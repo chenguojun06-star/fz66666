@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   z-index: var(--z-overlay);
-  background-color: #2563EB;
+  background-color: var(--color-bg-card);
+  border-bottom: 0.5px solid var(--color-border);
 }
 
 .status-bar {
@@ -35,19 +36,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-bg-hover);
 }
 
 .back-icon {
   font-size: var(--font-size-3xl);
-  color: #ffffff;
+  color: var(--color-text-primary);
   line-height: 1;
 }
 
 .nav-title-left {
   font-size: var(--font-size-xl);
   font-weight: bold;
-  color: #ffffff;
+  color: var(--color-text-primary);
   text-align: center;
 }
 
@@ -65,8 +66,8 @@
   width: 100%;
   max-width: 200px;
   height: 30px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 15px;
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-full);
   padding: 0 10px;
   box-sizing: border-box;
 }
@@ -80,16 +81,16 @@
   flex: 1;
   height: 100%;
   font-size: var(--font-size-sm);
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-tertiary);
 }
 
 .clear-icon {
   font-size: var(--font-size-xs);
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-tertiary);
   padding: 2px;
 }
 

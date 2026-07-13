@@ -1,48 +1,64 @@
-  <!-- ① 今日统计（顶部） -->
+  <!-- ① 今日统计（顶部 — 3列：今日扫码/进行中/已完成） -->
   <wxs src="../../../utils/money.wxs" module="money" />
   <view class="today-stats-card">
-    <view class="tsc-head">
-      <text class="tsc-title">今日统计</text>
-      <view class="refresh-btn {{my.loadingStats ? 'refresh-btn-loading' : ''}}" bindtap="refreshMy" hover-class="refresh-btn-hover">
-        <view class="line-icon line-icon--sm icon-refresh refresh-icon"></view>
-        <text class="refresh-text">刷新</text>
-      </view>
-    </view>
     <view class="tsc-grid">
+      <!-- 今日扫码 -->
       <view class="tsc-item">
-        <text class="tsc-num">{{my.stats.scanCount || 0}}</text>
-        <text class="tsc-label">扫码</text>
+        <view class="tsc-num-row">
+          <text class="tsc-num tsc-num--primary">{{my.stats.scanCount || 0}}</text>
+          <text class="tsc-unit">次</text>
+        </view>
+        <text class="tsc-label">今日扫码</text>
       </view>
-      <view class="tsc-item">
-        <text class="tsc-num">{{my.stats.orderCount || 0}}</text>
-        <text class="tsc-label">订单</text>
+      <!-- 进行中 -->
+      <view class="tsc-item tsc-item--divider">
+        <view class="tsc-num-row">
+          <text class="tsc-num">{{my.stats.orderCount || 0}}</text>
+          <text class="tsc-unit">单</text>
+        </view>
+        <text class="tsc-label">进行中</text>
       </view>
-      <view class="tsc-item">
-        <text class="tsc-num">{{my.stats.totalQuantity || 0}}</text>
-        <text class="tsc-label">数量</text>
-      </view>
-      <view class="tsc-item tsc-hl">
-        <text class="tsc-num">¥{{money.toFixed2(my.stats.totalAmount || 0)}}</text>
-        <text class="tsc-label">收入</text>
+      <!-- 已完成 -->
+      <view class="tsc-item tsc-item--divider">
+        <view class="tsc-num-row">
+          <text class="tsc-num tsc-num--success">{{my.stats.totalQuantity || 0}}</text>
+          <text class="tsc-unit">件</text>
+        </view>
+        <text class="tsc-label">已完成</text>
       </view>
     </view>
   </view>
 
-  <!-- ② 快捷入口卡片（历史记录 | 当月记录） -->
+  <!-- ② 快捷入口（3个扫码快捷方式：工序扫码/质检扫码/入库扫码） -->
   <view class="quick-entry-row">
-    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToHistory">
-      <view class="line-icon icon-clipboard qe-icon"></view>
-      <view class="qe-text">
-        <text class="qe-title">历史记录</text>
-        <text class="qe-desc">全部扫码记录</text>
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onScan">
+      <view class="qe-icon-wrap qe-icon-wrap--blue">
+        <view class="line-icon icon-clipboard qe-icon"></view>
       </view>
+      <view class="qe-text">
+        <text class="qe-title">工序扫码</text>
+        <text class="qe-desc">扫描工序二维码</text>
+      </view>
+      <view class="qe-chevron">›</view>
     </view>
-    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToMonthly">
-      <view class="line-icon icon-calendar qe-icon"></view>
-      <view class="qe-text">
-        <text class="qe-title">当月记录</text>
-        <text class="qe-desc">本月汇总统计</text>
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToQuality">
+      <view class="qe-icon-wrap qe-icon-wrap--green">
+        <view class="line-icon icon-check-square qe-icon"></view>
       </view>
+      <view class="qe-text">
+        <text class="qe-title">质检扫码</text>
+        <text class="qe-desc">质检结果录入</text>
+      </view>
+      <view class="qe-chevron">›</view>
+    </view>
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToWarehouse">
+      <view class="qe-icon-wrap qe-icon-wrap--orange">
+        <view class="line-icon icon-package qe-icon"></view>
+      </view>
+      <view class="qe-text">
+        <text class="qe-title">入库扫码</text>
+        <text class="qe-desc">成品入库登记</text>
+      </view>
+      <view class="qe-chevron">›</view>
     </view>
   </view>
-

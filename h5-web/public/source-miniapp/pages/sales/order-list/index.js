@@ -13,6 +13,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { PLATFORM_NAMES } = require('../../../utils/platformNames');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const PLATFORM_TABS = [
   { key: '',   label: '全部' },
@@ -85,6 +86,11 @@ Page({
       this.setData({ activePlatform: p });
     }
     this._resetAndLoad();
+    bindPageEvents(this, () => this._resetAndLoad(), ['ORDER_STATUS_CHANGED']);
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   onShow: function () {

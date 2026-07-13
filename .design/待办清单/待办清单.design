@@ -1,0 +1,93 @@
+{
+  "data": [
+    {
+      "id": "page-home",
+      "title": "日历待办首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783832801000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": [
+          {
+            "domId": "cta-new-task",
+            "targetPageId": "page-new-task",
+            "hideEdge": false
+          },
+          {
+            "domId": "nav-stats",
+            "targetPageId": "page-stats",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-new-task",
+      "title": "新建任务",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783832801000,
+      "canvasData": {
+        "x": 252,
+        "y": 132,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/new-task.html",
+        "interactions": [
+          {
+            "domId": "cta-save",
+            "targetPageId": "page-stats",
+            "hideEdge": false
+          },
+          {
+            "domId": "back-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-stats",
+      "title": "任务统计",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783832801000,
+      "canvasData": {
+        "x": 492,
+        "y": 96,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/stats.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "mobile",
+    "projectName": "待办清单",
+    "designLibrary": {
+      "name": "苹果",
+      "id": "dl_builtin_apple",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple",
+      "versionSource": "metadata.json"
+    }
+  }
+}

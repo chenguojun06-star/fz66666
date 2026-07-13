@@ -28,7 +28,7 @@
           </swiper-item>
         </swiper>
         <view wx:else class="cover-placeholder">
-          <text class="icon-box"></text>
+          <text class="cover-placeholder-text">暂无图片</text>
         </view>
 
         <!-- 左右切换箭头（多张图时显示） -->
@@ -121,7 +121,7 @@
       </view>
     </view>
 
-    <!-- ════════════ ② 数量进度卡 ════════════ -->
+    <!-- ════════════ ② 数量进度卡（含进度条） ════════════ -->
     <view class="qty-card">
       <view class="qty-col">
         <text class="qty-num">{{totalQuantity}}</text>
@@ -142,29 +142,43 @@
         <text class="qty-num qty-pct">{{progressPct}}%</text>
         <text class="qty-label">进度</text>
       </view>
-    </view>
-
-    <!-- 总进度条 -->
-    <view class="progress-bar-wrap">
-      <view class="progress-bar">
-        <view class="progress-fill" style="width:{{progressPct > 100 ? 100 : progressPct}}%"></view>
-      </view>
-      <view class="progress-info">
-        <text class="progress-qty">{{completedQuantity}}/{{totalQuantity}}件</text>
-        <text class="progress-pct">{{progressPct}}%</text>
+      <!-- 总进度条（内嵌于数量卡） -->
+      <view class="progress-bar-wrap">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width:{{progressPct > 100 ? 100 : progressPct}}%"></view>
+        </view>
+        <view class="progress-info">
+          <text class="progress-qty">{{completedQuantity}}/{{totalQuantity}}件</text>
+          <text class="progress-pct">{{progressPct}}%</text>
+        </view>
       </view>
     </view>
 
     <!-- ════════════ ③ 操作区 ════════════ -->
     <view class="action-bar {{isEditable ? '' : 'action-bar--disabled'}}">
-      <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">采购</view>
-      <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">裁剪</view>
-      <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">工序</view>
-      <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">转单</view>
-      <view class="action-btn" bindtap="onActionRemark" data-editable="{{isEditable}}">备注</view>
+      <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">
+        <view class="action-icon action-icon--procurement"></view>
+        <text class="action-text">采购</text>
+      </view>
+      <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">
+        <view class="action-icon action-icon--cutting"></view>
+        <text class="action-text">裁剪</text>
+      </view>
+      <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">
+        <view class="action-icon action-icon--process"></view>
+        <text class="action-text">工序</text>
+      </view>
+      <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">
+        <view class="action-icon action-icon--transfer"></view>
+        <text class="action-text">转单</text>
+      </view>
+      <view class="action-btn" bindtap="onActionRemark" data-editable="{{isEditable}}">
+        <view class="action-icon action-icon--remark"></view>
+        <text class="action-text">备注</text>
+      </view>
     </view>
 
-    <!-- ════════════ ④ 执行进度区 · 工序进度 ════════════ -->
+    <!-- ════════════ ④ 执行进度区 · 工序进度（时间线布局） ════════════ -->
     <view class="section-card" wx:if="{{stages.length > 0}}">
       <view class="section-hd">
         <text class="section-title">工序进度</text>
@@ -172,25 +186,31 @@
       </view>
       <view class="stage-list">
         <view class="stage-item" wx:for="{{stages}}" wx:key="name">
-          <view class="stage-info">
-            <view class="stage-left">
+          <!-- 左侧轨道：状态圆点 + 连接线 -->
+          <view class="stage-rail">
+            <view class="stage-dot-wrap">
+              <!-- 进行中阶段的脉冲动画环 -->
+              <view class="stage-pulse-ring" wx:if="{{item.statusCls === 'stage-doing'}}"></view>
               <view class="stage-dot {{item.statusCls}}">
-              <view class="icon-checkmark-sm" wx:if="{{item.statusCls === 'stage-done'}}"></view>
-              <view class="icon-dot-sm" wx:if="{{item.statusCls === 'stage-doing'}}"></view>
+                <view class="icon-checkmark-sm" wx:if="{{item.statusCls === 'stage-done'}}"></view>
+                <view class="icon-dot-sm" wx:if="{{item.statusCls === 'stage-doing'}}"></view>
+              </view>
             </view>
-              <text class="stage-name">{{item.name}}</text>
+            <!-- 垂直连接线（最后一个阶段不显示） -->
+            <view class="stage-line" wx:if="{{index < stages.length - 1}}"></view>
+          </view>
+          <!-- 右侧内容区 -->
+          <view class="stage-body">
+            <view class="stage-info">
+              <text class="stage-name {{item.statusCls === 'stage-pending' ? 'stage-name--pending' : ''}}">{{item.name}}</text>
+              <text class="stage-qty" wx:if="{{item.totalQty > 0}}">{{item.scannedQty || 0}}/{{item.totalQty}}</text>
             </view>
-            <text class="stage-status {{item.statusCls}}">{{item.status}}</text>
-          </view>
-          <view class="stage-meta" wx:if="{{item.startTime || item.completeTime || item.startOperator || item.completeOperator}}">
-            <text wx:if="{{item.startTime}}" class="meta-text">开始: {{item.startTime}}</text>
-            <text wx:if="{{item.startOperator && item.startOperator !== '-'}}" class="meta-text">/ {{item.startOperator}}</text>
-            <text wx:if="{{item.completeTime}}" class="meta-text">→ 完成: {{item.completeTime}}</text>
-            <text wx:if="{{item.completeOperator && item.completeOperator !== '-'}}" class="meta-text">/ {{item.completeOperator}}</text>
-          </view>
-          <view class="stage-progress" wx:if="{{item.totalQty > 0}}">
-            <text class="sp-text">{{item.scannedQty || 0}} / {{item.totalQty}}</text>
-            <view class="sp-bar">
+            <view class="stage-meta" wx:if="{{item.startOperator || item.startTime}}">
+              <text wx:if="{{item.startOperator && item.startOperator !== '-'}}" class="meta-text">{{item.startOperator}}</text>
+              <text wx:if="{{item.startOperator && item.startTime}}" class="meta-text-sep"> · </text>
+              <text wx:if="{{item.startTime}}" class="meta-text">{{item.startTime}}{{item.completeTime ? '→' : ''}}{{item.completeTime}}</text>
+            </view>
+            <view class="sp-bar" wx:if="{{item.totalQty > 0}}">
               <view class="sp-fill {{item.statusCls === 'stage-done' ? 'sp-fill--done' : ''}}" style="width:{{item.progress || 0}}%"></view>
             </view>
           </view>

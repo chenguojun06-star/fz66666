@@ -9,8 +9,8 @@
   margin-bottom: 12px;
   padding: 16px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-sm);
+  /* Apple: removed hard border, use shadow */
+  box-shadow: var(--shadow-card);
 }
 
 .section-title {
@@ -84,7 +84,7 @@
   right: 0;
   margin-top: 4px;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   z-index: var(--z-dropdown);
@@ -166,7 +166,7 @@
   flex: 1;
   height: 40px;
   line-height: 40px;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-md);
   padding: 0 12px;
   font-size: var(--font-size-md);
@@ -262,7 +262,7 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 
 .line-item {

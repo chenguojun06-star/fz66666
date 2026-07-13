@@ -121,7 +121,7 @@ page {
 .menu-icon-circle {
   width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,58 +152,58 @@ page {
 }
 
 .menu-icon-circle--purple {
-  background: linear-gradient(135deg, #7C3AED, #8B5CF6);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  background: var(--gradient-purple);
+  box-shadow: var(--shadow-gradient-purple);
 }
 
 .menu-icon-circle--blue {
-  background: linear-gradient(135deg, #2563EB, #3B82F6);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  background: var(--gradient-blue);
+  box-shadow: var(--shadow-gradient-blue);
 }
 
 .menu-icon-circle--teal {
-  background: linear-gradient(135deg, #0D9488, #14B8A6);
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+  background: var(--gradient-teal);
+  box-shadow: var(--shadow-gradient-teal);
 }
 
 .menu-icon-circle--amber {
-  background: linear-gradient(135deg, #D97706, #F59E0B);
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+  background: var(--gradient-amber);
+  box-shadow: var(--shadow-gradient-amber);
 }
 
 .menu-icon-circle--green {
-  background: linear-gradient(135deg, #059669, #10B981);
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  background: var(--gradient-green);
+  box-shadow: var(--shadow-gradient-green);
 }
 
 .menu-icon-circle--orange {
-  background: linear-gradient(135deg, #EA580C, #F97316);
-  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+  background: var(--gradient-orange);
+  box-shadow: var(--shadow-gradient-orange);
 }
 
 .menu-icon-circle--rose {
-  background: linear-gradient(135deg, #E11D48, #F43F5E);
-  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
+  background: var(--gradient-rose);
+  box-shadow: var(--shadow-gradient-rose);
 }
 
 .menu-icon-circle--indigo {
-  background: linear-gradient(135deg, #4F46E5, #6366F1);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  background: var(--gradient-indigo);
+  box-shadow: var(--shadow-gradient-indigo);
 }
 
 .menu-icon-circle--cyan {
-  background: linear-gradient(135deg, #0891B2, #06B6D4);
-  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
+  background: var(--gradient-cyan);
+  box-shadow: var(--shadow-gradient-cyan);
 }
 
 .menu-icon-circle--red {
-  background: linear-gradient(135deg, #DC2626, #EF4444);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  background: var(--gradient-red);
+  box-shadow: var(--shadow-gradient-red);
 }
 
 .menu-icon-circle--gray {
-  background: linear-gradient(135deg, #6B7280, #9CA3AF);
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+  background: var(--gradient-gray);
+  box-shadow: var(--shadow-gradient-gray);
 }
 
 .menu-more-icon {
@@ -276,12 +276,12 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   margin: 0 var(--page-padding-x) var(--spacing-lg);
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-card);
+  background: var(--gradient-blue);
+  box-shadow: var(--shadow-gradient-blue);
   position: relative;
 }
 
@@ -304,7 +304,7 @@ page {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 7px;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   min-width: 18px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.15);
@@ -314,12 +314,12 @@ page {
 .ai-welcome-card {
   display: flex;
   align-items: center;
-  margin: 0 12px 12px;
-  padding: 14px 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #A78BFA 100%);
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
-  color: #fff;
+  margin: 0 var(--page-padding-x) var(--card-gap);
+  padding: var(--spacing-md) var(--spacing-md);
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, var(--color-purple) 0%, var(--color-purple-light) 50%, #A78BFA 100%);
+  box-shadow: var(--shadow-gradient-purple);
+  color: var(--color-text-white);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .ai-welcome-card-hover {
@@ -327,16 +327,16 @@ page {
   box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
 }
 .ai-welcome--warn {
-  background: linear-gradient(135deg, #EF4444 0%, #F59E0B 100%);
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+  background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-warning) 100%);
+  box-shadow: var(--shadow-gradient-red);
 }
 .ai-welcome--manager {
-  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  background: linear-gradient(135deg, var(--gradient-indigo));
 }
 .ai-welcome-icon {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
@@ -373,12 +373,12 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 12px 12px;
-  padding: 14px 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #7C3AED 0%, #6366F1 100%);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
-  color: #fff;
+  margin: 0 var(--page-padding-x) var(--card-gap);
+  padding: var(--spacing-md) var(--spacing-md);
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, var(--color-purple) 0%, var(--gradient-indigo));
+  box-shadow: var(--shadow-gradient-indigo);
+  color: var(--color-text-white);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .ai-assistant-entry-hover {
@@ -392,7 +392,7 @@ page {
 .ai-assistant-entry-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
@@ -421,12 +421,12 @@ page {
 
 /* ============ 智能运营卡片 ============ */
 .ai-ops-card {
-  margin: 0 12px 12px;
-  padding: 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
-  color: #fff;
+  margin: 0 var(--page-padding-x) var(--card-gap);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-card);
+  background: var(--gradient-indigo);
+  box-shadow: var(--shadow-gradient-indigo);
+  color: var(--color-text-white);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .ai-ops-card-hover {

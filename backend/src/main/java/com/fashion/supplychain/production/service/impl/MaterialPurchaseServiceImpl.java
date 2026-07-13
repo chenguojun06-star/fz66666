@@ -41,6 +41,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     @Autowired
     private MaterialPurchaseReturnHelper returnHelper;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.MaterialPurchaseLogAppendHelper logAppendHelper;
+
     @Override
     public boolean deleteByOrderId(String orderId) {
         if (!StringUtils.hasText(orderId)) {
@@ -374,7 +377,20 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         applyArrivedQuantityUpdate(materialPurchase, newArrived, remark);
         syncStockOnArrivedChange(materialPurchase, delta);
 
-        return this.updateById(materialPurchase);
+        boolean updated = this.updateById(materialPurchase);
+
+        // 双写：到货登记同步写入 ProductionOrder.remarks
+        if (updated && delta != 0) {
+            try {
+                String detail = "到货登记：" + oldArrived + " → " + newArrived
+                        + "（物料：" + (materialPurchase.getMaterialName() == null ? "" : materialPurchase.getMaterialName()) + "）";
+                logAppendHelper.appendOrderOnly(id, "到货登记", detail);
+            } catch (Exception e) {
+                log.warn("[到货登记] 同步订单备注失败（不阻断）: id={}, err={}", id, e.getMessage());
+            }
+        }
+
+        return updated;
     }
 
     private void applyArrivedQuantityUpdate(MaterialPurchase mp, int newArrived, String remark) {

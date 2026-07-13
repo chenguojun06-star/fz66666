@@ -294,7 +294,7 @@ Page({
 
   saveSplitRecord(orderNo, bundleNo, qty, workerName) {
     const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
+    const pad = n => ('0' + n).slice(-2);
     const timeLabel = `${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const record = { orderNo, bundleNo, qty, workerName, time: now.getTime(), timeLabel };
     const list = [record, ...(this.data.splitRecords || [])].slice(0, 50);

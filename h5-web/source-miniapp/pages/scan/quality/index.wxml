@@ -3,22 +3,44 @@
   <!-- 订单信息 -->
   <view class="info-card">
     <view class="card-header">
-      <image-preview class="cover-wrap" src="{{coverImage || ''}}" mode="aspectFill" />
+      <view class="cover-wrap">
+        <image-preview src="{{coverImage || ''}}" mode="aspectFill" />
+      </view>
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
-        <text class="sub-info">订单 {{detail.orderNo}}</text>
-        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
-        <text wx:if="{{detail.color}}" class="sub-info">颜色 {{detail.color}}</text>
-        <text wx:if="{{detail.size}}" class="sub-info">码数 {{detail.size}}</text>
-        <text class="sub-info">数量 {{detail.quantity}} 件</text>
-        <text wx:if="{{detail.processName}}" class="sub-info tag-process">{{detail.processName}}</text>
+        <view class="info-grid">
+          <view class="info-grid-item" wx:if="{{detail.orderNo}}">
+            <text class="info-grid-label">订单</text>
+            <text class="info-grid-value">{{detail.orderNo}}</text>
+          </view>
+          <view class="info-grid-item" wx:if="{{detail.bundleNo}}">
+            <text class="info-grid-label">菲号</text>
+            <text class="info-grid-value">{{detail.bundleNo}}</text>
+          </view>
+          <view class="info-grid-item" wx:if="{{detail.color}}">
+            <text class="info-grid-label">颜色</text>
+            <text class="info-grid-value">{{detail.color}}</text>
+          </view>
+          <view class="info-grid-item" wx:if="{{detail.size}}">
+            <text class="info-grid-label">码数</text>
+            <text class="info-grid-value">{{detail.size}}</text>
+          </view>
+          <view class="info-grid-item">
+            <text class="info-grid-label">数量</text>
+            <text class="info-grid-value">{{detail.quantity}} 件</text>
+          </view>
+          <view class="info-grid-item" wx:if="{{detail.processName}}">
+            <text class="info-grid-label">工序</text>
+            <text class="info-grid-value">{{detail.processName}}</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>
 
   <!-- AI 建议 -->
   <view wx:if="{{aiSuggestion}}" class="insight-card">
-    <text class="insight-icon">🤖</text>
+    <text class="insight-icon"><text class="line-icon line-icon--lg icon-ai"></text></text>
     <view class="insight-body">
       <text wx:if="{{historicalDefectRate}}" class="insight-text">历史不良率 {{historicalDefectRate}}</text>
       <text wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent">⚠️ {{aiSuggestion.urgentTip}}</text>
@@ -30,7 +52,9 @@
         <text class="insight-label">缺陷提示：</text>
         <text wx:for="{{aiSuggestionList}}" wx:key="category" class="insight-checkpoint">【{{item.label}}】{{item.text}}</text>
       </block>
-      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">采纳建议</view>
+      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">
+        <text>采纳建议</text>
+      </view>
     </view>
   </view>
 
@@ -90,7 +114,7 @@
           <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
         </view>
         <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
-          <text class="add-icon">📷</text>
+          <text class="add-icon"><text class="line-icon icon-camera"></text></text>
           <text class="add-text">拍照/选图</text>
         </view>
       </view>
@@ -99,7 +123,7 @@
     <!-- AI 图片分析结果 -->
     <view wx:if="{{images.length > 0 && (aiImageAnalyzing || aiImageResult || aiImageError)}}" class="ai-image-result">
       <view class="ai-image-header">
-        <text class="ai-image-icon">🔍</text>
+        <text class="ai-image-icon"><text class="line-icon icon-search"></text></text>
         <text class="ai-image-title">AI 图片分析</text>
         <view wx:if="{{aiImageResult && aiImageResult.detectedItems.length > 0}}"
               class="ai-image-adopt" bindtap="onAdoptImageAiResult">采纳</view>

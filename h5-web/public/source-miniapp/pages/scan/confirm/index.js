@@ -7,6 +7,8 @@ const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
 const permission = require('../../../utils/permission');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
+const scanFeedback = require('../../../utils/scan-feedback');
 
 Page({
   data: {
@@ -158,6 +160,7 @@ Page({
     // 防御性检查：裁剪已完成 → 自动提示并返回
     if (isCutting && cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
       toast.success('裁剪任务已完成');
+      scanFeedback.playSuccess();
       setTimeout(function() { wx.navigateBack(); }, 1500);
       return;
     }
@@ -166,9 +169,11 @@ Page({
     if (raw.orderNo) {
       this._fetchAiTip(raw.orderNo, raw.processName || raw.progressStage || '');
     }
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     getApp().globalData.confirmScanData = null;
   },
 
@@ -287,6 +292,7 @@ Page({
 
     if (pendingItems.length === 0) {
       toast.success('所有物料均已领取');
+      scanFeedback.playSuccess();
       this._emitRefresh();
       wx.navigateBack();
       return;
@@ -307,6 +313,7 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.success('已领取 ' + pendingItems.length + ' 项物料');
+      scanFeedback.playSuccess();
 
       this._emitRefresh();
       wx.navigateBack();
@@ -314,6 +321,7 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.error(e.errMsg || e.message || '领取失败');
+      scanFeedback.playError();
     }
   },
 
@@ -364,6 +372,7 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.success('裁剪任务已领取');
+      scanFeedback.playSuccess();
       this._emitRefresh();
 
       wx.redirectTo({
@@ -373,6 +382,7 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.error(e.errMsg || e.message || '领取失败');
+      scanFeedback.playError();
     }
   },
 
@@ -432,6 +442,7 @@ Page({
       }
 
       toast.success('批量提交成功（' + tasks.length + '条）');
+      scanFeedback.playSuccess();
       getApp().globalData.lastScanResult = {
         orderNo: raw.orderNo || '',
         processCode: raw.processCode || '',
@@ -442,7 +453,6 @@ Page({
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
-      this.setData({ loading: false });
       var raw = this._scanContext;
       getApp().globalData.lastScanResult = {
         orderNo: (raw && raw.orderNo) || '',
@@ -451,12 +461,15 @@ Page({
         quantity: 0,
         success: false,
       };
+      scanFeedback.playError();
       wx.showModal({
         title: '扫码失败',
         content: e.message || e.errMsg || '提交失败，请稍后重试',
         showCancel: false,
         confirmText: '知道了',
       });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 

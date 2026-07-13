@@ -25,10 +25,10 @@
     </view>
   </view>
 
-  <view class="section-card" wx:if="{{remarks.length > 0}}">
+  <view class="section-card" wx:if="{{userRemarks.length > 0}}">
     <text class="section-title">备注记录</text>
     <view class="remark-list">
-      <view class="remark-card" wx:for="{{remarks}}" wx:key="id">
+      <view class="remark-card" wx:for="{{userRemarks}}" wx:key="id">
         <view class="remark-header">
           <text class="remark-author">{{item.authorName || '匿名'}}</text>
           <text class="remark-role" wx:if="{{item.authorRole}}">{{item.authorRole}}</text>
@@ -48,8 +48,22 @@
     </view>
   </view>
 
-  <view class="empty-state" wx:if="{{!loading && remarks.length === 0}}">
-    <text class="empty-text">暂无备注记录</text>
+  <view class="section-card" wx:if="{{systemLogs.length > 0}}">
+    <text class="section-title">操作日志</text>
+    <view class="log-list">
+      <view class="log-item" wx:for="{{systemLogs}}" wx:key="id">
+        <view class="log-header">
+          <text class="log-author">{{item.authorName || '系统'}}</text>
+          <text class="log-role">{{item.authorRole || '操作'}}</text>
+          <text class="log-time">{{item.timeDisplay || '-'}}</text>
+        </view>
+        <view class="log-content">{{item.content}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:if="{{!loading && userRemarks.length === 0 && systemLogs.length === 0}}">
+    <text class="empty-text">暂无备注和操作记录</text>
   </view>
 
   <view class="load-tip" wx:if="{{loading}}">加载中…</view>

@@ -201,8 +201,8 @@
 
 .mf-toggle.danger.active {
   color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
 }
 
 /* ---- 日期行 ---- */
@@ -240,7 +240,7 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--color-primary);
+  border: 1.5px solid var(--color-primary);
   border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
@@ -407,9 +407,7 @@
 }
 
 .mf-btn.ok {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  background: transparent; color: var(--color-primary); border: 1.5px solid var(--color-primary);
 }
 
 .mf-btn.disabled {

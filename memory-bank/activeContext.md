@@ -16,6 +16,39 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-07-12 P0 首页菜单点击不跳转修复（第三次同类事故）
+
+- **问题**：首页「常用应用」菜单点击无响应，不跳转页面
+- **根因**：`home/index.wxml` 用 `data-app="{{item}}"` 传整个对象，`onFavoriteTap` 读 `dataset.app.route`。小程序 `data-*` 传对象序列化不可靠，部分机型/编译条件下 `app` 变 `undefined` 或属性丢失，导致函数 `return` 不导航
+- **同类型历史事故**：
+  - 2026-07-08：样衣列表 `data-item="{{item}}"` 导致点击不跳转（已修为 `data-style-id` / `data-id`）
+  - 2026-07-12：首页菜单 `data-app="{{item}}"` 导致点击不跳转（本次修复）
+- **修复范围**：
+  - `miniprogram/pages/home/index.wxml`：`data-app` → `data-id` + `data-route` 字符串
+  - `miniprogram/pages/home/index.js`：`onFavoriteTap` 改读 `dataset.route`
+  - `miniprogram/pages/more-apps/index.wxml`：3处 `data-app` → `data-id` + `data-route`
+  - `miniprogram/pages/more-apps/index.js`：`onAppTap` 改读 `dataset.route`；`onToggleFavorite` 改读 `dataset.id` + `findAppById()` 查找
+  - H5 `source-miniapp` + `public` 两份拷贝同步
+- **遗留风险**：`components/ai-assistant/index.wxml` 有 12 处 `data-item="{{item}}"`，`dashboard/order-detail/index.wxml` 有 1 处。当前未报障，暂不修改，后续统一排查
+- **教训**：**禁止在 `data-*` 属性中传递对象**。必须拆为 `data-id` / `data-route` 等字符串属性，JS 端从 `dataset` 读取。已加入反模式。
+
+### 2026-07-12 样衣开发阶段详情数据打通 + H5 三端同步
+
+- **问题**：用户反馈样衣开发阶段详情页（工艺单/尺寸表/工序配置/码数单价）读不到 PC 端数据，且 H5 未同步
+- **根因**：小程序 `stage-detail/index.js` 之前仅从 `styleInfo` 嵌套对象提取数据，未调用 PC 端同款独立 API
+- **修复内容**：
+  - 尺码表：调用 `styleApi.listSizes` 按部位×尺码矩阵展示
+  - 工序配置：优先调用 `styleApi.listProcesses`，无数据时兜底 `patternProcessConfig`
+  - 生产制单（工艺单）：调用 `production.getProductionSheet` 获取完整 BOM/尺码/款式信息
+  - 码数单价：调用 `production.listSizePrices` 按工序×尺码矩阵展示
+  - H5 同步：`h5-web/source-miniapp` + `h5-web/public/source-miniapp` 三份拷贝与小程序完全一致
+  - H5 production.js 补充 `getProductionSheet` 方法（public 拷贝缺失）
+- **验证**：
+  - 三份 `stage-detail/index.js` / `.wxml` / `.wxss` diff 完全一致
+  - `node --check` 通过 5 个 JS 文件
+  - 无新增 `?.` / `padStart`（ES5 兼容）
+  - 硬编码颜色为历史遗留 6 处操作图标色，未引入新增
+
 ### 2026-07-10 小程序/UI/性能/扫码全量优化日（补录）
 
 今天围绕 ERP 小程序专业度、性能稳定性、扫码流程、数据联动进行了多轮密集修复和优化，以下按主题汇总：

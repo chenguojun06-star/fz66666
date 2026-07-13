@@ -4,373 +4,398 @@ const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { hasFeaturePermission } = require('../../utils/permission');
 const { bindPageEvents, unbindPageEvents } = require('../../utils/pageEventBinder');
 
-// 日期格式化工具函数（重构版 - 消除重复代码）
-
-/**
- * 解析日期字符串（兼容 iOS）
- * iOS 不支持 "yyyy-MM-dd HH:mm:ss"，需要使用 "yyyy-MM-ddTHH:mm:ss"
- */
+// ===== Date helpers =====
 function parseDateSafe(dateStr) {
-  if (!dateStr) return new Date(NaN);
+  if (!dateStr) return null;
+  if (typeof dateStr === 'string') {
+    // LocalDateTime array format: [2026,7,10,14,30,0,0]
+    var trimmed = dateStr.replace(/^\[|\]$/g, '');
+    var parts = trimmed.split(',').map(function (s) { return parseInt(s, 10); });
+    if (parts.length >= 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return new Date(parts[0], parts[1] - 1, parts[2],
+        parts[3] || 0, parts[4] || 0, parts[5] || 0);
+    }
+    var parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
   if (dateStr instanceof Date) return dateStr;
-  // 将空格分隔符替换为 T，兼容 iOS
-  return new Date(String(dateStr).replace(' ', 'T'));
+  return null;
 }
 
-/**
- * 提取日期组件（公共函数）
- */
-function extractDateComponents(date) {
-  const d = parseDateSafe(date);
+function extractDateComponents(dateStr) {
+  var d = parseDateSafe(dateStr);
+  if (!d) return { year: '', month: '', day: '', hours: '', minutes: '' };
   return {
-    year: d.getFullYear(),
-    month: String(d.getMonth() + 1).padStart(2, '0'),
-    day: String(d.getDate()).padStart(2, '0'),
-    hours: String(d.getHours()).padStart(2, '0'),
-    minutes: String(d.getMinutes()).padStart(2, '0'),
+    year: String(d.getFullYear()),
+    month: ('0' + (d.getMonth() + 1)).slice(-2),
+    day: ('0' + d.getDate()).slice(-2),
+    hours: ('0' + d.getHours()).slice(-2),
+    minutes: ('0' + d.getMinutes()).slice(-2),
   };
 }
 
-/**
- * 格式化为日期（YYYY-MM-DD）
- */
-function formatDate(date) {
-  const { year, month, day } = extractDateComponents(date);
-  return `${year}-${month}-${day}`;
+function formatMonthDay(dateStr) {
+  var c = extractDateComponents(dateStr);
+  return c.month + '-' + c.day;
 }
 
-/**
- * 格式化为日期时间（YYYY-MM-DD HH:mm）
- */
-function formatDateTime(date) {
-  const { year, month, day, hours, minutes } = extractDateComponents(date);
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
+// ===== Amount formatting =====
+function formatAmount(num) {
+  var n = Number(num) || 0;
+  var parts = n.toFixed(2).split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+}
+
+// ===== Record type classification =====
+function classifyRecordType(item) {
+  var pn = String(item.processName || '').toLowerCase();
+  if (pn.indexOf('奖金') !== -1 || pn.indexOf('绩效') !== -1 || pn.indexOf('bonus') !== -1) {
+    return 'bonus';
+  }
+  return 'piecework';
 }
 
 function _scanTypeText(raw) {
-  const v = String(raw || '').trim();
-  if (!v) return '-';
-  if (v === 'production') return '生产';
-  if (v === 'cutting') return '裁剪';
-  if (v === 'procurement') return '采购';
-  if (v === 'quality') return '质检';
-  if (v === 'pressing') return '大烫';
-  if (v === 'packaging') return '包装';
-  if (v === 'warehousing') return '入库';
-  if (v === 'sewing' || v === 'carSewing') return '车缝';
-  return '未知';
+  if (!raw) return '其他';
+  var t = String(raw).toLowerCase();
+  var map = {
+    cutting: '裁剪', cut: '裁剪',
+    sewing: '缝制', carsewing: '缝制', 'car_sewing': '缝制',
+    pressing: '后整理', iron: '后整理',
+    packaging: '包装', package: '包装',
+    quality: '质检', qc: '质检', qualitycheck: '质检',
+    warehousing: '入库', warehouse: '入库',
+    production: '生产', produce: '生产',
+    procurement: '采购', purchase: '采购',
+  };
+  return map[t] || '其他';
 }
 
-function _orderStatusText(status) {
-  const s = String(status || '').toLowerCase();
-  if (s === 'completed') return '已完成';
-  if (s === 'closed') return '已关单';
-  if (s === 'archived') return '已归档';
-  if (s === 'production') return '生产中';
-  if (s === 'pending') return '待生产';
-  if (s === 'delayed') return '已逾期';
-  if (s === 'scrapped') return '已报废';
-  if (s === 'cancelled' || s === 'canceled') return '已取消';
-  if (s === 'paused') return '已暂停';
-  if (s === 'returned') return '已退回';
-  return '未知';
-}
-
-function _paymentStatusText(status) {
-  if (!status) return '未发放';
-  if (status === 'success') return '已发放';
-  if (status === 'pending') return '待支付';
-  return '未知';
-}
+// ===== Empty state messages =====
+var EMPTY_TEXTS = {
+  all: '暂无工资记录',
+  piecework: '暂无计件记录',
+  hourly: '暂无计时记录',
+  bonus: '暂无奖金记录',
+};
 
 Page({
   data: {
-    // 筛选条件
-    timeFilter: 'month', // week, month, custom
+    // Date range (for API calls)
     startDate: '',
     endDate: '',
 
-    // 汇总数据
+    // Summary
+    monthLabel: '',
     totalAmount: '0.00',
-    totalQuantity: 0,
-    recordCount: 0,
-    orderCount: 0,
+    pieceworkTotal: '0.00',
+    bonusTotal: '0.00',
+    momText: '',
+    momIsUp: true,
 
-    // 明细数据
+    // Filter
+    typeFilter: 'all',
+    emptyText: '暂无工资记录',
+
+    // Records
     records: [],
-    filteredTotalAmount: '0.00',
+    filteredRecords: [],
+    filteredTotal: '0.00',
 
-    // 加载状态
+    // State
     loading: false,
 
-    // 排序状态
-    sortField: 'time', // 'amount' 或 'time'
-    sortOrder: 'desc', // desc:降序(从高到低), asc:升序(从低到高)
-    summaryItems: [],
+    // Date picker
+    dateQuick: 'thisMonth',
+    todayStr: '',
   },
 
-  onLoad() {
+  onLoad: function () {
     this.initDates();
-    // 数据加载由 onShow 统一处理（onLoad 后立即触发 onShow，首次也会加载）
-    bindPageEvents(this, () => this.loadData());
+    bindPageEvents(this, function () { this.loadData(); }.bind(this));
   },
 
-  onUnload() {
+  onUnload: function () {
     unbindPageEvents(this);
   },
 
-  // 每次进入页面（包括首次、从子页面返回）都刷新最新工资数据
-  onShow() {
-    // 未登录时拒绝访问：工资数据属于敏感个人信息，必须验证身份后才能加载
-    const app = getApp();
+  onShow: function () {
+    var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
-    // 权限校验：无查看工资权限则提示并返回
     if (!hasFeaturePermission('view_payroll')) {
       toast('您没有查看工资的权限');
-      wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/index/index' }); } });
+      wx.navigateBack({
+        delta: 1,
+        fail: function () { wx.switchTab({ url: '/pages/index/index' }); },
+      });
       return;
     }
     this.loadData();
   },
 
-  onPullDownRefresh() {
-    this.loadData().then(() => {
+  onPullDownRefresh: function () {
+    var self = this;
+    this.loadData().then(function () {
       wx.stopPullDownRefresh();
-    }).catch(() => { wx.stopPullDownRefresh(); });
-  },
-
-  /**
-   * 初始化日期
-   */
-  initDates() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-
-    // 默认本月第一天到今天
-    this.setData({
-      startDate: `${year}-${month}-01`,
-      endDate: `${year}-${month}-${day}`,
+    }).catch(function () {
+      wx.stopPullDownRefresh();
     });
   },
 
-  /**
-   * 切换筛选条件
-   */
-  onFilterChange(e) {
-    const filter = e.currentTarget.dataset.filter;
-    const now = new Date();
+  initDates: function () {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = ('0' + (now.getMonth() + 1)).slice(-2);
+    var day = ('0' + now.getDate()).slice(-2);
 
-    let startDate = '';
-    let endDate = formatDate(now);
+    this.setData({
+      startDate: year + '-' + month + '-01',
+      endDate: year + '-' + month + '-' + day,
+      monthLabel: year + '年' + (now.getMonth() + 1) + '月',
+      dateQuick: 'thisMonth',
+      todayStr: year + '-' + month + '-' + day,
+    });
+  },
 
-    if (filter === 'week') {
-      // 本周：周一到今天
-      const day = now.getDay() || 7; // 周日为0，转换为7
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - day + 1);
-      startDate = formatDate(monday);
-    } else if (filter === 'month') {
-      // 本月：1号到今天
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      startDate = `${year}-${month}-01`;
+  // ===== Date picker handlers =====
+  onQuickDateChange: function (e) {
+    var quick = e.currentTarget.dataset.quick;
+    var now = new Date();
+    var start, end, label;
+
+    if (quick === 'thisMonth') {
+      var y = now.getFullYear();
+      var m = ('0' + (now.getMonth() + 1)).slice(-2);
+      var d = ('0' + now.getDate()).slice(-2);
+      start = y + '-' + m + '-01';
+      end = y + '-' + m + '-' + d;
+      label = y + '年' + (now.getMonth() + 1) + '月';
+    } else if (quick === 'lastMonth') {
+      var lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      var ly = lm.getFullYear();
+      var lm2 = ('0' + (lm.getMonth() + 1)).slice(-2);
+      var ld = ('0' + new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate()).slice(-2);
+      start = ly + '-' + lm2 + '-01';
+      end = ly + '-' + lm2 + '-' + ld;
+      label = ly + '年' + (lm.getMonth() + 1) + '月';
+    } else if (quick === 'last3Months') {
+      var tm = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      var ty = tm.getFullYear();
+      var tm2 = ('0' + (tm.getMonth() + 1)).slice(-2);
+      var td = ('0' + now.getDate()).slice(-2);
+      start = ty + '-' + tm2 + '-01';
+      end = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + td;
+      label = '近三月';
+    }
+
+    this.setData({
+      dateQuick: quick,
+      startDate: start,
+      endDate: end,
+      monthLabel: label,
+    }, function () {
+      this.loadData();
+    }.bind(this));
+  },
+
+  onStartDateChange: function (e) {
+    var newStart = e.detail.value;
+    this.setData({
+      startDate: newStart,
+      dateQuick: '',
+      monthLabel: newStart + ' ~ ' + this.data.endDate,
+    }, function () {
+      this.loadData();
+    }.bind(this));
+  },
+
+  onEndDateChange: function (e) {
+    var newEnd = e.detail.value;
+    this.setData({
+      endDate: newEnd,
+      dateQuick: '',
+      monthLabel: this.data.startDate + ' ~ ' + newEnd,
+    }, function () {
+      this.loadData();
+    }.bind(this));
+  },
+
+  // ===== Type filter =====
+  onTypeFilterChange: function (e) {
+    var filter = e.currentTarget.dataset.filter;
+    this.setData({
+      typeFilter: filter,
+      emptyText: EMPTY_TEXTS[filter] || '暂无工资记录',
+    }, function () {
+      this.applyTypeFilter();
+    }.bind(this));
+  },
+
+  applyTypeFilter: function () {
+    var records = this.data.records;
+    var filter = this.data.typeFilter;
+    var filtered;
+
+    if (filter === 'all') {
+      filtered = records;
     } else {
-      // 自定义：保持当前日期
-      startDate = this.data.startDate;
-      endDate = this.data.endDate;
+      filtered = records.filter(function (r) {
+        return r.recordType === filter;
+      });
     }
 
-    this.setData(
-      {
-        timeFilter: filter,
-        startDate,
-        endDate,
-      },
-      () => {
-        if (filter !== 'custom') {
-          this.loadData();
-        }
-      },
-    );
-  },
-
-  /**
-   * 选择开始日期
-   */
-  onStartDateChange(e) {
-    this.setData(
-      {
-        startDate: e.detail.value,
-      },
-      () => {
-        this.loadData();
-      },
-    );
-  },
-
-  /**
-   * 选择结束日期
-   */
-  onEndDateChange(e) {
-    this.setData(
-      {
-        endDate: e.detail.value,
-      },
-      () => {
-        this.loadData();
-      },
-    );
-  },
-
-  /**
-   * 加载数据
-   */
-  async loadData() {
-    if (this.data.loading) {
-      return;
+    var total = 0;
+    for (var i = 0; i < filtered.length; i++) {
+      total += filtered[i].totalAmountNum;
     }
 
+    this.setData({
+      filteredRecords: filtered,
+      filteredTotal: formatAmount(total),
+    });
+  },
+
+  // ===== Data loading =====
+  loadData: function () {
+    if (this.data.loading) return Promise.resolve();
     this.setData({ loading: true });
 
-    try {
-      const { startDate, endDate } = this.data;
+    var self = this;
+    var startDate = this.data.startDate;
+    var endDate = this.data.endDate;
+    var prevRange = this.getPreviousMonthRange();
 
-      const data = await api.payrollSettlement.operatorSummary({
-          startTime: `${startDate} 00:00:00`,
-          endTime: `${endDate} 23:59:59`,
-          includeSettled: true,
-        });
+    return Promise.all([
+      api.payrollSettlement.operatorSummary({
+        startTime: startDate + ' 00:00:00',
+        endTime: endDate + ' 23:59:59',
+        includeSettled: true,
+      }),
+      api.payrollSettlement.operatorSummary({
+        startTime: prevRange.start + ' 00:00:00',
+        endTime: prevRange.end + ' 23:59:59',
+        includeSettled: true,
+      }).catch(function () { return []; }),
+    ]).then(function (results) {
+      var currentData = results[0];
+      var prevData = results[1];
 
-      if (Array.isArray(data)) {
-        this.processData(data);
+      if (Array.isArray(currentData)) {
+        var prevTotal = 0;
+        if (Array.isArray(prevData)) {
+          for (var i = 0; i < prevData.length; i++) {
+            prevTotal += Number(prevData[i].totalAmount) || 0;
+          }
+        }
+        self.processData(currentData, prevTotal);
       } else {
         toast.error('加载失败');
       }
-    } catch (error) {
+    }).catch(function (error) {
       console.error('加载工资数据失败:', error);
       toast.error(error.errMsg || error.message || '加载失败');
-    } finally {
-      this.setData({ loading: false });
-    }
+    }).then(function () {
+      self.setData({ loading: false });
+    });
   },
 
-  /**
-   * 处理数据
-   */
-  processData(data) {
-    const filterStart = this.data.startDate ? new Date(this.data.startDate + 'T00:00:00') : null;
-    const filterEnd = this.data.endDate ? new Date(this.data.endDate + 'T23:59:59') : null;
+  getPreviousMonthRange: function () {
+    // Dynamic: compute the previous period of same length as the selected range
+    var sParts = this.data.startDate.split('-');
+    var eParts = this.data.endDate.split('-');
+    var start = new Date(parseInt(sParts[0]), parseInt(sParts[1]) - 1, parseInt(sParts[2]));
+    var end = new Date(parseInt(eParts[0]), parseInt(eParts[1]) - 1, parseInt(eParts[2]));
+    var rangeMs = end.getTime() - start.getTime() + 86400000; // include end day
+    var prevEnd = new Date(start.getTime() - 86400000); // day before selected start
+    var prevStart = new Date(prevEnd.getTime() - rangeMs + 86400000);
+    function fmt(d) {
+      return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    }
+    return { start: fmt(prevStart), end: fmt(prevEnd) };
+  },
 
-    let totalAmount = 0;
-    let totalQuantity = 0;
-    const orderNoSet = new Set();
-    const records = [];
+  processData: function (data, prevTotal) {
+    var totalAmount = 0;
+    var pieceworkTotal = 0;
+    var bonusTotal = 0;
+    var records = [];
 
-    for (let i = 0; i < data.length; i++) {
-      const item = data[i];
+    for (var i = 0; i < data.length; i++) {
+      var item = data[i];
       if (!item.startTime) continue;
-      const time = parseDateSafe(item.startTime);
-      if ((filterStart && time < filterStart) || (filterEnd && time > filterEnd)) continue;
 
-      const amt = Number(item.totalAmount) || 0;
-      const qty = Number(item.quantity) || 0;
+      var amt = Number(item.totalAmount) || 0;
+      var qty = Number(item.quantity) || 0;
+      var unitPrice = Number(item.unitPrice) || 0;
+      var recordType = classifyRecordType(item);
+
       totalAmount += amt;
-      totalQuantity += qty;
-      if (item.orderNo) orderNoSet.add(item.orderNo);
+      if (recordType === 'bonus') {
+        bonusTotal += amt;
+      } else {
+        pieceworkTotal += amt;
+      }
+
+      var dateText = formatMonthDay(item.startTime);
+      var processTag = recordType === 'bonus'
+        ? '绩效奖金'
+        : (item.processName && item.processName !== '-' ? item.processName : _scanTypeText(item.scanType));
+      var productName = recordType === 'bonus'
+        ? '-'
+        : (item.styleNo && item.styleNo !== '-' ? item.styleNo : '-');
+      var orderNoText = item.orderNo || '-';
+      var calcText = recordType === 'bonus'
+        ? (qty + ' × ¥' + formatAmount(unitPrice))
+        : (qty + '件 × ¥' + formatAmount(unitPrice));
 
       records.push({
-        orderNo: item.orderNo || '-',
-        styleNo: item.styleNo || '-',
-        color: item.color || '-',
-        size: item.size || '-',
-        cuttingBundleNo: item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '',
-        processName: item.processName || '-',
-        operatorName: item.operatorName || '',
-        scanType: item.scanType || '',
-        scanTypeText: _scanTypeText(item.scanType),
-        delegateTargetType: item.delegateTargetType || '',
-        delegateTargetName: item.delegateTargetName || '',
-        actualOperatorName: item.actualOperatorName || '',
-        orderStatus: item.orderStatus || '',
-        orderStatusText: _orderStatusText(item.orderStatus),
-        paymentStatus: item.paymentStatus || '',
-        paymentStatusText: _paymentStatusText(item.paymentStatus),
-        settlementId: item.settlementId || '',
-        quantity: qty,
-        unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
-        totalAmount: amt.toFixed(2),
+        recordType: recordType,
+        processTag: processTag,
+        isBonus: recordType === 'bonus',
+        productName: productName,
+        metaText: orderNoText + ' · ' + dateText,
+        calcText: calcText,
+        totalAmount: formatAmount(amt),
         totalAmountNum: amt,
-        scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
         rawScanTime: item.startTime || '',
       });
     }
 
-    this._sortRecords(records);
+    // Sort by time descending (newest first)
+    records.sort(function (a, b) {
+      var ta = a.rawScanTime || '';
+      var tb = b.rawScanTime || '';
+      if (ta > tb) return -1;
+      if (ta < tb) return 1;
+      return 0;
+    });
 
-    let filteredTotalAmount = 0;
-    for (let i = 0; i < records.length; i++) {
-      filteredTotalAmount += records[i].totalAmountNum;
+    // Compute MoM (month-over-month)
+    var momText = '';
+    var momIsUp = true;
+    if (prevTotal > 0) {
+      var diff = ((totalAmount - prevTotal) / prevTotal) * 100;
+      momIsUp = diff >= 0;
+      momText = (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+    } else if (totalAmount > 0) {
+      momText = '新增';
+      momIsUp = true;
     }
 
     this.setData({
-      records,
-      filteredTotalAmount: filteredTotalAmount.toFixed(2),
-      summaryItems: [
-        { label: '本月总金额', value: '¥' + totalAmount.toFixed(2), highlight: true },
-        { label: '本月数量',   value: totalQuantity + ' 件' },
-        { label: '扫码次数',   value: records.length + ' 次' },
-        { label: '参与订单',   value: orderNoSet.size + ' 个' },
-      ],
-    });
+      records: records,
+      totalAmount: formatAmount(totalAmount),
+      pieceworkTotal: formatAmount(pieceworkTotal),
+      bonusTotal: formatAmount(bonusTotal),
+      momText: momText,
+      momIsUp: momIsUp,
+    }, function () {
+      this.applyTypeFilter();
+    }.bind(this));
   },
 
-  /**
-   * 排序记录（内部方法）
-   */
-  _sortRecords(records) {
-    const { sortField, sortOrder } = this.data;
-    const dir = sortOrder === 'desc' ? -1 : 1;
-    if (sortField === 'time') {
-      records.sort((a, b) => {
-        const ta = a.rawScanTime || '';
-        const tb = b.rawScanTime || '';
-        if (ta > tb) return -1 * dir;
-        if (ta < tb) return 1 * dir;
-        return 0;
-      });
-    } else {
-      records.sort((a, b) => dir * (b.totalAmountNum - a.totalAmountNum));
-    }
-  },
-
-  /**
-   * 切换排序字段（金额 / 时间）
-   */
-  toggleSort() {
-    const { sortField } = this.data;
-    const newField = sortField === 'amount' ? 'time' : 'amount';
-    this.setData({ sortField: newField, sortOrder: 'desc' }, () => {
-      const records = [...this.data.records];
-      this._sortRecords(records);
-      this.setData({ records });
-    });
-  },
-
-  /**
-   * 切换排序方向
-   */
-  toggleSortOrder() {
-    const newOrder = this.data.sortOrder === 'desc' ? 'asc' : 'desc';
-    this.setData({ sortOrder: newOrder }, () => {
-      const records = [...this.data.records];
-      this._sortRecords(records);
-      this.setData({ records });
-    });
-  },
-
-  goFeedback() {
-    safeNavigate({ url: '/pages/payroll/feedback/index' }).catch(() => {});
+  goFeedback: function () {
+    safeNavigate({ url: '/pages/payroll/feedback/index' }).catch(function () {});
   },
 });

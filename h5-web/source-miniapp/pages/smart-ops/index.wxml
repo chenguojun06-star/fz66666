@@ -206,7 +206,7 @@
     </view>
   </view>
 
-  <view class="section">
+  <view class="section" wx:if="{{false}}">
     <view class="card">
       <view class="card-header">
         <view class="live-dot-sm green"></view>

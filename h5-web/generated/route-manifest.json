@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T15:27:32.759Z",
+  "generatedAt": "2026-07-11T03:09:51.292Z",
   "tabBar": {
     "color": "#999999",
     "selectedColor": "#3b82f6",
@@ -192,12 +192,6 @@
       "packageName": "pkg-bundle-split"
     },
     {
-      "source": "pages/cutting/task-list/index",
-      "h5Path": "/cutting/task-list",
-      "type": "subpackage",
-      "packageName": "pkg-cutting"
-    },
-    {
       "source": "pages/cutting/bundle-detail/index",
       "h5Path": "/cutting/bundle-detail",
       "type": "subpackage",
@@ -270,6 +264,12 @@
       "packageName": "pkg-dashboard"
     },
     {
+      "source": "pages/dashboard/process-template/index",
+      "h5Path": "/dashboard/process-template",
+      "type": "subpackage",
+      "packageName": "pkg-dashboard"
+    },
+    {
       "source": "pages/smart-ops/index",
       "h5Path": "/smart-ops",
       "type": "subpackage",
@@ -334,6 +334,30 @@
       "h5Path": "/sample-development/detail",
       "type": "subpackage",
       "packageName": "pkg-sample-dev"
+    },
+    {
+      "source": "pages/sales/overview/index",
+      "h5Path": "/sales/overview",
+      "type": "subpackage",
+      "packageName": "pkg-sales"
+    },
+    {
+      "source": "pages/sales/order-list/index",
+      "h5Path": "/sales/order-list",
+      "type": "subpackage",
+      "packageName": "pkg-sales"
+    },
+    {
+      "source": "pages/return/list/index",
+      "h5Path": "/return/list",
+      "type": "subpackage",
+      "packageName": "pkg-return"
+    },
+    {
+      "source": "pages/return/detail/index",
+      "h5Path": "/return/detail",
+      "type": "subpackage",
+      "packageName": "pkg-return"
     }
   ]
 }

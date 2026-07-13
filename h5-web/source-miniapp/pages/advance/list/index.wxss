@@ -91,8 +91,8 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .card-header {

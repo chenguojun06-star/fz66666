@@ -1,0 +1,47 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-home", "page-new-task", "page-stats"],
+    "output": null,
+    "sharedRegions": [],
+    "privateRegions": ["full page content for each page"],
+    "mutableSlots": [],
+    "status": "generated",
+    "children": [
+      {
+        "nodeId": "gen-page-home",
+        "kind": "page-leaf",
+        "pageIds": ["page-home"],
+        "output": "pages/home.html",
+        "sharedRegions": [],
+        "privateRegions": ["entire page — calendar todo home screen"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-new-task",
+        "kind": "page-leaf",
+        "pageIds": ["page-new-task"],
+        "output": "pages/new-task.html",
+        "sharedRegions": [],
+        "privateRegions": ["entire page — new task editor screen"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-stats",
+        "kind": "page-leaf",
+        "pageIds": ["page-stats"],
+        "output": "pages/stats.html",
+        "sharedRegions": [],
+        "privateRegions": ["entire page — task statistics screen"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      }
+    ]
+  }
+}

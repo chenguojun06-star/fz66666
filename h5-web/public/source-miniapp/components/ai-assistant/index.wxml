@@ -28,7 +28,7 @@
     <view class="chat-header">
       <view class="header-tabs">
         <view class="tab-item {{currentTab === 'chat' ? 'active' : ''}}" catchtap="switchTab" data-tab="chat">
-          <text>☁️ 小云帮助中心</text>
+          <view class="line-icon line-icon--sm icon-dashboard"></view><text>帮助中心</text>
         </view>
         <view class="tab-item {{currentTab === 'tasks' ? 'active' : ''}}" catchtap="switchTab" data-tab="tasks">
           <view class="line-icon line-icon--sm icon-clipboard"></view><text>待办任务</text>
@@ -72,7 +72,7 @@
             <view class="chat-cloud-eye chat-cloud-eye-right"><view class="chat-cloud-eye-dot"></view></view>
             <view class="chat-cloud-smile"></view>
           </view>
-          <text class="ai-empty-title">小云 AI 助手</text>
+          <text class="ai-empty-title">智能助手</text>
           <text class="ai-empty-sub">随时问我生产、订单、工资的任何问题</text>
         </view>
 
@@ -289,7 +289,7 @@
           </view>
         </block>
         <view class="loading-indicator" wx:if="{{isLoading}}">
-          <text class="loading-hint-text">小云正在思考，你可以继续输入下一个问题…</text>
+          <text class="loading-hint-text">正在思考，你可以继续输入下一个问题…</text>
         </view>
       </scroll-view>
     </view>

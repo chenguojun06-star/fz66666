@@ -1,7 +1,5 @@
 {
   "navigationBarTitleText": "平台订单",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black",
   "backgroundColor": "#f5f6f8",
   "enablePullDownRefresh": true,
   "usingComponents": {}

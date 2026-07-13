@@ -1,10 +1,11 @@
 /* ===== 扫码区（一行布局） ===== */
 .scan-area-big {
   background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-xl);
   padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .scan-row {
   display: flex;
@@ -109,7 +110,7 @@
   padding: 4px 14px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   background: var(--color-bg-light);
   color: var(--color-text-primary);
 }

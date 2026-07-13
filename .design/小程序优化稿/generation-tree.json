@@ -1,0 +1,47 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-home", "page-dashboard", "page-scan"],
+    "output": null,
+    "sharedRegions": [],
+    "privateRegions": ["full page content for each page"],
+    "mutableSlots": [],
+    "status": "generated",
+    "children": [
+      {
+        "nodeId": "gen-page-home",
+        "kind": "page-leaf",
+        "pageIds": ["page-home"],
+        "output": "pages/home.html",
+        "sharedRegions": [],
+        "privateRegions": ["entire page — redesigned home screen"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-dashboard",
+        "kind": "page-leaf",
+        "pageIds": ["page-dashboard"],
+        "output": "pages/dashboard.html",
+        "sharedRegions": [],
+        "privateRegions": ["entire page — redesigned production dashboard screen"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-scan",
+        "kind": "page-leaf",
+        "pageIds": ["page-scan"],
+        "output": "pages/scan.html",
+        "sharedRegions": [],
+        "privateRegions": ["entire page — redesigned scan screen"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      }
+    ]
+  }
+}

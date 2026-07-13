@@ -49,7 +49,7 @@
   flex: 1;
   text-align: center;
   padding: 12px 4px;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: var(--color-bg-card);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
@@ -94,7 +94,7 @@
   flex-direction: column;
   align-items: center;
   padding: 7px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: var(--color-bg-card);
   margin-right: 8px;
   min-width: 52px;

@@ -59,16 +59,19 @@ class ScanSubmitter {
     try {
       let precheckHint = '';
       try {
-        const precheckResp = await this.api.intelligence?.precheckScan?.({
-          orderId: scanData?.orderId,
-          orderNo: scanData?.orderNo,
-          stageName: scanData?.progressStage,
-          processName: scanData?.processName,
-          quantity: Number(scanData?.quantity) || 0,
-          operatorId: scanData?.operatorId,
-          operatorName: scanData?.operatorName,
-        });
-        const issues = Array.isArray(precheckResp?.issues) ? precheckResp.issues : [];
+        let precheckResp = null;
+        if (this.api.intelligence && typeof this.api.intelligence.precheckScan === 'function') {
+          precheckResp = await this.api.intelligence.precheckScan({
+            orderId: scanData && scanData.orderId,
+            orderNo: scanData && scanData.orderNo,
+            stageName: scanData && scanData.progressStage,
+            processName: scanData && scanData.processName,
+            quantity: Number(scanData && scanData.quantity) || 0,
+            operatorId: scanData && scanData.operatorId,
+            operatorName: scanData && scanData.operatorName,
+          });
+        }
+        const issues = Array.isArray(precheckResp && precheckResp.issues) ? precheckResp.issues : [];
         if (issues.length > 0) {
           const first = issues[0] || {};
           precheckHint = String(first.title || first.reason || first.suggestion || '').trim();
@@ -95,7 +98,7 @@ class ScanSubmitter {
       } else {
         return {
           success: false,
-          message: res?.message || '提交失败',
+          message: (res && res.message) || '提交失败',
         };
       }
     } catch (e) {
@@ -146,7 +149,7 @@ class ScanSubmitter {
 
     return {
       success: true,
-      message: this.buildSuccessMessage(scanMode, scanData, stageResult, submitResult.data?.precheckHint),
+      message: this.buildSuccessMessage(scanMode, scanData, stageResult, submitResult.data && submitResult.data.precheckHint),
       data: {
         scanMode,
         orderNo: parsedData.orderNo,
@@ -155,7 +158,7 @@ class ScanSubmitter {
         processName: stageResult.processName,
         progressStage: stageResult.progressStage,
         scanType: stageResult.scanType,
-        scanId: submitResult.data?.scanId,
+        scanId: submitResult.data && submitResult.data.scanId,
       },
     };
   }

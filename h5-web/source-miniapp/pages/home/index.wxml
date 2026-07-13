@@ -1,56 +1,85 @@
 <view class="page">
-  <view class="header">
-    <view class="greeting-name" style="height: 41rpx; display: block; box-sizing: border-box">{{userName}}，{{greeting}}</view>
-    <view class="greeting-sub" style="height: 41rpx; display: block; box-sizing: border-box; position: relative; left: 0rpx; top: -8rpx">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
+  <wxs module="utils">
+    module.exports = {
+      firstChar: function(s) {
+        if (!s) return '用';
+        return s.charAt(0);
+      },
+      fullDate: function(dateStr, dayStr) {
+        var now = getDate();
+        var y = now.getFullYear();
+        return y + '年' + dateStr + ' ' + dayStr;
+      }
+    };
+  </wxs>
+
+  <!-- 问候卡片 -->
+  <view class="greeting-card">
+    <view class="greeting-avatar">
+      <text class="greeting-avatar-text">{{utils.firstChar(userName)}}</text>
+    </view>
+    <view class="greeting-info">
+      <text class="greeting-title">{{greeting}}，{{userName}}</text>
+      <text class="greeting-org">{{orgName || '衣智链'}}</text>
+      <text class="greeting-date">{{utils.fullDate(dateInfo.date, dateInfo.day)}}</text>
+    </view>
   </view>
 
-  <view class="weather-card">
-    <view class="weather-top">
-      <view class="weather-left">
-        <view class="weather-temp-wrap">
-          <text class="weather-temp">{{dateInfo.date}}</text>
-          <text class="weather-desc">{{dateInfo.day}}</text>
-        </view>
-      </view>
-      <text class="weather-season">{{dateInfo.season}}</text>
+  <!-- 今日小贴士 -->
+  <view class="tip-card" wx:if="{{dateInfo.dailyTip}}">
+    <view class="tip-icon-circle">
+      <view class="line-icon line-icon--sm icon-lightbulb"></view>
     </view>
-    <view class="weather-tip">{{dateInfo.dailyTip}}</view>
+    <view class="tip-content">
+      <text class="tip-title">今日小贴士</text>
+      <text class="tip-text">{{dateInfo.dailyTip}}</text>
+    </view>
   </view>
 
   <!-- 常用应用 -->
-  <view class="menu-section">
-    <view class="section-header">
-      <text class="section-title">常用应用</text>
-      <text class="section-more" bindtap="onMoreAppsTap">管理</text>
-    </view>
-    
-    <view class="menu-grid">
-      <view 
-        class="menu-item {{draggingIndex === index ? 'menu-item--dragging' : ''}}" 
-        wx:for="{{favoriteApps}}" 
-        wx:key="id" 
-        bindtap="onFavoriteTap" 
+  <view class="apps-card">
+    <view class="apps-grid">
+      <view
+        class="app-item {{draggingIndex === index ? 'app-item--dragging' : ''}}"
+        wx:for="{{favoriteApps}}"
+        wx:key="id"
+        bindtap="onFavoriteTap"
         data-index="{{index}}"
-        data-app="{{item}}"
+        data-id="{{item.id}}"
+        data-route="{{item.route}}"
         bindtouchstart="onTouchStart"
         bindtouchmove="onTouchMove"
         bindtouchend="onTouchEnd"
-        hover-class="menu-item-hover" 
+        hover-class="app-item-hover"
         hover-stay-time="100"
       >
-        <view class="menu-icon-circle {{item.circleClass}}">
+        <view class="app-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
-          <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
+          <text wx:if="{{item.badge}}" class="app-badge">{{item.badge}}</text>
         </view>
-        <text class="menu-name">{{item.name}}</text>
+        <text class="app-name">{{item.name}}</text>
+      </view>
+
+      <!-- 8. 更多应用（与收藏应用同网格，第8项） -->
+      <view
+        class="app-item"
+        bindtap="onMoreAppsTap"
+        hover-class="app-item-hover"
+        hover-stay-time="100"
+      >
+        <view class="app-icon-circle menu-icon-circle--gray">
+          <view class="line-icon line-icon--lg icon-app-more"></view>
+        </view>
+        <text class="app-name">更多应用</text>
       </view>
     </view>
-    
+
     <view class="empty-hint" wx:if="{{favoriteApps.length === 0}}">
-      <text class="empty-icon">📱</text>
-      <text class="empty-text">还没有添加常用应用，点击「管理」添加吧</text>
+      <view class="line-icon line-icon--lg icon-mobile"></view>
+      <text class="empty-text">还没有添加常用应用，点击「更多应用」添加吧</text>
     </view>
   </view>
 
-  <ai-assistant id="homeAiAssistant" notice-count="{{unreadNoticeCount}}" />
+  <!-- 小云AI助手 -->
+  <ai-assistant />
 </view>

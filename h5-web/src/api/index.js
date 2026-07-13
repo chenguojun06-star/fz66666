@@ -45,11 +45,11 @@ const production = {
   confirmReturnPurchase: (payload) => http.post('/api/production/purchase/return-confirm', payload),
   resetReturnConfirm: (payload) => http.post('/api/production/purchase/return-confirm/reset', payload),
   confirmProcurementComplete: (payload) => http.post('/api/production/order/confirm-procurement', payload),
-  myCuttingTasks: () => http.get('/api/production/cutting-task/list', { params: { myTasks: 'true' } }),
+  myCuttingTasks: () => http.get('/api/production/cutting-task', { params: { myTasks: 'true' } }),
   myQualityTasks: () => http.get('/api/production/scan/my-quality-tasks'),
   myRepairTasks: () => http.get('/api/production/warehousing/pending-repair-tasks'),
   receiveCuttingTaskById: (taskId, receiverId, receiverName) => http.post('/api/production/cutting-task/receive', { taskId, receiverId, receiverName }),
-  getCuttingTaskByOrderId: (orderIdOrNo) => http.get('/api/production/cutting-task/list', { params: { orderNo: orderIdOrNo, pageSize: 1 } }),
+  getCuttingTaskByOrderId: (orderIdOrNo) => http.get('/api/production/cutting-task', { params: { orderNo: orderIdOrNo, pageSize: 1 } }),
   getCuttingBundle: (orderNo, bundleNo) => http.get('/api/production/cutting/list', { params: { orderNo, bundleNo } }),
   generateCuttingBundles: (orderId, bundles) => http.post('/api/production/cutting/generate', { orderId, bundles }),
   listBundles: (orderNo, page = 1, pageSize = 100) => http.get('/api/production/cutting/list', { params: { orderNo, page, pageSize } }),
@@ -261,9 +261,9 @@ const intelligence = {
   getMaterialShortage: () => http.get('/api/intelligence/material-shortage'),
   runSelfHealing: (payload) => http.post('/api/intelligence/self-healing', payload || {}),
   feedback: (payload) => http.post('/api/intelligence/feedback', payload || {}),
-  hyperAdvisorAsk: (payload) => http.post('/api/intelligence/hyper-advisor/ask', payload || {}),
-  getAgentTrace: (commandId) => http.get(`/api/intelligence/agent-trace/${encodeURIComponent(commandId)}`),
-  getRecentTraces: () => http.get('/api/intelligence/agent-trace/recent'),
+  hyperAdvisorAsk: (payload) => http.post('/api/hyper-advisor/ask', payload || {}),
+  getAgentTrace: (commandId) => http.get(`/api/intelligence/ai-agent/traces/${encodeURIComponent(commandId)}`),
+  getRecentTraces: () => http.get('/api/intelligence/ai-agent/traces/recent'),
   ttsSpeak: (payload) => {
     const token = useAuthStore.getState().token;
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
@@ -331,8 +331,8 @@ const style = {
   getQuotation: (params) => http.get('/api/style/quotation', { params: params || {} }),
   getStyleDetail: (id) => http.get(`/api/style/info/${encodeURIComponent(id)}`),
   createStyle: (payload) => http.post('/api/style/info', payload),
-  updateStyle: (id, payload) => http.put(`/api/style/info/${encodeURIComponent(id)}`, payload),
-  deleteStyle: (id) => http.delete(`/api/style/info/${encodeURIComponent(id)}`),
+  updateStyle: (id, payload) => http.put('/api/style/info', { ...payload, id }),
+  deleteStyle: (id) => http.post(`/api/style/info/${encodeURIComponent(id)}/scrap`),
   listStyleAttachments: (styleId) => http.get('/api/style/attachment/list', { params: { styleId } }),
   uploadStyleAttachment: (payload) => http.post('/api/style/attachment/upload', payload),
   deleteStyleAttachment: (id) => http.delete(`/api/style/attachment/${encodeURIComponent(id)}`),
@@ -340,7 +340,7 @@ const style = {
   sampleReview: (id, payload) => http.post(`/api/style/info/${encodeURIComponent(id)}/sample-review`, payload || {}),
   copyStyle: (id) => http.post(`/api/style/info/${encodeURIComponent(id)}/copy`),
   stageAction: (id, stage, action) => http.post(`/api/style/info/${encodeURIComponent(id)}/stage-action?stage=${encodeURIComponent(stage)}&action=${encodeURIComponent(action)}`),
-  getDevelopmentStats: (params) => http.get('/api/style/info/stats/development', { params: params || {} }),
+  getDevelopmentStats: (params) => http.get('/api/style/info/development-stats', { params: params || {} }),
   listProcesses: (styleId) => http.get('/api/style/process/list', { params: { styleId } }),
   listSizePrices: (styleId) => http.get('/api/style/size-price/list', { params: { styleId } }),
   batchSaveSizePrices: (payload) => http.post('/api/style/size-price/batch-save', payload),
@@ -354,17 +354,17 @@ const warehouse = {
 
 const material = {
   listStockAlerts: (params) => http.get('/api/production/material/stock/alerts', { params: params || {} }),
-  listBatchDetails: (params) => http.get('/api/production/material/stock/batch-details', { params: params || {} }),
+  listBatchDetails: (params) => http.get('/api/production/material/stock/batches', { params: params || {} }),
   listPurchaseRecords: (params) => http.get('/api/production/purchase/list', { params: params || {} }),
 };
 
 const materialRoll = {
   scan: (data) => http.post('/api/production/material/roll/scan', data),
-  listByInbound: (params) => http.get('/api/production/material/roll/search', { params: params || {} }),
+  listByInbound: (params) => http.post('/api/production/material/roll/list', params || {}),
 };
 
 const orderManagement = {
-  createFromStyle: (data) => http.post('/api/production/order/create-from-style', data),
+  createFromStyle: (data) => http.post('/api/order-management/create-from-style', data),
 };
 
 const sampleStock = {

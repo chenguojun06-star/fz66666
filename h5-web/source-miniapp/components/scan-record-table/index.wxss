@@ -82,9 +82,9 @@
   align-self: flex-start;
 }
 
-.srt-type-样衣 {
-  background: #fff3e0;
-  color: #e65100;
+.srt-type-pattern {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
 .srt-th-bundle,

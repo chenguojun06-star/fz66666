@@ -6,22 +6,24 @@
     <!-- 搜索栏 -->
     <view class="search-bar">
       <view class="search-box">
-        <text class="search-icon">🔍</text>
-        <input 
-          class="search-input" 
-          placeholder="搜索款号/颜色/尺码" 
-          value="{{searchKeyword}}" 
+        <text class="line-icon icon-search search-icon"></text>
+        <input
+          class="search-input"
+          placeholder="搜索款号/颜色/尺码"
+          value="{{searchKeyword}}"
           bindinput="onSearchInput"
           bindconfirm="onSearchConfirm"
         />
-        <text class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">✕</text>
+        <view class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">
+          <view class="icon-close"></view>
+        </view>
       </view>
     </view>
     
     <!-- 操作按钮 -->
     <view class="action-bar">
       <view class="btn-scan" bindtap="onScanCode">
-        <text class="btn-icon">📷</text>
+        <text class="btn-icon"><text class="line-icon icon-camera"></text></text>
         <text class="btn-text">扫码</text>
       </view>
     </view>
@@ -39,7 +41,7 @@
       </view>
       
       <view wx:elif="{{stockList.length === 0}}" class="empty-wrap">
-        <text class="empty-icon">👕</text>
+        <text class="empty-icon"><text class="line-icon line-icon--lg icon-shirt"></text></text>
         <text class="empty-text">暂无样衣库存</text>
       </view>
       
@@ -53,7 +55,7 @@
       >
         <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" lazy-load mode="aspectFill" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
         <view wx:else class="stock-thumb-placeholder">
-          <text>👕</text>
+          <text><text class="line-icon icon-shirt"></text></text>
         </view>
         <view class="stock-info">
           <view class="stock-row">
@@ -203,7 +205,7 @@
       <!-- 借调记录 -->
       <view class="info-card" wx:if="{{stockInfo.activeLoans && stockInfo.activeLoans.length > 0}}">
         <view class="info-row">
-          <text class="info-label bold" style="width:auto">当前借调记录</text>
+          <text class="info-label info-label--wide">当前借调记录</text>
         </view>
         <view class="loan-item" wx:for="{{stockInfo.activeLoans}}" wx:key="id">
           <view class="info-row">
@@ -264,7 +266,7 @@
           />
           
           <!-- 库位选择 -->
-          <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">入库库位：</view>
+          <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label warehouse-label--mt">入库库位：</view>
           <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-option-row">
             <view
               wx:for="{{locationOptions}}"

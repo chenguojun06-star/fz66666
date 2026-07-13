@@ -1,93 +1,107 @@
 .location-scan-page {
-  padding: 16px;
-  background: #f5f5f5;
   min-height: 100vh;
+  padding: var(--spacing-sm) var(--page-padding-x);
+  background: var(--color-bg-page);
 }
 
 .header {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 12px;
   text-align: center;
+  margin-bottom: var(--spacing-lg);
 }
 
 .location-code {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1677ff;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
 }
 
 .zone-name {
-  font-size: 14px;
-  color: #666;
-  margin-top: 4px;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
 }
 
 .loading-container,
 .error-container,
 .empty-container {
-  text-align: center;
-  padding: 40px 16px;
-  color: #999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
 }
 
 .error-container button {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .info-card {
-  background: #fff;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .info-row {
   display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
+  align-items: center;
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.info-row .label {
-  color: #666;
-  font-size: 14px;
+.info-row:last-child {
+  border-bottom: none;
 }
 
-.info-row .value {
-  color: #333;
-  font-size: 14px;
-  font-weight: 500;
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.value {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  flex: 1;
 }
 
 .items-list {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .list-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  justify-content: space-between;
-}
-
-.list-header text:first-child {
-  font-weight: 500;
-  color: #333;
-}
-
-.list-header .count {
-  color: #1677ff;
-  font-size: 14px;
-}
-
-.item-row {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.list-header .count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .item-row:last-child {
@@ -99,35 +113,31 @@
 }
 
 .style-no {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  display: block;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  margin-bottom: 3px;
 }
 
 .tags {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tag {
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-light);
+  color: var(--color-text-secondary);
 }
 
-.tag.color {
-  background: #e6f7ff;
-  color: #1890ff;
+.item-qty {
+  text-align: right;
 }
 
-.tag.size {
-  background: #f0f0f0;
-  color: #666;
-}
-
-.item-qty .qty {
-  font-size: 16px;
-  font-weight: 700;
-  color: #52c41a;
+.qty {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
 }

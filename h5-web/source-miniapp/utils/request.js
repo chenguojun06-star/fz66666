@@ -567,7 +567,9 @@ function uploadFile(options) {
           }
 
           if (statusCode === 200 && body.code === 200) {
-            const fileUrl = body.data?.url || body.data?.fileUrl || body.data;
+            // P0 修复：?. 可选链在 ES5 下报错，改用显式守卫
+            var _d = body.data || {};
+            const fileUrl = _d.url || _d.fileUrl || body.data;
             if (fileUrl) {
               resolve(fileUrl);
             } else {

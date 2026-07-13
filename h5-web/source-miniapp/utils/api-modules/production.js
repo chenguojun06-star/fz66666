@@ -74,6 +74,12 @@ const production = {
   listWarehousing(params) {
     return ok('/api/production/warehousing/list', 'GET', params || {});
   },
+  warehousingStats(params) {
+    return ok('/api/production/warehousing/stats', 'GET', params || {});
+  },
+  pendingBundles(status) {
+    return ok('/api/production/warehousing/pending-bundles', 'GET', { status: status });
+  },
   saveWarehousing(payload) {
     return ok('/api/production/warehousing', 'POST', payload || {});
   },
@@ -149,6 +155,7 @@ const production = {
     return ok('/api/production/order/confirm-procurement', 'POST', payload || {});
   },
   myCuttingTasks() {
+    // P0 修复：后端 CuttingTaskController @GetMapping 无路径（根路径），原前端误加 /list
     return ok('/api/production/cutting-task', 'GET', { myTasks: 'true' });
   },
   myQualityTasks() {
@@ -176,6 +183,7 @@ const production = {
     return ok('/api/production/cutting-task/receive', 'POST', { taskId, receiverId, receiverName });
   },
   getCuttingTaskByOrderId(orderIdOrNo) {
+    // P0 修复：后端 @GetMapping 无路径（根路径），原前端误加 /list
     return ok('/api/production/cutting-task', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
   },
   listBundles(orderNo, page = 1, pageSize = 100) {
@@ -242,6 +250,16 @@ const production = {
   getPatternScanRecords(patternId) {
     const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/scan-records`, 'GET', {});
+  },
+  /**
+   * 撤销样衣扫码记录（与 PC 端 useSampleScanRecords.undoScanRecord 一致）
+   * 后端：DELETE /api/production/pattern/{patternId}/scan-records/{scanRecordId}
+   * 30 分钟内可撤销（前端校验，后端也会校验）
+   */
+  undoPatternScanRecord(patternId, scanRecordId) {
+    const pid = _normalizePatternId(patternId);
+    const sid = String(scanRecordId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(pid)}/scan-records/${encodeURIComponent(sid)}`, 'DELETE', {});
   },
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
@@ -333,6 +351,13 @@ const production = {
   },
   batchSaveSizePrices(payload) {
     return ok('/api/style/size-price/batch-save', 'POST', payload || {});
+  },
+  /**
+   * 获取生产制单（工艺单）完整数据，与 PC 端 StyleProductionTab 一致
+   */
+  getProductionSheet(styleId) {
+    const id = String(styleId || '').trim();
+    return ok('/api/data-center/production-sheet', 'GET', { styleId: id });
   },
 
   listOrderRemarks(targetType, targetNo) {

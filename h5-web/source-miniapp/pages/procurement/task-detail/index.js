@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const permission = require('../../../utils/permission');
 
 const MATERIAL_TYPE_MAP = {
@@ -49,6 +50,11 @@ Page({
     } else if (this.orderNo) {
       this._loadDetail();
     }
+    bindPageEvents(this, () => this._loadDetail(), ['TASK_RECEIVED', 'TASK_RETURNED']);
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onShow() {
@@ -100,7 +106,7 @@ Page({
 
         return {
           ...item,
-          _status: status,  // 保留标准化后的状态用于整体判断
+          _status: status,
           materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
           statusText: this._getStatusText(status),
           statusColor: this._getStatusColor(status),
@@ -311,20 +317,47 @@ Page({
       return;
     }
 
-    const { orderId, orderNo, overallArrivalRate } = this.data;
+    const { orderId, orderNo, materialPurchases, overallArrivalRate } = this.data;
     if (!orderNo) return;
 
-    // 砍掉弹窗，直接执行（备注从页面输入框取）
     wx.showLoading({ title: '确认中...', mask: true });
     try {
       const remark = (this.data.remark || '').trim();
+
+      // ① 先逐条调用采购单级 confirm-complete（与 PC 端一致）
+      //    将 awaiting_confirm / partial 状态的采购单推进到 completed
+      const confirmableItems = materialPurchases.filter(m => {
+        const s = m._status || m.status || '';
+        return s !== 'completed' && s !== 'cancelled';
+      });
+      let successCount = 0;
+      let failCount = 0;
+      for (const item of confirmableItems) {
+        try {
+          await api.production.confirmPurchaseComplete({
+            purchaseId: item.id || item.purchaseId,
+          });
+          successCount++;
+        } catch (err) {
+          // 单条失败不阻断，继续处理其他
+          failCount++;
+          console.warn('confirmPurchaseComplete failed:', item.id, err);
+        }
+      }
+
+      // ② 再调用订单级 confirm-procurement，流转采购→裁剪阶段
       await api.production.confirmProcurementComplete({
         id: orderId,
         orderNo,
         remark,
       });
+
       wx.hideLoading();
-      toast.success('采购阶段已完成，已流转到裁剪');
+      let msg = '采购阶段已完成，已流转到裁剪';
+      if (failCount > 0) {
+        msg += `（${successCount}项成功，${failCount}项跳过）`;
+      }
+      toast.success(msg);
       triggerDataRefresh('procurement');
       setTimeout(() => wx.navigateBack(), 1000);
     } catch (err) {

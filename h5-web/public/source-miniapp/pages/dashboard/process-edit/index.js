@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 const STAGE_MAP = [
   { id: 'procurement', name: '采购' },
@@ -57,6 +58,7 @@ Page({
       wx.showToast({ title: '缺少订单ID', icon: 'none' });
     }
     this._loadDictData();
+    bindPageEvents(this, () => {}, [Events.ORDER_PROGRESS_CHANGED]);
   },
 
   onShow: function () {
@@ -68,6 +70,7 @@ Page({
   },
 
   onUnload: function () {
+    unbindPageEvents(this);
     this._unbindKeyboardEvents();
   },
 
@@ -159,7 +162,7 @@ Page({
         const subList = processesByNode[stageKey];
         if (!Array.isArray(subList)) return;
         subList.forEach(function (n, i) {
-          const code = n.processCode || String(i + 1).padStart(2, '0');
+          const code = n.processCode || ('0' + (i + 1)).slice(-2);
           result.push({
             id: n.id || ('proc_' + stageKey + '_' + i),
             processName: n.name || n.processName || '',
@@ -181,7 +184,7 @@ Page({
 
     const nodes = (wf && wf.nodes) || [];
     return nodes.map(function (n, i) {
-      const code = n.processCode || String(i + 1).padStart(2, '0');
+      const code = n.processCode || ('0' + (i + 1)).slice(-2);
       return {
         id: n.id || ('proc_' + i),
         processName: n.name || '',
@@ -548,7 +551,7 @@ Page({
             nodes.push({
               id: String(p.id).startsWith('new_') ? 'proc_' + sortOrder : p.id,
               name: p.processName,
-              processCode: p.processCode || String(sortOrder + 1).padStart(2, '0'),
+              processCode: p.processCode || ('0' + (sortOrder + 1)).slice(-2),
               progressStage: p.progressStage || stageDef.id,
               machineType: p.machineType || '',
               standardTime: p.standardTime || 0,

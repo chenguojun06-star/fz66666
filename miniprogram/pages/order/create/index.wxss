@@ -5,12 +5,13 @@ page {
 .tab-bar {
   display: flex;
   background: var(--color-bg-card);
-  padding: 0 4px;
-  margin: 0 var(--page-padding-x) 12px;
-  border-radius: var(--radius-md);
+  padding: 0 var(--spacing-xs);
+  margin: 0 var(--page-padding-x) var(--card-gap);
+  border-radius: var(--radius-card);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+  box-shadow: var(--shadow-card);
 }
 
 .tab-item {
@@ -59,13 +60,13 @@ page {
 }
 
 .card {
-  width: calc(50% - 6px);
-  margin: 0 12px 12px 0;
+  width: calc(50% - var(--spacing-xs));
+  margin: 0 var(--card-gap) var(--card-gap) 0;
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   overflow: hidden;
   box-sizing: border-box;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .card:nth-child(2n) {

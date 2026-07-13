@@ -11,9 +11,9 @@ page {
   margin: 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
   padding: var(--spacing-md);
 }
 
@@ -87,10 +87,10 @@ page {
 
 .defect-card {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .defect-card-urgent {

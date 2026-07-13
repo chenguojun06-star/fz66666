@@ -5,6 +5,17 @@
 
 ## 已完成
 
+### 2026-07-12 样衣开发阶段详情数据打通 + H5 三端同步
+
+- [x] 小程序 `stage-detail/index.js` 工艺单/尺寸表/工序配置/码数单价改为调用 PC 端同款 API
+- [x] 尺码表按部位×尺码矩阵展示
+- [x] 工序配置优先 `styleApi.listProcesses` + 兜底 `patternProcessConfig`
+- [x] 生产制单调用 `production.getProductionSheet` 展示完整 BOM/尺码/款式信息
+- [x] 码数单价调用 `production.listSizePrices` 按工序×尺码矩阵展示
+- [x] H5 `source-miniapp` + `public/source-miniapp` 三份拷贝与小程序完全一致
+- [x] H5 `public/source-miniapp/utils/api-modules/production.js` 补充 `getProductionSheet`
+- [x] JS 语法检查通过；无新增 `?.` / `padStart`；硬编码颜色未新增
+
 ### 2026-07-10 小程序/UI/性能/扫码全量优化日
 
 - [x] iOS 日期格式兼容 + 样衣扫码脱离大货菲号系统

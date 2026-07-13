@@ -12,33 +12,13 @@ page {
   padding: var(--page-padding-x);
 }
 
-/* ===== 搜索栏（从 app.wxss 按需引入） ===== */
+/* ===== 搜索栏：search-row 布局保留，search-box/icon/input 使用 app.wxss 全局样式 ===== */
 .search-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-sm);
-}
-.search-icon {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-.search-input {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  width: 100%;
-  padding: 4px 0;
-  min-height: 24px;
-}
+
 .search-btn {
   padding: 8px 16px;
   font-size: var(--font-size-base);
@@ -75,7 +55,7 @@ page {
   background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .mode-tab {
   flex: 1;
@@ -100,7 +80,7 @@ page {
   padding: 14px;
   margin: 0 0 10px;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-md);
 }
 .month-arrow {

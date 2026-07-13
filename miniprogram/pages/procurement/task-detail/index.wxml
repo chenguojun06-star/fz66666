@@ -14,13 +14,19 @@
 
     <!-- ════════════ ① 基础信息卡 ════════════ -->
     <view class="section-card header-card">
-      <view class="header-top">
-        <text class="order-no">{{orderNo}}</text>
-        <text class="style-no">{{styleNo}}</text>
-      </view>
-      <view class="header-summary">
-        <text class="summary-count">共 {{materialPurchases.length}} 项</text>
-        <text class="summary-rate" wx:if="{{overallArrivalRate >= 0}}">到货率 {{overallArrivalRate}}%</text>
+      <image wx:if="{{styleCoverUrl}}" src="{{styleCoverUrl}}" mode="aspectFill" class="garment-thumb" />
+      <view class="header-info">
+        <view class="header-top">
+          <view class="header-title-wrap">
+            <text class="order-no">{{orderNo}}</text>
+            <text class="style-no">{{styleNo}}</text>
+          </view>
+          <text class="status-tag tag tag-processing">{{statusText || '采购中'}}</text>
+        </view>
+        <view class="header-summary">
+          <text class="summary-count">共 {{materialPurchases.length}} 项</text>
+          <text class="summary-rate" wx:if="{{overallArrivalRate >= 0}}">到货率 {{overallArrivalRate}}%</text>
+        </view>
       </view>
     </view>
 
@@ -52,13 +58,6 @@
     <view class="overall-progress-wrap" wx:if="{{overallArrivalRate >= 0}}">
       <view class="overall-progress-bar">
         <view class="overall-progress-fill" style="width: {{overallArrivalRate > 100 ? 100 : overallArrivalRate}}%"></view>
-      </view>
-    </view>
-
-    <!-- ════════════ ③ 操作区 ════════════ -->
-    <view class="action-section" wx:if="{{canConfirmProcurement && !hasReturnConfirmed}}">
-      <view class="btn-confirm-procurement" bindtap="onConfirmProcurement">
-        <text>确认回料完成</text>
       </view>
     </view>
 

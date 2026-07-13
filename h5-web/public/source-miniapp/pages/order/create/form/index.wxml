@@ -189,7 +189,7 @@
       <ext-fields mode="form" fields="{{extFields}}" data="{{}}" customOnly="{{true}}" bindchange="onExtFieldsChange" />
     </view>
 
-    <view style="height:80px;"></view>
+    <view class="bottom-spacer"></view>
   </scroll-view>
 
   <view class="bar">

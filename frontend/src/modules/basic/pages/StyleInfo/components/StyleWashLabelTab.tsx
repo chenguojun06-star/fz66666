@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Input, InputNumber, Space, Form } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
-import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, RollbackOutlined, LockOutlined } from '@ant-design/icons';
+import { App, Button, Input, InputNumber, Space } from 'antd';
+import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, CloseOutlined, LockOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import CompositionPartsEditor from './CompositionPartsEditor';
 import CareIconSelector from './CareIconSelector';
@@ -60,9 +59,6 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [rollbackOpen, setRollbackOpen] = useState(false);
-  const [rollbackForm] = Form.useForm();
-  const [rollbackSubmitting, setRollbackSubmitting] = useState(false);
 
   const [compositionParts, setCompositionParts] = useState(initialParts);
   const [washInstructions, setWashInstructions] = useState(initialWash || '');
@@ -142,33 +138,13 @@ const StyleWashLabelTab: React.FC<Props> = ({
     setIsEditing(true);
   }, []);
 
-  const handleRollback = useCallback(() => {
-    setRollbackOpen(true);
-  }, []);
-
-  const handleRollbackOk = useCallback(async () => {
-    const values = await rollbackForm.validateFields();
-    const remark = (values.remark || '').trim();
-    if (!remark) {
-      rollbackForm.setFields([{ name: 'remark', errors: ['请填写退回原因'] }]);
-      return;
-    }
-    setRollbackSubmitting(true);
-    try {
-      await api.put(`/style/info/rollback-remark/${styleId}`, { remark });
-    } catch {
-      message.warning('退回备注保存失败，但编辑已退回');
-    } finally {
-      setRollbackSubmitting(false);
-    }
+  const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
     setCompositionParts(initialParts);
     setWashInstructions(initialWash || '');
     setUCode(initialUCode || '');
-    setRollbackOpen(false);
-    rollbackForm.resetFields();
     onRefresh?.();
-  }, [styleId, initialParts, initialWash, initialUCode, rollbackForm, onRefresh, message]);
+  }, [initialParts, initialWash, initialUCode, onRefresh]);
 
   const handlePrint = useCallback(async () => {
     setPrintLoading(true);
@@ -233,14 +209,14 @@ const StyleWashLabelTab: React.FC<Props> = ({
             {isEditing ? (
               <EditOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />
             ) : (
-              <LockOutlined style={{ color: 'var(--color-text-quaternary, var(--color-text-quaternary))' }} />
+              <EyeOutlined style={{ color: 'var(--color-text-quaternary, var(--color-text-quaternary))' }} />
             )}
             <span style={{
               fontSize: 14,
               fontWeight: 600,
               color: isEditing ? 'var(--color-primary, var(--color-primary))' : 'var(--color-text-tertiary, #8c8c8c)',
             }}>
-              {isEditing ? '编辑中' : '已锁定'}
+              {isEditing ? '编辑中' : '查看模式'}
             </span>
           </div>
           <Space>
@@ -257,12 +233,11 @@ const StyleWashLabelTab: React.FC<Props> = ({
             {isEditing && (
               <>
                 <Button
-                  icon={<RollbackOutlined />}
-                  onClick={handleRollback}
+                  icon={<CloseOutlined />}
+                  onClick={handleCancelEdit}
                  
-                  danger
                 >
-                  退回
+                  取消
                 </Button>
                 <Button
                   type="primary"
@@ -271,7 +246,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
                   loading={saving}
                  
                 >
-                  保存并锁定
+                  保存
                 </Button>
               </>
             )}
@@ -403,26 +378,6 @@ const StyleWashLabelTab: React.FC<Props> = ({
           height={previewH}
         />
       </div>
-
-      {/* 退回编辑确认弹窗 */}
-      <ResizableModal
-        title="退回编辑"
-        open={rollbackOpen}
-        onOk={() => void handleRollbackOk()}
-        onCancel={() => { setRollbackOpen(false); rollbackForm.resetFields(); }}
-        okText="确认退回"
-        cancelText="取消"
-        confirmLoading={rollbackSubmitting}
-      >
-        <div style={{ marginBottom: 12, color: 'var(--color-text-secondary, #666)' }}>
-          退回编辑将放弃所有未保存的修改，请填写退回原因：
-        </div>
-        <Form form={rollbackForm} layout="vertical">
-          <Form.Item name="remark" rules={[{ required: true, message: '请填写退回原因' }]}>
-            <Input.TextArea rows={3} placeholder="请输入退回原因" maxLength={200} showCount />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
     </div>
   );
 };

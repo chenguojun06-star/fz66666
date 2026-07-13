@@ -5,10 +5,7 @@
   <!-- ════════════ ① 基础信息卡 ════════════ -->
   <view class="top-card">
     <view class="top-left">
-      <view class="cover-placeholder">
-        <view class="cover-icon icon-quality"></view>
-        <text class="cover-label">质检</text>
-      </view>
+      <image wx:if="{{detail.coverImage || detail.styleCover}}" class="garment-thumb" src="{{detail.coverImage || detail.styleCover}}" mode="aspectFill" />
     </view>
     <view class="top-right">
       <view class="top-title">

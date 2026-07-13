@@ -1,91 +1,105 @@
 <!-- pages/payroll/payroll.wxml -->
 <view class="page">
-  <!-- 通用悬浮铃铛组件 -->
 
-  <!-- 顶部统计卡片 -->
-  <summary-card title="我的工资" items="{{summaryItems}}"></summary-card>
+  <!-- 品牌渐变汇总卡 -->
+  <view class="summary-card">
+    <text class="summary-month">{{monthLabel}}</text>
+    <text class="summary-amount">¥{{totalAmount}}</text>
 
-  <!-- 工资结算反馈入口 -->
-  <view class="feedback-entry" hover-class="feedback-entry-hover" bindtap="goFeedback">
-    <text class="feedback-entry-text">工资结算反馈</text>
-    <text class="feedback-entry-arrow">›</text>
-  </view>
+    <!-- 环比对比 -->
+    <view class="summary-mom" wx:if="{{momText}}">
+      <text class="mom-arrow {{momIsUp ? 'mom-up' : 'mom-down'}}">{{momIsUp ? '↑' : '↓'}}</text>
+      <text class="mom-text {{momIsUp ? 'mom-up' : 'mom-down'}}">较上月 {{momText}}</text>
+    </view>
 
-  <!-- 筛选器 -->
-  <view class="filter-bar">
-    <view class="filter-tabs">
-      <view class="filter-tab {{timeFilter === 'week' ? 'active' : ''}}" hover-class="filter-tab-hover" hover-stay-time="100" bindtap="onFilterChange" data-filter="week">
-        本周
+    <!-- 分类明细：计件 | 奖金 -->
+    <view class="summary-breakdown">
+      <view class="breakdown-item">
+        <text class="breakdown-label">计件工资</text>
+        <text class="breakdown-value">¥{{pieceworkTotal}}</text>
       </view>
-      <view class="filter-tab {{timeFilter === 'month' ? 'active' : ''}}" hover-class="filter-tab-hover" hover-stay-time="100" bindtap="onFilterChange" data-filter="month">
-        本月
-      </view>
-      <view class="filter-tab {{timeFilter === 'custom' ? 'active' : ''}}" hover-class="filter-tab-hover" hover-stay-time="100" bindtap="onFilterChange" data-filter="custom">
-        自定义
+      <view class="breakdown-divider"></view>
+      <view class="breakdown-item">
+        <text class="breakdown-label">奖金</text>
+        <text class="breakdown-value">¥{{bonusTotal}}</text>
       </view>
     </view>
   </view>
 
-  <!-- 自定义时间选择 -->
-  <view class="custom-date" wx:if="{{timeFilter === 'custom'}}">
-    <view class="date-col">
-      <text class="date-label">开始</text>
-      <date-picker value="{{startDate}}" bindchange="onStartDateChange" />
-    </view>
-    <view class="date-col">
-      <text class="date-label">结束</text>
-      <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
-    </view>
+  <!-- 筛选标签 -->
+  <view class="filter-tabs">
+    <view
+      class="filter-tab {{typeFilter === 'all' ? 'active' : ''}}"
+      hover-class="filter-tab-hover"
+      hover-stay-time="100"
+      bindtap="onTypeFilterChange"
+      data-filter="all"
+    >全部</view>
+    <view
+      class="filter-tab {{typeFilter === 'piecework' ? 'active' : ''}}"
+      hover-class="filter-tab-hover"
+      hover-stay-time="100"
+      bindtap="onTypeFilterChange"
+      data-filter="piecework"
+    >计件</view>
+    <view
+      class="filter-tab {{typeFilter === 'hourly' ? 'active' : ''}}"
+      hover-class="filter-tab-hover"
+      hover-stay-time="100"
+      bindtap="onTypeFilterChange"
+      data-filter="hourly"
+    >计时</view>
+    <view
+      class="filter-tab {{typeFilter === 'bonus' ? 'active' : ''}}"
+      hover-class="filter-tab-hover"
+      hover-stay-time="100"
+      bindtap="onTypeFilterChange"
+      data-filter="bonus"
+    >奖金</view>
   </view>
 
-  <!-- 工序明细列表 -->
-  <view class="detail-section">
-    <view class="section-header">
-      <view class="section-title">【工序明细】</view>
-      <view class="sort-btn" hover-class="sort-btn-hover" hover-stay-time="100" bindtap="toggleSort">
-        <text class="sort-text">{{sortField === 'amount' ? '按金额' : '按时间'}}</text>
-        <text class="sort-icon" catchtap="toggleSortOrder">{{sortOrder === 'desc' ? '▼' : '▲'}}</text>
-      </view>
-    </view>
+  <!-- 加载中 -->
+  <view class="loading-state" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
 
-    <empty-state wx:if="{{records.length === 0}}" icon="icon-clipboard" text="暂无工序记录"></empty-state>
-
-    <view wx:for="{{records}}" wx:key="index" class="record-item">
-      <view class="record-header">
-        <text class="order-info" user-select>订单 {{item.orderNo}}</text>
-        <text class="style-info" user-select>款号 {{item.styleNo}}</text>
-      </view>
-      <view class="record-detail">
-        <text class="color-size">{{item.color}} {{item.size}}</text>
-        <text wx:if="{{item.cuttingBundleNo}}" class="bundle-no">菲号{{item.cuttingBundleNo}}</text>
-        <text class="process">{{item.processName}}</text>
-        <text wx:if="{{item.scanTypeText && item.scanTypeText !== '-'}}" class="scan-type-tag">{{item.scanTypeText}}</text>
-      </view>
-      <view wx:if="{{item.operatorName}}" class="operator-name">扫码人：{{item.operatorName}}</view>
-      <view wx:if="{{item.delegateTargetName}}" class="delegate-info">
-        <text wx:if="{{item.delegateTargetType === 'external'}}" class="delegate-tag delegate-external">外发</text>
-        <text wx:elif="{{item.delegateTargetType === 'internal'}}" class="delegate-tag delegate-internal">指派</text>
-        <text class="delegate-name">{{item.delegateTargetName}}</text>
-      </view>
-      <view class="record-footer">
-        <view class="calculation">
-          <text class="quantity" user-select>{{item.quantity}}件</text>
-          <text class="multiply">×</text>
-          <text class="unit-price" user-select>¥{{item.unitPrice}}</text>
-          <text class="equals">=</text>
-          <text class="amount" user-select>¥{{item.totalAmount}}</text>
+  <!-- 工明细记录 -->
+  <view class="records-list" wx:if="{{!loading && filteredRecords.length > 0}}">
+    <view
+      class="record-card"
+      wx:for="{{filteredRecords}}"
+      wx:key="index"
+      hover-class="record-card-hover"
+      hover-stay-time="100"
+    >
+      <view class="record-left">
+        <view class="record-tag-row">
+          <text class="process-tag {{item.isBonus ? 'tag-orange' : 'tag-blue'}}">{{item.processTag}}</text>
+          <text class="record-product">{{item.productName}}</text>
         </view>
-        <view class="footer-right">
-          <text class="payment-status payment-status-{{item.paymentStatus || 'none'}}">{{item.paymentStatusText}}</text>
-          <text class="time">{{item.scanTime}}</text>
-        </view>
+        <text class="record-meta">{{item.metaText}}</text>
+      </view>
+      <view class="record-right">
+        <text class="record-calc">{{item.calcText}}</text>
+        <text class="record-amount">¥{{item.totalAmount}}</text>
       </view>
     </view>
+  </view>
 
-    <!-- 底部统计 -->
-    <view wx:if="{{records.length > 0}}" class="bottom-summary">
-      <text class="bottom-label">当前筛选总计：</text>
-      <text class="bottom-amount" user-select>¥{{filteredTotalAmount}}</text>
-    </view>
+  <!-- 空状态 -->
+  <empty-state
+    wx:if="{{!loading && filteredRecords.length === 0}}"
+    icon="icon-clipboard"
+    text="{{emptyText}}"
+  ></empty-state>
+
+</view>
+
+<!-- 底部固定合计栏 -->
+<view class="total-bar" wx:if="{{!loading && records.length > 0}}">
+  <view class="total-bar-content">
+    <text class="total-bar-label">合计</text>
+    <text class="total-bar-value">¥{{filteredTotal}}</text>
   </view>
 </view>

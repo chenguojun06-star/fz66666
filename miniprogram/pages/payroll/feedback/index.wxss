@@ -44,8 +44,8 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .card-header {
@@ -209,7 +209,7 @@
   flex: 1;
   text-align: center;
   padding: var(--spacing-sm) 0;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-sm);
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);

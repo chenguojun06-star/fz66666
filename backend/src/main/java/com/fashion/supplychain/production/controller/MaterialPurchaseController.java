@@ -184,6 +184,9 @@ public class MaterialPurchaseController {
 
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可删除采购记录");
+        }
         return Result.success(materialPurchaseOrchestrator.delete(id));
     }
 
@@ -197,6 +200,10 @@ public class MaterialPurchaseController {
         String remark = (String) payload.get("remark");
         String expectedShipDate = (String) payload.get("expectedShipDate");
         Object purchaseQtyObj = payload.get("purchaseQuantity");
+
+        if (purchaseQtyObj != null && !UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可修改采购数量");
+        }
 
         MaterialPurchase purchase = new MaterialPurchase();
         purchase.setId(id);

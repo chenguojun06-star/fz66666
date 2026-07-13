@@ -46,9 +46,9 @@ class ScanStageProcessor {
         console.warn(
           `[ScanStageProcessor] 检测到疑似误路由: 当前阶段[${currentProcessName}]却进入BUNDLE分支, 已回退到订单工序检测`,
           {
-            orderNo: parsedData?.orderNo,
-            scanCode: parsedData?.scanCode,
-            bundleNo: parsedData?.bundleNo,
+            orderNo: parsedData && parsedData.orderNo,
+            scanCode: parsedData && parsedData.scanCode,
+            bundleNo: parsedData && parsedData.bundleNo,
           },
         );
         return await this.stageDetector.detectNextStage(orderDetail);

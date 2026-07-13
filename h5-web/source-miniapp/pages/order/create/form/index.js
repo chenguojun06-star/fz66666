@@ -5,12 +5,12 @@ const { toast } = require('../../../../utils/uiHelper');
 
 function today() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
 }
 function daysLater(n) {
   const d = new Date();
   d.setDate(d.getDate() + n);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
 }
 
 const PLATE_MAP = ['', 'FIRST', 'REORDER'];
@@ -228,12 +228,12 @@ Page({
       // 如果API失败，使用时间戳生成订单号
       const d = new Date();
       const ts = d.getFullYear()
-        + String(d.getMonth() + 1).padStart(2, '0')
-        + String(d.getDate()).padStart(2, '0')
-        + String(d.getHours()).padStart(2, '0')
-        + String(d.getMinutes()).padStart(2, '0')
-        + String(d.getSeconds()).padStart(2, '0')
-        + String(d.getMilliseconds()).padStart(3, '0');
+        + ('0' + (d.getMonth() + 1)).slice(-2)
+        + ('0' + d.getDate()).slice(-2)
+        + ('0' + d.getHours()).slice(-2)
+        + ('0' + d.getMinutes()).slice(-2)
+        + ('0' + d.getSeconds()).slice(-2)
+        + ('00' + d.getMilliseconds()).slice(-3);
       
       // 无资料下单使用 CUT 前缀，有资料下单使用 PO 前缀
       const prefix = isNoData ? 'CUT' : 'PO';

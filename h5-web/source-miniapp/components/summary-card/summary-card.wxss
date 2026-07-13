@@ -1,7 +1,7 @@
 .summary-card {
   margin: 12px;
   padding: 16px;
-  /* 降低饱和度：从 #3b82f6→#2563eb(刺眼蓝) 改为更柔和的商务蓝 */
+  /* 降低饱和度：从 #007aff→#007aff(刺眼蓝) 改为更柔和的商务蓝 */
   background: var(--color-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);

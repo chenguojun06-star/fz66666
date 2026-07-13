@@ -10,7 +10,7 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .card-header {
   display: flex;
@@ -111,7 +111,7 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .section-title {
   font-size: var(--font-size-sm);
@@ -340,7 +340,7 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .summary-row {
   display: flex;
@@ -402,7 +402,7 @@
   width: 45px;
   height: 28px;
   text-align: center;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-xs);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);

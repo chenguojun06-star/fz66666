@@ -2,56 +2,61 @@
 .scan-area-big {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
-  padding: 10px;
+  padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .scan-row {
   display: flex;
   align-items: center;
   gap: 0;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .scan-btn-big {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
   width: 100%;
   max-width: none;
   min-width: 0;
-  padding: 0 12px;
-  height: 52px;
+  padding: 0 16px;
+  height: 56px;
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-lg);
+  background: transparent;
+  color: var(--color-primary);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xl);
   font-weight: 700;
-  border: none;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.40);
+  border: 2px solid var(--color-primary);
+  box-shadow: none;
 }
 .scan-btn-big.off {
-  opacity: 0.4;
+  opacity: 0.35;
   pointer-events: none;
 }
 .scan-btn-big-hover {
-  opacity: 0.88;
-  transform: scale(0.97);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  opacity: 0.7;
+  transform: scale(0.98);
+  box-shadow: none;
 }
 .scan-btn-icon {
   font-size: var(--font-size-xl);
 }
 .scan-btn-icon-svg {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.scan-icon-img {
+  width: 32px;
+  height: 32px;
 }
 .scan-btn-text-group {
   display: flex;
@@ -61,15 +66,16 @@
 }
 
 .scan-btn-main {
-  font-size: var(--font-size-lg-xl);
+  font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
 }
 
 .scan-btn-sub {
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  color: var(--color-primary);
+  opacity: 0.7;
   white-space: nowrap;
 }
 
@@ -83,6 +89,15 @@
   margin-bottom: 6px;
 }
 
+.warehouse-label--location {
+  margin-top: 6px;
+}
+
+.factory-info-text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
 .warehouse-option-row {
   display: flex;
   flex-wrap: wrap;
@@ -94,14 +109,14 @@
   padding: 4px 14px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   background: var(--color-bg-light);
   color: var(--color-text-primary);
 }
 
 .warehouse-chip--active {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
   border-color: var(--color-primary);
 }
 

@@ -3,6 +3,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -226,9 +227,11 @@ Page({
     }
 
     this._backfillBundleDisplayMeta(raw, orderDetail);
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     getApp().globalData.scanResultData = null;
   },
 
@@ -239,7 +242,7 @@ Page({
         if (v.length > 10) {
           var d = new Date(v.replace(/-/g, '/'));
           if (!isNaN(d.getTime())) {
-            const pad = n => String(n).padStart(2, '0');
+            const pad = n => ('0' + n).slice(-2);
             return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
           }
         }
@@ -249,10 +252,10 @@ Page({
       var d = new Date(String(v).replace(' ', 'T'));
       if (isNaN(d.getTime())) return '';
       const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const h = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
+      const m = ('0' + (d.getMonth() + 1)).slice(-2);
+      const day = ('0' + d.getDate()).slice(-2);
+      const h = ('0' + d.getHours()).slice(-2);
+      const min = ('0' + d.getMinutes()).slice(-2);
       return y + '-' + m + '-' + day + ' ' + h + ':' + min;
     } catch (e) {
       return '';
@@ -277,54 +280,64 @@ Page({
 
     const patch = {};
 
-    if (needColor || needSize || !detail.styleNo) {
-      try {
-        const bundle = await api.production.getCuttingBundle(raw.orderNo, raw.bundleNo);
-        if (bundle) {
-          if (needColor && bundle.color) {
-            patch['detail.color'] = String(bundle.color);
-          }
-          if (needSize && bundle.size) {
-            patch['detail.size'] = String(bundle.size);
-          }
-          if (!detail.styleNo && bundle.styleNo) {
-            patch['detail.styleNo'] = String(bundle.styleNo);
-          }
+    // 两个回填请求互相独立，并行触发（原串行~2个RTT，并行后~1个RTT）
+    const needBundle = needColor || needSize || !detail.styleNo;
+    let source = orderDetail || {};
+    const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
+    // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
+    const needOrderFetch = (needDeliveryDate || needCoverImage) && (!hasDelivery || needCoverImage);
+
+    const tasks = [];
+    let bundleIdx = -1, orderIdx = -1;
+    if (needBundle) {
+      bundleIdx = tasks.length;
+      tasks.push(api.production.getCuttingBundle(raw.orderNo, raw.bundleNo)
+        .catch(function (e) { console.warn('[scan-result] 回填菲号颜色/码数失败:', e); return null; }));
+    }
+    if (needOrderFetch) {
+      orderIdx = tasks.length;
+      tasks.push(api.production.orderDetailByOrderNo(raw.orderNo)
+        .catch(function (e) { console.warn('[scan-result] 回填交货日期/封面图失败:', e); return null; }));
+    }
+
+    if (tasks.length > 0) {
+      const results = await Promise.all(tasks);
+      const bundle = bundleIdx >= 0 ? results[bundleIdx] : null;
+      const orderRes = orderIdx >= 0 ? results[orderIdx] : null;
+
+      if (bundle) {
+        if (needColor && bundle.color) {
+          patch['detail.color'] = String(bundle.color);
         }
-      } catch (e) {
-        console.warn('[scan-result] 回填菲号颜色/码数失败:', e);
+        if (needSize && bundle.size) {
+          patch['detail.size'] = String(bundle.size);
+        }
+        if (!detail.styleNo && bundle.styleNo) {
+          patch['detail.styleNo'] = String(bundle.styleNo);
+        }
+      }
+
+      if (orderRes) {
+        if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
+          source = orderRes.records[0] || source;
+        } else if (orderRes && typeof orderRes === 'object') {
+          source = orderRes;
+        }
       }
     }
 
-    if (needDeliveryDate || needCoverImage) {
-      try {
-        let source = orderDetail || {};
-        const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
-        // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
-        if (!hasDelivery || needCoverImage) {
-          const orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
-          if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
-            source = orderRes.records[0] || source;
-          } else if (orderRes && typeof orderRes === 'object') {
-            source = orderRes;
-          }
-        }
-        if (needDeliveryDate) {
-          const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
-          const dateText = this._formatYMD(dateVal);
-          if (dateText) {
-            patch['detail.deliveryDateDisplay'] = dateText;
-          }
-        }
-        // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
-        if (needCoverImage) {
-          const coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
-          if (coverUrl) {
-            patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
-          }
-        }
-      } catch (e) {
-        console.warn('[scan-result] 回填交货日期/封面图失败:', e);
+    if (needDeliveryDate) {
+      const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
+      const dateText = this._formatYMD(dateVal);
+      if (dateText) {
+        patch['detail.deliveryDateDisplay'] = dateText;
+      }
+    }
+    // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
+    if (needCoverImage) {
+      const coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
+      if (coverUrl) {
+        patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
       }
     }
 
@@ -405,7 +418,7 @@ Page({
   async _loadWarehouseOptions() {
     try {
       const res = await api.warehouse.listWarehouseAreas('FINISHED');
-      const data = res?.data || res;
+      const data = (res && res.data) || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const areaMap = {};
@@ -434,7 +447,7 @@ Page({
     }
     try {
       const res = await api.warehouse.listLocations('FINISHED', areaId);
-      const data = res?.data || res;
+      const data = (res && res.data) || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const locMap = {};
@@ -532,7 +545,8 @@ Page({
         quantity:      raw.quantity  || detail.displayQuantity || 0,
         operatorName:  raw.operatorName  || '',
         scanCode:      raw.scanCode  || raw.orderNo || '',
-        coverImage:    orderDetail.coverImage || orderDetail.styleImage || '',
+        // P0 修复：添加 cover/styleCover 兜底，原代码只取 coverImage/styleImage
+        coverImage:    orderDetail.coverImage || orderDetail.styleImage || orderDetail.cover || orderDetail.styleCover || '',
         orderId:       raw.orderId   || '',
       };
       safeNavigate({ url: '/pages/scan/quality/index' }).catch(() => {});

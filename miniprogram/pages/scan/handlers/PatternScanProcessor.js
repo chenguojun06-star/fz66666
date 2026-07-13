@@ -58,13 +58,15 @@ const SAMPLE_OPERATIONS = [
   { key: 'WAREHOUSE_IN', label: '样衣入库', color: '#13c2c2', icon: 'inbox' },
 ];
 
-// 样衣开发阶段（PC端配置）
+// 样衣开发阶段（与PC端7阶段对齐）
 const DEV_STAGES = [
   { key: 'bom', name: 'BOM' },
   { key: 'pattern', name: '纸样' },
-  { key: 'process', name: '单价' },
+  { key: 'size', name: '尺码表' },
+  { key: 'process', name: '工序' },
   { key: 'secondary', name: '二次工艺' },
   { key: 'production', name: '生产制单' },
+  { key: 'sizePrice', name: '码数单价' },
 ];
 
 async function handlePatternScan(handler, parsedData, manualScanType) {
@@ -138,7 +140,8 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
       if (typeof qtyCandidates[i] === 'number' && qtyCandidates[i] > 0) { qtyVal = qtyCandidates[i]; break; }
     }
     // 款号
-    const styleNoVal = patternDetail.styleNo || patternDetail.styleCode || patternId || '';
+    // P1 修复：移除 patternId 兜底（UUID 不是人类可读的款号）
+    const styleNoVal = patternDetail.styleNo || patternDetail.styleCode || '';
     // 款式名
     const styleNameVal = patternDetail.styleName || patternDetail.name || '';
     // 封面

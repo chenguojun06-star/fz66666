@@ -72,12 +72,12 @@
   color: var(--color-text-secondary);
 }
 .scan-mode-tip {
-  margin-top: 8px;
+  margin-top: 10px;
   padding: 0 4px;
 }
 .scan-mode-tip text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   line-height: var(--line-height-normal);
 }
 .res-order {
@@ -149,7 +149,7 @@
   border-radius: var(--radius-xl);
   padding: 10px;
   margin-bottom: 8px;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .sec-head {
   display: flex;

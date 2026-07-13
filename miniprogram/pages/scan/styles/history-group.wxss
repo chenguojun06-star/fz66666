@@ -2,8 +2,9 @@
 .hist-group {
   margin-bottom: 8px;
   background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   overflow: hidden;
 }
 
@@ -27,7 +28,7 @@
 .hgh-cover {
   width: 36px;
   height: 36px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -132,8 +133,9 @@
   padding: 10px;
   margin-bottom: 8px;
   background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 
 .hist-detail-item:last-child {

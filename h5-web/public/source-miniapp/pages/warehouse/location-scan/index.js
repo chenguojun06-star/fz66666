@@ -1,5 +1,6 @@
 const app = getApp();
 const api = require('../../../utils/api');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -24,6 +25,13 @@ Page({
     } else {
       this.setData({ error: '无效的库位二维码' });
     }
+    bindPageEvents(this, () => {
+      if (this.data.locationCode) this.loadLocationItems(this.data.locationCode);
+    }, ['STOCK_CHANGED']);
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   async loadLocationItems(locationCode) {

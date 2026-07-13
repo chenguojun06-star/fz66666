@@ -29,7 +29,7 @@
 .empty-guide {
   display: flex; flex-direction: column; align-items: center;
   padding: 60px 20px; margin: 16px 12px;
-  background: #fff; border-radius: 12px;
+  background: #fff; border-radius: var(--radius-card);
   border: 1px dashed #d9d9d9;
 }
 .eg-icon { font-size: 24px; margin-bottom: 12px; }

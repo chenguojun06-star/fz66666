@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -15,6 +16,11 @@ Page({
 
   onLoad() {
     this.loadSettlements();
+    bindPageEvents(this, () => this.loadSettlements());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onPullDownRefresh() {
@@ -25,11 +31,11 @@ Page({
     this.setData({ loading: true });
     try {
       const res = await api.wageSettlementFeedback.myPaidSettlements();
-      const list = res?.data || [];
+      const list = (res && res.data) || [];
       list.forEach(item => {
         const d = item.createTime ? new Date(String(item.createTime).replace(' ', 'T')) : null;
         item.createTimeText = d && !isNaN(d.getTime())
-          ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+          ? `${d.getFullYear()}-${('0' + (d.getMonth()+1)).slice(-2)}-${('0' + d.getDate()).slice(-2)}`
           : '-';
       });
       this.setData({ settlements: list });
@@ -61,7 +67,12 @@ Page({
   },
 
   onFeedbackTypeChange(e) {
-    this.setData({ feedbackType: e.detail.value });
+    const value = e.currentTarget.dataset.value;
+    if (value) {
+      this.setData({ feedbackType: value });
+    } else {
+      this.setData({ feedbackType: e.detail.value });
+    }
   },
 
   onFeedbackContentInput(e) {
@@ -81,7 +92,7 @@ Page({
       this.setData({ showForm: false, feedbackContent: '' });
       this.loadSettlements();
     } catch (e) {
-      toast.error(e?.message || '提交失败');
+      toast.error((e && e.message) || '提交失败');
     } finally {
       this.setData({ submitting: false });
     }

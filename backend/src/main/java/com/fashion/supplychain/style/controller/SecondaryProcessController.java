@@ -99,6 +99,9 @@ public class SecondaryProcessController {
     public Result<SecondaryProcess> approve(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可审批二次工艺");
+        }
         SecondaryProcess existing = secondaryProcessOrchestrator.getById(id);
         if (existing == null) {
             return Result.fail("二次工艺不存在");

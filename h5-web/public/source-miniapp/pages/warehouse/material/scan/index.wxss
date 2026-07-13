@@ -71,8 +71,8 @@
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .roll-code-label {
@@ -168,8 +168,8 @@
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .info-row {
@@ -255,7 +255,7 @@
   border-radius: var(--radius-md);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .btn-issue {

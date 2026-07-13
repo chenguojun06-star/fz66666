@@ -209,7 +209,7 @@ const ScanOfflineQueue = {
             if (DEBUG) console.log('[ScanOfflineQueue] 上传成功:', submitted + '/' + total);
           } else {
             this.dequeue(item.queueId);
-            if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res?.message);
+            if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res && res.message);
           }
         } catch (e) {
           failed++;

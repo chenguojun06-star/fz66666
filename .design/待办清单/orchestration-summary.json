@@ -1,0 +1,326 @@
+{
+  "project": {
+    "name": "待办清单",
+    "path": "/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/.design/待办清单",
+    "operation": "create",
+    "deviceType": "mobile",
+    "language": "zh-CN",
+    "dashboardMode": false,
+    "replicationMode": null,
+    "sourceUrl": null,
+    "visualSpecExcerpt": null,
+    "styleDefinitionBrief": null,
+    "designRead": "mobile todo app / personal productivity / calm premium / medium density / avoid clutter and oversaturation",
+    "designDials": {
+      "layoutVariance": 3,
+      "motionIntensity": 1,
+      "visualDensity": 3
+    },
+    "styleContinuityAnchors": null,
+    "specsConstraints": null,
+    "sharedProjectShellContract": {
+      "navigationShell": "mini program style top nav bar with right capsule; home and stats pages share a bottom tab bar with 2 tabs (待办/统计); new-task page is full-screen with cancel text button on left",
+      "primaryColorSystem": "single brand hue #2e8dff (dark mode blue) for primary CTA and selected states; no secondary or accent brand hue",
+      "typographySystem": "DM Sans for all UI text; JetBrains Mono for numeric data; title 20-28px/600 with negative tracking; body 14-16px/400/1.55; labels 12-13px/500",
+      "radiusScale": "cards 14px; inputs 12px; buttons pill (height/2); small chips 8px; max radius 16px",
+      "surfaceDepthModel": "dark mode: page background #1c1c1e (not pure black); cards #2c2c2e with 1px border #3a3a3c; floating CTA uses shadow-lg; static cards use border-first not shadow",
+      "ctaStyle": "one primary pill CTA per page filled with brand blue #2e8dff, white text, height 50-56px; secondary actions are text-only or icon-only, no ghost outline",
+      "alignmentRules": "375px width; 16px horizontal padding; 8px spacing base; sections separated by 24-32px vertical gaps; touch targets minimum 44x44pt"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-home", "page-new-task", "page-stats"],
+        "output": null,
+        "sharedRegions": [],
+        "privateRegions": ["full page content for each page"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": [
+          {
+            "nodeId": "gen-page-home",
+            "kind": "page-leaf",
+            "pageIds": ["page-home"],
+            "output": "pages/home.html",
+            "sharedRegions": [],
+            "privateRegions": ["entire page — calendar todo home screen"],
+            "mutableSlots": [],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-new-task",
+            "kind": "page-leaf",
+            "pageIds": ["page-new-task"],
+            "output": "pages/new-task.html",
+            "sharedRegions": [],
+            "privateRegions": ["entire page — new task editor screen"],
+            "mutableSlots": [],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-stats",
+            "kind": "page-leaf",
+            "pageIds": ["page-stats"],
+            "output": "pages/stats.html",
+            "sharedRegions": [],
+            "privateRegions": ["entire page — task statistics screen"],
+            "mutableSlots": [],
+            "status": "planned",
+            "children": []
+          }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "library-bound",
+    "libraryIdentity": {
+      "name": "苹果",
+      "id": "dl_builtin_apple",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple",
+      "versionSource": "metadata.json"
+    },
+    "libraryPath": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple",
+    "cssFilePath": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/colors_and_type.css",
+    "brandPrefix": "pinguo",
+    "themeMode": "light",
+    "designDecisionSummary": "Apple HIG dark mode: #1c1c1e deep gray base (avoid pure black), #2e8dff single brand blue accent, DM Sans + JetBrains Mono, pill buttons, 1px border + whisper-light shadows, whitespace as structure, one thick CTA per page",
+    "componentContractKind": "legacy-json",
+    "forbiddenInventedComponents": ["layout", "space"],
+    "allowedComponents": ["button", "card", "input", "navigation"],
+    "styleConstraints": {
+      "radiusMax": 16,
+      "spacingBase": 8,
+      "fontSizeBody": 15,
+      "fontSizeMin": 11,
+      "controlHeightDefault": 44,
+      "controlHeightLarge": 52
+    },
+    "productContext": {
+      "kitType": "app",
+      "productType": "personal productivity todo app"
+    },
+    "iconAssets": ["arrow-down", "arrow-left", "arrow-right", "arrow-up", "box", "check", "chevron-down", "chevron-left", "chevron-right", "chevron-up", "chevrons-down-up", "chevrons-up-down", "circle-alert", "circle-check", "circle-minus", "circle-pause", "circle-play", "circle-plus", "circle-question-mark", "external-link", "file", "folder-open", "folder", "funnel", "grip", "heart", "house", "mail", "map-pin", "message-circle-more", "mouse-pointer-click", "pen-line", "send-horizontal", "star", "tag", "thumbs-down", "thumbs-up", "trash-2", "triangle-alert", "user"],
+    "actualTokenNameReference": [
+      { "semanticPurpose": "Page background (override to #1c1c1e, not pure black)", "tokenName": "--background" },
+      { "semanticPurpose": "Primary text", "tokenName": "--foreground" },
+      { "semanticPurpose": "Card background (use #2c2c2e)", "tokenName": "--card" },
+      { "semanticPurpose": "Card text", "tokenName": "--card-foreground" },
+      { "semanticPurpose": "Brand blue CTA fill", "tokenName": "--primary" },
+      { "semanticPurpose": "Text on brand blue", "tokenName": "--primary-foreground" },
+      { "semanticPurpose": "Muted/secondary background", "tokenName": "--secondary" },
+      { "semanticPurpose": "Secondary text", "tokenName": "--muted-foreground" },
+      { "semanticPurpose": "Active/accent surface", "tokenName": "--accent" },
+      { "semanticPurpose": "Border lines", "tokenName": "--border" },
+      { "semanticPurpose": "Input border", "tokenName": "--input" },
+      { "semanticPurpose": "Focus ring", "tokenName": "--ring" },
+      { "semanticPurpose": "Destructive action", "tokenName": "--destructive" },
+      { "semanticPurpose": "Success state", "tokenName": "--success" },
+      { "semanticPurpose": "Chart color 1 (green)", "tokenName": "--chart-1" },
+      { "semanticPurpose": "Chart color 2 (blue)", "tokenName": "--chart-2" },
+      { "semanticPurpose": "Chart color 3 (orange)", "tokenName": "--chart-3" },
+      { "semanticPurpose": "Global radius", "tokenName": "--radius" },
+      { "semanticPurpose": "Sans font family", "tokenName": "--font-sans" },
+      { "semanticPurpose": "Mono font family for numbers", "tokenName": "--font-mono" },
+      { "semanticPurpose": "Card shadow", "tokenName": "--shadow-sm" },
+      { "semanticPurpose": "Float shadow for CTA", "tokenName": "--shadow-lg" },
+      { "semanticPurpose": "Primitive dark gray 800", "tokenName": "--background-800" },
+      { "semanticPurpose": "Primitive dark gray 700", "tokenName": "--background-700" },
+      { "semanticPurpose": "Primitive brand 400 dark mode blue", "tokenName": "--brand-400" },
+      { "semanticPurpose": "Primitive text 50 lightest", "tokenName": "--text-50" },
+      { "semanticPurpose": "Primitive text 400 muted", "tokenName": "--text-400" },
+      { "semanticPurpose": "Primitive success dark", "tokenName": "--state-success-dark" },
+      { "semanticPurpose": "Primitive error dark", "tokenName": "--state-error-dark" }
+    ]
+  },
+  "pages": [
+    {
+      "nodeId": "page-home",
+      "slug": "home",
+      "title": "日历待办首页",
+      "htmlSrc": "pages/home.html",
+      "pageIndex": 1,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "task-driven",
+      "businessScenario": "日历待办首页：月/周历切换 + 时间分组的待办卡片 + 底部新建待办主CTA",
+      "visualNorthStar": "A calm, structured todo home where a compact week calendar sits above time-grouped task cards, anchored by a single floating pill CTA. Feels like iOS Reminders meets Apple Calendar — dark, quiet, and confident.",
+      "compositionPattern": "Vertical stack: status bar → mini program nav → segmented control (月历/周历) → week strip → time-grouped task cards (上午/下午/晚上) → floating CTA → bottom tab bar",
+      "continuityAnchors": ["pill CTA style", "card border + spacing", "DM Sans type rhythm", "deep gray #1c1c1e background"],
+      "libraryRestraintMode": true,
+      "uiKitPath": null,
+      "componentPlan": [
+        {
+          "slug": "button",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/button.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-button.html"
+        },
+        {
+          "slug": "card",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/card.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-card.html"
+        },
+        {
+          "slug": "navigation",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/navigation.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-navigation.html"
+        }
+      ],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": true,
+      "qualityRisks": ["calendar density on 375px width", "too many task cards creating scroll fatigue", "CTA overlap with tab bar"]
+    },
+    {
+      "nodeId": "page-new-task",
+      "slug": "new-task",
+      "title": "新建任务",
+      "htmlSrc": "pages/new-task.html",
+      "pageIndex": 2,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "task-driven",
+      "businessScenario": "新增任务编辑页：标题输入、日期时间、标签、优先级、定时提醒开关 + 厚质感保存按钮",
+      "visualNorthStar": "A focused task editor that feels like iOS Settings meets a form — clean grouped rows, large title input, iOS-style toggles, and a single thick pill Save button at the bottom. Every field breathes.",
+      "compositionPattern": "Vertical stack: status bar → nav bar (cancel left, title center) → large title input → grouped settings list (date/time row, tag chips, priority selector, reminder toggle) → thick pill Save CTA pinned to bottom",
+      "continuityAnchors": ["pill CTA style", "card border + spacing", "DM Sans type rhythm", "deep gray #1c1c1e background"],
+      "libraryRestraintMode": true,
+      "uiKitPath": null,
+      "componentPlan": [
+        {
+          "slug": "button",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/button.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-button.html"
+        },
+        {
+          "slug": "input",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/input.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-input.html"
+        },
+        {
+          "slug": "card",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/card.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-card.html"
+        },
+        {
+          "slug": "navigation",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/navigation.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-navigation.html"
+        }
+      ],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": true,
+      "qualityRisks": ["form field density", "toggle visual clarity in dark mode", "keyboard interaction with bottom CTA"]
+    },
+    {
+      "nodeId": "page-stats",
+      "slug": "stats",
+      "title": "任务统计",
+      "htmlSrc": "pages/stats.html",
+      "pageIndex": 3,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "information-dense",
+      "businessScenario": "任务数据统计页：完成率环形图 + 周/月柱状图 + 分类完成列表 + 已归档入口",
+      "visualNorthStar": "A data dashboard that stays calm — a large donut chart dominates the top, a weekly bar chart sits below, and a categorized completion list flows into an archived entry. Feels like iOS Health stats, not a busy analytics dashboard.",
+      "compositionPattern": "Vertical stack: status bar → nav bar → donut completion chart (large) → segmented control (周/月) → bar chart → category completion list with progress bars → archived entry row",
+      "continuityAnchors": ["pill CTA style", "card border + spacing", "DM Sans type rhythm", "deep gray #1c1c1e background"],
+      "libraryRestraintMode": true,
+      "uiKitPath": null,
+      "componentPlan": [
+        {
+          "slug": "button",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/button.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-button.html"
+        },
+        {
+          "slug": "card",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/card.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-card.html"
+        },
+        {
+          "slug": "navigation",
+          "contractKind": "legacy-json",
+          "contractFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/components/navigation.json",
+          "previewFile": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/preview/component-navigation.html"
+        }
+      ],
+      "imagePlan": [],
+      "chartsRequired": true,
+      "miniProgramStyle": true,
+      "qualityRisks": ["chart readability in dark mode", "too many chart types cluttering the page", "progress bar contrast"]
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [
+    {
+      "sourceNodeId": "page-home",
+      "domId": "cta-new-task",
+      "targetPageId": "page-new-task"
+    },
+    {
+      "sourceNodeId": "page-new-task",
+      "domId": "cta-save",
+      "targetPageId": "page-stats"
+    }
+  ],
+  "hiddenInteractionPlan": [
+    {
+      "sourceNodeId": "page-new-task",
+      "domId": "back-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "reason": "cancel button returns to home"
+    },
+    {
+      "sourceNodeId": "page-home",
+      "domId": "nav-stats",
+      "targetPageId": "page-stats",
+      "hideEdge": true,
+      "reason": "tab bar stats entry"
+    },
+    {
+      "sourceNodeId": "page-stats",
+      "domId": "nav-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "reason": "tab bar home entry"
+    }
+  ]
+}

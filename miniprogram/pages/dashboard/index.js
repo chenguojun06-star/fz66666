@@ -12,8 +12,8 @@
  *   production.listOrders      → 订单列表 + 状态计数
  */
 const api = require('../../utils/api');
-const { transformOrderData } = require('./utils/orderTransform');
-const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
+const { transformOrderData } = require('../../utils/shared/orderTransform');
+const { buildProcessNodesWithRates, calcOrderProgress } = require('../../utils/shared/progressNodes');
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
@@ -22,15 +22,16 @@ const { safeNavigate } = require('../../utils/uiHelper');
 const app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；
-   已延期/临近交期用 smart-hints 筛选；
+   已延期用 smart-hints 筛选；
+   待生产按 status='pending' 精确过滤；
    生产中不单独过滤 status='production'，而是依赖 excludeTerminal='true' 排除终止状态，
    因为活跃状态包含 production/in_progress/cutting/sewing/ironing/packaging/quality_check/warehousing 等） */
 const STATUS_FILTERS = [
   { key: 'all',           label: '全部',   value: '' },
+  { key: 'pending',       label: '待生产', value: 'pending' },
   { key: 'in_production', label: '生产中', value: '' },
-  { key: 'overdue',       label: '已延期', value: '' },
-  { key: 'warning',       label: '临近交期', value: '' },
   { key: 'completed',     label: '已完成', value: 'completed' },
+  { key: 'overdue',       label: '已延期', value: '' },
 ];
 
 function buildProcessNodes(order) {
@@ -65,11 +66,13 @@ Page({
     },
     todayScanCount: 0,
     unreadNoticeCount: 0,
-    /* 状态过滤（统一一条：全部/生产中/已延期/临近交期/已完成） */
+    /* 状态过滤（统一一条：全部/待生产/生产中/已完成/已延期） */
     statFilters: STATUS_FILTERS,
     activeFilter: 'all',
-    statCounts: { all: 0, in_production: 0, overdue: 0, warning: 0, completed: 0 },
+    statCounts: { all: 0, pending: 0, in_production: 0, overdue: 0, completed: 0 },
     searchKey: '',
+    /* 菲号明细展开的订单ID（同一时间只展开一个） */
+    expandedOrderId: null,
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
   },
@@ -191,8 +194,8 @@ Page({
       }
     }
 
-    // 已延期/临近交期需要拉取更大范围再做本地过滤
-    const isSmartFilter = activeKey === 'overdue' || activeKey === 'warning';
+    // 已延期需要拉取更大范围再做本地过滤
+    const isSmartFilter = activeKey === 'overdue';
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
       const params = { page: p.page, pageSize: isSmartFilter ? 50 : p.pageSize };
@@ -213,15 +216,10 @@ Page({
         return enrichForDashboard(r);
       }
     }).then(function () {
-      // 智能筛选：已延期 / 临近交期（基于订单 remainDaysClass，与小程序订单交期计算一致）
+      // 智能筛选：已延期（基于订单 remainDaysClass，与小程序订单交期计算一致）
       if (activeKey === 'overdue') {
         const filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-overdue';
-        });
-        that.setData({ 'orders.list': filtered });
-      } else if (activeKey === 'warning') {
-        const filtered = (that.data.orders.list || []).filter(function (o) {
-          return o.remainDaysClass === 'days-urgent';
         });
         that.setData({ 'orders.list': filtered });
       }
@@ -253,17 +251,18 @@ Page({
     Promise.all([
       orderStatsFn2 ? orderStatsFn2({}).catch(function () { return {}; }) : Promise.resolve({}),
       api.dashboard.get().catch(function () { return {}; }),
+      orderStatsFn2 ? orderStatsFn2({ status: 'pending' }).catch(function () { return {}; }) : Promise.resolve({}),
     ]).then(function (res) {
       const stats = res[0] || {};
       const dash  = res[1] || {};
+      const pendingStats = res[2] || {};
       const overdueCount = Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0;
-      const warningCount = Number(stats.warningOrders) || 0;
       that.setData({
         statCounts: {
           all:            (Number(stats.activeOrders) || 0) + (Number(stats.completedOrders) || 0),
+          pending:        Number(pendingStats.activeOrders) || 0,
           in_production:  Number(stats.activeOrders) || 0,
           overdue:        overdueCount,
-          warning:        warningCount,
           completed:      Number(stats.completedOrders) || 0,
         },
       });
@@ -292,6 +291,13 @@ Page({
   },
   onExpandNoop: function () {
     // 阻止展开区的冒泡，避免误触折叠
+  },
+
+  /* ======== 菲号明细展开/收起（同一时间只展开一个订单） ======== */
+  toggleExpand: function (e) {
+    var id = e.currentTarget.dataset.id;
+    var current = this.data.expandedOrderId;
+    this.setData({ expandedOrderId: current === id ? null : id });
   },
 
   /* ======== 封面图预览 ======== */
@@ -379,6 +385,28 @@ Page({
   onSearchClear: function () {
     this.setData({ searchKey: '' });
     this.loadOrders(true);
+  },
+
+  /* ======== 扫码：调用 wx.scanCode 识别订单二维码 ======== */
+  onScanCode: function () {
+    const that = this;
+    wx.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success: function (res) {
+        const code = (res.result || '').trim();
+        if (!code) {
+          toast.error('扫码内容为空');
+          return;
+        }
+        // 将扫码结果设为搜索关键词并触发搜索
+        that.setData({ searchKey: code });
+        that.loadOrders(true);
+      },
+      fail: function () {
+        // 用户取消不提示
+      }
+    });
   },
 
   /* ======== 通知数量（小云 AI 助手浮标） ======== */

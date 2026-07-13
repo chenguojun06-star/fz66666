@@ -2,8 +2,8 @@ const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
-const { transformOrderData } = require('../utils/orderTransform');
-const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
+const { transformOrderData } = require('../../../utils/shared/orderTransform');
+const { buildProcessNodesWithRates, calcOrderProgress } = require('../../../utils/shared/progressNodes');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STATUS_MAP = {
@@ -21,8 +21,10 @@ function enrichForDashboard(order) {
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
   order.expanded = false;
+  order.feiExpanded = false;
   // 对齐PC端显示字段
   order.styleNameDisplay = order.styleName || '';
+  order.styleNameFocus = [order.styleNo, order.styleName].filter(Boolean).join(' ');
   order.merchandiserDisplay = order.merchandiser || '';
   order.customerDisplay = order.company || order.customer || order.customerName || '';
   return order;
@@ -279,6 +281,14 @@ Page({
     this.setData({ [path]: !this.data.orders[idx].expanded });
   },
 
+  /* ===== 菲号明细展开/收起 ===== */
+  toggleFeiDetail: function (e) {
+    const idx = e.currentTarget.dataset.index;
+    if (idx === undefined || !this.data.orders[idx]) return;
+    const path = 'orders[' + idx + '].feiExpanded';
+    this.setData({ [path]: !this.data.orders[idx].feiExpanded });
+  },
+
   onCoverPreview: function (e) {
     const url = e.currentTarget.dataset.url;
     if (!url) return;
@@ -374,6 +384,11 @@ Page({
   },
 
   onShipMethodChange: function (e) { this.setData({ 'shipForm.shipMethod': e.detail.value }); },
+  onSelectShipMethod: function (e) {
+    const value = e.currentTarget.dataset.value;
+    if (!value) return;
+    this.setData({ 'shipForm.shipMethod': value });
+  },
   onShipFieldInput: function (e) { this.setData({ ['shipForm.' + e.currentTarget.dataset.field]: e.detail.value }); },
 
   onSubmitShip: function () {

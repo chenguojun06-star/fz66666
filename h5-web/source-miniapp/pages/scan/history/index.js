@@ -17,19 +17,19 @@ function getDateBefore(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const m = ('0' + (d.getMonth() + 1)).slice(-2);
+  const day = ('0' + d.getDate()).slice(-2);
   return `${y}-${m}-${day}`;
 }
 
 function getToday() { return getDateBefore(0); }
 
 function getMonthRange(year, month) {
-  const m = String(month).padStart(2, '0');
+  const m = ('0' + month).slice(-2);
   const lastDay = new Date(year, month, 0).getDate();
   return {
     start: `${year}-${m}-01`,
-    end: `${year}-${m}-${String(lastDay).padStart(2, '0')}`,
+    end: `${year}-${m}-${('0' + lastDay).slice(-2)}`,
     display: `${year}年${month}月`,
   };
 }
@@ -286,7 +286,7 @@ Page({
         ? (settled[1] && settled[1].status === 'fulfilled' ? settled[1].value : [])
         : (this._patternRecords || []);
 
-      const newRecords = (result?.records || []).filter(
+      const newRecords = ((result && result.records) || []).filter(
         (item) => (item.scanResult || '').toLowerCase() !== 'failure',
       );
       const formatted = newRecords.map((item) => ({
@@ -327,7 +327,7 @@ Page({
 
       const prevList = reset ? [] : (this._records || []);
       const merged = prevList.concat(formatted);
-      const total = result?.total || 0;
+      const total = (result && result.total) || 0;
       const hasMore = merged.length < total;
 
       const patternRecords = reset

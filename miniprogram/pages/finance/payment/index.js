@@ -19,6 +19,18 @@ const BIZ_TYPE_MAP = {
   RECONCILIATION: { text: '工厂对账', cls: 'tag-orange' },
   REIMBURSEMENT: { text: '费用报销', cls: 'tag-gray' },
   PAYROLL: { text: '工资', cls: 'tag-blue' },
+  /* 采购款 = 浅蓝标签 */
+  PURCHASE: { text: '采购款', cls: 'tag-blue' },
+  PURCHASE_PAYMENT: { text: '采购款', cls: 'tag-blue' },
+  PURCHASE_ORDER: { text: '采购款', cls: 'tag-blue' },
+  /* 加工费 = 橙色标签 */
+  PROCESSING_FEE: { text: '加工费', cls: 'tag-orange' },
+  PROCESSING: { text: '加工费', cls: 'tag-orange' },
+  OUTSOURCING_FEE: { text: '加工费', cls: 'tag-orange' },
+  /* 物流费 = 绿色标签 */
+  LOGISTICS_FEE: { text: '物流费', cls: 'tag-green' },
+  LOGISTICS: { text: '物流费', cls: 'tag-green' },
+  SHIPPING_FEE: { text: '物流费', cls: 'tag-green' },
 };
 
 const PAYMENT_STATUS_MAP = {
@@ -30,8 +42,26 @@ const PAYMENT_STATUS_MAP = {
   refunded: { text: '已退回', cls: 'tag-orange' },
 };
 
-function bizTypeText(s) { return s ? ((BIZ_TYPE_MAP[s] || {}).text || '未知') : ''; }
-function bizTypeCls(s) { return (BIZ_TYPE_MAP[s] || {}).cls || 'tag-gray'; }
+function bizTypeText(s) {
+  if (!s) return '';
+  if (BIZ_TYPE_MAP[s]) return BIZ_TYPE_MAP[s].text;
+  /* 如果后端直接返回中文文本，原样展示 */
+  if (/[\u4e00-\u9fa5]/.test(s)) return s;
+  return '未知';
+}
+function bizTypeCls(s) {
+  if (BIZ_TYPE_MAP[s]) return BIZ_TYPE_MAP[s].cls;
+  /* 根据文本内容推断标签颜色 */
+  var text = bizTypeText(s);
+  if (text.indexOf('采购') >= 0) return 'tag-blue';
+  if (text.indexOf('加工') >= 0) return 'tag-orange';
+  if (text.indexOf('物流') >= 0 || text.indexOf('运费') >= 0) return 'tag-green';
+  if (text.indexOf('工资') >= 0) return 'tag-blue';
+  if (text.indexOf('订单') >= 0) return 'tag-green';
+  if (text.indexOf('对账') >= 0) return 'tag-orange';
+  if (text.indexOf('报销') >= 0) return 'tag-gray';
+  return 'tag-gray';
+}
 function paymentStatusText(s) { return s ? ((PAYMENT_STATUS_MAP[s] || {}).text || '未知') : ''; }
 function paymentStatusCls(s) { return (PAYMENT_STATUS_MAP[s] || {}).cls || 'tag-gray'; }
 
@@ -101,8 +131,8 @@ Page({
     const that = this;
     const now = new Date();
     const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
+    const m = ('0' + (now.getMonth() + 1)).slice(-2);
+    const d = ('0' + now.getDate()).slice(-2);
     const today = y + '-' + m + '-' + d;
     const firstDay = y + '-' + m + '-01';
     api.wagePayment.dashboardStats(firstDay, today).then(function (stats) {
@@ -189,6 +219,12 @@ Page({
 
   onPayMethodChange: function (e) {
     this.setData({ 'payForm.paymentMethod': e.detail.value, selectedAccountId: '' });
+  },
+
+  onSelectMethod: function (e) {
+    var method = e.currentTarget.dataset.method;
+    if (!method) return;
+    this.setData({ 'payForm.paymentMethod': method, selectedAccountId: '' });
   },
 
   onPayRemarkInput: function (e) {

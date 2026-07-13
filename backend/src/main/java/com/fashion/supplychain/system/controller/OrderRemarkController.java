@@ -9,7 +9,9 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.entity.StyleOperationLog;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.style.service.StyleOperationLogService;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.orchestration.OrderRemarkOrchestrator;
 import com.fashion.supplychain.system.service.OrderRemarkService;
@@ -43,6 +45,9 @@ public class OrderRemarkController {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleOperationLogService styleOperationLogService;
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
@@ -171,9 +176,36 @@ public class OrderRemarkController {
             return Collections.emptyList();
         }
         List<OrderRemark> result = new ArrayList<>();
-        if (StringUtils.hasText(style.getDescription())) {
-            result.addAll(parseInlineRemarks(style.getDescription().trim(), "style", styleNo));
+        // 注意：style.getDescription() 是生产制单文档内容（大货工艺要求等），
+        // 不是操作日志，不应拆成"历史备注"展示。只提取真正的操作记录。
+
+        // 1. 查询 t_style_operation_log 表，把款式操作日志合并到备注列表
+        try {
+            List<StyleOperationLog> opLogs = styleOperationLogService.lambdaQuery()
+                    .eq(StyleOperationLog::getStyleId, style.getId())
+                    .orderByDesc(StyleOperationLog::getCreateTime)
+                    .last("LIMIT 50")
+                    .list();
+            for (StyleOperationLog log : opLogs) {
+                OrderRemark r = new OrderRemark();
+                r.setTargetType("style");
+                r.setTargetNo(styleNo);
+                String content = log.getAction();
+                if (StringUtils.hasText(log.getRemark())) {
+                    content += "：" + log.getRemark();
+                }
+                r.setContent(content);
+                r.setAuthorName(log.getOperator());
+                r.setAuthorRole(log.getBizType());
+                r.setCreateTime(log.getCreateTime());
+                r.setDeleteFlag(0);
+                result.add(r);
+            }
+        } catch (Exception e) {
+            log.debug("查询款式操作日志失败: styleNo={}", styleNo, e);
         }
+
+        // 2. 样衣审核评语
         if (StringUtils.hasText(style.getSampleReviewComment())) {
             OrderRemark r = new OrderRemark();
             r.setId(-1L);
@@ -186,6 +218,7 @@ public class OrderRemarkController {
             r.setDeleteFlag(0);
             result.add(r);
         }
+        // 3. 制单退回评语
         if (StringUtils.hasText(style.getDescriptionReturnComment())) {
             OrderRemark r = new OrderRemark();
             r.setId(-2L);
@@ -198,6 +231,7 @@ public class OrderRemarkController {
             r.setDeleteFlag(0);
             result.add(r);
         }
+        // 4. 纸样退回评语
         if (StringUtils.hasText(style.getPatternRevReturnComment())) {
             OrderRemark r = new OrderRemark();
             r.setId(-3L);

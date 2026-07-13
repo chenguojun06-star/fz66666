@@ -129,7 +129,7 @@
     {
       "root": "pages/sample-development",
       "name": "pkg-sample-dev",
-      "pages": ["index/index", "detail/index"]
+      "pages": ["index/index", "detail/index", "stage-detail/index"]
     },
     {
       "root": "pages/sales",
@@ -146,14 +146,14 @@
     }
   ],
   "preloadRule": {
-    "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops", "pkg-more-apps"] },
+    "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops", "pkg-more-apps", "pkg-cutting", "pkg-procurement", "pkg-finance", "pkg-advance", "pkg-factory", "pkg-sample-dev", "pkg-sales", "pkg-return"] },
     "pages/defect/index":  { "network": "wifi", "packages": ["pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
     "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
     "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc", "pkg-advance", "pkg-finance"] }
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#3b82f6",
+    "color": "#8e8e93",
+    "selectedColor": "#007aff",
     "backgroundColor": "#ffffff",
     "borderStyle": "white",
     "list": [
@@ -185,8 +185,9 @@
   },
   "window": {
     "navigationBarTitleText": "衣智链",
-    "navigationBarBackgroundColor": "#2563EB",
-    "navigationBarTextStyle": "white",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f2f2f7",
     "backgroundTextStyle": "light"
   },
   "lazyCodeLoading": "requiredComponents",

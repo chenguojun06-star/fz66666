@@ -37,30 +37,19 @@
         <text class="advance-no">{{item.advanceNo || '—'}}</text>
         <text class="tag {{item.statusCls}}">{{item.statusText}}</text>
       </view>
-      <view class="card-body">
-        <view class="info-row">
-          <text class="info-label">员工</text>
-          <text class="info-value">{{item.employeeName || '—'}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">工厂</text>
-          <text class="info-value">{{item.factoryName || '—'}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">金额</text>
-          <text class="info-value amount">¥{{item.amountStr}}</text>
-        </view>
-        <view class="info-row" wx:if="{{item.status === 'approved'}}">
-          <text class="info-label">剩余</text>
-          <text class="info-value remaining">¥{{item.remainingStr}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">扣款</text>
-          <text class="tag {{item.repayCls}}" style="font-size:11px;">{{item.repayText}}</text>
-        </view>
+      <view class="card-employee-row">
+        <text class="employee-name">{{item.employeeName || '—'}}</text>
+        <text class="employee-dot">·</text>
+        <text class="factory-name">{{item.factoryName || '—'}}</text>
       </view>
+      <view class="card-amount-row">
+        <text class="amount-value">¥{{item.amountStr}}</text>
+        <text class="tag tag-sm {{item.repayCls}}">{{item.repayText}}</text>
+      </view>
+      <text class="remaining-text" wx:if="{{item.status === 'approved'}}">剩余 ¥{{item.remainingStr}}</text>
       <view class="card-footer">
         <text class="time-text">{{item.createTime || ''}}</text>
+        <text class="approve-hint" wx:if="{{item.status === 'pending'}}">点击审批</text>
       </view>
     </view>
 

@@ -6,38 +6,38 @@ const permission = require('../../utils/permission');
 
 function _hasFn(fn) { return typeof fn === 'function'; }
 
-const DAILY_FLOWERS = [
-  '🌸 樱花 — 生命之美，转瞬即永恒',
-  '🌹 玫瑰 — 热情与勇气',
-  '🌻 向日葵 — 追随阳光，永远热忱',
-  '🌷 郁金香 — 优雅与自信',
-  '🌺 木槿 — 坚韧温柔，细水长流',
-  '💐 康乃馨 — 感恩与温暖',
-  '🪻 薰衣草 — 等待一份美好',
-  '🌼 雏菊 — 纯真与希望',
-  '🏵️ 牡丹 — 雍容大气，不负韶华',
-  '🌿 绿萝 — 生生不息，自在生长',
-  '🪷 莲花 — 出淤泥而不染',
-  '🌾 稻穗 — 越充实，越谦逊',
-  '🍀 四叶草 — 幸运藏在坚持里',
-  '💮 茉莉 — 清新淡雅，沁人心脾',
-  '🪹 蒲公英 — 自由飞翔，落地生根',
-  '🌲 松柏 — 四季常青，志存高远',
-  '🌵 仙人掌 — 坚强不需要掌声',
-  '🎋 竹子 — 虚心有节，宁折不弯',
-  '🎍 梅花 — 凌寒独自开',
-  '🌱 新芽 — 一切美好，正在生长',
-  '🌳 橡树 — 根深才能叶茂',
-  '🪴 多肉 — 小而美，也是一种力量',
-  '🍃 银杏 — 时光沉淀出金色',
-  '🌕 桂花 — 低调芬芳，不言自明',
-  '🏔️ 雪莲 — 高处不胜寒，依然盛放',
-  '🎐 风铃草 — 感谢每一次相遇',
-  '🧊 水仙 — 内心丰盈，自有光芒',
-  '🫧 满天星 — 甘做配角，也照亮全场',
-  '🌴 椰树 — 面朝大海，从容不迫',
-  '🍁 枫叶 — 每一次变化都是成长',
-  '🎄 冬青 — 寒冬也有绿意',
+const DAILY_TIPS = [
+  '扫码前请确认菲号与工序匹配，避免扫错扣工资',
+  '质检不合格的菲号会自动回到待检列表，需返修后重新扫码',
+  '裁剪分扎后菲号自动生成二维码，可直接打印标签',
+  '工资结算前请确认所有工序扫码已完成，未完成的不计入',
+  '外发转单后可在转单记录中跟踪工厂进度',
+  '物料入库前请核对采购单号和实际数量，多退少补',
+  '样衣开发完成后BOM配置自动锁定，如需修改请联系主管',
+  '预付款申请需上传凭证，审批通过后自动入账',
+  '今日待质检的菲号请在下班前完成，避免影响下一道工序',
+  '扫码异常（重复扫码/扫错工序）请及时联系主管处理',
+  '裁剪损耗超过5%需要填写原因说明，否则无法生成菲号',
+  '订单交期前3天系统会自动提醒，请提前安排生产进度',
+  '工序模板修改后已扫码的记录不受影响，仅对新扫码生效',
+  '退货处理请在3个工作日内完成，逾期自动计入考核',
+  '库位扫码后请确认货架信息正确，避免物料错放',
+  '生产进度低于50%时系统会标红预警，请及时跟进',
+  '月度工资单在次月1号生成，如有异议请在3号前反馈',
+  '外发工厂交货延迟超过2天需立即上报，影响订单交期',
+  '样衣BOM配置时请填写准确用量，直接影响采购成本计算',
+  '质检合格率低于90%的批次需要返检全部菲号',
+  '扫码历史可按日期筛选，方便核对当日工作量',
+  '采购任务超期3天自动升级提醒，请及时处理',
+  '菲号打印前请确认标签尺寸和方向，避免浪费标签纸',
+  '工序单价调整需主管审批，审批通过后次日起效',
+  '库存预警的物料请优先安排采购，避免停工待料',
+  '样衣进度看板可查看各阶段完成率，及时跟进瓶颈工序',
+  '转单时请确认目标工厂产能，避免交期延误',
+  '工资查询支持按工序筛选，方便核对计件明细',
+  '每日下班前请完成当日扫码记录的确认，确保工资准确',
+  '财务付款状态实时更新，审批通过后可直接查看付款凭证',
+  '平台订单同步后请在24小时内确认，逾期系统自动标记未处理',
 ];
 
 const MENU_KEY_MAP = {
@@ -54,6 +54,7 @@ const MENU_KEY_MAP = {
   wagePayment: 'miniprogram.menu.wagePayment',
   salesData: 'miniprogram.menu.salesData',
   platformOrder: 'miniprogram.menu.platformOrder',
+  returnManage: 'miniprogram.menu.returnManage',
 };
 
 function getGreeting() {
@@ -63,61 +64,109 @@ function getGreeting() {
   return '晚上好';
 }
 
+// 将收藏 ID 数组映射为完整菜单项对象（含 iconClass / circleClass / route / name）
+function enrichFavorites(ids) {
+  var items = buildMenuItems(null);
+  var lookup = {};
+  items.forEach(function (item) { lookup[item.id] = item; });
+  return ids.map(function (entry) {
+    var id = typeof entry === 'string' ? entry : (entry && entry.id);
+    return lookup[id];
+  }).filter(function (item) { return item; });
+}
+
+// 默认收藏（设计稿 7 个核心应用，与 home.html 一致）
+function getDefaultFavoriteIds() {
+  return ['dashboard', 'scan', 'production', 'wagePayment', 'procurement', 'sampleDev', 'materialScan'];
+}
+
 function buildMenuItems(menuVisibility) {
   const visibility = menuVisibility || {};
   const items = [];
-
   const isFactory = isFactoryOwner();
 
-  // 运营看板：外发工厂不开放
-  if (!isFactory && visibility.smartOps !== false) {
-    items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' });
+  // ===== 设计稿 7 个核心应用（顺序/名称/图标/颜色与 home.html 一致）=====
+
+  // 1. 生产管理 — house icon — blue (#007aff)
+  if (!isFactory && visibility.dashboard !== false) {
+    items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-app-dashboard', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/index' });
   }
-  // 下单管理：外发工厂不开放
+  // 2. 扫码工序 — tag icon — green (#34c759)
+  if (visibility.quality !== false) {
+    items.push({ id: 'scan', name: '扫码工序', iconClass: 'icon-app-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
+  }
+  // 3. 质检管理 — checkmark icon — red
+  if (!isFactory && visibility.production !== false) {
+    items.push({ id: 'production', name: '质检管理', iconClass: 'icon-app-quality', circleClass: 'menu-icon-circle--red', route: '/pages/defect/index' });
+  }
+  // 4. 工资查询 — file icon — purple (#5856d6)
+  if (!isFactory && visibility.wagePayment !== false) {
+    items.push({ id: 'wagePayment', name: '工资查询', iconClass: 'icon-app-wage', circleClass: 'menu-icon-circle--purple', route: '/pages/payroll/payroll' });
+  }
+  // 5. 采购任务 — package icon — blue (#007aff)
+  if (!isFactory && visibility.procurement !== false) {
+    items.push({ id: 'procurement', name: '采购任务', iconClass: 'icon-app-procurement', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' });
+  }
+  // 5.5 菲号单价 — bundle split icon — green
+  if (visibility.bundleSplit !== false) {
+    items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-app-scan', circleClass: 'menu-icon-circle--green', route: '/pages/work/bundle-split/index' });
+  }
+  // 6. 样衣开发 — pencil icon — magenta (#af52de)
+  if (!isFactory && visibility.orderCreate !== false) {
+    items.push({ id: 'sampleDev', name: '样衣开发', iconClass: 'icon-app-sample', circleClass: 'menu-icon-circle--magenta', route: '/pages/sample-development/index/index' });
+  }
+  // 7. 物料入库 — cart icon — light blue (#66abff)
+  if (visibility.factoryShipment !== false) {
+    items.push({ id: 'materialScan', name: '物料入库', iconClass: 'icon-app-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' });
+  }
+
+  // ===== 其他应用（与 more-apps.html 设计稿一致）=====
+
+  // 生产管理组
+  if (!isFactory && visibility.dashboard !== false) {
+    items.push({ id: 'processTemplate', name: '工序模板', iconClass: 'icon-app-folder', circleClass: 'menu-icon-circle--lightblue', route: '/pages/dashboard/process-template/index' });
+  }
+  // 供应链组
+  if (visibility.cuttingDetail !== false) {
+    items.push({ id: 'cuttingDetail', name: '裁剪任务', iconClass: 'icon-menu-cutting-task', circleClass: 'menu-icon-circle--purple', route: '/pages/cutting/bundle-detail/index' });
+  }
+  if (visibility.factoryShipment !== false) {
+    items.push({ id: 'locationScan', name: '库位扫码', iconClass: 'icon-app-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' });
+    // 外发工厂对所有用户可见，确保收藏能同步到首页
+    items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-app-send', circleClass: 'menu-icon-circle--indigo', route: '/pages/factory/shipment/index' });
+  }
+  // 财务销售组
+  if (!isFactory && visibility.wagePayment !== false) {
+    items.push({ id: 'payroll', name: '财务付款', iconClass: 'icon-app-check-circle', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' });
+  }
+  if (!isFactory && visibility.advance !== false) {
+    items.push({ id: 'advance', name: '预付款', iconClass: 'icon-app-scan', circleClass: 'menu-icon-circle--magenta', route: '/pages/advance/list/index' });
+  }
+  if (!isFactory && visibility.salesData !== false) {
+    items.push({ id: 'salesData', name: '销售概览', iconClass: 'icon-app-shield', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/overview/index' });
+  }
+  // 其他组
+  if (!isFactory && visibility.smartOps !== false) {
+    items.push({ id: 'smartOps', name: '智能运营', iconClass: 'icon-app-help', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' });
+  }
+  if (!isFactory && visibility.returnManage !== false) {
+    items.push({ id: 'returnManage', name: '退货管理', iconClass: 'icon-app-arrow-left', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' });
+  }
+  if (!isFactory && visibility.userApproval !== false) {
+    items.push({ id: 'userApproval', name: '用户审批', iconClass: 'icon-app-user', circleClass: 'menu-icon-circle--gray', route: '/pages/admin/user-approval/index' });
+  }
+  if (!isFactory && visibility.feedback !== false) {
+    items.push({ id: 'feedback', name: '意见反馈', iconClass: 'icon-app-message', circleClass: 'menu-icon-circle--magenta', route: '/pages/admin/misc/feedback/index' });
+  }
+  // 额外应用（不在 more-apps 设计稿中，但保留兼容旧收藏）
   if (!isFactory && visibility.orderCreate !== false) {
     items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
   }
-  // 生产管理：外发工厂不开放（改为从外部工厂页面看自己的订单）
-  if (!isFactory && visibility.dashboard !== false) {
-    items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' });
-  }
-  // 质检通知：外发工厂不开放
-  if (!isFactory && visibility.production !== false) {
-    items.push({ id: 'production', name: '质检通知', iconClass: 'icon-menu-quality-notice', circleClass: 'menu-icon-circle--amber', route: '/pages/defect/index' });
-  }
-  // 生产扫码：所有用户均可
-  if (visibility.quality !== false) {
-    items.push({ id: 'quality', name: '生产扫码', iconClass: 'icon-menu-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
-  }
-  // 菲号单价：外发工厂不开放
-  if (!isFactory && visibility.bundleSplit !== false) {
-    items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-menu-price', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' });
-  }
-  // 裁剪任务：外发工厂不开放
-  if (!isFactory && visibility.cuttingDetail !== false) {
-    items.push({ id: 'cuttingDetail', name: '裁剪任务', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/bundle-detail/index' });
-  }
-  // 扫码历史：所有用户均可，但外发工厂只看到自己工厂的记录
   if (visibility.history !== false) {
     items.push({ id: 'history', name: '扫码历史', iconClass: 'icon-menu-history', circleClass: 'menu-icon-circle--indigo', route: '/pages/scan/history/index' });
   }
-  // 外发工厂：仅外发工厂账号可见
-  if (visibility.factoryShipment !== false) {
-    // 外发工厂账号 -> 显示为首页看板
-    if (isFactory) {
-      items.push({ id: 'factoryShipment', name: '工厂看板', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
-    } else if (visibility.dashboard === false) {
-      // 仅当生产管理不可见时才显示
-      items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
-    }
-  }
-  // 销售数据：外发工厂不开放
-  if (!isFactory && visibility.salesData !== false) {
-    items.push({ id: 'salesData', name: '销售数据', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--rose', route: '/pages/sales/overview/index' });
-  }
-  // 平台订单：外发工厂不开放
   if (!isFactory && visibility.platformOrder !== false) {
-    items.push({ id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' });
+    items.push({ id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--purple', route: '/pages/sales/order-list/index' });
   }
 
   return items;
@@ -176,9 +225,11 @@ Page({
     if (isFactory) {
       localFavorites = localFavorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
     }
-    if (localFavorites.length > 0) {
-      that.setData({ favoriteApps: localFavorites });
+    // 无收藏时使用默认（前7个菜单项）
+    if (localFavorites.length === 0) {
+      localFavorites = getDefaultFavoriteIds();
     }
+    that.setData({ favoriteApps: enrichFavorites(localFavorites) });
     // 再从服务端加载最新数据
     api.system.getFavoriteApps().then(function (data) {
       let favorites = [];
@@ -193,13 +244,15 @@ Page({
       if (isFactory) {
         favorites = favorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
       }
-      // 服务器返回空但本地有数据：保留本地（异步同步可能未完成）
-      if (favorites.length === 0 && localFavorites.length > 0) {
-        favorites = localFavorites;
+      // 服务器返回空：检查本地是否有真实收藏，否则用默认
+      if (favorites.length === 0) {
+        let stored = [];
+        try { stored = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
+        favorites = stored.length > 0 ? stored : getDefaultFavoriteIds();
       }
       // 同步到本地缓存
       try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
-      that.setData({ favoriteApps: favorites });
+      that.setData({ favoriteApps: enrichFavorites(favorites) });
     }).catch(function () {
       // 网络失败时用本地缓存，已在上面 setData 过
     });
@@ -312,7 +365,7 @@ Page({
 
     const season = this._computeSeasonBySolarTerms(now);
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-    const dailyTip = DAILY_FLOWERS[dayOfYear % DAILY_FLOWERS.length];
+    const dailyTip = DAILY_TIPS[dayOfYear % DAILY_TIPS.length];
 
     this.setData({
       dateInfo: {
@@ -367,9 +420,14 @@ Page({
     const that = this;
     setTimeout(function () { that._favoriteNavLock = false; }, 200);
 
-    const app = e.currentTarget.dataset.app;
-    if (!app || !app.route) return;
-    safeNavigate({ url: app.route });
+    // P0 修复：不传 data-app 对象（序列化不可靠），改传 data-route / data-id 字符串
+    var ds = e.currentTarget.dataset || {};
+    var route = String(ds.route || '').trim();
+    if (!route) {
+      console.warn('[home] onFavoriteTap 缺少 route 参数', ds);
+      return;
+    }
+    safeNavigate({ url: route });
   },
 
   onMoreAppsTap: function () {
@@ -457,14 +515,18 @@ Page({
   },
 
   _saveFavorites: function (favorites) {
+    // 从对象数组提取 ID 字符串数组（兼容旧的纯 ID 数组）
+    var ids = favorites.map(function (f) {
+      return typeof f === 'string' ? f : (f && f.id);
+    }).filter(function (id) { return id; });
     try {
-      wx.setStorageSync('favoriteApps', favorites);
+      wx.setStorageSync('favoriteApps', ids);
     } catch (e) {
       console.error('Save favorites failed', e);
     }
     // 异步同步到服务端
     try {
-      api.system.saveFavoriteApps(JSON.stringify(favorites)).catch(function (e) {
+      api.system.saveFavoriteApps(JSON.stringify(ids)).catch(function (e) {
         console.warn('[home] sync favorites to server failed:', e.message || e);
       });
     } catch (e) { /* ignore */ }

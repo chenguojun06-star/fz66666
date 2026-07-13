@@ -1,7 +1,7 @@
-/* ===== 历史记录 ===== */
-.empty {
+/* ===== 历史记录 — 空状态 ===== */
+{
   text-align: center;
-  padding: 20px;
+  padding: 32px 20px;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
 }

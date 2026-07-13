@@ -17,7 +17,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .section-card {
@@ -225,7 +225,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .sel-cover-box {
@@ -311,7 +311,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
   border-radius: var(--radius-sm);
   padding: 5px 6px;
   box-sizing: border-box;
@@ -453,7 +453,7 @@
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-md);
   padding: var(--spacing-xs);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .tab-item {
@@ -684,7 +684,7 @@
   background: var(--color-bg-card);
   color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .tf-mode-opt--disabled {
@@ -993,7 +993,7 @@
   border-radius: var(--radius-md);
   padding: var(--spacing-sm);
   box-sizing: border-box;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 
 /* =========================================
@@ -1016,18 +1016,18 @@
 /* 单主按钮：生成菲号 / 转单提交 */
 .btn-primary {
   flex: 1;
-  height: var(--btn-height-lg);
-  background: transparent;
+  height: var(--btn-height-md);
+  background: var(--color-bg-card);
   color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-2xl);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   transition: all 0.2s ease;
+  box-shadow: var(--shadow-card);
 }
 
 .btn-primary::after {
@@ -1229,7 +1229,7 @@
 }
 
 .bpo-wifi-hint-text {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
 }
 
@@ -1287,7 +1287,7 @@
   gap: var(--spacing-lg);
   margin: 0 auto;
   transition: width 0.2s ease, height 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 /* 竖版预览卡片 */

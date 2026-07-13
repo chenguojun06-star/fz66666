@@ -52,7 +52,8 @@ export default function ScanQualityPage() {
   useEffect(() => {
     if (!qualityData) { toast.error('数据异常'); navigate(-1); return; }
     setRawDetail(qualityData);
-    setCoverImage(getAuthedImageUrl(qualityData.coverImage || qualityData.styleImage || ''));
+    // P0 修复：添加 cover/styleCover 兜底，原代码只取 coverImage/styleImage
+    setCoverImage(getAuthedImageUrl(qualityData.coverImage || qualityData.styleImage || qualityData.cover || qualityData.styleCover || ''));
     setDetail({
       orderNo: qualityData.orderNo || '', bundleNo: qualityData.bundleNo || '',
       styleNo: qualityData.styleNo || '', color: qualityData.color || '',

@@ -145,10 +145,48 @@ public class PatternEnrichmentHelper {
                     developmentSourceType = styleInfo.getDevelopmentSourceType();
                     styleNo = styleInfo.getStyleNo();
 
-                    // 交期兜底：若 PatternProduction.deliveryTime 为空，从 StyleInfo.deliveryDate 取
+                    // 交期兜底
                     if (map.get("deliveryTime") == null && styleInfo.getDeliveryDate() != null) {
                         map.put("deliveryTime", styleInfo.getDeliveryDate().toLocalDate().toString());
                     }
+
+                    // ★ 补全阶段时间字段（小程序样衣开发进度条依赖这些字段）
+                    Map<String, Object> stageFields = new LinkedHashMap<>();
+                    stageFields.put("bomStartTime", styleInfo.getBomStartTime());
+                    stageFields.put("bomCompletedTime", styleInfo.getBomCompletedTime());
+                    stageFields.put("bomAssignee", styleInfo.getBomAssignee());
+                    stageFields.put("patternStartTime", styleInfo.getPatternStartTime());
+                    stageFields.put("patternCompletedTime", styleInfo.getPatternCompletedTime());
+                    stageFields.put("patternAssignee", styleInfo.getPatternAssignee());
+                    stageFields.put("sizeStartTime", styleInfo.getSizeStartTime());
+                    stageFields.put("sizeCompletedTime", styleInfo.getSizeCompletedTime());
+                    stageFields.put("sizeAssignee", styleInfo.getSizeAssignee());
+                    stageFields.put("processStartTime", styleInfo.getProcessStartTime());
+                    stageFields.put("processCompletedTime", styleInfo.getProcessCompletedTime());
+                    stageFields.put("processAssignee", styleInfo.getProcessAssignee());
+                    stageFields.put("secondaryStartTime", styleInfo.getSecondaryStartTime());
+                    stageFields.put("secondaryCompletedTime", styleInfo.getSecondaryCompletedTime());
+                    stageFields.put("secondaryAssignee", styleInfo.getSecondaryAssignee());
+                    stageFields.put("productionStartTime", styleInfo.getProductionStartTime());
+                    stageFields.put("productionCompletedTime", styleInfo.getProductionCompletedTime());
+                    stageFields.put("productionAssignee", styleInfo.getProductionAssignee());
+                    stageFields.put("sizePriceStartTime", styleInfo.getSizePriceStartTime());
+                    stageFields.put("sizePriceCompletedTime", styleInfo.getSizePriceCompletedTime());
+                    stageFields.put("sizePriceAssignee", styleInfo.getSizePriceAssignee());
+                    stageFields.put("sampleStatus", styleInfo.getSampleStatus());
+                    stageFields.put("sampleProgress", styleInfo.getSampleProgress());
+                    stageFields.put("sampleStartTime", styleInfo.getSampleStartTime());
+                    stageFields.put("sampleCompletedTime", styleInfo.getSampleCompletedTime());
+                    stageFields.put("sampleReviewStatus", styleInfo.getSampleReviewStatus());
+                    stageFields.put("sampleReviewComment", styleInfo.getSampleReviewComment());
+                    stageFields.put("sampleReviewer", styleInfo.getSampleReviewer());
+                    stageFields.put("sampleReviewTime", styleInfo.getSampleReviewTime());
+                    stageFields.put("progressNode", styleInfo.getProgressNode());
+                    stageFields.put("deliveryDate", styleInfo.getDeliveryDate());
+                    stageFields.put("season", styleInfo.getSeason());
+                    stageFields.put("sampleNo", styleInfo.getSampleNo());
+                    stageFields.put("sampleSupplier", styleInfo.getSampleSupplier());
+                    map.put("styleInfo", stageFields);
 
                     String sizeColorConfig = styleInfo.getSizeColorConfig();
                     if (StringUtils.hasText(sizeColorConfig)) {

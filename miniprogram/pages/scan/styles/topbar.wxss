@@ -1,10 +1,11 @@
 /* ===== 今日统计卡片（顶部） ===== */
 .today-stats-card {
   background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-xl);
   padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .tsc-head {
   display: flex;
@@ -24,7 +25,7 @@
   padding: 4px 10px;
   background: var(--color-bg-light);
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   margin-right: 8px;
 }
 .refresh-btn-loading {
@@ -60,7 +61,7 @@
   padding: 8px 4px;
   background: var(--color-bg-light);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .tsc-item.tsc-hl {
   background: var(--color-bg-light);

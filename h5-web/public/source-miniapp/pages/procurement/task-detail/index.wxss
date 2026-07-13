@@ -369,23 +369,21 @@
 .footer-bar .btn-secondary,
 .footer-bar .btn-submit {
   flex: 1;
-  height: var(--btn-height-lg);
+  height: var(--btn-height-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-button);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  background: transparent;
-  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
 }
 .footer-bar .btn-secondary {
   color: var(--color-text-secondary);
 }
 .footer-bar .btn-submit {
   color: var(--color-primary);
-  border-color: var(--color-primary);
-  border: 1px solid var(--color-primary);
 }
 .footer-bar-hover { opacity: 0.85; }
 .btn-disabled {

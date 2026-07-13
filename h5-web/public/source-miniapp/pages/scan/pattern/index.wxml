@@ -61,7 +61,7 @@
         <text class="group__hint">可多选</text>
       </view>
       <view class="group__body">
-        <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
+        <scroll-view class="process-scroll" scroll-y>
           <view wx:for="{{processList}}" wx:key="value"
                 class="cell cell--toggle {{item.checked ? 'cell--selected' : ''}}"
                 data-value="{{item.value}}"
@@ -82,9 +82,9 @@
     </view>
 
     <!-- 底部固定操作栏 -->
-    <view class="action-bar">
-      <view class="action-bar__btn action-bar__btn--secondary" hover-class="btn-hover" bindtap="goBack">取消</view>
-      <view class="action-bar__btn action-bar__btn--primary {{selectedCount === 0 ? 'action-bar__btn--disabled' : ''}}" hover-class="btn-hover" bindtap="onConfirmProcess">确认领取</view>
+    <view class="footer-bar">
+      <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+      <view class="btn-primary {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onConfirmProcess">确认领取</view>
     </view>
   </view>
 
@@ -103,6 +103,19 @@
       <view wx:if="{{detail.deliveryTime || detail.deliveryDate}}" class="status-card__delivery">
         <text class="status-card__deliveryLabel">交期</text>
         <text class="status-card__deliveryValue">{{detail.deliveryTime || detail.deliveryDate}}</text>
+      </view>
+    </view>
+
+    <!-- AI智能提示气泡 -->
+    <view wx:if="{{aiTipVisible && aiTipData && aiTipData.aiTip}}" class="ai-bubble {{aiTipData.priority === 'high' ? 'ai-bubble-high' : 'ai-bubble-normal'}}">
+      <view class="ai-bubble-header">
+        <text class="ai-bubble-icon"><text class="line-icon line-icon--lg {{aiTipData.priority === 'high' ? 'icon-danger' : 'icon-lightbulb'}}"></text></text>
+        <text class="ai-bubble-stage" wx:if="{{aiTipData.stage}}">{{aiTipData.stage}}</text>
+        <view class="ai-bubble-close" bindtap="dismissAiTip">✕</view>
+      </view>
+      <text class="ai-bubble-text">{{aiTipData.aiTip}}</text>
+      <view wx:if="{{aiTipData.keywords && aiTipData.keywords.length > 0}}" class="ai-bubble-tags">
+        <text wx:for="{{aiTipData.keywords}}" wx:key="*this" class="ai-bubble-tag">{{item}}</text>
       </view>
     </view>
 
@@ -189,46 +202,51 @@
           </view>
         </block>
 
-        <!-- 多色多码选择 -->
-        <block wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}">
-          <view class="cell-divider"></view>
-          <view class="cell cell--column">
-            <text class="cell__label">扫码明细（{{skuList.length}}项）</text>
-            <view class="cell__skuList">
-              <view wx:for="{{skuList}}" wx:key="id" class="sku-item">
-                <view class="sku-item__info">
-                  <text class="sku-item__label">{{item.label}}</text>
-                  <text class="sku-item__total">订单 {{item.totalQuantity}} 件</text>
+        <!-- 数量输入 -->
+        <block wx:if="{{detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}">
+          <!-- 矩阵输入模式（多颜色多码数） -->
+          <block wx:if="{{detail.hasMatrix && detail.matrixRows.length > 0}}">
+            <view class="cell-divider"></view>
+            <view class="cell cell--column">
+              <view class="cell__matrixHeader">
+                <text class="cell__label">数量矩阵</text>
+                <text class="cell__matrixTotal">合计 {{detail.matrixTotal || 0}} 件</text>
+              </view>
+              <view class="matrix-table">
+                <view class="matrix-row matrix-row--head">
+                  <view class="matrix-cell matrix-cell--label">颜色\码数</view>
+                  <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell matrix-cell--head">{{item}}</view>
+                  <view class="matrix-cell matrix-cell--sum">小计</view>
                 </view>
-                <view class="sku-item__qty">
-                  <input class="sku-item__input" type="number"
-                         value="{{item.inputQuantity}}"
-                         data-index="{{index}}" bindinput="onSkuInput"
-                         placeholder="数量…" />
-                  <text class="sku-item__unit">件</text>
+                <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:for-index="rIdx" wx:key="color" class="matrix-row">
+                  <view class="matrix-cell matrix-cell--label">{{row.color || '-'}}</view>
+                  <view wx:for="{{row.quantities}}" wx:for-item="q" wx:for-index="cIdx" wx:key="cIdx" class="matrix-cell matrix-cell--input">
+                    <input class="matrix-input"
+                           type="digit"
+                           placeholder="0"
+                           value="{{q}}"
+                           data-row="{{rIdx}}"
+                           data-col="{{cIdx}}"
+                           bindinput="onMatrixQtyInput" />
+                  </view>
+                  <view class="matrix-cell matrix-cell--sum">{{row.rowTotal || 0}}</view>
                 </view>
               </view>
             </view>
-          </view>
-          <view class="cell-divider"></view>
-          <view class="cell cell--summary">
-            <text class="cell__label">总数量</text>
-            <text class="cell__value cell__value--accent">{{summary.totalQuantity}} 件</text>
-          </view>
-        </block>
-
-        <!-- 数量输入（无 SKU 时） -->
-        <block wx:if="{{(!skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}">
-          <view class="cell-divider"></view>
-          <view class="cell cell--input">
-            <text class="cell__label">数量</text>
-            <input class="cell__input cell__input--inline"
-                   type="digit"
-                   placeholder="请输入数量…"
-                   value="{{detail.quantity}}"
-                   bindinput="onQuantityInput" />
-            <text class="cell__suffix">件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
-          </view>
+          </block>
+          <!-- 单数量输入模式（无矩阵） -->
+          <block wx:else>
+            <view class="cell-divider"></view>
+            <view class="cell cell--input">
+              <text class="cell__label">数量</text>
+              <input class="cell__input cell__input--inline"
+                     type="digit"
+                     placeholder="请输入数量…"
+                     value="{{detail.quantity}}"
+                     bindinput="onQuantityInput" />
+              <text class="cell__suffix">件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
+            </view>
+          </block>
         </block>
 
         <!-- 仓位编号 -->
@@ -290,9 +308,9 @@
     </view>
 
     <!-- 底部固定操作栏 -->
-    <view class="action-bar">
-      <view class="action-bar__btn action-bar__btn--secondary" hover-class="btn-hover" bindtap="goBack">取消</view>
-      <view class="action-bar__btn action-bar__btn--primary {{loading ? 'action-bar__btn--disabled' : ''}}" hover-class="btn-hover" bindtap="submitOp">
+    <view class="footer-bar">
+      <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
         {{loading ? '提交中…' : (detail.submitLabel || '提交')}}
       </view>
     </view>

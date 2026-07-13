@@ -89,7 +89,7 @@ page {
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 
 .user-header {
@@ -178,7 +178,7 @@ page {
   background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 
 .tab-item {

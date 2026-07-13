@@ -307,7 +307,7 @@ const scanLifecycleMixin = Behavior({
     async _loadWarehouseOptions() {
       try {
         const res = await api.warehouse.listWarehouseAreas('FINISHED');
-        const data = res?.data || res;
+        const data = (res && res.data) || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const areaMap = {};
@@ -338,7 +338,7 @@ const scanLifecycleMixin = Behavior({
       }
       try {
         const res = await api.warehouse.listLocations('FINISHED', areaId);
-        const data = res?.data || res;
+        const data = (res && res.data) || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const locMap = {};

@@ -6,29 +6,11 @@ const toast = require('../../../utils/uiHelper').toast;
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const SKUProcessor = require('../processors/SKUProcessor');
 const { handlePatternScan } = require('../handlers/PatternScanProcessor');
 const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
+const scanFeedback = require('../../../utils/scan-feedback');
 
-// ---- 常量（样板操作类型定义） ----
-const OPERATION_LABELS = {
-  RECEIVE: '领取样板',
-  PLATE: '车板扫码',
-  FOLLOW_UP: '跟单确认',
-  COMPLETE: '完成确认',
-  REWORK: '返修完成',
-  PROCUREMENT: '采购',
-  CUTTING: '裁剪',
-  SECONDARY: '二次工艺',
-  SEWING: '车缝',
-  TAIL: '尾部',
-  REVIEW: '样衣审核',
-  WAREHOUSE_IN: '样衣入库',
-  WAREHOUSE_OUT: '样衣出库',
-  WAREHOUSE_RETURN: '样衣归还',
-};
-const WAREHOUSE_OPERATIONS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN']);
-
+// ---- 状态中文映射 ----
 const STATUS_LABELS = {
   // 通用流程
   PENDING: '待处理',
@@ -58,21 +40,6 @@ function _statusToCN(status) {
   return STATUS_LABELS[s] || String(status);
 }
 
-const SOURCE_LABELS = {
-  SELF_DEVELOPED: '自主开发',
-  OEM: '来料加工',
-  CUSTOMER: '客供',
-  LICENSED: '授权款',
-};
-const CATEGORY_LABELS = {
-  WOMAN: '女装',
-  MAN: '男装',
-  KIDS: '童装',
-  SPORT: '运动',
-  OUTDOOR: '户外',
-  HOME: '家居',
-};
-
 function normalizePositiveInt(value, fallback) {
   const num = parseInt(value, 10);
   if (!Number.isFinite(num) || num <= 0) return fallback;
@@ -82,8 +49,6 @@ function normalizePositiveInt(value, fallback) {
 Page({
   data: {
     detail: {},
-    skuList: [],
-    summary: {},
     loading: false,
     warehouseOptions: [],
     warehouseAreaId: '',
@@ -95,6 +60,8 @@ Page({
     viewMode: 'loading',
     // 工序选择列表（显示工序名称、状态、是否可操作）
     processList: [],
+    aiTipData: null,
+    aiTipVisible: false,
   },
 
   onLoad(options) {
@@ -111,7 +78,8 @@ Page({
 
     if (!patternId) {
       toast.error('无效的样衣编号');
-      setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 300);
+      scanFeedback.playError();
+      setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
       return;
     }
 
@@ -135,6 +103,7 @@ Page({
       timedOut = true;
       try { wx.hideLoading(); } catch (_e) { /* ignore */ }
       toast.error('加载超时，请重试');
+      scanFeedback.playError();
       if (!that.data || !that.data.viewMode) {
         try {
           wx.navigateTo && wx.navigateBack({ delta: 1 });
@@ -156,6 +125,7 @@ Page({
         if (!result || !result.success) {
           finish();
           toast.error(result && result.message ? result.message : '加载失败');
+          scanFeedback.playError();
           setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
           return;
         }
@@ -194,7 +164,8 @@ Page({
         if (processList.length === 0) {
           finish();
           toast.success('所有工序已完成');
-          setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
+          scanFeedback.playSuccess();
+          setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 1200);
           return;
         }
 
@@ -211,7 +182,7 @@ Page({
             selectedCount: 0,
             detail: {
               patternId: data.patternId,
-              styleNo: data.styleNo || data.patternId,
+              styleNo: data.styleNo || '',
               styleName: data.styleName || '',
               color: data.color || '',
               size: data.size || '',
@@ -229,6 +200,7 @@ Page({
         finish();
         console.error('[PatternPage] 加载失败:', err);
         toast.error('加载失败，请重试');
+        scanFeedback.playError();
         setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
       });
     bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
@@ -280,7 +252,7 @@ Page({
     const colorVal = data.color || patternDetail.color || '';
     const sizeVal = data.size || patternDetail.size || '';
     const quantityVal = data.quantity || patternDetail.quantity || 0;
-    const styleNoVal = data.styleNo || patternDetail.styleNo || data.patternId || '';
+    const styleNoVal = data.styleNo || patternDetail.styleNo || '';
     const styleNameVal = data.styleName || patternDetail.styleName || '';
     const sizesArr = data.sizes || patternDetail.sizes || [];
     const coverVal = data.cover || patternDetail.coverImage || patternDetail.styleImage || '';
@@ -374,6 +346,33 @@ Page({
     }
 
     this._loadWarehouseOptions();
+
+    if (data.styleNo && operationType) {
+      this._fetchAiTip(data.styleNo, operationType);
+    }
+  },
+
+  _fetchAiTip(styleNo, processName) {
+    const self = this;
+    // P1 修复：styleNo 为空时不调用 AI 接口（之前 patternId 兜底导致 UUID 当 orderNo 传给后端）
+    if (!styleNo) return;
+    try {
+      api.intelligence.getScanTips({ orderNo: styleNo, processName: processName })
+        .then(function(res) {
+          if (res && res.aiTip) {
+            self.setData({ aiTipData: res, aiTipVisible: true });
+          }
+        })
+        .catch(function(err) {
+          console.warn('[PatternPage] AI提示获取失败:', err);
+        });
+    } catch (e) {
+      console.warn('[PatternPage] AI提示调用异常:', e);
+    }
+  },
+
+  dismissAiTip() {
+    this.setData({ aiTipVisible: false });
   },
 
   onUnload() {
@@ -385,28 +384,6 @@ Page({
   },
 
   // ---- 事件处理 ----
-
-  onOperationChange(e) {
-    if (e.currentTarget.dataset.disabled) return;
-    const type = e.currentTarget.dataset.type;
-    if (!type) return;
-
-    const options = this.data.detail.operationOptions || [];
-    const selected = options.find(item => item.value === type);
-    const patternDetail = (getApp().globalData && getApp().globalData.patternScanData
-      && (getApp().globalData.patternScanData.detail || getApp().globalData.patternScanData).patternDetail) || {};
-    const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
-    const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
-    const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
-
-    this.setData({
-      'detail.operationType': type,
-      'detail.operationLabel': (selected && selected.label) || OPERATION_LABELS[type] || '操作',
-      'detail.submitLabel': (selected && selected.label) || OPERATION_LABELS[type] || '操作',
-      'detail.requiresWarehouseInput': WAREHOUSE_OPERATIONS.has(type),
-      'detail.requiresReviewBeforeInbound': type === 'WAREHOUSE_IN' && !reviewApproved,
-    });
-  },
 
   onQuantityInput(e) {
     const maxQty = this.data.detail.maxQuantity || this.data.detail.quantity || 999999;
@@ -420,13 +397,28 @@ Page({
     }
   },
 
-  onSkuInput(e) {
-    const idx = e.currentTarget.dataset.index;
-    const val = parseInt(e.detail.value, 10) || 0;
-    const key = 'skuList[' + idx + '].inputQuantity';
-    this.setData({ [key]: val });
-    const summary = SKUProcessor.getSummary(this.data.skuList);
-    this.setData({ summary: summary });
+  // ---- 矩阵输入事件 ----
+  onMatrixQtyInput(e) {
+    const rowIdx = e.currentTarget.dataset.row;
+    const colIdx = e.currentTarget.dataset.col;
+    const val = e.detail.value;
+    const qty = parseInt(val, 10) || 0;
+    const matrixRows = this.data.detail.matrixRows || [];
+    if (rowIdx < 0 || rowIdx >= matrixRows.length) return;
+    const rows = JSON.parse(JSON.stringify(matrixRows));
+    if (!Array.isArray(rows[rowIdx].quantities)) rows[rowIdx].quantities = [];
+    while (rows[rowIdx].quantities.length <= colIdx) rows[rowIdx].quantities.push(0);
+    rows[rowIdx].quantities[colIdx] = qty;
+    // 重新计算行合计和总合计
+    let grandTotal = 0;
+    rows.forEach(function(r) {
+      r.rowTotal = (r.quantities || []).reduce(function(s, q) { return s + (Number(q) || 0); }, 0);
+      grandTotal += r.rowTotal;
+    });
+    this.setData({
+      'detail.matrixRows': rows,
+      'detail.matrixTotal': grandTotal,
+    });
   },
 
   onWarehouseInput(e) {
@@ -442,7 +434,7 @@ Page({
   async _loadWarehouseOptions() {
     try {
       const res = await api.warehouse.listWarehouseAreas('SAMPLE');
-      const data = res?.data || res;
+      const data = (res && res.data) || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const areaMap = {};
@@ -494,7 +486,7 @@ Page({
     }
     try {
       const res = await api.warehouse.listLocations('SAMPLE', areaId);
-      const data = res?.data || res;
+      const data = (res && res.data) || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const locMap = {};
@@ -536,12 +528,6 @@ Page({
   onReviewResultChange(e) {
     const result = e.currentTarget.dataset.result;
     this.setData({ 'detail.reviewResult': result });
-  },
-
-  previewImage() {
-    const url = this.data.detail.coverImage;
-    if (!url) return;
-    wx.previewImage({ urls: [url], current: url });
   },
 
   previewReviewImage(e) {
@@ -592,7 +578,7 @@ Page({
               if (data && data.code === 200 && data.data) {
                 resolve(data.data);
               } else {
-                reject(new Error(data?.message || '上传失败'));
+                reject(new Error((data && data.message) || '上传失败'));
               }
             } catch (e) {
               reject(e);
@@ -612,10 +598,12 @@ Page({
         const updatedImages = [...this.data.reviewImages, ...newImages];
         this.setData({ reviewImages: updatedImages });
         toast.success('上传成功');
+        scanFeedback.playSuccess();
       })
       .catch((err) => {
         console.error('[PatternPage] 图片上传失败:', err);
         toast.error('上传失败');
+        scanFeedback.playError();
       });
   },
 
@@ -683,60 +671,75 @@ Page({
       return payload;
     }.bind(this);
 
-    // 检查是否有多色多码选择
-    const hasSkuList = this.data.skuList && this.data.skuList.length > 0;
-    if (hasSkuList) {
-      const validation = SKUProcessor.validateSKUInputBatch(this.data.skuList);
-      if (!validation.valid) {
-        toast.error((validation.errors && validation.errors[0]) || '请检查输入');
-        return;
-      }
-      if (validation.validList.length === 0) {
-        toast.error('请至少输入一个数量');
-        return;
-      }
-
-      this.setData({ loading: true });
-      try {
-        const tasks = validation.validList.map(function(input) {
-          return api.production.submitPatternScan(
-            buildPayload(Number(input.inputQuantity), input.color, input.size)
-          );
+    // 矩阵模式：批量提交多条记录（每个颜色×码数一条）
+    if (d.hasMatrix && Array.isArray(d.matrixRows) && d.matrixRows.length > 0) {
+      const tasks = [];
+      d.matrixRows.forEach(function(row) {
+        const color = row.color || '';
+        (row.quantities || []).forEach(function(q, idx) {
+          const qNum = Number(q) || 0;
+          if (qNum > 0) {
+            const size = (d.matrixSizes && d.matrixSizes[idx]) || '';
+            tasks.push({ qty: qNum, color: color, size: size });
+          }
         });
-
-        await Promise.all(tasks);
-        toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
-        this._emitRefresh();
-        setTimeout(function() { wx.navigateBack(); }, 1200);
-      } catch (e) {
-        console.error('[样板页] 工序扫码提交失败:', e);
-        toast.error(e.errMsg || e.message || '工序扫码失败');
-      } finally {
-        this.setData({ loading: false });
-      }
-    } else {
-      if (qty <= 0) {
-        toast.error('请输入正确数量');
+      });
+      if (tasks.length === 0) {
+        toast.error('请至少填写一项数量');
         return;
       }
-      const maxQty = d.maxQuantity || d.quantity || 999999;
-      if (qty > maxQty) {
-        toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
-        return;
-      }
-
       this.setData({ loading: true });
-      try {
-        await api.production.submitPatternScan(buildPayload(qty, d.color, d.size));
-        toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
+      wx.showLoading({ title: '提交中 0/' + tasks.length, mask: true });
+      let success = 0;
+      let fail = 0;
+      for (let i = 0; i < tasks.length; i++) {
+        const t = tasks[i];
+        try {
+          await api.production.submitPatternScan(buildPayload(t.qty, t.color, t.size));
+          success++;
+        } catch (e) {
+          fail++;
+          console.error('[矩阵扫码] 第' + (i + 1) + '条提交失败:', e);
+        }
+        wx.showLoading({ title: '提交中 ' + (i + 1) + '/' + tasks.length, mask: true });
+      }
+      wx.hideLoading();
+      if (success > 0) {
+        toast.success('完成 ' + success + ' 条' + (fail > 0 ? '，失败 ' + fail + ' 条' : ''));
+        scanFeedback.playSuccess();
         this._emitRefresh();
         setTimeout(function() { wx.navigateBack(); }, 1200);
-      } catch (e) {
-        console.error('[样板页] 工序扫码提交失败:', e);
-        toast.error(e.errMsg || e.message || '工序扫码失败');
-      } finally {
-        this.setData({ loading: false });
+      } else {
+        toast.error('全部提交失败');
+        scanFeedback.playError();
       }
+      this.setData({ loading: false });
+      return;
+    }
+
+    if (qty <= 0) {
+      toast.error('请输入正确数量');
+      return;
+    }
+    const maxQty = d.maxQuantity || d.quantity || 999999;
+    if (qty > maxQty) {
+      toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
+      return;
+    }
+
+    this.setData({ loading: true });
+    try {
+      await api.production.submitPatternScan(buildPayload(qty, d.color, d.size));
+      toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
+      scanFeedback.playSuccess();
+      this._emitRefresh();
+      setTimeout(function() { wx.navigateBack(); }, 1200);
+    } catch (e) {
+      console.error('[样板页] 工序扫码提交失败:', e);
+      toast.error(e.errMsg || e.message || '工序扫码失败');
+      scanFeedback.playError();
+    } finally {
+      this.setData({ loading: false });
     }
   },
 

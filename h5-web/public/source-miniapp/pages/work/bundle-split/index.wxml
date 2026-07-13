@@ -25,7 +25,7 @@ module.exports = { abbr: abbr };
       </view>
       <view class="scan-bundle-bar">
         <view class="scan-bundle-btn" bindtap="scanBundleQr" hover-class="scan-bundle-btn-hover">
-          <text class="scan-icon">📷</text>
+          <text class="scan-icon"><text class="line-icon icon-camera"></text></text>
           <text>扫码菲号直接拆</text>
         </view>
       </view>
@@ -39,7 +39,7 @@ module.exports = { abbr: abbr };
           <text class="order-no">{{orderNo}}</text>
         </view>
         <view class="order-bar-actions">
-          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover">📷 扫菲号</view>
+          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover"><text class="line-icon icon-camera"></text> 扫菲号</view>
           <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
         </view>
       </view>
@@ -80,7 +80,7 @@ module.exports = { abbr: abbr };
           </view>
           <!-- 持有人（可选） -->
           <view wx:if="{{item.operatorName}}" class="bundle-holder">
-            <text class="holder-icon">👤</text>
+            <text class="holder-icon"><text class="line-icon icon-user"></text></text>
             <text class="holder-label">持有：</text>
             <text class="holder-name">{{item.operatorName}}</text>
           </view>
@@ -117,7 +117,7 @@ module.exports = { abbr: abbr };
       </view>
 
       <view wx:else class="empty-state empty-state-card">
-        <text class="empty-icon">📦</text>
+        <text class="empty-icon"><text class="line-icon line-icon--lg icon-box"></text></text>
         <text class="empty-text">该订单暂无菲号</text>
         <text class="empty-hint">请确认订单号是否正确，或扫码菲号直接拆</text>
       </view>
@@ -179,7 +179,7 @@ module.exports = { abbr: abbr };
     </view>
 
     <view wx:else class="empty-state empty-state-card">
-      <text class="empty-icon">📥</text>
+      <text class="empty-icon"><text class="line-icon line-icon--lg icon-inbox"></text></text>
       <text class="empty-text">暂无待确认的拆菲请求</text>
       <text class="empty-hint">当有工友向你拆菲转派时会显示在这里</text>
     </view>
@@ -228,7 +228,7 @@ module.exports = { abbr: abbr };
     </view>
 
     <view wx:elif="{{priceOrderNo && !priceLoading}}" class="empty-state empty-state-card">
-      <text class="empty-icon">📋</text>
+      <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
       <text class="empty-text">该订单暂无工序数据</text>
       <text class="empty-hint">请确认订单已分配工序</text>
     </view>

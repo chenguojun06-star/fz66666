@@ -89,7 +89,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg) var(--spacing-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .section-title {
@@ -164,7 +164,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .steps-title {

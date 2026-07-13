@@ -18,7 +18,7 @@
 .res-cover {
   width: 40px;
   height: 40px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -57,6 +57,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-error);
   color: var(--color-error);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
 }
@@ -146,10 +147,11 @@
 /* ===== 区块通用 ===== */
 .section {
   background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-xl);
   padding: 10px;
   margin-bottom: 8px;
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .sec-head {
   display: flex;

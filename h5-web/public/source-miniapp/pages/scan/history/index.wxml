@@ -7,9 +7,17 @@
 
   <!-- 月份选择器（按月模式） -->
   <view class="month-selector" wx:if="{{dateMode === 'month'}}">
-    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">‹</view>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </view>
     <text class="month-text">{{displayMonth}}</text>
-    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">›</view>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </view>
   </view>
 
   <!-- 日期范围选择（自定义模式） -->
@@ -59,9 +67,47 @@
     </view>
   </view>
 
-  <!-- 表格 -->
-  <view class="table-wrap" wx:if="{{displayRecords.length > 0}}">
-    <scan-record-table records="{{displayRecords}}" showAmount="{{true}}" extFields="{{extFields}}" />
+  <!-- 记录卡片列表 -->
+  <view class="record-list" wx:if="{{displayRecords.length > 0}}">
+    <view class="record-card" wx:for="{{displayRecords}}" wx:key="id">
+      <view class="record-card-top">
+        <view class="record-card-order">
+          <text class="record-order-no">{{item.displayOrderNo || '-'}}</text>
+          <text wx:if="{{item.displayTypeTag}}" class="record-type-tag {{item.displayTypeTag === '样衣' ? 'record-type-pattern' : ''}}">{{item.displayTypeTag}}</text>
+        </view>
+        <text class="record-time">{{item.displayTime || ''}}</text>
+      </view>
+      <view class="record-card-body">
+        <view class="record-row">
+          <text class="record-label">菲号</text>
+          <text class="record-value">{{item.displayBundleNo || '-'}}</text>
+        </view>
+        <view class="record-row">
+          <text class="record-label">工序</text>
+          <text class="record-value">{{item.displayProcess || '-'}}</text>
+        </view>
+        <view class="record-row">
+          <text class="record-label">颜色/码数</text>
+          <text class="record-value">{{item.displayColorSize || '-'}}</text>
+        </view>
+        <view class="record-row">
+          <text class="record-label">数量</text>
+          <text class="record-value record-qty">{{item.displayQuantity || 0}}</text>
+        </view>
+        <view class="record-row" wx:if="{{item.displayUnitPrice || item.displayPriceAmount}}">
+          <text class="record-label">单价/金额</text>
+          <text class="record-value">{{item.displayPriceAmount || item.displayUnitPrice || '-'}}</text>
+        </view>
+        <view class="record-row" wx:if="{{item.displayWorker}}">
+          <text class="record-label">领取人</text>
+          <text class="record-value">{{item.displayWorker}}</text>
+        </view>
+        <view class="record-row" wx:if="{{item.displayBedNo}}">
+          <text class="record-label">床号</text>
+          <text class="record-value">{{item.displayBedNo}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 空状态 -->

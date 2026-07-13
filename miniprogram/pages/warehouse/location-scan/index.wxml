@@ -1,3 +1,10 @@
+<wxs module="util">
+  module.exports.percent = function(used, total) {
+    if (!total || total === '∞' || total === 0) return 0;
+    var p = Math.round((used / total) * 100);
+    return p > 100 ? 100 : p;
+  }
+</wxs>
 <view class="location-scan-page">
   <view class="header">
     <view class="location-code">{{locationInfo.locationCode || locationCode}}</view>
@@ -25,6 +32,9 @@
     <view class="info-row">
       <text class="label">容量</text>
       <text class="value">{{locationInfo.usedCapacity}}/{{locationInfo.capacity || '∞'}}</text>
+    </view>
+    <view class="capacity-bar" wx:if="{{locationInfo.capacity && locationInfo.capacity > 0}}">
+      <view class="capacity-bar-fill" style="width: {{util.percent(locationInfo.usedCapacity, locationInfo.capacity)}}%"></view>
     </view>
   </view>
 

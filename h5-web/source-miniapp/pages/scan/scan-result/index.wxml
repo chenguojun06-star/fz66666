@@ -153,7 +153,7 @@
       <text class="group__hint">可多选</text>
     </view>
     <view class="group__body">
-      <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
+      <scroll-view class="process-scroll" scroll-y>
         <view wx:for="{{processOptions}}" wx:key="value"
               class="cell cell--toggle {{item.checked ? 'cell--selected' : ''}}"
               data-value="{{item.value}}"
@@ -248,9 +248,9 @@
   </view>
 
   <!-- ============== 底部固定操作栏 ============== -->
-  <view class="action-bar">
-    <view class="action-bar__btn action-bar__btn--secondary" hover-class="btn-hover" bindtap="goBack">取消</view>
-    <view class="action-bar__btn action-bar__btn--primary {{loading || selectedCount === 0 ? 'action-bar__btn--disabled' : ''}}" hover-class="btn-hover" bindtap="submitScanResult">
+  <view class="footer-bar">
+    <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-primary {{loading || selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitScanResult">
       {{loading ? '提交中…' : (isQualityReceive ? '质检录入' : '确认提交')}}
     </view>
   </view>

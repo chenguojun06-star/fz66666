@@ -17,12 +17,16 @@ const style = {
     return ok('/api/style/info', 'POST', payload || {});
   },
   updateStyle(styleId, payload) {
+    // P1 修复：后端 @PutMapping 无路径（根路径 /api/style/info），id 在 body 中
     const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}`, 'PUT', payload || {});
+    const body = { ...(payload || {}) };
+    if (id) body.id = id;
+    return ok('/api/style/info', 'PUT', body);
   },
   deleteStyle(styleId) {
+    // P1 修复：后端无 @DeleteMapping，删除通过 POST /{id}/scrap 软删除实现
     const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}`, 'DELETE', {});
+    return ok(`/api/style/info/${encodeURIComponent(id)}/scrap`, 'POST', {});
   },
 
   // 阶段操作（完成/重置）
@@ -122,10 +126,13 @@ const style = {
     // 通过款式详情获取styleNo，再查纸样列表取最新一条
     const id = String(styleId || '').trim();
     return ok(`/api/style/info/${encodeURIComponent(id)}`, 'GET', {}).then(detail => {
-      const styleNo = detail?.styleNo || detail?.styleCode || '';
+      // P0 修复：?. 可选链在低版本小程序基础库（ES5）下报错，改用显式守卫
+      const d = detail || {};
+      const styleNo = d.styleNo || d.styleCode || '';
       if (!styleNo) return null;
       return ok('/api/pattern-revision/list', 'GET', { styleNo, pageSize: 1 }).then(pageData => {
-        const records = pageData?.records || [];
+        const pd = pageData || {};
+        const records = pd.records || [];
         return records.length > 0 ? records[0] : null;
       });
     });
@@ -155,7 +162,8 @@ const style = {
     return ok('/api/style/attachment/list', 'GET', params || {});
   },
   uploadAttachment(payload) {
-    return ok('/api/style/attachment', 'POST', payload || {});
+    // P0 修复：后端 @PostMapping("/upload")，完整路径为 /api/style/attachment/upload
+    return ok('/api/style/attachment/upload', 'POST', payload || {});
   },
   deleteAttachment(attachmentId) {
     const id = String(attachmentId || '').trim();
@@ -200,10 +208,12 @@ const warehouse = {
     return ok('/api/warehouse/finished-inventory/edit', 'POST', { warehousingId, changes });
   },
   listWarehouseAreas(warehouseType) {
-    return ok('/api/warehouse/area/search', 'GET', { warehouseType: warehouseType || '' });
+    // P1 修复：后端 @PostMapping("/search")，前端原误用 GET
+    return ok('/api/warehouse/area/search', 'POST', { warehouseType: warehouseType || '' });
   },
   listLocations(warehouseType, areaId) {
-    return ok('/api/warehouse/location/search', 'GET', { warehouseType: warehouseType || '', areaId: areaId });
+    // P1 修复：后端 @PostMapping("/search")，前端原误用 GET
+    return ok('/api/warehouse/location/search', 'POST', { warehouseType: warehouseType || '', areaId: areaId });
   },
   // 库位库存详情（库位扫码后查询）
   locationItems(locationCode) {
@@ -217,7 +227,8 @@ const material = {
     return ok('/api/production/material/stock/alerts', 'GET', params || {});
   },
   listBatchDetails(params) {
-    return ok('/api/production/material/stock/batch-details', 'GET', params || {});
+    // P0 修复：后端 @GetMapping("/batches")，原前端误用 /batch-details
+    return ok('/api/production/material/stock/batches', 'GET', params || {});
   },
   listPurchaseRecords(params) {
     return ok('/api/production/purchase/list', 'GET', params || {});
@@ -250,7 +261,8 @@ const materialRoll = {
 
 const orderManagement = {
   createFromStyle(data) {
-    return ok('/api/production/order/create-from-style', 'POST', data || {});
+    // P0 修复：后端 OrderManagementController @RequestMapping("/api/order-management")
+    return ok('/api/order-management/create-from-style', 'POST', data || {});
   },
 };
 

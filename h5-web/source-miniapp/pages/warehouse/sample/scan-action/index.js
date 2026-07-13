@@ -6,6 +6,7 @@ const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
 const { ok } = require('../../../../utils/api-modules/helpers');
 const { toast } = require('../../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../../utils/pageEventBinder');
 
 const SAMPLE_TYPE_MAP = {
   'development': '开发样',
@@ -140,9 +141,17 @@ Page({
       };
       wx.onNeedPrivacyAuthorization(this._privacyCb);
     }
+    bindPageEvents(this, () => {
+      if (this.data.viewMode === 'list') {
+        this.loadStockList(true);
+      } else {
+        this.querySample(this.data.styleNo, this.data.color, this.data.size);
+      }
+    }, ['STOCK_CHANGED']);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     if (wx.offNeedPrivacyAuthorization && this._privacyCb) {
       wx.offNeedPrivacyAuthorization(this._privacyCb);
     }
@@ -192,12 +201,12 @@ Page({
         if (res && res.data) data = res.data;
         if (res && res.records) data = res;
         
-        const records = (data?.records || data?.data || []).map(item => ({
+        const records = ((data && data.records) || (data && data.data) || []).map(item => ({
           ...item,
           _imageUrl: buildImageUrl(item.imageUrl || item.coverImage || ''),
           _sampleTypeLabel: translateSampleType(item.sampleType || ''),
         }));
-        const total = data?.total || records.length;
+        const total = (data && data.total) || records.length;
         
         this.setData({
           stockList: refresh ? records : [...this.data.stockList, ...records],
@@ -337,14 +346,14 @@ Page({
   _loadLoanOptions() {
     // 加载租户人员
     ok('/api/system/user/list', 'GET', { pageSize: 200 }).then(records => {
-      const list = Array.isArray(records) ? records : (records?.records || []);
+      const list = Array.isArray(records) ? records : ((records && records.records) || []);
       this.setData({ loanUserList: list });
     }).catch(() => {
       this.setData({ loanUserList: [] });
     });
     // 加载外发工厂
     api.factory.list({ pageSize: 200, status: 'active' }).then(records => {
-      const list = Array.isArray(records) ? records : (records?.records || []);
+      const list = Array.isArray(records) ? records : ((records && records.records) || []);
       this.setData({ loanFactoryList: list });
     }).catch(() => {
       this.setData({ loanFactoryList: [] });
@@ -622,7 +631,7 @@ Page({
   _loadWarehouseOptions() {
     return api.warehouse.listWarehouseAreas('SAMPLE')
       .then((res) => {
-        const data = res?.data || res;
+        const data = (res && res.data) || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const areaMap = {};
@@ -682,7 +691,7 @@ Page({
     }
     return api.warehouse.listLocations('SAMPLE', areaId)
       .then((res) => {
-        const data = res?.data || res;
+        const data = (res && res.data) || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const locMap = {};

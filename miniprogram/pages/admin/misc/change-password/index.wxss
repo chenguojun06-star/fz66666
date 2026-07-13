@@ -9,7 +9,7 @@
   margin: 0 0 var(--card-gap);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   padding: var(--spacing-lg) var(--spacing-md);
 }
 
@@ -37,7 +37,7 @@
   padding: 0 var(--spacing-md);
   background: var(--color-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
 }

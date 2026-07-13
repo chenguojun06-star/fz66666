@@ -387,8 +387,8 @@ class ScanDataProcessor {
   getFactoryInfo(orderDetail, options) {
     const factory = options.getCurrentFactory ? options.getCurrentFactory() : null;
     return {
-      factoryId: factory?.id || orderDetail.factoryId || '',
-      factoryName: factory?.name || orderDetail.factoryName || '',
+      factoryId: (factory && factory.id) || orderDetail.factoryId || '',
+      factoryName: (factory && factory.name) || orderDetail.factoryName || '',
     };
   }
 
@@ -400,8 +400,8 @@ class ScanDataProcessor {
   getWorkerInfo(options) {
     const worker = options.getCurrentWorker ? options.getCurrentWorker() : null;
     return {
-      workerId: worker?.id || '',
-      workerName: worker?.name || '',
+      workerId: (worker && worker.id) || '',
+      workerName: (worker && worker.name) || '',
     };
   }
 

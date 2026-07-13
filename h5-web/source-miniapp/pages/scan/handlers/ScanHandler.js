@@ -124,7 +124,7 @@ class ScanHandler {
       return await this.dataProcessor.handleCuttingMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);
     }
 
-    if (orderDetail.items?.length > 0) {
+    if (orderDetail.items && orderDetail.items.length > 0) {
       return await this.dataProcessor.handleOrderWithItems(
         parsedData,
         orderDetail,

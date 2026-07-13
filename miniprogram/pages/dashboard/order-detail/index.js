@@ -39,7 +39,13 @@ function fmtTime(val) {
 }
 function fmtDate(val) {
   if (!val) return '';
-  const s = String(val);
+  // P0 修复：兼容 LocalDateTime 数组 [y,m,d,...] 格式，避免 "NaN天"
+  var s = val;
+  if (Array.isArray(s) && s.length >= 3) {
+    var pad = function(n) { return Number(n) < 10 ? '0' + n : '' + n; };
+    s = s[0] + '-' + pad(s[1]) + '-' + pad(s[2]);
+  }
+  s = String(s);
   if (s.length > 10) return s.substring(0, 10);
   return s;
 }
@@ -637,7 +643,6 @@ Page({
     const key = orderId || orderNo;
     const flowPromise = orderId
       ? production.getOrderFlow(orderId).then(function (res) {
-          console.log('[order-detail] flow res:', JSON.stringify(res).substring(0, 500));
           clearTimeout(timeoutTimer);
           // 防御后端返回 HTTP 200 但业务 code 非 200 的情况
           if (res && typeof res.code === 'number' && res.code !== 200) {
@@ -645,7 +650,7 @@ Page({
             console.warn('[order-detail] flow 业务失败:', msg, '→ 启动 fallback');
             return fallbackToDetail(key);
           }
-          const data = (res && res.data) || {};
+          const data = res || {};
           const order = resolveOrderFromFlow(data);
           if (!order) {
             console.warn('[order-detail] flow 数据无法解析 order → 启动 fallback');

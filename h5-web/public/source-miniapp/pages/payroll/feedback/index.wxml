@@ -6,7 +6,7 @@
   <view wx:if="{{loading}}" class="loading">加载中...</view>
 
   <view wx:if="{{!loading && settlements.length === 0}}" class="empty">
-    <text class="empty-icon">📋</text>
+    <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
     <text class="empty-text">暂无已发放的工资结算单</text>
   </view>
 
@@ -21,33 +21,31 @@
       </view>
     </view>
     <view class="card-body">
-      <view class="info-row">
-        <text class="info-label">订单号</text>
-        <text class="info-value">{{item.orderNo || '-'}}</text>
+      <view class="card-info-row" wx:if="{{item.styleNo}}">
+        <text class="card-info-label">款号</text>
+        <text class="card-info-value">{{item.styleNo}}</text>
       </view>
-      <view class="info-row" wx:if="{{item.styleNo}}">
-        <text class="info-label">款号</text>
-        <text class="info-value">{{item.styleNo}}</text>
+      <view class="card-info-row">
+        <text class="card-info-label">订单号</text>
+        <text class="card-info-value">{{item.orderNo || '-'}}</text>
       </view>
-      <view class="info-row">
-        <text class="info-label">总数量</text>
-        <text class="info-value">{{item.totalQuantity || 0}}件</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">总金额</text>
-        <text class="info-value amount">¥{{item.totalAmount || 0}}</text>
+      <view class="amount-row">
+        <text class="amount-main">¥{{item.totalAmount || 0}}</text>
+        <text class="amount-qty">{{item.totalQuantity || 0}}件</text>
       </view>
     </view>
     <view class="card-footer">
       <text class="time">{{item.createTimeText}}</text>
       <view wx:if="{{!item.feedbackStatus}}" class="feedback-action">
-        <text>点击反馈 ›</text>
+        <text>点击反馈</text>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </view>
     </view>
   </view>
 
   <view wx:if="{{showForm}}" class="modal-mask" bindtap="closeForm">
     <view class="modal-content" catchtap="">
+      <view class="modal-drag-handle"></view>
       <view class="modal-title">提交工资结算反馈</view>
 
       <view class="form-group">
@@ -57,16 +55,14 @@
 
       <view class="form-group">
         <text class="form-label">反馈类型</text>
-        <radio-group class="radio-group" bindchange="onFeedbackTypeChange">
-          <label class="radio-item">
-            <radio value="CONFIRM" checked="{{feedbackType === 'CONFIRM'}}" color="var(--color-primary)" />
+        <view class="radio-group">
+          <view class="radio-item {{feedbackType === 'CONFIRM' ? 'radio-item-active' : ''}}" bindtap="onFeedbackTypeChange" data-value="CONFIRM">
             <text>确认无误</text>
-          </label>
-          <label class="radio-item">
-            <radio value="OBJECTION" checked="{{feedbackType === 'OBJECTION'}}" color="var(--color-warning)" />
+          </view>
+          <view class="radio-item {{feedbackType === 'OBJECTION' ? 'radio-item-active' : ''}}" bindtap="onFeedbackTypeChange" data-value="OBJECTION">
             <text>提出异议</text>
-          </label>
-        </radio-group>
+          </view>
+        </view>
       </view>
 
       <view wx:if="{{feedbackType === 'OBJECTION'}}" class="form-group">

@@ -11,6 +11,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { PLATFORM_NAMES } = require('../../../utils/platformNames');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 /* 日期范围预设 */
 const DATE_RANGES = [
@@ -58,6 +59,11 @@ Page({
     const r = getRange(this.data.activeRange);
     this.setData({ startDate: r.startDate, endDate: r.endDate });
     this._loadStats();
+    bindPageEvents(this, () => this._loadStats());
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   onShow: function () {

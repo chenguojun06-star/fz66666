@@ -6,6 +6,7 @@ const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 const HANDLE_METHODS = ['返修', '报废'];
 
@@ -56,7 +57,8 @@ Page({
     }
     this._rawDetail = raw;
 
-    const coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || '');
+    // P0 修复：添加 cover/styleCover 兜底，原代码只取 coverImage/styleImage
+    const coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || raw.cover || raw.styleCover || '');
 
     this.setData({
       detail: {
@@ -78,9 +80,12 @@ Page({
     if (raw.orderId) {
       this._fetchAiSuggestion(raw.orderId);
     }
+
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     if (this._unsubPrivacy) { this._unsubPrivacy(); this._unsubPrivacy = null; }
     getApp().globalData.qualityData = null;
   },
@@ -410,7 +415,12 @@ Page({
         }, 800);
       }
       this._emitRefresh();
-      wx.navigateBack();
+
+      if (d.result === 'qualified') {
+        await this._showWarehousePicker();
+      } else {
+        wx.navigateBack();
+      }
     } catch (e) {
       this.setData({ loading: false });
       wx.showModal({
@@ -418,6 +428,148 @@ Page({
         content: e.message || e.errMsg || '请稍后重试',
         showCancel: false,
         confirmText: '知道了',
+      });
+    }
+  },
+
+  async _showWarehousePicker() {
+    const self = this;
+    try {
+      const warehouseRes = await api.warehouse.listWarehouseAreas('FINISHED');
+      const areas = warehouseRes && warehouseRes.records ? warehouseRes.records : [];
+      const options = areas.map(function(a) {
+        return { label: a.name || a.code || '', value: a.id || '' };
+      });
+      self.setData({ warehouseOptions: options });
+
+      if (options.length === 0) {
+        toast.info('暂无可用仓库，跳过入库');
+        wx.navigateBack();
+        return;
+      }
+
+      wx.showActionSheet({
+        itemList: ['直接返回', '选择仓库入库'],
+        success: function(res) {
+          if (res.tapIndex === 1) {
+            self._selectWarehouse(options);
+          } else {
+            wx.navigateBack();
+          }
+        },
+        fail: function() {
+          wx.navigateBack();
+        },
+      });
+    } catch (e) {
+      console.warn('[Quality] 获取仓库列表失败:', e);
+      toast.info('获取仓库信息失败，跳过入库');
+      wx.navigateBack();
+    }
+  },
+
+  _selectWarehouse(options) {
+    const self = this;
+    const itemList = options.map(function(o) { return o.label; });
+    wx.showActionSheet({
+      itemList: itemList,
+      title: '选择仓库',
+      success: function(res) {
+        const selected = options[res.tapIndex];
+        self.setData({ selectedWarehouse: selected.value });
+        self._selectLocation(selected.value);
+      },
+      fail: function() {
+        wx.navigateBack();
+      },
+    });
+  },
+
+  async _selectLocation(warehouseId) {
+    const self = this;
+    try {
+      const locationRes = await api.warehouse.listLocations('FINISHED', warehouseId);
+      const locations = locationRes && locationRes.records ? locationRes.records : [];
+      const options = locations.map(function(l) {
+        return { label: l.locationCode || '', value: l.locationCode || '' };
+      });
+
+      if (options.length === 0) {
+        wx.showModal({
+          title: '提示',
+          content: '该仓库暂无库位，是否继续入库？',
+          success: function(res) {
+            if (res.confirm) {
+              self._doWarehousing('');
+            } else {
+              wx.navigateBack();
+            }
+          },
+        });
+        return;
+      }
+
+      const itemList = options.map(function(o) { return o.label; });
+      wx.showActionSheet({
+        itemList: itemList,
+        title: '选择库位',
+        success: function(res) {
+          const selected = options[res.tapIndex];
+          self._doWarehousing(selected.value);
+        },
+        fail: function() {
+          wx.navigateBack();
+        },
+      });
+    } catch (e) {
+      console.warn('[Quality] 获取库位列表失败:', e);
+      wx.showModal({
+        title: '提示',
+        content: '获取库位信息失败，是否继续入库？',
+        success: function(res) {
+          if (res.confirm) {
+            self._doWarehousing('');
+          } else {
+            wx.navigateBack();
+          }
+        },
+      });
+    }
+  },
+
+  async _doWarehousing(locationCode) {
+    const self = this;
+    const d = self.data;
+    const raw = self._rawDetail;
+
+    wx.showLoading({ title: '入库中...', mask: true });
+    try {
+      const userInfo = getUserInfo() || {};
+      const payload = {
+        orderNo: d.detail.orderNo,
+        bundleNo: d.detail.bundleNo,
+        quantity: d.detail.quantity,
+        warehouseAreaId: d.selectedWarehouse,
+        locationCode: locationCode,
+        operatorId: userInfo.userId || '',
+        operatorName: userInfo.name || userInfo.username || '',
+      };
+      await api.warehouse.scanInbound(payload);
+      wx.hideLoading();
+      toast.success('入库成功');
+      self._emitRefresh();
+      wx.navigateBack();
+    } catch (e) {
+      wx.hideLoading();
+      console.warn('[Quality] 入库失败:', e);
+      wx.showModal({
+        title: '入库失败',
+        content: e.message || e.errMsg || '请稍后重试',
+        showCancel: false,
+        confirmText: '知道了',
+        success: function() {
+          wx.navigateBack();
+        },
       });
     }
   },

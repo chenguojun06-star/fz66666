@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 /* ========== 拆菲状态 中文化 ========== */
 var SPLIT_STATUS_LABELS = { PENDING: '待确认', APPROVED: '已确认', REJECTED: '已驳回', CANCELLED: '已取消', SPLIT_CHILD: '子菲号', SPLIT_PARENT: '主菲号', NORMAL: '常规' };
@@ -63,6 +64,10 @@ Page({
     const orderNo = decodeURIComponent(options.orderNo || '');
     this.loadSplitRecords();
     this._checkAdmin();
+    bindPageEvents(this, () => {
+      this.loadPendingSplits();
+      if (this.data.orderNo) this.fetchBundles();
+    }, ['TASK_BUNDLED']);
     if (!orderNo) {
       this.setData({ needSearch: true });
       this.loadWorkers();
@@ -72,6 +77,10 @@ Page({
     this.fetchBundles();
     this.loadWorkers();
     this.fetchOrderCover(orderNo);
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   /* ========== Tab 切换 ========== */
@@ -285,7 +294,7 @@ Page({
 
   saveSplitRecord(orderNo, bundleNo, qty, workerName) {
     const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
+    const pad = n => ('0' + n).slice(-2);
     const timeLabel = `${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const record = { orderNo, bundleNo, qty, workerName, time: now.getTime(), timeLabel };
     const list = [record, ...(this.data.splitRecords || [])].slice(0, 50);

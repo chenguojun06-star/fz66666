@@ -72,9 +72,11 @@ class JSONCodeParser {
     }
 
     // 处理样板生产类型
-    const patternId = obj.id || obj.patternId || obj.patternProductionId;
+    // P1 修复：qrType='style' 时 obj.id 是款式 UUID（StyleInfo.id），不是 PatternProduction.id
+    // 只有 qrType 明确为 pattern 类型时才用 obj.id 作为 patternId
+    const patternId = obj.patternId || obj.patternProductionId || (['pattern', 'sample', 'pattern_production', 'patternproduction'].includes(qrType) ? obj.id : '');
     const isPatternType = ['pattern', 'sample', 'pattern_production', 'patternproduction'].includes(qrType);
-    const isLegacyStylePattern = qrType === 'style' && !!patternId && (!obj.orderNo || obj.isPattern === true);
+    const isLegacyStylePattern = qrType === 'style' && !!obj.patternId && (!obj.orderNo || obj.isPattern === true);
 
     if ((isPatternType || isLegacyStylePattern) && patternId) {
       return {

@@ -28,7 +28,7 @@ function calcDeliveryInfo(dateStr) {
   if (s.length > 10) {
     const d = new Date(s.replace(/-/g, '/'));
     if (!isNaN(d.getTime())) {
-      const pad = n => String(n).padStart(2, '0');
+      const pad = n => ('0' + n).slice(-2);
       displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
   }
@@ -386,8 +386,8 @@ function mergeGroupedHistory(existingGroups, newGroups) {
 function _getToday() {
   const d = new Date();
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const m = ('0' + (d.getMonth() + 1)).slice(-2);
+  const day = ('0' + d.getDate()).slice(-2);
   return `${y}-${m}-${day}`;
 }
 

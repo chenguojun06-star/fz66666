@@ -136,10 +136,11 @@ Page({
     }
 
     let coverImage = '';
-    if (raw.orderDetail && raw.orderDetail.coverImage) {
-      coverImage = getAuthedImageUrl(raw.orderDetail.coverImage);
-    } else if (raw.orderDetail && raw.orderDetail.styleImage) {
-      coverImage = getAuthedImageUrl(raw.orderDetail.styleImage);
+    if (raw.orderDetail) {
+      const detail = raw.orderDetail;
+      coverImage = getAuthedImageUrl(
+        detail.coverImage || detail.styleImage || detail.cover || detail.styleCover || detail.imageUrl || ''
+      );
     }
 
     const color = raw.color || '';
@@ -242,7 +243,7 @@ Page({
         if (v.length > 10) {
           var d = new Date(v.replace(/-/g, '/'));
           if (!isNaN(d.getTime())) {
-            const pad = n => String(n).padStart(2, '0');
+            const pad = n => ('0' + n).slice(-2);
             return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
           }
         }
@@ -252,10 +253,10 @@ Page({
       var d = new Date(String(v).replace(' ', 'T'));
       if (isNaN(d.getTime())) return '';
       const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const h = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
+      const m = ('0' + (d.getMonth() + 1)).slice(-2);
+      const day = ('0' + d.getDate()).slice(-2);
+      const h = ('0' + d.getHours()).slice(-2);
+      const min = ('0' + d.getMinutes()).slice(-2);
       return y + '-' + m + '-' + day + ' ' + h + ':' + min;
     } catch (e) {
       return '';
@@ -418,7 +419,7 @@ Page({
   async _loadWarehouseOptions() {
     try {
       const res = await api.warehouse.listWarehouseAreas('FINISHED');
-      const data = res?.data || res;
+      const data = (res && res.data) || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const areaMap = {};
@@ -447,7 +448,7 @@ Page({
     }
     try {
       const res = await api.warehouse.listLocations('FINISHED', areaId);
-      const data = res?.data || res;
+      const data = (res && res.data) || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const locMap = {};
@@ -545,7 +546,8 @@ Page({
         quantity:      raw.quantity  || detail.displayQuantity || 0,
         operatorName:  raw.operatorName  || '',
         scanCode:      raw.scanCode  || raw.orderNo || '',
-        coverImage:    orderDetail.coverImage || orderDetail.styleImage || '',
+        // P0 修复：添加 cover/styleCover 兜底，原代码只取 coverImage/styleImage
+        coverImage:    orderDetail.coverImage || orderDetail.styleImage || orderDetail.cover || orderDetail.styleCover || '',
         orderId:       raw.orderId   || '',
       };
       safeNavigate({ url: '/pages/scan/quality/index' }).catch(() => {});

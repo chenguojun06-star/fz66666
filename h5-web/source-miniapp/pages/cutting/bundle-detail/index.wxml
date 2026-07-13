@@ -5,17 +5,17 @@
   <block wx:if="{{showOrderList}}">
     <view class="order-list-wrap">
       <!-- 搜索框 -->
-      <view class="order-search-bar">
-        <input
-          class="order-search-input"
-          placeholder="搜索订单号 / 款号"
-          value="{{orderSearchKeyword}}"
-          bindinput="onOrderSearchInput"
-          confirm-type="search"
-          bindconfirm="onOrderSearchConfirm"
-        />
-        <view class="order-search-icon">
-          <text class="icon-search">S</text>
+      <view class="search-bar">
+        <view class="search-box">
+          <view class="search-icon"><text class="icon-search">S</text></view>
+          <input
+            class="search-input"
+            placeholder="搜索订单号 / 款号"
+            value="{{orderSearchKeyword}}"
+            bindinput="onOrderSearchInput"
+            confirm-type="search"
+            bindconfirm="onOrderSearchConfirm"
+          />
         </view>
       </view>
 
@@ -82,13 +82,12 @@
       <view class="top-card">
         <view class="top-left" bindtap="previewImage">
           <image wx:if="{{coverImage}}" class="cover-img" src="{{coverImage}}" mode="aspectFill" lazy-load="{{true}}" />
-          <view wx:else class="cover-placeholder">
-            <text class="cover-abbr">{{orderInfo._styleAbbr || '--'}}</text>
-          </view>
         </view>
         <view class="top-right">
           <view class="top-title">
             <text class="order-no">{{orderNo}}</text>
+            <text wx:if="{{cuttingTaskInfo && cuttingTaskInfo.receivedByMe}}" class="status-tag tag tag-processing">已领取</text>
+            <text wx:elif="{{cuttingTaskInfo && cuttingTaskInfo.canReceive}}" class="status-tag tag tag-default">待领取</text>
           </view>
           <view class="info-row">
             <text class="info-label">款号</text>
@@ -330,7 +329,10 @@
                   class="bundle-row"
                 >
                   <text class="bl-cell bl-cell--no bold">{{item.bundleLabel || item.bundleNo || '-'}}</text>
-                  <text class="bl-cell bl-cell--code">{{item.qrCode || '-'}}</text>
+                  <view class="bl-cell bl-cell--code">
+                    <text class="bl-qr-icon"></text>
+                    <text class="bl-qr-text">{{item.qrCode || '-'}}</text>
+                  </view>
                   <text class="bl-cell bl-cell--color">{{item.color || '-'}}</text>
                   <text class="bl-cell bl-cell--size">{{item.size || '-'}}</text>
                   <text class="bl-cell bl-cell--qty">{{item.quantity || 0}}</text>
@@ -344,7 +346,7 @@
         <!-- ════════════ Panel B：转单 ════════════ -->
         <block wx:if="{{activeTab == 'transfer'}}">
           <view class="section-card">
-            <view class="section-hd" style="margin-bottom: 12rpx;">
+            <view class="section-hd section-hd--compact">
               <text class="section-title">转单信息</text>
             </view>
 
@@ -484,7 +486,7 @@
             </view>
 
             <!-- 备注 -->
-            <view class="tf-section" style="border-bottom: none;">
+            <view class="tf-section tf-section--last">
               <text class="tf-label">备注</text>
               <textarea class="tf-remark" placeholder="请输入转单备注（可选）" auto-height value="{{remark}}" bindinput="onRemarkInput" />
             </view>
@@ -507,7 +509,7 @@
     <!-- ⑤ 底部操作栏（菲号明细模式 → 打印 + 转单） -->
     <view class="footer-bar footer-bar--dual" wx:elif="{{orderNo && activeTab == 'detail' && !showCuttingForm}}">
       <view class="action-btn" bindtap="onPrintBundleLabels" wx:if="{{hasBundles}}">
-        <text class="ab-icon">🖨</text>
+        <text class="ab-icon"><text class="line-icon icon-print"></text></text>
         <text class="ab-label">打印菲号</text>
       </view>
       <view class="action-btn" bindtap="onTransfer">
@@ -643,5 +645,5 @@
   </view>
 
   <!-- 隐藏的 canvas 用于生成 QR 码 -->
-  <canvas type="2d" id="qrCanvas" style="position:fixed;left:-9999px;top:-9999px;width:200px;height:200px;"></canvas>
+  <canvas type="2d" id="qrCanvas" class="qr-canvas-hidden"></canvas>
 </view>

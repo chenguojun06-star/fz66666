@@ -1,5 +1,8 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
+const Display = require('../../../utils/displayHelper');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
@@ -13,7 +16,9 @@ Page({
     canApprove: false,
     canComplete: false,
     canReject: false,
+    showRefundBtn: false,
     partyLabel: '供应商',
+    returnRatio: '0%',
   },
 
   onLoad(options) {
@@ -23,6 +28,11 @@ Page({
     const type = options.type === 'sales' ? 'sales' : 'purchase';
     this.setData({ id, type, partyLabel: type === 'purchase' ? '供应商' : '客户' });
     this.loadDetail();
+    bindPageEvents(this, () => this.loadDetail());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   async loadDetail() {
@@ -33,15 +43,21 @@ Page({
       const res = await fetcher(id);
       const returnOrder = type === 'purchase' ? (res && (res.returnOrder || res.purchaseReturn || res)) : (res && (res.returnOrder || res.salesReturn || res));
       const items = type === 'purchase' ? (res && (res.items || res.returnItems || [])) : (res && (res.items || res.returnItems || []));
-      const status = String((returnOrder && returnOrder.returnStatus) || '').trim();
+      const status = String((returnOrder && returnOrder.returnStatus) || '').trim().toUpperCase();
+      const detail = this._normalizeDetail(returnOrder, type);
+      const normalizedItems = this._normalizeItems(items, type);
+      const statusInfo = Display.displayReturnStatus(this._mapReturnStatus(status));
+      const returnRatio = this._calcReturnRatio(returnOrder, normalizedItems);
       this.setData({
-        detail: this._normalizeDetail(returnOrder, type),
-        items: this._normalizeItems(items, type),
-        statusLabel: this._statusLabel(status),
-        statusColor: this._statusColor(status),
+        detail: detail,
+        items: normalizedItems,
+        statusLabel: statusInfo.text,
+        statusColor: statusInfo.color,
+        returnRatio: returnRatio,
         canApprove: status === 'PENDING',
         canComplete: status === 'APPROVED' && type === 'purchase',
         canReject: status === 'PENDING' && type === 'sales',
+        showRefundBtn: type === 'sales' && status === 'APPROVED',
         loading: false,
       });
     } catch (e) {
@@ -57,18 +73,18 @@ Page({
       returnNo: r.returnNo || '-',
       originalNo: type === 'purchase' ? (r.originalPurchaseNo || '-') : (r.originalOrderNo || '-'),
       partyName: type === 'purchase' ? (r.supplierName || '-') : (r.customerName || '-'),
-      returnType: r.returnType === 'FULL' ? '全部退货' : '部分退货',
+      returnType: r.returnType === 'FULL' ? '全部退货' : (r.returnType === 'PARTIAL' ? '部分退货' : (r.returnType || '-')),
       returnReason: r.returnReason || '-',
       totalAmount: Number(r.totalAmount || 0).toFixed(2),
       refundAmount: r.refundAmount != null ? Number(r.refundAmount).toFixed(2) : '',
       returnStatus: r.returnStatus || '',
       operatorName: r.operatorName || '-',
       approveUserName: r.approveUserName || '',
-      approveTime: r.approveTime ? String(r.approveTime).replace('T', ' ').slice(0, 16) : '',
-      returnTime: r.returnTime ? String(r.returnTime).replace('T', ' ').slice(0, 16) : '',
-      refundTime: r.refundTime ? String(r.refundTime).replace('T', ' ').slice(0, 16) : '',
+      approveTime: Display.formatDateTime(r.approveTime),
+      returnTime: Display.formatDateTime(r.returnTime),
+      refundTime: Display.formatDateTime(r.refundTime),
       remark: r.remark || '-',
-      createTime: r.createTime ? String(r.createTime).replace('T', ' ').slice(0, 16) : '-',
+      createTime: Display.formatDateTime(r.createTime),
     };
   },
 
@@ -88,26 +104,24 @@ Page({
     }));
   },
 
-  _statusLabel(status) {
+  _mapReturnStatus(status) {
+    const s = String(status || '').toLowerCase();
     const map = {
-      PENDING: '待审核',
-      APPROVED: '已审核',
-      RETURNED: '已退货',
-      REFUNDED: '已退款',
-      REJECTED: '已拒绝',
+      PENDING: 'pending',
+      APPROVED: 'processing',
+      RETURNED: 'completed',
+      REFUNDED: 'completed',
+      REJECTED: 'rejected',
     };
-    return map[status] || status || '-';
+    return map[status] || s || 'pending';
   },
 
-  _statusColor(status) {
-    const map = {
-      PENDING: '#f97316',
-      APPROVED: '#16a34a',
-      RETURNED: '#2563eb',
-      REFUNDED: '#2563eb',
-      REJECTED: '#dc2626',
-    };
-    return map[status] || '#64748b';
+  _calcReturnRatio(returnOrder, items) {
+    if (!returnOrder || returnOrder.returnType === 'FULL') return '100%';
+    const total = Number(returnOrder.originalAmount || returnOrder.totalOriginalAmount || 0);
+    const returned = Number(returnOrder.totalAmount || 0);
+    if (total <= 0) return '-';
+    return Display.calcProgressPercent(returned, total, 0);
   },
 
   async onApprove() {

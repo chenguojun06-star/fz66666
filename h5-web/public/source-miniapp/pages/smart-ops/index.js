@@ -2,6 +2,7 @@ const api = require('../../utils/api');
 const { isTenantOwner, isSuperAdmin } = require('../../utils/storage');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const { safeNavigate } = require('../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../utils/pageEventBinder');
 
 const REFRESH_INTERVAL = 30;
 
@@ -137,12 +138,13 @@ Page({
     const self = this;
     wx.nextTick(function () { self._refreshAll(); });
     this._startTimer();
+    bindPageEvents(this, () => this._refreshAll(), ['ORDER_PROGRESS_CHANGED']);
   },
 
   onShow: function () { this._updateTime(); if (!this._timer) this._startTimer(); },
   onHide: function () { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
   onPullDownRefresh: function () { this._refreshAll(); wx.stopPullDownRefresh(); },
-  onUnload: function () { if (this._timer) clearInterval(this._timer); },
+  onUnload: function () { unbindPageEvents(this); if (this._timer) clearInterval(this._timer); },
 
   onMenuTap: function (e) {
     const key = e.currentTarget.dataset.key;

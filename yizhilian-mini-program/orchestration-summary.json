@@ -1,0 +1,580 @@
+{
+  "project": {
+    "operation": "create",
+    "name": "yizhilian-mini-program",
+    "designProjectPath": "/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/yizhilian-mini-program",
+    "deviceType": "mobile",
+    "designRead": "Apple-inspired consumer product UI with restrained elegance. Mobile-first mini-program for clothing supply chain management (衣智链). Features: large rounded corners (19.2px), soft shadows, white cards on light gray background (#f2f2f7), Apple Blue (#007aff) primary, DM Sans typography. Clean info-density with generous spacing.",
+    "designDials": {
+      "radius": "1.2rem",
+      "spacing": "0.24rem",
+      "shadow": "soft",
+      "density": "comfortable"
+    }
+  },
+  "designSource": {
+    "operatingMode": "library-bound",
+    "libraryIdentity": {
+      "name": "苹果",
+      "id": "dl_builtin_apple",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple",
+      "versionSource": "selected-context"
+    },
+    "cssPath": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple/colors_and_type.css",
+    "prefix": "apple",
+    "iconAssets": [
+      "arrow-down", "arrow-left", "arrow-right", "arrow-up",
+      "box", "check", "chevron-down", "chevron-left", "chevron-right", "chevron-up",
+      "chevrons-down-up", "chevrons-up-down", "circle-alert", "circle-check",
+      "circle-minus", "circle-pause", "circle-play", "circle-plus",
+      "circle-question-mark", "external-link", "file", "folder-open", "folder",
+      "funnel", "grip", "heart", "house", "mail", "map-pin", "message-circle-more",
+      "mouse-pointer-click", "pen-line", "send-horizontal", "star", "tag",
+      "thumbs-down", "thumbs-up", "trash-2", "triangle-alert", "user"
+    ]
+  },
+  "pages": [
+    {
+      "pageId": "page-login",
+      "title": "登录",
+      "htmlSrc": "pages/login.html",
+      "visualNorthStar": "Clean login screen with soft gradient background, centered logo area, Apple-style input fields with large touch targets, and a prominent blue login button. Sketch-style garment illustration as decorative background.",
+      "compositionPattern": "centered-stack",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["input-field", "button-primary", "button-secondary", "card"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "title": "衣智链",
+        "subtitle": "服装供应链管理系统",
+        "fields": [
+          {"label": "企业编号", "placeholder": "请输入企业编号", "value": "YG001"},
+          {"label": "用户名", "placeholder": "请输入用户名", "value": "lilb"},
+          {"label": "密码", "placeholder": "请输入密码", "value": "••••••", "type": "password"}
+        ],
+        "actions": [
+          {"text": "登录", "type": "primary"},
+          {"text": "注册新账号", "type": "link"}
+        ],
+        "tip": "提示：默认账号 lilb / 123456"
+      }
+    },
+    {
+      "pageId": "page-home",
+      "title": "首页",
+      "htmlSrc": "pages/home.html",
+      "visualNorthStar": "Warm greeting header with user avatar and weather-like daily tip card. Below: 8-icon favorite apps grid with colored circular backgrounds (blue, green, orange, purple). AI assistant card at bottom with chat-style interface.",
+      "compositionPattern": "grid-stack",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards", "tab-bar-bottom"],
+      "componentPlan": ["card", "grid-icon", "avatar", "tab-bar"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "greeting": "下午好，李丽斌",
+        "factory": "东方制衣厂",
+        "dailyTip": "今日小贴士：及时扫码可以确保生产进度数据准确，方便后续工资结算。",
+        "apps": [
+          {"name": "生产管理", "icon": "house", "color": "blue"},
+          {"name": "扫码工序", "icon": "tag", "color": "green"},
+          {"name": "质检管理", "icon": "check", "color": "orange"},
+          {"name": "工资查询", "icon": "file", "color": "purple"},
+          {"name": "采购任务", "icon": "box", "color": "blue"},
+          {"name": "样衣开发", "icon": "pen-line", "color": "pink"},
+          {"name": "物料入库", "icon": "folder-open", "color": "teal"},
+          {"name": "更多应用", "icon": "circle-plus", "color": "gray"}
+        ],
+        "aiAssistant": {
+          "title": "小云AI助手",
+          "hint": "有什么可以帮你的？",
+          "placeholder": "输入你的问题..."
+        }
+      }
+    },
+    {
+      "pageId": "page-scan",
+      "title": "扫码",
+      "htmlSrc": "pages/scan.html",
+      "visualNorthStar": "Top: 3-column stats card (今日扫码/进行中/已完成). Middle: large circular scan button with blue gradient and camera icon. Below: quick action entries (工序扫码/质检扫码/入库扫码). Bottom: scan result card + recent scan history list.",
+      "compositionPattern": "stack-with-hero-cta",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards", "tab-bar-bottom"],
+      "componentPlan": ["stat-card", "button-circle", "list-item", "card", "tab-bar"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "stats": [
+          {"label": "今日扫码", "value": "128", "unit": "次"},
+          {"label": "进行中", "value": "3", "unit": "单"},
+          {"label": "已完成", "value": "45", "unit": "单"}
+        ],
+        "scanButton": "点击扫码",
+        "quickEntries": [
+          {"name": "工序扫码", "desc": "扫描工序二维码"},
+          {"name": "质检扫码", "desc": "质检结果录入"},
+          {"name": "入库扫码", "desc": "成品入库登记"}
+        ],
+        "lastScan": {
+          "orderNo": "PO20260712001",
+          "styleNo": "YS-2024-001",
+          "process": "缝制",
+          "operator": "李丽斌",
+          "time": "14:32",
+          "quantity": 50
+        },
+        "history": [
+          {"orderNo": "PO20260712001", "process": "裁剪", "operator": "张三", "time": "10:15", "qty": 100},
+          {"orderNo": "PO20260711003", "process": "缝制", "operator": "李四", "time": "09:30", "qty": 50},
+          {"orderNo": "PO20260711002", "process": "后整理", "operator": "王五", "time": "昨天", "qty": 80}
+        ]
+      }
+    },
+    {
+      "pageId": "page-quality",
+      "title": "质检",
+      "htmlSrc": "pages/quality.html",
+      "visualNorthStar": "Top: horizontal scrollable filter pills (全部/待检/合格/不合格/返修). Below: stats bar showing pass rate with color-coded numbers. Main: list of defect/quality check cards, each showing order info, style, defect type, quantity, and status tags.",
+      "compositionPattern": "filter-list",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards", "tab-bar-bottom"],
+      "componentPlan": ["filter-pill", "stat-bar", "card-list", "status-tag", "tab-bar"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "filters": ["全部(128)", "待检(5)", "合格(110)", "不合格(8)", "返修(5)"],
+        "stats": [
+          {"label": "合格率", "value": "94.5%", "trend": "up"},
+          {"label": "不合格", "value": "8", "trend": "down"},
+          {"label": "返修中", "value": "5", "trend": "flat"}
+        ],
+        "cards": [
+          {
+            "orderNo": "PO20260712001",
+            "styleNo": "YS-2024-001",
+            "styleName": "修身连衣裙",
+            "defectType": "线头",
+            "defectLevel": "轻微",
+            "quantity": 3,
+            "totalQty": 50,
+            "inspector": "李丽斌",
+            "time": "14:30",
+            "status": "合格"
+          },
+          {
+            "orderNo": "PO20260711003",
+            "styleNo": "YS-2024-003",
+            "styleName": "休闲T恤",
+            "defectType": "色差",
+            "defectLevel": "一般",
+            "quantity": 5,
+            "totalQty": 100,
+            "inspector": "张三",
+            "time": "13:15",
+            "status": "返修"
+          },
+          {
+            "orderNo": "PO20260711002",
+            "styleNo": "YS-2024-005",
+            "styleName": "牛仔外套",
+            "defectType": "破洞",
+            "defectLevel": "严重",
+            "quantity": 2,
+            "totalQty": 80,
+            "inspector": "王五",
+            "time": "11:20",
+            "status": "不合格"
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "page-profile",
+      "title": "我的",
+      "htmlSrc": "pages/profile.html",
+      "visualNorthStar": "Top: user profile card with avatar, name, factory name, and role badge. Below: settings menu list with icons (用户审批/修改密码/意见反馈/邀请同事/关于我们). Each menu item has chevron-right indicator. Clean Apple-style grouped list.",
+      "compositionPattern": "profile-menu-list",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards", "tab-bar-bottom"],
+      "componentPlan": ["profile-card", "menu-list", "menu-item", "tab-bar"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "user": {
+          "name": "李丽斌",
+          "factory": "东方制衣厂",
+          "role": "管理员",
+          "phone": "138****8888"
+        },
+        "menu": [
+          {"name": "用户审批", "icon": "user", "badge": "3"},
+          {"name": "修改密码", "icon": "circle-check"},
+          {"name": "意见反馈", "icon": "message-circle-more"},
+          {"name": "邀请同事", "icon": "send-horizontal"},
+          {"name": "隐私政策", "icon": "file"},
+          {"name": "关于我们", "icon": "circle-question-mark"}
+        ]
+      }
+    },
+    {
+      "pageId": "page-dashboard",
+      "title": "生产管理",
+      "htmlSrc": "pages/dashboard.html",
+      "visualNorthStar": "Top: search bar with scan icon button. Below: horizontal scrollable status filter pills (全部/待生产/生产中/已完成/已延期). Main: order cards with cover image, order number, style info, progress bar, and expandable detail section.",
+      "compositionPattern": "search-filter-card-list",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["search-bar", "filter-pill", "order-card", "progress-bar", "status-tag"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "searchPlaceholder": "搜索订单号/款号",
+        "filters": [
+          {"label": "全部", "count": 56, "active": true},
+          {"label": "待生产", "count": 8},
+          {"label": "生产中", "count": 23},
+          {"label": "已完成", "count": 20},
+          {"label": "已延期", "count": 5}
+        ],
+        "orders": [
+          {
+            "orderNo": "PO20260712001",
+            "styleNo": "YS-2024-001",
+            "styleName": "修身连衣裙",
+            "customer": "杭州服饰有限公司",
+            "factory": "东方制衣厂",
+            "quantity": 500,
+            "completed": 320,
+            "progress": 64,
+            "deliveryDate": "2026-07-20",
+            "remainDays": 8,
+            "status": "生产中",
+            "urgency": "normal"
+          },
+          {
+            "orderNo": "PO20260711003",
+            "styleNo": "YS-2024-003",
+            "styleName": "休闲T恤",
+            "customer": "广州贸易公司",
+            "factory": "东方制衣厂",
+            "quantity": 1000,
+            "completed": 1000,
+            "progress": 100,
+            "deliveryDate": "2026-07-10",
+            "remainDays": 0,
+            "status": "已完成",
+            "urgency": "normal"
+          },
+          {
+            "orderNo": "PO20260710002",
+            "styleNo": "YS-2024-005",
+            "styleName": "牛仔外套",
+            "customer": "深圳时装品牌",
+            "factory": "南方制衣厂",
+            "quantity": 300,
+            "completed": 150,
+            "progress": 50,
+            "deliveryDate": "2026-07-08",
+            "remainDays": -4,
+            "status": "已延期",
+            "urgency": "urgent"
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "page-order-detail",
+      "title": "订单详情",
+      "htmlSrc": "pages/order-detail.html",
+      "visualNorthStar": "Top: info card with product image placeholder + order details (order no, style no, customer, delivery date with remaining days badge). Below: 4-column quantity progress card. Then: action bar (采购/裁剪/工序/转单/备注). Below: process stages timeline with progress bars. Bottom: matrix table and operation records.",
+      "compositionPattern": "detail-stack",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["info-card", "stat-card", "action-bar", "timeline", "matrix-table", "record-list"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "order": {
+          "orderNo": "PO20260712001",
+          "styleNo": "YS-2024-001",
+          "styleName": "修身连衣裙",
+          "customer": "杭州服饰有限公司",
+          "factory": "东方制衣厂",
+          "salesman": "王小明",
+          "patternMaker": "李师傅",
+          "createdBy": "赵六",
+          "color": "黑色/白色",
+          "size": "S/M/L/XL",
+          "orderQty": 500,
+          "deliveryDate": "2026-07-20",
+          "remainDays": 8,
+          "status": "生产中",
+          "plateType": "首单",
+          "bizType": "内销"
+        },
+        "quantity": {
+          "total": 500,
+          "completed": 320,
+          "remain": 180,
+          "progressPct": 64
+        },
+        "actions": ["采购", "裁剪", "工序", "转单", "备注"],
+        "stages": [
+          {"name": "裁剪", "status": "done", "scannedQty": 500, "totalQty": 500, "progress": 100, "operator": "张三", "startTime": "07-10 09:00", "completeTime": "07-10 15:00"},
+          {"name": "缝制", "status": "doing", "scannedQty": 320, "totalQty": 500, "progress": 64, "operator": "李四", "startTime": "07-11 08:00"},
+          {"name": "后整理", "status": "pending", "scannedQty": 0, "totalQty": 500, "progress": 0},
+          {"name": "质检", "status": "pending", "scannedQty": 0, "totalQty": 500, "progress": 0},
+          {"name": "包装入库", "status": "pending", "scannedQty": 0, "totalQty": 500, "progress": 0}
+        ],
+        "matrix": {
+          "colors": ["黑色", "白色"],
+          "sizes": ["S", "M", "L", "XL"],
+          "rows": [
+            {"color": "黑色", "quantities": [50, 80, 80, 40], "total": 250},
+            {"color": "白色", "quantities": [50, 80, 80, 40], "total": 250}
+          ],
+          "total": 500
+        }
+      }
+    },
+    {
+      "pageId": "page-payroll",
+      "title": "工资",
+      "htmlSrc": "pages/payroll.html",
+      "visualNorthStar": "Top: summary card showing month, total earnings, and comparison with last month. Below: filter tabs (全部/计件/计时/奖金). Main: work detail records list with process name, quantity, unit price, and subtotal. Bottom: total settlement amount.",
+      "compositionPattern": "summary-filter-list",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["summary-card", "filter-tab", "detail-list", "total-bar"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "summary": {
+          "month": "2026年7月",
+          "totalEarnings": 8520.50,
+          "lastMonth": 7890.00,
+          "change": "+8.0%",
+          "piecework": 7200.00,
+          "bonus": 1320.50
+        },
+        "filters": ["全部", "计件", "计时", "奖金"],
+        "records": [
+          {"process": "裁剪", "orderNo": "PO20260712001", "styleName": "修身连衣裙", "qty": 500, "unitPrice": 2.5, "subtotal": 1250.00, "date": "07-10"},
+          {"process": "缝制", "orderNo": "PO20260712001", "styleName": "修身连衣裙", "qty": 320, "unitPrice": 8.0, "subtotal": 2560.00, "date": "07-11"},
+          {"process": "后整理", "orderNo": "PO20260711003", "styleName": "休闲T恤", "qty": 200, "unitPrice": 3.5, "subtotal": 700.00, "date": "07-09"},
+          {"process": "质检", "orderNo": "PO20260711002", "styleName": "牛仔外套", "qty": 80, "unitPrice": 5.0, "subtotal": 400.00, "date": "07-08"},
+          {"process": "绩效奖金", "orderNo": "-", "styleName": "-", "qty": 1, "unitPrice": 1320.50, "subtotal": 1320.50, "date": "07-12"}
+        ]
+      }
+    },
+    {
+      "pageId": "page-procurement",
+      "title": "采购任务",
+      "htmlSrc": "pages/procurement.html",
+      "visualNorthStar": "Top: filter tabs (全部/待采购/采购中/已到货/已延期). Below: search bar. Main: procurement task cards with material info, quantity, expected arrival date, supplier, and status. Each card has a claim/action button.",
+      "compositionPattern": "filter-search-card-list",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["filter-tab", "search-bar", "task-card", "status-tag", "action-button"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "filters": [
+          {"label": "全部", "count": 18, "active": true},
+          {"label": "待采购", "count": 5},
+          {"label": "采购中", "count": 8},
+          {"label": "已到货", "count": 3},
+          {"label": "已延期", "count": 2}
+        ],
+        "searchPlaceholder": "搜索物料/订单号",
+        "tasks": [
+          {
+            "material": "全棉面料 40S",
+            "materialCode": "MF-001",
+            "orderNo": "PO20260712001",
+            "quantity": 500,
+            "unit": "米",
+            "supplier": "绍兴面料厂",
+            "expectedDate": "2026-07-15",
+            "status": "采购中",
+            "buyer": "张三"
+          },
+          {
+            "material": "拉链 3#尼龙",
+            "materialCode": "AC-015",
+            "orderNo": "PO20260712001",
+            "quantity": 1000,
+            "unit": "条",
+            "supplier": "温州辅料厂",
+            "expectedDate": "2026-07-14",
+            "status": "待采购",
+            "buyer": "-"
+          },
+          {
+            "material": "涤纶缝纫线",
+            "materialCode": "AC-003",
+            "orderNo": "PO20260711003",
+            "quantity": 50,
+            "unit": "卷",
+            "supplier": "本地供应商",
+            "expectedDate": "2026-07-10",
+            "status": "已到货",
+            "buyer": "李四"
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "page-warehouse",
+      "title": "物料入库",
+      "htmlSrc": "pages/warehouse.html",
+      "visualNorthStar": "Top: header title with subtitle instruction. Center: large circular scan button (when no code scanned). After scan: roll code bar, material info card with key-value rows, action buttons (confirm issue / return). Clean scanning workflow interface.",
+      "compositionPattern": "scan-workflow",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["header-bar", "scan-button", "info-card", "key-value-row", "action-button"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "header": {
+          "title": "面辅料料卷发料/退回",
+          "subtitle": "扫描箱/卷上的 MR 开头二维码"
+        },
+        "scanned": {
+          "rollCode": "MR20260712001",
+          "material": {
+            "name": "全棉面料 40S",
+            "code": "MF-001",
+            "color": "黑色",
+            "quantity": 500,
+            "unit": "米",
+            "location": "A区-03货架",
+            "inboundNo": "IN20260710001",
+            "status": "在库"
+          },
+          "action": "确认发料出库",
+          "cuttingOrderNo": "CO20260712001"
+        }
+      }
+    },
+    {
+      "pageId": "page-more-apps",
+      "title": "更多应用",
+      "htmlSrc": "pages/more-apps.html",
+      "visualNorthStar": "Top: sticky search bar with edit button. Below: favorites section with grid of app icons with colored circles and favorite stars. Then: all apps section grouped by category, each group has a title and grid of app icons. Clean iOS-style app grid.",
+      "compositionPattern": "search-grid",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["search-bar", "app-grid", "app-icon", "section-header"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "favorites": [
+          {"name": "生产管理", "icon": "house", "color": "blue"},
+          {"name": "扫码工序", "icon": "tag", "color": "green"},
+          {"name": "质检管理", "icon": "check", "color": "orange"},
+          {"name": "工资查询", "icon": "file", "color": "purple"}
+        ],
+        "groups": [
+          {
+            "title": "生产管理",
+            "apps": [
+              {"name": "生产管理", "icon": "house", "color": "blue"},
+              {"name": "工序模板", "icon": "folder", "color": "cyan"},
+              {"name": "样衣开发", "icon": "pen-line", "color": "pink"},
+              {"name": "裁剪菲详情", "icon": "box", "color": "teal"}
+            ]
+          },
+          {
+            "title": "供应链",
+            "apps": [
+              {"name": "采购任务", "icon": "box", "color": "blue"},
+              {"name": "物料入库", "icon": "folder-open", "color": "teal"},
+              {"name": "库位扫码", "icon": "map-pin", "color": "green"},
+              {"name": "发货管理", "icon": "send-horizontal", "color": "orange"}
+            ]
+          },
+          {
+            "title": "财务销售",
+            "apps": [
+              {"name": "工资查询", "icon": "file", "color": "purple"},
+              {"name": "财务付款", "icon": "circle-check", "color": "green"},
+              {"name": "预付款", "icon": "tag", "color": "orange"},
+              {"name": "销售概览", "icon": "star", "color": "blue"}
+            ]
+          },
+          {
+            "title": "其他",
+            "apps": [
+              {"name": "智能运营", "icon": "circle-question-mark", "color": "indigo"},
+              {"name": "退货管理", "icon": "arrow-left", "color": "red"},
+              {"name": "用户审批", "icon": "user", "color": "gray"},
+              {"name": "意见反馈", "icon": "message-circle-more", "color": "pink"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "page-sample-dev",
+      "title": "样衣开发",
+      "htmlSrc": "pages/sample-dev.html",
+      "visualNorthStar": "Top: search bar with scan button. Below: stat tag row (全部/开发中/已完成/已延期) with smart hint tags. Main: task cards with cover image, style number, status tags, customer info, delivery date, quantity, and progress bar.",
+      "compositionPattern": "search-stats-card-list",
+      "continuityAnchors": ["apple-blue-primary", "dm-sans-typography", "soft-shadow-cards"],
+      "componentPlan": ["search-bar", "stat-tag", "filter-pill", "task-card", "progress-bar", "status-tag"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "content": {
+        "searchPlaceholder": "搜索款号/款式名",
+        "stats": [
+          {"label": "全部款号", "value": 24, "active": true},
+          {"label": "开发中", "value": 8},
+          {"label": "已完成", "value": 14},
+          {"label": "已延期", "value": 2}
+        ],
+        "smartHints": [
+          {"text": "临近交期 3", "color": "orange"}
+        ],
+        "tasks": [
+          {
+            "styleNo": "YS-2024-001",
+            "styleName": "修身连衣裙",
+            "customer": "杭州服饰",
+            "merchandiser": "王小明",
+            "category": "连衣裙",
+            "season": "2024夏",
+            "color": "黑色",
+            "size": "M/L",
+            "quantity": 3,
+            "deliveryDate": "07-15",
+            "progressNode": "打版",
+            "progressPct": 40,
+            "coverColor": "#f0f0f5"
+          },
+          {
+            "styleNo": "YS-2024-003",
+            "styleName": "休闲T恤",
+            "customer": "广州贸易",
+            "merchandiser": "李小华",
+            "category": "T恤",
+            "season": "2024夏",
+            "color": "白色",
+            "size": "S/M/L",
+            "quantity": 5,
+            "deliveryDate": "07-10",
+            "progressNode": "已完成",
+            "progressPct": 100,
+            "coverColor": "#f5f5fa"
+          },
+          {
+            "styleNo": "YS-2024-005",
+            "styleName": "牛仔外套",
+            "customer": "深圳品牌",
+            "merchandiser": "张大伟",
+            "category": "外套",
+            "season": "2024秋",
+            "color": "蓝色",
+            "size": "L/XL",
+            "quantity": 2,
+            "deliveryDate": "07-08",
+            "progressNode": "裁剪",
+            "progressPct": 60,
+            "coverColor": "#e8e8f0"
+          }
+        ]
+      }
+    }
+  ]
+}

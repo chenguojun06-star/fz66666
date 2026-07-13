@@ -42,8 +42,8 @@
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .info-row {
@@ -74,8 +74,8 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .list-header {

@@ -192,8 +192,9 @@ Page({
           styleCoverUrl: getAuthedImageUrl(order.styleCover || order.styleImageUrl || order.coverImage || ''),
           _styleAbbr: order.styleNo ? String(order.styleNo).slice(0, 2) : '--',
           // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
+          // P0 修复：plannedEndDate 可能是数组 [y,m,d]，需先转字符串再 slice
           deliveryDate: order.expectedShipDate || order.deliveryDate
-            || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
+            || (order.plannedEndDate ? (typeof order.plannedEndDate === 'string' ? order.plannedEndDate.slice(0, 10) : (Array.isArray(order.plannedEndDate) && order.plannedEndDate.length >= 3 ? order.plannedEndDate[0] + '-' + (order.plannedEndDate[1] < 10 ? '0' : '') + order.plannedEndDate[1] + '-' + (order.plannedEndDate[2] < 10 ? '0' : '') + order.plannedEndDate[2] : '')) : ''),
           expectedShipDate: order.expectedShipDate ? this._formatDeliveryDate(order.expectedShipDate) : '',
           // 状态颜色映射（统一走全局 design-tokens）
           _statusColor: this._mapStatusToColor(order.statusText || order.status || '生产中'),
@@ -746,7 +747,7 @@ Page({
     try {
       const d = new Date(str.replace(/-/g, '/'));
       if (isNaN(d.getTime())) return str.substring(0, 16);
-      const pad = n => String(n).padStart(2, '0');
+      const pad = n => ('0' + n).slice(-2);
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     } catch (e) {
       return str.substring(0, 16);
@@ -755,13 +756,23 @@ Page({
 
   _formatDeliveryDate(str) {
     if (!str) return '';
+    // P0 修复：兼容 LocalDateTime 数组 [y,m,d,h,mi,s] 和字符串格式
+    // 数组没有 replace/substring 方法，直接调用会 TypeError 崩溃
+    var s = str;
+    if (Array.isArray(s) && s.length >= 3) {
+      var pad = function(n) { return Number(n) < 10 ? '0' + n : '' + n; };
+      var y = s[0], mo = pad(s[1]), d = pad(s[2]);
+      var h = s.length > 3 ? pad(s[3]) : '00', mi = s.length > 4 ? pad(s[4]) : '00';
+      s = y + '-' + mo + '-' + d + ' ' + h + ':' + mi;
+    }
+    s = String(s);
     try {
-      const d = new Date(str.replace(/-/g, '/'));
-      if (isNaN(d.getTime())) return str.substring(0, 16);
-      const pad = n => String(n).padStart(2, '0');
-      return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      var dd = new Date(s.replace(/-/g, '/'));
+      if (isNaN(dd.getTime())) return s.substring(0, 16);
+      var pad2 = function(n) { return ('0' + n).slice(-2); };
+      return pad2(dd.getMonth() + 1) + '-' + pad2(dd.getDate()) + ' ' + pad2(dd.getHours()) + ':' + pad2(dd.getMinutes());
     } catch (e) {
-      return str.substring(0, 16);
+      return s.substring(0, 16);
     }
   },
 

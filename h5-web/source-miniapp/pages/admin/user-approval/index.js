@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isTenantOwner, isFactoryOwner, isSuperAdmin } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -25,6 +26,17 @@ Page({
     rejectReason: '',
     roleOptions: [],
     roleLoading: false,
+  },
+
+  onLoad() {
+    bindPageEvents(this, () => {
+      if (this.data.isPlatformAdmin) this.loadPendingUsers(true);
+      if (this.data.isTenantOwner || this.data.isFactoryOwner) this.loadTenantRegistrations();
+    });
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onShow() {
@@ -81,7 +93,7 @@ Page({
     this.setData({ roleLoading: true });
     try {
       const result = await api.system.listRoles({ page: 1, pageSize: 100 });
-      this.setData({ roleOptions: result?.records || [] });
+      this.setData({ roleOptions: (result && result.records) || [] });
     } catch (e) {
       console.error('加载角色失败', e);
     } finally {
@@ -108,7 +120,7 @@ Page({
       }
     } catch (error) {
       console.error('加载待审批用户失败', error);
-      toast.error(error?.message || '加载失败');
+      toast.error((error && error.message) || '加载失败');
     } finally {
       this.setData({ loading: false });
       if (reset) wx.stopPullDownRefresh();
@@ -198,8 +210,8 @@ Page({
   async loadTenantRegistrations() {
     try {
       const response = await api.tenant.listPendingRegistrations({ page: 1, pageSize: 50 });
-      const records = response?.records || (Array.isArray(response) ? response : []);
-      this.setData({ tenantRegistrations: records, tenantTotal: response?.total || records.length });
+      const records = (response && response.records) || (Array.isArray(response) ? response : []);
+      this.setData({ tenantRegistrations: records, tenantTotal: (response && response.total) || records.length });
     } catch (error) {
       console.error('加载工人注册列表失败', error);
     }
@@ -224,7 +236,7 @@ Page({
             this.loadTenantRegistrations();
           } catch (error) {
             wx.hideLoading();
-            toast.error(error?.message || '批准失败');
+            toast.error((error && error.message) || '批准失败');
           }
         }
       },
@@ -244,7 +256,7 @@ Page({
       cancelText: '取消',
       success: async (res) => {
         if (res.confirm) {
-          const reason = res.content?.trim() || '管理员拒绝';
+          const reason = (res.content && res.content.trim()) || '管理员拒绝';
           wx.showLoading({ title: '处理中...', mask: true });
           try {
             await api.tenant.rejectRegistration(user.id, { reason: reason });
@@ -253,7 +265,7 @@ Page({
             this.loadTenantRegistrations();
           } catch (error) {
             wx.hideLoading();
-            toast.error(error?.message || '拒绝失败');
+            toast.error((error && error.message) || '拒绝失败');
           }
         }
       },

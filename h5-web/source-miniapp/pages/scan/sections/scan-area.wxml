@@ -1,12 +1,12 @@
   <!-- ④ 扫码区（一行：扫码主键） -->
-  <view class="scan-area-big">
+  <view class="scan-area-section">
     <view class="scan-row">
       <view class="scan-btn-big {{loading ? 'off' : ''}}" hover-class="scan-btn-big-hover" hover-stay-time="100" bindtap="onScan">
         <view class="scan-btn-icon-svg">
-          <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 28px; height: 28px;" />
+          <image src="/assets/icons/scan-blue.svg" mode="aspectFit" class="scan-icon-img" />
         </view>
         <view class="scan-btn-text-group">
-          <text class="scan-btn-main">{{loading ? '识别中...' : '扫码识别'}}</text>
+          <text class="scan-btn-main">{{loading ? '识别中...' : '点击扫码'}}</text>
           <text class="scan-btn-sub">{{lastUsedProcessName ? '上次：' + lastUsedProcessName : '自动匹配工序'}}</text>
         </view>
       </view>
@@ -39,7 +39,7 @@
       />
 
       <!-- 库位选择（仓库选择后出现） -->
-      <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">目标库位：</view>
+      <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label warehouse-label--location">目标库位：</view>
       <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-option-row">
         <view
           wx:for="{{locationOptions}}"
@@ -66,12 +66,11 @@
       />
     </view>
     <view wx:if="{{currentUser && currentUser.factoryId}}" class="warehouse-input-row">
-      <view style="color:#666;font-size:24rpx;">
+      <view class="factory-info-text">
         当前归属：{{currentUser.factoryName || '-'}}{{currentUser.orgPath ? ' · ' + currentUser.orgPath : ''}}{{currentUser.factoryType === 'INTERNAL' ? ' · 内部' : (currentUser.factoryType === 'EXTERNAL' ? ' · 外部' : '')}}
       </view>
     </view>
     <view class="scan-mode-tip">
-      <text>说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。</text>
+      <text>扫码后自动匹配工序，按订单流转顺序执行</text>
     </view>
   </view>
-

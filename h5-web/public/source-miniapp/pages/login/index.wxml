@@ -116,30 +116,20 @@
   <!-- Form panel -->
   <view class="login-shell">
     <view class="login-panel">
-      <!-- Header: cloud mascot + title -->
+      <!-- Header: logo + title -->
       <view class="login-header">
         <view class="login-title-row">
           <view class="login-cloud-wrap">
-            <view class="login-cloud-glow"></view>
-            <view class="login-cloud">
-              <view class="login-cloud-part login-cloud-part-left"></view>
-              <view class="login-cloud-part login-cloud-part-center"></view>
-              <view class="login-cloud-part login-cloud-part-right"></view>
-              <view class="login-cloud-base"></view>
-              <view class="login-cloud-eye login-cloud-eye-left">
-                <view class="login-cloud-eye-dot"></view>
-              </view>
-              <view class="login-cloud-eye login-cloud-eye-right">
-                <view class="login-cloud-eye-dot"></view>
-              </view>
-              <view class="login-cloud-smile"></view>
-              <view class="login-cloud-spark login-cloud-spark-left"></view>
-              <view class="login-cloud-spark login-cloud-spark-right"></view>
+            <view class="login-logo-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18.357 7.243 16.5 5.386m1.857 1.857L21 5.5m-2.643 1.743L17.5 8.5m-11 0 .857-1.257M6.5 8.5 3 5.5m3.5 3 .857-1.257M6.5 8.5l.5 13m11-13-.5 13m-10.5 0h10"/>
+                <path d="M10.5 8.5 12 11l1.5-2.5"/>
+              </svg>
             </view>
           </view>
           <view class="login-title">{{i18nTexts.brand}}</view>
         </view>
-        <view class="login-subtitle">衣智链 · 小云｜多端协同更轻松</view>
+        <view class="login-subtitle">服装供应链管理系统</view>
       </view>
 
       <view wx:if="{{wechatChecking}}" class="wechat-checking">
@@ -153,10 +143,13 @@
           <text class="invite-banner-text">{{inviteBanner}}</text>
         </view>
 
-        <!-- Company search (no label) -->
+        <!-- Company search -->
         <view class="login-field">
+          <text class="login-field-label">企业编号</text>
           <view class="login-input-wrap">
-            <text class="login-input-icon login-input-icon-search">⌕</text>
+            <view class="login-input-icon login-input-icon-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
+            </view>
             <input
               class="login-input"
               placeholder="{{tenantsLoading ? i18nTexts.loading : i18nTexts.companySearchPlaceholder}}"
@@ -176,18 +169,24 @@
           </view>
         </view>
 
-        <!-- Username (no label) -->
+        <!-- Username -->
         <view class="login-field">
+          <text class="login-field-label">用户名</text>
           <view class="login-input-wrap">
-            <text class="login-input-icon login-input-icon-user">◌</text>
+            <view class="login-input-icon login-input-icon-user">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </view>
             <input class="login-input" placeholder="{{i18nTexts.usernamePlaceholder}}" value="{{username}}" bindinput="onUsernameInput" disabled="{{loading}}" />
           </view>
         </view>
 
-        <!-- Password (no label) -->
+        <!-- Password -->
         <view class="login-field">
+          <text class="login-field-label">密码</text>
           <view class="login-input-wrap">
-            <text class="login-input-icon login-input-icon-lock">◐</text>
+            <view class="login-input-icon login-input-icon-lock">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </view>
             <input class="login-input" placeholder="{{i18nTexts.passwordPlaceholder}}" password="{{!showPassword}}" value="{{password}}" bindinput="onPasswordInput" disabled="{{loading}}" />
             <text class="login-input-eye" bindtap="togglePassword">{{showPassword ? '隐' : '显'}}</text>
           </view>

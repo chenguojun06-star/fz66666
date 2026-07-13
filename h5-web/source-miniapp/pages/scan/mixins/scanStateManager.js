@@ -8,6 +8,8 @@
 const api = require('../../../utils/api');
 const { DEBUG_MODE } = require('../../../config');
 const { toast } = require('../../../utils/uiHelper');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
+const scanFeedback = require('../../../utils/scan-feedback');
 
 /** 扫码结果通知停留时长：20 分钟 */
 const RESULT_DISMISS_MS = 20 * 60 * 1000;
@@ -32,14 +34,13 @@ module.exports = {
     refreshMy: function() { this.loadMyPanel(true); },
 
     _playScanAudio: function(success) {
-      // 音频文件可能不存在（/assets/audio/scan-success.mp3 等），改用震动反馈避免崩溃
       try {
         if (success) {
-          wx.vibrateShort({ type: 'light' });
+          scanFeedback.playSuccess();
         } else {
-          wx.vibrateLong();
+          scanFeedback.playError();
         }
-      } catch (_) { /* 震动失败不影响扫码 */ }
+      } catch (_) { /* 反馈失败不影响扫码 */ }
     },
 
     loadMyPanel: function(refresh) {
@@ -68,7 +69,6 @@ module.exports = {
     },
 
     handleScanSuccess: function(result) {
-      wx.vibrateShort({ type: 'light' });
       this._playScanAudio(true);
       const processName = result.processName || '';
       const scanQty = Number(result.quantity) || 0;
@@ -93,6 +93,8 @@ module.exports = {
       this._startResultDismissTimer();
       this.addToLocalHistory(formattedResult);
       this.startUndoTimer(formattedResult);
+      // 触发全局数据刷新事件，通知订单详情页/看板主页等其他页面更新进度
+      try { triggerDataRefresh('scan'); } catch (_e) { /* eventBus 异常不影响扫码 */ }
       const self = this;
       this._scanRefreshTimer = setTimeout(function() {
         if (self && self.data) self.loadMyPanel(true);
@@ -101,7 +103,6 @@ module.exports = {
     },
 
     handleScanError: function(error) {
-      wx.vibrateLong();
       this._playScanAudio(false);
       const msg = error.errMsg || error.message || '扫码失败';
       let errorAction = 'retry';

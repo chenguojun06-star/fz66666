@@ -88,7 +88,7 @@ Page({
         var raw = (res && res.records) || (res && res.data && res.data.records) || (res && res.data) || [];
         var list = Array.isArray(raw) ? raw : [];
 
-        console.log('[下单管理] 原始数据数量:', list.length);
+        if (DEBUG) console.log('[下单管理] 原始数据数量:', list.length);
 
         // 款式下单：再次过滤确保只显示已完成的样衣
         if (!isNoData) {

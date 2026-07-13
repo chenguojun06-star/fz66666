@@ -93,8 +93,8 @@
           <text class="info-item-value refund-value">¥{{detail.refundAmount}}</text>
         </view>
       </view>
-      <view class="info-full-row" wx:if="{{detail.returnReason && detail.returnReason !== '-'}}">
-        <text class="info-item-label">退货原因</text>
+      <view class="info-full-row reason-row" wx:if="{{detail.returnReason && detail.returnReason !== '-'}}">
+        <text class="reason-icon">⚠</text>
         <text class="info-item-value full-value">{{detail.returnReason}}</text>
       </view>
       <view class="info-full-row" wx:if="{{detail.remark && detail.remark !== '-'}}">
@@ -126,7 +126,7 @@
               <text class="item-price">单价：¥{{item.unitPrice}}</text>
             </view>
             <view class="item-reason-row" wx:if="{{item.returnReason}}">
-              <text class="item-reason-label">退货原因：</text>
+              <text class="item-reason-icon">⚠</text>
               <text class="item-reason-text">{{item.returnReason}}</text>
             </view>
           </view>

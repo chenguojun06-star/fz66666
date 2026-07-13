@@ -14,10 +14,13 @@
       <view
         wx:for="{{activeType === 'purchase' ? statusTabs : statusTabsSales}}"
         wx:key="key"
-        class="status-tab {{activeStatus === item.key ? 'active' : ''}}"
+        class="status-tab status-tab--{{item.cls}} {{activeStatus === item.key ? 'active' : ''}}"
         data-key="{{item.key}}"
         bindtap="onStatusChange"
-      >{{item.label}}</view>
+      >
+        <text class="status-tab-label">{{item.label}}</text>
+        <text class="status-tab-count">{{statusCounts[item.key] || 0}}</text>
+      </view>
     </view>
   </scroll-view>
 
@@ -29,22 +32,24 @@
     </block>
 
     <block wx:for="{{list}}" wx:key="id">
-      <view class="card" data-id="{{item.id}}" data-type="{{item._type}}" bindtap="goDetail">
+      <view class="card" style="border-left: 6rpx solid {{item.statusColor}};" data-id="{{item.id}}" data-type="{{item._type}}" bindtap="goDetail">
         <view class="card-header">
           <text class="return-no">{{item.returnNo}}</text>
-          <text class="status-badge" style="color:{{item.statusColor}};border-color:{{item.statusColor}};">{{item.statusLabel}}</text>
+          <text class="status-badge" style="color:{{item.statusColor}};background:{{item.statusColor}}1A;">{{item.statusLabel}}</text>
         </view>
         <view class="card-row">
           <text class="row-label">原单号</text>
           <text class="row-value">{{item.originalNo}}</text>
         </view>
-        <view class="card-row">
-          <text class="row-label">{{item._type === 'purchase' ? '供应商' : '客户'}}</text>
-          <text class="row-value">{{item.partyName}}</text>
-        </view>
-        <view class="card-row">
-          <text class="row-label">类型</text>
-          <text class="row-value">{{item.returnType}}</text>
+        <view class="card-grid">
+          <view class="grid-item">
+            <text class="row-label">{{item._type === 'purchase' ? '供应商' : '客户'}}</text>
+            <text class="row-value">{{item.partyName}}</text>
+          </view>
+          <view class="grid-item">
+            <text class="row-label">类型</text>
+            <text class="row-value">{{item.returnType}}</text>
+          </view>
         </view>
         <view class="card-row" wx:if="{{item.returnReason !== '-'}}">
           <text class="row-label">原因</text>

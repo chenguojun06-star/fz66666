@@ -1,0 +1,99 @@
+{
+  "data": [
+    {
+      "id": "page-home",
+      "title": "首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783836400000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": [
+          {
+            "domId": "nav-dashboard",
+            "targetPageId": "page-dashboard",
+            "hideEdge": false
+          },
+          {
+            "domId": "nav-scan",
+            "targetPageId": "page-scan",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-dashboard",
+      "title": "生产管理",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783836400000,
+      "canvasData": {
+        "x": 432,
+        "y": -48,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dashboard.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-scan",
+            "targetPageId": "page-scan",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-scan",
+      "title": "扫码",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783836400000,
+      "canvasData": {
+        "x": 768,
+        "y": 12,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/scan.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-dashboard",
+            "targetPageId": "page-dashboard",
+            "hideEdge": true
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "mobile",
+    "projectName": "小程序优化稿",
+    "designLibrary": {
+      "name": "苹果",
+      "id": "dl_builtin_apple",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple",
+      "versionSource": "metadata.json"
+    },
+    "showEdge": false
+  }
+}

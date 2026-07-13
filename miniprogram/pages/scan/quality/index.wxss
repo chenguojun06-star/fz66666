@@ -10,13 +10,19 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .card-header { display: flex; align-items: flex-start; gap: var(--spacing-sm); }
 .cover-wrap {
   width: 55px; height: 55px;
   border-radius: var(--radius-md); overflow: hidden;
   flex-shrink: 0; background: var(--color-border-light);
+  position: relative;
+}
+.cover-tip {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); color: #fff;
+  font-size: 10px; text-align: center; padding: 2px 0;
 }
 .header-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .style-no { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
@@ -52,7 +58,7 @@
 .section-card {
   background: var(--color-bg-card); border-radius: var(--radius-lg);
   padding: var(--spacing-sm) var(--spacing-md); margin-bottom: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .section-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin-bottom: var(--spacing-sm); display: block; }
 
@@ -110,7 +116,7 @@
 }
 .photo-add {
   width: 70px; height: 70px; border-radius: var(--radius-md);
-  border: 1px solid var(--color-border); display: flex; flex-direction: column;
+  /* Apple: removed hard border, use shadow */
   align-items: center; justify-content: center; gap: 2px;
   background: var(--color-bg-gray);
 }
@@ -121,7 +127,7 @@
 .remark-area {
   width: 100%; min-height: 50px;
   padding: 6px; font-size: var(--font-size-sm);
-  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  /* Apple: removed hard border, use shadow */
   box-sizing: border-box;
 }
 

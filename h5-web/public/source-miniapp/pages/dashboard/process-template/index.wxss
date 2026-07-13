@@ -13,8 +13,8 @@
   padding: 10px 12px;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 .status-card-row {
   display: flex;
@@ -67,8 +67,8 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 /* 组头 */
@@ -233,7 +233,7 @@
 .action-btn--secondary {
   background: var(--color-bg-gray);
   color: var(--color-primary);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .action-btn--primary {
   background: transparent;
@@ -305,7 +305,7 @@
   background: var(--color-bg-gray);
   border-radius: var(--radius-md);
   box-sizing: border-box;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .form-textarea {
   width: 100%;
@@ -316,7 +316,7 @@
   background: var(--color-bg-gray);
   border-radius: var(--radius-md);
   box-sizing: border-box;
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .form-picker {
   display: flex;
@@ -328,7 +328,7 @@
   color: var(--color-text-primary);
   background: var(--color-bg-gray);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 .form-picker-arrow {
   font-size: 16px;
@@ -352,7 +352,7 @@
 .modal-btn--cancel {
   background: var(--color-bg-gray);
   color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 .modal-btn--confirm {
   background: var(--color-primary);

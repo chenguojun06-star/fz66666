@@ -36,6 +36,7 @@ public class StyleProcessOrchestrator {
         if (styleProcess == null || styleProcess.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
+        TenantAssert.assertTenantContext();
         if (styleProcess.getCreateTime() == null) {
             styleProcess.setCreateTime(LocalDateTime.now());
         }
@@ -67,6 +68,7 @@ public class StyleProcessOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "工序");
         styleProcess.setStyleId(current.getStyleId());
         styleProcess.setUpdateTime(LocalDateTime.now());
         boolean ok = styleProcessService.updateById(styleProcess);

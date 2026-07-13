@@ -72,9 +72,9 @@
 }
 
 .wc-op-btn-primary {
-  background: var(--color-primary, var(--color-primary));
-  color: var(--color-text-white);
-  border-color: var(--color-primary, var(--color-primary));
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
 }
 
 /* ---- 款号（单独使用时 display:block；在 wc-head 内自动 flex:1）---- */

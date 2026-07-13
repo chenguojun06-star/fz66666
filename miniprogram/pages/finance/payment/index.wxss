@@ -17,9 +17,9 @@
 .stat-card {
   flex: 1;
   text-align: center;
-  padding: var(--spacing-sm) + 2px;
+  padding: var(--spacing-sm) 2px;
   background: var(--color-bg-gray);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
 }
 
 .stat-value {
@@ -69,11 +69,10 @@
 
 .payable-card, .payment-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  margin: var(--spacing-sm) var(--page-padding-x);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-lg);
+  margin: var(--card-gap) var(--page-padding-x);
+  box-shadow: var(--shadow-card);
 }
 
 .card-header {

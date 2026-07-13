@@ -10,15 +10,18 @@
         <view class="icon-close"></view>
       </view>
     </view>
+    <view class="scan-btn" catchtap="onScanCode">
+      <view class="line-icon icon-scan-qr scan-btn-icon"></view>
+    </view>
   </view>
 
-  <!-- 状态过滤条（统一一条：全部/生产中/已延期/临近交期/已完成） -->
+  <!-- 状态过滤条（Apple 风格胶囊：label + count 内联，彩色背景） -->
   <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'overdue' ? 'filter-pill--danger' : ''}} {{item.key === 'warning' ? 'filter-pill--warning' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}}"
+    <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'overdue' ? 'filter-pill--danger' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}} {{item.key === 'in_production' ? 'filter-pill--brand' : ''}}"
           wx:for="{{statFilters}}" wx:key="key"
           data-key="{{item.key}}" bindtap="onStatTap">
-      <text class="filter-num">{{statCounts[item.key] || 0}}</text>
       <text class="filter-text">{{item.label}}</text>
+      <text class="filter-num">{{statCounts[item.key] || 0}}</text>
     </view>
   </scroll-view>
 
@@ -27,79 +30,61 @@
     <view class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
           wx:for="{{orders.list}}" wx:key="id">
 
-      <!-- 主行：封面图 + 规格信息右栏（点击展开折叠） -->
+      <!-- 主行：封面图 + 信息右栏（点击展开折叠） -->
       <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
         <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
           <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
-          <view wx:else class="cover-placeholder">
-            <text class="icon-box"></text>
-          </view>
         </view>
 
         <view class="order-info">
-          <!-- 顶部：订单号 + 状态标签 -->
+          <!-- 顶部：订单号 + 状态标签（Apple 风格实色标签） -->
           <view class="info-top">
             <text class="order-no">{{item.orderNo}}</text>
-            <text wx:if="{{item.urgencyTagText === '急'}}" class="status-tag tag tag-warning">急</text>
-            <text wx:if="{{item.plateTypeTagText}}" class="status-tag tag tag-processing">{{item.plateTypeTagText}}</text>
-            <text wx:if="{{item.status === 'completed'}}" class="status-tag tag tag-success">已完成</text>
-            <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="status-tag tag tag-error">已逾期</text>
+            <view class="info-tags">
+              <text wx:if="{{item.urgencyTagText === '急'}}" class="tag tag-solid tag-solid--warning">急</text>
+              <text wx:if="{{item.plateTypeTagText}}" class="tag tag-solid tag-solid--primary">{{item.plateTypeTagText}}</text>
+              <text wx:if="{{item.status === 'completed'}}" class="tag tag-solid tag-solid--success">已完成</text>
+              <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="tag tag-solid tag-solid--danger">已逾期</text>
+              <text wx:elif="{{item.status === 'production'}}" class="tag tag-solid tag-solid--primary">生产中</text>
+            </view>
           </view>
 
-          <!-- 基础信息（款号 + 款名） -->
-          <view class="info-spec-row">
-            <text class="info-spec-label">款号</text>
-            <text class="info-spec-value">{{item.styleNo || '-'}}</text>
-            <text class="info-spec-label" wx:if="{{item.styleNameDisplay}}">款名</text>
-            <text class="info-spec-value info-spec-value--name" wx:if="{{item.styleNameDisplay}}">{{item.styleNameDisplay}}</text>
-          </view>
+          <!-- 款号 + 款名（一行，大字） -->
+          <text class="info-style-name">{{item.styleNo || '-'}}{{item.styleNameDisplay ? ' ' + item.styleNameDisplay : ''}}</text>
 
-          <!-- 跟单员 + 客户 -->
-          <view class="info-spec-row" wx:if="{{item.merchandiserDisplay || item.customerDisplay}}">
-            <text class="info-spec-label" wx:if="{{item.merchandiserDisplay}}">跟单</text>
-            <text class="info-spec-value" wx:if="{{item.merchandiserDisplay}}">{{item.merchandiserDisplay}}</text>
-            <text class="info-spec-label" wx:if="{{item.customerDisplay}}">客户</text>
-            <text class="info-spec-value" wx:if="{{item.customerDisplay}}">{{item.customerDisplay}}</text>
-          </view>
+          <!-- 客户 -->
+          <text class="info-sub" wx:if="{{item.customerDisplay}}">{{item.customerDisplay}}</text>
 
           <!-- 工厂 -->
-          <view class="info-spec-row" wx:if="{{item.factoryName}}">
-            <text class="info-spec-label">工厂</text>
-            <text class="info-spec-value">{{item.factoryName}}</text>
-          </view>
+          <text class="info-sub info-sub--muted" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
 
-          <!-- 交期信息 -->
-          <view class="info-spec-row" wx:if="{{item.deliveryDateStr}}">
-            <text class="info-spec-label">交期</text>
-            <text class="info-spec-value">{{item.deliveryDateStr}}</text>
-            <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
-          </view>
-
-          <!-- 数量信息 -->
-          <view class="info-qty-row">
-            <view class="iq-main">
-              <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
-              <text class="iq-unit">件</text>
-            </view>
-            <view class="iq-sub">
-              <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
-              <text class="iq-lbl">已完成</text>
-              <text class="iq-divider">·</text>
-              <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
-              <text class="iq-lbl">剩余</text>
-            </view>
-          </view>
-          <view class="info-progress">
-            <view class="ip-bar">
-              <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
-            </view>
-            <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
-          </view>
+          <!-- 跟单员（如果有，显示在工厂下方） -->
+          <text class="info-sub info-sub--muted" wx:if="{{item.merchandiserDisplay}}">跟单 {{item.merchandiserDisplay}}</text>
         </view>
+      </view>
 
-        <view class="order-arrow">
-          <text class="arrow-icon {{item.expanded ? 'arrow-icon--up' : ''}}">›</text>
+      <!-- 进度条（全宽，图片+信息下方） -->
+      <view class="order-progress" data-index="{{index}}" catchtap="onCardToggle">
+        <view class="ip-bar">
+          <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.status === 'completed' ? 'ip-fill--done' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
         </view>
+        <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
+      </view>
+
+      <!-- 底部信息行：数量 + 交期 + 剩余天数 -->
+      <view class="order-bottom" data-index="{{index}}" catchtap="onCardToggle">
+        <view class="ob-left">
+          <text class="ob-qty">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}件</text>
+          <text class="ob-dot">·</text>
+          <text class="ob-delivery">交期 {{item.deliveryDateStr || '-'}}</text>
+        </view>
+        <text class="ob-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
+      </view>
+
+      <!-- 展开菲号明细 按钮 -->
+      <view class="expand-fei-btn" data-index="{{index}}" catchtap="onCardToggle">
+        <text class="expand-fei-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
+        <text class="expand-fei-arrow {{item.expanded ? 'expand-fei-arrow--up' : ''}}">›</text>
       </view>
 
       <!-- 展开区域 -->

@@ -21,6 +21,29 @@ function getProgressNodeColor(node) {
   return 'default';
 }
 
+// PC 端同款：CATEGORY_MAP / SEASON_MAP —— 与 styleTableViewUtils.ts 完全一致
+var CATEGORY_MAP = {
+  WOMAN: '女装', WOMEN: '女装',
+  MAN: '男装', MEN: '男装',
+  KID: '童装', KIDS: '童装',
+  WCMAN: '女童装', UNISEX: '男女同款',
+};
+var SEASON_MAP = {
+  SPRING: '春季', SUMMER: '夏季',
+  AUTUMN: '秋季', WINTER: '冬季',
+  SPRING_SUMMER: '春夏', AUTUMN_WINTER: '秋冬',
+};
+function toCategoryCn(val) {
+  if (!val) return '';
+  var k = String(val).trim().toUpperCase();
+  return CATEGORY_MAP[k] || val;
+}
+function toSeasonCn(val) {
+  if (!val) return '';
+  var k = String(val).trim().toUpperCase();
+  return SEASON_MAP[k] || val;
+}
+
 // PC 端同款：getDeliveryMeta —— 计算交期状态
 // tone: 'scrapped' | 'danger' | 'warning' | 'normal' | 'success'
 function getDeliveryMeta(record, allStagesCompleted) {
@@ -33,48 +56,31 @@ function getDeliveryMeta(record, allStagesCompleted) {
     return { tone: 'success', label: '已完成' };
   }
   const deliveryDate = record.deliveryDate || record.deliveryTime;
-  if (!deliveryDate) return { tone: 'normal', label: '待补交期' };
+  if (!deliveryDate) return { tone: 'normal', label: '待补交期', dateStr: '' };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   // iOS 兼容：'yyyy-MM-dd HH:mm:ss' 在 iOS 下无法解析，需替换为 'yyyy/MM/dd HH:mm:ss'
   const target = new Date(String(deliveryDate).replace(/-/g, '/'));
   target.setHours(0, 0, 0, 0);
   const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
-  if (diffDays < 0) return { tone: 'danger', label: `延期${Math.abs(diffDays)}天` };
-  if (diffDays <= 3) return { tone: 'warning', label: `${diffDays}天内交板` };
-  return { tone: 'normal', label: `${diffDays}天后交板` };
+  // 格式化交期日期为 MM-DD（与 PC 端 StyleCardView 一致）
+  var mm = target.getMonth() + 1;
+  var dd = target.getDate();
+  var dateStr = (mm < 10 ? '0' + mm : mm) + '-' + (dd < 10 ? '0' + dd : dd);
+  if (diffDays < 0) return { tone: 'danger', label: '延期' + Math.abs(diffDays) + '天', dateStr: dateStr };
+  if (diffDays <= 3) return { tone: 'warning', label: diffDays + '天内交板', dateStr: dateStr };
+  return { tone: 'normal', label: diffDays + '天后交板', dateStr: dateStr };
 }
 
-// 开发来源中文映射（后端返回英文枚举，前端映射为中文）
-const SOURCE_TYPE_LABELS = {
-  'SELF_DEVELOPED': '自主开发',
-  'SELECTION_CENTER': '选品中心',
-  'MARKET': '市场采购',
-  'SUPPLIER': '供应商提供',
-  'CUSTOMER': '客户定制',
-  'INTERNAL': '内部选品',
-  'SAMPLE': '样衣开发',
-  'BULK': '大货',
-  'PATTERN': '纸样开发',
-  'EXTERNAL': '外部市场',
-  'BUYER': '买手采购',
-};
-
-// 卡片底部阶段进度条配置（紧凑显示，每阶段一个 short 中文名）
+// PC 端同款：6 阶段（BOM/纸样/尺寸/工序/生产制单/二次工艺），与 StyleCardView.tsx:147-156 一致
 const STAGE_SUMMARY_CONFIG = [
   { key: 'bom',        short: 'BOM' },
   { key: 'pattern',    short: '纸样' },
-  { key: 'process',    short: '单价' },
-  { key: 'secondary',  short: '二次' },
+  { key: 'size',       short: '尺寸' },
+  { key: 'process',    short: '工序' },
   { key: 'production', short: '制单' },
+  { key: 'secondary',  short: '二次' },
 ];
-
-function formatDate(v) {
-  if (!v) return '';
-  const s = String(v);
-  if (s.length >= 10) return s.substring(0, 10);
-  return s;
-}
 
 Page({
   data: {
@@ -162,7 +168,7 @@ Page({
     }
   },
 
-  loadData: function (reset, opts) {
+  loadData: function (reset) {
     const that = this;
     if (reset) {
       that.setData({ loading: true, page: 1, list: [] });
@@ -222,12 +228,25 @@ Page({
           item._progressColor = getProgressNodeColor(progressNode);
 
           // ========== 与 PC 端一致：交期信息（次要标签） ==========
+          // P0 修复：优先用 item.deliveryTime（已是字符串），再 fallback styleInfo.deliveryDate
+          // （styleInfo.deliveryDate 是 LocalDateTime 序列化成数组 [y,m,d]，new Date 会 Invalid Date）
+          var _deliveryDate = item.deliveryTime || item.deliveryDate;
+          if (!_deliveryDate && styleInfo.deliveryDate) {
+            // 兼容 LocalDateTime 数组格式 [y,m,d] 和字符串
+            var dd = styleInfo.deliveryDate;
+            if (Array.isArray(dd) && dd.length >= 3) {
+              _deliveryDate = dd[0] + '-' + (dd[1] < 10 ? '0' : '') + dd[1] + '-' + (dd[2] < 10 ? '0' : '') + dd[2];
+            } else if (typeof dd === 'string') {
+              _deliveryDate = dd;
+            }
+          }
           const deliveryMeta = getDeliveryMeta(
-            { deliveryDate: item.deliveryDate || styleInfo.deliveryDate || item.deliveryTime, sampleStatus: item.sampleStatus || styleInfo.sampleStatus, status: item.status },
+            { deliveryDate: _deliveryDate, sampleStatus: item.sampleStatus || styleInfo.sampleStatus, status: item.status },
             false
           );
           item._deliveryTone = deliveryMeta.tone;
           item._deliveryLabel = deliveryMeta.label;
+          item._deliveryDateStr = deliveryMeta.dateStr || '';
 
           // ========== 基础字段：颜色 / 码数 / 数量 ==========
           function normalizeVal(v, sep) {
@@ -257,8 +276,8 @@ Page({
           const customerCandidates = [item.customer, styleInfo.customer, item.customerName, styleInfo.customerName, item.buyer, styleInfo.buyer];
           item._customer = customerCandidates.find(function (v) { return v != null && String(v).trim() !== ''; }) || '';
           item._merchandiser = item.merchandiser || styleInfo.merchandiser || '';
-          item._category = item.category || styleInfo.category || '';
-          item._season = item.season || styleInfo.season || '';
+          item._category = toCategoryCn(item.category || styleInfo.category || '');
+          item._season = toSeasonCn(item.season || styleInfo.season || '');
 
           // ========== 阶段进度摘要（紧凑 5 点进度条） ==========
           // 优先取 styleInfo 上的阶段时间字段，再兜底到 item 顶层
@@ -350,11 +369,6 @@ Page({
     this._searchTimer = setTimeout(this._doSearch.bind(this), 400);
   },
 
-  onSearchClear: function () {
-    this.setData({ keyword: '' });
-    this._doSearch();
-  },
-
   _doSearch: function () {
     this.loadData(true);
   },
@@ -367,7 +381,7 @@ Page({
     this.setData({ activeFilter: key, activeHint: '' });
     if (key === 'IN_PROGRESS') {
       // 开发中：不传 status 给后端，前端按 _progressNode 过滤活跃款式
-      this.loadData(true, { skipStatus: true });
+      this.loadData(true);
     } else {
       this.loadData(true);
     }
@@ -455,14 +469,20 @@ Page({
     const ds = e.currentTarget.dataset || {};
     const styleId = String(ds.styleId || '').trim();
     const patternId = String(ds.id || '').trim();
-    console.log('[sample-dev:index] onGoDetail styleId=' + styleId + ' patternId=' + patternId, ds);
+    if (DEBUG) {
+      console.log('[sample-dev:index] onGoDetail styleId=' + styleId + ' patternId=' + patternId, ds);
+    }
     if (!styleId && !patternId) {
       console.warn('[sample-dev:index] 缺少跳转参数，不导航');
       return;
     }
-    const param = styleId ? 'styleId=' + encodeURIComponent(styleId) : 'id=' + encodeURIComponent(patternId);
+    // P0 修复：同时传 styleId 和 patternId，避免 detail 页 patternId 丢失
+    // （之前用三目运算符二选一，导致 stage-detail 工序/扫码记录加载不到数据）
+    var params = [];
+    if (styleId) params.push('styleId=' + encodeURIComponent(styleId));
+    if (patternId) params.push('id=' + encodeURIComponent(patternId));
     safeNavigate({
-      url: '/pages/sample-development/detail/index?' + param,
+      url: '/pages/sample-development/detail/index?' + params.join('&'),
     }).catch(function (err) {
       console.warn('[sample-dev:index] 导航失败:', err);
     });

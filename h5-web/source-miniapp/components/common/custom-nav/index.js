@@ -29,7 +29,7 @@ Component({
     },
     bgColor: {
       type: String,
-      value: '#2563EB',
+      value: '#ffffff',
     },
   },
   data: {

@@ -337,40 +337,118 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const actions: RowAction[] = [];
 
         if (isUnqualified && !isRepairedWaitingQc) {
-          actions.push({
-            key: 'markRepaired',
-            label: '返修完成',
-            title: '标记为返修完成，进入重新质检',
-            disabled: frozen,
-            onClick: () => {
-              const bundleId = String((record as any)?.cuttingBundleId || '').trim();
-              if (!bundleId) {
-                message.warning('缺少菲号信息，无法操作');
-                return;
-              }
-              Modal.confirm({
-                title: '确认返修完成',
-                content: '确认该菲号已完成返修，可重新进行质检？',
-                onOk: async () => {
-                  try {
-                    const res = await api.post<{ code: number; message?: string }>(
-                      '/production/warehousing/mark-bundle-repaired',
-                      { bundleId }
-                    );
-                    if (res.code === 200) {
-                      message.success('已标记为返修完成，可重新进行质检');
-                      window.location.reload();
-                    } else {
-                      message.error(res.message || '操作失败');
+          const isRepairing = repairStatus === 'repairing';
+          const bundleId = String((record as any)?.cuttingBundleId || '').trim();
+
+          if (isRepairing) {
+            // 返修中 → 返修完成
+            actions.push({
+              key: 'markRepaired',
+              label: '返修完成',
+              title: '标记为返修完成，进入重新质检',
+              disabled: frozen,
+              onClick: () => {
+                if (!bundleId) {
+                  message.warning('缺少菲号信息，无法操作');
+                  return;
+                }
+                Modal.confirm({
+                  title: '确认返修完成',
+                  content: '确认该菲号已完成返修，可重新进行质检？',
+                  onOk: async () => {
+                    try {
+                      const res = await api.post<{ code: number; message?: string }>(
+                        '/production/warehousing/mark-bundle-repaired',
+                        { bundleId }
+                      );
+                      if (res.code === 200) {
+                        message.success('已标记为返修完成，可重新进行质检');
+                        window.location.reload();
+                      } else {
+                        message.error(res.message || '操作失败');
+                      }
+                    } catch {
+                      message.error('操作失败，请稍后重试');
                     }
-                  } catch {
-                    message.error('操作失败，请稍后重试');
-                  }
-                },
-              });
-            },
-            primary: false,
-          });
+                  },
+                });
+              },
+              primary: false,
+            });
+          } else {
+            // 待返修 → 开始返修 + 报废裁捆（与小程序 defect 页一致）
+            actions.push({
+              key: 'startRepair',
+              label: '开始返修',
+              title: '标记为返修中',
+              disabled: frozen,
+              onClick: () => {
+                if (!bundleId) {
+                  message.warning('缺少菲号信息，无法操作');
+                  return;
+                }
+                Modal.confirm({
+                  title: '确认开始返修',
+                  content: '确认开始返修该菲号？',
+                  onOk: async () => {
+                    try {
+                      const operatorName = String((record as any)?.qualityOperatorName || '').trim();
+                      const res = await api.post<{ code: number; message?: string }>(
+                        '/production/warehousing/mark-bundle-repairing',
+                        { bundleId, operatorName }
+                      );
+                      if (res.code === 200) {
+                        message.success('已开始返修');
+                        window.location.reload();
+                      } else {
+                        message.error(res.message || '操作失败');
+                      }
+                    } catch {
+                      message.error('操作失败，请稍后重试');
+                    }
+                  },
+                });
+              },
+              primary: true,
+            });
+
+            actions.push({
+              key: 'scrapBundle',
+              label: '报废',
+              title: '报废该菲号（不可撤销）',
+              disabled: frozen,
+              onClick: () => {
+                if (!bundleId) {
+                  message.warning('缺少菲号信息，无法操作');
+                  return;
+                }
+                Modal.confirm({
+                  title: '报废确认',
+                  content: '确认报废该菲号？此操作不可撤销。',
+                  okText: '确认报废',
+                  okButtonProps: { danger: true },
+                  cancelText: '取消',
+                  onOk: async () => {
+                    try {
+                      const res = await api.post<{ code: number; message?: string }>(
+                        '/production/warehousing/scrap-bundle',
+                        { bundleId }
+                      );
+                      if (res.code === 200) {
+                        message.success('已报废');
+                        window.location.reload();
+                      } else {
+                        message.error(res.message || '操作失败');
+                      }
+                    } catch {
+                      message.error('操作失败，请稍后重试');
+                    }
+                  },
+                });
+              },
+              primary: false,
+            });
+          }
         }
 
         if (isRepairedWaitingQc) {

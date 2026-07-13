@@ -5,11 +5,12 @@
   <view class="search-bar">
     <view class="search-box">
       <view class="line-icon line-icon--sm icon-search search-icon"></view>
-      <input class="search-input" placeholder="输入订单号/买家名后按搜索" value="{{keyword}}"
+      <input class="search-input" placeholder="输入订单号/买家名" value="{{keyword}}"
              confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
       <view wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">
         <view class="icon-close"></view>
       </view>
+      <text class="search-btn-inline" bindtap="onSearchConfirm">搜索</text>
     </view>
   </view>
 
@@ -34,7 +35,7 @@
   <!-- 订单列表 -->
   <view class="order-list" wx:if="{{list.length > 0}}">
     <view class="order-card" wx:for="{{list}}" wx:key="id" data-idx="{{index}}" bindtap="onOrderTap">
-      <!-- 第一行：平台 + 状态 -->
+      <!-- 头部：平台标签 + 排产标签 + 状态标签 -->
       <view class="oc-head">
         <view class="oc-head-left">
           <text class="oc-platform">{{item.platformName}}</text>
@@ -42,32 +43,32 @@
         </view>
         <text class="oc-status {{item.statusCls}}">{{item.status}}</text>
       </view>
-      <!-- 平台单号（优先显示） -->
+      <!-- 平台单号 -->
       <view class="oc-no" wx:if="{{item.platformOrderNo}}" data-no="{{item.platformOrderNo}}" catchtap="onCopyOrderNo">
         <text class="oc-no-label">平台单号</text>
         <text class="oc-no-val">{{item.platformOrderNo}}</text>
-        <text class="oc-copy">复制</text>
+        <text class="oc-copy-icon">⧉</text>
       </view>
       <!-- 内部单号 -->
       <view class="oc-no oc-no--sub" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" catchtap="onCopyOrderNo">
         <text class="oc-no-label">内部单号</text>
         <text class="oc-no-val">{{item.orderNo}}</text>
-        <text class="oc-copy">复制</text>
+        <text class="oc-copy-icon">⧉</text>
       </view>
+      <!-- 分隔线 -->
+      <view class="oc-divider" wx:if="{{item.productText || item.buyerName || item.amount}}"></view>
       <!-- 商品信息 -->
       <view class="oc-row" wx:if="{{item.productText}}">
         <text class="oc-label">商品</text>
         <text class="oc-val oc-product">{{item.productText}}</text>
       </view>
-      <!-- 买家 -->
-      <view class="oc-row">
-        <text class="oc-label">买家</text>
-        <text class="oc-val">{{item.buyerName}}</text>
-      </view>
-      <!-- 金额 -->
-      <view class="oc-row">
-        <text class="oc-label">实付</text>
-        <text class="oc-val oc-amount">¥{{item.amount}}</text>
+      <!-- 底部：买家 + 金额 -->
+      <view class="oc-bottom">
+        <view class="oc-buyer">
+          <text class="oc-label">买家</text>
+          <text class="oc-val">{{item.buyerName}}</text>
+        </view>
+        <text class="oc-amount">¥{{item.amount}}</text>
       </view>
       <!-- 物流 -->
       <view class="oc-row" wx:if="{{item.trackingNo}}">

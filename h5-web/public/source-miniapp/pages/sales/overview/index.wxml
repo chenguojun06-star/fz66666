@@ -34,7 +34,7 @@
   <!-- 平台分组列表 -->
   <view class="section-hd">
     <text class="section-title">平台销售明细</text>
-    <text class="section-action" bindtap="onViewOrders">查看订单 ›</text>
+    <text class="section-action" bindtap="onViewOrders">查看订单</text>
   </view>
 
   <view class="platform-list" wx:if="{{platforms.length > 0}}">
@@ -43,20 +43,17 @@
           data-platform="{{item.platform}}" bindtap="onPlatformTap">
       <view class="pc-head">
         <text class="pc-name">{{item.platformName}}</text>
-        <text class="pc-arrow">›</text>
+        <text class="pc-count">{{item.orderCount}}单</text>
       </view>
+      <view class="pc-divider"></view>
       <view class="pc-body">
         <view class="pc-col">
-          <text class="pc-num">{{item.orderCount}}</text>
-          <text class="pc-lbl">订单量</text>
-        </view>
-        <view class="pc-col">
-          <text class="pc-num pc-num--blue">¥{{item.salesAmount}}</text>
           <text class="pc-lbl">销售额</text>
+          <text class="pc-num">¥{{item.salesAmount}}</text>
         </view>
         <view class="pc-col">
-          <text class="pc-num pc-num--green">¥{{item.netRevenue}}</text>
           <text class="pc-lbl">净收入</text>
+          <text class="pc-num">¥{{item.netRevenue}}</text>
         </view>
       </view>
     </view>
@@ -64,7 +61,7 @@
 
   <!-- 空状态（区分加载失败） -->
   <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && !loadError}}">
-    <text class="empty-icon">📊</text>
+    <text class="empty-icon icon-chart"></text>
     <text class="empty-text">暂无销售数据</text>
     <text class="empty-hint">所选时间段内未统计到销售数据</text>
   </view>

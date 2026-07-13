@@ -32,8 +32,10 @@
             <text class="card-cat" wx:if="{{item.displayCategory}}">{{item.displayCategory}}</text>
             <text class="card-no">{{item.styleNo || '-'}}</text>
             <text class="card-name">{{item.styleName || '-'}}</text>
-            <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
-            <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
+            <view class="card-meta-row">
+              <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
+              <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
+            </view>
           </view>
         </view>
       </view>

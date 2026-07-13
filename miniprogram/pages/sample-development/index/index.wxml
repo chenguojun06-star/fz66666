@@ -25,22 +25,18 @@
     <view class="stat-tag {{(activeFilter === '' && !activeHint) ? 'stat-tag-active' : ''}}" data-key="" bindtap="onFilterTap">
       <text class="stat-label">全部款号</text>
       <text class="stat-value">{{totalCount}}</text>
-      <text class="stat-unit">个</text>
     </view>
     <view class="stat-tag stat-tag-primary {{activeFilter === 'IN_PROGRESS' ? 'stat-tag-active stat-tag-active-primary' : ''}}" data-key="IN_PROGRESS" bindtap="onFilterTap">
       <text class="stat-label">开发中</text>
       <text class="stat-value">{{sampleCount}}</text>
-      <text class="stat-unit">个</text>
     </view>
     <view class="stat-tag stat-tag-success {{activeFilter === 'COMPLETED' ? 'stat-tag-active stat-tag-active-success' : ''}}" data-key="COMPLETED" bindtap="onFilterTap">
       <text class="stat-label">已完成</text>
       <text class="stat-value">{{completedCount}}</text>
-      <text class="stat-unit">个</text>
     </view>
     <view class="stat-tag stat-tag-danger {{activeHint === 'overdue' ? 'stat-tag-active stat-tag-active-danger' : ''}}" data-key="overdue" bindtap="onHintTap">
       <text class="stat-label">已延期</text>
       <text class="stat-value">{{overdueCount}}</text>
-      <text class="stat-unit">个</text>
     </view>
 
     <!-- 竖分隔线 -->
@@ -85,7 +81,7 @@
             <text class="style-no">{{item._styleNo || '-'}}</text>
             <view class="tag-row">
               <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
-              <text wx:if="{{item._deliveryLabel && (item._deliveryTone === 'danger' || item._deliveryTone === 'warning' || item._deliveryTone === 'success')}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : 'success')}}">{{item._deliveryLabel}}</text>
+              <text wx:if="{{item._deliveryLabel}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : (item._deliveryTone === 'success' ? 'success' : 'default'))}}">{{item._deliveryLabel}}</text>
             </view>
           </view>
           <text wx:if="{{item.styleName || item.name}}" class="style-name">{{item.styleName || item.name}}</text>
@@ -100,11 +96,15 @@
             <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
           </view>
 
-          <!-- 数量行（样衣只有总数量，无已完成/剩余件数概念） -->
-          <view class="info-qty-row" wx:if="{{item._quantity}}">
-            <view class="iq-main">
+          <!-- 数量 + 交板日期行（与 PC 端 StyleCardView 一致） -->
+          <view class="info-qty-row" wx:if="{{item._quantity || item._deliveryDateStr}}">
+            <view class="iq-main" wx:if="{{item._quantity}}">
               <text class="iq-num">{{item._quantity}}</text>
               <text class="iq-unit">件</text>
+            </view>
+            <view class="iq-delivery" wx:if="{{item._deliveryDateStr}}">
+              <text class="iq-d-label">交板</text>
+              <text class="iq-d-date">{{item._deliveryDateStr}}</text>
             </view>
           </view>
           <!-- 进度条（基于5阶段完成率） -->
@@ -117,13 +117,6 @@
         </view>
       </view>
 
-      <!-- 第二行：阶段进度条 -->
-      <view wx:if="{{item._stageSummary}}" class="stage-bar">
-        <view wx:for="{{item._stageSummary}}" wx:key="key" wx:for-item="st" class="stage-bar-item {{st.status}}">
-          <view class="sb-dot"></view>
-          <text class="sb-name">{{st.short}}</text>
-        </view>
-      </view>
     </view>
 
     <!-- 加载更多 / 已显示全部 -->

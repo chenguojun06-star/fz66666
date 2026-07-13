@@ -82,13 +82,12 @@
       <view class="top-card">
         <view class="top-left" bindtap="previewImage">
           <image wx:if="{{coverImage}}" class="cover-img" src="{{coverImage}}" mode="aspectFill" lazy-load="{{true}}" />
-          <view wx:else class="cover-placeholder">
-            <text class="cover-abbr">{{orderInfo._styleAbbr || '--'}}</text>
-          </view>
         </view>
         <view class="top-right">
           <view class="top-title">
             <text class="order-no">{{orderNo}}</text>
+            <text wx:if="{{cuttingTaskInfo && cuttingTaskInfo.receivedByMe}}" class="status-tag tag tag-processing">已领取</text>
+            <text wx:elif="{{cuttingTaskInfo && cuttingTaskInfo.canReceive}}" class="status-tag tag tag-default">待领取</text>
           </view>
           <view class="info-row">
             <text class="info-label">款号</text>
@@ -330,7 +329,10 @@
                   class="bundle-row"
                 >
                   <text class="bl-cell bl-cell--no bold">{{item.bundleLabel || item.bundleNo || '-'}}</text>
-                  <text class="bl-cell bl-cell--code">{{item.qrCode || '-'}}</text>
+                  <view class="bl-cell bl-cell--code">
+                    <text class="bl-qr-icon"></text>
+                    <text class="bl-qr-text">{{item.qrCode || '-'}}</text>
+                  </view>
                   <text class="bl-cell bl-cell--color">{{item.color || '-'}}</text>
                   <text class="bl-cell bl-cell--size">{{item.size || '-'}}</text>
                   <text class="bl-cell bl-cell--qty">{{item.quantity || 0}}</text>

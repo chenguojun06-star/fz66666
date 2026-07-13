@@ -9,7 +9,7 @@
 
     <view wx:if="{{showSearch}}" class="nav-center">
       <view class="search-box">
-        <view class="line-icon line-icon--sm icon-search search-icon" style="filter: brightness(0) invert(1);"></view>
+        <view class="line-icon line-icon--sm icon-search search-icon"></view>
         <input
           class="search-input"
           placeholder="{{searchPlaceholder}}"

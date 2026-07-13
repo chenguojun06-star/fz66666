@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner } = require('../../utils/storage');
+const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
 const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
 const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
@@ -27,35 +27,88 @@ const MENU_ROLE_MAP = {
   worker: '工人',
 };
 
-function buildMenuItems(opts) {
-  const showInviteSection = opts.showInviteSection || false;
-  const showApprovalEntry = opts.showApprovalEntry || false;
+function maskPhone(phone) {
+  if (!phone || phone.length < 7) return phone || '';
+  return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4);
+}
+
+function buildMenuGroups(opts) {
   const showMenuManage = opts.showMenuManage || false;
-  const items = [];
+  const showApproval = opts.showApproval || false;
+  var groups = [];
 
-  items.push({ id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' });
-  items.push({ id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' });
-  items.push({ id: 'advance', label: '员工借支', iconClass: 'icon-clock', url: '/pages/advance/list/index' });
-  items.push({ id: 'return', label: '退货管理', iconClass: 'icon-stats', url: '/pages/return/list/index' });
-  if (opts.showWagePayment) {
-    items.push({ id: 'wagePayment', label: '收付款中心', iconClass: 'icon-stats', url: '/pages/finance/payment/index' });
+  // Group 1: 账户管理
+  var accountItems = [];
+  if (showApproval) {
+    accountItems.push({
+      id: 'approval',
+      label: '用户审批',
+      iconClass: 'icon-menu-user',
+      iconColor: 'primary',
+      url: '/pages/admin/user-approval/index',
+    });
   }
-
-  if (showInviteSection) {
-    items.push({ id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
-  }
-
-  items.push({ id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/misc/feedback/index' });
-
-  if (showApprovalEntry) {
-    items.push({ id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index' });
-  }
-
+  accountItems.push({
+    id: 'password',
+    label: '修改密码',
+    iconClass: 'icon-lock',
+    iconColor: 'success',
+    url: '/pages/admin/misc/change-password/index',
+  });
   if (showMenuManage) {
-    items.push({ id: 'menu-manage', label: '菜单管理', iconClass: 'icon-setting', action: 'openMenuManage' });
+    accountItems.push({
+      id: 'menu-manage',
+      label: '菜单管理',
+      iconClass: 'icon-setting',
+      iconColor: 'primary',
+      action: 'openMenuManage',
+    });
   }
+  groups.push({ id: 'account', items: accountItems });
 
-  return items;
+  // Group 2: 帮助与分享
+  groups.push({
+    id: 'help',
+    items: [
+      {
+        id: 'feedback',
+        label: '意见反馈',
+        iconClass: 'icon-feedback',
+        iconColor: 'warning',
+        action: 'openFeedback',
+      },
+      {
+        id: 'invite',
+        label: '邀请同事',
+        iconClass: 'icon-menu-invite',
+        iconColor: 'purple',
+        url: '/pages/admin/misc/invite/index',
+      },
+    ],
+  });
+
+  // Group 3: 关于
+  groups.push({
+    id: 'about',
+    items: [
+      {
+        id: 'privacy',
+        label: '隐私政策',
+        iconClass: 'icon-menu-privacy',
+        iconColor: 'gray',
+        action: 'openPrivacy',
+      },
+      {
+        id: 'about-us',
+        label: '关于我们',
+        iconClass: 'icon-lightbulb',
+        iconColor: 'gray',
+        action: 'openAbout',
+      },
+    ],
+  });
+
+  return groups;
 }
 
 Page({
@@ -68,7 +121,14 @@ Page({
     showApprovalEntry: false,
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
-    menuItems: [],
+    menuGroups: [],
+    factoryName: '',
+    userPhone: '',
+    stats: {
+      workHours: 0,
+      wage: 0,
+      scanCount: 0,
+    },
     menuManageVisible: false,
     menuManageList: [],
     savingMenuConfig: false,
@@ -88,8 +148,8 @@ Page({
     }
     const canManage = isAdminOrSupervisor() || isFactoryOwner();
     this._showMenuManage = canManage;
-    this._showWagePayment = isTenantOwner() || isAdminOrSupervisor();
-    this.loadUserInfo(canManage);
+    this.setData({ showApprovalEntry: canManage });
+    this.loadUserInfo();
     this.loadSystemInfo();
     this.setupDataRefreshListener();
   },
@@ -111,18 +171,18 @@ Page({
 
   refreshMenuItems: function () {
     this.setData({
-      menuItems: buildMenuItems({
-        showInviteSection: this._showInviteSection || false,
-        showApprovalEntry: this.data.showApprovalEntry,
+      menuGroups: buildMenuGroups({
         showMenuManage: this._showMenuManage || false,
-        showWagePayment: this._showWagePayment || false,
+        showApproval: this.data.showApprovalEntry || false,
       }),
     });
   },
 
   onMenuTap: function (e) {
-    const index = e.currentTarget.dataset.index;
-    const item = this.data.menuItems[index];
+    const groupIdx = e.currentTarget.dataset.groupIdx;
+    const itemIdx = e.currentTarget.dataset.itemIdx;
+    const group = this.data.menuGroups[groupIdx];
+    const item = group && group.items[itemIdx];
     if (!item) return;
     if (item.action === 'switchLanguage') {
       this.onLanguageSwitchTap();
@@ -130,6 +190,22 @@ Page({
     }
     if (item.action === 'openMenuManage') {
       this.openMenuManage();
+      return;
+    }
+    if (item.action === 'openFeedback') {
+      this.onFeedbackTap();
+      return;
+    }
+    if (item.action === 'copyInviteUrl') {
+      this.onCopyRecruitUrl();
+      return;
+    }
+    if (item.action === 'openPrivacy') {
+      this.onPrivacyTap();
+      return;
+    }
+    if (item.action === 'openAbout') {
+      this.onAboutTap();
       return;
     }
     if (item.url) {
@@ -296,11 +372,14 @@ Page({
     this.loadSystemInfo().finally(function () { wx.stopPullDownRefresh(); });
   },
 
-  loadUserInfo: function (showApprovalEntry) {
+  loadUserInfo: function () {
     const userInfo = getUserInfo();
     const roleDisplayName = getRoleDisplayName();
     const userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
     const avatarLetter = userName.charAt(0);
+
+    const rawPhone = (userInfo && (userInfo.phone || userInfo.mobile || userInfo.phoneNumber)) || '';
+    const userPhone = rawPhone ? maskPhone(rawPhone) : '';
 
     let avatarImgUrl = '';
     const rawAvatar = (userInfo && (userInfo.avatarUrl || userInfo.avatar || userInfo.headUrl)) || '';
@@ -308,10 +387,7 @@ Page({
       avatarImgUrl = getAuthedImageUrl(rawAvatar);
     }
 
-    const patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl };
-    if (typeof showApprovalEntry === 'boolean') {
-      patch.showApprovalEntry = showApprovalEntry;
-    }
+    const patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl, userPhone: userPhone };
     this.setData(patch);
     this.refreshMenuItems();
 
@@ -320,6 +396,7 @@ Page({
       if (!freshUser || !freshUser.name) return;
       setUserInfo(freshUser);
       const freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
+      const freshPhone = freshUser.phone || freshUser.mobile || freshUser.phoneNumber || '';
       let freshImgUrl = '';
       if (freshAvatar) {
         if (freshAvatar.indexOf('http://') === 0 || freshAvatar.indexOf('https://') === 0) {
@@ -331,8 +408,15 @@ Page({
           freshImgUrl = base + freshAvatar + sep + 'token=' + encodeURIComponent(token);
         }
       }
+      var freshPatch = {};
       if (freshImgUrl !== avatarImgUrl) {
-        this.setData({ avatarImgUrl: freshImgUrl });
+        freshPatch.avatarImgUrl = freshImgUrl;
+      }
+      if (freshPhone) {
+        freshPatch.userPhone = maskPhone(freshPhone);
+      }
+      if (Object.keys(freshPatch).length > 0) {
+        this.setData(freshPatch);
       }
     }.bind(this)).catch(function () {});
   },
@@ -351,8 +435,7 @@ Page({
           if (tenantCode) {
             self._recruitInfo = { show: true, tenantCode: tenantCode, tenantName: tenantName };
           }
-          self._showInviteSection = true;
-          self.refreshMenuItems();
+          self.setData({ factoryName: tenantName || '' });
           return onlineCount;
         }).catch(function (e) {
           console.error('加载租户信息失败', e);
@@ -402,6 +485,41 @@ Page({
     wx.setClipboardData({
       data: url,
       success: function () { toast.success('注册链接已复制'); },
+    });
+  },
+
+  onEditProfile: function () {
+    wx.showToast({ title: '暂未开放', icon: 'none' });
+  },
+
+  onFeedbackTap: function () {
+    safeNavigate({ url: '/pages/admin/misc/feedback/index' }).catch(function () {
+      wx.showToast({ title: '暂未开放', icon: 'none' });
+    });
+  },
+
+  onPrivacyTap: function () {
+    wx.showModal({
+      title: '隐私政策',
+      content: '衣智链服装供应链系统重视您的隐私保护。我们仅收集必要的业务数据用于提供扫码、质检、工资结算等服务，不会向第三方分享您的个人信息。详细隐私政策请查看官方网站。',
+      showCancel: false,
+      confirmText: '我知道了',
+    });
+  },
+
+  onAboutTap: function () {
+    var version = '1.0.0';
+    try {
+      var app = getApp();
+      if (app && app.globalData && app.globalData.version) {
+        version = app.globalData.version;
+      }
+    } catch (e) {}
+    wx.showModal({
+      title: '关于我们',
+      content: '衣智链服装供应链系统\n版本：' + version + '\n\n为服装工厂提供扫码、质检、工资结算等一站式管理服务。',
+      showCancel: false,
+      confirmText: '确定',
     });
   },
 

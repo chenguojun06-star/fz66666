@@ -1,104 +1,132 @@
 /**
- * 服装供应链系统 - 统一设计 Token  v8.0
+ * 服装供应链系统 - 统一设计 Token v10.0
  *
- * 对齐 WeUI v2.6.25 官方设计规范
- * 融合 xiaoyun-tokens，统一为单一 Token 体系
+ * Apple Design Library 风格
+ * 主色 #007aff (Apple System Blue)
+ * 背景 #f2f2f7 (Apple System Gray 6)
+ * 文字 #1d1d1f (Apple Label)
  *
- * @version 8.0
- * @date 2026-05-17
+ * @version 10.0
+ * @date 2026-07-12
  */
 
 page {
-  /* ========== 品牌色 ========== */
-  --color-primary: #2563eb;
-  --color-primary-light: #3b82f6;
-  --color-primary-dark: #1d4ed8;
-  --color-primary-rgb: 37, 99, 235;
-  --color-primary-bg: rgba(37, 99, 235, 0.06);
-  --color-primary-border: rgba(37, 99, 235, 0.2);
+  /* ========== 品牌色（Apple System Blue） ========== */
+  --color-primary: #007aff;
+  --color-primary-light: #2e8dff;
+  --color-primary-dark: #0064d6;
+  --color-primary-rgb: 0, 122, 255;
+  --color-primary-bg: #e8f2ff;
+  --color-primary-border: rgba(0, 122, 255, 0.2);
 
-  --gradient-progress: linear-gradient(90deg, #10b981 0%, #2563eb 100%);
+  --gradient-progress: linear-gradient(90deg, #34c759 0%, #007aff 100%);
 
-  /* ========== 语义色 ========== */
-  --color-success: #07c160;
-  --color-success-bg: rgba(7, 193, 96, 0.08);
-  --color-success-border: rgba(7, 193, 96, 0.2);
+  /* ========== 语义色（Apple System Colors） ========== */
+  --color-success: #34c759;
+  --color-success-bg: #e9f9ee;
+  --color-success-border: rgba(52, 199, 89, 0.2);
 
-  --color-warning: #fa9d3b;
-  --color-warning-bg: rgba(250, 157, 59, 0.08);
-  --color-warning-border: rgba(250, 157, 59, 0.2);
+  --color-warning: #ff9500;
+  --color-warning-bg: #fff5e6;
+  --color-warning-border: rgba(255, 149, 0, 0.2);
 
-  --color-danger: #fa5151;
-  --color-danger-bg: rgba(250, 81, 81, 0.08);
-  --color-danger-border: rgba(250, 81, 81, 0.2);
+  --color-danger: #ff3b30;
+  --color-danger-bg: #ffecea;
+  --color-danger-border: rgba(255, 59, 48, 0.2);
 
-  --color-info: #10aeff;
-  --color-info-bg: rgba(16, 174, 255, 0.08);
-  --color-info-border: rgba(16, 174, 255, 0.2);
+  --color-info: #5ac8fa;
+  --color-info-bg: rgba(90, 200, 250, 0.08);
+  --color-info-border: rgba(90, 200, 250, 0.2);
 
-  --color-link: #576b95;
+  --color-purple: #5856d6;
+  --color-purple-light: #7c5cfc;
+  --color-purple-bg: #f0effe;
+  --color-purple-bg-light: rgba(88, 86, 214, 0.1);
+  --color-purple-border: rgba(88, 86, 214, 0.2);
 
-  /* ========== 背景色 ========== */
-  --color-bg-page: #f4f5f7;
+  --color-magenta: #ff2d55;
+  --color-magenta-bg: rgba(255, 45, 85, 0.1);
+
+  --color-link: #007aff;
+
+  /* ========== 背景色（Apple System Gray） ========== */
+  --color-bg-page: #f2f2f7;
   --color-bg-card: #ffffff;
-  --color-bg-gray: #f7f7f7;
-  --color-bg-light: #fafbfc;
+  --color-bg-gray: #f2f2f7;
+  --color-bg-light: #f7f7fa;
   --color-bg-hover: rgba(0, 0, 0, 0.03);
-  --color-bg-active: #ececec;
-  --color-bg-section: #f0f2f5;
+  --color-bg-active: rgba(0, 0, 0, 0.06);
+  --color-bg-section: #e5e5ea;
 
-  /* ========== 文字色 ========== */
-  --color-text-primary: rgba(0, 0, 0, 0.9);
-  --color-text-secondary: rgba(0, 0, 0, 0.55);
-  --color-text-tertiary: rgba(0, 0, 0, 0.4);
-  --color-text-placeholder: rgba(0, 0, 0, 0.3);
-  --color-text-disabled: rgba(0, 0, 0, 0.2);
+  /* ========== 文字色（Apple Label Colors） ========== */
+  --color-text-primary: #1d1d1f;
+  --color-text-secondary: #6e6e73;
+  --color-text-tertiary: #8e8e93;
+  --color-text-placeholder: #8e8e93;
+  --color-text-disabled: #c7c7cc;
   --color-text-white: #ffffff;
 
-  /* ========== 边框色 ========== */
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-light: rgba(0, 0, 0, 0.05);
-  --color-border-blue: rgba(37, 99, 235, 0.2);
-  --color-divider: rgba(0, 0, 0, 0.08);
+  /* ========== 边框色（Apple Separator） ========== */
+  --color-border: #e5e5ea;
+  --color-border-light: #f2f2f7;
+  --color-border-blue: rgba(0, 122, 255, 0.18);
+  --color-divider: #e5e5ea;
 
   /* ========== 遮罩 ========== */
-  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay: rgba(0, 0, 0, 0.4);
 
-  /* ========== 圆角系统 ========== */
+  /* ========== 圆角系统（Apple 风格） ========== */
   --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
   --radius-full: 999px;
 
-  /* ========== 间距系统（8px 基准） ========== */
+  /* 语义化圆角别名 */
+  --radius-card: var(--radius-xl);
+  --radius-button: var(--radius-md);
+  --radius-tag: var(--radius-sm);
+  --radius-input: var(--radius-md);
+  --radius-modal: var(--radius-xl);
+
+  /* ========== 间距系统 ========== */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
   --spacing-xl: 20px;
-  --spacing-xxl: 24px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
 
-  /* ========== 阴影系统 ========== */
-  --shadow-sm: 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(0, 0, 0, 0.06);
-  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.04);
+  /* 语义化间距别名 */
+  --card-padding: var(--spacing-lg);
+  --card-gap: var(--spacing-md);
+  --page-padding-x: var(--spacing-lg);
+  --page-padding-y: var(--spacing-md);
 
-  /* ========== 字体系统（主体统一13px，用颜色区分重点） ========== */
-  --font-size-xs: 11px;
+  /* ========== 阴影系统（Apple 风格：柔和多层） ========== */
+  --shadow-2xs: 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 1px 3px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px -8px rgba(0, 0, 0, 0.08), 0 4px 8px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 16px 40px -10px rgba(0, 0, 0, 0.10), 0 8px 16px -8px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 24px 64px -12px rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 1px 3px -1px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+
+  /* ========== 字体系统（Apple HIG） ========== */
+  --font-size-xs: 10px;
   --font-size-sm: 12px;
   --font-size-md: 13px;
-  --font-size-base: 13px;
-  --font-size-lg: 14px;
-  --font-size-xl: 15px;
-  --font-size-2xl: 16px;
-  --font-size-3xl: 17px;
-  --font-size-4xl: 19px;
-  --font-size-5xl: 21px;
-  --font-size-6xl: 23px;
+  --font-size-base: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 17px;
+  --font-size-3xl: 20px;
+  --font-size-4xl: 22px;
+  --font-size-5xl: 28px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -106,27 +134,27 @@ page {
   --font-weight-bold: 700;
 
   --line-height-tight: 1.2;
-  --line-height-normal: 1.4;
+  --line-height-normal: 1.35;
   --line-height-medium: 1.5;
   --line-height-relaxed: 1.6;
 
   /* ========== 输入框系统 ========== */
-  --input-height: 32px;
-  --input-height-sm: 28px;
-  --input-height-xs: 24px;
-  --input-bg: var(--color-bg-card);
-  --input-border: var(--color-border);
-  --input-focus-border: var(--color-primary);
-  --input-placeholder: var(--color-text-placeholder);
-  --input-radius: var(--radius-sm);
+  --input-height: 40px;
+  --input-height-sm: 32px;
+  --input-height-xs: 28px;
+  --input-bg: #f2f2f7;
+  --input-border: transparent;
+  --input-focus-border: #007aff;
+  --input-placeholder: #8e8e93;
+  --input-radius: var(--radius-md);
 
-  /* ========== 按钮系统（紧凑 · 主28/次24/底部32） ========== */
-  --btn-height-lg: 32px;
-  --btn-height-md: 28px;
-  --btn-height-sm: 24px;
-  --btn-height-xs: 22px;
-  --btn-font-size: 13px;
-  --btn-radius: 6px;
+  /* ========== 按钮系统（Apple 风格：填充式） ========== */
+  --btn-height-lg: 50px;
+  --btn-height-md: 44px;
+  --btn-height-sm: 36px;
+  --btn-height-xs: 28px;
+  --btn-font-size: 14px;
+  --btn-radius: var(--radius-md);
 
   /* ========== 层级系统 ========== */
   --z-base: 1;
@@ -142,12 +170,38 @@ page {
   --z-float-panel: 9002;
 
   /* ========== 页面布局 ========== */
-  --page-padding-x: 12px;
+  --page-padding-x: 16px;
   --page-padding-y: 12px;
   --card-gap: 12px;
   --nav-bar-height: 44px;
 
-  /* ========== 兼容别名（xiaoyun → 统一） ========== */
+  /* ========== 菜单图标渐变系统（Apple 风格：柔和渐变） ========== */
+  --gradient-purple: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  --gradient-blue: linear-gradient(135deg, #2563EB, #3B82F6);
+  --gradient-teal: linear-gradient(135deg, #0D9488, #14B8A6);
+  --gradient-amber: linear-gradient(135deg, #D97706, #F59E0B);
+  --gradient-green: linear-gradient(135deg, #059669, #10B981);
+  --gradient-orange: linear-gradient(135deg, #EA580C, #F97316);
+  --gradient-rose: linear-gradient(135deg, #E11D48, #F43F5E);
+  --gradient-indigo: linear-gradient(135deg, #4F46E5, #6366F1);
+  --gradient-cyan: linear-gradient(135deg, #0891B2, #06B6D4);
+  --gradient-red: linear-gradient(135deg, #DC2626, #EF4444);
+  --gradient-gray: linear-gradient(135deg, #6B7280, #9CA3AF);
+
+  /* 渐变阴影变量 */
+  --shadow-gradient-purple: 0 4px 12px rgba(124, 58, 237, 0.3);
+  --shadow-gradient-blue: 0 4px 12px rgba(37, 99, 235, 0.3);
+  --shadow-gradient-teal: 0 4px 12px rgba(13, 148, 136, 0.3);
+  --shadow-gradient-amber: 0 4px 12px rgba(217, 119, 6, 0.3);
+  --shadow-gradient-green: 0 4px 12px rgba(5, 150, 105, 0.3);
+  --shadow-gradient-orange: 0 4px 12px rgba(234, 88, 12, 0.3);
+  --shadow-gradient-rose: 0 4px 12px rgba(225, 29, 72, 0.3);
+  --shadow-gradient-indigo: 0 4px 12px rgba(79, 70, 229, 0.3);
+  --shadow-gradient-cyan: 0 4px 12px rgba(8, 145, 178, 0.3);
+  --shadow-gradient-red: 0 4px 12px rgba(220, 38, 38, 0.3);
+  --shadow-gradient-gray: 0 4px 12px rgba(107, 114, 128, 0.3);
+
+  /* ========== 兼容别名（保持向下兼容） ========== */
   --color-error: var(--color-danger);
   --color-error-bg: var(--color-danger-bg);
   --xiaoyun-primary: var(--color-primary);
@@ -180,42 +234,39 @@ page {
   --xiaoyun-spacing-sm: 8px;
   --xiaoyun-spacing-md: 12px;
   --xiaoyun-spacing-lg: 16px;
-
 }
 
-/* ========== 统一状态标签颜色（与 PC 端 Ant Design Tag 一致） ========== */
-/* 用法：<text class="status-tag tag tag-success">已完成</text> */
-/* 注意：必须定义在 page { } 外部——WXSS 不支持 CSS 嵌套选择器 */
+/* ========== 统一状态标签颜色（Apple 风格） ========== */
 .status-tag,
 .tag {
   font-size: var(--font-size-xs);
-  padding: 4rpx 16rpx;
-  border-radius: var(--radius-lg);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
   font-weight: var(--font-weight-medium);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  line-height: 1.2;
+  line-height: 1.4;
   text-align: center;
   vertical-align: middle;
 }
 .tag-default    { background: var(--color-bg-gray); color: var(--color-text-secondary); }
-.tag-success    { background: var(--color-success-bg); color: var(--color-success); border: 1rpx solid var(--color-success-border); }
-.tag-warning    { background: var(--color-warning-bg); color: var(--color-warning); border: 1rpx solid var(--color-warning-border); }
-.tag-error      { background: var(--color-error-bg); color: var(--color-error); border: 1rpx solid var(--color-error-border); }
-.tag-processing { background: var(--color-info-bg); color: var(--color-info); border: 1rpx solid var(--color-info-border); }
+.tag-success    { background: var(--color-success-bg); color: var(--color-success); }
+.tag-warning    { background: var(--color-warning-bg); color: var(--color-warning); }
+.tag-error      { background: var(--color-danger-bg); color: var(--color-danger); }
+.tag-processing { background: var(--color-primary-bg); color: var(--color-primary); }
 
 /* 兼容旧 class 名称 */
-.tag-orange  { background: var(--color-warning-bg); color: var(--color-warning); border: 1rpx solid var(--color-warning-border); }
-.tag-blue    { background: var(--color-info-bg); color: var(--color-info); border: 1rpx solid var(--color-info-border); }
-.tag-green   { background: var(--color-success-bg); color: var(--color-success); border: 1rpx solid var(--color-success-border); }
+.tag-orange  { background: var(--color-warning-bg); color: var(--color-warning); }
+.tag-blue    { background: var(--color-primary-bg); color: var(--color-primary); }
+.tag-green   { background: var(--color-success-bg); color: var(--color-success); }
 .tag-gray    { background: var(--color-bg-gray); color: var(--color-text-secondary); }
-.tag-red     { background: var(--color-error-bg); color: var(--color-error); border: 1rpx solid var(--color-error-border); }
+.tag-red     { background: var(--color-danger-bg); color: var(--color-danger); }
 
-/* 业务别名（用途语义化命名） */
-.tag-color   { background: var(--color-info-bg); color: var(--color-primary); border: 1rpx solid var(--color-info-border); } /* 颜色标签 */
-.tag-size    { background: var(--color-bg-light); color: var(--color-text-secondary); } /* 尺码标签 */
-.tag-warn    { background: var(--color-warning-bg); color: var(--color-warning); border: 1rpx solid var(--color-warning-border); } /* 警告 */
-.tag-danger  { background: var(--color-error-bg); color: var(--color-error); border: 1rpx solid var(--color-error-border); } /* 危险 */
+/* 业务别名 */
+.tag-color   { background: var(--color-primary-bg); color: var(--color-primary); }
+.tag-size    { background: var(--color-bg-light); color: var(--color-text-secondary); }
+.tag-warn    { background: var(--color-warning-bg); color: var(--color-warning); }
+.tag-danger  { background: var(--color-danger-bg); color: var(--color-danger); }

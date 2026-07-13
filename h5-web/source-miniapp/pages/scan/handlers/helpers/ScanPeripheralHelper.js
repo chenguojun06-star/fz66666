@@ -12,11 +12,11 @@
  */
 function formatLocalDateTime(date) {
   const y = date.getFullYear();
-  const M = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  const s = String(date.getSeconds()).padStart(2, '0');
+  const M = ('0' + (date.getMonth() + 1)).slice(-2);
+  const d = ('0' + date.getDate()).slice(-2);
+  const h = ('0' + date.getHours()).slice(-2);
+  const m = ('0' + date.getMinutes()).slice(-2);
+  const s = ('0' + date.getSeconds()).slice(-2);
   return `${y}-${M}-${d} ${h}:${m}:${s}`;
 }
 

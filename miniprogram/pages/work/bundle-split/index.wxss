@@ -11,10 +11,10 @@
   align-items: center;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   padding: 0 var(--spacing-md) 0 var(--spacing-lg);
   height: 48px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -113,8 +113,8 @@
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .order-bar-left { flex: 1; display: flex; align-items: center; gap: var(--spacing-sm); min-width: 0; }
@@ -176,7 +176,7 @@
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-md);
   padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   border: 1px solid transparent;
   transition: border-color 0.2s;
 }
@@ -333,7 +333,7 @@
   padding: var(--spacing-lg) var(--spacing-md) var(--spacing-sm);
   background: var(--color-bg-page);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
+  /* Apple: removed hard border, use shadow */
 }
 
 .split-summary {
@@ -433,7 +433,7 @@
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-md);
   padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   border: 1px solid var(--color-info-bg);
 }
 
@@ -490,7 +490,7 @@
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-md);
   padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   border: 1px solid transparent;
   transition: border-color 0.2s;
 }
@@ -582,8 +582,8 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  /* Apple: removed hard border, use shadow */
 }
 
 .record-top {

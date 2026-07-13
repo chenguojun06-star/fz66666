@@ -9,11 +9,11 @@
 
 .tab-bar {
   display: flex;
-  margin: var(--card-gap-y) 0 0;
+  margin: var(--card-gap) 0 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .tab-item {
@@ -34,20 +34,20 @@
 }
 
 .form-card {
-  margin: var(--card-gap-y) 0;
+  margin: var(--card-gap) 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  padding: 20px 16px;
-  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-lg) var(--spacing-md);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-xs);
 }
 
 .form-label {
@@ -57,22 +57,22 @@
 }
 
 .form-input {
-  height: 44px;
-  line-height: 44px;
-  padding: 0 12px;
+  height: var(--input-height);
+  line-height: var(--input-height);
+  padding: 0 var(--spacing-md);
   background: var(--color-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
 }
 
 .form-textarea {
   min-height: 100px;
-  padding: 10px 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
   line-height: var(--line-height-relaxed);
@@ -82,11 +82,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 44px;
-  padding: 0 12px;
+  height: var(--input-height);
+  padding: 0 var(--spacing-md);
   background: var(--color-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+  /* Apple: removed hard border, use shadow */
 }
 
 .picker-text {
@@ -95,53 +95,31 @@
 }
 
 .picker-arrow {
-  font-size: var(--font-size-lg-xl);
+  font-size: var(--font-size-lg);
   color: var(--color-text-disabled);
 }
 
 .form-actions {
-  margin-top: 8px;
-}
-
-.btn-submit {
-  width: 100%;
-  height: 44px;
-  line-height: 44px;
-  text-align: center;
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  border-radius: var(--radius-sm);
-  transition: opacity 0.2s;
-}
-
-.btn-submit-hover {
-  opacity: 0.85;
-}
-
-.btn-submit.disabled {
-  opacity: 0.5;
-  pointer-events: none;
+  margin-top: var(--spacing-sm);
 }
 
 .feedback-list {
-  padding: var(--card-gap-y) 0;
+  padding: var(--card-gap) 0;
 }
 
 .feedback-item {
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  padding: 14px;
-  margin-bottom: 10px;
-  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .feedback-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .feedback-title {
@@ -156,18 +134,18 @@
 
 .feedback-status {
   font-size: var(--font-size-xs);
-  padding: 2px 8px;
+  padding: 2px var(--spacing-sm);
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-medium);
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: var(--spacing-sm);
 }
 
 .feedback-content {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -177,8 +155,8 @@
 .feedback-reply {
   background: var(--color-bg-light);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .reply-label {
