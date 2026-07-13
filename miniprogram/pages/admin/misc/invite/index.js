@@ -1,6 +1,5 @@
 const config = require('../../../../config');
 const api = require('../../../../utils/api');
-const { toast } = require('../../../../utils/uiHelper');
 
 function getFrontendOrigin() {
   let baseUrl = '';
@@ -44,7 +43,7 @@ Page({
       this._tenantName = tenantName;
     } catch (err) {
       console.error('[invite] loadTenantInfo failed', err);
-      toast.error('加载失败，请重试');
+      wx.showToast({ title: '加载失败，请重试', icon: 'none' });
     } finally {
       this.setData({ loading: false });
     }
@@ -53,12 +52,12 @@ Page({
   onCopyTenantCode() {
     const code = this.data.tenantCode;
     if (!code) {
-      toast.info('暂无邀请码');
+      wx.showToast({ title: '暂无邀请码', icon: 'none' });
       return;
     }
     wx.setClipboardData({
       data: code,
-      success: () => toast.success('工厂码已复制'),
+      success: () => wx.showToast({ title: '工厂码已复制', icon: 'success' }),
     });
   },
 
@@ -66,7 +65,7 @@ Page({
     const code = this.data.tenantCode;
     const name = this._tenantName || '工厂';
     if (!code) {
-      toast.info('暂无邀请码');
+      wx.showToast({ title: '暂无邀请码', icon: 'none' });
       return;
     }
     const origin = getFrontendOrigin();
@@ -74,7 +73,7 @@ Page({
       + '&tenantName=' + encodeURIComponent(name);
     wx.setClipboardData({
       data: url,
-      success: () => toast.success('链接已复制'),
+      success: () => wx.showToast({ title: '链接已复制', icon: 'success' }),
     });
   },
 

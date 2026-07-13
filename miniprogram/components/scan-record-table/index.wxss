@@ -67,24 +67,6 @@
 .srt-th-order,
 .srt-td-order {
   width: 100px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.srt-type-tag {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  line-height: 1.4;
-  font-weight: 500;
-  align-self: flex-start;
-}
-
-.srt-type-pattern {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
 }
 
 .srt-th-bundle,
@@ -142,13 +124,4 @@
 .srt-th-time,
 .srt-td-time {
   width: 80px;
-}
-
-/* 扩展字段列 */
-.srt-th-ext,
-.srt-td-ext {
-  min-width: 80px;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

@@ -42,20 +42,12 @@
  */
 
 // ==================== 导入模块 ====================
-const { safeNavigate, toast } = require('../../utils/uiHelper');
-const api = require('../../utils/api');
+const { safeNavigate } = require('../../utils/uiHelper');
 
 // 导入 Mixins (生命周期 + 核心业务 + 数据配置)
 const scanLifecycleMixin = require('./mixins/scanLifecycleMixin');
 const scanCoreMixin = require('./mixins/scanCoreMixin');
 const { scanPageData } = require('./mixins/scanDataConfig');
-
-// ============ 扫码页默认数据（无 AI 相关字段）============
-function _buildScanData() {
-  // 必须返回 scanPageData，否则 data.my 是 undefined，
-  // loadMyHistory/loadMyPanel 读取 my.loadingHistory/my.loadingStats 会崩溃导致扫码页打不开
-  return JSON.parse(JSON.stringify(scanPageData));
-}
 
 // 导入 Handlers (所有委托调用)
 const QualityHandler = require('./handlers/QualityHandler');
@@ -72,8 +64,8 @@ Page({
   // 使用 Mixins (微信小程序 behaviors 机制)
   behaviors: [scanLifecycleMixin, scanCoreMixin],
 
-  // 数据对象 (从 scanDataConfig 导入 + AI 扩展)
-  data: _buildScanData(),
+  // 数据对象 (从 scanDataConfig 导入)
+  data: scanPageData,
 
   // 业务处理器实例
   scanHandler: null,
@@ -156,7 +148,7 @@ Page({
   },
 
   /**
-   * 处理采购任务（跳转到采购任务列表页）
+   * 处理采购任务（已迁移到独立分包 pkg-procurement）
    * WXML: scan-history.wxml bindtap="onHandleProcurement"
    */
   onHandleProcurement(e) {
@@ -164,7 +156,7 @@ Page({
     const recordIdx = e.currentTarget.dataset.recordIdx;
     const app = getApp();
     app.globalData.procurementScanData = { groupId, recordIdx };
-    safeNavigate({ url: '/pages/procurement/task-list/index' }).catch(() => {});
+    safeNavigate({ url: '/pkg-procurement/pages/task/index' }).catch(() => {});
   },
 
   // ==================== 快捷导航（历史记录 / 当月记录） ====================
@@ -304,15 +296,15 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.networkType === 'none' || res.networkType === 'unknown') {
-          toast.error('网络不可用，请检查网络设置');
+          wx.showToast({ title: '网络不可用，请检查网络设置', icon: 'none', duration: 2500 });
         } else {
-          toast.success('网络已恢复，重新扫码');
+          wx.showToast({ title: '网络已恢复，重新扫码', icon: 'success', duration: 1500 });
           this.onScan();
         }
       },
       fail: () => {
         wx.hideLoading();
-        toast.error('检测失败，请重试');
+        wx.showToast({ title: '检测失败，请重试', icon: 'none' });
       },
     });
   },

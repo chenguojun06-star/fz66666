@@ -1,5 +1,6 @@
 {
-  "navigationBarTitleText": "采购到货",
-  "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

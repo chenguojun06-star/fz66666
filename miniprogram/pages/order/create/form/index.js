@@ -1,21 +1,17 @@
 const api = require('../../../../utils/api');
-const { fieldConfig } = require('../../../../utils/api-modules/field-config');
-const { collectExtValues } = require('../../../../utils/api-modules/field-config-helpers');
-const { toast } = require('../../../../utils/uiHelper');
 
 function today() {
   const d = new Date();
-  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function daysLater(n) {
   const d = new Date();
   d.setDate(d.getDate() + n);
-  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 const PLATE_MAP = ['', 'FIRST', 'REORDER'];
 const BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
-const BIZ_TYPE_LABELS = ['FOB 离岸价', 'ODM 原厂设计', 'OEM 代工生产', 'CMT 来料加工'];
 const PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
 const PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
@@ -36,8 +32,6 @@ Page({
     company: '', productCategory: '',
     plateType: '', plateTypeLabel: '',
     orderBizType: '',
-    orderBizTypeLabel: '',
-    bizTypeLabels: BIZ_TYPE_LABELS,
     patternMaker: '', merchandiser: '',
     pricingMode: 'PROCESS', pricingModeIdx: 0,
     pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '报价单价', '手动单价'],
@@ -48,12 +42,9 @@ Page({
     gridRows: [], gridSizes: [],
     colorInput: '', sizeInput: '',
     colorOptions: [], sizeOptions: [],
-    _colorOptItems: [], _sizeOptItems: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
     quickFillQty: 1, submitting: false,
-    // 扩展字段配置
-    extFields: [],
   },
 
   onLoad: function (opts) {
@@ -61,9 +52,6 @@ Page({
     var colors = [];
     var sizes = [];
     var coverImage = '';
-
-    // 加载扩展字段配置（非阻塞）
-    this.loadExtFields();
 
     if (isNoData) {
       // 无资料下单：使用用户上传的临时图片
@@ -87,8 +75,6 @@ Page({
       sizeOptions: sizes,
       selectedColors: colors.slice(),
       selectedSizes: sizes.slice(),
-      _colorOptItems: colors.map(function (c) { return { value: c, _selected: true }; }),
-      _sizeOptItems: sizes.map(function (s) { return { value: s, _selected: true }; }),
     });
 
     if (!isNoData && colors.length && sizes.length) { this._rebuildLines(); }
@@ -228,12 +214,12 @@ Page({
       // 如果API失败，使用时间戳生成订单号
       const d = new Date();
       const ts = d.getFullYear()
-        + ('0' + (d.getMonth() + 1)).slice(-2)
-        + ('0' + d.getDate()).slice(-2)
-        + ('0' + d.getHours()).slice(-2)
-        + ('0' + d.getMinutes()).slice(-2)
-        + ('0' + d.getSeconds()).slice(-2)
-        + ('00' + d.getMilliseconds()).slice(-3);
+        + String(d.getMonth() + 1).padStart(2, '0')
+        + String(d.getDate()).padStart(2, '0')
+        + String(d.getHours()).padStart(2, '0')
+        + String(d.getMinutes()).padStart(2, '0')
+        + String(d.getSeconds()).padStart(2, '0')
+        + String(d.getMilliseconds()).padStart(3, '0');
       
       // 无资料下单使用 CUT 前缀，有资料下单使用 PO 前缀
       const prefix = isNoData ? 'CUT' : 'PO';
@@ -277,20 +263,11 @@ Page({
   },
 
   onBizTypeChange: function (e) {
-    const idx = e.detail.value;
-    this.setData({
-      orderBizType: BIZ_TYPES[idx] || '',
-      orderBizTypeLabel: BIZ_TYPE_LABELS[idx] || '',
-    });
+    this.setData({ orderBizType: BIZ_TYPES[e.detail.value] || '' });
   },
 
   onPatternMakerInput: function (e) { this.setData({ patternMaker: e.detail.value }); },
   onMerchandiserInput: function (e) { this.setData({ merchandiser: e.detail.value }); },
-
-  _buildOptItems: function (opts, sel) {
-    const o = opts || []; const s = sel || [];
-    return o.map(function (v) { return { value: v, _selected: s.indexOf(v) !== -1 }; });
-  },
 
   /* ═══ 颜色 / 码数 ═══ */
   onColorInput: function (e) { this.setData({ colorInput: e.detail.value }); },
@@ -301,10 +278,7 @@ Page({
     if (opts.indexOf(v) === -1) opts.push(v);
     const sel = this.data.selectedColors.slice();
     if (sel.indexOf(v) === -1) sel.push(v);
-    this.setData({
-      colorOptions: opts, selectedColors: sel, colorInput: '',
-      _colorOptItems: this._buildOptItems(opts, sel),
-    });
+    this.setData({ colorOptions: opts, selectedColors: sel, colorInput: '' });
     this._rebuildLines();
   },
 
@@ -313,7 +287,7 @@ Page({
     const sel = this.data.selectedColors.slice();
     const i = sel.indexOf(c);
     if (i === -1) sel.push(c); else sel.splice(i, 1);
-    this.setData({ selectedColors: sel, _colorOptItems: this._buildOptItems(this.data.colorOptions, sel) });
+    this.setData({ selectedColors: sel });
     this._rebuildLines();
   },
 
@@ -325,10 +299,7 @@ Page({
     if (opts.indexOf(v) === -1) opts.push(v);
     const sel = this.data.selectedSizes.slice();
     if (sel.indexOf(v) === -1) sel.push(v);
-    this.setData({
-      sizeOptions: opts, selectedSizes: sel, sizeInput: '',
-      _sizeOptItems: this._buildOptItems(opts, sel),
-    });
+    this.setData({ sizeOptions: opts, selectedSizes: sel, sizeInput: '' });
     this._rebuildLines();
   },
 
@@ -337,7 +308,7 @@ Page({
     const sel = this.data.selectedSizes.slice();
     const i = sel.indexOf(s);
     if (i === -1) sel.push(s); else sel.splice(i, 1);
-    this.setData({ selectedSizes: sel, _sizeOptItems: this._buildOptItems(this.data.sizeOptions, sel) });
+    this.setData({ selectedSizes: sel });
     this._rebuildLines();
   },
 
@@ -386,22 +357,6 @@ Page({
   onManualPriceInput: function (e) { this.setData({ manualOrderUnitPrice: e.detail.value }); },
 
   /* ═══ 提交 ═══ */
-  /** 加载扩展字段配置（order 业务对象） */
-  loadExtFields: function () {
-    var self = this;
-    fieldConfig.list('order', 'mp', false).then(function (fields) {
-      self.setData({ extFields: fields || [] });
-    }).catch(function () {
-      // 字段配置加载失败不阻塞主流程
-    });
-  },
-
-  /** 扩展字段值变更回调 */
-  onExtFieldsChange: function (e) {
-    // 存储最新的扩展字段值，提交时收集
-    this._extFormValues = e.detail.allValues;
-  },
-
   onSubmit: function () {
     if (this.data.submitting) return;
     const d = this.data;
@@ -481,17 +436,16 @@ Page({
       plannedStartDate: d.plannedStartDate + 'T09:00:00',
       plannedEndDate: d.plannedEndDate + 'T18:00:00',
       scatterPricingMode: 'FOLLOW_ORDER',
-      extJson: collectExtValues(this._extFormValues || {}, d.extFields, ''),
     };
 
     const self = this;
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
-      toast.success('下单成功');
+      wx.showToast({ title: '下单成功', icon: 'success' });
       setTimeout(function () { wx.navigateBack(); }, 1500);
     }).catch(function (err) {
       self.setData({ submitting: false });
-      toast.error((err && err.message) || '下单失败');
+      wx.showToast({ title: (err && err.message) || '下单失败', icon: 'none', duration: 3000 });
     });
   },
 });

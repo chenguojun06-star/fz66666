@@ -1,7 +1,7 @@
 {
-  "navigationBarTitleText": "裁剪任务",
-  "enablePullDownRefresh": true,
+  "navigationStyle": "custom",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "image-preview": "/components/common/image-preview/index",
     "sku-matrix": "/components/sku-matrix/index"
   }

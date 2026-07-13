@@ -55,7 +55,7 @@
   <!-- 租户工人注册列表 -->
   <view wx:if="{{activeTab === 'tenant'}}">
     <view wx:if="{{tenantRegistrations.length === 0}}" class="empty">
-      <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
+      <text class="empty-icon">📋</text>
       <view class="empty-text">暂无工人注册申请</view>
       <view class="empty-hint">分享工厂注册二维码给员工，员工扫码即可提交注册申请</view>
     </view>

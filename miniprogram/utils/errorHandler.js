@@ -135,28 +135,18 @@ class ErrorHandler {
   }
 
   /**
- * 显示错误提示（Toast）- 集成 uiHelper
- * @param {*} error 错误对象
- * @param {string} defaultMsg 默认错误信息
- */
-showError(error, defaultMsg = '操作失败') {
-  const msg = this.formatError(error, defaultMsg);
-  // 优先使用 uiHelper.toast.error()，如果不可用则降级到 wx.showToast
-  try {
-    const { toast } = require('./uiHelper');
-    if (toast && typeof toast.error === 'function') {
-      toast.error(msg);
-      return;
-    }
-  } catch (e) {
-    // uiHelper 不可用，降级
+   * 显示错误提示（Toast）
+   * @param {*} error 错误对象
+   * @param {string} defaultMsg 默认错误信息
+   */
+  showError(error, defaultMsg = '操作失败') {
+    const msg = this.formatError(error, defaultMsg);
+    wx.showToast({
+      title: msg,
+      icon: 'error',
+      duration: 2000,
+    });
   }
-  wx.showToast({
-    title: msg,
-    icon: 'error',
-    duration: 2000,
-  });
-}
 
   /**
    * 记录错误（开发模式）

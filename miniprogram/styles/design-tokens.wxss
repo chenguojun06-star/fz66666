@@ -37,6 +37,9 @@ page {
   --color-info: #5ac8fa;
   --color-info-bg: rgba(90, 200, 250, 0.08);
   --color-info-border: rgba(90, 200, 250, 0.2);
+  --color-info-50: rgba(90, 200, 250, 0.06);
+  --color-info-100: rgba(90, 200, 250, 0.15);
+  --color-info-700: #0a6ca8;
 
   --color-purple: #5856d6;
   --color-purple-light: #7a78f0;
@@ -100,6 +103,7 @@ page {
   --spacing-xl: 20px;
   --spacing-2xl: 24px;
   --spacing-3xl: 32px;
+  --spacing-xxl: 24px;
 
   /* 语义化间距别名 */
   --card-padding: var(--spacing-lg);
@@ -118,16 +122,21 @@ page {
   --shadow-card-hover: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 
   /* ========== 字体系统（Apple HIG） ========== */
+  --font-size-xxs: 9px;
+  --font-size-2xs: 11px;
   --font-size-xs: 10px;
   --font-size-sm: 12px;
   --font-size-md: 13px;
+  --font-size-md-lg: 14px;
   --font-size-base: 14px;
   --font-size-lg: 15px;
+  --font-size-lg-xl: 16px;
   --font-size-xl: 16px;
   --font-size-2xl: 17px;
   --font-size-3xl: 20px;
   --font-size-4xl: 22px;
   --font-size-5xl: 28px;
+  --font-size-6xl: 32px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -206,6 +215,16 @@ page {
   /* ========== 兼容别名（保持向下兼容） ========== */
   --color-error: var(--color-danger);
   --color-error-bg: var(--color-danger-bg);
+  --color-error-border: var(--color-danger-border);
+  --color-bg-base: var(--color-bg-card);
+  --color-bg-container: var(--color-bg-card);
+  --color-bg-subtle: var(--color-bg-gray-light);
+  --color-border-antd: var(--color-border);
+  --color-text-quaternary: #c7c7cc;
+  --neutral-text: var(--color-text-primary);
+  --neutral-text-light: var(--color-text-secondary);
+  --card-border: var(--color-border-light);
+  --z-float: var(--z-float-trigger);
   --xiaoyun-primary: var(--color-primary);
   --xiaoyun-primary-bg: var(--color-primary-bg);
   --xiaoyun-primary-border: var(--color-primary-border);

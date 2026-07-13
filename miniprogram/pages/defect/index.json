@@ -1,7 +1,7 @@
 {
-  "navigationBarTitleText": "质检",
-  "enablePullDownRefresh": true,
+  "navigationStyle": "custom",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

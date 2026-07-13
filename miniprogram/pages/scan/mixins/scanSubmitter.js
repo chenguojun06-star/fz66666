@@ -7,7 +7,7 @@
 
 const api = require('../../../utils/api');
 const ScanHandler = require('../handlers/ScanHandler');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast, toastAndRedirect, safeNavigate } = require('../../../utils/uiHelper');
 const scanValidator = require('./scanValidator');
 const isRecentDuplicate = scanValidator.isRecentDuplicate;
 const markRecent = scanValidator.markRecent;
@@ -34,7 +34,7 @@ module.exports = {
       if (currentScanType === 'warehouse' && !this.data.warehouse) { toast.error('请先选择目标仓库'); return; }
       const self = this;
       wx.scanCode({
-        onlyFromCamera: false,
+        onlyFromCamera: true,
         scanType: ['qrCode', 'barCode'],
         success: function(res) { self.processScanCode(res.result, currentScanType); },
         fail: function(err) {
@@ -44,13 +44,10 @@ module.exports = {
     },
 
     processScanCode: function(codeStr, scanType) {
+      console.log('[DEBUG] processScanCode 入口: codeStr=', codeStr, 'scanType=', scanType);
       if (!codeStr) return;
       const self = this;
       if (isRecentDuplicate(codeStr)) { toast.info('扫码太快啦'); return; }
-      // ============ AI 预检查（可选，不阻塞主流程）============
-      if (typeof self._runScanPrecheck === 'function') {
-        try { self._runScanPrecheck(codeStr); } catch (_e) { /* ignore */ }
-      }
       this.setData({ loading: true });
       if (/^MR\d{13}$/.test(codeStr)) {
         this.setData({ loading: false });
@@ -63,7 +60,7 @@ module.exports = {
       this.scanHandler.handleScan(codeStr, options).then(function(result) {
         self._handleScanResult(result, codeStr, scanType);
       }).catch(function(e) {
-        self._handleScanException(e, codeStr);
+        self._handleScanException(e);
       }).finally(function() {
         self.setData({ loading: false });
       });
@@ -123,7 +120,7 @@ module.exports = {
       this.handleScanError({ message: '扫码结果异常，请重试' });
     },
 
-    _handleScanException: function(e, codeStr) {
+    _handleScanException: function(e) {
       if (e.needWarehousing && e.warehousingData) { this.showQualityModal(e.warehousingData); this.setData({ loading: false }); return; }
       if (e.isCompleted) {
         const msg = e.message || '进度节点已完成';
@@ -139,8 +136,7 @@ module.exports = {
         return;
       }
       if (e.isOfflineQueued) {
-        markRecent(codeStr, 2000);
-        toast.info('已离线缓存，联网后自动同步');
+        wx.showToast({ title: '📶 已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
         this.setData({
           lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
           offlinePendingCount: e.offlineCount || 0,

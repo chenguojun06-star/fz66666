@@ -3,8 +3,6 @@ const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/ord
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
-const { getUserInfo } = require('../../../utils/storage');
 const blePrinter = require('../utils/blePrinter');
 
 /**
@@ -38,7 +36,6 @@ Page({
     cuttingExcess: 0,
     maxBedNo: '-',
     operatorName: '-',
-    creatorName: '',
     latestBundleTime: '-',
     cuttingMatrix: { sizes: [], rows: [] },
     cuttingSimpleRows: [],
@@ -85,9 +82,6 @@ Page({
     cuttingLinesHasData: false,
     cuttingSummary: { totalOrdered: 0, totalCutting: 0, totalBundles: 0 },
     cuttingSubmitting: false,
-
-    /* ── 裁剪任务领取（与 t_cutting_task 关联）── */
-    cuttingTaskInfo: null,   // { taskId, status, receiverId, receiverName, canReceive, receivedByMe }
 
     /* ── Tab: detail(菲号明细) | transfer(转单) ── */
     activeTab: 'detail',
@@ -147,13 +141,6 @@ Page({
       this.setData({ showOrderList: true });
       this._loadOrderList();
     }
-    bindPageEvents(this, () => {
-      if (this.data.orderNo) this.loadAll(this.data.orderNo);
-    }, ['TASK_BUNDLED']);
-  },
-
-  onUnload() {
-    unbindPageEvents(this);
   },
 
   onShow() {
@@ -190,14 +177,10 @@ Page({
         list = list.map(order => ({
           ...order,
           styleCoverUrl: getAuthedImageUrl(order.styleCover || order.styleImageUrl || order.coverImage || ''),
-          _styleAbbr: order.styleNo ? String(order.styleNo).slice(0, 2) : '--',
           // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
-          // P0 修复：plannedEndDate 可能是数组 [y,m,d]，需先转字符串再 slice
           deliveryDate: order.expectedShipDate || order.deliveryDate
-            || (order.plannedEndDate ? (typeof order.plannedEndDate === 'string' ? order.plannedEndDate.slice(0, 10) : (Array.isArray(order.plannedEndDate) && order.plannedEndDate.length >= 3 ? order.plannedEndDate[0] + '-' + (order.plannedEndDate[1] < 10 ? '0' : '') + order.plannedEndDate[1] + '-' + (order.plannedEndDate[2] < 10 ? '0' : '') + order.plannedEndDate[2] : '')) : ''),
+            || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
           expectedShipDate: order.expectedShipDate ? this._formatDeliveryDate(order.expectedShipDate) : '',
-          // 状态颜色映射（统一走全局 design-tokens）
-          _statusColor: this._mapStatusToColor(order.statusText || order.status || '生产中'),
         }));
         this.setData({ orderList: list, orderListLoading: false });
       })
@@ -243,90 +226,13 @@ Page({
     this.setData({ loading: true });
     try {
       await this.loadOrderInfo(orderNo);
-      // 裁剪任务状态和分扎列表互相独立，并行加载（原串行~400ms，并行后~200ms）
-      await Promise.all([
-        this._loadCuttingTask(orderNo),
-        this.loadCuttingBundles(orderNo),
-      ]);
+      await this.loadCuttingBundles(orderNo);
     } catch (e) {
       console.error('[bundle-detail] loadAll error', e);
       toast.error('数据加载失败，请下拉刷新重试');
     } finally {
       this.setData({ loading: false });
     }
-  },
-
-  /** 查询该订单的裁剪任务状态,用于显示「领取裁剪任务」按钮 */
-  async _loadCuttingTask(orderNo) {
-    try {
-      const res = await api.production.getCuttingTaskByOrderId(orderNo).catch(() => null);
-      const list = this._extractList(res);
-      const task = list && list.length > 0 ? list[0] : null;
-      if (!task) {
-        this.setData({ cuttingTaskInfo: null });
-        return;
-      }
-      const userInfo = getUserInfo() || {};
-      const myId = String(userInfo.id || userInfo.userId || '').trim();
-      const status = String(task.status || '').toLowerCase();
-      const receiverId = String(task.receiverId || '').trim();
-      // 终态：已完成/已分扎/已结束 — 不允许再领取或操作
-      const isTerminal = status === 'completed' || status === 'done' || status === 'bundled';
-      const canReceive = !isTerminal && (status === 'pending' || (!receiverId && status !== 'bundled'));
-      const receivedByMe = !isTerminal && receiverId && myId && receiverId === myId;
-      const showReceiveBar = !isTerminal;
-      this.setData({
-        cuttingTaskInfo: {
-          taskId: task.id,
-          status: status,
-          receiverId: receiverId,
-          receiverName: task.receiverName || '',
-          canReceive: canReceive,
-          receivedByMe: receivedByMe,
-          showReceiveBar: showReceiveBar,
-          isTerminal: isTerminal,
-        },
-      });
-    } catch (e) {
-      console.warn('[bundle-detail] 加载裁剪任务状态失败', e);
-      this.setData({ cuttingTaskInfo: null });
-    }
-  },
-
-  /** 领取裁剪任务 */
-  onReceiveCuttingTask() {
-    const that = this;
-    const info = this.data.cuttingTaskInfo;
-    if (!info || !info.taskId) {
-      toast.error('未找到裁剪任务');
-      return;
-    }
-    const userInfo = getUserInfo() || {};
-    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-    const receiverName = String(userInfo.name || userInfo.username || userInfo.nickName || '').trim();
-    if (!receiverId) {
-      toast.error('用户信息缺失,无法领取');
-      return;
-    }
-    wx.showModal({
-      title: '领取裁剪任务',
-      content: '确定领取该订单的裁剪任务?',
-      confirmText: '领取',
-      success(res) {
-        if (!res.confirm) return;
-        wx.showLoading({ title: '领取中...' });
-        api.production.receiveCuttingTaskById(info.taskId, receiverId, receiverName).then(function () {
-          wx.hideLoading();
-          toast.success('领取成功');
-          // 重新加载裁剪任务状态
-          that._loadCuttingTask(that.data.orderNo);
-        }).catch(function (err) {
-          wx.hideLoading();
-          console.error('[bundle-detail] 领取裁剪任务失败', err);
-          toast.error('领取失败:' + (err && err.message ? err.message : '请重试'));
-        });
-      },
-    });
   },
 
   /** 加载订单信息 + 工序数 + 下单矩阵 */
@@ -358,18 +264,11 @@ Page({
 
       this._orderMatrix = orderMatrix;
       this._orderSimpleRows = orderSimpleRows;
-      const orderWithAbbr = Object.assign({}, order, { _styleAbbr: order && order.styleNo ? String(order.styleNo).slice(0, 2) : '--' });
-      // 如果 URL 未传 orderId，从订单数据中补充
-      const orderIdFromOrder = String(order.id || '');
-      const updateData = {
-        orderInfo: orderWithAbbr,
+      this.setData({
+        orderInfo: order,
         coverImage,
         orderTotal,
-      };
-      if (orderIdFromOrder && !this.data.orderId) {
-        updateData.orderId = orderIdFromOrder;
-      }
-      this.setData(updateData);
+      });
     } catch (e) {
       console.error('[bundle-detail] loadOrderInfo error', e);
     }
@@ -382,18 +281,15 @@ Page({
       const bundles = this._extractList(res);
 
       if (!bundles.length) {
-        // 终态或已被他人领取时，不显示裁剪分扎表单
-        const info = this.data.cuttingTaskInfo;
-        const canEdit = !info || !info.isTerminal;
         this.setData({
           cuttingTotal: 0, cuttingExcess: 0, maxBedNo: '-',
           operatorName: '-', latestBundleTime: '-',
           hasBundles: false, _rawBundles: [],
           cuttingMatrix: { sizes: [], rows: [] },
           cuttingSimpleRows: [],
-          showCuttingForm: canEdit,
+          showCuttingForm: true,
         });
-        if (canEdit) this._parseAndSetCuttingLines(this.data.orderInfo);
+        this._parseAndSetCuttingLines(this.data.orderInfo);
         return;
       }
 
@@ -417,10 +313,6 @@ Page({
       const withOp = bundles.filter(b => b.operatorName);
       const operatorName = withOp.length ? withOp[withOp.length - 1].operatorName : '-';
 
-      // 创建人（使用 creatorName，后端 select 返回此字段）
-      const withCreator = bundles.filter(b => b.creatorName);
-      const creatorName = withCreator.length ? withCreator[withCreator.length - 1].creatorName : '';
-
       // 编菲时间（最新 createTime）
       const times = bundles
         .map(b => b.createTime || b.createdTime || '')
@@ -436,7 +328,6 @@ Page({
         cuttingSimpleRows,
         maxBedNo: String(maxBedNo),
         operatorName,
-        creatorName,
         latestBundleTime,
         hasBundles: bundles.length > 0,
         _rawBundles: bundles,
@@ -694,17 +585,6 @@ Page({
     return [];
   },
 
-  /** 中文状态 → 语义化颜色类（default|processing|warning|success|error） */
-  _mapStatusToColor(statusText) {
-    const s = String(statusText || '');
-    if (/已完成|完成|结束|已确认/.test(s)) return 'success';
-    if (/完成|已裁剪|已生产/.test(s)) return 'success';
-    if (/取消|作废|退单|失败/.test(s)) return 'error';
-    if (/待|未|等待|准备|计划/.test(s)) return 'warning';
-    if (/生产|进行|裁剪|加工|扫描|扫码/.test(s)) return 'processing';
-    return 'processing';
-  },
-
   /**
    * 将 [{color, size, quantity}] 汇聚成：
    *   sizes: 排好序的尺码数组
@@ -747,7 +627,7 @@ Page({
     try {
       const d = new Date(str.replace(/-/g, '/'));
       if (isNaN(d.getTime())) return str.substring(0, 16);
-      const pad = n => ('0' + n).slice(-2);
+      const pad = n => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     } catch (e) {
       return str.substring(0, 16);
@@ -756,23 +636,13 @@ Page({
 
   _formatDeliveryDate(str) {
     if (!str) return '';
-    // P0 修复：兼容 LocalDateTime 数组 [y,m,d,h,mi,s] 和字符串格式
-    // 数组没有 replace/substring 方法，直接调用会 TypeError 崩溃
-    var s = str;
-    if (Array.isArray(s) && s.length >= 3) {
-      var pad = function(n) { return Number(n) < 10 ? '0' + n : '' + n; };
-      var y = s[0], mo = pad(s[1]), d = pad(s[2]);
-      var h = s.length > 3 ? pad(s[3]) : '00', mi = s.length > 4 ? pad(s[4]) : '00';
-      s = y + '-' + mo + '-' + d + ' ' + h + ':' + mi;
-    }
-    s = String(s);
     try {
-      var dd = new Date(s.replace(/-/g, '/'));
-      if (isNaN(dd.getTime())) return s.substring(0, 16);
-      var pad2 = function(n) { return ('0' + n).slice(-2); };
-      return pad2(dd.getMonth() + 1) + '-' + pad2(dd.getDate()) + ' ' + pad2(dd.getHours()) + ':' + pad2(dd.getMinutes());
+      const d = new Date(str.replace(/-/g, '/'));
+      if (isNaN(d.getTime())) return str.substring(0, 16);
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch (e) {
-      return s.substring(0, 16);
+      return str.substring(0, 16);
     }
   },
 
@@ -933,7 +803,6 @@ Page({
               const s = scanMap[code];
               result.push({
                 processCode: code,
-                processCodeText: n.name || n.processName || '未知',
                 processName: n.name || n.processName || '-',
                 unitPrice: price,
                 priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -954,7 +823,6 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
-            processCodeText: n.name || '未知',
             processName: n.name || '-',
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -977,7 +845,6 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
-            processCodeText: p.processName || p.name || '未知',
             processName: p.processName || p.name || '-',
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -1326,21 +1193,12 @@ Page({
   onGenerateBundles() {
     if (this.data.cuttingSubmitting) return;
     const d = this.data;
-    const info = d.cuttingTaskInfo;
-    // 终态禁止操作
-    if (info && info.isTerminal) {
-      return toast.info('裁剪任务已完成，无法生成菲号');
-    }
-    // 已被他人领取禁止操作
-    if (info && info.receiverId && !info.receivedByMe) {
-      return toast.error('该任务已被他人领取，无法操作');
-    }
     const cuttingOrderLines = d.cuttingOrderLines;
     const bundleSize = parseInt(d.bundleSize, 10) || 20;
-    const orderId = d.orderId || (d.orderInfo && d.orderInfo.id) || '';
+    const orderId = d.orderId;
     const orderNo = d.orderNo;
 
-    if (!orderId) return toast.error('缺少订单信息，请下拉刷新重试');
+    if (!orderId) return toast.error('缺少订单信息');
     if (!cuttingOrderLines.length) return toast.error('无可裁剪的尺码数据');
 
     const items = [];

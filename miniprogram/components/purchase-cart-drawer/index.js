@@ -25,15 +25,11 @@ Component({
         this.loadCart();
       }
     },
-    // 监听 selectedItems 和 cart.items 变化，自动更新 isAllSelected 和 item._selected 标志
+    // 监听 selectedItems 和 cart.items 变化，自动更新 isAllSelected
     'selectedItems, cart.items': function(selectedItems, cartItems) {
-      const items = (cartItems && cartItems.length ? cartItems : []).map(function (item) {
-        return Object.assign({}, item, { _selected: (selectedItems && selectedItems.indexOf(item.id) !== -1) });
-      });
-      const selIds = selectedItems || [];
+      const items = cartItems && cartItems.length ? cartItems : [];
       this.setData({
-        isAllSelected: items.length > 0 && selIds.length === items.length,
-        'cart.items': items,
+        isAllSelected: items.length > 0 && selectedItems && selectedItems.length === items.length,
       });
     },
   },

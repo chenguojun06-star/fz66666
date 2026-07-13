@@ -1,6 +1,5 @@
 const app = getApp();
 const api = require('../../../utils/api');
-const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -25,20 +24,13 @@ Page({
     } else {
       this.setData({ error: '无效的库位二维码' });
     }
-    bindPageEvents(this, () => {
-      if (this.data.locationCode) this.loadLocationItems(this.data.locationCode);
-    }, ['STOCK_CHANGED']);
-  },
-
-  onUnload() {
-    unbindPageEvents(this);
   },
 
   async loadLocationItems(locationCode) {
     this.setData({ loading: true, error: '' });
     try {
-      const res = await api.warehouse.locationItems(locationCode);
-      const data = (res && res.data) || res || {};
+      const res = await api.get('/warehouse/location/items', { locationCode });
+      const data = res?.data?.data || res?.data || {};
       this.setData({
         locationInfo: {
           locationCode: data.locationCode || locationCode,
@@ -53,7 +45,7 @@ Page({
       });
     } catch (err) {
       this.setData({
-        error: (err && err.errMsg) || (err && err.message) || '加载库位库存失败',
+        error: err?.message || '加载库位库存失败',
         loading: false,
       });
     }

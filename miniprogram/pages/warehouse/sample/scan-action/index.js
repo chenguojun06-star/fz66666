@@ -4,9 +4,6 @@
  */
 const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
-const { ok } = require('../../../../utils/api-modules/helpers');
-const { toast } = require('../../../../utils/uiHelper');
-const { bindPageEvents, unbindPageEvents } = require('../../../../utils/pageEventBinder');
 
 const SAMPLE_TYPE_MAP = {
   'development': '开发样',
@@ -41,7 +38,7 @@ const SAMPLE_TYPE_MAP = {
 
 function translateSampleType(type) {
   if (!type) return '-';
-  return SAMPLE_TYPE_MAP[type] || '未知';
+  return SAMPLE_TYPE_MAP[type] || type;
 }
 
 function buildImageUrl(url) {
@@ -75,45 +72,12 @@ Page({
     successMsg: '',
     stockInfo: null,
     actions: [],
-    _showInbound: false,
-    _showLoan: false,
-    _showReturn: false,
     showPrivacy: false,
     warehouseOptions: [],
     warehouseAreaId: '',
     warehouseLocationCode: '',
     warehouse: '',
     locationOptions: [],
-
-    // 借调表单
-    showLoanForm: false,
-    loanLendToType: 'person',  // 'person' | 'factory'
-    loanLendTo: '',
-    loanLendToId: '',
-    loanLendToFactoryId: '',
-    loanLendToFactoryName: '',
-    loanBorrower: '',
-    loanQuantity: 1,
-    loanRemark: '',
-    // 人员和工厂搜索
-    loanUserList: [],
-    loanFactoryList: [],
-    loanUserSearch: '',
-    loanFactorySearch: '',
-    _filteredLoanUsers: [],
-    _filteredLoanFactories: [],
-
-    // 归还选择
-    showReturnPicker: false,
-    selectedLoanId: '',
-
-    // 转借表单
-    showTransferForm: false,
-    transferLoanId: '',
-    transferLendTo: '',
-    transferLendToFactoryName: '',
-    transferQuantity: 1,
-    transferRemark: '',
   },
 
   onLoad(options) {
@@ -141,17 +105,9 @@ Page({
       };
       wx.onNeedPrivacyAuthorization(this._privacyCb);
     }
-    bindPageEvents(this, () => {
-      if (this.data.viewMode === 'list') {
-        this.loadStockList(true);
-      } else {
-        this.querySample(this.data.styleNo, this.data.color, this.data.size);
-      }
-    }, ['STOCK_CHANGED']);
   },
 
   onUnload() {
-    unbindPageEvents(this);
     if (wx.offNeedPrivacyAuthorization && this._privacyCb) {
       wx.offNeedPrivacyAuthorization(this._privacyCb);
     }
@@ -201,12 +157,12 @@ Page({
         if (res && res.data) data = res.data;
         if (res && res.records) data = res;
         
-        const records = ((data && data.records) || (data && data.data) || []).map(item => ({
+        const records = (data?.records || data?.data || []).map(item => ({
           ...item,
           _imageUrl: buildImageUrl(item.imageUrl || item.coverImage || ''),
           _sampleTypeLabel: translateSampleType(item.sampleType || ''),
         }));
-        const total = (data && data.total) || records.length;
+        const total = data?.total || records.length;
         
         this.setData({
           stockList: refresh ? records : [...this.data.stockList, ...records],
@@ -265,13 +221,9 @@ Page({
         if (d.stock) {
           d.stock._imageUrl = buildImageUrl(d.stock.imageUrl || d.stock.coverImage || '');
         }
-        const actionsArr = d.actions || [];
         this.setData({
           stockInfo: d,
-          actions: actionsArr,
-          _showInbound: actionsArr.indexOf('inbound') !== -1,
-          _showLoan: actionsArr.indexOf('loan') !== -1,
-          _showReturn: actionsArr.indexOf('return') !== -1,
+          actions: d.actions || [],
           loading: false,
         });
       })
@@ -320,133 +272,23 @@ Page({
 
   onLoan() {
     if (this.data.submitting) return;
-    // 切换内联表单显示
-    if (this.data.showLoanForm) {
-      this.setData({ showLoanForm: false });
-      return;
-    }
     const userInfo = getApp().globalData.userInfo || {};
-    this.setData({
-      showLoanForm: true,
-      loanLendToType: 'person',
-      loanLendTo: '',
-      loanLendToId: '',
-      loanLendToFactoryId: '',
-      loanLendToFactoryName: '',
-      loanBorrower: userInfo.name || userInfo.username || '',
-      loanQuantity: 1,
-      loanRemark: '',
-      loanUserSearch: '',
-      loanFactorySearch: '',
+    wx.showModal({
+      title: '确认借调',
+      content: `借调 ${this.data.styleNo} ${this.data.color} ${this.data.size}，确认？`,
+      success: (modal) => {
+        if (!modal.confirm) return;
+        const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
+        this._doAction('loan', () =>
+          api.sampleStock.loan({
+            sampleStockId: stock.id,
+            borrower: userInfo.name || userInfo.username || '',
+            borrowerId: userInfo.id ? String(userInfo.id) : '',
+            quantity: 1,
+          }),
+        );
+      },
     });
-    // 加载租户人员列表和外发工厂列表
-    this._loadLoanOptions();
-  },
-
-  _loadLoanOptions() {
-    // 加载租户人员
-    ok('/api/system/user/list', 'GET', { pageSize: 200 }).then(records => {
-      const list = Array.isArray(records) ? records : ((records && records.records) || []);
-      this.setData({ loanUserList: list });
-    }).catch(() => {
-      this.setData({ loanUserList: [] });
-    });
-    // 加载外发工厂
-    api.factory.list({ pageSize: 200, status: 'active' }).then(records => {
-      const list = Array.isArray(records) ? records : ((records && records.records) || []);
-      this.setData({ loanFactoryList: list });
-    }).catch(() => {
-      this.setData({ loanFactoryList: [] });
-    });
-  },
-
-  onLoanUserSearch(e) {
-    const keyword = (e.detail.value || '').trim().toLowerCase();
-    this.setData({ loanUserSearch: keyword });
-    const filtered = keyword
-      ? this.data.loanUserList.filter(u => (u.name || u.username || '').toLowerCase().includes(keyword))
-      : this.data.loanUserList;
-    this.setData({ _filteredLoanUsers: filtered.slice(0, 20) });
-  },
-
-  onLoanFactorySearch(e) {
-    const keyword = (e.detail.value || '').trim().toLowerCase();
-    this.setData({ loanFactorySearch: keyword });
-    const filtered = keyword
-      ? this.data.loanFactoryList.filter(f => (f.factoryName || f.name || '').toLowerCase().includes(keyword))
-      : this.data.loanFactoryList;
-    this.setData({ _filteredLoanFactories: filtered.slice(0, 20) });
-  },
-
-  onLoanUserSelect(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const user = this.data._filteredLoanUsers[idx];
-    if (!user) return;
-    this.setData({
-      loanLendTo: user.name || user.username || '',
-      loanLendToId: String(user.id || ''),
-      loanUserSearch: '',
-    });
-  },
-
-  onLoanFactorySelect(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const factory = this.data._filteredLoanFactories[idx];
-    if (!factory) return;
-    this.setData({
-      loanLendToFactoryId: String(factory.id || ''),
-      loanLendToFactoryName: factory.factoryName || factory.name || '',
-      loanFactorySearch: '',
-    });
-  },
-
-  onLoanLendToTypeChange(e) {
-    this.setData({ loanLendToType: e.detail.value });
-  },
-
-  onLoanLendToInput(e) {
-    this.setData({ loanLendTo: e.detail.value });
-  },
-
-  onLoanFactoryInput(e) {
-    this.setData({ loanLendToFactoryName: e.detail.value });
-  },
-
-  onLoanBorrowerInput(e) {
-    this.setData({ loanBorrower: e.detail.value });
-  },
-
-  onLoanRemarkInput(e) {
-    this.setData({ loanRemark: e.detail.value });
-  },
-
-  onLoanFormCancel() {
-    this.setData({ showLoanForm: false });
-  },
-
-  onLoanFormConfirm() {
-    const { loanLendTo, loanLendToId, loanLendToFactoryId, loanLendToFactoryName, loanLendToType, loanBorrower, loanQuantity, loanRemark } = this.data;
-    if (!loanLendTo && !loanLendToFactoryName) {
-      wx.showToast({ title: '请选择借入人或工厂', icon: 'none' });
-      return;
-    }
-    const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
-    const userInfo = getApp().globalData.userInfo || {};
-    this.setData({ showLoanForm: false });
-    this._doAction('loan', () =>
-      api.sampleStock.loan({
-        sampleStockId: stock.id,
-        borrower: loanBorrower || userInfo.name || userInfo.username || '',
-        borrowerId: userInfo.id ? String(userInfo.id) : '',
-        lendTo: loanLendToType === 'factory' ? '' : loanLendTo,
-        lendToId: loanLendToType === 'factory' ? '' : (loanLendToId || ''),
-        lendToType: loanLendToType,
-        lendToFactoryId: loanLendToType === 'factory' ? (loanLendToFactoryId || '') : '',
-        lendToFactoryName: loanLendToType === 'factory' ? loanLendToFactoryName : '',
-        quantity: loanQuantity || 1,
-        remark: loanRemark,
-      }),
-    );
   },
 
   onReturn() {
@@ -456,97 +298,20 @@ Page({
       wx.showToast({ title: '无借调记录', icon: 'none' });
       return;
     }
-    // 只有一条记录直接归还
-    if (loans.length === 1) {
-      this._doReturnLoan(loans[0]);
-      return;
-    }
-    // 多条记录，显示选择
-    this.setData({ showReturnPicker: true, selectedLoanId: loans[0].id });
-  },
-
-  onReturnLoanSelect(e) {
-    this.setData({ selectedLoanId: e.currentTarget.dataset.id });
-  },
-
-  onReturnPickerConfirm() {
-    const loans = (this.data.stockInfo && this.data.stockInfo.activeLoans) || [];
-    const loan = loans.find(l => l.id === this.data.selectedLoanId);
-    if (!loan) {
-      wx.showToast({ title: '请选择归还记录', icon: 'none' });
-      return;
-    }
-    this.setData({ showReturnPicker: false });
-    this._doReturnLoan(loan);
-  },
-
-  onReturnPickerCancel() {
-    this.setData({ showReturnPicker: false });
-  },
-
-  _doReturnLoan(loan) {
+    const loan = loans[0];
     wx.showModal({
       title: '确认归还',
-      content: `归还 ${this.data.styleNo} ${this.data.color} ${this.data.size}，借入人: ${loan.lendTo || loan.lendToFactoryName || loan.borrower || '未知'}，剩余 ${loan.remainingQuantity || loan.quantity || 1} 件`,
+      content: `归还 ${this.data.styleNo} ${this.data.color} ${this.data.size}，确认？`,
       success: (modal) => {
         if (!modal.confirm) return;
         this._doAction('return', () =>
           api.sampleStock.returnSample({
             loanId: loan.id,
-            returnQuantity: loan.remainingQuantity || loan.quantity || 1,
+            quantity: loan.quantity || 1,
           }),
         );
       },
     });
-  },
-
-  onTransfer(e) {
-    const loanId = e.currentTarget.dataset.id;
-    const loans = (this.data.stockInfo && this.data.stockInfo.activeLoans) || [];
-    const loan = loans.find(l => l.id === loanId);
-    if (!loan) return;
-    this.setData({
-      showTransferForm: true,
-      transferLoanId: loanId,
-      transferLendTo: '',
-      transferLendToFactoryName: '',
-      transferQuantity: loan.remainingQuantity || loan.quantity || 1,
-      transferRemark: '',
-    });
-  },
-
-  onTransferLendToInput(e) {
-    this.setData({ transferLendTo: e.detail.value });
-  },
-
-  onTransferFactoryInput(e) {
-    this.setData({ transferLendToFactoryName: e.detail.value });
-  },
-
-  onTransferRemarkInput(e) {
-    this.setData({ transferRemark: e.detail.value });
-  },
-
-  onTransferFormCancel() {
-    this.setData({ showTransferForm: false });
-  },
-
-  onTransferFormConfirm() {
-    const { transferLoanId, transferLendTo, transferLendToFactoryName, transferQuantity, transferRemark } = this.data;
-    if (!transferLendTo && !transferLendToFactoryName) {
-      wx.showToast({ title: '请填写转借入人或工厂', icon: 'none' });
-      return;
-    }
-    this.setData({ showTransferForm: false });
-    this._doAction('转借', () =>
-      api.sampleStock.transfer({
-        sourceLoanId: transferLoanId,
-        lendTo: transferLendTo,
-        lendToFactoryName: transferLendToFactoryName,
-        quantity: transferQuantity,
-        remark: transferRemark,
-      }),
-    );
   },
 
   _doAction(actionName, apiFn) {
@@ -618,7 +383,7 @@ Page({
       return;
     }
     
-    toast.error('无法识别的二维码');
+    wx.showToast({ title: '无法识别的二维码', icon: 'none' });
   },
 
   onBackToList() {
@@ -631,7 +396,7 @@ Page({
   _loadWarehouseOptions() {
     return api.warehouse.listWarehouseAreas('SAMPLE')
       .then((res) => {
-        const data = (res && res.data) || res;
+        const data = res?.data || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const areaMap = {};
@@ -691,7 +456,7 @@ Page({
     }
     return api.warehouse.listLocations('SAMPLE', areaId)
       .then((res) => {
-        const data = (res && res.data) || res;
+        const data = res?.data || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const locMap = {};

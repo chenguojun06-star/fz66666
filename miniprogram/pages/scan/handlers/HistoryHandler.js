@@ -28,7 +28,7 @@ function calcDeliveryInfo(dateStr) {
   if (s.length > 10) {
     const d = new Date(s.replace(/-/g, '/'));
     if (!isNaN(d.getTime())) {
-      const pad = n => ('0' + n).slice(-2);
+      const pad = n => String(n).padStart(2, '0');
       displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
   }
@@ -386,8 +386,8 @@ function mergeGroupedHistory(existingGroups, newGroups) {
 function _getToday() {
   const d = new Date();
   const y = d.getFullYear();
-  const m = ('0' + (d.getMonth() + 1)).slice(-2);
-  const day = ('0' + d.getDate()).slice(-2);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
@@ -398,11 +398,7 @@ function _getToday() {
  * @returns {Promise<void>} 异步加载并更新页面数据
  */
 async function loadMyHistory(page, refresh = false) {
-  const { my } = page.data || {};
-  if (!my) {
-    console.error('[loadMyHistory] page.data.my 未初始化，跳过加载');
-    return;
-  }
+  const { my } = page.data;
   if (my.loadingHistory) {
     // 强制刷新在并发场景下不应被直接丢弃，改为排队到当前请求结束后执行
     if (refresh) {
@@ -508,7 +504,7 @@ async function loadMyHistory(page, refresh = false) {
   } catch (e) {
     console.error('[loadMyHistory] 加载失败:', e.message || e);
     // 始终提示用户加载失败，便于排查"重新打开后记录消失"问题
-    toast.error('加载记录失败，请下拉刷新');
+    wx.showToast({ title: '加载记录失败，请下拉刷新', icon: 'none', duration: 2500 });
   } finally {
     page.setData({ 'my.loadingHistory': false });
 

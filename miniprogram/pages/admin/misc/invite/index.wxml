@@ -1,4 +1,6 @@
 <view class="container">
+  <custom-nav title="邀请员工" show-back="{{true}}" />
+
   <view class="qr-section">
     <block wx:if="{{loading}}">
       <view class="qr-loading">

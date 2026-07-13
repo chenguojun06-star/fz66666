@@ -1,14 +1,13 @@
 {
-  "appid": "wx6d92fb9db5a7bfb4",
-  "libVersion": "3.16.1",
-  "projectname": "cloud-fashion-chain",
+  "libVersion": "3.15.1",
+  "projectname": "miniprogram",
   "setting": {
     "urlCheck": false,
     "coverView": false,
     "lazyloadPlaceholderEnable": false,
     "skylineRenderEnable": false,
     "preloadBackgroundData": false,
-    "autoAudits": false,
+    "autoAudits": true,
     "useApiHook": true,
     "showShadowRootInWxmlPanel": false,
     "useStaticServer": false,
@@ -19,21 +18,5 @@
     "ignoreDevUnusedFiles": true,
     "bigPackageSizeSupport": false
   },
-  "condition": {
-    "miniprogram": {
-      "list": [
-        {
-          "name": "pages/sample-development/index/index",
-          "pathName": "pages/sample-development/index/index",
-          "query": "",
-          "scene": null,
-          "launchMode": "default",
-          "partialCompile": {
-            "enabled": true,
-            "pages": []
-          }
-        }
-      ]
-    }
-  }
+  "condition": {}
 }

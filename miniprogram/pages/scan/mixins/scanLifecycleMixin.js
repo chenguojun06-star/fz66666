@@ -13,7 +13,6 @@ const ScanHandler = require('../handlers/ScanHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus, Events } = require('../../../utils/eventBus');
-const { toast } = require('../../../utils/uiHelper');
 const ScanOfflineQueue = require('../services/ScanOfflineQueue');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
@@ -97,11 +96,6 @@ const scanLifecycleMixin = Behavior({
   async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
-    }
-
-    // 防御性重置：每次 onShow 强制清除 loading 状态，防止上次扫码流程异常中断后 loading 卡在 true 导致"扫码识别"按钮点击无反应
-    if (this.data && this.data.loading) {
-      this.setData({ loading: false });
     }
 
     // 从扫码确认页返回时，读取最新扫码结果并显示成功提示
@@ -289,11 +283,11 @@ const scanLifecycleMixin = Behavior({
         });
         this.setData({ offlineSyncing: false, offlinePendingCount: ScanOfflineQueue.count() });
         if (submitted > 0) {
-          toast.success('已同步 ' + submitted + ' 条扫码');
+          wx.showToast({ title: '已同步 ' + submitted + ' 条扫码', icon: 'none', duration: 2200 });
           setTimeout(() => { if (this && this.data) this.loadMyPanel(true); }, 500);
         }
         if (failed > 0 && ScanOfflineQueue.count() > 0) {
-          toast.error(failed + ' 条暂时失败，稍后自动重试');
+          wx.showToast({ title: failed + ' 条暂时失败，稍后自动重试', icon: 'none', duration: 2500 });
         }
       } catch (e) {
         console.warn('[lifecycle] _flushOfflineQueue 异常:', e);
@@ -307,7 +301,7 @@ const scanLifecycleMixin = Behavior({
     async _loadWarehouseOptions() {
       try {
         const res = await api.warehouse.listWarehouseAreas('FINISHED');
-        const data = (res && res.data) || res;
+        const data = res?.data || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const areaMap = {};
@@ -338,7 +332,7 @@ const scanLifecycleMixin = Behavior({
       }
       try {
         const res = await api.warehouse.listLocations('FINISHED', areaId);
-        const data = (res && res.data) || res;
+        const data = res?.data || res;
         const list = Array.isArray(data) ? data : [];
         if (list.length > 0) {
           const locMap = {};

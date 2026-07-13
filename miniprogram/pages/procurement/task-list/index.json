@@ -1,8 +1,7 @@
 {
-  "navigationBarTitleText": "采购页面",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#ededed",
   "usingComponents": {
-    "empty-state": "/components/empty-state/empty-state"
+    "custom-nav": "/components/common/custom-nav/index"
   }
 }

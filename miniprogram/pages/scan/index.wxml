@@ -42,6 +42,11 @@
 </wxs>
 
 <view class="page">
+  <custom-nav
+    title="扫码"
+    show-search="{{false}}"
+  />
+
   <view wx:if="{{offlinePendingCount > 0}}" class="offline-badge-bar" bindtap="onManualSync">
     <text class="offline-badge-icon">{{offlineSyncing ? '...' : '↑'}}</text>
     <text class="offline-badge-text">{{offlineSyncing ? '同步中...' : offlinePendingCount + ' 条待上传，点击立即同步'}}</text>

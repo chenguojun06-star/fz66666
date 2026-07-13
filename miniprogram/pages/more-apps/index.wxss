@@ -245,14 +245,6 @@ page {
   background: var(--icon-bg-cyan);
 }
 
-.menu-icon-circle--magenta {
-  background: var(--color-magenta-bg);
-}
-
-.menu-icon-circle--lightblue {
-  background: var(--icon-bg-cyan);
-}
-
 .menu-icon-circle--gray {
   background: var(--icon-bg-gray);
 }

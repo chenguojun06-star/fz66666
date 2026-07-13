@@ -6,7 +6,6 @@ const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
-const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 const HANDLE_METHODS = ['返修', '报废'];
 
@@ -28,19 +27,10 @@ Page({
     handleMethods: HANDLE_METHODS,
     defectCategories: DEFECT_CATEGORIES,
     aiSuggestion: null,
-    warehouseOptions: [],
-    locationOptions: [],
-    selectedWarehouse: '',
-    selectedLocation: '',
-    showWarehousePicker: false,
     aiSuggestionList: [],
     historicalDefectRate: '',
     loading: false,
     coverImage: '',
-    // AI 图片分析相关
-    aiImageAnalyzing: false,
-    aiImageResult: null,
-    aiImageError: '',
   },
 
   onLoad() {
@@ -62,8 +52,7 @@ Page({
     }
     this._rawDetail = raw;
 
-    // P0 修复：添加 cover/styleCover 兜底，原代码只取 coverImage/styleImage
-    const coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || raw.cover || raw.styleCover || '');
+    const coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || '');
 
     this.setData({
       detail: {
@@ -85,12 +74,9 @@ Page({
     if (raw.orderId) {
       this._fetchAiSuggestion(raw.orderId);
     }
-
-    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
-    unbindPageEvents(this);
     if (this._unsubPrivacy) { this._unsubPrivacy(); this._unsubPrivacy = null; }
     getApp().globalData.qualityData = null;
   },
@@ -207,13 +193,10 @@ Page({
           return api.common.uploadImage(f.tempFilePath);
         });
         Promise.all(tasks).then(function (urls) {
+          // 上传后返回的是相对路径 /api/file/tenant-download/...，
+          // <image> 标签无法发送 Authorization header，必须在 URL 追加 ?token=xxx
           const authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
-          const newImages = self.data.images.concat(authedUrls);
-          self.setData({ images: newImages });
-          // 上传成功后自动触发AI分析（分析第一张新上传的图片）
-          if (authedUrls.length > 0) {
-            self._analyzeImageWithAI(authedUrls[0]);
-          }
+          self.setData({ images: self.data.images.concat(authedUrls) });
         }).catch(function () {
           toast.error('图片上传失败');
         });
@@ -221,6 +204,7 @@ Page({
       fail: function (err) {
         console.warn('[Quality] chooseMedia fail:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          // 权限被拒绝时引导用户去设置页
           wx.showModal({
             title: '相机/相册权限',
             content: '需要相机或相册权限才能上传照片，请在设置中允许',
@@ -233,87 +217,6 @@ Page({
         }
       },
     });
-  },
-
-  /* ---- AI 图片分析 ---- */
-
-  _analyzeImageWithAI(imageUrl) {
-    const self = this;
-    if (!imageUrl) return;
-    self.setData({
-      aiImageAnalyzing: true,
-      aiImageResult: null,
-      aiImageError: '',
-    });
-
-    api.production.analyzeQualityImage({
-      imageUrl: imageUrl,
-      contextHint: '这是服装质检照片，请重点检查破洞、污渍、色差、线头、跳针、起毛等常见质量缺陷',
-    }).then(function (res) {
-      if (res && res.detectedItems && res.detectedItems.length > 0) {
-        self.setData({
-          aiImageAnalyzing: false,
-          aiImageResult: res,
-        });
-      } else {
-        self.setData({
-          aiImageAnalyzing: false,
-          aiImageResult: res || { detectedItems: [], severity: 'NONE' },
-        });
-      }
-    }).catch(function (err) {
-      console.warn('[Quality] AI图片分析失败:', err);
-      self.setData({
-        aiImageAnalyzing: false,
-        aiImageError: (err && (err.message || err.errMsg)) || '分析失败',
-      });
-    });
-  },
-
-  onReanalyzeImage() {
-    const self = this;
-    if (self.data.images.length > 0) {
-      self._analyzeImageWithAI(self.data.images[0]);
-    }
-  },
-
-  onAdoptImageAiResult() {
-    const self = this;
-    const result = self.data.aiImageResult;
-    if (!result || !result.detectedItems || result.detectedItems.length === 0) {
-      toast.error('暂无可采纳的AI结果');
-      return;
-    }
-    // 根据严重程度自动选择缺陷类别
-    const items = result.detectedItems;
-    const hasAppearance = items.some(function (it) {
-      const t = (it.type || '').toLowerCase();
-      return t.indexOf('破洞') >= 0 || t.indexOf('污渍') >= 0 || t.indexOf('起毛') >= 0 || t.indexOf('外观') >= 0;
-    });
-    const hasSize = items.some(function (it) {
-      const t = (it.type || '').toLowerCase();
-      return t.indexOf('尺寸') >= 0 || t.indexOf('大小') >= 0;
-    });
-    const hasProcess = items.some(function (it) {
-      const t = (it.type || '').toLowerCase();
-      return t.indexOf('线头') >= 0 || t.indexOf('跳针') >= 0 || t.indexOf('工艺') >= 0 || t.indexOf('车缝') >= 0;
-    });
-
-    let categoryIdx = 0; // 默认外观
-    if (hasSize) categoryIdx = 1; // 尺寸
-    else if (hasProcess) categoryIdx = 2; // 工艺
-    else if (hasAppearance) categoryIdx = 0; // 外观
-
-    const updates = {
-      defectCategoryIndex: categoryIdx,
-      result: 'unqualified',
-    };
-    // 用AI报告填充备注
-    if (result.report) {
-      updates.remark = result.report;
-    }
-    self.setData(updates);
-    toast.success('已采纳AI分析结果');
   },
 
   onDeleteImage(e) {
@@ -331,13 +234,6 @@ Page({
   /* ---- submit ---- */
 
   goBack() { wx.navigateBack(); },
-
-  onCoverTap() {
-    const raw = this._rawDetail;
-    if (!raw || !raw.orderNo) return;
-    const url = '/pages/production/order-detail/index?orderNo=' + encodeURIComponent(raw.orderNo);
-    safeNavigate({ url }).catch(() => {});
-  },
 
   async submitQuality() {
     if (this.data.loading) return;
@@ -423,16 +319,11 @@ Page({
       const statusText = (res && res.bundleStatusText) || '';
       if (hints.length > 0) {
         setTimeout(function() {
-          toast.info(statusText || hints.join(' → '));
+          wx.showToast({ title: statusText || hints.join(' → '), icon: 'none', duration: 3000 });
         }, 800);
       }
       this._emitRefresh();
-
-      if (d.result === 'qualified') {
-        await this._showWarehousePicker();
-      } else {
-        wx.navigateBack();
-      }
+      wx.navigateBack();
     } catch (e) {
       this.setData({ loading: false });
       wx.showModal({
@@ -440,148 +331,6 @@ Page({
         content: e.message || e.errMsg || '请稍后重试',
         showCancel: false,
         confirmText: '知道了',
-      });
-    }
-  },
-
-  async _showWarehousePicker() {
-    const self = this;
-    try {
-      const warehouseRes = await api.warehouse.listWarehouseAreas('FINISHED');
-      const areas = warehouseRes && warehouseRes.records ? warehouseRes.records : [];
-      const options = areas.map(function(a) {
-        return { label: a.name || a.code || '', value: a.id || '' };
-      });
-      self.setData({ warehouseOptions: options });
-
-      if (options.length === 0) {
-        toast.info('暂无可用仓库，跳过入库');
-        wx.navigateBack();
-        return;
-      }
-
-      wx.showActionSheet({
-        itemList: ['直接返回', '选择仓库入库'],
-        success: function(res) {
-          if (res.tapIndex === 1) {
-            self._selectWarehouse(options);
-          } else {
-            wx.navigateBack();
-          }
-        },
-        fail: function() {
-          wx.navigateBack();
-        },
-      });
-    } catch (e) {
-      console.warn('[Quality] 获取仓库列表失败:', e);
-      toast.info('获取仓库信息失败，跳过入库');
-      wx.navigateBack();
-    }
-  },
-
-  _selectWarehouse(options) {
-    const self = this;
-    const itemList = options.map(function(o) { return o.label; });
-    wx.showActionSheet({
-      itemList: itemList,
-      title: '选择仓库',
-      success: function(res) {
-        const selected = options[res.tapIndex];
-        self.setData({ selectedWarehouse: selected.value });
-        self._selectLocation(selected.value);
-      },
-      fail: function() {
-        wx.navigateBack();
-      },
-    });
-  },
-
-  async _selectLocation(warehouseId) {
-    const self = this;
-    try {
-      const locationRes = await api.warehouse.listLocations('FINISHED', warehouseId);
-      const locations = locationRes && locationRes.records ? locationRes.records : [];
-      const options = locations.map(function(l) {
-        return { label: l.locationCode || '', value: l.locationCode || '' };
-      });
-
-      if (options.length === 0) {
-        wx.showModal({
-          title: '提示',
-          content: '该仓库暂无库位，是否继续入库？',
-          success: function(res) {
-            if (res.confirm) {
-              self._doWarehousing('');
-            } else {
-              wx.navigateBack();
-            }
-          },
-        });
-        return;
-      }
-
-      const itemList = options.map(function(o) { return o.label; });
-      wx.showActionSheet({
-        itemList: itemList,
-        title: '选择库位',
-        success: function(res) {
-          const selected = options[res.tapIndex];
-          self._doWarehousing(selected.value);
-        },
-        fail: function() {
-          wx.navigateBack();
-        },
-      });
-    } catch (e) {
-      console.warn('[Quality] 获取库位列表失败:', e);
-      wx.showModal({
-        title: '提示',
-        content: '获取库位信息失败，是否继续入库？',
-        success: function(res) {
-          if (res.confirm) {
-            self._doWarehousing('');
-          } else {
-            wx.navigateBack();
-          }
-        },
-      });
-    }
-  },
-
-  async _doWarehousing(locationCode) {
-    const self = this;
-    const d = self.data;
-    const raw = self._rawDetail;
-
-    wx.showLoading({ title: '入库中...', mask: true });
-    try {
-      const userInfo = getUserInfo() || {};
-      const payload = {
-        orderNo: d.detail.orderNo,
-        bundleNo: d.detail.bundleNo,
-        quantity: d.detail.quantity,
-        warehouseAreaId: d.selectedWarehouse,
-        locationCode: locationCode,
-        operatorId: userInfo.userId || '',
-        operatorName: userInfo.name || userInfo.username || '',
-      };
-      await api.warehouse.scanInbound(payload);
-      wx.hideLoading();
-      toast.success('入库成功');
-      self._emitRefresh();
-      wx.navigateBack();
-    } catch (e) {
-      wx.hideLoading();
-      console.warn('[Quality] 入库失败:', e);
-      wx.showModal({
-        title: '入库失败',
-        content: e.message || e.errMsg || '请稍后重试',
-        showCancel: false,
-        confirmText: '知道了',
-        success: function() {
-          wx.navigateBack();
-        },
       });
     }
   },

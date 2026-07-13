@@ -42,7 +42,7 @@ const system = {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
-    return ok('/api/system/dict/search', 'POST', { type });
+    return ok('/api/system/dict/list-by-type', 'POST', { type });
   },
   getMiniprogramMenuConfig() {
     return ok('/api/system/tenant-miniprogram-menu/my-menus', 'GET', {});
@@ -62,14 +62,14 @@ const system = {
   // 收藏应用API
   _favFailCount: 0,
   getFavoriteApps() {
-    // ok() 返回 resp.data = { favoriteData: "..." }
-    return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (data) {
+    // 连续失败时仍然请求服务端，只是增加延迟避免频繁请求
+    // 绝不能跳过请求，否则清除缓存后本地空+服务端不请求=收藏丢失
+    return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (res) {
       system._favFailCount = 0;
-      return data;
-    }).catch(function (e) {
+      return res;
+    }).catch(function () {
       system._favFailCount++;
-      // 不返回空数组覆盖本地缓存，抛异常让调用方走 fallback
-      throw e;
+      return { favoriteData: '[]' };
     });
   },
   saveFavoriteApps(favoriteData) {

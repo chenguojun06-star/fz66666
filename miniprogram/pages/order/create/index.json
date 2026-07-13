@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "下单管理",
-  "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
-  }
+  "usingComponents": {}
 }

@@ -1,6 +1,5 @@
 const { formatLocalDateTime } = require('./ScanPeripheralHelper');
 const { normalizeScanType } = require('./ScanModeResolver');
-const { DEBUG } = require('../../../../config/debug');
 
 /**
  * 扫码数据处理器
@@ -318,12 +317,12 @@ class ScanDataProcessor {
   async getOrderDetail(orderNo, orderId) {
     // 防护：两个标识都为空时直接返回 null，避免空参数调用列表 API
     if (!orderNo && !orderId) {
-
+      console.warn('[DEBUG] getOrderDetail: orderNo 和 orderId 都为空');
       return null;
     }
 
     try {
-      if (DEBUG) console.log('[DEBUG] getOrderDetail: orderNo=', orderNo, 'orderId=', orderId);
+      console.log('[DEBUG] getOrderDetail: orderNo=', orderNo, 'orderId=', orderId);
       let res;
       if (orderNo) {
         res = await this.api.production.orderDetailByOrderNo(orderNo);
@@ -331,7 +330,7 @@ class ScanDataProcessor {
         // 通过 orderId (UUID) 查询
         res = await this.api.production.orderDetail(orderId);
       }
-      if (DEBUG) console.log('[DEBUG] getOrderDetail: API返回=', JSON.stringify(res));
+      console.log('[DEBUG] getOrderDetail: API返回=', JSON.stringify(res));
 
       // 解包分页响应：orderDetailByOrderNo 实际调用 /list，返回 Page 对象
       if (res && res.records && Array.isArray(res.records)) {
@@ -387,8 +386,8 @@ class ScanDataProcessor {
   getFactoryInfo(orderDetail, options) {
     const factory = options.getCurrentFactory ? options.getCurrentFactory() : null;
     return {
-      factoryId: (factory && factory.id) || orderDetail.factoryId || '',
-      factoryName: (factory && factory.name) || orderDetail.factoryName || '',
+      factoryId: factory?.id || orderDetail.factoryId || '',
+      factoryName: factory?.name || orderDetail.factoryName || '',
     };
   }
 
@@ -400,8 +399,8 @@ class ScanDataProcessor {
   getWorkerInfo(options) {
     const worker = options.getCurrentWorker ? options.getCurrentWorker() : null;
     return {
-      workerId: (worker && worker.id) || '',
-      workerName: (worker && worker.name) || '',
+      workerId: worker?.id || '',
+      workerName: worker?.name || '',
     };
   }
 

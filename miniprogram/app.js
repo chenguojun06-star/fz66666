@@ -106,6 +106,13 @@ App({
       });
     }
 
+    // 初始化WebSocket实时同步
+    try {
+      const ws = require('./utils/websocket');
+      ws.connect();
+    } catch (e) {
+      console.warn('[App] WebSocket初始化失败:', e.message || e);
+    }
   },
 
   onShow() {
@@ -116,6 +123,14 @@ App({
       }, 1000);
     } catch (e) {
       console.error('检查提醒失败', e);
+    }
+
+    // 页面重新可见时，如果 WebSocket 断开则自动重连
+    try {
+      const ws = require('./utils/websocket');
+      ws.onPageShow();
+    } catch (e) {
+      // WebSocket 模块加载失败不影响其他功能
     }
   },
 
@@ -370,23 +385,10 @@ App({
 
   onUnhandledRejection(res) {
     const reason = res && res.reason ? String(res.reason) : 'unknown';
-    // 过滤正常的导航抖动 / 超时 / 降级 — 不属于真实业务错误，不上报
-    if (
-      reason.includes('导航进行中') ||
-      reason.includes('navigateTo:fail') ||
-      reason.includes('redirectTo:fail') ||
-      reason.includes('switchTab:fail') ||
-      reason.includes('navigateTo:fail timeout') ||
-      reason.indexOf('timeout') !== -1 && reason.indexOf('navigate') !== -1
-    ) {
-      return;
-    }
-    console.warn('[App] 未处理的Promise拒绝:', reason);
-    try {
-      this._reportError('unhandledRejection', reason);
-    } catch (_) {
-      /* ignore secondary reporting failures */
-    }
+    // 过滤正常的防抖导航忽略 — 不属于真实错误，不需要上报
+    if (reason.includes('导航进行中')) return;
+    console.error('[App] 未处理的Promise拒绝:', reason);
+    this._reportError('unhandledRejection', reason);
   },
 
   _reportError(type, detail) {
