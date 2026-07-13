@@ -656,7 +656,7 @@
 }
 .stage-done.stage-status  { background: var(--color-success-bg); color: var(--color-success); }
 .stage-doing.stage-status { background: var(--color-info-bg); color: var(--color-info); }
-.stage-pending.stage-status { background: var(--color-bg-hover); color: var(--color-text-tertiary); }
+.stage-pending.stage-status { background: var(--color-bg-hover); color: var(--color-text-secondary); }
 
 .stage-meta {
   display: flex;

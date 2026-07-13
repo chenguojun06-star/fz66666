@@ -95,7 +95,7 @@
 .order-tag--warning { background: var(--color-warning-bg); color: var(--color-warning); }
 .order-tag--info    { background: var(--color-info-bg); color: var(--color-info); }
 .order-tag--success { background: var(--color-success-bg); color: var(--color-success); }
-.order-tag--default { background: var(--color-bg-gray); color: var(--color-text-tertiary); }
+.order-tag--default { background: var(--color-bg-gray); color: var(--color-text-secondary); }
 
 .oc-no {
   display: flex;
