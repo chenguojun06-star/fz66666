@@ -104,6 +104,21 @@ public class EcommerceOrderController {
         }
     }
 
+    /**
+     * 销售数据统计（按日期范围汇总销售额、订单量、运费、净收入及平台分组）
+     */
+    @GetMapping("/sales-stats")
+    public Result<Map<String, Object>> salesStats(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        try {
+            return Result.success(orchestrator.calcSalesStats(startDate, endDate));
+        } catch (Exception e) {
+            log.error("[EC销售统计失败] startDate={}, endDate={}", startDate, endDate, e);
+            return Result.fail("查询销售统计失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/orders/{id}/link")
     public Result<Void> linkProductionOrder(
             @PathVariable Long id,

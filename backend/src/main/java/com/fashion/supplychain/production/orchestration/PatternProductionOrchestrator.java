@@ -68,19 +68,28 @@ public class PatternProductionOrchestrator {
 
     /**
      * 分页查询并丰富样板生产记录（关联款式、工序、采购数据）
+     * <p>
+     * 支持 status=OVERDUE/WARNING 的虚拟状态筛选，由后端根据交期统一过滤并分页，
+     * 避免前端本地过滤导致分页错乱。
      */
     public Map<String, Object> listWithEnrichment(int page, int size, String keyword, String status,
                                                    String startDate, String endDate) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        boolean isDueFilter = "OVERDUE".equalsIgnoreCase(status) || "WARNING".equalsIgnoreCase(status);
+
         // 构建查询条件
         LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PatternProduction::getDeleteFlag, 0);
+        wrapper.eq(PatternProduction::getTenantId, tenantId)
+                .eq(PatternProduction::getDeleteFlag, 0);
 
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w.like(PatternProduction::getStyleNo, keyword)
                     .or().like(PatternProduction::getColor, keyword)
                     .or().like(PatternProduction::getPatternMaker, keyword));
         }
-        if (StringUtils.hasText(status)) {
+        if (StringUtils.hasText(status) && !isDueFilter) {
             wrapper.eq(PatternProduction::getStatus, status);
         }
         if (StringUtils.hasText(startDate)) {
@@ -98,12 +107,97 @@ public class PatternProductionOrchestrator {
                 .map(enrichmentHelper::enrichRecord)
                 .collect(Collectors.toList());
 
+        // OVERDUE/WARNING 是虚拟状态，需要按交期二次过滤并重新分页
+        if (isDueFilter) {
+            enrichedRecords = filterByDueDate(enrichedRecords, status.toUpperCase());
+            return paginateManually(enrichedRecords, page, size);
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("records", enrichedRecords);
         result.put("total", pageResult.getTotal());
         result.put("size", pageResult.getSize());
         result.put("current", pageResult.getCurrent());
         result.put("pages", pageResult.getPages());
+        return result;
+    }
+
+    /**
+     * 按交期过滤记录（OVERDUE：已延期，WARNING：3天内到期）
+     */
+    private List<Map<String, Object>> filterByDueDate(List<Map<String, Object>> records, String status) {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        return records.stream().filter(m -> {
+            String recordStatus = String.valueOf(m.get("status") == null ? "" : m.get("status")).trim().toUpperCase();
+            // 排除已完成/已入库/已报废
+            if ("COMPLETED".equals(recordStatus) || "WAREHOUSE_IN".equals(recordStatus)
+                    || "SCRAPPED".equals(recordStatus)) {
+                return false;
+            }
+            java.time.LocalDate deliveryDate = resolveDeliveryDate(m);
+            if (deliveryDate == null) {
+                return false;
+            }
+            long diffDays = java.time.temporal.ChronoUnit.DAYS.between(today, deliveryDate);
+            if ("OVERDUE".equals(status)) {
+                return diffDays < 0;
+            }
+            return diffDays >= 0 && diffDays <= 3;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 解析记录的交期：优先使用 PatternProduction.deliveryTime，其次 StyleInfo.deliveryDate
+     */
+    private java.time.LocalDate resolveDeliveryDate(Map<String, Object> record) {
+        Object deliveryTime = record.get("deliveryTime");
+        if (deliveryTime instanceof String && StringUtils.hasText((String) deliveryTime)) {
+            try {
+                String s = ((String) deliveryTime).trim();
+                if (s.length() > 10) {
+                    s = s.substring(0, 10);
+                }
+                return java.time.LocalDate.parse(s);
+            } catch (Exception e) {
+                log.debug("解析 deliveryTime 失败: {}", deliveryTime);
+            }
+        }
+        Object styleInfoObj = record.get("styleInfo");
+        if (styleInfoObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> styleInfo = (Map<String, Object>) styleInfoObj;
+            Object deliveryDate = styleInfo.get("deliveryDate");
+            if (deliveryDate instanceof String && StringUtils.hasText((String) deliveryDate)) {
+                try {
+                    String s = ((String) deliveryDate).trim();
+                    if (s.length() > 10) {
+                        s = s.substring(0, 10);
+                    }
+                    return java.time.LocalDate.parse(s);
+                } catch (Exception e) {
+                    log.debug("解析 styleInfo.deliveryDate 失败: {}", deliveryDate);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 手动分页（用于虚拟状态筛选后）
+     */
+    private Map<String, Object> paginateManually(List<Map<String, Object>> records, int page, int size) {
+        int total = records.size();
+        int pages = (int) Math.ceil((double) total / Math.max(size, 1));
+        int from = (page - 1) * size;
+        int to = Math.min(from + size, total);
+        List<Map<String, Object>> pageRecords = from < total ? records.subList(from, to) : java.util.Collections.emptyList();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", pageRecords);
+        result.put("total", total);
+        result.put("size", size);
+        result.put("current", page);
+        result.put("pages", pages);
         return result;
     }
 

@@ -291,7 +291,6 @@ public class ProductWarehousingRepairHelper {
         QueryWrapper<ProductWarehousing> qualityScanQuery = new QueryWrapper<>();
         qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "style_name", "unqualified_quantity", "qualified_quantity", "warehousing_quantity", "cutting_quantity", "defect_category", "defect_remark", "unqualified_image_urls", "create_time", "repair_status", "process_name", "repair_remark", "quality_operator_name", "scan_mode", "warehousing_no", "factory_name", "quality_status")
             .eq("tenant_id", tenantId)
-            .eq("warehousing_type", "quality_scan")
             .eq("delete_flag", 0)
             .gt("unqualified_quantity", 0);
         if (StringUtils.hasText(factoryId)) {
@@ -493,7 +492,7 @@ public class ProductWarehousingRepairHelper {
         LambdaUpdateWrapper<ProductWarehousing> uw = new LambdaUpdateWrapper<ProductWarehousing>()
                 .eq(ProductWarehousing::getTenantId, tenantId)
                 .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
                 .set(ProductWarehousing::getRepairStatus, status);
         if (operatorName != null && !operatorName.isBlank()) {
             uw.set(ProductWarehousing::getRepairOperatorName, operatorName);
@@ -510,8 +509,9 @@ public class ProductWarehousingRepairHelper {
                 new LambdaQueryWrapper<ProductWarehousing>()
                         .eq(ProductWarehousing::getTenantId, tenantId)
                         .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                        .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                        .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
                         .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .orderByDesc(ProductWarehousing::getCreateTime)
                         .last("LIMIT 1"));
         return pw != null ? pw.getRepairStatus() : null;
     }

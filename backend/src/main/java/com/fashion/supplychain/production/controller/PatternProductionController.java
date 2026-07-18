@@ -93,6 +93,27 @@ public class PatternProductionController {
     }
 
     /**
+     * 根据款式ID获取纸样生产记录
+     */
+    @GetMapping("/by-style/{styleId}")
+    public Result<Map<String, Object>> getByStyleId(@PathVariable String styleId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternProduction::getTenantId, tenantId)
+                .eq(PatternProduction::getStyleId, styleId)
+                .eq(PatternProduction::getDeleteFlag, 0)
+                .orderByDesc(PatternProduction::getCreateTime)
+                .last("LIMIT 1");
+        PatternProduction record = patternProductionService.getOne(wrapper);
+        if (record == null) {
+            return Result.success(null);
+        }
+        return Result.success(patternEnrichmentHelper.enrichRecord(record));
+    }
+
+    /**
      * 获取单条记录详情
      */
     @GetMapping("/{id}")

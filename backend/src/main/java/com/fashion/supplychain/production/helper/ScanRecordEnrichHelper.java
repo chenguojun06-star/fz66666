@@ -2,8 +2,10 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -36,6 +38,9 @@ public class ScanRecordEnrichHelper {
 
     @Autowired
     private StyleAttachmentService styleAttachmentService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     /**
      * 批量填充床号：从 t_cutting_bundle 查询 bedNo 并写入扫码记录
@@ -134,24 +139,50 @@ public class ScanRecordEnrichHelper {
      * 参考 PatternEnrichmentHelper.enrichRecord 模式，从 StyleInfo 查询补齐
      * - styleName 从 StyleInfo.styleName 补齐
      * - coverImage 从 StyleInfo.cover 补齐，为空时从 StyleAttachment 查图片附件兜底
+     * - 兼容历史数据：ScanRecord.styleId 为空时，通过 orderId 查 ProductionOrder.styleId 兜底
      */
     public void enrichStyleInfo(List<ScanRecord> records) {
         if (records == null || records.isEmpty()) return;
         try {
-            // 收集所有 styleId（ScanRecord.styleId 为 String，StyleInfo.id 为 Long）
+            // 第一步：收集显式 styleId
             List<String> styleIds = records.stream()
                     .map(ScanRecord::getStyleId)
                     .filter(StringUtils::hasText)
                     .map(String::trim)
                     .distinct()
                     .collect(Collectors.toList());
-            if (styleIds.isEmpty()) return;
 
-            // 批量查询 StyleInfo（避免 N+1：原循环内 getById 改为 listByIds 批量查询）
+            // 第二步：styleId 为空但有 orderId 的记录，通过 ProductionOrder 兜底查 styleId
+            Map<String, String> orderStyleIdMap = new HashMap<>();
+            List<String> missingStyleIdOrderIds = records.stream()
+                    .filter(r -> !StringUtils.hasText(r.getStyleId()) && StringUtils.hasText(r.getOrderId()))
+                    .map(ScanRecord::getOrderId)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!missingStyleIdOrderIds.isEmpty() && productionOrderService != null) {
+                try {
+                    productionOrderService.listByIds(missingStyleIdOrderIds).forEach(po -> {
+                        if (po != null && StringUtils.hasText(po.getStyleId())) {
+                            orderStyleIdMap.put(po.getId(), po.getStyleId());
+                        }
+                    });
+                } catch (Exception e) {
+                    log.warn("通过 ProductionOrder 兜底查 styleId 失败: orderIds={}", missingStyleIdOrderIds, e);
+                }
+            }
+
+            // 合并显式 styleId 与订单兜底 styleId
+            Set<String> allStyleIds = new HashSet<>(styleIds);
+            orderStyleIdMap.values().forEach(sid -> {
+                if (StringUtils.hasText(sid)) allStyleIds.add(sid.trim());
+            });
+            if (allStyleIds.isEmpty()) return;
+
+            // 批量查询 StyleInfo（避免 N+1）
             Map<String, StyleInfo> styleByIdStr = new HashMap<>();
             List<Long> validLongIds = new ArrayList<>();
             Map<Long, String> longIdToStrId = new HashMap<>();
-            for (String sid : styleIds) {
+            for (String sid : allStyleIds) {
                 try {
                     Long lid = Long.parseLong(sid);
                     validLongIds.add(lid);
@@ -198,6 +229,10 @@ public class ScanRecordEnrichHelper {
             // 填充每条记录
             for (ScanRecord r : records) {
                 String sid = r.getStyleId();
+                if (!StringUtils.hasText(sid)) {
+                    // 使用订单兜底 styleId（只用于本次富化，不持久化到数据库）
+                    sid = orderStyleIdMap.get(r.getOrderId());
+                }
                 if (!StringUtils.hasText(sid)) continue;
                 StyleInfo info = styleByIdStr.get(sid.trim());
                 if (info == null) continue;

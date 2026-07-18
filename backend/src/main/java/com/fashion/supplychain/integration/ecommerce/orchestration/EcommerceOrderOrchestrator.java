@@ -21,8 +21,10 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -166,6 +168,81 @@ public class EcommerceOrderOrchestrator {
     public IPage<EcommerceOrder> listOrders(Map<String, Object> params) {
         int page = parseIntSafe(params.get("page"), 1);
         int pageSize = parseIntSafe(params.get("pageSize"), 20);
+        LambdaQueryWrapper<EcommerceOrder> wrapper = buildListWrapper(params);
+        return ecOrderService.page(new Page<>(page, pageSize), wrapper);
+    }
+
+    /**
+     * 按日期范围统计销售额、订单量、运费、净收入，并按平台分组
+     */
+    public Map<String, Object> calcSalesStats(String startDate, String endDate) {
+        Long tenantId = TenantAssert.requireTenantId();
+        LambdaQueryWrapper<EcommerceOrder> wrapper = new LambdaQueryWrapper<EcommerceOrder>()
+                .eq(EcommerceOrder::getTenantId, tenantId)
+                .orderByDesc(EcommerceOrder::getCreateTime);
+        applyDateRange(wrapper, startDate, endDate);
+
+        List<EcommerceOrder> orders = ecOrderService.list(wrapper);
+
+        java.math.BigDecimal totalPayAmount = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal totalFreight = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal netRevenue = java.math.BigDecimal.ZERO;
+        int orderCount = 0;
+
+        Map<String, PlatformStat> platformMap = new java.util.HashMap<>();
+        for (EcommerceOrder order : orders) {
+            if (order.getStatus() == null || order.getStatus() == 4) {
+                continue; // 跳过已取消
+            }
+            java.math.BigDecimal pay = order.getPayAmount() != null ? order.getPayAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal freight = order.getFreight() != null ? order.getFreight() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal revenue = pay.subtract(freight);
+
+            totalPayAmount = totalPayAmount.add(pay);
+            totalFreight = totalFreight.add(freight);
+            netRevenue = netRevenue.add(revenue);
+            orderCount++;
+
+            String platform = StringUtils.hasText(order.getPlatform()) ? order.getPlatform() : "UNKNOWN";
+            PlatformStat stat = platformMap.computeIfAbsent(platform, k -> new PlatformStat(platform));
+            stat.orderCount++;
+            stat.totalPayAmount = stat.totalPayAmount.add(pay);
+            stat.netRevenue = stat.netRevenue.add(revenue);
+        }
+
+        List<Map<String, Object>> platformBreakdown = platformMap.values().stream()
+                .map(s -> {
+                    Map<String, Object> m = new java.util.HashMap<>();
+                    m.put("platform", s.platform);
+                    m.put("orderCount", s.orderCount);
+                    m.put("totalPayAmount", s.totalPayAmount);
+                    m.put("netRevenue", s.netRevenue);
+                    return m;
+                })
+                .sorted((a, b) -> ((java.math.BigDecimal) b.get("totalPayAmount")).compareTo((java.math.BigDecimal) a.get("totalPayAmount")))
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("orderCount", orderCount);
+        result.put("totalPayAmount", totalPayAmount);
+        result.put("totalFreight", totalFreight);
+        result.put("netRevenue", netRevenue);
+        result.put("platformBreakdown", platformBreakdown);
+        return result;
+    }
+
+    private static class PlatformStat {
+        String platform;
+        int orderCount;
+        java.math.BigDecimal totalPayAmount = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal netRevenue = java.math.BigDecimal.ZERO;
+
+        PlatformStat(String platform) {
+            this.platform = platform;
+        }
+    }
+
+    private LambdaQueryWrapper<EcommerceOrder> buildListWrapper(Map<String, Object> params) {
         LambdaQueryWrapper<EcommerceOrder> wrapper = new LambdaQueryWrapper<EcommerceOrder>()
                 .orderByDesc(EcommerceOrder::getCreateTime);
 
@@ -207,7 +284,26 @@ public class EcommerceOrderOrchestrator {
                 wrapper.isNull(EcommerceOrder::getProductionOrderNo);
             }
         }
-        return ecOrderService.page(new Page<>(page, pageSize), wrapper);
+        return wrapper;
+    }
+
+    private void applyDateRange(LambdaQueryWrapper<EcommerceOrder> wrapper, String startDate, String endDate) {
+        if (StringUtils.hasText(startDate)) {
+            String start = startDate.trim();
+            if (start.length() == 10) {
+                wrapper.ge(EcommerceOrder::getCreateTime, start + " 00:00:00");
+            } else {
+                wrapper.ge(EcommerceOrder::getCreateTime, start);
+            }
+        }
+        if (StringUtils.hasText(endDate)) {
+            String end = endDate.trim();
+            if (end.length() == 10) {
+                wrapper.le(EcommerceOrder::getCreateTime, end + " 23:59:59");
+            } else {
+                wrapper.le(EcommerceOrder::getCreateTime, end);
+            }
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

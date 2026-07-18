@@ -371,8 +371,13 @@ public class StyleBomOrchestrator {
     }
 
     private void normalizeAndCalc(StyleBom styleBom) {
-        styleBom.setGroupName(null);
-        BigDecimal usageAmount = styleBom.getUsageAmount() == null ? BigDecimal.ZERO : styleBom.getUsageAmount();
+        // 部位字段兜底：未指定部位时默认"整件"
+        // 与前端 calcTotalPrice 逻辑对齐：使用 effectiveUsage（有纸样数据时用 usageAmount，否则用 devUsageAmount 兜底）
+        if (!StringUtils.hasText(styleBom.getPartCode())) {
+            styleBom.setPartCode("GARMENT_PART_WHOLE");
+            styleBom.setPartName("整件");
+        }
+        BigDecimal usageAmount = pickEffectiveUsage(styleBom);
         BigDecimal lossRate = styleBom.getLossRate() == null ? BigDecimal.ZERO : styleBom.getLossRate();
         BigDecimal unitPrice = styleBom.getUnitPrice() == null ? BigDecimal.ZERO : styleBom.getUnitPrice();
 
@@ -380,6 +385,26 @@ public class StyleBomOrchestrator {
         usageAmount = usageAmount.setScale(4, RoundingMode.HALF_UP);
         BigDecimal qty = usageAmount.multiply(BigDecimal.ONE.add(lossRate.movePointLeft(2)));
         styleBom.setTotalPrice(qty.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * 与前端 calcTotalPrice 逻辑对齐：选择有效用量
+     * - 有纸样数据（patternSizeUsageMap 非空）→ 用 usageAmount
+     * - 否则 → 优先用 devUsageAmount，为空则用 usageAmount
+     */
+    private BigDecimal pickEffectiveUsage(StyleBom styleBom) {
+        String patternUsageMap = styleBom.getPatternSizeUsageMap();
+        boolean hasPatternData = StringUtils.hasText(patternUsageMap)
+                && patternUsageMap.trim().length() > 2; // 简单判断非 "{}" 等空对象
+        if (hasPatternData) {
+            return styleBom.getUsageAmount() == null ? BigDecimal.ZERO : styleBom.getUsageAmount();
+        }
+        BigDecimal dev = styleBom.getDevUsageAmount();
+        BigDecimal usage = styleBom.getUsageAmount();
+        if (dev != null && dev.compareTo(BigDecimal.ZERO) > 0) {
+            return dev;
+        }
+        return usage == null ? BigDecimal.ZERO : usage;
     }
 
     @Transactional(rollbackFor = Exception.class)

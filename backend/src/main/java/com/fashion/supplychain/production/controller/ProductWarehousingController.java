@@ -48,10 +48,12 @@ public class ProductWarehousingController {
     /**
      * 查询各状态的待处理菲号列表
      * @param status pendingQc(待质检) | pendingPackaging(待包装) | pendingWarehouse(待入库)
+     * @param orderId 可选，按订单过滤，不传则查全租户
      */
     @GetMapping("/pending-bundles")
-    public Result<?> listPendingBundles(@RequestParam String status) {
-        return Result.success(productWarehousingOrchestrator.listPendingBundles(status));
+    public Result<?> listPendingBundles(@RequestParam String status,
+                                        @RequestParam(required = false) String orderId) {
+        return Result.success(productWarehousingOrchestrator.listPendingBundles(status, orderId));
     }
 
     /**

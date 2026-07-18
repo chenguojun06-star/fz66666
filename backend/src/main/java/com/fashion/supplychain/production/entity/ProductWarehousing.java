@@ -150,6 +150,12 @@ public class ProductWarehousing {
 
     private String factoryType;
 
+    /**
+     * 订单交期（临时字段，查询时从 ProductionOrder.plannedEndDate 补齐）
+     */
+    @TableField(exist = false)
+    private java.time.LocalDateTime deliveryDate;
+
     private String orderBizType;
 
     private String orgUnitId;

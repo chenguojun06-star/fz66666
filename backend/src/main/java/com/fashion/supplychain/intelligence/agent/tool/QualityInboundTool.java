@@ -151,16 +151,9 @@ public class QualityInboundTool extends AbstractAgentTool {
 
     private String handleQuery(Map<String, Object> args) throws Exception {
         try {
-            // 查询待质检入库的菲号列表（status=pending_qc 或 pending_warehouse）
-            List<Map<String, Object>> pendingBundles =
-                    warehousingOrchestrator.listPendingBundles("pending_warehouse");
-
             String orderIdFilter = str(args, "orderId");
-            if (orderIdFilter != null && !orderIdFilter.isBlank()) {
-                pendingBundles = pendingBundles.stream()
-                        .filter(b -> orderIdFilter.equals(String.valueOf(b.getOrDefault("orderId", ""))))
-                        .toList();
-            }
+            List<Map<String, Object>> pendingBundles =
+                    warehousingOrchestrator.listPendingBundles("pending_warehouse", orderIdFilter);
 
             if (pendingBundles == null || pendingBundles.isEmpty()) {
                 Map<String, Object> result = new LinkedHashMap<>();

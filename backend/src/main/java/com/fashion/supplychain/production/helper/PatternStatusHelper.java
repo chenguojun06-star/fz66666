@@ -394,23 +394,36 @@ public class PatternStatusHelper {
 
         try {
             Map<String, Object> nodes = objectMapper.readValue(progressNodes, new TypeReference<Map<String, Object>>() {});
-            List<Integer> percents = new ArrayList<>();
-            for (Object value : nodes.values()) {
-                if (value instanceof Number) {
-                    percents.add(Math.max(0, Math.min(100, ((Number) value).intValue())));
-                    continue;
+            // 固定6阶段，与前端 SAMPLE_PARENT_STAGES 对齐
+            // 每个阶段支持中英文别名，取第一个非空值
+            String[][] stageAliases = {
+                {"procurement", "采购"},
+                {"cutting", "裁剪"},
+                {"secondary", "二次工艺"},
+                {"sewing", "车缝", "缝制", "生产"},
+                {"tail", "尾部", "后整"},
+                {"warehousing", "入库"}
+            };
+            int sum = 0;
+            for (String[] aliases : stageAliases) {
+                int value = 0;
+                for (String alias : aliases) {
+                    Object v = nodes.get(alias);
+                    if (v instanceof Number) {
+                        value = Math.max(0, Math.min(100, ((Number) v).intValue()));
+                        break;
+                    }
+                    if (v != null) {
+                        try {
+                            value = Math.max(0, Math.min(100, Integer.parseInt(String.valueOf(v))));
+                            break;
+                        } catch (Exception e) { /* ignore */ }
+                    }
                 }
-                try {
-                    percents.add(Math.max(0, Math.min(100, Integer.parseInt(String.valueOf(value)))));
-                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+                sum += value;
             }
-
-            if (percents.isEmpty()) {
-                return "IN_PROGRESS".equals(status) ? 5 : 0;
-            }
-
-            int sum = percents.stream().mapToInt(Integer::intValue).sum();
-            int avg = Math.round((float) sum / percents.size());
+            // 分母固定为6，与前端 Math.round(totalPercent / 6) 一致
+            int avg = Math.round((float) sum / 6);
             return Math.max("IN_PROGRESS".equals(status) ? 5 : 0, avg);
         } catch (Exception e) {
             log.warn("Failed to parse pattern progress nodes: patternId={}", pattern.getId(), e);

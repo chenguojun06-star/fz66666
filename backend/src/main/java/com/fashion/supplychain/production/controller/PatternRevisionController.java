@@ -35,16 +35,22 @@ public class PatternRevisionController {
      */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
         int page = Integer.parseInt(String.valueOf(params.getOrDefault("page", 1)));
         int pageSize = Integer.parseInt(String.valueOf(params.getOrDefault("pageSize", 10)));
 
+        String styleId = String.valueOf(params.getOrDefault("styleId", "")).trim();
         String styleNo = String.valueOf(params.getOrDefault("styleNo", "")).trim();
         String status = String.valueOf(params.getOrDefault("status", "")).trim();
         String revisionType = String.valueOf(params.getOrDefault("revisionType", "")).trim();
         String maintainerName = String.valueOf(params.getOrDefault("maintainerName", "")).trim();
 
         LambdaQueryWrapper<PatternRevision> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(styleNo), PatternRevision::getStyleNo, styleNo)
+        wrapper.eq(PatternRevision::getTenantId, tenantId)
+                .eq(StringUtils.hasText(styleId), PatternRevision::getStyleId, styleId)
+                .like(StringUtils.hasText(styleNo), PatternRevision::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(status), PatternRevision::getStatus, status)
                 .eq(StringUtils.hasText(revisionType), PatternRevision::getRevisionType, revisionType)
                 .like(StringUtils.hasText(maintainerName), PatternRevision::getMaintainerName, maintainerName)
@@ -52,6 +58,22 @@ public class PatternRevisionController {
 
         IPage<PatternRevision> result = patternRevisionService.page(new Page<>(page, pageSize), wrapper);
         return Result.success(result);
+    }
+
+    /**
+     * 根据款式ID查询最新纸样修订记录
+     */
+    @GetMapping("/by-style/{styleId}")
+    public Result<?> getByStyleId(@PathVariable String styleId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        PatternRevision revision = patternRevisionService.lambdaQuery()
+                .eq(PatternRevision::getStyleId, styleId)
+                .eq(PatternRevision::getTenantId, tenantId)
+                .orderByDesc(PatternRevision::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+        return Result.success(revision);
     }
 
     /**

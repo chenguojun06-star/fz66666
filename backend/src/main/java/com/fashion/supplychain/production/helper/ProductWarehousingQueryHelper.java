@@ -140,6 +140,8 @@ public class ProductWarehousingQueryHelper {
                 w.setFactoryName(order.getFactoryName());
             }
             w.setFactoryType(order.getFactoryType());
+            // 补齐订单交期（plannedEndDate），供前端展示交期倒计时
+            w.setDeliveryDate(order.getPlannedEndDate());
             w.setOrderBizType(order.getOrderBizType());
             w.setOrgUnitId(order.getOrgUnitId());
             w.setParentOrgUnitId(order.getParentOrgUnitId());
@@ -269,6 +271,27 @@ public class ProductWarehousingQueryHelper {
             stats.put("pendingWarehouseQuantity", 0L);
             stats.put("pendingPackagingBundles", 0L);
             stats.put("pendingPackagingQuantity", 0L);
+        }
+
+        // 3. 待返修菲号统计（有不合格数量且未报废的菲号数）
+        try {
+            Long tenantId = UserContext.tenantId();
+            long pendingRepairCount = productWarehousingService.lambdaQuery()
+                .select(ProductWarehousing::getCuttingBundleId)
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
+                .ne(ProductWarehousing::getRepairStatus, "scrapped")
+                .list()
+                .stream()
+                .map(ProductWarehousing::getCuttingBundleId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet())
+                .size();
+            stats.put("pendingRepairBundles", pendingRepairCount);
+        } catch (Exception e) {
+            log.error("待返修菲号统计查询失败: {}", e.getMessage(), e);
+            stats.put("pendingRepairBundles", 0L);
         }
 
         return stats;

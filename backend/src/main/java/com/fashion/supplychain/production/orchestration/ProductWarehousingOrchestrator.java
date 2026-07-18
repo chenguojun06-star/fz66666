@@ -91,8 +91,8 @@ public class ProductWarehousingOrchestrator {
         return queryHelper.getStatusStats(params);
     }
 
-    public List<Map<String, Object>> listPendingBundles(String status) {
-        return pendingHelper.listPendingBundles(status);
+    public List<Map<String, Object>> listPendingBundles(String status, String orderId) {
+        return pendingHelper.listPendingBundles(status, orderId);
     }
 
     public Map<String, Object> getBundleReadiness(String orderId) {
