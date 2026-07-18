@@ -185,3 +185,7 @@ tools/data-link-map/
 # 设计预览文件（仅本地开发，不入库）
 miniprogram/design-preview*.html
 miniprogram/design-philosophy.md
+
+# 临时分析报告
+_card1.txt
+design-vs-implementation-diff-report.md
