@@ -6,6 +6,11 @@ function _normalizeText(v) {
   return (v || '').toString().trim();
 }
 
+/**
+ * 过滤掉出货/发货节点
+ * @param {Array} list - 节点列表
+ * @returns {Array} 过滤后的节点列表
+ */
 function stripWarehousingNode(list) {
   const items = Array.isArray(list) ? list : [];
   return items.filter(n => {
@@ -24,6 +29,11 @@ const defaultNodes = [
   { id: 'warehousing', name: '入库' },
 ];
 
+/**
+ * 限制百分比在 0-100 之间
+ * @param {number} value - 原始值
+ * @returns {number} 限制后的百分比
+ */
 function clampPercent(value) {
   if (Number.isNaN(value)) {
     return 0;
@@ -31,6 +41,12 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+/**
+ * 根据进度百分比计算节点索引
+ * @param {Array} nodes - 节点列表
+ * @param {number} progress - 进度百分比
+ * @returns {number} 节点索引
+ */
 function getNodeIndexFromProgress(nodes, progress) {
   if (!nodes || nodes.length <= 1) {
     return 0;
@@ -39,6 +55,12 @@ function getNodeIndexFromProgress(nodes, progress) {
   return Math.max(0, Math.min(nodes.length - 1, idx));
 }
 
+/**
+ * 根据节点索引计算进度百分比
+ * @param {Array} nodes - 节点列表
+ * @param {number} index - 节点索引
+ * @returns {number} 进度百分比
+ */
 function getProgressFromNodeIndex(nodes, index) {
   if (!nodes || nodes.length <= 1) {
     return 0;
@@ -47,6 +69,11 @@ function getProgressFromNodeIndex(nodes, index) {
   return clampPercent((idx / (nodes.length - 1)) * 100);
 }
 
+/**
+ * 解析进度节点 JSON 字符串
+ * @param {string} raw - 原始 JSON 字符串
+ * @returns {Array} 解析后的节点列表
+ */
 function parseProgressNodes(raw) {
   if (!raw) return [];
   let obj = raw;
@@ -72,6 +99,11 @@ function parseProgressNodes(raw) {
   );
 }
 
+/**
+ * 从订单数据解析进度节点
+ * @param {Object} order - 订单数据
+ * @returns {Array} 进度节点列表
+ */
 function resolveNodesFromOrder(order) {
   if (!order) return defaultNodes;
   const raw = order.progressWorkflowJson;
@@ -121,6 +153,11 @@ function getNodeRateFromOrder(nodeName, order) {
   return -1;
 }
 
+/**
+ * 从 progressWorkflowJson 提取各父节点的子工序列表
+ * @param {Object|string} wfRaw - progressWorkflowJson 原始值
+ * @returns {Object} { 父节点名: [{name, unitPrice}] }
+ */
 function extractChildrenMap(wfRaw) {
   if (!wfRaw) return {};
   try {
@@ -146,6 +183,7 @@ function buildProcessNodesWithRates(order) {
   const nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
 
+  // 预先提取子工序 map，附加到每个父节点
   const childrenMap = extractChildrenMap(order.progressWorkflowJson);
 
   const orderStatus = (order.status || '').trim().toLowerCase();
@@ -155,6 +193,10 @@ function buildProcessNodesWithRates(order) {
   let hasRealRate = false;
   const totalBundles = Number(order.cuttingBundleCount) || 0;
   const processScannedMap = order.stageScannedBundleCount || {};
+  // P1-5 数据链路：总数量从 cuttingQuantity/cuttingQty/orderQuantity/sizeTotal 兜底
+  // 用于在工序进度区显示 已完成数/总数量/剩余 数量明细
+  const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
+                  || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   const result = nodes.map(function (n) {
     const name = n.name || n;
     const rate = getNodeRateFromOrder(name, order);
@@ -167,29 +209,41 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles),
       };
     }
+    // 数量明细：总数量>0 且有完成率时才计算，避免无完成率时显示 0/0
+    const qtyInfo = totalQty > 0 && rate >= 0 ? {
+      total: totalQty,
+      completed: Math.round(totalQty * rate / 100),
+      remaining: Math.max(0, totalQty - Math.round(totalQty * rate / 100)),
+    } : null;
     const children = childrenMap[name] || [];
     if (rate >= 0) {
       hasAnyRate = true;
       if (rate > 0 && rate < 100) hasRealRate = true;
-      return { name: name, percent: rate, bundleInfo: bundleInfo, children: children };
+      return { name: name, percent: rate, bundleInfo: bundleInfo, qtyInfo: qtyInfo, children: children };
     }
-    return { name: name, percent: -1, bundleInfo: bundleInfo, children: children };
+    return { name: name, percent: -1, bundleInfo: bundleInfo, qtyInfo: qtyInfo, children: children };
   });
   if (isCompletedOrClosed) {
     return result.map(function (r) {
-      return { name: r.name, percent: 100, bundleInfo: r.bundleInfo, children: r.children };
+      return {
+        name: r.name,
+        percent: 100,
+        bundleInfo: r.bundleInfo,
+        qtyInfo: totalQty > 0 ? { total: totalQty, completed: totalQty, remaining: 0 } : null,
+        children: r.children,
+      };
     });
   }
   if (hasAnyRate && hasRealRate) {
     return result.map(function (r) {
-      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
+      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, qtyInfo: r.qtyInfo, children: r.children };
     });
   }
   if (hasAnyRate && !hasRealRate) {
     const allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
     if (allHundred) {
       return result.map(function (r) {
-        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
+        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, qtyInfo: r.qtyInfo, children: r.children };
       });
     }
   }
@@ -214,7 +268,12 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles2),
       };
     }
-    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, children: childrenMap[name2] || [] };
+    const qtyInfo2 = totalQty > 0 ? {
+      total: totalQty,
+      completed: Math.round(totalQty * pct / 100),
+      remaining: Math.max(0, totalQty - Math.round(totalQty * pct / 100)),
+    } : null;
+    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, qtyInfo: qtyInfo2, children: childrenMap[name2] || [] };
   });
 }
 
@@ -226,7 +285,10 @@ function calcOrderProgress(order) {
     const completedQty = Number(order.completedQuantity) || 0;
     const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
                    || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+    // 有已完成数量（或无总数可参照）→ 真实完成，返回100%
     if (completedQty > 0 || totalQty === 0) return 100;
+    // completedQty=0 且有 totalQty → 仓库数量尚未录入，继续按工序完成率计算
+    // 避免进度条100%但「已完成数量」显示0的视觉矛盾
   }
 
   const orderNo = (order.orderNo || '').trim().toUpperCase();
@@ -263,16 +325,16 @@ function calcOrderProgress(order) {
 }
 
 module.exports = {
-  stripWarehousingNode: stripWarehousingNode,
-  defaultNodes: defaultNodes,
-  clampPercent: clampPercent,
-  getNodeIndexFromProgress: getNodeIndexFromProgress,
-  getProgressFromNodeIndex: getProgressFromNodeIndex,
-  parseProgressNodes: parseProgressNodes,
-  resolveNodesFromOrder: resolveNodesFromOrder,
-  getNodeRateFromOrder: getNodeRateFromOrder,
-  buildProcessNodesWithRates: buildProcessNodesWithRates,
-  extractChildrenMap: extractChildrenMap,
-  calcOrderProgress: calcOrderProgress,
-  STAGE_RATE_MAP: STAGE_RATE_MAP,
+  stripWarehousingNode,
+  defaultNodes,
+  clampPercent,
+  getNodeIndexFromProgress,
+  getProgressFromNodeIndex,
+  parseProgressNodes,
+  resolveNodesFromOrder,
+  getNodeRateFromOrder,
+  buildProcessNodesWithRates,
+  extractChildrenMap,
+  calcOrderProgress,
+  STAGE_RATE_MAP,
 };
