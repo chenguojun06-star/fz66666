@@ -95,7 +95,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
             }>
             <Button type="primary" disabled={Boolean(readOnly) || !editMode || loading || saving}
               icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}></span>}
-              style={{ background: 'linear-gradient(135deg, var(--color-accent-purple), #2f54eb)', borderColor: 'transparent', fontWeight: 500, boxShadow: '0 2px 6px rgba(114, 46, 209, 0.3)' }}>AI建议单价</Button>
+              style={{ background: 'transparent', borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontWeight: 500 }}>AI建议单价</Button>
           </Popover>
           {editMode && !readOnly && sizes.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

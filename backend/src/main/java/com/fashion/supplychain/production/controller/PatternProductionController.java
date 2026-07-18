@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
@@ -57,7 +58,7 @@ public class PatternProductionController {
             return Result.success(stats);
         } catch (Exception e) {
             log.error("获取样衣开发费用统计失败", e);
-            return Result.fail("获取统计失败: " + e.getMessage());
+            throw new BusinessException("获取统计失败: " + e.getMessage(), e);
         }
     }
 
@@ -135,10 +136,10 @@ public class PatternProductionController {
             List<Map<String, Object>> config = patternProductionOrchestrator.getPatternProcessConfig(id);
             return Result.success(config);
         } catch (IllegalArgumentException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("获取样衣工序配置失败: id={}", id, e);
-            return Result.fail("获取工序配置失败");
+            throw new BusinessException("获取工序配置失败", e);
         }
     }
 
@@ -261,10 +262,10 @@ public class PatternProductionController {
                     return Result.fail("不支持的操作: " + action);
             }
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("工作流操作失败: id={}, action={}", id, action, e);
-            return Result.fail("操作失败: " + e.getMessage());
+            throw new BusinessException("操作失败: " + e.getMessage(), e);
         }
     }
 
@@ -279,7 +280,7 @@ public class PatternProductionController {
             String msg = patternProductionOrchestrator.receivePattern(id, params);
             return Result.success(msg);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -289,7 +290,7 @@ public class PatternProductionController {
             Map<String, Object> result = patternProductionOrchestrator.completeByTask(id);
             return Result.success(result);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -304,7 +305,7 @@ public class PatternProductionController {
             String msg = patternProductionOrchestrator.updateProgress(id, progressNodes);
             return Result.success(msg);
         } catch (Exception e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -319,7 +320,7 @@ public class PatternProductionController {
             patternProductionOrchestrator.updateSecondaryFlag(id, hasSecondaryProcess);
             return Result.success(hasSecondaryProcess == 1 ? "已设置有二次工艺" : "已设置无二次工艺");
         } catch (Exception e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -332,7 +333,7 @@ public class PatternProductionController {
             patternProductionOrchestrator.delete(id);
             return Result.success("删除成功");
         } catch (Exception e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -380,10 +381,10 @@ public class PatternProductionController {
                     processName, progressStage);
             return Result.success(result);
         } catch (IllegalArgumentException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("样板生产扫码失败", e);
-            return Result.fail("扫码失败: " + e.getMessage());
+            throw new BusinessException("扫码失败: " + e.getMessage(), e);
         }
     }
 
@@ -470,7 +471,7 @@ public class PatternProductionController {
             return Result.success(result);
         } catch (Exception e) {
             log.error("获取样板扫码历史失败", e);
-            return Result.fail("获取失败: " + e.getMessage());
+            throw new BusinessException("获取失败: " + e.getMessage(), e);
         }
     }
 
@@ -485,10 +486,10 @@ public class PatternProductionController {
             Map<String, Object> result = patternProductionOrchestrator.undoPatternScan(scanRecordId);
             return Result.success(result);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("撤销样衣扫码记录失败: patternId={} scanRecordId={}", patternId, scanRecordId, e);
-            return Result.fail("撤销失败: " + e.getMessage());
+            throw new BusinessException("撤销失败: " + e.getMessage(), e);
         }
     }
 
@@ -505,10 +506,10 @@ public class PatternProductionController {
             patternProductionOrchestrator.updateBasicInfo(id, field, value);
             return Result.success("更新成功");
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("更新样板基本信息失败: id={}", id, e);
-            return Result.fail("更新失败: " + e.getMessage());
+            throw new BusinessException("更新失败: " + e.getMessage(), e);
         }
     }
 
@@ -527,10 +528,10 @@ public class PatternProductionController {
             patternProductionOrchestrator.assignPattern(patternId, assignee);
             return Result.success("指派成功");
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("指派失败: patternId={}", patternId, e);
-            return Result.fail("指派失败: " + e.getMessage());
+            throw new BusinessException("指派失败: " + e.getMessage(), e);
         }
     }
 

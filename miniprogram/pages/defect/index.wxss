@@ -539,13 +539,15 @@ page {
 }
 
 .action-btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .action-btn-danger {
-  background: var(--color-danger);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 
 /* ============ 加载更多 ============ */

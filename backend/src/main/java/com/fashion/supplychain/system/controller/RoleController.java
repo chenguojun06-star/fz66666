@@ -27,12 +27,12 @@ public class RoleController {
 
     @GetMapping("/list")
     public Result<?> getRoleList(
-            @RequestParam(defaultValue = "1") Long page,
-            @RequestParam(defaultValue = "10") Long pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String roleName,
             @RequestParam(required = false) String roleCode,
             @RequestParam(required = false) String status) {
-        Page<Role> rolePage = roleOrchestrator.list(page, pageSize, roleName, roleCode, status);
+        Page<Role> rolePage = roleOrchestrator.list((long) page, (long) pageSize, roleName, roleCode, status);
         return Result.success(rolePage);
     }
 

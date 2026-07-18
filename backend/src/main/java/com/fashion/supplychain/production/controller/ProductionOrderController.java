@@ -246,7 +246,7 @@ public class ProductionOrderController {
         TenantAssert.assertTenantContext();
         ProductionOrder source = productionOrderService.getById(id);
         if (source == null) {
-            return Result.fail("源订单不存在");
+            return Result.notFound("源订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(source.getTenantId(), "生产订单");
         ProductionOrder copy = new ProductionOrder();
@@ -315,12 +315,12 @@ public class ProductionOrderController {
         Object idObj = payload.get("id");
         String id = idObj != null ? String.valueOf(idObj).trim() : null;
         if (id == null || id.isEmpty()) {
-            return Result.fail("缺少id参数");
+            return Result.badRequest("缺少id参数");
         }
 
         ProductionOrder order = productionOrderService.getById(id);
         if (order == null) {
-            return Result.fail("订单不存在");
+            return Result.notFound("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
 
@@ -337,12 +337,12 @@ public class ProductionOrderController {
         Object idObj = payload.get("id");
         String id = idObj != null ? String.valueOf(idObj).trim() : null;
         if (id == null || id.isEmpty()) {
-            return Result.fail("缺少id参数");
+            return Result.badRequest("缺少id参数");
         }
 
         ProductionOrder order = productionOrderService.getById(id);
         if (order == null) {
-            return Result.fail("订单不存在");
+            return Result.notFound("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
 
@@ -362,14 +362,14 @@ public class ProductionOrderController {
         String orderId = payload == null ? null : String.valueOf(payload.getOrDefault("orderId", "")).trim();
         String remark = payload != null ? (String) payload.getOrDefault("remark", "") : "";
         if (!StringUtils.hasText(orderId)) {
-            return Result.fail("缺少orderId参数");
+            return Result.badRequest("缺少orderId参数");
         }
 
         try {
             com.fashion.supplychain.production.entity.UrgeRecord record = productionOrderOrchestrator.urge(orderId, remark);
             com.fashion.supplychain.production.entity.ProductionOrder order = productionOrderService.getById(orderId);
             if (order == null) {
-                return Result.fail("订单不存在");
+                return Result.notFound("订单不存在");
             }
             TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
             Integer urgeCount = order.getUrgeCount();
@@ -392,12 +392,12 @@ public class ProductionOrderController {
         Object urgeRecordIdObj = payload == null ? null : payload.get("urgeRecordId");
         String urgeRecordId = urgeRecordIdObj != null ? String.valueOf(urgeRecordIdObj).trim() : null;
         if (!StringUtils.hasText(urgeRecordId)) {
-            return Result.fail("缺少urgeRecordId参数");
+            return Result.badRequest("缺少urgeRecordId参数");
         }
 
         com.fashion.supplychain.production.entity.UrgeRecord record = urgeRecordService.getById(urgeRecordId);
         if (record == null) {
-            return Result.fail("催单记录不存在");
+            return Result.notFound("催单记录不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "催单记录");
 
@@ -489,7 +489,7 @@ public class ProductionOrderController {
         TenantAssert.assertTenantContext();
         ProductionOrder order = productionOrderService.getById(id);
         if (order == null) {
-            return Result.fail("订单不存在");
+            return Result.notFound("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         String remarks = order.getRemarks();

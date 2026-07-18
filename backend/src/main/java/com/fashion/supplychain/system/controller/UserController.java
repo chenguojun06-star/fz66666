@@ -45,8 +45,8 @@ public class UserController {
      */
     @GetMapping("/list")
     public Result<?> getUserList(
-            @RequestParam(defaultValue = "1") Long page,
-            @RequestParam(defaultValue = "10") Long pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String roleName,
@@ -62,7 +62,7 @@ public class UserController {
             }
             factoryId = ctxFactoryId;
         }
-        Page<User> userPage = userOrchestrator.list(page, pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, excludeFactoryUsers);
+        Page<User> userPage = userOrchestrator.list((long) page, (long) pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, excludeFactoryUsers);
         return Result.success(userPage);
     }
 
@@ -328,9 +328,9 @@ public class UserController {
      */
     @GetMapping("/pending")
     public Result<?> getPendingUsers(
-            @RequestParam(defaultValue = "1") Long page,
-            @RequestParam(defaultValue = "10") Long pageSize) {
-        Page<User> userPage = userOrchestrator.listPendingUsers(page, pageSize);
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        Page<User> userPage = userOrchestrator.listPendingUsers((long) page, (long) pageSize);
         return Result.success(userPage);
     }
 

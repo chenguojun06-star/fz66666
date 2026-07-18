@@ -68,8 +68,8 @@ public class FinishedProductSettlementController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Result<Page<FinishedProductSettlement>> page(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String orderNo,
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String status,

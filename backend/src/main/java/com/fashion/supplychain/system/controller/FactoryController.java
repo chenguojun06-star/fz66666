@@ -29,8 +29,8 @@ public class FactoryController {
 
     @GetMapping("/list")
     public Result<?> list(
-            @RequestParam(required = false) String page,
-            @RequestParam(required = false) String pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String factoryCode,
             @RequestParam(required = false) String factoryName,
             @RequestParam(required = false) String status,
@@ -52,7 +52,7 @@ public class FactoryController {
             singlePage.setTotal(1);
             return Result.success(singlePage);
         }
-        IPage<Factory> result = factoryOrchestrator.list(page, pageSize, factoryCode, factoryName, status, supplierType, factoryType, parentOrgUnitId);
+        IPage<Factory> result = factoryOrchestrator.list(String.valueOf(page), String.valueOf(pageSize), factoryCode, factoryName, status, supplierType, factoryType, parentOrgUnitId);
         return Result.success(result);
     }
 

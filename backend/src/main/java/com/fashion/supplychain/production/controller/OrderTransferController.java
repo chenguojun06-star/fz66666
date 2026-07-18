@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.OrderTransfer;
 import com.fashion.supplychain.production.orchestration.OrderTransferOrchestrator;
@@ -62,7 +63,7 @@ public class OrderTransferController {
             }
         } catch (Exception e) {
             log.error("查询转移记录失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -90,7 +91,7 @@ public class OrderTransferController {
             return Result.success(transfer);
         } catch (Exception e) {
             log.error("发起订单转移失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -104,7 +105,7 @@ public class OrderTransferController {
             return success ? Result.success("接受成功") : Result.fail("接受失败");
         } catch (Exception e) {
             log.error("接受转移请求失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -120,7 +121,7 @@ public class OrderTransferController {
             return success ? Result.success("拒绝成功") : Result.fail("拒绝失败");
         } catch (Exception e) {
             log.error("拒绝转移请求失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -138,7 +139,7 @@ public class OrderTransferController {
             return Result.success(result);
         } catch (Exception e) {
             log.error("搜索用户失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -155,7 +156,7 @@ public class OrderTransferController {
             return Result.success(Map.of("count", page.getTotal()));
         } catch (Exception e) {
             log.error("获取待处理转移数量失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -172,7 +173,7 @@ public class OrderTransferController {
             return Result.success(result);
         } catch (Exception e) {
             log.error("搜索工厂失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -202,7 +203,7 @@ public class OrderTransferController {
             return Result.success(transfer);
         } catch (Exception e) {
             log.error("创建转工厂请求失败", e);
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 }

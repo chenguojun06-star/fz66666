@@ -26,8 +26,8 @@ public class OperationLogController {
     @GetMapping("/list")
     @PreAuthorize("isAuthenticated()")
     public Result<?> getOperationLogList(
-            @RequestParam(defaultValue = "1") Long page,
-            @RequestParam(defaultValue = "10") Long pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String module,
             @RequestParam(required = false) String operation,
             @RequestParam(required = false) String operatorName,
@@ -38,7 +38,7 @@ public class OperationLogController {
             @RequestParam(required = false) String endDate) {
 
         Page<OperationLog> logPage = operationLogService.getOperationLogPage(
-                page, pageSize, module, operation, operatorName, targetType, targetId, targetName, startDate, endDate
+                (long) page, (long) pageSize, module, operation, operatorName, targetType, targetId, targetName, startDate, endDate
         );
         return Result.success(logPage);
     }
@@ -52,10 +52,10 @@ public class OperationLogController {
     public Result<?> getOperationLogByTarget(
             @RequestParam String targetType,
             @RequestParam String targetId,
-            @RequestParam(defaultValue = "1") Long page,
-            @RequestParam(defaultValue = "20") Long pageSize) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         Page<OperationLog> logPage = operationLogService.getOperationLogPage(
-                page, pageSize, null, null, null, targetType, targetId, null, null, null
+                (long) page, (long) pageSize, null, null, null, targetType, targetId, null, null, null
         );
         return Result.success(logPage);
     }

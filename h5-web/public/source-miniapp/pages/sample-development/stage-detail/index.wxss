@@ -355,11 +355,12 @@
   opacity: 0.7;
 }
 .sdc-btn-primary {
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 .sdc-btn-primary .line-icon,
 .sdc-btn-primary .sdc-btn-text {
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 .sdc-btn-outline {
   background: var(--color-bg-card);
@@ -423,8 +424,10 @@
 .empty-state {
   padding: 60rpx 32rpx;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8rpx;
 }
 .empty-state.compact {
   padding: 32rpx;
@@ -432,6 +435,10 @@
 .empty-text {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
+}
+.empty-hint {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-quaternary, #999);
 }
 
 /* ═══════════════════════════════════════════
@@ -723,107 +730,6 @@
   margin-bottom: 16rpx;
   transition: box-shadow 0.2s ease;
 }
-
-/* ===== 父阶段分组卡片（与 PC 端 useSampleProcessProgress 一致） ===== */
-.parent-stage-card {
-  margin-bottom: 16rpx;
-  transition: box-shadow 0.2s ease;
-}
-.parent-stage-card.psg-expanded {
-  box-shadow: 0 4rpx 24rpx rgba(0, 122, 255, 0.12);
-}
-.dc-percent {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-primary);
-  font-variant-numeric: tabular-nums;
-}
-.psg-progress-bar {
-  height: 6rpx;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-full);
-  margin: 8rpx 0 0;
-  overflow: hidden;
-}
-.psg-progress-fill {
-  height: 100%;
-  background: var(--color-primary);
-  border-radius: var(--radius-full);
-  transition: width 0.3s ease;
-}
-.psg-expand-area {
-  padding: 16rpx 0 8rpx;
-  border-top: 1rpx solid var(--color-border-light);
-}
-.psg-sub-item {
-  padding: 16rpx;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-md);
-  margin-bottom: 12rpx;
-}
-.psg-sub-item.psg-sub-done {
-  background: var(--color-success-bg);
-}
-.psg-sub-header {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-.psg-sub-dot {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  background: var(--color-text-quaternary);
-  flex-shrink: 0;
-}
-.psg-dot-done {
-  background: var(--color-success);
-}
-.psg-sub-name {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  flex: 1;
-}
-.psg-sub-price {
-  font-size: var(--font-size-2xs);
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.psg-sub-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  margin-top: 8rpx;
-  margin-left: 22rpx;
-}
-.psg-sub-assignee {
-  font-size: var(--font-size-2xs);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-medium);
-}
-.psg-sub-time {
-  font-size: var(--font-size-2xs);
-  color: var(--color-text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.psg-sub-count {
-  font-size: var(--font-size-2xs);
-  color: var(--color-text-tertiary);
-}
-.psg-scan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  margin-top: 12rpx;
-  margin-left: 22rpx;
-}
-.psg-no-records {
-  padding: 12rpx 0 4rpx;
-  margin-left: 22rpx;
-  font-size: var(--font-size-2xs);
-  color: var(--color-text-tertiary);
-}
 .process-stage-card.psc-expanded {
   box-shadow: 0 4rpx 24rpx rgba(0, 122, 255, 0.12);
 }
@@ -867,6 +773,28 @@
 }
 .psc-arrow-up {
   transform: rotate(180deg);
+}
+
+/* 工序分组标题（同步PC端父子结构） */
+.process-group-header {
+  margin-top: 24rpx;
+  margin-bottom: 12rpx;
+  padding: 12rpx 20rpx;
+  background: var(--color-bg-secondary, #f4f5f7);
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pgg-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.pgg-count {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 展开区域：扫码记录列表 */
@@ -1132,8 +1060,9 @@
   color: var(--color-text-secondary);
 }
 .rf-btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 /* ═══════════════════════════════════════════
@@ -1175,10 +1104,11 @@
   color: var(--color-text-primary);
 }
 .bb-btn-primary {
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 .bb-btn-primary .bb-btn-text {
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 .bb-btn-text {
   font-size: var(--font-size-md);

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.controller;
 
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -60,7 +61,7 @@ public class SecondaryProcessController {
             SecondaryProcess saved = secondaryProcessOrchestrator.createProcess(process);
             return Result.success(saved);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -75,7 +76,7 @@ public class SecondaryProcessController {
             SecondaryProcess updated = secondaryProcessOrchestrator.updateProcess(id, process);
             return Result.success(updated);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -90,7 +91,7 @@ public class SecondaryProcessController {
             secondaryProcessOrchestrator.deleteProcess(id);
             return Result.success(null);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 
@@ -111,7 +112,7 @@ public class SecondaryProcessController {
             SecondaryProcess approved = secondaryProcessOrchestrator.approveProcess(id, body);
             return Result.success(approved);
         } catch (IllegalStateException | NoSuchElementException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         }
     }
 }

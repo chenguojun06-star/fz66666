@@ -355,11 +355,12 @@
   opacity: 0.7;
 }
 .sdc-btn-primary {
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 .sdc-btn-primary .line-icon,
 .sdc-btn-primary .sdc-btn-text {
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 .sdc-btn-outline {
   background: var(--color-bg-card);
@@ -1059,8 +1060,9 @@
   color: var(--color-text-secondary);
 }
 .rf-btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 /* ═══════════════════════════════════════════
@@ -1102,10 +1104,11 @@
   color: var(--color-text-primary);
 }
 .bb-btn-primary {
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 .bb-btn-primary .bb-btn-text {
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 .bb-btn-text {
   font-size: var(--font-size-md);

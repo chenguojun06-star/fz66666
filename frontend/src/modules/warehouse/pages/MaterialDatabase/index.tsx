@@ -474,7 +474,7 @@ const MaterialDatabasePage: React.FC = () => {
     tbody tr:hover { background: #fafcff; }
     .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #999; padding-top: 12px; border-top: 1px solid #eee; }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
-    .print-btn { padding: 8px 16px; background: var(--color-info); color: var(--color-bg-base); border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .print-btn { padding: 8px 16px; background: transparent; color: var(--color-primary); border: 1px solid var(--color-primary); border-radius: 4px; cursor: pointer; font-size: 13px; }
     @media print {
       .no-print { display: none !important; }
       .print-btn-bar { display: none; }

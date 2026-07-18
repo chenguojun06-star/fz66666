@@ -781,9 +781,9 @@ const OneClickActionInline: React.FC<{
             style={{
               fontSize: 12,
               padding: '4px 12px',
-              background: 'linear-gradient(135deg, #6d28d9, #9333ea)',
-              color: '#fff',
-              border: 'none',
+              background: 'transparent',
+              color: 'var(--color-primary)',
+              border: '1px solid var(--color-primary)',
               borderRadius: 6,
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.6 : 1,

@@ -70,7 +70,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
         </Col>
         <Col>
           <Button type="primary" size="large" icon={<RocketOutlined />}
-            style={{ background: 'var(--color-bg-base)', color: '#764ba2', border: 'none', fontWeight: 600, height: 44, padding: '0 28px' }}
+            style={{ background: 'var(--color-bg-base)', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', fontWeight: 600, height: 44, padding: '0 28px' }}
             onClick={onGoStore}
           >
             立即开通 <ArrowRightOutlined />

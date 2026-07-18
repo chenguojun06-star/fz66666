@@ -165,43 +165,46 @@ page {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 8px 0 0;
 }
 
 /* 卡片：overflow-hidden 让 border-left 圆角生效；左边框细线条 2px */
 .quality-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
+  padding: 12px;
+  box-sizing: border-box;
   overflow: hidden;
-  border-left: 2px solid var(--color-border);
-  transition: box-shadow 0.15s ease;
+  transition: transform 0.18s ease, background-color 0.18s ease;
 }
 
 .quality-card:active {
   box-shadow: var(--shadow-md);
 }
 
-/* 状态色左边框 */
+/* 状态色边框 */
 .quality-card--qualified {
-  border-left-color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .quality-card--unqualified {
-  border-left-color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 .quality-card--repair,
 .quality-card--repaired {
-  border-left-color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 
 .quality-card--pending {
-  border-left-color: var(--color-info);
+  border-color: var(--color-info);
 }
 
-/* 卡片内层 padding（压缩高度） */
+/* 卡片内层（padding 已移到 quality-card） */
 .card-inner {
-  padding: 12px;
+  padding: 0;
 }
 
 /* 卡片主体：封面 + 信息 横向排列 gap-2.5(10px) */
@@ -536,13 +539,15 @@ page {
 }
 
 .action-btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .action-btn-danger {
-  background: var(--color-danger);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 
 /* ============ 加载更多 ============ */

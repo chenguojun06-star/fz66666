@@ -189,3 +189,8 @@ miniprogram/design-philosophy.md
 # 临时分析报告
 _card1.txt
 design-vs-implementation-diff-report.md
+
+# IDE 设计工具产物（仅本地工作文件，不入库）
+.design/
+*.design
+yizhilian-mini-program/yizhilian-mini-program.design

@@ -145,29 +145,30 @@ page {
   transition: all 0.18s ease;
 }
 
-/* 主按钮：实心蓝底白字（Apple HIG 标准） */
+/* 主按钮：蓝色镂空（透明背景+蓝边框+蓝文字） */
 .btn-primary {
   height: var(--btn-height-md);
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   padding: 0 var(--spacing-xl);
   min-width: 56px;
 }
 
 .btn-primary-hover {
-  opacity: 0.88;
+  background: var(--color-primary-bg);
   transform: scale(0.98);
 }
 
 .btn-primary:active {
-  opacity: 0.85;
+  background: var(--color-primary-bg);
   transform: scale(0.96);
 }
 
 .btn-primary:disabled {
   background: var(--color-bg-page);
   color: var(--color-text-tertiary);
+  border-color: var(--color-border);
   opacity: 1;
 }
 
@@ -193,12 +194,12 @@ page {
   transform: scale(0.96);
 }
 
-/* 危险按钮：红色实心 */
+/* 危险按钮：红色镂空（透明背景+红边框+红文字） */
 .btn-danger {
   height: var(--btn-height-md);
-  background: var(--color-danger);
-  color: var(--color-text-white);
-  border: none;
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
   padding: 0 var(--spacing-xl);
   min-width: 48px;
   border-radius: var(--btn-radius);
@@ -206,12 +207,12 @@ page {
 }
 
 .btn-danger-hover {
-  opacity: 0.88;
+  background: var(--color-danger-bg);
   transform: scale(0.98);
 }
 
 .btn-danger:active {
-  opacity: 0.85;
+  background: var(--color-danger-bg);
   transform: scale(0.96);
 }
 
@@ -258,19 +259,18 @@ page {
 /* 以下别名确保各页面使用不同 class 名的按钮外观完全一致 */
 /* 所有别名都是自包含的，不需要配合 .btn 基础类使用 */
 
-/* 主操作按钮别名：蓝色实心白字 */
+/* 主操作按钮别名：蓝色镂空（透明背景+蓝边框+蓝文字） */
 .btn-submit,
 .btn-confirm,
 .btn-save,
-.btn-return-confirm,
 .btn-confirm-procurement {
   display: flex;
   align-items: center;
   justify-content: center;
   height: var(--btn-height-md);
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   padding: 0 var(--spacing-xl);
   border-radius: var(--btn-radius);
   font-size: var(--font-size-base);
@@ -283,21 +283,43 @@ page {
 .btn-submit:active,
 .btn-confirm:active,
 .btn-save:active,
-.btn-return-confirm:active,
 .btn-confirm-procurement:active {
-  opacity: 0.85;
+  background: var(--color-primary-bg);
   transform: scale(0.98);
 }
 
-/* 取消/次要按钮别名：灰色背景 */
+/* 退货确认按钮：红色镂空（保留业务色） */
+.btn-return-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height-md);
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  padding: 0 var(--spacing-xl);
+  border-radius: var(--btn-radius);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  box-sizing: border-box;
+  min-width: 48px;
+  transition: all 0.18s ease;
+}
+
+.btn-return-confirm:active {
+  background: var(--color-danger-bg);
+  transform: scale(0.98);
+}
+
+/* 取消/次要按钮别名：灰色镂空（透明背景+灰边框+灰文字） */
 .btn-cancel {
   display: flex;
   align-items: center;
   justify-content: center;
   height: var(--btn-height-md);
-  background: var(--color-bg-page);
-  color: var(--color-text-primary);
-  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
   padding: 0 var(--spacing-xl);
   border-radius: var(--btn-radius);
   font-size: var(--font-size-base);
@@ -308,7 +330,7 @@ page {
 }
 
 .btn-cancel:active {
-  opacity: 0.75;
+  background: var(--color-bg-hover);
   transform: scale(0.98);
 }
 
@@ -608,13 +630,13 @@ page {
 }
 
 .modal-btn.cancel {
-  background: var(--color-bg-page);
-  color: var(--color-text-primary);
-  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .modal-btn-cancel-hover {
-  opacity: 0.8;
+  background: var(--color-bg-hover);
 }
 
 .modal-btn.confirm {
@@ -624,7 +646,7 @@ page {
 }
 
 .modal-btn-confirm-hover {
-  opacity: 0.85;
+  background: var(--color-primary-bg);
 }
 
 /* ========== 底部固定操作栏（Apple 风格：毛玻璃效果） ========== */
@@ -654,9 +676,9 @@ page {
   border-radius: var(--radius-button);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  background: var(--color-bg-page);
-  color: var(--color-text-primary);
-  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .footer-bar .btn-submit {
@@ -668,9 +690,9 @@ page {
   border-radius: var(--radius-button);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .footer-bar .btn-danger {
@@ -682,9 +704,9 @@ page {
   border-radius: var(--btn-radius);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  background: var(--color-danger);
-  color: var(--color-text-white);
-  border: none;
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 
 .footer-bar .btn-disabled {

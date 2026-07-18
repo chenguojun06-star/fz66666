@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.controller;
 
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.orchestration.StyleBomOrchestrator;
@@ -94,9 +95,9 @@ public class StyleBomController {
             return Result.success(createdCount);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (java.util.NoSuchElementException e) {
-            return Result.fail(e.getMessage());
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("Failed to generate material purchase", e);
             return Result.fail("生成失败：" + e.getMessage());

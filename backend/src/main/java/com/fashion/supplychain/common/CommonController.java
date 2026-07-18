@@ -56,10 +56,10 @@ public class CommonController {
     @PostMapping("/upload")
     public Result<String> upload(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            return Result.fail("文件为空");
+            return Result.badRequest("文件为空");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            return Result.fail("文件大小超过10MB限制");
+            return Result.badRequest("文件大小超过10MB限制");
         }
         try {
             TenantAssert.assertTenantContext();
@@ -69,7 +69,7 @@ public class CommonController {
             int dot = safeOriginal.lastIndexOf('.');
             String extension = dot >= 0 ? safeOriginal.substring(dot).toLowerCase() : "";
             if (!ALLOWED_EXTENSIONS.contains(extension)) {
-                return Result.fail("不支持的文件类型: " + extension + "，允许的类型: " + ALLOWED_EXTENSIONS);
+                return Result.badRequest("不支持的文件类型: " + extension + "，允许的类型: " + ALLOWED_EXTENSIONS);
             }
             String newFilename = UUID.randomUUID().toString() + extension;
 

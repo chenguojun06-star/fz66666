@@ -80,8 +80,8 @@ public class ProductSkuController {
 
     @GetMapping("/list")
     public Result<Page<ProductSku>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String skuCode) {
         Page<ProductSku> pageParam = new Page<>(page, pageSize);

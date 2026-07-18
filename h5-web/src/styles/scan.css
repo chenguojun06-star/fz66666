@@ -8,10 +8,10 @@
 .quick-entry-icon { font-size: 20px; }
 .quick-entry-text { font-size: var(--font-size-sm); font-weight: 600; }
 .quick-entry-desc { font-size: var(--font-size-xxs); color: var(--color-text-tertiary); margin-top: 2px; }
-.scan-big-btn { width: 120px; height: 50px; border-radius: 14px; border: none; background: var(--color-primary); color: #fff; font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.scan-big-btn:active:not(:disabled) { opacity: 0.88; transform: scale(0.96); }
+.scan-big-btn { width: 120px; height: 50px; border-radius: 14px; border: 1px solid var(--color-primary); background: transparent; color: var(--color-primary); font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s, transform 0.1s; }
+.scan-big-btn:active:not(:disabled) { background: var(--color-primary-bg); transform: scale(0.96); }
 .scan-big-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.scan-spinner { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: scan-spin 0.8s linear infinite; }
+.scan-spinner { width: 28px; height: 28px; border: 3px solid rgba(0,122,255,0.2); border-top-color: var(--color-primary); border-radius: 50%; animation: scan-spin 0.8s linear infinite; }
 @keyframes scan-spin { to { transform: rotate(360deg); } }
 .scan-btn-label { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-primary); }
 .scan-btn-hint { font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: 4px; }

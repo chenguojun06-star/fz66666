@@ -99,6 +99,30 @@ public class Result<T> implements Serializable {
     }
 
     /**
+     * 资源不存在（HTTP 404）
+     */
+    public static <T> Result<T> notFound(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(404);
+        result.setMessage(message);
+        result.setData(null);
+        result.setRequestId(currentRequestId());
+        return result;
+    }
+
+    /**
+     * 权限不足（HTTP 403）
+     */
+    public static <T> Result<T> forbidden(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(403);
+        result.setMessage(message);
+        result.setData(null);
+        result.setRequestId(currentRequestId());
+        return result;
+    }
+
+    /**
      * 失败响应带状态码
      */
     public static <T> Result<T> fail(Integer code, String message) {

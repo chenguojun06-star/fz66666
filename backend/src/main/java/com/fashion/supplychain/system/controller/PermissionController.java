@@ -21,12 +21,12 @@ public class PermissionController {
 
     @GetMapping("/list")
     public Result<?> getPermissionList(
-            @RequestParam(defaultValue = "1") Long page,
-            @RequestParam(defaultValue = "10") Long pageSize,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String permissionName,
             @RequestParam(required = false) String permissionCode,
             @RequestParam(required = false) String status) {
-        Page<Permission> permissionPage = permissionOrchestrator.list(page, pageSize, permissionName, permissionCode,
+        Page<Permission> permissionPage = permissionOrchestrator.list((long) page, (long) pageSize, permissionName, permissionCode,
                 status);
         return Result.success(permissionPage);
     }

@@ -29,16 +29,16 @@ public class ChangeApprovalController {
     @GetMapping("/pending")
     public Result<?> listPending(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.success(changeApprovalOrchestrator.listPendingForMe(page, size));
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return Result.success(changeApprovalOrchestrator.listPendingForMe(page, pageSize));
     }
 
     /** 我提交的申请列表 */
     @GetMapping("/my")
     public Result<?> listMyRequests(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.success(changeApprovalOrchestrator.listMyRequests(page, size));
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return Result.success(changeApprovalOrchestrator.listMyRequests(page, pageSize));
     }
 
     /** 待审批数量（用于TopBar红点） */

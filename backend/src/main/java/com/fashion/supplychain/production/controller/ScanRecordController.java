@@ -351,7 +351,7 @@ public class ScanRecordController {
         String orderNo = params.containsKey("orderNo") ? params.get("orderNo").toString() : null;
 
         if (orderNo == null) {
-            return Result.fail("缺少orderNo参数");
+            return Result.badRequest("缺少orderNo参数");
         }
 
         switch (type) {
@@ -363,7 +363,7 @@ public class ScanRecordController {
                 String color = params.containsKey("color") ? params.get("color").toString() : null;
                 String size = params.containsKey("size") ? params.get("size").toString() : null;
                 if (styleNo == null || color == null || size == null) {
-                    return Result.fail("缺少SKU维度参数（styleNo/color/size）");
+                    return Result.badRequest("缺少SKU维度参数（styleNo/color/size）");
                 }
                 return Result.success(skuService.getSKUProgress(orderNo, styleNo, color, size));
 
@@ -378,7 +378,7 @@ public class ScanRecordController {
                 String color2 = params.containsKey("color") ? params.get("color").toString() : null;
                 String size2 = params.containsKey("size") ? params.get("size").toString() : null;
                 if (styleNo2 == null || color2 == null || size2 == null) {
-                    return Result.fail("缺少SKU维度参数（styleNo/color/size）");
+                    return Result.badRequest("缺少SKU维度参数（styleNo/color/size）");
                 }
                 boolean completed = skuService.isSKUCompleted(orderNo, styleNo2, color2, size2);
                 return Result.success(completed);
