@@ -193,6 +193,10 @@ function buildProcessNodesWithRates(order) {
   let hasRealRate = false;
   const totalBundles = Number(order.cuttingBundleCount) || 0;
   const processScannedMap = order.stageScannedBundleCount || {};
+  // P1-5 数据链路：总数量从 cuttingQuantity/cuttingQty/orderQuantity/sizeTotal 兜底
+  // 用于在工序进度区显示 已完成数/总数量/剩余 数量明细
+  const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
+                  || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   const result = nodes.map(function (n) {
     const name = n.name || n;
     const rate = getNodeRateFromOrder(name, order);
@@ -205,29 +209,41 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles),
       };
     }
+    // 数量明细：总数量>0 且有完成率时才计算，避免无完成率时显示 0/0
+    const qtyInfo = totalQty > 0 && rate >= 0 ? {
+      total: totalQty,
+      completed: Math.round(totalQty * rate / 100),
+      remaining: Math.max(0, totalQty - Math.round(totalQty * rate / 100)),
+    } : null;
     const children = childrenMap[name] || [];
     if (rate >= 0) {
       hasAnyRate = true;
       if (rate > 0 && rate < 100) hasRealRate = true;
-      return { name: name, percent: rate, bundleInfo: bundleInfo, children: children };
+      return { name: name, percent: rate, bundleInfo: bundleInfo, qtyInfo: qtyInfo, children: children };
     }
-    return { name: name, percent: -1, bundleInfo: bundleInfo, children: children };
+    return { name: name, percent: -1, bundleInfo: bundleInfo, qtyInfo: qtyInfo, children: children };
   });
   if (isCompletedOrClosed) {
     return result.map(function (r) {
-      return { name: r.name, percent: 100, bundleInfo: r.bundleInfo, children: r.children };
+      return {
+        name: r.name,
+        percent: 100,
+        bundleInfo: r.bundleInfo,
+        qtyInfo: totalQty > 0 ? { total: totalQty, completed: totalQty, remaining: 0 } : null,
+        children: r.children,
+      };
     });
   }
   if (hasAnyRate && hasRealRate) {
     return result.map(function (r) {
-      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
+      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, qtyInfo: r.qtyInfo, children: r.children };
     });
   }
   if (hasAnyRate && !hasRealRate) {
     const allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
     if (allHundred) {
       return result.map(function (r) {
-        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
+        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, qtyInfo: r.qtyInfo, children: r.children };
       });
     }
   }
@@ -252,7 +268,12 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles2),
       };
     }
-    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, children: childrenMap[name2] || [] };
+    const qtyInfo2 = totalQty > 0 ? {
+      total: totalQty,
+      completed: Math.round(totalQty * pct / 100),
+      remaining: Math.max(0, totalQty - Math.round(totalQty * pct / 100)),
+    } : null;
+    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, qtyInfo: qtyInfo2, children: childrenMap[name2] || [] };
   });
 }
 
