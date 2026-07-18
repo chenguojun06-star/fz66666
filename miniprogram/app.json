@@ -193,8 +193,8 @@
   },
   "window": {
     "navigationBarTitleText": "衣智链",
-    "navigationBarBackgroundColor": "#f2f2f7",
-    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#007aff",
+    "navigationBarTextStyle": "white",
     "backgroundColor": "#f2f2f7",
     "backgroundTextStyle": "light"
   },

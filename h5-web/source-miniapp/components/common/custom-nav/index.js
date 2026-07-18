@@ -29,7 +29,7 @@ Component({
     },
     bgColor: {
       type: String,
-      value: '#ffffff',
+      value: '#007aff', /* @design-system: 统一蓝色导航栏，调用方可覆盖 */
     },
   },
   data: {

@@ -20,8 +20,6 @@
   --color-primary-bg-dark: #cfe5ff;
   --color-primary-border: rgba(0, 122, 255, 0.2);
 
-  --gradient-progress: linear-gradient(90deg, #34c759 0%, #007aff 100%);
-
   /* ========== 语义色（Apple System Colors） ========== */
   --color-success: #34c759;
   --color-success-bg: #e9f9ee;

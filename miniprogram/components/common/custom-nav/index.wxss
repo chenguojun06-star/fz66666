@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   z-index: var(--z-overlay);
-  background-color: #f2f2f7;
+  background-color: var(--color-primary); /* @design-system: 统一蓝色导航栏 */
+  color: #ffffff;
 }
 
 .status-bar {
@@ -35,19 +36,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--color-bg-hover);
+  background: rgba(255, 255, 255, 0.18); /* 蓝色导航栏上的半透明白按钮 */
 }
 
 .back-icon {
   font-size: var(--font-size-3xl);
-  color: var(--color-text-primary);
+  color: #ffffff;
   line-height: 1;
 }
 
 .nav-title-left {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: #ffffff;
   text-align: center;
 }
 
@@ -65,7 +66,7 @@
   width: 100%;
   max-width: 200px;
   height: 30px;
-  background: var(--color-bg-hover);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-full);
   padding: 0 10px;
   box-sizing: border-box;
@@ -74,22 +75,23 @@
 .search-icon {
   font-size: var(--font-size-xs);
   margin-right: 4px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .search-input {
   flex: 1;
   height: 100%;
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  color: #ffffff;
 }
 
 .search-input::placeholder {
-  color: var(--color-text-tertiary);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .clear-icon {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: rgba(255, 255, 255, 0.7);
   padding: 2px;
 }
 
