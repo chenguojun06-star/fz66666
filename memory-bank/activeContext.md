@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-08（补录 7-05~7-08 共 64 个提交 + 记忆同步规则）
+> 最后更新：2026-07-18（补录 7-18 样衣开发进度/仓库库位/工序配置/三端一致性核查/多租户漏洞修复）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,214 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-18 三端数据流转一致性核查 + 3个P0级多租户漏洞修复
+
+- **三端一致性核查**：梳理 PC/小程序/H5 在开发生产、下单、大货生产、财务管理、结算、面辅料采购及出入库环节的数据流转一致性，共发现 47 项问题（13 P0 / 16 P1 / 18 P2）
+  - H5 端缺失仓库管理、外发管理和智能领取模块；扫码功能因缺少 operatorId/operatorName 必填字段导致 100% 失败
+  - PC 端调用不存在端点：/production/order/{id}、/board-stats、/production/pattern/by-style/{styleId}
+  - 小程序 5 个接口路径错误：/style/bom/batch-save、/style/info/{id}/pattern-revision 等
+  - 三端 scanType 枚举值、订单创建字段、状态机文案不一致；PatternEnrichmentHelper.java 字段语义错位
+- **3 个 P0 级多租户隔离漏洞修复**（后置校验 → 查询时直接带 tenant_id 过滤）：
+  - [PatternRevisionController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java) list 接口：缺少 tenant_id 过滤
+  - [PatternProductionOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/orchestration/PatternProductionOrchestrator.java) 列表查询：缺少 tenant_id 过滤
+  - [PatternProductionController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java) 新端点：后置校验改为查询时直接带 tenant_id 过滤
+- **修复范围**：后端 4 个文件 + PC 端 2 个文件 + 小程序 1 个文件 + H5 1 个文件，全部通过编译验证、多租户审计、数据链路闭环确认
+
+### 2026-07-18 小程序样衣开发进度显示修复 + 仓库库位选择修复
+
+- **样衣开发进度不显示**：根因是代码 BUG（stage-detail/index.js 的 getNodeProgress 缺少别名匹配、devStages 进度 key 不匹配、index.wxml 无进度条 UI、读取未规范化的 progressNodes、缓存丢失时未重建 snapshot、完成状态判断不一致、进度规范化逻辑重复实现）
+  - 修复：修改 stage-detail/index.js、stage-detail/index.wxml、sampleHelper.js，统一公共函数并补充 UI 元素
+- **仓库库位选择无反应**：小程序调用了不存在的 GET 接口（/api/warehouse/area/list-by-type、/api/warehouse/location/list-by-type）
+  - 修复：将 GET 改为与 PC 端一致的 POST /search 接口；在 quality-detail/index.js 增加字典兜底逻辑（库位查询为空时回退 /system/dict/list?dictType=finished_warehouse_location）
+- **代码质量扫描核实**：删除 assets/garments/ 下 3 张未引用图片（jacket-denim.jpg 等）；确认其余未使用 JS/组件为微信扫描器未识别分包引用的误报
+- **工序展示与 PC 端配置对齐**：stage-detail 页面增加 _groupProcessesByStage 和 _filterGroupsByStageKey 方法，按 PC 端 STAGE_ORDER=['采购','裁剪','二次工艺','车缝','尾部','入库'] 分组，空状态提示"请到 PC 端「款式管理 - 工序单价」中配置"
+
+### 2026-07-17 删除质检详情页"业务注意事项"区块（用户反馈）
+
+- **问题**：用户反馈质检详情页"业务注意事项"区块全是备注信息堆砌（订单备注/采购备注/BOM物料备注），不是质检该有的内容
+- **处理**：直接删除 [quality-detail/index.wxml](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/miniprogram/pages/quality-detail/index.wxml) 中的"业务注意事项"整个区块（原 section 4）
+- **保留**：AI 质检助手区块（urgentTip / checkpoints / 历史次品率 / defectSuggestions）
+- **后端 buildQualityTips 保留**：方法仍返回（其他场景可能引用），但质检详情页不再展示
+- **教训**：质检页面应聚焦质检本身，不要把业务备注、巡检信息堆砌过来
+
+### 2026-07-17 小程序质检两页面与 PC 端全面对齐 + 后端业务注意事项聚合
+
+- **问题背景**：用户反馈小程序质检页面与 PC 端风格/字段/状态全部不一致；待质检状态显示"黑不溜秋"；质检注意事项全部是 AI 巡检硬编码信息
+- **修复范围**（5 个文件，全部已通过质量门控）：
+  1. **`miniprogram/styles/design-tokens.wxss`**：新增 `--color-bg-subtle` (#f5f5f5) + `--color-bg-info` (#e8f2ff) + `.tag-info` 全局类样式（之前缺失导致多处背景色失效）
+  2. **`miniprogram/pages/defect/index.js`**：
+     - `DEFECT_CATEGORY_MAP` 移除"问题"后缀，与 PC 端/quality-detail 统一
+     - `CATEGORY_TEXT` 新增 `repair: '返修中'`，`repaired` 改为"返修完成"
+     - `CATEGORY_TAG_CLASS.pending` 从 `tag-default` 改为 `tag-info`（修复"黑不溜秋"）
+     - `_formatTime` 从 M/D HH:mm 改为 YYYY-MM-DD HH:mm（与 quality-detail 对齐）
+  3. **`miniprogram/pages/defect/index.wxss`**：`.quality-card--pending` 的 `border-left-color` 从 `--color-text-tertiary` 改为 `--color-info`
+  4. **`miniprogram/pages/quality-detail/index.js`**：
+     - `QUALITY_STATUS_MAP.pending.cls` 从 `status-default` 改为 `status-info`（修复"黑不溜秋"）
+     - 新增 `fetchAiSuggestion()` 方法调用独立 AI 建议接口 `/api/quality/ai-suggestion?orderId=`
+     - data 新增 `aiSuggestion` / `aiLoading` 字段
+     - `onLoad` / `onRefresh` / WebSocket 回调都加入 `fetchAiSuggestion` 调用
+  5. **`miniprogram/pages/quality-detail/index.wxml` + index.wxss**：
+     - 新增"AI 质检助手"区块（urgentTip / 历史次品率 / checkpoints / defectList）
+     - 原"质检注意事项"改名为"业务注意事项"
+     - 新增 `.status-info` 样式 + AI 助手全套样式（ai-card / ai-badge / ai-urgent-tip / verdict-* / defect-advice-*）
+  6. **`backend/.../ProductWarehousingPendingHelper.java`**：
+     - `getQualityBriefing` 重构：提前查 StyleInfo 实体供 buildStyleInfo 和 buildQualityTips 共用
+     - 新增 `fetchStyleInfoEntity()` 方法
+     - `buildStyleInfo(StyleInfo)` 扩展返回 8 个字段（fabricComposition / washInstructions / difficultyLabel / difficultyLevel / safetyCategory / executeStandard / qualityGrade / imageInsight）
+     - `buildOrderInfo` 新增 `urgencyLevel` 和 `procurementConfirmRemark`
+     - `buildQualityTips` 完全重写，10 类业务注意事项聚合：①急单 ②订单业务备注 ③采购确认备注 ④工艺难度 ⑤面料成分+洗涤说明 ⑥安全类别（童装/婴幼儿强制安全合规） ⑦样衣审核反馈（REWORK/REJECT） ⑧AI视觉识别摘要 ⑨BOM物料特殊备注 ⑩历史次品统计
+     - `appendDefectHistoryTips` categoryLabels 文案移除"问题"后缀
+- **验证结果**：
+  - 小程序 JS 语法检查通过（`node --check` 0 errors）
+  - 三端 diff 一致性验证通过（miniprogram == h5-web/source-miniapp == h5-web/public/source-miniapp == h5-web/dist/source-miniapp）
+  - 后端 `mvn compile` BUILD SUCCESS
+- **业务价值**：质检注意事项从硬编码 5 条通用提示 → 聚合 10 类真实业务字段；新增独立 AI 质检助手区块与 PC 端 AiQualityHelperCard 对齐；待质检状态颜色统一为 info 蓝色
+
+### 2026-07-17 小程序历史遗留 ESLint 错误全量清理（62→0 errors）
+
+- **问题背景**：小程序 pages/ components/ utils/api-modules/ 目录长期积累 62 个 ESLint errors，全部为历史遗留问题，影响代码质量和后续维护
+- **清理范围与成果**：
+  - **no-empty（9处）**：空 catch 块全部补充注释说明（如 `/* 存储写入失败忽略 */`），不影响业务逻辑
+  - **no-unused-vars（35+处）**：未使用变量/参数全部处理
+    - 未使用 import：删除（如 more-apps/index.js 的 toast）
+    - 未使用函数参数：重命名为 `_` 前缀（如 `_e` / `_i` / `_items` / `_manualScanType`）
+    - 未使用局部变量：删除（如 stage-detail 的 styleId/patternId/fileName/that）
+    - 未使用解构字段：移除（如 procurement/task-detail 的 unit）
+  - **no-redeclare（10处）**：函数内 var 重复声明
+    - factory/orderTransform.js + dashboard/orderTransform.js：把 var 声明提到函数顶部，后续只赋值不重复声明
+    - scan/confirm/index.js + scan/scan-result/index.js：同上模式
+  - **no-undef（5处）**：
+    - `Behavior`：补充到 .eslintrc.js globals（微信小程序全局API）
+    - `toCategoryCn` / `toSeasonCn`：未定义函数，改为直接用 style.category/season 原值
+    - `SCAN_TYPE_RULES` / `VALID_SCAN_TYPES` / `DEFAULT_SCAN_TYPE`：从 shared/stageDetection 正确导入
+  - **no-prototype-builtins（6处）**：全部改为 `Object.prototype.hasOwnProperty.call(obj, key)`
+  - **no-inner-declarations（1处）**：函数声明改 const 赋值表达式
+  - **no-case-declarations（1处）**：case 块加花括号包裹
+- **验证结果**：全量 ESLint 检查 0 errors（排除 weapp-qrcode.js / blePrinter.js 第三方库）
+
+### 2026-07-16 全局 API 响应处理规范清理 + P0 级问题修复
+
+- **问题背景**：ok() helper 已统一解包 Result.data，但大量页面仍残留 `res.data` / `res.code` 判断，导致数据读取路径不一致，部分页面数据全空（P0级）
+- **P0 级问题修复**：
+  - `dashboard/order-detail/index.js`：2处 `res.code !== 200` 判断完全错误（ok() 失败直接 throw，不会走到 then），导致业务错误时错误走 fallback 路径；移除冗余 `res.data` 判断
+  - `scan/handlers/helpers/ScanSubmitter.js`：扫码成功判断逻辑注释不准确，更新为 ok() 返回值语义
+- **P1 级冗余清理（9 个文件）**：
+  - `defect/index.js`：移除 `res && res.data` 兜底分支
+  - `sample-development/index/index.js`：`loadStats` / `loadData` 两处移除 `res && res.data` 判断
+  - `home/index.js` + `more-apps/index.js`：收藏应用加载移除 `res.data && res.data.favoriteData` 冗余层级
+  - `order/create/index.js`：字典加载 + 款式列表两处移除 `res.data` 判断
+  - `warehouse/sample/scan-action/index.js`：列表 + 仓库区域 + 库位 三处移除 `res?.data` 判断
+  - `components/purchase-cart-drawer/index.js`：预览 + 确认下单 两处移除 `res && res.data`
+  - `components/ai-assistant/index.js`：待办任务 + 自然语言执行 两处移除 `res && res.data`
+- **保留 raw() 包装的 API**：`tenant.publicList()` / `system.login()` / `tenant.workerRegister()` 使用 raw() 返回完整响应，`res.data` 判断正确，未修改
+- **验证结果**：
+  - ESLint 13 个 errors 均为历史遗留（unused vars / empty block），本次修改未引入新 error
+  - 未引入新的硬编码颜色 / 未破坏设计规范
+
+### 2026-07-15 小程序工资页面 + 质检详情页修复
+
+- **工资页面连接不到后端**：
+  - 根因：`ok()` helper 成功时直接返回 `resp.data`，但 `payroll.js` 仍检查 `res.code === 200`，条件永远不成立，数据被丢弃
+  - 修复：改为 `const data = await api.payrollSettlement.operatorSummary(...)`，直接使用 `Array.isArray(data)` 判断
+- **工资页面不支持时间筛选**：
+  - 根因：页面没有日期选择器 UI，`initDates()` 硬编码本月
+  - 修复：WXML 增加 `<picker mode="date">` 起止日期选择器，JS 增加 `onStartDateChange` / `onEndDateChange` 事件，选择后自动重新加载数据；WXSS 增加日期选择栏样式
+- **质检详情页数据全空**：
+  - 根因：defect 列表传 `ScanRecord` 字段（`cuttingBundleNo`/`operatorName`/`quantity`/`scanResult`），但 quality-detail WXML 期望 `ProductWarehousing` 字段（`bundleNo`/`qualityOperatorName`/`warehousingQuantity`/`qualityStatus`）
+  - 修复：`_processDetail` 增加字段映射兼容逻辑
+- **验证**：ESLint 0 errors；H5 三端同步一致
+
+### 2026-07-15 PC 质检入库页订单号字体过大修复
+
+- **问题**：PC 端「生产管理 → 质检入库」列表中订单号列字体明显大于其他列，不符合设计系统
+- **根因**：项目设计系统规定表格单元格标准字体为 `--table-cell-font-size: 12px`，但 `WarehousingTable.tsx` 中订单号、入库号、菲号、扫码方式、状态、时间等列显式硬编码 `fontSize: 14`，导致订单号列视觉上过大
+- **修复内容**：
+  - 将 `frontend/src/modules/production/pages/Production/ProductWarehousing/components/WarehousingTable.tsx` 中所有硬编码 `fontSize: 14` 改为 `fontSize: 'var(--table-cell-font-size)'`（统一 12px）
+  - 订单号下方生产方/组织路径文字使用 `--font-size-xs: 11px`，符合「副标题 11px 灰色」规范
+- **验证结果**：前端 `npx tsc --noEmit` 0 errors
+
+### 2026-07-14 质检页面款式图片不显示修复 + 外发管理状态确认
+
+- **问题**：用户反馈质检页面没有款式图片，质疑外发管理命名与功能
+- **根因**：`defect/index.js` 调用 `/api/production/scan/list`（`listScans`），后端 `ScanRecordEnrichHelper.enrichStyleInfo` 仅按 `ScanRecord.styleId` 查封面图；历史扫码记录（尤其是质检记录）未写入 `styleId`，导致封面图缺失
+- **修复内容**：
+  - 后端 `ScanRecordEnrichHelper.enrichStyleInfo` 增加 `orderId` 兜底逻辑：`styleId` 为空时通过 `ProductionOrderService.listByIds` 批量查 `ProductionOrder.styleId`，再查 `StyleInfo.cover` / `StyleAttachment` 兜底
+  - 该修复覆盖所有走 `ScanRecordOrchestrator.list/getByOrderId/getByStyleNo/getHistory/getMyHistory` 的接口（含小程序质检列表、扫码历史等）
+  - 前端 `defect/index.js` 修复 ESLint `no-empty` 错误（catch 块加注释）
+- **外发管理核查**：
+  - 小程序/H5 菜单、页面标题、导航栏已统一为「外发管理」
+  - `pages/factory/shipment/index` 已实现完整发货/收货/删除功能，入口在「外发管理 → 我的订单 → 展开卡片 → 发货」（仅外发工厂账号可见）
+  - 订单详情页（`dashboard/order-detail`）当前无外发发货入口，如需新增需单独确认
+- **验证结果**：
+  - 后端 `mvn compile -q` 通过
+  - `miniprogram/pages/defect/index.js` ESLint 0 errors
+  - H5 `source-miniapp` / `public/source-miniapp` / `dist/source-miniapp` 三端同步且 diff 一致
+
+### 2026-07-14 全量 API 模块核查 + 3 处修复
+
+- **问题**：用户要求核查所有 API 是否有问题
+- **核查范围**：`miniprogram/utils/api-modules/*.js` + `utils/api.js` + 关键后端 Controller
+- **发现问题**：
+  1. `return.js` `salesReturn.reject(id, reason)` 用 `{ params: { reason } }` 传参，但 `request.js` 不识别 `options.params`，导致拒绝原因传不到后端
+  2. `finance.js` `factoryShipment.listByOrder` 调用 `/api/production/factory-shipment/list-by-order`，后端实际端点是 `/search`
+  3. `api.js` 未导出 `fieldConfig`，只有组件直接 `require('./api-modules/field-config')`
+  4. `field-config.js` 导入了未使用的 `raw`，ESLint error
+- **修复内容**：
+  - `return.js` reject 改为 URL query `?reason=...`（与后端 `@RequestParam String reason` 对齐）
+  - `finance.js` `listByOrder` 改为 `/api/production/factory-shipment/search`
+  - `api.js` 导入并导出 `fieldConfig`
+  - `field-config.js` 移除未使用 `raw` import
+  - H5 `source-miniapp` + `public/source-miniapp` 同步以上修改
+- **验证结果**：
+  - `node --check` 全部 api-modules 通过
+  - `npx eslint` 相关文件 0 errors（仅历史 warnings）
+  - `mvn compile -q` 通过
+  - H5 三端 diff 一致
+
+### 2026-07-14 销售模块运行时错误修复 + 验证闭环
+
+- **问题**：开发者工具日志显示 `Cannot read properties of undefined (reading 'getSalesStats')` / `listOrders`，以及生产环境 `POST /api/system/dict/list-by-type` 405
+- **根因**：
+  - 小程序 `utils/api.js` 未导入/导出 `ecommerce` 领域模块，导致 `api.ecommerce` 为 `undefined`
+  - 后端 `DictController` 缺少 `POST /list-by-type` 映射，原 `GET /by-type` 被客户端 POST 请求命中时返回 405
+- **修复内容**：
+  - 新建 `miniprogram/utils/api-modules/ecommerce.js`，提供 `getSalesStats` / `listOrders`
+  - `miniprogram/utils/api.js` 导入并导出 `ecommerce`
+  - 后端 `DictController` 增加 `@PostMapping("/list-by-type")` 并保留旧 `GET /by-type` 兼容
+  - 后端 `EcommerceOrderOrchestrator.calcSalesStats` + `EcommerceOrderController.salesStats` 提供销售统计
+- **验证结果**：
+  - `mvn compile -q` 通过
+  - `npx eslint` 4 个关键文件 0 errors（仅历史 `no-var` / `require-jsdoc` warnings）
+  - H5 `source-miniapp` + `public/source-miniapp` 与小程序 source diff 一致
+  - 开发者工具报错行号（182/328）与当前文件实际行号（125/251）不一致，判断为旧编译缓存；需重新编译/清缓存
+- **遗留/说明**：生产环境 `api.webyszl.cn` 的 405 需部署后端修复后才消失，本地代码已修复
+
+### 2026-07-14 样衣开发筛选/搜索/阶段后端联通性修复
+
+- **问题**：用户反馈样衣开发列表页筛选按钮、搜索输入框、详情页阶段"不与云端后端联通"，筛选结果错乱、分页垃圾
+- **根因**：
+  - `OVERDUE` / `WARNING` 是前端本地过滤，后端分页后前端再过滤，导致每页数据量随机、total 不准确
+  - 搜索框其实已传 keyword 给后端，但筛选分页体验差让用户误以为没连后端
+  - 详情页阶段进度已从 `PatternProduction.progressNodes` + `procurementProgress` 计算，但列表页虚拟状态分页问题掩盖了这一点
+- **修复内容**：
+  - 后端 `PatternProductionOrchestrator.listWithEnrichment` 支持 `status=OVERDUE/WARNING`，按交期统一过滤并重新分页
+  - 前端 `sample-development/index/index.js` 直接把 `OVERDUE/WARNING` 作为 `status` 传后端，删除前端本地过滤
+  - 修复 `detail/index.js` 4 个 ESLint 硬错误（未使用 toast/name、空 catch 块）
+  - H5 三端（source-miniapp / public / dist）同步小程序修改
+- **验证**：
+  - ESLint 0 错误（17 个历史警告未引入新错误）
+  - H5 三端 diff 一致
+  - 后端 `mvn compile -q` 通过
+  - 决策记录：D-038 虚拟状态筛选必须后端过滤并重新分页
+
+### 2026-07-14 样衣详情页 iOS 日期解析报错修复
+
+- **问题**：开发者工具日志显示 `new Date("04/27 00:04") 在部分 iOS 下无法正常使用`，源自 `detail/index.js` 的 `formatNodeTime`
+- **根因**：后端返回 `MM-dd HH:mm`，代码用 `s.replace(/-/g, '/')` 转成 `MM/DD HH:mm`，iOS 不支持该格式
+- **修复**：`formatNodeTime` 先用正则解析 `MM-dd HH:mm`，避免依赖 `new Date`
+- **文件**：[sample-development/detail/index.js](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/miniprogram/pages/sample-development/detail/index.js#L106-L119)
+- **验证**：ESLint 0 错误，H5 三端 diff 一致
 
 ### 2026-07-12 P0 首页菜单点击不跳转修复（第三次同类事故）
 

@@ -1,9 +1,85 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-08（补录 7-05~7-08 共 64 个提交）
+> 最后更新：2026-07-18（补录 7-18 多租户漏洞修复 + 三端一致性核查）
 
 ## 已完成
+
+### 2026-07-18 三端数据流转一致性核查 + 3个P0级多租户漏洞修复
+
+- [x] P0: 修复 PatternRevisionController.java list 接口缺少 tenant_id 过滤
+- [x] P0: 修复 PatternProductionOrchestrator.java 列表查询缺少 tenant_id 过滤
+- [x] P0: 修复 PatternProductionController.java 新端点（后置校验改为查询时直接带 tenant_id 过滤）
+- [x] 三端一致性核查：共发现 47 项问题（13 P0 / 16 P1 / 18 P2），已记录待办
+- [x] 小程序样衣开发进度显示修复（stage-detail 别名匹配/进度条UI/缓存重建）
+- [x] 仓库库位选择修复（GET改POST + 字典兜底逻辑）
+- [x] 工序展示与 PC 端配置对齐（按 stageKey 过滤 + 父阶段分组）
+- [x] 代码质量扫描核实（删除3张未引用图片，确认误报）
+
+### 2026-07-16 全局 API 响应处理规范清理 + P0 级问题修复
+
+- [x] P0: 修复 `dashboard/order-detail/index.js` 2 处 `res.code !== 200` 判断错误（ok() 失败直接 throw，不会走到 then）
+- [x] P0: 更新 `ScanSubmitter.js` 扫码成功判断逻辑注释，明确 ok() 返回值语义
+- [x] P1: 清理 `defect/index.js` 冗余 `res.data` 判断
+- [x] P1: 清理 `sample-development/index/index.js` 2 处冗余判断
+- [x] P1: 清理 `home/index.js` + `more-apps/index.js` 收藏应用加载冗余判断
+- [x] P1: 清理 `order/create/index.js` 2 处冗余判断
+- [x] P1: 清理 `warehouse/sample/scan-action/index.js` 3 处冗余判断
+- [x] P1: 清理 `components/purchase-cart-drawer/index.js` 2 处冗余判断
+- [x] P1: 清理 `components/ai-assistant/index.js` 2 处冗余判断
+- [x] 确认 `tenant.publicList()` / `system.login()` / `tenant.workerRegister()` 使用 raw()，`res.data` 判断正确，未修改
+- [x] ESLint 验证：13 个 errors 均为历史遗留，本次修改未引入新 error
+- [x] 新增决策 D-039：API 响应处理规范 — ok() vs raw() 必须严格区分
+
+### 2026-07-15 PC 质检入库页订单号字体过大修复
+
+- [x] 定位根因：`WarehousingTable.tsx` 订单号列硬编码 `fontSize: 14`，违背设计系统 `--table-cell-font-size: 12px`
+- [x] 将文件中 9 处硬编码 `fontSize: 14` 统一改为 `var(--table-cell-font-size)`
+- [x] 订单号下方生产方/组织路径改为 11px 灰色副标题样式
+- [x] 前端 `npx tsc --noEmit` 0 errors
+
+### 2026-07-14 质检页面款式图片不显示修复 + 外发管理状态确认
+
+- [x] 定位质检列表图片缺失根因：`ScanRecord.styleId` 为空导致 `enrichStyleInfo` 无法匹配封面图
+- [x] 后端 `ScanRecordEnrichHelper.enrichStyleInfo` 增加 `orderId → ProductionOrder.styleId` 兜底查询
+- [x] 修复覆盖 `list/getByOrderId/getByStyleNo/getHistory/getMyHistory` 全链路扫码记录接口
+- [x] 修复 `miniprogram/pages/defect/index.js` ESLint `no-empty` 错误
+- [x] H5 `source-miniapp` / `public/source-miniapp` / `dist/source-miniapp` 同步 `defect/index.js`
+- [x] 核查外发管理命名：小程序/H5 菜单与页面标题已统一为「外发管理」
+- [x] 确认外发发货功能已实现：入口在「外发管理 → 我的订单 → 展开卡片 → 发货」
+- [x] 后端 `mvn compile -q` 通过；`defect/index.js` ESLint 0 errors；H5 三端 diff 一致
+
+### 2026-07-14 全量 API 模块核查 + 3 处修复
+
+- [x] 扫描 `miniprogram/utils/api-modules/*.js` 全部 14 个模块的导出与语法
+- [x] 发现并修复 `return.js` `salesReturn.reject` 参数传递 bug（`options.params` 不生效）
+- [x] 发现并修复 `finance.js` `factoryShipment.listByOrder` 错误端点（`/list-by-order` → `/search`）
+- [x] `api.js` 补充导出 `fieldConfig`
+- [x] 修复 `field-config.js` 未使用 `raw` import 导致的 ESLint error
+- [x] H5 `source-miniapp` + `public/source-miniapp` 同步以上修改
+- [x] `node --check` 全部 api-modules 通过；`npx eslint` 0 errors；`mvn compile -q` 通过
+
+### 2026-07-14 销售模块运行时错误修复 + 验证闭环
+
+- [x] 新建 `miniprogram/utils/api-modules/ecommerce.js`，实现 `getSalesStats` / `listOrders`
+- [x] `miniprogram/utils/api.js` 导入并导出 `ecommerce` 模块
+- [x] 修复 `pages/sales/overview/index.js` 与 `pages/sales/order-list/index.js` 对 `api.ecommerce` 的调用
+- [x] 后端 `DictController` 增加 `POST /api/system/dict/list-by-type` 映射，保留 `GET /by-type` 兼容
+- [x] 后端 `EcommerceOrderOrchestrator.calcSalesStats` + `EcommerceOrderController.salesStats` 实现销售统计
+- [x] 后端 `mvn compile -q` 通过
+- [x] 小程序 4 个关键文件 ESLint 0 errors（仅历史 warnings）
+- [x] H5 `source-miniapp` + `public/source-miniapp` 与小程序 source diff 一致
+
+### 2026-07-14 样衣开发筛选/搜索/阶段后端联通性修复
+
+- [x] 后端 `PatternProductionOrchestrator.listWithEnrichment` 支持 `status=OVERDUE/WARNING`，按交期过滤并重新分页
+- [x] 前端 `sample-development/index/index.js` 删除 `OVERDUE/WARNING` 前端本地过滤，直接传 `status` 给后端
+- [x] 修复 `sample-development/detail/index.js` 4 个 ESLint 硬错误
+- [x] H5 `source-miniapp` + `public/source-miniapp` + `dist/source-miniapp` 三端同步
+- [x] ESLint 0 错误、H5 三端 diff 一致、后端 `mvn compile -q` 通过
+- [x] 记录决策 D-038：虚拟状态筛选必须后端过滤并重新分页
+- [x] 修复 `sample-development/detail/index.js` `formatNodeTime` iOS 日期解析报错（MM-dd HH:mm 不应 replace 成 MM/DD HH:mm）
+- [x] H5 三端同步 iOS 日期解析修复
 
 ### 2026-07-12 样衣开发阶段详情数据打通 + H5 三端同步
 

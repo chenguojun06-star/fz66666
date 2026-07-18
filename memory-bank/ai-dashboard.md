@@ -6,6 +6,33 @@
 
 ---
 
+## 📊 最新会话速览（2026-07-14）
+
+| 指标 | 值 | 状态 |
+|------|-----|------|
+| 日期 | 2026-07-14 | — |
+| 当日主题 | 销售模块修复 + 全量 API 模块核查 | — |
+| 修改文件数 | 11 个核心文件（小程序 API 模块 + 后端） | — |
+| Bug修复 | 6 项（getSalesStats / listOrders / dict 405 / reject 参数 / factoryShipment 端点 / fieldConfig 导出） | ✅ 已修复 |
+| 验证 | node --check / ESLint 0 errors / mvn compile / H5 diff 一致 | ✅ 通过 |
+| 遗留 | 开发者工具需清缓存重新编译；生产 405 需后端部署 | ⚠️ 待执行 |
+
+**今日操作日志**：
+- 排查 `pages/sales/overview/index.js` / `pages/sales/order-list/index.js` `api.ecommerce` undefined 报错
+- 新建 `miniprogram/utils/api-modules/ecommerce.js` 并接入 `utils/api.js`
+- 修复后端 `DictController` POST `/list-by-type` 405 问题
+- 后端 `EcommerceOrderOrchestrator.calcSalesStats` + `EcommerceOrderController.salesStats` 销售统计接口
+- 全量扫描 `utils/api-modules/*.js`，发现并修复：
+  - `return.js` `salesReturn.reject` 参数传递 bug
+  - `finance.js` `factoryShipment.listByOrder` 错误端点
+  - `api.js` 缺少 `fieldConfig` 导出
+  - `field-config.js` 未使用 `raw` import
+- H5 `source-miniapp` + `public/source-miniapp` 同步
+- 运行 `node --check`、`mvn compile -q`、`npx eslint`、H5 `diff -q` 验证
+- 更新 `memory-bank/activeContext.md` / `progress.md` / `ai-dashboard.md`
+
+---
+
 ## 📊 最新会话速览（2026-07-10）
 
 | 指标 | 值 | 状态 |

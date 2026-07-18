@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-07-02
+> 最后更新：2026-07-18（补录 D-040 多租户隔离强化 — 查询时直接带 tenant_id 过滤）
 
 ---
 
@@ -529,3 +529,67 @@
   - 后端：SampleStockOrchestrator / MaterialWarehouseOperationOrchestrator / FinishedOutstockHelper / ProductSkuController
   - 前端：LoanModal.tsx / OutboundModal.tsx / QrcodeOutboundModal.tsx / types.ts / useOutboundActions.ts
   - 提交：324ec2b06
+
+## D-038：虚拟状态筛选必须后端过滤并重新分页
+
+- **日期**：2026-07-14
+- **上下文**：用户反馈样衣开发列表页「已延期」「临近交期」筛选按钮「跟狗屎一样」，分页错乱、数据随机
+- **根因**：`OVERDUE` / `WARNING` 是前端虚拟状态，实现为后端按无状态分页返回后，前端再本地过滤。导致每页实际条目数随机、`total` 不准确、翻页体验极差
+- **决策**：
+  1. 虚拟状态筛选改由后端统一过滤并重新分页
+  2. 后端 `PatternProductionOrchestrator.listWithEnrichment` 识别 `status=OVERDUE/WARNING`，按 `deliveryTime` / `styleInfo.deliveryDate` 过滤后手动分页
+  3. 前端直接传 `status=OVERDUE/WARNING` 给后端，删除前端本地过滤逻辑
+- **理由**：
+  - 分页控件依赖准确的 `total` / `pages`，前端本地过滤会破坏分页语义
+  - 交期计算规则应集中在一处（后端），避免前后端逻辑不一致
+  - 搜索 + 筛选组合时，后端统一过滤才能保证结果正确
+- **影响**：
+  - 后端：`PatternProductionOrchestrator.java` 新增 `filterByDueDate` / `resolveDeliveryDate` / `paginateManually`
+  - 前端：`miniprogram/pages/sample-development/index/index.js` 删除本地过滤
+  - H5：`h5-web/source-miniapp` / `public/source-miniapp` / `dist/source-miniapp` 三端同步
+
+## D-039：API 响应处理规范 — ok() vs raw() 必须严格区分
+
+- **日期**：2026-07-16
+- **上下文**：全局排查发现 9+ 个页面存在 API 响应处理不一致问题：`ok()` helper 已统一解包 `Result.data`，但大量页面仍残留 `res.data` / `res.code` 判断，导致部分页面数据全空（P0级），代码可读性差
+- **根因**：
+  1. 历史迁移不彻底：从裸 `request()` → ok()/raw()` 迁移时，部分页面未同步更新响应处理
+  2. 缺少统一规范，开发者不知道哪些 API 用 ok()、哪些用 raw()
+- **决策**：
+  1. **ok() 包装的 API：成功时 `.then(res => res` 拿到的就是业务数据对象，失败直接 `.catch()`，**禁止**在 then 里判断 `res.code` / `res.data`
+  2. **raw() 包装的 API：返回完整响应体 `{ code, data, message }`，需自行判断 `res.code === 200` 并取 `res.data`
+  3. **使用原则**：
+     - 业务接口默认用 **ok()**（95% 以上）
+     - 登录/注册/公开接口（无需鉴权、需读 code）用 **raw()**
+     - 需读 HTTP 状态码的场景用 **raw()**
+  4. **当前 raw() 清单（仅 3 处）**：`system.login` / `tenant.publicList` / `tenant.workerRegister`
+- **理由**：
+  - ok() 统一解包减少重复判断，减少出错概率
+  - 明确边界清晰，开发者一看 API 函数名就知道返回格式
+  -失败统一走 catch，错误处理集中
+- **影响**：
+  - 小程序：清理 9 个文件的冗余 `res.data` 判断，修复 2 处 P0 级 `res.code` 判断错误
+  - 后续新增 API 函数必须明确标注是 ok() 还是 raw() 包装
+  - H5 三端同步同样规范
+
+## D-040：多租户隔离强化 — 查询时直接带 tenant_id 过滤，禁止依赖后置校验
+
+- **日期**：2026-07-18
+- **上下文**：三端数据流转一致性核查中发现 3 个 P0 级多租户隔离漏洞，均采用"先查全量 → 再用 TenantAssert.assertBelongsToCurrentTenant 后置校验"模式，存在数据泄露风险窗口（查询已返回全量数据，校验失败才拒绝）
+- **根因**：
+  1. D-014 虽要求"所有读接口必须校验资源租户归属"，但未明确要求"查询时即带 tenant_id 过滤"
+  2. 后置校验模式在数据量小时代价低，但一旦数据量大或并发高，会泄露其他租户数据
+- **决策**：
+  1. **所有多租户表的列表/详情查询必须在 SQL/Mapper 查询时直接带 `tenant_id` 过滤条件**（`.eq(Entity::getTenantId, tenantId)`）
+  2. **禁止使用"先查全量 → 后置 TenantAssert 校验"模式**
+  3. TenantAssert.assertBelongsToCurrentTenant 仅用于"按主键查询单条详情"场景的二次防御，不能作为唯一的隔离手段
+  4. 新增 Controller 端点时，查询条件必须显式带 tenant_id，Code Review 必检
+- **理由**：
+  - 查询时过滤是数据库层面的隔离，零窗口泄露
+  - 后置校验是应用层校验，存在"查到再拒绝"的时间窗口
+  - 符合 P0 铁律 4（多租户隔离）的最严格实现
+- **影响**：
+  - 修复 PatternRevisionController.list、PatternProductionOrchestrator 列表查询、PatternProductionController 新端点
+  - 后续所有新增查询接口必须遵循此决策
+  - audit-tenant-id.py 扫描会持续监控
+

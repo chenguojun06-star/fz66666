@@ -199,6 +199,39 @@ wx.request({
 
 ---
 
+### AP-MP-03: ok() 包装的 API 仍判断 res.code / res.data
+
+**识别信号**：用 `ok()` 包装的 API 调用后，`.then()` 里写 `if (res.code === 200)` 或 `res && res.data`
+**错误做法**：
+```js
+// ok() 已经解包了 Result.data，res 就是业务数据
+api.production.listScans(params).then(function (res) {
+  if (res.code === 200) {     // ❌ res.code 永远是 undefined
+    const data = res.data;      // ❌ res.data 永远是 undefined
+  }
+});
+```
+**正确做法**：
+```js
+// ok() 成功时 res 就是业务数据，失败直接 catch
+api.production.listScans(params).then(function (res) {
+  const records = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+}).catch(function (err) {
+  // 错误处理统一走这里
+});
+```
+**如何判断是 ok() 还是 raw()**：
+- 业务接口（95%+）→ ok() → 直接用 res
+- 登录/注册/公开接口 → raw() → 取 res.data
+- 查 `utils/api-modules/*.js` 里函数体是 `return ok(...)` 还是 `return raw(...)`
+**后果**：
+- P0 级：页面数据全空（res.code 判断永远不成立，数据被丢弃）
+- 代码混乱：同一个项目里两种风格混用，维护困难
+**触发P0铁律**：#3 全链路一致性（间接）
+**历史教训**：2026-07-15 工资页面数据全空，根因是 payroll.js 仍判断 `res.code === 200`，ok() 返回的 res 里压根没有 code
+
+---
+
 ## 🔄 工作流相关
 
 ### AP-WF-01: 跳过编译验证直接推送代码
