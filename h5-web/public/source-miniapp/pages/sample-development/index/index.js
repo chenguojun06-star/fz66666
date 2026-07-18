@@ -4,6 +4,64 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 
+// 格式化日期时间：2026-07-19 12:34
+function fmtDateTime(raw) {
+  if (!raw) return '';
+  var s = String(raw);
+  if (!s) return '';
+  try {
+    var d = new Date(s.replace(/-/g, '/'));
+    if (isNaN(d.getTime())) return s.substring(0, 16);
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  } catch (_e) { return s.substring(0, 16); }
+}
+
+// 解析 sizeColorMatrix 为前端可渲染的结构
+function parseMatrix(item) {
+  var scm = item.sizeColorMatrix;
+  if (!scm) return { sizes: [], rows: [] };
+  var sizes = Array.isArray(scm.sizes) ? scm.sizes.map(String) : [];
+  var rows = Array.isArray(scm.matrixRows) ? scm.matrixRows.map(function (r) {
+    var qtyArr = Array.isArray(r.quantities) ? r.quantities : [];
+    var rowTotal = qtyArr.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
+    return { color: r.color || '', quantities: qtyArr, rowTotal: rowTotal };
+  }) : [];
+  return { sizes: sizes, rows: rows };
+}
+
+// 把扫码记录按 processName 分组成子工序
+function groupScanRecordsByProcess(records) {
+  if (!Array.isArray(records) || records.length === 0) return [];
+  var map = {};
+  var order = [];
+  records.forEach(function (r) {
+    var key = r.processName || r.process_name || '其他';
+    if (!map[key]) {
+      map[key] = { processName: key, records: [], totalQty: 0 };
+      order.push(key);
+    }
+    var qty = Number(r.quantity) || 0;
+    map[key].records.push({
+      id: r.id,
+      operatorName: r.operatorName || r.operator || r.operator_name || '-',
+      scanTimeText: fmtDateTime(r.scanTime || r.scan_time),
+      color: r.color || '',
+      size: r.size || '',
+      quantity: qty,
+    });
+    map[key].totalQty += qty;
+  });
+  // 每个子工序的扫码记录按时间倒序
+  return order.map(function (k) {
+    map[k].records.sort(function (a, b) {
+      return a.scanTimeText < b.scanTimeText ? 1 : (a.scanTimeText > b.scanTimeText ? -1 : 0);
+    });
+    return map[k];
+  });
+}
+
 const STATUS_LABELS = {
   PENDING: '待领取',
   IN_PROGRESS: '开发中',
@@ -304,6 +362,12 @@ Page({
           item._deliveryTag = fmtDate(item.deliveryTime);
           item._receiveTimeShort = formatDate(item.receiveTime);
           item.expanded = false;
+          // 多码多色矩阵
+          item._matrix = parseMatrix(item);
+          // 子工序扫码记录（展开时按需加载）
+          item._scanLoading = false;
+          item._subProcesses = [];
+          item._scanLoaded = false;
           // 数量
           item._quantity = item.quantity || si.sampleQuantity || '';
           item._overdue = false;
@@ -458,10 +522,38 @@ Page({
 
   // 切换卡片展开/收起子工序
   onCardToggle: function (e) {
+    var that = this;
     var idx = Number(e.currentTarget.dataset.index);
     if (Number.isNaN(idx) || idx < 0 || idx >= this.data.list.length) return;
+    var item = this.data.list[idx];
+    var newExpanded = !item.expanded;
+
+    // 切换展开状态
     var path = 'list[' + idx + '].expanded';
-    this.setData({ [path]: !this.data.list[idx].expanded });
+    this.setData({ [path]: newExpanded });
+
+    // 展开且未加载过扫码记录时按需加载
+    if (newExpanded && !item._scanLoaded && !item._scanLoading) {
+      var patternId = item.id || item.patternId;
+      if (!patternId) return;
+      this.setData({ ['list[' + idx + ']._scanLoading']: true });
+      api.production.getPatternScanRecords(patternId).then(function (res) {
+        var records = (res && res.data) || res || [];
+        if (!Array.isArray(records)) records = [];
+        var subProcesses = groupScanRecordsByProcess(records);
+        that.setData({
+          ['list[' + idx + ']._subProcesses']: subProcesses,
+          ['list[' + idx + ']._scanLoading']: false,
+          ['list[' + idx + ']._scanLoaded']: true,
+        });
+      }).catch(function () {
+        that.setData({
+          ['list[' + idx + ']._subProcesses']: [],
+          ['list[' + idx + ']._scanLoading']: false,
+          ['list[' + idx + ']._scanLoaded']: true,
+        });
+      });
+    }
   },
 
   onScan: function () {

@@ -100,7 +100,7 @@
         <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
       </view>
 
-      <!-- 领取人 + 领取时间（如果有） -->
+      <!-- 领取人 + 领取时间（订单级，如果有） -->
       <view class="card-receiver-row" wx:if="{{item.receiver || item.receiveTime}}">
         <view class="receiver-item" wx:if="{{item.receiver}}">
           <text class="receiver-label">领取人</text>
@@ -123,21 +123,59 @@
         <text class="card-progress-percent">{{item._progressPercent || 0}}%</text>
       </view>
 
-      <!-- 展开子工序按钮 -->
+      <!-- 展开明细按钮 -->
       <view class="card-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
-        <text class="expand-btn-text">{{item.expanded ? '收起子工序' : '展开子工序'}}</text>
+        <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细（子工序·多码多色）'}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
       </view>
 
-      <!-- 子工序列表 -->
-      <view class="card-stages" wx:if="{{item.expanded}}">
-        <view class="stage-item" wx:for="{{item._devStages}}" wx:for-item="st" wx:key="key">
-          <view class="stage-head">
-            <text class="stage-name">{{st.name}}</text>
-            <text class="stage-pct {{st.completed ? 'stage-pct--done' : ''}}">{{st.percent}}%</text>
-          </view>
-          <view class="stage-bar-bg">
-            <view class="stage-bar-fill {{st.completed ? 'stage-bar-fill--done' : ''}}" style="width:{{st.percent > 100 ? 100 : st.percent}}%"></view>
+      <!-- 展开区：多码多色 + 子工序列表 -->
+      <view class="card-expand-area" wx:if="{{item.expanded}}">
+        <!-- 多码多色矩阵 -->
+        <view wx:if="{{item._matrix.sizes.length > 0}}" class="expand-section">
+          <text class="section-title">多码多色</text>
+          <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
+            <view class="matrix-table">
+              <view class="matrix-row matrix-row--head">
+                <text class="matrix-cell matrix-cell--color">颜色</text>
+                <text wx:for="{{item._matrix.sizes}}" wx:for-item="sz" wx:key="*this" class="matrix-cell">{{sz}}</text>
+                <text class="matrix-cell matrix-cell--total">合计</text>
+              </view>
+              <view wx:for="{{item._matrix.rows}}" wx:for-item="row" wx:key="color" class="matrix-row">
+                <text class="matrix-cell matrix-cell--color">{{row.color}}</text>
+                <text wx:for="{{row.quantities}}" wx:for-item="qty" wx:for-index="qi" wx:key="qi" class="matrix-cell">{{qty}}</text>
+                <text class="matrix-cell matrix-cell--total">{{row.rowTotal}}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 子工序列表（按 processName 分组的扫码记录） -->
+        <view class="expand-section">
+          <text class="section-title">子工序明细</text>
+          <view wx:if="{{item._scanLoading}}" class="state-hint">加载中...</view>
+          <view wx:elif="{{item._subProcesses.length === 0}}" class="state-hint">暂无扫码记录</view>
+          <view wx:else class="sub-proc-list">
+            <view wx:for="{{item._subProcesses}}" wx:for-item="sp" wx:key="processName" class="sub-proc-group">
+              <view class="sub-proc-head">
+                <text class="sub-proc-name">{{sp.processName}}</text>
+                <text class="sub-proc-meta">{{sp.records.length}}条 · {{sp.totalQty}}件</text>
+              </view>
+              <view wx:for="{{sp.records}}" wx:for-item="rec" wx:key="id" class="sub-proc-rec">
+                <view class="rec-row1">
+                  <view class="rec-operator-wrap">
+                    <view class="rec-dot"></view>
+                    <text class="rec-operator">{{rec.operatorName || '-'}}</text>
+                  </view>
+                  <text class="rec-time">{{rec.scanTimeText}}</text>
+                </view>
+                <view class="rec-row2">
+                  <text wx:if="{{rec.color}}" class="rec-tag rec-tag--color">{{rec.color}}</text>
+                  <text wx:if="{{rec.size}}" class="rec-tag rec-tag--size">{{rec.size}}</text>
+                  <text class="rec-qty">{{rec.quantity}}件</text>
+                </view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
