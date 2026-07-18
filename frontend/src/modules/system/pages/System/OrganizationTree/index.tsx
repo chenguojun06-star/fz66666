@@ -370,7 +370,7 @@ const OrganizationTreePage: React.FC = () => {
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          const res: any = await api.post(`/system/user/${record.id}/reset-password`);
+          const res: any = await api.post('/system/user/admin-reset-member-pwd', { userId: record.id });
           if (res?.code === 200) {
             message.success('密码已重置');
           } else {

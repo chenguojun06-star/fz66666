@@ -243,7 +243,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
     return set;
   }, [qcRecords]);
 
-  const handleWarehouseSubmit = async (items: { id: string; warehouse: string }[]) => {
+  const handleWarehouseSubmit = async (items: { id: string; warehouse: string; warehouseAreaId: string }[]) => {
     if (!items.length) return;
     if (!orderId) return;
     setWarehousingLoading(true);
@@ -257,7 +257,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
           if (!item) continue;
           try {
             const res = await api.put<{ code: number; message: string; data: boolean }>(
-              '/production/warehousing', { id: item.id, warehouse: item.warehouse },
+              '/production/warehousing', { id: item.id, warehouse: item.warehouse, warehouseAreaId: item.warehouseAreaId },
             );
             if (res.code !== 200) {
               failCount++;

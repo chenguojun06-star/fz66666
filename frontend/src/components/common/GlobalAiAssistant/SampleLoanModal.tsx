@@ -59,7 +59,7 @@ const SampleLoanModal: React.FC<SampleLoanModalProps> = ({ visible, prefillData,
 
   const loadFactories = async () => {
     try {
-      const res = await api.get('/factory/list', { params: { page: 1, pageSize: 500, status: 'active' } });
+      const res = await api.get('/system/factory/list', { params: { page: 1, pageSize: 500, status: 'active' } });
       const records = (res as any)?.data?.records || [];
       setFactoryOptions(records.map((f: any) => ({
         label: f.factoryName || f.name || f.id,

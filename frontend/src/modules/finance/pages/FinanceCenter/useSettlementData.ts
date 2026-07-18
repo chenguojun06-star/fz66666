@@ -230,7 +230,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
   const saveRemark = async () => {
     if (!editingOrderId) return;
     try {
-      await api.post(`/finance/finished-settlement/${editingOrderId}/remark`, { remark: remarkText });
+      await api.post(`/finance/shipment-reconciliation/${editingOrderId}/remark`, { remark: remarkText });
       message.success('备注保存成功');
       setRemarkModalVisible(false);
       loadData();

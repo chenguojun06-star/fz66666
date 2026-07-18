@@ -120,8 +120,14 @@ export interface StyleBom extends Record<string, unknown> {
   | 'accessoryE';
   materialCode: string;
   materialName: string;
-  /** 分组名称（如：上衣、裤子、亲子装-大人款、亲子装-儿童款） */
+  /** 分组名称（已废弃：保留字段，向后兼容，新逻辑请使用 partCode/partName） */
   groupName?: string;
+  /** 部位编码（引用词典 garment_part，如 GARMENT_PART_UPPER 表示上装；默认 GARMENT_PART_WHOLE 整件） */
+  partCode?: string;
+  /** 部位名称（冗余字段，便于展示，如：上装、下装、马甲、里布） */
+  partName?: string;
+  /** 子部位名称（如：袖口、领子、门襟、下摆、口袋；为空表示主部位整件使用） */
+  subPartName?: string;
   fabricComposition?: string;
   color: string;
   specification?: string;

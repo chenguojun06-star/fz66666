@@ -179,7 +179,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
         const newTotalDays = Math.round(newBudgetDays / config.ratio);
         const newShipDate = orderCreate.add(newTotalDays, 'day').format('YYYY-MM-DD HH:mm');
         try {
-          const res = await api.post('/production/order/quick-edit', {
+          const res = await api.put('/production/order/quick-edit', {
             orderId: String(record.id || ''),
             expectedShipDate: newShipDate,
           });

@@ -66,7 +66,7 @@ export function useProductionActions({
       });
       if (remarkText.trim()) {
         try {
-          const orderRes: any = await api.get(`/production/order/${orderId}`);
+          const orderRes: any = await api.get(`/production/order/detail/${orderId}`);
           const orderNo = orderRes?.data?.data?.orderNo || orderRes?.data?.orderNo || '';
           if (orderNo) {
             await remarkApi.add({

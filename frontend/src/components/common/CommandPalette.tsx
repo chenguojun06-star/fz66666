@@ -189,7 +189,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       // 1. 先上传文件到 COS
       const formData = new FormData();
       formData.append('file', file);
-      const uploadRes = await api.post('/upload', formData, {
+      const uploadRes = await api.post('/common/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       });

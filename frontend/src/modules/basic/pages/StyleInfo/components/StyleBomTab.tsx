@@ -412,16 +412,22 @@ const StyleBomTab: React.FC<Props> = ({
     onCartAdded?.();
   }, [handleAddToPurchaseCart, onCartAdded]);
 
-  const handleBomRecognized = useCallback((items: Array<{ id: string; materialName: string; materialCode?: string; specification?: string; usageAmount?: number }>) => {
+  const handleBomRecognized = useCallback((items: Array<{ id: string; materialName: string; materialCode?: string; specification?: string; usageAmount?: number; partName?: string; subPartName?: string }>) => {
     if (!Array.isArray(items) || items.length === 0) return;
     items.forEach((it, idx) => {
       const rowId = `tmp_ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`;
+      // 部位兜底：AI未识别到部位时默认"整件"
+      const partName = (it.partName || '').trim() || '整件';
+      // 子部位：AI未识别到则为空字符串（表示主部位整件使用）
+      const subPartName = (it.subPartName || '').trim();
       const patch: Partial<StyleBom> & Record<string, unknown> = {
         id: rowId,
         materialName: it.materialName,
         materialCode: it.materialCode,
         specification: it.specification,
         usageAmount: it.usageAmount,
+        partName,
+        subPartName,
       };
       form.setFieldsValue({ [rowId]: patch });
     });
@@ -429,12 +435,16 @@ const StyleBomTab: React.FC<Props> = ({
       const next = [...(Array.isArray(prev) ? prev : [])];
       items.forEach((it, idx) => {
         const rowId = `tmp_ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`;
+        const partName = (it.partName || '').trim() || '整件';
+        const subPartName = (it.subPartName || '').trim();
         next.push({
           id: rowId,
           materialName: it.materialName,
           materialCode: it.materialCode,
           specification: it.specification,
           usageAmount: it.usageAmount,
+          partName,
+          subPartName,
         } as StyleBom);
       });
       return sortBomRows(next);

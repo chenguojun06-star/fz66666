@@ -4,6 +4,26 @@ import { useCallback } from 'react';
 import type { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 
+/**
+ * 部位名称 → 部位编码 映射（与后端 V20260505001 种子的 garment_part 词典对齐）
+ * 词典动态扩展时，新部位的 partCode 由后端 normalizeAndCalc 兜底处理（无映射则保留 partName，partCode 留空）
+ */
+const PART_NAME_TO_CODE: Record<string, string> = {
+  '整件': 'GARMENT_PART_WHOLE',
+  '上装': 'GARMENT_PART_UPPER',
+  '马甲': 'GARMENT_PART_VEST',
+  '下装': 'GARMENT_PART_LOWER',
+  '里布': 'GARMENT_PART_LINING',
+  '其他': 'GARMENT_PART_OTHER',
+};
+
+/** 根据 partName 推导 partCode；未匹配时返回空字符串（由后端兜底为整件） */
+function resolvePartCode(partName?: string): string {
+  if (!partName) return '';
+  const trimmed = partName.trim();
+  return PART_NAME_TO_CODE[trimmed] || '';
+}
+
 interface UseStyleBomMutationsOptions {
   locked: boolean;
   styleId: string | number;
@@ -71,7 +91,18 @@ const useStyleBomMutations = ({
   }, [form, message]);
 
   const buildPersistedItem = useCallback((item: StyleBom, row: Record<string, any>) => {
-    const nextItem: Record<string, any> = { ...item, ...row, groupName: '' };
+    const nextItem: Record<string, any> = { ...item, ...row };
+    // 部位字段处理：根据 partName 推导 partCode，两者都空则不设置（后端兜底为整件）
+    const partName = (nextItem.partName ?? '').toString().trim();
+    if (partName) {
+      nextItem.partName = partName;
+      const code = resolvePartCode(partName);
+      if (code) nextItem.partCode = code;
+    } else {
+      // 未指定部位：交给后端 normalizeAndCalc 兜底为"整件"
+      nextItem.partName = nextItem.partName || '';
+      nextItem.partCode = nextItem.partCode || '';
+    }
     const conversionRate = Number(row?.conversionRate ?? nextItem.conversionRate ?? 1) || 1;
     const rawSizeUsageMap = activeSizes.length
       ? Object.fromEntries(activeSizes.map((size) => {

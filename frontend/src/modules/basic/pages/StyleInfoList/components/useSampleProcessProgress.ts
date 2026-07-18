@@ -51,10 +51,8 @@ export default function useSampleProcessProgress(
       const scannedStages = new Set<string>();
 
       if (productionOrderId) {
-        // 并行请求：订单详情 + board统计 + 扫码记录（3个请求并行，不再串行累加延迟）
-        const [orderRes, statsRes, scanRes] = await Promise.allSettled([
-          api.get(`/production/order/${productionOrderId}`),
-          api.get(`/production/order/${productionOrderId}/board-stats`),
+        const [orderRes, scanRes] = await Promise.allSettled([
+          api.get(`/production/order/detail/${productionOrderId}`),
           api.get(`/production/scan/list`, { params: { orderId: productionOrderId, pageSize: 200 } }),
         ]);
 
@@ -79,21 +77,36 @@ export default function useSampleProcessProgress(
           }
         }
 
-        if (statsRes.status === 'fulfilled') {
-          const statsData = (statsRes.value as any)?.data;
-          if (statsData && typeof statsData === 'object') {
-            const stats: Record<string, { completed: number; total: number }> = {};
-            for (const [key, val] of Object.entries(statsData as Record<string, unknown>)) {
-              const v = val as Record<string, unknown>;
-              stats[key] = {
-                completed: Number(v.completed || v.scanned || 0),
-                total: Number(v.total || v.planned || 0),
-              };
+        const scanRecords: any[] = [];
+        if (scanRes.status === 'fulfilled') {
+          const scanData = (scanRes.value as any)?.data;
+          const records = Array.isArray(scanData?.records) ? scanData.records : Array.isArray(scanData) ? scanData : [];
+          scanRecords.push(...records);
+        }
+
+        if (scanRecords.length > 0 && nodes.length > 0) {
+          const stats: Record<string, { completed: number; total: number }> = {};
+          const nameCountMap: Record<string, number> = {};
+          for (const r of scanRecords) {
+            if (r.success === false) continue;
+            const key = r.processName || r.operationType || '';
+            if (key) {
+              nameCountMap[key] = (nameCountMap[key] || 0) + 1;
+              const normalized = normalizeOperationType(key);
+              if (normalized) {
+                nameCountMap[normalized] = (nameCountMap[normalized] || 0) + 1;
+              }
             }
-            setTrackingStats(stats);
-          } else {
-            setTrackingStats({});
           }
+          for (const node of nodes) {
+            const key = node.processCode || node.name || '';
+            const completed = nameCountMap[key] || 0;
+            const total = completed > 0 ? 1 : 0;
+            if (key) {
+              stats[key] = { completed, total };
+            }
+          }
+          setTrackingStats(stats);
         } else {
           setTrackingStats({});
         }
@@ -238,7 +251,8 @@ export default function useSampleProcessProgress(
 
   const completeProcess = useCallback(async (processCode: string) => {
     if (!orderId) return;
-    await api.post(`/production/order/${orderId}/quick-scan`, {
+    await api.post('/production/scan/execute', {
+      orderId,
       processCode,
       operatorRole: 'PLATE_WORKER',
     });

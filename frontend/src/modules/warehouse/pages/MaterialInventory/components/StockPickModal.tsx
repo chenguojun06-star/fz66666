@@ -43,22 +43,16 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
     const values = await form.validateFields();
     setLoading(true);
     try {
-      // 通过物料库存ID领取
-      await api.post('/production/material/picking/outbound', {
+      // 通过物料库存ID直接出库扣减
+      await api.post('/production/material/stock/manual-outbound', {
         stockId: record?.id,
-        materialCode: record?.materialCode,
-        materialName: record?.materialName,
-        color: record?.color,
-        size: record?.size,
-        unit: record?.unit,
         quantity: values.quantity,
-        orderId: values.orderId,
+        reason: values.remark || '仓库直接领料出库',
         orderNo: values.orderNo,
         receiverId: values.receiverId,
         receiverName: values.receiverName,
         pickupType: values.pickupType || 'INTERNAL',
         usageType: values.usageType || 'BULK',
-        remark: values.remark || '',
       });
       message.success('领取成功，库存已更新');
       onPicked();

@@ -16,7 +16,7 @@ type RowLocationState = {
 interface Props {
   qcRecords: WarehousingDetailRecord[];
   warehousingLoading: boolean;
-  onSubmit: (items: { id: string; warehouse: string }[]) => Promise<void>;
+  onSubmit: (items: { id: string; warehouse: string; warehouseAreaId: string }[]) => Promise<void>;
 }
 
 const WarehousingActionPanel: React.FC<Props> = ({
@@ -93,7 +93,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
 
   const handleSubmit = useCallback(async () => {
     if (selectedIds.length === 0) return;
-    const items: { id: string; warehouse: string }[] = [];
+    const items: { id: string; warehouse: string; warehouseAreaId: string }[] = [];
     const missing: string[] = [];
     for (const id of selectedIds) {
       const loc = rowLocations[id];
@@ -101,7 +101,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
         const r = pendingRecords.find(x => String(x.id) === id);
         missing.push(r ? String(r.cuttingBundleQrCode || id).split('|')[0] : id);
       } else {
-        items.push({ id, warehouse: loc.locationCode });
+        items.push({ id, warehouse: loc.locationCode, warehouseAreaId: loc.areaId });
       }
     }
     if (missing.length > 0) {

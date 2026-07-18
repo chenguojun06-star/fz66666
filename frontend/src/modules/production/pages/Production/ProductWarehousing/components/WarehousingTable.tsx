@@ -119,7 +119,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const text = String(v || '').trim();
         if (!text) return '-';
         return (
-          <Button type="link" style={{ padding: 0, fontSize: 14 }} onClick={() => goToDetail(record, 'inspect')} title={text}>
+          <Button type="link" style={{ padding: 0, fontSize: 'var(--table-cell-font-size)' }} onClick={() => goToDetail(record, 'inspect')} title={text}>
             {text}
           </Button>
         );
@@ -146,14 +146,14 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         }
 
         const inner = (
-          <div style={{ fontSize: 14 }}>
+          <div style={{ fontSize: 'var(--table-cell-font-size)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <span style={tooltipContent ? { borderBottom: '1px dotted var(--color-primary)', cursor: 'help' } : undefined}>{text}</span>
-              {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 14 }}>{plateTag.text}</Tag>}
-              {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 14 }}>{urgencyTag.text}</Tag>}
+              {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{plateTag.text}</Tag>}
+              {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{urgencyTag.text}</Tag>}
             </div>
             {(record as any).orgPath || (record as any).parentOrgUnitName ? (
-              <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 2 }}>
+              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: 2 }}>
                 {(record as any).orgPath || (record as any).parentOrgUnitName}
               </div>
             ) : null}
@@ -221,7 +221,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         } else if (text.length > 14) {
           short = '...' + text.slice(-12);
         }
-        return <span title={text} style={{ fontSize: 14 }}>{short}</span>;
+        return <span title={text} style={{ fontSize: 'var(--table-cell-font-size)' }}>{short}</span>;
       },
     },
     {
@@ -275,8 +275,8 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       width: 80,
       render: (v: unknown) => {
         const mode = String(v || '').trim().toLowerCase();
-        if (mode === 'ucode') return <Tag color="green" style={{ marginInlineEnd: 0, fontSize: 14 }}>U编码</Tag>;
-        return <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 14 }}>菲号</Tag>;
+        if (mode === 'ucode') return <Tag color="green" style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>U编码</Tag>;
+        return <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>菲号</Tag>;
       },
     },
     {
@@ -286,7 +286,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       width: 72,
       render: (status: any) => {
         const { text, color } = getQualityStatusConfig(status);
-        return <Tag color={color} style={{ marginInlineEnd: 0, fontSize: 14 }}>{text}</Tag>;
+        return <Tag color={color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{text}</Tag>;
       },
     },
     {
@@ -309,7 +309,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         // 只显示月-日 时:分
         if (!s || s === '-') return '-';
         const m = s.match(/(\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-        return m ? <span title={s} style={{ fontSize: 14 }}>{m[1]} {m[2]}</span> : <span style={{ fontSize: 14 }}>{s}</span>;
+        return m ? <span title={s} style={{ fontSize: 'var(--table-cell-font-size)' }}>{m[1]} {m[2]}</span> : <span style={{ fontSize: 'var(--table-cell-font-size)' }}>{s}</span>;
       },
     },
 

@@ -151,6 +151,36 @@ export function useBomColumns({
       }
     },
     {
+      title: '部位',
+      dataIndex: 'partName',
+      key: 'partName',
+      width: 100,
+      ellipsis: true,
+      editable: true,
+      render: (text: string, record: StyleBom) => {
+        const editorResult = renderDictEditor('partName', record, 'garment_part', '整件');
+        if (editorResult) return editorResult;
+        // 展示态：未填部位时显示"整件"（与后端兜底一致）
+        const label = text || record.partName || '整件';
+        return <Tag color={label === '整件' ? 'default' : 'blue'}>{label}</Tag>;
+      }
+    },
+    {
+      title: '子部位',
+      dataIndex: 'subPartName',
+      key: 'subPartName',
+      width: 100,
+      ellipsis: true,
+      editable: true,
+      render: (text: string, record: StyleBom) => {
+        const editorResult = renderDictEditor('subPartName', record, 'garment_sub_part', '如：袖口/领子/门襟');
+        if (editorResult) return editorResult;
+        // 展示态：未填子部位时显示"-"（子部位可为空，表示主部位整件使用）
+        if (!text && !record.subPartName) return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
+        return <Tag color="cyan">{text || record.subPartName}</Tag>;
+      }
+    },
+    {
       title: '物料编码',
       dataIndex: 'materialCode',
       key: 'materialCode',

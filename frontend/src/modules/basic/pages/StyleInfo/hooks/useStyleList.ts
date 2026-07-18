@@ -15,7 +15,6 @@ interface UseStyleListReturn {
   queryParams: StyleQueryParams;
   setQueryParams: React.Dispatch<React.SetStateAction<StyleQueryParams>>;
   fetchList: (params?: StyleQueryParams) => Promise<void>;
-  handleToggleTop: (record: StyleInfo) => Promise<void>;
 }
 
 export const useStyleList = (): UseStyleListReturn => {
@@ -46,25 +45,6 @@ export const useStyleList = (): UseStyleListReturn => {
     }
   }, [queryParams]);
 
-  const handleToggleTop = useCallback(async (record: StyleInfo) => {
-    try {
-      const newTopStatus = record.isTop === 1 ? 0 : 1;
-      const response = await api.post('/style/info/toggle-top', {
-        id: record.id,
-        isTop: newTopStatus
-      });
-      if (response.code === 200) {
-        message.success(newTopStatus === 1 ? '置顶成功' : '取消置顶成功');
-        await fetchList();
-      } else {
-        message.error(response.msg || '操作失败');
-      }
-    } catch (error) {
-      console.error('置顶操作失败:', error);
-      message.error('操作失败');
-    }
-  }, [fetchList]);
-
   return {
     loading,
     setLoading,
@@ -75,6 +55,5 @@ export const useStyleList = (): UseStyleListReturn => {
     queryParams,
     setQueryParams,
     fetchList,
-    handleToggleTop
   };
 };

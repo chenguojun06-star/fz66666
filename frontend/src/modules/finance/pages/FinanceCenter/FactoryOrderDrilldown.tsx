@@ -67,7 +67,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
     setLoading(true);
     try {
       const promises = orderNos.map(orderNo =>
-        api.get('/finance/finished-settlement/detail/' + encodeURIComponent(orderNo))
+        api.get(`/finance/finished-settlement/detail/${encodeURIComponent(orderNo)}`)
           .catch(() => null)
       );
       const results = await Promise.all(promises);

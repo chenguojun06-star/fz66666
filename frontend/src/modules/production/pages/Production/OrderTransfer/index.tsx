@@ -63,8 +63,8 @@ const OrderTransferPage: React.FC = () => {
       let total = 0;
 
       do {
-        const response = await api.get('/production/order/transfer/received', {
-          params: { page, pageSize: ORDER_TRANSFER_FETCH_BATCH_SIZE }
+        const response = await api.get('/production/order/transfer/list', {
+          params: { page, pageSize: ORDER_TRANSFER_FETCH_BATCH_SIZE, type: 'received' }
         });
         const result = response as Record<string, unknown>;
         if (result.code !== 200) {

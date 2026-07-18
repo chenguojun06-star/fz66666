@@ -69,7 +69,7 @@ const PayrollOperatorSummary: React.FC = () => {
             const values = await paymentForm.validateFields();
             if (!activeRecord?.id) { message.error('缺少结算记录ID'); return; }
             setPaymentLoading(true);
-            await api.post(`/finance/payroll-settlement/${String(activeRecord.id)}/payment`, { amount: values.amount });
+            await api.put(`/finance/payroll-settlement/${String(activeRecord.id)}/payment`, { amount: values.amount });
             message.success('打款记录已保存');
             setPaymentModalVisible(false);
             void fetchData();
