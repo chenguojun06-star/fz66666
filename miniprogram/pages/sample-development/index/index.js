@@ -302,6 +302,8 @@ Page({
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);
           item._deliveryTag = fmtDate(item.deliveryTime);
+          item._receiveTimeShort = formatDate(item.receiveTime);
+          item.expanded = false;
           // 数量
           item._quantity = item.quantity || si.sampleQuantity || '';
           item._overdue = false;
@@ -452,6 +454,14 @@ Page({
     safeNavigate({
       url: '/pages/sample-development/detail/index?' + param,
     }).catch(function () {});
+  },
+
+  // 切换卡片展开/收起子工序
+  onCardToggle: function (e) {
+    var idx = Number(e.currentTarget.dataset.index);
+    if (Number.isNaN(idx) || idx < 0 || idx >= this.data.list.length) return;
+    var path = 'list[' + idx + '].expanded';
+    this.setData({ [path]: !this.data.list[idx].expanded });
   },
 
   onScan: function () {

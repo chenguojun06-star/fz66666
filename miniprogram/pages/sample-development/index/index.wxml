@@ -100,6 +100,18 @@
         <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
       </view>
 
+      <!-- 领取人 + 领取时间（如果有） -->
+      <view class="card-receiver-row" wx:if="{{item.receiver || item.receiveTime}}">
+        <view class="receiver-item" wx:if="{{item.receiver}}">
+          <text class="receiver-label">领取人</text>
+          <text class="receiver-value">{{item.receiver}}</text>
+        </view>
+        <view class="receiver-item" wx:if="{{item.receiveTime}}">
+          <text class="receiver-label">领取时间</text>
+          <text class="receiver-value">{{item._receiveTimeShort}}</text>
+        </view>
+      </view>
+
       <!-- 进度条 -->
       <view class="card-progress">
         <view class="card-progress-track">
@@ -109,6 +121,25 @@
           ></view>
         </view>
         <text class="card-progress-percent">{{item._progressPercent || 0}}%</text>
+      </view>
+
+      <!-- 展开子工序按钮 -->
+      <view class="card-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+        <text class="expand-btn-text">{{item.expanded ? '收起子工序' : '展开子工序'}}</text>
+        <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
+      </view>
+
+      <!-- 子工序列表 -->
+      <view class="card-stages" wx:if="{{item.expanded}}">
+        <view class="stage-item" wx:for="{{item._devStages}}" wx:for-item="st" wx:key="key">
+          <view class="stage-head">
+            <text class="stage-name">{{st.name}}</text>
+            <text class="stage-pct {{st.completed ? 'stage-pct--done' : ''}}">{{st.percent}}%</text>
+          </view>
+          <view class="stage-bar-bg">
+            <view class="stage-bar-fill {{st.completed ? 'stage-bar-fill--done' : ''}}" style="width:{{st.percent > 100 ? 100 : st.percent}}%"></view>
+          </view>
+        </view>
       </view>
     </view>
 
