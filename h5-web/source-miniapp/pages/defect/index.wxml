@@ -1,6 +1,6 @@
 <view class="container">
   <!-- 筛选标签栏（设计稿：在统计栏上方） -->
-  <scroll-view scroll-x class="filter-row" enhanced show-scrollbar="{{false}}">
+  <scroll-view scroll-x class="filter-row" enhanced enable-flex show-scrollbar="{{false}}">
     <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">
       <text>全部</text><text class="filter-count">({{filterCounts.all}})</text>
     </view>
