@@ -1,6 +1,4 @@
 <!-- 样衣扫码 -->
-<custom-nav title="样衣扫码" show-back="{{true}}" />
-
 <view class="container">
 
   <!-- 状态卡片（对齐设计稿：圆形图标 + 标题 + 交期） -->

@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "工序编辑",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

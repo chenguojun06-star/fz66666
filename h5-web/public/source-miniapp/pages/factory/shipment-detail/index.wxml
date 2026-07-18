@@ -1,7 +1,5 @@
 <!-- 发货管理详情页（独立页面） -->
 <view class="page">
-  <custom-nav title="发货管理" show-back="{{true}}"></custom-nav>
-
   <!-- 订单信息区 -->
   <view class="order-card" wx:if="{{order}}">
     <view class="oi-cover" catchtap="onCoverPreview" data-url="{{order.styleCoverUrl}}">

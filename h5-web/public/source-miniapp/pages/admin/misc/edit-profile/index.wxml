@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="编辑资料" show-back="{{true}}" show-search="{{false}}" />
-
   <view wx:if="{{loading}}" class="loading-wrap">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>

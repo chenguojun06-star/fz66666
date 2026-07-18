@@ -24,7 +24,7 @@ const scanLifecycleMixin = Behavior({
    * 生命周期函数--监听页面加载
    * @returns {Promise<void>} 无返回值
    */
-  async onLoad() {
+  async onLoad(query) {
     // 初始化业务处理器（加 try-catch，防止构造抛错导致 scanHandler 永远为 null）
     try {
       this.scanHandler = new ScanHandler(api, {
@@ -36,6 +36,11 @@ const scanLifecycleMixin = Behavior({
     } catch (e) {
       console.error('[scanLifecycleMixin] ScanHandler 初始化失败:', e);
       // scanHandler 保持 null，processScanCode 中会做守卫提示
+    }
+
+    // 接收外部页面传入的扫码结果，自动处理
+    if (query && query.code) {
+      this._pendingScanCode = decodeURIComponent(query.code);
     }
 
     // 订阅全局事件
@@ -95,6 +100,18 @@ const scanLifecycleMixin = Behavior({
   async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
+    }
+
+    // 处理外部页面传入的扫码结果（wx.scanCode 扫到的码）
+    if (this._pendingScanCode) {
+      const code = this._pendingScanCode;
+      this._pendingScanCode = null;
+      setTimeout(() => {
+        if (typeof this.processScanCode === 'function') {
+          this.processScanCode(code);
+        }
+      }, 300);
+      return;
     }
 
     // 从扫码确认页返回时，读取最新扫码结果并显示成功提示

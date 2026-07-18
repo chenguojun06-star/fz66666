@@ -62,8 +62,8 @@
 }
 
 .scan-btn {
-  flex: 1 1 0%;
-  min-width: 0;
+  flex-shrink: 0;
+  width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -378,10 +378,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-.card-delivery {
+.card-days-left {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
+}
+.card-days-left.overdue {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+.card-days-left.near-due {
+  color: var(--color-warning);
+  font-weight: 600;
 }
 
 /* 进度条 */

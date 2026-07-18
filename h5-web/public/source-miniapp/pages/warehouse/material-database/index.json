@@ -1,7 +1,5 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "物料资料",
   "enablePullDownRefresh": true,
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

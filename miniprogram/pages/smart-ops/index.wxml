@@ -1,4 +1,3 @@
-<custom-nav title="智能运营" show-back="{{true}}" />
 <view class="cockpit">
 
   <view class="status-bar">

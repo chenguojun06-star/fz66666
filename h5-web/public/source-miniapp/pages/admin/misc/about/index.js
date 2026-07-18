@@ -1,4 +1,5 @@
 const api = require('../../../../utils/api');
+const { getUserInfo } = require('../../../../utils/storage');
 
 Page({
   data: {
@@ -16,9 +17,13 @@ Page({
     database: '',
     tenantName: '',
     onlineCount: 0,
+    isSuperAdmin: false,
   },
 
   onLoad: function () {
+    const userInfo = getUserInfo() || {};
+    const isSuperAdmin = userInfo.role === 'super_admin' || userInfo.role === 'admin';
+    this.setData({ isSuperAdmin });
     this.loadSystemInfo();
   },
 
@@ -28,11 +33,16 @@ Page({
 
   loadSystemInfo: function () {
     const that = this;
-    return Promise.allSettled([
-      api.get('/api/system/status/overview', 'GET', {}).catch(function () { return null; }),
-      api.system.getMe().catch(function () { return null; }),
-      api.system.getOnlineCount().catch(function () { return 0; }),
-    ]).then(function (results) {
+    const promises = [];
+    if (this.data.isSuperAdmin) {
+      promises.push(api.get('/api/system/status/overview', 'GET', {}).catch(function () { return null; }));
+    } else {
+      promises.push(Promise.resolve({ status: 'fulfilled', value: null }));
+    }
+    promises.push(api.system.getMe().catch(function () { return null; }));
+    promises.push(api.system.getOnlineCount().catch(function () { return 0; }));
+
+    return Promise.allSettled(promises).then(function (results) {
       const statusData = that._unwrap(results[0]);
       const me = that._unwrap(results[1]);
       const onlineCount = that._unwrap(results[2]);

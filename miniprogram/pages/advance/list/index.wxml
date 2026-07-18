@@ -1,4 +1,3 @@
-<custom-nav title="预付款" show-back="{{true}}" />
 <view class="page">
 
   <!-- Filter Bar: 2 pickers, flex-1, white bg, shadow-sm -->

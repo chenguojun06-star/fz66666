@@ -1,9 +1,6 @@
 {
-  "navigationStyle": "custom",
   "navigationBarTitleText": "更多应用",
   "enablePullDownRefresh": false,
   "backgroundColor": "#f2f2f7",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

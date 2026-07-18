@@ -8,7 +8,6 @@
 const { style: styleApi } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const sampleStageUtils = require('../../../shared/sampleStageUtils');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const { displayCategory, displaySeason } = require('../../../utils/displayHelper');
 const { STAGE_NAMES, getStageName } = require('../../../utils/sampleHelper');
@@ -143,7 +142,8 @@ Page({
     patternData: null,
     secondaryList: [],
     processStages: [],
-    parentStages: [],
+    processGroups: [],
+    processTotalCount: 0,
     patternScanRecords: [],
     patternScanGroups: [],
     productionData: null,
@@ -720,101 +720,24 @@ Page({
       const styleProcesses = _unwrapList(styleProcessRes);
       const processList = styleProcesses.length > 0 ? styleProcesses : config;
 
-      // 构建工序列表（按父阶段分组，与 PC 端 useSampleProcessProgress 一致）
+      // 构建工序列表（平铺）
       const processStages = this._buildProcessStages(processList, records, detail);
-      // 按父阶段分组
-      const parentStages = this._buildParentStageGroups(processList, records, detail);
-      this.setData({ processStages: processStages, parentStages: parentStages });
+      // 按阶段分组（同步PC端父子结构）
+      const processGroups = this._filterGroupsByStageKey(
+        this._groupProcessesByStage(processStages),
+        this.data.stageKey
+      );
+      this.setData({
+        processStages,
+        processGroups,
+        processTotalCount: processStages.length,
+      });
 
       // 构建扫码记录列表（与PC端6列对齐）
       this._buildScanRecords(records);
     } catch (e) {
       console.error('工序/扫码记录加载失败', e);
     }
-  },
-
-  /**
-   * 按父阶段分组子工序（与 PC 端 useSampleProcessProgress.stages 一致）
-   * 返回 [{key,label,subProcesses,completedCount,totalCount,percent,expanded,latestOperator,latestTime}]
-   */
-  _buildParentStageGroups(config, records, detail) {
-    if (!config || !config.length) return [];
-    const now = Date.now();
-    // 构建工序节点（与 PC 端 nodes 结构一致）
-    const nodes = config.map((c, idx) => ({
-      id: String(c.sortOrder || (idx + 1)),
-      name: c.processName || c.operationType || '',
-      processCode: c.operationType || c.processName || String(idx + 1),
-      progressStage: c.progressStage || '',
-      unitPrice: Number(c.unitPrice || c.price || 0),
-      sortOrder: c.sortOrder || (idx + 1),
-      machineType: c.machineType || '',
-      difficulty: c.difficulty || '',
-    }));
-    // 用共享工具按父阶段分组
-    const groups = sampleStageUtils.groupByParentStages(nodes, records);
-    // 给每个子工序补充扫码记录和领取人信息
-    const recordMap = {};
-    (records || []).forEach(r => {
-      const key = r.processId || r.processName || '';
-      const altKey = r.operationType || '';
-      if (key) {
-        if (!recordMap[key]) recordMap[key] = [];
-        recordMap[key].push(r);
-      }
-      if (altKey) {
-        if (!recordMap[altKey]) recordMap[altKey] = [];
-        recordMap[altKey].push(r);
-      }
-    });
-    return groups.map(g => {
-      const subs = g.subProcesses.map(sub => {
-        const allRecords = recordMap[sub.name] || recordMap[sub.processCode] || [];
-        const sorted = allRecords.slice().sort((a, b) => {
-          const ta = a.scanTime || '';
-          const tb = b.scanTime || '';
-          return tb > ta ? 1 : (tb < ta ? -1 : 0);
-        });
-        const latest = sorted[0] || null;
-        const scanTime = latest && latest.scanTime ? new Date(String(latest.scanTime).replace(/-/g, '/')).getTime() : 0;
-        const canUndo = scanTime > 0 && (now - scanTime) < 30 * 60 * 1000;
-        return {
-          ...sub,
-          assignee: (latest && latest.operatorName) || '',
-          scanTime: scanTime > 0 ? this._fmtDateTime(latest.scanTime) : '',
-          scanCount: sorted.length,
-          warehouse: (latest && (latest.warehouse || latest.warehouseName)) || '',
-          remark: (latest && latest.remark) || '',
-          recordId: latest ? latest.id : '',
-          canUndo: canUndo,
-          scanList: sorted.map(r => ({
-            id: r.id || '',
-            operatorName: r.operatorName || r.operator || '未知',
-            operationLabel: sampleStageUtils.normalizeOperationType(r.operationType) || r.operationType || '未知',
-            scanTimeText: this._fmtDateTime(r.scanTime),
-            warehouse: r.warehouse || r.warehouseName || '-',
-            remark: r.remark || '',
-            quantity: r.quantity || (detail && detail.quantity) || 1,
-            color: r.color || '',
-            size: r.size || '',
-          })),
-        };
-      });
-      // 父阶段最新操作人和时间
-      const allSubRecords = subs.flatMap(s => s.scanList || []);
-      const latestRec = allSubRecords[0] || null;
-      return {
-        key: g.key,
-        label: g.label,
-        subProcesses: subs,
-        completedCount: g.completedCount,
-        totalCount: g.totalCount,
-        percent: g.percent,
-        expanded: false,
-        latestOperator: latestRec ? latestRec.operatorName : '',
-        latestTime: latestRec ? latestRec.scanTimeText : '',
-      };
-    });
   },
 
   _buildProcessStages(config, records, detail) {
@@ -908,6 +831,101 @@ Page({
     });
   },
 
+  /**
+   * 按阶段分组（同步PC端父子结构，STAGE_ORDER: 采购/裁剪/二次工艺/车缝/尾部/入库）
+   * @param {Array} processStages - 平铺的子工序列表
+   * @returns {Array} 分组后的工序列表 [{stageName, processes, totalCount, completedCount}]
+   */
+  _groupProcessesByStage(processStages) {
+    if (!processStages || processStages.length === 0) return [];
+    // 与 PC 端 STAGE_ORDER 一致
+    var STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+    // progressStage → 中文阶段名映射（覆盖后端可能返回的英文/中文变体）
+    var STAGE_MAP = {
+      '采购': '采购', 'procurement': '采购', '备料': '采购',
+      '裁剪': '裁剪', 'cutting': '裁剪',
+      '二次工艺': '二次工艺', 'secondary': '二次工艺',
+      '车缝': '车缝', 'sewing': '车缝', '缝制': '车缝', 'carSewing': '车缝',
+      '尾部': '尾部', 'tail': '尾部', '后整': '尾部', 'tailProcess': '尾部',
+      '入库': '入库', 'warehousing': '入库',
+    };
+
+    function resolveStageName(progressStage) {
+      var ps = String(progressStage || '').trim();
+      if (!ps) return '其他';
+      if (STAGE_MAP[ps]) return STAGE_MAP[ps];
+      var lowerPs = ps.toLowerCase();
+      for (var k in STAGE_MAP) {
+        var lk = k.toLowerCase();
+        if (lowerPs === lk || lowerPs.indexOf(lk) >= 0 || lk.indexOf(lowerPs) >= 0) {
+          return STAGE_MAP[k];
+        }
+      }
+      return ps;
+    }
+
+    // 分组
+    var groupMap = {};
+    var customOrder = [];
+    processStages.forEach(function (p) {
+      var stageName = resolveStageName(p.progressStage);
+      if (!groupMap[stageName]) {
+        groupMap[stageName] = [];
+        customOrder.push(stageName);
+      }
+      groupMap[stageName].push(p);
+    });
+
+    // 按 PC 端 STAGE_ORDER 排序
+    var result = STAGE_ORDER
+      .filter(function (name) { return groupMap[name] && groupMap[name].length > 0; })
+      .map(function (name) {
+        var processes = groupMap[name];
+        return {
+          stageName: name,
+          processes: processes,
+          totalCount: processes.length,
+          completedCount: processes.filter(function (p) { return p.status === 'completed'; }).length,
+        };
+      });
+
+    // 处理不在 STAGE_ORDER 中的自定义阶段
+    customOrder.forEach(function (name) {
+      if (STAGE_ORDER.indexOf(name) < 0 && groupMap[name] && groupMap[name].length > 0) {
+        result.push({
+          stageName: name,
+          processes: groupMap[name],
+          totalCount: groupMap[name].length,
+          completedCount: groupMap[name].filter(function (p) { return p.status === 'completed'; }).length,
+        });
+      }
+    });
+
+    return result;
+  },
+
+  /**
+   * 根据当前 stageKey 过滤分组
+   * - stageKey === 'process'：显示全部分组（父子结构）
+   * - stageKey 为具体阶段：只显示对应阶段分组
+   */
+  _filterGroupsByStageKey(groups, stageKey) {
+    if (!groups || groups.length === 0) return [];
+    if (stageKey === 'process' || !stageKey) return groups;
+    // stageKey → 中文阶段名
+    var STAGE_KEY_MAP = {
+      procurement: '采购',
+      cutting: '裁剪',
+      secondary: '二次工艺',
+      sewing: '车缝',
+      tail: '尾部',
+      warehousing: '入库',
+    };
+    var targetStage = STAGE_KEY_MAP[stageKey];
+    if (!targetStage) return groups;
+    return groups.filter(function (g) { return g.stageName === targetStage; });
+  },
+
   _buildScanRecords(records) {
     const now = Date.now();
     const list = (records || []).map(r => {
@@ -976,25 +994,18 @@ Page({
   onToggleProcess(e) {
     const key = e.currentTarget.dataset.key;
     if (!key) return;
-    const list = this.data.processStages || [];
-    const idx = list.findIndex(p => p.key === key);
-    if (idx < 0) return;
-    const newExpanded = !list[idx].expanded;
-    this.setData({
-      ['processStages[' + idx + '].expanded']: newExpanded,
-    });
-  },
-
-  /** 展开/收起父阶段（查看子工序和扫码记录） */
-  onToggleParentStage(e) {
-    const key = e.currentTarget.dataset.key;
-    if (!key) return;
-    const list = this.data.parentStages || [];
-    const idx = list.findIndex(p => p.key === key);
-    if (idx < 0) return;
-    this.setData({
-      ['parentStages[' + idx + '].expanded']: !list[idx].expanded,
-    });
+    const groups = this.data.processGroups || [];
+    for (let gi = 0; gi < groups.length; gi++) {
+      const processes = groups[gi].processes || [];
+      const pi = processes.findIndex(p => p.key === key);
+      if (pi >= 0) {
+        const newExpanded = !processes[pi].expanded;
+        this.setData({
+          ['processGroups[' + gi + '].processes[' + pi + '].expanded']: newExpanded,
+        });
+        return;
+      }
+    }
   },
 
   /** 撤回样衣扫码记录 */

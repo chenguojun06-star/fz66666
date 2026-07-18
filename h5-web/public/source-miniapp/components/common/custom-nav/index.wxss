@@ -4,8 +4,7 @@
   left: 0;
   right: 0;
   z-index: var(--z-overlay);
-  background-color: var(--color-primary); /* @design-system: 统一蓝色导航栏 */
-  color: #ffffff;
+  background-color: #ffffff;
 }
 
 .status-bar {
@@ -36,19 +35,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18); /* 蓝色导航栏上的半透明白按钮 */
+  background: var(--color-bg-hover);
 }
 
 .back-icon {
   font-size: var(--font-size-3xl);
-  color: #ffffff;
+  color: var(--color-text-primary);
   line-height: 1;
 }
 
 .nav-title-left {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: #ffffff;
+  font-size: 17px; /* @design-system: 与微信原生导航栏标题字号一致 */
+  font-weight: 600;
+  color: var(--color-text-primary);
   text-align: center;
 }
 
@@ -66,7 +65,7 @@
   width: 100%;
   max-width: 200px;
   height: 30px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-bg-hover);
   border-radius: var(--radius-full);
   padding: 0 10px;
   box-sizing: border-box;
@@ -75,23 +74,22 @@
 .search-icon {
   font-size: var(--font-size-xs);
   margin-right: 4px;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .search-input {
   flex: 1;
   height: 100%;
   font-size: var(--font-size-sm);
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-tertiary);
 }
 
 .clear-icon {
   font-size: var(--font-size-xs);
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-tertiary);
   padding: 2px;
 }
 

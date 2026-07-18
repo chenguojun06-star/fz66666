@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="物料资料" show-back="{{true}}" show-search="{{false}}" />
-
   <!-- 筛选栏 -->
   <view class="filter-bar">
     <view class="search-box">

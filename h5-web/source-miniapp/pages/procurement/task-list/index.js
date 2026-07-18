@@ -17,13 +17,22 @@ const STATUS_TABS = [
 ];
 
 /**
- * 状态标签配置
+ * 状态标签配置（与详情页 _getStatusText/_getStatusColor 对齐）
  * 与 design-tokens.wxss 的 tag-* 颜色类对应
  */
 const STATUS_CONFIG = {
   pending: { label: '待采购', tagClass: 'tag-gray' },
+  waiting_procurement: { label: '待采购', tagClass: 'tag-gray' },
   procuring: { label: '采购中', tagClass: 'tag-blue' },
+  procurement_in_progress: { label: '采购中', tagClass: 'tag-blue' },
+  received: { label: '已领取', tagClass: 'tag-blue' },
+  partial: { label: '部分到货', tagClass: 'tag-blue' },
+  partial_arrival: { label: '部分到货', tagClass: 'tag-blue' },
+  awaiting_confirm: { label: '待确认完成', tagClass: 'tag-gold' },
   arrived: { label: '已到货', tagClass: 'tag-green' },
+  completed: { label: '全部到货', tagClass: 'tag-green' },
+  procurement_completed: { label: '已完成', tagClass: 'tag-green' },
+  warehouse_pending: { label: '待仓库出库', tagClass: 'tag-cyan' },
   delayed: { label: '已延期', tagClass: 'tag-red' },
   cancelled: { label: '已取消', tagClass: 'tag-gray' },
 };
@@ -180,8 +189,9 @@ Page({
    * 设计稿：物料级别卡片，每条记录一张卡片
    */
   _normalizeItem(item) {
+    const rawStatus = String(item.status || '').trim().toLowerCase();
     const displayStatus = this._computeDisplayStatus(item);
-    const statusConfig = STATUS_CONFIG[displayStatus] || STATUS_CONFIG.pending;
+    const statusConfig = STATUS_CONFIG[rawStatus] || STATUS_CONFIG[displayStatus] || STATUS_CONFIG.pending;
 
     const styleCoverUrl = getAuthedImageUrl(item.styleCover || '');
 

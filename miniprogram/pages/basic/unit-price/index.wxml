@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="资料单价" show-back="{{true}}" show-search="{{false}}" />
-
   <!-- 款式选择 -->
   <view class="style-selector">
     <view class="style-picker" bindtap="onTapStyleSelect" hover-class="style-picker--hover" hover-stay-time="100">

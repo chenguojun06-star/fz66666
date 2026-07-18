@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="质检" />
-
   <!-- 筛选标签栏（设计稿：在统计栏上方） -->
   <scroll-view scroll-x class="filter-row" enhanced show-scrollbar="{{false}}">
     <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">
@@ -100,7 +98,7 @@
               </view>
               <text class="card-cs-tag" wx:if="{{item.color || item.size}}">{{item.color || '-'}}/{{item.size || '-'}}</text>
             </view>
-            <!-- 第五行：操作人 + 时间 + 数量（设计稿：border-top pt-3） -->
+            <!-- 第五行：操作人 + 时间 + 数量（始终渲染保持卡片高度一致） -->
             <view class="card-row-bottom">
               <view class="card-operator-wrap" wx:if="{{item.operatorName}}">
                 <view class="operator-user-icon"></view>
@@ -109,6 +107,7 @@
               <text class="card-time">{{item.displayTime || ''}}</text>
               <text class="card-qty" wx:if="{{item.unqualifiedQuantity}}">{{item.unqualifiedQuantity}}/{{item.quantity}}件</text>
               <text class="card-qty" wx:elif="{{item.quantity}}">{{item.quantity}}件</text>
+              <text class="card-qty" wx:else>待检</text>
             </view>
           </view>
         </view>

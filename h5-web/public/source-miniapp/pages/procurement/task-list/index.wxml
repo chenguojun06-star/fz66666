@@ -1,5 +1,3 @@
-<custom-nav title="采购任务" show-back="{{true}}" />
-
 <view class="container">
   <!-- 状态筛选 Tab + 搜索栏（sticky） -->
   <view class="sticky-header">

@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { eventBus, Events } = require('../../../utils/eventBus');
 
 const STATUS_OPTIONS = [
   { label: '全部', value: '' },
@@ -40,6 +41,36 @@ Page({
 
   onLoad: function () {
     this.loadList(true);
+  },
+
+  onShow: function () {
+    this._bindEvents();
+  },
+
+  onHide: function () {
+    this._unbindEvents();
+  },
+
+  onUnload: function () {
+    this._unbindEvents();
+  },
+
+  _bindEvents: function () {
+    this._onDataChanged = function (data) {
+      if (data && (data.type === 'warehouse' || data.type === 'finishedInventory')) {
+        this.loadList(true);
+      }
+    }.bind(this);
+    this._onRefreshAll = function () {
+      this.loadList(true);
+    }.bind(this);
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindEvents: function () {
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
   onPullDownRefresh: function () {
@@ -133,31 +164,17 @@ Page({
     const item = this.data.list.find(function (it) { return it.id === id; });
     if (!item) return;
 
-    const skuList = this.data.list
-      .filter(function (it) { return it.styleNo === item.styleNo && it.orderNo === item.orderNo; })
-      .map(function (it) {
-        return {
-          color: it.color || '--',
-          size: it.size || '--',
-          sku: it.sku || '--',
-          availableQty: it.availableQty || 0,
-          lockedQty: it.lockedQty || 0,
-          defectQty: it.defectQty || 0,
-          costPrice: it.costPrice || 0,
-          salesPrice: it.salesPrice || 0,
-          warehouseLocation: it.warehouseLocation || '--',
-        };
-      });
-
-    this.setData({
-      selectedItem: item,
-      skuList: skuList,
-      detailVisible: true,
+    // 跳转到详情页
+    const params = [
+      'styleNo=' + encodeURIComponent(item.styleNo || ''),
+      'orderNo=' + encodeURIComponent(item.orderNo || ''),
+      'styleName=' + encodeURIComponent(item.styleName || ''),
+      'styleImage=' + encodeURIComponent(item._styleImage || item.styleImage || ''),
+      'factoryName=' + encodeURIComponent(item.factoryName || ''),
+    ].join('&');
+    wx.navigateTo({
+      url: '/pages/warehouse/finished-inventory/detail/index?' + params,
     });
-  },
-
-  onCloseDetail: function () {
-    this.setData({ detailVisible: false, selectedItem: null, skuList: [] });
   },
 
   preventTouchMove: function () {},

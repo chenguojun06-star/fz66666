@@ -17,7 +17,7 @@ const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progr
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
-const { safeNavigate } = require('../../utils/uiHelper');
+const { safeNavigate, quickScan } = require('../../utils/uiHelper');
 
 const app = getApp();
 
@@ -47,15 +47,6 @@ function enrichForDashboard(order) {
 Page({
   data: {
     loading: true,
-    todayStr: '',
-    /* 4 张摘要卡片 */
-    cards: {
-      sample:     { developing: 0, completed: 0 },
-      production: { total: 0, overdue: 0, pieces: 0 },
-      inbound:    { today: 0, week: 0 },
-      outbound:   { today: 0, week: 0 },
-    },
-    todayScanCount: 0,
     unreadNoticeCount: 0,
     /* 状态过滤 */
     statFilters: STATUS_FILTERS,
@@ -75,7 +66,6 @@ Page({
       return;
     }
     this._pendingOrderId = (options && options.orderId) ? decodeURIComponent(options.orderId) : '';
-    this.setData({ todayStr: this._formatToday() });
     this.refreshCards();
     this.loadOrders(true);
   },
@@ -138,26 +128,6 @@ Page({
 
       that.setData({
         loading: false,
-        todayScanCount: Number(dash.todayScanCount) || 0,
-        cards: {
-          sample: {
-            developing: Number(dash.sampleDevelopmentCount) || 0,
-            completed:  Number(stats.completedOrders) || 0,
-          },
-          production: {
-            total:   Number(stats.activeOrders) || 0,
-            overdue: Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,
-            pieces:  Number(stats.activeQuantity) || 0,
-          },
-          inbound: {
-            today: (topStats.warehousingInbound && topStats.warehousingInbound.day) || 0,
-            week:  (topStats.warehousingInbound && topStats.warehousingInbound.week) || 0,
-          },
-          outbound: {
-            today: (topStats.warehousingOutbound && topStats.warehousingOutbound.day) || 0,
-            week:  (topStats.warehousingOutbound && topStats.warehousingOutbound.week) || 0,
-          },
-        },
       });
       if (apiFailCount >= 3) {
         wx.showToast({ title: '数据加载失败，请下拉刷新', icon: 'none', duration: 2500 });
@@ -335,15 +305,9 @@ Page({
     }, 500);
   },
 
-  /* ======== 搜索：清除 ======== */
-  onSearchClear: function () {
-    this.setData({ searchKey: '' });
-    this.loadOrders(true);
-  },
-
   /* ======== 扫码 ======== */
   onScanTap: function () {
-    wx.navigateTo({ url: '/pages/scan/index' });
+    quickScan();
   },
 
   /* ======== 通知数量（小云 AI 助手浮标） ======== */
@@ -357,11 +321,6 @@ Page({
   },
 
   /* ======== 工具方法 ======== */
-  _formatToday: function () {
-    const d = new Date();
-    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
-  },
-
   _bindWsEvents: function () {
     if (this._wsBound) return;
     this._wsBound = true;

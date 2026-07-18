@@ -1,7 +1,6 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "我的",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index"
   }
 }

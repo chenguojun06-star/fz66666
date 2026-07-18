@@ -6,8 +6,6 @@ function abbr(str) {
 module.exports = { abbr: abbr };
 </wxs>
 <view class="container">
-  <custom-nav title="裁剪分菲" show-back="{{true}}" show-search="{{false}}" />
-
   <!-- ======== Tab 切换栏 ======== -->
   <view class="tab-bar">
     <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">拆菲号</view>

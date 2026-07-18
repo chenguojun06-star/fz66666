@@ -104,7 +104,9 @@ Page({
     const firstDay = y + '-' + m + '-01';
     api.wagePayment.dashboardStats(firstDay, today).then(function (stats) {
       that.setData({ stats: stats || {} });
-    }).catch(function () {});
+    }).catch(function (err) {
+      console.error('[payment] _loadStats failed', err);
+    });
   },
 
   _resetAndLoad: function () {
@@ -152,7 +154,9 @@ Page({
         paymentHasMore: that.data.paymentList.length + records.length < total,
         paymentPage: that.data.paymentPage + 1,
       });
-    }).catch(function () {});
+    }).catch(function (err) {
+      console.error('[payment] _loadPayments failed', err);
+    });
   },
 
   onOpenPayModal: function (e) {
@@ -326,7 +330,7 @@ Page({
         api.wagePayment.cancelPayment(id).then(function () {
           toast('已取消');
           that._resetAndLoad();
-        }).catch(function (_e) { toast('取消失败: ' + (e.message || e)); });
+        }).catch(function (err) { toast('取消失败: ' + (err && err.message ? err.message : String(err))); });
       }
     });
   },
@@ -344,7 +348,7 @@ Page({
           toast('已确认');
           that._loadStats();
           that._resetAndLoad();
-        }).catch(function (_e) { toast('确认失败: ' + (e.message || e)); });
+        }).catch(function (err) { toast('确认失败: ' + (err && err.message ? err.message : String(err))); });
       }
     });
   },

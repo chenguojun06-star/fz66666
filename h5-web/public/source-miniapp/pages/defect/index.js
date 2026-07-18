@@ -148,9 +148,16 @@ Page({
       promise = api.production.pendingBundles(req.status).then(function (res) {
         var items = Array.isArray(res) ? res : (res && res.records ? res.records : []);
         return items.map(function (item) {
-          // 补齐 listWarehousing 兼容字段
+          // 补齐 id（wx:key 需要）和 listWarehousing 兼容字段
+          item.id = item.id || item.bundleId || ('pending_' + (item.bundleNo || '') + '_' + (item.orderNo || ''));
+          item.coverImage = item.coverImage || item.styleCover || '';
           item.warehousingQuantity = item.quantity || 0;
           item.qualityStatus = 'pending';
+          item.bundleQrCode = item.bundleQrCode || item.qrCode || '';
+          item.deliveryDate = item.deliveryDate || item.plannedEndDate || '';
+          // 待检没有扫码时间/操作人，用空值占位保持卡片高度一致
+          if (!item.scanTime && !item.createTime) item.displayTime = '';
+          if (!item.operatorName) item.operatorName = '';
           return self._processQualityItem(item);
         });
       });
@@ -252,8 +259,16 @@ Page({
     if (!item.coverImage && item.styleCover) item.coverImage = item.styleCover;
     if (!item.quantity && item.warehousingQuantity) item.quantity = item.warehousingQuantity;
 
-    item.defectCategoryText = DEFECT_CATEGORY_MAP[item.defectCategory] || item.defectCategory || '';
-    item.repairStatusText = REPAIR_STATUS_MAP[item.repairStatus] || item.repairStatus || '';
+    // pendingBundles 返回字段兼容（菲号级别数据补齐为与 listWarehousing 一致）
+    if (!item.orderNo && item.productionOrderNo) item.orderNo = item.productionOrderNo;
+    if (!item.factoryName && item.productionFactoryName) item.factoryName = item.productionFactoryName;
+    if (!item.factoryType && item.productionFactoryType) item.factoryType = item.productionFactoryType;
+    if (!item.deliveryDate && item.plannedEndDate) item.deliveryDate = item.plannedEndDate;
+    if (!item.color && item.bundleColor) item.color = item.bundleColor;
+    if (!item.size && item.bundleSize) item.size = item.bundleSize;
+
+    item.defectCategoryText = DEFECT_CATEGORY_MAP[item.defectCategory] || '';
+    item.repairStatusText = REPAIR_STATUS_MAP[item.repairStatus] || '';
     item.qualityCategory = getQualityCategory(item);
     item.qualityCategoryText = CATEGORY_TEXT[item.qualityCategory] || '待检';
     item.qualityTagClass = CATEGORY_TAG_CLASS[item.qualityCategory] || 'tag-default';
@@ -279,6 +294,8 @@ Page({
 
     if (item.scanTime || item.createTime) {
       item.displayTime = this._formatTime(item.scanTime || item.createTime);
+    } else {
+      item.displayTime = item.displayTime || '';
     }
 
     // 交期倒计时（与 PC 端 getRemainingDaysDisplay 逻辑对齐）
@@ -301,10 +318,38 @@ Page({
       item.factoryTypeText = '';
     }
 
-    // 菲号截断显示（与 PC 端一致）
-    item.bundleNoShort = this._truncateBundleNo(item.bundleQrCode || item.bundleNo || item.cuttingBundleQrCode);
+    // 菲号显示：订单号+菲号（与 PC 端 useProcessTrackingColumns 对齐）
+    var rawBundleNo = item.bundleQrCode || item.bundleNo || item.cuttingBundleQrCode || '';
+    item.bundleNoShort = this._formatBundleNo(rawBundleNo, item.orderNo);
 
     return item;
+  },
+
+  /**
+   * 菲号格式化：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
+   * 如 qrCode = "PO20260128001-A001-黑色-M-50-01|SKU-...|SIG-..."
+   * 返回 "PO20260128001-01"
+   */
+  _formatBundleNo: function (qr, orderNo) {
+    if (!qr) {
+      // 没有二维码，用 orderNo + bundleNo 拼接
+      if (orderNo && this._currentItemBundleNo) {
+        return orderNo + '-' + this._currentItemBundleNo;
+      }
+      return '-';
+    }
+    var t = String(qr).split('|')[0].trim();
+    if (!t) return '-';
+    var parts = t.split('-');
+    // 最后一部分是菲号序号
+    var bundleSeq = parts[parts.length - 1] || '';
+    // 取订单号（第一部分）或传入的 orderNo
+    var ord = orderNo || parts[0] || '';
+    if (ord && bundleSeq) {
+      return ord + '-' + bundleSeq;
+    }
+    // 回退：取后3段
+    return parts.length > 3 ? parts.slice(-3).join('-') : t;
   },
 
   /**
@@ -351,17 +396,6 @@ Page({
     var min = d.getMinutes();
     return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day) +
       ' ' + (h < 10 ? '0' + h : h) + ':' + (min < 10 ? '0' + min : min);
-  },
-
-  /**
-   * 菲号截断显示（与 PC 端 InspectFormPanel 一致：取后3段用-拼接）
-   */
-  _truncateBundleNo: function (qr) {
-    if (!qr) return '-';
-    var t = String(qr).split('|')[0].trim();
-    if (!t) return '-';
-    var parts = t.split('-');
-    return parts.length > 3 ? parts.slice(-3).join('-') : t;
   },
 
   onStartRepair: function (e) {

@@ -3,7 +3,6 @@ const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
-const enumLabels = require('../../../shared/enumLabels');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -887,38 +886,14 @@ Page({
     // 尺寸表数据透视：部位为行，尺码为列
     const sizeTable = this._pivotSizeTable(sizeList || []);
 
-    // BOM 物料类型/状态 → 中文（与 PC 端 getMaterialTypeLabel 一致）
-    const bomListZh = (bomList || []).map(function (item) {
-      var copy = Object.assign({}, item);
-      if (item.materialType) {
-        copy.materialTypeText = enumLabels.materialTypeLabel(item.materialType);
-      }
-      if (item.status) {
-        copy.statusText = enumLabels.processStatusLabel(item.status);
-      }
-      return copy;
-    });
-
-    // 二次工艺类型/状态 → 中文
-    const secondaryListZh = (secondaryList || []).map(function (item) {
-      var copy = Object.assign({}, item);
-      if (item.processType) {
-        copy.processTypeText = enumLabels.processTypeLabel(item.processType);
-      }
-      if (item.status) {
-        copy.statusText = enumLabels.processStatusLabel(item.status);
-      }
-      return copy;
-    });
-
     this.setData({
-      bomList: bomListZh,
+      bomList: bomList || [],
       bomLoading: false,
       sizeList: sizeList || [],
       sizeColumns: sizeTable.columns,
       sizeRows: sizeTable.rows,
       sizeLoading: false,
-      secondaryList: secondaryListZh,
+      secondaryList: secondaryList || [],
       secondaryLoading: false,
     });
   },

@@ -104,12 +104,16 @@ class ScanHandler {
       return null;
     }
 
-    // 采购/裁剪阶段判断使用 includes 而非严格等于，防止后端返回「原材料采购」等变体名称时误判
+    // 采购/裁剪阶段判断：精确匹配白名单，避免误判
     const _cpn = String(orderDetail.currentProcessName || orderDetail.current_process_name || '').trim();
+    const PROCUREMENT_PROCESS_WHITELIST = ['采购', '原材料采购', '物料采购', '辅料采购'];
+    const CUTTING_PROCESS_WHITELIST = ['裁剪', '裁床', '分扎', '分包'];
+    const EXCLUDED_PROCESS_NAMES = ['采购退货', '裁剪检验', '裁剪返工', '采购退款'];
+
     const isProcurementMode =
       manualScanType === 'procurement' ||
-      _cpn === '采购' ||
-      _cpn.includes('采购');
+      PROCUREMENT_PROCESS_WHITELIST.includes(_cpn) ||
+      (_cpn.includes('采购') && !EXCLUDED_PROCESS_NAMES.includes(_cpn));
 
     if (isProcurementMode) {
       return await this.dataProcessor.handleProcurementMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);
@@ -117,8 +121,8 @@ class ScanHandler {
 
     const isCuttingMode =
       manualScanType === 'cutting' ||
-      _cpn === '裁剪' ||
-      _cpn.includes('裁剪');
+      CUTTING_PROCESS_WHITELIST.includes(_cpn) ||
+      (_cpn.includes('裁剪') && !EXCLUDED_PROCESS_NAMES.includes(_cpn));
 
     if (isCuttingMode) {
       return await this.dataProcessor.handleCuttingMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);

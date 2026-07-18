@@ -1,8 +1,7 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "采购任务",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "search-scan": "/components/search-scan/index"
   }
 }

@@ -1,8 +1,6 @@
 {
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "质检录入",
+  "navigationBarTitleText": "质检扫码",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "image-preview": "/components/common/image-preview/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }

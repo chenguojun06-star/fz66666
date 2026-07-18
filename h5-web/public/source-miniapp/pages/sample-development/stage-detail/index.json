@@ -2,6 +2,5 @@
   "navigationBarTitleText": "阶段详情",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
-  "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "enablePullDownRefresh": true
 }

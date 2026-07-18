@@ -1,4 +1,3 @@
-<custom-nav title="退货详情" show-back="{{true}}" />
 <view class="page-container">
   <block wx:if="{{loading}}">
     <view class="loading-wrap">加载中...</view>

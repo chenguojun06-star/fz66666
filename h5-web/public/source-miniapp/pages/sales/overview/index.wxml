@@ -1,5 +1,4 @@
 <!-- 销售数据概览 -->
-<custom-nav title="销售概览" show-back="{{true}}" />
 <view class="page">
   <!-- 日期范围筛选 -->
   <scroll-view class="range-bar" scroll-x enhanced show-scrollbar="{{false}}">

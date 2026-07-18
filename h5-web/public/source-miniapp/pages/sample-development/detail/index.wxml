@@ -127,7 +127,7 @@
             <view class="bom-item__main">
               <text class="bom-item__name">{{item.materialName || item.partName || '-'}}</text>
               <view class="bom-item__meta">
-                <text wx:if="{{item.materialTypeText}}" class="bom-item__tag">{{item.materialTypeText}}</text>
+                <text wx:if="{{item.materialType}}" class="bom-item__tag">{{item.materialType}}</text>
                 <text wx:if="{{item.color}}" class="bom-item__sub">{{item.color}}</text>
                 <text wx:if="{{item.specification}}" class="bom-item__sub">{{item.specification}}</text>
               </view>
@@ -225,9 +225,9 @@
             <view class="bom-item__main">
               <text class="bom-item__name">{{item.processName || '-'}}</text>
               <view class="bom-item__meta">
-                <text wx:if="{{item.processTypeText}}" class="bom-item__tag">{{item.processTypeText}}</text>
+                <text wx:if="{{item.processType}}" class="bom-item__tag">{{item.processType}}</text>
                 <text wx:if="{{item.factoryName}}" class="bom-item__sub">{{item.factoryName}}</text>
-                <text wx:if="{{item.statusText}}" class="bom-item__sub">{{item.statusText}}</text>
+                <text wx:if="{{item.status}}" class="bom-item__sub">{{item.status}}</text>
               </view>
             </view>
             <view class="bom-item__right">

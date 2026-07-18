@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "退货详情",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

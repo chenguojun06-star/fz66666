@@ -1,5 +1,3 @@
-<custom-nav title="质检扫码" show-back="{{true}}" />
-
 <view class="container">
 
   <!-- 订单信息 -->

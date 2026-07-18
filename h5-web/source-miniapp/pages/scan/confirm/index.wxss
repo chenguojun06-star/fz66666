@@ -8,11 +8,16 @@
 /* ===== 头部卡片（对齐设计稿：图标盒 + 标题行 + 标签） ===== */
 .info-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  padding: 32rpx;
+  
+  
   margin-bottom: 32rpx;
-  border: 1rpx solid var(--color-border);
+  
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .card-header {
   display: flex;
@@ -146,10 +151,11 @@
 /* ===== 区段卡片（对齐设计稿：圆角 + 边框 + 阴影） ===== */
 .section-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  padding: 32rpx;
-  margin-bottom: 32rpx;
-  border: 1rpx solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
 .section-title {
@@ -368,14 +374,19 @@
   display: flex;
   align-items: flex-start;
   gap: 16rpx;
-  border-radius: var(--radius-xl);
-  padding: 24rpx 32rpx;
+  
+  
   margin-bottom: 32rpx;
   background: var(--color-primary-bg);
-  border: 1rpx solid var(--color-primary-bg-dark);
+  
   font-size: var(--font-size-sm);
   color: var(--color-primary);
   line-height: var(--line-height-normal);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .tip-icon { flex-shrink: 0; font-size: var(--font-size-md); display: flex; align-items: center; }
 .tip-text { flex: 1; }
@@ -386,11 +397,16 @@
   align-items: center;
   justify-content: space-between;
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  padding: 32rpx;
+  
+  
   margin-bottom: 32rpx;
-  border: 1rpx solid var(--color-border);
+  
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .summary-left {
   display: flex;

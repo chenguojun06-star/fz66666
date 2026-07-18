@@ -74,10 +74,15 @@
   align-items: center;
   justify-content: space-between;
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 24rpx;
+  
+  
   margin-bottom: 12rpx;
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .stock-thumb {
@@ -285,10 +290,15 @@
 /* 信息卡片 */
 .info-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
+  
+  
   margin-bottom: 10px;
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .detail-image {
@@ -325,10 +335,15 @@
 /* 仓库选择区域 */
 .warehouse-section {
   margin-bottom: 12rpx;
-  padding: 16rpx;
+  
   background: var(--color-bg-page);
-  border-radius: var(--radius-md);
+  
+  
+
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .warehouse-label {

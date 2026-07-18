@@ -1,10 +1,15 @@
 /* ===== 今日统计卡片（顶部） ===== */
 .today-stats-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  padding: 16px;
+  
+  
   margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .tsc-head {
   display: flex;
@@ -108,12 +113,17 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 8px 12px;
+  
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
+  
   box-shadow: var(--shadow-sm);
   gap: 8px;
   height: 40px;
+  
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
   box-sizing: border-box;
 }
 .qe-hover {

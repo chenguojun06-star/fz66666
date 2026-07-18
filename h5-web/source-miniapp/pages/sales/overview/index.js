@@ -12,6 +12,8 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { PLATFORM_NAMES } = require('../../../utils/platformNames');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
+const { hasFeaturePermission } = require('../../../utils/permission');
+const { formatDate, pad2 } = require('../../../utils/displayHelper');
 
 /* 日期范围预设 */
 const DATE_RANGES = [
@@ -22,7 +24,6 @@ const DATE_RANGES = [
   { key: 'thisYear',    label: '本年' },
 ];
 
-function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function fmtDate(d) {
   return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 }
@@ -72,6 +73,11 @@ Page({
   onLoad: function () {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    if (!hasFeaturePermission('view_sales') && !hasFeaturePermission('view_finance')) {
+      toast('您没有查看销售数据的权限');
+      wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
+      return;
+    }
     const r = getRange(this.data.activeRange);
     this.setData({ startDate: r.startDate, endDate: r.endDate });
     this._loadStats();

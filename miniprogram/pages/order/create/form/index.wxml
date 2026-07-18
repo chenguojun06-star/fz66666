@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="新建订单" show-search="{{false}}" />
-
   <scroll-view scroll-y class="body">
     <!-- 款式 -->
     <view class="sec">

@@ -1,7 +1,6 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "裁剪分菲",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index"
   }
 }

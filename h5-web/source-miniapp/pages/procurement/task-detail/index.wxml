@@ -1,5 +1,3 @@
-<custom-nav title="采购详情" show-back="{{true}}" />
-
 <view class="page-container">
   <!-- 加载中 -->
   <view class="loading-wrapper" wx:if="{{loading}}">

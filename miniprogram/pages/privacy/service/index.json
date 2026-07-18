@@ -1,7 +1,4 @@
 {
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "用户服务协议",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "navigationBarTitleText": "",
+  "usingComponents": {}
 }

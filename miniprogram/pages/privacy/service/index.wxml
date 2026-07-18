@@ -1,5 +1,3 @@
-<custom-nav title="" show-back="{{true}}" />
-
 <scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
   <view class="doc-header">
     <text class="doc-title">衣智链 用户服务协议</text>

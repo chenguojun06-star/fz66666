@@ -1,8 +1,6 @@
 {
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "员工注册",
+  "navigationBarTitleText": "注册",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

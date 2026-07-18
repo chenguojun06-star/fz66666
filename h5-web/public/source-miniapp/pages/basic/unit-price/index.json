@@ -1,7 +1,5 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "资料单价",
   "enablePullDownRefresh": true,
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

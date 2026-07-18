@@ -1,6 +1,4 @@
 <!-- pages/payroll/payroll.wxml -->
-<custom-nav title="工资查询" show-back="{{true}}" />
-
 <view class="page">
   <!-- 汇总渐变卡片 (brand-50 -> brand-100) -->
   <view class="summary-card">

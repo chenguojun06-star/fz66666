@@ -8,7 +8,7 @@
  *  2. 直接进入，手动扫码
  */
 const api = require('../../../../utils/api');
-const { eventBus } = require('../../../../utils/eventBus');
+const { eventBus, Events } = require('../../../../utils/eventBus');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）
@@ -120,6 +120,7 @@ Page({
             successMsg: result.message || '发料成功！',
             rollInfo: { ...rollInfo, currentStatus: 'ISSUED' },
           });
+          eventBus.emit(Events.DATA_CHANGED, { type: 'materialStock' });
           wx.vibrateShort({ type: 'heavy' });
         } catch (e) {
           this.setData({ submitting: false, errorMsg: e.message || '发料失败' });
@@ -151,6 +152,7 @@ Page({
             successMsg: result.message || '退回成功！',
             rollInfo: { ...rollInfo, currentStatus: 'IN_STOCK' },
           });
+          eventBus.emit(Events.DATA_CHANGED, { type: 'materialStock' });
           wx.vibrateShort({ type: 'heavy' });
         } catch (e) {
           this.setData({ submitting: false, errorMsg: e.message || '退回失败' });

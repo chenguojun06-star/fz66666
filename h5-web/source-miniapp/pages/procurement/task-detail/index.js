@@ -1,7 +1,7 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
@@ -32,6 +32,29 @@ Page({
   },
 
   onShow() {
+    if (this.orderNo) this._loadDetail();
+    this._bindEvents();
+  },
+
+  onHide() {
+    this._unbindEvents();
+  },
+
+  onUnload() {
+    this._unbindEvents();
+  },
+
+  _bindEvents() {
+    this._onDataChanged = (data) => {
+      if (data && (data.type === 'procurement' || data.type === 'purchase')) {
+        if (this.orderNo) this._loadDetail();
+      }
+    };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+  },
+
+  _unbindEvents() {
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
   },
 
   onPullDownRefresh() {

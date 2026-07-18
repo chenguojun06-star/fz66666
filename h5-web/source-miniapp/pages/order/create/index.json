@@ -1,7 +1,4 @@
 {
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "下单管理",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "navigationBarTitleText": "订单创建",
+  "usingComponents": {}
 }

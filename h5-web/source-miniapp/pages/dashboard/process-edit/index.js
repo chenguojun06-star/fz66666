@@ -481,9 +481,11 @@ Page({
     });
 
     const workflowJson = JSON.stringify({ nodes: nodes });
+    const deletedIds = that._deletedIds || [];
     const payload = {
       id: that.data.orderId,
       progressWorkflowJson: workflowJson,
+      deletedIds: deletedIds,
     };
 
     wx.showLoading({ title: '保存中...' });

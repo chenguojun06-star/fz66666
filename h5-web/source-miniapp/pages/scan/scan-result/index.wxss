@@ -12,11 +12,16 @@
   align-items: center;
   gap: 24rpx;
   background: var(--color-bg-card);
-  border: 1rpx solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  padding: 32rpx;
+  
+  
+  
   margin-bottom: 24rpx;
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .success-icon-circle {

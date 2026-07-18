@@ -181,7 +181,7 @@ page {
 
 /* ===== 列表视图 ===== */
 .list-wrap {
-  padding: 12px var(--page-padding-x);
+  padding: 12px 0;
 }
 
 .step-item {
@@ -189,10 +189,15 @@ page {
   align-items: center;
   gap: 10px;
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: 12px;
+  
+  
   margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .step-item--hover {

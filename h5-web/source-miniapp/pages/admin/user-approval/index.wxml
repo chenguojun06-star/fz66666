@@ -1,4 +1,3 @@
-<custom-nav title="用户审批" show-back="{{true}}" />
 <view class="container">
   <view class="sub-header">
     <view class="count">待审批：{{activeTab === 'tenant' ? tenantTotal : total}}人</view>

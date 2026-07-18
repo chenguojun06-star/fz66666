@@ -1,5 +1,4 @@
 <wxs src="../../../utils/money.wxs" module="money" />
-<custom-nav title="扫码确认" show-back="{{true}}" />
 
 <view class="container">
 

@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { eventBus, Events } = require('../../../utils/eventBus');
 
 const TYPE_OPTIONS = [
   { label: '全部类型', value: '' },
@@ -50,6 +51,36 @@ Page({
 
   onLoad: function () {
     this.loadList(true);
+  },
+
+  onShow: function () {
+    this._bindEvents();
+  },
+
+  onHide: function () {
+    this._unbindEvents();
+  },
+
+  onUnload: function () {
+    this._unbindEvents();
+  },
+
+  _bindEvents: function () {
+    this._onDataChanged = function (data) {
+      if (data && (data.type === 'warehouse' || data.type === 'materialStock' || data.type === 'material')) {
+        this.loadList(true);
+      }
+    }.bind(this);
+    this._onRefreshAll = function () {
+      this.loadList(true);
+    }.bind(this);
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindEvents: function () {
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
   onPullDownRefresh: function () {

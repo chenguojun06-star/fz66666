@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
+const { hasFeaturePermission } = require('../../../utils/permission');
 
 Page({
   data: {
@@ -43,6 +44,11 @@ Page({
   onLoad() {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    if (!hasFeaturePermission('view_purchase_return') && !hasFeaturePermission('view_sales_return')) {
+      toast('您没有查看退货的权限');
+      wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
+      return;
+    }
     this.loadData();
     bindPageEvents(this, () => this.loadData());
   },

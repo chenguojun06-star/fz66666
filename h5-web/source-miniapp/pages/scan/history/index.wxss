@@ -171,10 +171,15 @@ page {
 .summary-card {
   display: flex;
   margin: 0 0 10px;
-  padding: 16px 4px;
+  
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
+  
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .summary-item {
   flex: 1;
@@ -230,9 +235,12 @@ page {
 }
 .record-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, background-color 0.18s ease;
 }
 .record-top {
   display: flex;

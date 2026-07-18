@@ -22,9 +22,14 @@
   align-items: center;
   justify-content: center;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
+  
+  
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .qr-image {
@@ -167,10 +172,15 @@
 .steps-card {
   margin: 0 0 16px;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  padding: 16px;
+  
+  
+  
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .steps-title {
@@ -185,6 +195,11 @@
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 16px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .step-item:last-child {

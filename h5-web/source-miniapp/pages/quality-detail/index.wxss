@@ -4,7 +4,9 @@
 .container {
   min-height: 100vh;
   background: var(--color-bg, #f5f6f8);
+  padding: 0 var(--page-padding-x, 16px);
   padding-bottom: 40rpx;
+  box-sizing: border-box;
 }
 
 /* 加载 / 空态 */
@@ -73,11 +75,13 @@
 
 /* 卡片基础 */
 .detail-card {
-  margin: 20rpx 24rpx;
-  padding: 28rpx;
+  margin: 0 0 12px 0;
+  padding: 12px;
   background: #fff;
-  border-radius: 24rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border, #e8e8e8);
+  border-radius: var(--radius-xl, 12px);
+  box-sizing: border-box;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
 }
 .detail-card.section-pending {
   border-top: 6rpx solid var(--color-primary, #165DFF);
@@ -316,10 +320,15 @@
 .overview-card {
   flex: 1;
   background: #fff;
-  border-radius: 20rpx;
-  padding: 28rpx 16rpx;
+  
+  
   text-align: center;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .overview-card--primary { border-top: 6rpx solid var(--color-primary, #165DFF); }
 .overview-card--warning { border-top: 6rpx solid #FF9F00; }
@@ -468,9 +477,14 @@
 .qc-form-info-card,
 .wh-form-info-card {
   background: #f7f8fa;
-  border-radius: 16rpx;
-  padding: 20rpx 24rpx;
+  
+  
   margin-bottom: 20rpx;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .qc-form-info-row,
 .wh-form-info-row {
@@ -636,14 +650,17 @@
   gap: 20rpx;
 }
 .qc-card {
-  background: #fafbfc;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  border-left: 6rpx solid transparent;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
 }
 .qc-card-highlighted {
+  border-color: #FF9F00;
   background: rgba(255, 159, 0, 0.06);
-  border-left-color: #FF9F00;
 }
 .qc-card--actionable {
   border-left-color: var(--color-primary, #165DFF);
@@ -865,8 +882,13 @@
 }
 .bom-item {
   background: #f7f8fa;
-  border-radius: 12rpx;
-  padding: 16rpx 20rpx;
+  
+  
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .bom-row {
   display: flex;

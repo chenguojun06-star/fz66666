@@ -14,7 +14,6 @@
  */
 
 var stageDetection = require('../../../shared/stageDetection');
-var sampleStageUtils = require('../../../shared/sampleStageUtils');
 
 // 样衣生产操作类型（5个基本操作）
 const SAMPLE_OPERATIONS = [
@@ -275,21 +274,6 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
   const options = [];
   const status = String(patternDetail.status || '').toUpperCase();
   
-  // 收集每个工序的领取人信息（与 stage-detail 一致）
-  var operatorMap = {};
-  if (scanRecords && Array.isArray(scanRecords)) {
-    scanRecords.forEach(function (r) {
-      var pName = String(r.processName || '').trim();
-      var opType = String(r.operationType || '').trim();
-      if (pName && r.operatorName && !operatorMap[pName]) {
-        operatorMap[pName] = r.operatorName;
-      }
-      if (opType && r.operatorName && !operatorMap[opType]) {
-        operatorMap[opType] = r.operatorName;
-      }
-    });
-  }
-  
   // 检查是否需要先领取
   const needReceive = (status === 'PENDING' || status === '') && !completedStages.has('RECEIVE') && !completedStages.has('领取') && !completedStages.has('采购');
   if (needReceive) {
@@ -299,7 +283,6 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       icon: 'scan',
       processName: '领取样衣',
       progressStage: '采购',
-      parentStageLabel: '采购',
       scanType: 'procurement'
     });
     return options;
@@ -311,11 +294,7 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
     const processName = String(config.processName || config.operationType || '').trim();
     const progressStage = String(config.progressStage || processName).trim();
     const scanType = String(config.scanType || 'production').trim();
-    // 父阶段标签（与 PC 端 resolveStageKey 一致）
-    const parentStageKey = sampleStageUtils.resolveStageKey(progressStage);
-    const parentStageLabel = parentStageKey !== 'unknown' ? (sampleStageUtils.STAGE_KEY_MAP[parentStageKey] ? progressStage : progressStage) : progressStage;
     const isCompleted = completedStages.has(processName) || completedStages.has(config.operationType) || completedStages.has(stageDetection.canonicalStageKey(processName));
-    const assignee = operatorMap[processName] || operatorMap[config.operationType] || '';
     
     if (isCompleted) {
       continue; // 跳过已完成的
@@ -331,12 +310,10 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
         icon: 'lock',
         processName: processName,
         progressStage: progressStage,
-        parentStageLabel: parentStageLabel,
         scanType: scanType,
         sortOrder: config.sortOrder || i,
         locked: true,
         lockReason: '需先完成：' + gate.missing.join('、'),
-        assignee: assignee,
       });
       break; // 门禁拦截后不再显示后续工序
     }
@@ -348,10 +325,8 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       icon: 'tool',
       processName: processName,
       progressStage: progressStage,
-      parentStageLabel: parentStageLabel,
       scanType: scanType,
-      sortOrder: config.sortOrder || i,
-      assignee: assignee,
+      sortOrder: config.sortOrder || i
     });
     break; // 只显示第一个可执行的工序
   }

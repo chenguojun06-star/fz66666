@@ -94,10 +94,10 @@
         </view>
       </view>
 
-      <!-- 件数 + 交板日期 -->
+      <!-- 件数 + 延期/剩余天数 -->
       <view class="card-info-row">
         <text class="card-quantity">{{item.quantity ? item.quantity + '件' : ''}}</text>
-        <text wx:if="{{item._deliveryTag}}" class="card-delivery">交板 {{item._deliveryTag}}</text>
+        <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
       </view>
 
       <!-- 进度条 -->

@@ -17,7 +17,7 @@ page {
 .stats-row {
   display: flex;
   gap: 8px;
-  padding: 12px var(--page-padding-x);
+  padding: 12px 0;
 }
 
 .stat-card {
@@ -59,7 +59,7 @@ page {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 var(--page-padding-x) 12px;
+  padding: 0 0 12px;
 }
 
 .filter-bar > search-scan {
@@ -143,7 +143,7 @@ page {
 
 /* ============ 列表 ============ */
 .list-wrap {
-  padding: 0 var(--page-padding-x);
+  padding: 0;
 }
 
 /* 卡片：与 dashboard/order-card 完全一致 */

@@ -1,7 +1,5 @@
 <!-- 生产订单详情页 · 完整版（对齐设计稿） -->
 
-<custom-nav title="{{pageTitle}}" show-back="{{true}}" />
-
 <view class="detail-page">
   <!-- 加载骨架 -->
   <view class="skeleton-wrap" wx:if="{{loading && !order}}">

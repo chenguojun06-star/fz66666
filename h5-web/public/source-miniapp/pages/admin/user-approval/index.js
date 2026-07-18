@@ -216,6 +216,10 @@ Page({
       cancelText: '取消',
       success: async (res) => {
         if (res.confirm) {
+          if (!this.data.factorySelectedRole) {
+            toast.info('请先选择角色');
+            return;
+          }
           wx.showLoading({ title: '处理中...', mask: true });
           try {
             await api.tenant.approveRegistration(user.id, { roleId: this.data.factorySelectedRole });

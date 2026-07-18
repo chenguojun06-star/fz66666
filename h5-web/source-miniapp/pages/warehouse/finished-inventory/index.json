@@ -1,8 +1,7 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "成品库存",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "search-scan": "/components/search-scan/index"
   }
 }

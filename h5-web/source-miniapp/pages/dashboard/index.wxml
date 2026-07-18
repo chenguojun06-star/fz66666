@@ -1,6 +1,4 @@
 <!-- 生产管理 · 美团风格订单卡片 -->
-<custom-nav title="生产管理" show-back="{{true}}" />
-
 <view class="page">
   <!-- 搜索栏 + 扫码（sticky）-->
   <view class="search-bar-wrap">

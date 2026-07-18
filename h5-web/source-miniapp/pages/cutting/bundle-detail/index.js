@@ -1034,6 +1034,10 @@ Page({
       return p;
     });
 
+    if (!payload.processes || payload.processes.length === 0) {
+      return toast.info('请至少选择一个工序');
+    }
+
     if (d.remark) payload.remark = d.remark;
 
     this.setData({ submitting: true });

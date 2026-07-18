@@ -25,10 +25,15 @@
 .stat-card {
   flex: 1;
   text-align: left;
-  padding: 16px;
+  
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
+  
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .stat-label {
@@ -107,10 +112,15 @@
 .payable-card,
 .payment-card {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  padding: 16px;
+  
+  
+  
   margin-bottom: 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .card-header {

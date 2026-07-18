@@ -1,6 +1,4 @@
 <view class="page">
-  <custom-nav title="衣智链" />
-
   <!-- 问候卡片 -->
   <view class="header">
     <view class="header-avatar">{{userName ? userName[0] : '用户'}}</view>

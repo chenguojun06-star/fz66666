@@ -72,9 +72,14 @@ page {
   align-items: flex-start;
   gap: 12px;
   margin: 0 var(--page-padding-x) var(--spacing-md);
-  padding: 16px;
-  border-radius: var(--radius-2xl);
+  
+  
   background: var(--color-primary-bg);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .tip-icon-circle {

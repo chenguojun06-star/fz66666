@@ -1,9 +1,7 @@
 {
-  "navigationStyle": "custom",
   "navigationBarTitleText": "订单备注",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "image-preview": "/components/common/image-preview/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }

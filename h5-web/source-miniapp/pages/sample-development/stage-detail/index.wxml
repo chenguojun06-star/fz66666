@@ -269,50 +269,62 @@
 
     <!-- ══ ⑥ 工序配置（process / cutting / sewing / tail 阶段） ══ -->
     <block wx:if="{{stageKey === 'process' || stageKey === 'cutting' || stageKey === 'sewing' || stageKey === 'tail'}}">
-      <!-- 按父阶段分组（与 PC 端 useSampleProcessProgress 一致） -->
-      <view wx:if="{{parentStages.length > 0}}" class="section-label">
-        <text class="sl-text">生产进度</text>
-        <text class="sl-count">{{parentStages.length}}阶段</text>
+      <view class="section-label">
+        <text class="sl-text">工序列表</text>
+        <text class="sl-count">{{processTotalCount}}项</text>
       </view>
-      <view wx:if="{{parentStages.length > 0}}" class="parent-stage-list">
-        <view wx:for="{{parentStages}}" wx:key="key" class="data-card parent-stage-card {{item.expanded ? 'psg-expanded' : ''}}" data-key="{{item.key}}" bindtap="onToggleParentStage">
-          <view class="dc-header">
-            <view class="dc-title-row">
-              <text class="dc-title">{{item.label}}</text>
-              <text class="dc-status-tag dst-{{item.percent >= 100 ? 'completed' : (item.percent > 0 ? 'in_progress' : 'not_started')}}">{{item.completedCount}}/{{item.totalCount}}</text>
-            </view>
-            <text class="dc-percent">{{item.percent}}%</text>
+      <view wx:if="{{processTotalCount === 0}}" class="empty-state">
+        <text class="empty-text">暂无工序配置</text>
+        <text class="empty-hint">请到PC端「款式管理 - 工序单价」中配置</text>
+      </view>
+      <block wx:else>
+        <!-- 按阶段分组（同步PC端父子结构） -->
+        <block wx:for="{{processGroups}}" wx:for-item="group" wx:key="stageName">
+          <view class="process-group-header">
+            <text class="pgg-name">{{group.stageName}}</text>
+            <text class="pgg-count">{{group.totalCount}}项 · 已完成{{group.completedCount}}项</text>
           </view>
-          <view class="dc-body">
-            <view class="dc-row" wx:if="{{item.latestOperator}}">
-              <text class="dc-label">最新领取人</text>
-              <text class="dc-value">{{item.latestOperator}}</text>
-            </view>
-            <view class="dc-row" wx:if="{{item.latestTime}}">
-              <text class="dc-label">最新扫码</text>
-              <text class="dc-value">{{item.latestTime}}</text>
-            </view>
-          </view>
-          <!-- 进度条 -->
-          <view class="psg-progress-bar">
-            <view class="psg-progress-fill" style="width: {{item.percent}}%"></view>
-          </view>
-          <!-- 展开区域：子工序列表 -->
-          <view wx:if="{{item.expanded}}" class="psg-expand-area" catchtap="">
-            <view wx:for="{{item.subProcesses}}" wx:for-item="sub" wx:key="id" class="psg-sub-item {{sub.completed ? 'psg-sub-done' : ''}}">
-              <view class="psg-sub-header">
-                <view class="psg-sub-dot {{sub.completed ? 'psg-dot-done' : ''}}"></view>
-                <text class="psg-sub-name">{{sub.name}}</text>
-                <text wx:if="{{sub.unitPrice}}" class="psg-sub-price">¥{{sub.unitPrice}}</text>
+          <view wx:for="{{group.processes}}" wx:for-item="item" wx:key="key" class="data-card process-stage-card {{item.expanded ? 'psc-expanded' : ''}}" data-key="{{item.key}}" bindtap="onToggleProcess">
+            <view class="dc-header">
+              <view class="dc-title-row">
+                <text class="dc-title">{{item.name}}</text>
+                <text class="dc-status-tag dst-{{item.status}}">{{item.statusText}}</text>
               </view>
-              <view class="psg-sub-meta">
-                <text wx:if="{{sub.assignee}}" class="psg-sub-assignee">{{sub.assignee}}</text>
-                <text wx:if="{{sub.scanTime}}" class="psg-sub-time">{{sub.scanTime}}</text>
-                <text wx:if="{{sub.scanCount > 0}}" class="psg-sub-count">{{sub.scanCount}}次扫码</text>
+              <text wx:if="{{item.unitPrice}}" class="dc-amount">¥{{item.unitPrice}}</text>
+            </view>
+            <view class="dc-body">
+              <view class="dc-row">
+                <text class="dc-label">领取人</text>
+                <text class="dc-value">{{item.assignee || '未领取'}}</text>
               </view>
-              <!-- 子工序扫码记录列表 -->
-              <view wx:if="{{sub.scanList.length > 0}}" class="psg-scan-list">
-                <view wx:for="{{sub.scanList}}" wx:for-item="rec" wx:key="id" class="psc-scan-item">
+              <view wx:if="{{item.scanTime}}" class="dc-row">
+                <text class="dc-label">扫码时间</text>
+                <text class="dc-value">{{item.scanTime}}</text>
+              </view>
+              <view wx:if="{{item.scanCount > 0}}" class="dc-row">
+                <text class="dc-label">扫码次数</text>
+                <text class="dc-value">{{item.scanCount}}次</text>
+              </view>
+              <view wx:if="{{item.warehouse}}" class="dc-row">
+                <text class="dc-label">仓库</text>
+                <text class="dc-value">{{item.warehouse}}</text>
+              </view>
+              <view wx:if="{{item.machineType}}" class="dc-row">
+                <text class="dc-label">机器类型</text>
+                <text class="dc-value">{{item.machineType}}</text>
+              </view>
+              <view wx:if="{{item.difficulty}}" class="dc-row">
+                <text class="dc-label">难度</text>
+                <text class="dc-value">{{item.difficulty}}</text>
+              </view>
+            </view>
+            <!-- 展开区域：扫码记录列表 -->
+            <view wx:if="{{item.expanded}}" class="psc-expand-area" catchtap="">
+              <view wx:if="{{item.scanList.length > 0}}" class="psc-scan-list">
+                <view class="psc-scan-header">
+                  <text class="psc-scan-title">扫码记录（{{item.scanCount}}条）</text>
+                </view>
+                <view wx:for="{{item.scanList}}" wx:for-item="rec" wx:key="id" class="psc-scan-item">
                   <view class="psc-scan-row">
                     <view class="psc-scan-operator">
                       <view class="psc-scan-dot"></view>
@@ -329,101 +341,22 @@
                   <view wx:if="{{rec.remark}}" class="psc-scan-remark">
                     <text>{{rec.remark}}</text>
                   </view>
+                  <view wx:if="{{rec.canUndo}}" class="psc-scan-undo" catchtap="onUndoScan" data-id="{{rec.id}}">
+                    <text>撤回</text>
+                  </view>
                 </view>
               </view>
-              <view wx:if="{{sub.scanCount === 0}}" class="psg-no-records">
+              <view wx:else class="psc-no-records">
                 <text>暂无扫码记录</text>
               </view>
             </view>
-          </view>
-          <view class="psc-toggle-indicator">
-            <text>{{item.expanded ? '收起' : '查看子工序'}}</text>
-            <view class="psc-arrow {{item.expanded ? 'psc-arrow-up' : ''}}"></view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 原有平铺工序列表 -->
-      <view class="section-label">
-        <text class="sl-text">工序列表</text>
-        <text class="sl-count">{{processStages.length}}项</text>
-      </view>
-      <view wx:if="{{processStages.length === 0}}" class="empty-state">
-        <text class="empty-text">暂无工序配置</text>
-      </view>
-      <block wx:else>
-        <view wx:for="{{processStages}}" wx:key="key" class="data-card process-stage-card {{item.expanded ? 'psc-expanded' : ''}}" data-key="{{item.key}}" bindtap="onToggleProcess">
-          <view class="dc-header">
-            <view class="dc-title-row">
-              <text class="dc-title">{{item.name}}</text>
-              <text class="dc-status-tag dst-{{item.status}}">{{item.statusText}}</text>
-            </view>
-            <text wx:if="{{item.unitPrice}}" class="dc-amount">¥{{item.unitPrice}}</text>
-          </view>
-          <view class="dc-body">
-            <view class="dc-row">
-              <text class="dc-label">领取人</text>
-              <text class="dc-value">{{item.assignee || '未领取'}}</text>
-            </view>
-            <view wx:if="{{item.scanTime}}" class="dc-row">
-              <text class="dc-label">扫码时间</text>
-              <text class="dc-value">{{item.scanTime}}</text>
-            </view>
-            <view wx:if="{{item.scanCount > 0}}" class="dc-row">
-              <text class="dc-label">扫码次数</text>
-              <text class="dc-value">{{item.scanCount}}次</text>
-            </view>
-            <view wx:if="{{item.warehouse}}" class="dc-row">
-              <text class="dc-label">仓库</text>
-              <text class="dc-value">{{item.warehouse}}</text>
-            </view>
-            <view wx:if="{{item.machineType}}" class="dc-row">
-              <text class="dc-label">机器类型</text>
-              <text class="dc-value">{{item.machineType}}</text>
-            </view>
-            <view wx:if="{{item.difficulty}}" class="dc-row">
-              <text class="dc-label">难度</text>
-              <text class="dc-value">{{item.difficulty}}</text>
+            <!-- 展开/收起指示器 -->
+            <view class="psc-toggle-indicator">
+              <text>{{item.expanded ? '收起' : '查看详情'}}</text>
+              <view class="psc-arrow {{item.expanded ? 'psc-arrow-up' : ''}}"></view>
             </view>
           </view>
-          <!-- 展开区域：扫码记录列表 -->
-          <view wx:if="{{item.expanded}}" class="psc-expand-area" catchtap="">
-            <view wx:if="{{item.scanList.length > 0}}" class="psc-scan-list">
-              <view class="psc-scan-header">
-                <text class="psc-scan-title">扫码记录（{{item.scanCount}}条）</text>
-              </view>
-              <view wx:for="{{item.scanList}}" wx:for-item="rec" wx:key="id" class="psc-scan-item">
-                <view class="psc-scan-row">
-                  <view class="psc-scan-operator">
-                    <view class="psc-scan-dot"></view>
-                    <text class="psc-scan-name">{{rec.operatorName}}</text>
-                  </view>
-                  <text class="psc-scan-time">{{rec.scanTimeText}}</text>
-                </view>
-                <view class="psc-scan-meta">
-                  <text class="psc-scan-op">{{rec.operationLabel}}</text>
-                  <text wx:if="{{rec.color || rec.size}}" class="psc-scan-cs">{{rec.color}}/{{rec.size}}</text>
-                  <text class="psc-scan-qty">{{rec.quantity}}件</text>
-                  <text wx:if="{{rec.warehouse && rec.warehouse !== '-'}}" class="psc-scan-wh">{{rec.warehouse}}</text>
-                </view>
-                <view wx:if="{{rec.remark}}" class="psc-scan-remark">
-                  <text>{{rec.remark}}</text>
-                </view>
-                <view wx:if="{{rec.canUndo}}" class="psc-scan-undo" catchtap="onUndoScan" data-id="{{rec.id}}">
-                  <text>撤回</text>
-                </view>
-              </view>
-            </view>
-            <view wx:else class="psc-no-records">
-              <text>暂无扫码记录</text>
-            </view>
-          </view>
-          <!-- 展开/收起指示器 -->
-          <view class="psc-toggle-indicator">
-            <text>{{item.expanded ? '收起' : '查看详情'}}</text>
-            <view class="psc-arrow {{item.expanded ? 'psc-arrow-up' : ''}}"></view>
-          </view>
-        </view>
+        </block>
       </block>
     </block>
 

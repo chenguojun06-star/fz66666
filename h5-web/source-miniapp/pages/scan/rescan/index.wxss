@@ -9,10 +9,15 @@
 /* ========= 信息卡片 ========= */
 .info-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  padding: var(--spacing-lg);
+  
+  
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--spacing-md);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .card-header {
@@ -122,11 +127,16 @@
   display: flex;
   align-items: flex-start;
   background: var(--color-bg-card);
-  border: 1rpx solid var(--color-warning);
-  border-radius: var(--radius-2xl);
-  padding: var(--spacing-lg);
+  
+  
+  
   margin-bottom: var(--spacing-md);
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .warning-icon {

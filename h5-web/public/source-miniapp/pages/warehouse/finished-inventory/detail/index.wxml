@@ -1,0 +1,110 @@
+<view class="container">
+  <!-- 加载 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:elif="{{skuList.length > 0}}">
+    <!-- 款式信息 -->
+    <view class="section-card style-card">
+      <image wx:if="{{styleImage}}" src="{{styleImage}}" mode="aspectFill" class="style-image" />
+      <view wx:else class="style-image style-image--placeholder">
+        <text class="style-image-text">衣</text>
+      </view>
+      <view class="style-info">
+        <text class="style-no">{{styleNo}}</text>
+        <text class="style-name">{{styleName || '-'}}</text>
+        <view class="style-meta">
+          <text wx:if="{{factoryName}}" class="meta-tag">{{factoryName}}</text>
+          <text wx:if="{{orderNo}}" class="meta-sub">订单：{{orderNo}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 统计卡片 -->
+    <view class="stats-row">
+      <view class="stat-card">
+        <text class="stat-value">{{summary.totalAvailable}}</text>
+        <text class="stat-label">可用库存</text>
+      </view>
+      <view class="stat-card">
+        <text class="stat-value stat-value--muted">{{summary.totalLocked}}</text>
+        <text class="stat-label">锁定</text>
+      </view>
+      <view class="stat-card">
+        <text class="stat-value stat-value--danger">{{summary.totalDefect}}</text>
+        <text class="stat-label">次品</text>
+      </view>
+      <view class="stat-card">
+        <text class="stat-value stat-value--info">{{summary.totalInbound}}</text>
+        <text class="stat-label">累计入库</text>
+      </view>
+    </view>
+
+    <!-- SKU 列表 -->
+    <view class="section-card">
+      <view class="card-header">
+        <text class="card-title">SKU 明细</text>
+        <text class="card-count">{{skuList.length}}个</text>
+      </view>
+
+      <scroll-view scroll-x class="sku-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="sku-table">
+          <view class="sku-row sku-row--header">
+            <text class="sku-cell sku-cell--color">颜色</text>
+            <text class="sku-cell sku-cell--size">尺码</text>
+            <text class="sku-cell sku-cell--qty">可用</text>
+            <text class="sku-cell sku-cell--qty">次品</text>
+            <text class="sku-cell sku-cell--qty">累计入库</text>
+            <text class="sku-cell sku-cell--price">售价</text>
+            <text class="sku-cell sku-cell--loc">库位</text>
+            <text class="sku-cell sku-cell--action">操作</text>
+          </view>
+          <view wx:for="{{skuList}}" wx:key="id" class="sku-row">
+            <text class="sku-cell sku-cell--color">{{item.color}}</text>
+            <text class="sku-cell sku-cell--size">{{item.size}}</text>
+            <text class="sku-cell sku-cell--qty sku-cell--bold">{{item.availableQty}}</text>
+            <text class="sku-cell sku-cell--qty sku-cell--danger">{{item.defectQty}}</text>
+            <text class="sku-cell sku-cell--qty">{{item.totalInboundQty}}</text>
+            <text class="sku-cell sku-cell--price">¥{{item.salesPrice}}</text>
+            <text class="sku-cell sku-cell--loc">{{item.warehouseLocation}}</text>
+            <view class="sku-cell sku-cell--action">
+              <view wx:if="{{item.availableQty > 0}}" class="outbound-btn" catchtap="onOutbound" data-sku="{{item}}">出库</view>
+              <text wx:else class="outbound-btn--disabled">无库存</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
+
+  <view wx:else class="empty-wrap">
+    <text class="empty-text">暂无库存数据</text>
+  </view>
+
+  <!-- 出库弹窗 -->
+  <view wx:if="{{showOutbound}}" class="modal-mask" bindtap="onCancelOutbound" catchtouchmove="preventTouchMove">
+    <view class="modal-content" catchtap="preventTouchMove">
+      <view class="modal-header">
+        <text class="modal-title">出库</text>
+        <view class="modal-close" bindtap="onCancelOutbound"><text>✕</text></view>
+      </view>
+      <view class="modal-body">
+        <view class="outbound-info">
+          <text class="outbound-sku">{{outboundSku.color}} / {{outboundSku.size}}</text>
+          <text class="outbound-available">可用库存 {{outboundSku.availableQty}} 件</text>
+        </view>
+        <view class="qty-picker">
+          <view class="qty-btn" bindtap="onOutboundQtyMinus">-</view>
+          <input class="qty-input" type="number" value="{{outboundQty}}" bindinput="onOutboundQtyChange" />
+          <view class="qty-btn" bindtap="onOutboundQtyPlus">+</view>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-btn modal-btn--cancel" bindtap="onCancelOutbound">取消</view>
+        <view class="modal-btn modal-btn--confirm" bindtap="onConfirmOutbound">确认出库</view>
+      </view>
+    </view>
+  </view>
+</view>

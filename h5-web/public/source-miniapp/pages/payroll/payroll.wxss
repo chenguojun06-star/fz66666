@@ -10,9 +10,14 @@
 /* ========== 汇总渐变卡片 (brand-50 -> brand-100) ========== */
 .summary-card {
   margin-top: 12px;
-  padding: 16px;
+  
   background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-primary-bg-dark) 100%);
-  border-radius: 16px;
+  
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .summary-month {
@@ -108,6 +113,46 @@
   flex-shrink: 0;
 }
 
+/* ========== 日期选择栏 ========== */
+.date-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--page-padding-x) 12px;
+}
+
+.date-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  height: 36px;
+  flex: 1;
+  box-shadow: var(--shadow-sm);
+}
+
+.date-label {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.date-value {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+}
+
+.date-sep {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
 /* ========== 筛选标签 (Apple 风格下划线) ========== */
 .filter-tabs {
   display: flex;
@@ -147,11 +192,16 @@
 /* 工序记录卡片：border + rounded-lg(8px)，对齐设计稿 rounded-lg border border-[var(--background-300)] */
 .record-item {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
+  
+  
+  
   margin-bottom: 10px;
   transition: background-color 0.18s ease;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .record-item:active {

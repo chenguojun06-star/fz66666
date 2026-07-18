@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="裁剪菲详情" show-back="{{true}}" />
-
   <!-- 订单选择列表（从首页直接进来时显示） -->
   <block wx:if="{{showOrderList}}">
     <view class="order-list-wrap">

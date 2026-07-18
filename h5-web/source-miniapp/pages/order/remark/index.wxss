@@ -9,10 +9,11 @@
 
 .section-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -113,8 +114,13 @@
   gap: var(--spacing-md);
 }
 .remark-card {
-  padding: var(--spacing-md) 0;
+  
   border-bottom: 1px solid var(--color-border);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .remark-card:last-child { border-bottom: none; }
 

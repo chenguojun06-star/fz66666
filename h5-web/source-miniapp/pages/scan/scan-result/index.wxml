@@ -1,5 +1,4 @@
 <wxs src="../../../utils/money.wxs" module="money" />
-<custom-nav title="扫码结果" show-back="{{true}}" />
 <view class="container">
 
   <!-- 扫描成功状态卡片（对齐设计稿：白底 + 绿色圆圈 + 边框） -->

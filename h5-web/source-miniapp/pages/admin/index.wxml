@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="我的" show-search="{{false}}" />
-
   <!-- 用户信息卡 -->
   <view wx:if="{{userInfo}}" class="user-profile-card">
     <view class="profile-edit-btn" hover-class="profile-edit-btn-hover" hover-stay-time="100" bindtap="onEditProfile">

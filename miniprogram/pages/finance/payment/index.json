@@ -2,5 +2,5 @@
   "usingComponents": {
     "empty-state": "/components/empty-state/empty-state"
   },
-  "navigationBarTitleText": "收付款中心"
+  "navigationBarTitleText": "财务付款"
 }

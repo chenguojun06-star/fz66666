@@ -1,8 +1,6 @@
 {
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "面辅料料卷扫码",
+  "navigationBarTitleText": "",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

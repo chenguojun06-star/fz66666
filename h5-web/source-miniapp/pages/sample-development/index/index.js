@@ -1,7 +1,8 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 
 const STATUS_LABELS = {
   PENDING: '待领取',
@@ -9,27 +10,10 @@ const STATUS_LABELS = {
   PRODUCTION_COMPLETED: '已完成',
   COMPLETED: '已完成',
   WAREHOUSE_IN: '已入库',
+  WAREHOUSE_OUT: '已出库',
+  REWORK: '返工中',
   SCRAPPED: '已报废',
   CLOSED: '已关单',
-};
-
-// 与 PC 端 6 阶段对齐
-const SAMPLE_PARENT_STAGES = [
-  { key: 'procurement', name: '采购' },
-  { key: 'cutting', name: '裁剪' },
-  { key: 'secondary', name: '二次工艺' },
-  { key: 'sewing', name: '车缝' },
-  { key: 'tail', name: '尾部' },
-  { key: 'warehousing', name: '入库' },
-];
-
-const SAMPLE_PROGRESS_NODE_ALIASES = {
-  procurement: ['procurement', '采购'],
-  cutting: ['cutting', '裁剪', '下板'],
-  secondary: ['secondary', '二次工艺'],
-  sewing: ['sewing', '车缝', '缝制'],
-  tail: ['tail', '尾部', '后整'],
-  warehousing: ['warehousing', '入库'],
 };
 
 const CATEGORY_MAP = {
@@ -52,8 +36,8 @@ const SEASON_MAP = {
   AUTUMN_WINTER: '秋冬',
 };
 
-// 完成态状态集合
-var COMPLETED_STATUSES = ['COMPLETED', 'PRODUCTION_COMPLETED', 'WAREHOUSE_IN', 'CLOSED'];
+// 完成态状态集合（与后端 calcSampleStats 对齐）
+var COMPLETED_STATUSES = ['COMPLETED', 'PRODUCTION_COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT', 'CLOSED'];
 
 function clampPercent(value) {
   var n = Number(value || 0);
@@ -86,10 +70,20 @@ function getSampleNodeProgress(item, key) {
 
 function isSampleSnapshotFullyCompleted(item) {
   var status = String(item.status || '').trim().toUpperCase();
+  // 完成态状态直接返回 true（与后端 calculatePatternProgressPercent 对齐）
+  if (status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED' || status === 'WAREHOUSE_IN' || status === 'WAREHOUSE_OUT') {
+    return true;
+  }
   var allDone = SAMPLE_PARENT_STAGES.every(function (s) {
+    if (s.key === 'procurement') {
+      // 采购阶段用 procurementProgress 判断（MaterialPurchase 实时聚合）
+      var pp = item.procurementProgress;
+      var pct = (pp && typeof pp === 'object') ? pp.percent : (pp || 0);
+      return Number(pct) >= 100;
+    }
     return getSampleNodeProgress(item, s.key) >= 100;
   });
-  return allDone && (status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED');
+  return allDone && (status === 'IN_PROGRESS');
 }
 
 function formatDate(v) {
@@ -297,48 +291,69 @@ Page({
 
         // 处理每条记录
         var allList = records.map(function (item) {
-          item._cover = getAuthedImageUrl(item.coverImage || '');
+          // 从嵌套 styleInfo 中提取字段（后端 enrichRecord 返回）
+          var si = item.styleInfo || {};
+          // 款号/款名优先从顶层取，没有则从 styleInfo 嵌套对象取
+          item._styleNo = item.styleNo || si.styleNo || '';
+          item._styleName = item.styleName || si.styleName || '';
+          item._cover = getAuthedImageUrl(item.coverImage || si.cover || '');
           item._statusLabel = STATUS_LABELS[item.status] || item.status || '-';
           item._statusColor = that.getStatusColorClass(item.status);
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);
           item._deliveryTag = fmtDate(item.deliveryTime);
+          // 数量
+          item._quantity = item.quantity || si.sampleQuantity || '';
           item._overdue = false;
           item._nearDue = false;
+          item._daysLeftText = '';
           if (item.deliveryTime && !isCompletedStatus(item.status)) {
             try {
               var now = new Date();
               var due = new Date(String(item.deliveryTime).replace(/-/g, '/'));
-              if (due < now) {
+              var diffMs = due - now;
+              var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              if (diffDays < 0) {
                 item._overdue = true;
-              } else if (isWithinDays(item.deliveryTime, 3)) {
+                item._daysLeftText = '延期' + Math.abs(diffDays) + '天';
+              } else if (diffDays === 0) {
                 item._nearDue = true;
+                item._daysLeftText = '今天交板';
+              } else if (diffDays <= 3) {
+                item._nearDue = true;
+                item._daysLeftText = '剩' + diffDays + '天';
+              } else {
+                item._daysLeftText = '剩' + diffDays + '天';
               }
             } catch (_e) { /* ignore */ }
           }
 
-          // 元信息行1：公司 · 跟单 · 品类 · 季节
+          // 元信息行1：客户 · 跟单 · 品类 · 季节
           var meta1Parts = [];
-          if (item.company || item.brandName) meta1Parts.push(item.company || item.brandName);
-          if (item.merchandiser || item.merchandiserName) meta1Parts.push('跟单: ' + (item.merchandiser || item.merchandiserName));
-          var category = item.category;
+          var customer = item.customer || si.customer || item.company || si.company || item.brandName || '';
+          if (customer) meta1Parts.push(customer);
+          var merchandiser = item.merchandiser || item.merchandiserName || si.merchandiser || '';
+          if (merchandiser) meta1Parts.push('跟单: ' + merchandiser);
+          var category = item.category || si.category || '';
           if (category && CATEGORY_MAP[category]) category = CATEGORY_MAP[category];
           if (category) meta1Parts.push(category);
-          var season = item.season;
+          var season = item.season || si.season || '';
           if (season && SEASON_MAP[season]) season = SEASON_MAP[season];
           if (season) meta1Parts.push(season);
           item._metaLine1 = meta1Parts.join(' · ');
 
           // 元信息行2：颜色 · 尺码
           var meta2Parts = [];
-          if (item.color) meta2Parts.push(item.color);
-          if (item.sizes || item.sizeRange) meta2Parts.push(item.sizes || item.sizeRange);
+          var color = item.color || si.color || '';
+          if (color) meta2Parts.push(color);
+          var sizes = item.sizes || item.sizeRange || si.size || si.sizes || si.sizeRange || '';
+          if (sizes) meta2Parts.push(sizes);
           item._metaLine2 = meta2Parts.join(' · ');
 
           // 进度计算
           var completed = isSampleSnapshotFullyCompleted(item);
           var statusUpper = String(item.status || '').trim().toUpperCase();
-          var received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].indexOf(statusUpper) >= 0
+          var received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT'].indexOf(statusUpper) >= 0
             || Boolean(item.receiver)
             || !!item.receiveTime;
           var procurementProgress = clampPercent(
@@ -395,6 +410,8 @@ Page({
       PRODUCTION_COMPLETED: 'var(--color-success)',
       COMPLETED: 'var(--color-success)',
       WAREHOUSE_IN: 'var(--color-text-tertiary)',
+      WAREHOUSE_OUT: 'var(--color-text-tertiary)',
+      REWORK: 'var(--color-danger)',
       SCRAPPED: 'var(--color-text-tertiary)',
       CLOSED: 'var(--color-text-tertiary)',
     };
@@ -438,9 +455,7 @@ Page({
   },
 
   onScan: function () {
-    safeNavigate({
-      url: '/pages/scan/index',
-    }).catch(function () {});
+    quickScan();
   },
 
   onPreviewImage: function (e) {

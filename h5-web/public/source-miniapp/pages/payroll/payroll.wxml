@@ -1,6 +1,4 @@
 <!-- pages/payroll/payroll.wxml -->
-<custom-nav title="工资查询" show-back="{{true}}" />
-
 <view class="page">
   <!-- 汇总渐变卡片 (brand-50 -> brand-100) -->
   <view class="summary-card">
@@ -21,6 +19,23 @@
         <text class="summary-stat-value">¥{{bonusAmount}}</text>
       </view>
     </view>
+  </view>
+
+  <!-- 日期选择栏 -->
+  <view class="date-bar">
+    <picker mode="date" value="{{startDate}}" end="{{endDate}}" bindchange="onStartDateChange">
+      <view class="date-picker">
+        <text class="date-label">开始</text>
+        <text class="date-value">{{startDate}}</text>
+      </view>
+    </picker>
+    <text class="date-sep">~</text>
+    <picker mode="date" value="{{endDate}}" start="{{startDate}}" bindchange="onEndDateChange">
+      <view class="date-picker">
+        <text class="date-label">结束</text>
+        <text class="date-value">{{endDate}}</text>
+      </view>
+    </picker>
   </view>
 
   <!-- 类型筛选 tabs (Apple 风格下划线) -->

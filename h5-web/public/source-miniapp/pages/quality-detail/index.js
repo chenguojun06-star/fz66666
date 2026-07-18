@@ -4,7 +4,7 @@ const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { getUserInfo } = require('../../utils/storage');
 const qualityHelper = require('../../utils/quality-helper');
-const { calcDeliveryInfo } = require('../factory/utils/orderTransform');
+const { calcDeliveryInfo } = require('../../utils/deliveryHelper');
 
 const getQualityCategory = qualityHelper.getQualityCategory;
 const DEFECT_CATEGORY_MAP = qualityHelper.DEFECT_CATEGORY_MAP;
@@ -368,7 +368,7 @@ Page({
       .then(function (res) {
         var bundles = Array.isArray(res) ? res : (res && res.records ? res.records : []);
         bundles = bundles.map(function (b) {
-          b.bundleNoShort = self._truncateBundleNo(b.bundleQrCode || b.bundleNo || b.cuttingBundleQrCode);
+          b.bundleNoShort = self._truncateBundleNo(b.bundleQrCode || b.bundleNo || b.cuttingBundleQrCode, b.orderNo || self.data.orderNo);
           // 多选用 key：优先 qrCode，缺省回退 bundleId
           b.selectKey = b.qrCode || b.bundleId || '';
           b.selected = false;
@@ -410,8 +410,8 @@ Page({
 
     r.defectCategoryText = DEFECT_CATEGORY_MAP[r.defectCategory] || r.defectCategory || '';
 
-    // 菲号截断显示（与 PC 端 / 列表页一致）
-    r.bundleNoShort = this._truncateBundleNo(r.bundleQrCode || r.bundleNo || r.cuttingBundleQrCode);
+    // 菲号显示：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
+    r.bundleNoShort = this._truncateBundleNo(r.bundleQrCode || r.bundleNo || r.cuttingBundleQrCode, r.orderNo || this.data.orderNo);
 
     r.isHighlighted = !!this.data.warehousingNo &&
       String(r.warehousingNo || '').trim() === this.data.warehousingNo;
@@ -514,13 +514,21 @@ Page({
   },
 
   /**
-   * 菲号截断显示（与 PC 端 InspectFormPanel / 列表页一致：取后3段用-拼接）
+   * 菲号格式化：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
    */
-  _truncateBundleNo: function (qr) {
-    if (!qr) return '-';
+  _truncateBundleNo: function (qr, orderNo) {
+    if (!qr) {
+      if (orderNo) return orderNo + '-?';
+      return '-';
+    }
     var t = String(qr).split('|')[0].trim();
     if (!t) return '-';
     var parts = t.split('-');
+    var bundleSeq = parts[parts.length - 1] || '';
+    var ord = orderNo || parts[0] || '';
+    if (ord && bundleSeq) {
+      return ord + '-' + bundleSeq;
+    }
     return parts.length > 3 ? parts.slice(-3).join('-') : t;
   },
 

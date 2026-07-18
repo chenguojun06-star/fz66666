@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="质检详情" show-back="{{true}}" />
-
   <!-- 加载态 -->
   <view wx:if="{{loading && !order && !detail}}" class="loading-state">
     <view class="loading-spinner"></view>

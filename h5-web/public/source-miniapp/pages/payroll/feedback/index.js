@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { hasFeaturePermission } = require('../../../utils/permission');
 
 Page({
   data: {
@@ -14,6 +15,11 @@ Page({
   },
 
   onLoad() {
+    if (!hasFeaturePermission('view_payroll')) {
+      toast('您没有查看工资的权限');
+      wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
+      return;
+    }
     this.loadSettlements();
   },
 

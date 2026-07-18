@@ -50,10 +50,15 @@
 /* ========== 1. 款式信息卡片（蓝色渐变） ========== */
 .info-card {
   background: linear-gradient(135deg, var(--color-primary-bg), var(--color-bg-card));
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-md);
+  
+  
   margin-bottom: var(--card-gap);
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .info-card__body {
@@ -185,11 +190,16 @@
 /* ========== 通用 Section Card ========== */
 .section-card {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-md);
+  
+  
+  
   margin-bottom: var(--card-gap);
   box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .section-card__header {
   display: flex;
@@ -756,10 +766,15 @@
   display: flex;
   gap: 10px;
   background: var(--color-bg-card);
+  
+  
+  
+  box-shadow: var(--shadow-sm);
+
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
+  padding: 12px;
+  box-sizing: border-box;
 }
 .remark-avatar {
   width: 32px;
@@ -978,8 +993,13 @@
 }
 
 /* ============ 资料标签栏 ============ */
+/* 资料区合并卡片 */
+.tab-section-card {
+  padding: 0;
+  overflow: hidden;
+}
 .data-tabs {
-  background: var(--color-bg-card, #fff);
+  background: transparent;
   border-bottom: 1px solid var(--color-border-light, #f0f0f0);
   white-space: nowrap;
 }
@@ -1066,11 +1086,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border-light, #f5f5f5);
+  padding: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
 }
 .bom-item:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 .bom-item__main {
   flex: 1;
@@ -1156,13 +1181,9 @@
   text-align: center;
   flex-shrink: 0;
 }
-.size-cell--part { width: 90px; text-align: left; font-weight: 500; }
-.size-cell--code { width: 60px; }
-.size-cell--group { width: 80px; }
-.size-cell--method { width: 100px; }
-.size-cell--base { width: 70px; }
-.size-cell--val { width: 80px; font-weight: 600; color: var(--color-primary, #1677ff); }
-.size-cell--tol { width: 70px; }
+.size-cell--part { width: 80px; text-align: left; font-weight: 500; }
+.size-cell--size { width: 60px; font-weight: 600; }
+.size-cell--val { width: 60px; }
 
 /* 文件列表 */
 .file-list {

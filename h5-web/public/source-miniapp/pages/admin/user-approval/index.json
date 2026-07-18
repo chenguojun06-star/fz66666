@@ -1,9 +1,6 @@
 {
-  "navigationStyle": "custom",
   "navigationBarTitleText": "用户审批",
   "enablePullDownRefresh": true,
   "onReachBottomDistance": 50,
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }
