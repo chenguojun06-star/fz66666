@@ -1,67 +1,84 @@
+<custom-nav title="退货列表" show-back="{{true}}" />
 <view class="page-bg">
-  <view class="type-tabs">
-    <view
-      wx:for="{{typeTabs}}"
-      wx:key="key"
-      class="type-tab {{activeType === item.key ? 'active' : ''}}"
-      data-key="{{item.key}}"
-      bindtap="onTypeChange"
-    >{{item.label}}</view>
+  <!-- 分段控件 + 状态标签（sticky） -->
+  <view class="sticky-header">
+    <!-- 类型分段控件 -->
+    <view class="type-tabs">
+      <view
+        wx:for="{{typeTabs}}"
+        wx:key="key"
+        class="type-tab {{activeType === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onTypeChange"
+      >{{item.label}}</view>
+    </view>
+
+    <!-- 状态标签：横向滚动，pill 形，带计数 -->
+    <scroll-view scroll-x class="status-tabs-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="status-tabs">
+        <view
+          wx:for="{{activeType === 'purchase' ? statusTabs : statusTabsSales}}"
+          wx:key="key"
+          class="status-tab status-tab--{{item.cls}} {{activeStatus === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onStatusChange"
+        >
+          <text class="status-tab-label">{{item.label}}</text>
+          <text class="status-tab-count">{{statusCounts[item.key] || 0}}</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 
-  <scroll-view scroll-x class="status-tabs-scroll" enhanced show-scrollbar="{{false}}">
-    <view class="status-tabs">
-      <view
-        wx:for="{{activeType === 'purchase' ? statusTabs : statusTabsSales}}"
-        wx:key="key"
-        class="status-tab status-tab--{{item.cls}} {{activeStatus === item.key ? 'active' : ''}}"
-        data-key="{{item.key}}"
-        bindtap="onStatusChange"
-      >
-        <text class="status-tab-label">{{item.label}}</text>
-        <text class="status-tab-count">{{statusCounts[item.key] || 0}}</text>
+  <!-- 退货卡片列表 -->
+  <view class="list-wrap">
+    <!-- 空状态 -->
+    <view wx:if="{{list.length === 0 && !loading}}" class="empty-state">
+      <view class="empty-text">暂无退货单</view>
+    </view>
+
+    <!-- 卡片三段式：header / detail-grid / footer -->
+    <view
+      wx:for="{{list}}"
+      wx:key="id"
+      class="card border-{{item.statusColor}}"
+      data-id="{{item.id}}"
+      data-type="{{item._type}}"
+      bindtap="goDetail"
+    >
+      <!-- Header：退货单号 + 原单号 + 状态标签 -->
+      <view class="card-header">
+        <view class="header-left">
+          <text class="return-no">{{item.returnNo}}</text>
+          <text class="card-sub-no">原单号: {{item.originalNo}}</text>
+        </view>
+        <text class="status-badge tag-{{item.statusColor}}">{{item.statusLabel}}</text>
+      </view>
+
+      <!-- Detail grid：供应商/客户 · 类型 · 原因 -->
+      <view class="card-grid">
+        <view class="grid-item">
+          <text class="row-label">{{item._type === 'purchase' ? '供应商' : '客户'}}</text>
+          <text class="row-value">{{item.partyName}}</text>
+        </view>
+        <view class="grid-item">
+          <text class="row-label">类型</text>
+          <text class="row-value">{{item.reasonType}}</text>
+        </view>
+        <view class="grid-item grid-item--full" wx:if="{{item.reasonDetail}}">
+          <text class="row-label">原因</text>
+          <text class="row-value">{{item.reasonDetail}}</text>
+        </view>
+      </view>
+
+      <!-- Footer：金额 + 时间 -->
+      <view class="card-footer">
+        <text class="amount">¥{{item.totalAmount}}</text>
+        <text class="time">{{item.createTime}}</text>
       </view>
     </view>
-  </scroll-view>
 
-  <view class="list-wrap">
-    <block wx:if="{{list.length === 0 && !loading}}">
-      <view class="empty-state">
-        <view class="empty-text">暂无退货单</view>
-      </view>
-    </block>
-
-    <block wx:for="{{list}}" wx:key="id">
-      <view class="card" style="border-left: 6rpx solid {{item.statusColor}};" data-id="{{item.id}}" data-type="{{item._type}}" bindtap="goDetail">
-        <view class="card-header">
-          <text class="return-no">{{item.returnNo}}</text>
-          <text class="status-badge" style="color:{{item.statusColor}};background:{{item.statusColor}}1A;">{{item.statusLabel}}</text>
-        </view>
-        <view class="card-row">
-          <text class="row-label">原单号</text>
-          <text class="row-value">{{item.originalNo}}</text>
-        </view>
-        <view class="card-grid">
-          <view class="grid-item">
-            <text class="row-label">{{item._type === 'purchase' ? '供应商' : '客户'}}</text>
-            <text class="row-value">{{item.partyName}}</text>
-          </view>
-          <view class="grid-item">
-            <text class="row-label">类型</text>
-            <text class="row-value">{{item.returnType}}</text>
-          </view>
-        </view>
-        <view class="card-row" wx:if="{{item.returnReason !== '-'}}">
-          <text class="row-label">原因</text>
-          <text class="row-value reason">{{item.returnReason}}</text>
-        </view>
-        <view class="card-footer">
-          <text class="amount">¥{{item.totalAmount}}</text>
-          <text class="time">{{item.createTime}}</text>
-        </view>
-      </view>
-    </block>
-
+    <!-- 加载 / 分页结束 -->
     <view wx:if="{{loading}}" class="loading-more">加载中...</view>
     <view wx:elif="{{!hasMore && list.length > 0}}" class="loading-more">没有更多了</view>
   </view>

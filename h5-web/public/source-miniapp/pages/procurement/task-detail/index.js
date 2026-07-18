@@ -2,8 +2,6 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
-const permission = require('../../../utils/permission');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
@@ -16,14 +14,11 @@ Page({
     orderId: '',
     orderNo: '',
     styleNo: '',
-    patternProductionId: '',
-    sourceType: '',
     loading: false,
     submitting: false,
     materialPurchases: [],
     remark: '',
     hasInput: false,
-    hasReturnInput: false,
     canConfirmProcurement: false,
     hasReturnConfirmed: false,
     overallArrivalRate: -1,
@@ -32,29 +27,8 @@ Page({
   onLoad(options) {
     this.orderNo = decodeURIComponent(options.orderNo || '');
     const styleNo = decodeURIComponent(options.styleNo || '');
-    // P1-2 修复：样衣采购任务无 orderNo，按 patternProductionId 关联查询
-    this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
-    this.sourceType = decodeURIComponent(options.sourceType || '');
-    this.styleId = decodeURIComponent(options.styleId || '');
-    this.setData({
-      orderNo: this.orderNo,
-      styleNo,
-      patternProductionId: this.patternProductionId,
-      sourceType: this.sourceType,
-    });
-    // 样衣采购：按 patternProductionId 查询；旧样衣兜底用 styleId；大货订单：按 orderNo 查询
-    if (this.patternProductionId && this.sourceType === 'sample') {
-      this._loadDetail();
-    } else if (this.styleId && this.sourceType === 'sample') {
-      this._loadDetail();
-    } else if (this.orderNo) {
-      this._loadDetail();
-    }
-    bindPageEvents(this, () => this._loadDetail(), ['TASK_RECEIVED', 'TASK_RETURNED']);
-  },
-
-  onUnload() {
-    unbindPageEvents(this);
+    this.setData({ orderNo: this.orderNo, styleNo });
+    if (this.orderNo) this._loadDetail();
   },
 
   onShow() {
@@ -67,13 +41,7 @@ Page({
   async _loadDetail() {
     this.setData({ loading: true });
     try {
-      // P1-2 修复：样衣采购按 patternProductionId 查询；旧样衣兜底用 styleId；大货订单按 orderNo 查询
-      const params = (this.patternProductionId && this.sourceType === 'sample')
-        ? { patternProductionId: this.patternProductionId, sourceType: 'sample' }
-        : (this.styleId && this.sourceType === 'sample')
-          ? { styleId: this.styleId, sourceType: 'sample' }
-          : { orderNo: this.orderNo };
-      const res = await api.production.getMaterialPurchases(params);
+      const res = await api.production.getMaterialPurchases({ orderNo: this.orderNo });
       const list = this._normalizeToArray(res);
       const userInfo = getUserInfo() || {};
       const receiverId = String(userInfo.id || userInfo.userId || '').trim();
@@ -94,7 +62,6 @@ Page({
 
         const purchaseQty = Number(item.purchaseQuantity || 0);
         const arrivedQty = Number(item.arrivedQuantity || 0);
-        const pendingQty = Math.max(0, purchaseQty - arrivedQty);
         totalPurchased += purchaseQty;
         totalArrived += arrivedQty;
         if (!returnConfirmed) hasUnconfirmed = true;
@@ -106,8 +73,7 @@ Page({
 
         return {
           ...item,
-          _status: status,
-          materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
+          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
           statusText: this._getStatusText(status),
           statusColor: this._getStatusColor(status),
           isActionable,
@@ -116,11 +82,6 @@ Page({
           returnConfirmed,
           canConfirmReturn,
           inputQuantity: '',
-          returnQtyInput: '',
-          purchaseQuantity: this._fmtQty(purchaseQty),
-          arrivedQuantity: this._fmtQty(arrivedQty),
-          pendingQuantity: this._fmtQty(pendingQty),
-          returnQuantity: this._fmtQty(Number(item.returnQuantity || 0)),
           arrivalRate: purchaseQty > 0 ? Math.round(arrivedQty / purchaseQty * 100) : 0,
           returnConfirmTimeText,
         };
@@ -128,13 +89,9 @@ Page({
 
       const orderId = (materialPurchases[0] && (materialPurchases[0].orderId || materialPurchases[0].order_id)) || '';
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
-      // 整体采购阶段已完成：所有物料都 procurement_completed
-      const allProcurementCompleted = materialPurchases.length > 0
-        && materialPurchases.every(m => m._status === 'procurement_completed');
-      // canConfirmProcurement 需排除整体已完成的情况
-      const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50 && !allProcurementCompleted;
+      const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
 
-      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed, hasReturnInput: false, allProcurementCompleted });
+      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -155,40 +112,13 @@ Page({
     this.setData({ materialPurchases: materials, hasInput });
   },
 
-  onReturnQtyInput(e) {
-    const { id } = e.currentTarget.dataset;
-    const value = e.detail.value;
-    const materials = this.data.materialPurchases.map(item => {
-      if ((item.id || item.purchaseId) === id) {
-        return { ...item, returnQtyInput: value };
-      }
-      return item;
-    });
-    const hasReturnInput = materials.some(m => m.canConfirmReturn && !m.returnConfirmed && m.returnQtyInput && Number(m.returnQtyInput) > 0);
-    this.setData({ materialPurchases: materials, hasReturnInput });
-  },
-
   onRemarkInput(e) {
     this.setData({ remark: e.detail.value });
   },
 
   async onReceiveAll() {
-    // 软校验：非采购员且非主管，提示但不阻断
-    if (!permission.canReceiveTask('procurement')) {
-      const allowed = await new Promise(resolve => {
-        wx.showModal({
-          title: '岗位提示',
-          content: `您当前职务「${permission.getRoleDisplayName()}」非采购岗，确定代领？`,
-          confirmText: '确定代领',
-          cancelText: '取消',
-          success: res => resolve(!!res.confirm),
-        });
-      });
-      if (!allowed) return;
-    }
-
     if (this.data.hasReturnConfirmed) {
-      toast.info('已有物料完成回料确认，无法继续采购');
+      toast.warning('已有物料完成回料确认，无法继续采购');
       return;
     }
 
@@ -226,149 +156,99 @@ Page({
   },
 
   async onReturnConfirm(e) {
-    const { id } = e.currentTarget.dataset;
+    const { id, name, arrived, purchase } = e.currentTarget.dataset;
     if (!id) return;
 
-    const item = this.data.materialPurchases.find(m => (m.id || m.purchaseId) === id);
-    if (!item) return;
+    const defaultQty = (Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0;
 
-    const arrivedQty = Number(item.arrivedQuantity || 0);
-    const purchaseQty = Number(item.purchaseQuantity || 0);
-    const defaultQty = arrivedQty > 0 ? arrivedQty : purchaseQty;
-    const inputQty = item.returnQtyInput ? Number(item.returnQtyInput) : defaultQty;
+    wx.showModal({
+      title: '确认回料',
+      content: `确认「${name || '该物料'}」回料数量（可修改）:`,
+      editable: true,
+      placeholderText: String(defaultQty),
+      confirmText: '确认回料',
+      confirmColor: '#007aff',
+      success: async (res) => {
+        if (!res.confirm) return;
 
-    if (isNaN(inputQty) || inputQty < 0) {
-      toast.error('请输入有效的回料数量');
-      return;
-    }
+        const qty = (res.content !== undefined && res.content !== '')
+          ? Number(res.content)
+          : defaultQty;
+        if (isNaN(qty) || qty < 0) {
+          toast.error('请输入有效的回料数量');
+          return;
+        }
 
-    const userInfo = getUserInfo() || {};
-    const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
-    const confirmerName = String(userInfo.name || userInfo.username || '').trim();
+        const userInfo = getUserInfo() || {};
+        const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
+        const confirmerName = String(userInfo.name || userInfo.username || '').trim();
 
-    wx.showLoading({ title: '确认中...', mask: true });
-    try {
-      await api.production.confirmReturnPurchase({
-        purchaseId: id,
-        confirmerId,
-        confirmerName,
-        returnQuantity: inputQty,
-      });
-      wx.hideLoading();
-      toast.success('回料确认成功');
-      triggerDataRefresh('procurement');
-      this._loadDetail();
-    } catch (err) {
-      wx.hideLoading();
-      toast.error(err.errMsg || err.message || '确认失败');
-    }
-  },
+        wx.showLoading({ title: '确认中...', mask: true });
+        try {
+          await api.production.confirmReturnPurchase({
+            purchaseId: id,
+            confirmerId,
+            confirmerName,
+            returnQuantity: qty,
+          });
+          wx.hideLoading();
+          toast.success('回料确认成功');
 
-  async onConfirmAllReturns() {
-    const { materialPurchases, hasReturnConfirmed } = this.data;
-    if (hasReturnConfirmed) {
-      toast.info('已有物料完成回料确认，无法重复操作');
-      return;
-    }
+          triggerDataRefresh('procurement');
 
-    // 找到所有可确认回料且未确认的物料
-    const confirmableItems = materialPurchases.filter(m => m.canConfirmReturn && !m.returnConfirmed);
-    if (confirmableItems.length === 0) {
-      toast.info('没有待确认回料的物料');
-      return;
-    }
-
-    const userInfo = getUserInfo() || {};
-    const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
-    const confirmerName = String(userInfo.name || userInfo.username || '').trim();
-
-    wx.showLoading({ title: '一键确认中...', mask: true });
-    try {
-      await Promise.all(confirmableItems.map(item => {
-        const arrivedQty = Number(item.arrivedQuantity || 0);
-        const purchaseQty = Number(item.purchaseQuantity || 0);
-        const defaultQty = arrivedQty > 0 ? arrivedQty : purchaseQty;
-        const inputQty = item.returnQtyInput ? Number(item.returnQtyInput) : defaultQty;
-        return api.production.confirmReturnPurchase({
-          purchaseId: item.id || item.purchaseId,
-          confirmerId,
-          confirmerName,
-          returnQuantity: inputQty,
-        });
-      }));
-      wx.hideLoading();
-      toast.success(`已确认 ${confirmableItems.length} 项回料`);
-      triggerDataRefresh('procurement');
-      this._loadDetail();
-    } catch (err) {
-      wx.hideLoading();
-      toast.error(err.errMsg || err.message || '批量确认失败');
-      this._loadDetail();
-    }
+          this._loadDetail();
+        } catch (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '确认失败');
+        }
+      },
+    });
   },
 
   async onConfirmProcurement() {
     if (this.data.hasReturnConfirmed) {
-      toast.info('已有物料完成回料确认，无需再次确认');
-      return;
-    }
-    if (this.data.allProcurementCompleted) {
-      toast.info('采购阶段已完成，无需再次确认');
+      toast.warning('已有物料完成回料确认，无需再次确认');
       return;
     }
 
-    const { orderId, orderNo, materialPurchases, overallArrivalRate } = this.data;
+    const { orderId, orderNo, overallArrivalRate } = this.data;
     if (!orderNo) return;
 
-    wx.showLoading({ title: '确认中...', mask: true });
-    try {
-      const remark = (this.data.remark || '').trim();
+    wx.showModal({
+      title: '确认回料完成',
+      content: `当前到货率 ${overallArrivalRate}%，确认后采购阶段将流转到裁剪环节。确定？`,
+      confirmText: '确认完成',
+      confirmColor: '#007aff',
+      editable: true,
+      placeholderText: '备注（选填）',
+      success: async (res) => {
+        if (!res.confirm) return;
 
-      // ① 先逐条调用采购单级 confirm-complete（与 PC 端一致）
-      //    将 awaiting_confirm / partial 状态的采购单推进到 completed
-      const confirmableItems = materialPurchases.filter(m => {
-        const s = m._status || m.status || '';
-        return s !== 'completed' && s !== 'cancelled';
-      });
-      let successCount = 0;
-      let failCount = 0;
-      for (const item of confirmableItems) {
+        wx.showLoading({ title: '确认中...', mask: true });
         try {
-          await api.production.confirmPurchaseComplete({
-            purchaseId: item.id || item.purchaseId,
+          const remark = (res.content || '').trim();
+          await api.production.confirmProcurementComplete({
+            id: orderId,
+            orderNo,
+            remark,
           });
-          successCount++;
+          wx.hideLoading();
+          toast.success('采购阶段已完成，已流转到裁剪');
+
+          triggerDataRefresh('procurement');
+
+          setTimeout(() => wx.navigateBack(), 1000);
         } catch (err) {
-          // 单条失败不阻断，继续处理其他
-          failCount++;
-          console.warn('confirmPurchaseComplete failed:', item.id, err);
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
-
-      // ② 再调用订单级 confirm-procurement，流转采购→裁剪阶段
-      await api.production.confirmProcurementComplete({
-        id: orderId,
-        orderNo,
-        remark,
-      });
-
-      wx.hideLoading();
-      let msg = '采购阶段已完成，已流转到裁剪';
-      if (failCount > 0) {
-        msg += `（${successCount}项成功，${failCount}项跳过）`;
-      }
-      toast.success(msg);
-      triggerDataRefresh('procurement');
-      setTimeout(() => wx.navigateBack(), 1000);
-    } catch (err) {
-      wx.hideLoading();
-      toast.error(err.errMsg || err.message || '确认失败');
-    }
+      },
+    });
   },
 
   async onSubmit() {
     if (this.data.hasReturnConfirmed) {
-      toast.info('已有物料完成回料确认，无法继续到货登记');
+      toast.warning('已有物料完成回料确认，无法继续到货登记');
       return;
     }
 
@@ -460,11 +340,6 @@ Page({
     return String(rawStatus || '').trim().toLowerCase();
   },
 
-  _fmtQty(n) {
-    const num = Number(n || 0);
-    return Math.round(num * 100) / 100;
-  },
-
   _getStatusText(status) {
     const map = {
       pending: '待采购', received: '已领取', partial: '部分到货',
@@ -478,13 +353,13 @@ Page({
 
   _getStatusColor(status) {
     const map = {
-      pending: 'warning', received: 'processing', partial: 'processing',
-      partial_arrival: 'processing', awaiting_confirm: 'warning', completed: 'success',
-      cancelled: 'error', warehouse_pending: 'processing',
-      waiting_procurement: 'warning', procurement_in_progress: 'processing',
-      procurement_completed: 'success',
+      pending: 'orange', received: 'blue', partial: 'blue',
+      partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
+      cancelled: 'red', warehouse_pending: 'cyan',
+      waiting_procurement: 'orange', procurement_in_progress: 'blue',
+      procurement_completed: 'green',
     };
-    return map[status] || 'warning';
+    return map[status] || 'orange';
   },
 
   _isActionableForUser(item, receiverId, receiverName) {

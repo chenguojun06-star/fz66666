@@ -6,6 +6,7 @@ function abbr(str) {
 module.exports = { abbr: abbr };
 </wxs>
 <view class="container">
+  <custom-nav title="裁剪分菲" show-back="{{true}}" show-search="{{false}}" />
 
   <!-- ======== Tab 切换栏 ======== -->
   <view class="tab-bar">
@@ -25,7 +26,7 @@ module.exports = { abbr: abbr };
       </view>
       <view class="scan-bundle-bar">
         <view class="scan-bundle-btn" bindtap="scanBundleQr" hover-class="scan-bundle-btn-hover">
-          <text class="scan-icon"><text class="line-icon icon-camera"></text></text>
+          <view class="scan-icon line-icon icon-camera"></view>
           <text>扫码菲号直接拆</text>
         </view>
       </view>
@@ -39,7 +40,7 @@ module.exports = { abbr: abbr };
           <text class="order-no">{{orderNo}}</text>
         </view>
         <view class="order-bar-actions">
-          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover"><text class="line-icon icon-camera"></text> 扫菲号</view>
+          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover"><view class="line-icon icon-camera"></view><text>扫菲号</text></view>
           <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
         </view>
       </view>
@@ -70,21 +71,19 @@ module.exports = { abbr: abbr };
                 <text class="bi-dot"> · </text>
                 <text class="bi-val bi-color">{{item.color || '-'}}</text>
               </view>
-              <!-- 第 3 行：菲号 + 数量徽章 -->
+              <!-- 第 3 行：菲号 + 数量徽章 + 持有人 -->
               <view class="bundle-info-row">
                 <text class="bi-label">菲号</text>
                 <text class="bi-val bi-bundle-label">{{item.bundleLabel || item.bundleNo}}</text>
                 <text class="bi-badge">{{item.quantity}}件</text>
+                <text wx:if="{{item.operatorName}}" class="bi-dot">·</text>
+                <text wx:if="{{item.operatorName}}" class="bi-holder-label">持有</text>
+                <text wx:if="{{item.operatorName}}" class="bi-holder-name">{{item.operatorName}}</text>
               </view>
             </view>
           </view>
-          <!-- 持有人（可选） -->
-          <view wx:if="{{item.operatorName}}" class="bundle-holder">
-            <text class="holder-icon"><text class="line-icon icon-user"></text></text>
-            <text class="holder-label">持有：</text>
-            <text class="holder-name">{{item.operatorName}}</text>
-          </view>
 
+          <view wx:if="{{selectedIdx === index}}" class="split-divider" catchtap=""></view>
           <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
             <view class="form-row">
               <text class="form-label">转出数量</text>
@@ -95,7 +94,7 @@ module.exports = { abbr: abbr };
               <picker mode="selector" range="{{processes}}" range-key="processName" value="{{processIdx}}" bindchange="onProcessChange">
                 <view class="picker-box">
                   <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : '选择工序'}}</text>
-                  <text class="arrow">›</text>
+                  <view class="arrow icon-arrow-right-sm"></view>
                 </view>
               </picker>
             </view>
@@ -104,7 +103,7 @@ module.exports = { abbr: abbr };
               <picker mode="selector" range="{{workers}}" range-key="workerName" value="{{workerIdx}}" bindchange="onWorkerChange">
                 <view class="picker-box">
                   <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">{{workerIdx >= 0 ? workers[workerIdx].workerName : '选择工人'}}</text>
-                  <text class="arrow">›</text>
+                  <view class="arrow icon-arrow-right-sm"></view>
                 </view>
               </picker>
             </view>
@@ -117,7 +116,7 @@ module.exports = { abbr: abbr };
       </view>
 
       <view wx:else class="empty-state empty-state-card">
-        <text class="empty-icon"><text class="line-icon line-icon--lg icon-box"></text></text>
+        <view class="empty-icon line-icon line-icon--xl icon-package"></view>
         <text class="empty-text">该订单暂无菲号</text>
         <text class="empty-hint">请确认订单号是否正确，或扫码菲号直接拆</text>
       </view>
@@ -179,7 +178,7 @@ module.exports = { abbr: abbr };
     </view>
 
     <view wx:else class="empty-state empty-state-card">
-      <text class="empty-icon"><text class="line-icon line-icon--lg icon-inbox"></text></text>
+      <view class="empty-icon line-icon line-icon--xl icon-inbox"></view>
       <text class="empty-text">暂无待确认的拆菲请求</text>
       <text class="empty-hint">当有工友向你拆菲转派时会显示在这里</text>
     </view>
@@ -213,7 +212,7 @@ module.exports = { abbr: abbr };
 
         <!-- 展开的调整表单 -->
         <view wx:if="{{selectedProcessIdx === index}}" class="adjust-form" catchtap="">
-          <view wx:if="{{!isAdmin}}" class="admin-tip">⚠️ 仅管理员可调整单价</view>
+          <view wx:if="{{!isAdmin}}" class="admin-tip"><view class="icon-warning-orange"></view><text> 仅管理员可调整单价</text></view>
           <view class="form-row">
             <text class="form-label">新单价（元）</text>
             <input class="form-input" type="digit" placeholder="输入新单价" value="{{adjustPrice}}" bindinput="onAdjustPriceInput" />
@@ -228,7 +227,7 @@ module.exports = { abbr: abbr };
     </view>
 
     <view wx:elif="{{priceOrderNo && !priceLoading}}" class="empty-state empty-state-card">
-      <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
+      <view class="empty-icon line-icon line-icon--xl icon-clipboard"></view>
       <text class="empty-text">该订单暂无工序数据</text>
       <text class="empty-hint">请确认订单已分配工序</text>
     </view>

@@ -1,7 +1,6 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
-const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STATUS_MAP = {
   pending: { text: '待审批', cls: 'tag-orange' },
@@ -15,9 +14,9 @@ const DEDUCT_MAP = {
   repaid:   { text: '已扣完', cls: 'tag-green' },
 };
 
-function statusText(s) { return s ? ((STATUS_MAP[s] || {}).text || '未知') : ''; }
+function statusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
 function statusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
-function deductText(s) { return s ? ((DEDUCT_MAP[s] || {}).text || '未知') : ''; }
+function deductText(s) { return (DEDUCT_MAP[s] || {}).text || s || ''; }
 function deductCls(s) { return (DEDUCT_MAP[s] || {}).cls || 'tag-gray'; }
 
 Page({
@@ -37,6 +36,18 @@ Page({
     canApprove: false,
     STATUS_MAP: STATUS_MAP,
     DEDUCT_MAP: DEDUCT_MAP,
+    STATUS_OPTIONS: [
+      { value: '', label: '全部状态' },
+      { value: 'pending', label: '待审批' },
+      { value: 'approved', label: '已审批' },
+      { value: 'rejected', label: '已驳回' },
+    ],
+    REPAY_OPTIONS: [
+      { value: '', label: '全部扣款' },
+      { value: 'unrepaid', label: '未扣款' },
+      { value: 'partial', label: '部分扣款' },
+      { value: 'repaid', label: '已扣完' },
+    ],
   },
 
   _STATUS_OPTIONS: [
@@ -54,11 +65,6 @@ Page({
 
   onLoad: function () {
     this.setData({ canApprove: isAdminOrSupervisor() });
-    bindPageEvents(this, () => this._resetAndLoad());
-  },
-
-  onUnload: function () {
-    unbindPageEvents(this);
   },
 
   onShow: function () {
@@ -68,7 +74,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
 

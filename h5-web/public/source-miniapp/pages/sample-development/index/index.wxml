@@ -1,129 +1,120 @@
-<view class="container">
-  <!-- 搜索栏（搜索框 4/5 + 扫码按钮 1/5） -->
-  <view class="search-bar">
-    <view class="search-box">
-      <text class="search-icon icon-search"></text>
-      <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
-      <view wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">
-        <view class="icon-close"></view>
+<view class="page">
+  <!-- 吸顶区：搜索栏 + 状态统计标签 -->
+  <view class="sticky-top">
+    <!-- 搜索栏：输入框 4/5 + 扫码按钮 1/5 -->
+    <view class="search-row">
+      <view class="search-box {{keyword ? 'has-keyword' : ''}}">
+        <view class="line-icon line-icon--sm icon-search search-icon"></view>
+        <input
+          class="search-input"
+          placeholder="搜索款号/款式名"
+          value="{{keyword}}"
+          bindinput="onSearchInput"
+          bindconfirm="_doSearch"
+          confirm-type="search"
+        />
+        <view wx:if="{{keyword}}" class="line-icon line-icon--sm icon-close search-clear" bindtap="onSearchClear"></view>
+      </view>
+      <view class="scan-btn" bindtap="onScan">
+        <view class="line-icon icon-scan scan-icon"></view>
       </view>
     </view>
-    <view class="scan-btn" hover-class="scan-btn-hover" bindtap="onTopScan">
-      <view class="scan-icon icon-camera"></view>
-    </view>
-  </view>
 
-  <!-- 跨岗位提示条 -->
-  <view wx:if="{{roleHint}}" class="role-hint-bar">
-    <text class="role-hint-icon">⚠️</text>
-    <text class="role-hint-text">{{roleHint}}</text>
-  </view>
-
-  <!-- 统计标签 + 智能提示（一行 flex wrap，对齐 PC 端 PageStatCards） -->
-  <view class="stat-cards-row">
-    <!-- 统计标签区 -->
-    <view class="stat-tag {{(activeFilter === '' && !activeHint) ? 'stat-tag-active' : ''}}" data-key="" bindtap="onFilterTap">
-      <text class="stat-label">全部款号</text>
-      <text class="stat-value">{{totalCount}}</text>
-    </view>
-    <view class="stat-tag stat-tag-primary {{activeFilter === 'IN_PROGRESS' ? 'stat-tag-active stat-tag-active-primary' : ''}}" data-key="IN_PROGRESS" bindtap="onFilterTap">
-      <text class="stat-label">开发中</text>
-      <text class="stat-value">{{sampleCount}}</text>
-    </view>
-    <view class="stat-tag stat-tag-success {{activeFilter === 'COMPLETED' ? 'stat-tag-active stat-tag-active-success' : ''}}" data-key="COMPLETED" bindtap="onFilterTap">
-      <text class="stat-label">已完成</text>
-      <text class="stat-value">{{completedCount}}</text>
-    </view>
-    <view class="stat-tag stat-tag-danger {{activeHint === 'overdue' ? 'stat-tag-active stat-tag-active-danger' : ''}}" data-key="overdue" bindtap="onHintTap">
-      <text class="stat-label">已延期</text>
-      <text class="stat-value">{{overdueCount}}</text>
-    </view>
-
-    <!-- 竖分隔线 -->
-    <view wx:if="{{overdueCount > 0 || warningCount > 0 || delayedHints.length > 0}}" class="stat-divider"></view>
-
-    <!-- 智能提示标题 -->
-    <text wx:if="{{overdueCount > 0 || warningCount > 0 || delayedHints.length > 0}}" class="hint-title">智能提示：</text>
-
-    <!-- 智能提示标签 -->
-    <view wx:if="{{overdueCount > 0}}" class="hint-tag hint-red {{activeHint === 'overdue' ? 'hint-tag-active' : ''}}" data-key="overdue" bindtap="onHintTap">
-      <text>已延期 {{overdueCount}}</text>
-    </view>
-    <view wx:if="{{warningCount > 0}}" class="hint-tag hint-orange {{activeHint === 'warning' ? 'hint-tag-active' : ''}}" data-key="warning" bindtap="onHintTap">
-      <text>临近交期 {{warningCount}}</text>
-    </view>
-    <view wx:for="{{delayedHints}}" wx:key="stageName" class="hint-tag hint-orange {{activeHint === item.stageName ? 'hint-tag-active' : ''}}" data-key="{{item.stageName}}" bindtap="onHintTap">
-      <text>{{item.stageName}}延期 {{item.count}}</text>
+    <!-- 状态统计标签（自动换行） -->
+    <view class="stat-tags">
+      <block wx:for="{{statusTabs}}" wx:key="key">
+        <view wx:if="{{item.isSmart}}" class="stat-divider"></view>
+        <view
+          class="stat-tag {{activeFilter === item.key ? 'active' : ''}} stat-tag--{{item.color}}"
+          data-key="{{item.key}}"
+          bindtap="onFilterTap"
+        >
+          <view wx:if="{{item.isSmart}}" class="stat-tag__warn"></view>
+          <text class="stat-tag__label">{{item.label}}</text>
+          <text class="stat-tag__count">{{item.count}}</text>
+        </view>
+      </block>
     </view>
   </view>
 
   <!-- 加载中 -->
-  <view wx:if="{{loading && displayList.length === 0}}" class="loading-state">
-    <text>加载样衣中…</text>
+  <view wx:if="{{loading}}" class="state-wrap">
+    <view class="loading-spinner"></view>
+    <text class="state-text">加载中...</text>
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{!loading && displayList.length === 0}}" text="暂无样衣开发记录" hint="点击上方扫码录入新的样衣任务"></empty-state>
+  <view wx:elif="{{list.length === 0}}" class="state-wrap state-wrap--empty">
+    <view class="line-icon line-icon--lg icon-inbox state-icon"></view>
+    <text class="state-text">暂无样衣开发记录</text>
+  </view>
 
-  <!-- 任务列表 -->
-  <block wx:else>
-    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-style-id="{{item.styleId}}" data-id="{{item.id}}" bindtap="onGoDetail" hover-class="task-card-hover">
-      <!-- 第一行：封面图 + 主信息 -->
-      <view class="card-main-row">
-        <view class="card-cover-wrap" data-src="{{item._cover}}" catchtap="onPreviewImage">
-          <image wx:if="{{item._cover}}" src="{{item._cover}}" mode="aspectFill" class="cover-img" lazy-load="true"></image>
-          <view wx:else class="cover-placeholder-box">
-            <text class="cover-placeholder icon-placeholder"></text>
-          </view>
+  <!-- 卡片列表 -->
+  <view wx:else class="card-list">
+    <view
+      class="card"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      data-item="{{item}}"
+      bindtap="onCardTap"
+    >
+      <!-- 封面 + 信息 -->
+      <view class="card-top">
+        <image
+          wx:if="{{item._cover}}"
+          class="card-cover"
+          src="{{item._cover}}"
+          mode="aspectFill"
+          data-src="{{item._cover}}"
+          catchtap="onPreviewImage"
+        />
+        <view wx:else class="card-cover-ph">
+          <view class="line-icon line-icon--lg icon-shirt card-cover-icon"></view>
         </view>
-        <view class="card-info">
-          <view class="card-title-row">
-            <text class="style-no">{{item._styleNo || '-'}}</text>
-            <view class="tag-row">
-              <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
-              <text wx:if="{{item._deliveryLabel}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : (item._deliveryTone === 'success' ? 'success' : 'default'))}}">{{item._deliveryLabel}}</text>
-            </view>
-          </view>
-          <text wx:if="{{item.styleName || item.name}}" class="style-name">{{item.styleName || item.name}}</text>
-          <view class="card-meta-row" wx:if="{{item._customer || item._category || item._season}}">
-            <text wx:if="{{item._customer}}" class="meta-text">{{item._customer}}</text>
-            <text wx:if="{{item._merchandiser}}" class="meta-text">· 跟单: {{item._merchandiser}}</text>
-            <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
-            <text wx:if="{{item._season}}" class="meta-text">· {{item._season}}</text>
-          </view>
-          <view class="card-meta-row" wx:if="{{item._color || item._size}}">
-            <text wx:if="{{item._color}}" class="meta-text">{{item._color}}</text>
-            <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
-          </view>
 
-          <!-- 数量 + 交板日期行（与 PC 端 StyleCardView 一致） -->
-          <view class="info-qty-row" wx:if="{{item._quantity || item._deliveryDateStr}}">
-            <view class="iq-main" wx:if="{{item._quantity}}">
-              <text class="iq-num">{{item._quantity}}</text>
-              <text class="iq-unit">件</text>
-            </view>
-            <view class="iq-delivery" wx:if="{{item._deliveryDateStr}}">
-              <text class="iq-d-label">交板</text>
-              <text class="iq-d-date">{{item._deliveryDateStr}}</text>
+        <view class="card-info">
+          <!-- 款号 + 状态标签 + 交板标签 -->
+          <view class="card-title-row">
+            <text class="card-style-no">{{item.styleNo || '-'}}</text>
+            <view class="card-tags">
+              <view class="status-badge" style="background:{{item._statusColor}}">{{item._statusLabel}}</view>
+              <view
+                wx:if="{{item._deliveryTag}}"
+                class="delivery-tag {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}"
+              >交板 {{item._deliveryTag}}</view>
             </view>
           </view>
-          <!-- 进度条（基于5阶段完成率） -->
-          <view class="info-progress">
-            <view class="ip-bar">
-              <view class="ip-fill" style="width:{{item._progressPct || 0}}%"></view>
-            </view>
-            <text class="ip-pct">{{item._progressPct || 0}}%</text>
-          </view>
+          <!-- 款式名 -->
+          <text wx:if="{{item.styleName}}" class="card-style-name">{{item.styleName}}</text>
+          <!-- 元信息行1：公司 · 跟单 · 品类 · 季节 -->
+          <text wx:if="{{item._metaLine1}}" class="card-meta">{{item._metaLine1}}</text>
+          <!-- 元信息行2：颜色 · 尺码 -->
+          <text wx:if="{{item._metaLine2}}" class="card-meta card-meta--muted">{{item._metaLine2}}</text>
         </view>
       </view>
 
+      <!-- 件数 + 交板日期 -->
+      <view class="card-info-row">
+        <text class="card-quantity">{{item.quantity ? item.quantity + '件' : ''}}</text>
+        <text wx:if="{{item._deliveryTag}}" class="card-delivery">交板 {{item._deliveryTag}}</text>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="card-progress">
+        <view class="card-progress-track">
+          <view
+            class="card-progress-fill"
+            style="width: {{item._progressPercent || 0}}%; background: {{item._statusColor}};"
+          ></view>
+        </view>
+        <text class="card-progress-percent">{{item._progressPercent || 0}}%</text>
+      </view>
     </view>
 
-    <!-- 加载更多 / 已显示全部 -->
-    <view wx:if="{{hasMore}}" class="load-more" bindtap="onLoadMore">
-      <text wx:if="{{loadingMore}}">加载中…</text>
-      <text wx:else>加载更多</text>
+    <!-- 加载更多 -->
+    <view wx:if="{{hasMore}}" class="load-more">
+      <text>{{loadingMore ? '加载中...' : '加载更多'}}</text>
     </view>
-    <view wx:elif="{{list.length > 0}}" class="no-more">已显示全部 {{total}} 条</view>
-  </block>
+  </view>
 </view>

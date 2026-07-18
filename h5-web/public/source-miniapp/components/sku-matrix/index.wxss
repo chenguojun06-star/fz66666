@@ -6,8 +6,8 @@
 
 .matrix-scroll { width: 100%; -webkit-overflow-scrolling: touch; }
 .matrix-table { display: flex; flex-direction: column; min-width: 100%; }
-.matrix-row { display: flex; border-bottom: 1rpx solid var(--color-border-light); }
-.matrix-header { background: var(--color-bg-gray); font-weight: var(--font-weight-semibold); }
+.matrix-row { display: flex; border-bottom: 1rpx solid var(--color-border); }
+.matrix-header { background: var(--color-bg-page); font-weight: var(--font-weight-semibold); }
 .matrix-cell {
   min-width: 100rpx; padding: 14rpx 12rpx;
   text-align: center; font-size: var(--font-size-sm); color: var(--color-text-primary);

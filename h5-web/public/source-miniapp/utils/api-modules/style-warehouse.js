@@ -16,24 +16,18 @@ const style = {
   createStyle(payload) {
     return ok('/api/style/info', 'POST', payload || {});
   },
-  updateStyle(styleId, payload) {
-    // P1 修复：后端 @PutMapping 无路径（根路径 /api/style/info），id 在 body 中
-    const id = String(styleId || '').trim();
-    const body = { ...(payload || {}) };
-    if (id) body.id = id;
-    return ok('/api/style/info', 'PUT', body);
-  },
-  deleteStyle(styleId) {
-    // P1 修复：后端无 @DeleteMapping，删除通过 POST /{id}/scrap 软删除实现
-    const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}/scrap`, 'POST', {});
-  },
 
   // 阶段操作（完成/重置）
   stageAction(styleId, stage, action, remark) {
     const id = String(styleId || '').trim();
     const payload = remark ? { reason: remark } : {};
     return ok(`/api/style/info/${encodeURIComponent(id)}/stage-action?stage=${encodeURIComponent(stage)}&action=${encodeURIComponent(action)}`, 'POST', payload);
+  },
+
+  // 样衣审核（提交审核结论）
+  saveSampleReview(styleId, payload) {
+    const id = String(styleId || '').trim();
+    return ok(`/api/style/info/${encodeURIComponent(id)}/sample-review`, 'POST', payload || {});
   },
 
   // BOM清单
@@ -43,58 +37,30 @@ const style = {
   createBom(payload) {
     return ok('/api/style/bom', 'POST', payload || {});
   },
-  /**
-   * 更新 BOM（后端 PUT /api/style/bom，id 放在 payload body 中）
-   * 更新 devUsageAmount 后会自动同步 pending 状态的样衣采购任务数量
-   */
-  updateBom(payload) {
-    return ok('/api/style/bom', 'PUT', payload || {});
-  },
   deleteBom(bomId) {
     const id = String(bomId || '').trim();
     return ok(`/api/style/bom/${encodeURIComponent(id)}`, 'DELETE', {});
   },
-  batchSaveBom(payload) {
-    return ok('/api/style/bom/batch-save', 'POST', payload || {});
+
+  // SKU 库存查询/调整
+  getInventory(skuCode) {
+    const code = String(skuCode || '').trim();
+    return ok(`/api/style/sku/inventory/${encodeURIComponent(code)}`, 'GET', {});
   },
-  /**
-   * 基于 BOM 生成样衣采购单（与 PC 端 StyleBomTab.handleGeneratePurchase 一致）
-   * 后端会遍历 BOM 列表，按 devUsageAmount(优先) 或 usageAmount × 数量 × (1+损耗率) 计算采购数量
-   */
-  generateSamplePurchase(payload) {
-    return ok('/api/style/bom/generate-purchase', 'POST', payload || {});
+  updateInventory(data) {
+    return ok('/api/style/sku/inventory/update', 'POST', data || {});
   },
 
-  // 工序（与 PC 端共用 /api/style/process 系列，PUT 的 id 在 body 中）
+  // 工序
   listProcesses(params) {
     return ok('/api/style/process/list', 'GET', params || {});
   },
   createProcess(payload) {
     return ok('/api/style/process', 'POST', payload || {});
   },
-  updateProcess(payload) {
-    // 修复 P0：后端 PUT /api/style/process 的 id 在 body 中，不在 URL 路径里
-    return ok('/api/style/process', 'PUT', payload || {});
-  },
   deleteProcess(processId) {
     const id = String(processId || '').trim();
     return ok(`/api/style/process/${encodeURIComponent(id)}`, 'DELETE', {});
-  },
-
-  // 工序模板库（与 PC 端共用 /api/template-library 系列）
-  listProcessTemplates(params) {
-    return ok('/api/template-library/list', 'GET', params || {});
-  },
-  getProcessTemplate(templateId) {
-    const id = String(templateId || '').trim();
-    return ok(`/api/template-library/${encodeURIComponent(id)}`, 'GET', {});
-  },
-  applyProcessTemplateToStyle(payload) {
-    // 套用模板到款号：body = { templateId, targetStyleId, mode: 'overwrite' | 'merge' }
-    return ok('/api/template-library/apply-to-style', 'POST', payload || {});
-  },
-  createTemplateFromStyle(payload) {
-    return ok('/api/template-library/create-from-style', 'POST', payload || {});
   },
 
   // 二次工艺
@@ -123,22 +89,12 @@ const style = {
 
   // 纸样
   getPatternRevision(styleId) {
-    // 通过款式详情获取styleNo，再查纸样列表取最新一条
     const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}`, 'GET', {}).then(detail => {
-      // P0 修复：?. 可选链在低版本小程序基础库（ES5）下报错，改用显式守卫
-      const d = detail || {};
-      const styleNo = d.styleNo || d.styleCode || '';
-      if (!styleNo) return null;
-      return ok('/api/pattern-revision/list', 'GET', { styleNo, pageSize: 1 }).then(pageData => {
-        const pd = pageData || {};
-        const records = pd.records || [];
-        return records.length > 0 ? records[0] : null;
-      });
-    });
+    return ok(`/api/pattern-revision/by-style/${encodeURIComponent(id)}`, 'GET', {});
   },
   savePatternRevision(styleId, payload) {
-    return ok('/api/pattern-revision', 'POST', payload || {});
+    const data = { ...(payload || {}), styleId: String(styleId || '').trim() };
+    return ok('/api/pattern-revision', 'POST', data);
   },
   lockPatternRevision(styleId) {
     const id = String(styleId || '').trim();
@@ -162,7 +118,6 @@ const style = {
     return ok('/api/style/attachment/list', 'GET', params || {});
   },
   uploadAttachment(payload) {
-    // P0 修复：后端 @PostMapping("/upload")，完整路径为 /api/style/attachment/upload
     return ok('/api/style/attachment/upload', 'POST', payload || {});
   },
   deleteAttachment(attachmentId) {
@@ -183,6 +138,9 @@ const style = {
 };
 
 const warehouse = {
+  getLocationItems(params) {
+    return ok('/api/warehouse/location/items', 'GET', params || {});
+  },
   listFinishedInventory(params) {
     return ok('/api/warehouse/finished-inventory/list', 'GET', params || {});
   },
@@ -208,16 +166,12 @@ const warehouse = {
     return ok('/api/warehouse/finished-inventory/edit', 'POST', { warehousingId, changes });
   },
   listWarehouseAreas(warehouseType) {
-    // P1 修复：后端 @PostMapping("/search")，前端原误用 GET
+    // 与 PC 端 warehouseAreaApi.listByType 对齐：POST /api/warehouse/area/search
     return ok('/api/warehouse/area/search', 'POST', { warehouseType: warehouseType || '' });
   },
   listLocations(warehouseType, areaId) {
-    // P1 修复：后端 @PostMapping("/search")，前端原误用 GET
+    // 与 PC 端 warehouseLocationMapApi 对齐：POST /api/warehouse/location/search
     return ok('/api/warehouse/location/search', 'POST', { warehouseType: warehouseType || '', areaId: areaId });
-  },
-  // 库位库存详情（库位扫码后查询）
-  locationItems(locationCode) {
-    return ok('/api/warehouse/location/items', 'GET', { locationCode });
   },
 };
 
@@ -225,10 +179,6 @@ const warehouse = {
 const material = {
   listStockAlerts(params) {
     return ok('/api/production/material/stock/alerts', 'GET', params || {});
-  },
-  listBatchDetails(params) {
-    // P0 修复：后端 @GetMapping("/batches")，原前端误用 /batch-details
-    return ok('/api/production/material/stock/batches', 'GET', params || {});
   },
   listPurchaseRecords(params) {
     return ok('/api/production/purchase/list', 'GET', params || {});
@@ -248,6 +198,15 @@ const material = {
   scanQuery(materialCode) {
     return ok('/api/production/material/stock/scan-query', 'GET', { materialCode });
   },
+  listDatabase(params) {
+    return ok('/api/material/database/list', 'GET', params || {});
+  },
+  getDatabaseById(id) {
+    return ok(`/api/material/database/${encodeURIComponent(id)}`, 'GET', {});
+  },
+  generateMaterialCode(materialType) {
+    return ok('/api/material/database/generate-code', 'GET', { materialType: materialType || 'accessory' });
+  },
 };
 
 const materialRoll = {
@@ -259,25 +218,46 @@ const materialRoll = {
   },
 };
 
-const orderManagement = {
-  createFromStyle(data) {
-    // P0 修复：后端 OrderManagementController @RequestMapping("/api/order-management")
-    return ok('/api/order-management/create-from-style', 'POST', data || {});
-  },
-};
-
 // 样衣库存
 const sampleStock = {
   list(params) { return ok('/api/stock/sample/list', 'GET', params || {}); },
   scanQuery(data) { return ok('/api/stock/sample/scan-query', 'POST', data); },
   inbound(data) { return ok('/api/stock/sample/inbound', 'POST', data); },
-  inboundBatch(data) { return ok('/api/stock/sample/inbound/batch', 'POST', data); },
   loan(data) { return ok('/api/stock/sample/loan', 'POST', data); },
   returnSample(data) { return ok('/api/stock/sample/return', 'POST', data); },
-  transfer(data) { return ok('/api/stock/sample/transfer', 'POST', data); },
-  destroy(data) { return ok('/api/stock/sample/destroy', 'POST', data); },
-  transferToOutstock(data) { return ok('/api/stock/sample/transfer-to-outstock', 'POST', data); },
-  loanList(params) { return ok('/api/stock/sample/loan/list', 'GET', params || {}); },
 };
 
-module.exports = { style, warehouse, material, materialRoll, orderManagement, sampleStock };
+const templateLibrary = {
+  list(params) {
+    return ok('/api/template-library/list', 'GET', params || {});
+  },
+  detail(id) {
+    return ok(`/api/template-library/${encodeURIComponent(id)}`, 'GET', {});
+  },
+  processUnitPrices(styleNo) {
+    return ok('/api/template-library/process-unit-prices', 'GET', { styleNo });
+  },
+  progressNodeUnitPrices(styleNo) {
+    return ok('/api/template-library/progress-node-unit-prices', 'GET', { styleNo });
+  },
+  processPriceTemplate(styleNo) {
+    return ok('/api/template-library/process-price-template', 'GET', { styleNo: styleNo || '' });
+  },
+  processPriceStyleOptions(keyword) {
+    return ok('/api/template-library/process-price-style-options', 'GET', { keyword: keyword || '' });
+  },
+  saveProcessPriceTemplate(data) {
+    return ok('/api/template-library/process-price-template', 'POST', data || {});
+  },
+  create(data) {
+    return ok('/api/template-library', 'POST', data || {});
+  },
+  update(data) {
+    return ok('/api/template-library', 'PUT', data || {});
+  },
+  remove(id) {
+    return ok(`/api/template-library/${encodeURIComponent(id)}`, 'DELETE', {});
+  },
+};
+
+module.exports = { style, warehouse, material, materialRoll, sampleStock, templateLibrary };

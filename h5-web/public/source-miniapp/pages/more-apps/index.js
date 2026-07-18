@@ -1,87 +1,38 @@
 const { safeNavigate } = require('../../utils/uiHelper');
-const { isFactoryOwner } = require('../../utils/storage');
 const api = require('../../utils/api');
+const { eventBus, Events } = require('../../utils/eventBus');
 
-// 所有应用配置 — 全部 21 个应用（与 home/index.js 完全一致）
+// 所有应用配置（与设计稿对齐：4组 x 4个 = 16个应用）
 const ALL_APPS = [
-  { group: '生产管理', items: [
-    { id: 'dashboard', name: '生产管理', iconClass: 'icon-app-dashboard', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/index' },
-    { id: 'scan', name: '扫码工序', iconClass: 'icon-app-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
-    { id: 'production', name: '质检管理', iconClass: 'icon-app-quality', circleClass: 'menu-icon-circle--red', route: '/pages/defect/index' },
-    { id: 'processTemplate', name: '工序模板', iconClass: 'icon-app-folder', circleClass: 'menu-icon-circle--lightblue', route: '/pages/dashboard/process-template/index' },
-    { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-app-sample', circleClass: 'menu-icon-circle--magenta', route: '/pages/sample-development/index/index' },
-    { id: 'cuttingDetail', name: '裁剪任务', iconClass: 'icon-menu-cutting-task', circleClass: 'menu-icon-circle--purple', route: '/pages/cutting/bundle-detail/index' },
-    { id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-app-scan', circleClass: 'menu-icon-circle--green', route: '/pages/work/bundle-split/index' },
+  { group: '生产模块', items: [
+    { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/index' },
+    { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--green', route: '/pages/order/create/index' },
+    { id: 'processTemplate', name: '工序模板', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--purple', route: '/pages/dashboard/process-template/index' },
+    { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/sample-development/index/index' },
+    { id: 'cuttingDetail', name: '裁剪菲详情', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/cutting/bundle-detail/index' },
+    { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
   ]},
   { group: '供应链', items: [
-    { id: 'procurement', name: '采购任务', iconClass: 'icon-app-procurement', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
-    { id: 'materialScan', name: '物料入库', iconClass: 'icon-app-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
-    { id: 'locationScan', name: '库位扫码', iconClass: 'icon-app-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
-    { id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-app-send', circleClass: 'menu-icon-circle--indigo', route: '/pages/factory/shipment/index' },
+    { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
+    { id: 'materialScan', name: '物料入库', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
+    { id: 'locationScan', name: '库位扫码', iconClass: 'icon-menu-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
+    { id: 'factoryShipment', name: '外发管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--orange', route: '/pages/factory/shipment/index' },
+    { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
+    { id: 'finishedInventory', name: '成品仓储', iconClass: 'icon-menu-stock-check', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inventory/index' },
   ]},
   { group: '财务销售', items: [
-    { id: 'wagePayment', name: '工资查询', iconClass: 'icon-app-wage', circleClass: 'menu-icon-circle--purple', route: '/pages/payroll/payroll' },
-    { id: 'payroll', name: '财务付款', iconClass: 'icon-app-check-circle', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' },
-    { id: 'advance', name: '预付款', iconClass: 'icon-app-scan', circleClass: 'menu-icon-circle--magenta', route: '/pages/advance/list/index' },
-    { id: 'salesData', name: '销售概览', iconClass: 'icon-app-shield', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/overview/index' },
-    { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--indigo', route: '/pages/order/create/index' },
-    { id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--purple', route: '/pages/sales/order-list/index' },
+    { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/payroll/payroll' },
+    { id: 'financePayment', name: '财务付款', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' },
+    { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--lightblue', route: '/pages/advance/list/index' },
+    { id: 'salesOverview', name: '销售概览', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--violet', route: '/pages/sales/overview/index' },
   ]},
   { group: '其他', items: [
-    { id: 'smartOps', name: '智能运营', iconClass: 'icon-app-help', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
-    { id: 'returnManage', name: '退货管理', iconClass: 'icon-app-arrow-left', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' },
-    { id: 'userApproval', name: '用户审批', iconClass: 'icon-app-user', circleClass: 'menu-icon-circle--gray', route: '/pages/admin/user-approval/index' },
-    { id: 'feedback', name: '意见反馈', iconClass: 'icon-app-message', circleClass: 'menu-icon-circle--magenta', route: '/pages/admin/misc/feedback/index' },
-    { id: 'history', name: '扫码历史', iconClass: 'icon-menu-history', circleClass: 'menu-icon-circle--indigo', route: '/pages/scan/history/index' },
+    { id: 'smartOps', name: '智能运营', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
+    { id: 'returnList', name: '退货管理', iconClass: 'icon-menu-return', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' },
+    { id: 'userApproval', name: '用户审批', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--gray', route: '/pages/admin/user-approval/index' },
+    { id: 'feedback', name: '意见反馈', iconClass: 'icon-menu-feedback', circleClass: 'menu-icon-circle--blue', route: '/pages/admin/misc/feedback/index' },
   ]},
 ];
-
-// 外发工厂不可见的应用分组
-const FACTORY_HIDDEN_GROUPS = ['财务销售'];
-
-// 根据 id 从 ALL_APPS 查找完整应用对象
-function findAppById(id) {
-  for (var i = 0; i < ALL_APPS.length; i++) {
-    var items = ALL_APPS[i].items;
-    for (var j = 0; j < items.length; j++) {
-      if (items[j].id === id) return items[j];
-    }
-  }
-  return null;
-}
-
-// 从任意格式的收藏项提取 ID（兼容 string / object）
-function extractId(entry) {
-  if (typeof entry === 'string') return entry;
-  if (entry && typeof entry === 'object' && entry.id) return entry.id;
-  return null;
-}
-
-// 将收藏数组统一转换为 ID 字符串数组（用于存储和同步）
-function toIdArray(favorites) {
-  if (!Array.isArray(favorites)) return [];
-  return favorites.map(extractId).filter(function (id) { return !!id; });
-}
-
-// 将收藏 ID 数组映射为完整应用对象（用于渲染）
-function enrichFavorites(favorites) {
-  if (!Array.isArray(favorites)) return [];
-  var result = [];
-  for (var i = 0; i < favorites.length; i++) {
-    var id = extractId(favorites[i]);
-    if (!id) continue;
-    var app = findAppById(id);
-    if (app) result.push(app);
-  }
-  return result;
-}
-
-// 根据角色过滤应用列表
-function filterAppsByRole(apps) {
-  const isFactory = isFactoryOwner();
-  if (!isFactory) return apps;
-  return apps.filter(g => !FACTORY_HIDDEN_GROUPS.includes(g.group));
-}
 
 Page({
   data: {
@@ -93,63 +44,44 @@ Page({
   },
 
   onLoad: function () {
-    const visibleApps = filterAppsByRole(ALL_APPS);
-    this.setData({ allApps: visibleApps, filteredApps: visibleApps });
     this.loadFavorites();
   },
 
   onShow: function () {
-    const visibleApps = filterAppsByRole(ALL_APPS);
-    this.setData({ allApps: visibleApps });
     this.loadFavorites();
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 });
+  },
+
+  onBack: function () {
+    const pages = getCurrentPages();
+    if (pages.length > 1) {
+      wx.navigateBack();
+    } else {
+      wx.switchTab({ url: '/pages/home/index' });
     }
   },
 
   loadFavorites: function () {
     const that = this;
-    const isFactory = isFactoryOwner();
-    // 先读本地缓存快速渲染
-    let localFavorites = [];
-    try { localFavorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
-    // 统一提取 ID，外发工厂过滤掉销售类应用
-    var localIds = toIdArray(localFavorites);
-    if (isFactory) {
-      localIds = localIds.filter(function (id) { return id !== 'salesData' && id !== 'platformOrder'; });
-    }
-    if (localIds.length > 0) {
-      var enriched = enrichFavorites(localIds);
-      that.setData({ favoriteApps: enriched });
-      that.filterApps(that.data.searchKeyword, enriched);
-    }
-    // 再从服务端加载最新数据
-    api.system.getFavoriteApps().then(function (data) {
+    api.system.getFavoriteApps().then(function (res) {
       let favorites = [];
       try {
-        const raw = data && data.favoriteData ? data.favoriteData : (typeof data === 'string' ? data : '[]');
+        const raw = res && res.favoriteData ? res.favoriteData : (typeof res === 'string' ? res : '[]');
         favorites = JSON.parse(raw);
         if (!Array.isArray(favorites)) favorites = [];
       } catch (e) {
         favorites = [];
       }
-      // 统一提取 ID
-      var favIds = toIdArray(favorites);
-      // 外发工厂过滤掉销售类应用
-      if (isFactory) {
-        favIds = favIds.filter(function (id) { return id !== 'salesData' && id !== 'platformOrder'; });
-      }
-      // 服务器返回空但本地有数据：保留本地
-      if (favIds.length === 0 && localIds.length > 0) {
-        favIds = localIds;
-      }
-      // 存储统一用 ID 数组（与 home/index.js 一致）
-      try { wx.setStorageSync('favoriteApps', favIds); } catch (e) { /* ignore */ }
-      var enriched = enrichFavorites(favIds);
-      that.setData({ favoriteApps: enriched });
-      that.filterApps(that.data.searchKeyword, enriched);
+      try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
+      that.setData({ favoriteApps: favorites });
+      that.filterApps(that.data.searchKeyword, favorites);
     }).catch(function () {
-      // 网络失败时用本地缓存，已在上面 setData 过
+      try {
+        const favorites = wx.getStorageSync('favoriteApps') || [];
+        that.setData({ favoriteApps: favorites });
+        that.filterApps(that.data.searchKeyword, favorites);
+      } catch (e) {
+        console.error('Load favorites failed', e);
+      }
     });
   },
 
@@ -163,8 +95,7 @@ Page({
   filterApps: function (keyword, favorites) {
     const k = (keyword || '').toLowerCase();
     const favs = favorites || this.data.favoriteApps || [];
-    // 统一提取 ID 用于判断是否已收藏
-    const favIds = new Set(toIdArray(favs));
+    const favIds = new Set(favs.map(function(f) { return f.id; }));
 
     const filtered = ALL_APPS.map(function (group) {
       return {
@@ -182,13 +113,11 @@ Page({
   },
 
   onAppTap: function (e) {
-    var ds = e.currentTarget.dataset || {};
-    var route = String(ds.route || '').trim();
-    if (!route) {
-      console.warn('[more-apps] onAppTap 缺少 route', ds);
-      return;
-    }
-    safeNavigate({ url: route });
+    // 编辑模式下不跳转，只允许收藏/取消收藏
+    if (this.data.editing) return;
+    const route = e.currentTarget.dataset.route;
+    if (!route) return;
+    safeNavigate({ url: route }).catch(function() {});
   },
 
   onEditToggle: function () {
@@ -196,38 +125,36 @@ Page({
   },
 
   onToggleFavorite: function (e) {
-    var ds = e.currentTarget.dataset || {};
-    var appId = String(ds.id || '').trim();
+    const appId = e.currentTarget.dataset.id;
     if (!appId) return;
-    var app = findAppById(appId);
+
+    // 从 ALL_APPS 查找应用完整信息
+    var app = null;
+    ALL_APPS.forEach(function (group) {
+      group.items.forEach(function (item) {
+        if (item.id === appId) app = item;
+      });
+    });
     if (!app) return;
 
-    // 从当前收藏中提取 ID 数组
-    var currentIds = toIdArray(this.data.favoriteApps);
-    var existingIndex = currentIds.indexOf(appId);
+    const favorites = this.data.favoriteApps.slice();
+    const existingIndex = favorites.findIndex(function (f) { return f.id === app.id; });
 
     if (existingIndex >= 0) {
-      currentIds.splice(existingIndex, 1);
+      favorites.splice(existingIndex, 1);
     } else {
-      currentIds.push(appId);
+      favorites.push({ id: app.id, name: app.name, iconClass: app.iconClass, circleClass: app.circleClass, route: app.route, badge: app.badge });
     }
 
-    // 存储用 ID 数组（与 home/index.js 一致）
-    try {
-      wx.setStorageSync('favoriteApps', currentIds);
-    } catch (e) { /* ignore */ }
+    try { wx.setStorageSync('favoriteApps', favorites); } catch (e2) { /* ignore */ }
+    this.setData({ favoriteApps: favorites });
+    this.filterApps(this.data.searchKeyword, favorites);
 
-    // 渲染用完整对象
-    var enriched = enrichFavorites(currentIds);
-    this.setData({ favoriteApps: enriched });
-    this.filterApps(this.data.searchKeyword, enriched);
+    // 通知首页更新收藏列表
+    eventBus.emit(Events.FAVORITES_CHANGED, favorites);
 
-    // 同步到服务端用 ID 数组
-    this._syncToServer(currentIds);
-  },
-
-  isFavorite: function (id) {
-    return toIdArray(this.data.favoriteApps).indexOf(id) !== -1;
+    // 异步同步到服务端
+    this._syncToServer(favorites);
   },
 
   onClearFavorites: function () {
@@ -237,18 +164,20 @@ Page({
       content: '确定要清空收藏吗？',
       success: function (res) {
         if (res.confirm) {
-          try { wx.setStorageSync('favoriteApps', []); } catch (e) { /* ignore */ }
-          that.setData({ favoriteApps: [], editing: false });
-          that.filterApps(that.data.searchKeyword, []);
-          that._syncToServer([]);
+          const emptyFavorites = [];
+          try { wx.setStorageSync('favoriteApps', emptyFavorites); } catch (e) { /* ignore */ }
+          that.setData({ favoriteApps: emptyFavorites, editing: false });
+          that.filterApps(that.data.searchKeyword, emptyFavorites);
+          eventBus.emit(Events.FAVORITES_CHANGED, emptyFavorites);
+          that._syncToServer(emptyFavorites);
         }
       },
     });
   },
 
-  _syncToServer: function (favIds) {
+  _syncToServer: function (favorites) {
     try {
-      api.system.saveFavoriteApps(JSON.stringify(favIds)).catch(function (e) {
+      api.system.saveFavoriteApps(JSON.stringify(favorites)).catch(function (e) {
         console.warn('[more-apps] sync favorites to server failed:', e.message || e);
       });
     } catch (e) { /* ignore */ }

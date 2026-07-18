@@ -1,14 +1,47 @@
 /* 样衣仓库管理页 */
 
 .container {
-  padding: var(--spacing-sm) var(--page-padding-x);
-  background: var(--color-bg-page);
+  padding: 12rpx var(--page-padding-x);
+  background: var(--color-bg-page, var(--color-bg-page));
   min-height: 100vh;
+}
+
+/* ==================== 搜索栏 ==================== */
+.search-bar {
+  margin-bottom: 12rpx;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: 12rpx 16rpx;
+  border: 1px solid var(--color-border);
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.search-icon {
+  font-size: var(--font-size-md);
+  margin-right: 8rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+}
+
+.search-clear {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: 8rpx;
 }
 
 /* ==================== 操作栏 ==================== */
 .action-bar {
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: 12rpx;
 }
 
 .btn-scan {
@@ -16,24 +49,24 @@
   align-items: center;
   justify-content: center;
   background: var(--color-bg-card);
-  /* Apple: removed hard border, use shadow */
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--spacing-md);
+  padding: 20rpx;
 }
 
 .btn-scan .btn-icon {
-  font-size: var(--font-size-2xl);
-  margin-right: var(--spacing-xs);
+  font-size: var(--font-size-xl);
+  margin-right: 8rpx;
 }
 
 .btn-scan .btn-text {
   font-size: var(--font-size-md);
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 /* ==================== 列表 ==================== */
 .stock-list {
-  margin-top: var(--spacing-xs);
+  margin-top: 8rpx;
 }
 
 .stock-item {
@@ -42,32 +75,31 @@
   justify-content: space-between;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-card);
-  /* Apple: removed hard border, use shadow */
+  padding: 24rpx;
+  margin-bottom: 12rpx;
+  box-shadow: var(--shadow-sm);
 }
 
 .stock-thumb {
-  width: 50px;
-  height: 50px;
+  width: 100rpx;
+  height: 100rpx;
   border-radius: var(--radius-xs);
-  margin-right: var(--spacing-md);
+  margin-right: 16rpx;
   flex-shrink: 0;
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
 }
 
 .stock-thumb-placeholder {
-  width: 50px;
-  height: 50px;
+  width: 100rpx;
+  height: 100rpx;
   border-radius: var(--radius-xs);
-  margin-right: var(--spacing-md);
+  margin-right: 16rpx;
   flex-shrink: 0;
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-4xl);
 }
 
 .stock-info {
@@ -77,7 +109,7 @@
 .stock-row {
   display: flex;
   align-items: center;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: 8rpx;
 }
 
 .stock-row:last-child {
@@ -87,13 +119,13 @@
 .stock-label {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  width: 30px;
+  width: 60rpx;
   flex-shrink: 0;
 }
 
 .stock-value {
   font-size: var(--font-size-md);
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .stock-status {
@@ -109,26 +141,26 @@
 
 .qty-num {
   font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
+  font-weight: bold;
   color: var(--color-primary);
 }
 
 .qty-unit {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-left: 2px;
+  margin-left: 4rpx;
 }
 
 .stock-loan {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs);
   color: var(--color-warning);
-  margin-top: 2px;
+  margin-top: 4rpx;
 }
 
 .stock-arrow {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
-  margin-top: 2px;
+  margin-top: 4rpx;
 }
 
 /* 空状态 */
@@ -136,12 +168,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 0;
+  padding: 80rpx 0;
 }
 
 .empty-icon {
-  font-size: 20px;
-  margin-bottom: var(--spacing-sm);
+  font-size: 40px;
+  margin-bottom: 16rpx;
   opacity: 0.6;
 }
 
@@ -153,7 +185,7 @@
 /* 加载更多 */
 .load-more {
   text-align: center;
-  padding: var(--spacing-md) 0;
+  padding: 24rpx 0;
 }
 
 .load-text {
@@ -164,7 +196,7 @@
 /* ==================== 详情页头部 ==================== */
 .header {
   position: relative;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: 12rpx;
 }
 
 .header-back {
@@ -173,14 +205,14 @@
   top: 0;
   font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: var(--spacing-xs) 0;
+  padding: 8rpx 0;
 }
 
 .header-title {
   text-align: center;
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  font-weight: bold;
+  color: var(--color-text);
   display: block;
 }
 
@@ -190,12 +222,12 @@
   top: 0;
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  padding: var(--spacing-xs) 0;
+  padding: 8rpx 0;
 }
 
 .header-info {
   text-align: center;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 16rpx;
 }
 
 .header-sub {
@@ -210,9 +242,8 @@
   display: flex; 
   justify-content: center; 
   align-items: center; 
-  padding: 30px 0; 
+  padding: 60px 0; 
 }
-
 .loading-text { 
   font-size: var(--font-size-md); 
   color: var(--color-text-secondary); 
@@ -221,20 +252,19 @@
 /* 错误 */
 .error-card {
   background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
+  border: 1px solid var(--color-danger);
   border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
-.error-icon { font-size: var(--font-size-4xl); margin-bottom: var(--spacing-xs); }
-.error-msg { font-size: var(--font-size-md); color: var(--color-danger); text-align: center; margin-bottom: var(--spacing-sm); }
+.error-icon { font-size: var(--font-size-4xl); margin-bottom: 8px; }
+.error-msg { font-size: var(--font-size-md); color: var(--color-danger); text-align: center; margin-bottom: 12px; }
 .btn-retry {
   font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: 3px var(--spacing-lg);
+  padding: 6px 20px;
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-xs);
 }
@@ -242,99 +272,84 @@
 /* 成功 */
 .success-banner {
   background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
+  border: 1px solid var(--color-success);
   border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: 10px;
 }
-
-.success-icon { font-size: var(--font-size-xl); margin-right: var(--spacing-xs); }
+.success-icon { font-size: var(--font-size-lg-xl); margin-right: 8px; }
 .success-text { font-size: var(--font-size-md); color: var(--color-success); }
 
 /* 信息卡片 */
 .info-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-card);
-  /* Apple: removed hard border, use shadow */
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
 }
 
-.detail-header {
-  display: flex;
-  align-items: flex-start;
-}
-
-.detail-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.detail-thumb {
-  width: 60px;
-  height: 60px;
+.detail-image {
+  width: 100%;
+  height: 360rpx;
   border-radius: var(--radius-xs);
-  margin-left: var(--spacing-md);
-  flex-shrink: 0;
-  background: var(--color-bg-light);
+  margin-bottom: 12rpx;
+  background: var(--color-bg-page);
 }
 
 .info-row {
   display: flex;
   align-items: center;
-  padding: var(--spacing-xs) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
 }
-
 .info-row:last-child { border-bottom: none; }
-
 .info-label { font-size: var(--font-size-sm); color: var(--color-text-secondary); width: 60px; flex-shrink: 0; }
-.info-label--wide { width: auto; font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
-.info-value { font-size: var(--font-size-md); color: var(--color-text-primary); flex: 1; }
+.info-value { font-size: var(--font-size-md); color: var(--color-text); flex: 1; }
 .info-value.bold,
-.bold { font-weight: var(--font-weight-bold); font-size: var(--font-size-md); color: var(--color-primary); }
+.bold { font-weight: bold; font-size: var(--font-size-md-lg); color: var(--color-primary); }
+
+/* 状态标签 */
+.status-tag { padding: 2px 8px; border-radius: var(--radius-xl); font-size: var(--font-size-xs); }
+.tag-green { background: var(--color-success-bg); color: var(--color-success); }
+.tag-orange { background: var(--color-warning-bg); color: var(--color-warning); }
 
 /* 借调记录 */
-.loan-item { margin-top: var(--spacing-xs); padding-top: var(--spacing-xs); border-top: 1px dashed var(--color-border-light); }
+.loan-item { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--color-border); }
 
 /* 操作按钮 */
-.action-area { margin-bottom: var(--spacing-sm); }
+.action-area { margin-bottom: 10px; }
 
 /* 仓库选择区域 */
 .warehouse-section {
-  margin-bottom: var(--spacing-sm);
-  padding: var(--spacing-md);
-  background: var(--color-bg-light);
+  margin-bottom: 12rpx;
+  padding: 16rpx;
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
-  /* Apple: removed hard border, use shadow */
+  border: 1px solid var(--color-border);
 }
 
 .warehouse-label {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.warehouse-label--mt {
-  margin-top: var(--spacing-sm);
+  margin-bottom: 6px;
 }
 
 .warehouse-option-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-xs);
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .warehouse-chip {
-  padding: 2px var(--spacing-md);
+  padding: 4px 14px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
-  /* Apple: removed hard border, use shadow */
-  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
 }
 
@@ -345,8 +360,8 @@
 }
 
 .warehouse-chip--clear {
-  background: var(--color-danger-bg);
-  border-color: var(--color-danger-border);
+  background: rgba(254, 226, 226, 0.6);
+  border-color: rgba(252, 165, 165, 0.5);
   color: var(--color-danger);
 }
 
@@ -361,136 +376,36 @@
 
 .input-box {
   width: 100%;
-  height: var(--input-height-sm);
+  height: 40px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 0 var(--spacing-md);
+  padding: 0 12px;
   font-size: var(--font-size-sm);
   box-sizing: border-box;
-  background: var(--color-bg-card);
 }
 
 .btn-inbound {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-white);
   text-align: center;
   border-radius: var(--radius-md);
-  padding: var(--spacing-md) 0;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--spacing-xs);
+  padding: 14px 0;
+  font-size: var(--font-size-md-lg);
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
+  margin-bottom: 8px;
 }
 
 .btn-loan {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-white);
   text-align: center;
   border-radius: var(--radius-md);
-  padding: var(--spacing-md) 0;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--spacing-xs);
-}
-
-/* ==================== 借调内联表单 ==================== */
-.loan-inline {
-  background: var(--color-bg-gray);
-  /* Apple: removed hard border, use shadow */
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-xs);
-}
-
-.loan-inline-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: var(--spacing-sm);
-}
-
-.loan-inline-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  width: 60px;
-  flex-shrink: 0;
-}
-
-.loan-inline-radios {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.loan-inline-input {
-  flex: 1;
-  font-size: var(--font-size-md);
-  padding: var(--spacing-xs) var(--spacing-md);
-  /* Apple: removed hard border, use shadow */
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-card);
-  height: var(--input-height-sm);
-  box-sizing: border-box;
-}
-
-.loan-inline-actions {
-  display: flex;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-.loan-inline-btn {
-  flex: 1;
-  text-align: center;
-  padding: var(--spacing-sm) 0;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-}
-
-.loan-inline-btn--cancel {
-  background: var(--color-bg-gray);
-  color: var(--color-text-secondary);
-  /* Apple: removed hard border, use shadow */
-}
-
-.loan-inline-btn--confirm {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-}
-
-.loan-inline-selected {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  padding: 3px 5px;
-  border-radius: var(--radius-xs);
-  margin-bottom: var(--spacing-sm);
-  display: inline-block;
-}
-
-.loan-inline-list {
-  max-height: 100px;
-  overflow-y: auto;
-  /* Apple: removed hard border, use shadow */
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--spacing-sm);
-}
-
-.loan-inline-option {
-  padding: var(--spacing-xs) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.loan-inline-option:last-child {
-  border-bottom: none;
-}
-
-.loan-inline-option:active {
-  background: var(--color-primary-bg);
+  padding: 14px 0;
+  font-size: var(--font-size-md-lg);
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
+  margin-bottom: 8px;
 }
 
 .btn-return {
@@ -498,134 +413,9 @@
   color: var(--color-text-white);
   text-align: center;
   border-radius: var(--radius-md);
-  padding: var(--spacing-md) 0;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--spacing-xs);
-}
-
-.btn-disabled { opacity: 0.6; pointer-events: none; }
-
-/* ==================== 借调记录操作 ==================== */
-.loan-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 3px;
-}
-
-.btn-transfer-sm {
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-xs);
-  padding: 2px 6px;
-}
-
-.transfer-tag {
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  padding: 1px 4px;
-  border-radius: var(--radius-xs);
-}
-
-/* ==================== 弹窗通用 ==================== */
-.modal-mask {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--color-overlay);
-  z-index: var(--z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  width: 85%;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.modal-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  text-align: center;
-  padding: var(--spacing-lg) 0 var(--spacing-md);
-  color: var(--color-text-primary);
-}
-
-.modal-body {
-  padding: var(--spacing-sm) var(--spacing-xl) var(--spacing-lg);
-}
-
-.modal-actions {
-  display: flex;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.modal-btn-cancel,
-.modal-btn-confirm {
-  flex: 1;
-  text-align: center;
-  padding: var(--spacing-lg) 0;
-  font-size: var(--font-size-md);
-}
-
-.modal-btn-cancel {
-  color: var(--color-text-secondary);
-  border-right: 1px solid var(--color-border-light);
-}
-
-.modal-btn-confirm {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-bold);
-}
-
-/* 表单项 */
-.form-item {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-item .form-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xs);
-  display: block;
-  width: auto;
-}
-
-.form-input {
-  width: 100%;
-  height: var(--input-height-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0 var(--spacing-md);
-  font-size: var(--font-size-md);
-  box-sizing: border-box;
-  background: var(--color-bg-card);
-}
-
-.radio-item {
-  display: inline-block;
-  margin-right: var(--spacing-lg);
-  font-size: var(--font-size-md);
-}
-
-/* 归还选择 */
-.return-pick-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-md) var(--spacing-sm);
-  /* Apple: removed hard border, use shadow */
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-xs);
-  font-size: var(--font-size-md);
-}
-
-.return-pick-item--active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-bg);
+  padding: 14px 0;
+  font-size: var(--font-size-md-lg);
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(250,173,20,0.25);
+  margin-bottom: 8px;
 }

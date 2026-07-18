@@ -41,7 +41,7 @@ Page({
         try {
           const dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
-        } catch (_) {}
+        } catch (_) { /* 隐私弹窗异常忽略 */ }
       }.bind(this));
     }
     this._loadRemarks();
@@ -49,13 +49,12 @@ Page({
 
   onUnload: function () {
     if (this._unsubPrivacy) {
-      try { this._unsubPrivacy(); } catch (_) {}
+      try { this._unsubPrivacy(); } catch (_) { /* 取消订阅异常忽略 */ }
       this._unsubPrivacy = null;
     }
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     this._loadRemarks().finally(function () {
       wx.stopPullDownRefresh();
     });
@@ -66,7 +65,7 @@ Page({
     this.setData({ loading: true });
     return api.production.listOrderRemarks(this.data.targetType, this.data.targetNo)
       .then(function (list) {
-        const allRemarks = (Array.isArray(list) ? list : []).map(function (r) {
+        const remarks = (Array.isArray(list) ? list : []).map(function (r) {
           if (r.imageUrls) {
             try {
               r.imageList = JSON.parse(r.imageUrls).map(function (u) { return getAuthedImageUrl(u); });
@@ -79,26 +78,10 @@ Page({
           }
           return r;
         });
-
-        const USER_ROLES = new Set(['', null, undefined]);
-        const SYSTEM_ROLES = new Set(['快速备注', '历史备注', 'AI巡检', '采购备注', '样衣审核', '制单退回', '纸样退回']);
-
-        const userRemarks = allRemarks.filter(function (r) {
-          return USER_ROLES.has(r.authorRole);
-        });
-
-        const systemLogs = allRemarks.filter(function (r) {
-          return SYSTEM_ROLES.has(r.authorRole);
-        });
-
-        that.setData({
-          userRemarks: userRemarks,
-          systemLogs: systemLogs,
-          loading: false,
-        });
+        that.setData({ remarks: remarks, loading: false });
       })
       .catch(function () {
-        that.setData({ userRemarks: [], systemLogs: [], loading: false });
+        that.setData({ remarks: [], loading: false });
       });
   },
 

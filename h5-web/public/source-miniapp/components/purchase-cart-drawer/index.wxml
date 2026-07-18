@@ -8,7 +8,7 @@
         <text class="cart-count" wx:if="{{ cart && cart.items && cart.items.length > 0 }}">({{ cart.items.length }})</text>
       </view>
       <view class="cart-close-btn" bindtap="onClose">
-        <text class="close-icon">✕</text>
+        <view class="line-icon line-icon--sm icon-close"></view>
       </view>
     </view>
 
@@ -17,7 +17,7 @@
       <!-- 合并建议 -->
       <view class="merge-suggestion" wx:if="{{ mergeSuggestions && mergeSuggestions.length > 0 }}">
         <view class="merge-header">
-          <text class="merge-title">💡 智能合并建议</text>
+          <view class="line-icon line-icon--sm icon-lightbulb"></view><text class="merge-title">智能合并建议</text>
         </view>
         <view class="merge-item" wx:for="{{ mergeSuggestions }}" wx:key="index">
           <text class="merge-text">{{ item.materialName }} 有 {{ item.count }} 条可合并</text>
@@ -30,7 +30,7 @@
       <!-- 购物车物料列表 -->
       <view class="cart-item" wx:for="{{ cart.items }}" wx:key="id">
         <view class="item-left">
-          <checkbox checked="{{ item._selected }}" bindtap="onToggleItem" data-id="{{ item.id }}" />
+          <checkbox checked="{{ selectedItems.indexOf(item.id) !== -1 }}" bindtap="onToggleItem" data-id="{{ item.id }}" />
         </view>
         <view class="item-center">
           <view class="item-name">{{ item.materialName }}</view>
@@ -57,10 +57,10 @@
         </view>
         <view class="item-right">
           <view class="item-split" bindtap="onSplit" wx:if="{{ item.quantity > 1 }}">
-            <text class="split-icon">✂</text>
+            <view class="line-icon line-icon--sm icon-scissors-orange"></view>
           </view>
           <view class="item-delete" bindtap="onDelete" data-id="{{ item.id }}">
-            <text class="delete-icon">🗑</text>
+            <view class="line-icon line-icon--sm icon-trash"></view>
           </view>
         </view>
       </view>
@@ -68,7 +68,7 @@
 
     <!-- 空状态 -->
     <view class="cart-empty" wx:else>
-      <text class="empty-icon">🛒</text>
+      <view class="line-icon line-icon--lg icon-cart"></view>
       <text class="empty-text">购物车是空的</text>
     </view>
 
@@ -99,7 +99,7 @@
   <view class="preview-drawer" catchtap="onPreviewTap">
     <view class="preview-header">
       <text class="preview-title">采购单预览</text>
-      <view class="preview-close" bindtap="onClosePreview">✕</view>
+      <view class="preview-close" bindtap="onClosePreview"><view class="line-icon line-icon--sm icon-close"></view></view>
     </view>
     <scroll-view class="preview-content" scroll-y="true">
       <view class="preview-group" wx:for="{{ previewData && previewData.purchaseGroups }}" wx:key="index">

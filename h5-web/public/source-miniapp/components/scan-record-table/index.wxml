@@ -13,8 +13,6 @@
       <text class="srt-th srt-th-qty">数量</text>
       <text class="srt-th srt-th-bed">床号</text>
       <text class="srt-th srt-th-time">日期</text>
-      <!-- 扩展字段列头 -->
-      <text wx:for="{{_extColumns}}" wx:key="fieldKey" class="srt-th srt-th-ext">{{item.label}}</text>
     </view>
 
     <!-- 分块包装：每 30 条一组，避免 srt-table-inner 直接子节点超过 60（WXML 性能告警） -->
@@ -22,10 +20,7 @@
       <view class="srt-chunk">
         <view wx:for="{{chunk.items}}" wx:for-item="item" wx:key="id" class="srt-table-row" hover-class="srt-table-row-hover" hover-stay-time="50">
           <text class="srt-td srt-td-worker" user-select>{{item.displayWorker}}</text>
-          <view class="srt-td srt-td-order">
-            <text user-select>{{item.displayOrderNo}}</text>
-            <text wx:if="{{item.displayTypeTag}}" class="srt-type-tag {{item.displayTypeTag === '样衣' ? 'srt-type-pattern' : ''}}">{{item.displayTypeTag}}</text>
-          </view>
+          <text class="srt-td srt-td-order" user-select>{{item.displayOrderNo}}</text>
           <text class="srt-td srt-td-bundle" user-select>{{item.displayBundleNo}}</text>
           <text class="srt-td srt-td-process" user-select>{{item.displayProcess}}</text>
           <text class="srt-td srt-td-colorsize" user-select>{{item.displayColorSize}}</text>
@@ -34,8 +29,6 @@
           <text class="srt-td srt-td-qty" user-select>{{item.displayQuantity}}</text>
           <text class="srt-td srt-td-bed" user-select>{{item.displayBedNo}}</text>
           <text class="srt-td srt-td-time" user-select>{{item.displayTime}}</text>
-          <!-- 扩展字段值 -->
-          <text wx:for="{{_extColumns}}" wx:for-item="ef" wx:key="fieldKey" class="srt-td srt-td-ext" user-select>{{item._extDisplay[ef.fieldKey]}}</text>
         </view>
       </view>
     </block>

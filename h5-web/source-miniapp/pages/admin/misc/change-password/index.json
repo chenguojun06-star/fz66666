@@ -1,4 +1,6 @@
 {
-  "navigationBarTitleText": "修改密码",
-  "usingComponents": {}
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

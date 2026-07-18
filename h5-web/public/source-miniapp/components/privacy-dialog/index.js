@@ -12,7 +12,12 @@
 const { safeNavigate } = require('../../utils/uiHelper');
 
 Component({
-  properties: {},
+  properties: {
+    appName: {
+      type: String,
+      value: '衣智链',
+    },
+  },
 
   data: {
     show: false,

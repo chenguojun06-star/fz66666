@@ -2,7 +2,7 @@
  * 字段配置 API（多租户字段定制系统）
  * 对应后端 /api/system/field-config
  */
-const { ok, raw } = require('./helpers');
+const { ok } = require('./helpers');
 
 const fieldConfig = {
   /**

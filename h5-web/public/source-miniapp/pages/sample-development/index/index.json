@@ -1,8 +1,6 @@
 {
-  "usingComponents": {
-    "empty-state": "/components/empty-state/empty-state"
-  },
+  "usingComponents": {},
   "navigationBarTitleText": "样衣开发跟进",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#ededed"
+  "backgroundColor": "#f5f5f5"
 }

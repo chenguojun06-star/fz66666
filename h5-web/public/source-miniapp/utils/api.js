@@ -7,15 +7,14 @@
 
 // ── 领域模块 ──────────────────────────────────────────────
 const production = require('./api-modules/production');
-const { factoryShipment } = require('./api-modules/production');
 const purchaseCart = require('./api-modules/purchase-cart');
 const { system, serial, factory, factoryWorker, tenant } = require('./api-modules/system');
-const { fieldConfig } = require('./api-modules/field-config');
 const { intelligence, notice } = require('./api-modules/intelligence');
-const { style, warehouse, material, materialRoll, orderManagement, sampleStock } = require('./api-modules/style-warehouse');
+const { style, warehouse, material, materialRoll, sampleStock, templateLibrary } = require('./api-modules/style-warehouse');
 const { dashboard, wechat, common } = require('./api-modules/common');
-const { employeeAdvance, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
-const { ecommerce } = require('./api-modules/ecommerce');
+const { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
+const { fieldConfig } = require('./api-modules/field-config');
+const ecommerce = require('./api-modules/ecommerce');
 const { purchaseReturn, salesReturn } = require('./api-modules/return');
 
 // ── 聚合对象（与拆分前完全一致的接口） ──────────────────────
@@ -28,8 +27,8 @@ const api = {
   materialRoll,
   style,
   warehouse,
-  orderManagement,
   sampleStock,
+  templateLibrary,
   serial,
   factory,
   tenant,
@@ -45,8 +44,6 @@ const api = {
   wageSettlementFeedback,
   ecommerce,
   fieldConfig,
-  purchaseReturn,
-  salesReturn,
 };
 
 // ── 导出（保持原有 module.exports + named exports 兼容） ───
@@ -59,12 +56,12 @@ module.exports.material = material;
 module.exports.materialRoll = materialRoll;
 module.exports.style = style;
 module.exports.warehouse = warehouse;
-module.exports.orderManagement = orderManagement;
 module.exports.serial = serial;
 module.exports.factory = factory;
 module.exports.tenant = tenant;
 module.exports.wechat = wechat;
 module.exports.sampleStock = sampleStock;
+module.exports.templateLibrary = templateLibrary;
 module.exports.employeeAdvance = employeeAdvance;
 module.exports.factoryShipment = factoryShipment;
 module.exports.wagePayment = wagePayment;

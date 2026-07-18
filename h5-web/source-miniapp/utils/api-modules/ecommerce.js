@@ -1,34 +1,28 @@
+/**
+ * 电商订单 API
+ *
+ * 对应后端 /api/ecommerce/*
+ */
 const { ok } = require('./helpers');
 
-/**
- * 电商/销售数据 API
- *  - listOrders     多平台订单列表
- *  - getSalesStats  销售统计汇总（复用 finance.ec-revenue/summary）
- *  - getShopStats   店铺/平台连接器统计
- */
 const ecommerce = {
   /**
-   * 多平台订单列表
-   * @param {Object} params { platform, status, page, pageSize, ... }
+   * 查询销售统计
+   * @param {Object} params - { startDate, endDate }
+   * @returns {Promise<Object>} { orderCount, totalPayAmount, totalFreight, netRevenue, platformBreakdown }
    */
-  listOrders: function (params) {
+  getSalesStats(params) {
+    return ok('/api/ecommerce/sales-stats', 'GET', params || {});
+  },
+
+  /**
+   * 查询电商订单列表
+   * @param {Object} params - { platform, status, keyword, page, pageSize }
+   * @returns {Promise<Object>} { records, total, size, current, pages }
+   */
+  listOrders(params) {
     return ok('/api/ecommerce/orders/list', 'POST', params || {});
-  },
-
-  /**
-   * 销售统计汇总（后端为 POST + RequestBody）
-   * @param {Object} params { startDate, endDate, platform?, status? }
-   */
-  getSalesStats: function (params) {
-    return ok('/api/finance/ec-revenue/summary', 'POST', params || {});
-  },
-
-  /**
-   * 店铺/平台连接器统计
-   */
-  getShopStats: function () {
-    return ok('/api/platform-connector/shop-stats', 'GET', {});
   },
 };
 
-module.exports = { ecommerce };
+module.exports = ecommerce;

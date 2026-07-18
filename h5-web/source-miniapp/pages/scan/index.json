@@ -1,7 +1,7 @@
 {
-  "navigationBarTitleText": "扫码",
-  "enablePullDownRefresh": true,
+  "navigationStyle": "custom",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }

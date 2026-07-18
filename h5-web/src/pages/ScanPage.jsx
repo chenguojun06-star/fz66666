@@ -196,6 +196,7 @@ export default function ScanPage() {
     setCameraActive(false);
     if (!isOnline()) {
       try {
+        const user = useAuthStore.getState().user;
         await scanOfflineQueue.enqueue({
           scanCode: code,
           scanType,
@@ -204,6 +205,8 @@ export default function ScanPage() {
           processCode: '',
           orderId: '',
           bundleNo: '',
+          operatorId: user?.userId || user?.id || '',
+          operatorName: user?.username || user?.name || user?.nickname || '',
         });
         setLastResult({ scanCode: code, scanType, success: true, message: '网络离线，扫码已缓存，联网后自动上传' });
         toast.warn('网络离线，扫码已缓存');

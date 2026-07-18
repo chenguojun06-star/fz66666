@@ -184,17 +184,15 @@ async function handle401Error({ statusCode, body, skipAuthRedirect, reject, reso
     }
     clearToken();
     clearRefreshToken();
-    wx.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2000 });
-    setTimeout(() => triggerLoginRedirect(), 1500);
-    reject(createError('登录已过期', { type: 'auth', statusCode, data: body }));
+    triggerLoginRedirect();
+    reject(createError('未登录', { type: 'auth', statusCode, data: body }));
     return true;
   }
   if (!skipAuthRedirect) {
     clearToken();
     clearRefreshToken();
-    wx.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2000 });
-    setTimeout(() => triggerLoginRedirect(), 1500);
-    reject(createError('登录已过期', { type: 'auth', statusCode, data: body }));
+    triggerLoginRedirect();
+    reject(createError('未登录', { type: 'auth', statusCode, data: body }));
     return true;
   }
   return false;
@@ -567,9 +565,7 @@ function uploadFile(options) {
           }
 
           if (statusCode === 200 && body.code === 200) {
-            // P0 修复：?. 可选链在 ES5 下报错，改用显式守卫
-            var _d = body.data || {};
-            const fileUrl = _d.url || _d.fileUrl || body.data;
+            const fileUrl = body.data?.url || body.data?.fileUrl || body.data;
             if (fileUrl) {
               resolve(fileUrl);
             } else {

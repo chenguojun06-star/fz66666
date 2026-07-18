@@ -9,7 +9,7 @@ import './StyleDevPage.css';
 
 const STAGE_KEYS = ['bom', 'pattern', 'sizePrice', 'process', 'secondary', 'production', 'quotation'];
 const STAGE_LABELS = { bom: 'BOM清单', pattern: '纸样开发', sizePrice: '码数单价', process: '工序单价', secondary: '二次工艺', production: '生产制单', quotation: '报价单' };
-const STAGE_ICONS = { bom: '📦', pattern: '✏️', sizePrice: '📏', process: '⚙️', secondary: '🎨', production: '🏭', quotation: '💰' };
+const STAGE_ICONS = { bom: 'package', pattern: 'scissors', sizePrice: 'ruler', process: 'settings', secondary: 'palette', production: 'factory', quotation: 'dollarSign' };
 const PROGRESS_NODES = ['未开始', '纸样开发中', '纸样完成', '样衣制作中', '样衣完成', '开发样报废'];
 const SAMPLE_TYPE_MAP = { development: '开发样', pre_production: '产前样', shipment: '大货样', sales: '销售样' };
 
@@ -202,7 +202,7 @@ export default function StyleDevPage() {
               <span style={{ color: getProgressColor(getProgressNode(selectedStyle)), fontWeight: 600 }}>
                 {getProgressNode(selectedStyle)}
               </span>
-              {isOverdue(selectedStyle) && <span style={{ color: 'var(--color-danger)', marginLeft: 8 }}>⚠ 逾期</span>}
+              {isOverdue(selectedStyle) && <span style={{ color: 'var(--color-danger)', marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 2 }}><Icon name="alertTriangle" size={12} /> 逾期</span>}
             </div>
             <div className="style-detail-meta">
               {selectedStyle.season && <span>{selectedStyle.season}</span>}
@@ -216,7 +216,7 @@ export default function StyleDevPage() {
           {STAGE_KEYS.map(key => (
             <button key={key} className={`style-tab-btn ${activeTab === key ? 'active' : ''}`}
               onClick={() => handleTabChange(key)}>
-              <span className="style-tab-icon">{STAGE_ICONS[key]}</span>
+              <span className="style-tab-icon"><Icon name={STAGE_ICONS[key]} size={18} /></span>
               <span className="style-tab-label">{STAGE_LABELS[key]}</span>
             </button>
           ))}
@@ -228,11 +228,11 @@ export default function StyleDevPage() {
           ) : (
             <>
               {activeTab === 'bom' && <BomTab data={tabData.bom} />}
-              {activeTab === 'pattern' && <PatternTab data={tabData.pattern} />}
-              {activeTab === 'sizePrice' && <SizePriceTab data={tabData.sizePrice} />}
-              {activeTab === 'process' && <ProcessTab data={tabData.process} />}
-              {activeTab === 'secondary' && <ProcessTab data={tabData.secondary} isSecondary />}
-              {activeTab === 'production' && <ProductionTab data={tabData.production} />}
+              {activeTab === 'pattern' && <DataListTab data={tabData.pattern} config={TAB_FIELD_CONFIG.pattern} />}
+              {activeTab === 'sizePrice' && <DataListTab data={tabData.sizePrice} config={TAB_FIELD_CONFIG.sizePrice} />}
+              {activeTab === 'process' && <DataListTab data={tabData.process} config={TAB_FIELD_CONFIG.process} />}
+              {activeTab === 'secondary' && <DataListTab data={tabData.secondary} config={TAB_FIELD_CONFIG.secondary} />}
+              {activeTab === 'production' && <DataListTab data={tabData.production} config={TAB_FIELD_CONFIG.production} />}
               {activeTab === 'quotation' && <QuotationTab data={tabData.quotation} />}
             </>
           )}
@@ -332,7 +332,7 @@ export default function StyleDevPage() {
                   {style.category && <span>· {style.category}</span>}
                 </div>
               </div>
-              <div className="style-card-arrow">›</div>
+              <div className="style-card-arrow"><Icon name="chevronRight" size={18} color="var(--color-text-tertiary)" /></div>
             </div>
           ))}
           {hasMore && (
@@ -423,65 +423,76 @@ function BomTab({ data }) {
   );
 }
 
-function PatternTab({ data }) {
-  if (!data || (Array.isArray(data) && data.length === 0)) return <EmptyTab text="暂无纸样文件" />;
-  const list = Array.isArray(data) ? data : [];
-  return (
-    <div className="tab-data-list">
-      {list.map((item, i) => (
-        <div key={item.id || i} className="tab-data-item">
-          <div className="tab-data-row"><span className="tab-data-label">文件名</span><span>{item.fileName || item.name || '-'}</span></div>
-          <div className="tab-data-row"><span className="tab-data-label">类型</span><span>{item.fileType || item.category || '-'}</span></div>
-          {item.fileUrl && <a href={item.fileUrl} target="_blank" rel="noreferrer" className="tab-data-link">查看文件</a>}
-        </div>
-      ))}
-    </div>
-  );
-}
+const TAB_FIELD_CONFIG = {
+  pattern: {
+    emptyText: '暂无纸样文件',
+    fields: [
+      { label: '文件名', get: it => it.fileName || it.name || '-' },
+      { label: '类型', get: it => it.fileType || it.category || '-' },
+    ],
+    linkField: 'fileUrl',
+    linkText: '查看文件',
+  },
+  sizePrice: {
+    emptyText: '暂无码数单价',
+    fields: [
+      { label: '尺码', get: it => it.sizeName || it.size || '-' },
+      { label: '单价', get: it => `¥${it.unitPrice ?? it.price ?? '-'}` },
+      { label: '颜色', get: it => it.color || '', hideIfEmpty: true },
+    ],
+  },
+  process: {
+    emptyText: '暂无工序',
+    fields: [
+      { label: '工序', get: it => it.processName || it.name || '-' },
+      { label: '单价', get: it => `¥${it.unitPrice ?? it.price ?? '-'}` },
+      { label: '说明', get: it => it.description || '', hideIfEmpty: true },
+    ],
+  },
+  secondary: {
+    emptyText: '暂无二次工艺',
+    fields: [
+      { label: '工序', get: it => it.processName || it.name || '-' },
+      { label: '单价', get: it => `¥${it.unitPrice ?? it.price ?? '-'}` },
+      { label: '说明', get: it => it.description || '', hideIfEmpty: true },
+    ],
+  },
+  production: {
+    emptyText: '暂无生产制单',
+    singleItem: true,
+    fields: [
+      { label: '生产备注', get: it => it.productionNotes || '', hideIfEmpty: true },
+      { label: '描述', get: it => it.description || '', hideIfEmpty: true },
+      { label: '数量', get: it => it.quantity ? String(it.quantity) : '', hideIfEmpty: true },
+      { label: '交期', get: it => it.deliveryDate || '', hideIfEmpty: true },
+    ],
+  },
+};
 
-function SizePriceTab({ data }) {
-  if (!data || (Array.isArray(data) && data.length === 0)) return <EmptyTab text="暂无码数单价" />;
-  const list = Array.isArray(data) ? data : [];
+function DataListTab({ data, config }) {
+  if (!data || (Array.isArray(data) && data.length === 0)) return <EmptyTab text={config.emptyText} />;
+  const list = config.singleItem ? [data] : (Array.isArray(data) ? data : []);
+  if (config.singleItem && list[0] && !config.fields.some(f => f.get(list[0]))) {
+    return <EmptyTab text={config.emptyText} />;
+  }
   return (
     <div className="tab-data-list">
-      {list.map((item, i) => (
-        <div key={item.id || i} className="tab-data-item">
-          <div className="tab-data-row"><span className="tab-data-label">尺码</span><span>{item.sizeName || item.size || '-'}</span></div>
-          <div className="tab-data-row"><span className="tab-data-label">单价</span><span>¥{item.unitPrice ?? item.price ?? '-'}</span></div>
-          {item.color && <div className="tab-data-row"><span className="tab-data-label">颜色</span><span>{item.color}</span></div>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ProcessTab({ data, isSecondary }) {
-  if (!data || (Array.isArray(data) && data.length === 0)) return <EmptyTab text={isSecondary ? '暂无二次工艺' : '暂无工序'} />;
-  const list = Array.isArray(data) ? data : [];
-  return (
-    <div className="tab-data-list">
-      {list.map((item, i) => (
-        <div key={item.id || i} className="tab-data-item">
-          <div className="tab-data-row"><span className="tab-data-label">工序</span><span>{item.processName || item.name || '-'}</span></div>
-          <div className="tab-data-row"><span className="tab-data-label">单价</span><span>¥{item.unitPrice ?? item.price ?? '-'}</span></div>
-          {item.description && <div className="tab-data-row"><span className="tab-data-label">说明</span><span>{item.description}</span></div>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ProductionTab({ data }) {
-  if (!data) return <EmptyTab text="暂无生产制单" />;
-  return (
-    <div className="tab-data-list">
-      <div className="tab-data-item">
-        {data.productionNotes && <div className="tab-data-row"><span className="tab-data-label">生产备注</span><span>{data.productionNotes}</span></div>}
-        {data.description && <div className="tab-data-row"><span className="tab-data-label">描述</span><span>{data.description}</span></div>}
-        {data.quantity && <div className="tab-data-row"><span className="tab-data-label">数量</span><span>{data.quantity}</span></div>}
-        {data.deliveryDate && <div className="tab-data-row"><span className="tab-data-label">交期</span><span>{data.deliveryDate}</span></div>}
-        {!data.productionNotes && !data.description && !data.quantity && !data.deliveryDate && <EmptyTab text="暂无生产制单信息" />}
-      </div>
+      {list.map((item, i) => {
+        const fields = config.fields.filter(f => !f.hideIfEmpty || f.get(item));
+        return (
+          <div key={item.id || i} className="tab-data-item">
+            {fields.map((f, fi) => (
+              <div key={fi} className="tab-data-row">
+                <span className="tab-data-label">{f.label}</span>
+                <span>{f.get(item)}</span>
+              </div>
+            ))}
+            {config.linkField && item[config.linkField] && (
+              <a href={item[config.linkField]} target="_blank" rel="noreferrer" className="tab-data-link">{config.linkText || '查看'}</a>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

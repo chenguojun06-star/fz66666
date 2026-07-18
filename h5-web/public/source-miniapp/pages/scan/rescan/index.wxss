@@ -1,117 +1,209 @@
+
+/* ========= 页面容器（匹配设计稿：扁平背景） ========= */
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 80px);
+  padding: var(--page-padding-y) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 120px);
 }
 
-/* 信息卡片 */
+/* ========= 信息卡片 ========= */
 .info-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   padding: var(--spacing-lg);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-md);
 }
+
 .card-header {
   display: flex;
   align-items: flex-start;
+  gap: 12px;
 }
+
 .cover-wrap {
-  width: 70px;
-  height: 70px;
-  border-radius: var(--radius-lg);
+  width: 128rpx;
+  height: 160rpx;
+  border-radius: calc(var(--radius-2xl) - 4px);
   overflow: hidden;
   flex-shrink: 0;
-  background: var(--color-bg-gray);
+  background: linear-gradient(135deg, var(--color-border), #d1d1d6);
 }
+
 .cover-img {
   width: 100%;
   height: 100%;
 }
+
 .cover-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
 }
+
 .placeholder-icon {
   font-size: var(--font-size-3xl);
 }
+
 .header-info {
   flex: 1;
-  margin-left: var(--spacing-lg);
+  padding-top: 2rpx;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
-}
-.style-no {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-}
-.style-name {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
 }
 
-/* 字段列表 */
-.field-list {
-  border-bottom: 1px solid var(--color-border-light);
-  padding-top: var(--spacing-md);
-  margin-top: var(--spacing-md);
+.style-no-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
+
+.style-no {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2rpx;
+}
+
+.style-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-top: 16rpx;
+}
+
+/* ========= 字段列表卡片（独立卡片，匹配设计稿） ========= */
+.field-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-md);
+  overflow: hidden;
+}
+
 .field-row {
   display: flex;
-  align-items: baseline;
-  padding: 5px 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx var(--spacing-lg);
+  border-bottom: 1rpx solid var(--color-border);
 }
+
+.field-row:last-child {
+  border-bottom: none;
+}
+
 .field-label {
-  width: 70px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
+
 .field-value {
-  flex: 1;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
-}
-.field-value.highlight {
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-/* 警告卡片 */
+.field-value.highlight {
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========= 警告卡片 ========= */
 .warning-card {
   display: flex;
   align-items: flex-start;
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
-  border-radius: var(--radius-xl);
+  background: var(--color-bg-card);
+  border: 1rpx solid var(--color-warning);
+  border-radius: var(--radius-2xl);
   padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
 }
+
 .warning-icon {
   font-size: var(--font-size-xl);
-  margin-right: var(--spacing-md);
+  margin-right: 16rpx;
   flex-shrink: 0;
+  color: var(--color-warning);
 }
+
 .warning-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 8rpx;
 }
+
 .warning-title {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-warning);
+  color: var(--color-text-primary);
 }
+
 .warning-desc {
-  font-size: var(--font-size-xs);
-  color: var(--color-warning);
-  line-height: var(--line-height-relaxed);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ========= 底部操作栏（匹配设计稿：取消按钮带边框，退回按钮48px高） ========= */
+.footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--page-padding-x) calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1rpx solid var(--color-border);
+  z-index: var(--z-dropdown);
+}
+
+.footer-bar .btn-cancel {
+  flex: 1;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2xl);
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border: 1rpx solid var(--color-border);
+}
+
+.footer-bar .btn-danger {
+  flex: 1;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2xl);
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  border: none;
+}
+
+.footer-bar .btn-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.footer-bar-hover {
+  opacity: 0.75;
 }

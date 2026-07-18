@@ -1,4 +1,6 @@
 <view class="container">
+  <custom-nav title="邀请同事" show-back="{{true}}" />
+
   <view class="qr-section">
     <block wx:if="{{loading}}">
       <view class="qr-loading">
@@ -8,9 +10,9 @@
     </block>
     <block wx:elif="{{qrUrl}}">
       <view class="qr-card">
-        <image class="qr-image" src="{{qrUrl}}" mode="widthFix" />
-        <text class="qr-label">微信扫一扫，加入工厂</text>
+        <image class="qr-image" src="{{qrUrl}}" mode="aspectFit" />
       </view>
+      <text class="qr-label">微信扫一扫，加入工厂</text>
     </block>
     <block wx:else>
       <view class="qr-card qr-card-fail">
@@ -21,17 +23,19 @@
   </view>
 
   <view class="invite-card">
-    <view class="section-title">工厂邀请码</view>
-    <view class="code-row">
-      <view class="code-display">{{tenantCode || '--'}}</view>
-      <view class="copy-btn" hover-class="copy-btn-hover" hover-stay-time="100" bindtap="onCopyTenantCode">复制</view>
+    <view class="card-label-row">
+      <text class="card-label">工厂邀请码</text>
+      <view class="copy-text-btn" hover-class="copy-text-btn-hover" hover-stay-time="100" bindtap="onCopyTenantCode">复制</view>
     </view>
+    <view class="code-display">{{tenantCode || '--'}}</view>
 
     <view class="divider"></view>
 
-    <view class="section-title">PC端注册链接</view>
+    <view class="card-label-row">
+      <text class="card-label">PC端注册链接</text>
+    </view>
     <view class="hint-text">员工可通过此链接在电脑端注册账号</view>
-    <view class="copy-btn copy-link" hover-class="copy-btn-hover" hover-stay-time="100" bindtap="onCopyInviteUrl">复制注册链接</view>
+    <view class="copy-link-btn" hover-class="copy-link-btn-hover" hover-stay-time="100" bindtap="onCopyInviteUrl">复制注册链接</view>
   </view>
 
   <view class="steps-card">
@@ -56,5 +60,10 @@
     </view>
   </view>
 
-  <button class="share-btn" open-type="share">分享给微信好友</button>
+  <button class="share-btn" open-type="share">
+    <view class="share-btn-inner">
+      <view class="share-btn-icon line-icon icon-send-arrow"></view>
+      <text class="share-btn-text">分享给微信好友</text>
+    </view>
+  </button>
 </view>

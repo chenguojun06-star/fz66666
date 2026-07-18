@@ -4,8 +4,7 @@
   left: 0;
   right: 0;
   z-index: var(--z-overlay);
-  background-color: var(--color-bg-card);
-  border-bottom: 0.5px solid var(--color-border);
+  background-color: #f2f2f7;
 }
 
 .status-bar {
@@ -46,8 +45,8 @@
 }
 
 .nav-title-left {
-  font-size: var(--font-size-xl);
-  font-weight: bold;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-align: center;
 }

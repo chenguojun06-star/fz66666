@@ -1,0 +1,111 @@
+<view class="container">
+  <!-- 统计卡片 -->
+  <view class="stats-row">
+    <view class="stat-card">
+      <text class="stat-value">{{total}}</text>
+      <text class="stat-label">款数</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-value stat-value--success">{{totalAvailableQty}}</text>
+      <text class="stat-label">可用库存(件)</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-value stat-value--danger">{{totalDefectQty}}</text>
+      <text class="stat-label">次品数(件)</text>
+    </view>
+  </view>
+
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <search-scan
+      placeholder="搜索订单号/款号/SKU"
+      value="{{searchText}}"
+      show-scan="{{false}}"
+      bind:input="onSearchInput"
+      bind:confirm="onSearchConfirm"
+    />
+    <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+      <view class="filter-picker">
+        <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
+        <text class="filter-picker-arrow">▾</text>
+      </view>
+    </picker>
+    <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{factoryTypeIndex}}" bindchange="onFactoryTypeChange">
+      <view class="filter-picker">
+        <text class="filter-picker-text">{{factoryTypeOptions[factoryTypeIndex].label}}</text>
+        <text class="filter-picker-arrow">▾</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 列表 -->
+  <view wx:if="{{loading && list.length === 0}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{list.length === 0}}" class="empty-wrap">
+    <view class="empty-icon line-icon line-icon--xl icon-package"></view>
+    <text class="empty-text">暂无成品库存数据</text>
+    <text class="empty-sub">请先扫码入库</text>
+  </view>
+
+  <view wx:else class="list-wrap">
+    <view wx:for="{{list}}" wx:key="id" class="inventory-item" data-id="{{item.id}}" bindtap="onItemTap" hover-class="inventory-item--hover" hover-stay-time="100">
+      <view class="item-header">
+        <image wx:if="{{item._styleImage}}" src="{{item._styleImage}}" mode="aspectFill" class="item-image" />
+        <view wx:else class="item-image item-image--placeholder">
+          <text class="item-image-text">衣</text>
+        </view>
+        <view class="item-info">
+          <view class="item-title-row">
+            <text class="item-style-no">{{item.styleNo}}</text>
+            <text class="item-style-name">{{item.styleName}}</text>
+          </view>
+          <view class="item-order">
+            <text class="item-order-label">订单：</text>
+            <text class="item-order-value">{{item.orderNo}}</text>
+          </view>
+          <view class="item-tags">
+            <text wx:if="{{item.factoryName}}" class="item-tag item-tag--factory">{{item.factoryName}}</text>
+            <text wx:if="{{item._hasAvailable}}" class="item-tag item-tag--success">有库存</text>
+            <text wx:if="{{item._hasDefect}}" class="item-tag item-tag--danger">有次品</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="item-body">
+        <view class="item-qty-row">
+          <view class="qty-block">
+            <text class="qty-value">{{item.availableQty || 0}}</text>
+            <text class="qty-label">可用</text>
+          </view>
+          <view class="qty-block">
+            <text class="qty-value qty-value--muted">{{item.lockedQty || 0}}</text>
+            <text class="qty-label">锁定</text>
+          </view>
+          <view class="qty-block">
+            <text class="qty-value qty-value--danger">{{item.defectQty || 0}}</text>
+            <text class="qty-label">次品</text>
+          </view>
+          <view class="qty-block">
+            <text class="qty-value qty-value--info">{{item.totalInboundQty || 0}}</text>
+            <text class="qty-label">累计入库</text>
+          </view>
+        </view>
+
+        <view class="item-meta">
+          <text class="meta-text">最近入库：{{item._lastInboundDate}}</text>
+          <text class="meta-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{hasMore}}" class="load-more">
+      <text class="load-more-text">上拉加载更多</text>
+    </view>
+    <view wx:elif="{{list.length > 0}}" class="load-more">
+      <text class="load-more-text">— 没有更多了 —</text>
+    </view>
+  </view>
+</view>

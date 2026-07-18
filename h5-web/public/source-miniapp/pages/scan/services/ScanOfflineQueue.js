@@ -17,7 +17,6 @@ const ITEM_TTL_MS = 24 * 60 * 60 * 1000;
 const FLUSH_LOCK_KEY = 'scan_offline_flush_lock';
 const FLUSH_LOCK_TTL_MS = 30 * 1000;
 const { DEBUG } = require('../../../config/debug');
-const { toast } = require('../../../utils/uiHelper');
 
 let _cache = null;
 let _cacheTime = 0;
@@ -119,7 +118,11 @@ const ScanOfflineQueue = {
   enqueue(scanData) {
     const queue = _load();
     if (queue.length >= MAX_QUEUE_SIZE) {
-      toast.error('离线缓存已满(' + MAX_QUEUE_SIZE + '条)，请联网后同步');
+      wx.showToast({
+        title: '离线缓存已满(' + MAX_QUEUE_SIZE + '条)，请联网后同步',
+        icon: 'none',
+        duration: 3000,
+      });
       return false;
     }
     const item = {
@@ -130,7 +133,7 @@ const ScanOfflineQueue = {
     queue.push(item);
     const saved = _save(queue);
     if (!saved) {
-      toast.error('离线数据保存失败，请检查存储空间');
+      wx.showToast({ title: '离线数据保存失败，请检查存储空间', icon: 'none', duration: 3000 });
       return false;
     }
     if (DEBUG) console.log('[ScanOfflineQueue] 已入队，当前数量:', queue.length);
@@ -209,7 +212,7 @@ const ScanOfflineQueue = {
             if (DEBUG) console.log('[ScanOfflineQueue] 上传成功:', submitted + '/' + total);
           } else {
             this.dequeue(item.queueId);
-            if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res && res.message);
+            if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res?.message);
           }
         } catch (e) {
           failed++;

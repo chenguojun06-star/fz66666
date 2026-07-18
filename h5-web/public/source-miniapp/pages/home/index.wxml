@@ -1,34 +1,20 @@
 <view class="page">
-  <wxs module="utils">
-    module.exports = {
-      firstChar: function(s) {
-        if (!s) return '用';
-        return s.charAt(0);
-      },
-      fullDate: function(dateStr, dayStr) {
-        var now = getDate();
-        var y = now.getFullYear();
-        return y + '年' + dateStr + ' ' + dayStr;
-      }
-    };
-  </wxs>
+  <custom-nav title="衣智链" />
 
   <!-- 问候卡片 -->
-  <view class="greeting-card">
-    <view class="greeting-avatar">
-      <text class="greeting-avatar-text">{{utils.firstChar(userName)}}</text>
-    </view>
-    <view class="greeting-info">
-      <text class="greeting-title">{{greeting}}，{{userName}}</text>
-      <text class="greeting-org">{{orgName || '衣智链'}}</text>
-      <text class="greeting-date">{{utils.fullDate(dateInfo.date, dateInfo.day)}}</text>
+  <view class="header">
+    <view class="header-avatar">{{userName ? userName[0] : '用户'}}</view>
+    <view class="header-info">
+      <text class="greeting-name">{{greeting}}，{{userName}}</text>
+      <text class="greeting-sub">{{orgName || '欢迎使用衣智链'}}</text>
+      <text class="greeting-date">{{dateInfo.date}} {{dateInfo.day}}</text>
     </view>
   </view>
 
   <!-- 今日小贴士 -->
-  <view class="tip-card" wx:if="{{dateInfo.dailyTip}}">
+  <view class="tip-card">
     <view class="tip-icon-circle">
-      <view class="line-icon line-icon--sm icon-lightbulb"></view>
+      <text class="tip-icon-text">i</text>
     </view>
     <view class="tip-content">
       <text class="tip-title">今日小贴士</text>
@@ -36,50 +22,44 @@
     </view>
   </view>
 
-  <!-- 常用应用 -->
-  <view class="apps-card">
-    <view class="apps-grid">
-      <view
-        class="app-item {{draggingIndex === index ? 'app-item--dragging' : ''}}"
-        wx:for="{{favoriteApps}}"
-        wx:key="id"
-        bindtap="onFavoriteTap"
+  <!-- 应用网格 -->
+  <view class="menu-section">
+    <view class="menu-grid">
+      <view 
+        class="menu-item" 
+        wx:for="{{menuItems}}" 
+        wx:key="id" 
+        bindtap="onMenuTap" 
         data-index="{{index}}"
-        data-id="{{item.id}}"
-        data-route="{{item.route}}"
-        bindtouchstart="onTouchStart"
-        bindtouchmove="onTouchMove"
-        bindtouchend="onTouchEnd"
-        hover-class="app-item-hover"
+        hover-class="menu-item-hover" 
         hover-stay-time="100"
       >
-        <view class="app-icon-circle {{item.circleClass}}">
+        <view class="menu-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
-          <text wx:if="{{item.badge}}" class="app-badge">{{item.badge}}</text>
         </view>
-        <text class="app-name">{{item.name}}</text>
+        <text class="menu-name">{{item.name}}</text>
       </view>
-
-      <!-- 8. 更多应用（与收藏应用同网格，第8项） -->
-      <view
-        class="app-item"
-        bindtap="onMoreAppsTap"
-        hover-class="app-item-hover"
-        hover-stay-time="100"
-      >
-        <view class="app-icon-circle menu-icon-circle--gray">
-          <view class="line-icon line-icon--lg icon-app-more"></view>
-        </view>
-        <text class="app-name">更多应用</text>
-      </view>
-    </view>
-
-    <view class="empty-hint" wx:if="{{favoriteApps.length === 0}}">
-      <view class="line-icon line-icon--lg icon-mobile"></view>
-      <text class="empty-text">还没有添加常用应用，点击「更多应用」添加吧</text>
     </view>
   </view>
 
-  <!-- 小云AI助手 -->
-  <ai-assistant />
+  <!-- AI助手卡片 -->
+  <view class="ai-card">
+    <view class="ai-card-header">
+      <view class="ai-card-avatar">
+        <view class="line-icon line-icon--lg icon-menu-ai"></view>
+      </view>
+      <view class="ai-card-info">
+        <text class="ai-card-title">小云AI助手</text>
+        <text class="ai-card-sub">有什么可以帮你的？</text>
+      </view>
+    </view>
+    <view class="ai-card-input-row">
+      <text class="ai-card-input-text">输入你的问题...</text>
+      <view class="ai-card-send-btn">
+        <view class="icon-send-arrow"></view>
+      </view>
+    </view>
+  </view>
+
+  <ai-assistant id="homeAiAssistant" notice-count="{{unreadNoticeCount}}" />
 </view>

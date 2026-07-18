@@ -8,11 +8,11 @@
 }
 
 .days-urgent {
-  color: var(--color-error);
+  color: var(--color-danger);
 }
 
 .days-overdue {
-  color: var(--color-error);
+  color: var(--color-danger);
   font-weight: 700;
 }
 
@@ -20,190 +20,12 @@
 .res-session-bar {
   margin-top: 4px;
   padding: 3px 6px;
-  background: rgba(22, 119, 255, 0.06);
+  background: var(--color-primary-bg);
   border-radius: var(--radius-sm);
 }
 .res-session-text {
   font-size: var(--font-size-xxs);
   color: var(--color-primary);
-  font-weight: 500;
-}
-
-/* ============ AI 扫码助手卡片 ============ */
-.ai-scan-helper {
-  display: flex;
-  align-items: center;
-  margin: 12px 0;
-  padding: 12px 14px;
-  border-radius: var(--radius-card);
-  background: linear-gradient(135deg, #7C3AED 0%, #6366F1 100%);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.22);
-  color: #fff;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.ai-scan-helper-hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
-}
-.ai-scan-helper-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-card);
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-.ai-scan-helper-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.ai-scan-helper-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 3px;
-}
-.ai-scan-helper-tips {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.92);
-}
-.ai-scan-helper-tips--warn {
-  color: #FFE58F;
-}
-.ai-scan-helper-tips--success {
-  color: #B7EB8F;
-}
-.ai-scan-helper-arrow {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
-  margin-left: 8px;
-}
-
-/* ============ AI 扫码警告列表 ============ */
-.ai-scan-warnings {
-  margin: 0 0 12px 0;
-  padding: 0;
-}
-.ai-scan-warning-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  background: #FFF7E6;
-  border: 1px solid #FFD591;
-  border-radius: 10px;
-}
-.ai-scan-warning-icon {
-  font-size: 16px;
-  margin-right: 8px;
-  flex-shrink: 0;
-}
-.ai-scan-warning-msg {
-  font-size: 13px;
-  color: #AD6800;
-}
-
-/* ============ 本月工资目标进度 ============ */
-.tsc-salary-goal {
-  margin-top: 12px;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, #F3F0FF 0%, #EDEBFF 100%);
-  border-radius: 10px;
-}
-.tsc-salary-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.tsc-salary-title {
-  font-size: 13px;
-  color: #5A52CC;
-  font-weight: 600;
-}
-.tsc-salary-percent {
-  font-size: 13px;
-  font-weight: 700;
-  color: #7C3AED;
-}
-.tsc-salary-progress {
-  width: 100%;
-  height: 8px;
-  background: rgba(124, 58, 237, 0.15);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.tsc-salary-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #7C3AED 0%, #6366F1 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-.tsc-salary-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #5A52CC;
-}
-.tsc-salary-current {
-  font-weight: 600;
-}
-.tsc-salary-gap {
-  opacity: 0.85;
-}
-
-/* ============ AI 扫码结果增强 ============ */
-.ai-scan-result {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, #FFF7E6 0%, #FFF1F0 100%);
-  border-radius: 10px;
-  border: 1px solid rgba(124, 58, 237, 0.12);
-}
-.ai-scan-result-head {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.ai-scan-result-icon {
-  font-size: 16px;
-  margin-right: 6px;
-}
-.ai-scan-result-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #7C3AED;
-}
-.ai-scan-result-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.ai-scan-result-row {
-  display: flex;
-  align-items: flex-start;
-  font-size: 12px;
-  line-height: 1.5;
-}
-.ai-scan-result-row--tips {
-  padding-top: 6px;
-  border-top: 1px dashed rgba(124, 58, 237, 0.18);
-}
-.ai-scan-result-key {
-  flex-shrink: 0;
-  width: 56px;
-  color: #8c8c8c;
-}
-.ai-scan-result-val {
-  flex: 1;
-  color: #1f1f1f;
   font-weight: 500;
 }
 
@@ -232,7 +54,7 @@
 
 /* ===== AI质检助手 ===== */
 .qm-ai-section {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   border: 1px solid var(--color-info-bg);
   border-radius: var(--radius-xs);
   padding: 10px 12px;
@@ -251,14 +73,14 @@
   color: var(--color-primary);
 }
 .qm-ai-badge {
-  font-size: var(--font-size-2xs);
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
 }
-.qm-ai-badge-green { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
+.qm-ai-badge-green { background: var(--color-success-bg); color: var(--color-success); }
 .qm-ai-badge-orange { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); }
-.qm-ai-badge-red { background: var(--color-error-bg); color: var(--color-danger); border: 1px solid var(--color-error-border); }
+.qm-ai-badge-red { background: var(--color-danger-bg); color: var(--color-danger); border: 1px solid var(--color-danger-border); }
 .qm-ai-tip {
   font-size: var(--font-size-xs);
   color: var(--color-warning);
@@ -305,14 +127,17 @@
   background: transparent;
   color: var(--color-primary);
   font-size: var(--font-size-xs);
-  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
   padding: 0 10px;
-  height: 30px;
-  line-height: 30px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 60px;
   flex-shrink: 0;
-  border: 1px solid var(--color-primary);
-  font-weight: 500;
+  white-space: nowrap;
 }
 .qm-adopt-btn-hover {
   opacity: 0.7;

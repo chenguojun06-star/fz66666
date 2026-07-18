@@ -49,7 +49,7 @@ const salesReturn = {
   },
   /** 拒绝销售退货单 */
   reject(id, reason) {
-    return ok(`/api/crm/sales-return/${encodeURIComponent(id)}/reject`, 'POST', null, { params: { reason } });
+    return ok(`/api/crm/sales-return/${encodeURIComponent(id)}/reject?reason=${encodeURIComponent(reason || '')}`, 'POST', {});
   },
   /** 标记退款完成 */
   markRefunded(id) {

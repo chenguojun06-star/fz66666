@@ -2,12 +2,13 @@
  * 平台订单列表页
  *
  *  - 顶部平台筛选 Tab：全部 / 淘宝 / 抖音 / 京东 / 拼多多 / 希音 等
- *  - 状态筛选：全部 / 待付款 / 待发货 / 已发货 / 已完成 / 已取消
+ *  - 状态筛选：全部 / 待付款 / 待发货 / 已发货 / 已完成 / 已取消 / 已退款
  *  - 搜索框：按订单号/买家名搜索
  *  - 订单列表：平台标签 + 平台单号 + 内部单号 + 买家 + 商品名+数量 + 实付金额 + 状态 + 下单时间
  *  - 分页加载
+ *  - 状态Tab显示对应数量
  *
- *  后端 status 为 Integer：0=待付款 1=待发货 2=已发货 3=已完成 4=已取消 5=退款中
+ *  后端 status 为 Integer：0=待付款 1=待发货 2=已发货 3=已完成 4=已取消 5=已退款
  *  后端 platform 筛选兼容短码（TB）和全码（TAOBAO）
  */
 const api = require('../../../utils/api');
@@ -37,7 +38,7 @@ var STATUS_TABS = [
   { key: '2', label: '已发货' },
   { key: '3', label: '已完成' },
   { key: '4', label: '已取消' },
-  { key: '5', label: '退款中' },
+  { key: '5', label: '已退款' },
 ];
 
 var STATUS_MAP = {
@@ -46,7 +47,7 @@ var STATUS_MAP = {
   2: { text: '已发货', cls: 'order-tag--info' },
   3: { text: '已完成', cls: 'order-tag--success' },
   4: { text: '已取消', cls: 'order-tag--default' },
-  5: { text: '退款中', cls: 'order-tag--warning' },
+  5: { text: '已退款', cls: 'order-tag--warning' },
 };
 
 function fmtTime(val) {
@@ -76,6 +77,7 @@ Page({
     loadingMore: false,
     platformNames: PLATFORM_NAMES,
     loadError: false,
+    statusCounts: {},
   },
 
   onLoad: function (options) {
@@ -101,7 +103,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    var that = this;
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
 
@@ -147,6 +148,7 @@ Page({
 
   _resetAndLoad: function () {
     this.setData({ list: [], page: 1, hasMore: true, loadError: false });
+    this._loadStatusCounts();
     return this._loadPage(true);
   },
 
@@ -232,6 +234,29 @@ Page({
         toast.info('加载更多失败，请重试');
         that.setData({ hasMore: true });
       }
+    });
+  },
+
+  // 加载各状态Tab的数量（通过 pageSize=1 轻量请求获取 total）
+  _loadStatusCounts: function () {
+    var that = this;
+    var counts = {};
+    var platform = this.data.activePlatform;
+    var keyword = this.data.keyword;
+
+    // 并行请求各状态的 total
+    var promises = STATUS_TABS.map(function (tab) {
+      var params = { platform: platform, status: tab.key, page: 1, pageSize: 1 };
+      if (keyword) params.keyword = keyword;
+      return api.ecommerce.listOrders(params).then(function (res) {
+        counts[tab.key] = Number((res && res.total) || 0);
+      }).catch(function () {
+        counts[tab.key] = 0;
+      });
+    });
+
+    Promise.all(promises).then(function () {
+      that.setData({ statusCounts: counts });
     });
   },
 

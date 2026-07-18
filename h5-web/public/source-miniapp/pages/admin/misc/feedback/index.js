@@ -1,5 +1,4 @@
 const api = require('../../../../utils/api');
-const { toast } = require('../../../../utils/uiHelper');
 
 const STATUS_MAP = {
   PENDING: '待处理',
@@ -20,7 +19,7 @@ Page({
     activeTab: 'submit',
     categoryList: CATEGORY_LIST,
     categoryIndex: 0,
-    form: { title: '', content: '', category: 'BUG' },
+    form: { title: '', content: '', contact: '', category: 'BUG' },
     submitting: false,
     myFeedbacks: [],
   },
@@ -45,11 +44,12 @@ Page({
 
   onTitleInput(e) { this.setData({ 'form.title': e.detail.value }); },
   onContentInput(e) { this.setData({ 'form.content': e.detail.value }); },
+  onContactInput(e) { this.setData({ 'form.contact': e.detail.value }); },
 
   async onSubmitFeedback() {
-    const { title, content, category } = this.data.form;
-    if (!title.trim()) return toast.error('请填写标题');
-    if (!content.trim()) return toast.error('请填写描述');
+    const { title, content, category, contact } = this.data.form;
+    if (!title.trim()) return wx.showToast({ title: '请填写标题', icon: 'none' });
+    if (!content.trim()) return wx.showToast({ title: '请填写描述', icon: 'none' });
 
     this.setData({ submitting: true });
     try {
@@ -57,16 +57,17 @@ Page({
         title: title.trim(),
         content: content.trim(),
         category,
+        contact: contact.trim(),
         source: 'MINIPROGRAM',
       });
-      toast.success('提交成功');
+      wx.showToast({ title: '提交成功', icon: 'success' });
       this.setData({
-        form: { title: '', content: '', category: 'BUG' },
+        form: { title: '', content: '', contact: '', category: 'BUG' },
         categoryIndex: 0,
       });
       this.loadMyFeedbacks();
     } catch (err) {
-      toast.error(err.message || '提交失败');
+      wx.showToast({ title: err.message || '提交失败', icon: 'none' });
     } finally {
       this.setData({ submitting: false });
     }
@@ -77,7 +78,7 @@ Page({
       const res = await api.system.myFeedbackList({ page: 1, pageSize: 20 });
       const list = (res.records || (Array.isArray(res) ? res : [])).map(item => ({
         ...item,
-        statusText: item.status ? (STATUS_MAP[item.status] || '未知') : '',
+        statusText: STATUS_MAP[item.status] || item.status,
       }));
       this.setData({ myFeedbacks: list });
     } catch (err) {

@@ -1,107 +1,143 @@
+/**
+ * 面辅料料卷发料/退回页面 — 严格对照设计稿 warehouse.html
+ *
+ * 设计要点（对照设计稿）：
+ *  - 卡片：白底 + radius-card(19px) + shadow-sm，不用 border
+ *  - 信息行：justify-between + 1px divider 分隔
+ *  - 状态标签：pill 形浅色背景
+ *  - 主按钮：全宽圆角填充式 brand 色
+ *  - 退回按钮：镂空风格
+ *  - 次要按钮：文本按钮居中
+ *  - 数字：tabular-nums
+ *  - 所有颜色使用 CSS 变量，无硬编码
+ */
+
+/* ============ 页面容器 ============ */
 .container {
-  padding: var(--spacing-sm) var(--page-padding-x);
+  padding: var(--spacing-md) var(--page-padding-x);
+  padding-bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom));
   background: var(--color-bg-page);
   min-height: 100vh;
 }
 
-/* 顶部标题 */
+/* ============ 顶部标题（纯文本，无卡片） ============ */
 .header {
+  padding: 0 var(--spacing-xs);
   margin-bottom: var(--spacing-lg);
-  text-align: center;
 }
 
 .header-title {
   display: block;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .header-sub {
   display: block;
-  font-size: var(--font-size-sm);
+  margin-top: 6px;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-relaxed);
   color: var(--color-text-secondary);
 }
 
-/* 扫码按钮 */
+/* ============ 扫码入口（首次进入） ============ */
 .scan-btn-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 0;
+  margin-top: 40px;
 }
 
 .scan-btn {
+  width: 120px;
+  height: 120px;
+  background: var(--color-bg-card);
+  border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 140px;
-  height: 140px;
-  background: transparent;
-  border: 1px solid var(--color-primary);
-  border-radius: 50%;
   box-shadow: var(--shadow-md);
-  margin-bottom: var(--spacing-md);
 }
 
 .scan-icon {
-  font-size: var(--font-size-5xl);
-  color: var(--color-primary);
-  margin-bottom: var(--spacing-xs);
+  width: 44px;
+  height: 44px;
+  background-size: 44px 44px;
 }
 
 .scan-label {
+  margin-top: var(--spacing-xs);
   font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
-  font-weight: var(--font-weight-bold);
 }
 
 .scan-hint {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  margin-top: var(--spacing-lg);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
-/* 料卷编号栏 */
+/* ============ 已扫码内容区（垂直间距 16px） ============ */
+.roll-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* ============ 料卷编号栏 ============ */
 .roll-code-bar {
   display: flex;
   align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-card);
-  /* Apple: removed hard border, use shadow */
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .roll-code-label {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-right: var(--spacing-xs);
+  color: var(--color-text-tertiary);
 }
 
 .roll-code-value {
   flex: 1;
-  font-size: var(--font-size-md);
+  min-width: 0;
+  text-align: center;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
+  font-family: var(--font-family-mono, monospace);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn-rescan {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-xs);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
 }
 
-/* 加载 */
+/* ============ 加载中 ============ */
 .loading-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 0;
+  padding: var(--spacing-xl) 0;
+  text-align: center;
 }
 
 .loading-text {
@@ -109,177 +145,259 @@
   color: var(--color-text-secondary);
 }
 
-/* 错误 */
+/* ============ 错误卡片 ============ */
 .error-card {
-  background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .error-icon {
   font-size: var(--font-size-3xl);
-  margin-bottom: var(--spacing-xs);
 }
 
 .error-msg {
+  margin-top: var(--spacing-xs);
+  text-align: center;
   font-size: var(--font-size-md);
   color: var(--color-danger);
-  text-align: center;
-  margin-bottom: var(--spacing-sm);
 }
 
 .btn-retry {
-  font-size: var(--font-size-md);
-  color: var(--color-primary);
-  padding: 3px var(--spacing-lg);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-xs);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-lg);
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
-/* 成功 */
+/* ============ 成功横幅 ============ */
 .success-banner {
-  background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   align-items: center;
-  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-success-bg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .success-icon {
+  margin-right: var(--spacing-sm);
   font-size: var(--font-size-xl);
-  margin-right: var(--spacing-xs);
 }
 
 .success-text {
+  flex: 1;
   font-size: var(--font-size-md);
   color: var(--color-success);
 }
 
-/* 信息卡片 */
+/* ============ 料卷信息卡片 ============ */
 .info-card {
+  overflow: hidden;
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  box-shadow: var(--shadow-card);
-  /* Apple: removed hard border, use shadow */
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-row {
   display: flex;
   align-items: center;
-  padding: var(--spacing-xs) 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.info-row:last-child {
-  border-bottom: none;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
 }
 
 .info-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  width: 60px;
   flex-shrink: 0;
+  white-space: nowrap;
+  font-size: var(--font-size-md);
+  color: var(--color-text-tertiary);
 }
 
 .info-value {
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
+  min-width: 0;
   flex: 1;
+  text-align: right;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .info-value.bold {
+  font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  color: var(--color-text-primary);
 }
 
-.status-tag {
-  display: inline-block;
-  padding: 2px var(--spacing-sm);
-  border-radius: var(--radius-xs);
-  font-size: var(--font-size-xs);
+.info-divider {
+  height: 1px;
+  background: var(--color-border);
 }
 
-.tag-success {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-  border: 1px solid var(--color-success-border);
-}
-
-.tag-warning {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-  border: 1px solid var(--color-warning-border);
-}
-
-/* 操作区 */
+/* ============ 操作区 ============ */
 .action-area {
-  margin-bottom: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
+/* ============ 关联裁剪单输入 ============ */
 .input-row {
-  margin-bottom: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
 }
 
 .input-label {
   display: block;
-  font-size: var(--font-size-sm);
+  margin-bottom: 6px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xs);
+}
+
+.input-field-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  height: 48px;
+  padding: 0 var(--spacing-lg);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.input-field-wrap:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-bg);
+}
+
+.input-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  background: var(--color-text-tertiary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z'/%3E%3Cpath d='M14 2v5a1 1 0 0 0 1 1h5'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z'/%3E%3Cpath d='M14 2v5a1 1 0 0 0 1 1h5'/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
 .input-field {
-  width: 100%;
-  height: var(--input-height-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0 var(--spacing-md);
-  font-size: var(--font-size-md);
-  box-sizing: border-box;
-  background: var(--color-bg-card);
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: var(--font-size-md-lg);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
-.btn-issue,
-.btn-return {
-  width: 100%;
-  text-align: center;
-  padding: var(--spacing-md) 0;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-card);
+.input-field::-webkit-input-placeholder {
+  color: var(--color-text-placeholder);
 }
 
+/* ============ 确认发料按钮（主操作，全宽填充式） ============ */
 .btn-issue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 14px;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-issue:active {
+  transform: scale(0.98);
+}
+
+.btn-issue-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+/* ============ 退回入库按钮（镂空风格） ============ */
+.btn-return {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--spacing-md);
   background: transparent;
   color: var(--color-primary);
   border: 1px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
 }
 
-.btn-return {
-  background: var(--color-warning);
-  color: var(--color-text-white);
+.btn-return:active {
+  background: var(--color-primary-bg);
 }
 
+/* ============ 扫下一个料卷（次要文本按钮，居中） ============ */
+.btn-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+}
+
+.btn-next-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/%3E%3Cpath d='m3.3 7 8.7 5 8.7-5'/%3E%3Cpath d='M12 22V12'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/%3E%3Cpath d='m3.3 7 8.7 5 8.7-5'/%3E%3Cpath d='M12 22V12'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+/* ============ 禁用态 ============ */
 .btn-disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   pointer-events: none;
 }
 
-.btn-next {
-  text-align: center;
-  padding: var(--spacing-md) 0;
-  font-size: var(--font-size-md);
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-card);
+/* ============ 状态标签 ============ */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+.tag-green {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.tag-orange {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }

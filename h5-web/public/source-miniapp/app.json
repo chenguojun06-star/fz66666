@@ -33,7 +33,10 @@
       "pages": [
         "material/scan/index",
         "sample/scan-action/index",
-        "location-scan/index"
+        "location-scan/index",
+        "finished-inventory/index",
+        "finished-inventory/detail/index",
+        "material-database/index"
       ]
     },
     {
@@ -44,7 +47,7 @@
     {
       "root": "pages/admin/misc",
       "name": "pkg-admin-misc",
-      "pages": ["change-password/index", "feedback/index", "invite/index"]
+      "pages": ["change-password/index", "feedback/index", "invite/index", "about/index", "edit-profile/index"]
     },
     {
       "root": "pages/work/bundle-split",
@@ -119,7 +122,12 @@
     {
       "root": "pages/factory",
       "name": "pkg-factory",
-      "pages": ["shipment/index"]
+      "pages": ["shipment/index", "shipment-detail/index"]
+    },
+    {
+      "root": "pages/basic",
+      "name": "pkg-basic",
+      "pages": ["unit-price/index"]
     },
     {
       "root": "pages/finance",
@@ -185,7 +193,7 @@
   },
   "window": {
     "navigationBarTitleText": "衣智链",
-    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarBackgroundColor": "#f2f2f7",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f2f2f7",
     "backgroundTextStyle": "light"

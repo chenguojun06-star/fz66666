@@ -14,14 +14,14 @@ Page({
     statusTabs: [
       { key: 'all', label: '全部', cls: 'all' },
       { key: 'PENDING', label: '待审核', cls: 'pending' },
-      { key: 'APPROVED', label: '已审核', cls: 'approved' },
+      { key: 'APPROVED', label: '审核通过', cls: 'approved' },
       { key: 'RETURNED', label: '已退货', cls: 'returned' },
       { key: 'REJECTED', label: '已拒绝', cls: 'rejected' },
     ],
     statusTabsSales: [
       { key: 'all', label: '全部', cls: 'all' },
       { key: 'PENDING', label: '待审核', cls: 'pending' },
-      { key: 'APPROVED', label: '已审核', cls: 'approved' },
+      { key: 'APPROVED', label: '审核通过', cls: 'approved' },
       { key: 'REFUNDED', label: '已退款', cls: 'refunded' },
       { key: 'REJECTED', label: '已拒绝', cls: 'rejected' },
     ],
@@ -111,7 +111,7 @@ Page({
       if (activeStatus === 'all') {
         const counts = { all: total, PENDING: 0, APPROVED: 0, RETURNED: 0, REFUNDED: 0, REJECTED: 0 };
         merged.forEach(r => {
-          if (counts.hasOwnProperty(r.returnStatus)) counts[r.returnStatus]++;
+          if (Object.prototype.hasOwnProperty.call(counts, r.returnStatus)) counts[r.returnStatus]++;
         });
         updateData.statusCounts = counts;
       }
@@ -140,7 +140,7 @@ Page({
     const counts = { all: total, PENDING: 0, APPROVED: 0, RETURNED: 0, REFUNDED: 0, REJECTED: 0 };
     records.forEach(r => {
       const status = String(r.returnStatus || '').trim();
-      if (counts.hasOwnProperty(status)) counts[status]++;
+      if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status]++;
     });
     return counts;
   },
@@ -156,8 +156,8 @@ Page({
         returnNo: r.returnNo || '-',
         originalNo: isPurchase ? (r.originalPurchaseNo || '-') : (r.originalOrderNo || '-'),
         partyName: isPurchase ? (r.supplierName || '-') : (r.customerName || '-'),
-        returnType: r.returnType === 'FULL' ? '全部退货' : '部分退货',
-        returnReason: r.returnReason || '-',
+        reasonType: r.returnReason || '-',
+        reasonDetail: r.remark || '',
         totalAmount: Number(r.totalAmount || 0).toFixed(2),
         returnStatus: status,
         statusLabel,
@@ -168,10 +168,10 @@ Page({
     });
   },
 
-  _statusLabel(status, type) {
+  _statusLabel(status, _type) {
     const map = {
       PENDING: '待审核',
-      APPROVED: '已审核',
+      APPROVED: '审核通过',
       RETURNED: '已退货',
       REFUNDED: '已退款',
       REJECTED: '已拒绝',
@@ -181,13 +181,13 @@ Page({
 
   _statusColor(status) {
     const map = {
-      PENDING: '#ff9500',
-      APPROVED: '#34c759',
-      RETURNED: '#aeaeb2',
-      REFUNDED: '#007aff',
-      REJECTED: '#ff3b30',
+      PENDING: 'warning',
+      APPROVED: 'success',
+      RETURNED: 'gray',
+      REFUNDED: 'blue',
+      REJECTED: 'danger',
     };
-    return map[status] || '#aeaeb2';
+    return map[status] || 'gray';
   },
 
   goDetail(e) {

@@ -1,84 +1,73 @@
-<!-- 平台订单列表 -->
-
+<!-- 销售订单列表 -->
 <view class="page">
-  <!-- 搜索框 -->
-  <view class="search-bar">
-    <view class="search-box">
-      <view class="line-icon line-icon--sm icon-search search-icon"></view>
-      <input class="search-input" placeholder="输入订单号/买家名" value="{{keyword}}"
-             confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
-      <view wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">
-        <view class="icon-close"></view>
+  <!-- 搜索框 + 筛选区（sticky） -->
+  <view class="sticky-header">
+    <search-scan
+      placeholder="输入订单号/买家名后按搜索"
+      value="{{keyword}}"
+      show-scan="{{false}}"
+      bind:input="onSearchInput"
+      bind:confirm="onSearchConfirm"
+      bind:clear="onClearKeyword"
+    />
+
+    <!-- 平台筛选 Tab（横向滚动） -->
+    <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="tab-pill {{activePlatform === item.key ? 'tab-pill--on' : ''}}"
+            wx:for="{{platformTabs}}" wx:key="key"
+            data-key="{{item.key}}" bindtap="onPlatformTap">
+        <text>{{item.label}}</text>
+        <text class="tab-pill-count" wx:if="{{item.count}}">{{item.count}}</text>
       </view>
-      <text class="search-btn-inline" bindtap="onSearchConfirm">搜索</text>
-    </view>
+    </scroll-view>
+
+    <!-- 状态筛选 -->
+    <scroll-view class="tab-scroll status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="status-pill {{activeStatus === item.key ? 'status-pill--on' : ''}}"
+            wx:for="{{statusTabs}}" wx:key="key"
+            data-key="{{item.key}}" bindtap="onStatusTap">
+        <text>{{item.label}}</text>
+        <text class="status-pill-count" wx:if="{{statusCounts[item.key] > 0}}">{{statusCounts[item.key]}}</text>
+      </view>
+    </scroll-view>
   </view>
-
-  <!-- 平台筛选 Tab（横向滚动） -->
-  <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="tab-pill {{activePlatform === item.key ? 'tab-pill--on' : ''}}"
-          wx:for="{{platformTabs}}" wx:key="key"
-          data-key="{{item.key}}" bindtap="onPlatformTap">
-      <text>{{item.label}}</text>
-    </view>
-  </scroll-view>
-
-  <!-- 状态筛选 -->
-  <scroll-view class="tab-scroll status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="status-pill {{activeStatus === item.key ? 'status-pill--on' : ''}}"
-          wx:for="{{statusTabs}}" wx:key="key"
-          data-key="{{item.key}}" bindtap="onStatusTap">
-      <text>{{item.label}}</text>
-    </view>
-  </scroll-view>
 
   <!-- 订单列表 -->
   <view class="order-list" wx:if="{{list.length > 0}}">
     <view class="order-card" wx:for="{{list}}" wx:key="id" data-idx="{{index}}" bindtap="onOrderTap">
-      <!-- 头部：平台标签 + 排产标签 + 状态标签 -->
+      <!-- 头部：平台标签 + 排产标签 + 时间 -->
       <view class="oc-head">
         <view class="oc-head-left">
           <text class="oc-platform">{{item.platformName}}</text>
           <text class="oc-prod-no" wx:if="{{item.productionOrderNo}}">已排产</text>
         </view>
-        <text class="oc-status {{item.statusCls}}">{{item.status}}</text>
+        <text class="oc-time">{{item.orderTime || ''}}</text>
       </view>
       <!-- 平台单号 -->
       <view class="oc-no" wx:if="{{item.platformOrderNo}}" data-no="{{item.platformOrderNo}}" catchtap="onCopyOrderNo">
         <text class="oc-no-label">平台单号</text>
         <text class="oc-no-val">{{item.platformOrderNo}}</text>
-        <text class="oc-copy-icon">⧉</text>
+        <view class="oc-copy-icon icon-copy-sm"></view>
       </view>
       <!-- 内部单号 -->
-      <view class="oc-no oc-no--sub" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" catchtap="onCopyOrderNo">
+      <view class="oc-no" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" catchtap="onCopyOrderNo">
         <text class="oc-no-label">内部单号</text>
         <text class="oc-no-val">{{item.orderNo}}</text>
-        <text class="oc-copy-icon">⧉</text>
+        <view class="oc-copy-icon icon-copy-sm"></view>
       </view>
       <!-- 分隔线 -->
       <view class="oc-divider" wx:if="{{item.productText || item.buyerName || item.amount}}"></view>
       <!-- 商品信息 -->
-      <view class="oc-row" wx:if="{{item.productText}}">
-        <text class="oc-label">商品</text>
-        <text class="oc-val oc-product">{{item.productText}}</text>
-      </view>
+      <text class="oc-product" wx:if="{{item.productText}}">{{item.productText}}</text>
       <!-- 底部：买家 + 金额 -->
-      <view class="oc-bottom">
-        <view class="oc-buyer">
-          <text class="oc-label">买家</text>
-          <text class="oc-val">{{item.buyerName}}</text>
-        </view>
+      <view class="oc-bottom" wx:if="{{item.buyerName || item.amount}}">
+        <text class="oc-buyer">{{item.buyerName}}</text>
         <text class="oc-amount">¥{{item.amount}}</text>
       </view>
       <!-- 物流 -->
-      <view class="oc-row" wx:if="{{item.trackingNo}}">
-        <text class="oc-label">物流</text>
-        <text class="oc-val">{{item.expressCompany}} {{item.trackingNo}}</text>
-      </view>
-      <!-- 下单时间 -->
-      <view class="oc-row" wx:if="{{item.orderTime}}">
-        <text class="oc-label">下单</text>
-        <text class="oc-val oc-time">{{item.orderTime}}</text>
+      <view class="oc-logistics" wx:if="{{item.trackingNo}}">
+        <view class="oc-logistics-icon line-icon icon-package"></view>
+        <text class="oc-logistics-text">{{item.expressCompany}} {{item.trackingNo}}</text>
       </view>
     </view>
   </view>
@@ -107,7 +96,7 @@
     <text class="empty-hint">切换平台或状态试试</text>
   </view>
   <view class="empty-state" wx:if="{{!loading && list.length === 0 && loadError}}">
-    <text class="empty-icon">⚠️</text>
+    <view class="empty-icon icon-warning-orange"></view>
     <text class="empty-text">加载失败</text>
     <text class="empty-hint" bindtap="onRetry">点击重试</text>
   </view>

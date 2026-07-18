@@ -3,42 +3,13 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
   const n = parseInt(value, 10);
   if (!isFinite(n) || n <= 0) return fallback;
   return n;
-}
-
-// ── 样衣开发阶段 AI 识别结果字段解析工具 ──
-function pickHintField(raw, key) {
-  if (!raw) return '';
-  if (raw[key] != null && raw[key] !== '') return raw[key];
-  if (raw.orderDetail && raw.orderDetail[key] != null && raw.orderDetail[key] !== '') return raw.orderDetail[key];
-  if (raw.orderInfo && raw.orderInfo[key] != null && raw.orderInfo[key] !== '') return raw.orderInfo[key];
-  return '';
-}
-
-function computeDifficultyLevelInfo(label, score) {
-  // 返回 { severity, badgeClass, title, icon }
-  const lv = String(label || '').trim();
-  const s = typeof score === 'number' ? score : parseInt(String(score || '0'), 10);
-  let severity = 'LOW';
-  if (lv.indexOf('高定') >= 0) severity = 'CRITICAL';
-  else if (lv.indexOf('工艺复杂') >= 0) severity = 'HIGH';
-  else if (lv.indexOf('中等') >= 0 || lv.indexOf('中等难度') >= 0) severity = 'MEDIUM';
-  else if (lv.indexOf('简单') >= 0 || lv.length === 0) severity = 'LOW';
-  else if (s >= 8) severity = 'CRITICAL';
-  else if (s >= 6) severity = 'HIGH';
-  else if (s >= 4) severity = 'MEDIUM';
-  return {
-    severity,
-    badgeClass: 'worker-difficulty--' + severity.toLowerCase(),
-    title: lv || ('难度分 ' + (s || 0) + '/10'),
-    icon: severity === 'CRITICAL' ? '🔴' : severity === 'HIGH' ? '🟠' : severity === 'MEDIUM' ? '🟡' : '🟢',
-  };
 }
 
 Page({
@@ -58,19 +29,7 @@ Page({
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
-    // ── 新增：样衣开发阶段 AI 识别提示相关字段 ──
-    difficultyLabel: '',
-    difficultyScore: '',
-    difficultyLevel: '',
-    difficultyLevelInfo: null,  // 含 severity/icon/badgeClass，WXML 中直接 detail.difficultyLevelInfo
-    fabricComposition: '',
-    imageInsight: '',
-    workerHint: '',
-    secondaryProcessHint: '',
-    needleHint: '',
-    processHintList: [],        // Array<string>，后端提取的工艺关键词
-    description: '',
-    hintExpanded: true,
+    productionHints: null,
     loading: false,
   },
 
@@ -83,11 +42,6 @@ Page({
       return;
     }
     this._scanContext = raw;
-
-    // 扫码成功进入结果页时，触发振动提示
-    wx.vibrateShort({
-      type: 'medium'
-    });
 
     let processOptions = this._buildProcessOptions(raw);
     if (processOptions.length === 0 && raw.processName) {
@@ -152,64 +106,23 @@ Page({
     const cuttingDate = orderDetail.cuttingDate || orderDetail.cutDate || orderDetail.plannedCutDate || orderDetail.plannedStartDate || '';
     const deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || orderDetail.plannedEndDate || '';
 
-    // ── 样衣开发阶段 AI 识别结果，工人扫码展示 ──
-    const difficultyLabel = pickHintField(raw, 'difficultyLabel');
-    const difficultyScore = pickHintField(raw, 'difficultyScore');
-    const difficultyLevel = pickHintField(raw, 'difficultyLevel');
-    const difficultyLevelInfo = computeDifficultyLevelInfo(difficultyLabel, difficultyScore);
-    const fabricComposition = pickHintField(raw, 'fabricComposition');
-    const imageInsight = pickHintField(raw, 'imageInsight');
-    const workerHint = pickHintField(raw, 'workerHint');
-    const secondaryProcessHint = pickHintField(raw, 'secondaryProcessHint');
-    const needleHint = pickHintField(raw, 'needleHint');
-    const description = pickHintField(raw, 'description');
-    const processHintRaw = raw.processHints || (raw.orderDetail && raw.orderDetail.processHints)
-      || (raw.orderInfo && raw.orderInfo.processHints) || [];
-    const processHintList = Array.isArray(processHintRaw) && processHintRaw.length > 0
-      ? processHintRaw.map(function(p) { return String(p); })
-      : [];
-
     this.setData({
       detail: {
-        // —— 基础信息 ——
         coverImage: coverImage,
-        cover: raw.cover || (raw.orderDetail && raw.orderDetail.cover) || '',
-        styleNo: raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo) || '',
-        styleName: raw.styleName || (raw.orderDetail && raw.orderDetail.styleName) || '',
+        styleNo: raw.styleNo || orderDetail.styleNo || '',
         orderNo: raw.orderNo || '',
-        customerName: raw.customerName || (raw.orderDetail && raw.orderDetail.customerName) || '',
-        processName: raw.processName || '',
+        bundleNo: bundleNo,
+        processName: normalizeProcessName(raw.processName || ''),
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
-
-        // —— 菲号信息 ——
-        bundleNo: raw.bundleNo != null ? raw.bundleNo : (raw.orderDetail && raw.orderDetail.bundleNo) || '',
-        bundleLabel: raw.bundleLabel || (raw.orderDetail && raw.orderDetail.bundleLabel) || '',
         color: color,
         size: size,
         displayQuantity: displayQuantity,
-        quantity: raw.quantity || 0,
-        bedNoDisplay: raw.bedNoDisplay
-          || ((raw.bedNo != null && raw.bedSubNo != null) ? (raw.bedNo + '-' + raw.bedSubNo) : (raw.bedNo != null ? String(raw.bedNo) : ''))
-          || (raw.orderDetail && raw.orderDetail.bedNoDisplay)
-          || '',
-        bedNo: raw.bedNo != null ? String(raw.bedNo) : '',
-        bundleSplitHint: raw.bundleSplitHint || '',
+        bedNo: bedNo ? String(bedNo) : '',
+        cuttingDateDisplay: this._formatYMD(cuttingDate),
+        deliveryDateDisplay: this._formatYMD(deliveryDate),
         bundleStatusHints: raw.bundleStatusHints || [],
         bundleStatusText: raw.bundleStatusText || '',
-
-        // —— 样衣开发阶段 AI 识别结果 ——
-        difficultyLabel: difficultyLabel,
-        difficultyScore: difficultyScore,
-        difficultyLevel: difficultyLevel,
-        difficultyLevelInfo: difficultyLevelInfo,
-        fabricComposition: fabricComposition,
-        imageInsight: imageInsight,
-        workerHint: workerHint,
-        secondaryProcessHint: secondaryProcessHint,
-        needleHint: needleHint,
-        processHints: processHintList,
-        description: description,
       },
       processOptions: processOptions,
       selectedNames: selectedNames,
@@ -220,6 +133,7 @@ Page({
       isQualityReceive: isQualityReceive,
       warehouseCode: raw.warehouseCode || '',
       warehouseAreaId: raw.warehouseAreaId || '',
+      imageInsight: (raw.stageResult && raw.stageResult.imageInsight) || raw.imageInsight || (orderDetail.imageInsight) || '',
     });
 
     if (isWarehouseStage) {
@@ -227,35 +141,35 @@ Page({
     }
 
     this._backfillBundleDisplayMeta(raw, orderDetail);
-    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
+    this._loadProductionHints(raw, orderDetail);
   },
 
   onUnload() {
-    unbindPageEvents(this);
     getApp().globalData.scanResultData = null;
   },
 
   _formatYMD(v) {
     if (!v) return '';
+    var d;
     try {
       if (typeof v === 'string') {
         if (v.length > 10) {
-          var d = new Date(v.replace(/-/g, '/'));
+          d = new Date(v.replace(/-/g, '/'));
           if (!isNaN(d.getTime())) {
-            const pad = n => ('0' + n).slice(-2);
+            const pad = n => String(n).padStart(2, '0');
             return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
           }
         }
         if (v.length >= 10) return v.substring(0, 10);
         return v;
       }
-      var d = new Date(String(v).replace(' ', 'T'));
+      d = new Date(String(v).replace(' ', 'T'));
       if (isNaN(d.getTime())) return '';
       const y = d.getFullYear();
-      const m = ('0' + (d.getMonth() + 1)).slice(-2);
-      const day = ('0' + d.getDate()).slice(-2);
-      const h = ('0' + d.getHours()).slice(-2);
-      const min = ('0' + d.getMinutes()).slice(-2);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
       return y + '-' + m + '-' + day + ' ' + h + ':' + min;
     } catch (e) {
       return '';
@@ -280,70 +194,121 @@ Page({
 
     const patch = {};
 
-    // 两个回填请求互相独立，并行触发（原串行~2个RTT，并行后~1个RTT）
-    const needBundle = needColor || needSize || !detail.styleNo;
-    let source = orderDetail || {};
-    const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
-    // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
-    const needOrderFetch = (needDeliveryDate || needCoverImage) && (!hasDelivery || needCoverImage);
-
-    const tasks = [];
-    let bundleIdx = -1, orderIdx = -1;
-    if (needBundle) {
-      bundleIdx = tasks.length;
-      tasks.push(api.production.getCuttingBundle(raw.orderNo, raw.bundleNo)
-        .catch(function (e) { console.warn('[scan-result] 回填菲号颜色/码数失败:', e); return null; }));
-    }
-    if (needOrderFetch) {
-      orderIdx = tasks.length;
-      tasks.push(api.production.orderDetailByOrderNo(raw.orderNo)
-        .catch(function (e) { console.warn('[scan-result] 回填交货日期/封面图失败:', e); return null; }));
-    }
-
-    if (tasks.length > 0) {
-      const results = await Promise.all(tasks);
-      const bundle = bundleIdx >= 0 ? results[bundleIdx] : null;
-      const orderRes = orderIdx >= 0 ? results[orderIdx] : null;
-
-      if (bundle) {
-        if (needColor && bundle.color) {
-          patch['detail.color'] = String(bundle.color);
+    if (needColor || needSize || !detail.styleNo) {
+      try {
+        const bundle = await api.production.getCuttingBundle(raw.orderNo, raw.bundleNo);
+        if (bundle) {
+          if (needColor && bundle.color) {
+            patch['detail.color'] = String(bundle.color);
+          }
+          if (needSize && bundle.size) {
+            patch['detail.size'] = String(bundle.size);
+          }
+          if (!detail.styleNo && bundle.styleNo) {
+            patch['detail.styleNo'] = String(bundle.styleNo);
+          }
         }
-        if (needSize && bundle.size) {
-          patch['detail.size'] = String(bundle.size);
-        }
-        if (!detail.styleNo && bundle.styleNo) {
-          patch['detail.styleNo'] = String(bundle.styleNo);
-        }
-      }
-
-      if (orderRes) {
-        if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
-          source = orderRes.records[0] || source;
-        } else if (orderRes && typeof orderRes === 'object') {
-          source = orderRes;
-        }
+      } catch (e) {
+        console.warn('[scan-result] 回填菲号颜色/码数失败:', e);
       }
     }
 
-    if (needDeliveryDate) {
-      const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
-      const dateText = this._formatYMD(dateVal);
-      if (dateText) {
-        patch['detail.deliveryDateDisplay'] = dateText;
-      }
-    }
-    // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
-    if (needCoverImage) {
-      const coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
-      if (coverUrl) {
-        patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
+    if (needDeliveryDate || needCoverImage) {
+      try {
+        let source = orderDetail || {};
+        const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
+        // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
+        if (!hasDelivery || needCoverImage) {
+          const orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
+          if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
+            source = orderRes.records[0] || source;
+          } else if (orderRes && typeof orderRes === 'object') {
+            source = orderRes;
+          }
+        }
+        if (needDeliveryDate) {
+          const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
+          const dateText = this._formatYMD(dateVal);
+          if (dateText) {
+            patch['detail.deliveryDateDisplay'] = dateText;
+          }
+        }
+        // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
+        if (needCoverImage) {
+          const coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
+          if (coverUrl) {
+            patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
+          }
+        }
+      } catch (e) {
+        console.warn('[scan-result] 回填交货日期/封面图失败:', e);
       }
     }
 
     if (Object.keys(patch).length > 0) {
       this.setData(patch);
     }
+  },
+
+  async _loadProductionHints(raw, orderDetail) {
+    const source = orderDetail || (raw && raw.orderDetail) || {};
+    const styleId = source.styleId || source.style_id || (raw && raw.styleId) || '';
+    if (!styleId) return;
+
+    try {
+      const styleInfo = await api.style.getStyleDetail(styleId);
+      if (!styleInfo) return;
+
+      const desc = styleInfo.description || '';
+      const hints = {
+        difficultyLabel: styleInfo.difficultyLabel || '',
+        difficultyScore: styleInfo.difficultyScore || 0,
+        difficultySeverity: this._difficultySeverity(styleInfo.difficultyScore),
+        fabricComposition: styleInfo.fabricComposition || '',
+        needleHint: this._parseNeedleHint(desc),
+        craftNotes: desc,
+        secondaryProcessText: '',
+      };
+
+      // 二次工艺
+      try {
+        const spRes = await api.style.listSecondaryProcesses({ styleId: styleId });
+        const spList = Array.isArray(spRes) ? spRes : (spRes && spRes.records) || [];
+        if (spList.length > 0) {
+          hints.secondaryProcessText = spList
+            .map(function(p) { return p.processName || p.processType || ''; })
+            .filter(Boolean)
+            .join('、');
+        }
+      } catch (spErr) {
+        // 二次工艺加载失败不阻断主流程
+      }
+
+      const patch = { productionHints: hints };
+      if (styleInfo.imageInsight && !this.data.imageInsight) {
+        patch.imageInsight = styleInfo.imageInsight;
+      }
+      this.setData(patch);
+    } catch (e) {
+      console.warn('[scan-result] 加载生产提示失败:', e);
+    }
+  },
+
+  _difficultySeverity(score) {
+    const s = parseInt(score, 10);
+    if (!s || s <= 0) return 'low';
+    if (s <= 3) return 'low';
+    if (s <= 6) return 'medium';
+    if (s <= 8) return 'high';
+    return 'critical';
+  },
+
+  _parseNeedleHint(desc) {
+    if (!desc) return '';
+    // 从工艺备注中解析针号提示，如 "11号针"、"9号针"
+    const match = String(desc).match(/(\d{1,2}号针)/);
+    if (match) return match[1];
+    return '';
   },
 
   _buildProcessOptions(raw) {
@@ -418,7 +383,7 @@ Page({
   async _loadWarehouseOptions() {
     try {
       const res = await api.warehouse.listWarehouseAreas('FINISHED');
-      const data = (res && res.data) || res;
+      const data = res?.data || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const areaMap = {};
@@ -447,7 +412,7 @@ Page({
     }
     try {
       const res = await api.warehouse.listLocations('FINISHED', areaId);
-      const data = (res && res.data) || res;
+      const data = res?.data || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
         const locMap = {};
@@ -545,8 +510,7 @@ Page({
         quantity:      raw.quantity  || detail.displayQuantity || 0,
         operatorName:  raw.operatorName  || '',
         scanCode:      raw.scanCode  || raw.orderNo || '',
-        // P0 修复：添加 cover/styleCover 兜底，原代码只取 coverImage/styleImage
-        coverImage:    orderDetail.coverImage || orderDetail.styleImage || orderDetail.cover || orderDetail.styleCover || '',
+        coverImage:    orderDetail.coverImage || orderDetail.styleImage || '',
         orderId:       raw.orderId   || '',
       };
       safeNavigate({ url: '/pages/scan/quality/index' }).catch(() => {});
@@ -653,8 +617,6 @@ Page({
       }
 
       if (failedItems.length === 0) {
-        // 提交成功：振动+Toast提示
-        wx.vibrateShort({ type: 'heavy' });
         toast.success('已完成 ' + successCount + ' 个工序扫码');
         wx.navigateBack();
       } else if (successCount > 0) {
@@ -677,8 +639,6 @@ Page({
           quantity: quantity || 0,
           success: false,
         };
-        // 提交失败：长振动+Modal提示
-        wx.vibrateLong();
         wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
       }
     } catch (e) {
@@ -691,8 +651,6 @@ Page({
         quantity: quantity || 0,
         success: false,
       };
-      // 异常失败：长振动+Modal提示
-      wx.vibrateLong();
       wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
     }
   },

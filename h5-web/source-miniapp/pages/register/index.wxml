@@ -1,3 +1,5 @@
+<custom-nav title="注册" show-back="{{true}}" />
+
 <view class="container">
   <view class="card register-card">
     <view class="title">员工注册</view>
@@ -7,21 +9,19 @@
     <view class="field factory-field">
       <view class="label">工厂编码/名称 <text class="required">*</text></view>
       <view class="input-row">
-        <view class="input-wrap" style="flex:1;">
-          <view class="input-wrap-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
-          </view>
-          <input
-            class="input"
-            placeholder="输入工厂编码或名称搜索"
-            value="{{selectedFactory ? selectedFactory.tenantCode : tenantCode}}"
-            bindinput="onTenantCodeInput"
-            disabled="{{!!scannedCode}}"
-          />
+        <view class="input-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </view>
+        <input
+          class="input"
+          placeholder="请输入工厂编码或名称"
+          value="{{selectedFactory ? selectedFactory.tenantCode : tenantCode}}"
+          bindinput="onTenantCodeInput"
+          disabled="{{!!scannedCode}}"
+        />
         <view class="scan-btn" bindtap="onScanCode">
           <view class="scan-icon-svg">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8"/><path d="M11 8v8"/><path d="M15 8v8"/></svg>
+            <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 20px; height: 20px;" />
           </view>
         </view>
       </view>
@@ -40,7 +40,7 @@
           bindtap="onPickFactory"
         >
           <text class="factory-dropdown-name">{{item.tenantName || item.name}}</text>
-          <text class="factory-dropdown-code">({{item.tenantCode}})</text>
+          <text class="factory-dropdown-code">{{item.tenantCode}}</text>
         </view>
         <view wx:if="{{filteredTenants.length === 0}}" class="factory-dropdown-empty">
           未搜索到对应工厂，可直接输入编码
@@ -51,9 +51,9 @@
     <!-- 用户名 -->
     <view class="field">
       <view class="label">用户名 <text class="required">*</text></view>
-      <view class="input-wrap">
-        <view class="input-wrap-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <view class="input-row">
+        <view class="input-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </view>
         <input
           class="input"
@@ -68,9 +68,9 @@
     <!-- 姓名 -->
     <view class="field">
       <view class="label">姓名 <text class="required">*</text></view>
-      <view class="input-wrap">
-        <view class="input-wrap-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <view class="input-row">
+        <view class="input-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 21h8"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
         </view>
         <input
           class="input"
@@ -84,14 +84,14 @@
     <!-- 手机号 -->
     <view class="field">
       <view class="label">手机号（选填）</view>
-      <view class="input-wrap">
-        <view class="input-wrap-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+      <view class="input-row">
+        <view class="input-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
         </view>
         <input
           class="input"
           type="number"
-          placeholder="用于通知联系，可不填"
+          placeholder="请输入手机号"
           value="{{phone}}"
           bindinput="onPhoneInput"
           maxlength="11"
@@ -102,9 +102,9 @@
     <!-- 密码 -->
     <view class="field">
       <view class="label">密码 <text class="required">*</text></view>
-      <view class="input-wrap">
-        <view class="input-wrap-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <view class="input-row">
+        <view class="input-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </view>
         <input
           class="input"
@@ -119,9 +119,9 @@
     <!-- 确认密码 -->
     <view class="field">
       <view class="label">确认密码 <text class="required">*</text></view>
-      <view class="input-wrap">
-        <view class="input-wrap-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <view class="input-row">
+        <view class="input-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </view>
         <input
           class="input"
@@ -134,8 +134,8 @@
     </view>
 
     <view class="agreement-row">
-      <view class="agreement-switch {{agreedPolicies ? 'switch-on' : ''}}" bindtap="onAgreePoliciesChange">
-        <view class="agreement-switch-knob"></view>
+      <view class="ios-toggle {{agreedPolicies ? 'on' : ''}}" bindtap="onAgreePoliciesChange">
+        <view class="ios-toggle-handle"></view>
       </view>
       <view class="agreement-text-wrap">
         <text class="agreement-text">我已阅读并同意</text>
@@ -151,11 +151,11 @@
         {{loading ? '提交中...' : '提交注册申请'}}
       </view>
     </view>
+  </view>
 
-    <!-- 返回登录 -->
-    <view class="back-link" bindtap="onBackToLogin">
-      已有账号？返回登录
-    </view>
+  <!-- 返回登录 -->
+  <view class="back-link" bindtap="onBackToLogin">
+    <text class="back-link-text">已有账号？</text><text class="back-link-action">返回登录</text>
   </view>
   <!-- 微信隐私授权弹窗（审核必须） -->
   <privacy-dialog id="privacyDialog" />

@@ -17,15 +17,15 @@ const EMPTY_TEXT = '-';
 
 /* ============== 颜色常量 ============== */
 
-const STATUS_COLOR_DEFAULT = 'var(--color-border-antd)';
+const STATUS_COLOR_DEFAULT = 'var(--color-border)';
 const STATUS_COLOR_SUCCESS = 'var(--color-success)';
 const STATUS_COLOR_PROCESSING = 'var(--color-primary)';
 const STATUS_COLOR_WARNING = 'var(--color-warning)';
-const STATUS_COLOR_ERROR = 'var(--color-error)';
+const STATUS_COLOR_ERROR = 'var(--color-danger)';
 const STATUS_COLOR_BLUE = 'var(--color-info)';
 const STATUS_COLOR_CYAN = 'var(--color-tertiary)';
 const STATUS_COLOR_ORANGE = 'var(--color-warning-secondary)';
-const STATUS_COLOR_VOLCANO = 'var(--color-error-secondary)';
+const STATUS_COLOR_VOLCANO = 'var(--color-danger)';
 const STATUS_COLOR_PURPLE = 'var(--color-purple)';
 const STATUS_COLOR_GEEKBLUE = 'var(--color-geekblue)';
 
@@ -156,7 +156,7 @@ const PURCHASE_STATUS_COLOR = {
 /* ============== 退货状态映射 ============== */
 
 const RETURN_STATUS_LABEL = {
-  pending: '待处理',
+  pending: '待审核',
   processing: '处理中',
   completed: '已完成',
   cancelled: '已取消',
@@ -180,6 +180,163 @@ const DEFECT_CATEGORY_LABEL = {
   functional_effectiveness: '功能有效性问题',
   other: '其他问题',
 };
+
+/* ============== 款式类别（CATEGORY）映射 ============== */
+
+const CATEGORY_LABEL = {
+  WOMAN: '女装',
+  WOMEN: '女装',
+  MAN: '男装',
+  MEN: '男装',
+  KID: '童装',
+  KIDS: '童装',
+  WCMAN: '女童装',
+  UNISEX: '男女同款',
+  SPORT: '运动装',
+  OUTDOOR: '户外装',
+  HOME: '家居服',
+};
+
+/* ============== 季节（SEASON）映射 ============== */
+
+const SEASON_LABEL = {
+  SPRING: '春季',
+  SUMMER: '夏季',
+  AUTUMN: '秋季',
+  FALL: '秋季',
+  WINTER: '冬季',
+  SPRING_SUMMER: '春夏',
+  AUTUMN_WINTER: '秋冬',
+  ALL_SEASON: '全季',
+};
+
+/* ============== 款式来源（SOURCE）映射 ============== */
+
+const SOURCE_LABEL = {
+  SELF_DEVELOPED: '自主开发',
+  OEM: '来料加工',
+  CUSTOMER: '客供',
+  LICENSED: '授权款',
+};
+
+/* ============== 工序名归一化映射（用于扫码页直接显示原始 processName） ============== */
+
+/**
+ * 工序名归一化：后端可能返回英文 code 或历史旧名称，统一映射为中文展示
+ * 涵盖：扫码流程中的标准工序 + 质检两步领取/验收归一
+ */
+const PROCESS_NAME_NORMALIZE_MAP = {
+  PRODUCTION: '车缝',
+  SEWING: '车缝',
+  CUTTING: '裁剪',
+  PROCUREMENT: '采购',
+  SECONDARY: '二次工艺',
+  SECONDARY_PROCESS: '二次工艺',
+  TAIL: '尾部',
+  IRONING: '整烫',
+  PACKAGING: '包装',
+  WAREHOUSE: '入库',
+  WAREHOUSE_IN: '入库',
+  WAREHOUSE_OUT: '出库',
+  WAREHOUSE_RETURN: '归还',
+  QUALITY: '质检',
+  QUALITY_CHECK: '质检',
+  EMBROIDERY: '绣花',
+  PRINTING: '印花',
+  WASHING: '洗水',
+  DYEING: '染色',
+  PLEATING: '压褶',
+  BEADING: '钉珠',
+};
+
+/**
+ * 工序名归一化正则规则（兼容中文历史旧名）
+ * - 质检领取/验收/确认 → 质检
+ * - 大烫/整烫 → 整烫（保持一致）
+ */
+const PROCESS_NAME_NORMALIZE_RULES = [
+  { regex: /^质检(领取|验收|确认)$/, replace: '质检' },
+  { regex: /^大烫$/, replace: '整烫' },
+];
+
+/**
+ * 归一化工序名
+ * @param {string} name - 后端返回的 processName
+ * @returns {string} 中文工序名（未匹配则原样返回）
+ */
+function normalizeProcessName(name) {
+  if (isEmpty(name)) return '';
+  const k = String(name).trim();
+  if (!k) return '';
+  // 1) 精确 code 匹配（大小写不敏感）
+  const upper = k.toUpperCase();
+  if (PROCESS_NAME_NORMALIZE_MAP[upper]) return PROCESS_NAME_NORMALIZE_MAP[upper];
+  // 2) 正则归一
+  for (let i = 0; i < PROCESS_NAME_NORMALIZE_RULES.length; i++) {
+    const rule = PROCESS_NAME_NORMALIZE_RULES[i];
+    if (rule.regex.test(k)) return rule.replace;
+  }
+  // 3) 已是中文/未知，原样返回
+  return k;
+}
+
+/* ============== 拆菲状态（SPLIT_STATUS）映射 ============== */
+
+const SPLIT_STATUS_LABEL = {
+  PENDING: '待确认',
+  APPROVED: '已通过',
+  REJECTED: '已拒绝',
+  CANCELLED: '已取消',
+  CANCELED: '已取消',
+  COMPLETED: '已完成',
+};
+
+const SPLIT_STATUS_COLOR = {
+  PENDING: STATUS_COLOR_WARNING,
+  APPROVED: STATUS_COLOR_SUCCESS,
+  REJECTED: STATUS_COLOR_ERROR,
+  CANCELLED: STATUS_COLOR_DEFAULT,
+  CANCELED: STATUS_COLOR_DEFAULT,
+  COMPLETED: STATUS_COLOR_SUCCESS,
+};
+
+/* ============== 通用枚举展示函数 ============== */
+
+/**
+ * 通用：从映射表取标签
+ * @param {string} value - 原始值
+ * @param {Object} map - 映射表（key 为大写）
+ * @returns {string} 中文标签，未匹配则原值
+ */
+function _labelFromMap(value, map) {
+  if (isEmpty(value)) return '';
+  const k = String(value).trim();
+  if (!k) return '';
+  const candidates = [k, k.toUpperCase(), k.toLowerCase()];
+  for (let i = 0; i < candidates.length; i++) {
+    if (map[candidates[i]]) return map[candidates[i]];
+  }
+  return k;
+}
+
+function displayCategory(value) {
+  return _labelFromMap(value, CATEGORY_LABEL);
+}
+
+function displaySeason(value) {
+  return _labelFromMap(value, SEASON_LABEL);
+}
+
+function displaySource(value) {
+  return _labelFromMap(value, SOURCE_LABEL);
+}
+
+function displaySplitStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const text = _labelFromMap(status, SPLIT_STATUS_LABEL);
+  const color = SPLIT_STATUS_COLOR[String(status).trim().toUpperCase()] || STATUS_COLOR_DEFAULT;
+  return { text, color };
+}
 
 /* ============== 基础工具函数 ============== */
 
@@ -467,6 +624,14 @@ module.exports = {
   displayReturnStatusText: (s) => displayReturnStatus(s).text,
   displayReturnStatusColor: (s) => displayReturnStatus(s).color,
   displayDefectCategory,
+  // 款式/季节/来源/工序/拆菲
+  displayCategory,
+  displaySeason,
+  displaySource,
+  normalizeProcessName,
+  displaySplitStatus,
+  displaySplitStatusText: (s) => displaySplitStatus(s).text,
+  displaySplitStatusColor: (s) => displaySplitStatus(s).color,
   // 完整映射
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
@@ -477,6 +642,12 @@ module.exports = {
   RETURN_STATUS_LABEL,
   RETURN_STATUS_COLOR,
   DEFECT_CATEGORY_LABEL,
+  CATEGORY_LABEL,
+  SEASON_LABEL,
+  SOURCE_LABEL,
+  PROCESS_NAME_NORMALIZE_MAP,
+  SPLIT_STATUS_LABEL,
+  SPLIT_STATUS_COLOR,
   // 颜色常量
   STATUS_COLOR_DEFAULT,
   STATUS_COLOR_SUCCESS,

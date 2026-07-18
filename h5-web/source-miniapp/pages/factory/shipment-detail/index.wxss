@@ -1,0 +1,452 @@
+/**
+ * 发货管理详情页样式
+ * 独立整页布局（无遮罩弹窗），使用 design-tokens CSS 变量
+ * 卡片风格与 dashboard 一致
+ */
+
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  padding-bottom: 20px;
+  box-sizing: border-box;
+}
+
+/* ========== 订单信息卡 ========== */
+.order-card {
+  display: flex;
+  gap: 12px;
+  margin: 8px 16px 0;
+  padding: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+.oi-cover {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.oi-pic {
+  width: 100%;
+  height: 100%;
+}
+.oi-cover-ph {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.oi-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.oi-no {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.oi-style {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oi-style-no {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.oi-factory {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ========== Tab 切换 ========== */
+.tab-bar {
+  display: flex;
+  margin: 12px 16px 0;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+.tab-item {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  border-radius: 6px;
+  transition: all .2s;
+}
+.tab-active {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ========== Tab 内容 ========== */
+.tab-content {
+  padding: 12px 16px 0;
+}
+
+/* ========== 区块卡片 ========== */
+.section-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+.section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+
+/* ========== 可发数量行 ========== */
+.ship-remaining-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+}
+.ship-remaining-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+.ship-remaining-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+.ship-remaining-num {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+/* ========== 发货明细表 ========== */
+.ship-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.ship-table__head {
+  display: flex;
+  padding: 8px 12px;
+  background: var(--color-bg-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+.ship-table__row {
+  display: flex;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+  align-items: center;
+}
+.ship-table__row:last-child {
+  border-bottom: none;
+}
+.ship-table__empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.st-col {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.st-col--color {
+  flex: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-col--size {
+  flex: 0.8;
+  min-width: 0;
+}
+.st-col--ordered,
+.st-col--shipped {
+  width: 44px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.st-col--input {
+  width: 56px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.st-col--readonly {
+  text-align: center;
+}
+
+/* 发货数输入框 */
+.ship-qty-input {
+  width: 48px;
+  height: 32px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-card);
+  box-sizing: border-box;
+}
+
+/* ========== 发货方式 ========== */
+.ship-method__group {
+  display: flex;
+  gap: 8px;
+}
+.ship-method__btn {
+  flex: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  transition: all .15s;
+}
+.ship-method__btn--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  font-weight: var(--font-weight-semibold);
+}
+.ship-radio-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* ========== 发货字段 ========== */
+.ship-field {
+  margin-top: 12px;
+}
+.ship-field__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+.ship-field__input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  box-sizing: border-box;
+}
+.ship-field__textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  box-sizing: border-box;
+}
+
+/* ========== 底部固定确认按钮 ========== */
+.submit-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  z-index: var(--z-sticky);
+}
+.submit-btn {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  transition: opacity .15s;
+}
+.submit-btn:active {
+  opacity: .7;
+}
+.submit-btn--disabled {
+  opacity: .6;
+}
+
+/* ========== 发货记录卡 ========== */
+.record-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+.record-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.record-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.record-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.record-no {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-status {
+  font-size: var(--font-size-2xs);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+  flex-shrink: 0;
+}
+.tag-orange { background: var(--color-warning-bg); color: var(--color-warning); }
+.tag-green { background: var(--color-success-bg); color: var(--color-success); }
+.tag-gray { background: var(--color-bg-hover); color: var(--color-text-tertiary); }
+.record-qty {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.record-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  transition: transform 0.2s;
+}
+.record-arrow--up {
+  transform: rotate(180deg);
+}
+.record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.record-express {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-detail {
+  margin-top: 10px;
+}
+.record-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+.record-btn {
+  height: 32px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+  flex-shrink: 0;
+  transition: opacity .15s;
+}
+.record-btn:active {
+  opacity: .7;
+}
+.record-btn--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.record-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ========== 空状态 ========== */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 0;
+  gap: 12px;
+}
+.empty-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ========== 加载提示 ========== */
+.load-tip {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  padding: 16px 0;
+}

@@ -9,9 +9,9 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('./helpers/ScanModeResolver');
 
 function buildProcessOptions(processName, progressStage, stageResult) {
-  const scannedSet = new Set((stageResult && stageResult.scannedProcessNames) || []);
-  const allBundleProcesses = (stageResult && stageResult.allBundleProcesses) || [];
-  const hidePrice = (stageResult && stageResult.hidePrice) || false;
+  const scannedSet = new Set(stageResult?.scannedProcessNames || []);
+  const allBundleProcesses = stageResult?.allBundleProcesses || [];
+  const hidePrice = stageResult?.hidePrice || false;
   let options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
     .map(p => ({
@@ -28,8 +28,8 @@ function buildProcessOptions(processName, progressStage, stageResult) {
     options = [{
       label: fallbackName,
       value: fallbackName,
-      scanType: normalizeScanType(fallbackName, stageResult && stageResult.scanType),
-      unitPrice: Number((stageResult && stageResult.unitPrice) || 0),
+      scanType: normalizeScanType(fallbackName, stageResult?.scanType),
+      unitPrice: Number(stageResult?.unitPrice || 0),
       hidePrice: true,
     }];
   }

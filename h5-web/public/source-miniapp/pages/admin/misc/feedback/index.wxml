@@ -1,36 +1,45 @@
 <view class="container">
+  <custom-nav title="意见反馈" show-back="{{true}}" show-search="{{false}}" />
+
   <view class="tab-bar">
     <view class="tab-item {{activeTab === 'submit' ? 'active' : ''}}" bindtap="switchTab" data-tab="submit">提交反馈</view>
     <view class="tab-item {{activeTab === 'list' ? 'active' : ''}}" bindtap="switchTab" data-tab="list">我的反馈</view>
   </view>
 
   <view wx:if="{{activeTab === 'submit'}}" class="form-card">
-    <view class="form-field">
-      <text class="form-label">反馈类型</text>
+    <view class="form-row">
       <picker mode="selector" range="{{categoryList}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
-        <view class="picker-row">
-          <text class="picker-text">{{categoryList[categoryIndex].label}}</text>
-          <text class="picker-arrow">›</text>
+        <view class="form-row-inner">
+          <text class="form-row-label">反馈类型</text>
+          <view class="form-row-value">
+            <text class="form-row-text">{{categoryList[categoryIndex].label}}</text>
+            <view class="picker-arrow icon-arrow-right-sm"></view>
+          </view>
         </view>
       </picker>
     </view>
-    <view class="form-field">
-      <text class="form-label">标题</text>
-      <input class="form-input" placeholder="请简要描述问题" bindinput="onTitleInput" value="{{form.title}}" maxlength="50" />
-    </view>
-    <view class="form-field">
-      <text class="form-label">详细描述</text>
-      <textarea class="form-textarea" placeholder="请详细描述您遇到的问题或建议" bindinput="onContentInput" value="{{form.content}}" maxlength="500" auto-height />
-    </view>
-    <view class="form-actions">
-      <view class="btn-submit {{submitting ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmitFeedback">
-        {{submitting ? '提交中...' : '提交反馈'}}
+    <view class="form-divider"></view>
+    <view class="form-row">
+      <view class="form-row-inner">
+        <text class="form-row-label">标题</text>
+        <input class="form-row-input" placeholder="请简要描述问题" bindinput="onTitleInput" value="{{form.title}}" maxlength="50" />
       </view>
+    </view>
+    <view class="form-divider"></view>
+    <view class="form-row form-row-block">
+      <text class="form-row-label">详细描述</text>
+      <textarea class="form-row-textarea" placeholder="请详细描述您遇到的问题或建议" bindinput="onContentInput" value="{{form.content}}" maxlength="500" auto-height />
+      <view class="form-char-count">{{form.content.length || 0}}/500</view>
+    </view>
+  </view>
+  <view wx:if="{{activeTab === 'submit'}}" class="form-actions">
+    <view class="btn-submit {{submitting ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmitFeedback">
+      {{submitting ? '提交中...' : '提交反馈'}}
     </view>
   </view>
 
   <view wx:if="{{activeTab === 'list'}}" class="feedback-list">
-    <empty-state wx:if="{{!myFeedbacks.length}}" icon="icon-feedback" text="暂无反馈记录"></empty-state>
+    <empty-state wx:if="{{!myFeedbacks.length}}" icon="icon-inbox" text="暂无反馈记录"></empty-state>
     <view wx:for="{{myFeedbacks}}" wx:key="id" class="feedback-item">
       <view class="feedback-head">
         <text class="feedback-title">{{item.title}}</text>

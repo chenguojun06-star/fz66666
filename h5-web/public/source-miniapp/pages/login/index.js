@@ -193,7 +193,7 @@ async function executeLogin(params, options = {}) {
   try {
     const resp = await api.wechat.miniProgramLogin(params);
 
-    // ✅ openid 已绑定 → 拿到 token，直接登录
+    // [OK] openid 已绑定 → 拿到 token，直接登录
     if (resp && resp.code === 200 && resp.data && resp.data.token) {
       const loginUser = resp.data.user || null;
       const loginTenantId = loginUser && loginUser.tenantId != null ? String(loginUser.tenantId) : '';
@@ -205,7 +205,7 @@ async function executeLogin(params, options = {}) {
       return { success: true };
     }
 
-    // ✅ openid 未绑定 → 需要用户输入账号密码绑定（首次）
+    // [OK] openid 未绑定 → 需要用户输入账号密码绑定（首次）
     if (resp && resp.code === 200 && resp.data && resp.data.needBind) {
       if (!silent) {
         toast.info(i18n.t('login.inputAccountToBind'));
@@ -213,7 +213,7 @@ async function executeLogin(params, options = {}) {
       return { success: false, needBind: true };
     }
 
-    // ❌ 真正的错误（账号密码错误、网络异常等）
+    // [FAIL] 真正的错误（账号密码错误、网络异常等）
     toast.error((resp && resp.message) || i18n.t('login.loginFailed'));
     return { success: false };
   } catch (e) {
@@ -386,7 +386,7 @@ Page({
     // 正式/体验版：先静默尝试 openid 一键登录（已绑定则无需选公司）
     const shouldAutoWechat = (envVersion === 'trial' || envVersion === 'release') && !autoWechatTried;
 
-    // ✅ 延迟到初始渲染完成后再 setData，避免 FLOW_INITIAL_CREATION 冲突
+    // [OK] 延迟到初始渲染完成后再 setData，避免 FLOW_INITIAL_CREATION 冲突
     await new Promise(resolve => {
       if (typeof wx.nextTick === 'function') {
         wx.nextTick(resolve);
@@ -395,7 +395,7 @@ Page({
       }
     });
 
-    // ✅ 合并 setData 调用，减少渲染次数
+    // [OK] 合并 setData 调用，减少渲染次数
     this.setData({
       showDevFields,
       apiBaseUrl,

@@ -17,7 +17,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 24px 20px 18px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-md);
 }
 
 .privacy-title {
@@ -53,7 +53,7 @@
   height: var(--btn-height-md);
   line-height: var(--btn-height-md);
   text-align: center;
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   color: var(--color-text-secondary);
   border-radius: var(--radius-xs);
   font-size: var(--font-size-md);

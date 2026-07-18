@@ -1,0 +1,65 @@
+<view class="container">
+  <custom-nav title="编辑资料" show-back="{{true}}" show-search="{{false}}" />
+
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:else class="content">
+
+    <!-- 头像 -->
+    <view class="avatar-section">
+      <view class="avatar-wrap" hover-class="avatar-wrap-hover" hover-stay-time="100" bindtap="onChooseAvatar">
+        <image wx:if="{{avatarDisplayUrl}}" src="{{avatarDisplayUrl}}" mode="aspectFill" class="avatar-img" binderror="onAvatarError" />
+        <text wx:else class="avatar-letter">{{name[0] || '?'}}</text>
+        <view class="avatar-edit-badge">
+          <text class="avatar-edit-icon">+</text>
+        </view>
+      </view>
+      <text class="avatar-tip">点击更换头像</text>
+    </view>
+
+    <!-- 信息表单 -->
+    <view class="form-card">
+      <!-- 姓名（只读） -->
+      <view class="form-row">
+        <text class="form-label">姓名</text>
+        <text class="form-value form-value--readonly">{{name || '--'}}</text>
+      </view>
+      <!-- 用户名（只读） -->
+      <view class="form-row">
+        <text class="form-label">用户名</text>
+        <text class="form-value form-value--readonly">{{username || '--'}}</text>
+      </view>
+      <!-- 角色（只读） -->
+      <view class="form-row" wx:if="{{roleDisplayName}}">
+        <text class="form-label">角色</text>
+        <text class="form-value form-value--readonly">{{roleDisplayName}}</text>
+      </view>
+      <!-- 所属工厂（只读） -->
+      <view class="form-row" wx:if="{{tenantName}}">
+        <text class="form-label">所属工厂</text>
+        <text class="form-value form-value--readonly">{{tenantName}}</text>
+      </view>
+      <!-- 手机号（可编辑） -->
+      <view class="form-row">
+        <text class="form-label">手机号</text>
+        <input class="form-input" type="number" maxlength="11" placeholder="请输入手机号" value="{{editPhone}}" bindinput="onPhoneInput" />
+      </view>
+    </view>
+
+    <!-- 提示 -->
+    <view class="hint-card">
+      <text class="hint-text">姓名和角色需联系管理员修改</text>
+    </view>
+
+    <!-- 保存按钮 -->
+    <view class="btn-section">
+      <view class="save-btn {{saving ? 'save-btn--disabled' : ''}}" hover-class="{{saving ? '' : 'save-btn-hover'}}" hover-stay-time="100" bindtap="{{saving ? '' : 'onSave'}}">
+        <text class="save-btn-text">{{saving ? '保存中...' : '保存'}}</text>
+      </view>
+    </view>
+
+  </view>
+</view>

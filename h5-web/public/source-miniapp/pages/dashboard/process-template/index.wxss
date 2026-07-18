@@ -9,25 +9,49 @@
 
 /* 顶部款式信息卡 */
 .status-card {
-  margin: 8px 12px 0;
-  padding: 10px 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  /* Apple: removed hard border, use shadow */
+  margin: 12px 16px;
+  padding: 16px;
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.status-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 .status-card-row {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.status-card-icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+}
+.status-card-icon svg {
+  width: 24px;
+  height: 24px;
 }
 .status-card-title {
-  font-size: var(--font-size-xl);
+  font-size: 20px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .status-card-sub {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
 }
 .status-card-meta {
@@ -37,14 +61,18 @@
 }
 .meta-chip {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-gray);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  background: var(--color-bg-card);
+  padding: 0 10px;
+  height: 28px;
+  line-height: 28px;
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium);
 }
 .meta-chip--price {
   color: var(--color-primary);
-  background: var(--color-primary-bg);
+  background: var(--color-bg-card);
   font-variant-numeric: tabular-nums;
 }
 
@@ -60,15 +88,14 @@
 
 /* 阶段分组列表 */
 .group-list {
-  padding: 8px 12px;
+  padding: 12px 16px;
 }
 .group {
   margin-bottom: 12px;
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  /* Apple: removed hard border, use shadow */
+  box-shadow: var(--shadow-sm);
 }
 
 /* 组头 */
@@ -76,8 +103,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 12px 12px;
 }
 .group-header-left {
   display: flex;
@@ -85,16 +111,16 @@
   gap: 6px;
 }
 .group-header-name {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 .group-header-count {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   padding: 1px 6px;
-  border-radius: var(--radius-full);
+  border-radius: 6px;
   min-width: 16px;
   text-align: center;
 }
@@ -104,19 +130,31 @@
   gap: 10px;
 }
 .group-header-add {
-  font-size: 18px;
   color: var(--color-primary);
-  line-height: 1;
-  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+.group-header-add svg {
+  width: 18px;
+  height: 18px;
 }
 .group-header-arrow {
-  font-size: 16px;
   color: var(--color-text-tertiary);
-  transform: rotate(90deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
   transition: transform 0.2s;
+  transform: rotate(-90deg);
+}
+.group-header-arrow svg {
+  width: 16px;
+  height: 16px;
 }
 .group-header-arrow.arrow-down {
-  transform: rotate(270deg);
+  transform: rotate(0deg);
 }
 
 /* 工序列表 */
@@ -136,10 +174,10 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border-light);
+  border-top: 1px solid var(--color-border);
 }
-.cell:last-child {
-  border-bottom: none;
+.cell:first-child {
+  border-top: none;
 }
 .cell-main {
   flex: 1;
@@ -152,30 +190,48 @@
   margin-bottom: 4px;
 }
 .cell-title {
-  font-size: var(--font-size-md);
+  font-size: 15px;
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
 }
 .cell-code {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-xxs);
   color: var(--color-text-secondary);
-  background: var(--color-bg-gray);
-  padding: 1px 4px;
+  background: var(--color-bg-page);
+  padding: 1px 6px;
   border-radius: var(--radius-xs);
 }
 .cell-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
 }
 .cell-meta {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 .cell-meta--price {
-  color: var(--color-primary);
+  color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
+}
+.cell-diff-badge {
+  font-size: var(--font-size-xxs);
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
+  font-weight: var(--font-weight-medium);
+}
+.cell-diff-badge--easy {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+.cell-diff-badge--medium {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+.cell-diff-badge--hard {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 .cell-desc {
   display: block;
@@ -188,21 +244,31 @@
 }
 .cell-actions {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
   padding-left: 8px;
+  flex-shrink: 0;
 }
 .cell-action {
-  font-size: var(--font-size-xs);
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cell-action svg {
+  width: 14px;
+  height: 14px;
 }
 .cell-action--edit {
-  color: var(--color-primary);
+  color: var(--color-text-tertiary);
 }
 .cell-action--del {
-  color: var(--color-danger);
+  color: var(--color-text-tertiary);
 }
 
 /* 底部操作栏 */
@@ -218,7 +284,7 @@
   background: var(--color-bg-card);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 1px solid var(--color-border);
   z-index: var(--z-dropdown);
 }
 .action-btn {
@@ -226,53 +292,41 @@
   height: var(--btn-height-md);
   border-radius: var(--radius-md);
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
+  font-weight: 600;
   border: none;
   line-height: var(--btn-height-md);
 }
 .action-btn--secondary {
-  background: var(--color-bg-gray);
-  color: var(--color-primary);
-  /* Apple: removed hard border, use shadow */
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
 }
 .action-btn--primary {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-white);
 }
 .action-btn--primary[loading]::before {
   display: none;
 }
 
-/* 弹窗 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--color-overlay);
-  z-index: var(--z-modal);
-}
-.modal-panel {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+/* 内联表单 */
+.inline-form-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  z-index: calc(var(--z-modal) + 1);
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 16px;
+  box-shadow: var(--shadow-sm);
 }
-.modal-header {
+.inline-form-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
 }
 .modal-title {
   font-size: var(--font-size-lg);
@@ -280,7 +334,9 @@
   color: var(--color-text-primary);
 }
 .modal-close {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-tertiary);
   padding: 0 4px;
 }
@@ -302,7 +358,7 @@
   padding: 0 var(--spacing-md);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
   box-sizing: border-box;
   /* Apple: removed hard border, use shadow */
@@ -313,7 +369,7 @@
   padding: 8px var(--spacing-md);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
   box-sizing: border-box;
   /* Apple: removed hard border, use shadow */
@@ -326,31 +382,35 @@
   padding: 0 var(--spacing-md);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
   /* Apple: removed hard border, use shadow */
 }
 .form-picker-arrow {
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-tertiary);
   transform: rotate(90deg);
 }
-.modal-footer {
+.inline-form-actions {
   display: flex;
   gap: 8px;
-  padding: 8px 12px 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 .modal-btn {
   flex: 1;
   height: var(--btn-height-md);
   border-radius: var(--radius-md);
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
+  font-weight: 600;
   border: none;
   line-height: var(--btn-height-md);
 }
 .modal-btn--cancel {
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
   /* Apple: removed hard border, use shadow */
 }

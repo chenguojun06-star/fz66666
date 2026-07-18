@@ -2,7 +2,6 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const Display = require('../../../utils/displayHelper');
-const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
@@ -12,7 +11,7 @@ Page({
     detail: null,
     items: [],
     statusLabel: '',
-    statusColor: '#64748b',
+    statusClass: 'gray',
     canApprove: false,
     canComplete: false,
     canReject: false,
@@ -52,7 +51,7 @@ Page({
         detail: detail,
         items: normalizedItems,
         statusLabel: statusInfo.text,
-        statusColor: statusInfo.color,
+        statusClass: this._colorToClass(statusInfo.color),
         returnRatio: returnRatio,
         canApprove: status === 'PENDING',
         canComplete: status === 'APPROVED' && type === 'purchase',
@@ -116,7 +115,17 @@ Page({
     return map[status] || s || 'pending';
   },
 
-  _calcReturnRatio(returnOrder, items) {
+  _colorToClass(color) {
+    const c = String(color || '');
+    if (c.includes('success')) return 'success';
+    if (c.includes('warning')) return 'warning';
+    if (c.includes('error') || c.includes('danger')) return 'danger';
+    if (c.includes('primary') || c.includes('processing')) return 'blue';
+    if (c.includes('info')) return 'blue';
+    return 'gray';
+  },
+
+  _calcReturnRatio(returnOrder, _items) {
     if (!returnOrder || returnOrder.returnType === 'FULL') return '100%';
     const total = Number(returnOrder.originalAmount || returnOrder.totalOriginalAmount || 0);
     const returned = Number(returnOrder.totalAmount || 0);

@@ -1,8 +1,8 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "员工注册",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

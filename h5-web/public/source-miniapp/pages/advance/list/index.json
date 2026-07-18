@@ -1,7 +1,7 @@
 {
   "usingComponents": {
-    "empty-state": "/components/empty-state/empty-state"
+    "empty-state": "/components/empty-state/empty-state",
+    "search-scan": "/components/search-scan/index"
   },
-  "navigationBarTitleText": "员工借支",
-  "enablePullDownRefresh": true
+  "navigationBarTitleText": "员工借支"
 }

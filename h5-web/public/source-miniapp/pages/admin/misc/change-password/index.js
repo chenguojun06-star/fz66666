@@ -1,5 +1,4 @@
 const api = require('../../../../utils/api');
-const { toast } = require('../../../../utils/uiHelper');
 
 Page({
   data: {
@@ -22,21 +21,21 @@ Page({
   async onSubmit() {
     const { oldPassword, newPassword, confirmPassword } = this.data.pwdForm;
     if (!oldPassword || !newPassword || !confirmPassword) {
-      return toast.error('请填写所有密码字段');
+      return wx.showToast({ title: '请填写所有密码字段', icon: 'none' });
     }
     if (newPassword.length < 6) {
-      return toast.error('新密码至少6位');
+      return wx.showToast({ title: '新密码至少6位', icon: 'none' });
     }
     if (newPassword !== confirmPassword) {
-      return toast.error('两次输入的密码不一致');
+      return wx.showToast({ title: '两次输入的密码不一致', icon: 'none' });
     }
     this.setData({ saving: true });
     try {
       await api.system.changePassword({ oldPassword, newPassword });
-      toast.success('密码修改成功');
+      wx.showToast({ title: '密码修改成功', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
-      toast.error(err.message || '修改失败');
+      wx.showToast({ title: err.message || '修改失败', icon: 'none' });
     } finally {
       this.setData({ saving: false });
     }

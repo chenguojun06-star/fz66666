@@ -1,77 +1,65 @@
-<view class="page-container">
+<view class="container">
+  <custom-nav title="我的" show-search="{{false}}" />
 
   <!-- 用户信息卡 -->
-  <view wx:if="{{userInfo}}" class="profile-card">
-    <view class="profile-edit-btn" hover-class="profile-edit-btn-hover" bindtap="onEditProfile">
-      <view class="line-icon icon-edit profile-edit-icon"></view>
+  <view wx:if="{{userInfo}}" class="user-profile-card">
+    <view class="profile-edit-btn" hover-class="profile-edit-btn-hover" hover-stay-time="100" bindtap="onEditProfile">
+      <view class="line-icon line-icon--sm icon-edit"></view>
     </view>
     <view class="profile-header">
       <view class="profile-avatar">
-        <image wx:if="{{avatarImgUrl}}" class="profile-avatar-img" src="{{avatarImgUrl}}" lazy-load mode="aspectFill" binderror="onAvatarError" />
-        <text wx:else class="profile-avatar-letter">{{avatarLetter}}</text>
+        <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;" binderror="onAvatarError" />
+        <text wx:else class="avatar-letter">{{avatarLetter}}</text>
       </view>
       <view class="profile-info">
         <view class="profile-name-row">
           <text class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</text>
-          <view class="profile-role-badge">
-            <text class="profile-role-text">{{roleDisplayName || '普通用户'}}</text>
-          </view>
+          <view class="role-badge">{{roleDisplayName || '普通用户'}}</view>
         </view>
-        <text wx:if="{{factoryName}}" class="profile-factory">{{factoryName}}</text>
-        <text wx:if="{{userPhone}}" class="profile-phone">{{userPhone}}</text>
+        <view wx:if="{{tenantName}}" class="profile-sub">{{tenantName}}</view>
+        <view wx:if="{{phoneText}}" class="profile-sub profile-sub--phone">{{phoneText}}</view>
+        <view wx:if="{{showApprovalEntry}}" class="profile-online">
+          <view class="line-icon line-icon--sm icon-user-group online-icon"></view>
+          <text>{{onlineCount}}人在线</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 快捷统计 -->
-  <view class="stats-card">
+  <!-- 快速统计 -->
+  <view class="stats-row">
     <view class="stats-item">
       <text class="stats-value">{{stats.workHours}}</text>
       <text class="stats-label">本月工时</text>
     </view>
-    <view class="stats-divider"></view>
-    <view class="stats-item">
-      <text class="stats-value">¥{{stats.wage}}</text>
+    <view class="stats-item stats-item--divider">
+      <text class="stats-value">{{stats.wageText}}</text>
       <text class="stats-label">本月工资</text>
     </view>
-    <view class="stats-divider"></view>
     <view class="stats-item">
       <text class="stats-value">{{stats.scanCount}}</text>
       <text class="stats-label">扫码次数</text>
     </view>
   </view>
 
-  <!-- 菜单分组 -->
-  <view class="menu-group" wx:for="{{menuGroups}}" wx:key="id" wx:for-item="group">
-    <view class="menu-card">
-      <view
-        class="menu-item"
-        wx:for="{{group.items}}"
-        wx:key="id"
-        wx:for-item="item"
-        wx:for-index="itemIdx"
-        hover-class="menu-item-hover"
-        data-group-idx="{{index}}"
-        data-item-idx="{{itemIdx}}"
-        bindtap="onMenuTap"
-      >
-        <view class="menu-icon-wrap menu-icon-{{item.iconColor || 'primary'}}">
+  <!-- 功能菜单 - 分组卡片 -->
+  <view class="menu-group" wx:for="{{menuGroups}}" wx:key="groupId" wx:for-item="group" wx:for-index="groupIdx">
+    <view class="menu-list">
+      <view class="menu-item" wx:for="{{group.items}}" wx:key="id" hover-class="menu-item-hover" data-index="{{item.flatIndex}}" bindtap="onMenuTap">
+        <view class="menu-icon-wrap" style="background: {{item.iconBg}};">
           <view class="line-icon {{item.iconClass}}"></view>
         </view>
         <text class="menu-label">{{item.label}}</text>
-        <view wx:if="{{item.badge && item.badge > 0}}" class="menu-badge">
-          <text class="menu-badge-text">{{item.badge}}</text>
-        </view>
-        <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
-        <view class="menu-arrow"></view>
+        <view wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</view>
+        <view class="menu-arrow icon-arrow-right-sm"></view>
       </view>
     </view>
   </view>
 
   <!-- 退出登录 -->
   <view class="logout-section">
-    <view class="logout-btn" hover-class="logout-btn-hover" bindtap="onLogout">
-      <text class="logout-text">退出登录</text>
+    <view class="logout-btn-full" hover-class="logout-btn-full-hover" hover-stay-time="100" bindtap="onLogout">
+      <text class="logout-btn-text">退出登录</text>
     </view>
   </view>
 
@@ -83,7 +71,7 @@
   <view class="mm-header">
     <text class="mm-title">菜单管理</text>
     <view class="mm-close" hover-class="mm-close-hover" bindtap="closeMenuManage">
-      <text class="mm-close-text">✕</text>
+      <view class="mm-close-text icon-close"></view>
     </view>
   </view>
   <view class="mm-desc">按角色控制首页各功能入口的显示与隐藏，关闭后该角色用户首页不可见。</view>

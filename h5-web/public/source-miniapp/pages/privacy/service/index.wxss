@@ -1,48 +1,71 @@
-{
-  padding: var(--spacing-xs) var(--page-padding-x);
-  background: var(--color-bg-page);
-  box-shadow: var(--shadow-card);
-  /* Apple style: removed hard border */
-
-{
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-card);
-  /* Apple style: removed hard border */
+.page {
+  padding: 40px 20px;
+  background: #ffffff;
+  box-sizing: border-box;
+  height: 100vh;
 }
 
-{
-  font-size: var(--font-size-lg-xl);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: 6px;
-}
-
-{
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
-}
-
-{
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 8px;
-}
-
-{
-  font-size: var(--font-size-md);
-  color: var(--color-text-secondary);
-  line-height: var(--line-height-relaxed);
-}
-
-{
+/* Header */
+.doc-header {
   text-align: center;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
-  padding: var(--spacing-lg) 0 24px;
+  margin-bottom: 40px;
+}
+
+.doc-title {
+  display: block;
+  font-size: 22px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.doc-date {
+  display: block;
+  margin-top: 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Sections */
+.doc-section {
+  margin-bottom: 32px;
+}
+
+.doc-heading {
+  display: block;
+  margin-bottom: 12px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.doc-body {
+  display: block;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+/* Email link (brand-500 color) */
+.doc-contact {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.doc-email {
+  font-size: var(--font-size-base);
+  color: var(--color-primary);
+  line-height: 1.7;
+}
+
+/* Footer */
+.doc-footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }

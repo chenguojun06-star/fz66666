@@ -1,3 +1,5 @@
+<custom-nav title="扫码历史" show-back="{{true}}" />
+
 <view class="container">
   <!-- 时间模式切换 -->
   <view class="mode-tabs">
@@ -7,17 +9,9 @@
 
   <!-- 月份选择器（按月模式） -->
   <view class="month-selector" wx:if="{{dateMode === 'month'}}">
-    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </view>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth"><view class="icon-arrow-left-sm"></view></view>
     <text class="month-text">{{displayMonth}}</text>
-    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </view>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth"><view class="icon-arrow-right-sm"></view></view>
   </view>
 
   <!-- 日期范围选择（自定义模式） -->
@@ -35,13 +29,13 @@
     </view>
   </view>
 
-  <!-- 搜索 -->
-  <view class="filter-section">
-    <view class="search-row">
-      <view class="search-box">
-        <view class="line-icon line-icon--sm icon-search search-icon"></view>
-        <input class="search-input" placeholder="订单号 / 菲号 / 工序" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
-      </view>
+  <!-- 搜索（对齐设计稿：输入框上方、按钮下方） -->
+  <view class="filter-section search-card">
+    <view class="search-input-box">
+      <view class="line-icon line-icon--sm icon-search search-icon"></view>
+      <input class="search-input" placeholder="订单号 / 菲号 / 工序" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
+    </view>
+    <view class="search-btn-row">
       <view class="search-btn" bindtap="onSearch" hover-class="search-btn-hover" hover-stay-time="50">搜索</view>
       <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch" hover-class="clear-btn-hover" hover-stay-time="50">重置</view>
     </view>
@@ -59,53 +53,30 @@
     </view>
     <view class="summary-item">
       <text class="summary-num">{{summary.recordCount || 0}}</text>
-      <text class="summary-label">记录数（样衣{{summary.patternRecordCount || 0}}）</text>
+      <text class="summary-label">记录数</text>
+      <text class="summary-sub-label">样衣{{summary.patternRecordCount || 0}}</text>
     </view>
     <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-item-hl-hover" hover-stay-time="50">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
-      <text class="summary-label">工资（{{summary.payableRecordCount || 0}}条）</text>
+      <text class="summary-label">工资</text>
     </view>
   </view>
 
-  <!-- 记录卡片列表 -->
-  <view class="record-list" wx:if="{{displayRecords.length > 0}}">
-    <view class="record-card" wx:for="{{displayRecords}}" wx:key="id">
-      <view class="record-card-top">
-        <view class="record-card-order">
-          <text class="record-order-no">{{item.displayOrderNo || '-'}}</text>
-          <text wx:if="{{item.displayTypeTag}}" class="record-type-tag {{item.displayTypeTag === '样衣' ? 'record-type-pattern' : ''}}">{{item.displayTypeTag}}</text>
+  <!-- 记录卡片列表（对齐设计稿：卡片式，非表格） -->
+  <view class="records-list" wx:if="{{displayRecords.length > 0}}">
+    <view wx:for="{{displayRecords}}" wx:key="id" class="record-card">
+      <view class="record-top">
+        <view class="record-top-left">
+          <text class="record-date">{{item.displayTime}}</text>
+          <text class="record-order">{{item.displayOrderNo}}</text>
         </view>
-        <text class="record-time">{{item.displayTime || ''}}</text>
+        <text wx:if="{{item.lineAmount > 0}}" class="record-amount">¥{{item.displayLineAmount}}</text>
       </view>
-      <view class="record-card-body">
-        <view class="record-row">
-          <text class="record-label">菲号</text>
-          <text class="record-value">{{item.displayBundleNo || '-'}}</text>
-        </view>
-        <view class="record-row">
-          <text class="record-label">工序</text>
-          <text class="record-value">{{item.displayProcess || '-'}}</text>
-        </view>
-        <view class="record-row">
-          <text class="record-label">颜色/码数</text>
-          <text class="record-value">{{item.displayColorSize || '-'}}</text>
-        </view>
-        <view class="record-row">
-          <text class="record-label">数量</text>
-          <text class="record-value record-qty">{{item.displayQuantity || 0}}</text>
-        </view>
-        <view class="record-row" wx:if="{{item.displayUnitPrice || item.displayPriceAmount}}">
-          <text class="record-label">单价/金额</text>
-          <text class="record-value">{{item.displayPriceAmount || item.displayUnitPrice || '-'}}</text>
-        </view>
-        <view class="record-row" wx:if="{{item.displayWorker}}">
-          <text class="record-label">领取人</text>
-          <text class="record-value">{{item.displayWorker}}</text>
-        </view>
-        <view class="record-row" wx:if="{{item.displayBedNo}}">
-          <text class="record-label">床号</text>
-          <text class="record-value">{{item.displayBedNo}}</text>
-        </view>
+      <view class="record-bottom">
+        <text class="record-bundle">{{item.displayBundleNo}}</text>
+        <text class="record-dot">·</text>
+        <text class="record-process">{{item.displayProcess}}</text>
+        <text class="record-qty">{{item.displayQuantity}}件</text>
       </view>
     </view>
   </view>

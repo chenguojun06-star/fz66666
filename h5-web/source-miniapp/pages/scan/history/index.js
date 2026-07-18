@@ -3,9 +3,7 @@
  * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
-const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { eventBus, Events } = require('../../../utils/eventBus');
-const { toast } = require('../../../utils/uiHelper');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -17,19 +15,19 @@ function getDateBefore(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
   const y = d.getFullYear();
-  const m = ('0' + (d.getMonth() + 1)).slice(-2);
-  const day = ('0' + d.getDate()).slice(-2);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
 function getToday() { return getDateBefore(0); }
 
 function getMonthRange(year, month) {
-  const m = ('0' + month).slice(-2);
+  const m = String(month).padStart(2, '0');
   const lastDay = new Date(year, month, 0).getDate();
   return {
     start: `${year}-${m}-01`,
-    end: `${year}-${m}-${('0' + lastDay).slice(-2)}`,
+    end: `${year}-${m}-${String(lastDay).padStart(2, '0')}`,
     display: `${year}年${month}月`,
   };
 }
@@ -41,47 +39,26 @@ function formatTime(timeStr) {
 }
 
 function _formatPatternRecord(item) {
-  const qty = typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity
-    : (item.quantity ? parseInt(item.quantity, 10) || 0 : 0);
   return {
     ...item,
     _isPattern: true,
     displayTime: formatTime(item.scanTime),
-    // 工序名直接用配置（含父子关系）的 processName，不加固定"样衣-"前缀
-    displayProcess: item.processName || item.progressStage || item.operationType || '-',
+    displayProcess: '样衣-' + (item.progressStage || item.operationType || '-'),
     displayWorker: item.operatorName || '-',
-    displayOrderNo: item.styleNo || item.orderNo || '-',
-    displayBundleNo: '-',
+    displayOrderNo: item.styleNo || '-',
+    displayBundleNo: item.color || '-',
     displayColor: item.color || '-',
     displaySize: item.size || '-',
     // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
     // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
     displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
-    displayQuantity: qty,
-    displayUnitPrice: (function() {
-      var p = Number(item.unitPrice);
-      return (p != null && p > 0) ? '¥' + p.toFixed(2) : '-';
-    })(),
-    displayPriceAmount: (function() {
-      var p = Number(item.unitPrice);
-      var c = Number(item.scanCost);
-      var amt = c > 0 ? c : (p > 0 ? p * qty : 0);
-      if (p > 0 && amt > 0) return '¥' + p.toFixed(2) + ' / ¥' + amt.toFixed(2);
-      if (p > 0) return '¥' + p.toFixed(2) + ' / -';
-      return '-';
-    })(),
-    lineAmount: (function() {
-      var c = Number(item.scanCost);
-      var p = Number(item.unitPrice);
-      return c > 0 ? c : (p > 0 ? p * qty : 0);
-    })(),
-    displayLineAmount: (function() {
-      var amt = Number(item.scanCost) || (Number(item.unitPrice) || 0) * qty;
-      return amt > 0 ? '¥' + amt.toFixed(2) : '-';
-    })(),
-    isPayable: (Number(item.scanCost) > 0) || (Number(item.unitPrice) > 0 && qty > 0),
+    displayQuantity: 0,
+    displayUnitPrice: '-',
+    displayPriceAmount: '-',
+    lineAmount: 0,
+    displayLineAmount: '-',
+    isPayable: false,
     displayBedNo: '-',
-    displayTypeTag: '样衣',
   };
 }
 
@@ -114,8 +91,6 @@ Page({
     },
     emptyText: '',
     emptyHint: '',
-    // 扩展字段配置
-    extFields: [],
   },
 
   _reqGeneration: 0,
@@ -126,21 +101,9 @@ Page({
     this._records = [];
     this._patternRecords = [];
     this._updateMonthDisplay();
-    // 加载扩展字段配置（非阻塞）
-    this.loadExtFields();
     // 未登录时跳过数据加载，避免触发 401 请求
     if (!(wx.getStorageSync('auth_token') || '')) return;
     this.loadData(true);
-  },
-
-  /** 加载扩展字段配置（scan 业务对象） */
-  loadExtFields() {
-    const self = this;
-    fieldConfig.list('scan', 'mp', false).then(function (fields) {
-      self.setData({ extFields: fields || [] });
-    }).catch(function () {
-      // 字段配置加载失败不阻塞主流程
-    });
   },
 
   onShow() {
@@ -286,7 +249,7 @@ Page({
         ? (settled[1] && settled[1].status === 'fulfilled' ? settled[1].value : [])
         : (this._patternRecords || []);
 
-      const newRecords = ((result && result.records) || []).filter(
+      const newRecords = (result?.records || []).filter(
         (item) => (item.scanResult || '').toLowerCase() !== 'failure',
       );
       const formatted = newRecords.map((item) => ({
@@ -322,12 +285,11 @@ Page({
         })(),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
         displayBedNo: item.bedNo != null ? String(item.bedNo) : '-',
-        displayTypeTag: '',
       }));
 
       const prevList = reset ? [] : (this._records || []);
       const merged = prevList.concat(formatted);
-      const total = (result && result.total) || 0;
+      const total = result?.total || 0;
       const hasMore = merged.length < total;
 
       const patternRecords = reset
@@ -391,7 +353,7 @@ Page({
         this.setData({ loading: false });
         return;
       }
-      toast.error('加载失败: ' + ((e && e.message) || '请稍后重试'));
+      wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
       this.setData({ loading: false });
     }
   },

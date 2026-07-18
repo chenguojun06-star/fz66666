@@ -307,4 +307,59 @@ function safeNavigate(options, method = 'navigateTo') {
   });
 }
 
-module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate };
+/* ============== 日期格式化 ============== */
+
+function toDate(input) {
+  if (!input) return null;
+  if (input instanceof Date) {
+    const t = input.getTime();
+    return isNaN(t) ? null : new Date(t);
+  }
+  if (typeof input === 'number') {
+    const d = new Date(input);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const raw = String(input).trim();
+  if (!raw) return null;
+  const m = raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (m) {
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function formatDate(input) {
+  const d = toDate(input);
+  if (!d) return '-';
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function formatDateTime(input) {
+  const d = toDate(input);
+  if (!d) return '-';
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function timeAgo(input) {
+  const d = toDate(input);
+  if (!d) return '-';
+  const now = Date.now();
+  const diff = now - d.getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (seconds < 60) return '刚刚';
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
+  return formatDate(input);
+}
+
+export { toast, toastAndRedirect, confirm, prompt, safeNavigate, formatDate, formatDateTime, timeAgo };

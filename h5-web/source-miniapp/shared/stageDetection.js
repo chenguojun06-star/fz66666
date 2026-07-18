@@ -133,8 +133,7 @@ const SCAN_TYPE_RULES = {
   '入库': 'warehouse',
 };
 
-var VALID_SCAN_TYPES = ['production', 'quality', 'warehouse', 'cutting', 'procurement', 'secondaryProcess', 'pressing', 'packaging', 'sewing'];
-function isValidScanType(t) { return VALID_SCAN_TYPES.indexOf(t) >= 0; }
+const VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting', 'procurement', 'secondaryProcess', 'pressing', 'packaging', 'sewing']);
 
 const DEFAULT_SCAN_TYPE = 'production';
 
@@ -176,7 +175,7 @@ function checkParentStageGate(processName, completedStages) {
  * @returns {string}
  */
 function inferScanType(processName, progressStage, backendScanType) {
-  if (backendScanType && isValidScanType(backendScanType)) {
+  if (backendScanType && VALID_SCAN_TYPES.has(backendScanType)) {
     return backendScanType;
   }
   if (SCAN_TYPE_RULES[processName]) {
@@ -279,7 +278,6 @@ module.exports = {
   canonicalStageKey: canonicalStageKey,
   SCAN_TYPE_RULES: SCAN_TYPE_RULES,
   VALID_SCAN_TYPES: VALID_SCAN_TYPES,
-  isValidScanType: isValidScanType,
   DEFAULT_SCAN_TYPE: DEFAULT_SCAN_TYPE,
   inferScanType: inferScanType,
   parseDefectQtyFromRemark: parseDefectQtyFromRemark,

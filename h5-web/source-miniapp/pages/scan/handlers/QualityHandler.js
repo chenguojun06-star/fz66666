@@ -2,7 +2,7 @@
  * 质检 Handler
  * 质检已迁移为独立页面 /pages/scan/quality/index，此处仅保留页面导航
  */
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { safeNavigate } = require('../../../utils/uiHelper');
 
 /**
  * 跳转到质检录入页面

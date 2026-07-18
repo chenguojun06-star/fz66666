@@ -11,7 +11,7 @@
 
 /* === 选择器容器 === */
 .inline-selector {
-  background: var(--color-bg-gray, var(--color-bg-light));
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -45,16 +45,16 @@
 }
 
 .inline-selector-item.active {
-  background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.08) 0%, var(--color-purple-bg-light) 100%);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
   border-color: var(--color-primary, var(--color-primary));
-  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.15);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 /* === 禁用项（如"无二次工艺"信息提示） === */
 .inline-selector-item--disabled {
   opacity: 0.45;
-  background: var(--color-bg-light);
-  border-color: var(--color-bg-gray);
+  background: var(--color-bg-page);
+  border-color: var(--color-bg-page);
   cursor: not-allowed;
 }
 .inline-selector-item--disabled .inline-selector-label {
@@ -75,7 +75,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid var(--color-border, var(--color-bg-gray));
+  border: 2px solid var(--color-border, var(--color-bg-page));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,8 +84,8 @@
 }
 
 .inline-selector-radio.checked {
-  border-color: var(--color-primary);
-  background: var(--color-bg-card);
+  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
 }
 
 .inline-selector-radio-dot {

@@ -14,6 +14,7 @@ page {
   color: var(--color-text-primary);
   font-size: var(--font-size-md);
   line-height: var(--line-height-medium);
+  letter-spacing: -0.022em;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
@@ -33,7 +34,7 @@ page {
 /* ========== 卡片（Apple 风格：纯白、细边框、柔和阴影、大圆角） ========== */
 .card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--spacing-lg);
   margin-bottom: var(--card-gap);
   border: 1px solid var(--color-border);
@@ -59,7 +60,7 @@ page {
 }
 
 .card-secondary {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   box-shadow: var(--shadow-sm);
 }
 
@@ -131,7 +132,7 @@ page {
   box-shadow: 0 0 0 2px var(--color-primary-bg);
 }
 
-/* ========== 按钮系统（Apple 风格：填充式） ========== */
+/* ========== 按钮系统（Apple 风格：主按钮实心蓝底白字） ========== */
 .btn {
   display: flex;
   align-items: center;
@@ -144,13 +145,13 @@ page {
   transition: all 0.18s ease;
 }
 
-/* 主按钮：蓝色描边空心 */
+/* 主按钮：实心蓝底白字（Apple HIG 标准） */
 .btn-primary {
   height: var(--btn-height-md);
-  background: transparent;
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-primary);
-  padding: 0 var(--spacing-lg);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border: none;
+  padding: 0 var(--spacing-xl);
   min-width: 56px;
 }
 
@@ -160,27 +161,25 @@ page {
 }
 
 .btn-primary:active {
-  background: var(--color-primary-bg);
   opacity: 0.85;
   transform: scale(0.96);
 }
 
 .btn-primary:disabled {
-  background: transparent;
-  border-color: var(--color-border);
+  background: var(--color-bg-page);
   color: var(--color-text-tertiary);
   opacity: 1;
 }
 
-/* 次要按钮：灰色填充 */
+/* 次要按钮：空心蓝边框（Apple secondary style） */
 .btn-secondary {
   height: var(--btn-height-md);
-  background: var(--color-bg-gray);
-  color: var(--color-text-primary);
-  border: none;
-  padding: 0 var(--spacing-md);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  padding: 0 var(--spacing-xl);
   min-width: 48px;
-  border-radius: var(--radius-md);
+  border-radius: var(--btn-radius);
   font-size: var(--font-size-base);
 }
 
@@ -194,15 +193,15 @@ page {
   transform: scale(0.96);
 }
 
-/* 危险按钮：红色填充 */
+/* 危险按钮：红色实心 */
 .btn-danger {
   height: var(--btn-height-md);
   background: var(--color-danger);
   color: var(--color-text-white);
   border: none;
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--spacing-xl);
   min-width: 48px;
-  border-radius: var(--radius-md);
+  border-radius: var(--btn-radius);
   font-size: var(--font-size-base);
 }
 
@@ -231,12 +230,14 @@ page {
   height: var(--btn-height-sm);
   font-size: var(--font-size-sm);
   padding: 0 var(--spacing-md);
+  border-radius: var(--radius-sm);
 }
 
 .btn-xs {
   height: var(--btn-height-xs);
   font-size: var(--font-size-xs);
   padding: 0 var(--spacing-sm);
+  border-radius: var(--radius-xs);
 }
 
 .btn-lg {
@@ -251,6 +252,114 @@ page {
 .btn-disabled {
   opacity: 0.4 !important;
   pointer-events: none;
+}
+
+/* ========== 按钮别名系统（统一各页面不同的按钮命名） ========== */
+/* 以下别名确保各页面使用不同 class 名的按钮外观完全一致 */
+/* 所有别名都是自包含的，不需要配合 .btn 基础类使用 */
+
+/* 主操作按钮别名：蓝色实心白字 */
+.btn-submit,
+.btn-confirm,
+.btn-save,
+.btn-return-confirm,
+.btn-confirm-procurement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height-md);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border: none;
+  padding: 0 var(--spacing-xl);
+  border-radius: var(--btn-radius);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  box-sizing: border-box;
+  min-width: 48px;
+  transition: all 0.18s ease;
+}
+
+.btn-submit:active,
+.btn-confirm:active,
+.btn-save:active,
+.btn-return-confirm:active,
+.btn-confirm-procurement:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* 取消/次要按钮别名：灰色背景 */
+.btn-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height-md);
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  border: none;
+  padding: 0 var(--spacing-xl);
+  border-radius: var(--btn-radius);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  box-sizing: border-box;
+  min-width: 48px;
+  transition: all 0.18s ease;
+}
+
+.btn-cancel:active {
+  opacity: 0.75;
+  transform: scale(0.98);
+}
+
+/* 描边按钮别名：透明背景蓝边框 */
+.btn-outline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height-md);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  padding: 0 var(--spacing-xl);
+  border-radius: var(--btn-radius);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  box-sizing: border-box;
+  min-width: 48px;
+  transition: all 0.18s ease;
+}
+
+.btn-outline:active {
+  opacity: 0.75;
+  transform: scale(0.98);
+}
+
+/* 行内操作按钮：小尺寸 */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height-sm);
+  padding: 0 var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+/* hover-class 别名 */
+.btn-submit-hover,
+.btn-confirm-hover,
+.btn-save-hover {
+  opacity: 0.88;
+  transform: scale(0.98);
+}
+
+.btn-cancel-hover {
+  opacity: 0.75;
+  transform: scale(0.98);
 }
 
 /* ========== 文字颜色 ========== */
@@ -314,7 +423,7 @@ page {
 }
 
 .list-item-hover {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   transform: scale(0.99);
 }
 
@@ -430,7 +539,7 @@ page {
 .loading-spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid var(--color-bg-gray);
+  border: 3px solid var(--color-bg-page);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -499,7 +608,7 @@ page {
 }
 
 .modal-btn.cancel {
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
   border: none;
 }
@@ -545,7 +654,7 @@ page {
   border-radius: var(--radius-button);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
   border: none;
 }
@@ -559,9 +668,9 @@ page {
   border-radius: var(--radius-button);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  background: transparent;
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border: none;
 }
 
 .footer-bar .btn-danger {
@@ -571,7 +680,7 @@ page {
   align-items: center;
   justify-content: center;
   border-radius: var(--btn-radius);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   background: var(--color-danger);
   color: var(--color-text-white);
@@ -590,7 +699,7 @@ page {
 /* ========== 分割线 ========== */
 .divider {
   height: 1px;
-  background: var(--color-divider);
+  background: var(--color-border);
   margin: var(--spacing-md) 0;
 }
 
@@ -623,10 +732,9 @@ page {
   background: var(--color-bg-page);
 }
 
+/* 已废弃 sticky，搜索框跟随页面滚动 */
 .search-bar--sticky {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
+  position: relative;
 }
 
 .search-box {
@@ -635,7 +743,7 @@ page {
   align-items: center;
   gap: var(--spacing-sm);
   height: var(--input-height-sm);
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
   border-radius: var(--radius-full);
   padding: 0 var(--spacing-md);
 }
@@ -665,4 +773,96 @@ page {
   justify-content: center;
   color: var(--color-text-tertiary);
   flex-shrink: 0;
+}
+
+/* ========== 筛选标签 Filter Pills ========== */
+.filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--page-padding-x);
+  padding-bottom: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.filter-pill--active {
+  color: var(--color-text-white);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.filter-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-white);
+  background: var(--color-text-tertiary);
+  border-radius: var(--radius-full);
+}
+
+.filter-pill--active .filter-pill-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ========== 统计条 Stats Bar ========== */
+.stats-bar {
+  display: flex;
+  align-items: stretch;
+  margin: 0 var(--page-padding-x) 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.stats-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 4px;
+}
+
+.stats-item + .stats-item {
+  border-left: 1px solid var(--color-border-light);
+}
+
+.stats-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-label {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  margin-top: 4px;
 }

@@ -1,6 +1,6 @@
+<custom-nav title="用户审批" show-back="{{true}}" />
 <view class="container">
-  <view class="header">
-    <view class="title">用户审批</view>
+  <view class="sub-header">
     <view class="count">待审批：{{activeTab === 'tenant' ? tenantTotal : total}}人</view>
   </view>
 
@@ -22,7 +22,7 @@
     </view>
 
     <view wx:elif="{{pendingUsers.length === 0}}" class="empty">
-      <text class="empty-icon">✅</text>
+      <view class="empty-icon icon-check-green"></view>
       <view class="empty-text">暂无待审批用户</view>
     </view>
 
@@ -33,18 +33,20 @@
             <view class="line-icon line-icon--sm icon-user"></view>
           </view>
           <view class="user-info">
-            <view class="user-name">{{item.name || item.username}}</view>
-            <view class="user-meta">
-              <view wx:if="{{item.roleName}}" class="meta-item">角色：{{item.roleName}}</view>
-              <view wx:if="{{item.phone}}" class="meta-item">手机：{{item.phone}}</view>
-              <view wx:if="{{item.email}}" class="meta-item">邮箱：{{item.email}}</view>
-              <view class="meta-item">注册时间：{{item.createTime}}</view>
+            <view class="user-name-row">
+              <view class="user-name">{{item.name || item.username}}</view>
+              <view class="user-time">{{item.createTime}}</view>
             </view>
+            <view wx:if="{{item.phone}}" class="user-phone">{{item.phone}}</view>
           </view>
         </view>
+        <view wx:if="{{item.roleName}}" class="user-meta-row">
+          <view class="position-tag">{{item.roleName}}</view>
+        </view>
+        <view class="card-divider"></view>
         <view class="user-actions">
+          <view class="action-btn approve-btn" data-user="{{item}}" bindtap="onApproveUser">通过</view>
           <view class="action-btn reject-btn" data-user="{{item}}" bindtap="onReject">拒绝</view>
-          <view class="action-btn approve-btn" data-user="{{item}}" bindtap="onApproveUser">批准</view>
         </view>
       </view>
     </view>
@@ -55,7 +57,7 @@
   <!-- 租户工人注册列表 -->
   <view wx:if="{{activeTab === 'tenant'}}">
     <view wx:if="{{tenantRegistrations.length === 0}}" class="empty">
-      <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
+      <view class="empty-icon line-icon line-icon--xl icon-clipboard"></view>
       <view class="empty-text">暂无工人注册申请</view>
       <view class="empty-hint">分享工厂注册二维码给员工，员工扫码即可提交注册申请</view>
     </view>
@@ -67,33 +69,35 @@
             <view class="line-icon line-icon--sm icon-user"></view>
           </view>
           <view class="user-info">
-            <view class="user-name">
-              {{item.name || item.username}}
-              <text class="badge-tag">工人注册</text>
+            <view class="user-name-row">
+              <view class="user-name">
+                {{item.name || item.username}}
+                <text class="badge-tag">工人注册</text>
+              </view>
+              <view class="user-time">{{item.createTime}}</view>
             </view>
-            <view class="user-meta">
-              <view class="meta-item">用户名：{{item.username}}</view>
-              <view wx:if="{{item.phone}}" class="meta-item">手机：{{item.phone}}</view>
-              <view wx:if="{{item.roleName}}" class="meta-item">角色：{{item.roleName}}</view>
-              <view class="meta-item">注册时间：{{item.createTime}}</view>
-            </view>
+            <view wx:if="{{item.phone}}" class="user-phone">{{item.phone}}</view>
           </view>
         </view>
+        <view class="user-meta-row">
+          <view wx:if="{{item.factoryName}}" class="user-factory">
+            <view class="icon-factory"></view>
+            <text class="factory-name">{{item.factoryName}}</text>
+          </view>
+          <view wx:if="{{item.roleName}}" class="position-tag">{{item.roleName}}</view>
+        </view>
+        <view class="card-divider"></view>
         <view class="user-actions">
+          <view class="action-btn approve-btn" data-user="{{item}}" bindtap="onTenantApprove">通过</view>
           <view class="action-btn reject-btn" data-user="{{item}}" bindtap="onTenantReject">拒绝</view>
-          <view class="action-btn approve-btn" data-user="{{item}}" bindtap="onTenantApprove">批准</view>
         </view>
       </view>
     </view>
   </view>
 
-  <!-- 批准弹窗 —— 角色分配 -->
-  <mp-modal
-    visible="{{showApprovalModal}}"
-    title="批准用户"
-    show-close="{{true}}"
-    bind:close="cancelApprove"
-  >
+  <!-- 批准区域 —— 角色分配（页内展开） -->
+  <view wx:if="{{showApprovalModal}}" class="inline-form-card">
+    <view class="inline-form-title">批准用户</view>
     <view class="mf-body">
       <view class="modal-text">
         批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
@@ -121,19 +125,15 @@
         </view>
       </view>
     </view>
-    <view class="mf-actions" slot="footer">
+    <view class="mf-actions">
       <view class="mf-btn cancel" bindtap="cancelApprove">取消</view>
       <view class="mf-btn ok" bindtap="confirmApprove">批准并分配角色</view>
     </view>
-  </mp-modal>
+  </view>
 
-  <!-- 拒绝弹窗 -->
-  <mp-modal
-    visible="{{showRejectModal}}"
-    title="拒绝用户"
-    show-close="{{true}}"
-    bind:close="cancelReject"
-  >
+  <!-- 拒绝区域（页内展开） -->
+  <view wx:if="{{showRejectModal}}" class="inline-form-card">
+    <view class="inline-form-title">拒绝用户</view>
     <view class="mf-body">
       <view class="modal-text">
         确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
@@ -151,9 +151,9 @@
         />
       </view>
     </view>
-    <view class="mf-actions" slot="footer">
+    <view class="mf-actions">
       <view class="mf-btn cancel" bindtap="cancelReject">取消</view>
       <view class="mf-btn danger" bindtap="confirmReject">确定拒绝</view>
     </view>
-  </mp-modal>
+  </view>
 </view>

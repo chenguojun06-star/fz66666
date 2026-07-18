@@ -1,0 +1,89 @@
+<view class="container">
+  <custom-nav title="关于我们" show-back="{{true}}" show-search="{{false}}" />
+
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:else class="content">
+
+    <!-- 应用 Logo + 名称 -->
+    <view class="app-header">
+      <view class="app-logo">
+        <text class="app-logo-text">衣</text>
+      </view>
+      <text class="app-name">{{appName || '服装供应链管理系统'}}</text>
+      <text class="app-slogan">让服装生产更高效</text>
+    </view>
+
+    <!-- 基本信息 -->
+    <view class="info-card">
+      <view class="info-title">系统信息</view>
+      <view class="info-row">
+        <text class="info-label">应用名称</text>
+        <text class="info-value">{{appName || '--'}}</text>
+      </view>
+      <view class="info-row" wx:if="{{tenantName}}">
+        <text class="info-label">所属工厂</text>
+        <text class="info-value">{{tenantName}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">在线人数</text>
+        <text class="info-value">{{onlineCount}} 人</text>
+      </view>
+    </view>
+
+    <!-- 技术信息 -->
+    <view class="info-card">
+      <view class="info-title">运行状态</view>
+      <view class="info-row">
+        <text class="info-label">Java 版本</text>
+        <text class="info-value">{{javaVersion}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">操作系统</text>
+        <text class="info-value">{{osName}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">运行时长</text>
+        <text class="info-value">{{uptime}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">启动时间</text>
+        <text class="info-value">{{startTime}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">内存使用</text>
+        <text class="info-value">{{heapUsedMb}} / {{heapMaxMb}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">内存占比</text>
+        <view class="info-value-row">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{heapUsedPercent}}%; background: {{heapUsedPercent > 80 ? 'var(--color-error)' : 'var(--color-primary)'}};"></view>
+          </view>
+          <text class="progress-text">{{heapUsedPercent}}%</text>
+        </view>
+      </view>
+      <view class="info-row">
+        <text class="info-label">数据库</text>
+        <text class="info-value {{database === '异常' ? 'text-error' : 'text-success'}}">{{database}}</text>
+      </view>
+    </view>
+
+    <!-- 操作 -->
+    <view class="action-card">
+      <view class="action-btn" hover-class="action-btn-hover" hover-stay-time="100" bindtap="onCopyVersion">
+        <text class="action-btn-text">复制版本信息</text>
+      </view>
+    </view>
+
+    <!-- 版权 -->
+    <view class="copyright">
+      <text class="copyright-text">服装供应链管理系统</text>
+      <text class="copyright-sub">由 AI 驱动的智能制造平台</text>
+    </view>
+
+  </view>
+</view>

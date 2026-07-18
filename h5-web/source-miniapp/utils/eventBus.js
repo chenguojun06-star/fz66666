@@ -142,6 +142,7 @@ const Events = {
   // 通用数据变更
   DATA_CHANGED: 'data:changed', // 通用数据变更
   REFRESH_ALL: 'refresh:all', // 请求刷新所有页面
+  FAVORITES_CHANGED: 'favorites:changed', // 收藏应用变更
 };
 
 /**

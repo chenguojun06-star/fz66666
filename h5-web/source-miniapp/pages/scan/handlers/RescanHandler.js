@@ -7,6 +7,7 @@
 
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 /**
  * 点击"退回重扫"按钮 — 跳转独立页面 /pages/scan/rescan/index
@@ -31,7 +32,7 @@ function onRescanRecord(ctx, e) {
     recordIdx: recordIdx,
     coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
     styleNo: record.styleNo || '',
-    processName: record.processName || '',
+    processName: normalizeProcessName(record.processName || ''),
   };
   safeNavigate({ url: '/pages/scan/rescan/index' }).catch(() => {});
 }

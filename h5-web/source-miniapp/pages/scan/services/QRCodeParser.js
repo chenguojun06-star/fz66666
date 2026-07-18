@@ -3,7 +3,7 @@
  * Version: 2.3 (重构版)
  * Date: 2026-02-15
  *
- * 🔧 重构说明 (v2.2 → v2.3):
+ * [FIX] 重构说明 (v2.2 → v2.3):
  * 1. 提取工具类到 ParserUtils.js (~180行)
  * 2. 提取菲号解析到 BundleCodeParser.js (~200行)
  * 3. 提取订单号解析到 OrderCodeParser.js (~60行)
@@ -58,7 +58,7 @@ class QRCodeParser {
 
     // 尝试解析（传入原始扫码内容用于 scanCode 字段）
     const result = this._tryParseFormats(parseTarget, first, skuNo, raw);
-
+    console.log('[DEBUG] QRCodeParser: raw=', raw, 'parseTarget=', parseTarget, 'result=', JSON.stringify(result));
     if (result) {
       return result;
     }
@@ -184,7 +184,7 @@ class QRCodeParser {
       };
     }
 
-    // 3. 菲号格式（🔧 修复：使用原始完整扫码内容作为 scanCode）
+    // 3. 菲号格式（[FIX] 修复：使用原始完整扫码内容作为 scanCode）
     const bundleResult = BundleCodeParser.parse(parseTarget);
     if (bundleResult) {
       return this._buildBundleResult(bundleResult, rawScanCode, skuNo);

@@ -1,68 +1,44 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
-const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
-/* ========== 收款人类型 中文化 ========== */
-var PAYEE_TYPE_LABELS = { WORKER: '员工', TEAM: '团队', FACTORY: '工厂', SUPPLIER: '供应商' };
-
-const PAYMENT_METHOD_MAP = {
+var PAYMENT_METHOD_MAP = {
   OFFLINE: '线下付款',
   BANK: '银行卡',
   WECHAT: '微信',
   ALIPAY: '支付宝',
 };
 
-const BIZ_TYPE_MAP = {
+var PAYMENT_METHODS = [
+  { value: 'OFFLINE', label: '线下付款' },
+  { value: 'BANK', label: '银行卡' },
+  { value: 'WECHAT', label: '微信' },
+  { value: 'ALIPAY', label: '支付宝' },
+];
+
+var BIZ_TYPE_MAP = {
+  PURCHASE: { text: '采购款', cls: 'tag-blue' },
+  PROCESSING: { text: '加工费', cls: 'tag-orange' },
+  LOGISTICS: { text: '物流费', cls: 'tag-green' },
   PAYROLL_SETTLEMENT: { text: '工资结算', cls: 'tag-blue' },
   ORDER_SETTLEMENT: { text: '订单结算', cls: 'tag-green' },
   RECONCILIATION: { text: '工厂对账', cls: 'tag-orange' },
   REIMBURSEMENT: { text: '费用报销', cls: 'tag-gray' },
   PAYROLL: { text: '工资', cls: 'tag-blue' },
-  /* 采购款 = 浅蓝标签 */
-  PURCHASE: { text: '采购款', cls: 'tag-blue' },
-  PURCHASE_PAYMENT: { text: '采购款', cls: 'tag-blue' },
-  PURCHASE_ORDER: { text: '采购款', cls: 'tag-blue' },
-  /* 加工费 = 橙色标签 */
-  PROCESSING_FEE: { text: '加工费', cls: 'tag-orange' },
-  PROCESSING: { text: '加工费', cls: 'tag-orange' },
-  OUTSOURCING_FEE: { text: '加工费', cls: 'tag-orange' },
-  /* 物流费 = 绿色标签 */
-  LOGISTICS_FEE: { text: '物流费', cls: 'tag-green' },
-  LOGISTICS: { text: '物流费', cls: 'tag-green' },
-  SHIPPING_FEE: { text: '物流费', cls: 'tag-green' },
 };
 
-const PAYMENT_STATUS_MAP = {
+var PAYMENT_STATUS_MAP = {
   pending: { text: '待处理', cls: 'tag-orange' },
-  processing: { text: '处理中', cls: 'tag-blue' },
-  success: { text: '已完成', cls: 'tag-green' },
+  processing: { text: '处理中', cls: 'tag-orange' },
+  success: { text: '已确认', cls: 'tag-green' },
   failed: { text: '失败', cls: 'tag-red' },
   cancelled: { text: '已取消', cls: 'tag-gray' },
   refunded: { text: '已退回', cls: 'tag-orange' },
 };
 
-function bizTypeText(s) {
-  if (!s) return '';
-  if (BIZ_TYPE_MAP[s]) return BIZ_TYPE_MAP[s].text;
-  /* 如果后端直接返回中文文本，原样展示 */
-  if (/[\u4e00-\u9fa5]/.test(s)) return s;
-  return '未知';
-}
-function bizTypeCls(s) {
-  if (BIZ_TYPE_MAP[s]) return BIZ_TYPE_MAP[s].cls;
-  /* 根据文本内容推断标签颜色 */
-  var text = bizTypeText(s);
-  if (text.indexOf('采购') >= 0) return 'tag-blue';
-  if (text.indexOf('加工') >= 0) return 'tag-orange';
-  if (text.indexOf('物流') >= 0 || text.indexOf('运费') >= 0) return 'tag-green';
-  if (text.indexOf('工资') >= 0) return 'tag-blue';
-  if (text.indexOf('订单') >= 0) return 'tag-green';
-  if (text.indexOf('对账') >= 0) return 'tag-orange';
-  if (text.indexOf('报销') >= 0) return 'tag-gray';
-  return 'tag-gray';
-}
-function paymentStatusText(s) { return s ? ((PAYMENT_STATUS_MAP[s] || {}).text || '未知') : ''; }
+function bizTypeText(s) { return (BIZ_TYPE_MAP[s] || {}).text || s || ''; }
+function bizTypeCls(s) { return (BIZ_TYPE_MAP[s] || {}).cls || 'tag-gray'; }
+function paymentStatusText(s) { return (PAYMENT_STATUS_MAP[s] || {}).text || s || ''; }
 function paymentStatusCls(s) { return (PAYMENT_STATUS_MAP[s] || {}).cls || 'tag-gray'; }
 
 Page({
@@ -84,24 +60,16 @@ Page({
     selectedAccountName: '',
     canPay: false,
     stats: null,
-    // 搜索收款人
-    showSearchPayee: false,
-    searchPayeeKeyword: '',
-    searchPayeeResults: [],
-    // 保存账户弹窗
-    showSaveAccountModal: false,
-    accountForm: { payeeId: '', payeeType: '', accountName: '', accountNo: '', bankName: '' },
-    // 取消支付确认
-    cancellingPaymentId: null,
+    paymentMethods: PAYMENT_METHODS,
+    modalView: 'form',
+    searchKeyword: '',
+    searchResults: [],
+    searching: false,
+    newAccountForm: { accountName: '', accountNumber: '', bankName: '' },
   },
 
   onLoad: function () {
     this.setData({ canPay: isAdminOrSupervisor() });
-    bindPageEvents(this, () => this._resetAndLoad());
-  },
-
-  onUnload: function () {
-    unbindPageEvents(this);
   },
 
   onShow: function () {
@@ -112,7 +80,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     this._loadStats();
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
@@ -131,8 +98,8 @@ Page({
     const that = this;
     const now = new Date();
     const y = now.getFullYear();
-    const m = ('0' + (now.getMonth() + 1)).slice(-2);
-    const d = ('0' + now.getDate()).slice(-2);
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
     const today = y + '-' + m + '-' + d;
     const firstDay = y + '-' + m + '-01';
     api.wagePayment.dashboardStats(firstDay, today).then(function (stats) {
@@ -164,7 +131,7 @@ Page({
         pendingPage: that.data.pendingPage + 1,
         loading: false,
       });
-    }).catch(function (e) {
+    }).catch(function (_e) {
       that.setData({ loading: false });
     });
   },
@@ -177,7 +144,7 @@ Page({
       const enriched = records.map(function (r) {
         r.statusText = paymentStatusText(r.status);
         r.statusCls = paymentStatusCls(r.status);
-        r.paymentMethodText = r.paymentMethod ? (PAYMENT_METHOD_MAP[r.paymentMethod] || '未知') : '';
+        r.paymentMethodText = PAYMENT_METHOD_MAP[r.paymentMethod] || r.paymentMethod || '';
         return r;
       });
       that.setData({
@@ -200,6 +167,9 @@ Page({
       payeeAccounts: [],
       selectedAccountId: '',
       selectedAccountName: '',
+      modalView: 'form',
+      searchKeyword: '',
+      searchResults: [],
     });
     this._loadPayeeAccounts(item);
   },
@@ -217,14 +187,8 @@ Page({
     this.setData({ 'payForm.amount': e.detail.value });
   },
 
-  onPayMethodChange: function (e) {
-    this.setData({ 'payForm.paymentMethod': e.detail.value, selectedAccountId: '' });
-  },
-
-  onSelectMethod: function (e) {
-    var method = e.currentTarget.dataset.method;
-    if (!method) return;
-    this.setData({ 'payForm.paymentMethod': method, selectedAccountId: '' });
+  onPayMethodSelect: function (e) {
+    this.setData({ 'payForm.paymentMethod': e.currentTarget.dataset.value, selectedAccountId: '', selectedAccountName: '' });
   },
 
   onPayRemarkInput: function (e) {
@@ -274,172 +238,119 @@ Page({
     }});
   },
 
-  onCancelPay: function () {
-    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
-    this.setData({ showPayModal: false, currentPayable: null });
-  },
-
-  // ========== 确认支付（线下确认 / 确认收款） ==========
-
-  onConfirmPayment: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.paymentList[idx];
-    if (!item) return;
-    var that = this;
-    var method = item.paymentMethod;
-    var confirmFn = (method === 'OFFLINE') ? api.wagePayment.confirmOffline : api.wagePayment.confirmReceived;
-    wx.showModal({
-      title: '确认支付',
-      content: '确认' + (method === 'OFFLINE' ? '线下已付款' : '已收款') + ' ¥' + (item.amount || 0).toFixed(2) + '？',
-      success: function (res) {
-        if (!res.confirm) return;
-        confirmFn(item.id).then(function () {
-          toast('确认成功');
-          that._loadStats();
-          that._resetAndLoad();
-        }).catch(function (e) { toast('确认失败: ' + (e.message || e)); });
-      }
-    });
-  },
-
-  // ========== 取消支付（支付记录列表操作） ==========
-
-  onCancelPayment: function (e) {
-    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.paymentList[idx];
-    if (!item) return;
-    var that = this;
-    wx.showModal({
-      title: '取消支付',
-      content: '确认取消该笔支付记录？',
-      success: function (res) {
-        if (!res.confirm) return;
-        that.setData({ cancellingPaymentId: item.id });
-        api.wagePayment.cancelPayment(item.id).then(function () {
-          toast('已取消');
-          that.setData({ cancellingPaymentId: null });
-          that._loadStats();
-          that._resetAndLoad();
-        }).catch(function (e) {
-          that.setData({ cancellingPaymentId: null });
-          toast('取消失败: ' + (e.message || e));
-        });
-      }
-    });
-  },
-
-  // ========== 重新支付（失败/退回的支付记录） ==========
-
-  onRepay: function (e) {
-    if (!hasFeaturePermission('initiate_payment')) { toast('您没有发起支付的权限'); return; }
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.paymentList[idx];
-    if (!item) return;
-    var that = this;
-    wx.showModal({
-      title: '重新支付',
-      content: '确认重新发起 ¥' + (item.amount || 0).toFixed(2) + ' 的支付？',
-      success: function (res) {
-        if (!res.confirm) return;
-        api.wagePayment.initiatePayment({
-          payeeType: item.payeeType,
-          payeeId: item.payeeId,
-          payeeName: item.payeeName,
-          paymentMethod: item.paymentMethod || 'OFFLINE',
-          amount: item.amount,
-          bizType: item.bizType,
-          bizId: item.bizId,
-          bizNo: item.bizNo,
-          remark: '重新支付',
-        }).then(function () {
-          toast('支付已发起');
-          that._loadStats();
-          that._resetAndLoad();
-        }).catch(function (e) { toast('支付失败: ' + (e.message || e)); });
-      }
-    });
-  },
-
-  // ========== 搜索收款人 ==========
-
-  onOpenSearchPayee: function () {
-    this.setData({ showSearchPayee: true, searchPayeeKeyword: '', searchPayeeResults: [] });
-  },
-
-  onSearchPayeeInput: function (e) {
-    this.setData({ searchPayeeKeyword: e.detail.value });
-  },
-
   onSearchPayee: function () {
-    var keyword = this.data.searchPayeeKeyword.trim();
-    if (!keyword) { toast('请输入收款人姓名或手机号'); return; }
+    this.setData({ modalView: 'search', searchKeyword: '', searchResults: [] });
+  },
+
+  onPayeeSearchInput: function (e) {
+    this.setData({ searchKeyword: e.detail.value });
+  },
+
+  onPayeeSearch: function () {
+    var keyword = (this.data.searchKeyword || '').trim();
+    if (!keyword) { toast('请输入收款人名称'); return; }
+    this.setData({ searching: true });
     var that = this;
     api.wagePayment.searchPayee({ keyword: keyword }).then(function (res) {
       var results = Array.isArray(res) ? res : (res && res.records) || [];
-      // 收款人类型中文化：兜底 '其他'，不展示英文 code
-      results.forEach(function (item) {
-        if (item) {
-          var rawType = item.type || item.payeeType || '';
-          item.payeeTypeText = rawType ? (PAYEE_TYPE_LABELS[String(rawType).toUpperCase()] || '其他') : '';
-        }
-      });
-      that.setData({ searchPayeeResults: results });
-    }).catch(function (e) { toast('搜索失败: ' + (e.message || e)); });
-  },
-
-  onSelectSearchPayee: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var payee = this.data.searchPayeeResults[idx];
-    if (!payee) return;
-    // 选中收款人后，加载其账户列表
-    this.setData({ showSearchPayee: false });
-    if (payee.id && payee.type) {
-      this._loadPayeeAccounts({ payeeId: payee.id, payeeType: payee.type });
-    }
-  },
-
-  onCloseSearchPayee: function () {
-    this.setData({ showSearchPayee: false });
-  },
-
-  // ========== 保存收款账户 ==========
-
-  onOpenSaveAccount: function () {
-    var item = this.data.currentPayable;
-    this.setData({
-      showSaveAccountModal: true,
-      accountForm: {
-        payeeId: item ? item.payeeId : '',
-        payeeType: item ? item.payeeType : '',
-        accountName: '',
-        accountNo: '',
-        bankName: '',
-      },
+      that.setData({ searchResults: results, searching: false });
+    }).catch(function () {
+      that.setData({ searching: false });
     });
   },
 
-  onAccountFormInput: function (e) {
+  onSelectPayee: function (e) {
+    var idx = Number(e.currentTarget.dataset.index);
+    var payee = this.data.searchResults[idx];
+    if (!payee) return;
+    var payeeId = payee.payeeId || payee.id;
+    var payeeType = payee.payeeType || payee.type;
+    var payeeName = payee.payeeName || payee.name || '';
+    this.setData({
+      'currentPayable.payeeId': payeeId,
+      'currentPayable.payeeType': payeeType,
+      'currentPayable.payeeName': payeeName,
+      modalView: 'form',
+      selectedAccountId: '',
+      selectedAccountName: '',
+      payeeAccounts: [],
+    });
+    this._loadPayeeAccounts(this.data.currentPayable);
+  },
+
+  onBackToForm: function () {
+    this.setData({ modalView: 'form' });
+  },
+
+  onAddAccount: function () {
+    this.setData({ modalView: 'addAccount', newAccountForm: { accountName: '', accountNumber: '', bankName: '' } });
+  },
+
+  onAccountInput: function (e) {
     var field = e.currentTarget.dataset.field;
-    this.setData({ ['accountForm.' + field]: e.detail.value });
+    var data = {};
+    data['newAccountForm.' + field] = e.detail.value;
+    this.setData(data);
   },
 
   onSaveAccount: function () {
-    var form = this.data.accountForm;
-    if (!form.accountName.trim()) { toast('请输入账户名称'); return; }
-    if (!form.accountNo.trim()) { toast('请输入账号'); return; }
+    var form = this.data.newAccountForm;
+    if (!form.accountName) { toast('请输入账户名称'); return; }
+    if (!form.accountNumber) { toast('请输入账号'); return; }
+    var item = this.data.currentPayable;
+    if (!item || !item.payeeId) { toast('请先选择收款人'); return; }
+    var payload = {
+      payeeId: item.payeeId,
+      payeeType: item.payeeType,
+      accountName: form.accountName,
+      accountNumber: form.accountNumber,
+      bankName: form.bankName || '',
+    };
     var that = this;
-    api.wagePayment.saveAccount(form).then(function () {
-      toast('账户保存成功');
-      that.setData({ showSaveAccountModal: false });
-      // 刷新账户列表
-      if (that.data.currentPayable) {
-        that._loadPayeeAccounts(that.data.currentPayable);
-      }
-    }).catch(function (e) { toast('保存失败: ' + (e.message || e)); });
+    api.wagePayment.saveAccount(payload).then(function () {
+      toast('账户添加成功');
+      that.setData({ modalView: 'form' });
+      that._loadPayeeAccounts(item);
+    }).catch(function (e) { toast('添加失败: ' + (e.message || e)); });
   },
 
-  onCloseSaveAccount: function () {
-    this.setData({ showSaveAccountModal: false });
+  onCancelRecord: function (e) {
+    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
+    var id = e.currentTarget.dataset.id;
+    var that = this;
+    wx.showModal({
+      title: '确认取消',
+      content: '确认取消此笔支付？',
+      success: function (res) {
+        if (!res.confirm) return;
+        api.wagePayment.cancelPayment(id).then(function () {
+          toast('已取消');
+          that._resetAndLoad();
+        }).catch(function (_e) { toast('取消失败: ' + (e.message || e)); });
+      }
+    });
+  },
+
+  onConfirmRecord: function (e) {
+    if (!hasFeaturePermission('initiate_payment')) { toast('您没有确认支付的权限'); return; }
+    var id = e.currentTarget.dataset.id;
+    var that = this;
+    wx.showModal({
+      title: '确认',
+      content: '确认此笔支付已完成？',
+      success: function (res) {
+        if (!res.confirm) return;
+        api.wagePayment.confirmOffline(id).then(function () {
+          toast('已确认');
+          that._loadStats();
+          that._resetAndLoad();
+        }).catch(function (_e) { toast('确认失败: ' + (e.message || e)); });
+      }
+    });
+  },
+
+  onCancelPay: function () {
+    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
+    this.setData({ showPayModal: false, currentPayable: null });
   },
 });

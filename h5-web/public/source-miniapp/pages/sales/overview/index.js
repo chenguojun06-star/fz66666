@@ -1,7 +1,7 @@
 /**
  * 销售数据概览页
  *
- *  - 顶部：日期范围筛选（本月 / 上月 / 近30天）
+ *  - 顶部：日期范围筛选（今日 / 本周 / 本月 / 本季 / 本年）
  *  - 汇总卡片：总销售额、总订单量、总运费、净收入
  *  - 按平台分组列表：平台名 / 订单量 / 销售额 / 净收入
  *
@@ -15,9 +15,11 @@ const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBi
 
 /* 日期范围预设 */
 const DATE_RANGES = [
-  { key: 'thisMonth', label: '本月' },
-  { key: 'lastMonth', label: '上月' },
-  { key: 'last30', label: '近30天' },
+  { key: 'today',       label: '今日' },
+  { key: 'thisWeek',    label: '本周' },
+  { key: 'thisMonth',   label: '本月' },
+  { key: 'thisQuarter', label: '本季' },
+  { key: 'thisYear',    label: '本年' },
 ];
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
@@ -26,18 +28,32 @@ function fmtDate(d) {
 }
 function getRange(key) {
   const now = new Date();
+  if (key === 'today') {
+    return { startDate: fmtDate(now), endDate: fmtDate(now) };
+  }
+  if (key === 'thisWeek') {
+    // 周一为一周开始
+    var day = now.getDay() || 7;
+    var monday = new Date(now);
+    monday.setDate(now.getDate() - day + 1);
+    return { startDate: fmtDate(monday), endDate: fmtDate(now) };
+  }
   if (key === 'thisMonth') {
     return { startDate: fmtDate(new Date(now.getFullYear(), now.getMonth(), 1)), endDate: fmtDate(now) };
   }
-  if (key === 'lastMonth') {
-    return { startDate: fmtDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), endDate: fmtDate(new Date(now.getFullYear(), now.getMonth(), 0)) };
+  if (key === 'thisQuarter') {
+    var qMonth = Math.floor(now.getMonth() / 3) * 3;
+    return { startDate: fmtDate(new Date(now.getFullYear(), qMonth, 1)), endDate: fmtDate(now) };
   }
-  return { startDate: fmtDate(new Date(now.getTime() - 29 * 86400000)), endDate: fmtDate(now) };
+  if (key === 'thisYear') {
+    return { startDate: fmtDate(new Date(now.getFullYear(), 0, 1)), endDate: fmtDate(now) };
+  }
+  // 默认本月
+  return { startDate: fmtDate(new Date(now.getFullYear(), now.getMonth(), 1)), endDate: fmtDate(now) };
 }
 function fmtMoney(v) {
   const n = Number(v) || 0;
-  if (n >= 10000) return (n / 10000).toFixed(2) + '万';
-  return n.toFixed(2);
+  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 Page({
@@ -74,7 +90,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     this._loadStats().finally(function () { wx.stopPullDownRefresh(); });
   },
 
@@ -122,7 +137,9 @@ Page({
           platformName: PLATFORM_NAMES[code] || code || '未知平台',
           orderCount: Number(p.orderCount || 0),
           salesAmount: Number(p.totalPayAmount || 0),
+          salesAmountText: fmtMoney(Number(p.totalPayAmount || 0)),
           netRevenue: Number(p.netRevenue || 0),
+          netRevenueText: fmtMoney(Number(p.netRevenue || 0)),
         };
       });
       that.setData({
@@ -130,9 +147,12 @@ Page({
         loadError: false,
         summary: {
           totalSales: Number(data.totalPayAmount || 0),
+          totalSalesText: fmtMoney(Number(data.totalPayAmount || 0)),
           totalOrders: Number(data.orderCount || 0),
           totalShipping: Number(data.totalFreight || 0),
+          totalShippingText: fmtMoney(Number(data.totalFreight || 0)),
           netRevenue: Number(data.netRevenue || 0),
+          netRevenueText: fmtMoney(Number(data.netRevenue || 0)),
         },
         platforms: platforms,
       });

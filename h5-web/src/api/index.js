@@ -108,7 +108,7 @@ const system = {
   login: (payload) => http.post('/api/system/user/login', payload, { headers: { skipAuth: true } }),
   getMe: () => http.get('/api/system/user/me'),
   listPendingUsers: () => http.get('/api/system/user/pending'),
-  updateUser: (userId, data) => http.put(`/api/system/user/${userId}`, data),
+  updateUser: (userId, data) => http.put('/api/system/user', { ...data, id: userId }),
   approveUser: (userId, data) => http.post(`/api/system/user/${userId}/approval-action?action=approve`, data || {}),
   rejectUser: (userId, data) => http.post(`/api/system/user/${userId}/approval-action?action=reject`, data || {}),
   listRoles: () => http.get('/api/system/role/list'),

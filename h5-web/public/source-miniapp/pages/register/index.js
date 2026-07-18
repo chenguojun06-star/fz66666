@@ -18,7 +18,7 @@ Page({
     phone: '',
     password: '',
     confirmPassword: '',
-    agreedPolicies: false,
+    agreedPolicies: true,
     loading: false,
     factorySearch: '',
     tenants: [],
@@ -131,8 +131,11 @@ Page({
     this.setData({ confirmPassword: (e && e.detail && e.detail.value) || '' });
   },
   onAgreePoliciesChange(e) {
-    const checked = !!(e && e.detail ? e.detail.value : false);
-    this.setData({ agreedPolicies: checked });
+    if (e && e.detail && typeof e.detail.value !== 'undefined') {
+      this.setData({ agreedPolicies: !!e.detail.value });
+    } else {
+      this.setData({ agreedPolicies: !this.data.agreedPolicies });
+    }
   },
   onViewServiceAgreement() {
     safeNavigate({ url: '/pages/privacy/service/index' }).catch(() => {});

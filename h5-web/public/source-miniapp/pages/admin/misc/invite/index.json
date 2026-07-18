@@ -1,4 +1,6 @@
 {
-  "navigationBarTitleText": "邀请员工",
-  "usingComponents": {}
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

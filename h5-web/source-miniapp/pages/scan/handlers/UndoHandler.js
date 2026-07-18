@@ -70,7 +70,7 @@ function stopUndoTimer(page) {
  */
 async function handleUndo(page) {
   const record = page._undoRecord;
-  const recordId = (record && record.recordId) || (record && record.data && record.data.recordId) || (record && record.data && record.data.id);
+  const recordId = record?.recordId || record?.data?.recordId || record?.data?.id;
   const scanType = String(record && record.scanType || '').trim().toLowerCase();
 
   if (!record || !recordId) {

@@ -1,10 +1,11 @@
 <view class="container">
-  <scroll-view scroll-y class="body">
+  <custom-nav title="新建订单" show-search="{{false}}" />
 
-    <!-- 款式信息 -->
-    <view class="sec sec--top">
+  <scroll-view scroll-y class="body">
+    <!-- 款式 -->
+    <view class="sec">
       <view class="style-row" wx:if="{{coverImage}}">
-        <image class="style-thumb" src="{{coverImage}}" lazy-load mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
+        <image class="style-thumb" src="{{coverImage}}" mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
         <view class="style-txt">
           <text class="style-no">{{styleNo}}</text>
           <text class="style-nm">{{styleName}}</text>
@@ -19,42 +20,33 @@
       </view>
     </view>
 
-    <!-- 汇总卡片 -->
-    <view class="summary-card" wx:if="{{orderQuantity > 0 || computedUnitPrice > 0}}">
-      <view class="summary-item" wx:if="{{orderQuantity > 0}}">
-        <text class="summary-lbl">总数量</text>
-        <text class="summary-val">{{orderQuantity}} 件</text>
-      </view>
-      <view class="summary-divider" wx:if="{{orderQuantity > 0 && computedUnitPrice > 0}}"></view>
-      <view class="summary-item" wx:if="{{computedUnitPrice > 0}}">
-        <text class="summary-lbl">{{pricingModeLabels[pricingModeIdx]}}</text>
-        <text class="summary-val primary">¥{{computedUnitPrice}}</text>
-      </view>
-    </view>
-
     <!-- 订单信息 -->
     <view class="sec">
       <view class="sec-hd">订单信息</view>
+
       <view class="f-row">
-        <text class="f-lbl">订单号</text>
+        <text class="f-lbl"><text class="req">*</text>订单号</text>
         <input class="f-inp flex-1" value="{{orderNo}}" bindinput="onOrderNoInput" placeholder="自动生成" />
-        <view class="f-btn f-btn--sm" bindtap="onAutoGenOrderNo"><text>生成</text></view>
+        <view class="f-btn" bindtap="onAutoGenOrderNo"><text>生成</text></view>
       </view>
+
       <view class="f-row">
-        <text class="f-lbl">生产方</text>
+        <text class="f-lbl"><text class="req">*</text>生产方</text>
         <view class="f-seg">
           <view class="f-seg-i {{factoryMode==='INTERNAL'?'on':''}}" data-v="INTERNAL" bindtap="onFactoryModeTap">内部工厂</view>
           <view class="f-seg-i {{factoryMode==='EXTERNAL'?'on':''}}" data-v="EXTERNAL" bindtap="onFactoryModeTap">外发加工</view>
         </view>
       </view>
+
       <view wx:if="{{factoryMode==='INTERNAL'}}" class="f-row">
-        <text class="f-lbl">部门</text>
+        <text class="f-lbl"><text class="req">*</text>部门</text>
         <picker range="{{orgUnitList}}" range-key="name" bindchange="onOrgUnitChange" class="flex-1">
           <view class="f-pv {{orgUnitId?'':'ph'}}">{{orgUnitName || '选择部门'}}</view>
         </picker>
       </view>
+
       <view wx:if="{{factoryMode==='EXTERNAL'}}" class="f-row">
-        <text class="f-lbl">工厂</text>
+        <text class="f-lbl"><text class="req">*</text>工厂</text>
         <picker range="{{factoryList}}" range-key="factoryName" bindchange="onFactoryChange" class="flex-1">
           <view class="f-pv {{factoryId?'':'ph'}}">{{factoryName || '选择工厂'}}</view>
         </picker>
@@ -64,20 +56,22 @@
     <!-- 时间与交期 -->
     <view class="sec">
       <view class="sec-hd">时间与交期</view>
+
       <view class="f-row-row">
         <view class="f-row half">
-          <text class="f-lbl">下单</text>
+          <text class="f-lbl"><text class="req">*</text>下单</text>
           <picker mode="date" value="{{plannedStartDate}}" bindchange="onStartDateChange" class="flex-1">
-            <view class="f-pv {{plannedStartDate?'':'ph'}}">{{plannedStartDate || '选择日期'}}</view>
+            <view class="f-pv {{plannedStartDate?'':'ph'}}">{{plannedStartDate || '选择'}}</view>
           </picker>
         </view>
         <view class="f-row half">
-          <text class="f-lbl">交期</text>
+          <text class="f-lbl"><text class="req">*</text>交期</text>
           <picker mode="date" value="{{plannedEndDate}}" bindchange="onEndDateChange" class="flex-1">
-            <view class="f-pv {{plannedEndDate?'':'ph'}}">{{plannedEndDate || '选择日期'}}</view>
+            <view class="f-pv {{plannedEndDate?'':'ph'}}">{{plannedEndDate || '选择'}}</view>
           </picker>
         </view>
       </view>
+
       <view class="f-row">
         <text class="f-lbl">急单</text>
         <view class="f-seg">
@@ -90,6 +84,7 @@
     <!-- 业务信息 -->
     <view class="sec">
       <view class="sec-hd">业务信息</view>
+
       <view class="f-row-row">
         <view class="f-row half">
           <text class="f-lbl">客户</text>
@@ -102,6 +97,7 @@
           </picker>
         </view>
       </view>
+
       <view class="f-row-row">
         <view class="f-row half">
           <text class="f-lbl">首翻单</text>
@@ -111,11 +107,12 @@
         </view>
         <view class="f-row half">
           <text class="f-lbl">类型</text>
-          <picker range="{{bizTypeLabels}}" bindchange="onBizTypeChange" class="flex-1">
-            <view class="f-pv {{orderBizTypeLabel?'':'ph'}}">{{orderBizTypeLabel || '选择'}}</view>
+          <picker range="{{['FOB','ODM','OEM','CMT']}}" bindchange="onBizTypeChange" class="flex-1">
+            <view class="f-pv {{orderBizType?'':'ph'}}">{{orderBizType || '选择'}}</view>
           </picker>
         </view>
       </view>
+
       <view class="f-row-row">
         <view class="f-row half">
           <text class="f-lbl">纸样师</text>
@@ -130,27 +127,30 @@
 
     <!-- 下单数量 -->
     <view class="sec">
-      <view class="sec-hd">下单数量</view>
+      <view class="sec-hd">下单数量 <text class="req">*</text></view>
+
       <view class="add-row">
         <text class="add-lbl">颜色</text>
         <input class="add-inp flex-1" value="{{colorInput}}" bindinput="onColorInput" bindconfirm="onColorAdd" placeholder="输入颜色名，回车添加" confirm-type="done" />
-        <view class="f-btn f-btn--sm" bindtap="onColorAdd"><text>添加</text></view>
+        <view class="f-btn" bindtap="onColorAdd"><text>添加</text></view>
       </view>
-      <view class="chip-wrap" wx:if="{{_colorOptItems.length > 0}}">
-        <view class="chip {{item._selected ? 'on' : ''}}" wx:for="{{_colorOptItems}}" wx:key="value" data-c="{{item.value}}" bindtap="onColorToggle">{{item.value}}</view>
+      <view class="chip-wrap" wx:if="{{colorOptions.length > 0}}">
+        <view class="chip {{selectedColors.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{colorOptions}}" wx:key="*this" data-c="{{item}}" bindtap="onColorToggle">{{item}}<view wx:if="{{selectedColors.indexOf(item) !== -1}}" class="icon-check-sm" style="margin-left:2px;"></view></view>
       </view>
+
       <view class="add-row">
         <text class="add-lbl">码数</text>
         <input class="add-inp flex-1" value="{{sizeInput}}" bindinput="onSizeInput" bindconfirm="onSizeAdd" placeholder="输入码数，回车添加" confirm-type="done" />
-        <view class="f-btn f-btn--sm" bindtap="onSizeAdd"><text>添加</text></view>
+        <view class="f-btn" bindtap="onSizeAdd"><text>添加</text></view>
       </view>
-      <view class="chip-wrap" wx:if="{{_sizeOptItems.length > 0}}">
-        <view class="chip {{item._selected ? 'on' : ''}}" wx:for="{{_sizeOptItems}}" wx:key="value" data-s="{{item.value}}" bindtap="onSizeToggle">{{item.value}}</view>
+      <view class="chip-wrap" wx:if="{{sizeOptions.length > 0}}">
+        <view class="chip {{selectedSizes.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{sizeOptions}}" wx:key="*this" data-s="{{item}}" bindtap="onSizeToggle">{{item}}<view wx:if="{{selectedSizes.indexOf(item) !== -1}}" class="icon-check-sm" style="margin-left:2px;"></view></view>
       </view>
+
       <view class="qfill" wx:if="{{orderLines.length > 0}}">
         <text class="add-lbl">铺量</text>
         <input class="qfill-inp" type="number" value="{{quickFillQty}}" bindinput="onQuickFillInput" />
-        <view class="f-btn f-btn--sm" bindtap="onQuickFill"><text>铺量</text></view>
+        <view class="f-btn" bindtap="onQuickFill"><text>铺量</text></view>
       </view>
 
       <!-- 二维矩阵 -->
@@ -166,30 +166,37 @@
           </view>
         </view>
       </view>
+
+      <view wx:if="{{orderQuantity > 0}}" class="total">
+        <text>总数量：</text>
+        <text class="total-num">{{orderQuantity}}</text>
+      </view>
     </view>
 
     <!-- 定价 -->
     <view class="sec">
       <view class="sec-hd">定价方式</view>
+
       <view class="f-row">
         <text class="f-lbl">模式</text>
         <picker range="{{pricingModeLabels}}" bindchange="onPricingModeChange" class="flex-1">
           <view class="f-pv">{{pricingModeLabels[pricingModeIdx]}}</view>
         </picker>
       </view>
+
+      <!-- 工序合计单价 -->
+      <view wx:if="{{pricingMode !== 'MANUAL' && computedUnitPrice > 0}}" class="pp-total">
+        <text class="pp-total-lbl">{{pricingModeLabels[pricingModeIdx]}}：</text>
+        <text class="pp-total-val">{{computedUnitPrice}}</text>
+      </view>
+
       <view wx:if="{{pricingMode === 'MANUAL'}}" class="f-row">
-        <text class="f-lbl">单价</text>
+        <text class="f-lbl"><text class="req">*</text>单价</text>
         <input class="f-inp flex-1" type="digit" value="{{manualOrderUnitPrice}}" bindinput="onManualPriceInput" placeholder="0.00" />
       </view>
     </view>
 
-    <!-- 扩展字段（自定义字段录入） -->
-    <view class="sec" wx:if="{{extFields.length > 0}}">
-      <view class="sec-hd">自定义字段</view>
-      <ext-fields mode="form" fields="{{extFields}}" data="{{}}" customOnly="{{true}}" bindchange="onExtFieldsChange" />
-    </view>
-
-    <view class="bottom-spacer"></view>
+    <view style="height:80px;"></view>
   </scroll-view>
 
   <view class="bar">

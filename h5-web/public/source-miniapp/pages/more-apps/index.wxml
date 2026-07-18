@@ -1,11 +1,10 @@
+<custom-nav title="更多应用" show-back="{{true}}" />
 <view class="page">
-  <view class="search-bar search-bar--sticky">
+  <view class="search-bar-page">
     <view class="search-box">
-      <view class="line-icon icon-search search-icon"></view>
+      <view class="search-icon line-icon icon-search"></view>
       <input class="search-input" placeholder="搜索应用名称" value="{{searchKeyword}}" bindinput="onSearchInput" />
-      <view class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">
-        <view class="icon-close"></view>
-      </view>
+      <view class="search-clear icon-close" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true"></view>
     </view>
     <text class="edit-btn {{editing ? 'edit-btn-active' : ''}}" bindtap="onEditToggle">{{editing ? '完成' : '编辑'}}</text>
   </view>
@@ -14,28 +13,28 @@
     <view class="section-header">
       <view class="section-title-row">
         <text class="section-title">我的收藏</text>
-        <text class="section-count">{{favoriteApps.length}}</text>
+        <text class="section-count section-count--blue">{{favoriteApps.length}}</text>
       </view>
       <text class="clear-btn" wx:if="{{editing}}" bindtap="onClearFavorites">清空</text>
     </view>
     <view class="app-grid">
-      <view class="app-item" wx:for="{{favoriteApps}}" wx:key="id" data-id="{{item.id}}" data-route="{{item.route}}" bindtap="onAppTap">
+      <view class="app-item" wx:for="{{favoriteApps}}" wx:key="id" data-route="{{item.route}}" data-id="{{item.id}}" bindtap="onAppTap">
         <view class="menu-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
           <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
-          <view class="fav-star-tap" catchtap="onToggleFavorite" data-id="{{item.id}}">
-            <text class="fav-star fav-star-active">★</text>
+          <view class="fav-star fav-star--active" wx:if="{{!editing}}">
+            <view class="line-icon icon-star"></view>
           </view>
         </view>
         <text class="app-name">{{item.name}}</text>
-        <view class="remove-btn" wx:if="{{editing}}" data-id="{{item.id}}" catchtap="onToggleFavorite">✕</view>
+        <view class="remove-btn icon-close" wx:if="{{editing}}" data-id="{{item.id}}" catchtap="onToggleFavorite"></view>
       </view>
     </view>
   </view>
 
   <view class="all-apps-section">
     <view class="empty-result" wx:if="{{filteredApps.length === 0 && searchKeyword}}">
-      <view class="line-icon icon-search empty-icon"></view>
+      <view class="empty-icon line-icon icon-search"></view>
       <text class="empty-text">未找到"{{searchKeyword}}"相关应用</text>
     </view>
 
@@ -45,13 +44,16 @@
         <text class="group-count">{{item.items.length}}个</text>
       </view>
       <view class="app-grid">
-        <view class="app-item" wx:for="{{item.items}}" wx:for-item="app" wx:key="id" data-id="{{app.id}}" data-route="{{app.route}}" bindtap="onAppTap">
+        <view class="app-item" wx:for="{{item.items}}" wx:for-item="app" wx:key="id" data-route="{{app.route}}" data-id="{{app.id}}" bindtap="onAppTap">
           <view class="menu-icon-circle {{app.circleClass}}">
             <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
             <text wx:if="{{app.badge}}" class="menu-badge">{{app.badge}}</text>
-            <view class="fav-star-tap" catchtap="onToggleFavorite" data-id="{{app.id}}">
-            <text class="fav-star {{app.isFav ? 'fav-star-active' : ''}}">{{app.isFav ? '★' : '☆'}}</text>
-          </view>
+            <view class="fav-star {{app.isFav ? 'fav-star--active' : 'fav-star--inactive'}}" wx:if="{{!editing}}">
+              <view class="line-icon {{app.isFav ? 'icon-star' : 'icon-star-outline'}}"></view>
+            </view>
+            <view class="fav-star {{app.isFav ? 'fav-star--active' : ''}}" wx:if="{{editing}}" catchtap="onToggleFavorite" data-id="{{app.id}}">
+              <view class="line-icon {{app.isFav ? 'icon-star' : 'icon-star-outline'}}"></view>
+            </view>
           </view>
           <text class="app-name">{{app.name}}</text>
         </view>

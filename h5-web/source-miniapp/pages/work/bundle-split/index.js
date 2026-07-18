@@ -1,9 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
-
-/* ========== 拆菲状态 中文化 ========== */
-var SPLIT_STATUS_LABELS = { PENDING: '待确认', APPROVED: '已确认', REJECTED: '已驳回', CANCELLED: '已取消', SPLIT_CHILD: '子菲号', SPLIT_PARENT: '主菲号', NORMAL: '常规' };
+const { displaySplitStatus } = require('../../../utils/displayHelper');
 
 function showTip(msg) { toast.info(msg); }
 
@@ -64,10 +61,6 @@ Page({
     const orderNo = decodeURIComponent(options.orderNo || '');
     this.loadSplitRecords();
     this._checkAdmin();
-    bindPageEvents(this, () => {
-      this.loadPendingSplits();
-      if (this.data.orderNo) this.fetchBundles();
-    }, ['TASK_BUNDLED']);
     if (!orderNo) {
       this.setData({ needSearch: true });
       this.loadWorkers();
@@ -77,10 +70,6 @@ Page({
     this.fetchBundles();
     this.loadWorkers();
     this.fetchOrderCover(orderNo);
-  },
-
-  onUnload() {
-    unbindPageEvents(this);
   },
 
   /* ========== Tab 切换 ========== */
@@ -294,7 +283,7 @@ Page({
 
   saveSplitRecord(orderNo, bundleNo, qty, workerName) {
     const now = new Date();
-    const pad = n => ('0' + n).slice(-2);
+    const pad = n => String(n).padStart(2, '0');
     const timeLabel = `${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const record = { orderNo, bundleNo, qty, workerName, time: now.getTime(), timeLabel };
     const list = [record, ...(this.data.splitRecords || [])].slice(0, 50);
@@ -371,15 +360,15 @@ Page({
     this.setData({ pendingLoading: true });
     try {
       const res = await api.production.listPendingSplits();
-      const list = Array.isArray(res) ? res : (res || []);
-      const safeList = Array.isArray(list) ? list : [];
-      // 拆菲状态中文化：兜底 '其他'，不展示英文 code
-      safeList.forEach(function (item) {
-        if (item && item.splitStatus) {
-          item.splitStatusText = SPLIT_STATUS_LABELS[String(item.splitStatus).toUpperCase()] || '其他';
-        }
+      const rawList = Array.isArray(res) ? res : (res || []);
+      const list = (rawList || []).map(function (item) {
+        const st = displaySplitStatus(item.splitStatus);
+        return Object.assign({}, item, {
+          splitStatusText: st.text,
+          splitStatusColorKey: String(item.splitStatus || '').trim().toLowerCase(),
+        });
       });
-      this.setData({ pendingSplits: safeList, pendingLoading: false });
+      this.setData({ pendingSplits: list, pendingLoading: false });
     } catch (e) {
       console.warn('[bundle-split] loadPendingSplits fail', e);
       this.setData({ pendingLoading: false });

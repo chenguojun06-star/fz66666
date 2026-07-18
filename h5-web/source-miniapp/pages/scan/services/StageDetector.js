@@ -23,7 +23,6 @@
 
 const shared = require('../../../shared/stageDetection');
 const inferScanType = shared.inferScanType;
-const parseDefectQtyFromRemark = shared.parseDefectQtyFromRemark;
 const extractQualityMeta = shared.extractQualityMeta;
 const SCAN_TYPE_RULES = shared.SCAN_TYPE_RULES;
 const VALID_SCAN_TYPES = shared.VALID_SCAN_TYPES;
@@ -46,7 +45,7 @@ class StageDetector {
     this.CACHE_TTL = 60 * 1000;
 
     // scanType 推断规则（根据 progressStage 或 processName 推断扫码类型）
-    // ⚠️ 这套规则仅作兜底，后端 /process-config 接口现在已统一返回 scanType
+    // [WARNING] 这套规则仅作兜底，后端 /process-config 接口现在已统一返回 scanType
     // 工序名称到 scanType 的映射规则
     this.scanTypeRules = SCAN_TYPE_RULES;
     // 合法的 scanType 集合（用于校验后端返回值）
@@ -201,7 +200,7 @@ class StageDetector {
       throw new Error(`当前工序「${currentProgress}」不在订单[${orderNo}]的工序配置中，请在PC端检查工序模板配置`);
     }
 
-    // ✅ 修复：后端 currentProcessName 语义 = "第一个尚未完成的工序"
+    // [OK] 修复：后端 currentProcessName 语义 = "第一个尚未完成的工序"
     // 因此应该返回当前工序本身（而非下一个）
     const current = config[currentIndex];
     return {

@@ -1,6 +1,7 @@
 {
-  "navigationBarTitleText": "问题反馈",
+  "navigationStyle": "custom",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "empty-state": "/components/empty-state/empty-state"
   }
 }

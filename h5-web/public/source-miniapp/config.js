@@ -98,21 +98,6 @@ function resolveSafeBaseUrl(url) {
 }
 
 /**
- * 判断当前是否运行在微信开发者工具环境
- * 开发者工具环境下允许连接本地后端（127.0.0.1/localhost/内网IP）进行调试
- * @returns {boolean}
- */
-function isDevToolsEnv() {
-  try {
-    if (typeof wx !== 'undefined' && wx.getSystemInfoSync) {
-      const sys = wx.getSystemInfoSync();
-      return sys && sys.platform === 'devtools';
-    }
-  } catch (_e) { /* ignore */ }
-  return false;
-}
-
-/**
  * 获取当前 API 基址（优先 Storage > 默认云地址）
  * @returns {string} API 基础地址
  */
@@ -136,13 +121,8 @@ function getBaseUrl() {
             return DEFAULT_BASE_URL;
           }
 
-          // 3. Storage 里存的是内网 IP 或本地回环地址
-          //    开发者工具环境：保留本地地址用于联调本地后端
-          //    真机/线上环境：统一替换为云地址（安全要求）
+          // 3. Storage 里存的是内网 IP 或本地回环地址 → 统一替换为云地址
           if (isPrivateNetworkUrl(v) || /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(v)) {
-            if (isDevToolsEnv()) {
-              return v;
-            }
             try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
             return DEFAULT_BASE_URL;
           }

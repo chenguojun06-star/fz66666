@@ -18,7 +18,7 @@
           bindconfirm="onSearchConfirm"
           confirm-type="search"
         />
-        <text wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onSearchClear">✕</text>
+        <view wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onSearchClear"><view class="line-icon line-icon--sm icon-close"></view></view>
       </view>
     </view>
 

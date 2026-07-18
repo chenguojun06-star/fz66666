@@ -14,7 +14,6 @@
  *   orderId  - 订单 ID（UUID，优先使用）
  *   orderNo  - 订单号（备用）
  */
-const api = require('../../../utils/api');
 const production = require('../../../utils/api-modules/production');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -265,14 +264,13 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     // 用 .finally 在接口返回后立即停止下拉刷新动画（避免 3.5s 卡顿）
     this._loadFlow().finally(function () {
-      try { wx.stopPullDownRefresh(); } catch (e) {}
+      try { wx.stopPullDownRefresh(); } catch (_e) { /* 停止刷新失败忽略 */ }
     });
     // 兜底：8 秒内若 Promise 未结束（极端情况），强制停止
     setTimeout(function () {
-      try { wx.stopPullDownRefresh(); } catch (e) {}
+      try { wx.stopPullDownRefresh(); } catch (_e) { /* 停止刷新失败忽略 */ }
     }, 8000);
   },
 
@@ -611,14 +609,10 @@ Page({
       }
       console.log('[order-detail] 启动 fallback orderDetail, key:', key);
       return production.orderDetail(key).then(function (res) {
+        // ok() 已解包，res 就是 data；失败已 throw 由 catch 兜底
         console.log('[order-detail] detail fallback res:', JSON.stringify(res).substring(0, 500));
-        if (res && typeof res.code === 'number' && res.code !== 200) {
-          const msg = res.message || ('服务端返回错误码 ' + res.code);
-          console.warn('[order-detail] detail fallback 业务失败:', msg);
-          throw new Error(msg);
-        }
         let order = null;
-        const payload = (res && res.data) || res || {};
+        const payload = res || {};
         if (Array.isArray(payload)) {
           order = payload[0] || null;
         } else if (Array.isArray(payload.records)) {
@@ -644,12 +638,7 @@ Page({
     const flowPromise = orderId
       ? production.getOrderFlow(orderId).then(function (res) {
           clearTimeout(timeoutTimer);
-          // 防御后端返回 HTTP 200 但业务 code 非 200 的情况
-          if (res && typeof res.code === 'number' && res.code !== 200) {
-            const msg = res.message || ('服务端返回错误码 ' + res.code);
-            console.warn('[order-detail] flow 业务失败:', msg, '→ 启动 fallback');
-            return fallbackToDetail(key);
-          }
+          // ok() 已解包，res 就是完整 flow 数据；失败已 throw 由 catch 兜底
           const data = res || {};
           const order = resolveOrderFromFlow(data);
           if (!order) {
@@ -664,7 +653,9 @@ Page({
           if (!that.data.loading) return Promise.resolve();
           return fallbackToDetail(key);
         })
-      : Promise.resolve();
+      : orderNo
+        ? fallbackToDetail(orderNo)
+        : Promise.resolve();
 
     // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
     return flowPromise;
@@ -708,7 +699,7 @@ Page({
   /* ======== 操作：扫码 ======== */
   onActionScan: function () {
     wx.switchTab({ url: '/pages/scan/index', fail: function () {
-      safeNavigate({ url: '/pages/scan/index' });
+      safeNavigate({ url: '/pages/scan/index' }).catch(() => {});
     }});
   },
 

@@ -80,8 +80,39 @@ const production = {
   pendingBundles(status) {
     return ok('/api/production/warehousing/pending-bundles', 'GET', { status: status });
   },
+  /**
+   * 质检简报（与 PC 端 InspectionDetail.fetchBriefing 一致）
+   * 返回订单信息、款式信息、BOM、质检注意事项
+   */
+  qualityBriefing(orderId) {
+    const id = String(orderId || '').trim();
+    return ok(`/api/production/warehousing/quality-briefing/${encodeURIComponent(id)}`, 'GET', {});
+  },
+  /**
+   * 菲号扫码就绪状态（与 PC 端 getBundleReadiness 一致）
+   * 返回 qcReadyQrs / warehouseReadyQrs
+   */
+  bundleReadiness(orderId) {
+    const id = String(orderId || '').trim();
+    return ok(`/api/production/warehousing/bundle-readiness?orderId=${encodeURIComponent(id)}`, 'GET', {});
+  },
   saveWarehousing(payload) {
     return ok('/api/production/warehousing', 'POST', payload || {});
+  },
+  /**
+   * 更新质检入库记录（与 PC 端 handleWarehouseSubmit 对齐）
+   * 用于详情页内直接入库：PUT /api/production/warehousing
+   * body: { id, warehouse, warehouseAreaId }
+   */
+  updateWarehousing(payload) {
+    return ok('/api/production/warehousing', 'PUT', payload || {});
+  },
+  /**
+   * 批量合格质检（与 PC 端 handleBatchQualifiedSubmit 对齐）
+   * POST /api/production/warehousing/batch
+   */
+  batchSaveWarehousing(payload) {
+    return ok('/api/production/warehousing/batch', 'POST', payload || {});
   },
   listScans(params) {
     return ok('/api/production/scan/list', 'GET', params || {});
@@ -273,6 +304,23 @@ const production = {
     }
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', payload);
   },
+  /**
+   * 保存样衣阶段进度（与 PC 端 useSampleStage.handleSaveSampleProgress 一致）
+   * progress: { procurement, cutting, secondary, sewing, tail, warehousing }
+   */
+  savePatternProgress(patternId, progress) {
+    const id = _normalizePatternId(patternId);
+    const payload = {
+      procurement: Number(progress?.procurement || 0),
+      cutting: Number(progress?.cutting || 0),
+      secondary: Number(progress?.secondary || 0),
+      sewing: Number(progress?.sewing || 0),
+      tail: Number(progress?.tail || 0),
+      warehousing: Number(progress?.warehousing || 0),
+    };
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/progress`, 'POST', payload);
+  },
+
   /**
    * 通用样衣工作流操作（与 PC 端 useSampleStage 一致）
    * action: receive / complete / warehouse-in / review

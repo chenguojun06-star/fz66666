@@ -1,8 +1,6 @@
 {
-  "navigationBarTitleText": "外发工厂",
-  "enablePullDownRefresh": true,
-  "backgroundColor": "#ededed",
+  "navigationBarTitleText": "外发管理",
   "usingComponents": {
-    "empty-state": "/components/empty-state/empty-state"
+    "search-scan": "/components/search-scan/index"
   }
 }

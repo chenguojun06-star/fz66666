@@ -1,7 +1,10 @@
 {
   "navigationBarTitleText": "生产管理",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index"
+    "custom-nav": "/components/common/custom-nav/index",
+    "ai-assistant": "/components/ai-assistant/index",
+    "search-scan": "/components/search-scan/index"
   }
 }

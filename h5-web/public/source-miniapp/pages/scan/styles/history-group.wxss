@@ -2,18 +2,18 @@
 .hist-group {
   margin-bottom: 8px;
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  /* Apple: removed hard border, use shadow */
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
   overflow: hidden;
 }
 
 .hist-group-header {
   padding: 8px 10px;
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   cursor: pointer;
 }
 .hist-group-header-hover {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
 }
 
 .hgh-top {
@@ -27,7 +27,7 @@
 .hgh-cover {
   width: 36px;
   height: 36px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -61,7 +61,7 @@
   font-size: var(--font-size-sm);
   font-weight: 600;
   padding: 2px 9px;
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   color: var(--color-primary);
   border-radius: var(--radius-full);
 }
@@ -70,7 +70,7 @@
   font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 2px 7px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
 }
 
 .delivery-days-tag.days-safe {
@@ -84,13 +84,13 @@
 }
 
 .delivery-days-tag.days-urgent {
-  color: var(--color-error);
-  background: var(--color-error-bg);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .delivery-days-tag.days-overdue {
-  color: var(--color-error);
-  background: var(--color-error-bg);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
   font-weight: 700;
 }
 
@@ -133,7 +133,7 @@
   margin-bottom: 8px;
   background: var(--color-bg-card);
   border-radius: var(--radius-sm);
-  /* Apple: removed hard border, use shadow */
+  border: 1px solid var(--color-border);
 }
 
 .hist-detail-item:last-child {
@@ -181,11 +181,11 @@
   padding: 4px 10px;
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-xs);
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   font-weight: 500;
 }
 .hdi-action-hover {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
 }
 
 /* 每条记录的码数-数量上下对齐网格 */

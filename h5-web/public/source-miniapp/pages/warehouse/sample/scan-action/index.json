@@ -1,7 +1,8 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "样衣扫码",
-  "enablePullDownRefresh": true,
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

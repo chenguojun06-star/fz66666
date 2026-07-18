@@ -15,7 +15,10 @@ const system = {
     return ok('/api/system/user/pending', 'GET', {});
   },
   updateUser(userId, data) {
-    return ok(`/api/system/user/${userId}`, 'PUT', data);
+    return ok('/api/system/user', 'PUT', { ...(data || {}), id: userId });
+  },
+  updateMe(data) {
+    return ok('/api/system/user/me', 'PUT', data || {});
   },
   approveUser(userId, data) {
     return ok(`/api/system/user/${userId}/approval-action?action=approve`, 'POST', data || {});
@@ -42,7 +45,9 @@ const system = {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
-    return ok('/api/system/dict/search', 'POST', { type });
+    // 与 PC 端对齐：GET /api/system/dict/list?dictType=xxx&page=1&pageSize=999
+    // 线上后端 /list-by-type 尚未部署（405），改用 PC 端同款分页接口
+    return ok('/api/system/dict/list', 'GET', { dictType: type, page: 1, pageSize: 999 });
   },
   getMiniprogramMenuConfig() {
     return ok('/api/system/tenant-miniprogram-menu/my-menus', 'GET', {});
@@ -62,14 +67,14 @@ const system = {
   // 收藏应用API
   _favFailCount: 0,
   getFavoriteApps() {
-    // ok() 返回 resp.data = { favoriteData: "..." }
-    return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (data) {
+    // 连续失败时仍然请求服务端，只是增加延迟避免频繁请求
+    // 绝不能跳过请求，否则清除缓存后本地空+服务端不请求=收藏丢失
+    return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (res) {
       system._favFailCount = 0;
-      return data;
-    }).catch(function (e) {
+      return res;
+    }).catch(function () {
       system._favFailCount++;
-      // 不返回空数组覆盖本地缓存，抛异常让调用方走 fallback
-      throw e;
+      return { favoriteData: '[]' };
     });
   },
   saveFavoriteApps(favoriteData) {

@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background: var(--color-bg-gray);
+  background: var(--color-bg-page);
 }
 .placeholder-icon {
   font-size: var(--font-size-3xl);

@@ -128,54 +128,28 @@ async function loadCuttingTasks() {
 }
 
 /**
- * 加载采购任务（已领取待完成）— 按订单分组
- * @returns {Promise<Array>} 采购任务列表（订单级别）
+ * 加载采购任务（已领取待完成）
+ * @returns {Promise<Array>} 采购任务列表
  */
 async function loadProcurementTasks() {
   try {
     const res = await api.production.myProcurementTasks();
     const list = Array.isArray(res) ? res : res?.records || [];
 
-    // 按订单分组（与采购页面 task-list 一致的逻辑）
-    const map = {};
-    list.forEach(item => {
-      const orderNo = item.orderNo || item.productionOrderNo || '';
-      const patternProductionId = item.patternProductionId || '';
-      const groupKey = orderNo || (patternProductionId ? `sample_${patternProductionId}` : 'unknown');
-      if (!map[groupKey]) {
-        map[groupKey] = {
-          orderNo,
-          styleNo: item.styleNo || '',
-          patternProductionId,
-          items: [],
-          totalPurchased: 0,
-          totalArrived: 0,
-          latestReceivedTime: null,
-        };
-      }
-      const g = map[groupKey];
-      g.items.push(item);
-      g.totalPurchased += Number(item.purchaseQuantity || 0);
-      g.totalArrived += Number(item.arrivedQuantity || 0);
-      // iOS 不支持 "yyyy-MM-dd HH:mm:ss"，需将空格替换为 T 兼容 ISO 8601
-      const rtRaw = item.receivedTime;
-      const rt = rtRaw ? new Date(typeof rtRaw === 'string' ? rtRaw.replace(' ', 'T') : rtRaw) : null;
-      if (rt && (!g.latestReceivedTime || rt > g.latestReceivedTime)) {
-        g.latestReceivedTime = rt;
-      }
-    });
-
-    return Object.values(map).map(g => ({
-      id: g.orderNo || `sample_${g.patternProductionId}`,
-      orderNo: g.orderNo,
-      styleNo: g.styleNo,
-      patternProductionId: g.patternProductionId,
-      materialCount: g.items.length,
-      totalPurchased: g.totalPurchased,
-      totalArrived: g.totalArrived,
-      arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
-      receivedTimeText: formatTimeAgo(g.latestReceivedTime),
+    const mapped = list.map(item => ({
+      ...item,
+      id: item.id || item.purchaseId,
+      orderNo: item.orderNo || item.productionOrderNo || '',
+      styleNo: item.styleNo || '',
+      materialName: item.materialName || '未知物料',
+      purchaseQuantity: item.purchaseQuantity || 0,
+      arrivedQuantity: item.arrivedQuantity || 0,
+      unit: item.unit || '米',
+      receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
+
+
+    return mapped;
   } catch (err) {
     console.error('[loadProcurementTasks] 加载失败:', err);
     return [];

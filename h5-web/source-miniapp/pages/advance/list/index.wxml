@@ -1,55 +1,63 @@
+<custom-nav title="预付款" show-back="{{true}}" />
 <view class="page">
+
+  <!-- Filter Bar: 2 pickers, flex-1, white bg, shadow-sm -->
   <view class="filter-bar">
     <view class="filter-item">
-      <picker mode="selector" range="{{_STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+      <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
         <view class="picker-box">
-          <text>{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
-          <text class="arrow">›</text>
+          <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+          <view class="picker-chevron"></view>
         </view>
       </picker>
     </view>
     <view class="filter-item">
-      <picker mode="selector" range="{{_REPAY_OPTIONS}}" range-key="label" bindchange="onRepayFilterChange">
+      <picker mode="selector" range="{{REPAY_OPTIONS}}" range-key="label" bindchange="onRepayFilterChange">
         <view class="picker-box">
-          <text>{{repayFilter ? DEDUCT_MAP[repayFilter].text : '全部扣款'}}</text>
-          <text class="arrow">›</text>
+          <text class="picker-text">{{repayFilter ? DEDUCT_MAP[repayFilter].text : '全部扣款'}}</text>
+          <view class="picker-chevron"></view>
         </view>
       </picker>
     </view>
   </view>
 
-  <view class="filter-section">
-    <view class="search-row">
-      <view class="search-box">
-        <view class="line-icon line-icon--sm icon-search search-icon"></view>
-        <input class="search-input" placeholder="搜索员工姓名" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onKeywordSearch" />
-      </view>
-      <view class="search-btn" bindtap="onKeywordSearch" hover-class="search-btn-hover" hover-stay-time="50">搜索</view>
-      <view class="clear-btn" wx:if="{{keyword}}" bindtap="onClearSearch" hover-class="clear-btn-hover" hover-stay-time="50">重置</view>
-    </view>
-  </view>
+  <!-- Search Row -->
+  <search-scan
+    placeholder="搜索员工姓名"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onKeywordSearch"
+  />
 
+  <!-- List -->
   <view class="list-section">
     <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无借支记录" />
 
-    <view class="advance-card" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem">
-      <view class="card-header">
+    <view class="advance-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
+      <!-- Row 1: order# + status tag -->
+      <view class="card-row1">
         <text class="advance-no">{{item.advanceNo || '—'}}</text>
-        <text class="tag {{item.statusCls}}">{{item.statusText}}</text>
+        <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
       </view>
-      <view class="card-employee-row">
-        <text class="employee-name">{{item.employeeName || '—'}}</text>
-        <text class="employee-dot">·</text>
+      <!-- Row 2: person icon + name + separator + factory -->
+      <view class="card-row2">
+        <view class="person-icon"></view>
+        <text class="person-name">{{item.employeeName || '—'}}</text>
+        <text class="row-separator">·</text>
         <text class="factory-name">{{item.factoryName || '—'}}</text>
       </view>
-      <view class="card-amount-row">
-        <text class="amount-value">¥{{item.amountStr}}</text>
-        <text class="tag tag-sm {{item.repayCls}}">{{item.repayText}}</text>
+      <!-- Row 3: amount + deduction tag -->
+      <view class="card-row3">
+        <text class="amount-text">¥{{item.amountStr}}</text>
+        <text class="deduct-tag {{item.repayCls}}">{{item.repayText}}</text>
       </view>
-      <text class="remaining-text" wx:if="{{item.status === 'approved'}}">剩余 ¥{{item.remainingStr}}</text>
+      <!-- Row 4: remaining (if approved) -->
+      <text class="remaining-text" wx:if="{{item.status === 'approved' && item.remainingStr}}">剩余 ¥{{item.remainingStr}}</text>
+      <!-- Footer: border-top, time + click hint -->
       <view class="card-footer">
         <text class="time-text">{{item.createTime || ''}}</text>
-        <text class="approve-hint" wx:if="{{item.status === 'pending'}}">点击审批</text>
+        <text class="click-hint" wx:if="{{item.status === 'pending'}}">点击审批</text>
       </view>
     </view>
 
@@ -58,18 +66,26 @@
     </view>
   </view>
 
-  <view class="fab-btn" bindtap="onTapCreate">+</view>
+  <!-- FAB: circle + plus icon -->
+  <view class="fab-btn" bindtap="onTapCreate">
+    <view class="fab-icon-circle">
+      <view class="fab-icon-plus-h"></view>
+      <view class="fab-icon-plus-v"></view>
+    </view>
+  </view>
 
-  <view class="action-sheet-mask" wx:if="{{showActionSheet}}" bindtap="onCloseActionSheet"></view>
-  <view class="action-sheet {{showActionSheet ? 'action-sheet-show' : ''}}">
-    <view class="action-sheet-header">
+  <!-- Action Sheet (inline expandable) -->
+  <view class="inline-form-card" wx:if="{{showActionSheet}}">
+    <view class="inline-form-title">
       <text>{{currentAdvance.advanceNo || '操作'}}</text>
     </view>
-    <view class="action-sheet-body">
+    <view class="inline-form-body">
       <view class="action-item action-approve" wx:if="{{canApprove && currentAdvance.status === 'pending'}}" bindtap="onActionApprove">
+        <view class="action-icon action-icon-check"></view>
         <text>审批通过</text>
       </view>
       <view class="action-item action-reject" wx:if="{{canApprove && currentAdvance.status === 'pending'}}" bindtap="onActionReject">
+        <view class="action-icon action-icon-warn"></view>
         <text>驳回</text>
       </view>
       <view class="action-item action-cancel" bindtap="onCloseActionSheet">
@@ -78,20 +94,26 @@
     </view>
   </view>
 
-  <view class="modal-mask" wx:if="{{showCreateModal}}" bindtap="onCancelCreate"></view>
-  <view class="modal {{showCreateModal ? 'modal-show' : ''}}">
-    <view class="modal-header">
+  <!-- Create Form (inline expandable) -->
+  <view class="inline-form-card" wx:if="{{showCreateModal}}">
+    <view class="inline-form-title">
       <text class="modal-title">申请借支</text>
-      <text class="modal-close" bindtap="onCancelCreate">✕</text>
+      <view class="modal-close" bindtap="onCancelCreate">
+        <view class="modal-close-line1"></view>
+        <view class="modal-close-line2"></view>
+      </view>
     </view>
-    <view class="modal-body">
+    <view class="inline-form-body">
       <view class="mf-item">
         <text class="mf-label mf-required">员工姓名</text>
         <input class="mf-input" placeholder="请输入员工姓名" value="{{createForm.employeeName}}" data-field="employeeName" bindinput="onCreateFieldInput" />
       </view>
       <view class="mf-item">
         <text class="mf-label mf-required">借支金额</text>
-        <input class="mf-input" type="digit" placeholder="请输入金额" value="{{createForm.amount}}" data-field="amount" bindinput="onCreateFieldInput" />
+        <view class="mf-amount-wrap">
+          <text class="mf-amount-prefix">¥</text>
+          <input class="mf-amount-input" type="digit" placeholder="请输入金额" value="{{createForm.amount}}" data-field="amount" bindinput="onCreateFieldInput" />
+        </view>
       </view>
       <view class="mf-item">
         <text class="mf-label mf-required">借支事由</text>
@@ -102,7 +124,7 @@
         <input class="mf-input" placeholder="选填" value="{{createForm.orderNo}}" data-field="orderNo" bindinput="onCreateFieldInput" />
       </view>
     </view>
-    <view class="modal-footer">
+    <view class="inline-form-actions">
       <view class="modal-btn cancel" bindtap="onCancelCreate">取消</view>
       <view class="modal-btn confirm" bindtap="onSubmitCreate">提交</view>
     </view>

@@ -2,7 +2,6 @@ const api = require('../../utils/api');
 const { isTenantOwner, isSuperAdmin } = require('../../utils/storage');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const { safeNavigate } = require('../../utils/uiHelper');
-const { bindPageEvents, unbindPageEvents } = require('../../utils/pageEventBinder');
 
 const REFRESH_INTERVAL = 30;
 
@@ -91,39 +90,28 @@ function isDelayed(o) {
 }
 
 function isHighRisk(o) {
-  // 高风险：未延期但 7 天内交期且进度 < 50%（与后端 SQL 一致，排除已延期）
   const end = o.plannedEndDate || o.expectedShipDate;
   if (!end) return false;
   const d = safeDate(end);
   if (!d) return false;
-  if (d < new Date()) return false; // 已延期的由 isDelayed 处理，不重复
   const daysLeft = Math.ceil((d.getTime() - Date.now()) / 86400000);
   const prog = calcProgress(o);
   return daysLeft >= 0 && daysLeft <= 7 && prog < 50;
 }
 
-// 风险订单 = 高风险（未延期但临近交期且进度落后）
-// 注意：isRisk 不再包含 isDelayed，与后端 SQL 一致，避免与 delayedOrders 重复计数
-function isRisk(o) { return isHighRisk(o); }
+function isRisk(o) { return isDelayed(o) || isHighRisk(o); }
 
 Page({
   data: {
     currentTime: '', totalWarn: 0,
     menuData: { inProduction: 0, todayOrders: 0, todayInbound: 0, todayOutbound: 0, delayedOrders: 0, riskOrders: 0 },
     menuExtra: { inProductionQty: 0, todayOrdersQty: 0, todayInboundQty: 0, todayOutboundQty: 0, delayedOrdersQty: 0, riskOrdersQty: 0 },
+    heroScanQty: 0,
+    heroScanCount: 0,
     activeMenu: '', activeMenuTitle: '', activeOrders: [],
     stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
     factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
     lastRefreshTime: '', loading: false,
-    // ============ 顶部简洁区域（无彩色）============
-    topStats: {
-      todayScanCount: 0,       // 今日扫码次数
-      todayScanQty: 0,          // 今日扫码件数
-      activeOrders: 0,          // 进行中订单
-      totalFactories: 0,        // 合作工厂数
-      todayInboundCount: 0,     // 今日入库
-      todayOutboundCount: 0,    // 今日出库
-    },
     // _allOrders 已迁移到 this._allOrders 实例属性（在 onMenuTap 里过滤使用，不参与 WXML 渲染）
     // 避免 setData 传入未绑定 WXML 变量的性能告警，同时减少大数组序列化开销。
   },
@@ -138,13 +126,12 @@ Page({
     const self = this;
     wx.nextTick(function () { self._refreshAll(); });
     this._startTimer();
-    bindPageEvents(this, () => this._refreshAll(), ['ORDER_PROGRESS_CHANGED']);
   },
 
   onShow: function () { this._updateTime(); if (!this._timer) this._startTimer(); },
   onHide: function () { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
   onPullDownRefresh: function () { this._refreshAll(); wx.stopPullDownRefresh(); },
-  onUnload: function () { unbindPageEvents(this); if (this._timer) clearInterval(this._timer); },
+  onUnload: function () { if (this._timer) clearInterval(this._timer); },
 
   onMenuTap: function (e) {
     const key = e.currentTarget.dataset.key;
@@ -224,14 +211,12 @@ Page({
       api.dashboard.getDailyBrief(),
       api.production.getFactoryCapacity(),
       api.intelligence.getLivePulse(),
-      api.dashboard.getTopStats({}),
     ]).then(function (results) {
       const ordersData = self._unwrap(results[0]);
       const statsData = self._unwrap(results[1]);
       const brief = self._unwrap(results[2]);
       const factoryCap = self._unwrap(results[3]);
       const pulse = self._unwrap(results[4]);
-      const topStats = self._unwrap(results[5]);
 
       // 如果 pulse 接口失败，使用默认值
       const _pulseData = (pulse && !pulse.error) ? pulse : {
@@ -290,17 +275,6 @@ Page({
         riskOrdersQty: toNum(statsData && statsData.riskQuantity) || riskQty,
       };
       const totalWarn = menuData.delayedOrders + menuData.riskOrders;
-
-      // ============ 顶部简洁统计（无彩色） ============
-      const ts = topStats && typeof topStats === 'object' ? topStats : {};
-      const topStatsOut = {
-        todayScanCount: toNum(ts.todayScanCount) || toNum(ts.scanCount) || toNum(brief && brief.todayScanCount) || 0,
-        todayScanQty: toNum(ts.todayScanQty) || toNum(ts.scanQty) || toNum(brief && brief.todayScanQty) || 0,
-        activeOrders: menuData.inProduction,
-        totalFactories: 0, // 在 factoryList 计算后赋值
-        todayInboundCount: menuData.todayInbound,
-        todayOutboundCount: menuData.todayOutbound,
-      };
 
       const stageBuckets = STAGE_LIST.map(function(stage) {
         const bucketOrders = inProd.filter(function(o) { return detectStage(o) === stage.key; });
@@ -361,15 +335,13 @@ Page({
         });
       }
 
-      // ============ 顶部简洁统计（无彩色）============
-      topStatsOut.totalFactories = toNum(ts.totalFactories) || factoryList.length || 0;
-
       self.setData({
         menuData: menuData, menuExtra: menuExtra, totalWarn: totalWarn,
+        heroScanQty: (menuExtra.todayInboundQty || 0) + (menuExtra.todayOutboundQty || 0),
+        heroScanCount: (menuData.todayInbound || 0) + (menuData.todayOutbound || 0) + (menuData.todayOrders || 0),
         stageBuckets: stageBuckets,
         factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,
-        topStats: topStatsOut,
         loading: false,
       });
       // 存为实例属性，不走 setData（不参与 WXML）

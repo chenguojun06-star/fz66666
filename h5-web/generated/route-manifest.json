@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-07-11T03:09:51.292Z",
+  "generatedAt": "2026-07-15T10:02:34.387Z",
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#3b82f6",
+    "color": "#8e8e93",
+    "selectedColor": "#007aff",
     "backgroundColor": "#ffffff",
     "borderStyle": "white",
     "list": [
@@ -34,8 +34,9 @@
   },
   "window": {
     "navigationBarTitleText": "衣智链",
-    "navigationBarBackgroundColor": "#2563EB",
-    "navigationBarTextStyle": "white",
+    "navigationBarBackgroundColor": "#f2f2f7",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f2f2f7",
     "backgroundTextStyle": "light"
   },
   "preloadRule": {
@@ -47,7 +48,15 @@
         "pkg-bundle-split",
         "pkg-dashboard",
         "pkg-smart-ops",
-        "pkg-more-apps"
+        "pkg-more-apps",
+        "pkg-cutting",
+        "pkg-procurement",
+        "pkg-finance",
+        "pkg-advance",
+        "pkg-factory",
+        "pkg-sample-dev",
+        "pkg-sales",
+        "pkg-return"
       ]
     },
     "pages/defect/index": {
@@ -332,6 +341,12 @@
     {
       "source": "pages/sample-development/detail/index",
       "h5Path": "/sample-development/detail",
+      "type": "subpackage",
+      "packageName": "pkg-sample-dev"
+    },
+    {
+      "source": "pages/sample-development/stage-detail/index",
+      "h5Path": "/sample-development/stage-detail",
       "type": "subpackage",
       "packageName": "pkg-sample-dev"
     },

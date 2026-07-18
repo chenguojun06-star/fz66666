@@ -8,18 +8,10 @@
 const { style: styleApi } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const sampleStageUtils = require('../../../shared/sampleStageUtils');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
-
-// 阶段名称映射
-const STAGE_NAMES = {
-  bom: 'BOM配置',
-  pattern: '纸样开发',
-  size: '尺码表',
-  process: '工序配置',
-  secondary: '二次工艺',
-  production: '生产制单',
-  sizePrice: '码数单价',
-};
+const { displayCategory, displaySeason } = require('../../../utils/displayHelper');
+const { STAGE_NAMES, getStageName } = require('../../../utils/sampleHelper');
 
 // 样衣扫码操作类型中文映射（与PC端一致）
 const OPERATION_TYPE_LABELS = {
@@ -142,6 +134,7 @@ Page({
     stage: null,
     styleInfo: null,
     stageName: '',
+    navTitle: '阶段详情',
     loading: true,
     // 各阶段数据
     bomList: [],
@@ -150,6 +143,7 @@ Page({
     patternData: null,
     secondaryList: [],
     processStages: [],
+    parentStages: [],
     patternScanRecords: [],
     patternScanGroups: [],
     productionData: null,
@@ -172,6 +166,8 @@ Page({
     progressPercent: 0,
     progressDashoffset: 125.66,
     stagePhotos: [],
+    patternSnapshot: null,
+    devStages: [],
   },
 
   onLoad(options) {
@@ -193,21 +189,53 @@ Page({
     this.setData({
       stageKey, styleId: finalStyleId, patternId: finalPatternId, stageName,
       stage, styleInfo,
+      navTitle: stageName || '阶段详情',
+      patternSnapshot: cache.snapshot || null,
     });
     wx.setNavigationBarTitle({ title: stageName });
 
     // 从 styleInfo 构建时间轴和样衣信息卡（纯数据准备，无 API 调用）
     if (styleInfo) {
       this.buildTimeline(styleInfo);
+      // 加载对应阶段的数据
+      this.loadStageData();
+      // 附件通用加载
+      this.loadAttachments();
+      // 备注日志加载
+      this.loadRemarks();
+      bindPageEvents(this, () => this.loadStageData());
+    } else if (finalStyleId) {
+      // 兜底：缓存丢失时用 API 加载 styleInfo
+      var that = this;
+      styleApi.getStyleDetail(finalStyleId).then(function (res) {
+        var info = (res && res.data) || res || null;
+        if (info) {
+          that.setData({ styleInfo: info });
+          that.buildTimeline(info);
+        } else {
+          // API 也没拿到，用空数据构建阶段框架
+          that.buildTimeline({ id: finalStyleId });
+        }
+        that.loadStageData();
+        that.loadAttachments();
+        that.loadRemarks();
+        bindPageEvents(that, () => that.loadStageData());
+      }).catch(function () {
+        // API 失败也构建阶段框架
+        that.buildTimeline({ id: finalStyleId });
+        that.loadStageData();
+        that.loadAttachments();
+        that.loadRemarks();
+        bindPageEvents(that, () => that.loadStageData());
+      });
+    } else {
+      // 无 styleId 也无缓存，用空数据构建阶段框架
+      this.buildTimeline({ id: '' });
+      this.loadStageData();
+      this.loadAttachments();
+      this.loadRemarks();
+      bindPageEvents(this, () => this.loadStageData());
     }
-
-    // 加载对应阶段的数据
-    this.loadStageData();
-    // 附件通用加载
-    this.loadAttachments();
-    // 备注日志加载
-    this.loadRemarks();
-    bindPageEvents(this, () => this.loadStageData());
   },
 
   onUnload() {
@@ -242,64 +270,104 @@ Page({
   },
 
   /**
-   * 从 styleInfo 构建时间轴 + 样衣信息卡 + 当前阶段详情
-   * 逻辑与 detail/index.js 的 buildStages 一致，纯数据准备无 API 调用
+   * 从 styleInfo + snapshot 构建时间轴 + 样衣信息卡 + 当前阶段详情
+   * 进度数据来源与 detail/index.js 的 buildStages 完全一致
    */
   buildTimeline(styleInfo) {
     if (!styleInfo) return;
     var that = this;
+    var snapshot = this.data.patternSnapshot || styleInfo.snapshot || {};
     var stageConfig = [
-      { key: 'bom', name: 'BOM配置' },
-      { key: 'pattern', name: '纸样开发' },
-      { key: 'size', name: '尺码表' },
-      { key: 'process', name: '工序配置' },
-      { key: 'production', name: '生产制单' },
+      { key: 'procurement', name: '采购' },
+      { key: 'cutting', name: '裁剪' },
       { key: 'secondary', name: '二次工艺' },
+      { key: 'sewing', name: '车缝' },
+      { key: 'tail', name: '尾部' },
+      { key: 'warehousing', name: '入库' },
     ];
-    var stages = stageConfig.map(function (s) {
-      var completedTime = styleInfo[s.key + 'CompletedTime'] || '';
-      var startTime = styleInfo[s.key + 'StartTime'] || '';
-      var assignee = styleInfo[s.key + 'Assignee'] || '';
-      var status;
-      if (completedTime) status = 'completed';
-      else if (startTime) status = 'in_progress';
-      else status = 'not_started';
-      var statusText = status === 'completed' ? '已完成'
-        : status === 'in_progress' ? '进行中' : '未开始';
-      // 时间标签
+
+    // 从 snapshot.progressNodes 获取阶段进度（与 detail 页面 getSampleNodeProgress 逻辑一致）
+    function getNodeProgress(snap, key) {
+      if (!snap) return 0;
+      // 采购阶段用 _procurementProgress
+      if (key === 'procurement') return snap._procurementProgress || 0;
+      // 其他阶段从 progressNodes JSON 取
+      var nodes = snap.progressNodes;
+      if (!nodes) return 0;
+      if (typeof nodes === 'string') {
+        try { nodes = JSON.parse(nodes); } catch (e) { return 0; }
+      }
+      var node = nodes[key];
+      if (!node) return 0;
+      if (typeof node === 'number') return node;
+      if (typeof node === 'object') {
+        if (typeof node.percent === 'number') return node.percent;
+        if (typeof node.progress === 'number') return node.progress;
+        if (node.completed && node.total && node.total > 0) {
+          return Math.round((node.completed / node.total) * 100);
+        }
+      }
+      return 0;
+    }
+
+    var isFullyCompleted = snapshot._isFullyCompleted;
+    var totalPercent = 0;
+    var stages = stageConfig.map(function (s, idx) {
+      var percent;
+      if (isFullyCompleted) {
+        percent = 100;
+      } else {
+        percent = getNodeProgress(snapshot, s.key);
+      }
+      totalPercent += percent;
+      var status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
+      var statusText = percent >= 100 ? '已完成' : (percent > 0 ? percent + '%' : '待开始');
+
+      // 时间标签从 snapshot 获取
       var timeLabel = '';
       var deliveryShort = styleInfo._deliveryTime
         ? that._fmtDate(styleInfo._deliveryTime) : '';
-      if (completedTime && startTime) {
-        timeLabel = that._fmtDate(startTime) + ' → ' + that._fmtDate(completedTime);
-      } else if (startTime) {
-        timeLabel = that._fmtDate(startTime) + ' → 预计 ' + deliveryShort;
-      } else {
-        timeLabel = deliveryShort ? '预计 ' + deliveryShort : '';
+      if (deliveryShort) {
+        timeLabel = '交期 ' + deliveryShort;
       }
+
       // 延时提示
       var delayText = '';
       var delayTone = '';
-      if (status === 'in_progress' && startTime) {
-        var stageStart = new Date(String(startTime).replace(/-/g, '/'));
-        var now = new Date();
-        var elapsedDays = Math.floor((now.getTime() - stageStart.getTime()) / 86400000);
-        if (elapsedDays > 7) {
-          delayText = '已耗时' + elapsedDays + '天';
-          delayTone = elapsedDays > 14 ? 'danger' : 'warning';
+      if (status === 'in_progress' && snapshot._countdownDays != null) {
+        if (snapshot._countdownDays < 0) {
+          delayText = '已逾期' + Math.abs(snapshot._countdownDays) + '天';
+          delayTone = 'danger';
+        } else if (snapshot._countdownDays <= 3) {
+          delayText = '临近交期' + snapshot._countdownDays + '天';
+          delayTone = 'warning';
         }
       }
+
+      // 描述文本
+      var description = '';
+      var stageProgress = percent;
+      if (status === 'completed') {
+        description = s.name + '已完成';
+      } else if (status === 'in_progress') {
+        description = s.name + '进行中 ' + percent + '%';
+      } else {
+        description = '待开始';
+      }
+
       return {
         key: s.key,
         name: s.name,
         status: status,
         statusText: statusText,
-        assignee: assignee,
-        startTime: startTime ? that._fmtDateTime(startTime) : '',
-        completedAt: completedTime ? that._fmtDateTime(completedTime) : '',
+        assignee: snapshot._receiverName || styleInfo.receiver || '',
+        startTime: '',
+        completedAt: '',
         timeLabel: timeLabel,
         delayText: delayText,
         delayTone: delayTone,
+        description: description,
+        stageProgress: stageProgress,
         isCurrent: s.key === that.data.stageKey,
       };
     });
@@ -307,11 +375,10 @@ Page({
     // 进度计算
     var completedCount = 0;
     stages.forEach(function (s) { if (s.status === 'completed') completedCount++; });
-    var inProgressCount = stages.filter(function (s) { return s.status === 'in_progress'; }).length;
     var progressPercent = stages.length > 0
-      ? Math.round((completedCount * 100 + inProgressCount * 50) / stages.length)
+      ? Math.round(totalPercent / stages.length)
       : 0;
-    var circumference = 125.66; // 2 * Math.PI * 20
+    var circumference = 125.66;
     var dashoffset = circumference * (1 - progressPercent / 100);
 
     // 样衣信息卡
@@ -344,8 +411,8 @@ Page({
       statusText: info._mainStatus || '开发中',
       customer: info.customer || info.customerName || '',
       patternMaker: info.patternMaker || info.patternDeveloper || info.receiver || '',
-      category: info.category || info.productCategory || '',
-      season: info.season || '',
+      category: displayCategory(info.category || info.productCategory || ''),
+      season: displaySeason(info.season || ''),
       color: info.color || '',
       size: info.size || '',
       quantity: info.quantity || info.sampleQuantity || 0,
@@ -375,12 +442,42 @@ Page({
       remainingQty: remainingQty,
     };
 
+    // 开发阶段快捷入口数据（从 snapshot 或 styleInfo 推导状态）
+    var devStageConfig = [
+      { key: 'bom', name: 'BOM', iconClass: 'icon-bom' },
+      { key: 'pattern', name: '纸样', iconClass: 'icon-pattern' },
+      { key: 'size', name: '尺码', iconClass: 'icon-size' },
+      { key: 'process', name: '工序', iconClass: 'icon-process' },
+      { key: 'secondary', name: '二次工艺', iconClass: 'icon-secondary' },
+      { key: 'production', name: '制单', iconClass: 'icon-production' },
+      { key: 'sizePrice', name: '码价', iconClass: 'icon-price' },
+    ];
+    var devStages = devStageConfig.map(function (s) {
+      // 从 progressNodes 取进度，优先用 snapshot 数据
+      var percent = getNodeProgress(snapshot, s.key);
+      var status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
+      var statusText = percent >= 100 ? '已完成' : (percent > 0 ? '进行中' : '');
+      //  fallback：从 styleInfo 直接字段判断（如 patternStatus）
+      if (status === 'not_started' && s.key === 'pattern' && styleInfo.patternStatus) {
+        status = styleInfo.patternStatus === 'COMPLETED' ? 'completed' : 'in_progress';
+        statusText = styleInfo.patternStatus === 'COMPLETED' ? '已完成' : '进行中';
+      }
+      return {
+        key: s.key,
+        name: s.name,
+        iconClass: s.iconClass,
+        status: status,
+        statusText: statusText,
+      };
+    });
+
     that.setData({
       timelineStages: stages,
       sampleCard: sampleCard,
       stageDetail: stageDetail,
       progressPercent: progressPercent,
       progressDashoffset: dashoffset,
+      devStages: devStages,
     });
   },
 
@@ -394,11 +491,36 @@ Page({
 
   /** 根据stageKey加载对应阶段数据 */
   async loadStageData() {
-    const { stageKey, styleId, patternId } = this.data;
+    const { stageKey } = this.data;
     if (!stageKey) return;
     this.setData({ loading: true });
     try {
       switch (stageKey) {
+        case 'procurement':
+          // 采购阶段：复用BOM数据展示物料需求
+          await this.loadBom();
+          break;
+        case 'cutting':
+          // 裁剪阶段：加载裁剪/扫码记录
+          await this.loadProcessAndScans();
+          break;
+        case 'secondary':
+          // 二次工艺
+          await this.loadSecondary();
+          break;
+        case 'sewing':
+          // 车缝阶段：加载工序扫码记录
+          await this.loadProcessAndScans();
+          break;
+        case 'tail':
+          // 尾部阶段：加载工序扫码记录
+          await this.loadProcessAndScans();
+          break;
+        case 'warehousing':
+          // 入库阶段：加载生产制单
+          this.loadProduction();
+          break;
+        // 兼容旧 key（防止其他入口传入）
         case 'bom':
           await this.loadBom();
           break;
@@ -410,9 +532,6 @@ Page({
           break;
         case 'process':
           await this.loadProcessAndScans();
-          break;
-        case 'secondary':
-          await this.loadSecondary();
           break;
         case 'production':
           this.loadProduction();
@@ -438,6 +557,14 @@ Page({
         it._unit = it.unit || '';
         it._materialLabel = it.materialName || it.name || '';
         it._specLabel = [it.spec, it.specification, it.color].filter(v => v).join(' ');
+        // 部位标签：未指定部位时显示"整件"，与后端兜底一致
+        var partName = (it.partName || '').toString().trim();
+        if (!partName) partName = '整件';
+        it._partLabel = partName;
+        it._isWholePart = partName === '整件';
+        // 子部位标签：未指定则为空（不展示），与后端逻辑一致
+        var subPartName = (it.subPartName || '').toString().trim();
+        it._subPartLabel = subPartName;
         // P0 修复：与 PC 端 calcTotalPrice 一致，含损耗率
         var effectiveUsage = Number(it.devUsageAmount || it.usageAmount || 0);
         var lossRate = Number(it.lossRate || 0);
@@ -472,6 +599,9 @@ Page({
   /* ============ 纸样 ============ */
   async loadPattern() {
     if (!this.data.styleId) return;
+    // 防重入：避免 bindPageEvents + onLoad 重复触发
+    if (this._patternLoading) return;
+    this._patternLoading = true;
     try {
       const res = await styleApi.getPatternRevision(this.data.styleId);
       const patternData = res ? Object.assign({}, res) : null;
@@ -479,7 +609,17 @@ Page({
         patternData.statusText = PATTERN_STATUS_LABELS[String(patternData.status).toUpperCase()] || '其他';
       }
       this.setData({ patternData });
-    } catch (e) { console.error('纸样加载失败', e); }
+    } catch (e) {
+      // 404 = 该款式没有纸样数据，静默处理不刷错误日志
+      const status = e && (e.statusCode || (e.data && e.data.code));
+      if (status === 404 || status === 40400) {
+        this.setData({ patternData: null });
+      } else {
+        console.error('纸样加载失败', e);
+      }
+    } finally {
+      this._patternLoading = false;
+    }
   },
 
   /* ============ 尺码表（调用PC端同款API） ============ */
@@ -489,11 +629,11 @@ Page({
       const res = await styleApi.listSizes({ styleId: this.data.styleId });
       const list = _unwrapList(res);
       // P0 修复：与 PC 端 splitSizeNames 一致，拆分组合尺码 "S,M,L" → ["S","M","L"]
-      function splitSizeNames(raw) {
+      const splitSizeNames = function (raw) {
         if (!raw) return [];
         var s = String(raw).trim();
         if (s.startsWith('[')) {
-          try { return JSON.parse(s).map(function (x) { return String(x).trim(); }).filter(Boolean); } catch (e) {}
+          try { return JSON.parse(s).map(function (x) { return String(x).trim(); }).filter(Boolean); } catch (e) { /* JSON解析失败，降级为分割 */ }
         }
         return s.split(/[,，、]/).map(function (x) { return x.trim(); }).filter(Boolean);
       }
@@ -550,7 +690,7 @@ Page({
       }
       try {
         // 通过 styleId 反查 patternProduction
-        const listRes = await production.listPatterns({ styleId: styleId, page: 1, size: 1 });
+        const listRes = await production.listPatterns({ styleId: styleId, page: 1, pageSize: 1 });
         const data = (listRes && listRes.data) || listRes || {};
         const records = data.records || (Array.isArray(data) ? data : []);
         if (records.length > 0 && records[0].id) {
@@ -580,9 +720,11 @@ Page({
       const styleProcesses = _unwrapList(styleProcessRes);
       const processList = styleProcesses.length > 0 ? styleProcesses : config;
 
-      // 构建工序列表
+      // 构建工序列表（按父阶段分组，与 PC 端 useSampleProcessProgress 一致）
       const processStages = this._buildProcessStages(processList, records, detail);
-      this.setData({ processStages });
+      // 按父阶段分组
+      const parentStages = this._buildParentStageGroups(processList, records, detail);
+      this.setData({ processStages: processStages, parentStages: parentStages });
 
       // 构建扫码记录列表（与PC端6列对齐）
       this._buildScanRecords(records);
@@ -591,42 +733,177 @@ Page({
     }
   },
 
-  _buildProcessStages(config, records, detail) {
+  /**
+   * 按父阶段分组子工序（与 PC 端 useSampleProcessProgress.stages 一致）
+   * 返回 [{key,label,subProcesses,completedCount,totalCount,percent,expanded,latestOperator,latestTime}]
+   */
+  _buildParentStageGroups(config, records, detail) {
     if (!config || !config.length) return [];
     const now = Date.now();
-    // 按工序名/id归集最新一条扫码记录
+    // 构建工序节点（与 PC 端 nodes 结构一致）
+    const nodes = config.map((c, idx) => ({
+      id: String(c.sortOrder || (idx + 1)),
+      name: c.processName || c.operationType || '',
+      processCode: c.operationType || c.processName || String(idx + 1),
+      progressStage: c.progressStage || '',
+      unitPrice: Number(c.unitPrice || c.price || 0),
+      sortOrder: c.sortOrder || (idx + 1),
+      machineType: c.machineType || '',
+      difficulty: c.difficulty || '',
+    }));
+    // 用共享工具按父阶段分组
+    const groups = sampleStageUtils.groupByParentStages(nodes, records);
+    // 给每个子工序补充扫码记录和领取人信息
     const recordMap = {};
     (records || []).forEach(r => {
       const key = r.processId || r.processName || '';
-      if (key && !recordMap[key]) recordMap[key] = r;
+      const altKey = r.operationType || '';
+      if (key) {
+        if (!recordMap[key]) recordMap[key] = [];
+        recordMap[key].push(r);
+      }
+      if (altKey) {
+        if (!recordMap[altKey]) recordMap[altKey] = [];
+        recordMap[altKey].push(r);
+      }
+    });
+    return groups.map(g => {
+      const subs = g.subProcesses.map(sub => {
+        const allRecords = recordMap[sub.name] || recordMap[sub.processCode] || [];
+        const sorted = allRecords.slice().sort((a, b) => {
+          const ta = a.scanTime || '';
+          const tb = b.scanTime || '';
+          return tb > ta ? 1 : (tb < ta ? -1 : 0);
+        });
+        const latest = sorted[0] || null;
+        const scanTime = latest && latest.scanTime ? new Date(String(latest.scanTime).replace(/-/g, '/')).getTime() : 0;
+        const canUndo = scanTime > 0 && (now - scanTime) < 30 * 60 * 1000;
+        return {
+          ...sub,
+          assignee: (latest && latest.operatorName) || '',
+          scanTime: scanTime > 0 ? this._fmtDateTime(latest.scanTime) : '',
+          scanCount: sorted.length,
+          warehouse: (latest && (latest.warehouse || latest.warehouseName)) || '',
+          remark: (latest && latest.remark) || '',
+          recordId: latest ? latest.id : '',
+          canUndo: canUndo,
+          scanList: sorted.map(r => ({
+            id: r.id || '',
+            operatorName: r.operatorName || r.operator || '未知',
+            operationLabel: sampleStageUtils.normalizeOperationType(r.operationType) || r.operationType || '未知',
+            scanTimeText: this._fmtDateTime(r.scanTime),
+            warehouse: r.warehouse || r.warehouseName || '-',
+            remark: r.remark || '',
+            quantity: r.quantity || (detail && detail.quantity) || 1,
+            color: r.color || '',
+            size: r.size || '',
+          })),
+        };
+      });
+      // 父阶段最新操作人和时间
+      const allSubRecords = subs.flatMap(s => s.scanList || []);
+      const latestRec = allSubRecords[0] || null;
+      return {
+        key: g.key,
+        label: g.label,
+        subProcesses: subs,
+        completedCount: g.completedCount,
+        totalCount: g.totalCount,
+        percent: g.percent,
+        expanded: false,
+        latestOperator: latestRec ? latestRec.operatorName : '',
+        latestTime: latestRec ? latestRec.scanTimeText : '',
+      };
+    });
+  },
+
+  _buildProcessStages(config, records, detail) {
+    if (!config || !config.length) return [];
+    const now = Date.now();
+    // 按工序名/id归集所有扫码记录（不只取最新一条，与PC端对齐）
+    const recordMap = {};
+    (records || []).forEach(r => {
+      const key = r.processId || r.processName || '';
+      const altKey = r.operationType || '';
+      if (key) {
+        if (!recordMap[key]) recordMap[key] = [];
+        recordMap[key].push(r);
+      }
+      // 也按 operationType 归集（PC端 scan-records 用 operationType 关联）
+      if (altKey && !recordMap[altKey]) {
+        recordMap[altKey] = [];
+        recordMap[altKey].push(r);
+      } else if (altKey) {
+        recordMap[altKey].push(r);
+      }
     });
     return config.map((c, idx) => {
       const key = c.id || c.processId || ('p_' + idx);
-      const rec = recordMap[key] || recordMap[c.processName] || null;
-      const completed = rec && (rec.operationType === 'COMPLETE' || rec.operationType === 'WAREHOUSE_IN');
-      const inProgress = rec && !completed;
-      const scanTime = rec && rec.scanTime ? new Date(String(rec.scanTime).replace(/-/g, '/')).getTime() : 0;
+      const processName = c.processName || c.name || ('工序' + (idx + 1));
+      const processCode = c.processCode || c.operationType || '';
+      // 该工序的所有扫码记录
+      const allRecords = recordMap[key] || recordMap[processName] || recordMap[processCode] || [];
+      const sortedRecords = allRecords.slice().sort((a, b) => {
+        const ta = a.scanTime || '';
+        const tb = b.scanTime || '';
+        return tb > ta ? 1 : (tb < ta ? -1 : 0);
+      });
+      const latest = sortedRecords[0] || null;
+      const completed = latest && (latest.operationType === 'COMPLETE' || latest.operationType === 'WAREHOUSE_IN');
+      const inProgress = latest && !completed;
+      const scanTime = latest && latest.scanTime ? new Date(String(latest.scanTime).replace(/-/g, '/')).getTime() : 0;
       const canUndo = scanTime > 0 && (now - scanTime) < 30 * 60 * 1000;
       const price = Number(c.unitPrice || c.price || 0);
       const qty = Number(detail.quantity || detail.sampleQuantity || 1);
       const totalPrice = price > 0 ? (price * qty).toFixed(2) : '';
+
+      // 构建该工序的扫码记录列表（与PC端6列对齐）
+      const scanList = sortedRecords.map(r => {
+        const opType = String(r.operationType || '').toUpperCase();
+        const opLabel = OPERATION_TYPE_LABELS[opType] || opType || '未知';
+        const rScanTime = r.scanTime ? new Date(String(r.scanTime).replace(/-/g, '/')).getTime() : 0;
+        const rCanUndo = rScanTime > 0 && (now - rScanTime) < 30 * 60 * 1000;
+        return {
+          id: r.id || '',
+          operatorName: r.operatorName || r.operator || '未知',
+          operationLabel: opLabel,
+          scanTimeText: this._fmtDateTime(r.scanTime),
+          warehouse: r.warehouse || r.warehouseName || '-',
+          remark: r.remark || '',
+          canUndo: rCanUndo,
+          quantity: r.quantity || qty,
+          color: r.color || '',
+          size: r.size || '',
+        };
+      });
+
       return {
         key: String(key),
-        name: c.processName || c.name || ('工序' + (idx + 1)),
+        name: processName,
         progressStage: c.progressStage || c.stage || '',
-        assignee: (rec && rec.operatorName) || c.assignee || '',
-        scanTime: scanTime > 0 ? this._fmtDateTime(rec.scanTime) : '',
+        assignee: (latest && latest.operatorName) || c.assignee || '',
+        scanTime: scanTime > 0 ? this._fmtDateTime(latest.scanTime) : '',
         completed,
         inProgress,
         status: completed ? 'completed' : (inProgress ? 'in_progress' : 'not_started'),
         statusText: completed ? '已完成' : (inProgress ? '进行中' : '未开始'),
-        warehouse: (rec && (rec.warehouse || rec.warehouseName)) || '',
-        remark: (rec && rec.remark) || '',
+        warehouse: (latest && (latest.warehouse || latest.warehouseName)) || '',
+        remark: (latest && latest.remark) || '',
         unitPrice: price > 0 ? price.toFixed(2) : '',
         totalPrice: totalPrice,
         quantity: qty,
-        recordId: rec ? rec.id : '',
+        recordId: latest ? latest.id : '',
         canUndo: canUndo,
+        // 展开相关
+        expanded: false,
+        scanCount: scanList.length,
+        scanList: scanList,
+        // 工序额外信息（与PC端列对齐）
+        processCode: processCode,
+        machineType: c.machineType || '',
+        difficulty: c.difficulty || '',
+        standardTime: c.standardTime || '',
+        sortOrder: c.sortOrder || (idx + 1),
       };
     });
   },
@@ -695,6 +972,31 @@ Page({
     this.setData({ patternScanRecords: list, patternScanGroups: groups });
   },
 
+  /** 展开/收起工序详情（查看扫码记录） */
+  onToggleProcess(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    const list = this.data.processStages || [];
+    const idx = list.findIndex(p => p.key === key);
+    if (idx < 0) return;
+    const newExpanded = !list[idx].expanded;
+    this.setData({
+      ['processStages[' + idx + '].expanded']: newExpanded,
+    });
+  },
+
+  /** 展开/收起父阶段（查看子工序和扫码记录） */
+  onToggleParentStage(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    const list = this.data.parentStages || [];
+    const idx = list.findIndex(p => p.key === key);
+    if (idx < 0) return;
+    this.setData({
+      ['parentStages[' + idx + '].expanded']: !list[idx].expanded,
+    });
+  },
+
   /** 撤回样衣扫码记录 */
   async onUndoScan(e) {
     const scanRecordId = e.currentTarget.dataset.id;
@@ -704,7 +1006,7 @@ Page({
       title: '确认撤回',
       content: '撤回后该扫码记录将被删除，是否继续？',
       confirmText: '撤回',
-      confirmColor: '#ff4d4f',
+      confirmColor: '#ff3b30',
       success: async (res) => {
         if (!res.confirm) return;
         wx.showLoading({ title: '撤回中...', mask: true });
@@ -808,8 +1110,8 @@ Page({
         productionData: {
           styleNo: style.styleNo || '',
           styleName: style.styleName || '',
-          category: toCategoryCn(style.category),
-          season: toSeasonCn(style.season),
+          category: displayCategory(style.category || ''),
+          season: displaySeason(style.season || ''),
           color: style.color || '',
           size: style.size || '',
           quantity: style.quantity || style.sampleQuantity || 0,
@@ -986,7 +1288,6 @@ Page({
   uploadFileAttachment(tempFile, callback) {
     const filePath = tempFile.path || tempFile.tempFilePath;
     const fileSize = tempFile.size;
-    const fileName = tempFile.name || ('file_' + Date.now());
     if (fileSize > 15 * 1024 * 1024) {
       wx.showToast({ title: '文件不能超过15MB', icon: 'none' });
       if (callback) callback();
@@ -1070,7 +1371,7 @@ Page({
       title: '确认删除',
       content: '删除后不可恢复，是否继续？',
       confirmText: '删除',
-      confirmColor: '#ff4d4f',
+      confirmColor: '#ff3b30',
       success: async (res) => {
         if (!res.confirm) return;
         try {
@@ -1192,15 +1493,70 @@ Page({
     }
   },
 
-  /** 提交审核 */
+  /** 提交审核 —— 展开页面内审核表单 */
   onSubmitReview() {
+    this.setData({
+      showReviewForm: true,
+      reviewFormStatus: 'PASS',
+      reviewFormComment: '',
+    });
+  },
+
+  /** 取消审核表单 */
+  onCancelReviewForm() {
+    this.setData({ showReviewForm: false });
+  },
+
+  /** 审核结论选择变更 */
+  onReviewStatusChange(e) {
+    var val = e.detail.value;
+    var options = ['PASS', 'REWORK', 'REJECT'];
+    this.setData({ reviewFormStatus: options[val] || 'PASS' });
+  },
+
+  /** 审核评语输入 */
+  onReviewCommentInput(e) {
+    this.setData({ reviewFormComment: e.detail.value });
+  },
+
+  /** 确认提交审核 —— 调用后端 sample-review API */
+  onConfirmSubmitReview() {
+    var that = this;
+    var styleId = this.data.styleId;
+    var status = this.data.reviewFormStatus;
+    var comment = (this.data.reviewFormComment || '').trim();
+
+    if (!styleId) {
+      wx.showToast({ title: '缺少款式信息', icon: 'none' });
+      return;
+    }
+
+    var statusLabels = { PASS: '通过', REWORK: '需修改', REJECT: '不通过' };
     wx.showModal({
-      title: '提交审核',
-      content: '确定要提交此样衣开发记录进行审核吗？',
-      confirmText: '提交',
+      title: '确认提交审核',
+      content: '审核结论：' + statusLabels[status] + (comment ? '\n评语：' + comment : ''),
+      confirmText: '确认提交',
+      confirmColor: status === 'PASS' ? '#1677ff' : (status === 'REWORK' ? '#faad14' : '#ff4d4f'),
       success: function (res) {
         if (res.confirm) {
-          wx.showToast({ title: '功能开发中', icon: 'none' });
+          wx.showLoading({ title: '提交中...', mask: true });
+          styleApi.saveSampleReview(styleId, {
+            reviewStatus: status,
+            reviewComment: comment,
+            reviewImages: [],
+          })
+            .then(function () {
+              wx.hideLoading();
+              wx.showToast({ title: '审核提交成功', icon: 'success' });
+              that.setData({ showReviewForm: false });
+              // 刷新生产制单数据
+              that.loadProduction();
+            })
+            .catch(function (err) {
+              wx.hideLoading();
+              var msg = (err && err.message) || '审核提交失败，请重试';
+              wx.showToast({ title: msg, icon: 'none' });
+            });
         }
       },
     });
@@ -1223,16 +1579,73 @@ Page({
     this.chooseImage('camera');
   },
 
-  /** 标记完成 */
+  /** 切换开发阶段快捷入口 */
+  onSwitchDevStage(e) {
+    var key = e.currentTarget.dataset.key;
+    if (!key || key === this.data.stageKey) return;
+    // 找到对应的阶段名称更新导航栏
+    var stage = (this.data.devStages || []).find(function(s) { return s.key === key; });
+    var newName = stage ? stage.name : '阶段详情';
+    this.setData({ stageKey: key, navTitle: newName });
+    wx.setNavigationBarTitle({ title: newName });
+    this.loadStageData();
+  },
+
+  /**
+   * 标记完成 —— 调用后端 stage-action API
+   * 开发阶段（bom/pattern/size/process/secondary/production/sizePrice）走 styleInfo stage-action
+   * 生产阶段（procurement/cutting/sewing/tail/warehousing）暂不支持移动端标记完成
+   */
   onMarkComplete() {
     var that = this;
+    var stageKey = this.data.stageKey;
+    var styleId = this.data.styleId;
+    var stageName = this.data.stageName;
+
+    // stageKey → 后端 stage 参数映射
+    var STAGE_KEY_MAP = {
+      bom: 'bom',
+      pattern: 'pattern',
+      size: 'size',
+      process: 'process',
+      secondary: 'secondary',
+      production: 'production',
+      sizePrice: 'size-price',
+    };
+    var stage = STAGE_KEY_MAP[stageKey];
+
+    if (!stage) {
+      wx.showToast({ title: '该阶段暂不支持移动端标记完成', icon: 'none' });
+      return;
+    }
+    if (!styleId) {
+      wx.showToast({ title: '缺少款式信息', icon: 'none' });
+      return;
+    }
+
     wx.showModal({
       title: '标记完成',
-      content: '确定要将「' + this.data.stageName + '」标记为完成吗？',
+      content: '确定要将「' + stageName + '」标记为完成吗？完成后不可撤销。',
       confirmText: '确认完成',
+      confirmColor: '#1677ff',
       success: function (res) {
         if (res.confirm) {
-          wx.showToast({ title: '功能开发中', icon: 'none' });
+          wx.showLoading({ title: '提交中...', mask: true });
+          styleApi.stageAction(styleId, stage, 'complete')
+            .then(function () {
+              wx.hideLoading();
+              wx.showToast({ title: '标记成功', icon: 'success' });
+              // 刷新页面数据
+              that.loadStageData();
+              if (that.data.styleInfo) {
+                that.buildTimeline(that.data.styleInfo);
+              }
+            })
+            .catch(function (err) {
+              wx.hideLoading();
+              var msg = (err && err.message) || '标记失败，请重试';
+              wx.showToast({ title: msg, icon: 'none' });
+            });
         }
       },
     });
@@ -1279,5 +1692,12 @@ Page({
     var urls = (this.data.stagePhotos || []).map(function (p) { return p.url; });
     if (!urls.length) return;
     wx.previewImage({ urls: urls, current: current });
+  },
+
+  /** 预览生产制单封面图 */
+  onPreviewImage(e) {
+    var url = e.currentTarget.dataset.url;
+    if (!url) return;
+    wx.previewImage({ urls: [url], current: url });
   },
 });

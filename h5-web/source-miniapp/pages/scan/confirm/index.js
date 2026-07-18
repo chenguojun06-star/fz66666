@@ -6,9 +6,7 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
-const permission = require('../../../utils/permission');
-const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
-const scanFeedback = require('../../../utils/scan-feedback');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 Page({
   data: {
@@ -28,6 +26,7 @@ Page({
     secondaryProcesses: [],
     buttonText: '确认扫码',
     loading: false,
+    deliveryInfo: {},
   },
 
   onLoad() {
@@ -69,7 +68,7 @@ Page({
       };
       materialPurchases = raw.materialPurchases.map(function(item) {
         return Object.assign({}, item, {
-          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || '未知',
+          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
         });
       });
       materialPurchases.forEach(function(item) {
@@ -86,10 +85,8 @@ Page({
         pending: '待领取', not_started: '待领取',
         received: '已领取', in_progress: '已领取',
         bundled: '已完成', completed: '已完成', done: '已完成',
-        cancelled: '已取消', archived: '已归档',
       };
-      cuttingTask.statusText = statusMap[cuttingTask.status] || '未知状态';
-      cuttingTask.isTerminal = ['completed', 'done', 'bundled', 'cancelled', 'archived'].includes(cuttingTask.status);
+      cuttingTask.statusText = statusMap[cuttingTask.status] || cuttingTask.status || '待领取';
     }
 
     let btnText = '确认扫码';
@@ -114,12 +111,21 @@ Page({
     const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
     const secondaryProcesses = rawProcesses.map(function(item) {
       return Object.assign({}, item, {
-        processTypeCN: PROCESS_TYPE_MAP[item.processType] || '未知',
-        statusCN: STATUS_MAP[item.status] || '未知',
+        processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
+        statusCN: STATUS_MAP[item.status] || item.status || '',
       });
     });
 
     const description = orderDetail.description || raw.description || '';
+
+    // 提取交期与剩余天数（数据来自API返回的orderDetail）
+    const deliveryDate = orderDetail.deliveryDate
+      || orderDetail.expectedShipDate
+      || orderDetail.shipDate
+      || orderDetail.plannedShipDate
+      || orderDetail.plannedEndDate
+      || '';
+    const deliveryInfo = this._calcDeliveryInfo(deliveryDate);
 
     // 提取裁剪工序单价（来自 handleCuttingMode 注入的 stageResult）
     let cuttingUnitPrice = 0;
@@ -140,7 +146,7 @@ Page({
         styleNo: orderDetail.styleNo || raw.styleNo || '',
         orderNo: raw.orderNo || '',
         bundleNo: raw.bundleNo || '',
-        processName: raw.processName || '',
+        processName: normalizeProcessName(raw.processName || ''),
         progressStage: raw.progressStage || '',
         bomFallback: raw.bomFallback || false,
         quantity: raw.quantity || 0,
@@ -155,12 +161,12 @@ Page({
       skuList: formItems,
       summary: summary,
       sizeMatrix: sizeMatrix,
+      deliveryInfo: deliveryInfo,
     });
 
     // 防御性检查：裁剪已完成 → 自动提示并返回
     if (isCutting && cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
-      toast.success('裁剪任务已完成');
-      scanFeedback.playSuccess();
+      wx.showToast({ title: '裁剪任务已完成', icon: 'success' });
       setTimeout(function() { wx.navigateBack(); }, 1500);
       return;
     }
@@ -169,12 +175,58 @@ Page({
     if (raw.orderNo) {
       this._fetchAiTip(raw.orderNo, raw.processName || raw.progressStage || '');
     }
-    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
-    unbindPageEvents(this);
     getApp().globalData.confirmScanData = null;
+  },
+
+  /**
+   * 计算交期与剩余天数
+   * @param {string} dateStr - 日期字符串(YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss)
+   * @returns {Object} { deliveryDateStr, remainDaysText, remainDaysClass }
+   */
+  _calcDeliveryInfo(dateStr) {
+    if (!dateStr) return {};
+    var s = String(dateStr);
+    var dateOnly = s.substring(0, 10);
+    var displayStr = dateOnly;
+    if (s.length > 10) {
+      var d = new Date(s.replace(/-/g, '/'));
+      if (!isNaN(d.getTime())) {
+        var pad = function(n) { return String(n).padStart(2, '0'); };
+        displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      }
+    }
+    var parts = dateOnly.split('-');
+    if (parts.length !== 3) return {};
+
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    var diffMs = target.getTime() - today.getTime();
+    var remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    var remainDaysText = '';
+    var remainDaysClass = '';
+    if (remainDays > 7) {
+      remainDaysText = '剩余' + remainDays + '天';
+      remainDaysClass = 'days-safe';
+    } else if (remainDays > 3) {
+      remainDaysText = '剩余' + remainDays + '天';
+      remainDaysClass = 'days-warn';
+    } else if (remainDays > 0) {
+      remainDaysText = '剩余' + remainDays + '天';
+      remainDaysClass = 'days-urgent';
+    } else if (remainDays === 0) {
+      remainDaysText = '今天到期';
+      remainDaysClass = 'days-urgent';
+    } else {
+      remainDaysText = '超期' + Math.abs(remainDays) + '天';
+      remainDaysClass = 'days-overdue';
+    }
+
+    return { deliveryDateStr: displayStr, remainDaysText: remainDaysText, remainDaysClass: remainDaysClass };
   },
 
   _buildSizeMatrix(skuList) {
@@ -261,21 +313,6 @@ Page({
       return;
     }
 
-    // 职务校验（宽松规则）：非采购岗位且非主管以上，弹窗确认后再领
-    if (!permission.canReceiveTask('procurement')) {
-      const confirmed = await new Promise(resolve => {
-        wx.showModal({
-          title: '跨岗位领取确认',
-          content: `您当前职务「${permission.getRoleDisplayName()}」非采购岗，确定代领？`,
-          confirmText: '确定代领',
-          cancelText: '取消',
-          success: r => resolve(r.confirm),
-          fail: () => resolve(false),
-        });
-      });
-      if (!confirmed) return;
-    }
-
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
@@ -292,7 +329,6 @@ Page({
 
     if (pendingItems.length === 0) {
       toast.success('所有物料均已领取');
-      scanFeedback.playSuccess();
       this._emitRefresh();
       wx.navigateBack();
       return;
@@ -313,7 +349,6 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.success('已领取 ' + pendingItems.length + ' 项物料');
-      scanFeedback.playSuccess();
 
       this._emitRefresh();
       wx.navigateBack();
@@ -321,7 +356,6 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.error(e.errMsg || e.message || '领取失败');
-      scanFeedback.playError();
     }
   },
 
@@ -337,21 +371,6 @@ Page({
       toast.info('该任务已被领取');
       wx.navigateBack();
       return;
-    }
-
-    // 职务校验（宽松规则）：非裁剪岗位且非主管以上，弹窗确认后再领
-    if (!permission.canReceiveTask('cutting')) {
-      const confirmed = await new Promise(resolve => {
-        wx.showModal({
-          title: '跨岗位领取确认',
-          content: `您当前职务「${permission.getRoleDisplayName()}」非裁剪岗，确定代领？`,
-          confirmText: '确定代领',
-          cancelText: '取消',
-          success: r => resolve(r.confirm),
-          fail: () => resolve(false),
-        });
-      });
-      if (!confirmed) return;
     }
 
     const userInfo = getUserInfo() || {};
@@ -372,7 +391,6 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.success('裁剪任务已领取');
-      scanFeedback.playSuccess();
       this._emitRefresh();
 
       wx.redirectTo({
@@ -382,7 +400,6 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.error(e.errMsg || e.message || '领取失败');
-      scanFeedback.playError();
     }
   },
 
@@ -442,7 +459,6 @@ Page({
       }
 
       toast.success('批量提交成功（' + tasks.length + '条）');
-      scanFeedback.playSuccess();
       getApp().globalData.lastScanResult = {
         orderNo: raw.orderNo || '',
         processCode: raw.processCode || '',
@@ -453,7 +469,8 @@ Page({
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
-      var raw = this._scanContext;
+      this.setData({ loading: false });
+      raw = this._scanContext;
       getApp().globalData.lastScanResult = {
         orderNo: (raw && raw.orderNo) || '',
         processCode: (raw && raw.processCode) || '',
@@ -461,15 +478,12 @@ Page({
         quantity: 0,
         success: false,
       };
-      scanFeedback.playError();
       wx.showModal({
         title: '扫码失败',
         content: e.message || e.errMsg || '提交失败，请稍后重试',
         showCancel: false,
         confirmText: '知道了',
       });
-    } finally {
-      this.setData({ loading: false });
     }
   },
 

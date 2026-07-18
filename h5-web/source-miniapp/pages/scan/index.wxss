@@ -1,14 +1,13 @@
-/* Apple 风格 — 页面基础布局 */
+/* 极简紧凑风格 */
 @import '../../styles/inline-selector.wxss';
 
-{
+page {
   background: var(--color-bg-page);
   min-height: 100vh;
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
-{
+.page {
   padding: var(--page-padding-x);
-  padding-top: var(--page-padding-y);
 }
 
 /* ===== 拆分样式文件（按原始顺序导入，禁止调换顺序） ===== */

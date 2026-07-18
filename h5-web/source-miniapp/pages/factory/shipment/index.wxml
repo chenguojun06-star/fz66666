@@ -1,187 +1,241 @@
-<view class="container">
-  <view class="tab-bar">
-    <view class="tab-segmented">
+<!-- 外发管理 · 设计稿对齐 factory-shipment.html -->
+<view class="page">
+  <!-- ===== Sticky 头部：Tab + 工厂筛选 ===== -->
+  <view class="sticky-header">
+    <!-- Tab 切换（segmented control：rounded-lg bg-muted p-0.5） -->
+    <view class="tab-bar">
       <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="switchTab">我的订单</view>
       <view class="tab-item {{activeTab===1?'tab-active':''}}" data-tab="1" bindtap="switchTab">发货记录</view>
     </view>
-  </view>
 
-  <!-- 外发工厂汇总状态条（对齐 PC 端 FactorySidebar 7-Tag） -->
-  <view class="factory-stats-bar" wx:if="{{!isFactory && activeTab === 0}}">
-    <!-- 全部工厂汇总 -->
-    <view class="factory-card factory-card--all {{selectedFactoryId === '' ? 'factory-card--selected' : ''}}"
-          data-factory-id="" bindtap="onFactoryStatTap">
-      <view class="factory-card-name">全部工厂</view>
-      <view class="factory-card-tags">
-        <text class="ftag ftag--blue">{{factoryStatsTotal.orderCount}} 单</text>
-        <text class="ftag ftag--orange">{{factoryStatsTotal.totalQuantity}} 件</text>
-        <text class="ftag ftag--default">{{factoryStatsTotal.styleCount}} 款</text>
-        <text class="ftag ftag--processing">{{factoryStatsTotal.inProgressCount}} 进行中</text>
-        <text class="ftag ftag--success">{{factoryStatsTotal.completedCount}} 已完成</text>
-        <text class="ftag ftag--danger" wx:if="{{factoryStatsTotal.overdueCount > 0}}">{{factoryStatsTotal.overdueCount}} 逾期</text>
-        <text class="ftag ftag--warning" wx:if="{{factoryStatsTotal.warningCount > 0}}">{{factoryStatsTotal.warningCount}} 预警</text>
-      </view>
-    </view>
-    <!-- 各工厂卡片（横向滚动） -->
-    <scroll-view scroll-x class="factory-scroll" enhanced show-scrollbar="{{false}}" wx:if="{{factoryStats.length > 0}}">
-      <view class="factory-card {{selectedFactoryId === item.factoryId ? 'factory-card--selected' : ''}}"
+    <!-- 工厂筛选 · 横向滚动卡 -->
+    <scroll-view wx:if="{{activeTab===0 && factoryStats.length > 0}}" class="factory-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="factory-card {{selectedFactoryId === item.factoryId ? 'factory-card--active' : ''}}"
             wx:for="{{factoryStats}}" wx:key="factoryId"
-            data-factory-id="{{item.factoryId}}" bindtap="onFactoryStatTap">
-        <view class="factory-card-name">{{item.factoryName}}</view>
-        <view class="factory-card-tags">
-          <text class="ftag ftag--blue">{{item.orderCount}} 单</text>
-          <text class="ftag ftag--orange">{{item.totalQuantity}} 件</text>
-          <text class="ftag ftag--default">{{item.styleCount}} 款</text>
-          <text class="ftag ftag--processing">{{item.inProgressCount}} 进行中</text>
-          <text class="ftag ftag--success">{{item.completedCount}} 已完成</text>
-          <text class="ftag ftag--danger" wx:if="{{item.overdueCount > 0}}">{{item.overdueCount}} 逾期</text>
-          <text class="ftag ftag--warning" wx:if="{{item.warningCount > 0}}">{{item.warningCount}} 预警</text>
+            data-id="{{item.factoryId}}" bindtap="onSelectFactory">
+        <text class="factory-name">{{item.factoryName}}</text>
+        <view class="factory-nums">
+          <view class="fn-item">
+            <text class="fn-val fn-val--primary">{{item.orderCount}}</text>
+            <text class="fn-lbl">单</text>
+          </view>
+          <view class="fn-item">
+            <text class="fn-val">{{item.totalQuantity}}</text>
+            <text class="fn-lbl">件</text>
+          </view>
+          <view class="fn-item">
+            <text class="fn-val fn-val--sm">{{item.styleCount}}</text>
+            <text class="fn-lbl">款</text>
+          </view>
+        </view>
+        <view class="factory-tags">
+          <text class="ftag ftag--primary" wx:if="{{item.inProgress > 0}}">{{item.inProgress}}进行中</text>
+          <text class="ftag ftag--success" wx:if="{{item.completed > 0}}">{{item.completed}}已完成</text>
+          <text class="ftag ftag--danger" wx:if="{{item.overdue > 0}}">{{item.overdue}}逾期</text>
+          <text class="ftag ftag--warning" wx:if="{{item.warning > 0}}">{{item.warning}}预警</text>
         </view>
       </view>
     </scroll-view>
   </view>
 
-  <view class="search-bar">
-    <view class="search-box">
-      <text class="icon-search search-icon"></text>
-      <input class="search-input" placeholder="搜索订单号 / 款号" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onKeywordSearch" />
+  <!-- 搜索栏 + 扫码按钮 -->
+  <search-scan
+    placeholder="搜索订单号 / 款号"
+    value="{{keyword}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onKeywordSearch"
+    bind:scan="onScan"
+  />
+
+  <!-- 筛选 pill（生产中 / 已完成） -->
+  <view wx:if="{{activeTab===0}}" class="filter-pills">
+    <view class="filter-pill {{activeFilter==='production'?'filter-pill--active':''}}" data-filter="production" bindtap="onFilterTap">
+      <text>生产中</text>
+      <text class="pill-count">{{filterStats.production}}</text>
+    </view>
+    <view class="filter-pill {{activeFilter==='completed'?'filter-pill--active':''}}" data-filter="completed" bindtap="onFilterTap">
+      <text>已完成</text>
+      <text class="pill-count">{{filterStats.completed}}</text>
     </view>
   </view>
 
+  <!-- 智能提示标签（已延期 / 临近交期，可点击筛选） -->
+  <view wx:if="{{activeTab===0}}" class="hint-row">
+    <view class="hint-tag hint-tag--danger {{activeFilter==='overdue'?'hint-tag--active':''}}" data-filter="overdue" bindtap="onFilterTap">
+      <view class="hint-tag__icon icon-alert-red"></view>
+      <text>已延期</text>
+      <text class="hint-tag__count">{{filterStats.overdue}}</text>
+    </view>
+    <view class="hint-tag hint-tag--warning {{activeFilter==='warning'?'hint-tag--active':''}}" data-filter="warning" bindtap="onFilterTap">
+      <view class="hint-tag__icon icon-clock-gray"></view>
+      <text>临近交期</text>
+      <text class="hint-tag__count">{{filterStats.warning}}</text>
+    </view>
+  </view>
+
+  <!-- ===== 我的订单 ===== -->
   <view wx:if="{{activeTab===0}}" class="tab-content">
-
-    <!-- ===== 状态过滤条（生产中 / 已完成） ===== -->
-    <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}}"
-            wx:for="{{statFilters}}" wx:key="key"
-            data-key="{{item.key}}" bindtap="onStatTap">
-        <text class="filter-text">{{item.label}}</text>
-        <text class="filter-num">{{statCounts[item.key] || 0}}</text>
-      </view>
-    </scroll-view>
-
-    <!-- ===== smart-hints 小标签（已延期 / 临近交期） ===== -->
-    <view class="smart-hints" wx:if="{{hasSmartHints || smartFilter}}">
-      <view class="smart-hint {{smartFilter === item.key ? 'smart-hint--active' : ''}} {{item.tone === 'danger' ? 'smart-hint--danger' : 'smart-hint--warning'}} {{item.count === 0 ? 'smart-hint--zero' : ''}}"
-            wx:for="{{smartHints}}" wx:key="key"
-            wx:if="{{item.count > 0 || smartFilter === item.key}}"
-            data-key="{{item.key}}" bindtap="onSmartHintTap">
-        <text class="smart-hint-num">{{item.count}}</text>
-        <text class="smart-hint-lbl">{{item.label}}</text>
-      </view>
-      <view class="smart-hint-clear" wx:if="{{smartFilter}}" catchtap="onClearSmartFilter">
-        <text>清除筛选 ✕</text>
-      </view>
-    </view>
-
+    <!-- 空状态 -->
     <view wx:if="{{orders.length===0 && !orderLoading}}" class="empty">
-      <empty-state icon="icon-factory" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+      <view class="line-icon line-icon--xl icon-clipboard-gray"></view>
+      <text class="empty-text">暂无订单数据</text>
     </view>
 
+    <!-- 订单列表 -->
     <view class="order-list" wx:if="{{orders.length > 0}}">
-      <view class="task-card {{item.expanded ? 'task-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'task-card--overdue' : ''}}"
+      <view class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
             wx:for="{{orders}}" wx:key="id">
 
+        <!-- 主行：封面图 + 基本信息 -->
         <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
-        <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
-          <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
-          <view wx:else class="cover-placeholder">
-            <text class="icon-box"></text>
-          </view>
-        </view>
-
-        <view class="order-info">
-          <view class="info-top">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text wx:if="{{item.urgencyTagText === '急'}}" class="status-tag tag tag-warning">急</text>
-            <text wx:if="{{item.plateTypeTagText}}" class="status-tag tag tag-processing">{{item.plateTypeTagText}}</text>
-            <text wx:if="{{item.status === 'completed'}}" class="status-tag tag tag-success">已完成</text>
-            <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="status-tag tag tag-error">已逾期</text>
-          </view>
-
-          <text class="info-style-name" wx:if="{{item.styleNameFocus}}">{{item.styleNameFocus}}</text>
-
-          <view class="info-spec-row" wx:if="{{item.styleNo && !item.styleNameDisplay}}">
-            <text class="info-spec-label">款号</text>
-            <text class="info-spec-value">{{item.styleNo}}</text>
-          </view>
-
-          <!-- 跟单员 + 客户 -->
-          <view class="info-spec-row" wx:if="{{item.merchandiserDisplay || item.customerDisplay}}">
-            <text class="info-spec-label" wx:if="{{item.merchandiserDisplay}}">跟单</text>
-            <text class="info-spec-value" wx:if="{{item.merchandiserDisplay}}">{{item.merchandiserDisplay}}</text>
-            <text class="info-spec-label" wx:if="{{item.customerDisplay}}">客户</text>
-            <text class="info-spec-value" wx:if="{{item.customerDisplay}}">{{item.customerDisplay}}</text>
-          </view>
-
-          <!-- 工厂 -->
-          <view class="info-spec-row" wx:if="{{item.factoryName}}">
-            <text class="info-spec-label">工厂</text>
-            <text class="info-spec-value">{{item.factoryName}}</text>
-          </view>
-
-          <view class="info-spec-row" wx:if="{{item.deliveryDateStr}}">
-            <text class="info-spec-label">交期</text>
-            <text class="info-spec-value">{{item.deliveryDateStr}}</text>
-            <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
-          </view>
-
-          <view class="info-progress-row">
-            <text class="ipr-qty"><text class="ipr-qty-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>件</text>
-            <view class="ip-bar">
-              <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.status === 'completed' ? 'ip-fill--done' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
+          <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
+            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+            <view wx:else class="cover-placeholder">
+              <view class="cover-ph-text"><view class="line-icon line-icon--xl icon-package"></view></view>
             </view>
-            <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
-            <text class="ip-remain">剩<text class="ip-remain-num">{{item.remainQuantity || 0}}</text>件</text>
+          </view>
+
+          <view class="order-info">
+            <!-- 行1：订单号 + 急标签 + 状态标签 -->
+            <view class="info-line1">
+              <text class="order-no">{{item.orderNo}}</text>
+              <view class="info-badges">
+                <text wx:if="{{item.urgencyTagText === '急'}}" class="urgent-badge">急</text>
+                <text wx:if="{{item.statusText}}" class="status-badge status-badge--{{item.statusCls}}">{{item.statusText}}</text>
+              </view>
+            </view>
+            <!-- 行2：款名 -->
+            <view class="info-style">{{item.styleName || item.styleNo || '暂无款名'}}</view>
+            <!-- 行3：客户名 -->
+            <view class="info-customer" wx:if="{{item.customerName}}">{{item.customerName}}</view>
+            <!-- 行4：工厂名 -->
+            <view class="info-factory" wx:if="{{item.factoryName}}">{{item.factoryName}}</view>
           </view>
         </view>
 
-        <view class="order-arrow">
-          <text class="arrow-icon {{item.expanded ? 'arrow-icon--up' : ''}}">›</text>
+        <!-- 进度行：数量·交期 + 进度条 + 百分比 + 剩余天数（同一行） -->
+        <view class="info-progress">
+          <view class="ip-left">
+            <text class="ip-qty">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}件</text>
+            <text class="ip-dot">·</text>
+            <text class="ip-delivery" wx:if="{{item.deliveryDateStr}}">交期 {{item.deliveryDateStr}}</text>
+          </view>
+          <view class="ip-bar">
+            <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.isClosed ? 'ip-fill--done' : ''}}" style="width: {{item.progressWidth}}%"></view>
+          </view>
+          <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
+          <text class="ip-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
         </view>
-      </view>
 
-        <view class="order-expand" wx:if="{{item.expanded}}" catchtap="">
-          <view class="expand-section" wx:if="{{item.processNodes.length > 0}}">
-            <text class="expand-title">工序进度</text>
-            <scroll-view scroll-x class="process-circles" enhanced show-scrollbar="{{false}}">
-              <view class="proc-step" wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name">
-                <view class="proc-circle {{node.percent >= 100 ? 'proc-circle--done' : ''}} {{node.percent > 0 && node.percent < 100 ? 'proc-circle--active' : ''}}">
-                  <text wx:if="{{node.percent >= 100}}" class="proc-check">✓</text>
-                  <text wx:elif="{{node.percent > 0}}" class="proc-pct-text">{{node.percent}}</text>
-                  <text wx:else class="proc-dash">—</text>
+        <!-- 展开按钮 -->
+        <view class="order-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+          <text class="expand-btn-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
+          <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
+        </view>
+
+        <!-- 展开区域 -->
+        <view class="order-expand" wx:if="{{item.expanded}}">
+          <!-- 菲号明细 -->
+          <view class="detail-head">
+            <text class="detail-title">菲号明细</text>
+            <text class="detail-count">共{{item.colorGroups.length || 0}}菲</text>
+          </view>
+          <view class="detail-table">
+            <view class="detail-row detail-row--head">
+              <view class="detail-cell detail-cell--no">菲号</view>
+              <view class="detail-cell detail-cell--proc">工序明细</view>
+              <view class="detail-cell detail-cell--qty">数量</view>
+            </view>
+            <block wx:if="{{item.colorGroups && item.colorGroups.length > 0}}">
+              <view class="detail-row" wx:for="{{item.colorGroups}}" wx:for-item="cg" wx:key="color">
+                <view class="detail-cell detail-cell--no">{{cg.color}}</view>
+                <view class="detail-cell detail-cell--proc">
+                  <text wx:for="{{item.processNodes}}" wx:for-item="pn" wx:for-index="pni" wx:key="name" class="proc-node">{{pn.name}}<text wx:if="{{pni < item.processNodes.length - 1}}" class="proc-sep">→</text></text>
                 </view>
-                <text class="proc-label {{node.percent >= 100 ? 'proc-label--done' : ''}} {{node.percent > 0 && node.percent < 100 ? 'proc-label--active' : ''}}">{{node.name}}</text>
-                <text class="proc-qty" wx:if="{{node.qtyInfo}}">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
+                <view class="detail-cell detail-cell--qty">{{cg.total}}件</view>
+              </view>
+            </block>
+            <view class="detail-row detail-row--empty" wx:else>
+              <view class="detail-cell detail-cell--empty">暂无菲号明细</view>
+            </view>
+          </view>
+
+          <!-- 工序进度明细 -->
+          <view class="expand-section" wx:if="{{item.processNodes && item.processNodes.length > 0}}">
+            <text class="expand-title">工序进度</text>
+            <view class="process-node" wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name">
+              <view class="node-hd">
+                <text class="node-name">{{node.name}}</text>
+                <text class="node-pct {{node.percent >= 100 ? 'node-pct--done' : ''}}">{{node.percent}}%</text>
+              </view>
+              <view class="node-meta">
+                <text class="node-qty" wx:if="{{node.qtyInfo}}">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
+                <text class="node-dot" wx:if="{{node.qtyInfo && node.bundleInfo}}">·</text>
+                <text class="node-bundle-text" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
+              </view>
+              <view class="node-bar-bg">
+                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width: {{node.percentWidth}}%"></view>
+              </view>
+              <!-- 子工序列表 -->
+              <view class="node-sub-procs" wx:if="{{node.children && node.children.length > 0}}">
+                <view class="sub-proc-item" wx:for="{{node.children}}" wx:for-item="sp" wx:key="name">
+                  <text class="sp-name">{{sp.name}}</text>
+                  <text class="sp-price" wx:if="{{sp.unitPrice > 0}}">¥{{sp.unitPrice}}</text>
+                  <text class="sp-price sp-price--free" wx:else>待定价</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 颜色尺码矩阵 -->
+          <view class="expand-section" wx:if="{{item.colorGroups && item.colorGroups.length > 0}}">
+            <text class="expand-title">颜色尺码</text>
+            <scroll-view scroll-x class="sku-scroll" enhanced show-scrollbar="{{false}}">
+              <view class="sku-table">
+                <view class="sku-row sku-row--head">
+                  <text class="sku-cell sku-cell--color">颜色</text>
+                  <text class="sku-cell" wx:for="{{item.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
+                  <text class="sku-cell sku-cell--total">合计</text>
+                </view>
+                <view class="sku-row" wx:for="{{item.colorGroups}}" wx:for-item="cg" wx:key="color">
+                  <text class="sku-cell sku-cell--color">{{cg.color}}</text>
+                  <text class="sku-cell" wx:for="{{item.allSizes}}" wx:for-item="sz" wx:key="*this">{{cg.sizeMap[sz] || '-'}}</text>
+                  <text class="sku-cell sku-cell--total">{{cg.total}}</text>
+                </view>
               </view>
             </scroll-view>
           </view>
 
-          <scroll-view scroll-x class="expand-actions" enhanced show-scrollbar="{{false}}">
-            <view class="act-btn" catchtap="onOpenDetail" data-index="{{index}}">详情</view>
-            <view class="act-btn" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
-            <view class="act-btn" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
-            <view class="act-btn" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
-            <view class="act-btn act-btn--ship" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory}}">发货</view>
-            <view class="act-btn" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
+          <!-- 快捷操作 -->
+          <view class="expand-actions">
+            <view class="act-btn act-btn--detail" catchtap="onGoOrderDetail" data-index="{{index}}">详情</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
+            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory || isTenantAdmin}}">发货</view>
+            <view class="act-btn act-btn--remark" catchtap="onViewShipment" data-index="{{index}}">发货记录</view>
+            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
             <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
-          </scroll-view>
+          </view>
         </view>
       </view>
     </view>
 
+    <!-- 加载提示 -->
     <view class="load-tip" wx:if="{{orderLoading}}">加载中…</view>
     <view class="load-tip load-tip--end" wx:if="{{!orderHasMore && orders.length>0}}">— 没有更多了 —</view>
   </view>
 
+  <!-- ===== 发货记录 ===== -->
   <view wx:if="{{activeTab===1}}" class="tab-content">
     <view wx:if="{{shipments.length===0 && !shipmentLoading}}" class="empty">
-      <empty-state icon="icon-factory" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+      <view class="line-icon line-icon--xl icon-package"></view>
+      <text class="empty-text">暂无发货记录</text>
     </view>
-    <view wx:for="{{shipments}}" wx:key="id" class="task-card" data-index="{{index}}" bindtap="onTapShipment">
+    <view wx:for="{{shipments}}" wx:key="id" class="shipment-card" data-index="{{index}}" bindtap="onTapShipment">
       <view class="shipment-top">
         <text class="shipment-no">{{item.orderNo || item.shipmentNo || ''}}</text>
-        <text class="status-tag tag {{item.statusCls}}">{{item.statusText}}</text>
+        <text class="shipment-status {{item.statusCls}}">{{item.statusText}}</text>
       </view>
       <view class="shipment-info">
         <text>发货: {{item.totalQuantity || 0}}件</text>
@@ -193,118 +247,3 @@
   </view>
 </view>
 
-<view class="modal-mask" wx:if="{{showShipModal}}" bindtap="onCancelShip">
-  <view class="modal-content" catchtap="">
-    <view class="modal-header">
-      <text class="modal-title">发货 - {{currentOrder.orderNo}}</text>
-      <text class="modal-close" bindtap="onCancelShip">✕</text>
-    </view>
-    <scroll-view scroll-y class="modal-body">
-      <view wx:if="{{shippableInfo}}" class="ship-remaining">
-        <text class="ship-remaining-label">可发数量</text>
-        <text class="ship-remaining-value"><text class="ship-remaining-num">{{shippableInfo.remaining || 0}}</text> 件</text>
-      </view>
-      <view class="ship-table-header">
-        <text class="st-col st-col--left">颜色</text>
-        <text class="st-col st-col--center">尺码</text>
-        <text class="st-col st-col--right">下单</text>
-        <text class="st-col st-col--right">已发</text>
-        <text class="st-col st-col--right">发货数</text>
-      </view>
-      <view wx:for="{{shipDetails}}" wx:key="index" class="ship-table-row">
-        <text class="st-col st-col--left">{{item.color || '-'}}</text>
-        <text class="st-col st-col--center">{{item.sizeName || '-'}}</text>
-        <text class="st-col st-col--right st-num">{{item.ordered}}</text>
-        <text class="st-col st-col--right st-num">{{item.shipped}}</text>
-        <input class="st-col st-col--right st-input" type="number" placeholder="0" value="{{item.quantity}}" data-index="{{index}}" bindinput="onShipDetailQtyInput" />
-      </view>
-      <view class="ship-form">
-        <view class="sf-row">
-          <text class="sf-label">发货方式</text>
-          <view class="ship-method-group">
-            <view class="ship-method-btn {{shipForm.shipMethod==='SELF_DELIVERY' ? 'ship-method-btn--on' : ''}}" data-value="SELF_DELIVERY" bindtap="onSelectShipMethod">自送</view>
-            <view class="ship-method-btn {{shipForm.shipMethod==='EXPRESS' ? 'ship-method-btn--on' : ''}}" data-value="EXPRESS" bindtap="onSelectShipMethod">快递</view>
-          </view>
-        </view>
-        <view wx:if="{{shipForm.shipMethod==='EXPRESS'}}" class="sf-row">
-          <text class="sf-label">快递公司</text>
-          <input class="sf-input" placeholder="请输入" value="{{shipForm.expressCompany}}" data-field="expressCompany" bindinput="onShipFieldInput" />
-        </view>
-        <view wx:if="{{shipForm.shipMethod==='EXPRESS'}}" class="sf-row">
-          <text class="sf-label">快递单号</text>
-          <input class="sf-input" placeholder="请输入" value="{{shipForm.trackingNo}}" data-field="trackingNo" bindinput="onShipFieldInput" />
-        </view>
-        <view class="sf-row">
-          <text class="sf-label">备注</text>
-          <textarea class="sf-textarea" placeholder="选填" value="{{shipForm.remark}}" data-field="remark" bindinput="onShipFieldInput" />
-        </view>
-      </view>
-    </scroll-view>
-    <view class="modal-footer">
-      <view class="btn btn-cancel" bindtap="onCancelShip">取消</view>
-      <view class="btn btn-primary" bindtap="onSubmitShip">确认发货</view>
-    </view>
-  </view>
-</view>
-
-<view class="modal-mask" wx:if="{{showDetailModal}}" bindtap="onCloseDetail">
-  <view class="modal-content" catchtap="">
-    <view class="modal-header">
-      <text class="modal-title">发货详情</text>
-      <text class="modal-close" bindtap="onCloseDetail">✕</text>
-    </view>
-    <scroll-view scroll-y class="modal-body">
-      <view wx:if="{{currentShipment}}" class="detail-info">
-        <view class="di-row"><text class="di-label">状态</text><text class="di-value {{currentShipment.statusCls}}">{{currentShipment.statusText}}</text></view>
-        <view class="di-row"><text class="di-label">发货数量</text><text class="di-value">{{currentShipment.totalQuantity || 0}} 件</text></view>
-        <view class="di-row" wx:if="{{currentShipment.creatorName}}"><text class="di-label">创建人</text><text class="di-value">{{currentShipment.creatorName}}</text></view>
-        <view class="di-row" wx:if="{{currentShipment.shippedByName}}"><text class="di-label">发货人</text><text class="di-value">{{currentShipment.shippedByName}} · {{currentShipment.shipTime || ''}}</text></view>
-        <view class="di-row" wx:if="{{currentShipment.receivedByName}}"><text class="di-label">收货人</text><text class="di-value">{{currentShipment.receivedByName}} · {{currentShipment.receiveTime || ''}}</text></view>
-      </view>
-      <view wx:if="{{detailItems.length > 0}}">
-        <view class="ship-table-header">
-          <text class="st-col">颜色</text>
-          <text class="st-col">尺码</text>
-          <text class="st-col">数量</text>
-        </view>
-        <view wx:for="{{detailItems}}" wx:key="index" class="ship-table-row">
-          <text class="st-col">{{item.color || '-'}}</text>
-          <text class="st-col">{{item.sizeName || '-'}}</text>
-          <text class="st-col">{{item.quantity}}</text>
-        </view>
-      </view>
-    </scroll-view>
-    <view class="modal-footer">
-      <view wx:if="{{currentShipment.receiveStatus==='pending' && isFactory}}" class="btn btn-danger" bindtap="onDeleteShipment">删除</view>
-      <view wx:if="{{currentShipment.receiveStatus==='pending' && isTenantAdmin}}" class="btn btn-primary" bindtap="onOpenReceiveModal">收货确认</view>
-      <view class="btn btn-cancel" bindtap="onCloseDetail">关闭</view>
-    </view>
-  </view>
-</view>
-
-<view class="modal-mask" wx:if="{{showReceiveModal}}" bindtap="onCancelReceive">
-  <view class="modal-content" catchtap="">
-    <view class="modal-header">
-      <text class="modal-title">收货确认</text>
-      <text class="modal-close" bindtap="onCancelReceive">✕</text>
-    </view>
-    <scroll-view scroll-y class="modal-body">
-      <view class="ship-table-header">
-        <text class="st-col">颜色</text>
-        <text class="st-col">尺码</text>
-        <text class="st-col">发货数</text>
-        <text class="st-col">到货数</text>
-      </view>
-      <view wx:for="{{receiveForm.receivedDetails}}" wx:key="index" class="ship-table-row">
-        <text class="st-col">{{item.color || '-'}}</text>
-        <text class="st-col">{{item.sizeName || '-'}}</text>
-        <text class="st-col">{{item.quantity}}</text>
-        <input class="st-col st-input" type="number" placeholder="0" value="{{item.receivedQuantity}}" data-index="{{index}}" bindinput="onReceiveDetailQtyInput" />
-      </view>
-    </scroll-view>
-    <view class="modal-footer">
-      <view class="btn btn-cancel" bindtap="onCancelReceive">取消</view>
-      <view class="btn btn-primary" bindtap="onSubmitReceive">确认收货</view>
-    </view>
-  </view>
-</view>

@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STAGES = [
@@ -267,12 +267,10 @@ Page({
     const { stages, styleId } = this.data;
     if (!styleId) return;
 
-    let hasNew = false;
     const allProcesses = [];
     stages.forEach((s) => {
       s.processes.forEach((p) => {
         allProcesses.push({ ...p, sortOrder: allProcesses.length });
-        if (p._isNew) hasNew = true;
       });
     });
 

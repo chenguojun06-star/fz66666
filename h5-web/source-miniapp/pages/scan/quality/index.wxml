@@ -1,49 +1,44 @@
+<custom-nav title="质检扫码" show-back="{{true}}" />
+
 <view class="container">
 
   <!-- 订单信息 -->
   <view class="info-card">
     <view class="card-header">
-      <view class="cover-wrap">
-        <image-preview src="{{coverImage || ''}}" mode="aspectFill" />
-      </view>
+      <image-preview class="cover-wrap" src="{{coverImage || ''}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
-        <view class="info-grid">
-          <view class="info-grid-item" wx:if="{{detail.orderNo}}">
-            <text class="info-grid-label">订单</text>
-            <text class="info-grid-value">{{detail.orderNo}}</text>
-          </view>
-          <view class="info-grid-item" wx:if="{{detail.bundleNo}}">
-            <text class="info-grid-label">菲号</text>
-            <text class="info-grid-value">{{detail.bundleNo}}</text>
-          </view>
-          <view class="info-grid-item" wx:if="{{detail.color}}">
-            <text class="info-grid-label">颜色</text>
-            <text class="info-grid-value">{{detail.color}}</text>
-          </view>
-          <view class="info-grid-item" wx:if="{{detail.size}}">
-            <text class="info-grid-label">码数</text>
-            <text class="info-grid-value">{{detail.size}}</text>
-          </view>
-          <view class="info-grid-item">
-            <text class="info-grid-label">数量</text>
-            <text class="info-grid-value">{{detail.quantity}} 件</text>
-          </view>
-          <view class="info-grid-item" wx:if="{{detail.processName}}">
-            <text class="info-grid-label">工序</text>
-            <text class="info-grid-value">{{detail.processName}}</text>
-          </view>
-        </view>
+        <text class="sub-info">订单 {{detail.orderNo}}</text>
+        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+      </view>
+    </view>
+    <view class="info-divider"></view>
+    <view class="kv-grid">
+      <view class="kv-item">
+        <text class="kv-label">颜色</text>
+        <text class="kv-value">{{detail.color || '-'}}</text>
+      </view>
+      <view class="kv-item kv-item-border">
+        <text class="kv-label">码数</text>
+        <text class="kv-value">{{detail.size || '-'}}</text>
+      </view>
+      <view class="kv-item">
+        <text class="kv-label">数量</text>
+        <text class="kv-value">{{detail.quantity}}件</text>
+      </view>
+      <view class="kv-item kv-item-border">
+        <text class="kv-label">工序</text>
+        <text class="kv-value">{{detail.processName || '-'}}</text>
       </view>
     </view>
   </view>
 
   <!-- AI 建议 -->
   <view wx:if="{{aiSuggestion}}" class="insight-card">
-    <text class="insight-icon"><text class="line-icon line-icon--lg icon-ai"></text></text>
+    <view class="line-icon icon-ai insight-icon"></view>
     <view class="insight-body">
       <text wx:if="{{historicalDefectRate}}" class="insight-text">历史不良率 {{historicalDefectRate}}</text>
-      <text wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent">⚠️ {{aiSuggestion.urgentTip}}</text>
+      <view wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent"><view class="icon-warning-orange"></view> {{aiSuggestion.urgentTip}}</view>
       <block wx:if="{{aiSuggestion.checkpoints && aiSuggestion.checkpoints.length > 0}}">
         <text class="insight-label">质检要点：</text>
         <text wx:for="{{aiSuggestion.checkpoints}}" wx:key="*this" class="insight-checkpoint">• {{item}}</text>
@@ -52,125 +47,86 @@
         <text class="insight-label">缺陷提示：</text>
         <text wx:for="{{aiSuggestionList}}" wx:key="category" class="insight-checkpoint">【{{item.label}}】{{item.text}}</text>
       </block>
-      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">
-        <text>采纳建议</text>
-      </view>
+      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">采纳建议</view>
     </view>
   </view>
 
   <!-- 质检结果选择 -->
-  <view class="section-card">
-    <text class="section-title">质检结果</text>
+  <view class="section-group">
+    <text class="section-group-title">质检结果</text>
     <view class="result-group">
       <view class="result-btn {{result === 'qualified' ? 'active-pass' : ''}}"
             bindtap="onSelectResult" data-value="qualified">
-        <text class="result-icon">✅</text>
+        <view class="result-icon"><view class="icon-check-green"></view></view>
         <text>合格</text>
       </view>
       <view class="result-btn {{result === 'unqualified' ? 'active-fail' : ''}}"
             bindtap="onSelectResult" data-value="unqualified">
-        <text class="result-icon">❌</text>
+        <view class="line-icon icon-close result-icon"></view>
         <text>不合格</text>
       </view>
     </view>
   </view>
 
   <!-- 不合格详情 -->
-  <view wx:if="{{result === 'unqualified'}}" class="section-card">
-    <text class="section-title">不良品详情</text>
-
-    <view class="form-row">
-      <text class="form-label">不良数量</text>
-      <input class="form-input" type="number" value="{{defectQuantity}}"
-             bindinput="onDefectQuantityInput" placeholder="请输入不良数量" />
-    </view>
-
-    <view class="form-row">
-      <text class="form-label">缺陷类别</text>
-      <picker range="{{defectCategories}}" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
-        <view class="form-picker">
-          {{defectCategoryIndex >= 0 ? defectCategories[defectCategoryIndex] : '请选择'}}
-          <text class="picker-arrow">▾</text>
+  <view wx:if="{{result === 'unqualified'}}" class="section-group">
+    <text class="section-group-title">不良品详情</text>
+    <view class="group-card">
+      <view class="group-field-list">
+        <view class="form-row">
+          <text class="form-label">不良数量</text>
+          <input class="form-input" type="number" value="{{defectQuantity}}"
+                 bindinput="onDefectQuantityInput" placeholder="请输入不良数量" />
         </view>
-      </picker>
-    </view>
 
-    <view class="form-row">
-      <text class="form-label">处理方式</text>
-      <picker range="{{handleMethods}}" value="{{handleMethodIndex}}" bindchange="onHandleMethodChange">
-        <view class="form-picker">
-          {{handleMethodIndex >= 0 ? handleMethods[handleMethodIndex] : '请选择'}}
-          <text class="picker-arrow">▾</text>
+        <view class="form-row">
+          <text class="form-label">缺陷类别</text>
+          <picker range="{{defectCategories}}" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
+            <view class="form-picker">
+              {{defectCategoryIndex >= 0 ? defectCategories[defectCategoryIndex] : '请选择'}}
+              <view class="picker-arrow"><view class="icon-chevron-down-sm"></view></view>
+            </view>
+          </picker>
         </view>
-      </picker>
+
+        <view class="form-row">
+          <text class="form-label">处理方式</text>
+          <picker range="{{handleMethods}}" value="{{handleMethodIndex}}" bindchange="onHandleMethodChange">
+            <view class="form-picker">
+              {{handleMethodIndex >= 0 ? handleMethods[handleMethodIndex] : '请选择'}}
+              <view class="picker-arrow"><view class="icon-chevron-down-sm"></view></view>
+            </view>
+          </picker>
+        </view>
+      </view>
     </view>
 
     <!-- 图片上传 -->
-    <view class="form-row-col">
-      <text class="form-label">不良品照片（最多5张）</text>
+    <view class="section-group" style="margin-top: 20rpx;">
+      <view class="photo-title-row">
+        <text class="section-group-title" style="margin-bottom: 0;">不良品照片</text>
+        <text class="photo-count-hint">最多 5 张</text>
+      </view>
       <view class="photo-grid">
         <view wx:for="{{images}}" wx:key="*this" class="photo-item">
           <image-preview class="photo-img" src="{{item}}" mode="aspectFill" />
-          <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
+          <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage"><view class="icon-multiply-sm"></view></view>
         </view>
         <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
-          <text class="add-icon"><text class="line-icon icon-camera"></text></text>
+          <view class="add-icon"><view class="line-icon icon-camera"></view></view>
           <text class="add-text">拍照/选图</text>
         </view>
-      </view>
-    </view>
-
-    <!-- AI 图片分析结果 -->
-    <view wx:if="{{images.length > 0 && (aiImageAnalyzing || aiImageResult || aiImageError)}}" class="ai-image-result">
-      <view class="ai-image-header">
-        <text class="ai-image-icon"><text class="line-icon icon-search"></text></text>
-        <text class="ai-image-title">AI 图片分析</text>
-        <view wx:if="{{aiImageResult && aiImageResult.detectedItems.length > 0}}"
-              class="ai-image-adopt" bindtap="onAdoptImageAiResult">采纳</view>
-        <view wx:if="{{!aiImageAnalyzing && aiImageResult}}"
-              class="ai-image-retry" bindtap="onReanalyzeImage">重新分析</view>
-      </view>
-
-      <view wx:if="{{aiImageAnalyzing}}" class="ai-image-loading">
-        <text>AI 正在分析图片中...</text>
-      </view>
-
-      <view wx:if="{{aiImageError}}" class="ai-image-error">
-        <text>分析失败：{{aiImageError}}</text>
-      </view>
-
-      <view wx:if="{{aiImageResult && aiImageResult.detectedItems && aiImageResult.detectedItems.length > 0}}" class="ai-image-defects">
-        <view class="ai-severity">
-          <text>严重程度：</text>
-          <text class="severity-badge severity-{{aiImageResult.severity}}">{{aiImageResult.severity}}</text>
-        </view>
-        <view wx:for="{{aiImageResult.detectedItems}}" wx:key="type" class="defect-item">
-          <text class="defect-type">• {{item.type}}</text>
-          <text wx:if="{{item.description}}" class="defect-desc">{{item.description}}</text>
-          <text wx:if="{{item.confidence}}" class="defect-confidence">置信度：{{item.confidence}}%</text>
-        </view>
-        <view wx:if="{{aiImageResult.report}}" class="ai-image-report">
-          <text class="report-label">分析说明：</text>
-          <text class="report-text">{{aiImageResult.report}}</text>
-        </view>
-        <view wx:if="{{aiImageResult.recommendation}}" class="ai-image-recommend">
-          <text class="recommend-label">建议处理：</text>
-          <text class="recommend-text">{{aiImageResult.recommendation}}</text>
-        </view>
-      </view>
-
-      <view wx:if="{{aiImageResult && aiImageResult.severity === 'NONE' && (!aiImageResult.detectedItems || aiImageResult.detectedItems.length === 0)}}"
-            class="ai-image-clean">
-        <text>✅ 未检测到明显缺陷，建议人工复核确认</text>
       </view>
     </view>
   </view>
 
   <!-- 备注 -->
-  <view class="section-card">
-    <text class="section-title">备注</text>
-    <textarea class="remark-area" value="{{remark}}" bindinput="onRemarkInput"
-              placeholder="可填写质检备注" maxlength="500" auto-height />
+  <view class="section-group">
+    <text class="section-group-title">质检备注</text>
+    <view class="group-card">
+      <textarea class="remark-area" value="{{remark}}" bindinput="onRemarkInput"
+                placeholder="可填写质检备注" maxlength="500" auto-height />
+    </view>
   </view>
 
   <view class="footer-bar">

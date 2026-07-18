@@ -25,15 +25,11 @@ Component({
         this.loadCart();
       }
     },
-    // 监听 selectedItems 和 cart.items 变化，自动更新 isAllSelected 和 item._selected 标志
+    // 监听 selectedItems 和 cart.items 变化，自动更新 isAllSelected
     'selectedItems, cart.items': function(selectedItems, cartItems) {
-      const items = (cartItems && cartItems.length ? cartItems : []).map(function (item) {
-        return Object.assign({}, item, { _selected: (selectedItems && selectedItems.indexOf(item.id) !== -1) });
-      });
-      const selIds = selectedItems || [];
+      const items = cartItems && cartItems.length ? cartItems : [];
       this.setData({
-        isAllSelected: items.length > 0 && selIds.length === items.length,
-        'cart.items': items,
+        isAllSelected: items.length > 0 && selectedItems && selectedItems.length === items.length,
       });
     },
   },
@@ -75,7 +71,7 @@ Component({
           self.setData({ selectedItems: allIds });
           self._computeTotal();
         }
-      }).catch(function (e) {
+      }).catch(function (_e) {
         wx.hideLoading();
         // API 可能不存在，设置默认空购物车
         self.setData({
@@ -267,7 +263,7 @@ Component({
       api.purchaseCart.preview()
         .then(function (res) {
           wx.hideLoading();
-          const data = res && res.data || res;
+          const data = res || {};
           self.setData({ previewVisible: true, previewData: data });
         })
         .catch(function () {
@@ -291,7 +287,7 @@ Component({
 
     onConfirm: function () {
       if (this.data.submitting) return;
-      if (!this.data.selectedItems.length === 0) {
+      if (this.data.selectedItems.length === 0) {
         wx.showToast({ title: '请先选择物料', icon: 'none' });
         return;
       }
@@ -317,7 +313,7 @@ Component({
       api.purchaseCart.confirm(this.data.selectedItems)
         .then(function (res) {
           wx.hideLoading();
-          const data = res && res.data || res;
+          const data = res || {};
           const purchaseNos = data && data.purchaseNos || [];
 
           wx.showToast({
