@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { displaySplitStatus } = require('../../../utils/displayHelper');
 
 function showTip(msg) { toast.info(msg); }
 
@@ -359,8 +360,15 @@ Page({
     this.setData({ pendingLoading: true });
     try {
       const res = await api.production.listPendingSplits();
-      const list = Array.isArray(res) ? res : (res || []);
-      this.setData({ pendingSplits: Array.isArray(list) ? list : [], pendingLoading: false });
+      const rawList = Array.isArray(res) ? res : (res || []);
+      const list = (rawList || []).map(function (item) {
+        const st = displaySplitStatus(item.splitStatus);
+        return Object.assign({}, item, {
+          splitStatusText: st.text,
+          splitStatusColorKey: String(item.splitStatus || '').trim().toLowerCase(),
+        });
+      });
+      this.setData({ pendingSplits: list, pendingLoading: false });
     } catch (e) {
       console.warn('[bundle-split] loadPendingSplits fail', e);
       this.setData({ pendingLoading: false });

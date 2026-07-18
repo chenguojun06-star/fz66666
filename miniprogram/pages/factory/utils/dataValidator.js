@@ -71,7 +71,7 @@ function validateDataShape(data, shape) {
   }
 
   for (const fieldName in shape) {
-    if (shape.hasOwnProperty(fieldName)) {
+    if (Object.prototype.hasOwnProperty.call(shape, fieldName)) {
       const rule = shape[fieldName];
       const value = data[fieldName];
       const error = validateField(value, rule, fieldName);
@@ -156,13 +156,13 @@ function normalizeData(data, shape) {
 
   const normalized = {};
   for (const key in data) {
-    if (data.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
       normalized[key] = data[key];
     }
   }
 
   for (const fieldName in shape) {
-    if (shape.hasOwnProperty(fieldName)) {
+    if (Object.prototype.hasOwnProperty.call(shape, fieldName)) {
       const rule = shape[fieldName];
       const value = normalized[fieldName];
 

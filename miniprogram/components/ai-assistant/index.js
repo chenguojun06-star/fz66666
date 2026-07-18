@@ -355,17 +355,17 @@ Component({
       if (!(wx.getStorageSync('auth_token') || '')) return;
       const self = this;
       api.intelligence.getMyPendingTaskSummary().then(function (res) {
-        const data = res && res.data ? res.data : res;
+        const data = res;
         if (!data) return;
         const suggestions = [];
         if (data.overdueOrderCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: '🚨 ' + data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
+          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
         }
         if (data.qualityTaskCount > 0) {
-          suggestions.push({ icon: 'icon-clipboard', label: '📋 ' + data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？' });
+          suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？' });
         }
         if (data.materialShortageCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: '⚠️ 面料缺口', question: '当前有哪些面料缺口预警？' });
+          suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？' });
         }
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
@@ -448,7 +448,7 @@ Component({
         const key = type + ':' + id;
         if (obj.keys.indexOf(key) === -1) { obj.keys.push(key); }
         wx.setStorageSync('task_dismissed_items', JSON.stringify(obj));
-      } catch (_e) {}
+      } catch (_e) { /* 存储写入失败忽略 */ }
       this.loadTasks();
     },
 
@@ -690,13 +690,13 @@ Component({
         title: '确认执行',
         content: command,
         confirmText: '执行',
-        confirmColor: '#1677FF',
+        confirmColor: '#007aff',
         success: function (res) {
           if (!res.confirm) return;
           wx.showLoading({ title: '执行中...' });
           api.intelligence.naturalLanguageExecute({ text: command }).then(function (res) {
             wx.hideLoading();
-            const data = res && res.data ? res.data : res;
+            const data = res;
             if (data && data.status === 'SUCCESS') {
               wx.showToast({ title: '执行成功', icon: 'success' });
               self.sendMessage();

@@ -187,7 +187,7 @@
   text-align: center;
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  background: var(--color-bg-light, var(--color-bg-light));
+  background: var(--color-bg-page, var(--color-bg-page));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
 }
@@ -249,11 +249,10 @@
 .mf-mini-btn {
   padding: 5px 12px;
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
-  background: rgba(var(--color-primary-rgb), 0.15);
-  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
-  border-radius: var(--radius-xs);
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -302,7 +301,8 @@
   justify-content: center;
   font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
-  background: var(--color-bg-gray, var(--color-bg-light));
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
   border-radius: 50%;
 }
 
@@ -313,16 +313,17 @@
 
 .mf-add-btn {
   font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-primary);
   padding: 2px 10px;
   background: rgba(var(--color-primary-rgb), 0.1);
-  border-radius: 20px;
+  border-radius: var(--radius-full);
 }
 
 /* 次要操作按钮（如"导入5码"）— 灰色描边风格 */
 .mf-import-btn {
   color: var(--color-text-secondary);
-  background: var(--color-bg-light, var(--color-bg-light));
+  background: var(--color-bg-page, var(--color-bg-page));
   border: 1px solid var(--color-border);
 }
 
@@ -358,7 +359,7 @@
   text-align: center;
   font-size: var(--font-size-sm);
   color: var(--color-text-disabled);
-  background: var(--color-bg-light, var(--color-bg-light));
+  background: var(--color-bg-page, var(--color-bg-page));
   border-radius: var(--radius-xs);
 }
 
@@ -371,7 +372,7 @@
   margin-bottom: 6px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
-  background: var(--color-bg-light, var(--color-bg-light));
+  background: var(--color-bg-page, var(--color-bg-page));
 }
 
 .mf-select-item.active {
@@ -389,7 +390,7 @@
 .mf-btn {
   flex: 1;
   padding: 7px 8px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   text-align: center;
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -401,9 +402,9 @@
 }
 
 .mf-btn.cancel {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--color-bg-page);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  border: none;
 }
 
 .mf-btn.ok {
@@ -416,7 +417,7 @@
 }
 
 .mf-btn.danger {
-  background: var(--color-error, var(--color-danger));
+  background: var(--color-danger, var(--color-danger));
   color: var(--color-text-white);
 }
 
@@ -429,7 +430,7 @@
   display: flex;
   justify-content: space-between;
   padding: 3px 0;
-  border-bottom: 1px solid var(--color-border-light, var(--color-bg-light));
+  border-bottom: 1px solid var(--color-border);
 }
 
 .mf-kv:last-child {

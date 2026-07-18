@@ -78,8 +78,8 @@ class ScanSubmitter {
 
       const res = await this.api.production.executeScan(scanData);
 
-      // 严谨校验：如果后端报错但是 HTTP 200 (Result 中仅抛出了 code: 500)，res 里面压根没有 success
-      // 因此必须明确 res.success === true 或者 res.code === 200!
+      // ok() 已解包 Result.data，失败直接 throw 进 catch
+      // res 为后端返回的业务数据 Map（含 scanRecord/success/unitPriceHint 等）
       if (res && (res.scanRecord || res.success === true)) {
         if (res.unitPriceHint) {
           wx.showToast({ title: res.unitPriceHint, icon: 'none', duration: 4000 });

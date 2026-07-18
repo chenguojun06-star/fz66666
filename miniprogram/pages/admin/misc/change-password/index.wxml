@@ -1,27 +1,35 @@
 <view class="container">
   <custom-nav title="修改密码" show-back="{{true}}" show-search="{{false}}" />
+
+  <!-- Security Tip (brand-50 bg, check icon) -->
+  <view class="safety-tip">
+    <view class="safety-icon"></view>
+    <text class="safety-text">为了账户安全，请定期修改密码并使用包含字母与数字的高强度密码</text>
+  </view>
+
+  <!-- Password Form Card (iOS settings style: borderless inputs + dividers) -->
   <view class="card">
-    <view class="form-section">
-      <view class="form-field">
-        <text class="form-label">原密码</text>
-        <input class="form-input" type="safe-password" placeholder="请输入原密码"
-          bindinput="onOldPwdInput" value="{{pwdForm.oldPassword}}" password="{{true}}" />
-      </view>
-      <view class="form-field">
-        <text class="form-label">新密码</text>
-        <input class="form-input" type="safe-password" placeholder="新密码（至少6位）"
-          bindinput="onNewPwdInput" value="{{pwdForm.newPassword}}" password="{{true}}" />
-      </view>
-      <view class="form-field">
-        <text class="form-label">确认新密码</text>
-        <input class="form-input" type="safe-password" placeholder="请再次输入新密码"
-          bindinput="onConfirmPwdInput" value="{{pwdForm.confirmPassword}}" password="{{true}}" />
-      </view>
+    <view class="form-field">
+      <text class="form-label">原密码</text>
+      <input class="form-input" type="safe-password" placeholder="请输入原密码"
+        bindinput="onOldPwdInput" value="{{pwdForm.oldPassword}}" password="{{true}}" />
     </view>
-    <view class="form-actions">
-      <view class="btn-submit {{saving ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmit">
-        {{saving ? '提交中...' : '确认修改'}}
-      </view>
+    <view class="field-divider"></view>
+    <view class="form-field">
+      <text class="form-label">新密码</text>
+      <input class="form-input" type="safe-password" placeholder="新密码（至少6位）"
+        bindinput="onNewPwdInput" value="{{pwdForm.newPassword}}" password="{{true}}" />
     </view>
+    <view class="field-divider"></view>
+    <view class="form-field">
+      <text class="form-label">确认新密码</text>
+      <input class="form-input" type="safe-password" placeholder="请再次输入新密码"
+        bindinput="onConfirmPwdInput" value="{{pwdForm.confirmPassword}}" password="{{true}}" />
+    </view>
+  </view>
+
+  <!-- Submit Button (outside card) -->
+  <view class="btn-submit {{saving ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmit">
+    {{saving ? '提交中...' : '确认修改'}}
   </view>
 </view>

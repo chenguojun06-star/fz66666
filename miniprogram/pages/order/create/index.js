@@ -46,7 +46,8 @@ Page({
 
     return api.system.getDictList('category')
       .then(function (res) {
-        var dictData = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+        // 兼容分页结构 {records:[...]} 和数组 [...]
+        var dictData = Array.isArray(res) ? res : (res && res.records) || [];
         dictData.forEach(function (d) {
           var v = d.dictValue || d.value || '';
           var l = d.dictLabel || d.label || '';
@@ -63,7 +64,7 @@ Page({
         return api.style.listStyles(params);
       })
       .then(function (res) {
-        var raw = (res && res.records) || (res && res.data && res.data.records) || (res && res.data) || [];
+        var raw = (res && res.records) || (Array.isArray(res) ? res : []) || [];
         var list = Array.isArray(raw) ? raw : [];
 
         console.log('[下单管理] 原始数据数量:', list.length);

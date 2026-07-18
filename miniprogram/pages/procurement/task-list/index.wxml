@@ -1,100 +1,118 @@
+<custom-nav title="采购任务" show-back="{{true}}" />
+
 <view class="container">
-  <!-- 跨岗位提示条 -->
-  <view wx:if="{{roleHint}}" class="role-hint-bar">
-    <text class="role-hint-icon">⚠️</text>
-    <text class="role-hint-text">{{roleHint}}</text>
-  </view>
+  <!-- 状态筛选 Tab + 搜索栏（sticky） -->
+  <view class="sticky-header">
+    <scroll-view scroll-x class="filter-tabs-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="filter-tabs">
+        <view
+          wx:for="{{statusTabs}}"
+          wx:key="key"
+          class="filter-tab {{item.tabClass}} {{activeFilter === item.key ? 'active' : ''}}"
+          bindtap="onFilterTap"
+          data-key="{{item.key}}"
+        >
+          <text class="tab-label">{{item.label}}</text>
+          <text wx:if="{{item.count > 0}}" class="tab-badge">{{item.count}}</text>
+        </view>
+      </view>
+    </scroll-view>
 
-  <!-- 状态筛选 Tab -->
-  <view class="filter-tabs">
-    <view
-      wx:for="{{statusTabs}}"
-      wx:key="key"
-      class="filter-tab {{activeStatus === item.key ? 'active' : ''}}"
-      bindtap="onTabChange"
-      data-key="{{item.key}}"
-    >
-      <text>{{item.label}}</text>
-      <text wx:if="{{item.count > 0}}" class="tab-badge">{{item.count}}</text>
-    </view>
-  </view>
-
-  <!-- 搜索框 -->
-  <view class="search-bar">
-    <view class="search-box">
-      <view class="line-icon line-icon--sm icon-search search-icon"></view>
-      <input
-        class="search-input"
-        placeholder="搜索物料/订单号"
-        value="{{searchKeyword}}"
-        bindinput="onSearchInput"
-        confirm-type="search"
-        bindconfirm="onSearchConfirm"
-      />
-    </view>
+    <!-- 搜索栏 -->
+    <search-scan
+      placeholder="搜索物料/订单号"
+      value="{{keyword}}"
+      show-scan="{{false}}"
+      bind:input="onSearchInput"
+    />
   </view>
 
   <!-- 加载中 -->
-  <view wx:if="{{loading && !filteredGroups.length}}" class="loading-state">
-    <text>加载采购页面中…</text>
+  <view wx:if="{{loading && !filteredItems.length}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载采购任务中…</text>
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{filteredGroups.length === 0}}" icon="icon-box" text="暂无采购任务" hint="当有新的订单分配时，采购任务将出现在这里" card="{{true}}"></empty-state>
+  <view wx:elif="{{filteredItems.length === 0}}" class="empty-state">
+    <view class="empty-icon line-icon icon-package"></view>
+    <text class="empty-text">暂无采购任务</text>
+    <text class="empty-hint">当有物料需要采购时，任务将出现在这里</text>
+  </view>
 
-  <!-- 订单卡片列表 -->
+  <!-- 任务列表（物料级别卡片） -->
   <block wx:else>
-    <view class="order-list">
-      <view
-        wx:for="{{filteredGroups}}"
-        wx:key="groupKey"
-        class="proc-card"
-        data-group="{{item}}"
-        bindtap="onGroupTap"
-        hover-class="proc-card-hover"
-      >
-        <!-- 顶部：款式图片 + 订单信息 -->
-        <view class="proc-card-top">
-          <view class="proc-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}" data-group="{{item}}">
-            <image wx:if="{{item.styleCoverUrl}}" class="proc-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
-          </view>
-          <view class="proc-info">
-            <view class="proc-info-head">
-              <text class="proc-order-no {{item.isSample ? 'proc-sample-no' : ''}}">{{item.displayOrderNo}}</text>
-              <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
-            </view>
-            <text wx:if="{{item.styleNo}}" class="proc-style-no">{{item.styleNo}}</text>
-          </view>
+    <view
+      wx:for="{{filteredItems}}"
+      wx:key="id"
+      class="task-card"
+    >
+      <!-- 头部：款式图 + 物料信息 + 状态标签 -->
+      <view class="card-header">
+        <view class="card-media">
+          <image
+            wx:if="{{item.styleCoverUrl}}"
+            class="media-img"
+            src="{{item.styleCoverUrl}}"
+            mode="aspectFill"
+            lazy-load="true"
+          />
+          <view wx:else class="media-placeholder line-icon icon-package"></view>
         </view>
-        <!-- 详情行 -->
-        <view class="proc-details">
-          <view class="proc-detail-row">
-            <text class="proc-detail-label">物料</text>
-            <text class="proc-detail-value highlight">{{item.totalCount}}项</text>
-          </view>
-          <view class="proc-detail-row">
-            <text class="proc-detail-label">到货率</text>
-            <text class="proc-detail-value {{item.arrivalRate >= 100 ? 'success' : ''}}">{{item.arrivalRate}}%</text>
-          </view>
-          <view class="proc-detail-row" wx:if="{{item.pendingCount > 0}}">
-            <text class="proc-detail-label">待采购</text>
-            <text class="proc-detail-value pending">{{item.pendingCount}}项</text>
-          </view>
-          <view class="proc-detail-row" wx:if="{{item.receiverName}}">
-            <text class="proc-detail-label">领取人</text>
-            <text class="proc-detail-value">{{item.receiverName}}</text>
-          </view>
+        <view class="card-title-area">
+          <text class="material-name">{{item.materialName || '未知物料'}}</text>
+          <text class="material-code" wx:if="{{item.materialCode}}">{{item.materialCode}}</text>
         </view>
-        <!-- 底部操作按钮 -->
-        <view class="proc-action" wx:if="{{item.canReceive}}">
-          <view class="proc-btn proc-btn-primary" catchtap="onReceive" data-group="{{item}}">
-            <text>领取采购</text>
-          </view>
+        <text class="tag {{item.statusTagClass}}">{{item.statusLabel}}</text>
+      </view>
+
+      <!-- 详情行：2 列网格，订单号跨两列 -->
+      <view class="card-body">
+        <view class="info-row info-row-full">
+          <text class="info-label">订单号</text>
+          <text class="info-value">{{item.orderNo || '-'}}</text>
         </view>
-        <view class="proc-action proc-action--end" wx:else>
-          <view class="proc-btn proc-btn-outline">
-            <text>查看详情</text>
-          </view>
+        <view class="info-row">
+          <text class="info-label">数量</text>
+          <text class="info-value">{{item.quantityText}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">供应商</text>
+          <text class="info-value">{{item.supplierText}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">{{item.dateLabel}}</text>
+          <text class="info-value">{{item.dateText || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">采购员</text>
+          <text class="info-value">{{item.buyerText}}</text>
+        </view>
+      </view>
+
+      <!-- 操作按钮 -->
+      <view class="card-footer">
+        <view
+          wx:if="{{item.isPending}}"
+          class="btn-claim"
+          data-id="{{item.id}}"
+          bindtap="onClaimPurchase"
+          hover-class="btn-claim-hover"
+          hover-stay-time="100"
+        >
+          <text>领取采购</text>
+          <view class="line-icon icon-arrow-right-sm claim-arrow"></view>
+        </view>
+        <view
+          wx:else
+          class="btn-detail"
+          data-order-no="{{item.orderNo}}"
+          data-style-no="{{item.styleNo}}"
+          bindtap="onViewDetail"
+          hover-class="btn-detail-hover"
+          hover-stay-time="100"
+        >
+          查看详情
         </view>
       </view>
     </view>

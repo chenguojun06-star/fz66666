@@ -122,6 +122,7 @@ Page({
         designer: data.designer || patternDetail.designer || '-',
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
         deliveryTime: patternDetail.deliveryTime || '-',
+        deliveryTimeShort: this._formatDeliveryShort(patternDetail.deliveryTime),
         coverImage: getAuthedImageUrl(patternDetail.coverImage || patternDetail.styleImage || ''),
         styleImage: getAuthedImageUrl(patternDetail.styleImage || patternDetail.coverImage || ''),
         styleName: patternDetail.styleName || data.styleName || '',
@@ -211,6 +212,24 @@ Page({
     if (app.globalData) {
       app.globalData.patternScanData = null;
     }
+  },
+
+  /**
+   * 格式化交期为短日期（MM-DD），数据来自API的deliveryTime字段
+   */
+  _formatDeliveryShort(dateStr) {
+    if (!dateStr || dateStr === '-') return '';
+    var s = String(dateStr).trim();
+    // 尝试解析日期
+    var d = new Date(s.replace(/-/g, '/'));
+    if (isNaN(d.getTime())) {
+      // 尝试只取日期部分
+      var parts = s.substring(0, 10).split('-');
+      if (parts.length === 3) return parts[1] + '-' + parts[2];
+      return '';
+    }
+    var pad = function(n) { return String(n).padStart(2, '0'); };
+    return pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   },
 
   // ---- 事件处理 ----

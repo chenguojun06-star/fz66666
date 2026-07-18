@@ -1,141 +1,463 @@
-<!-- 质检详情页 · 六段式结构 -->
+<view class="container">
+  <custom-nav title="质检详情" show-back="{{true}}" />
 
-<view class="quality-page" wx:if="{{detail}}">
+  <!-- 加载态 -->
+  <view wx:if="{{loading && !order && !detail}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
 
-  <!-- ════════════ ① 基础信息卡 ════════════ -->
-  <view class="top-card">
-    <view class="top-left">
-      <image wx:if="{{detail.coverImage || detail.styleCover}}" class="garment-thumb" src="{{detail.coverImage || detail.styleCover}}" mode="aspectFill" />
+  <!-- 错误兜底 -->
+  <block wx:elif="{{!order && !detail}}">
+    <view class="empty-state">
+      <view class="empty-icon"><view class="line-icon line-icon--xl icon-alert"></view></view>
+      <text class="empty-text">无法加载质检简报</text>
+      <text class="empty-hint">请返回列表重新进入</text>
     </view>
-    <view class="top-right">
-      <view class="top-title">
-        <text class="order-no">{{detail.orderNo || '-'}}</text>
-        <view class="status-tag" style="background: {{detail._statusColor}}15; color: {{detail._statusColor}};">
-          {{detail._statusText}}
+  </block>
+
+  <block wx:else>
+    <!-- ============ 1. 基本信息卡（设计稿：封面图 + 订单号 + 状态标签 + 行式信息 border-b 分隔） ============ -->
+    <view class="detail-card">
+      <view class="basic-header">
+        <image wx:if="{{styleCover}}" class="basic-cover" src="{{styleCover}}" mode="aspectFill" />
+        <view wx:else class="basic-cover-placeholder">
+          <view class="line-icon icon-shirt"></view>
+        </view>
+        <view class="basic-header-info">
+          <view class="basic-title-row">
+            <text class="basic-order-no">{{order.orderNo || (detail.orderNo || '-')}}</text>
+            <view wx:if="{{latestRecord.qualityStatusText}}" class="status-pill {{latestRecord.qualityStatusCls}}">{{latestRecord.qualityStatusText}}</view>
+            <view wx:elif="{{qcStats.count > 0}}" class="status-pill status-info">已检 {{qcStats.count}} 次</view>
+          </view>
+          <text wx:if="{{order.styleNo || detail.styleNo}}" class="basic-style-no">{{order.styleNo || detail.styleNo}}</text>
+          <view class="basic-info-rows">
+            <view class="basic-info-row" wx:if="{{warehousingNo || detail.warehousingNo}}">
+              <text class="basic-info-label">入库号</text>
+              <text class="basic-info-value">{{warehousingNo || detail.warehousingNo}}</text>
+            </view>
+            <view class="basic-info-row" wx:if="{{order.styleName || detail.styleName}}">
+              <text class="basic-info-label">款名</text>
+              <text class="basic-info-value">{{order.styleName || detail.styleName}}</text>
+            </view>
+            <view class="basic-info-row" wx:if="{{order.color}}">
+              <text class="basic-info-label">颜色</text>
+              <text class="basic-info-value">{{order.color}}</text>
+            </view>
+            <view class="basic-info-row" wx:if="{{order.size}}">
+              <text class="basic-info-label">尺码</text>
+              <text class="basic-info-value">{{order.size}}</text>
+            </view>
+            <view class="basic-info-row" wx:if="{{order.orderQuantity}}">
+              <text class="basic-info-label">数量</text>
+              <text class="basic-info-value">{{order.orderQuantity}}</text>
+            </view>
+            <view class="basic-info-row" wx:if="{{order.factoryName}}">
+              <text class="basic-info-label">生产方</text>
+              <text class="basic-info-value">{{order.factoryName}}</text>
+            </view>
+            <view class="basic-info-row" wx:if="{{order.deliveryDateStr}}">
+              <text class="basic-info-label">交期</text>
+              <text class="basic-info-value">{{order.deliveryDateStr}}</text>
+              <text class="remain-badge {{order.remainDaysClass}}" wx:if="{{order.remainDaysText}}">{{order.remainDaysText}}</text>
+            </view>
+            <view class="basic-info-row last" wx:if="{{order.merchandiser}}">
+              <text class="basic-info-label">跟单员</text>
+              <text class="basic-info-value">{{order.merchandiser}}</text>
+            </view>
+          </view>
         </view>
       </view>
-      <view class="info-row" wx:if="{{detail.warehousingNo}}">
-        <text class="info-label">入库号</text>
-        <text class="info-value">{{detail.warehousingNo}}</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">款号</text>
-        <text class="info-value">{{detail.styleNo || '-'}}</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">款名</text>
-        <text class="info-value">{{detail.styleName || '-'}}</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">生产方</text>
-        <text class="info-value">{{detail.factoryName || '-'}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.bundleNo}}">
-        <text class="info-label">菲号</text>
-        <text class="info-value">{{detail.bundleNo}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.color}}">
-        <text class="info-label">颜色</text>
-        <text class="info-value">{{detail.color}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.size}}">
-        <text class="info-label">尺码</text>
-        <text class="info-value">{{detail.size}}</text>
-      </view>
     </view>
-  </view>
 
-  <!-- ════════════ ② 数量进度卡 ════════════ -->
-  <view class="qty-card">
-    <view class="qty-col">
-      <text class="qty-num">{{detail.cuttingQuantity || 0}}</text>
-      <text class="qty-label">裁剪</text>
-    </view>
-    <view class="qty-div"></view>
-    <view class="qty-col">
-      <text class="qty-num">{{detail.warehousingQuantity || 0}}</text>
-      <text class="qty-label">质检</text>
-    </view>
-    <view class="qty-div"></view>
-    <view class="qty-col">
-      <text class="qty-num qty-success">{{detail.qualifiedQuantity || 0}}</text>
-      <text class="qty-label">合格</text>
-    </view>
-    <view class="qty-div"></view>
-    <view class="qty-col">
-      <text class="qty-num qty-error">{{detail.unqualifiedQuantity || 0}}</text>
-      <text class="qty-label">不合格</text>
-    </view>
-  </view>
-
-  <!-- ════════════ ③ 操作区（无操作按钮，省略） ════════════ -->
-
-  <!-- ════════════ ④ 执行进度区 · 质检信息 ════════════ -->
-  <view class="section-card">
-    <view class="section-hd">
-      <text class="section-title">质检信息</text>
-    </view>
-    <view class="info-list">
-      <view class="info-row" wx:if="{{detail.scanModeText}}">
-        <text class="info-label">扫码方式</text>
-        <text class="info-value">{{detail.scanModeText}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.qualityOperatorName}}">
-        <text class="info-label">质检人</text>
-        <text class="info-value">{{detail.qualityOperatorName}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.createTimeText}}">
-        <text class="info-label">质检时间</text>
-        <text class="info-value">{{detail.createTimeText}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.processName}}">
-        <text class="info-label">工序</text>
-        <text class="info-value">{{detail.processName}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- ════════════ ⑤ 明细数据区 · 异常问题 + 不良品照片 ════════════ -->
-  <view class="section-card" wx:if="{{detail.defectCategoryText || detail.defectRemark || detail.remark || detail.imageList.length > 0}}">
-    <view class="section-hd">
-      <text class="section-title">质检明细</text>
-    </view>
-    <view class="info-list" wx:if="{{detail.defectCategoryText || detail.defectRemark || detail.remark}}">
-      <view class="info-row" wx:if="{{detail.defectCategoryText}}">
-        <text class="info-label">缺陷类别</text>
-        <text class="info-value text-error">{{detail.defectCategoryText}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.defectRemark}}">
-        <text class="info-label">处理方式</text>
-        <text class="info-value">{{detail.defectRemark}}</text>
-      </view>
-      <view class="info-row" wx:if="{{detail.remark}}">
-        <text class="info-label">备注</text>
-        <text class="info-value">{{detail.remark}}</text>
+    <!-- ============ 2. 数量进度卡（设计稿：4列大数字 22px） ============ -->
+    <view class="detail-card">
+      <view class="qty-progress-grid">
+        <view class="qty-progress-col">
+          <text class="qty-progress-label">裁剪</text>
+          <text class="qty-progress-value">{{detail.cuttingQuantity || order.orderQuantity || 0}}</text>
+        </view>
+        <view class="qty-progress-col">
+          <text class="qty-progress-label">质检</text>
+          <text class="qty-progress-value">{{detail.warehousingQuantity || qcStats.count || 0}}</text>
+        </view>
+        <view class="qty-progress-col">
+          <text class="qty-progress-label">合格</text>
+          <text class="qty-progress-value qty-success">{{detail.qualifiedQuantity || qcStats.qualified || 0}}</text>
+        </view>
+        <view class="qty-progress-col">
+          <text class="qty-progress-label">不合格</text>
+          <text class="qty-progress-value qty-error">{{detail.unqualifiedQuantity || qcStats.unqualified || 0}}</text>
+        </view>
       </view>
     </view>
 
-    <view class="photo-wrap" wx:if="{{detail.imageList.length > 0}}">
-      <view class="photo-hd">
-        <text class="photo-title">不良品照片</text>
-        <text class="section-count">{{detail.imageList.length}}张</text>
-      </view>
-      <view class="photo-grid">
-        <image
-          wx:for="{{detail.imageList}}"
-          wx:key="*this"
-          class="defect-photo"
-          src="{{item}}"
-          mode="aspectFill"
-          data-url="{{item}}"
-          data-urls="{{detail.imageList}}"
-          bindtap="onPreviewImage"
-        />
+    <!-- ============ 3. 质检信息卡（设计稿：标题 + 4行键值对 border-b 分隔） ============ -->
+    <view class="detail-card" wx:if="{{latestRecord}}">
+      <text class="card-title-text">质检信息</text>
+      <view class="info-rows">
+        <view class="info-row">
+          <text class="info-row-label">扫码方式</text>
+          <text class="info-row-value">{{latestRecord.scanMode || '逐件扫码'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-row-label">质检人</text>
+          <text class="info-row-value">{{latestRecord.qualityOperatorName || latestRecord.operatorName || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-row-label">质检时间</text>
+          <text class="info-row-value">{{latestRecord.displayTime || '-'}}</text>
+        </view>
+        <view class="info-row last">
+          <text class="info-row-label">工序</text>
+          <text class="info-row-value">{{latestRecord.processName || order.processName || '包装前质检'}}</text>
+        </view>
       </view>
     </view>
-  </view>
 
-  <!-- ════════════ ⑥ 操作记录区（暂无，省略） ════════════ -->
+    <!-- ============ 4. 质检明细卡（设计稿：标题 + 缺陷详情 + 不良品照片3列网格） ============ -->
+    <view class="detail-card" wx:if="{{latestRecord && (latestRecord.defectCategoryText || latestRecord.defectRemark || latestRecord.remark)}}">
+      <text class="card-title-text">质检明细</text>
+      <view class="info-rows">
+        <view class="info-row" wx:if="{{latestRecord.defectCategoryText}}">
+          <text class="info-row-label">缺陷类别</text>
+          <text class="info-row-value defect-value">{{latestRecord.defectCategoryText}}</text>
+        </view>
+        <view class="info-row" wx:if="{{latestRecord.defectRemark}}">
+          <text class="info-row-label">处理方式</text>
+          <text class="info-row-value">{{latestRecord.defectRemark}}</text>
+        </view>
+        <view class="info-row last" wx:if="{{latestRecord.remark}}">
+          <text class="info-row-label">备注</text>
+          <text class="info-row-value info-row-value--right">{{latestRecord.remark}}</text>
+        </view>
+      </view>
+      <!-- 不良品照片区域 -->
+      <view class="defect-photo-section" wx:if="{{latestRecord.imageList.length > 0}}">
+        <view class="defect-photo-header">
+          <text class="defect-photo-title">不良品照片</text>
+          <text class="defect-photo-count">{{latestRecord.imageList.length}}张</text>
+        </view>
+        <view class="photo-grid-3">
+          <image wx:for="{{latestRecord.imageList}}" wx:key="*this"
+                 class="defect-photo-img" src="{{item}}" mode="aspectFill"
+                 data-url="{{item}}" data-urls="{{latestRecord.imageList}}" bindtap="onPreviewImage" />
+        </view>
+      </view>
+    </view>
 
-  <view class="bottom-gap"></view>
+    <!-- ============ 5. 质检概览（保留：3列卡片） ============ -->
+    <view class="overview-grid">
+      <view class="overview-card overview-card--primary {{pendingBundles.length > 0 ? 'overview-card--active' : ''}}"
+            bindtap="onScrollToPending">
+        <view class="overview-value">{{pendingBundles.length}}</view>
+        <view class="overview-label">待质检</view>
+        <view class="overview-hint" wx:if="{{pendingBundles.length > 0}}">点击开始质检 →</view>
+        <view class="overview-hint overview-hint--muted" wx:else>暂无待检</view>
+      </view>
+      <view class="overview-card overview-card--warning {{qcStats.pendingWarehouse > 0 ? 'overview-card--active' : ''}}"
+            bindtap="onScrollToRecords">
+        <view class="overview-value">{{qcStats.pendingWarehouse}}</view>
+        <view class="overview-label">待入库</view>
+        <view class="overview-hint" wx:if="{{qcStats.pendingWarehouse > 0}}">点击去入库 →</view>
+        <view class="overview-hint overview-hint--muted" wx:else>暂无待入库</view>
+      </view>
+      <view class="overview-card overview-card--success">
+        <view class="overview-value">{{qcStats.passRate}}</view>
+        <view class="overview-label">合格率</view>
+        <view class="overview-hint overview-hint--muted">合格 {{qcStats.qualified}} / 不合格 {{qcStats.unqualified}}</view>
+      </view>
+    </view>
+
+    <!-- ============ 6. 待质检菲号（页面内多选，与 PC 端 InspectionDetail 对齐） ============ -->
+    <view class="detail-card section-pending" wx:if="{{pendingBundles.length > 0}}">
+      <view class="card-title-row">
+        <view class="card-title-with-tag">
+          <text class="card-title">待质检菲号</text>
+          <text class="card-badge card-badge--primary">{{pendingBundles.length}}</text>
+        </view>
+      </view>
+
+      <!-- 多选操作栏：全选/反选/清空 + 已选汇总 -->
+      <view class="bundle-select-toolbar">
+        <view class="bundle-select-actions">
+          <text class="bundle-select-action" bindtap="onSelectAllBundles">全选</text>
+          <text class="bundle-select-action" bindtap="onInvertBundles">反选</text>
+          <text class="bundle-select-action" bindtap="onClearBundles">清空</text>
+        </view>
+        <text class="bundle-select-summary" wx:if="{{selectedBundleQrs.length > 0}}">
+          已选 {{selectedBundleQrs.length}} 个 / 合计 {{selectedBundleTotalQty}} 件
+        </text>
+      </view>
+
+      <!-- 菲号多选列表 -->
+      <view class="bundle-select-list">
+        <view wx:for="{{pendingBundles}}" wx:key="bundleId"
+              class="bundle-select-item {{item.selected ? 'bundle-select-item--active' : ''}}"
+              data-key="{{item.selectKey}}" bindtap="onToggleBundle">
+          <view class="bundle-checkbox {{item.selected ? 'bundle-checkbox--checked' : ''}}">
+            <text wx:if="{{item.selected}}" class="bundle-checkbox-icon">✓</text>
+          </view>
+          <view class="bundle-select-info">
+            <view class="bundle-select-row">
+              <text class="bundle-select-no">{{item.bundleNoShort}}</text>
+              <text class="tag tag-info" wx:if="{{item.qrCode}}">{{item.qrCode}}</text>
+            </view>
+            <view class="bundle-select-meta">
+              <text class="bundle-select-meta-item" wx:if="{{item.color}}">颜色 {{item.color}}</text>
+              <text class="bundle-select-meta-item" wx:if="{{item.size}}">尺码 {{item.size}}</text>
+              <text class="bundle-select-meta-item">数量 {{item.quantity || 0}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 单选质检表单（原弹窗内容移至此） -->
+      <block wx:if="{{selectedBundleQrs.length === 1}}">
+        <view class="qc-form">
+          <view class="qc-form-title">质检录入</view>
+          <view class="qc-form-info-card">
+            <view class="qc-form-info-row"><text class="qc-form-info-label">菲号</text><text class="qc-form-info-value">{{qcSheetData.bundleNoShort || qcSheetData.bundleNo || '-'}}</text></view>
+            <view class="qc-form-info-row" wx:if="{{qcSheetData.qrCode}}"><text class="qc-form-info-label">二维码</text><text class="qc-form-info-value">{{qcSheetData.qrCode}}</text></view>
+            <view class="qc-form-info-row"><text class="qc-form-info-label">质检总数</text><text class="qc-form-info-value qc-form-info-strong">{{qcSheetData.quantity}}</text></view>
+          </view>
+          <view class="qc-form-row">
+            <view class="qc-form-col"><text class="qc-form-label">合格数量</text><input class="qc-form-input" type="number" value="{{qcSheetData.qualifiedQty}}" bindinput="onQcQualifiedQtyChange" placeholder="0" /></view>
+            <view class="qc-form-col"><text class="qc-form-label">不合格数量</text><input class="qc-form-input" type="number" value="{{qcSheetData.unqualifiedQty}}" bindinput="onQcUnqualifiedQtyChange" placeholder="0" /></view>
+          </view>
+          <block wx:if="{{qcSheetData.unqualifiedQty > 0}}">
+            <view class="qc-form-divider"></view>
+            <view class="qc-form-row">
+              <view class="qc-form-col"><text class="qc-form-label">缺陷类别</text>
+                <picker class="qc-form-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" bindchange="onDefectCategoryChange">
+                  <view class="picker-value {{qcSheetData.defectCategory ? '' : 'picker-placeholder'}}">{{qcSheetData.defectCategory ? qcSheetData.defectCategory : '请选择缺陷类别'}}</view>
+                </picker>
+              </view>
+              <view class="qc-form-col"><text class="qc-form-label">处理方式</text>
+                <picker class="qc-form-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" bindchange="onDefectRemarkChange">
+                  <view class="picker-value {{qcSheetData.defectRemark ? '' : 'picker-placeholder'}}">{{qcSheetData.defectRemark ? qcSheetData.defectRemark : '请选择处理方式'}}</view>
+                </picker>
+              </view>
+            </view>
+            <view class="qc-form-row">
+              <view class="qc-form-col-full"><text class="qc-form-label">备注（可选）</text>
+                <textarea class="qc-form-textarea" value="{{qcSheetData.remark}}" bindinput="onQcRemarkInput" placeholder="补充说明..." maxlength="200" />
+              </view>
+            </view>
+            <view class="qc-form-row">
+              <view class="qc-form-col-full"><text class="qc-form-label">不良品照片（可选，最多 5 张）</text>
+                <view class="upload-grid">
+                  <view wx:for="{{qcSheetData.imageUrls}}" wx:key="*this" class="upload-item">
+                    <image class="upload-img" src="{{item}}" mode="aspectFill" data-index="{{index}}" data-url="{{item}}" data-urls="{{qcSheetData.imageUrls}}" bindtap="onQcImagePreview" />
+                    <view class="upload-remove" data-index="{{index}}" bindtap="onQcImageRemove">x</view>
+                  </view>
+                  <view wx:if="{{qcSheetData.imageUrls.length < 5}}" class="upload-add" bindtap="onQcImageAdd">
+                    <text class="upload-add-icon">+</text><text class="upload-add-text">添加照片</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </block>
+          <view class="qc-form-actions">
+            <button class="btn btn-default-outline btn-block" bindtap="onClearBundles">取消</button>
+            <button class="btn btn-primary-outline btn-block" loading="{{submitting}}" bindtap="onSubmitQc">提交质检</button>
+          </view>
+        </view>
+      </block>
+
+      <!-- 多选批量操作 -->
+      <block wx:if="{{selectedBundleQrs.length > 1}}">
+        <!-- 批量不合格内联表单 -->
+        <block wx:if="{{batchUnqualFormVisible}}">
+          <view class="qc-form batch-unqual-form">
+            <view class="qc-form-title">批量不合格质检</view>
+            <view class="qc-form-row">
+              <view class="qc-form-col"><text class="qc-form-label">缺陷类别</text>
+                <picker class="qc-form-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" bindchange="onBatchUnqualDefectCategoryChange">
+                  <view class="picker-value {{batchUnqualData.defectCategory ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectCategory ? batchUnqualData.defectCategory : '请选择缺陷类别'}}</view>
+                </picker>
+              </view>
+              <view class="qc-form-col"><text class="qc-form-label">处理方式</text>
+                <picker class="qc-form-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" bindchange="onBatchUnqualDefectRemarkChange">
+                  <view class="picker-value {{batchUnqualData.defectRemark ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectRemark ? batchUnqualData.defectRemark : '请选择处理方式'}}</view>
+                </picker>
+              </view>
+            </view>
+            <view class="qc-form-actions">
+              <button class="btn btn-default-outline btn-block" bindtap="onCancelBatchUnqualified">取消</button>
+              <button class="btn btn-danger-outline btn-block" loading="{{submitting}}" bindtap="onConfirmBatchUnqualified">确认批量不合格</button>
+            </view>
+          </view>
+        </block>
+        <!-- 批量操作按钮 -->
+        <view class="batch-actions" wx:if="{{!batchUnqualFormVisible}}">
+          <button class="btn btn-success-outline btn-block" loading="{{submitting}}" bindtap="onBatchQualified">批量合格质检</button>
+          <button class="btn btn-danger-outline btn-block" loading="{{submitting}}" bindtap="onBatchUnqualified">批量不合格质检</button>
+        </view>
+      </block>
+    </view>
+
+    <!-- ============ 7. 质检记录列表（保留，入库改为页面内展开） ============ -->
+    <view class="detail-card section-records">
+      <view class="card-title-row">
+        <view class="card-title-with-tag">
+          <text class="card-title">质检记录</text>
+          <text class="card-badge" wx:if="{{qcRecords.length > 0}}">{{qcRecords.length}}</text>
+        </view>
+        <text class="card-title-hint" wx:if="{{qcRecords.length === 0}}">暂无记录</text>
+      </view>
+
+      <view wx:if="{{recordsLoading && qcRecords.length === 0}}" class="loading-inline">
+        <text class="loading-text">加载中...</text>
+      </view>
+      <view wx:elif="{{qcRecords.length === 0}}" class="empty-inline">
+        <text class="empty-text-inline">暂无质检记录</text>
+      </view>
+      <view wx:else class="qc-list">
+        <view wx:for="{{qcRecords}}" wx:key="id"
+              class="qc-card {{item.isHighlighted ? 'qc-card-highlighted' : ''}} {{item.canWarehouse ? 'qc-card--actionable' : ''}} {{item.canMarkRepaired ? 'qc-card--warning' : ''}}">
+          <view class="qc-card-header">
+            <view class="qc-card-left">
+              <text class="qc-wh-no">{{item.warehousingNo || '-'}}</text>
+              <text wx:if="{{item.isHighlighted}}" class="tag tag-current">当前</text>
+            </view>
+            <view class="qc-card-header-right">
+              <text class="quality-status {{item.qualityStatusCls}}">{{item.qualityStatusText}}</text>
+              <button wx:if="{{item.canWarehouse}}" class="btn btn-primary-outline btn-sm {{whExpandIndex === index ? 'btn-primary-solid' : ''}}" data-index="{{index}}" bindtap="onOpenWhSheet">{{whExpandIndex === index ? '收起' : '入库'}}</button>
+              <button wx:if="{{item.canMarkRepaired}}" class="btn btn-warning-outline btn-sm" data-index="{{index}}" bindtap="onStartRepair">开始返修</button>
+              <button wx:if="{{item.repairStatus === 'repairing'}}" class="btn btn-success-outline btn-sm" data-index="{{index}}" bindtap="onCompleteRepair">完成返修</button>
+              <button wx:if="{{item.qualityCategory === 'unqualified' && !item.canMarkRepaired && item.repairStatus !== 'scrapped' && item.repairStatus !== 'repair_done'}}" class="btn btn-danger-outline btn-sm" data-index="{{index}}" bindtap="onScrap">报废</button>
+            </view>
+          </view>
+          <view class="qc-card-body">
+            <view class="qc-row"><text class="qc-label">菲号</text><text class="qc-value">{{item.bundleNoShort}}</text></view>
+            <view class="qc-row"><text class="qc-label">颜色/尺码</text><text class="qc-value">{{item.color || '-'}} / {{item.size || '-'}}</text></view>
+            <view class="qc-qty-row">
+              <view class="qc-qty-item"><text class="qc-qty-label">质检</text><text class="qc-qty-value">{{item.warehousingQuantity || 0}}</text></view>
+              <view class="qc-qty-item"><text class="qc-qty-label">合格</text><text class="qc-qty-value qc-success">{{item.qualifiedQuantity || 0}}</text></view>
+              <view class="qc-qty-item"><text class="qc-qty-label">不合格</text><text class="qc-qty-value qc-error">{{item.unqualifiedQuantity || 0}}</text></view>
+              <view class="qc-qty-item" wx:if="{{item.warehouse}}"><text class="qc-qty-label">仓库</text><text class="qc-qty-value qc-info">{{item.warehouse}}</text></view>
+            </view>
+            <view class="qc-row" wx:if="{{item.defectCategoryText}}"><text class="qc-label">缺陷类别</text><text class="qc-value qc-error-text">{{item.defectCategoryText}}</text></view>
+            <view class="qc-row" wx:if="{{item.defectRemark}}"><text class="qc-label">处理方式</text><text class="qc-value">{{item.defectRemark}}</text></view>
+            <view class="qc-row" wx:if="{{item.remark}}"><text class="qc-label">备注</text><text class="qc-value">{{item.remark}}</text></view>
+            <view class="qc-row"><text class="qc-label">质检人</text><text class="qc-value">{{item.qualityOperatorName || item.operatorName || '-'}}</text></view>
+            <view class="qc-row" wx:if="{{item.displayTime}}"><text class="qc-label">质检时间</text><text class="qc-value">{{item.displayTime}}</text></view>
+          </view>
+          <view wx:if="{{item.imageList.length > 0}}" class="qc-photos">
+            <view class="qc-photos-title">不良品照片 ({{item.imageList.length}})</view>
+            <view class="photo-grid-3">
+              <image wx:for="{{item.imageList}}" wx:for-item="imgUrl" wx:key="*this"
+                     class="defect-photo-img" src="{{imgUrl}}" mode="aspectFill"
+                     data-url="{{imgUrl}}" data-urls="{{item.imageList}}" bindtap="onPreviewImage" />
+            </view>
+          </view>
+
+          <!-- 页面内入库表单（记录下方展开，原入库弹窗内容移至此） -->
+          <block wx:if="{{whExpandIndex === index}}">
+            <view class="wh-form">
+              <view class="wh-form-title">入库操作</view>
+              <view class="wh-form-info-card">
+                <view class="wh-form-info-row"><text class="wh-form-info-label">入库号</text><text class="wh-form-info-value">{{whSheetData.warehousingNo || '-'}}</text></view>
+                <view class="wh-form-info-row" wx:if="{{whSheetData.bundleNo}}"><text class="wh-form-info-label">菲号</text><text class="wh-form-info-value">{{whSheetData.bundleNo}}</text></view>
+                <view class="wh-form-info-row"><text class="wh-form-info-label">合格数量</text><text class="wh-form-info-value wh-form-info-strong">{{whSheetData.qualifiedQty}}</text></view>
+              </view>
+              <view class="wh-form-divider"></view>
+              <view class="wh-form-row">
+                <view class="wh-form-col-full"><text class="wh-form-label">仓库</text>
+                  <picker class="wh-form-picker" mode="selector" range="{{warehouseOptions}}" range-key="name" bindchange="onWarehouseChange">
+                    <view class="picker-value {{whSheetData.warehouseAreaId ? '' : 'picker-placeholder'}}">{{whSheetData.warehouseAreaName || '请选择仓库'}}</view>
+                  </picker>
+                </view>
+              </view>
+              <view class="wh-form-row">
+                <view class="wh-form-col-full"><text class="wh-form-label">库位</text>
+                  <picker class="wh-form-picker" mode="selector" range="{{locationOptions}}" range-key="name" bindchange="onLocationChange" disabled="{{!whSheetData.warehouseAreaId}}">
+                    <view class="picker-value {{whSheetData.warehouseLocationCode ? '' : 'picker-placeholder'}}">{{whSheetData.warehouseLocationCode || '请先选择仓库'}}</view>
+                  </picker>
+                </view>
+              </view>
+              <view class="wh-form-actions">
+                <button class="btn btn-default-outline btn-block" data-index="{{index}}" bindtap="onOpenWhSheet">取消</button>
+                <button class="btn btn-primary-outline btn-block" loading="{{submitting}}" bindtap="onSubmitWarehouse">确认入库</button>
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </view>
+
+    <!-- ============ 8. AI 质检助手（保留，可折叠） ============ -->
+    <view class="detail-card ai-card {{aiCollapsed ? 'ai-card--collapsed' : ''}}" wx:if="{{aiSuggestion || aiLoading}}">
+      <view class="card-title-row" bindtap="onToggleAi">
+        <view class="card-title-with-tag">
+          <text class="card-title">AI 质检助手</text>
+          <text class="card-badge card-badge--ai">AI</text>
+        </view>
+        <text class="card-collapse-icon">{{aiCollapsed ? '展开' : '收起'}}</text>
+      </view>
+      <block wx:if="{{!aiCollapsed}}">
+        <view wx:if="{{aiLoading}}" class="loading-inline"><text class="loading-text">AI 分析中...</text></view>
+        <block wx:else>
+          <view wx:if="{{aiSuggestion.urgentTip}}" class="ai-urgent-tip">
+            <text class="urgent-icon">!</text><text class="urgent-text">{{aiSuggestion.urgentTip}}</text>
+          </view>
+          <view wx:if="{{aiSuggestion.hasHistoricalData}}" class="ai-history-row">
+            <view class="history-block">
+              <text class="history-label">历史次品率</text>
+              <text class="history-value {{aiSuggestion.historicalVerdictCls}}">{{aiSuggestion.historicalDefectRateText}}</text>
+            </view>
+            <view wx:if="{{aiSuggestion.historicalVerdictText}}" class="history-block">
+              <text class="history-label">风险等级</text>
+              <text class="history-value {{aiSuggestion.historicalVerdictCls}}">{{aiSuggestion.historicalVerdictText}}</text>
+            </view>
+          </view>
+          <view wx:if="{{aiSuggestion.checkpoints.length > 0}}" class="ai-section">
+            <view class="ai-section-title">质检要点</view>
+            <view class="tips-list">
+              <view wx:for="{{aiSuggestion.checkpoints}}" wx:key="index" class="tip-item">
+                <text class="tip-bullet">.</text><text class="tip-text">{{item}}</text>
+              </view>
+            </view>
+          </view>
+          <view wx:if="{{aiSuggestion.defectList.length > 0}}" class="ai-section">
+            <view class="ai-section-title">次品处理建议</view>
+            <view class="defect-advice-list">
+              <view wx:for="{{aiSuggestion.defectList}}" wx:key="category" class="defect-advice-item">
+                <view class="defect-advice-label">{{item.label}}</view>
+                <view class="defect-advice-text">{{item.advice}}</view>
+              </view>
+            </view>
+          </view>
+        </block>
+      </block>
+    </view>
+
+    <!-- ============ 9. BOM 物料（保留，可折叠） ============ -->
+    <view class="detail-card {{bomCollapsed ? 'bom-card--collapsed' : ''}}" wx:if="{{bom.length > 0}}">
+      <view class="card-title-row" bindtap="onToggleBom">
+        <view class="card-title-with-tag">
+          <text class="card-title">BOM 物料</text>
+          <text class="card-badge">{{bom.length}}</text>
+        </view>
+        <text class="card-collapse-icon">{{bomCollapsed ? '展开' : '收起'}}</text>
+      </view>
+      <block wx:if="{{!bomCollapsed}}">
+        <view class="bom-list">
+          <view wx:for="{{bom}}" wx:key="id" class="bom-item">
+            <view class="bom-row"><text class="bom-code">{{item.materialCode || '-'}}</text><text class="bom-type-tag">{{item.materialTypeText}}</text></view>
+            <text class="bom-name">{{item.materialName || '-'}}</text>
+            <view class="bom-meta">
+              <text class="bom-meta-item" wx:if="{{item.color}}">{{item.color}}</text>
+              <text class="bom-meta-item" wx:if="{{item.size}}">{{item.size}}</text>
+              <text class="bom-meta-item">用量 {{item.usageAmount || 0}}{{item.unit || ''}}</text>
+              <text class="bom-meta-item" wx:if="{{item.lossRate}}">损耗 {{item.lossRate}}%</text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <view style="height: 120rpx;"></view>
+  </block>
 </view>

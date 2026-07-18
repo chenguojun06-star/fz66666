@@ -15,7 +15,10 @@ const system = {
     return ok('/api/system/user/pending', 'GET', {});
   },
   updateUser(userId, data) {
-    return ok(`/api/system/user/${userId}`, 'PUT', data);
+    return ok('/api/system/user', 'PUT', { ...(data || {}), id: userId });
+  },
+  updateMe(data) {
+    return ok('/api/system/user/me', 'PUT', data || {});
   },
   approveUser(userId, data) {
     return ok(`/api/system/user/${userId}/approval-action?action=approve`, 'POST', data || {});
@@ -42,7 +45,9 @@ const system = {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
-    return ok('/api/system/dict/list-by-type', 'POST', { type });
+    // 与 PC 端对齐：GET /api/system/dict/list?dictType=xxx&page=1&pageSize=999
+    // 线上后端 /list-by-type 尚未部署（405），改用 PC 端同款分页接口
+    return ok('/api/system/dict/list', 'GET', { dictType: type, page: 1, pageSize: 999 });
   },
   getMiniprogramMenuConfig() {
     return ok('/api/system/tenant-miniprogram-menu/my-menus', 'GET', {});

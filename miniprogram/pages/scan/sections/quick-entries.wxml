@@ -1,0 +1,13 @@
+  <!-- ③ 快捷入口（历史记录 | 我的工资，横向紧凑一行两列） -->
+  <view class="quick-entry-row">
+    <view class="quick-entry-card" hover-class="qe-hover" hover-stay-time="100" bindtap="onGoToHistory">
+      <view class="qe-icon"><view class="line-icon icon-clipboard"></view></view>
+      <text class="qe-title">历史记录</text>
+      <view class="qe-arrow"><view class="icon-arrow-right-sm"></view></view>
+    </view>
+    <view class="quick-entry-card" hover-class="qe-hover" hover-stay-time="100" bindtap="onGoToMonthly">
+      <view class="qe-icon qe-icon--green"><view class="line-icon icon-clipboard"></view></view>
+      <text class="qe-title">我的工资</text>
+      <view class="qe-arrow"><view class="icon-arrow-right-sm"></view></view>
+    </view>
+  </view>

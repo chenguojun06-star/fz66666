@@ -1,9 +1,15 @@
+<custom-nav title="工序模板" show-back="{{true}}" />
 <view class="page-bg">
   <!-- 顶部款式信息卡 -->
   <view class="status-card" wx:if="{{styleNo}}">
-    <view class="status-card-row">
-      <text class="status-card-title">{{styleNo}}</text>
-      <text class="status-card-sub" wx:if="{{styleName}}">{{styleName}}</text>
+    <view class="status-card-top">
+      <view class="status-card-row">
+        <text class="status-card-title">{{styleNo}}</text>
+        <text class="status-card-sub" wx:if="{{styleName}}">{{styleName}}</text>
+      </view>
+      <view class="status-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+      </view>
     </view>
     <view class="status-card-meta">
       <text class="meta-chip">共 {{totalProcessCount}} 道工序</text>
@@ -75,12 +81,11 @@
   </view>
 </view>
 
-<!-- 添加/编辑工序弹窗 -->
-<view wx:if="{{modalVisible}}" class="modal-overlay" bindtap="onModalCancel"></view>
-<view wx:if="{{modalVisible}}" class="modal-panel">
-  <view class="modal-header">
+<!-- 添加/编辑工序内联表单 -->
+<view wx:if="{{modalVisible}}" class="inline-form-card">
+  <view class="inline-form-title">
     <text class="modal-title">{{modalMode === 'add' ? '添加工序' : '编辑工序'}}</text>
-    <text class="modal-close" bindtap="onModalCancel">✕</text>
+    <view class="modal-close" bindtap="onModalCancel"><view class="icon-close"></view></view>
   </view>
   <view class="modal-body">
     <view class="form-item">
@@ -96,7 +101,7 @@
       <picker mode="selector" range="{{stageOptions}}" range-key="name" value="{{formStageIndex}}" bindchange="onStageChange">
         <view class="form-picker">
           <text>{{stageOptions[formStageIndex].name}}</text>
-          <text class="form-picker-arrow">›</text>
+          <view class="form-picker-arrow"><view class="icon-arrow-right-sm"></view></view>
         </view>
       </picker>
     </view>
@@ -109,7 +114,7 @@
       <picker mode="selector" range="{{difficultyOptions}}" value="{{formDifficultyIndex}}" bindchange="onDifficultyChange">
         <view class="form-picker">
           <text>{{difficultyOptions[formDifficultyIndex]}}</text>
-          <text class="form-picker-arrow">›</text>
+          <view class="form-picker-arrow"><view class="icon-arrow-right-sm"></view></view>
         </view>
       </picker>
     </view>
@@ -126,7 +131,7 @@
       <textarea class="form-textarea" value="{{form.description}}" data-field="description" bindinput="onFormInput" placeholder="工序描述（可选）" />
     </view>
   </view>
-  <view class="modal-footer">
+  <view class="inline-form-actions">
     <button class="modal-btn modal-btn--cancel" bindtap="onModalCancel">取消</button>
     <button class="modal-btn modal-btn--confirm" bindtap="onModalConfirm">确定</button>
   </view>

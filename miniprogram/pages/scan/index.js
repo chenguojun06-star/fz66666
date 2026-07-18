@@ -3,7 +3,7 @@
  * Version: 2.3 (重构版)
  * Date: 2026-02-15
  *
- * 🔧 重构说明 (v2.2 → v2.3):
+ * [FIX] 重构说明 (v2.2 → v2.3):
  * 1. 提取 data 配置到 scanDataConfig.js (~150行)
  * 2. 提取生命周期到 scanLifecycleMixin.js (~200行)
  * 3. 提取核心扫码逻辑到 scanCoreMixin.js (~370行)
@@ -324,7 +324,7 @@ Page({
       title: '确认撤回',
       content: '确认撤回该扫码记录吗？撤回后无法恢复。',
       confirmText: '撤回',
-      confirmColor: '#ff4d4f',
+      confirmColor: '#ff3b30',
       success: async (res) => {
         if (!res.confirm) return;
         wx.showLoading({ title: '正在撤回...', mask: true });
@@ -384,11 +384,11 @@ Page({
     const value = e.currentTarget.dataset.value;
     if (this.data.warehouse === value) {
       this.setData({ warehouse: '', warehouseAreaId: '', warehouseLocationCode: '', locationOptions: [] });
-      try { wx.setStorageSync('scan_pref_warehouse', ''); } catch (_) {}
+      try { wx.setStorageSync('scan_pref_warehouse', ''); } catch (_) { /* 存储写入失败忽略 */ }
     } else {
       const areaId = (this._warehouseAreaMap && this._warehouseAreaMap[value]) || '';
       this.setData({ warehouse: value, warehouseAreaId: areaId, warehouseLocationCode: '', locationOptions: [] });
-      try { wx.setStorageSync('scan_pref_warehouse', value); } catch (_) {}
+      try { wx.setStorageSync('scan_pref_warehouse', value); } catch (_) { /* 存储写入失败忽略 */ }
       if (areaId) { this._loadLocationOptions(areaId); }
     }
   },

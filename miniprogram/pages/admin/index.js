@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
+const { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner } = require('../../utils/storage');
 const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
 const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
@@ -14,9 +14,9 @@ const HOME_MENU_KEY_MAP = {
   production: { fullKey: 'miniprogram.menu.production', label: '质检通知' },
   quality: { fullKey: 'miniprogram.menu.quality', label: '生产扫码' },
   bundleSplit: { fullKey: 'miniprogram.menu.bundleSplit', label: '菲号单价' },
-  cuttingDetail: { fullKey: 'miniprogram.menu.cuttingDetail', label: '裁剪任务' },
+  cuttingDetail: { fullKey: 'miniprogram.menu.cuttingDetail', label: '裁剪明细' },
   history: { fullKey: 'miniprogram.menu.history', label: '扫码历史' },
-  factoryShipment: { fullKey: 'miniprogram.menu.factoryShipment', label: '外发工厂' },
+  factoryShipment: { fullKey: 'miniprogram.menu.factoryShipment', label: '外发管理' },
   advance: { fullKey: 'miniprogram.menu.advance', label: '员工借支' },
   wagePayment: { fullKey: 'miniprogram.menu.wagePayment', label: '收付款中心' },
 };
@@ -28,87 +28,52 @@ const MENU_ROLE_MAP = {
 };
 
 function maskPhone(phone) {
-  if (!phone || phone.length < 7) return phone || '';
+  if (!phone || phone.length < 7) return '';
   return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4);
 }
 
-function buildMenuGroups(opts) {
+function buildMenuItems(opts) {
+  const showInviteSection = opts.showInviteSection || false;
+  const showApprovalEntry = opts.showApprovalEntry || false;
   const showMenuManage = opts.showMenuManage || false;
-  const showApproval = opts.showApproval || false;
-  var groups = [];
+  const pendingCount = opts.pendingCount || '';
+  const items = [];
 
-  // Group 1: 账户管理
-  var accountItems = [];
-  if (showApproval) {
-    accountItems.push({
-      id: 'approval',
-      label: '用户审批',
-      iconClass: 'icon-menu-user',
-      iconColor: 'primary',
-      url: '/pages/admin/user-approval/index',
-    });
+  // Group 0: 管理功能
+  if (showApprovalEntry) {
+    items.push({ id: 'approval', label: '用户审批', iconClass: 'icon-menu-user', iconBg: 'var(--color-primary)', url: '/pages/admin/user-approval/index', group: 0, badge: pendingCount });
   }
-  accountItems.push({
-    id: 'password',
-    label: '修改密码',
-    iconClass: 'icon-lock',
-    iconColor: 'success',
-    url: '/pages/admin/misc/change-password/index',
-  });
+  items.push({ id: 'password', label: '修改密码', iconClass: 'icon-menu-password', iconBg: 'var(--color-success)', url: '/pages/admin/misc/change-password/index', group: 0 });
+
+  // Group 1: 其他设置
+  items.push({ id: 'feedback', label: '意见反馈', iconClass: 'icon-menu-feedback', iconBg: 'var(--color-warning)', url: '/pages/admin/misc/feedback/index', group: 1 });
+  if (showInviteSection) {
+    items.push({ id: 'invite', label: '邀请员工', iconClass: 'icon-menu-invite', iconBg: 'var(--color-purple)', url: '/pages/admin/misc/invite/index', group: 1 });
+  }
   if (showMenuManage) {
-    accountItems.push({
-      id: 'menu-manage',
-      label: '菜单管理',
-      iconClass: 'icon-setting',
-      iconColor: 'primary',
-      action: 'openMenuManage',
-    });
+    items.push({ id: 'menu-manage', label: '菜单管理', iconClass: 'icon-menu-process', iconBg: 'var(--color-violet)', action: 'openMenuManage', group: 1 });
   }
-  groups.push({ id: 'account', items: accountItems });
 
-  // Group 2: 帮助与分享
-  groups.push({
-    id: 'help',
-    items: [
-      {
-        id: 'feedback',
-        label: '意见反馈',
-        iconClass: 'icon-feedback',
-        iconColor: 'warning',
-        action: 'openFeedback',
-      },
-      {
-        id: 'invite',
-        label: '邀请同事',
-        iconClass: 'icon-menu-invite',
-        iconColor: 'purple',
-        url: '/pages/admin/misc/invite/index',
-      },
-    ],
+  // Group 2: 关于
+  items.push({ id: 'privacy', label: '隐私政策', iconClass: 'icon-menu-privacy', iconBg: 'var(--color-text-tertiary)', url: '/pages/privacy/index', group: 2 });
+  items.push({ id: 'about', label: '关于我们', iconClass: 'icon-menu-confirm', iconBg: 'var(--color-text-tertiary)', url: '/pages/admin/misc/about/index', group: 2 });
+
+  return items;
+}
+
+function buildMenuGroups(menuItems) {
+  var groupMap = {};
+  var groupOrder = [];
+  var flatIndex = 0;
+  menuItems.forEach(function (item) {
+    item.flatIndex = flatIndex++;
+    var g = item.group;
+    if (!groupMap[g]) { groupMap[g] = []; groupOrder.push(g); }
+    groupMap[g].push(item);
   });
-
-  // Group 3: 关于
-  groups.push({
-    id: 'about',
-    items: [
-      {
-        id: 'privacy',
-        label: '隐私政策',
-        iconClass: 'icon-menu-privacy',
-        iconColor: 'gray',
-        action: 'openPrivacy',
-      },
-      {
-        id: 'about-us',
-        label: '关于我们',
-        iconClass: 'icon-lightbulb',
-        iconColor: 'gray',
-        action: 'openAbout',
-      },
-    ],
+  return groupOrder.map(function (key) {
+    return { groupId: 'g' + key, items: groupMap[key] };
   });
-
-  return groups;
 }
 
 Page({
@@ -121,14 +86,12 @@ Page({
     showApprovalEntry: false,
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
+    menuItems: [],
     menuGroups: [],
-    factoryName: '',
-    userPhone: '',
-    stats: {
-      workHours: 0,
-      wage: 0,
-      scanCount: 0,
-    },
+    tenantName: '',
+    phoneText: '',
+    stats: { workHours: '--', wageText: '¥0', scanCount: 0 },
+    pendingCount: '',
     menuManageVisible: false,
     menuManageList: [],
     savingMenuConfig: false,
@@ -148,9 +111,11 @@ Page({
     }
     const canManage = isAdminOrSupervisor() || isFactoryOwner();
     this._showMenuManage = canManage;
-    this.setData({ showApprovalEntry: canManage });
-    this.loadUserInfo();
+    this._showWagePayment = isTenantOwner() || isAdminOrSupervisor();
+    this.loadUserInfo(canManage);
     this.loadSystemInfo();
+    this.loadProfileStats();
+    this.loadPendingCount();
     this.setupDataRefreshListener();
   },
 
@@ -170,19 +135,19 @@ Page({
   },
 
   refreshMenuItems: function () {
-    this.setData({
-      menuGroups: buildMenuGroups({
-        showMenuManage: this._showMenuManage || false,
-        showApproval: this.data.showApprovalEntry || false,
-      }),
+    const menuItems = buildMenuItems({
+      showInviteSection: this._showInviteSection || false,
+      showApprovalEntry: this.data.showApprovalEntry,
+      showMenuManage: this._showMenuManage || false,
+      pendingCount: this.data.pendingCount || '',
     });
+    const menuGroups = buildMenuGroups(menuItems);
+    this.setData({ menuItems: menuItems, menuGroups: menuGroups });
   },
 
   onMenuTap: function (e) {
-    const groupIdx = e.currentTarget.dataset.groupIdx;
-    const itemIdx = e.currentTarget.dataset.itemIdx;
-    const group = this.data.menuGroups[groupIdx];
-    const item = group && group.items[itemIdx];
+    const index = e.currentTarget.dataset.index;
+    const item = this.data.menuItems[index];
     if (!item) return;
     if (item.action === 'switchLanguage') {
       this.onLanguageSwitchTap();
@@ -190,22 +155,6 @@ Page({
     }
     if (item.action === 'openMenuManage') {
       this.openMenuManage();
-      return;
-    }
-    if (item.action === 'openFeedback') {
-      this.onFeedbackTap();
-      return;
-    }
-    if (item.action === 'copyInviteUrl') {
-      this.onCopyRecruitUrl();
-      return;
-    }
-    if (item.action === 'openPrivacy') {
-      this.onPrivacyTap();
-      return;
-    }
-    if (item.action === 'openAbout') {
-      this.onAboutTap();
       return;
     }
     if (item.url) {
@@ -282,11 +231,11 @@ Page({
     if (this.data._useRoleApi) {
       api.system.saveMiniprogramMenuRoleConfig(roleMenus).then(function () {
         self.setData({ menuManageVisible: false, savingMenuConfig: false });
-        toast.success('菜单配置已保存');
+        wx.showToast({ title: '菜单配置已保存', icon: 'success' });
       }).catch(function (err) {
         console.error('保存菜单配置失败', err);
         self.setData({ savingMenuConfig: false });
-        toast.error('保存失败');
+        wx.showToast({ title: '保存失败', icon: 'none' });
       });
     } else {
       const flatMenus = {};
@@ -296,11 +245,11 @@ Page({
       }
       api.system.saveMiniprogramMenuConfig(flatMenus).then(function () {
         self.setData({ menuManageVisible: false, savingMenuConfig: false });
-        toast.success('菜单配置已保存');
+        wx.showToast({ title: '菜单配置已保存', icon: 'success' });
       }).catch(function (err) {
         console.error('保存菜单配置失败', err);
         self.setData({ savingMenuConfig: false });
-        toast.error('保存失败');
+        wx.showToast({ title: '保存失败', icon: 'none' });
       });
     }
   },
@@ -321,7 +270,7 @@ Page({
         if (tab && typeof tab.refreshLanguage === 'function') {
           tab.refreshLanguage(appliedLang);
         }
-        toast.success(i18n.t('admin.languageSwitched', appliedLang));
+        wx.showToast({ title: i18n.t('admin.languageSwitched', appliedLang), icon: 'success' });
       },
       fail: function () {},
     });
@@ -334,6 +283,8 @@ Page({
     this._unsubscribeRefresh = onDataRefresh(function () {
       this.loadUserInfo(isAdminOrSupervisor());
       this.loadSystemInfo();
+      this.loadProfileStats();
+      this.loadPendingCount();
     }.bind(this));
 
     if (this._wsBound) return;
@@ -369,17 +320,25 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    this.loadSystemInfo().finally(function () { wx.stopPullDownRefresh(); });
+    const self = this;
+    Promise.all([
+      this.loadSystemInfo(),
+      new Promise(function (resolve) {
+        self.loadProfileStats();
+        resolve();
+      }),
+      new Promise(function (resolve) {
+        self.loadPendingCount();
+        resolve();
+      }),
+    ]).finally(function () { wx.stopPullDownRefresh(); });
   },
 
-  loadUserInfo: function () {
+  loadUserInfo: function (showApprovalEntry) {
     const userInfo = getUserInfo();
     const roleDisplayName = getRoleDisplayName();
     const userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
     const avatarLetter = userName.charAt(0);
-
-    const rawPhone = (userInfo && (userInfo.phone || userInfo.mobile || userInfo.phoneNumber)) || '';
-    const userPhone = rawPhone ? maskPhone(rawPhone) : '';
 
     let avatarImgUrl = '';
     const rawAvatar = (userInfo && (userInfo.avatarUrl || userInfo.avatar || userInfo.headUrl)) || '';
@@ -387,7 +346,11 @@ Page({
       avatarImgUrl = getAuthedImageUrl(rawAvatar);
     }
 
-    const patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl, userPhone: userPhone };
+    const phoneText = maskPhone((userInfo && userInfo.phone) || '');
+    const patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl, phoneText: phoneText };
+    if (typeof showApprovalEntry === 'boolean') {
+      patch.showApprovalEntry = showApprovalEntry;
+    }
     this.setData(patch);
     this.refreshMenuItems();
 
@@ -396,7 +359,6 @@ Page({
       if (!freshUser || !freshUser.name) return;
       setUserInfo(freshUser);
       const freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
-      const freshPhone = freshUser.phone || freshUser.mobile || freshUser.phoneNumber || '';
       let freshImgUrl = '';
       if (freshAvatar) {
         if (freshAvatar.indexOf('http://') === 0 || freshAvatar.indexOf('https://') === 0) {
@@ -412,10 +374,11 @@ Page({
       if (freshImgUrl !== avatarImgUrl) {
         freshPatch.avatarImgUrl = freshImgUrl;
       }
-      if (freshPhone) {
-        freshPatch.userPhone = maskPhone(freshPhone);
+      var freshPhone = maskPhone(freshUser.phone || '');
+      if (freshPhone && freshPhone !== phoneText) {
+        freshPatch.phoneText = freshPhone;
       }
-      if (Object.keys(freshPatch).length > 0) {
+      if (Object.keys(freshPatch).length) {
         this.setData(freshPatch);
       }
     }.bind(this)).catch(function () {});
@@ -435,7 +398,9 @@ Page({
           if (tenantCode) {
             self._recruitInfo = { show: true, tenantCode: tenantCode, tenantName: tenantName };
           }
-          self.setData({ factoryName: tenantName || '' });
+          self._showInviteSection = true;
+          self.setData({ tenantName: tenantName || '' });
+          self.refreshMenuItems();
           return onlineCount;
         }).catch(function (e) {
           console.error('加载租户信息失败', e);
@@ -455,13 +420,37 @@ Page({
   onCopyRecruitCode: function () {
     const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
-      toast.error('暂无工厂码');
+      wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
     }
     wx.setClipboardData({
       data: code,
-      success: function () { toast.success('工厂码已复制'); },
+      success: function () { wx.showToast({ title: '工厂码已复制', icon: 'success' }); },
     });
+  },
+
+  loadPendingCount: function () {
+    const self = this;
+    if (!this.data.showApprovalEntry) return;
+    api.system.listPendingUsers({ page: 1, pageSize: 1 }).then(function (res) {
+      const count = (res && res.total) || (res && res.records && res.records.length) || 0;
+      self.setData({ pendingCount: count > 0 ? String(count) : '' });
+      self.refreshMenuItems();
+    }).catch(function () {});
+  },
+
+  loadProfileStats: function () {
+    const self = this;
+    api.production.personalScanStats({ period: 'month' }).then(function (res) {
+      const scanCount = (res && res.scanCount) || 0;
+      const totalAmount = Number((res && res.totalAmount) || 0);
+      const workHours = (res && (res.workHours || res.workingHours)) || '--';
+      self.setData({
+        'stats.scanCount': scanCount,
+        'stats.wageText': totalAmount > 0 ? '\u00a5' + totalAmount.toLocaleString() : '\u00a50',
+        'stats.workHours': workHours,
+      });
+    }).catch(function () {});
   },
 
   onCopyRecruitUrl: function () {
@@ -469,7 +458,7 @@ Page({
     const tenantCode = recruitInfo.tenantCode || '';
     const tenantName = recruitInfo.tenantName || '';
     if (!tenantCode) {
-      toast.error('暂无工厂码');
+      wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
     }
     let baseUrl = '';
@@ -484,42 +473,7 @@ Page({
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({
       data: url,
-      success: function () { toast.success('注册链接已复制'); },
-    });
-  },
-
-  onEditProfile: function () {
-    wx.showToast({ title: '暂未开放', icon: 'none' });
-  },
-
-  onFeedbackTap: function () {
-    safeNavigate({ url: '/pages/admin/misc/feedback/index' }).catch(function () {
-      wx.showToast({ title: '暂未开放', icon: 'none' });
-    });
-  },
-
-  onPrivacyTap: function () {
-    wx.showModal({
-      title: '隐私政策',
-      content: '衣智链服装供应链系统重视您的隐私保护。我们仅收集必要的业务数据用于提供扫码、质检、工资结算等服务，不会向第三方分享您的个人信息。详细隐私政策请查看官方网站。',
-      showCancel: false,
-      confirmText: '我知道了',
-    });
-  },
-
-  onAboutTap: function () {
-    var version = '1.0.0';
-    try {
-      var app = getApp();
-      if (app && app.globalData && app.globalData.version) {
-        version = app.globalData.version;
-      }
-    } catch (e) {}
-    wx.showModal({
-      title: '关于我们',
-      content: '衣智链服装供应链系统\n版本：' + version + '\n\n为服装工厂提供扫码、质检、工资结算等一站式管理服务。',
-      showCancel: false,
-      confirmText: '确定',
+      success: function () { wx.showToast({ title: '注册链接已复制', icon: 'success' }); },
     });
   },
 
@@ -530,6 +484,10 @@ Page({
     } else {
       safeNavigate({ url: '/pages/login/index' }, 'reLaunch').catch(function () {});
     }
+  },
+
+  onEditProfile: function () {
+    safeNavigate({ url: '/pages/admin/misc/edit-profile/index' }).catch(function () {});
   },
 
   onAvatarError: function () {

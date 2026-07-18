@@ -1,4 +1,6 @@
 <wxs src="../../../utils/money.wxs" module="money" />
+<custom-nav title="扫码确认" show-back="{{true}}" />
+
 <view class="container">
 
   <view class="info-card">
@@ -9,24 +11,35 @@
       <view class="header-info">
         <view wx:if="{{isProcurement}}" class="procurement-badge">面辅料采购</view>
         <view wx:if="{{isCutting}}" class="cutting-badge">裁剪领取</view>
-        <text class="style-no">{{detail.styleNo || '-'}}</text>
+        <view class="style-no-row">
+          <text class="style-no">{{detail.styleNo || '-'}}</text>
+          <text wx:if="{{!isProcurement && !isCutting && detail.processName}}" class="tag-process">{{detail.processName}}</text>
+        </view>
         <text class="sub-info">{{detail.orderNo || '-'}}</text>
-        <text wx:if="{{!isProcurement && !isCutting && detail.processName}}" class="tag-process">{{detail.processName}}</text>
+        <text wx:if="{{deliveryInfo.deliveryDateStr}}" class="delivery-info">
+          <text class="delivery-date">交期 {{deliveryInfo.deliveryDateStr}}</text>
+          <text class="delivery-sep"> · </text>
+          <text class="delivery-remain {{deliveryInfo.remainDaysClass}}">{{deliveryInfo.remainDaysText}}</text>
+        </text>
       </view>
     </view>
+  </view>
 
-    <view wx:if="{{sizeMatrix.rows.length > 0}}" class="matrix-section">
-      <text class="matrix-label">下单明细</text>
-      <sku-matrix size-matrix="{{sizeMatrix}}" mode="compact" />
-    </view>
+  <!-- ===== 下单明细（独立卡片，对齐设计稿） ===== -->
+  <view wx:if="{{sizeMatrix.rows.length > 0}}" class="section-card matrix-card">
+    <text class="matrix-label">下单明细</text>
+    <sku-matrix size-matrix="{{sizeMatrix}}" mode="compact" />
   </view>
 
   <!-- ===== AI智能提示气泡（所有阶段通用，可关闭） ===== -->
   <view wx:if="{{aiTipVisible && aiTipData && aiTipData.aiTip}}" class="ai-bubble {{aiTipData.priority === 'high' ? 'ai-bubble-high' : 'ai-bubble-normal'}}">
     <view class="ai-bubble-header">
-      <text class="ai-bubble-icon">{{aiTipData.priority === 'high' ? '🔴' : '💡'}}</text>
+      <view class="ai-bubble-icon-wrap">
+        <view class="line-icon icon-ai"></view>
+      </view>
+      <text class="ai-bubble-title">{{aiTipData.priority === 'high' ? '重要' : '提示'}}</text>
       <text class="ai-bubble-stage" wx:if="{{aiTipData.stage}}">{{aiTipData.stage}}</text>
-      <view class="ai-bubble-close" bindtap="dismissAiTip">✕</view>
+      <view class="ai-bubble-close" bindtap="dismissAiTip"><view class="icon-close"></view></view>
     </view>
     <text class="ai-bubble-text">{{aiTipData.aiTip}}</text>
     <view wx:if="{{aiTipData.keywords.length > 0}}" class="ai-bubble-tags">
@@ -70,7 +83,7 @@
   <!-- ===== 采购模式：面辅料明细 ===== -->
   <block wx:if="{{isProcurement}}">
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
-      <text class="warn-icon">⚠️</text>
+      <view class="warn-icon"><view class="icon-warning-orange"></view></view>
       <text class="warn-text">未找到采购单，当前为BOM物料参考信息</text>
     </view>
 
@@ -156,7 +169,7 @@
     </view>
 
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
-      <text class="warn-icon">⚠️</text>
+      <view class="warn-icon"><view class="icon-warning-orange"></view></view>
       <text class="warn-text">未匹配到BOM工价，当前使用默认工价</text>
     </view>
 
@@ -181,22 +194,24 @@
     </view>
 
     <view class="summary-card">
-      <view class="summary-row">
+      <view class="summary-left">
         <text class="summary-label">总数量</text>
         <text class="summary-value">{{summary.totalQuantity}} 件</text>
       </view>
-      <view wx:if="{{isCutting && cuttingUnitPrice > 0}}" class="summary-row">
-        <text class="summary-label">裁剪单价</text>
-        <text class="summary-value amount">¥{{cuttingUnitPrice}} / 件</text>
-      </view>
-      <view wx:if="{{!isCutting && summary.totalAmount > 0}}" class="summary-row">
-        <text class="summary-label">预估工价</text>
-        <text class="summary-value amount">¥{{money.toFixed2(summary.totalAmount)}}</text>
+      <view class="summary-right">
+        <view wx:if="{{isCutting && cuttingUnitPrice > 0}}" class="summary-item">
+          <text class="summary-label">裁剪单价</text>
+          <text class="summary-value amount">¥{{cuttingUnitPrice}} / 件</text>
+        </view>
+        <view wx:if="{{!isCutting && summary.totalAmount > 0}}" class="summary-item">
+          <text class="summary-label">预估工价</text>
+          <text class="summary-value amount">¥{{money.toFixed2(summary.totalAmount)}}</text>
+        </view>
       </view>
     </view>
 
     <view wx:if="{{isCutting}}" class="tip-card">
-      <text class="tip-icon">📋</text>
+      <view class="tip-icon"><view class="line-icon line-icon--xl icon-clipboard"></view></view>
       <text class="tip-text">领取后请到「小云帮助中心」任务列表中点击任务进行分扎，生成菲号</text>
     </view>
   </block>

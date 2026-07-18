@@ -17,6 +17,7 @@ page {
   --color-primary-dark: #0064d6;
   --color-primary-rgb: 0, 122, 255;
   --color-primary-bg: #e8f2ff;
+  --color-primary-bg-dark: #cfe5ff;
   --color-primary-border: rgba(0, 122, 255, 0.2);
 
   --gradient-progress: linear-gradient(90deg, #34c759 0%, #007aff 100%);
@@ -47,6 +48,11 @@ page {
   --color-purple-bg-light: rgba(88, 86, 214, 0.1);
   --color-purple-border: rgba(88, 86, 214, 0.2);
 
+  --color-violet: #af52de;
+  --color-violet-bg: #f8f0fd;
+  --color-violet-bg-light: rgba(175, 82, 222, 0.1);
+  --color-violet-border: rgba(175, 82, 222, 0.2);
+
   --color-magenta: #ff2d55;
   --color-magenta-bg: rgba(255, 45, 85, 0.1);
 
@@ -55,44 +61,44 @@ page {
   /* ========== 背景色（Apple System Gray） ========== */
   --color-bg-page: #f2f2f7;
   --color-bg-card: #ffffff;
-  --color-bg-gray: #f2f2f7;
-  --color-bg-gray-light: #f7f7fa;
-  --color-bg-light: #f7f7fa;
   --color-bg-hover: rgba(0, 0, 0, 0.03);
   --color-bg-active: rgba(0, 0, 0, 0.06);
-  --color-bg-section: #e5e5ea;
+  --color-bg-subtle: #f5f5f5;
+  --color-bg-muted: #f7f7fa;
+  --color-bg-info: #e8f2ff;
 
   /* ========== 文字色（Apple Label Colors） ========== */
   --color-text-primary: #1d1d1f;
   --color-text-secondary: #6e6e73;
   --color-text-tertiary: #8e8e93;
+  --color-text-quaternary: #c7c7cc;
   --color-text-placeholder: #8e8e93;
   --color-text-disabled: #c7c7cc;
   --color-text-white: #ffffff;
 
-  /* ========== 边框色（Apple Separator） ========== */
+  /* ========== 边框色（与设计稿对齐：实色） ========== */
   --color-border: #e5e5ea;
   --color-border-light: #f2f2f7;
+  --color-border-lighter: #f5f5f7;
   --color-border-blue: rgba(0, 122, 255, 0.18);
-  --color-divider: #e5e5ea;
 
   /* ========== 遮罩 ========== */
   --color-overlay: rgba(0, 0, 0, 0.4);
 
-  /* ========== 圆角系统（Apple 风格） ========== */
+  /* ========== 圆角系统（与设计稿 Tailwind 对齐） ========== */
   --radius-xs: 4px;
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-2xl: 22px;
+  --radius-md: 10px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 19px;
   --radius-full: 999px;
 
   /* 语义化圆角别名 */
-  --radius-card: var(--radius-xl);
-  --radius-button: var(--radius-md);
-  --radius-tag: var(--radius-sm);
-  --radius-input: var(--radius-md);
+  --radius-card: var(--radius-2xl);
+  --radius-button: var(--radius-full);
+  --radius-tag: var(--radius-full);
+  --radius-input: var(--radius-sm);
   --radius-modal: var(--radius-xl);
 
   /* ========== 间距系统 ========== */
@@ -103,13 +109,12 @@ page {
   --spacing-xl: 20px;
   --spacing-2xl: 24px;
   --spacing-3xl: 32px;
-  --spacing-xxl: 24px;
 
   /* 语义化间距别名 */
-  --card-padding: var(--spacing-lg);
-  --card-gap: var(--spacing-md);
-  --page-padding-x: var(--spacing-lg);
-  --page-padding-y: var(--spacing-md);
+  --card-padding: 12px;
+  --card-gap: 12px;
+  --page-padding-x: 16px;
+  --page-padding-y: 12px;
 
   /* ========== 阴影系统（Apple 风格：柔和多层） ========== */
   --shadow-2xs: 0 1px 2px -1px rgba(0, 0, 0, 0.04);
@@ -122,21 +127,21 @@ page {
   --shadow-card-hover: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 
   /* ========== 字体系统（Apple HIG） ========== */
-  --font-size-xxs: 9px;
+  --font-size-xxs: 10px;
   --font-size-2xs: 11px;
-  --font-size-xs: 10px;
-  --font-size-sm: 12px;
-  --font-size-md: 13px;
-  --font-size-md-lg: 14px;
-  --font-size-base: 14px;
-  --font-size-lg: 15px;
-  --font-size-lg-xl: 16px;
-  --font-size-xl: 16px;
-  --font-size-2xl: 17px;
-  --font-size-3xl: 20px;
-  --font-size-4xl: 22px;
-  --font-size-5xl: 28px;
-  --font-size-6xl: 32px;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-md-lg: 15px;
+  --font-size-base: 15px;
+  --font-size-lg: 16px;
+  --font-size-lg-xl: 17px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 22px;
+  --font-size-4xl: 24px;
+  --font-size-5xl: 30px;
+  --font-size-6xl: 34px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -159,12 +164,12 @@ page {
   --input-radius: var(--radius-md);
 
   /* ========== 按钮系统（Apple 风格：填充式） ========== */
-  --btn-height-lg: 44px;
-  --btn-height-md: 40px;
-  --btn-height-sm: 34px;
+  --btn-height-lg: 50px;
+  --btn-height-md: 44px;
+  --btn-height-sm: 36px;
   --btn-height-xs: 28px;
   --btn-font-size: 14px;
-  --btn-radius: var(--radius-md);
+  --btn-radius: var(--radius-xl);
 
   /* ========== 层级系统 ========== */
   --z-base: 1;
@@ -175,9 +180,7 @@ page {
   --z-popover: 700;
   --z-tooltip: 800;
   --z-notification: 900;
-  --z-float-trigger: 9000;
-  --z-float-badge: 9001;
-  --z-float-panel: 9002;
+  --z-float-trigger: 900;
 
   /* ========== 页面布局 ========== */
   --page-padding-x: 16px;
@@ -187,17 +190,17 @@ page {
 
   /* ========== 菜单图标渐变系统（Apple 风格：柔和渐变） ========== */
   /* Apple 风格：纯色淡背景，不用渐变 */
-  --icon-bg-purple: #f0effe;
-  --icon-bg-blue: #e8f2ff;
-  --icon-bg-teal: #e6f7f5;
-  --icon-bg-amber: #fff8ec;
-  --icon-bg-green: #e9f9ee;
-  --icon-bg-orange: #fff0e8;
-  --icon-bg-rose: #ffeef2;
-  --icon-bg-indigo: #eef0fe;
-  --icon-bg-cyan: #ecf8fc;
-  --icon-bg-red: #ffecea;
-  --icon-bg-gray: #f2f2f7;
+  --icon-bg-purple: #ecebfe;
+  --icon-bg-blue: #dbeafe;
+  --icon-bg-teal: #d1f4f0;
+  --icon-bg-amber: #fef3c7;
+  --icon-bg-green: #d1fae5;
+  --icon-bg-orange: #ffe4d6;
+  --icon-bg-rose: #ffe4e8;
+  --icon-bg-indigo: #e0e7ff;
+  --icon-bg-cyan: #cffafe;
+  --icon-bg-red: #ffe4e0;
+  --icon-bg-gray: #e5e5ea;
 
   /* Apple 风格图标颜色（深色，在淡背景上清晰可见） */
   --icon-color-purple: #5856d6;
@@ -211,58 +214,14 @@ page {
   --icon-color-cyan: #06b6d4;
   --icon-color-red: #ff3b30;
   --icon-color-gray: #6b7280;
-
-  /* ========== 兼容别名（保持向下兼容） ========== */
-  --color-error: var(--color-danger);
-  --color-error-bg: var(--color-danger-bg);
-  --color-error-border: var(--color-danger-border);
-  --color-bg-base: var(--color-bg-card);
-  --color-bg-container: var(--color-bg-card);
-  --color-bg-subtle: var(--color-bg-gray-light);
-  --color-border-antd: var(--color-border);
-  --color-text-quaternary: #c7c7cc;
-  --neutral-text: var(--color-text-primary);
-  --neutral-text-light: var(--color-text-secondary);
-  --card-border: var(--color-border-light);
-  --z-float: var(--z-float-trigger);
-  --xiaoyun-primary: var(--color-primary);
-  --xiaoyun-primary-bg: var(--color-primary-bg);
-  --xiaoyun-primary-border: var(--color-primary-border);
-  --xiaoyun-success: var(--color-success);
-  --xiaoyun-success-bg: var(--color-success-bg);
-  --xiaoyun-success-border: var(--color-success-border);
-  --xiaoyun-warning: var(--color-warning);
-  --xiaoyun-warning-bg: var(--color-warning-bg);
-  --xiaoyun-warning-border: var(--color-warning-border);
-  --xiaoyun-danger: var(--color-danger);
-  --xiaoyun-danger-bg: var(--color-danger-bg);
-  --xiaoyun-danger-border: var(--color-danger-border);
-  --xiaoyun-text-primary: var(--color-text-primary);
-  --xiaoyun-text-secondary: var(--color-text-secondary);
-  --xiaoyun-text-tertiary: var(--color-text-tertiary);
-  --xiaoyun-bg-card: var(--color-bg-card);
-  --xiaoyun-bg-page: var(--color-bg-page);
-  --xiaoyun-border-card: var(--color-border-light);
-  --xiaoyun-radius-sm: var(--radius-sm);
-  --xiaoyun-radius-md: var(--radius-md);
-  --xiaoyun-radius-lg: var(--radius-lg);
-  --xiaoyun-font-xs: 10px;
-  --xiaoyun-font-sm: 11px;
-  --xiaoyun-font-base: 12px;
-  --xiaoyun-font-lg: 14px;
-  --xiaoyun-font-xl: 17px;
-  --xiaoyun-spacing-xs: 4px;
-  --xiaoyun-spacing-sm: 8px;
-  --xiaoyun-spacing-md: 12px;
-  --xiaoyun-spacing-lg: 16px;
 }
 
 /* ========== 统一状态标签颜色（Apple 风格） ========== */
 .status-tag,
 .tag {
   font-size: var(--font-size-xs);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
   font-weight: var(--font-weight-medium);
   flex-shrink: 0;
   display: inline-flex;
@@ -273,21 +232,22 @@ page {
   text-align: center;
   vertical-align: middle;
 }
-.tag-default    { background: var(--color-bg-gray); color: var(--color-text-secondary); }
+.tag-default    { background: var(--color-bg-page); color: var(--color-text-secondary); }
 .tag-success    { background: var(--color-success-bg); color: var(--color-success); }
 .tag-warning    { background: var(--color-warning-bg); color: var(--color-warning); }
 .tag-error      { background: var(--color-danger-bg); color: var(--color-danger); }
+.tag-info       { background: var(--color-bg-info); color: var(--color-info-700); }
 .tag-processing { background: var(--color-primary-bg); color: var(--color-primary); }
 
 /* 兼容旧 class 名称 */
 .tag-orange  { background: var(--color-warning-bg); color: var(--color-warning); }
 .tag-blue    { background: var(--color-primary-bg); color: var(--color-primary); }
 .tag-green   { background: var(--color-success-bg); color: var(--color-success); }
-.tag-gray    { background: var(--color-bg-gray); color: var(--color-text-secondary); }
+.tag-gray    { background: var(--color-bg-page); color: var(--color-text-secondary); }
 .tag-red     { background: var(--color-danger-bg); color: var(--color-danger); }
 
 /* 业务别名 */
 .tag-color   { background: var(--color-primary-bg); color: var(--color-primary); }
-.tag-size    { background: var(--color-bg-light); color: var(--color-text-secondary); }
+.tag-size    { background: var(--color-bg-page); color: var(--color-text-secondary); }
 .tag-warn    { background: var(--color-warning-bg); color: var(--color-warning); }
 .tag-danger  { background: var(--color-danger-bg); color: var(--color-danger); }

@@ -11,7 +11,7 @@
 
 /* === 选择器容器 === */
 .inline-selector {
-  background: var(--color-bg-gray, var(--color-bg-light));
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -53,8 +53,8 @@
 /* === 禁用项（如"无二次工艺"信息提示） === */
 .inline-selector-item--disabled {
   opacity: 0.45;
-  background: var(--color-bg-light);
-  border-color: var(--color-bg-gray);
+  background: var(--color-bg-page);
+  border-color: var(--color-bg-page);
   cursor: not-allowed;
 }
 .inline-selector-item--disabled .inline-selector-label {
@@ -75,7 +75,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid var(--color-border, var(--color-bg-gray));
+  border: 2px solid var(--color-border, var(--color-bg-page));
   display: flex;
   align-items: center;
   justify-content: center;

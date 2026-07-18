@@ -1,4 +1,4 @@
-<!-- 生产订单详情页 · 完整版 -->
+<!-- 生产订单详情页 · 完整版（对齐设计稿） -->
 
 <view class="detail-page">
   <!-- 加载骨架 -->
@@ -18,131 +18,95 @@
   </view>
 
   <block wx:if="{{!loading && order}}">
-    <!-- ══ 顶部信息卡 ══ -->
+    <!-- ══ ① 顶部信息卡 ══ -->
     <view class="top-card">
-      <!-- 图片轮播区 -->
-      <view class="top-left {{hasMultipleImages ? 'top-left--carousel' : ''}}" bindtap="onPreviewImage">
-        <swiper class="img-swiper" wx:if="{{imageList.length > 0}}" current="{{currentImageIndex}}" bindchange="onImageChange" autoplay="{{false}}" circular="{{false}}">
-          <swiper-item wx:for="{{imageList}}" wx:key="index">
-            <image class="cover-img" src="{{item.url}}" mode="aspectFill" lazy-load />
-          </swiper-item>
-        </swiper>
-        <view wx:else class="cover-placeholder">
-          <text class="cover-placeholder-text">暂无图片</text>
+      <view class="top-header">
+        <!-- 封面图（保留 swiper，隐藏导航箭头/指示器/类型标签） -->
+        <view class="top-left" bindtap="onPreviewImage">
+          <swiper class="img-swiper" wx:if="{{imageList.length > 0}}" current="{{currentImageIndex}}" bindchange="onImageChange" autoplay="{{false}}" circular="{{false}}">
+            <swiper-item wx:for="{{imageList}}" wx:key="index">
+              <image class="cover-img" src="{{item.url}}" mode="aspectFill" lazy-load />
+            </swiper-item>
+          </swiper>
+          <view wx:else class="cover-placeholder">
+            <text class="cover-placeholder-text">暂无图片</text>
+          </view>
         </view>
-
-        <!-- 左右切换箭头（多张图时显示） -->
-        <view class="img-nav img-nav--prev" wx:if="{{hasMultipleImages && currentImageIndex > 0}}" catchtap="goPrevImage">
-          <text class="icon-chevron-left"></text>
-        </view>
-        <view class="img-nav img-nav--next" wx:if="{{hasMultipleImages && currentImageIndex < imageList.length - 1}}" catchtap="goNextImage">
-          <text class="icon-chevron-right"></text>
-        </view>
-
-        <!-- 图片索引指示器 -->
-        <view class="img-indicator" wx:if="{{hasMultipleImages}}">
-          <text class="img-indicator-text">{{currentImageIndex + 1}} / {{imageList.length}}</text>
-        </view>
-
-        <!-- 图片类型标签 -->
-        <view class="img-type-tag" wx:if="{{imageList.length > 0}}">
-          <text>{{imageList[currentImageIndex].label}}</text>
+        <view class="top-right">
+          <view class="top-title">
+            <text class="order-no" bindtap="onCopyOrderNo">{{order.orderNo || '-'}}</text>
+            <text class="status-tag tag {{statusInfo.cls}}">{{statusInfo.text}}</text>
+          </view>
+          <text class="top-style-name" wx:if="{{order.styleName}}">{{order.styleName}}</text>
+          <!-- 标签行：首单 → 翻单 → 急（圆角胶囊，浅底深字） -->
+          <view class="top-tags" wx:if="{{order.urgencyLevel === 'urgent' || order.urgencyLevel === '急' || order.plateType === 'FIRST' || order.plateType === 'REORDER' || order.plateType === '翻单'}}">
+            <text wx:if="{{order.plateType === 'FIRST'}}" class="flag-tag flag-tag--blue">首单</text>
+            <text wx:if="{{order.plateType === 'REORDER' || order.plateType === '翻单'}}" class="flag-tag flag-tag--blue">翻单</text>
+            <text wx:if="{{order.urgencyLevel === 'urgent' || order.urgencyLevel === '急'}}" class="flag-tag flag-tag--orange">急</text>
+          </view>
         </view>
       </view>
-      <view class="top-right">
-        <view class="top-title">
-          <text class="order-no" bindtap="onCopyOrderNo">{{order.orderNo || '-'}}</text>
-          <text class="status-tag tag {{statusInfo.cls}}">{{statusInfo.text}}</text>
-          <text wx:if="{{order.urgencyLevel === 'urgent' || order.urgencyLevel === '急'}}" class="status-tag tag tag-warning">急</text>
-          <text wx:if="{{order.plateType === 'FIRST'}}" class="status-tag tag tag-processing">首单</text>
-          <text wx:if="{{order.plateType === 'REORDER' || order.plateType === '翻单'}}" class="status-tag tag tag-processing">翻单</text>
-        </view>
-        <view class="info-row">
+      <!-- 信息网格 2列5行：款号|业务员、客户、工厂、颜色|尺码、下单数|交期 -->
+      <view class="info-grid">
+        <view class="info-cell">
           <text class="info-label">款号</text>
           <text class="info-value">{{order.styleNo || '-'}}</text>
         </view>
-        <view class="info-row" wx:if="{{order.customerName}}">
-          <text class="info-label">客户</text>
-          <text class="info-value">{{order.customerName}}</text>
-        </view>
-        <view class="info-row" wx:if="{{order.factoryName}}">
-          <text class="info-label">工厂</text>
-          <text class="info-value">{{order.factoryName}}</text>
-        </view>
-        <view class="info-row" wx:if="{{order.salesman || order.merchandiser}}">
+        <view class="info-cell" wx:if="{{order.salesman || order.merchandiser}}">
           <text class="info-label">业务员</text>
           <text class="info-value">{{order.salesman || order.merchandiser}}</text>
         </view>
-        <view class="info-row" wx:if="{{order.company}}">
-          <text class="info-label">公司</text>
-          <text class="info-value">{{order.company}}</text>
+        <view class="info-cell info-cell--full" wx:if="{{order.customerName}}">
+          <text class="info-label">客户</text>
+          <text class="info-value">{{order.customerName}}</text>
         </view>
-        <view class="info-row" wx:if="{{order.factoryTypeText || order.factoryType}}">
-          <text class="info-label">类型</text>
-          <text class="info-value">{{order.factoryTypeText || order.factoryType}}</text>
+        <view class="info-cell info-cell--full" wx:if="{{order.factoryName}}">
+          <text class="info-label">工厂</text>
+          <text class="info-value">{{order.factoryName}}</text>
         </view>
-        <view class="info-row" wx:if="{{order.productCategory}}">
-          <text class="info-label">类别</text>
-          <text class="info-value">{{order.productCategory}}</text>
-        </view>
-        <view class="info-row" wx:if="{{order.patternMaker}}">
-          <text class="info-label">版师</text>
-          <text class="info-value">{{order.patternMaker}}</text>
-        </view>
-        <view class="info-row" wx:if="{{order.createdByName}}">
-          <text class="info-label">创建人</text>
-          <text class="info-value">{{order.createdByName}}</text>
-        </view>
-        <view class="info-row" wx:if="{{specSummary.hasSpec}}">
+        <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">颜色</text>
           <text class="info-value info-value--strong">{{specSummary.colorText}}</text>
         </view>
-        <view class="info-row" wx:if="{{specSummary.hasSpec}}">
+        <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">尺码</text>
           <text class="info-value info-value--strong">{{specSummary.sizeText}}</text>
         </view>
-        <view class="info-row" wx:if="{{specSummary.hasSpec}}">
+        <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">下单数</text>
           <text class="info-value info-value--strong">{{specSummary.qtyText}}</text>
         </view>
-        <view class="info-row" wx:if="{{deliveryDateStr}}">
+        <view class="info-cell" wx:if="{{deliveryDateStr}}">
           <text class="info-label">交期</text>
-          <text class="info-value">{{deliveryDateStr}}</text>
-          <text class="remain-badge {{remainDaysClass}}" wx:if="{{remainDaysText}}">{{remainDaysText}}</text>
-        </view>
-        <view class="info-row" wx:if="{{orderBizTypeText}}">
-          <text class="info-label">业务</text>
-          <text class="info-value">{{orderBizTypeText}}</text>
-        </view>
-        <view class="info-row" wx:if="{{ecPlatformName}}">
-          <text class="info-label">平台来源</text>
-          <text class="info-value">{{ecPlatformName}}</text>
+          <view class="info-value-row">
+            <text class="info-value">{{deliveryDateStr}}</text>
+            <text class="remain-badge {{remainDaysClass}}" wx:if="{{remainDaysText}}">{{remainDaysText}}</text>
+          </view>
         </view>
       </view>
     </view>
 
-    <!-- ════════════ ② 数量进度卡（含进度条） ════════════ -->
+    <!-- ══ ② 数量进度卡 ══ -->
     <view class="qty-card">
-      <view class="qty-col">
-        <text class="qty-num">{{totalQuantity}}</text>
-        <text class="qty-label">总数量</text>
+      <view class="qty-row">
+        <view class="qty-col">
+          <text class="qty-label">总数量</text>
+          <text class="qty-num">{{totalQuantity}}</text>
+        </view>
+        <view class="qty-col">
+          <text class="qty-label">已完成</text>
+          <text class="qty-num qty-done">{{completedQuantity}}</text>
+        </view>
+        <view class="qty-col">
+          <text class="qty-label">剩余</text>
+          <text class="qty-num qty-remain">{{remainQuantity}}</text>
+        </view>
+        <view class="qty-col">
+          <text class="qty-label">进度</text>
+          <text class="qty-num qty-pct">{{progressPct}}%</text>
+        </view>
       </view>
-      <view class="qty-div"></view>
-      <view class="qty-col">
-        <text class="qty-num qty-done">{{completedQuantity}}</text>
-        <text class="qty-label">已完成</text>
-      </view>
-      <view class="qty-div"></view>
-      <view class="qty-col">
-        <text class="qty-num qty-remain">{{remainQuantity}}</text>
-        <text class="qty-label">剩余</text>
-      </view>
-      <view class="qty-div"></view>
-      <view class="qty-col">
-        <text class="qty-num qty-pct">{{progressPct}}%</text>
-        <text class="qty-label">进度</text>
-      </view>
-      <!-- 总进度条（内嵌于数量卡） -->
+      <!-- 总进度条 -->
       <view class="progress-bar-wrap">
         <view class="progress-bar">
           <view class="progress-fill" style="width:{{progressPct > 100 ? 100 : progressPct}}%"></view>
@@ -154,7 +118,7 @@
       </view>
     </view>
 
-    <!-- ════════════ ③ 操作区 ════════════ -->
+    <!-- ══ ③ 操作栏（5按钮，SVG mask 线性图标） ══ -->
     <view class="action-bar {{isEditable ? '' : 'action-bar--disabled'}}">
       <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--procurement"></view>
@@ -178,7 +142,7 @@
       </view>
     </view>
 
-    <!-- ════════════ ④ 执行进度区 · 工序进度（时间线布局） ════════════ -->
+    <!-- ══ ④ 工序进度时间线 ══ -->
     <view class="section-card" wx:if="{{stages.length > 0}}">
       <view class="section-hd">
         <text class="section-title">工序进度</text>
@@ -192,8 +156,8 @@
               <!-- 进行中阶段的脉冲动画环 -->
               <view class="stage-pulse-ring" wx:if="{{item.statusCls === 'stage-doing'}}"></view>
               <view class="stage-dot {{item.statusCls}}">
+                <!-- 完成=绿色对勾（SVG mask） -->
                 <view class="icon-checkmark-sm" wx:if="{{item.statusCls === 'stage-done'}}"></view>
-                <view class="icon-dot-sm" wx:if="{{item.statusCls === 'stage-doing'}}"></view>
               </view>
             </view>
             <!-- 垂直连接线（最后一个阶段不显示） -->
@@ -205,56 +169,51 @@
               <text class="stage-name {{item.statusCls === 'stage-pending' ? 'stage-name--pending' : ''}}">{{item.name}}</text>
               <text class="stage-qty" wx:if="{{item.totalQty > 0}}">{{item.scannedQty || 0}}/{{item.totalQty}}</text>
             </view>
+            <view class="sp-bar" wx:if="{{item.totalQty > 0}}">
+              <view class="sp-fill {{item.statusCls === 'stage-done' ? 'sp-fill--done' : ''}}" style="width:{{item.progress || 0}}%"></view>
+            </view>
             <view class="stage-meta" wx:if="{{item.startOperator || item.startTime}}">
               <text wx:if="{{item.startOperator && item.startOperator !== '-'}}" class="meta-text">{{item.startOperator}}</text>
               <text wx:if="{{item.startOperator && item.startTime}}" class="meta-text-sep"> · </text>
               <text wx:if="{{item.startTime}}" class="meta-text">{{item.startTime}}{{item.completeTime ? '→' : ''}}{{item.completeTime}}</text>
             </view>
-            <view class="sp-bar" wx:if="{{item.totalQty > 0}}">
-              <view class="sp-fill {{item.statusCls === 'stage-done' ? 'sp-fill--done' : ''}}" style="width:{{item.progress || 0}}%"></view>
-            </view>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- ════════════ ⑤ 明细数据区 ════════════ -->
-
-    <!-- 下单矩阵 -->
+    <!-- ══ ⑤ 下单明细矩阵表（CSS Grid） ══ -->
     <view class="section-card" wx:if="{{matrixModel && matrixModel.hasData}}">
       <view class="section-hd">
         <text class="section-title">下单明细</text>
         <text class="section-count">共 {{matrixModel.total}} 件 / {{matrixModel.colors.length}} 色 × {{matrixModel.allSizes.length}} 码</text>
       </view>
-      <view class="matrix-table">
-        <view class="matrix-thead">
-          <view class="matrix-tr matrix-tr--head">
-            <text class="matrix-th matrix-th--color">颜色</text>
-            <text class="matrix-th" wx:for="{{matrixModel.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
-            <text class="matrix-th matrix-th--total">小计</text>
-          </view>
-        </view>
-        <view class="matrix-tbody">
-          <view class="matrix-tr" wx:for="{{matrixModel.rows}}" wx:key="label">
-            <text class="matrix-td matrix-td--color">{{item.label}}</text>
-            <text class="matrix-td" wx:for="{{item.quantities}}" wx:for-item="qty" wx:key="*this">{{qty > 0 ? qty : '-'}}</text>
-            <text class="matrix-td matrix-td--total">{{item.rowTotal}}</text>
-          </view>
-          <view class="matrix-tr matrix-tr--total">
-            <text class="matrix-td matrix-td--color">合计</text>
-            <text class="matrix-td" wx:for="{{matrixModel.sizeSummary}}" wx:for-item="szSum" wx:key="size">{{szSum.qty > 0 ? szSum.qty : '-'}}</text>
-            <text class="matrix-td matrix-td--total">{{matrixModel.total}}</text>
-          </view>
-        </view>
+      <view class="matrix-table" style="grid-template-columns: 1.2fr repeat({{matrixModel.allSizes.length}}, 1fr) 1.1fr;">
+        <!-- 表头行 -->
+        <text class="matrix-cell matrix-cell--head matrix-cell--color">颜色</text>
+        <text class="matrix-cell matrix-cell--head" wx:for="{{matrixModel.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
+        <text class="matrix-cell matrix-cell--head matrix-cell--total">小计</text>
+        <!-- 数据行 -->
+        <block wx:for="{{matrixModel.rows}}" wx:key="label">
+          <text class="matrix-cell matrix-cell--color">{{item.label}}</text>
+          <text class="matrix-cell" wx:for="{{item.quantities}}" wx:for-item="qty" wx:key="*this">{{qty > 0 ? qty : '-'}}</text>
+          <text class="matrix-cell matrix-cell--total">{{item.rowTotal}}</text>
+        </block>
+        <!-- 合计行 -->
+        <text class="matrix-cell matrix-cell--color matrix-cell--foot">合计</text>
+        <text class="matrix-cell matrix-cell--foot" wx:for="{{matrixModel.sizeSummary}}" wx:for-item="szSum" wx:key="size">{{szSum.qty > 0 ? szSum.qty : '-'}}</text>
+        <text class="matrix-cell matrix-cell--total matrix-cell--foot">{{matrixModel.total}}</text>
       </view>
     </view>
 
-    <!-- 裁剪明细（可领取） -->
+    <!-- 裁剪明细（业务需要，设计稿无） -->
     <view class="section-card" wx:if="{{cuttingBundleList.length > 0}}">
       <view class="section-hd">
         <text class="section-title">裁剪明细</text>
-        <text class="status-tag tag tag-success" wx:if="{{cuttingAllDone}}">已完成</text>
-        <text class="section-count">{{bundleSummary.totalBundles}}扎 / {{bundleSummary.totalQty}}件</text>
+        <view class="section-hd-right">
+          <text class="status-tag tag tag-success" wx:if="{{cuttingAllDone}}">已完成</text>
+          <text class="section-count">{{bundleSummary.totalBundles}}扎 / {{bundleSummary.totalQty}}件</text>
+        </view>
       </view>
       <view class="cut-list">
         <view class="cut-item" wx:for="{{cuttingBundleList}}" wx:key="id">
@@ -290,12 +249,14 @@
       </view>
     </view>
 
-    <!-- 物料采购（可领取） -->
+    <!-- 物料采购（业务需要，设计稿无） -->
     <view class="section-card" wx:if="{{hasMaterialPurchases}}">
       <view class="section-hd">
         <text class="section-title">物料采购</text>
-        <text class="status-tag tag tag-success" wx:if="{{procurementAllDone}}">已完成</text>
-        <text class="section-count">{{materialPurchases.length}}项</text>
+        <view class="section-hd-right">
+          <text class="status-tag tag tag-success" wx:if="{{procurementAllDone}}">已完成</text>
+          <text class="section-count">{{materialPurchases.length}}项</text>
+        </view>
       </view>
       <view class="mat-list">
         <view class="mat-item" wx:for="{{materialPurchases}}" wx:key="index">
@@ -374,7 +335,7 @@
       </view>
     </view>
 
-    <!-- ════════════ ⑥ 操作记录区 ════════════ -->
+    <!-- ══ ⑥ 操作记录区 ══ -->
     <view class="section-card" wx:if="{{records.length > 0}}">
       <view class="section-hd">
         <text class="section-title">操作记录</text>

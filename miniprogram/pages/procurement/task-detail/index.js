@@ -1,7 +1,7 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
@@ -32,6 +32,29 @@ Page({
   },
 
   onShow() {
+    if (this.orderNo) this._loadDetail();
+    this._bindEvents();
+  },
+
+  onHide() {
+    this._unbindEvents();
+  },
+
+  onUnload() {
+    this._unbindEvents();
+  },
+
+  _bindEvents() {
+    this._onDataChanged = (data) => {
+      if (data && (data.type === 'procurement' || data.type === 'purchase')) {
+        if (this.orderNo) this._loadDetail();
+      }
+    };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+  },
+
+  _unbindEvents() {
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
   },
 
   onPullDownRefresh() {
@@ -156,7 +179,7 @@ Page({
   },
 
   async onReturnConfirm(e) {
-    const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
+    const { id, name, arrived, purchase } = e.currentTarget.dataset;
     if (!id) return;
 
     const defaultQty = (Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0;
@@ -167,7 +190,7 @@ Page({
       editable: true,
       placeholderText: String(defaultQty),
       confirmText: '确认回料',
-      confirmColor: '#1677ff',
+      confirmColor: '#007aff',
       success: async (res) => {
         if (!res.confirm) return;
 
@@ -218,7 +241,7 @@ Page({
       title: '确认回料完成',
       content: `当前到货率 ${overallArrivalRate}%，确认后采购阶段将流转到裁剪环节。确定？`,
       confirmText: '确认完成',
-      confirmColor: '#1677ff',
+      confirmColor: '#007aff',
       editable: true,
       placeholderText: '备注（选填）',
       success: async (res) => {

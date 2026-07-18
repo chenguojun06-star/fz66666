@@ -3,6 +3,7 @@
   "usingComponents": {
     "custom-nav": "/components/common/custom-nav/index",
     "image-preview": "/components/common/image-preview/index",
-    "sku-matrix": "/components/sku-matrix/index"
+    "sku-matrix": "/components/sku-matrix/index",
+    "search-scan": "/components/search-scan/index"
   }
 }

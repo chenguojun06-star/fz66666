@@ -1,40 +1,42 @@
 <!-- 销售数据概览 -->
-
 <view class="page">
   <!-- 日期范围筛选 -->
-  <view class="range-bar">
+  <scroll-view class="range-bar" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="range-pill {{activeRange === item.key ? 'range-pill--on' : ''}}"
           wx:for="{{ranges}}" wx:key="key"
           data-key="{{item.key}}" bindtap="onRangeTap">
       <text>{{item.label}}</text>
     </view>
-    <view class="range-date">{{startDate}} ~ {{endDate}}</view>
-  </view>
+  </scroll-view>
+  <view class="range-date">{{startDate}} ~ {{endDate}}</view>
 
   <!-- 汇总卡片 -->
   <view class="summary-grid">
     <view class="sum-card sum-card--blue">
-      <text class="sum-val">¥{{summary.totalSales}}</text>
       <text class="sum-lbl">总销售额</text>
+      <text class="sum-val">¥{{summary.totalSalesText}}</text>
     </view>
     <view class="sum-card sum-card--green">
-      <text class="sum-val">{{summary.totalOrders}}</text>
       <text class="sum-lbl">总订单量</text>
+      <text class="sum-val">{{summary.totalOrders}}</text>
     </view>
     <view class="sum-card sum-card--orange">
-      <text class="sum-val">¥{{summary.totalShipping}}</text>
       <text class="sum-lbl">总运费</text>
+      <text class="sum-val">¥{{summary.totalShippingText}}</text>
     </view>
     <view class="sum-card sum-card--purple">
-      <text class="sum-val">¥{{summary.netRevenue}}</text>
       <text class="sum-lbl">净收入</text>
+      <text class="sum-val">¥{{summary.netRevenueText}}</text>
     </view>
   </view>
 
   <!-- 平台分组列表 -->
   <view class="section-hd">
     <text class="section-title">平台销售明细</text>
-    <text class="section-action" bindtap="onViewOrders">查看订单</text>
+    <view class="section-action" bindtap="onViewOrders">
+      <text>查看订单</text>
+      <view class="icon-arrow-right-sm"></view>
+    </view>
   </view>
 
   <view class="platform-list" wx:if="{{platforms.length > 0}}">
@@ -43,17 +45,17 @@
           data-platform="{{item.platform}}" bindtap="onPlatformTap">
       <view class="pc-head">
         <text class="pc-name">{{item.platformName}}</text>
-        <text class="pc-count">{{item.orderCount}}单</text>
+        <text class="pc-count">订单量 {{item.orderCount}}</text>
       </view>
       <view class="pc-divider"></view>
       <view class="pc-body">
         <view class="pc-col">
           <text class="pc-lbl">销售额</text>
-          <text class="pc-num">¥{{item.salesAmount}}</text>
+          <text class="pc-num">¥{{item.salesAmountText}}</text>
         </view>
         <view class="pc-col">
           <text class="pc-lbl">净收入</text>
-          <text class="pc-num">¥{{item.netRevenue}}</text>
+          <text class="pc-num pc-num--blue">¥{{item.netRevenueText}}</text>
         </view>
       </view>
     </view>
@@ -66,7 +68,7 @@
     <text class="empty-hint">所选时间段内未统计到销售数据</text>
   </view>
   <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && loadError}}">
-    <text class="empty-icon">⚠️</text>
+    <view class="empty-icon icon-warning-orange"></view>
     <text class="empty-text">加载失败</text>
     <text class="empty-hint" bindtap="onRetry">点击重试</text>
   </view>

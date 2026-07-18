@@ -7,7 +7,7 @@
 
 const api = require('../../../utils/api');
 const ScanHandler = require('../handlers/ScanHandler');
-const { toast, toastAndRedirect, safeNavigate } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const scanValidator = require('./scanValidator');
 const isRecentDuplicate = scanValidator.isRecentDuplicate;
 const markRecent = scanValidator.markRecent;
@@ -136,9 +136,9 @@ module.exports = {
         return;
       }
       if (e.isOfflineQueued) {
-        wx.showToast({ title: '📶 已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
+        wx.showToast({ title: '已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
         this.setData({
-          lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
+          lastResult: { success: false, queued: true, message: '无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
           offlinePendingCount: e.offlineCount || 0,
         });
         wx.pageScrollTo({ scrollTop: 0, duration: 300 });

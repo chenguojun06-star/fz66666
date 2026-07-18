@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "退货管理",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

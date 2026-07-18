@@ -6,7 +6,7 @@
 const COLOR_DEFAULT = 'var(--color-text-disabled)';
 const COLOR_SUCCESS = 'var(--color-success)';
 const COLOR_WARNING = 'var(--color-warning)';
-const COLOR_ERROR = 'var(--color-error)';
+const COLOR_DANGER = 'var(--color-danger)';
 const COLOR_FALLBACK = 'var(--color-text-secondary)';
 
 /**
@@ -82,11 +82,11 @@ function getStatusColor(status) {
     production: COLOR_SUCCESS,
     completed: COLOR_SUCCESS,
     delayed: COLOR_WARNING,
-    scrapped: COLOR_ERROR,
-    cancelled: COLOR_ERROR,
-    canceled: COLOR_ERROR,
+    scrapped: COLOR_DANGER,
+    cancelled: COLOR_DANGER,
+    canceled: COLOR_DANGER,
     paused: COLOR_WARNING,
-    returned: COLOR_ERROR,
+    returned: COLOR_DANGER,
     closed: COLOR_SUCCESS,
     archived: COLOR_DEFAULT,
   };
@@ -102,14 +102,38 @@ function getQualityColor(qualityStatus) {
   const s = (qualityStatus || '').toString().trim().toLowerCase();
   const colorMap = {
     qualified: COLOR_SUCCESS,
-    unqualified: COLOR_ERROR,
+    unqualified: COLOR_DANGER,
     repaired: COLOR_DEFAULT,
   };
   return colorMap[s] || COLOR_FALLBACK;
 }
 
+/**
+ * 根据订单状态获取封面徽标样式类名
+ * @param {string} status - 状态码
+ * @returns {string} CSS 类名后缀（production/completed/overdue/pending）
+ */
+function orderStatusBadgeClass(status) {
+  const s = (status || '').toString().trim().toLowerCase();
+  const map = {
+    pending: 'pending',
+    production: 'production',
+    completed: 'completed',
+    delayed: 'overdue',
+    scrapped: 'overdue',
+    cancelled: 'overdue',
+    canceled: 'overdue',
+    paused: 'pending',
+    returned: 'overdue',
+    closed: 'completed',
+    archived: 'completed',
+  };
+  return map[s] || 'pending';
+}
+
 module.exports = {
   orderStatusText,
+  orderStatusBadgeClass,
   qualityStatusText,
   scanResultText,
   getStatusColor,

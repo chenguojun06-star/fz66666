@@ -1,174 +1,196 @@
-<!-- 采购详情页 · 六段式结构 -->
-<view class="detail-page">
+<custom-nav title="采购详情" show-back="{{true}}" />
+
+<view class="page-container">
+  <!-- 加载中 -->
   <view class="loading-wrapper" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
   </view>
 
+  <!-- 空状态 -->
   <view class="empty-state" wx:elif="{{materialPurchases.length === 0}}">
-    <text class="empty-icon icon-box"></text>
+    <view class="empty-icon line-icon icon-package"></view>
     <text class="empty-text">暂无采购物料</text>
   </view>
 
   <block wx:else>
+    <view class="detail-body">
 
-    <!-- ════════════ ① 基础信息卡 ════════════ -->
-    <view class="section-card header-card">
-      <image wx:if="{{styleCoverUrl}}" src="{{styleCoverUrl}}" mode="aspectFill" class="garment-thumb" />
-      <view class="header-info">
+      <!-- Card 1: 订单头部 -->
+      <view class="detail-card order-header">
         <view class="header-top">
-          <view class="header-title-wrap">
-            <text class="order-no">{{orderNo}}</text>
-            <text class="style-no">{{styleNo}}</text>
+          <view class="order-media">
+            <view class="media-placeholder line-icon icon-package"></view>
           </view>
-          <text class="status-tag tag tag-processing">{{statusText || '采购中'}}</text>
+          <view class="header-title">
+            <text class="order-no">{{orderNo}}</text>
+            <text class="style-no" wx:if="{{styleNo}}">款号 {{styleNo}}</text>
+          </view>
+          <text class="tag {{overallArrivalRate >= 100 ? 'tag-green' : 'tag-blue'}}">{{overallArrivalRate >= 100 ? '已完成' : '采购中'}}</text>
         </view>
+
         <view class="header-summary">
-          <text class="summary-count">共 {{materialPurchases.length}} 项</text>
-          <text class="summary-rate" wx:if="{{overallArrivalRate >= 0}}">到货率 {{overallArrivalRate}}%</text>
+          <view class="summary-item">
+            <text class="summary-label">共</text>
+            <text class="summary-value">{{materialPurchases.length}}</text>
+            <text class="summary-label">项</text>
+          </view>
+          <view class="summary-divider"></view>
+          <view class="summary-item">
+            <text class="summary-label">到货率</text>
+            <text class="summary-value summary-primary">{{overallArrivalRate}}%</text>
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- ════════════ ② 总览进度卡 ════════════ -->
-    <view class="qty-card">
-      <view class="qty-col">
-        <text class="qty-num">{{materialPurchases.length}}</text>
-        <text class="qty-label">物料项数</text>
-      </view>
-      <view class="qty-div"></view>
-      <view class="qty-col">
-        <text class="qty-num qty-pct">{{overallArrivalRate}}%</text>
-        <text class="qty-label">整体到货率</text>
-      </view>
-      <view class="qty-div"></view>
-      <view class="qty-col">
-        <text class="qty-num qty-done" wx:if="{{hasReturnConfirmed}}">已完成</text>
-        <text class="qty-num qty-remain" wx:else>进行中</text>
-        <text class="qty-label">回料状态</text>
-      </view>
-      <view class="qty-div"></view>
-      <view class="qty-col">
-        <text class="qty-num qty-done" wx:if="{{canConfirmProcurement}}">已达标</text>
-        <text class="qty-num qty-remain" wx:else>未达标</text>
-        <text class="qty-label">采购阶段</text>
-      </view>
-    </view>
-
-    <view class="overall-progress-wrap" wx:if="{{overallArrivalRate >= 0}}">
-      <view class="overall-progress-bar">
-        <view class="overall-progress-fill" style="width: {{overallArrivalRate > 100 ? 100 : overallArrivalRate}}%"></view>
-      </view>
-    </view>
-
-    <!-- ════════════ ④ 执行进度区 · 物料到货进度 ════════════ -->
-    <view class="section-card">
-      <view class="section-hd">
-        <text class="section-title">物料到货进度</text>
-        <text class="section-count">{{materialPurchases.length}} 项</text>
+      <!-- Card 2: 统计概览 -->
+      <view class="detail-card stats-card">
+        <view class="stats-grid">
+          <view class="stat-item">
+            <text class="stat-label">物料项数</text>
+            <text class="stat-value">{{materialPurchases.length}}</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-label">整体到货率</text>
+            <text class="stat-value stat-primary">{{overallArrivalRate}}%</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-label">回料状态</text>
+            <text class="stat-value-text stat-{{hasReturnConfirmed ? 'success' : 'warning'}}">{{hasReturnConfirmed ? '已回料' : '进行中'}}</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-label">采购阶段</text>
+            <text class="stat-value-text stat-{{overallArrivalRate >= 100 ? 'success' : (overallArrivalRate >= 70 ? 'success' : 'danger')}}">{{overallArrivalRate >= 100 ? '已完成' : (overallArrivalRate >= 70 ? '达标' : '未达标')}}</text>
+          </view>
+        </view>
+        <view class="overall-progress">
+          <view class="overall-progress-track">
+            <view class="overall-progress-fill" style="width: {{overallArrivalRate > 100 ? 100 : overallArrivalRate}}%"></view>
+          </view>
+        </view>
       </view>
 
-      <view class="material-list">
-        <view wx:for="{{materialPurchases}}" wx:key="id"
-          class="material-item {{item.isComplete ? 'item-done' : ''}} {{item.returnConfirmed ? 'item-confirmed' : ''}}">
+      <!-- Card 3: 物料到货进度 -->
+      <view class="detail-card material-list">
+        <view class="section-head">
+          <text class="section-title">物料到货进度</text>
+          <text class="section-count">{{materialPurchases.length}} 项</text>
+        </view>
 
-          <view class="mat-head">
-            <view class="mat-title">
-              <text class="mat-name">{{item.materialName || item.materialTypeCN || '物料'}}</text>
-              <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
-              <text class="status-tag tag tag-success" wx:if="{{item.returnConfirmed}}">已回料</text>
+        <view
+          wx:for="{{materialPurchases}}"
+          wx:key="id"
+          class="material-item {{item.isComplete ? 'item-done' : ''}}"
+        >
+          <!-- 物料信息行 -->
+          <view class="mat-info">
+            <view class="mat-info-left">
+              <text class="mat-name">{{item.materialName || '未知物料'}}</text>
+              <text class="mat-desc">{{item.materialTypeCN}}{{item.materialCode ? ' · 编号 ' + item.materialCode : ''}}{{item.specifications ? ' · 规格 ' + item.specifications : ''}} · 单位 {{item.unit || '米'}}</text>
+            </view>
+            <view class="mat-tags">
+              <text class="tag tag-{{item.statusColor}}">{{item.statusText}}</text>
+              <text wx:if="{{item.returnConfirmed}}" class="tag tag-green">已回料</text>
             </view>
           </view>
 
-          <view class="mat-meta-row">
-            <text class="mat-meta" wx:if="{{item.materialTypeCN}}">{{item.materialTypeCN}}</text>
-            <text class="mat-meta" wx:if="{{item.materialCode}}">编号 {{item.materialCode}}</text>
-            <text class="mat-meta" wx:if="{{item.specifications}}">规格 {{item.specifications}}</text>
-            <text class="mat-meta">单位 {{item.unit || '米'}}</text>
-          </view>
-
-          <view class="mat-qty-row">
-            <view class="qty-cell">
+          <!-- 数量统计 4 列 -->
+          <view class="qty-grid">
+            <view class="qty-item">
               <text class="qty-lbl">需求</text>
               <text class="qty-val">{{item.purchaseQuantity || 0}}</text>
             </view>
-            <view class="qty-cell">
+            <view class="qty-item">
               <text class="qty-lbl">已到</text>
-              <text class="qty-val arrived">{{item.arrivedQuantity || 0}}</text>
+              <text class="qty-val">{{item.arrivedQuantity || 0}}</text>
             </view>
-            <view class="qty-cell">
+            <view class="qty-item">
               <text class="qty-lbl">待到</text>
-              <text class="qty-val pending">{{item.pendingQuantity || 0}}</text>
+              <text class="qty-val qty-pending">{{item.pendingQuantity || (item.purchaseQuantity - item.arrivedQuantity) || 0}}</text>
             </view>
-            <view class="qty-cell">
+            <view class="qty-item">
               <text class="qty-lbl">到货率</text>
-              <text class="qty-val {{item.arrivalRate >= 100 ? 'arrived' : ''}}">{{item.arrivalRate || 0}}%</text>
+              <text class="qty-val qty-primary">{{item.arrivalRate || 0}}%</text>
             </view>
           </view>
 
-          <view class="mat-sub-row" wx:if="{{item.creatorName || item.receiverName || item.returnConfirmed}}">
-            <text class="mat-sub" wx:if="{{item.creatorName}}">创建：{{item.creatorName}}</text>
-            <text class="mat-sub" wx:if="{{item.receiverName}}">· 领取：{{item.receiverName}}</text>
-            <text class="mat-sub" wx:if="{{item.returnConfirmed}}">
-              · 回料 {{item.returnQuantity || item.arrivedQuantity}}{{item.unit || ''}}
-            </text>
-            <text class="mat-sub" wx:if="{{item.returnConfirmed && item.returnConfirmerName}}">
-              · {{item.returnConfirmerName}}
-            </text>
-            <text class="mat-sub" wx:if="{{item.returnConfirmed && item.returnConfirmTimeText}}">
-              · {{item.returnConfirmTimeText}}
-            </text>
+          <!-- 创建/领取/回料信息 -->
+          <text class="mat-meta">{{item.creatorName ? '创建：' + item.creatorName + ' · ' : ''}}领取：{{item.receiverName || '-'}}{{item.returnConfirmed ? ' · 回料 ' + (item.returnQuantity || item.arrivedQuantity) + (item.unit || '') + ' ' + (item.returnConfirmerName || '') + ' ' + (item.returnConfirmTimeText || '') : ''}}</text>
+
+          <!-- 进度条 -->
+          <view class="progress-bar">
+            <view class="progress-fill {{(item.returnConfirmed || item.isComplete) ? 'fill-success' : ''}}" style="width: {{item.arrivalRate > 100 ? 100 : item.arrivalRate}}%"></view>
           </view>
 
-          <view class="mat-progress" wx:if="{{!item.isComplete}}">
-            <view class="mat-progress-bar">
-              <view class="mat-progress-fill {{item.returnConfirmed ? 'fill-confirmed' : ''}}" style="width: {{item.arrivalRate > 100 ? 100 : item.arrivalRate}}%"></view>
+          <!-- 到货数量输入 -->
+          <view class="item-input-row" wx:if="{{item.isActionable && !item.returnConfirmed}}">
+            <view class="input-wrap">
+              <view class="input-icon line-icon icon-search"></view>
+              <input
+                class="input-field"
+                type="digit"
+                placeholder="输入到货数量"
+                placeholder-class="input-placeholder"
+                data-id="{{item.id || item.purchaseId}}"
+                bindinput="onMaterialInput"
+                value="{{item.inputQuantity}}"
+              />
             </view>
-          </view>
-
-          <view class="mat-input-row" wx:if="{{item.isActionable && !item.returnConfirmed}}">
-            <input class="mat-input" type="digit" placeholder="输入到货数量"
+            <view
+              wx:if="{{item.canConfirmReturn}}"
+              class="btn-return-confirm"
               data-id="{{item.id || item.purchaseId}}"
-              bindinput="onMaterialInput" value="{{item.inputQuantity}}" />
+              data-name="{{item.materialName}}"
+              data-arrived="{{item.arrivedQuantity}}"
+              data-purchase="{{item.purchaseQuantity}}"
+              data-unit="{{item.unit || ''}}"
+              bindtap="onReturnConfirm"
+              hover-class="btn-hover"
+              hover-stay-time="100"
+            >确认回料</view>
           </view>
 
-          <!-- 回料确认：页面内直接输入数量+确认按钮 -->
-          <view class="mat-return-row" wx:if="{{item.canConfirmReturn && !item.returnConfirmed}}">
-            <input class="mat-return-input" type="digit" placeholder="回料数量（默认到货量）"
-              data-id="{{item.id || item.purchaseId}}"
-              bindinput="onReturnQtyInput" value="{{item.returnQtyInput}}" />
-            <view class="btn-return-confirm" data-id="{{item.id || item.purchaseId}}"
-              bindtap="onReturnConfirm">
-              确认回料
-            </view>
-          </view>
-
-          <view class="mat-hint" wx:if="{{item.needsReceive}}">
-            <text class="hint-text">需采购后可登记</text>
+          <!-- 需采购提示 -->
+          <view class="receive-hint" wx:if="{{item.needsReceive}}">
+            <text>需采购后可登记到货</text>
           </view>
         </view>
       </view>
-    </view>
 
-    <!-- ════════════ ⑤ 明细数据区 · 备注 ════════════ -->
-    <view class="section-card remark-card">
-      <view class="section-hd">
+      <!-- Card 4: 备注 -->
+      <view class="detail-card remark-section">
         <text class="section-title">备注说明</text>
+        <view class="remark-wrap">
+          <textarea
+            class="remark-input"
+            placeholder="到货率不足 70% 时必填备注"
+            placeholder-class="remark-placeholder"
+            bindinput="onRemarkInput"
+            value="{{remark}}"
+            maxlength="200"
+          />
+        </view>
       </view>
-      <textarea class="remark-input" placeholder="到货率不足 70% 时必填备注"
-        bindinput="onRemarkInput" value="{{remark}}" maxlength="200" />
+
     </view>
-
-    <!-- ════════════ ⑥ 操作记录区（预留） ════════════ -->
-
   </block>
 </view>
 
-<!-- ===== 底部操作栏 ===== -->
-<view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading && !allProcurementCompleted}}">
-  <view class="btn-secondary {{hasReturnConfirmed ? 'btn-disabled' : ''}}" hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}" bindtap="onReceiveAll">一键采购</view>
-  <view class="btn-secondary {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
-    hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}" bindtap="onSubmit">提交到货</view>
-  <view class="btn-submit {{hasReturnConfirmed ? 'btn-disabled' : ''}}"
-    hover-class="{{!hasReturnConfirmed ? 'footer-bar-hover' : ''}}" bindtap="onConfirmAllReturns">一键全部完成</view>
+<!-- 底部操作栏：3 按钮 -->
+<view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
+  <view
+    class="btn-outline {{hasReturnConfirmed ? 'btn-disabled' : ''}}"
+    hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}"
+    bindtap="onReceiveAll"
+  >一键采购</view>
+  <view
+    class="btn-outline {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
+    hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
+    bindtap="onSubmit"
+  >提交到货</view>
+  <view
+    class="btn-primary {{(!canConfirmProcurement || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
+    hover-class="{{(canConfirmProcurement && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
+    bindtap="onConfirmProcurement"
+  >一键全部完成</view>
 </view>

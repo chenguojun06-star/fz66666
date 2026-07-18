@@ -16,9 +16,6 @@
   padding: 8px 10px;
   background: rgba(var(--color-primary-rgb), 0.1);
   border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
 .srt-th {
@@ -33,7 +30,7 @@
   display: flex;
   align-items: center;
   padding: 10px;
-  border-bottom: 1px solid var(--color-border-light, rgba(226, 232, 240, 0.5));
+  border-bottom: 1px solid var(--color-border, rgba(226, 232, 240, 0.5));
 }
 
 /* 分块包装：display:contents 让节点对布局透明，仅用于减少 srt-table-inner 直接子节点数 */

@@ -23,6 +23,7 @@ const scanPageData = {
   currentUser: null,
   quantity: '',
   warehouse: '',
+  scanType: 'auto', // 扫码类型: auto/production/cutting/quality/warehouse/stock
   lastUsedProcessName: '', // 上次拍码成功的工序名称，页面内显示提示
   offlinePendingCount: 0,  // 离线待同步条数（无网时扫码进队列）
   offlineSyncing: false,   // 联网后正在批量上传时为 true
@@ -112,7 +113,7 @@ const scanPageData = {
 
   },
 
-  // 🔧 质检结果弹窗数据（简化版）
+  // [FIX] 质检结果弹窗数据（简化版）
   qualityModal: {
     show: false,
     detail: null,
@@ -129,7 +130,7 @@ const scanPageData = {
   // 处理方式（与PC端 DEFECT_REMARK_OPTIONS 一致）
   handleMethods: ['返修', '报废'],
 
-  // 🆕 样板生产确认弹窗数据
+  // [NEW] 样板生产确认弹窗数据
   patternConfirm: {
     visible: false,
     loading: false,

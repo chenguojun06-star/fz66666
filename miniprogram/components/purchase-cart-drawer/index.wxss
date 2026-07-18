@@ -56,8 +56,8 @@
 .cart-count {
   background: rgba(255, 255, 255, 0.2);
   padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
   color: var(--color-text-white);
 }
 
@@ -87,7 +87,7 @@
 /* 合并建议 */
 .merge-suggestion {
   background: var(--color-primary-bg);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 12px;
   margin-bottom: 12px;
   border: 1px solid var(--color-primary-border);
@@ -108,7 +108,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .merge-item:last-child {
@@ -123,7 +123,7 @@
 .merge-btn {
   background: transparent; color: var(--color-primary); border: 1.5px solid var(--color-primary);
   padding: 6px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-lg);
 }
 
@@ -132,7 +132,7 @@
   display: flex;
   padding: 12px;
   background: var(--color-bg-card);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
 }
@@ -155,7 +155,7 @@
 }
 
 .item-spec {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-bottom: 4px;
 }
@@ -165,11 +165,11 @@
 }
 
 .item-source {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .item-edit {
@@ -179,7 +179,7 @@
 }
 
 .edit-label {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   width: 50px;
 }
@@ -187,7 +187,7 @@
 .edit-input {
   flex: 1;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 6px 8px;
   font-size: var(--font-size-lg);
 }
@@ -201,8 +201,8 @@
 .quantity-btn {
   width: 28px;
   height: 28px;
-  background: var(--color-bg-light);
-  border-radius: 4px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -215,7 +215,7 @@
   flex: 1;
   text-align: center;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 6px 8px;
   margin: 0 4px;
   font-size: var(--font-size-lg);
@@ -322,13 +322,13 @@
 .preview-btn,
 .confirm-btn {
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-xl);
   font-weight: 500;
 }
 
 .preview-btn {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
 }
 
@@ -356,7 +356,7 @@
   max-width: 400px;
   max-height: 80vh;
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
 }
@@ -387,8 +387,8 @@
 }
 
 .preview-group {
-  background: var(--color-bg-light);
-  border-radius: 8px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -430,17 +430,17 @@
 }
 
 .source-label {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   margin-right: 4px;
 }
 
 .source-item {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   background: var(--color-bg-card);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   margin-right: 4px;
   margin-bottom: 4px;
   display: inline-block;
@@ -473,7 +473,7 @@
   background: transparent; color: var(--color-primary); border: 1.5px solid var(--color-primary);
   text-align: center;
   padding: 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-3xl);
   font-weight: 600;
 }

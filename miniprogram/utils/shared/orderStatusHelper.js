@@ -8,12 +8,12 @@
 const COLOR_DEFAULT = 'var(--color-text-disabled)';
 const COLOR_SUCCESS = 'var(--color-success)';
 const COLOR_WARNING = 'var(--color-warning)';
-const COLOR_ERROR = 'var(--color-error)';
+const COLOR_DANGER = 'var(--color-danger)';
 const COLOR_PROCESSING = 'var(--color-primary)'; // 与前端 processing 对应（生产中/活跃工序）
 const COLOR_BLUE = 'var(--color-info)';
 const COLOR_CYAN = 'var(--color-tertiary)';
 const COLOR_ORANGE = 'var(--color-warning-secondary)';
-const COLOR_VOLCANO = 'var(--color-error-secondary)';
+const COLOR_VOLCANO = 'var(--color-danger)';
 const COLOR_PURPLE = 'var(--color-purple)';
 const COLOR_GEEKBLUE = 'var(--color-geekblue)';
 const COLOR_FALLBACK = 'var(--color-text-secondary)';
@@ -76,7 +76,7 @@ const STATUS_COLOR_MAP = {
   produced: COLOR_CYAN,
   warehoused: COLOR_SUCCESS,
   delayed: COLOR_WARNING,
-  scrapped: COLOR_ERROR,
+  scrapped: COLOR_DANGER,
   cancelled: COLOR_DEFAULT,
   canceled: COLOR_DEFAULT,
   paused: COLOR_ORANGE,
@@ -133,7 +133,7 @@ function getQualityColor(qualityStatus) {
   const s = (qualityStatus || '').toString().trim().toLowerCase();
   const colorMap = {
     qualified: COLOR_SUCCESS,
-    unqualified: COLOR_ERROR,
+    unqualified: COLOR_DANGER,
     repaired: COLOR_DEFAULT,
   };
   return colorMap[s] || COLOR_FALLBACK;

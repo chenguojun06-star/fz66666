@@ -1,4 +1,7 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "库位库存详情",
-  "usingComponents": {}
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

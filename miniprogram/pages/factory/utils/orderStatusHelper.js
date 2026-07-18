@@ -6,7 +6,7 @@
 const COLOR_DEFAULT = 'var(--color-text-disabled)';
 const COLOR_SUCCESS = 'var(--color-success)';
 const COLOR_WARNING = 'var(--color-warning)';
-const COLOR_ERROR = 'var(--color-error)';
+const COLOR_DANGER = 'var(--color-danger)';
 const COLOR_FALLBACK = 'var(--color-text-secondary)';
 
 function orderStatusText(status) {
@@ -28,6 +28,24 @@ function orderStatusText(status) {
     return '';
   }
   return map[s] || '未知';
+}
+
+function orderStatusCls(status) {
+  const s = (status || '').toString().trim().toLowerCase();
+  const map = {
+    pending: 'tag-gray',
+    production: 'tag-blue',
+    completed: 'tag-green',
+    delayed: 'tag-orange',
+    scrapped: 'tag-red',
+    cancelled: 'tag-red',
+    canceled: 'tag-red',
+    paused: 'tag-orange',
+    returned: 'tag-red',
+    closed: 'tag-green',
+    archived: 'tag-gray',
+  };
+  return map[s] || 'tag-gray';
 }
 
 function qualityStatusText(status) {
@@ -62,11 +80,11 @@ function getStatusColor(status) {
     production: COLOR_SUCCESS,
     completed: COLOR_SUCCESS,
     delayed: COLOR_WARNING,
-    scrapped: COLOR_ERROR,
-    cancelled: COLOR_ERROR,
-    canceled: COLOR_ERROR,
+    scrapped: COLOR_DANGER,
+    cancelled: COLOR_DANGER,
+    canceled: COLOR_DANGER,
     paused: COLOR_WARNING,
-    returned: COLOR_ERROR,
+    returned: COLOR_DANGER,
     closed: COLOR_SUCCESS,
     archived: COLOR_DEFAULT,
   };
@@ -77,7 +95,7 @@ function getQualityColor(qualityStatus) {
   const s = (qualityStatus || '').toString().trim().toLowerCase();
   const colorMap = {
     qualified: COLOR_SUCCESS,
-    unqualified: COLOR_ERROR,
+    unqualified: COLOR_DANGER,
     repaired: COLOR_DEFAULT,
   };
   return colorMap[s] || COLOR_FALLBACK;
@@ -85,6 +103,7 @@ function getQualityColor(qualityStatus) {
 
 module.exports = {
   orderStatusText: orderStatusText,
+  orderStatusCls: orderStatusCls,
   qualityStatusText: qualityStatusText,
   scanResultText: scanResultText,
   getStatusColor: getStatusColor,

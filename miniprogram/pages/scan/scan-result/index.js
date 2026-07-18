@@ -3,6 +3,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -28,6 +29,7 @@ Page({
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
+    productionHints: null,
     loading: false,
   },
 
@@ -110,7 +112,7 @@ Page({
         styleNo: raw.styleNo || orderDetail.styleNo || '',
         orderNo: raw.orderNo || '',
         bundleNo: bundleNo,
-        processName: raw.processName || '',
+        processName: normalizeProcessName(raw.processName || ''),
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
         color: color,
@@ -131,6 +133,7 @@ Page({
       isQualityReceive: isQualityReceive,
       warehouseCode: raw.warehouseCode || '',
       warehouseAreaId: raw.warehouseAreaId || '',
+      imageInsight: (raw.stageResult && raw.stageResult.imageInsight) || raw.imageInsight || (orderDetail.imageInsight) || '',
     });
 
     if (isWarehouseStage) {
@@ -138,6 +141,7 @@ Page({
     }
 
     this._backfillBundleDisplayMeta(raw, orderDetail);
+    this._loadProductionHints(raw, orderDetail);
   },
 
   onUnload() {
@@ -146,10 +150,11 @@ Page({
 
   _formatYMD(v) {
     if (!v) return '';
+    var d;
     try {
       if (typeof v === 'string') {
         if (v.length > 10) {
-          var d = new Date(v.replace(/-/g, '/'));
+          d = new Date(v.replace(/-/g, '/'));
           if (!isNaN(d.getTime())) {
             const pad = n => String(n).padStart(2, '0');
             return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -158,7 +163,7 @@ Page({
         if (v.length >= 10) return v.substring(0, 10);
         return v;
       }
-      var d = new Date(String(v).replace(' ', 'T'));
+      d = new Date(String(v).replace(' ', 'T'));
       if (isNaN(d.getTime())) return '';
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -243,6 +248,67 @@ Page({
     if (Object.keys(patch).length > 0) {
       this.setData(patch);
     }
+  },
+
+  async _loadProductionHints(raw, orderDetail) {
+    const source = orderDetail || (raw && raw.orderDetail) || {};
+    const styleId = source.styleId || source.style_id || (raw && raw.styleId) || '';
+    if (!styleId) return;
+
+    try {
+      const styleInfo = await api.style.getStyleDetail(styleId);
+      if (!styleInfo) return;
+
+      const desc = styleInfo.description || '';
+      const hints = {
+        difficultyLabel: styleInfo.difficultyLabel || '',
+        difficultyScore: styleInfo.difficultyScore || 0,
+        difficultySeverity: this._difficultySeverity(styleInfo.difficultyScore),
+        fabricComposition: styleInfo.fabricComposition || '',
+        needleHint: this._parseNeedleHint(desc),
+        craftNotes: desc,
+        secondaryProcessText: '',
+      };
+
+      // 二次工艺
+      try {
+        const spRes = await api.style.listSecondaryProcesses({ styleId: styleId });
+        const spList = Array.isArray(spRes) ? spRes : (spRes && spRes.records) || [];
+        if (spList.length > 0) {
+          hints.secondaryProcessText = spList
+            .map(function(p) { return p.processName || p.processType || ''; })
+            .filter(Boolean)
+            .join('、');
+        }
+      } catch (spErr) {
+        // 二次工艺加载失败不阻断主流程
+      }
+
+      const patch = { productionHints: hints };
+      if (styleInfo.imageInsight && !this.data.imageInsight) {
+        patch.imageInsight = styleInfo.imageInsight;
+      }
+      this.setData(patch);
+    } catch (e) {
+      console.warn('[scan-result] 加载生产提示失败:', e);
+    }
+  },
+
+  _difficultySeverity(score) {
+    const s = parseInt(score, 10);
+    if (!s || s <= 0) return 'low';
+    if (s <= 3) return 'low';
+    if (s <= 6) return 'medium';
+    if (s <= 8) return 'high';
+    return 'critical';
+  },
+
+  _parseNeedleHint(desc) {
+    if (!desc) return '';
+    // 从工艺备注中解析针号提示，如 "11号针"、"9号针"
+    const match = String(desc).match(/(\d{1,2}号针)/);
+    if (match) return match[1];
+    return '';
   },
 
   _buildProcessOptions(raw) {

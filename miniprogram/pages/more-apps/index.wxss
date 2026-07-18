@@ -1,42 +1,73 @@
-/* ============ 更多应用页面 ============ */
+/* ============ 更多应用页 ============ */
 page {
   background: var(--color-bg-page);
 }
 
 .page {
-  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 
-/* -- 搜索栏（基础样式走 app.wxss 全局 .search-bar / .search-box；本页 sticky 用 --sticky 修饰类） -- */
+/* -- 搜索栏 -- */
+.search-bar-page {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--page-padding-x);
+  background: var(--color-bg-page);
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 0 12px;
+  height: 36px;
+  background: #e5e5ea;
+  border-radius: 19px;
+}
+.search-box:focus-within {
+  border-color: var(--color-primary);
+}
+
+.search-icon {
+  font-size: var(--font-size-sm);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.search-clear {
+  font-size: var(--font-size-md);
+  color: var(--color-text-tertiary);
+  padding: 0 var(--spacing-xs);
+}
 
 .edit-btn {
   font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: 8px 12px;
-  min-height: 32px;
-  border-radius: var(--radius-full);
-  background: var(--color-primary-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 500;
+  flex-shrink: 0;
+  padding: 0 var(--spacing-xs);
 }
 
 .edit-btn-active {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  color: var(--color-danger);
 }
 
-/* -- 内容区域 -- */
-.fav-section,
-.all-apps-section {
-  background: var(--color-bg-card);
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-lg) var(--page-padding-x);
-}
-
+/* -- 收藏区域 -- */
 .fav-section {
-  background: linear-gradient(135deg, var(--color-warning-bg) 0%, var(--color-bg-card) 100%);
-  border: 1px solid var(--color-warning-border);
+  margin: var(--spacing-sm) var(--page-padding-x);
+  padding: 16px;
+  background: var(--color-bg-card);
+  border-radius: 19px;
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
@@ -49,22 +80,28 @@ page {
 .section-title-row {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .section-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  font-weight: 600;
   color: var(--color-text-primary);
-  letter-spacing: 0.5px;
 }
 
 .section-count {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-gray);
-  padding: 2px 8px;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-page);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
   border-radius: var(--radius-full);
+}
+
+.section-count--blue {
+  color: var(--color-primary);
+  background: #cfe5ff;
 }
 
 .clear-btn {
@@ -75,119 +112,130 @@ page {
 /* -- 应用网格 -- */
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  row-gap: var(--spacing-xl);
+  grid-template-columns: repeat(4, 1fr);
+  column-gap: 8px;
+  row-gap: 12px;
 }
 
 .app-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
   position: relative;
 }
 
 .menu-icon-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-card);
+  width: 48px;
+  height: 48px;
+  border-radius: 19px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
   position: relative;
+  transition: transform 0.15s ease;
 }
 
 .menu-icon-circle .line-icon--lg {
-  width: 30px;
-  height: 30px;
-  background-size: 30px 30px;
+  width: 24px;
+  height: 24px;
+  background-size: 24px 24px;
+}
+
+.app-item:active .menu-icon-circle {
+  transform: scale(0.92);
+}
+
+.app-name {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.2;
 }
 
 .menu-badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: var(--color-danger);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background-color: var(--color-danger);
   color: var(--color-text-white);
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  line-height: 1.2;
-  font-weight: var(--font-weight-semibold);
-}
-
-.fav-star {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 32px;
-  height: 32px;
+  font-size: var(--font-size-xxs);
+  font-weight: 600;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  opacity: 0.6;
+  border: 2px solid var(--color-bg-card);
+}
+
+/* -- 编辑模式按钮 -- */
+.fav-star {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   z-index: 2;
 }
 
-.fav-star-active {
-  opacity: 1;
+.fav-star--active {
+  color: var(--color-warning);
 }
 
-.app-name {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  text-align: center;
-  line-height: var(--line-height-tight);
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: var(--font-weight-medium);
+.fav-star--inactive {
+  color: var(--color-text-tertiary);
 }
 
 .remove-btn {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -6px;
+  right: -6px;
   width: 20px;
   height: 20px;
-  padding: 6px;
-  background: var(--color-danger);
+  background-color: var(--color-danger);
   color: var(--color-text-white);
-  border-radius: 50%;
+  font-size: var(--font-size-xxs);
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  z-index: 2;
 }
 
-/* -- 应用分组 -- */
+/* -- 全部应用区 -- */
+.all-apps-section {
+  margin: 0 var(--page-padding-x);
+}
+
 .app-group {
-  margin-bottom: var(--spacing-xxl);
-}
-
-.app-group:last-child {
-  margin-bottom: 0;
+  margin-bottom: var(--spacing-md);
+  padding: 16px;
+  background: var(--color-bg-card);
+  border-radius: 19px;
+  box-shadow: var(--shadow-sm);
 }
 
 .group-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
   margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 2px solid var(--color-primary-border);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .group-count {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-normal);
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  color: var(--color-text-tertiary);
 }
 
 /* -- 空状态 -- */
@@ -195,56 +243,45 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-xxl) 0;
+  padding: var(--spacing-xl) 0;
+  gap: var(--spacing-sm);
 }
 
 .empty-icon {
-  font-size: 24px;
+  font-size: var(--font-size-3xl);
+  opacity: 0.3;
 }
 
 .empty-text {
-  font-size: var(--font-size-md);
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }
 
-/* -- 图标颜色（Apple 风格：淡背景） -- */
-.menu-icon-circle--purple {
-  background: var(--icon-bg-purple);
-}
-
+/* -- 图标颜色 -- */
 .menu-icon-circle--blue {
-  background: var(--icon-bg-blue);
+  background: var(--color-primary);
 }
-
-.menu-icon-circle--teal {
-  background: var(--icon-bg-teal);
-}
-
-.menu-icon-circle--amber {
-  background: var(--icon-bg-amber);
-}
-
 .menu-icon-circle--green {
-  background: var(--icon-bg-green);
+  background: var(--color-success);
 }
-
 .menu-icon-circle--orange {
-  background: var(--icon-bg-orange);
+  background: var(--color-warning);
 }
-
-.menu-icon-circle--rose {
-  background: var(--icon-bg-rose);
+.menu-icon-circle--purple {
+  background: var(--color-purple);
 }
-
-.menu-icon-circle--indigo {
-  background: var(--icon-bg-indigo);
+.menu-icon-circle--violet {
+  background: var(--color-violet);
 }
-
-.menu-icon-circle--cyan {
-  background: var(--icon-bg-cyan);
+.menu-icon-circle--lightblue {
+  background: var(--color-info);
 }
-
+.menu-icon-circle--teal {
+  background: var(--icon-color-teal);
+}
+.menu-icon-circle--red {
+  background: var(--color-danger);
+}
 .menu-icon-circle--gray {
-  background: var(--icon-bg-gray);
+  background: var(--color-text-tertiary);
 }

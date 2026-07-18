@@ -23,7 +23,7 @@ const factoryShipment = {
     return ok('/api/production/factory-shipment/list', 'POST', params || {});
   },
   listByOrder: function (orderId) {
-    return ok('/api/production/factory-shipment/list-by-order', 'POST', { orderId: orderId });
+    return ok('/api/production/factory-shipment/search', 'POST', { orderId: orderId });
   },
   shippable: function (orderId) {
     return ok('/api/production/factory-shipment/shippable/' + encodeURIComponent(orderId), 'GET', {});

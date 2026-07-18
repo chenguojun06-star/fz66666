@@ -44,7 +44,7 @@ class ScanDataProcessor {
         const styleId = orderDetail.styleId || orderDetail.style_id;
         if (styleId) {
           try {
-            const bomList = await this.api.style.getBomList({ styleId });
+            const bomList = await this.api.style.listBom({ styleId });
             if (Array.isArray(bomList) && bomList.length > 0) {
               materialPurchases = bomList.map((item, idx) => ({
                 id: item.id || `bom_${idx}`,
@@ -71,7 +71,7 @@ class ScanDataProcessor {
         }
       }
 
-      // ★ 所有物料已领取 → 流转到裁剪工序而非标记isCompleted
+      // [IMPORTANT] 所有物料已领取 → 流转到裁剪工序而非标记isCompleted
       if (!bomFallback && materialPurchases.length > 0
           && materialPurchases.every(function(item) { return (item.pendingQuantity || 0) <= 0; })) {
         return await this.handleCuttingMode(parsedData, orderDetail, scanMode);

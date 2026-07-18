@@ -17,11 +17,11 @@ var stageDetection = require('../../../shared/stageDetection');
 
 // 样衣生产操作类型（5个基本操作）
 const SAMPLE_OPERATIONS = [
-  { key: 'RECEIVE', label: '领取样衣', color: '#1890ff', icon: 'scan' },
-  { key: 'PLATE', label: '车板', color: '#722ed1', icon: 'tool' },
-  { key: 'FOLLOW_UP', label: '跟单确认', color: '#fa8c16', icon: 'check-circle' },
-  { key: 'COMPLETE', label: '完成确认', color: '#52c41a', icon: 'check' },
-  { key: 'WAREHOUSE_IN', label: '样衣入库', color: '#13c2c2', icon: 'inbox' },
+  { key: 'RECEIVE', label: '领取样衣', colorClass: 'blue', icon: 'scan' },
+  { key: 'PLATE', label: '车板', colorClass: 'blue', icon: 'tool' },
+  { key: 'FOLLOW_UP', label: '跟单确认', colorClass: 'warning', icon: 'check-circle' },
+  { key: 'COMPLETE', label: '完成确认', colorClass: 'success', icon: 'check' },
+  { key: 'WAREHOUSE_IN', label: '样衣入库', colorClass: 'blue', icon: 'inbox' },
 ];
 
 // 样衣开发阶段（PC端配置）
@@ -105,7 +105,7 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
  * 构建样衣操作选项
  * 根据样衣状态和扫码记录，判断下一步可执行的操作
  */
-function buildSampleOperationOptions(patternDetail, scanRecords, manualScanType) {
+function buildSampleOperationOptions(patternDetail, scanRecords, _manualScanType) {
   const options = [];
   const status = String(patternDetail.status || '').toUpperCase();
   
@@ -244,7 +244,7 @@ async function getPatternProcessConfig(handler, patternId) {
  * 核心逻辑：只显示当前可执行的工序，已完成的不显示
  * 门禁校验：与后端 ProductionScanStageSupport.validateParentStagePrerequisite 对齐
  */
-function buildProcessOperationOptions(processConfig, scanRecords, patternDetail, manualScanType) {
+function buildProcessOperationOptions(processConfig, scanRecords, patternDetail, _manualScanType) {
   if (!processConfig || processConfig.length === 0) {
     return [];
   }

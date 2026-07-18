@@ -1,12 +1,10 @@
 <!--
-  样衣阶段详情页（设计稿重构版）
-  ① 样衣信息卡（封面+款号+进度环+信息网格+数量交期）
-  ② 阶段时间轴（6 阶段垂直连线+状态圆+进度条+操作按钮）
-  ③ 当前阶段详情卡（详情网格+时间信息+现场照片+操作按钮）
-  ④ 分阶段内容（BOM/纸样/尺码/工序/二次工艺/生产制单/码数单价）
-  ⑤ 附件区（通用）
-  ⑥ 备注日志（与PC端对齐）
-  ⑦ 底部固定操作栏
+  样衣阶段详情页 — 只显示当前阶段内容，不重复 detail 页面的样衣信息/时间轴/附件/备注
+  ① 开发阶段快捷入口（横向滚动切换）
+  ② 当前阶段详情卡（详情网格+时间信息+现场照片+操作按钮）
+  ③ 分阶段内容（BOM/纸样/尺码/工序/二次工艺/生产制单/码数单价）
+  ④ 审核表单（页面内展开）
+  ⑤ 底部固定操作栏（修改信息 / 提交审核）
 -->
 <view class="stage-detail-page">
 
@@ -18,130 +16,36 @@
 
   <block wx:else>
 
-    <!-- ══ ① 样衣信息卡 ══ -->
-    <view wx:if="{{sampleCard}}" class="sample-card">
-      <!-- 顶部：封面 + 信息 + 进度环 -->
-      <view class="sc-top">
-        <!-- 封面 -->
-        <view class="sc-cover">
-          <image wx:if="{{sampleCard.coverUrl}}" src="{{sampleCard.coverUrl}}" mode="aspectFill" class="sc-cover-img" />
-          <view wx:else class="sc-cover-placeholder">
-            <text class="sc-cover-icon">衫</text>
+    <!-- ══ ① 开发阶段快捷入口 ══ -->
+    <view class="dev-stage-section">
+      <view class="ds-header">
+        <text class="ds-title">样衣开发</text>
+        <text class="ds-sub">点击切换查看各阶段详情</text>
+      </view>
+      <scroll-view class="ds-scroll" scroll-x="true" enable-flex="true">
+        <view class="ds-list">
+          <view wx:for="{{devStages}}" wx:key="key"
+            class="ds-item {{item.key === stageKey ? 'ds-item-active' : ''}} {{item.status === 'completed' ? 'ds-item-done' : ''}}"
+            data-key="{{item.key}}" bindtap="onSwitchDevStage">
+            <view class="ds-icon-wrap">
+              <text class="ds-icon-text">{{item.name}}</text>
+              <view wx:if="{{item.status === 'completed'}}" class="ds-check">
+                <view class="line-icon line-icon--sm icon-check-sm"></view>
+              </view>
+            </view>
+            <text wx:if="{{item.statusText}}" class="ds-status">{{item.statusText}}</text>
           </view>
         </view>
-        <!-- 信息区 -->
-        <view class="sc-info">
-          <view class="sc-title-row">
-            <text class="sc-style-no">{{sampleCard.styleNo || '-'}}</text>
-            <text class="sc-status-tag">{{sampleCard.statusText}}</text>
-          </view>
-          <text class="sc-style-name">{{sampleCard.styleName || '-'}}</text>
-          <text class="sc-meta" wx:if="{{sampleCard.customer || sampleCard.patternMaker}}">{{sampleCard.customer}}{{sampleCard.customer && sampleCard.patternMaker ? ' · ' : ''}}跟单 {{sampleCard.patternMaker}}</text>
-        </view>
-        <!-- 进度环 -->
-        <view class="sc-progress-ring" style="--p: {{progressPercent}};">
-          <view class="ring-inner">
-            <text class="ring-text">{{progressPercent}}%</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 信息网格 -->
-      <view class="sc-info-grid">
-        <view class="sc-grid-item">
-          <text class="sc-grid-label">类别</text>
-          <text class="sc-grid-value">{{sampleCard.category || '-'}}</text>
-        </view>
-        <view class="sc-grid-item">
-          <text class="sc-grid-label">季节</text>
-          <text class="sc-grid-value">{{sampleCard.season || '-'}}</text>
-        </view>
-        <view class="sc-grid-item">
-          <text class="sc-grid-label">颜色</text>
-          <text class="sc-grid-value">{{sampleCard.color || '-'}}</text>
-        </view>
-        <view class="sc-grid-item">
-          <text class="sc-grid-label">尺码</text>
-          <text class="sc-grid-value">{{sampleCard.size || '-'}}</text>
-        </view>
-      </view>
-
-      <!-- 分割线 -->
-      <view class="sc-divider"></view>
-
-      <!-- 底部：数量 + 交期 -->
-      <view class="sc-bottom">
-        <view class="sc-qty">
-          <text class="sc-qty-label">数量</text>
-          <text class="sc-qty-value">{{sampleCard.quantity}}件</text>
-        </view>
-        <view class="sc-delivery">
-          <text class="sc-delivery-label">交期</text>
-          <text class="sc-delivery-value">{{sampleCard.deliveryDateShort || '-'}}</text>
-          <text wx:if="{{sampleCard.countdownText}}" class="sc-countdown tone-{{sampleCard.countdownTone}}">{{sampleCard.countdownText}}</text>
-        </view>
-      </view>
+      </scroll-view>
     </view>
 
-    <!-- ══ ② 阶段时间轴 ══ -->
-    <view wx:if="{{timelineStages.length > 0}}" class="timeline-section">
-      <view class="ts-header">
-        <text class="ts-title">开发阶段</text>
-        <text class="ts-count">{{sampleCard.completedCount || 0}}/{{sampleCard.totalStages || 6}} 已完成</text>
-      </view>
-      <view class="ts-timeline">
-        <!-- 垂直连接线 -->
-        <view class="ts-line"></view>
-
-        <view wx:for="{{timelineStages}}" wx:key="key"
-          class="ts-stage {{item.isCurrent ? 'ts-stage-current' : ''}} {{item.status === 'not_started' ? 'ts-stage-pending' : ''}}">
-
-          <!-- 状态圆 -->
-          <view class="ts-circle-wrap">
-            <!-- 已完成：绿色圆 + 勾 -->
-            <view wx:if="{{item.status === 'completed'}}" class="ts-circle ts-circle-done">
-              <text class="ts-check">✓</text>
-            </view>
-            <!-- 进行中：蓝色圆 + 脉冲动画 -->
-            <view wx:elif="{{item.status === 'in_progress'}}" class="ts-circle ts-circle-active">
-              <view class="ts-pulse-ring"></view>
-              <view class="ts-pulse-dot"></view>
-            </view>
-            <!-- 未开始：灰色边框圆 -->
-            <view wx:else class="ts-circle ts-circle-pending">
-              <view class="ts-pending-dot"></view>
-            </view>
-          </view>
-
-          <!-- 阶段卡片 -->
-          <view class="ts-card {{item.isCurrent ? 'ts-card-current' : ''}} {{item.status === 'not_started' ? 'ts-card-pending' : ''}}">
-            <view class="ts-card-header">
-              <text class="ts-card-name">{{item.name}}</text>
-              <text class="ts-card-tag tag-{{item.status}}">{{item.statusText}}</text>
-            </view>
-            <view class="ts-card-meta">
-              <text class="ts-card-assignee" wx:if="{{item.assignee}}">{{item.assignee}}</text>
-              <text class="ts-card-assignee ts-card-assignee-empty" wx:else>待分配</text>
-              <text class="ts-card-time" wx:if="{{item.timeLabel}}">{{item.timeLabel}}</text>
-            </view>
-            <view wx:if="{{item.delayText}}" class="ts-card-delay delay-{{item.delayTone}}">{{item.delayText}}</view>
-            <!-- 非当前已完成阶段的查看详情按钮 -->
-            <view wx:if="{{!item.isCurrent && item.status !== 'not_started'}}" class="ts-view-detail" data-key="{{item.key}}" bindtap="onViewStageDetail">
-              <text>查看详情</text>
-              <text class="ts-arrow">›</text>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- ══ ③ 当前阶段详情卡 ══ -->
+    <!-- ══ ② 当前阶段详情卡 ══ -->
     <view wx:if="{{stageDetail}}" class="sdc-card sdc-{{stageDetail.status}}">
       <!-- 头部 -->
       <view class="sdc-header">
         <view class="sdc-title-wrap">
           <view class="sdc-icon sdc-icon-{{stageDetail.status}}">
-            <text class="sdc-icon-text">{{stageDetail.name ? stageDetail.name[0] : '阶'}}</text>
+            <view class="line-icon line-icon--sm icon-scissors-white"></view>
           </view>
           <text class="sdc-title">{{stageDetail.name}}详情</text>
         </view>
@@ -160,11 +64,11 @@
         </view>
         <view class="sdc-grid-item">
           <text class="sdc-grid-label">已完成</text>
-          <text class="sdc-grid-value">{{stageDetail.completedQty || 0}}件</text>
+          <text class="sdc-grid-value sdc-grid-value-success">{{stageDetail.completedQty || 0}}件</text>
         </view>
         <view class="sdc-grid-item">
           <text class="sdc-grid-label">剩余</text>
-          <text class="sdc-grid-value">{{stageDetail.remainingQty !== undefined ? stageDetail.remainingQty : (stageDetail.plannedQty ? stageDetail.plannedQty : 0)}}件</text>
+          <text class="sdc-grid-value sdc-grid-value-warning">{{stageDetail.remainingQty !== undefined ? stageDetail.remainingQty : (stageDetail.plannedQty ? stageDetail.plannedQty : 0)}}件</text>
         </view>
       </view>
 
@@ -174,12 +78,12 @@
       <!-- 时间信息 -->
       <view class="sdc-time-info">
         <view class="sdc-time-row" wx:if="{{stageDetail.startTime}}">
-          <view class="sdc-time-icon icon-clock"></view>
+          <view class="line-icon line-icon--sm icon-clock-gray"></view>
           <text class="sdc-time-label">开始时间</text>
           <text class="sdc-time-value">{{stageDetail.startTime}}</text>
         </view>
         <view class="sdc-time-row" wx:if="{{stageDetail.completedAt}}">
-          <view class="sdc-time-icon icon-calendar"></view>
+          <view class="line-icon line-icon--sm icon-calendar-gray"></view>
           <text class="sdc-time-label">完成时间</text>
           <text class="sdc-time-value">{{stageDetail.completedAt}}</text>
         </view>
@@ -200,24 +104,27 @@
       <!-- 操作按钮（已完成阶段不显示操作按钮） -->
       <view wx:if="{{stageDetail.status !== 'completed'}}" class="sdc-actions">
         <view class="sdc-btn sdc-btn-primary" bindtap="onScanUpdate">
+          <view class="line-icon line-icon--sm icon-scan-white"></view>
           <text class="sdc-btn-text">扫码更新</text>
         </view>
         <view class="sdc-btn sdc-btn-outline" bindtap="onUploadPhotoDetail">
+          <view class="line-icon line-icon--sm icon-camera-gray"></view>
           <text class="sdc-btn-text">上传照片</text>
         </view>
-        <view wx:if="{{stageDetail.status !== 'completed'}}" class="sdc-btn sdc-btn-outline" bindtap="onMarkComplete">
+        <view class="sdc-btn sdc-btn-outline" bindtap="onMarkComplete">
+          <view class="line-icon line-icon--sm icon-check-gray"></view>
           <text class="sdc-btn-text">标记完成</text>
         </view>
       </view>
       <!-- 已完成提示 -->
       <view wx:if="{{stageDetail.status === 'completed'}}" class="sdc-completed-banner">
-        <text class="sdc-completed-icon">✓</text>
+        <view class="line-icon line-icon--sm icon-check-sm"></view>
         <text class="sdc-completed-text">此阶段已完成</text>
       </view>
     </view>
 
-    <!-- ══ ④ BOM 清单 ══ -->
-    <block wx:if="{{stageKey === 'bom'}}">
+    <!-- ══ ③ BOM 清单（bom / procurement 阶段） ══ -->
+    <block wx:if="{{stageKey === 'bom' || stageKey === 'procurement'}}">
       <view class="section-label">
         <text class="sl-text">BOM配置</text>
         <text class="sl-count" wx:if="{{bomSummary.totalCount}}">{{bomSummary.totalCount}}种</text>
@@ -256,7 +163,11 @@
           </view>
           <view class="data-card" wx:for="{{group.items}}" wx:for-item="item" wx:key="id">
             <view class="dc-header">
-              <text class="dc-title">{{item._materialLabel}}</text>
+              <view class="dc-title-wrap">
+                <text class="dc-title">{{item._materialLabel}}</text>
+                <text class="dc-part-tag {{item._isWholePart ? 'dc-part-whole' : 'dc-part-other'}}">{{item._partLabel}}</text>
+                <text wx:if="{{item._subPartLabel}}" class="dc-part-tag dc-part-sub">{{item._subPartLabel}}</text>
+              </view>
               <text class="dc-amount">¥{{item._amount}}</text>
             </view>
             <view class="dc-body">
@@ -282,7 +193,7 @@
       </block>
     </block>
 
-    <!-- ══ ⑤ 纸样开发 ══ -->
+    <!-- ══ ④ 纸样开发 ══ -->
     <block wx:if="{{stageKey === 'pattern'}}">
       <view class="section-label">
         <text class="sl-text">纸样信息</text>
@@ -320,7 +231,7 @@
       </view>
     </block>
 
-    <!-- ══ ⑥ 尺码表 ══ -->
+    <!-- ══ ⑤ 尺码表 ══ -->
     <block wx:if="{{stageKey === 'size'}}">
       <view class="section-label">
         <text class="sl-text">尺码信息</text>
@@ -356,54 +267,100 @@
       </view>
     </block>
 
-    <!-- ══ ⑦ 工序配置 ══ -->
-    <block wx:if="{{stageKey === 'process'}}">
+    <!-- ══ ⑥ 工序配置（process / cutting / sewing / tail 阶段） ══ -->
+    <block wx:if="{{stageKey === 'process' || stageKey === 'cutting' || stageKey === 'sewing' || stageKey === 'tail'}}">
       <view class="section-label">
         <text class="sl-text">工序列表</text>
-        <text class="sl-count">{{processStages.length}}项</text>
+        <text class="sl-count">{{processTotalCount}}项</text>
       </view>
-      <view wx:if="{{processStages.length === 0}}" class="empty-state">
+      <view wx:if="{{processTotalCount === 0}}" class="empty-state">
         <text class="empty-text">暂无工序配置</text>
+        <text class="empty-hint">请到PC端「款式管理 - 工序单价」中配置</text>
       </view>
       <block wx:else>
-        <view wx:for="{{processStages}}" wx:key="key" class="data-card process-stage-card">
-          <view class="dc-header">
-            <view class="dc-title-row">
-              <text class="dc-title">{{item.name}}</text>
-              <text class="dc-status-tag dst-{{item.status}}">{{item.statusText}}</text>
-            </view>
-            <text wx:if="{{item.unitPrice}}" class="dc-amount">¥{{item.unitPrice}}</text>
+        <!-- 按阶段分组（同步PC端父子结构） -->
+        <block wx:for="{{processGroups}}" wx:for-item="group" wx:key="stageName">
+          <view class="process-group-header">
+            <text class="pgg-name">{{group.stageName}}</text>
+            <text class="pgg-count">{{group.totalCount}}项 · 已完成{{group.completedCount}}项</text>
           </view>
-          <view class="dc-body">
-            <view wx:if="{{item.totalPrice}}" class="dc-row">
-              <text class="dc-label">工序金额</text>
-              <text class="dc-value dc-amount">¥{{item.totalPrice}}（{{item.quantity}}件 × ¥{{item.unitPrice}}）</text>
+          <view wx:for="{{group.processes}}" wx:for-item="item" wx:key="key" class="data-card process-stage-card {{item.expanded ? 'psc-expanded' : ''}}" data-key="{{item.key}}" bindtap="onToggleProcess">
+            <view class="dc-header">
+              <view class="dc-title-row">
+                <text class="dc-title">{{item.name}}</text>
+                <text class="dc-status-tag dst-{{item.status}}">{{item.statusText}}</text>
+              </view>
+              <text wx:if="{{item.unitPrice}}" class="dc-amount">¥{{item.unitPrice}}</text>
             </view>
-            <view wx:if="{{item.assignee}}" class="dc-row">
-              <text class="dc-label">领取人</text>
-              <text class="dc-value">{{item.assignee}}</text>
+            <view class="dc-body">
+              <view class="dc-row">
+                <text class="dc-label">领取人</text>
+                <text class="dc-value">{{item.assignee || '未领取'}}</text>
+              </view>
+              <view wx:if="{{item.scanTime}}" class="dc-row">
+                <text class="dc-label">扫码时间</text>
+                <text class="dc-value">{{item.scanTime}}</text>
+              </view>
+              <view wx:if="{{item.scanCount > 0}}" class="dc-row">
+                <text class="dc-label">扫码次数</text>
+                <text class="dc-value">{{item.scanCount}}次</text>
+              </view>
+              <view wx:if="{{item.warehouse}}" class="dc-row">
+                <text class="dc-label">仓库</text>
+                <text class="dc-value">{{item.warehouse}}</text>
+              </view>
+              <view wx:if="{{item.machineType}}" class="dc-row">
+                <text class="dc-label">机器类型</text>
+                <text class="dc-value">{{item.machineType}}</text>
+              </view>
+              <view wx:if="{{item.difficulty}}" class="dc-row">
+                <text class="dc-label">难度</text>
+                <text class="dc-value">{{item.difficulty}}</text>
+              </view>
             </view>
-            <view wx:if="{{item.scanTime}}" class="dc-row">
-              <text class="dc-label">扫码时间</text>
-              <text class="dc-value">{{item.scanTime}}</text>
+            <!-- 展开区域：扫码记录列表 -->
+            <view wx:if="{{item.expanded}}" class="psc-expand-area" catchtap="">
+              <view wx:if="{{item.scanList.length > 0}}" class="psc-scan-list">
+                <view class="psc-scan-header">
+                  <text class="psc-scan-title">扫码记录（{{item.scanCount}}条）</text>
+                </view>
+                <view wx:for="{{item.scanList}}" wx:for-item="rec" wx:key="id" class="psc-scan-item">
+                  <view class="psc-scan-row">
+                    <view class="psc-scan-operator">
+                      <view class="psc-scan-dot"></view>
+                      <text class="psc-scan-name">{{rec.operatorName}}</text>
+                    </view>
+                    <text class="psc-scan-time">{{rec.scanTimeText}}</text>
+                  </view>
+                  <view class="psc-scan-meta">
+                    <text class="psc-scan-op">{{rec.operationLabel}}</text>
+                    <text wx:if="{{rec.color || rec.size}}" class="psc-scan-cs">{{rec.color}}/{{rec.size}}</text>
+                    <text class="psc-scan-qty">{{rec.quantity}}件</text>
+                    <text wx:if="{{rec.warehouse && rec.warehouse !== '-'}}" class="psc-scan-wh">{{rec.warehouse}}</text>
+                  </view>
+                  <view wx:if="{{rec.remark}}" class="psc-scan-remark">
+                    <text>{{rec.remark}}</text>
+                  </view>
+                  <view wx:if="{{rec.canUndo}}" class="psc-scan-undo" catchtap="onUndoScan" data-id="{{rec.id}}">
+                    <text>撤回</text>
+                  </view>
+                </view>
+              </view>
+              <view wx:else class="psc-no-records">
+                <text>暂无扫码记录</text>
+              </view>
             </view>
-            <view wx:if="{{item.warehouse}}" class="dc-row">
-              <text class="dc-label">仓库</text>
-              <text class="dc-value">{{item.warehouse}}</text>
-            </view>
-            <view wx:if="{{item.remark}}" class="dc-row">
-              <text class="dc-label">备注</text>
-              <text class="dc-value">{{item.remark}}</text>
+            <!-- 展开/收起指示器 -->
+            <view class="psc-toggle-indicator">
+              <text>{{item.expanded ? '收起' : '查看详情'}}</text>
+              <view class="psc-arrow {{item.expanded ? 'psc-arrow-up' : ''}}"></view>
             </view>
           </view>
-          <view wx:if="{{item.canUndo && item.recordId}}" class="psc-action-bar" data-id="{{item.recordId}}" bindtap="onUndoScan">
-            <text class="psc-undo-btn">撤回本次扫码</text>
-          </view>
-        </view>
+        </block>
       </block>
     </block>
 
-    <!-- ══ ⑧ 二次工艺 ══ -->
+    <!-- ══ ⑦ 二次工艺 ══ -->
     <block wx:if="{{stageKey === 'secondary'}}">
       <view class="section-label">
         <text class="sl-text">二次工艺</text>
@@ -461,8 +418,8 @@
       </block>
     </block>
 
-    <!-- ══ ⑨ 生产制单（工艺单） ══ -->
-    <block wx:if="{{stageKey === 'production'}}">
+    <!-- ══ ⑧ 生产制单（production / warehousing 阶段） ══ -->
+    <block wx:if="{{stageKey === 'production' || stageKey === 'warehousing'}}">
       <view class="section-label">
         <text class="sl-text">生产制单</text>
       </view>
@@ -544,7 +501,7 @@
       </block>
     </block>
 
-    <!-- ══ ⑩ 码数单价 ══ -->
+    <!-- ══ ⑨ 码数单价 ══ -->
     <block wx:if="{{stageKey === 'sizePrice'}}">
       <view class="section-label">
         <text class="sl-text">码数单价</text>
@@ -569,94 +526,52 @@
       </view>
     </block>
 
-    <!-- ══ ⑪ 附件区 ══ -->
-    <view class="section-label attachment-section-label">
-      <text class="sl-text">附件文件</text>
-      <text class="sl-count">{{attachmentList.length}}个</text>
-    </view>
-    <view class="attachment-upload-bar" bindtap="onUploadAttachment">
-      <text class="aub-text">上传附件（图片/PDF/文档/CAD）</text>
-      <text class="aub-arrow">+</text>
-    </view>
-    <view wx:if="{{attachmentLoading}}" class="empty-state">
-      <text class="empty-text">加载中...</text>
-    </view>
-    <view wx:elif="{{attachmentList.length === 0}}" class="empty-state">
-      <text class="empty-text">暂无附件</text>
-    </view>
-    <block wx:else>
-      <view wx:for="{{attachmentList}}" wx:key="id" class="attachment-card" data-url="{{item._url}}" bindtap="onAttachmentTap">
-        <view class="att-icon {{item._iconClass}}"></view>
-        <view class="att-info">
-          <text class="att-name">{{item.fileName || item.name || '未命名'}}</text>
-          <view class="att-meta">
-            <text wx:if="{{item._uploader}}" class="att-uploader">{{item._uploader}}</text>
-            <text wx:if="{{item.createTimeText}}" class="att-time">{{item.createTimeText}}</text>
-            <text wx:if="{{item.fileSizeText}}" class="att-size">{{item.fileSizeText}}</text>
-          </view>
-        </view>
-        <view class="att-delete" data-id="{{item.id}}" catchtap="onDeleteAttachment">
-          <text class="att-del-icon">×</text>
-        </view>
-      </view>
-    </block>
-
-    <!-- ══ ⑫ 备注日志 ══ -->
-    <view class="section-label remark-section-label">
-      <text class="sl-text">备注日志</text>
-      <text class="sl-count">{{remarkList.length}}条</text>
-    </view>
-
-    <!-- 输入区 -->
-    <view class="remark-input-bar">
-      <view class="rib-role-row">
-        <input class="rib-role-input" placeholder="角色/工序（可选）" value="{{remarkRoleInput}}" bindinput="onRemarkRoleInput" maxlength="50" />
-        <view class="rib-submit-btn {{remarkSubmitting ? 'rib-submitting' : ''}}" bindtap="onSubmitRemark">
-          <text>{{remarkSubmitting ? '提交中' : '提交备注'}}</text>
-        </view>
-      </view>
-      <textarea
-        class="rib-textarea"
-        placeholder="输入备注内容…"
-        value="{{remarkInput}}"
-        bindinput="onRemarkInput"
-        maxlength="1000"
-        auto-height
-      />
-    </view>
-
-    <!-- 备注列表 -->
-    <view wx:if="{{remarkLoading}}" class="empty-state">
-      <text class="empty-text">加载中...</text>
-    </view>
-    <view wx:elif="{{remarkList.length === 0}}" class="empty-state">
-      <text class="empty-text">暂无备注</text>
-    </view>
-    <block wx:else>
-      <view wx:for="{{remarkList}}" wx:key="id" class="remark-card">
-        <view class="rc-header">
-          <view class="rc-author-row">
-            <view class="rc-avatar">{{item._authorInitial}}</view>
-            <view class="rc-author-info">
-              <text class="rc-author">{{item._author}}</text>
-              <text wx:if="{{item._authorRole}}" class="rc-role">{{item._authorRole}}</text>
-            </view>
-          </view>
-          <text class="rc-time">{{item._createTimeText}}</text>
-        </view>
-        <view wx:if="{{item._content}}" class="rc-content">{{item._content}}</view>
-        <view wx:if="{{item._images.length > 0}}" class="rc-images">
-          <image wx:for="{{item._images}}" wx:for-item="img" wx:key="*this"
-                 src="{{img}}" mode="aspectFill" class="rc-img"
-                 data-url="{{img}}" bindtap="onPreviewRemarkImage" />
-        </view>
-      </view>
-    </block>
-
   </block>
 
-  <!-- ══ ⑬ 底部固定操作栏 ══ -->
-  <view class="bottom-bar">
+  <!-- ══ ④ 审核表单（页面内展开，非弹窗） ══ -->
+  <view wx:if="{{showReviewForm}}" class="review-form-card">
+    <view class="rf-header">
+      <text class="rf-title">样衣审核</text>
+      <view class="rf-close" bindtap="onCancelReviewForm">
+        <view class="line-icon line-icon--sm icon-multiply-sm"></view>
+      </view>
+    </view>
+    <view class="rf-body">
+      <view class="rf-row">
+        <text class="rf-label">审核结论</text>
+        <picker mode="selector" range="{{['通过','需修改','不通过']}}" value="{{reviewFormStatus === 'PASS' ? 0 : reviewFormStatus === 'REWORK' ? 1 : 2}}" bindchange="onReviewStatusChange">
+          <view class="rf-picker">
+            <text class="rf-picker-text {{reviewFormStatus === 'PASS' ? 'rf-pass' : reviewFormStatus === 'REWORK' ? 'rf-rework' : 'rf-reject'}}">
+              {{reviewFormStatus === 'PASS' ? '通过' : reviewFormStatus === 'REWORK' ? '需修改' : '不通过'}}
+            </text>
+            <view class="line-icon line-icon--sm icon-arrow-right-sm"></view>
+          </view>
+        </picker>
+      </view>
+      <view class="rf-row">
+        <text class="rf-label">审核评语</text>
+        <textarea
+          class="rf-textarea"
+          placeholder="请输入审核评语（可选）"
+          value="{{reviewFormComment}}"
+          bindinput="onReviewCommentInput"
+          maxlength="500"
+          auto-height
+        />
+      </view>
+    </view>
+    <view class="rf-actions">
+      <view class="rf-btn rf-btn-secondary" bindtap="onCancelReviewForm">
+        <text>取消</text>
+      </view>
+      <view class="rf-btn rf-btn-primary" bindtap="onConfirmSubmitReview">
+        <text>确认提交</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ ⑤ 底部固定操作栏 ══ -->
+  <view wx:if="{{!loading && !showReviewForm}}" class="bottom-bar">
     <view class="bottom-bar-inner">
       <view class="bb-btn bb-btn-secondary" bindtap="onEditInfo">
         <text class="bb-btn-text">修改信息</text>

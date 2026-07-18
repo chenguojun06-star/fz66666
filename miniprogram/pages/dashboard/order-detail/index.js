@@ -14,7 +14,6 @@
  *   orderId  - 订单 ID（UUID，优先使用）
  *   orderNo  - 订单号（备用）
  */
-const api = require('../../../utils/api');
 const production = require('../../../utils/api-modules/production');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -30,28 +29,9 @@ var PRICING_MODE_LABELS = { PROCESS: '工序单价', SIZE: '尺码单价', COST:
 /* ========== 工具函数 ========== */
 function fmt(val, fallback) { return (val != null && val !== '') ? val : (fallback || '-'); }
 function fmtNum(v, fallback) { return (v != null && !isNaN(v)) ? Number(v) : (fallback || 0); }
-function fmtTime(val) {
-  if (!val) return '';
-  const s = String(val);
-  if (s.length === 10) return s; // 纯日期
-  if (s.length > 16) return s.substring(0, 16); // 去掉秒
-  return s;
-}
-function fmtDate(val) {
-  if (!val) return '';
-  // P0 修复：兼容 LocalDateTime 数组 [y,m,d,...] 格式，避免 "NaN天"
-  var s = val;
-  if (Array.isArray(s) && s.length >= 3) {
-    var pad = function(n) { return Number(n) < 10 ? '0' + n : '' + n; };
-    s = s[0] + '-' + pad(s[1]) + '-' + pad(s[2]);
-  }
-  s = String(s);
-  if (s.length > 10) return s.substring(0, 10);
-  return s;
-}
-
 /* 平台来源代码 → 中文名（统一使用共享模块，与销售/订单列表页保持一致） */
 const { getPlatformName } = require('../../../utils/platformNames');
+const { formatDate, formatDateTime } = require('../../../utils/displayHelper');
 
 /* 状态文本 + tag 类名 */
 function getStatusInfo(raw) {
@@ -105,12 +85,12 @@ function getScanTypeClass(r) {
  *         colorGroups: [{color, sizeMap, total}], allSizes, colors: [颜色], sizeSummary: [{size, qty}] }
  */
 function buildMatrixModel(order) {
-  if (!order) return { sizes: [], rows: [], total: 0, hasData: false, flatList: [], colorGroups: [], allSizes: [], colors: [], sizeSummary: [] };
+  if (!order) return { rows: [], total: 0, hasData: false, allSizes: [], colors: [], sizeSummary: [] };
 
   // 1. 复用 parseProductionOrderLines 解析 SKU 明细（与列表页保持一致）
   var lines = parseProductionOrderLines(order);
   if (!lines || !lines.length) {
-    return { sizes: [], rows: [], total: 0, hasData: false, flatList: [], colorGroups: [], allSizes: [], colors: [], sizeSummary: [] };
+    return { rows: [], total: 0, hasData: false, allSizes: [], colors: [], sizeSummary: [] };
   }
 
   // 2. 收集所有尺码、颜色
@@ -143,32 +123,20 @@ function buildMatrixModel(order) {
 
   // 5. 构造矩阵行（颜色 × 尺码）
   var rows = [];
-  var colorGroups = [];
   for (var p = 0; p < colorOrder.length; p++) {
     var color = colorOrder[p];
     var quantities = allSizes.map(function (sz) { return colorRowMap[color][sz] || 0; });
     var rowTotal = quantities.reduce(function (s, v) { return s + v; }, 0);
     rows.push({ label: color, quantities: quantities, rowTotal: rowTotal });
-
-    // colorGroups：供 WXML 用 cg.sizeMap[sz] 直接访问
-    colorGroups.push({ color: color, sizeMap: colorRowMap[color], total: rowTotal });
   }
 
   // 6. 尺码汇总（每尺码合计）
   var sizeSummary = allSizes.map(function (sz) { return { size: sz, qty: sizeTotals[sz] || 0 }; });
 
-  // 7. 平铺列表
-  var flatList = lines.map(function (line) {
-    return line.color + ' / ' + line.size + ' × ' + line.quantity;
-  });
-
   return {
-    sizes: allSizes,
     rows: rows,
     total: total,
     hasData: true,
-    flatList: flatList,
-    colorGroups: colorGroups,
     allSizes: allSizes,
     colors: colorsRaw,
     sizeSummary: sizeSummary,
@@ -185,7 +153,6 @@ Page({
     // 订单基本信息
     order: null,
     isEditable: false,
-    styleCoverUrl: '',
     statusInfo: { text: '', cls: '' },
     deliveryDateStr: '',
     remainDaysText: '',
@@ -195,7 +162,6 @@ Page({
     remainQuantity: 0,
     progressPct: 0,
     specSummary: { colorText: '', sizeText: '', qtyText: '', hasSpec: false },
-    ecPlatformName: '',
 
     // 工序阶段
     stages: [],
@@ -219,12 +185,11 @@ Page({
     quotation: null,
 
     // 下单矩阵（颜色×尺码×数量）
-    matrixModel: { sizes: [], rows: [], total: 0, hasData: false, flatList: [] },
+    matrixModel: { rows: [], total: 0, hasData: false },
 
     // 图片列表（封面图 + 款式附件 + 订单备注图）
     imageList: [],
     currentImageIndex: 0,
-    hasMultipleImages: false,
 
     // 加载失败提示
     loadError: '',
@@ -265,14 +230,13 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     // 用 .finally 在接口返回后立即停止下拉刷新动画（避免 3.5s 卡顿）
     this._loadFlow().finally(function () {
-      try { wx.stopPullDownRefresh(); } catch (e) {}
+      try { wx.stopPullDownRefresh(); } catch (_e) { /* 停止刷新失败忽略 */ }
     });
     // 兜底：8 秒内若 Promise 未结束（极端情况），强制停止
     setTimeout(function () {
-      try { wx.stopPullDownRefresh(); } catch (e) {}
+      try { wx.stopPullDownRefresh(); } catch (_e) { /* 停止刷新失败忽略 */ }
     }, 8000);
   },
 
@@ -349,7 +313,7 @@ Page({
 
       // 交期信息
       const rawDelivery = order.plannedEndDate || order.expectedShipDate || order.deliveryDate || '';
-      const deliveryDateStr = fmtDate(rawDelivery);
+      const deliveryDateStr = formatDate(rawDelivery);
       let remainDaysText = '';
       let remainDaysClass = '';
       const orderStatus = String(order.status || '').toLowerCase();
@@ -390,10 +354,9 @@ Page({
           totalQty: fmtNum(s.totalQuantity),
           scannedQty: fmtNum(s.scannedQuantity),
           progress: fmtNum(s.progress, s.totalQuantity ? Math.round((s.scannedQuantity || 0) / s.totalQuantity * 100) : 0),
-          startTime: fmtTime(s.startTime),
-          completeTime: fmtTime(s.completeTime),
+          startTime: formatDateTime(s.startTime),
+          completeTime: formatDateTime(s.completeTime),
           startOperator: fmt(s.startOperatorName || s.startOperator, '-'),
-          completeOperator: fmt(s.completeOperatorName || s.completeOperator, '-'),
         };
       });
 
@@ -401,14 +364,12 @@ Page({
       const rawRecords = Array.isArray(ctx.records) ? ctx.records : (ctx.records && Array.isArray(ctx.records.records)) ? ctx.records.records : [];
       const records = rawRecords.slice(0, 10).map(function (r) {
         return {
-          scanTime: fmtTime(r.scanTime || r.createTime),
+          scanTime: formatDateTime(r.scanTime || r.createTime),
           operatorName: fmt(r.operatorName || r.operator, '-'),
           processName: fmt(r.processName || r.progressStage, '-'),
           scanType: getScanTypeText(r),
           scanTypeClass: getScanTypeClass(r),
-          bundleNo: fmt(r.bundleNo, '-'),
           quantity: fmtNum(r.quantity),
-          scanResult: fmt(r.scanResult, '-'),
         };
       });
 
@@ -434,11 +395,9 @@ Page({
           unit: fmt(mp.unit, '件'),
           status: st.text,
           statusCls: st.cls,
-          expectedArrivalDate: fmtDate(mp.expectedArrivalDate || mp.planDate),
+          expectedArrivalDate: formatDate(mp.expectedArrivalDate || mp.planDate),
           receiverName: fmt(mp.receiverName || mp.purchaserName, ''),
           isClaimable: isClaimable,
-          orderNo: fmt(mp.orderNo || order.orderNo, ''),
-          styleNo: fmt(mp.styleNo || order.styleNo, ''),
         };
       });
 
@@ -488,10 +447,17 @@ Page({
             'done': { text: '已完成', cls: 'tag-success' },
           };
           const st = statusMap[rawStatus] || { text: '待领取', cls: 'tag-default' };
+          var rawBundleNo = b.bundleNo || b.bundleLabel || b.bundle_no || '-';
+          // 菲号显示：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
+          var orderNo = self.data.order && self.data.order.orderNo ? self.data.order.orderNo : '';
+          var bundleDisplay = rawBundleNo;
+          if (orderNo && rawBundleNo && rawBundleNo !== '-' && String(rawBundleNo).indexOf(orderNo) !== 0) {
+            bundleDisplay = orderNo + '-' + rawBundleNo;
+          }
           return {
             id: b.id,
             taskId: b.taskId || b.id,
-            bundleNo: b.bundleNo || b.bundleLabel || b.bundle_no || '-',
+            bundleNo: bundleDisplay,
             color: fmt(b.color, ''),
             size: fmt(b.size, ''),
             quantity: fmtNum(b.quantity),
@@ -499,7 +465,6 @@ Page({
             statusCls: st.cls,
             receiverName: fmt(b.receiverName || b.operatorName, ''),
             isClaimable: isClaimable,
-            orderNo: fmt(b.orderNo || order.orderNo, ''),
           };
         });
         // 整体裁剪完成判定
@@ -529,12 +494,6 @@ Page({
         return { colorText: colorText, sizeText: sizeText, qtyText: qtyText, hasSpec: true };
       })();
 
-      // 平台来源（电商订单 ecPlatform → 中文名）
-      const ecPlatformName = getPlatformName(order.ecPlatform || order.platform || order.platformCode);
-
-      // 业务类型中文化（兜底 '未知'，不展示英文 code）
-      const orderBizTypeText = order.orderBizType ? (BIZ_TYPE_LABELS[order.orderBizType] || '未知') : '';
-
       // BOM 物料类型中文化
       bomList.forEach(function (b) {
         b.materialTypeText = b.materialType && b.materialType !== '-' ? (MATERIAL_TYPE_LABELS[b.materialType] || '其他') : '-';
@@ -553,8 +512,6 @@ Page({
       that.setData({
         order: order,
         isEditable: isEditable,
-        isTerminal: isTerminal,
-        styleCoverUrl: coverUrl,
         statusInfo: statusInfo,
         deliveryDateStr: deliveryDateStr,
         remainDaysText: remainDaysText,
@@ -564,8 +521,6 @@ Page({
         remainQuantity: remainQty,
         progressPct: progressPct,
         specSummary: specSummary,
-        ecPlatformName: ecPlatformName,
-        orderBizTypeText: orderBizTypeText,
         stages: stages,
         records: records,
         materialPurchases: materialPurchases,
@@ -580,7 +535,6 @@ Page({
         quotation: quotation,
         imageList: imageList,
         currentImageIndex: 0,
-        hasMultipleImages: imageList.length > 1,
         loading: false,
       });
 
@@ -611,14 +565,10 @@ Page({
       }
       console.log('[order-detail] 启动 fallback orderDetail, key:', key);
       return production.orderDetail(key).then(function (res) {
+        // ok() 已解包，res 就是 data；失败已 throw 由 catch 兜底
         console.log('[order-detail] detail fallback res:', JSON.stringify(res).substring(0, 500));
-        if (res && typeof res.code === 'number' && res.code !== 200) {
-          const msg = res.message || ('服务端返回错误码 ' + res.code);
-          console.warn('[order-detail] detail fallback 业务失败:', msg);
-          throw new Error(msg);
-        }
         let order = null;
-        const payload = (res && res.data) || res || {};
+        const payload = res || {};
         if (Array.isArray(payload)) {
           order = payload[0] || null;
         } else if (Array.isArray(payload.records)) {
@@ -644,12 +594,7 @@ Page({
     const flowPromise = orderId
       ? production.getOrderFlow(orderId).then(function (res) {
           clearTimeout(timeoutTimer);
-          // 防御后端返回 HTTP 200 但业务 code 非 200 的情况
-          if (res && typeof res.code === 'number' && res.code !== 200) {
-            const msg = res.message || ('服务端返回错误码 ' + res.code);
-            console.warn('[order-detail] flow 业务失败:', msg, '→ 启动 fallback');
-            return fallbackToDetail(key);
-          }
+          // ok() 已解包，res 就是完整 flow 数据；失败已 throw 由 catch 兜底
           const data = res || {};
           const order = resolveOrderFromFlow(data);
           if (!order) {
@@ -664,7 +609,9 @@ Page({
           if (!that.data.loading) return Promise.resolve();
           return fallbackToDetail(key);
         })
-      : Promise.resolve();
+      : orderNo
+        ? fallbackToDetail(orderNo)
+        : Promise.resolve();
 
     // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
     return flowPromise;
@@ -675,17 +622,6 @@ Page({
     const idx = e && e.detail && typeof e.detail.current === 'number' ? e.detail.current : 0;
     this.setData({ currentImageIndex: idx });
   },
-  goPrevImage: function () {
-    const idx = this.data.currentImageIndex;
-    if (idx <= 0) return;
-    this.setData({ currentImageIndex: idx - 1 });
-  },
-  goNextImage: function () {
-    const idx = this.data.currentImageIndex;
-    const list = this.data.imageList;
-    if (!list || idx >= list.length - 1) return;
-    this.setData({ currentImageIndex: idx + 1 });
-  },
   onPreviewImage: function () {
     const list = this.data.imageList;
     const idx = this.data.currentImageIndex;
@@ -693,23 +629,11 @@ Page({
     const urls = list.map(function (item) { return item.url; });
     wx.previewImage({ current: urls[idx], urls: urls });
   },
-  /* ======== 封面预览（兼容旧逻辑） ======== */
-  onPreviewCover: function () {
-    this.onPreviewImage();
-  },
-
   /* ======== 复制订单号 ======== */
   onCopyOrderNo: function () {
     const no = this.data.orderNo || (this.data.order && this.data.order.orderNo);
     if (!no) return;
     wx.setClipboardData({ data: no, success: function () { toast.success('已复制'); } });
-  },
-
-  /* ======== 操作：扫码 ======== */
-  onActionScan: function () {
-    wx.switchTab({ url: '/pages/scan/index', fail: function () {
-      safeNavigate({ url: '/pages/scan/index' });
-    }});
   },
 
   /* ======== 操作：裁剪分扎 ======== */

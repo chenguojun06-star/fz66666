@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "工序编辑",
   "usingComponents": {
-    "mp-modal": "/components/common/mp-modal/index"
+    "custom-nav": "/components/common/custom-nav/index"
   }
 }

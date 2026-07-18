@@ -1,9 +1,9 @@
 .undo-btn {
   color: var(--color-danger);
   border-color: var(--color-danger);
-  background: var(--color-error-bg);
+  background: var(--color-danger-bg);
   margin-left: auto;
 }
 .undo-btn-hover {
-  background: var(--color-error-bg);
+  background: var(--color-danger-bg);
 }

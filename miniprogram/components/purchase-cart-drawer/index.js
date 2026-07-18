@@ -71,7 +71,7 @@ Component({
           self.setData({ selectedItems: allIds });
           self._computeTotal();
         }
-      }).catch(function (e) {
+      }).catch(function (_e) {
         wx.hideLoading();
         // API 可能不存在，设置默认空购物车
         self.setData({
@@ -263,7 +263,7 @@ Component({
       api.purchaseCart.preview()
         .then(function (res) {
           wx.hideLoading();
-          const data = res && res.data || res;
+          const data = res || {};
           self.setData({ previewVisible: true, previewData: data });
         })
         .catch(function () {
@@ -287,7 +287,7 @@ Component({
 
     onConfirm: function () {
       if (this.data.submitting) return;
-      if (!this.data.selectedItems.length === 0) {
+      if (this.data.selectedItems.length === 0) {
         wx.showToast({ title: '请先选择物料', icon: 'none' });
         return;
       }
@@ -313,7 +313,7 @@ Component({
       api.purchaseCart.confirm(this.data.selectedItems)
         .then(function (res) {
           wx.hideLoading();
-          const data = res && res.data || res;
+          const data = res || {};
           const purchaseNos = data && data.purchaseNos || [];
 
           wx.showToast({

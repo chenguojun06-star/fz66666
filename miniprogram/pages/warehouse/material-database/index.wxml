@@ -1,0 +1,173 @@
+<view class="container">
+  <custom-nav title="物料资料" show-back="{{true}}" show-search="{{false}}" />
+
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="search-box">
+      <input class="search-input" type="text" placeholder="搜索编码/名称/款号/供应商" value="{{searchText}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+    </view>
+    <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+      <view class="filter-picker">
+        <text class="filter-picker-text">{{typeOptions[typeIndex].label}}</text>
+        <text class="filter-picker-arrow">▾</text>
+      </view>
+    </picker>
+    <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+      <view class="filter-picker">
+        <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
+        <text class="filter-picker-arrow">▾</text>
+      </view>
+    </picker>
+  </view>
+
+  <view class="total-bar">
+    <text class="total-text">共 {{total}} 条物料</text>
+  </view>
+
+  <!-- 列表 -->
+  <view wx:if="{{loading && list.length === 0}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{list.length === 0}}" class="empty-wrap">
+    <text class="empty-icon">🧵</text>
+    <text class="empty-text">暂无物料资料</text>
+    <text class="empty-sub">请先在PC端添加物料</text>
+  </view>
+
+  <view wx:else class="list-wrap">
+    <view wx:for="{{list}}" wx:key="id" class="material-item" data-id="{{item.id}}" bindtap="onItemTap" hover-class="material-item--hover" hover-stay-time="100">
+      <view class="item-left">
+        <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFill" class="item-image" />
+        <view wx:else class="item-image item-image--placeholder">
+          <text class="item-image-text">料</text>
+        </view>
+      </view>
+
+      <view class="item-main">
+        <view class="item-header">
+          <text class="item-type-badge" style="background: {{item._typeColor}}15; color: {{item._typeColor}};">{{item._typeLabel}}</text>
+          <text class="item-code">{{item.materialCode}}</text>
+          <text wx:if="{{!item._enabled}}" class="item-status item-status--disabled">停用</text>
+        </view>
+        <text class="item-name">{{item.materialName}}</text>
+        <view class="item-meta-row">
+          <text wx:if="{{item.color}}" class="meta-text">颜色：{{item.color}}</text>
+          <text wx:if="{{item.specifications}}" class="meta-text">规格：{{item.specifications}}</text>
+        </view>
+        <view class="item-meta-row">
+          <text wx:if="{{item.unitPrice != null}}" class="meta-price">¥{{item._unitPrice}}/{{item.unit || '个'}}</text>
+          <text wx:if="{{item.supplierName}}" class="meta-supplier">供应商：{{item.supplierName}}</text>
+        </view>
+      </view>
+
+      <view class="item-arrow">
+        <text class="arrow-text">›</text>
+      </view>
+    </view>
+
+    <view wx:if="{{hasMore}}" class="load-more">
+      <text class="load-more-text">上拉加载更多</text>
+    </view>
+    <view wx:elif="{{list.length > 0}}" class="load-more">
+      <text class="load-more-text">— 没有更多了 —</text>
+    </view>
+  </view>
+
+  <!-- 详情弹窗 -->
+  <view wx:if="{{detailVisible && selectedItem}}" class="modal-mask" bindtap="onCloseDetail" catchtouchmove="preventTouchMove">
+    <view class="modal-content modal-content--bottom" catchtap="preventTouchMove">
+      <view class="modal-header">
+        <text class="modal-title">物料详情</text>
+        <view class="modal-close" bindtap="onCloseDetail">
+          <text class="modal-close-text">✕</text>
+        </view>
+      </view>
+
+      <scroll-view class="detail-scroll" scroll-y="true">
+        <view class="detail-hero">
+          <image wx:if="{{selectedItem._image}}" src="{{selectedItem._image}}" mode="aspectFill" class="detail-image" />
+          <view wx:else class="detail-image detail-image--placeholder">
+            <text class="detail-image-text">料</text>
+          </view>
+          <view class="detail-hero-info">
+            <view class="detail-hero-top">
+              <text class="detail-type-badge" style="background: {{selectedItem._typeColor}}15; color: {{selectedItem._typeColor}};">{{selectedItem._typeLabel}}</text>
+              <text wx:if="{{!selectedItem._enabled}}" class="detail-status detail-status--disabled">已停用</text>
+            </view>
+            <text class="detail-name">{{selectedItem.materialName}}</text>
+            <text class="detail-code">{{selectedItem.materialCode}}</text>
+          </view>
+        </view>
+
+        <view class="detail-section">
+          <text class="detail-section-title">基本信息</text>
+          <view class="detail-grid">
+            <view class="detail-grid-item">
+              <text class="grid-label">颜色</text>
+              <text class="grid-value">{{selectedItem.color || '--'}}</text>
+            </view>
+            <view class="detail-grid-item">
+              <text class="grid-label">规格</text>
+              <text class="grid-value">{{selectedItem.specifications || '--'}}</text>
+            </view>
+            <view class="detail-grid-item">
+              <text class="grid-label">单位</text>
+              <text class="grid-value">{{selectedItem.unit || '--'}}</text>
+            </view>
+            <view class="detail-grid-item">
+              <text class="grid-label">单价</text>
+              <text class="grid-value grid-value--price">¥{{selectedItem._unitPrice}}</text>
+            </view>
+            <view wx:if="{{selectedItem.fabricWidth}}" class="detail-grid-item">
+              <text class="grid-label">幅宽</text>
+              <text class="grid-value">{{selectedItem.fabricWidth}}</text>
+            </view>
+            <view wx:if="{{selectedItem.fabricWeight}}" class="detail-grid-item">
+              <text class="grid-label">克重</text>
+              <text class="grid-value">{{selectedItem.fabricWeight}}</text>
+            </view>
+            <view wx:if="{{selectedItem.fabricComposition}}" class="detail-grid-item detail-grid-item--full">
+              <text class="grid-label">成分</text>
+              <text class="grid-value">{{selectedItem.fabricComposition}}</text>
+            </view>
+            <view wx:if="{{selectedItem.styleNo}}" class="detail-grid-item detail-grid-item--full">
+              <text class="grid-label">对应款号</text>
+              <text class="grid-value">{{selectedItem.styleNo}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{selectedItem.supplierName}}" class="detail-section">
+          <text class="detail-section-title">供应商信息</text>
+          <view class="detail-grid">
+            <view class="detail-grid-item detail-grid-item--full">
+              <text class="grid-label">供应商名称</text>
+              <text class="grid-value">{{selectedItem.supplierName}}</text>
+            </view>
+            <view wx:if="{{selectedItem.supplierContactPerson}}" class="detail-grid-item">
+              <text class="grid-label">联系人</text>
+              <text class="grid-value">{{selectedItem.supplierContactPerson}}</text>
+            </view>
+            <view wx:if="{{selectedItem.supplierContactPhone}}" class="detail-grid-item">
+              <text class="grid-label">联系电话</text>
+              <text class="grid-value grid-value--phone" bindtap="onCallSupplier">{{selectedItem.supplierContactPhone}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{selectedItem.remark}}" class="detail-section">
+          <text class="detail-section-title">备注</text>
+          <view class="detail-remark">
+            <text class="remark-text">{{selectedItem.remark}}</text>
+          </view>
+        </view>
+
+        <view class="detail-footer">
+          <text class="footer-text">创建时间：{{selectedItem._createTime}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

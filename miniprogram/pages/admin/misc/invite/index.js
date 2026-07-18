@@ -1,5 +1,6 @@
 const config = require('../../../../config');
 const api = require('../../../../utils/api');
+const { hasFeaturePermission } = require('../../../../utils/permission');
 
 function getFrontendOrigin() {
   let baseUrl = '';
@@ -20,6 +21,11 @@ Page({
   },
 
   onLoad() {
+    if (!hasFeaturePermission('manage_users') && !hasFeaturePermission('admin')) {
+      wx.showToast({ title: '仅管理员可访问', icon: 'none' });
+      wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
+      return;
+    }
     this.loadTenantInfo();
   },
 

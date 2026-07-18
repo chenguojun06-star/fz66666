@@ -12,7 +12,7 @@
   justify-content: space-between;
   padding: 0 12px;
   height: 40px;
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
   border-radius: var(--radius-md);
   border: 1.5px solid var(--input-border);
   box-sizing: border-box;
@@ -20,7 +20,7 @@
 
 .dp-trigger--has-value {
   border-color: var(--color-primary, var(--color-primary-light));
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
 }
 
 .dp-value {
@@ -73,7 +73,7 @@
   bottom: 0;
   z-index: var(--z-float-trigger);
   background: var(--color-bg-card);
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   transform: translateY(0);
   animation: dp-slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
   /* 底部安全区 */
@@ -86,7 +86,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px 10px;
-  border-bottom: 1px solid var(--color-bg-light);
+  border-bottom: 1px solid var(--color-bg-page);
 }
 
 .dp-sheet-cancel {
@@ -119,8 +119,8 @@
 }
 
 .dp-indicator {
-  border-top: 1px solid var(--color-bg-gray);
-  border-bottom: 1px solid var(--color-bg-gray);
+  border-top: 1px solid var(--color-bg-page);
+  border-bottom: 1px solid var(--color-bg-page);
 }
 
 .dp-col-item {

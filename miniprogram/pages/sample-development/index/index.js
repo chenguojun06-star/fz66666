@@ -1,70 +1,144 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 
 const STATUS_LABELS = {
   PENDING: '待领取',
-  IN_PROGRESS: '制作中',
+  IN_PROGRESS: '开发中',
+  PRODUCTION_COMPLETED: '已完成',
   COMPLETED: '已完成',
   WAREHOUSE_IN: '已入库',
+  WAREHOUSE_OUT: '已出库',
+  REWORK: '返工中',
+  SCRAPPED: '已报废',
+  CLOSED: '已关单',
 };
 
-const REVIEW_STATUS_LABELS = {
-  'APPROVED': '已通过',
-  'REJECTED': '已驳回',
-  'PENDING': '待审核',
-  'IN_REVIEW': '审核中',
-  'DRAFT': '草稿',
-  'SUBMITTED': '已提交',
+const CATEGORY_MAP = {
+  WOMAN: '女装',
+  WOMEN: '女装',
+  MAN: '男装',
+  MEN: '男装',
+  KID: '童装',
+  KIDS: '童装',
+  WCMAN: '女童装',
+  UNISEX: '男女同款',
 };
 
-const STATUS_COLORS = {
-  PENDING: '#faad14',
-  IN_PROGRESS: '#1677ff',
-  COMPLETED: '#52c41a',
-  WAREHOUSE_IN: '#8c8c8c',
+const SEASON_MAP = {
+  SPRING: '春季',
+  SUMMER: '夏季',
+  AUTUMN: '秋季',
+  WINTER: '冬季',
+  SPRING_SUMMER: '春夏',
+  AUTUMN_WINTER: '秋冬',
 };
 
-const STATUS_TABS = [
-  { key: '', label: '全部' },
-  { key: 'PENDING', label: '待领取' },
-  { key: 'IN_PROGRESS', label: '制作中' },
-  { key: 'COMPLETED', label: '已完成' },
-  { key: 'WAREHOUSE_IN', label: '已入库' },
-];
+// 完成态状态集合（与后端 calcSampleStats 对齐）
+var COMPLETED_STATUSES = ['COMPLETED', 'PRODUCTION_COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT', 'CLOSED'];
 
-const DEV_STAGES = [
-  { key: 'bom', name: 'BOM' },
-  { key: 'pattern', name: '纸样' },
-  { key: 'process', name: '单价' },
-  { key: 'secondary', name: '二次工艺' },
-  { key: 'production', name: '生产制单' },
-];
+function clampPercent(value) {
+  var n = Number(value || 0);
+  return Number.isNaN(n) ? 0 : Math.max(0, Math.min(100, Math.round(n)));
+}
 
-const PROD_STAGES = [
-  { op: 'RECEIVE', name: '领取样衣' },
-  { op: 'PLATE', name: '车板' },
-  { op: 'FOLLOW_UP', name: '跟单确认' },
-  { op: 'COMPLETE', name: '完成确认' },
-  { op: 'WAREHOUSE_IN', name: '样衣入库' },
-];
+function normalizeProgressNodes(raw) {
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      return JSON.parse(raw);
+    } catch (_e) {
+      return {};
+    }
+  }
+  if (raw && typeof raw === 'object') return raw;
+  return {};
+}
+
+function getSampleNodeProgress(item, key) {
+  var nodes = normalizeProgressNodes(item.progressNodes);
+  var aliases = SAMPLE_PROGRESS_NODE_ALIASES[key] || [key];
+  for (var i = 0; i < aliases.length; i++) {
+    var value = nodes[aliases[i]];
+    if (value !== undefined && value !== null) {
+      return clampPercent(value);
+    }
+  }
+  return 0;
+}
+
+function isSampleSnapshotFullyCompleted(item) {
+  var status = String(item.status || '').trim().toUpperCase();
+  // 完成态状态直接返回 true（与后端 calculatePatternProgressPercent 对齐）
+  if (status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED' || status === 'WAREHOUSE_IN' || status === 'WAREHOUSE_OUT') {
+    return true;
+  }
+  var allDone = SAMPLE_PARENT_STAGES.every(function (s) {
+    if (s.key === 'procurement') {
+      // 采购阶段用 procurementProgress 判断（MaterialPurchase 实时聚合）
+      var pp = item.procurementProgress;
+      var pct = (pp && typeof pp === 'object') ? pp.percent : (pp || 0);
+      return Number(pct) >= 100;
+    }
+    return getSampleNodeProgress(item, s.key) >= 100;
+  });
+  return allDone && (status === 'IN_PROGRESS');
+}
 
 function formatDate(v) {
   if (!v) return '';
-  const s = String(v);
+  var s = String(v);
   if (s.length >= 10) return s.substring(0, 10);
   return s;
 }
 
 function fmtDate(v) {
   if (!v) return '';
-  const s = String(v);
+  var s = String(v);
   try {
-    const parts = s.split(/[-T :]/);
+    var parts = s.split(/[-T :]/);
     if (parts.length >= 3) return parts[1] + '-' + parts[2];
   } catch (_e) { /* ignore */ }
   return s;
+}
+
+function isWithinDays(dateStr, days) {
+  if (!dateStr) return false;
+  try {
+    var due = new Date(String(dateStr).replace(/-/g, '/'));
+    var now = new Date();
+    var diff = (due - now) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= days;
+  } catch (_e) { return false; }
+}
+
+function isCompletedStatus(status) {
+  return COMPLETED_STATUSES.indexOf(String(status || '').trim().toUpperCase()) >= 0;
+}
+
+// 前端筛选：根据 tab.key 从全量列表筛选
+function filterByTab(allList, tabKey) {
+  if (!tabKey) return allList;
+  if (tabKey === 'IN_PROGRESS') {
+    // 开发中 = 所有未完成（排除已完成/已入库/已关单/已报废）
+    return allList.filter(function (item) {
+      return !isCompletedStatus(item.status) && item.status !== 'SCRAPPED';
+    });
+  }
+  if (tabKey === 'COMPLETED') {
+    // 已完成 = COMPLETED + PRODUCTION_COMPLETED + WAREHOUSE_IN + CLOSED
+    return allList.filter(function (item) {
+      return isCompletedStatus(item.status);
+    });
+  }
+  if (tabKey === 'OVERDUE') {
+    return allList.filter(function (item) { return item._overdue; });
+  }
+  if (tabKey === 'WARNING') {
+    return allList.filter(function (item) { return item._nearDue; });
+  }
+  return allList;
 }
 
 Page({
@@ -72,22 +146,24 @@ Page({
     loading: true,
     keyword: '',
     activeFilter: '',
-    statusTabs: STATUS_TABS,
-
+    statusTabs: [
+      { key: '', label: '全部', color: 'primary', count: 0 },
+      { key: 'IN_PROGRESS', label: '开发中', color: 'primary', count: 0 },
+      { key: 'COMPLETED', label: '已完成', color: 'success', count: 0 },
+      { key: 'OVERDUE', label: '已延期', color: 'danger', count: 0 },
+      { key: 'WARNING', label: '临近交期', color: 'warning', isSmart: true, count: 0 },
+    ],
     list: [],
     page: 1,
     pageSize: 15,
     total: 0,
     hasMore: false,
     loadingMore: false,
-
-    expandedId: '',
-    patternDetail: null,
-    patternScanRecords: null,
-    detailLoading: false,
   },
 
   onLoad: function () {
+    this._allList = [];
+    this._filteredList = [];
     this.loadData(true);
   },
 
@@ -108,8 +184,8 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const self = this;
-    Promise.resolve(self.loadData(true)).then(function () {
+    var self = this;
+    self.loadData(true).then(function () {
       wx.stopPullDownRefresh();
     }).catch(function () {
       wx.stopPullDownRefresh();
@@ -117,14 +193,25 @@ Page({
   },
 
   onReachBottom: function () {
-    if (this.data.hasMore && !this.data.loadingMore) {
-      this.loadData(false);
-    }
+    if (!this.data.hasMore || this.data.loadingMore) return;
+    var nextPage = this.data.page + 1;
+    var pageSize = this.data.pageSize;
+    var endIdx = nextPage * pageSize;
+    var filtered = this._filteredList || [];
+    var displayList = filtered.slice(0, endIdx);
+    this.setData({
+      list: displayList,
+      page: nextPage,
+      hasMore: endIdx < filtered.length,
+      loadingMore: false,
+    });
   },
 
   _bindEvents: function () {
-    const that = this;
-    this._onRefresh = function () { that.loadData(true); };
+    var that = this;
+    this._onRefresh = function () {
+      that.loadData(true);
+    };
     eventBus.on(Events.REFRESH_ALL, this._onRefresh);
     eventBus.on(Events.DATA_CHANGED, this._onRefresh);
   },
@@ -136,73 +223,179 @@ Page({
     }
   },
 
+  // 从全量列表计算各筛选标签数量 + 执行筛选 + 分页
+  _updateCountsAndFilter: function () {
+    var that = this;
+    var allList = this._allList || [];
+
+    // 计算各状态数量
+    var inProgressCount = 0;
+    var completedCount = 0;
+    var overdueCount = 0;
+    var warningCount = 0;
+    allList.forEach(function (item) {
+      if (isCompletedStatus(item.status)) {
+        completedCount++;
+      } else if (item.status !== 'SCRAPPED') {
+        inProgressCount++;
+      }
+      if (item._overdue) overdueCount++;
+      if (item._nearDue) warningCount++;
+    });
+    var totalCount = allList.length;
+
+    // 更新筛选标签数量
+    var tabs = this.data.statusTabs.map(function (tab) {
+      var count = 0;
+      if (tab.key === '') count = totalCount;
+      else if (tab.key === 'IN_PROGRESS') count = inProgressCount;
+      else if (tab.key === 'COMPLETED') count = completedCount;
+      else if (tab.key === 'OVERDUE') count = overdueCount;
+      else if (tab.key === 'WARNING') count = warningCount;
+      return Object.assign({}, tab, { count: count });
+    });
+
+    // 执行筛选
+    var filtered = filterByTab(allList, this.data.activeFilter);
+    this._filteredList = filtered;
+
+    // 分页
+    var pageSize = this.data.pageSize;
+    var displayList = filtered.slice(0, pageSize);
+
+    this.setData({
+      statusTabs: tabs,
+      list: displayList,
+      total: filtered.length,
+      page: 1,
+      hasMore: filtered.length > pageSize,
+      loading: false,
+      loadingMore: false,
+    });
+  },
+
   loadData: function (reset) {
-    const that = this;
+    var that = this;
     if (reset) {
-      that.setData({ loading: true, page: 1, list: [] });
-    } else {
-      that.setData({ loadingMore: true });
+      that.setData({ loading: true });
     }
 
-    const params = {
-      page: that.data.page,
-      size: that.data.pageSize,
-    };
+    // 全量加载（不分页、不传 status），前端统一筛选和计数
+    var params = { page: 1, size: 500 };
     if (that.data.keyword.trim()) params.keyword = that.data.keyword.trim();
-    if (that.data.activeFilter) params.status = that.data.activeFilter;
 
     return api.production.listPatterns(params)
       .then(function (res) {
-        const data = res && res.data ? res.data : res;
-        const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
-        const total = Number(data && data.total) || records.length;
+        var data = res;
+        var records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
 
-        const list = records.map(function (item) {
-          item._cover = getAuthedImageUrl(item.coverImage || '');
+        // 处理每条记录
+        var allList = records.map(function (item) {
+          // 从嵌套 styleInfo 中提取字段（后端 enrichRecord 返回）
+          var si = item.styleInfo || {};
+          // 款号/款名优先从顶层取，没有则从 styleInfo 嵌套对象取
+          item._styleNo = item.styleNo || si.styleNo || '';
+          item._styleName = item.styleName || si.styleName || '';
+          item._cover = getAuthedImageUrl(item.coverImage || si.cover || '');
           item._statusLabel = STATUS_LABELS[item.status] || item.status || '-';
-          item._statusColor = STATUS_COLORS[item.status] || '#8c8c8c';
+          item._statusColor = that.getStatusColorClass(item.status);
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);
-          item._expanded = false;
+          item._deliveryTag = fmtDate(item.deliveryTime);
+          // 数量
+          item._quantity = item.quantity || si.sampleQuantity || '';
+          item._overdue = false;
+          item._nearDue = false;
+          item._daysLeftText = '';
+          if (item.deliveryTime && !isCompletedStatus(item.status)) {
+            try {
+              var now = new Date();
+              var due = new Date(String(item.deliveryTime).replace(/-/g, '/'));
+              var diffMs = due - now;
+              var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              if (diffDays < 0) {
+                item._overdue = true;
+                item._daysLeftText = '延期' + Math.abs(diffDays) + '天';
+              } else if (diffDays === 0) {
+                item._nearDue = true;
+                item._daysLeftText = '今天交板';
+              } else if (diffDays <= 3) {
+                item._nearDue = true;
+                item._daysLeftText = '剩' + diffDays + '天';
+              } else {
+                item._daysLeftText = '剩' + diffDays + '天';
+              }
+            } catch (_e) { /* ignore */ }
+          }
 
-          item._devStages = DEV_STAGES.map(function (s) {
+          // 元信息行1：客户 · 跟单 · 品类 · 季节
+          var meta1Parts = [];
+          var customer = item.customer || si.customer || item.company || si.company || item.brandName || '';
+          if (customer) meta1Parts.push(customer);
+          var merchandiser = item.merchandiser || item.merchandiserName || si.merchandiser || '';
+          if (merchandiser) meta1Parts.push('跟单: ' + merchandiser);
+          var category = item.category || si.category || '';
+          if (category && CATEGORY_MAP[category]) category = CATEGORY_MAP[category];
+          if (category) meta1Parts.push(category);
+          var season = item.season || si.season || '';
+          if (season && SEASON_MAP[season]) season = SEASON_MAP[season];
+          if (season) meta1Parts.push(season);
+          item._metaLine1 = meta1Parts.join(' · ');
+
+          // 元信息行2：颜色 · 尺码
+          var meta2Parts = [];
+          var color = item.color || si.color || '';
+          if (color) meta2Parts.push(color);
+          var sizes = item.sizes || item.sizeRange || si.size || si.sizes || si.sizeRange || '';
+          if (sizes) meta2Parts.push(sizes);
+          item._metaLine2 = meta2Parts.join(' · ');
+
+          // 进度计算
+          var completed = isSampleSnapshotFullyCompleted(item);
+          var statusUpper = String(item.status || '').trim().toUpperCase();
+          var received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT'].indexOf(statusUpper) >= 0
+            || Boolean(item.receiver)
+            || !!item.receiveTime;
+          var procurementProgress = clampPercent(
+            Number(
+              (item.procurementProgress && typeof item.procurementProgress === 'object'
+                ? item.procurementProgress.percent
+                : item.procurementProgress) || 0,
+            ),
+          );
+
+          var totalPercent = 0;
+          item._devStages = SAMPLE_PARENT_STAGES.map(function (s) {
+            var percent;
+            if (completed) {
+              percent = 100;
+            } else if (s.key === 'procurement') {
+              percent = procurementProgress;
+            } else if (received) {
+              percent = getSampleNodeProgress(item, s.key);
+            } else {
+              percent = 0;
+            }
+            totalPercent += percent;
             return {
               key: s.key,
               name: s.name,
-              completed: !!(item.styleInfo && item.styleInfo[s.key + 'CompletedTime']),
+              completed: percent >= 100,
+              percent: percent,
             };
           });
 
           item._devDoneCount = item._devStages.filter(function (s) { return s.completed; }).length;
           item._devTotalCount = item._devStages.length;
-
-          if (item.scanRecords && Array.isArray(item.scanRecords)) {
-            item._scanStages = PROD_STAGES.map(function (s) {
-              const matched = item.scanRecords.filter(function (r) {
-                return String(r.operationType || '').toUpperCase() === s.op;
-              });
-              return {
-                name: s.name,
-                completed: matched.length > 0,
-                time: matched.length > 0 && matched[0].scanTime ? fmtDate(matched[0].scanTime) : '',
-              };
-            });
-          } else {
-            item._scanStages = [];
-          }
+          item._progressPercent = item._devTotalCount > 0
+            ? Math.round(totalPercent / item._devTotalCount)
+            : 0;
 
           return item;
         });
 
-        const newList = reset ? list : (that.data.list || []).concat(list);
-        that.setData({
-          list: newList,
-          total: total,
-          hasMore: newList.length < total,
-          loading: false,
-          loadingMore: false,
-          page: reset ? 1 : that.data.page + 1,
-        });
+        that._allList = allList;
+        that._updateCountsAndFilter();
       })
       .catch(function () {
         that.setData({ loading: false, loadingMore: false });
@@ -210,8 +403,23 @@ Page({
       });
   },
 
+  getStatusColorClass: function (status) {
+    var map = {
+      PENDING: 'var(--color-warning)',
+      IN_PROGRESS: 'var(--color-primary)',
+      PRODUCTION_COMPLETED: 'var(--color-success)',
+      COMPLETED: 'var(--color-success)',
+      WAREHOUSE_IN: 'var(--color-text-tertiary)',
+      WAREHOUSE_OUT: 'var(--color-text-tertiary)',
+      REWORK: 'var(--color-danger)',
+      SCRAPPED: 'var(--color-text-tertiary)',
+      CLOSED: 'var(--color-text-tertiary)',
+    };
+    return map[status] || 'var(--color-text-tertiary)';
+  },
+
   onSearchInput: function (e) {
-    let val = (e.detail.value || '').trim();
+    var val = (e.detail.value || '').trim();
     if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clear) val = '';
     this.setData({ keyword: val });
     clearTimeout(this._searchTimer);
@@ -228,74 +436,30 @@ Page({
   },
 
   onFilterTap: function (e) {
-    const key = e.currentTarget.dataset.key;
+    var key = e.currentTarget.dataset.key;
     this.setData({ activeFilter: key });
-    this.loadData(true);
+    // 纯前端筛选，不需要重新请求后端
+    this._updateCountsAndFilter();
   },
 
   onCardTap: function (e) {
-    const id = e.currentTarget.dataset.id;
-    if (!id) return;
-    const expandedId = this.data.expandedId === id ? '' : id;
-    this.setData({ expandedId: expandedId });
-
-    if (expandedId) {
-      this.loadDetail(id);
-    } else {
-      this.setData({ patternDetail: null, patternScanRecords: null });
-    }
-  },
-
-  loadDetail: function (patternId) {
-    const that = this;
-    that.setData({ detailLoading: true });
-
-    return api.production.getPatternDetail(patternId)
-      .then(function (res) {
-        const detail = res && res.data ? res.data : res;
-        if (detail.reviewStatus) {
-          detail._reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] || detail.reviewStatus;
-        }
-        that.setData({ patternDetail: detail });
-        return api.production.getPatternScanRecords(patternId);
-      })
-      .then(function (res) {
-        const records = res && res.data ? res.data : (Array.isArray(res) ? res : []);
-        that.setData({ patternScanRecords: records });
-      })
-      .catch(function () {})
-      .finally(function () {
-        that.setData({ detailLoading: false });
-      });
-  },
-
-  onGoDetail: function (e) {
-    const item = e.currentTarget.dataset.item;
+    var item = e.currentTarget.dataset.item;
     if (!item) return;
-    // 优先使用 styleId（款式ID），没有则用 id 作为兜底
-    const styleId = item.styleId || '';
-    const patternId = item.id || '';
+    var styleId = item.styleId || '';
+    var patternId = item.id || '';
     if (!styleId && !patternId) return;
-    const param = styleId ? 'styleId=' + encodeURIComponent(styleId) : 'id=' + encodeURIComponent(patternId);
+    var param = styleId ? 'styleId=' + encodeURIComponent(styleId) : 'id=' + encodeURIComponent(patternId);
     safeNavigate({
       url: '/pages/sample-development/detail/index?' + param,
-    }).catch(() => {});
+    }).catch(function () {});
   },
 
-  onGoScan: function (e) {
-    const item = e.currentTarget.dataset.item;
-    if (!item || !item.styleId) return;
-    const app = getApp();
-    if (app && app.globalData) {
-      app.globalData.patternScanData = item;
-    }
-    safeNavigate({
-      url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(item.id || ''),
-    }).catch(() => {});
+  onScan: function () {
+    quickScan();
   },
 
   onPreviewImage: function (e) {
-    const url = e.currentTarget.dataset.src;
+    var url = e.currentTarget.dataset.src;
     if (!url) return;
     wx.previewImage({ current: url, urls: [url] });
   },

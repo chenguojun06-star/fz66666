@@ -12,6 +12,7 @@ const { toast } = require('../../../utils/uiHelper');
 const { DEBUG_MODE } = require('../../../config');
 const { getStorageValue, setStorageValue } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 // ==================== 交期计算 ====================
 
@@ -50,10 +51,10 @@ function calcDeliveryInfo(dateStr) {
     remainDaysText = `剩${remainDays}天`;
     remainDaysClass = 'days-warn';
   } else if (remainDays > 0) {
-    remainDaysText = `剩${remainDays}天❗`;
+    remainDaysText = `剩${remainDays}天`;
     remainDaysClass = 'days-urgent';
   } else if (remainDays === 0) {
-    remainDaysText = '今天到期❗';
+    remainDaysText = '今天到期';
     remainDaysClass = 'days-urgent';
   } else {
     remainDaysText = `超期${Math.abs(remainDays)}天`;
@@ -67,14 +68,13 @@ function calcDeliveryInfo(dateStr) {
 
 /**
  * 归一化质检子步骤名称：质检领取/质检验收 → 质检
+ * 委托 displayHelper.normalizeProcessName 统一处理（覆盖英文 code + 中文历史旧名）
  * @param {string} processName
  * @returns {string}
  */
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
-  // 兼容历史旧数据（确认）及现在的两步（领取/验收）
-  if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
-  return processName;
+  return normalizeProcessName(processName);
 }
 
 /**
@@ -159,7 +159,7 @@ function _addRecordToGroup(group, record) {
 
   let qtyArr = [];
 
-  // ✅ 优先使用后端返回的裁剪详情数据（真实分布）
+  // [OK] 优先使用后端返回的裁剪详情数据（真实分布）
   if (record.cuttingDetails && Array.isArray(record.cuttingDetails) && record.cuttingDetails.length > 0) {
     // 使用cutting_bundle的真实数据
     const detailsMap = {};
@@ -168,7 +168,7 @@ function _addRecordToGroup(group, record) {
     });
     qtyArr = sizeArr.map(size => detailsMap[size] || 0);
   }
-  // ❌ 降级方案：平均分配（仅用于没有cuttingDetails的情况）
+  // [FAIL] 降级方案：平均分配（仅用于没有cuttingDetails的情况）
   else if (sizeArr.length > 1) {
     const base = Math.floor(totalQty / sizeArr.length);
     const remainder = totalQty % sizeArr.length;

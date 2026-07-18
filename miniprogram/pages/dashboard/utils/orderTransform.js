@@ -3,7 +3,7 @@
  * 从 work/index.js 提取的纯函数，负责订单数据格式化
  */
 const { validateProductionOrder, normalizeData } = require('./dataValidator');
-const { orderStatusText } = require('./orderStatusHelper');
+const { orderStatusText, orderStatusBadgeClass } = require('./orderStatusHelper');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { calcOrderProgress } = require('./progressNodes');
@@ -146,17 +146,18 @@ function buildColorSizeMeta(order) {
  * @returns {Object} { deliveryDateStr, remainDays, remainDaysText, remainDaysClass }
  */
 function calcDeliveryInfo(source) {
+  const pad = n => String(n).padStart(2, '0');
+  var dateStr, d;
   // 已关单 / 已完成：停止倒计时，直接显示关单状态
   const status = String(source.status || '').toLowerCase();
   if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
     const raw = source.plannedEndDate || source.expectedShipDate || '';
-    var dateStr = '';
+    dateStr = '';
     if (raw) {
       const s = String(raw);
       if (s.length > 10) {
-        var d = new Date(s.replace(/-/g, '/'));
+        d = new Date(s.replace(/-/g, '/'));
         if (!isNaN(d.getTime())) {
-          var pad = n => String(n).padStart(2, '0');
           dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         } else {
           dateStr = s.substring(0, 16);
@@ -176,11 +177,10 @@ function calcDeliveryInfo(source) {
   const raw = source.plannedEndDate || source.expectedShipDate || '';
   if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
 
-  var dateStr = String(raw);
+  dateStr = String(raw);
   if (dateStr.length > 10) {
-    var d = new Date(dateStr.replace(/-/g, '/'));
+    d = new Date(dateStr.replace(/-/g, '/'));
     if (!isNaN(d.getTime())) {
-      var pad = n => String(n).padStart(2, '0');
       dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     } else {
       dateStr = dateStr.substring(0, 16);
@@ -298,6 +298,7 @@ function transformOrderData(r) {
     orderedQty: source.orderQuantity || 0,
     styleCoverUrl,
     statusText: orderStatusText(source.status),
+    statusClass: orderStatusBadgeClass(source.status),
     isClosed: isClosedStatus(source.status),
     sizeList: sizeMeta.sizeList,
     sizeQtyList: sizeMeta.sizeQtyList,

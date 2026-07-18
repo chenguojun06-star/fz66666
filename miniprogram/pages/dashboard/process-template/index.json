@@ -1,6 +1,8 @@
 {
-  "navigationStyle": "default",
+  "navigationStyle": "custom",
   "navigationBarTitleText": "工序模板配置",
   "enablePullDownRefresh": false,
-  "usingComponents": {}
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

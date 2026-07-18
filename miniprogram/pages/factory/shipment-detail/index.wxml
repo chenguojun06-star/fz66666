@@ -1,0 +1,191 @@
+<!-- 发货管理详情页（独立页面） -->
+<view class="page">
+  <custom-nav title="发货管理" show-back="{{true}}"></custom-nav>
+
+  <!-- 订单信息区 -->
+  <view class="order-card" wx:if="{{order}}">
+    <view class="oi-cover" catchtap="onCoverPreview" data-url="{{order.styleCoverUrl}}">
+      <image wx:if="{{order.styleCoverUrl}}" class="oi-pic" src="{{order.styleCoverUrl}}" mode="aspectFill" lazy-load />
+      <view wx:else class="oi-cover-ph"><view class="line-icon line-icon--xl icon-package"></view></view>
+    </view>
+    <view class="oi-main">
+      <text class="oi-no">{{order.orderNo}}</text>
+      <text class="oi-style">{{order.styleName || order.styleNo || '暂无款名'}}</text>
+      <text class="oi-style-no" wx:if="{{order.styleNo}}">款号：{{order.styleNo}}</text>
+      <text class="oi-factory" wx:if="{{order.factoryName}}">{{order.factoryName}}</text>
+    </view>
+  </view>
+
+  <!-- Tab 切换 -->
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="onSwitchTab">发货</view>
+    <view class="tab-item {{activeTab===1?'tab-active':''}}" data-tab="1" bindtap="onSwitchTab">发货记录</view>
+    <view class="tab-item {{activeTab===2?'tab-active':''}}" data-tab="2" bindtap="onSwitchTab" wx:if="{{isTenantAdmin}}">收货确认</view>
+  </view>
+
+  <!-- ===== Tab1: 发货 ===== -->
+  <view wx:if="{{activeTab===0}}" class="tab-content">
+    <!-- 可发数量行 -->
+    <view class="ship-remaining-row" wx:if="{{shippableInfo}}">
+      <text class="ship-remaining-label">可发数量</text>
+      <text class="ship-remaining-value"><text class="ship-remaining-num">{{shippableInfo.remaining || 0}}</text> 件</text>
+    </view>
+
+    <!-- 发货明细表 -->
+    <view class="section-card">
+      <view class="section-title">发货明细</view>
+      <view class="ship-table">
+        <view class="ship-table__head">
+          <text class="st-col st-col--color">颜色</text>
+          <text class="st-col st-col--size">尺码</text>
+          <text class="st-col st-col--ordered">下单</text>
+          <text class="st-col st-col--shipped">已发</text>
+          <text class="st-col st-col--input">发货数</text>
+        </view>
+        <view wx:for="{{shipDetails}}" wx:key="index" class="ship-table__row">
+          <text class="st-col st-col--color">{{item.color || '-'}}</text>
+          <text class="st-col st-col--size">{{item.sizeName || '-'}}</text>
+          <text class="st-col st-col--ordered">{{item.ordered}}</text>
+          <text class="st-col st-col--shipped">{{item.shipped}}</text>
+          <view class="st-col st-col--input">
+            <input class="ship-qty-input" type="number" placeholder="0" value="{{item.quantity}}" data-index="{{index}}" bindinput="onShipDetailQtyInput" />
+          </view>
+        </view>
+        <view wx:if="{{shipDetails.length === 0}}" class="ship-table__empty">暂无颜色尺码明细</view>
+      </view>
+    </view>
+
+    <!-- 发货方式 -->
+    <view class="section-card">
+      <view class="section-title">发货方式</view>
+      <radio-group bindchange="onShipMethodChange" class="ship-method__group">
+        <label class="ship-method__btn {{shipForm.shipMethod === 'SELF_DELIVERY' ? 'ship-method__btn--active' : ''}}">
+          <radio value="SELF_DELIVERY" checked="{{shipForm.shipMethod === 'SELF_DELIVERY'}}" class="ship-radio-hidden" />
+          <text>自送</text>
+        </label>
+        <label class="ship-method__btn {{shipForm.shipMethod === 'EXPRESS' ? 'ship-method__btn--active' : ''}}">
+          <radio value="EXPRESS" checked="{{shipForm.shipMethod === 'EXPRESS'}}" class="ship-radio-hidden" />
+          <text>快递</text>
+        </label>
+      </radio-group>
+
+      <!-- 快递公司（仅快递方式显示） -->
+      <view wx:if="{{shipForm.shipMethod==='EXPRESS'}}" class="ship-field">
+        <text class="ship-field__label">快递公司</text>
+        <input class="ship-field__input" placeholder="请输入快递公司" value="{{shipForm.expressCompany}}" data-field="expressCompany" bindinput="onShipFieldInput" />
+      </view>
+      <!-- 快递单号 -->
+      <view wx:if="{{shipForm.shipMethod==='EXPRESS'}}" class="ship-field">
+        <text class="ship-field__label">快递单号</text>
+        <input class="ship-field__input" placeholder="请输入快递单号" value="{{shipForm.trackingNo}}" data-field="trackingNo" bindinput="onShipFieldInput" />
+      </view>
+      <!-- 备注 -->
+      <view class="ship-field">
+        <text class="ship-field__label">备注</text>
+        <textarea class="ship-field__textarea" placeholder="选填" value="{{shipForm.remark}}" data-field="remark" bindinput="onShipFieldInput" />
+      </view>
+    </view>
+
+    <view style="height: 80px;"></view>
+  </view>
+
+  <!-- 底部固定确认发货按钮（仅发货 Tab 显示） -->
+  <view wx:if="{{activeTab===0}}" class="submit-bar">
+    <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmitShip">{{submitting ? '提交中…' : '确认发货'}}</view>
+  </view>
+
+  <!-- ===== Tab2: 发货记录 ===== -->
+  <view wx:if="{{activeTab===1}}" class="tab-content">
+    <view wx:if="{{shipmentRecords.length===0 && !recordsLoading}}" class="empty">
+      <view class="line-icon line-icon--xl icon-package"></view>
+      <text class="empty-text">暂无发货记录</text>
+    </view>
+
+    <view wx:for="{{shipmentRecords}}" wx:key="id" class="record-card">
+      <!-- 记录头部 -->
+      <view class="record-head" data-id="{{item.id}}" bindtap="onToggleRecord">
+        <view class="record-head-left">
+          <text class="record-no">{{item.shipmentNo || item.orderNo || ('发货-' + item.id)}}</text>
+          <text class="record-status {{item.statusCls}}">{{item.statusText}}</text>
+        </view>
+        <view class="record-head-right">
+          <text class="record-qty">{{item.totalQuantity || 0}}件</text>
+          <view class="record-arrow {{expandedRecordId === item.id ? 'record-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
+        </view>
+      </view>
+      <view class="record-meta">
+        <text wx:if="{{item.shipDate}}">发货：{{item.shipDate}}</text>
+        <text wx:elif="{{item.createdAt}}">发货：{{item.createdAt}}</text>
+        <text wx:if="{{item.shipMethod === 'EXPRESS'}}" class="record-express">快递：{{item.expressCompany || ''}} {{item.trackingNo || ''}}</text>
+      </view>
+
+      <!-- 展开明细 -->
+      <view wx:if="{{expandedRecordId === item.id}}" class="record-detail">
+        <view class="ship-table">
+          <view class="ship-table__head">
+            <text class="st-col st-col--color">颜色</text>
+            <text class="st-col st-col--size">尺码</text>
+            <text class="st-col st-col--input st-col--readonly">数量</text>
+          </view>
+          <view wx:for="{{item.details}}" wx:for-item="d" wx:key="index" class="ship-table__row">
+            <text class="st-col st-col--color">{{d.color || '-'}}</text>
+            <text class="st-col st-col--size">{{d.sizeName || '-'}}</text>
+            <text class="st-col st-col--input st-col--readonly">{{d.quantity}}</text>
+          </view>
+          <view wx:if="{{!item.details || item.details.length === 0}}" class="ship-table__empty">暂无明细</view>
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="record-actions">
+          <view wx:if="{{item.receiveStatus==='pending' && isFactory}}" class="record-btn record-btn--danger" data-id="{{item.id}}" catchtap="onDeleteShipment">删除</view>
+          <view wx:if="{{item.receiveStatus==='pending' && isTenantAdmin}}" class="record-btn record-btn--primary" data-id="{{item.id}}" catchtap="onGoReceiveTab">收货确认</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="load-tip" wx:if="{{recordsLoading}}">加载中…</view>
+  </view>
+
+  <!-- ===== Tab3: 收货确认（仅租户管理员可见） ===== -->
+  <view wx:if="{{activeTab===2 && isTenantAdmin}}" class="tab-content">
+    <view wx:if="{{pendingShipments.length===0 && !recordsLoading}}" class="empty">
+      <view class="line-icon line-icon--xl icon-package"></view>
+      <text class="empty-text">暂无待收货记录</text>
+    </view>
+
+    <view wx:for="{{pendingShipments}}" wx:key="id" class="record-card">
+      <view class="record-head">
+        <view class="record-head-left">
+          <text class="record-no">{{item.shipmentNo || item.orderNo || ('发货-' + item.id)}}</text>
+          <text class="record-status {{item.statusCls}}">{{item.statusText}}</text>
+        </view>
+        <view class="record-head-right">
+          <text class="record-qty">{{item.totalQuantity || 0}}件</text>
+        </view>
+      </view>
+
+      <!-- 收货明细表 -->
+      <view class="ship-table">
+        <view class="ship-table__head">
+          <text class="st-col st-col--color">颜色</text>
+          <text class="st-col st-col--size">尺码</text>
+          <text class="st-col st-col--shipped">发货数</text>
+          <text class="st-col st-col--input">到货数</text>
+        </view>
+        <view wx:for="{{receiveForms[item.id]}}" wx:for-item="d" wx:key="index" class="ship-table__row">
+          <text class="st-col st-col--color">{{d.color || '-'}}</text>
+          <text class="st-col st-col--size">{{d.sizeName || '-'}}</text>
+          <text class="st-col st-col--shipped">{{d.quantity}}</text>
+          <view class="st-col st-col--input">
+            <input class="ship-qty-input" type="number" placeholder="0" value="{{d.receivedQuantity}}" data-sid="{{item.id}}" data-index="{{index}}" bindinput="onReceiveDetailQtyInput" />
+          </view>
+        </view>
+        <view wx:if="{{!receiveForms[item.id] || receiveForms[item.id].length === 0}}" class="ship-table__empty">暂无明细</view>
+      </view>
+
+      <view class="record-actions">
+        <view class="record-btn record-btn--primary" data-id="{{item.id}}" bindtap="onSubmitReceive">确认收货</view>
+      </view>
+    </view>
+  </view>
+</view>

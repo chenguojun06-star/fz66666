@@ -35,6 +35,9 @@ Page({
     editable: false,
     hasChanges: false,
     stages: [],
+    totalCount: 0,
+    totalPrice: 0,
+    modifiedCount: 0,
     processEditId: null,
     editForm: {},
     showAddModal: false,
@@ -97,7 +100,7 @@ Page({
 
       const processes = that._extractProcesses(order);
       that._buildStages(processes);
-      this._originalProcesses = JSON.parse(JSON.stringify(processes));
+      that._originalProcesses = JSON.parse(JSON.stringify(processes));
       that._deletedIds = [];
       that._newProcesses = [];
       that.setData({ loading: false });
@@ -158,7 +161,7 @@ Page({
 
   _buildStages: function (processes) {
     const stageMap = {};
-    STAGE_MAP.forEach(function (s) { stageMap[s.id] = { id: s.id, name: s.name, processes: [] }; });
+    STAGE_MAP.forEach(function (s) { stageMap[s.id] = { id: s.id, name: s.name, processes: [], totalPrice: 0 }; });
 
     processes.forEach(function (p) {
       const raw = p.progressStage || '';
@@ -168,11 +171,36 @@ Page({
       if (!stageId) stageId = STAGE_NAME_TO_ID[raw] || null;
       // 3. 兜底归入尾部（与PC端默认规则一致）
       if (!stageId) stageId = 'tailProcess';
+      p.modified = false;
       stageMap[stageId].processes.push(p);
+      stageMap[stageId].totalPrice += Number(p.price || 0);
     });
 
-    const stages = STAGE_MAP.map(function (s) { return stageMap[s.id]; });
+    const stages = STAGE_MAP.map(function (s) {
+      var st = stageMap[s.id];
+      st.totalPrice = st.totalPrice.toFixed(2);
+      return st;
+    });
+    this._recalcTotals(stages);
     this.setData({ stages: stages });
+  },
+
+  _recalcTotals: function (stages) {
+    var totalCount = 0;
+    var totalPrice = 0;
+    var modifiedCount = 0;
+    (stages || this.data.stages).forEach(function (st) {
+      st.processes.forEach(function (p) {
+        totalCount++;
+        totalPrice += Number(p.price || 0);
+        if (p.modified) modifiedCount++;
+      });
+    });
+    this.setData({
+      totalCount: totalCount,
+      totalPrice: totalPrice.toFixed(2),
+      modifiedCount: modifiedCount,
+    });
   },
 
   onAddProcess: function (e) {
@@ -232,6 +260,7 @@ Page({
     }
     this._newProcesses.push(newProcess);
     this.setData({ stages: stages, showAddModal: false, hasChanges: true });
+    this._recalcStageTotal(form.stageId);
   },
 
   onEditProcess: function (e) {
@@ -301,11 +330,19 @@ Page({
           procs[j].price = parseFloat(form.price) || 0;
           procs[j].standardTime = parseInt(form.standardTime) || 0;
           procs[j].difficulty = form.difficulty || '中';
+          procs[j].modified = true;
           break;
         }
       }
     }
+    // 重新计算阶段总价和全局统计
+    stages.forEach(function (st) {
+      var sum = 0;
+      st.processes.forEach(function (p) { sum += Number(p.price || 0); });
+      st.totalPrice = sum.toFixed(2);
+    });
     this.setData({ stages: stages, processEditId: null, editForm: {}, hasChanges: true });
+    this._recalcTotals(stages);
   },
 
   onDeleteProcess: function (e) {
@@ -334,8 +371,71 @@ Page({
           }
         }
         that.setData({ stages: stages, hasChanges: true });
+        that._recalcStageTotal(stageId);
       },
     });
+  },
+
+  onMoveUp: function (e) {
+    const id = e.currentTarget.dataset.id;
+    const stageId = e.currentTarget.dataset.stageId;
+    const stages = this.data.stages;
+    for (let i = 0; i < stages.length; i++) {
+      if (stages[i].id === stageId) {
+        const procs = stages[i].processes;
+        for (let j = 0; j < procs.length; j++) {
+          if (procs[j].id === id && j > 0) {
+            const tmp = procs[j - 1];
+            procs[j - 1] = procs[j];
+            procs[j] = tmp;
+            procs[j - 1].modified = true;
+            procs[j].modified = true;
+            this.setData({ stages: stages, hasChanges: true });
+            this._recalcTotals(stages);
+            return;
+          }
+        }
+        break;
+      }
+    }
+  },
+
+  onMoveDown: function (e) {
+    const id = e.currentTarget.dataset.id;
+    const stageId = e.currentTarget.dataset.stageId;
+    const stages = this.data.stages;
+    for (let i = 0; i < stages.length; i++) {
+      if (stages[i].id === stageId) {
+        const procs = stages[i].processes;
+        for (let j = 0; j < procs.length; j++) {
+          if (procs[j].id === id && j < procs.length - 1) {
+            const tmp = procs[j + 1];
+            procs[j + 1] = procs[j];
+            procs[j] = tmp;
+            procs[j].modified = true;
+            procs[j + 1].modified = true;
+            this.setData({ stages: stages, hasChanges: true });
+            this._recalcTotals(stages);
+            return;
+          }
+        }
+        break;
+      }
+    }
+  },
+
+  _recalcStageTotal: function (stageId) {
+    const stages = this.data.stages;
+    for (let i = 0; i < stages.length; i++) {
+      if (stages[i].id === stageId) {
+        var sum = 0;
+        stages[i].processes.forEach(function (p) { sum += Number(p.price || 0); });
+        stages[i].totalPrice = sum.toFixed(2);
+        break;
+      }
+    }
+    this.setData({ stages: stages });
+    this._recalcTotals(stages);
   },
 
   onResetChanges: function () {
@@ -381,9 +481,11 @@ Page({
     });
 
     const workflowJson = JSON.stringify({ nodes: nodes });
+    const deletedIds = that._deletedIds || [];
     const payload = {
       id: that.data.orderId,
       progressWorkflowJson: workflowJson,
+      deletedIds: deletedIds,
     };
 
     wx.showLoading({ title: '保存中...' });
@@ -392,7 +494,7 @@ Page({
       that._deletedIds = [];
       that._newProcesses = [];
       that.setData({ hasChanges: false });
-      that._buildStages(nodes.map(function (n, i) {
+      that._buildStages(nodes.map(function (n, _i) {
         return {
           id: n.id,
           processName: n.name,
@@ -405,7 +507,7 @@ Page({
           sortOrder: n.sortOrder,
         };
       }));
-      that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n, i) {
+      that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n, _i) {
         return {
           id: n.id, processName: n.name, processCode: n.processCode,
           progressStage: n.progressStage, machineType: n.machineType,

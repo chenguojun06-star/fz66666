@@ -1,7 +1,9 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "扫码历史",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "scan-record-table": "../../../components/scan-record-table",
     "date-picker": "/components/common/date-picker/index",
     "empty-state": "/components/empty-state/empty-state",

@@ -153,11 +153,9 @@ Page({
     
     return api.sampleStock.list(params)
       .then((res) => {
-        let data = res;
-        if (res && res.data) data = res.data;
-        if (res && res.records) data = res;
+        const data = res || {};
         
-        const records = (data?.records || data?.data || []).map(item => ({
+        const records = (data?.records || []).map(item => ({
           ...item,
           _imageUrl: buildImageUrl(item.imageUrl || item.coverImage || ''),
           _sampleTypeLabel: translateSampleType(item.sampleType || ''),
@@ -369,7 +367,7 @@ Page({
         this.querySample(data.styleNo, data.color, data.size);
         return;
       }
-    } catch (e) {}
+    } catch (e) { /* 扫码解析异常，继续按空格分割逻辑 */ }
     
     const parts = code.trim().split(/\s+/);
     if (parts.length >= 3) {
@@ -396,8 +394,7 @@ Page({
   _loadWarehouseOptions() {
     return api.warehouse.listWarehouseAreas('SAMPLE')
       .then((res) => {
-        const data = res?.data || res;
-        const list = Array.isArray(data) ? data : [];
+        const list = Array.isArray(res) ? res : [];
         if (list.length > 0) {
           const areaMap = {};
           const options = [];
@@ -456,8 +453,7 @@ Page({
     }
     return api.warehouse.listLocations('SAMPLE', areaId)
       .then((res) => {
-        const data = res?.data || res;
-        const list = Array.isArray(data) ? data : [];
+        const list = Array.isArray(res) ? res : [];
         if (list.length > 0) {
           const locMap = {};
           const options = [];

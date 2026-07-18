@@ -8,7 +8,6 @@
  * @description 管理页面生命周期、事件订阅和数据刷新
  */
 
-/* global Behavior */
 const ScanHandler = require('../handlers/ScanHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
@@ -25,7 +24,7 @@ const scanLifecycleMixin = Behavior({
    * 生命周期函数--监听页面加载
    * @returns {Promise<void>} 无返回值
    */
-  async onLoad() {
+  async onLoad(query) {
     // 初始化业务处理器（加 try-catch，防止构造抛错导致 scanHandler 永远为 null）
     try {
       this.scanHandler = new ScanHandler(api, {
@@ -37,6 +36,11 @@ const scanLifecycleMixin = Behavior({
     } catch (e) {
       console.error('[scanLifecycleMixin] ScanHandler 初始化失败:', e);
       // scanHandler 保持 null，processScanCode 中会做守卫提示
+    }
+
+    // 接收外部页面传入的扫码结果，自动处理
+    if (query && query.code) {
+      this._pendingScanCode = decodeURIComponent(query.code);
     }
 
     // 订阅全局事件
@@ -98,6 +102,18 @@ const scanLifecycleMixin = Behavior({
       this.getTabBar().setData({ selected: 1 });
     }
 
+    // 处理外部页面传入的扫码结果（wx.scanCode 扫到的码）
+    if (this._pendingScanCode) {
+      const code = this._pendingScanCode;
+      this._pendingScanCode = null;
+      setTimeout(() => {
+        if (typeof this.processScanCode === 'function') {
+          this.processScanCode(code);
+        }
+      }, 300);
+      return;
+    }
+
     // 从扫码确认页返回时，读取最新扫码结果并显示成功提示
     try {
       const lastScanRes = getApp().globalData.lastScanResult;
@@ -125,7 +141,7 @@ const scanLifecycleMixin = Behavior({
     // 每次显示都检查登录状态和更新统计
     const isLogin = await this.checkLoginStatus();
     if (isLogin) {
-      // ✅ 并行加载数据（try/catch 防止任一失败导致待办弹窗不弹出）
+      // [OK] 并行加载数据（try/catch 防止任一失败导致待办弹窗不弹出）
       try {
         await this.loadMyPanel(true);
 
@@ -148,7 +164,7 @@ const scanLifecycleMixin = Behavior({
         console.error('[scanLifecycleMixin] onShow 数据加载异常（不影响待办弹窗）:', err);
       }
 
-      // ✅ 无论数据加载成功与否，都检查待处理任务（从铃铛/小云点击过来）
+      // [OK] 无论数据加载成功与否，都检查待处理任务（从铃铛/小云点击过来）
       this.checkPendingTasks();
       // 检查离线队列，有项目就尝试同步（切回此页时网络可能已恢复）
       const offlineCount = ScanOfflineQueue.count();
@@ -228,7 +244,7 @@ const scanLifecycleMixin = Behavior({
         if (taskStr) {
           wx.removeStorageSync('pending_quality_task');
           const task = JSON.parse(taskStr);
-          // ✅ 延迟弹出质检弹窗，确保页面渲染完成
+          // [OK] 延迟弹出质检弹窗，确保页面渲染完成
           setTimeout(() => {
             this.showQualityModal({
               orderId: task.orderId || '', // 订单ID（warehousing需要）

@@ -67,7 +67,7 @@ App({
       console.log = () => {};
     }
 
-    // ✅ 隐私保护授权监听（基础库 2.32.3+，2023-09-15 微信强制要求）
+    // [OK] 隐私保护授权监听（基础库 2.32.3+，2023-09-15 微信强制要求）
     // 当用户触发需要隐私授权的 API（扫码/选图等）时，通过 eventBus 通知当前页面弹窗
     if (typeof wx.onNeedPrivacyAuthorization === 'function') {
       wx.onNeedPrivacyAuthorization(resolve => {
@@ -199,7 +199,7 @@ App({
     const { clearUserInfo } = require('./utils/storage');
     clearUserInfo();
 
-    // ✅ 清除所有业务缓存，防止跨租户数据泄漏
+    // [OK] 清除所有业务缓存，防止跨租户数据泄漏
     const BUSINESS_KEYS = [
       'pending_cutting_task',
       'pending_procurement_task',

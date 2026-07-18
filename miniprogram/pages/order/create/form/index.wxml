@@ -135,7 +135,7 @@
         <view class="f-btn" bindtap="onColorAdd"><text>添加</text></view>
       </view>
       <view class="chip-wrap" wx:if="{{colorOptions.length > 0}}">
-        <view class="chip {{selectedColors.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{colorOptions}}" wx:key="*this" data-c="{{item}}" bindtap="onColorToggle">{{item}}<text wx:if="{{selectedColors.indexOf(item) !== -1}}" style="margin-left:2px;font-size:10px;">✓</text></view>
+        <view class="chip {{selectedColors.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{colorOptions}}" wx:key="*this" data-c="{{item}}" bindtap="onColorToggle">{{item}}<view wx:if="{{selectedColors.indexOf(item) !== -1}}" class="icon-check-sm" style="margin-left:2px;"></view></view>
       </view>
 
       <view class="add-row">
@@ -144,7 +144,7 @@
         <view class="f-btn" bindtap="onSizeAdd"><text>添加</text></view>
       </view>
       <view class="chip-wrap" wx:if="{{sizeOptions.length > 0}}">
-        <view class="chip {{selectedSizes.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{sizeOptions}}" wx:key="*this" data-s="{{item}}" bindtap="onSizeToggle">{{item}}<text wx:if="{{selectedSizes.indexOf(item) !== -1}}" style="margin-left:2px;font-size:10px;">✓</text></view>
+        <view class="chip {{selectedSizes.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{sizeOptions}}" wx:key="*this" data-s="{{item}}" bindtap="onSizeToggle">{{item}}<view wx:if="{{selectedSizes.indexOf(item) !== -1}}" class="icon-check-sm" style="margin-left:2px;"></view></view>
       </view>
 
       <view class="qfill" wx:if="{{orderLines.length > 0}}">

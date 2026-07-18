@@ -41,7 +41,7 @@ Page({
         try {
           const dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
-        } catch (_) {}
+        } catch (_) { /* 隐私弹窗异常忽略 */ }
       }.bind(this));
     }
     this._loadRemarks();
@@ -49,13 +49,12 @@ Page({
 
   onUnload: function () {
     if (this._unsubPrivacy) {
-      try { this._unsubPrivacy(); } catch (_) {}
+      try { this._unsubPrivacy(); } catch (_) { /* 取消订阅异常忽略 */ }
       this._unsubPrivacy = null;
     }
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     this._loadRemarks().finally(function () {
       wx.stopPullDownRefresh();
     });

@@ -2,6 +2,7 @@
   "navigationStyle": "custom",
   "usingComponents": {
     "custom-nav": "/components/common/custom-nav/index",
-    "privacy-dialog": "/components/privacy-dialog/index"
+    "privacy-dialog": "/components/privacy-dialog/index",
+    "image-preview": "/components/common/image-preview/index"
   }
 }

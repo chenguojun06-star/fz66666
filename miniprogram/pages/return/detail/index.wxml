@@ -1,20 +1,21 @@
+<custom-nav title="退货详情" show-back="{{true}}" />
 <view class="page-container">
   <block wx:if="{{loading}}">
     <view class="loading-wrap">加载中...</view>
   </block>
 
   <block wx:elif="{{detail}}">
-    <!-- ══ 顶部信息卡 ══ -->
+    <!-- ══ 1. 顶部信息卡 ══ -->
     <view class="top-card">
-      <view class="top-left">
+      <view class="cover-wrap">
         <view class="cover-placeholder">
-          <text class="icon-return"></text>
+          <view class="icon-return"></view>
         </view>
       </view>
       <view class="top-right">
         <view class="top-title-row">
           <text class="top-order-no">{{detail.returnNo}}</text>
-          <view class="status-tag" style="background:{{statusColor}}1a;color:{{statusColor}};">
+          <view class="status-tag tag-{{statusClass}}">
             <text>{{statusLabel}}</text>
           </view>
         </view>
@@ -28,7 +29,7 @@
       </view>
     </view>
 
-    <!-- ══ 数据概览卡 ══ -->
+    <!-- ══ 2. 数据概览卡 ══ -->
     <view class="overview-card">
       <view class="overview-item">
         <text class="overview-value">{{detail.returnType === '全部退货' ? '100%' : returnRatio}}</text>
@@ -46,7 +47,7 @@
       </view>
     </view>
 
-    <!-- ══ 基本信息 ══ -->
+    <!-- ══ 3. 基本信息 ══ -->
     <view class="section-card">
       <view class="section-header">
         <text class="section-title">基本信息</text>
@@ -93,8 +94,8 @@
           <text class="info-item-value refund-value">¥{{detail.refundAmount}}</text>
         </view>
       </view>
-      <view class="info-full-row reason-row" wx:if="{{detail.returnReason && detail.returnReason !== '-'}}">
-        <text class="reason-icon">⚠</text>
+      <view class="info-full-row" wx:if="{{detail.returnReason && detail.returnReason !== '-'}}">
+        <text class="info-item-label">退货原因</text>
         <text class="info-item-value full-value">{{detail.returnReason}}</text>
       </view>
       <view class="info-full-row" wx:if="{{detail.remark && detail.remark !== '-'}}">
@@ -103,7 +104,7 @@
       </view>
     </view>
 
-    <!-- ══ 退货明细 ══ -->
+    <!-- ══ 4. 退货明细 ══ -->
     <view class="section-card">
       <view class="section-header">
         <text class="section-title">退货明细</text>
@@ -126,7 +127,7 @@
               <text class="item-price">单价：¥{{item.unitPrice}}</text>
             </view>
             <view class="item-reason-row" wx:if="{{item.returnReason}}">
-              <text class="item-reason-icon">⚠</text>
+              <view class="item-reason-icon"></view>
               <text class="item-reason-text">{{item.returnReason}}</text>
             </view>
           </view>
@@ -137,7 +138,7 @@
     <!-- 底部安全距离 -->
     <view class="bottom-safe" wx:if="{{canApprove || canComplete || canReject || showRefundBtn}}"></view>
 
-    <!-- ══ 底部操作栏 ══ -->
+    <!-- ══ 5. 底部操作栏（sticky） ══ -->
     <view class="action-bar" wx:if="{{canApprove || canComplete || canReject}}">
       <button wx:if="{{canReject}}" class="action-btn action-btn--danger" bindtap="onReject">拒绝</button>
       <button wx:if="{{canApprove}}" class="action-btn action-btn--primary" bindtap="onApprove">审核通过</button>

@@ -156,11 +156,20 @@ function prompt({
 
 /**
  * 全局导航锁（防止快速重复跳转导致路由错误）
+ *
+ * 设计要点：
+ * - navigating 锁防止并发 navigateTo（避免 routeDone webviewId not found 错误）
+ * - pendingNavigate 记录被防抖拦截的最后一次导航意图，当前导航结束后自动重试一次
+ *   （历史教训：2026-07-13 之前被拦截时直接 return，导致用户疯狂点击全部丢失，
+ *    5 秒超时后用户已离开，UI 看似卡死）
+ * - NAVIGATE_TIMEOUT=3s（5s 太长，用户会以为卡死开始疯狂点击）
  */
 let navigating = false;
 let navigateTimer = null;
-const NAVIGATE_TIMEOUT = 5000; // 导航超时时间(ms)，从3秒增加到5秒
-const NAVIGATE_UNLOCK_DELAY = 1500; // 导航完成后解锁延迟(ms)
+let pendingNavigate = null; // 被防抖拦截的最后一次导航意图 { options, method }
+const NAVIGATE_TIMEOUT = 8000; // 导航超时时间(ms)，分包首次加载需要更长时间
+const NAVIGATE_UNLOCK_DELAY = 800; // 导航完成后解锁延迟(ms)
+const DEBUG_NAVIGATE = false; // 调试日志开关（生产环境保持 false）
 
 // tabBar 页面路径集合（与 app.json tabBar.list 保持一致）
 const TAB_BAR_PAGES = new Set([
@@ -171,20 +180,39 @@ const TAB_BAR_PAGES = new Set([
 ]);
 
 /**
- * 安全导航（带防抖保护 + tabBar 自动检测 + 超时保护）
+ * 安全导航（带防抖保护 + tabBar 自动检测 + 超时保护 + 待执行队列）
  * 防止用户快速点击导致 "routeDone with a webviewId xxx is not found" 错误
  * 自动检测 tabBar 页面并切换为 switchTab，避免 navigateTo 报错
  * 自动检测页面栈深度，避免超过10层导致超时
+ *
+ * 防抖策略：
+ * - 导航进行中被拦截时，记录最后一次意图到 pendingNavigate
+ * - 当前导航结束（success/fail/timeout）后，若有 pendingNavigate，自动重试一次
+ * - 重试也走完整的防抖/超时流程，避免无限递归
+ *
  * @param {Object} options - 导航参数 { url, ... }
  * @param {string} method - 导航方式: navigateTo | switchTab | redirectTo | reLaunch
- * @returns {Promise} - 导航结果
+ * @returns {Promise} - 导航结果（注意：被拦截的调用返回已 resolve 的 Promise，
+ *                      真实结果通过重试 Promise 传递，调用方应 .catch(() => {}) 兜底）
  */
 function safeNavigate(options, method = 'navigateTo') {
   if (navigating) {
-    console.warn('[SafeNavigate] 导航进行中，忽略重复调用:', options.url);
+    // 记录最后一次被拦截的意图，当前导航结束后自动重试一次
+    // 不打印 warn（避免日志噪音），仅保留 pendingNavigate 供后续重试
+    pendingNavigate = { options: { ...options }, method };
     return Promise.resolve();
   }
 
+  return doNavigate(options, method, false);
+}
+
+/**
+ * 实际执行导航（内部函数）
+ * @param {Object} options - 导航参数
+ * @param {string} method - 导航方式
+ * @param {boolean} isRetry - 是否为重试调用（重试不再入队 pendingNavigate，避免无限递归）
+ */
+function doNavigate(options, method, isRetry) {
   const urlPath = (options.url || '').split('?')[0];
 
   // 自动检测 tabBar 页面：如果目标是 tabBar 页面且当前不是 switchTab，自动纠正
@@ -219,36 +247,100 @@ function safeNavigate(options, method = 'navigateTo') {
   }[method] || wx.navigateTo;
 
   let timeoutTimer = null;
+  let settled = false; // 防止 timeout 和 fail/success 双重触发 finalize
+
+  /**
+   * 导航结束后的清理与重试逻辑（仅执行一次）
+   * @param {boolean} success - 是否成功
+   */
+  const finalize = (success) => {
+    if (settled) return; // 防止双重触发（timeout + fail 都可能回调）
+    settled = true;
+    if (timeoutTimer) {
+      clearTimeout(timeoutTimer);
+      timeoutTimer = null;
+    }
+    if (success) {
+      // success 分支：延迟解锁，防止页面切换动画期间被新的 navigateTo 触发 routeDone 错误
+      navigateTimer = setTimeout(() => {
+        navigating = false;
+        navigateTimer = null;
+        retryPendingIfNeeded();
+      }, NAVIGATE_UNLOCK_DELAY);
+    } else {
+      // fail/timeout 分支：立即解锁，并尝试重试 pendingNavigate
+      navigating = false;
+      navigateTimer = null;
+      retryPendingIfNeeded();
+    }
+  };
+
+  /**
+   * 如果有被拦截的 pendingNavigate，自动重试一次
+   * 重试不再入队 pendingNavigate（isRetry=true），避免无限递归
+   */
+  const retryPendingIfNeeded = () => {
+    if (!pendingNavigate) return;
+    const pending = pendingNavigate;
+    pendingNavigate = null; // 清空，避免重试失败时再次触发
+    if (DEBUG_NAVIGATE) {
+      console.log('[SafeNavigate] 自动重试被拦截的导航:', pending.options.url);
+    }
+    // 重试不返回 Promise（原调用方已返回，无法传递结果）
+    doNavigate(pending.options, pending.method, true).catch(() => {});
+  };
 
   return new Promise((resolve, reject) => {
     // 设置超时保护
     timeoutTimer = setTimeout(() => {
-      navigating = false;
-      navigateTimer = null;
       const err = { errMsg: 'navigateTo:fail timeout' };
       console.error('[SafeNavigate] 导航超时:', options.url, err);
+      finalize(false);
       reject(err);
     }, NAVIGATE_TIMEOUT);
 
     navigator({
       ...options,
       success: (res) => {
-        if (timeoutTimer) clearTimeout(timeoutTimer);
-        navigateTimer = setTimeout(() => {
-          navigating = false;
-          navigateTimer = null;
-        }, NAVIGATE_UNLOCK_DELAY);
+        finalize(true);
         resolve(res);
       },
       fail: (err) => {
-        if (timeoutTimer) clearTimeout(timeoutTimer);
-        navigating = false;
-        navigateTimer = null;
         console.error('[SafeNavigate] 导航失败:', err);
+        finalize(false);
         reject(err);
       },
     });
   });
 }
 
-module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate };
+/**
+ * 快捷扫码：直接调起微信扫码，扫到结果后跳转到扫码处理页
+ * @returns {Promise} 无返回值（扫码失败/取消静默处理）
+ */
+function quickScan() {
+  return new Promise((resolve) => {
+    wx.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success(res) {
+        const code = res.result || '';
+        if (!code) {
+          toast('未识别到内容');
+          resolve(false);
+          return;
+        }
+        safeNavigate({
+          url: '/pages/scan/index?code=' + encodeURIComponent(code),
+        }).catch(() => {});
+        resolve(true);
+      },
+      fail() {
+        // 用户取消扫码，静默处理
+        resolve(false);
+      },
+    });
+  });
+}
+
+module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate, quickScan };

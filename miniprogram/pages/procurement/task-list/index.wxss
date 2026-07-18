@@ -1,215 +1,322 @@
 @import '/styles/page-utils.wxss';
 
+/* =====================================================
+ * 采购任务列表页 — 物料级别卡片
+ * 对照设计稿：procurement.html
+ * 全部使用 design-tokens CSS 变量，禁止硬编码颜色
+ * ===================================================== */
+
 .container {
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse at 20% 0%, rgba(234, 88, 12, 0.06) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(234, 88, 12, 0.03) 0%, var(--color-bg-page) 30%);
-  padding: 0 var(--page-padding-x) calc(40rpx + env(safe-area-inset-bottom));
+  background: var(--color-bg-page);
+  padding: 0 var(--page-padding-x) calc(var(--spacing-2xl) + env(safe-area-inset-bottom));
 }
 
-/* ---- 筛选 Tab ---- */
+/* =====================================================
+ * 一、状态筛选 Tab + 搜索栏（内嵌）
+ * 全部 / 待采购 / 采购中 / 已到货 / 已延期
+ * ===================================================== */
+
+.sticky-header {
+  position: relative;
+  background: var(--color-bg-page);
+  padding-top: 3px;
+}
+
+.filter-tabs-scroll {
+  white-space: nowrap;
+  padding: 0 0 2px;
+}
+
 .filter-tabs {
-  display: flex;
-  padding: 20rpx 0;
-  gap: 16rpx;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  display: inline-flex;
+  gap: 8px;
 }
+
 .filter-tab {
-  flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6rpx;
-  padding: 12rpx 28rpx;
-  border-radius: var(--radius-xl, 24rpx);
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  background: var(--color-bg-page);
   color: var(--color-text-secondary);
-  background: var(--color-bg-card);
-  border-bottom: 1rpx solid var(--color-border);
+  flex-shrink: 0;
 }
+
 .filter-tab.active {
   background: var(--color-primary);
   color: var(--color-text-white);
-  border-color: var(--color-primary);
-}
-.tab-badge {
-  font-size: var(--font-size-xxs);
-  background: rgba(255,255,255,0.3);
-  padding: 2rpx 10rpx;
-  border-radius: 20rpx;
-}
-.filter-tab.active .tab-badge {
-  background: rgba(255,255,255,0.35);
 }
 
-/* ---- 加载状态 ---- */
-.loading-state {
-  text-align: center;
-  padding: 120rpx 0;
+/* 待采购 — 灰色描边 + 灰底 */
+.filter-tab.tab-pending:not(.active) {
+  background: var(--color-bg-muted);
   color: var(--color-text-secondary);
+}
+
+/* 采购中 — 浅蓝底 */
+.filter-tab.tab-procuring:not(.active) {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+
+/* 已到货 — 浅绿底 */
+.filter-tab.tab-arrived:not(.active) {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: transparent;
+}
+
+/* 已延期 — 浅红底 */
+.filter-tab.tab-delayed:not(.active) {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: transparent;
+}
+
+.tab-label {
+  line-height: 1;
+}
+
+.tab-badge {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+}
+
+/* =====================================================
+ * 二、搜索栏
+ * ===================================================== */
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  margin-bottom: 2px;
+}
+.search-bar:focus-within {
+  border-color: var(--color-primary);
+}
+
+.search-icon {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.search-placeholder {
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-md);
 }
 
-/* ---- 空状态 ---- */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 120rpx 0;
-}
-.empty-icon { font-size: 80rpx; opacity: 0.4; }
-.empty-text {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  margin-top: 20rpx;
-}
-.empty-hint {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  margin-top: 8rpx;
-}
+/* =====================================================
+ * 三、加载 / 空状态
+ * （.loading-state / .loading-spinner / .loading-text
+ *   .empty-state / .empty-text / .empty-hint 均在 app.wxss 全局定义）
+ * ===================================================== */
 
-/* ---- 任务卡片 ---- */
-.task-card {
-  margin: 0 0 var(--card-gap-y);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl, 24rpx);
-  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-  overflow: hidden;
-}
-.task-card-hover {
-  transform: scale(0.99);
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08);
-}
-
-/* ---- 卡片头部 ---- */
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24rpx 28rpx 12rpx;
-}
-.card-header-left {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  flex: 1;
-  min-width: 0;
-}
-.card-icon-circle {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
+/* 空状态图标 — line-icon 需要额外居中 */
+.empty-icon.line-icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 32px;
+}
+
+/* =====================================================
+ * 四、物料级别任务卡片
+ * 卡片：rounded-xl(12px) + border + box-shadow，与设计稿 procurement.html 对齐
+ * ===================================================== */
+
+.task-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+/* ---- 卡片头部：图片 + 物料信息 + 状态标签 ---- */
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.card-media {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
+  overflow: hidden;
+  background: var(--color-bg-page);
 }
-.card-icon-circle--orange {
-  background: rgba(234, 88, 12, 0.1);
-  color: #ea580c;
+
+.media-img {
+  width: 100%;
+  height: 100%;
 }
-.card-icon-circle--orange .iconfont {
-  font-size: 30rpx;
+
+.media-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-text-tertiary);
 }
+
 .card-title-area {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
-  min-width: 0;
+  gap: 4px;
+  padding-top: 2px;
 }
-.order-no {
-  font-size: var(--font-size-base);
-  font-weight: 600;
+
+.material-name {
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.style-no {
+
+.material-code {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---- 状态标签 ---- */
-.status-tag {
-  font-size: var(--font-size-xxs);
-  padding: 4rpx 16rpx;
-  border-radius: var(--radius-lg, 16rpx);
+/* 状态标签 — .tag 基础类和 .tag-* 颜色类在 design-tokens.wxss 全局定义 */
+.card-header .tag {
   flex-shrink: 0;
+  align-self: flex-start;
 }
-.tag-orange { background: var(--color-warning-bg); color: var(--color-warning); }
-.tag-blue   { background: var(--color-info-bg); color: var(--color-primary); }
-.tag-green  { background: var(--color-success-bg); color: var(--color-success); }
 
-/* ---- 卡片信息行 ---- */
+/* =====================================================
+ * 五、卡片详情行（2 列网格）
+ * ===================================================== */
+
 .card-body {
-  padding: 0 28rpx 16rpx;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
 }
+
 .info-row {
   display: flex;
-  align-items: center;
-  padding: 6rpx 0;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
+
+/* 跨两列（订单号） */
+.info-row-full {
+  grid-column: 1 / -1;
+}
+
 .info-label {
-  width: 100rpx;
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
+
 .info-value {
-  flex: 1;
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
-}
-.info-value.bold { font-weight: 600; }
-.info-value.arrived { color: var(--color-success); font-weight: 600; }
-.info-value.pending { color: var(--color-warning); font-weight: 600; }
-
-/* ---- 进度条 ---- */
-.progress-wrapper {
-  padding: 0 28rpx 16rpx;
-}
-.progress-bar {
-  height: 6rpx;
-  background: var(--color-border-light);
-  border-radius: 6rpx;
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  background: var(--color-primary);
-  border-radius: 6rpx;
-  transition: width 0.3s ease;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ---- 底部操作栏 ---- */
+/* =====================================================
+ * 六、卡片操作按钮
+ * 主操作（领取采购）：主色填充；次操作（查看详情）：镂空描边
+ * ===================================================== */
+
 .card-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  padding: 16rpx 28rpx 20rpx;
-  border-top: 1px solid var(--color-border-light);
-  gap: 16rpx;
 }
-.btn-action {
-  padding: 12rpx 32rpx;
-  border-radius: var(--radius-lg, 16rpx);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-}
-.btn-primary {
+
+/* 领取采购 — 主色填充按钮，全宽 */
+.btn-claim {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 10px;
   background: var(--color-primary);
   color: var(--color-text-white);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
-.btn-primary-hover {
-  opacity: 0.85;
+
+.btn-claim-hover {
+  opacity: 0.88;
+  transform: scale(0.98);
 }
-.btn-disabled {
-  background: var(--color-bg-page);
-  color: var(--color-text-secondary);
+
+.claim-arrow {
+  font-size: var(--font-size-md);
 }
-.card-arrow {
-  font-size: var(--font-size-md-lg);
-  color: var(--color-text-tertiary);
+
+/* 查看详情 — 镂空描边按钮，右对齐 */
+.btn-detail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
+}
+
+.btn-detail-hover {
+  opacity: 0.7;
 }

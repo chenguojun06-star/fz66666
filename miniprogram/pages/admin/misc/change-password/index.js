@@ -26,6 +26,12 @@ Page({
     if (newPassword.length < 6) {
       return wx.showToast({ title: '新密码至少6位', icon: 'none' });
     }
+    if (!/[a-zA-Z]/.test(newPassword)) {
+      return wx.showToast({ title: '新密码需包含字母', icon: 'none' });
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return wx.showToast({ title: '新密码需包含数字', icon: 'none' });
+    }
     if (newPassword !== confirmPassword) {
       return wx.showToast({ title: '两次输入的密码不一致', icon: 'none' });
     }

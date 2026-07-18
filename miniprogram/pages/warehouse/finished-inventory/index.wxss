@@ -1,0 +1,479 @@
+/**
+ * 成品库存页 — 统一卡片风格
+ * 原生导航栏（不使用 custom-nav）
+ * 卡片用 box-shadow + var(--radius-card)，无 border 外框
+ */
+
+page {
+  background: var(--color-bg-page);
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.container {
+  min-height: 100vh;
+}
+
+/* ============ 统计卡片 ============ */
+.stats-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.stat-card {
+  flex: 1;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 8px;
+  box-sizing: border-box;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value--success {
+  color: var(--color-success);
+}
+
+.stat-value--danger {
+  color: var(--color-danger);
+}
+
+.stat-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* ============ 筛选栏 ============ */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 12px;
+}
+
+.filter-bar > search-scan {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-picker {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  height: 36px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-picker-text {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.filter-picker-arrow {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+/* ============ 加载/空状态 ============ */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 120px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 120px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.empty-text {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.empty-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ============ 列表 ============ */
+.list-wrap {
+  padding: 0;
+}
+
+/* 卡片：与 dashboard/order-card 完全一致 */
+.inventory-item {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 12px;
+  overflow: hidden;
+  padding: 12px;
+  box-sizing: border-box;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.inventory-item--hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* 头部：封面80x80 + 信息（与 dashboard 一致） */
+.item-header {
+  display: flex;
+  gap: 12px;
+}
+
+.item-image {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+  background: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.item-image--placeholder {
+  background: var(--color-primary-bg);
+}
+
+.item-image-text {
+  font-size: 22px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-style-no {
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.item-style-name {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-order {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.item-order-label {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.item-order-value {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.item-tags {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.item-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  line-height: 1.4;
+}
+
+.item-tag--factory {
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+}
+
+.item-tag--success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.item-tag--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* 主体：数量4列，border-top 分隔 */
+.item-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.item-qty-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.qty-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qty-value {
+  font-size: 18px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.qty-value--muted {
+  color: var(--color-text-tertiary);
+}
+
+.qty-value--danger {
+  color: var(--color-danger);
+}
+
+.qty-value--info {
+  color: var(--color-primary);
+}
+
+.qty-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.item-meta {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meta-text {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.meta-arrow {
+  font-size: 14px;
+  color: var(--color-text-quaternary);
+}
+
+/* ============ 加载更多 ============ */
+.load-more {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.load-more-text {
+  font-size: 12px;
+  color: var(--color-text-quaternary);
+}
+
+/* ============ 详情弹窗 ============ */
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-overlay);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-content--bottom {
+  width: 100%;
+  max-height: 70vh;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-text {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+}
+
+.detail-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail-style {
+  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.detail-order {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.detail-scroll {
+  flex: 1;
+  padding: 0 16px 16px;
+  max-height: 50vh;
+}
+
+.sku-table {
+  margin-top: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.sku-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 8px;
+}
+
+.sku-row + .sku-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.sku-row--header {
+  background: var(--color-bg-page);
+}
+
+.sku-row--header .sku-cell {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.sku-cell {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.sku-cell--color {
+  flex: 1.2;
+  text-align: left;
+  padding-left: 4px;
+}
+
+.sku-cell--size {
+  flex: 1;
+}
+
+.sku-cell--qty {
+  flex: 0.9;
+}
+
+.sku-cell--price {
+  flex: 1;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.sku-cell--danger {
+  color: var(--color-danger);
+}
+
+.sku-empty {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.sku-empty-text {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}

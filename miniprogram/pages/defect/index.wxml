@@ -1,162 +1,123 @@
 <view class="container">
-  <!-- Filter Pills (Apple-style, horizontal scrollable) -->
-  <view class="filter-row">
-    <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : 'filter-pill-gray'}}" data-filter="all" bindtap="onFilter">
-      <text>全部</text>
-      <text class="filter-count">({{filterCounts.all}})</text>
+  <custom-nav title="质检" />
+
+  <!-- 筛选标签栏（设计稿：在统计栏上方） -->
+  <scroll-view scroll-x class="filter-row" enhanced show-scrollbar="{{false}}">
+    <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">
+      <text>全部</text><text class="filter-count">({{filterCounts.all}})</text>
     </view>
-    <view class="filter-pill {{activeFilter === 'pending' ? 'filter-pill-active' : 'filter-pill-gray'}}" data-filter="pending" bindtap="onFilter">
-      <text>待检</text>
-      <text class="filter-count">({{filterCounts.pending}})</text>
+    <view class="filter-pill {{activeFilter === 'pending' ? 'filter-pill-active' : ''}}" data-filter="pending" bindtap="onFilter">
+      <text>待检</text><text class="filter-count">({{filterCounts.pending}})</text>
     </view>
-    <view class="filter-pill {{activeFilter === 'qualified' ? 'filter-pill-active' : 'filter-pill-success'}}" data-filter="qualified" bindtap="onFilter">
-      <text>合格</text>
-      <text class="filter-count">({{filterCounts.qualified}})</text>
+    <view class="filter-pill filter-pill-success {{activeFilter === 'qualified' ? 'filter-pill-active' : ''}}" data-filter="qualified" bindtap="onFilter">
+      <text>合格</text><text class="filter-count">({{filterCounts.qualified}})</text>
     </view>
-    <view class="filter-pill {{activeFilter === 'failed' ? 'filter-pill-active' : 'filter-pill-danger'}}" data-filter="failed" bindtap="onFilter">
-      <text>不合格</text>
-      <text class="filter-count">({{filterCounts.failed}})</text>
+    <view class="filter-pill filter-pill-error {{activeFilter === 'unqualified' ? 'filter-pill-active' : ''}}" data-filter="unqualified" bindtap="onFilter">
+      <text>不合格</text><text class="filter-count">({{filterCounts.unqualified}})</text>
     </view>
-    <view class="filter-pill {{activeFilter === 'repairing' ? 'filter-pill-active' : 'filter-pill-warning'}}" data-filter="repairing" bindtap="onFilter">
-      <text>返修</text>
-      <text class="filter-count">({{filterCounts.repairing}})</text>
+    <view class="filter-pill filter-pill-warning {{activeFilter === 'repair' ? 'filter-pill-active' : ''}}" data-filter="repair" bindtap="onFilter">
+      <text>返修</text><text class="filter-count">({{filterCounts.repair}})</text>
+    </view>
+  </scroll-view>
+
+  <!-- 统计栏（设计稿：在筛选标签下方） -->
+  <view class="stats-bar">
+    <view class="stats-item">
+      <view class="stats-value-row">
+        <view class="stats-arrow-up"></view>
+        <text class="stats-value stats-success">{{stats.passRate}}</text>
+      </view>
+      <text class="stats-label">合格率</text>
+    </view>
+    <view class="stats-item stats-item--bordered">
+      <view class="stats-value-row">
+        <view class="stats-arrow-down"></view>
+        <text class="stats-value stats-error">{{stats.unqualifiedCount}}</text>
+      </view>
+      <text class="stats-label">不合格</text>
+    </view>
+    <view class="stats-item">
+      <view class="stats-value-row">
+        <view class="stats-minus-circle"></view>
+        <text class="stats-value stats-warning">{{stats.repairCount}}</text>
+      </view>
+      <text class="stats-label">返修中</text>
     </view>
   </view>
 
-  <!-- Stats Cards (2 independent cards) -->
-  <view class="stats-cards">
-    <!-- 本月不良率 -->
-    <view class="stat-card-box">
-      <text class="stat-card-label">本月不良率</text>
-      <view class="stat-card-main">
-        <text class="stat-card-value stats-error">{{stats.passRate}}%</text>
-        <view class="stat-card-trend stat-card-trend--down">
-          <text class="trend-arrow">↓</text>
-          <text class="trend-text">环比下降 2.1%</text>
-        </view>
-      </view>
-    </view>
-    <!-- 不良品总数 -->
-    <view class="stat-card-box">
-      <text class="stat-card-label">不良品总数</text>
-      <view class="stat-card-main">
-        <text class="stat-card-value stats-error">{{stats.failCount}}</text>
-        <view class="stat-card-trend stat-card-trend--up">
-          <text class="trend-arrow">↑</text>
-          <text class="trend-text">较上月增加 8件</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- iOS Segmented Control Tab -->
-  <view class="seg-control">
-    <view class="seg-btn {{defectTab === 'records' ? 'seg-btn--active' : ''}}" data-tab="records" bindtap="onDefectTabChange">不良记录</view>
-    <view class="seg-btn {{defectTab === 'types' ? 'seg-btn--active' : ''}}" data-tab="types" bindtap="onDefectTabChange">缺陷类型</view>
-  </view>
-
-  <!-- 缺陷类型统计面板 -->
-  <view class="defect-type-panel" wx:if="{{defectTab === 'types'}}">
-    <view class="dt-item">
-      <view class="dt-info">
-        <text class="dt-name">色差</text>
-        <text class="dt-pct">32%</text>
-      </view>
-      <view class="dt-bar"><view class="dt-fill dt-fill--danger" style="width:32%"></view></view>
-    </view>
-    <view class="dt-item">
-      <view class="dt-info">
-        <text class="dt-name">破洞</text>
-        <text class="dt-pct">21%</text>
-      </view>
-      <view class="dt-bar"><view class="dt-fill dt-fill--warning" style="width:21%"></view></view>
-    </view>
-    <view class="dt-item">
-      <view class="dt-info">
-        <text class="dt-name">线头</text>
-        <text class="dt-pct">26%</text>
-      </view>
-      <view class="dt-bar"><view class="dt-fill dt-fill--primary" style="width:26%"></view></view>
-    </view>
-    <view class="dt-item">
-      <view class="dt-info">
-        <text class="dt-name">尺寸偏差</text>
-        <text class="dt-pct">13%</text>
-      </view>
-      <view class="dt-bar"><view class="dt-fill dt-fill--info" style="width:13%"></view></view>
-    </view>
-    <view class="dt-item">
-      <view class="dt-info">
-        <text class="dt-name">其他</text>
-        <text class="dt-pct">8%</text>
-      </view>
-      <view class="dt-bar"><view class="dt-fill dt-fill--muted" style="width:8%"></view></view>
-    </view>
-  </view>
-
-  <!-- 不良记录列表（仅 records tab 显示） -->
-  <block wx:if="{{defectTab !== 'types'}}">
-  <!-- Loading State -->
+  <!-- 加载态 -->
   <view wx:if="{{loading && list.length === 0}}" class="loading-state">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
   </view>
 
-  <!-- Empty State -->
+  <!-- 空状态 -->
   <view wx:elif="{{list.length === 0}}" class="empty-state">
-    <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
-    <text class="empty-text">暂无质检数据</text>
-    <text class="empty-hint">待质检菲号和质检不合格记录会出现在这里</text>
+    <view class="empty-icon"><view class="line-icon line-icon--xl icon-clipboard"></view></view>
+    <text class="empty-text">暂无质检记录</text>
+    <text class="empty-hint">扫码质检后记录会出现在这里</text>
   </view>
 
-  <!-- Quality Check Cards -->
-  <view wx:else class="card-list">
-    <view
-      wx:for="{{list}}"
-      wx:key="id"
-      class="quality-card {{item.qualityStatus === 'pending' ? 'card-border-info' : item.qualityStatus === 'repairing' ? 'card-border-warning' : item.qualityStatus === 'qualified' ? 'card-border-success' : 'card-border-danger'}}"
-      data-index="{{index}}"
-      bindtap="onViewDetail"
-    >
-      <view class="card-body">
-        <!-- Cover Image -->
-        <view class="card-cover" wx:if="{{item.coverImage}}" catchtap="onPreviewCover" data-url="{{item.coverImage}}">
-          <image class="cover-img" src="{{item.coverImage}}" mode="aspectFill" />
-        </view>
-        <!-- Card Info Area -->
-        <view class="card-info">
-          <!-- Top Row: Order Number + Status Tag -->
-          <view class="card-header">
-            <text class="card-order-no">{{item.orderNo || '-'}}</text>
-            <text class="quality-tag {{item.qualityStatus === 'pending' ? 'tag-processing' : item.qualityStatus === 'repairing' ? 'tag-warning' : item.qualityStatus === 'qualified' ? 'tag-success' : 'tag-error'}}">{{item.qualityStatusText}}</text>
+  <!-- 质检记录列表 -->
+  <view wx:else class="list">
+    <view wx:for="{{list}}" wx:key="id" class="quality-card quality-card--{{item.qualityCategory}}" data-index="{{index}}" bindtap="onViewDetail">
+      <view class="card-inner">
+        <view class="card-body">
+          <!-- 封面图 56x56（设计稿：每张卡片左侧有款式图） -->
+          <view class="card-cover" wx:if="{{item.displayCover}}">
+            <image class="cover-img" src="{{item.displayCover}}" mode="aspectFill" />
+          </view>
+          <view class="card-cover card-cover-empty" wx:else>
+            <view class="cover-placeholder"><view class="line-icon icon-camera"></view></view>
           </view>
 
-          <!-- Style Name -->
-          <view class="card-style-row" wx:if="{{item.styleNo || item.styleName}}">
-            <text class="card-style-text">{{item.styleNo || ''}}{{item.styleName ? ' ' + item.styleName : ''}}</text>
-          </view>
-
-          <!-- Tags Row: Bundle No + Color/Size -->
-          <view class="card-tags-row">
-            <text class="card-mini-tag" wx:if="{{item.bundleNo}}">菲号 {{item.bundleNo}}</text>
-            <text class="card-mini-tag" wx:if="{{item.color || item.size}}">{{item.color || '-'}}/{{item.size || '-'}}</text>
-          </view>
-
-          <!-- Bottom Row: Defect Category + Unqualified Count / Quantity -->
-          <view class="card-footer">
-            <text class="card-defect-category" wx:if="{{item.defectCategoryText}}">{{item.defectCategoryText}}</text>
-            <text wx:if="{{item._source === 'pendingQc'}}" class="card-unqualified">数量 <text class="unqualified-num">{{item.quantity || 0}}</text> 件</text>
-            <text wx:else class="card-unqualified">不合格 <text class="unqualified-num">{{item.unqualifiedQuantity || 0}}</text> 件</text>
+          <!-- 信息区 -->
+          <view class="card-info">
+            <!-- 第一行：订单号 + 菲号 + 状态标签 -->
+            <view class="card-row-top">
+              <text class="card-order-no">{{item.orderNo || '-'}}</text>
+              <text class="card-bundle-no" wx:if="{{item.bundleNoShort}}">{{item.bundleNoShort}}</text>
+              <text class="card-status-tag tag-{{item.qualityCategory}}">{{item.qualityCategoryText}}</text>
+            </view>
+            <!-- 第二行：款名 -->
+            <text class="card-style-name" wx:if="{{item.styleName}}">{{item.styleName}}</text>
+            <!-- 第三行：生产方 + 交期倒计时（与PC端对齐） -->
+            <view class="card-meta-line" wx:if="{{item.factoryText || item.deliveryText}}">
+              <view class="card-factory-tag" wx:if="{{item.factoryText}}">
+                <text>{{item.factoryText}}</text>
+                <text class="card-factory-type" wx:if="{{item.factoryTypeText}}">{{item.factoryTypeText}}</text>
+              </view>
+              <view class="card-delivery {{item.deliveryCls}}" wx:if="{{item.deliveryText}}">
+                <text class="delivery-icon"></text>
+                <text>{{item.deliveryText}}</text>
+              </view>
+            </view>
+            <!-- 第四行：缺陷标签 + 颜色尺码 -->
+            <view class="card-tags" wx:if="{{item.defectCategoryText || item.color || item.size}}">
+              <view class="card-defect-tag" wx:if="{{item.defectCategoryText}}">
+                <view class="defect-warning-icon"></view>
+                <text>{{item.defectCategoryText}}</text>
+              </view>
+              <text class="card-cs-tag" wx:if="{{item.color || item.size}}">{{item.color || '-'}}/{{item.size || '-'}}</text>
+            </view>
+            <!-- 第五行：操作人 + 时间 + 数量（始终渲染保持卡片高度一致） -->
+            <view class="card-row-bottom">
+              <view class="card-operator-wrap" wx:if="{{item.operatorName}}">
+                <view class="operator-user-icon"></view>
+                <text class="card-operator">{{item.operatorName}}</text>
+              </view>
+              <text class="card-time">{{item.displayTime || ''}}</text>
+              <text class="card-qty" wx:if="{{item.unqualifiedQuantity}}">{{item.unqualifiedQuantity}}/{{item.quantity}}件</text>
+              <text class="card-qty" wx:elif="{{item.quantity}}">{{item.quantity}}件</text>
+              <text class="card-qty" wx:else>待检</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- Action Buttons (preserve all handlers based on repairStatus) -->
-      <view class="card-actions" catchtap="">
-        <view wx:if="{{item._source === 'pendingQc'}}" class="action-row">
-          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onGoQuality">去质检</view>
-        </view>
-        <view wx:elif="{{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair'}}" class="action-row">
+      <!-- 操作按钮（返修/报废等） -->
+      <view class="card-actions" wx:if="{{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair' || item.repairStatus === 'repairing' || item.repairStatus === 'repair_done'}}" catchtap="">
+        <view wx:if="{{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair'}}" class="action-row">
           <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onStartRepair">开始返修</view>
           <view class="action-btn action-btn-danger" data-index="{{index}}" catchtap="onScrap">报废</view>
         </view>
@@ -170,13 +131,12 @@
     </view>
   </view>
 
-  <!-- Load More -->
+  <!-- 加载更多 -->
   <view wx:if="{{list.length > 0}}" class="load-more">
     <view class="load-more-btn" bindtap="onLoadMore">
       {{loadingMore ? '加载中...' : (hasMore ? '加载更多' : '没有更多了')}}
     </view>
   </view>
-  </block>
 
   <privacy-dialog id="privacyDialog" />
 </view>

@@ -309,9 +309,10 @@ const SKUProcessor = {
       case 'color':
         return copy.sort((a, b) => a.color.localeCompare(b.color, 'zh'));
 
-      case 'size':
+      case 'size': {
         const sortedSizes = sortSizeNames(copy.map(s => s.size));
         return copy.sort((a, b) => sortedSizes.indexOf(a.size) - sortedSizes.indexOf(b.size));
+      }
 
       case 'progress':
         return copy.sort((a, b) => {

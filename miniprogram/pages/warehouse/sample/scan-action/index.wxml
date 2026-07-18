@@ -1,4 +1,6 @@
 <!-- 样衣仓库管理页 -->
+<custom-nav title="样衣扫码" show-back="{{true}}" />
+
 <view class="container">
   
   <!-- ==================== 列表视图 ==================== -->
@@ -6,7 +8,7 @@
     <!-- 搜索栏 -->
     <view class="search-bar">
       <view class="search-box">
-        <text class="search-icon">🔍</text>
+        <view class="line-icon icon-search search-icon"></view>
         <input 
           class="search-input" 
           placeholder="搜索款号/颜色/尺码" 
@@ -14,14 +16,14 @@
           bindinput="onSearchInput"
           bindconfirm="onSearchConfirm"
         />
-        <text class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">✕</text>
+        <view class="line-icon icon-close search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true"></view>
       </view>
     </view>
     
     <!-- 操作按钮 -->
     <view class="action-bar">
       <view class="btn-scan" bindtap="onScanCode">
-        <text class="btn-icon">📷</text>
+        <view class="line-icon icon-camera btn-icon"></view>
         <text class="btn-text">扫码</text>
       </view>
     </view>
@@ -33,13 +35,13 @@
       </view>
       
       <view wx:elif="{{stockListError}}" class="error-card">
-        <text class="error-icon">⚠️</text>
+        <view class="line-icon icon-alert error-icon"></view>
         <text class="error-msg">{{stockListError}}</text>
         <view class="btn-retry" bindtap="loadStockList" data-refresh="true">重试</view>
       </view>
       
       <view wx:elif="{{stockList.length === 0}}" class="empty-wrap">
-        <text class="empty-icon">👕</text>
+        <view class="line-icon icon-shirt empty-icon"></view>
         <text class="empty-text">暂无样衣库存</text>
       </view>
       
@@ -53,7 +55,6 @@
       >
         <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" mode="aspectFill" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
         <view wx:else class="stock-thumb-placeholder">
-          <text>👕</text>
         </view>
         <view class="stock-info">
           <view class="stock-row">
@@ -97,9 +98,8 @@
   <view wx:if="{{viewMode === 'detail'}}">
     <!-- 头部 -->
     <view class="header">
-      <view class="header-back" bindtap="onBackToList">‹ 返回列表</view>
       <text class="header-title">样衣详情</text>
-      <view class="header-scan" bindtap="onScanCode">📷 扫码</view>
+      <view class="header-scan" bindtap="onScanCode">扫码</view>
     </view>
     
     <view class="header-info">
@@ -113,14 +113,14 @@
     
     <!-- 错误提示 -->
     <view class="error-card" wx:elif="{{errorMsg}}">
-      <text class="error-icon">⚠️</text>
+      <view class="line-icon icon-alert error-icon"></view>
       <text class="error-msg">{{errorMsg}}</text>
       <view class="btn-retry" bindtap="onRetry">重试</view>
     </view>
     
     <!-- 成功提示 -->
     <view class="success-banner" wx:if="{{successMsg}}">
-      <text class="success-icon">✅</text>
+      <view class="line-icon icon-checkmark success-icon"></view>
       <text class="success-text">{{successMsg}}</text>
     </view>
     

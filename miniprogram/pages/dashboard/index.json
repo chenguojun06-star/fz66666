@@ -4,6 +4,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "custom-nav": "/components/common/custom-nav/index",
-    "ai-assistant": "/components/ai-assistant/index"
+    "ai-assistant": "/components/ai-assistant/index",
+    "search-scan": "/components/search-scan/index"
   }
 }

@@ -1,45 +1,27 @@
   <!-- ③ 扫码结果 -->
   <wxs src="../../../utils/money.wxs" module="money" />
   <view wx:if="{{lastResult}}" class="result {{lastResult.success ? 'ok' : 'err'}}">
-    <view class="res-header">
+    <view class="res-top">
       <view class="res-cover" wx:if="{{lastResult.coverImage}}" catchtap="onPreviewCover" data-url="{{lastResult.coverImage}}">
         <image class="res-cover-img" src="{{lastResult.coverImage}}" mode="aspectFill" lazy-load />
       </view>
-      <view class="res-header-text">
+      <view class="res-top-text">
         <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
         <text class="res-msg">{{lastResult.message}}</text>
+        <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" hover-class="res-undo-hover" hover-stay-time="100" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
       </view>
-      <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" hover-class="res-undo-hover" hover-stay-time="100" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
     </view>
-    <view wx:if="{{lastResult.orderNo || lastResult.styleNo || lastResult.processName}}" class="res-info-grid">
-      <view wx:if="{{lastResult.orderNo}}" class="res-info-item">
-        <text class="res-info-label">订单号</text>
-        <text class="res-info-value">{{lastResult.orderNo}}</text>
-      </view>
-      <view wx:if="{{lastResult.styleNo}}" class="res-info-item">
-        <text class="res-info-label">款号</text>
-        <text class="res-info-value">{{lastResult.styleNo}}</text>
-      </view>
-      <view wx:if="{{lastResult.processName}}" class="res-info-item">
-        <text class="res-info-label">工序</text>
-        <text class="res-info-value res-proc-tag">{{lastResult.processName}}</text>
-      </view>
-      <view wx:if="{{lastResult.factoryName}}" class="res-info-item">
-        <text class="res-info-label">工厂</text>
-        <text class="res-info-value">{{lastResult.factoryName}}{{lastResult.factoryType === 'INTERNAL' ? ' · 内部' : (lastResult.factoryType === 'EXTERNAL' ? ' · 外部' : '')}}</text>
-      </view>
-      <view wx:if="{{lastResult.color}}" class="res-info-item">
-        <text class="res-info-label">颜色</text>
-        <text class="res-info-value">{{lastResult.color}}</text>
-      </view>
-      <view wx:if="{{lastResult.size}}" class="res-info-item">
-        <text class="res-info-label">码数</text>
-        <text class="res-info-value">{{lastResult.size}}</text>
-      </view>
-      <view wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="res-info-item">
-        <text class="res-info-label">单价</text>
-        <text class="res-info-value {{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{money.toFixed2(lastResult.unitPrice)}}{{lastResult.unitPriceHint ? ' !' : ''}}</text>
-      </view>
+    <view class="res-info">
+      <text wx:if="{{lastResult.orderNo}}" class="res-order">{{lastResult.orderNo}}</text>
+      <text wx:if="{{lastResult.styleNo}}" class="res-style">{{lastResult.styleNo}}</text>
+      <text wx:if="{{lastResult.factoryName}}">{{lastResult.factoryName}}</text>
+      <text wx:if="{{lastResult.orgPath}}">{{lastResult.orgPath}}</text>
+      <text wx:if="{{lastResult.factoryType === 'INTERNAL'}}" class="res-proc">内部</text>
+      <text wx:if="{{lastResult.factoryType === 'EXTERNAL'}}" class="res-proc">外部</text>
+      <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
+      <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
+      <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
+      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{money.toFixed2(lastResult.unitPrice)}}{{lastResult.unitPriceHint ? ' !' : ''}}</text>
     </view>
     <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="res-session-bar">
       <text class="res-session-text">本工序今日累计 {{lastResult.sessionQty}} 件</text>
@@ -48,9 +30,10 @@
       <view class="line-icon line-icon--sm icon-alert hint-icon"></view>
       <text class="hint-text">{{lastResult.unitPriceHint}}</text>
     </view>
-    <!-- 失败后明确下一步操作按钮 -->
+    <!-- 失败后明确下一步操作按鈕 -->
     <view wx:if="{{!lastResult.success && lastResult.errorAction}}" class="res-actions">
       <view wx:if="{{lastResult.errorAction === 'checkNetwork'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onCheckNetwork">检查网络</view>
       <view wx:if="{{lastResult.errorAction === 'retry'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onScan">重新扫码</view>
     </view>
   </view>
+

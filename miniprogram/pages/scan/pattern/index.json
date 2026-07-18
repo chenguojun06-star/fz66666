@@ -1,6 +1,8 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "样板生产",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "image-preview": "/components/common/image-preview/index"
   }
 }

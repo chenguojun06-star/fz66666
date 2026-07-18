@@ -1,3 +1,4 @@
+<custom-nav title="订单备注" show-back="{{true}}" />
 <view class="page">
   <view class="section-card">
     <view class="form-row-col">
@@ -10,14 +11,15 @@
       <view class="photo-grid">
         <view wx:for="{{images}}" wx:key="*this" class="photo-item">
           <image-preview class="photo-img" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="onPreviewImage" />
-          <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
+          <view class="photo-del icon-multiply-sm" data-index="{{index}}" catchtap="onDeleteImage"></view>
         </view>
       </view>
     </view>
 
     <view class="action-bar">
       <view class="act-btn act-btn--photo" bindtap="onChooseImage">
-        <text>📷 拍照/选图</text>
+        <view class="line-icon icon-camera"></view>
+        <text> 拍照/选图</text>
       </view>
       <view class="act-btn act-btn--submit {{submitting ? 'act-btn--disabled' : ''}}" bindtap="onSubmitRemark">
         <text>{{submitting ? '提交中…' : '提交备注'}}</text>

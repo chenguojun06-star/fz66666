@@ -22,6 +22,7 @@ module.exports = {
     App: 'readonly',
     Page: 'readonly',
     Component: 'readonly',
+    Behavior: 'readonly',
     getApp: 'readonly',
     getCurrentPages: 'readonly',
   },

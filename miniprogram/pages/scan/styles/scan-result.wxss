@@ -1,14 +1,19 @@
 /* ===== 扫码结果 ===== */
 .result {
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   padding: 10px;
   margin-bottom: 8px;
 }
 .result.ok {
-  background: var(--color-success-bg);
+  background: var(--color-bg-card);
+  border-left: 3px solid var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 .result.err {
-  background: var(--color-error-bg);
+  background: var(--color-danger-bg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 .res-top {
   display: flex;
@@ -34,17 +39,17 @@
   min-width: 0;
 }
 .res-tag {
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
 }
 .res-tag.ok {
   background: var(--color-success);
   color: var(--color-text-white);
 }
 .res-tag.err {
-  background: var(--color-error);
+  background: var(--color-danger);
   color: var(--color-text-white);
 }
 .res-msg {
@@ -55,14 +60,13 @@
 .res-undo {
   padding: 4px 10px;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-error);
-  color: var(--color-error);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
 }
 .res-undo-hover {
-  background: var(--color-bg-light);
+  background: var(--color-bg-page);
 }
 .res-info {
   display: flex;
@@ -73,12 +77,12 @@
   color: var(--color-text-secondary);
 }
 .scan-mode-tip {
-  margin-top: 10px;
+  margin-top: 8px;
   padding: 0 4px;
 }
 .scan-mode-tip text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   line-height: var(--line-height-normal);
 }
 .res-order {
@@ -90,7 +94,7 @@
 }
 .res-proc {
   padding: 2px 8px;
-  background: rgba(16, 185, 129, 0.12);
+  background: var(--color-success-bg);
   color: var(--color-success); /* 加深绿色，确保小字件对比度≥4.5:1 */
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
@@ -109,9 +113,9 @@
   gap: 6px;
   margin-top: 8px;
   padding: 8px 10px;
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: 10px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border, rgba(255, 149, 0, 0.3));
+  border-radius: var(--radius-2xl);
 }
 .hint-icon {
   flex-shrink: 0;
@@ -134,7 +138,7 @@
   flex: 1;
   text-align: center;
   padding: 9px 0;
-  background: var(--color-error);
+  background: var(--color-danger);
   color: var(--color-text-white);
   border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
@@ -147,11 +151,10 @@
 /* ===== 区块通用 ===== */
 .section {
   background: var(--color-bg-card);
-  box-shadow: var(--shadow-card);
   border-radius: var(--radius-xl);
   padding: 10px;
   margin-bottom: 8px;
-  /* Apple: removed hard border, use shadow */
+  border: 1px solid var(--color-border);
 }
 .sec-head {
   display: flex;

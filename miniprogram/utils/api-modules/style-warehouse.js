@@ -16,20 +16,18 @@ const style = {
   createStyle(payload) {
     return ok('/api/style/info', 'POST', payload || {});
   },
-  updateStyle(styleId, payload) {
-    const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}`, 'PUT', payload || {});
-  },
-  deleteStyle(styleId) {
-    const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}`, 'DELETE', {});
-  },
 
   // 阶段操作（完成/重置）
   stageAction(styleId, stage, action, remark) {
     const id = String(styleId || '').trim();
     const payload = remark ? { reason: remark } : {};
     return ok(`/api/style/info/${encodeURIComponent(id)}/stage-action?stage=${encodeURIComponent(stage)}&action=${encodeURIComponent(action)}`, 'POST', payload);
+  },
+
+  // 样衣审核（提交审核结论）
+  saveSampleReview(styleId, payload) {
+    const id = String(styleId || '').trim();
+    return ok(`/api/style/info/${encodeURIComponent(id)}/sample-review`, 'POST', payload || {});
   },
 
   // BOM清单
@@ -39,16 +37,18 @@ const style = {
   createBom(payload) {
     return ok('/api/style/bom', 'POST', payload || {});
   },
-  updateBom(bomId, payload) {
-    const id = String(bomId || '').trim();
-    return ok(`/api/style/bom/${encodeURIComponent(id)}`, 'PUT', payload || {});
-  },
   deleteBom(bomId) {
     const id = String(bomId || '').trim();
     return ok(`/api/style/bom/${encodeURIComponent(id)}`, 'DELETE', {});
   },
-  batchSaveBom(payload) {
-    return ok('/api/style/bom/batch-save', 'POST', payload || {});
+
+  // SKU 库存查询/调整
+  getInventory(skuCode) {
+    const code = String(skuCode || '').trim();
+    return ok(`/api/style/sku/inventory/${encodeURIComponent(code)}`, 'GET', {});
+  },
+  updateInventory(data) {
+    return ok('/api/style/sku/inventory/update', 'POST', data || {});
   },
 
   // 工序
@@ -58,33 +58,9 @@ const style = {
   createProcess(payload) {
     return ok('/api/style/process', 'POST', payload || {});
   },
-  updateProcess(processId, payload) {
-    const id = String(processId || '').trim();
-    return ok(`/api/style/process/${encodeURIComponent(id)}`, 'PUT', payload || {});
-  },
   deleteProcess(processId) {
     const id = String(processId || '').trim();
     return ok(`/api/style/process/${encodeURIComponent(id)}`, 'DELETE', {});
-  },
-
-  // 工序模板
-  listProcessTemplates(params) {
-    return ok('/api/style/process-template/list', 'GET', params || {});
-  },
-  getProcessTemplate(templateId) {
-    const id = String(templateId || '').trim();
-    return ok(`/api/style/process-template/${encodeURIComponent(id)}`, 'GET', {});
-  },
-  createProcessTemplate(payload) {
-    return ok('/api/style/process-template', 'POST', payload || {});
-  },
-  updateProcessTemplate(templateId, payload) {
-    const id = String(templateId || '').trim();
-    return ok(`/api/style/process-template/${encodeURIComponent(id)}`, 'PUT', payload || {});
-  },
-  deleteProcessTemplate(templateId) {
-    const id = String(templateId || '').trim();
-    return ok(`/api/style/process-template/${encodeURIComponent(id)}`, 'DELETE', {});
   },
 
   // 二次工艺
@@ -114,11 +90,11 @@ const style = {
   // 纸样
   getPatternRevision(styleId) {
     const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}/pattern-revision`, 'GET', {});
+    return ok(`/api/pattern-revision/by-style/${encodeURIComponent(id)}`, 'GET', {});
   },
   savePatternRevision(styleId, payload) {
-    const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}/pattern-revision`, 'POST', payload || {});
+    const data = { ...(payload || {}), styleId: String(styleId || '').trim() };
+    return ok('/api/pattern-revision', 'POST', data);
   },
   lockPatternRevision(styleId) {
     const id = String(styleId || '').trim();
@@ -142,7 +118,7 @@ const style = {
     return ok('/api/style/attachment/list', 'GET', params || {});
   },
   uploadAttachment(payload) {
-    return ok('/api/style/attachment', 'POST', payload || {});
+    return ok('/api/style/attachment/upload', 'POST', payload || {});
   },
   deleteAttachment(attachmentId) {
     const id = String(attachmentId || '').trim();
@@ -162,6 +138,9 @@ const style = {
 };
 
 const warehouse = {
+  getLocationItems(params) {
+    return ok('/api/warehouse/location/items', 'GET', params || {});
+  },
   listFinishedInventory(params) {
     return ok('/api/warehouse/finished-inventory/list', 'GET', params || {});
   },
@@ -187,10 +166,12 @@ const warehouse = {
     return ok('/api/warehouse/finished-inventory/edit', 'POST', { warehousingId, changes });
   },
   listWarehouseAreas(warehouseType) {
-    return ok('/api/warehouse/area/list-by-type', 'GET', { warehouseType: warehouseType || '' });
+    // 与 PC 端 warehouseAreaApi.listByType 对齐：POST /api/warehouse/area/search
+    return ok('/api/warehouse/area/search', 'POST', { warehouseType: warehouseType || '' });
   },
   listLocations(warehouseType, areaId) {
-    return ok('/api/warehouse/location/list-by-type', 'GET', { warehouseType: warehouseType || '', areaId: areaId });
+    // 与 PC 端 warehouseLocationMapApi 对齐：POST /api/warehouse/location/search
+    return ok('/api/warehouse/location/search', 'POST', { warehouseType: warehouseType || '', areaId: areaId });
   },
 };
 
@@ -198,9 +179,6 @@ const warehouse = {
 const material = {
   listStockAlerts(params) {
     return ok('/api/production/material/stock/alerts', 'GET', params || {});
-  },
-  listBatchDetails(params) {
-    return ok('/api/production/material/stock/batch-details', 'GET', params || {});
   },
   listPurchaseRecords(params) {
     return ok('/api/production/purchase/list', 'GET', params || {});
@@ -220,6 +198,15 @@ const material = {
   scanQuery(materialCode) {
     return ok('/api/production/material/stock/scan-query', 'GET', { materialCode });
   },
+  listDatabase(params) {
+    return ok('/api/material/database/list', 'GET', params || {});
+  },
+  getDatabaseById(id) {
+    return ok(`/api/material/database/${encodeURIComponent(id)}`, 'GET', {});
+  },
+  generateMaterialCode(materialType) {
+    return ok('/api/material/database/generate-code', 'GET', { materialType: materialType || 'accessory' });
+  },
 };
 
 const materialRoll = {
@@ -228,12 +215,6 @@ const materialRoll = {
   },
   listByInbound(params) {
     return ok('/api/production/material/roll/list', 'POST', params || {});
-  },
-};
-
-const orderManagement = {
-  createFromStyle(data) {
-    return ok('/api/production/order/create-from-style', 'POST', data || {});
   },
 };
 
@@ -246,4 +227,37 @@ const sampleStock = {
   returnSample(data) { return ok('/api/stock/sample/return', 'POST', data); },
 };
 
-module.exports = { style, warehouse, material, materialRoll, orderManagement, sampleStock };
+const templateLibrary = {
+  list(params) {
+    return ok('/api/template-library/list', 'GET', params || {});
+  },
+  detail(id) {
+    return ok(`/api/template-library/${encodeURIComponent(id)}`, 'GET', {});
+  },
+  processUnitPrices(styleNo) {
+    return ok('/api/template-library/process-unit-prices', 'GET', { styleNo });
+  },
+  progressNodeUnitPrices(styleNo) {
+    return ok('/api/template-library/progress-node-unit-prices', 'GET', { styleNo });
+  },
+  processPriceTemplate(styleNo) {
+    return ok('/api/template-library/process-price-template', 'GET', { styleNo: styleNo || '' });
+  },
+  processPriceStyleOptions(keyword) {
+    return ok('/api/template-library/process-price-style-options', 'GET', { keyword: keyword || '' });
+  },
+  saveProcessPriceTemplate(data) {
+    return ok('/api/template-library/process-price-template', 'POST', data || {});
+  },
+  create(data) {
+    return ok('/api/template-library', 'POST', data || {});
+  },
+  update(data) {
+    return ok('/api/template-library', 'PUT', data || {});
+  },
+  remove(id) {
+    return ok(`/api/template-library/${encodeURIComponent(id)}`, 'DELETE', {});
+  },
+};
+
+module.exports = { style, warehouse, material, materialRoll, sampleStock, templateLibrary };

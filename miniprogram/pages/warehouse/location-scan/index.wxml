@@ -1,63 +1,81 @@
-<wxs module="util">
-  module.exports.percent = function(used, total) {
-    if (!total || total === '∞' || total === 0) return 0;
-    var p = Math.round((used / total) * 100);
-    return p > 100 ? 100 : p;
-  }
-</wxs>
+<custom-nav title="库位扫码" show-back="{{true}}" />
+
 <view class="location-scan-page">
-  <view class="header">
-    <view class="location-code">{{locationInfo.locationCode || locationCode}}</view>
-    <view class="zone-name" wx:if="{{locationInfo.zoneName}}">{{locationInfo.zoneName}}</view>
+  <!-- 扫码入口 -->
+  <view wx:if="{{!locationInfo && !loading && !error}}" class="scan-entry" bindtap="onStartScan">
+    <view class="scan-entry__icon">
+      <view class="line-icon icon-scan" style="width:48px;height:48px;"></view>
+    </view>
+    <text class="scan-entry__title">点击扫码查询库位库存</text>
+    <text class="scan-entry__sub">扫描库位二维码查看库存明细</text>
+  </view>
+
+  <!-- 手动输入 -->
+  <view wx:if="{{!locationInfo && !loading && !error}}" class="manual-input-wrap">
+    <input class="manual-input" placeholder="或输入库位编码" value="{{manualCode}}" bindinput="onManualInput" confirm-type="search" bindconfirm="onManualSearch" />
+    <view class="manual-btn" bindtap="onManualSearch">查询</view>
   </view>
 
   <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
     <text>加载中...</text>
   </view>
 
   <view wx:if="{{error}}" class="error-container">
-    <text>{{error}}</text>
-    <button size="mini" bindtap="onRetry">重试</button>
+    <text class="error-text">{{error}}</text>
+    <view class="error-actions">
+      <view class="retry-btn" bindtap="onStartScan">重新扫码</view>
+      <view wx:if="{{locationCode}}" class="retry-btn retry-btn--outline" bindtap="onRetry">重试</view>
+    </view>
   </view>
 
   <view wx:if="{{!loading && !error && locationInfo}}" class="info-card">
+    <view class="header">
+      <view class="location-code">{{locationInfo.locationCode || locationCode}}</view>
+      <view class="zone-name" wx:if="{{locationInfo.zoneName}}">{{locationInfo.zoneName}}</view>
+    </view>
     <view class="info-row">
       <text class="label">仓库名称</text>
-      <text class="value">{{locationInfo.warehouseTypeLabel}}</text>
+      <text class="value">{{locationInfo.warehouseTypeLabel || '-'}}</text>
     </view>
+    <view class="info-divider"></view>
     <view class="info-row">
       <text class="label">库位名称</text>
       <text class="value">{{locationInfo.locationName || '-'}}</text>
     </view>
-    <view class="info-row">
+    <view class="info-divider"></view>
+    <view class="info-row capacity-row">
       <text class="label">容量</text>
-      <text class="value">{{locationInfo.usedCapacity}}/{{locationInfo.capacity || '∞'}}</text>
+      <text class="value"><text class="capacity-used">{{locationInfo.usedCapacity}}</text> / {{locationInfo.capacity || '∞'}}</text>
     </view>
-    <view class="capacity-bar" wx:if="{{locationInfo.capacity && locationInfo.capacity > 0}}">
-      <view class="capacity-bar-fill" style="width: {{util.percent(locationInfo.usedCapacity, locationInfo.capacity)}}%"></view>
+    <view class="capacity-bar" wx:if="{{locationInfo.capacity}}">
+      <view class="capacity-bar-fill" style="width: {{locationInfo.usedCapacity / locationInfo.capacity * 100}}%;"></view>
     </view>
   </view>
 
-  <view wx:if="{{!loading && !error && items.length > 0}}" class="items-list">
+  <view wx:if="{{!loading && !error && items.length > 0}}" class="items-section">
     <view class="list-header">
-      <text>库存明细</text>
+      <text class="list-title">库存明细</text>
       <text class="count">{{items.length}} 件</text>
     </view>
-    <view class="item-row" wx:for="{{items}}" wx:key="skuCode">
-      <view class="item-main">
-        <text class="style-no">{{item.styleNo || '-'}}</text>
-        <view class="tags">
-          <text class="tag color">{{item.color || '-'}}</text>
-          <text class="tag size">{{item.size || '-'}}</text>
+    <view class="items-list">
+      <view class="item-card" wx:for="{{items}}" wx:key="skuCode">
+        <view class="item-main">
+          <text class="style-no">{{item.styleNo || '-'}}</text>
+          <view class="tags">
+            <text class="tag color">{{item.color || '-'}}</text>
+            <text class="tag size">{{item.size || '-'}}</text>
+          </view>
         </view>
-      </view>
-      <view class="item-qty">
-        <text class="qty">{{item.stockQuantity}}</text>
+        <view class="item-qty">
+          <text class="qty">{{item.stockQuantity}}</text>
+          <text class="qty-unit">件</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <view wx:if="{{!loading && !error && items.length === 0}}" class="empty-container">
+  <view wx:if="{{!loading && !error && locationInfo && items.length === 0}}" class="empty-container">
     <text>该库位暂无库存</text>
   </view>
 </view>

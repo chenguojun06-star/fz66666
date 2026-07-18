@@ -1,54 +1,86 @@
 @import '/styles/page-utils.wxss';
 @import '/styles/modal-form.wxss';
 
+/* ============================================================
+ * 财务付款页 — 对齐设计稿 finance-payment.html
+ * 设计系统: Apple-inspired (Pinguo tokens → mini-program tokens)
+ * ============================================================ */
+
 .page {
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--color-bg-page);
   min-height: 100vh;
 }
 
+/* ============================================================
+ * 一、统计栏 Stats Bar
+ * 设计: 2列白卡片, 左对齐, 标签在上/数值在下, 22px粗体
+ * ============================================================ */
 .stats-bar {
   display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  background: var(--color-bg-card);
+  gap: 12px;
+  padding: 12px 16px 0;
 }
 
 .stat-card {
   flex: 1;
-  text-align: center;
-  padding: var(--spacing-sm) 2px;
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-card);
-}
+  text-align: left;
+  
+  background: var(--color-bg-card);
+  
+  box-shadow: var(--shadow-sm);
 
-.stat-value {
-  display: block;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .stat-label {
   display: block;
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  margin-top: 2px;
+  line-height: 1.2;
 }
 
+.stat-value {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value.stat-warning {
+  color: var(--color-warning);
+}
+
+.stat-value.stat-success {
+  color: var(--color-success);
+}
+
+/* ============================================================
+ * 二、标签栏 Tab Bar
+ * 设计: 无背景, 底部1px分隔线, 激活态2px蓝色下划线
+ * ============================================================ */
 .tab-bar {
   display: flex;
-  background: var(--color-bg-card);
-  border-bottom: 1px solid var(--color-border-light);
+  margin-top: 12px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tab-item {
   flex: 1;
   text-align: center;
-  padding: var(--spacing-md) 0;
+  padding: 10px 0;
   font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   position: relative;
+  white-space: nowrap;
 }
 
 .tab-active {
@@ -59,358 +91,674 @@
 .tab-active::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 30%;
-  right: 30%;
-  height: 3px;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
   background: var(--color-primary);
-  border-radius: var(--radius-xs);
 }
 
-.payable-card, .payment-card {
+/* ============================================================
+ * 三、面板容器
+ * ============================================================ */
+.tab-panel {
+  padding: 12px 16px 0;
+}
+
+/* ============================================================
+ * 四、卡片通用样式
+ * 设计: 白底, 1px边框(#e5e5ea), 圆角18px, 内边距16px, 无阴影
+ * ============================================================ */
+.payable-card,
+.payment-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-card);
-  padding: var(--spacing-lg);
-  margin: var(--card-gap) var(--page-padding-x);
-  box-shadow: var(--shadow-card);
+  
+  
+  
+  margin-bottom: 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-sm);
+  gap: 8px;
 }
 
-.payee-name {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-}
-
-.card-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px var(--spacing-lg);
-}
-
-.info-row {
-  display: flex;
+/* ============================================================
+ * 五、卡片标签 Card Tag
+ * 设计: 11px, 4px圆角, px-2 py-0.5 (紧凑非胶囊型)
+ * 覆盖全局 .tag 的胶囊圆角
+ * ============================================================ */
+.card-tag {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.5;
 }
 
-.info-label {
-  color: var(--color-text-tertiary);
-}
-
-.info-value {
-  color: var(--color-text-primary);
-}
-
-.info-value.amount {
+/* 标签颜色 — 对齐设计稿 color-mix 效果 */
+.card-tag.tag-blue,
+.card-tag.tag-color {
+  background: var(--color-primary-bg);
   color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
 }
 
-.info-value.paid {
+.card-tag.tag-green,
+.card-tag.tag-success {
+  background: var(--color-success-bg);
   color: var(--color-success);
 }
 
-.info-value.remaining {
-  color: var(--color-danger);
-  font-weight: var(--font-weight-semibold);
+.card-tag.tag-orange,
+.card-tag.tag-warn {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
-.info-value.desc {
+.card-tag.tag-gray {
+  background: var(--color-bg-page);
   color: var(--color-text-secondary);
-  max-width: 200px;
+}
+
+.card-tag.tag-red,
+.card-tag.tag-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* ============================================================
+ * 六、卡片头部信息
+ * ============================================================ */
+.card-biz-no {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.payee-name {
+  display: block;
+  margin-top: 8px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card-actions {
-  margin-top: var(--spacing-sm) + 2px;
-  padding-top: var(--spacing-sm) + 2px;
-  border-top: 1px solid var(--color-border-light);
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
+.card-order-no {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.action-btn {
-  height: var(--btn-height-sm);
-  padding: 0 var(--spacing-lg);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+/* ============================================================
+ * 七、付款卡片 — 金额三列布局
+ * 设计: flex水平排列, 列间竖线分隔, 11px标签 + 15px数值
+ * ============================================================ */
+.amount-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  margin-top: 12px;
+}
+
+.amount-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.amount-col-padded {
+  padding-left: 12px;
+}
+
+.amount-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.amount-label {
+  display: block;
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.2;
+}
+
+.amount-val-main {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-val-paid {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-val-remaining {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-danger);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+ * 八、付款卡片 — 底部操作栏
+ * 设计: 顶部分隔线, 说明左/按钮右
+ * ============================================================ */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.card-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .pay-btn {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-}
-
-.confirm-btn {
-  background: var(--color-success);
-  color: var(--color-text-white);
-}
-
-.cancel-btn {
-  background: var(--color-bg-gray);
-  color: var(--color-text-secondary);
-}
-
-.modal-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--color-overlay);
-  z-index: var(--z-modal);
-}
-
-.modal {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
-  z-index: calc(var(--z-modal) + 1);
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.modal-show {
-  transform: translateY(0);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.modal-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-}
-
-.modal-close {
-  font-size: 13px;
-  color: var(--color-text-tertiary);
-  padding: 4px;
-}
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: var(--spacing-lg);
-}
-
-.modal-footer {
-  display: flex;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md) 16px;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.modal-btn {
-  flex: 1;
-  text-align: center;
-  height: var(--btn-height-md);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-btn.cancel {
-  background: var(--color-bg-gray);
-  color: var(--color-text-secondary);
-}
-
-.modal-btn.confirm {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: var(--color-text-white);
-}
-
-.mf-kv-list {
-  margin-bottom: var(--spacing-md);
-}
-
-.mf-kv {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.mf-kv:last-child {
-  border-bottom: none;
-}
-
-.mf-kv-key {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.mf-kv-val {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.mf-kv-val--danger {
-  color: var(--color-danger);
   font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.mf-item {
-  margin-bottom: var(--spacing-md);
+/* ============================================================
+ * 九、收支记录卡片 — 底部金额行
+ * 设计: 顶部分隔线, 18px粗体金额 + 12px支付方式
+ * ============================================================ */
+.card-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 
-.mf-item--first {
-  margin-top: var(--spacing-md);
-}
-
-.mf-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xs);
-  display: block;
-}
-
-.mf-required::before {
-  content: '*';
-  color: var(--color-danger);
-  margin-right: 2px;
-}
-
-.mf-input {
-  width: 100%;
-  height: var(--input-height-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 0 var(--spacing-md);
-  font-size: var(--font-size-sm);
+.amount-val {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  background: var(--color-bg-card);
-  box-sizing: border-box;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.picker-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-}
-
-.picker-box .arrow {
-  color: var(--color-text-tertiary);
-}
-
-.radio-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-right: var(--spacing-md);
-  margin-bottom: 4px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-}
-
-.modal-sub-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
-}
-
-.sub-action-btn {
-  flex: 1;
-  text-align: center;
-  height: var(--btn-height-sm);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  background: var(--color-bg-gray);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.search-btn {
-  text-align: center;
-  height: var(--btn-height-sm);
-  margin-top: var(--spacing-sm);
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.payee-result-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.payee-result-name {
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-}
-
-.payee-result-type {
+.method-val {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
+  white-space: nowrap;
 }
 
-.empty-hint {
-  text-align: center;
-  padding: 20px 0;
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-sm);
-}
-
+/* ============================================================
+ * 十、加载更多
+ * ============================================================ */
 .load-more {
   text-align: center;
-  padding: var(--spacing-md) 0;
+  padding: 8px 0 4px;
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
 .load-more.disabled {
   color: var(--color-text-disabled);
+  pointer-events: none;
+}
+
+/* ============================================================
+ * 十一、支付内联表单
+ * 设计: 卡片式内联展开, 圆角, KV列表, 表单
+ * ============================================================ */
+.inline-form-card {
+  background: var(--color-bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 内联表单标题（含关闭按钮） */
+.inline-form-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+  font-size: var(--font-size-lg-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-tertiary);
+  padding: 4px;
+}
+
+/* KV 列表 */
+.modal-kv-list {
+  padding: 0 16px 4px;
+}
+
+.modal-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-kv:last-child {
+  border-bottom: none;
+}
+
+.modal-kv-key {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.modal-kv-val {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-left: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-kv-amount {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 表单区域 */
+.modal-form-area {
+  padding: 12px 16px;
+}
+
+.modal-form-area .mf-item {
+  margin-bottom: 16px;
+}
+
+.modal-form-area .mf-item:last-child {
+  margin-bottom: 0;
+}
+
+.modal-form-area .mf-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+/* 金额输入框 (带¥前缀) */
+.amount-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  box-sizing: border-box;
+}
+
+.amount-input-prefix {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.amount-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+/* 备注输入框 — 覆盖 mf-input 灰底风格, 改为白底带边框 */
+.modal-form-area .mf-input {
+  height: 48px;
+  padding: 0 12px;
+  line-height: 48px;
+  font-size: var(--font-size-md);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* 支付方式按钮网格 — 对齐设计稿 grid 2列按钮 */
+.method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.method-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e5ea;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.method-btn.method-active {
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.method-check {
+  width: 14px;
+  height: 14px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  flex-shrink: 0;
+}
+
+/* 收款账户选择器 */
+.picker-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-md);
+  box-sizing: border-box;
+}
+
+.picker-text {
+  color: var(--color-text-primary);
+}
+
+.picker-text.placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.picker-box .arrow {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* 内联表单底部按钮 */
+.inline-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.modal-btn {
+  flex: 1;
+  text-align: center;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.modal-btn.cancel {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+}
+
+.modal-btn.confirm {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ============================================================
+ * 十二、收支记录 — 操作按钮
+ * 设计: 处理中状态显示 取消/确认 按钮, 金额左/按钮右
+ * ============================================================ */
+.footer-justify-between {
+  justify-content: space-between;
+}
+
+.record-amount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.record-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.record-btn-cancel {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+}
+
+.record-btn-confirm {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ============================================================
+ * 十三、弹窗子操作区
+ * 设计: 顶部分隔线, 搜索收款人 | 竖线 | 新增收款账户
+ * ============================================================ */
+.modal-sub-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.sub-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.sub-action-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+ * 十四、搜索收款人面板
+ * ============================================================ */
+.search-panel {
+  padding: 0 16px 16px;
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  box-sizing: border-box;
+}
+
+.search-input-icon {
+  width: 16px;
+  height: 16px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.search-btn {
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-xl);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-results {
+  margin-top: 12px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  margin-bottom: 8px;
+}
+
+.search-result-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result-type {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.search-empty {
+  text-align: center;
+  padding: 24px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }

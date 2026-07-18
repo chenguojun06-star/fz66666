@@ -4,6 +4,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const blePrinter = require('../utils/blePrinter');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 /**
  * 裁剪单明细页 bundle-detail
@@ -803,7 +804,7 @@ Page({
               const s = scanMap[code];
               result.push({
                 processCode: code,
-                processName: n.name || n.processName || '-',
+                processName: normalizeProcessName(n.name || n.processName || '-'),
                 unitPrice: price,
                 priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
                 pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
@@ -823,7 +824,7 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
-            processName: n.name || '-',
+            processName: normalizeProcessName(n.name || '-'),
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
             pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
@@ -845,7 +846,7 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
-            processName: p.processName || p.name || '-',
+            processName: normalizeProcessName(p.processName || p.name || '-'),
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
             pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
@@ -1032,6 +1033,10 @@ Page({
       if (d.priceOverrides[code] != null) p.newPrice = d.priceOverrides[code];
       return p;
     });
+
+    if (!payload.processes || payload.processes.length === 0) {
+      return toast.info('请至少选择一个工序');
+    }
 
     if (d.remark) payload.remark = d.remark;
 

@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
 
 const STATUS_MAP = {
@@ -36,6 +36,18 @@ Page({
     canApprove: false,
     STATUS_MAP: STATUS_MAP,
     DEDUCT_MAP: DEDUCT_MAP,
+    STATUS_OPTIONS: [
+      { value: '', label: '全部状态' },
+      { value: 'pending', label: '待审批' },
+      { value: 'approved', label: '已审批' },
+      { value: 'rejected', label: '已驳回' },
+    ],
+    REPAY_OPTIONS: [
+      { value: '', label: '全部扣款' },
+      { value: 'unrepaid', label: '未扣款' },
+      { value: 'partial', label: '部分扣款' },
+      { value: 'repaid', label: '已扣完' },
+    ],
   },
 
   _STATUS_OPTIONS: [
@@ -62,7 +74,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    const that = this;
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
 

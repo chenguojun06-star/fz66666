@@ -1,6 +1,7 @@
+<custom-nav title="无资料下单" show-back="{{true}}" />
 <view class="page">
   <view class="section">
-    <view class="section-title">📋 基本信息</view>
+    <view class="section-title"><view class="line-icon icon-clipboard"></view> 基本信息</view>
     
     <!-- 款号输入 - 带搜索 -->
     <view class="form-item search-input-wrapper">
@@ -17,7 +18,7 @@
         <view class="search-loading" wx:if="{{styleSearching}}">
           <text>搜索中...</text>
         </view>
-        <view class="clear-icon" wx:if="{{styleSearchKeyword && !styleSearching}}" bindtap="onStyleNoInput" data-clear="true">✕</view>
+        <view class="clear-icon icon-close" wx:if="{{styleSearchKeyword && !styleSearching}}" bindtap="onStyleNoInput" data-clear="true"></view>
       </view>
       <!-- 款号搜索下拉框 -->
       <view class="search-dropdown" wx:if="{{showStyleDropdown && styleSearchResults.length > 0}}">
@@ -69,7 +70,7 @@
         <view class="search-loading" wx:if="{{customerSearching}}">
           <text>搜索中...</text>
         </view>
-        <view class="clear-icon" wx:if="{{customerSearchKeyword && !customerSearching}}" bindtap="onCustomerInput" data-clear="true">✕</view>
+        <view class="clear-icon icon-close" wx:if="{{customerSearchKeyword && !customerSearching}}" bindtap="onCustomerInput" data-clear="true"></view>
       </view>
       <!-- 客户搜索下拉框 -->
       <view class="search-dropdown" wx:if="{{showCustomerDropdown && customerSearchResults.length > 0}}">
@@ -102,7 +103,7 @@
   </view>
 
   <view class="section">
-    <view class="section-title">🏭 生产方</view>
+    <view class="section-title">生产方</view>
     <radio-group class="mode-radio-group" bindchange="onFactoryModeChange">
       <label class="mode-radio">
         <radio value="INTERNAL" checked="{{factoryMode === 'INTERNAL'}}" />内部工厂
@@ -137,22 +138,22 @@
   </view>
 
   <view class="section">
-    <view class="section-title">📷 款式图片</view>
+    <view class="section-title"><view class="line-icon icon-camera"></view> 款式图片</view>
     <view class="image-upload" bindtap="chooseImage">
       <image wx:if="{{styleImageUrl}}" src="{{styleImageUrl}}" mode="aspectFill" bindtap="previewImage" catchtap="previewImage" />
       <view wx:else class="upload-placeholder">
-        <text class="upload-icon">📷</text>
+        <view class="upload-icon line-icon icon-camera"></view>
         <text>点击上传款式图片</text>
       </view>
       <view class="delete-image" wx:if="{{styleImageUrl}}" bindtap="deleteImage" catchtap="deleteImage">
-        <text>✕</text>
+        <view class="icon-close"></view>
       </view>
     </view>
   </view>
 
   <view class="section">
     <view class="section-header">
-      <text class="section-title">📝 下单明细</text>
+      <text class="section-title">下单明细</text>
       <text class="add-btn" bindtap="addOrderLine">+ 添加</text>
     </view>
     <view class="order-lines">
@@ -169,13 +170,13 @@
           <text class="line-label">数量</text>
           <input class="line-input" type="number" placeholder="必填" value="{{item.quantity}}" data-index="{{index}}" data-field="quantity" bindinput="onOrderLineInput" />
         </view>
-        <view class="line-del" wx:if="{{orderLines.length > 1}}" data-index="{{index}}" bindtap="removeOrderLine">✕</view>
+        <view class="line-del icon-close" wx:if="{{orderLines.length > 1}}" data-index="{{index}}" bindtap="removeOrderLine"></view>
       </view>
     </view>
   </view>
 
   <view class="section">
-    <view class="section-title">📝 备注</view>
+    <view class="section-title">备注</view>
     <textarea class="textarea" placeholder="输入订单备注..." value="{{remarks}}" bindinput="onRemarksInput" />
   </view>
 

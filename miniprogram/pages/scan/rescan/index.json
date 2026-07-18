@@ -1,6 +1,8 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "退回重扫",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "image-preview": "/components/common/image-preview/index"
   }
 }

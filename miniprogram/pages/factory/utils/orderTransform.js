@@ -1,5 +1,5 @@
 const { validateProductionOrder, normalizeData } = require('./dataValidator');
-const { orderStatusText } = require('./orderStatusHelper');
+const { orderStatusText, orderStatusCls } = require('./orderStatusHelper');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { calcOrderProgress } = require('./progressNodes');
@@ -91,6 +91,7 @@ function buildColorSizeMeta(order) {
 }
 
 function calcDeliveryInfo(source) {
+  const pad = function (n) { return String(n).padStart(2, '0'); };
   const status = String(source.status || '').toLowerCase();
   if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
     var raw = source.plannedEndDate || source.expectedShipDate || '';
@@ -100,7 +101,6 @@ function calcDeliveryInfo(source) {
       if (s.length > 10) {
         var d = new Date(s.replace(/-/g, '/'));
         if (!isNaN(d.getTime())) {
-          var pad = function (n) { return String(n).padStart(2, '0'); };
           dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         } else {
           dateStr = s.substring(0, 16);
@@ -111,13 +111,12 @@ function calcDeliveryInfo(source) {
     }
     return { deliveryDateStr: dateStr, remainDays: null, remainDaysText: '已关单', remainDaysClass: 'days-done' };
   }
-  var raw = source.plannedEndDate || source.expectedShipDate || '';
+  raw = source.plannedEndDate || source.expectedShipDate || '';
   if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
-  var dateStr = String(raw);
+  dateStr = String(raw);
   if (dateStr.length > 10) {
-    var d = new Date(dateStr.replace(/-/g, '/'));
+    d = new Date(dateStr.replace(/-/g, '/'));
     if (!isNaN(d.getTime())) {
-      var pad = function (n) { return String(n).padStart(2, '0'); };
       dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     } else {
       dateStr = dateStr.substring(0, 16);
@@ -197,6 +196,7 @@ function transformOrderData(r) {
     orderedQty: source.orderQuantity || 0,
     styleCoverUrl: styleCoverUrl,
     statusText: orderStatusText(source.status),
+    statusCls: orderStatusCls(source.status),
     isClosed: isClosedStatus(source.status),
     sizeList: sizeMeta.sizeList,
     sizeQtyList: sizeMeta.sizeQtyList,

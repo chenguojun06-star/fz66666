@@ -6,6 +6,7 @@ const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { normalizeProcessName } = require('../../../utils/displayHelper');
 
 const HANDLE_METHODS = ['返修', '报废'];
 
@@ -61,7 +62,7 @@ Page({
         styleNo: raw.styleNo || '',
         color: raw.color || '',
         size: raw.size || raw.sizeSpec || '',
-        processName: raw.processName || '',
+        processName: normalizeProcessName(raw.processName || ''),
         quantity: raw.quantity || 0,
         progressStage: raw.progressStage || '',
         operatorName: raw.operatorName || '',
