@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
+import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import java.util.ArrayList;
@@ -32,6 +33,9 @@ public class ProductWarehousingQueryHelper {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductionOrderQueryService productionOrderQueryService;
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
@@ -151,10 +155,23 @@ public class ProductWarehousingQueryHelper {
             if (!StringUtils.hasText(w.getStyleName())) {
                 w.setStyleName(order.getStyleName());
             }
-            // P1-5 数据链路：补齐 styleCover，供前端展示款式封面
-            if (!StringUtils.hasText(w.getStyleCover())) {
+            // P1-5 数据链路：补齐 styleCover/coverImage/styleImage，供前端展示款式封面
+            // 注意：order.styleCover 等是 @TableField(exist=false) 临时字段，
+            // 已在 loadProductionOrdersSafely 中通过 productionOrderQueryService.fillStyleCover() 填充
+            if (StringUtils.hasText(order.getStyleCover())) {
                 w.setStyleCover(order.getStyleCover());
             }
+            if (StringUtils.hasText(order.getCoverImage())) {
+                w.setCoverImage(order.getCoverImage());
+            }
+            if (StringUtils.hasText(order.getStyleImage())) {
+                w.setStyleImage(order.getStyleImage());
+            }
+            // 补齐订单状态/实际完成时间/生产进度，供前端交期倒计时判定终态
+            // 修复缺陷：质检已完成的订单仍被计算为逾期
+            w.setStatus(order.getStatus());
+            w.setActualEndDate(order.getActualEndDate());
+            w.setProductionProgress(order.getProductionProgress());
         }
     }
 
@@ -195,7 +212,13 @@ public class ProductWarehousingQueryHelper {
             return Collections.emptyMap();
         }
         try {
-            return productionOrderService.listByIds(orderIds).stream()
+            List<ProductionOrder> orderList = productionOrderService.listByIds(orderIds);
+            // 补齐 styleCover/coverImage/styleImage（从 StyleInfo/附件/模板兜底）
+            // 与 ProductWarehousingPendingHelper.loadOrdersWithCover 保持一致
+            if (orderList != null && !orderList.isEmpty()) {
+                productionOrderQueryService.fillStyleCover(orderList);
+            }
+            return orderList.stream()
                     .collect(Collectors.toMap(ProductionOrder::getId, order -> order, (left, right) -> left));
         } catch (Exception ex) {
             log.error("[{}] 加载生产订单失败，跳过订单补充字段，orderIds={}", scene, orderIds, ex);

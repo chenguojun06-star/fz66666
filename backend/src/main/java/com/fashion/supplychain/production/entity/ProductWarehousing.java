@@ -37,6 +37,39 @@ public class ProductWarehousing {
     @TableField(exist = false)
     private String styleCover;
 
+    /**
+     * 款式封面图（兼容字段，供前端 coverImage/styleImage 读取；查询时从 StyleInfo.cover 补齐）
+     */
+    @TableField(exist = false)
+    private String coverImage;
+
+    /**
+     * 款式封面图（兼容字段，供前端 styleImage 读取；查询时从 StyleInfo.cover 补齐）
+     */
+    @TableField(exist = false)
+    private String styleImage;
+
+    /**
+     * 生产订单状态（临时字段，查询时从 ProductionOrder.status 补齐）
+     * 用于前端交期倒计时判定订单是否已完成/报废/关单等终态
+     */
+    @TableField(exist = false)
+    private String status;
+
+    /**
+     * 订单实际完成日期（临时字段，查询时从 ProductionOrder.actualEndDate 补齐）
+     * 用于前端交期倒计时判定订单是否已实际完成
+     */
+    @TableField(exist = false)
+    private LocalDateTime actualEndDate;
+
+    /**
+     * 生产进度百分比（临时字段，查询时从 ProductionOrder.productionProgress 补齐）
+     * 用于前端交期倒计时兜底判定（progress >= 100 视为已完成）
+     */
+    @TableField(exist = false)
+    private Integer productionProgress;
+
     private Integer warehousingQuantity;
 
     private Integer qualifiedQuantity;
