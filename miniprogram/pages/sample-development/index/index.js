@@ -4,7 +4,54 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 
-// 格式化日期时间：2026-07-19 12:34
+// 6 个父阶段定义（与 PC 端 SAMPLE_PARENT_STAGES 对齐）
+const PARENT_STAGES = [
+  { key: 'procurement', label: '采购' },
+  { key: 'cutting', label: '裁剪' },
+  { key: 'secondary', label: '二次工艺' },
+  { key: 'sewing', label: '车缝' },
+  { key: 'tail', label: '尾部' },
+  { key: 'warehousing', label: '入库' },
+];
+
+// 子工序名/progressStage → 父阶段 key 映射（参考 PC 端 resolveStageKey）
+const STAGE_KEY_MAP = {
+  '采购': 'procurement', '裁剪': 'cutting', '二次工艺': 'secondary',
+  '车缝': 'sewing', '尾部': 'tail', '入库': 'warehousing',
+  'procurement': 'procurement', 'cutting': 'cutting', 'secondary': 'secondary',
+  'sewing': 'sewing', 'tail': 'tail', 'warehousing': 'warehousing',
+  '缝制': 'sewing', '后整': 'tail', '下板': 'cutting', '裁床': 'cutting',
+};
+
+// operationType（英文大写）→ 中文父阶段名 映射
+const OP_TYPE_TO_STAGE = {
+  RECEIVE: 'procurement', PROCUREMENT: 'procurement',
+  CUTTING: 'cutting', SECONDARY: 'secondary',
+  SEWING: 'sewing', TAIL: 'tail',
+  WAREHOUSE_IN: 'warehousing', WAREHOUSE_OUT: 'warehousing',
+  PLATE: 'sewing', IRONING: 'tail',
+  QUALITY: 'tail', PACKAGING: 'tail',
+};
+
+function resolveStageKey(name) {
+  if (!name) return 'unknown';
+  if (STAGE_KEY_MAP[name]) return STAGE_KEY_MAP[name];
+  var lower = String(name).toLowerCase();
+  for (var k in STAGE_KEY_MAP) {
+    if (lower.indexOf(k.toLowerCase()) >= 0 || lower.indexOf(STAGE_KEY_MAP[k].toLowerCase()) >= 0) {
+      return STAGE_KEY_MAP[k];
+    }
+  }
+  return 'unknown';
+}
+
+function normalizeOpToStage(opType) {
+  if (!opType) return null;
+  var upper = String(opType).trim().toUpperCase();
+  return OP_TYPE_TO_STAGE[upper] || null;
+}
+
+// 格式化日期：2026-07-19 12:34
 function fmtDateTime(raw) {
   if (!raw) return '';
   var s = String(raw);
@@ -16,6 +63,12 @@ function fmtDateTime(raw) {
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
       + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   } catch (_e) { return s.substring(0, 16); }
+}
+
+function fmtDateShort(raw) {
+  if (!raw) return '';
+  var s = fmtDateTime(raw);
+  return s ? s.substring(0, 10) : '';
 }
 
 // 解析 sizeColorMatrix 为前端可渲染的结构
@@ -31,34 +84,112 @@ function parseMatrix(item) {
   return { sizes: sizes, rows: rows };
 }
 
-// 把扫码记录按 processName 分组成子工序
-function groupScanRecordsByProcess(records) {
-  if (!Array.isArray(records) || records.length === 0) return [];
-  var map = {};
-  var order = [];
-  records.forEach(function (r) {
-    var key = r.processName || r.process_name || '其他';
-    if (!map[key]) {
-      map[key] = { processName: key, records: [], totalQty: 0 };
-      order.push(key);
+/**
+ * 构建子工序进度数据（参考 PC 端 useSampleProcessProgress）
+ * @param {Array} configNodes - GET /production/pattern/{id}/process-config 返回的子工序配置数组
+ * @param {Array} scanRecords - GET /production/pattern/{id}/scan-records 返回的扫码记录数组
+ * @param {Object} order - 订单级字段（color/size/quantity/receiver/receiveTime/completeTime）
+ * @returns {{ stages: Array, needsConfig: boolean }}
+ *          stages: [{ key, label, percent, completedCount, totalCount, subProcesses: [{ key, name, color, size, quantity, receiver, time, status, percent, unitPrice }] }]
+ */
+function buildSampleStages(configNodes, scanRecords, order) {
+  if (!Array.isArray(configNodes) || configNodes.length === 0) {
+    return { stages: [], needsConfig: true };
+  }
+
+  // 收集扫码记录中的已完成子工序标识
+  var scannedNames = {};
+  var scannedStages = {};
+  (scanRecords || []).forEach(function (r) {
+    if (r.success === false) return;
+    if (r.processName) scannedNames[r.processName] = true;
+    if (r.operationType) {
+      scannedNames[r.operationType] = true;
+      var stageKey = normalizeOpToStage(r.operationType);
+      if (stageKey) {
+        scannedNames[stageKey] = true;
+        scannedStages[stageKey] = true;
+      }
     }
-    var qty = Number(r.quantity) || 0;
-    map[key].records.push({
-      id: r.id,
-      operatorName: r.operatorName || r.operator || r.operator_name || '-',
-      scanTimeText: fmtDateTime(r.scanTime || r.scan_time),
-      color: r.color || '',
-      size: r.size || '',
-      quantity: qty,
-    });
-    map[key].totalQty += qty;
+    if (r.progressStage) scannedStages[r.progressStage] = true;
   });
-  // 每个子工序的扫码记录按时间倒序
-  return order.map(function (k) {
-    map[k].records.sort(function (a, b) {
-      return a.scanTimeText < b.scanTimeText ? 1 : (a.scanTimeText > b.scanTimeText ? -1 : 0);
+
+  // 把配置的子工序按 progressStage 归类到 6 个父阶段
+  var stageMap = {};
+  configNodes.forEach(function (n, idx) {
+    var stageKey = resolveStageKey(n.progressStage || n.name || '');
+    if (!stageMap[stageKey]) stageMap[stageKey] = [];
+    stageMap[stageKey].push({
+      id: String(n.sortOrder || n.id || idx + 1),
+      name: n.processName || n.operationType || '',
+      processCode: n.operationType || n.processName || String(idx + 1),
+      progressStage: n.progressStage || '',
+      unitPrice: Number(n.unitPrice || n.price || 0),
+      completed: !!scannedNames[n.processName] || !!scannedNames[n.processCode]
+        || !!(n.progressStage && scannedStages[n.progressStage]),
     });
-    return map[k];
+  });
+
+  // unknown 阶段兜底归入尾部
+  var unknownSubs = stageMap.unknown || [];
+  if (unknownSubs.length > 0) {
+    if (!stageMap.tail) stageMap.tail = [];
+    stageMap.tail = stageMap.tail.concat(unknownSubs);
+    delete stageMap.unknown;
+  }
+
+  // 构造 6 个父阶段结果（按 PARENT_STAGES 顺序）
+  var stages = PARENT_STAGES.map(function (stage) {
+    var subs = stageMap[stage.key] || [];
+    var completedCount = 0;
+    subs.forEach(function (sub) {
+      if (sub.completed) completedCount++;
+    });
+    var totalCount = subs.length;
+    var percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    return {
+      key: stage.key,
+      label: stage.label,
+      percent: percent,
+      completedCount: completedCount,
+      totalCount: totalCount,
+      subProcesses: subs,
+    };
+  });
+
+  return { stages: stages, needsConfig: false };
+}
+
+/**
+ * 从 stages + 当前 tab 构造子工序表格行（参考 PC 端 subTableData）
+ * 子工序的 receiver/time：已完成或进行中时显示订单级 receiver/receiveTime，否则不显示
+ * 子工序的 color/size/quantity：使用订单级字段（与 PC 端一致）
+ */
+function buildSubProcessRows(stage, order) {
+  if (!stage || !stage.subProcesses || stage.subProcesses.length === 0) return [];
+  var isDone = stage.percent >= 100;
+  var isActive = stage.percent > 0 && stage.percent < 100;
+  var receiver = order.receiver || '';
+  var receiveTimeShort = order._receiveTimeShort || '';
+  var color = order.color || '';
+  var size = order.size || '';
+  var qty = stage.key === 'procurement' ? '1种面料'
+    : (Number(order.quantity) > 0 ? String(order.quantity) : '-');
+  return stage.subProcesses.map(function (sub) {
+    var subDone = isDone || sub.completed;
+    var subActive = isActive;
+    return {
+      key: sub.id || sub.processCode || sub.name,
+      name: sub.name,
+      color: color,
+      size: size,
+      quantity: qty,
+      receiver: subDone ? receiver : (subActive ? receiver : ''),
+      time: subDone ? receiveTimeShort : (subActive ? receiveTimeShort : ''),
+      status: subDone ? 'completed' : (subActive ? 'in_progress' : 'pending'),
+      percent: stage.percent,
+      unitPrice: sub.unitPrice,
+    };
   });
 }
 
@@ -360,14 +491,18 @@ Page({
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);
           item._deliveryTag = fmtDate(item.deliveryTime);
-          item._receiveTimeShort = formatDate(item.receiveTime);
+          item._receiveTimeShort = fmtDateTime(item.receiveTime);
+          item._completeTimeShort = fmtDateTime(item.completeTime);
           item.expanded = false;
           // 多码多色矩阵
           item._matrix = parseMatrix(item);
-          // 子工序扫码记录（展开时按需加载）
-          item._scanLoading = false;
-          item._subProcesses = [];
-          item._scanLoaded = false;
+          // 配置好的子工序列表（展开时按需加载）
+          item._configLoading = false;
+          item._needsConfig = false;
+          item._stages = [];
+          item._activeStage = '';
+          item._currentSubProcesses = [];
+          item._configLoaded = false;
           // 数量
           item._quantity = item.quantity || si.sampleQuantity || '';
           item._overdue = false;
@@ -528,32 +663,78 @@ Page({
     var item = this.data.list[idx];
     var newExpanded = !item.expanded;
 
-    // 切换展开状态
     var path = 'list[' + idx + '].expanded';
     this.setData({ [path]: newExpanded });
 
-    // 展开且未加载过扫码记录时按需加载
-    if (newExpanded && !item._scanLoaded && !item._scanLoading) {
+    // 展开且未加载过子工序配置时按需加载
+    if (newExpanded && !item._configLoaded && !item._configLoading) {
       var patternId = item.id || item.patternId;
-      if (!patternId) return;
-      this.setData({ ['list[' + idx + ']._scanLoading']: true });
-      api.production.getPatternScanRecords(patternId).then(function (res) {
-        var records = (res && res.data) || res || [];
-        if (!Array.isArray(records)) records = [];
-        var subProcesses = groupScanRecordsByProcess(records);
+      if (!patternId) {
+        this.setData({
+          ['list[' + idx + ']._configLoaded']: true,
+          ['list[' + idx + ']._needsConfig']: true,
+        });
+        return;
+      }
+      this.setData({ ['list[' + idx + ']._configLoading']: true });
+      Promise.all([
+        api.production.getPatternProcessConfig(patternId),
+        api.production.getPatternScanRecords(patternId),
+      ]).then(function (results) {
+        var configNodes = (results[0] && results[0].data) || results[0] || [];
+        if (!Array.isArray(configNodes)) configNodes = [];
+        var scanRecords = (results[1] && results[1].data) || results[1] || [];
+        if (!Array.isArray(scanRecords)) scanRecords = [];
+        var built = buildSampleStages(configNodes, scanRecords, item);
+        // 默认选第一个有子工序的 tab
+        var activeStage = '';
+        for (var i = 0; i < built.stages.length; i++) {
+          if (built.stages[i].totalCount > 0) {
+            activeStage = built.stages[i].key;
+            break;
+          }
+        }
+        if (!activeStage && built.stages.length > 0) {
+          activeStage = built.stages[0].key;
+        }
+        var currentSubs = [];
+        if (activeStage) {
+          var stageObj = built.stages.find(function (s) { return s.key === activeStage; });
+          currentSubs = buildSubProcessRows(stageObj, item);
+        }
         that.setData({
-          ['list[' + idx + ']._subProcesses']: subProcesses,
-          ['list[' + idx + ']._scanLoading']: false,
-          ['list[' + idx + ']._scanLoaded']: true,
+          ['list[' + idx + ']._stages']: built.stages,
+          ['list[' + idx + ']._needsConfig']: built.needsConfig,
+          ['list[' + idx + ']._activeStage']: activeStage,
+          ['list[' + idx + ']._currentSubProcesses']: currentSubs,
+          ['list[' + idx + ']._configLoading']: false,
+          ['list[' + idx + ']._configLoaded']: true,
         });
       }).catch(function () {
         that.setData({
-          ['list[' + idx + ']._subProcesses']: [],
-          ['list[' + idx + ']._scanLoading']: false,
-          ['list[' + idx + ']._scanLoaded']: true,
+          ['list[' + idx + ']._stages']: [],
+          ['list[' + idx + ']._needsConfig']: true,
+          ['list[' + idx + ']._configLoading']: false,
+          ['list[' + idx + ']._configLoaded']: true,
         });
       });
     }
+  },
+
+  // 切换父阶段 tab，重新构造当前 tab 下的子工序列表
+  onStageTabTap: function (e) {
+    var idx = Number(e.currentTarget.dataset.index);
+    var stageKey = e.currentTarget.dataset.stage;
+    if (Number.isNaN(idx) || idx < 0 || idx >= this.data.list.length) return;
+    var item = this.data.list[idx];
+    if (!stageKey || stageKey === item._activeStage) return;
+    var stageObj = (item._stages || []).find(function (s) { return s.key === stageKey; });
+    if (!stageObj) return;
+    var currentSubs = buildSubProcessRows(stageObj, item);
+    this.setData({
+      ['list[' + idx + ']._activeStage']: stageKey,
+      ['list[' + idx + ']._currentSubProcesses']: currentSubs,
+    });
   },
 
   onScan: function () {

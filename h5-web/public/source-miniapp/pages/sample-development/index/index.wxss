@@ -516,6 +516,35 @@
   text-align: center;
 }
 
+/* 基本信息网格 */
+.facts-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 10px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+}
+
+.fact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.fact-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.fact-value {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
 /* 多码多色矩阵 */
 .matrix-scroll {
   width: 100%;
@@ -573,120 +602,157 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* 子工序列表 */
-.sub-proc-list {
+/* 父阶段 tab 列表 */
+.stage-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 6px;
 }
 
-.sub-proc-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-sm);
-}
-
-.sub-proc-head {
+.stage-tab {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.sub-proc-name {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
-
-.sub-proc-meta {
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
   font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stage-tab--active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.stage-tab--done {
+  color: var(--color-success);
+}
+
+.stage-tab--active .stage-tab-count {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.stage-tab-name {
+  font-size: var(--font-size-xs);
+}
+
+.stage-tab-count {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 
-.sub-proc-rec {
+/* 子工序表格 */
+.sub-proc-table {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.sub-proc-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 6px;
+  font-size: var(--font-size-xs);
+}
+
+.sub-proc-row--head {
+  background: var(--color-bg-page);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+}
+
+.sub-proc-row + .sub-proc-row {
   border-top: 1px solid var(--color-border-light, var(--color-border));
 }
 
-.sub-proc-rec:first-of-type {
-  border-top: none;
-}
-
-.rec-row1 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.rec-operator-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.rec-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.rec-operator {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
+.sp-cell {
+  flex: 1;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 0 2px;
 }
 
-.rec-time {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-.rec-row2 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding-left: 12px;
-}
-
-.rec-tag {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+.sp-cell--name {
+  flex: 1.5;
+  text-align: left;
+  color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
 }
 
-.rec-tag--color {
-  background: rgba(255, 159, 64, 0.12);
-  color: var(--color-warning);
+.sp-cell--color {
+  flex: 0.8;
 }
 
-.rec-tag--size {
+.sp-cell--size {
+  flex: 0.6;
+}
+
+.sp-cell--qty {
+  flex: 0.6;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.sp-cell--receiver {
+  flex: 0.9;
+  text-align: center;
+}
+
+.sp-cell--time {
+  flex: 1.4;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.sp-cell--status {
+  flex: 0.9;
+  text-align: center;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+}
+
+.status-tag--done {
+  background: rgba(82, 196, 26, 0.12);
+  color: var(--color-success);
+}
+
+.status-tag--progress {
   background: rgba(64, 158, 255, 0.12);
   color: var(--color-primary);
 }
 
-.rec-qty {
+.status-tag--pending {
+  background: var(--color-bg-page);
+  color: var(--color-text-tertiary);
+}
+
+.sub-proc-empty {
+  padding: 16px 0;
+  text-align: center;
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-  font-variant-numeric: tabular-nums;
-  margin-left: auto;
+  color: var(--color-text-tertiary);
 }
 
 /* 加载更多 */

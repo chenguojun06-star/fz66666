@@ -100,18 +100,6 @@
         <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
       </view>
 
-      <!-- 领取人 + 领取时间（订单级，如果有） -->
-      <view class="card-receiver-row" wx:if="{{item.receiver || item.receiveTime}}">
-        <view class="receiver-item" wx:if="{{item.receiver}}">
-          <text class="receiver-label">领取人</text>
-          <text class="receiver-value">{{item.receiver}}</text>
-        </view>
-        <view class="receiver-item" wx:if="{{item.receiveTime}}">
-          <text class="receiver-label">领取时间</text>
-          <text class="receiver-value">{{item._receiveTimeShort}}</text>
-        </view>
-      </view>
-
       <!-- 进度条 -->
       <view class="card-progress">
         <view class="card-progress-track">
@@ -125,13 +113,48 @@
 
       <!-- 展开明细按钮 -->
       <view class="card-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
-        <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细（子工序·多码多色）'}}</text>
+        <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细（子工序 + 多码多色）'}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
       </view>
 
-      <!-- 展开区：多码多色 + 子工序列表 -->
+      <!-- 展开区：基本信息 + 配置好的子工序 + 多码多色 -->
       <view class="card-expand-area" wx:if="{{item.expanded}}">
-        <!-- 多码多色矩阵 -->
+        <!-- 基本信息（领取人/时间/完成时间/款号/颜色/尺码/数量） -->
+        <view class="expand-section">
+          <text class="section-title">基本信息</text>
+          <view class="facts-grid">
+            <view class="fact-item">
+              <text class="fact-label">领取人</text>
+              <text class="fact-value">{{item.receiver || '-'}}</text>
+            </view>
+            <view class="fact-item">
+              <text class="fact-label">领取时间</text>
+              <text class="fact-value">{{item._receiveTimeShort || '-'}}</text>
+            </view>
+            <view class="fact-item">
+              <text class="fact-label">完成时间</text>
+              <text class="fact-value">{{item._completeTimeShort || '-'}}</text>
+            </view>
+            <view class="fact-item">
+              <text class="fact-label">款号</text>
+              <text class="fact-value">{{item.styleNo || '-'}}</text>
+            </view>
+            <view class="fact-item">
+              <text class="fact-label">颜色</text>
+              <text class="fact-value">{{item.color || '-'}}</text>
+            </view>
+            <view class="fact-item">
+              <text class="fact-label">尺码</text>
+              <text class="fact-value">{{item.size || '-'}}</text>
+            </view>
+            <view class="fact-item">
+              <text class="fact-label">数量</text>
+              <text class="fact-value">{{item.quantity || '-'}}件</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 多码多色矩阵（如有） -->
         <view wx:if="{{item._matrix.sizes.length > 0}}" class="expand-section">
           <text class="section-title">多码多色</text>
           <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
@@ -150,32 +173,52 @@
           </scroll-view>
         </view>
 
-        <!-- 子工序列表（按 processName 分组的扫码记录） -->
+        <!-- 配置好的子工序列表（按父阶段分组） -->
         <view class="expand-section">
           <text class="section-title">子工序明细</text>
-          <view wx:if="{{item._scanLoading}}" class="state-hint">加载中...</view>
-          <view wx:elif="{{item._subProcesses.length === 0}}" class="state-hint">暂无扫码记录</view>
-          <view wx:else class="sub-proc-list">
-            <view wx:for="{{item._subProcesses}}" wx:for-item="sp" wx:key="processName" class="sub-proc-group">
-              <view class="sub-proc-head">
-                <text class="sub-proc-name">{{sp.processName}}</text>
-                <text class="sub-proc-meta">{{sp.records.length}}条 · {{sp.totalQty}}件</text>
-              </view>
-              <view wx:for="{{sp.records}}" wx:for-item="rec" wx:key="id" class="sub-proc-rec">
-                <view class="rec-row1">
-                  <view class="rec-operator-wrap">
-                    <view class="rec-dot"></view>
-                    <text class="rec-operator">{{rec.operatorName || '-'}}</text>
-                  </view>
-                  <text class="rec-time">{{rec.scanTimeText}}</text>
-                </view>
-                <view class="rec-row2">
-                  <text wx:if="{{rec.color}}" class="rec-tag rec-tag--color">{{rec.color}}</text>
-                  <text wx:if="{{rec.size}}" class="rec-tag rec-tag--size">{{rec.size}}</text>
-                  <text class="rec-qty">{{rec.quantity}}件</text>
-                </view>
-              </view>
+          <view wx:if="{{item._configLoading}}" class="state-hint">加载中...</view>
+          <view wx:elif="{{item._needsConfig}}" class="state-hint">该款号尚未配置子工序，请先在款式工序配置中添加</view>
+          <view wx:elif="{{item._stages.length === 0}}" class="state-hint">暂无子工序</view>
+          <view wx:else class="stage-tabs">
+            <view
+              wx:for="{{item._stages}}"
+              wx:for-item="st"
+              wx:key="key"
+              class="stage-tab {{item._activeStage === st.key ? 'stage-tab--active' : ''}} {{st.percent >= 100 ? 'stage-tab--done' : ''}}"
+              data-index="{{index}}"
+              data-stage="{{st.key}}"
+              catchtap="onStageTabTap"
+            >
+              <text class="stage-tab-name">{{st.label}}</text>
+              <text class="stage-tab-count" wx:if="{{st.totalCount > 0}}">{{st.completedCount}}/{{st.totalCount}}</text>
             </view>
+          </view>
+
+          <!-- 当前 tab 下的子工序列表 -->
+          <view wx:if="{{!item._configLoading && !item._needsConfig && item._stages.length > 0}}" class="sub-proc-table">
+            <view class="sub-proc-row sub-proc-row--head">
+              <text class="sp-cell sp-cell--name">工序</text>
+              <text class="sp-cell sp-cell--color">颜色</text>
+              <text class="sp-cell sp-cell--size">尺码</text>
+              <text class="sp-cell sp-cell--qty">数量</text>
+              <text class="sp-cell sp-cell--receiver">领取人</text>
+              <text class="sp-cell sp-cell--time">时间</text>
+              <text class="sp-cell sp-cell--status">状态</text>
+            </view>
+            <view wx:for="{{item._currentSubProcesses}}" wx:for-item="sp" wx:key="key" class="sub-proc-row">
+              <text class="sp-cell sp-cell--name">{{sp.name}}</text>
+              <text class="sp-cell sp-cell--color">{{sp.color || '-'}}</text>
+              <text class="sp-cell sp-cell--size">{{sp.size || '-'}}</text>
+              <text class="sp-cell sp-cell--qty">{{sp.quantity}}</text>
+              <text class="sp-cell sp-cell--receiver">{{sp.receiver || '-'}}</text>
+              <text class="sp-cell sp-cell--time">{{sp.time || '-'}}</text>
+              <text class="sp-cell sp-cell--status">
+                <text wx:if="{{sp.status === 'completed'}}" class="status-tag status-tag--done">已完成</text>
+                <text wx:elif="{{sp.status === 'in_progress'}}" class="status-tag status-tag--progress">{{sp.percent}}%</text>
+                <text wx:else class="status-tag status-tag--pending">待领取</text>
+              </text>
+            </view>
+            <view wx:if="{{item._currentSubProcesses.length === 0}}" class="sub-proc-empty">该阶段暂无子工序</view>
           </view>
         </view>
       </view>
