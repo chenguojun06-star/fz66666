@@ -12,19 +12,19 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: var(--color-primary); /* @design-system: 统一蓝色导航栏 */
-  border-bottom: 1px solid var(--color-primary-dark);
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.topbar-title { margin: 0; font-weight: 700; font-size: var(--font-size-lg); color: #ffffff; }
-.topbar-subtitle { margin: 2px 0 0; color: rgba(255, 255, 255, 0.85); font-size: var(--font-size-xs); }
+.topbar-title { margin: 0; font-weight: 700; font-size: var(--font-size-lg); }
+.topbar-subtitle { margin: 2px 0 0; color: var(--color-text-secondary); font-size: var(--font-size-xs); }
 
 .topbar-back-btn {
   background: none;
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #ffffff;
+  color: var(--color-text-primary);
   padding: 0;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;

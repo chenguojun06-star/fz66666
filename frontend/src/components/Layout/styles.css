@@ -13,8 +13,8 @@
   left: 0;
   right: 0;
   height: 60px;
-  background-color: var(--color-primary); /* @design-system: 统一蓝色导航栏 */
-  border-bottom: var(--border-width) solid var(--color-primary-dark);
+  background-color: var(--neutral-white);
+  border-bottom: var(--border-width) solid var(--neutral-dark);
   display: flex;
   align-items: center;
   padding: 0 var(--spacing-md);
@@ -40,7 +40,7 @@
 
 .header-title {
   font-size: var(--font-size-lg);
-  color: #ffffff; /* @design-system: 蓝色导航栏上的白色文字 */
+  color: var(--neutral-text);
   margin: 0;
   font-weight: 600;
   white-space: nowrap;
@@ -250,7 +250,7 @@
 
 .user-name {
   font-size: var(--font-size-base);
-  color: #ffffff; /* @design-system: 蓝色导航栏上的白色文字 */
+  color: var(--neutral-text);
   margin: 0;
   font-weight: 500;
 }
