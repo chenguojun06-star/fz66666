@@ -284,9 +284,10 @@
           <view class="section-count-badge quality-badge">{{qualityTasks.length}}</view>
         </view>
         <view class="task-card task-type-quality" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{qualityTasks}}" wx:key="orderId" catchtap="handleQualityTask" data-item="{{item}}">
-          <view class="task-dismiss" catchtap="dismissTask" data-type="quality" data-id="{{item.orderId}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -299,6 +300,7 @@
               </view>
             </view>
             <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="quality" data-id="{{item.orderId}}">×</view>
               <button class="task-action-btn quality-btn" size="mini" catchtap="handleQualityTask" data-item="{{item}}">去质检</button>
             </view>
           </view>
@@ -314,9 +316,10 @@
           <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
         </view>
         <view class="task-card task-type-cutting" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
-          <view class="task-dismiss" catchtap="dismissTask" data-type="cutting" data-id="{{item.orderId}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -327,6 +330,7 @@
               </view>
             </view>
             <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="cutting" data-id="{{item.orderId}}">×</view>
               <button class="task-action-btn cutting-btn" size="mini" catchtap="handleCuttingTask" data-item="{{item}}">去裁剪</button>
             </view>
           </view>
@@ -342,9 +346,10 @@
           <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
         </view>
         <view class="task-card task-type-purchase" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
-          <view class="task-dismiss" catchtap="dismissTask" data-type="purchase" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo || item.purchaseNo}}</text>
@@ -357,6 +362,7 @@
               </view>
             </view>
             <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="purchase" data-id="{{item.id}}">×</view>
               <button class="task-action-btn default-btn" size="mini" catchtap="handlePurchaseTask" data-item="{{item}}">查看</button>
             </view>
           </view>
@@ -372,9 +378,10 @@
           <view class="section-count-badge repair-badge">{{repairTasks.length}}</view>
         </view>
         <view class="task-card task-type-repair" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{repairTasks}}" wx:key="id" catchtap="handleRepairTask" data-item="{{item}}">
-          <view class="task-dismiss" catchtap="dismissTask" data-type="repair" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -386,6 +393,7 @@
               </view>
             </view>
             <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="repair" data-id="{{item.id}}">×</view>
               <button class="task-action-btn repair-btn" size="mini" catchtap="handleRepairTask" data-item="{{item}}">去返修</button>
             </view>
           </view>
@@ -401,9 +409,10 @@
           <view class="section-count-badge overdue-badge">{{overdueOrders.length}}</view>
         </view>
         <view class="task-card task-type-overdue" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{overdueOrders}}" wx:key="id" catchtap="handleOverdueOrder" data-item="{{item}}">
-          <view class="task-dismiss" catchtap="dismissTask" data-type="overdue" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -412,6 +421,7 @@
               <text class="task-name">{{item.styleName || item.styleNo || ''}}</text>
             </view>
             <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="overdue" data-id="{{item.id}}">×</view>
               <button class="task-action-btn default-btn" size="mini" catchtap="handleOverdueOrder" data-item="{{item}}">查看</button>
             </view>
           </view>

@@ -119,6 +119,8 @@ async function loadCuttingTasks() {
       ...item,
       id: item.id || item.taskId,
       orderNo: item.productionOrderNo || item.orderNo,
+      // 保留款式图字段（后端 CuttingTaskController 未注入，前端用 styleNo 兜底显示占位）
+      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
       receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
   } catch (err) {
@@ -177,6 +179,8 @@ async function loadQualityTasks() {
       size: item.size || '',
       quantity: item.quantity || 1,
       scanCode: item.scanCode || '',
+      // 保留款式图字段（后端 ScanRecordController.my-quality-tasks 已注入 coverImage/styleImage）
+      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
       receivedTimeText: formatTimeAgo(item.scanTime || item.createdAt),
     }));
   } catch (err) {
@@ -204,6 +208,8 @@ async function loadRepairTasks() {
       size: item.size || '',
       defectQty: Number(item.defectQty) || 0,
       defectCategory: item.defectCategory || '',
+      // 保留款式图字段
+      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
     }));
   } catch (err) {
     console.error('[loadRepairTasks] 加载失败:', err);
