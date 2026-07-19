@@ -101,7 +101,12 @@ export default function useStagePanel({
     }
 
     if (!scrapped && selectedStage.stage.key === 'sample') {
-      if (sampleHook.sampleSnapshot?.receiveTime && sampleHook.sampleSnapshot.receiveTime !== '待领取' && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
+      // 「标记完成」按钮显示条件：样衣已进入生产状态（IN_PROGRESS/REWORK），未完成且无完成时间
+      // 旧的「领取样板」流程已删除，现在通过 status 判断而不是 receiveTime
+      // 因为 receiveTime 由首次扫码自动填充，可能为 null 但 status 已是 IN_PROGRESS
+      const sampleStatus = String(sampleHook.sampleSnapshot?.status || '').trim().toUpperCase();
+      const isSampleInProgress = sampleStatus === 'IN_PROGRESS' || sampleStatus === 'REWORK';
+      if (isSampleInProgress && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
         actions.push({
           key: 'complete-sample', label: '标记完成', type: 'primary',
           onClick: () => {

@@ -471,11 +471,20 @@ Page({
         result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
 
       } else if (operationType === 'RECEIVE') {
-        const receiveExtra = {};
-        if (d.color) receiveExtra.color = d.color;
-        if (qty > 0) receiveExtra.quantity = qty;
-        const rcvRes = await api.production.receivePattern(d.patternId, remark, receiveExtra);
-        result = rcvRes ? { success: true, message: '领取成功' } : { success: false, message: '领取样板失败' };
+        // 工序级扫码领取（旧的 receivePattern 端点已删除，统一走 submitPatternScan）
+        const scanRes = await api.production.submitPatternScan({
+          patternId: d.patternId,
+          operationType: 'RECEIVE',
+          operatorRole: 'PLATE_WORKER',
+          quantity: qty,
+          color: d.color,
+          remark: remark,
+        });
+        result = {
+          success: true,
+          message: (scanRes && scanRes.message) || '领取成功',
+          data: scanRes,
+        };
 
       } else {
         const scanRes = await api.production.submitPatternScan({

@@ -77,8 +77,10 @@ const production = {
   warehousingStats(params) {
     return ok('/api/production/warehousing/stats', 'GET', params || {});
   },
-  pendingBundles(status) {
-    return ok('/api/production/warehousing/pending-bundles', 'GET', { status: status });
+  pendingBundles(status, orderId) {
+    var params = { status: status };
+    if (orderId) params.orderId = orderId;
+    return ok('/api/production/warehousing/pending-bundles', 'GET', params);
   },
   /**
    * 质检简报（与 PC 端 InspectionDetail.fetchBriefing 一致）
@@ -323,21 +325,13 @@ const production = {
 
   /**
    * 通用样衣工作流操作（与 PC 端 useSampleStage 一致）
-   * action: receive / complete / warehouse-in / review
+   * 注：「receive」（领取样板）已废弃 — 统一走工序级扫码 submitScan(RECEIVE)
+   * action: complete / warehouse-in / review / maintenance
    */
   patternWorkflowAction(patternId, action, payload) {
     const id = _normalizePatternId(patternId);
     const act = encodeURIComponent(action || '');
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${act}`, 'POST', payload || {});
-  },
-  receivePattern(patternId, remark, extra) {
-    const id = _normalizePatternId(patternId);
-    const payload = { remark: remark || '' };
-    if (extra) {
-      if (extra.color) payload.color = extra.color;
-      if (extra.quantity) payload.quantity = extra.quantity;
-    }
-    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', payload);
   },
   completePatternByTask(patternId) {
     const id = _normalizePatternId(patternId);

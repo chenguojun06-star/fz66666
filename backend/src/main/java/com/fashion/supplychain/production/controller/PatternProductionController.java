@@ -232,9 +232,6 @@ public class PatternProductionController {
             @RequestBody(required = false) Map<String, Object> request) {
         try {
             switch (action.toLowerCase()) {
-                case "receive":
-                    String receiveMsg = patternProductionOrchestrator.receivePattern(id, request);
-                    return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
                             id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null, null, null, null, null);
@@ -270,20 +267,10 @@ public class PatternProductionController {
     }
 
     /**
-     * 领取样板（纸样师傅领取）
+     * 样衣制作完成（按钮触发，需要先有扫码记录）
+     * 注意：旧的「领取样板」端点已删除 — 现在统一走工序级扫码流程
+     * 工序级领取/完成/入库都通过 submitScan + 扫码二维码完成
      */
-    @PostMapping("/{id}/receive")
-    public Result<String> receive(
-            @PathVariable String id,
-            @RequestBody(required = false) Map<String, Object> params) {
-        try {
-            String msg = patternProductionOrchestrator.receivePattern(id, params);
-            return Result.success(msg);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            throw new BusinessException(e.getMessage(), e);
-        }
-    }
-
     @PostMapping("/{id}/complete")
     public Result<Map<String, Object>> completeByTask(@PathVariable String id) {
         try {

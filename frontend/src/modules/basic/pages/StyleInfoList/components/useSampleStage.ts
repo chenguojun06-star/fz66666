@@ -153,20 +153,6 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStage?.record?.styleNo, selectedStage?.stage?.key]);
 
-  const handleReceiveSample = useCallback(async () => {
-    if (!sampleSnapshot?.id) return;
-    setSampleActionLoading(true);
-    try {
-      await api.post(`/production/pattern/${sampleSnapshot.id}/workflow-action`, {}, { params: { action: 'receive' } });
-      message.success('样衣已领取');
-      await reloadSampleStage();
-    } catch (error: unknown) {
-      message.error(typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : (error instanceof Error ? error.message : '领取失败'));
-    } finally {
-      setSampleActionLoading(false);
-    }
-  }, [message, reloadSampleStage, sampleSnapshot?.id]);
-
   const handleSaveSampleProgress = useCallback(async () => {
     if (!sampleSnapshot?.id) return;
     setSampleActionLoading(true);
@@ -241,7 +227,6 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     shouldShowSampleStageProgress,
     sampleStageSummary,
     reloadSampleStage,
-    handleReceiveSample,
     handleSaveSampleProgress,
   };
 }

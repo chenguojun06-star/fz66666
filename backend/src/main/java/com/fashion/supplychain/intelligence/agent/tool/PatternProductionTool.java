@@ -68,14 +68,10 @@ public class PatternProductionTool extends AbstractAgentTool {
                 yield successJson("查询样板列表成功", result);
             }
             case "receive" -> {
+                // 已废弃：旧的「领取样板」端点已删除，统一走工序级扫码 submitScan(RECEIVE)
+                // 提示用户走扫码流程
                 String patternId = requireString(args, "patternId");
-                String remark = optionalString(args, "remark");
-
-                Map<String, Object> params = new LinkedHashMap<>();
-                if (remark != null) params.put("remark", remark);
-
-                String resultMsg = patternProductionOrchestrator.receivePattern(patternId, params);
-                yield successJson("收样成功", Map.of("patternId", patternId, "message", resultMsg != null ? resultMsg : "收样已确认"));
+                yield errorJson("「领取样板」操作已废弃，请让工人扫码工序二维码完成领取（submitScan operationType=RECEIVE）。patternId=" + patternId);
             }
             case "review" -> {
                 String patternId = requireString(args, "patternId");
@@ -94,7 +90,7 @@ public class PatternProductionTool extends AbstractAgentTool {
                 Map<String, Object> inResult = patternProductionOrchestrator.warehouseIn(patternId, remark, null, null, null);
                 yield successJson("样板入库成功", inResult);
             }
-            default -> errorJson("不支持的 action：" + action + "，可用：list / receive / review / warehouse_in");
+            default -> errorJson("不支持的 action：" + action + "，可用：list / review / warehouse_in");
         };
     }
 

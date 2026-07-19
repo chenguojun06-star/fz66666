@@ -61,10 +61,7 @@ const production = {
   getPatternProcessConfig: (patternId) => http.get(`/api/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/process-config`),
   getPatternScanRecords: (patternId) => http.get(`/api/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/scan-records`),
   submitPatternScan: (payload) => http.post('/api/production/pattern/scan', payload),
-  receivePattern: (patternId, remark) => {
-    const id = encodeURIComponent(String(patternId || '').trim());
-    return http.post(`/api/production/pattern/${id}/workflow-action?action=receive`, { remark: remark || '' });
-  },
+  // 注：旧的 receivePattern API 已删除 — 统一走 submitPatternScan(operationType=RECEIVE) 工序级扫码
   reviewPattern: (patternId, result, remark) => {
     const id = encodeURIComponent(String(patternId || '').trim());
     return http.post(`/api/production/pattern/${id}/workflow-action?action=review`, { result, remark });

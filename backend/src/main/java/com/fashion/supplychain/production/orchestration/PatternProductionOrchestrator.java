@@ -306,77 +306,11 @@ public class PatternProductionOrchestrator {
     }
 
     /**
-     * 领取样板（跨域更新：PatternProduction + StyleInfo）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public String receivePattern(String id, Map<String, Object> params) {
-        PatternProduction record = getPatternWithTenant(id);
-        if (record == null || record.getDeleteFlag() == 1) {
-            throw new IllegalArgumentException("记录不存在");
-        }
-        if (!"PENDING".equals(record.getStatus())) {
-            throw new IllegalStateException("当前状态不允许领取");
-        }
-
-        String currentUser = UserContext.username();
-        record.setReceiver(currentUser);
-        record.setReceiveTime(LocalDateTime.now());
-        record.setStatus("IN_PROGRESS");
-        record.setUpdateBy(currentUser);
-        record.setUpdateTime(LocalDateTime.now());
-        record.setPatternMaker(currentUser);
-
-        if (params != null) {
-            parseAndSetTime(params, "releaseTime", record);
-            parseAndSetTime(params, "deliveryTime", record);
-            if (params.containsKey("color") && params.get("color") != null) {
-                String color = String.valueOf(params.get("color")).trim();
-                if (StringUtils.hasText(color)) {
-                    record.setColor(color);
-                }
-            }
-            if (params.containsKey("quantity") && params.get("quantity") != null) {
-                try {
-                    int qty = Integer.parseInt(String.valueOf(params.get("quantity")).trim());
-                    if (qty > 0) {
-                        record.setQuantity(qty);
-                    }
-                } catch (NumberFormatException ignore) {}
-            }
-        }
-
-        patternProductionService.updateById(record);
-
-        // 创建样衣领取扫码记录，使前端工序进度能匹配"采购"阶段
-        PatternScanRecord receiveRecord = new PatternScanRecord();
-        receiveRecord.setPatternProductionId(id);
-        receiveRecord.setStyleId(record.getStyleId());
-        receiveRecord.setStyleNo(record.getStyleNo());
-        receiveRecord.setColor(record.getColor());
-        receiveRecord.setOperationType("RECEIVE");
-        receiveRecord.setProcessName(patternOperationLabel("RECEIVE"));
-        receiveRecord.setProgressStage(mapOperationTypeToProgressStage("RECEIVE"));
-        receiveRecord.setProcessCode("RECEIVE");
-        receiveRecord.setOperatorId(UserContext.userId());
-        receiveRecord.setOperatorName(currentUser);
-        receiveRecord.setOperatorRole("PLATE_WORKER");
-        receiveRecord.setScanTime(LocalDateTime.now());
-        receiveRecord.setRemark("领取样板");
-        receiveRecord.setCreateTime(LocalDateTime.now());
-        receiveRecord.setDeleteFlag(0);
-        patternScanRecordService.save(receiveRecord);
-
-        createPatternScanRecordForWage(record, "领取样板", UserContext.userId(), currentUser, LocalDateTime.now());
-
-        statusHelper.syncStyleInfoOnReceive(record.getStyleId(), currentUser);
-        statusHelper.syncStyleInfoSampleStage(record);
-
-        log.info("Pattern production received: id={}, receiver={}", id, currentUser);
-        return "领取成功";
-    }
-
-    /**
      * 更新工序进度（跨域更新：PatternProduction + StyleInfo）
+     *
+     * 注：旧的 receivePattern（领取样板）方法已删除 — 现在统一走工序级扫码流程：
+     * 工人扫二维码 → submitScan(operationType=RECEIVE, processName=...) 触发领取
+     * 由 PatternStatusHelper.ensureInProgress 在首次扫码时自动补全 receiver/receiveTime
      */
     @Transactional(rollbackFor = Exception.class)
     public String updateProgress(String id, Map<String, Integer> progressNodes) {
@@ -399,6 +333,15 @@ public class PatternProductionOrchestrator {
 
             patternProductionService.updateById(record);
             statusHelper.syncStyleInfoSampleStage(record);
+
+            // 备注日志：更新进度
+            StringBuilder progressDetail = new StringBuilder();
+            progressDetail.append("进度节点：").append(progressNodes.size()).append(" 项");
+            if (allCompleted) {
+                progressDetail.append(" · 全部完成");
+            }
+            appendPatternRemarkSimple(record, "更新进度", progressDetail.toString());
+
             log.info("Pattern production progress updated: id={}, progress={}", id, progressNodes);
             return "进度更新成功";
         } catch (Exception e) {
@@ -420,8 +363,22 @@ public class PatternProductionOrchestrator {
             throw new IllegalStateException("当前状态不允许完成，仅制作中或返修中可操作");
         }
         String currentUserId = UserContext.userId();
-        if (pattern.getReceiverId() != null && !pattern.getReceiverId().equals(currentUserId)) {
-            throw new IllegalStateException("仅领取人可点击完成");
+        // 权限校验：扫码完成人优先；receiverId 不存在时回退到扫码记录最近一次 PLATE/FOLLOW_UP 的操作人
+        // （旧的「领取样板」端点已删除，receiverId 不再可靠；改为以扫码记录为权威）
+        if (StringUtils.hasText(pattern.getReceiverId()) && !pattern.getReceiverId().equals(currentUserId)) {
+            // receiverId 与当前用户不一致：可能是后来的扫码工人，再查最近一次制作类扫码记录的 operatorId
+            PatternScanRecord latest = patternScanRecordService.lambdaQuery()
+                    .eq(PatternScanRecord::getPatternProductionId, patternId)
+                    .eq(PatternScanRecord::getTenantId, UserContext.tenantId())
+                    .eq(PatternScanRecord::getDeleteFlag, 0)
+                    .in(PatternScanRecord::getOperationType, java.util.Arrays.asList("PLATE", "FOLLOW_UP", "REWORK", "COMPLETE"))
+                    .orderByDesc(PatternScanRecord::getScanTime)
+                    .last("LIMIT 1")
+                    .one();
+            if (latest != null && StringUtils.hasText(latest.getOperatorId())
+                    && !latest.getOperatorId().equals(currentUserId)) {
+                throw new IllegalStateException("仅最近一次制作类扫码操作人或领取人可点击完成");
+            }
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -457,6 +414,19 @@ public class PatternProductionOrchestrator {
         statusHelper.syncStyleInfoSampleStage(pattern);
 
         createPatternScanRecordForWage(pattern, wasRework ? "返修完成" : "制作完成", currentUserId, operatorName, now);
+
+        // 备注日志：制作完成/返修完成
+        String completeAction = wasRework ? "返修完成" : "制作完成";
+        StringBuilder completeDetail = new StringBuilder();
+        completeDetail.append("操作人：").append(operatorName);
+        if (pattern.getQuantity() != null && pattern.getQuantity() > 0) {
+            completeDetail.append(" · 数量").append(pattern.getQuantity());
+        }
+        if (wasRework) {
+            int reworkCount = pattern.getReworkCount() != null ? pattern.getReworkCount() : 0;
+            completeDetail.append(" · 第").append(reworkCount).append("次返修");
+        }
+        appendPatternRemarkSimple(pattern, completeAction, completeDetail.toString());
 
         log.info("[样衣完成] patternId={} operator={} type={}", patternId, operatorName, scanRecord.getOperationType());
 
@@ -705,6 +675,93 @@ public class PatternProductionOrchestrator {
             }
         } catch (Exception e) {
             log.warn("样衣扫码追加操作日志失败，不影响主流程: patternId={}, error={}", pattern.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 通用备注日志追加（不依赖扫码场景）
+     * 用于非扫码类操作（领取/进度更新/完成/审核/维护/撤销扫码/指派/二次工艺/删除/基本信息更新）
+     * 与大货 OrderRemarkHelper.append(order, action, detail) 签名对齐
+     *
+     * 双写：
+     * 1. PatternProduction.remarks 字段（inline，最近 20 条，最多 4000 字符）
+     * 2. t_order_remark 表（targetType="pattern"）
+     *
+     * @param pattern 样板生产记录（必须含 id 和 tenantId）
+     * @param action  动作标签，如"领取样板"/"制作完成"/"审核通过"等
+     * @param detail  详情，可为空
+     */
+    private void appendPatternRemarkSimple(PatternProduction pattern, String action, String detail) {
+        if (pattern == null || !StringUtils.hasText(pattern.getId())) {
+            return;
+        }
+        try {
+            String operatorName = UserContext.username();
+            if (!StringUtils.hasText(operatorName)) {
+                operatorName = UserContext.userId();
+            }
+            if (!StringUtils.hasText(operatorName)) {
+                operatorName = "系统";
+            }
+            String now = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    .format(java.time.LocalDateTime.now());
+            // 格式与大货一致：[yyyy-MM-dd HH:mm:ss] 操作人 动作：详情
+            StringBuilder line = new StringBuilder();
+            line.append("[").append(now).append("] ");
+            line.append(operatorName).append(" ").append(action);
+            if (StringUtils.hasText(detail)) {
+                line.append("：").append(detail);
+            }
+            String newEntry = line.toString();
+
+            // 重新查询最新数据再追加（避免覆盖并发写入）
+            PatternProduction fresh = patternProductionService.getById(pattern.getId());
+            if (fresh == null) return;
+            String existing = fresh.getRemarks();
+            String merged;
+            if (existing == null || existing.trim().isEmpty()) {
+                merged = newEntry;
+            } else {
+                merged = existing + "\n" + newEntry;
+            }
+            // 限制最大长度 4000 字符，保留最近 20 条
+            if (merged.length() > 4000) {
+                String[] lines = merged.split("\n");
+                int keep = Math.min(lines.length, 20);
+                StringBuilder sb = new StringBuilder();
+                for (int i = lines.length - keep; i < lines.length; i++) {
+                    if (sb.length() > 0) sb.append("\n");
+                    sb.append(lines[i]);
+                }
+                merged = sb.toString();
+            }
+            fresh.setRemarks(merged);
+            patternProductionService.updateById(fresh);
+            // 同步到内存对象，供后续逻辑使用
+            pattern.setRemarks(merged);
+
+            // === 双写 t_order_remark 表 ===
+            try {
+                if (orderRemarkService != null) {
+                    com.fashion.supplychain.system.entity.OrderRemark record =
+                            new com.fashion.supplychain.system.entity.OrderRemark();
+                    record.setTargetType("pattern");
+                    record.setTargetNo(String.valueOf(fresh.getId()));
+                    record.setAuthorName(operatorName);
+                    record.setAuthorRole(action);
+                    record.setContent(newEntry);
+                    record.setTenantId(fresh.getTenantId());
+                    record.setCreateTime(LocalDateTime.now());
+                    record.setDeleteFlag(0);
+                    orderRemarkService.save(record);
+                }
+            } catch (Exception e) {
+                log.warn("样衣操作同步t_order_remark失败，不影响主流程: patternId={}, action={}, error={}",
+                        pattern.getId(), action, e.getMessage());
+            }
+        } catch (Exception e) {
+            log.warn("样衣操作追加备注日志失败，不影响主流程: patternId={}, action={}, error={}",
+                    pattern.getId(), action, e.getMessage());
         }
     }
 

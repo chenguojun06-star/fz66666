@@ -145,8 +145,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const [expandedParentStage, setExpandedParentStage] = useState<string | null>(null);
   const [assigningData, setAssigningData] = useState<{ open: boolean; patternId: string; currentAssignee: string }>({ open: false, patternId: '', currentAssignee: '' });
   const [assignForm] = Form.useForm();
-  const [receiveModalOpen, setReceiveModalOpen] = useState(false);
-  const [receiveForm] = Form.useForm();
 
   const sample = useSampleStage({ selectedStage, message, onRefresh });
   const scanRecords = useSampleScanRecords();
@@ -710,54 +708,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       </div>
                     </div>
 
-                    <Modal
-                      title="领取样衣"
-                      open={receiveModalOpen}
-                      onCancel={() => setReceiveModalOpen(false)}
-                      onOk={async () => {
-                        try {
-                          const values = await receiveForm.validateFields();
-                          setReceiveModalOpen(false);
-                          await api.post(`/production/pattern/${sample.sampleSnapshot?.id}/workflow-action`, {
-                            color: values.color,
-                            quantity: values.quantity,
-                          }, { params: { action: 'receive' } });
-                          message.success('样衣已领取');
-                          await sample.reloadSampleStage();
-                          onRefresh();
-                        } catch (err: any) {
-                          if (err?.errorFields) return;
-                          message.error(typeof err?.response?.data?.message === 'string' ? err.response.data.message : '领取失败');
-                        }
-                      }}
-                      confirmLoading={sample.sampleActionLoading}
-                    >
-                      <Form form={receiveForm} layout="vertical">
-                        {(() => {
-                          const colors = sample.sampleSnapshot?.colors?.length
-                            ? sample.sampleSnapshot.colors
-                            : sample.sampleSnapshot?.color
-                              ? [sample.sampleSnapshot.color]
-                              : ['默认'];
-                          return colors.length > 1 ? (
-                            <Form.Item name="color" label="选择颜色" rules={[{ required: true, message: '请选择颜色' }]}>
-                              <Select placeholder="请选择颜色">
-                                {colors.map((c) => (
-                                  <Select.Option key={c} value={c}>{c}</Select.Option>
-                                ))}
-                              </Select>
-                            </Form.Item>
-                          ) : (
-                            <Form.Item name="color" label="颜色">
-                              <Input disabled value={colors[0] || '默认'} />
-                            </Form.Item>
-                          );
-                        })()}
-                        <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
-                          <InputNumber min={1} max={9999} style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Form>
-                    </Modal>
                     {sample.shouldShowSampleStageProgress ? (
                       <div style={{ marginTop: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
