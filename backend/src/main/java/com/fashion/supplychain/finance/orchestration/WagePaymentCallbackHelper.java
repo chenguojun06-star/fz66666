@@ -1,5 +1,6 @@
 package com.fashion.supplychain.finance.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
@@ -13,6 +14,8 @@ import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusS
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -32,6 +35,7 @@ public class WagePaymentCallbackHelper {
     private final FinishedSettlementApprovalStatusService finishedSettlementApprovalStatusService;
     private final ShipmentReconciliationService shipmentReconciliationService;
     private final BillAggregationService billAggregationService;
+    private final ScanRecordMapper scanRecordMapper;
 
     public void callbackPaidUpstream(String bizType, String bizId) {
         Long tenantId = UserContext.tenantId();
@@ -270,6 +274,38 @@ public class WagePaymentCallbackHelper {
             psPatch.setUpdateTime(LocalDateTime.now());
             payrollSettlementService.updateById(psPatch);
             log.info("[工资支付] 退回回写工资结算: id={}, paid->approved", bizId);
+
+            // P1-6 修复：退款后释放 ScanRecord 绑定，让操作员可以重新扫码
+            // 原实现只回写 PayrollSettlement 状态，未释放 ScanRecord 的 payrollSettlementId/settlementStatus
+            // 导致操作员扫码时被 ScanUndoHelper.assertNotPayrollSettled 拦截，无法重扫
+            releaseScanRecordsForRefund(bizId, tenantId);
+        }
+    }
+
+    /**
+     * 退款后释放扫码记录绑定（P1-6 用户级阻塞修复）
+     * <p>
+     * 原状态：settlementStatus=payroll_approved / payroll_settled，payrollSettlementId=bizId
+     * 释放后：settlementStatus=null，payrollSettlementId=null
+     * 这样操作员可以重新对这些扫码记录进行撤回/重扫操作
+     * <p>
+     * 多租户安全：UPDATE 显式带 tenant_id WHERE，符合 P0 铁律4
+     */
+    private void releaseScanRecordsForRefund(String payrollSettlementId, Long tenantId) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            LambdaUpdateWrapper<ScanRecord> uw = new LambdaUpdateWrapper<ScanRecord>()
+                    .set(ScanRecord::getSettlementStatus, null)
+                    .set(ScanRecord::getPayrollSettlementId, null)
+                    .set(ScanRecord::getUpdateTime, now)
+                    .eq(ScanRecord::getPayrollSettlementId, payrollSettlementId)
+                    .eq(ScanRecord::getTenantId, tenantId);
+            int rows = scanRecordMapper.update(null, uw);
+            log.info("[工资支付] 退款释放扫码记录绑定: payrollSettlementId={}, tenantId={}, releasedRows={}",
+                    payrollSettlementId, tenantId, rows);
+        } catch (Exception e) {
+            log.error("[工资支付] 退款释放扫码记录失败（不影响退款主流程）: payrollSettlementId={}, err={}",
+                    payrollSettlementId, e.getMessage(), e);
         }
     }
 

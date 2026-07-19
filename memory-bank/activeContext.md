@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-18（补录 7-18 样衣开发进度/仓库库位/工序配置/三端一致性核查/多租户漏洞修复）
+> 最后更新：2026-07-19（财务数据链路闭环 Phase 1-4 + Phase 3 全部完成）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,60 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-19 财务数据链路闭环（Phase 1-4 + Phase 3 全部完成）
+
+用户指令："全部核实清楚了 所有的链路 就开始优化 一定要注意所有的数据链路闭环"
+
+**Phase 1 止血（5 项核心修复）✅**
+- BillAggregationOrchestrator 新增 `reverseBySource` / `reverseByOrder` 反向账单机制（B1 阻塞根因）
+- SalesReturnOrchestrator 补 tenantId 过滤 + 联动反向账单
+- FactoryShipmentOrchestrator fail-safe 保护
+- ShipmentReconciliationOrchestrator 推账单方向修正（P0-1/P0-2/P0-3）
+- ReconciliationStatusOrchestrator 退回联动账单（P1-6）
+
+**Phase 2 补齐（5 项 P0 修复）✅**
+- ProductionCleanupOrchestrator：清理前校验已结清账单
+- FinishedWarehouseOperationOrchestrator：出库冲销联动
+- PurchaseReturnOrchestrator：采购退货联动反向
+- MaterialPurchasePickingHelper：FACTORY fallback category
+- MaterialPurchaseWarehousePickHelper + MaterialStockOrchestrator + MaterialPickupOrchestrator
+
+**Phase 2.5 EXTERNAL_FACTORY 核查（3 P0 + 6 P1 + 1 P2 修复）✅**
+- SecondaryProcessOrchestrator：非法枚举 SECONDARY_PROCESS → EXTERNAL_FACTORY + 补 TenantAssert
+- 前端 billAggregationApi.ts 补 SHIPMENT 选项
+
+**Phase 4 审计修复（3 处）✅**
+- SalesReturnOrchestrator.java:216 `originalOrder` 编译错误修复
+- FactoryShipmentOrchestrator.java:209 `isSuccess()` 方法修复
+- finance/ShipmentReconciliationOrchestrator.java:352 `void无法转换为int` 修复
+
+**Phase 3 P1 用户级阻塞修复 ✅**
+- **Phase 3-1: isOwnFactory 字段化** ✅
+  - Flyway 迁移 [V202707191000__add_is_own_factory_to_shipment_reconciliation.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202707191000__add_is_own_factory_to_shipment_reconciliation.sql) — 幂等加列 + 按 order_id 关联 t_production_order.factory_type 回填历史数据（INTERNAL→1/EXTERNAL→0/其他→NULL）
+  - check-flyway-sql.py 验证通过
+- **Phase 3-2: undoPatternScan 双写** ✅
+  - [PatternProductionOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/orchestration/PatternProductionOrchestrator.java) undoPatternScan 方法重写，补齐 5 项修复：
+    1. 多租户校验 PatternScanRecord + PatternProduction（P0 铁律4）
+    2. 工资结算状态校验（防止已结算扫码被撤回导致工资单悬挂）
+    3. 同步删除 ScanRecord 镜像（scanType="pattern"，与 submitScan 的 syncToScanRecord 对称）
+    4. 写备注日志（与 submitScan 的 appendPatternRemark 对称，双写 PatternProduction.remarks + t_order_remark）
+    5. 时间窗规则对齐 ScanUndoHelper（管理员 5h / 普通 30min）
+  - 新增 `findPatternScanRecordMirror` 私有方法（scanType+tenantId+operatorId+styleNo+scanTime±60s 匹配）
+  - 新增 `isAdminRole` 私有方法（与 ScanUndoHelper.isAdminRole 对齐）
+- **Phase 3-3: 样衣开发费用统一接入 BillAggregation** ✅
+  - [StyleInfoOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/style/orchestration/StyleInfoOrchestrator.java) 新增 `@Lazy @Autowired(required = false) BillAggregationOrchestrator`
+  - saveSampleReview PASS 分支新增 `pushStyleDevelopmentBill(style)`
+  - saveSampleReview REJECT/REWORK 分支新增 `reverseStyleDevelopmentBill`
+  - 新增 `pushStyleDevelopmentBill` 私有方法：sourceType=STYLE_DEVELOPMENT / billType=PAYABLE / billCategory=EXPENSE / counterpartyType=EMPLOYEE，金额=materialCost+processCost（与 StyleCostCalculator 对齐，去除 secondaryProcessCost 避免与 SECONDARY_PROCESS sourceType 重复）
+  - 新增 `reverseStyleDevelopmentBill` 私有方法：调 reverseBySource 联动取消 Bill → Payable 全链路
+  - 新增 `computeMaterialCost` / `computeProcessCost` 私有方法（与 StyleCostCalculator.computeLiveDevCostFromBatch 逻辑一致，单款实时聚合）
+  - 不阻塞主流程原则：账单推送/反向失败仅记日志，不影响审核主流程
+
+**编译验证**：`mvn compile` 一次通过（exit 0）
+**Flyway 验证**：`python3 scripts/check-flyway-sql.py` 通过
+
+**决策记录**：D-041 财务数据链路闭环 — 反向账单机制 + isOwnFactory 字段化 + 样衣开发费用统一接入
 
 ### 2026-07-18 三端数据流转一致性核查 + 3个P0级多租户漏洞修复
 

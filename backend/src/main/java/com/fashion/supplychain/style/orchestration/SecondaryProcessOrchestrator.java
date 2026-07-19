@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
@@ -132,6 +133,8 @@ public class SecondaryProcessOrchestrator {
         if (process == null) {
             throw new NoSuchElementException("二次工艺不存在");
         }
+        // P3 审计修复：显式校验租户归属（P0铁律4 多租户隔离）
+        TenantAssert.assertBelongsToCurrentTenant(process.getTenantId(), "二次工艺");
 
         if ("approved".equals(process.getApprovalStatus())) {
             throw new IllegalStateException("已审批，不可重复操作");
@@ -149,7 +152,9 @@ public class SecondaryProcessOrchestrator {
             if (process.getTotalPrice() != null && process.getTotalPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
                 req.setBillType("PAYABLE");
-                req.setBillCategory("SECONDARY_PROCESS");
+                // P1-5 修复：二次工艺对方是 FACTORY（外协外发），归入"外发厂"类别
+                // 原值 "SECONDARY_PROCESS" 不在 BillAggregation 声明的 7 种枚举中
+                req.setBillCategory("EXTERNAL_FACTORY");
                 req.setSourceType("SECONDARY_PROCESS");
                 req.setSourceId(String.valueOf(id));
                 req.setSourceNo("SP-" + id);

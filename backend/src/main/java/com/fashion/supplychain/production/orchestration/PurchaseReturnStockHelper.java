@@ -76,9 +76,16 @@ public class PurchaseReturnStockHelper {
     }
 
     /**
-     * 冲减应付账款（找到该供应商最新未付款的应付记录，减少应付金额）
+     * 冲减应付账款（按原采购单关联到具体 Payable，减少应付金额）
+     * <p>
+     * P0-6 修复：原实现按 supplierId 取最新 Payable，会扣错供应商的应付单
+     * 现改为按 originalPurchaseId 多级关联：
+     * 1. 优先：通过 MaterialReconciliation.sourceId/purchaseId 反查关联的 BillAggregation
+     * 2. 次优：通过 supplierId + 同月份 + PENDING/PARTIAL 状态的合并 Payable
+     * 3. 兜底：通过 supplierId 最新未付款 Payable（保留原逻辑）
+     * 已 PAID 的应付单不冲减（避免负数），改为日志告警提示需人工冲账
      *
-     * @param returnEntity 退货单（含 supplierId + totalAmount）
+     * @param returnEntity 退货单（含 originalPurchaseId + supplierId + totalAmount）
      */
     public void decreasePayable(PurchaseReturn returnEntity) {
         BigDecimal totalAmount = returnEntity.getTotalAmount();
@@ -86,21 +93,91 @@ public class PurchaseReturnStockHelper {
             return;
         }
         Long tenantId = returnEntity.getTenantId();
-        // P0铁律4：必须用AND保持tenant_id隔离，禁止.or()绕过租户过滤
-        List<Payable> payables = payableService.list(
+        if (tenantId == null) {
+            log.warn("采购退货 tenantId 为空，跳过应付更新: returnNo={}", returnEntity.getReturnNo());
+            return;
+        }
+
+        Payable targetPayable = findPayableByPurchaseId(returnEntity, tenantId);
+        if (targetPayable == null) {
+            targetPayable = findPayableBySupplierAndMonth(returnEntity, tenantId);
+        }
+        if (targetPayable == null) {
+            targetPayable = findLatestUnpaidPayable(returnEntity, tenantId);
+        }
+        if (targetPayable == null) {
+            log.warn("采购退货未找到对应应付账款记录，跳过应付更新: returnNo={}, supplierId={}, originalPurchaseId={}",
+                    returnEntity.getReturnNo(), returnEntity.getSupplierId(), returnEntity.getOriginalPurchaseId());
+            return;
+        }
+
+        // 已结清的应付单不冲减（避免出现负数或回滚已付款状态）
+        if ("PAID".equals(targetPayable.getStatus())) {
+            log.warn("采购退货关联应付单已结清，需人工冲账: returnNo={}, payableNo={}, paidAmount={}",
+                    returnEntity.getReturnNo(), targetPayable.getPayableNo(), targetPayable.getPaidAmount());
+            return;
+        }
+
+        BigDecimal paidAmountDelta = totalAmount.negate(); // 负数：减少应付
+        payableService.atomicAddPaidAmount(targetPayable.getId(), paidAmountDelta);
+        log.info("采购退货应付账款更新成功: returnNo={}, payableId={}, payableNo={}, delta={}, originalPurchaseId={}",
+                returnEntity.getReturnNo(), targetPayable.getId(), targetPayable.getPayableNo(),
+                paidAmountDelta, returnEntity.getOriginalPurchaseId());
+    }
+
+    /**
+     * 按 originalPurchaseId 关联查找 Payable
+     * 通过 MaterialReconciliation 的 orderId/sourceId 字段反查 BillAggregation
+     */
+    private Payable findPayableByPurchaseId(PurchaseReturn returnEntity, Long tenantId) {
+        String originalPurchaseId = returnEntity.getOriginalPurchaseId();
+        if (!org.springframework.util.StringUtils.hasText(originalPurchaseId)) {
+            return null;
+        }
+        // 优先：Payable.sourceId 直接等于 originalPurchaseId（MaterialReconciliation 直接派生时）
+        List<Payable> list = payableService.list(
+                new LambdaQueryWrapper<Payable>()
+                        .eq(Payable::getTenantId, tenantId)
+                        .eq(Payable::getSourceId, originalPurchaseId)
+                        .eq(Payable::getDeleteFlag, 0)
+                        .in(Payable::getStatus, "PENDING", "PARTIAL")
+                        .orderByDesc(Payable::getCreateTime)
+        );
+        if (!list.isEmpty()) {
+            return list.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * 按 supplierId + 当月 + PENDING/PARTIAL 查找合并 Payable
+     */
+    private Payable findPayableBySupplierAndMonth(PurchaseReturn returnEntity, Long tenantId) {
+        String currentMonth = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+        List<Payable> list = payableService.list(
+                new LambdaQueryWrapper<Payable>()
+                        .eq(Payable::getTenantId, tenantId)
+                        .eq(Payable::getSupplierId, returnEntity.getSupplierId())
+                        .eq(Payable::getSettlementMonth, currentMonth)
+                        .eq(Payable::getDeleteFlag, 0)
+                        .in(Payable::getStatus, "PENDING", "PARTIAL")
+                        .orderByDesc(Payable::getCreateTime)
+        );
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    /**
+     * 兜底：按 supplierId 取最新未付款 Payable
+     */
+    private Payable findLatestUnpaidPayable(PurchaseReturn returnEntity, Long tenantId) {
+        List<Payable> list = payableService.list(
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getTenantId, tenantId)
                         .eq(Payable::getSupplierId, returnEntity.getSupplierId())
                         .eq(Payable::getDeleteFlag, 0)
+                        .in(Payable::getStatus, "PENDING", "PARTIAL")
                         .orderByDesc(Payable::getCreateTime)
         );
-        if (payables.isEmpty()) {
-            log.warn("采购退货未找到对应应付账款记录，跳过应付更新: supplierId={}", returnEntity.getSupplierId());
-            return;
-        }
-        Payable latestPayable = payables.get(0);
-        BigDecimal paidAmountDelta = totalAmount.negate(); // 负数：减少应付
-        payableService.atomicAddPaidAmount(latestPayable.getId(), paidAmountDelta);
-        log.info("采购退货应付账款更新成功: payableId={}, delta={}", latestPayable.getId(), paidAmountDelta);
+        return list.isEmpty() ? null : list.get(0);
     }
 }

@@ -183,9 +183,26 @@ public class ReconciliationStatusOrchestrator {
 
                 appendStatusLogForShipment(sr, to);
 
-                pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
-                        "RECEIVABLE", "PRODUCT", "CUSTOMER", sr.getCustomerId(), sr.getCustomerName(),
-                        sr.getOrderId(), sr.getOrderNo(), sr.getFinalAmount(), sr.getTotalAmount(), now);
+                // P0-1 修复：按 isOwnFactory 区分对账方向
+                // - 本厂订单（isOwnFactory=1）：不推账单（本厂工资走 PayrollSettlement 链路，物料走 MaterialReconciliation）
+                // - 外发工厂订单（isOwnFactory=0）：推 PAYABLE+EXTERNAL_FACTORY，对方=工厂
+                // - 销售出货（无 isOwnFactory 字段或 =null）：推 RECEIVABLE+PRODUCT，对方=客户
+                boolean isOwn = sr.getIsOwnFactory() != null && sr.getIsOwnFactory() == 1;
+                if (isOwn) {
+                    // 本厂订单关单不推账单（避免重复计入成本）
+                    log.info("[ReconciliationStatus] 本厂订单对账不推账单: reconciliationNo={}",
+                            sr.getReconciliationNo());
+                } else if (sr.getIsOwnFactory() != null && sr.getIsOwnFactory() == 0) {
+                    // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY
+                    pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
+                            "PAYABLE", "EXTERNAL_FACTORY", "FACTORY", sr.getCustomerId(), sr.getCustomerName(),
+                            sr.getOrderId(), sr.getOrderNo(), sr.getFinalAmount(), sr.getTotalAmount(), now);
+                } else {
+                    // 销售出货对账 → RECEIVABLE+PRODUCT（原逻辑）
+                    pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
+                            "RECEIVABLE", "PRODUCT", "CUSTOMER", sr.getCustomerId(), sr.getCustomerName(),
+                            sr.getOrderId(), sr.getOrderNo(), sr.getFinalAmount(), sr.getTotalAmount(), now);
+                }
                 cancelBillOnRejected(to, "SHIPMENT_RECONCILIATION", rid, "成品对账");
                 syncBillOnPaid(to, "SHIPMENT_RECONCILIATION", rid, sr.getFinalAmount(), sr.getTotalAmount());
                 pushWebhookOnShipmentApproved(to, rid, sr, from);
@@ -421,6 +438,8 @@ public class ReconciliationStatusOrchestrator {
         LambdaUpdateWrapper<MaterialReconciliation> uw = buildMaterialReturnUpdate(mr, from, reason);
         boolean ok = materialReconciliationService.update(uw);
         if (!ok) throw new IllegalStateException("退回失败");
+        // P1-6 修复：物料对账退回时联动账单（数据链路闭环）
+        reverseBillOnReturn("MATERIAL_RECONCILIATION", rid, from, reason);
         return "退回成功";
     }
 
@@ -447,7 +466,47 @@ public class ReconciliationStatusOrchestrator {
         LambdaUpdateWrapper<ShipmentReconciliation> uw = buildShipmentReturnUpdate(sr, from, reason);
         boolean ok = shipmentReconciliationService.update(uw);
         if (!ok) throw new IllegalStateException("退回失败");
+        // P1-6 修复：成品对账退回时联动账单（数据链路闭环）
+        reverseBillOnReturn("SHIPMENT_RECONCILIATION", rid, from, reason);
         return "退回成功";
+    }
+
+    /**
+     * P1-6 修复：对账单退回时联动账单状态
+     * <p>
+     * 状态映射：
+     * - from=paid → reverseBySource（账单已 SETTLED，若已结算会失败需人工冲账）
+     * - from=approved → cancelBySource（账单 CONFIRMED/PENDING，直接取消）
+     * - from=verified/pending → 无需操作（账单未推送）
+     * <p>
+     * 失败不阻塞主流程（账单异常走人工对账）
+     */
+    private void reverseBillOnReturn(String sourceType, String sourceId, String from, String reason) {
+        if (billAggregationOrchestrator == null) return;
+        if (!"paid".equals(from) && !"approved".equals(from)) {
+            return;
+        }
+        try {
+            if ("paid".equals(from)) {
+                try {
+                    billAggregationOrchestrator.reverseBySource(sourceType, sourceId,
+                            "对账单 paid 退回: " + reason);
+                    log.info("[ReconciliationStatus] 退回联动反向账单: sourceType={}, sourceId={}",
+                            sourceType, sourceId);
+                } catch (Exception e) {
+                    log.warn("[ReconciliationStatus] 退回反向账单失败（可能已结算需冲账）: sourceType={}, sourceId={}, err={}",
+                            sourceType, sourceId, e.getMessage());
+                }
+            } else {
+                // from=approved
+                billAggregationOrchestrator.cancelBySource(sourceType, sourceId);
+                log.info("[ReconciliationStatus] 退回联动取消账单: sourceType={}, sourceId={}",
+                        sourceType, sourceId);
+            }
+        } catch (Exception e) {
+            log.warn("[ReconciliationStatus] 退回联动账单失败（不阻塞主流程）: sourceType={}, sourceId={}, err={}",
+                    sourceType, sourceId, e.getMessage());
+        }
     }
 
     private String resolveCurrentUserId(String label) {

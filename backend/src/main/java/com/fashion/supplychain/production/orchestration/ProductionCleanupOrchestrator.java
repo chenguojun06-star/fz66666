@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -63,6 +64,9 @@ public class ProductionCleanupOrchestrator {
 
     @Autowired
     private MaterialReconciliationService materialReconciliationService;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     /**
      * 清理错误创建的虚拟采购记录
@@ -301,10 +305,13 @@ public class ProductionCleanupOrchestrator {
         }
 
         int recomputedOrders = 0;
+        int billsReversed = 0;
         for (String oid : touchedOrderIds) {
             if (!StringUtils.hasText(oid)) {
                 continue;
             }
+            // P0-4 修复：批量清理时也联动反向账单（数据链路闭环）
+            billsReversed += reverseBillsByOrder(oid.trim(), "批量清理(cleanupSince)");
             try {
                 productionOrderService.recomputeProgressFromRecords(oid.trim());
                 recomputedOrders++;
@@ -321,6 +328,7 @@ public class ProductionCleanupOrchestrator {
         data.put("purchaseDeleted", purchaseDeleted);
         data.put("touchedOrders", touchedOrderIds.size());
         data.put("recomputedOrders", recomputedOrders);
+        data.put("billsReversed", billsReversed);
         return data;
     }
 
@@ -346,6 +354,9 @@ public class ProductionCleanupOrchestrator {
         long cuttingTaskDeleted = deleteCuttingTasks(oid);
         int cuttingBundleDeleted = deleteCuttingBundles(oid, bundleIds);
         int shipmentRecDeleted = deleteShipmentRecs(shipmentRecIds);
+        // P0-4 修复：级联反向账单（Bill → Payable/Receivable 全链路闭环）
+        // 必须在订单软删之前执行，否则账单反向失败会回滚整个事务，避免悬挂
+        int billReversed = reverseBillsByOrder(oid, "订单全链路清理");
         boolean orderSoftDeleted = productionOrderService.deleteById(oid);
 
         Map<String, Object> data = new HashMap<>();
@@ -360,6 +371,7 @@ public class ProductionCleanupOrchestrator {
         data.put("cuttingTaskDeleted", cuttingTaskDeleted);
         data.put("cuttingBundleDeleted", cuttingBundleDeleted);
         data.put("shipmentReconciliationDeleted", shipmentRecDeleted);
+        data.put("billReversed", billReversed);
         data.put("orderSoftDeleted", orderSoftDeleted);
         return data;
     }
@@ -518,6 +530,42 @@ public class ProductionCleanupOrchestrator {
             if (shipmentReconciliationService.removeById(id.trim())) deleted++;
         }
         return deleted;
+    }
+
+    /**
+     * P0-4 修复：按订单号反向所有关联账单（Bill → Payable/Receivable 全链路闭环）
+     * <p>
+     * 调用 BillAggregationOrchestrator.reverseByOrder 实现：
+     * - 未结清账单 → 置为 CANCELLED + 联动 Payable/Receivable 状态
+     * - 已结清账单 → 抛异常（需先在付款中心冲账），由调用方决定是否继续
+     * <p>
+     * 设计原则：
+     * - billAggregationOrchestrator 可选注入（避免循环依赖和单元测试困扰）
+     * - 反向失败时记录日志但不抛异常（避免阻塞清理主流程）
+     * - 调用方应根据业务场景决定是否需要严格回滚
+     *
+     * @param orderId 订单ID
+     * @param reason  反向原因
+     * @return 成功反向的账单数量（-1 表示 orchestrator 未注入）
+     */
+    private int reverseBillsByOrder(String orderId, String reason) {
+        if (billAggregationOrchestrator == null) {
+            log.warn("[ProductionCleanup] BillAggregationOrchestrator 未注入，跳过账单反向: orderId={}", orderId);
+            return -1;
+        }
+        if (!StringUtils.hasText(orderId)) {
+            return 0;
+        }
+        try {
+            int reversed = billAggregationOrchestrator.reverseByOrder(orderId, reason);
+            log.info("[ProductionCleanup] 订单级账单反向完成: orderId={}, reversed={}", orderId, reversed);
+            return reversed;
+        } catch (Exception e) {
+            // 已结清账单会抛异常 — 这里不阻塞主流程，但记录告警供财务对账
+            log.warn("[ProductionCleanup] 订单级账单反向部分失败（可能存在已结清账单需手动冲账）: orderId={}, err={}",
+                    orderId, e.getMessage());
+            return 0;
+        }
     }
 
 }

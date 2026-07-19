@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-07-18（补录 D-040 多租户隔离强化 — 查询时直接带 tenant_id 过滤）
+> 最后更新：2026-07-19（新增 D-041 财务数据链路闭环 — 反向账单 + 字段化 + 样衣开发费用接入）
 
 ---
 
@@ -592,4 +592,28 @@
   - 修复 PatternRevisionController.list、PatternProductionOrchestrator 列表查询、PatternProductionController 新端点
   - 后续所有新增查询接口必须遵循此决策
   - audit-tenant-id.py 扫描会持续监控
+
+## D-041：财务数据链路闭环 — 反向账单机制 + isOwnFactory 字段化 + 样衣开发费用统一接入
+
+- **日期**：2026-07-19
+- **上下文**：财务全链路调研发现 10 P0 / 19 P1 / 21 P2 问题，核心结构性缺陷是"反向账单机制缺失"（B1 阻塞点），是 P0-3、P0-7、P0-9 的共同根因。另外发现 ShipmentReconciliation.isOwnFactory 字段在 Java 实体已声明 `@TableField("is_own_factory")` 但 DB 表从未通过 Flyway 添加列，导致 INSERT 静默丢失 → SELECT null → 三态判定退化为 null 分支 → 外发工厂对账错推 RECEIVABLE+SHIPMENT+CUSTOMER 方向，且 uk_source 幂等约束使方向不可纠正。样衣开发费用（BOM 物料 + 工序成本）完全游离于 BillAggregation 之外，仅二次工艺已接入。
+- **决策**：
+  1. **反向账单机制（reverseBill）**：所有退货/撤回/反转/删除场景必须联动 Bill → Payable/Receivable 全链路。未结清账单直接 CANCELLED + 联动 Payable/Receivable CANCELLED；已结清账单抛异常提示需先冲账（防止财务数据丢失）；已付款/已收款的保留痕迹（仅回写 remark）
+  2. **isOwnFactory 字段化**：DB 表 t_shipment_reconciliation 必须显式有 is_own_factory 列（Flyway V202707191000），Java 三态判定 1=本厂（不推账单）/ 0=外发工厂（推 PAYABLE+EXTERNAL_FACTORY+FACTORY）/ null=销售出货（推 RECEIVABLE+SHIPMENT+CUSTOMER）
+  3. **样衣开发费用接入 BillAggregation**：sourceType=STYLE_DEVELOPMENT / billType=PAYABLE / billCategory=EXPENSE / counterpartyType=EMPLOYEE，金额 = materialCost + processCost（不包含 secondaryProcessCost，避免与 SECONDARY_PROCESS sourceType 重复推送）。审核 PASS → pushBill；审核 REJECT/REWORK → reverseBySource
+  4. **undoPatternScan 双写**：撤销样衣扫码必须同步删除 ScanRecord 镜像（scanType="pattern"，与 submitScan 的 syncToScanRecord 对称）+ 工资结算状态校验 + 写备注日志（与 submitScan 的 appendPatternRemark 对称）
+  5. **可选注入模式**：跨域 Orchestrator 调用使用 `@Autowired(required = false) + @Lazy` 避免循环依赖
+  6. **不阻塞主流程原则**：账单联动失败时记日志告警但不抛异常（已结清账单需人工冲账）
+  7. **fail-safe 原则**：账单服务异常时应阻止业务操作（而非跳过校验），避免误删已对账数据
+- **理由**：
+  - 财务数据链路必须闭环：每个反向/删除/退货操作都必须联动账单状态，避免悬挂数据
+  - isOwnFactory 字段化是方向不可纠正的根因修复，比 uk_source 幂等约束的副作用更彻底
+  - 样衣开发费用接入使财务全链路统计完整，BOM+工序与二次工艺并行推送，互不重叠
+  - 可选注入 + @Lazy 是 Spring 跨域 Orchestrator 互调的标准解法
+- **影响**：
+  - 后端修改文件：BillAggregationOrchestrator（reverseBySource/reverseByOrder）、SalesReturnOrchestrator、FactoryShipmentOrchestrator、ShipmentReconciliationOrchestrator、ReconciliationStatusOrchestrator、MaterialPurchasePickingHelper、MaterialPurchaseWarehousePickHelper、MaterialStockOrchestrator、MaterialPickupOrchestrator、SecondaryProcessOrchestrator、ProductionCleanupOrchestrator、FinishedWarehouseOperationOrchestrator、PurchaseReturnOrchestrator、PatternProductionOrchestrator（undoPatternScan 重写）、StyleInfoOrchestrator（pushStyleDevelopmentBill/reverseStyleDevelopmentBill）
+  - Flyway 迁移：V202707191000__add_is_own_factory_to_shipment_reconciliation.sql（幂等加列 + 多租户安全回填）
+  - 前端：billAggregationApi.ts 补 SHIPMENT 选项
+  - 后续所有反向/退货/撤回/删除操作必须调用 reverseBySource 或 reverseByOrder
+  - 后续新增 billCategory 必须在 7 种合法枚举内：MATERIAL / PRODUCT / EXTERNAL_FACTORY / PAYROLL / EXPENSE / SHIPMENT / DEDUCTION
 

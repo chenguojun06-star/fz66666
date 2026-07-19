@@ -302,7 +302,8 @@ public class MaterialPickupOrchestrator {
             com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest req =
                     new com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest();
             req.setBillType("RECEIVABLE");
-            req.setBillCategory("MATERIAL");
+            // P1-4 修复：对方是 FACTORY（外发工厂领料），应归入"外发厂"类别
+            req.setBillCategory("EXTERNAL_FACTORY");
             req.setSourceType("MATERIAL_PICKUP");
             req.setSourceId(record.getId());
             req.setSourceNo(record.getPickupNo());

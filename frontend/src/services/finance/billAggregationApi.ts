@@ -99,6 +99,8 @@ export const BILL_CATEGORY_OPTIONS = [
   { label: '外发厂', value: 'EXTERNAL_FACTORY' },
   { label: '工资', value: 'PAYROLL' },
   { label: '费用', value: 'EXPENSE' },
+  // P2-2 修复：补充 SHIPMENT（成品发货）选项，与 BILL_CATEGORY_MAP 对齐
+  { label: '成品发货', value: 'SHIPMENT' },
   { label: '扣款', value: 'DEDUCTION' },
 ];
 

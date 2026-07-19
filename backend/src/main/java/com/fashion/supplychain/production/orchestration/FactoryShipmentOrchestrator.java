@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.entity.FactoryShipment;
 import com.fashion.supplychain.production.entity.FactoryShipmentDetail;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -52,6 +53,9 @@ public class FactoryShipmentOrchestrator {
     private ProductionOrderService productionOrderService;
     @Autowired
     private FactoryShipmentDetailService factoryShipmentDetailService;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     // ===== 发货 =====
 
@@ -198,6 +202,14 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("无权操作其他工厂的发货单");
         }
 
+        // P0-3 修复：删除前校验对账状态（数据链路闭环）
+        // 如果该订单已产生成品对账账单（SHIPPMENT_RECONCILIATION），禁止删除
+        // 避免发货量与对账金额不一致的悬挂数据
+        Result<Void> reconCheck = assertShipmentReversible(fs);
+        if (reconCheck != null && reconCheck.getCode() != null && reconCheck.getCode() != 200) {
+            return reconCheck;
+        }
+
         FactoryShipment patch = new FactoryShipment();
         patch.setId(shipmentId);
         patch.setDeleteFlag(1);
@@ -206,6 +218,38 @@ public class FactoryShipmentOrchestrator {
 
         log.info("[FactoryShipment] 软删除发货单 shipmentId={}", shipmentId);
         return Result.success(null);
+    }
+
+    /**
+     * P0-3 修复：校验发货单是否可删除（未产生对账账单）
+     * <p>
+     * 通过 BillAggregationOrchestrator.billExistsByOrderId 检查订单是否已推过
+     * SHIPMENT_RECONCILIATION 账单：
+     * - 存在账单：禁止删除，提示用户先撤销对账或联系财务
+     * - 不存在账单：允许删除
+     *
+     * @return null 表示可删除；非 null Result 表示禁止删除的原因
+     */
+    private Result<Void> assertShipmentReversible(FactoryShipment fs) {
+        if (billAggregationOrchestrator == null) {
+            return null; // orchestrator 未注入，跳过校验
+        }
+        String orderId = fs.getOrderId();
+        if (!StringUtils.hasText(orderId)) {
+            return null;
+        }
+        try {
+            if (billAggregationOrchestrator.billExistsByOrderId("SHIPMENT_RECONCILIATION", orderId)) {
+                return Result.fail("该发货单关联的订单已产生成品对账账单，"
+                        + "请先在财务中心撤销对账或联系财务人员处理后再删除");
+            }
+        } catch (Exception e) {
+            // P2 审计修复：fail-safe 原则 — 账单服务异常时禁止删除（避免误删已对账的发货单）
+            log.error("[FactoryShipment] 对账状态校验异常（fail-safe 阻止删除）: shipmentId={}, orderId={}, err={}",
+                    fs.getId(), orderId, e.getMessage(), e);
+            return Result.fail("账单服务暂时不可用，无法校验对账状态，请稍后重试或联系财务人员");
+        }
+        return null;
     }
 
     // ===== 查询 =====

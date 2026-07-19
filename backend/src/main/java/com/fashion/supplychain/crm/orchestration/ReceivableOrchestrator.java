@@ -404,12 +404,38 @@ public class ReceivableOrchestrator {
     }
 
     /**
+     * 反向账单联动：更新应收单状态（仅用于 BillAggregation.reverseBillInternal 联动调用）
+     * 不走 markReceived 流程，仅回写状态和备注，保留财务痕迹
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateReceivableStatus(Receivable receivable) {
+        if (receivable == null || !StringUtils.hasText(receivable.getId())) {
+            return;
+        }
+        Long tenantId = UserContext.tenantId();
+        Receivable existing = receivableService.lambdaQuery()
+                .eq(Receivable::getId, receivable.getId())
+                .eq(Receivable::getTenantId, tenantId)
+                .eq(Receivable::getDeleteFlag, 0)
+                .one();
+        if (existing == null) {
+            log.warn("[ReceivableOrchestrator] 反向联动更新失败：应收单不存在: id={}", receivable.getId());
+            return;
+        }
+        receivableService.updateById(receivable);
+        log.info("[ReceivableOrchestrator] 反向联动状态更新: receivableNo={}, newStatus={}",
+                existing.getReceivableNo(), receivable.getStatus());
+    }
+
+    /**
      * 定时标记逾期：PENDING/PARTIAL 且 due_date < today → OVERDUE
-     * 可由 @Scheduled 任务每日调用，也可按需手动触发
+     * <p>
+     * P1-3 修复：原实现跨租户批量 update，违反 P0 铁律4多租户隔离
+     * 现改为逐条更新（UPDATE 语句显式带 tenant_id WHERE）
+     * 由 @Scheduled 任务每日调用，也可按需手动触发
      */
     @Transactional(rollbackFor = Exception.class)
     public int markOverdue() {
-        // 跨所有租户标记逾期，定时任务调用无需租户上下文
         List<Receivable> list = receivableService.list(
                 new LambdaQueryWrapper<Receivable>()
                         .eq(Receivable::getDeleteFlag, 0)
@@ -417,13 +443,27 @@ public class ReceivableOrchestrator {
                         .lt(Receivable::getDueDate, LocalDate.now()));
         int count = 0;
         for (Receivable r : list) {
-            r.setStatus("OVERDUE");
-            receivableService.updateById(r);
-            logAppendHelper.appendMarkOverdue(r, null);
-            count++;
+            try {
+                // 逐条更新（显式带 id + tenant_id 双重 WHERE，确保多租户隔离）
+                boolean updated = receivableService.lambdaUpdate()
+                        .eq(Receivable::getId, r.getId())
+                        .eq(Receivable::getTenantId, r.getTenantId())
+                        .eq(Receivable::getDeleteFlag, 0)
+                        .set(Receivable::getStatus, "OVERDUE")
+                        .set(Receivable::getUpdateTime, LocalDateTime.now())
+                        .update();
+                if (updated) {
+                    r.setStatus("OVERDUE");
+                    logAppendHelper.appendMarkOverdue(r, null);
+                    count++;
+                }
+            } catch (Exception e) {
+                log.error("[ReceivableOrchestrator] 标记逾期失败（跳过）: receivableNo={}, tenantId={}, err={}",
+                        r.getReceivableNo(), r.getTenantId(), e.getMessage());
+            }
         }
         if (count > 0) {
-            log.info("[ReceivableOrchestrator] 批量标记逾期 {} 条", count);
+            log.info("[ReceivableOrchestrator] 批量标记逾期 {} 条（按租户隔离逐条更新）", count);
         }
         return count;
     }

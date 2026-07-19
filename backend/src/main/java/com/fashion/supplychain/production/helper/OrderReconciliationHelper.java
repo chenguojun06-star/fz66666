@@ -153,7 +153,16 @@ public class OrderReconciliationHelper {
     }
 
     /**
-     * 推送出货应收账单到 BillAggregation
+     * 推送对账账单到 BillAggregation
+     * <p>
+     * P0-1 修复：原实现错推 RECEIVABLE+CUSTOMER（外发工厂应付错记为客户应收）
+     * 现按工厂类型正确推送：
+     * - 本厂订单：不推送账单（本厂工资走 PayrollSettlement 链路，不重复推）
+     * - 外发工厂订单：推 PAYABLE+EXTERNAL_FACTORY，对方=工厂
+     * - 销售出货（非工厂对账）：推 RECEIVABLE+SHIPMENT，对方=客户
+     * <p>
+     * 判定逻辑：recon.customerId 实际存的是 factoryId（历史命名问题），
+     * 通过 isOwnFactory(recon) 判定方向。
      */
     private void pushReceivableBill(ShipmentReconciliation recon) {
         if (billAggregationOrchestrator == null || recon == null || recon.getFinalAmount() == null
@@ -162,24 +171,36 @@ public class OrderReconciliationHelper {
         }
         try {
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
-            req.setBillType("RECEIVABLE");
-            req.setBillCategory("SHIPMENT");
-            req.setSourceType("SHIPMENT_RECONCILIATION");
             req.setSourceId(recon.getId());
             req.setSourceNo(recon.getReconciliationNo());
-            req.setCounterpartyType("CUSTOMER");
-            req.setCounterpartyId(recon.getCustomerId());
-            req.setCounterpartyName(recon.getCustomerName());
             req.setOrderId(recon.getOrderId());
             req.setOrderNo(recon.getOrderNo());
             req.setStyleNo(recon.getStyleNo());
             req.setAmount(recon.getFinalAmount());
             req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+
+            // 判定对账方向：本厂=不推（工资链路独立处理）；外发工厂=PAYABLE；客户销售=RECEIVABLE
+            boolean isOwn = recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 1;
+            if (isOwn) {
+                // 本厂订单：扫码工资已走 PayrollSettlement 链路，物料成本走 MaterialReconciliation
+                // 关单时不再推送账单，避免重复计入成本
+                log.info("[OrderRecon] 本厂订单关单不推账单（工资走PayrollSettlement独立链路）: reconciliationNo={}",
+                        recon.getReconciliationNo());
+                return;
+            }
+            // 外发工厂对账 → PAYABLE（应付工厂加工费）
+            req.setBillType("PAYABLE");
+            req.setBillCategory("EXTERNAL_FACTORY");
+            req.setSourceType("SHIPMENT_RECONCILIATION");
+            req.setCounterpartyType("FACTORY");
+            req.setCounterpartyId(recon.getCustomerId());     // 历史字段名 customerId 实际存 factoryId
+            req.setCounterpartyName(recon.getCustomerName()); // 实际存 factoryName
+
             billAggregationOrchestrator.pushBill(req);
-            log.info("[OrderRecon] 推送应收账单: reconciliationNo={}, amount={}",
-                    recon.getReconciliationNo(), recon.getFinalAmount());
+            log.info("[OrderRecon] 推送外发工厂应付账单: reconciliationNo={}, factoryId={}, amount={}",
+                    recon.getReconciliationNo(), recon.getCustomerId(), recon.getFinalAmount());
         } catch (Exception e) {
-            log.warn("[OrderRecon] 推送应收账单失败: reconciliationNo={}, err={}",
+            log.warn("[OrderRecon] 推送对账账单失败: reconciliationNo={}, err={}",
                     recon.getReconciliationNo(), e.getMessage());
         }
     }

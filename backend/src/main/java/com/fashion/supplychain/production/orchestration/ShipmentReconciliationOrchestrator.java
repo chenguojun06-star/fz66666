@@ -358,32 +358,57 @@ public class ShipmentReconciliationOrchestrator {
 
     /**
      * 推送出货应收账单到 BillAggregation
+     * <p>
+     * P0-1 修复：按 isOwnFactory 三态判定对账方向（与 ReconciliationStatusOrchestrator 对齐）
+     * - 本厂订单（isOwnFactory=1）：不推账单（本厂工资走 PayrollSettlement）
+     * - 外发工厂订单（isOwnFactory=0）：推 PAYABLE+EXTERNAL_FACTORY+FACTORY
+     * - 销售出货（isOwnFactory=null）：推 RECEIVABLE+SHIPMENT+CUSTOMER（原逻辑）
+     * <p>
+     * 幂等性说明：pushBill 按 sourceType+sourceId+tenantId 去重，因此本方法必须在
+     * 对账单生成阶段就推送正确方向的账单，否则后续 ReconciliationStatusOrchestrator
+     * 推送的正确账单会被认为"已存在"而只更新金额不创建新账单。
      */
     private void pushReceivableBill(ShipmentReconciliation recon) {
         if (billAggregationOrchestrator == null || recon == null || recon.getFinalAmount() == null
                 || recon.getFinalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
+        // 三态判定
+        boolean isOwn = recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 1;
+        if (isOwn) {
+            log.info("[ProdShipment] 本厂订单对账不推账单: reconciliationNo={}",
+                    recon.getReconciliationNo());
+            return;
+        }
         try {
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
-            req.setBillType("RECEIVABLE");
-            req.setBillCategory("SHIPMENT");
             req.setSourceType("SHIPMENT_RECONCILIATION");
             req.setSourceId(recon.getId());
             req.setSourceNo(recon.getReconciliationNo());
-            req.setCounterpartyType("CUSTOMER");
-            req.setCounterpartyId(recon.getCustomerId());
-            req.setCounterpartyName(recon.getCustomerName());
             req.setOrderId(recon.getOrderId());
             req.setOrderNo(recon.getOrderNo());
             req.setStyleNo(recon.getStyleNo());
             req.setAmount(recon.getFinalAmount());
             req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            req.setCounterpartyId(recon.getCustomerId());
+            req.setCounterpartyName(recon.getCustomerName());
+
+            if (recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0) {
+                // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY+FACTORY
+                req.setBillType("PAYABLE");
+                req.setBillCategory("EXTERNAL_FACTORY");
+                req.setCounterpartyType("FACTORY");
+            } else {
+                // 销售出货 → RECEIVABLE+SHIPMENT+CUSTOMER（原逻辑）
+                req.setBillType("RECEIVABLE");
+                req.setBillCategory("SHIPMENT");
+                req.setCounterpartyType("CUSTOMER");
+            }
             billAggregationOrchestrator.pushBill(req);
-            log.info("[ProdShipment] 推送应收账单: reconciliationNo={}, amount={}",
-                    recon.getReconciliationNo(), recon.getFinalAmount());
+            log.info("[ProdShipment] 推送账单: reconciliationNo={}, billType={}, billCategory={}, amount={}",
+                    recon.getReconciliationNo(), req.getBillType(), req.getBillCategory(), req.getAmount());
         } catch (Exception e) {
-            log.warn("[ProdShipment] 推送应收账单失败: reconciliationNo={}, err={}",
+            log.warn("[ProdShipment] 推送账单失败: reconciliationNo={}, err={}",
                     recon.getReconciliationNo(), e.getMessage());
         }
     }

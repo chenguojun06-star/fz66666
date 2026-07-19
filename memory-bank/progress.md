@@ -1,9 +1,22 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-18（补录 7-18 多租户漏洞修复 + 三端一致性核查）
+> 最后更新：2026-07-19（财务数据链路闭环 Phase 1-4 + Phase 3 全部完成）
 
 ## 已完成
+
+### 2026-07-19 财务数据链路闭环（Phase 1-4 + Phase 3 全部完成）
+
+- [x] **Phase 1 止血（5 项核心修复）**：反向账单机制 + SalesReturn/FactoryShipment/ShipmentReconciliation/ReconciliationStatus 联动
+- [x] **Phase 2 补齐（5 项 P0 修复）**：ProductionCleanup/FinishedWarehouse/PurchaseReturn/MaterialPurchase 系列
+- [x] **Phase 2.5 EXTERNAL_FACTORY 核查（3 P0 + 6 P1 + 1 P2）**：SecondaryProcessOrchestrator 非法枚举修复 + 前端 SHIPMENT 选项
+- [x] **Phase 4 审计修复（3 处编译错误）**：SalesReturnOrchestrator/FactoryShipmentOrchestrator/ShipmentReconciliationOrchestrator
+- [x] **Phase 3-1: isOwnFactory 字段化** — Flyway V202707191000 幂等加列 + 多租户安全回填
+- [x] **Phase 3-2: undoPatternScan 双写** — PatternProductionOrchestrator 重写，5 项修复（多租户/工资结算/ScanRecord 镜像/备注日志/时间窗）
+- [x] **Phase 3-3: 样衣开发费用统一接入 BillAggregation** — StyleInfoOrchestrator 新增 pushStyleDevelopmentBill/reverseStyleDevelopmentBill，金额=materialCost+processCost
+- [x] mvn compile 编译验证通过（exit 0）
+- [x] check-flyway-sql.py 验证通过
+- [x] 决策 D-041 记录：财务数据链路闭环 — 反向账单机制 + isOwnFactory 字段化 + 样衣开发费用统一接入
 
 ### 2026-07-18 三端数据流转一致性核查 + 3个P0级多租户漏洞修复
 

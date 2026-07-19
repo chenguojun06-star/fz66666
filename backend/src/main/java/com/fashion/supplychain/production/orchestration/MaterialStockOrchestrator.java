@@ -335,15 +335,18 @@ public class MaterialStockOrchestrator {
 
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
             req.setBillType("PAYABLE");
-            req.setBillCategory("MATERIAL");
             req.setSourceType("MATERIAL_OUTBOUND");
             req.setSourceId(outboundLog.getId());
             req.setSourceNo(outboundLog.getOutboundNo());
             if (StringUtils.hasText(stock.getSupplierId()) || StringUtils.hasText(stock.getSupplierName())) {
+                // 供应商提供物料 → 物料类别
+                req.setBillCategory("MATERIAL");
                 req.setCounterpartyType("SUPPLIER");
                 req.setCounterpartyId(stock.getSupplierId());
                 req.setCounterpartyName(stock.getSupplierName());
             } else {
+                // P1-3 修复：fallback 到外发工厂 → 应归入"外发厂"类别
+                req.setBillCategory("EXTERNAL_FACTORY");
                 req.setCounterpartyType("FACTORY");
                 req.setCounterpartyId(outboundLog.getFactoryId());
                 req.setCounterpartyName(outboundLog.getFactoryName());

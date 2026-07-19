@@ -2,6 +2,9 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.finance.entity.MaterialReconciliation;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
+import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PurchaseReturn;
 import com.fashion.supplychain.production.entity.PurchaseReturnItem;
@@ -50,6 +53,12 @@ public class PurchaseReturnOrchestrator {
 
     @Autowired
     private PurchaseReturnStockHelper stockHelper;
+
+    @Autowired(required = false)
+    private MaterialReconciliationService materialReconciliationService;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     /**
      * 创建采购退货单（事务边界）
@@ -245,6 +254,11 @@ public class PurchaseReturnOrchestrator {
             throw new IllegalArgumentException("退货明细为空");
         }
 
+        // P0-7 修复：完成退货前校验对账状态（数据链路闭环）
+        // 如果原采购单已产生 approved/paid 状态的物料对账单，禁止直接 completeReturn
+        // 避免对账金额与实际退货数据不一致的悬挂数据
+        assertPurchaseReversible(returnEntity, tenantId);
+
         // 2. 扣减库存（P1#4: 失败抛异常触发事务回滚）
         stockHelper.decreaseStockForItems(items);
 
@@ -256,7 +270,89 @@ public class PurchaseReturnOrchestrator {
         returnEntity.setReturnTime(LocalDateTime.now());
         purchaseReturnService.updateById(returnEntity);
 
+        // P0-7 修复：完成退货后联动反向未审批的对账单（数据链路闭环）
+        reversePendingReconciliationForReturn(returnEntity, tenantId);
+
         log.info("采购退货完成: returnId={}, returnNo={}", returnId, returnEntity.getReturnNo());
+    }
+
+    /**
+     * P0-7 修复：校验原采购单的对账状态是否允许退货
+     * <p>
+     * 检查 MaterialReconciliation 表中 originalPurchaseId 关联的对账单：
+     * - approved/paid 状态：禁止退货（已审批的金额会与实际退货数据不一致）
+     * - PENDING/draft 状态：允许退货（decreasePayable 会处理应付金额）
+     * - 不存在对账单：允许退货
+     *
+     * @throws IllegalArgumentException 如果存在 approved/paid 状态的对账单
+     */
+    private void assertPurchaseReversible(PurchaseReturn returnEntity, Long tenantId) {
+        if (materialReconciliationService == null) {
+            return;
+        }
+        String originalPurchaseId = returnEntity.getOriginalPurchaseId();
+        if (!StringUtils.hasText(originalPurchaseId)) {
+            return;
+        }
+        List<MaterialReconciliation> reconciliations = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getPurchaseId, originalPurchaseId)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
+                .list();
+        if (reconciliations == null || reconciliations.isEmpty()) {
+            return;
+        }
+        for (MaterialReconciliation recon : reconciliations) {
+            String status = recon.getStatus();
+            if ("approved".equals(status) || "paid".equals(status) || "verified".equals(status)) {
+                throw new IllegalArgumentException("原采购单已存在 " + status
+                        + " 状态的物料对账单（单号: " + recon.getReconciliationNo()
+                        + "），请先在财务中心撤销对账或联系财务人员处理后再完成退货");
+            }
+        }
+    }
+
+    /**
+     * P0-7 修复：完成退货后联动反向 PENDING 状态的对账单
+     * <p>
+     * PENDING 状态的对账单未生效，退货后应自动反向避免悬挂数据：
+     * - 调用 BillAggregationOrchestrator.reverseBySource 反向账单 + 联动 Payable
+     * - 反向失败不阻塞主流程（已记日志告警）
+     */
+    private void reversePendingReconciliationForReturn(PurchaseReturn returnEntity, Long tenantId) {
+        if (materialReconciliationService == null || billAggregationOrchestrator == null) {
+            return;
+        }
+        String originalPurchaseId = returnEntity.getOriginalPurchaseId();
+        if (!StringUtils.hasText(originalPurchaseId)) {
+            return;
+        }
+        try {
+            List<MaterialReconciliation> pendingRecons = materialReconciliationService.lambdaQuery()
+                    .eq(MaterialReconciliation::getPurchaseId, originalPurchaseId)
+                    .eq(MaterialReconciliation::getTenantId, tenantId)
+                    .eq(MaterialReconciliation::getDeleteFlag, 0)
+                    .in(MaterialReconciliation::getStatus, "draft", "PENDING", "pending", "submitted")
+                    .list();
+            if (pendingRecons == null || pendingRecons.isEmpty()) {
+                return;
+            }
+            for (MaterialReconciliation recon : pendingRecons) {
+                try {
+                    billAggregationOrchestrator.reverseBySource(
+                            "MATERIAL_RECONCILIATION", recon.getId(),
+                            "采购退货完成联动反向: returnNo=" + returnEntity.getReturnNo());
+                    log.info("[采购退货] 联动反向 PENDING 对账单: returnId={}, reconId={}",
+                            returnEntity.getId(), recon.getId());
+                } catch (Exception e) {
+                    log.warn("[采购退货] 联动反向 PENDING 对账单失败（不阻塞主流程）: reconId={}, err={}",
+                            recon.getId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[采购退货] 查询 PENDING 对账单失败（不阻塞主流程）: returnId={}, err={}",
+                    returnEntity.getId(), e.getMessage());
+        }
     }
 
     // ─── 查询委托给 Helper（保持 API 契约不变）─────────────────────────────

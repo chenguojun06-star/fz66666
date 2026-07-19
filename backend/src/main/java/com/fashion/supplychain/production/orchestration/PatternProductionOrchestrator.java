@@ -975,6 +975,13 @@ public class PatternProductionOrchestrator {
 
     /**
      * 撤销样衣扫码记录（管理员/主管权限）
+     * <p>
+     * P1 修复（数据链路闭环）：
+     * 1. 多租户校验 PatternScanRecord + PatternProduction（P0 铁律4）
+     * 2. 工资结算状态校验（防止已结算的扫码记录被撤回导致工资单数据悬挂）
+     * 3. 同步删除 ScanRecord 镜像（scanType="pattern"，与 submitScan 的 syncToScanRecord 对称）
+     * 4. 写备注日志（与 submitScan 的 appendPatternRemark 对称，双写 PatternProduction.remarks + t_order_remark）
+     * 5. 时间窗规则对齐 ScanUndoHelper（管理员 5h / 普通 30min，原代码统一 30min 对管理员过严）
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undoPatternScan(String scanRecordId) {
@@ -982,16 +989,35 @@ public class PatternProductionOrchestrator {
             throw new IllegalArgumentException("扫码记录ID不能为空");
         }
 
+        // P2 修复：入口校验租户上下文
+        TenantAssert.assertTenantContext();
+
         PatternScanRecord scanRecord = patternScanRecordService.getById(scanRecordId);
         if (scanRecord == null || scanRecord.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("扫码记录不存在");
         }
 
-        String operatorName = UserContext.username();
+        // P1 修复 1：多租户校验（P0 铁律4）
+        TenantAssert.assertBelongsToCurrentTenant(scanRecord.getTenantId(), "样衣扫码记录");
 
-        LocalDateTime scanTime = scanRecord.getScanTime();
-        if (scanTime != null && scanTime.plusMinutes(30).isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("只能撤回30分钟内的扫码记录");
+        String operatorName = UserContext.username();
+        UserContext ctx = UserContext.get();
+
+        // P1 修复 2：时间窗规则对齐 ScanUndoHelper（管理员 5h / 普通 30min）
+        // scanTime 为 null 时用 createTime 兜底；两者都为 null 则拒绝撤回（保守策略）
+        LocalDateTime scanTime = scanRecord.getScanTime() != null
+                ? scanRecord.getScanTime() : scanRecord.getCreateTime();
+        if (scanTime == null) {
+            throw new IllegalStateException("扫码记录缺少时间信息，无法撤回，请联系管理员");
+        }
+        boolean isAdmin = isAdminRole(ctx);
+        boolean undoExpired = isAdmin
+                ? scanTime.plusHours(5).isBefore(LocalDateTime.now())
+                : scanTime.plusMinutes(30).isBefore(LocalDateTime.now());
+        if (undoExpired) {
+            throw new IllegalStateException(isAdmin
+                    ? "只能撤回5小时内的扫码记录（管理员权限）"
+                    : "只能撤回30分钟内的扫码记录，如需撤回请联系管理员");
         }
 
         String patternProductionId = scanRecord.getPatternProductionId();
@@ -1004,18 +1030,120 @@ public class PatternProductionOrchestrator {
             throw new IllegalArgumentException("关联的样板生产记录不存在");
         }
 
+        // P1 修复 1：多租户校验样板生产
+        TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样板生产");
+
+        // P1 修复 3：工资结算状态校验 + 同步删除 ScanRecord 镜像
+        // submitScan 时 syncToScanRecord 会向 t_scan_record 写一条 scanType="pattern" 镜像
+        // 撤销时必须同步删除该镜像，否则工资统计仍会算这笔钱（数据悬挂）
+        // P1 修复 5：镜像删除失败必须让事务回滚（不允许 try-catch 吞异常导致悬挂）
+        ScanRecord mirrorScanRecord = findPatternScanRecordMirror(scanRecord);
+        if (mirrorScanRecord != null) {
+            if (StringUtils.hasText(mirrorScanRecord.getPayrollSettlementId())) {
+                throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
+            }
+            if ("payroll_settled".equals(mirrorScanRecord.getSettlementStatus())) {
+                throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
+            }
+        }
+
+        // 软删 PatternScanRecord
         scanRecord.setDeleteFlag(1);
         patternScanRecordService.updateById(scanRecord);
 
+        // 硬删 ScanRecord 镜像（与大货 ScanUndoHelper.undoNormalScan 一致，ScanRecord 无 deleteFlag 字段）
+        // P1 修复 5：删除失败必须抛异常触发事务回滚，避免 PatternScanRecord 软删但 ScanRecord 留存的数据悬挂
+        if (mirrorScanRecord != null) {
+            scanRecordService.removeById(mirrorScanRecord.getId());
+            log.info("[样衣撤回] 同步删除ScanRecord镜像: mirrorId={}", mirrorScanRecord.getId());
+        }
+
         log.info("[样衣撤回] scanRecordId={} operationType={} operatorName={} undoBy={}",
                 scanRecordId, scanRecord.getOperationType(), scanRecord.getOperatorName(), operatorName);
+
+        // P1 修复 4：写备注日志（与 submitScan 的 appendPatternRemark 对称）
+        // appendPatternRemarkSimple 会双写 PatternProduction.remarks + t_order_remark
+        // 备注日志失败不阻塞主流程（仅日志，不影响数据一致性）
+        String actionLabel = "撤销扫码";
+        String detail = patternOperationLabel(scanRecord.getOperationType())
+                + (StringUtils.hasText(scanRecord.getProcessName()) ? "·" + scanRecord.getProcessName() : "")
+                + (scanRecord.getQuantity() != null ? "·数量" + scanRecord.getQuantity() : "")
+                + (StringUtils.hasText(scanRecord.getColor()) ? "·" + scanRecord.getColor() : "")
+                + (StringUtils.hasText(scanRecord.getSize()) ? "·" + scanRecord.getSize() : "");
+        try {
+            appendPatternRemarkSimple(pattern, actionLabel, detail);
+        } catch (Exception e) {
+            log.warn("[样衣撤回] 写备注日志失败（不阻塞主流程）: patternId={}, err={}",
+                    pattern.getId(), e.getMessage());
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", "已撤销扫码记录");
         result.put("scanRecordId", scanRecordId);
         result.put("undoBy", operatorName);
+        result.put("mirrorScanRecordId", mirrorScanRecord != null ? mirrorScanRecord.getId() : null);
         return result;
+    }
+
+    /**
+     * P1 修复：查找样衣扫码对应的 ScanRecord 镜像（scanType="pattern"）
+     * <p>
+     * 匹配策略（按 scanTime 降序取最近一条）：
+     * - scanType = "pattern"
+     * - tenantId = 当前租户
+     * - operatorId = PatternScanRecord.operatorId（必填，null 时返回 null 避免误删）
+     * - styleNo = PatternScanRecord.styleNo（必填，null 时返回 null 避免误删）
+     * - scanTime 在 PatternScanRecord.scanTime ±60 秒内（容忍时钟漂移，
+     *   因 syncToScanRecord 用 LocalDateTime.now() 重新取时间，与 PatternScanRecord.scanTime 略有差异）
+     * <p>
+     * P1 修复 6：关键匹配字段为 null 时直接返回 null，避免 LambdaQueryWrapper
+     * 静默忽略 null 条件导致误删其他操作员/其他款号的镜像
+     */
+    private ScanRecord findPatternScanRecordMirror(PatternScanRecord scanRecord) {
+        if (scanRecord == null || scanRecord.getScanTime() == null) {
+            return null;
+        }
+        // P1 修复 6：operatorId / styleNo 关键匹配字段为 null 时不查询，避免误删
+        if (!StringUtils.hasText(scanRecord.getOperatorId())
+                || !StringUtils.hasText(scanRecord.getStyleNo())) {
+            log.warn("[样衣撤回] PatternScanRecord 缺少 operatorId/styleNo，跳过镜像删除避免误删: id={}, operatorId={}, styleNo={}",
+                    scanRecord.getId(), scanRecord.getOperatorId(), scanRecord.getStyleNo());
+            return null;
+        }
+        try {
+            LocalDateTime scanTime = scanRecord.getScanTime();
+            LocalDateTime start = scanTime.minusSeconds(60);
+            LocalDateTime end = scanTime.plusSeconds(60);
+            Long tenantId = UserContext.tenantId();
+            List<ScanRecord> candidates = scanRecordService.list(
+                    new LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getScanType, "pattern")
+                            .eq(ScanRecord::getTenantId, tenantId)
+                            .eq(ScanRecord::getOperatorId, scanRecord.getOperatorId())
+                            .eq(ScanRecord::getStyleNo, scanRecord.getStyleNo())
+                            .between(ScanRecord::getScanTime, start, end)
+                            .orderByDesc(ScanRecord::getScanTime)
+                            .last("LIMIT 1"));
+            return (candidates != null && !candidates.isEmpty()) ? candidates.get(0) : null;
+        } catch (Exception e) {
+            log.warn("[样衣撤回] 查找ScanRecord镜像失败: patternScanRecordId={}, err={}",
+                    scanRecord.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * P1 修复：判断是否管理员角色（与 ScanUndoHelper.isAdminRole 对齐）
+     * ADMIN_ROLE_KEYWORDS = {"admin", "ADMIN", "manager", "supervisor", "主管", "管理员"}
+     */
+    private boolean isAdminRole(UserContext ctx) {
+        if (ctx == null) return false;
+        String role = ctx.getRole();
+        if (role == null) return false;
+        return role.contains("admin") || role.contains("ADMIN")
+                || role.contains("manager") || role.contains("supervisor")
+                || role.contains("主管") || role.contains("管理员");
     }
 
     /**

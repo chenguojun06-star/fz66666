@@ -320,12 +320,50 @@ public class ShipmentReconciliationOrchestrator {
         if (!ok) {
             if (shipmentReconciliationService.getById(key) == null) {
                 log.warn("[RECON-DELETE] id={} already deleted, idempotent success", key);
+                // P0-3 修复：幂等场景也联动反向账单（避免脏数据残留）
+                reverseBillsOnReconDelete(key, current.getReconciliationNo());
                 return true;
             }
             throw new IllegalStateException("删除失败");
         }
+        // P0-3 修复：删除对账单时联动反向账单（数据链路闭环）
+        // 反向 SHIPMENT_RECONCILIATION 主账单（含 EXTERNAL_FACTORY/SHIPMENT 类别）
+        // 取消 SHIPMENT_RECONCILIATION_DEDUCTION 扣款账单
+        reverseBillsOnReconDelete(key, current.getReconciliationNo());
         logAppendHelper.appendDelete(current, UserContext.username());
         return true;
+    }
+
+    /**
+     * P0-3 修复：删除对账单时联动反向账单
+     * <p>
+     * 反向范围：
+     * - sourceType=SHIPMENT_RECONCILIATION 的主账单（可能是 EXTERNAL_FACTORY 应付 或 SHIPMENT 应收）
+     * - sourceType=SHIPMENT_RECONCILIATION_DEDUCTION 的扣款账单
+     * <p>
+     * 失败不阻塞主流程（账单可能已结清需人工冲账）
+     */
+    private void reverseBillsOnReconDelete(String reconId, String reconNo) {
+        if (billAggregationOrchestrator == null) {
+            log.warn("[RECON-DELETE] BillAggregationOrchestrator 未注入，跳过账单反向: reconId={}", reconId);
+            return;
+        }
+        try {
+            billAggregationOrchestrator.reverseBySource(
+                    "SHIPMENT_RECONCILIATION", reconId,
+                    "对账单删除: " + (reconNo != null ? reconNo : reconId));
+            log.info("[RECON-DELETE] 反向主账单: reconId={}", reconId);
+        } catch (Exception e) {
+            log.warn("[RECON-DELETE] 反向主账单失败（可能已结清需手动冲账）: reconId={}, err={}",
+                    reconId, e.getMessage());
+        }
+        try {
+            billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION_DEDUCTION", reconId);
+            log.info("[RECON-DELETE] 取消扣款账单: reconId={}", reconId);
+        } catch (Exception e) {
+            log.warn("[RECON-DELETE] 取消扣款账单失败（不阻塞）: reconId={}, err={}",
+                    reconId, e.getMessage());
+        }
     }
 
     public int backfill() {
@@ -626,32 +664,56 @@ public class ShipmentReconciliationOrchestrator {
 
     /**
      * 推送出货应收账单到 BillAggregation
-     * 出货对账单生成后自动推送应收账单，用于向客户收款
+     * <p>
+     * P0-2 修复：按 isOwnFactory 三态判定对账方向（与 ReconciliationStatusOrchestrator 对齐）
+     * - 本厂订单（isOwnFactory=1）：不推账单（本厂工资走 PayrollSettlement）
+     * - 外发工厂订单（isOwnFactory=0）：推 PAYABLE+EXTERNAL_FACTORY+FACTORY
+     * - 销售出货（isOwnFactory=null）：推 RECEIVABLE+SHIPMENT+CUSTOMER（原逻辑）
+     * <p>
+     * 幂等性说明：pushBill 按 sourceType+sourceId+tenantId 去重，必须在对账单生成阶段
+     * 就推送正确方向的账单，否则后续 ReconciliationStatusOrchestrator 推送的正确账单
+     * 会被认为"已存在"而只更新金额不创建新账单，导致方向错误的账单无法纠正。
      */
     private void pushReceivableBill(ShipmentReconciliation recon) {
         if (recon == null || recon.getFinalAmount() == null || recon.getFinalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
+        // 三态判定
+        boolean isOwn = recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 1;
+        if (isOwn) {
+            log.info("[ShipmentRecon] 本厂订单对账不推账单: reconciliationNo={}",
+                    recon.getReconciliationNo());
+            return;
+        }
         try {
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
-            req.setBillType("RECEIVABLE");
-            req.setBillCategory("SHIPMENT");
             req.setSourceType("SHIPMENT_RECONCILIATION");
             req.setSourceId(recon.getId());
             req.setSourceNo(recon.getReconciliationNo());
-            req.setCounterpartyType("CUSTOMER");
-            req.setCounterpartyId(recon.getCustomerId());
-            req.setCounterpartyName(recon.getCustomerName());
             req.setOrderId(recon.getOrderId());
             req.setOrderNo(recon.getOrderNo());
             req.setStyleNo(recon.getStyleNo());
             req.setAmount(recon.getFinalAmount());
             req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            req.setCounterpartyId(recon.getCustomerId());
+            req.setCounterpartyName(recon.getCustomerName());
+
+            if (recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0) {
+                // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY+FACTORY
+                req.setBillType("PAYABLE");
+                req.setBillCategory("EXTERNAL_FACTORY");
+                req.setCounterpartyType("FACTORY");
+            } else {
+                // 销售出货 → RECEIVABLE+SHIPMENT+CUSTOMER（原逻辑）
+                req.setBillType("RECEIVABLE");
+                req.setBillCategory("SHIPMENT");
+                req.setCounterpartyType("CUSTOMER");
+            }
             billAggregationOrchestrator.pushBill(req);
-            log.info("[ShipmentRecon] 推送应收账单: reconciliationNo={}, amount={}",
-                    recon.getReconciliationNo(), recon.getFinalAmount());
+            log.info("[ShipmentRecon] 推送账单: reconciliationNo={}, billType={}, billCategory={}, amount={}",
+                    recon.getReconciliationNo(), req.getBillType(), req.getBillCategory(), req.getAmount());
         } catch (Exception e) {
-            log.warn("[ShipmentRecon] 推送应收账单失败: reconciliationNo={}, err={}",
+            log.warn("[ShipmentRecon] 推送账单失败: reconciliationNo={}, err={}",
                     recon.getReconciliationNo(), e.getMessage());
         }
     }

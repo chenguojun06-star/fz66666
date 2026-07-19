@@ -356,6 +356,30 @@ public class PayableOrchestrator {
         logAppendHelper.appendDelete(id);
     }
 
+    /**
+     * 反向账单联动：更新应付单状态（仅用于 BillAggregation.reverseBillInternal 联动调用）
+     * 不走 markPaid 流程，仅回写状态和备注，保留财务痕迹
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePayableStatus(Payable payable) {
+        if (payable == null || !StringUtils.hasText(payable.getId())) {
+            return;
+        }
+        TenantAssert.assertTenantContext();
+        Payable existing = payableService.lambdaQuery()
+                .eq(Payable::getId, payable.getId())
+                .eq(Payable::getTenantId, UserContext.tenantId())
+                .eq(Payable::getDeleteFlag, 0)
+                .one();
+        if (existing == null) {
+            log.warn("[PayableOrchestrator] 反向联动更新失败：应付单不存在: id={}", payable.getId());
+            return;
+        }
+        payableService.updateById(payable);
+        log.info("[PayableOrchestrator] 反向联动状态更新: payableNo={}, newStatus={}",
+                existing.getPayableNo(), payable.getStatus());
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public int markOverdue() {
         TenantAssert.assertTenantContext();

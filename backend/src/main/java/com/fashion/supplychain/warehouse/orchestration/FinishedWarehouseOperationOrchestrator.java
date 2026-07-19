@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -18,6 +20,7 @@ import com.fashion.supplychain.warehouse.service.StockChangeLogService;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,6 +44,13 @@ public class FinishedWarehouseOperationOrchestrator {
     private final StockChangeLogService stockChangeLogService;
     private final WarehouseLocationOrchestrator warehouseLocationOrchestrator;
     private final ObjectMapper objectMapper;
+
+    // P0-9 修复：可选注入账单orchestrator（避免循环依赖）
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired(required = false)
+    private ProductionOrderService productionOrderService;
 
     private static final Set<String> VALID_SOURCE_TYPES = Set.of(
             "external_purchase", "free_inbound", "transfer_in", "return_in", "other_in", "scan_inbound");
@@ -317,9 +327,61 @@ public class FinishedWarehouseOperationOrchestrator {
                 reversal.getWarehousingNo(), "reversal",
                 original.getUnitPrice(), reversal.getTotalAmount(), traceId, userId, username, tenantId);
 
+        // P0-9 修复：成品冲销联动对账（数据链路闭环）
+        // 1. 反向入库相关账单（如有）— sourceType=WAREHOUSING, sourceId=originalId
+        // 2. 重算订单进度（如有 orderId 关联），避免冲销后进度异常
+        reverseReconciliationOnReversal(original, reversal, reason);
+        recomputeOrderProgressAfterReversal(original);
+
         log.info("[成品冲销] originalId={} reversalId={} skuCode={} -{} reason={}",
                 original.getId(), reversal.getId(), skuCode, reverseQty, reason);
         return reversal;
+    }
+
+    /**
+     * P0-9 修复：成品冲销联动反向账单
+     * <p>
+     * 入库本身可能推过账单（如外发加工费 PAYABLE、销售出货 RECEIVABLE），
+     * 冲销时通过 reverseBySource 反向关联账单 + 联动 Payable/Receivable 状态
+     */
+    private void reverseReconciliationOnReversal(ProductWarehousing original, ProductWarehousing reversal, String reason) {
+        if (billAggregationOrchestrator == null) {
+            log.warn("[成品冲销] BillAggregationOrchestrator 未注入，跳过账单反向: originalId={}", original.getId());
+            return;
+        }
+        try {
+            // 入库单作为 source 反向账单
+            billAggregationOrchestrator.reverseBySource("WAREHOUSING", original.getId(),
+                    "成品冲销: " + reason + " | reversalNo=" + reversal.getWarehousingNo());
+            log.info("[成品冲销] 联动反向账单完成: originalId={}", original.getId());
+        } catch (Exception e) {
+            // 已结清账单会抛异常 — 不阻塞冲销主流程，记录告警供财务对账
+            log.warn("[成品冲销] 联动反向账单失败（可能存在已结清账单需手动冲账）: originalId={}, err={}",
+                    original.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * P0-9 修复：冲销后重算订单进度
+     * <p>
+     * 成品入库冲销会影响订单的入库数量、生产进度等指标，
+     * 必须重算避免订单进度异常（如完成率虚高）
+     */
+    private void recomputeOrderProgressAfterReversal(ProductWarehousing original) {
+        if (productionOrderService == null) {
+            return;
+        }
+        String orderId = original.getOrderId();
+        if (!StringUtils.hasText(orderId)) {
+            return;
+        }
+        try {
+            productionOrderService.recomputeProgressFromRecords(orderId.trim());
+            log.info("[成品冲销] 重算订单进度完成: orderId={}", orderId);
+        } catch (Exception e) {
+            log.warn("[成品冲销] 重算订单进度失败（不阻塞主流程）: orderId={}, err={}",
+                    orderId, e.getMessage());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

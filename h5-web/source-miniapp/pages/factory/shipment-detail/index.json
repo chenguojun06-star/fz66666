@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "发货管理",
-  "usingComponents": {}
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
 }

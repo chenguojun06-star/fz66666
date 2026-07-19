@@ -31,7 +31,11 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -114,6 +118,20 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private StringRedisTemplate redisTemplate;
+
+    /**
+     * 账单聚合编排器（可选注入，避免循环依赖）
+     * <p>
+     * Phase 3-3 修复（数据链路闭环）：
+     * 样衣开发费用（BOM 物料 + 工序成本）统一接入 BillAggregation，
+     * 与 SecondaryProcessOrchestrator（二次工艺）的 SECONDARY_PROCESS sourceType 并行。
+     */
+    @Lazy
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    /** 样衣开发费用 sourceType（与 SecondaryProcessOrchestrator.SECONDARY_PROCESS 并列） */
+    private static final String STYLE_DEV_SOURCE_TYPE = "STYLE_DEVELOPMENT";
 
     public IPage<StyleInfo> list(Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoService.queryPage(params);
@@ -824,9 +842,160 @@ public class StyleInfoOrchestrator {
 
         if ("PASS".equalsIgnoreCase(reviewStatus)) {
             autoGenerateSkusIfNeeded(id);
+            // Phase 3-3: 样衣审核通过 → 推送开发费用账单（BOM 物料 + 工序成本）
+            // 与 SecondaryProcessOrchestrator.SECONDARY_PROCESS sourceType 并行，互不重叠
+            pushStyleDevelopmentBill(style);
+        } else if ("REJECT".equalsIgnoreCase(reviewStatus)
+                || "REWORK".equalsIgnoreCase(reviewStatus)) {
+            // Phase 3-3: 审核驳回/返工 → 反向已推送的账单（如存在），避免悬挂数据
+            reverseStyleDevelopmentBill(String.valueOf(id),
+                    "样衣审核" + ("REJECT".equalsIgnoreCase(reviewStatus) ? "驳回" : "返工"));
         }
 
         return styleInfoService.getById(id);
+    }
+
+    /**
+     * Phase 3-3: 推送样衣开发费用账单（数据链路闭环）
+     * <p>
+     * 费用构成（与 StyleCostCalculator 对齐，但去除 secondaryProcessCost 避免与
+     * SecondaryProcessOrchestrator.SECONDARY_PROCESS sourceType 重复推送）：
+     *   amount = materialCost + processCost
+     * <p>
+     * 账单维度：
+     *   - billType = PAYABLE（应付给开发人员/外协工厂）
+     *   - billCategory = EXPENSE（样衣开发费用）
+     *   - sourceType = STYLE_DEVELOPMENT
+     *   - sourceId = StyleInfo.id
+     *   - counterpartyType = EMPLOYEE（开发人员）
+     * <p>
+     * 幂等性：BillAggregation uk_source (sourceType + sourceId + tenantId) 保证不重复推送。
+     * 已存在账单时，pushBill 会同步金额（materialCost + processCost 变化时自动更新）。
+     * <p>
+     * P1 修复（Spring 事务 rollback-only 陷阱）：
+     * BillAggregationOrchestrator.pushBill 内部 @Transactional(REQUIRED) 会加入外层
+     * saveSampleReview 事务。若 pushBill 抛异常，即使外层 try-catch 捕获，Spring 仍会
+     * 标记事务为 rollback-only，导致审核事务回滚。
+     * <p>
+     * 修复策略：fail-safe — 账单推送失败时让审核事务回滚，保证账单与审核状态强一致。
+     * 不再 try-catch 吞异常，避免"审核 PASS 但账单未推送"的数据悬挂。
+     */
+    private void pushStyleDevelopmentBill(StyleInfo style) {
+        if (billAggregationOrchestrator == null) {
+            log.warn("[StyleDevBill] BillAggregationOrchestrator 未注入，跳过样衣开发费用推送: styleId={}", style.getId());
+            return;
+        }
+        if (style == null || style.getId() == null) {
+            return;
+        }
+        BigDecimal materialCost = computeMaterialCost(style.getId());
+        BigDecimal processCost = computeProcessCost(style.getId());
+        BigDecimal totalCost = materialCost.add(processCost)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        if (totalCost.compareTo(BigDecimal.ZERO) <= 0) {
+            log.info("[StyleDevBill] 样衣开发费用为0，跳过账单推送: styleId={}", style.getId());
+            return;
+        }
+
+        BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+        req.setBillType("PAYABLE");
+        req.setBillCategory("EXPENSE");
+        req.setSourceType(STYLE_DEV_SOURCE_TYPE);
+        req.setSourceId(String.valueOf(style.getId()));
+        req.setSourceNo("SD-" + style.getId());
+        req.setCounterpartyType("EMPLOYEE");
+        // 审核人作为开发费用承担方（可后续扩展为制版师/开发员字段）
+        req.setCounterpartyId(UserContext.userId());
+        req.setCounterpartyName(style.getSampleReviewer() != null
+                ? style.getSampleReviewer() : UserContext.username());
+        req.setOrderId(String.valueOf(style.getId()));
+        req.setOrderNo(style.getStyleNo());
+        req.setStyleNo(style.getStyleNo());
+        req.setAmount(totalCost);
+        req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+        req.setRemark("样衣开发费用: 款号=" + style.getStyleNo()
+                + " 物料=" + materialCost + " 工序=" + processCost);
+
+        // P1 修复：fail-safe — pushBill 异常时让审核事务回滚，保证账单与审核状态强一致
+        billAggregationOrchestrator.pushBill(req);
+        log.info("[StyleDevBill] 样衣开发费用账单已推送: styleId={}, styleNo={}, amount={}",
+                style.getId(), style.getStyleNo(), totalCost);
+    }
+
+    /**
+     * Phase 3-3: 反向样衣开发费用账单（数据链路闭环）
+     * <p>
+     * 触发场景：样衣审核驳回 / 返工 / 后续可能的删除
+     * 行为：调用 reverseBySource 联动取消 Bill → Payable 全链路
+     *  - 未结清账单：直接 CANCELLED + 联动 Payable CANCELLED
+     *  - 已结清账单：抛异常（fail-safe，让审核事务回滚，避免数据悬挂）
+     * <p>
+     * P1 修复（Spring 事务 rollback-only 陷阱）：
+     * 调用 reverseBySource 前先用 billExists 预检：
+     *  - 账单不存在（未推送过或已反向）：直接跳过，不调用 reverseBySource
+     *  - 账单存在：调用 reverseBySource，异常时让审核事务回滚（fail-safe）
+     * 这样既避免了无谓的 @Transactional 调用，又保证了已结清账单场景下审核操作失败而非数据悬挂。
+     */
+    private void reverseStyleDevelopmentBill(String sourceId, String reason) {
+        if (billAggregationOrchestrator == null) {
+            log.warn("[StyleDevBill] BillAggregationOrchestrator 未注入，跳过反向: sourceId={}", sourceId);
+            return;
+        }
+        if (!StringUtils.hasText(sourceId)) {
+            return;
+        }
+        // P1 修复：预检账单是否存在，不存在直接跳过（避免无谓的 @Transactional 调用）
+        if (!billAggregationOrchestrator.billExists(STYLE_DEV_SOURCE_TYPE, sourceId)) {
+            log.info("[StyleDevBill] 样衣开发费用账单不存在，跳过反向: sourceId={}", sourceId);
+            return;
+        }
+        // P1 修复：fail-safe — 已结清账单反向会抛异常，让审核事务回滚，避免数据悬挂
+        // 用户会看到错误提示"账单已结算 X 元，需先在付款中心冲账后再反向操作"，由人工介入冲账
+        billAggregationOrchestrator.reverseBySource(STYLE_DEV_SOURCE_TYPE, sourceId, reason);
+        log.info("[StyleDevBill] 样衣开发费用账单已反向: sourceId={}, reason={}", sourceId, reason);
+    }
+
+    /**
+     * Phase 3-3: 实时聚合款式 BOM 物料成本
+     * 与 StyleCostCalculator.computeLiveDevCostFromBatch 的 materialTotal 逻辑一致，
+     * 但单款查询（非批量），用于账单推送时实时计算。
+     */
+    private BigDecimal computeMaterialCost(Long styleId) {
+        if (styleId == null) {
+            return BigDecimal.ZERO;
+        }
+        List<StyleBom> bomItems = styleBomService.listByStyleId(styleId);
+        if (bomItems == null || bomItems.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        double total = bomItems.stream().mapToDouble(bom -> {
+            BigDecimal tp = bom.getTotalPrice();
+            if (tp != null) return tp.doubleValue();
+            double usage = bom.getUsageAmount() != null ? bom.getUsageAmount().doubleValue() : 0.0;
+            double loss  = bom.getLossRate()    != null ? bom.getLossRate().doubleValue()    : 0.0;
+            double up    = bom.getUnitPrice()   != null ? bom.getUnitPrice().doubleValue()   : 0.0;
+            return usage * (1.0 + loss / 100.0) * up;
+        }).sum();
+        return BigDecimal.valueOf(total).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Phase 3-3: 实时聚合款式工序成本
+     * 与 StyleCostCalculator.computeLiveDevCostFromBatch 的 processTotal 逻辑一致。
+     */
+    private BigDecimal computeProcessCost(Long styleId) {
+        if (styleId == null) {
+            return BigDecimal.ZERO;
+        }
+        List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);
+        if (processes == null || processes.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        double total = processes.stream()
+                .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
+                .sum();
+        return BigDecimal.valueOf(total).setScale(2, RoundingMode.HALF_UP);
     }
 
     private void autoGenerateSkusIfNeeded(Long styleId) {

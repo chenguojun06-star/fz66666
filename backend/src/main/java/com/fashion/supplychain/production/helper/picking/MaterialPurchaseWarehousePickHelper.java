@@ -441,7 +441,6 @@ public class MaterialPurchaseWarehousePickHelper {
 
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
             req.setBillType("PAYABLE");
-            req.setBillCategory("MATERIAL");
             req.setSourceType("MATERIAL_OUTBOUND");
             req.setSourceId(outboundLog.getId());
             req.setSourceNo(outboundLog.getOutboundNo());
@@ -449,10 +448,14 @@ public class MaterialPurchaseWarehousePickHelper {
             String supplierId = stock != null ? stock.getSupplierId() : null;
             String supplierName = stock != null ? stock.getSupplierName() : null;
             if (StringUtils.hasText(supplierId) || StringUtils.hasText(supplierName)) {
+                // 供应商提供物料 → 物料类别
+                req.setBillCategory("MATERIAL");
                 req.setCounterpartyType("SUPPLIER");
                 req.setCounterpartyId(supplierId);
                 req.setCounterpartyName(supplierName);
             } else {
+                // P1-2 修复：fallback 到外发工厂 → 应归入"外发厂"类别
+                req.setBillCategory("EXTERNAL_FACTORY");
                 req.setCounterpartyType("FACTORY");
                 req.setCounterpartyId(outboundLog.getFactoryId());
                 req.setCounterpartyName(outboundLog.getFactoryName());

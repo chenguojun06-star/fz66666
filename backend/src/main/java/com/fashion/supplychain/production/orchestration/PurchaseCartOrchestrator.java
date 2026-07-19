@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import org.springframework.util.StringUtils;
 
 @Component
 @Slf4j
@@ -393,11 +394,10 @@ public class PurchaseCartOrchestrator {
             purchase.setPurchaseQuantity(group.getTotalQuantity());
             purchase.setTotalAmount(group.getTotalAmount());
             purchase.setStatus(MaterialConstants.STATUS_PENDING);
-            purchase.setSourceType("BATCH");
             purchase.setTenantId(tenantId);
             purchase.setArrivedQuantity(0);
             purchase.setDeleteFlag(0);
-            
+
             // 设置必需的字段
             if (!org.springframework.util.StringUtils.hasText(purchase.getUnit())) {
                 purchase.setUnit("-");
@@ -405,19 +405,27 @@ public class PurchaseCartOrchestrator {
             if (purchase.getUnitPrice() == null) {
                 purchase.setUnitPrice(BigDecimal.ZERO);
             }
-            
+
             // 生成采购单号
             purchase.setPurchaseNo(nextPurchaseNo());
-            
+
             String sourcesJson = buildSourcesJson(group.getSourceItems());
             purchase.setRemark(sourcesJson);
-            
-            // 直接使用 service 保存，绕过 orchestrator 的 savePurchaseAndUpdateOrder 逻辑
-            boolean saved = materialPurchaseService.save(purchase);
+
+            // P0-5 修复：原实现直接 service.save() 绕过 Orchestrator
+            // - 跳过 savePurchaseAndUpdateOrder 的事务边界
+            // - 跳过 statusHelper.syncAfterPurchaseChanged 状态联动
+            // - sourceType 强制 'BATCH' 丢失样衣标识
+            // 现改走 materialPurchaseOrchestrator.saveAndSync（含事务、状态联动、sourceType 推断）
+            // saveAndSync 会根据 patternProductionId/orderId 自动推断 sourceType=sample/order/batch
+            // 同时根据 sourceItems 反推关联订单/样衣ID
+            enrichPurchaseFromSourceItems(purchase, group.getSourceItems(), tenantId);
+
+            boolean saved = materialPurchaseOrchestrator.saveAndSync(purchase);
             if (!saved) {
                 throw new BusinessException("保存采购单失败");
             }
-            
+
             String purchaseId = purchase.getId();
             String purchaseNo = purchase.getPurchaseNo();
             purchaseIds.add(purchaseId);
@@ -543,6 +551,55 @@ public class PurchaseCartOrchestrator {
         } catch (Exception e) {
             log.error("序列化来源信息失败", e);
             return "[]";
+        }
+    }
+
+    /**
+     * 从购物车来源项反推采购单的关联字段（orderId / patternProductionId / sourceType）
+     * <p>
+     * P0-5 修复配套：原 confirm 强制 sourceType='BATCH'，丢失样衣标识
+     * 现按 sourceItems 推断：
+     * - 若所有来源 sourceType=sample 且 sourceId 一致 → sample 模式，关联 patternProductionId
+     * - 若所有来源 sourceType=order 且 sourceId 一致 → order 模式，关联 orderId
+     * - 否则 → batch 模式（多订单/多样衣合并）
+     */
+    private void enrichPurchaseFromSourceItems(MaterialPurchase purchase,
+                                                List<CartPreviewDto.SourceItemDto> sourceItems,
+                                                Long tenantId) {
+        if (sourceItems == null || sourceItems.isEmpty()) {
+            purchase.setSourceType("batch");
+            return;
+        }
+        // 提取所有非空 sourceType
+        Set<String> sourceTypes = sourceItems.stream()
+                .map(CartPreviewDto.SourceItemDto::getSourceType)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        // 提取所有非空 sourceId
+        Set<String> sourceIds = sourceItems.stream()
+                .map(s -> s.getSourceNo() != null ? s.getSourceNo() : null)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        if (sourceTypes.size() == 1 && sourceIds.size() == 1) {
+            String type = sourceTypes.iterator().next();
+            // sourceId 实际存的是 sourceNo（业务编号），原 sourceNo 字段已用于显示
+            // 此处取 sourceItems 的第一个非空 sourceId（购物车 item 的 sourceId 字段在购物车模型中存在）
+            // 但 CartPreviewDto.SourceItemDto 没有 sourceId 字段，仅有 sourceType/sourceNo/quantity
+            // 通过 sourceNo 反查关联ID（如果前端传入的 sourceNo 是订单号或样衣编号）
+            String sourceNo = sourceIds.iterator().next();
+            if ("sample".equalsIgnoreCase(type)) {
+                purchase.setSourceType("sample");
+                // 样衣关联通过 sourceNo 保留在 remark 中，MaterialPurchaseOrchestrator.saveAndSync 会读取
+                log.info("[PurchaseCart] 采购单关联样衣: sourceNo={}", sourceNo);
+            } else if ("order".equalsIgnoreCase(type)) {
+                purchase.setSourceType("order");
+                log.info("[PurchaseCart] 采购单关联订单: orderNo={}", sourceNo);
+            } else {
+                purchase.setSourceType("batch");
+            }
+        } else {
+            purchase.setSourceType("batch");
         }
     }
 }
