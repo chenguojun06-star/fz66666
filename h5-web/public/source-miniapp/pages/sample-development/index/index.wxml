@@ -59,10 +59,9 @@
       data-id="{{item.id}}"
       data-card-idx="{{cardIdx}}"
       data-item="{{item}}"
-      catchtap="onCardTap"
     >
-      <!-- 封面 + 信息 -->
-      <view class="card-top">
+      <!-- 封面 + 信息（点击跳详情） -->
+      <view class="card-top" data-item="{{item}}" catchtap="onCardTap">
         <image
           wx:if="{{item._cover}}"
           class="card-cover"

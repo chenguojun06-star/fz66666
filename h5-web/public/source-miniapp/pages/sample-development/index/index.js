@@ -664,63 +664,74 @@ Page({
     if (Number.isNaN(idx) || idx < 0 || idx >= this.data.list.length) return;
     var item = this.data.list[idx];
     var newExpanded = !item.expanded;
+    var patternId = item.id || item.patternId;
 
-    var path = 'list[' + idx + '].expanded';
-    this.setData({ [path]: newExpanded });
-
-    // 展开且未加载过子工序配置时按需加载
-    if (newExpanded && !item._configLoaded && !item._configLoading) {
-      var patternId = item.id || item.patternId;
-      if (!patternId) {
-        this.setData({
-          ['list[' + idx + ']._configLoaded']: true,
-          ['list[' + idx + ']._needsConfig']: true,
-        });
-        return;
-      }
-      this.setData({ ['list[' + idx + ']._configLoading']: true });
-      Promise.all([
-        api.production.getPatternProcessConfig(patternId),
-        api.production.getPatternScanRecords(patternId),
-      ]).then(function (results) {
-        var configNodes = (results[0] && results[0].data) || results[0] || [];
-        if (!Array.isArray(configNodes)) configNodes = [];
-        var scanRecords = (results[1] && results[1].data) || results[1] || [];
-        if (!Array.isArray(scanRecords)) scanRecords = [];
-        var built = buildSampleStages(configNodes, scanRecords, item);
-        // 默认选第一个有子工序的 tab
-        var activeStage = '';
-        for (var i = 0; i < built.stages.length; i++) {
-          if (built.stages[i].totalCount > 0) {
-            activeStage = built.stages[i].key;
-            break;
-          }
-        }
-        if (!activeStage && built.stages.length > 0) {
-          activeStage = built.stages[0].key;
-        }
-        var currentSubs = [];
-        if (activeStage) {
-          var stageObj = built.stages.find(function (s) { return s.key === activeStage; });
-          currentSubs = buildSubProcessRows(stageObj, item);
-        }
-        that.setData({
-          ['list[' + idx + ']._stages']: built.stages,
-          ['list[' + idx + ']._needsConfig']: built.needsConfig,
-          ['list[' + idx + ']._activeStage']: activeStage,
-          ['list[' + idx + ']._currentSubProcesses']: currentSubs,
-          ['list[' + idx + ']._configLoading']: false,
-          ['list[' + idx + ']._configLoaded']: true,
-        });
-      }).catch(function () {
-        that.setData({
-          ['list[' + idx + ']._stages']: [],
-          ['list[' + idx + ']._needsConfig']: true,
-          ['list[' + idx + ']._configLoading']: false,
-          ['list[' + idx + ']._configLoaded']: true,
-        });
-      });
+    // 收起或已加载过：仅切换 expanded
+    if (!newExpanded || item._configLoaded) {
+      this.setData({ ['list[' + idx + '].expanded']: newExpanded });
+      return;
     }
+
+    // 展开 + 首次加载：一次性 setData（expanded + loading + 占位空数组）
+    var initPayload = {};
+    initPayload['list[' + idx + '].expanded'] = true;
+    initPayload['list[' + idx + ']._configLoading'] = true;
+    initPayload['list[' + idx + ']._stages'] = [];
+    initPayload['list[' + idx + ']._currentSubProcesses'] = [];
+    initPayload['list[' + idx + ']._activeStage'] = '';
+    this.setData(initPayload);
+
+    if (!patternId) {
+      this.setData({
+        ['list[' + idx + ']._configLoading']: false,
+        ['list[' + idx + ']._configLoaded']: true,
+        ['list[' + idx + ']._needsConfig']: true,
+      });
+      return;
+    }
+
+    Promise.all([
+      api.production.getPatternProcessConfig(patternId),
+      api.production.getPatternScanRecords(patternId),
+    ]).then(function (results) {
+      var configNodes = (results[0] && results[0].data) || results[0] || [];
+      if (!Array.isArray(configNodes)) configNodes = [];
+      var scanRecords = (results[1] && results[1].data) || results[1] || [];
+      if (!Array.isArray(scanRecords)) scanRecords = [];
+      var built = buildSampleStages(configNodes, scanRecords, item);
+      // 默认选第一个有子工序的 tab
+      var activeStage = '';
+      for (var i = 0; i < built.stages.length; i++) {
+        if (built.stages[i].totalCount > 0) {
+          activeStage = built.stages[i].key;
+          break;
+        }
+      }
+      if (!activeStage && built.stages.length > 0) {
+        activeStage = built.stages[0].key;
+      }
+      var currentSubs = [];
+      if (activeStage) {
+        var stageObj = built.stages.find(function (s) { return s.key === activeStage; });
+        currentSubs = buildSubProcessRows(stageObj, item);
+      }
+      // 一次性 setData：stages + activeStage + currentSubs + loading=false + loaded=true
+      var payload = {};
+      payload['list[' + idx + ']._stages'] = built.stages;
+      payload['list[' + idx + ']._needsConfig'] = built.needsConfig;
+      payload['list[' + idx + ']._activeStage'] = activeStage;
+      payload['list[' + idx + ']._currentSubProcesses'] = currentSubs;
+      payload['list[' + idx + ']._configLoading'] = false;
+      payload['list[' + idx + ']._configLoaded'] = true;
+      that.setData(payload);
+    }).catch(function () {
+      that.setData({
+        ['list[' + idx + ']._stages']: [],
+        ['list[' + idx + ']._needsConfig']: true,
+        ['list[' + idx + ']._configLoading']: false,
+        ['list[' + idx + ']._configLoaded']: true,
+      });
+    });
   },
 
   // 切换父阶段 tab，重新构造当前 tab 下的子工序列表
