@@ -238,11 +238,9 @@
   box-shadow: var(--shadow-sm);
   padding: 12px;
   box-sizing: border-box;
-  transition: transform 0.18s ease, background-color 0.18s ease;
-}
-
-.card:active {
-  background: var(--color-bg-hover);
+  /* 移除 .card:active 背景，避免点击子元素时整个卡片闪烁 */
+  /* 注意：:active 会冒泡到祖先元素，所以 .card-top:active 也不能加，
+     否则点击展开按钮/stage-tab 时 .card-top 仍会闪 */
 }
 
 /* 封面 + 信息 */
