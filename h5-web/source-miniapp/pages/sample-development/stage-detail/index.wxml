@@ -336,6 +336,8 @@
                     <text class="psc-scan-op">{{rec.operationLabel}}</text>
                     <text wx:if="{{rec.color || rec.size}}" class="psc-scan-cs">{{rec.color}}/{{rec.size}}</text>
                     <text class="psc-scan-qty">{{rec.quantity}}件</text>
+                    <text wx:if="{{rec.unitPrice}}" class="psc-scan-price">¥{{rec.unitPrice}}/件</text>
+                    <text wx:if="{{rec.scanCost}}" class="psc-scan-wage">工资¥{{rec.scanCost}}</text>
                     <text wx:if="{{rec.warehouse && rec.warehouse !== '-'}}" class="psc-scan-wh">{{rec.warehouse}}</text>
                   </view>
                   <view wx:if="{{rec.remark}}" class="psc-scan-remark">

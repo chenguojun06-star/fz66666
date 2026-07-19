@@ -786,6 +786,12 @@ Page({
         const opLabel = OPERATION_TYPE_LABELS[opType] || opType || '未知';
         const rScanTime = r.scanTime ? new Date(String(r.scanTime).replace(/-/g, '/')).getTime() : 0;
         const rCanUndo = rScanTime > 0 && (now - rScanTime) < 30 * 60 * 1000;
+        // P1 修复（手机端同步）：补 unitPrice / scanCost，与 PC 端扫码记录表对齐
+        const rQty = Number(r.quantity || qty || 1);
+        const rPrice = Number(r.unitPrice || 0);
+        const rScanCostNum = Number(r.scanCost || 0) > 0
+          ? Number(r.scanCost)
+          : (rPrice > 0 ? rPrice * rQty : 0);
         return {
           id: r.id || '',
           operatorName: r.operatorName || r.operator || '未知',
@@ -797,6 +803,8 @@ Page({
           quantity: r.quantity || qty,
           color: r.color || '',
           size: r.size || '',
+          unitPrice: rPrice > 0 ? rPrice.toFixed(2) : '',
+          scanCost: rScanCostNum > 0 ? rScanCostNum.toFixed(2) : '',
         };
       });
 

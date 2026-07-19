@@ -875,6 +875,17 @@
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
+.psc-scan-price {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.psc-scan-wage {
+  font-size: var(--font-size-2xs);
+  color: var(--color-success);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
 .psc-scan-wh {
   font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
