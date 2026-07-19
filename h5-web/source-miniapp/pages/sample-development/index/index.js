@@ -51,13 +51,13 @@ function normalizeOpToStage(opType) {
   return OP_TYPE_TO_STAGE[upper] || null;
 }
 
-// 格式化日期：2026-07-19 12:34
-// 兼容 iOS：仅支持 yyyy/MM/dd、yyyy/MM/dd HH:mm:ss、yyyy-MM-dd、yyyy-MM-ddTHH:mm:ss
-// 后端可能返回 "03/23 21:17"（无年份 MM/DD HH:mm），需补当前年份
-function fmtDateTime(raw) {
-  if (!raw) return '';
+// 兼容 iOS 的 Date 解析：iOS 只支持 "yyyy/MM/dd"、"yyyy/MM/dd HH:mm:ss"、
+// "yyyy-MM-dd"、"yyyy-MM-ddTHH:mm:ss"、"yyyy-MM-ddTHH:mm:ss+HH:mm"。
+// 后端可能返回 "03/23 21:17"（无年份 MM/DD HH:mm），需补当前年份后解析。
+function safeParseDate(raw) {
+  if (!raw) return null;
   var s = String(raw).trim();
-  if (!s) return '';
+  if (!s) return null;
   try {
     var normalized = s;
     // 匹配 MM/DD HH:mm 或 MM/DD HH:mm:ss（无年份）
@@ -75,11 +75,20 @@ function fmtDateTime(raw) {
       normalized = s.replace(/-/g, '/');
     }
     var d = new Date(normalized);
-    if (isNaN(d.getTime())) return s.substring(0, 16);
-    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-      + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  } catch (_e) { return s.substring(0, 16); }
+    return isNaN(d.getTime()) ? null : d;
+  } catch (_e) { return null; }
+}
+
+// 格式化日期：2026-07-19 12:34
+function fmtDateTime(raw) {
+  if (!raw) return '';
+  var s = String(raw).trim();
+  if (!s) return '';
+  var d = safeParseDate(s);
+  if (!d) return s.substring(0, 16);
+  var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
 function fmtDateShort(raw) {
@@ -311,12 +320,11 @@ function fmtDate(v) {
 
 function isWithinDays(dateStr, days) {
   if (!dateStr) return false;
-  try {
-    var due = new Date(String(dateStr).replace(/-/g, '/'));
-    var now = new Date();
-    var diff = (due - now) / (1000 * 60 * 60 * 24);
-    return diff >= 0 && diff <= days;
-  } catch (_e) { return false; }
+  var due = safeParseDate(dateStr);
+  if (!due) return false;
+  var now = new Date();
+  var diff = (due - now) / (1000 * 60 * 60 * 24);
+  return diff >= 0 && diff <= days;
 }
 
 function isCompletedStatus(status) {
@@ -526,9 +534,9 @@ Page({
           item._nearDue = false;
           item._daysLeftText = '';
           if (item.deliveryTime && !isCompletedStatus(item.status)) {
-            try {
+            var due = safeParseDate(item.deliveryTime);
+            if (due) {
               var now = new Date();
-              var due = new Date(String(item.deliveryTime).replace(/-/g, '/'));
               var diffMs = due - now;
               var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
               if (diffDays < 0) {
@@ -543,7 +551,7 @@ Page({
               } else {
                 item._daysLeftText = '剩' + diffDays + '天';
               }
-            } catch (_e) { /* ignore */ }
+            }
           }
 
           // 元信息行1：客户 · 跟单 · 品类 · 季节
