@@ -1,4 +1,23 @@
 <view class="container">
+  <!-- 搜索栏：输入框 4/5 + 扫码按钮 1/5（与样衣开发页一致） -->
+  <view class="search-row">
+    <view class="search-box {{keyword ? 'has-keyword' : ''}}">
+      <view class="line-icon line-icon--sm icon-search search-icon"></view>
+      <input
+        class="search-input"
+        placeholder="搜索订单号/款号/工厂"
+        value="{{keyword}}"
+        bindinput="onSearchInput"
+        bindconfirm="_doSearch"
+        confirm-type="search"
+      />
+      <view wx:if="{{keyword}}" class="line-icon line-icon--sm icon-close search-clear" bindtap="onSearchClear"></view>
+    </view>
+    <view class="scan-btn" bindtap="onScan">
+      <view class="line-icon icon-scan scan-icon"></view>
+    </view>
+  </view>
+
   <!-- 筛选标签栏（设计稿：在统计栏上方） -->
   <scroll-view scroll-x class="filter-row" enhanced enable-flex show-scrollbar="{{false}}">
     <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">

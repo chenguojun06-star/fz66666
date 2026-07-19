@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { toast, safeNavigate } = require('../../utils/uiHelper');
+const { toast, safeNavigate, quickScan } = require('../../utils/uiHelper');
 const { getUserInfo } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
@@ -13,31 +13,33 @@ const DEFECT_CATEGORY_MAP = qualityHelper.DEFECT_CATEGORY_MAP;
 
 /**
  * 后端 filter → API 路由（与 PC 端 useProductWarehousing.handleStatusFilterChange 对齐）
- * - all / qualified / unqualified → listWarehousing（后端过滤 qualityStatus）
+ * - all / qualified / unqualified → listWarehousing（后端过滤 qualityStatus，支持 warehousingNo 关键词）
  * - pending → pendingBundles('pendingQc') 待质检菲号
  * - repair → myRepairTasks() 当前用户的待返修任务
  */
-function buildRequestByFilter(filter, page, pageSize) {
+function buildRequestByFilter(filter, page, pageSize, keyword) {
+  var kw = keyword || '';
   switch (filter) {
     case 'pending':
       // 待质检菲号：不分页，后端返回全部
       return { type: 'pendingBundles', status: 'pendingQc' };
     case 'qualified':
-      return { type: 'list', params: { page: page, pageSize: pageSize, qualityStatus: 'qualified' } };
+      return { type: 'list', params: { page: page, pageSize: pageSize, qualityStatus: 'qualified', warehousingNo: kw } };
     case 'unqualified':
-      return { type: 'list', params: { page: page, pageSize: pageSize, qualityStatus: 'unqualified' } };
+      return { type: 'list', params: { page: page, pageSize: pageSize, qualityStatus: 'unqualified', warehousingNo: kw } };
     case 'repair':
       // 待返修任务列表：按当前用户过滤，不分页
       return { type: 'myRepairTasks' };
     default:
       // all
-      return { type: 'list', params: { page: page, pageSize: pageSize } };
+      return { type: 'list', params: { page: page, pageSize: pageSize, warehousingNo: kw } };
   }
 }
 
 Page({
   data: {
     activeFilter: 'all',
+    keyword: '',
     list: [],
     loading: false,
     loadingMore: false,
@@ -100,6 +102,34 @@ Page({
     this.loadQualityList(true);
   },
 
+  /**
+   * 搜索输入：400ms 防抖
+   * pending/repair 模式下输入关键词会自动切到 all 模式（走 listWarehousing 才支持 warehousingNo 关键词搜索）
+   */
+  onSearchInput: function (e) {
+    var val = (e.detail.value || '').trim();
+    this.setData({ keyword: val });
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(this._doSearch.bind(this), 400);
+  },
+
+  onSearchClear: function () {
+    this.setData({ keyword: '' });
+    this._doSearch();
+  },
+
+  _doSearch: function () {
+    var filter = this.data.activeFilter;
+    if ((filter === 'pending' || filter === 'repair') && this.data.keyword) {
+      this.setData({ activeFilter: 'all' });
+    }
+    this.loadQualityList(true);
+  },
+
+  onScan: function () {
+    quickScan();
+  },
+
   onViewDetail: function (e) {
     const index = e.currentTarget.dataset.index;
     const item = this.data.list[index];
@@ -135,7 +165,7 @@ Page({
 
     const page = reset ? 1 : self.data.page;
     const filter = self.data.activeFilter;
-    const req = buildRequestByFilter(filter, page, self.data.pageSize);
+    const req = buildRequestByFilter(filter, page, self.data.pageSize, self.data.keyword);
 
     self.setData({
       loading: reset,
