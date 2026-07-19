@@ -5,7 +5,7 @@
     <text class="loading-text">加载中...</text>
   </view>
 
-  <block wx:elif="{{skuList.length > 0}}">
+  <block wx:elif="{{skuList.length > 0 || activeTab === 'inbound'}}">
     <!-- 款式信息 -->
     <view class="section-card style-card">
       <image wx:if="{{styleImage}}" src="{{styleImage}}" mode="aspectFill" class="style-image" />
@@ -42,8 +42,19 @@
       </view>
     </view>
 
-    <!-- SKU 列表 -->
-    <view class="section-card">
+    <!-- Tab 切换 -->
+    <view class="tab-bar">
+      <view class="tab-item {{activeTab === 'sku' ? 'tab-item--active' : ''}}" bindtap="onSwitchTab" data-tab="sku">
+        <text class="tab-text">SKU明细</text>
+      </view>
+      <view class="tab-item {{activeTab === 'inbound' ? 'tab-item--active' : ''}}" bindtap="onSwitchTab" data-tab="inbound">
+        <text class="tab-text">入库记录</text>
+        <text wx:if="{{inboundHistory.length > 0}}" class="tab-badge">{{inboundHistory.length}}</text>
+      </view>
+    </view>
+
+    <!-- SKU 明细 Tab -->
+    <view wx:if="{{activeTab === 'sku'}}" class="section-card">
       <view class="card-header">
         <text class="card-title">SKU 明细</text>
         <text class="card-count">{{skuList.length}}个</text>
@@ -77,7 +88,72 @@
         </view>
       </scroll-view>
     </view>
-  </block>
+
+    <!-- 入库记录 Tab -->
+    <view wx:if="{{activeTab === 'inbound'}}" class="section-card">
+      <view class="card-header">
+        <text class="card-title">入库记录</text>
+        <text class="card-count">{{inboundHistory.length}}条</text>
+      </view>
+
+      <view wx:if="{{inboundLoading}}" class="loading-wrap loading-wrap--small">
+        <view class="loading-spinner loading-spinner--small"></view>
+        <text class="loading-text">加载中...</text>
+      </view>
+
+      <view wx:elif="{{inboundHistory.length === 0}}" class="empty-wrap empty-wrap--small">
+        <text class="empty-text">暂无入库记录</text>
+      </view>
+
+      <view wx:else class="inbound-list">
+        <view wx:for="{{inboundHistory}}" wx:key="id" class="inbound-item">
+          <view class="inbound-item-header">
+            <text class="inbound-date">{{item.inboundDate}}</text>
+            <text class="inbound-no">{{item.qualityInspectionNo}}</text>
+          </view>
+          <view class="inbound-item-body">
+            <view class="inbound-row">
+              <text class="inbound-label">菲号</text>
+              <text class="inbound-value">{{item.cuttingBundleNo}}</text>
+            </view>
+            <view class="inbound-row">
+              <text class="inbound-label">规格</text>
+              <text class="inbound-value">{{item.color}} / {{item.size}}</text>
+            </view>
+            <view class="inbound-row">
+              <text class="inbound-label">数量</text>
+              <text class="inbound-value inbound-value--qty">{{item.quantity}} 件</text>
+            </view>
+            <view class="inbound-row">
+              <text class="inbound-label">操作人</text>
+              <text class="inbound-value">{{item.operator}}</text>
+            </view>
+            <view class="inbound-row">
+              <text class="inbound-label">库位</text>
+              <text class="inbound-value inbound-value--loc">{{item.warehouseLocation}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 对账信息 -->
+      <view wx:if="{{inboundHistory.length > 0}}" class="reconcile-card">
+        <view class="reconcile-title">对账信息</view>
+        <view class="reconcile-row">
+          <text class="reconcile-label">入库合计</text>
+          <text class="reconcile-value">{{inboundTotalQty}} 件 ({{inboundHistory.length}}条)</text>
+        </view>
+        <view class="reconcile-row">
+          <text class="reconcile-label">当前可用</text>
+          <text class="reconcile-value reconcile-value--success">{{summary.totalAvailable}} 件</text>
+        </view>
+        <view class="reconcile-row">
+          <text class="reconcile-label">次品</text>
+          <text class="reconcile-value reconcile-value--danger">{{summary.totalDefect}} 件</text>
+        </view>
+      </view>
+    </view>
+  </view>
 
   <view wx:else class="empty-wrap">
     <text class="empty-text">暂无库存数据</text>

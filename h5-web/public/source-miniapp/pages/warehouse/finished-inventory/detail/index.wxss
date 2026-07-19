@@ -315,3 +315,156 @@
   color: #1677ff;
   font-weight: 600;
 }
+
+/* ============ Tab 切换栏 ============ */
+.tab-bar {
+  display: flex;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: var(--radius-xl, 12px);
+  padding: 4px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #666;
+  border-radius: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.tab-item--active {
+  background: rgba(22, 119, 255, 0.08);
+  color: #1677ff;
+  font-weight: 600;
+}
+.tab-text {
+  font-size: 14px;
+}
+.tab-badge {
+  margin-left: 6px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  color: #fff;
+  background: #1677ff;
+  border-radius: 9px;
+  text-align: center;
+}
+
+/* ============ 入库记录列表 ============ */
+.inbound-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inbound-item {
+  background: #fafbfc;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.inbound-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #eee;
+  margin-bottom: 8px;
+}
+.inbound-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+.inbound-no {
+  font-size: 12px;
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+.inbound-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inbound-row {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+.inbound-label {
+  width: 60px;
+  color: #999;
+  flex-shrink: 0;
+}
+.inbound-value {
+  flex: 1;
+  color: #333;
+  word-break: break-all;
+}
+.inbound-value--qty {
+  color: #1677ff;
+  font-weight: 600;
+}
+.inbound-value--loc {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+/* ============ 对账卡片 ============ */
+.reconcile-card {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8faff;
+  border: 1px solid #d6e4ff;
+  border-radius: 8px;
+}
+.reconcile-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1677ff;
+  margin-bottom: 8px;
+}
+.reconcile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.reconcile-label {
+  color: #666;
+}
+.reconcile-value {
+  color: #333;
+  font-weight: 600;
+}
+.reconcile-value--success {
+  color: #52c41a;
+}
+.reconcile-value--danger {
+  color: #ff4d4f;
+}
+
+/* ============ 辅助：小号加载/空状态 ============ */
+.loading-wrap--small {
+  padding: 30px 0;
+}
+.loading-spinner--small {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
+  margin-bottom: 6px;
+}
+.empty-wrap--small {
+  padding: 40px 0;
+}
