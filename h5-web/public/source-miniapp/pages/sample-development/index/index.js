@@ -658,7 +658,9 @@ Page({
   // 切换卡片展开/收起子工序
   onCardToggle: function (e) {
     var that = this;
-    var idx = Number(e.currentTarget.dataset.index);
+    var idx = Number(e.currentTarget.dataset.cardIdx !== undefined
+      ? e.currentTarget.dataset.cardIdx
+      : e.currentTarget.dataset.index);
     if (Number.isNaN(idx) || idx < 0 || idx >= this.data.list.length) return;
     var item = this.data.list[idx];
     var newExpanded = !item.expanded;
@@ -723,7 +725,7 @@ Page({
 
   // 切换父阶段 tab，重新构造当前 tab 下的子工序列表
   onStageTabTap: function (e) {
-    var idx = Number(e.currentTarget.dataset.index);
+    var idx = Number(e.currentTarget.dataset.cardIdx);
     var stageKey = e.currentTarget.dataset.stage;
     if (Number.isNaN(idx) || idx < 0 || idx >= this.data.list.length) return;
     var item = this.data.list[idx];

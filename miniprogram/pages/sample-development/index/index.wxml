@@ -54,8 +54,10 @@
     <view
       class="card"
       wx:for="{{list}}"
+      wx:for-index="cardIdx"
       wx:key="id"
       data-id="{{item.id}}"
+      data-card-idx="{{cardIdx}}"
       data-item="{{item}}"
       catchtap="onCardTap"
     >
@@ -112,7 +114,7 @@
       </view>
 
       <!-- 展开明细按钮 -->
-      <view class="card-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+      <view class="card-expand-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
         <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细（子工序 + 多码多色）'}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
       </view>
@@ -150,7 +152,7 @@
               wx:for-item="st"
               wx:key="key"
               class="stage-tab {{item._activeStage === st.key ? 'stage-tab--active' : ''}} {{st.percent >= 100 ? 'stage-tab--done' : ''}}"
-              data-index="{{index}}"
+              data-card-idx="{{cardIdx}}"
               data-stage="{{st.key}}"
               catchtap="onStageTabTap"
             >
