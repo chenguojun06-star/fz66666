@@ -1,7 +1,6 @@
 {
   "navigationBarTitleText": "扫码",
   "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index",
     "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

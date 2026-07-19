@@ -79,7 +79,7 @@
   padding: 12px;
   background: #fff;
   border: 1px solid var(--color-border, #e8e8e8);
-  border-radius: var(--radius-xl, 12px);
+  border-radius: var(--radius-xl);
   box-sizing: border-box;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
 }
@@ -124,7 +124,7 @@
   font-size: 22rpx;
   color: #fff;
   background: var(--color-text-tertiary, #999);
-  border-radius: 18rpx;
+  border-radius: var(--radius-md);
 }
 .card-badge--primary {
   background: var(--color-primary, #165DFF);
@@ -147,7 +147,7 @@
 .basic-cover-placeholder {
   width: 160rpx;
   height: 160rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   background: #f0f1f3;
 }
@@ -175,7 +175,7 @@
 .status-pill {
   margin-left: 16rpx;
   padding: 4rpx 16rpx;
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   font-size: 22rpx;
   font-weight: 500;
 }
@@ -213,7 +213,7 @@
 .remain-badge {
   margin-left: 16rpx;
   padding: 2rpx 12rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-sm);
   font-size: 22rpx;
   font-weight: 600;
 }
@@ -307,7 +307,7 @@
   height: 200rpx;
   margin-right: 12rpx;
   margin-bottom: 12rpx;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   background: #f0f1f3;
 }
 
@@ -387,7 +387,7 @@
   align-items: center;
   padding: 20rpx;
   background: #fafbfc;
-  border-radius: 16rpx;
+  border-radius: var(--radius-sm);
   border: 2rpx solid transparent;
   transition: all 0.15s ease;
 }
@@ -449,7 +449,7 @@
 .tag {
   display: inline-block;
   padding: 2rpx 12rpx;
-  border-radius: 8rpx;
+  border-radius: var(--radius-xs);
   font-size: 22rpx;
   line-height: 1.6;
 }
@@ -461,7 +461,7 @@
   margin-top: 24rpx;
   padding: 24rpx;
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   border: 1rpx solid var(--color-border-light, #f0f0f0);
 }
 .batch-unqual-form {
@@ -534,7 +534,7 @@
 .qc-form-input {
   height: 80rpx;
   background: #f7f8fa;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   padding: 0 20rpx;
   font-size: 30rpx;
   color: var(--color-text-primary, #1A1A1A);
@@ -542,7 +542,7 @@
 .qc-form-picker,
 .wh-form-picker {
   background: #f7f8fa;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   height: 80rpx;
   display: flex;
   align-items: center;
@@ -550,7 +550,7 @@
 }
 .qc-form-textarea {
   background: #f7f8fa;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   padding: 16rpx 20rpx;
   min-height: 120rpx;
   font-size: 28rpx;
@@ -581,7 +581,7 @@
   position: relative;
   width: 160rpx;
   height: 160rpx;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .upload-img {
@@ -607,7 +607,7 @@
   width: 160rpx;
   height: 160rpx;
   border: 2rpx dashed #d9d9d9;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -695,7 +695,7 @@
 .quality-status {
   font-size: 24rpx;
   padding: 2rpx 12rpx;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   font-weight: 500;
 }
 .quality-status.status-success { background: rgba(82, 196, 26, 0.12); color: #52C41A; }
@@ -728,7 +728,7 @@
 }
 .qc-qty-item {
   background: #fff;
-  border-radius: 10rpx;
+  border-radius: var(--radius-xs);
   padding: 12rpx 16rpx;
   text-align: center;
 }
@@ -762,7 +762,7 @@
   margin-top: 20rpx;
   padding: 24rpx;
   background: #fff;
-  border-radius: 16rpx;
+  border-radius: var(--radius-sm);
   border: 1rpx solid var(--color-border-light, #f0f0f0);
 }
 .wh-form-title {
@@ -778,7 +778,7 @@
   display: flex;
   align-items: center;
   background: rgba(245, 63, 63, 0.06);
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   padding: 16rpx 20rpx;
   margin-bottom: 20rpx;
 }
@@ -810,7 +810,7 @@
 .history-block {
   flex: 1;
   background: #f7f8fa;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   padding: 16rpx;
   text-align: center;
 }
@@ -859,7 +859,7 @@
 }
 .defect-advice-item {
   background: #f7f8fa;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   padding: 16rpx 20rpx;
 }
 .defect-advice-label {
@@ -906,7 +906,7 @@
   color: var(--color-primary, #165DFF);
   background: rgba(22, 93, 255, 0.1);
   padding: 2rpx 12rpx;
-  border-radius: 8rpx;
+  border-radius: var(--radius-xs);
 }
 .bom-name {
   font-size: 28rpx;
@@ -931,7 +931,7 @@
   justify-content: center;
   height: 80rpx;
   padding: 0 28rpx;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   font-size: 28rpx;
   font-weight: 500;
   line-height: 1;

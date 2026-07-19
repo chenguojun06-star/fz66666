@@ -15,28 +15,30 @@
     </view>
   </view>
 
-  <!-- 筛选栏 -->
-  <view class="filter-bar">
-    <search-scan
-      placeholder="搜索订单号/款号/SKU"
-      value="{{searchText}}"
-      show-scan="{{false}}"
-      bind:input="onSearchInput"
-      bind:confirm="onSearchConfirm"
-    />
-    <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
-      <view class="filter-picker">
-        <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
-        <text class="filter-picker-arrow">▾</text>
-      </view>
-    </picker>
-    <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{factoryTypeIndex}}" bindchange="onFactoryTypeChange">
-      <view class="filter-picker">
-        <text class="filter-picker-text">{{factoryTypeOptions[factoryTypeIndex].label}}</text>
-        <text class="filter-picker-arrow">▾</text>
-      </view>
-    </picker>
-  </view>
+  <!-- 搜索 + 筛选器（sticky 吸顶，统一通用组件） -->
+  <sticky-search-bar
+    placeholder="搜索订单号/款号/SKU"
+    value="{{searchText}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onSearchInput"
+    bind:confirm="onSearchConfirm"
+  >
+    <view slot="filter" class="filter-pickers">
+      <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+        <view class="filter-picker">
+          <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
+          <text class="filter-picker-arrow">▾</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{factoryTypeIndex}}" bindchange="onFactoryTypeChange">
+        <view class="filter-picker">
+          <text class="filter-picker-text">{{factoryTypeOptions[factoryTypeIndex].label}}</text>
+          <text class="filter-picker-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+  </sticky-search-bar>
 
   <!-- 列表 -->
   <view wx:if="{{loading && list.length === 0}}" class="loading-wrap">
@@ -108,4 +110,5 @@
       <text class="load-more-text">— 没有更多了 —</text>
     </view>
   </view>
+  <ai-assistant />
 </view>

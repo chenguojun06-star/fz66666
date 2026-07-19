@@ -87,4 +87,5 @@
       <text class="bottom-bar-amount">¥{{filteredTotalAmount}}</text>
     </view>
   </view>
+  <ai-assistant />
 </view>

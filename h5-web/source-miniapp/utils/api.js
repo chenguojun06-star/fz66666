@@ -13,7 +13,6 @@ const { intelligence, notice } = require('./api-modules/intelligence');
 const { style, warehouse, material, materialRoll, sampleStock, templateLibrary } = require('./api-modules/style-warehouse');
 const { dashboard, wechat, common } = require('./api-modules/common');
 const { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
-const { fieldConfig } = require('./api-modules/field-config');
 const ecommerce = require('./api-modules/ecommerce');
 const { purchaseReturn, salesReturn } = require('./api-modules/return');
 const attendance = require('./api-modules/attendance');
@@ -44,7 +43,6 @@ const api = {
   payrollSettlement,
   wageSettlementFeedback,
   ecommerce,
-  fieldConfig,
   attendance,
 };
 
@@ -70,7 +68,6 @@ module.exports.wagePayment = wagePayment;
 module.exports.payrollSettlement = payrollSettlement;
 module.exports.wageSettlementFeedback = wageSettlementFeedback;
 module.exports.ecommerce = ecommerce;
-module.exports.fieldConfig = fieldConfig;
 module.exports.purchaseReturn = purchaseReturn;
 module.exports.salesReturn = salesReturn;
 module.exports.attendance = attendance;

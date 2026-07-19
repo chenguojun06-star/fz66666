@@ -26,7 +26,7 @@
 .skel-cover {
   width: 140rpx;
   height: 176rpx;
-  border-radius: calc(var(--radius-2xl) - 8rpx);
+  border-radius: var(--radius-md);
   background: var(--color-bg-page);
   flex-shrink: 0;
 }
@@ -73,7 +73,7 @@
 .top-left {
   width: 80px;
   height: 100px;
-  border-radius: calc(var(--radius-2xl) - 4px);
+  border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--color-bg-page);
@@ -571,7 +571,7 @@
   /* grid-template-columns 由 WXML 内联 style 动态设置 */
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius-2xl) - 4px);
+  border-radius: var(--radius-md);
   background: var(--color-bg-card);
 }
 .matrix-cell {
@@ -708,7 +708,7 @@
 }
 .mat-item {
   background: var(--color-bg-page);
-  border-radius: calc(var(--radius-2xl) - 4px);
+  border-radius: var(--radius-md);
   padding: 20rpx 24rpx;
 }
 .mat-top {

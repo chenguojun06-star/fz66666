@@ -4,12 +4,13 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const blePrinter = require('../utils/blePrinter');
-const { normalizeProcessName } = require('../../../utils/displayHelper');
+const { normalizeProcessName, displayStatusText: orderStatusText } = require('../../../utils/displayHelper');
 
 /**
  * 裁剪单明细页 bundle-detail
  * 入参：orderNo（订单号）
  * 功能：展示订单的下单数量、裁货数量、菲号明细，支持菲号标签打印
+ * 订单状态文案统一走 displayHelper.displayStatusText（覆盖 cutting/sewing/procurement 等工序状态）
  */
 Page({
   data: {
@@ -21,7 +22,21 @@ Page({
     showOrderList: false,
     orderListLoading: false,
     orderList: [],
+    filteredOrderList: [],
     orderSearchKeyword: '',
+    /* 状态筛选 Tab（与 dashboard/procurement 一致的 filter-pill 风格）
+     * 订单状态维度：全部 / 裁剪中 / 车缝中 / 质检中 / 已完成 / 已取消
+     * 与 displayHelper.ORDER_STATUS_LABEL 的状态值对齐
+     */
+    orderStatusTabs: [
+      { key: '', label: '全部', pillClass: '' },
+      { key: 'cutting', label: '裁剪中', pillClass: 'filter-pill--prod' },
+      { key: 'sewing', label: '车缝中', pillClass: 'filter-pill--prod' },
+      { key: 'quality_check', label: '质检中', pillClass: 'filter-pill--prod' },
+      { key: 'completed', label: '已完成', pillClass: 'filter-pill--done' },
+      { key: 'cancelled', label: '已取消', pillClass: '' },
+    ],
+    activeOrderStatus: '',
 
     /* 订单基础信息 */
     orderInfo: null,
@@ -178,12 +193,15 @@ Page({
         list = list.map(order => ({
           ...order,
           styleCoverUrl: getAuthedImageUrl(order.styleCover || order.styleImageUrl || order.coverImage || ''),
+          // 订单状态文案统一走 displayHelper.displayStatusText（覆盖 cutting/sewing/procurement 等工序状态）
+          statusText: orderStatusText(order.status) || '生产中',
           // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
           deliveryDate: order.expectedShipDate || order.deliveryDate
             || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
           expectedShipDate: order.expectedShipDate ? this._formatDeliveryDate(order.expectedShipDate) : '',
         }));
         this.setData({ orderList: list, orderListLoading: false });
+        this._applyOrderFilter();
       })
       .catch(() => {
         this.setData({ orderListLoading: false });
@@ -194,11 +212,51 @@ Page({
   /** 搜索框输入 */
   onOrderSearchInput(e) {
     this.setData({ orderSearchKeyword: e.detail.value || '' });
+    this._applyOrderFilter();
   },
 
   /** 搜索确认 */
   onOrderSearchConfirm() {
-    this._loadOrderList(this.data.orderSearchKeyword.trim());
+    this._applyOrderFilter();
+  },
+
+  /** 状态筛选 Tab 点击 */
+  onOrderStatusTap(e) {
+    const key = e.currentTarget.dataset.key || '';
+    this.setData({ activeOrderStatus: key });
+    this._applyOrderFilter();
+  },
+
+  /** 订单列表筛选：状态 + 关键词（与 procurement/task-list._applyFilter 一致） */
+  _applyOrderFilter() {
+    const { orderList, activeOrderStatus, orderSearchKeyword } = this.data;
+    let filtered = orderList;
+
+    if (activeOrderStatus) {
+      filtered = filtered.filter(o => String(o.status || '').trim().toLowerCase() === activeOrderStatus);
+    }
+
+    if (orderSearchKeyword && orderSearchKeyword.trim()) {
+      const kw = orderSearchKeyword.trim().toLowerCase();
+      filtered = filtered.filter(o =>
+        (o.orderNo && o.orderNo.toLowerCase().includes(kw)) ||
+        (o.styleNo && o.styleNo.toLowerCase().includes(kw)) ||
+        (o.styleName && o.styleName.toLowerCase().includes(kw))
+      );
+    }
+
+    // 各 tab 计数
+    const orderStatusTabs = this.data.orderStatusTabs.map(tab => {
+      let count = 0;
+      if (!tab.key) {
+        count = orderList.length;
+      } else {
+        count = orderList.filter(o => String(o.status || '').trim().toLowerCase() === tab.key).length;
+      }
+      return { ...tab, count };
+    });
+
+    this.setData({ filteredOrderList: filtered, orderStatusTabs });
   },
 
   /** 选择订单，进入明细视图 */
@@ -255,6 +313,8 @@ Page({
       if (order.expectedShipDate) {
         order.expectedShipDate = this._formatDeliveryDate(order.expectedShipDate);
       }
+      // 订单状态文案统一走 displayHelper.displayStatusText（覆盖 cutting/sewing/procurement 等工序状态）
+      order.statusText = orderStatusText(order.status) || '生产中';
 
       const coverImage = getAuthedImageUrl(order.styleImageUrl || order.coverImage || order.imgUrl || '');
       const orderLines = parseProductionOrderLines(order);

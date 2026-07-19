@@ -15,7 +15,7 @@
 .privacy-box {
   width: 310px;
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-2xl);
   padding: 24px 20px 18px;
   box-shadow: var(--shadow-md);
 }

@@ -42,7 +42,7 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   background: var(--color-bg-page);
-  border-radius: 13px;
+  border-radius: var(--radius-md);
   transition: all 0.15s;
 }
 
@@ -64,7 +64,7 @@
 /* User Card */
 .user-card {
   background: var(--color-bg-card);
-  border-radius: 19px;
+  border-radius: var(--radius-xl);
   padding: 16px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 12px;
@@ -187,7 +187,7 @@
   font-weight: var(--font-weight-medium);
   color: #0064d6;
   background: var(--color-primary-bg);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 /* Card Divider */
@@ -216,7 +216,7 @@
 
 .approve-btn {
   padding: 10px 0;
-  border-radius: 13px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 600;
   background: var(--color-success);
@@ -229,7 +229,7 @@
 
 .reject-btn {
   padding: 10px 0;
-  border-radius: 13px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 600;
   background: var(--color-danger);
@@ -310,7 +310,7 @@
 /* 页内展开表单 */
 .inline-form-card {
   background: var(--color-bg-card);
-  border-radius: 19px;
+  border-radius: var(--radius-xl);
   padding: 16px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 12px;

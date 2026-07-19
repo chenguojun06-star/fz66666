@@ -1,7 +1,5 @@
 {
   "navigationBarTitleText": "衣智链",
   "enablePullDownRefresh": true,
-  "usingComponents": {
-    "purchase-cart-drawer": "/components/purchase-cart-drawer/index"
-  }
+  "usingComponents": {}
 }

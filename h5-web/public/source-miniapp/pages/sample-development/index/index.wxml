@@ -1,27 +1,16 @@
 <view class="page">
   <!-- 吸顶区：搜索栏 + 状态统计标签 -->
-  <view class="sticky-top">
-    <!-- 搜索栏：输入框 4/5 + 扫码按钮 1/5 -->
-    <view class="search-row">
-      <view class="search-box {{keyword ? 'has-keyword' : ''}}">
-        <view class="line-icon line-icon--sm icon-search search-icon"></view>
-        <input
-          class="search-input"
-          placeholder="搜索款号/款式名"
-          value="{{keyword}}"
-          bindinput="onSearchInput"
-          bindconfirm="_doSearch"
-          confirm-type="search"
-        />
-        <view wx:if="{{keyword}}" class="line-icon line-icon--sm icon-close search-clear" bindtap="onSearchClear"></view>
-      </view>
-      <view class="scan-btn" bindtap="onScan">
-        <view class="line-icon icon-scan scan-icon"></view>
-      </view>
-    </view>
-
-    <!-- 状态统计标签（自动换行） -->
-    <view class="stat-tags">
+  <sticky-search-bar
+    placeholder="搜索款号/款式名"
+    value="{{keyword}}"
+    show-scan="{{true}}"
+    show-filter="{{true}}"
+    bind:input="onSearchInput"
+    bind:confirm="_doSearch"
+    bind:clear="onSearchClear"
+    bind:scan="onScan"
+  >
+    <view slot="filter" class="stat-tags">
       <block wx:for="{{statusTabs}}" wx:key="key">
         <view wx:if="{{item.isSmart}}" class="stat-divider"></view>
         <view
@@ -35,7 +24,7 @@
         </view>
       </block>
     </view>
-  </view>
+  </sticky-search-bar>
 
   <!-- 加载中 -->
   <view wx:if="{{loading}}" class="state-wrap">
@@ -201,4 +190,5 @@
       <text>{{loadingMore ? '加载中...' : '加载更多'}}</text>
     </view>
   </view>
+  <ai-assistant />
 </view>

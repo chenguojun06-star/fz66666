@@ -603,6 +603,7 @@ module.exports = {
   formatCompact,
   formatDateRange,
   toDate,
+  pad2,
   // 数字
   displayAmount,
   displayQuantity,

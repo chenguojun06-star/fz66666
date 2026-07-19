@@ -186,4 +186,5 @@
       </view>
     </view>
   </view>
+  <ai-assistant />
 </view>

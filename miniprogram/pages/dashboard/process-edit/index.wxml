@@ -168,4 +168,5 @@
       <view class="mf-btn mf-btn--confirm" bindtap="onConfirmAdd">确认添加</view>
     </view>
   </view>
+  <ai-assistant />
 </view>

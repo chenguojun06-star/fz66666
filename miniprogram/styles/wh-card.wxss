@@ -7,7 +7,7 @@
 /* ---- 卡片容器 ---- */
 .wc-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-md);
   padding: 10px;
   margin-bottom: 10px;
   display: flex;

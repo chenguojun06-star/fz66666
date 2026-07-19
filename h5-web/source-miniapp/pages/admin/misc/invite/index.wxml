@@ -64,4 +64,5 @@
       <text class="share-btn-text">分享给微信好友</text>
     </view>
   </button>
+  <ai-assistant />
 </view>

@@ -1,24 +1,25 @@
 <!-- 生产管理 · 美团风格订单卡片 -->
 <view class="page">
-  <!-- 搜索栏 + 扫码（sticky）-->
-  <view class="search-bar-wrap">
-    <search-scan
-      placeholder="搜索订单号/款号"
-      value="{{searchKey}}"
-      bind:input="onSearchInput"
-      bind:scan="onScanTap"
-    />
-
-    <!-- 状态过滤条（sticky）-->
-    <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'in_production' ? 'filter-pill--prod' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}} {{item.key === 'overdue' ? 'filter-pill--danger' : ''}}"
-            wx:for="{{statFilters}}" wx:key="key"
-            data-key="{{item.key}}" bindtap="onStatTap">
-        <text class="filter-text">{{item.label}}</text>
-        <text class="filter-num">{{statCounts[item.key] || 0}}</text>
-      </view>
-    </scroll-view>
-  </view>
+  <!-- 吸顶区：搜索 + 扫码 + 筛选器（统一使用通用组件 sticky-search-bar） -->
+  <sticky-search-bar
+    placeholder="搜索订单号/款号"
+    value="{{searchKey}}"
+    show-scan="{{true}}"
+    show-filter="{{true}}"
+    bind:input="onSearchInput"
+    bind:scan="onScanTap"
+  >
+    <view slot="filter">
+      <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'in_production' ? 'filter-pill--prod' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}} {{item.key === 'overdue' ? 'filter-pill--danger' : ''}}"
+              wx:for="{{statFilters}}" wx:key="key"
+              data-key="{{item.key}}" bindtap="onStatTap">
+          <text class="filter-text">{{item.label}}</text>
+          <text class="filter-num">{{statCounts[item.key] || 0}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </sticky-search-bar>
 
   <!-- ===== 订单列表 ===== -->
   <view class="order-list" wx:if="{{orders.list.length > 0}}">

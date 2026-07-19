@@ -30,4 +30,5 @@
   <view class="btn-submit {{saving ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmit">
     {{saving ? '提交中...' : '确认修改'}}
   </view>
+  <ai-assistant />
 </view>

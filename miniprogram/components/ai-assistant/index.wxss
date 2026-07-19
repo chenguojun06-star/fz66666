@@ -468,7 +468,7 @@
 .task-card {
   position: relative;
   background: var(--color-bg-card);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-card);
   margin-bottom: 7px;
   overflow: hidden;
   display: flex;

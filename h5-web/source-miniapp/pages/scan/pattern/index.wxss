@@ -451,7 +451,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12rpx 16rpx;
-  border-radius: var(--radius-sm, 8rpx);
+  border-radius: var(--radius-sm);
   background: var(--color-bg-page, #f5f5f5);
 }
 .sku-info {
@@ -481,7 +481,7 @@
   height: 64rpx;
   text-align: center;
   border: 1rpx solid var(--input-border, #d9d9d9);
-  border-radius: var(--radius-xs, 6rpx);
+  border-radius: var(--radius-xs);
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-semibold, 600);
   background: var(--input-bg, #fff);

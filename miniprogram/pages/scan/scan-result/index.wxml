@@ -216,4 +216,5 @@
       {{loading ? '提交中...' : (isQualityReceive ? '质检录入' : '确认提交')}}
     </view>
   </view>
+  <ai-assistant />
 </view>

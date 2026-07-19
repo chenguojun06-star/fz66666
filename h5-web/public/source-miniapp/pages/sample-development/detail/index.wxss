@@ -1262,7 +1262,7 @@
   bottom: 0;
   height: 2px;
   background: var(--color-primary, #1677ff);
-  border-radius: 1px;
+  border-radius: var(--radius-full);
 }
 
 /* 标签内容区 */
@@ -1353,7 +1353,7 @@
   color: var(--color-primary, #1677ff);
   background: rgba(22, 119, 255, 0.08);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 .bom-item__sub {
   font-size: 11px;
@@ -1388,7 +1388,7 @@
   flex-direction: column;
   min-width: 100%;
   border: 1px solid var(--color-border-light, #eee);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .size-row {
@@ -1435,7 +1435,7 @@
 .file-item__icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--color-bg-page, #f7f8fa);
   flex-shrink: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3C/svg%3E");

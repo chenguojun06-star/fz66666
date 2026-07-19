@@ -45,4 +45,5 @@
   <view class="doc-footer">
     <text>© 2026 衣智链. 保留所有权利.</text>
   </view>
+  <ai-assistant />
 </scroll-view>

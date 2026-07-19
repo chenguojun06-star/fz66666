@@ -781,7 +781,7 @@
   margin-bottom: 12rpx;
   padding: 12rpx 20rpx;
   background: var(--color-bg-secondary, #f4f5f7);
-  border-radius: 8rpx;
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: space-between;

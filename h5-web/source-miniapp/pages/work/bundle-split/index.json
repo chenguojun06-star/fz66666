@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "裁剪分菲",
-  "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index"
-  }
+  "usingComponents": {}
 }

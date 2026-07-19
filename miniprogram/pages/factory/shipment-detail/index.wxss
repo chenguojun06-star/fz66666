@@ -96,7 +96,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   font-weight: var(--font-weight-medium);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   transition: all .2s;
 }
 .tab-active {

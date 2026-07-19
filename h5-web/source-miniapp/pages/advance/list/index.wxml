@@ -1,33 +1,33 @@
 <view class="page">
 
-  <!-- Filter Bar: 2 pickers, flex-1, white bg, shadow-sm -->
-  <view class="filter-bar">
-    <view class="filter-item">
-      <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
-        <view class="picker-box">
-          <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
-          <view class="picker-chevron"></view>
-        </view>
-      </picker>
-    </view>
-    <view class="filter-item">
-      <picker mode="selector" range="{{REPAY_OPTIONS}}" range-key="label" bindchange="onRepayFilterChange">
-        <view class="picker-box">
-          <text class="picker-text">{{repayFilter ? DEDUCT_MAP[repayFilter].text : '全部扣款'}}</text>
-          <view class="picker-chevron"></view>
-        </view>
-      </picker>
-    </view>
-  </view>
-
-  <!-- Search Row -->
-  <search-scan
+  <!-- 搜索 + 筛选器（sticky 吸顶，统一通用组件） -->
+  <sticky-search-bar
     placeholder="搜索员工姓名"
     value="{{keyword}}"
     show-scan="{{false}}"
+    show-filter="{{true}}"
     bind:input="onKeywordInput"
     bind:confirm="onKeywordSearch"
-  />
+  >
+    <view slot="filter" class="filter-bar">
+      <view class="filter-item">
+        <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+          <view class="picker-box">
+            <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+            <view class="picker-chevron"></view>
+          </view>
+        </picker>
+      </view>
+      <view class="filter-item">
+        <picker mode="selector" range="{{REPAY_OPTIONS}}" range-key="label" bindchange="onRepayFilterChange">
+          <view class="picker-box">
+            <text class="picker-text">{{repayFilter ? DEDUCT_MAP[repayFilter].text : '全部扣款'}}</text>
+            <view class="picker-chevron"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+  </sticky-search-bar>
 
   <!-- List -->
   <view class="list-section">
@@ -129,4 +129,5 @@
     </view>
   </view>
 
+  <ai-assistant />
 </view>

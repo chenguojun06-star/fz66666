@@ -78,6 +78,7 @@
     <button class="action-btn action-btn--secondary" bindtap="onAddProcess" data-stage-id="carSewing">添加工序</button>
     <button class="action-btn action-btn--primary" loading="{{saving}}" bindtap="onSaveAll">保存模板</button>
   </view>
+  <ai-assistant />
 </view>
 
 <!-- 添加/编辑工序内联表单 -->

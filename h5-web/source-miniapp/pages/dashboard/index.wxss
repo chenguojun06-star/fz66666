@@ -10,74 +10,12 @@
   background: var(--color-bg-page);
 }
 
-/* ============ 搜索栏 + 筛选区（内嵌） ============ */
-.search-bar-wrap {
-  position: relative;
-  background: var(--color-bg-page);
-  padding: 3px 0 2px;
-}
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.search-box {
-  display: flex;
-  align-items: center;
-  background: var(--color-bg-card);
-  flex: 1;
-  border-radius: var(--radius-lg);
-  padding: 0 12px;
-  height: 36px;
-  border: 1px solid var(--color-border);
-}
-.search-box:focus-within {
-  border-color: var(--color-primary);
-}
-.search-icon-wrap {
-  display: flex;
-  align-items: center;
-  margin-right: 8px;
-}
-.search-input {
-  flex: 1;
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-  height: 28px;
-  padding: 0;
-}
-.search-input::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-/* 扫码按钮 */
-.scan-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--color-text-primary);
-}
-.scan-btn:active {
-  background: var(--color-bg-active);
-}
-.scan-btn-icon {
-  width: 20px;
-  height: 20px;
-  background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7V5a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M17 3h2a2 2 0 0 1 2 2v2'/%3E%3Cpath d='M21 17v2a2 2 0 0 1-2 2h-2'/%3E%3Cpath d='M7 21H5a2 2 0 0 1-2-2v-2'/%3E%3Cline x1='3' y1='12' x2='21' y2='12'/%3E%3C/svg%3E") no-repeat center / contain;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7V5a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M17 3h2a2 2 0 0 1 2 2v2'/%3E%3Cpath d='M21 17v2a2 2 0 0 1-2 2h-2'/%3E%3Cpath d='M7 21H5a2 2 0 0 1-2-2v-2'/%3E%3Cline x1='3' y1='12' x2='21' y2='12'/%3E%3C/svg%3E") no-repeat center / contain;
-}
+/* ============ 搜索栏 + 扫码：已迁移到通用组件 sticky-search-bar ============ */
 
 /* ============ 筛选 pill ============ */
 .filter-scroll {
   white-space: nowrap;
-  padding: 12px 0 1px;
+  padding: 0;
 }
 .filter-pill {
   display: inline-flex;

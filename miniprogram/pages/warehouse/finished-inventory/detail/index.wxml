@@ -153,7 +153,7 @@
         </view>
       </view>
     </view>
-  </view>
+  </block>
 
   <view wx:else class="empty-wrap">
     <text class="empty-text">暂无库存数据</text>
@@ -183,4 +183,5 @@
       </view>
     </view>
   </view>
+  <ai-assistant />
 </view>

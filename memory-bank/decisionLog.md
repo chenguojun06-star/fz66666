@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-07-19（新增 D-041 财务数据链路闭环 — 反向账单 + 字段化 + 样衣开发费用接入）
+> 最后更新：2026-07-19（新增 D-042 员工打卡健壮性增强 — 实体注解对齐 + 跨天补卡 + 并发兜底）
 
 ---
 
@@ -616,4 +616,53 @@
   - 前端：billAggregationApi.ts 补 SHIPMENT 选项
   - 后续所有反向/退货/撤回/删除操作必须调用 reverseBySource 或 reverseByOrder
   - 后续新增 billCategory 必须在 7 种合法枚举内：MATERIAL / PRODUCT / EXTERNAL_FACTORY / PAYROLL / EXPENSE / SHIPMENT / DEDUCTION
+
+## D-042：员工打卡健壮性增强 — 实体注解对齐 + 跨天补卡兜底 + 并发竞态兜底
+
+- **日期**：2026-07-19
+- **上下文**：用户要求"看看后端有没有什么问题"，全面检查 WorkAttendance 打卡功能后发现 1 个 P1 bug + 2 个 P2 边界问题：
+  1. **P1 bug（updateTime 永不更新）**：WorkAttendance 实体的 `createTime`/`updateTime`/`tenantId` 三个字段未标注 `@TableField(fill = ...)`，与项目其他实体（SampleStock/SelectionBatch/StockTransfer 等）不一致。后果：MyBatisPlusMetaObjectHandler 的 `strictInsertFill`/`strictUpdateFill` 对无注解字段是 no-op；从 DB 加载的实体已带旧 updateTime，`updateById` 会显式 SET 旧值覆盖 `ON UPDATE CURRENT_TIMESTAMP`，导致 updateTime 永远停留在首次 INSERT 的时间
+  2. **P2 跨天打卡丢工时**：clockOut 用 `LocalDate.now()` 查 today_record，凌晨下班打卡时（如 day1 23:55 上班，day2 00:30 下班）会走「漏打上班卡」分支，创建 day2 的 0 工时记录，day1 的真实上班卡永远没有 clock_out_time，工时丢失
+  3. **P2 并发 clockIn 竞态**：两个并发 clockIn 都看到 `today_record==null` → 同时 INSERT → 唯一键 `uk_tenant_user_date` 让其中一个抛 DuplicateKeyException，用户看到 500
+- **决策**：
+  1. **实体注解对齐**：所有业务实体的 `createTime`/`updateTime`/`tenantId` 必须显式标注 `@TableField(fill = FieldFill.INSERT)`，`updateTime` 还要加 `FieldFill.INSERT_UPDATE`，与项目主流实体（SampleStock/StockTransfer/SelectionBatch 等）保持一致。即使 Orchestrator 手动 setTenantId，注解也是必需的，因为 TenantInterceptor 注释说"INSERT 通过 MetaObjectHandler 自动填充"，但 strictInsertFill 对无注解字段是 no-op
+  2. **跨天补卡兜底**：clockOut 时如果今日无记录，先查最近一条「未下班打卡」记录（`clock_out_time IS NULL ORDER BY clock_in_time DESC LIMIT 1`），找到则补 clock_out_time 到该记录（不修改 workDate），避免跨天工时丢失
+  3. **并发竞态兜底**：clockIn 的 save 调用包 try-catch DuplicateKeyException，捕获后重新查询返回"今日已上班打卡"，避免向用户报 500。数据完整性由唯一键 `uk_tenant_user_date` 保证，应用层只做友好降级
+- **理由**：
+  - 实体注解对齐是项目主流模式，未标注是漏配，会导致自动填充失效
+  - 跨天补卡兜底是打卡系统的常见场景（夜班、加班），不能简单按"今日无记录"判定漏打上班卡
+  - 并发兜底是「唯一键 + 友好降级」模式，避免向用户暴露数据库异常
+- **影响**：
+  - 后端修改文件：
+    - WorkAttendance.java（补 3 个 @TableField 注解）
+    - WorkAttendanceMapper.java（新增 selectLatestOpen）
+    - WorkAttendanceService.java + WorkAttendanceServiceImpl.java（新增 findLatestOpen）
+    - WorkAttendanceOrchestrator.java（clockIn 加 try-catch DuplicateKeyException，clockOut 加跨天兜底分支）
+  - 后续新增业务实体时，必须按本决策标注 @TableField 注解
+  - 后续涉及「按日期查询 + 跨天」的场景（如签到/签退），参考本决策的「先查今日，再查最近未关闭记录」模式
+
+## D-043：小云AI智能化升级 — 死代码修复 + 可观测性增强 + 配置统一
+
+- **日期**：2026-07-20
+- **上下文**：用户要求"全局核实去GitHub调研最新的智能体...全部深入了解透彻后我们就开始升级"。先调研小云全链路架构（五层记忆模型/Hybrid Graph MAS v4.1/双Model Router/6个自研MCP/24+ Java Agent工具/D-021统一可观测/EvolutionPipeline自进化三件套），发现6个P0级死代码/断链、10个P1级稳定性/可观测性问题、3个P2级配置不一致
+- **决策**：
+  1. **死代码必须接入真实调用方，不得仅删除**：archivalMemCtx/selfCritiqueCtx/recordUsage 等死代码原本是"声明了但永远走不到"的代码路径，修复时必须找到原本应该调用的方法/Service并接入（如 selfCritiqueCtx 通过 EvolutionOrchestrator.getUnifiedMetrics 获取真实自评统计），而不是直接删除声明。理由：这些代码是设计意图的体现，删除会丢失功能
+  2. **getUnifiedMetrics 公开化**：EvolutionOrchestrator 原16个 aggregateXxxStats 方法都是 private，外部无法访问。新增 public getUnifiedMetrics(tenantId) 便捷重载，供 AiAgentPromptHelper.buildSelfCritiqueBlock 和未来其他观测场景调用
+  3. **自进化默认关闭，显式开启**：EvolutionPipeline.self-play-enabled 和 EvolutionSafetyGuard.auto-deploy-enabled 默认值统一改为 false。理由：自动应用未审查的进化提案存在生产风险（可能与人工编辑冲突），生产环境需要自进化时显式设置 XIAOYUN_EVOLUTION_AUTO_DEPLOY=true
+  4. **cron 错峰调度**：凌晨3-4点的7个AI任务原本有3处时间冲突（MemoryArchive vs SelfDrill 03:30、SharedMem vs SystemDoctor vs Gepa 04:00、MemoryNudge vs AiSelfEvolution 04:30）。错峰到03:00-05:00区间，每个间隔15-20分钟
+  5. **AI组件健康检查聚合**：新建 AiComponentHealthIndicator 实现 Spring Boot HealthIndicator，将 DeepSeek/Qdrant/Agnes/LiteLLM/Langfuse 5个组件的健康状态聚合到 /actuator/health。设计原则：单组件超时2s、独立try-catch、未配置返回UNKNOWN不视为DOWN
+  6. **DEEPSEEK_API_KEY 启动校验**：AiInferenceRouter.@PostConstruct 校验 key 非空，默认仅告警不阻止启动（ai.api-key.fail-fast-on-empty=false）。理由：key为空时所有AI功能都会失败，但错误散落在各Service中，启动时统一告警+列出受影响功能更友好
+  7. **配置默认值与yml统一**：ModelConsortiumRouter strategy 代码默认 cost-optimal → speed-first 对齐 yml；AiAgentMemoryHelper MAX_MEMORY_TURNS 硬编码15 → @Value注入对齐 yml 的20
+  8. **@Scheduled 任务必须加 enabled 开关**：所有AI cron任务新增 `@Value("${xiaoyun.job.xxx.enabled:true}")` 开关，默认true不影响现有行为，运维可通过 yml/env 关闭
+- **理由**：
+  - 死代码修复原则是"接入真实调用方"而非"删除"，保留设计意图
+  - 自进化默认关闭符合"生产环境不自动应用未审查变更"原则
+  - 健康检查聚合到 actuator 可被 K8s/Prometheus 统一监控，无需额外对接
+  - 配置默认值与yml统一避免"代码跑 cost-optimal 但运维以为 speed-first"的认知偏差
+- **影响**：
+  - 后端修改文件26个（含新建1个 AiComponentHealthIndicator.java），789 insertions(+), 27 deletions(-)
+  - commit: 92b7fd957，已推送至 origin/main
+  - 验证：mvn compile通过、audit-tenant-id.py通过、check-flyway-sql.py通过、代码搜索无残留
+  - 后续所有新增 @Scheduled 任务必须带 enabled 开关
+  - 后续所有 @Value 默认值必须与 application.yml 显式配置对齐
 

@@ -2,9 +2,9 @@
   "navigationBarTitleText": "扫码历史",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "scan-record-table": "../../../components/scan-record-table",
     "date-picker": "/components/common/date-picker/index",
     "empty-state": "/components/empty-state/empty-state",
-    "load-more": "/components/load-more/load-more"
+    "load-more": "/components/load-more/load-more",
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

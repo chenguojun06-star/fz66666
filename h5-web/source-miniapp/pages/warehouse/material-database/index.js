@@ -101,6 +101,11 @@ Page({
     this.loadList(true);
   },
 
+  onSearchClear: function () {
+    this.setData({ searchText: '' });
+    this.loadList(true);
+  },
+
   onTypeChange: function (e) {
     const idx = Number(e.detail.value);
     this.setData({

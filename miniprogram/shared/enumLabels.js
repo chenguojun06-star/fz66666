@@ -62,14 +62,56 @@ var PATTERN_STATUS_MAP = {
   SCRAPPED: '已报废',
 };
 
-// ── 订单状态映射 ──
+// ── 订单状态映射（与后端 OrderStatusConstants.LABEL_MAP + utils/displayHelper.js ORDER_STATUS_LABEL 完全对齐）──
+// 状态值为小写英文（not_started/pending/cutting/sewing/...），大小写不敏感匹配
 var ORDER_STATUS_MAP = {
-  PENDING: '待开始',
-  IN_PROGRESS: '进行中',
+  // 活跃状态
+  not_started: '未开始',
+  pending: '待生产',
+  production: '生产中',
+  in_progress: '生产中',
+  paused: '已暂停',
+  // 工序阶段
+  procurement: '物料采购',
+  cutting: '裁剪中',
+  sewing: '车缝中',
+  ironing: '大烫',
+  secondary_process: '二次工艺',
+  packaging: '包装',
+  quality_check: '质检中',
+  warehousing: '入库中',
+  // 终止/异常状态
+  completed: '已完成',
+  delayed: '已逾期',
+  scrapped: '已报废',
+  cancelled: '已取消',
+  canceled: '已取消',
+  returned: '已退回',
+  closed: '已关单',
+  archived: '已归档',
+  // 其他常见状态
+  confirmed: '已确认',
+  draft: '草稿',
+  produced: '已生产',
+  warehoused: '已入库',
+  material_preparation: '备料中',
+  received: '已领取',
+  partial: '部分到货',
+  partial_arrival: '部分到货',
+  awaiting_confirm: '待确认',
+  warehouse_pending: '待入库',
+  bundled: '已成菲',
+  created: '已创建',
+  // 兼容大写 key（后端部分接口返回大写）
+  PENDING: '待生产',
+  IN_PROGRESS: '生产中',
   COMPLETED: '已完成',
   CANCELLED: '已取消',
-  ENABLED: '启用',
-  DISABLED: '停用',
+  SCRAPPED: '已报废',
+  ARCHIVED: '已归档',
+  CLOSED: '已关单',
+  DELAYED: '已逾期',
+  PAUSED: '已暂停',
 };
 
 // ── 审核状态映射 ──

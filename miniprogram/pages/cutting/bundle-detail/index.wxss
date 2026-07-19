@@ -73,137 +73,14 @@
   font-size: var(--font-size-sm);
 }
 
-/* ── 订单选择列表（无参入口模式）── */
-.order-list-wrap { padding: 0; }
-.order-list-loading,
-.order-list-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 80rpx 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  gap: 16rpx;
-}
-.order-list-empty .empty-icon { font-size: 32px; }
+/* ── 订单选择列表（无参入口模式）──
+ * 卡片样式统一 @import 全局 order-card.wxss（.task-card / .card-header / .card-body / .card-footer / .filter-pill 等）
+ * 与 procurement/task-list、dashboard 等页面共享同一套卡片样式
+ */
+@import '/styles/order-card.wxss';
 
-/* ── 订单卡片（与 dashboard/defect 卡片结构统一） ── */
-.order-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 4px;
-}
-.cutting-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-left: 2px solid var(--color-primary);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  box-sizing: border-box;
-  transition: transform 0.18s ease, background-color 0.18s ease;
-}
-.cutting-card:active {
-  background: var(--color-bg-active, var(--color-bg-page));
-}
-.cutting-card-inner {
-  padding: 12px;
-  box-sizing: border-box;
-}
-.cutting-card-body {
-  display: flex;
-  gap: 10px;
-}
-/* 封面图 44x44 */
-.cutting-card-cover {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--color-bg-page);
-}
-.cutting-cover-img {
-  width: 100%;
-  height: 100%;
-}
-.cutting-cover-empty {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary-bg);
-}
-/* 信息区 */
-.cutting-card-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-/* 行1：订单号 + 状态标签 */
-.cutting-card-row-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.cutting-card-order-no {
-  font-size: 13px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-  font-variant-numeric: tabular-nums;
-}
-.cutting-card-status-tag {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  white-space: nowrap;
-}
-/* 行2：款名 */
-.cutting-card-style-name {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* 行3：交货 + 数量 */
-.cutting-card-meta-line {
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.cutting-card-delivery {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-.cutting-card-qty {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-primary);
-  font-variant-numeric: tabular-nums;
-}
+.order-list-wrap { padding: 0; }
+
 
 /* ── 订单信息区 ── */
 .info-card-body {
@@ -216,7 +93,7 @@
   width: 144rpx;
   height: 144rpx;
   flex-shrink: 0;
-  border-radius: calc(var(--radius-2xl) - 4px);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--color-bg-page);
 }

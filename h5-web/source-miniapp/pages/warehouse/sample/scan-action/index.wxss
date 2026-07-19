@@ -6,62 +6,9 @@
   min-height: 100vh;
 }
 
-/* ==================== 搜索栏 ==================== */
-.search-bar {
-  margin-bottom: 12rpx;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 12rpx 16rpx;
-  border: 1px solid var(--color-border);
-  height: 36px;
-  box-sizing: border-box;
-}
-
-.search-icon {
-  font-size: var(--font-size-md);
-  margin-right: 8rpx;
-}
-
-.search-input {
-  flex: 1;
-  font-size: var(--font-size-md);
-  color: var(--color-text);
-}
-
-.search-clear {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  padding: 8rpx;
-}
-
-/* ==================== 操作栏 ==================== */
-.action-bar {
-  margin-bottom: 12rpx;
-}
-
-.btn-scan {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 20rpx;
-}
-
-.btn-scan .btn-icon {
-  font-size: var(--font-size-xl);
-  margin-right: 8rpx;
-}
-
-.btn-scan .btn-text {
-  font-size: var(--font-size-md);
-  color: var(--color-text);
+/* ===== sticky-search-bar 容器：负 margin 抵消 .container 水平 padding ===== */
+.ssb-wrap {
+  margin: 0 calc(-1 * var(--page-padding-x));
 }
 
 /* ==================== 列表 ==================== */

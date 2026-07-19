@@ -1,6 +1,6 @@
 <!-- 外发管理 · 设计稿对齐 factory-shipment.html -->
 <view class="page">
-  <!-- ===== Sticky 头部：Tab + 工厂筛选 ===== -->
+  <!-- ===== Sticky 头部：Tab + 工厂筛选 + 搜索 + 扫码 + 筛选器（统一吸顶）===== -->
   <view class="sticky-header">
     <!-- Tab 切换（segmented control：rounded-lg bg-muted p-0.5） -->
     <view class="tab-bar">
@@ -36,41 +36,46 @@
         </view>
       </view>
     </scroll-view>
-  </view>
 
-  <!-- 搜索栏 + 扫码按钮 -->
-  <search-scan
-    placeholder="搜索订单号 / 款号"
-    value="{{keyword}}"
-    bind:input="onKeywordInput"
-    bind:confirm="onKeywordSearch"
-    bind:scan="onScan"
-  />
+    <!-- 搜索栏 + 扫码 + 筛选器（嵌入已有 sticky-header 内，sticky=false） -->
+    <sticky-search-bar
+      sticky="{{false}}"
+      placeholder="搜索订单号 / 款号"
+      value="{{keyword}}"
+      show-scan="{{true}}"
+      show-filter="{{activeTab===0}}"
+      bind:input="onKeywordInput"
+      bind:confirm="onKeywordSearch"
+      bind:scan="onScan"
+    >
+      <view slot="filter">
+        <!-- 筛选 pill（生产中 / 已完成） -->
+        <view class="filter-pills">
+          <view class="filter-pill {{activeFilter==='production'?'filter-pill--active':''}}" data-filter="production" bindtap="onFilterTap">
+            <text>生产中</text>
+            <text class="pill-count">{{filterStats.production}}</text>
+          </view>
+          <view class="filter-pill {{activeFilter==='completed'?'filter-pill--active':''}}" data-filter="completed" bindtap="onFilterTap">
+            <text>已完成</text>
+            <text class="pill-count">{{filterStats.completed}}</text>
+          </view>
+        </view>
 
-  <!-- 筛选 pill（生产中 / 已完成） -->
-  <view wx:if="{{activeTab===0}}" class="filter-pills">
-    <view class="filter-pill {{activeFilter==='production'?'filter-pill--active':''}}" data-filter="production" bindtap="onFilterTap">
-      <text>生产中</text>
-      <text class="pill-count">{{filterStats.production}}</text>
-    </view>
-    <view class="filter-pill {{activeFilter==='completed'?'filter-pill--active':''}}" data-filter="completed" bindtap="onFilterTap">
-      <text>已完成</text>
-      <text class="pill-count">{{filterStats.completed}}</text>
-    </view>
-  </view>
-
-  <!-- 智能提示标签（已延期 / 临近交期，可点击筛选） -->
-  <view wx:if="{{activeTab===0}}" class="hint-row">
-    <view class="hint-tag hint-tag--danger {{activeFilter==='overdue'?'hint-tag--active':''}}" data-filter="overdue" bindtap="onFilterTap">
-      <view class="hint-tag__icon icon-alert-red"></view>
-      <text>已延期</text>
-      <text class="hint-tag__count">{{filterStats.overdue}}</text>
-    </view>
-    <view class="hint-tag hint-tag--warning {{activeFilter==='warning'?'hint-tag--active':''}}" data-filter="warning" bindtap="onFilterTap">
-      <view class="hint-tag__icon icon-clock-gray"></view>
-      <text>临近交期</text>
-      <text class="hint-tag__count">{{filterStats.warning}}</text>
-    </view>
+        <!-- 智能提示标签（已延期 / 临近交期，可点击筛选） -->
+        <view class="hint-row">
+          <view class="hint-tag hint-tag--danger {{activeFilter==='overdue'?'hint-tag--active':''}}" data-filter="overdue" bindtap="onFilterTap">
+            <view class="hint-tag__icon icon-alert-red"></view>
+            <text>已延期</text>
+            <text class="hint-tag__count">{{filterStats.overdue}}</text>
+          </view>
+          <view class="hint-tag hint-tag--warning {{activeFilter==='warning'?'hint-tag--active':''}}" data-filter="warning" bindtap="onFilterTap">
+            <view class="hint-tag__icon icon-clock-gray"></view>
+            <text>临近交期</text>
+            <text class="hint-tag__count">{{filterStats.warning}}</text>
+          </view>
+        </view>
+      </view>
+    </sticky-search-bar>
   </view>
 
   <!-- ===== 我的订单 ===== -->
@@ -245,5 +250,6 @@
     <view class="load-tip" wx:if="{{shipmentLoading}}">加载中…</view>
     <view class="load-tip load-tip--end" wx:if="{{!shipmentHasMore && shipments.length>0}}">— 没有更多了 —</view>
   </view>
+  <ai-assistant />
 </view>
 

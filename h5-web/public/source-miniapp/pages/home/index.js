@@ -2,6 +2,7 @@ const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
 const { isTokenExpired } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
 
 const DAILY_TIPS = [
   '及时扫码可以确保生产进度数据准确，方便后续工资结算。',
@@ -47,6 +48,7 @@ Page({
     greeting: '',
     userName: '',
     orgName: '',
+    avatarImgUrl: '',
     menuItems: [],
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
@@ -190,9 +192,12 @@ Page({
     const info = Object.assign({}, cacheInfo, globalInfo);
     const name = info.realName || info.name || info.nickName || info.nickname || '用户';
     const orgName = info.factoryName || info.tenantName || '';
+    const rawAvatar = info.avatarUrl || info.avatar || info.headUrl || '';
+    const avatarImgUrl = rawAvatar ? getAuthedImageUrl(rawAvatar) : '';
     const patch = {};
     if (name !== this.data.userName) patch.userName = name;
     if (orgName !== this.data.orgName) patch.orgName = orgName;
+    if (avatarImgUrl !== this.data.avatarImgUrl) patch.avatarImgUrl = avatarImgUrl;
     if (Object.keys(patch).length) this.setData(patch);
 
     if (!forceRemote && this._loadedUserNameFromRemote) return;
@@ -205,12 +210,20 @@ Page({
         const me = res || {};
         const remoteName = me.realName || me.name || me.nickName || me.nickname;
         const remoteOrgName = me.factoryName || me.tenantName || '';
+        const remoteRawAvatar = me.avatarUrl || me.avatar || me.headUrl || '';
+        const remoteAvatarImgUrl = remoteRawAvatar ? getAuthedImageUrl(remoteRawAvatar) : '';
         const remotePatch = {};
         if (remoteName && remoteName !== that.data.userName) remotePatch.userName = remoteName;
         if (remoteOrgName && remoteOrgName !== that.data.orgName) remotePatch.orgName = remoteOrgName;
+        if (remoteAvatarImgUrl && remoteAvatarImgUrl !== that.data.avatarImgUrl) remotePatch.avatarImgUrl = remoteAvatarImgUrl;
         if (Object.keys(remotePatch).length) that.setData(remotePatch);
       })
       .catch(function (e) { console.warn('[home] _loadUserName failed:', e.message || e); });
+  },
+
+  onAvatarError: function () {
+    // 真实头像加载失败（如 token 过期/文件丢失），降级到首字符占位
+    if (this.data.avatarImgUrl) this.setData({ avatarImgUrl: '' });
   },
 
   _loadUnreadCount: function () {

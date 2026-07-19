@@ -45,4 +45,19 @@ public interface WorkAttendanceMapper extends BaseMapper<WorkAttendance> {
     Map<String, Object> selectMonthlyStats(@Param("tenantId") Long tenantId,
                                           @Param("userId") String userId,
                                           @Param("month") LocalDate month);
+
+    /**
+     * 查询最近一条「未下班打卡」记录（clock_out_time IS NULL）
+     * <p>用于跨天下班打卡兜底：例如 day1 23:55 上班打卡，day2 00:30 下班打卡时，
+     * 今日（day2）无记录，需找到 day1 的上班卡补下班时间，避免工时丢失。
+     */
+    @Select("SELECT * FROM t_work_attendance " +
+            "WHERE tenant_id = #{tenantId} " +
+            "  AND user_id = #{userId} " +
+            "  AND clock_out_time IS NULL " +
+            "  AND delete_flag = 0 " +
+            "ORDER BY clock_in_time DESC " +
+            "LIMIT 1")
+    WorkAttendance selectLatestOpen(@Param("tenantId") Long tenantId,
+                                    @Param("userId") String userId);
 }

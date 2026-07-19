@@ -1,22 +1,29 @@
 <view class="container">
-  <!-- 筛选栏 -->
-  <view class="filter-bar">
-    <view class="search-box">
-      <input class="search-input" type="text" placeholder="搜索编码/名称/款号/供应商" value="{{searchText}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+  <!-- 搜索框 + 筛选器：已迁移到通用组件 sticky-search-bar -->
+  <sticky-search-bar
+    placeholder="搜索编码/名称/款号/供应商"
+    value="{{searchText}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onSearchInput"
+    bind:confirm="onSearchConfirm"
+    bind:clear="onSearchClear"
+  >
+    <view slot="filter" class="filter-pickers">
+      <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="filter-picker">
+          <text class="filter-picker-text">{{typeOptions[typeIndex].label}}</text>
+          <text class="filter-picker-arrow">▾</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+        <view class="filter-picker">
+          <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
+          <text class="filter-picker-arrow">▾</text>
+        </view>
+      </picker>
     </view>
-    <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
-      <view class="filter-picker">
-        <text class="filter-picker-text">{{typeOptions[typeIndex].label}}</text>
-        <text class="filter-picker-arrow">▾</text>
-      </view>
-    </picker>
-    <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
-      <view class="filter-picker">
-        <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
-        <text class="filter-picker-arrow">▾</text>
-      </view>
-    </picker>
-  </view>
+  </sticky-search-bar>
 
   <view class="total-bar">
     <text class="total-text">共 {{total}} 条物料</text>
@@ -168,4 +175,5 @@
       </scroll-view>
     </view>
   </view>
+  <ai-assistant />
 </view>

@@ -499,4 +499,65 @@ Page({
   onAvatarError: function () {
     this.setData({ avatarImgUrl: '' });
   },
+
+  // 点击头像直接换头像（与 PC 端体验对齐）
+  onAvatarTap: function () {
+    const that = this;
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: function (res) {
+        const tempFilePath = res.tempFiles[0].tempFilePath;
+        that._uploadAvatar(tempFilePath);
+      },
+    });
+  },
+
+  _uploadAvatar: function (filePath) {
+    const that = this;
+    wx.showLoading({ title: '上传中...' });
+    const auth_token = getToken() || '';
+    const baseUrl = getBaseUrl();
+
+    wx.uploadFile({
+      url: baseUrl + '/api/file/upload',
+      filePath: filePath,
+      name: 'file',
+      header: { 'Authorization': 'Bearer ' + auth_token },
+      success: function (res) {
+        wx.hideLoading();
+        try {
+          const data = JSON.parse(res.data);
+          const url = data.data || data.url || data.fileUrl || '';
+          if (!url) {
+            wx.showToast({ title: '上传失败', icon: 'none' });
+            return;
+          }
+          // 调用 PUT /api/system/user/me 持久化到后端
+          api.system.updateMe({ avatarUrl: url }).then(function () {
+            const newDisplayUrl = getAuthedImageUrl(url);
+            that.setData({ avatarImgUrl: newDisplayUrl });
+            // 同步更新本地缓存
+            try {
+              const cached = wx.getStorageSync('user_info') || {};
+              cached.avatarUrl = url;
+              wx.setStorageSync('user_info', cached);
+            } catch (e) { /* ignore */ }
+            wx.showToast({ title: '头像已更新', icon: 'success' });
+          }).catch(function (err) {
+            console.warn('[admin] updateMe avatar failed:', err);
+            wx.showToast({ title: '保存失败', icon: 'none' });
+          });
+        } catch (e) {
+          wx.showToast({ title: '上传失败', icon: 'none' });
+        }
+      },
+      fail: function () {
+        wx.hideLoading();
+        wx.showToast({ title: '上传失败', icon: 'none' });
+      },
+    });
+  },
 });

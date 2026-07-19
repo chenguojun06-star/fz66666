@@ -68,4 +68,5 @@
       <view class="btn-submit" hover-class="btn-hover" bindtap="submitFeedback">{{submitting ? '提交中...' : '提交'}}</view>
     </view>
   </view>
+  <ai-assistant />
 </view>

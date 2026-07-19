@@ -77,4 +77,5 @@
   <view class="loading-state" wx:if="{{loading}}">
     <text>加载中...</text>
   </view>
+  <ai-assistant />
 </view>

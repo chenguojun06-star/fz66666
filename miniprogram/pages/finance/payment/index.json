@@ -2,5 +2,7 @@
   "usingComponents": {
     "empty-state": "/components/empty-state/empty-state"
   },
-  "navigationBarTitleText": "财务付款"
+  "navigationBarTitleText": "财务付款",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

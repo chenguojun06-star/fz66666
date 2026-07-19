@@ -1,6 +1,9 @@
 {
   "navigationBarTitleText": "样衣扫码",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
+    "privacy-dialog": "/components/privacy-dialog/index",
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

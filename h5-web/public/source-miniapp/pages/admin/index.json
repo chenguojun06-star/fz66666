@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "我的",
-  "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index"
-  }
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {}
 }

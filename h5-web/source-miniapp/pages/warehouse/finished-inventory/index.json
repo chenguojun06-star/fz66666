@@ -2,6 +2,6 @@
   "navigationBarTitleText": "成品库存",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "search-scan": "/components/search-scan/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

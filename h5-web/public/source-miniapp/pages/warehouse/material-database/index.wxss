@@ -7,30 +7,11 @@ page {
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 
-/* ===== 筛选栏 ===== */
-.filter-bar {
+/* ===== 筛选器 slot（sticky-search-bar 已含搜索框，此处只放 picker） ===== */
+.filter-pickers {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 0;
-  padding-top: calc(12px + env(safe-area-inset-top));
-}
-
-.search-box {
-  flex: 1;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  height: 36px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-}
-
-.search-input {
-  flex: 1;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  height: 36px;
 }
 
 .filter-picker {
@@ -38,21 +19,28 @@ page {
   align-items: center;
   gap: 2px;
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   padding: 0 10px;
-  height: 36px;
-  flex-shrink: 0;
+  height: 32px;
+  flex: 1;
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
 }
 
 .filter-picker-text {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   color: var(--color-text-secondary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filter-picker-arrow {
   font-size: 10px;
   color: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
 
 .total-bar {
@@ -141,7 +129,7 @@ page {
 .item-image {
   width: 56px;
   height: 56px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--color-bg-muted);
   display: flex;
   align-items: center;
@@ -174,7 +162,7 @@ page {
 .item-type-badge {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   line-height: 1.4;
   flex-shrink: 0;
 }
@@ -188,7 +176,7 @@ page {
 .item-status {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .item-status--disabled {
@@ -269,7 +257,7 @@ page {
   width: 100%;
   max-height: 85vh;
   background: var(--color-bg-card);
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   display: flex;
   flex-direction: column;
 }
@@ -317,7 +305,7 @@ page {
 .detail-image {
   width: 80px;
   height: 80px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--color-bg-muted);
   flex-shrink: 0;
   overflow: hidden;
@@ -350,13 +338,13 @@ page {
 .detail-type-badge {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .detail-status {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .detail-status--disabled {
@@ -431,7 +419,7 @@ page {
 
 .detail-remark {
   background: var(--color-bg-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
 }
 

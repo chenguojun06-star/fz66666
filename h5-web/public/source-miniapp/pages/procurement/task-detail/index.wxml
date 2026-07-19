@@ -24,7 +24,7 @@
             <text class="order-no">{{orderNo}}</text>
             <text class="style-no" wx:if="{{styleNo}}">款号 {{styleNo}}</text>
           </view>
-          <text class="tag {{overallArrivalRate >= 100 ? 'tag-green' : 'tag-blue'}}">{{overallArrivalRate >= 100 ? '已完成' : '采购中'}}</text>
+          <text class="tag tag-{{overallStatusColor}}">{{overallStatusText}}</text>
         </view>
 
         <view class="header-summary">
@@ -58,7 +58,7 @@
           </view>
           <view class="stat-item">
             <text class="stat-label">采购阶段</text>
-            <text class="stat-value-text stat-{{overallArrivalRate >= 100 ? 'success' : (overallArrivalRate >= 70 ? 'success' : 'danger')}}">{{overallArrivalRate >= 100 ? '已完成' : (overallArrivalRate >= 70 ? '达标' : '未达标')}}</text>
+            <text class="stat-value-text stat-{{overallStatusColor}}">{{overallStatusText}}</text>
           </view>
         </view>
         <view class="overall-progress">
@@ -172,6 +172,7 @@
 
     </view>
   </block>
+  <ai-assistant />
 </view>
 
 <!-- 底部操作栏：3 按钮 -->

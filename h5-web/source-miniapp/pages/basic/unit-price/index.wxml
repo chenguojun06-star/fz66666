@@ -121,4 +121,5 @@
       </scroll-view>
     </view>
   </view>
+  <ai-assistant />
 </view>

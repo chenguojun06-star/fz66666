@@ -23,7 +23,7 @@ page {
 .stat-card {
   flex: 1;
   background: var(--color-bg-card);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -54,17 +54,11 @@ page {
   color: var(--color-text-tertiary);
 }
 
-/* ============ 筛选栏 ============ */
-.filter-bar {
+/* ============ 筛选器（picker 行）：已迁移到 sticky-search-bar 的 filter slot ============ */
+.filter-pickers {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 0 12px;
-}
-
-.filter-bar > search-scan {
-  flex: 1;
-  min-width: 0;
 }
 
 .filter-picker {
@@ -74,15 +68,19 @@ page {
   background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   padding: 0 10px;
-  height: 36px;
-  flex-shrink: 0;
+  height: 32px;
+  flex: 1;
   box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
 }
 
 .filter-picker-text {
   font-size: 12px;
   color: var(--color-text-secondary);
   white-space: nowrap;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filter-picker-arrow {

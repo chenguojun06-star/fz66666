@@ -302,7 +302,6 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
   background: var(--color-bg-page);
-  border-radius: var(--radius-md);
   border-radius: 50%;
 }
 

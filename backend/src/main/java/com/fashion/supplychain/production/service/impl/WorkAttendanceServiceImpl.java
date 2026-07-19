@@ -23,6 +23,12 @@ public class WorkAttendanceServiceImpl extends ServiceImpl<WorkAttendanceMapper,
     }
 
     @Override
+    public WorkAttendance findLatestOpen(Long tenantId, String userId) {
+        if (tenantId == null || userId == null) return null;
+        return baseMapper.selectLatestOpen(tenantId, userId);
+    }
+
+    @Override
     public Map<String, Object> monthlyStats(Long tenantId, String userId, LocalDate month) {
         if (tenantId == null || userId == null || month == null) return java.util.Collections.emptyMap();
         return baseMapper.selectMonthlyStats(tenantId, userId, month);

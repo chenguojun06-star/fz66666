@@ -7,82 +7,8 @@
   padding-bottom: 32px;
 }
 
-/* ========== 吸顶区：搜索栏 + 状态标签 ========== */
-.sticky-top {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
-  background: var(--color-bg-page);
-  padding: 12px var(--page-padding-x) 8px;
-}
-
-/* ----- 搜索栏：输入框 4/5 + 扫码按钮 1/5 ----- */
-.search-row {
-  display: flex;
-  gap: 8px;
-}
-
-.search-box {
-  flex: 4 1 0%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-sizing: border-box;
-  transition: border-color 0.2s ease;
-}
-
-.search-box.has-keyword {
-  border-color: var(--color-primary);
-}
-
-.search-icon {
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-}
-
-.search-input::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-.search-clear {
-  flex-shrink: 0;
-}
-
-.scan-btn {
-  flex-shrink: 0;
-  width: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-sizing: border-box;
-  transition: transform 0.18s ease, background-color 0.18s ease;
-}
-
-.scan-btn:active {
-  background: var(--color-bg-hover);
-  transform: scale(0.95);
-}
-
-.scan-icon {
-  color: var(--color-text-primary);
-}
+/* ========== 搜索栏 + 扫码按钮：已迁移到通用组件 sticky-search-bar ========== */
+/* ========== 下方仅保留筛选器（stat-tags）相关样式 ========== */
 
 /* ----- 状态统计标签 ----- */
 .stat-tags {
@@ -90,7 +16,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding-top: 12px;
   padding-bottom: 4px;
 }
 
@@ -384,7 +309,7 @@
   gap: 2px;
   padding: 4px 10px;
   border: 1px solid var(--color-primary, #1677ff);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--color-primary, #1677ff);
   font-size: var(--font-size-xs);

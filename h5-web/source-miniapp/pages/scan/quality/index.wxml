@@ -135,4 +135,5 @@
   </view>
 
   <privacy-dialog id="privacyDialog" />
+  <ai-assistant />
 </view>

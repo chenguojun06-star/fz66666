@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "物料资料",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "sticky-search-bar": "/components/sticky-search-bar/index"
+  }
 }

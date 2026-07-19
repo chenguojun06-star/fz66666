@@ -436,28 +436,6 @@ const production = {
   },
 };
 
-const factoryShipment = {
-  list: function (params) {
-    return ok('/api/production/factory-shipment/list', 'POST', params || {});
-  },
-  listByOrder: function (orderId) {
-    return ok('/api/production/factory-shipment/search', 'POST', { orderId: orderId });
-  },
-  shippable: function (orderId) {
-    return ok('/api/production/factory-shipment/shippable/' + encodeURIComponent(orderId), 'GET', {});
-  },
-  ship: function (data) {
-    return ok('/api/production/factory-shipment/ship', 'POST', data || {});
-  },
-  receive: function (id, payload) {
-    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/receive', 'POST', payload || {});
-  },
-  getDetails: function (id) {
-    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/details', 'GET', {});
-  },
-  remove: function (id) {
-    return ok('/api/production/factory-shipment/' + encodeURIComponent(id), 'DELETE', {});
-  },
-};
-
-module.exports = { ...production, factoryShipment };
+// 注：factoryShipment 已统一收敛至 ./finance.js（避免与 finance.factoryShipment 重复定义）
+// 调用方请使用 api.factoryShipment.X（来自 finance.js 的导出）
+module.exports = production;

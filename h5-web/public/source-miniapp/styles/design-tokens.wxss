@@ -84,16 +84,16 @@ page {
   --color-overlay: rgba(0, 0, 0, 0.4);
 
   /* ========== 圆角系统（与设计稿 Tailwind 对齐） ========== */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 19px;
-  --radius-full: 999px;
+  --radius-xs: 4px;     /* 极小元素：头像角标、小图标 */
+  --radius-sm: 8px;     /* 小元素：标签、小按钮、输入框 */
+  --radius-md: 10px;    /* 中等元素：按钮、输入框、嵌套子卡片 */
+  --radius-lg: 12px;    /* 列表主卡片（与 --radius-xl 解耦，作为主卡片语义） */
+  --radius-xl: 12px;    /* 兼容历史代码，值同 --radius-lg */
+  --radius-2xl: 19px;   /* 特大容器：Modal 主壳、首页问候卡 */
+  --radius-full: 999px; /* 圆形：头像、胶囊 */
 
   /* 语义化圆角别名 */
-  --radius-card: var(--radius-2xl);
+  --radius-card: var(--radius-lg);    /* 主卡片统一用 12px */
   --radius-button: var(--radius-full);
   --radius-tag: var(--radius-full);
   --radius-input: var(--radius-sm);

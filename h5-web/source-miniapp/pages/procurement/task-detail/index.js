@@ -114,7 +114,34 @@ Page({
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
       const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
 
-      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed });
+      // 头部状态：基于物料实际状态计算（不依赖到货率，对齐用户诉求"已完成的任务要显示已完成"）
+      // 优先级：全部 completed → 已完成；含 cancelled 且其他都完成 → 已完成（取消的物料不阻断）
+      //        全部 received/partial → 已采购；含 pending → 待采购；否则 → 采购中
+      const validItems = materialPurchases.filter(m => this._normalizeStatus(m.status) !== 'cancelled');
+      const allCompleted = validItems.length > 0 && validItems.every(m => {
+        const s = this._normalizeStatus(m.status);
+        return s === 'completed' || s === 'procurement_completed';
+      });
+      const allReceived = validItems.length > 0 && validItems.every(m => {
+        const s = this._normalizeStatus(m.status);
+        return s === 'completed' || s === 'procurement_completed' || s === 'received' || s === 'partial' || s === 'partial_arrival';
+      });
+      const hasPending = validItems.some(m => {
+        const s = this._normalizeStatus(m.status);
+        return !s || s === 'pending' || s === 'waiting_procurement';
+      });
+      let overallStatus = 'procuring';
+      let overallStatusColor = 'blue';
+      if (allCompleted) { overallStatus = 'completed'; overallStatusColor = 'green'; }
+      else if (allReceived) { overallStatus = 'received'; overallStatusColor = 'blue'; }
+      else if (hasPending) { overallStatus = 'pending'; overallStatusColor = 'orange'; }
+      const overallStatusText = this._getStatusText(overallStatus);
+
+      this.setData({
+        orderId, materialPurchases, loading: false,
+        overallArrivalRate, canConfirmProcurement, hasReturnConfirmed,
+        overallStatus, overallStatusColor, overallStatusText,
+      });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -365,10 +392,11 @@ Page({
 
   _getStatusText(status) {
     const map = {
-      pending: '待采购', received: '已领取', partial: '部分到货',
+      pending: '待采购', received: '已采购', partial: '部分到货',
       partial_arrival: '部分到货', awaiting_confirm: '待确认完成',
-      completed: '全部到货', cancelled: '已取消', warehouse_pending: '待仓库出库',
+      completed: '已完成', cancelled: '已取消', warehouse_pending: '待仓库出库',
       waiting_procurement: '待采购', procurement_in_progress: '采购中',
+      purchasing: '采购中', material_preparation: '备料中',
       procurement_completed: '已完成',
     };
     return map[status] || '待采购';

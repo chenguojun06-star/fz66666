@@ -147,6 +147,10 @@ const warehouse = {
   outboundFinishedInventory(data) {
     return ok('/api/warehouse/finished-inventory/outbound', 'POST', data || {});
   },
+  // 别名：兼容历史调用 api.warehouse.outbound（避免运行时 TypeError）
+  outbound(data) {
+    return ok('/api/warehouse/finished-inventory/outbound', 'POST', data || {});
+  },
   freeInbound(data) {
     return ok('/api/warehouse/finished-inventory/free-inbound', 'POST', data || {});
   },

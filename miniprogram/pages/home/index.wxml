@@ -1,7 +1,10 @@
 <view class="page">
   <!-- 问候卡片 -->
   <view class="header">
-    <view class="header-avatar">{{userName ? userName[0] : '用户'}}</view>
+    <view class="header-avatar">
+      <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" class="header-avatar-img" binderror="onAvatarError" />
+      <text wx:else class="header-avatar-letter">{{userName ? userName[0] : '用'}}</text>
+    </view>
     <view class="header-info">
       <text class="greeting-name">{{greeting}}，{{userName}}</text>
       <text class="greeting-sub">{{orgName || '欢迎使用衣智链'}}</text>
@@ -62,4 +65,5 @@
       </view>
     </view>
   </view>
+  <ai-assistant />
 </view>

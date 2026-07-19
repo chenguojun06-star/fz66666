@@ -1,7 +1,10 @@
 {
   "navigationBarTitleText": "质检",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "privacy-dialog": "/components/privacy-dialog/index",
-    "image-preview": "/components/common/image-preview/index"
+    "image-preview": "/components/common/image-preview/index",
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

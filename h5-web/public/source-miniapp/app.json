@@ -199,6 +199,9 @@
     "backgroundTextStyle": "light"
   },
   "lazyCodeLoading": "requiredComponents",
+  "usingComponents": {
+    "ai-assistant": "/components/ai-assistant/index"
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "__usePrivacyCheck__": true,

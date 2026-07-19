@@ -1,9 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-19（财务数据链路闭环 Phase 1-4 + Phase 3 全部完成）
+> 最后更新：2026-07-19（员工打卡后端健壮性增强 P1+P2 修复完成）
 
 ## 已完成
+
+### 2026-07-19 员工打卡后端健壮性增强（P1+P2 全修）
+
+- [x] **P1**：WorkAttendance 实体补齐 @TableField(fill=FieldFill.INSERT/INSERT_UPDATE) 注解（修复 updateTime 永不更新的 bug）
+- [x] **P2.1**：Mapper 新增 selectLatestOpen + Service 新增 findLatestOpen（查最近未下班打卡记录）
+- [x] **P2.1**：Orchestrator.clockOut 新增跨天兜底分支（凌晨下班打卡补到昨晚的上班卡，避免工时丢失）
+- [x] **P2.2**：Orchestrator.clockIn save 调用 try-catch DuplicateKeyException，并发兜底返回"今日已上班打卡"
+- [x] mvn compile 验证通过（exit 0，2188 源文件）
+- [x] check-flyway-sql.py 验证通过
+- [x] audit-tenant-id.py 验证通过（1 处历史遗留 RoleTemplate 违规，非本次引入）
+- [x] 决策 D-042 记录：员工打卡健壮性增强 — 实体注解对齐 + 跨天补卡兜底 + 并发竞态兜底
 
 ### 2026-07-19 财务数据链路闭环（Phase 1-4 + Phase 3 全部完成）
 

@@ -155,4 +155,5 @@
       <view class="mf-btn danger" bindtap="confirmReject">确定拒绝</view>
     </view>
   </view>
+  <ai-assistant />
 </view>

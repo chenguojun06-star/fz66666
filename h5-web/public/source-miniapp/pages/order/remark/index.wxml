@@ -56,4 +56,5 @@
   <view class="load-tip" wx:if="{{loading}}">加载中…</view>
 
   <privacy-dialog id="privacyDialog" />
+  <ai-assistant />
 </view>

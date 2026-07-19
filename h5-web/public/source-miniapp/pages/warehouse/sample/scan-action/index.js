@@ -180,11 +180,15 @@ Page({
 
   onSearchInput(e) {
     let keyword = (e.detail.value || '').trim();
-    if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clear) keyword = '';
     this.setData({ searchKeyword: keyword });
   },
 
   onSearchConfirm() {
+    this.loadStockList(true);
+  },
+
+  onSearchClear() {
+    this.setData({ searchKeyword: '' });
     this.loadStockList(true);
   },
 

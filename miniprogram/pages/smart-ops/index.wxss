@@ -48,7 +48,7 @@
 .menu-qty { display: block; font-size: var(--font-size-2xs); color: var(--color-text-tertiary); margin-top: 2px; }
 
 .section { padding: 0; margin-top: var(--card-gap); }
-.card { background: var(--color-bg-card); border-radius: var(--radius-card); padding: 16px; box-shadow: var(--shadow-sm); }
+.card { background: var(--color-bg-card); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-sm); }
 .card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
 .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary); flex-shrink: 0; }
 .live-dot-sm.green { background: var(--color-success); }

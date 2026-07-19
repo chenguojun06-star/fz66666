@@ -3,29 +3,21 @@
   
   <!-- ==================== 列表视图 ==================== -->
   <view wx:if="{{viewMode === 'list'}}">
-    <!-- 搜索栏 -->
-    <view class="search-bar">
-      <view class="search-box">
-        <view class="line-icon icon-search search-icon"></view>
-        <input 
-          class="search-input" 
-          placeholder="搜索款号/颜色/尺码" 
-          value="{{searchKeyword}}" 
-          bindinput="onSearchInput"
-          bindconfirm="onSearchConfirm"
-        />
-        <view class="line-icon icon-close search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true"></view>
-      </view>
+    <!-- 搜索框 + 扫码按钮：已迁移到通用组件 sticky-search-bar -->
+    <view class="ssb-wrap">
+      <sticky-search-bar
+        sticky="{{false}}"
+        placeholder="搜索款号/颜色/尺码"
+        value="{{searchKeyword}}"
+        show-scan="{{true}}"
+        show-filter="{{false}}"
+        bind:input="onSearchInput"
+        bind:confirm="onSearchConfirm"
+        bind:clear="onSearchClear"
+        bind:scan="onScanCode"
+      />
     </view>
-    
-    <!-- 操作按钮 -->
-    <view class="action-bar">
-      <view class="btn-scan" bindtap="onScanCode">
-        <view class="line-icon icon-camera btn-icon"></view>
-        <text class="btn-text">扫码</text>
-      </view>
-    </view>
-    
+
     <!-- 列表 -->
     <view class="stock-list">
       <view wx:if="{{stockListLoading && stockList.length === 0}}" class="loading-wrap">
@@ -299,4 +291,5 @@
     bind:agree="onPrivacyAgree"
     bind:disagree="onPrivacyDisagree"
   />
+  <ai-assistant />
 </view>

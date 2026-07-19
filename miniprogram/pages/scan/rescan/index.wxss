@@ -29,7 +29,7 @@
 .cover-wrap {
   width: 128rpx;
   height: 160rpx;
-  border-radius: calc(var(--radius-2xl) - 4px);
+  border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--color-border), #d1d1d6);

@@ -1,38 +1,43 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
 const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 
 /**
- * 筛选 Tab 定义（与设计稿一致）
- * 全部 / 待采购 / 采购中 / 已到货 / 已延期
+ * 筛选 Tab 定义（与 PC 端 MaterialSearchForm 状态筛选对齐）
+ * 全部 / 待采购 / 已采购 / 部分到货 / 全部到货 / 已取消 / 已延期
+ * pillClass 对应 dashboard 的 filter-pill--* 颜色类
  */
 const STATUS_TABS = [
-  { key: '', label: '全部', tabClass: 'tab-all' },
-  { key: 'pending', label: '待采购', tabClass: 'tab-pending' },
-  { key: 'procuring', label: '采购中', tabClass: 'tab-procuring' },
-  { key: 'arrived', label: '已到货', tabClass: 'tab-arrived' },
-  { key: 'delayed', label: '已延期', tabClass: 'tab-delayed' },
+  { key: '', label: '全部', pillClass: '' },
+  { key: 'pending', label: '待采购', pillClass: '' },
+  { key: 'received', label: '已采购', pillClass: 'filter-pill--prod' },
+  { key: 'partial', label: '部分到货', pillClass: 'filter-pill--prod' },
+  { key: 'completed', label: '已完成', pillClass: 'filter-pill--done' },
+  { key: 'cancelled', label: '已取消', pillClass: '' },
+  { key: 'delayed', label: '已延期', pillClass: 'filter-pill--danger' },
 ];
 
 /**
  * 状态标签配置（与详情页 _getStatusText/_getStatusColor 对齐）
  * 与 design-tokens.wxss 的 tag-* 颜色类对应
+ * 注：completed 统一显示「已完成」（对齐用户需求）
  */
 const STATUS_CONFIG = {
   pending: { label: '待采购', tagClass: 'tag-gray' },
   waiting_procurement: { label: '待采购', tagClass: 'tag-gray' },
   procuring: { label: '采购中', tagClass: 'tag-blue' },
   procurement_in_progress: { label: '采购中', tagClass: 'tag-blue' },
-  received: { label: '已领取', tagClass: 'tag-blue' },
+  purchasing: { label: '采购中', tagClass: 'tag-blue' },
+  material_preparation: { label: '备料中', tagClass: 'tag-blue' },
+  received: { label: '已采购', tagClass: 'tag-blue' },
   partial: { label: '部分到货', tagClass: 'tag-blue' },
   partial_arrival: { label: '部分到货', tagClass: 'tag-blue' },
   awaiting_confirm: { label: '待确认完成', tagClass: 'tag-gold' },
-  arrived: { label: '已到货', tagClass: 'tag-green' },
-  completed: { label: '全部到货', tagClass: 'tag-green' },
-  procurement_completed: { label: '已完成', tagClass: 'tag-green' },
   warehouse_pending: { label: '待仓库出库', tagClass: 'tag-cyan' },
+  completed: { label: '已完成', tagClass: 'tag-green' },
+  procurement_completed: { label: '已完成', tagClass: 'tag-green' },
   delayed: { label: '已延期', tagClass: 'tag-red' },
   cancelled: { label: '已取消', tagClass: 'tag-gray' },
 };
@@ -106,6 +111,11 @@ Page({
   onSearchInput(e) {
     this.setData({ keyword: e.detail.value });
     this._applyFilter();
+  },
+
+  /** 扫码按钮：调用通用 quickScan 跳到扫码页 */
+  onScanTap() {
+    quickScan();
   },
 
   _applyFilter() {
@@ -219,28 +229,42 @@ Page({
   },
 
   /**
-   * 计算展示状态（设计稿五态）
-   * 优先级：已到货 > 已取消 > 已延期 > 待采购 > 采购中
+   * 计算展示状态（与 PC 端 MaterialSearchForm 状态对齐：7 档）
+   * 优先级：已取消 > 已完成 > 已延期 > 已采购 > 部分到货 > 待采购 > 采购中
+   * 注：cancelled 优先级高于 delayed，因为取消是终态；延期是过程态
    */
   _computeDisplayStatus(item) {
     const rawStatus = String(item.status || '').trim().toLowerCase();
-
-    if (rawStatus === 'completed' || rawStatus === 'procurement_completed') {
-      return 'arrived';
-    }
 
     if (rawStatus === 'cancelled') {
       return 'cancelled';
     }
 
+    if (rawStatus === 'completed' || rawStatus === 'procurement_completed') {
+      return 'completed';
+    }
+
+    // 部分到货（优先级高于延期，因为部分到货是事实，延期是时间）
+    if (rawStatus === 'partial' || rawStatus === 'partial_arrival') {
+      return 'partial';
+    }
+
+    // 已采购（received 状态：已领取但未到货或部分到货）
+    if (rawStatus === 'received') {
+      return 'received';
+    }
+
+    // 延期：未到货且已超期
     if (this._isOverdue(item.expectedArrivalDate)) {
       return 'delayed';
     }
 
+    // 待采购：未领取
     if (!rawStatus || rawStatus === 'pending' || rawStatus === 'waiting_procurement') {
       return 'pending';
     }
 
+    // 其余状态归为采购中（procurement / purchasing / material_preparation / awaiting_confirm / warehouse_pending）
     return 'procuring';
   },
 

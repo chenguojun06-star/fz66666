@@ -68,7 +68,7 @@
 .feedback-status {
   font-size: var(--font-size-xs);
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-weight: var(--font-weight-medium);
 }
 .status-none {
@@ -148,7 +148,7 @@
 /* 页面内反馈表单 */
 .inline-form-card {
   background: var(--color-bg-card);
-  border-radius: 16px;
+  border-radius: var(--radius-2xl);
   border: 1px solid var(--color-border);
   padding: 16px;
   margin: 12px 0;
@@ -212,7 +212,7 @@
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   padding: 12px 0;
   background: transparent;
 }

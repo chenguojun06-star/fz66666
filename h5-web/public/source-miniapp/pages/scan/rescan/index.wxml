@@ -50,4 +50,5 @@
       {{loading ? '退回中...' : '确认退回'}}
     </view>
   </view>
+  <ai-assistant />
 </view>

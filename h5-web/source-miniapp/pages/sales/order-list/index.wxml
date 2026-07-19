@@ -1,36 +1,37 @@
 <!-- 销售订单列表 -->
 <view class="page">
-  <!-- 搜索框 + 筛选区（sticky） -->
-  <view class="sticky-header">
-    <search-scan
-      placeholder="输入订单号/买家名后按搜索"
-      value="{{keyword}}"
-      show-scan="{{false}}"
-      bind:input="onSearchInput"
-      bind:confirm="onSearchConfirm"
-      bind:clear="onClearKeyword"
-    />
+  <!-- 搜索框 + 平台筛选 + 状态筛选（sticky 吸顶，统一通用组件） -->
+  <sticky-search-bar
+    placeholder="输入订单号/买家名后按搜索"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onSearchInput"
+    bind:confirm="onSearchConfirm"
+    bind:clear="onClearKeyword"
+  >
+    <view slot="filter">
+      <!-- 平台筛选 Tab（横向滚动） -->
+      <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="tab-pill {{activePlatform === item.key ? 'tab-pill--on' : ''}}"
+              wx:for="{{platformTabs}}" wx:key="key"
+              data-key="{{item.key}}" bindtap="onPlatformTap">
+          <text>{{item.label}}</text>
+          <text class="tab-pill-count" wx:if="{{item.count}}">{{item.count}}</text>
+        </view>
+      </scroll-view>
 
-    <!-- 平台筛选 Tab（横向滚动） -->
-    <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="tab-pill {{activePlatform === item.key ? 'tab-pill--on' : ''}}"
-            wx:for="{{platformTabs}}" wx:key="key"
-            data-key="{{item.key}}" bindtap="onPlatformTap">
-        <text>{{item.label}}</text>
-        <text class="tab-pill-count" wx:if="{{item.count}}">{{item.count}}</text>
-      </view>
-    </scroll-view>
-
-    <!-- 状态筛选 -->
-    <scroll-view class="tab-scroll status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="status-pill {{activeStatus === item.key ? 'status-pill--on' : ''}}"
-            wx:for="{{statusTabs}}" wx:key="key"
-            data-key="{{item.key}}" bindtap="onStatusTap">
-        <text>{{item.label}}</text>
-        <text class="status-pill-count" wx:if="{{statusCounts[item.key] > 0}}">{{statusCounts[item.key]}}</text>
-      </view>
-    </scroll-view>
-  </view>
+      <!-- 状态筛选 -->
+      <scroll-view class="tab-scroll status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="status-pill {{activeStatus === item.key ? 'status-pill--on' : ''}}"
+              wx:for="{{statusTabs}}" wx:key="key"
+              data-key="{{item.key}}" bindtap="onStatusTap">
+          <text>{{item.label}}</text>
+          <text class="status-pill-count" wx:if="{{statusCounts[item.key] > 0}}">{{statusCounts[item.key]}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </sticky-search-bar>
 
   <!-- 订单列表 -->
   <view class="order-list" wx:if="{{list.length > 0}}">
@@ -105,4 +106,5 @@
   <view class="loading-state" wx:if="{{loading}}">
     <text>加载中...</text>
   </view>
+  <ai-assistant />
 </view>

@@ -1,0 +1,81 @@
+/* 通用 sticky 顶栏：搜索 + 扫码 + 筛选器 slot
+ * 与样衣开发页面 .sticky-top 样式对齐，所有三件套页面统一使用
+ */
+.ssb {
+  background: var(--color-bg-page);
+  padding: 12px var(--page-padding-x) 8px;
+}
+
+.ssb--sticky {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+/* ----- 搜索栏：输入框 4/5 + 扫码按钮 1/5 ----- */
+.ssb-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ssb-box {
+  flex: 4 1 0%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.ssb-box.has-keyword {
+  border-color: var(--color-primary);
+}
+
+.ssb-icon {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.ssb-input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+.ssb-clear {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.ssb-scan {
+  flex-shrink: 0;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.ssb-scan-hover {
+  background: var(--color-bg-hover);
+  transform: scale(0.95);
+}
+
+/* ----- 筛选器 slot 容器 ----- */
+.ssb-filter {
+  padding-top: 12px;
+  padding-bottom: 4px;
+}

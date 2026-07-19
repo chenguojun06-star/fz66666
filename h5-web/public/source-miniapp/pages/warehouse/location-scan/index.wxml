@@ -76,4 +76,5 @@
   <view wx:if="{{!loading && !error && locationInfo && items.length === 0}}" class="empty-container">
     <text>该库位暂无库存</text>
   </view>
+  <ai-assistant />
 </view>

@@ -1,7 +1,9 @@
 {
   "usingComponents": {
     "empty-state": "/components/empty-state/empty-state",
-    "search-scan": "/components/search-scan/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   },
-  "navigationBarTitleText": "预付款"
+  "navigationBarTitleText": "预付款",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

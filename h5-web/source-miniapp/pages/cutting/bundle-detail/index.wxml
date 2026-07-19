@@ -2,62 +2,97 @@
   <!-- 订单选择列表（从首页直接进来时显示） -->
   <block wx:if="{{showOrderList}}">
     <view class="order-list-wrap">
-      <!-- 搜索框 -->
-      <search-scan
+      <!-- 吸顶区：搜索 + 筛选器（与 dashboard/procurement 一致的通用组件） -->
+      <sticky-search-bar
         placeholder="搜索订单号 / 款号"
         value="{{orderSearchKeyword}}"
         show-scan="{{false}}"
+        show-filter="{{true}}"
         bind:input="onOrderSearchInput"
         bind:confirm="onOrderSearchConfirm"
-      />
+      >
+        <view slot="filter">
+          <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+            <view
+              wx:for="{{orderStatusTabs}}"
+              wx:key="key"
+              class="filter-pill {{activeOrderStatus === item.key ? 'filter-pill--on' : ''}} {{item.pillClass}}"
+              data-key="{{item.key}}"
+              bindtap="onOrderStatusTap"
+            >
+              <text class="filter-text">{{item.label}}</text>
+              <text wx:if="{{item.count > 0}}" class="filter-num">{{item.count}}</text>
+            </view>
+          </scroll-view>
+        </view>
+      </sticky-search-bar>
 
       <!-- 列表加载中 -->
-      <view wx:if="{{orderListLoading}}" class="order-list-loading">
-        <text>加载订单列表…</text>
+      <view wx:if="{{orderListLoading}}" class="loading-state">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">加载订单列表中…</text>
       </view>
 
       <!-- 无结果 -->
-      <view wx:elif="{{!orderList.length}}" class="order-list-empty">
+      <view wx:elif="{{!filteredOrderList.length}}" class="empty-state">
+        <view class="empty-icon line-icon icon-package"></view>
         <text class="empty-text">暂无裁剪中的订单</text>
       </view>
 
-      <!-- 订单卡片列表 -->
-      <view wx:else class="order-list">
+      <!-- 订单卡片列表（与 procurement/task-list 一致的通用 .task-card 结构） -->
+      <block wx:else>
         <view
-          wx:for="{{orderList}}"
+          wx:for="{{filteredOrderList}}"
           wx:key="id"
-          class="cutting-card"
+          class="task-card"
           bindtap="onSelectOrder"
           data-order="{{item}}"
         >
-          <view class="cutting-card-inner">
-            <view class="cutting-card-body">
-              <!-- 封面图（点击放大） -->
-              <view class="cutting-card-cover" catchtap="onPreviewSelImage" data-url="{{item.styleCoverUrl}}">
-                <image wx:if="{{item.styleCoverUrl}}" class="cutting-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
-                <view wx:else class="cutting-cover-empty">
-                  <text class="cover-abbr">{{item.styleNo ? item.styleNo.substring(0,2) : '--'}}</text>
-                </view>
-              </view>
-              <!-- 信息区 -->
-              <view class="cutting-card-info">
-                <!-- 行1：订单号 + 状态标签 -->
-                <view class="cutting-card-row-top">
-                  <text class="cutting-card-order-no">{{item.orderNo}}</text>
-                  <text class="cutting-card-status-tag">{{item.statusText || '生产中'}}</text>
-                </view>
-                <!-- 行2：款号 -->
-                <text class="cutting-card-style-name">款号：{{item.styleNo || '-'}}</text>
-                <!-- 行3：交货 + 数量 -->
-                <view class="cutting-card-meta-line">
-                  <text class="cutting-card-delivery" wx:if="{{item.expectedShipDate || item.deliveryDate}}">交货：{{item.expectedShipDate || item.deliveryDate}}</text>
-                  <text class="cutting-card-qty">{{item.orderQuantity || 0}}件</text>
-                </view>
+          <!-- 头部：款式图 + 订单号 + 状态标签 -->
+          <view class="card-header">
+            <view class="card-media" catchtap="onPreviewSelImage" data-url="{{item.styleCoverUrl}}">
+              <image
+                wx:if="{{item.styleCoverUrl}}"
+                class="media-img"
+                src="{{item.styleCoverUrl}}"
+                mode="aspectFill"
+                lazy-load="true"
+              />
+              <view wx:else class="media-placeholder">
+                <text class="cover-abbr">{{item.styleNo ? item.styleNo.substring(0,2) : '--'}}</text>
               </view>
             </view>
+            <view class="card-title-area">
+              <text class="material-name">{{item.orderNo}}</text>
+              <text class="material-code" wx:if="{{item.styleNo}}">款号 {{item.styleNo}}</text>
+            </view>
+            <text class="tag tag-{{item.statusClass || 'blue'}}">{{item.statusText || '生产中'}}</text>
+          </view>
+
+          <!-- 详情行 -->
+          <view class="card-body">
+            <view class="info-row info-row-full">
+              <text class="info-label">款号</text>
+              <text class="info-value">{{item.styleNo || '-'}}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">数量</text>
+              <text class="info-value">{{item.orderQuantity || 0}}件</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">交期</text>
+              <text class="info-value">{{item.expectedShipDate || item.deliveryDate || '-'}}</text>
+            </view>
+          </view>
+
+          <!-- 操作按钮 -->
+          <view class="card-footer">
+            <view class="btn-detail">查看详情</view>
           </view>
         </view>
-      </view>
+
+        <view class="no-more">已显示全部订单</view>
+      </block>
     </view>
   </block>
 
@@ -91,7 +126,7 @@
           <view class="info-rows">
             <view class="info-row info-row--top">
               <text class="info-order-no">{{orderNo}}</text>
-              <text class="info-status-badge">已领取</text>
+              <text class="info-status-badge">{{orderInfo.statusText || '生产中'}}</text>
             </view>
             <view class="info-row">
               <text class="info-row-label">款号</text>
@@ -623,4 +658,5 @@
 
   <!-- 隐藏的 canvas 用于生成 QR 码 -->
   <canvas type="2d" id="qrCanvas" style="position:fixed;left:-9999px;top:-9999px;width:200px;height:200px;"></canvas>
+  <ai-assistant />
 </view>

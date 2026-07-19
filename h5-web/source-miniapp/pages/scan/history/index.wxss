@@ -12,78 +12,22 @@ page {
   padding: var(--page-padding-x);
 }
 
-/* ===== 搜索栏（对齐设计稿：输入框上方、按钮下方） ===== */
-.search-card {
-  padding: 12px;
+/* ===== sticky-search-bar 容器：负 margin 抵消 .container 水平 padding ===== */
+.ssb-wrap {
+  margin: 0 calc(-1 * var(--page-padding-x));
 }
-.search-input-box {
+
+/* ===== filter slot 容器 ===== */
+.scan-history-filter {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  padding: 0 12px;
-  height: 40px;
-  box-sizing: border-box;
-  background: var(--color-bg-muted);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius-2xl) - 4px);
-}
-.search-icon {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-.search-input {
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-  width: 100%;
-  padding: 4px 0;
-  min-height: 24px;
-}
-.search-btn-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-.search-btn {
-  flex: 1;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-white);
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-sm);
-  white-space: nowrap;
-}
-.search-btn-hover {
-  opacity: 0.9;
-}
-.clear-btn {
-  flex: 1;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  white-space: nowrap;
-}
-.clear-btn-hover {
-  background: var(--color-bg-hover);
 }
 
 /* ===== 模式切换 ===== */
 .mode-tabs {
   display: flex;
-  margin: 0 0 10px;
+  margin: 0 0 2px;
   background: var(--color-border);
   border-radius: var(--radius-2xl);
   padding: 4px;
@@ -102,7 +46,7 @@ page {
   font-weight: 600;
   background: var(--color-bg-card);
   box-shadow: var(--shadow-sm);
-  border-radius: calc(var(--radius-2xl) - 4px);
+  border-radius: var(--radius-md);
 }
 
 /* ===== 月份选择器 ===== */
@@ -112,9 +56,9 @@ page {
   justify-content: center;
   gap: 20px;
   padding: 14px;
-  margin: 0 0 10px;
-  background: transparent;
-  border: none;
+  margin: 0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 .month-arrow {
@@ -137,19 +81,16 @@ page {
   text-align: center;
 }
 
-/* ===== 筛选区域 ===== */
-.filter-section {
-  margin: 0 0 10px;
-  padding: 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-sm);
-}
+/* ===== 日期范围选择（自定义模式） ===== */
 .date-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  padding: 12px;
+  margin: 0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 .date-col {
   flex: 1;

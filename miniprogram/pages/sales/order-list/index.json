@@ -3,6 +3,6 @@
   "backgroundColor": "#f5f6f8",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "search-scan": "/components/search-scan/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

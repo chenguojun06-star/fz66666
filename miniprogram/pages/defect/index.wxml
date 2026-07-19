@@ -1,43 +1,37 @@
 <view class="container">
-  <!-- 搜索栏：输入框 4/5 + 扫码按钮 1/5（与样衣开发页一致） -->
-  <view class="search-row">
-    <view class="search-box {{keyword ? 'has-keyword' : ''}}">
-      <view class="line-icon line-icon--sm icon-search search-icon"></view>
-      <input
-        class="search-input"
-        placeholder="搜索订单号/款号/工厂"
-        value="{{keyword}}"
-        bindinput="onSearchInput"
-        bindconfirm="_doSearch"
-        confirm-type="search"
-      />
-      <view wx:if="{{keyword}}" class="line-icon line-icon--sm icon-close search-clear" bindtap="onSearchClear"></view>
+  <!-- 吸顶区：搜索栏 + 扫码 + 筛选器（统一使用通用组件 sticky-search-bar） -->
+  <sticky-search-bar
+    placeholder="搜索订单号/款号/工厂"
+    value="{{keyword}}"
+    show-scan="{{true}}"
+    show-filter="{{true}}"
+    bind:input="onSearchInput"
+    bind:confirm="_doSearch"
+    bind:clear="onSearchClear"
+    bind:scan="onScan"
+  >
+    <view slot="filter" class="filter-row-wrap">
+      <scroll-view scroll-x class="filter-row" enhanced enable-flex show-scrollbar="{{false}}">
+        <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">
+          <text>全部</text><text class="filter-count">({{filterCounts.all}})</text>
+        </view>
+        <view class="filter-pill {{activeFilter === 'pending' ? 'filter-pill-active' : ''}}" data-filter="pending" bindtap="onFilter">
+          <text>待检</text><text class="filter-count">({{filterCounts.pending}})</text>
+        </view>
+        <view class="filter-pill filter-pill-success {{activeFilter === 'qualified' ? 'filter-pill-active' : ''}}" data-filter="qualified" bindtap="onFilter">
+          <text>合格</text><text class="filter-count">({{filterCounts.qualified}})</text>
+        </view>
+        <view class="filter-pill filter-pill-error {{activeFilter === 'unqualified' ? 'filter-pill-active' : ''}}" data-filter="unqualified" bindtap="onFilter">
+          <text>不合格</text><text class="filter-count">({{filterCounts.unqualified}})</text>
+        </view>
+        <view class="filter-pill filter-pill-warning {{activeFilter === 'repair' ? 'filter-pill-active' : ''}}" data-filter="repair" bindtap="onFilter">
+          <text>返修</text><text class="filter-count">({{filterCounts.repair}})</text>
+        </view>
+      </scroll-view>
     </view>
-    <view class="scan-btn" bindtap="onScan">
-      <view class="line-icon icon-scan scan-icon"></view>
-    </view>
-  </view>
+  </sticky-search-bar>
 
-  <!-- 筛选标签栏（设计稿：在统计栏上方） -->
-  <scroll-view scroll-x class="filter-row" enhanced enable-flex show-scrollbar="{{false}}">
-    <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">
-      <text>全部</text><text class="filter-count">({{filterCounts.all}})</text>
-    </view>
-    <view class="filter-pill {{activeFilter === 'pending' ? 'filter-pill-active' : ''}}" data-filter="pending" bindtap="onFilter">
-      <text>待检</text><text class="filter-count">({{filterCounts.pending}})</text>
-    </view>
-    <view class="filter-pill filter-pill-success {{activeFilter === 'qualified' ? 'filter-pill-active' : ''}}" data-filter="qualified" bindtap="onFilter">
-      <text>合格</text><text class="filter-count">({{filterCounts.qualified}})</text>
-    </view>
-    <view class="filter-pill filter-pill-error {{activeFilter === 'unqualified' ? 'filter-pill-active' : ''}}" data-filter="unqualified" bindtap="onFilter">
-      <text>不合格</text><text class="filter-count">({{filterCounts.unqualified}})</text>
-    </view>
-    <view class="filter-pill filter-pill-warning {{activeFilter === 'repair' ? 'filter-pill-active' : ''}}" data-filter="repair" bindtap="onFilter">
-      <text>返修</text><text class="filter-count">({{filterCounts.repair}})</text>
-    </view>
-  </scroll-view>
-
-  <!-- 统计栏（设计稿：在筛选标签下方） -->
+  <!-- 统计栏（不在吸顶区内，随页面滚动） -->
   <view class="stats-bar">
     <view class="stats-item">
       <view class="stats-value-row">
@@ -156,4 +150,5 @@
   </view>
 
   <privacy-dialog id="privacyDialog" />
+  <ai-assistant />
 </view>

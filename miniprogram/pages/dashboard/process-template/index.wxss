@@ -125,7 +125,7 @@
   color: var(--color-text-secondary);
   background: var(--color-bg-page);
   padding: 1px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-width: 16px;
   text-align: center;
 }
@@ -317,7 +317,7 @@
 /* 内联表单 */
 .inline-form-card {
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   padding: 16px;
   margin: 12px 16px;
   box-shadow: var(--shadow-sm);

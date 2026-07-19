@@ -420,6 +420,7 @@
     <view class="icon-sample" style="width:48px;height:48px;opacity:0.3;"></view>
     <text class="empty-state__text">未找到样衣信息</text>
   </view>
+  <ai-assistant />
 </view>
 
 <!-- 进度编辑器（与 PC 端 progressEditor 对齐） -->

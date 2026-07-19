@@ -16,6 +16,11 @@ public interface WorkAttendanceService extends IService<WorkAttendance> {
     WorkAttendance findToday(Long tenantId, String userId, LocalDate workDate);
 
     /**
+     * 查询最近一条未下班打卡记录（跨天补卡兜底用）
+     */
+    WorkAttendance findLatestOpen(Long tenantId, String userId);
+
+    /**
      * 月度工时统计
      */
     Map<String, Object> monthlyStats(Long tenantId, String userId, LocalDate month);

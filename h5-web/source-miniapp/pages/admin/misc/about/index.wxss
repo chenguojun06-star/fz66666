@@ -50,7 +50,7 @@ page {
 .app-logo {
   width: 64px;
   height: 64px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   display: flex;
   align-items: center;
@@ -134,13 +134,13 @@ page {
   width: 80px;
   height: 6px;
   background: var(--color-border-lighter);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   transition: width 0.3s ease;
 }
 

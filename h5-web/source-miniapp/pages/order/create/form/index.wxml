@@ -202,4 +202,5 @@
       <text>{{submitting ? '提交中...' : '确认下单'}}</text>
     </view>
   </view>
+  <ai-assistant />
 </view>

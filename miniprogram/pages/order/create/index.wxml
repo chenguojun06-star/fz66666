@@ -65,4 +65,5 @@
       </button>
     </view>
   </view>
+  <ai-assistant />
 </view>

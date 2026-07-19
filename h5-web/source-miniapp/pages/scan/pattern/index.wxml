@@ -236,4 +236,5 @@
       {{loading ? '提交中...' : (detail.submitLabel || '领取')}}
     </view>
   </view>
+  <ai-assistant />
 </view>

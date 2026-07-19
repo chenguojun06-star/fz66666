@@ -51,4 +51,5 @@
       <text class="feedback-time">{{item.createdTime}}</text>
     </view>
   </view>
+  <ai-assistant />
 </view>

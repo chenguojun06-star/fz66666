@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -19,7 +21,8 @@ public class WorkAttendance {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 租户ID（P0 铁律4） */
+    /** 租户ID（P0 铁律4） — 由 MyBatisPlusMetaObjectHandler 自动填充；Orchestrator 也会显式 set 兜底 */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     /** 员工ID */
@@ -55,7 +58,9 @@ public class WorkAttendance {
     /** 0未删 1已删 */
     private Integer deleteFlag;
 
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

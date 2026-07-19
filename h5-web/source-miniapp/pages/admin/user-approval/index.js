@@ -61,11 +61,10 @@ Page({
   },
 
   onPullDownRefresh() {
-    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin) {
-      this.loadPendingUsers(true);
-    } else {
-      this.loadTenantRegistrations();
-    }
+    var task = (this.data.activeTab === 'system' && this.data.isPlatformAdmin)
+      ? this.loadPendingUsers(true)
+      : this.loadTenantRegistrations();
+    Promise.resolve(task).finally(function () { wx.stopPullDownRefresh(); });
   },
 
   onReachBottom() {

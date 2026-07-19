@@ -1,0 +1,25 @@
+<view class="ssb {{sticky ? 'ssb--sticky' : ''}}">
+  <!-- 搜索栏：输入框 4/5 + 扫码按钮 1/5 -->
+  <view class="ssb-row">
+    <view class="ssb-box {{value ? 'has-keyword' : ''}}">
+      <view class="line-icon line-icon--sm icon-search ssb-icon"></view>
+      <input
+        class="ssb-input"
+        placeholder="{{placeholder}}"
+        value="{{value}}"
+        bindinput="onInput"
+        bindconfirm="onConfirm"
+        confirm-type="search"
+      />
+      <view wx:if="{{value}}" class="line-icon line-icon--sm icon-close ssb-clear" catchtap="onClear"></view>
+    </view>
+    <view wx:if="{{showScan}}" class="ssb-scan" hover-class="ssb-scan-hover" hover-stay-time="100" catchtap="onScan">
+      <view class="line-icon icon-scan ssb-scan-icon"></view>
+    </view>
+  </view>
+
+  <!-- 筛选器 slot：调用方塞 stat-tags / filter-pills / filter-tabs 等任意筛选内容 -->
+  <view wx:if="{{showFilter}}" class="ssb-filter">
+    <slot name="filter"></slot>
+  </view>
+</view>

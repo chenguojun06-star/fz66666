@@ -147,4 +147,5 @@
       <button class="action-btn action-btn--primary" bindtap="onRefund">标记退款完成</button>
     </view>
   </block>
+  <ai-assistant />
 </view>

@@ -364,7 +364,7 @@
  * ============================================================ */
 .inline-form-card {
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   padding: 16px;
   margin: 12px 0;
   box-shadow: var(--shadow-sm);
@@ -620,7 +620,7 @@
 
 .record-btn {
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;

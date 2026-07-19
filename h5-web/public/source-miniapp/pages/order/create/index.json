@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "订单创建",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {}
 }

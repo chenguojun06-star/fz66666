@@ -1,6 +1,8 @@
 {
   "navigationBarTitleText": "外发管理",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {
-    "search-scan": "/components/search-scan/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

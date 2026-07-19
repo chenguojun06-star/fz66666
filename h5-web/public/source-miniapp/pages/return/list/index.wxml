@@ -81,4 +81,5 @@
     <view wx:if="{{loading}}" class="loading-more">加载中...</view>
     <view wx:elif="{{!hasMore && list.length > 0}}" class="loading-more">没有更多了</view>
   </view>
+  <ai-assistant />
 </view>

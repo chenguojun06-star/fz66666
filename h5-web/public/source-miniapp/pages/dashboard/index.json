@@ -2,7 +2,6 @@
   "navigationBarTitleText": "生产管理",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index",
-    "search-scan": "/components/search-scan/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }
