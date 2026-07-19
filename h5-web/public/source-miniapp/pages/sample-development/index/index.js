@@ -52,12 +52,29 @@ function normalizeOpToStage(opType) {
 }
 
 // 格式化日期：2026-07-19 12:34
+// 兼容 iOS：仅支持 yyyy/MM/dd、yyyy/MM/dd HH:mm:ss、yyyy-MM-dd、yyyy-MM-ddTHH:mm:ss
+// 后端可能返回 "03/23 21:17"（无年份 MM/DD HH:mm），需补当前年份
 function fmtDateTime(raw) {
   if (!raw) return '';
-  var s = String(raw);
+  var s = String(raw).trim();
   if (!s) return '';
   try {
-    var d = new Date(s.replace(/-/g, '/'));
+    var normalized = s;
+    // 匹配 MM/DD HH:mm 或 MM/DD HH:mm:ss（无年份）
+    var noYearMatch = s.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+    if (noYearMatch) {
+      var year = new Date().getFullYear();
+      var mm = noYearMatch[1].padStart ? noYearMatch[1].padStart(2, '0') : ('0' + noYearMatch[1]).slice(-2);
+      var dd = noYearMatch[2].padStart ? noYearMatch[2].padStart(2, '0') : ('0' + noYearMatch[2]).slice(-2);
+      var hh = noYearMatch[3].padStart ? noYearMatch[3].padStart(2, '0') : ('0' + noYearMatch[3]).slice(-2);
+      var mi = noYearMatch[4].padStart ? noYearMatch[4].padStart(2, '0') : ('0' + noYearMatch[4]).slice(-2);
+      var ss = noYearMatch[5] ? (noYearMatch[5].padStart ? noYearMatch[5].padStart(2, '0') : ('0' + noYearMatch[5]).slice(-2)) : '00';
+      normalized = year + '/' + mm + '/' + dd + ' ' + hh + ':' + mi + ':' + ss;
+    } else if (s.indexOf('-') >= 0 && s.indexOf('/') < 0) {
+      // "2026-07-19 12:34" 或 "2026-07-19T12:34:56"
+      normalized = s.replace(/-/g, '/');
+    }
+    var d = new Date(normalized);
     if (isNaN(d.getTime())) return s.substring(0, 16);
     var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
