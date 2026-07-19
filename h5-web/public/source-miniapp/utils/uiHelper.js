@@ -314,4 +314,33 @@ function doNavigate(options, method, isRetry) {
   });
 }
 
-module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate };
+/**
+ * 快捷扫码：直接调起微信扫码，扫到结果后跳转到扫码处理页
+ * @returns {Promise} 无返回值（扫码失败/取消静默处理）
+ */
+function quickScan() {
+  return new Promise((resolve) => {
+    wx.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success(res) {
+        const code = res.result || '';
+        if (!code) {
+          toast('未识别到内容');
+          resolve(false);
+          return;
+        }
+        safeNavigate({
+          url: '/pages/scan/index?code=' + encodeURIComponent(code),
+        }).catch(() => {});
+        resolve(true);
+      },
+      fail() {
+        // 用户取消扫码，静默处理
+        resolve(false);
+      },
+    });
+  });
+}
+
+module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate, quickScan };

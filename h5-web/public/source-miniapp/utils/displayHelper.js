@@ -357,6 +357,10 @@ function toDate(input) {
     const t = input.getTime();
     return isNaN(t) ? null : new Date(t);
   }
+  if (Array.isArray(input) && input.length >= 3) {
+    const d = new Date(+input[0], +input[1] - 1, +input[2], +(input[3] || 0), +(input[4] || 0), +(input[5] || 0));
+    return isNaN(d.getTime()) ? null : d;
+  }
   if (typeof input === 'number') {
     const d = new Date(input);
     return isNaN(d.getTime()) ? null : d;
