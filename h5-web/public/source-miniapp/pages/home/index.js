@@ -50,6 +50,15 @@ Page({
     menuItems: [],
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
+    // 考勤打卡
+    attendanceStatusText: '今日未打卡',
+    attendanceStatusClass: 'attendance-status--idle',
+    attendanceClockInText: '--:--',
+    attendanceClockOutText: '--:--',
+    monthlyHoursText: '0.0',
+    monthlyDaysText: '0',
+    clockInBtnActive: true,
+    clockOutBtnActive: false,
   },
 
   onLoad: function () {
@@ -75,6 +84,7 @@ Page({
     this._loadUserName(true);
     this._refreshHomeData();
     this._loadFavorites();
+    this._loadAttendance();
     this._bindEvents();
   },
 
@@ -244,6 +254,103 @@ Page({
     if (now < liQiu) return '夏';
     if (now < liDong) return '秋';
     return '冬';
+  },
+
+  // ========== 考勤打卡 ==========
+
+  _loadAttendance: function () {
+    const self = this;
+    Promise.allSettled([
+      api.attendance.todayStatus(),
+      api.attendance.monthlyStats(),
+    ]).then(function (results) {
+      const statusRes = results[0].status === 'fulfilled' ? results[0].value : null;
+      const statsRes = results[1].status === 'fulfilled' ? results[1].value : null;
+      self._applyAttendanceStatus(statusRes);
+      self._applyMonthlyStats(statsRes);
+    }).catch(function (e) {
+      console.warn('[home] _loadAttendance failed:', e && e.errMsg);
+    });
+  },
+
+  _applyAttendanceStatus: function (res) {
+    if (!res) return;
+    const clockIn = res.clockInTime;
+    const clockOut = res.clockOutTime;
+    const hasClockedIn = !!res.hasClockedIn || !!clockIn;
+    const hasClockedOut = !!res.hasClockedOut || !!clockOut;
+    let statusText = '今日未打卡';
+    let statusClass = 'attendance-status--idle';
+    if (hasClockedIn && !hasClockedOut) {
+      statusText = '上班中';
+      statusClass = 'attendance-status--working';
+    } else if (hasClockedIn && hasClockedOut) {
+      statusText = '今日已下班';
+      statusClass = 'attendance-status--done';
+    } else if (!hasClockedIn) {
+      statusText = '今日未打卡';
+      statusClass = 'attendance-status--idle';
+    }
+    this.setData({
+      attendanceStatusText: statusText,
+      attendanceStatusClass: statusClass,
+      attendanceClockInText: clockIn ? this._formatTime(clockIn) : '--:--',
+      attendanceClockOutText: clockOut ? this._formatTime(clockOut) : '--:--',
+      clockInBtnActive: !hasClockedIn,
+      clockOutBtnActive: hasClockedIn && !hasClockedOut,
+    });
+  },
+
+  _applyMonthlyStats: function (res) {
+    if (!res) return;
+    const hours = Number(res.workHours || 0);
+    const days = Number(res.workDays || 0);
+    this.setData({
+      monthlyHoursText: hours.toFixed(1),
+      monthlyDaysText: String(days),
+    });
+  },
+
+  _formatTime: function (t) {
+    if (!t) return '--:--';
+    const s = String(t);
+    // 后端返回 "2026-07-19T09:12:34" 或 "2026-07-19 09:12:34"
+    const m = s.match(/(\d{2}):(\d{2})/);
+    return m ? (m[1] + ':' + m[2]) : '--:--';
+  },
+
+  onClockIn: function () {
+    const self = this;
+    wx.showLoading({ title: '打卡中', mask: true });
+    api.attendance.clockIn().then(function (res) {
+      wx.hideLoading();
+      wx.showToast({ title: (res && res.message) || '上班打卡成功', icon: 'success' });
+      self._applyAttendanceStatus(res);
+      return api.attendance.monthlyStats();
+    }).then(function (stats) {
+      self._applyMonthlyStats(stats);
+    }).catch(function (e) {
+      wx.hideLoading();
+      const msg = (e && e.errMsg) || '上班打卡失败';
+      wx.showToast({ title: msg, icon: 'none' });
+    });
+  },
+
+  onClockOut: function () {
+    const self = this;
+    wx.showLoading({ title: '打卡中', mask: true });
+    api.attendance.clockOut().then(function (res) {
+      wx.hideLoading();
+      wx.showToast({ title: (res && res.message) || '下班打卡成功', icon: 'success' });
+      self._applyAttendanceStatus(res);
+      return api.attendance.monthlyStats();
+    }).then(function (stats) {
+      self._applyMonthlyStats(stats);
+    }).catch(function (e) {
+      wx.hideLoading();
+      const msg = (e && e.errMsg) || '下班打卡失败';
+      wx.showToast({ title: msg, icon: 'none' });
+    });
   },
 
   // ========== 点击事件 ==========

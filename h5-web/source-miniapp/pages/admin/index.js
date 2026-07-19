@@ -441,14 +441,20 @@ Page({
 
   loadProfileStats: function () {
     const self = this;
+    // 本月工时从打卡 API 获取（独立打卡，方案 C）
+    api.attendance.monthlyStats().then(function (res) {
+      const hours = Number((res && res.workHours) || 0);
+      self.setData({ 'stats.workHours': hours.toFixed(1) });
+    }).catch(function () {
+      self.setData({ 'stats.workHours': '--' });
+    });
+    // 扫码次数 + 本月工资仍走 personalScanStats
     api.production.personalScanStats({ period: 'month' }).then(function (res) {
       const scanCount = (res && res.scanCount) || 0;
       const totalAmount = Number((res && res.totalAmount) || 0);
-      const workHours = (res && (res.workHours || res.workingHours)) || '--';
       self.setData({
         'stats.scanCount': scanCount,
         'stats.wageText': totalAmount > 0 ? '\u00a5' + totalAmount.toLocaleString() : '\u00a50',
-        'stats.workHours': workHours,
       });
     }).catch(function () {});
   },

@@ -287,3 +287,144 @@ page {
   height: 16px;
   background-size: 16px 16px;
 }
+
+/* ============ 考勤打卡卡片 ============ */
+.attendance-card {
+  margin: 0 var(--page-padding-x) var(--spacing-md);
+  padding: 14px 16px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.attendance-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.attendance-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attendance-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.attendance-status {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.attendance-status--idle {
+  background: var(--color-bg-page);
+  color: var(--color-text-tertiary);
+}
+
+.attendance-status--working {
+  background: var(--color-success-bg, #e9f9ee);
+  color: var(--color-success);
+}
+
+.attendance-status--done {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.attendance-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.attendance-time-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.attendance-time-divider {
+  color: var(--color-text-tertiary);
+}
+
+.attendance-body {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.05));
+  border-bottom: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.05));
+}
+
+.attendance-stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.attendance-stats--divider {
+  border-left: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.05));
+}
+
+.attendance-stats-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.attendance-stats-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.attendance-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.attendance-btn--out {
+  /* 下班按钮与上班按钮样式一致，仅通过 active 状态区分 */
+}
+
+.attendance-btn-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.attendance-btn--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.attendance-btn--active .attendance-btn-text {
+  color: var(--color-text-white);
+}
+
+.attendance-btn-hover {
+  opacity: 0.85;
+}
