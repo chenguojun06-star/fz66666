@@ -180,7 +180,7 @@ Page({
   // ========== 数据刷新 ==========
 
   _refreshHomeData: function () {
-    return Promise.allSettled([this._loadUnreadCount()]);
+    return Promise.resolve();
   },
 
   _loadUserName: function (forceRemote) {
@@ -214,13 +214,8 @@ Page({
   },
 
   _loadUnreadCount: function () {
-    const self = this;
-    return api.notice.unreadCount()
-      .then(function (res) {
-        const count = Number(res) || 0;
-        self.setData({ unreadNoticeCount: count });
-      })
-      .catch(function (e) { console.warn('[home] _loadUnreadCount failed:', e.message || e); });
+    // 已废弃：ai-assistant 组件从首页移除，悬浮入口仍由全局组件提供
+    return Promise.resolve();
   },
 
   _computeDateInfo: function () {

@@ -203,125 +203,35 @@ page {
   background: var(--color-text-tertiary);
 }
 
-/* -- AI助手卡片 -- */
-.ai-card {
-  margin: 0 var(--page-padding-x) var(--spacing-md);
-  padding: 16px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-sm);
-}
-
-.ai-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.ai-card-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
-  flex-shrink: 0;
-}
-
-.ai-card-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.ai-card-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ai-card-sub {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ai-card-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-full);
-  padding: 10px 16px;
-}
-
-.ai-card-input-text {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--font-size-md);
-  color: var(--color-text-tertiary);
-}
-
-.ai-card-send-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.ai-card-send-btn .icon-send-arrow {
-  display: block;
-  width: 16px;
-  height: 16px;
-  background-size: 16px 16px;
-}
-
-/* ============ 考勤打卡卡片 ============ */
+/* ============ 考勤打卡卡片（紧凑版） ============ */
 .attendance-card {
   margin: 0 var(--page-padding-x) var(--spacing-md);
-  padding: 14px 16px;
+  padding: 10px 14px;
   background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-}
-
-.attendance-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
 }
 
 .attendance-title-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  margin-bottom: 6px;
 }
 
 .attendance-title {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
+  flex-shrink: 0;
 }
 
 .attendance-status {
-  font-size: var(--font-size-xs);
-  padding: 2px 8px;
+  font-size: 10px;
+  padding: 1px 6px;
   border-radius: var(--radius-full);
   font-weight: 500;
+  line-height: 1.4;
 }
 
 .attendance-status--idle {
@@ -339,64 +249,16 @@ page {
   color: var(--color-primary);
 }
 
-.attendance-time-row {
+.attendance-actions {
+  margin-left: auto;
   display: flex;
-  align-items: center;
   gap: 6px;
 }
 
-.attendance-time-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.attendance-time-divider {
-  color: var(--color-text-tertiary);
-}
-
-.attendance-body {
-  display: flex;
-  align-items: stretch;
-  margin-bottom: 12px;
-  padding: 10px 0;
-  border-top: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.05));
-  border-bottom: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.05));
-}
-
-.attendance-stats {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.attendance-stats--divider {
-  border-left: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.05));
-}
-
-.attendance-stats-value {
-  font-size: var(--font-size-2xl);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.attendance-stats-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
-
-.attendance-actions {
-  display: flex;
-  gap: 8px;
-}
-
 .attendance-btn {
-  flex: 1;
-  height: 40px;
+  min-width: 56px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -406,12 +268,8 @@ page {
   transition: all 0.2s ease;
 }
 
-.attendance-btn--out {
-  /* 下班按钮与上班按钮样式一致，仅通过 active 状态区分 */
-}
-
 .attendance-btn-text {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   font-weight: 500;
 }
@@ -427,4 +285,22 @@ page {
 
 .attendance-btn-hover {
   opacity: 0.85;
+}
+
+.attendance-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.attendance-time-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.attendance-time-divider {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
 }
