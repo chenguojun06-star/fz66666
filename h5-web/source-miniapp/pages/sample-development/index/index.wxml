@@ -112,7 +112,7 @@
         <view class="card-progress-track">
           <view
             class="card-progress-fill"
-            style="width: {{item._progressPercent || 0}}%; background: {{item._statusColor}};"
+            style="{{ {width: (item._progressPercent || 0) + '%', background: item._statusColor} }}"
           ></view>
         </view>
         <text class="card-progress-percent">{{item._progressPercent || 0}}%</text>

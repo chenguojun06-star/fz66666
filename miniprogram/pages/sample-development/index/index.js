@@ -51,31 +51,70 @@ function normalizeOpToStage(opType) {
   return OP_TYPE_TO_STAGE[upper] || null;
 }
 
-// 兼容 iOS 的 Date 解析：iOS 只支持 "yyyy/MM/dd"、"yyyy/MM/dd HH:mm:ss"、
-// "yyyy-MM-dd"、"yyyy-MM-ddTHH:mm:ss"、"yyyy-MM-ddTHH:mm:ss+HH:mm"。
-// 后端可能返回 "03/23 21:17"（无年份 MM/DD HH:mm），需补当前年份后解析。
+// 兼容 iOS 的 Date 解析：完全避免 new Date(string) 调用，
+// 微信开发者工具的 iOS 兼容性检测器会对 new Date(stringVariable) 静态告警，
+// 即使运行时传入的是合规格式也会误报。因此统一用 new Date(y, m, d, h, mi, s) 多参数构造。
+// 兼容后端返回的多种格式：
+//   "03/23 21:17"（无年份 MM/DD HH:mm）→ 补当前年份
+//   "2026-07-19 12:34" / "2026-07-19T12:34:56" → 标准 ISO
+//   "2026/07/19 12:34" → 标准 yyyy/MM/dd
+//   "2026-07-19" / "2026/07/19" → 仅日期
 function safeParseDate(raw) {
   if (!raw) return null;
   var s = String(raw).trim();
   if (!s) return null;
   try {
-    var normalized = s;
-    // 匹配 MM/DD HH:mm 或 MM/DD HH:mm:ss（无年份）
+    // 1. MM/DD HH:mm 或 MM/DD HH:mm:ss（无年份）→ 补当前年份
     var noYearMatch = s.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
     if (noYearMatch) {
-      var year = new Date().getFullYear();
-      var mm = noYearMatch[1].padStart ? noYearMatch[1].padStart(2, '0') : ('0' + noYearMatch[1]).slice(-2);
-      var dd = noYearMatch[2].padStart ? noYearMatch[2].padStart(2, '0') : ('0' + noYearMatch[2]).slice(-2);
-      var hh = noYearMatch[3].padStart ? noYearMatch[3].padStart(2, '0') : ('0' + noYearMatch[3]).slice(-2);
-      var mi = noYearMatch[4].padStart ? noYearMatch[4].padStart(2, '0') : ('0' + noYearMatch[4]).slice(-2);
-      var ss = noYearMatch[5] ? (noYearMatch[5].padStart ? noYearMatch[5].padStart(2, '0') : ('0' + noYearMatch[5]).slice(-2)) : '00';
-      normalized = year + '/' + mm + '/' + dd + ' ' + hh + ':' + mi + ':' + ss;
-    } else if (s.indexOf('-') >= 0 && s.indexOf('/') < 0) {
-      // "2026-07-19 12:34" 或 "2026-07-19T12:34:56"
-      normalized = s.replace(/-/g, '/');
+      return new Date(
+        new Date().getFullYear(),
+        parseInt(noYearMatch[1], 10) - 1,
+        parseInt(noYearMatch[2], 10),
+        parseInt(noYearMatch[3], 10),
+        parseInt(noYearMatch[4], 10),
+        noYearMatch[5] ? parseInt(noYearMatch[5], 10) : 0
+      );
     }
-    var d = new Date(normalized);
-    return isNaN(d.getTime()) ? null : d;
+    // 2. yyyy-MM-dd HH:mm[:ss] 或 yyyy-MM-ddTHH:mm:ss
+    var dashMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+    if (dashMatch) {
+      return new Date(
+        parseInt(dashMatch[1], 10),
+        parseInt(dashMatch[2], 10) - 1,
+        parseInt(dashMatch[3], 10),
+        parseInt(dashMatch[4], 10),
+        parseInt(dashMatch[5], 10),
+        dashMatch[6] ? parseInt(dashMatch[6], 10) : 0
+      );
+    }
+    // 3. yyyy/MM/dd HH:mm[:ss]
+    var slashMatch = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+    if (slashMatch) {
+      return new Date(
+        parseInt(slashMatch[1], 10),
+        parseInt(slashMatch[2], 10) - 1,
+        parseInt(slashMatch[3], 10),
+        parseInt(slashMatch[4], 10),
+        parseInt(slashMatch[5], 10),
+        slashMatch[6] ? parseInt(slashMatch[6], 10) : 0
+      );
+    }
+    // 4. yyyy-MM-dd 或 yyyy/MM/dd（仅日期）
+    var dateOnly = s.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+    if (dateOnly) {
+      return new Date(
+        parseInt(dateOnly[1], 10),
+        parseInt(dateOnly[2], 10) - 1,
+        parseInt(dateOnly[3], 10)
+      );
+    }
+    // 5. 时间戳数字
+    if (/^\d+$/.test(s)) {
+      return new Date(parseInt(s, 10));
+    }
+    // 6. 其他格式无法解析
+    return null;
   } catch (_e) { return null; }
 }
 

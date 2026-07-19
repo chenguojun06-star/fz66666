@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2019",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,
