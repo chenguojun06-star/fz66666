@@ -369,6 +369,46 @@
   margin-top: 10px;
 }
 
+.card-info-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 详情按钮：镂空风格，符合项目设计规范（透明背景+彩色边框+彩色文字） */
+.card-detail-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-primary, #1677ff);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-primary, #1677ff);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
+.card-detail-btn__text {
+  color: inherit;
+}
+.card-detail-btn__arrow {
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  margin-left: 1px;
+}
+.card-detail-btn:active {
+  background: var(--color-primary, #1677ff);
+  color: #fff;
+  opacity: 0.85;
+}
+
 .card-quantity {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);

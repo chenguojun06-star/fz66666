@@ -95,10 +95,16 @@
         </view>
       </view>
 
-      <!-- 件数 + 延期/剩余天数 -->
+      <!-- 件数 + 延期/剩余天数 + 详情按钮 -->
       <view class="card-info-row">
-        <text class="card-quantity">{{item.quantity ? item.quantity + '件' : ''}}</text>
-        <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
+        <view class="card-info-left">
+          <text class="card-quantity">{{item.quantity ? item.quantity + '件' : ''}}</text>
+          <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
+        </view>
+        <view class="card-detail-btn" data-item="{{item}}" catchtap="onCardTap">
+          <text class="card-detail-btn__text">详情</text>
+          <view class="card-detail-btn__arrow"></view>
+        </view>
       </view>
 
       <!-- 进度条 -->
