@@ -157,8 +157,9 @@ page {
   display: flex;
   align-items: stretch;
   background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  padding: 8px 12px;
+  padding: 4px 12px;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
@@ -168,7 +169,7 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 1px;
 }
 
 .stats-item--bordered {
@@ -179,13 +180,13 @@ page {
 .stats-value-row {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 /* SVG 统计图标 */
 .stats-arrow-up {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2334c759' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12 12 5l7 7'/%3E%3Cpath d='M12 19V5'/%3E%3C/svg%3E");
   background-size: contain;
@@ -194,8 +195,8 @@ page {
 }
 
 .stats-arrow-down {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff3b30' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14'/%3E%3Cpath d='m19 12-7 7-7-7'/%3E%3C/svg%3E");
   background-size: contain;
@@ -204,8 +205,8 @@ page {
 }
 
 .stats-minus-circle {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9500' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M8 12h8'/%3E%3C/svg%3E");
   background-size: contain;
@@ -214,14 +215,14 @@ page {
 }
 
 .stats-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: var(--font-weight-bold);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .stats-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-secondary);
 }
 
