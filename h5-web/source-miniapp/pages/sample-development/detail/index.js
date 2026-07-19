@@ -3,6 +3,7 @@ const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
+const { enrichBomList, processTypeLabel, processStatusLabel } = require('../../../shared/enumLabels');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -736,6 +737,21 @@ Page({
     }
   },
 
+  // === 工序项点击展开：显示该工序的实际扫码记录 ===
+  onProcessItemTap(e) {
+    const idx = Number(e.currentTarget.dataset.idx);
+    if (Number.isNaN(idx) || idx < 0 || idx >= this.data.allProcesses.length) return;
+    const cur = this.data.allProcesses[idx];
+    if (!cur || cur._scanCount === 0) {
+      // 无扫码记录：不展开，可加提示
+      wx.showToast({ title: '该工序暂无扫码记录', icon: 'none', duration: 1200 });
+      return;
+    }
+    this.setData({
+      ['allProcesses[' + idx + ']._expanded']: !cur._expanded,
+    });
+  },
+
   onTabChange(e) {
     const key = e.currentTarget.dataset.key;
     if (key) this.setData({ activeTab: key });
@@ -808,16 +824,98 @@ Page({
 
     const [processes, scans] = await Promise.all(tasks);
 
-    // 处理工序：格式化显示
+    // 处理工序：格式化显示 + 匹配扫码记录 + 计算进度状态
+    // 先把扫码记录按 processName 分组（兼容 processName/operationType 两种匹配）
+    const scansByProcessName = {};
+    (scans || []).forEach(function (r) {
+      const name = String(r.processName || '').trim();
+      if (!name) return;
+      if (!scansByProcessName[name]) scansByProcessName[name] = [];
+      scansByProcessName[name].push(r);
+    });
+
     const allProcesses = (processes || []).map(function (p, idx) {
       const stageRaw = p.progressStage || p.stage || '';
+      const name = p.processName || p.name || ('工序' + (idx + 1));
+      // 该工序的扫码记录（按时间倒序）
+      const myScans = (scansByProcessName[name] || []).slice().sort(function (a, b) {
+        const ta = new Date(String(a.scanTime || a.createTime || '').replace(/-/g, '/')).getTime() || 0;
+        const tb = new Date(String(b.scanTime || b.createTime || '').replace(/-/g, '/')).getTime() || 0;
+        return tb - ta;
+      });
+      // 状态判断：有 COMPLETE → 已完成；有 RECEIVE 但无 COMPLETE → 进行中；无记录 → 待领取
+      let status = 'pending';
+      let statusText = '待领取';
+      if (myScans.length > 0) {
+        const hasComplete = myScans.some(function (r) {
+          return r.operationType === 'COMPLETE' || r.success === true;
+        });
+        if (hasComplete) {
+          status = 'completed';
+          statusText = '已完成';
+        } else {
+          status = 'in_progress';
+          statusText = '进行中';
+        }
+      }
+      // 数量统计
+      let completedQty = 0;
+      myScans.forEach(function (r) {
+        if (r.operationType === 'COMPLETE' || r.success === true) {
+          completedQty += Number(r.quantity) || 0;
+        }
+      });
+      let receivedQty = 0;
+      myScans.forEach(function (r) {
+        if (r.operationType === 'RECEIVE') {
+          receivedQty += Number(r.quantity) || 0;
+        }
+      });
+
       return Object.assign({}, p, {
         _key: p.id || ('p_' + idx),
-        _name: p.processName || p.name || ('工序' + (idx + 1)),
+        _name: name,
         _stage: stageRaw,
         _stageLower: String(stageRaw).toLowerCase(),
         _price: p.price || p.unitPrice || '',
         _assignee: p.assignee || '',
+        _status: status,
+        _statusText: statusText,
+        _scanCount: myScans.length,
+        _scanRecords: myScans.map(function (r) {
+          const timeStr = r.scanTime || r.createTime || '';
+          let displayTime = '';
+          if (timeStr) {
+            try {
+              const d = new Date(String(timeStr).replace(/-/g, '/'));
+              if (!isNaN(d.getTime())) {
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const mi = String(d.getMinutes()).padStart(2, '0');
+                displayTime = mm + '-' + dd + ' ' + hh + ':' + mi;
+              }
+            } catch (_) {}
+          }
+          return {
+            _displayTime: displayTime,
+            _operationText: r.operationType === 'RECEIVE' ? '领取'
+              : r.operationType === 'COMPLETE' ? '完成'
+              : r.operationType === 'WAREHOUSE_IN' ? '入库'
+              : r.operationType === 'WAREHOUSE_OUT' ? '出库'
+              : r.operationType === 'WAREHOUSE_RETURN' ? '归还'
+              : r.operationType === 'PLATE' ? '车板'
+              : r.operationType === 'FOLLOW_UP' ? '跟单'
+              : r.processName || r.operationType || '-',
+            operatorName: r.operatorName || r.userName || '-',
+            quantity: r.quantity || 0,
+            color: r.color || '',
+            size: r.size || '',
+          };
+        }),
+        _completedQty: completedQty,
+        _receivedQty: receivedQty,
+        _expanded: false,
       });
     });
 
@@ -886,14 +984,24 @@ Page({
     // 尺寸表数据透视：部位为行，尺码为列
     const sizeTable = this._pivotSizeTable(sizeList || []);
 
+    // BOM 物料类型英文 → 中文（fabricA → 面料A）
+    // 二次工艺 processType/status 英文 → 中文
+    const enrichedBomList = enrichBomList(bomList || []);
+    const enrichedSecondaryList = (secondaryList || []).map(function (item) {
+      var copy = Object.assign({}, item);
+      if (item.processType) copy.processTypeText = processTypeLabel(item.processType);
+      if (item.status) copy.statusText = processStatusLabel(item.status);
+      return copy;
+    });
+
     this.setData({
-      bomList: bomList || [],
+      bomList: enrichedBomList,
       bomLoading: false,
       sizeList: sizeList || [],
       sizeColumns: sizeTable.columns,
       sizeRows: sizeTable.rows,
       sizeLoading: false,
-      secondaryList: secondaryList || [],
+      secondaryList: enrichedSecondaryList,
       secondaryLoading: false,
     });
   },

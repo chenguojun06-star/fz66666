@@ -463,15 +463,35 @@
 .process-list {
   margin-top: 4px;
 }
+/* 工序项：纵向布局（主行 + 展开区） */
 .process-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: var(--spacing-md) 0;
   border-bottom: 1px solid var(--color-border-light);
 }
 .process-item--last {
   border-bottom: none;
+}
+/* 可点击的工序项 */
+.process-item--clickable {
+  cursor: pointer;
+}
+/* 注意：不使用 :active 背景色，避免点击子元素时整个卡片闪烁 */
+.process-item--expanded {
+  background: var(--color-bg-hover, #f7f8fa);
+  border-radius: var(--radius-md);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+/* 主行：序号 + 工序信息 + 单价 + 状态 + 箭头 */
+.process-item__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .process-item__left {
   display: flex;
@@ -518,12 +538,150 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
+/* 右侧：单价 + 状态徽章 + 展开箭头 */
+.process-item__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .process-item__price {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  flex-shrink: 0;
-  margin-left: var(--spacing-sm);
+}
+
+/* 状态徽章 */
+.process-item__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+}
+.process-item__status .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+}
+.process-item__status--completed {
+  background: rgba(82, 196, 26, 0.1);
+  color: #52c41a;
+}
+.process-item__status--completed .status-dot {
+  background: #52c41a;
+}
+.process-item__status--in_progress {
+  background: rgba(24, 144, 255, 0.1);
+  color: #1890ff;
+}
+.process-item__status--in_progress .status-dot {
+  background: #1890ff;
+}
+.process-item__status--pending {
+  background: var(--color-bg-hover, #f5f5f5);
+  color: var(--color-text-tertiary);
+}
+
+/* 展开箭头 */
+.process-item__arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--color-text-tertiary);
+  transition: transform 0.2s ease;
+}
+.process-item__arrow--up {
+  transform: rotate(180deg);
+}
+
+/* 展开区：扫码记录 */
+.process-item__expand {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border-light);
+}
+.scan-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.scan-summary__label {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.scan-summary__count {
+  padding: 1px 8px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+.scan-summary__done {
+  color: #52c41a;
+}
+.scan-summary__received {
+  color: #1890ff;
+}
+.scan-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scan-record-item {
+  padding: 8px 10px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-border);
+}
+.scan-record-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.scan-record-item__op {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-hover, #f5f5f5);
+  color: var(--color-text-secondary);
+}
+/* 操作类型色块 */
+.scan-record-item__op--领取,
+.scan-record-item__op--完成 {
+  background: rgba(82, 196, 26, 0.1);
+  color: #52c41a;
+}
+.scan-record-item__op--入库 {
+  background: rgba(24, 144, 255, 0.1);
+  color: #1890ff;
+}
+.scan-record-item__op--出库,
+.scan-record-item__op--归还 {
+  background: rgba(250, 173, 20, 0.1);
+  color: #faad14;
+}
+.scan-record-item__time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.scan-record-item__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.scan-record-item__operator {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
 /* 扫码记录 */

@@ -127,7 +127,7 @@
             <view class="bom-item__main">
               <text class="bom-item__name">{{item.materialName || item.partName || '-'}}</text>
               <view class="bom-item__meta">
-                <text wx:if="{{item.materialType}}" class="bom-item__tag">{{item.materialType}}</text>
+                <text wx:if="{{item.materialTypeText}}" class="bom-item__tag">{{item.materialTypeText}}</text>
                 <text wx:if="{{item.color}}" class="bom-item__sub">{{item.color}}</text>
                 <text wx:if="{{item.specification}}" class="bom-item__sub">{{item.specification}}</text>
               </view>
@@ -187,27 +187,66 @@
         <view wx:else class="empty-hint"><text class="empty-hint__text">暂无尺寸表，请在 PC 端配置</text></view>
       </view>
 
-      <!-- 工序 -->
+      <!-- 工序（可点击展开，显示实际扫码进度+记录） -->
       <view wx:if="{{activeTab === 'process'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">工序配置</text>
+          <text class="tab-card__title">工序进度</text>
           <text class="tab-card__count">{{allProcesses.length}}项</text>
         </view>
         <view wx:if="{{processLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
         <view wx:elif="{{allProcesses.length > 0}}" class="process-list">
-          <view wx:for="{{allProcesses}}" wx:key="_key" class="process-item {{index === allProcesses.length - 1 ? 'process-item--last' : ''}}">
-            <view class="process-item__left">
-              <view class="process-item__index">{{index + 1}}</view>
-              <view class="process-item__info">
-                <text class="process-item__name">{{item._name}}</text>
-                <view class="process-item__meta">
-                  <text wx:if="{{item._stage}}" class="process-item__stage">{{item._stage}}</text>
-                  <text wx:if="{{item.machineType}}" class="process-item__machine">{{item.machineType}}</text>
-                  <text wx:if="{{item.difficulty}}" class="process-item__diff">{{item.difficulty}}</text>
+          <view
+            wx:for="{{allProcesses}}"
+            wx:key="_key"
+            class="process-item {{index === allProcesses.length - 1 ? 'process-item--last' : ''}} {{item._expanded ? 'process-item--expanded' : ''}} {{item._scanCount > 0 ? 'process-item--clickable' : ''}}"
+            data-idx="{{index}}"
+            catchtap="onProcessItemTap"
+          >
+            <view class="process-item__main">
+              <view class="process-item__left">
+                <view class="process-item__index">{{index + 1}}</view>
+                <view class="process-item__info">
+                  <text class="process-item__name">{{item._name}}</text>
+                  <view class="process-item__meta">
+                    <text wx:if="{{item._stage}}" class="process-item__stage">{{item._stage}}</text>
+                    <text wx:if="{{item.machineType}}" class="process-item__machine">{{item.machineType}}</text>
+                    <text wx:if="{{item.difficulty}}" class="process-item__diff">{{item.difficulty}}</text>
+                  </view>
+                </view>
+              </view>
+              <view class="process-item__right">
+                <text wx:if="{{item._price}}" class="process-item__price">¥{{item._price}}</text>
+                <view class="process-item__status process-item__status--{{item._status}}">
+                  <text class="status-dot"></text>
+                  <text class="status-text">{{item._statusText}}</text>
+                </view>
+                <view wx:if="{{item._scanCount > 0}}" class="process-item__arrow {{item._expanded ? 'process-item__arrow--up' : ''}}"></view>
+              </view>
+            </view>
+
+            <!-- 展开区：扫码记录列表 -->
+            <view wx:if="{{item._expanded && item._scanRecords.length > 0}}" class="process-item__expand">
+              <view class="scan-summary">
+                <text class="scan-summary__label">扫码记录</text>
+                <text class="scan-summary__count">{{item._scanCount}}条</text>
+                <text wx:if="{{item._completedQty > 0}}" class="scan-summary__done">已完成 {{item._completedQty}}件</text>
+                <text wx:if="{{item._receivedQty > 0}}" class="scan-summary__received">已领 {{item._receivedQty}}件</text>
+              </view>
+              <view class="scan-record-list">
+                <view wx:for="{{item._scanRecords}}" wx:for-item="rec" wx:for-index="ri" wx:key="ri" class="scan-record-item">
+                  <view class="scan-record-item__top">
+                    <text class="scan-record-item__op scan-record-item__op--{{rec._operationText}}">{{rec._operationText}}</text>
+                    <text class="scan-record-item__time">{{rec._displayTime || '-'}}</text>
+                  </view>
+                  <view class="scan-record-item__body">
+                    <text class="scan-record-item__operator">{{rec.operatorName}}</text>
+                    <text wx:if="{{rec.color}}" class="scan-record-item__color">· {{rec.color}}</text>
+                    <text wx:if="{{rec.size}}" class="scan-record-item__size">· {{rec.size}}</text>
+                    <text wx:if="{{rec.quantity > 0}}" class="scan-record-item__qty">· {{rec.quantity}}件</text>
+                  </view>
                 </view>
               </view>
             </view>
-            <text wx:if="{{item._price}}" class="process-item__price">¥{{item._price}}</text>
           </view>
         </view>
         <view wx:else class="empty-hint"><text class="empty-hint__text">暂无工序配置，请在 PC 端配置</text></view>
@@ -225,9 +264,9 @@
             <view class="bom-item__main">
               <text class="bom-item__name">{{item.processName || '-'}}</text>
               <view class="bom-item__meta">
-                <text wx:if="{{item.processType}}" class="bom-item__tag">{{item.processType}}</text>
+                <text wx:if="{{item.processTypeText}}" class="bom-item__tag">{{item.processTypeText}}</text>
                 <text wx:if="{{item.factoryName}}" class="bom-item__sub">{{item.factoryName}}</text>
-                <text wx:if="{{item.status}}" class="bom-item__sub">{{item.status}}</text>
+                <text wx:if="{{item.statusText}}" class="bom-item__sub">{{item.statusText}}</text>
               </view>
             </view>
             <view class="bom-item__right">
