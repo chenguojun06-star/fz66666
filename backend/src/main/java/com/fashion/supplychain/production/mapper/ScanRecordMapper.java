@@ -136,7 +136,9 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  sr.scan_type AS scanType,",
                         "  COALESCE(SUM(sr.quantity), 0) AS quantity,",
                         /* 与 selectPersonalStats 保持一致：total_amount → scan_cost → unit_price×quantity 兜底 */
-                        "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount, 0), NULLIF(sr.scan_cost, 0), sr.unit_price * sr.quantity, 0)), 0) AS totalAmount",
+                        "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount, 0), NULLIF(sr.scan_cost, 0), sr.unit_price * sr.quantity, 0)), 0) AS totalAmount,",
+                        /* P1 修复（工资链路断点5）：返回单价原始值供 PayrollSettlementOrchestrator 直读，避免反推精度损失 */
+                        "  COALESCE(MAX(NULLIF(sr.process_unit_price, 0)), MAX(NULLIF(sr.unit_price, 0)), 0) AS unitPrice",
                         "FROM t_scan_record sr",
                         "WHERE sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",

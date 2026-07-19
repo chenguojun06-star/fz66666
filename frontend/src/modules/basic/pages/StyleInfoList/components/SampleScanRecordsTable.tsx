@@ -106,6 +106,36 @@ const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ pattern
       width: 170,
     },
     {
+      title: '数量',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 70,
+      align: 'right' as const,
+      render: (v: number | null | undefined) => (v != null && v > 0 ? `${v} 件` : '-'),
+    },
+    {
+      title: '单价',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      width: 90,
+      align: 'right' as const,
+      render: (v: number | null | undefined) =>
+        v != null && v > 0 ? `¥${Number(v).toFixed(2)}` : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>,
+    },
+    {
+      title: '工资',
+      dataIndex: 'scanCost',
+      key: 'scanCost',
+      width: 100,
+      align: 'right' as const,
+      render: (v: number | null | undefined) =>
+        v != null && v > 0 ? (
+          <span style={{ color: 'var(--color-success)', fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span>
+        ) : (
+          <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
+        ),
+    },
+    {
       title: '仓库',
       dataIndex: 'warehouseCode',
       key: 'warehouseCode',

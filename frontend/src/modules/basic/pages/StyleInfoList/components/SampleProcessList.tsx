@@ -398,6 +398,15 @@ export default function SampleProcessList({
       render: (val: string) => <span style={{ fontWeight: 600 }}>{val}</span>,
     },
     {
+      title: '单价',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      width: 80,
+      align: 'right' as const,
+      render: (v: number | null | undefined) =>
+        v != null && v > 0 ? `¥${Number(v).toFixed(2)}` : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>,
+    },
+    {
       title: '领取人',
       dataIndex: 'receiver',
       key: 'receiver',

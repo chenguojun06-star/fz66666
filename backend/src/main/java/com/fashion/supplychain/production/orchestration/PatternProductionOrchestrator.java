@@ -461,15 +461,23 @@ public class PatternProductionOrchestrator {
         String effectiveColor = StringUtils.hasText(color) ? color : pattern.getColor();
         String effectiveSize = StringUtils.hasText(size) ? size : pattern.getSize();
 
+        // P1 修复（工资链路断点4）：unitPrice 为空时兜底查 StyleProcess.price
+        // 避免 workflowAction "complete" 路径传 null unitPrice 导致工资为 0
+        BigDecimal effectiveUnitPrice = unitPrice;
+        if (effectiveUnitPrice == null || effectiveUnitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            effectiveUnitPrice = lookupStyleProcessPrice(pattern.getStyleId(),
+                    StringUtils.hasText(processName) ? processName : patternOperationLabel(operationType));
+        }
+
         PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName,
                 operatorRole, remark, quantity, effectiveColor, effectiveSize,
-                warehouseCode, warehouseAreaId, warehouseLocationCode, processName, progressStage, unitPrice);
+                warehouseCode, warehouseAreaId, warehouseLocationCode, processName, progressStage, effectiveUnitPrice);
         patternScanRecordService.save(scanRecord);
 
         // 自动追加操作日志到 PatternProduction.remarks（与大货 ProductionOrder.remarks 一致）
         appendPatternRemark(pattern, operationType, operatorName, scanRecord, unitPrice);
 
-        syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice, effectiveColor, effectiveSize);
+        syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, effectiveUnitPrice, effectiveColor, effectiveSize);
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
         if ("COMPLETE".equals(operationType.trim()) || "WAREHOUSE_IN".equals(operationType.trim())) {
@@ -547,39 +555,91 @@ public class PatternProductionOrchestrator {
         return scanRecord;
     }
 
+    /**
+     * P1 修复（工资链路断点1/2/3）：
+     * 1. 同步写 unitPrice（旧字段）+ processUnitPrice（新字段），保证工资 SQL 三层兜底都能命中
+     * 2. 同步写 totalAmount（= unitPrice × qty），保证工资 SQL 第一层兜底命中
+     * 3. 移除 try-catch，fail-safe 让外层 @Transactional 回滚，避免镜像悬挂
+     * 4. 与 submitScan 的 createPatternScanRecord 保持字段一致
+     */
     private void syncToScanRecord(PatternProduction pattern, String operationType,
             String operatorId, String operatorName, String remark, BigDecimal unitPrice,
             String effectiveColor, String effectiveSize) {
+        ScanRecord sr = new ScanRecord();
+        sr.setScanType("pattern");
+        sr.setScanResult("success");
+        sr.setOperatorId(operatorId);
+        sr.setOperatorName(operatorName);
+        sr.setScanTime(LocalDateTime.now());
+        sr.setStyleNo(pattern.getStyleNo());
+        sr.setOrderNo(pattern.getStyleNo());
+        sr.setColor(effectiveColor);
+        sr.setSize(effectiveSize);
+        String processLabel = patternOperationLabel(operationType);
+        sr.setProcessName(processLabel);
+        sr.setProcessCode(processLabel);
+        sr.setProgressStage(processLabel);
+        int patternQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
+        sr.setQuantity(patternQty);
+        if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(patternQty));
+            // 双写：unitPrice（旧字段） + processUnitPrice（新字段）
+            sr.setUnitPrice(unitPrice);
+            sr.setProcessUnitPrice(unitPrice);
+            sr.setScanCost(totalCost);
+            sr.setTotalAmount(totalCost);
+        }
+        sr.setTenantId(UserContext.tenantId());
+        sr.setFactoryId(null);
+        // 样衣没有菲号概念，保留 null（cuttingBundleNo 字段为 Integer 类型）
+        sr.setCuttingBundleNo(null);
+        sr.setRemark(remark);
+        sr.setCreateTime(LocalDateTime.now());
+        scanRecordService.saveScanRecord(sr);
+    }
+
+    /**
+     * P1 修复（工资链路断点4兜底）：查询 StyleProcess.price 作为 unitPrice 兜底
+     * <p>
+     * 匹配策略（按精确度递减）：
+     * 1. processName 精确匹配（前端传入的工序名）
+     * 2. processCode 匹配（operationType 作为 code）
+     * 3. processName LIKE 模糊匹配（容忍"完成确认" vs "完成"等差异）
+     * 4. 返回 null（查不到，工资为 0，由人工补录）
+     */
+    private BigDecimal lookupStyleProcessPrice(String styleId, String processNameOrLabel) {
+        if (!StringUtils.hasText(styleId) || !StringUtils.hasText(processNameOrLabel)) {
+            return null;
+        }
         try {
-            ScanRecord sr = new ScanRecord();
-            sr.setScanType("pattern");
-            sr.setScanResult("success");
-            sr.setOperatorId(operatorId);
-            sr.setOperatorName(operatorName);
-            sr.setScanTime(LocalDateTime.now());
-            sr.setStyleNo(pattern.getStyleNo());
-            sr.setOrderNo(pattern.getStyleNo());
-            sr.setColor(effectiveColor);
-            sr.setSize(effectiveSize);
-            String processLabel = patternOperationLabel(operationType);
-            sr.setProcessName(processLabel);
-            sr.setProcessCode(processLabel);
-            sr.setProgressStage(processLabel);
-            int patternQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
-            sr.setQuantity(patternQty);
-            if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
-                sr.setProcessUnitPrice(unitPrice);
-                sr.setScanCost(unitPrice.multiply(BigDecimal.valueOf(patternQty)));
+            Long sid = Long.valueOf(styleId);
+            // 策略1：processName 精确匹配
+            com.fashion.supplychain.style.entity.StyleProcess sp = styleProcessService.lambdaQuery()
+                    .eq(com.fashion.supplychain.style.entity.StyleProcess::getStyleId, sid)
+                    .eq(com.fashion.supplychain.style.entity.StyleProcess::getProcessName, processNameOrLabel)
+                    .last("LIMIT 1")
+                    .one();
+            if (sp != null && sp.getPrice() != null && sp.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                return sp.getPrice();
             }
-            sr.setTenantId(UserContext.tenantId());
-            sr.setFactoryId(null);
-            // 样衣没有菲号概念，保留 null（cuttingBundleNo 字段为 Integer 类型）
-            sr.setCuttingBundleNo(null);
-            sr.setRemark(remark);
-            sr.setCreateTime(LocalDateTime.now());
-            scanRecordService.saveScanRecord(sr);
-        } catch (Exception e) {
-            log.warn("样衣扫码同步写入ScanRecord失败，不影响主流程", e);
+            // 策略2：模糊匹配（processName 包含查询关键词，或反过来）
+            List<com.fashion.supplychain.style.entity.StyleProcess> candidates = styleProcessService.lambdaQuery()
+                    .eq(com.fashion.supplychain.style.entity.StyleProcess::getStyleId, sid)
+                    .last("LIMIT 50")
+                    .list();
+            if (candidates != null) {
+                for (com.fashion.supplychain.style.entity.StyleProcess p : candidates) {
+                    if (p.getPrice() == null || p.getPrice().compareTo(BigDecimal.ZERO) <= 0) continue;
+                    String pn = p.getProcessName();
+                    if (pn == null) continue;
+                    if (pn.contains(processNameOrLabel) || processNameOrLabel.contains(pn)) {
+                        return p.getPrice();
+                    }
+                }
+            }
+            return null;
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
@@ -932,45 +992,47 @@ public class PatternProductionOrchestrator {
         }
     }
 
+    /**
+     * P1 修复（工资链路断点3）：completeByTask 路径单价兜底
+     * <p>
+     * 原问题：用 processLabel（如"完成确认"）精确匹配 StyleProcess.processName（如"裁剪"），
+     * 大概率匹配不到，单价为 null，工资为 0。
+     * <p>
+     * 修复策略：
+     * 1. 使用 lookupStyleProcessPrice 模糊匹配（精确 → 包含 → 反包含）
+     * 2. 双写 unitPrice + processUnitPrice + scanCost + totalAmount，与 syncToScanRecord 一致
+     * 3. 移除 try-catch，fail-safe 让外层事务回滚
+     */
     private void createPatternScanRecordForWage(PatternProduction pattern, String processLabel,
                                                   String operatorId, String operatorName, LocalDateTime scanTime) {
-        try {
-            ScanRecord sr = new ScanRecord();
-            sr.setScanType("pattern");
-            sr.setScanResult("success");
-            sr.setOperatorId(operatorId);
-            sr.setOperatorName(operatorName);
-            sr.setScanTime(scanTime);
-            sr.setStyleNo(pattern.getStyleNo());
-            sr.setOrderNo(pattern.getStyleNo());
-            sr.setColor(pattern.getColor());
-            sr.setProcessName(processLabel);
-            sr.setProcessCode(processLabel);
-            sr.setProgressStage(processLabel);
-            int qty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
-            sr.setQuantity(qty);
-            sr.setTenantId(UserContext.tenantId());
-            sr.setFactoryId(null);
-            sr.setCuttingBundleNo(null);
-            sr.setCreateTime(LocalDateTime.now());
-            scanRecordService.saveScanRecord(sr);
-            try {
-                com.fashion.supplychain.style.entity.StyleProcess sp = styleProcessService.lambdaQuery()
-                        .eq(com.fashion.supplychain.style.entity.StyleProcess::getStyleId, pattern.getStyleId())
-                        .eq(com.fashion.supplychain.style.entity.StyleProcess::getProcessName, processLabel)
-                        .last("LIMIT 1")
-                        .one();
-                if (sp != null && sp.getPrice() != null && sp.getPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    sr.setProcessUnitPrice(sp.getPrice());
-                    sr.setScanCost(sp.getPrice().multiply(java.math.BigDecimal.valueOf(qty)));
-                    scanRecordService.updateById(sr);
-                }
-            } catch (Exception ex) {
-                log.debug("样衣ScanRecord工序单价查询失败，不影响主流程: {}", ex.getMessage());
-            }
-        } catch (Exception e) {
-            log.warn("样衣操作同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
+        ScanRecord sr = new ScanRecord();
+        sr.setScanType("pattern");
+        sr.setScanResult("success");
+        sr.setOperatorId(operatorId);
+        sr.setOperatorName(operatorName);
+        sr.setScanTime(scanTime);
+        sr.setStyleNo(pattern.getStyleNo());
+        sr.setOrderNo(pattern.getStyleNo());
+        sr.setColor(pattern.getColor());
+        sr.setProcessName(processLabel);
+        sr.setProcessCode(processLabel);
+        sr.setProgressStage(processLabel);
+        int qty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
+        sr.setQuantity(qty);
+        sr.setTenantId(UserContext.tenantId());
+        sr.setFactoryId(null);
+        sr.setCuttingBundleNo(null);
+        sr.setCreateTime(LocalDateTime.now());
+        // 兜底查询单价，避免工资为 0
+        BigDecimal unitPrice = lookupStyleProcessPrice(pattern.getStyleId(), processLabel);
+        if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(qty));
+            sr.setUnitPrice(unitPrice);
+            sr.setProcessUnitPrice(unitPrice);
+            sr.setScanCost(totalCost);
+            sr.setTotalAmount(totalCost);
         }
+        scanRecordService.saveScanRecord(sr);
     }
 
     /**

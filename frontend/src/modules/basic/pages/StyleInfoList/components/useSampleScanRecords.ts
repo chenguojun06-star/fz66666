@@ -12,6 +12,12 @@ export interface ScanRecord {
   warehouseCode: string;
   remark: string;
   scanTime: string | null;
+  /** P1 修复：单价（元/件），后端 PatternScanRecord.unitPrice 透出 */
+  unitPrice?: number | null;
+  /** P1 修复：扫码工资（= unitPrice × quantity），后端 PatternScanRecord.scanCost 透出 */
+  scanCost?: number | null;
+  /** 数量（部分接口返回） */
+  quantity?: number | null;
 }
 
 const STAGE_KEY_MAP: Record<string, string[]> = {

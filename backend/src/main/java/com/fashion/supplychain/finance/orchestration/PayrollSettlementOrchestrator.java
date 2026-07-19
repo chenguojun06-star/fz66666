@@ -175,9 +175,17 @@ public class PayrollSettlementOrchestrator {
             if (amount == null) {
                 amount = BigDecimal.ZERO;
             }
-            BigDecimal up = qty > 0
-                    ? amount.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
+            // P1 修复（工资链路断点5）：优先直读 SQL 返回的 unitPrice（process_unit_price 优先，unit_price 兜底）
+            // 避免反推 amount/qty 的精度损失（如 3.33×3=9.99，反推得 3.33，但 3.333×3=9.999 取整后反推得 3.33 损失精度）
+            BigDecimal storedUnitPrice = toBigDecimal(row.get("unitPrice"));
+            BigDecimal up;
+            if (storedUnitPrice != null && storedUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                up = storedUnitPrice;
+            } else if (qty > 0) {
+                up = amount.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP);
+            } else {
+                up = BigDecimal.ZERO;
+            }
             row.put("unitPrice", up);
 
             String processCode = TextUtils.safeText(row.get("processCode"));

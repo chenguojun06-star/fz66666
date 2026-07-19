@@ -216,6 +216,9 @@ public class PatternProductionController {
             item.put("warehouseLocationCode", r.getWarehouseLocationCode());
             item.put("remark", r.getRemark());
             item.put("scanTime", r.getScanTime() != null ? r.getScanTime().format(fmt) : null);
+            // P1 修复（PC端缺失1）：透出 unitPrice / scanCost，供前端显示单价和扫码工资
+            item.put("unitPrice", r.getUnitPrice());
+            item.put("scanCost", r.getScanCost());
             return item;
         }).collect(Collectors.toList());
 
@@ -448,7 +451,14 @@ public class PatternProductionController {
                         ? r.getQuantity()
                         : ((pp != null && pp.getQuantity() != null) ? pp.getQuantity() : 1);
                 item.put("quantity", qty);
-                item.put("unitPrice", null);
+                // P1 修复（PC端缺失2）：不再显式置 null，透出实际单价 + 计算扫码工资
+                java.math.BigDecimal unitPrice = r.getUnitPrice();
+                item.put("unitPrice", unitPrice);
+                if (unitPrice != null && unitPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    item.put("scanCost", unitPrice.multiply(java.math.BigDecimal.valueOf(qty)));
+                } else {
+                    item.put("scanCost", r.getScanCost());
+                }
                 item.put("patternProductionId", r.getPatternProductionId());
                 item.put("orderId", pp != null ? pp.getId() : null);
                 item.put("orderNo", r.getStyleNo());
