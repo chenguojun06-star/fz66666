@@ -57,7 +57,7 @@
       wx:key="id"
       data-id="{{item.id}}"
       data-item="{{item}}"
-      bindtap="onCardTap"
+      catchtap="onCardTap"
     >
       <!-- 封面 + 信息 -->
       <view class="card-top">
@@ -117,43 +117,8 @@
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
       </view>
 
-      <!-- 展开区：基本信息 + 配置好的子工序 + 多码多色 -->
+      <!-- 展开区：多码多色 + 配置好的子工序 -->
       <view class="card-expand-area" wx:if="{{item.expanded}}">
-        <!-- 基本信息（领取人/时间/完成时间/款号/颜色/尺码/数量） -->
-        <view class="expand-section">
-          <text class="section-title">基本信息</text>
-          <view class="facts-grid">
-            <view class="fact-item">
-              <text class="fact-label">领取人</text>
-              <text class="fact-value">{{item.receiver || '-'}}</text>
-            </view>
-            <view class="fact-item">
-              <text class="fact-label">领取时间</text>
-              <text class="fact-value">{{item._receiveTimeShort || '-'}}</text>
-            </view>
-            <view class="fact-item">
-              <text class="fact-label">完成时间</text>
-              <text class="fact-value">{{item._completeTimeShort || '-'}}</text>
-            </view>
-            <view class="fact-item">
-              <text class="fact-label">款号</text>
-              <text class="fact-value">{{item.styleNo || '-'}}</text>
-            </view>
-            <view class="fact-item">
-              <text class="fact-label">颜色</text>
-              <text class="fact-value">{{item.color || '-'}}</text>
-            </view>
-            <view class="fact-item">
-              <text class="fact-label">尺码</text>
-              <text class="fact-value">{{item.size || '-'}}</text>
-            </view>
-            <view class="fact-item">
-              <text class="fact-label">数量</text>
-              <text class="fact-value">{{item.quantity || '-'}}件</text>
-            </view>
-          </view>
-        </view>
-
         <!-- 多码多色矩阵（如有） -->
         <view wx:if="{{item._matrix.sizes.length > 0}}" class="expand-section">
           <text class="section-title">多码多色</text>
