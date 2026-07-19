@@ -11,7 +11,7 @@ const { TextArea } = Input;
 interface RemarkTimelineModalProps {
   open: boolean;
   onClose: () => void;
-  targetType: 'order' | 'style';
+  targetType: 'order' | 'style' | 'pattern';
   targetNo: string;
   defaultRole?: string;
   canAddRemark?: boolean;
@@ -93,7 +93,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
     }
   };
 
-  const title = targetType === 'order' ? `订单备注 — ${targetNo}` : `款式备注 — ${targetNo}`;
+  const title = targetType === 'order' ? `订单备注 — ${targetNo}` : targetType === 'pattern' ? `样衣备注日志 — ${targetNo}` : `款式备注 — ${targetNo}`;
 
   return (
     <Drawer

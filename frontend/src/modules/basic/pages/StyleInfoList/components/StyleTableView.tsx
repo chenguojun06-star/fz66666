@@ -21,6 +21,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
+import { remarkApi } from '@/services/system/remarkApi';
+import type { OrderRemark } from '@/services/system/remarkApi';
 import StyleCopyModal from './StyleCopyModal';
 import useSampleStage from './useSampleStage';
 import useSampleProcessProgress from './useSampleProcessProgress';
@@ -32,6 +34,65 @@ import useConfirmStage from './useConfirmStage';
 import useStagePanel from './useStagePanel';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import { getFieldValue, renderCellValue } from '@/hooks/useExtColumns';
+
+/** 样衣备注日志预览（展示最近 3 条，与小程序「备注日志」tab 数据同源：t_order_remark where targetType=pattern） */
+const PatternRemarkPreview: React.FC<{ patternId: string }> = ({ patternId }) => {
+  const [list, setList] = useState<OrderRemark[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!patternId) return;
+    let cancelled = false;
+    setLoading(true);
+    remarkApi.list({ targetType: 'pattern', targetNo: patternId })
+      .then((res: any) => {
+        if (cancelled) return;
+        const arr = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        setList(arr.slice(0, 3));
+      })
+      .catch(() => { if (!cancelled) setList([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [patternId]);
+
+  if (loading) return <Skeleton active paragraph={{ rows: 2 }} />;
+  if (list.length === 0) {
+    return (
+      <div style={{ padding: '12px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+        暂无备注日志
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {list.map((r) => (
+        <div
+          key={r.id}
+          style={{
+            padding: '8px 10px',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border-light)',
+            borderRadius: 6,
+            fontSize: 13,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span>
+              <strong>{r.authorName || '匿名'}</strong>
+              {r.authorRole && <Tag style={{ marginLeft: 8 }}>{r.authorRole}</Tag>}
+            </span>
+            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+              {r.createTime ? String(r.createTime).replace('T', ' ').substring(0, 16) : ''}
+            </span>
+          </div>
+          <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--color-text-secondary)' }}>
+            {r.content}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 interface StyleTableViewProps {
   data: StyleInfo[];
@@ -80,6 +141,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
 
   const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string; defaultRole?: string }>({ open: false, styleNo: '' });
+  const [patternRemarkTarget, setPatternRemarkTarget] = useState<{ open: boolean; patternId: string }>({ open: false, patternId: '' });
   const [expandedParentStage, setExpandedParentStage] = useState<string | null>(null);
   const [assigningData, setAssigningData] = useState<{ open: boolean; patternId: string; currentAssignee: string }>({ open: false, patternId: '', currentAssignee: '' });
   const [assignForm] = Form.useForm();
@@ -513,6 +575,25 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     />
                   </div>
                 ) : null}
+                {sample.sampleSnapshot ? (
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                        备注日志
+                        <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
+                          — 样衣 {sample.sampleSnapshot.id}
+                        </span>
+                      </div>
+                      <Button
+                        size="small"
+                        onClick={() => setPatternRemarkTarget({ open: true, patternId: String(sample.sampleSnapshot?.id || '') })}
+                      >
+                        查看全部
+                      </Button>
+                    </div>
+                    <PatternRemarkPreview patternId={String(sample.sampleSnapshot.id)} />
+                  </div>
+                ) : null}
                 {selectedStage.stage.key === 'procurement' ? (
                   <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -858,6 +939,14 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         targetType="style"
         targetNo={remarkTarget.styleNo}
         defaultRole={remarkTarget.defaultRole}
+      />
+
+      {/* 样衣备注日志弹窗（与小程序「备注日志」tab 数据同源：t_order_remark where targetType=pattern） */}
+      <RemarkTimelineModal
+        open={patternRemarkTarget.open}
+        onClose={() => setPatternRemarkTarget({ open: false, patternId: '' })}
+        targetType="pattern"
+        targetNo={patternRemarkTarget.patternId}
       />
 
       {/* 样衣指派弹窗 */}

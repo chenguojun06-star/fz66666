@@ -52,6 +52,9 @@ public class OrderRemarkController {
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.PatternProductionService patternProductionService;
+
     // 兼容两种格式：
     // 1. 旧格式：[MM-DD HH:mm] 或 [MM-DD HH:mm:ss]
     // 2. 新格式：[yyyy-MM-dd HH:mm:ss]（与 OperationLogAppendUtil / OrderRemarkHelper 统一）
@@ -104,6 +107,11 @@ public class OrderRemarkController {
             result.sort(Comparator.comparing(OrderRemark::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder())));
         } else if ("style".equals(targetType)) {
             List<OrderRemark> inlineRemarks = extractStyleInlineRemarks(targetNo);
+            result.addAll(inlineRemarks);
+            result.sort(Comparator.comparing(OrderRemark::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder())));
+        } else if ("pattern".equals(targetType)) {
+            // 样衣开发：合并 t_pattern_production.remarks 拆行展示
+            List<OrderRemark> inlineRemarks = extractPatternInlineRemarks(targetNo);
             result.addAll(inlineRemarks);
             result.sort(Comparator.comparing(OrderRemark::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder())));
         }
@@ -245,6 +253,27 @@ public class OrderRemarkController {
             result.add(r);
         }
         return result;
+    }
+
+    /**
+     * 样衣开发：从 t_pattern_production.remarks 提取行内备注
+     * targetNo = patternProduction.id
+     */
+    private List<OrderRemark> extractPatternInlineRemarks(String patternId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        com.fashion.supplychain.production.entity.PatternProduction pattern = patternProductionService.lambdaQuery()
+                .select(com.fashion.supplychain.production.entity.PatternProduction::getId,
+                        com.fashion.supplychain.production.entity.PatternProduction::getRemarks)
+                .eq(com.fashion.supplychain.production.entity.PatternProduction::getId, patternId)
+                .eq(com.fashion.supplychain.production.entity.PatternProduction::getTenantId, tenantId)
+                .eq(com.fashion.supplychain.production.entity.PatternProduction::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (pattern == null || !StringUtils.hasText(pattern.getRemarks())) {
+            return Collections.emptyList();
+        }
+        return parseInlineRemarks(pattern.getRemarks().trim(), "pattern", patternId);
     }
 
     private List<OrderRemark> parseInlineRemarks(String remarks, String targetType, String targetNo) {

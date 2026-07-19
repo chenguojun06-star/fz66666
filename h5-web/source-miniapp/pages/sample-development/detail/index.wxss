@@ -750,6 +750,81 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 备注日志时间线（与 PC 端同步：扫码/进度更新等操作自动写入） */
+.remark-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.remark-timeline__item {
+  display: flex;
+  gap: 10px;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  box-sizing: border-box;
+}
+.remark-timeline__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.remark-timeline__avatar-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-white);
+  font-weight: var(--font-weight-bold);
+}
+.remark-timeline__body {
+  flex: 1;
+  min-width: 0;
+}
+.remark-timeline__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.remark-timeline__author {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remark-timeline__role {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xxs);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.remark-timeline__time {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.remark-timeline__content {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-medium);
+  word-break: break-all;
+}
+
 /* ========== 3. 附件文件 ========== */
 .attachment-list {
   display: flex;

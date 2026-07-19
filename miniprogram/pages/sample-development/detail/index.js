@@ -133,9 +133,13 @@ Page({
     allProcesses: [],          // 全部工序（从 /api/style/process/list 加载）
     processLoading: false,
 
-    // 扫码记录
+    // 工序内嵌扫码记录（用于工序展开区展示，不再单独作为 tab）
     scanRecords: [],
     scanLoading: false,
+
+    // 备注日志（BOM 清单下方 tab，与 PC 端同步：拉取 t_order_remark where targetType=pattern）
+    patternRemarkList: [],
+    patternRemarkLoading: false,
 
     // BOM 物料
     bomList: [],
@@ -153,14 +157,14 @@ Page({
     expandedStageKey: '',
 
     // 资料标签
-    activeTab: 'bom',       // bom/pattern/size/process/secondary/scan/attachment
+    activeTab: 'bom',       // bom/pattern/size/process/secondary/remark/attachment
     tabs: [
       { key: 'bom',        name: 'BOM物料' },
       { key: 'pattern',    name: '纸样' },
       { key: 'size',       name: '尺寸表' },
       { key: 'process',    name: '工序' },
       { key: 'secondary',  name: '二次工艺' },
-      { key: 'scan',       name: '扫码记录' },
+      { key: 'remark',     name: '备注日志' },
       { key: 'attachment', name: '附件' },
     ],
 
@@ -280,6 +284,7 @@ Page({
       this.loadRemarks();
       this._loadProcessesAndScans();
       this._loadBomAndSizes();
+      this._loadPatternRemarks();
     } catch (e) {
       this.setData({ loading: false });
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -722,6 +727,44 @@ Page({
       wx.showToast({ title: '提交失败', icon: 'none' });
     }
     this.setData({ submittingRemark: false });
+  },
+
+  // === 备注日志（与 PC 端同步：拉取 t_order_remark where targetType=pattern） ===
+
+  async _loadPatternRemarks() {
+    const snapshot = this.data.patternSnapshot || {};
+    const pid = String(snapshot.id || this.data.patternId || '');
+    if (!pid) return;
+    this.setData({ patternRemarkLoading: true });
+    try {
+      const res = await production.listOrderRemarks('pattern', pid);
+      const list = res?.data?.records || res?.data || res?.records || [];
+      const rawList = Array.isArray(list) ? list : [];
+      const patternRemarkList = rawList.map(function (item, idx) {
+        const authorName = item.authorName || item.createdByName || '匿名';
+        return Object.assign({}, item, {
+          _timeText: this._formatPatternRemarkTime(item.createTime || item.createdAt),
+          _roleLabel: item.authorRole || '',
+          _avatarText: authorName.charAt(0),
+          _avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+          _authorName: authorName,
+          _content: item.content || '',
+        });
+      }.bind(this));
+      this.setData({ patternRemarkList: patternRemarkList });
+    } catch (_e) {
+      // 备注日志加载失败不阻塞主流程
+    }
+    this.setData({ patternRemarkLoading: false });
+  },
+
+  _formatPatternRemarkTime(t) {
+    if (!t) return '';
+    const s = String(t).replace('T', ' ');
+    // 后端格式：yyyy-MM-dd HH:mm:ss
+    if (s.length >= 16) return s.substring(5, 16);
+    if (s.length >= 10) return s.substring(5);
+    return s;
   },
 
   // === 阶段操作（页面内切换，不跳转）===

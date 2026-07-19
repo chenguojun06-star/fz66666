@@ -278,29 +278,29 @@
         <view wx:else class="empty-hint"><text class="empty-hint__text">暂无二次工艺</text></view>
       </view>
 
-      <!-- 扫码记录 -->
-      <view wx:if="{{activeTab === 'scan'}}" class="tab-card">
+      <!-- 备注日志（与 PC 端同步：扫码操作/进度更新等动作会自动写入 t_order_remark where targetType=pattern） -->
+      <view wx:if="{{activeTab === 'remark'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">扫码记录</text>
-          <text class="tab-card__count">{{scanRecords.length}}条</text>
+          <text class="tab-card__title">备注日志</text>
+          <text class="tab-card__count">{{patternRemarkList.length}}条</text>
         </view>
-        <view wx:if="{{scanLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
-        <view wx:elif="{{scanRecords.length > 0}}" class="scan-record-list">
-          <view wx:for="{{scanRecords}}" wx:key="id" class="scan-record-item {{index === scanRecords.length - 1 ? 'scan-record-item--last' : ''}}">
-            <view class="scan-record-item__left">
-              <view class="scan-record-item__dot scan-record-item__dot--{{item.operationType}}"></view>
-              <view class="scan-record-item__info">
-                <text class="scan-record-item__operation">{{item._operationText}}</text>
-                <text wx:if="{{item.processName}}" class="scan-record-item__process">{{item.processName}}</text>
-              </view>
+        <view wx:if="{{patternRemarkLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:elif="{{patternRemarkList.length > 0}}" class="remark-timeline">
+          <view wx:for="{{patternRemarkList}}" wx:key="id" class="remark-timeline__item {{index === patternRemarkList.length - 1 ? 'remark-timeline__item--last' : ''}}">
+            <view class="remark-timeline__avatar" style="background:{{item._avatarColor}};">
+              <text class="remark-timeline__avatar-text">{{item._avatarText}}</text>
             </view>
-            <view class="scan-record-item__right">
-              <text wx:if="{{item.operatorName}}" class="scan-record-item__operator">{{item.operatorName}}</text>
-              <text class="scan-record-item__time">{{item._displayTime}}</text>
+            <view class="remark-timeline__body">
+              <view class="remark-timeline__header">
+                <text class="remark-timeline__author">{{item._authorName}}</text>
+                <text wx:if="{{item._roleLabel}}" class="remark-timeline__role">{{item._roleLabel}}</text>
+                <text class="remark-timeline__time">{{item._timeText}}</text>
+              </view>
+              <view class="remark-timeline__content">{{item._content}}</view>
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无扫码记录</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无备注日志</text></view>
       </view>
 
       <!-- 附件 -->

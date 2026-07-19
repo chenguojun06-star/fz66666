@@ -66,6 +66,9 @@ public class PatternProductionOrchestrator {
     @Autowired
     private com.fashion.supplychain.style.service.StyleProcessService styleProcessService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.service.OrderRemarkService orderRemarkService;
+
     /**
      * 分页查询并丰富样板生产记录（关联款式、工序、采购数据）
      * <p>
@@ -678,6 +681,28 @@ public class PatternProductionOrchestrator {
             patternProductionService.updateById(fresh);
             // 同步到内存对象，供后续逻辑使用
             pattern.setRemarks(merged);
+
+            // === 双写 t_order_remark 表 ===
+            // 与 OrderRemarkHelper.append 双写策略一致，让 PC 端 RemarkTimelineModal
+            // 和小程序「备注日志」tab 都能拉取展示
+            try {
+                if (orderRemarkService != null) {
+                    com.fashion.supplychain.system.entity.OrderRemark record =
+                            new com.fashion.supplychain.system.entity.OrderRemark();
+                    record.setTargetType("pattern");
+                    record.setTargetNo(String.valueOf(fresh.getId()));
+                    record.setAuthorName(operatorName != null ? operatorName : "-");
+                    record.setAuthorRole(actionLabel);
+                    record.setContent(newEntry);
+                    record.setTenantId(fresh.getTenantId());
+                    record.setCreateTime(LocalDateTime.now());
+                    record.setDeleteFlag(0);
+                    orderRemarkService.save(record);
+                }
+            } catch (Exception e) {
+                log.warn("样衣扫码同步t_order_remark失败，不影响主流程: patternId={}, error={}",
+                        pattern.getId(), e.getMessage());
+            }
         } catch (Exception e) {
             log.warn("样衣扫码追加操作日志失败，不影响主流程: patternId={}, error={}", pattern.getId(), e.getMessage());
         }
