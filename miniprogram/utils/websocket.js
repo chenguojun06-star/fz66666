@@ -1,5 +1,6 @@
 const { getBaseUrl } = require('../config');
-const { getToken, getUserInfo } = require('./storage');
+const { getToken, getUserInfo, isTokenExpired } = require('./storage');
+const { refreshTokenRequest } = require('./request');
 const { DEBUG } = require('../config/debug');
 const { eventBus, Events } = require('./eventBus');
 
@@ -68,6 +69,70 @@ var cloudContainerAvailable = true;
 // 事件防抖：同一事件类型在 DEBOUNCE_INTERVAL 内只触发一次
 var DEBOUNCE_INTERVAL = 1000; // 防抖间隔 1秒
 var debounceTimers = {}; // { eventType: timerId }
+// token 刷新中标志：避免并发刷新 + 避免刷新期间反复触发 connect
+var tokenRefreshing = false;
+// token 刷新失败停止重连：refreshToken 也过期时，不再重连，避免刷屏
+// 用户重新登录后调用 connect() 重置此标志
+var tokenRefreshFailed = false;
+
+/**
+ * 确保 token 有效（过期则刷新）
+ * WebSocket 不像 HTTP 请求层有 401 兜底，需在 connect() 之前主动检测
+ * @returns {Promise<boolean>} true=token 有效（原本有效或刷新成功），false=无 token 或刷新失败
+ */
+async function ensureFreshToken() {
+  // 若其他调用栈正在刷新，等待其完成
+  if (tokenRefreshing) {
+    var waitStart = Date.now();
+    while (tokenRefreshing && Date.now() - waitStart < 5000) {
+      await new Promise(function (r) { setTimeout(r, 100); });
+    }
+    // 等待结束后再检查一次
+    return !isTokenExpired() && !!getToken();
+  }
+
+  var token = getToken();
+  if (!token) {
+    if (DEBUG) console.warn('[WebSocket] 无 token，跳过连接（请先登录）');
+    return false;
+  }
+
+  if (!isTokenExpired()) {
+    return true;
+  }
+
+  // token 过期，主动刷新
+  if (DEBUG) console.log('[WebSocket] token 已过期，主动刷新');
+  tokenRefreshing = true;
+  try {
+    var newToken = await refreshTokenRequest();
+    if (!newToken) {
+      console.error('[WebSocket] token 刷新失败（refreshToken 也已过期），停止重连');
+      tokenRefreshFailed = true;
+      // 触发跳转登录
+      try {
+        var storage = require('./storage');
+        storage.clearToken();
+        storage.clearRefreshToken();
+        var pages = getCurrentPages();
+        var cur = pages[pages.length - 1];
+        if (cur && cur.route !== 'pages/login/index') {
+          wx.reLaunch({ url: '/pages/login/index' });
+        }
+      } catch (_) {}
+      return false;
+    }
+    if (DEBUG) console.log('[WebSocket] token 刷新成功，继续连接');
+    tokenRefreshFailed = false;
+    return true;
+  } catch (e) {
+    console.error('[WebSocket] token 刷新异常:', e && e.message ? e.message : e);
+    tokenRefreshFailed = true;
+    return false;
+  } finally {
+    tokenRefreshing = false;
+  }
+}
 
 /**
  * 将 HTTP 基址转换为 WebSocket 地址
@@ -433,8 +498,13 @@ function connectViaWebSocket() {
  * 建立 WebSocket 连接
  * 优先使用 wx.cloud.connectContainer（微信云托管专用通道），
  * 不可用时回退到 wx.connectSocket（标准WebSocket）
+ *
+ * 增量逻辑（2026-07-19）：
+ * - connect() 改为 async，先 await ensureFreshToken() 确保 token 有效
+ * - token 过期则主动调用 refreshTokenRequest() 刷新（与 HTTP 请求层一致）
+ * - refreshToken 也过期时，停止重连并跳转登录页（避免无限重连刷屏）
  */
-function connect() {
+async function connect() {
   // 已连接或正在连接中，不重复建立
   if (connectionState === 'connected' || connectionState === 'connecting') {
     if (DEBUG) console.log('[WebSocket] 已在连接状态，跳过');
@@ -449,9 +519,24 @@ function connect() {
     return;
   }
 
+  // token 刷新已失败（refreshToken 也过期），不再尝试连接
+  // 用户重新登录后调用 connect() 会重置此标志
+  if (tokenRefreshFailed) {
+    if (DEBUG) console.warn('[WebSocket] token 刷新已失败，跳过连接（请重新登录）');
+    return;
+  }
+
   manuallyClosed = false;
   reconnectScheduled = false;
   connectionState = 'connecting';
+
+  // ★ 先确保 token 有效（过期则刷新），再尝试连接
+  var tokenOk = await ensureFreshToken();
+  if (!tokenOk) {
+    connectionState = 'disconnected';
+    // ensureFreshToken 内部已处理跳转登录或刷屏控制
+    return;
+  }
 
   // 优先尝试微信云托管专用通道
   if (canUseCloudContainer()) {
@@ -472,6 +557,13 @@ function connect() {
 function scheduleReconnect() {
   if (manuallyClosed) {
     if (DEBUG) console.log('[WebSocket] 主动断开，不自动重连');
+    return;
+  }
+
+  // token 刷新已失败（refreshToken 也过期）：不再安排重连，避免刷屏
+  // 用户重新登录后调用 connect() 会重置此标志
+  if (tokenRefreshFailed) {
+    if (DEBUG) console.warn('[WebSocket] token 刷新已失败，不再重连（请重新登录）');
     return;
   }
 
@@ -576,6 +668,18 @@ function onPageShow() {
   }
 }
 
+/**
+ * 重置 token 失败状态（用户重新登录后调用）
+ * 清除 tokenRefreshFailed 标志并立即发起连接
+ */
+function onLoginSuccess() {
+  tokenRefreshFailed = false;
+  tokenRefreshing = false;
+  reconnectCount = 0;
+  if (DEBUG) console.log('[WebSocket] 用户重新登录，重置状态并立即连接');
+  connect();
+}
+
 module.exports = {
   connect: connect,
   disconnect: disconnect,
@@ -583,4 +687,5 @@ module.exports = {
   isConnected: isConnected,
   getConnectionState: getConnectionState,
   onPageShow: onPageShow,
+  onLoginSuccess: onLoginSuccess,
 };

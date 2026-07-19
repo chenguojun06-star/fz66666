@@ -950,6 +950,7 @@ Page({
               : r.operationType === 'PLATE' ? '车板'
               : r.operationType === 'FOLLOW_UP' ? '跟单'
               : r.processName || r.operationType || '-',
+            _operationClass: String(r.operationType || 'OTHER').toLowerCase(),
             operatorName: r.operatorName || r.userName || '-',
             quantity: r.quantity || 0,
             color: r.color || '',
@@ -990,6 +991,7 @@ Page({
           : r.operationType === 'PLATE' ? '车板'
           : r.operationType === 'FOLLOW_UP' ? '跟单'
           : r.processName || r.operationType || '',
+        _operationClass: String(r.operationType || 'OTHER').toLowerCase(),
       });
     });
 

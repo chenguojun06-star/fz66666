@@ -235,7 +235,7 @@
               <view class="scan-record-list">
                 <view wx:for="{{item._scanRecords}}" wx:for-item="rec" wx:for-index="ri" wx:key="ri" class="scan-record-item">
                   <view class="scan-record-item__top">
-                    <text class="scan-record-item__op scan-record-item__op--{{rec._operationText}}">{{rec._operationText}}</text>
+                    <text class="scan-record-item__op scan-record-item__op--{{rec._operationClass}}">{{rec._operationText}}</text>
                     <text class="scan-record-item__time">{{rec._displayTime || '-'}}</text>
                   </view>
                   <view class="scan-record-item__body">

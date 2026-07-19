@@ -615,4 +615,4 @@ function unwrapData(res, fallbackMsg) {
   throw createError(msg, { type: 'biz', data: res });
 }
 
-module.exports = { request, uploadFile, isApiSuccess, unwrapData, extractServerMessage };
+module.exports = { request, uploadFile, isApiSuccess, unwrapData, extractServerMessage, refreshTokenRequest };

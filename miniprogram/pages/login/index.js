@@ -31,6 +31,10 @@ async function tryAutoWechatLogin() {
       if (resp.data.user) {
         setUserInfo(resp.data.user);
       }
+      // 用户重新登录后重置 WebSocket 的 token 失败状态并立即发起连接
+      try {
+        require('../../utils/websocket').onLoginSuccess();
+      } catch (_) {}
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return true;
     }
@@ -72,6 +76,10 @@ function finishLogin(user, token, refreshToken) {
   if (user) {
     setUserInfo(user);
   }
+  // 用户重新登录后重置 WebSocket 的 token 失败状态并立即发起连接
+  try {
+    require('../../utils/websocket').onLoginSuccess();
+  } catch (_) {}
   safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
 }
 
