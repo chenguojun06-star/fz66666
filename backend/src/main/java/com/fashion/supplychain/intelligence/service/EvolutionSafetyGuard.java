@@ -24,8 +24,14 @@ public class EvolutionSafetyGuard {
     @Value("${xiaoyun.evolution.auto-deploy-threshold:0.85}")
     private double autoDeployThreshold;
 
-    /** 是否启用自动部署（生产环境建议开启） */
-    @Value("${xiaoyun.evolution.auto-deploy-enabled:${XIAOYUN_EVOLUTION_AUTO_DEPLOY:true}}")
+    /**
+     * 是否启用自动部署。
+     *
+     * <p>【P1-4修复】原默认 true（生产风险：自动应用未审查的进化提案，可能与人工编辑冲突）。
+     * 与 EvolutionPipeline.self-play-enabled、GitHubResearchJob.auto-deploy-enabled 默认值统一为 false。
+     * 生产环境需自进化时显式设置 XIAOYUN_EVOLUTION_AUTO_DEPLOY=true 或 yml 配置。
+     */
+    @Value("${xiaoyun.evolution.auto-deploy-enabled:${XIAOYUN_EVOLUTION_AUTO_DEPLOY:false}}")
     private boolean autoDeployEnabled;
 
     private static final List<String> PROTECTED_TABLES = List.of(

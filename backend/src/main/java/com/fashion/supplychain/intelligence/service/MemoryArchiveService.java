@@ -52,6 +52,13 @@ public class MemoryArchiveService {
     private static final int ARCHIVE_MONTHS = 6;
     private static final String MEMORY_TYPE_ARCHIVAL = "archival_conversation";
 
+    /**
+     * 【P2-3修复】任务开关，默认 true（不影响现有行为）。
+     * 运维可通过 yml/env 关闭：xiaoyun.memory.archive.enabled=false
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.memory.archive.enabled:true}")
+    private boolean archiveEnabled;
+
     @Autowired
     private AiConversationMemoryMapper conversationMemoryMapper;
 
@@ -60,7 +67,24 @@ public class MemoryArchiveService {
     private QdrantService qdrantService;
 
     /**
-     * 每天 03:30 归档 6 个月+ 的对话记忆到 Qdrant。
+     * 每天 03:45 归档 6 个月+ 的对话记忆到 Qdrant。
+     *
+     * <p>【P1-5修复】原 03:30 与 SelfDrillOrchestrator 同时执行，DB连接池瞬时双倍压力。
+     * 错峰到 03:45，与 03:30 的 SelfDrill 错开 15 分钟，避免 DB/Qdrant 资源争抢。
+     *
+     * <p>凌晨cron错峰时间表（03:00-05:00 区间）：
+     * <ul>
+     *   <li>03:15 DatabaseHealthCheckJob</li>
+     *   <li>03:20 WorkerProfileOrchestrator</li>
+     *   <li>03:30 SelfDrillOrchestrator</li>
+     *   <li>03:40 OrderLearningRefreshJob</li>
+     *   <li>03:45 MemoryArchiveService（本任务）</li>
+     *   <li>04:00 SystemDoctorPatrolJob</li>
+     *   <li>04:15 SharedAgentMemoryService</li>
+     *   <li>04:20 GepaPromptOptimizer</li>
+     *   <li>04:30 AiSelfEvolutionJob</li>
+     *   <li>04:45 MemoryNudgeOrchestrator</li>
+     * </ul>
      *
      * <p>流程：
      * <ol>
@@ -69,8 +93,12 @@ public class MemoryArchiveService {
      *   <li>Qdrant 不可用时只软删除（降级）</li>
      * </ol>
      */
-    @Scheduled(cron = "0 30 3 * * ?")
+    @Scheduled(cron = "0 45 3 * * ?")
     public void archiveOldMemories() {
+        if (!archiveEnabled) {
+            log.debug("[L5-Archive] 已禁用（xiaoyun.memory.archive.enabled=false）");
+            return;
+        }
         log.info("[L5-Archive] 开始归档 {} 个月+ 的对话记忆", ARCHIVE_MONTHS);
         int totalArchived = 0;
         int totalFailed = 0;

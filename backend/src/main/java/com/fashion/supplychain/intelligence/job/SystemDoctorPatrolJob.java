@@ -12,8 +12,19 @@ import java.util.List;
 @Lazy
 public class SystemDoctorPatrolJob extends AbstractPatrolJob {
 
+    /**
+     * 【P2-3修复】任务开关，默认 true（不影响现有行为）。
+     * 运维可通过 yml/env 关闭：xiaoyun.job.system-doctor-patrol.enabled=false
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.job.system-doctor-patrol.enabled:true}")
+    private boolean enabled;
+
     @Scheduled(cron = "0 0 4 * * ?")
     public void patrol() {
+        if (!enabled) {
+            log.debug("[SystemDoctor] 已禁用（xiaoyun.job.system-doctor-patrol.enabled=false）");
+            return;
+        }
         log.info("[SystemDoctor] ===== 开始系统医生巡检 =====");
         List<Long> tenants = getActiveTenantIds();
 

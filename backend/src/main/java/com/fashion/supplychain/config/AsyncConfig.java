@@ -47,6 +47,10 @@ public class AsyncConfig implements AsyncConfigurer {
 
     /**
      * AI自我批评专用线程池（低优先级，不影响主业务）。
+     *
+     * <p>【P1-1修复】原 DiscardPolicy 静默丢弃任务，无法观测自批评任务丢失情况。
+     * 现改为自定义 RejectedExecutionHandler，丢弃前记录 WARN 日志（含线程池状态），
+     * 便于运维定位"为何 SelfCritic 评分缺失"问题。仍不阻塞主流程（不抛 RejectedExecutionException）。
      */
     @Bean("aiSelfCriticExecutor")
     public Executor aiSelfCriticExecutor() {
@@ -57,7 +61,12 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setKeepAliveSeconds(120);
         executor.setThreadNamePrefix("ai-critic-");
         executor.setTaskDecorator(contextCopyingDecorator());
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy()); // 队列满时丢弃，不阻塞主流程
+        // 【P1-1修复】有日志的拒绝策略：丢弃前记录WARN，便于观测SelfCritic任务丢失
+        executor.setRejectedExecutionHandler((runnable, pool) -> {
+            log.warn("[aiSelfCriticExecutor] 任务被丢弃（队列满，core={},max={},active={},queue={}）",
+                    pool.getCorePoolSize(), pool.getMaximumPoolSize(),
+                    pool.getActiveCount(), pool.getQueue().size());
+        });
         executor.setWaitForTasksToCompleteOnShutdown(false); // 不等待，快速关闭
         executor.initialize();
         log.info("AI Self-Critic thread pool initialized: core={}, max={}, queue={}",

@@ -17,6 +17,13 @@ import org.springframework.context.annotation.Lazy;
 @Lazy
 public class AiSelfEvolutionJob {
 
+    /**
+     * 【P2-3修复】任务开关，默认 true（不影响现有行为）。
+     * 运维可通过 yml/env 关闭：xiaoyun.job.ai-self-evolution.enabled=false
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.job.ai-self-evolution.enabled:true}")
+    private boolean enabled;
+
     @Autowired
     private AiSelfEvolutionService aiSelfEvolutionService;
 
@@ -28,6 +35,10 @@ public class AiSelfEvolutionJob {
 
     @Scheduled(cron = "0 30 4 * * ?")
     public void runAutoEvolutionForAllTenants() {
+        if (!enabled) {
+            log.debug("[AiSelfEvolutionJob] 已禁用（xiaoyun.job.ai-self-evolution.enabled=false）");
+            return;
+        }
         String lockValue = distributedLockService.tryLock(
                 "job:ai-self-evolution", 30, TimeUnit.MINUTES);
         if (lockValue == null) {

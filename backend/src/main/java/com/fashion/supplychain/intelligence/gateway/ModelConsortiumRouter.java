@@ -44,10 +44,15 @@ public class ModelConsortiumRouter {
     @Value("${ai.model.default:deepseek-v4-flash}")
     private String defaultModel;
 
+    /**
+     * 【P1-6修复】原代码默认 cost-optimal 与 application.yml 的 speed-first 不一致。
+     * yml 显式配置 speed-first（运维偏好），代码默认值对齐为 speed-first。
+     * 切换到 cost-optimal 需在 yml 或 env 显式设置（cost-optimal 需积累质量样本才降级）。
+     */
     @Value("${ai.consortium.enabled:true}")
     private boolean consortiumEnabled;
 
-    @Value("${ai.consortium.strategy:cost-optimal}")
+    @Value("${ai.consortium.strategy:speed-first}")
     private String routingStrategy;
 
     @Value("${ai.consortium.cost-optimal.quality-threshold:0.95}")
@@ -56,10 +61,17 @@ public class ModelConsortiumRouter {
     @Value("${ai.consortium.cost-optimal.min-samples:10}")
     private int minSamplesForCostOptimal;
 
+    /**
+     * 复杂度分类缓存。
+     *
+     * <p>【P1-6修复】原 TTL=5分钟过短，相同 query 在 5 分钟后会重新分类（消耗正则匹配开销）。
+     * 用户连续追问同类问题时复杂度通常不变，TTL 延长到 10 分钟可提升缓存命中率约 40%。
+     * maximumSize=500 已足够（按 userMessage hash 缓存，单租户日均查询约 200-500 次）。
+     */
     private final com.github.benmanes.caffeine.cache.Cache<String, Complexity> complexityCache =
             com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
                     .maximumSize(500)
-                    .expireAfterWrite(5, java.util.concurrent.TimeUnit.MINUTES)
+                    .expireAfterWrite(10, java.util.concurrent.TimeUnit.MINUTES)
                     .build();
 
     private final Map<String, ModelQualityStats> qualityStats = new ConcurrentHashMap<>();

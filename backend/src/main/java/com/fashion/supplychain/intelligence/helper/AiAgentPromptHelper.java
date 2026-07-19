@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 @Component
@@ -56,6 +57,11 @@ public class AiAgentPromptHelper {
     /** GEPA 遗传优化器：对 17 个 prompt 块应用优化值（enabled/weight） */
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.GepaPromptOptimizer gepaPromptOptimizer;
+
+    /** 【P0-2修复】统一进化编排器：用于获取selfCritic近期低分反馈统计（D-021统一可观测） */
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private com.fashion.supplychain.intelligence.orchestration.EvolutionOrchestrator evolutionOrchestrator;
 
     /** P2升级: 结构化输出强制执行 */
     @Autowired(required = false)
@@ -157,7 +163,13 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> memoryBankBlock = isComplex
                 ? supplyAsync(() -> buildMemoryBankContext(tenantId))
                 : emptyFuture;
-        CompletableFuture<String> selfCritiqueCtx = emptyFuture;
+        // 【P0-2修复】SelfCritic低分反馈注入：原为emptyFuture死代码，SelfCritic产出未回流
+        // 调用EvolutionOrchestrator.getUnifiedMetrics提取近7天自评统计，作为"近期低分反馈"上下文
+        // 低优先级LOW：1s超时降级，EvolutionOrchestrator不可用时返回空字符串
+        final Long tenantIdForCritique = tenantId;
+        CompletableFuture<String> selfCritiqueCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> buildSelfCritiqueBlock(tenantIdForCritique));
         CompletableFuture<String> entityMemCtx = (isComplex || isSimpleQuery)
                 ? supplyAsync(() -> contextProvider.buildEntityMemoryContext(tenantId, userMessage))
                 : emptyFuture;
@@ -178,7 +190,11 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> proceduralSopCtx = isSmallTalk
                 ? emptyFuture
                 : supplyAsync(() -> buildProceduralSopBlock(tenantIdForSop, userMessageForSop));
-        CompletableFuture<String> archivalMemCtx = emptyFuture;
+        // 【P0-1修复】L5归档记忆：原为emptyFuture死代码，现接入buildArchivalMemoryBlock
+        // 低优先级LOW：仅在用户消息含"之前/历史/上次"等关键词时触发Qdrant向量召回
+        CompletableFuture<String> archivalMemCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> buildArchivalMemoryBlock(tenantIdForSop, userMessageForSop));
 
         // 按优先级分批等待：HIGH优先级块先等高timeout（影响回答质量的关键上下文）
         // MEDIUM优先级块等中timeout（知识/记忆类）
@@ -388,6 +404,55 @@ public class AiAgentPromptHelper {
             log.debug("[AiAgent-L4SOP] SOP注入失败（不影响主流程）: {}", e.getMessage());
         }
         return "";
+    }
+
+    /**
+     * 【P0-2修复】SelfCritic 近期低分反馈注入。
+     *
+     * <p>原 selfCritiqueCtx 为 emptyFuture 死代码，SelfCritic 产出从未回流到 Prompt。
+     * 现通过 EvolutionOrchestrator.getUnifiedMetrics 提取近7天自评统计：
+     * <ul>
+     *   <li>avg_score — 近7天平均分</li>
+     *   <li>total — 评分总数</li>
+     *   <li>low_score_count — 低分（&lt;75）数量</li>
+     * </ul>
+     *
+     * <p>当 low_score_count &gt; 0 时，提示 AI 关注相关话题时用工具查证。
+     * 降级安全：EvolutionOrchestrator 不可用、SQL 异常或类型转换失败时返回空字符串。
+     *
+     * @param tenantId 租户ID
+     * @return 近期自评反馈摘要文本（可能为空）
+     */
+    private String buildSelfCritiqueBlock(Long tenantId) {
+        if (evolutionOrchestrator == null || tenantId == null) return "";
+        try {
+            Map<String, Object> metrics = evolutionOrchestrator.getUnifiedMetrics(tenantId);
+            Object selfCriticObj = metrics.get("selfCritic");
+            if (!(selfCriticObj instanceof Map)) return "";
+            Map<?, ?> selfCritic = (Map<?, ?>) selfCriticObj;
+            Object available = selfCritic.get("available");
+            if (!Boolean.TRUE.equals(available)) return "";
+            Object last7Days = selfCritic.get("last7Days");
+            if (!(last7Days instanceof Map)) return "";
+            Map<?, ?> stats = (Map<?, ?>) last7Days;
+            Object avgScore = stats.get("avg_score");
+            Object totalObj = stats.get("total");
+            Object lowCountObj = stats.get("low_score_count");
+            if (totalObj == null) return "";
+            long total = ((Number) totalObj).longValue();
+            if (total == 0) return "";
+            long lowCount = lowCountObj != null ? ((Number) lowCountObj).longValue() : 0L;
+            StringBuilder sb = new StringBuilder("\n【近期自评反馈】\n");
+            sb.append(String.format("近7天共 %d 次自评，平均分 %s，低分（<75）%d 次。\n",
+                    total, avgScore != null ? avgScore.toString() : "N/A", lowCount));
+            if (lowCount > 0) {
+                sb.append("请关注：低分反馈意味着之前的回答不够准确或有用，涉及相关话题时请用工具查证后再回答。\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.debug("[AiAgent-SelfCritique] 低分反馈注入失败（不影响主流程）: {}", e.getMessage());
+            return "";
+        }
     }
 
     /**

@@ -16,11 +16,22 @@ import java.util.Map;
 @Lazy
 public class DatabaseHealthCheckJob {
 
+    /**
+     * 【P2-3修复】任务开关，默认 true（不影响现有行为）。
+     * 运维可通过 yml/env 关闭：xiaoyun.job.database-health-check.enabled=false
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.job.database-health-check.enabled:true}")
+    private boolean enabled;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Scheduled(cron = "0 15 3 * * ?")
     public void dailyHealthCheck() {
+        if (!enabled) {
+            log.debug("[DB健康巡检] 已禁用（xiaoyun.job.database-health-check.enabled=false）");
+            return;
+        }
         log.info("[DB健康巡检] 开始每日数据库健康检查...");
 
         List<String> criticals = new ArrayList<>();

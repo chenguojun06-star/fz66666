@@ -31,6 +31,27 @@ public class AiInferenceRouter implements AiInferenceGateway {
     @Value("${ai.gateway.routing-strategy:failover}")
     private String routingStrategy;
 
+    /**
+     * 【P1-10修复】启动时校验 DEEPSEEK_API_KEY 非空。
+     *
+     * <p>原行为：key 为空时启动正常，但所有 AI 功能（对话/视觉/工具调用）都会失败，
+     * 用户排查困难（错误散落在各 Service 中）。
+     *
+     * <p>现行为：
+     * <ul>
+     *   <li>fail-fast-on-empty=true（默认 false）：启动失败，明确提示缺失 key</li>
+     *   <li>fail-fast-on-empty=false（默认）：启动成功，但打印 ERROR 级别告警 + 列出受影响功能</li>
+     * </ul>
+     *
+     * <p>受影响功能：DeepSeek 对话、Spring AI 工具调用、AiAdvisor 日常建议、
+     * SelfCritic 自评分、EvolutionPipeline 自进化、Qdrant 向量检索（embedding 降级）。
+     */
+    @Value("${ai.api-key.fail-fast-on-empty:false}")
+    private boolean failFastOnEmptyApiKey;
+
+    @Value("${ai.deepseek.api-key:${DEEPSEEK_API_KEY:}}")
+    private String deepseekApiKey;
+
     @Autowired
     private LegacyInferenceAdapter legacyAdapter;
 
@@ -54,6 +75,35 @@ public class AiInferenceRouter implements AiInferenceGateway {
 
     private final AtomicInteger springAiConsecutiveFailures = new AtomicInteger(0);
     private final AtomicLong springAiCircuitOpenSince = new AtomicLong(0);
+
+    /**
+     * 【P1-10修复】启动时校验 DEEPSEEK_API_KEY。
+     * 默认仅告警不阻止启动，开启 fail-fast-on-empty=true 可强制阻止启动。
+     */
+    @jakarta.annotation.PostConstruct
+    public void validateApiKey() {
+        boolean keyMissing = deepseekApiKey == null || deepseekApiKey.isBlank();
+        if (!keyMissing) {
+            log.info("[AiInferenceRouter] DEEPSEEK_API_KEY 已配置（长度={}），AI 功能正常可用",
+                    deepseekApiKey.length());
+            return;
+        }
+
+        String affectedFeatures = "DeepSeek 对话 / Spring AI 工具调用 / AiAdvisor 日常建议 / "
+                + "SelfCritic 自评分 / EvolutionPipeline 自进化 / Qdrant 向量检索（embedding 降级）";
+
+        if (failFastOnEmptyApiKey) {
+            String msg = "[AiInferenceRouter] DEEPSEEK_API_KEY 为空且 ai.api-key.fail-fast-on-empty=true，"
+                    + "应用启动被阻止。受影响功能：" + affectedFeatures
+                    + "。解决：设置环境变量 DEEPSEEK_API_KEY 或在 yml 配置 ai.deepseek.api-key";
+            log.error(msg);
+            throw new IllegalStateException(msg);
+        }
+
+        log.error("[AiInferenceRouter] ⚠️ DEEPSEEK_API_KEY 为空！AI 功能将全部失败。受影响功能：{}", affectedFeatures);
+        log.error("[AiInferenceRouter] 解决：设置环境变量 DEEPSEEK_API_KEY 或在 yml 配置 ai.deepseek.api-key");
+        log.error("[AiInferenceRouter] 如需启动失败而非降级，设置 ai.api-key.fail-fast-on-empty=true");
+    }
 
     @Override
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {

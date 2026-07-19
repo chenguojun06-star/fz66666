@@ -88,9 +88,12 @@ public class MemoryNudgeOrchestrator {
 
     /**
      * 定时清理过期的记忆提醒（NUDGE_EXPIRY_HOURS=72）。
-     * 每天凌晨4:30执行，防止PENDING状态堆积。
+     * 每天凌晨 04:45 执行，防止 PENDING 状态堆积。
+     *
+     * <p>【P1-5修复】原 04:30 与 AiSelfEvolutionJob 同时执行。
+     * 错峰到 04:45，避免 DB 写入争抢。完整错峰表见 MemoryArchiveService 注释。
      */
-    @Scheduled(cron = "0 30 4 * * ?")
+    @Scheduled(cron = "0 45 4 * * ?")
     public void scheduledExpireOldNudges() {
         try {
             expireOldNudges();

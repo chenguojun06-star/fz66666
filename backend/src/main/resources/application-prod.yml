@@ -97,19 +97,34 @@ app:
     pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:FashionCloud2026PiiKeyFallback@Prod}
 
 # 生产环境健康检查配置（支持 K8s 探针）
+# 【P1-3修复】原仅暴露 health,info，无法采集 Prometheus 指标；show-details:never 无法诊断
+# 现增加 metrics 和 prometheus 暴露（Prometheus 抓取），show-details 改为 when-authorized（授权用户可看详情）
+# redis 健康检查默认开启，便于发现连接异常
+# 【P1-2修复】AI 组件健康检查：DeepSeek/Qdrant/Agnes/LiteLLM/Langfuse 5 个组件聚合到 /actuator/health/components/ai
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: ${ACTUATOR_ENDPOINTS:health,info,metrics,prometheus}
   endpoint:
     health:
-      show-details: never
+      show-details: when-authorized
+      show-components: when-authorized
       probes:
         enabled: true
+    metrics:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
   health:
-    redis:
-      enabled: false
+    ai:
+      enabled: ${AI_HEALTH_ENABLED:true}  # AI 组件健康检查开关（DeepSeek/Qdrant/Agnes/LiteLLM/Langfuse）
 
 # 微信云托管环境：开放接口服务内网代理使用自签名证书，需信任
 wechat:

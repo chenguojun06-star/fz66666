@@ -22,6 +22,15 @@ import java.util.stream.Collectors;
 @Component
 @Lazy
 @AgentToolDef(name = "ec_stock_query", description = "查询电商跨平台库存、预警和采购建议")
+@McpToolAnnotation(
+        name = "ec_stock_query",
+        description = "查询电商跨平台库存、预警和采购建议：总览库存分布、低库存SKU、未解决预警、待处理采购建议。当用户询问电商库存数量、低库存、库存预警时使用。",
+        domain = ToolDomain.WAREHOUSE,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"电商库存", "库存查询", "低库存", "库存预警", "采购建议"}
+)
 public class EcStockQueryTool {
 
     @Autowired private EcUniversalStockService universalStockService;

@@ -165,8 +165,11 @@ public class QdrantService {
                         .path("params").path("vectors").path("size").asLong(-1);
                 int expectedDim = getVectorDim();
                 if (storedDim > 0 && storedDim != expectedDim) {
-                    log.error("[Qdrant] ⚠️ 向量维度不匹配！集合={} 存储维度={} 当前配置维度={}"
-                            + " — 搜索结果将不可靠，请重建集合或调整 API Key 配置",
+                    // 【P1-7修复】原 log.error 在"无 API Key 走 pseudoEmbedding(128维)"场景下产生大量 ERROR 噪音
+                    // 改为 log.warn：仍保留问题可见性，但不污染 ERROR 级别日志（真正的服务错误才用 ERROR）
+                    // 同时补充降级提示：若使用 pseudoEmbedding 属于配置降级，非故障
+                    log.warn("[Qdrant] 向量维度不匹配（可能为 pseudoEmbedding 降级模式）集合={} 存储维度={} 当前配置维度={}"
+                            + " — 搜索结果可能不可靠，请重建集合或调整 API Key 配置",
                             collectionName, storedDim, expectedDim);
                 } else if (storedDim > 0) {
                     log.info("[Qdrant] 集合 {} 维度校验通过 dim={}", collectionName, storedDim);

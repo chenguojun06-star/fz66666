@@ -127,9 +127,17 @@ public class AiAgentOrchestrator {
 
     private final java.util.concurrent.atomic.AtomicLong conversationTurnCounter = new java.util.concurrent.atomic.AtomicLong(0);
 
+    /**
+     * 短查询缓存（命中时直接返回，跳过 LLM 调用）。
+     *
+     * <p>【P2-2修复】原未启用 recordStats，无法观测缓存命中率。
+     * 启用后可通过 Cache.stats() 查看命中率/驱逐数/加载耗时，
+     * 用于判断 queryCache 是否有效（命中率 < 5% 说明缓存策略需调整）。
+     */
     private final com.github.benmanes.caffeine.cache.Cache<String, String> queryCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
             .maximumSize(200)
             .expireAfterWrite(5, TimeUnit.MINUTES)
+            .recordStats()
             .build();
 
     private static class TenantCachedContext {

@@ -380,4 +380,57 @@ public class EvolutionOrchestrator {
         }
         return stats;
     }
+
+    // ==================== 公开统一指标入口（D-021）====================
+
+    /**
+     * 获取统一进化指标（D-021 统一可观测）。
+     *
+     * <p>聚合16个自进化组件的运行指标，供：
+     * <ul>
+     *   <li>运维仪表盘（/api/admin/evolution/metrics）</li>
+     *   <li>AI Agent 自身回溯（AiAgentPromptHelper 注入 selfCritiqueCtx）</li>
+     *   <li>Langfuse 可观测链路（trace enrichment）</li>
+     *   <li>CI/CD 健康检查（HealthIndicator）</li>
+     * </ul>
+     *
+     * <p>设计原则：
+     * <ul>
+     *   <li>所有子指标聚合走 safeCall，单组件失败不影响整体</li>
+     *   <li>tenantId=null 时返回全局聚合，非空时按租户过滤</li>
+     *   <li>所有 SQL 查询带 tenant_id WHERE（P0 铁律 4 多租户隔离）</li>
+     * </ul>
+     *
+     * @param tenantId 租户ID（null 表示全局聚合）
+     * @return 16个组件的指标Map
+     */
+    public Map<String, Object> getUnifiedMetrics(Long tenantId) {
+        Map<String, Object> metrics = new LinkedHashMap<>();
+        metrics.put("selfCritic", safeCall("selfCritic", () -> aggregateSelfCriticStats(tenantId)));
+        metrics.put("dataTruth", safeCall("dataTruth", () -> aggregateDataTruthStats(tenantId)));
+        metrics.put("quickPath", safeCall("quickPath", () -> aggregateQuickPathStats(tenantId)));
+        metrics.put("realTimeLearning", safeCall("realTimeLearning", () -> aggregateRealTimeLearningStats(tenantId)));
+        metrics.put("systemDataMiner", safeCall("systemDataMiner", () -> aggregateSystemDataMinerStats(tenantId)));
+        metrics.put("userProfile", safeCall("userProfile", () -> aggregateUserProfileStats(tenantId)));
+        metrics.put("memoryNudge", safeCall("memoryNudge", () -> aggregateMemoryNudgeStats(tenantId)));
+        metrics.put("skill", safeCall("skill", () -> aggregateSkillStats(tenantId)));
+        metrics.put("skillAutoCreation", safeCall("skillAutoCreation", () -> aggregateSkillAutoCreationStats(tenantId)));
+        metrics.put("conversationReflection", safeCall("conversationReflection", () -> aggregateConversationReflectionStats(tenantId)));
+        metrics.put("skillCrystallization", safeCall("skillCrystallization", () -> aggregateSkillCrystallizationStats(tenantId)));
+        metrics.put("gepaPromptOptimizer", safeCall("gepaPromptOptimizer", () -> aggregateGepaPromptOptimizerStats(tenantId)));
+        metrics.put("evolutionEvent", safeCall("evolutionEvent", () -> aggregateEvolutionEventStats()));
+        metrics.put("memoryBank", safeCall("memoryBank", () -> aggregateMemoryBankStats(tenantId)));
+        metrics.put("modelSelection", safeCall("modelSelection", () -> aggregateModelSelectionStats()));
+        metrics.put("costExplosionGuard", safeCall("costExplosionGuard", () -> aggregateCostExplosionGuardStats()));
+        metrics.put("generatedAt", LocalDateTime.now());
+        metrics.put("tenantId", tenantId);
+        return metrics;
+    }
+
+    /**
+     * 获取全局统一进化指标（便捷重载，等价于 getUnifiedMetrics(null)）。
+     */
+    public Map<String, Object> getUnifiedMetrics() {
+        return getUnifiedMetrics(null);
+    }
 }

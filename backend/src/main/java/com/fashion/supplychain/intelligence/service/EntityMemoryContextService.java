@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,12 +34,23 @@ public class EntityMemoryContextService {
     @Autowired(required = false)
     private QdrantService qdrantService;
 
+    /**
+     * 【P1-9修复】专用 Executor：原 CompletableFuture.supplyAsync 未指定 Executor，
+     * 默认使用 ForkJoinPool.commonPool()，与 JVM 其他共用 commonPool 的任务争抢资源，
+     * 且 commonPool 大小受限于 CPU 核数（默认 -1），高并发时易饱和导致 AI Prompt 构建超时。
+     * 现复用 AsyncConfig.taskExecutor（core=20, max=50, queue=2000），隔离 AI 任务与 parallelStream。
+     */
+    @Autowired
+    @Qualifier("taskExecutor")
+    private Executor taskExecutor;
+
     public String buildEntityMemoryContext(Long tenantId, String userMessage) {
         if (tenantId == null || userMessage == null || userMessage.isBlank()) {
             return "";
         }
 
         // DB 实体记忆查询与 Qdrant 语义向量搜索无依赖关系，并行执行（原串行 200-500ms → 并行 ≤ max(单步)）
+        // 【P1-9修复】指定 taskExecutor 替代 ForkJoinPool.commonPool
         CompletableFuture<String> entityFuture = CompletableFuture.supplyAsync(() -> {
             try {
                 return lookupEntityMemories(tenantId, userMessage);
@@ -45,7 +58,7 @@ public class EntityMemoryContextService {
                 log.debug("[EntityMemory] 实体记忆加载跳过: {}", e.getMessage());
                 return "";
             }
-        });
+        }, taskExecutor);
 
         CompletableFuture<String> semanticFuture = CompletableFuture.supplyAsync(() -> {
             try {
@@ -54,7 +67,7 @@ public class EntityMemoryContextService {
                 log.debug("[EntityMemory] 语义记忆搜索跳过: {}", e.getMessage());
                 return "";
             }
-        });
+        }, taskExecutor);
 
         // 等待两路完成（2s 超时保护，单步失败不影响另一步）
         String entityCtx = "";

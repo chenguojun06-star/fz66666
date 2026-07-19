@@ -70,11 +70,14 @@ public class GepaPromptOptimizer {
     private final Random random = new Random();
 
     /**
-     * 离线优化定时任务（每天 04:00 异步执行，不影响在线响应）。
+     * 离线优化定时任务（每天 04:20 异步执行，不影响在线响应）。
      * 遍历所有有反馈数据的租户逐一优化；无租户时做全局优化。
+     *
+     * <p>【P1-5修复】原 04:00 与 SystemDoctorPatrolJob、SharedAgentMemoryService 同时执行。
+     * 错峰到 04:20，避开 04:15 SharedMem 清理 + 04:30 AiSelfEvolutionJob。完整错峰表见 MemoryArchiveService 注释。
      */
     @Async("aiSelfCriticExecutor")
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 20 4 * * ?")
     public void scheduledOptimize() {
         try {
             List<Long> tenantIds = jdbc.queryForList(

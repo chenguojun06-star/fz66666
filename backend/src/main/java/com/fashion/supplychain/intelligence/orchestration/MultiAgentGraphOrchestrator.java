@@ -212,11 +212,15 @@ public class MultiAgentGraphOrchestrator {
         List<SpecialistAgent> targets = specialistAgents.stream()
                 .filter(s -> "full".equals(route) || s.getRoute().equals(route))
                 .toList();
-        
+
         if (targets.isEmpty()) {
             log.debug("[Graph] 无匹配的 SpecialistAgent，跳过");
             return;
         }
+
+        // 【P0-3修复】读取共享记忆：注入已有事实，避免Sub-Agent重复查询
+        // 原readFacts方法无调用方（断链），现接入到dispatchSpecialists入口
+        injectSharedMemoryFacts(state);
         
         if (targets.size() == 1) {
             // 单领域：直接执行，保持原有逻辑
@@ -304,6 +308,54 @@ public class MultiAgentGraphOrchestrator {
             return SwarmTopology.STAR;  // 3-5个用星型
         } else {
             return SwarmTopology.MESH;  // 6+个用全并行
+        }
+    }
+
+    /**
+     * 【P0-3修复】注入共享记忆：从同会话已写入的事实中读取，避免 Sub-Agent 重复查询。
+     *
+     * <p>原 {@link com.fashion.supplychain.intelligence.service.SharedAgentMemoryService#readFacts}
+     * 方法无调用方（断链），现接入到 dispatchSpecialists 入口。
+     *
+     * <p>读取后追加到 state.contextSummary，供 Supervisor 和 Specialist 复用已有事实。
+     * 设计意图：扫码 Agent 已发现 order_status=DELAYED 时，质检 Agent 无需重复查询。
+     *
+     * <p>多租户隔离：readFacts 内部已带 tenant_id WHERE（P0 铁律 4）。
+     * 降级安全：SharedAgentMemoryService 不可用或异常时静默跳过，不影响主流程。
+     */
+    private void injectSharedMemoryFacts(AgentState state) {
+        if (sharedAgentMemory == null) {
+            log.debug("[Graph:SharedMem] SharedAgentMemoryService 未配置，跳过共享记忆读取");
+            return;
+        }
+        String sessionId = state.getThreadId();
+        if (sessionId == null) {
+            return;
+        }
+        try {
+            List<com.fashion.supplychain.intelligence.entity.SharedAgentMemory> existingFacts =
+                    sharedAgentMemory.readFacts(state.getTenantId(), sessionId);
+            if (existingFacts == null || existingFacts.isEmpty()) {
+                log.debug("[Graph:SharedMem] 无已存在共享记忆 tenant={} session={}",
+                        state.getTenantId(), sessionId);
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n[共享记忆：同会话已发现的事实，可复用避免重复查询]\n");
+            for (com.fashion.supplychain.intelligence.entity.SharedAgentMemory fact : existingFacts) {
+                sb.append(String.format("- %s: %s (来源:%s, 置信度:%s)\n",
+                        fact.getFactKey(),
+                        truncate(fact.getFactValue() != null ? fact.getFactValue() : "", 200),
+                        fact.getAgentName() != null ? fact.getAgentName() : "unknown",
+                        fact.getConfidence() != null ? fact.getConfidence() : "N/A"));
+            }
+            String factsCtx = sb.toString();
+            String existingSummary = state.getContextSummary();
+            state.setContextSummary((existingSummary == null ? "" : existingSummary) + factsCtx);
+            log.info("[Graph:SharedMem] 注入共享记忆 {} 条 tenant={} session={}",
+                    existingFacts.size(), state.getTenantId(), sessionId);
+        } catch (Exception e) {
+            log.debug("[Graph:SharedMem] 读取共享记忆失败（不影响主流程）: {}", e.getMessage());
         }
     }
     

@@ -38,7 +38,16 @@ import java.util.concurrent.TimeUnit;
 @Lazy
 public class AiAgentMemoryHelper {
 
-    private static final int MAX_MEMORY_TURNS = 15;
+    /**
+     * 【P2-1修复】原硬编码 MAX_MEMORY_TURNS=15 与 application.yml
+     * 的 xiaoyun.conversation-memory.max-turns=20 不一致。
+     * 导致 AiAgentMemoryHelper 截断比 ConversationMemoryService 早 5 轮，
+     * 同一用户的对话记忆在两个 Service 中窗口大小不一致。
+     * 现改为 @Value 注入，与 yml 默认值 20 对齐（运维可调）。
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.conversation-memory.max-turns:20}")
+    private int maxMemoryTurns;
+
     private static final int MAX_USERS_CACHED = 500;
     private static final int COMPACT_THRESHOLD_TURNS = 20;
     private static final String REDIS_MEMORY_PREFIX = "fashion:chat:memory:";
@@ -109,7 +118,7 @@ public class AiAgentMemoryHelper {
         List<AiMessage> history = conversationMemory.get(key, k -> Collections.synchronizedList(new ArrayList<>()));
         history.add(AiMessage.user(userMsg));
         history.add(AiMessage.assistant(assistantMsg));
-        while (history.size() > MAX_MEMORY_TURNS * 2) {
+        while (history.size() > maxMemoryTurns * 2) {
             history.remove(0);
         }
         // L2: Redis async

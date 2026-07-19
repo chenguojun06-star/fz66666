@@ -125,8 +125,11 @@ public class SharedAgentMemoryService {
 
     /**
      * 每天清理过期记录（会话结束 24h 后）。
+     *
+     * <p>【P1-5修复】原 04:00 与 SystemDoctorPatrolJob、GepaPromptOptimizer 同时执行。
+     * 错峰到 04:15，避免 DB 写入争抢。完整错峰表见 MemoryArchiveService 注释。
      */
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 15 4 * * ?")
     public void purgeExpiredJob() {
         try {
             int purged = sharedAgentMemoryMapper.purgeExpired();

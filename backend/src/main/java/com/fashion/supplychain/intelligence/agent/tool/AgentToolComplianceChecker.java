@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,19 @@ import java.util.Map;
 public class AgentToolComplianceChecker {
 
     private final List<AgentTool> registeredTools;
+
+    /**
+     * 【P1-8修复】fail-fast 开关：默认 false（仅记录日志），生产环境可设为 true 阻止启动。
+     * <p>对应 application.yml 配置：
+     * <pre>
+     * intelligence:
+     *   tool:
+     *     compliance:
+     *       fail-fast: true   # 严重违规时阻止应用启动
+     * </pre>
+     */
+    @Value("${intelligence.tool.compliance.fail-fast:false}")
+    private boolean failFast;
 
     public AgentToolComplianceChecker(List<AgentTool> registeredTools) {
         this.registeredTools = registeredTools;
@@ -85,5 +99,15 @@ public class AgentToolComplianceChecker {
 
         log.info("[ToolCompliance] Registered {} tools: {}", registeredTools.size(),
                 registeredTools.stream().map(AgentTool::getName).sorted().toList());
+
+        // 【P1-8修复】fail-fast：严重违规时抛异常阻止应用启动
+        // 默认 false 保持向后兼容；生产环境通过 application-prod.yml 设置 true 启用
+        if (failFast && !errors.isEmpty()) {
+            String msg = "[ToolCompliance] fail-fast=true，发现 " + errors.size()
+                    + " 个严重违规，应用启动被阻止。违规清单：\n  - "
+                    + String.join("\n  - ", errors);
+            log.error(msg);
+            throw new IllegalStateException(msg);
+        }
     }
 }

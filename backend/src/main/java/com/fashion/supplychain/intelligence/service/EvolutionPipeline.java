@@ -45,7 +45,7 @@ public class EvolutionPipeline {
     @Qualifier("aiSelfCriticExecutor")
     private Executor aiSelfCriticExecutor;
 
-    @Value("${xiaoyun.evolution.self-play.enabled:true}")
+    @Value("${xiaoyun.evolution.self-play.enabled:false}")
     private boolean selfPlayEnabled;
 
     @Value("${xiaoyun.evolution.self-play.scenarios-per-cycle:5}")

@@ -406,7 +406,11 @@ ai:
       top-n: ${AI_COHERE_RERANK_TOP_N:5}            # 精排后返回条数（候选池 15 → 精排后 top-n）
   consortium:
     enabled: ${AI_CONSORTIUM_ENABLED:true}
-    strategy: ${AI_CONSORTIUM_STRATEGY:speed-first}  # 启用速度优先策略
+    strategy: ${AI_CONSORTIUM_STRATEGY:speed-first}  # speed-first（默认）/ cost-optimal（需质量样本）/ quality-first
+    # cost-optimal 策略子参数（仅在 strategy=cost-optimal 时生效）
+    cost-optimal:
+      quality-threshold: ${AI_CONSORTIUM_QUALITY_THRESHOLD:0.95}  # 快速模型评分/推理模型评分 >= 此值时降级
+      min-samples: ${AI_CONSORTIUM_MIN_SAMPLES:10}                # 最少样本数，不足时不降级
   model:
     fast: ${AI_MODEL_FAST:deepseek-v4-flash}        # 简单查询用这个（快）
     reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}  # 复杂分析用这个

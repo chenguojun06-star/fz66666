@@ -20,6 +20,15 @@ import java.util.Map;
 @Component
 @Lazy
 @AgentToolDef(name = "ec_stock_alert", description = "电商库存预警检测与采购建议生成")
+@McpToolAnnotation(
+        name = "ec_stock_alert",
+        description = "电商库存预警检测与采购建议生成：检测跨平台库存预警（缺货/低库存），自动生成采购建议。当用户询问电商库存预警、采购建议、补货时使用。",
+        domain = ToolDomain.WAREHOUSE,
+        readOnly = false,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"电商库存", "库存预警", "采购建议", "补货", "缺货检测"}
+)
 public class EcStockAlertNotifyTool {
 
     @Autowired private EcStockOrchestrator stockOrchestrator;

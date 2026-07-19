@@ -17,6 +17,13 @@ import org.springframework.context.annotation.Lazy;
 @Lazy
 public class OrderLearningRefreshJob {
 
+    /**
+     * 【P2-3修复】任务开关，默认 true（不影响现有行为）。
+     * 运维可通过 yml/env 关闭：xiaoyun.job.order-learning-refresh.enabled=false
+     */
+    @org.springframework.beans.factory.annotation.Value("${xiaoyun.job.order-learning-refresh.enabled:true}")
+    private boolean enabled;
+
     @Autowired
     private OrderLearningRefreshOrchestrator orderLearningRefreshOrchestrator;
 
@@ -28,6 +35,10 @@ public class OrderLearningRefreshJob {
 
     @Scheduled(cron = "0 40 3 * * ?")
     public void refreshRecentLearningData() {
+        if (!enabled) {
+            log.debug("[下单学习Job] 已禁用（xiaoyun.job.order-learning-refresh.enabled=false）");
+            return;
+        }
         String lockValue = distributedLockService == null
                 ? null
                 : distributedLockService.tryLock("job:order-learning-refresh", 30, TimeUnit.MINUTES);
