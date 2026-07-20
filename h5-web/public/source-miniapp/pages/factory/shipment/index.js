@@ -152,7 +152,7 @@ Page({
       const that = this;
       this.setData({ orderLoading: true });
       const params = { page: this.data.orderPage, pageSize: 20 };
-      if (this.data.keyword) params.orderNo = this.data.keyword;
+      if (this.data.keyword) params.keyword = this.data.keyword;
       if (this.data.selectedFactoryId != null) params.factoryId = this.data.selectedFactoryId;
       return api.production.listOrders(params).then(function (res) {
         const records = (res && res.records) || [];

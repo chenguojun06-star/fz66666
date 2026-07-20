@@ -163,7 +163,7 @@ Page({
         params.status = filterVal;
       }
       const searchKey = that.data.searchKey;
-      if (searchKey) params.orderNo = searchKey;
+      if (searchKey) params.keyword = searchKey;
       return api.production.listOrders(params);
     }, function (r) {
       return enrichForDashboard(transformOrderData(r));

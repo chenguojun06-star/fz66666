@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -98,7 +99,21 @@ public class TrackingRecordInitHelper {
     }
 
     /**
-     * 追加新菲号的工序跟踪记录（增量初始化）
+     * 追加/同步菲号的工序跟踪记录（增量补建 + 清理多余）
+     * <p>
+     * 支持两种场景（用户在工艺流程编辑器中修改工序后）：
+     * <ul>
+     *   <li><b>新增工序</b>：为已有菲号补建缺失的工序 tracking 记录</li>
+     *   <li><b>减少工序</b>：将已删除工序的 pending tracking 记录物理删除；
+     *       scanned 状态的保留（避免丢失工资数据），由管理员手动处理</li>
+     * </ul>
+     * <p>
+     * <b>注意</b>：旧逻辑是"全有或全无"——只要菲号有任何 tracking 记录就跳过整个菲号，
+     * 导致新增工序永远补不上。现改为按工序名/编号逐个判断。
+     *
+     * @param productionOrderId 订单ID
+     * @param bundles 涉及的菲号列表
+     * @return 本次新插入的 tracking 记录数
      */
     public int appendProcessTracking(String productionOrderId, List<CuttingBundle> bundles) {
         if (!StringUtils.hasText(productionOrderId) || CollectionUtils.isEmpty(bundles)) {
@@ -110,7 +125,6 @@ public class TrackingRecordInitHelper {
         }
         List<CuttingBundle> targets = bundles.stream()
                 .filter(b -> b != null && StringUtils.hasText(b.getId()))
-                .filter(b -> CollectionUtils.isEmpty(trackingService.getByBundleId(b.getId())))
                 .collect(Collectors.toList());
         if (targets.isEmpty()) {
             return 0;
@@ -120,19 +134,159 @@ public class TrackingRecordInitHelper {
         if (CollectionUtils.isEmpty(processNodes)) {
             return 0;
         }
-
         ensureCuttingNode(processNodes, order);
 
         Map<String, CuttingTask> taskBySizeKey = new HashMap<>();
         CuttingTask anyReceivedTask = buildTaskIndex(productionOrderId, taskBySizeKey);
 
-        List<ProductionProcessTracking> trackingRecords = buildTrackingRecords(
-                order, targets, processNodes, taskBySizeKey, anyReceivedTask);
+        int insertedCount = 0;
+        int deletedCount = 0;
+        int scannedObsoleteRetained = 0;
 
-        if (trackingRecords.isEmpty()) {
-            return 0;
+        for (CuttingBundle bundle : targets) {
+            List<ProductionProcessTracking> existing = trackingService.getByBundleId(bundle.getId());
+
+            // 1. 清理已被前端工艺流程删除的工序（减少工序场景）
+            int[] obsoleteStats = removeObsoleteProcessTracking(bundle, processNodes, existing);
+            deletedCount += obsoleteStats[0];
+            scannedObsoleteRetained += obsoleteStats[1];
+
+            // 2. 补建新增工序的 tracking 记录（新增工序场景）
+            List<ProductionProcessTracking> toInsert = buildTrackingRecordsForMissing(
+                    order, bundle, processNodes, taskBySizeKey, anyReceivedTask, existing);
+            if (!toInsert.isEmpty()) {
+                insertedCount += trackingService.batchInsert(toInsert);
+            }
         }
-        return trackingService.batchInsert(trackingRecords);
+
+        if (insertedCount > 0 || deletedCount > 0) {
+            log.info("订单 {} 工序跟踪同步：补建 {} 条，清理 pending {} 条，保留 scanned废弃 {} 条（涉及 {} 个菲号）",
+                    order.getOrderNo(), insertedCount, deletedCount, scannedObsoleteRetained, targets.size());
+        }
+        return insertedCount;
+    }
+
+    /**
+     * 清理已被前端工艺流程删除的工序跟踪记录（减少工序场景）。
+     * <p>
+     * 策略：
+     * <ul>
+     *   <li><b>pending 状态</b>（未扫码）：直接物理删除，无扫码数据丢失风险</li>
+     *   <li><b>scanned/reset 状态</b>（已扫码/已重置）：保留，避免丢失工资数据，由管理员手动处理</li>
+     * </ul>
+     *
+     * @param bundle 菲号
+     * @param processNodes 当前工艺流程节点列表
+     * @param existing 该菲号已有的 tracking 记录
+     * @return int[2]：[0]=删除的 pending 条数，[1]=保留的 scanned 废弃条数
+     */
+    private int[] removeObsoleteProcessTracking(CuttingBundle bundle,
+                                                List<Map<String, Object>> processNodes,
+                                                List<ProductionProcessTracking> existing) {
+        if (CollectionUtils.isEmpty(existing)) {
+            return new int[]{0, 0};
+        }
+        Set<String> currentNodeNames = processNodes.stream()
+                .map(n -> getStringValue(n, "name", "").trim())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Set<String> currentNodeCodes = processNodes.stream()
+                .map(n -> getStringValue(n, "processCode",
+                        getStringValue(n, "code", "")).trim())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        List<ProductionProcessTracking> pendingObsolete = new ArrayList<>();
+        int scannedObsolete = 0;
+        for (ProductionProcessTracking t : existing) {
+            String name = t.getProcessName() == null ? "" : t.getProcessName().trim();
+            String code = t.getProcessCode() == null ? "" : t.getProcessCode().trim();
+            boolean nameMatched = StringUtils.hasText(name) && currentNodeNames.contains(name);
+            boolean codeMatched = StringUtils.hasText(code) && currentNodeCodes.contains(code);
+            if (nameMatched || codeMatched) {
+                continue;  // 工序仍在当前工艺流程中
+            }
+            // 工序已被前端删除
+            if ("pending".equals(t.getScanStatus())) {
+                pendingObsolete.add(t);
+            } else {
+                scannedObsolete++;
+            }
+        }
+
+        if (!pendingObsolete.isEmpty()) {
+            List<String> idsToRemove = pendingObsolete.stream()
+                    .map(ProductionProcessTracking::getId)
+                    .collect(Collectors.toList());
+            boolean removed = trackingService.removeByIds(idsToRemove);
+            if (removed) {
+                log.info("[工序同步-减少] 菲号#{} 清理 {} 条 pending tracking 记录（工序已被前端删除）：{}",
+                        bundle.getBundleNo(), pendingObsolete.size(),
+                        pendingObsolete.stream()
+                                .map(t -> t.getProcessName() + "/" + t.getProcessCode())
+                                .collect(Collectors.joining(", ")));
+            }
+        }
+        if (scannedObsolete > 0) {
+            log.warn("[工序同步-减少] 菲号#{} 保留 {} 条 scanned 废弃 tracking 记录（已扫码，避免丢失工资数据）",
+                    bundle.getBundleNo(), scannedObsolete);
+        }
+        return new int[]{pendingObsolete.size(), scannedObsolete};
+    }
+
+    /**
+     * 为缺失的工序构建 tracking 记录（新增工序场景）。
+     * <p>
+     * 对比当前 processNodes 与已有 tracking 记录，只为缺失的工序构建新记录。
+     *
+     * @param order 生产订单
+     * @param bundle 菲号
+     * @param processNodes 当前工艺流程节点列表
+     * @param taskBySizeKey 裁剪任务索引（按 color|size）
+     * @param anyReceivedTask 任意已领取的裁剪任务（兜底用）
+     * @param existing 该菲号已有的 tracking 记录
+     * @return 待插入的 tracking 记录列表（可能为空）
+     */
+    private List<ProductionProcessTracking> buildTrackingRecordsForMissing(
+            ProductionOrder order, CuttingBundle bundle,
+            List<Map<String, Object>> processNodes,
+            Map<String, CuttingTask> taskBySizeKey, CuttingTask anyReceivedTask,
+            List<ProductionProcessTracking> existing) {
+
+        Set<String> existingNames = existing.stream()
+                .map(t -> t.getProcessName() == null ? "" : t.getProcessName().trim())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Set<String> existingCodes = existing.stream()
+                .map(t -> t.getProcessCode() == null ? "" : t.getProcessCode().trim())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        List<Map<String, Object>> missingNodes = processNodes.stream()
+                .filter(n -> {
+                    String name = getStringValue(n, "name", "").trim();
+                    String code = getStringValue(n, "processCode",
+                            getStringValue(n, "code", "")).trim();
+                    boolean nameExists = StringUtils.hasText(name) && existingNames.contains(name);
+                    boolean codeExists = StringUtils.hasText(code) && existingCodes.contains(code);
+                    return !nameExists && !codeExists;
+                })
+                .collect(Collectors.toList());
+
+        if (missingNodes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ProductionProcessTracking> toInsert = buildTrackingRecords(
+                order, Collections.singletonList(bundle), missingNodes, taskBySizeKey, anyReceivedTask);
+        if (!toInsert.isEmpty()) {
+            log.info("[工序同步-新增] 菲号#{} 补建 {} 条缺失 tracking 记录：{}",
+                    bundle.getBundleNo(), toInsert.size(),
+                    toInsert.stream()
+                            .map(t -> t.getProcessName() + "/" + t.getProcessCode())
+                            .collect(Collectors.joining(", ")));
+        }
+        return toInsert;
     }
 
     // ========== 私有方法 ==========

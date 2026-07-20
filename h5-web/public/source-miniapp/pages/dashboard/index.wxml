@@ -2,7 +2,7 @@
 <view class="page">
   <!-- 吸顶区：搜索 + 扫码 + 筛选器（统一使用通用组件 sticky-search-bar） -->
   <sticky-search-bar
-    placeholder="搜索订单号/款号"
+    placeholder="搜索订单号/款号/工厂"
     value="{{searchKey}}"
     show-scan="{{true}}"
     show-filter="{{true}}"

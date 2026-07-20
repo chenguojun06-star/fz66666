@@ -2,8 +2,10 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
+import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -43,6 +45,8 @@ public class ProductionOrderWorkflowHelper {
     private ObjectMapper objectMapper;
     @Autowired
     private ProductionOrderLogAppendHelper logAppendHelper;
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder lockProgressWorkflow(String id, String workflowJson) {
@@ -85,6 +89,21 @@ public class ProductionOrderWorkflowHelper {
             processTrackingOrchestrator.syncUnitPrices(oid);
         } catch (Exception e) {
             log.warn("lockProgressWorkflow: syncUnitPrices failed for orderId={}", oid, e);
+        }
+
+        // 同步工序跟踪记录（用户在工艺流程编辑器中新增/减少工序后，锁定时同步 tracking 表）
+        // - 新增工序 → 为已有菲号补建缺失的 tracking 记录
+        // - 减少工序 → 物理删除 pending 状态的多余 tracking（scanned 保留避免丢失工资数据）
+        try {
+            List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
+                    .eq(CuttingBundle::getProductionOrderId, oid)
+                    .list();
+            if (!bundles.isEmpty()) {
+                int synced = processTrackingOrchestrator.appendProcessTracking(oid, bundles);
+                log.info("[锁定工序] 同步工序跟踪记录: orderId={}, 补建 {} 条", oid, synced);
+            }
+        } catch (Exception e) {
+            log.warn("[锁定工序] 同步工序跟踪记录失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
         }
 
         // 写订单备注时间线：锁定工序流程

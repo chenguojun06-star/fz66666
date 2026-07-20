@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-20（小云AI智能化升级 — 6项P0+10项P1+3项P2+1项P1-2 全量修复完成）
+> 最后更新：2026-07-20（子工序匹配菲号同步修复 — 新增/减少工序同步 tracking 表）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,40 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-20 子工序匹配菲号同步修复 ✅
+
+用户指令："修复啊 这些问题 为什么会导致这样呢 不管是新增 还是减少子工序这些逻辑都要同步更新啊"
+
+**根因**：[TrackingRecordInitHelper.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/helper/TrackingRecordInitHelper.java) 的 `appendProcessTracking` 是"全有或全无"过滤：
+- 旧逻辑：`filter(b -> CollectionUtils.isEmpty(trackingService.getByBundleId(b.getId())))` — 只要菲号有任何 tracking 记录就跳过整个菲号
+- 后果：用户在工艺流程编辑器新增/减少工序后，已有菲号的 tracking 表永远不同步，导致小程序扫码匹配菲号失败（5种情况中的情况2/3/4/5）
+
+**修复点1 - TrackingRecordInitHelper.appendProcessTracking 重构**：
+- 移除"全有或全无"过滤
+- 改为按工序名/编号逐个判断：缺失的工序补建、多余 pending 工序删除、scanned 工序保留（避免丢失工资数据）
+- 新增 `removeObsoleteProcessTracking` 私有方法：处理减少工序场景（pending 直接物理删除，scanned/reset 保留）
+- 新增 `buildTrackingRecordsForMissing` 私有方法：处理新增工序场景（只为缺失工序构建 tracking 记录）
+
+**修复点2 - [ProductionOrderWorkflowHelper.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductionOrderWorkflowHelper.java) lockProgressWorkflow 锁定时同步**：
+- 在 syncUnitPrices 后追加 appendProcessTracking 调用
+- 用户在前端工艺流程编辑器修改工序并锁定后，立即同步 tracking 表
+- 注入 CuttingBundleService，查询订单下所有菲号后批量同步
+
+**两条同步路径（双保险）**：
+1. **即时同步**：用户锁定工艺流程时（lockProgressWorkflow）→ 立即同步所有菲号 tracking 表
+2. **兜底同步**：扫码时发现 tracking 记录缺失（ScanExecutorSupport.doUpdateProcessTracking）→ 自动补建缺失工序
+
+**反模式自查（P0 #23）**：
+- ✅ Helper 类无 @Transactional（事务边界在 Orchestrator 层，符合 D-001）
+- ✅ 多租户隔离：TenantInterceptor 自动给 SELECT/UPDATE/DELETE 注入 tenant_id 条件
+- ✅ 无 SQL 字符串拼接（使用 MyBatis-Plus API）
+- ✅ 异常传播触发事务回滚（无 try-catch 包裹关键操作）
+- ✅ 方法行数：appendProcessTracking ~50行 / removeObsoleteProcessTracking ~52行 / buildTrackingRecordsForMissing ~40行
+
+**验证结果**：
+- ✅ mvn compile BUILD SUCCESS（exit 0）
+- ✅ 无 warning 涉及本次修改代码
 
 ### 2026-07-20 小云AI智能化升级 — 全量修复发布 ✅
 

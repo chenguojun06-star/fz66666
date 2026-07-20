@@ -40,7 +40,7 @@
     <!-- 搜索栏 + 扫码 + 筛选器（嵌入已有 sticky-header 内，sticky=false） -->
     <sticky-search-bar
       sticky="{{false}}"
-      placeholder="搜索订单号 / 款号"
+      placeholder="搜索订单号/款号/工厂"
       value="{{keyword}}"
       show-scan="{{true}}"
       show-filter="{{activeTab===0}}"
