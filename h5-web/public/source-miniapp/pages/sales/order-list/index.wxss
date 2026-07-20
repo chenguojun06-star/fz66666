@@ -242,15 +242,6 @@
   color: var(--color-text-tertiary);
 }
 
-/* ============ 空状态 ============ */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 64px var(--page-padding-x, 12px);
-  gap: 8px;
-}
 .empty-icon {
   width: 48px;
   height: 48px;
@@ -267,6 +258,7 @@
 }
 
 /* ============ 加载态 ============ */
+/* 本地覆盖：使用 text-align: center 而非全局 flex 布局，此页加载态为纯文本 */
 .loading-state {
   text-align: center;
   padding: 24px var(--page-padding-x, 12px);

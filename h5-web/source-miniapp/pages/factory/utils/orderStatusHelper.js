@@ -1,18 +1,12 @@
 /**
  * 订单状态辅助函数
- * 统一管理订单、质检等状态文本转换
+ * 统一管理订单状态文本与 CSS 标签类名转换
  *
  * 状态文案统一代理到 utils/displayHelper.js（覆盖 40+ 状态，含 cutting/sewing/procurement 等工序），
  * 避免各页面独立维护导致 cutting 等工序状态显示英文/未知。
  */
 
 const { displayStatusText } = require('../../../utils/displayHelper');
-
-const COLOR_DEFAULT = 'var(--color-text-disabled)';
-const COLOR_SUCCESS = 'var(--color-success)';
-const COLOR_WARNING = 'var(--color-warning)';
-const COLOR_DANGER = 'var(--color-danger)';
-const COLOR_FALLBACK = 'var(--color-text-secondary)';
 
 /**
  * 将订单状态码转换为中文文本
@@ -73,64 +67,7 @@ function orderStatusCls(status) {
   return map[s] || 'tag-gray';
 }
 
-function qualityStatusText(status) {
-  const s = (status || '').toString().trim().toLowerCase();
-  const map = {
-    qualified: '合格',
-    unqualified: '次品待返修',
-    repaired: '返修完成',
-  };
-  if (!s) {
-    return '';
-  }
-  return map[s] || '未知';
-}
-
-function scanResultText(status) {
-  const s = (status || '').toString().trim().toLowerCase();
-  const map = {
-    success: '成功',
-    failure: '失败',
-  };
-  if (!s) {
-    return '';
-  }
-  return map[s] || '未知';
-}
-
-function getStatusColor(status) {
-  const s = (status || '').toString().trim().toLowerCase();
-  const colorMap = {
-    pending: COLOR_DEFAULT,
-    production: COLOR_SUCCESS,
-    completed: COLOR_SUCCESS,
-    delayed: COLOR_WARNING,
-    scrapped: COLOR_DANGER,
-    cancelled: COLOR_DANGER,
-    canceled: COLOR_DANGER,
-    paused: COLOR_WARNING,
-    returned: COLOR_DANGER,
-    closed: COLOR_SUCCESS,
-    archived: COLOR_DEFAULT,
-  };
-  return colorMap[s] || COLOR_FALLBACK;
-}
-
-function getQualityColor(qualityStatus) {
-  const s = (qualityStatus || '').toString().trim().toLowerCase();
-  const colorMap = {
-    qualified: COLOR_SUCCESS,
-    unqualified: COLOR_DANGER,
-    repaired: COLOR_DEFAULT,
-  };
-  return colorMap[s] || COLOR_FALLBACK;
-}
-
 module.exports = {
   orderStatusText: orderStatusText,
   orderStatusCls: orderStatusCls,
-  qualityStatusText: qualityStatusText,
-  scanResultText: scanResultText,
-  getStatusColor: getStatusColor,
-  getQualityColor: getQualityColor,
 };

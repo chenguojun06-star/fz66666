@@ -146,6 +146,7 @@
 .change-btn-hover { opacity: 0.7; }
 
 /* ======== 加载 ======== */
+/* 本地覆盖：使用 text-align: center 而非全局 flex 布局，此页加载态为纯文本 */
 .loading-state {
   text-align: center;
   padding: 120rpx 0;

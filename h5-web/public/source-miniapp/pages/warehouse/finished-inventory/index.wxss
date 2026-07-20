@@ -1,3 +1,5 @@
+@import '/styles/modal-form.wxss';
+
 /**
  * 成品库存页 — 统一卡片风格
  * 原生导航栏（不使用 custom-nav）
@@ -334,20 +336,6 @@ page {
 .load-more-text {
   font-size: 12px;
   color: var(--color-text-quaternary);
-}
-
-/* ============ 详情弹窗 ============ */
-.modal-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--color-overlay);
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
 }
 
 .modal-content--bottom {

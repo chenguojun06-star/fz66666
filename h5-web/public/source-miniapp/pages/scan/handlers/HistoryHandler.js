@@ -13,56 +13,7 @@ const { DEBUG_MODE } = require('../../../config');
 const { getStorageValue, setStorageValue } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { normalizeProcessName } = require('../../../utils/displayHelper');
-
-// ==================== 交期计算 ====================
-
-/**
- * 计算交期与剩余天数
- * @param {string} dateStr - 日期字符串(YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss)
- * @returns {Object} { deliveryDateStr, remainDays, remainDaysText, remainDaysClass }
- */
-function calcDeliveryInfo(dateStr) {
-  if (!dateStr) return {};
-  const s = String(dateStr);
-  const dateOnly = s.substring(0, 10);
-  let displayStr = dateOnly;
-  if (s.length > 10) {
-    const d = new Date(s.replace(/-/g, '/'));
-    if (!isNaN(d.getTime())) {
-      const pad = n => String(n).padStart(2, '0');
-      displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
-  }
-  const parts = dateOnly.split('-');
-  if (parts.length !== 3) return {};
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  const diffMs = target.getTime() - today.getTime();
-  const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  let remainDaysText = '';
-  let remainDaysClass = '';
-  if (remainDays > 7) {
-    remainDaysText = `剩${remainDays}天`;
-    remainDaysClass = 'days-safe';
-  } else if (remainDays > 3) {
-    remainDaysText = `剩${remainDays}天`;
-    remainDaysClass = 'days-warn';
-  } else if (remainDays > 0) {
-    remainDaysText = `剩${remainDays}天`;
-    remainDaysClass = 'days-urgent';
-  } else if (remainDays === 0) {
-    remainDaysText = '今天到期';
-    remainDaysClass = 'days-urgent';
-  } else {
-    remainDaysText = `超期${Math.abs(remainDays)}天`;
-    remainDaysClass = 'days-overdue';
-  }
-
-  return { deliveryDateStr: displayStr, remainDays, remainDaysText, remainDaysClass };
-}
+const { calcDeliveryInfo } = require('../../../utils/deliveryHelper');
 
 // ==================== 分组辅助方法 ====================
 
@@ -328,9 +279,8 @@ async function enrichGroupsWithOrderData(groups) {
       const order = orderMap[g.orderNo];
       if (!order) return;
 
-      // 交期信息
-      const raw = order.plannedEndDate || order.expectedShipDate || '';
-      const delivery = calcDeliveryInfo(raw);
+      // 交期信息（deliveryHelper 内部读取 plannedEndDate/expectedShipDate/status/createTime）
+      const delivery = calcDeliveryInfo(order);
       g.deliveryDateStr = delivery.deliveryDateStr || '';
       g.remainDaysText = delivery.remainDaysText || '';
       g.remainDaysClass = delivery.remainDaysClass || '';

@@ -6,6 +6,7 @@ const { validateProductionOrder, normalizeData } = require('./dataValidator');
 const { orderStatusText, orderStatusBadgeClass } = require('./orderStatusHelper');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { calcDeliveryInfo } = require('../../../utils/deliveryHelper');
 const { calcOrderProgress } = require('./progressNodes');
 
 /**
@@ -135,107 +136,6 @@ function buildColorSizeMeta(order) {
     }),
     allSizes,
   };
-}
-
-/**
- * 计算交期和剩余天数
- * 颜色逻辑与 PC 端 progressColor.ts 保持一致：
- *   有 createTime 时按比例：≤20% → red，≤50% → yellow，>50% → green
- *   无 createTime 时固定阈值：≤3天 → urgent，≤7天 → warn，>7天 → safe
- * @param {Object} source - 订单数据（需包含 plannedEndDate/expectedShipDate，可选 createTime）
- * @returns {Object} { deliveryDateStr, remainDays, remainDaysText, remainDaysClass }
- */
-function calcDeliveryInfo(source) {
-  const pad = n => String(n).padStart(2, '0');
-  var dateStr, d;
-  // 已关单 / 已完成：停止倒计时，直接显示关单状态
-  const status = String(source.status || '').toLowerCase();
-  if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
-    const raw = source.plannedEndDate || source.expectedShipDate || '';
-    dateStr = '';
-    if (raw) {
-      const s = String(raw);
-      if (s.length > 10) {
-        d = new Date(s.replace(/-/g, '/'));
-        if (!isNaN(d.getTime())) {
-          dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-        } else {
-          dateStr = s.substring(0, 16);
-        }
-      } else {
-        dateStr = s.substring(0, 10);
-      }
-    }
-    return {
-      deliveryDateStr: dateStr,
-      remainDays: null,
-      remainDaysText: '已关单',
-      remainDaysClass: 'days-done',
-    };
-  }
-
-  const raw = source.plannedEndDate || source.expectedShipDate || '';
-  if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
-
-  dateStr = String(raw);
-  if (dateStr.length > 10) {
-    d = new Date(dateStr.replace(/-/g, '/'));
-    if (!isNaN(d.getTime())) {
-      dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    } else {
-      dateStr = dateStr.substring(0, 16);
-    }
-  }
-  const deliveryDateStr = dateStr;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const rawDateOnly = String(raw).substring(0, 10);
-  const dateParts = rawDateOnly.split('-');
-  const target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
-  const diffMs = target.getTime() - today.getTime();
-  const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  let remainDaysText = '';
-  let remainDaysClass = '';
-
-  if (remainDays < 0) {
-    remainDaysText = `逾${Math.abs(remainDays)}天`;
-    remainDaysClass = 'days-overdue';
-  } else if (remainDays === 0) {
-    remainDaysText = '今天';
-    remainDaysClass = 'days-urgent';
-  } else {
-    const createRaw = source.createTime || '';
-    if (createRaw) {
-      const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
-      const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
-      const ratio = remainDays / totalDays;
-      if (ratio <= 0.2) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-urgent';
-      } else if (ratio <= 0.5) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-warn';
-      } else {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-safe';
-      }
-    } else {
-      if (remainDays <= 3) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-urgent';
-      } else if (remainDays <= 7) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-warn';
-      } else {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-safe';
-      }
-    }
-  }
-
-  return { deliveryDateStr, remainDays, remainDaysText, remainDaysClass };
 }
 
 /**

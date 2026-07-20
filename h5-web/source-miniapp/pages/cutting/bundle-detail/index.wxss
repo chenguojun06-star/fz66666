@@ -63,16 +63,6 @@
   white-space: nowrap;
 }
 
-/* ── 加载状态 ── */
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 300rpx;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
 /* ── 订单选择列表（无参入口模式）──
  * 卡片样式统一 @import 全局 order-card.wxss（.task-card / .card-header / .card-body / .card-footer / .filter-pill 等）
  * 与 procurement/task-list、dashboard 等页面共享同一套卡片样式

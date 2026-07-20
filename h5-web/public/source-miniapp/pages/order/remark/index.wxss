@@ -156,6 +156,7 @@
 }
 .remark-images { margin-top: var(--spacing-sm); }
 
+/* 本地覆盖：使用 text-align: center 而非全局 flex 布局，此页空状态为纯文本 */
 .empty-state { text-align: center; padding: 60px 0; }
 .empty-text { font-size: var(--font-size-md); color: var(--color-text-tertiary); }
 .load-tip { text-align: center; padding: 24px 0; font-size: var(--font-size-sm); color: var(--color-text-tertiary); }

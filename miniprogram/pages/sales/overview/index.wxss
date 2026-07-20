@@ -166,6 +166,7 @@
 }
 
 /* ============ 空状态 / 加载态 ============ */
+/* 本地覆盖：使用 text-align: center 而非全局 flex 布局，此页加载态为纯文本 */
 .loading-state {
   text-align: center;
   padding: 24px 0;

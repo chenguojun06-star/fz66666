@@ -219,7 +219,7 @@
   color: #999;
 }
 
-/* 出库弹窗 */
+/* 出库弹窗 — 本地覆盖：居中弹窗（align-items: center），与全局 .modal-mask 底部弹窗（align-items: flex-end）不同，z-index 999 避免遮盖顶部导航 */
 .modal-mask {
   position: fixed;
   top: 0;

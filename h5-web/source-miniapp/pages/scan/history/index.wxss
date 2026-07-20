@@ -243,12 +243,6 @@ page {
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== 空/加载状态 ===== */
-.empty-state {
-  padding: 48px 20px;
-  margin: 0;
-  background: transparent;
-}
 .empty-icon { font-size: var(--font-size-2xl); opacity: 0.5; }
 .empty-text { font-size: var(--font-size-base); color: var(--color-text-secondary); font-weight: 500; }
 .empty-hint { margin-top: 6px; font-size: var(--font-size-xs); color: var(--color-text-disabled); }

@@ -9,14 +9,6 @@
   box-sizing: border-box;
 }
 
-/* 加载 / 空态 */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 120rpx 0;
-}
 .loading-spinner {
   width: 64rpx;
   height: 64rpx;
@@ -38,12 +30,6 @@
   text-align: center;
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 140rpx 40rpx;
-}
 .empty-icon {
   width: 120rpx;
   height: 120rpx;

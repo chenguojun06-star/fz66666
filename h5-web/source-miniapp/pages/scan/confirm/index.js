@@ -7,6 +7,7 @@ const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
 const { normalizeProcessName } = require('../../../utils/displayHelper');
+const { calcDeliveryInfo } = require('../../../utils/deliveryHelper');
 
 Page({
   data: {
@@ -125,7 +126,11 @@ Page({
       || orderDetail.plannedShipDate
       || orderDetail.plannedEndDate
       || '';
-    const deliveryInfo = this._calcDeliveryInfo(deliveryDate);
+    const deliveryInfo = calcDeliveryInfo({
+      plannedEndDate: deliveryDate,
+      status: orderDetail.status,
+      createTime: orderDetail.createTime,
+    });
 
     // 提取裁剪工序单价（来自 handleCuttingMode 注入的 stageResult）
     let cuttingUnitPrice = 0;
@@ -179,54 +184,6 @@ Page({
 
   onUnload() {
     getApp().globalData.confirmScanData = null;
-  },
-
-  /**
-   * 计算交期与剩余天数
-   * @param {string} dateStr - 日期字符串(YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss)
-   * @returns {Object} { deliveryDateStr, remainDaysText, remainDaysClass }
-   */
-  _calcDeliveryInfo(dateStr) {
-    if (!dateStr) return {};
-    var s = String(dateStr);
-    var dateOnly = s.substring(0, 10);
-    var displayStr = dateOnly;
-    if (s.length > 10) {
-      var d = new Date(s.replace(/-/g, '/'));
-      if (!isNaN(d.getTime())) {
-        var pad = function(n) { return String(n).padStart(2, '0'); };
-        displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-      }
-    }
-    var parts = dateOnly.split('-');
-    if (parts.length !== 3) return {};
-
-    var today = new Date();
-    today.setHours(0, 0, 0, 0);
-    var target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    var diffMs = target.getTime() - today.getTime();
-    var remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    var remainDaysText = '';
-    var remainDaysClass = '';
-    if (remainDays > 7) {
-      remainDaysText = '剩余' + remainDays + '天';
-      remainDaysClass = 'days-safe';
-    } else if (remainDays > 3) {
-      remainDaysText = '剩余' + remainDays + '天';
-      remainDaysClass = 'days-warn';
-    } else if (remainDays > 0) {
-      remainDaysText = '剩余' + remainDays + '天';
-      remainDaysClass = 'days-urgent';
-    } else if (remainDays === 0) {
-      remainDaysText = '今天到期';
-      remainDaysClass = 'days-urgent';
-    } else {
-      remainDaysText = '超期' + Math.abs(remainDays) + '天';
-      remainDaysClass = 'days-overdue';
-    }
-
-    return { deliveryDateStr: displayStr, remainDaysText: remainDaysText, remainDaysClass: remainDaysClass };
   },
 
   _buildSizeMatrix(skuList) {

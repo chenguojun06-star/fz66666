@@ -11,6 +11,20 @@
      按钮 pad    8px
    ============================================================ */
 
+/* ---- 遮罩层（全局统一，避免各页面重复定义） ---- */
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-overlay);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
 /* ---- 表单主体 ---- */
 .mf-body {
   padding: 10px 0 4px;
