@@ -57,7 +57,7 @@ Page({
     statusTabs: [
       { key: 'all',        label: '全部',   pillClass: '' },
       { key: 'in_stock',   label: '在库',   pillClass: '' },
-      { key: 'loaned_out', label: '全部借出', pillClass: '' },
+      { key: 'loaned_out', label: '已借出', pillClass: '' },
     ],
     activeStatus: 'all',
 
@@ -261,9 +261,9 @@ Page({
       else if (loaned > 0) loanedOutCount++;
     });
     return [
-      { key: 'all',        label: '全部',     pillClass: '',           count: allCount },
-      { key: 'in_stock',   label: '在库',     pillClass: '',           count: inStockCount },
-      { key: 'loaned_out', label: '全部借出', pillClass: '',           count: loanedOutCount },
+      { key: 'all',        label: '全部',   pillClass: '', count: allCount },
+      { key: 'in_stock',   label: '在库',   pillClass: '', count: inStockCount },
+      { key: 'loaned_out', label: '已借出', pillClass: '', count: loanedOutCount },
     ];
   },
 
