@@ -59,6 +59,8 @@ public class SkillCrystallizationService {
     private static final String SOURCE_CRYSTALLIZED = "crystallized";
     private static final BigDecimal INITIAL_CONFIDENCE = new BigDecimal("0.80");
     private static final double MIN_QUALITY_FOR_CRYSTALLIZE = 0.75;
+    /** 修复：问题最短长度阈值，短句承接不参与结晶化命中 */
+    private static final int MIN_QUESTION_LENGTH_FOR_CRYSTALLIZE = 6;
 
     /** P1-4：结晶化技能升级为程序性记忆的触发阈值（命中使用 20 次即升级） */
     private static final int PROMOTION_USE_COUNT_THRESHOLD = 20;
@@ -103,9 +105,18 @@ public class SkillCrystallizationService {
 
     /**
      * 尝试用结晶化技能直接回答（命中则跳过 LLM 推理）。
+     *
+     * 修复：增加两层防护避免对话承接短句被误判命中：
+     * 1. 问题最短长度阈值（< 6 字符不参与结晶化命中，避免"可以""看看"等承接句被误命中）
+     * 2. extractIntent 已修复：无法分类的返回 null，computeSemanticHash 也会返回 null
      */
     public Optional<String> tryCrystallizedAnswer(Long tenantId, String userQuestion) {
         if (tenantId == null || userQuestion == null) return Optional.empty();
+        // 修复：短句承接不参与结晶化命中（"可以""看看""什么情况"等）
+        if (userQuestion.trim().length() < MIN_QUESTION_LENGTH_FOR_CRYSTALLIZE) {
+            log.debug("[Crystallize] 问题过短，跳过结晶化命中: len={}", userQuestion.trim().length());
+            return Optional.empty();
+        }
         String semanticHash = computeSemanticHash(userQuestion);
         if (semanticHash == null) return Optional.empty();
 
@@ -371,7 +382,11 @@ public class SkillCrystallizationService {
         if (lower.matches(".*(工资|计件|薪资).*")) return "查询工资";
         if (lower.matches(".*(质检|次品|不合格).*")) return "查询质检";
         if (lower.matches(".*(对比|排名|排行).*")) return "对比排名";
-        return "通用查询";
+        // 修复：原 "通用查询" intent 会把"可以""什么情况""看看"等对话承接短句
+        // 全部归为同一语义哈希，导致一旦结晶化后所有承接短句都命中并返回死板缓存答案，
+        // 跳过 LLM 推理和工具调用，用户无法获取真实数据。
+        // 修复方案：无法分类的问题返回 null，不参与结晶化（computeSemanticHash 也会返回 null）
+        return null;
     }
 
     private String extractEntities(String question) {

@@ -5,9 +5,11 @@ import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.integration.im.service.DingtalkNotifyService;
 import com.fashion.supplychain.integration.im.service.FeishuNotifyService;
 import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
+import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import com.fashion.supplychain.system.entity.OrderRemark;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.util.StringUtils;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -41,10 +44,16 @@ public class SmartRemarkAgent {
     private static final Set<String> TERMINAL_STATUSES =
             Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
+    /** 样衣开发终态状态：已完成的不巡检 */
+    private static final Set<String> PATTERN_TERMINAL_STATUSES =
+            Set.of("COMPLETED", "CANCELLED", "ARCHIVED");
+
     @Autowired
     private TenantService tenantService;
     @Autowired
     private ProductionOrderService productionOrderService;
+    @Autowired
+    private PatternProductionService patternProductionService;
     @Autowired
     private ScanRecordMapper scanRecordMapper;
     @Autowired
@@ -135,8 +144,15 @@ public class SmartRemarkAgent {
                 traceOrchestrator.recordPatrolStep(t.getId(), commandId, "smartRemark",
                         "扫描" + orders.size() + "个订单，新增备注" + remarks + "条，通知" + notices + "条",
                         System.currentTimeMillis() - start, true);
+
+                // === 同步巡检样衣开发记录（PatternProduction）===
+                // 修复点：原逻辑只巡检大货订单，样衣开发模块完全没有 AI 巡检覆盖
+                // 导致样衣开发页面看不到任何 AI 巡检异常备注
+                int patternRemarks = scanPatternProductions(t.getId(), commandId, start);
+                totalRemarks += patternRemarks;
+
                 traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
-                        "备注" + remarks + "条，通知" + notices + "条", null, System.currentTimeMillis() - start);
+                        "备注" + (remarks + patternRemarks) + "条，通知" + notices + "条", null, System.currentTimeMillis() - start);
             } catch (Exception e) {
                 log.warn("[SmartRemark] 租户{}巡检异常: {}", t.getId(), e.getMessage());
                 if (commandId != null) {
@@ -294,6 +310,243 @@ public class SmartRemarkAgent {
             orderRemarkService.save(orderRemark);
         } catch (Exception e) {
             log.warn("AI巡检备注写入t_order_remark失败: orderId={}, error={}", order.getId(), e.getMessage());
+        }
+    }
+
+    // ==================== 样衣开发巡检 ====================
+
+    /**
+     * 巡检样衣开发记录（PatternProduction）
+     * 修复点：原 AI 巡检只覆盖大货订单，样衣开发模块完全没有 AI 巡检
+     * 导致样衣开发页面看不到任何 AI 巡检异常备注
+     *
+     * 触发条件（紧急度评分 >= 60 才写备注）：
+     * 1. 交板时间已逾期或临近（<=3天）
+     * 2. 领取后超过 3 天未完成
+     * 3. 创建后超过 5 天仍待领取
+     */
+    private int scanPatternProductions(Long tenantId, String commandId, long startMs) {
+        try {
+            List<PatternProduction> patterns = patternProductionService.lambdaQuery()
+                    .eq(PatternProduction::getTenantId, tenantId)
+                    .eq(PatternProduction::getDeleteFlag, 0)
+                    .notIn(PatternProduction::getStatus, PATTERN_TERMINAL_STATUSES)
+                    .list();
+
+            if (patterns.isEmpty()) return 0;
+
+            LocalDateTime now = LocalDateTime.now();
+            int remarks = 0;
+            for (PatternProduction pattern : patterns) {
+                int score = computePatternUrgencyScore(pattern, now);
+                if (score < URGENT_THRESHOLD) continue;
+
+                // 24 小时去重：同 patternId 当天已写过 AI 巡检备注则跳过
+                if (!shouldRemarkPattern(pattern)) continue;
+
+                String remark = buildPatternRemark(pattern, now, score);
+                appendPatternRemark(pattern, remark);
+                remarks++;
+                log.info("[SmartRemark] 已备注样衣开发 {}: 紧急度={}, 备注={}",
+                        pattern.getId(), score, remark);
+            }
+
+            if (remarks > 0) {
+                traceOrchestrator.recordPatrolStep(tenantId, commandId, "smartRemarkPattern",
+                        "扫描" + patterns.size() + "条样衣记录，新增备注" + remarks + "条",
+                        System.currentTimeMillis() - startMs, true);
+            }
+            return remarks;
+        } catch (Exception e) {
+            log.warn("[SmartRemark] 样衣开发巡检异常: tenantId={}, error={}", tenantId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 样衣开发紧急度评分
+     * 评分维度：交板时间、停滞天数、状态
+     */
+    int computePatternUrgencyScore(PatternProduction pattern, LocalDateTime now) {
+        int score = 0;
+
+        // 1. 交板时间维度
+        if (pattern.getDeliveryTime() != null) {
+            long daysToDeadline = ChronoUnit.DAYS.between(now, pattern.getDeliveryTime());
+            if (daysToDeadline < 0) {
+                // 已逾期
+                score += Math.min(50, (int) Math.abs(daysToDeadline) * 10);
+            } else if (daysToDeadline <= 3) {
+                // 3 天内交板
+                score += 30;
+            } else if (daysToDeadline <= 7) {
+                score += 10;
+            }
+        }
+
+        // 2. 停滞天数维度
+        if (pattern.getReceiveTime() != null) {
+            // 已领取：判断领取后是否长时间未完成
+            long stagnantDays = ChronoUnit.DAYS.between(pattern.getReceiveTime(), now);
+            if (stagnantDays >= 5) {
+                score += 25;
+            } else if (stagnantDays >= 3) {
+                score += 15;
+            }
+        } else {
+            // 未领取：判断创建后是否长时间无人领取
+            if (pattern.getCreateTime() != null) {
+                long waitDays = ChronoUnit.DAYS.between(pattern.getCreateTime(), now);
+                if (waitDays >= 5) {
+                    score += 25;
+                } else if (waitDays >= 3) {
+                    score += 15;
+                }
+            }
+        }
+
+        // 3. 状态维度：制作中但接近交板时间加分
+        if ("IN_PROGRESS".equals(pattern.getStatus()) && pattern.getDeliveryTime() != null) {
+            long daysToDeadline = ChronoUnit.DAYS.between(now, pattern.getDeliveryTime());
+            if (daysToDeadline <= 3) {
+                score += 10;
+            }
+        }
+
+        return Math.min(100, score);
+    }
+
+    /**
+     * 判断该样衣记录今天是否已写过 AI 巡检备注（24 小时去重）
+     */
+    private boolean shouldRemarkPattern(PatternProduction pattern) {
+        try {
+            // 查 t_order_remark 表，targetType=pattern + targetNo=patternId + authorRole=AI巡检 + 近 24 小时
+            long count = orderRemarkService.lambdaQuery()
+                    .eq(OrderRemark::getTenantId, pattern.getTenantId())
+                    .eq(OrderRemark::getTargetType, "pattern")
+                    .eq(OrderRemark::getTargetNo, pattern.getId())
+                    .eq(OrderRemark::getAuthorRole, "AI巡检")
+                    .eq(OrderRemark::getDeleteFlag, 0)
+                    .gt(OrderRemark::getCreateTime, LocalDateTime.now().minusHours(24))
+                    .count();
+            return count == 0;
+        } catch (Exception e) {
+            log.debug("[SmartRemark] 查询样衣备注去重失败，默认允许写入: patternId={}", pattern.getId());
+            return true;
+        }
+    }
+
+    /**
+     * 构建样衣开发巡检备注内容
+     */
+    private String buildPatternRemark(PatternProduction pattern, LocalDateTime now, int score) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(AI_REMARK_PREFIX).append(now.format(FMT)).append(" ");
+
+        if (pattern.getDeliveryTime() != null) {
+            long daysToDeadline = ChronoUnit.DAYS.between(now, pattern.getDeliveryTime());
+            if (daysToDeadline < 0) {
+                sb.append("已逾期").append(Math.abs(daysToDeadline)).append("天");
+            } else if (daysToDeadline <= 3) {
+                sb.append("距交板仅").append(daysToDeadline).append("天");
+            } else if (daysToDeadline <= 7) {
+                sb.append("交板临近(剩余").append(daysToDeadline).append("天)");
+            }
+        }
+
+        if (pattern.getReceiveTime() != null) {
+            long stagnantDays = ChronoUnit.DAYS.between(pattern.getReceiveTime(), now);
+            if (stagnantDays >= 3) {
+                sb.append("，已领取").append(stagnantDays).append("天未完成");
+            }
+        } else if (pattern.getCreateTime() != null) {
+            long waitDays = ChronoUnit.DAYS.between(pattern.getCreateTime(), now);
+            if (waitDays >= 3) {
+                sb.append("，创建").append(waitDays).append("天未领取");
+            }
+        }
+
+        if (StringUtils.hasText(pattern.getStyleNo())) {
+            sb.append("，款号").append(pattern.getStyleNo());
+        }
+
+        if (score >= 80) {
+            sb.append("⚠️需紧急处理");
+        } else if (score >= 60) {
+            sb.append("需关注");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 写入样衣开发 AI 巡检备注
+     * 修复点：双写 pattern + style 两个桶
+     * - pattern 桶：让 PC 端样衣备注日志弹窗 + 小程序「备注日志」tab 能看到
+     * - style 桶：让 PC 端款式备注弹窗（StyleTableView.tsx 的 targetType="style"）也能看到
+     *
+     * @param pattern 样衣开发记录
+     * @param remark  备注内容（含 [AI巡检] 前缀）
+     */
+    private void appendPatternRemark(PatternProduction pattern, String remark) {
+        // 1. 写入 PatternProduction.remarks 字段（inline）
+        try {
+            String existing = pattern.getRemarks();
+            String newRemarks;
+            if (existing == null || existing.isBlank()) {
+                newRemarks = remark;
+            } else {
+                newRemarks = existing + "\n" + remark;
+            }
+            if (newRemarks.length() > MAX_REMARKS_LENGTH) {
+                newRemarks = truncateRemarks(newRemarks);
+            }
+            pattern.setRemarks(newRemarks);
+            patternProductionService.updateById(pattern);
+        } catch (Exception e) {
+            log.warn("[SmartRemark] AI巡检备注写入PatternProduction.remarks失败: patternId={}, error={}",
+                    pattern.getId(), e.getMessage());
+        }
+
+        // 2. 写入 t_order_remark 表（pattern 桶）—— PC 端样衣备注日志弹窗 + 小程序「备注日志」tab 读取
+        try {
+            String contentBody = remark.replaceFirst("^\\[AI巡检\\]\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\]\\s*", "");
+            OrderRemark patternRemark = new OrderRemark();
+            patternRemark.setTargetType("pattern");
+            patternRemark.setTargetNo(pattern.getId());
+            patternRemark.setAuthorName("AI巡检");
+            patternRemark.setAuthorRole("AI巡检");
+            patternRemark.setContent(contentBody);
+            patternRemark.setTenantId(pattern.getTenantId());
+            patternRemark.setCreateTime(LocalDateTime.now());
+            patternRemark.setDeleteFlag(0);
+            orderRemarkService.save(patternRemark);
+        } catch (Exception e) {
+            log.warn("[SmartRemark] AI巡检备注写入t_order_remark(pattern桶)失败: patternId={}, error={}",
+                    pattern.getId(), e.getMessage());
+        }
+
+        // 3. 写入 t_order_remark 表（style 桶）—— PC 端款式备注弹窗（targetType="style"）读取
+        // 让用户在款式列表点「备注」时也能看到该款号下所有样衣的 AI 巡检异常
+        if (StringUtils.hasText(pattern.getStyleNo())) {
+            try {
+                String contentBody = remark.replaceFirst("^\\[AI巡检\\]\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\]\\s*", "");
+                String patternTag = "[样衣" + pattern.getId().substring(0, Math.min(8, pattern.getId().length())) + "] ";
+                OrderRemark styleRemark = new OrderRemark();
+                styleRemark.setTargetType("style");
+                styleRemark.setTargetNo(pattern.getStyleNo());
+                styleRemark.setAuthorName("AI巡检");
+                styleRemark.setAuthorRole("AI巡检·样衣");
+                styleRemark.setContent(patternTag + contentBody);
+                styleRemark.setTenantId(pattern.getTenantId());
+                styleRemark.setCreateTime(LocalDateTime.now());
+                styleRemark.setDeleteFlag(0);
+                orderRemarkService.save(styleRemark);
+            } catch (Exception e) {
+                log.warn("[SmartRemark] AI巡检备注写入t_order_remark(style桶)失败: styleNo={}, error={}",
+                        pattern.getStyleNo(), e.getMessage());
+            }
         }
     }
 
