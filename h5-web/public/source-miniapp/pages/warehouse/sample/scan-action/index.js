@@ -236,6 +236,16 @@ Page({
         if (d.stock) {
           d.stock._imageUrl = buildImageUrl(d.stock.imageUrl || d.stock.coverImage || '');
         }
+        // 计算统计：待归还数（未归还的借调单数） + 报废数（inventoryStatus=SCRAPPED 或 destroyTime 非空）
+        const activeLoans = d.activeLoans || [];
+        d.pendingReturnCount = activeLoans.length;
+        // 报废数：当前后端 SampleStock 没有 scrappedQuantity 字段，按 inventoryStatus 推断
+        // 如果该 SKU 已报废，整条记录视为报废，数量为 stock.quantity；否则 0
+        const stock = d.stock || {};
+        const isScrapped = stock.inventoryStatus === 'SCRAPPED'
+          || stock.inventoryStatus === 'SCRAP'
+          || !!stock.destroyTime;
+        d.scrappedCount = isScrapped ? (stock.quantity || 0) : 0;
         this.setData({
           stockInfo: d,
           actions: d.actions || [],
@@ -247,6 +257,9 @@ Page({
         this.setData({ errorMsg: (err && (err.errMsg || err.message)) || '网络异常，请重试', loading: false });
       });
   },
+
+  // 空操作：仅用于阻止事件冒泡（如弹窗内层 catchtap）
+  noop() {},
 
   onRetry() {
     const { styleNo, color, size } = this.data;
