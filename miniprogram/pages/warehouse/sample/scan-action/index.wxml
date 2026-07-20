@@ -187,23 +187,23 @@
           <text class="info-value">{{stockInfo.stock.loanedQuantity}} 件</text>
         </view>
 
-        <!-- 库存统计：总数量/已借调/待归还/报废 -->
-        <view class="stock-stats-grid">
-          <view class="stock-stat-item">
-            <text class="stock-stat-num stock-stat-num--blue">{{stockInfo.stock.quantity || 0}}</text>
-            <text class="stock-stat-label">总数量</text>
+        <!-- 库存统计：总数量/已借调/待归还/报废（复用项目统一 stats-row/stat-card 样式） -->
+        <view class="stats-row">
+          <view class="stat-card">
+            <text class="stat-value">{{stockInfo.stock.quantity || 0}}</text>
+            <text class="stat-label">总数量</text>
           </view>
-          <view class="stock-stat-item">
-            <text class="stock-stat-num stock-stat-num--orange">{{stockInfo.stock.loanedQuantity || 0}}</text>
-            <text class="stock-stat-label">已借调</text>
+          <view class="stat-card">
+            <text class="stat-value stat-value--warning">{{stockInfo.stock.loanedQuantity || 0}}</text>
+            <text class="stat-label">已借调</text>
           </view>
-          <view class="stock-stat-item">
-            <text class="stock-stat-num stock-stat-num--red">{{stockInfo.pendingReturnCount || 0}}</text>
-            <text class="stock-stat-label">待归还</text>
+          <view class="stat-card">
+            <text class="stat-value stat-value--danger">{{stockInfo.pendingReturnCount || 0}}</text>
+            <text class="stat-label">待归还</text>
           </view>
-          <view class="stock-stat-item">
-            <text class="stock-stat-num stock-stat-num--gray">{{stockInfo.scrappedCount || 0}}</text>
-            <text class="stock-stat-label">报废</text>
+          <view class="stat-card">
+            <text class="stat-value stat-value--secondary">{{stockInfo.scrappedCount || 0}}</text>
+            <text class="stat-label">报废</text>
           </view>
         </view>
       </view>

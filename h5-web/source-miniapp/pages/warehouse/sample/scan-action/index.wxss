@@ -268,33 +268,41 @@
   background: var(--color-bg-page);
 }
 
-/* 库存统计：4列网格（总数量/已借调/待归还/报废） */
-.stock-stats-grid {
+/* 库存统计：复用项目统一 stats-row / stat-card 样式
+   （与 finished-inventory、dashboard 等页面保持一致） */
+.stats-row {
   display: flex;
-  margin-top: 12rpx;
-  padding: 16rpx 0;
+  gap: 8px;
+  padding: 12px 0 4px;
+  margin-top: 8rpx;
   border-top: 1rpx dashed var(--color-border);
 }
-.stock-stat-item {
+.stat-card {
   flex: 1;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 10px 4px;
 }
-.stock-stat-num {
-  font-size: var(--font-size-xl);
-  font-weight: bold;
+.stat-value {
+  font-size: 22px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
-.stock-stat-num--blue { color: var(--color-primary); }
-.stock-stat-num--orange { color: var(--color-warning); }
-.stock-stat-num--red { color: var(--color-danger); }
-.stock-stat-num--gray { color: var(--color-text-secondary); }
-.stock-stat-label {
-  font-size: var(--font-size-2xs);
-  color: var(--color-text-secondary);
-  margin-top: 4rpx;
+.stat-value--success { color: var(--color-success); }
+.stat-value--warning { color: var(--color-warning); }
+.stat-value--danger { color: var(--color-danger); }
+.stat-value--secondary { color: var(--color-text-secondary); }
+.stat-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
 }
 
 .info-row {
