@@ -140,7 +140,9 @@
       
       <!-- 已有库存记录 -->
       <view class="info-card" wx:if="{{stockInfo.found && stockInfo.stock}}">
-        <image wx:if="{{stockInfo.stock._imageUrl}}" class="detail-image" src="{{stockInfo.stock._imageUrl}}" mode="aspectFill" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
+        <view wx:if="{{stockInfo.stock._imageUrl}}" class="detail-image-wrap">
+          <image class="detail-image" src="{{stockInfo.stock._imageUrl}}" mode="aspectFit" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
+        </view>
         <view class="info-row">
           <text class="info-label">状态</text>
           <text class="info-value">

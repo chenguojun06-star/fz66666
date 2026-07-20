@@ -248,11 +248,23 @@
   box-sizing: border-box;
 }
 
-.detail-image {
+/* 详情图：限定高度 + aspectFit 完整显示不裁剪 + 居中 */
+.detail-image-wrap {
   width: 100%;
-  height: 220rpx;
+  max-height: 160rpx;
+  margin-bottom: 10rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-bg-page);
   border-radius: var(--radius-xs);
-  margin-bottom: 12rpx;
+  overflow: hidden;
+}
+.detail-image {
+  width: auto;
+  height: 160rpx;
+  max-width: 100%;
+  border-radius: var(--radius-xs);
   background: var(--color-bg-page);
 }
 
