@@ -300,13 +300,16 @@ Page({
       loanQuantity: 1,
       loanPickerLoading: true,
     });
-    // 并行加载工厂列表和员工列表
+    // 并行加载外发工厂列表和内部员工列表
+    // 注意：api.factory 和 api.system.listUsers 直接挂在 api 顶层（非 api.system.factory）
+    // - api.factory.list 返回 IPage<Factory>，取 records
+    // - api.system.listUsers 返回 Page<User>，取 records
     Promise.all([
-      api.system.factory.list({ pageSize: 200 }).catch(() => ({ data: { list: [] } })),
-      api.system.factoryWorker.list(null).catch(() => ({ data: [] })),
+      api.factory.list({ page: 1, pageSize: 200 }).catch(() => ({ records: [] })),
+      api.system.listUsers({ page: 1, pageSize: 200 }).catch(() => ({ records: [] })),
     ]).then(([factoryRes, workerRes]) => {
-      const factoryList = (factoryRes && factoryRes.data && factoryRes.data.list) || [];
-      const workerList = (workerRes && workerRes.data) || [];
+      const factoryList = (factoryRes && factoryRes.records) || [];
+      const workerList = (workerRes && workerRes.records) || [];
       this.setData({
         factoryList,
         workerList,

@@ -14,6 +14,13 @@ const system = {
   listPendingUsers() {
     return ok('/api/system/user/pending', 'GET', {});
   },
+  /**
+   * 分页查询用户/员工列表
+   * 用于样衣借调选择借入人等场景
+   */
+  listUsers(params) {
+    return ok('/api/system/user/list', 'GET', params || {});
+  },
   updateUser(userId, data) {
     return ok('/api/system/user', 'PUT', { ...(data || {}), id: userId });
   },
