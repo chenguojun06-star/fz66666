@@ -327,12 +327,24 @@
         <text class="loan-qty-max">可用 {{stockInfo.availableQuantity}} 件</text>
       </view>
 
-      <!-- 借调对象列表 -->
+      <!-- 搜索框：过滤员工/工厂列表 -->
+      <view class="loan-search-row">
+        <input
+          class="loan-search-input"
+          placeholder="{{loanTargetType === 'person' ? '搜索员工姓名' : '搜索工厂名称'}}"
+          value="{{loanSearchKeyword}}"
+          bindinput="onLoanSearchInput"
+          confirm-type="search"
+        />
+        <view wx:if="{{loanSearchKeyword}}" class="loan-search-clear" bindtap="onLoanSearchClear">×</view>
+      </view>
+
+      <!-- 借调对象列表（基于过滤后的列表渲染） -->
       <view wx:if="{{loanPickerLoading}}" class="loan-loading">加载中...</view>
       <view wx:elif="{{loanTargetType === 'person'}}" class="loan-target-list">
-        <view wx:if="{{workerList.length === 0}}" class="loan-empty">暂无员工数据</view>
+        <view wx:if="{{filteredWorkerList.length === 0}}" class="loan-empty">{{loanSearchKeyword ? '未匹配到员工' : '暂无员工数据'}}</view>
         <view
-          wx:for="{{workerList}}"
+          wx:for="{{filteredWorkerList}}"
           wx:key="id"
           class="loan-target-item {{loanTargetId === item.id ? 'loan-target-item--active' : ''}}"
           bindtap="onLoanTargetSelect"
@@ -345,9 +357,9 @@
         </view>
       </view>
       <view wx:elif="{{loanTargetType === 'factory'}}" class="loan-target-list">
-        <view wx:if="{{factoryList.length === 0}}" class="loan-empty">暂无外发工厂数据</view>
+        <view wx:if="{{filteredFactoryList.length === 0}}" class="loan-empty">{{loanSearchKeyword ? '未匹配到工厂' : '暂无外发工厂数据'}}</view>
         <view
-          wx:for="{{factoryList}}"
+          wx:for="{{filteredFactoryList}}"
           wx:key="id"
           class="loan-target-item {{loanTargetId === item.id ? 'loan-target-item--active' : ''}}"
           bindtap="onLoanTargetSelect"

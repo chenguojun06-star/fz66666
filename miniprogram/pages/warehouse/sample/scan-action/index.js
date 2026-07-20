@@ -82,8 +82,11 @@ Page({
     // === 借调目标选择 ===
     showLoanPicker: false,         // 借调弹窗显隐
     loanTargetType: 'person',      // 'person' | 'factory'
-    factoryList: [],               // 外发工厂列表
-    workerList: [],                // 员工列表
+    factoryList: [],               // 外发工厂列表（全量）
+    workerList: [],                // 员工列表（全量）
+    filteredFactoryList: [],       // 搜索过滤后的工厂列表
+    filteredWorkerList: [],        // 搜索过滤后的员工列表
+    loanSearchKeyword: '',         // 搜索关键词
     loanTargetId: '',              // 选中目标ID
     loanTargetName: '',            // 选中目标名称
     loanQuantity: 1,               // 借调数量
@@ -298,6 +301,7 @@ Page({
       loanTargetId: '',
       loanTargetName: '',
       loanQuantity: 1,
+      loanSearchKeyword: '',
       loanPickerLoading: true,
     });
     // 并行加载外发工厂列表和内部员工列表
@@ -313,6 +317,8 @@ Page({
       this.setData({
         factoryList,
         workerList,
+        filteredFactoryList: factoryList,
+        filteredWorkerList: workerList,
         loanPickerLoading: false,
       });
     }).catch(() => {
@@ -320,11 +326,56 @@ Page({
     });
   },
 
+  // 搜索过滤：员工/工厂
+  onLoanSearchInput(e) {
+    const keyword = ((e.detail.value || '') + '').trim().toLowerCase();
+    this.setData({ loanSearchKeyword: keyword });
+    this._filterLoanTargets(keyword);
+  },
+
+  onLoanSearchClear() {
+    this.setData({ loanSearchKeyword: '' });
+    this._filterLoanTargets('');
+  },
+
+  // 根据关键词过滤当前类型的列表
+  _filterLoanTargets(keyword) {
+    const { loanTargetType, factoryList, workerList } = this.data;
+    if (!keyword) {
+      this.setData({
+        filteredFactoryList: factoryList,
+        filteredWorkerList: workerList,
+      });
+      return;
+    }
+    if (loanTargetType === 'person') {
+      const filtered = (workerList || []).filter(item => {
+        const name = ((item.name || item.workerName || item.username || '') + '').toLowerCase();
+        return name.includes(keyword);
+      });
+      this.setData({ filteredWorkerList: filtered });
+    } else {
+      const filtered = (factoryList || []).filter(item => {
+        const name = ((item.factoryName || item.name || '') + '').toLowerCase();
+        const contact = ((item.contactPerson || '') + '').toLowerCase();
+        return name.includes(keyword) || contact.includes(keyword);
+      });
+      this.setData({ filteredFactoryList: filtered });
+    }
+  },
+
   // 切换借调目标类型
   onLoanTargetTypeChange(e) {
     const type = e.currentTarget.dataset.type;
     if (!type) return;
-    this.setData({ loanTargetType: type, loanTargetId: '', loanTargetName: '' });
+    this.setData({
+      loanTargetType: type,
+      loanTargetId: '',
+      loanTargetName: '',
+      loanSearchKeyword: '',
+      filteredFactoryList: this.data.factoryList,
+      filteredWorkerList: this.data.workerList,
+    });
   },
 
   // 选择借调目标
