@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "裁剪菲详情",
+  "navigationBarTitleText": "裁剪管理",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "usingComponents": {
