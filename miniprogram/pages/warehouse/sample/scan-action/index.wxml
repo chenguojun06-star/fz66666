@@ -26,7 +26,7 @@
               bindtap="onStatusTabTap"
             >
               <text class="filter-text">{{item.label}}</text>
-              <text wx:if="{{item.count > 0}}" class="filter-num">{{item.count}}</text>
+              <text class="filter-num">{{item.count}}</text>
             </view>
           </scroll-view>
         </view>
