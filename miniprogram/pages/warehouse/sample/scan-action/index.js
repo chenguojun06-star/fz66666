@@ -78,6 +78,16 @@ Page({
     warehouseLocationCode: '',
     warehouse: '',
     locationOptions: [],
+
+    // === 借调目标选择 ===
+    showLoanPicker: false,         // 借调弹窗显隐
+    loanTargetType: 'person',      // 'person' | 'factory'
+    factoryList: [],               // 外发工厂列表
+    workerList: [],                // 员工列表
+    loanTargetId: '',              // 选中目标ID
+    loanTargetName: '',            // 选中目标名称
+    loanQuantity: 1,               // 借调数量
+    loanPickerLoading: false,
   },
 
   onLoad(options) {
@@ -274,21 +284,104 @@ Page({
 
   onLoan() {
     if (this.data.submitting) return;
+    const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
+    const availableQty = this.data.stockInfo && this.data.stockInfo.availableQuantity
+      ? this.data.stockInfo.availableQuantity : 0;
+    if (availableQty <= 0) {
+      wx.showToast({ title: '可用库存为0，无法借调', icon: 'none' });
+      return;
+    }
+    // 打开借调目标选择弹窗
+    this.setData({
+      showLoanPicker: true,
+      loanTargetType: 'person',
+      loanTargetId: '',
+      loanTargetName: '',
+      loanQuantity: 1,
+      loanPickerLoading: true,
+    });
+    // 并行加载工厂列表和员工列表
+    Promise.all([
+      api.system.factory.list({ pageSize: 200 }).catch(() => ({ data: { list: [] } })),
+      api.system.factoryWorker.list(null).catch(() => ({ data: [] })),
+    ]).then(([factoryRes, workerRes]) => {
+      const factoryList = (factoryRes && factoryRes.data && factoryRes.data.list) || [];
+      const workerList = (workerRes && workerRes.data) || [];
+      this.setData({
+        factoryList,
+        workerList,
+        loanPickerLoading: false,
+      });
+    }).catch(() => {
+      this.setData({ loanPickerLoading: false });
+    });
+  },
+
+  // 切换借调目标类型
+  onLoanTargetTypeChange(e) {
+    const type = e.currentTarget.dataset.type;
+    if (!type) return;
+    this.setData({ loanTargetType: type, loanTargetId: '', loanTargetName: '' });
+  },
+
+  // 选择借调目标
+  onLoanTargetSelect(e) {
+    const { id, name } = e.currentTarget.dataset;
+    if (!id) return;
+    this.setData({ loanTargetId: id, loanTargetName: name });
+  },
+
+  // 借调数量输入
+  onLoanQuantityInput(e) {
+    let qty = parseInt(e.detail.value, 10);
+    if (isNaN(qty) || qty < 1) qty = 1;
+    const availableQty = this.data.stockInfo && this.data.stockInfo.availableQuantity
+      ? this.data.stockInfo.availableQuantity : 1;
+    if (qty > availableQty) qty = availableQty;
+    this.setData({ loanQuantity: qty });
+  },
+
+  // 取消借调
+  onLoanCancel() {
+    this.setData({ showLoanPicker: false });
+  },
+
+  // 确认借调
+  onLoanConfirm() {
+    if (this.data.submitting) return;
+    const { loanTargetType, loanTargetId, loanTargetName, loanQuantity } = this.data;
+    if (!loanTargetId || !loanTargetName) {
+      wx.showToast({ title: '请选择借调对象', icon: 'none' });
+      return;
+    }
+    const availableQty = this.data.stockInfo && this.data.stockInfo.availableQuantity
+      ? this.data.stockInfo.availableQuantity : 0;
+    if (loanQuantity > availableQty) {
+      wx.showToast({ title: `借调数量不能超过可用库存(${availableQty})`, icon: 'none' });
+      return;
+    }
+    const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
     const userInfo = getApp().globalData.userInfo || {};
+
+    // 构造借调参数（向后端 SampleLoan 实体字段对齐）
+    const loanPayload = {
+      sampleStockId: stock.id,
+      borrower: userInfo.name || userInfo.username || '',  // 操作人（借出登记人）
+      borrowerId: userInfo.id ? String(userInfo.id) : '',
+      quantity: loanQuantity,
+      lendToType: loanTargetType,                 // 'person' | 'factory'
+      lendTo: loanTargetName,                     // 借入人姓名 或 借入工厂名
+      lendToId: loanTargetId,                     // 借入人ID 或 借入工厂ID
+      lendToFactoryId: loanTargetType === 'factory' ? loanTargetId : '',
+    };
+
     wx.showModal({
       title: '确认借调',
-      content: `借调 ${this.data.styleNo} ${this.data.color} ${this.data.size}，确认？`,
+      content: `借调给「${loanTargetName}」，数量 ${loanQuantity} 件，确认？`,
       success: (modal) => {
         if (!modal.confirm) return;
-        const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
-        this._doAction('loan', () =>
-          api.sampleStock.loan({
-            sampleStockId: stock.id,
-            borrower: userInfo.name || userInfo.username || '',
-            borrowerId: userInfo.id ? String(userInfo.id) : '',
-            quantity: 1,
-          }),
-        );
+        this.setData({ showLoanPicker: false });
+        this._doAction('loan', () => api.sampleStock.loan(loanPayload));
       },
     });
   },

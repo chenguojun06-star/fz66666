@@ -285,6 +285,84 @@
     </block>
   </view>
   
+  <!-- 借调目标选择弹窗 -->
+  <view wx:if="{{showLoanPicker}}" class="loan-picker-mask" catchtap="onLoanCancel">
+    <view class="loan-picker" catchtap="">
+      <view class="loan-picker-header">
+        <text class="loan-picker-title">选择借调对象</text>
+        <view class="loan-picker-close" bindtap="onLoanCancel">×</view>
+      </view>
+
+      <!-- 借调对象类型切换 -->
+      <view class="loan-type-tabs">
+        <view
+          class="loan-type-tab {{loanTargetType === 'person' ? 'loan-type-tab--active' : ''}}"
+          bindtap="onLoanTargetTypeChange"
+          data-type="person"
+        >借给员工</view>
+        <view
+          class="loan-type-tab {{loanTargetType === 'factory' ? 'loan-type-tab--active' : ''}}"
+          bindtap="onLoanTargetTypeChange"
+          data-type="factory"
+        >借给外发工厂</view>
+      </view>
+
+      <!-- 借调数量 -->
+      <view class="loan-qty-row">
+        <text class="loan-qty-label">借调数量</text>
+        <input
+          class="loan-qty-input"
+          type="number"
+          value="{{loanQuantity}}"
+          bindinput="onLoanQuantityInput"
+        />
+        <text class="loan-qty-max">可用 {{stockInfo.availableQuantity}} 件</text>
+      </view>
+
+      <!-- 借调对象列表 -->
+      <view wx:if="{{loanPickerLoading}}" class="loan-loading">加载中...</view>
+      <view wx:elif="{{loanTargetType === 'person'}}" class="loan-target-list">
+        <view wx:if="{{workerList.length === 0}}" class="loan-empty">暂无员工数据</view>
+        <view
+          wx:for="{{workerList}}"
+          wx:key="id"
+          class="loan-target-item {{loanTargetId === item.id ? 'loan-target-item--active' : ''}}"
+          bindtap="onLoanTargetSelect"
+          data-id="{{item.id}}"
+          data-name="{{item.name || item.workerName || item.username}}"
+        >
+          <text class="loan-target-name">{{item.name || item.workerName || item.username}}</text>
+          <text wx:if="{{item.factoryName}}" class="loan-target-sub">{{item.factoryName}}</text>
+          <text wx:if="{{loanTargetId === item.id}}" class="loan-target-check">✓</text>
+        </view>
+      </view>
+      <view wx:elif="{{loanTargetType === 'factory'}}" class="loan-target-list">
+        <view wx:if="{{factoryList.length === 0}}" class="loan-empty">暂无外发工厂数据</view>
+        <view
+          wx:for="{{factoryList}}"
+          wx:key="id"
+          class="loan-target-item {{loanTargetId === item.id ? 'loan-target-item--active' : ''}}"
+          bindtap="onLoanTargetSelect"
+          data-id="{{item.id}}"
+          data-name="{{item.factoryName || item.name}}"
+        >
+          <text class="loan-target-name">{{item.factoryName || item.name}}</text>
+          <text wx:if="{{item.contactPerson}}" class="loan-target-sub">联系人：{{item.contactPerson}}</text>
+          <text wx:if="{{loanTargetId === item.id}}" class="loan-target-check">✓</text>
+        </view>
+      </view>
+
+      <!-- 确认按钮 -->
+      <view class="loan-picker-footer">
+        <view class="loan-btn loan-btn--cancel" bindtap="onLoanCancel">取消</view>
+        <view
+          class="loan-btn loan-btn--confirm {{(!loanTargetId || submitting) ? 'loan-btn--disabled' : ''}}"
+          bindtap="onLoanConfirm"
+        >确认借调</view>
+      </view>
+    </view>
+  </view>
+
   <!-- 隐私协议 -->
   <privacy-dialog
     wx:if="{{showPrivacy}}"
