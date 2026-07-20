@@ -185,11 +185,15 @@ Page({
         const total = data?.total || records.length;
 
         const newStockList = refresh ? records : [...this.data.stockList, ...records];
+        // 计算每个筛选 tab 的数量统计
+        const statusTabs = this._computeStatusTabs(newStockList);
+        // 按 activeStatus 过滤渲染列表
         const filteredStockList = newStockList.filter(s => this._matchesStatus(s));
         this.setData({
           stockList: newStockList,
           filteredStockList,
-          hasMore: this.data.stockList.length < total,
+          statusTabs,
+          hasMore: newStockList.length < total,
           page: page + 1,
           stockListLoading: false,
         });
@@ -243,6 +247,24 @@ Page({
     if (status === 'in_stock') return available > 0;
     if (status === 'loaned_out') return available <= 0 && loaned > 0;
     return true;
+  },
+
+  // 计算每个筛选 tab 的数量统计
+  _computeStatusTabs(list) {
+    let allCount = 0, inStockCount = 0, loanedOutCount = 0;
+    (list || []).forEach(s => {
+      allCount++;
+      const qty = s.quantity || 0;
+      const loaned = s.loanedQuantity || 0;
+      const available = qty - loaned;
+      if (available > 0) inStockCount++;
+      else if (loaned > 0) loanedOutCount++;
+    });
+    return [
+      { key: 'all',        label: '全部',     pillClass: '',           count: allCount },
+      { key: 'in_stock',   label: '在库',     pillClass: '',           count: inStockCount },
+      { key: 'loaned_out', label: '全部借出', pillClass: '',           count: loanedOutCount },
+    ];
   },
 
   onStockItemTap(e) {

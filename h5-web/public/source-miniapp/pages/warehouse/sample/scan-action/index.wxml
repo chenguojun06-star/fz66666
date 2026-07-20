@@ -49,7 +49,12 @@
         <view class="line-icon icon-shirt empty-icon"></view>
         <text class="empty-text">暂无样衣库存</text>
       </view>
-      
+
+      <view wx:elif="{{filteredStockList.length === 0}}" class="empty-wrap">
+        <view class="line-icon icon-shirt empty-icon"></view>
+        <text class="empty-text">当前筛选下无数据</text>
+      </view>
+
       <block wx:else>
       <view
         class="stock-item"
@@ -89,9 +94,9 @@
         </view>
       </view>
       </block>
-      
-      <!-- 加载更多 -->
-      <view class="load-more" wx:if="{{stockList.length > 0}}">
+
+      <!-- 加载更多：仅在"全部"tab下显示，本地过滤时不显示（避免误以为还有数据） -->
+      <view class="load-more" wx:if="{{activeStatus === 'all' && stockList.length > 0}}">
         <text wx:if="{{stockListLoading}}" class="load-text">加载中...</text>
         <text wx:elif="{{hasMore}}" class="load-text" bindtap="loadStockList">加载更多</text>
         <text wx:else class="load-text">— 没有更多了 —</text>
