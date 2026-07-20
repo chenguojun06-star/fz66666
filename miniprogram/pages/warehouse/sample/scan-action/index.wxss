@@ -346,40 +346,63 @@
   box-sizing: border-box;
 }
 
-.btn-inbound {
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  text-align: center;
+/* 出库库位提示条（已入库时显示，让用户清楚样衣在哪里） */
+.stock-location-banner {
+  background: #e8f2ff;
   border-radius: var(--radius-md);
-  padding: 14px 0;
-  font-size: var(--font-size-md-lg);
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
-  margin-bottom: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+.stock-location-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-right: 6px;
+}
+.stock-location-value {
+  font-size: var(--font-size-md);
+  color: var(--color-primary);
+  font-weight: 500;
+  flex: 1;
 }
 
-.btn-loan {
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  text-align: center;
-  border-radius: var(--radius-md);
-  padding: 14px 0;
-  font-size: var(--font-size-md-lg);
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
-  margin-bottom: 8px;
+/* ==================== 操作按钮：一行3个 + 镂空风格 ==================== */
+/* 遵循项目铁律：所有按钮必须采用镂空风格（透明背景+彩色边框+彩色文字），禁止实心 */
+.action-btn-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
 }
-
-.btn-return {
-  background: var(--color-warning);
-  color: var(--color-text-white);
+.action-btn {
+  flex: 1;
   text-align: center;
+  padding: 10px 0;
+  font-size: var(--font-size-md);
+  font-weight: 500;
   border-radius: var(--radius-md);
-  padding: 14px 0;
-  font-size: var(--font-size-md-lg);
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(250,173,20,0.25);
-  margin-bottom: 8px;
+  border: 2rpx solid;
+  background: transparent;
+  transition: opacity 0.2s ease;
+}
+.action-btn--inbound {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.action-btn--loan {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+.action-btn--return {
+  color: var(--color-text-secondary);
+  border-color: var(--color-text-secondary);
+}
+.action-btn--hover {
+  opacity: 0.7;
+}
+.action-btn--disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* ==================== 借调目标选择弹窗 ==================== */

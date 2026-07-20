@@ -209,6 +209,12 @@
       
       <!-- 操作按钮区域 -->
       <view class="action-area" wx:if="{{!successMsg}}">
+        <!-- 出库库位提示（已入库时显示，让用户清楚样衣在哪里） -->
+        <view wx:if="{{stockInfo.found && stockInfo.stock && (stockInfo.stock.warehouseAreaName || stockInfo.stock.location)}}" class="stock-location-banner">
+          <text class="stock-location-label">出库库位：</text>
+          <text class="stock-location-value">{{stockInfo.stock.warehouseAreaName || '-'}}{{stockInfo.stock.location ? ' / ' + stockInfo.stock.location : ''}}</text>
+        </view>
+
         <!-- 仓库区域选择（入库时显示） -->
         <view wx:if="{{actions.indexOf('inbound') !== -1}}" class="warehouse-section">
           <view class="warehouse-label">入库仓库：</view>
@@ -260,26 +266,26 @@
           />
         </view>
         
-        <view
-          class="btn-inbound {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{actions.indexOf('inbound') !== -1}}"
-          bindtap="onInbound"
-        >
-          入库
-        </view>
-        <view
-          class="btn-loan {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{actions.indexOf('loan') !== -1}}"
-          bindtap="onLoan"
-        >
-          借调
-        </view>
-        <view
-          class="btn-return {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{actions.indexOf('return') !== -1}}"
-          bindtap="onReturn"
-        >
-          归还
+        <!-- 操作按钮：一行3个 + 镂空风格（遵循项目铁律：所有按钮必须镂空） -->
+        <view class="action-btn-row">
+          <view
+            class="action-btn action-btn--inbound {{submitting ? 'action-btn--disabled' : ''}}"
+            wx:if="{{actions.indexOf('inbound') !== -1}}"
+            bindtap="onInbound"
+            hover-class="action-btn--hover"
+          >入库</view>
+          <view
+            class="action-btn action-btn--loan {{submitting ? 'action-btn--disabled' : ''}}"
+            wx:if="{{actions.indexOf('loan') !== -1}}"
+            bindtap="onLoan"
+            hover-class="action-btn--hover"
+          >借调</view>
+          <view
+            class="action-btn action-btn--return {{submitting ? 'action-btn--disabled' : ''}}"
+            wx:if="{{actions.indexOf('return') !== -1}}"
+            bindtap="onReturn"
+            hover-class="action-btn--hover"
+          >归还</view>
         </view>
       </view>
     </block>
