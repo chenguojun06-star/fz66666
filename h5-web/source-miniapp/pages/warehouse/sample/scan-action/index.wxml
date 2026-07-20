@@ -3,19 +3,34 @@
   
   <!-- ==================== 列表视图 ==================== -->
   <view wx:if="{{viewMode === 'list'}}">
-    <!-- 搜索框 + 扫码按钮：已迁移到通用组件 sticky-search-bar -->
+    <!-- 搜索框 + 扫码按钮 + 筛选器：复用通用组件 sticky-search-bar -->
     <view class="ssb-wrap">
       <sticky-search-bar
         sticky="{{false}}"
         placeholder="搜索款号/颜色/尺码"
         value="{{searchKeyword}}"
         show-scan="{{true}}"
-        show-filter="{{false}}"
+        show-filter="{{true}}"
         bind:input="onSearchInput"
         bind:confirm="onSearchConfirm"
         bind:clear="onSearchClear"
         bind:scan="onScanCode"
-      />
+      >
+        <view slot="filter">
+          <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+            <view
+              wx:for="{{statusTabs}}"
+              wx:key="key"
+              class="filter-pill {{activeStatus === item.key ? 'filter-pill--on' : ''}} {{item.pillClass}}"
+              data-key="{{item.key}}"
+              bindtap="onStatusTabTap"
+            >
+              <text class="filter-text">{{item.label}}</text>
+              <text wx:if="{{item.count > 0}}" class="filter-num">{{item.count}}</text>
+            </view>
+          </scroll-view>
+        </view>
+      </sticky-search-bar>
     </view>
 
     <!-- 列表 -->
@@ -36,9 +51,9 @@
       </view>
       
       <block wx:else>
-      <view 
-        class="stock-item" 
-        wx:for="{{stockList}}" 
+      <view
+        class="stock-item"
+        wx:for="{{filteredStockList}}"
         wx:key="id"
         bindtap="onStockItemTap"
         data-stock="{{item}}"
@@ -140,9 +155,14 @@
       
       <!-- 已有库存记录 -->
       <view class="info-card" wx:if="{{stockInfo.found && stockInfo.stock}}">
-        <view wx:if="{{stockInfo.stock._imageUrl}}" class="detail-image-wrap">
-          <image class="detail-image" src="{{stockInfo.stock._imageUrl}}" mode="aspectFit" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
-        </view>
+        <image
+          wx:if="{{stockInfo.stock._imageUrl}}"
+          class="detail-image"
+          src="{{stockInfo.stock._imageUrl}}"
+          mode="aspectFit"
+          bindtap="onPreviewImage"
+          data-src="{{stockInfo.stock._imageUrl}}"
+        />
         <view class="info-row">
           <text class="info-label">状态</text>
           <text class="info-value">

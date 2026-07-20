@@ -49,12 +49,21 @@ Page({
   data: {
     // 列表模式 vs 详情模式
     viewMode: 'list',  // 'list' | 'detail'
-    
+
     // 搜索相关
     searchKeyword: '',
-    
+
+    // 筛选器：库存状态 tabs（与 cutting/bundle-detail 等页面统一 filter-pill 风格）
+    statusTabs: [
+      { key: 'all',        label: '全部',   pillClass: '' },
+      { key: 'in_stock',   label: '在库',   pillClass: '' },
+      { key: 'loaned_out', label: '全部借出', pillClass: '' },
+    ],
+    activeStatus: 'all',
+
     // 列表数据
     stockList: [],
+    filteredStockList: [],   // 按 activeStatus 本地过滤后的渲染列表
     stockListLoading: false,
     stockListError: '',
     hasMore: true,
@@ -167,16 +176,19 @@ Page({
     return api.sampleStock.list(params)
       .then((res) => {
         const data = res || {};
-        
+
         const records = (data?.records || []).map(item => ({
           ...item,
           _imageUrl: buildImageUrl(item.imageUrl || item.coverImage || ''),
           _sampleTypeLabel: translateSampleType(item.sampleType || ''),
         }));
         const total = data?.total || records.length;
-        
+
+        const newStockList = refresh ? records : [...this.data.stockList, ...records];
+        const filteredStockList = newStockList.filter(s => this._matchesStatus(s));
         this.setData({
-          stockList: refresh ? records : [...this.data.stockList, ...records],
+          stockList: newStockList,
+          filteredStockList,
           hasMore: this.data.stockList.length < total,
           page: page + 1,
           stockListLoading: false,
@@ -203,6 +215,34 @@ Page({
   onSearchClear() {
     this.setData({ searchKeyword: '' });
     this.loadStockList(true);
+  },
+
+  // 切换库存状态筛选 tab（本地过滤，不重新请求）
+  onStatusTabTap(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key || key === this.data.activeStatus) return;
+    const newFiltered = (this.data.stockList || []).filter(s => {
+      const qty = s.quantity || 0;
+      const loaned = s.loanedQuantity || 0;
+      const available = qty - loaned;
+      if (key === 'all') return true;
+      if (key === 'in_stock') return available > 0;
+      if (key === 'loaned_out') return available <= 0 && loaned > 0;
+      return true;
+    });
+    this.setData({ activeStatus: key, filteredStockList: newFiltered });
+  },
+
+  // 判断单条 stock 是否匹配当前状态筛选
+  _matchesStatus(stock) {
+    const status = this.data.activeStatus;
+    if (status === 'all') return true;
+    const qty = stock.quantity || 0;
+    const loaned = stock.loanedQuantity || 0;
+    const available = qty - loaned;
+    if (status === 'in_stock') return available > 0;
+    if (status === 'loaned_out') return available <= 0 && loaned > 0;
+    return true;
   },
 
   onStockItemTap(e) {
