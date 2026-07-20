@@ -250,7 +250,7 @@
 
 .detail-image {
   width: 100%;
-  height: 360rpx;
+  height: 220rpx;
   border-radius: var(--radius-xs);
   margin-bottom: 12rpx;
   background: var(--color-bg-page);

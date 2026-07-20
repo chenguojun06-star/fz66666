@@ -10,6 +10,7 @@ const ALL_APPS = [
     { id: 'processTemplate', name: '工序模板', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--purple', route: '/pages/dashboard/process-template/index' },
     { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/sample-development/index/index' },
     { id: 'cuttingDetail', name: '裁剪菲详情', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/cutting/bundle-detail/index' },
+    { id: 'bundleSplit', name: '菲号管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--red', route: '/pages/work/bundle-split/index' },
     { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
   ]},
   { group: '供应链', items: [
