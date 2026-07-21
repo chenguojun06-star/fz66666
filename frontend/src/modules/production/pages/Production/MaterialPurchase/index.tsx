@@ -1,11 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space, Tabs } from 'antd';
+import React, { useState, useCallback } from 'react';
+import { Card, Form, Tooltip, message, Tabs } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined, ShoppingCartOutlined } from '@ant-design/icons';
-import ResizableTable from '@/components/common/ResizableTable';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
-import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import MaterialSearchForm from './components/MaterialSearchForm';
 import MaterialTable from './components/MaterialTable';
@@ -13,28 +11,30 @@ import PurchaseModal from './components/PurchaseModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
 import PurchaseReturnTab from './components/PurchaseReturnTab';
+import OrderPickerModal from './components/OrderPickerModal';
+import WarehousePickModal from './components/WarehousePickModal';
+import ReturnConfirmModal from './components/ReturnConfirmModal';
+import ReturnResetModal from './components/ReturnResetModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
-import { formatMaterialQuantity } from './utils';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import api from '@/utils/api';
 
 const MaterialPurchase: React.FC = () => {
   const navigate = useNavigate();
   const [activeMainTab, setActiveMainTab] = useState('purchase');
   const [orderPickerOpen, setOrderPickerOpen] = useState(false);
-  const [orderPickerKeyword, setOrderPickerKeyword] = useState('');
-  const [orderPickerList, setOrderPickerList] = useState<any[]>([]);
-  const [orderPickerLoading, setOrderPickerLoading] = useState(false);
   const [warehousePickModalOpen, setWarehousePickModalOpen] = useState(false);
-  const [warehousePickTarget, setWarehousePickTarget] = useState<any>(null);
+  const [warehousePickTarget, setWarehousePickTarget] = useState<MaterialPurchaseType | null>(null);
   const [warehousePickQty, setWarehousePickQty] = useState(0);
-  const [warehousePickSubmitting, setWarehousePickSubmitting] = useState(false);
-  const [warehousePickForm] = Form.useForm();
+  const [qualityIssueOpen, setQualityIssueOpen] = useState(false);
+  const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
+  const [remarkOpen, setRemarkOpen] = useState(false);
+  const [remarkOrderNo, setRemarkOrderNo] = useState('');
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const {
     contextHolder, modalContextHolder,
     user, isMobile, isSupervisorOrAbove,
@@ -73,14 +73,6 @@ const MaterialPurchase: React.FC = () => {
     confirmComplete, confirmCompleteSubmitting,
   } = useMaterialPurchase();
 
-  // 本弹窗用于 AI 识别时传递给 recognizeReturnEvidence 的文件引用
-  const [returnRecognizeFile, setReturnRecognizeFile] = useState<File | null>(null);
-  const evidenceFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [qualityIssueOpen, setQualityIssueOpen] = useState(false);
-  const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
-  const [remarkOpen, setRemarkOpen] = useState(false);
-  const [remarkOrderNo, setRemarkOrderNo] = useState('');
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const { batchAddItems } = usePurchaseCartActions();
 
   const openDetailPage = useCallback((styleNo: string, orderNo?: string) => {
@@ -97,56 +89,8 @@ const MaterialPurchase: React.FC = () => {
     if (!purchaseId) { message.error('采购任务缺少ID'); return; }
     setWarehousePickTarget(record);
     setWarehousePickQty(pickQty);
-    warehousePickForm.setFieldsValue({ pickQty });
     setWarehousePickModalOpen(true);
-  }, [warehousePickForm]);
-
-  const handleWarehousePickSubmit = useCallback(async () => {
-    if (!warehousePickTarget) return;
-    const values = await warehousePickForm.validateFields();
-    const pickQty = Number(values.pickQty);
-    if (pickQty <= 0) {
-      message.error('领取数量必须大于0');
-      return;
-    }
-    const purchaseId = String(warehousePickTarget.id).trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
-    const receiverId = String(user?.id || '').trim();
-    setWarehousePickSubmitting(true);
-    try {
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
-        purchaseId,
-        pickQty,
-        receiverId,
-        receiverName,
-      });
-      if (res.code === 200) {
-        message.success(`${warehousePickTarget.materialName || warehousePickTarget.materialCode} 已提交出库申请，等待仓库确认`);
-        setWarehousePickModalOpen(false);
-        fetchMaterialPurchaseList();
-        reloadCurrentDetail();
-      } else {
-        message.error(res.message || '领取失败');
-      }
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '领取失败');
-    } finally {
-      setWarehousePickSubmitting(false);
-    }
-  }, [warehousePickTarget, warehousePickForm, user, fetchMaterialPurchaseList, reloadCurrentDetail]);
-
-  const handleSearchOrders = useCallback(async () => {
-    if (!orderPickerKeyword.trim()) { message.warning('请输入订单号或款号'); return; }
-    setOrderPickerLoading(true);
-    try {
-      const res = await api.get('/production/order/list', {
-        params: { page: 1, pageSize: 20, keyword: orderPickerKeyword.trim() },
-      });
-      const records = res?.code === 200 ? (res?.data?.records || []) : [];
-      setOrderPickerList(records);
-    } catch { setOrderPickerList([]); }
-    finally { setOrderPickerLoading(false); }
-  }, [orderPickerKeyword]);
+  }, []);
 
   const handlePickOrder = useCallback((order: any) => {
     const styleNo = String(order.styleNo || '').trim();
@@ -353,52 +297,12 @@ const MaterialPurchase: React.FC = () => {
           }}
         />
 
-        <ResizableModal
-          title="选择订单 — 新增物料采购"
+        <OrderPickerModal
           open={orderPickerOpen}
-          onCancel={() => setOrderPickerOpen(false)}
-          width={isMobile ? '96vw' : 900}
-          footer={null}
-        >
-          <Space orientation="vertical" style={{ width: '100%' }} size={12}>
-            <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, lineHeight: 1.6 }}>
-              选择一个生产订单，进入该订单的物料采购详情页，可编辑面辅料信息、采购到货、回料确认等操作。
-            </div>
-            <Space>
-              <Input
-                placeholder="输入订单号或款号搜索"
-                value={orderPickerKeyword}
-                onChange={e => setOrderPickerKeyword(e.target.value)}
-                onPressEnter={handleSearchOrders}
-                style={{ width: 320 }}
-                allowClear
-              />
-              <Button type="primary" onClick={handleSearchOrders} loading={orderPickerLoading}>搜索</Button>
-            </Space>
-            <ResizableTable
-              rowKey="id"
-              dataSource={orderPickerList}
-              loading={orderPickerLoading}
-              pagination={false}
-              size="small"
-              scroll={{ x: 720, y: 400 }}
-              emptyDescription="暂无生产订单"
-              columns={[
-                { title: '订单号', dataIndex: 'orderNo', width: 180 },
-                { title: '款号', dataIndex: 'styleNo', width: 120 },
-                { title: '款名', dataIndex: 'styleName', width: 160, ellipsis: true },
-                { title: '颜色', dataIndex: 'color', width: 100 },
-                { title: '下单数量', dataIndex: 'orderQuantity', width: 100, align: 'right' as const },
-                {
-                  title: '操作', width: 80, fixed: 'right' as const,
-                  render: (_: any, record: any) => (
-                    <Button type="link" size="small" onClick={() => handlePickOrder(record)}>选择</Button>
-                  ),
-                },
-              ]}
-            />
-          </Space>
-        </ResizableModal>
+          isMobile={isMobile}
+          onClose={() => setOrderPickerOpen(false)}
+          onPickOrder={handlePickOrder}
+        />
 
         <PurchaseModal
           visible={visible}
@@ -444,103 +348,19 @@ const MaterialPurchase: React.FC = () => {
           }}
         />
 
-        <ResizableModal
+        <WarehousePickModal
           open={warehousePickModalOpen}
-          title={`仓库领取 - ${warehousePickTarget?.materialName || warehousePickTarget?.materialCode}`}
-          okText="确认领取"
-          cancelText="取消"
-          width={isMobile ? '96vw' : '40vw'}
-          onCancel={() => {
+          target={warehousePickTarget}
+          pickQty={warehousePickQty}
+          isMobile={isMobile}
+          user={user}
+          onClose={() => setWarehousePickModalOpen(false)}
+          onSuccess={() => {
             setWarehousePickModalOpen(false);
-            warehousePickForm.resetFields();
+            fetchMaterialPurchaseList();
+            reloadCurrentDetail();
           }}
-          okButtonProps={{ loading: warehousePickSubmitting }}
-          onOk={handleWarehousePickSubmit}
-          destroyOnHidden
-        >
-          <Form form={warehousePickForm} layout="vertical">
-            {warehousePickTarget && (
-              <>
-                {/* 物料详细信息卡片 */}
-                <Card size="small" style={{ marginBottom: 16 }}>
-                  <ResizableTable
-                    dataSource={[warehousePickTarget]}
-                    pagination={false}
-                    size="small"
-                    rowKey="id"
-                    emptyDescription="暂无数据"
-                    columns={[
-                      { title: '物料编号', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
-                      { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 140, render: (v: any) => v || '-' },
-                      { title: '颜色', dataIndex: 'color', key: 'color', width: 90, render: (v: any) => v || '-' },
-                      { title: '规格/幅宽', key: 'specWidth', width: 130, render: (_: any, r: any) => `${r.specifications || ''}${r.fabricWidth ? ` (${r.fabricWidth})` : ''}` || '-' },
-                      { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 130, render: (v: any) => v || '-' },
-                      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => Number(v) ? `¥${Number(v).toFixed(2)}` : '-' },
-                    ]}
-                  />
-                </Card>
-
-                {/* 需求/库存对比 */}
-                <div style={{ marginBottom: 16, display: 'flex', gap: 24, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>需求数量</div>
-                    <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{formatMaterialQuantity(warehousePickTarget.purchaseQuantity)} {warehousePickTarget.unit || ''}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>本次领取</div>
-                    <div style={{ fontWeight: 600, color: 'var(--color-primary)' }} id="warehouse-pick-qty-display">-</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>剩余待采购</div>
-                    <div style={{ fontWeight: 600, color: 'var(--color-warning)' }} id="warehouse-pick-remain-display">-</div>
-                  </div>
-                </div>
-                <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                  领取后将创建出库单，等待仓库确认出库；剩余数量将自动转采购任务。
-                </div>
-
-                <Form.Item
-                  label="仓库领取数量"
-                  name="pickQty"
-                  rules={[
-                    { required: true, message: '请输入领取数量' },
-                    {
-                      validator: async (_, v) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) throw new Error('请输入数字');
-                        if (n <= 0) throw new Error('领取数量必须大于0');
-                      },
-                    },
-                  ]}
-                >
-                  <Space.Compact style={{ width: '100%' }}>
-                    <InputNumber
-                      style={{ width: '100%' }}
-                      min={0}
-                      max={warehousePickTarget.purchaseQuantity}
-                      step={0.01}
-                      precision={2}
-                      placeholder="请输入领取数量"
-                      onChange={(v) => {
-                        const pickQty = Number(v) || 0;
-                        const remain = Math.max(0, Number(warehousePickTarget.purchaseQuantity || 0) - pickQty);
-                        const qtyEl = document.getElementById('warehouse-pick-qty-display');
-                        const remainEl = document.getElementById('warehouse-pick-remain-display');
-                        if (qtyEl) qtyEl.textContent = `${pickQty} ${warehousePickTarget.unit || ''}`;
-                        if (remainEl) remainEl.textContent = `${remain} ${warehousePickTarget.unit || ''}`;
-                      }}
-                    />
-                    <Input
-                      style={{ width: 80, textAlign: 'center' }}
-                      value={warehousePickTarget.unit || ''}
-                      disabled
-                    />
-                  </Space.Compact>
-                </Form.Item>
-              </>
-            )}
-          </Form>
-        </ResizableModal>
+        />
 
         <MaterialQualityIssueModal
           open={qualityIssueOpen}
@@ -554,284 +374,35 @@ const MaterialPurchase: React.FC = () => {
           }}
         />
 
-        <ResizableModal
+        <ReturnConfirmModal
           open={returnConfirmModal.visible}
-          title="回料确认 / 追加回料"
-          okText="提交回料"
-          cancelText="取消"
-          width={isMobile ? '96vw' : '60vw'}
-          centered
+          data={returnConfirmModal.data}
+          isMobile={isMobile}
+          user={user}
+          returnConfirmForm={returnConfirmForm}
+          returnEvidenceFiles={returnEvidenceFiles}
+          setReturnEvidenceFiles={setReturnEvidenceFiles}
+          returnEvidenceRecognizing={returnEvidenceRecognizing}
+          recognizeReturnEvidence={recognizeReturnEvidence}
+          returnConfirmSubmitting={returnConfirmSubmitting}
+          submitReturnConfirm={submitReturnConfirm}
           onCancel={() => {
             returnConfirmModal.close();
             returnConfirmForm.resetFields();
-            setReturnRecognizeFile(null);
           }}
-          okButtonProps={{ loading: returnConfirmSubmitting }}
-          onOk={submitReturnConfirm}
-          destroyOnHidden
-          autoFontSize={false}
-          initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.78) : 700}
-          scaleWithViewport
-        >
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            {/* 左侧：凭证上传 + AI识别 */}
-            {!isMobile && (
-              <div
-                  style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, outline: 'none' }}
-                  tabIndex={0}
-                  onPaste={(e) => {
-                    const files = e.clipboardData.files;
-                    if (files && files.length > 0) {
-                      e.preventDefault();
-                      const file = files[0];
-                      if (file.type.startsWith('image/')) {
-                        setReturnRecognizeFile(file);
-                        const uploadFile = { uid: `-${Date.now()}`, name: file.name, status: 'done' as const, originFileObj: file };
-                        setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
-                      }
-                      return;
-                    }
-                    const items = e.clipboardData.items;
-                    for (let i = 0; i < items.length; i++) {
-                      if (items[i].type.startsWith('image/')) {
-                        e.preventDefault();
-                        const f = items[i].getAsFile();
-                        if (f) {
-                          setReturnRecognizeFile(f);
-                          const uploadFile = { uid: `-${Date.now()}`, name: 'pasted-image.png', status: 'done' as const, originFileObj: f };
-                          setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
-                        }
-                        break;
-                      }
-                    }
-                  }}
-                >
-                <div style={{ color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
-                  确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
-                </div>
-                <input
-                  ref={evidenceFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (!files?.length) return;
-                    const currentLen = returnEvidenceFiles.length;
-                    const remaining = Math.max(0, 5 - currentLen);
-                    Array.from(files).slice(0, remaining).forEach((f) => {
-                      setReturnRecognizeFile(f);
-                      const uploadFile = { uid: `-${Date.now()}`, name: f.name, status: 'done' as const, originFileObj: f };
-                      setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
-                    });
-                    if (evidenceFileInputRef.current) evidenceFileInputRef.current.value = '';
-                  }}
-                />
-                <div
-                  onDragOver={(e) => { e.preventDefault(); }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const files = Array.from(e.dataTransfer.files || []);
-                    const currentLen = returnEvidenceFiles.length;
-                    const remaining = Math.max(0, 5 - currentLen);
-                    files.slice(0, remaining).forEach((f) => {
-                      if (f.type.startsWith('image/')) {
-                        setReturnRecognizeFile(f);
-                        const uploadFile = { uid: `-${Date.now()}`, name: f.name, status: 'done' as const, originFileObj: f };
-                        setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
-                      }
-                    });
-                  }}
-                  onClick={() => evidenceFileInputRef.current?.click()}
-                  style={{
-                    border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '16px 4px',
-                    textAlign: 'center', cursor: 'pointer', background: 'var(--color-bg-container)', transition: 'border-color 0.3s',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-border-antd)'; }}
-                >
-                  <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
-                    <InboxOutlined style={{ fontSize: 24, color: 'var(--color-primary)' }} />
-                  </p>
-                  <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text)', margin: 0 }}>上传回料凭据图片</p>
-                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', margin: '2px 0 0' }}>支持多张，最多5张</p>
-                </div>
-                {returnEvidenceFiles.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {returnEvidenceFiles.map((f: any) => (
-                      <div key={f.uid} style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-                        <img
-                          src={f.url || (f.originFileObj ? URL.createObjectURL(f.originFileObj) : '')}
-                          alt={f.name || ''}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                        <span
-                          style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, background: 'rgba(0,0,0,0.5)', color: 'var(--color-bg-base)', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setReturnEvidenceFiles((prev: any[]) => prev.filter((x: any) => x.uid !== f.uid));
-                            if (returnRecognizeFile === f.originFileObj) setReturnRecognizeFile(null);
-                          }}
-                        >
-                          ×
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button
-                  type="dashed"
-                  icon={<FileSearchOutlined />}
-                  block
-                  loading={returnEvidenceRecognizing}
-                  disabled={!returnRecognizeFile}
-                  onClick={async () => {
-                    if (!returnRecognizeFile) return;
-                    const orderNo = String(returnConfirmModal.data?.[0]?.orderNo || '');
-                    const qtys = await recognizeReturnEvidence(returnRecognizeFile, orderNo);
-                    if (!Object.keys(qtys).length) {
-                      message.warning('未识别到匹配物料');
-                      return;
-                    }
-                    const current = returnConfirmForm.getFieldValue('items') || [];
-                    returnConfirmForm.setFieldsValue({
-                      items: (current as Array<any>).map((it) => ({
-                        ...it,
-                        returnQuantity: qtys[String(it.purchaseId)] ?? it.returnQuantity,
-                      })),
-                    });
-                    message.success(`AI已识别并填入 ${Object.keys(qtys).length} 项回料数量`);
-                  }}
-                >
-                  {returnEvidenceRecognizing ? 'AI识别中…' : '上传单据·AI识别回料数'}
-                </Button>
-              </div>
-            )}
+        />
 
-            {/* 右侧：物料明细表 */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {isMobile && (
-                <div style={{ marginBottom: 8, color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)' }}>
-                  确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
-                </div>
-              )}
-              <Form form={returnConfirmForm} layout="vertical" preserve={false}>
-                <ResizableTable
-                  storageKey="material-purchase-return"
-                  emptyDescription="暂无回料明细"
-                  dataSource={(returnConfirmModal.data || []).map((t, idx) => ({
-                    key: String(t?.id || idx),
-                    id: t?.id,
-                    materialName: t?.materialName,
-                    materialCode: t?.materialCode,
-                    purchaseQuantity: Number(t?.purchaseQuantity || 0) || 0,
-                    arrivedQuantity: Number(t?.arrivedQuantity || 0) || 0,
-                    returnQuantity: t?.returnQuantity,
-                    index: idx,
-                  }))}
-                  columns={[
-                    {
-                      title: '物料',
-                      dataIndex: 'materialName',
-                      key: 'materialName',
-                      render: (_, record) => (
-                        <>
-                          <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(record.materialName || '-')}</div>
-                          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(record.materialCode || '')}</div>
-                          <Form.Item name={['items', record.index, 'purchaseId']} initialValue={String(record.id || '')} hidden>
-                            <Input />
-                          </Form.Item>
-                          <Form.Item name={['items', record.index, 'purchaseQuantity']} initialValue={record.purchaseQuantity} hidden>
-                            <Input />
-                          </Form.Item>
-                          <Form.Item name={['items', record.index, 'arrivedQuantity']} initialValue={record.arrivedQuantity} hidden>
-                            <Input />
-                          </Form.Item>
-                        </>
-                      ),
-                    },
-                    {
-                      title: '采购数',
-                      dataIndex: 'purchaseQuantity',
-                      key: 'purchaseQuantity',
-                      width: 90,
-                      align: 'right' as const,
-                      render: (v: number) => formatMaterialQuantity(v),
-                    },
-                    {
-                      title: '到货数',
-                      dataIndex: 'arrivedQuantity',
-                      key: 'arrivedQuantity',
-                      width: 90,
-                      align: 'right' as const,
-                      render: (v: number) => formatMaterialQuantity(v),
-                    },
-                    {
-                      title: '实际回料数',
-                      key: 'returnQuantity',
-                      width: 180,
-                      align: 'right' as const,
-                      render: (_, record) => {
-                        const max = record.arrivedQuantity > 0 ? record.arrivedQuantity : record.purchaseQuantity;
-                        return (
-                          <Form.Item
-                            name={['items', record.index, 'returnQuantity']}
-                            initialValue={Number(record.returnQuantity || 0) || (max || 0)}
-                            style={{ margin: 0 }}
-                            rules={[
-                              { required: true, message: '请输入实际回料数量' },
-                              {
-                                validator: async (_, v) => {
-                                  const n = Number(v);
-                                  if (!Number.isFinite(n)) throw new Error('请输入数字');
-                                  if (n < 0) throw new Error('不能小于0');
-                                },
-                              },
-                            ]}
-                          >
-                            <InputNumber min={0} precision={2} step={0.01} style={{ width: 140 }} />
-                          </Form.Item>
-                        );
-                      },
-                    },
-                  ]}
-                  pagination={false}
-                 
-                  bordered
-                />
-              </Form>
-            </div>
-          </div>
-        </ResizableModal>
-
-        <ResizableModal
+        <ReturnResetModal
           open={returnResetModal.visible}
-          title="退回回料确认"
-          okText="确认退回"
-          cancelText="取消"
-          okButtonProps={{ danger: true, type: 'default', loading: returnResetSubmitting }}
-          width={isMobile ? '96vw' : '40vw'}
+          isMobile={isMobile}
+          returnResetForm={returnResetForm}
+          returnResetSubmitting={returnResetSubmitting}
+          submitReturnReset={submitReturnReset}
           onCancel={() => {
             returnResetModal.close();
             returnResetForm.resetFields();
           }}
-          onOk={submitReturnReset}
-          destroyOnHidden
-          autoFontSize={false}
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-          scaleWithViewport
-        >
-          <Form form={returnResetForm} layout="vertical" preserve={false}>
-            <Form.Item
-              name="reason"
-              label="退回原因"
-              rules={[{ required: true, message: '请输入退回原因' }]}
-            >
-              <Input.TextArea rows={3} maxLength={200} showCount />
-            </Form.Item>
-          </Form>
-        </ResizableModal>
+        />
 
         <QuickEditModal
           visible={quickEditModal.visible}

@@ -1,21 +1,14 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { App, Button, Card, Form, Segmented, Select, Space, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { App, Button, Card, Select, Space } from 'antd';
 
 import PageLayout from '@/components/common/PageLayout';
-import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
-import RowActions from '@/components/common/RowActions';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
-import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import type { CuttingTask } from '@/types/production';
-import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb, PatternSupplementButton } from '@/components/StyleAssets';
-import StyleCoverGallery from '@/components/common/StyleCoverGallery';
-import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useViewport } from '@/utils/useViewport';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -36,9 +29,8 @@ import {
   useCuttingCreateTask,
   useCuttingBom,
 } from './hooks';
-import type { CuttingBundleRow } from './hooks';
-import { CuttingCreateTaskModal, CuttingFreeBundlePanel, CuttingPrintPreviewModal, CuttingRatioPanel, CuttingBomPanel } from './components';
-import { useBundleColumns } from './columns';
+import { CuttingCreateTaskModal, CuttingEntryView } from './components';
+import { useBundleColumns, useTaskColumns } from './columns';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -201,6 +193,16 @@ const CuttingManagement: React.FC = () => {
 
   const columns = useBundleColumns(activeTask);
 
+  const taskColumns = useTaskColumns({
+    tasks,
+    goToEntry,
+    handleRollbackActive,
+    onOpenRemark: (orderNo: string) => {
+      setRemarkOrderNo(orderNo);
+      setRemarkOpen(true);
+    },
+  });
+
   const handleReceiveClick = useCallback(async () => {
     if (!activeTask) return;
     const ok = await tasks.handleReceiveTask(activeTask);
@@ -342,209 +344,7 @@ const CuttingManagement: React.FC = () => {
                 stickyHeader
                 storageKey="cutting-task-table-v2"
                 scroll={{ x: 'max-content' }}
-                columns={[
-                  {
-                    title: '图片',
-                    key: 'cover',
-                    width: 72,
-                    render: (_: any, record: any) => (
-                      <StyleCoverThumb 
-                        src={record.styleCover || null} 
-                        styleId={record.styleId} 
-                        styleNo={record.styleNo} 
-                        color={record.color} // 传入颜色，优先显示SKU颜色图片
-                        size={48} 
-                        borderRadius={6} 
-                      />
-                    )
-                  },
-                  {
-                    title: '订单号',
-                    dataIndex: 'productionOrderNo',
-                    key: 'productionOrderNo',
-                    width: 230,
-                    render: (v: any, record: CuttingTask) => (
-                      <a
-                        onClick={(e) => { e.stopPropagation(); goToEntry(record); }}
-                        title={String(v || '').trim() || '-'}
-                        style={{ color: 'var(--primary-color)', cursor: 'pointer' }}
-                      >
-                        <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>
-                      </a>
-                    ),
-                  },
-                  {
-                    title: '款号',
-                    dataIndex: 'styleNo',
-                    key: 'styleNo',
-                    width: 200,
-                    render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-                  },
-                  { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
-                  {
-                    title: '生产方',
-                    key: 'factoryName',
-                    width: 120,
-                    render: (_: any, record: CuttingTask) => {
-                      const name = record.factoryName;
-                      const type = record.factoryType;
-                      if (!name) return '-';
-                      return (
-                        <Space size={4}>
-                          <FactoryTypeTag factoryType={type} />
-                          <span>{name}</span>
-                        </Space>
-                      );
-                    },
-                  },
-                  { title: '下单人', dataIndex: 'orderCreatorName', key: 'orderCreatorName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
-                  {
-                    title: <SortableColumnTitle
-                      title="下单时间"
-                      sortField={tasks.cuttingSortField}
-                      fieldName="orderTime"
-                      sortOrder={tasks.cuttingSortOrder}
-                      onSort={tasks.handleCuttingSort}
-                      align="left"
-                    />,
-                    dataIndex: 'orderTime',
-                    key: 'orderTime',
-                    width: 170,
-                    render: (v: unknown) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-')
-                  },
-                  { title: '数量', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 90, align: 'right' as const },
-                  {
-                    title: '裁剪数',
-                    dataIndex: 'cuttingQuantity',
-                    key: 'cuttingQuantity',
-                    width: 90,
-                    align: 'right' as const,
-                    render: (v: unknown) => Number(v ?? 0) || 0,
-                  },
-                  {
-                    title: '扎数',
-                    dataIndex: 'cuttingBundleCount',
-                    key: 'cuttingBundleCount',
-                    width: 80,
-                    align: 'right' as const,
-                    render: (v: unknown) => Number(v ?? 0) || 0,
-                  },
-                  { title: '裁剪员', dataIndex: 'receiverName', key: 'receiverName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
-                  {
-                    title: <SortableColumnTitle
-                      title="领取时间"
-                      sortField={tasks.cuttingSortField}
-                      fieldName="receivedTime"
-                      sortOrder={tasks.cuttingSortOrder}
-                      onSort={tasks.handleCuttingSort}
-                      align="left"
-                    />,
-                    dataIndex: 'receivedTime',
-                    key: 'receivedTime',
-                    width: 170,
-                    render: (v: unknown) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-')
-                  },
-                  {
-                    title: <SortableColumnTitle
-                      title="完成时间"
-                      sortField={tasks.cuttingSortField}
-                      fieldName="bundledTime"
-                      sortOrder={tasks.cuttingSortOrder}
-                      onSort={tasks.handleCuttingSort}
-                      align="left"
-                    />,
-                    dataIndex: 'bundledTime',
-                    key: 'bundledTime',
-                    width: 170,
-                    render: (v: unknown) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-')
-                  },
-                  {
-                    title: '备注',
-                    dataIndex: 'remarks',
-                    key: 'remarks',
-                    width: 150,
-                    ellipsis: true,
-                    render: (v: any) => v || '-',
-                  },
-                  {
-                    title: '纸样',
-                    key: 'attachments',
-                    width: 130,
-                    render: (_: any, record: CuttingTask) => (
-                      <Space size={4}>
-                        <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
-                        <PatternSupplementButton styleId={record.styleId} styleNo={record.styleNo} />
-                      </Space>
-                    ),
-                  },
-                  {
-                    title: '操作',
-                    key: 'action',
-                    width: 120,
-                    render: (_: any, record: CuttingTask) => {
-                      const orderNo = String(record.productionOrderNo || '').trim();
-                      const frozen = tasks.isOrderFrozenById(orderNo);
-                      const isPending = record.status === 'pending';
-                      const isReceived = record.status === 'received';
-                      const isCompleted = record.status === 'completed';
-                      const canRollback = tasks.isAdmin && !isPending && !isCompleted;
-                      return (
-                        <RowActions
-                          actions={[
-                            {
-                              key: 'edit',
-                              label: '编辑',
-                              title: isCompleted ? '已完成，不可编辑' : frozen ? '编辑（订单已关单/报废/完成）' : '编辑',
-                              disabled: frozen || isCompleted,
-                              onClick: () => {
-                                tasks.setQuickEditRecord(record);
-                                tasks.setQuickEditVisible(true);
-                              },
-                            },
-                            ...(isPending
-                              ? [{
-                                  key: 'receive',
-                                  label: '领取',
-                                  title: '领取任务',
-                                  disabled: frozen || tasks.receiveTaskLoading,
-                                  onClick: () => tasks.handleReceiveTask(record),
-                                  primary: true,
-                                }]
-                              : []),
-                            ...(!isPending
-                              ? [{
-                                  key: 'entry',
-                                  label: isReceived ? '生成菲号' : '查看',
-                                  title: isReceived ? '进入填写数量生成菲号' : '查看详情',
-                                  disabled: frozen,
-                                  onClick: () => goToEntry(record),
-                                  primary: isReceived,
-                                }]
-                              : []),
-                            ...(canRollback
-                              ? [{
-                                  key: 'rollback',
-                                  label: '退回',
-                                  title: '退回',
-                                  disabled: frozen || tasks.rollbackTaskLoading,
-                                  danger: true,
-                                  onClick: () => handleRollbackActive(record),
-                                }]
-                              : []),
-                            {
-                              key: 'remark',
-                              label: '备注',
-                              onClick: () => {
-                                setRemarkOrderNo(record.productionOrderNo);
-                                setRemarkOpen(true);
-                              },
-                            },
-                          ]}
-                        />
-                      );
-                    }
-                  },
-                ]}
+                columns={taskColumns}
                 dataSource={tasks.sortedTaskList}
                 rowKey={(row) => row.id || row.productionOrderId}
                 loading={tasks.taskLoading}
@@ -563,213 +363,21 @@ const CuttingManagement: React.FC = () => {
           )}
 
           {isEntryPage && activeTask ? (
-            <>
-              <div ref={bundles.editSectionRef} />
-
-              <div className="cutting-entry-layout mb-sm">
-                <div className="cutting-entry-main">
-                  <div className="cutting-entry-info">
-                    <ProductionOrderHeader
-                      orderNo={String(activeTask.productionOrderNo || '').trim()}
-                      styleNo={String(activeTask.styleNo || '').trim()}
-                      styleName={String(activeTask.styleName || '').trim()}
-                      orderLines={bundles.entryOrderLines}
-                      styleId={activeTask?.styleId}
-                      styleCover={activeTask?.styleCover || null}
-                      coverNode={(
-                        <div style={{ width: 160, maxWidth: '100%' }}>
-                          <StyleCoverGallery
-                            styleId={activeTask?.styleId}
-                            styleNo={String(activeTask.styleNo || '').trim()}
-                            src={activeTask?.styleCover || null}
-                            fit="cover"
-                            borderRadius={8}
-                          />
-                        </div>
-                      )}
-                      color={String(bundles.entryColorText || activeTask.color || '').trim()}
-                      sizeItems={bundles.entryOrderDetailLoading ? [] : bundles.entrySizeItems.map((x) => ({ size: x.size, quantity: Number(x.quantity || 0) || 0 }))}
-                      totalQuantity={bundles.entrySizeItems.length
-                        ? bundles.entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)
-                        : (Number(activeTask?.orderQuantity ?? 0) || 0)}
-                      coverSize={160}
-                      matrixColumnMinWidth={36}
-                      matrixGap={10}
-                      matrixFontSize={13}
-                    />
-                  </div>
-
-                  <div>
-                    {tasks.isAdmin && activeTask && activeTask.status !== 'pending' && activeTask.status !== 'completed' ? (
-                      <div className="cutting-entry-actions">
-                        <Button
-                          danger
-                          onClick={() => handleRollbackActive(activeTask)}
-                          loading={tasks.rollbackTaskLoading}
-                          disabled={tasks.isOrderFrozenById(activeTask?.productionOrderNo ?? '') || !!activeTask?.hasScanRecords}
-                        >
-                          退回
-                        </Button>
-                        {bundles.importLocked && bundles.dataSource.length > 0 && (
-                          <Button
-                            type="default"
-                            icon={<PlusOutlined />}
-                            onClick={bundles.handleAddBed}
-                          >
-                            增加床次
-                          </Button>
-                        )}
-                      </div>
-                    ) : null}
-
-                    <div style={{ marginBottom: 12 }}>
-                      <Segmented
-                        options={[
-                          { label: '一键生成', value: 'auto' },
-                          { label: '自由编菲', value: 'free' },
-                        ]}
-                        value={bundleMode}
-                        onChange={(val) => setBundleMode(val as 'auto' | 'free')}
-                        disabled={bundles.importLocked}
-                      />
-                    </div>
-
-                    {bundleMode === 'auto' ? (
-                      <Form layout="vertical">
-                        <CuttingRatioPanel
-                          entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
-                          entrySizeItems={bundles.entrySizeItems}
-                          entryOrderLines={bundles.entryOrderLines}
-                          defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
-                          sizeUsageMap={bundles.entrySizeUsageMap}
-                          fabricUsageRows={bundles.entryFabricUsageRows}
-                          arrivedFabricM={bundles.entryMainFabricArrived}
-                          generating={bundles.generateLoading}
-                          disabled={bundles.importLocked}
-                          onConfirm={(rows) => {
-                            bundles.setBundlesInput(rows);
-                            bundles.handleGenerate(rows);
-                          }}
-                          onClear={() => {
-                            bundles.setImportLocked(false);
-                            bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
-                          }}
-                          existingCutQtyByKey={existingCutQtyByKey}
-                        />
-                      </Form>
-                    ) : (
-                      <CuttingFreeBundlePanel
-                        entryOrderLines={bundles.entryOrderLines}
-                        generating={bundles.generateLoading}
-                        disabled={bundles.importLocked}
-                        onConfirm={(rows) => {
-                          bundles.setBundlesInput(rows);
-                          bundles.handleGenerate(rows);
-                        }}
-                        onClear={() => {
-                          bundles.setImportLocked(false);
-                          bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
-                        }}
-                      />
-                    )}
-
-                    <CuttingBomPanel
-                      bomList={bom.bomList}
-                      bomLoading={bom.bomLoading}
-                      bomEditing={bom.bomEditing}
-                      bomSaving={bom.bomSaving}
-                      canEdit={bom.canEdit}
-                      isBundled={bom.isBundled}
-                      materialModalOpen={bom.materialModalOpen}
-                      onSetEditing={bom.setBomEditing}
-                      onAddRow={bom.handleAddRow}
-                      onRemoveRow={bom.handleRemoveRow}
-                      onUpdateRow={bom.handleUpdateRow}
-                      onSave={bom.handleSave}
-                      onDelete={bom.handleDelete}
-                      onOpenMaterialModal={bom.handleOpenMaterialModal}
-                      onUseMaterial={bom.handleUseMaterial}
-                      onCreateMaterial={bom.handleCreateMaterial}
-                      onSetMaterialModalOpen={bom.setMaterialModalOpen}
-                    />
-                  </div>
-
-                  <div className="cutting-entry-footer">
-                    <div className="cutting-entry-footer-grid">
-                      <div className="cutting-entry-field">
-                        <div className="cutting-entry-label">裁剪人</div>
-                        <div className="cutting-entry-value">{String(activeTask.receiverName || '').trim() || '-'}</div>
-                      </div>
-                      <div className="cutting-entry-field">
-                        <div className="cutting-entry-label">领取时间</div>
-                        <div className="cutting-entry-value">{formatDateTime(activeTask.receivedTime) || '-'}</div>
-                      </div>
-                      <div className="cutting-entry-field">
-                        <div className="cutting-entry-label">完成时间</div>
-                        <div className="cutting-entry-value">{formatDateTime(activeTask.bundledTime) || '-'}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Space style={{ marginBottom: 12 }}>
-                <Button type="primary" onClick={() => print.openBatchPrint(bundles.selectedBundles)} disabled={!bundles.selectedBundles.length}>
-                  打印菲号
-                </Button>
-                <Button
-                  type="default"
-                  onClick={() => {
-                    if (!bundles.selectedBundles.length) {
-                      message.warning('请先勾选要打印的批次');
-                      return;
-                    }
-                    setCuttingSheetPrintOpen(true);
-                  }}
-                  disabled={!bundles.selectedBundles.length}
-                >
-                  打印裁剪单
-                </Button>
-                <Button onClick={bundles.clearBundleSelection} disabled={!bundles.selectedBundles.length}>
-                  清除勾选
-                </Button>
-                <Tag color={bundles.selectedBundles.length ? 'blue' : 'default'}>{`已选：${bundles.selectedBundles.length}`}</Tag>
-              </Space>
-
-              <ResizableTable<CuttingBundleRow>
-                storageKey="cutting-bundle-table"
-                columns={columns}
-                dataSource={bundles.dataSource}
-                rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
-               
-                rowSelection={{
-                  selectedRowKeys: bundles.selectedBundleRowKeys,
-                  onChange: (keys, rows) => {
-                    bundles.setSelectedBundleRowKeys(keys);
-                    bundles.setSelectedBundles((rows as CuttingBundleRow[]) || []);
-                  },
-                }}
-                loading={bundles.listLoading}
-                scroll={{ x: 'max-content' }}
-                emptyDescription="暂无裁剪数据"
-                pagination={{
-                  current: bundles.queryParams.page,
-                  pageSize: bundles.queryParams.pageSize,
-                  total: bundles.total,
-                  showTotal: (total) => `共 ${total} 条`,
-                  showSizeChanger: true,
-                  pageSizeOptions: ['10', '20', '50', '100', '200'],
-                  onChange: (page, pageSize) => bundles.setQueryParams(prev => ({ ...prev, page, pageSize })),
-                }}
-              />
-
-              <CuttingPrintPreviewModal
-                modalWidth={modalWidth}
-                print={print}
-                bundles={{ selectedBundles: bundles.selectedBundles, clearBundleSelection: bundles.clearBundleSelection }}
-              />
-
-            </>
+            <CuttingEntryView
+              activeTask={activeTask}
+              tasks={tasks}
+              bundles={bundles}
+              bom={bom}
+              print={print}
+              bundleMode={bundleMode}
+              setBundleMode={setBundleMode}
+              existingCutQtyByKey={existingCutQtyByKey}
+              columns={columns}
+              modalWidth={modalWidth}
+              message={message}
+              onOpenCuttingSheetPrint={() => setCuttingSheetPrintOpen(true)}
+              onRollbackActive={handleRollbackActive}
+            />
           ) : null}
 
           <CuttingCreateTaskModal createTask={createTask} />

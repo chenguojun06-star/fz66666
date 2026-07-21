@@ -1,18 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Form } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api, { parseProductionOrderLines } from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getMaterialTypeCategory } from '@/utils/materialType';
 import { buildSizePairs } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 import {
   InlinePurchasePanelProps,
-  normalizeStatus,
   sortPurchases,
   unwrapRecords,
 } from './InlinePurchasePanel.helpers';
+import { usePurchaseEditActions } from './hooks/usePurchaseEditActions';
+import { usePurchaseReceiveActions } from './hooks/usePurchaseReceiveActions';
+import { usePurchaseReturnActions } from './hooks/usePurchaseReturnActions';
 
 const useInlinePurchaseData = (props: InlinePurchasePanelProps) => {
   const { orderId, orderNo, patternId, sourceType = 'order', styleNo, color: propColor, quantity: propQuantity } = props;
@@ -248,407 +249,6 @@ const useInlinePurchaseData = (props: InlinePurchasePanelProps) => {
     };
   }, [orderId, orderNo, order, firstPurchase, styleNo]);
 
-  const handleCancelEdit = useCallback(() => {
-    setEditing(false);
-    setEditableData([]);
-  }, []);
-
-  const handleAddRow = useCallback(() => {
-    const info = getOrderStyleInfo();
-    const newRow: MaterialPurchase = {
-      id: `tmp_${Date.now()}`,
-      purchaseNo: '',
-      supplierId: '',
-      orderNo: info.orderNo,
-      styleNo: info.styleNo,
-      styleName: info.styleName,
-      styleId: info.styleId,
-      materialType: 'fabricA',
-      materialCode: '',
-      materialName: '',
-      unit: '',
-      color: '',
-      size: '',
-      specifications: '',
-      fabricComposition: '',
-      fabricWeight: '',
-      purchaseQuantity: 0,
-      arrivedQuantity: 0,
-      unitPrice: 0,
-      totalAmount: 0,
-      supplierName: '',
-      status: MATERIAL_PURCHASE_STATUS.PENDING,
-    } as MaterialPurchase;
-    setEditableData(prev => [...prev, newRow]);
-  }, [getOrderStyleInfo]);
-
-  const handleUpdateRow = useCallback((rowId: string, field: string, value: any) => {
-    setEditableData(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r));
-  }, []);
-
-  const handleRemoveRow = useCallback((rowId: string) => {
-    setEditableData(prev => prev.filter(r => r.id !== rowId));
-  }, []);
-
-  const handleSaveAll = useCallback(async () => {
-    const validRows = editableData.filter(r => r.materialCode || r.materialName);
-    if (validRows.length === 0) { message.warning('请至少添加一行物料'); return; }
-    const REQUIRED = ['materialType', 'materialCode', 'materialName', 'unit', 'supplierName'];
-    const incomplete = validRows.find(r => REQUIRED.some(f => { const v = (r as any)[f]; return v === undefined || v === null || String(v).trim() === ''; }));
-    if (incomplete) { message.warning('请完善所有物料的必填信息'); return; }
-    setSaving(true);
-    try {
-      for (const row of validRows) {
-        const purchaseQuantity = Number(row.purchaseQuantity || 0);
-        const unitPrice = Number(row.unitPrice || 0);
-        const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice) ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
-        const resolvedSourceType = sourceType === 'sample' ? 'sample' : (order?.sourceBizType === 'SAMPLE' ? 'sample' : 'order');
-        const payload = {
-          ...row,
-          totalAmount,
-          status: row.status || MATERIAL_PURCHASE_STATUS.PENDING,
-          sourceType: resolvedSourceType,
-          ...(resolvedSourceType === 'sample' && patternId ? { patternProductionId: patternId } : {}),
-        };
-        const isTemp = !row.id || String(row.id).startsWith('tmp_');
-        if (!isTemp) {
-          await api.put('/production/purchase', payload);
-        } else {
-          const { id: _id, ...rest } = payload;
-          await api.post('/production/purchase', rest);
-        }
-      }
-      const originalIds = new Set(purchases.map(p => p.id));
-      const keptIds = new Set(validRows.filter(r => r.id && !String(r.id).startsWith('tmp_')).map(r => r.id));
-      const deletedIds = [...originalIds].filter(id => !keptIds.has(id));
-      for (const delId of deletedIds) { if (delId) await api.delete(`/production/purchase/${delId}`); }
-      message.success('保存成功');
-      setEditing(false);
-      setEditableData([]);
-      loadData();
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || err?.message || '保存失败');
-    } finally {
-      setSaving(false);
-    }
-  }, [editableData, purchases, message, loadData, order?.sourceBizType, patternId, sourceType]);
-
-  const handleOpenMaterialModal = useCallback((rowId: string) => {
-    setMaterialTargetRowId(rowId);
-    setMaterialModalOpen(true);
-  }, []);
-
-  const fillRowFromMaterial = useCallback((rowId: string, record: Record<string, unknown>) => {
-    setEditableData(prev => prev.map(r => {
-      if (r.id !== rowId) return r;
-      return {
-        ...r,
-        materialCode: String(record.materialCode || r.materialCode || ''),
-        materialName: String(record.materialName || r.materialName || ''),
-        materialType: String(record.materialType || r.materialType || 'accessoryA') as MaterialPurchase['materialType'],
-        fabricComposition: String(record.fabricComposition || r.fabricComposition || ''),
-        fabricWeight: String(record.fabricWeight || r.fabricWeight || ''),
-        color: String(record.color || r.color || ''),
-        specifications: String(record.specifications || r.specifications || ''),
-        unit: String(record.unit || r.unit || ''),
-        unitPrice: Number(record.unitPrice || r.unitPrice || 0),
-        supplierName: String(record.supplierName || r.supplierName || ''),
-        supplierId: String(record.supplierId || r.supplierId || ''),
-      };
-    }));
-  }, []);
-
-  const handleUseMaterial = useCallback(async (record: Record<string, unknown>) => {
-    if (!materialTargetRowId) return;
-    fillRowFromMaterial(materialTargetRowId, record);
-    setMaterialModalOpen(false);
-  }, [materialTargetRowId, fillRowFromMaterial]);
-
-  const handleReceive = useCallback(async (record: MaterialPurchase) => {
-    setReceiveModalRecord(record);
-    receiveForm.setFieldsValue({ quantity: Number(record.purchaseQuantity || 0) });
-    setReceiveModalVisible(true);
-  }, [receiveForm]);
-
-  const doReceive = useCallback(async () => {
-    try {
-      const values = await receiveForm.validateFields();
-      const record = receiveModalRecord;
-      if (!record) return;
-      const purchaseId = String(record?.id || '').trim();
-      if (!purchaseId) return;
-      const receiverId = String(user?.id || '').trim();
-      const receiverName = String(user?.name || user?.username || '').trim();
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
-        purchaseId,
-        receiverId,
-        receiverName,
-        arrivedQuantity: values.quantity,
-      });
-      if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 到货确认成功`);
-        setReceiveModalVisible(false);
-        loadData();
-      } else {
-        message.error(res?.message || '到货确认失败');
-      }
-    } catch (e) {
-      if (e && typeof e === 'object' && 'errorFields' in e) return; // form validation
-      message.error((e as Error)?.message || '到货确认失败');
-    }
-  }, [receiveModalRecord, receiveForm, user, message, loadData]);
-
-  // 到货入库：将物料入库到仓库库存
-  const handleInbound = useCallback(async (record: MaterialPurchase) => {
-    setInboundModalRecord(record);
-    const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
-    inboundForm.setFieldsValue({ arrivedQuantity: maxQty });
-    setInboundModalVisible(true);
-  }, [inboundForm]);
-
-  const doInbound = useCallback(async () => {
-    try {
-      const values = await inboundForm.validateFields();
-      const record = inboundModalRecord;
-      if (!record) return;
-      const purchaseId = String(record?.id || '').trim();
-      if (!purchaseId) return;
-      const operatorId = String(user?.id || '').trim();
-      const operatorName = String(user?.name || user?.username || '').trim();
-      const res = await api.post<{ code: number; message?: string }>('/production/material/inbound/confirm-arrival', {
-        purchaseId,
-        arrivedQuantity: values.arrivedQuantity,
-        operatorId,
-        operatorName,
-        warehouseLocation: values.warehouseLocation,
-        remark: values.remark,
-      });
-      if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 到货入库成功，库存已更新`);
-        setInboundModalVisible(false);
-        inboundForm.resetFields();
-        loadData();
-      } else {
-        message.error(res?.message || '到货入库失败');
-      }
-    } catch (e) {
-      if (e && typeof e === 'object' && 'errorFields' in e) return; // form validation
-      message.error((e as Error)?.message || '到货入库失败');
-    }
-  }, [inboundModalRecord, inboundForm, user, message, loadData]);
-
-  const handleReceiveAll = useCallback(async () => {
-    if (actionLoading) return; // 防重入
-    const pendingItems = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
-    if (pendingItems.length === 0) {
-      message.info('没有待采购的物料');
-      return;
-    }
-    const receiverId = String(user?.id || '').trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
-    if (!receiverId && !receiverName) {
-      message.error('领取人信息缺失，请重新登录');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      const purchaseIds = pendingItems.map(p => String(p.id || '')).filter(Boolean);
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/batch-receive', {
-        purchaseIds,
-        receiverId,
-        receiverName,
-      });
-      if (res?.code === 200) {
-        message.success(`已批量领取 ${pendingItems.length} 项物料`);
-        loadData();
-      } else {
-        message.error(res?.message || '批量领取失败');
-      }
-    } catch (e) {
-      message.error((e as Error)?.message || '批量领取失败');
-    } finally {
-      setActionLoading(false);
-    }
-  }, [actionLoading, purchases, user, message, loadData]);
-
-  const handleConfirmReturn = useCallback(async (record: MaterialPurchase) => {
-    setReturnModalRecord(record);
-    returnForm.setFieldsValue({ quantity: Number(record.arrivedQuantity || record.purchaseQuantity || 0) });
-    setReturnModalVisible(true);
-  }, [returnForm]);
-
-  const doReturnConfirm = useCallback(async () => {
-    try {
-      const values = await returnForm.validateFields();
-      const record = returnModalRecord;
-      if (!record) return;
-      const purchaseId = String(record?.id || '').trim();
-      if (!purchaseId) return;
-      const confirmerId = String(user?.id || '').trim();
-      const confirmerName = String(user?.name || user?.username || '').trim();
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/return-confirm', {
-        purchaseId,
-        returnQuantity: values.quantity,
-        confirmerId,
-        confirmerName,
-      });
-      if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 回料确认成功`);
-        setReturnModalVisible(false);
-        loadData();
-      } else {
-        message.error(res?.message || '回料确认失败');
-      }
-    } catch (e) {
-      if (e && typeof e === 'object' && 'errorFields' in e) return;
-      message.error((e as Error)?.message || '回料确认失败');
-    }
-  }, [returnModalRecord, returnForm, user, message, loadData]);
-
-  const handleReturnReset = useCallback(async (record: MaterialPurchase) => {
-    const purchaseId = String(record?.id || '').trim();
-    if (!purchaseId) return;
-    try {
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/return-confirm/reset', {
-        purchaseId,
-      });
-      if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 已退回`);
-        loadData();
-      } else {
-        message.error(res?.message || '退回失败');
-      }
-    } catch (e) {
-      message.error((e as Error)?.message || '退回失败');
-    }
-  }, [message, loadData]);
-
-  const handleCancelReceive = useCallback(async (record: MaterialPurchase) => {
-    const purchaseId = String(record?.id || '').trim();
-    if (!purchaseId) return;
-    try {
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/cancel-receive', {
-        purchaseId,
-        reason: '手动取消领取',
-      });
-      if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 已取消领取`);
-        loadData();
-      } else {
-        message.error(res?.message || '取消领取失败');
-      }
-    } catch (e) {
-      message.error((e as Error)?.message || '取消领取失败');
-    }
-  }, [message, loadData]);
-
-  const handleBatchReturn = useCallback(async () => {
-    const returnable = purchases.filter(p => {
-      const s = normalizeStatus(p.status);
-      return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
-        && Number(p?.returnConfirmed || 0) !== 1;
-    });
-    if (returnable.length === 0) {
-      message.info('没有可回料确认的物料');
-      return;
-    }
-    const contentEl = (
-      <div>
-        <p>确认回料以下 {returnable.length} 项物料：</p>
-        <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 }}>
-          {returnable.map((item, idx) => (
-            <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{item.materialName || item.materialCode} · {item.color || '-'}</span>
-              <span style={{ color: 'var(--color-primary)' }}>到货 {item.arrivedQuantity || item.purchaseQuantity}{item.unit || ''}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-    modal.confirm({
-      title: '批量回料确认',
-      content: contentEl,
-      okText: '确认回料',
-      cancelText: '取消',
-      width: '40vw',
-      onOk: async () => {
-        setActionLoading(true);
-        try {
-          const confirmerId = String(user?.id || '').trim();
-          const confirmerName = String(user?.name || user?.username || '').trim();
-          const purchaseIds = returnable.map(p => String(p.id || '')).filter(Boolean);
-          const res = await api.post<{ code: number; message?: string }>('/production/purchase/batch-return-confirm', {
-            purchaseIds,
-            confirmerId,
-            confirmerName,
-          });
-          if (res?.code === 200) {
-            message.success(`已批量回料确认 ${returnable.length} 项`);
-            loadData();
-          } else {
-            message.error(res?.message || '批量回料确认失败');
-          }
-        } catch (e) {
-          message.error((e as Error)?.message || '批量回料确认失败');
-        } finally {
-          setActionLoading(false);
-        }
-      },
-    });
-  }, [purchases, user, message, modal, loadData]);
-
-  const handleConfirmComplete = useCallback(async () => {
-    const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
-    if (awaiting.length === 0) {
-      message.info('没有待确认完成的物料');
-      return;
-    }
-    setConfirmCompleteLoading(true);
-    try {
-      for (const record of awaiting) {
-        await api.post('/production/purchase/confirm-complete', { purchaseId: record.id });
-      }
-      message.success(`已确认完成 ${awaiting.length} 项`);
-      loadData();
-    } catch (e) {
-      message.error((e as Error)?.message || '确认完成失败');
-    } finally {
-      setConfirmCompleteLoading(false);
-    }
-  }, [purchases, message, loadData]);
-
-  const handleWarehousePick = useCallback(async (record: MaterialPurchase, pickQty: number) => {
-    const purchaseId = String(record?.id || '').trim();
-    if (!purchaseId) return;
-    const safePickQty = Number.isFinite(pickQty) ? Math.floor(pickQty) : 0;
-    if (safePickQty <= 0) {
-      message.error('领取数量无效，请检查库存数据');
-      return;
-    }
-    const receiverId = String(user?.id || '').trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
-    try {
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
-        purchaseId,
-        pickQty: safePickQty,
-        receiverId,
-        receiverName,
-      });
-      if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 已提交出库申请`);
-        loadData();
-      } else {
-        message.error(res?.message || '出库领取失败');
-      }
-    } catch (e) {
-      message.error((e as Error)?.message || '出库领取失败');
-    }
-  }, [user, message, loadData]);
-
-  const handleQualityIssue = useCallback((record: MaterialPurchase) => {
-    message.info(`品质异常：${record.materialName || record.materialCode}，请前往物料采购页面处理`);
-  }, [message]);
-
   const orderColorSet = useMemo(() => {
     const colors = new Set<string>();
     orderLines.forEach(line => {
@@ -689,39 +289,6 @@ const useInlinePurchaseData = (props: InlinePurchasePanelProps) => {
 
   const canProcure = !bomIncomplete;
 
-  const handleStartEdit = useCallback(() => {
-    if (purchases.length === 0 && orderColorSet.size > 1) {
-      const autoRows: MaterialPurchase[] = Array.from(orderColorSet).map((color) => ({
-        id: `tmp_${Date.now()}_${color}`,
-        purchaseNo: '',
-        supplierId: '',
-        orderNo: orderNo || order?.orderNo || '',
-        styleNo: order?.styleNo || '',
-        styleName: order?.styleName || '',
-        styleId: order?.styleId || '',
-        materialType: 'fabricA',
-        materialCode: '',
-        materialName: '',
-        unit: '',
-        color,
-        size: '',
-        specifications: '',
-        fabricComposition: '',
-        fabricWeight: '',
-        purchaseQuantity: 0,
-        arrivedQuantity: 0,
-        unitPrice: 0,
-        totalAmount: 0,
-        supplierName: '',
-        status: MATERIAL_PURCHASE_STATUS.PENDING,
-      } as MaterialPurchase));
-      setEditableData(autoRows);
-    } else {
-      setEditableData([...purchases]);
-    }
-    setEditing(true);
-  }, [purchases, orderColorSet, orderNo, order]);
-
   const sections = useMemo(() => {
     return ([
       { key: 'fabric', title: '面料' },
@@ -732,6 +299,67 @@ const useInlinePurchaseData = (props: InlinePurchasePanelProps) => {
       return { ...sec, data };
     }).filter(x => x.data.length > 0);
   }, [purchases]);
+
+  // ── 编辑相关 actions（拆分到 ./hooks/usePurchaseEditActions）──
+  const editActions = usePurchaseEditActions({
+    message,
+    editableData,
+    setEditableData,
+    editing,
+    setEditing,
+    saving,
+    setSaving,
+    materialTargetRowId,
+    setMaterialTargetRowId,
+    materialModalOpen,
+    setMaterialModalOpen,
+    purchases,
+    loadData,
+    getOrderStyleInfo,
+    sourceType,
+    patternId,
+    order,
+    orderColorSet,
+    orderNo,
+  });
+
+  // ── 到货/入库/取消/出库 actions（拆分到 ./hooks/usePurchaseReceiveActions）──
+  const receiveActions = usePurchaseReceiveActions({
+    message,
+    user,
+    purchases,
+    loadData,
+    receiveModalRecord,
+    setReceiveModalRecord,
+    receiveModalVisible,
+    setReceiveModalVisible,
+    receiveForm,
+    inboundModalRecord,
+    setInboundModalRecord,
+    inboundModalVisible,
+    setInboundModalVisible,
+    inboundForm,
+    actionLoading,
+    setActionLoading,
+  });
+
+  // ── 回料/确认完成/品质异常 actions（拆分到 ./hooks/usePurchaseReturnActions）──
+  const returnActions = usePurchaseReturnActions({
+    message,
+    modal,
+    user,
+    purchases,
+    loadData,
+    returnModalRecord,
+    setReturnModalRecord,
+    returnModalVisible,
+    setReturnModalVisible,
+    returnForm,
+    actionLoading,
+    setActionLoading,
+    confirmCompleteLoading,
+    setConfirmCompleteLoading,
+  });
 
   const displayData = editing ? editableData : purchases;
 
@@ -771,31 +399,13 @@ const useInlinePurchaseData = (props: InlinePurchasePanelProps) => {
     // actions
     loadData,
     navigate,
-    handleCancelEdit,
-    handleAddRow,
-    handleUpdateRow,
-    handleRemoveRow,
-    handleSaveAll,
-    handleOpenMaterialModal,
-    handleUseMaterial,
+    ...editActions,
     setMaterialModalOpen,
-    handleReceive,
-    doReceive,
+    ...receiveActions,
     setReceiveModalVisible,
-    handleInbound,
-    doInbound,
     setInboundModalVisible,
-    handleReceiveAll,
-    handleConfirmReturn,
-    doReturnConfirm,
+    ...returnActions,
     setReturnModalVisible,
-    handleReturnReset,
-    handleCancelReceive,
-    handleBatchReturn,
-    handleConfirmComplete,
-    handleWarehousePick,
-    handleQualityIssue,
-    handleStartEdit,
   };
 };
 

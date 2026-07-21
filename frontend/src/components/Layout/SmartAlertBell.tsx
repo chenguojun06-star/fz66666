@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertOutlined,
@@ -9,301 +9,40 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { Badge } from 'antd';
-import api, { ApiResult } from '../../utils/api';
-import { sysNoticeApi, urgeApi } from '../../services/production/productionApi';
-import { useUser } from '../../utils/AuthContext';
-import type { SysNotice } from '../../services/production/productionApi';
-import { useAiPatrol, RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
+import { RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
-import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
+import XiaoyunInsightCard from '../common/XiaoyunInsightCard';
 import BackgroundTaskPanel from '../common/BackgroundTaskPanel';
-
-interface TopPriorityOrder {
-  orderNo: string;
-  styleNo: string;
-  factoryName: string;
-  progress: number;
-  daysLeft: number;
-}
-
-interface BriefData {
-  date: string;
-  yesterdayWarehousingCount: number;
-  yesterdayWarehousingQuantity: number;
-  todayScanCount: number;
-  overdueOrderCount: number;
-  highRiskOrderCount: number;
-  topPriorityOrder?: TopPriorityOrder;
-  suggestions: string[];
-  decisionCards?: XiaoyunInsightCardData[];
-}
-
-interface UrgentEvent {
-  id: string;
-  type: 'overdue' | 'defective' | 'approval' | 'material';
-  title: string;
-  orderNo: string;
-  time: string;
-}
-
-const choose = (seed: number, variants: string[]) => {
-  if (!variants.length) return '';
-  return variants[Math.abs(seed) % variants.length];
-};
-
-// 根据事件类型获取跳转路径
-const getEventNav = (ev: UrgentEvent): string => {
-  if (ev.type === 'overdue')   return `/production?orderNo=${ev.orderNo}`;
-  if (ev.type === 'defective') return `/production/warehousing?orderNo=${ev.orderNo}`;
-  if (ev.type === 'approval')  return '/finance/center?tab=factory';
-  if (ev.type === 'material')  return '/warehouse/material';
-  return '/dashboard';
-};
-// ─── localStorage 每日 dismiss 辅助 ─────────────────────────
-const _sapDismissKey = () => `sap_dismissed_${new Date().toISOString().slice(0, 10)}`;
-const loadDismissed = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(_sapDismissKey());
-    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-  } catch { return new Set(); }
-};
-const saveDismissed = (ids: Set<string>) => {
-  try { localStorage.setItem(_sapDismissKey(), JSON.stringify([...ids])); } catch { /* ok */ }
-};
-
-const _sapNoticeDismissKey = () => `sap_dismissed_notices_${new Date().toISOString().slice(0, 10)}`;
-const loadDismissedNotices = (): Set<number> => {
-  try {
-    const raw = localStorage.getItem(_sapNoticeDismissKey());
-    return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
-  } catch { return new Set(); }
-};
-const saveDismissedNotices = (ids: Set<number>) => {
-  try { localStorage.setItem(_sapNoticeDismissKey(), JSON.stringify([...ids])); } catch { /* ok */ }
-};
-
-// ─── 主组件 ─────────────────────────────────────────────────
-const NOTICE_POLL_INTERVAL = 60_000;
-const MAX_BACKOFF = 5 * 60_000;
+import { useAlertData } from './SmartAlertBell/hooks/useAlertData';
+import { choose, getEventNav } from './SmartAlertBell/helpers';
+import UrgeReplyInline from './SmartAlertBell/components/UrgeReplyInline';
+import OneClickActionInline from './SmartAlertBell/components/OneClickActionInline';
 
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useUser();
-  const [open, setOpen] = useState(false);
-  const [brief, setBrief] = useState<BriefData | null>(null);
-  const [events, setEvents] = useState<UrgentEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [fetchedToday, setFetchedToday] = useState('');
-  const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
-  const [_myUnreadCount, setMyUnreadCount] = useState(0);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
-  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(loadDismissedNotices);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  const fetchedTodayRef = useRef(fetchedToday);
-  fetchedTodayRef.current = fetchedToday;
-  const briefRef = useRef(brief);
-  briefRef.current = brief;
-  const userRef = useRef(user);
-  userRef.current = user;
-
-  const { patrolSummary, fetchForOrders: fetchPatrolRiskData } = useAiPatrol();
-
-  const visibleEvents = useMemo(() => events.filter(ev => !dismissedIds.has(ev.id)), [events, dismissedIds]);
-  const visibleNotices = useMemo(() => myNotices.filter(n => !dismissedNoticeIds.has(n.id)), [myNotices, dismissedNoticeIds]);
-
-  const alertCount = visibleEvents.length + (patrolSummary?.pendingCount ?? 0);
-  const unreadNoticeCount = visibleNotices.filter(n => !n.isRead).length;
-
-  const fetchMyNotices = useCallback(async () => {
-    try {
-      const [noticesRes, countRes] = await Promise.allSettled([
-        sysNoticeApi.getMyNotices() as Promise<any>,
-        sysNoticeApi.getUnreadCount() as Promise<any>,
-      ]);
-      if (noticesRes.status === 'fulfilled' && noticesRes.value?.data) {
-        setMyNotices(noticesRes.value.data);
-      }
-      if (countRes.status === 'fulfilled' && countRes.value?.data?.count !== undefined) {
-        setMyUnreadCount(Number(countRes.value.data.count));
-      }
-      const bothFailed = noticesRes.status === 'rejected' && countRes.status === 'rejected';
-      return bothFailed ? 'failed' : 'ok';
-    } catch {
-      return 'failed';
-    }
-  }, []);
-
-  const abortRef = useRef<AbortController | null>(null);
-  const fetchData = useCallback(async () => {
-    const today = new Date().toDateString();
-    if (fetchedTodayRef.current === today && briefRef.current) return;
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    setLoading(true);
-    try {
-      const u = userRef.current;
-      const factoryId = (u as any)?.factoryId || undefined;
-      const isManagerLevel = !!(u as any)?.isSuperAdmin || !!(u as any)?.isTenantOwner
-        || ['admin', '管理员', '管理'].some(k => ((u as any)?.role || '').toLowerCase().includes(k));
-      if (!factoryId && !isManagerLevel) {
-        setFetchedToday(today);
-        return;
-      }
-      const [briefRes, eventsRes] = await Promise.allSettled([
-        api.get('/dashboard/daily-brief', { signal: ac.signal, params: factoryId ? { factoryId } : undefined }) as Promise<ApiResult<BriefData>>,
-        api.get('/dashboard/urgent-events', { signal: ac.signal, params: factoryId ? { factoryId } : undefined }) as Promise<ApiResult<UrgentEvent[]>>,
-      ]);
-      if (ac.signal.aborted) return;
-      if (briefRes.status === 'fulfilled' && briefRes.value.code === 200) {
-        setBrief(briefRes.value.data ?? null);
-      }
-      if (eventsRes.status === 'fulfilled' && eventsRes.value.code === 200) {
-        setEvents(eventsRes.value.data ?? []);
-      }
-      setFetchedToday(today);
-    } finally {
-      if (!ac.signal.aborted) setLoading(false);
-    }
-  }, []);
-
-  const fetchPatrolData = useCallback(async () => {
-    try {
-      await fetchPatrolRiskData([]);
-    } catch { /* silent fail */ }
-  }, [fetchPatrolRiskData]);
-
-  const noticeFailRef = useRef(0);
-  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleNoticePoll = useCallback(() => {
-    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-    const delay = noticeFailRef.current === 0
-      ? NOTICE_POLL_INTERVAL
-      : Math.min(NOTICE_POLL_INTERVAL * Math.pow(2, noticeFailRef.current - 1), MAX_BACKOFF);
-    noticeTimerRef.current = setTimeout(async () => {
-      const result = await fetchMyNotices();
-      if (result === 'failed') {
-        noticeFailRef.current += 1;
-      } else {
-        noticeFailRef.current = 0;
-      }
-      scheduleNoticePoll();
-    }, delay);
-  }, [fetchMyNotices]);
-
-  useEffect(() => {
-    fetchData();
-    fetchPatrolData();
-    void fetchMyNotices().then((result) => {
-      if (result === 'failed') noticeFailRef.current += 1;
-      else noticeFailRef.current = 0;
-      scheduleNoticePoll();
-    });
-    const timer = setInterval(() => setFetchedToday(''), 10 * 60 * 1000);
-    return () => {
-      clearInterval(timer);
-      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-      abortRef.current?.abort();
-    };
-  }, [fetchData, fetchMyNotices, fetchPatrolData, scheduleNoticePoll]);
-
-  useEffect(() => {
-    if (!fetchedToday) { fetchData(); fetchPatrolData(); }
-  }, [fetchedToday, fetchData, fetchPatrolData]);
-
-  // 点击面板外关闭
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        btnRef.current  && !btnRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  // Escape 关闭
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
-
-  // 消除单条我的通知（localStorage 每日持久化，隔天重新检测）
-  const dismissNotice = useCallback((id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDismissedNoticeIds(prev => {
-      const next = new Set([...prev, id]);
-      saveDismissedNotices(next);
-      return next;
-    });
-  }, []);
-
-  const markAllNoticesRead = useCallback(() => {
-    const unreadIds = myNotices.filter(n => !n.isRead).map(n => n.id);
-    if (unreadIds.length === 0) return;
-    Promise.allSettled(unreadIds.map(id => sysNoticeApi.markRead(id)))
-      .then(() => fetchMyNotices())
-      .catch((err) => console.error('批量标记通知已读失败:', err));
-    setDismissedNoticeIds(prev => {
-      const next = new Set([...prev, ...unreadIds]);
-      saveDismissedNotices(next);
-      return next;
-    });
-  }, [myNotices, fetchMyNotices]);
-
-  // 单条通知标记已读 + 可选回调（如同步本地 dismiss 列表）
-  const handleMarkRead = useCallback((id: number, callback?: () => void) => {
-    sysNoticeApi.markRead(id)
-      .then(() => fetchMyNotices())
-      .catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
-    if (callback) callback();
-  }, [fetchMyNotices]);
-
-  // 消除单条事件（当天不再显示，隔天重新检测）
-  const dismissEvent = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDismissedIds(prev => {
-      const next = new Set(prev);
-      next.add(id);
-      saveDismissed(next);
-      return next;
-    });
-  }, []);
-
-  // 跳转辅助：关闭面板并导航
-  const goTo = (path: string) => {
-    setOpen(false);
-    navigate(path);
-  };
-
-  // 点击按钮时先拉数据
-  const handleToggle = () => {
-    if (!open) { fetchData(); fetchPatrolData(); }
-    setOpen(v => !v);
-  };
-
-  // ── 渲染 ──────────────────────────────────────────────────
-  const patrolSeverityColor = (severity: string) => {
-    if (severity === 'HIGH') return 'var(--color-error)';
-    if (severity === 'MEDIUM') return 'var(--color-warning)';
-    return 'var(--color-warning)';
-  };
-
-  const riskLevel = (brief?.overdueOrderCount ?? 0) > 0 || (patrolSummary?.highRiskPending ?? 0) > 0 ? 'high'
-    : (brief?.highRiskOrderCount ?? 0) > 0 ? 'mid'
-    : 'ok';
-
-  const dotColor = riskLevel === 'high' ? '#ef4444'
-    : riskLevel === 'mid' ? '#f59e0b'
-    : '#22c55e';
+  const {
+    open,
+    setOpen,
+    brief,
+    loading,
+    visibleEvents,
+    visibleNotices,
+    dismissedIds,
+    alertCount,
+    unreadNoticeCount,
+    patrolSummary,
+    panelRef,
+    btnRef,
+    dotColor,
+    patrolSeverityColor,
+    goTo,
+    handleToggle,
+    dismissEvent,
+    dismissNotice,
+    markAllNoticesRead,
+    handleMarkRead,
+    dismissNoticeLocally,
+  } = useAlertData();
 
   return (
     <div className="smart-alert-wrap">
@@ -326,7 +65,7 @@ const SmartAlertBell: React.FC = () => {
         {alertCount > 0 && (
           <Badge
             count={alertCount}
-           
+
             style={{ marginLeft: 4, background: dotColor, boxShadow: 'none' }}
           />
         )}
@@ -596,25 +335,13 @@ const SmartAlertBell: React.FC = () => {
                         <UrgeReplyInline
                           urgeRecordId={n.urgeRecordId}
                           orderNo={n.orderNo}
-                          onReplied={() => handleMarkRead(n.id, () => {
-                            setDismissedNoticeIds(prev => {
-                              const next = new Set([...prev, n.id]);
-                              saveDismissedNotices(next);
-                              return next;
-                            });
-                          })}
+                          onReplied={() => handleMarkRead(n.id, () => dismissNoticeLocally(n.id))}
                         />
                       )}
                       {n.actionPayload && !n.isRead && !n.urgeRecordId && (
                         <OneClickActionInline
                           notice={n}
-                          onDone={() => handleMarkRead(n.id, () => {
-                            setDismissedNoticeIds(prev => {
-                              const next = new Set([...prev, n.id]);
-                              saveDismissedNotices(next);
-                              return next;
-                            });
-                          })}
+                          onDone={() => handleMarkRead(n.id, () => dismissNoticeLocally(n.id))}
                         />
                       )}
                     </div>
@@ -623,13 +350,7 @@ const SmartAlertBell: React.FC = () => {
                         className="sap-notice-read-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleMarkRead(n.id, () => {
-                            setDismissedNoticeIds(prev => {
-                              const next = new Set([...prev, n.id]);
-                              saveDismissedNotices(next);
-                              return next;
-                            });
-                          });
+                          handleMarkRead(n.id, () => dismissNoticeLocally(n.id));
                         }}
                       >
                         已读
@@ -654,156 +375,4 @@ const SmartAlertBell: React.FC = () => {
   );
 };
 
-// ─── 小统计格子 ───────────────────────────────────────────
-
-const UrgeReplyInline: React.FC<{
-  urgeRecordId: string;
-  orderNo: string;
-  onReplied: () => void;
-}> = ({ urgeRecordId, orderNo: _orderNo, onReplied }) => {
-  const [replyContent, setReplyContent] = React.useState('');
-  const [expectedShipDate, setExpectedShipDate] = React.useState('');
-  const [submitting, setSubmitting] = React.useState(false);
-  const [submitted, setSubmitted] = React.useState(false);
-
-  const handleSubmit = async () => {
-    if (!replyContent.trim() && !expectedShipDate) return;
-    setSubmitting(true);
-    try {
-      await urgeApi.reply(urgeRecordId, replyContent, expectedShipDate || undefined);
-      setSubmitted(true);
-      onReplied();
-    } catch {
-      // silent
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (submitted) {
-    return (
-      <div style={{ fontSize: 12, color: '#389e0d', marginTop: 4 }}>
-        ✅ 已回复
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
-        <input
-          type="date"
-          value={expectedShipDate}
-          onChange={(e) => setExpectedShipDate(e.target.value)}
-          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid var(--color-border-antd)', borderRadius: 4, width: 130 }}
-          placeholder="预计出货日"
-        />
-        <input
-          type="text"
-          value={replyContent}
-          onChange={(e) => setReplyContent(e.target.value)}
-          placeholder="回复备注..."
-          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid var(--color-border-antd)', borderRadius: 4, flex: 1, minWidth: 80 }}
-        />
-      </div>
-      <button
-        onClick={() => void handleSubmit()}
-        disabled={submitting || (!replyContent.trim() && !expectedShipDate)}
-        style={{
-          fontSize: 11,
-          padding: '2px 8px',
-          background: 'var(--color-error)',
-          color: 'var(--color-bg-base)',
-          border: 'none',
-          borderRadius: 4,
-          cursor: submitting ? 'not-allowed' : 'pointer',
-          opacity: submitting ? 0.6 : 1,
-        }}
-      >
-        {submitting ? '提交中...' : '回复催单'}
-      </button>
-    </div>
-  );
-};
-
 export default SmartAlertBell;
-
-// ─── 一键处理按钮 ───────────────────────────────────────────
-
-const OneClickActionInline: React.FC<{
-  notice: SysNotice;
-  onDone: () => void;
-}> = ({ notice, onDone }) => {
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const payload = useMemo(() => {
-    try {
-      return notice.actionPayload ? JSON.parse(notice.actionPayload) : {};
-    } catch {
-      return {};
-    }
-  }, [notice.actionPayload]);
-
-  const handleAction = async () => {
-    if (loading || done) return;
-    setLoading(true);
-    setError('');
-    try {
-      if (notice.actionType === 'urge_order' && payload.orderId) {
-        await urgeApi.urge(payload.orderId, 'AI巡检自动催单');
-        setDone(true);
-        setTimeout(() => onDone(), 800);
-      } else if (notice.actionType === 'task_overdue' || notice.actionType === 'task_due_soon') {
-        navigate('/intelligence/tasks?tab=my');
-      }
-    } catch (e: any) {
-      setError(e?.message || '操作失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const buttonText = () => {
-    if (done) return '✅ 已处理';
-    if (notice.actionType === 'urge_order') return '⚡ 一键催单';
-    if (notice.actionType === 'task_overdue') return '去处理';
-    if (notice.actionType === 'task_due_soon') return '去查看';
-    return '处理';
-  };
-
-  return (
-    <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-      {done ? (
-        <div style={{ fontSize: 12, color: '#389e0d' }}>
-          ✅ 已催单，工厂已收到通知
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button
-            onClick={() => void handleAction()}
-            disabled={loading}
-            style={{
-              fontSize: 12,
-              padding: '4px 12px',
-              background: 'transparent',
-              color: 'var(--color-primary)',
-              border: '1px solid var(--color-primary)',
-              borderRadius: 6,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-              fontWeight: 500,
-            }}
-          >
-            {loading ? '处理中...' : buttonText()}
-          </button>
-          {error && (
-            <span style={{ fontSize: 11, color: 'var(--color-error)' }}>{error}</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
