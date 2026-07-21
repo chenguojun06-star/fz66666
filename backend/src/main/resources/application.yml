@@ -132,6 +132,9 @@ logging:
     com.baomidou.mybatisplus: warn
     # SSE/流式接口 response 已提交时 Spring 尝试渲染 error 页产生的已知无害噪音，直接屏蔽
     '[org.springframework.boot.autoconfigure.web.servlet.error]': off
+    # 同源问题在 Tomcat dispatcherServlet 层的 ERROR 日志（"Servlet.service() ... threw exception"），一并屏蔽
+    # 真正的 Controller 异常已在 GlobalExceptionHandler 中以 logger.error 输出完整堆栈，不依赖此 logger
+    '[org.apache.catalina.core.ContainerBase.[Tomcat].[host].[context].[dispatcherServlet]]': off
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
@@ -417,7 +420,7 @@ ai:
     vision: ${AI_MODEL_VISION:agnes-2.0-flash}     # 图片分析用这个
     default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
   openai-compat:
-    enabled: ${AI_OPENAI_COMPAT_ENABLED:false}
+    enabled: ${AI_OPENAI_COMPAT_ENABLED:true}
     api-key: ${AI_OPENAI_COMPAT_API_KEY:}
     model-name: ${AI_OPENAI_COMPAT_MODEL_NAME:xiaoyun-agent}
     tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:1}
@@ -439,11 +442,10 @@ ai:
       enabled: ${AI_IM_AI_DINGTALK_ENABLED:false}
       app-secret: ${AI_IM_AI_DINGTALK_APP_SECRET:}
 
-# Qdrant 向量库配置（需显式启用，默认禁用避免 Connection refused 报错）
-# 启用方式：设置 QDRANT_ENABLED=true 并配置 QDRANT_URL
+# Qdrant 向量库配置（默认启用，QDRANT_URL 为空时自动降级）
 intelligence:
   qdrant:
-    enabled: ${QDRANT_ENABLED:false}
+    enabled: ${QDRANT_ENABLED:true}
     url: ${QDRANT_URL:http://localhost:6333}
     collection: ${QDRANT_COLLECTION:fashion_memory}
     vector-size: ${QDRANT_VECTOR_SIZE:1024}
@@ -451,14 +453,14 @@ intelligence:
     timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
   # A 子项目：小云核心智能化升级 — 双跑 Feature Flag
   cognition:
-    enabled: false
-    rollout-tenants: ""
+    enabled: ${INTELLIGENCE_COGNITION_ENABLED:true}
+    rollout-tenants: ${INTELLIGENCE_COGNITION_ROLLOUT_TENANTS:}
   execution:
-    enabled: false
-    rollout-tenants: ""
+    enabled: ${INTELLIGENCE_EXECUTION_ENABLED:true}
+    rollout-tenants: ${INTELLIGENCE_EXECUTION_ROLLOUT_TENANTS:}
   perception:
-    enabled: false
-    rollout-tenants: ""
+    enabled: ${INTELLIGENCE_PERCEPTION_ENABLED:true}
+    rollout-tenants: ${INTELLIGENCE_PERCEPTION_ROLLOUT_TENANTS:}
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
 xiaoyun:
@@ -486,6 +488,9 @@ xiaoyun:
       enabled: ${XIAOYUN_TOOL_DISCOVERY_ENABLED:true}
       min-tool-count-for-rag: ${XIAOYUN_TOOL_DISCOVERY_MIN_COUNT:30}
       top-k: ${XIAOYUN_TOOL_DISCOVERY_TOP_K:10}
+    # 数据真实性守卫 — 4项并行校验（数据真实性/数字一致性/实体事实/接地率）
+    data-truth-guard:
+      enabled: ${XIAOYUN_DATA_TRUTH_GUARD_ENABLED:true}
   # 数字孪生全模块快照
   digital-twin:
     enabled: ${XIAOYUN_DIGITAL_TWIN_ENABLED:true}

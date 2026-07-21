@@ -29,9 +29,17 @@ public class AuditInterceptor implements HandlerInterceptor {
 
     private static final String AUDIT_CONTEXT_KEY = "auditContext";
     private static final String START_TIME_KEY = "auditStartTime";
+    /** ERROR dispatch 路径：跳过审计日志，避免 SecurityContext 已被清理时的"幽灵"日志 */
+    private static final String ERROR_PATH = "/error";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 跳过 ERROR dispatch：此时 SecurityContext/UserContext 已被 Filter 清理，
+        // 记录的 tenant=null/user=null 是"幽灵"日志，无业务价值
+        if (ERROR_PATH.equals(request.getRequestURI())) {
+            return true;
+        }
+
         // 记录开始时间
         request.setAttribute(START_TIME_KEY, System.currentTimeMillis());
         
@@ -73,10 +81,15 @@ public class AuditInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                Object handler, Exception ex) {
+        // 跳过 ERROR dispatch 的后续处理（preHandle 已跳过，afterCompletion 也保持一致）
+        if (ERROR_PATH.equals(request.getRequestURI())) {
+            return;
+        }
+
         // 计算耗时
         Long startTime = (Long) request.getAttribute(START_TIME_KEY);
         long duration = startTime != null ? System.currentTimeMillis() - startTime : 0;
-        
+
         // 获取响应状态
         int status = response.getStatus();
         

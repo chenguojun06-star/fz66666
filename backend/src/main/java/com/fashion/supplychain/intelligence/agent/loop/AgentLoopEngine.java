@@ -44,6 +44,7 @@ import com.fashion.supplychain.intelligence.service.PromptEvolutionService;
 import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
@@ -58,6 +59,9 @@ import java.util.concurrent.ForkJoinPool;
 @Component
 @Lazy
 public class AgentLoopEngine {
+
+    @Value("${xiaoyun.agent.data-truth-guard.enabled:true}")
+    private boolean dataTruthGuardEnabled;
 
     @Autowired private AiInferenceGateway inferenceGateway;
     @Autowired private AiAgentToolExecHelper toolExecHelper;
@@ -630,18 +634,17 @@ public class AgentLoopEngine {
         }
 
         // 数据真实性守卫（4项并行校验，纯规则无LLM，约1-3秒）
-        // TODO: 默认关闭，确认无误报后再打开。
         // 包含：数据真实性 + 数字一致性 + 实体事实 + 接地率检查
-        // try {
-        //     if (ctx.getAllExecRecords() != null && !ctx.getAllExecRecords().isEmpty()) {
-        //         String guardWarnings = runDataTruthGuards(ctx, content);
-        //         if (guardWarnings != null && !guardWarnings.isBlank()) {
-        //             content += "\n" + guardWarnings;
-        //         }
-        //     }
-        // } catch (Exception e) {
-        //     log.debug("[AsyncPost] 数据真实性守卫异常: {}", e.getMessage());
-        // }
+        try {
+            if (dataTruthGuardEnabled && ctx.getAllExecRecords() != null && !ctx.getAllExecRecords().isEmpty()) {
+                String guardWarnings = runDataTruthGuards(ctx, content);
+                if (guardWarnings != null && !guardWarnings.isBlank()) {
+                    content += "\n" + guardWarnings;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AsyncPost] 数据真实性守卫异常: {}", e.getMessage());
+        }
 
         // 自我一致性验证（仅高风险工具，约1-2秒）
         try {

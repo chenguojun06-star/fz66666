@@ -23,10 +23,18 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(RequestLoggingInterceptor.class);
     private static final String START_TIME_KEY = "requestStartTime";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    /** ERROR dispatch 路径：跳过请求日志，避免 SSE 场景下反复打印 GET /error 噪音 */
+    private static final String ERROR_PATH = "/error";
 
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
             @NonNull Object handler) throws Exception {
+        // 跳过 ERROR dispatch：SSE 流式接口在 response 已提交后 Spring 会 forward /error，
+        // 此时打印"Request received: GET /error"是已知噪音，无业务价值
+        if (ERROR_PATH.equals(request.getRequestURI())) {
+            return true;
+        }
+
         // 记录请求开始时间
         long startTime = System.currentTimeMillis();
         request.setAttribute(START_TIME_KEY, startTime);
@@ -50,6 +58,11 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
             @NonNull Object handler, @Nullable Exception ex) throws Exception {
+        // 跳过 ERROR dispatch 的后续处理（preHandle 已跳过，afterCompletion 也保持一致）
+        if (ERROR_PATH.equals(request.getRequestURI())) {
+            return;
+        }
+
         // 计算响应时间
         long startTime = (long) request.getAttribute(START_TIME_KEY);
         long endTime = System.currentTimeMillis();

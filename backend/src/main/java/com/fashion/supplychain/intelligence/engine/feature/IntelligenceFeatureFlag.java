@@ -35,7 +35,7 @@ public class IntelligenceFeatureFlag {
     @Value("${intelligence.perception.rollout-tenants:}")
     private String perceptionTenantsCsv;
 
-    @Value("${intelligence.prompt-evolution.enabled:false}")
+    @Value("${xiaoyun.prompt-evolution.enabled:true}")
     private boolean promptEvolutionEnabled;
 
     @Value("${intelligence.kg-snapshot.enabled:true}")
