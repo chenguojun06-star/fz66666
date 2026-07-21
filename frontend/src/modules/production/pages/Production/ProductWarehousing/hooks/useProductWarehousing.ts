@@ -1,387 +1,48 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { readPageSize } from '@/utils/pageSizeStore';
-import { Form } from 'antd';
-import { useLocation, useNavigate } from 'react-router-dom';
-import api, { useProductionOrderFrozenCache } from '@/utils/api';
+import { useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import api from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
-import {
-  ProductWarehousing as WarehousingType,
-  WarehousingQueryParams,
-} from '@/types/production';
-import type { UploadFile } from 'antd/es/upload/interface';
-import {
-  CuttingBundleRow,
-} from '../types';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
-import { message } from '@/utils/antdStatic';
+import { ProductWarehousing as WarehousingType } from '@/types/production';
 
+import { useWarehousingList } from './useWarehousingList';
+import { useWarehousingModals } from './useWarehousingModals';
 
-// 质检入库统计数据类型
-export interface WarehousingStats {
-  totalCount: number;
-  totalOrders: number;
-  totalQuantity: number;
-  todayCount: number;
-  todayOrders: number;
-  todayQuantity: number;
-  pendingQcBundles: number;
-  pendingQcQuantity: number;
-  pendingPackagingBundles: number;
-  pendingPackagingQuantity: number;
-  pendingWarehouseBundles: number;
-  pendingWarehouseQuantity: number;
-  unqualifiedCount: number;
-  unqualifiedQuantity: number;
-}
-
-const defaultStats: WarehousingStats = {
-  totalCount: 0,
-  totalOrders: 0,
-  totalQuantity: 0,
-  todayCount: 0,
-  todayOrders: 0,
-  todayQuantity: 0,
-  pendingQcBundles: 0,
-  pendingQcQuantity: 0,
-  pendingPackagingBundles: 0,
-  pendingPackagingQuantity: 0,
-  pendingWarehouseBundles: 0,
-  pendingWarehouseQuantity: 0,
-  unqualifiedCount: 0,
-  unqualifiedQuantity: 0,
-};
-
-// 状态筛选类型
-export type StatusFilter = 'all' | 'pendingQc' | 'pendingPackaging' | 'pendingWarehouse' | 'unqualified' | 'completed';
-
-// 待处理菲号行数据
-export interface PendingBundleRow {
-  bundleId: string;
-  bundleNo: number;
-  qrCode: string;
-  color: string;
-  size: string;
-  quantity: number;
-  orderId: string;
-  orderNo: string;
-  styleNo: string;
-  styleName: string;
-  styleCover: string;
-  status: string;
-}
+// 重新导出类型，保持外部 import 路径不变（向后兼容）
+export type { WarehousingStats, StatusFilter, PendingBundleRow } from './warehousingConstants';
 
 export const useProductWarehousing = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [form] = Form.useForm();
 
-  // State
-  const [loading, setLoading] = useState(false);
-  const [warehousingList, setWarehousingList] = useState<WarehousingType[]>([]);
-  const [total, setTotal] = useState(0);
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const [queryParams, setQueryParams] = useState<WarehousingQueryParams>({
-    page: 1,
-    pageSize: readPageSize(10),
+  const {
+    loading,
+    warehousingList,
+    setWarehousingList,
+    total,
+    setTotal,
+    smartError,
+    queryParams,
+    setQueryParams,
+    showSmartErrorNotice,
+    warehousingStats,
+    fetchWarehousingStats,
+    statusFilter,
+    setStatusFilter,
+    handleStatusFilterChange,
+    showAllWarehousing,
+    setShowAllWarehousing,
+    pendingBundles,
+    pendingBundlesLoading,
+    fetchPendingBundles,
+    navigateToInspect,
+    fetchWarehousingList,
+    ensureOrderUnlockedById,
+    isOrderFrozenById,
+  } = useWarehousingList();
+
+  const modalState = useWarehousingModals({
+    fetchWarehousingList,
+    ensureOrderUnlockedById,
   });
-  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-
-  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({
-      title,
-      reason,
-      code,
-      actionText: '刷新重试',
-    });
-  }, [showSmartErrorNotice]);
-
-  // 状态筛选
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [showAllWarehousing, setShowAllWarehousing] = useState(false);
-  const [pendingBundles, setPendingBundles] = useState<PendingBundleRow[]>([]);
-  const [pendingBundlesLoading, setPendingBundlesLoading] = useState(false);
-
-  // 统计卡片
-  const [warehousingStats, setWarehousingStats] = useState<WarehousingStats>(defaultStats);
-
-  const [visible, setVisible] = useState(false); // New/Edit Modal
-  const [currentWarehousing, setCurrentWarehousing] = useState<WarehousingType | null>(null);
-  const [submitLoading, setSubmitLoading] = useState(false);
-
-  const [warehousingModalOpen, setWarehousingModalOpen] = useState(false); // Simple Warehousing Modal
-  const [warehousingModalLoading, setWarehousingModalLoading] = useState(false);
-  const [warehousingModalOrderId, setWarehousingModalOrderId] = useState<string>('');
-  const [warehousingModalWarehousingNo, setWarehousingModalWarehousingNo] = useState<string>('');
-  const [warehousingModalOrderNo, setWarehousingModalOrderNo] = useState<string>('');
-  const [warehousingModalWarehouse, setWarehousingModalWarehouse] = useState<string>('');
-  const [warehousingModalStyleNo, setWarehousingModalStyleNo] = useState<string>('');
-  const [warehousingModalColor, setWarehousingModalColor] = useState<string>('');
-  const [warehousingModalSize, setWarehousingModalSize] = useState<string>('');
-  const [warehousingModalQuantity, setWarehousingModalQuantity] = useState<number>(0);
-
-  const [independentDetailOpen, setIndependentDetailOpen] = useState(false);
-  const [independentDetailWarehousingNo, setIndependentDetailWarehousingNo] = useState<string>('');
-  const [independentDetailSummary, setIndependentDetailSummary] = useState<WarehousingType | null>(null);
-
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [previewTitle, setPreviewTitle] = useState<string>('');
-
-  // Form/Data State
-  const [bundles, setBundles] = useState<CuttingBundleRow[]>([]);
-  const [unqualifiedFileList, setUnqualifiedFileList] = useState<UploadFile[]>([]);
-
-  // Derived State
-  const frozenOrderIds = useMemo(() => {
-    return Array.from(new Set(warehousingList.map((r: any) => String(r?.orderId || '').trim()).filter(Boolean)));
-  }, [warehousingList]);
-
-  const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'statusOrStock', acceptAnyData: true });
-
-  // Actions
-  const fetchWarehousingStats = useCallback(async () => {
-    try {
-      const res = await api.get<{ code: number; data: WarehousingStats }>('/production/warehousing/stats');
-      if (res.code === 200 && res.data) {
-        setWarehousingStats(res.data);
-      } else {
-        console.warn('[质检入库] stats 返回异常:', res);
-      }
-    } catch (err) {
-      console.warn('[质检入库] stats 请求失败:', err);
-    }
-  }, []);
-
-  // 获取待处理菲号列表
-  const fetchPendingBundles = useCallback(async (status: string) => {
-    setPendingBundlesLoading(true);
-    try {
-      const res = await api.get<{ code: number; data: PendingBundleRow[] }>('/production/warehousing/pending-bundles', {
-        params: { status },
-      });
-      if (res.code === 200 && res.data) {
-        setPendingBundles(res.data);
-      } else {
-        setPendingBundles([]);
-      }
-    } catch {
-      setPendingBundles([]);
-    } finally {
-      setPendingBundlesLoading(false);
-    }
-  }, []);
-
-  const fetchWarehousingList = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', { params: queryParams });
-      if (response.code === 200) {
-        setWarehousingList(response.data.records || []);
-        setTotal(response.data.total || 0);
-        if (showSmartErrorNotice) setSmartError(null);
-      } else {
-        const errMessage = (response as any).message || '获取质检入库列表失败';
-        reportSmartError('质检入库列表加载失败', errMessage, 'WAREHOUSING_LIST_LOAD_FAILED');
-        message.error(errMessage);
-      }
-    } catch (error) {
-      reportSmartError('质检入库列表加载失败', '网络异常或服务不可用，请稍后重试', 'WAREHOUSING_LIST_LOAD_EXCEPTION');
-      message.error('获取质检入库列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [queryParams, showSmartErrorNotice, reportSmartError]);
-
-  // 切换状态筛选
-  const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
-    setStatusFilter(newFilter);
-    setPendingBundles([]);
-    if (newFilter === 'pendingQc' || newFilter === 'pendingPackaging' || newFilter === 'pendingWarehouse') {
-      // 待处理类：走 pending-bundles API
-      fetchPendingBundles(newFilter);
-      return;
-    }
-    // all / completed / unqualified：走 list API，通过 qualityStatus 过滤
-    // 不合格 → qualityStatus=unqualified
-    // 已完成 → qualityStatus=qualified（合格即视为已完成，含已入库和待入库）
-    // 全部 → 不传 qualityStatus
-    const nextQualityStatus = newFilter === 'unqualified' ? 'unqualified'
-      : newFilter === 'completed' ? 'qualified'
-      : undefined;
-    setQueryParams((prev) => ({
-      ...prev,
-      page: 1,
-      qualityStatus: nextQualityStatus,
-    }));
-    // 注意：setQueryParams 会触发下方 useEffect 自动调 fetchWarehousingList
-  }, [fetchPendingBundles]);
-
-  const navigateToInspect = useCallback((orderId: string, bundleId?: string) => {
-    const params = new URLSearchParams();
-    if (bundleId) params.set('bundleId', bundleId);
-    navigate(`/production/warehousing/inspect/${orderId}?${params.toString()}`);
-  }, [navigate]);
-
-  const fetchBundlesByOrderNo = async (orderNo: string) => {
-    const on = String(orderNo || '').trim();
-    if (!on) {
-      setBundles([]);
-      return;
-    }
-    try {
-      const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
-        params: { page: 1, pageSize: 500, orderNo: on },
-      });
-      if (res.code === 200) {
-        setBundles((res.data?.records || []) as CuttingBundleRow[]);
-      } else {
-        setBundles([]);
-      }
-    } catch {
-      setBundles([]);
-    }
-  };
-
-  const openDialog = (warehousing?: WarehousingType) => {
-    setCurrentWarehousing(warehousing || null);
-    setVisible(true);
-  };
-
-  const closeDialog = () => {
-    setVisible(false);
-    setCurrentWarehousing(null);
-  };
-
-  const openWarehousingModal = (record: WarehousingType) => {
-    const oid = String((record as any)?.orderId || '').trim();
-    const whNo = String((record as any)?.warehousingNo || '').trim();
-    const on = String((record as any)?.orderNo || '').trim();
-    if (!oid && !whNo) {
-      message.error('缺少订单信息');
-      return;
-    }
-    setWarehousingModalOrderId(oid);
-    setWarehousingModalWarehousingNo(whNo);
-    setWarehousingModalOrderNo(on);
-    setWarehousingModalWarehouse('');
-    setWarehousingModalStyleNo(String(record?.styleNo || '').trim());
-    setWarehousingModalColor(String(record?.color || '').trim());
-    setWarehousingModalSize(String(record?.size || '').trim());
-    setWarehousingModalQuantity(Number(record?.warehousingQuantity || 0));
-    setWarehousingModalOpen(true);
-  };
-
-  const closeWarehousingModal = () => {
-    setWarehousingModalOpen(false);
-    setWarehousingModalLoading(false);
-    setWarehousingModalOrderId('');
-    setWarehousingModalWarehousingNo('');
-    setWarehousingModalOrderNo('');
-    setWarehousingModalWarehouse('');
-    setWarehousingModalStyleNo('');
-    setWarehousingModalColor('');
-    setWarehousingModalSize('');
-    setWarehousingModalQuantity(0);
-  };
-
-  const submitWarehousing = async () => {
-    const oid = String(warehousingModalOrderId || '').trim();
-    const whNo = String(warehousingModalWarehousingNo || '').trim();
-    const warehouse = String(warehousingModalWarehouse || '').trim();
-    if (!warehouse) {
-      message.error('请选择仓库');
-      return;
-    }
-    if (!oid && !whNo) {
-      message.error('缺少订单信息');
-      return;
-    }
-    if (oid && !(await ensureOrderUnlockedById(oid))) return;
-
-    try {
-      setWarehousingModalLoading(true);
-      const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number }; message?: string }>('/production/warehousing/list', {
-        params: {
-          page: 1,
-          pageSize: 500,
-          ...(whNo ? { warehousingNo: whNo } : {}),
-          ...(!whNo && oid ? { orderId: oid } : {}),
-        },
-      });
-      if (res.code !== 200) {
-        message.error(res.message || '获取质检记录失败');
-        return;
-      }
-      const records = (res.data?.records || []) as WarehousingType[];
-      const targets = records.filter((r) => {
-        const qs = String((r as any)?.qualityStatus || '').trim().toLowerCase();
-        const qualified = !qs || qs === 'qualified';
-        const q = Number((r as any)?.qualifiedQuantity || 0) || 0;
-        const wt = String((r as any)?.warehousingType || '').trim();
-        const wh = String((r as any)?.warehouse || '').trim();
-        if (wt === 'quality_scan_scrap' || wt === 'repair_return') return false;
-        if (wh && wh !== '待分配') return false;
-        return qualified && q > 0;
-      });
-
-      if (!targets.length) {
-        message.info('该订单暂无可入库的合格质检记录');
-        return;
-      }
-
-      const concurrency = 5;
-      const queue = targets.slice();
-      const workers = Array.from({ length: Math.min(concurrency, queue.length) }).map(async () => {
-        while (queue.length) {
-          const r = queue.shift();
-          if (!r) continue;
-          await api.put<{ code: number; message: string; data: boolean }>('/production/warehousing', { id: (r as any)?.id, warehouse });
-        }
-      });
-      await Promise.all(workers);
-
-      message.success('入库完成');
-      try {
-        window.dispatchEvent(new Event('warehouse:in'));
-        window.dispatchEvent(new Event('data:changed'));
-      } catch (_e) {
-        // 事件派发失败不影响业务
-      }
-      closeWarehousingModal();
-      fetchWarehousingList();
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '入库失败');
-    } finally {
-      setWarehousingModalLoading(false);
-    }
-  };
-
-  const openIndependentDetailPopup = (record: WarehousingType) => {
-    const whNo = String((record as any)?.warehousingNo || '').trim();
-    if (!whNo) {
-      message.warning('质检入库号为空');
-      return;
-    }
-    setIndependentDetailWarehousingNo(whNo);
-    setIndependentDetailSummary(record);
-    setIndependentDetailOpen(true);
-  };
-
-  const closeIndependentDetailPopup = () => {
-    setIndependentDetailOpen(false);
-    setIndependentDetailWarehousingNo('');
-    setIndependentDetailSummary(null);
-  };
-
-  const ensureOrderUnlockedById = async (orderId: any) => {
-    return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已完成，无法操作'));
-  };
-
-  const isOrderFrozenById = (orderId: any) => {
-    return orderFrozen.isFrozenById[orderId] || false;
-  };
 
   // Sync logic
   useSync(
@@ -408,7 +69,7 @@ export const useProductWarehousing = () => {
     },
     {
       interval: 30000,
-      enabled: !loading && !visible && !warehousingModalOpen && !independentDetailOpen,
+      enabled: !loading && !modalState.visible && !modalState.warehousingModalOpen && !modalState.independentDetailOpen,
       pauseOnHidden: true,
       onError: (error) => {
         console.error('[实时同步] 质检入库数据同步错误', error);
@@ -463,6 +124,7 @@ export const useProductWarehousing = () => {
     }
   }, [location.search]);
 
+  // Derived State
   const sortedWarehousingList = useMemo(() => {
     let list = [...warehousingList];
     if (!showAllWarehousing) {
@@ -493,12 +155,9 @@ export const useProductWarehousing = () => {
     showSmartErrorNotice,
     queryParams,
     setQueryParams,
-    visible,
-    setVisible,
-    currentWarehousing,
-    form,
-    submitLoading,
-    setSubmitLoading,
+
+    // Modal State
+    ...modalState,
 
     // Stats
     warehousingStats,
@@ -515,54 +174,8 @@ export const useProductWarehousing = () => {
     fetchPendingBundles,
     navigateToInspect,
 
-    // Modal State
-    warehousingModalOpen,
-    setWarehousingModalOpen,
-    warehousingModalLoading,
-    setWarehousingModalLoading,
-    warehousingModalOrderId,
-    setWarehousingModalOrderId,
-    warehousingModalWarehousingNo,
-    setWarehousingModalWarehousingNo,
-    warehousingModalOrderNo,
-    setWarehousingModalOrderNo,
-    warehousingModalWarehouse,
-    setWarehousingModalWarehouse,
-    warehousingModalStyleNo,
-    warehousingModalColor,
-    warehousingModalSize,
-    warehousingModalQuantity,
-
-    independentDetailOpen,
-    setIndependentDetailOpen,
-    independentDetailWarehousingNo,
-    setIndependentDetailWarehousingNo,
-    independentDetailSummary,
-    setIndependentDetailSummary,
-
-    previewOpen,
-    setPreviewOpen,
-    previewUrl,
-    setPreviewUrl,
-    previewTitle,
-    setPreviewTitle,
-
-    // Form/Data State
-    bundles,
-    setBundles,
-    unqualifiedFileList,
-    setUnqualifiedFileList,
-
     // Actions
     fetchWarehousingList,
-    fetchBundlesByOrderNo,
-    openDialog,
-    closeDialog,
-    openWarehousingModal,
-    closeWarehousingModal,
-    submitWarehousing,
-    openIndependentDetailPopup,
-    closeIndependentDetailPopup,
     ensureOrderUnlockedById,
     isOrderFrozenById,
   };
