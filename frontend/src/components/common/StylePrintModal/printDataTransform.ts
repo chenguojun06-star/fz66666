@@ -4,7 +4,7 @@
  */
 'use client';
 
-type LabelSize = '40x70' | '50x100';
+import type { LabelSize } from './types';
 
 export const LABEL_SIZE_MAP: Record<LabelSize, [number, number]> = {
   '40x70': [70, 40],

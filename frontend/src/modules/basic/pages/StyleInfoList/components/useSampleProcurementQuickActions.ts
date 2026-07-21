@@ -21,7 +21,7 @@ interface ProcurementItem {
   sourceType: string;
 }
 
-interface HookState {
+export interface HookState {
   items: ProcurementItem[];
   loading: boolean;
   error: string | null;

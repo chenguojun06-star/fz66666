@@ -87,3 +87,6 @@ export interface PrintData {
   attachments: any[];
   productionSheet: any;
 }
+
+/** 标签尺寸：4×7cm 或 5×10cm */
+export type LabelSize = '40x70' | '50x100';

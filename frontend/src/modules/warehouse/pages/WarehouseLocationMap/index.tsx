@@ -1,888 +1,224 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert, Checkbox, Drawer, InputNumber } from 'antd';
-import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined, PrinterOutlined, ImportOutlined, ExportOutlined, CheckSquareOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
-import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
-import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
+// 仓库仓位管理主组件 - 组合 Hook + 子组件
+import React from 'react';
+import { Empty } from 'antd';
+import { useWarehouseLocationData } from './useWarehouseLocationData';
+import WarehouseSidebar from './WarehouseSidebar';
+import WarehouseStats from './WarehouseStats';
+import WarehouseZoneTabs from './WarehouseZoneTabs';
+import WarehouseLocationGrid from './WarehouseLocationGrid';
+import FormModals from './FormModals';
+import LocationDetailDrawer from './LocationDetailDrawer';
+import TransferDrawer from './TransferDrawer';
+import InboundDrawer from './InboundDrawer';
+import OutboundDrawer from './OutboundDrawer';
 import LocationLabelPrintModal from './LocationLabelPrintModal';
-import api from '@/utils/api';
-import { useUser } from '@/utils/AuthContext';
 import './WarehouseLocationMap.css';
 
-interface WarehouseAreaItem {
-  id: string;
-  areaCode: string;
-  areaName: string;
-  warehouseType: string;
-  status: string;
-  address?: string;
-  contactPerson?: string;
-  contactPhone?: string;
-  managerName?: string;
-  description?: string;
-  sortOrder?: number;
-}
-
-interface LocationItem {
-  id: string;
-  locationCode: string;
-  locationName: string;
-  zoneCode: string;
-  zoneName: string;
-  aisleCode: string;
-  rackCode: string;
-  levelCode: string;
-  positionCode: string;
-  locationType: string;
-  warehouseType: string;
-  areaId: string;
-  capacity: number;
-  usedCapacity: number;
-  status: string;
-  description?: string;
-}
-
-interface LocationSkuItem {
-  skuCode: string;
-  styleNo: string;
-  color: string;
-  size: string;
-  stockQuantity: number;
-  salesPrice?: number;
-  costPrice?: number;
-}
-
-const WAREHOUSE_TYPE_MAP: Record<string, string> = {
-  FINISHED: '成品仓',
-  MATERIAL: '物料仓',
-  SAMPLE: '样衣仓',
-};
-
-const WAREHOUSE_TYPE_OPTIONS = [
-  { value: 'FINISHED', label: '成品仓' },
-  { value: 'MATERIAL', label: '物料仓' },
-  { value: 'SAMPLE', label: '样衣仓' },
-];
-
 const WarehouseLocationMap: React.FC = () => {
-  const { message, modal } = App.useApp();
-  const { user } = useUser();
-  const [searchParams] = useSearchParams();
-  const locationCodeFromUrl = searchParams.get('locationCode');
+  const data = useWarehouseLocationData();
+  const {
+    // 数据状态
+    areas,
+    areasLoading,
+    selectedAreaId,
+    selectedZoneName,
+    locations,
+    locationsLoading,
+    selectedLocation,
+    locationItems,
+    locationItemsLoading,
+    detailModalOpen,
+    selectMode,
+    selectedLocationIds,
+    printModalOpen,
+    transferModalOpen,
+    transferTargetLocation,
+    transferLoading,
+    inboundModalOpen,
+    inboundForm,
+    inboundLoading,
+    outboundModalOpen,
+    outboundLoading,
+    outboundItems,
+    outboundCustomerName,
+    outboundCustomerPhone,
+    outboundShippingAddress,
+    outstockType,
+    outboundRemark,
+    createAreaModalOpen,
+    createAreaForm,
+    createLocationModalOpen,
+    createLocationForm,
+    batchInitModalOpen,
+    batchInitForm,
+    // 派生数据
+    selectedArea,
+    zones,
+    filteredLocations,
+    areaOverview,
+    overviewLoading,
+    // 仓库区域操作
+    setSelectedAreaId,
+    setSelectedZoneName,
+    handleToggleArea,
+    confirmDeleteArea,
+    confirmDeleteLocation,
+    // 库位操作
+    handleLocationClick,
+    handleCreateArea,
+    handleCreateLocation,
+    handleBatchInit,
+    handleTransfer,
+    // 入库
+    handleOpenInbound,
+    handleDoInbound,
+    setInboundModalOpen,
+    // 出库
+    handleOpenOutbound,
+    handleDoOutbound,
+    setOutboundModalOpen,
+    setOutboundItems,
+    setOutboundCustomerName,
+    setOutboundCustomerPhone,
+    setOutboundShippingAddress,
+    setOutstockType,
+    setOutboundRemark,
+    // 弹窗开关
+    setCreateAreaModalOpen,
+    setCreateLocationModalOpen,
+    setBatchInitModalOpen,
+    setDetailModalOpen,
+    setTransferModalOpen,
+    setTransferTargetLocation,
+    setPrintModalOpen,
+    setSelectMode,
+    setSelectedLocationIds,
+  } = data;
 
-  const [areas, setAreas] = useState<WarehouseAreaItem[]>([]);
-  const [areasLoading, setAreasLoading] = useState(true);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
-  const [selectedZoneName, setSelectedZoneName] = useState<string>('');
-
-  const [locations, setLocations] = useState<LocationItem[]>([]);
-  const [locationsLoading, setLocationsLoading] = useState(false);
-
-  const [overview, setOverview] = useState<Record<string, any>>({});
-  const [overviewLoading, setOverviewLoading] = useState(true);
-
-  const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(null);
-  const [locationItems, setLocationItems] = useState<LocationSkuItem[]>([]);
-  const [locationItemsLoading, setLocationItemsLoading] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-
-  const [createAreaModalOpen, setCreateAreaModalOpen] = useState(false);
-  const [createAreaForm] = Form.useForm();
-
-  const [createLocationModalOpen, setCreateLocationModalOpen] = useState(false);
-  const [createLocationForm] = Form.useForm();
-
-  const [batchInitModalOpen, setBatchInitModalOpen] = useState(false);
-  const [batchInitForm] = Form.useForm();
-
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [transferTargetLocation, setTransferTargetLocation] = useState('');
-  const [transferLoading, setTransferLoading] = useState(false);
-
-  // 勾选模式状态
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(new Set());
-  const [printModalOpen, setPrintModalOpen] = useState(false);
-
-  // ===== 入库弹窗状态 =====
-  const [inboundModalOpen, setInboundModalOpen] = useState(false);
-  const [inboundForm] = Form.useForm();
-  const [inboundLoading, setInboundLoading] = useState(false);
-
-  // ===== 出库弹窗状态 =====
-  const [outboundModalOpen, setOutboundModalOpen] = useState(false);
-  const [outboundLoading, setOutboundLoading] = useState(false);
-  const [outboundItems, setOutboundItems] = useState<Array<{
-    skuCode: string; styleNo: string; color: string; size: string;
-    stockQuantity: number; salesPrice?: number; costPrice?: number;
-    outboundQty: number; selected: boolean; adjustedPrice?: number;
-  }>>([]);
-  const [outboundCustomerName, setOutboundCustomerName] = useState('');
-  const [outboundCustomerPhone, setOutboundCustomerPhone] = useState('');
-  const [outboundShippingAddress, setOutboundShippingAddress] = useState('');
-  const [outstockType, setOutstockType] = useState<string>('sales');
-  const [outboundRemark, setOutboundRemark] = useState('');
-
-  const loadAreas = useCallback(async () => {
-    setAreasLoading(true);
-    try {
-      const res = await warehouseLocationMapApi.getAreaList({ pageSize: 200 });
-      const list = res?.data?.data?.records || res?.data?.records || [];
-      setAreas(list);
-      if (list.length > 0 && !selectedAreaId) {
-        setSelectedAreaId(list[0].id);
-      }
-    } catch {
-      message.error('加载仓库区域失败');
-    } finally {
-      setAreasLoading(false);
+  // 勾选模式切换
+  const handleToggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    if (selectMode) {
+      setSelectedLocationIds(new Set());
     }
-  }, [message, selectedAreaId]);
+  };
 
-  const loadOverview = useCallback(async () => {
-    setOverviewLoading(true);
-    try {
-      const res = await warehouseLocationMapApi.getWarehouseOverview();
-      setOverview(res?.data?.data || res?.data || {});
-    } catch {
-      // silent
-    } finally {
-      setOverviewLoading(false);
+  // 全选/取消全选
+  const handleToggleSelectAll = () => {
+    const allIds = filteredLocations.map(l => l.id);
+    const allSelected = allIds.length > 0 && allIds.every(id => selectedLocationIds.has(id));
+    if (allSelected) {
+      setSelectedLocationIds(new Set());
+    } else {
+      setSelectedLocationIds(new Set(allIds));
     }
-  }, []);
+  };
 
-  const loadLocations = useCallback(async (areaId: string) => {
-    if (!areaId) return;
-    setLocationsLoading(true);
-    try {
-      const res = await warehouseLocationMapApi.getLocationListByType(undefined, areaId);
-      const list = res?.data?.data || res?.data || [];
-      setLocations(list);
-      if (list.length > 0) {
-        const firstZone = list.find((l: LocationItem) => l.zoneName)?.zoneName || '';
-        setSelectedZoneName(firstZone);
-      } else {
-        setSelectedZoneName('');
-      }
-    } catch {
-      message.error('加载库位数据失败');
-    } finally {
-      setLocationsLoading(false);
-    }
-  }, [message]);
+  // 单项勾选切换
+  const handleToggleSelect = (locationId: string) => {
+    const newSet = new Set(selectedLocationIds);
+    if (selectedLocationIds.has(locationId)) newSet.delete(locationId);
+    else newSet.add(locationId);
+    setSelectedLocationIds(newSet);
+  };
 
-  useEffect(() => {
-    loadAreas();
-    loadOverview();
-  }, [loadAreas, loadOverview]);
+  // 单项 Checkbox 变化
+  const handleCheckboxChange = (locationId: string, checked: boolean) => {
+    const newSet = new Set(selectedLocationIds);
+    if (checked) newSet.add(locationId);
+    else newSet.delete(locationId);
+    setSelectedLocationIds(newSet);
+  };
 
-  useEffect(() => {
-    if (selectedAreaId) {
-      loadLocations(selectedAreaId);
-    }
-  }, [selectedAreaId, loadLocations]);
-
-  // URL 参数解析 - 扫码跳转定位
-  useEffect(() => {
-    if (locationCodeFromUrl && locations.length > 0) {
-      const targetLocation = locations.find(l => l.locationCode === locationCodeFromUrl);
-      if (targetLocation) {
-        // 自动定位到该库位所在的区域和库区
-        setSelectedZoneName(targetLocation.zoneName || '');
-        // 自动弹出详情
-        handleLocationClick(targetLocation);
-      }
-    }
-  }, [locationCodeFromUrl, locations]);
-
-  const selectedArea = useMemo(
-    () => areas.find(a => a.id === selectedAreaId),
-    [areas, selectedAreaId]
-  );
-
-  const zones = useMemo(() => {
-    const zoneMap = new Map<string, string>();
-    locations.forEach(loc => {
-      if (loc.zoneName && !zoneMap.has(loc.zoneName)) {
-        zoneMap.set(loc.zoneName, loc.zoneCode || loc.zoneName);
-      }
+  // 打开批量初始化弹窗（预设默认值）
+  const handleOpenBatchInit = (form: typeof batchInitForm) => {
+    form.setFieldsValue({
+      rackCount: 2,
+      levelCount: 3,
+      positionCount: 2,
     });
-    return Array.from(zoneMap.entries()).map(([name, code]) => ({ name, code }));
-  }, [locations]);
-
-  const filteredLocations = useMemo(() => {
-    if (!selectedZoneName) return locations;
-    return locations.filter(l => l.zoneName === selectedZoneName);
-  }, [locations, selectedZoneName]);
-
-  const handleToggleArea = async (areaId: string, checked: boolean) => {
-    const newStatus = checked ? 'ACTIVE' : 'DISABLED';
-    try {
-      await warehouseLocationMapApi.updateAreaStatus(areaId, newStatus);
-      setAreas(prev => prev.map(a => a.id === areaId ? { ...a, status: newStatus } : a));
-      message.success(checked ? '已启用' : '已停用');
-    } catch {
-      message.error('操作失败');
-    }
+    setBatchInitModalOpen(true);
   };
 
-  const confirmDeleteArea = (areaId: string, areaName: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    let reasonInput = '';
-    modal.confirm({
-      title: `确定删除仓库「${areaName}」？`,
-      content: (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ color: 'var(--color-danger)', marginBottom: 8 }}>
-            此操作将硬删除该仓库及其下所有空闲库位，删除后不可恢复！
-          </div>
-          <Input.TextArea
-            rows={3}
-            placeholder="请输入删除原因（必填）"
-            onChange={(e) => { reasonInput = e.target.value; }}
-          />
-        </div>
-      ),
-      okText: '确认删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        if (!reasonInput.trim()) {
-          message.error('请输入删除原因');
-          return Promise.reject();
-        }
-        try {
-          await warehouseLocationMapApi.deleteArea(areaId, reasonInput.trim());
-          message.success('仓库删除成功');
-          if (selectedAreaId === areaId) {
-            setSelectedAreaId('');
-            setLocations([]);
-          }
-          loadAreas();
-          loadOverview();
-        } catch (err: any) {
-          const errMsg = err?.response?.data?.message || err?.message || '删除失败';
-          message.error(errMsg);
-        }
-      },
-    });
+  // 打开转移库存抽屉（从详情抽屉触发）
+  const handleOpenTransferFromDetail = () => {
+    setDetailModalOpen(false);
+    setTransferTargetLocation('');
+    setTransferModalOpen(true);
   };
 
-  const confirmDeleteLocation = (locationId: string, locationCode: string, usedCapacity: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    if (usedCapacity > 0) {
-      modal.confirm({
-        title: '无法删除库位',
-        content: `该库位有 ${usedCapacity} 件库存，请先转移库存到其他库位后再删除。`,
-        okText: '去转移库存',
-        cancelText: '取消',
-        onOk: () => {
-          setTransferTargetLocation('');
-          setTransferModalOpen(true);
-          setDetailModalOpen(false);
-        },
-      });
-      return;
-    }
-    let reasonInput = '';
-    modal.confirm({
-      title: `确定删除库位「${locationCode}」？`,
-      content: (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ color: 'var(--color-danger)', marginBottom: 8 }}>
-            此操作将硬删除该库位，删除后不可恢复！
-          </div>
-          <Input.TextArea
-            rows={3}
-            placeholder="请输入删除原因（必填）"
-            onChange={(e) => { reasonInput = e.target.value; }}
-          />
-        </div>
-      ),
-      okText: '确认删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        if (!reasonInput.trim()) {
-          message.error('请输入删除原因');
-          return Promise.reject();
-        }
-        try {
-          const res = await warehouseLocationMapApi.deleteLocation(locationId, reasonInput.trim());
-          const code = res?.data?.code;
-          if (code !== undefined && code !== 0 && code !== 200) {
-            message.error(res?.data?.message || '删除失败');
-            return;
-          }
-          message.success(`库位 ${locationCode} 已删除`);
-          if (selectedLocation?.id === locationId) {
-            setDetailModalOpen(false);
-            setSelectedLocation(null);
-          }
-          loadLocations(selectedAreaId);
-          loadOverview();
-        } catch (err: any) {
-          const errMsg = err?.response?.data?.message || err?.message || '删除失败';
-          message.error(errMsg);
-        }
-      },
-    });
+  // 关闭弹窗时的清理回调
+  const handleCancelCreateArea = () => {
+    setCreateAreaModalOpen(false);
+    createAreaForm.resetFields();
   };
-
-  const handleCreateArea = async () => {
-    try {
-      const values = await createAreaForm.validateFields();
-      await warehouseLocationMapApi.quickCreateArea(values.areaName, values.warehouseType);
-      message.success('仓库创建成功');
-      setCreateAreaModalOpen(false);
-      createAreaForm.resetFields();
-      loadAreas();
-      loadOverview();
-    } catch {
-      message.error('创建失败');
-    }
+  const handleCancelCreateLocation = () => {
+    setCreateLocationModalOpen(false);
+    createLocationForm.resetFields();
   };
-
-  const generateZoneCode = (zoneName: string, existingZones: string[]): string => {
-    if (!zoneName) return 'A';
-    const firstChar = zoneName.trim().charAt(0).toUpperCase();
-    if (/[A-Z]/.test(firstChar) && !existingZones.includes(firstChar)) return firstChar;
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (const l of letters) {
-      if (!existingZones.includes(l)) return l;
-    }
-    return 'Z';
+  const handleCancelBatchInit = () => {
+    setBatchInitModalOpen(false);
+    batchInitForm.resetFields();
   };
-
-  const handleCreateLocation = async () => {
-    try {
-      const values = await createLocationForm.validateFields();
-      const rawZoneName = Array.isArray(values.zoneName) ? values.zoneName[0] : values.zoneName;
-      const zoneName = String(rawZoneName || '').trim();
-      if (!zoneName) {
-        message.error('请输入库区名称');
-        return;
-      }
-      const rackNum = String(values.rackNum || '01').padStart(2, '0');
-      const levelNum = values.levelNum || 1;
-      const positionNum = values.positionNum || 1;
-      const existingZoneCodes = zones.map(z => z.code);
-      const zoneCode = values.zoneCode || generateZoneCode(zoneName, existingZoneCodes);
-      const locationCode = `${zoneCode}-${rackNum}-${levelNum}-${positionNum}`;
-      const locationName = `${zoneName} ${rackNum}架${levelNum}层${positionNum}位`;
-      await warehouseLocationMapApi.createLocation({
-        locationCode,
-        locationName,
-        zoneCode,
-        zoneName,
-        aisleCode: zoneCode,
-        rackCode: `${zoneCode}-${rackNum}`,
-        levelCode: String(levelNum),
-        positionCode: String(positionNum),
-        warehouseType: selectedArea?.warehouseType,
-        areaId: selectedAreaId,
-        capacity: values.capacity || 100,
-        locationType: 'STORAGE',
-      });
-      message.success('库位创建成功');
-      setCreateLocationModalOpen(false);
-      createLocationForm.resetFields();
-      loadLocations(selectedAreaId);
-    } catch {
-      message.error('创建失败');
-    }
-  };
-
-  const handleBatchInit = async () => {
-    try {
-      const values = await batchInitForm.validateFields();
-      const zoneName = values.zoneName.trim();
-      const rackCount = values.rackCount || 2;
-      const levelCount = values.levelCount || 3;
-      const positionCount = values.positionCount || 2;
-      const existingZoneCodes = zones.map(z => z.code);
-      const _zoneCode = generateZoneCode(zoneName, existingZoneCodes);
-      await warehouseLocationMapApi.batchInitLocations({
-        warehouseType: selectedArea?.warehouseType,
-        areaId: selectedAreaId,
-        zoneNames: [zoneName],
-        racksPerZone: rackCount,
-        levelsPerRack: levelCount,
-        positionsPerLevel: positionCount,
-      });
-      message.success('批量初始化成功');
-      setBatchInitModalOpen(false);
-      batchInitForm.resetFields();
-      loadLocations(selectedAreaId);
-      loadOverview();
-    } catch {
-      message.error('批量初始化失败');
-    }
-  };
-
-  const handleLocationClick = async (location: LocationItem) => {
-    setSelectedLocation(location);
-    setDetailModalOpen(true);
-    setLocationItemsLoading(true);
-    try {
-      const res = await warehouseLocationMapApi.getLocationItems(location.locationCode, location.warehouseType);
-      const items = res?.data?.data?.items || res?.data?.items || [];
-      setLocationItems(items);
-    } catch {
-      setLocationItems([]);
-    } finally {
-      setLocationItemsLoading(false);
-    }
-  };
-
-  const handleTransfer = async () => {
-    if (!selectedLocation || !transferTargetLocation) {
-      message.error('请选择目标库位');
-      return;
-    }
-    setTransferLoading(true);
-    try {
-      const res = await warehouseLocationMapApi.transferLocation(
-        selectedLocation.locationCode,
-        transferTargetLocation,
-        selectedLocation.warehouseType,
-      );
-      const code = res?.data?.code;
-      if (code !== undefined && code !== 0 && code !== 200) {
-        message.error(res?.data?.message || '转移失败');
-        return;
-      }
-      const data = res?.data?.data || res?.data;
-      message.success(`已从 ${data?.fromLocationCode || selectedLocation.locationCode} 转移 ${data?.transferredCount || 0} 条记录到 ${data?.toLocationCode || transferTargetLocation}`);
-      setTransferModalOpen(false);
-      setTransferTargetLocation('');
-      setDetailModalOpen(false);
-      setSelectedLocation(null);
-      loadLocations(selectedAreaId);
-      loadOverview();
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || '转移失败';
-      message.error(errMsg);
-    } finally {
-      setTransferLoading(false);
-    }
-  };
-
-  // ===== 入库处理 =====
-  const handleOpenInbound = () => {
+  const handleCloseInbound = () => {
+    setInboundModalOpen(false);
     inboundForm.resetFields();
-    inboundForm.setFieldsValue({ warehouseLocation: selectedLocation?.locationCode || '' });
-    setInboundModalOpen(true);
   };
-
-  const handleDoInbound = async () => {
-    try {
-      const values = await inboundForm.validateFields();
-      setInboundLoading(true);
-      const operatorId = String(user?.id || '').trim();
-      const operatorName = String(user?.name || user?.username || '').trim();
-      const res = await api.post('/production/material/inbound/manual', {
-        materialCode: values.materialCode,
-        materialName: values.materialName,
-        materialType: values.materialType || 'fabricA',
-        color: values.color || '',
-        size: values.size || '',
-        quantity: values.quantity,
-        warehouseLocation: values.warehouseLocation || selectedLocation?.locationCode || '',
-        supplierName: values.supplierName || '',
-        operatorId,
-        operatorName,
-        remark: values.remark || '',
-      });
-      if ((res as any)?.code === 200) {
-        message.success('入库成功');
-        setInboundModalOpen(false);
-        inboundForm.resetFields();
-        if (selectedLocation) handleLocationClick(selectedLocation);
-        loadLocations(selectedAreaId);
-        loadOverview();
-      } else {
-        message.error((res as any)?.message || '入库失败');
-      }
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '入库失败');
-    } finally {
-      setInboundLoading(false);
-    }
+  const handleCloseTransfer = () => {
+    setTransferModalOpen(false);
+    setTransferTargetLocation('');
   };
-
-  // ===== 出库处理 =====
-  const handleOpenOutbound = () => {
-    const items = locationItems.map(item => ({
-      ...item,
-      outboundQty: 0,
-      selected: false,
-      adjustedPrice: item.salesPrice,
-    }));
-    setOutboundItems(items);
-    setOutboundCustomerName('');
-    setOutboundCustomerPhone('');
-    setOutboundShippingAddress('');
-    setOutstockType('sales');
-    setOutboundRemark('');
-    setOutboundModalOpen(true);
-  };
-
-  const handleDoOutbound = async () => {
-    const selectedItems = outboundItems.filter(item => item.selected && item.outboundQty > 0);
-    if (selectedItems.length === 0) {
-      message.warning('请至少选择一项并填写出库数量');
-      return;
-    }
-    for (const item of selectedItems) {
-      if (item.outboundQty > item.stockQuantity) {
-        message.warning(`${item.styleNo} ${item.color} ${item.size} 出库数量不能超过库存 ${item.stockQuantity}`);
-        return;
-      }
-    }
-    setOutboundLoading(true);
-    try {
-      const traceId = 'TR-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-      for (const item of selectedItems) {
-        const finalPrice = item.adjustedPrice ?? item.salesPrice;
-        await api.post('/warehouse/finished-inventory/free-outbound', {
-          skuCode: item.skuCode,
-          quantity: item.outboundQty,
-          warehouseLocation: selectedLocation?.locationCode,
-          warehouseAreaId: selectedLocation?.areaId,
-          outstockType: outstockType || 'sales',
-          customerName: outboundCustomerName || undefined,
-          customerPhone: outboundCustomerPhone || undefined,
-          shippingAddress: outboundShippingAddress || undefined,
-          salesPrice: finalPrice,
-          originalSalesPrice: item.salesPrice,
-          priceAdjustmentReason: finalPrice !== item.salesPrice ? '手动调整' : undefined,
-          traceId,
-          remark: outboundRemark || undefined,
-        });
-      }
-      message.success(`出库成功，共 ${selectedItems.length} 项`);
-      setOutboundModalOpen(false);
-      if (selectedLocation) handleLocationClick(selectedLocation);
-      loadLocations(selectedAreaId);
-      loadOverview();
-    } catch (e: any) {
-      message.error(e?.response?.data?.message || e?.message || '出库失败');
-    } finally {
-      setOutboundLoading(false);
-    }
-  };
-
-  const getLocationStatus = (loc: LocationItem): 'empty' | 'normal' | 'full' | 'locked' => {
-    if (loc.status === 'DISABLED') return 'locked';
-    if (!loc.usedCapacity || loc.usedCapacity === 0) return 'empty';
-    if (loc.capacity && loc.usedCapacity >= loc.capacity * 0.8) return 'full';
-    return 'normal';
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'empty': return 'var(--color-text-quaternary)';
-      case 'normal': return 'var(--color-success)';
-      case 'full': return 'var(--color-warning)';
-      case 'locked': return 'var(--color-danger)';
-      default: return 'var(--color-text-quaternary)';
-    }
-  };
-
-  const getStatusBg = (status: string) => {
-    switch (status) {
-      case 'empty': return 'var(--color-bg-container)';
-      case 'normal': return '#f6ffed';
-      case 'full': return '#FFFBE6';
-      case 'locked': return '#F6FFED';
-      default: return 'var(--color-bg-container)';
-    }
-  };
-
-  const getStatusBorder = (status: string) => {
-    switch (status) {
-      case 'empty': return 'var(--color-border-light)';
-      case 'normal': return '#b7eb8f';
-      case 'full': return '#ffe58f';
-      case 'locked': return '#ffccc7';
-      default: return 'var(--color-border-light)';
-    }
-  };
-
-  const areaOverview = selectedArea ? overview[selectedArea.warehouseType] : null;
 
   return (
     <div className="warehouse-location-map">
       <div className="wlm-layout">
-        <div className="wlm-sidebar">
-          <div className="wlm-sidebar-header">
-            <ShopOutlined className="wlm-sidebar-icon" />
-            <span className="wlm-sidebar-title">仓库仓位管理</span>
-            <Button
-              type="primary"
-              size="small"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateAreaModalOpen(true)}
-            >
-              新建仓库
-            </Button>
-          </div>
-          <div className="wlm-warehouse-list">
-            <Spin spinning={areasLoading}>
-              {areas.length === 0 && !areasLoading ? (
-                <Empty description="暂无仓库，点击上方新建" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              ) : (
-                areas.map(area => (
-                  <div
-                    key={area.id}
-                    className={`wlm-warehouse-item ${selectedAreaId === area.id ? 'active' : ''}`}
-                    onClick={() => setSelectedAreaId(area.id)}
-                  >
-                    <div className="wlm-warehouse-info">
-                      <div className="wlm-warehouse-name">
-                        {area.areaName}
-                        <Tag
-                          color={area.warehouseType === 'FINISHED' ? 'blue' : area.warehouseType === 'MATERIAL' ? 'green' : 'orange'}
-                          style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
-                        >
-                          {WAREHOUSE_TYPE_MAP[area.warehouseType] ?? '未知'}
-                        </Tag>
-                      </div>
-                      <div className="wlm-warehouse-meta">
-                        <span>编码: {area.areaCode}</span>
-                        {area.address && <span>地址: {area.address}</span>}
-                      </div>
-                    </div>
-                    <div className="wlm-warehouse-actions" onClick={e => e.stopPropagation()}>
-                      <DeleteOutlined
-                        className="wlm-action-icon"
-                        style={{ color: 'var(--color-danger)', marginRight: 6 }}
-                        onClick={(e) => confirmDeleteArea(area.id, area.areaName, e)}
-                      />
-                      <Switch
-                        size="small"
-                        checked={area.status === 'ACTIVE'}
-                        onChange={checked => handleToggleArea(area.id, checked)}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </Spin>
-          </div>
-        </div>
+        <WarehouseSidebar
+          areas={areas}
+          areasLoading={areasLoading}
+          selectedAreaId={selectedAreaId}
+          onSelectArea={setSelectedAreaId}
+          onToggleArea={handleToggleArea}
+          onDeleteArea={confirmDeleteArea}
+          onCreateArea={() => setCreateAreaModalOpen(true)}
+        />
 
         <div className="wlm-main">
           {selectedArea ? (
             <>
-              <div className="wlm-main-header">
-                <div className="wlm-header-left">
-                  <div className="wlm-header-title">
-                    <EnvironmentOutlined style={{ color: 'var(--color-primary)', marginRight: 8 }} />
-                    {selectedArea.areaName}
-                    <Tag color={selectedArea.warehouseType === 'FINISHED' ? 'blue' : selectedArea.warehouseType === 'MATERIAL' ? 'green' : 'orange'} style={{ marginLeft: 8 }}>
-                      {WAREHOUSE_TYPE_MAP[selectedArea.warehouseType] ?? '未知'}
-                    </Tag>
-                  </div>
-                  <div className="wlm-header-subtitle">
-                    {selectedArea.address || '实际库存数，用于店铺售卖的库存，订单发货后扣减'}
-                  </div>
-                </div>
-                <div className="wlm-header-stats">
-                  <Row gutter={24}>
-                    <Col>
-                      <Statistic
-                        title="总库位"
-                        value={areaOverview?.totalLocations || locations.length}
-                        suffix="个"
-                        styles={{ content: { color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 } }}
-                        loading={overviewLoading}
-                      />
-                    </Col>
-                    <Col>
-                      <Statistic
-                        title="已使用"
-                        value={areaOverview?.usedLocations || locations.filter(l => l.usedCapacity > 0).length}
-                        suffix="个"
-                        styles={{ content: { color: 'var(--color-success)', fontSize: 15, fontWeight: 600 } }}
-                        loading={overviewLoading}
-                      />
-                    </Col>
-                  </Row>
-                </div>
-              </div>
+              <WarehouseStats
+                selectedArea={selectedArea}
+                areaOverview={areaOverview}
+                overviewLoading={overviewLoading}
+                locations={locations}
+              />
 
-              <div className="wlm-zone-tabs">
-                {zones.map(zone => (
-                  <div
-                    key={zone.name}
-                    className={`wlm-zone-tab ${selectedZoneName === zone.name ? 'active' : ''}`}
-                    onClick={() => setSelectedZoneName(zone.name)}
-                  >
-                    <AppstoreOutlined style={{ marginRight: 4 }} />
-                    {zone.name}
-                    <Badge
-                      count={locations.filter(l => l.zoneName === zone.name && l.usedCapacity > 0).length}
-                      style={{ marginLeft: 6, backgroundColor: 'var(--color-primary)' }}
-                    />
-                  </div>
-                ))}
-                <div className="wlm-zone-tab-actions">
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<AppstoreOutlined />}
-                    onClick={() => {
-                      setSelectMode(!selectMode);
-                      if (selectMode) {
-                        setSelectedLocationIds(new Set());
-                      }
-                    }}
-                  >
-                    {selectMode ? '取消勾选' : '批量勾选'}
-                  </Button>
-                  {selectMode && (
-                    <>
-                      <Button
-                        type="link"
-                        size="small"
-                        icon={<CheckSquareOutlined />}
-                        onClick={() => {
-                          const allIds = filteredLocations.map(l => l.id);
-                          const allSelected = allIds.length > 0 && allIds.every(id => selectedLocationIds.has(id));
-                          if (allSelected) {
-                            setSelectedLocationIds(new Set());
-                          } else {
-                            setSelectedLocationIds(new Set(allIds));
-                          }
-                        }}
-                      >
-                        {filteredLocations.length > 0 && filteredLocations.every(l => selectedLocationIds.has(l.id)) ? '取消全选' : '全选'}
-                      </Button>
-                      {selectedLocationIds.size > 0 && (
-                        <Button
-                          type="primary"
-                          size="small"
-                          icon={<PrinterOutlined />}
-                          onClick={() => setPrintModalOpen(true)}
-                        >
-                          打印库位贴 ({selectedLocationIds.size})
-                        </Button>
-                      )}
-                    </>
-                  )}
-                  {!selectMode && (
-                    <>
-                      <Button
-                        type="link"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={() => setCreateLocationModalOpen(true)}
-                      >
-                        新增库位
-                      </Button>
-                      <Button
-                        type="link"
-                        size="small"
-                        icon={<AppstoreOutlined />}
-                        onClick={() => {
-                        batchInitForm.setFieldsValue({
-                          rackCount: 2,
-                          levelCount: 3,
-                          positionCount: 2,
-                        });
-                        setBatchInitModalOpen(true);
-                      }}
-                      >
-                        批量初始化
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
+              <WarehouseZoneTabs
+                zones={zones}
+                locations={locations}
+                selectedZoneName={selectedZoneName}
+                onSelectZone={setSelectedZoneName}
+                selectMode={selectMode}
+                selectedLocationIds={selectedLocationIds}
+                filteredLocations={filteredLocations}
+                onToggleSelectMode={handleToggleSelectMode}
+                onToggleSelectAll={handleToggleSelectAll}
+                onOpenPrint={() => setPrintModalOpen(true)}
+                onCreateLocation={() => setCreateLocationModalOpen(true)}
+                onOpenBatchInit={handleOpenBatchInit}
+                batchInitForm={batchInitForm}
+              />
 
-              <Spin spinning={locationsLoading}>
-                {filteredLocations.length > 0 ? (
-                  <div className="wlm-location-grid">
-                    {filteredLocations.map(location => {
-                      const status = getLocationStatus(location);
-                      const isSelected = selectedLocationIds.has(location.id);
-                      return (
-                        <Tooltip
-                          key={location.id}
-                          title={
-                            status === 'empty'
-                              ? `${location.locationCode} - 空库位`
-                              : `${location.locationCode} - 已用 ${location.usedCapacity}/${location.capacity || '∞'}`
-                          }
-                          placement="top"
-                        >
-                          <div
-                            className={`wlm-location-card ${status} ${isSelected ? 'selected' : ''}`}
-                            style={{
-                              backgroundColor: getStatusBg(status),
-                              borderColor: isSelected ? 'var(--color-primary)' : getStatusBorder(status),
-                            }}
-                            onClick={() => {
-                              if (selectMode) {
-                                const newSet = new Set(selectedLocationIds);
-                                if (isSelected) newSet.delete(location.id);
-                                else newSet.add(location.id);
-                                setSelectedLocationIds(newSet);
-                              } else {
-                                handleLocationClick(location);
-                              }
-                            }}
-                          >
-                            {selectMode && (
-                              <Checkbox
-                                className="wlm-location-checkbox"
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  const newSet = new Set(selectedLocationIds);
-                                  if (e.target.checked) newSet.add(location.id);
-                                  else newSet.delete(location.id);
-                                  setSelectedLocationIds(newSet);
-                                }}
-                              />
-                            )}
-                            <div className="wlm-location-code" style={{ color: getStatusColor(status) }}>
-                              {location.locationCode}
-                            </div>
-                            <div className="wlm-location-qty">
-                              {status === 'empty' ? (
-                                <span className="wlm-empty-text">空闲</span>
-                              ) : (
-                                <>
-                                  <InboxOutlined style={{ fontSize: 12, marginRight: 2 }} />
-                                  {location.usedCapacity}
-                                </>
-                              )}
-                            </div>
-                            <div className="wlm-location-capacity">
-                              {location.capacity ? `${location.usedCapacity}/${location.capacity}` : `${location.usedCapacity}`}
-                            </div>
-                            {!selectMode && (
-                              <DeleteOutlined
-                                className="wlm-location-delete-icon"
-                                onClick={(e) => confirmDeleteLocation(location.id, location.locationCode, location.usedCapacity, e)}
-                              />
-                            )}
-                          </div>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Empty
-                    description={locationsLoading ? '加载中...' : '该仓库暂无库位，请点击上方"新增库位"或"批量初始化"'}
-                    style={{ marginTop: 60 }}
-                  />
-                )}
-              </Spin>
+              <WarehouseLocationGrid
+                filteredLocations={filteredLocations}
+                locationsLoading={locationsLoading}
+                locations={locations}
+                selectMode={selectMode}
+                selectedLocationIds={selectedLocationIds}
+                onLocationClick={handleLocationClick}
+                onToggleSelect={handleToggleSelect}
+                onCheckboxChange={handleCheckboxChange}
+                onDeleteLocation={confirmDeleteLocation}
+              />
             </>
           ) : (
             <Empty description="请选择仓库，或点击左侧新建仓库" style={{ marginTop: 60 }} />
@@ -890,257 +226,47 @@ const WarehouseLocationMap: React.FC = () => {
         </div>
       </div>
 
-      {/* 新建仓库弹窗 */}
-      <ResizableModal
-        open={createAreaModalOpen}
-        onCancel={() => { setCreateAreaModalOpen(false); createAreaForm.resetFields(); }}
-        title="新建仓库"
-        width="30vw"
-        onOk={handleCreateArea}
-        okText="创建"
-      >
-        <div style={{ padding: '8px 0' }}>
-          <Form form={createAreaForm} layout="vertical">
-            <Form.Item name="warehouseType" label="仓库类型" rules={[{ required: true, message: '请选择仓库类型' }]}>
-              <Select placeholder="请选择仓库类型" options={WAREHOUSE_TYPE_OPTIONS} />
-            </Form.Item>
-            <Form.Item name="areaName" label="仓库名称" rules={[{ required: true, message: '请输入仓库名称' }]}>
-              <Input placeholder="例如：十五楼板房仓" />
-            </Form.Item>
-          </Form>
-        </div>
-      </ResizableModal>
+      {/* 表单弹窗：新建仓库 / 新增库位 / 批量初始化 */}
+      <FormModals
+        createAreaModalOpen={createAreaModalOpen}
+        createAreaForm={createAreaForm}
+        onCreateArea={handleCreateArea}
+        onCancelCreateArea={handleCancelCreateArea}
+        createLocationModalOpen={createLocationModalOpen}
+        createLocationForm={createLocationForm}
+        onCreateLocation={handleCreateLocation}
+        onCancelCreateLocation={handleCancelCreateLocation}
+        selectedArea={selectedArea}
+        zones={zones}
+        batchInitModalOpen={batchInitModalOpen}
+        batchInitForm={batchInitForm}
+        onBatchInit={handleBatchInit}
+        onCancelBatchInit={handleCancelBatchInit}
+      />
 
-      {/* 新增库位弹窗 */}
-      <ResizableModal
-        open={createLocationModalOpen}
-        onCancel={() => { setCreateLocationModalOpen(false); createLocationForm.resetFields(); }}
-        title={`新增库位 - ${selectedArea?.areaName || ''}`}
-        width="30vw"
-        onOk={handleCreateLocation}
-        okText="创建"
-      >
-        <div style={{ padding: '8px 0' }}>
-          <Form form={createLocationForm} layout="vertical">
-            <Form.Item name="zoneName" label="库区名称" rules={[{ required: true, message: '请输入库区名称' }]}>
-              <Select
-                mode="tags"
-                maxCount={1}
-                placeholder="输入或选择已有库区"
-                options={zones.map(z => ({ label: z.name, value: z.name }))}
-              />
-            </Form.Item>
-            <Form.Item name="zoneCode" label="库区编码" extra="留空自动取库区首字母">
-              <Input placeholder="自动生成" maxLength={1} />
-            </Form.Item>
-            <Row gutter={12}>
-              <Col span={8}>
-                <Form.Item name="rackNum" label="货架号" rules={[{ required: true, message: '必填' }]} initialValue="01">
-                  <Input placeholder="01" />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="levelNum" label="层" rules={[{ required: true, message: '必填' }]} initialValue={1}>
-                  <Input type="number" min={1} />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="positionNum" label="位" rules={[{ required: true, message: '必填' }]} initialValue={1}>
-                  <Input type="number" min={1} />
-                </Form.Item>
-              </Col>
-            </Row>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
-              编码格式：{createLocationForm.getFieldValue('zoneCode') || 'A'}-{String(createLocationForm.getFieldValue('rackNum') || '01').padStart(2,'0')}-{createLocationForm.getFieldValue('levelNum') || 1}-{createLocationForm.getFieldValue('positionNum') || 1}
-            </div>
-            <Form.Item name="capacity" label="容量上限" initialValue={100} style={{ marginTop: 12 }}>
-              <Input type="number" placeholder="100" />
-            </Form.Item>
-          </Form>
-        </div>
-      </ResizableModal>
-
-      {/* 批量初始化弹窗 */}
-      <ResizableModal
-        open={batchInitModalOpen}
-        onCancel={() => { setBatchInitModalOpen(false); batchInitForm.resetFields(); }}
-        title={`批量初始化库位 - ${selectedArea?.areaName || ''}`}
-        width="30vw"
-        onOk={handleBatchInit}
-        okText="开始初始化"
-      >
-        <div style={{ padding: '8px 0' }}>
-          <Form form={batchInitForm} layout="vertical">
-            <Form.Item name="zoneName" label="库区名称" rules={[{ required: true, message: '请输入库区名称' }]} initialValue="A区">
-              <Input placeholder="例如：A区" />
-            </Form.Item>
-            <Row gutter={12}>
-              <Col span={8}>
-                <Form.Item name="rackCount" label="货架数" initialValue={2}>
-                  <Input type="number" min={1} />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="levelCount" label="每架层数" initialValue={3}>
-                  <Input type="number" min={1} />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="positionCount" label="每层位数" initialValue={2}>
-                  <Input type="number" min={1} />
-                </Form.Item>
-              </Col>
-            </Row>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
-              将生成 {(batchInitForm.getFieldValue('rackCount') || 2) * (batchInitForm.getFieldValue('levelCount') || 3) * (batchInitForm.getFieldValue('positionCount') || 2)} 个库位，编码如 A-01-1-1 到 A-{(String(batchInitForm.getFieldValue('rackCount') || 2)).padStart(2,'0')}-{batchInitForm.getFieldValue('levelCount') || 3}-{batchInitForm.getFieldValue('positionCount') || 2}
-            </div>
-          </Form>
-        </div>
-      </ResizableModal>
-
-      {/* 库位详情 Drawer */}
-      <Drawer
+      {/* 库位详情抽屉 */}
+      <LocationDetailDrawer
         open={detailModalOpen}
         onClose={() => setDetailModalOpen(false)}
-        title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
-        size="large"
-        styles={{ wrapper: { width: '85%' } }}
-        destroyOnHidden
-      >
-        {selectedLocation && (
-          <div className="wlm-detail-content">
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={6}>
-                <div className="wlm-detail-label">库位编码</div>
-                <div className="wlm-detail-value">{selectedLocation.locationCode}</div>
-              </Col>
-              <Col span={6}>
-                <div className="wlm-detail-label">库位名称</div>
-                <div className="wlm-detail-value">{selectedLocation.locationName || '-'}</div>
-              </Col>
-              <Col span={6}>
-                <div className="wlm-detail-label">库区</div>
-                <div className="wlm-detail-value">{selectedLocation.zoneName || '-'}</div>
-              </Col>
-              <Col span={6}>
-                <div className="wlm-detail-label">容量</div>
-                <div className="wlm-detail-value" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
-                  {selectedLocation.usedCapacity}/{selectedLocation.capacity || '∞'}
-                </div>
-              </Col>
-            </Row>
-
-            <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-              <Button
-                type="primary"
-                icon={<ImportOutlined />}
-                onClick={handleOpenInbound}
-              >
-                入库
-              </Button>
-              {selectedLocation.usedCapacity > 0 && (
-                <Button
-                  type="default"
-                  icon={<ExportOutlined />}
-                  onClick={handleOpenOutbound}
-                >
-                  出库
-                </Button>
-              )}
-              {selectedLocation.usedCapacity > 0 && (
-                <Button
-                  icon={<SwapOutlined />}
-                  onClick={() => {
-                    setDetailModalOpen(false);
-                    setTransferTargetLocation('');
-                    setTransferModalOpen(true);
-                  }}
-                >
-                  转移库存
-                </Button>
-              )}
-            </div>
-
-            <Spin spinning={locationItemsLoading}>
-              {locationItems.length === 0 && !locationItemsLoading ? (
-                <Empty description="该库位暂无库存" />
-              ) : (
-                <div className="wlm-detail-table" style={{ marginTop: 16 }}>
-                  <div className="wlm-detail-table-header">
-                    <div className="wlm-detail-th">款号</div>
-                    <div className="wlm-detail-th">颜色</div>
-                    <div className="wlm-detail-th">尺码</div>
-                    <div className="wlm-detail-th">SKU编码</div>
-                    <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
-                    <div className="wlm-detail-th" style={{ textAlign: 'right' }}>单价</div>
-                  </div>
-                  {locationItems.map((sku, idx) => (
-                    <div key={idx} className="wlm-detail-tr">
-                      <div className="wlm-detail-td">{sku.styleNo || '-'}</div>
-                      <div className="wlm-detail-td">
-                        <Tag color="blue">{sku.color || '-'}</Tag>
-                      </div>
-                      <div className="wlm-detail-td">
-                        <Tag>{sku.size || '-'}</Tag>
-                      </div>
-                      <div className="wlm-detail-td" style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
-                        {sku.skuCode}
-                      </div>
-                      <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
-                        {sku.stockQuantity}
-                      </div>
-                      <div className="wlm-detail-td" style={{ textAlign: 'right', fontWeight: 500 }}>
-                        ¥{sku.salesPrice?.toFixed(2) || sku.costPrice?.toFixed(2) || '-'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Spin>
-          </div>
-        )}
-      </Drawer>
+        selectedLocation={selectedLocation}
+        locationItems={locationItems}
+        locationItemsLoading={locationItemsLoading}
+        onOpenInbound={handleOpenInbound}
+        onOpenOutbound={handleOpenOutbound}
+        onOpenTransfer={handleOpenTransferFromDetail}
+      />
 
       {/* 库存转移抽屉 */}
-      <Drawer
+      <TransferDrawer
         open={transferModalOpen}
-        onClose={() => { setTransferModalOpen(false); setTransferTargetLocation(''); }}
-        title="库存转移"
-        styles={{ wrapper: { width: 420, zIndex: 2000 } }}
-        destroyOnHidden
-        extra={
-          <Button type="primary" onClick={handleTransfer} loading={transferLoading} disabled={!transferTargetLocation}>
-            确认转移
-          </Button>
-        }
-      >
-        <div style={{ padding: '8px 0' }}>
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            title={
-              <span>
-                源库位：<strong>{selectedLocation?.locationCode}</strong>
-                {selectedLocation?.locationName && `（${selectedLocation.locationName}）`}
-                ，当前库存 <strong>{selectedLocation?.usedCapacity}</strong> 件
-              </span>
-            }
-          />
-          <Form layout="vertical">
-            <Form.Item label="目标库位" required>
-              <WarehouseLocationAutoComplete
-                warehouseType={selectedLocation?.warehouseType}
-                areaId={selectedAreaId}
-                value={transferTargetLocation}
-                onChange={(val) => setTransferTargetLocation(val)}
-                placeholder="请选择目标库位"
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-          </Form>
-        </div>
-      </Drawer>
+        onClose={handleCloseTransfer}
+        onConfirm={handleTransfer}
+        loading={transferLoading}
+        selectedLocation={selectedLocation}
+        selectedAreaId={selectedAreaId}
+        transferTargetLocation={transferTargetLocation}
+        onTargetLocationChange={setTransferTargetLocation}
+      />
 
       {/* 库位贴打印弹窗 */}
       <LocationLabelPrintModal
@@ -1151,328 +277,35 @@ const WarehouseLocationMap: React.FC = () => {
       />
 
       {/* 入库抽屉 */}
-      <Drawer
+      <InboundDrawer
         open={inboundModalOpen}
-        onClose={() => { setInboundModalOpen(false); inboundForm.resetFields(); }}
-        title={`入库 - 库位 ${selectedLocation?.locationCode || ''}`}
-        styles={{ wrapper: { width: 420, zIndex: 2000 } }}
-        destroyOnHidden
-        extra={
-          <Button type="primary" onClick={handleDoInbound} loading={inboundLoading}>
-            确认入库
-          </Button>
-        }
-      >
-        <div style={{ padding: '8px 0' }}>
-          <Form form={inboundForm} layout="vertical">
-            <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '请输入物料编码' }]}>
-              <Input placeholder="请输入物料编码" />
-            </Form.Item>
-            <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请输入物料名称' }]}>
-              <Input placeholder="请输入物料名称" />
-            </Form.Item>
-            <Form.Item name="materialType" label="物料类型" initialValue="fabricA">
-              <Select
-                options={[
-                  { value: 'fabricA', label: '面料A' }, { value: 'fabricB', label: '面料B' },
-                  { value: 'fabricC', label: '面料C' }, { value: 'fabricD', label: '面料D' },
-                  { value: 'fabricE', label: '面料E' }, { value: 'liningA', label: '里料A' },
-                  { value: 'liningB', label: '里料B' }, { value: 'liningC', label: '里料C' },
-                  { value: 'liningD', label: '里料D' }, { value: 'liningE', label: '里料E' },
-                  { value: 'accessoryA', label: '辅料A' }, { value: 'accessoryB', label: '辅料B' },
-                  { value: 'accessoryC', label: '辅料C' }, { value: 'accessoryD', label: '辅料D' },
-                  { value: 'accessoryE', label: '辅料E' },
-                ]}
-              />
-            </Form.Item>
-            <Row gutter={12}>
-              <Col span={12}>
-                <Form.Item name="color" label="颜色">
-                  <Input placeholder="颜色" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="size" label="尺码">
-                  <Input placeholder="尺码" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
-              <InputNumber style={{ width: '100%' }} min={0.01} precision={2} placeholder="数量" />
-            </Form.Item>
-            <Form.Item name="warehouseLocation" label="库位">
-              <Input placeholder="库位编码" disabled />
-            </Form.Item>
-            <Form.Item name="supplierName" label="供应商">
-              <Input placeholder="供应商（选填）" />
-            </Form.Item>
-            <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} placeholder="备注（选填）" />
-            </Form.Item>
-          </Form>
-        </div>
-      </Drawer>
+        onClose={handleCloseInbound}
+        onConfirm={handleDoInbound}
+        loading={inboundLoading}
+        selectedLocation={selectedLocation}
+        inboundForm={inboundForm}
+      />
 
       {/* 出库抽屉 */}
-      <Drawer
+      <OutboundDrawer
         open={outboundModalOpen}
         onClose={() => setOutboundModalOpen(false)}
-        title={`出库 - 库位 ${selectedLocation?.locationCode || ''}`}
-        styles={{ wrapper: { width: 760, zIndex: 2000 } }}
-        destroyOnHidden
-        extra={
-          <Button type="primary" onClick={handleDoOutbound} loading={outboundLoading}>
-            确认出库
-          </Button>
-        }
-      >
-        <div style={{ padding: '8px 0' }}>
-          {outboundItems.length === 0 ? (
-            <Empty description="该库位暂无库存" />
-          ) : (
-            <>
-              {/* 出库类型 */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>出库类型</div>
-                <Select
-                  value={outstockType}
-                  onChange={setOutstockType}
-                  style={{ width: '100%' }}
-                  options={[
-                    { value: 'sales', label: '销售出库' },
-                    { value: 'gift', label: '赠送出库' },
-                    { value: 'transfer', label: '调拨出库' },
-                    { value: 'self_use', label: '自用出库' },
-                    { value: 'free_outbound', label: '自由出库' },
-                  ]}
-                />
-              </div>
-
-              {/* 按款号分组的库存明细 */}
-              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600 }}>库存物品</span>
-                <Button
-                  type="link"
-                  size="small"
-                  onClick={() => {
-                    const allSelected = outboundItems.every(item => item.selected);
-                    setOutboundItems(outboundItems.map(item => ({ ...item, selected: !allSelected })));
-                  }}
-                >
-                  {outboundItems.every(item => item.selected) ? '取消全选' : '全选'}
-                </Button>
-              </div>
-
-              {(() => {
-                // 按款号分组
-                const groups = new Map<string, typeof outboundItems>();
-                outboundItems.forEach(item => {
-                  const key = item.styleNo || '未知款号';
-                  if (!groups.has(key)) groups.set(key, []);
-                  groups.get(key)!.push(item);
-                });
-                return Array.from(groups.entries()).map(([styleNo, items]) => {
-                  const groupSelected = items.filter(i => i.selected);
-                  const groupTotalStock = items.reduce((s, i) => s + i.stockQuantity, 0);
-                  const groupTotalOut = groupSelected.reduce((s, i) => s + i.outboundQty, 0);
-                  const groupTotalAmount = groupSelected.reduce((s, i) => s + (i.outboundQty * (i.adjustedPrice ?? i.salesPrice ?? 0)), 0);
-                  return (
-                    <div key={styleNo} style={{
-                      marginBottom: 16, border: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                      borderRadius: 8, overflow: 'hidden',
-                    }}>
-                      {/* 款号头部 */}
-                      <div style={{
-                        padding: '8px 12px', backgroundColor: 'var(--color-bg-container, var(--color-bg-container))',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Checkbox
-                            checked={items.every(i => i.selected)}
-                            indeterminate={groupSelected.length > 0 && groupSelected.length < items.length}
-                            onChange={(e) => {
-                              const newItems = [...outboundItems];
-                              items.forEach(gi => {
-                                const idx = newItems.findIndex(ni => ni.skuCode === gi.skuCode);
-                                if (idx >= 0) newItems[idx] = { ...newItems[idx], selected: e.target.checked };
-                              });
-                              setOutboundItems(newItems);
-                            }}
-                          />
-                          <span style={{ fontWeight: 600, fontSize: 15 }}>{styleNo}</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                          库存 {groupTotalStock} 件 | 已选出库 {groupTotalOut} 件
-                          {groupTotalAmount > 0 && <span style={{ marginLeft: 8, color: 'var(--color-primary)', fontWeight: 500 }}>¥{groupTotalAmount.toFixed(2)}</span>}
-                        </div>
-                      </div>
-
-                      {/* 码数明细表 */}
-                      <div style={{ padding: '4px 0' }}>
-                        {/* 表头 */}
-                        <div style={{
-                          display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
-                          padding: '6px 12px', fontSize: 12, color: 'var(--color-text-tertiary)',
-                          borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                        }}>
-                          <div>选择</div>
-                          <div>颜色 / 尺码</div>
-                          <div style={{ textAlign: 'right' }}>库存</div>
-                          <div style={{ textAlign: 'right' }}>出库数量</div>
-                          <div style={{ textAlign: 'right' }}>出库单价</div>
-                          <div style={{ textAlign: 'right' }}>小计</div>
-                        </div>
-                        {/* 行 */}
-                        {items.map((item) => {
-                          const idx = outboundItems.findIndex(ni => ni.skuCode === item.skuCode);
-                          const subtotal = item.outboundQty * (item.adjustedPrice ?? item.salesPrice ?? 0);
-                          const priceChanged = item.adjustedPrice !== item.salesPrice && item.adjustedPrice !== undefined;
-                          return (
-                            <div key={item.skuCode} style={{
-                              display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
-                              padding: '8px 12px', alignItems: 'center',
-                              borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                              backgroundColor: item.selected ? 'var(--color-bg-highlight, #e6f4ff)' : 'transparent',
-                            }}>
-                              <div>
-                                <Checkbox
-                                  checked={item.selected}
-                                  onChange={(e) => {
-                                    const newItems = [...outboundItems];
-                                    newItems[idx] = { ...newItems[idx], selected: e.target.checked };
-                                    setOutboundItems(newItems);
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <Tag color="blue" style={{ marginRight: 4 }}>{item.color}</Tag>
-                                <Tag>{item.size}</Tag>
-                              </div>
-                              <div style={{ textAlign: 'right', fontWeight: 500 }}>
-                                {item.stockQuantity}
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  max={item.stockQuantity}
-                                  value={item.outboundQty}
-                                  onChange={(val) => {
-                                    const newItems = [...outboundItems];
-                                    newItems[idx] = { ...newItems[idx], outboundQty: val || 0 };
-                                    setOutboundItems(newItems);
-                                  }}
-                                  disabled={!item.selected}
-                                  style={{ width: 72 }}
-                                />
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  precision={2}
-                                  value={item.adjustedPrice ?? item.salesPrice}
-                                  onChange={(val) => {
-                                    const newItems = [...outboundItems];
-                                    newItems[idx] = { ...newItems[idx], adjustedPrice: val ?? item.salesPrice };
-                                    setOutboundItems(newItems);
-                                  }}
-                                  disabled={!item.selected}
-                                  style={{ width: 90 }}
-                                  prefix="¥"
-                                />
-                                {priceChanged && (
-                                  <div style={{ fontSize: 10, color: 'var(--color-warning)', marginTop: 2 }}>
-                                    原价 ¥{item.salesPrice?.toFixed(2)}
-                                  </div>
-                                )}
-                              </div>
-                              <div style={{ textAlign: 'right', fontWeight: 500, color: 'var(--color-primary)' }}>
-                                {item.outboundQty > 0 ? `¥${subtotal.toFixed(2)}` : '-'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-
-              {/* 出库汇总 */}
-              {(() => {
-                const selectedItems = outboundItems.filter(i => i.selected && i.outboundQty > 0);
-                const totalQty = selectedItems.reduce((s, i) => s + i.outboundQty, 0);
-                const totalAmount = selectedItems.reduce((s, i) => s + (i.outboundQty * (i.adjustedPrice ?? i.salesPrice ?? 0)), 0);
-                if (totalQty > 0) {
-                  return (
-                    <div style={{
-                      padding: '12px 16px', marginBottom: 16,
-                      backgroundColor: 'var(--color-bg-container, var(--color-bg-container))',
-                      borderRadius: 8, border: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    }}>
-                      <span style={{ fontWeight: 600 }}>出库汇总</span>
-                      <div style={{ display: 'flex', gap: 24 }}>
-                        <span>共 <strong style={{ color: 'var(--color-primary)' }}>{selectedItems.length}</strong> 项</span>
-                        <span>总数量 <strong style={{ color: 'var(--color-primary)' }}>{totalQty}</strong> 件</span>
-                        <span>总金额 <strong style={{ color: 'var(--color-primary)', fontSize: 16 }}>¥{totalAmount.toFixed(2)}</strong></span>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-
-              {/* 客户信息 */}
-              <div style={{
-                marginTop: 16, borderTop: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                paddingTop: 16,
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: 12 }}>客户/收货信息</div>
-                <Form layout="vertical">
-                  <Row gutter={12}>
-                    <Col span={12}>
-                      <Form.Item label="客户/领取人" style={{ marginBottom: 12 }}>
-                        <Input
-                          placeholder="输入客户名称或领取人姓名"
-                          value={outboundCustomerName}
-                          onChange={(e) => setOutboundCustomerName(e.target.value)}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item label="联系电话" style={{ marginBottom: 12 }}>
-                        <Input
-                          placeholder="联系电话（选填）"
-                          value={outboundCustomerPhone}
-                          onChange={(e) => setOutboundCustomerPhone(e.target.value)}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Form.Item label="收货地址" style={{ marginBottom: 12 }}>
-                    <Input
-                      placeholder="收货地址（选填）"
-                      value={outboundShippingAddress}
-                      onChange={(e) => setOutboundShippingAddress(e.target.value)}
-                    />
-                  </Form.Item>
-                  <Form.Item label="备注" style={{ marginBottom: 0 }}>
-                    <Input.TextArea
-                      rows={2}
-                      placeholder="出库备注（选填）"
-                      value={outboundRemark}
-                      onChange={(e) => setOutboundRemark(e.target.value)}
-                    />
-                  </Form.Item>
-                </Form>
-              </div>
-            </>
-          )}
-        </div>
-      </Drawer>
+        onConfirm={handleDoOutbound}
+        loading={outboundLoading}
+        selectedLocation={selectedLocation}
+        outboundItems={outboundItems}
+        onSetOutboundItems={setOutboundItems}
+        outstockType={outstockType}
+        onOutstockTypeChange={setOutstockType}
+        outboundCustomerName={outboundCustomerName}
+        onCustomerNameChange={setOutboundCustomerName}
+        outboundCustomerPhone={outboundCustomerPhone}
+        onCustomerPhoneChange={setOutboundCustomerPhone}
+        outboundShippingAddress={outboundShippingAddress}
+        onShippingAddressChange={setOutboundShippingAddress}
+        outboundRemark={outboundRemark}
+        onRemarkChange={setOutboundRemark}
+      />
     </div>
   );
 };
