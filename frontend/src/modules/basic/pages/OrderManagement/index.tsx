@@ -1,15 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Card, Form, Space, Tabs } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import { App, Card, Form, Tabs } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import SchemaPrint from '@/components/common/SchemaPrint';
-import api from '@/utils/api';
-import dayjs from 'dayjs';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -18,7 +14,6 @@ import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
-import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { useCuttingCreateTask } from '@/modules/production/pages/Production/Cutting/hooks';
 import { CuttingCreateTaskModal } from '@/modules/production/pages/Production/Cutting/components';
@@ -33,18 +28,24 @@ import OrderListContent from './components/OrderListContent';
 import OrderCreateModal from './components/OrderCreateModal';
 
 import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
-import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty } from './utils/orderBomMetrics';
-import { confirmPricingReady } from './utils/confirmPricingReady';
 import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from './utils/orderIntelligence';
 import type { SizePriceRecord } from './utils/orderIntelligence';
 import { splitOptions, mergeDistinctOptions, parseSizeColorConfig } from './utils/orderFormHelpers';
+import { confirmPricingReady } from './utils/confirmPricingReady';
 import { getBomColumns } from './utils/orderBomColumns';
+import { normalizeSizeKey, displaySizeLabel, useOrderBomCalc } from './hooks/useOrderBomCalc';
 import { useOrderColumns } from './hooks/useOrderColumns';
 import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
 import { useOrderActions } from './hooks/useOrderActions';
 import { useOrderHandleSubmit } from './hooks/useOrderHandleSubmit';
 import { useFormDraft } from '@/hooks/useFormDraft';
+
+import { buildTooltipTheme } from './helpers';
+import { useOrderStats } from './hooks/useOrderStats';
+import { useSmartFilter } from './hooks/useSmartFilter';
+import { useStatCardsConfig } from './hooks/useStatCardsConfig';
+import { useCreateDialog } from './hooks/useCreateDialog';
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -67,42 +68,15 @@ const OrderManagement: React.FC = () => {
 
   const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
 
-  const tooltipTheme = useMemo(() => {
-    const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
-    const isDark = theme === 'dark';
-    return {
-      background: isDark ? 'var(--color-bg-base)' : '#111827',
-      text: isDark ? '#1f1f1f' : 'var(--color-bg-page)',
-      border: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)',
-      divider: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.2)',
-    };
-  }, []);
+  const tooltipTheme = useMemo(() => buildTooltipTheme(), []);
 
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1, pageSize: readPageSize(20),
     onlyCompleted: true, pushedToOrderOnly: true, keyword: '',
   });
   const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
-  const [smartFilter, setSmartFilter] = useState<'all' | 'overdue' | 'warning'>('all');
 
-  // 顶部统计卡片数据（全部/下单中/已完成/已延期）
-  const [orderStats, setOrderStats] = useState<{ totalStyles: number; developingStyles: number; completedStyles: number; delayedStyles: number }>({ totalStyles: 0, developingStyles: 0, completedStyles: 0, delayedStyles: 0 });
-  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed'>('completed');
-  const loadOrderStats = useCallback(async () => {
-    try {
-      const res: any = await api.get('/style/info/stats', { params: { mode: 'order' } });
-      if (res.code === 200 && res.data) {
-        setOrderStats({
-          totalStyles: Number(res.data.totalStyles || 0),
-          developingStyles: Number(res.data.developingStyles || 0),
-          completedStyles: Number(res.data.completedStyles || 0),
-          delayedStyles: Number(res.data.delayedStyles || 0),
-        });
-      }
-    } catch {
-      // 静默失败，不影响列表加载
-    }
-  }, []);
+  const { orderStats, loadOrderStats, activeStatFilter, setActiveStatFilter } = useOrderStats();
 
   const [visible, setVisible] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
@@ -134,23 +108,8 @@ const OrderManagement: React.FC = () => {
     smartError, fetchStyles,
   } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
 
-  const normalizeSizeKey = (v: unknown) => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
-  const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
-  const orderQtyStats = useMemo(() => buildOrderQtyStats(orderLines), [orderLines]);
-
-  const getMatchedQty = (colorRaw: any, sizeRaw: any) => getMatchedOrderQty(orderQtyStats, colorRaw, sizeRaw);
-  const calcBomBudgetQty = (record: StyleBom) => calcBomRequirementQty(record, orderQtyStats);
-  const calcBomTotalPrice = (record: StyleBom) => {
-    const unitPrice = Number((record as Record<string, unknown>).unitPrice) || 0;
-    const budgetQty = calcBomBudgetQty(record);
-    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
-    return Number((budgetQty * unitPrice).toFixed(2));
-  };
-  const calcBomReferenceKg = (record: StyleBom) => {
-    const meters = calcBomBudgetQty(record);
-    if (!Number.isFinite(meters) || meters <= 0) return null;
-    return computeReferenceKilograms(meters, (record as Record<string, unknown>).conversionRate, '米');
-  };
+  // ===== BOM 计算（复用已有 useOrderBomCalc Hook） =====
+  const { orderQtyStats, getMatchedQty, calcBomBudgetQty, calcBomTotalPrice, calcBomReferenceKg } = useOrderBomCalc(orderLines);
   // 保留 BOM 列定义供未来扩展使用
   void getBomColumns({ getMatchedQty, calcBomBudgetQty, calcBomTotalPrice, calcBomReferenceKg });
 
@@ -217,56 +176,11 @@ const OrderManagement: React.FC = () => {
     [orderLines],
   );
 
-  // 已延期 / 临近交期 的款式过滤（基于交板日期 deliveryDate）
-  const overdueStyles = useMemo(() => {
-    return styles.filter((s) => {
-      if (!s.deliveryDate) return false;
-      return dayjs(s.deliveryDate).endOf('day').isBefore(dayjs());
-    });
-  }, [styles]);
-
-  const warningStyles = useMemo(() => {
-    return styles.filter((s) => {
-      if (!s.deliveryDate) return false;
-      const d = dayjs(s.deliveryDate).endOf('day');
-      return d.isAfter(dayjs()) && d.isBefore(dayjs().add(3, 'day'));
-    });
-  }, [styles]);
-
-  const handleSmartFilterClick = (
-    target: 'overdue' | 'warning',
-    records: StyleInfo[],
-  ) => {
-    if (smartFilter === target) {
-      setSmartFilter('all');
-      return;
-    }
-    setSmartFilter(target);
-    // 滚动到第一个匹配项
-    const firstMatch = records[0];
-    if (firstMatch?.id) {
-      setTimeout(() => {
-        const node = document.querySelector(`#style-row-${firstMatch.id}`) as HTMLElement | null;
-        if (node) {
-          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  };
-
-  const displayStyles = useMemo(() => {
-    if (smartFilter === 'overdue') {
-      return overdueStyles;
-    }
-    if (smartFilter === 'warning') {
-      return warningStyles;
-    }
-    return styles;
-  }, [smartFilter, styles, overdueStyles, warningStyles]);
-
-  const handleClearSmartFilter = () => {
-    setSmartFilter('all');
-  };
+  // ===== 智能筛选（已延期/临近交期） =====
+  const {
+    smartFilter, setSmartFilter, overdueStyles, warningStyles, displayStyles,
+    handleSmartFilterClick, handleClearSmartFilter,
+  } = useSmartFilter(styles);
 
   const {
     deliverySuggestion, suggestionLoading, quotationUnitPrice,
@@ -322,7 +236,7 @@ const OrderManagement: React.FC = () => {
     return mergeDistinctOptions(splitOptions(selectedStyle?.size), parsed.sizes);
   }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
-  const { generateOrderNo, openCreate: _openCreate, closeDialog: _closeDialog } = useOrderActions({
+  const { generateOrderNo, openCreate: openCreateInternal, closeDialog: closeDialogInternal } = useOrderActions({
     form,
     setSelectedStyle,
     setVisible,
@@ -339,52 +253,15 @@ const OrderManagement: React.FC = () => {
     setPricingModeTouched,
   });
 
-  const openCreate = (style: StyleInfo) => {
-    const draftInfo = orderDraft.getDraftInfo();
-    if (draftInfo.hasDraft) {
-      modal.confirm({
-        title: '发现未保存的草稿',
-        content: (
-          <div>
-            <p>检测到您有未保存的订单草稿（{draftInfo.timeDescription}），是否恢复？</p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
-              选择"恢复草稿"将恢复之前未提交的订单内容，选择"新建订单"将清空草稿并重新开始。
-            </p>
-          </div>
-        ),
-        okText: '恢复草稿',
-        cancelText: '新建订单',
-        onOk: () => {
-          _openCreate(style);
-          setTimeout(() => {
-            const draftData = orderDraft.loadDraft() as { formValues?: Record<string, unknown>; orderLines?: OrderLine[]; factoryMode?: 'INTERNAL' | 'EXTERNAL' } | null;
-            if (draftData) {
-              if (draftData.formValues) {
-                form.setFieldsValue(draftData.formValues);
-              }
-              if (draftData.orderLines) {
-                setOrderLines(draftData.orderLines);
-              }
-              if (draftData.factoryMode) {
-                setFactoryMode(draftData.factoryMode);
-              }
-            }
-          }, 0);
-        },
-        onCancel: () => {
-          orderDraft.clearDraft();
-          _openCreate(style);
-        },
-      });
-    } else {
-      _openCreate(style);
-    }
-  };
-
-  const closeDialog = () => {
-    orderDraft.flushSaveDraft();
-    _closeDialog();
-  };
+  const { openCreate, closeDialog } = useCreateDialog({
+    form,
+    modal,
+    orderDraft,
+    openCreateInternal,
+    closeDialogInternal,
+    setOrderLines,
+    setFactoryMode,
+  });
 
   const handleSubmit = useOrderHandleSubmit({
     form, message,
@@ -401,6 +278,20 @@ const OrderManagement: React.FC = () => {
 
   const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen });
 
+  // ===== 统计卡片配置 =====
+  const { cards, hints, onClearHints } = useStatCardsConfig({
+    orderStats,
+    activeStatFilter,
+    setActiveStatFilter,
+    setQueryParams,
+    setSmartFilter,
+    smartFilter,
+    overdueStyles,
+    warningStyles,
+    handleSmartFilterClick,
+    handleClearSmartFilter,
+  });
+
   return (
     <>
       <PageLayout
@@ -415,77 +306,9 @@ const OrderManagement: React.FC = () => {
 
             <PageStatCards
               activeKey={activeStatFilter}
-              cards={[
-                {
-                  key: 'all',
-                  items: [
-                    { label: '全部订单', value: orderStats.totalStyles, unit: '个', color: 'var(--color-text-primary)' },
-                  ],
-                  onClick: () => {
-                    setActiveStatFilter('all');
-                    setQueryParams(prev => ({ ...prev, onlyCompleted: false, onlyInProgress: false, page: 1 }));
-                    setSmartFilter('all');
-                  },
-                  activeColor: 'var(--color-text-primary)',
-                },
-                {
-                  key: 'inProgress',
-                  items: [
-                    { label: '下单中', value: orderStats.developingStyles, unit: '个', color: 'var(--color-primary)' },
-                  ],
-                  onClick: () => {
-                    setActiveStatFilter('inProgress');
-                    setQueryParams(prev => ({ ...prev, onlyCompleted: false, onlyInProgress: true, page: 1 }));
-                    setSmartFilter('all');
-                  },
-                  activeColor: 'var(--color-primary)',
-                },
-                {
-                  key: 'completed',
-                  items: [
-                    { label: '已完成', value: orderStats.completedStyles, unit: '个', color: 'var(--color-success)' },
-                  ],
-                  onClick: () => {
-                    setActiveStatFilter('completed');
-                    setQueryParams(prev => ({ ...prev, onlyCompleted: true, onlyInProgress: false, page: 1 }));
-                    setSmartFilter('all');
-                  },
-                  activeColor: 'var(--color-success)',
-                },
-                {
-                  key: 'delayed',
-                  items: [
-                    { label: '已延期', value: orderStats.delayedStyles, unit: '个', color: 'var(--color-danger)' },
-                  ],
-                  onClick: () => {
-                    setActiveStatFilter('delayed');
-                    setQueryParams(prev => ({ ...prev, onlyCompleted: false, onlyInProgress: false, page: 1 }));
-                    handleSmartFilterClick('overdue', overdueStyles);
-                  },
-                  activeColor: 'var(--color-danger)',
-                },
-              ]}
-              hints={[
-                {
-                  key: 'overdue',
-                  count: overdueStyles.length,
-                  tone: 'red',
-                  label: '已延期',
-                  hint: overdueStyles[0]?.styleNo ? `点击定位到 ${overdueStyles[0].styleNo}` : '点击定位到延期款号',
-                  active: smartFilter === 'overdue',
-                  onClick: () => handleSmartFilterClick('overdue', overdueStyles),
-                },
-                {
-                  key: 'warning',
-                  count: warningStyles.length,
-                  tone: 'orange',
-                  label: '临近交期',
-                  hint: warningStyles[0]?.styleNo ? `点击定位到 ${warningStyles[0].styleNo}` : '点击定位到临近交期款号',
-                  active: smartFilter === 'warning',
-                  onClick: () => handleSmartFilterClick('warning', warningStyles),
-                },
-              ]}
-              onClearHints={smartFilter !== 'all' ? handleClearSmartFilter : undefined}
+              cards={cards}
+              hints={hints}
+              onClearHints={onClearHints}
             />
           </>
         }
