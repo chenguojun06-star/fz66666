@@ -25,7 +25,8 @@
         <view class="stage-total" wx:if="{{item.processes.length > 0}}">
           <text class="stage-total-price">¥{{item.totalPrice}}</text>
         </view>
-        <view class="stage-actions" wx:if="{{editable}}">
+        <view class="stage-add-icon" wx:if="{{editable}}" catchtap="onAddProcess" data-stage-id="{{item.id}}" data-stage-name="{{item.name}}">
+          <view class="line-icon icon-plus-sm"></view>
         </view>
       </view>
 
@@ -36,26 +37,16 @@
         <block wx:if="{{processEditId !== child.id}}">
           <view class="process-row">
             <view class="process-info">
-              <view class="process-name-row">
-                <text class="process-name">{{child.processName}}</text>
-                <text class="process-code" wx:if="{{child.processCode}}">{{child.processCode}}</text>
-                <text class="process-modified-badge" wx:if="{{child.modified}}">已改</text>
-              </view>
-              <view class="process-meta-row">
-                <text class="process-machine" wx:if="{{child.machineType}}">{{child.machineType}}</text>
-                <text wx:if="{{child.difficulty}}" class="process-diff-badge {{child.difficulty === '易' || child.difficulty === '简单' ? 'process-diff-badge--easy' : ''}} {{child.difficulty === '中' || child.difficulty === '中等' ? 'process-diff-badge--medium' : ''}} {{child.difficulty === '难' || child.difficulty === '困难' ? 'process-diff-badge--hard' : ''}}">{{child.difficulty}}</text>
-                <text class="process-meta-text" wx:if="{{child.standardTime}}">{{child.standardTime}}s</text>
-                <text class="price-value" wx:if="{{child.price}}">¥{{child.price}}</text>
-                <text class="price-value price-value--empty" wx:else>未定价</text>
-              </view>
+              <text class="process-name">{{child.processName}}</text>
+              <text class="process-code" wx:if="{{child.processCode}}">{{child.processCode}}</text>
+              <text class="process-modified-badge" wx:if="{{child.modified}}">已改</text>
+              <text class="process-machine" wx:if="{{child.machineType}}">{{child.machineType}}</text>
+              <text wx:if="{{child.difficulty}}" class="process-diff-badge {{child.difficulty === '易' || child.difficulty === '简单' ? 'process-diff-badge--easy' : ''}} {{child.difficulty === '中' || child.difficulty === '中等' ? 'process-diff-badge--medium' : ''}} {{child.difficulty === '难' || child.difficulty === '困难' ? 'process-diff-badge--hard' : ''}}">{{child.difficulty}}</text>
+              <text class="process-meta-text" wx:if="{{child.standardTime}}">{{child.standardTime}}s</text>
+              <text class="price-value" wx:if="{{child.price}}">¥{{child.price}}</text>
+              <text class="price-value price-value--empty" wx:else>未定价</text>
             </view>
             <view class="process-actions" wx:if="{{editable}}">
-              <view class="pact-btn pact-btn--move" catchtap="onMoveUp" data-id="{{child.id}}" data-stage-id="{{item.id}}">
-                <view class="line-icon icon-sort-up"></view>
-              </view>
-              <view class="pact-btn pact-btn--move" catchtap="onMoveDown" data-id="{{child.id}}" data-stage-id="{{item.id}}">
-                <view class="line-icon icon-sort-down"></view>
-              </view>
               <view class="pact-btn pact-btn--edit" catchtap="onEditProcess" data-id="{{child.id}}" data-stage-id="{{item.id}}">
                 <view class="line-icon icon-edit"></view>
               </view>
@@ -103,13 +94,7 @@
 
       <!-- 空工序组 -->
       <view class="empty-stage" wx:if="{{item.processes.length === 0}}">
-        <text class="empty-stage-text">暂无工序</text>
-      </view>
-
-      <!-- 添加工序按钮 -->
-      <view class="stage-add-btn" wx:if="{{editable}}" catchtap="onAddProcess" data-stage-id="{{item.id}}" data-stage-name="{{item.name}}">
-        <view class="line-icon icon-plus-sm"></view>
-        <text>添加</text>
+        <text class="empty-stage-text">暂无工序，点击右上角 + 添加</text>
       </view>
     </view>
   </block>
