@@ -3,33 +3,20 @@ import { Tag, App, Tooltip } from 'antd';
 
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
 import ResizableTable from '@/components/common/ResizableTable';
-import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 
 import PageLayout from '@/components/common/PageLayout';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder } from '@/types/production';
-import {
-  isOrderFrozenByStatus,
-  withQuery,
-} from '@/utils/api';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import '../../../styles.css';
-import dayjs from 'dayjs';
-import UniversalCardView from '@/components/common/UniversalCardView';
-import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
-import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
-import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
-import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import { useNavigate } from 'react-router-dom';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
-import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
-import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import {
   useColumnSettings,
   useProductionTransfer,
@@ -44,12 +31,13 @@ import {
   useAnomalyDetection,
 } from './hooks';
 import { useProductionListData } from './hooks/useProductionListData';
+import { useStatCardsConfig } from './hooks/useStatCardsConfig';
 import AnomalyBanner from './AnomalyBanner';
 import { useAiPatrol, RISK_TYPE_LABELS } from './hooks/useAiPatrol';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import ProductionModals from './components/ProductionModals';
 import ProductionFilterBar from './components/ProductionFilterBar';
-import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
+import ProductionCardView from './components/ProductionCardView';
 import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
@@ -222,28 +210,21 @@ const ProductionList: React.FC = () => {
     );
   }, [patrolRiskMap]);
 
-  // 点击统计卡片筛选
-  const handleStatClick = (type: 'all' | 'production' | 'completed' | 'delayed' | 'today') => {
-    setActiveStatFilter(type);
-    if (type === 'all') {
-      // 全部：不排除终态，显示所有订单（含已完成/已关单）
-      setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: undefined, page: 1 });
-    } else if (type === 'production') {
-      setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: true, page: 1 });
-    } else if (type === 'completed') {
-      // 已完成：只看终态订单
-      setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: 'completed', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: undefined, page: 1 });
-    } else if (type === 'delayed') {
-      setShowDelayedOnly(true);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, excludeTerminal: true, page: 1 });
-    } else if (type === 'today') {
-      setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', excludeTerminal: true, page: 1 });
-    }
-  };
+  // ===== 统计卡片配置（handleStatClick + cards + hints + extraRight） =====
+  const { cards: statCards, hints: statHints, onClearHints: statOnClearHints, extraRight: statExtraRight } = useStatCardsConfig({
+    globalStats,
+    activeStatFilter,
+    setActiveStatFilter,
+    setShowDelayedOnly,
+    setQueryParams,
+    queryParams,
+    smartActionItems,
+    delayedHints,
+    focusOrderIds,
+    setFocusOrderIds,
+    setSmartQueueFilter,
+    smartQueueFilter,
+  });
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
     savePageSize(pageSize);
@@ -281,101 +262,10 @@ const ProductionList: React.FC = () => {
 
           <PageStatCards
             activeKey={activeStatFilter}
-            cards={[
-              {
-                key: 'all',
-                items: [
-                  { label: '全部订单', value: Number(globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-text-primary)' },
-                  { label: '总数量', value: Number(globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-text-primary)' },
-                ],
-                onClick: () => handleStatClick('all'),
-                activeColor: 'var(--color-text-primary)',
-              },
-              {
-                key: 'production',
-                items: [
-                  { label: '生产中', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
-                  { label: '数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
-                ],
-                onClick: () => handleStatClick('production'),
-                activeColor: 'var(--color-primary)',
-              },
-              {
-                key: 'completed',
-                items: [
-                  { label: '已完成', value: Number(globalStats.completedOrders ?? 0), unit: '个', color: 'var(--color-success)' },
-                  { label: '数量', value: Number(globalStats.completedQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
-                ],
-                onClick: () => handleStatClick('completed'),
-                activeColor: 'var(--color-success)',
-              },
-              {
-                key: 'delayed',
-                items: [
-                  { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
-                  { label: '数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
-                ],
-                onClick: () => handleStatClick('delayed'),
-                activeColor: 'var(--color-danger)',
-              },
-              {
-                key: 'today',
-                items: [
-                  { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
-                  { label: '数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
-                ],
-                onClick: () => handleStatClick('today'),
-                activeColor: 'var(--color-primary)',
-              },
-            ]}
-            hints={[
-              ...smartActionItems.map((item) => ({ ...item, count: item.value })),
-              ...delayedHints.map(h => ({
-                  key: h.key,
-                  count: h.count,
-                  tone: 'red' as const,
-                  label: `${h.stageName}延期`,
-                  hint: `点击查看${h.stageName}延期订单`,
-                  active: focusOrderIds.size > 0 && h.items.some(item => focusOrderIds.has(String(item.id))),
-                  onClick: () => {
-                    // 已在当前页面，直接设置筛选，不走 navigate
-                    const ids = h.items.map(item => String(item.id));
-                    setFocusOrderIds(new Set(ids));
-                    setSmartQueueFilter('all');
-                    setQueryParams(prev => ({ ...prev, page: 1 }));
-                  },
-                })),
-              ]}
-              onClearHints={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? () => { setSmartQueueFilter('all'); setFocusOrderIds(new Set()); } : undefined}
-              extraRight={
-                <button
-                  type="button"
-                  onClick={() => setQueryParams(prev => ({
-                    ...prev,
-                    page: 1,
-                    status: undefined,
-                    excludeTerminal: !prev.excludeTerminal,
-                    includeScrapped: prev.excludeTerminal ? true : false,
-                  }))}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    border: '1px solid var(--color-border-antd)',
-                    background: 'var(--color-bg-base)',
-                    color: !queryParams.excludeTerminal ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                    borderRadius: 4,
-                    padding: '4px 10px',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    lineHeight: 1.4,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {queryParams.excludeTerminal ? '显示全部' : '只看进行中'}
-                </button>
-              }
+            cards={statCards}
+            hints={statHints}
+            onClearHints={statOnClearHints}
+            extraRight={statExtraRight}
           />
           </>}
           filterLeft={ProductionFilterBar({
@@ -454,112 +344,35 @@ const ProductionList: React.FC = () => {
               onEmptyAction={() => navigate('/order-management')}
             />
           ) : (
-            <>
-            <UniversalCardView
-              dataSource={sortedProductionList}
-              columns={cardColumns}
-              coverField="styleCover"
-              titleField="orderNo"
-              subtitleField="styleNo"
-              fields={[]}
-              fieldGroups={[
-                [
-                  { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
-                ],
-                ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
-                  gridKey: 'cardColorSizeGrid',
-                  getItems: (record) => getOrderCardSizeQuantityItems(record),
-                  getFallbackColor: (record) => String(record.color || '').trim(),
-                  getFallbackSize: (record) => String(record.size || '').trim(),
-                  getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
-                }),
-                [
-                  { label: '', key: 'statusTags', render: (_val: unknown, record: Record<string, unknown>) => {
-                    const statusKey = String(record?.status || '').trim().toLowerCase();
-                    const status = statusKey ? (ORDER_STATUS_LABEL[statusKey] || '未知') : '-';
-                    const statusColor = ORDER_STATUS_COLOR[statusKey] || 'default';
-                    const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
-                    const deliveryDate = record?.plannedEndDate ? dayjs(record.plannedEndDate as string).format('MM-DD') : '';
-                    return (
-                      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Tag color={statusColor} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{status}</Tag>
-                        {deliveryDate && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
-                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首单</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻单</Tag>}
-                        {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '已取消' && remainText !== '-'
-                          && <Tag style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px', color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
-                      </div>
-                    );
-                  }},
-                ]
-              ]}
-              progressConfig={{
-                calculate: calcCardProgress,
-                getStatus: (record: ProductionOrder) => {
-                  const s = String(record.status || '').trim().toLowerCase();
-                  if (s === 'completed' || s === 'closed') return 'normal' as const;
-                  if (isOrderFrozenByStatus(record)) return 'default' as const;
-                  return getProgressColorStatus(record.plannedEndDate, record.status);
-                },
-                isCompleted: (record: ProductionOrder) => {
-                  const s = String(record.status || '').trim().toLowerCase();
-                  return s === 'completed' || s === 'closed';
-                },
-                minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
-                show: true,
-                type: 'liquid',
-                progressExtra: (record: ProductionOrder) => {
-                  const frozen = isOrderFrozenByStatus(record);
-                  return (
-                    <BudgetDaysEditor
-                      record={record}
-                      nodeName="整体"
-                      stageEndTime={(record as any).actualEndDate || undefined}
-                      isCompletedOrClosed={frozen}
-                    />
-                  );
-                },
-              }}
-              getCardId={(record) => `production-order-card-${getOrderDomKey(record as ProductionOrder)}`}
-              getCardStyle={(record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? {
-                boxShadow: '0 0 0 2px rgba(250, 173, 20, 0.35), 0 10px 24px rgba(250, 173, 20, 0.18)',
-                transform: 'translateY(-2px)',
-              } : undefined}
-              actions={(record: ProductionOrder) => {
-                const frozen = isOrderFrozenByStatus(record);
-                const frozenTitle = '订单已关单/报废/完成，无法操作';
-                const commonActions = buildCommonOrderActions({
-                  record, frozen, completed: frozen,
-                  canManageOrderLifecycle: !!canManageOrderLifecycle,
-                  isSupervisorOrAbove: !!isSupervisorOrAbove,
-                  onQuickEdit: (r) => quickEditModal.open(r),
-                  handleCloseOrder, handleScrapOrder, handleCopyOrder, handleShareOrder,
-                  onOpenRemark: (r) => setRemarkTarget({ open: true, orderNo: r.orderNo || '', merchandiser: r.merchandiser }),
-                });
-                return [
-                  { key: 'detail', label: '详情', title: '查看订单详情', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) },
-                  { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => printModal.open(record) },
-                  { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
-                  ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
-                  ...(isFactoryAccount ? [{ key: 'subProcessRemap', label: '子工序', disabled: frozen, title: frozen ? frozenTitle : '子工序单价配置', onClick: () => openSubProcessRemap(record) }] : []),
-                  { key: 'receive', label: '入库/出库', title: '面辅料智能领取（入库/出库）', onClick: () => smartReceiveModal.open(record.orderNo || '') },
-                  ...commonActions,
-                  ...(isFactoryAccount ? [{ key: 'orderFlow', label: '全流程', title: '查看订单全流程记录', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) }] : []),
-                ];
-              }}
-              hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
-              titleTags={patrolTitleTags}
-            />
-            {/* 卡片视图分页器 */}
-            <StandardPagination
-              current={queryParams.page}
+            <ProductionCardView
+              sortedProductionList={sortedProductionList}
+              cardColumns={cardColumns}
+              page={queryParams.page}
               pageSize={queryParams.pageSize}
-              total={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? sortedProductionList.length : total}
-              wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
-              onChange={handlePageChange}
+              handlePageChange={handlePageChange}
+              smartQueueFilter={smartQueueFilter}
+              focusOrderIds={focusOrderIds}
+              total={total}
+              focusedOrderId={focusedOrderId}
+              getOrderDomKey={getOrderDomKey}
+              calcCardProgress={calcCardProgress}
+              patrolTitleTags={patrolTitleTags}
+              navigate={navigate}
+              quickEditModal={quickEditModal}
+              printModal={printModal}
+              handlePrintLabel={handlePrintLabel}
+              openProcessDetail={openProcessDetail}
+              openSubProcessRemap={openSubProcessRemap}
+              smartReceiveModal={smartReceiveModal}
+              handleCloseOrder={handleCloseOrder}
+              handleScrapOrder={handleScrapOrder}
+              handleCopyOrder={handleCopyOrder}
+              handleShareOrder={handleShareOrder}
+              canManageOrderLifecycle={canManageOrderLifecycle}
+              isSupervisorOrAbove={isSupervisorOrAbove}
+              isFactoryAccount={isFactoryAccount}
+              setRemarkTarget={setRemarkTarget}
             />
-            </>
           )}
         </PageLayout>
 

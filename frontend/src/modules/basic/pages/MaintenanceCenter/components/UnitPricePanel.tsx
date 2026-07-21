@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { App, Button, Card, Form, Image, Input, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -6,395 +6,43 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { isAdminUser as isAdminUserFn, useUser } from '@/utils/AuthContext';
-import { useViewport } from '@/utils/useViewport';
-import { readPageSize } from '@/utils/pageSizeStore';
-import type { TemplateLibrary } from '@/types/style';
 import EditTemplateModal from '../../TemplateCenter/components/EditTemplateModal';
-import type { EditTemplateModalRef } from '../../TemplateCenter/components/EditTemplateModal';
 import TemplateInlineEditor from '../../TemplateCenter/components/inlineEditor/TemplateInlineEditor';
 import CreateFromStyleModal from '../../TemplateCenter/components/CreateFromStyleModal';
 import ApplyToStyleModal from '../../TemplateCenter/components/ApplyToStyleModal';
 import SyncProcessPriceModal from '../../TemplateCenter/components/SyncProcessPriceModal';
 import {
-  typeLabel, typeColor, formatTemplateKey, getErrorMessage, hasErrorFields,
+  typeLabel, typeColor, formatTemplateKey, getErrorMessage,
 } from '../../TemplateCenter/utils/templateUtils';
 import type { TemplateLibraryRecord } from '../../TemplateCenter/utils/templateUtils';
+import {
+  type UnitPricePanelProps,
+  directCardStyle, directStackStyle, directTitleStyle, directMetaStyle,
+  directFieldLabelStyle, processingBannerStyle, templateTypeOptions,
+  isLockedRow as isLocked, isProcessingRow as isProcessing,
+} from './helpers';
+import { useUnitPriceData } from './useUnitPriceData';
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
-const directCardStyle = {
-  border: '1px solid #ececec',
-  borderRadius: 10,
-  padding: 12,
-  background: 'var(--color-bg-base)',
-} as const;
-
-const directStackStyle = { display: 'grid', gap: 10 } as const;
-
-const directTitleStyle = {
-  fontSize: 14,
-  fontWeight: 600,
-  color: 'var(--color-text-primary)',
-  lineHeight: 1.2,
-} as const;
-
-const directMetaStyle = {
-  fontSize: 14,
-  color: 'var(--neutral-text-secondary)',
-  lineHeight: 1.4,
-} as const;
-
-const directFieldLabelStyle = {
-  marginBottom: 4,
-  fontSize: 14,
-  fontWeight: 600,
-  color: 'var(--neutral-text-secondary)',
-} as const;
-
-const processingBannerStyle = {
-  marginBottom: 10,
-  padding: '8px 10px',
-  borderRadius: 8,
-  border: '1px solid #ffd591',
-  background: '#FFF7E6',
-  display: 'grid',
-  gap: 4,
-} as const;
-
-interface PageResp<T> { records: T[]; total: number }
-
-const normalizeTemplateRecords = (payload: unknown, sourceStyleNo?: string) => {
-  const records = Array.isArray(payload)
-    ? payload
-    : Array.isArray((payload as PageResp<TemplateLibrary> | undefined)?.records)
-      ? (payload as PageResp<TemplateLibrary>).records
-      : [];
-  const normalizedStyleNo = String(sourceStyleNo || '').trim();
-  return records
-    .filter((item): item is TemplateLibrary => !!item)
-    .filter((item) => !normalizedStyleNo || String(item.sourceStyleNo || '').trim() === normalizedStyleNo);
-};
-
-const templateTypeOptions = [
-  { label: '全部类型', value: '' },
-  { label: '工序进度单价', value: 'process' },
-  { label: '多码工序进度单价', value: 'process_size' },
-];
-
-interface UnitPricePanelProps { styleNo?: string; onSaved?: () => void; }
-
-const parseTemplateContent = (content: unknown) => {
-  if (typeof content === 'object' && content !== null) return content;
-  const text = String(content ?? '').trim();
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-};
-
-const isProcessSizeTemplate = (row: TemplateLibrary) => {
-  const parsed = parseTemplateContent(row?.templateContent);
-  return !!parsed && typeof parsed === 'object' && Array.isArray((parsed as { sizes?: unknown[] }).sizes);
-};
-
-const isUnitPriceTemplate = (row: TemplateLibrary, selectedType?: string) => {
-  const normalizedSelectedType = String(selectedType || '').trim().toLowerCase();
-  const normalizedRowType = String(row?.templateType || '').trim().toLowerCase();
-  if (normalizedRowType === 'size' || normalizedRowType === 'bom') return false;
-  if (!normalizedSelectedType) {
-    return normalizedRowType === 'process' || normalizedRowType === 'process_price';
-  }
-  if (normalizedSelectedType === 'process_size') {
-    return (normalizedRowType === 'process' || normalizedRowType === 'process_price') && isProcessSizeTemplate(row);
-  }
-  return normalizedRowType === normalizedSelectedType;
-};
-
-const getDirectTemplatePriority = (row: TemplateLibrary) => {
-  const normalizedRowType = String(row?.templateType || '').trim().toLowerCase();
-  if (normalizedRowType === 'process_price') return 0;
-  if (normalizedRowType === 'process' && !isProcessSizeTemplate(row)) return 1;
-  if (normalizedRowType === 'process') return 2;
-  return 99;
-};
-
 const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo, onSaved }) => {
-  const { message } = App.useApp();
-  const { user } = useUser();
-  const { width: vpWidth } = useViewport();
-  const modalWidth = vpWidth > 1600 ? '85vw' : '85vw';
-
-  const [queryForm] = Form.useForm();
-  const [createForm] = Form.useForm();
-  const [applyForm] = Form.useForm();
-  const [directRollbackForm] = Form.useForm();
-  const editModalRef = useRef<EditTemplateModalRef>(null);
-
-  const styleNoReqSeq = useRef(0);
-  const styleNoTimerRef = useRef<number | undefined>(undefined);
-  const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [styleNoLoading, setStyleNoLoading] = useState(false);
-  const directTemplateHydratedRef = useRef(false);
-  const [hydratingTemplate, setHydratingTemplate] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<TemplateLibrary[]>([]);
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(readPageSize(10));
-  const [total, setTotal] = useState(0);
-  const pageRef = useRef(1);
-  const pageSizeRef = useRef(readPageSize(10));
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [applyOpen, setApplyOpen] = useState(false);
-  const [syncPriceOpen, setSyncPriceOpen] = useState(false);
-  const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
-
-  const [rollbackTarget, setRollbackTarget] = useState<TemplateLibrary | null>(null);
-  const [rollbackLoading, setRollbackLoading] = useState(false);
-  const [, setCancelLocking] = useState(false);
-
-  const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TemplateLibrary | null>(null);
-  const [deleteTemplateLoading, setDeleteTemplateLoading] = useState(false);
-
-  const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
-  const isFactoryUser = useMemo(() => !!user?.factoryId, [user]);
-
-  const isLocked = (row?: TemplateLibrary | null) => {
-    const v = Number(row?.locked);
-    return Number.isFinite(v) && v === 1;
-  };
-
-  const isProcessing = (row?: TemplateLibrary | null) => !!row && !isLocked(row);
-
-  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smartErrorNotice' as any), []);
-
-  /* ─── rollback ─── */
-  const handleRollback = (row: TemplateLibrary) => {
-    if (!row?.id) return;
-    if (!isAdminUser && !isFactoryUser) { message.error('仅管理员可退回修改'); return; }
-    setRollbackTarget(row);
-  };
-
-  const handleRollbackConfirm = async (reason: string) => {
-    if (!rollbackTarget?.id) return;
-    const target = rollbackTarget;
-    setRollbackLoading(true);
-    try {
-      const res = await api.post<{ code: number; message: string }>(`/template-library/${rollbackTarget.id}/rollback`, { reason });
-      if (res.code !== 200) { message.error(res.message || '退回失败'); return; }
-      message.success('已退回，可修改');
-      setRollbackTarget(null);
-      await fetchList({ page: 1 });
-      if (styleNo && target) {
-        editModalRef.current?.openEdit({ ...target, locked: 0 });
-      }
-    } finally {
-      setRollbackLoading(false);
-    }
-  };
-
-  /* ─── delete ─── */
-  const handleDelete = (row: TemplateLibrary) => {
-    if (!row?.id) return;
-    setPendingDeleteTemplate(row);
-  };
-
-  const handleDeleteConfirm = async (reason: string) => {
-    if (!pendingDeleteTemplate?.id) return;
-    setDeleteTemplateLoading(true);
-    try {
-      const res = await api.delete<{ code: number; message: string }>(`/template-library/${pendingDeleteTemplate.id}`, { params: { reason } });
-      if (res.code !== 200) { message.error(res.message || '删除失败'); return; }
-      message.success('已删除');
-      setPendingDeleteTemplate(null);
-      fetchList({ page: 1 });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (typeof e === 'object' && e !== null && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
-      message.error(msg || '删除失败');
-    } finally {
-      setDeleteTemplateLoading(false);
-    }
-  };
-
-  /* ─── style-no autocomplete ─── */
-  const fetchStyleNoOptions = useCallback(async (keyword?: string) => {
-    const seq = (styleNoReqSeq.current += 1);
-    setStyleNoLoading(true);
-    try {
-      const res = await api.get<{ code: number; data: Array<{ styleNo: string; styleName?: string }> }>('/template-library/process-price-style-options', {
-        params: { keyword: String(keyword ?? '').trim() },
-      });
-      if (seq !== styleNoReqSeq.current) return;
-      if (res.code !== 200) return;
-      const records = Array.isArray(res.data) ? res.data : [];
-      const next = records
-        .map((r) => {
-          const sn = String(r?.styleNo || '').trim();
-          const nm = String(r?.styleName || '').trim();
-          return sn ? { value: sn, label: nm ? `${sn}（${nm}）` : sn } : null;
-        })
-        .filter(Boolean) as Array<{ value: string; label: string }>;
-      setStyleNoOptions(next);
-    } catch { /* ignore */ } finally {
-      if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
-    }
-  }, []);
-
-  const scheduleFetchStyleNos = (keyword: string) => {
-    if (styleNoTimerRef.current != null) window.clearTimeout(styleNoTimerRef.current);
-    styleNoTimerRef.current = window.setTimeout(() => fetchStyleNoOptions(keyword), 250);
-  };
-
-  /* ─── fetch list (process/process_size/process_price) ─── */
-  const fetchList = useCallback(async (next?: { page?: number; pageSize?: number }) => {
-    const p = next?.page ?? pageRef.current;
-    const ps = next?.pageSize ?? pageSizeRef.current;
-    setLoading(true);
-    setSmartError(null);
-    try {
-      const v = styleNo ? {} : queryForm.getFieldsValue();
-      const sourceStyleNo = String(styleNo || v.sourceStyleNo || '').trim();
-      let templateType = styleNo ? '' : (v.templateType || '');
-      /* process_size → process mapping + client-side filter */
-      const wantSizes = templateType === 'process_size';
-      const apiType = wantSizes ? 'process' : templateType;
-
-      const res = await api.get<{ code: number; message: string; data: PageResp<TemplateLibrary> }>('/template-library/list', {
-        params: { page: p, pageSize: ps, templateType: apiType, keyword: styleNo ? '' : (v.keyword || ''), sourceStyleNo },
-      });
-      if (res.code !== 200) { message.error(res.message || '获取模板列表失败'); return; }
-      const keyword = String(v.keyword || '').trim().toLowerCase();
-      let records = normalizeTemplateRecords(res.data, sourceStyleNo);
-      records = records.filter((row) => {
-        if (!keyword) return true;
-        const haystack = [row.templateName, row.templateKey, row.sourceStyleNo]
-          .map((value) => String(value || '').toLowerCase())
-          .join(' ');
-        return haystack.includes(keyword);
-      });
-      records = records.filter((row) => isUnitPriceTemplate(row, templateType));
-      /* client-side sizes filter */
-      if (wantSizes) {
-        records = records.filter((r) => isProcessSizeTemplate(r));
-      }
-      const start = (p - 1) * ps;
-      const pageRecords = styleNo ? records : records.slice(start, start + ps);
-      setData(pageRecords);
-      setTotal(records.length);
-      pageRef.current = p;
-      pageSizeRef.current = ps;
-      setPage(p);
-      setPageSize(ps);
-    } catch (e: unknown) {
-      const errMsg = getErrorMessage(e, '获取模板列表失败');
-      message.error(errMsg);
-      if (showSmartErrorNotice && hasErrorFields(e)) {
-        setSmartError({ title: errMsg, reason: errMsg } as SmartErrorInfo);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [message, queryForm, showSmartErrorNotice, styleNo]);
-
-  useEffect(() => {
-    if (!styleNo) queryForm.setFieldsValue({ sourceStyleNo: undefined });
-    fetchList({ page: 1, pageSize: pageSizeRef.current });
-    fetchStyleNoOptions('');
-  }, [fetchList, fetchStyleNoOptions, queryForm, styleNo]);
-
-  const directRow = useMemo(() => {
-    if (!styleNo || data.length === 0) return null;
-    const candidates = [...data].sort((a, b) => getDirectTemplatePriority(a) - getDirectTemplatePriority(b));
-    return candidates[0] ?? null;
-  }, [data, styleNo]);
-
-  useEffect(() => {
-    if (!styleNo) {
-      directTemplateHydratedRef.current = false;
-      return;
-    }
-    if (loading || hydratingTemplate || data.length > 0 || directTemplateHydratedRef.current) return;
-
-    directTemplateHydratedRef.current = true;
-    setHydratingTemplate(true);
-    void (async () => {
-      try {
-        const res = await api.post<{ code: number; message?: string }>('/template-library/create-from-style', {
-          sourceStyleNo: styleNo,
-          templateTypes: ['process', 'process_price'],
-        });
-        if (res.code !== 200) {
-          message.error(res.message || '自动生成工序单价模板失败');
-          return;
-        }
-        await fetchList({ page: 1 });
-      } catch (error: unknown) {
-        message.error(getErrorMessage(error, '自动生成工序单价模板失败'));
-      } finally {
-        setHydratingTemplate(false);
-      }
-    })();
-  }, [data.length, fetchList, hydratingTemplate, loading, message, styleNo]);
-
-  const handleDirectRollback = async () => {
-    if (!directRow?.id) return;
-    try {
-      const values = await directRollbackForm.validateFields();
-      setRollbackLoading(true);
-      const res = await api.post<{ code: number; message: string }>(`/template-library/${directRow.id}/rollback`, { reason: values.reason });
-      if (res.code !== 200) {
-        message.error(res.message || '退回失败');
-        return;
-      }
-      message.success('已退回，可直接在当前页面继续编辑');
-      directRollbackForm.resetFields();
-      await fetchList({ page: 1 });
-    } catch (error: unknown) {
-      message.error(getErrorMessage(error, '退回失败'));
-    } finally {
-      setRollbackLoading(false);
-    }
-  };
-
-  /* ─── submitCreate ─── */
-  const submitCreate = useCallback(async (values: Record<string, unknown>) => {
-    try {
-      const res = await api.post<{ code: number; message: string }>('/template-library/create-from-style', values);
-      if (res.code !== 200) { message.error(res.message || '创建失败'); return; }
-      message.success('模板已创建');
-      setCreateOpen(false);
-      createForm.resetFields();
-      fetchList({ page: 1 });
-    } catch (e: unknown) {
-      message.error(getErrorMessage(e, '创建失败'));
-    }
-  }, [message, createForm, fetchList]);
-
-  /* ─── submitApply ─── */
-  const submitApply = useCallback(async (values: Record<string, unknown>) => {
-    try {
-      const body: Record<string, unknown> = { templateId: activeRow?.id, ...(values || {}) };
-      const res = await api.post<{ code: number; message: string }>('/template-library/apply-to-style', body);
-      if (res.code !== 200) { message.error(res.message || '应用失败'); return; }
-      message.success('已应用到款号');
-      setApplyOpen(false);
-      applyForm.resetFields();
-      fetchList({});
-    } catch (e: unknown) {
-      message.error(getErrorMessage(e, '应用失败'));
-    }
-  }, [message, applyForm, activeRow, fetchList]);
+  const {
+    queryForm, createForm, applyForm, directRollbackForm, editModalRef,
+    styleNoOptions, styleNoLoading, fetchStyleNoOptions, scheduleFetchStyleNos,
+    loading, data, smartError, setSmartError, page, pageSize, total, fetchList,
+    createOpen, setCreateOpen, applyOpen, setApplyOpen, syncPriceOpen, setSyncPriceOpen,
+    activeRow, setActiveRow,
+    rollbackTarget, setRollbackTarget, rollbackLoading, handleRollback, handleRollbackConfirm,
+    pendingDeleteTemplate, setPendingDeleteTemplate, deleteTemplateLoading, handleDelete, handleDeleteConfirm,
+    directRow, hydratingTemplate, handleDirectRollback,
+    isFactoryUser,
+    showSmartErrorNotice,
+    submitCreate, submitApply,
+    modalWidth, message, setCancelLocking,
+  } = useUnitPriceData({ styleNo });
 
   /* ─── columns ─── */
   const columns: ColumnsType<TemplateLibraryRecord> = [
@@ -467,7 +115,6 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo, onSaved }) => 
               <Button
                 type="default"
                 danger
-               
                 loading={rollbackLoading}
                 onClick={handleDirectRollback}
                 style={{ background: 'var(--color-bg-base)', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
@@ -517,7 +164,6 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo, onSaved }) => 
   /* ─── render ─── */
   return (
     <Card
-     
       styles={{ body: { padding: '8px 12px' } }}
     >
       <Form form={queryForm} component={false} />

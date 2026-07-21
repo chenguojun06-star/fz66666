@@ -1,45 +1,15 @@
-import React, { useState } from 'react';
-import { Table, ConfigProvider, Empty, Button, Space, Dropdown, Modal, Checkbox, message } from 'antd';
+import React from 'react';
+import { Table, ConfigProvider, Button } from 'antd';
 import type { TableProps } from 'antd';
-import type { ColumnType } from 'antd/es/table';
-import { PlusOutlined, DownloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined } from '@ant-design/icons';
+import { DndContext, closestCenter } from '@dnd-kit/core';
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
   SortableContext,
   horizontalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import {
-  DEFAULT_PAGE_SIZE,
-  buildPageSizeStorageKey,
-  normalizePageSize,
-  readPageSize,
-  readPageSizeByKey,
-  savePageSize,
-  savePageSizeByKey,
-} from '@/utils/pageSizeStore';
-import {
-  normalizePageSizeOptions,
-  hashString,
-  buildColumnsSignature,
-  isLeafColumn,
-  getColumnId,
-  readArrayStorage,
-  writeArrayStorage,
-  uniqueStrings,
-  computeAdaptiveWidth,
-} from './utils';
-import { exportTableToExcel } from '@/utils/exportExcel';
+import { useResizableTableData } from './useResizableTableData';
+import { useTableExport } from './useTableExport';
+import ExportModal from './ExportModal';
 
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
@@ -71,50 +41,6 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   exportFilename?: string;
 };
 
-const SortableHeaderCell: React.FC<any> = (props) => {
-  const {
-    'data-col-id': colId,
-    children,
-    className,
-    style,
-    ...restProps
-  } = props;
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: colId || '' });
-
-  const transformStyle: React.CSSProperties = transform
-    ? {
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-        // 拖拽中需要 position:relative 才能正确渲染 transform，非拖拽状态不覆盖
-        // 不拖拽时不可覆盖 position，否则 fixed 列 header 的 position:sticky 会失效
-        position: 'relative',
-        zIndex: isDragging ? 100 : undefined,
-      }
-    : {};
-
-  return (
-    <th
-      ref={setNodeRef}
-      className={className}
-      style={{ ...style, ...transformStyle }}
-      {...attributes}
-      {...listeners}
-      {...restProps}
-    >
-      {children}
-    </th>
-  );
-};
-
 const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   const {
     columns,
@@ -144,457 +70,57 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     ...rest
   } = props;
 
-  // 导出相关状态
-  const [exportModalVisible, setExportModalVisible] = useState(false);
-  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
-  const [exporting, setExporting] = useState(false);
-
-  const hasEmptyAction = Boolean(emptyActionText && onEmptyAction);
-  const hasEmptySecondaryAction = Boolean(emptySecondaryActionText && onEmptySecondaryAction);
-
-  const mergedLocale = React.useMemo(() => {
-    if (!hasEmptyAction && !hasEmptySecondaryAction && !emptyDescription) {
-      return localeProp;
-    }
-    const emptyNode = (
-      <Empty
-        description={emptyDescription || '暂无数据'}
-        style={{ padding: '48px 0' }}
-      >
-        {(hasEmptyAction || hasEmptySecondaryAction) && (
-          <Space>
-            {hasEmptySecondaryAction && (
-              <Button onClick={onEmptySecondaryAction}>
-                {emptySecondaryActionText}
-              </Button>
-            )}
-            {hasEmptyAction && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={onEmptyAction}>
-                {emptyActionText}
-              </Button>
-            )}
-          </Space>
-        )}
-      </Empty>
-    );
-    return {
-      ...localeProp,
-      emptyText: emptyNode,
-    };
-  }, [localeProp, emptyDescription, emptyActionText, onEmptyAction, emptySecondaryActionText, onEmptySecondaryAction, hasEmptyAction, hasEmptySecondaryAction]);
-
-  const shellRef = React.useRef<HTMLDivElement>(null);
-  const [isScrollable, setIsScrollable] = React.useState(false);
-  const lastScrollableRef = React.useRef<boolean>(false);
-  const scrollRafRef = React.useRef<number | null>(null);
-
-  const checkScrollable = React.useCallback(() => {
-    const shell = shellRef.current;
-    if (!shell) return;
-    const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
-    if (!tableBody) return;
-    // 读取布局属性后，延迟 setState 到下一帧，避免 Forced reflow
-    const next = tableBody.scrollWidth > tableBody.clientWidth + 2;
-    if (lastScrollableRef.current === next) return;
-    lastScrollableRef.current = next;
-    // 用 microtask 延迟 setState，让浏览器先完成当前帧的布局计算
-    Promise.resolve().then(() => setIsScrollable(next));
-  }, []);
-
-  const responsiveTableSize = React.useMemo(() => {
-    if (!responsiveSize || sizeProp) return sizeProp;
-    if (typeof window === 'undefined') return undefined;
-    return window.innerWidth < 768 ? 'small' : undefined;
-  }, [responsiveSize, sizeProp]);
-
-  const resolvedStorageKey = React.useMemo(() => {
-    if (storageKeyProp) return storageKeyProp;
-    if (typeof window === 'undefined') return undefined;
-    const pathname = window.location?.pathname || 'unknown';
-    const rowKeyText = typeof rowKey === 'string' ? rowKey : '';
-    const colsSig = hashString(buildColumnsSignature(columns));
-    return `resizableTable:${pathname}:${rowKeyText}:${colsSig}`;
-  }, [columns, rowKey, storageKeyProp]);
-
-  const stickyFooter = stickyFooterProp ?? false;
-  const pageSizeStorageKey = React.useMemo(() => (
-    resolvedStorageKey ? buildPageSizeStorageKey(resolvedStorageKey) : undefined
-  ), [resolvedStorageKey]);
-
-  const mergedPagination = React.useMemo(() => {
-    if (paginationProp === false) return false;
-    if (paginationProp === undefined || paginationProp === null) return paginationProp;
-    const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
-    const { position, placement, showSizeChanger: showSizeChangerProp, ...baseRest } = base as any;
-    const explicitDefaultPageSize = typeof base?.defaultPageSize === 'number'
-      ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
-      : undefined;
-    const persistedPageSize = pageSizeStorageKey
-      ? readPageSizeByKey(pageSizeStorageKey, explicitDefaultPageSize ?? DEFAULT_PAGE_SIZE)
-      : readPageSize(explicitDefaultPageSize ?? DEFAULT_PAGE_SIZE);
-    const normalizedPageSize = typeof base?.pageSize === 'number'
-      ? normalizePageSize(base.pageSize, DEFAULT_PAGE_SIZE)
-      : undefined;
-    const normalizedDefaultPageSize = normalizedPageSize === undefined
-      ? persistedPageSize
-      : explicitDefaultPageSize;
-
-    const originalOnChange = base?.onChange;
-    const trackedPageSize = normalizedPageSize ?? normalizedDefaultPageSize;
-    const interceptedOnChange = (page: number, pageSize: number) => {
-      const nextPageSize = normalizePageSize(pageSize, DEFAULT_PAGE_SIZE);
-      if (trackedPageSize === undefined || nextPageSize !== trackedPageSize) {
-        if (pageSizeStorageKey) {
-          savePageSizeByKey(pageSizeStorageKey, nextPageSize);
-        } else {
-          savePageSize(nextPageSize);
-        }
-      }
-      originalOnChange?.(page, nextPageSize);
-    };
-
-    let resolvedShowSizeChanger;
-    if (showSizeChangerProp === false) {
-      resolvedShowSizeChanger = false;
-    } else {
-      const baseShowSizeChanger = typeof showSizeChangerProp === 'object' ? showSizeChangerProp : {};
-      resolvedShowSizeChanger = { getPopupContainer: (triggerNode: HTMLElement) => document.body, ...baseShowSizeChanger };
-    }
-
-    return {
-      ...baseRest,
-      pageSize: normalizedPageSize,
-      defaultPageSize: normalizedDefaultPageSize,
-      pageSizeOptions: normalizePageSizeOptions(base?.pageSizeOptions, normalizedPageSize, normalizedDefaultPageSize),
-      onChange: interceptedOnChange,
-      simple: base?.simple ?? false,
-      showSizeChanger: resolvedShowSizeChanger,
-      placement: placement ?? position ?? ['bottomRight'],
-    } as any;
-  }, [pageSizeStorageKey, paginationProp]);
-
-  const orderStorageKey = React.useMemo(() => {
-    if (!resolvedStorageKey) return null;
-    return `${resolvedStorageKey}:order`;
-  }, [resolvedStorageKey]);
-
-  const [columnOrder, setColumnOrder] = React.useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    if (!orderStorageKey) return [];
-    return readArrayStorage(orderStorageKey) || [];
+  const {
+    mergedLocale,
+    shellRef,
+    responsiveTableSize,
+    mergedPagination,
+    finalColumns,
+    dndSensors,
+    sortableColumnIds,
+    handleDragEnd,
+    getTablePopupContainer,
+    mergedScroll,
+    mergedComponents,
+    wrapperClassName,
+  } = useResizableTableData<T>({
+    columns,
+    components,
+    scroll,
+    tableLayout,
+    pagination: paginationProp,
+    storageKeyProp,
+    allowFixedColumns,
+    reorderableColumns,
+    stickyFooterProp,
+    stickyHeaderProp,
+    showIndex,
+    responsiveSize,
+    className,
+    sizeProp,
+    rowKey,
+    emptyDescription,
+    emptyActionText,
+    onEmptyAction,
+    emptySecondaryActionText,
+    onEmptySecondaryAction,
+    localeProp,
   });
 
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!orderStorageKey) {
-      setColumnOrder([]);
-      return;
-    }
-    const nextOrder = readArrayStorage(`${orderStorageKey}`) || [];
-    setColumnOrder(nextOrder);
-  }, [orderStorageKey]);
-
-  React.useEffect(() => {
-    if (!orderStorageKey) return;
-    writeArrayStorage(orderStorageKey, uniqueStrings(columnOrder));
-  }, [columnOrder, orderStorageKey]);
-
-  const preparedColumns = React.useMemo(() => {
-    if (!columns) return columns;
-    const rawCols = (Array.isArray(columns) ? columns : []) as any[];
-
-    const mapColumns = (cols: any[]): any[] => {
-      return cols.map((col) => {
-        const colRecord = col as any;
-        const isLeaf = isLeafColumn(col);
-
-        if (!isLeaf) {
-          const children = Array.isArray(colRecord.children) ? colRecord.children : [];
-          return { ...colRecord, children: mapColumns(children) };
-        }
-
-        const colId = getColumnId(colRecord, [rawCols.indexOf(colRecord)]);
-
-        const keyText = colRecord.key == null ? '' : String(colRecord.key);
-        const dataIndexText = Array.isArray(colRecord.dataIndex)
-          ? colRecord.dataIndex.join('.')
-          : colRecord.dataIndex == null ? '' : String(colRecord.dataIndex);
-
-        const maybeAction =
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
-          ['操作', '操作列', '操作区', '操作按钮'].includes(String(colRecord.title || '').trim());
-
-        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
-
-        const adaptive = computeAdaptiveWidth(colRecord);
-
-        return {
-          ...safeColRecord,
-          colId,
-          ...(adaptive.width != null ? { width: adaptive.width } : {}),
-          fixed: allowFixedColumns ? (maybeAction ? 'right' : colRecord.fixed) : undefined,
-        };
-      });
-    };
-
-    const mapped = mapColumns(rawCols);
-
-    if (showIndex && mapped.length > 0) {
-      const indexColumn = {
-        title: '序号',
-        key: '__index__',
-        dataIndex: '__index__',
-        width: 60,
-        align: 'center',
-        fixed: 'left',
-        colId: '__index__',
-        render: (_: any, __: any, idx: number) => idx + 1,
-      };
-      return [indexColumn, ...mapped];
-    }
-
-    return mapped;
-  }, [columns, allowFixedColumns, showIndex]);
-
-  const orderedColumns = React.useMemo(() => {
-    if (!preparedColumns || columnOrder.length === 0) return preparedColumns;
-    const rawCols = preparedColumns as any[];
-    const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
-    if (!topLevelLeaf) return preparedColumns;
-
-    const indexCol = showIndex ? rawCols.find((c: any) => c.colId === '__index__') : null;
-    const restCols = showIndex ? rawCols.filter((c: any) => c.colId !== '__index__') : rawCols;
-
-    const topLevelIds = restCols.map((col, idx) => getColumnId(col, [idx]));
-    const map = new Map<string, any>();
-    for (let i = 0; i < restCols.length; i++) {
-      map.set(topLevelIds[i], restCols[i]);
-    }
-
-    const ordered: any[] = [];
-    for (const id of columnOrder) {
-      const hit = map.get(id);
-      if (!hit) continue;
-      ordered.push(hit);
-      map.delete(id);
-    }
-    for (let i = 0; i < restCols.length; i++) {
-      const id = topLevelIds[i];
-      const hit = map.get(id);
-      if (!hit) continue;
-      ordered.push(hit);
-      map.delete(id);
-    }
-
-    const fixedLeft = ordered.filter((c: any) => c.fixed === 'left');
-    const fixedRight = ordered.filter((c: any) => c.fixed === 'right');
-    const nonFixed = ordered.filter((c: any) => c.fixed !== 'left' && c.fixed !== 'right');
-    const result = [...fixedLeft, ...nonFixed, ...fixedRight];
-
-    if (indexCol) {
-      return [indexCol, ...result];
-    }
-    return result;
-  }, [preparedColumns, columnOrder, showIndex]);
-
-  const finalColumns = React.useMemo(() => {
-    if (!orderedColumns) return orderedColumns;
-    const currentPage = typeof (mergedPagination as any)?.current === 'number' ? (mergedPagination as any).current : 1;
-    const currentPageSize = typeof (mergedPagination as any)?.pageSize === 'number' ? (mergedPagination as any).pageSize : 0;
-    const indexOffset = currentPage > 1 && currentPageSize > 0 ? (currentPage - 1) * currentPageSize : 0;
-
-    return (orderedColumns as any[]).map((col: any) => {
-      const { colId, ...cleanCol } = col;
-      const originalOnHeaderCell = cleanCol.onHeaderCell;
-
-      if (colId === '__index__') {
-        return {
-          ...cleanCol,
-          render: (_: any, __: any, idx: number) => indexOffset + idx + 1,
-          onHeaderCell: (column: any) => {
-            const originalProps = typeof originalOnHeaderCell === 'function'
-              ? originalOnHeaderCell(column)
-              : {};
-            return { ...originalProps, 'data-col-id': colId };
-          },
-        };
-      }
-
-      return {
-        ...cleanCol,
-        onHeaderCell: (column: any) => {
-          const originalProps = typeof originalOnHeaderCell === 'function'
-            ? originalOnHeaderCell(column)
-            : {};
-          return {
-            ...originalProps,
-            'data-col-id': colId,
-          };
-        },
-      };
-    });
-  }, [orderedColumns, mergedPagination]);
-
-  React.useEffect(() => {
-    checkScrollable();
-    const shell = shellRef.current;
-    if (!shell) return;
-    const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
-    if (!tableBody) return;
-
-    const ro = new ResizeObserver(() => {
-      if (scrollRafRef.current !== null) return;
-      scrollRafRef.current = window.requestAnimationFrame(() => {
-        scrollRafRef.current = null;
-        checkScrollable();
-      });
-    });
-    ro.observe(tableBody);
-    const onScroll = () => {
-      if (scrollRafRef.current !== null) return;
-      scrollRafRef.current = window.requestAnimationFrame(() => {
-        scrollRafRef.current = null;
-        checkScrollable();
-      });
-    };
-    tableBody.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      ro.disconnect();
-      tableBody.removeEventListener('scroll', onScroll);
-      if (scrollRafRef.current !== null) {
-        window.cancelAnimationFrame(scrollRafRef.current);
-        scrollRafRef.current = null;
-      }
-    };
-  }, [checkScrollable, finalColumns]);
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    }),
-    useSensor(KeyboardSensor),
-  );
-
-  const sortableColumnIds = React.useMemo(() => {
-    if (!orderedColumns || !reorderableColumns) return [];
-    return (orderedColumns as any[])
-      .filter((col: any) => col.colId && col.colId !== '__index__')
-      .map((col: any) => col.colId);
-  }, [orderedColumns, reorderableColumns]);
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const currentIds = (orderedColumns as any[]).map((col: any) => col.colId);
-    const oldIndex = currentIds.indexOf(String(active.id));
-    const newIndex = currentIds.indexOf(String(over.id));
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const nextOrder = arrayMove(currentIds, oldIndex, newIndex);
-    setColumnOrder(uniqueStrings(nextOrder));
-  };
-
-  const getTablePopupContainer = React.useCallback((triggerNode?: HTMLElement) => {
-    if (triggerNode) {
-      const modal = triggerNode.closest?.('.ant-modal-body') as HTMLElement | null;
-      if (modal) return modal;
-      const drawer = triggerNode.closest?.('.ant-drawer-content') as HTMLElement | null;
-      if (drawer) return drawer;
-    }
-    return document.body;
-  }, []);
-
-  // 检测 finalColumns 中是否存在 fixed:'left' 或 fixed:'right' 的列。
-  // allowFixedColumns=true（默认）时，操作列（key/dataIndex 包含 'action/actions/操作' 等）
-  // 会被自动设为 fixed:'right'。若存在固定列却没有 scroll，antd 会出现表头/体错位问题。
-  // 因此：只要有固定列，且调用方未显式传 scroll，就自动兜底 { x: 'max-content' }。
-  const hasFixedColumn = React.useMemo(() => {
-    if (!finalColumns) return false;
-    return (finalColumns as any[]).some(
-      (col: any) => col.fixed === 'left' || col.fixed === 'right',
-    );
-  }, [finalColumns]);
-
-  const mergedScroll = React.useMemo(() => {
-    if (!scroll) return hasFixedColumn ? { x: 'max-content' } : undefined;
-    return typeof scroll === 'object' ? scroll : undefined;
-  }, [scroll, hasFixedColumn]);
-
-  const mergedComponents = React.useMemo(() => {
-    const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};
-
-    if (!reorderableColumns) return baseComponents;
-
-    return {
-      ...baseComponents,
-      header: {
-        ...(typeof baseComponents.header === 'object' && baseComponents.header !== null
-          ? baseComponents.header
-          : {}),
-        cell: SortableHeaderCell,
-      },
-    } as any;
-  }, [components, reorderableColumns]);
-
-  const wrapperClassName = React.useMemo(() => {
-    const next = [
-      'resizable-table-shell',
-      isScrollable ? 'resizable-table-shell--scrollable' : '',
-      className,
-      stickyFooter ? 'resizable-table-shell-sticky-footer' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-    return next;
-  }, [className, stickyFooter, isScrollable]);
-
-  // 导出相关逻辑
-  const exportableColumns = React.useMemo(() => {
-    if (!columns) return [];
-    return (columns as any[]).filter(col => {
-      const key = col.key || col.dataIndex;
-      if (typeof key === 'string') {
-        return key !== '__index__' && !key.toLowerCase().includes('action') && !key.toLowerCase().includes('操作');
-      }
-      return true;
-    });
-  }, [columns]);
-
-  const handleExportClick = React.useCallback(() => {
-    if (!dataSource || dataSource.length === 0) {
-      message.warning('暂无数据可导出');
-      return;
-    }
-    // 默认导出所有列
-    const allKeys = exportableColumns.map(col => String(col.key || col.dataIndex || ''));
-    setSelectedExportColumns(allKeys);
-    setExportModalVisible(true);
-  }, [dataSource, exportableColumns]);
-
-  const handleExportConfirm = React.useCallback(async () => {
-    if (!dataSource || dataSource.length === 0 || !columns) {
-      setExportModalVisible(false);
-      return;
-    }
-    setExporting(true);
-    try {
-      await exportTableToExcel(
-        [...dataSource] as T[],
-        columns as ColumnType<T>[],
-        exportFilename,
-        selectedExportColumns
-      );
-      message.success('导出成功');
-      setExportModalVisible(false);
-    } catch (error) {
-      message.error('导出失败，请重试');
-      console.error('导出Excel失败:', error);
-    } finally {
-      setExporting(false);
-    }
-  }, [dataSource, columns, exportFilename, selectedExportColumns]);
+  const {
+    exportModalVisible,
+    setExportModalVisible,
+    selectedExportColumns,
+    setSelectedExportColumns,
+    exporting,
+    exportableColumns,
+    handleExportClick,
+    handleExportConfirm,
+  } = useTableExport<T>({
+    columns,
+    dataSource,
+    exportFilename,
+  });
 
   const tableContent = (
     <div className={wrapperClassName} ref={shellRef}>
@@ -630,6 +156,19 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     </div>
   );
 
+  const exportModalNode = showExport && exportModalVisible ? (
+    <ExportModal
+      visible={exportModalVisible}
+      exporting={exporting}
+      selectedColumns={selectedExportColumns}
+      exportableColumns={exportableColumns}
+      recordCount={dataSource?.length || 0}
+      onCancel={() => setExportModalVisible(false)}
+      onOk={handleExportConfirm}
+      onSelectedColumnsChange={(values) => setSelectedExportColumns(values)}
+    />
+  ) : null;
+
   if (reorderableColumns && sortableColumnIds.length > 0) {
     return (
       <>
@@ -642,34 +181,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
             {tableContent}
           </SortableContext>
         </DndContext>
-        {showExport && exportModalVisible && (
-          <Modal
-            title="选择导出列"
-            open={exportModalVisible}
-            onCancel={() => setExportModalVisible(false)}
-            onOk={handleExportConfirm}
-            confirmLoading={exporting}
-            width={600}
-          >
-            <Checkbox.Group
-              value={selectedExportColumns}
-              onChange={(values) => setSelectedExportColumns(values as string[])}
-              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-            >
-              {exportableColumns.map(col => (
-                <Checkbox
-                  key={String(col.key || col.dataIndex || '')}
-                  value={String(col.key || col.dataIndex || '')}
-                >
-                  {typeof col.title === 'string' ? col.title : String(col.title || '')}
-                </Checkbox>
-              ))}
-            </Checkbox.Group>
-            <div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 12 }}>
-              提示：导出当前页数据，共 {dataSource?.length || 0} 条记录
-            </div>
-          </Modal>
-        )}
+        {exportModalNode}
       </>
     );
   }
@@ -677,34 +189,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   return (
     <>
       {tableContent}
-      {showExport && exportModalVisible && (
-        <Modal
-          title="选择导出列"
-          open={exportModalVisible}
-          onCancel={() => setExportModalVisible(false)}
-          onOk={handleExportConfirm}
-          confirmLoading={exporting}
-          width={600}
-        >
-          <Checkbox.Group
-            value={selectedExportColumns}
-            onChange={(values) => setSelectedExportColumns(values as string[])}
-            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-          >
-            {exportableColumns.map(col => (
-              <Checkbox
-                key={String(col.key || col.dataIndex || '')}
-                value={String(col.key || col.dataIndex || '')}
-              >
-                {typeof col.title === 'string' ? col.title : String(col.title || '')}
-              </Checkbox>
-            ))}
-          </Checkbox.Group>
-          <div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 12 }}>
-            提示：导出当前页数据，共 {dataSource?.length || 0} 条记录
-          </div>
-        </Modal>
-      )}
+      {exportModalNode}
     </>
   );
 };

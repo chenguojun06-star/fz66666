@@ -1,33 +1,24 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  SendOutlined,
-  CloseOutlined,
-  SoundOutlined,
-  LoadingOutlined,
-  AudioMutedOutlined,
-  ClearOutlined,
-  PaperClipOutlined,
-  SmileOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { App } from 'antd';
 import { useUser, useAuthState } from '@/utils/AuthContext';
-import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
-import XiaoyunCloudAvatar, { CuteCloudTrigger } from '@/components/common/XiaoyunCloudAvatar';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
-import cloudStyles from './CloudTrigger.module.css';
-import emojiStyles from './EmojiPicker.module.css';
 import msgStyles from './MessageBubble.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
-import { EMOJI_GROUPS, getPageSuggestions } from './constants';
+import { getPageSuggestions } from './constants';
+import { computePanelStyle } from './helpers';
 import { useAiChat } from './useAiChat';
-import { stopAllSpeech } from './speechUtils';
 import { useDragSnap } from './useDragSnap';
 import { usePendingTasks } from './usePendingTasks';
 import { useMoodGreeting } from './useMoodGreeting';
 import { useEmojiPicker } from './useEmojiPicker';
+import { usePanelResize } from './usePanelResize';
+import { useAdviceListener } from './useAdviceListener';
+import { useTaskPanel } from './useTaskPanel';
+import { usePanelActions } from './usePanelActions';
+import { useTriggerDrag } from './useTriggerDrag';
 import MessageBubble from './MessageBubble';
 import SmartBubble from './SmartBubble';
 import XiaoyunLiveStatus from './XiaoyunLiveStatus';
@@ -35,38 +26,10 @@ import TaskAggregationPanel from './TaskAggregationPanel';
 import PendingItemsSection from './PendingItemsSection';
 import TaskListView from './TaskListView';
 import TaskFormModal from './TaskFormModal';
-import { usePanelResize } from './usePanelResize';
-import { useTaskManager } from './useTaskManager';
-import type { Message, PanelView, TaskItem, ActionCard } from './types';
+import PanelHeader from './PanelHeader';
+import ChatInputArea from './ChatInputArea';
+import FloatingTrigger from './FloatingTrigger';
 import SampleLoanModal from './SampleLoanModal';
-
-function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const raw = payload as Record<string, unknown>;
-  const title = String(raw.title || '').trim();
-  if (!title) return null;
-  return {
-    traceId: String(raw.traceId || ''),
-    title,
-    summary: String(raw.summary || '系统发来了一条智能建议。'),
-    reasoningChain: Array.isArray(raw.reasoningChain)
-      ? raw.reasoningChain.map(item => String(item || '')).filter(Boolean)
-      : [],
-    proposedActions: Array.isArray(raw.proposedActions)
-      ? raw.proposedActions
-        .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
-        .map((item) => ({
-          label: String(item.label || '执行'),
-          actionCommand: String(item.actionCommand || ''),
-          actionParams: item.actionParams && typeof item.actionParams === 'object'
-            ? item.actionParams as Record<string, unknown>
-            : undefined,
-          riskWarning: item.riskWarning != null ? String(item.riskWarning) : undefined,
-        }))
-      : [],
-    confidenceScore: typeof raw.confidenceScore === 'number' ? raw.confidenceScore : undefined,
-  };
-}
 
 const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
@@ -84,17 +47,8 @@ const GlobalAiAssistant: React.FC = () => {
 
   // ── parent-local state ──
   const [isOpen, setIsOpen] = useState(false);
-  const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
-
-  const [panelView, setPanelView] = useState<PanelView>('chat');
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-  const [taskSaving, setTaskSaving] = useState(false);
   const { tasks: pendingItems, refresh: refreshPendingTasks } = usePendingTasks();
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
-
-  const [sampleLoanModalVisible, setSampleLoanModalVisible] = useState(false);
-  const [sampleLoanPrefill, setSampleLoanPrefill] = useState<Record<string, unknown> | undefined>();
 
   const { size, cycleSize, dimensions, showSidebar, showAuxPanel } = usePanelResize();
 
@@ -102,15 +56,12 @@ const GlobalAiAssistant: React.FC = () => {
     setIsOpen(false);
     startIdleSnap();
   }, [startIdleSnap]);
-  const { tasks: myTasks, loading: tasksLoading, stats: taskStats, fetchTasks, createTask, updateTask, deleteTask, claimTask, completeTask, startPolling, stopPolling } = useTaskManager();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ── 拖拽辅助 refs ──
-  const hasDragRef = useRef(false);
-  const dragStartRef = useRef({ mx: 0, my: 0, tx: 0, ty: 0 });
+  // ── isOpen ref 镜像（保留原行为） ──
   const isOpenRef = useRef(isOpen);
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
 
@@ -154,59 +105,34 @@ const GlobalAiAssistant: React.FC = () => {
     token: localStorage.getItem('authToken') ?? '',
   });
 
-  // ── 监听后端推送的 AI 智能决策卡片 ──
-  useEffect(() => {
-    const handleAdvicePush = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const advice = normalizeTraceableAdvice(customEvent.detail);
-      if (!advice) return;
+  // ── 监听后端推送的 AI 智能决策卡片 + ⌘K 搜索无结果 ──
+  useAdviceListener({ setMessages, setIsOpen, setInputValue, subscribe });
 
-      setIsOpen(true);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `advice-${Date.now()}`,
-          role: 'ai',
-          text: advice.summary,
-          traceableAdvice: advice,
-        }
-      ]);
-    };
+  // ── 任务面板状态与回调 ──
+  const {
+    isTaskPanelOpen, setIsTaskPanelOpen,
+    panelView, setPanelView,
+    showTaskForm, setShowTaskForm, editingTask, setEditingTask, taskSaving,
+    myTasks, tasksLoading, taskStats,
+    openTaskPanel, closeTaskPanel, backToChat,
+    switchToTasks, switchToChat,
+    handleTaskCreate, handleTaskEdit, handleTaskSave,
+    handleTaskDelete, handleTaskClaim, handleTaskComplete,
+  } = useTaskPanel({ refreshPendingTasks, setIsOpen, messageApi: message });
 
-    window.addEventListener('ai:traceable_advice', handleAdvicePush);
-    return () => window.removeEventListener('ai:traceable_advice', handleAdvicePush);
-  }, [setMessages]);
+  // ── 导航 / 模态框 / 动作卡片回调 ──
+  const {
+    sampleLoanModalVisible, setSampleLoanModalVisible,
+    sampleLoanPrefill,
+    openTraceCenter, jumpToIntelligenceCenter,
+    onSafeNavigate, handleActionCardAction, onPurchaseDocAction,
+  } = usePanelActions({ setIsOpen, setIsTaskPanelOpen, setMessages, handleSend, messageApi: message, navigate });
 
-  useEffect(() => {
-    return subscribe('ai:traceable_advice', (msg: WsMessage) => {
-      const advice = normalizeTraceableAdvice(msg.payload);
-      if (!advice) return;
-
-      setIsOpen(true);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `advice-ws-${Date.now()}`,
-          role: 'ai',
-          text: advice.summary,
-          traceableAdvice: advice,
-        }
-      ]);
-    });
-  }, [subscribe, setMessages]);
-
-  // ── 监听 ⌘K 搜索无结果 → 打开小云面板并预填问题 ──
-  useEffect(() => {
-    const handleOpenAiChat = (event: Event) => {
-      const query = (event as CustomEvent).detail?.query;
-      if (query) {
-        setInputValue(query);
-      }
-      setIsOpen(true);
-    };
-    window.addEventListener('openAiChat', handleOpenAiChat);
-    return () => window.removeEventListener('openAiChat', handleOpenAiChat);
-  }, [setInputValue]);
+  // ── 浮标拖拽事件 ──
+  const { handleTriggerMouseDown } = useTriggerDrag({
+    triggerPos, cancelIdleSnap, setIsActiveDrag,
+    moveTo, snapToEdge, startIdleSnap, snapToVisible, setIsOpen,
+  });
 
   const dismissPendingItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -244,12 +170,6 @@ const GlobalAiAssistant: React.FC = () => {
     }
   }, [isOpen]);
 
-  // ── 辅助回调 ──
-  const openTraceCenter = useCallback((commandId?: string) => {
-    const path = commandId ? `/cockpit/agent-traces?commandId=${commandId}` : '/cockpit/agent-traces';
-    window.open(path, '_blank');
-  }, []);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -257,191 +177,20 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
-  const jumpToIntelligenceCenter = (_query: string) => {
-    setIsOpen(false);
-    if (window.location.pathname !== '/cockpit') {
-      navigate('/cockpit');
-    }
-  };
-
-  const onSafeNavigate = useCallback((path: string) => {
-    const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic', '/cockpit', '/style-info', '/order-management'];
-    const safePath = path && knownPrefixes.some(p => path.startsWith(p)) ? path : '/production';
-    setIsOpen(false);
-    setIsTaskPanelOpen(false);
-    navigate(safePath);
-  }, [navigate]);
-
-  const handleOpenModal = useCallback((modalType: string, prefillData?: Record<string, unknown>) => {
-    if (modalType === 'open_order_create') {
-      setIsOpen(false);
-      setIsTaskPanelOpen(false);
-      const params = new URLSearchParams();
-      params.set('autoOpenCreate', '1');
-      if (prefillData?.styleNo) {
-        params.set('styleNo', String(prefillData.styleNo));
-      }
-      navigate(`/basic/order-management?${params.toString()}`);
-    } else if (modalType === 'open_sample_loan') {
-      setSampleLoanPrefill(prefillData);
-      setSampleLoanModalVisible(true);
-    }
-  }, [navigate]);
-
-  const handleActionCardAction = useCallback((card: ActionCard, actionType: string, path?: string, orderId?: string) => {
-    const action = card.actions.find(a => a.type === actionType);
-    if (actionType === 'open_modal' && action?.modalType) {
-      handleOpenModal(action.modalType, action.prefillData || card.prefillData);
-    } else if (actionType === 'navigate' && path) {
-      onSafeNavigate(path);
-    } else if (actionType === 'mark_urgent' && orderId) {
-      void handleSend(`把订单 ${orderId} 标记为紧急`);
-    } else {
-      void handleSend(`执行操作：${card.title}`);
-    }
-  }, [handleOpenModal, onSafeNavigate, handleSend]);
-
-  const openTaskPanel = useCallback(() => {
-    setIsTaskPanelOpen(true);
-    setIsOpen(false);
-    refreshPendingTasks();
-  }, [refreshPendingTasks]);
-
-  const closeTaskPanel = useCallback(() => {
-    setIsTaskPanelOpen(false);
-  }, []);
-
-  const backToChat = useCallback(() => {
-    setIsTaskPanelOpen(false);
-    setIsOpen(true);
-    setPanelView('chat');
-  }, []);
-
-  const switchToTasks = useCallback(() => {
-    setPanelView('tasks');
-    fetchTasks();
-    startPolling();
-  }, [fetchTasks, startPolling]);
-
-  const switchToChat = useCallback(() => {
-    setPanelView('chat');
-    stopPolling();
-  }, [stopPolling]);
-
-  const handleTaskCreate = useCallback(() => {
-    setEditingTask(null);
-    setShowTaskForm(true);
-  }, []);
-
-  const handleTaskEdit = useCallback((task: TaskItem) => {
-    setEditingTask(task);
-    setShowTaskForm(true);
-  }, []);
-
-  const handleTaskSave = useCallback(async (data: { title: string; description?: string; priority: string; module: string; orderNo?: string; endTime?: string }) => {
-    setTaskSaving(true);
-    try {
-      if (editingTask?.id) {
-        await updateTask(editingTask.id, data as Record<string, unknown>);
-      } else {
-        await createTask(data);
-      }
-      setShowTaskForm(false);
-      setEditingTask(null);
-    } catch (e) { console.error('[GlobalAiAssistant] 保存任务失败:', e); message.error('保存任务失败'); } finally { setTaskSaving(false); }
-  }, [editingTask, createTask, updateTask]);
-
-  const handleTaskDelete = useCallback(async (taskId: string) => {
-    await deleteTask(taskId);
-    setShowTaskForm(false);
-    setEditingTask(null);
-  }, [deleteTask]);
-
-  const handleTaskClaim = useCallback(async (taskId: string) => {
-    await claimTask(taskId);
-  }, [claimTask]);
-
-  const handleTaskComplete = useCallback(async (taskId: string) => {
-    await completeTask(taskId);
-  }, [completeTask]);
-
   const sendWithContext = useCallback((text?: string) => {
     const msgText = (text ?? inputValue).trim();
     if (!msgText) return;
     void handleSend(text);
   }, [inputValue, handleSend]);
 
-  useEffect(() => {
-    if (panelView === 'tasks') startPolling(); else stopPolling();
-    return () => stopPolling();
-  }, [panelView, startPolling, stopPolling]);
-
-  const onPurchaseDocAction = useCallback(async (msgId: string, mode: string, card: any) => {
-    try {
-      await intelligenceApi.autoExecutePurchaseDoc({ docId: card.docId, confirmInbound: mode === 'inbound', warehouseLocation: mode === 'inbound' ? '默认仓' : undefined });
-      setMessages(prev => prev.map(m =>
-        m.id === msgId
-          ? { ...m, purchaseDocCard: m.purchaseDocCard ? { ...m.purchaseDocCard, autoStatus: mode === 'arrival' ? 'arrived' : 'inbound' } : m.purchaseDocCard }
-          : m
-      ));
-    } catch {
-      message.error('操作失败，请稍后重试');
-    }
-  }, [message, setMessages]);
-
-  // ── 浮标拖拽事件 ──
-  const handleTriggerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    hasDragRef.current = false;
-    dragStartRef.current = { mx: e.clientX, my: e.clientY, tx: triggerPos.x, ty: triggerPos.y };
-    cancelIdleSnap();
-    const onMove = (ev: MouseEvent) => {
-      const dx = ev.clientX - dragStartRef.current.mx;
-      const dy = ev.clientY - dragStartRef.current.my;
-      if (!hasDragRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        hasDragRef.current = true;
-        setIsActiveDrag(true);
-      }
-      if (!hasDragRef.current) return;
-      moveTo(
-        Math.max(-28, Math.min(dragStartRef.current.tx + dx, window.innerWidth - 28)),
-        Math.max(10, Math.min(dragStartRef.current.ty + dy, window.innerHeight - 56)),
-      );
-    };
-    const onUp = () => {
-      setIsActiveDrag(false);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      if (hasDragRef.current) {
-        snapToEdge();
-      } else {
-        // 点击（非拖拽）→ 切换面板
-        setIsOpen(prev => {
-          if (prev) { startIdleSnap(); } else { snapToVisible(); }
-          return !prev;
-        });
-      }
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [triggerPos.x, triggerPos.y, cancelIdleSnap, setIsActiveDrag, moveTo, snapToEdge, startIdleSnap, snapToVisible]);
-
   // ── 页面上下文感知建议 ──
   const pageSuggestions = useMemo(() => getPageSuggestions(location.pathname), [location.pathname]);
 
   // ── 面板定位样式（根据浮标边缘侧计算） ──
-  const panelStyle: React.CSSProperties = useMemo(() => {
-    return {
-      position: 'fixed' as const,
-      zIndex: 9998,
-      bottom: 16,
-      width: dimensions.width,
-      height: dimensions.height,
-      ...(triggerPos.edge === 'left'
-        ? { left: 16, transformOrigin: 'bottom left' }
-        : { right: 16, transformOrigin: 'bottom right' }),
-    };
-  }, [triggerPos.edge, dimensions.width, dimensions.height]);
+  const panelStyle: React.CSSProperties = useMemo(
+    () => computePanelStyle(triggerPos.edge, dimensions.width, dimensions.height),
+    [triggerPos.edge, dimensions.width, dimensions.height],
+  );
 
   // ── JSX ──
   return (
@@ -467,32 +216,17 @@ const GlobalAiAssistant: React.FC = () => {
       {isOpen && !isTaskPanelOpen && (
         <div className={styles.chatPanel} style={panelStyle}>
           {/* Header */}
-          <div className={styles.panelHeader}>
-            <div className={styles.avatarContainer}>
-              <CuteCloudTrigger size={40} active />
-            </div>
-            <div className={styles.headerText}>
-              <div className={styles.headerTitle}>小云 智慧大脑</div>
-              <div className={styles.headerSubtitle}>云裳智链 · AI协同工作中枢</div>
-            </div>
-            <div className={styles.headerActions}>
-              <span className={styles.headerActionBtn} onClick={cycleSize} title={`当前${size === 'small' ? '小框' : size === 'medium' ? '中框' : '大框'}，点击切换`}>
-                {size === 'small' ? '⬜' : size === 'medium' ? '⊞' : '⊟'}
-              </span>
-              <UnorderedListOutlined
-                className={styles.headerActionBtn}
-                onClick={switchToTasks}
-                title="任务列表"
-              />
-              {isMuted ? (
-                <AudioMutedOutlined className={styles.headerActionBtn} onClick={() => setIsMuted(false)} title="取消静音" />
-              ) : (
-                <SoundOutlined className={styles.headerActionBtn} onClick={() => { setIsMuted(true); stopAllSpeech(); }} title="静音" />
-              )}
-              <ClearOutlined className={styles.headerActionBtn} onClick={() => { clearChat(); refreshPendingTasks(); setHasFetchedMood(false); }} title="清空对话" />
-              <CloseOutlined className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`} onClick={handleClose} title="关闭" />
-            </div>
-          </div>
+          <PanelHeader
+            size={size}
+            cycleSize={cycleSize}
+            isMuted={isMuted}
+            setIsMuted={setIsMuted}
+            clearChat={clearChat}
+            refreshPendingTasks={refreshPendingTasks}
+            setHasFetchedMood={setHasFetchedMood}
+            handleClose={handleClose}
+            switchToTasks={switchToTasks}
+          />
 
           {/* Body: Sidebar + Main + Aux */}
           <div className={styles.panelBody}>
@@ -574,103 +308,31 @@ const GlobalAiAssistant: React.FC = () => {
                     )}
                   </div>
 
-                  <div className={styles.inputArea}>
-                    <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
-                    
-                    {/* 图片预览区域 */}
-                    {previewImage && (
-                      <div style={{
-                        padding: '8px 12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        background: '#f9fafb',
-                        borderRadius: 8,
-                        marginBottom: 8
-                      }}>
-                        <img
-                          src={previewImage}
-                          alt="预览"
-                          style={{
-                            width: 60,
-                            height: 60,
-                            objectFit: 'cover',
-                            borderRadius: 6,
-                            border: '1px solid var(--color-border)'
-                          }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
-                            {attachedFile?.name || '图片'}
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                            即将上传并分析
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAttachedFile(null);
-                            setPreviewImage(null);
-                          }}
-                          style={{
-                            padding: '4px 8px',
-                            border: 'none',
-                            background: 'transparent',
-                            color: 'var(--color-text-secondary)',
-                            fontSize: 16,
-                            cursor: 'pointer'
-                          }}
-                          title="移除"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* 普通文件预览 */}
-                    {attachedFile && !previewImage && (
-                      <div className={styles.attachChip}>
-                        <span>📎 {attachedFile.name}</span>
-                        <button type="button" className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
-                      </div>
-                    )}
-                    
-                    <div className={styles.inputRow}>
-                      <button type="button" className={styles.uploadBtn} title="上传文件" onClick={() => fileInputRef.current?.click()} disabled={isTyping || uploadingFile}>
-                        <PaperClipOutlined />
-                      </button>
-                      <button type="button" className={`${styles.uploadBtn} ${styles.traceBtn}`} title="查看AI记录" onClick={() => openTraceCenter()} disabled={isTyping || uploadingFile}>
-                        AI记录
-                      </button>
-                      <div className={emojiStyles.emojiWrapper} ref={emojiPanelRef}>
-                        <button type="button" className={`${styles.uploadBtn} ${showEmojiPicker ? emojiStyles.emojiActive : ''}`} title="表情" onClick={() => setShowEmojiPicker(v => !v)}>
-                          <SmileOutlined />
-                        </button>
-                        {showEmojiPicker && (
-                          <div className={emojiStyles.emojiPanel}>
-                            <div className={emojiStyles.emojiTabs}>
-                              {EMOJI_GROUPS.map((g, i) => (
-                                <button type="button" key={g.label} className={`${emojiStyles.emojiTabBtn} ${emojiTab === i ? emojiStyles.emojiTabActive : ''}`} onClick={() => setEmojiTab(i)}>{g.label}</button>
-                              ))}
-                            </div>
-                            <div className={emojiStyles.emojiGrid}>
-                              {EMOJI_GROUPS[emojiTab].emojis.map((em, i) => (
-                                <button type="button" key={`${em}-${i}`} className={emojiStyles.emojiItem} onClick={() => handleEmojiSelect(em)}>{em}</button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <input ref={inputRef} type="text" className={styles.chatInput} placeholder="直接说需求，也可以上传采购单据让我自动识别、到货或入库" value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown} disabled={isTyping || uploadingFile} />
-                      <button type="button" className={styles.voiceBtn} title="语音输入" onClick={handleVoiceInput} disabled={isTyping || isRecording} style={{ color: isRecording ? 'var(--xiaoyun-danger)' : undefined }}>
-                        {isRecording ? <LoadingOutlined spin /> : <SoundOutlined />}<span>语音</span>
-                      </button>
-                      <button type="button" className={styles.sendBtn} onClick={() => attachedFile ? void handleSendWithAttachment() : sendWithContext()} disabled={(!inputValue.trim() && !attachedFile) || isTyping || uploadingFile}>
-                        {uploadingFile ? <LoadingOutlined /> : <SendOutlined />}<span>{uploadingFile ? '处理中' : '发送'}</span>
-                      </button>
-                    </div>
-                  </div>
+                  <ChatInputArea
+                    fileInputRef={fileInputRef}
+                    handleFileSelect={handleFileSelect}
+                    previewImage={previewImage}
+                    attachedFile={attachedFile}
+                    setAttachedFile={setAttachedFile}
+                    setPreviewImage={setPreviewImage}
+                    isTyping={isTyping}
+                    uploadingFile={uploadingFile}
+                    isRecording={isRecording}
+                    openTraceCenter={() => openTraceCenter()}
+                    emojiPanelRef={emojiPanelRef}
+                    showEmojiPicker={showEmojiPicker}
+                    setShowEmojiPicker={setShowEmojiPicker}
+                    emojiTab={emojiTab}
+                    setEmojiTab={setEmojiTab}
+                    handleEmojiSelect={handleEmojiSelect}
+                    inputRef={inputRef}
+                    inputValue={inputValue}
+                    setInputValue={setInputValue}
+                    handleKeyDown={handleKeyDown}
+                    handleVoiceInput={handleVoiceInput}
+                    handleSendWithAttachment={handleSendWithAttachment}
+                    sendWithContext={sendWithContext}
+                  />
                 </>
               )}
 
@@ -712,17 +374,16 @@ const GlobalAiAssistant: React.FC = () => {
       )}
 
       {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘 */}
-      <div
-        className={`${cloudStyles.triggerBtn} ${isActiveDrag ? cloudStyles.triggerDragging : ''} ${isDocked && !isOpen && !isTaskPanelOpen ? cloudStyles.triggerDocked : ''} ${isDocked && triggerPos.edge === 'right' ? cloudStyles.triggerDockedRight : ''}`}
-        style={{ left: triggerPos.x, top: triggerPos.y }}
+      <FloatingTrigger
+        triggerPos={triggerPos}
+        isActiveDrag={isActiveDrag}
+        isDocked={isDocked}
+        isOpen={isOpen}
+        isTaskPanelOpen={isTaskPanelOpen}
+        visiblePendingCount={visiblePendingItems.length}
         onMouseDown={handleTriggerMouseDown}
-        title="召唤小云智能助手"
-      >
-        <CuteCloudTrigger size={56} active={isOpen || isTaskPanelOpen} />
-        {!isOpen && !isTaskPanelOpen && visiblePendingItems.length > 0 && (
-          <span className={cloudStyles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
-        )}
-      </div>
+        onBadgeClick={(e) => { e.stopPropagation(); openTaskPanel(); }}
+      />
 
       <SampleLoanModal
         visible={sampleLoanModalVisible}

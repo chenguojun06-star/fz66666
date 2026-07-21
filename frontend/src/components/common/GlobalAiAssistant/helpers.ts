@@ -1,3 +1,6 @@
+import type { CSSProperties } from 'react';
+import type { Message } from './types';
+
 export const SUPER_ADMIN_ONLY_TOOLS = new Set([
   'tool_critic_evolution',
   'tool_ai_self_optimize_report',
@@ -158,4 +161,51 @@ export function buildReportInsight(label: string, data: any): string {
   lines.push('');
   lines.push('下方看板展示完整数据，点击底部按钮可下载 Excel 完整版。');
   return lines.join('\n');
+}
+
+/** 规范化后端推送的 TraceableAdvice 载荷，校验失败返回 null */
+export function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const raw = payload as Record<string, unknown>;
+  const title = String(raw.title || '').trim();
+  if (!title) return null;
+  return {
+    traceId: String(raw.traceId || ''),
+    title,
+    summary: String(raw.summary || '系统发来了一条智能建议。'),
+    reasoningChain: Array.isArray(raw.reasoningChain)
+      ? raw.reasoningChain.map(item => String(item || '')).filter(Boolean)
+      : [],
+    proposedActions: Array.isArray(raw.proposedActions)
+      ? raw.proposedActions
+        .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+        .map((item) => ({
+          label: String(item.label || '执行'),
+          actionCommand: String(item.actionCommand || ''),
+          actionParams: item.actionParams && typeof item.actionParams === 'object'
+            ? item.actionParams as Record<string, unknown>
+            : undefined,
+          riskWarning: item.riskWarning != null ? String(item.riskWarning) : undefined,
+        }))
+      : [],
+    confidenceScore: typeof raw.confidenceScore === 'number' ? raw.confidenceScore : undefined,
+  };
+}
+
+/** 根据浮标边缘侧计算面板定位样式 */
+export function computePanelStyle(
+  triggerEdge: 'left' | 'right',
+  width: number,
+  height: number,
+): CSSProperties {
+  return {
+    position: 'fixed' as const,
+    zIndex: 9998,
+    bottom: 16,
+    width,
+    height,
+    ...(triggerEdge === 'left'
+      ? { left: 16, transformOrigin: 'bottom left' }
+      : { right: 16, transformOrigin: 'bottom right' }),
+  };
 }
