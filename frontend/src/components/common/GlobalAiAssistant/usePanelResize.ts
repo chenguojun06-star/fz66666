@@ -15,7 +15,7 @@ function loadSavedSize(): PanelSize {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw && SIZE_ORDER.includes(raw as PanelSize)) return raw as PanelSize;
-  } catch {}
+  } catch { /* localStorage 不可用，忽略 */ }
   return 'small';
 }
 
@@ -23,7 +23,7 @@ export function usePanelResize() {
   const [size, setSize] = useState<PanelSize>(loadSavedSize);
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, size); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, size); } catch { /* localStorage 不可用，忽略 */ }
   }, [size]);
 
   const cycleSize = useCallback(() => {

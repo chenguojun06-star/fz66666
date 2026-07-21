@@ -209,7 +209,7 @@ const MaterialDatabasePage: React.FC = () => {
     try {
       const res = await api.get<{ code: number; data: string }>('/material-color-card/generate-code');
       if (res.code === 200 && res.data) cardForm.setFieldsValue({ cardCode: res.data, materialType: 'fabric' });
-    } catch {}
+    } catch (e) { console.error('[MaterialDatabase] 生成色卡编号失败:', e); }
     setCardDialogVisible(true);
   };
 
@@ -1039,7 +1039,7 @@ const MaterialDatabasePage: React.FC = () => {
                       try {
                         const url = await uploadCardImage(file);
                         updateCardItem(idx, 'image', url);
-                      } catch {}
+                      } catch (e) { console.error('[MaterialDatabase] 上传色卡图片失败:', e); message.error('上传图片失败'); }
                     }}>上传图片</Button>
                     {item.image && (
                       <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32} style={{ objectFit: 'cover' }} preview />

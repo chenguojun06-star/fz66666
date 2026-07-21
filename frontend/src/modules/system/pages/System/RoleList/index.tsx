@@ -445,7 +445,7 @@ const RoleList: React.FC = () => {
   const handleRemarkConfirm = async (remark: string) => {
     if (!remarkModalState) return;
     setRemarkLoading(true);
-    try { await remarkModalState.onConfirm(remark); setRemarkModalState(null); } catch { } finally { setRemarkLoading(false); }
+    try { await remarkModalState.onConfirm(remark); setRemarkModalState(null); } catch (e) { console.error('[RoleList] 备注确认失败:', e); message.error('操作失败'); } finally { setRemarkLoading(false); }
   };
 
   const handleSave = async () => {

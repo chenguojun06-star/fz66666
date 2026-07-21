@@ -28,7 +28,7 @@ export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDa
         const options = (Array.isArray(records) ? records : []).filter((item: any) => item.dictLabel).map((item: any) => ({ value: item.dictLabel, label: item.dictLabel }));
         setSizeOptions(options);
       }
-    } catch {}
+    } catch (e) { console.error('[useStyleProcessData] 加载尺码字典选项失败:', e); }
   };
 
   const fetchProcess = useCallback(async () => {
@@ -86,12 +86,12 @@ export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDa
         setProcessTemplates(Array.isArray(records) ? records as TemplateLibrary[] : []);
         return;
       }
-    } catch {} finally { setTemplateLoading(false); }
+    } catch (e) { console.error('[useStyleProcessData] 加载工序模板列表失败:', e); } finally { setTemplateLoading(false); }
     try {
       const res = await api.get<{ code: number; data: any[] }>('/template-library/type/process');
       const result = res as any;
       if (result.code === 200) setProcessTemplates(Array.isArray(result.data) ? result.data : []);
-    } catch {}
+    } catch (e) { console.error('[useStyleProcessData] 加载工序模板兜底失败:', e); }
   };
 
   useEffect(() => { fetchProcess(); }, [styleId, fetchProcess]);

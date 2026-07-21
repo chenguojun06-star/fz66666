@@ -7,6 +7,7 @@
  *
  * 注意：services/production/productionApi.ts 已保留 re-export，旧导入路径仍兼容。
  */
+import type { AxiosRequestConfig } from 'axios';
 import api, { type ApiResult } from '../../utils/api';
 import { unwrapApiData } from '../../utils/api/core';
 import { downloadFile } from '../../utils/fileUrl';
@@ -77,6 +78,149 @@ import type {
 
 // 类型定义已提取至 intelligenceTypes.ts，此处 re-export 以保持所有消费方导入兼容
 export * from './intelligenceTypes';
+
+/* ================================================================
+   本地类型定义 — 命令执行引擎 / 采购单据 / 多代理图等接口响应
+================================================================ */
+
+/** 采购单据执行响应（autoExecutePurchaseDoc / replayPurchaseDoc 共用） */
+interface PurchaseDocExecResponse {
+  code: number;
+  data: Record<string, unknown>;
+  message?: string;
+}
+
+/** 待审批命令条目 */
+interface PendingCommandItem {
+  commandId: string;
+  action?: string;
+  targetId?: string;
+  reason?: string;
+  riskLevel?: number;
+  waitingFor?: string[];
+  createdAt?: string;
+  params?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** 待审批命令列表响应 */
+interface PendingCommandsResponse {
+  pending: PendingCommandItem[];
+  totalCount: number;
+}
+
+/** 命令详情 */
+interface CommandDetail {
+  commandId?: string;
+  action?: string;
+  targetId?: string;
+  reason?: string;
+  riskLevel?: number;
+  waitingFor?: string[];
+  createdAt?: string;
+  params?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** 命令执行结果（executeCommand / approveCommand / rejectCommand 共用） */
+interface CommandExecuteResult {
+  commandId?: string;
+  status?: string;
+  message?: string;
+  data?: unknown;
+  cascadedTasks?: number;
+  notifiedRecipients?: string[];
+  [key: string]: unknown;
+}
+
+/** 命令执行入参 */
+interface CommandExecutePayload {
+  commandId?: string;
+  action?: string;
+  targetId?: string;
+  params?: Record<string, unknown>;
+  riskLevel?: number;
+  waitingFor?: string[];
+  reason?: string;
+  [key: string]: unknown;
+}
+
+/** 审计日志查询结果 */
+interface AuditLogQueryResult {
+  rows?: Array<Record<string, unknown>>;
+  total?: number;
+  [key: string]: unknown;
+}
+
+/** 命令工作流历史 */
+interface WorkflowHistoryResult {
+  steps?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+/** 多代理图运行结果 */
+interface MultiAgentGraphResult {
+  route: string;
+  confidenceScore: number;
+  reflection: string;
+  optimizationSuggestion: string;
+  contextSummary: string;
+  success: boolean;
+  errorMessage?: string;
+  executedAt: string;
+  latencyMs: number;
+  specialistResults?: Record<string, string>;
+  nodeTrace?: string[];
+  executionId?: string;
+  digitalTwinSnapshot?: string;
+  [key: string]: unknown;
+}
+
+/** 多代理图历史条目 */
+interface GraphHistoryItem {
+  id: string;
+  scene: string;
+  route: string;
+  confidenceScore: number;
+  status: string;
+  latencyMs: number;
+  createTime: string;
+  userFeedback?: number;
+  [key: string]: unknown;
+}
+
+/** 款式图片搜索结果 */
+interface StyleSearchResult {
+  success: boolean;
+  matchCount: number;
+  matches: Array<{
+    styleNo: string;
+    difficultyLevel: string;
+    difficultyScore: number;
+    similarity: string;
+  }>;
+  error?: string;
+}
+
+/** 票据 OCR 解析结果 */
+interface ReceiptParseResult {
+  imageUrl: string;
+  available: boolean;
+  errorMessage?: string;
+  confidence?: number;
+  amount?: number;
+  invoiceDate?: string;
+  invoiceNo?: string;
+  supplierName?: string;
+  expenseType?: string;
+  taxRate?: string;
+  taxAmount?: number;
+  items?: string[];
+}
+
+/** AxiosRequestConfig 项目扩展（retry 字段已在拦截器 core.ts 中使用） */
+type ApiRequestConfig = AxiosRequestConfig & { retry?: number };
+
 /* ================================================================
    intelligenceApi — 全部智能运营接口
 ================================================================ */
@@ -399,7 +543,7 @@ export const intelligenceApi = {
       .then(async (res) => {
         if (res.status === 401) {
           try { localStorage.removeItem('authToken'); localStorage.removeItem('userId'); } catch { /* ignore */ }
-          const w = window as any;
+          const w = window as unknown as Window & { __appAuthLogoutNavigate?: () => void };
           if (typeof w.__appAuthLogoutNavigate === 'function') w.__appAuthLogoutNavigate();
           else window.location.href = '/login';
           onError('登录已过期，请重新登录');
@@ -577,17 +721,22 @@ export const intelligenceApi = {
     warehouseLocation?: string;
     confirmInbound?: boolean;
   }): Promise<Record<string, unknown>> => {
-    const resp = await api.post<{ code: number; data: Record<string, unknown>; message?: string }>('/production/purchase/auto-execute-doc', payload);
-    const raw = (resp as unknown as { data?: { code?: number; data?: Record<string, unknown>; message?: string } }).data;
-    if (raw?.code && raw.code !== 200) throw new Error(raw.message ?? '采购单据自动执行失败');
-    return raw?.data ?? (resp as unknown as { data: Record<string, unknown> }).data;
+    const resp = await api.post<PurchaseDocExecResponse>('/production/purchase/auto-execute-doc', payload);
+    // 后端可能返回双层嵌套（resp.data 内层为带 code 的响应），用类型守卫处理
+    const inner = (typeof resp.data === 'object' && resp.data !== null && 'code' in resp.data)
+      ? resp.data as unknown as PurchaseDocExecResponse
+      : undefined;
+    if (inner?.code && inner.code !== 200) throw new Error(inner.message ?? '采购单据自动执行失败');
+    return inner?.data ?? resp.data;
   },
 
   replayPurchaseDoc: async (payload: { docId?: string; orderNo?: string }): Promise<Record<string, unknown>> => {
-    const resp = await api.post<{ code: number; data: Record<string, unknown>; message?: string }>('/production/purchase/replay-doc', payload);
-    const raw = (resp as unknown as { data?: { code?: number; data?: Record<string, unknown>; message?: string } }).data;
-    if (raw?.code && raw.code !== 200) throw new Error(raw.message ?? '采购单据回放失败');
-    return raw?.data ?? (resp as unknown as { data: Record<string, unknown> }).data;
+    const resp = await api.post<PurchaseDocExecResponse>('/production/purchase/replay-doc', payload);
+    const inner = (typeof resp.data === 'object' && resp.data !== null && 'code' in resp.data)
+      ? resp.data as unknown as PurchaseDocExecResponse
+      : undefined;
+    if (inner?.code && inner.code !== 200) throw new Error(inner.message ?? '采购单据回放失败');
+    return inner?.data ?? resp.data;
   },
 
   /** 催单：更新订单的预计出货日期和备注 */
@@ -638,10 +787,10 @@ export const intelligenceApi = {
 
   /** 小云全域待办任务聚合：裁剪/质检/返修/物料/逾期订单/异常/样衣/工资/对账/报销 */
   getMyPendingTasks: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskDTO[] }>('/intelligence/pending-tasks/my', { retry: 0 } as any),
+    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskDTO[] }>('/intelligence/pending-tasks/my', { retry: 0 } as ApiRequestConfig),
 
   getMyPendingTaskSummary: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary', { retry: 0 } as any),
+    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary', { retry: 0 } as ApiRequestConfig),
 
   createTask: (data: Record<string, unknown>) =>
     api.post<{ code: number; data: Record<string, unknown> }>('/intelligence/task-center/tasks', data),
@@ -687,72 +836,72 @@ export const intelligenceApi = {
     api.post<{ code: number; data: number }>('/intelligence/orphan-data/delete', { tableName, ids }),
 
   platformSuperDashboard: (days = 30): Promise<Record<string, unknown>> =>
-    api.get('/intelligence/platform/super-dashboard', { params: { days } }).then((r: any) => r?.data ?? {}),
+    api.get<{ code: number; data: Record<string, unknown> }>('/intelligence/platform/super-dashboard', { params: { days } }).then((r) => r?.data ?? {}),
 
   platformToolPerformance: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get('/intelligence/platform/tool-performance', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/platform/tool-performance', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
 
   platformDecisionAdoption: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get('/intelligence/platform/decision-adoption', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/platform/decision-adoption', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
 
   platformPatrolMttr: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get('/intelligence/platform/patrol-mttr', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/platform/patrol-mttr', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
 
   evolutionPending: (): Promise<Record<string, unknown>[]> =>
-    api.get('/intelligence/evolution/pending').then((r: any) => Array.isArray(r?.data) ? r.data : []),
+    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/evolution/pending').then((r) => Array.isArray(r?.data) ? r.data : []),
 
   evolutionHistory: (days = 30): Promise<Record<string, unknown>[]> =>
-    api.get('/intelligence/evolution/history', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+    api.get<{ code: number; data: Record<string, unknown>[] }>('/intelligence/evolution/history', { params: { days } }).then((r) => Array.isArray(r?.data) ? r.data : []),
 
   evolutionActiveOverrides: (): Promise<Record<string, string>> =>
-    api.get('/intelligence/evolution/active-overrides').then((r: any) => r?.data ?? {}),
+    api.get<{ code: number; data: Record<string, string> }>('/intelligence/evolution/active-overrides').then((r) => r?.data ?? {}),
 
   evolutionApprove: (proposalId: string): Promise<boolean> =>
-    api.post(`/intelligence/evolution/approve/${proposalId}`).then((r: any) => r?.data === true),
+    api.post<{ code: number; data: boolean }>(`/intelligence/evolution/approve/${proposalId}`).then((r) => r?.data === true),
 
   evolutionRollback: (proposalId: string): Promise<boolean> =>
-    api.post(`/intelligence/evolution/rollback/${proposalId}`).then((r: any) => r?.data === true),
+    api.post<{ code: number; data: boolean }>(`/intelligence/evolution/rollback/${proposalId}`).then((r) => r?.data === true),
 
   evolutionTest: (proposalId: string): Promise<Record<string, unknown>> =>
-    api.post(`/intelligence/evolution/test/${proposalId}`).then((r: any) => r?.data ?? {}),
+    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/evolution/test/${proposalId}`).then((r) => r?.data ?? {}),
 
   evolutionDeploy: (proposalId: string): Promise<boolean> =>
-    api.post(`/intelligence/evolution/deploy/${proposalId}`).then((r: any) => r?.data === true),
+    api.post<{ code: number; data: boolean }>(`/intelligence/evolution/deploy/${proposalId}`).then((r) => r?.data === true),
 
   // ── 命令执行引擎 ──
 
-  executeCommand: async (command: any): Promise<any> => {
-    const response = await api.post<ApiResult<any>>('/intelligence/commands/execute', command);
+  executeCommand: async (command: CommandExecutePayload): Promise<CommandExecuteResult> => {
+    const response = await api.post<ApiResult<CommandExecuteResult>>('/intelligence/commands/execute', command);
     return response.data;
   },
 
-  approveCommand: async (commandId: string, body?: { remark?: string }): Promise<any> => {
-    const response = await api.post<ApiResult<any>>(`/intelligence/commands/${commandId}/approve`, body || {});
+  approveCommand: async (commandId: string, body?: { remark?: string }): Promise<CommandExecuteResult> => {
+    const response = await api.post<ApiResult<CommandExecuteResult>>(`/intelligence/commands/${commandId}/approve`, body || {});
     return response.data;
   },
 
-  rejectCommand: async (commandId: string, body: { reason?: string }): Promise<any> => {
-    const response = await api.post<ApiResult<any>>(`/intelligence/commands/${commandId}/reject`, body);
+  rejectCommand: async (commandId: string, body: { reason?: string }): Promise<CommandExecuteResult> => {
+    const response = await api.post<ApiResult<CommandExecuteResult>>(`/intelligence/commands/${commandId}/reject`, body);
     return response.data;
   },
 
-  getPendingCommands: async (): Promise<any> => {
-    const response = await api.get<ApiResult<any>>('/intelligence/commands/pending');
+  getPendingCommands: async (): Promise<PendingCommandsResponse> => {
+    const response = await api.get<ApiResult<PendingCommandsResponse>>('/intelligence/commands/pending');
     if (response == null || (response.code != null && response.code !== 200)) {
       throw new Error(response?.message || '获取待审批命令失败');
     }
     return response.data ?? { pending: [], totalCount: 0 };
   },
 
-  getCommandDetail: async (commandId: string): Promise<any> => {
-    const response = await api.get<ApiResult<any>>(`/intelligence/commands/${commandId}`);
+  getCommandDetail: async (commandId: string): Promise<CommandDetail> => {
+    const response = await api.get<ApiResult<CommandDetail>>(`/intelligence/commands/${commandId}`);
     return response.data;
   },
 
   // ── 审计/统计 ──
 
-  queryAuditLogs: async (options: AuditLogQuery = {}): Promise<any> => {
-    const response = await api.get<ApiResult<any>>('/intelligence/audit-logs', { params: options });
+  queryAuditLogs: async (options: AuditLogQuery = {}): Promise<AuditLogQueryResult> => {
+    const response = await api.get<ApiResult<AuditLogQueryResult>>('/intelligence/audit-logs', { params: options });
     return response.data;
   },
 
@@ -768,18 +917,18 @@ export const intelligenceApi = {
 
   // ── 反馈/配置 ──
 
-  submitFeedback: async (commandId: string, feedback: FeedbackData): Promise<any> => {
+  submitFeedback: async (commandId: string, feedback: FeedbackData): Promise<CommandExecuteResult | null> => {
     try {
-      const response = await api.post<ApiResult<any>>(`/intelligence/commands/${commandId}/feedback`, feedback);
+      const response = await api.post<ApiResult<CommandExecuteResult>>(`/intelligence/commands/${commandId}/feedback`, feedback);
       return response.data;
     } catch {
       return null;
     }
   },
 
-  queryWorkflowHistory: async (commandId: string): Promise<any> => {
+  queryWorkflowHistory: async (commandId: string): Promise<WorkflowHistoryResult | null> => {
     try {
-      const response = await api.get<ApiResult<any>>(`/intelligence/commands/${commandId}/workflow`);
+      const response = await api.get<ApiResult<WorkflowHistoryResult>>(`/intelligence/commands/${commandId}/workflow`);
       return response.data;
     } catch {
       return null;
@@ -801,9 +950,9 @@ export const intelligenceApi = {
     }
   },
 
-  updateExecutionConfig: async (config: Partial<ExecutionConfig>): Promise<any> => {
+  updateExecutionConfig: async (config: Partial<ExecutionConfig>): Promise<ExecutionConfig | null> => {
     try {
-      const response = await api.put<ApiResult<any>>('/intelligence/config', config);
+      const response = await api.put<ApiResult<ExecutionConfig>>('/intelligence/config', config);
       return response.data;
     } catch {
       return null;
@@ -812,13 +961,13 @@ export const intelligenceApi = {
 
   // ── 多代理图 ──
 
-  runMultiAgentGraph: async (params: { scene?: string; orderIds?: string[]; question?: string }): Promise<any> => {
-    const response = await api.post<ApiResult<any>>('/intelligence/multi-agent-graph/run', params);
+  runMultiAgentGraph: async (params: { scene?: string; orderIds?: string[]; question?: string }): Promise<MultiAgentGraphResult> => {
+    const response = await api.post<ApiResult<MultiAgentGraphResult>>('/intelligence/multi-agent-graph/run', params);
     return response.data;
   },
 
-  getGraphHistory: async (page = 1, size = 20): Promise<any[]> => {
-    const response = await api.get<ApiResult<any[]>>('/intelligence/multi-agent-graph/history', { params: { page, size } });
+  getGraphHistory: async (page = 1, size = 20): Promise<GraphHistoryItem[]> => {
+    const response = await api.get<ApiResult<GraphHistoryItem[]>>('/intelligence/multi-agent-graph/history', { params: { page, size } });
     return response.data;
   },
 
@@ -840,59 +989,46 @@ export const intelligenceApi = {
 
   runForecast: async (params: ForecastRequest): Promise<ForecastResult> => {
     const response = await api.post<ApiResult<ForecastResult>>('/intelligence/forecast', params);
-    return response.data as unknown as ForecastResult;
+    return response.data;
   },
 
   visualAnalyze: async (params: VisualAIRequest): Promise<VisualAIResponse> => {
     const response = await api.post<ApiResult<VisualAIResponse>>('/intelligence/visual/analyze', params);
-    return response.data as unknown as VisualAIResponse;
+    return response.data;
   },
 
-  styleSearchByImage: async (imageUrl: string, topK = 5): Promise<{ success: boolean; matchCount: number; matches: Array<{ styleNo: string; difficultyLevel: string; difficultyScore: number; similarity: string }>; error?: string }> => {
-    const response = await api.post<ApiResult<any>>('/intelligence/visual/style-search', { imageUrl, topK });
-    return (response as any)?.data ?? { success: false, matchCount: 0, matches: [] };
+  styleSearchByImage: async (imageUrl: string, topK = 5): Promise<StyleSearchResult> => {
+    const response = await api.post<ApiResult<StyleSearchResult>>('/intelligence/visual/style-search', { imageUrl, topK });
+    return response?.data ?? { success: false, matchCount: 0, matches: [] };
   },
 
   /** 样衣图片结构化字段解析：返回款名建议、颜色列表、品类、季节、图案、面料、袖型、领型、版型 */
   styleParseFromImage: async (imageUrl: string): Promise<StyleFieldParseResult> => {
     const response = await api.post<ApiResult<StyleFieldParseResult>>('/intelligence/visual/style-parse', { imageUrl });
-    return (response as any)?.data ?? { available: false, errorMessage: '返回为空', colors: [], overallConfidence: 0 };
+    return response?.data ?? { available: false, errorMessage: '返回为空', colors: [], overallConfidence: 0 };
   },
 
   /** 发票/收据/采购单据 OCR 识别：返回金额、开票日期、发票号、开票单位、费用类型、税率 */
-  receiptParse: async (imageUrl: string): Promise<{
-    imageUrl: string;
-    available: boolean;
-    errorMessage?: string;
-    confidence?: number;
-    amount?: number;
-    invoiceDate?: string;
-    invoiceNo?: string;
-    supplierName?: string;
-    expenseType?: string;
-    taxRate?: string;
-    taxAmount?: number;
-    items?: string[];
-  }> => {
-    const response = await api.post<ApiResult<any>>('/intelligence/visual/receipt-parse', { imageUrl });
-    return (response as any)?.data ?? { available: false, errorMessage: '返回为空' };
+  receiptParse: async (imageUrl: string): Promise<ReceiptParseResult> => {
+    const response = await api.post<ApiResult<ReceiptParseResult>>('/intelligence/visual/receipt-parse', { imageUrl });
+    return response?.data ?? { imageUrl, available: false, errorMessage: '返回为空' };
   },
 
   // ── 巡检 ──
 
   getPatrolActionsByTarget: async (targetType: string, targetId: string, limit = 10): Promise<PatrolAction[]> => {
     const response = await api.get<ApiResult<PatrolAction[]>>('/intelligence/patrol/actions/by-target', { params: { targetType, targetId, limit } });
-    return (response as any)?.data ?? [];
+    return response?.data ?? [];
   },
 
   getPatrolRecentActions: async (limit = 20): Promise<PatrolAction[]> => {
     const response = await api.get<ApiResult<PatrolAction[]>>('/intelligence/patrol/actions/recent', { params: { limit } });
-    return (response as any)?.data ?? [];
+    return response?.data ?? [];
   },
 
   getPatrolSummary: async (): Promise<PatrolSummary> => {
     const response = await api.get<ApiResult<PatrolSummary>>('/intelligence/patrol/summary');
-    return (response as any)?.data ?? { pendingCount: 0, autoExecutedToday: 0, highRiskPending: 0, recentActions: [] };
+    return response?.data ?? { pendingCount: 0, autoExecutedToday: 0, highRiskPending: 0, recentActions: [] };
   },
 
   approvePatrolAction: async (actionId: number, remark?: string): Promise<void> => {

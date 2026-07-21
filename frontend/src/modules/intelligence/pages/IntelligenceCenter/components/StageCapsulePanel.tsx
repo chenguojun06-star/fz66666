@@ -165,11 +165,11 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
   const navigate = useNavigate();
   const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem('stage_capsule_collapsed') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('stage_capsule_collapsed') === 'true'; } catch { /* localStorage 不可用，忽略 */ return false; }
   });
   const toggleCollapsed = () => setCollapsed(prev => {
     const next = !prev;
-    try { localStorage.setItem('stage_capsule_collapsed', String(next)); } catch {}
+    try { localStorage.setItem('stage_capsule_collapsed', String(next)); } catch { /* localStorage 不可用，忽略 */ }
     return next;
   });
 

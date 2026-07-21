@@ -259,6 +259,14 @@ const SmartAlertBell: React.FC = () => {
     });
   }, [myNotices, fetchMyNotices]);
 
+  // 单条通知标记已读 + 可选回调（如同步本地 dismiss 列表）
+  const handleMarkRead = useCallback((id: number, callback?: () => void) => {
+    sysNoticeApi.markRead(id)
+      .then(() => fetchMyNotices())
+      .catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
+    if (callback) callback();
+  }, [fetchMyNotices]);
+
   // 消除单条事件（当天不再显示，隔天重新检测）
   const dismissEvent = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -557,7 +565,7 @@ const SmartAlertBell: React.FC = () => {
                     }}
                     onClick={() => {
                       if (!n.isRead) {
-                        sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
+                        handleMarkRead(n.id);
                       }
                     }}
                   >
@@ -588,27 +596,25 @@ const SmartAlertBell: React.FC = () => {
                         <UrgeReplyInline
                           urgeRecordId={n.urgeRecordId}
                           orderNo={n.orderNo}
-                          onReplied={() => {
-                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => console.error('标记通知已读失败:', err));
+                          onReplied={() => handleMarkRead(n.id, () => {
                             setDismissedNoticeIds(prev => {
                               const next = new Set([...prev, n.id]);
                               saveDismissedNotices(next);
                               return next;
                             });
-                          }}
+                          })}
                         />
                       )}
                       {n.actionPayload && !n.isRead && !n.urgeRecordId && (
                         <OneClickActionInline
                           notice={n}
-                          onDone={() => {
-                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => console.error('标记通知已读失败:', err));
+                          onDone={() => handleMarkRead(n.id, () => {
                             setDismissedNoticeIds(prev => {
                               const next = new Set([...prev, n.id]);
                               saveDismissedNotices(next);
                               return next;
                             });
-                          }}
+                          })}
                         />
                       )}
                     </div>
@@ -617,11 +623,12 @@ const SmartAlertBell: React.FC = () => {
                         className="sap-notice-read-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
-                          setDismissedNoticeIds(prev => {
-                            const next = new Set([...prev, n.id]);
-                            saveDismissedNotices(next);
-                            return next;
+                          handleMarkRead(n.id, () => {
+                            setDismissedNoticeIds(prev => {
+                              const next = new Set([...prev, n.id]);
+                              saveDismissedNotices(next);
+                              return next;
+                            });
                           });
                         }}
                       >

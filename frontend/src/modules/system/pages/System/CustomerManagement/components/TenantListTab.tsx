@@ -77,11 +77,11 @@ const TenantListTab: React.FC = () => {
       if (tenantId && aiMode === 'platform') {
         try {
           await tenantService.setTenantAiConfig(tenantId, { action: 'provision', apiKey: values.tenantAiApiKey || 'platform-default' });
-        } catch { }
+        } catch (e) { console.error('[TenantListTab] 配置平台AI失败:', e); }
       } else if (tenantId && aiMode === 'tenant' && values.tenantAiApiKey) {
         try {
           await tenantService.setTenantAiConfig(tenantId, { action: 'provision', apiKey: values.tenantAiApiKey });
-        } catch { }
+        } catch (e) { console.error('[TenantListTab] 配置租户AI失败:', e); }
       }
       message.success('租户创建成功');
       modal.close(); form.resetFields(); fetchData();

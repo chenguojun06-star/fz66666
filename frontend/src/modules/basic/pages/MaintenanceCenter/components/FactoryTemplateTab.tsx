@@ -102,7 +102,7 @@ const FactoryTemplateTab: React.FC = () => {
         if (labels.length) {
           content = JSON.stringify({ sizes: sortSizeNames(labels), parts: [{ partName: '', measureMethod: '', tolerance: 0.5, values: {} }] });
         }
-      } catch {}
+      } catch (e) { console.error('[FactoryTemplateTab] 加载尺码字典失败:', e); }
     }
     const newTpl: Partial<TemplateLibrary> = {
       templateType: type,

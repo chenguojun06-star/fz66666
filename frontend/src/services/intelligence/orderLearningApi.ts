@@ -12,7 +12,7 @@ const readEndpointUnavailable = () => {
       recommendationEndpointUnavailable = true;
       return true;
     }
-  } catch {}
+  } catch { /* sessionStorage 不可用，忽略 */ }
   return false;
 };
 
@@ -20,7 +20,7 @@ const markEndpointUnavailable = () => {
   recommendationEndpointUnavailable = true;
   try {
     sessionStorage.setItem(ENDPOINT_UNAVAILABLE_STORAGE_KEY, '1');
-  } catch {}
+  } catch { /* sessionStorage 不可用，忽略 */ }
 };
 
 const normalizeParamsKey = (params: { styleNo: string; orderQuantity?: number; factoryMode?: string; pricingMode?: string; currentUnitPrice?: number }) =>

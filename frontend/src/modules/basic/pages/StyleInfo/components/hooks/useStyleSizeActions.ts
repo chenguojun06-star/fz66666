@@ -56,10 +56,8 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
     gradingDraftZones, setGradingDraftZones,
     setGradingConfigOpen, setAddSizeOpen,
     newSizeName, setNewSizeName, newGroupName, setNewGroupName,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    sizeTemplateKey, setSizeTemplateKey,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    fetchSize, fetchSizeDictOptions,
+    setSizeTemplateKey,
+    fetchSize,
   } = deps;
 
   const { message } = App.useApp();

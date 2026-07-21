@@ -128,7 +128,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       setActiveTab('all');
       setImageSearchMode(false);
       setIsDragging(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 

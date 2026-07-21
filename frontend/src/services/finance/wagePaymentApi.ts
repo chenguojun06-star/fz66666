@@ -196,11 +196,16 @@ export const wagePaymentApi = {
     api.delete(`/finance/payment-accounts/${id}`),
 
   // ---- 工资支付 ----
+  // P0-5/P0-6 修复（D-023）：与小程序 miniprogram/utils/api-modules/finance.js 对齐，
+  //   initiatePayment / confirmOffline 统一走 -with-callback 路径，自动回写上游单据状态。
+  //   后端 WagePaymentController 同时提供 /initiate 和 /initiate-with-callback 两个端点，
+  //   两者校验逻辑相同，with-callback 版本会额外触发上游（工资结算/订单结算/工厂对账）状态回写。
+  //   小程序版本只走 with-callback，PC 端历史遗留两个端点（hasBiz 分支选择），现在统一走 with-callback。
   initiatePayment: (request: PaymentInitiateRequest) =>
-    api.post('/finance/wage-payments/initiate', request),
+    api.post('/finance/wage-payments/initiate-with-callback', request),
 
   confirmOffline: (id: string, proofUrl?: string, remark?: string) =>
-    api.post(`/finance/wage-payments/${id}/confirm-offline`, { proofUrl, remark }),
+    api.post(`/finance/wage-payments/${id}/confirm-offline-with-callback`, { proofUrl, remark }),
 
   confirmReceived: (id: string) =>
     api.post(`/finance/wage-payments/${id}/confirm-received`),

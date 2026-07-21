@@ -75,13 +75,15 @@ export default function ScanPatternPage() {
     try {
       let result;
       if (operationType === 'REVIEW') {
-        const res = await api.production.reviewPattern(d.patternId, 'APPROVED', remarkStr);
+        // P0-3 修复：与小程序对齐，传 images 空数组（页面暂无图片上传，预留接口）
+        const res = await api.production.reviewPattern(d.patternId, 'APPROVED', remarkStr, []);
         result = res ? { success: true, message: '样衣审核通过' } : { success: false, message: '审核提交失败' };
       } else if (operationType === 'WAREHOUSE_IN') {
         const latestDetail = await api.production.getPatternDetail(d.patternId);
         const reviewApproved = latestDetail?.reviewStatus === 'APPROVED' || latestDetail?.reviewResult === 'APPROVED';
-        if (!reviewApproved) await api.production.reviewPattern(d.patternId, 'APPROVED', remarkStr);
-        const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '', remarkStr);
+        if (!reviewApproved) await api.production.reviewPattern(d.patternId, 'APPROVED', remarkStr, []);
+        // P0-2 修复：与小程序对齐，传 warehouseAreaId / warehouseLocationCode（页面暂无字段，传空字符串占位）
+        const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '', '', '', remarkStr);
         result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
       } else if (operationType === 'RECEIVE') {
         // 工序级扫码领取（旧的 receivePattern 端点已删除，统一走 submitPatternScan）

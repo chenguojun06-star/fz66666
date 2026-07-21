@@ -23,7 +23,7 @@ import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCar
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
@@ -69,8 +69,6 @@ const ProductionList: React.FC = () => {
   const isFactoryAccount = !!(user as any)?.factoryId;
   const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const location = useLocation();
   const { factoryTypeOptions } = useOrganizationFilterOptions();
 
   // 延期环节数据（内联到智能提示标签）
@@ -90,22 +88,15 @@ const ProductionList: React.FC = () => {
   const {
     queryParams, setQueryParams, dateRange, setDateRange,
     sortField, sortOrder, handleSort,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    productionList, setProductionList, selectedRowKeys, setSelectedRowKeys,
+    productionList, selectedRowKeys, setSelectedRowKeys,
     _selectedRows, setSelectedRows, loading, total,
     viewMode, setViewMode,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    showDelayedOnly, setShowDelayedOnly, activeStatFilter, setActiveStatFilter,
+    setShowDelayedOnly, activeStatFilter, setActiveStatFilter,
     smartQueueFilter, setSmartQueueFilter,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    smartError, showSmartErrorNotice, reportSmartError,
+    smartError, showSmartErrorNotice,
     orderFocusRef, calcCardProgress,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    deliveryRiskMap, stagnantOrderIds, smartActionItems, smartQueueOrders,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    fetchProductionList, sortedProductionList, urlFocusApplied,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    wsRefreshRef,
+    deliveryRiskMap, stagnantOrderIds, smartActionItems,
+    fetchProductionList, sortedProductionList,
     focusOrderIds, setFocusOrderIds,
   } = useProductionListData();
 
@@ -142,8 +133,6 @@ const ProductionList: React.FC = () => {
     transferFactoryId, setTransferFactoryId,
     transferFactoryMessage, setTransferFactoryMessage, transferFactories, transferFactorySearching,
     transferSubmitting, submitTransfer, searchTransferUsers, searchTransferFactories,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            handleTransferOrder,
     transferBundles, transferBundlesLoading, transferSelectedBundleIds, setTransferSelectedBundleIds,
     transferProcesses, transferProcessesLoading, transferSelectedProcessCodes, setTransferSelectedProcessCodes,
     closeTransferModal,

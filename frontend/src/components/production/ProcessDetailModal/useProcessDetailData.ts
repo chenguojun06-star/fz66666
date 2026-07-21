@@ -40,9 +40,11 @@ export const useProcessDetailData = (
       setTemplateNodesList([]);
       return;
     }
+    let cancelled = false;
     (async () => {
       try {
         const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
+        if (cancelled) return;
         const rows: any[] = Array.isArray(res?.data) ? res.data : [];
         const pm = new Map<string, number>();
         const nl: TemplateNode[] = [];
@@ -58,12 +60,18 @@ export const useProcessDetailData = (
             description: String(n?.description || '').trim(),
           });
         });
+        if (cancelled) return;
         setTemplatePriceMap(pm);
         setTemplateNodesList(nl);
-      } catch {
+      } catch (e) {
+        if (cancelled) return;
+        console.error('[useProcessDetailData] 加载模板节点单价失败:', e);
         setTemplateNodesList([]);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [visible, record]);
 
   useEffect(() => {
@@ -78,12 +86,14 @@ export const useProcessDetailData = (
       setSecondaryProcessDescriptionMap(new Map());
       return;
     }
+    let cancelled = false;
     (async () => {
       try {
         const [processRes, secondaryRes] = await Promise.all([
           api.get(`/style/process/list?styleId=${styleId}`),
           api.get(`/style/secondary-process/list?styleId=${styleId}`),
         ]);
+        if (cancelled) return;
         const processRows = Array.isArray(processRes?.data) ? processRes.data : [];
         const secondaryRows = Array.isArray(secondaryRes?.data) ? secondaryRes.data : [];
         const nextProcessMap = new Map<string, string>();
@@ -98,13 +108,19 @@ export const useProcessDetailData = (
           const description = String(item?.description || '').trim();
           if (name && description) nextSecondaryMap.set(name, description);
         });
+        if (cancelled) return;
         setStyleProcessDescriptionMap(nextProcessMap);
         setSecondaryProcessDescriptionMap(nextSecondaryMap);
-      } catch {
+      } catch (e) {
+        if (cancelled) return;
+        console.error('[useProcessDetailData] 加载工序描述失败:', e);
         setStyleProcessDescriptionMap(new Map());
         setSecondaryProcessDescriptionMap(new Map());
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [visible, record?.styleId]);
 
   const loadCuttingData = useCallback(async () => {
@@ -151,12 +167,15 @@ export const useProcessDetailData = (
       setWarehousingSkuRows([]);
       return;
     }
+    let cancelled = false;
     (async () => {
       try {
         const res = await api.get<ApiResult<any[]>>('/production/scan/sku/query', {
           params: { type: 'list', orderNo: record.orderNo },
         });
+        if (cancelled) return;
         const rows: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+        if (cancelled) return;
         setWarehousingSkuRows(
           rows.map((r: any) => ({
             color: String(r.color || '-'),
@@ -164,10 +183,15 @@ export const useProcessDetailData = (
             quantity: Number(r.quantity) || 0,
           })),
         );
-      } catch {
+      } catch (e) {
+        if (cancelled) return;
+        console.error('[useProcessDetailData] 加载入库SKU失败:', e);
         setWarehousingSkuRows([]);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [visible, processType, record?.orderNo]);
 
   const cuttingSizeItems = useMemo(() => {

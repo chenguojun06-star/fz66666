@@ -84,7 +84,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.log('[WS] 连接建立');
+      console.debug('[WS] 连接建立');
       setConnected(true);
       reconnectAttemptsRef.current = 0;
     };
@@ -128,13 +128,13 @@ export function useWebSocket(options: UseWebSocketOptions) {
       // 主动关闭时不重连（React StrictMode 卸载或组件销毁）
       if (manualCloseRef.current) return;
 
-      console.log('[WS] 连接关闭:', event.code);
+      console.debug('[WS] 连接关闭:', event.code);
 
       if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
         // 指数退避：5s -> 10s -> 20s -> 30s（上限30s）
         const delay = Math.min(reconnectInterval * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
-        console.log(`[WS] ${delay / 1000}s 后重连（第${reconnectAttemptsRef.current}次）`);
+        console.debug(`[WS] ${delay / 1000}s 后重连（第${reconnectAttemptsRef.current}次）`);
         reconnectTimerRef.current = setTimeout(connect, delay);
       }
     };

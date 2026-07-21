@@ -330,7 +330,7 @@ export const normalizePatternProductionSnapshot = (item: Record<string, unknown>
         }
         colors = Array.from(colorSet);
       }
-    } catch {}
+    } catch (e) { console.error('[styleTableViewUtils] 解析颜色矩阵失败:', e); }
   }
 
   if (colors.length === 0 && item.color && typeof item.color === 'string') {

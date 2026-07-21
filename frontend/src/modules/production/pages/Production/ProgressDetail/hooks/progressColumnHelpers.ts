@@ -1,10 +1,4 @@
 import dayjs from 'dayjs';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import OrderInfoGrid from '@/components/common/OrderInfoGrid';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { ProductionOrder } from '@/types/production';
 
 function calcHealthScore(record: ProductionOrder): { score: number; level: 'good'|'warn'|'danger' } {

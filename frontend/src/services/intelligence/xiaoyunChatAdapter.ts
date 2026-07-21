@@ -119,7 +119,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     try {
       const parsed = JSON.parse(match[1].trim());
       if (Array.isArray(parsed)) clarificationHints = parsed.map(String);
-    } catch {}
+    } catch (e) { console.error('[xiaoyunChatAdapter] CLARIFICATION JSON解析失败:', e); }
   }
 
   let overdueFactoryCard: OverdueFactoryCardData | undefined;
@@ -147,7 +147,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
           overdueFactoryCard = parsed as unknown as OverdueFactoryCardData;
         }
       }
-    } catch {}
+    } catch (e) { console.error('[xiaoyunChatAdapter] OVERDUE_FACTORY JSON解析失败:', e); }
   }
 
   let reportPreview: ReportPreviewData | undefined;
@@ -160,7 +160,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
         reportPreview = parsed as ReportPreviewData;
         reportType = (parsed.reportType as 'daily' | 'weekly' | 'monthly') || 'daily';
       }
-    } catch {}
+    } catch (e) { console.error('[xiaoyunChatAdapter] REPORT_PREVIEW JSON解析失败:', e); }
   }
 
   const displayText = rawText

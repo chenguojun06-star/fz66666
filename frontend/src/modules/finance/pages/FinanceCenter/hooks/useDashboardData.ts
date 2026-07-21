@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { App } from 'antd';
 import api from '@/utils/api';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -10,8 +9,6 @@ import { getDateRanges, calcChange, generateTrendData } from '../dashboardUtils'
 import { Dayjs } from 'dayjs';
 
 export const useDashboardData = () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRangeType>('month');
   const [customRange, setCustomRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);

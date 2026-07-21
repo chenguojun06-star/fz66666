@@ -34,8 +34,7 @@ const PayrollOperatorSummary: React.FC = () => {
         detailSelectedKeys, setDetailSelectedKeys,
         selectedRowKeys, setSelectedRowKeys,
         printModalVisible, setPrintModalVisible,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        totalQuantity, totalAmount, sortedRows, filteredRows, summaryRows,
+        totalAmount, filteredRows, summaryRows,
         internalOrders, internalOrdersLoading, fetchInternalOrders,
         workerEffList, workerEffLoading, workerEffFetched, fetchWorkerEfficiency,
         doFetchData, fetchData, reset,

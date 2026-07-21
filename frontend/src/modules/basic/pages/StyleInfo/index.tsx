@@ -43,10 +43,6 @@ const StyleInfoDetailPage: React.FC = () => {
     currentStyle,
     setCurrentStyle,
     form,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    activeTabKey,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    setActiveTabKey,
     editLocked,
     setEditLocked,
     isNewPage,

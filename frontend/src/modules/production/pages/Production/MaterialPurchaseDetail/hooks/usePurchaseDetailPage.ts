@@ -2,9 +2,31 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Form, App } from 'antd';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
-import type { MaterialPurchase } from '@/types/production';
+import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { normalizeMaterialQuantity } from '../../MaterialPurchase/utils';
+
+// ===== API 响应类型 =====
+interface ApiResult<T> {
+  code: number;
+  data: T;
+  message?: string;
+}
+
+interface PageResult<T> {
+  records: T[];
+  total?: number;
+}
+
+type MaterialPurchaseListResponse = ApiResult<PageResult<MaterialPurchase>> & { records?: MaterialPurchase[] };
+
+interface PurchaseListParams {
+  orderNo?: string;
+  styleNo?: string;
+  sourceType?: string;
+  page: number;
+  pageSize: number;
+}
 
 const _postSave = (payload: Record<string, unknown>) =>
   api.post<{ code: number; message?: string }>('/production/purchase', payload);
@@ -28,7 +50,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   const { modal, message } = App.useApp();
 
   const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<ProductionOrder | null>(null);
   const [purchaseList, setPurchaseList] = useState<MaterialPurchase[]>([]);
 
   const [receiveVisible, setReceiveVisible] = useState(false);
@@ -94,25 +116,24 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   const loadData = useCallback(async () => {
     if (!styleNoParam) return;
     setLoading(true);
-    let orderRecord: any = null;
+    let orderRecord: ProductionOrder | null = null;
     try {
       try {
-        const orderRes = await api.get('/production/order/list', {
+        const orderRes = await api.get<ApiResult<PageResult<ProductionOrder>>>('/production/order/list', {
           params: { styleNo: styleNoParam, page: 1, pageSize: 1 },
         });
-        const orderResult = orderRes as any;
-        const orders = (orderResult?.data as any)?.records || [];
+        const orders = orderRes?.data?.records || [];
         orderRecord = orders.length > 0 ? orders[0] : null;
         setOrder(orderRecord);
       } catch {
         setOrder(null);
       }
 
-      const params: Record<string, any> = orderNoParam
+      const params: PurchaseListParams = orderNoParam
         ? { orderNo: orderNoParam, page: 1, pageSize: 1000 }
         : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
-      const purchaseRes = await api.get('/production/purchase/list', { params });
-      const result = purchaseRes as any;
+      const purchaseRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', { params });
+      const result = purchaseRes;
       let records: MaterialPurchase[] = [];
       if (result?.code === 200) {
         records = result?.data?.records || [];
@@ -122,12 +143,12 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
 
       if (records.length === 0 && orderRecord?.id) {
         try {
-          const previewRes = await api.get<{ code: number; data: MaterialPurchase[] }>(
+          const previewRes = await api.get<ApiResult<MaterialPurchase[]>>(
             '/production/purchase/demand/preview',
             { params: { orderId: orderRecord.id } }
           );
-          if ((previewRes as any)?.code === 200 && Array.isArray((previewRes as any)?.data)) {
-            records = (previewRes as any).data;
+          if (previewRes?.code === 200 && Array.isArray(previewRes?.data)) {
+            records = previewRes.data;
           }
         } catch { /* 预览不可用则用空列表 */ }
       }
@@ -136,11 +157,11 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
         const styleNo = String(orderRecord?.styleNo || '').trim();
         if (styleNo) {
           try {
-            const styleRes = await api.get('/production/purchase/list', {
+            const styleRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', {
               params: { styleNo, sourceType: 'sample', page: 1, pageSize: 1000 },
             });
-            if ((styleRes as any)?.code === 200) {
-              const styleRecords = (styleRes as any)?.data?.records || [];
+            if (styleRes?.code === 200) {
+              const styleRecords = styleRes?.data?.records || [];
               if (styleRecords.length > 0) {
                 records = styleRecords;
               }
@@ -223,7 +244,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     setEditableData((prev) => [...prev, newRow]);
   }, [orderNoParam, order?.orderNo, styleNoParam]);
 
-  const handleUpdateRow = useCallback((rowId: string, field: string, value: any) => {
+  const handleUpdateRow = useCallback((rowId: string, field: keyof MaterialPurchase, value: unknown) => {
     setEditableData((prev) =>
       prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r))
     );
@@ -242,12 +263,12 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          const res = await api.delete(`/production/purchase/${record.id}`);
-          if ((res as any).code === 200) {
+          const res = await api.delete<ApiResult<unknown>>(`/production/purchase/${record.id}`);
+          if (res.code === 200) {
             message.success('删除成功');
             await loadData();
           } else {
-            message.error((res as any).message || '删除失败');
+            message.error(res.message || '删除失败');
           }
         } catch {
           message.error('删除失败，请重试');
@@ -297,7 +318,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
           ...rest,
           totalAmount,
           status: r.status || MATERIAL_PURCHASE_STATUS.PENDING,
-          sourceType: (r as any).sourceType || 'order',
+          sourceType: r.sourceType || 'order',
           orderNo: r.orderNo || orderNoParam || order?.orderNo || '',
           styleNo: r.styleNo || styleNoParam,
           ...(isTemp ? {} : { id }),
@@ -354,8 +375,8 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
           unitPrice: Number(record.unitPrice || r.unitPrice || 0),
           supplierName: String(record.supplierName || r.supplierName || ''),
           supplierId: String(record.supplierId || r.supplierId || ''),
-          supplierContactPerson: String(record.supplierContactPerson || (r as any).supplierContactPerson || ''),
-          supplierContactPhone: String(record.supplierContactPhone || (r as any).supplierContactPhone || ''),
+          supplierContactPerson: String(record.supplierContactPerson || r['supplierContactPerson'] || ''),
+          supplierContactPhone: String(record.supplierContactPhone || r['supplierContactPhone'] || ''),
         };
       })
     );
@@ -372,7 +393,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
 
   const handleCreateMaterial = useCallback(async (values: Record<string, unknown>) => {
     try {
-      const res = await api.post('/material/database', values);
+      const res = await api.post<ApiResult<{ id?: string }>>('/material/database', values);
       if (res.code === 200 && materialTargetRowId) {
         fillRowFromMaterial(materialTargetRowId, {
           ...values,
@@ -547,7 +568,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     const returnable = purchaseList.filter((p) => {
       const s = String(p.status || '').toLowerCase();
       return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
-        && Number((p as any)?.returnConfirmed || 0) !== 1;
+        && Number(p.returnConfirmed ? 1 : 0) !== 1;
     });
     if (!returnable.length) {
       message.info('没有可回料确认的物料');
@@ -596,12 +617,12 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          const res = await api.post('/production/purchase/return-confirm/reset', { purchaseId: record.id });
-          if ((res as any).code === 200) {
+          const res = await api.post<ApiResult<unknown>>('/production/purchase/return-confirm/reset', { purchaseId: record.id });
+          if (res.code === 200) {
             message.success('退回成功');
             await loadData();
           } else {
-            message.error((res as any).message || '退回失败');
+            message.error(res.message || '退回失败');
           }
         } catch {
           message.error('退回失败');
@@ -613,17 +634,17 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   const handleWarehousePick = async (record: MaterialPurchase, pickQty: number) => {
     const receiverName = String(user?.name || user?.username || '').trim();
     try {
-      const res = await api.post('/production/purchase/warehouse-pick', {
+      const res = await api.post<ApiResult<unknown>>('/production/purchase/warehouse-pick', {
         purchaseId: record.id,
         pickQty,
         receiverId: user?.id || '',
         receiverName,
       });
-      if ((res as any).code === 200) {
+      if (res.code === 200) {
         message.success('出库领取成功');
         await loadData();
       } else {
-        message.error((res as any).message || '出库领取失败');
+        message.error(res.message || '出库领取失败');
       }
     } catch {
       message.error('出库领取失败');
@@ -647,7 +668,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     try {
       const values = await inboundForm.validateFields();
       const operatorName = String(user?.name || user?.username || '').trim();
-      const res = await api.post('/production/material/inbound/confirm-arrival', {
+      const res = await api.post<ApiResult<unknown>>('/production/material/inbound/confirm-arrival', {
         purchaseId: inboundRecord.id,
         arrivedQuantity: values.arrivedQuantity,
         operatorId: user?.id || '',
@@ -655,13 +676,13 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
         warehouseLocation: values.warehouseLocation,
         remark: values.remark,
       });
-      if ((res as any).code === 200) {
+      if (res.code === 200) {
         message.success('到货入库成功，库存已更新');
         setInboundVisible(false);
         inboundForm.resetFields();
         await loadData();
       } else {
-        message.error((res as any).message || '到货入库失败');
+        message.error(res.message || '到货入库失败');
       }
     } catch (error: unknown) {
       const formError = error as { errorFields?: Array<{ errors?: string[] }> };

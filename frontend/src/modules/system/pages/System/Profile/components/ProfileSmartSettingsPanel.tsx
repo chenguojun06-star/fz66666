@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Card, Form, InputNumber, Select, Space, Spin, Switch, Typography } from 'antd';
-import { DownOutlined, MessageOutlined, TeamOutlined, MobileOutlined } from '@ant-design/icons';
-import type { SmartFeatureKey, MiniprogramMenuKey } from '@/smart/core/featureFlags';
-import { MINIPROGRAM_MENU_KEYS } from '@/smart/core/featureFlags';
+import { DownOutlined, MessageOutlined, TeamOutlined } from '@ant-design/icons';
+import type { SmartFeatureKey } from '@/smart/core/featureFlags';
 import type { TenantIntelligenceProfilePayload, TenantIntelligenceProfileResponse } from '@/services/system/tenantIntelligenceProfileService';
 
 const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: string }> = {
@@ -86,53 +85,6 @@ export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
   'outstock.priceAdjustRequireReason',
 ];
 
-const MINIPROGRAM_MENU_LABELS: Record<MiniprogramMenuKey, { title: string; desc: string }> = {
-  'miniprogram.menu.smartOps': {
-    title: '运营看板',
-    desc: '小程序首页显示运营看板入口（仍需租户老板角色才可见）。',
-  },
-  'miniprogram.menu.dashboard': {
-    title: '生产管理',
-    desc: '小程序首页显示生产管理入口（仍需管理员角色才可见）。',
-  },
-  'miniprogram.menu.orderCreate': {
-    title: '下单管理',
-    desc: '小程序首页显示下单管理入口（仍需管理员/工厂主角色才可见）。',
-  },
-  'miniprogram.menu.production': {
-    title: '质检通知',
-    desc: '小程序首页显示质检通知入口。',
-  },
-  'miniprogram.menu.quality': {
-    title: '生产扫码',
-    desc: '小程序首页显示生产扫码入口。',
-  },
-  'miniprogram.menu.bundleSplit': {
-    title: '菲号单价',
-    desc: '小程序首页显示菲号单价入口。',
-  },
-  'miniprogram.menu.cuttingDetail': {
-    title: '裁剪明细',
-    desc: '小程序首页显示裁剪明细入口。',
-  },
-  'miniprogram.menu.history': {
-    title: '扫码历史',
-    desc: '小程序首页显示扫码历史入口。',
-  },
-  'miniprogram.menu.factoryShipment': {
-    title: '外发工厂',
-    desc: '小程序首页显示外发工厂入口。',
-  },
-  'miniprogram.menu.advance': {
-    title: '员工借支',
-    desc: '小程序首页显示员工借支入口。',
-  },
-  'miniprogram.menu.wagePayment': {
-    title: '收付款中心',
-    desc: '小程序首页显示收付款中心入口。',
-  },
-};
-
 type Props = {
   canManageSmartFlags: boolean;
   smartFlags: Record<SmartFeatureKey, boolean>;
@@ -149,12 +101,6 @@ type Props = {
   onRefreshProfile: () => void;
   onResetProfile: () => void;
   onSaveProfile: () => void;
-  miniprogramMenuFlags: Record<MiniprogramMenuKey, boolean>;
-  savingMiniprogramMenuFlags: boolean;
-  onToggleMiniprogramMenu: (key: MiniprogramMenuKey, enabled: boolean) => void;
-  onEnableAllMiniprogramMenus: () => void;
-  onDisableAllMiniprogramMenus: () => void;
-  onResetMiniprogramMenus: () => void;
 };
 
 const ProfileSmartSettingsPanel: React.FC<Props> = ({
@@ -173,17 +119,8 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
   onRefreshProfile,
   onResetProfile,
   onSaveProfile,
-  miniprogramMenuFlags,
-  savingMiniprogramMenuFlags,
-  onToggleMiniprogramMenu,
-  onEnableAllMiniprogramMenus,
-  onDisableAllMiniprogramMenus,
-  onResetMiniprogramMenus,
 }) => {
   const [smartFlagsCollapsed, setSmartFlagsCollapsed] = useState(true);
-  const [miniprogramMenuCollapsed, setMiniprogramMenuCollapsed] = useState(true);
-
-  const miniprogramMenuEnabledCount = MINIPROGRAM_MENU_KEYS.filter((key) => miniprogramMenuFlags[key]).length;
 
   return (
     <div>
@@ -322,66 +259,6 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             )}
           </Spin>
         </Card>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}
-          onClick={() => setMiniprogramMenuCollapsed(v => !v)}
-        >
-          <MobileOutlined style={{ color: 'var(--primary-color)' }} />
-          <span style={{ fontWeight: 600, fontSize: 15 }}>小程序菜单管理</span>
-          <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-            （当前已显示 {miniprogramMenuEnabledCount}/{MINIPROGRAM_MENU_KEYS.length}）
-          </Typography.Text>
-          <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: miniprogramMenuCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
-        </div>
-        {!miniprogramMenuCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-          <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-              控制小程序「我的」页面各菜单入口的显示与隐藏，关闭后该租户下所有用户均不可见。
-            </Typography.Text>
-            <Space>
-              <Button disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onEnableAllMiniprogramMenus}>全部显示</Button>
-              <Button disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onDisableAllMiniprogramMenus}>全部隐藏</Button>
-              <Button disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onResetMiniprogramMenus}>恢复默认</Button>
-            </Space>
-          </Space>
-
-          {MINIPROGRAM_MENU_KEYS.map((menuKey) => {
-            const meta = MINIPROGRAM_MENU_LABELS[menuKey];
-            return (
-              <div
-                key={menuKey}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  padding: '8px 0',
-                  borderTop: '1px solid var(--color-border-light)',
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{meta.title}</div>
-                  <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-                    {meta.desc}
-                  </Typography.Text>
-                </div>
-                <Switch
-                  checked={Boolean(miniprogramMenuFlags[menuKey])}
-                  disabled={!canManageSmartFlags || savingMiniprogramMenuFlags}
-                  onChange={(checked) => onToggleMiniprogramMenu(menuKey, checked)}
-                />
-              </div>
-            );
-          })}
-          {!canManageSmartFlags && (
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-              当前账号仅可查看小程序菜单配置，修改需使用租户管理员账号。
-            </Typography.Text>
-          )}
-        </Card>}
       </div>
     </div>
   );

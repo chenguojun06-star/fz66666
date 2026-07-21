@@ -239,7 +239,8 @@ const GlobalAiAssistant: React.FC = () => {
   // ── 打开时聚焦 ──
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+      const timer = setTimeout(() => inputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -347,7 +348,7 @@ const GlobalAiAssistant: React.FC = () => {
       }
       setShowTaskForm(false);
       setEditingTask(null);
-    } catch {} finally { setTaskSaving(false); }
+    } catch (e) { console.error('[GlobalAiAssistant] 保存任务失败:', e); message.error('保存任务失败'); } finally { setTaskSaving(false); }
   }, [editingTask, createTask, updateTask]);
 
   const handleTaskDelete = useCallback(async (taskId: string) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Space, Input, Select, App, Tabs, Row, Col, Drawer } from 'antd';
+import { Card, Button, Space, Input, Select, Tabs, Row, Col, Drawer } from 'antd';
 import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
@@ -21,8 +21,6 @@ import { useFinishedInventoryActions } from './hooks/useFinishedInventoryActions
 import { useSync } from '@/utils/syncManager';
 
 const _FinishedInventory: React.FC = () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { message } = App.useApp();
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
   const [scanOperationOpen, setScanOperationOpen] = useState(false);
   const [freeInboundOpen, setFreeInboundOpen] = useState(false);

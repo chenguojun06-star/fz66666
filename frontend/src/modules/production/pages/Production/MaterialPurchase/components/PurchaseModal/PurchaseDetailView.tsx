@@ -287,7 +287,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         setMaterialList((res as any).data?.records || []);
         setMaterialTotal((res as any).data?.total || 0);
       }
-    } catch {} finally {
+    } catch (e) { console.error('[PurchaseDetailView] 加载物料列表失败:', e); } finally {
       setMaterialLoading(false);
     }
   }, [materialKeyword, materialPage, materialPageSize]);

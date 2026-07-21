@@ -136,7 +136,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             { params: { page: 1, pageSize: 200, patternProductionId: patternId, sourceType: 'sample', materialType: '', status: '' } }
           );
           records = sortPurchases(unwrapRecords(sampleRes));
-        } catch {}
+        } catch (e) { console.error('[InlinePurchasePanel] 加载样衣采购列表失败:', e); }
 
         // 样衣模式没有大货订单，需要查样衣详情构造订单头信息（款号/款名/颜色/码数/下单数量/封面图）
         // 否则 ProductionOrderHeader 全显示 '-'，用户看不到基础信息
@@ -439,7 +439,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         setMaterialList(res.data?.records || []);
         setMaterialTotal(res.data?.total || 0);
       }
-    } catch {} finally {
+    } catch (e) { console.error('[InlinePurchasePanel] 加载物料列表失败:', e); } finally {
       setMaterialLoading(false);
     }
   }, [materialKeyword, materialPage, materialPageSize]);

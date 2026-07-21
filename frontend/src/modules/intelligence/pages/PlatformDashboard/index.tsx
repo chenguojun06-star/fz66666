@@ -9,7 +9,7 @@
  *
  * 路由挂载：intelligence/platform-dashboard（通过 routeConfig.ts 注册）
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, Col, Row, Select, Spin, Statistic, Tag, Typography, Alert } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useUser } from '@/utils/AuthContext';
@@ -97,8 +97,8 @@ export const PlatformDashboard: React.FC = () => {
   };
 
   // 未加载时显示 CTA
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  React.useEffect(() => { load(days); }, []);
+  const initialDaysRef = useRef(days);
+  useEffect(() => { load(initialDaysRef.current); }, [load]);
 
   if (!user?.isSuperAdmin) {
     return <Alert type="error" title="无权限" description="仅平台超级管理员可访问本页面" showIcon />;

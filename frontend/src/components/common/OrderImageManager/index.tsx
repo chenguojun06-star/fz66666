@@ -89,7 +89,9 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
           .filter(Boolean) as string[];
         setStyleImages(imgUrls);
       }
-    } catch {}
+    } catch (e) {
+      console.error('[OrderImageManager] 加载款式图片失败:', e);
+    }
   }, [styleId, styleNo]);
 
   useEffect(() => {

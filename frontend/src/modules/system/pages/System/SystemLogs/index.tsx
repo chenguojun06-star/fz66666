@@ -29,7 +29,7 @@ const SystemLogs: React.FC = () => {
         const obj = JSON.parse(raw || '{}');
         if (Number.isFinite(Number(obj?.page))) page = Number(obj.page);
       }
-    } catch {}
+    } catch { /* localStorage 不可用或JSON损坏，忽略 */ }
     return { page, pageSize } as LoginLogQueryParams;
   });
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
@@ -103,7 +103,7 @@ const SystemLogs: React.FC = () => {
         const obj = JSON.parse(raw || '{}');
         if (Number.isFinite(Number(obj?.page))) page = Number(obj.page);
       }
-    } catch {}
+    } catch { /* localStorage 不可用或JSON损坏，忽略 */ }
     return { page, pageSize } as OperationLogQueryParams;
   });
   const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
@@ -438,7 +438,7 @@ const SystemLogs: React.FC = () => {
                       showTotal: (t) => `共 ${t} 条`,
                       pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                       onChange: (page, pageSize) => {
-                        try { if (typeof window !== 'undefined') localStorage.setItem('system-loginlog-pagination', JSON.stringify({ page })); } catch {}
+                        try { if (typeof window !== 'undefined') localStorage.setItem('system-loginlog-pagination', JSON.stringify({ page })); } catch { /* localStorage 不可用，忽略 */ }
                         savePageSizeByKey('system-loginlog-pagination:size', pageSize);
                         setLoginQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
@@ -568,7 +568,7 @@ const SystemLogs: React.FC = () => {
                       showTotal: (t) => `共 ${t} 条`,
                       pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                       onChange: (page, pageSize) => {
-                        try { if (typeof window !== 'undefined') localStorage.setItem('system-operationlog-pagination', JSON.stringify({ page })); } catch {}
+                        try { if (typeof window !== 'undefined') localStorage.setItem('system-operationlog-pagination', JSON.stringify({ page })); } catch { /* localStorage 不可用，忽略 */ }
                         savePageSizeByKey('system-operationlog-pagination:size', pageSize);
                         setOperationQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },

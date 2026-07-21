@@ -1,6 +1,32 @@
 import { http, handleUnauthorized } from '@/services/http';
 import { useAuthStore } from '@/stores/authStore';
 
+/**
+ * 规范化 patternId：从 JSON / URL参数 / 前缀格式中提取纯 id
+ * 最后一道防线：无论调用方传什么，都确保 URL 拼接的是纯 id
+ * 修复 P0：JSON 二维码被整体当作 id 传入导致后端 400
+ * 与小程序 miniprogram/utils/api-modules/production.js 第12行 _normalizePatternId 保持一致
+ */
+function _normalizePatternId(patternId) {
+  if (!patternId) return '';
+  const s = String(patternId).trim();
+  if (!s) return '';
+  if (s.charAt(0) === '{') {
+    try {
+      const obj = JSON.parse(s);
+      const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+      if (id) return String(id).trim();
+    } catch (_e) { /* 解析失败继续 */ }
+  }
+  const m = s.match(/[?&]patternId=([^&]+)/);
+  if (m && m[1]) {
+    try { return decodeURIComponent(m[1]).trim(); } catch (_e) { return String(m[1]).trim(); }
+  }
+  const prefixMatch = s.match(/^pattern[-:_#](.+)/i);
+  if (prefixMatch && prefixMatch[1]) return String(prefixMatch[1]).trim();
+  return s;
+}
+
 const production = {
   orderList: (params) => http.get('/api/production/order/list', { params }),
   orderStats: (params) => http.get('/api/production/order/stats', { params }),
@@ -57,18 +83,39 @@ const production = {
   splitTransfer: (data) => http.post('/api/production/cutting/split-transfer', data),
   splitRollback: (data) => http.post('/api/production/cutting/split-rollback', data),
   getBundleFamily: (bundleId) => http.get(`/api/production/cutting/family/${bundleId}`),
-  getPatternDetail: (patternId) => http.get(`/api/production/pattern/${encodeURIComponent(String(patternId || '').trim())}`),
-  getPatternProcessConfig: (patternId) => http.get(`/api/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/process-config`),
-  getPatternScanRecords: (patternId) => http.get(`/api/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/scan-records`),
+  getPatternDetail: (patternId) => {
+    const id = _normalizePatternId(patternId);
+    return http.get(`/api/production/pattern/${encodeURIComponent(id)}`);
+  },
+  getPatternProcessConfig: (patternId) => {
+    const id = _normalizePatternId(patternId);
+    return http.get(`/api/production/pattern/${encodeURIComponent(id)}/process-config`);
+  },
+  getPatternScanRecords: (patternId) => {
+    const id = _normalizePatternId(patternId);
+    return http.get(`/api/production/pattern/${encodeURIComponent(id)}/scan-records`);
+  },
   submitPatternScan: (payload) => http.post('/api/production/pattern/scan', payload),
   // 注：旧的 receivePattern API 已删除 — 统一走 submitPatternScan(operationType=RECEIVE) 工序级扫码
-  reviewPattern: (patternId, result, remark) => {
-    const id = encodeURIComponent(String(patternId || '').trim());
-    return http.post(`/api/production/pattern/${id}/workflow-action?action=review`, { result, remark });
+  // P0-3 修复（D-023）：与小程序对齐，reviewPattern 增加 images 参数（用于审核图片上传）
+  reviewPattern: (patternId, result, remark, images) => {
+    const id = _normalizePatternId(patternId);
+    const action = encodeURIComponent('review');
+    const payload = { result, remark };
+    if (images && Array.isArray(images) && images.length > 0) {
+      payload.images = images;
+    }
+    return http.post(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, payload);
   },
-  warehouseIn: (patternId, warehouseCode, remark) => {
-    const id = encodeURIComponent(String(patternId || '').trim());
-    return http.post(`/api/production/pattern/${id}/workflow-action?action=warehouse-in`, { warehouseCode: warehouseCode || '', remark: remark || '' });
+  // P0-2 修复（D-023）：与小程序对齐，warehouseIn 增加 warehouseAreaId / warehouseLocationCode 参数
+  warehouseIn: (patternId, warehouseCode, warehouseAreaId, warehouseLocationCode, remark) => {
+    const id = _normalizePatternId(patternId);
+    return http.post(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=warehouse-in`, {
+      warehouseCode: warehouseCode || '',
+      warehouseAreaId: warehouseAreaId || '',
+      warehouseLocationCode: warehouseLocationCode || '',
+      remark: remark || '',
+    });
   },
   getQualityAiSuggestion: (orderId) => http.get('/api/quality/ai-suggestion', { params: { orderId } }),
   queryOrderProcesses: (orderNo) => http.get('/api/production/process-price/processes', { params: { orderNo } }),
@@ -95,10 +142,20 @@ const production = {
   deleteStyleProcess: (id) => http.delete(`/api/style/process/${id}`),
   listSizePrices: (styleId) => http.get('/api/style/size-price/list', { params: { styleId } }),
   batchSaveSizePrices: (payload) => http.post('/api/style/size-price/batch-save', payload),
-  completePatternByTask: (patternId, payload) => http.post(`/api/production/pattern/${encodeURIComponent(patternId)}/complete`, payload || {}),
+  completePatternByTask: (patternId, payload) => {
+    const id = _normalizePatternId(patternId);
+    return http.post(`/api/production/pattern/${encodeURIComponent(id)}/complete`, payload || {});
+  },
   listPatternProductions: (params) => http.get('/api/production/pattern/list', { params: params || {} }),
-  patternWorkflowAction: (patternId, action, payload) => http.post(`/api/production/pattern/${encodeURIComponent(patternId)}/workflow-action?action=${encodeURIComponent(action)}`, payload || {}),
-  updatePatternProgress: (patternId, payload) => http.post(`/api/production/pattern/${encodeURIComponent(patternId)}/progress`, payload || {}),
+  patternWorkflowAction: (patternId, action, payload) => {
+    const id = _normalizePatternId(patternId);
+    const act = encodeURIComponent(action || '');
+    return http.post(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${act}`, payload || {});
+  },
+  updatePatternProgress: (patternId, payload) => {
+    const id = _normalizePatternId(patternId);
+    return http.post(`/api/production/pattern/${encodeURIComponent(id)}/progress`, payload || {});
+  },
 };
 
 const system = {
@@ -120,7 +177,8 @@ const system = {
 };
 
 const serial = {
-  generate: (type) => http.get('/api/system/serial/generate', { params: { type } }),
+  // P0-7 修复（D-023）：与后端 SerialController + 小程序对齐，参数名 ruleCode（原 type 会被后端忽略）
+  generate: (ruleCode) => http.get('/api/system/serial/generate', { params: { ruleCode } }),
 };
 
 const factory = {

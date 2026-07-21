@@ -46,6 +46,50 @@ interface ColorCard {
   createTime?: string;
 }
 
+// ===== API 响应类型 =====
+interface ApiResult<T> {
+  code: number;
+  data: T;
+  message?: string;
+}
+
+interface PageResult<T> {
+  records: T[];
+  total: number;
+}
+
+interface ColorCardDetail {
+  items: ColorCardItem[];
+}
+
+interface ColorCardListParams {
+  keyword: string;
+  page: number;
+  pageSize: number;
+  materialType?: string;
+}
+
+interface RecognizedColorInfo {
+  success: boolean;
+  color?: { textValue?: string; rawText?: string };
+  unitPrice?: { numberValue?: number };
+  imageUrl?: string;
+  aiHint?: string;
+  errorMessage?: string;
+}
+
+interface ImageUploadFile {
+  url: string;
+}
+
+// SupplierSelect 的 option 参数类型
+interface SupplierSelectOption {
+  id?: string;
+  supplierId?: string;
+  supplierContactPerson?: string;
+  supplierContactPhone?: string;
+}
+
 const MATERIAL_TYPE_OPTIONS = [
   { label: '面料', value: 'fabric' },
   { label: '里料', value: 'lining' },
@@ -66,7 +110,7 @@ const ColorCardPage: React.FC = () => {
   const [currentCard, setCurrentCard] = useState<ColorCard | null>(null);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [coverImageFiles, setCoverImageFiles] = useState<any[]>([]);
+  const [coverImageFiles, setCoverImageFiles] = useState<ImageUploadFile[]>([]);
 
   // ===== 颜色管理弹窗 =====
   const [itemVisible, setItemVisible] = useState(false);
@@ -103,9 +147,9 @@ const ColorCardPage: React.FC = () => {
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { keyword, page, pageSize };
+      const params: ColorCardListParams = { keyword, page, pageSize };
       if (materialType) params.materialType = materialType;
-      const res = await api.get<{ code: number; data: any; message?: string }>(
+      const res = await api.get<ApiResult<PageResult<ColorCard>>>(
         '/color-card/list', { params },
       );
       if (res.code === 200) {
@@ -133,7 +177,7 @@ const ColorCardPage: React.FC = () => {
       if (res.code === 200 && res.data) {
         form.setFieldsValue({ colorCardCode: res.data, materialType: 'fabric' });
       }
-    } catch {}
+    } catch (e) { console.error('[ColorCard] 生成编号失败:', e); }
     setDialogVisible(true);
   };
 
@@ -165,7 +209,7 @@ const ColorCardPage: React.FC = () => {
       setSubmitting(true);
       // 获取封面图片URL
       if (coverImageFiles.length > 0) {
-        values.image = (coverImageFiles[0] as any)?.url || '';
+        values.image = coverImageFiles[0]?.url || '';
       }
       if (currentCard?.id) {
         await api.put('/color-card', { id: currentCard.id, ...values });
@@ -200,7 +244,7 @@ const ColorCardPage: React.FC = () => {
     setCurrentCardId(card.id);
     setCurrentCardName(card.colorCardName);
     try {
-      const res = await api.get<{ code: number; data: any }>(`/color-card/${card.id}`);
+      const res = await api.get<ApiResult<ColorCardDetail>>(`/color-card/${card.id}`);
       if (res.code === 200) {
         const items = res.data?.items || [];
         setCurrentItems(items);
@@ -254,9 +298,9 @@ const ColorCardPage: React.FC = () => {
     }
   };
 
-  const updateItem = (idx: number, field: keyof ColorCardItem, value: any) => {
+  const updateItem = (idx: number, field: keyof ColorCardItem, value: string | number | undefined | null) => {
     const next = [...currentItems];
-    (next[idx] as any)[field] = value;
+    next[idx] = { ...next[idx], [field]: value ?? undefined };
     setCurrentItems(next);
   };
 
@@ -292,7 +336,7 @@ const ColorCardPage: React.FC = () => {
     setRecognizeVisible(true);
   };
 
-  const onPickImage: any = (e: any) => {
+  const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -314,7 +358,7 @@ const ColorCardPage: React.FC = () => {
     }
     setRecognizing(true);
     try {
-      const res = await api.post<{ code: number; data: any; message?: string }>(
+      const res = await api.post<ApiResult<RecognizedColorInfo>>(
         '/material/database/recognize-color-card', { imageUrl: recognizeImage },
       );
       if (res.code === 200 && res.data && res.data.success) {
@@ -354,11 +398,12 @@ const ColorCardPage: React.FC = () => {
   const openPreview = async (card: ColorCard) => {
     setPreviewCard(card);
     try {
-      const res = await api.get<{ code: number; data: any }>(`/color-card/${card.id}`);
+      const res = await api.get<ApiResult<ColorCardDetail>>(`/color-card/${card.id}`);
       if (res.code === 200) {
-        setPreviewItems(res.data?.items || []);
+        const items = res.data?.items || [];
+        setPreviewItems(items);
         // 默认全选
-        setSelectedItems(new Set((res.data?.items || []).map((_: any, i: number) => i)));
+        setSelectedItems(new Set(items.map((_, i) => i)));
       } else {
         setPreviewItems([]);
       }
@@ -410,7 +455,7 @@ const ColorCardPage: React.FC = () => {
       render: (v: number) => <Tag color={v > 0 ? 'blue' : 'default'}>{v || 0}</Tag> },
     { title: '创建时间', dataIndex: 'createTime', width: 160 },
     { title: '操作', dataIndex: 'op', width: 340, fixed: 'right' as const,
-      render: (_: any, r: ColorCard) => (
+      render: (_: unknown, r: ColorCard) => (
         <Space size="small" wrap>
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openEditDialog(r)}>编辑</Button>
           <Button size="small" type="link" onClick={() => openItemsDialog(r)}>颜色管理</Button>
@@ -426,7 +471,7 @@ const ColorCardPage: React.FC = () => {
 
   const previewColumns = [
     { title: '', key: 'select', width: 50,
-      render: (_: any, __: any, idx: number) => (
+      render: (_: unknown, __: ColorCardItem, idx: number) => (
         <Checkbox checked={selectedItems.has(idx)} onChange={() => toggleSelect(idx)} />
       )},
     { title: '颜色编号', dataIndex: 'colorNo', width: 100 },
@@ -506,7 +551,7 @@ const ColorCardPage: React.FC = () => {
           {/* 封面图片 */}
           <Form.Item name="image" label="色卡本封面图片">
             <ImageUploadBox
-              value={coverImageFiles.length > 0 ? (coverImageFiles[0] as any)?.url : null}
+              value={coverImageFiles.length > 0 ? coverImageFiles[0]?.url ?? null : null}
               onChange={(url) => setCoverImageFiles(url ? [{ url }] : [])}
               uploadFn={uploadImage}
               size={120}
@@ -541,11 +586,12 @@ const ColorCardPage: React.FC = () => {
                   placeholder="请选择供应商"
                   value={getFieldValue('supplierName')}
                   onChange={(value, option) => {
+                    const opt = option as SupplierSelectOption | undefined;
                     form.setFieldsValue({
-                      supplierId: (option as any)?.supplierId || value,
+                      supplierId: opt?.supplierId || value,
                       supplierName: value,
-                      supplierContactPerson: (option as any)?.contactPerson,
-                      supplierContactPhone: (option as any)?.contactPhone,
+                      supplierContactPerson: opt?.supplierContactPerson,
+                      supplierContactPhone: opt?.supplierContactPhone,
                     });
                   }}
                 />
@@ -621,8 +667,8 @@ const ColorCardPage: React.FC = () => {
                       const input = document.createElement('input');
                       input.type = 'file';
                       input.accept = 'image/*';
-                      input.onchange = async (e: any) => {
-                        const file = e.target.files?.[0];
+                      input.onchange = async (e: Event) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
                         if (file) {
                           try {
                             const url = await uploadImage(file);

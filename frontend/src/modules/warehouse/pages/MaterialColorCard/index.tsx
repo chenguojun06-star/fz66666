@@ -126,7 +126,7 @@ const MaterialColorCardPage: React.FC = () => {
       if (res.code === 200 && res.data) {
         form.setFieldsValue({ cardCode: res.data, materialType: 'fabric' });
       }
-    } catch {}
+    } catch (e) { console.error('[MaterialColorCard] 生成编号失败:', e); }
     setDialogVisible(true);
   };
 
@@ -496,7 +496,7 @@ const MaterialColorCardPage: React.FC = () => {
                         '/material-color-card/generate-code',
                       );
                       if (genRes.code === 200 && genRes.data) values.cardCode = genRes.data;
-                    } catch {}
+                    } catch (e) { console.error('[MaterialColorCard] AI识别后生成编号失败:', e); }
                     form.setFieldsValue(values);
                     antdMessage.success('已自动填充识别结果，请核对后保存');
                   } else {
@@ -673,7 +673,7 @@ const MaterialColorCardPage: React.FC = () => {
                           '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
                         );
                         if (res.code === 200) updateItem(idx, 'image', res.data);
-                      } catch {}
+                      } catch (e) { console.error('[MaterialColorCard] 上传色卡图片失败:', e); antdMessage.error('上传图片失败'); }
                     }}>上传图片</Button>
                     {item.image && (
                       <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32}

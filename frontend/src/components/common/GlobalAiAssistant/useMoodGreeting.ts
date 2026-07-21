@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import type { SetStateAction, Dispatch } from 'react';
 import api from '@/utils/api';
+import type { ApiResult } from '@/utils/api';
 import type { XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
 import type { Message } from './types';
 import { INITIAL_MSG } from './constants';
+
+type DailyBriefData = {
+  overdueOrderCount?: number;
+  highRiskOrderCount?: number;
+  todayScanCount?: number;
+  [key: string]: unknown;
+};
+
+type DailyBriefResponse = ApiResult<DailyBriefData> | DailyBriefData;
 
 export function useMoodGreeting(
   user: unknown,
@@ -21,9 +31,13 @@ export function useMoodGreeting(
         const isManagerLevel = !!(user as any)?.isSuperAdmin || !!(user as any)?.isTenantOwner
           || ['admin', '管理员', '管理'].some(k => ((user as any)?.role || '').toLowerCase().includes(k));
         if (!factoryId && !isManagerLevel) return;
-        const res = await api.get('/dashboard/daily-brief', factoryId ? { params: { factoryId } } : undefined);
-        // @ts-ignore
-        const actualData = res?.code === 200 ? res.data : (res?.data || res);
+        const res = await api.get<DailyBriefResponse>('/dashboard/daily-brief', factoryId ? { params: { factoryId } } : undefined);
+        const actualData: DailyBriefData | undefined =
+          res && typeof res === 'object' && 'code' in res && res.code === 200
+            ? (res as ApiResult<DailyBriefData>).data
+            : (res && typeof res === 'object' && 'data' in res
+              ? (res as { data?: DailyBriefData }).data
+              : (res as DailyBriefData | undefined));
         if (actualData) {
           const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = actualData;
           let newMood: XiaoyunCloudMood = 'normal';

@@ -52,7 +52,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
             return;
           }
         }
-      } catch {}
+      } catch (e) { console.error('[SizeInlineTable] 加载尺码字典失败:', e); }
       setSizeOptions(sortSizeNames(FALLBACK_SIZE_RAW).map((s) => ({ value: s, label: s })));
     })();
   }, []);

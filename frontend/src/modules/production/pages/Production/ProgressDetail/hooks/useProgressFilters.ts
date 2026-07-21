@@ -11,14 +11,14 @@ const PROGRESS_VIEW_MODE_STORAGE_KEY = 'production_progress_view_mode';
 const getDateSortFromStorage = (): boolean => {
   try {
     return localStorage.getItem(DATE_SORT_STORAGE_KEY) === 'true';
-  } catch {}
+  } catch { /* localStorage 不可用，忽略 */ }
   return false;
 };
 
 const saveDateSortToStorage = (asc: boolean) => {
   try {
     localStorage.setItem(DATE_SORT_STORAGE_KEY, String(asc));
-  } catch {}
+  } catch { /* localStorage 不可用，忽略 */ }
 };
 
 export const useProgressFilters = () => {

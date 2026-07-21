@@ -231,6 +231,7 @@ export function useAiChatStream(config: StreamConfig) {
             return;
           }
         } catch (_retryErr) {
+          console.error('[useAiChatStream] 重试AI回答失败:', _retryErr);
         }
       }
       safeSetMessages(prev => {
@@ -333,7 +334,7 @@ export function useAiChatStream(config: StreamConfig) {
         (event) => {
           streamStarted = true;
           resetInactivityTimer();
-          try { unifiedHandler(event.type, JSON.stringify(event.data)); } catch {}
+          try { unifiedHandler(event.type, JSON.stringify(event.data)); } catch (e) { console.error('[useAiChatStream] unifiedHandler处理失败:', e); }
           if (event.type === 'thinking') {
             const toolStatus = '小云正在整理思路，准备给你结论…';
             safeSetMessages(prev => {

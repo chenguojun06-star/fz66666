@@ -8,7 +8,7 @@ export const SESSION_LS_KEY = 'ai_chat_session_v1';
 export const SESSION_MAX_DAYS = 7;
 
 export function saveSession(sessionId: string): void {
-  try { localStorage.setItem(SESSION_LS_KEY, JSON.stringify({ sessionId, createdAt: Date.now() })); } catch {}
+  try { localStorage.setItem(SESSION_LS_KEY, JSON.stringify({ sessionId, createdAt: Date.now() })); } catch { /* localStorage 不可用，忽略 */ }
 }
 
 export function loadSession(): string {
@@ -19,7 +19,7 @@ export function loadSession(): string {
       const ageDays = (Date.now() - createdAt) / 86400000;
       if (ageDays < SESSION_MAX_DAYS && sessionId) return sessionId;
     }
-  } catch {}
+  } catch { /* localStorage 不可用或JSON损坏，忽略 */ }
   const newId = genSessionId();
   saveSession(newId);
   return newId;
@@ -38,5 +38,5 @@ export const loadDismissedPending = (): Set<string> => {
 };
 
 export const saveDismissedPending = (set: Set<string>) => {
-  try { localStorage.setItem(_aiPendingDismissKey(), JSON.stringify([...set])); } catch {}
+  try { localStorage.setItem(_aiPendingDismissKey(), JSON.stringify([...set])); } catch { /* localStorage 不可用，忽略 */ }
 };
