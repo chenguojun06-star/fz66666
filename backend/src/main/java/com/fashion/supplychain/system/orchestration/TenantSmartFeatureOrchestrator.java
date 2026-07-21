@@ -51,7 +51,20 @@ public class TenantSmartFeatureOrchestrator {
             "miniprogram.menu.history",
             "miniprogram.menu.factoryShipment",
             "miniprogram.menu.advance",
-            "miniprogram.menu.wagePayment"
+            "miniprogram.menu.wagePayment",
+            "miniprogram.menu.sampleDev",
+            "miniprogram.menu.unitPrice",
+            "miniprogram.menu.procurement",
+            "miniprogram.menu.materialScan",
+            "miniprogram.menu.locationScan",
+            "miniprogram.menu.materialDatabase",
+            "miniprogram.menu.finishedInventory",
+            "miniprogram.menu.sampleStock",
+            "miniprogram.menu.financePayment",
+            "miniprogram.menu.salesOverview",
+            "miniprogram.menu.returnList",
+            "miniprogram.menu.userApproval",
+            "miniprogram.menu.feedback"
     );
 
     public static final List<String> MINIPROGRAM_MENU_ROLES = Arrays.asList(
@@ -67,17 +80,30 @@ public class TenantSmartFeatureOrchestrator {
     }};
 
     public static final Map<String, String> MENU_KEY_LABELS = new LinkedHashMap<>() {{
-        put("miniprogram.menu.smartOps", "运营看板");
+        put("miniprogram.menu.smartOps", "智能运营");
         put("miniprogram.menu.dashboard", "生产管理");
         put("miniprogram.menu.orderCreate", "下单管理");
-        put("miniprogram.menu.production", "质检通知");
-        put("miniprogram.menu.quality", "生产扫码");
-        put("miniprogram.menu.bundleSplit", "菲号单价");
-        put("miniprogram.menu.cuttingDetail", "裁剪明细");
+        put("miniprogram.menu.production", "质检管理");
+        put("miniprogram.menu.quality", "扫码工序");
+        put("miniprogram.menu.bundleSplit", "菲号管理");
+        put("miniprogram.menu.cuttingDetail", "裁剪管理");
         put("miniprogram.menu.history", "扫码历史");
-        put("miniprogram.menu.factoryShipment", "外发工厂");
-        put("miniprogram.menu.advance", "员工借支");
-        put("miniprogram.menu.wagePayment", "收付款中心");
+        put("miniprogram.menu.factoryShipment", "外发管理");
+        put("miniprogram.menu.advance", "预付款");
+        put("miniprogram.menu.wagePayment", "工资查询");
+        put("miniprogram.menu.sampleDev", "样衣开发");
+        put("miniprogram.menu.unitPrice", "资料单价");
+        put("miniprogram.menu.procurement", "采购任务");
+        put("miniprogram.menu.materialScan", "物料入库");
+        put("miniprogram.menu.locationScan", "库位扫码");
+        put("miniprogram.menu.materialDatabase", "物料资料");
+        put("miniprogram.menu.finishedInventory", "成品仓储");
+        put("miniprogram.menu.sampleStock", "样衣仓库");
+        put("miniprogram.menu.financePayment", "财务付款");
+        put("miniprogram.menu.salesOverview", "销售概览");
+        put("miniprogram.menu.returnList", "退货管理");
+        put("miniprogram.menu.userApproval", "用户审批");
+        put("miniprogram.menu.feedback", "意见反馈");
     }};
 
     public static final List<String> ALL_FEATURE_KEYS;

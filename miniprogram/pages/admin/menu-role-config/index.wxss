@@ -1,0 +1,200 @@
+.page {
+  min-height: 100vh;
+  background: #f4f5f7;
+  padding-bottom: 40rpx;
+}
+
+/* 顶部导航 */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+}
+
+.back-btn {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.save-btn {
+  padding: 8rpx 20rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #2a5cff;
+  background: transparent;
+}
+
+.save-btn text {
+  font-size: 26rpx;
+  color: #2a5cff;
+  font-weight: 500;
+}
+
+.save-btn--disabled {
+  border-color: #ccc;
+  opacity: 0.6;
+}
+
+.save-btn--disabled text {
+  color: #999;
+}
+
+/* 加载 */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 200rpx;
+}
+
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid #e8e8e8;
+  border-top-color: #2a5cff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 角色标签页 */
+.role-tabs {
+  display: flex;
+  background: #fff;
+  padding: 16rpx 24rpx 0;
+  gap: 16rpx;
+}
+
+.role-tab {
+  padding: 12rpx 28rpx;
+  border-radius: 32rpx;
+  background: #f4f5f7;
+  border: 1rpx solid transparent;
+  transition: all 0.2s ease;
+}
+
+.role-tab text {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.role-tab--active {
+  background: #e8f2ff;
+  border-color: #2a5cff;
+}
+
+.role-tab--active text {
+  color: #2a5cff;
+  font-weight: 600;
+}
+
+/* 提示 */
+.tip-bar {
+  background: #fff;
+  padding: 16rpx 24rpx 8rpx;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 应用列表 */
+.menu-list {
+  background: #fff;
+  margin-top: 16rpx;
+  padding: 0 24rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-name {
+  font-size: 30rpx;
+  color: #1a1a2e;
+}
+
+/* 开关 */
+.switch-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.switch {
+  width: 96rpx;
+  height: 52rpx;
+  border-radius: 26rpx;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.switch--on {
+  background: #2a5cff;
+}
+
+.switch--off {
+  background: #ccc;
+}
+
+.switch-knob {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 4rpx;
+  transition: left 0.2s ease;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.15);
+}
+
+.switch--on .switch-knob {
+  left: 48rpx;
+}
+
+.switch--off .switch-knob {
+  left: 4rpx;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 24rpx 48rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  z-index: 999;
+}
