@@ -5,617 +5,88 @@
  *  - 已完成 → 不显示
  *  - 未开始 → 按工序顺序前2条，带预测开始日期
  *  - 全无扫码 → 按工序顺序前2条，带预测日期
+ *
+ * v6.1 (2026-07-22) 拆分：
+ *  - 业务逻辑 → useSmartOrderHoverCardData
+ *  - 常量/纯函数 → helpers.ts
+ *  - 子区块 → components/ 子目录
  */
-import React, { useMemo } from 'react';
-import dayjs from 'dayjs';
-import { Tag } from 'antd';
+import React from 'react';
 
 import { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCard';
 import type { ProductionOrder } from '@/types/production';
-import { useProductionBoardStore } from '@/stores/productionBoardStore';
-import { isDirectCuttingOrder, isOrderTerminal } from '@/utils/api';
-import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
-import { isSentinelKey, SENTINEL_KEY_MAP } from '@/modules/production/utils/calcOrderProgress';
-import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
-import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
-import { getPlatformTag } from '@/utils/platform';
 
+import { useSmartOrderHoverCardData } from './SmartOrderHoverCard/useSmartOrderHoverCardData';
+import HeaderSection from './SmartOrderHoverCard/components/HeaderSection';
+import AlertsSection from './SmartOrderHoverCard/components/AlertsSection';
+import InProgressList from './SmartOrderHoverCard/components/InProgressList';
+import NextList from './SmartOrderHoverCard/components/NextList';
+import FooterSection from './SmartOrderHoverCard/components/FooterSection';
 
 interface Props { order: ProductionOrder; }
 
-const STAGES_DEF = [
-  { key: 'procurementCompletionRate', label: '采购' },
-  { key: 'cuttingCompletionRate',     label: '裁剪' },
-  { key: 'sewingCompletionRate',      label: '车缝' },
-  { key: 'qualityCompletionRate',     label: '质检' },
-  { key: 'warehousingCompletionRate', label: '入库' },
-] as const;
-
-/** 固定展示顺序（工厂有自定义工序时也按此排） */
-const STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
-
-/**
- * 规范化节点显示名称：将冗长变体名简化为标准名，仅用于 UI 显示层
- * 例："仓库入库" / "成品入库" / "质检入库" / "入仓" → "入库"
- * 例："__procurement__" → "采购"（内部哨兵键映射）
- */
-const normalizeNodeLabel = (name: string): string => {
-  if (!name) return name;
-  if (SENTINEL_KEY_MAP[name]) return SENTINEL_KEY_MAP[name];
-  if (name.includes('入库') || name.includes('入仓')) return '入库';
-  return name;
-};
-
-function fieldRate(o: ProductionOrder, key: string): number {
-  return Math.min(100, Math.max(0, Number((o as any)[key]) || 0));
-}
-
 const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
-  const boardTimesByOrder = useProductionBoardStore(s => s.boardTimesByOrder);
-  const boardStatsByOrder = useProductionBoardStore(s => s.boardStatsByOrder);
-  const processStatsByOrder      = useProductionBoardStore(s => s.processStatsByOrder);
-  const processGroupsByOrder     = useProductionBoardStore(s => s.processGroupsByOrder);
-  const processTimesByOrder      = useProductionBoardStore(s => s.processTimesByOrder);
-  const processWorkerCountsByOrder = useProductionBoardStore(s => s.processWorkerCountsByOrder);
-  const boardStats    = boardStatsByOrder[String(order.id)]  ?? null;
-  const boardTimes    = useMemo(() => boardTimesByOrder[String(order.id)]  ?? {}, [boardTimesByOrder, order.id]);
-  const processStats  = processStatsByOrder[String(order.id)]  ?? null;
-  const processGroups = useMemo(() => processGroupsByOrder[String(order.id)] ?? {}, [processGroupsByOrder, order.id]);
-  const processTimes  = useMemo(() => processTimesByOrder[String(order.id)]  ?? {}, [processTimesByOrder, order.id]);
-  const processWorkers = useMemo(() => processWorkerCountsByOrder[String(order.id)] ?? {}, [processWorkerCountsByOrder, order.id]);
+  const data = useSmartOrderHoverCardData(order);
 
-  const total       = Number(order.orderQuantity) || 0;
-  const directCutting = isDirectCuttingOrder(order as any);
-  // 已完成 / 已关单 / 已报废等终态订单均不显示悬浮卡
-  const isCompleted = isOrderTerminal(order);
-  const now         = dayjs();
-  const planEnd     = order.plannedEndDate ? dayjs(order.plannedEndDate) : null;
-  const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
-  const prog        = calcOrderProgress(order, boardStats);
-
-  /**
-   * 工序条目列表：
-   *  - 有子工序扫码数据 (processStats 有 qty>0 的内容)：
-   *      直接按 processName 展示，并附上父工序名 (stageName)
-   *  - 无子工序数据：回退到 boardStats 父工序级别（带 STAGES_DEF 字段兜底）
-   */
-  const stages = useMemo(() => {
-    // 是否有真实扫码的子工序数据
-    const hasProcess = processStats != null &&
-      Object.values(processStats as Record<string, number>).some(v => v > 0);
-
-    if (hasProcess) {
-      // 真正动态：按实际 processName 展示，不依赖硬编码节点列表
-      const pStats  = processStats  as Record<string, number>;
-      const pGroups = processGroups as Record<string, string[]>;
-      const pTimes  = processTimes  as Record<string, string>;
-      const pWorkerCounts = processWorkers as Record<string, number>;
-      // 每个 processName 找到对应的父工序 (stageName)
-      const pToStage = (pName: string): string =>
-        Object.entries(pGroups).find(([, pNames]) => pNames.includes(pName))?.[0] ?? '';
-
-      const items = Object.entries(pStats)
-        .filter(([, qty]) => qty > 0)
-        .map(([pName, qty]) => ({
-          label:       pName,
-          stageName:   pToStage(pName),
-          qty,
-          pct:         total > 0 ? Math.min(100, Math.round(qty / total * 100)) : 0,
-          lastTime:    pTimes[pName] ? dayjs(pTimes[pName]).format('MM-DD') : null,
-          workerCount: pWorkerCounts[pName] ?? 0,
-        }));
-
-      // 按父工序 STAGE_ORDER 排序，父工序相同时子工序按名字排
-      items.sort((a, b) => {
-        const ai = STAGE_ORDER.indexOf(a.stageName);
-        const bi = STAGE_ORDER.indexOf(b.stageName);
-        if (ai !== bi) {
-          if (ai === -1) return 1;
-          if (bi === -1) return -1;
-          return ai - bi;
-        }
-        return a.label.localeCompare(b.label);
-      });
-      return items;
-    }
-
-    // 备用：boardStats 父工序级别
-    //  提前规范化 boardStats key（"仓库入库"→"入库"），防止与 STAGES_DEF 生成重复同名条目
-    //   若不规范化，"仓库入库"(qty=10,pct=25%) 与 STAGES_DEF "入库"(qty=0,pct=0) 并存
-    //   导致 AI 看到两条"入库"，错误地把 pct=0 那条识别为"未开始"
-    const normBoardMap = new Map<string, number>(); // normalizedLabel → qty
-    const normBoardTimeMap = new Map<string, string>(); // normalizedLabel → time
-    if (boardStats) {
-      for (const [k, v] of Object.entries(boardStats as Record<string, number>)) {
-        if (v > 0) {
-          const nk = normalizeNodeLabel(k);
-          normBoardMap.set(nk, Math.max(normBoardMap.get(nk) ?? 0, v));
-        }
-      }
-    }
-    for (const [k, t] of Object.entries(boardTimes)) {
-      const nk = normalizeNodeLabel(k);
-      if (!normBoardTimeMap.has(nk)) normBoardTimeMap.set(nk, t);
-    }
-    const boardKeys = Array.from(normBoardMap.keys());
-    const stageDefs = directCutting ? STAGES_DEF.filter(s => s.label !== '采购') : STAGES_DEF;
-    const stageOrder = directCutting ? STAGE_ORDER.filter(label => label !== '采购') : STAGE_ORDER;
-    const allLabels = Array.from(
-      new Set([...boardKeys, ...stageDefs.map(s => s.label)])
-    );
-    allLabels.sort((a, b) => {
-      const ai = stageOrder.indexOf(a);
-      const bi = stageOrder.indexOf(b);
-      if (ai === -1 && bi === -1) return 0;
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
-    return allLabels.map(label => {
-      const fromBoard = normBoardMap.get(label) ?? 0;
-      const fieldDef = stageDefs.find(s => s.label === label);
-      const fromField = fieldDef ? fieldRate(order, fieldDef.key) : 0;
-      const qty = fromBoard > 0
-        ? fromBoard
-        : fromField > 0 && total > 0
-          ? Math.round(fromField / 100 * total)
-          : 0;
-      const pct = fromBoard > 0 && total > 0
-        ? Math.min(100, Math.round(fromBoard / total * 100))
-        : fromField;
-      const rawT = normBoardTimeMap.get(label);
-      const lastTime = rawT ? dayjs(rawT).format('MM-DD') : null;
-      return { label, stageName: '' as string, qty, pct, lastTime, workerCount: 0 };
-    });
-  }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes, processWorkers, directCutting]);
-
-  /* 卡住检测（最近扫码3天没动） */
-  const stuckNode = useMemo(() => {
-    if (isCompleted) return null;
-    const entries = Object.entries(boardTimes).filter(([k]) => !isSentinelKey(k));
-    if (!entries.length) return null;
-    const [node, time] = entries.reduce((a, b) =>
-      dayjs(a[1]).isAfter(dayjs(b[1])) ? a : b
-    );
-    const days = now.diff(dayjs(time), 'day');
-    return days >= 3 ? { node: normalizeNodeLabel(node), days } : null;
-  }, [boardTimes, isCompleted, now]);
-
-  /* 交期标签 */
-  const deadline = useMemo(() => {
-    if (isCompleted) return { text: '已完成', color: 'var(--color-success)' };
-    if (daysLeft === null) return null;
-    if (daysLeft < 0) return { text: `逾期 ${-daysLeft} 天`, color: 'var(--color-danger)' };
-    if (daysLeft === 0) return { text: '今天交货', color: 'var(--color-danger)' };
-    if (daysLeft <= 3) return { text: `还剩 ${daysLeft} 天`, color: 'var(--color-warning)' };
-    return { text: `还剩 ${daysLeft} 天`, color: 'var(--color-success)' };
-  }, [isCompleted, daysLeft]);
-
-  /* 风险标签 */
-  const risk = useMemo(() => {
-    if (isCompleted) return null;
-    if (daysLeft === null) return null;
-    if (daysLeft < 0) return { text: '已逾期', color: 'var(--color-danger)', bg: '#F6FFED' };
-    if (daysLeft <= 3 && prog < 80) return { text: ' 高风险', color: 'var(--color-danger)', bg: '#F6FFED' };
-    if (daysLeft <= 7 && prog < 50) return { text: '存在风险', color: 'var(--color-warning)', bg: '#FFFBE6' };
-    if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: 'var(--color-warning)', bg: '#FFFBE6' };
-    return null;
-  }, [isCompleted, daysLeft, prog]);
-  /* 速度：取单工序最大件数 / 开工天数
-   * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高 */
-  const speed = useMemo(() => {
-    const orderStart = order.createTime ? dayjs(order.createTime) : null;
-    const elapsed = orderStart ? Math.max(1, now.diff(orderStart, 'day')) : 1;
-    const completedQty = Number(order.completedQuantity) || 0;
-    // 优先用真实入库完成数
-    if (completedQty > 0) return completedQty / elapsed;
-    // 用单工序最大件数（不跨工序累加，防止同一批件重复计）
-    const maxStageQty = boardStats
-      ? Math.max(
-          0,
-          ...Object.values(boardStats as Record<string, number>).map(v => Number(v) || 0)
-        )
-      : 0;
-    const fromProg = prog > 0 && total > 0 ? Math.round(prog / 100 * total) : 0;
-    const done = Math.max(maxStageQty, fromProg);
-    return done > 0 ? done / elapsed : 0;
-  }, [order, prog, total, boardStats, now]);
-  /* 今日任务：剩余件数 / 剩余天数 = 今天至少完成多少件 */
-  const todayTask = useMemo(() => {
-    if (isCompleted || daysLeft === null || daysLeft <= 0 || total <= 0) return null;
-    const completedQty = Math.round(prog / 100 * total);
-    const remainQty = Math.max(0, total - completedQty);
-    if (remainQty === 0) return null;
-    const target = Math.ceil(remainQty / daysLeft);
-    if (target <= 0) return null;
-    const overload = speed > 0 && target > speed * 1.5;
-    const tight    = speed > 0 && target > speed * 1.0;
-    return {
-      target,
-      color:  overload ? 'var(--color-danger)' : tight ? 'var(--color-warning)' : 'var(--color-success)',
-      label:  overload ? '超产能' : tight ? '需加速' : '正常',
-    };
-  }, [isCompleted, daysLeft, total, prog, speed]);
-
-  /**
-   *  核心显示逻辑
-   *
-   * 分三类：
-   *   inProgress  → pct > 0 && pct < 100（有扫码但未完成）— 全部显示
-   *   notStarted  → pct === 0 && qty === 0（无扫码）
-   *   done        → pct >= 100（已完成）— 不显示
-   *
-   * 最终列表：inProgress(全部) + notStarted前2条（按工序顺序）
-   * 若 inProgress 为空，则只显示 notStarted 前2条
-   */
-  const { inProgressList, nextList, hasScan } = useMemo(() => {
-    const ip = stages.filter(s => s.pct > 0 && s.pct < 100);
-    const ns = stages.filter(s => s.pct === 0 && s.qty === 0);
-    return {
-      inProgressList: ip,
-      nextList: ns.slice(0, 2),
-      hasScan: stages.some(s => s.qty > 0 || s.pct > 0),
-    };
-  }, [stages]);
-
-  /**
-   * 预测时间计算
-   *
-   * 进行中工序：预计完成日 = now + (total - qty) / speed
-   * 未开始工序的预测开始日：
-   *   - 基础偏移 = 当前最慢进行中工序的剩余天数（如无进行中 = 0）
-   *   - 每个 notStarted 工序叠加上一道工序的预计耗时
-   */
-  const baseDays = useMemo(() => {
-    if (inProgressList.length === 0) return 0;
-    // 取进行中工序中剩余最多的（最晚完成）
-    return inProgressList.reduce((max, s) => {
-      if (speed <= 0) return Math.max(max, 3);
-      const remain = Math.ceil(Math.max(0, total - s.qty) / speed);
-      return Math.max(max, remain);
-    }, 0);
-  }, [inProgressList, speed, total]);
-
-  const stageWorkDays = speed > 0 && total > 0
-    ? Math.max(1, Math.ceil(total / speed))
-    : 7; // 速度未知默认7天/道
-
-  /* AI 预测完工时间（后端算法，模块级缓存） */
-  const firstActive = inProgressList[0];
-  const predictHint = useOrderPredictHint(
-    String(order.id || ''),
-    order.orderNo,
-    firstActive?.stageName || firstActive?.label,
-    prog,
-    isCompleted || !firstActive,
-  );
-
-  /* 智能进度分析（瓶颈/人员/资源/风险） */
-  const progressInsight = useMemo(() => {
-    if (isCompleted) return null;
-    const snapshots = stages.map(s => ({
-      name: s.label,
-      qty: s.qty,
-      pct: s.pct,
-      lastTime: s.lastTime,
-    }));
-    return analyzeProgress(order, snapshots, boardTimes, speed);
-  }, [order, stages, boardTimes, speed, isCompleted]);
-
-  /* ─────── RENDER ─────── */
   // 已完成/已关单不显示悬浮卡
-  if (isCompleted) return null;
+  if (data.isCompleted) return null;
+
+  const {
+    total,
+    now,
+    prog,
+    daysLeft,
+    speed,
+    inProgressList,
+    nextList,
+    hasScan,
+    baseDays,
+    stageWorkDays,
+    stuckNode,
+    deadline,
+    risk,
+    todayTask,
+    predictHint,
+    progressInsight,
+  } = data;
 
   return (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 11, lineHeight: 1.5, boxSizing: 'border-box' }}>
+      <HeaderSection order={order} deadline={deadline} />
 
-      {/* 顶部：款号 + 款名 + EC单号 */}
-      {(order.styleNo || order.ecOrderNo) && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          marginBottom: 6, flexWrap: 'wrap',
-        }}>
-          {order.styleNo && (
-            <span style={{
-              fontSize: 11, color: 'var(--color-text-secondary)', background: 'var(--color-bg-subtle)',
-              padding: '1px 7px', borderRadius: 10, fontWeight: 600,
-            }}>
-              款号 {order.styleNo}
-            </span>
-          )}
-          {order.styleName && (
-            <span style={{ fontSize: 11, color: '#888', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {order.styleName}
-            </span>
-          )}
-          {order.ecOrderNo && (
-            <>
-              {order.ecPlatform && (
-                <Tag color={getPlatformTag(order.ecPlatform).color} style={{ margin: 0, fontSize: 11, padding: '0 6px', lineHeight: '16px', borderRadius: 10 }}>
-                  {getPlatformTag(order.ecPlatform).label}
-                </Tag>
-              )}
-              <span style={{
-                fontSize: 11, color: 'var(--color-primary)', background: '#e6f4ff',
-                padding: '1px 7px', borderRadius: 10, fontWeight: 600,
-              }}>
-                {order.ecOrderNo}
-              </span>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* 工厂 + 交期 */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: 8,
-      }}>
-        <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: 11 }}>
-          {order.factoryName || '工序进度'}
-        </span>
-        {deadline && (
-          <span style={{
-            fontSize: 11, fontWeight: 700, color: deadline.color,
-            background: deadline.color + '18', padding: '2px 8px', borderRadius: 10,
-          }}>
-            {deadline.text}
-          </span>
-        )}
-      </div>
-
-      {/* AI 预测完工 */}
-      {predictHint && (
-        <div style={{
-          padding: '3px 10px', background: '#f0f5ff', borderRadius: 6,
-          marginBottom: 8, fontSize: 11, color: 'var(--color-primary)',
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span></span>
-          <span>AI预测完工 <b>{predictHint.text}</b></span>
-          {predictHint.confidence && <span style={{ color: 'var(--color-text-tertiary)' }}>置信{predictHint.confidence}</span>}
-          {predictHint.remaining > 0 && <span style={{ color: 'var(--color-text-tertiary)' }}>剩{predictHint.remaining}件</span>}
-        </div>
-      )}
-
-      {/* 风险条 */}
-      {risk && (
-        <div style={{
-          padding: '4px 10px', background: risk.bg, borderRadius: 6,
-          marginBottom: 8, fontSize: 11, color: risk.color, fontWeight: 700,
-        }}>
-          {risk.text}
-          {speed > 0 && total > 0 && daysLeft !== null && daysLeft >= 0 && (
-            <span style={{ fontWeight: 400, color: '#888', marginLeft: 8 }}>
-              {speed.toFixed(1)} 件/天，还需约 {Math.ceil((total - Math.round(prog / 100 * total)) / speed)} 天
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 次品预警 - 有次品才显示 */}
-      {(order.unqualifiedQuantity ?? 0) > 0 && (
-        <div style={{
-          padding: '3px 10px', background: '#F6FFED', borderRadius: 6,
-          marginBottom: 8, fontSize: 11, color: 'var(--color-danger)', fontWeight: 700,
-          display: 'flex', alignItems: 'center', gap: 5,
-        }}>
-          <span></span>
-          <span>次品 {order.unqualifiedQuantity} 件，请核查质检记录</span>
-        </div>
-      )}
-
-      {/* 交付SLA + SPC质检统计 */}
-      {(order.deliverySlaStatus || (order as any).cpk) && (
-        <div style={{
-          padding: '4px 10px', background: '#f0f5ff', borderRadius: 6,
-          marginBottom: 8, fontSize: 11, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
-        }}>
-          {order.deliverySlaStatus && (
-            <span style={{
-              padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-              background: order.deliverySlaStatus === 'completed' ? '#f6ffed' :
-                         order.deliverySlaStatus === 'on_track' ? '#e6f4ff' :
-                         order.deliverySlaStatus === 'at_risk' ? '#FFF7E6' : '#F6FFED',
-              color: order.deliverySlaStatus === 'completed' ? '#389e0d' :
-                     order.deliverySlaStatus === 'on_track' ? 'var(--color-primary)' :
-                     order.deliverySlaStatus === 'at_risk' ? 'var(--color-warning)' : 'var(--color-danger)',
-            }}>
-              SLA: {order.deliverySlaStatus === 'completed' ? '达标' :
-                    order.deliverySlaStatus === 'on_track' ? '正常' :
-                    order.deliverySlaStatus === 'at_risk' ? '预警' : '超期'}
-              {order.actualDeliveryDays != null && ` ${order.actualDeliveryDays}天`}
-            </span>
-          )}
-          {(order as any).cpk != null && (
-            <span style={{
-              padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-              background: (order as any).cpk >= 1.33 ? '#f6ffed' : (order as any).cpk >= 1.0 ? '#FFF7E6' : '#F6FFED',
-              color: (order as any).cpk >= 1.33 ? '#389e0d' : (order as any).cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
-            }}>
-              Cpk {(order as any).cpk}{(order as any).ppk != null && ` / Ppk ${(order as any).ppk}`}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 今日任务标签 */}
-      {todayTask && (
-        <div style={{
-          padding: '3px 10px', borderRadius: 6, marginBottom: 8,
-          background: todayTask.color + '14',
-          display: 'flex', alignItems: 'center', gap: 6, fontSize: 11,
-        }}>
-          <span></span>
-          <span style={{ fontWeight: 700, color: todayTask.color }}>
-            今日需≥{todayTask.target}件
-          </span>
-          <span style={{ color: 'var(--color-text-tertiary)' }}>才能按时交货</span>
-          <span style={{
-            background: todayTask.color + '28',
-            color: todayTask.color,
-            padding: '0 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-          }}>
-            {todayTask.label}
-          </span>
-        </div>
-      )}
+      <AlertsSection
+        order={order}
+        predictHint={predictHint}
+        risk={risk}
+        speed={speed}
+        total={total}
+        daysLeft={daysLeft}
+        prog={prog}
+        todayTask={todayTask}
+      />
 
       {/* ① 进行中工序（全部显示） */}
-      {inProgressList.length > 0 && (
-        <div style={{ marginBottom: 4 }}>
-          {inProgressList.map((s, idx) => {
-            const remainDays = speed > 0
-              ? Math.ceil(Math.max(0, total - s.qty) / speed)
-              : null;
-            const estFinish = remainDays !== null
-              ? now.add(remainDays, 'day').format('MM-DD')
-              : null;
-            // 子工序模式：展示父工序分组标题
-            const showGroupHeader = s.stageName &&
-              (idx === 0 || inProgressList[idx - 1].stageName !== s.stageName);
-            const isSubProcess = !!s.stageName;
-            return (
-              <React.Fragment key={s.label}>
-                {showGroupHeader && (
-                  <div style={{
-                    fontSize: 11, color: '#888', fontWeight: 600,
-                    marginTop: idx > 0 ? 6 : 0, marginBottom: 2,
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                    <span style={{ color: 'var(--color-primary)' }}>◆</span>
-                    <span>{s.stageName}</span>
-                    <div style={{ flex: 1, height: 1, background: '#e8f4ff', marginLeft: 2 }} />
-                  </div>
-                )}
-                <div style={{ paddingLeft: isSubProcess ? 10 : 0, marginBottom: 6 }}>
-                  {/* 第一行：图标 + 工序名 + 进度条(60px) + 百分比 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 12, flexShrink: 0, fontSize: 11, textAlign: 'center', color: 'var(--color-primary)' }}>▶</span>
-                    <span style={{ minWidth: 40, maxWidth: 56, flexShrink: 0, fontWeight: 600, color: 'var(--color-primary)', fontSize: 11 }}>{s.label}</span>
-                    {/* 瓶颈标记：当前工序与 progressInsight 检测到的瓶颈匹配 */}
-                    {progressInsight?.bottleneck?.stage === s.label && (
-                      <span style={{
-                        background: '#F6FFED', color: 'var(--color-danger)',
-                        borderRadius: 8, padding: '0 5px', fontSize: 11, fontWeight: 700,
-                      }}>瓶颈</span>
-                    )}
-                    <div style={{ width: 60, flexShrink: 0, height: 4, background: '#f0f5ff', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${Math.min(100, s.pct)}%`, height: '100%',
-                        borderRadius: 2, background: 'var(--color-primary)',
-                      }} />
-                    </div>
-                    <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--color-primary)', fontWeight: 700, minWidth: 34, textAlign: 'right' }}>
-                      {s.pct}%
-                    </span>
-                  </div>
-                  {/* 第二行：件数 + 操作人数 + 人均产能 + 最近扫码时间 + 预计完成日 */}
-                  <div style={{ paddingLeft: 17, fontSize: 11, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span style={{ color: '#888' }}>{s.qty}/{total}件</span>
-                    {s.workerCount > 0 && (
-                      <span style={{
-                        color: 'var(--color-primary)', background: '#e6f4ff',
-                        padding: '0px 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                      }}>
-                         {s.workerCount}人
-                      </span>
-                    )}
-                    {s.workerCount > 0 && speed > 0 && (
-                      <span style={{ color: 'var(--color-text-tertiary)' }}>
-                        约{(speed / s.workerCount).toFixed(1)}件/人·天
-                      </span>
-                    )}
-                    {s.lastTime && <span>最近 {s.lastTime}</span>}
-                    {estFinish && <span style={{ color: 'var(--color-primary)' }}>预计 {estFinish}</span>}
-                  </div>
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
-      )}
+      <InProgressList
+        inProgressList={inProgressList}
+        total={total}
+        speed={speed}
+        now={now}
+        progressInsight={progressInsight}
+      />
 
-      {/* ② 分隔线（有进行中时才加） */}
-      {inProgressList.length > 0 && nextList.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          borderTop: '1px dashed var(--color-border)', margin: '2px 0 6px',
-        }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-quaternary)', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
-        </div>
-      )}
+      {/* ②③ 分隔线 + 未开始前2条 + 空状态 + 卡住警告 */}
+      <NextList
+        inProgressList={inProgressList}
+        nextList={nextList}
+        hasScan={hasScan}
+        prog={prog}
+        baseDays={baseDays}
+        stageWorkDays={stageWorkDays}
+        now={now}
+        stuckNode={stuckNode}
+      />
 
-      {/* ③ 未开始前2条（带预测日期） */}
-      {nextList.length > 0 ? (
-        <div>
-          {nextList.map((s, idx) => {
-            // 第0条：从baseDays之后开始
-            // 第1条：再加一道工序耗时
-            const startOffset = baseDays + idx * stageWorkDays;
-            const predictDate = now.add(startOffset, 'day').format('MM-DD');
-            return (
-              <div key={s.label} style={{ marginBottom: 7 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0, color: 'var(--color-border-antd)' }}>○</span>
-                  <span style={{ width: 26, flexShrink: 0, fontWeight: 400, color: 'var(--color-text-quaternary)' }}>{s.label}</span>
-                  <div style={{ flex: 1, height: 5, background: 'var(--color-bg-subtle)', borderRadius: 3 }} />
-                  <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: 'var(--color-text-quaternary)' }}>
-                    约 {predictDate}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : !hasScan && (
-        <div style={{ color: 'var(--color-text-quaternary)', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
-          {prog > 0 ? `整体进度 ${prog}%，工序数据加载中…` : '待开工'}
-        </div>
-      )}
-
-      {/* 卡住警告 */}
-      {stuckNode && (
-        <div style={{
-          marginTop: 6, padding: '3px 8px', background: '#FFF7E6',
-          borderRadius: 5, fontSize: 11, color: '#d46b08',
-          display: 'flex', alignItems: 'center', gap: 4,
-        }}>
-          <span>⏸</span>
-          <span><b>{stuckNode.node}</b> 已 <b>{stuckNode.days}</b> 天无扫码</span>
-        </div>
-      )}
-
-      {/*  智能进度分析 */}
-      {progressInsight && renderProgressInsight(progressInsight)}
-
-
-
-      {/* 跟单 + 备注 */}
-      {(order.merchandiser || (order as any).operationRemark) && (
-        <div style={{
-          borderTop: '1px solid var(--color-bg-subtle)', marginTop: 7, paddingTop: 6,
-          display: 'flex', gap: 10, flexWrap: 'wrap',
-        }}>
-          {order.merchandiser && (
-            <span>
-              <span style={{ color: 'var(--color-text-quaternary)' }}>跟单 </span>
-              <span style={{ color: 'var(--color-text-secondary)' }}>{order.merchandiser}</span>
-            </span>
-          )}
-          {(order as any).operationRemark && (
-            <span style={{
-              color: '#d46b08', background: 'rgba(250,173,20,0.1)',
-              padding: '1px 5px', borderRadius: 3,
-            }}>
-              {(order as any).operationRemark}
-            </span>
-          )}
-        </div>
-      )}
-
-
-
+      <FooterSection order={order} progressInsight={progressInsight} />
     </div>
   );
 };
