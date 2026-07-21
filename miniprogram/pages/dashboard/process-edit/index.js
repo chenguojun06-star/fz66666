@@ -457,22 +457,30 @@ Page({
     const that = this;
     const stages = that.data.stages;
     const nodes = [];
+    const processesByNode = {};
     let sortOrder = 0;
     STAGE_MAP.forEach(function (stageDef) {
       for (let i = 0; i < stages.length; i++) {
         if (stages[i].id === stageDef.id) {
           stages[i].processes.forEach(function (p) {
-            nodes.push({
+            const node = {
               id: String(p.id).startsWith('new_') ? 'proc_' + sortOrder : p.id,
               name: p.processName,
+              processName: p.processName,
               processCode: p.processCode || String(sortOrder + 1).padStart(2, '0'),
               progressStage: p.progressStage || stageDef.id,
               machineType: p.machineType || '',
               standardTime: p.standardTime || 0,
               unitPrice: p.price || 0,
+              price: p.price || 0,
               difficulty: p.difficulty || '',
               sortOrder: sortOrder,
-            });
+            };
+            nodes.push(node);
+            // 同步写入 processesByNode（与 PC 端 progressWorkflowBuilder.ts 一致）
+            const stageKey = node.progressStage || node.name;
+            if (!processesByNode[stageKey]) processesByNode[stageKey] = [];
+            processesByNode[stageKey].push(node);
             sortOrder++;
           });
           break;
@@ -480,7 +488,9 @@ Page({
       }
     });
 
-    const workflowJson = JSON.stringify({ nodes: nodes });
+    // 与 PC 端 useOrderSubmit.tsx / progressWorkflowBuilder.ts 对齐
+    // 同时写入 nodes + processesByNode，确保 PC 端、扫码端都能读到子工序明细
+    const workflowJson = JSON.stringify({ nodes: nodes, processesByNode: processesByNode });
     const deletedIds = that._deletedIds || [];
     const payload = {
       id: that.data.orderId,
