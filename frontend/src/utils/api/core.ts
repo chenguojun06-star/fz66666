@@ -1,93 +1,17 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
+import {
+  API_TIMEOUT_MS,
+  SCAN_API_TIMEOUT_MS,
+  AI_VISION_TIMEOUT_MS,
+  FILE_UPLOAD_TIMEOUT_MS,
+} from './core/constants';
+import { generateRequestId } from './core/helpers';
+import type { ApiClient } from './core/types';
 
-/**
- * 核心 API 超时配置（毫秒）
- * - 普通请求：15秒
- * - 扫码提交：10秒（快速失败，便于用户重试）
- * - AI/图片识别：60秒（视觉模型处理可能需要长耗时）
- * - 文件上传：60秒
- */
-export const API_TIMEOUT_MS = 15000;
-export const SCAN_API_TIMEOUT_MS = 10000;
-export const AI_VISION_TIMEOUT_MS = 60000;
-export const FILE_UPLOAD_TIMEOUT_MS = 60000;
-
-export type ApiResult<T = unknown> = {
-  code: number;
-  data: T;
-  message?: string;
-  requestId?: string;
-};
-
-export type ApiClient = Omit<AxiosInstance, 'request' | 'get' | 'delete' | 'head' | 'options' | 'post' | 'put' | 'patch'> & {
-  <T = any, R = T, D = any>(config: AxiosRequestConfig<D>): Promise<R>;
-  request<T = any, R = T, D = any>(config: AxiosRequestConfig<D>): Promise<R>;
-  get<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  delete<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  head<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  options<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  post<T = any, R = T, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
-  put<T = any, R = T, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
-  patch<T = any, R = T, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
-};
-
-export const isApiSuccess = (result: unknown): result is ApiResult => {
-  return (
-    typeof result === 'object' &&
-    result !== null &&
-    'code' in result &&
-    Number((result as ApiResult).code) === 200
-  );
-};
-
-export const getApiMessage = (result: unknown, fallback: string): string => {
-  if (typeof result === 'object' && result !== null && 'message' in result) {
-    const msg = String((result as { message: unknown }).message || '').trim();
-    return msg || fallback;
-  }
-  return fallback;
-};
-
-export const unwrapApiData = <T = unknown>(result: unknown, fallbackMessage: string): T => {
-  if (isApiSuccess(result)) return (result as ApiResult<T>).data;
-  throw new Error(getApiMessage(result, fallbackMessage));
-};
-
-export const generateRequestId = () => {
-  try {
-    const anyCrypto = typeof crypto !== 'undefined' ? (crypto as unknown as any) : undefined;
-    if (anyCrypto && typeof anyCrypto.randomUUID === 'function') {
-      return String(anyCrypto.randomUUID());
-    }
-  } catch {
-    // Intentionally empty
-  }
-  const t = Date.now().toString(36);
-  const r1 = Math.random().toString(36).slice(2, 10);
-  const r2 = Math.random().toString(36).slice(2, 10);
-  return `${t}-${r1}-${r2}`;
-};
-
-export const toNumberSafe = (v: unknown) => {
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const toUrlSearchParams = (params: Record<string, unknown>): URLSearchParams => {
-  const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      searchParams.append(key, String(value));
-    }
-  });
-  return searchParams;
-};
-
-export const withQuery = (path: string, params: Record<string, unknown>): string => {
-  const searchParams = toUrlSearchParams(params);
-  const queryString = searchParams.toString();
-  return queryString ? `${path}?${queryString}` : path;
-};
+// re-export 子模块，保持外部 import 路径不变
+export * from './core/constants';
+export * from './core/types';
+export * from './core/helpers';
 
 const isViteDevServerRequest = (): boolean => {
   try {

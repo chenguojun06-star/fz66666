@@ -2,409 +2,80 @@
  * 我的账单 Tab — 租户用户查看自己的套餐概览、账单记录、申请发票
  * + 我的应用订阅（App Store 开通记录 + 续费到期提醒）
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
+ *
+ * 拆分说明：业务逻辑在 useMyBillingTabData，列定义在 myBilling/columns，
+ *           常量/纯函数在 myBilling/helpers，弹窗/卡片为独立子组件（myBilling/）。
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Card, Row, Col, Statistic, Tag, Button, Form, Input,
-  Descriptions, Progress, Empty, Typography, App, Alert, Space, Tooltip,
-} from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
-import {
-  FileTextOutlined, BellOutlined, AppstoreOutlined, SyncOutlined,
-  CreditCardOutlined, CopyOutlined,
-} from '@ant-design/icons';
-import { formatMoney } from '@/utils/format';
-import dayjs from 'dayjs';
-import tenantService from '@/services/tenantService';
-import { appStoreService } from '@/services/system/appStore';
-import type { MyAppInfo } from '@/services/system/appStore';
+import React from 'react';
+import { Card, Space, Button, Empty } from 'antd';
+import { AppstoreOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
-import { DEFAULT_PAGE_SIZE } from '@/utils/pageSizeStore';
-import { PLAN_LABELS, SUB_TYPE_LABELS, formatPlanFee, formatSubscriptionPrice } from './billingDisplay';
+import useMyBillingTabData from './myBilling/useMyBillingTabData';
+import { buildBillColumns } from './myBilling/columns';
+import ExpiringAppsAlert from './myBilling/ExpiringAppsAlert';
+import BillingOverviewCards from './myBilling/BillingOverviewCards';
+import MyAppsSubscriptionCard from './myBilling/MyAppsSubscriptionCard';
+import PayModal from './myBilling/PayModal';
+import InvoiceModal from './myBilling/InvoiceModal';
+import InvoiceInfoModal from './myBilling/InvoiceInfoModal';
 
-const { Text } = Typography;
-
-const INVOICE_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  NOT_REQUIRED: { label: '无需开票', color: 'default' },
-  PENDING: { label: '待开票', color: 'processing' },
-  ISSUED: { label: '已开票', color: 'success' },
-  MAILED: { label: '已寄出', color: 'success' },
-};
-
-const BILL_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDING: { label: '待付款', color: 'warning' },
-  PAID: { label: '已支付', color: 'success' },
-  OVERDUE: { label: '逾期', color: 'error' },
-  WAIVED: { label: '已减免', color: 'default' },
-};
-
-const SUB_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  ACTIVE: { label: '使用中', color: 'success' },
-  EXPIRED: { label: '已过期', color: 'error' },
-  SUSPENDED: { label: '已暂停', color: 'default' },
-  TRIAL: { label: '试用中', color: 'processing' },
-};
-
-/** 计算距到期天数（返回 null 表示永久有效） */
-function daysUntilExpiry(endTime?: string): number | null {
-  if (!endTime) return null;
-  return dayjs(endTime).diff(dayjs(), 'day');
-}
-
-/** 到期天数对应颜色 */
-function expiryColor(days: number | null): string {
-  if (days === null) return 'success';
-  if (days < 0) return 'error';
-  if (days <= 7) return 'error';
-  if (days <= 14) return 'orange';
-  if (days <= 30) return 'gold';
-  return 'success';
-}
-
-// ========== 组件 ==========
 interface MyBillingTabProps {
   /** 嵌入模式：隐藏与 MyModulesTab 重复的概览卡片和应用订阅表格 */
   embedded?: boolean;
 }
 
 const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
-  const { message } = App.useApp();
-  const [overview, setOverview] = useState<any>(null);
-  const [bills, setBills] = useState<any[]>([]);
-  const [myApps, setMyApps] = useState<MyAppInfo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
-  const [invoiceInfoModalVisible, setInvoiceInfoModalVisible] = useState(false);
-  const [currentBill, setCurrentBill] = useState<any>(null);
-  const [invoiceForm] = Form.useForm();
-  const [invoiceInfoForm] = Form.useForm();
-  const [payModalVisible, setPayModalVisible] = useState(false);
-  const [payingBill, setPayingBill] = useState<any>(null);
-  const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
-  const [invoiceInfoSubmitting, setInvoiceInfoSubmitting] = useState(false);
+  const {
+    overview,
+    bills,
+    myApps,
+    loading,
+    invoiceModalVisible,
+    setInvoiceModalVisible,
+    invoiceInfoModalVisible,
+    setInvoiceInfoModalVisible,
+    currentBill,
+    payModalVisible,
+    setPayModalVisible,
+    payingBill,
+    invoiceForm,
+    invoiceInfoForm,
+    invoiceSubmitting,
+    invoiceInfoSubmitting,
+    expiringApps,
+    fetchData,
+    handleRequestInvoice,
+    handleSubmitInvoice,
+    handlePay,
+    copyText,
+    handleOpenInvoiceInfo,
+    handleSaveInvoiceInfo,
+  } = useMyBillingTabData();
 
-  /** 30天内即将到期（含已过期）的应用，用于顶部提醒 */
-  const expiringApps = useMemo(() =>
-    (Array.isArray(myApps) ? myApps : []).filter(app => {
-      if (!app.endTime) return false;          // 永久有效，无需提醒
-      const days = daysUntilExpiry(app.endTime);
-      return days !== null && days <= 30;
-    }),
-    [myApps],
-  );
+  const billColumns = buildBillColumns({
+    onPay: handlePay,
+    onRequestInvoice: handleRequestInvoice,
+  });
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [overviewRes, billsRes, appsRes]: any[] = await Promise.all([
-        tenantService.getMyBilling(),
-        tenantService.listMyBills({ page: 1, pageSize: 50 }),
-        appStoreService.getMyApps().catch(() => []),   // 失败不影响主账单
-      ]);
-      setOverview(overviewRes?.data || overviewRes);
-      const billData = billsRes?.data || billsRes;
-      setBills(Array.isArray(billData) ? billData : (billData?.records || []));
-      const appsData = Array.isArray(appsRes) ? appsRes : (appsRes?.records || appsRes?.data || []);
-      setMyApps(appsData);
-    } catch {
-      message.error('加载账单数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [message]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  // ---------- 申请开票 ----------
-  const handleRequestInvoice = (record: any) => {
-    setCurrentBill(record);
-    const defaults = overview?.invoiceDefaults || {};
-    invoiceForm.setFieldsValue({
-      invoiceTitle: record.invoiceTitle || defaults.invoiceTitle || '',
-      invoiceTaxNo: record.invoiceTaxNo || defaults.invoiceTaxNo || '',
-      invoiceBankName: record.invoiceBankName || defaults.invoiceBankName || '',
-      invoiceBankAccount: record.invoiceBankAccount || defaults.invoiceBankAccount || '',
-      invoiceAddress: record.invoiceAddress || defaults.invoiceAddress || '',
-      invoicePhone: record.invoicePhone || defaults.invoicePhone || '',
-    });
-    setInvoiceModalVisible(true);
-  };
-
-  const handleSubmitInvoice = async () => {
-    setInvoiceSubmitting(true);
-    try {
-      const values = await invoiceForm.validateFields();
-      await tenantService.requestInvoice(currentBill.id, values);
-      message.success('发票申请已提交');
-      setInvoiceModalVisible(false);
-      fetchData();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) return;
-      message.error(err instanceof Error ? err.message : '申请失败');
-    } finally {
-      setInvoiceSubmitting(false);
-    }
-  };
-
-  // ---------- 快捷付款 ----------
-  const handlePay = (record: any) => {
-    setPayingBill(record);
-    setPayModalVisible(true);
-  };
-
-  const copyText = (text: string, label: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      message.success(`${label}已复制到剪贴板`);
-    }).catch(() => {
-      message.error('复制失败，请手动复制');
-    });
-  };
-
-  // ---------- 默认开票信息 ----------
-  const handleOpenInvoiceInfo = () => {
-    const defaults = overview?.invoiceDefaults || {};
-    invoiceInfoForm.setFieldsValue(defaults);
-    setInvoiceInfoModalVisible(true);
-  };
-
-  const handleSaveInvoiceInfo = async () => {
-    setInvoiceInfoSubmitting(true);
-    try {
-      const values = await invoiceInfoForm.validateFields();
-      await tenantService.updateMyInvoiceInfo(values);
-      message.success('开票信息已保存');
-      setInvoiceInfoModalVisible(false);
-      fetchData();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) return;
-      message.error(err instanceof Error ? err.message : '保存失败');
-    } finally {
-      setInvoiceInfoSubmitting(false);
-    }
-  };
-
-  // ---------- 表格列定义（月账单） ----------
-  const billColumns = [
-    { title: '账单编号', dataIndex: 'billingNo', width: 160 },
-    { title: '账期', dataIndex: 'billingMonth', width: 100 },
-    { title: '套餐', dataIndex: 'planType', width: 90,
-      render: (v: string) => PLAN_LABELS[v] ?? '未知' },
-    { title: '金额(¥)', dataIndex: 'totalAmount', width: 100,
-      render: (v: number) => (
-        <Text strong style={{ color: 'var(--color-primary)' }}>
-          {formatMoney(v)}
-        </Text>
-      ),
-    },
-    { title: '状态', dataIndex: 'status', width: 90,
-      render: (v: string) => {
-        const cfg = BILL_STATUS_CONFIG[v] || { label: v, color: 'default' };
-        return <Tag color={cfg.color}>{cfg.label}</Tag>;
-      },
-    },
-    { title: '发票', dataIndex: 'invoiceStatus', width: 90,
-      render: (v: string) => {
-        const cfg = INVOICE_STATUS_CONFIG[v] || { label: v || '—', color: 'default' };
-        return <Tag color={cfg.color}>{cfg.label}</Tag>;
-      },
-    },
-    { title: '发票号', dataIndex: 'invoiceNo', width: 140,
-      render: (v: string) => v || '—' },
-    { title: '操作', key: 'actions', width: 200,
-      render: (_: any, record: any) => {
-        const canPay = record.status === 'PENDING' || record.status === 'OVERDUE';
-        const canRequest = (record.status === 'PAID' || record.status === 'PENDING')
-          && (!record.invoiceStatus || record.invoiceStatus === 'NOT_REQUIRED');
-        return (
-          <Space size={0}>
-            {canPay && (
-              <Button type="link" icon={<CreditCardOutlined />}
-                style={{ color: 'var(--color-primary)' }}
-                onClick={() => handlePay(record)}>
-                立即付款
-              </Button>
-            )}
-            {canRequest && (
-              <Button type="link" icon={<FileTextOutlined />}
-                onClick={() => handleRequestInvoice(record)}>
-                申请开票
-              </Button>
-            )}
-          </Space>
-        );
-      },
-    },
-  ];
-  // ---------- 表格列定义（App 订阅） ----------
-  const appColumns = [
-    {
-      title: '应用名称', dataIndex: 'appName', width: 140,
-      render: (v: string) => <Text strong>{v}</Text>,
-    },
-    {
-      title: '订阅类型', dataIndex: 'subscriptionType', width: 90,
-      render: (v: string) => <Tag color="blue">{SUB_TYPE_LABELS[v] ?? '未知'}</Tag>,
-    },
-    {
-      title: '费用', key: 'price', width: 110,
-      render: (_: unknown, record: MyAppInfo) => (
-        <Text strong style={{ color: 'var(--color-primary)' }}>{formatSubscriptionPrice(record)}</Text>
-      ),
-    },
-    {
-      title: '开始时间', dataIndex: 'startTime', width: 120,
-      render: (v: string) => v ? v.slice(0, 10) : '—',
-    },
-    {
-      title: '到期时间', dataIndex: 'endTime', width: 120,
-      render: (v: string) => {
-        if (!v) return <Tag color="success">永久有效</Tag>;
-        const days = daysUntilExpiry(v);
-        const color = expiryColor(days);
-        if (days !== null && days < 0) return <Tag color="error">已过期</Tag>;
-        return (
-          <Tooltip title={`${days} 天后到期`}>
-            <Tag color={color}>{v.slice(0, 10)}</Tag>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: '剩余天数', key: 'daysLeft', width: 90,
-      render: (_: any, record: MyAppInfo) => {
-        if (!record.endTime) return <Tag color="success">永久</Tag>;
-        const days = daysUntilExpiry(record.endTime);
-        if (days === null) return <Tag color="success">永久</Tag>;
-        if (days < 0) return <Tag color="error">已过期</Tag>;
-        const color = expiryColor(days);
-        return <Tag color={color}>{days} 天</Tag>;
-      },
-    },
-    {
-      title: '状态', dataIndex: 'status', width: 80,
-      render: (v: string, record: MyAppInfo) => {
-        const key = record.isExpired ? 'EXPIRED' : (v || 'ACTIVE');
-        const cfg = SUB_STATUS_CONFIG[key] || { label: key, color: 'default' };
-        return <Tag color={cfg.color}>{cfg.label}</Tag>;
-      },
-    },
-  ];
-  // ---------- 渲染 ----------
   return (
     <div>
       {/* ===== 续费到期提醒（30天内到期） ===== */}
-      {expiringApps.length > 0 && (
-        <Alert
-          type={expiringApps.some(a => daysUntilExpiry(a.endTime) !== null && daysUntilExpiry(a.endTime)! <= 7) ? 'error' : 'warning'}
-          icon={<BellOutlined />}
-          showIcon
-          style={{ marginBottom: 16 }}
-          title={
-            <Space size={4} wrap>
-              <Text strong>续费提醒：</Text>
-              {expiringApps.map(app => {
-                const days = daysUntilExpiry(app.endTime);
-                const expired = days !== null && days < 0;
-                return (
-                  <Tag key={app.subscriptionId} color={expired ? 'error' : expiryColor(days)}>
-                    {app.appName}
-                    {expired ? ' 已过期' : `（${days}天后到期）`}
-                  </Tag>
-                );
-              })}
-            </Space>
-          }
-          description="请及时续费，过期后相关功能将暂停使用，数据保留30天。"
-          closable
-        />
-      )}
+      <ExpiringAppsAlert expiringApps={expiringApps} />
+
       {/* 套餐概览卡片（嵌入模式下隐藏，由 MyModulesTab 展示） */}
-      {!embedded && overview && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="当前套餐"
-                value={PLAN_LABELS[overview.planType] ?? '未知'}
-                styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
-              />
-              <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
-                {formatPlanFee(overview)}
-                {overview.expireTime && <span> · 到期: {overview.expireTime?.slice(0, 10)}</span>}
-              </div>
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="存储使用"
-                value={`${overview.storageUsedMb || 0}MB`}
-                suffix={`/ ${overview.storageQuotaMb}MB`}
-              />
-              <Progress
-                percent={overview.storageUsedPercent || 0}
-               
-                status={overview.storageUsedPercent > 80 ? 'exception' : 'normal'}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="用户数"
-                value={overview.currentUsers || 0}
-                suffix={`/ ${overview.maxUsers || '∞'}`}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic title="租户编码" value={overview.tenantCode || '—'} styles={{ content: { fontSize: 18 } }} />
-              <div style={{ marginTop: 8 }}>
-                <Button type="link" onClick={handleOpenInvoiceInfo}>
-                  维护开票信息
-                </Button>
-              </div>
-            </Card>
-          </Col>
-        </Row>
+      {!embedded && (
+        <BillingOverviewCards overview={overview} onOpenInvoiceInfo={handleOpenInvoiceInfo} />
       )}
 
       {/* ===== 我的应用订阅（嵌入模式下隐藏，由 MyModulesTab 展示） ===== */}
-      {!embedded && myApps.length > 0 && (
-        <Card
-          title={<Space><AppstoreOutlined />我的应用订阅</Space>}
-         
-          style={{ marginBottom: 24 }}
-          extra={
-            <Button
-              type="link"
-             
-              icon={<SyncOutlined />}
-              onClick={fetchData}
-              loading={loading}
-            >
-              刷新
-            </Button>
-          }
-        >
-          <ResizableTable
-            storageKey="profile-my-apps"
-            rowKey="subscriptionId"
-            dataSource={myApps}
-            columns={appColumns}
-            loading={loading}
-            pagination={myApps.length > DEFAULT_PAGE_SIZE ? { size: 'small' } : false}
-           
-            locale={{ emptyText: <Empty description="暂无已开通应用" /> }}
-          />
-        </Card>
+      {!embedded && (
+        <MyAppsSubscriptionCard myApps={myApps} loading={loading} onRefresh={fetchData} />
       )}
 
       {/* ===== 账单记录（平台订阅月账单） ===== */}
       <Card
         title={<Space><AppstoreOutlined />账单记录</Space>}
-       
+
         extra={<Button type="link" onClick={handleOpenInvoiceInfo}>开票信息设置</Button>}
       >
         <ResizableTable
@@ -414,150 +85,38 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
           columns={billColumns}
           loading={loading}
           pagination={false}
-         
+
           scroll={{ x: 'max-content' }}
           locale={{ emptyText: <Empty description="暂无账单记录" /> }}
         />
       </Card>
 
       {/* 快捷付款弹窗 */}
-      <ResizableModal
-        title={<Space><CreditCardOutlined />立即付款</Space>}
+      <PayModal
         open={payModalVisible}
-        onCancel={() => setPayModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setPayModalVisible(false)}>关闭</Button>,
-        ]}
-        width="40vw"
-      >
-        {payingBill && (
-          <div>
-            <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="账单编号" span={2}>
-                <Space>
-                  <Text code>{payingBill.billingNo}</Text>
-                  <Button type="text" icon={<CopyOutlined />}
-                    onClick={() => copyText(payingBill.billingNo, '账单编号')} />
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="账期">{payingBill.billingMonth}</Descriptions.Item>
-              <Descriptions.Item label="套餐">{PLAN_LABELS[payingBill.planType] ?? '未知'}</Descriptions.Item>
-              <Descriptions.Item label="应付金额" span={2}>
-                <Space align="center">
-                  <Text strong style={{ color: 'var(--color-error)', fontSize: 22 }}>
-                    {formatMoney(payingBill.totalAmount)}
-                  </Text>
-                  <Button type="text" icon={<CopyOutlined />}
-                    onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
-                </Space>
-              </Descriptions.Item>
-            </Descriptions>
-
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-              title="付款方式"
-              description="请通过银行转账或扫码向管理员付款。付款时请在备注中注明账单编号，付款完成后联系管理员确认，确认后账单状态将更新为「已支付」。"
-            />
-
-            <Card title="付款信息" style={{ marginBottom: 12 }}>
-              <Descriptions column={1}>
-                <Descriptions.Item label="付款备注（必填）">
-                  <Space>
-                    <Text code>{payingBill.billingNo}</Text>
-                    <Button type="text" icon={<CopyOutlined />}
-                      onClick={() => copyText(payingBill.billingNo, '付款备注')} />
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="付款金额">
-                  <Space>
-                    <Text strong style={{ color: 'var(--color-error)' }}>{formatMoney(payingBill.totalAmount)}</Text>
-                    <Button type="text" icon={<CopyOutlined />}
-                      onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
-                  </Space>
-                </Descriptions.Item>
-              </Descriptions>
-              <div style={{ marginTop: 12, padding: '10px 12px', background: '#FFFBE6', borderRadius: 6, fontSize: 14, color: '#ad6800' }}>
-                 请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
-              </div>
-            </Card>
-          </div>
-        )}
-      </ResizableModal>
+        payingBill={payingBill}
+        onClose={() => setPayModalVisible(false)}
+        onCopy={copyText}
+      />
 
       {/* 申请开票弹窗 */}
-      <ResizableModal
-        title="申请发票"
+      <InvoiceModal
         open={invoiceModalVisible}
-        onOk={handleSubmitInvoice}
-        onCancel={() => setInvoiceModalVisible(false)}
-        okText="提交申请"
-        width="40vw"
-        confirmLoading={invoiceSubmitting}
-      >
-        {currentBill && (
-          <Descriptions column={2} style={{ marginBottom: 16 }}>
-            <Descriptions.Item label="账单编号">{currentBill.billingNo}</Descriptions.Item>
-            <Descriptions.Item label="金额">{formatMoney(currentBill.totalAmount)}</Descriptions.Item>
-          </Descriptions>
-        )}
-        <Form form={invoiceForm} layout="vertical">
-          <Form.Item name="invoiceTitle" label="发票抬头" rules={[{ required: true, message: '请输入发票抬头' }]}>
-            <Input placeholder="公司全称" />
-          </Form.Item>
-          <Form.Item name="invoiceTaxNo" label="纳税人识别号" rules={[{ required: true, message: '请输入纳税人识别号' }]}>
-            <Input placeholder="统一社会信用代码" />
-          </Form.Item>
-          <Form.Item name="invoiceBankName" label="开户银行">
-            <Input placeholder="选填" />
-          </Form.Item>
-          <Form.Item name="invoiceBankAccount" label="银行账号">
-            <Input placeholder="选填" />
-          </Form.Item>
-          <Form.Item name="invoiceAddress" label="注册地址">
-            <Input placeholder="选填" />
-          </Form.Item>
-          <Form.Item name="invoicePhone" label="注册电话">
-            <Input placeholder="选填" />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
+        currentBill={currentBill}
+        form={invoiceForm}
+        submitting={invoiceSubmitting}
+        onClose={() => setInvoiceModalVisible(false)}
+        onSubmit={handleSubmitInvoice}
+      />
 
       {/* 维护默认开票信息弹窗 */}
-      <ResizableModal
-        title="默认开票信息"
+      <InvoiceInfoModal
         open={invoiceInfoModalVisible}
-        onOk={handleSaveInvoiceInfo}
-        onCancel={() => setInvoiceInfoModalVisible(false)}
-        okText="保存"
-        width="40vw"
-        confirmLoading={invoiceInfoSubmitting}
-      >
-        <div style={{ marginBottom: 12, color: 'var(--text-secondary)' }}>
-          设置后，每次申请发票时会自动填充以下信息
-        </div>
-        <Form form={invoiceInfoForm} layout="vertical">
-          <Form.Item name="invoiceTitle" label="发票抬头">
-            <Input placeholder="公司全称" />
-          </Form.Item>
-          <Form.Item name="invoiceTaxNo" label="纳税人识别号">
-            <Input placeholder="统一社会信用代码" />
-          </Form.Item>
-          <Form.Item name="invoiceBankName" label="开户银行">
-            <Input placeholder="开户银行名称" />
-          </Form.Item>
-          <Form.Item name="invoiceBankAccount" label="银行账号">
-            <Input placeholder="对公账号" />
-          </Form.Item>
-          <Form.Item name="invoiceAddress" label="注册地址">
-            <Input placeholder="营业执照注册地址" />
-          </Form.Item>
-          <Form.Item name="invoicePhone" label="注册电话">
-            <Input placeholder="公司电话" />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
+        form={invoiceInfoForm}
+        submitting={invoiceInfoSubmitting}
+        onClose={() => setInvoiceInfoModalVisible(false)}
+        onSubmit={handleSaveInvoiceInfo}
+      />
     </div>
   );
 };

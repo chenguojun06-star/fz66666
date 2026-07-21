@@ -1,8 +1,7 @@
-import { App, Form, Modal } from 'antd';
+import { App, Form } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleBom, TemplateLibrary } from '@/types/style';
-import api from '@/utils/api';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import useStyleBomActions from './useStyleBomActions';
 import { useBomColumns } from './useBomColumns';
@@ -10,13 +9,14 @@ import useStyleBomData from './useStyleBomData';
 import useStyleBomEditing from './useStyleBomEditing';
 import useStyleBomMaterials, { type StyleBomMaterialTab } from './useStyleBomMaterials';
 import useStyleBomMutations from './useStyleBomMutations';
+import useBomMaterialFill from './useBomMaterialFill';
+import useBomCompletionHandlers from './useBomCompletionHandlers';
 import {
   buildSizeSpecMap as buildSizeSpecMapHelper,
   buildSizeUsageMap as buildSizeUsageMapHelper,
   calcTotalPrice as calcTotalPriceHelper,
   extractSpecLength as extractSpecLengthHelper,
   isTempId as isTempIdHelper,
-  mapDbTypeToBomType as mapDbTypeToBomTypeHelper,
   normalizeUniqueValues as normalizeUniqueValuesHelper,
   parseNumberMap as parseNumberMapHelper,
   resolvePatternUnit as resolvePatternUnitHelper,
@@ -156,111 +156,12 @@ export const useStyleBomTabData = ({
     },
   });
 
-  const fillRowFromMaterial = useCallback(
-    async (rid: string, material: Record<string, unknown>) => {
-      const rowId = String(rid || '').trim();
-      if (!rowId) return;
-      const m = material || {};
-      const patch: Record<string, unknown> = {
-        materialCode: String(m.materialCode || '').trim(),
-        materialName: String(m.materialName || '').trim(),
-        fabricComposition: String(m.fabricComposition || '').trim(),
-        fabricWeight: String(m.fabricWeight || '').trim(),
-        unit: String(m.unit || '').trim(),
-        patternUnit: String(m.patternUnit || m.unit || '').trim(),
-        conversionRate: Number(m.conversionRate ?? 1) || 1,
-        supplier: String(m.supplierName || '').trim(),
-        specification: String(m.specifications ?? m.specification ?? '').trim(),
-        unitPrice: Number(m.unitPrice) || 0,
-        materialType: mapDbTypeToBomTypeHelper(m.materialType),
-        // 自动从面辅料资料带出图片（面辅料资料 image 字段，包装成 JSON 数组）
-        imageUrls: m.image ? JSON.stringify([String(m.image).trim()]) : undefined,
-      };
-      const materialColor = String(m.color ?? m.materialColor ?? '').trim();
-      if (materialColor) {
-        patch.color = materialColor;
-      }
-      patch.sizeSpecMap = buildSizeSpecMap(String(patch.specification || ''), m.sizeSpecMap as string | undefined);
-      const current = (form.getFieldValue(rowId) || {}) as Record<string, unknown>;
-      const merged = { ...current, ...patch };
-      merged.totalPrice = calcTotalPriceHelper(merged as Partial<StyleBom>);
-      form.setFieldsValue({ [rowId]: merged });
-      setData((prev) =>
-        sortBomRowsHelper(
-          (Array.isArray(prev) ? prev : []).map((it: StyleBom) => {
-            if (String(it?.id) !== rowId) return it;
-            return { ...it, ...merged } as StyleBom;
-          })
-        )
-      );
-
-      // 自动检查该物料的库存状态
-      try {
-        const materialCode = String(m.materialCode || '').trim();
-        const color = String(merged.color || '').trim();
-
-        if (materialCode) {
-          // 使用MaterialStockService查询库存（与后端StyleBomService相同逻辑）
-          const res = await api.get<{ code: number; data: { records: any[] } }>(
-            '/production/material/stock/list',
-            { params: {
-              materialCode,
-              color: color || undefined,  // 如果颜色为空，不传参数
-              page: 1,
-              pageSize: 1
-            } }
-          );
-
-          if (res.code === 200 && res.data?.records?.length > 0) {
-            const stock = res.data.records[0];
-            const availableQty = Number(stock.quantity || 0) - Number(stock.lockedQuantity || 0);
-            const usageAmount = Number(merged.usageAmount || 0);
-            const requiredQty = Math.ceil(usageAmount);
-
-            const stockStatus = availableQty >= requiredQty ? 'sufficient' : availableQty > 0 ? 'insufficient' : 'none';
-            const requiredPurchase = Math.max(0, requiredQty - availableQty);
-
-            // 更新data数组中的对应行
-            setData(prev => sortBomRowsHelper(
-              prev.map(item =>
-                String(item.id) === rowId ? {
-                  ...item,
-                  ...merged,
-                  stockStatus,
-                  availableStock: availableQty,
-                  requiredPurchase,
-                } as StyleBom : item
-              )
-            ));
-
-            const statusText = stockStatus === 'sufficient' ? '库存充足' : stockStatus === 'insufficient' ? '库存不足' : '无库存';
-            message.success(`${materialCode} 库存检查完成：${statusText}（可用：${availableQty}）`);
-          } else {
-            // 无库存记录
-            const usageAmount = Number(merged.usageAmount || 0);
-            const requiredQty = Math.ceil(usageAmount);
-
-            setData(prev => sortBomRowsHelper(
-              prev.map(item =>
-                String(item.id) === rowId ? {
-                  ...item,
-                  ...merged,
-                  stockStatus: 'none',
-                  availableStock: 0,
-                  requiredPurchase: requiredQty,
-                } as StyleBom : item
-              )
-            ));
-
-            message.warning(`${materialCode} 无库存记录`);
-          }
-        }
-      } catch {
-        message.error('库存检查失败，请稍后重试');
-      }
-    },
-    [buildSizeSpecMap, form, message, setData]
-  );
+  const { fillRowFromMaterial } = useBomMaterialFill({
+    form,
+    setData,
+    message,
+    buildSizeSpecMap,
+  });
 
   const {
     materialCreateForm,
@@ -376,49 +277,20 @@ export const useStyleBomTabData = ({
     sortBomRows: sortBomRowsHelper,
   });
 
-  const handleAddCartWithCallback = useCallback(async () => {
-    await handleAddToPurchaseCart();
-    onCartAdded?.();
-  }, [handleAddToPurchaseCart, onCartAdded]);
-
-  const handleBomRecognized = useCallback((items: BomRecognizedItem[]) => {
-    if (!Array.isArray(items) || items.length === 0) return;
-    items.forEach((it, idx) => {
-      const rowId = `tmp_ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`;
-      // 部位兜底：AI未识别到部位时默认"整件"
-      const partName = (it.partName || '').trim() || '整件';
-      // 子部位：AI未识别到则为空字符串（表示主部位整件使用）
-      const subPartName = (it.subPartName || '').trim();
-      const patch: Partial<StyleBom> & Record<string, unknown> = {
-        id: rowId,
-        materialName: it.materialName,
-        materialCode: it.materialCode,
-        specification: it.specification,
-        usageAmount: it.usageAmount,
-        partName,
-        subPartName,
-      };
-      form.setFieldsValue({ [rowId]: patch });
-    });
-    setData((prev) => {
-      const next = [...(Array.isArray(prev) ? prev : [])];
-      items.forEach((it, idx) => {
-        const rowId = `tmp_ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`;
-        const partName = (it.partName || '').trim() || '整件';
-        const subPartName = (it.subPartName || '').trim();
-        next.push({
-          id: rowId,
-          materialName: it.materialName,
-          materialCode: it.materialCode,
-          specification: it.specification,
-          usageAmount: it.usageAmount,
-          partName,
-          subPartName,
-        } as StyleBom);
-      });
-      return sortBomRowsHelper(next);
-    });
-  }, [form, setData]);
+  const {
+    handleAddCartWithCallback,
+    handleBomRecognized,
+    onBeforeComplete,
+  } = useBomCompletionHandlers({
+    form,
+    setData,
+    message,
+    data,
+    styleId,
+    tableEditable,
+    handleAddToPurchaseCart,
+    onCartAdded,
+  });
 
   // 列定义
   const columns = useBomColumns({
@@ -445,39 +317,6 @@ export const useStyleBomTabData = ({
     onApplyPickup: handleApplyPickup,
     activeSizes,
   });
-
-  const onBeforeComplete = useCallback(async () => {
-    if (!data || data.length === 0) {
-      message.error('请先配置BOM物料');
-      return false;
-    }
-    if (tableEditable) {
-      message.error('请先点击"保存全部"保存单价数据，再完成BOM配置');
-      return false;
-    }
-    const hasZeroPrices = data.some(item => !Number(item.unitPrice));
-    if (hasZeroPrices) {
-      const confirmed = await new Promise<boolean>((resolve) => {
-        Modal.confirm({
-          width: '30vw',
-          title: '部分单价为0',
-          content: '存在单价为0的BOM物料，确认仍然完成BOM配置？',
-          okText: '确认完成',
-          cancelText: '返回填写',
-          onOk: () => resolve(true),
-          onCancel: () => resolve(false),
-        });
-      });
-      if (!confirmed) return false;
-    }
-    // 标记完成前自动同步BOM到物料数据库（尽力而为，重复自动过滤）
-    try {
-      await api.post(`/style/bom/${styleId}/sync-material-database`);
-    } catch {
-      // 尽力而为：同步失败不阻断完成操作
-    }
-    return true;
-  }, [data, message, styleId, tableEditable]);
 
   return {
     activeSizes,

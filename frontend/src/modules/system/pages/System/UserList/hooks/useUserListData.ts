@@ -1,16 +1,13 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { App, Form } from 'antd';
 import type { NavigateFunction } from 'react-router-dom';
-import { Role, User as UserType, UserQueryParams } from '@/types/system';
-import api, { requestWithPathFallback } from '@/utils/api';
-import tenantService from '@/services/tenantService';
-import { useSync } from '@/utils/syncManager';
-import { RemarkModalState, buildFormRules, buildPermissionsByModule } from '../userListUtils';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
-import { readPageSize } from '@/utils/pageSizeStore';
+import { User as UserType } from '@/types/system';
+import api from '@/utils/api';
+import { RemarkModalState } from '../userListUtils';
 import type { useModal } from '@/hooks';
-import organizationApi from '@/services/system/organizationApi';
+import { useUserFetch } from './useUserFetch';
+import { useUserRoleOps } from './useUserRoleOps';
+import { useUserFormOps } from './useUserFormOps';
 
 interface UseUserListDataDeps {
   user: any;
@@ -26,338 +23,12 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
   const { message, modal } = App.useApp();
   const canManageUsers = isSuperAdmin || isTenantOwner;
 
-  // ---- 数据状态 ----
-  const [queryParams, setQueryParams] = useState<UserQueryParams>({ page: 1, pageSize: readPageSize(20) });
-  const [userList, setUserList] = useState<UserType[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const submitLoadingRef = useRef(false);
-
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({ title, reason, code });
-  };
-
-  const [activeEditTab, setActiveEditTab] = useState<'base' | 'perm'>('base');
+  // ---- 备注弹窗（主 hook 持有，供多子 hook 共享）----
   const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
   const [remarkLoading, setRemarkLoading] = useState(false);
-  const [roleOptions, setRoleOptions] = useState<Role[]>([]);
-  const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
-  const [permTree, setPermTree] = useState<any[]>([]);
-  const [permCheckedIds, setPermCheckedIds] = useState<Set<number>>(new Set());
-  const [permLoading, setPermLoading] = useState(false);
-  const [permSaving, setPermSaving] = useState(false);
-  const [pendingUserCount, setPendingUserCount] = useState(0);
-  const [logLoading, setLogLoading] = useState(false);
-  const [logRecords, setLogRecords] = useState<any[]>([]);
-  const [logTitle, setLogTitle] = useState('操作日志');
-  const [inviteQr, setInviteQr] = useState<{ open: boolean; loading: boolean; qrBase64?: string; expiresAt?: string }>({ open: false, loading: false });
-
-  const formRules = useMemo(() => buildFormRules(!!userModal.data), [userModal.data]);
-  const selectedRoleId = Form.useWatch('roleId', form);
-  const selectedRoleName = useMemo(() => {
-    const rid = String(selectedRoleId || '').trim();
-    if (!rid) return '';
-    const hit = roleOptions.find((r) => String(r.id) === rid);
-    return hit?.roleName || '';
-  }, [roleOptions, selectedRoleId]);
-  const permissionsByModule = useMemo(() => buildPermissionsByModule(permTree), [permTree]);
-
-  // ---- 数据加载 ----
-  const fetchRoleOptions = async () => {
-    setRoleOptionsLoading(true);
-    try {
-      const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-      if (!isSuperAdmin && tenantId) {
-        const response = await tenantService.listTenantRoles(tenantId);
-        const result = response as any;
-        if (result.code === 200) {
-          setRoleOptions(Array.isArray(result.data) ? result.data : []);
-        } else {
-          setRoleOptions([]);
-        }
-      } else {
-        const response = await requestWithPathFallback('get', '/system/role/list', '/auth/role/list', undefined, {
-          params: { page: 1, pageSize: 1000 },
-        });
-        const result = response as any;
-        if (result.code === 200) {
-          setRoleOptions(Array.isArray(result.data?.records) ? result.data.records : []);
-        } else {
-          setRoleOptions([]);
-        }
-      }
-    } catch {
-      setRoleOptions([]);
-    } finally {
-      setRoleOptionsLoading(false);
-    }
-  };
-
-  const getUserList = async () => {
-    setLoading(true);
-    try {
-      const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-      if (!isSuperAdmin && tenantId) {
-        const response = await tenantService.listSubAccounts({
-          page: queryParams.page, pageSize: queryParams.pageSize,
-          name: queryParams.name, roleName: queryParams.roleName,
-          orgUnitId: queryParams.orgUnitId || undefined,
-          employmentStatus: queryParams.employmentStatus || undefined,
-          roleId: queryParams.roleId || undefined,
-          excludeFactoryUsers: true,
-        });
-        const result = response as any;
-        if (result.code === 200) {
-          setUserList(result.data?.records || []);
-          setTotal(result.data?.total || 0);
-          if (showSmartErrorNotice) setSmartError(null);
-        } else {
-          reportSmartError('用户列表加载失败', result.message || '服务返回异常，请稍后重试', 'SYSTEM_USER_LIST_FAILED');
-          message.error(result.message || '获取用户列表失败');
-        }
-      } else {
-        const response = await api.get<{ code: number; data: { records: any[]; total: number } }>('/system/user/list', {
-          params: {
-            page: queryParams.page, pageSize: queryParams.pageSize,
-            username: queryParams.username, name: queryParams.name,
-            roleName: queryParams.roleName, status: queryParams.status,
-            employmentStatus: queryParams.employmentStatus || undefined,
-            orgUnitId: queryParams.orgUnitId || undefined,
-            excludeFactoryUsers: true,
-          },
-        });
-        const result = response as any;
-        if (result.code === 200) {
-          setUserList(result.data.records || []);
-          setTotal(result.data.total || 0);
-          if (showSmartErrorNotice) setSmartError(null);
-        } else {
-          reportSmartError('用户列表加载失败', result.message || '服务返回异常，请稍后重试', 'SYSTEM_USER_LIST_FAILED');
-          message.error(result.message || '获取用户列表失败');
-        }
-      }
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试';
-      reportSmartError('用户列表加载失败', errMsg, 'SYSTEM_USER_LIST_EXCEPTION');
-      message.error(error instanceof Error ? error.message : '获取用户列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 用户身份变化时清空旧数据
-  const currentUserId = user?.id;
-  useEffect(() => { setUserList([]); setTotal(0); }, [currentUserId]);
-
-  useEffect(() => {
-    if (!currentUserId) return;
-    getUserList();
-    fetchRoleOptions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryParams, currentUserId]);
-
-  useSync(
-    'user-list',
-    async () => {
-      try {
-        const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-        if (!isSuperAdmin && tenantId) {
-          const response = await tenantService.listSubAccounts({
-            page: queryParams.page, pageSize: queryParams.pageSize,
-            name: queryParams.name, roleName: queryParams.roleName,
-            orgUnitId: queryParams.orgUnitId || undefined,
-            employmentStatus: queryParams.employmentStatus || undefined,
-            roleId: queryParams.roleId || undefined,
-            excludeFactoryUsers: true,
-          });
-          if (response.code === 200) {
-            return { records: response.data?.records || [], total: response.data?.total || 0 };
-          }
-          return null;
-        }
-        const response = await api.get<{ code: number; data: { records: any[]; total: number } }>('/system/user/list', {
-          params: {
-            page: queryParams.page, pageSize: queryParams.pageSize,
-            username: queryParams.username, name: queryParams.name,
-            roleName: queryParams.roleName, status: queryParams.status,
-            employmentStatus: queryParams.employmentStatus || undefined,
-            orgUnitId: queryParams.orgUnitId || undefined,
-            excludeFactoryUsers: true,
-          },
-        });
-        if (response.code === 200) {
-          return { records: response.data.records || [], total: response.data.total || 0 };
-        }
-        return null;
-      } catch (error: unknown) {
-        const status = typeof error === 'object' && error !== null && 'response' in error ? (error as Record<string, any>).response?.status : (typeof error === 'object' && error !== null && 'status' in error ? (error as Record<string, any>).status : undefined);
-        if (status !== 403) console.error('[实时同步] 获取用户列表失败', error);
-        return null;
-      }
-    },
-    (newData, oldData) => {
-      if (oldData !== null && newData) {
-        setUserList(newData.records);
-        setTotal(newData.total);
-      }
-    },
-    {
-      interval: 60000,
-      enabled: !loading && !userModal.visible,
-      pauseOnHidden: true,
-      onError: (error) => console.error('[实时同步] 用户列表同步错误', error),
-    }
-  );
-
-  // 实时同步：待审批用户数量（替代手动 setInterval）
-  useSync(
-    'pending-user-count',
-    async () => {
-      try {
-        const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-        if (!isSuperAdmin && tenantId) {
-          const response = await tenantService.listPendingRegistrations({ page: 1, pageSize: 1 });
-          const result = response as any;
-          if (result.code === 200) {
-            return { count: result.data?.total || 0 };
-          }
-          return { count: 0 };
-        }
-        const response = await api.get('/system/user/pending', { params: { page: 1, pageSize: 1 } });
-        const result = response as any;
-        if (result.code === 200) {
-          return { count: result.data?.total || 0 };
-        }
-        return { count: 0 };
-      } catch (error) {
-        console.error('获取待审批用户数量失败', error);
-        return null;
-      }
-    },
-    (newData, oldData) => {
-      if (!newData) return;
-      const newCount = newData.count;
-      const oldCount = oldData?.count ?? 0;
-      if (newCount > oldCount && oldCount > 0) {
-        message.info({
-          content: `有 ${newCount - oldCount} 个新用户待审批`,
-          duration: 5,
-          onClick: () => { navigate('/system/user-approval'); },
-        });
-      }
-      setPendingUserCount(newCount);
-    },
-    {
-      interval: 30000,
-      enabled: !!currentUserId && !loading && !userModal.visible,
-      pauseOnHidden: true,
-      onError: (error) => console.error('[实时同步] 待审批用户数同步错误', error),
-    }
-  );
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchRoleOptions(); }, []);
-
-  // ---- 权限管理 ----
-  const loadPermTreeAndChecked = async (roleId: string) => {
-    const rid = String(roleId || '').trim();
-    if (!rid) { setPermTree([]); setPermCheckedIds(new Set()); return; }
-    setPermLoading(true);
-    try {
-      const [treeRes, idsRes] = await Promise.all([
-        requestWithPathFallback('get', '/system/permission/tree', '/auth/permission/tree'),
-        requestWithPathFallback('get', `/system/role/${rid}/permission-ids`, `/auth/role/${rid}/permission-ids`),
-      ]);
-      const treeResult = treeRes as any;
-      const idsResult = idsRes as any;
-      if (treeResult.code === 200) { setPermTree(Array.isArray(treeResult.data) ? treeResult.data : []); } else { setPermTree([]); }
-      const idList = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
-      setPermCheckedIds(new Set(idList.map((id: any) => Number(id))));
-    } catch {
-      message.error('加载权限失败');
-      setPermTree([]); setPermCheckedIds(new Set());
-    } finally {
-      setPermLoading(false);
-    }
-  };
-
-  const savePerms = async () => {
-    const rid = String(selectedRoleId || '').trim();
-    if (!rid) { message.error('请先选择角色'); return; }
-    openRemarkModal('确认保存权限', '确认保存', undefined, async (remark) => {
-      setPermSaving(true);
-      try {
-        const ids = Array.from(permCheckedIds.values());
-        const res = await requestWithPathFallback('put', `/system/role/${rid}/permission-ids`, `/auth/role/${rid}/permission-ids`, { permissionIds: ids, remark });
-        const result = res as any;
-        if (result.code === 200) { message.success('权限保存成功'); } else { message.error(result.message || '权限保存失败'); }
-      } catch { message.error('权限保存失败'); } finally { setPermSaving(false); }
-    });
-  };
-
-  useEffect(() => {
-    if (!userModal.visible) return;
-    const rid = String(selectedRoleId || '').trim();
-    if (!rid) { setPermTree([]); setPermCheckedIds(new Set()); return; }
-    loadPermTreeAndChecked(rid);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRoleId, userModal.visible]);
-
-  // ---- 表单 & 弹窗控制 ----
-  useEffect(() => {
-    if (!userModal.visible) { form.resetFields(); return; }
-    if (userModal.data) {
-      const next = { ...userModal.data, roleId: String((userModal.data as any).roleId ?? '') };
-      const t1 = setTimeout(() => { form.setFieldsValue(next); }, 50);
-      return () => clearTimeout(t1);
-    }
-    form.resetFields();
-    const t2 = setTimeout(() => { form.setFieldsValue({ permissionRange: 'all', status: 'active', approvalStatus: 'approved' }); }, 50);
-    return () => clearTimeout(t2);
-  }, [form, userModal.data, userModal.visible]);
-
-  const openDialog = (editUser?: UserType, initialTab: 'base' | 'perm' = 'base') => {
-    setActiveEditTab(initialTab);
-    userModal.open(editUser ?? undefined);
-    if (roleOptions.length === 0 && !roleOptionsLoading) fetchRoleOptions();
-  };
-
-  const closeDialog = () => {
-    userModal.close();
-    setActiveEditTab('base');
-    setPermTree([]); setPermCheckedIds(new Set());
-    form.resetFields();
-  };
-
-  const handleGenerateInvite = async () => {
-    setInviteQr({ open: true, loading: true });
-    try {
-      const resp = await api.post('/wechat/mini-program/invite/generate', {});
-      const result = resp?.data;
-      if (result?.code === 200 && result?.data?.qrCodeBase64) {
-        setInviteQr({ open: true, loading: false, qrBase64: result.data.qrCodeBase64, expiresAt: result.data.expiresAt });
-      } else if (result?.code === 200 && result?.data) {
-        message.error('生成邀请码失败：微信服务配置异常，无法获取小程序码');
-        setInviteQr({ open: false, loading: false });
-      } else {
-        message.error('生成邀请码失败：' + (result?.message || '未知错误'));
-        setInviteQr({ open: false, loading: false });
-      }
-    } catch {
-      message.error('生成邀请码失败');
-      setInviteQr({ open: false, loading: false });
-    }
-  };
-
-  // ---- 备注弹窗 ----
   const openRemarkModal = (title: string, okText: string, okButtonProps: any, onConfirm: (remark: string) => Promise<void>) => {
     setRemarkModalState({ open: true, title, okText, okDanger: (okButtonProps as any)?.danger === true, onConfirm });
   };
-
   const handleRemarkConfirm = async (remark: string) => {
     if (!remarkModalState) return;
     setRemarkLoading(true);
@@ -365,6 +36,9 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
   };
 
   // ---- 日志弹窗 ----
+  const [logLoading, setLogLoading] = useState(false);
+  const [logRecords, setLogRecords] = useState<any[]>([]);
+  const [logTitle, setLogTitle] = useState('操作日志');
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
     setLogTitle(title);
     logModal.open();
@@ -376,141 +50,28 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     } catch (e: unknown) { message.error(e instanceof Error ? e.message : '获取日志失败'); setLogRecords([]); } finally { setLogLoading(false); }
   };
 
-  // ---- CRUD 操作 ----
-  const toggleUserStatus = async (id: string, currentStatus: UserType['status']) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    openRemarkModal('确认状态变更', '确认', undefined, async (remark) => {
-      try {
-        const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-        if (!isSuperAdmin && tenantId) {
-          const response = await tenantService.updateSubAccount(Number(id), { status: newStatus, operationRemark: remark });
-          const result = response as any;
-          if (result.code === 200) {
-            message.success('状态更新成功');
-            setUserList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
-          } else { message.error(result.message || '状态更新失败'); }
-          return;
-        }
-        const response = await api.put('/system/user/status', null, { params: { id, status: newStatus, remark } });
-        const result = response as any;
-        if (result.code === 200) {
-          message.success('状态更新成功');
-          setUserList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
-        } else { message.error(result.message || '状态更新失败'); }
-      } catch (error: unknown) { message.error(error instanceof Error ? error.message : '状态更新失败'); }
-    });
-  };
+  // ---- 子 hook 组合 ----
+  const {
+    queryParams, setQueryParams, userList, setUserList, total, loading,
+    pendingUserCount, smartError, showSmartErrorNotice, getUserList,
+  } = useUserFetch({ user, isSuperAdmin, userModalVisible: userModal.visible, message, navigate });
 
-  const applyRoleToUser = async (targetUser: UserType, role: Role) => {
-    const uid = String(targetUser.id ?? '').trim();
-    const rid = String(role.id ?? '').trim();
-    if (!uid || !rid) { message.error('缺少人员或角色信息'); return; }
-    openRemarkModal('一键授权', '确定', undefined, async (remark) => {
-      const payload: any = {
-        id: targetUser.id, username: targetUser.username, name: targetUser.name,
-        roleId: Number(role.id), roleName: role.roleName,
-        permissionRange: (targetUser as any).permissionRange,
-        status: targetUser.status, phone: targetUser.phone, email: targetUser.email,
-        operationRemark: remark,
-      };
-      const tenantId = targetUser?.tenantId ? Number(targetUser.tenantId) : null;
-      if (!isSuperAdmin && tenantId) {
-        const response = await tenantService.updateSubAccount(Number(uid), payload as any);
-        const result = response as any;
-        if (result.code === 200) { message.success('授权成功'); getUserList(); return; }
-        message.error(result.message || '授权失败'); throw new Error('grant failed');
-      }
-      const response = await api.put('/system/user', payload);
-      const result = response as any;
-      if (result.code === 200) { message.success('授权成功'); getUserList(); return; }
-      message.error(result.message || '授权失败'); throw new Error('grant failed');
-    });
-  };
+  const {
+    roleOptions, roleOptionsLoading,
+    permTree, setPermTree, permCheckedIds, setPermCheckedIds, permLoading, permSaving,
+    formRules, selectedRoleId, selectedRoleName, permissionsByModule,
+    fetchRoleOptions, loadPermTreeAndChecked, savePerms,
+  } = useUserRoleOps({ user, isSuperAdmin, form, userModal, message, openRemarkModal });
 
-  const handleSubmit = async () => {
-    if (submitLoadingRef.current) return;
-    try {
-      const values: any = await form.validateFields();
-      const submit = async (remark?: string) => {
-        submitLoadingRef.current = true;
-        setSubmitLoading(true);
-        try {
-          let response;
-          const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-          if (!isSuperAdmin && tenantId) {
-            if (userModal.data?.id) {
-              response = await tenantService.updateSubAccount(Number(userModal.data.id), { ...values, operationRemark: remark || null });
-            } else { response = await tenantService.addSubAccount(values); }
-          } else if (userModal.data?.id) {
-            response = await api.put('/system/user', { ...values, id: userModal.data.id, operationRemark: remark || null });
-          } else { response = await api.post('/system/user', values); }
-          const result = response as any;
-          if (result.code === 200) {
-            message.success(userModal.data?.id ? '编辑人员成功' : '新增人员成功');
-            closeDialog(); getUserList();
-          } else { message.error(result.message || '保存失败'); }
-        } finally { setSubmitLoading(false); submitLoadingRef.current = false; }
-      };
-      if (userModal.data?.id) { openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
-      await submit();
-    } catch (error) {
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
-        message.error(firstError.errors[0] || '表单验证失败');
-      } else { message.error((error as Error).message || '保存失败'); }
-    }
-  };
-
-  const handleResetPassword = (record: UserType) => {
-    modal.confirm({
-      title: '重置密码',
-      content: `确定将「${record.name || record.username}」的密码重置为 123456？重置后该成员需使用新密码重新登录。`,
-      okText: '确定重置',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        await organizationApi.ownerResetMemberPwd(String(record.id));
-        message.success('密码已重置为 123456');
-      },
-    });
-  };
-
-  // 快捷变更在职状态（调岗/离职/归档）
-  const changeEmploymentStatus = async (record: UserType, nextStatus: 'transferred' | 'resigned' | 'archived') => {
-    const statusLabel: Record<typeof nextStatus, string> = {
-      transferred: '调岗',
-      resigned: '离职',
-      archived: '归档',
-    };
-    openRemarkModal(`确认${statusLabel[nextStatus]}`, '确认', undefined, async (remark) => {
-      try {
-        const tenantId = record?.tenantId ? Number(record.tenantId) : null;
-        const payload: any = {
-          id: record.id,
-          username: record.username,
-          name: record.name,
-          employmentStatus: nextStatus,
-          operationRemark: remark,
-        };
-        if (!isSuperAdmin && tenantId) {
-          const response = await tenantService.updateSubAccount(Number(record.id), payload);
-          const result = response as any;
-          if (result.code === 200) {
-            message.success(`${statusLabel[nextStatus]}成功`);
-            setUserList(prev => prev.map(u => u.id === record.id ? { ...u, employmentStatus: nextStatus } : u));
-          } else { message.error(result.message || `${statusLabel[nextStatus]}失败`); }
-          return;
-        }
-        const response = await api.put('/system/user', payload);
-        const result = response as any;
-        if (result.code === 200) {
-          message.success(`${statusLabel[nextStatus]}成功`);
-          setUserList(prev => prev.map(u => u.id === record.id ? { ...u, employmentStatus: nextStatus } : u));
-        } else { message.error(result.message || `${statusLabel[nextStatus]}失败`); }
-      } catch (error: unknown) {
-        message.error(error instanceof Error ? error.message : `${statusLabel[nextStatus]}失败`);
-      }
-    });
-  };
+  const {
+    submitLoading, activeEditTab, setActiveEditTab, inviteQr, setInviteQr,
+    openDialog, closeDialog, handleGenerateInvite, handleSubmit,
+    toggleUserStatus, applyRoleToUser, handleResetPassword, changeEmploymentStatus,
+  } = useUserFormOps({
+    user, isSuperAdmin, form, userModal, modal, message,
+    roleOptions, roleOptionsLoading, fetchRoleOptions,
+    getUserList, setUserList, setPermTree, setPermCheckedIds, openRemarkModal,
+  });
 
   return {
     // 数据状态

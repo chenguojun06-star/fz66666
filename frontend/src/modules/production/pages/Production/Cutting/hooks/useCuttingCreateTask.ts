@@ -4,89 +4,20 @@ import { useUser } from '@/utils/AuthContext';
 import { factoryApi } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { Factory, OrganizationUnit } from '@/types/system';
-import { CUTTING_STAGE_ORDER } from '@/utils/productionStage';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
 import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';
+import {
+  type CuttingFactoryMode,
+  type StyleOption,
+  type CuttingCreateOrderLine,
+  type CuttingProcessNode,
+  type ProcessUnitPrice,
+  isSelectableInternalUnit,
+  createEmptyOrderLine,
+} from './cuttingCreateTaskHelpers';
+import { useCuttingProcessNodes } from './useCuttingProcessNodes';
 
-export type CuttingFactoryMode = 'INTERNAL' | 'EXTERNAL';
-
-const INTERNAL_UNIT_KEYWORDS = ['组', '车间', '班组', '产线', '裁剪', '车缝', '缝制', '尾部', '后整', '整烫', '包装', '质检', '工艺', '生产'];
-
-const isSelectableInternalUnit = (unit: OrganizationUnit) => {
-  if (unit.nodeType !== 'DEPARTMENT') {
-    return false;
-  }
-  // 只匹配部门自身名称，不匹配路径（pathNames），避免"财务部门"因上级是"车间2"而被误选入
-  const name = String(unit.unitName || unit.nodeName || '').trim();
-  return INTERNAL_UNIT_KEYWORDS.some((keyword) => name.includes(keyword));
-};
-
-interface StyleOption {
-  id: number | string;
-  styleNo: string;
-  styleName?: string;
-}
-
-export interface CuttingCreateOrderLine {
-  color: string;
-  size: string;
-  quantity: number | null;
-}
-
-const createEmptyOrderLine = (): CuttingCreateOrderLine => ({
-  color: '',
-  size: '',
-  quantity: null,
-});
-
-export interface CuttingProcessNode {
-  id: string;
-  name: string;
-  progressStage: string;
-  unitPrice: number;
-  machineType?: string;
-  difficulty?: string;
-  standardTime?: number;
-  sizePrices?: Record<string, number>;
-}
-
-// 已移除 defaultCuttingProcessNodes（2026-04-28）：不再使用自动模板加载
-// 用户现在必须手动从零开始配置工序
-
-const FIXED_PARENT_NODES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
-
-const SYNONYM_TO_PARENT: Record<string, string> = {
-  '采购': '采购', '物料采购': '采购', '面辅料采购': '采购', '备料': '采购', '到料': '采购', '进料': '采购', '物料': '采购',
-  '裁剪': '裁剪', '裁床': '裁剪', '剪裁': '裁剪', '开裁': '裁剪', '裁片': '裁剪', '裁切': '裁剪',
-  '二次工艺': '二次工艺', '二次': '二次工艺',
-  '车缝': '车缝', '缝制': '车缝', '缝纫': '车缝', '车工': '车缝', '生产': '车缝', '制作': '车缝',
-  '车位': '车缝', '车间生产': '车缝', '整件': '车缝',
-  '尾部': '尾部', '后整理': '尾部', '后道': '尾部',
-  '入库': '入库', '仓储': '入库', '上架': '入库', '进仓': '入库', '入仓': '入库', '验收': '入库', '成品入库': '入库',
-};
-
-function resolveProgressStage(processName: string, dynamicMapping?: Record<string, string>): string {
-  if (!processName?.trim()) return '';
-  const name = processName.trim();
-  if (FIXED_PARENT_NODES.includes(name)) return name;
-  if (dynamicMapping && dynamicMapping[name]) return dynamicMapping[name];
-  if (SYNONYM_TO_PARENT[name]) return SYNONYM_TO_PARENT[name];
-  for (const [keyword, parent] of Object.entries(SYNONYM_TO_PARENT)) {
-    if (name.includes(keyword)) return parent;
-  }
-  if (dynamicMapping) {
-    for (const [keyword, parent] of Object.entries(dynamicMapping)) {
-      if (name.includes(keyword)) return parent;
-    }
-  }
-  return '';
-}
-
-export interface ProcessUnitPrice {
-  processName: string;
-  unitPrice: number | null;
-  processCode?: string;
-}
+export type { CuttingFactoryMode, CuttingCreateOrderLine, CuttingProcessNode, ProcessUnitPrice };
 
 interface UseCuttingCreateTaskOptions {
   message: any;
@@ -112,7 +43,6 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createFactoryId, setCreateFactoryId] = useState<string>('');
   const [createFactoryOptions, setCreateFactoryOptions] = useState<Factory[]>([]);
   const [createFactoryLoading, setCreateFactoryLoading] = useState(false);
-  const [createProcessNodes, setCreateProcessNodes] = useState<CuttingProcessNode[]>([]);
   const [createStyleImageUrl, setCreateStyleImageUrl] = useState<string | null>(null);
   const [createCustomerName, setCreateCustomerName] = useState<string>('');
   const [createRemarks, setCreateRemarks] = useState<string>('');
@@ -126,6 +56,17 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
   const [createMerchandiser, setCreateMerchandiser] = useState<string>('');
   const [createOrderPlacer, setCreateOrderPlacer] = useState<string>('');
+
+  const {
+    createProcessNodes,
+    setCreateProcessNodes,
+    addProcessNode,
+    addProcessNodeToStage,
+    removeProcessNode,
+    updateProcessNode,
+    importFromTemplate,
+    buildCuttingWorkflowJson,
+  } = useCuttingProcessNodes({ message, dynamicProcessMapping });
 
   useEffect(() => {
     if (mappingLoadedRef.current) return;
@@ -272,98 +213,6 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
 
   const handleStyleNoBlur = () => {
     // 不做任何操作 - 禁用自动模板加载功能
-  };
-
-  const addProcessNodeToStage = (stage: string) => {
-    const targetStage = CUTTING_STAGE_ORDER.includes(stage) ? stage : '裁剪';
-    const maxSort = createProcessNodes.length;
-    const nextId = String(maxSort + 1).padStart(2, '0');
-    setCreateProcessNodes((prev) => [...prev, { id: nextId, name: '', progressStage: targetStage, unitPrice: 0, machineType: '', difficulty: '', standardTime: 0, sizePrices: {} }]);
-  };
-
-  const importFromTemplate = async (templateStyleNo: string) => {
-    const sn = String(templateStyleNo || '').trim();
-    if (!sn) return;
-    try {
-      const res = await api.get<{ code: number; data: any }>('/template-library/process-price-template', {
-        params: { styleNo: sn },
-      });
-      if (res.code === 200 && res.data) {
-        const content = res.data.content || {};
-        const steps: any[] = content.steps || [];
-        if (steps.length === 0) {
-          message.warning('该款号暂无工序模板数据');
-          return;
-        }
-        const nodes: CuttingProcessNode[] = steps.map((step, idx) => ({
-          id: String(idx + 1).padStart(2, '0'),
-          name: String(step.processName || step.name || '').trim(),
-          progressStage: String(step.progressStage || '').trim() || resolveProgressStage(String(step.processName || step.name || ''), dynamicProcessMapping) || '裁剪',
-          unitPrice: typeof step.unitPrice === 'number' ? step.unitPrice : 0,
-          machineType: String(step.machineType || '').trim(),
-          difficulty: String(step.difficulty || '').trim(),
-          standardTime: typeof step.standardTime === 'number' ? step.standardTime : 0,
-          sizePrices: step.sizePrices && typeof step.sizePrices === 'object' ? step.sizePrices : {},
-        })).filter(n => n.name);
-        setCreateProcessNodes(nodes);
-        message.success(`已导入 ${nodes.length} 道工序`);
-      } else {
-        message.warning('该款号暂无工序模板数据');
-      }
-    } catch {
-      message.error('模板加载失败');
-    }
-  };
-
-  const addProcessNode = () => {
-    addProcessNodeToStage('裁剪');
-  };
-
-  const removeProcessNode = (index: number) => {
-    setCreateProcessNodes((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const updateProcessNode = (index: number, field: keyof CuttingProcessNode, value: string | number) => {
-    setCreateProcessNodes((prev) => prev.map((node, idx) => {
-      if (idx !== index) return node;
-      const updated = { ...node, [field]: value };
-      if (field === 'name' && typeof value === 'string') {
-        const resolved = resolveProgressStage(value, dynamicProcessMapping);
-        if (resolved && CUTTING_STAGE_ORDER.includes(resolved)) {
-          updated.progressStage = resolved;
-        }
-      }
-      return updated;
-    }));
-  };
-
-  const buildCuttingWorkflowJson = (): string | undefined => {
-    const sorted = [...createProcessNodes].sort((a, b) => {
-      const stageA = a.progressStage || resolveProgressStage(a.name, dynamicProcessMapping) || '裁剪';
-      const stageB = b.progressStage || resolveProgressStage(b.name, dynamicProcessMapping) || '裁剪';
-      const sa = CUTTING_STAGE_ORDER.indexOf(stageA);
-      const sb = CUTTING_STAGE_ORDER.indexOf(stageB);
-      if (sa !== sb) return sa - sb;
-      return 0;
-    });
-    const nodes = sorted
-      .filter((n) => String(n.name || '').trim())
-      .map((n, idx) => {
-        const node: Record<string, any> = {
-          id: String(idx + 1).padStart(2, '0'),
-          name: n.name,
-          processCode: String(idx + 1).padStart(2, '0'),
-          progressStage: n.progressStage || resolveProgressStage(n.name, dynamicProcessMapping) || '',
-          unitPrice: n.unitPrice,
-        };
-        if (n.machineType) node.machineType = n.machineType;
-        if (n.difficulty) node.difficulty = n.difficulty;
-        if (n.standardTime) node.standardTime = n.standardTime;
-        if (n.sizePrices && Object.keys(n.sizePrices).length > 0) node.sizePrices = n.sizePrices;
-        return node;
-      });
-    if (nodes.length === 0) return undefined;
-    return JSON.stringify({ nodes });
   };
 
   const openCreateTask = () => {

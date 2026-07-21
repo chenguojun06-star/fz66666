@@ -1,9 +1,11 @@
+// 节点解析主入口
+// 业务函数定义于此；工具函数与类型从子模块 re-export，保持外部 import 路径不变
+
 import { ProductionOrder, ScanRecord, CuttingBundle } from '@/types/production';
 import { StyleProcess } from '@/types/style';
 import { ProgressNode } from '../types';
 import {
   defaultNodes,
-  canonicalStageKey,
   stageNameMatches,
   getRecordStageName,
   isCuttingStageKey,
@@ -11,68 +13,20 @@ import {
   stripWarehousingNode as _stripWarehousingNode,
   resolveDynamicParent,
 } from './stageMapping';
+import {
+  clampPercent,
+  getNodeIndexFromProgress,
+  sortNodesByProcessCode,
+  applySubProcessRemapToNodes,
+} from './nodeResolution.helpers';
 
-const STAGE_SORT_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
-
-const isProcessCode = (code: string): boolean => {
-  if (!code) return false;
-  if (/^[0-9a-f]{8}-/i.test(code)) return false;
-  if (['purchase','cutting','sewing','pressing','quality','secondary-process','secondaryProcess','packaging','warehousing'].includes(code)) return false;
-  return /^[\d]+(-[\d]+)*$/.test(code);
-};
-
-const parseProcessCodeSegments = (code: string): (number | string)[] => {
-  if (!code) return [];
-  return code.split('-').map(segment => {
-    const num = parseInt(segment, 10);
-    return !isNaN(num) && /^\d+$/.test(segment) ? num : segment;
-  });
-};
-
-const compareProcessCodes = (codeA: string, codeB: string): number => {
-  const isA = isProcessCode(codeA);
-  const isB = isProcessCode(codeB);
-  if (isA && !isB) return -1;
-  if (!isA && isB) return 1;
-  if (!isA && !isB) return 0;
-  const segsA = parseProcessCodeSegments(codeA);
-  const segsB = parseProcessCodeSegments(codeB);
-  const maxLen = Math.max(segsA.length, segsB.length);
-  for (let i = 0; i < maxLen; i++) {
-    const a = segsA[i];
-    const b = segsB[i];
-    if (a === undefined && b !== undefined) return -1;
-    if (a !== undefined && b === undefined) return 1;
-    if (typeof a === 'number' && typeof b === 'number') {
-      if (a !== b) return a - b;
-    } else if (typeof a === 'number') {
-      return -1;
-    } else if (typeof b === 'number') {
-      return 1;
-    } else {
-      const cmp = String(a).localeCompare(String(b));
-      if (cmp !== 0) return cmp;
-    }
-  }
-  return 0;
-};
-
-const sortNodesByProcessCode = (nodes: ProgressNode[]): ProgressNode[] => {
-  return [...nodes].sort((a, b) => {
-    const codeA = String(a.id || '').trim();
-    const codeB = String(b.id || '').trim();
-    const codeCmp = compareProcessCodes(codeA, codeB);
-    if (codeCmp !== 0) return codeCmp;
-    const stageA = a.progressStage || canonicalStageKey(a.name) || '';
-    const stageB = b.progressStage || canonicalStageKey(b.name) || '';
-    const idxA = STAGE_SORT_ORDER.indexOf(stageA);
-    const idxB = STAGE_SORT_ORDER.indexOf(stageB);
-    const sortA = idxA >= 0 ? idxA : STAGE_SORT_ORDER.length;
-    const sortB = idxB >= 0 ? idxB : STAGE_SORT_ORDER.length;
-    if (sortA !== sortB) return sortA - sortB;
-    return a.name.localeCompare(b.name, 'zh-CN');
-  });
-};
+// re-export 工具函数（保持外部 import 路径不变）
+export {
+  clampPercent,
+  getOrderShipTime,
+  getNodeIndexFromProgress,
+  getCloseMinRequired,
+} from './nodeResolution.helpers';
 
 export const findPricingProcessForStage = (list: StyleProcess[], stageName: string) => {
   const stage = String(stageName || '').trim();
@@ -86,27 +40,6 @@ export const findPricingProcessForStage = (list: StyleProcess[], stageName: stri
     }
   }
   return null;
-};
-
-export const clampPercent = (value: number) => {
-  if (Number.isNaN(value)) return 0;
-  return Math.max(0, Math.min(100, Math.round(value)));
-};
-
-export const getOrderShipTime = (order: ProductionOrder) => {
-  return order.actualEndDate || order.plannedEndDate || '';
-};
-
-export const getNodeIndexFromProgress = (nodes: ProgressNode[], progress: number) => {
-  if (nodes.length <= 1) return 0;
-  const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
-  return Math.max(0, Math.min(nodes.length - 1, idx));
-};
-
-export const getCloseMinRequired = (cuttingQuantity: number) => {
-  const cq = Number(cuttingQuantity ?? 0);
-  if (!Number.isFinite(cq) || cq <= 0) return 0;
-  return Math.ceil(cq * 0.9);
 };
 
 export const getCurrentWorkflowNodeForOrder = (
@@ -159,114 +92,6 @@ export const parseWorkflowNodesFromOrder = (order: ProductionOrder | null): Prog
   const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
   if (!raw) return [];
   return parseProgressNodes(raw);
-};
-
-type SubProcessRemapItem = {
-  id?: string;
-  name?: string;
-  originalName?: string;
-  [k: string]: unknown;
-};
-
-type SubProcessRemapStage = {
-  enabled?: boolean;
-  subProcesses?: SubProcessRemapItem[];
-  [k: string]: unknown;
-};
-
-type SubProcessRemap = Record<string, SubProcessRemapStage>;
-
-const stageKeyToParent = (stageKey: string) => {
-  const map: Record<string, string> = {
-    procurement: '采购',
-    cutting: '裁剪',
-    secondaryProcess: '二次工艺',
-    carSewing: '车缝',
-    tailProcess: '尾部',
-    warehousing: '入库',
-  };
-  return map[String(stageKey || '').trim()] || '';
-};
-
-const parseSubProcessRemap = (order: ProductionOrder | null): SubProcessRemap => {
-  const raw = String((order as any)?.nodeOperations || '').trim();
-  if (!raw) return {};
-  try {
-    const obj = JSON.parse(raw);
-    const remap = obj?.subProcessRemap;
-    if (!remap || typeof remap !== 'object') return {};
-    return remap as SubProcessRemap;
-  } catch {
-    return {};
-  }
-};
-
-const applySubProcessRemapToNodes = (nodes: ProgressNode[], order: ProductionOrder | null): ProgressNode[] => {
-  if (!Array.isArray(nodes) || nodes.length === 0) return [];
-  const remap = parseSubProcessRemap(order);
-  const stageKeys = Object.keys(remap);
-  if (stageKeys.length === 0) return nodes;
-
-  const working = [...nodes];
-  for (const stageKey of stageKeys) {
-    const cfg = remap[stageKey];
-    if (!cfg || cfg.enabled !== true || !Array.isArray(cfg.subProcesses)) {
-      continue;
-    }
-    const parent = stageKeyToParent(stageKey);
-    if (!parent) continue;
-
-    const parentCanonical = canonicalStageKey(parent);
-    const matchedRows: ProgressNode[] = [];
-    let insertAt = -1;
-
-    for (let i = 0; i < working.length; i += 1) {
-      const row = working[i];
-      const rowParent = String(row.progressStage || row.name || '').trim();
-      if (canonicalStageKey(rowParent) === parentCanonical) {
-        if (insertAt < 0) insertAt = i;
-        matchedRows.push(row);
-      }
-    }
-
-    const byName = new Map<string, ProgressNode>();
-    matchedRows.forEach((row) => {
-      const key = String(row.name || '').trim();
-      if (key && !byName.has(key)) {
-        byName.set(key, row);
-      }
-    });
-
-    for (let i = working.length - 1; i >= 0; i -= 1) {
-      const row = working[i];
-      const rowParent = String(row.progressStage || row.name || '').trim();
-      if (canonicalStageKey(rowParent) === parentCanonical) {
-        working.splice(i, 1);
-      }
-    }
-
-    if (insertAt < 0) insertAt = working.length;
-
-    const rebuilt: ProgressNode[] = cfg.subProcesses
-      .map((sp, idx) => {
-        const name = String(sp?.name || '').trim();
-        if (!name) return null;
-        const base = byName.get(name);
-        return {
-          id: String(base?.id || `${stageKey}-${idx + 1}`),
-          name,
-          unitPrice: Number(base?.unitPrice) || 0,
-          progressStage: parent,
-        } as ProgressNode;
-      })
-      .filter((x): x is ProgressNode => Boolean(x));
-
-    if (rebuilt.length > 0) {
-      working.splice(insertAt, 0, ...rebuilt);
-    }
-  }
-
-  return working;
 };
 
 export const resolveNodesForOrder = (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/utils/api';
 
-interface TodayBrief {
+export interface TodayBrief {
   todayOrderCount: number;
   todayOrderQuantity: number;
   todayInboundCount: number;

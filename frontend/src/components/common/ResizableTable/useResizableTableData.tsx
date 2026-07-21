@@ -10,26 +10,20 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { buildPageSizeStorageKey } from '@/utils/pageSizeStore';
 import {
-  DEFAULT_PAGE_SIZE,
-  buildPageSizeStorageKey,
-  normalizePageSize,
-  readPageSize,
-  readPageSizeByKey,
-  savePageSize,
-  savePageSizeByKey,
-} from '@/utils/pageSizeStore';
-import {
-  normalizePageSizeOptions,
   hashString,
   buildColumnsSignature,
-  isLeafColumn,
-  getColumnId,
   readArrayStorage,
   writeArrayStorage,
   uniqueStrings,
-  computeAdaptiveWidth,
 } from './utils';
+import {
+  buildMergedPagination,
+  prepareColumns,
+  reorderColumnsByOrder,
+  applyColumnIdTransforms,
+} from './resizableTableHelpers';
 import SortableHeaderCell from './SortableHeaderCell';
 
 interface UseResizableTableDataParams<T> {
@@ -152,57 +146,10 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
     resolvedStorageKey ? buildPageSizeStorageKey(resolvedStorageKey) : undefined
   ), [resolvedStorageKey]);
 
-  const mergedPagination = React.useMemo(() => {
-    if (paginationProp === false) return false;
-    if (paginationProp === undefined || paginationProp === null) return paginationProp;
-    const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
-    const { position, placement, showSizeChanger: showSizeChangerProp, ...baseRest } = base as any;
-    const explicitDefaultPageSize = typeof base?.defaultPageSize === 'number'
-      ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
-      : undefined;
-    const persistedPageSize = pageSizeStorageKey
-      ? readPageSizeByKey(pageSizeStorageKey, explicitDefaultPageSize ?? DEFAULT_PAGE_SIZE)
-      : readPageSize(explicitDefaultPageSize ?? DEFAULT_PAGE_SIZE);
-    const normalizedPageSize = typeof base?.pageSize === 'number'
-      ? normalizePageSize(base.pageSize, DEFAULT_PAGE_SIZE)
-      : undefined;
-    const normalizedDefaultPageSize = normalizedPageSize === undefined
-      ? persistedPageSize
-      : explicitDefaultPageSize;
-
-    const originalOnChange = base?.onChange;
-    const trackedPageSize = normalizedPageSize ?? normalizedDefaultPageSize;
-    const interceptedOnChange = (page: number, pageSize: number) => {
-      const nextPageSize = normalizePageSize(pageSize, DEFAULT_PAGE_SIZE);
-      if (trackedPageSize === undefined || nextPageSize !== trackedPageSize) {
-        if (pageSizeStorageKey) {
-          savePageSizeByKey(pageSizeStorageKey, nextPageSize);
-        } else {
-          savePageSize(nextPageSize);
-        }
-      }
-      originalOnChange?.(page, nextPageSize);
-    };
-
-    let resolvedShowSizeChanger;
-    if (showSizeChangerProp === false) {
-      resolvedShowSizeChanger = false;
-    } else {
-      const baseShowSizeChanger = typeof showSizeChangerProp === 'object' ? showSizeChangerProp : {};
-      resolvedShowSizeChanger = { getPopupContainer: (triggerNode: HTMLElement) => document.body, ...baseShowSizeChanger };
-    }
-
-    return {
-      ...baseRest,
-      pageSize: normalizedPageSize,
-      defaultPageSize: normalizedDefaultPageSize,
-      pageSizeOptions: normalizePageSizeOptions(base?.pageSizeOptions, normalizedPageSize, normalizedDefaultPageSize),
-      onChange: interceptedOnChange,
-      simple: base?.simple ?? false,
-      showSizeChanger: resolvedShowSizeChanger,
-      placement: placement ?? position ?? ['bottomRight'],
-    } as any;
-  }, [pageSizeStorageKey, paginationProp]);
+  const mergedPagination = React.useMemo(
+    () => buildMergedPagination(paginationProp, pageSizeStorageKey),
+    [pageSizeStorageKey, paginationProp],
+  );
 
   const orderStorageKey = React.useMemo(() => {
     if (!resolvedStorageKey) return null;
@@ -230,142 +177,20 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
     writeArrayStorage(orderStorageKey, uniqueStrings(columnOrder));
   }, [columnOrder, orderStorageKey]);
 
-  const preparedColumns = React.useMemo(() => {
-    if (!columns) return columns;
-    const rawCols = (Array.isArray(columns) ? columns : []) as any[];
+  const preparedColumns = React.useMemo(
+    () => prepareColumns(columns, allowFixedColumns, showIndex),
+    [columns, allowFixedColumns, showIndex],
+  );
 
-    const mapColumns = (cols: any[]): any[] => {
-      return cols.map((col) => {
-        const colRecord = col as any;
-        const isLeaf = isLeafColumn(col);
+  const orderedColumns = React.useMemo(
+    () => reorderColumnsByOrder(preparedColumns, columnOrder, showIndex),
+    [preparedColumns, columnOrder, showIndex],
+  );
 
-        if (!isLeaf) {
-          const children = Array.isArray(colRecord.children) ? colRecord.children : [];
-          return { ...colRecord, children: mapColumns(children) };
-        }
-
-        const colId = getColumnId(colRecord, [rawCols.indexOf(colRecord)]);
-
-        const keyText = colRecord.key == null ? '' : String(colRecord.key);
-        const dataIndexText = Array.isArray(colRecord.dataIndex)
-          ? colRecord.dataIndex.join('.')
-          : colRecord.dataIndex == null ? '' : String(colRecord.dataIndex);
-
-        const maybeAction =
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
-          ['操作', '操作列', '操作区', '操作按钮'].includes(String(colRecord.title || '').trim());
-
-        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
-
-        const adaptive = computeAdaptiveWidth(colRecord);
-
-        return {
-          ...safeColRecord,
-          colId,
-          ...(adaptive.width != null ? { width: adaptive.width } : {}),
-          fixed: allowFixedColumns ? (maybeAction ? 'right' : colRecord.fixed) : undefined,
-        };
-      });
-    };
-
-    const mapped = mapColumns(rawCols);
-
-    if (showIndex && mapped.length > 0) {
-      const indexColumn = {
-        title: '序号',
-        key: '__index__',
-        dataIndex: '__index__',
-        width: 60,
-        align: 'center',
-        fixed: 'left',
-        colId: '__index__',
-        render: (_: any, __: any, idx: number) => idx + 1,
-      };
-      return [indexColumn, ...mapped];
-    }
-
-    return mapped;
-  }, [columns, allowFixedColumns, showIndex]);
-
-  const orderedColumns = React.useMemo(() => {
-    if (!preparedColumns || columnOrder.length === 0) return preparedColumns;
-    const rawCols = preparedColumns as any[];
-    const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
-    if (!topLevelLeaf) return preparedColumns;
-
-    const indexCol = showIndex ? rawCols.find((c: any) => c.colId === '__index__') : null;
-    const restCols = showIndex ? rawCols.filter((c: any) => c.colId !== '__index__') : rawCols;
-
-    const topLevelIds = restCols.map((col, idx) => getColumnId(col, [idx]));
-    const map = new Map<string, any>();
-    for (let i = 0; i < restCols.length; i++) {
-      map.set(topLevelIds[i], restCols[i]);
-    }
-
-    const ordered: any[] = [];
-    for (const id of columnOrder) {
-      const hit = map.get(id);
-      if (!hit) continue;
-      ordered.push(hit);
-      map.delete(id);
-    }
-    for (let i = 0; i < restCols.length; i++) {
-      const id = topLevelIds[i];
-      const hit = map.get(id);
-      if (!hit) continue;
-      ordered.push(hit);
-      map.delete(id);
-    }
-
-    const fixedLeft = ordered.filter((c: any) => c.fixed === 'left');
-    const fixedRight = ordered.filter((c: any) => c.fixed === 'right');
-    const nonFixed = ordered.filter((c: any) => c.fixed !== 'left' && c.fixed !== 'right');
-    const result = [...fixedLeft, ...nonFixed, ...fixedRight];
-
-    if (indexCol) {
-      return [indexCol, ...result];
-    }
-    return result;
-  }, [preparedColumns, columnOrder, showIndex]);
-
-  const finalColumns = React.useMemo(() => {
-    if (!orderedColumns) return orderedColumns;
-    const currentPage = typeof (mergedPagination as any)?.current === 'number' ? (mergedPagination as any).current : 1;
-    const currentPageSize = typeof (mergedPagination as any)?.pageSize === 'number' ? (mergedPagination as any).pageSize : 0;
-    const indexOffset = currentPage > 1 && currentPageSize > 0 ? (currentPage - 1) * currentPageSize : 0;
-
-    return (orderedColumns as any[]).map((col: any) => {
-      const { colId, ...cleanCol } = col;
-      const originalOnHeaderCell = cleanCol.onHeaderCell;
-
-      if (colId === '__index__') {
-        return {
-          ...cleanCol,
-          render: (_: any, __: any, idx: number) => indexOffset + idx + 1,
-          onHeaderCell: (column: any) => {
-            const originalProps = typeof originalOnHeaderCell === 'function'
-              ? originalOnHeaderCell(column)
-              : {};
-            return { ...originalProps, 'data-col-id': colId };
-          },
-        };
-      }
-
-      return {
-        ...cleanCol,
-        onHeaderCell: (column: any) => {
-          const originalProps = typeof originalOnHeaderCell === 'function'
-            ? originalOnHeaderCell(column)
-            : {};
-          return {
-            ...originalProps,
-            'data-col-id': colId,
-          };
-        },
-      };
-    });
-  }, [orderedColumns, mergedPagination]);
+  const finalColumns = React.useMemo(
+    () => applyColumnIdTransforms(orderedColumns, mergedPagination),
+    [orderedColumns, mergedPagination],
+  );
 
   React.useEffect(() => {
     checkScrollable();

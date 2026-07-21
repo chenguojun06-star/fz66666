@@ -1,26 +1,24 @@
-import React, { useMemo, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Statistic, Switch, Tabs, Tooltip } from 'antd';
+import React, { useMemo } from 'react';
+import { App, Button, Card, Input, Select, Space, Switch, Tabs } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
-import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getSummaryColumns, getDetailColumns } from './payrollOperatorColumns';
 import WageSlipPrintModal from './WageSlipPrintModal';
-import { PrinterOutlined, SearchOutlined, DownloadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ShopOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited } from './usePayrollData';
-import { formatMoney } from '@/utils/format';
-import { statusMap } from '@/modules/finance/pages/FinanceCenter/useSettlementData';
 import { usePayrollActions } from './usePayrollActions';
-import WorkerEfficiencyTab from './WorkerEfficiencyTab';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { SCAN_TYPE_OPTIONS } from '@/components/common/ScanTypeBadge';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
-import api from '@/utils/api';
-import { formatDateTime, formatDate } from '@/utils/datetime';
+import { internalOrderColumns } from './internalOrderColumns';
+import { usePaymentAndDeduction } from './usePaymentAndDeduction';
+import PaymentModal from './PaymentModal';
+import DeductionModal from './DeductionModal';
+import StatisticsCards from './StatisticsCards';
 
 const PayrollOperatorSummary: React.FC = () => {
     const {
@@ -36,237 +34,26 @@ const PayrollOperatorSummary: React.FC = () => {
         printModalVisible, setPrintModalVisible,
         totalAmount, filteredRows, summaryRows,
         internalOrders, internalOrdersLoading, fetchInternalOrders,
-        workerEffList, workerEffLoading, workerEffFetched, fetchWorkerEfficiency,
         doFetchData, fetchData, reset,
     } = usePayrollData();
 
     const { message } = App.useApp();
 
-    const [paymentModalVisible, setPaymentModalVisible] = useState(false);
-    const [deductionModalVisible, setDeductionModalVisible] = useState(false);
-    const [activeRecord, setActiveRecord] = useState<Record<string, unknown> | null>(null);
-    const [paymentForm] = Form.useForm();
-    const [deductionForm] = Form.useForm();
-    const [paymentLoading, setPaymentLoading] = useState(false);
-    const [deductionLoading, setDeductionLoading] = useState(false);
-
-    const handleRecordPayment = (record: Record<string, unknown>) => {
-        setActiveRecord(record);
-        paymentForm.resetFields();
-        paymentForm.setFieldsValue({ amount: toNumberOrZero(record.remainingAmount) });
-        setPaymentModalVisible(true);
-    };
-
-    const handleAddDeduction = (record: Record<string, unknown>) => {
-        setActiveRecord(record);
-        deductionForm.resetFields();
-        setDeductionModalVisible(true);
-    };
-
-    const submitPayment = async () => {
-        try {
-            const values = await paymentForm.validateFields();
-            if (!activeRecord?.id) { message.error('缺少结算记录ID'); return; }
-            setPaymentLoading(true);
-            await api.put(`/finance/payroll-settlement/${String(activeRecord.id)}/payment`, { amount: values.amount });
-            message.success('打款记录已保存');
-            setPaymentModalVisible(false);
-            void fetchData();
-        } catch (err: unknown) {
-            if (err instanceof Error) message.error(err.message);
-        } finally {
-            setPaymentLoading(false);
-        }
-    };
-
-    const submitDeduction = async () => {
-        try {
-            const values = await deductionForm.validateFields();
-            if (!activeRecord?.id) { message.error('缺少结算记录ID'); return; }
-            setDeductionLoading(true);
-            await api.post(`/finance/payroll-settlement/${String(activeRecord.id)}/deduction`, {
-                amount: values.amount,
-                type: values.type,
-                description: values.description,
-            });
-            message.success('扣款记录已保存');
-            setDeductionModalVisible(false);
-            void fetchData();
-        } catch (err: unknown) {
-            if (err instanceof Error) message.error(err.message);
-        } finally {
-            setDeductionLoading(false);
-        }
-    };
+    const {
+        paymentModalVisible, setPaymentModalVisible,
+        deductionModalVisible, setDeductionModalVisible,
+        activeRecord,
+        paymentForm, deductionForm,
+        paymentLoading, deductionLoading,
+        handleRecordPayment, handleAddDeduction,
+        submitPayment, submitDeduction,
+    } = usePaymentAndDeduction({ fetchData, message });
 
     const { sortField: summarySortField, sortOrder: summarySortOrder, handleSort: handleSummarySort } = usePersistentSort<string, 'asc' | 'desc'>({
         storageKey: 'payroll-operator-summary',
         defaultField: 'operatorName',
         defaultOrder: 'asc',
     });
-
-    const internalOrderColumns = useMemo(() => [
-        {
-            title: '订单号',
-            dataIndex: 'orderNo',
-            key: 'orderNo',
-            width: 150,
-        },
-        {
-            title: '款号',
-            dataIndex: 'styleNo',
-            key: 'styleNo',
-            width: 120,
-        },
-        {
-            title: '工厂',
-            dataIndex: 'factoryName',
-            key: 'factoryName',
-            width: 220,
-            render: (_text: string, record: any) => (
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <FactoryTypeTag factoryType={record.factoryType} />
-                        <span>{record.factoryName || '-'}</span>
-                    </div>
-                    {(record.orgPath || record.parentOrgUnitName) &&
-                     (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
-                        <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
-                            {record.orgPath || record.parentOrgUnitName}
-                        </div>
-                    ) : null}
-                </div>
-            ),
-        },
-        {
-            title: '状态',
-            dataIndex: 'status',
-            key: 'status',
-            width: 100,
-            render: (status: string) => {
-                const info = statusMap[status] || { text: '未知', color: 'var(--neutral-text-secondary)' };
-                return (
-                    <span style={{ padding: '2px 8px', fontSize: 14, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
-                        {info.text}
-                    </span>
-                );
-            },
-        },
-        {
-            title: '完成时间',
-            dataIndex: 'completeTime',
-            key: 'completeTime',
-            width: 160,
-            render: (val: string) => formatDateTime(val),
-        },
-        {
-            title: '颜色',
-            dataIndex: 'colors',
-            key: 'colors',
-            width: 100,
-            render: (val: string) => val || '-',
-        },
-        {
-            title: '下单数',
-            dataIndex: 'orderQuantity',
-            key: 'orderQuantity',
-            width: 100,
-            align: 'right' as const,
-            render: (val: number) => val?.toLocaleString() || '-',
-        },
-        {
-            title: '入库数',
-            dataIndex: 'warehousedQuantity',
-            key: 'warehousedQuantity',
-            width: 100,
-            align: 'right' as const,
-            render: (val: number) => val?.toLocaleString() || '-',
-        },
-        {
-            title: '次品数',
-            dataIndex: 'defectQuantity',
-            key: 'defectQuantity',
-            width: 100,
-            align: 'right' as const,
-            render: (val: number) => (
-                <span style={{ color: val > 0 ? 'var(--color-danger)' : '#666' }}>
-                    {val?.toLocaleString() || '-'}
-                </span>
-            ),
-        },
-        {
-            title: (<Tooltip title="下单时锁定的加工单价"><span>下单锁定单价</span></Tooltip>),
-            dataIndex: 'styleFinalPrice',
-            key: 'styleFinalPrice',
-            width: 150,
-            align: 'right' as const,
-            render: (val: number) => (
-                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
-            ),
-        },
-        {
-            title: (<Tooltip title="面辅料采购总成本（状态：已收货/已完成）"><span>面辅料成本</span></Tooltip>),
-            dataIndex: 'materialCost',
-            key: 'materialCost',
-            width: 130,
-            align: 'right' as const,
-            render: (val: number) => formatMoney(val),
-        },
-        {
-            title: (<Tooltip title="生产过程中工序扫码成本总计"><span>生产成本</span></Tooltip>),
-            dataIndex: 'productionCost',
-            key: 'productionCost',
-            width: 120,
-            align: 'right' as const,
-            render: (val: number) => formatMoney(val),
-        },
-        {
-            title: (<Tooltip title="次品报废损失 = 次品数 × 单件成本"><span>报废损失</span></Tooltip>),
-            dataIndex: 'defectLoss',
-            key: 'defectLoss',
-            width: 120,
-            align: 'right' as const,
-            render: (val: number) => (
-                <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
-                    {val > 0 ? '-' : ''}{formatMoney(val)}
-                </span>
-            ),
-        },
-        {
-            title: '总金额',
-            dataIndex: 'totalAmount',
-            key: 'totalAmount',
-            width: 130,
-            align: 'right' as const,
-            render: (val: number) => (
-                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
-            ),
-        },
-        {
-            title: '利润',
-            dataIndex: 'profit',
-            key: 'profit',
-            width: 130,
-            align: 'right' as const,
-            render: (val: number) => (
-                <span style={{ fontWeight: 600, color: val >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                    {formatMoney(val)}
-                </span>
-            ),
-        },
-        {
-            title: '利润率',
-            dataIndex: 'profitMargin',
-            key: 'profitMargin',
-            width: 100,
-            align: 'right' as const,
-            render: (val: number) => (
-                <span style={{ fontWeight: 600, color: val >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                    {val !== null && val !== undefined ? `${val.toFixed(2)}%` : '-'}
-                </span>
-            ),
-        },
-    ], []);
 
     const {
         handleAuditDetail, handleBatchAuditDetails, handleRejectOperator,
@@ -310,37 +97,12 @@ const PayrollOperatorSummary: React.FC = () => {
             >
                 {/* ===== 统一统计卡片 ===== */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-                    {activeTab === 'internalOrders' ? (
-                        <>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ShopOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>} value={internalOrders.length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
-                            </Card>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />生产中</span>} value={internalOrders.filter((r: any) => r.status === 'production' || r.status === 'IN_PRODUCTION' || r.status === 'in_production').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
-                            </Card>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已完成</span>} value={internalOrders.filter((r: any) => r.status === 'completed' || r.status === 'COMPLETED' || r.status === 'closed' || r.status === 'CLOSED').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
-                            </Card>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={internalOrders.reduce((s: number, r: any) => s + toNumberOrZero(r.totalAmount), 0)} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
-                            </Card>
-                        </>
-                    ) : (
-                        <>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
-                            </Card>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
-                            </Card>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
-                            </Card>
-                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-                                <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
-                            </Card>
-                        </>
-                    )}
+                    <StatisticsCards
+                        activeTab={activeTab}
+                        internalOrders={internalOrders}
+                        rows={rows}
+                        totalAmount={totalAmount}
+                    />
                 </div>
 
                 {activeTab !== 'internalOrders' && (
@@ -479,64 +241,23 @@ const PayrollOperatorSummary: React.FC = () => {
                 workerData={getPrintData()}
                 dateRange={dateRange?.[0] && dateRange?.[1] ? [dayjs(dateRange[0]).format('YYYY-MM-DD'), dayjs(dateRange[1]).format('YYYY-MM-DD')] : ['-', '-']} />
 
-            <ResizableModal
-                title={`记录打款 — ${activeRecord?.operatorName || ''}`}
-                open={paymentModalVisible}
-                onCancel={() => setPaymentModalVisible(false)}
+            <PaymentModal
+                visible={paymentModalVisible}
+                record={activeRecord}
+                form={paymentForm}
+                loading={paymentLoading}
+                onClose={() => setPaymentModalVisible(false)}
                 onOk={submitPayment}
-                confirmLoading={paymentLoading}
-                width="30vw"
-            >
-                <Form form={paymentForm} layout="vertical">
-                    <Form.Item label="剩余未付金额" style={{ color: 'var(--neutral-text-secondary)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: 13 }}>
-                            {formatMoney(Number(activeRecord?.remainingAmount ?? 0))}
-                        </span>
-                    </Form.Item>
-                    <Form.Item name="amount" label="打款金额" rules={[{ required: true, message: '请输入打款金额' }]}>
-                        <InputNumber
-                            style={{ width: '100%' }}
-                            min={0.01}
-                            max={toNumberOrZero(activeRecord?.remainingAmount)}
-                            precision={2}
-                            prefix="¥"
-                            placeholder="请输入打款金额"
-                        />
-                    </Form.Item>
-                </Form>
-            </ResizableModal>
+            />
 
-            <ResizableModal
-                title={`添加扣款 — ${activeRecord?.operatorName || ''}`}
-                open={deductionModalVisible}
-                onCancel={() => setDeductionModalVisible(false)}
+            <DeductionModal
+                visible={deductionModalVisible}
+                record={activeRecord}
+                form={deductionForm}
+                loading={deductionLoading}
+                onClose={() => setDeductionModalVisible(false)}
                 onOk={submitDeduction}
-                confirmLoading={deductionLoading}
-                width="40vw"
-            >
-                <Form form={deductionForm} layout="vertical">
-                    <Form.Item name="type" label="扣款类型" rules={[{ required: true, message: '请选择扣款类型' }]}>
-                        <Select placeholder="请选择扣款类型" options={[
-                            { value: 'ADVANCE_DEDUCTION', label: '借支抵扣' },
-                            { value: 'QUALITY_PENALTY', label: '质量罚款' },
-                            { value: 'ATTENDANCE_DEDUCTION', label: '考勤扣款' },
-                            { value: 'OTHER', label: '其他' },
-                        ]} />
-                    </Form.Item>
-                    <Form.Item name="amount" label="扣款金额" rules={[{ required: true, message: '请输入扣款金额' }]}>
-                        <InputNumber
-                            style={{ width: '100%' }}
-                            min={0.01}
-                            precision={2}
-                            prefix="¥"
-                            placeholder="请输入扣款金额"
-                        />
-                    </Form.Item>
-                    <Form.Item name="description" label="扣款说明">
-                        <Input.TextArea rows={3} placeholder="请输入扣款说明" maxLength={200} showCount />
-                    </Form.Item>
-                </Form>
-            </ResizableModal>
+            />
         </>
     );
 };
