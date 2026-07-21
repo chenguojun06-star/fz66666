@@ -1,0 +1,52 @@
+<view class="page">
+  <!-- 顶部导航 -->
+  <view class="page-header">
+    <view class="back-btn" bindtap="onBack">
+      <view class="line-icon icon-arrow-left"></view>
+    </view>
+    <text class="page-title">应用权限配置</text>
+    <view class="save-btn {{saving ? 'save-btn--disabled' : ''}}" bindtap="onSave">
+      <text>{{saving ? '保存中...' : '保存'}}</text>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 内容区 -->
+  <view class="content" wx:if="{{!loading}}">
+    <!-- 角色标签页 -->
+    <view class="role-tabs">
+      <view class="role-tab {{activeRole === item ? 'role-tab--active' : ''}}"
+            wx:for="{{roles}}" wx:key="*this"
+            data-role="{{item}}" bindtap="onSwitchRole">
+        <text>{{roleLabels[item] || item}}</text>
+      </view>
+    </view>
+
+    <!-- 提示文字 -->
+    <view class="tip-bar">
+      <text class="tip-text">关闭开关后，该角色用户将不再看到此应用</text>
+    </view>
+
+    <!-- 应用列表 -->
+    <view class="menu-list">
+      <view class="menu-item" wx:for="{{menus}}" wx:key="*this" data-menu="{{item}}" bindtap="onToggleMenu">
+        <text class="menu-name">{{menuLabels[item] || item}}</text>
+        <view class="switch-wrap">
+          <view class="switch {{(roleMenus[activeRole] && roleMenus[activeRole][item] === false) ? 'switch--off' : 'switch--on'}}">
+            <view class="switch-knob"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Toast -->
+  <view class="toast" wx:if="{{showToast}}">
+    <text>{{toastMsg}}</text>
+  </view>
+</view>

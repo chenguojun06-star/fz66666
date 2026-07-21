@@ -6,6 +6,7 @@
       <view class="search-clear icon-close" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true"></view>
     </view>
     <text class="edit-btn {{editing ? 'edit-btn-active' : ''}}" bindtap="onEditToggle">{{editing ? '完成' : '编辑'}}</text>
+    <text class="edit-btn" wx:if="{{isAdmin && !editing}}" bindtap="onGotoRoleConfig">权限配置</text>
   </view>
 
   <view class="fav-section" wx:if="{{favoriteApps.length > 0}}">

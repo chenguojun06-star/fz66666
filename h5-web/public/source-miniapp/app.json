@@ -4,7 +4,8 @@
     "pages/home/index",
     "pages/defect/index",
     "pages/scan/index",
-    "pages/admin/index"
+    "pages/admin/index",
+    "pages/admin/menu-role-config/index"
   ],
   "subpackages": [
     {

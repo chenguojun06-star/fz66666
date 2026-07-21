@@ -1,6 +1,32 @@
 const { safeNavigate } = require('../../utils/uiHelper');
 const api = require('../../utils/api');
 const { eventBus, Events } = require('../../utils/eventBus');
+const { isTenantOwner, getUserRole } = require('../../utils/storage');
+
+// 应用ID → 后端菜单权限key 映射
+const APP_ID_TO_MENU_KEY = {
+  'dashboard': 'miniprogram.menu.dashboard',
+  'orderCreate': 'miniprogram.menu.orderCreate',
+  'sampleDev': 'miniprogram.menu.sampleDev',
+  'cuttingDetail': 'miniprogram.menu.cuttingDetail',
+  'bundleSplit': 'miniprogram.menu.bundleSplit',
+  'unitPrice': 'miniprogram.menu.unitPrice',
+  'procurement': 'miniprogram.menu.procurement',
+  'materialScan': 'miniprogram.menu.materialScan',
+  'locationScan': 'miniprogram.menu.locationScan',
+  'factoryShipment': 'miniprogram.menu.factoryShipment',
+  'materialDatabase': 'miniprogram.menu.materialDatabase',
+  'finishedInventory': 'miniprogram.menu.finishedInventory',
+  'sampleStock': 'miniprogram.menu.sampleStock',
+  'wagePayment': 'miniprogram.menu.wagePayment',
+  'financePayment': 'miniprogram.menu.financePayment',
+  'advance': 'miniprogram.menu.advance',
+  'salesOverview': 'miniprogram.menu.salesOverview',
+  'smartOps': 'miniprogram.menu.smartOps',
+  'returnList': 'miniprogram.menu.returnList',
+  'userApproval': 'miniprogram.menu.userApproval',
+  'feedback': 'miniprogram.menu.feedback',
+};
 
 // 所有应用配置（与设计稿对齐：4组 x 4个 = 16个应用）
 const ALL_APPS = [
@@ -42,14 +68,35 @@ Page({
     filteredApps: ALL_APPS,
     favoriteApps: [],
     editing: false,
+    menuFlags: {},
+    isAdmin: false,
   },
 
   onLoad: function () {
-    this.loadFavorites();
+    this._checkAdmin();
+    this.loadMenuConfig();
   },
 
   onShow: function () {
     this.loadFavorites();
+  },
+
+  _checkAdmin: function () {
+    const role = getUserRole();
+    const admin = isTenantOwner() || /admin|manager|supervisor|merchandiser/i.test(role);
+    this.setData({ isAdmin: admin });
+  },
+
+  loadMenuConfig: function () {
+    const that = this;
+    api.system.getMiniprogramMenuConfig().then(function (res) {
+      const flags = res || {};
+      that.setData({ menuFlags: flags });
+      that.loadFavorites();
+    }).catch(function () {
+      that.setData({ menuFlags: {} });
+      that.loadFavorites();
+    });
   },
 
   onBack: function () {
@@ -97,13 +144,21 @@ Page({
     const k = (keyword || '').toLowerCase();
     const favs = favorites || this.data.favoriteApps || [];
     const favIds = new Set(favs.map(function(f) { return f.id; }));
+    const flags = this.data.menuFlags || {};
 
     const filtered = ALL_APPS.map(function (group) {
       return {
         group: group.group,
         items: group.items
           .filter(function (item) {
-            return item.name.toLowerCase().indexOf(k) !== -1;
+            // 搜索过滤
+            if (item.name.toLowerCase().indexOf(k) === -1) return false;
+            // 菜单权限过滤：未配置或配置为true时可见
+            const menuKey = APP_ID_TO_MENU_KEY[item.id];
+            if (menuKey) {
+              return flags[menuKey] !== false;
+            }
+            return true;
           })
           .map(function (item) {
             return Object.assign({}, item, { isFav: favIds.has(item.id) });
@@ -123,6 +178,10 @@ Page({
 
   onEditToggle: function () {
     this.setData({ editing: !this.data.editing });
+  },
+
+  onGotoRoleConfig: function () {
+    safeNavigate({ url: '/pages/admin/menu-role-config/index' }).catch(function() {});
   },
 
   onToggleFavorite: function (e) {

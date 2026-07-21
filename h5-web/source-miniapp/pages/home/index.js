@@ -4,6 +4,34 @@ const { isTokenExpired } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 
+// 应用ID → 后端菜单权限key 映射（与 more-apps/index.js 对齐）
+const APP_ID_TO_MENU_KEY = {
+  'dashboard': 'miniprogram.menu.dashboard',
+  'orderCreate': 'miniprogram.menu.orderCreate',
+  'sampleDev': 'miniprogram.menu.sampleDev',
+  'cuttingDetail': 'miniprogram.menu.cuttingDetail',
+  'bundleSplit': 'miniprogram.menu.bundleSplit',
+  'unitPrice': 'miniprogram.menu.unitPrice',
+  'procurement': 'miniprogram.menu.procurement',
+  'materialScan': 'miniprogram.menu.materialScan',
+  'locationScan': 'miniprogram.menu.locationScan',
+  'factoryShipment': 'miniprogram.menu.factoryShipment',
+  'materialDatabase': 'miniprogram.menu.materialDatabase',
+  'finishedInventory': 'miniprogram.menu.finishedInventory',
+  'sampleStock': 'miniprogram.menu.sampleStock',
+  'wagePayment': 'miniprogram.menu.wagePayment',
+  'financePayment': 'miniprogram.menu.financePayment',
+  'advance': 'miniprogram.menu.advance',
+  'salesOverview': 'miniprogram.menu.salesOverview',
+  'smartOps': 'miniprogram.menu.smartOps',
+  'returnList': 'miniprogram.menu.returnList',
+  'userApproval': 'miniprogram.menu.userApproval',
+  'feedback': 'miniprogram.menu.feedback',
+  'quality': 'miniprogram.menu.quality',
+  'production': 'miniprogram.menu.production',
+  'history': 'miniprogram.menu.history',
+};
+
 const DAILY_TIPS = [
   '及时扫码可以确保生产进度数据准确，方便后续工资结算。',
   '质检不合格时请拍照留存，便于后续返修追溯。',
@@ -106,9 +134,14 @@ Page({
 
   _loadFavorites: function () {
     const that = this;
-    api.system.getFavoriteApps().then(function (res) {
+    // 同时获取收藏和菜单权限配置
+    Promise.all([
+      api.system.getFavoriteApps().catch(function () { return { favoriteData: '[]' }; }),
+      api.system.getMiniprogramMenuConfig().catch(function () { return {}; }),
+    ]).then(function (results) {
       let favorites = [];
       try {
+        const res = results[0];
         const raw = res && res.favoriteData ? res.favoriteData : (typeof res === 'string' ? res : '[]');
         favorites = JSON.parse(raw);
         if (!Array.isArray(favorites)) favorites = [];
@@ -116,21 +149,29 @@ Page({
         favorites = [];
       }
       try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
-      that.setData({ menuItems: that._buildMenuItems(favorites) });
+      const menuFlags = results[1] || {};
+      that.setData({ menuItems: that._buildMenuItems(favorites, menuFlags) });
     }).catch(function () {
       let favorites = [];
-      try {
-        favorites = wx.getStorageSync('favoriteApps') || [];
-      } catch (e) { /* ignore */ }
-      that.setData({ menuItems: that._buildMenuItems(favorites) });
+      try { favorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
+      that.setData({ menuItems: that._buildMenuItems(favorites, {}) });
     });
   },
 
-  _buildMenuItems: function (favorites) {
+  _buildMenuItems: function (favorites, menuFlags) {
+    const flags = menuFlags || {};
+    function isVisible(appId) {
+      const menuKey = APP_ID_TO_MENU_KEY[appId];
+      if (menuKey) {
+        return flags[menuKey] !== false;
+      }
+      return true;
+    }
+
     var items = [];
     if (favorites && favorites.length > 0) {
-      // 用户有收藏：显示收藏的应用
-      items = favorites.map(function (f) {
+      // 用户有收藏：显示收藏的应用（过滤不可见）
+      items = favorites.filter(function (f) { return isVisible(f.id); }).map(function (f) {
         return {
           id: f.id,
           name: f.name,
@@ -140,9 +181,10 @@ Page({
           badge: f.badge,
         };
       });
-    } else {
-      // 没有收藏：显示默认应用
-      items = DEFAULT_APPS.map(function (a) {
+    }
+    if (items.length === 0) {
+      // 没有收藏或全部被过滤：显示默认应用
+      items = DEFAULT_APPS.filter(function (a) { return isVisible(a.id); }).map(function (a) {
         return Object.assign({}, a);
       });
     }
