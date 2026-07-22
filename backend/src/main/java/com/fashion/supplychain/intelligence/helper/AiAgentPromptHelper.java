@@ -195,6 +195,13 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> archivalMemCtx = isSmallTalk
                 ? emptyFuture
                 : supplyAsync(() -> buildArchivalMemoryBlock(tenantIdForSop, userMessageForSop));
+        // P0-2: 反思记忆闭环 — 召回历史低分回答的 REFLECTIVE 记忆，注入 prompt 防止重蹈覆辙
+        // 低优先级LOW：仅在非闲聊场景触发，retrieveMultiSignal 内部做多租户隔离
+        final Long tenantIdForReflective = tenantId;
+        final String userMessageForReflective = userMessage;
+        CompletableFuture<String> reflectiveMemCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> contextProvider.buildReflectiveMemoryContext(tenantIdForReflective, userMessageForReflective));
 
         // 按优先级分批等待：HIGH优先级块先等高timeout（影响回答质量的关键上下文）
         // MEDIUM优先级块等中timeout（知识/记忆类）
@@ -233,6 +240,7 @@ public class AiAgentPromptHelper {
         String exceptionReportBlock = safeJoinWithTimeout(exceptionReport, lowTimeout, "异常报告(LOW)");
         String selfCritiqueBlock = safeJoinWithTimeout(selfCritiqueCtx, lowTimeout, "自我评分反馈(LOW)");
         String archivalMemBlock = safeJoinWithTimeout(archivalMemCtx, lowTimeout, "L5归档记忆(LOW)");
+        String reflectiveMemBlock = safeJoinWithTimeout(reflectiveMemCtx, lowTimeout, "反思记忆(LOW)");
 
         String masFromFuture = safeJoinWithTimeout(masInsightCtx, mediumTimeout, "多Agent分析(MEDIUM)");
         String masFromCache = buildMasInsightBlock();
@@ -249,7 +257,7 @@ public class AiAgentPromptHelper {
                 masInsightBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
                 userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, memoryBankBlockStr, selfCritiqueBlock,
                 entityMemoryBlock, graphRagBlock, factoryProfileBlock, proceduralMemBlock, proceduralSopBlock,
-                archivalMemBlock, formatHint,
+                archivalMemBlock, reflectiveMemBlock, formatHint,
                 toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
@@ -638,7 +646,7 @@ public class AiAgentPromptHelper {
             String userBehaviorBlock, String contextFileBlockStr, String userProfileBlockStr,
             String memoryBankBlockStr, String selfCritiqueBlock, String entityMemoryBlock,
             String graphRagBlock, String factoryProfileBlock, String proceduralMemBlock,
-            String proceduralSopBlock, String archivalMemBlock,
+            String proceduralSopBlock, String archivalMemBlock, String reflectiveMemBlock,
             String formatHint, String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
         if (identity == null || identity.isBlank()) {
@@ -704,6 +712,10 @@ public class AiAgentPromptHelper {
         // L5 归档记忆：冷数据召回（低优先级，仅在用户问历史时触发）
         if (archivalMemBlock != null && !archivalMemBlock.isEmpty()) {
             prompt.append("<!--BLOCK:archivalMemCtx-->").append(archivalMemBlock).append("<!--/BLOCK:archivalMemCtx-->");
+        }
+        // P0-2: 反思记忆 — 历史低分回答的教训（低优先级，用户问建议/优化/反思时由 IntentBasedPriorityRouter 保护）
+        if (reflectiveMemBlock != null && !reflectiveMemBlock.isEmpty()) {
+            prompt.append("<!--BLOCK:reflectiveMem-->").append(reflectiveMemBlock).append("<!--/BLOCK:reflectiveMem-->");
         }
         prompt.append("<!--BLOCK:rag-->").append(applyGepaGene("rag", ragContext, gepaInd)).append("<!--/BLOCK:rag-->");
         prompt.append("<!--BLOCK:userBehavior-->").append(userBehaviorBlock).append("<!--/BLOCK:userBehavior-->");

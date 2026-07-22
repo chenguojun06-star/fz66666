@@ -15,6 +15,7 @@ import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.helper.LangfuseSpanHelper;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
@@ -98,25 +99,37 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<SkillCrystallizationService> skillCrystallizationServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ModelSelectionRouter> modelSelectionRouterProvider;
 
+    // P0-4: Langfuse 全链路 span 追踪（required=false 兼容 Langfuse 未配置场景）
+    @Autowired(required = false)
+    private LangfuseSpanHelper langfuseSpanHelper;
+
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
         try {
             // 加载跨会话对话记忆上下文
-            injectConversationMemory(ctx);
+            // P0-4: span inject_memory
+            try (LangfuseSpanHelper.SpanScope injectMemScope = langfuseSpanHelper == null
+                    ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("inject_memory")) {
+                injectConversationMemory(ctx);
+            }
 
             // 语义缓存查找：命中则直接返回，跳过整个Agent循环
+            // P0-4: span semantic_cache_lookup
             SemanticCacheService semanticCacheService = semanticCacheServiceProvider.getIfAvailable();
             if (semanticCacheService != null && ctx.getTenantId() != null) {
-                try {
-                    String cached = semanticCacheService.lookup(ctx.getTenantId(), ctx.getUserMessage());
-                    if (cached != null) {
-                        log.info("[AgentLoop] 语义缓存命中，跳过Agent循环 tenantId={} queryLen={}",
-                                ctx.getTenantId(), ctx.getUserMessage().length());
-                        return handleFinalAnswer(ctx, cached, cb);
+                try (LangfuseSpanHelper.SpanScope cacheScope = langfuseSpanHelper == null
+                        ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("semantic_cache_lookup")) {
+                    try {
+                        String cached = semanticCacheService.lookup(ctx.getTenantId(), ctx.getUserMessage());
+                        if (cached != null) {
+                            log.info("[AgentLoop] 语义缓存命中，跳过Agent循环 tenantId={} queryLen={}",
+                                    ctx.getTenantId(), ctx.getUserMessage().length());
+                            return handleFinalAnswer(ctx, cached, cb);
+                        }
+                    } catch (Exception e) {
+                        log.warn("[AgentLoop] 语义缓存查找异常，继续主流程: {}", e.getMessage());
                     }
-                } catch (Exception e) {
-                    log.warn("[AgentLoop] 语义缓存查找异常，继续主流程: {}", e.getMessage());
                 }
             }
 
@@ -236,7 +249,12 @@ public class AgentLoopEngine {
             streamCb.onProgress(progressPercent, "第 " + iter + "/" + maxIter + " 轮推理");
         }
 
-        IntelligenceInferenceResult result = performInference(ctx, cb, iter);
+        // P0-4: span llm_inference
+        IntelligenceInferenceResult result;
+        try (LangfuseSpanHelper.SpanScope llmScope = langfuseSpanHelper == null
+                ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("llm_inference")) {
+            result = performInference(ctx, cb, iter);
+        }
         log.info("[DEBUG-AI] iter={} success={} contentLen={} toolCalls={} provider={} model={}",
                 iter, result.isSuccess(),
                 result.getContent() != null ? result.getContent().length() : 0,
@@ -258,9 +276,17 @@ public class AgentLoopEngine {
         }
 
         if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
-            return runToolExecutionPhase(ctx, cb, iter, assistantMessage, result);
+            // P0-4: span tool_execution
+            try (LangfuseSpanHelper.SpanScope toolScope = langfuseSpanHelper == null
+                    ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("tool_execution")) {
+                return runToolExecutionPhase(ctx, cb, iter, assistantMessage, result);
+            }
         }
-        return handleFinalAnswer(ctx, result.getContent(), cb);
+        // P0-4: span final_answer
+        try (LangfuseSpanHelper.SpanScope finalScope = langfuseSpanHelper == null
+                ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("final_answer")) {
+            return handleFinalAnswer(ctx, result.getContent(), cb);
+        }
     }
 
     private IntelligenceInferenceResult performInference(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {

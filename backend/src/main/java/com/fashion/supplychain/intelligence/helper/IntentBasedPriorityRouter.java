@@ -28,7 +28,8 @@ public class IntentBasedPriorityRouter {
     /** 默认低优先级块（可被缩减） */
     private static final Set<String> DEFAULT_LOW_PRIORITY = new HashSet<>(Arrays.asList(
             "proceduralMem", "userBehavior", "longTermMem", "masInsight",
-            "contextFile", "selfCritique", "graphRag", "factoryProfile"
+            "contextFile", "selfCritique", "graphRag", "factoryProfile",
+            "reflectiveMem"
     ));
 
     /**
@@ -66,6 +67,10 @@ public class IntentBasedPriorityRouter {
         }
         if (containsAny(lower, "之前", "上次", "历史", "记住", "记得", "你说过")) {
             lowPriority.remove("longTermMem"); // 长期记忆保护
+        }
+        // P0-2: 反思记忆保护 — 用户问建议/优化/踩坑/类似/历史/教训/反思时，保护 reflectiveMem 不被缩减
+        if (containsAny(lower, "建议", "优化", "踩坑", "类似", "之前", "上次", "历史", "教训", "反思")) {
+            lowPriority.remove("reflectiveMem"); // 反思记忆保护
         }
 
         return lowPriority.toArray(new String[0]);

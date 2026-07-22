@@ -2,11 +2,14 @@ package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.dto.ProceduralMemoryCreateDTO;
+import com.fashion.supplychain.intelligence.dto.ProceduralMemoryUpdateDTO;
 import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -188,6 +191,195 @@ public class ProceduralMemoryService {
         log.debug("[ProceduralMemory.matchSOP] 匹配到SOP: {}", bestSOP.getSopName());
 
         return new MatchedSOP(bestSOP);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // CRUD 方法（P0-3 L4 自编辑工具集升级，2026-07-22）
+    // 不加 @Transactional（D-001：Service 层禁止事务）
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * 创建 SOP
+     *
+     * @param tenantId 租户ID（从 UserContext 获取，不信任外部传入）
+     * @param dto 创建参数
+     * @return 创建后的 SOP
+     */
+    public ProceduralMemory createSop(Long tenantId, ProceduralMemoryCreateDTO dto) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("租户ID不能为空");
+        }
+        if (dto == null || dto.getSopName() == null || dto.getSopName().isBlank()) {
+            throw new IllegalArgumentException("SOP名称不能为空");
+        }
+
+        ProceduralMemory sop = new ProceduralMemory();
+        sop.setTenantId(tenantId);
+        sop.setSopName(dto.getSopName());
+        sop.setSopType(dto.getSopType());
+        sop.setStepsJson(dto.getStepsJson());
+        sop.setPreconditions(dto.getPreconditions());
+        sop.setPostcheck(dto.getPostcheck());
+        sop.setTriggerKeywords(dto.getTriggerKeywords());
+        sop.setConfidence(dto.getConfidence() != null ? dto.getConfidence() : BigDecimal.valueOf(0.80));
+        sop.setSource(dto.getSource() != null ? dto.getSource() : ProceduralMemory.SOURCE_MANUAL);
+        sop.setEnabled(dto.getEnabled() != null ? dto.getEnabled() : 1);
+        sop.setVersion(1);
+        sop.setUsageCount(0);
+        sop.setSuccessCount(0);
+        sop.setDeleteFlag(0);
+
+        proceduralMemoryMapper.insert(sop);
+        log.info("[ProceduralMemory.createSop] 创建SOP成功，tenantId={}, id={}, name={}",
+                tenantId, sop.getId(), sop.getSopName());
+        return sop;
+    }
+
+    /**
+     * 更新 SOP（selective update，仅更新非 null 字段）
+     *
+     * @param tenantId 租户ID
+     * @param id SOP ID
+     * @param dto 更新参数
+     * @return 更新后的 SOP
+     */
+    public ProceduralMemory updateSop(Long tenantId, Long id, ProceduralMemoryUpdateDTO dto) {
+        if (tenantId == null || id == null) {
+            throw new IllegalArgumentException("租户ID和SOP ID不能为空");
+        }
+        if (dto == null) {
+            throw new IllegalArgumentException("更新参数不能为空");
+        }
+
+        // 校验存在 + 租户归属
+        requireSopBelongsToTenant(tenantId, id);
+
+        // selective update（MyBatis-Plus 默认 NOT_NULL 策略，仅更新非 null 字段）
+        ProceduralMemory update = new ProceduralMemory();
+        update.setId(id);
+        if (dto.getSopName() != null) update.setSopName(dto.getSopName());
+        if (dto.getSopType() != null) update.setSopType(dto.getSopType());
+        if (dto.getStepsJson() != null) update.setStepsJson(dto.getStepsJson());
+        if (dto.getPreconditions() != null) update.setPreconditions(dto.getPreconditions());
+        if (dto.getPostcheck() != null) update.setPostcheck(dto.getPostcheck());
+        if (dto.getTriggerKeywords() != null) update.setTriggerKeywords(dto.getTriggerKeywords());
+        if (dto.getConfidence() != null) update.setConfidence(dto.getConfidence());
+        if (dto.getSource() != null) update.setSource(dto.getSource());
+        if (dto.getEnabled() != null) update.setEnabled(dto.getEnabled());
+
+        proceduralMemoryMapper.updateById(update);
+        log.info("[ProceduralMemory.updateSop] 更新SOP成功，tenantId={}, id={}", tenantId, id);
+        return proceduralMemoryMapper.selectById(id);
+    }
+
+    /**
+     * 软删除 SOP（delete_flag=1）
+     *
+     * @param tenantId 租户ID
+     * @param id SOP ID
+     */
+    public void deleteSop(Long tenantId, Long id) {
+        if (tenantId == null || id == null) {
+            throw new IllegalArgumentException("租户ID和SOP ID不能为空");
+        }
+        requireSopBelongsToTenant(tenantId, id);
+
+        ProceduralMemory update = new ProceduralMemory();
+        update.setId(id);
+        update.setDeleteFlag(1);
+        proceduralMemoryMapper.updateById(update);
+        log.info("[ProceduralMemory.deleteSop] 软删除SOP成功，tenantId={}, id={}", tenantId, id);
+    }
+
+    /**
+     * 启用 SOP（enabled=1）
+     *
+     * @param tenantId 租户ID
+     * @param id SOP ID
+     */
+    public void enableSop(Long tenantId, Long id) {
+        setEnabled(tenantId, id, 1);
+    }
+
+    /**
+     * 禁用 SOP（enabled=0）
+     *
+     * @param tenantId 租户ID
+     * @param id SOP ID
+     */
+    public void disableSop(Long tenantId, Long id) {
+        setEnabled(tenantId, id, 0);
+    }
+
+    /**
+     * 列表查询 SOP
+     *
+     * @param tenantId 租户ID
+     * @param sopType SOP类型（可选）
+     * @param enabled 是否启用（可选）
+     * @param limit 最多返回条数（上限200）
+     * @return SOP 列表
+     */
+    public List<ProceduralMemory> listSops(Long tenantId, String sopType, Boolean enabled, int limit) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("租户ID不能为空");
+        }
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+
+        LambdaQueryWrapper<ProceduralMemory> wrapper = new LambdaQueryWrapper<ProceduralMemory>()
+                .eq(ProceduralMemory::getTenantId, tenantId)
+                .eq(ProceduralMemory::getDeleteFlag, 0);
+        if (sopType != null && !sopType.isBlank()) {
+            wrapper.eq(ProceduralMemory::getSopType, sopType);
+        }
+        if (enabled != null) {
+            wrapper.eq(ProceduralMemory::getEnabled, enabled ? 1 : 0);
+        }
+        wrapper.orderByDesc(ProceduralMemory::getConfidence)
+                .orderByDesc(ProceduralMemory::getUsageCount)
+                .last("LIMIT " + safeLimit);
+
+        return proceduralMemoryMapper.selectList(wrapper);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // 内部辅助方法
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 设置 SOP 启用状态
+     */
+    private void setEnabled(Long tenantId, Long id, int enabled) {
+        if (tenantId == null || id == null) {
+            throw new IllegalArgumentException("租户ID和SOP ID不能为空");
+        }
+        requireSopBelongsToTenant(tenantId, id);
+
+        ProceduralMemory update = new ProceduralMemory();
+        update.setId(id);
+        update.setEnabled(enabled);
+        proceduralMemoryMapper.updateById(update);
+        log.info("[ProceduralMemory.setEnabled] SOP={} enabled={}", id, enabled);
+    }
+
+    /**
+     * 校验 SOP 存在且属于指定租户（P0铁律4：多租户隔离）
+     *
+     * @param tenantId 租户ID
+     * @param id SOP ID
+     * @return 存在的 SOP
+     * @throws IllegalArgumentException 不存在或不属于该租户
+     */
+    private ProceduralMemory requireSopBelongsToTenant(Long tenantId, Long id) {
+        ProceduralMemory sop = proceduralMemoryMapper.selectOne(
+                new LambdaQueryWrapper<ProceduralMemory>()
+                        .eq(ProceduralMemory::getId, id)
+                        .eq(ProceduralMemory::getTenantId, tenantId)
+                        .eq(ProceduralMemory::getDeleteFlag, 0));
+        if (sop == null) {
+            throw new IllegalArgumentException("SOP不存在或无权访问，id=" + id);
+        }
+        return sop;
     }
 
     /**

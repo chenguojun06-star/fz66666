@@ -621,4 +621,50 @@ public class PromptContextProvider {
             return "";
         }
     }
+
+    /**
+     * P0-2: 反思记忆上下文 — 召回历史低分回答的 REFLECTIVE 记忆，注入 prompt 防止重蹈覆辙。
+     *
+     * <p>借鉴 Mem0/Letta 反思记忆闭环：低分回答→编码为反思记忆→下次类似问题召回→注入 prompt。
+     * 仅召回 layer='REFLECTIVE' 的记忆，每条截断到 200 字，最多 3 条。
+     *
+     * @param tenantId 租户ID（多租户隔离）
+     * @param userMessage 用户消息（用于多信号召回排序）
+     * @return 反思记忆上下文块，无召回时返回空字符串
+     */
+    public String buildReflectiveMemoryContext(Long tenantId, String userMessage) {
+        if (longTermMemoryOrchestrator == null || tenantId == null
+                || userMessage == null || userMessage.isBlank()) {
+            return "";
+        }
+        try {
+            // retrieveMultiSignal 内部通过 UserContext.tenantId() 做多租户隔离
+            // subjectId 传 null：召回该租户下所有 REFLECTIVE 记忆（不限定主体）
+            List<AiLongMemory> candidates = longTermMemoryOrchestrator
+                    .retrieveMultiSignal(userMessage, "user", null, 5);
+            if (candidates == null || candidates.isEmpty()) return "";
+
+            // 过滤 layer='REFLECTIVE'，最多 3 条
+            List<AiLongMemory> reflective = candidates.stream()
+                    .filter(m -> "REFLECTIVE".equals(m.getLayer()))
+                    .limit(3)
+                    .collect(Collectors.toList());
+            if (reflective.isEmpty()) return "";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("## 反思记忆（历史低分回答的教训）\n");
+            for (AiLongMemory m : reflective) {
+                String content = m.getContent();
+                if (content == null) content = "";
+                if (content.length() > 200) content = content.substring(0, 200) + "…";
+                sb.append("- ").append(content).append("\n");
+            }
+            sb.append("（以上为历史低分回答的反思总结，回答类似问题时请引以为戒，避免重蹈覆辙。）\n");
+            log.debug("[AiAgent-Reflective] 注入 {} 条反思记忆", reflective.size());
+            return sb.toString();
+        } catch (Exception e) {
+            log.debug("[AiAgent-Reflective] 反思记忆召回跳过: {}", e.getMessage());
+            return "";
+        }
+    }
 }

@@ -16,9 +16,12 @@ import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.helper.LangfuseSpanContext;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
 import com.fashion.supplychain.intelligence.service.SelfCriticService;
+import com.fashion.supplychain.intelligence.service.ReflectiveMemoryWriter;
 import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
+import com.fashion.supplychain.intelligence.dto.SelfCritiqueResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +77,11 @@ public class AiAgentOrchestrator {
     /** P2升级: 结构化输出后处理 */
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer> outputEnforcerProvider;
 
+    // P0-2: 反思记忆闭环 — 低分回答写入 REFLECTIVE 长期记忆（@Lazy 避免循环依赖）
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private ReflectiveMemoryWriter reflectiveMemoryWriter;
+
     // P1-4: 秒答缓存（预取的业务快照 + 预构建答案）
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.QuickAnswerCacheService> quickAnswerCacheServiceProvider;
 
@@ -98,6 +106,12 @@ public class AiAgentOrchestrator {
 
     // P1升级: 意图组合引擎 — 一句话多意图识别与并行处理
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.IntentCompositionService> intentCompositionServiceProvider;
+
+    // P0-4: Langfuse 全链路追踪（required=false 兼容 Langfuse 未配置场景）
+    @Autowired(required = false)
+    private LangfuseTraceOrchestrator langfuseTraceOrchestrator;
+    @Autowired(required = false)
+    private LangfuseSpanContext langfuseSpanContext;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -610,6 +624,24 @@ public class AiAgentOrchestrator {
             ctx.setDeadlineMs(requestStartAt + agentTimeoutMs);
             ctx.setCancelled(cancelled);
 
+            // P0-4: Langfuse 全链路追踪 — 入口创建 trace + 设置 ThreadLocal span 根
+            // pushTraceWithId 同步创建 trace（失败不影响业务），pushRoot 设置 span 栈供 AgentLoopEngine 使用
+            if (langfuseTraceOrchestrator != null) {
+                try {
+                    langfuseTraceOrchestrator.pushTraceWithId(
+                            ctx.getCommandId(), "streaming_chat", UserContext.tenantId(), UserContext.userId());
+                } catch (Exception le) {
+                    log.debug("[AiAgent-Stream] Langfuse pushTrace 异常（不影响业务）: {}", le.getMessage());
+                }
+            }
+            if (langfuseSpanContext != null) {
+                try {
+                    langfuseSpanContext.pushRoot(ctx.getCommandId(), ctx.getCommandId(), "streaming_chat");
+                } catch (Exception le) {
+                    log.debug("[AiAgent-Stream] Langfuse pushRoot 异常（不影响业务）: {}", le.getMessage());
+                }
+            }
+
             // P2-2: 成本爆炸防御 — 上下文肥大检测与压缩
             applyCostExplosionGuard(ctx);
 
@@ -648,6 +680,14 @@ public class AiAgentOrchestrator {
             lastCommandIdHolder.remove();
             lastToolRecordsHolder.remove();
             AgentModeContext.clear();
+            // P0-4: 清理 Langfuse ThreadLocal span 栈，防止内存泄漏
+            if (langfuseSpanContext != null) {
+                try {
+                    langfuseSpanContext.clear();
+                } catch (Exception le) {
+                    log.debug("[AiAgent-Stream] Langfuse spanContext.clear 异常: {}", le.getMessage());
+                }
+            }
         }
     }
 
@@ -770,6 +810,31 @@ public class AiAgentOrchestrator {
                         null, toolResultsList, metrics, usedQuickPath);
             } catch (Exception e) {
                 log.debug("[AiAgent] SelfCritic触发失败（非关键）: {}", e.getMessage());
+            }
+        }
+
+        // P0-4: Langfuse — SelfCritic 评分完成后自动提交 score（conversationId 即 traceId）
+        // 失败不影响主流程，submitScore 内部已有 try-catch 但额外兜底
+        if (langfuseTraceOrchestrator != null && conversationId != null) {
+            try {
+                langfuseTraceOrchestrator.submitScore(conversationId, "self_critic", selfScore);
+            } catch (Exception le) {
+                log.debug("[AiAgent] Langfuse submitScore 异常（不影响业务）: {}", le.getMessage());
+            }
+        }
+
+        // P0-2: 反思记忆闭环 — 低分回答写入 REFLECTIVE 长期记忆
+        if (reflectiveMemoryWriter != null && tenantId != null) {
+            try {
+                Long userIdLong = null;
+                if (userId != null) {
+                    try { userIdLong = Long.parseLong(userId); } catch (NumberFormatException ignored) {}
+                }
+                SelfCritiqueResult critiqueResult = SelfCritiqueResult.of(selfScore);
+                reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,
+                        userMessage, assistantResponse, critiqueResult);
+            } catch (Exception e) {
+                log.debug("[AiAgent] 反思记忆写入触发失败（非关键）: {}", e.getMessage());
             }
         }
 

@@ -1,9 +1,76 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-22（前端 eslint warning 全面清零 — commit 6db64aecf）
+> 最后更新：2026-07-22（小云AI P0+P1 前沿升级全部完成 — 9 项智能化升级）
 
 ## 已完成
+
+### 2026-07-22 小云AI P0+P1 前沿升级全部完成（待提交）✅
+
+延续 GitHub 前沿调研（Mem0/Letta/Langfuse/Graphiti/Cognee/AWS S3 Vectors），本次完成 P0 三项 + P1 五项共 8 项智能化升级：
+
+**P0 阶段（已完成）**：
+- [x] P0-1 MCP 工具入参提示注入防御（4 个 MCP，仅本地）
+- [x] P0-2 反思记忆闭环（ReflectiveMemoryWriter + 5 文件修改）
+- [x] P0-3 L4 ProceduralMemory 自编辑工具集（AgentTool+Controller+CRUD）
+- [x] P0-4 Langfuse 全链路追踪（span 层级 + 主对话接入 + submitScore）
+
+**P1 阶段（已完成）**：
+- [x] **P1-1 t_ai_long_memory 时序字段**（Graphiti 时序知识图谱方向）
+  - 新建 Flyway V202707221000 — valid_from/valid_to/superseded_by + 2 索引 + 回填
+  - 修改 AiLongMemory entity + LongTermMemoryOrchestrator（supersedeOldMemories + retrieve 过滤）
+- [x] **P1-2 扫码 State Graph + HITL**（LangGraph 状态机方向）
+  - 新建 ScanState（11 状态枚举）+ ScanStateGraph（状态机+HITL）+ Controller
+  - 新建 Flyway V202707221002 — t_scan_state_log
+  - 零侵入：未修改任何现有 ScanRecordOrchestrator 代码
+- [x] **P1-3 t_shared_agent_memory + 消息总线**（AWS S3 Vectors 多 Agent 协作方向）
+  - 新建 Flyway V202707221001 — t_shared_agent_memory
+  - 新建 Entity/Mapper/Service/CleanupJob
+  - MultiAgentGraphOrchestrator 已集成 readFacts/writeFact
+- [x] **P1-4 离线评估 dataset**（Langfuse 离线评估方向）
+  - 新建 Flyway V202707221003 — t_eval_dataset + t_eval_item
+  - 新建 Entity/Mapper/Service/Job/DTO
+  - 每周日 02:00 离线评估
+- [x] **P1-5 记忆巩固定时任务**（Cognee 离线巩固方向）
+  - 新建 MemoryConsolidationService + MemoryConsolidationJob + ConsolidationResult DTO
+  - 每天 03:30 巩固相似记忆
+
+**验证**：
+- mvn compile -q 通过（exit 0）
+- check-flyway-sql 无新增警告（253 个全为历史遗留）
+- audit-tenant-id 无新增违规（1 处历史遗留 RoleTemplate）
+- 6 个 MCP node --check 通过
+
+**变更范围**：P0 17 文件 + P1 25 文件 = 42 文件，4 个新 Flyway 迁移。
+**非任务文件**保持未暂存：PatternProductionController.java、types/style.ts。
+
+### 2026-07-22 小云AI P0 前沿升级（待提交）✅
+
+延续 GitHub 前沿调研（Mem0/Letta/Langfuse/Graphiti/Cognee），本次完成 P0 三项智能化升级：
+
+- [x] **P0-1 MCP 工具入参提示注入防御**（仅本地，.trae/ 在 .gitignore）
+  - db-query-mcp 新增 `assertNoSqlInjection` + `stripStringLiterals`，接入 3 个工具函数
+  - flyway-mcp/test-runner-mcp/memory-bank-mcp 修复路径穿越/ReDoS 等 4 个 HIGH 风险
+  - 参考 Azure DevOps MCP 2026-07 漏洞
+- [x] **P0-2 反思记忆闭环**（Mem0/Letta 前沿方向）
+  - 新建 ReflectiveMemoryWriter + SelfCritiqueResult DTO
+  - 修改 AiAgentOrchestrator/ConversationReflectionOrchestrator/PromptContextProvider/AiAgentPromptHelper/IntentBasedPriorityRouter
+  - SelfCritic 评分<75 → AiLongMemory(layer=REFLECTIVE) → 下次类似问题召回 → prompt 注入
+- [x] **P0-3 L4 ProceduralMemory 自编辑工具集**（Letta 自编辑记忆方向）
+  - 新建 ProceduralMemoryCreateDTO/UpdateDTO/ProceduralMemoryTool/ProceduralMemoryController
+  - 修改 ProceduralMemoryService（追加 6 个 CRUD）+ AiAgentToolAccessService（注册工具）
+  - AI 可自编辑 SOP，从"只读检索"升级为"自编辑进化"
+- [x] **P0-4 Langfuse 全链路追踪**（Langfuse 28.4k star + OpenTelemetry 方向）
+  - 增强 LangfuseTraceOrchestrator（beginSpan/endSpan/recordEvent/recordGeneration）
+  - 新建 LangfuseSpanContext（ThreadLocal span 栈）+ LangfuseSpanHelper（try-with-resources）
+  - 修改 AgentLoopEngine（5 个关键节点 span 包裹）+ AiAgentOrchestrator（pushTrace/submitScore/clear）
+- [x] mvn compile -q 通过（exit 0）
+- [x] audit-tenant-id 无新增违规（1 处历史遗留）
+- [x] 6 个 MCP node --check 通过
+- [x] 非任务文件保持未暂存：PatternProductionController.java、types/style.ts
+
+**变更范围**：17 个文件（9 修改 + 8 新建），599 行新增。
+**下一步**：P1-1~P1-5（时序字段/扫码 State Graph/共享记忆/离线评估/记忆巩固）。
 
 ### 2026-07-22 前端 eslint warning 全面清零（commit 6db64aecf）
 

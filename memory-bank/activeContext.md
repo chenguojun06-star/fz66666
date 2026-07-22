@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-22（前端 eslint warning 全面清零 — commit 6db64aecf）
+> 最后更新：2026-07-22（小云AI P0+P1 前沿升级全部完成 — 9 项智能化升级）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,79 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-22 小云AI P0+P1 前沿升级全部完成（待提交）✅
+
+延续 GitHub 前沿调研（Mem0/Letta/Langfuse/Graphiti/Cognee/AWS S3 Vectors），本次完成 P0 三项 + P1 五项共 8 项智能化升级，全部 mvn compile + audit-tenant-id + check-flyway-sql 验证通过：
+
+**P1-1 t_ai_long_memory 时序字段**（Graphiti 时序知识图谱方向）：
+- 新建 Flyway [V202707221000__add_temporal_fields_to_ai_long_memory.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202707221000__add_temporal_fields_to_ai_long_memory.sql) — 加 valid_from/valid_to/superseded_by 三字段 + 2 索引 + 回填
+- 修改 [AiLongMemory.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/entity/AiLongMemory.java) — 新增 3 字段
+- 修改 [LongTermMemoryOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/LongTermMemoryOrchestrator.java) — 新增 supersedeOldMemories + retrieve 过滤 valid_to IS NULL
+
+**P1-2 扫码 State Graph + HITL**（LangGraph 状态机方向）：
+- 新建 [ScanState.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/scan/graph/ScanState.java) — 11 状态枚举 + canTransitionTo
+- 新建 [ScanStateGraph.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/scan/graph/ScanStateGraph.java) — 状态机管理 + HITL 中断/恢复
+- 新建 [ScanStateGraphController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/scan/graph/ScanStateGraphController.java) — 3 REST 端点
+- 新建 Flyway [V202707221002__create_scan_state_log.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202707221002__create_scan_state_log.sql)
+- **零侵入**：未修改任何现有 ScanRecordOrchestrator 代码
+
+**P1-3 t_shared_agent_memory + 消息总线**（AWS S3 Vectors 多 Agent 协作方向）：
+- 新建 Flyway [V202707221001__create_shared_agent_memory.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202707221001__create_shared_agent_memory.sql)
+- 新建 [SharedAgentMemory.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/entity/SharedAgentMemory.java) + Mapper + Service + CleanupJob
+- MultiAgentGraphOrchestrator 已集成 readFacts/writeFact（同会话 Sub-Agent 共享事实）
+
+**P1-4 离线评估 dataset**（Langfuse 离线评估方向）：
+- 新建 Flyway [V202707221003__create_eval_dataset.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202707221003__create_eval_dataset.sql) — t_eval_dataset + t_eval_item
+- 新建 EvalDataset/EvalItem entity + Mapper + EvalRunResult DTO
+- 新建 [OfflineEvalService.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/OfflineEvalService.java) — createDataset/sampleConversations/runEvaluation
+- 新建 [OfflineEvalJob.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/job/OfflineEvalJob.java) — 每周日 02:00 离线评估
+
+**P1-5 记忆巩固定时任务**（Cognee 离线巩固方向）：
+- 新建 [MemoryConsolidationService.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/MemoryConsolidationService.java) — 按 subjectType+subjectId 分组，组合并相似记忆
+- 新建 [MemoryConsolidationJob.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/job/MemoryConsolidationJob.java) — 每天 03:30 巩固
+- 新建 [ConsolidationResult.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/ConsolidationResult.java) DTO
+
+**验证**：mvn compile -q 通过（exit 0）+ check-flyway-sql 无新增警告 + audit-tenant-id 无新增违规。
+**变更范围**：P0 17 文件 + P1 25 文件 = 42 文件。3 个新 Flyway 迁移（V202707221000/221001/221002/221003）。
+**非任务文件**保持未暂存：PatternProductionController.java、types/style.ts。
+
+### 2026-07-22 小云AI P0 前沿升级（待提交）✅
+
+延续 GitHub 前沿调研，本次完成 P0 三项智能化升级，全部 mvn compile + audit-tenant-id 验证通过：
+
+**P0-1 MCP 工具入参提示注入防御**（仅本地，.trae/ 在 .gitignore）：
+- db-query-mcp 新增 `assertNoSqlInjection` 函数（拒绝 `--`/`/* */`/`;`/`UNION`）+ `stripStringLiterals`（避免误判字符串内注释）
+- 接入 3 个工具函数：toolQueryTable/toolCountTable/toolExecuteReadonlySql
+- 参考 Azure DevOps MCP 2026-07 漏洞（PR 描述隐藏注释劫持 AI 评审 Agent）
+- flyway-mcp/test-runner-mcp/memory-bank-mcp 由 subagent 修复路径穿越/ReDoS 等 4 个 HIGH 风险
+
+**P0-2 反思记忆闭环**（Mem0/Letta 前沿方向）：
+- 新建 [ReflectiveMemoryWriter.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/ReflectiveMemoryWriter.java) — @Async 写入，SelfCritic 评分<75 时写入 AiLongMemory(layer=REFLECTIVE)
+- 新建 [SelfCritiqueResult.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/SelfCritiqueResult.java) DTO
+- 修改 [AiAgentOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/AiAgentOrchestrator.java) triggerPostTurnHooks — SelfCritic 后追加 writeAsync
+- 修改 [ConversationReflectionOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/ConversationReflectionOrchestrator.java) — 追加 writeTenantMemory（阈值 0.75）
+- 修改 [PromptContextProvider.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/helper/PromptContextProvider.java) — 新增 buildReflectiveMemoryContext
+- 修改 [AiAgentPromptHelper.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/helper/AiAgentPromptHelper.java) — 新增 reflectiveMemCtx 上下文块
+- 修改 [IntentBasedPriorityRouter.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/helper/IntentBasedPriorityRouter.java) — 新增 reflectiveMem 标签 + 意图保护
+
+**P0-3 L4 ProceduralMemory 自编辑工具集**（Letta 自编辑记忆方向）：
+- 新建 [ProceduralMemoryCreateDTO.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/ProceduralMemoryCreateDTO.java) + [ProceduralMemoryUpdateDTO.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/ProceduralMemoryUpdateDTO.java)
+- 修改 [ProceduralMemoryService.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/ProceduralMemoryService.java) — 追加 6 个 CRUD 方法（createSop/updateSop/deleteSop/enableSop/disableSop/listSops）
+- 新建 [ProceduralMemoryTool.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/agent/tool/ProceduralMemoryTool.java) — @AgentToolDef 6 action，preview+confirm 双阶段
+- 新建 [ProceduralMemoryController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/controller/ProceduralMemoryController.java) — 6 REST 端点 + TenantAssert
+- 修改 [AiAgentToolAccessService.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/AiAgentToolAccessService.java) — 注册 procedural_memory_tool
+
+**P0-4 Langfuse 全链路追踪**（Langfuse 28.4k star + OpenTelemetry 方向）：
+- 增强 [LangfuseTraceOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/LangfuseTraceOrchestrator.java) — 新增 beginSpan/endSpan/recordEvent/recordGeneration（保留现有 pushTrace/submitScore）
+- 新建 [LangfuseSpanContext.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/helper/LangfuseSpanContext.java) — ThreadLocal span 栈
+- 新建 [LangfuseSpanHelper.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/helper/LangfuseSpanHelper.java) — SpanScope try-with-resources，enabled=false 时 NOOP
+- 修改 [AgentLoopEngine.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/agent/loop/AgentLoopEngine.java) — 5 个关键节点 span 包裹
+- 修改 [AiAgentOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/AiAgentOrchestrator.java) — executeAgentStreaming 入口 pushTrace + pushRoot，triggerPostTurnHooks 中 submitScore，finally 中 clear
+
+**验证**：mvn compile -q 通过（exit 0）+ audit-tenant-id 无新增违规 + 6 个 MCP node --check 通过。
+**变更范围**：17 个文件（9 修改 + 8 新建），599 行新增。非任务文件保持未暂存。
+**下一步**：P1-1~P1-5（时序字段/扫码 State Graph/共享记忆/离线评估/记忆巩固）。
 
 ### 2026-07-22 前端 eslint warning 全面清零（commit 6db64aecf）✅
 

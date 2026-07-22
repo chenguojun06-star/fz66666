@@ -128,6 +128,8 @@ public class AiAgentToolAccessService {
         register("tool_inventory_summary", "库存价值汇总：按仓库/品类统计库存总值、均价、数量分布", false, ToolDomain.WAREHOUSE);
         register("tool_avg_completion_time", "历史完工周期分析：按工厂/品类统计平均完成天数、中位数、准时率", false, ToolDomain.ANALYSIS);
         register("tool_quality_statistics", "质量统计：按工厂/类型统计质量缺陷分布与趋势", false, ToolDomain.WAREHOUSE);
+        // ── 2026-07-22 新增：L4 程序性记忆自编辑工具 ──
+        register("procedural_memory_tool", "SOP记忆编辑：AI自编辑SOP流程记忆，创建/更新/删除/启用/禁用/搜索SOP", false, ToolDomain.SYSTEM);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
@@ -208,7 +210,8 @@ public class AiAgentToolAccessService {
             Map.entry("tool_material_picking", "领料操作"),
             Map.entry("tool_material_quality_issue", "质量问题"),
             Map.entry("tool_procurement", "采购操作"),
-            Map.entry("tool_defective_board", "次品操作")
+            Map.entry("tool_defective_board", "次品操作"),
+            Map.entry("procedural_memory_tool", "确认编辑 SOP 记忆")
     );
 
     public static String getConfirmLabel(String toolName) {

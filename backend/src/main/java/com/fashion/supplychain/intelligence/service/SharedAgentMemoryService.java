@@ -1,143 +1,128 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.entity.SharedAgentMemory;
 import com.fashion.supplychain.intelligence.mapper.SharedAgentMemoryMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 /**
- * 多 Agent 共享记忆服务（五层记忆模型第六章）。
+ * 多Agent共享记忆服务
  *
- * <p>同会话内 Sub-Agent（扫码/质检/工资）共享事实，避免重复查询和事实冲突。
+ * <p>同会话内 Sub-Agent 共享事实，避免重复查询和事实冲突</p>
+ * <p>不加 @Transactional（D-001：Service 层禁止事务）</p>
+ * <p>共享记忆失败不影响主流程，异常吞掉仅 log.warn</p>
  *
- * <p>核心能力：
- * <ul>
- *   <li>{@link #writeFact} — Sub-Agent 执行后写入发现的事实</li>
- *   <li>{@link #readFacts} — Sub-Agent 执行前读取共享记忆</li>
- *   <li>{@link #detectConflicts} — 检测同 fact_key 的冲突（confidence 高的覆盖低的）</li>
- *   <li>{@link #purgeExpiredJob} — 每天清理过期记录</li>
- * </ul>
- *
- * <p>设计原则：
- * <ul>
- *   <li>多租户隔离（P0 铁律 4）：所有查询带 tenant_id WHERE</li>
- *   <li>会话隔离：按 session_id 隔离，同会话内共享，跨会话不共享</li>
- *   <li>冲突检测：同 fact_key 重复写入时，confidence 高的覆盖低的；同 confidence 时保留最新</li>
- *   <li>过期清理：会话结束 24h 后过期，定时任务清理</li>
- * </ul>
+ * @author xiaoyun
+ * @since 2026-07-22
  */
 @Slf4j
 @Service
-@Lazy
-@RequiredArgsConstructor
 public class SharedAgentMemoryService {
 
-    private final SharedAgentMemoryMapper sharedAgentMemoryMapper;
-
-    /** 默认置信度 */
-    private static final BigDecimal DEFAULT_CONFIDENCE = new BigDecimal("0.80");
-    /** 默认过期时间（写入后 24h） */
-    private static final long DEFAULT_TTL_HOURS = 24L;
+    @Autowired
+    private SharedAgentMemoryMapper sharedAgentMemoryMapper;
 
     /**
-     * 写入事实（多租户隔离）。
+     * 写入/更新事实（UPSERT 语义：同 session_id+fact_key 则 UPDATE，否则 INSERT）
      *
-     * <p>冲突检测：同 session_id + fact_key 已存在时，
-     * confidence 高的覆盖低的；同 confidence 时保留最新（覆盖）。
+     * <p>confidence 使用 BigDecimal（与 entity 字段类型一致，避免浮点精度损失）</p>
      *
-     * @param tenantId    租户ID
-     * @param sessionId   会话ID
-     * @param agentName   写入的 Agent 名（scan_agent/quality_agent/wage_agent）
-     * @param factKey     事实键（order_status/quality_result/...）
-     * @param factValue   事实值 JSON
-     * @param confidence  置信度 0-100（null 用默认 0.80）
+     * @param tenantId   租户ID（P0铁律4）
+     * @param sessionId  会话ID（隔离边界）
+     * @param agentName  Agent名称
+     * @param factKey    事实键
+     * @param factValue  事实值JSON
+     * @param confidence 置信度0-100（null 时默认 0.80）
      */
     public void writeFact(Long tenantId, String sessionId, String agentName,
-                           String factKey, String factValue, BigDecimal confidence) {
-        if (tenantId == null || sessionId == null || factKey == null || factValue == null) return;
+                          String factKey, String factValue, BigDecimal confidence) {
         try {
-            BigDecimal conf = confidence != null ? confidence : DEFAULT_CONFIDENCE;
-            SharedAgentMemory existing = sharedAgentMemoryMapper.findFact(tenantId, sessionId, factKey);
-            if (existing == null) {
-                SharedAgentMemory fact = new SharedAgentMemory();
-                fact.setTenantId(tenantId);
-                fact.setSessionId(sessionId);
-                fact.setAgentName(agentName);
-                fact.setFactKey(factKey);
-                fact.setFactValue(factValue);
-                fact.setConfidence(conf);
-                fact.setExpireTime(LocalDateTime.now().plusHours(DEFAULT_TTL_HOURS));
-                sharedAgentMemoryMapper.insert(fact);
+            LambdaQueryWrapper<SharedAgentMemory> qw = new LambdaQueryWrapper<>();
+            qw.eq(SharedAgentMemory::getTenantId, tenantId)
+              .eq(SharedAgentMemory::getSessionId, sessionId)
+              .eq(SharedAgentMemory::getFactKey, factKey);
+            SharedAgentMemory existing = sharedAgentMemoryMapper.selectOne(qw);
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime expireAt = now.plusHours(24);
+            BigDecimal conf = (confidence != null) ? confidence : new BigDecimal("0.80");
+
+            if (existing != null) {
+                existing.setAgentName(agentName);
+                existing.setFactValue(factValue);
+                existing.setConfidence(conf);
+                existing.setCreateTime(now);
+                existing.setExpireTime(expireAt);
+                sharedAgentMemoryMapper.updateById(existing);
             } else {
-                // 冲突检测：confidence 高的覆盖低的；同 confidence 时保留最新
-                BigDecimal existingConf = existing.getConfidence() == null ? BigDecimal.ZERO : existing.getConfidence();
-                if (conf.compareTo(existingConf) >= 0) {
-                    existing.setAgentName(agentName);
-                    existing.setFactValue(factValue);
-                    existing.setConfidence(conf);
-                    sharedAgentMemoryMapper.updateById(existing);
-                    log.debug("[SharedMem] 事实更新 tenant={} session={} key={} conf={}→{}",
-                            tenantId, sessionId, factKey, existingConf, conf);
-                } else {
-                    log.debug("[SharedMem] 事实保留（新conf {} < 旧conf {}）tenant={} session={} key={}",
-                            conf, existingConf, tenantId, sessionId, factKey);
-                }
+                SharedAgentMemory mem = new SharedAgentMemory();
+                mem.setTenantId(tenantId);
+                mem.setSessionId(sessionId);
+                mem.setAgentName(agentName);
+                mem.setFactKey(factKey);
+                mem.setFactValue(factValue);
+                mem.setConfidence(conf);
+                mem.setCreateTime(now);
+                mem.setExpireTime(expireAt);
+                sharedAgentMemoryMapper.insert(mem);
             }
         } catch (Exception e) {
-            log.warn("[SharedMem] writeFact 失败 tenant={} session={} key={}: {}",
+            log.warn("[SharedAgentMemory] writeFact 失败(不影响主流程): tenant={}, session={}, key={}, err={}",
                     tenantId, sessionId, factKey, e.getMessage());
         }
     }
 
     /**
-     * 读取会话内所有事实（多租户隔离）。
+     * 读取会话内所有有效事实（未过期）
      */
     public List<SharedAgentMemory> readFacts(Long tenantId, String sessionId) {
-        if (tenantId == null || sessionId == null) return java.util.Collections.emptyList();
         try {
-            return sharedAgentMemoryMapper.findFactsBySession(tenantId, sessionId);
+            return sharedAgentMemoryMapper.findBySession(tenantId, sessionId);
         } catch (Exception e) {
-            log.warn("[SharedMem] readFacts 失败 tenant={} session={}: {}", tenantId, sessionId, e.getMessage());
-            return java.util.Collections.emptyList();
+            log.warn("[SharedAgentMemory] readFacts 失败(不影响主流程): tenant={}, session={}, err={}",
+                    tenantId, sessionId, e.getMessage());
+            return Collections.emptyList();
         }
     }
 
     /**
-     * 检测会话内的事实冲突（同 fact_key 多个 Agent 写入不同值）。
+     * 读取单条事实（仅返回未过期的）
      *
-     * <p>注意：由于 uk_session_fact 唯一索引，同 session_id + fact_key 只有一条记录，
-     * 冲突已在 writeFact 时通过 confidence 比较 resolved。本方法返回的是"曾被多个 Agent 写入"的事实
-     * （通过 agentName 与当前记录对比，需要外部传入历史记录）。
-     *
-     * <p>V1 实现：返回空列表（冲突在 writeFact 时已 resolved）。
-     * V2 可扩展为记录写入历史，检测 Agent 间分歧。
+     * @return 事实值JSON，不存在或已过期返回 null
      */
-    public List<String> detectConflicts(Long tenantId, String sessionId) {
-        return java.util.Collections.emptyList();
+    public String readFact(Long tenantId, String sessionId, String factKey) {
+        try {
+            List<SharedAgentMemory> facts = sharedAgentMemoryMapper.findBySession(tenantId, sessionId);
+            return facts.stream()
+                    .filter(m -> factKey.equals(m.getFactKey()))
+                    .map(SharedAgentMemory::getFactValue)
+                    .findFirst()
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("[SharedAgentMemory] readFact 失败(不影响主流程): tenant={}, session={}, key={}, err={}",
+                    tenantId, sessionId, factKey, e.getMessage());
+            return null;
+        }
     }
 
     /**
-     * 每天清理过期记录（会话结束 24h 后）。
-     *
-     * <p>【P1-5修复】原 04:00 与 SystemDoctorPatrolJob、GepaPromptOptimizer 同时执行。
-     * 错峰到 04:15，避免 DB 写入争抢。完整错峰表见 MemoryArchiveService 注释。
+     * 清理过期记忆（由定时任务 SharedAgentMemoryCleanupJob 调用）
      */
-    @Scheduled(cron = "0 15 4 * * ?")
-    public void purgeExpiredJob() {
+    public void purgeExpired() {
         try {
-            int purged = sharedAgentMemoryMapper.purgeExpired();
-            if (purged > 0) {
-                log.info("[SharedMem] 清理过期共享记忆 {} 条", purged);
+            int deleted = sharedAgentMemoryMapper.purgeExpired();
+            if (deleted > 0) {
+                log.info("[SharedAgentMemory] 清理过期共享记忆: 删除{}条", deleted);
             }
         } catch (Exception e) {
-            log.warn("[SharedMem] 清理过期记录失败: {}", e.getMessage());
+            log.warn("[SharedAgentMemory] purgeExpired 失败(不影响主流程): {}", e.getMessage());
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
@@ -41,7 +42,12 @@ public class LongTermMemoryOrchestrator {
             embeddingId, confidence, sourceSessionId);
         m.setScope("TENANT");
         m.setTenantId(UserContext.tenantId());
+        m.setValidFrom(LocalDateTime.now());
+        m.setValidTo(null);
+        m.setSupersededBy(null);
         memoryMapper.insert(m);
+        // 时序版本化：将同 subjectType+subjectId+layer 的旧有效记忆标记为失效
+        supersedeOldMemories(UserContext.tenantId(), subjectType, subjectId, layer, m.getId());
         return m;
     }
 
@@ -54,8 +60,48 @@ public class LongTermMemoryOrchestrator {
             confidence, null);
         m.setScope("PLATFORM_GLOBAL");
         m.setTenantId(null);
+        m.setValidFrom(LocalDateTime.now());
+        m.setValidTo(null);
+        m.setSupersededBy(null);
         memoryMapper.insert(m);
+        // 时序版本化：平台级记忆按 subjectType+layer 失效旧记忆（tenantId 为 null）
+        supersedeOldMemories(null, subjectType, null, layer, m.getId());
         return m;
+    }
+
+    /**
+     * 时序版本化：将同 subjectType+subjectId+layer 的旧有效记忆标记为失效。
+     * <p>新事实写入时旧事实自动失效（valid_to=now, superseded_by=新记忆id），
+     * 查询时只返回 valid_to IS NULL 的有效记忆。参考 Graphiti 时序知识图谱。</p>
+     *
+     * <p><b>异常吞掉策略</b>：supersede 失败不影响主流程（新记忆已成功写入），
+     * 仅 log.warn 记录，便于后续排查。无 @Transactional（P0 铁律2：仅 Orchestrator 层）。</p>
+     *
+     * @param tenantId    租户 ID（PLATFORM_GLOBAL 记忆传 null）
+     * @param subjectType 主题类型
+     * @param subjectId   主题 ID（PLATFORM_GLOBAL 记忆传 null）
+     * @param layer       记忆层级 FACT/EPISODIC/REFLECTIVE
+     * @param newMemoryId 新写入的记忆 ID（用于 superseded_by）
+     */
+    private void supersedeOldMemories(Long tenantId, String subjectType, String subjectId,
+                                       String layer, Long newMemoryId) {
+        if (newMemoryId == null) return;
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            LambdaUpdateWrapper<AiLongMemory> uw = new LambdaUpdateWrapper<>();
+            uw.eq(tenantId != null, AiLongMemory::getTenantId, tenantId)
+              .eq(AiLongMemory::getSubjectType, subjectType)
+              .eq(AiLongMemory::getSubjectId, subjectId)
+              .eq(AiLongMemory::getLayer, layer)
+              .isNull(AiLongMemory::getValidTo)
+              .ne(AiLongMemory::getId, newMemoryId)
+              .set(AiLongMemory::getValidTo, now)
+              .set(AiLongMemory::getSupersededBy, newMemoryId);
+            memoryMapper.update(null, uw);
+        } catch (Exception e) {
+            log.warn("[Memory] supersedeOldMemories 失败 tenant={} subjType={} subjId={} layer={} newId={} err={}",
+                    tenantId, subjectType, subjectId, layer, newMemoryId, e.getMessage());
+        }
     }
 
     /**
@@ -71,6 +117,7 @@ public class LongTermMemoryOrchestrator {
         w.eq(subjectType != null, AiLongMemory::getSubjectType, subjectType)
          .eq(subjectId != null, AiLongMemory::getSubjectId, subjectId)
          .eq(AiLongMemory::getDeleteFlag, 0)
+         .isNull(AiLongMemory::getValidTo)
          .and(q -> q.eq(AiLongMemory::getScope, "PLATFORM_GLOBAL")
                     .or(o -> o.eq(AiLongMemory::getScope, "TENANT")
                               .eq(AiLongMemory::getTenantId, tid)))
@@ -166,6 +213,7 @@ public class LongTermMemoryOrchestrator {
         w.eq(StringUtils.hasText(subjectType), AiLongMemory::getSubjectType, subjectType)
          .eq(StringUtils.hasText(subjectId), AiLongMemory::getSubjectId, subjectId)
          .eq(AiLongMemory::getDeleteFlag, 0)
+         .isNull(AiLongMemory::getValidTo)
          .and(q -> q.eq(AiLongMemory::getScope, "PLATFORM_GLOBAL")
                     .or(o -> o.eq(AiLongMemory::getScope, "TENANT")
                               .eq(AiLongMemory::getTenantId, tid)))

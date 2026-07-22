@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
@@ -46,6 +47,14 @@ public class AiLongMemory {
 
     /** 双时态：事实失效时间（NULL=当前有效） */
     private LocalDateTime invalidAt;
+
+    /** 时序版本化：记忆有效期结束（NULL=当前有效，被新记忆替代时置为 now） */
+    @TableField("valid_to")
+    private LocalDateTime validTo;
+
+    /** 时序版本化：被哪条新记忆替代（新记忆的 id，NULL=未被替代） */
+    @TableField("superseded_by")
+    private Long supersededBy;
 
     /** 事实唯一键（subjectType:subjectId:predicate），用于冲突消解 */
     private String factKey;

@@ -1,10 +1,12 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.ConversationReflection;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.ConversationReflectionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
@@ -22,6 +24,11 @@ public class ConversationReflectionOrchestrator {
     private final ConversationReflectionMapper reflectionMapper;
     private final AiInferenceRouter inferenceRouter;
     private final SkillEvolutionOrchestrator skillEvolutionOrchestrator;
+
+    /** P0-2: 反思记忆闭环 — 用于写入 REFLECTIVE 长期记忆（@Lazy 避免循环依赖） */
+    @Autowired
+    @Lazy
+    private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
 
     @Async
     public void reflectAsync(Long tenantId, String conversationId, String sessionId,
@@ -55,6 +62,36 @@ public class ConversationReflectionOrchestrator {
             reflection.setPromptSuggestion(suggestion);
 
             reflectionMapper.insert(reflection);
+
+            // P0-2: 反思记忆闭环 — 低分回答写入 REFLECTIVE 长期记忆
+            // ConversationReflection 评分是 0-1 范围，0.75 等价于 SelfCritic 的 75/100 阈值
+            if (longTermMemoryOrchestrator != null && score != null && score.doubleValue() < 0.75) {
+                try {
+                    // 异步线程手动设置 UserContext（writeTenantMemory 内部依赖 UserContext.tenantId()）
+                    UserContext previous = UserContext.get();
+                    try {
+                        UserContext ctx = new UserContext();
+                        ctx.setTenantId(tenantId);
+                        UserContext.set(ctx);
+
+                        String reflectiveText = "[反思] 用户问题: " + truncate(userMessage, 200)
+                                + " | AI回答: " + truncate(assistantResponse, 300)
+                                + " | 质量评分: " + score
+                                + " | 改进建议: " + truncate(suggestion, 200);
+                        BigDecimal confidence = BigDecimal.valueOf(Math.max(0.5, 1.0 - score.doubleValue()));
+
+                        longTermMemoryOrchestrator.writeTenantMemory(
+                                "REFLECTIVE", "user", null, null,
+                                reflectiveText, null, confidence, sessionId);
+                        log.debug("[Reflection] 已写入反思记忆 tenant={} session={} score={}", tenantId, sessionId, score);
+                    } finally {
+                        if (previous != null) UserContext.set(previous);
+                        else UserContext.clear();
+                    }
+                } catch (Exception e) {
+                    log.debug("[Reflection] 反思记忆写入失败（非关键）: {}", e.getMessage());
+                }
+            }
 
             skillEvolutionOrchestrator.tryEvolveSkill(reflection);
 
