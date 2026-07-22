@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import type { Customer, CustomerListParams } from '@/services/crm/customerApi';
+import type { CustomerListParams } from '@/services/crm/customerApi';
 
 export type DialogMode = 'create' | 'edit' | 'view';
 

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Card, Form, Select, Row, Col, Input, AutoComplete, InputNumber, Typography } from 'antd';
+import { Card, Form, Select, Row, Col, Input, AutoComplete, Typography } from 'antd';
 
 const { Option } = Select;
 

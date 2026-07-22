@@ -21,14 +21,12 @@ const ColorCardPage: React.FC = () => {
     onRecognize: data.openRecognize,
     onPreview: data.openPreview,
     onDelete: data.handleDelete,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [data.openEditDialog, data.openItemsDialog, data.openRecognize, data.openPreview, data.handleDelete]);
 
   // ===== 预览表格列定义 =====
   const previewColumns = useMemo(() => buildPreviewColumns({
     selectedItems: data.selectedItems,
     onToggleSelect: data.toggleSelect,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [data.selectedItems, data.toggleSelect]);
 
   return (

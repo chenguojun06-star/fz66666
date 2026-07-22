@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Tag, Button, Space, Dropdown, MenuProps, App } from 'antd';
-import type { MenuProps as AntDMenuProps } from 'antd';
+import React from 'react';
+import { Tag, Button, Dropdown, MenuProps, App } from 'antd';
 import { CheckOutlined, CloseOutlined, UserOutlined, AppstoreOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import { Role, User as UserType } from '@/types/system';
@@ -112,7 +111,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
     onResetPassword,
     onChangeEmploymentStatus,
   } = props;
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
 
   // 快速切换用户角色
   const handleQuickChangeRole = async (user: UserType, newRole: Role) => {

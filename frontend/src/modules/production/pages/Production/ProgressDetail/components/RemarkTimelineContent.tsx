@@ -2,7 +2,7 @@
 // 抽离自原 ProcessKanbanDrawer.tsx，保持业务逻辑不变
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Spin, Tag, Button, Space, Input, Empty } from 'antd';
+import { Spin, Tag, Button, Input, Empty } from 'antd';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
 import { formatDateTime } from '@/utils/datetime';

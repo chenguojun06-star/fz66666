@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input, InputNumber, Select, Switch, Row, Col, Tag } from 'antd';
+import { Modal, Form, Input, Select, Switch, Row, Col, Tag } from 'antd';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import { FIELD_TYPE_OPTIONS } from '@/services/system/fieldConfigApi';
 import type { FormInstance } from 'antd';

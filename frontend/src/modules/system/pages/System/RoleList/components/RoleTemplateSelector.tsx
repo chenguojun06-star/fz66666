@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Badge, Card, Empty, Radio, Spin, Tag, Typography } from 'antd';
 import type { RadioChangeEvent } from 'antd';
-import { CrownOutlined, UserOutlined, SettingOutlined, AuditOutlined, AppstoreOutlined, BuildOutlined } from '@ant-design/icons';
+import { CrownOutlined, UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import './RoleTemplateSelector.css';
 

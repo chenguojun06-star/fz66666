@@ -122,7 +122,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
       const orderNos = sortedOrders.map(o => o.orderNo).filter(Boolean) as string[];
       fetchForOrders(orderNos);
     }
-  }, [sortedOrders.length]);
+  }, [sortedOrders.length, fetchForOrders]);
 
   const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
     const risks = getOrderRisks(record.orderNo || '');
@@ -135,7 +135,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         {label}
       </Tag>
     );
-  }, [patrolRiskMap]);
+  }, [patrolRiskMap, getOrderRisks, getHighestSeverity]);
 
   const mergedTitleTags = useMemo(() => (record: ProductionOrder) => {
     const base = typeof titleTags === 'function' ? titleTags(record) : null;
@@ -170,7 +170,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         closable
       />
     );
-  }, [sortedOrders, patrolRiskMap, patrolSummary]);
+  }, [sortedOrders, patrolRiskMap, patrolSummary, hasRisks, getHighestSeverity]);
 
   const calcCardProgress = useMemo(() => (record: ProductionOrder): number =>
     calcOrderProgress(record, boardStatsByOrder[String(record.id || '')] ?? null),

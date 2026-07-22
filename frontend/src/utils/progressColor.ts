@@ -43,13 +43,6 @@ const parseSafeLocalDate = (dateStr: string | null | undefined): Date => {
   return new Date(s);
 };
 
-/** 本地时间的 00:00（今天零点） */
-const getLocalToday = (): Date => {
-  const t = new Date();
-  t.setHours(0, 0, 0, 0);
-  return t;
-};
-
 /**
  * 判断订单是否已处于"完成/终止"状态（不应再显示"延期"倒计时）
  */

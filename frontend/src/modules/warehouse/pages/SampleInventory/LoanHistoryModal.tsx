@@ -9,7 +9,6 @@ import { formatDateTime } from '@/utils/datetime';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import dayjs from 'dayjs';
 
 interface LoanHistoryModalProps {
   visible: boolean;

@@ -87,7 +87,6 @@ export default function useStyleTableViewData(params: UseStyleTableViewDataParam
   // ── 派生行数据 ───────────────────────────────────────────
   const rows = useMemo(
     () => buildRowData(data, { stockStateMap, categoryOptions, customFields, dateSortAsc }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [categoryOptions, data, stockStateMap, dateSortAsc, customFields],
   );
 

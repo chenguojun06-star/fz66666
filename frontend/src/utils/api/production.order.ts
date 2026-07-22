@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ApiResponse } from '../../types/api';
 import { createApiClient, toNumberSafe } from './core';
 
 const api = createApiClient();

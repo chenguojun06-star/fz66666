@@ -20,7 +20,7 @@ interface Props {
 const WarehouseLocationGrid: React.FC<Props> = ({
   filteredLocations,
   locationsLoading,
-  locations,
+  locations: _locations,
   selectMode,
   selectedLocationIds,
   onLocationClick,

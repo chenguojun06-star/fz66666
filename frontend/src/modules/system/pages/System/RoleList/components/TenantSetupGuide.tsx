@@ -16,7 +16,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [checking, setChecking] = useState(false);
+  const [_checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (visible) {

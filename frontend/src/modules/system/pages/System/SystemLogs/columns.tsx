@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tag, Button } from 'antd';
 import { formatDateTimeSecond } from '@/utils/datetime';
-import { LoginLog } from '@/types/system';
 import { OperationLog } from '@/types/operation-log';
 import { normalizeLoginStatus, getStatusText, OPERATION_COLOR_MAP } from './helpers';
 

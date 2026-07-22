@@ -11,9 +11,6 @@ import ProcessKanbanDrawer from './components/ProcessKanbanDrawer';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { useProductionBoardStore } from '@/stores';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
-// WS 订阅已移至 useOrderSync，此处仅保留类型导入
-import type { WsMessage } from '@/hooks/useWebSocket';
-import { invalidateBoardStatsTimestamp } from './hooks/useBoardStats';
 import '../../../styles.css';
 
 import { defaultNodes, stripWarehousingNode, findPricingProcessForStage, getCloseMinRequired, getCurrentWorkflowNodeForOrder } from './utils';

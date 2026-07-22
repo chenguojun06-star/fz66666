@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Space, InputNumber, Collapse, Slider, Switch, Tooltip, Input, Select, Dropdown } from 'antd';
+import { Card, Button, Space, InputNumber, Collapse, Slider, Switch, Input, Select, Dropdown } from 'antd';
 import { PrinterOutlined, SettingOutlined, SaveOutlined, BookOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
 import type { PrintType } from '../types';
 import type { HangSettings, BarSettings, WashSettings } from '../constants';

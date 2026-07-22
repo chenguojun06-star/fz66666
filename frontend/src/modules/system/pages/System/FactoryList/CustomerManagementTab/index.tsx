@@ -67,7 +67,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
     void fetchCustomers();
   }, [fetchCustomers]);
 
-  const { fields: fieldConfigs, loading: fieldConfigLoading, refresh: refreshFieldConfigs } = useFieldConfig({
+  const { fields: fieldConfigs, loading: fieldConfigLoading } = useFieldConfig({
     bizType: 'customer',
     platform: 'pc',
   });

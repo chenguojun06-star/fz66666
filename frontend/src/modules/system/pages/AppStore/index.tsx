@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Row, Col, Tag, Button, Form, Input, Select, InputNumber, Spin, Badge, Alert, Steps, Divider, Typography } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, BookOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from './useAppStore';
 import { EC_PLATFORM_MAP, MODULE_CONFIG, CATEGORY_LABEL_MAP, isEcApp, parseFeatures } from './appStoreConstants';

@@ -122,7 +122,7 @@ export const useProductWarehousing = () => {
         orderNo: orderNo || prev.orderNo,
       }));
     }
-  }, [location.search]);
+  }, [location.search, setQueryParams]);
 
   // Derived State
   const sortedWarehousingList = useMemo(() => {

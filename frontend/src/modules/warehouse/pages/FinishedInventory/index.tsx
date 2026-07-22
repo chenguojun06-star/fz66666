@@ -9,7 +9,6 @@ import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { FinishedInventory } from './finishedInventoryColumns';
 import ResizableTable from '@/components/common/ResizableTable';
-import StandardModal from '@/components/common/StandardModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';

@@ -118,7 +118,7 @@ export const useProgressColumns = ({
       ),
     }] : []),
   ], [
-    boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
+    boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo, processWorkerNamesByOrder,
     openNodeDetail, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, labelPrintLoading, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal,

@@ -26,7 +26,7 @@ export const useOrderSync = ({
   userId,
   tenantId,
 }: UseOrderSyncParams) => {
-  const { connected: wsConnected, subscribeProgress } = useWebSocket({
+  const { connected: _wsConnected, subscribeProgress } = useWebSocket({
     userId,
     tenantId,
     enabled: true,

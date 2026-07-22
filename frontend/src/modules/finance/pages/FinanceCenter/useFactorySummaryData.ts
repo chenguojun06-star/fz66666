@@ -152,7 +152,6 @@ export function useFactorySummaryData(
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message, onAuditNosChange, reportSmartError, showSmartErrorNotice]);
 
   const loadPushedFactories = useCallback(async () => {

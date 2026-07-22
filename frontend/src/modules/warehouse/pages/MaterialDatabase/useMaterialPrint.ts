@@ -43,12 +43,6 @@ const buildMaterialPrintHtml = (dataList: MaterialDatabase[]): string => {
     totalValue += qty * unitPrice;
   });
 
-  // 类型汇总行
-  const typeSummaryRows = Object.keys(statsByType).map(type => {
-    const s = statsByType[type];
-    return `<tr><td colspan="8" style="text-align:right;background:var(--color-bg-container);font-weight:600">${esc(getMaterialTypeLabel(type))} 小计：${s.count} 项 / ${s.totalQty.toFixed(2)} 单位</td><td style="text-align:right;background:var(--color-bg-container);font-weight:600">${s.totalQty.toFixed(2)}</td><td colspan="2" style="text-align:right;background:var(--color-bg-container);font-weight:600">—</td><td style="background:var(--color-bg-container)"></td></tr>`;
-  }).join('');
-
   const now = new Date();
   const printDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
