@@ -13,7 +13,7 @@ const PayableDetailModal: React.FC<{
   payableId?: string;
   onClose: () => void;
 }> = ({ open, payableId, onClose }) => {
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [detail, setDetail] = useState<Payable | null>(null);
 
   useEffect(() => {

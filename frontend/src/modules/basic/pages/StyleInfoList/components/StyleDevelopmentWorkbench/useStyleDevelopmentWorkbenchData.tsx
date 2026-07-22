@@ -243,7 +243,7 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
         }
       },
     });
-  }, [record.id, record.styleNo, record.styleName, stageCards, message, refreshWorkbenchView]);
+  }, [record.id, record.styleNo, record.styleName, stageCards, message, modal, refreshWorkbenchView]);
 
   return {
     loading,

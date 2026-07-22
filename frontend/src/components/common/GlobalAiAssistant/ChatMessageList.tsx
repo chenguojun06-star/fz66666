@@ -5,7 +5,7 @@ import msgStyles from './MessageBubble.module.css';
 import XiaoyunLiveStatus from './XiaoyunLiveStatus';
 import PendingItemsSection from './PendingItemsSection';
 import MessageBubble from './MessageBubble';
-import type { Message, TaskItem, ActionCard } from './types';
+import type { Message, ActionCard } from './types';
 import type { LiveStatus } from './useAiChatStream';
 import type { PendingTaskDTO } from '@/services/intelligence/intelligenceApi';
 import { buildWizardCommand } from './helpers';

@@ -24,7 +24,7 @@ import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
 import type { SizePriceRecord } from './utils/orderIntelligence';
 import { confirmPricingReady } from './utils/confirmPricingReady';
 import { getBomColumns } from './utils/orderBomColumns';
-import { normalizeSizeKey, displaySizeLabel, useOrderBomCalc } from './hooks/useOrderBomCalc';
+import { normalizeSizeKey, useOrderBomCalc } from './hooks/useOrderBomCalc';
 import { useOrderColumns } from './hooks/useOrderColumns';
 import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
@@ -101,7 +101,7 @@ const OrderManagement: React.FC = () => {
   } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
 
   // ===== BOM 计算（复用已有 useOrderBomCalc Hook） =====
-  const { orderQtyStats, getMatchedQty, calcBomBudgetQty, calcBomTotalPrice, calcBomReferenceKg } = useOrderBomCalc(orderLines);
+  const { getMatchedQty, calcBomBudgetQty, calcBomTotalPrice, calcBomReferenceKg } = useOrderBomCalc(orderLines);
   // 保留 BOM 列定义供未来扩展使用
   void getBomColumns({ getMatchedQty, calcBomBudgetQty, calcBomTotalPrice, calcBomReferenceKg });
 
@@ -127,7 +127,6 @@ const OrderManagement: React.FC = () => {
   }, [location.search, loadOrderStats]);
 
   const {
-    bomByType,
     watchedFactoryId,
     watchedOrgUnitId,
     watchedPricingMode,

@@ -1,5 +1,4 @@
 import { Tag } from 'antd';
-import DisplayStatusTag from '@/components/common/DisplayStatusTag';
 import { displayMaterialPurchaseStatus } from '@/utils/display';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Button, Input, InputNumber, Select, Modal, Image, message as antMessage } from 'antd';
-import { CopyOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Input, Select, Modal, Image } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 import { MatrixRow, DisplayRow, normalizeGradingZones } from './styleSizeTabUtils';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';

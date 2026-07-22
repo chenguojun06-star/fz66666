@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { App, Button, Card, Col, Empty, Form, Input, InputNumber, Row, Select, Space, Tag, Tabs } from 'antd';
+import { App, Button, Card, Col, Empty, Form, Input, InputNumber, Row, Select, Space, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';

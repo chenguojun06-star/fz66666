@@ -37,7 +37,7 @@ export function useProductionListData() {
   const location = useLocation();
   const { user } = useUser();
   const tenantId = user?.tenantId ? String(user.tenantId) : undefined;
-  const { connected: wsConnected, subscribeProgress } = useWebSocket({
+  const { subscribeProgress } = useWebSocket({
     userId: user?.id,
     tenantId,
     enabled: true,
@@ -204,7 +204,7 @@ export function useProductionListData() {
         return { ...prev, factoryName: factoryNameParam, page: 1 };
       });
     }
-  }, [location.search]);
+  }, [location.search, setSmartQueueFilter]);
 
   useSync(
     'production-orders',

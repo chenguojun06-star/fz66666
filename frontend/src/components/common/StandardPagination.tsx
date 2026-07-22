@@ -32,7 +32,7 @@ const StandardPagination: React.FC<StandardPaginationProps> = ({
   const resolvedShowSizeChanger = useMemo(() => {
     if (showSizeChanger === false) return false;
     const base = typeof showSizeChanger === 'object' ? showSizeChanger : {};
-    return { getPopupContainer: (triggerNode: HTMLElement) => document.body, ...base };
+    return { getPopupContainer: (_triggerNode: HTMLElement) => document.body, ...base };
   }, [showSizeChanger]);
 
   return (

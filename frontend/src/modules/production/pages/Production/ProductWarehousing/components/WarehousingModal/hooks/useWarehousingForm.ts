@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Form } from 'antd';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
-import api, { useProductionOrderFrozenCache } from '@/utils/api';
+import { useProductionOrderFrozenCache } from '@/utils/api';
 import { MAX_UNQUALIFIED_IMAGES } from '../../../constants';
 import { CuttingBundleRow, BundleRepairStats } from '../../../types';
 import { isBundleBlockedForWarehousing } from '../../../utils';

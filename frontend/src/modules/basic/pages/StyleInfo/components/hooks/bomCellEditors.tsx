@@ -1,4 +1,4 @@
-import { App, Form, Input, Button, Select, InputNumber } from 'antd';
+import { App, Form, Input, Select, InputNumber } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { StyleBom } from '@/types/style';
 import DictAutoComplete from '@/components/common/DictAutoComplete';

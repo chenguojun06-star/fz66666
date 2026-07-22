@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Form } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
-import api, { type ApiResult } from '@/utils/api';
+import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { usePersistentState } from '@/hooks/usePersistentState';

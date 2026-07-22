@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
-import { Alert, App, Button, Checkbox, Input, Space, Tag, Tooltip, Empty } from 'antd';
+import { Alert, App, Button, Checkbox, Input, Space, Tag, Empty } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { requestWithPathFallback } from '@/utils/api';
 import { useViewport } from '@/utils/useViewport';

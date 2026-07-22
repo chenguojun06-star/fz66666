@@ -1,5 +1,5 @@
 import React from 'react';
-import { App, Button, Card, Form, Image, Input, Select, Space, Tag, Tooltip, Typography } from 'antd';
+import { Button, Card, Form, Image, Input, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -28,7 +28,7 @@ import { useUnitPriceData } from './useUnitPriceData';
 const { Text } = Typography;
 const { TextArea } = Input;
 
-const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo, onSaved }) => {
+const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
   const {
     queryForm, createForm, applyForm, directRollbackForm, editModalRef,
     styleNoOptions, styleNoLoading, fetchStyleNoOptions, scheduleFetchStyleNos,

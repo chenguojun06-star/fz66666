@@ -55,7 +55,7 @@ export function usePanelActions({
     setIsOpen(false);
     setIsTaskPanelOpen(false);
     navigate(safePath);
-  }, [navigate]);
+  }, [navigate, setIsOpen, setIsTaskPanelOpen]);
 
   const handleOpenModal = useCallback((modalType: string, prefillData?: Record<string, unknown>) => {
     if (modalType === 'open_order_create') {
@@ -71,7 +71,7 @@ export function usePanelActions({
       setSampleLoanPrefill(prefillData);
       setSampleLoanModalVisible(true);
     }
-  }, [navigate]);
+  }, [navigate, setIsOpen, setIsTaskPanelOpen]);
 
   const handleActionCardAction = useCallback((card: ActionCard, actionType: string, path?: string, orderId?: string) => {
     const action = card.actions.find(a => a.type === actionType);

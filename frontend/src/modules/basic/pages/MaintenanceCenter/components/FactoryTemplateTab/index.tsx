@@ -3,7 +3,6 @@ import { Button, Select, Input, Space, Dropdown } from 'antd';
 import { PlusOutlined, CopyOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import type { TemplateLibrary } from '@/types/style';
 import { typeLabel } from '../../../TemplateCenter/utils/templateUtils';
 import TemplateInlineEditor from '../../../TemplateCenter/components/inlineEditor/TemplateInlineEditor';
 import TemplateViewContent from '../../../TemplateCenter/components/TemplateViewContent';
@@ -22,7 +21,6 @@ const FactoryTemplateTab: React.FC = () => {
     total,
     templateType,
     setTemplateType,
-    keyword,
     setKeyword,
     fetchList,
     editOpen,

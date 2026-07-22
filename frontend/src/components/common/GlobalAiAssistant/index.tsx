@@ -109,7 +109,7 @@ const GlobalAiAssistant: React.FC = () => {
   // ── 任务面板状态与回调 ──
   const {
     isTaskPanelOpen, setIsTaskPanelOpen,
-    panelView, setPanelView,
+    panelView,
     showTaskForm, setShowTaskForm, editingTask, setEditingTask, taskSaving,
     myTasks, tasksLoading, taskStats,
     openTaskPanel, closeTaskPanel, backToChat,

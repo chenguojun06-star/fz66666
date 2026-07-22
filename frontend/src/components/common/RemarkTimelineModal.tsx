@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Button, Empty, Spin, App, Tag, Image, Drawer } from 'antd';
-import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import MultiImageUploadBox from './MultiImageUploadBox';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';

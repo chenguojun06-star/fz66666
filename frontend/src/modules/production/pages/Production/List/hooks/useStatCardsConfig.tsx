@@ -27,7 +27,7 @@ interface UseStatCardsConfigParams {
  */
 export function useStatCardsConfig({
   globalStats,
-  activeStatFilter,
+  activeStatFilter: _activeStatFilter,
   setActiveStatFilter,
   setShowDelayedOnly,
   setQueryParams,

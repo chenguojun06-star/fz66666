@@ -126,18 +126,19 @@ export const useReceivableData = () => {
     setActiveRecord(null);
   }, []);
 
+  const currentPage = pagination.current;
   const handleDelete = useCallback((record: Receivable) => {
     confirmDelete(`应收单「${record.receivableNo}」`, async () => {
       await receivableApi.delete(record.id!);
-      fetchList(pagination.current);
+      fetchList(currentPage);
       fetchStats();
     });
-  }, [fetchList, fetchStats, pagination.current]);
+  }, [fetchList, fetchStats, currentPage]);
 
   const refreshCurrent = useCallback(() => {
-    fetchList(pagination.current);
+    fetchList(currentPage);
     fetchStats();
-  }, [fetchList, fetchStats, pagination.current]);
+  }, [fetchList, fetchStats, currentPage]);
 
   return {
     // 数据

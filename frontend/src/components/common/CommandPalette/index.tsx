@@ -20,7 +20,6 @@ import {
   SearchOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import SmartImage from '../SmartImage';
 import { MENU_INDEX } from './helpers';
 import { useCommandPaletteData } from './useCommandPaletteData';
 import ResultList from './ResultList';

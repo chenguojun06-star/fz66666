@@ -12,7 +12,6 @@ import type { PurchaseCartDrawerProps } from '@/types/purchaseCart';
 export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
   open,
   onClose,
-  onConfirmSuccess,
 }) => {
   const {
     cart,

@@ -25,7 +25,7 @@ const { TextArea } = Input;
 
 interface PatternPanelProps { styleNo?: string; onSaved?: () => void; }
 
-const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo, onSaved }) => {
+const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
   const {
     queryParams, setQueryParams, styleNoInput, setStyleNoInput, styleNameInput, setStyleNameInput,

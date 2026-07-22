@@ -57,6 +57,8 @@ const PayableList: React.FC = () => {
       handleDelete,
       onMarkPaid: handleMarkPaid,
     }),
+    // handleDelete/handleMarkPaid 为非 useCallback 函数，加入 deps 会触发 "deps change on every render" warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [openPayableDetail],
   );
 

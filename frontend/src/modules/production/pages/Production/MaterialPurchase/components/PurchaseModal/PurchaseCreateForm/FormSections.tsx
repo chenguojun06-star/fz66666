@@ -59,7 +59,7 @@ interface MaterialInfoSectionProps {
 }
 
 export const MaterialInfoSection: React.FC<MaterialInfoSectionProps> = ({
-  form,
+  form: _form,
   materialDbOptions,
   materialDbLoading,
   onSearchMaterialDb,
@@ -125,7 +125,7 @@ interface MaterialDetailSectionProps {
 }
 
 export const MaterialDetailSection: React.FC<MaterialDetailSectionProps> = ({
-  form,
+  form: _form,
   colorOptions,
   materialCode,
   stockInfo,
@@ -236,7 +236,7 @@ interface QuantitySectionProps {
   unit: string | undefined;
 }
 
-export const QuantitySection: React.FC<QuantitySectionProps> = ({ form, purchaseQuantity, conversionRate, unit }) => (
+export const QuantitySection: React.FC<QuantitySectionProps> = ({ form: _form, purchaseQuantity, conversionRate, unit }) => (
   <Row gutter={[16, 0]}>
     <Col xs={24} md={6}>
       <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>

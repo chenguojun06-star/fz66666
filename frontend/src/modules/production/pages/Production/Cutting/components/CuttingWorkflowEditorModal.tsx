@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { App, Button, InputNumber, Popconfirm, Select, Space, Spin, Drawer } from 'antd';
+import { App, Button, InputNumber, Popconfirm, Select, Spin, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { App, Card, Row, Col, Image, Upload, Button, Modal, Space, message, Empty, Tag, Checkbox, Spin, Tooltip } from 'antd';
-import { UploadOutlined, DeleteOutlined, SaveOutlined, PictureOutlined, SyncOutlined, CheckSquareOutlined } from '@ant-design/icons';
+import { App, Card, Row, Col, Image, Upload, Button, Modal, Space, Empty, Tag, Checkbox, Spin, Tooltip } from 'antd';
+import { UploadOutlined, DeleteOutlined, SaveOutlined, PictureOutlined, SyncOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { confirmAction } from '@/utils/confirm';
@@ -94,6 +94,31 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     }
   }, [antMessage]);
 
+  // 保存所有图片
+  const saveImages = useCallback(async () => {
+    if (colorImages.length === 0) return;
+    setSaving(true);
+    try {
+      const imageMap: Record<string, string> = {};
+      for (const c of colorImages) {
+        if (c.imageUrl) {
+          imageMap[c.color] = c.imageUrl;
+        }
+      }
+      const res = await api.put(`/style/sku/color-images/${styleId}`, imageMap);
+      if (res.code === 200) {
+        antMessage.success('保存成功');
+        onSaved?.();
+      } else {
+        antMessage.error(res.message || '保存失败');
+      }
+    } catch (err) {
+      antMessage.error('保存失败');
+    } finally {
+      setSaving(false);
+    }
+  }, [colorImages, styleId, antMessage, onSaved]);
+
   // 批量上传（同图片批量应用）
   const handleBatchUpload = useCallback(async (file: File) => {
     if (selectedColors.size === 0) {
@@ -125,32 +150,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       setSaving(false);
     }
     return false; // 阻止默认上传
-  }, [selectedColors, antMessage]);
-
-  // 保存所有图片
-  const saveImages = useCallback(async () => {
-    if (colorImages.length === 0) return;
-    setSaving(true);
-    try {
-      const imageMap: Record<string, string> = {};
-      for (const c of colorImages) {
-        if (c.imageUrl) {
-          imageMap[c.color] = c.imageUrl;
-        }
-      }
-      const res = await api.put(`/style/sku/color-images/${styleId}`, imageMap);
-      if (res.code === 200) {
-        antMessage.success('保存成功');
-        onSaved?.();
-      } else {
-        antMessage.error(res.message || '保存失败');
-      }
-    } catch (err) {
-      antMessage.error('保存失败');
-    } finally {
-      setSaving(false);
-    }
-  }, [colorImages, styleId, antMessage, onSaved]);
+  }, [selectedColors, antMessage, saveImages]);
 
   // 删除单个颜色图片
   const handleDelete = useCallback((color: string) => {

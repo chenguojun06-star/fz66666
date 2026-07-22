@@ -38,7 +38,7 @@ type ExpenseDetailModalProps = {
   reportSmartError: (title: string, reason?: string, code?: string) => void;
 };
 
-const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, viewMode, onClose, onRefresh, reportSmartError }) => {
+const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, viewMode: _viewMode, onClose, onRefresh, reportSmartError }) => {
   const { user } = useUser();
   const { message } = App.useApp();
   const [detailDocList, setDetailDocList] = useState<ExpenseReimbursementDoc[]>([]);

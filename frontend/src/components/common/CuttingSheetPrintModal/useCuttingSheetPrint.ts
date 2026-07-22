@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { message } from '@/utils/antdStatic';
 import { safePrint } from '@/utils/safePrint';
-import type { CuttingBundleRow } from '@/modules/production/pages/Production/Cutting/hooks';
 import { groupBundlesByOrder, buildPrintPageData } from './printDataTransform';
 import { buildCuttingSheetPrintHtml } from './printTemplate';
 import type { CuttingSheetPrintModalProps } from './types';

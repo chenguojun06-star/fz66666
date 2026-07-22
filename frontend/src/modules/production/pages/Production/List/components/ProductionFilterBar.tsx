@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Button, Select, Popover, Checkbox, Segmented } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, RadarChartOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';

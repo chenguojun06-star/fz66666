@@ -24,7 +24,7 @@ export const useStyleSizeData = (
   const combinedSizeIdsRef = useRef<Array<string | number>>([]);
 
   const { message } = App.useApp();
-  const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes.join(',')]);
+  const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
 
   const fetchSizeTemplates = async (sourceStyleNo?: string) => {
     const sn = String(sourceStyleNo ?? '').trim();

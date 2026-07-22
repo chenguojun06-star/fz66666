@@ -29,7 +29,7 @@ const PlatformDetail: React.FC = () => {
     loading, testing, syncing,
     stats, configured, activeTab, showGuide,
     orders, orderTotal, orderLoading, orderPage, orderPageSize,
-    filterStatus, keyword,
+    filterStatus,
     expressOrderTarget, expressModalOpen,
     configForm, testResult,
     setActiveTab, setShowGuide, setFilterStatus, setKeyword,

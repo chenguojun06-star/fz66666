@@ -12,7 +12,7 @@ import { useStyleProcessActions } from './hooks/useStyleProcessActions';
 import { useStyleProcessAi } from './hooks/useStyleProcessAi';
 
 const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
-  styleId, styleNo, readOnly, hidePrice = false,
+  styleId, readOnly, hidePrice = false,
   progressNode: _progressNode, processAssignee, processStartTime, processCompletedTime,
   onRefresh, onDataLoaded,
 }) => {

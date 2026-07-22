@@ -30,7 +30,7 @@ const FactoryList: React.FC = () => {
     managementTab, activeTab,
     handleManagementTabChange, handleTabChange,
     queryParams, setQueryParams,
-    factoryCodeInput, setFactoryCodeInput,
+    factoryCodeInput: _factoryCodeInput, setFactoryCodeInput,
     factoryNameInput, setFactoryNameInput,
     factoryList, total, loading,
     smartError, showSmartErrorNotice, fetchFactories,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { App, Button, Input, InputNumber, Space } from 'antd';
-import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, CloseOutlined, LockOutlined } from '@ant-design/icons';
+import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import CompositionPartsEditor from './CompositionPartsEditor';
 import CareIconSelector from './CareIconSelector';
@@ -17,7 +17,6 @@ import {
   buildWashLabelPrintHtml,
   buildWashLabelMultiPageHtml,
   getDefaultDateText,
-  compositionFromSections,
   washTextFromInstructions,
   type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';

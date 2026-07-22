@@ -19,7 +19,6 @@ interface StyleStatsCardProps {
  * 开发周期信息已移至弹窗内部
  */
 const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
-  stats,
   loading,
   collapsed = false,
   onToggle,

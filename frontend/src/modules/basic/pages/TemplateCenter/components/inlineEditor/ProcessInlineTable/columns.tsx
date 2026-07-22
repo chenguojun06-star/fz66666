@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Checkbox, Input, InputNumber, Popconfirm, Tag } from 'antd';
+import { Button, Input, InputNumber, Popconfirm, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import DictAutoComplete from '@/components/common/DictAutoComplete';

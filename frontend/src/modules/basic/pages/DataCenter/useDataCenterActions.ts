@@ -134,7 +134,7 @@ export function useDataCenterActions() {
     } catch (e: unknown) {
       message.error((e as any)?.message || '下载失败');
     }
-  }, [message, downloadFile]);
+  }, [message, downloadFile, user?.tenantName]);
 
   const openEditModal = useCallback((record: StyleInfo) => {
     setEditingRecord(record);

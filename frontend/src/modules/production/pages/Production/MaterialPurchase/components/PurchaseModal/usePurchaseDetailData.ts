@@ -5,7 +5,6 @@ import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/typ
 import { confirmDelete } from '@/utils/confirm';
 import {
   PurchaseDocRecord,
-  parseInvoiceUrls,
 } from './PurchaseDetailView.helpers';
 import { useInvoiceManagement } from './useInvoiceManagement';
 import { useMaterialSearch } from './useMaterialSearch';

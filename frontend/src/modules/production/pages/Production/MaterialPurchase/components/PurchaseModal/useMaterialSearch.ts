@@ -8,7 +8,7 @@ interface UseMaterialSearchParams {
   setEditableData: React.Dispatch<React.SetStateAction<MaterialPurchaseType[]>>;
 }
 
-export const useMaterialSearch = ({ editableData, setEditableData }: UseMaterialSearchParams) => {
+export const useMaterialSearch = ({ editableData: _editableData, setEditableData }: UseMaterialSearchParams) => {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [materialTargetRowId, setMaterialTargetRowId] = useState<string | null>(null);
   const [materialKeyword, setMaterialKeyword] = useState('');

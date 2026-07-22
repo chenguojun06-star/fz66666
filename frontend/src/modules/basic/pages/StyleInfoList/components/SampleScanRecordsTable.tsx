@@ -33,7 +33,7 @@ function getOperationLabel(op: string | undefined): string {
 
 const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ patternId, stageKey, onRefresh }) => {
   const { message } = App.useApp();
-  const { scanRecords, scanRecordsLoading, loadScanRecords, getFilteredRecords, undoScanRecord } = useSampleScanRecords();
+  const { scanRecordsLoading, loadScanRecords, getFilteredRecords, undoScanRecord } = useSampleScanRecords();
   const [undoingIds, setUndoingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {

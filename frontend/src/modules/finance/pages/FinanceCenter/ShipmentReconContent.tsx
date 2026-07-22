@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Input, Button, Tag, Space, Statistic, Empty, App, DatePicker, Modal, message } from 'antd';
-import { SearchOutlined, ReloadOutlined, DownloadOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Tag, Space, Statistic, Empty, App, Modal } from 'antd';
+import { SearchOutlined, ReloadOutlined, DownloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { formatMoney } from '@/utils/format';
 import api from '@/utils/api';
@@ -12,8 +11,6 @@ import { readPageSize } from '@/utils/pageSizeStore';
 import RowActions from '@/components/common/RowActions';
 import { MATERIAL_RECON_STATUS_MAP } from '@/constants/statusMaps';
 import type { ShipmentReconciliation } from '@/types/finance';
-
-const { RangePicker } = DatePicker;
 
 interface FilterState {
   orderNo: string;

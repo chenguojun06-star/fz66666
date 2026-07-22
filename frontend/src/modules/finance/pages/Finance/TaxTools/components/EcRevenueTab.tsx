@@ -38,7 +38,7 @@ const EcRevenueTab: React.FC = () => {
     } catch {
       message.warning('汇总数据加载失败');
     }
-  }, [filters.platform]);
+  }, [filters.platform, message]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -58,7 +58,7 @@ const EcRevenueTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, message]);
 
   useEffect(() => {
     fetchList();

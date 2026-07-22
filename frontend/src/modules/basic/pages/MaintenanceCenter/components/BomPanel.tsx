@@ -64,7 +64,7 @@ const normalizeTemplateRecords = (payload: unknown, sourceStyleNo?: string) => {
 
 interface BomPanelProps { styleNo?: string; onSaved?: () => void; }
 
-const BomPanel: React.FC<BomPanelProps> = ({ styleNo, onSaved }) => {
+const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
   const [directRollbackForm] = Form.useForm();
 

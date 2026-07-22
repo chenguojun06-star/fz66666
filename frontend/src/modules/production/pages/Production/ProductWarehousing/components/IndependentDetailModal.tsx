@@ -45,10 +45,6 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
     onError: onClose,
   });
 
-  // Viewport logic replacement
-  const detailPopupWidth = "88vw";
-  const detailPopupInitialHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.82) : 800;
-
   // Derive styleId/styleNo for production sheet and size chart tabs
   const styleId = orderDetail?.styleId || entryWarehousing?.styleId;
   const plateTypeKey = String((orderDetail as any)?.plateType || (entryWarehousing as any)?.plateType || '').trim().toUpperCase();

@@ -1,13 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { App } from 'antd';
-import api, { type ApiResult, isApiSuccess } from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { getProductionProcessTracking } from '@/utils/api/production';
 import type { NodeType, NodeOperations, Factory, ScanRecord, BundleRecord, OperatorSummary, NodeStats } from './types';
 import { useOrderSummary } from './useOrderSummary';
-import type { OrderSummary } from './useOrderSummary';
 import { usePredictionFeedback } from './usePredictionFeedback';
-import type { PredictionState } from './usePredictionFeedback';
 import {
   normalizeText,
   formatHistoryTime as _formatHistoryTime,

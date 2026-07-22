@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 export interface ProcessStats {
   totalProcessTypes: number;
   totalStyles: number;

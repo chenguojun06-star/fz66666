@@ -43,8 +43,6 @@ export type OrderFlowResponse = {
   materialPurchases?: any[];
 };
 
-import type { OrderLine } from '@/types/production';
-
 export { orderStatusTag };
 
 export function useOrderFlowData() {
@@ -99,13 +97,14 @@ export function useOrderFlowData() {
   const stageColumns = useMemo(() => buildStageColumns(), []);
 
   const order = data?.order;
+  const styleQuotation = (data as any)?.styleQuotation;
 
   const orderLines = useMemo(() => {
     const warehousings = (data?.warehousings || []) as ProductWarehousing[];
     const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
-    const styleQuotationTotalPrice = Number((data as any)?.styleQuotation?.totalPrice) || 0;
+    const styleQuotationTotalPrice = Number(styleQuotation?.totalPrice) || 0;
     return computeOrderLines(order, warehousings, cuttingBundles, styleQuotationTotalPrice);
-  }, [order, data?.warehousings, data?.cuttingBundles, (data as any)?.styleQuotation]);
+  }, [order, data?.warehousings, data?.cuttingBundles, styleQuotation]);
 
   const orderLineColumns = useMemo(() => buildOrderLineColumns(), []);
 

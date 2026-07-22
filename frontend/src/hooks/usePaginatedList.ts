@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { message } from '@/utils/antdStatic';
 
 interface PaginatedResult<_T = unknown> {
@@ -36,8 +36,6 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
 
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
-
-  const stableFiltersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);

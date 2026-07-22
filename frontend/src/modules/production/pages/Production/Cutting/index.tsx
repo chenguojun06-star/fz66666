@@ -178,6 +178,9 @@ const CuttingManagement: React.FC = () => {
     if (ok && routeOrderNo) {
       await syncActiveTaskByOrderNo(routeOrderNo);
     }
+    // syncActiveTaskByOrderNo 是非 memoized 的普通函数，加入 deps 会使 callback 每次渲染重建
+    // tasks.handleReceiveTask 已在 deps 中，无需整个 tasks 对象
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks.handleReceiveTask, activeTask, routeOrderNo]);
 
   return (

@@ -1,7 +1,6 @@
 import React from 'react';
-import { Tooltip, Tag } from 'antd';
+import { Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import { isOrderFrozenByStatus } from '@/utils/api/production';

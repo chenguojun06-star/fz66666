@@ -23,7 +23,7 @@ interface InlineEditableFieldProps {
   bold?: boolean;
 }
 
-const InlineEditableField: React.FC<InlineEditableFieldProps> = ({ label, value, editable, fieldKey, onSave, saving, bold }) => {
+const InlineEditableField: React.FC<InlineEditableFieldProps> = ({ label: _label, value, editable, fieldKey, onSave, saving, bold }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);

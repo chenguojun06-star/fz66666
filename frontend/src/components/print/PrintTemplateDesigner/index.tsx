@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core';
 import { InputNumber, Select, Button, Input, Switch, Slider, Space, Divider, Card, Typography, Tooltip, message } from 'antd';
-import { DeleteOutlined, SettingOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import type { TemplateConfig, TemplateField, DraggableFieldItem } from './types';
 import { FIELD_LIST, DEFAULT_TEMPLATE_CONFIG, TEMPLATE_TYPE_OPTIONS } from './types';
 import PrintPreview from '../PrintPreview';

@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button, Card, Drawer, Tag } from 'antd';
 
 import PageStatCards from '@/components/common/PageStatCards';
@@ -15,16 +14,12 @@ import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import type { StatusFilter, PendingBundleRow } from '../hooks/useProductWarehousing';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import InspectionDetail from '../pages/InspectionDetail';
-import { useViewport } from '@/utils/useViewport';
 
 interface WarehousingListProps {
   hook: ReturnType<typeof useProductWarehousing>;
 }
 
 const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
-  const navigate = useNavigate();
-  const { isMobile } = useViewport();
-
   const [inspectDrawerVisible, setInspectDrawerVisible] = useState(false);
   const [inspectDrawerOrderId, setInspectDrawerOrderId] = useState('');
   const [inspectDrawerTab, setInspectDrawerTab] = useState('records');
@@ -63,7 +58,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     setShowAllWarehousing,
     pendingBundles,
     pendingBundlesLoading,
-    navigateToInspect,
   } = hook;
 
   // 待处理菲号表格列定义

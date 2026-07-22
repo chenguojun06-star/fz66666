@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Card, Row, Col, Statistic, DatePicker, Input, Select, Button, Tag, Space } from 'antd';
+import { App, Card, Row, Col, Statistic, DatePicker, Input, Button, Tag, Space } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkuColorImage from '@/components/common/SkuColorImage';
 import dayjs from 'dayjs';
@@ -86,7 +86,8 @@ const WasteTab: React.FC = () => {
     finally { setLoading(false); }
   }, [filters, message]);
 
-  useEffect(() => { fetchSummary(); fetchList(1, pagination.pageSize); }, [fetchSummary, fetchList]);
+  const pageSize = pagination.pageSize;
+  useEffect(() => { fetchSummary(); fetchList(1, pageSize); }, [fetchSummary, fetchList, pageSize]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, current: 1 }));

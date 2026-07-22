@@ -9,7 +9,7 @@ const InlineEditableField: React.FC<{
   editable: boolean;
   onSave: (value: string) => void;
   saving?: boolean;
-}> = ({ label, value, editable, onSave, saving }) => {
+}> = ({ value, editable, onSave, saving }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);

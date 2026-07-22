@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
-import { App, Progress, QRCode, Skeleton, Table, Tag } from 'antd';
+import { Progress, QRCode, Skeleton, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import SampleProcessList from './SampleProcessList';
 import useSampleScanRecords, { ScanRecord } from './useSampleScanRecords';
 import type { ProcessStageProgress } from './useSampleProcessProgress';
@@ -42,12 +41,8 @@ export default function SampleStageExpandedContent({
   quantity,
   size,
   onCompleteProcess,
-  onReceiveSample,
-  onUpdateProgress,
-  actionLoading = false,
   onRefresh,
 }: SampleStageExpandedContentProps) {
-  const { message } = App.useApp();
   const { scanRecords, scanRecordsLoading, loadScanRecords } = useSampleScanRecords();
 
   useEffect(() => {

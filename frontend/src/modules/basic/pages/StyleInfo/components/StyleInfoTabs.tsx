@@ -46,7 +46,6 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
   activeKey,
   onChange,
   currentStyle,
-  styleIdParam,
   sizeColorConfig,
   matrixSizes,
   totalMatrixQty,

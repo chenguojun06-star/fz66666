@@ -146,6 +146,8 @@ const DashboardAiInsight: React.FC = () => {
     } finally {
       setLoading(false);
     }
+    // patrolSummary 在回调内通过 setPatrolSummary 更新，加入 deps 会触发循环（useEffect→buildInsights→setState→buildInsights...）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   useEffect(() => {

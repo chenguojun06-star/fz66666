@@ -32,7 +32,8 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
 
   useEffect(() => {
-    return () => { Object.values(hintTimerRef.current).forEach(t => clearTimeout(t)); };
+    const timers = hintTimerRef.current;
+    return () => { Object.values(timers).forEach(t => clearTimeout(t)); };
   }, []);
 
   const fetchPriceHint = useCallback((rowId: string | number, processName: string, standardTime?: number) => {

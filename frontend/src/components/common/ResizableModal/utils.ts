@@ -1,5 +1,4 @@
 import type { ModalProps } from 'antd';
-import { COMPACT_MODAL_BASE_WIDTH, MEDIUM_MODAL_BASE_WIDTH } from './constants';
 
 export const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 

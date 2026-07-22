@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Spin } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -50,6 +50,8 @@ const OverdueOrderTable: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    // loadData 非 useCallback 包裹，加入 deps 会每次渲染创建新引用触发循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {

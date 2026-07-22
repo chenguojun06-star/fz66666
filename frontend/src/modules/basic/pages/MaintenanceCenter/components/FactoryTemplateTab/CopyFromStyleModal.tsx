@@ -57,7 +57,7 @@ const CopyFromStyleModal: React.FC<CopyFromStyleModalProps> = ({ open, onCancel,
       copyForm.resetFields();
       fetchStyleNoOptions('');
     }
-  }, [open]);
+  }, [open, copyForm]);
 
   const handleCopySubmit = async () => {
     try {

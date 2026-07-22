@@ -56,22 +56,10 @@ function getFieldValue(record: Record<string, unknown>, fieldKey: string): unkno
   return undefined;
 }
 
-function parseOptions(json?: string | null): string[] {
-  if (!json) return [];
-  try {
-    const parsed = JSON.parse(json);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((item: any) => {
-      if (typeof item === 'string') return item;
-      return item.label ?? item.value ?? String(item);
-    });
-  } catch { return []; }
-}
-
 function renderValue(
   value: unknown,
   fieldType?: string,
-  optionsJson?: string | null
+  _optionsJson?: string | null
 ): React.ReactNode {
   if (value === undefined || value === null || value === '') return '-';
 

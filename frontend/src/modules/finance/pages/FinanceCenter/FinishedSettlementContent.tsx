@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Button, Input, Select, Empty, Space, Tag, Statistic, Timeline, Tabs, Table, InputNumber, Popconfirm } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, SearchOutlined, DownloadOutlined, MinusCircleOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Button, Input, Select, Empty, Space, Statistic, Timeline, Tabs, Table, InputNumber } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, DownloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import PageLayout from '@/components/common/PageLayout';
@@ -35,7 +35,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     pageParams,
     handleSearch, handleReset,
     handleAuditOrder, handleBatchAudit,
-    handleExportSelected, handleExport,
+    handleExport,
     openRemarkModal, saveRemark, openLogModal,
     openDeductionModal, saveDeductionItems,
     handleTableChange,

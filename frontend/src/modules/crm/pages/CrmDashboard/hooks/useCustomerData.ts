@@ -102,13 +102,14 @@ export const useCustomerData = () => {
     fetchList(page);
   }, [fetchList]);
 
+  const currentPage = pagination.current;
   const handleDelete = useCallback((record: Customer) => {
     confirmDelete(`客户「${record.companyName}」`, async () => {
       await customerApi.delete(record.id!);
-      fetchList(pagination.current);
+      fetchList(currentPage);
       fetchStats();
     });
-  }, [fetchList, fetchStats, pagination.current]);
+  }, [fetchList, fetchStats, currentPage]);
 
   const openDrawer = useCallback(async (record: Customer) => {
     setDrawerData(record);
@@ -143,9 +144,9 @@ export const useCustomerData = () => {
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   const onModalSuccess = useCallback(() => {
-    fetchList(pagination.current);
+    fetchList(currentPage);
     fetchStats();
-  }, [fetchList, fetchStats, pagination.current]);
+  }, [fetchList, fetchStats, currentPage]);
 
   return {
     // 列表数据

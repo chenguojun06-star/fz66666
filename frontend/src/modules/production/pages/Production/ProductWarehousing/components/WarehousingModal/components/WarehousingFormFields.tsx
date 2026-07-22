@@ -17,7 +17,7 @@ interface WarehousingFormFieldsProps {
   onCancel: () => void;
 }
 
-const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, openPreview, onCancel }) => {
+const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, openPreview: _openPreview, onCancel }) => {
   const watchedOrderIdForAi = Form.useWatch('orderId', hook.form);
   const watchedDefectCategoryForAi = Form.useWatch('defectCategory', hook.form);
   const { selectOptions: finishedWarehouseOptions, areas } = useWarehouseAreaOptions('FINISHED');
@@ -39,7 +39,6 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
     watchedBundleQr,
     watchedWarehousingQty,
     watchedUnqualifiedQty,
-    unqualifiedImageUrls,
     batchSelectedBundleQrs,
     batchQtyByQr,
     batchSelectRows,

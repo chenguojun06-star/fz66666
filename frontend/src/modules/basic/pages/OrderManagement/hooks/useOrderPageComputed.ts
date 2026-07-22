@@ -87,15 +87,19 @@ export function useOrderPageComputed({
     return Array.from(set);
   }, [orderLines]);
 
+  const selectedStyleColor = selectedStyle?.color;
+  const selectedStyleSize = selectedStyle?.size;
+  const selectedStyleSizeColorConfig = (selectedStyle as any)?.sizeColorConfig;
+
   const selectableColors = useMemo(() => {
-    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
-    return mergeDistinctOptions(splitOptions(selectedStyle?.color), parsed.colors);
-  }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
+    const parsed = parseSizeColorConfig(selectedStyleSizeColorConfig);
+    return mergeDistinctOptions(splitOptions(selectedStyleColor), parsed.colors);
+  }, [selectedStyleColor, selectedStyleSizeColorConfig]);
 
   const selectableSizes = useMemo(() => {
-    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
-    return mergeDistinctOptions(splitOptions(selectedStyle?.size), parsed.sizes);
-  }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
+    const parsed = parseSizeColorConfig(selectedStyleSizeColorConfig);
+    return mergeDistinctOptions(splitOptions(selectedStyleSize), parsed.sizes);
+  }, [selectedStyleSize, selectedStyleSizeColorConfig]);
 
   return {
     bomByType,

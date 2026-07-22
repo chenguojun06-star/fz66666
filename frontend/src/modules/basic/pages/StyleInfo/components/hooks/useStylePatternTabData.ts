@@ -83,7 +83,8 @@ const useStylePatternTabData = ({
   }, [styleId]);
 
   useEffect(() => {
-    return () => { if (sizeSearchTimerRef.current) clearTimeout(sizeSearchTimerRef.current); };
+    const timer = sizeSearchTimerRef.current;
+    return () => { if (timer) clearTimeout(timer); };
   }, []);
 
   useEffect(() => {

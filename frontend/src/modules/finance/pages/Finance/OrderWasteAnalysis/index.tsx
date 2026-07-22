@@ -5,7 +5,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import SkuColorImage from '@/components/common/SkuColorImage';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
 
 const { RangePicker } = DatePicker;
@@ -81,7 +80,6 @@ export interface OrderWasteSummaryDTO {
 
 const OrderWasteAnalysis: React.FC = () => {
   const { message } = App.useApp();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<OrderWasteSummaryDTO | null>(null);
@@ -151,10 +149,11 @@ const OrderWasteAnalysis: React.FC = () => {
     }
   }, [filters, message]);
 
+  const currentPageSize = pagination.pageSize;
   useEffect(() => {
     fetchSummary();
-    fetchList(1, pagination.pageSize);
-  }, [fetchSummary, fetchList]);
+    fetchList(1, currentPageSize);
+  }, [fetchSummary, fetchList, currentPageSize]);
 
   const handleFilterChange = (key: keyof typeof filters, value: string | dayjs.Dayjs[]) => {
     setFilters(prev => ({ ...prev, [key]: value }));

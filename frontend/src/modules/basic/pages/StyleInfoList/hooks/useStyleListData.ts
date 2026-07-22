@@ -28,7 +28,6 @@ export const useStyleListData = ({
   data,
   total,
   queryParams,
-  setQueryParams,
   fetchList,
   statsRangeType,
   loadDevelopmentStats,
@@ -107,7 +106,7 @@ export const useStyleListData = ({
     loadDevelopmentStats(statsRangeType);
     loadCategoryOptions();
     loadStyleStats();
-  }, [fetchList, loadDevelopmentStats, statsRangeType]);
+  }, [fetchList, loadCategoryOptions, loadDevelopmentStats, loadStyleStats, statsRangeType]);
 
   // queryParams 变化时重新加载
   useEffect(() => {

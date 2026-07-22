@@ -9,7 +9,6 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { PlusOutlined, SearchOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import {
@@ -82,7 +81,7 @@ const EmployeeAdvancePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filterStatus, filterRepayment, keyword, message]);
+  }, [page, pageSize, filterStatus, filterRepayment, keyword, message, reportSmartError]);
 
   useEffect(() => { void fetchList(); }, [fetchList]);
 

@@ -42,7 +42,6 @@ export const CartList: React.FC<CartListProps> = ({
   onToggleSelectAll,
   onUpdate,
   onDelete,
-  onSplit,
   submitting,
 }) => {
   const { message } = App.useApp();
@@ -51,43 +50,29 @@ export const CartList: React.FC<CartListProps> = ({
   const allSelected = items.length > 0 && selectedItems.size === items.length;
   const indeterminate = selectedItems.size > 0 && !allSelected;
 
-  const startEdit = (id: string, current: number) => {
-    setEditingMap(prev => ({ ...prev, [id]: current }));
-  };
+  const columns: ColumnsType<PurchaseCartItem> = useMemo(() => {
+    const startEdit = (id: string, current: number) => {
+      setEditingMap(prev => ({ ...prev, [id]: current }));
+    };
 
-  const cancelEdit = (id: string) => {
-    setEditingMap(prev => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  };
+    const cancelEdit = (id: string) => {
+      setEditingMap(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    };
 
-  const saveEdit = (id: string) => {
-    const value = editingMap[id];
-    if (value === undefined || value <= 0) {
-      message.warning('数量必须大于 0');
-      return;
-    }
-    onUpdate(id, { quantity: value });
-    cancelEdit(id);
-  };
-
-  const handleSplit = (item: PurchaseCartItem) => {
-    const value = editingMap[item.id];
-    if (value === undefined || value <= 0) {
-      message.warning('请先输入拆分数量');
-      return;
-    }
-    if (value >= item.quantity) {
-      message.warning('拆分数量必须小于当前数量');
-      return;
-    }
-    onSplit(item.id, value);
-    cancelEdit(item.id);
-  };
-
-  const columns: ColumnsType<PurchaseCartItem> = useMemo(() => [
+    const saveEdit = (id: string) => {
+      const value = editingMap[id];
+      if (value === undefined || value <= 0) {
+        message.warning('数量必须大于 0');
+        return;
+      }
+      onUpdate(id, { quantity: value });
+      cancelEdit(id);
+    };
+    return [
     {
       title: (
         <Checkbox
@@ -246,7 +231,7 @@ export const CartList: React.FC<CartListProps> = ({
         );
       },
     },
-  ], [items, selectedItems, allSelected, indeterminate, editingMap, submitting, onToggleSelect, onToggleSelectAll, onUpdate, onDelete]);
+  ]; }, [items, selectedItems, allSelected, indeterminate, editingMap, submitting, onToggleSelect, onToggleSelectAll, onUpdate, onDelete, message]);
 
   if (loading) {
     return (

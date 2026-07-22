@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ProductionOrder } from '@/types/production';
 import {
   renderStageProgressCell,

@@ -2,10 +2,6 @@ import { useCallback } from 'react';
 import { usePurchaseCartContext } from '@/context/PurchaseCartContext';
 import type {
   AddCartItemRequest,
-  UpdateCartItemRequest,
-  MergeRequest,
-  SplitRequest,
-  ConfirmResult,
   AddItemResult,
 } from '@/types/purchaseCart';
 
@@ -13,7 +9,7 @@ export interface UsePurchaseCartOptions {
   onConfirmSuccess?: (purchaseIds: string[]) => void;
 }
 
-export function usePurchaseCart(options?: UsePurchaseCartOptions) {
+export function usePurchaseCart(_options?: UsePurchaseCartOptions) {
   const context = usePurchaseCartContext();
 
   const confirm = useCallback(async (itemIds?: string[]): Promise<void> => {

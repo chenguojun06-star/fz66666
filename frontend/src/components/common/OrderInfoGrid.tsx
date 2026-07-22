@@ -30,8 +30,6 @@ interface OrderInfoGridProps {
  */
 const OrderInfoGrid: React.FC<OrderInfoGridProps> = ({
   items,
-  gap = 6,
-  rowGap = 5,
   fontSize = 12,
   column = 2,
   styles,

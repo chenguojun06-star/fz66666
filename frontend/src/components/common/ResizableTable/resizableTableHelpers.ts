@@ -57,7 +57,7 @@ export const buildMergedPagination = (
     resolvedShowSizeChanger = false;
   } else {
     const baseShowSizeChanger = typeof showSizeChangerProp === 'object' ? showSizeChangerProp : {};
-    resolvedShowSizeChanger = { getPopupContainer: (triggerNode: HTMLElement) => document.body, ...baseShowSizeChanger };
+    resolvedShowSizeChanger = { getPopupContainer: (_triggerNode: HTMLElement) => document.body, ...baseShowSizeChanger };
   }
 
   return {

@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Space, Tag } from 'antd';
+import { App, Button, InputNumber, Space, Tag } from 'antd';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
-import { autoCollectDictEntry } from '@/hooks/useDictOptions';
 
 interface StyleColorSizeTableProps {
   // 码数状态
@@ -77,8 +76,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   matrixRows, setMatrixRows,
   onImageSync,
   onImageClear,
-  commonSizes, commonColors,
-  setCommonSizes, setCommonColors,
   editLocked, isFieldLocked,
   hideInternalTitle = false,
   hideMatrix = false

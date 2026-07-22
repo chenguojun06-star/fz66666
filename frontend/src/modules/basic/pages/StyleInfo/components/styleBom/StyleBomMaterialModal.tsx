@@ -32,7 +32,6 @@ interface StyleBomMaterialModalProps {
 
 const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
   open,
-  modalWidth,
   materialTab,
   materialKeyword,
   materialLoading,

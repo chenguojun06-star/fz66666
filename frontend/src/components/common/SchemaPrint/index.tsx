@@ -138,7 +138,7 @@ function buildListHtml(
     `<th style="background:#fafafa;font-weight:500;text-align:left;padding:8px 10px;border:1px solid #d9d9d9;">${f.label}</th>`
   ).join('');
 
-  const bodyRows = list.map((record, ri) => {
+  const bodyRows = list.map((record, _ri) => {
     const cells = fields.map(f =>
       `<td style="padding:6px 10px;border:1px solid #d9d9d9;">${formatValue(getFieldValue(record, f.fieldKey), f.fieldType) || '-'}</td>`
     ).join('');

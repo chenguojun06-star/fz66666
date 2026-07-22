@@ -115,14 +115,14 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   smartQueueFilter, smartQueueOrders, smartActionItems, setSmartQueueFilter,
   fetchOrders, titleTags,
 }) => {
-  const { patrolRiskMap, patrolSummary, fetchForOrders, getOrderRisks, hasRisks, getHighestSeverity } = useAiPatrol();
+  const { patrolSummary, fetchForOrders, getOrderRisks, hasRisks, getHighestSeverity } = useAiPatrol();
 
   useEffect(() => {
     if (sortedOrders.length > 0) {
       const orderNos = sortedOrders.map(o => o.orderNo).filter(Boolean) as string[];
       fetchForOrders(orderNos);
     }
-  }, [sortedOrders.length, fetchForOrders]);
+  }, [sortedOrders, fetchForOrders]);
 
   const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
     const risks = getOrderRisks(record.orderNo || '');
@@ -135,7 +135,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         {label}
       </Tag>
     );
-  }, [patrolRiskMap, getOrderRisks, getHighestSeverity]);
+  }, [getOrderRisks, getHighestSeverity]);
 
   const mergedTitleTags = useMemo(() => (record: ProductionOrder) => {
     const base = typeof titleTags === 'function' ? titleTags(record) : null;
@@ -170,7 +170,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         closable
       />
     );
-  }, [sortedOrders, patrolRiskMap, patrolSummary, hasRisks, getHighestSeverity]);
+  }, [sortedOrders, patrolSummary, hasRisks, getHighestSeverity]);
 
   const calcCardProgress = useMemo(() => (record: ProductionOrder): number =>
     calcOrderProgress(record, boardStatsByOrder[String(record.id || '')] ?? null),

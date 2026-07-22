@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App } from 'antd';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -47,11 +47,11 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
 
   // 新建模式使用本地预览，否则使用服务器图片
   // 服务器无附件时：若有 coverUrl（来自选品中心下板），合成一条虚拟条目作为细节图1兜底展示
-  const displayImages: DisplayImage[] = isNewMode
+  const displayImages: DisplayImage[] = useMemo(() => isNewMode
     ? localPreviewUrls.map((url, i) => ({ fileUrl: url, id: `local-${i}`, isLocal: true, localIndex: i }))
     : images.length > 0
       ? images
-      : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []);
+      : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []), [isNewMode, localPreviewUrls, images, coverUrl]);
   const currentImage = displayImages[currentIndex];
 
   // 生成本地预览URL
@@ -203,7 +203,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     } finally {
       setSearching(false);
     }
-  }, [currentImage, displayImages, currentIndex, isNewMode, pendingFiles, searching, styleId, styleNo]);
+  }, [displayImages, currentIndex, isNewMode, pendingFiles, searching, styleId, styleNo, message]);
 
   // 编辑模式下首次加载时自动触发一次识别（保持原有行为）
   useEffect(() => {

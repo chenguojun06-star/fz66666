@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getSummaryColumns, getDetailColumns } from './payrollOperatorColumns';
 import WageSlipPrintModal from './WageSlipPrintModal';
-import { PrinterOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SearchOutlined } from '@ant-design/icons';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited } from './usePayrollData';
 import { usePayrollActions } from './usePayrollActions';
@@ -25,7 +25,7 @@ const PayrollOperatorSummary: React.FC = () => {
         activeTab, setActiveTab, keyword, setKeyword, scanType, setScanType,
         dateRange, setDateRange, includeSettled, setIncludeSettled,
         approvalFilter, setApprovalFilter,
-        kingdeeExportFormat, setKingdeeExportFormat,
+        kingdeeExportFormat,
         rows, setRows, loading, smartError, showSmartErrorNotice,
         detailSortField, detailSortOrder, handleDetailSort,
         auditedDetailKeys, setAuditedDetailKeys,
@@ -58,7 +58,7 @@ const PayrollOperatorSummary: React.FC = () => {
     const {
         handleAuditDetail, handleBatchAuditDetails, handleRejectOperator,
         handleFinalPush, handleBatchFinalPush,
-        exportToExcelFn, handleKingdeeExport,
+        exportToExcelFn,
         handlePrintWageSlips, getPrintData,
     } = usePayrollActions({
         rows, setRows, auditedDetailKeys, setAuditedDetailKeys,

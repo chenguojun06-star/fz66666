@@ -3,7 +3,6 @@ import { Card, Input, Button, Tag, DatePicker, Space } from 'antd';
 import { SearchOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
@@ -100,7 +99,7 @@ const ExternalScanContent: React.FC = () => {
     setPage(1);
   };
 
-  const baseColumns: ColumnsType<ScanRecordRow> = [
+  const columns = useMemo<ColumnsType<ScanRecordRow>>(() => [
     {
       title: '委托工厂',
       dataIndex: 'delegateTargetName',
@@ -200,9 +199,8 @@ const ExternalScanContent: React.FC = () => {
           <Tag>{v || '-'}</Tag>
         ),
     },
-  ];
-
-  const columns = useMemo(() => [...baseColumns, ...extColumns], [baseColumns, extColumns]);
+    ...extColumns,
+  ], [extColumns]);
 
   return (
     <Card styles={{ body: { padding: '16px 20px' } }}>

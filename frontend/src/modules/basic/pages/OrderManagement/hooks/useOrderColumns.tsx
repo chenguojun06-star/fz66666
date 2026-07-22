@@ -19,7 +19,7 @@ interface UseOrderColumnsParams {
 export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen }: UseOrderColumnsParams) {
   const { extColumns } = useExtColumns<StyleInfo>({ bizType: 'style', platform: 'pc' });
 
-  const baseColumns = [
+  const baseColumns = useMemo(() => [
     {
       title: '图片',
       dataIndex: 'cover',
@@ -155,7 +155,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
         />
       )
     }
-  ];
+  ], [openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen]);
 
   const columns = useMemo(() => {
     const actionColIndex = baseColumns.findIndex(c => c.key === 'action');

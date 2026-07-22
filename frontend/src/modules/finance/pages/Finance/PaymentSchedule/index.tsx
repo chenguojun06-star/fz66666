@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Col, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Card, Col, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import {
   ClockCircleOutlined, DollarOutlined, ExclamationCircleOutlined, WarningOutlined,
 } from '@ant-design/icons';
@@ -67,6 +67,7 @@ const PaymentSchedule: React.FC = () => {
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
+  const nowTimestamp = now.getTime();
 
   const filteredRecords = useMemo(() => {
     let result = records.filter(r => {
@@ -74,12 +75,12 @@ const PaymentSchedule: React.FC = () => {
       const due = new Date(r.dueDate);
       due.setHours(0, 0, 0, 0);
       const remaining = r.amount - (r.paidAmount ?? 0);
-      return remaining > 0 && due >= now;
+      return remaining > 0 && due.getTime() >= nowTimestamp;
     });
 
     if (timeFilter !== 'all') {
       const days = parseInt(timeFilter, 10);
-      const targetDate = new Date(now);
+      const targetDate = new Date(nowTimestamp);
       targetDate.setDate(targetDate.getDate() + days);
       result = result.filter(r => {
         if (!r.dueDate) return false;
@@ -96,13 +97,13 @@ const PaymentSchedule: React.FC = () => {
     });
 
     return result;
-  }, [records, timeFilter, now.getTime()]);
+  }, [records, timeFilter, nowTimestamp]);
 
   const stats = useMemo(() => {
     const totalPending = filteredRecords.reduce((sum, r) => sum + (r.amount - (r.paidAmount ?? 0)), 0);
 
     const calcAmountInDays = (days: number) => {
-      const targetDate = new Date(now);
+      const targetDate = new Date(nowTimestamp);
       targetDate.setDate(targetDate.getDate() + days);
       return filteredRecords
         .filter(r => {
@@ -120,7 +121,7 @@ const PaymentSchedule: React.FC = () => {
       in14Days: calcAmountInDays(14),
       in30Days: calcAmountInDays(30),
     };
-  }, [filteredRecords, now.getTime()]);
+  }, [filteredRecords, nowTimestamp]);
 
   const getRemainingDays = (dueDate?: string) => {
     if (!dueDate) return null;
@@ -176,7 +177,6 @@ const PaymentSchedule: React.FC = () => {
       render: (_, r) => {
         const days = getRemainingDays(r.dueDate);
         if (days === null) return '-';
-        const color = getRemainingDaysColor(days);
         const tagColor = days <= 3 ? 'red' : days <= 7 ? 'orange' : 'blue';
         return (
           <Tag color={tagColor} style={{ margin: 0 }}>
@@ -194,7 +194,7 @@ const PaymentSchedule: React.FC = () => {
     },
     {
       title: '操作', width: 120, fixed: 'right',
-      render: (_, record) => {
+      render: (_, _record) => {
         const actions: RowAction[] = [
           {
             key: 'view',

@@ -207,7 +207,7 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
   inspectDrawerOrderId,
   closeInspectDrawer,
   customFields,
-  fieldConfigs,
+  fieldConfigs: _fieldConfigs,
 }) => {
   return (
   <>

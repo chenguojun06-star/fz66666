@@ -43,7 +43,7 @@ const MaterialReconciliation: React.FC = () => {
   } = useMaterialReconActions(reconciliationList, selectedRowKeys, fetchList, user);
 
   const { exporting, exportCsv } = useMaterialReconExport(queryParams, reconciliationList, selectedRowKeys, user);
-  const { columns } = useMaterialReconColumns({ user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal: (ids) => { batchReject(); }, openDialog });
+  const { columns } = useMaterialReconColumns({ user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal: (_ids) => { batchReject(); }, openDialog });
 
   // ==================== 统计卡片 ====================
   const stats = useMemo(() => {
@@ -55,7 +55,7 @@ const MaterialReconciliation: React.FC = () => {
     const approvedCount = approved.length;
     const paidCount = paid.length;
     return { pendingCount, approvedCount, paidCount, totalAmount, total };
-  }, [reconciliationList]);
+  }, [reconciliationList, total]);
 
   // ==================== 状态Tab ====================
   const statusTabs = [

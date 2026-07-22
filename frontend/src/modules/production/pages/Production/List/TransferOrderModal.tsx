@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Select, Tabs, Input, InputNumber, Drawer, Button, Space } from 'antd';
+import { Select, Tabs, Input, InputNumber, Drawer, Button } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { safeString } from './utils';
 import { formatMoney } from '@/utils/format';

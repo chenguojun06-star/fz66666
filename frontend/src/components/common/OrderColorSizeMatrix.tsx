@@ -269,13 +269,6 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   };
-  const headerCellStyle: React.CSSProperties = {
-    textAlign: 'center',
-    fontSize,
-    color: 'var(--neutral-text, #262626)',
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-  };
   const qtyCellStyle: React.CSSProperties = {
     textAlign: 'center',
     fontSize,

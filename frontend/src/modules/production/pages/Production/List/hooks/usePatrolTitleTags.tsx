@@ -4,7 +4,7 @@ import { ProductionOrder } from '@/types/production';
 import { useAiPatrol, RISK_TYPE_LABELS } from './useAiPatrol';
 
 export function usePatrolTitleTags() {
-  const { patrolRiskMap, getOrderRisks, getHighestSeverity } = useAiPatrol();
+  const { getOrderRisks, getHighestSeverity } = useAiPatrol();
 
   const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
     const risks = getOrderRisks(record.orderNo || '');
@@ -17,7 +17,7 @@ export function usePatrolTitleTags() {
         {label}
       </Tag>
     );
-  }, [patrolRiskMap]);
+  }, [getOrderRisks, getHighestSeverity]);
 
   return { patrolTitleTags };
 }

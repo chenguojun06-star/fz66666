@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { App, AutoComplete, Button, Space } from 'antd';
+import { AutoComplete, Button, Space } from 'antd';
 import { WarningOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import TopStats from '../../components/TopStats';
 import DashboardAiInsight from '../../components/DashboardAiInsight';
@@ -19,9 +18,6 @@ import QuickEntrySettingsModal from './QuickEntrySettingsModal';
 import './styles.css';
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const { message } = App.useApp();
-
   const {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     stats,

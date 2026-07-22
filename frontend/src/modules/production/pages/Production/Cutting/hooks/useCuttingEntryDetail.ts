@@ -39,15 +39,19 @@ export function useCuttingEntryDetail({
   const [entryOrderLines, setEntryOrderLines] = useState<EntryOrderLine[]>([]);
 
   const activeOrderNo = useMemo(() => String((activeTask as unknown as any)?.productionOrderNo ?? '').trim(), [activeTask]);
+  const activeStyleId = (activeTask as unknown as any)?.styleId;
+  const activeStyleNo = (activeTask as unknown as any)?.styleNo;
+  const activeTaskId = (activeTask as any)?.id;
+  const activeProductionOrderId = (activeTask as unknown as any)?.productionOrderId;
 
   // 加载款式 BOM 纸样用量（sizeUsageMap）
   useEffect(() => {
     if (!isEntryPage) return;
-    const styleRef = String((activeTask as unknown as any)?.styleId || '').trim();
-    const styleNo = String((activeTask as unknown as any)?.styleNo || '').trim();
+    const styleRef = String(activeStyleId || '').trim();
+    const styleNo = String(activeStyleNo || '').trim();
     const seq = (entryBomReqSeq.current += 1);
     const bomQuery = styleRef
-      ? (/^\d+$/.test(styleRef) ? `styleId=${styleRef}` : `styleNo=${encodeURIComponent(styleRef)}`)
+      ? (/^\d+$/.test(styleRef) ? `styleId=${styleRef}` : `styleNo=${encodeURIComponent(styleNo)}`)
       : (styleNo ? `styleNo=${encodeURIComponent(styleNo)}` : '');
     if (!bomQuery) { setEntrySizeUsageMap({}); return; }
     void api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?${bomQuery}`)
@@ -97,7 +101,7 @@ export function useCuttingEntryDetail({
         setEntryFabricUsageRows(fabricRows);
       })
       .catch(() => { if (seq === entryBomReqSeq.current) { setEntrySizeUsageMap({}); setEntryFabricUsageRows([]); } });
-  }, [isEntryPage, (activeTask as unknown as any)?.styleId]);
+  }, [isEntryPage, activeStyleId, activeStyleNo]);
 
   // 加载面辅料采购
   useEffect(() => {
@@ -111,18 +115,18 @@ export function useCuttingEntryDetail({
     }
     setEntryPurchaseLoading(true);
     setEntryPurchases([]);
-    fetchSortedPurchasesByOrderNo(no, (activeTask as any)?.styleNo)
+    fetchSortedPurchasesByOrderNo(no, activeStyleNo)
       .then((list) => { if (seq === entryPurchaseReqSeq.current) setEntryPurchases(list); })
       .finally(() => { if (seq === entryPurchaseReqSeq.current) setEntryPurchaseLoading(false); });
-  }, [isEntryPage, activeOrderNo]);
+  }, [isEntryPage, activeOrderNo, activeStyleNo]);
 
   // 加载订单明细
   useEffect(() => {
     if (!isEntryPage) return;
     const detailKey = String(
       orderId
-      || (activeTask as unknown as any)?.productionOrderId
-      || (activeTask as unknown as any)?.productionOrderNo
+      || activeProductionOrderId
+      || activeOrderNo
       || ''
     ).trim();
     if (!detailKey) {
@@ -183,7 +187,7 @@ export function useCuttingEntryDetail({
     })();
 
     return () => { cancelled = true; };
-  }, [isEntryPage, orderId, activeTask?.id, (activeTask as unknown as any)?.productionOrderId, (activeTask as unknown as any)?.productionOrderNo]);
+  }, [isEntryPage, orderId, activeTaskId, activeProductionOrderId, activeOrderNo]);
 
   return {
     activeOrderNo,

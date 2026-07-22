@@ -50,7 +50,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
   const {
     visible, styleId, orderId, orderNo,
     styleNo, styleName, cover, color, quantity,
-    category, season, mode, patternProductionId: propPatternId, extraInfo = {},
+    mode, patternProductionId: propPatternId, extraInfo = {},
     sizeDetails = [], sizeColorConfig,
   } = params;
 
@@ -171,7 +171,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
       finally { setLoading(false); }
     };
     loadData();
-  }, [visible, styleId, mode, propPatternId, styleNo, cover]);
+  }, [visible, styleId, mode, propPatternId, styleNo, cover, orderId, user]);
 
   // ───── 副作用：异步生成主二维码 PNG dataURL ─────
   useEffect(() => {

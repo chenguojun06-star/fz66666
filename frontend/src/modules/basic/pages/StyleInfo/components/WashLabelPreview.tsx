@@ -95,7 +95,7 @@ const WashLabelPreview: React.FC<Props> = ({
         `<style>html{zoom:${ZOOM}}`,
       );
     });
-  }, [iframeSrcDocs, ZOOM]);
+  }, [iframeSrcDocs]);
 
   return (
     <div style={{

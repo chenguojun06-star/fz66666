@@ -20,7 +20,7 @@ interface SubmitDeps {
 export const useWarehousingSubmit = (deps: SubmitDeps) => {
   const {
     form, batchSelectedBundleQrs, batchQtyByQr, unqualifiedFileList,
-    currentWarehousing, onSuccess, onCancel, ensureOrderUnlockedById, batchSelectedHasBlocked,
+    currentWarehousing, onSuccess, ensureOrderUnlockedById, batchSelectedHasBlocked,
   } = deps;
 
   const [submitLoading, setSubmitLoading] = useState(false);

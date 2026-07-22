@@ -11,7 +11,7 @@ export interface PrintHtmlParams {
 }
 
 export function buildPrintHtml({
-  headerInfo, printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle
+  printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle
 }: PrintHtmlParams): string {
   const printHeader = (() => {
     const factory = tenantName?.trim() || '';

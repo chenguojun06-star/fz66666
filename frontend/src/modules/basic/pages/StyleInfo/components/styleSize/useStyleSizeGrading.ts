@@ -6,7 +6,7 @@ import {
   createGradingZone,
   normalizeGradingZones,
 } from './shared';
-import { matchPartStep, inferCategory, GRADING_PRESETS, matchPresetSteps } from './gradingPresets';
+import { matchPartStep, inferCategory } from './gradingPresets';
 
 interface Params {
   rows: MatrixRow[];

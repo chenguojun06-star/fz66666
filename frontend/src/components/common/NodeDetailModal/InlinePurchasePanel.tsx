@@ -32,7 +32,6 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     actionLoading,
     confirmCompleteLoading,
     editing,
-    editableData,
     saving,
     materialModalOpen,
     receiveModalVisible,

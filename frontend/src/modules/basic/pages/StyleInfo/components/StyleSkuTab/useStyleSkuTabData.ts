@@ -59,7 +59,7 @@ export const useStyleSkuTabData = ({
   }, [styleId]);
 
   useEffect(() => { fetchSkus(); }, [fetchSkus]);
-  useEffect(() => { if (refreshTrigger > 0) fetchSkus(); }, [refreshTrigger]);
+  useEffect(() => { if (refreshTrigger > 0) fetchSkus(); }, [refreshTrigger, fetchSkus]);
   useEffect(() => { if (initialMode) setSkuMode(initialMode); }, [initialMode]);
   useEffect(() => { if (initialSkc) setSkcValue(initialSkc); }, [initialSkc]);
   useEffect(() => { if (initialUseSkuPrefix !== undefined) setUseSkuPrefix(Boolean(initialUseSkuPrefix)); }, [initialUseSkuPrefix]);

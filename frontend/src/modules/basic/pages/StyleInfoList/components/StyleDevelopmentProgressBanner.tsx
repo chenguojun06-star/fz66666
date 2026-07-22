@@ -7,8 +7,6 @@ import {
   computeBudgetStatus,
 } from '@/utils/workingTimeCalculator';
 
-const DEFAULT_BUDGET_HOURS = 5;
-
 interface BudgetLabel {
   text: string;
   color: string;

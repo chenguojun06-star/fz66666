@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Space, Tag, Tooltip } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useColumnSettings, ColumnSettingsModal } from '@/components/common/ColumnSettings';

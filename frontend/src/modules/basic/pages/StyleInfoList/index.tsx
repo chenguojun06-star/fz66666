@@ -8,7 +8,7 @@ import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { useStyleList, useStyleStats } from '../StyleInfo/hooks';
 import { useStyleActions } from './hooks/useStyleActions';
 import { useStyleViewMode } from './hooks/useStyleViewMode';
-import { useStyleListData, StyleSmartFilter } from './hooks/useStyleListData';
+import { useStyleListData } from './hooks/useStyleListData';
 import { useStyleFocus } from './hooks/useStyleFocus';
 import { useStyleMaintenance } from './hooks/useStyleMaintenance';
 import { useStylePrint } from './hooks/useStylePrint';
@@ -74,7 +74,6 @@ const StyleInfoListPage: React.FC = () => {
     styleStats,
     activeStatFilter,
     setActiveStatFilter,
-    activeStyles,
     overdueStyles,
     warningStyles,
     overdueStyleCount,
@@ -92,7 +91,6 @@ const StyleInfoListPage: React.FC = () => {
   });
 
   const {
-    pendingFocusStyleId,
     setPendingFocusStyleId,
     focusedStyleId,
     setFocusedStyleId,

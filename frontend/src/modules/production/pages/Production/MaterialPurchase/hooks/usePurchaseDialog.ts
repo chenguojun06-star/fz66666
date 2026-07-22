@@ -3,7 +3,7 @@
  * ~130 lines (target ≤ 200)
  */
 import { useState, useEffect, useRef } from 'react';
-import { Form, Modal } from 'antd';
+import { Form } from 'antd';
 import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';

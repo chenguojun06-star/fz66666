@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Select, Popconfirm, Modal, Tooltip, message as antMessage } from 'antd';
+import { Button, Input, Select, Popconfirm, Modal, Tooltip } from 'antd';
 import { CopyOutlined, DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
 import type { SizeTableData, SizeTablePart } from '../../utils/templateUtils';
-import ExcelPasteInput, { parseExcelClipboard } from '@/components/common/ExcelPasteInput';
+import ExcelPasteInput from '@/components/common/ExcelPasteInput';
 
 interface SizeInlineTableProps {
   value: SizeTableData;
