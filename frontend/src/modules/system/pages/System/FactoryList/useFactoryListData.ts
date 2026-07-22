@@ -6,8 +6,6 @@ import api, { type ApiResult } from '@/utils/api';
 import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { usePersistentState } from '@/hooks/usePersistentState';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -17,16 +15,12 @@ import { paths } from '@/routeConfig';
 import { useExtColumns } from '@/hooks/useExtColumns';
 import { flattenExtJson, collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
 import { getFactoryColumns } from './factoryListColumns';
+import { calculateFactoryStats, mergeColumnsWithExt } from './utils';
+import { useScorecard } from './useScorecard';
+import { useRemarkModal } from './useRemarkModal';
+import { useLogModal } from './useLogModal';
 
 type DialogMode = 'create' | 'view' | 'edit';
-
-type RemarkModalState = {
-  open: boolean;
-  title: string;
-  okText: string;
-  okDanger: boolean;
-  onConfirm: (remark: string) => Promise<void>;
-};
 
 export function useFactoryListData() {
   const { message } = App.useApp();
@@ -35,18 +29,29 @@ export function useFactoryListData() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ===== 弹窗 =====
   const factoryModal = useModal<FactoryType>();
-  const logModal = useModal();
-  const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
-  const [remarkLoading, setRemarkLoading] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
 
-  // ===== Tabs 状态 =====
+  const {
+    remarkModalState,
+    setRemarkModalState,
+    remarkLoading,
+    openRemarkModal,
+    handleRemarkConfirm,
+  } = useRemarkModal();
+
+  const {
+    logModal,
+    logLoading,
+    logRecords,
+    logTitle,
+    setLogRecords,
+    openLogModal,
+  } = useLogModal();
+
   const [managementTab, setManagementTab] = usePersistentState<'supplier' | 'customer'>('factory-list-management-tab', 'supplier');
   const [activeTab, setActiveTab] = usePersistentState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('factory-list-supplier-tab', 'ALL');
 
-  // ===== 列表数据 =====
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
     page: 1,
     pageSize: readPageSize(DEFAULT_PAGE_SIZE),
@@ -66,13 +71,9 @@ export function useFactoryListData() {
   }, [showSmartErrorNotice]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const businessLicenseUrl = Form.useWatch('businessLicense', form) as string | undefined;
-  const [logLoading, setLogLoading] = useState(false);
-  const [logRecords, setLogRecords] = useState<any[]>([]);
-  const [logTitle, setLogTitle] = useState('操作日志');
   const [departmentOptions, setDepartmentOptions] = useState<OrganizationUnit[]>([]);
   const [userOptions, setUserOptions] = useState<User[]>([]);
 
-  // ===== 字段配置（多租户扩展字段） =====
   const { extColumns, fieldConfigs } = useExtColumns<FactoryType>({ bizType: 'supplier', platform: 'pc' });
   const customFields = useMemo(
     () => fieldConfigs.filter(f => f.isSystem === 0),
@@ -82,75 +83,17 @@ export function useFactoryListData() {
     navigate(`${paths.fieldConfig}?bizType=supplier`);
   };
 
-  // 收款账户 / 供应商账号 弹窗
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountFactory, setAccountFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
   const [supplierUserModalOpen, setSupplierUserModalOpen] = useState(false);
   const [supplierUserFactory, setSupplierUserFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
 
-  // 评分卡（懒加载）
-  const [scorecardMap, setScorecardMap] = useState<Record<string, SupplierScore>>({});
-  const [scorecardLoaded, setScorecardLoaded] = useState(false);
-  const [scorecardLoading, setScorecardLoading] = useState(false);
-  const loadScorecardOnce = useCallback(async () => {
-    if (scorecardLoaded || scorecardLoading) return;
-    setScorecardLoading(true);
-    try {
-      const res = await intelligenceApi.getSupplierScorecard() as ApiResult<{ scores: SupplierScore[] }>;
-      const scores: SupplierScore[] = res?.data?.scores ?? [];
-      const m: Record<string, SupplierScore> = {};
-      scores.forEach((s) => { m[s.factoryName] = s; });
-      setScorecardMap(m);
-      setScorecardLoaded(true);
-    } catch { /* 静默失败 */ } finally {
-      setScorecardLoading(false);
-    }
-  }, [scorecardLoaded, scorecardLoading]);
+  const { scorecardMap, scorecardLoading, loadScorecardOnce } = useScorecard();
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  // ===== 工厂/供应商统计（用于顶部统计卡片）=====
-  const factoryStats = useMemo(() => {
-    let materialCount = 0;
-    let outsourceCount = 0;
-    let internalCount = 0;
-    let externalCount = 0;
-    let activeCount = 0;
-    let inactiveCount = 0;
-    let approvedCount = 0;
-    let pendingCount = 0;
+  const factoryStats = useMemo(() => calculateFactoryStats(factoryList), [factoryList]);
 
-    factoryList.forEach((f) => {
-      const supplierType = String(f.supplierType || '').toUpperCase();
-      const factoryType = String(f.factoryType || '').toUpperCase();
-      const status = String(f.status || 'active');
-      const admissionStatus = String((f as any).admissionStatus || '').toLowerCase();
-
-      if (supplierType === 'MATERIAL') materialCount++;
-      if (supplierType === 'OUTSOURCE') outsourceCount++;
-      if (factoryType === 'INTERNAL') internalCount++;
-      if (factoryType === 'EXTERNAL') externalCount++;
-
-      if (status === 'active') activeCount++;
-      else inactiveCount++;
-
-      if (admissionStatus === 'approved') approvedCount++;
-      if (admissionStatus === 'pending' || admissionStatus === '') pendingCount++;
-    });
-
-    return {
-      materialCount,
-      outsourceCount,
-      internalCount,
-      externalCount,
-      activeCount,
-      inactiveCount,
-      approvedCount,
-      pendingCount,
-    };
-  }, [factoryList]);
-
-  // ===== 数据获取 =====
   const fetchFactories = useCallback(async () => {
     setLoading(true);
     try {
@@ -184,7 +127,6 @@ export function useFactoryListData() {
     }
   }, []);
 
-  // ===== Effects =====
   useEffect(() => {
     const codeChanged = debouncedFactoryCode !== (queryParams.factoryCode || '');
     const nameChanged = debouncedFactoryName !== (queryParams.factoryName || '');
@@ -255,7 +197,6 @@ export function useFactoryListData() {
     });
   }, [activeTab, dialogMode, factoryModal.data, factoryModal.visible, form]);
 
-  // ===== Handlers =====
   const handleManagementTabChange = (tab: string) => setManagementTab(tab as 'supplier' | 'customer');
   const handleTabChange = (tab: string) => {
     const t = tab as 'ALL' | 'MATERIAL' | 'OUTSOURCE';
@@ -271,54 +212,6 @@ export function useFactoryListData() {
     factoryModal.close();
     form.resetFields();
   };
-
-  const openRemarkModal = useCallback((
-    title: string,
-    okText: string,
-    okButtonProps: any,
-    onConfirm: (remark: string) => Promise<void>
-  ) => {
-    setRemarkModalState({
-      open: true,
-      title,
-      okText,
-      okDanger: (okButtonProps as any)?.danger === true,
-      onConfirm,
-    });
-  }, []);
-  const handleRemarkConfirm = async (remark: string) => {
-    if (!remarkModalState) return;
-    setRemarkLoading(true);
-    try {
-      await remarkModalState.onConfirm(remark);
-      setRemarkModalState(null);
-    } catch {
-      // error already shown inside onConfirm
-    } finally {
-      setRemarkLoading(false);
-    }
-  };
-
-  const openLogModal = useCallback(async (bizType: string, bizId: string, title: string) => {
-    setLogTitle(title);
-    logModal.open();
-    setLogLoading(true);
-    try {
-      const res = await api.get('/system/operation-log/list', { params: { bizType, bizId } });
-      const result = res as any;
-      if (result.code === 200) {
-        setLogRecords(Array.isArray(result.data) ? result.data : []);
-      } else {
-        message.error(result.message || '获取日志失败');
-        setLogRecords([]);
-      }
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '获取日志失败');
-      setLogRecords([]);
-    } finally {
-      setLogLoading(false);
-    }
-  }, [logModal, message]);
 
   const handleSave = async () => {
     const values = await form.validateFields();
@@ -369,7 +262,6 @@ export function useFactoryListData() {
     });
   }, [message, openRemarkModal]);
 
-  // ===== Columns =====
   const baseColumns = useMemo(() => getFactoryColumns({
     openDialog,
     handleDelete,
@@ -384,29 +276,16 @@ export function useFactoryListData() {
     navigate,
   }), [scorecardMap, scorecardLoading, loadScorecardOnce, navigate, handleDelete, openDialog, openLogModal]);
 
-  const columns = useMemo(() => {
-    const actionColIndex = baseColumns.findIndex(c => c.key === 'actions');
-    if (actionColIndex === -1) {
-      return [...baseColumns, ...extColumns] as any;
-    }
-    const before = baseColumns.slice(0, actionColIndex);
-    const actionCol = baseColumns[actionColIndex];
-    const after = baseColumns.slice(actionColIndex + 1);
-    return [...before, ...extColumns, actionCol, ...after] as any;
-  }, [baseColumns, extColumns]);
+  const columns = useMemo(() => mergeColumnsWithExt(baseColumns, extColumns), [baseColumns, extColumns]);
 
   return {
-    // UI
     isMobile, modalWidth, modalInitialHeight,
     form, businessLicenseUrl,
-    // 弹窗
     factoryModal, logModal,
     remarkModalState, setRemarkModalState, remarkLoading,
     dialogMode, setDialogMode,
-    // Tabs
     managementTab, activeTab,
     handleManagementTabChange, handleTabChange,
-    // 列表
     queryParams, setQueryParams,
     factoryCodeInput, setFactoryCodeInput,
     factoryNameInput, setFactoryNameInput,
@@ -415,20 +294,13 @@ export function useFactoryListData() {
     submitLoading,
     logLoading, logRecords, logTitle,
     departmentOptions, userOptions,
-    // 字段配置
     extColumns, fieldConfigs, customFields, goToFieldConfig,
-    // 日志
     setLogRecords,
-    // 收款/账号弹窗
     accountModalOpen, setAccountModalOpen, accountFactory,
     supplierUserModalOpen, setSupplierUserModalOpen, supplierUserFactory,
-    // 评分
     scorecardMap, scorecardLoading, loadScorecardOnce,
-    // 统计
     factoryStats,
-    // 列
     columns,
-    // Handlers
     openDialog, closeDialog,
     handleRemarkConfirm,
     openLogModal, handleSave, handleDelete,

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Form, message } from 'antd';
-import type { ButtonProps } from 'antd';
+import { App, Form } from 'antd';
 import { Role } from '@/types/system';
 import { getErrorMessage } from '@/types/api';
 import api, { requestWithPathFallback } from '@/utils/api';
@@ -10,19 +9,16 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { roleTemplateApi } from '@/services/system/roleTemplateApi';
 import type { RoleTemplate } from './components/RoleTemplateSelector';
-import { MODULE_SECTIONS } from './helpers';
-import type { OperationLog, PermissionNode, RemarkModalState, RoleRecord } from './helpers';
+import type { PermissionNode, RoleRecord } from './helpers';
+import { buildPermCodeMap, computeSections, countPermNodes, selectAllPerms, deselectAllPerms, togglePermIds } from './utils';
+import { useRemarkModal } from './useRemarkModal';
+import { useOperationLog } from './useOperationLog';
 
-/**
- * 角色列表数据 Hook
- * 包含所有 useState/useEffect/useCallback 与业务处理函数
- */
 export function useRoleListData() {
-  const { message, modal } = App.useApp();
+  const { message: appMessage, modal } = App.useApp();
   const [form] = Form.useForm();
   const roleModal = useModal<Role>();
 
-  // 角色模板选择弹窗
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<RoleTemplate | undefined>();
 
@@ -38,27 +34,18 @@ export function useRoleListData() {
   const [checkedPermIds, setCheckedPermIds] = useState<Set<number>>(new Set());
   const [permLoading, setPermLoading] = useState(false);
   const [permSaving, setPermSaving] = useState(false);
-  // 权限搜索词（原始值，用于即时显示）
   const [permKeywordInput, setPermKeywordInput] = useState('');
-  // 防抖后的搜索词
   const permKeyword = useDebouncedValue(permKeywordInput, 200);
-  // 当前编辑的职位名称（截图风格：顶部直接编辑）
   const [editingRoleName, setEditingRoleName] = useState('');
 
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [employeeList, setEmployeeList] = useState<any[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
 
-  const [logVisible, setLogVisible] = useState(false);
-  const [logLoading, setLogLoading] = useState(false);
-  const [logRecords, setLogRecords] = useState<OperationLog[]>([]);
-  const [logTitle, setLogTitle] = useState('操作日志');
-
-  const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
-  const [remarkLoading, setRemarkLoading] = useState(false);
-
-  // 新租户开户向导
   const [showSetupGuide, setShowSetupGuide] = useState(false);
+
+  const remarkModal = useRemarkModal();
+  const operationLog = useOperationLog();
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -72,13 +59,13 @@ export function useRoleListData() {
         return;
       }
       reportSmartError('角色列表加载失败', String(result.message || '服务返回异常'), 'SYSTEM_ROLE_LIST_FAILED');
-      message.error(String(result.message || '获取角色列表失败'));
+      appMessage.error(String(result.message || '获取角色列表失败'));
     } catch (error) {
       reportSmartError('角色列表加载失败', getErrorMessage(error, '网络异常'), 'SYSTEM_ROLE_LIST_EXCEPTION');
-      message.error(getErrorMessage(error, '获取角色列表失败'));
+      appMessage.error(getErrorMessage(error, '获取角色列表失败'));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message, showSmartErrorNotice]);
+  }, [appMessage, showSmartErrorNotice]);
 
   useEffect(() => { fetchRoles(); }, [fetchRoles]);
 
@@ -94,11 +81,9 @@ export function useRoleListData() {
   };
 
   useEffect(() => {
-    // 检测是否为新租户
     checkNewTenant();
   }, []);
 
-  // 角色切换时加载权限树（带防抖，防止快速切换）
   const loadPermTreeAndChecked = useCallback(async (roleId: string) => {
     const rid = String(roleId || '').trim();
     if (!rid) { setPermTree([]); setCheckedPermIds(new Set()); return; }
@@ -114,15 +99,13 @@ export function useRoleListData() {
       else setPermTree([]);
       const idList = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
       setCheckedPermIds(new Set(idList.map((id: any) => Number(id))));
-    } catch { message.error('加载权限失败'); setPermTree([]); setCheckedPermIds(new Set()); }
+    } catch { appMessage.error('加载权限失败'); setPermTree([]); setCheckedPermIds(new Set()); }
     finally { setPermLoading(false); }
-  }, [message]);
+  }, [appMessage]);
 
-  // 防抖后的角色ID
   const [debouncedRoleId, setDebouncedRoleId] = useState<string | null>(null);
   const roleIdDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // 角色切换时延迟加载权限树
   const handleRoleSelect = useCallback((role: RoleRecord | null) => {
     setSelectedRole(role);
     setEditingRoleName(role?.roleName || '');
@@ -130,7 +113,7 @@ export function useRoleListData() {
     if (role?.id) {
       roleIdDebounceTimer.current = setTimeout(() => {
         setDebouncedRoleId(String(role.id));
-      }, 150); // 150ms防抖
+      }, 150);
     } else {
       setDebouncedRoleId(null);
       setPermTree([]); setCheckedPermIds(new Set());
@@ -142,113 +125,49 @@ export function useRoleListData() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedRoleId]);
 
-  const permCodeMap = useMemo(() => {
-    const map = new Map<string, PermissionNode>();
-    const walk = (nodes: PermissionNode[]) => {
-      for (const n of nodes) {
-        const code = String(n.permissionCode || '').trim();
-        if (code) map.set(code, n);
-        if (n.children?.length) walk(n.children);
-      }
-    };
-    walk(permTree);
-    return map;
-  }, [permTree]);
+  const permCodeMap = useMemo(() => buildPermCodeMap(permTree), [permTree]);
 
-  const sectionsComputed = useMemo(() => {
-    const kw = String(permKeyword || '').trim().toLowerCase();
-    const firstCodeLabel = new Map<string, string>();
-    const result = MODULE_SECTIONS.map((section) => {
-      const items: Array<{ label: string; permNode: PermissionNode | null; sharedWith: string | null; allIds: number[] }> = [];
-      for (const item of section.items) {
-        const sharedWith = firstCodeLabel.has(item.code) ? firstCodeLabel.get(item.code)! : null;
-        if (!firstCodeLabel.has(item.code)) firstCodeLabel.set(item.code, item.label);
-        const node = permCodeMap.get(item.code) || null;
-        const childIds: number[] = (!sharedWith && node?.children) ? node.children.filter(c => c.id != null).map(c => Number(c.id)) : [];
-        const selfId = node?.id != null && !sharedWith ? [Number(node.id)] : [];
-        const allIds = [...selfId, ...childIds];
-        items.push({ label: item.label, permNode: node, sharedWith, allIds });
-      }
-      // 本模块统计
-      let moduleTotal = 0;
-      let moduleChecked = 0;
-      for (const it of items) {
-        for (const id of it.allIds) {
-          moduleTotal++;
-          if (checkedPermIds.has(id)) moduleChecked++;
-        }
-      }
-      return { title: section.title, items, moduleTotal, moduleChecked };
-    }).filter(s => s.items.length > 0);
-    if (!kw) return result;
-    return result.filter(s =>
-      s.title.toLowerCase().includes(kw) ||
-      s.items.some(it => it.label.toLowerCase().includes(kw) || (it.permNode?.children || []).some((c: PermissionNode) => String(c.permissionName || '').toLowerCase().includes(kw)))
-    );
-  }, [permKeyword, permCodeMap, checkedPermIds]);
+  const sectionsComputed = useMemo(() => computeSections(permKeyword, permCodeMap, checkedPermIds), [permKeyword, permCodeMap, checkedPermIds]);
 
-  const totalPermCount = useMemo(() => {
-    let total = 0;
-    const walk = (nodes: PermissionNode[]) => {
-      for (const n of nodes) {
-        if (n.id != null) total++;
-        if (n.children?.length) walk(n.children);
-      }
-    };
-    walk(permTree);
-    return total;
-  }, [permTree]);
+  const totalPermCount = useMemo(() => countPermNodes(permTree), [permTree]);
 
   const savePerms = async () => {
     if (!selectedRole?.id) return;
-    openRemarkModal('确认保存', '确认保存', undefined, async (remark) => {
+    remarkModal.openRemarkModal('确认保存', '确认保存', undefined, async (remark) => {
       setPermSaving(true);
       try {
-        // 1. 先保存职位名称（截图风格：顶部输入框直接编辑）
         const nameChanged = editingRoleName.trim() !== '' && editingRoleName.trim() !== selectedRole.roleName;
         if (nameChanged) {
           const rolePayload = { ...selectedRole, roleName: editingRoleName.trim(), operationRemark: remark };
           const roleRes = await requestWithPathFallback('put', '/system/role', '/auth/role', rolePayload);
           const roleResult = roleRes as { code?: number; message?: unknown };
           if (roleResult.code !== 200) {
-            message.error(String(roleResult.message || '保存职位名称失败'));
+            appMessage.error(String(roleResult.message || '保存职位名称失败'));
             return;
           }
           setSelectedRole(prev => prev ? { ...prev, roleName: editingRoleName.trim() } : prev);
           setRoleList(prev => prev.map(r => r.id === selectedRole.id ? { ...r, roleName: editingRoleName.trim() } : r));
         }
-        // 2. 保存权限
         const ids = Array.from(checkedPermIds.values());
         const res = await requestWithPathFallback('put', `/system/role/${selectedRole.id}/permission-ids`, `/auth/role/${selectedRole.id}/permission-ids`, { permissionIds: ids, remark });
         const result = res as { code?: number; message?: unknown };
         if (result.code === 200) {
-          message.success('保存成功');
-        } else message.error(String(result.message || '保存权限失败'));
-      } catch { message.error('保存失败'); } finally { setPermSaving(false); }
+          appMessage.success('保存成功');
+        } else appMessage.error(String(result.message || '保存权限失败'));
+      } catch { appMessage.error('保存失败'); } finally { setPermSaving(false); }
     });
   };
 
   const handleSelectAll = () => {
-    const next = new Set(checkedPermIds);
-    const walk = (nodes: PermissionNode[]) => {
-      for (const n of nodes) {
-        if (n.id != null) next.add(Number(n.id));
-        if (n.children?.length) walk(n.children);
-      }
-    };
-    walk(permTree);
-    setCheckedPermIds(next);
+    setCheckedPermIds(selectAllPerms(permTree, checkedPermIds));
   };
 
   const handleDeselectAll = () => {
-    setCheckedPermIds(new Set());
+    setCheckedPermIds(deselectAllPerms());
   };
 
   const toggleIds = (ids: number[], selected: boolean) => {
-    const next = new Set(checkedPermIds);
-    if (selected) ids.forEach(id => next.add(id));
-    else ids.forEach(id => next.delete(id));
-    setCheckedPermIds(next);
+    setCheckedPermIds(togglePermIds(checkedPermIds, ids, selected));
   };
 
   const openDialog = (role?: Role) => {
@@ -271,11 +190,9 @@ export function useRoleListData() {
       status: 'active',
       dataScope: template.permissionRange || 'team',
     });
-    // 保存模板ID到表单外部，供后续使用（如apply接口）
     (form as any).__templateId = template.id;
   };
 
-  // 从模板直接创建角色（调用apply接口）
   const handleApplyTemplate = async (template: RoleTemplate) => {
     setTemplateModalOpen(false);
     try {
@@ -284,27 +201,17 @@ export function useRoleListData() {
         remark: '应用角色模板',
       });
       if (res?.code === 200) {
-        message.success('角色创建成功');
+        appMessage.success('角色创建成功');
         fetchRoles();
       } else {
-        message.error(res?.message || '创建失败');
+        appMessage.error(res?.message || '创建失败');
       }
     } catch (error: unknown) {
-      message.error(getErrorMessage(error, '创建失败'));
+      appMessage.error(getErrorMessage(error, '创建失败'));
     }
   };
 
   const closeDialog = () => { roleModal.close(); form.resetFields(); (form as any).__templateId = undefined; };
-
-  const openRemarkModal = (title: string, okText: string, okButtonProps: ButtonProps | undefined, onConfirm: (remark: string) => Promise<void>) => {
-    setRemarkModalState({ open: true, title, okText, okDanger: okButtonProps?.danger === true, onConfirm });
-  };
-
-  const handleRemarkConfirm = async (remark: string) => {
-    if (!remarkModalState) return;
-    setRemarkLoading(true);
-    try { await remarkModalState.onConfirm(remark); setRemarkModalState(null); } catch (e) { console.error('[RoleList] 备注确认失败:', e); message.error('操作失败'); } finally { setRemarkLoading(false); }
-  };
 
   const handleSave = async () => {
     try {
@@ -317,24 +224,24 @@ export function useRoleListData() {
         if (nextPayload?.id) response = await requestWithPathFallback('put', '/system/role', '/auth/role', nextPayload);
         else response = await requestWithPathFallback('post', '/system/role', '/auth/role', nextPayload);
         const result = response as { code?: number; message?: unknown };
-        if (result.code === 200) { message.success('保存成功'); closeDialog(); fetchRoles(); }
-        else message.error(String(result.message || '保存失败'));
+        if (result.code === 200) { appMessage.success('保存成功'); closeDialog(); fetchRoles(); }
+        else appMessage.error(String(result.message || '保存失败'));
       };
-      if (payload?.id) { openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
+      if (payload?.id) { remarkModal.openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
       await submit();
-    } catch (error: unknown) { message.error(getErrorMessage(error, '保存失败')); }
+    } catch (error: unknown) { appMessage.error(getErrorMessage(error, '保存失败')); }
   };
 
   const handleDelete = async (id?: string | number) => {
     const rid = String(id ?? '').trim();
     if (!rid) return;
-    openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
+    remarkModal.openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
       try {
         const response = await requestWithPathFallback('delete', `/system/role/${rid}`, `/auth/role/${rid}`, undefined, { params: { remark } });
         const result = response as { code?: number; message?: unknown };
-        if (result.code === 200) { message.success('删除成功'); fetchRoles(); if (selectedRole?.id === rid) setSelectedRole(null); return; }
+        if (result.code === 200) { appMessage.success('删除成功'); fetchRoles(); if (selectedRole?.id === rid) setSelectedRole(null); return; }
         throw new Error(String(result.message || '删除失败'));
-      } catch (error: unknown) { message.error(getErrorMessage(error, '删除失败')); throw error; }
+      } catch (error: unknown) { appMessage.error(getErrorMessage(error, '删除失败')); throw error; }
     });
   };
 
@@ -343,7 +250,6 @@ export function useRoleListData() {
     setEmployeeModalOpen(true);
     setEmployeeLoading(true);
     try {
-      // 使用动态pageSize，确保能获取所有用户
       const res = await api.get('/system/user/list', { params: { roleId: selectedRole.id, page: 1, pageSize: 9999 } });
       const result = res as any;
       if (result.code === 200) setEmployeeList(result.data?.records || []);
@@ -362,30 +268,17 @@ export function useRoleListData() {
       onOk: async () => {
         try {
           const res: any = await api.put('/system/user', { id: userId, roleId: '' });
-          if (res?.code === 200) { message.success('已移除角色'); await handleOpenEmployeeList(); }
-          else message.error(res?.message || '移除失败');
-        } catch { message.error('移除失败'); }
+          if (res?.code === 200) { appMessage.success('已移除角色'); await handleOpenEmployeeList(); }
+          else appMessage.error(res?.message || '移除失败');
+        } catch { appMessage.error('移除失败'); }
       },
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRole, modal, message]);
-
-  const openLogModal = async (bizType: string, bizId: string, title: string) => {
-    setLogTitle(title); setLogVisible(true); setLogLoading(true);
-    try {
-      const res = await api.get('/system/operation-log/list', { params: { bizType, bizId } });
-      const result = res as { code?: number; data?: unknown; message?: unknown };
-      if (result.code === 200) setLogRecords(Array.isArray(result.data) ? (result.data as OperationLog[]) : []);
-      else { message.error(String(result.message || '获取日志失败')); setLogRecords([]); }
-    } catch (e: unknown) { message.error(getErrorMessage(e, '获取日志失败')); setLogRecords([]); }
-    finally { setLogLoading(false); }
-  };
+  }, [selectedRole, modal, appMessage]);
 
   return {
-    // form & modals
     form,
     roleModal,
-    // state
     templateModalOpen,
     setTemplateModalOpen,
     selectedTemplate,
@@ -408,21 +301,19 @@ export function useRoleListData() {
     setEmployeeModalOpen,
     employeeList,
     employeeLoading,
-    logVisible,
-    setLogVisible,
-    logLoading,
-    logRecords,
-    setLogRecords,
-    logTitle,
-    remarkModalState,
-    setRemarkModalState,
-    remarkLoading,
+    logVisible: operationLog.logVisible,
+    setLogVisible: operationLog.setLogVisible,
+    logLoading: operationLog.logLoading,
+    logRecords: operationLog.logRecords,
+    setLogRecords: operationLog.setLogRecords,
+    logTitle: operationLog.logTitle,
+    remarkModalState: remarkModal.remarkModalState,
+    setRemarkModalState: remarkModal.setRemarkModalState,
+    remarkLoading: remarkModal.remarkLoading,
     showSetupGuide,
     setShowSetupGuide,
-    // computed
     sectionsComputed,
     totalPermCount,
-    // actions
     fetchRoles,
     handleRoleSelect,
     savePerms,
@@ -433,12 +324,12 @@ export function useRoleListData() {
     openDialogWithTemplate,
     handleApplyTemplate,
     closeDialog,
-    openRemarkModal,
-    handleRemarkConfirm,
+    openRemarkModal: remarkModal.openRemarkModal,
+    handleRemarkConfirm: remarkModal.handleRemarkConfirm,
     handleSave,
     handleDelete,
     handleOpenEmployeeList,
     handleRemoveEmployeeFromRole,
-    openLogModal,
+    openLogModal: operationLog.openLogModal,
   };
 }

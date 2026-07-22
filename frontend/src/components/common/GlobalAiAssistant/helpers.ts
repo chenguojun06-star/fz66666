@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Message } from './types';
+import { getPageSuggestions } from './constants';
+import { getPageLabel } from '@/routeConfig';
 
 export const SUPER_ADMIN_ONLY_TOOLS = new Set([
   'tool_critic_evolution',
@@ -208,4 +210,134 @@ export function computePanelStyle(
       ? { left: 16, transformOrigin: 'bottom left' }
       : { right: 16, transformOrigin: 'bottom right' }),
   };
+}
+
+/** 判断文件是否为图片 */
+export function isImageFile(file: File): boolean {
+  const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+  const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+  return imageExts.includes(ext);
+}
+
+/** 判断文本是否为图片URL */
+export function isImageUrl(text: string): boolean {
+  const imageUrlPattern = /^https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
+  return imageUrlPattern.test(text);
+}
+
+/** 从 URL search 参数中提取重要业务ID上下文 */
+export function extractUrlParamContext(search: string): string[] {
+  const searchParams = new URLSearchParams(search);
+  const paramContext: string[] = [];
+  for (const [k, v] of Array.from(searchParams.entries())) {
+    if (['orderNo', 'styleId', 'orderId', 'styleNo', 'order', 'id', 'bundleId', 'batchId'].includes(k)) {
+      paramContext.push(`${k}:${v}`);
+    }
+  }
+  return paramContext;
+}
+
+/** 构建历史对话摘要提示 */
+export function buildHistoryHint(messages: Message[]): string {
+  const recentHistory = messages.slice(-5).filter(m => m.role === 'user').map(m => m.text).join(' | ');
+  return recentHistory.length > 0
+    ? `\n[历史对话摘要：${recentHistory.substring(0, 100)}...]`
+    : '';
+}
+
+/** 从文本中检测报表类型 */
+export function detectReportType(text: string): 'daily' | 'weekly' | 'monthly' | undefined {
+  if (text.includes('日报')) return 'daily';
+  if (text.includes('周报')) return 'weekly';
+  if (text.includes('月报')) return 'monthly';
+  return undefined;
+}
+
+interface BuildContextualTextOptions {
+  pathname: string;
+  search: string;
+  messages: Message[];
+  text: string;
+  factoryId?: string | number;
+  factoryName?: string;
+}
+
+/** 构建带页面上下文的完整对话文本 */
+export function buildContextualText(options: BuildContextualTextOptions): string {
+  const { pathname, search, messages, text, factoryId, factoryName } = options;
+
+  const pageContext = getPageLabel(pathname);
+  const paramContext = extractUrlParamContext(search);
+  const suggestions = getPageSuggestions(pathname);
+
+  const suggestionsHint = suggestions.length > 0
+    ? `\n[页面快捷操作建议：${suggestions.slice(0, 3).join('；')}]`
+    : '';
+
+  const historyHint = buildHistoryHint(messages);
+
+  const fullContext = pageContext
+    ? `[当前页面:${pageContext}${paramContext.length > 0 ? ' | ' + paramContext.join(', ') : ''}]`
+    : '';
+
+  const visionHint = isImageUrl(text)
+    ? '\n[系统提示：用户发送了一张图片URL，如果与服装相关，请主动调用视觉工具进行分析（款式识别/缺陷检测/色差检测/以图搜款）]'
+    : '';
+
+  if (factoryId) {
+    return `${fullContext}[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}${visionHint}${suggestionsHint}${historyHint}`;
+  }
+  return `${fullContext}${text}${visionHint}${suggestionsHint}${historyHint}`;
+}
+
+/** 构建图片分析的上下文文本 */
+export function buildImageContextText(
+  question: string,
+  factoryId: string | number | undefined,
+  factoryName: string | undefined,
+  hasServerImageUrl: boolean,
+): string {
+  const visionInstruction = hasServerImageUrl
+    ? '\n[系统提示：用户上传了一张图片，请主动调用视觉工具进行分析（款式识别/缺陷检测/色差检测/以图搜款]'
+    : '';
+  const baseText = question || '请帮我分析这张图片';
+  if (factoryId) {
+    return `[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${baseText}${visionInstruction}`;
+  }
+  return `${baseText}${visionInstruction}`;
+}
+
+/** 校验文件类型和大小 */
+export function validateFile(file: File): { valid: boolean; error?: string } {
+  const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif', '.pdf', '.webp', '.bmp'];
+  const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+  if (!allowed.includes(ext)) {
+    return { valid: false, error: '只支持 Excel（xlsx/xls）、CSV、图片和 PDF 文件' };
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return { valid: false, error: '文件大小不能超过 10MB' };
+  }
+  return { valid: true };
+}
+
+export function needsRiskAnalysis(text: string): boolean {
+  return /风险|延期|逾期|交期|超期|risk|overdue|delay|模拟|推演|what.?if|预测|forecast/i.test(text);
+}
+
+export function needsOverdueFactory(text: string): boolean {
+  return /逾期|延期|超期|overdue/i.test(text);
+}
+
+export function isAuthError(err: unknown): boolean {
+  return typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
+}
+
+/** 从 StepWizard 表单参数构建命令文本 */
+export function buildWizardCommand(command: string, params: Record<string, unknown>): string {
+  let p = command;
+  Object.entries(params).forEach(([_k, v]) => {
+    if (Array.isArray(v)) p += ' ' + v.join(',');
+    else if (v !== undefined && v !== null && v !== '') p += ' ' + v;
+  });
+  return p;
 }

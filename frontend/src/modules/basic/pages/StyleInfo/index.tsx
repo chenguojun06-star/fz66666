@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { App, Card, Checkbox, Form, Input, Tabs } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import { App, Card, Form } from 'antd';
 import PageLayout from '@/components/common/PageLayout';
 import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { useStyleDetail } from './hooks/useStyleDetail';
@@ -9,24 +8,16 @@ import { useStyleFormActions } from './hooks/useStyleFormActions';
 import { useStyleColorSize } from './hooks/useStyleColorSize';
 import { useStyleProduction } from './hooks/useStyleProduction';
 import { useStylePushOrder } from './hooks/useStylePushOrder';
+import { useStyleDraft } from './hooks/useStyleDraft';
 import StyleBasicInfoForm, { type StyleBasicInfoFormRef } from './components/StyleBasicInfoForm';
 import StyleActionButtons from './components/StyleActionButtons';
-
-import StyleBomTab from './components/StyleBomTab';
-import StyleQuotationTab from './components/StyleQuotationTab';
-import StyleAttachmentTab from './components/StyleAttachmentTab';
-import StylePatternTab from './components/StylePatternTab';
-import StyleProcessTab from './components/StyleProcessTab';
-import StyleProductionTab from './components/StyleProductionTab';
-import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
-
-import StyleWashLabelTab from './components/StyleWashLabelTab';
+import StyleInfoTabs from './components/StyleInfoTabs';
+import PushToOrderModal from './components/PushToOrderModal';
 import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileCard';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
-import { useFormDraft } from '@/hooks/useFormDraft';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 
 import './styles.css';
@@ -71,62 +62,12 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const colorSize = useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, form });
 
-  const styleDraft = useFormDraft('style-create', { debounceMs: 300 });
-  const [draftChecked, setDraftChecked] = useState(false);
-
-  useEffect(() => {
-    if (!isNewPage || draftChecked) return;
-
-    const draftInfo = styleDraft.getDraftInfo();
-    if (draftInfo.hasDraft) {
-      modal.confirm({
-        title: '发现未保存的草稿',
-        content: (
-          <div>
-            <p>检测到您有未保存的款号草稿（{draftInfo.timeDescription}），是否恢复？</p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
-              选择"恢复草稿"将恢复之前未保存的款号内容，选择"新建款号"将清空草稿并重新开始。
-            </p>
-          </div>
-        ),
-        okText: '恢复草稿',
-        cancelText: '新建款号',
-        onOk: () => {
-          const draftData = styleDraft.loadDraft() as {
-            formValues?: Record<string, unknown>;
-            sizeColorConfig?: Record<string, unknown>;
-          } | null;
-          if (draftData) {
-            if (draftData.formValues) {
-              form.setFieldsValue(draftData.formValues);
-            }
-            if (draftData.sizeColorConfig) {
-              setCurrentStyle((prev) => prev ? {
-                ...prev,
-                sizeColorConfig: JSON.stringify(draftData.sizeColorConfig),
-              } as any : null);
-            }
-          }
-          setDraftChecked(true);
-        },
-        onCancel: () => {
-          styleDraft.clearDraft();
-          setDraftChecked(true);
-        },
-      });
-    } else {
-      setDraftChecked(true);
-    }
-  }, [isNewPage, draftChecked, styleDraft, form, modal, setCurrentStyle]);
-
-  useEffect(() => {
-    if (!isNewPage || !draftChecked) return;
-    const allValues = form.getFieldsValue(true);
-    styleDraft.saveDraftDebounced({
-      formValues: allValues,
-      sizeColorConfig: colorSize.sizeColorConfig,
-    });
-  }, [form, colorSize.sizeColorConfig, isNewPage, draftChecked, styleDraft]);
+  const { clearDraft } = useStyleDraft({
+    isNewPage,
+    form,
+    setCurrentStyle,
+    sizeColorConfig: colorSize.sizeColorConfig,
+  });
 
   const {
     saving,
@@ -153,7 +94,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const handleSave = async () => {
     const success = await _handleSave();
     if (success && isNewPage) {
-      styleDraft.clearDraft();
+      clearDraft();
     }
     return success;
   };
@@ -176,8 +117,6 @@ const StyleInfoDetailPage: React.FC = () => {
     return editLocked && Boolean(currentStyle?.id);
   };
 
-  // 监听订单进度变更/数据变更事件，500ms 防抖后刷新详情
-  // 重要：用户编辑中（editLocked=true 且已有 id）不刷新，避免丢失草稿
   useEffect(() => {
     if (!styleIdParam || isNewPage) return;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,16 +141,21 @@ const StyleInfoDetailPage: React.FC = () => {
     return null;
   }
 
+  const handleRefresh = () => {
+    if (styleIdParam) {
+      void fetchDetail(styleIdParam);
+    }
+  };
+
   return (
     <>
       <PageLayout>
         {showSmartErrorNotice && smartError ? (
           <Card style={{ marginBottom: 12 }}>
-            <SmartErrorNotice error={smartError} onFix={() => { if (styleIdParam) void fetchDetail(styleIdParam); }} />
+            <SmartErrorNotice error={smartError} onFix={handleRefresh} />
           </Card>
         ) : null}
         <StyleIntelligenceProfileCard style={currentStyle} />
-        {/* 样衣详情 - 基础信息卡片 */}
         <Card
           title={
             <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>样衣详情</span>
@@ -296,190 +240,39 @@ const StyleInfoDetailPage: React.FC = () => {
               skc={(currentStyle as any)?.skc}
               skuMode={(currentStyle as any)?.skuMode}
               useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
-              onRefresh={() => { void fetchDetail(styleIdParam!); }}
+              onRefresh={handleRefresh}
             />
           </Form>
         </Card>
 
-        {/* 业务流程区 —— 按业务流程分区展示 BOM / 报价单 / 其他信息 */}
-        <div style={{ marginTop: 4 }}>
-          <Tabs
-            activeKey={bomAreaTabKey}
-            onChange={setBomAreaTabKey}
-            size="small"
-            tabBarStyle={{
-              background: 'var(--color-bg-base)',
-              padding: '0 12px',
-              borderRadius: '10px 10px 0 0',
-              border: '1px solid var(--color-border)',
-              margin: 0,
-            }}
-            items={[
-              { key: 'bom', label: 'BOM清单 · 工艺 · 生产', children: (
-                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
-                  <StyleBomTab
-                    styleId={currentStyle?.id ?? ''}
-                    sizeColorConfig={colorSize.sizeColorConfig}
-                    readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
-                    bomAssignee={(currentStyle as any)?.bomAssignee}
-                    bomStartTime={(currentStyle as any)?.bomStartTime}
-                    bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    onCartAdded={() => setCartDrawerOpen(true)}
-                  />
-                  <Card title="纸样开发" id="section-pattern" style={{ marginTop: 8, borderRadius: 8 }}>
-                    <StylePatternTab
-                      styleId={currentStyle?.id ?? ''}
-                      sizeColorConfig={colorSize.sizeColorConfig}
-                      readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
-                      patternAssignee={(currentStyle as any)?.patternAssignee}
-                      patternStartTime={(currentStyle as any)?.patternStartTime}
-                      patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
-                      patternStatus={currentStyle?.patternStatus}
-                      sizeAssignee={(currentStyle as any)?.sizeAssignee}
-                      sizeStartTime={(currentStyle as any)?.sizeStartTime}
-                      sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
-                      linkedSizes={colorSize.matrixSizes}
-                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    />
-                  </Card>
-                  <Card title="生产制单" id="section-production" style={{ marginTop: 8, borderRadius: 8 }}>
-                    <StyleProductionTab
-                      styleId={currentStyle?.id ?? ''}
-                      styleNo={currentStyle?.styleNo ?? ''}
-                      productionReqRows={production.productionReqRows}
-                      productionReqRowCount={production.productionReqRowCount}
-                      productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
-                      productionReqEditable={production.productionReqEditable}
-                      productionReqSaving={production.productionSaving}
-                      productionReqRollbackSaving={production.productionRollbackSaving}
-                      onProductionReqChange={production.updateProductionReqRow}
-                      onProductionReqSave={production.handleSaveProduction}
-                      onProductionReqReset={production.resetProductionReqFromCurrent}
-                      onProductionReqRollback={production.handleRollbackProductionReq}
-                      productionReqCanRollback
-                      productionAssignee={(currentStyle as any)?.productionAssignee}
-                      productionStartTime={(currentStyle as any)?.productionStartTime}
-                      productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
-                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                      sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
-                      sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
-                      sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
-                      sampleReviewer={(currentStyle as any)?.sampleReviewer}
-                      sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
-                      completedTime={(currentStyle as any)?.completedTime}
-                      styleName={(currentStyle as any)?.styleName}
-                      color={(currentStyle as any)?.color}
-                      size={(currentStyle as any)?.size}
-                      sampleQuantity={(currentStyle as any)?.sampleQuantity}
-                    />
-                  </Card>
-                  <Card title="二次工艺" id="section-secondary" style={{ marginTop: 8, borderRadius: 8 }}>
-                    <StyleSecondaryProcessTab
-                      styleId={currentStyle?.id ?? ''}
-                      styleNo={currentStyle?.styleNo ?? ''}
-                      readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
-                      secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
-                      secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
-                      secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
-                      sampleQuantity={(currentStyle as any)?.sampleQuantity}
-                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    />
-                  </Card>
-                  <Card title="工序单价" id="section-process" style={{ marginTop: 8, borderRadius: 8 }}>
-                    <StyleProcessTab
-                      styleId={currentStyle?.id ?? ''}
-                      styleNo={currentStyle?.styleNo ?? ''}
-                      readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
-                      processAssignee={(currentStyle as any)?.processAssignee}
-                      processStartTime={(currentStyle as any)?.processStartTime}
-                      processCompletedTime={(currentStyle as any)?.processCompletedTime}
-                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    />
-                  </Card>
-                </div>
-              )},
-              { key: 'quotation', label: '报价单', children: (
-                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
-                  <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
-                </div>
-              )},
-              { key: 'attachment', label: '附件文件', children: (
-                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
-                  <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
-                </div>
-              )},
-              { key: 'washlabel', label: '洗水唛', children: (
-                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
-                  <StyleWashLabelTab
-                    styleId={String(currentStyle?.id ?? '')}
-                    styleNo={currentStyle?.styleNo ?? ''}
-                    styleName={(currentStyle as any)?.styleName}
-                    fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
-                    fabricComposition={(currentStyle as any)?.fabricComposition}
-                    washInstructions={(currentStyle as any)?.washInstructions}
-                    uCode={(currentStyle as any)?.uCode}
-                    washTempCode={(currentStyle as any)?.washTempCode}
-                    bleachCode={(currentStyle as any)?.bleachCode}
-                    tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
-                    ironCode={(currentStyle as any)?.ironCode}
-                    dryCleanCode={(currentStyle as any)?.dryCleanCode}
-                    careIconCodes={(currentStyle as any)?.careIconCodes}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                </div>
-              )},
-            ]}
-          />
-        </div>
-        </PageLayout>
+        <StyleInfoTabs
+          activeKey={bomAreaTabKey}
+          onChange={setBomAreaTabKey}
+          currentStyle={currentStyle}
+          styleIdParam={styleIdParam}
+          sizeColorConfig={colorSize.sizeColorConfig}
+          matrixSizes={colorSize.matrixSizes}
+          totalMatrixQty={colorSize.totalMatrixQty}
+          production={production}
+          onRefresh={handleRefresh}
+          onCartAdded={() => setCartDrawerOpen(true)}
+        />
+      </PageLayout>
 
-      <ResizableModal
-        title="推送到下单管理"
+      <PushToOrderModal
         open={pushOrder.pushToOrderModalVisible}
-        onOk={pushOrder.submitPushToOrder}
-        onCancel={() => {
-          pushOrder.setPushToOrderModalVisible(false);
-          pushOrder.pushToOrderForm.resetFields();
-        }}
         confirmLoading={pushOrder.pushToOrderSaving}
-        width="40vw"
-        forceRender
-      >
-        <Form form={pushOrder.pushToOrderForm} layout="vertical">
-          <Form.Item label="同步目标（勾选才会过去）">
-            <Checkbox.Group
-              value={pushOrder.pushToOrderTargets}
-              onChange={(values) => pushOrder.setPushToOrderTargets(values.map((v) => String(v)))}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  gap: 8,
-                }}
-              >
-                <Checkbox value="pattern">纸样开发</Checkbox>
-                <Checkbox value="size">尺寸表</Checkbox>
-                <Checkbox value="bom">BOM清单</Checkbox>
-                <Checkbox value="process">工序单价</Checkbox>
-                <Checkbox value="production">生产制单</Checkbox>
-                <Checkbox value="secondary">二次工艺</Checkbox>
-                <Checkbox value="sku">SKU管理</Checkbox>
-              </div>
-            </Checkbox.Group>
-          </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={3} placeholder="选填：推送备注" />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
+        pushToOrderForm={pushOrder.pushToOrderForm}
+        pushToOrderTargets={pushOrder.pushToOrderTargets}
+        setPushToOrderTargets={pushOrder.setPushToOrderTargets}
+        setPushToOrderModalVisible={pushOrder.setPushToOrderModalVisible}
+        onOk={pushOrder.submitPushToOrder}
+      />
 
       <PurchaseCartDrawer
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
       />
-
     </>
   );
 };

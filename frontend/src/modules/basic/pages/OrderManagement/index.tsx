@@ -1,36 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Card, Form, Tabs } from 'antd';
+import { App, Form } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
-import PageStatCards from '@/components/common/PageStatCards';
-import StylePrintModal from '@/components/common/StylePrintModal';
-import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
-import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { readPageSize } from '@/utils/pageSizeStore';
-import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { useCuttingCreateTask } from '@/modules/production/pages/Production/Cutting/hooks';
-import { CuttingCreateTaskModal } from '@/modules/production/pages/Production/Cutting/components';
 import { paths } from '@/routeConfig';
 
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { StyleBom } from '@/types/style';
 
-import OrderRankingDashboard from './components/OrderRankingDashboard';
-import OrderAnalysisTab from './components/OrderAnalysisTab';
-import OrderListContent from './components/OrderListContent';
-import OrderCreateModal from './components/OrderCreateModal';
+import OrderManagementHeader from './components/OrderManagementHeader';
+import OrderManagementModals from './components/OrderManagementModals';
+import OrderManagementTabs from './components/OrderManagementTabs';
 
 import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
-import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from './utils/orderIntelligence';
 import type { SizePriceRecord } from './utils/orderIntelligence';
-import { splitOptions, mergeDistinctOptions, parseSizeColorConfig } from './utils/orderFormHelpers';
 import { confirmPricingReady } from './utils/confirmPricingReady';
 import { getBomColumns } from './utils/orderBomColumns';
 import { normalizeSizeKey, displaySizeLabel, useOrderBomCalc } from './hooks/useOrderBomCalc';
@@ -39,6 +30,7 @@ import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
 import { useOrderActions } from './hooks/useOrderActions';
 import { useOrderHandleSubmit } from './hooks/useOrderHandleSubmit';
+import { useOrderPageComputed } from './hooks/useOrderPageComputed';
 import { useFormDraft } from '@/hooks/useFormDraft';
 
 import { buildTooltipTheme } from './helpers';
@@ -134,47 +126,31 @@ const OrderManagement: React.FC = () => {
     loadOrderStats();
   }, [location.search, loadOrderStats]);
 
-  const bomByType = useMemo(() => {
-    const fabric = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'fabric');
-    const lining = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'lining');
-    const accessory = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'accessory');
-    return { fabric, lining, accessory };
-  }, [bomList]);
-
-  const orderOrchestration = useMemo(() => analyzeOrderOrchestration({
-    bomMaterialRows: [...bomByType.fabric, ...bomByType.lining],
-    orderLines, sizePriceRows, selectedStyle,
-    normalizeSizeKey, displaySizeLabel,
-    processBasedUnitPrice: computeProcessBasedUnitPrice(progressNodes),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [bomByType.fabric, bomByType.lining, orderLines, progressNodes, selectedStyle, sizePriceRows]);
-
-  const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
-  const watchedOrgUnitId = Form.useWatch('orgUnitId', form) as string | undefined;
-  const watchedPricingMode = (Form.useWatch('pricingMode', form) as 'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL' | undefined) || 'PROCESS';
-  const watchedManualOrderUnitPrice = Number(Form.useWatch('manualOrderUnitPrice', form) || 0);
-
-  const selectedFactoryStat = useMemo(() => {
-    if (!factoryCapacities.length) return null;
-    if (factoryMode === 'EXTERNAL' && watchedFactoryId) {
-      const factory = factories.find(f => f.id === watchedFactoryId);
-      if (!factory) return null;
-      return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
-    }
-    if (factoryMode === 'INTERNAL' && watchedOrgUnitId) {
-      const dept = departments.find(d => d.id === watchedOrgUnitId);
-      if (!dept) return null;
-      const deptName = dept.nodeName || dept.pathNames || '';
-      if (!deptName) return null;
-      return factoryCapacities.find(c => deptName.includes(c.factoryName) || c.factoryName.includes(deptName)) ?? null;
-    }
-    return null;
-  }, [factoryMode, watchedFactoryId, watchedOrgUnitId, factoryCapacities, factories, departments]);
-
-  const totalOrderQuantity = useMemo(
-    () => orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
-    [orderLines],
-  );
+  const {
+    bomByType,
+    watchedFactoryId,
+    watchedOrgUnitId,
+    watchedPricingMode,
+    watchedManualOrderUnitPrice,
+    selectedFactoryStat,
+    totalOrderQuantity,
+    orderOrchestration,
+    orderLineColors,
+    orderLineSizes,
+    selectableColors,
+    selectableSizes,
+  } = useOrderPageComputed({
+    bomList,
+    orderLines,
+    sizePriceRows,
+    selectedStyle,
+    progressNodes,
+    form,
+    factoryMode,
+    factories,
+    departments,
+    factoryCapacities,
+  });
 
   // ===== 智能筛选（已延期/临近交期） =====
   const {
@@ -196,16 +172,6 @@ const OrderManagement: React.FC = () => {
 
   const doConfirmPricingReady = () => confirmPricingReady(modal, orderOrchestration, watchedPricingMode, resolvedOrderUnitPrice);
 
-  const orderLineColors = useMemo(() => {
-    const set = new Set(orderLines.map(l => (l.color || '').trim()).filter(Boolean));
-    return Array.from(set);
-  }, [orderLines]);
-
-  const orderLineSizes = useMemo(() => {
-    const set = new Set(orderLines.map(l => (l.size || '').trim()).filter(Boolean));
-    return Array.from(set);
-  }, [orderLines]);
-
   useEffect(() => {
     form.setFieldsValue({ orderQuantity: totalOrderQuantity });
   }, [form, totalOrderQuantity]);
@@ -225,16 +191,6 @@ const OrderManagement: React.FC = () => {
       orderDraft.clearDraft();
     }
   }, [createdOrder, orderDraft]);
-
-  const selectableColors = useMemo(() => {
-    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
-    return mergeDistinctOptions(splitOptions(selectedStyle?.color), parsed.colors);
-  }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
-
-  const selectableSizes = useMemo(() => {
-    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
-    return mergeDistinctOptions(splitOptions(selectedStyle?.size), parsed.sizes);
-  }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
   const { generateOrderNo, openCreate: openCreateInternal, closeDialog: closeDialogInternal } = useOrderActions({
     form,
@@ -297,53 +253,36 @@ const OrderManagement: React.FC = () => {
       <PageLayout
         title="下单管理"
         headerContent={
-          <>
-            {showSmartErrorNotice && smartError ? (
-              <Card style={{ marginBottom: 12 }}>
-                <SmartErrorNotice error={smartError} onFix={fetchStyles} />
-              </Card>
-            ) : null}
-
-            <PageStatCards
-              activeKey={activeStatFilter}
-              cards={cards}
-              hints={hints}
-              onClearHints={onClearHints}
-            />
-          </>
+          <OrderManagementHeader
+            showSmartErrorNotice={showSmartErrorNotice}
+            smartError={smartError}
+            fetchStyles={fetchStyles}
+            activeStatFilter={activeStatFilter}
+            cards={cards}
+            hints={hints}
+            onClearHints={onClearHints}
+          />
         }
       >
-        <Tabs defaultActiveKey="list" items={[
-          {
-            key: 'list',
-            label: '下单管理',
-            children: (
-              <>
-                <OrderRankingDashboard onOrderClick={openCreate} />
-                <OrderListContent
-                  viewMode={viewMode}
-                  setViewMode={setViewMode}
-                  queryParams={queryParams}
-                  setQueryParams={setQueryParams}
-                  styles={displayStyles}
-                  total={total}
-                  loading={loading}
-                  columns={columns as any}
-                  cardColumns={cardColumns}
-                  openCreate={openCreate}
-                  fetchStyles={fetchStyles}
-                  onNoDataOrder={cuttingCreateTask.openCreateTask}
-                  styleFieldConfigs={styleFieldConfigs}
-                  onGoToFieldConfig={goToStyleFieldConfig}
-                />
-              </>
-            ),
-          },
-          { key: 'analysis', label: '数据分析', children: <OrderAnalysisTab /> },
-        ]} />
+        <OrderManagementTabs
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          queryParams={queryParams}
+          setQueryParams={setQueryParams}
+          styles={displayStyles}
+          total={total}
+          loading={loading}
+          columns={columns as any}
+          cardColumns={cardColumns}
+          openCreate={openCreate}
+          fetchStyles={fetchStyles}
+          onNoDataOrder={cuttingCreateTask.openCreateTask}
+          styleFieldConfigs={styleFieldConfigs}
+          onGoToFieldConfig={goToStyleFieldConfig}
+        />
       </PageLayout>
 
-      <OrderCreateModal
+      <OrderManagementModals
         visible={visible}
         onClose={closeDialog}
         onSubmit={handleSubmit}
@@ -386,34 +325,15 @@ const OrderManagement: React.FC = () => {
         suggestionLoading={suggestionLoading}
         generateOrderNo={generateOrderNo}
         customFields={orderCustomFields}
+        remarkModalOpen={remarkModalOpen}
+        setRemarkModalOpen={setRemarkModalOpen}
+        remarkStyleNo={remarkStyleNo}
+        printModalVisible={printModalVisible}
+        setPrintModalVisible={setPrintModalVisible}
+        printingRecord={printingRecord}
+        setPrintingRecord={setPrintingRecord}
+        cuttingCreateTask={cuttingCreateTask}
       />
-
-      <RemarkTimelineModal
-        open={remarkModalOpen}
-        onClose={() => setRemarkModalOpen(false)}
-        targetType="style"
-        targetNo={remarkStyleNo}
-      />
-
-      <StylePrintModal
-        visible={printModalVisible}
-        onClose={() => { setPrintModalVisible(false); setPrintingRecord(null); }}
-        styleId={printingRecord?.id}
-        styleNo={printingRecord?.styleNo}
-        styleName={printingRecord?.styleName}
-        cover={printingRecord?.cover}
-        color={printingRecord?.color}
-        quantity={printingRecord?.sampleQuantity}
-        category={printingRecord?.category}
-        season={printingRecord?.season}
-        mode="order"
-        extraInfo={{
-          '交板日期': printingRecord?.deliveryDate,
-          '设计师': printingRecord?.sampleNo,
-        }}
-      />
-
-      <CuttingCreateTaskModal createTask={cuttingCreateTask} />
     </>
   );
 };

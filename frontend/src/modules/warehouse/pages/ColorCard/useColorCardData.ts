@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Form, message as antdMessage } from 'antd';
 import api from '@/utils/api';
 import type {
-  ApiResult,
   ColorCard,
-  ColorCardDetail,
   ColorCardItem,
   ColorCardListParams,
   ImageUploadFile,
   PageResult,
   RecognizedColorInfo,
+  ApiResult,
 } from './types';
+import { uploadImage, getCoverImageUrl } from './utils';
+import { useColorCardItems } from './useColorCardItems';
+import { useColorCardPreview } from './useColorCardPreview';
 
-// ===== 色卡本页面所有状态与业务逻辑（从 index.tsx 抽取） =====
 export function useColorCardData() {
   const [dataList, setDataList] = useState<ColorCard[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,45 +23,16 @@ export function useColorCardData() {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
-  // ===== 色卡本弹窗 =====
   const [dialogVisible, setDialogVisible] = useState(false);
   const [currentCard, setCurrentCard] = useState<ColorCard | null>(null);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [coverImageFiles, setCoverImageFiles] = useState<ImageUploadFile[]>([]);
 
-  // ===== 颜色管理弹窗 =====
-  const [itemVisible, setItemVisible] = useState(false);
-  const [currentItems, setCurrentItems] = useState<ColorCardItem[]>([]);
-  const [currentCardId, setCurrentCardId] = useState<string>('');
-  const [currentCardName, setCurrentCardName] = useState<string>('');
-
-  // ===== 拍照识别 =====
   const [recognizeVisible, setRecognizeVisible] = useState(false);
   const [recognizeImage, setRecognizeImage] = useState<string>('');
   const [recognizing, setRecognizing] = useState(false);
 
-  // ===== 生成物料预览 =====
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewCard, setPreviewCard] = useState<ColorCard | null>(null);
-  const [previewItems, setPreviewItems] = useState<ColorCardItem[]>([]);
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
-
-  // ===== 颜色编号递增 =====
-  const nextColorNoRef = useRef<string>('');
-
-  // ===== 上传图片 =====
-  const uploadImage = useCallback(async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await api.post<{ code: number; data: string }>(
-      '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
-    if (res.code !== 200 || !res.data) throw new Error('上传失败');
-    return res.data;
-  }, []);
-
-  // ===== 列表加载 =====
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
@@ -82,13 +54,13 @@ export function useColorCardData() {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
-  // ===== 色卡本 CRUD =====
+  const itemsHook = useColorCardItems({ onSaved: fetchList });
+  const previewHook = useColorCardPreview({ onGenerated: fetchList });
 
   const openCreateDialog = async () => {
     setCurrentCard(null);
     form.resetFields();
     setCoverImageFiles([]);
-    // 自动生成编号
     try {
       const res = await api.get<{ code: number; data: string }>('/color-card/generate-code');
       if (res.code === 200 && res.data) {
@@ -124,9 +96,8 @@ export function useColorCardData() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      // 获取封面图片URL
       if (coverImageFiles.length > 0) {
-        values.image = coverImageFiles[0]?.url || '';
+        values.image = getCoverImageUrl(coverImageFiles);
       }
       if (currentCard?.id) {
         await api.put('/color-card', { id: currentCard.id, ...values });
@@ -155,100 +126,9 @@ export function useColorCardData() {
     }
   };
 
-  // ===== 颜色管理 =====
-
-  const openItemsDialog = async (card: ColorCard) => {
-    setCurrentCardId(card.id);
-    setCurrentCardName(card.colorCardName);
-    try {
-      const res = await api.get<ApiResult<ColorCardDetail>>(`/color-card/${card.id}`);
-      if (res.code === 200) {
-        const items = res.data?.items || [];
-        setCurrentItems(items);
-        // 计算下一个颜色编号
-        if (items.length > 0) {
-          const maxSeq = items.reduce((max, item) => {
-            const m = item.colorNo?.match(/^C(\d+)$/);
-            const seq = m ? parseInt(m[1]) : 0;
-            return seq > max ? seq : max;
-          }, 0);
-          nextColorNoRef.current = 'C' + String(maxSeq + 1).padStart(3, '0');
-        } else {
-          nextColorNoRef.current = 'C001';
-        }
-      } else {
-        setCurrentItems([]);
-        nextColorNoRef.current = 'C001';
-      }
-    } catch {
-      setCurrentItems([]);
-      nextColorNoRef.current = 'C001';
-    }
-    setItemVisible(true);
-  };
-
-  const addEmptyItem = async () => {
-    // 自动获取下一个颜色编号
-    if (!nextColorNoRef.current) {
-      try {
-        const res = await api.get<{ code: number; data: string }>(
-          `/color-card/${currentCardId}/generate-color-no`,
-        );
-        if (res.code === 200) nextColorNoRef.current = res.data;
-      } catch {
-        nextColorNoRef.current = 'C' + String(currentItems.length + 1).padStart(3, '0');
-      }
-    }
-    const next: ColorCardItem = {
-      colorNo: nextColorNoRef.current,
-      colorName: '',
-      unitPrice: undefined,
-      image: '',
-      remark: '',
-      sortOrder: currentItems.length,
-    };
-    setCurrentItems([...currentItems, next]);
-    // 递增编号
-    const m = nextColorNoRef.current.match(/^C(\d+)$/);
-    if (m) {
-      nextColorNoRef.current = 'C' + String(parseInt(m[1]) + 1).padStart(3, '0');
-    }
-  };
-
-  const updateItem = (idx: number, field: keyof ColorCardItem, value: string | number | undefined | null) => {
-    const next = [...currentItems];
-    next[idx] = { ...next[idx], [field]: value ?? undefined };
-    setCurrentItems(next);
-  };
-
-  const removeItem = (idx: number) => {
-    const next = [...currentItems];
-    next.splice(idx, 1);
-    setCurrentItems(next);
-  };
-
-  const saveItems = async () => {
-    if (!currentCardId) return;
-    const validItems = currentItems.filter(it => it.colorNo || it.colorName);
-    if (validItems.length === 0) {
-      antdMessage.warning('至少填写一条颜色');
-      return;
-    }
-    try {
-      await api.post(`/color-card/${currentCardId}/items/batch`, { items: validItems });
-      antdMessage.success(`已保存 ${validItems.length} 条颜色`);
-      setItemVisible(false);
-      fetchList();
-    } catch (err: any) {
-      antdMessage.error(err?.message || '保存失败');
-    }
-  };
-
-  // ===== 拍照识别 =====
-
   const openRecognize = (card: ColorCard) => {
-    setCurrentCardId(card.id);
-    setCurrentCardName(card.colorCardName);
+    itemsHook.setCurrentCardId(card.id);
+    itemsHook.setCurrentCardName(card.colorCardName);
     setRecognizeImage('');
     setRecognizeVisible(true);
   };
@@ -284,19 +164,18 @@ export function useColorCardData() {
         if (colorName) {
           antdMessage.success(`识别到颜色：${colorName}`);
           setRecognizeVisible(false);
-          // 自动添加识别到的颜色
-          if (!itemVisible) {
-            setCurrentItems([]);
+          if (!itemsHook.itemVisible) {
+            itemsHook.setCurrentItems([]);
           }
           const newItem: ColorCardItem = {
-            colorNo: nextColorNoRef.current || 'C001',
+            colorNo: itemsHook.nextColorNoRef.current || 'C001',
             colorName,
             unitPrice: data?.unitPrice?.numberValue,
             image: data?.imageUrl || '',
             remark: data?.aiHint || '',
           };
-          setCurrentItems(prev => [...prev, newItem]);
-          setItemVisible(true);
+          itemsHook.setCurrentItems(prev => [...prev, newItem]);
+          itemsHook.setItemVisible(true);
         } else {
           antdMessage.info('未识别到明确的颜色信息，请手动添加');
         }
@@ -310,57 +189,7 @@ export function useColorCardData() {
     }
   };
 
-  // ===== 生成物料预览 =====
-
-  const openPreview = async (card: ColorCard) => {
-    setPreviewCard(card);
-    try {
-      const res = await api.get<ApiResult<ColorCardDetail>>(`/color-card/${card.id}`);
-      if (res.code === 200) {
-        const items = res.data?.items || [];
-        setPreviewItems(items);
-        // 默认全选
-        setSelectedItems(new Set(items.map((_, i) => i)));
-      } else {
-        setPreviewItems([]);
-      }
-    } catch {
-      setPreviewItems([]);
-    }
-    setPreviewVisible(true);
-  };
-
-  const confirmGenerate = async () => {
-    if (!previewCard || selectedItems.size === 0) {
-      antdMessage.warning('请选择要生成的颜色');
-      return;
-    }
-    try {
-      const itemsToGenerate = selectedItems.size === previewItems.length
-        ? null  // null 表示全部
-        : previewItems.filter((_, i) => selectedItems.has(i));
-      const res = await api.post<{ code: number; data: string[]; message?: string }>(
-        `/color-card/${previewCard.id}/generate-materials`, { items: itemsToGenerate },
-      );
-      if (res.code === 200) {
-        antdMessage.success(`成功生成 ${res.data.length} 条物料记录`);
-        setPreviewVisible(false);
-        fetchList();
-      }
-    } catch (err: any) {
-      antdMessage.error(err?.message || '生成失败');
-    }
-  };
-
-  const toggleSelect = (idx: number) => {
-    const next = new Set(selectedItems);
-    if (next.has(idx)) next.delete(idx);
-    else next.add(idx);
-    setSelectedItems(next);
-  };
-
   return {
-    // 列表
     dataList,
     loading,
     keyword,
@@ -373,7 +202,6 @@ export function useColorCardData() {
     setPageSize,
     total,
     fetchList,
-    // 色卡本弹窗
     dialogVisible,
     setDialogVisible,
     currentCard,
@@ -386,20 +214,18 @@ export function useColorCardData() {
     handleSave,
     handleDelete,
     uploadImage,
-    // 颜色管理弹窗
-    itemVisible,
-    setItemVisible,
-    currentItems,
-    currentCardId,
-    setCurrentCardId,
-    currentCardName,
-    nextColorNoRef,
-    openItemsDialog,
-    addEmptyItem,
-    updateItem,
-    removeItem,
-    saveItems,
-    // 拍照识别
+    itemVisible: itemsHook.itemVisible,
+    setItemVisible: itemsHook.setItemVisible,
+    currentItems: itemsHook.currentItems,
+    currentCardId: itemsHook.currentCardId,
+    setCurrentCardId: itemsHook.setCurrentCardId,
+    currentCardName: itemsHook.currentCardName,
+    nextColorNoRef: itemsHook.nextColorNoRef,
+    openItemsDialog: itemsHook.openItemsDialog,
+    addEmptyItem: itemsHook.addEmptyItem,
+    updateItem: itemsHook.updateItem,
+    removeItem: itemsHook.removeItem,
+    saveItems: itemsHook.saveItems,
     recognizeVisible,
     setRecognizeVisible,
     recognizeImage,
@@ -408,15 +234,14 @@ export function useColorCardData() {
     openRecognize,
     onPickImage,
     runRecognition,
-    // 生成物料预览
-    previewVisible,
-    setPreviewVisible,
-    previewCard,
-    previewItems,
-    selectedItems,
-    setSelectedItems,
-    openPreview,
-    confirmGenerate,
-    toggleSelect,
+    previewVisible: previewHook.previewVisible,
+    setPreviewVisible: previewHook.setPreviewVisible,
+    previewCard: previewHook.previewCard,
+    previewItems: previewHook.previewItems,
+    selectedItems: previewHook.selectedItems,
+    setSelectedItems: previewHook.setSelectedItems,
+    openPreview: previewHook.openPreview,
+    confirmGenerate: previewHook.confirmGenerate,
+    toggleSelect: previewHook.toggleSelect,
   };
 }

@@ -1,85 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { App } from 'antd';
-import api, { toNumberSafe, isApiSuccess, getApiMessage, sortSizeNames } from '@/utils/api';
-
-const FALLBACK_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const norm = (v: unknown) => String(v || '').trim();
-
-interface StyleProcessRow {
-  id: string | number;
-  processCode: string;
-  processName: string;
-  progressStage: string;
-  machineType: string;
-  difficulty?: string;
-  standardTime: number;
-  price: number;
-  sortOrder: number;
-  sizePrices?: Record<string, number>;
-  sizePriceTouched?: Record<string, boolean>;
-}
-
-type MatchedScope = 'style' | 'order' | 'empty';
-
-const buildRowsFromContent = (content: any, fallbackSizes: string[] = FALLBACK_SIZES): { rows: StyleProcessRow[]; sizes: string[] } => {
-  const rawSteps = Array.isArray(content?.steps) ? content.steps : [];
-  const rawSizes = Array.isArray(content?.sizes)
-    ? content.sizes.map((item: unknown) => String(item || '').trim().toUpperCase()).filter(Boolean)
-    : [];
-  const sizes = sortSizeNames(rawSizes.length ? rawSizes : fallbackSizes);
-
-  const rows: StyleProcessRow[] = rawSteps.map((item: any, index: number) => {
-    const sizePrices: Record<string, number> = {};
-    const sizePriceTouched: Record<string, boolean> = {};
-    sizes.forEach((size) => {
-      const sizePrice = toNumberSafe(item?.sizePrices?.[size]);
-      const basePrice = toNumberSafe(item?.unitPrice ?? item?.price);
-      sizePrices[size] = sizePrice || basePrice;
-      sizePriceTouched[size] = item?.sizePrices?.[size] != null;
-    });
-
-    return {
-      id: item?.processCode || `loaded-${index}`,
-      processCode: String(item?.processCode || String(index + 1).padStart(2, '0')),
-      processName: String(item?.processName || item?.name || ''),
-      progressStage: String(item?.progressStage || '车缝'),
-      machineType: String(item?.machineType || ''),
-      difficulty: String(item?.difficulty || ''),
-      standardTime: toNumberSafe(item?.standardTime),
-      price: toNumberSafe(item?.unitPrice ?? item?.price),
-      sortOrder: index + 1,
-      sizePrices,
-      sizePriceTouched,
-    };
-  });
-
-  return { rows, sizes };
-};
+import api, { isApiSuccess, getApiMessage, sortSizeNames, toNumberSafe } from '@/utils/api';
+import { useStyleNoSearch } from './useStyleNoSearch';
+import { useProcessEditor } from './useProcessEditor';
+import { buildRowsFromContent, FALLBACK_SIZES, norm, MatchedScope, StyleProcessRow } from './utils';
 
 export default function useProcessPriceActions(open: boolean, initialStyleNo?: string) {
   const { message } = App.useApp();
 
   const [matchedScope, setMatchedScope] = useState<MatchedScope>('empty');
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [styleInputVal, setStyleInputVal] = useState('');
-  const [styleNoOptions, setStyleNoOptions] = useState<{ value: string; label: string }[]>([]);
-  const [_styleNoLoading, setStyleNoLoading] = useState(false);
-  const [selectedStyleNo, setSelectedStyleNo] = useState('');
-  const styleNoSeq = useRef(0);
-  const styleNoTimer = useRef<number | undefined>(undefined);
-
-  const [data, setData] = useState<StyleProcessRow[]>([]);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [sizes, setSizes] = useState<string[]>([...FALLBACK_SIZES]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
-  const [newSizeName, setNewSizeName] = useState('');
-  const [addSizePopoverOpen, setAddSizePopoverOpen] = useState(false);
-  const snapshotRef = useRef<StyleProcessRow[] | null>(null);
   const dictSizesLoadedRef = useRef(false);
+
+  const styleSearch = useStyleNoSearch();
+  const {
+    styleInputVal, styleNoOptions, selectedStyleNo,
+    setStyleInputVal, setSelectedStyleNo, fetchStyleNoOptions, scheduleStyleSearch,
+  } = styleSearch;
+
+  const editor = useProcessEditor();
+  const {
+    data, editMode, sizes, newSizeName, addSizePopoverOpen,
+    setData, setSizes, setNewSizeName, setAddSizePopoverOpen,
+    resetEditingState, enterEdit, exitEdit, handleAdd, handleDelete,
+    updateField, updateSizePrice, handleAddSize, handleRemoveSize,
+  } = editor;
 
   useEffect(() => {
     if (dictSizesLoadedRef.current) return;
@@ -91,42 +41,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
         if (labels.length) setSizes(sortSizeNames(labels));
       })
       .catch((err) => console.error('加载尺码字典失败:', err));
-  }, []);
-
-  const resetEditingState = useCallback(() => {
-    setEditMode(false);
-    snapshotRef.current = null;
-  }, []);
-
-  const fetchStyleNoOptions = useCallback(async (keyword: string) => {
-    const seq = (styleNoSeq.current += 1);
-    setStyleNoLoading(true);
-    try {
-      const res = await api.get<any>('/template-library/process-price-style-options', {
-        params: { keyword: keyword.trim() },
-      });
-      if (seq !== styleNoSeq.current) return;
-      const records: any[] = Array.isArray(res?.data) ? res.data : [];
-      setStyleNoOptions(
-        records
-          .map((record: any) => {
-            const styleNo = String(record?.styleNo || '').trim();
-            const styleName = String(record?.styleName || '').trim();
-            return { value: styleNo, label: styleName ? `${styleNo}（${styleName}）` : styleNo };
-          })
-          .filter((record: any) => record.value)
-      );
-    } catch {
-      // ignore
-    } finally {
-      if (seq === styleNoSeq.current) setStyleNoLoading(false);
-    }
-  }, []);
-
-  const scheduleStyleSearch = useCallback((keyword: string) => {
-    if (styleNoTimer.current) window.clearTimeout(styleNoTimer.current);
-    styleNoTimer.current = window.setTimeout(() => fetchStyleNoOptions(keyword), 250);
-  }, [fetchStyleNoOptions]);
+  }, [setSizes]);
 
   const loadTemplate = useCallback(async (styleNo?: string) => {
     setLoadingTemplate(true);
@@ -152,7 +67,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     } finally {
       setLoadingTemplate(false);
     }
-  }, [resetEditingState, message]);
+  }, [resetEditingState, message, setData, setSizes]);
 
   useEffect(() => {
     if (!open) return;
@@ -206,117 +121,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     setSelectedStyleNo(nextStyleNo);
     setStyleInputVal(nextStyleNo);
     if (nextStyleNo) loadTemplate(nextStyleNo);
-  }, [loadTemplate]);
-
-  const enterEdit = useCallback(() => {
-    if (editMode) return;
-    snapshotRef.current = JSON.parse(JSON.stringify(data));
-    setEditMode(true);
-  }, [editMode, data]);
-
-  const exitEdit = useCallback(() => {
-    if (snapshotRef.current) {
-      setData(snapshotRef.current);
-    }
-    resetEditingState();
-  }, [resetEditingState]);
-
-  const handleAdd = useCallback(() => {
-    if (!editMode) enterEdit();
-    const maxSort = data.length ? Math.max(...data.map((item) => toNumberSafe(item.sortOrder))) : 0;
-    const nextSort = maxSort + 1;
-    const sizePrices: Record<string, number> = {};
-    const sizePriceTouched: Record<string, boolean> = {};
-    sizes.forEach((size) => {
-      sizePrices[size] = 0;
-      sizePriceTouched[size] = false;
-    });
-    setData((prev) => [
-      ...prev,
-      {
-        id: `tmp-${Date.now()}`,
-        processCode: String(nextSort).padStart(2, '0'),
-        processName: '',
-        progressStage: '车缝',
-        machineType: '',
-        difficulty: '',
-        standardTime: 0,
-        price: 0,
-        sortOrder: nextSort,
-        sizePrices,
-        sizePriceTouched,
-      },
-    ]);
-  }, [editMode, enterEdit, data, sizes]);
-
-  const handleDelete = useCallback((id: string | number) => {
-    if (!editMode) enterEdit();
-    setData((prev) => prev
-      .filter((item) => item.id !== id)
-      .map((item, index) => ({
-        ...item,
-        sortOrder: index + 1,
-        processCode: String(index + 1).padStart(2, '0'),
-      }))
-    );
-  }, [editMode, enterEdit]);
-
-  const updateField = useCallback((id: string | number, field: keyof StyleProcessRow, value: any) => {
-    setData((prev) => prev.map((row) => {
-      if (row.id !== id) return row;
-      if (field !== 'price') {
-        return { ...row, [field]: value };
-      }
-      const nextPrice = toNumberSafe(value);
-      const oldPrice = toNumberSafe(row.price);
-      const nextSizePrices = { ...(row.sizePrices || {}) };
-      const touched = row.sizePriceTouched || {};
-      sizes.forEach((size) => {
-        const current = toNumberSafe(nextSizePrices[size]);
-        if (!touched[size] || current === oldPrice) {
-          nextSizePrices[size] = nextPrice;
-        }
-      });
-      return { ...row, price: nextPrice, sizePrices: nextSizePrices };
-    }));
-  }, [sizes]);
-
-  const updateSizePrice = useCallback((id: string | number, size: string, value: number) => {
-    setData((prev) => prev.map((row) => row.id !== id ? row : {
-      ...row,
-      sizePrices: { ...(row.sizePrices || {}), [size]: value },
-      sizePriceTouched: { ...(row.sizePriceTouched || {}), [size]: true },
-    }));
-  }, []);
-
-  const handleAddSize = useCallback(() => {
-    const trimmed = newSizeName.trim().toUpperCase();
-    if (!trimmed) {
-      message.warning('请输入尺码');
-      return;
-    }
-    if (sizes.includes(trimmed)) {
-      message.warning('该尺码已存在');
-      return;
-    }
-    setSizes((prev) => sortSizeNames([...prev, trimmed]));
-    setData((prev) => prev.map((row) => ({
-      ...row,
-      sizePrices: { ...(row.sizePrices || {}), [trimmed]: toNumberSafe(row.price) },
-      sizePriceTouched: { ...(row.sizePriceTouched || {}), [trimmed]: false },
-    })));
-    setNewSizeName('');
-    message.success(`已添加尺码: ${trimmed}`);
-  }, [newSizeName, sizes, message]);
-
-  const handleRemoveSize = useCallback((size: string) => {
-    setSizes((prev) => prev.filter((item) => item !== size));
-    setData((prev) => prev.map((row) => {
-      const { [size]: _removedPrice, ...nextSizePrices } = row.sizePrices || {};
-      const { [size]: _removedTouched, ...nextTouched } = row.sizePriceTouched || {};
-      return { ...row, sizePrices: nextSizePrices, sizePriceTouched: nextTouched };
-    }));
-  }, []);
+  }, [loadTemplate, setSelectedStyleNo, setStyleInputVal]);
 
   const saveAll = useCallback(async (): Promise<boolean> => {
     if (!selectedStyleNo.trim()) {
@@ -415,7 +220,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     setSizes([...FALLBACK_SIZES]);
     setImageUrls([]);
     resetEditingState();
-  }, [resetEditingState]);
+  }, [resetEditingState, setStyleInputVal, setSelectedStyleNo, setData, setSizes]);
 
   const isBusy = saving || syncing || loadingTemplate;
   const readyForScope = Boolean(selectedStyleNo.trim());
@@ -432,3 +237,5 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     saveAll, syncToOrders, saveAndSync: handleSaveAndSync, handleClose, loadTemplate,
   };
 }
+
+export type { StyleProcessRow, MatchedScope };

@@ -4,11 +4,26 @@ import { App } from 'antd';
 import { StyleSize } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
 import {
-  MatrixCell, MatrixRow,
-  resolveGroupName, normalizeRowSorts,
-  normalizeChunkImageAssignments, normalizeGradingZones,
-  serializeGradingRule, createGradingZone,
+  MatrixRow,
+  normalizeRowSorts,
 } from '../styleSize/shared';
+import {
+  applyGradingToRow,
+  buildGradingDraftZones,
+  buildBatchGradingDraftZones,
+  createNewPartRow,
+  insertPartInGroup,
+  createNewGroupRow,
+  parseAndValidateSizeNames,
+  addSizeColumnsToRows,
+  deleteSizeColumnFromRows,
+  collectIdsFromDeletedRow,
+  collectIdsFromDeletedSize,
+  applyGradingDraftToRows,
+  setChunkImageUrlsForRows,
+  updateChunkGroupNameForRows,
+  buildSaveTasks,
+} from './utils';
 
 export interface StyleSizeActionsDeps {
   styleId: string | number;
@@ -88,22 +103,7 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
   }, [setRows]);
 
   const updateChunkGroupName = useCallback((chunkRowKeys: string[], groupName: string) => {
-    const normalizedGroupName = String(groupName || '').trim() || '其他区';
-    if (!chunkRowKeys.length) return;
-    const rowKeySet = new Set(chunkRowKeys);
-    setRows((prev) => {
-      let changed = false;
-      const nextRows = prev.map((row) => {
-        if (!rowKeySet.has(row.key)) return row;
-        const currentResolvedGroup = resolveGroupName(row.groupName, row.partName);
-        if (currentResolvedGroup === normalizedGroupName && String(row.groupName || '').trim() === normalizedGroupName) {
-          return row;
-        }
-        changed = true;
-        return { ...row, groupName: normalizedGroupName };
-      });
-      return changed ? normalizeRowSorts(nextRows) : prev;
-    });
+    setRows((prev) => updateChunkGroupNameForRows(prev, chunkRowKeys, groupName));
   }, [setRows]);
 
   const updateMeasureMethod = useCallback((rowKey: string, measureMethod: string) => {
@@ -114,62 +114,16 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
     setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, tolerance } : r)));
   }, [setRows]);
 
-  const applyGradingToRow = useCallback((row: MatrixRow): MatrixRow => {
-    if (!sizeColumns.length) return row;
-    const baseSize = sizeColumns.includes(String(row.baseSize || '').trim())
-      ? String(row.baseSize).trim() : '';
-    const baseIndex = sizeColumns.indexOf(baseSize);
-    if (baseIndex < 0) return { ...row, baseSize };
-    const zones = normalizeGradingZones(row.gradingZones || [], sizeColumns);
-    if (!zones.length) return { ...row, baseSize, gradingZones: [] };
-    const baseValue = toNumberSafe(row.cells[baseSize]?.value);
-    const getStepForSize = (sizeName: string): number => {
-      for (const zone of zones) {
-        if ((zone.frontSizes || []).includes(sizeName)) return toNumberSafe(zone.frontStep);
-        if ((zone.backSizes || []).includes(sizeName)) return toNumberSafe(zone.backStep);
-        for (const col of zone.sizeStepColumns || []) {
-          if ((col.sizes || []).includes(sizeName)) return toNumberSafe(col.step);
-        }
-      }
-      return 0;
-    };
-    const nextCells = { ...row.cells };
-    nextCells[baseSize] = { ...(nextCells[baseSize] || { value: 0 }), value: baseValue };
-    for (let index = 0; index < sizeColumns.length; index += 1) {
-      if (index === baseIndex) continue;
-      const currentSize = sizeColumns[index];
-      const step = getStepForSize(currentSize);
-      const distance = Math.abs(index - baseIndex);
-      const value = index < baseIndex ? baseValue - step * distance : baseValue + step * distance;
-      nextCells[currentSize] = { ...(nextCells[currentSize] || { value: 0 }), value: Number(value.toFixed(2)) };
-    }
-    return { ...row, baseSize, gradingZones: zones, cells: nextCells };
-  }, [sizeColumns]);
-
   const updateBaseSize = useCallback((rowKey: string, baseSize: string) => {
     setRows((prev) => prev.map((row) => (
-      row.key === rowKey ? applyGradingToRow({ ...row, baseSize: String(baseSize || '').trim() }) : row
+      row.key === rowKey ? applyGradingToRow({ ...row, baseSize: String(baseSize || '').trim() }, sizeColumns) : row
     )));
-  }, [setRows, applyGradingToRow]);
+  }, [setRows, sizeColumns]);
 
   const openGradingConfig = useCallback((row: MatrixRow) => {
     setGradingTargetRowKey(row.key);
-    const baseSize = row.baseSize || '';
-    setGradingDraftBaseSize(baseSize);
-    const baseIndex = baseSize ? sizeColumns.indexOf(baseSize) : -1;
-    const defaultFrontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
-    const defaultBackSizes = baseIndex >= 0 && baseIndex < sizeColumns.length - 1 ? sizeColumns.slice(baseIndex + 1) : [];
-    const existingZones = normalizeGradingZones(row.gradingZones || [], sizeColumns);
-    if (existingZones.length > 0) {
-      setGradingDraftZones(existingZones.map((z: any) => ({
-        ...z,
-        frontSizes: (z.frontSizes || []).length > 0 ? z.frontSizes : defaultFrontSizes,
-        backSizes: (z.backSizes || []).length > 0 ? z.backSizes : defaultBackSizes,
-        partKeys: [row.key],
-      })));
-    } else {
-      setGradingDraftZones([createGradingZone([], '1', [row.key], defaultFrontSizes, defaultBackSizes)]);
-    }
+    setGradingDraftBaseSize(row.baseSize || '');
+    setGradingDraftZones(buildGradingDraftZones(row, sizeColumns));
     setGradingConfigOpen(true);
   }, [sizeColumns, setGradingTargetRowKey, setGradingDraftBaseSize, setGradingDraftZones, setGradingConfigOpen]);
 
@@ -177,12 +131,8 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
     if (selectedRowKeys.length === 0) { message.warning('请先选择要配置的部位'); return; }
     setGradingTargetRowKey('batch');
     const firstSelectedRow = rows.find((r) => selectedRowKeys.includes(r.key));
-    const baseSize = firstSelectedRow?.baseSize || '';
-    setGradingDraftBaseSize(baseSize);
-    const baseIndex = baseSize ? sizeColumns.indexOf(baseSize) : -1;
-    const frontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
-    const backSizes = baseIndex >= 0 && baseIndex < sizeColumns.length - 1 ? sizeColumns.slice(baseIndex + 1) : [];
-    setGradingDraftZones([createGradingZone([], '1', selectedRowKeys.map(String), frontSizes, backSizes)]);
+    setGradingDraftBaseSize(firstSelectedRow?.baseSize || '');
+    setGradingDraftZones(buildBatchGradingDraftZones(selectedRowKeys, rows, sizeColumns));
     setGradingConfigOpen(true);
   }, [rows, selectedRowKeys, sizeColumns, message, setGradingTargetRowKey, setGradingDraftBaseSize, setGradingDraftZones, setGradingConfigOpen]);
 
@@ -193,31 +143,12 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
       message.error('请先选择样版码');
       return;
     }
-    if (targetKey === 'batch') {
-      setRows((prev) => prev.map((row) => {
-        const matchingZones = gradingDraftZones.filter((zone: any) => (zone.partKeys || []).includes(row.key));
-        if (matchingZones.length === 0) return row;
-        return applyGradingToRow({
-          ...row, baseSize: gradingDraftBaseSize,
-          gradingZones: matchingZones.map((z: any) => ({
-            key: z.key, label: z.label, sizes: z.sizes || [], step: z.step || 0,
-            frontSizes: z.frontSizes || [], frontStep: z.frontStep || 0,
-            backSizes: z.backSizes || [], backStep: z.backStep || 0,
-            sizeStepColumns: z.sizeStepColumns || [],
-          })),
-        });
-      }));
-      setSelectedRowKeys([]);
-    } else {
-      setRows((prev) => prev.map((row) => (
-        row.key === targetKey
-          ? applyGradingToRow({ ...row, baseSize: gradingDraftBaseSize, gradingZones: normalizeGradingZones(gradingDraftZones, sizeColumns) })
-          : row
-      )));
-    }
+    const result = applyGradingDraftToRows(rows, targetKey, gradingDraftBaseSize, gradingDraftZones, sizeColumns);
+    setRows(result.rows);
+    if (result.clearSelection) setSelectedRowKeys([]);
     setGradingConfigOpen(false);
     setGradingTargetRowKey('');
-  }, [gradingTargetRowKey, gradingDraftBaseSize, gradingDraftZones, sizeColumns, applyGradingToRow, message, setRows, setSelectedRowKeys, setGradingConfigOpen, setGradingTargetRowKey]);
+  }, [gradingTargetRowKey, gradingDraftBaseSize, gradingDraftZones, sizeColumns, rows, message, setRows, setSelectedRowKeys, setGradingConfigOpen, setGradingTargetRowKey]);
 
   const updateCellValue = useCallback((rowKey: string, sizeName: string, value: number) => {
     setRows((prev) => prev.map((r) =>
@@ -226,28 +157,14 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
   }, [setRows]);
 
   const setChunkImageUrls = useCallback((chunkRowKeys: string[], nextImages: string[]) => {
-    const ownerRowKey = String(chunkRowKeys[0] || '');
-    const rowKeySet = new Set(chunkRowKeys);
-    const sanitized = nextImages.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 2);
-    setRows((prev) => prev.map((row) => {
-      if (!rowKeySet.has(row.key)) return row;
-      return { ...row, imageUrls: String(row.key) === ownerRowKey && sanitized.length ? sanitized : undefined };
-    }));
+    setRows((prev) => setChunkImageUrlsForRows(prev, chunkRowKeys, nextImages));
   }, [setRows]);
 
   const handleAddPartInGroup = useCallback((groupName: string) => {
     if (readOnly) return;
     const key = `tmp-part-${Date.now()}-${Math.random()}`;
-    const cells: Record<string, MatrixCell> = {};
-    sizeColumns.forEach((sn) => { cells[sn] = { value: 0 }; });
-    setRows((prev) => {
-      const groupRowIndices: number[] = [];
-      prev.forEach((r, i) => { if (resolveGroupName(r.groupName, r.partName) === groupName) groupRowIndices.push(i); });
-      const insertAt = groupRowIndices.length ? groupRowIndices[groupRowIndices.length - 1] + 1 : prev.length;
-      const next = [...prev];
-      next.splice(insertAt, 0, { key, groupName, partName: '', measureMethod: '', baseSize: '', gradingZones: [], tolerance: '', sort: 0, cells });
-      return normalizeRowSorts(next);
-    });
+    const newRow = createNewPartRow(groupName, sizeColumns, key);
+    setRows((prev) => insertPartInGroup(prev, groupName, newRow));
     if (!editMode) enterEdit();
   }, [readOnly, sizeColumns, editMode, enterEdit, setRows]);
 
@@ -256,38 +173,21 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
     const groupName = String(newGroupName || '').trim();
     if (!groupName) { message.error('请输入分组名称'); return; }
     const key = `tmp-group-${Date.now()}-${Math.random()}`;
-    const cells: Record<string, MatrixCell> = {};
-    sizeColumns.forEach((sn) => { cells[sn] = { value: 0 }; });
-    setRows((prev) => normalizeRowSorts([...prev, {
-      key, groupName, partName: '', measureMethod: '', baseSize: '', gradingZones: [], tolerance: '',
-      sort: prev.length ? Math.max(...prev.map((r) => toNumberSafe(r.sort))) + 1 : 1, cells,
-    }]));
+    const maxSort = rows.length ? Math.max(...rows.map((r) => Number(r.sort || 0))) + 1 : 1;
+    const newRow = createNewGroupRow(groupName, sizeColumns, key, maxSort);
+    setRows((prev) => normalizeRowSorts([...prev, newRow]));
     setNewGroupName('');
     if (!editMode) enterEdit();
-  }, [readOnly, newGroupName, sizeColumns, editMode, enterEdit, message, setRows, setNewGroupName]);
+  }, [readOnly, newGroupName, sizeColumns, rows, editMode, enterEdit, message, setRows, setNewGroupName]);
 
   const confirmAddSize = useCallback(() => {
     if (readOnly) return;
     const raw = String(newSizeName || '').trim();
-    if (!raw) { message.error('请输入尺码'); return; }
-    const parts = raw.split(/[\n,，、;；]+/g).map((x) => String(x || '').trim()).filter(Boolean);
-    if (!parts.length) { message.error('请输入尺码'); return; }
-    const nextToAdd: string[] = [];
-    const seen = new Set<string>();
-    for (const p of parts) {
-      if (sizeColumns.includes(p)) { message.error(`尺码已存在：${p}`); return; }
-      if (seen.has(p)) continue;
-      seen.add(p);
-      nextToAdd.push(p);
-    }
-    if (!nextToAdd.length) { message.error('请输入尺码'); return; }
-    const merged = sortSizeNames([...sizeColumns, ...nextToAdd]);
+    const result = parseAndValidateSizeNames(raw, sizeColumns);
+    if (result.error) { message.error(result.error); return; }
+    const merged = sortSizeNames([...sizeColumns, ...result.sizes]);
     setSizeColumns(merged);
-    setRows((prev) => prev.map((r) => {
-      const nextCells = { ...r.cells };
-      nextToAdd.forEach((sn) => { nextCells[sn] = { value: 0 }; });
-      return { ...r, baseSize: merged.includes(r.baseSize) ? r.baseSize : '', gradingZones: normalizeGradingZones(r.gradingZones || [], merged), cells: nextCells };
-    }));
+    setRows((prev) => addSizeColumnsToRows(prev, result.sizes, merged));
     setAddSizeOpen(false);
     setNewSizeName('');
     if (!editMode) enterEdit();
@@ -315,77 +215,44 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
 
   const handleDeletePart = useCallback((row: MatrixRow) => {
     if (readOnly) return;
-    const ids = Object.values(row.cells).map((c) => c.id).filter((id): id is string | number => id != null && String(id).trim() !== '');
+    const ids = collectIdsFromDeletedRow(row);
     setDeletedIds((prev) => [...prev, ...ids]);
     setRows((prev) => prev.filter((r) => r.key !== row.key));
   }, [readOnly, setDeletedIds, setRows]);
 
   const handleDeleteSize = useCallback((sizeName: string) => {
     if (readOnly) return;
-    const ids: Array<string | number> = [];
-    rows.forEach((r) => { const id = r.cells[sizeName]?.id; if (id != null && String(id).trim() !== '') ids.push(id); });
+    const ids = collectIdsFromDeletedSize(rows, sizeName);
     setDeletedIds((prev) => [...prev, ...ids]);
+    const remainingSizes = sizeColumns.filter((s) => s !== sizeName);
     setSizeColumns((prev) => prev.filter((s) => s !== sizeName));
-    setRows((prev) => prev.map((r) => {
-      const nextCells = { ...r.cells };
-      delete nextCells[sizeName];
-      const nextSizes = sizeColumns.filter((s) => s !== sizeName);
-      return { ...r, baseSize: nextSizes.includes(r.baseSize) ? r.baseSize : '', gradingZones: normalizeGradingZones(r.gradingZones || [], nextSizes), cells: nextCells };
-    }));
+    setRows((prev) => deleteSizeColumnFromRows(prev, sizeName, remainingSizes));
   }, [readOnly, rows, sizeColumns, setDeletedIds, setSizeColumns, setRows]);
 
   const saveAll = useCallback(async () => {
     if (readOnly) return;
-    const normalizedRows = normalizeChunkImageAssignments(rows);
-    const invalid = normalizedRows.some((r) => !String(r.partName || '').trim());
-    if (invalid) { message.error('请先填写部位'); return; }
-    if (!sizeColumns.length) { message.error('请先添加尺码'); return; }
-    const originals = originalRef.current;
-    const originalById = new Map<string, StyleSize>();
-    originals.forEach((o) => { if (o.id != null) originalById.set(String(o.id), o); });
-    const obsoleteOriginalIds = originals
-      .filter((item) => item.id != null && !sizeColumns.includes(String(item.sizeName || '').trim()))
-      .map((item) => String(item.id));
+    const taskInput = {
+      rows, sizeColumns, deletedIds,
+      originals: originalRef.current,
+      combinedSizeIds: combinedSizeIdsRef.current || [],
+      styleId,
+    };
+    const { deleteIds, updateTasks, hasInvalid, normalizedRows } = buildSaveTasks(taskInput);
+    if (hasInvalid) {
+      if (normalizedRows.some((r) => !String(r.partName || '').trim())) {
+        message.error('请先填写部位');
+      } else {
+        message.error('请先添加尺码');
+      }
+      return;
+    }
     setSaving(true);
     try {
-      const combinedIds = combinedSizeIdsRef.current || [];
-      const deleteTasks = Array.from(new Set([...deletedIds.map((x) => String(x)), ...combinedIds.map((x) => String(x)), ...obsoleteOriginalIds].filter(Boolean)))
-        .map((id) => api.delete(`/style/size/${id}`));
+      const deleteTasks = deleteIds.map((id) => api.delete(`/style/size/${id}`));
       if (deleteTasks.length) await Promise.all(deleteTasks);
-      const tasks: Array<Promise<any>> = [];
-      normalizedRows.forEach((r) => {
-        const groupName = resolveGroupName(r.groupName, r.partName);
-        const imageUrlsJson = r.imageUrls && r.imageUrls.length > 0 ? JSON.stringify(r.imageUrls.slice(0, 2)) : null;
-        const gradingRule = serializeGradingRule(r, sizeColumns);
-        sizeColumns.forEach((sn) => {
-          const cell = r.cells[sn];
-          const id = cell?.id;
-          const payload: any = {
-            id: id != null ? id : undefined, styleId, sizeName: sn, partName: r.partName,
-            groupName, measureMethod: r.measureMethod, baseSize: r.baseSize || '',
-            standardValue: toNumberSafe(cell?.value), tolerance: r.tolerance,
-            sort: toNumberSafe(r.sort), imageUrls: imageUrlsJson, gradingRule,
-          };
-          if (id != null && String(id).trim() !== '') {
-            const old = originalById.get(String(id));
-            const changed = !old ||
-              String(old.sizeName || '').trim() !== sn ||
-              String(old.partName || '').trim() !== String(r.partName || '').trim() ||
-              String((old as Record<string, unknown>).groupName || '').trim() !== String(payload.groupName || '').trim() ||
-              String((old as Record<string, unknown>).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
-              String((old as Record<string, unknown>).baseSize || '').trim() !== String(payload.baseSize || '').trim() ||
-              toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
-              String(old.tolerance ?? '') !== String(payload.tolerance ?? '') ||
-              toNumberSafe((old as Record<string, unknown>).sort) !== toNumberSafe(payload.sort) ||
-              String((old as Record<string, unknown>).imageUrls || '') !== String(payload.imageUrls || '') ||
-              String((old as Record<string, unknown>).gradingRule || '') !== String(payload.gradingRule || '');
-            if (changed) tasks.push(api.put('/style/size', payload));
-          } else {
-            const createPayload = { ...payload }; delete createPayload.id;
-            tasks.push(api.post('/style/size', createPayload));
-          }
-        });
-      });
+      const tasks = updateTasks.map(({ payload, isNew }) =>
+        isNew ? api.post('/style/size', payload) : api.put('/style/size', payload)
+      );
       if (tasks.length) {
         const results = await Promise.all(tasks);
         const bad = results.find((r: Record<string, unknown>) => (r as any)?.code !== 200);

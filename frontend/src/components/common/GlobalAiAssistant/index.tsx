@@ -3,9 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { App } from 'antd';
 import { useUser, useAuthState } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
-import msgStyles from './MessageBubble.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
 import { getPageSuggestions } from './constants';
 import { computePanelStyle } from './helpers';
@@ -19,17 +17,17 @@ import { useAdviceListener } from './useAdviceListener';
 import { useTaskPanel } from './useTaskPanel';
 import { usePanelActions } from './usePanelActions';
 import { useTriggerDrag } from './useTriggerDrag';
-import MessageBubble from './MessageBubble';
 import SmartBubble from './SmartBubble';
-import XiaoyunLiveStatus from './XiaoyunLiveStatus';
 import TaskAggregationPanel from './TaskAggregationPanel';
-import PendingItemsSection from './PendingItemsSection';
 import TaskListView from './TaskListView';
 import TaskFormModal from './TaskFormModal';
 import PanelHeader from './PanelHeader';
 import ChatInputArea from './ChatInputArea';
 import FloatingTrigger from './FloatingTrigger';
 import SampleLoanModal from './SampleLoanModal';
+import PanelSidebar from './PanelSidebar';
+import TaskAuxPanel from './TaskAuxPanel';
+import ChatMessageList from './ChatMessageList';
 
 const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
@@ -230,83 +228,41 @@ const GlobalAiAssistant: React.FC = () => {
 
           {/* Body: Sidebar + Main + Aux */}
           <div className={styles.panelBody}>
-            {showSidebar && (
-              <div className={styles.sidebar}>
-                <button className={`${styles.sidebarItem} ${panelView === 'chat' ? styles.sidebarItemActive : ''}`} onClick={switchToChat} title="对话">
-                  💬 <span className={styles.sidebarLabel}>对话</span>
-                </button>
-                <button className={`${styles.sidebarItem} ${panelView === 'tasks' ? styles.sidebarItemActive : ''}`} onClick={switchToTasks} title="任务">
-                  📋 <span className={styles.sidebarLabel}>任务</span>
-                  {taskStats.pending > 0 && <span className={styles.sidebarBadge}>{taskStats.pending}</span>}
-                </button>
-              </div>
-            )}
-
-            {!showSidebar && (
-              <div className={styles.bottomNav}>
-                <button className={`${styles.bottomNavItem} ${panelView === 'chat' ? styles.bottomNavItemActive : ''}`} onClick={switchToChat}>💬</button>
-                <button className={`${styles.bottomNavItem} ${panelView === 'tasks' ? styles.bottomNavItemActive : ''}`} onClick={switchToTasks}>
-                  📋{taskStats.pending > 0 && <span className={styles.bottomNavBadge}>{taskStats.pending}</span>}
-                </button>
-              </div>
-            )}
+            <PanelSidebar
+              showSidebar={showSidebar}
+              panelView={panelView}
+              switchToChat={switchToChat}
+              switchToTasks={switchToTasks}
+              taskStats={taskStats}
+            />
 
             <div className={styles.mainContent}>
               {panelView === 'chat' && (
                 <>
-                  <div className={styles.chatArea} ref={chatAreaRef}>
-                    <XiaoyunLiveStatus
-                      mood={liveStatus.mood}
-                      step={liveStatus.step}
-                      toolExecuting={liveStatus.toolExecuting}
-                      elapsedMs={liveStatus.elapsedMs}
-                      visible={liveStatus.visible}
-                    />
-                    {messages.length === 1 && (
-                      <PendingItemsSection
-                        items={visiblePendingItems}
-                        onDismiss={dismissPendingItem}
-                        onNavigate={onSafeNavigate}
-                        onOpenTaskList={switchToTasks}
-                      />
-                    )}
-                    {messages.length <= 1 && (
-                      <div className={msgStyles.quickHint}>直接自然语言输入就可以，下面只是常用示例</div>
-                    )}
-                    <div className={msgStyles.suggestionChips}>
-                      {pageSuggestions.map(q => (
-                        <div key={q} className={msgStyles.chip} onClick={() => sendWithContext(q)}>{q}</div>
-                      ))}
-                    </div>
-                    {messages.map(msg => (
-                      <MessageBubble
-                        key={msg.id} msg={msg} downloadingType={downloadingType}
-                        onSend={handleSend} onDownloadReport={handleDownloadReport}
-                        onActualDownload={handleActualDownload} onShowAgentTrace={handleShowAgentTrace}
-                        onShowRecentTraces={handleShowRecentTraces} onOpenTraceCenter={openTraceCenter}
-                        onFeedback={handleAdvisorFeedback} onJumpToIntelligence={jumpToIntelligenceCenter}
-                        onSafeNavigate={onSafeNavigate} onSpeak={speak}
-                        onPurchaseDocAction={(msgId, mode, card) => onPurchaseDocAction(msgId, mode, card)}
-                        onActionCardAction={(card, actionType, path, orderId) => handleActionCardAction(card, actionType, path, orderId)}
-                        onWizardSubmit={(_msgId, command, params) => {
-                          let p = command;
-                          Object.entries(params).forEach(([_k, v]) => {
-                            if (Array.isArray(v)) p += ' ' + v.join(',');
-                            else if (v !== undefined && v !== null && v !== '') p += ' ' + v;
-                          });
-                          handleSend(p);
-                        }}
-                      />
-                    ))}
-                    {isTyping && (
-                      <div className={`${msgStyles.messageRow} ${msgStyles.rowAi}`}>
-                        <div className={msgStyles.messageAvatar}><XiaoyunCloudAvatar size={28} active loading /></div>
-                        <div className={`${msgStyles.messageBubble} ${msgStyles.bubbleAi}`}>
-                          <div className={msgStyles.typingText}>小云正在处理，请稍等一下…</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <ChatMessageList
+                    chatAreaRef={chatAreaRef}
+                    liveStatus={liveStatus}
+                    messages={messages}
+                    visiblePendingItems={visiblePendingItems}
+                    pageSuggestions={pageSuggestions}
+                    isTyping={isTyping}
+                    downloadingType={downloadingType}
+                    dismissPendingItem={dismissPendingItem}
+                    onSafeNavigate={onSafeNavigate}
+                    switchToTasks={switchToTasks}
+                    sendWithContext={sendWithContext}
+                    handleSend={handleSend}
+                    handleDownloadReport={handleDownloadReport}
+                    handleActualDownload={handleActualDownload}
+                    handleShowAgentTrace={handleShowAgentTrace}
+                    handleShowRecentTraces={handleShowRecentTraces}
+                    openTraceCenter={openTraceCenter}
+                    handleAdvisorFeedback={handleAdvisorFeedback}
+                    jumpToIntelligenceCenter={jumpToIntelligenceCenter}
+                    speak={speak}
+                    onPurchaseDocAction={onPurchaseDocAction}
+                    handleActionCardAction={handleActionCardAction}
+                  />
 
                   <ChatInputArea
                     fileInputRef={fileInputRef}
@@ -356,18 +312,7 @@ const GlobalAiAssistant: React.FC = () => {
             </div>
 
             {showAuxPanel && (
-              <div className={styles.auxPanel}>
-                <div className={styles.auxSectionTitle}>任务统计</div>
-                <div className={styles.auxStatItem}><span>全部</span><span className={styles.auxStatValue}>{taskStats.total}</span></div>
-                <div className={styles.auxStatItem}><span>待处理</span><span className={styles.auxStatValue}>{taskStats.pending}</span></div>
-                <div className={styles.auxStatItem}><span>进行中</span><span className={styles.auxStatValue}>{taskStats.inProgress}</span></div>
-                <div className={styles.auxStatItem}><span>已完成</span><span className={styles.auxStatValue}>{taskStats.completed}</span></div>
-                <div className={styles.auxStatItem}><span>紧急</span><span className={styles.auxStatValue} style={{ color: 'var(--color-error)' }}>{taskStats.highPriority}</span></div>
-                <div className={styles.auxSectionTitle} style={{ marginTop: 20 }}>快捷操作</div>
-                <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} style={{ width: '100%', marginTop: 8 }} onClick={handleTaskCreate}>
-                  + 新建任务
-                </button>
-              </div>
+              <TaskAuxPanel taskStats={taskStats} handleTaskCreate={handleTaskCreate} />
             )}
           </div>
         </div>

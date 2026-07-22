@@ -8,7 +8,9 @@ import type { HyperAdvisorResponse } from '@/services/intelligence/intelligenceA
 import api from '@/utils/api';
 import type { Message, FollowUpAction } from './types';
 import { parseAiResponse } from './types';
-import { describeToolName } from './helpers';
+import { describeToolName, needsRiskAnalysis, needsOverdueFactory, isAuthError } from './helpers';
+import { upsertMessage, buildMessageData } from './utils';
+import type { BuildMessageDataOptions } from './utils';
 
 const SSE_INACTIVITY_TIMEOUT_MS = 30_000;
 
@@ -59,21 +61,15 @@ export function useAiChatStream(config: StreamConfig) {
   }, []);
 
   const safeSetMessages = useCallback((updater: (prev: Message[]) => Message[]) => {
-    if (mountedRef.current) {
-      config.setMessages(updater);
-    }
+    if (mountedRef.current) config.setMessages(updater);
   }, [config]);
 
   const safeSetIsTyping = useCallback((value: boolean) => {
-    if (mountedRef.current) {
-      config.setIsTyping(value);
-    }
+    if (mountedRef.current) config.setIsTyping(value);
   }, [config]);
 
   const safeUpdateLiveStatus = useCallback((status: LiveStatus) => {
-    if (mountedRef.current) {
-      config.onLiveStatusChange(status);
-    }
+    if (mountedRef.current) config.onLiveStatusChange(status);
   }, [config]);
 
   const abort = useCallback(() => {
@@ -85,19 +81,31 @@ export function useAiChatStream(config: StreamConfig) {
     safeUpdateLiveStatus({ visible: false });
   }, [clearAllTimers, safeUpdateLiveStatus]);
 
+  const setTextMessage = useCallback((msgId: string, text: string) => {
+    safeSetMessages((prev) =>
+      upsertMessage(prev, msgId, (existing) =>
+        existing ? { ...existing, text } : { id: msgId, role: 'ai', text },
+      ),
+    );
+  }, [safeSetMessages]);
+
+  const setFullMessage = useCallback((msgId: string, data: ReturnType<typeof buildMessageData>) => {
+    safeSetMessages((prev) =>
+      upsertMessage(prev, msgId, (existing) =>
+        existing ? { ...existing, ...data } : { id: msgId, role: 'ai', ...data },
+      ),
+    );
+  }, [safeSetMessages]);
+
   const startStream = useCallback((
     contextualText: string,
     text: string,
     reportTypeToDownload?: 'daily' | 'weekly' | 'monthly',
     imageUrl?: string,
   ) => {
-    if (streamAbortRef.current) {
-      streamAbortRef.current.abort();
-      streamAbortRef.current = null;
-    }
-    if (subRequestAbortRef.current) {
-      subRequestAbortRef.current.abort();
-    }
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    subRequestAbortRef.current?.abort();
     subRequestAbortRef.current = new AbortController();
 
     const currentSeq = ++requestSeqRef.current;
@@ -117,17 +125,24 @@ export function useAiChatStream(config: StreamConfig) {
     };
     updateLiveStatus({ mood: 'thinking', visible: true, step: undefined, toolExecuting: undefined, elapsedMs: undefined });
 
+    const finishTyping = () => {
+      if (requestSeqRef.current !== currentSeq) return;
+      safeSetIsTyping(false);
+    };
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = scheduleTimer(() => {
+        if (requestSeqRef.current === currentSeq && !answerReceived && !completed) {
+          setTextMessage(aiMsgId, accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔');
+        }
+        finishTyping();
+      }, SSE_INACTIVITY_TIMEOUT_MS);
+    };
+
     const unifiedHandler = createXiaoyunHandler({
-      onStepProgress: (e) => updateLiveStatus({
-        mood: 'calculating',
-        step: { step: e.step, total: e.total, phase: e.phase, message: e.message },
-        elapsedMs: e.elapsedMs,
-      }),
-      onToolExecuting: (e) => updateLiveStatus({
-        mood: 'searching',
-        toolExecuting: { tool: e.tool, icon: e.icon, message: e.message, parallel: e.parallel },
-        elapsedMs: e.elapsedMs,
-      }),
+      onStepProgress: (e) => updateLiveStatus({ mood: 'calculating', step: { step: e.step, total: e.total, phase: e.phase, message: e.message }, elapsedMs: e.elapsedMs }),
+      onToolExecuting: (e) => updateLiveStatus({ mood: 'searching', toolExecuting: { tool: e.tool, icon: e.icon, message: e.message, parallel: e.parallel }, elapsedMs: e.elapsedMs }),
       onXiaoyunMood: (e) => updateLiveStatus({ mood: e.mood }),
       onTimeBudget: (e) => updateLiveStatus({ elapsedMs: e.elapsedMs }),
       onProgress: (e) => updateLiveStatus({ progress: { percent: e.percent, message: e.message } }),
@@ -142,40 +157,16 @@ export function useAiChatStream(config: StreamConfig) {
       onDone: () => {},
     });
 
-    const finishTyping = () => {
-      if (requestSeqRef.current !== currentSeq) return;
-      safeSetIsTyping(false);
-    };
-
-    const resetInactivityTimer = () => {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      inactivityTimer = scheduleTimer(() => {
-        if (requestSeqRef.current === currentSeq) {
-          if (!answerReceived && !completed) {
-            safeSetMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              const errText = accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔';
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-            });
-          }
-          finishTyping();
-        }
-      }, SSE_INACTIVITY_TIMEOUT_MS);
-    };
-
     const fireRiskAnalysis = () => {
-      const needsRiskAnalysis = /风险|延期|逾期|交期|超期|risk|overdue|delay|模拟|推演|what.?if|预测|forecast/i.test(text);
-      if (!needsRiskAnalysis) return;
-
+      if (!needsRiskAnalysis(text)) return;
       const signal = subRequestAbortRef.current?.signal;
       intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText)
-        .then(resp => {
+        .then((resp) => {
           if (signal?.aborted) return;
           const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
             ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
           if (!ha) return;
-          safeSetMessages(prev => prev.map(m => m.id === aiMsgId ? {
+          safeSetMessages((prev) => prev.map((m) => m.id === aiMsgId ? {
             ...m, riskIndicators: ha.riskIndicators, simulation: ha.simulation,
             needsClarification: ha.needsClarification, traceId: ha.traceId,
             advisorSessionId: ha.sessionId, userQuery: text,
@@ -185,61 +176,55 @@ export function useAiChatStream(config: StreamConfig) {
     };
 
     const fireOverdueFactory = () => {
-      if (!/逾期|延期|超期|overdue/i.test(accumulatedText)) return;
-
+      if (!needsOverdueFactory(accumulatedText)) return;
       const signal = subRequestAbortRef.current?.signal;
       api.get('/dashboard/overdue-factory-stats')
-        .then(res => {
+        .then((res) => {
           if (signal?.aborted) return;
           const d = (res as any)?.data ?? res;
           if (d && d.factoryGroups?.length) {
-            safeSetMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, overdueFactoryCard: d } : m));
+            safeSetMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, overdueFactoryCard: d } : m));
           }
         })
         .catch(() => {});
     };
 
+    const fetchAndSetAnswer = async (fallbackText: string, extraOpts: BuildMessageDataOptions = {}) => {
+      const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
+      const rawAnswer = payload?.answer || fallbackText;
+      const displayAnswer = payload?.displayAnswer || rawAnswer;
+      const parsed = parseAiResponse(rawAnswer);
+      const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
+      const data = buildMessageData(displayAnswer, parsed, {
+        intent: payload?.source,
+        cardsOverride: payload?.cards,
+        commandId: payload?.commandId,
+        followUpActions,
+        ...extraOpts,
+      });
+      setFullMessage(aiMsgId, data);
+      return displayAnswer;
+    };
+
     const runRetryLoop = async () => {
-      let retryCount = 0;
       const maxRetries = 2;
       const retryDelay = [2000, 4000];
       const signal = subRequestAbortRef.current?.signal;
-
-      while (retryCount < maxRetries) {
+      for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
         if (signal?.aborted) return;
         try {
-          await new Promise(r => setTimeout(r, retryDelay[retryCount]));
+          await new Promise((r) => setTimeout(r, retryDelay[retryCount]));
           if (signal?.aborted) return;
-          retryCount++;
-
-          const retryPayload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
-          const retryAnswer = retryPayload?.answer || '';
-          if (retryAnswer) {
-            const retryDisplay = retryPayload?.displayAnswer || retryAnswer;
-            const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc, overdueFactoryCard: ofc, reportPreview: rp, reportType: rpt } = parseAiResponse(retryAnswer);
-            const retryCards = retryPayload?.cards || [];
-            const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
-            safeSetMessages(prev => prev.map(m => m.id === aiMsgId ? {
-              ...m, text: retryDisplay || dt, intent: retryPayload?.source,
-              charts: ch, cards: retryCards.length ? retryCards : pc,
-              actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
-              stepWizardCards: swc, overdueFactoryCard: ofc,
-              reportPreview: rp, reportType: rpt,
-              agentCommandId: retryPayload?.commandId, followUpActions: retryFollowUp,
-            } : m));
-            speak(retryDisplay || dt);
+          const display = await fetchAndSetAnswer('');
+          if (display) {
+            speak(display);
             return;
           }
         } catch (_retryErr) {
           console.error('[useAiChatStream] 重试AI回答失败:', _retryErr);
         }
       }
-      safeSetMessages(prev => {
-        const existing = prev.find(m => m.id === aiMsgId);
-        const errText = '当前连不到数据服务，请稍后再试。';
-        if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-        return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-      });
+      setTextMessage(aiMsgId, '当前连不到数据服务，请稍后再试。');
     };
 
     const onDone = () => {
@@ -247,14 +232,7 @@ export function useAiChatStream(config: StreamConfig) {
       completed = true;
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       if (!answerReceived) {
-        if (!accumulatedText) {
-          safeSetMessages(prev => {
-            const existing = prev.find(m => m.id === aiMsgId);
-            const errText = '小云未返回有效回答，请重试或换个问法 🤔';
-            if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-            return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-          });
-        }
+        if (!accumulatedText) setTextMessage(aiMsgId, '小云未返回有效回答，请重试或换个问法 🤔');
         finishTyping();
       }
       safeUpdateLiveStatus({ ...currentLiveStatus, mood: 'done' });
@@ -269,49 +247,18 @@ export function useAiChatStream(config: StreamConfig) {
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       updateLiveStatus({ mood: 'warning' });
 
-      const isAuthError = typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
-      if (isAuthError) {
-        safeSetMessages(prev => {
-          const existing = prev.find(m => m.id === aiMsgId);
-          const errText = '登录已过期，请重新登录';
-          if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-          return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-        });
+      if (isAuthError(err)) {
+        setTextMessage(aiMsgId, '登录已过期，请重新登录');
         finishTyping();
         return;
       }
       if (streamStarted) {
-        safeSetMessages(prev => {
-          const existing = prev.find(m => m.id === aiMsgId);
-          const errText = accumulatedText || '网络中断，请重试 🌧️';
-          if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-          return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-        });
+        setTextMessage(aiMsgId, accumulatedText || '网络中断，请重试 🌧️');
         finishTyping();
         return;
       }
       try {
-        const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
-        const rawAnswer = payload?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
-        const displayAnswer = payload?.displayAnswer || rawAnswer;
-        const commandId = payload?.commandId;
-        const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards, overdueFactoryCard: parsedOverdueCard, reportPreview: parsedReportPreview, reportType: parsedReportType } = parseAiResponse(rawAnswer);
-        const cards = payload?.cards || [];
-        const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
-        safeSetMessages(prev => {
-          const existing = prev.find(m => m.id === aiMsgId);
-          const msgData = {
-            text: displayAnswer || displayText, intent: payload?.source,
-            reportType: reportTypeToDownload || parsedReportType, reportPreview: parsedReportPreview, charts,
-            cards: cards.length ? cards : parsedCards,
-            actionCards, quickActions, teamStatusCards, bundleSplitCards,
-            stepWizardCards: parsedStepWizardCards,
-            overdueFactoryCard: parsedOverdueCard,
-            agentCommandId: commandId, followUpActions,
-          };
-          if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
-          return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
-        });
+        await fetchAndSetAnswer('当前还没拿到有效分析结果，请换个问法或稍后重试。', { reportTypeToDownload });
         finishTyping();
         return;
       } catch (_syncErr) {
@@ -324,115 +271,78 @@ export function useAiChatStream(config: StreamConfig) {
       }
     };
 
+    const handleStreamEvent = (event: any) => {
+      streamStarted = true;
+      resetInactivityTimer();
+      try { unifiedHandler(event.type, JSON.stringify(event.data)); } catch (e) { console.error('[useAiChatStream] unifiedHandler处理失败:', e); }
+
+      switch (event.type) {
+        case 'thinking':
+          setTextMessage(aiMsgId, '小云正在整理思路，准备给你结论…');
+          break;
+        case 'tool_call':
+          setTextMessage(aiMsgId, `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`);
+          break;
+        case 'tool_result':
+          setTextMessage(aiMsgId, event.data.success
+            ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
+            : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`);
+          break;
+        case 'progress': {
+          const msg = event.data.message || '';
+          const pct = event.data.percent || 0;
+          if (msg) setTextMessage(aiMsgId, `小云正在分析（${pct}%）— ${msg}`);
+          break;
+        }
+        case 'answer_chunk': {
+          const chunk = String(event.data.chunk || '');
+          if (chunk) {
+            accumulatedText += chunk;
+            setTextMessage(aiMsgId, accumulatedText);
+          }
+          break;
+        }
+        case 'answer': {
+          const rawContent = String(event.data.content || '');
+          const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
+          const parsed = parseAiResponse(rawContent);
+          let displayText = parsed.displayText || '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
+          accumulatedText = displayText;
+          setFullMessage(aiMsgId, buildMessageData(displayText, parsed, { commandId, reportTypeToDownload }));
+          if (!answerReceived) {
+            answerReceived = true;
+            if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
+            finishTyping();
+          }
+          break;
+        }
+        case 'follow_up_actions': {
+          const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
+          if (actions.length) {
+            safeSetMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, followUpActions: actions } : m));
+          }
+          break;
+        }
+        case 'error':
+          accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
+          setTextMessage(aiMsgId, accumulatedText);
+          break;
+      }
+    };
+
     try {
       const pageContext = location.pathname + location.search;
       resetInactivityTimer();
-
       const ctrl = intelligenceApi.aiAdvisorChatStream(
-        contextualText,
-        pageContext,
-        (event) => {
-          streamStarted = true;
-          resetInactivityTimer();
-          try { unifiedHandler(event.type, JSON.stringify(event.data)); } catch (e) { console.error('[useAiChatStream] unifiedHandler处理失败:', e); }
-          if (event.type === 'thinking') {
-            const toolStatus = '小云正在整理思路，准备给你结论…';
-            safeSetMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
-            });
-          } else if (event.type === 'tool_call') {
-            const toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`;
-            safeSetMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
-            });
-          } else if (event.type === 'tool_result') {
-            const toolStatus = event.data.success
-              ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
-              : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`;
-            safeSetMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
-            });
-          } else if (event.type === 'progress') {
-            const progressMsg = event.data.message || '';
-            const progressPercent = event.data.percent || 0;
-            if (progressMsg) {
-              safeSetMessages(prev => {
-                const existing = prev.find(m => m.id === aiMsgId);
-                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: `小云正在分析（${progressPercent}%）— ${progressMsg}` } : m);
-                return [...prev, { id: aiMsgId, role: 'ai' as const, text: `小云正在分析（${progressPercent}%）— ${progressMsg}` }];
-              });
-            }
-          } else if (event.type === 'answer_chunk') {
-            const chunk = String(event.data.chunk || '');
-            if (chunk) {
-              accumulatedText += chunk;
-              safeSetMessages(prev => {
-                const existing = prev.find(m => m.id === aiMsgId);
-                const currentText = accumulatedText;
-                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: currentText } : m);
-                return [...prev, { id: aiMsgId, role: 'ai' as const, text: currentText }];
-              });
-            }
-          } else if (event.type === 'answer') {
-            const rawContent = String(event.data.content || '');
-            const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            let { displayText, charts: _charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, reportPreview, reportType: parsedReportType } = parseAiResponse(rawContent);
-            if (!displayText || !displayText.trim()) {
-              displayText = '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
-            }
-            accumulatedText = displayText;
-            safeSetMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              const msgData = {
-                text: accumulatedText,
-                reportType: reportTypeToDownload || parsedReportType,
-                reportPreview,
-                charts: _charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard,
-                agentCommandId: commandId,
-              };
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
-            });
-            if (!answerReceived) {
-              answerReceived = true;
-              if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
-              finishTyping();
-            }
-          } else if (event.type === 'follow_up_actions') {
-            const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
-            if (actions.length) {
-              safeSetMessages(prev => {
-                const existing = prev.find(m => m.id === aiMsgId);
-                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, followUpActions: actions } : m);
-                return [...prev, { id: aiMsgId, role: 'ai' as const, text: '', followUpActions: actions }];
-              });
-            }
-          } else if (event.type === 'error') {
-            accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
-            safeSetMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: accumulatedText }];
-            });
-          }
-        },
-        onDone,
-        onError,
-        imageUrl,
+        contextualText, pageContext, handleStreamEvent, onDone, onError, imageUrl,
       );
       streamAbortRef.current = ctrl;
     } catch (_error) {
-      safeSetMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
+      safeSetMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '当前连不到数据服务，请稍后再试。' }]);
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       finishTyping();
     }
-  }, [location, advisorSessionId, isSuperAdmin, speak, safeSetIsTyping, safeSetMessages, safeUpdateLiveStatus, scheduleTimer]);
+  }, [location, advisorSessionId, isSuperAdmin, speak, safeSetIsTyping, safeSetMessages, safeUpdateLiveStatus, scheduleTimer, setTextMessage, setFullMessage]);
 
   return { startStream, abort, streamAbortRef };
 }

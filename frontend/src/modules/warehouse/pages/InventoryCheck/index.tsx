@@ -1,268 +1,54 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Table, Tag, Space, Modal, Form, InputNumber, Select, Input, App, Statistic, Row, Col, Descriptions, Popconfirm, Tooltip, Steps, Empty, Alert, Image } from 'antd';
+import React, { useState } from 'react';
+import { Card, Button, Table, Tag, Space, Form, Select, Input, Statistic, Row, Col, Descriptions, Alert, Empty } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableModal from '@/components/common/ResizableModal';
-import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { inventoryCheckApi } from '../../../../services/warehouse/inventoryCheckApi';
+import { PlusOutlined, AuditOutlined, ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '../../../../components/common/ResizableTable';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { formatMoney } from '@/utils/format';
-
-const CHECK_TYPE_MAP: Record<string, { label: string; color: string }> = {
-  MATERIAL: { label: '物料盘点', color: 'processing' },
-  FINISHED: { label: '成品盘点', color: 'success' },
-  SAMPLE: { label: '样衣盘点', color: 'info' },
-};
-
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  draft: { label: '待盘点', color: 'warning' },
-  confirmed: { label: '已确认', color: 'success' },
-  cancelled: { label: '已取消', color: 'default' },
-};
-
-const DIFF_TYPE_MAP: Record<string, { label: string; color: string }> = {
-  PROFIT: { label: '盘盈', color: 'error' },
-  LOSS: { label: '盘亏', color: 'processing' },
-  EQUAL: { label: '持平', color: 'success' },
-};
+import { CHECK_TYPE_MAP, STATUS_MAP } from './constants';
+import { useInventoryCheck } from './useInventoryCheck';
+import { buildColumns, buildItemColumns, detailItemColumns } from './columns';
+import InventoryCheckGuide from './InventoryCheckGuide';
 
 const InventoryCheck: React.FC = () => {
-  const { message } = App.useApp();
-  const [list, setList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState<any>({});
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [currentCheck, setCurrentCheck] = useState<any>(null);
-  const [currentItems, setCurrentItems] = useState<any[]>([]);
-  const [fillModalVisible, setFillModalVisible] = useState(false);
-  const [createForm] = Form.useForm();
-  const [createSubmitting, setCreateSubmitting] = useState(false);
-  const [fillSubmitting, setFillSubmitting] = useState(false);
-  const [filterType, setFilterType] = useState<string | undefined>();
-  const [filterStatus, setFilterStatus] = useState<string | undefined>();
-
-  const fetchList = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await inventoryCheckApi.list({
-        page, pageSize,
-        checkType: filterType,
-        status: filterStatus,
-      });
-      const data = res.data?.data || res.data;
-      if (data?.records) {
-        setList(data.records);
-        setTotal(data.total || 0);
-      } else if (Array.isArray(data)) {
-        setList(data);
-        setTotal(data.length);
-      }
-    } catch (e: any) {
-      message.error(e.message || '查询失败');
-    } finally {
-      setLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, filterType, filterStatus]);
-
-  const fetchSummary = useCallback(async () => {
-    try {
-      const res = await inventoryCheckApi.summary();
-      setSummary(res.data?.data || res.data || {});
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => { fetchList(); }, [fetchList]);
-  useEffect(() => { fetchSummary(); }, [fetchSummary]);
-
-  const handleCreate = async () => {
-    setCreateSubmitting(true);
-    try {
-      const values = await createForm.validateFields();
-      await inventoryCheckApi.create(values);
-      message.success('盘点单创建成功');
-      setCreateModalVisible(false);
-      createForm.resetFields();
-      fetchList();
-      fetchSummary();
-    } catch (e: any) {
-      if (e.message) message.error(e.message);
-    } finally {
-      setCreateSubmitting(false);
-    }
-  };
-
-  const handleViewDetail = async (record: any) => {
-    try {
-      const res = await inventoryCheckApi.detail(record.id);
-      const data = res.data?.data || res.data;
-      setCurrentCheck(data);
-      setCurrentItems(data?.items || []);
-      setDetailModalVisible(true);
-    } catch (e: any) {
-      message.error(e.message || '查询详情失败');
-    }
-  };
-
-  const handleOpenFill = async (record: any) => {
-    try {
-      const res = await inventoryCheckApi.detail(record.id);
-      const data = res.data?.data || res.data;
-      setCurrentCheck(data);
-      setCurrentItems((data?.items || []).map((it: any) => ({ ...it })));
-      setFillModalVisible(true);
-    } catch (e: any) {
-      message.error(e.message || '查询盘点明细失败');
-    }
-  };
-
-  const handleFillActual = async () => {
-    setFillSubmitting(true);
-    try {
-      const items = currentItems
-        .filter(it => it.actualQuantity !== undefined && it.actualQuantity !== null)
-        .map(it => ({ itemId: it.id, actualQuantity: it.actualQuantity }));
-      if (items.length === 0) {
-        message.warning('请至少填写一项实盘数量');
-        return;
-      }
-      await inventoryCheckApi.fillActual({ checkId: currentCheck.id, items });
-      message.success('实盘数量已保存');
-      setFillModalVisible(false);
-      fetchList();
-    } catch (e: any) {
-      message.error(e.message || '保存失败');
-    } finally {
-      setFillSubmitting(false);
-    }
-  };
-
-  const handleConfirm = async (checkId: string) => {
-    try {
-      await inventoryCheckApi.confirm(checkId);
-      message.success('盘点已确认，库存已调整');
-      fetchList();
-      fetchSummary();
-    } catch (e: any) {
-      message.error(e.message || '确认失败');
-    }
-  };
-
-  const handleCancel = async (checkId: string) => {
-    try {
-      await inventoryCheckApi.cancel(checkId);
-      message.success('盘点已取消');
-      fetchList();
-      fetchSummary();
-    } catch (e: any) {
-      message.error(e.message || '取消失败');
-    }
-  };
-
-  const renderDiff = (v: number) => v ? <span style={{ color: v > 0 ? 'var(--color-error)' : 'var(--color-info)' }}>{v > 0 ? `+${v}` : v}</span> : '-';
-
-  const renderDiffType = (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v ? '未知' : '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; };
-
-  const imageColumn = {
-    title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
-    render: (v: string) => v ? <Image src={getFullAuthedFileUrl(v)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
-  };
-
-  const styleNoColumn = {
-    title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true,
-    render: (v: string, r: any) => v || r.materialCode || r.skuCode || '-',
-  };
-
-  const columns = [
-    { title: '盘点单号', dataIndex: 'checkNo', key: 'checkNo', width: 180, ellipsis: true },
-    {
-      title: '盘点类型', dataIndex: 'checkType', key: 'checkType', width: 100,
-      render: (v: string) => {
-        const m = CHECK_TYPE_MAP[v] || { label: '未知', color: 'default' };
-        return <Tag color={m.color}>{m.label}</Tag>;
-      },
-    },
-    {
-      title: '状态', dataIndex: 'status', key: 'status', width: 90,
-      render: (v: string) => {
-        const m = STATUS_MAP[v] || { label: '未知', color: 'default' };
-        return <Tag color={m.color}>{m.label}</Tag>;
-      },
-    },
-    { title: '盘点项数', dataIndex: 'totalItems', key: 'totalItems', width: 90, align: 'center' as const },
-    { title: '差异数', dataIndex: 'diffItems', key: 'diffItems', width: 80, align: 'center' as const },
-    { title: '账面总量', dataIndex: 'totalBookQty', key: 'totalBookQty', width: 100, align: 'right' as const },
-    { title: '实盘总量', dataIndex: 'totalActualQty', key: 'totalActualQty', width: 100, align: 'right' as const },
-    {
-      title: '差异数量', dataIndex: 'totalDiffQty', key: 'totalDiffQty', width: 100, align: 'right' as const,
-      render: renderDiff,
-    },
-    { title: '仓位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100, ellipsis: true },
-    { title: '创建人', dataIndex: 'createdByName', key: 'createdByName', width: 90 },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160 },
-    {
-      title: '操作', key: 'action', width: 240, fixed: 'right' as const,
-      render: (_: any, record: any) => (
-        <Space size={4}>
-          <Tooltip title="查看详情"><Button type="link" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} /></Tooltip>
-          {record.status === 'draft' && (
-            <>
-              <Button type="link" onClick={() => handleOpenFill(record)}>填写实盘</Button>
-              <Popconfirm title="确认盘点？确认后将自动调整库存" onConfirm={() => handleConfirm(record.id)}>
-                <Button type="link" icon={<CheckCircleOutlined />} style={{ color: 'var(--color-success)' }}>确认</Button>
-              </Popconfirm>
-              <Popconfirm title="确定取消此盘点单？" onConfirm={() => handleCancel(record.id)}>
-                <Button type="link" danger icon={<CloseCircleOutlined />}>取消</Button>
-              </Popconfirm>
-            </>
-          )}
-        </Space>
-      ),
-    },
-  ];
-
-  const itemColumns = [
-    imageColumn,
-    styleNoColumn,
-    { title: '名称', dataIndex: 'materialName', key: 'materialName', width: 120, ellipsis: true },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 70 },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 70 },
-    { title: '账面数量', dataIndex: 'bookQuantity', key: 'bookQuantity', width: 90, align: 'right' as const },
-    {
-      title: '实盘数量', dataIndex: 'actualQuantity', key: 'actualQuantity', width: 110,
-      render: (v: number, r: any, idx: number) => (
-        <InputNumber
-          min={0} value={v}
-          onChange={val => {
-            const newItems = [...currentItems];
-            newItems[idx] = { ...newItems[idx], actualQuantity: val ?? 0 };
-            setCurrentItems(newItems);
-          }}
-        />
-      ),
-    },
-    { title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const, render: renderDiff },
-    { title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80, render: renderDiffType },
-  ];
-
-  const detailItemColumns = [
-    imageColumn,
-    styleNoColumn,
-    { title: '名称', dataIndex: 'materialName', key: 'materialName', width: 120, ellipsis: true },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 70 },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 70 },
-    { title: '账面数量', dataIndex: 'bookQuantity', key: 'bookQuantity', width: 90, align: 'right' as const },
-    { title: '实盘数量', dataIndex: 'actualQuantity', key: 'actualQuantity', width: 90, align: 'right' as const },
-    { title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const, render: renderDiff },
-    { title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80, render: renderDiffType },
-    { title: '差异金额', dataIndex: 'diffAmount', key: 'diffAmount', width: 100, align: 'right' as const, render: (v: number) => v ? formatMoney(v) : '-' },
-  ];
+  const {
+    list,
+    loading,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    total,
+    summary,
+    createModalVisible,
+    setCreateModalVisible,
+    detailModalVisible,
+    setDetailModalVisible,
+    currentCheck,
+    currentItems,
+    setCurrentItems,
+    fillModalVisible,
+    setFillModalVisible,
+    createForm,
+    createSubmitting,
+    fillSubmitting,
+    filterType,
+    setFilterType,
+    filterStatus,
+    setFilterStatus,
+    fetchList,
+    fetchSummary,
+    handleCreate,
+    handleViewDetail,
+    handleOpenFill,
+    handleFillActual,
+    handleConfirm,
+    handleCancel,
+  } = useInventoryCheck();
 
   const [guideVisible, setGuideVisible] = useState(false);
+
+  const columns = buildColumns({ handleViewDetail, handleOpenFill, handleConfirm, handleCancel });
+  const itemColumns = buildItemColumns(currentItems, setCurrentItems);
 
   return (
     <div style={{ padding: 16 }}>
@@ -374,42 +160,7 @@ const InventoryCheck: React.FC = () => {
         <Table rowKey="id" size="small" columns={itemColumns} dataSource={currentItems} pagination={false} scroll={{ y: 400 }} />
       </StandardModal>
 
-      <Modal
-        title="盘点操作流程说明"
-        open={guideVisible}
-        onCancel={() => setGuideVisible(false)}
-        footer={<Button onClick={() => setGuideVisible(false)}>知道了</Button>}
-        width="40vw"
-      >
-        <Steps orientation="vertical" current={-1} items={[
-          {
-            title: '第一步：新建盘点单',
-            content: '选择盘点类型（物料盘点/成品盘点/样衣盘点），可选指定款号或仓位。系统会自动加载对应库存快照作为账面数据，生成盘点明细。',
-          },
-          {
-            title: '第二步：填写实盘数量',
-            content: '在盘点单中逐项填写实际盘点数量。系统自动计算差异（实盘-账面），标记盘盈/盘亏/持平。',
-          },
-          {
-            title: '第三步：确认盘点',
-            content: '确认后系统自动调整库存：盘盈增加库存，盘亏扣减库存。确认后不可撤销，请确保实盘数据准确。',
-          },
-        ]} />
-        <Alert
-          type="warning"
-          showIcon
-          title="注意事项"
-          description={
-            <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
-              <li>盘点确认后库存会自动调整，请确保实盘数据准确</li>
-              <li>填写款号/物料编码可只盘点指定款号，不填则盘点全部库存</li>
-              <li>物料盘点基于 t_material_stock 表，成品盘点基于 t_product_sku 表，样衣盘点基于 t_sample_stock 表</li>
-              <li>未填写实盘数量的项目不会参与差异计算</li>
-            </ul>
-          }
-          style={{ marginTop: 16 }}
-        />
-      </Modal>
+      <InventoryCheckGuide visible={guideVisible} onClose={() => setGuideVisible(false)} />
     </div>
   );
 };

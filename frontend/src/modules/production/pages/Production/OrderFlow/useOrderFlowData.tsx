@@ -1,16 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { useLocation } from 'react-router-dom';
-import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
+import { useEffect, useMemo, useState } from 'react';
+import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
-import { formatDateTime } from '@/utils/datetime';
-import { formatMoney } from '@/utils/format';
 import type { CuttingBundle, CuttingTask, ProductionOrder, ProductWarehousing } from '@/types/production';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
-import OrderStatusTag from '@/components/common/OrderStatusTag';
+import { useFlowQuery } from './hooks/useFlowQuery';
+import { useStyleProcessDescriptions } from './hooks/useStyleProcessDescriptions';
+import {
+  orderStatusTag,
+  buildStageColumns,
+  enrichStagesWithPurchase,
+  computeOrderLines,
+  buildOrderLineColumns,
+  computeWarehousingTotal,
+  computeWarehousingQualified,
+  computeWarehousingUnqualified,
+  computeCuttingSizeItems,
+} from './utils';
 
 export type FlowStage = {
   processName: string;
@@ -38,33 +45,16 @@ export type OrderFlowResponse = {
 
 import type { OrderLine } from '@/types/production';
 
-export const orderStatusTag = (status: any) => <OrderStatusTag status={status} />;
-
-const statusTag = (status: FlowStage['status']) => {
-  if (status === 'completed') return React.createElement(Tag, { color: 'success' }, '已完成');
-  if (status === 'in_progress') return React.createElement(Tag, { color: 'processing' }, '进行中');
-  return React.createElement(Tag, null, '未开始');
-};
+export { orderStatusTag };
 
 export function useOrderFlowData() {
-  const location = useLocation();
+  const query = useFlowQuery();
   const { user } = useUser();
   const isFactoryUser = !!(user as any)?.factoryId;
-
-  const query = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return {
-      orderId: String(params.get('orderId') || '').trim(),
-      orderNo: String(params.get('orderNo') || '').trim(),
-      styleNo: String(params.get('styleNo') || '').trim(),
-    };
-  }, [location.search]);
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OrderFlowResponse | null>(null);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const [styleProcessDescriptionMap, setStyleProcessDescriptionMap] = useState<Map<string, string>>(new Map());
-  const [secondaryProcessDescriptionMap, setSecondaryProcessDescriptionMap] = useState<Map<string, string>>(new Map());
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -101,279 +91,40 @@ export function useOrderFlowData() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.orderId]);
 
-  useEffect(() => {
-    const styleId = String(data?.order?.styleId || '').trim();
-    if (!styleId) {
-      setStyleProcessDescriptionMap(new Map());
-      setSecondaryProcessDescriptionMap(new Map());
-      return;
-    }
-    (async () => {
-      try {
-        const [processRes, secondaryRes] = await Promise.all([
-          api.get(`/style/process/list?styleId=${styleId}`),
-          api.get(`/style/secondary-process/list?styleId=${styleId}`),
-        ]);
-        const processRows = Array.isArray((processRes as any)?.data) ? (processRes as any).data : [];
-        const secondaryRows = Array.isArray((secondaryRes as any)?.data) ? (secondaryRes as any).data : [];
-        const nextProcessMap = new Map<string, string>();
-        const nextSecondaryMap = new Map<string, string>();
-        processRows.forEach((item: any) => {
-          const name = String(item?.processName || item?.name || '').trim();
-          const description = String(item?.description || '').trim();
-          if (name && description) nextProcessMap.set(name, description);
-        });
-        secondaryRows.forEach((item: any) => {
-          const name = String(item?.processName || item?.name || '').trim();
-          const description = String(item?.description || '').trim();
-          if (name && description) nextSecondaryMap.set(name, description);
-        });
-        setStyleProcessDescriptionMap(nextProcessMap);
-        setSecondaryProcessDescriptionMap(nextSecondaryMap);
-      } catch {
-        setStyleProcessDescriptionMap(new Map());
-        setSecondaryProcessDescriptionMap(new Map());
-      }
-    })();
-  }, [data?.order?.styleId]);
+  const styleId = String(data?.order?.styleId || '').trim();
+  const { styleProcessDescriptionMap, secondaryProcessDescriptionMap } = useStyleProcessDescriptions(styleId);
 
-  const enrichedStages = useMemo(() => {
-    const stages = data?.stages || [];
-    const materialPurchases = data?.materialPurchases || [];
-    const order = data?.order;
+  const enrichedStages = useMemo(() => enrichStagesWithPurchase(data), [data]);
 
-    if (materialPurchases.length > 0 || (order?.materialArrivalRate !== undefined && order?.materialArrivalRate !== null)) {
-      const purchaseStage: FlowStage = {
-        processName: '采购',
-        status: 'not_started',
-        totalQuantity: 0,
-      };
-
-      const materialArrivalRate = order?.materialArrivalRate || 0;
-      const isProcurementManuallyCompleted = order?.procurementManuallyCompleted === 1;
-      if (isProcurementManuallyCompleted || materialArrivalRate >= 100) {
-        purchaseStage.status = 'completed';
-      } else if (materialArrivalRate > 0) {
-        purchaseStage.status = 'in_progress';
-      }
-
-      if (materialPurchases.length > 0) {
-        const sortedPurchases = [...materialPurchases].sort((a: any, b: any) => {
-          const timeA = a.createTime ? new Date(a.createTime).getTime() : 0;
-          const timeB = b.createTime ? new Date(b.createTime).getTime() : 0;
-          return timeA - timeB;
-        });
-
-        const firstPurchase = sortedPurchases[0] as any;
-        const lastPurchase = sortedPurchases[sortedPurchases.length - 1] as any;
-
-        // 过滤系统自动填充的操作人名（MyBatisPlusMetaObjectHandler 在无 HTTP 用户上下文时默认填"系统管理员"）
-        // 采购操作人语义：receiverName = 实际收料/领料人（明确的业务行为），优先于 creatorName（DB 记录创建人，系统自动行为）
-        const getDisplayOperator = (...names: (string | undefined | null)[]): string => {
-          for (const n of names) {
-            if (n && n !== '系统管理员') return n;
-          }
-          return '未记录';
-        };
-
-        purchaseStage.startTime = firstPurchase?.createTime;
-        purchaseStage.startOperatorName = getDisplayOperator(
-          firstPurchase?.receiverName,
-          firstPurchase?.creatorName,
-        );
-
-        if (purchaseStage.status === 'completed') {
-          purchaseStage.completeTime = lastPurchase?.updateTime || lastPurchase?.createTime;
-          purchaseStage.completeOperatorName = getDisplayOperator(
-            lastPurchase?.receiverName,
-            lastPurchase?.auditOperatorName,
-            lastPurchase?.updaterName,
-          );
-        }
-
-        purchaseStage.totalQuantity = materialPurchases.length;
-      }
-
-      const existingPurchaseIndex = stages.findIndex((s: FlowStage) => s.processName === '采购');
-      if (existingPurchaseIndex >= 0) {
-        return [...stages.slice(0, existingPurchaseIndex), purchaseStage, ...stages.slice(existingPurchaseIndex + 1)];
-      } else {
-        return [stages[0], purchaseStage, ...stages.slice(1)].filter(Boolean);
-      }
-    }
-
-    return stages;
-  }, [data]);
-
-  const stageColumns: ColumnsType<FlowStage> = [
-    {
-      title: '环节',
-      dataIndex: 'processName',
-      key: 'processName',
-      width: 160,
-      render: (v: unknown) => String(v || '').trim() || '-',
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 110,
-      render: (v: unknown) => statusTag(String(v || 'not_started') as any),
-    },
-    {
-      title: '累计数量',
-      dataIndex: 'totalQuantity',
-      key: 'totalQuantity',
-      width: 110,
-      align: 'right',
-      render: (v: unknown) => Number(v ?? 0) || 0,
-    },
-    {
-      title: '开始时间',
-      dataIndex: 'startTime',
-      key: 'startTime',
-      width: 170,
-      render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-'),
-    },
-    {
-      title: '开始操作人',
-      dataIndex: 'startOperatorName',
-      key: 'startOperatorName',
-      width: 120,
-      render: (v: unknown) => String(v || '').trim() || '-',
-    },
-    {
-      title: '完成时间',
-      dataIndex: 'completeTime',
-      key: 'completeTime',
-      width: 170,
-      render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-'),
-    },
-    {
-      title: '完成操作人',
-      dataIndex: 'completeOperatorName',
-      key: 'completeOperatorName',
-      width: 120,
-      render: (v: unknown) => String(v || '').trim() || '-',
-    },
-    {
-      title: '耗时',
-      key: 'duration',
-      width: 120,
-      render: (_: unknown, record: FlowStage) => {
-        const start = record.startTime ? new Date(record.startTime).getTime() : 0;
-        if (!start) return React.createElement('span', { style: { color: 'var(--color-text-quaternary)' } }, '-');
-        const end = record.completeTime
-          ? new Date(record.completeTime).getTime()
-          : record.status === 'in_progress' ? Date.now() : 0;
-        if (!end) return React.createElement('span', { style: { color: 'var(--color-text-quaternary)' } }, '-');
-        const hours = Math.round((end - start) / 3600000);
-        if (hours <= 0) return React.createElement('span', { style: { color: 'var(--color-text-quaternary)' } }, '-');
-        const days = Math.floor(hours / 24);
-        const remainHours = hours % 24;
-        const label = days > 0 ? `${days}天${remainHours}小时` : `${hours}小时`;
-        const color = hours > 336 ? 'var(--color-error)' : hours > 168 ? 'var(--color-warning)' : '#595959';
-        return React.createElement(
-          'span',
-          { style: { color, fontSize: 14, fontWeight: hours > 168 ? 600 : 400 } },
-          record.status === 'in_progress' ? `⏳${label}` : label,
-        );
-      },
-    },
-  ];
+  const stageColumns = useMemo(() => buildStageColumns(), []);
 
   const order = data?.order;
 
   const orderLines = useMemo(() => {
-    const lines = parseProductionOrderLines(order || null) as OrderLine[];
     const warehousings = (data?.warehousings || []) as ProductWarehousing[];
     const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
-    const unitPrice =
-      Number(order?.factoryUnitPrice) ||
-      Number((data as any)?.styleQuotation?.totalPrice) ||
-      0;
-
-    return lines.map(line => {
-      const matchedBundles = cuttingBundles.filter(b =>
-        b.color === line.color && b.size === line.size
-      );
-      const bundleIds = matchedBundles.map(b => b.id);
-
-      const matchedWarehousings = warehousings.filter(w =>
-        bundleIds.includes(w.cuttingBundleId || '')
-      );
-
-      const qualityQuantity = matchedWarehousings.reduce((sum, w) =>
-        sum + (w.qualifiedQuantity || 0) + (w.unqualifiedQuantity || 0), 0);
-      const defectiveQuantity = matchedWarehousings.reduce((sum, w) =>
-        sum + (w.unqualifiedQuantity || 0), 0);
-      const warehousingQuantity = matchedWarehousings.reduce((sum, w) =>
-        sum + (w.warehousingQuantity || 0), 0);
-
-      const totalPrice = unitPrice > 0 ? unitPrice : 0;
-
-      return {
-        ...line,
-        totalPrice,
-        qualityQuantity,
-        defectiveQuantity,
-        warehousingQuantity,
-      };
-    });
+    const styleQuotationTotalPrice = Number((data as any)?.styleQuotation?.totalPrice) || 0;
+    return computeOrderLines(order, warehousings, cuttingBundles, styleQuotationTotalPrice);
   }, [order, data?.warehousings, data?.cuttingBundles, (data as any)?.styleQuotation]);
 
-  const orderLineColumns: ColumnsType<OrderLine> = [
-    { title: 'SKU号', dataIndex: 'skuNo', key: 'skuNo', width: 240, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 100, render: (v: unknown) => String(v || '').trim() || '-' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
-    { title: '单价', dataIndex: 'totalPrice', key: 'totalPrice', width: 110, align: 'right', render: (v: unknown) => {
-      const val = toNumberSafe(v);
-      return val > 0 ? formatMoney(val) : '-';
-    }},
-    { title: '质检数', dataIndex: 'qualityQuantity', key: 'qualityQuantity', width: 90, align: 'right', render: (v: unknown) => {
-      const val = toNumberSafe(v);
-      return val > 0 ? React.createElement('span', { style: { color: 'var(--primary-color)' } }, val) : '-';
-    }},
-    { title: '次品数', dataIndex: 'defectiveQuantity', key: 'defectiveQuantity', width: 90, align: 'right', render: (v: unknown) => {
-      const val = toNumberSafe(v);
-      return val > 0 ? React.createElement('span', { style: { color: 'var(--color-danger)' } }, val) : '-';
-    }},
-    { title: '入库数', dataIndex: 'warehousingQuantity', key: 'warehousingQuantity', width: 90, align: 'right', render: (v: unknown) => {
-      const val = toNumberSafe(v);
-      return val > 0 ? React.createElement('span', { style: { color: 'var(--color-success)' } }, val) : '-';
-    }},
-  ];
+  const orderLineColumns = useMemo(() => buildOrderLineColumns(), []);
 
   const warehousingTotal = useMemo(
-    () => (data?.warehousings || []).reduce((sum, w) => sum + toNumberSafe((w as any)?.warehousingQuantity), 0),
+    () => computeWarehousingTotal(data?.warehousings || []),
     [data?.warehousings],
   );
   const warehousingQualified = useMemo(
-    () => (data?.warehousings || []).reduce((sum, w) => sum + toNumberSafe((w as any)?.qualifiedQuantity), 0),
+    () => computeWarehousingQualified(data?.warehousings || []),
     [data?.warehousings],
   );
   const warehousingUnqualified = useMemo(
-    () => (data?.warehousings || []).reduce((sum, w) => sum + toNumberSafe((w as any)?.unqualifiedQuantity), 0),
+    () => computeWarehousingUnqualified(data?.warehousings || []),
     [data?.warehousings],
   );
 
   const cuttingSizeItems = useMemo(() => {
     const bundles = (data?.cuttingBundles || []) as CuttingBundle[];
-    if (bundles.length === 0) return undefined;
-    const map = new Map<string, { color?: string; size: string; quantity: number }>();
-    bundles.forEach(bundle => {
-      const color = String(bundle.color || '').trim();
-      const size = String(bundle.size || '').trim();
-      const qty = toNumberSafe(bundle.quantity);
-      if (size && qty > 0) {
-        const key = `${color}__${size}`;
-        const cur = map.get(key);
-        if (cur) { cur.quantity += qty; }
-        else { map.set(key, { color: color || undefined, size, quantity: qty }); }
-      }
-    });
-    return Array.from(map.values());
+    return computeCuttingSizeItems(bundles);
   }, [data?.cuttingBundles]);
 
   const cuttingBundles = useMemo(() => (data?.cuttingBundles || []) as CuttingBundle[], [data?.cuttingBundles]);

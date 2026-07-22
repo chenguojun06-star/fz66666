@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Spin, Empty, Tag, Image } from 'antd';
+import { App, Button, Spin, Empty, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
-import type { OrderImage, OrderImageSnapshot } from '@/services/system/remarkApi';
+import type { OrderImage } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import { visualAnalyze } from '@/services/intelligence/intelligenceApi';
+import { arrowBtnStyle } from './utils';
+import ImageHistoryContent from './ImageHistoryContent';
+import AIAnalysisContent from './AIAnalysisContent';
 
 interface OrderImageManagerProps {
   orderNo: string;
@@ -22,7 +25,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   const [styleImages, setStyleImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [snapshots, setSnapshots] = useState<OrderImageSnapshot[]>([]);
+  const [snapshots, setSnapshots] = useState<any[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [hovering, setHovering] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -156,48 +159,11 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     }
   };
 
-  const parseUrls = (urls?: string): string[] => {
-    if (!urls) return [];
-    try {
-      const parsed = JSON.parse(urls);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const snapshotTypeMap: Record<string, { text: string; color: string }> = {
-    ADD: { text: '新增', color: 'green' },
-    DELETE: { text: '删除', color: 'red' },
-    REORDER: { text: '排序', color: 'blue' },
-    UPDATE: { text: '更新', color: 'orange' },
-  };
-
   const goPrev = () => setCurrentIdx((i) => (i > 0 ? i - 1 : totalCount - 1));
   const goNext = () => setCurrentIdx((i) => (i < totalCount - 1 ? i + 1 : 0));
 
   const currentImg = allImageUrls[currentIdx];
   const currentOrderImg = currentImg && !currentImg.isCover ? images.find((im) => im.id === currentImg.id) : undefined;
-
-  const arrowBtnStyle = (side: 'left' | 'right'): React.CSSProperties => ({
-    position: 'absolute',
-    [side]: 4,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    background: 'rgba(0,0,0,0.45)',
-    color: 'var(--color-bg-base)',
-    border: 'none',
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: hovering ? 1 : 0,
-    transition: 'opacity 0.2s ease',
-    cursor: 'pointer',
-    zIndex: 2,
-  });
 
   return (
     <div>
@@ -245,8 +211,8 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
 
             {totalCount > 1 && (
               <>
-                <Button type="text" icon={<LeftOutlined />} onClick={goPrev} style={arrowBtnStyle('left')} />
-                <Button type="text" icon={<RightOutlined />} onClick={goNext} style={arrowBtnStyle('right')} />
+                <Button type="text" icon={<LeftOutlined />} onClick={goPrev} style={arrowBtnStyle('left', hovering)} />
+                <Button type="text" icon={<RightOutlined />} onClick={goNext} style={arrowBtnStyle('right', hovering)} />
               </>
             )}
 
@@ -338,55 +304,9 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
         footer={null}
         width="40vw"
       >
-        {snapshots.length === 0 ? (
-          <Empty description="暂无更新记录" />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {snapshots.map((s) => {
-              const typeInfo = snapshotTypeMap[s.snapshotType] || { text: s.snapshotType, color: 'default' };
-              const beforeUrls = parseUrls(s.beforeUrls);
-              const afterUrls = parseUrls(s.afterUrls);
-              return (
-                <div key={s.id} style={{ padding: 12, border: '1px solid var(--color-border-light)', borderRadius: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span>
-                      <Tag color={typeInfo.color}>{typeInfo.text}</Tag>
-                      <span style={{ marginLeft: 8 }}>{s.operatorName || '系统'}</span>
-                    </span>
-                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
-                      {s.createTime ? s.createTime.replace('T', ' ').substring(0, 16) : ''}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    {beforeUrls.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>变更前</div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {beforeUrls.map((url, idx) => (
-                            <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {afterUrls.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>变更后</div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {afterUrls.map((url, idx) => (
-                            <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ImageHistoryContent snapshots={snapshots} />
       </ResizableModal>
 
-      {/* AI视觉分析结果弹窗 */}
       <ResizableModal
         title="AI视觉分析"
         open={!!analysisResult}
@@ -394,30 +314,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
         footer={null}
         width="40vw"
       >
-        {analysisResult && (
-          <div>
-            {analysisResult.report && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>分析结果</div>
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{analysisResult.report}</div>
-              </div>
-            )}
-            {analysisResult.recommendation && (
-              <div style={{ padding: 10, background: 'var(--color-bg-container)', borderRadius: 6, border: '1px solid var(--color-border-light)' }}>
-                <span style={{ fontWeight: 600 }}>建议：</span>
-                {analysisResult.recommendation}
-              </div>
-            )}
-            {analysisResult.severity && analysisResult.severity !== 'NONE' && (
-              <div style={{ marginTop: 8 }}>
-                <Tag color={analysisResult.severity === 'HIGH' || analysisResult.severity === 'CRITICAL' ? 'red' : analysisResult.severity === 'MEDIUM' ? 'orange' : 'blue'}>
-                  严重程度：{analysisResult.severity}
-                </Tag>
-                {analysisResult.confidence != null && <Tag>置信度：{analysisResult.confidence}%</Tag>}
-              </div>
-            )}
-          </div>
-        )}
+        <AIAnalysisContent analysisResult={analysisResult} />
       </ResizableModal>
     </div>
   );

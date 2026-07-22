@@ -8,3 +8,4 @@ export type { StyleOption, CuttingProcessNode } from './useCuttingCreateTask';
 export type { CuttingCreateTaskState } from './useCuttingCreateTask';
 export { useCuttingBom } from './useCuttingBom';
 export type { CuttingBomRow } from './useCuttingBom';
+export { useCuttingRouteParams } from './useCuttingRouteParams';

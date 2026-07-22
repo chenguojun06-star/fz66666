@@ -14,7 +14,7 @@ import OrderCreateModalSidebar from './OrderCreateModalSidebar';
 import { ExtFieldsSection } from '@/components/common/SchemaForm/ExtFieldsSection';
 import { OrderLine } from '../types';
 
-interface Props {
+export interface OrderCreateModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: () => void;
@@ -59,7 +59,7 @@ interface Props {
   customFields: FieldConfigItem[];
 }
 
-const OrderCreateModal: React.FC<Props> = (p) => {
+const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
   const {
     visible, onClose, onSubmit, submitLoading, createdOrder, selectedStyle,
     isMobile, form,
