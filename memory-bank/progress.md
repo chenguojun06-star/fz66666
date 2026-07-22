@@ -1,9 +1,36 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-19（员工打卡后端健壮性增强 P1+P2 修复完成）
+> 最后更新：2026-07-22（前端 eslint warning 全面清零 — commit 6db64aecf）
 
 ## 已完成
+
+### 2026-07-22 前端 eslint warning 全面清零（commit 6db64aecf）
+
+- [x] 修复 54 个 react-hooks/exhaustive-deps warning（34 个文件）
+- [x] 清理 8 个遗留 no-unused-vars warning
+- [x] 3 组 subagent 并行执行（Group 1: 18 文件 / Group 2: 11 文件 / Group 3: 9 文件）
+- [x] 全局 `npx tsc --noEmit` 0 errors
+- [x] 全局 `npx eslint . --max-warnings 500` 0 warnings
+- [x] 推送到远程（commit 6db64aecf，117 files changed）
+- [x] 非任务文件保持未暂存：`PatternProductionController.java`、`types/style.ts`
+
+**最终状态**：eslint 从 62 warnings → 0 warnings，CI 完全清零。
+
+### 2026-07-22 前端 400-500 行超大文件拆分收尾（commit dbbbda837）
+
+- [x] 拆分约 50 个 400-500 行区间超大 TS/TSX 业务文件
+- [x] 三种拆分模式：目录化拆分（主组件+子组件）、Hook 拆分、列组按业务域拆分
+- [x] 严格保持 API 路径、参数签名、字段名、返回值结构、业务逻辑不变
+- [x] 修复目录化后相对路径层级问题（多加一层 `../`）
+- [x] 修复 Hook 含 JSX 必须用 .tsx 扩展名问题
+- [x] 修复共享 utils.ts interface 未导出（TS4058）问题
+- [x] 修复类型系统兼容性（可选 vs 必填、索引签名）
+- [x] 全局 `npx tsc --noEmit` 验证通过（0 errors）
+- [x] 推送到远程（commit dbbbda837）
+- [x] 非任务文件保持未暂存：`PatternProductionController.java`、`types/style.ts`
+
+**最终统计**：500+ 行剩 2 个（intelligenceApi.ts/routeConfig.ts）、400-500 行剩 1 个（utils/api/core.ts 472 行）、300-400 行剩 146 个待推进。
 
 ### 2026-07-19 员工打卡后端健壮性增强（P1+P2 全修）
 

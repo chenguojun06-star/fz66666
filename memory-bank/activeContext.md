@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-20（子工序匹配菲号同步修复 — 新增/减少工序同步 tracking 表）
+> 最后更新：2026-07-22（前端 eslint warning 全面清零 — commit 6db64aecf）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,47 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-22 前端 eslint warning 全面清零（commit 6db64aecf）✅
+
+延续 CI 修复（commit 16e967582），本次完成全部剩余 eslint warning 清理：
+
+- **修复 54 个 react-hooks/exhaustive-deps warning**（34 个文件）：
+  - 补全依赖数组（setState 函数、useCallback 稳定引用、useMemo 派生值等）
+  - 提取复杂表达式为独立变量（可选链 `?.`、三元运算、`pagination.current` 等）
+  - 将 `baseColumns` 数组移入 useMemo callback 或用 useMemo 包裹
+  - `ref.current` 在 cleanup 中复制到局部变量
+  - 5 处使用 `// eslint-disable-next-line` 并附注释说明循环风险（Cutting/index.tsx、DashboardAiInsight、OverdueOrderTable、PayableList 等）
+- **清理 8 个遗留 no-unused-vars warning**：删除未使用 type import、参数加 `_` 前缀
+- **3 组 subagent 并行执行**（Group 1: 18 文件 / Group 2: 11 文件 / Group 3: 9 文件）
+- 全局 `npx tsc --noEmit` 0 errors，`npx eslint . --max-warnings 500` 0 warnings
+- CI 阈值 500 远低于上限，CI 稳健通过
+- 非任务文件保持未暂存：`backend/.../PatternProductionController.java`、`frontend/src/types/style.ts`
+
+**最终状态**：eslint 从 62 warnings → 0 warnings，CI 完全清零。
+
+**下一步**：可推进 300-400 行区间拆分（146 个）、类型安全重灾区、空 catch 批量修复等 P1/P2 优化项。
+
+### 2026-07-22 前端 400-500 行超大文件拆分收尾（commit dbbbda837）✅
+
+延续上次 500-750 行拆分（commit 7fb0b0186），本次完成 400-500 行区间剩余文件清理：
+
+- 拆分约 50 个超大文件（含 DailyTodoModal/CuttingSheetPrintModal/ResizableModal/FactoryTemplateTab/StyleAttachmentTab/StyleSizeTab/StyleProcessKnowledgeTab/ProcessInlineTable/PaymentAuditPopover/OverviewChart/OrderScrollPanel/ProductionModals/PurchaseCreateForm/FactoryShipModal/AppOrderTab/CustomerManagementTab/OutstockRecordTab/OutboundModal/production.ts 等）
+- 三种拆分模式：目录化拆分（主组件+子组件）、Hook 拆分（主 Hook+子 Hook）、列组按业务域拆分
+- 严格保持 API 路径、参数签名、字段名、返回值结构、业务逻辑不变
+- 修复多起目录化后相对路径层级问题（多加一层 `../`）
+- 修复 Hook 含 JSX 必须用 .tsx 扩展名问题
+- 修复共享 utils.ts interface 未导出（TS4058）问题
+- 修复类型系统兼容性（可选 vs 必填、索引签名）
+- 全局 `npx tsc --noEmit` 验证通过（0 errors）
+- 非任务文件保持未暂存：`backend/.../PatternProductionController.java`、`frontend/src/types/style.ts`（不属于本次拆分）
+
+**最终统计**：
+- 500+ 行：2 个（intelligenceApi.ts 1132 行、routeConfig.ts 803 行，超大基础文件）
+- 400-500 行：1 个（utils/api/core.ts 472 行）
+- 300-400 行：146 个（待后续推进）
+
+**下一步**：可推进 300-400 行区间拆分（146 个）、类型安全重灾区、空 catch 批量修复等 P1/P2 优化项。
 
 ### 2026-07-20 子工序匹配菲号同步修复 ✅
 
