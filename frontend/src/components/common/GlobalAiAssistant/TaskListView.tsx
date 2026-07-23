@@ -13,7 +13,7 @@ const STATUS_TABS = [
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   high: { label: '紧急', color: 'var(--color-error)', bg: '#FFF1F0' },
   medium: { label: '一般', color: '#d48806', bg: '#FFFBE6' },
-  low: { label: '低', color: '#389e0d', bg: '#f6ffed' },
+  low: { label: '低', color: '#389e0d', bg: 'var(--status-success-bg)' },
 };
 
 const MODULE_LABELS: Record<string, string> = {
@@ -119,7 +119,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
                     {getOrderLinkStatusLabel(task.orderLinkStatus)}
                   </span>
                 )}
-                {task.progressChangeMonitorEnabled && <span className={styles.sysTag} style={{ background: '#e6f7ff', color: 'var(--color-info)' }}>监控中</span>}
+                {task.progressChangeMonitorEnabled && <span className={styles.sysTag} style={{ background: 'var(--status-processing-bg)', color: 'var(--color-info)' }}>监控中</span>}
                 <span className={styles.taskTitle}>{task.title}</span>
               </div>
               <div className={styles.taskCardBottom}>

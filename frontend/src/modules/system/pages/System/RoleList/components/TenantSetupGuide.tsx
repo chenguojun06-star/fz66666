@@ -107,7 +107,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
                 onClick={() => toggleTemplate(tpl.id)}
                 style={{
                   borderColor: selectedIds.includes(tpl.id) ? 'var(--color-info)' : 'var(--color-border-light)',
-                  background: selectedIds.includes(tpl.id) ? '#e6f7ff' : 'var(--color-bg-base)',
+                  background: selectedIds.includes(tpl.id) ? 'var(--status-processing-bg)' : 'var(--color-bg-base)',
                 }}
                 bodyStyle={{ padding: 12 }}
               >

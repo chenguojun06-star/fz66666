@@ -86,7 +86,7 @@
 }
 .claimBtn { background: var(--xiaoyun-primary-bg); color: var(--xiaoyun-primary); }
 .claimBtn:hover { background: var(--xiaoyun-primary); color: var(--color-bg-base); }
-.completeBtn { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+.completeBtn { background: var(--status-success-bg); color: #389e0d; border: 1px solid var(--status-success-border); }
 .completeBtn:hover { background: #389e0d; color: var(--color-bg-base); }
 .editBtn { background: var(--xiaoyun-bg-page); color: var(--xiaoyun-text-secondary); }
 .editBtn:hover { background: var(--xiaoyun-border-card); }
@@ -101,5 +101,5 @@
 
 .sysTag {
   padding: 1px 6px; border-radius: 8px; font-size: 10px;
-  background: #e6f7ff; color: #08979c; flex-shrink: 0;
+  background: var(--status-processing-bg); color: #08979c; flex-shrink: 0;
 }

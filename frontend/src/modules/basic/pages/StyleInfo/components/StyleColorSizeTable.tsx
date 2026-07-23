@@ -375,7 +375,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
             </div>
 
             {matrixTotal > 0 && (
-              <div style={{ marginTop: 4, padding: '5px 8px', background: '#f0f9ff', border: '1px solid #91d5ff', display: 'inline-block', borderRadius: 8 }}>
+              <div style={{ marginTop: 4, padding: '5px 8px', background: '#f0f9ff', border: '1px solid var(--status-processing-border)', display: 'inline-block', borderRadius: 8 }}>
                 <span style={{ fontWeight: 500, color: 'var(--primary-color)' }}>总数量：</span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary-color)' }}>{matrixTotal}</span>
               </div>

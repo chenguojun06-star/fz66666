@@ -34,6 +34,8 @@ public class IntelligencePanelController {
     private final CapacityGapOrchestrator capacityGapOrchestrator;
     private final StagnantAlertOrchestrator stagnantAlertOrchestrator;
     private final AiPatrolOrchestrator aiPatrolOrchestrator;
+    private final PreOrderDeliveryPredictionOrchestrator preOrderDeliveryPredictionOrchestrator;
+    private final FactoryActiveOrderOrchestrator factoryActiveOrderOrchestrator;
 
     @PostMapping("/live-pulse")
     public Result<LivePulseResponse> livePulse() {
@@ -137,5 +139,25 @@ public class IntelligencePanelController {
         int count = aiPatrolOrchestrator.patrolTenant(
                 com.fashion.supplychain.common.UserContext.tenantId());
         return Result.success(count);
+    }
+
+    /**
+     * 预下单三档交期预测（不依赖 orderId）
+     * 下单人员选择工厂+输入数量后即可预测三档完工日期，实现"下单前可见时间线"。
+     */
+    @PostMapping("/pre-order-delivery-prediction")
+    public Result<PreOrderDeliveryPredictionResponse> preOrderDeliveryPrediction(
+            @RequestBody PreOrderDeliveryPredictionRequest request) {
+        return Result.success(preOrderDeliveryPredictionOrchestrator.predictByFactory(request));
+    }
+
+    /**
+     * 工厂在产订单明细（下单页详情抽屉用）
+     * 返回该工厂当前所有在产订单，含风险等级和距交期天数。
+     */
+    @GetMapping("/factory-active-orders")
+    public Result<java.util.List<FactoryActiveOrderDTO>> factoryActiveOrders(
+            @RequestParam String factoryName) {
+        return Result.success(factoryActiveOrderOrchestrator.getActiveOrdersByFactory(factoryName));
     }
 }

@@ -38,20 +38,25 @@ const PRINT_FIX_CSS = `
 <style>
   :root {
     color-scheme: light !important;
-    --color-primary: var(--color-primary);
-    --color-text-primary: var(--color-text-primary);
-    --color-text-secondary: var(--color-text-secondary);
-    --color-text-tertiary: var(--color-text-tertiary);
-    --color-text-quaternary: var(--color-text-quaternary);
-    --color-bg-base: var(--color-bg-base);
-    --color-bg-container: var(--color-bg-container);
-    --color-bg-subtle: var(--color-bg-subtle);
-    --color-bg-page: var(--color-bg-page);
-    --color-border: var(--color-border);
-    --color-border-light: var(--color-border-light);
-    --color-border-antd: var(--color-border-antd);
+    /* 打印 iframe 是独立文档，不继承父页面 CSS 变量，必须显式定义具体值 */
+    --color-primary: #2D7FF9;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #6b7280;
+    --color-text-tertiary: #9ca3af;
+    --color-text-quaternary: #bfbfbf;
+    --color-bg-base: #ffffff;
+    --color-bg-container: #ffffff;
+    --color-bg-subtle: #f5f5f5;
+    --color-bg-page: #ffffff;
+    --color-border: #e5e7eb;
+    --color-border-light: #f0f0f0;
+    --color-border-antd: #d9d9d9;
+    --status-success-bg: #f6ffed;
+    --status-processing-bg: #e6f7ff;
+    --status-warning-bg: #fffbe6;
+    --status-error-bg: #fff2f0;
   }
-  html, body { background: var(--color-bg-base) !important; color: #000 !important; }
+  html, body { background: #ffffff !important; color: #000 !important; }
 
   table, thead, tr { break-inside: avoid !important; page-break-inside: avoid !important; }
 
@@ -64,9 +69,9 @@ const PRINT_FIX_CSS = `
     text-rendering: optimizeLegibility;
   }
 
-  html, body { background-color: var(--color-bg-base) !important; }
-  th { background-color: var(--color-bg-container) !important; }
-  img { background: var(--color-bg-base) !important; }
+  html, body { background-color: #ffffff !important; }
+  th { background-color: #ffffff !important; }
+  img { background: #ffffff !important; }
 </style>
 `;
 

@@ -6,8 +6,8 @@
 }
 
 .reportHeader {
-  background: linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%);
-  border: 1px solid #91d5ff;
+  background: linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%);
+  border: 1px solid var(--status-processing-border);
   border-radius: 10px;
   padding: 10px 12px;
 }
@@ -161,7 +161,7 @@
 }
 
 .riskChip {
-  background: #FFF7E6;
+  background: var(--status-warning-bg);
   border: 1px solid #ffd591;
   border-radius: 8px;
   padding: 6px;

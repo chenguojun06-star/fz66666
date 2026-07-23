@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import type { MessageInstance } from 'antd/es/message/interface';
 
 /**
@@ -26,6 +26,13 @@ export function useAsyncButtonAction<T = void>({
 }) {
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const setLoadingSafe = useCallback((val: boolean) => {
     if (mountedRef.current) {

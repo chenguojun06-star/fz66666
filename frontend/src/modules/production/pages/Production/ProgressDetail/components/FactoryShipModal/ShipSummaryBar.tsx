@@ -14,7 +14,7 @@ const ShipSummaryBar: React.FC<ShipSummaryBarProps> = ({
 }) => {
   return (
     <div style={{
-      background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6,
+      background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: 6,
       padding: '8px 14px', marginBottom: 12, display: 'flex', gap: 24, flexWrap: 'wrap',
     }}>
       <span>裁片总数：<b>{shippableInfo?.cuttingTotal ?? '-'}</b></span>

@@ -34,7 +34,7 @@ const processingBannerStyle = {
   padding: '8px 10px',
   borderRadius: 8,
   border: '1px solid #ffd591',
-  background: '#FFF7E6',
+  background: 'var(--status-warning-bg)',
   display: 'grid',
   gap: 4,
 } as const;

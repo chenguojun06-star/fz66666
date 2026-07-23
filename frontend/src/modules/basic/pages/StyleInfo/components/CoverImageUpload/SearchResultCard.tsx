@@ -80,7 +80,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
               </div>
               <span style={{
                 padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                background: parseInt(m.similarity) >= 72 ? 'var(--color-success-bg, #f6ffed)' : 'var(--color-bg-container)',
+                background: parseInt(m.similarity) >= 72 ? 'var(--color-success-bg, var(--status-success-bg))' : 'var(--color-bg-container)',
                 color: parseInt(m.similarity) >= 72 ? 'var(--color-success, var(--color-success))' : 'var(--color-text-secondary)',
               }}>
                 {m.similarity}

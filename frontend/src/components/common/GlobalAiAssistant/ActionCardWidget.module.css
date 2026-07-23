@@ -1,6 +1,6 @@
 .actionCard {
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
+  background: var(--status-warning-bg);
+  border: 1px solid var(--status-warning-border);
   border-radius: 10px;
   padding: 10px 12px;
   margin: 6px 0;
@@ -10,12 +10,12 @@
   border-color: #ffa39e;
 }
 .cardWarning {
-  background: #fffbe6;
-  border-color: #ffe58f;
+  background: var(--status-warning-bg);
+  border-color: var(--status-warning-border);
 }
 .cardNormal {
-  background: #f6ffed;
-  border-color: #b7eb8f;
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
 }
 .actionCardTitle { font-size: 13px; font-weight: 600; color: #873800; margin-bottom: 4px; }
 .actionCardDesc { font-size: 12px; color: #874d00; margin-bottom: 8px; line-height: 1.5; }

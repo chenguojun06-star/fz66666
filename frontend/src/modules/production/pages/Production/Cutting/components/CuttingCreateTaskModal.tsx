@@ -1,5 +1,6 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { AutoComplete, Button, Card, Drawer, Input, Select, Segmented, Space } from 'antd';
+import { RightOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
 import CustomerSelect from '@/components/common/CustomerSelect';
@@ -7,6 +8,7 @@ import type { CuttingCreateTaskState } from '../hooks';
 import FactoryCapacityCard from './FactoryCapacityCard';
 import OrderLinesCard from './OrderLinesCard';
 import ProcessFlowCard from './ProcessFlowCard';
+import FactoryInsightDrawer from '@/modules/basic/pages/OrderManagement/components/FactoryInsightDrawer';
 
 interface Props {
   createTask: CuttingCreateTaskState;
@@ -14,12 +16,22 @@ interface Props {
 
 const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   const styleSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [insightOpen, setInsightOpen] = useState(false);
   const debouncedFetchStyleInfoOptions = useCallback((v: string) => {
     if (styleSearchTimerRef.current) clearTimeout(styleSearchTimerRef.current);
     styleSearchTimerRef.current = setTimeout(() => {
       createTask.fetchStyleInfoOptions(v);
     }, 300);
   }, [createTask]);
+
+  // 计算总下单数量（从 createOrderLines 聚合）
+  const totalOrderQuantity = useMemo(
+    () => createTask.createOrderLines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0),
+    [createTask.createOrderLines]
+  );
+
+  // 解析当前选择的工厂名（用于 FactoryInsightDrawer）
+  const insightFactoryName = createTask.selectedFactoryStat?.factoryName || '';
 
   return (
     <Drawer
@@ -203,6 +215,20 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           />
         </div>
         {createTask.selectedFactoryStat && <FactoryCapacityCard stat={createTask.selectedFactoryStat} />}
+        {createTask.selectedFactoryStat && createTask.selectedFactoryStat.factoryName && (
+          <div style={{ marginTop: 6, textAlign: 'right' }}>
+            <Button
+              size="small"
+              type="default"
+              onClick={() => setInsightOpen(true)}
+              style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
+              icon={<RightOutlined />}
+              iconPosition="end"
+            >
+              查看工厂全动态详情
+            </Button>
+          </div>
+        )}
           </div>
         </div>
       </Card>
@@ -220,6 +246,17 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           工序单价直接影响工资结算，请根据实际工价填写。
         </div>
       </Card>
+
+      {insightFactoryName && (
+        <FactoryInsightDrawer
+          open={insightOpen}
+          onClose={() => setInsightOpen(false)}
+          factoryName={insightFactoryName}
+          orderQuantity={totalOrderQuantity}
+          plannedDeadline={createTask.createDeliveryDate || undefined}
+          styleNo={createTask.createStyleNo || undefined}
+        />
+      )}
     </Drawer>
   );
 };

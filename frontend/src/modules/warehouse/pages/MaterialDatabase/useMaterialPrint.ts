@@ -79,7 +79,7 @@ const buildMaterialPrintHtml = (dataList: MaterialDatabase[]): string => {
     .summary-card-value { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
     .summary-card.highlight .summary-card-value { color: #d4380d; font-size: 20px; }
     .type-stats { display: flex; flex-wrap: wrap; gap: 8px; }
-    .type-stat { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0f7ff; border: 1px solid #91d5ff; border-radius: 4px; font-size: 12px; }
+    .type-stat { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0f7ff; border: 1px solid var(--status-processing-border); border-radius: 4px; font-size: 12px; }
     .type-name { font-weight: 600; color: var(--color-info); }
     .type-count, .type-qty { color: #666; }
     .section { page-break-inside: avoid; }

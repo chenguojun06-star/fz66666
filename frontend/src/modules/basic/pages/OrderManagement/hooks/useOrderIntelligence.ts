@@ -47,16 +47,24 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
   const [schedulingResult, setSchedulingResult] = useState<SchedulingSuggestionResponse | null>(null);
   const [schedulingLoading, setSchedulingLoading] = useState(false);
 
+  // 竞态保护：每次发起请求自增 requestId，响应回来后比对，不匹配则丢弃
+  const deliveryRequestIdRef = useRef(0);
+  const schedulingRequestIdRef = useRef(0);
+
   const fetchDeliverySuggestion = useCallback(async (factoryName?: string, qty?: number) => {
     if (!factoryName && !qty) return;
+    const requestId = ++deliveryRequestIdRef.current;
     setSuggestionLoading(true);
     try {
       const res = await intelligenceApi.getDeliveryDateSuggestion(factoryName, qty);
+      if (deliveryRequestIdRef.current !== requestId) return; // 旧请求丢弃
       if (isApiSuccess(res) && res?.data) {
         setDeliverySuggestion(res.data as DeliveryDateSuggestionResponse);
       }
     } catch { /* 静默失败 */ } finally {
-      setSuggestionLoading(false);
+      if (deliveryRequestIdRef.current === requestId) {
+        setSuggestionLoading(false);
+      }
     }
   }, []);
 
@@ -69,23 +77,45 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
     }
     const deadlineStr = deadline ? (deadline.format?.('YYYY-MM-DD') ?? String(deadline)) : '';
     const productCategory = form.getFieldValue('productCategory') || selectedStyle?.category || '';
+    const requestId = ++schedulingRequestIdRef.current;
     setSchedulingLoading(true);
     try {
       const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr, productCategory });
+      if (schedulingRequestIdRef.current !== requestId) return; // 旧请求丢弃
       if (isApiSuccess(res) && res?.data) {
         setSchedulingResult(res.data as SchedulingSuggestionResponse);
       }
     } catch { /* 静默失败 */ } finally {
-      setSchedulingLoading(false);
+      if (schedulingRequestIdRef.current === requestId) {
+        setSchedulingLoading(false);
+      }
     }
   }, [selectedStyle, totalOrderQuantity, form]);
 
-  // 排产建议自动触发
+  // 排产建议自动触发（防抖 500ms，避免连续修改数量时雪崩）
+  const schedulingTimerRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!visible || !selectedStyle?.styleNo || totalOrderQuantity <= 0) {
+    if (!visible) {
+      // 弹窗关闭时清空排产建议，避免下次打开残留旧数据
+      schedulingRequestIdRef.current++;
+      setSchedulingResult(null);
       return;
     }
-    void fetchSchedulingSuggestion();
+    if (!selectedStyle?.styleNo || totalOrderQuantity <= 0) {
+      return;
+    }
+    if (schedulingTimerRef.current) {
+      window.clearTimeout(schedulingTimerRef.current);
+    }
+    schedulingTimerRef.current = window.setTimeout(() => {
+      void fetchSchedulingSuggestion();
+    }, 500);
+    return () => {
+      if (schedulingTimerRef.current) {
+        window.clearTimeout(schedulingTimerRef.current);
+        schedulingTimerRef.current = null;
+      }
+    };
   }, [visible, selectedStyle?.styleNo, totalOrderQuantity, fetchSchedulingSuggestion]);
 
   // 报价参考自动获取
@@ -94,10 +124,17 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
       setQuoteReference(null);
       return;
     }
+    // 提取原始值避免 selectedStyle 整体引用触发重复拉取
+    const styleNo = selectedStyle.styleNo;
+    const styleId = selectedStyle?.id;
+    const styleTotalCost = Number((selectedStyle as any)?.totalCost) || 0;
+    const styleTotalPrice = Number((selectedStyle as any)?.totalPrice) || 0;
+    const stylePrice = Number(selectedStyle?.price) || 0;
+
     let cancelled = false;
     Promise.all([
-      intelligenceApi.getStyleQuoteSuggestion(selectedStyle.styleNo).catch(() => null),
-      selectedStyle?.id ? api.get(`/style/quotation?styleId=${selectedStyle.id}`).catch(() => null) : Promise.resolve(null),
+      intelligenceApi.getStyleQuoteSuggestion(styleNo).catch(() => null),
+      styleId ? api.get(`/style/quotation?styleId=${styleId}`).catch(() => null) : Promise.resolve(null),
     ]).then(([quoteSuggestionRes, quotationRes]: any[]) => {
       if (cancelled) return;
       const suggestion = quoteSuggestionRes?.data || {};
@@ -107,12 +144,12 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
         || 0;
       const fallbackTotalCost = Number(suggestion?.totalCost)
         || derivedQuotationTotalCost
-        || Number((selectedStyle as any)?.totalCost)
+        || styleTotalCost
         || 0;
       const fallbackQuotationPrice = Number(quotation?.totalPrice)
         || Number(suggestion?.currentQuotation)
-        || Number((selectedStyle as any)?.totalPrice)
-        || Number(selectedStyle?.price)
+        || styleTotalPrice
+        || stylePrice
         || 0;
       setQuoteReference({
         currentQuotation: fallbackQuotationPrice,
@@ -125,7 +162,9 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
     return () => {
       cancelled = true;
     };
-  }, [visible, selectedStyle]);
+  // 依赖 styleNo/id 而非 selectedStyle 整体引用，避免 setState 创建新引用导致重复拉取
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, selectedStyle?.id, selectedStyle?.styleNo]);
 
   // 定价相关计算
   const processBasedUnitPrice = useMemo(() => {
@@ -255,14 +294,20 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
   const schedulingPlans = schedulingResult?.plans || [];
 
   // 工厂或数量变化时自动重新计算交货期建议
+  // 依赖 selectedFactoryStat 整体（对象引用变即用户切换了工厂选择）+ factoryMode（切换内外模式即使同名也刷新）
   useEffect(() => {
+    if (!visible) {
+      // 弹窗关闭时清空交期建议，避免下次打开残留旧数据
+      deliveryRequestIdRef.current++;
+      setDeliverySuggestion(null);
+      return;
+    }
     if (!selectedFactoryStat || !totalOrderQuantity) {
       setDeliverySuggestion(null);
       return;
     }
     fetchDeliverySuggestion(selectedFactoryStat.factoryName, totalOrderQuantity);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFactoryStat?.factoryName, totalOrderQuantity]);
+  }, [visible, selectedFactoryStat, totalOrderQuantity, factoryMode, fetchDeliverySuggestion]);
 
   const resetIntelligence = useCallback(() => {
     setSchedulingResult(null);

@@ -7,7 +7,7 @@
 
 .overdueSummaryBar {
   background: linear-gradient(135deg, #fff1f0 0%, #fff7e6 100%);
-  border: 1px solid #ffccc7;
+  border: 1px solid var(--status-error-border);
   border-radius: 10px;
   padding: 10px 12px;
 }
@@ -191,7 +191,7 @@
 }
 
 .overdueOrderItem:hover {
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
 }
 
 .overdueOrderLeft {

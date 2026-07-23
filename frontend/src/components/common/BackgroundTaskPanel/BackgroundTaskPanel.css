@@ -52,7 +52,7 @@
 }
 
 .bg-task-item:hover {
-  background-color: var(--bg-hover, #fafafa);
+  background-color: var(--bg-hover, var(--color-bg-container));
 }
 
 .bg-task-item:last-child {
@@ -117,7 +117,7 @@
   padding: 6px 8px;
   font-size: 12px;
   color: var(--error-color, #ff4d4f);
-  background-color: var(--error-bg, #fff2f0);
+  background-color: var(--error-bg, var(--status-error-bg));
   border-radius: 4px;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -118,9 +118,9 @@
 }
 
 .searchInput:focus {
-  background: #e6f7ff;
-  border-color: #91d5ff;
-  box-shadow: inset 0 0 0 1px #91d5ff;
+  background: var(--status-processing-bg);
+  border-color: var(--status-processing-border);
+  box-shadow: inset 0 0 0 1px var(--status-processing-border);
 }
 
 .filterRow {
@@ -146,14 +146,14 @@
 }
 
 .filterChip:hover {
-  border-color: #91d5ff;
+  border-color: var(--status-processing-border);
   color: var(--color-info);
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
 }
 
 .filterChipActive {
   border-color: var(--color-info);
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
   color: var(--color-info);
   font-weight: 600;
 }
@@ -214,7 +214,7 @@
 }
 
 .taskItem:hover {
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
   transform: translateX(2px);
   box-shadow: 0 1px 4px rgba(24, 144, 255, 0.12);
 }
@@ -279,7 +279,7 @@
 .taskRefNo {
   font-size: 14px;
   color: var(--color-info);
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
   border-radius: 4px;
   padding: 1px 5px;
   cursor: pointer;

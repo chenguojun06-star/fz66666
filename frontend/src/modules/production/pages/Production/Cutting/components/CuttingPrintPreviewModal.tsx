@@ -129,11 +129,11 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
       <div
         style={{
           padding: '8px 14px',
-          background: '#f6ffed',
+          background: 'var(--status-success-bg)',
           color: '#389e0d',
           marginBottom: '12px',
           borderRadius: '4px',
-          border: '1px solid #b7eb8f',
+          border: '1px solid var(--status-success-border)',
           fontSize: '12px',
           lineHeight: '1.7',
         }}
@@ -147,7 +147,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         <div
           style={{
             padding: '10px 16px',
-            background: '#FFF7E6',
+            background: 'var(--status-warning-bg)',
             color: '#ad6800',
             marginBottom: '12px',
             borderRadius: '4px',

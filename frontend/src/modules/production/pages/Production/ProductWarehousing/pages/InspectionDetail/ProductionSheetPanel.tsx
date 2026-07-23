@@ -50,7 +50,7 @@ const ProductionSheetPanel: React.FC<Props> = ({
           padding: '10px 12px',
           border: '1px solid var(--neutral-border, #e8e8e8)',
           borderRadius: 6,
-          background: 'var(--neutral-bg, #fafafa)',
+          background: 'var(--neutral-bg, var(--color-bg-container))',
           fontSize: 14,
           lineHeight: '20px',
         }}>

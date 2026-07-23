@@ -1,6 +1,6 @@
 .teamStatusCard {
-  background: linear-gradient(180deg, #f6ffed 0%, #fcffe6 100%);
-  border: 1px solid #b7eb8f;
+  background: linear-gradient(180deg, var(--status-success-bg) 0%, #fcffe6 100%);
+  border: 1px solid var(--status-success-border);
   border-radius: 12px;
   padding: 12px;
   margin: 8px 0;
@@ -127,7 +127,7 @@
 }
 
 .purchaseDocCard {
-  background: linear-gradient(180deg, #fff7e6 0%, #fffbe6 100%);
+  background: linear-gradient(180deg, #fff7e6 0%, var(--status-warning-bg) 100%);
   border: 1px solid #ffd591;
   border-radius: 12px;
   padding: 12px;

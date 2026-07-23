@@ -70,5 +70,5 @@
 }
 
 .emojiItem:hover {
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
 }

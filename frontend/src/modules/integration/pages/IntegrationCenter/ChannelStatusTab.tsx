@@ -82,7 +82,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
       {stats && (
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={8}>
-            <Card variant="borderless" style={{ background: '#f6ffed', borderRadius: 8 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 8 }}>
               <Statistic title="迗7天支付流水" value={stats.paymentCount7d} suffix="笔" styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
@@ -92,7 +92,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card variant="borderless" style={{ background: stats.unprocessedCallbacks > 0 ? '#FFF7E6' : '#f9f9f9', borderRadius: 8 }}>
+            <Card variant="borderless" style={{ background: stats.unprocessedCallbacks > 0 ? 'var(--status-warning-bg)' : '#f9f9f9', borderRadius: 8 }}>
               <Statistic title="待处理回调" value={stats.unprocessedCallbacks} suffix="条"
                 styles={{ content: { color: stats.unprocessedCallbacks > 0 ? 'var(--color-warning)' : '#999' } }} />
             </Card>

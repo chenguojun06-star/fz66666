@@ -218,7 +218,7 @@ const printCss = `
     border: 2px solid var(--color-warning);
     padding: 8px 12px;
     border-radius: 4px;
-    background: #FFF7E6;
+    background: var(--status-warning-bg);
     margin-top: 4px;
   }
   .delivery-date-value {

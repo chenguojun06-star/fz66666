@@ -85,7 +85,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: linear-gradient(135deg, #FFF1F0 0%, #ffccc7 100%);
+  background: linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%);
   border: 1px solid #ffa39e;
   border-radius: 8px;
   cursor: pointer;

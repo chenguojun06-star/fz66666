@@ -97,7 +97,7 @@ function buildDetailHtml(
 
   const tableRows = rows.map(row => {
     const cells = row.flatMap(cell => `
-      <th style="background:#fafafa;font-weight:500;width:20%;text-align:left;padding:8px 12px;border:1px solid #d9d9d9;">${cell.label}</th>
+      <th style="background:var(--color-bg-container);font-weight:500;width:20%;text-align:left;padding:8px 12px;border:1px solid #d9d9d9;">${cell.label}</th>
       <td style="padding:8px 12px;border:1px solid #d9d9d9;">${cell.value || '-'}</td>
     `).join('');
     const emptyCells = row.length < column
@@ -135,7 +135,7 @@ function buildListHtml(
   footer?: React.ReactNode
 ): string {
   const headerCells = fields.map(f =>
-    `<th style="background:#fafafa;font-weight:500;text-align:left;padding:8px 10px;border:1px solid #d9d9d9;">${f.label}</th>`
+    `<th style="background:var(--color-bg-container);font-weight:500;text-align:left;padding:8px 10px;border:1px solid #d9d9d9;">${f.label}</th>`
   ).join('');
 
   const bodyRows = list.map((record, _ri) => {

@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-22（小云AI P0+P1 前沿升级全部完成 — 9 项智能化升级）
+> 最后更新：2026-07-23（下单页智能化模块 P2+P3 共 7 项修复 — 全部完成）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,147 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-23 下单页智能化模块 P2+P3 共 7 项修复（全部完成）✅
+
+用户要求"剩余的7个全部要优化好"，本次完成全部 7 项 P2/P3 级问题修复，npx tsc --noEmit 通过（exit 0）。
+
+**修复清单（7 项）**：
+
+1. **OrderFactorySelector deliveryOnTimeRate null/undefined 兜底** — [OrderFactorySelector.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/OrderFactorySelector.tsx)
+   - 问题：null/undefined 与数字比较返回 false（null→0, undefined→NaN），导致显示 "null%"/"undefined%"
+   - 修复：新增 `formatRate` 工具函数 + `FactoryStatBlock` 子组件，统一处理兜底
+   - 副产物：消除 INTERNAL/EXTERNAL 两段近 50 行重复渲染代码
+
+2. **SmartStyleInsightCard calcInsight 竞态保护 + 错误态区分** — [SmartStyleInsightCard.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/SmartStyleInsightCard.tsx)
+   - 问题：用户快速切换款号时旧请求可能覆盖新数据；加载失败与"真无数据"无法区分
+   - 修复：useRef 持有递增 requestId，响应回来后比对；新增 hasError state 区分错误态/空数据态，错误时显示"重试"按钮
+
+3. **StyleQuotePopover 失败时旧数据残留 + 竞态保护** — [StyleQuotePopover.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/StyleQuotePopover.tsx)
+   - 问题：失败不清 data → 旧款报价"张冠李戴"显示在新款上；无竞态保护
+   - 修复：fetchData 开头 `setData(null)`；新增 requestIdRef 竞态保护；Popover onOpenChange 关闭分支 `requestIdRef.current++` 让在飞请求作废
+
+4. **FactoryInsightDrawer 错误态 UI + 重试按钮** — [FactoryInsightDrawer.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/FactoryInsightDrawer.tsx)
+   - 问题：loadAll 失败仅 console.error，无错误态 UI、无重试入口，用户只看到 Empty 不知道是加载失败还是无数据
+   - 修复：新增 error state；catch 块 setError；渲染层加 Alert + 重试按钮
+
+5. **useOrderIntelligence 两个 fetch 竞态保护 + visible=false 重置** — [useOrderIntelligence.ts](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/hooks/useOrderIntelligence.ts)
+   - 问题：fetchDeliverySuggestion/fetchSchedulingSuggestion 无竞态保护；弹窗关闭后 schedulingResult/deliverySuggestion 残留
+   - 修复：新增 deliveryRequestIdRef + schedulingRequestIdRef；fetchXxx 发起前 ++，响应回来后比对；scheduling effect 和 delivery effect 在 visible=false 时主动 ++requestId + setState(null)
+
+6. **多文件硬编码颜色改 CSS 变量（design-system.css）**
+   - OrderFactorySelector：#f6ffed/#b7eb8f/#FFF7E6/#ffd591/#FFF1F0/#ffa39e/#888 → var(--status-*-bg/border)
+   - SmartStyleInsightCard：#f0f5ff/#F6FFED/#ffccc7/#FFFBE6/#ffe58f/#874d00/#e8f0fe/#d6e8ff/#667085/#1f2937 → var(--color-*)
+   - StyleQuotePopover：#f6ffed/#b7eb8f/#FFF7E6/#ffd591/#595959 → var(--status-*-bg/border)
+   - FactoryInsightDrawer：#fff1f0 → var(--status-error-bg)；#888 → var(--color-text-quaternary)
+   - OrderSchedulingInsights：#91caff/#f6ffed/#1f1f1f/#262626 → var(--status-processing-border)/var(--status-success-bg)/var(--color-text-primary)
+
+7. **折叠态 loading 指示** — OrderSchedulingInsights + OrderLearningInsightCard
+   - 问题：OrderSchedulingInsights 折叠态只有"分析中..."文字无视觉指示；OrderLearningInsightCard 折叠态完全无 loading 指示
+   - 修复：均新增 LoadingOutlined 旋转图标 + "分析中..."文字组合
+
+**验证**：npx tsc --noEmit 通过（exit 0）。本次仅前端 6 个文件改动，无需 mvn compile。
+**变更范围**：6 个前端文件（OrderFactorySelector / SmartStyleInsightCard / StyleQuotePopover / FactoryInsightDrawer / useOrderIntelligence / OrderSchedulingInsights / OrderLearningInsightCard，共 7 个）
+
+---
+
+### 2026-07-23 下单页智能化模块优化（P0+P1 共 9 项修复）✅
+
+用户要求核实下单页所有智能化模块、逻辑问题、无资料下单弹窗支持情况。调研发现 8 类智能化模块 + 16 个逻辑问题 + 无资料下单弹窗完全未集成智能化。本次修复 P0 级 2 项 + P1 级 4 项 + P2 级 3 项 = 9 项，npx tsc --noEmit 通过。
+
+**调研结论**：
+- 下单页共集成 8 类智能化模块：交期建议/AI 排产/报价参考/订单学习/工厂全动态详情/智能款式分析/工厂产能/工序进度
+- "无资料下单"弹窗存在但完全未集成智能化（Cutting 目录零调用 intelligenceApi）
+- 共发现 16 个逻辑问题（P0×2 / P1×4 / P2×7 / P3×3）
+
+**本次修复（9 项）**：
+
+**P0 级（严重）**：
+1. **deliverySuggestion useEffect 依赖项** — [useOrderIntelligence.ts:257-265](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/hooks/useOrderIntelligence.ts#L257-L265)
+   - 问题：依赖 `selectedFactoryStat?.factoryName` 字符串，切换同名工厂不刷新
+   - 修复：改为 `selectedFactoryStat` 整体 + `factoryMode` + `fetchDeliverySuggestion` 依赖，去掉 eslint-disable
+
+2. **FactoryInsightDrawer 无防抖重复加载** — [FactoryInsightDrawer.tsx:79-121](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/FactoryInsightDrawer.tsx#L79-L121)
+   - 问题：依赖 `[open, factoryName, orderQuantity, plannedDeadline]` 无防抖，参数变化触发 3 API 雪崩
+   - 修复：open 切换/factoryName 变化立即加载，参数变化 600ms 防抖；用 paramsRef 避免闭包过期；loadAll 用 useCallback 稳定引用
+
+**P1 级（高）**：
+3. **无资料下单弹窗接入工厂全动态详情 Drawer** — [CuttingCreateTaskModal.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/production/pages/Production/Cutting/components/CuttingCreateTaskModal.tsx)
+   - 问题：CuttingCreateTaskModal 完全未集成智能化
+   - 修复：接入 FactoryInsightDrawer，从 createOrderLines 聚合 totalOrderQuantity，传入 createDeliveryDate/createStyleNo；FactoryCapacityCard 下方加"查看工厂全动态详情"镂空按钮
+
+4. **getStyleQuoteSuggestion 重复调用 + destroyOnHidden 缓存冲突** — [StyleQuotePopover.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/StyleQuotePopover.tsx)
+   - 问题：fetchedRef + destroyOnHidden 导致首次拉取后永不刷新
+   - 修复：去掉 fetchedRef 缓存，每次 hover 都拉取（mouseEnterDelay=0.3 已防抖）
+
+5. **SmartStyleInsightCard 拉取 100 条本地算** — [SmartStyleInsightCard.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/SmartStyleInsightCard.tsx)
+   - 问题：拉 100 条历史订单到前端本地聚合，无防抖
+   - 修复：拉取量 100→30 + 防抖 400ms
+
+6. **orderLearningApi 404 永久禁用无重试** — [orderLearningApi.ts](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/services/intelligence/orderLearningApi.ts)
+   - 问题：HTTP 404 后 sessionStorage 永久标记不可用，需手动清 sessionStorage 才能恢复
+   - 修复：改为 5 分钟冷却后自动重试，存储时间戳而非布尔值
+
+**P2 级（中）**：
+7. **排产建议无防抖** — useOrderIntelligence.ts:83-101
+   - 修复：加 500ms 防抖（schedulingTimerRef）
+8. **selectedStyle 对象引用依赖** — useOrderIntelligence.ts:140
+   - 修复：`[visible, selectedStyle]` → `[visible, selectedStyle?.id, selectedStyle?.styleNo]`
+
+**验证**：npx tsc --noEmit 通过（exit 0）。本次仅改前端文件，无需 mvn compile。
+**变更范围**：6 个前端文件（3 新建无需改 + 6 修改）。
+
+### 2026-07-23 下单页工厂全动态时间线（4 项 Gap 全部完成）✅
+
+用户阶段四需求：下单人员在选择工厂时即可看到该工厂的全动态时间线（当前负载/预计完工/每天产量），不重复现有智能化逻辑、不占窗口位置（用 Drawer）。本次完成 4 项 Gap 后端 + 前端，mvn compile + npx tsc --noEmit 全通过。
+
+**4 项 Gap 实现**：
+
+1. **预下单三档交期预测 API（不依赖 orderId）**
+   - 新建 [PreOrderDeliveryPredictionRequest.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/PreOrderDeliveryPredictionRequest.java)（factoryName/orderQuantity/styleNo?/plannedDeadline?）
+   - 新建 [PreOrderDeliveryPredictionResponse.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/PreOrderDeliveryPredictionResponse.java)（三档日期+timelineNodes）
+   - 新建 [PreOrderDeliveryPredictionOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/PreOrderDeliveryPredictionOrchestrator.java)
+   - **独特设计**：用工厂总负载（含本单）计算排队时间，输出 timelineNodes 供前端直接渲染
+   - 后端端点：`POST /intelligence/pre-order-delivery-prediction`
+
+2. **产能缺口分析集成到下单页**
+   - 复用现有 `CapacityGapOrchestrator.analyze()`（4 档 gapLevel），前端 Drawer 调用 `intelligenceApi.getCapacityGap()`
+   - 在 Drawer 中按 factoryName 过滤出当前工厂的 gap 项展示
+
+3. **工厂当前在产订单明细（可点击详情查看）**
+   - 新建 [FactoryActiveOrderDTO.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/dto/FactoryActiveOrderDTO.java)
+   - 新建 [FactoryActiveOrderOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/FactoryActiveOrderOrchestrator.java)（按 plannedEndDate 排序，danger/warning/safe 三档风险）
+   - 后端端点：`GET /intelligence/factory-active-orders?factoryName=xxx`
+
+4. **后端下单时产能预警（不阻断，仅 warning）**
+   - 新建 [FactoryCapacityWarningHelper.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/helper/FactoryCapacityWarningHelper.java)
+   - 阈值：OVERLOAD_QUANTITY_THRESHOLD=5000 / OVERLOAD_ORDER_THRESHOLD=20
+   - `warnIfOverloaded` 查询在制订单超阈值时 `log.warn`，**不抛异常**
+   - `evictFactoryCapacityCache` 删除 Redis key `factory_capacity:{tenantId}`（解决原 5 分钟延迟）
+   - 修改 [ProductionOrderOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductionOrderOrchestrator.java)：
+     - saveOrUpdateOrder 末尾 `registerCapacityWarningAfterCommit`（TransactionSynchronizationManager afterCommit 回调）
+     - evictCacheAfterCommit 内同步路径 + afterCommit 路径都加 `factoryCapacityWarningHelper.evictFactoryCapacityCache`
+
+5. **时间线可视化组件（详情视图）**
+   - 新建 [FactoryInsightDrawer.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/FactoryInsightDrawer.tsx)（720px 宽 Drawer，destroyOnClose）
+   - 三大区块：交期预测时间线（水平节点）+ 产能缺口分析（Tag+advice）+ 在产订单明细 Table（7 列）
+   - `loadAll` 用 Promise.all 并行调用 3 个 API
+   - 修改 [OrderFactorySelector.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/basic/pages/OrderManagement/components/OrderFactorySelector.tsx)：
+     - 内部工厂卡片 + 外发工厂卡片末尾各加「查看工厂全动态详情」镂空按钮
+     - `renderInsightDrawer` 在 return 末尾只渲染一次（避免重复实例）
+   - 修改 [intelligenceApi.ts](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/services/intelligence/intelligenceApi.ts) + [operation.ts](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/services/intelligence/intelligenceTypes/operation.ts) 新增 4 个类型 + 3 个 API 方法
+
+**算法复用（不重复造轮子）**：
+- 新建 [FactoryVelocityCalculator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/helper/FactoryVelocityCalculator.java) 从 DeliveryPredictionOrchestrator 拆薄
+- 复用 EWMA(α=0.33) + 趋势检测(最小二乘,±25%) + 季节性修正(周末70%) + P80 百分位混合(6:4) + 历史偏差校准
+- 区别：DeliveryPredictionOrchestrator.computeWeightedVelocity(orderId) 按单订单聚合；FactoryVelocityCalculator.computeFactoryVelocity(factoryName) 按工厂所有在制订单聚合
+
+**踩坑修复（编译期）**：
+- 后端：MyBatis-Plus `qw.ne("status", "a","b","c")` 不支持多值 → 改为 `qw.notIn("status", Arrays.asList(...))`
+- 前端：ApiClient.post 的泛型 R 默认 = T，`api.post<{code,data:T}>` 返回 `Promise<{code,data:T}>`，await 后直接 `.data` 即可，不需要 `.data?.data`
+
+**验证**：mvn compile -q 通过（exit 0）+ npx tsc --noEmit 通过（exit 0）。
+**变更范围**：后端 8 文件（5 新建 + 3 修改）+ 前端 4 文件（1 新建 + 3 修改）= 12 文件。
 
 ### 2026-07-22 小云AI P0+P1 前沿升级全部完成（待提交）✅
 

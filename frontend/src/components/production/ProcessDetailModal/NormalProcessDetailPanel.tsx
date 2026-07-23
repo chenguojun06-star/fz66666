@@ -196,7 +196,7 @@ const ProcessOrderInfoGrid: React.FC<{
 const CuttingSizeDetail: React.FC<{ items: Array<{ size: string; quantity: number }> }> = ({ items }) => (
   <div style={{
     padding: '8px 12px',
-    border: '1px solid #b7eb8f',
+    border: '1px solid var(--status-success-border)',
     background: 'rgba(34, 197, 94, 0.15)',
     borderRadius: 12,
     marginBottom: 12,
@@ -214,7 +214,7 @@ const CuttingSizeDetail: React.FC<{ items: Array<{ size: string; quantity: numbe
         padding: '2px 8px',
         background: 'var(--color-bg-base)',
         borderRadius: 4,
-        border: '1px solid #b7eb8f'
+        border: '1px solid var(--status-success-border)'
       }}>
         {item.size}: {item.quantity}
       </span>

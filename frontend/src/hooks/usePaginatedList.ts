@@ -20,6 +20,7 @@ interface UsePaginatedListResult<T, S> {
   page: number;
   setPage: (p: number) => void;
   stats: S | null;
+  error: Error | null;
   refresh: () => void;
 }
 
@@ -33,12 +34,27 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState<S | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
 
+  useEffect(() => {
+    mountedRef.current = true;
+    const reqId = requestIdRef.current;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current = reqId + 1;
+    };
+  }, []);
+
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setError(null);
     try {
       const promises: [Promise<unknown>, Promise<unknown>?] = [
         fetchList({ page, pageSize, ...filtersRef.current } as { page: number; pageSize: number } & Partial<F>),
@@ -47,6 +63,9 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
         promises.push(fetchStats());
       }
       const results = await Promise.all(promises);
+
+      if (requestIdRef.current !== requestId || !mountedRef.current) return;
+
       const listData = results[0] as PaginatedResult<T>;
       const records = listData?.records ?? (Array.isArray(listData) ? listData : []);
       setList(Array.isArray(records) ? records : []);
@@ -54,10 +73,16 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
       if (results[1]) {
         setStats(results[1] as S);
       }
-    } catch {
+    } catch (err) {
+      if (requestIdRef.current !== requestId || !mountedRef.current) return;
+      setError(err as Error);
+      setList([]);
+      setTotal(0);
       message.error(onError);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId && mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [fetchList, fetchStats, page, pageSize, onError]);
 
@@ -72,6 +97,7 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
     page,
     setPage,
     stats,
+    error,
     refresh: fetchData,
   };
 }

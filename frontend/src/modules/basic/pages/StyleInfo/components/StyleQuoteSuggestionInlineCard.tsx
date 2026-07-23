@@ -78,7 +78,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           alignItems: 'center',
           gap: 8,
           padding: '10px 14px',
-          background: 'linear-gradient(90deg, #F0FFF4 0%, #FFF7E6 100%)',
+          background: 'linear-gradient(90deg, #F0FFF4 0%, var(--status-warning-bg) 100%)',
           cursor: 'pointer',
         }}
       >

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Tag } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import type { SchedulePlan } from '@/services/intelligence/intelligenceApi';
 import { buildSchedulingInsightItems } from './orderSchedulingInsightsOrchestrator';
 
@@ -30,8 +31,15 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
         <Button onClick={() => setVisible((prev) => !prev)}>
           {visible ? '收起建议' : '排产建议'}
         </Button>
-        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>
-          {loading ? '分析中...' : `显示 ${items.length}${plans.length > items.length ? ` / ${plans.length}` : ''} 家`}
+        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {loading ? (
+            <>
+              <LoadingOutlined style={{ fontSize: 13 }} />
+              <span>分析中...</span>
+            </>
+          ) : (
+            <span>显示 {items.length}{plans.length > items.length ? ` / ${plans.length}` : ''} 家</span>
+          )}
         </span>
       </div>
       {visible ? (
@@ -59,15 +67,15 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
               <div
                 key={item.key}
                 style={{
-                  border: item.selected ? '1px solid #91caff' : '1px solid var(--color-border-light)',
+                  border: item.selected ? '1px solid var(--status-processing-border)' : '1px solid var(--color-border-light)',
                   borderRadius: 8,
                   padding: 10,
-                  background: item.selected ? '#f6ffed' : 'var(--color-bg-container)',
+                  background: item.selected ? 'var(--status-success-bg)' : 'var(--color-bg-container)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1f1f1f' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
                       {item.pinned ? '当前工厂' : `推荐${item.rank}`} · {item.factoryName}
                     </div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{item.estimatedText}</div>
@@ -81,15 +89,15 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                 <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>在制</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>{item.currentLoadText}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.currentLoadText}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>可用</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>{item.availableCapacityText}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.availableCapacityText}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>日产能</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>{item.dailyCapacityText}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.dailyCapacityText}</div>
                   </div>
                 </div>
                 {item.dataNote ? (

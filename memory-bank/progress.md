@@ -1,9 +1,126 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-22（小云AI P0+P1 前沿升级全部完成 — 9 项智能化升级）
+> 最后更新：2026-07-23（下单页智能化模块 P2+P3 共 7 项修复 — 全部完成）
 
 ## 已完成
+
+### 2026-07-23 下单页智能化模块 P2+P3 共 7 项修复（全部完成）✅
+
+用户要求"剩余的7个全部要优化好"，全部修复完毕。npx tsc --noEmit 通过。
+
+- [x] **P2-9 OrderFactorySelector deliveryOnTimeRate null/undefined 兜底**
+  - 新增 formatRate + FactoryStatBlock 子组件，消除 INTERNAL/EXTERNAL 重复渲染
+- [x] **P2-10 SmartStyleInsightCard calcInsight 竞态保护 + 错误态区分**
+  - useRef requestId + hasError state，错误时显示"重试"
+- [x] **P2-11 StyleQuotePopover 失败清 data + 竞态保护 + Popover 关闭取消在飞请求**
+- [x] **P2-12 FactoryInsightDrawer 错误态 UI + 重试按钮**
+  - 新增 error state + Alert + 重试按钮
+- [x] **P2-13 useOrderIntelligence 两个 fetch 竞态保护 + visible=false 重置**
+  - deliveryRequestIdRef + schedulingRequestIdRef；弹窗关闭清空残留
+- [x] **P3-14 多文件硬编码颜色改 CSS 变量**（5 个文件）
+  - OrderFactorySelector / SmartStyleInsightCard / StyleQuotePopover / FactoryInsightDrawer / OrderSchedulingInsights
+- [x] **P3-15 折叠态 loading 指示** — OrderSchedulingInsights + OrderLearningInsightCard
+  - 新增 LoadingOutlined 旋转图标 + "分析中..."文字
+
+**变更范围**：7 个前端文件
+**验证**：npx tsc --noEmit 通过（exit 0）
+
+---
+
+### 2026-07-23 下单页智能化模块优化（P0+P1 共 9 项修复）✅
+
+用户需求：盘点下单页所有智能化模块、检查逻辑问题、确认无资料下单弹窗是否支持智能化。
+
+**调研结论**：下单页集成 8 类智能化模块（交货期智能建议 / AI 排产建议 / 款式报价建议 / 订单学习推荐 / 工厂全动态详情 Drawer / 智能款式分析卡 / 工厂产能数据 / 工序进度加载）；无资料下单弹窗（CuttingCreateTaskModal）此前完全未集成任何 intelligenceApi。
+
+**P0 修复（2 项）**：
+- [x] **P0-1 useOrderIntelligence deliverySuggestion 依赖项**
+  - 原 `selectedFactoryStat?.factoryName` + eslint-disable 掩盖问题，工厂对象其他字段变化不触发重算
+  - 改为整体 `selectedFactoryStat` + `factoryMode` + `fetchDeliverySuggestion` 依赖
+- [x] **P0-2 FactoryInsightDrawer 防抖重构**
+  - 原 useEffect 无防抖，open/orderQuantity/plannedDeadline 任一变化即触发 3 个 API 并行雪崩
+  - 重构为：open 从 false→true 立即加载 / factoryName 变化立即加载 / 其他参数变化 600ms 防抖
+  - 用 ref 保存最新参数避免闭包过期
+
+**P1 修复（4 项）**：
+- [x] **P1-3 无资料下单弹窗接入 FactoryInsightDrawer**
+  - CuttingCreateTaskModal 新增「查看工厂全动态详情」镂空按钮（仅在 selectedFactoryStat 存在时显示）
+  - useMemo 聚合 createOrderLines 计算总下单数量传给 Drawer
+  - 接入交期预测/产能缺口/在产订单明细三大模块
+  - 跳过交期建议/排产/订单学习：无资料下单无款号工价基础，FactoryInsightDrawer 已覆盖核心场景
+- [x] **P1-4 StyleQuotePopover fetchedRef 缓存冲突**
+  - destroyOnHidden=true 销毁内容，但 fetchedRef 在父作用域导致首次拉取后永不刷新
+  - 去掉 fetchedRef，改为 onOpenChange 触发拉取（每次打开重新拉）
+- [x] **P1-5 SmartStyleInsightCard 拉取量 + 防抖**
+  - pageSize 100→30（足够算周期/准时率/频率统计）
+  - 新增 400ms 防抖，避免快速切换款号时连续拉取
+- [x] **P1-6 orderLearningApi 404 永久禁用改 5 分钟冷却**
+  - 原 sessionStorage 布尔值永久标记不可用，后端修复后前端仍不重试
+  - 改为时间戳 + 5 分钟冷却，过期自动恢复
+
+**P2 修复（2 项）**：
+- [x] **P2-7 排产建议加 500ms 防抖**
+  - 原 useEffect 无防抖，visible/styleNo/totalOrderQuantity 变化即触发
+  - 加 schedulingTimerRef + setTimeout 500ms + cleanup
+- [x] **P2-8 selectedStyle 对象引用依赖**
+  - 原 `selectedStyle` 整体引用依赖，setState 创建新引用导致重复拉取
+  - 改为 `selectedStyle?.id` + `selectedStyle?.styleNo` 字段依赖
+
+**变更范围**：前端 6 文件修改（useOrderIntelligence.ts / FactoryInsightDrawer.tsx / CuttingCreateTaskModal.tsx / StyleQuotePopover.tsx / SmartStyleInsightCard.tsx / orderLearningApi.ts），无后端变更。
+
+**验证**：
+- npx tsc --noEmit 通过（exit 0）
+
+**待办（用户未确认）**：
+- 剩余 P2 级 4 个问题（问题 9-12）+ P3 级 3 个问题（问题 14-16）未处理
+- 无资料下单是否需要接入更多智能化模块（交期建议/排产/订单学习）— 已自行跳过，待用户确认
+
+### 2026-07-23 下单页工厂全动态时间线（4 项 Gap 全部完成）✅
+
+用户阶段四需求：下单人员在选择工厂时即可看到该工厂的全动态时间线（当前负载/预计完工/每天产量），不重复现有智能化逻辑、不占窗口位置（用 Drawer）。
+
+**4 项 Gap + 时间线可视化组件**：
+- [x] **Gap 1：预下单三档交期预测 API（不依赖 orderId）**
+  - 新建 PreOrderDeliveryPredictionRequest/Response DTO + PreOrderDeliveryPredictionOrchestrator
+  - 独特设计：用工厂总负载（含本单）计算排队时间，输出 timelineNodes 供前端直接渲染
+  - 端点：`POST /intelligence/pre-order-delivery-prediction`
+- [x] **Gap 2：产能缺口分析集成到下单页**
+  - 复用现有 `CapacityGapOrchestrator.analyze()`（4 档 gapLevel）
+  - Drawer 调用 `intelligenceApi.getCapacityGap()`，按 factoryName 过滤
+- [x] **Gap 3：工厂当前在产订单明细（可点击详情查看）**
+  - 新建 FactoryActiveOrderDTO + FactoryActiveOrderOrchestrator
+  - 按 plannedEndDate 排序，danger/warning/safe 三档风险分类
+  - 端点：`GET /intelligence/factory-active-orders?factoryName=xxx`
+- [x] **Gap 4：后端下单时产能预警（不阻断，仅 warning）**
+  - 新建 FactoryCapacityWarningHelper（@Component）
+  - 阈值：5000 件 / 20 单
+  - warnIfOverloaded 不抛异常，仅 log.warn
+  - evictFactoryCapacityCache 删除 Redis key `factory_capacity:{tenantId}`
+  - ProductionOrderOrchestrator.saveOrUpdateOrder 末尾 afterCommit 回调 warnIfOverloaded
+  - evictCacheAfterCommit 同步路径 + afterCommit 路径都加 evictFactoryCapacityCache
+- [x] **时间线可视化组件（详情视图）**
+  - 新建 FactoryInsightDrawer.tsx（720px 宽 Drawer，destroyOnClose）
+  - 三大区块：交期预测时间线（水平节点）+ 产能缺口分析 + 在产订单明细 Table（7 列）
+  - Promise.all 并行 3 API
+  - OrderFactorySelector.tsx 加「查看工厂全动态详情」镂空按钮（内部 + 外发工厂各一处）
+  - renderInsightDrawer 在 return 末尾只渲染一次
+  - intelligenceApi.ts + operation.ts 新增 4 类型 + 3 API 方法
+
+**算法复用（不重复造轮子）**：
+- 新建 FactoryVelocityCalculator.java 从 DeliveryPredictionOrchestrator 拆薄
+- 复用 EWMA(α=0.33) + 趋势检测(最小二乘,±25%) + 季节性修正(周末70%) + P80 百分位混合(6:4) + 历史偏差校准
+- 区别：单订单聚合 vs 工厂所有在制订单聚合
+
+**踩坑修复（编译期）**：
+- 后端：MyBatis-Plus `qw.ne("status", "a","b","c")` 不支持多值 → `qw.notIn("status", Arrays.asList(...))`
+- 前端：ApiClient.post 泛型 R 默认 = T，`api.post<{code,data:T}>` 返回 `Promise<{code,data:T}>`，await 后直接 `.data`
+
+**验证**：
+- mvn compile -q 通过（exit 0）
+- npx tsc --noEmit 通过（exit 0）
+
+**变更范围**：后端 8 文件（5 新建 + 3 修改）+ 前端 4 文件（1 新建 + 3 修改）= 12 文件。
 
 ### 2026-07-22 小云AI P0+P1 前沿升级全部完成（待提交）✅
 

@@ -80,7 +80,7 @@ const PayModal: React.FC<PayModalProps> = ({
       <div style={{ padding: '0 8px' }}>
         {/* 业务信息提示 */}
         {currentPayable && (
-          <Card style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+          <Card style={{ marginBottom: 16, background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)' }}>
             <Descriptions column={2}>
               <Descriptions.Item label="业务类型">
                 <Tag color={BIZ_TYPE_MAP[currentPayable.bizType]?.color}>
@@ -164,7 +164,7 @@ const PayModal: React.FC<PayModalProps> = ({
 
           {/* 显示选中的收款账户信息 */}
           {selectedMethod && selectedMethod !== 'OFFLINE' && (
-            <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+            <div style={{ background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
               <div style={{ fontWeight: 500, marginBottom: 8 }}>
                 收款账户
                 <Button

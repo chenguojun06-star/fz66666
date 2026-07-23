@@ -40,6 +40,18 @@ export const useRequest = <T = any>(
   const [data, setData] = useState<T | undefined>();
   const [error, setError] = useState<Error | undefined>();
   const hasAutoRun = useRef(false);
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const reqId = requestIdRef.current;
+    return () => {
+      mountedRef.current = false;
+      // 卸载时让所有在飞请求作废：改变 requestId 使后续回调不匹配
+      requestIdRef.current = reqId + 1;
+    };
+  }, []);
 
   const {
     onSuccess,
@@ -68,10 +80,13 @@ export const useRequest = <T = any>(
   );
 
   const run = useCallback(async (): Promise<T | void> => {
+    const requestId = ++requestIdRef.current;
+
     // 权限前置拦截
     if (permission) {
       const result = checkPermissionRequirement(user, permission);
       if (!result.allowed) {
+        if (requestIdRef.current !== requestId || !mountedRef.current) return;
         const err = new Error(result.reason || '无权限');
         setError(err);
         message.error(result.reason || '无权限执行此操作');
@@ -84,6 +99,7 @@ export const useRequest = <T = any>(
     if (tenantCacheKey) {
       const cached = globalCache.get(tenantCacheKey);
       if (cached && cached.expireAt > Date.now()) {
+        if (requestIdRef.current !== requestId || !mountedRef.current) return;
         setData(cached.data as T);
         onSuccessRef.current?.(cached.data as T);
         return cached.data as T;
@@ -95,6 +111,8 @@ export const useRequest = <T = any>(
 
     try {
       const result = await asyncFnRef.current();
+
+      if (requestIdRef.current !== requestId || !mountedRef.current) return;
 
       if (typeof result === 'string') {
         message.success(result);
@@ -110,13 +128,16 @@ export const useRequest = <T = any>(
       onSuccessRef.current?.(result as T);
       return result as T;
     } catch (err: unknown) {
+      if (requestIdRef.current !== requestId || !mountedRef.current) return;
       const errorMsg = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'msg' in err ? String((err as Record<string, any>).msg) : '操作失败');
       message.error(errorMsg);
       setError(err as Error);
       onErrorRef.current?.(err as Error);
       throw err;
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId && mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [user, permission, tenantCacheKey, cacheTTL, message]);
 

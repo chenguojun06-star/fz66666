@@ -104,7 +104,7 @@ const PlatformDetail: React.FC = () => {
                   </Card>
                 </Col>
                 <Col span={12}>
-                  <Card style={{ borderRadius: 6, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
+                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-success-border)', background: 'var(--status-success-bg)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-success)' }}>🛒 链路二：电商仓（现货发货）</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → <Tag color="orange">待拣货</Tag> → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
@@ -120,17 +120,17 @@ const PlatformDetail: React.FC = () => {
           />
           <Row gutter={12} style={{ marginBottom: 16 }}>
             <Col span={6}>
-              <Card style={{ background: '#FFF7E6', borderRadius: 8, border: '1px solid #ffd591' }}>
+              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid #ffd591' }}>
                 <Statistic title="待拣货" value={stats?.pendingPick ?? 0} suffix="单" styles={{ content: { color: 'var(--color-warning)', fontSize: 20 } }} prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: '#e6f7ff', borderRadius: 8, border: '1px solid #91caff' }}>
+              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid #91caff' }}>
                 <Statistic title="备货中" value={stats?.preparing ?? 0} suffix="单" styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }} prefix={<SyncOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: '#f6ffed', borderRadius: 8, border: '1px solid #95de64' }}>
+              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid #95de64' }}>
                 <Statistic title="已出库" value={stats?.shippedToday ?? 0} suffix="单" styles={{ content: { color: 'var(--color-success)', fontSize: 20 } }} prefix={<CheckCircleOutlined />} />
               </Card>
             </Col>
@@ -159,7 +159,7 @@ const PlatformDetail: React.FC = () => {
               title={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>点击查看获取教程 →</Button></span>}
             />
           ) : (
-            <Card title={guide.title} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffe58f' }}
+            <Card title={guide.title} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid var(--status-warning-border)' }}
               extra={<Button type="link" onClick={() => setShowGuide(false)}>收起</Button>}>
               <Steps direction="vertical" current={-1}
                 items={guide.steps.map(s => ({ title: s.title, description: <Text type="secondary">{s.description}</Text>, status: 'process' as const }))}
@@ -217,7 +217,7 @@ const PlatformDetail: React.FC = () => {
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.ecommerceCenter)} style={{ marginRight: 8 }} />
           <span style={{
             width: 40, height: 40, borderRadius: 10,
-            background: configured ? '#f6ffed' : '#FFF7E6',
+            background: configured ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 20, color: platform.color, marginRight: 12,
           }}>
@@ -239,22 +239,22 @@ const PlatformDetail: React.FC = () => {
         {configured && stats && (
           <Row gutter={16} style={{ marginBottom: 12 }}>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
                 <Statistic title="今日订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-success-bg) 0%, #fcffe6 100%)', borderRadius: 12 }}>
                 <Statistic title="今日销售" value={formatMoney(parseFloat(stats.todaySales))} styles={{ content: { color: 'var(--color-success)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #FFF7E6 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
                 <Statistic title="待发货" value={stats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: 'var(--color-warning)' }} />} styles={{ content: { color: 'var(--color-warning)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: (stats.noStockWarn ?? 0) > 0 ? 'linear-gradient(135deg, #FFF1F0 0%, #ffccc7 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: (stats.noStockWarn ?? 0) > 0 ? 'linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
                 <Statistic title="缺货预警" value={stats.noStockWarn} suffix="单" prefix={<WarningOutlined style={{ color: (stats.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' }} />} styles={{ content: { color: (stats.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' } }} />
               </Card>
             </Col>

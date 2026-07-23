@@ -242,7 +242,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
             </Upload.Dragger>
 
             {!ocrLoading && ocrFile && (
-              <div style={{ marginTop: 16, padding: 12, background: 'var(--color-success-bg-light, #f6ffed)', borderRadius: 8, border: '1px solid var(--color-success-border, #b7eb8f)' }}>
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--color-success-bg-light, var(--status-success-bg))', borderRadius: 8, border: '1px solid var(--color-success-border, var(--status-success-border))' }}>
                 <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
                   已选择: {ocrFile.name}
                 </p>

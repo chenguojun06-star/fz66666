@@ -72,7 +72,7 @@ const NextList: React.FC<Props> = ({
     {/* 卡住警告 */}
     {stuckNode && (
       <div style={{
-        marginTop: 6, padding: '3px 8px', background: '#FFF7E6',
+        marginTop: 6, padding: '3px 8px', background: 'var(--status-warning-bg)',
         borderRadius: 5, fontSize: 11, color: '#d46b08',
         display: 'flex', alignItems: 'center', gap: 4,
       }}>

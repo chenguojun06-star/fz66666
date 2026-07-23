@@ -168,7 +168,7 @@ const ShareOrderPage: React.FC = () => {
         {/* 品牌标题 */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 14, color: '#76a7c4', letterSpacing: 2, marginBottom: 4 }}>PRODUCTION TRACKING</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#e6f7ff', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>工序跟进追踪</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--status-processing-bg)', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>工序跟进追踪</div>
         </div>
 
         <Alert
@@ -214,7 +214,7 @@ const ShareOrderPage: React.FC = () => {
         </div>
 
         <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(57,255,20,0.14)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 12 }}> 智能进度说明</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 12 }}> 智能进度说明</div>
           <div style={{ display: 'grid', gap: 10 }}>
             <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
               <div style={{ fontSize: 14, color: '#7fa7c2', marginBottom: 4 }}>当前状态</div>
@@ -233,7 +233,7 @@ const ShareOrderPage: React.FC = () => {
 
         {/* 工序进度 */}
         <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 16 }}>工序进度</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 16 }}>工序进度</div>
           {data.stages?.map(s => (
             <div key={s.stageName} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -257,11 +257,11 @@ const ShareOrderPage: React.FC = () => {
         {/* AI 预测 */}
         {ai && (
           <div style={{ background: `linear-gradient(135deg, rgba(8,20,40,0.88), rgba(8,20,40,0.76))`, border: `1px solid ${riskColor}30`, borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: `0 8px 24px ${riskColor}14` }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 12 }}> AI 预测分析</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 12 }}> AI 预测分析</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 14, color: '#7fa7c2', marginBottom: 4 }}>预测完成日期</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff' }}>{ai.predictedFinishDate || '计算中'}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)' }}>{ai.predictedFinishDate || '计算中'}</div>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 14, color: '#7fa7c2', marginBottom: 4 }}>预测置信度</div>
@@ -279,7 +279,7 @@ const ShareOrderPage: React.FC = () => {
         {/* 最近扫码记录 */}
         {data.recentScans && data.recentScans.length > 0 && (
           <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 14 }}>最近生产记录</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 14 }}>最近生产记录</div>
             {data.recentScans.map((s: ScanEntry, i: number) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans!.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

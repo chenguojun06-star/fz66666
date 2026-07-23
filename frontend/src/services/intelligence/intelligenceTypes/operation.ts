@@ -48,6 +48,78 @@ export interface DeliveryPredictionResponse {
   rationale: string;
 }
 
+// ─── 预下单交期预测（不依赖 orderId）───
+export interface PreOrderDeliveryPredictionRequest {
+  factoryName: string;
+  orderQuantity: number;
+  styleNo?: string;
+  plannedDeadline?: string;
+}
+
+export interface PreOrderTimelineNode {
+  type: 'today' | 'optimistic' | 'mostLikely' | 'pessimistic' | 'plannedDeadline';
+  date: string;
+  daysFromToday: number;
+  label: string;
+  riskLevel: 'safe' | 'warning' | 'danger';
+}
+
+export interface PreOrderDeliveryPredictionResponse {
+  factoryName: string;
+  orderQuantity: number;
+  factoryPendingQuantity: number;
+  factoryDailyVelocity: number;
+  optimisticDate: string;
+  mostLikelyDate: string;
+  pessimisticDate: string;
+  optimisticDays: number;
+  mostLikelyDays: number;
+  pessimisticDays: number;
+  plannedDeadline?: string;
+  likelyDelayed: boolean;
+  confidence: number;
+  rationale: string;
+  timelineNodes: PreOrderTimelineNode[];
+}
+
+// ─── 产能缺口分析 ───
+export interface FactoryCapacityGap {
+  factoryName: string;
+  pendingQuantity: number;
+  dailyCapacity: number;
+  estimatedDaysToComplete: number;
+  nearestDueDate?: string;
+  daysToNearestDue: number;
+  gapDays: number;
+  gapLevel: 'safe' | 'tight' | 'gap' | 'critical';
+  advice: string;
+}
+
+export interface CapacityGapResponse {
+  totalFactories: number;
+  gapFactoryCount: number;
+  factories: FactoryCapacityGap[];
+}
+
+// ─── 工厂在产订单明细 ───
+export interface FactoryActiveOrderDTO {
+  orderId: string;
+  orderNo: string;
+  styleNo?: string;
+  styleName?: string;
+  customerName?: string;
+  orderQuantity?: number;
+  completedQuantity?: number;
+  remainingQuantity?: number;
+  productionProgress?: number;
+  plannedEndDate?: string;
+  daysToDeadline: number;
+  status?: string;
+  urgencyLevel?: string;
+  merchandiser?: string;
+  riskLevel: 'safe' | 'warning' | 'danger';
+}
+
 export interface ProfitEstimationResponse {
   orderId: string;
   orderNo: string;

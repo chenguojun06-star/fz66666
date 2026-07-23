@@ -122,8 +122,8 @@
 
 [data-theme="dark"] .dashboard-page .filter-card .ant-btn-primary:hover {
   background: rgba(64, 169, 255, 0.1) !important;
-  border-color: #91d5ff !important;
-  color: #91d5ff !important;
+  border-color: var(--status-processing-border) !important;
+  color: var(--status-processing-border) !important;
   box-shadow: 0 4px 12px rgba(105, 177, 255, 0.25) !important;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .stat-card {
-  background: #ffffff;
+  background: var(--color-bg-base);
   border: 1px solid var(--color-border-light, #e8e8e8);
   border-radius: 12px;
   padding: 24px;
@@ -220,7 +220,7 @@
 
 .stat-card--quantity {
   border-color: #52c41a;
-  background: #f6ffed;
+  background: var(--status-success-bg);
 }
 
 .stat-card--overdue {
@@ -230,7 +230,7 @@
 
 .stat-card--today-warehousing {
   border-color: #faad14;
-  background: #fffbe6;
+  background: var(--status-warning-bg);
 }
 
 .stat-card--total-warehousing {
@@ -319,7 +319,7 @@
 
 .stat-icon--overdue {
   color: #ff7875;
-  background: #ffccc7;
+  background: var(--status-error-border);
 }
 
 .stat-icon--today-warehousing {
@@ -350,7 +350,7 @@
 
 .stat-icon--finance {
   color: #faad14;
-  background: #fffbe6;
+  background: var(--status-warning-bg);
 }
 
 .stat-icon--scan {
@@ -360,7 +360,7 @@
 
 .stat-icon--warehousing {
   color: #52c41a;
-  background: #f6ffed;
+  background: var(--status-success-bg);
 }
 
 .stat-icon--unqualified {
@@ -400,7 +400,7 @@
 }
 
 .dashboard-card {
-  background: #ffffff;
+  background: var(--color-bg-base);
   border: 1px solid var(--color-border-light, #e8e8e8);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -501,7 +501,7 @@
 
 .activity-icon--reconciliation {
   color: #faad14;
-  background: #fffbe6;
+  background: var(--status-warning-bg);
 }
 
 .activity-icon--scan {
@@ -516,7 +516,7 @@
 
 .activity-icon--material {
   color: #52c41a;
-  background: #f6ffed;
+  background: var(--status-success-bg);
 }
 
 .activity-content {
@@ -641,12 +641,12 @@
 
 .entry-icon--finance {
   color: #faad14;
-  background: #fffbe6;
+  background: var(--status-warning-bg);
 }
 
 .entry-icon--material {
   color: #52c41a;
-  background: #f6ffed;
+  background: var(--status-success-bg);
 }
 
 .entry-icon--warehousing {

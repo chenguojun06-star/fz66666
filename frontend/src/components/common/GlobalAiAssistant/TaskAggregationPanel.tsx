@@ -14,8 +14,8 @@ interface TaskAggregationPanelProps {
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   high: { label: '紧急', color: 'var(--color-error)', bg: '#FFF1F0', border: '#ffa39e' },
-  medium: { label: '一般', color: '#d48806', bg: '#FFFBE6', border: '#ffe58f' },
-  low: { label: '低', color: '#389e0d', bg: '#f6ffed', border: '#b7eb8f' },
+  medium: { label: '一般', color: '#d48806', bg: '#FFFBE6', border: 'var(--status-warning-border)' },
+  low: { label: '低', color: '#389e0d', bg: 'var(--status-success-bg)', border: 'var(--status-success-border)' },
 };
 
 const MODULE_LABELS: Record<string, string> = {

@@ -49,7 +49,7 @@ const DashboardContent: React.FC = () => {
     <Spin spinning={loading}>
       {smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={loadData} /></Card>}
       {healthData && !healthCollapsed && (
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', border: '1px solid #bae7ff' }}
+        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg, #f0f5ff 0%, var(--status-processing-bg) 100%)', border: '1px solid #bae7ff' }}
           title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 15, color: healthData.score >= 80 ? 'var(--color-success)' : healthData.score >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{healthData.score}</b> 分</span>}
           extra={<Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => setHealthCollapsed(true)}>收起</Button>}>
           <Row gutter={16}>

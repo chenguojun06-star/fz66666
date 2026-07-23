@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '@/utils/api';
 
 export interface DictOption {
@@ -14,23 +14,38 @@ export interface DictOption {
 export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
   options: DictOption[];
   loading: boolean;
+  error: Error | null;
 } {
   const [options, setOptions] = useState<DictOption[]>(fallback);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const reqId = requestIdRef.current;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current = reqId + 1;
+    };
+  }, []);
 
   useEffect(() => {
     if (!dictType) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setError(null);
     api
       .get('/system/dict/list', { params: { dictType, pageSize: 999, page: 1 } })
       .then((res: any) => {
+        if (requestIdRef.current !== requestId || !mountedRef.current) return;
         const records: any[] = res?.data?.records || res?.records || [];
         if (records.length > 0) {
           const raw = records
             .filter((r: any) => r.dictCode && r.dictLabel)
             .sort((a: any, b: any) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
             .map((r: any) => ({ value: r.dictCode, label: r.dictLabel }));
-          // 按 label 去重，保留第一个（sort 最小值已在前）
           const seenLabels = new Set<string>();
           setOptions(
             raw.filter((opt: { value: string; label: string }) => {
@@ -40,15 +55,19 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
             })
           );
         }
-        // 空列表时保持 fallback 不变
       })
-      .catch(() => {
-        /* 保持 fallback */
+      .catch((err) => {
+        if (requestIdRef.current !== requestId || !mountedRef.current) return;
+        setError(err as Error);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (requestIdRef.current === requestId && mountedRef.current) {
+          setLoading(false);
+        }
+      });
   }, [dictType]);
 
-  return { options, loading };
+  return { options, loading, error };
 }
 
 /**

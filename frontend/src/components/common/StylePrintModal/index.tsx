@@ -82,8 +82,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           {/* 顶部操作栏 */}
           <div style={{
             marginBottom: 12, padding: '10px 16px',
-            background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)',
-            borderRadius: 8, border: '1px solid #91d5ff',
+            background: 'linear-gradient(90deg, #f0f5ff 0%, var(--status-processing-bg) 100%)',
+            borderRadius: 8, border: '1px solid var(--status-processing-border)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
           }}>
             <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>

@@ -99,8 +99,8 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       )}
 
       <style>{`
-        .row-no-stock { background: var(--color-success-bg, #f6ffed) !important; }
-        .row-partial { background: var(--color-warning-bg, #fffbe6) !important; }
+        .row-no-stock { background: var(--color-success-bg, var(--status-success-bg)) !important; }
+        .row-partial { background: var(--color-warning-bg, var(--status-warning-bg)) !important; }
         .row-done { background: var(--color-bg-disabled, #f6f6f6) !important; }
         .row-cancelled { opacity: 0.5; }
         .row-no-stock:hover td, .row-partial:hover td, .row-done:hover td { background: inherit !important; }

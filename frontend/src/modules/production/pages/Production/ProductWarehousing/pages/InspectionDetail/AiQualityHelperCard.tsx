@@ -25,7 +25,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               fontSize: 14, fontWeight: 400, padding: '1px 7px',
               borderRadius: 10, background:
                 aiSuggestion.historicalDefectRate > 0.05 ? '#FFF1F0'
-                  : aiSuggestion.historicalDefectRate > 0.02 ? '#FFF7E6' : '#f6ffed',
+                  : aiSuggestion.historicalDefectRate > 0.02 ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
               color: aiSuggestion.historicalDefectRate > 0.05 ? 'var(--color-danger)'
                 : aiSuggestion.historicalDefectRate > 0.02 ? 'var(--color-warning)' : 'var(--color-success)',
             }}>
@@ -46,7 +46,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
         <div style={{ fontSize: 14, lineHeight: 1.8 }}>
           {aiSuggestion.urgentTip && (
             <div style={{
-              padding: '6px 12px', background: '#FFF7E6',
+              padding: '6px 12px', background: 'var(--status-warning-bg)',
               border: '1px solid #ffd591', borderRadius: 6,
               marginBottom: 10, color: '#d46b08', fontWeight: 600, fontSize: 14,
             }}>
@@ -61,7 +61,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               return (
                 <div key={i} style={{
                   padding: '6px 10px',
-                  background: isRed ? '#FFF1F0' : isYellow ? '#FFFBE6' : '#f6ffed',
+                  background: isRed ? '#FFF1F0' : isYellow ? '#FFFBE6' : 'var(--status-success-bg)',
                   borderLeft: `3px solid ${isRed ? 'var(--color-danger)' : isYellow ? 'var(--color-warning)' : 'var(--color-success)'}`,
                   borderRadius: '0 4px 4px 0',
                   color: 'var(--color-text-primary)', fontSize: 14,

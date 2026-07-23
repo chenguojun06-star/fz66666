@@ -286,7 +286,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       </Space>
 
       {(summary && (summary.inProduction > 0 || summary.stock > 0 || summary.pendingSales > 0)) || availabilityLoading ? (
-        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#FFF7E6' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: '#d46b08' }}>
+        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? 'var(--status-warning-bg)' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: '#d46b08' }}>
           {availabilityLoading ? (
             <span>正在查询该款式的在途、库存、销售欠数...</span>
           ) : summary ? (

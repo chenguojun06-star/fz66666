@@ -19,8 +19,8 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
         <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? 'var(--color-success)' : stat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
           推荐指数 {stat.matchScore}分
         </span>
-        {stat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #b7eb8f' }}>推荐</span>}
-        {stat.capacitySource === 'configured' && <span style={{ background: '#FFF7E6', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
+        {stat.matchScore >= 70 && <span style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-success-border)' }}>推荐</span>}
+        {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
         {stat.capacitySource === 'none' && <span style={{ background: '#FFF1F0', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
       </div>
     )}

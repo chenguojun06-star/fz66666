@@ -36,7 +36,7 @@ export const getStatusColor = (status: LocationStatus): string => {
 export const getStatusBg = (status: LocationStatus): string => {
   switch (status) {
     case 'empty': return 'var(--color-bg-container)';
-    case 'normal': return '#f6ffed';
+    case 'normal': return 'var(--status-success-bg)';
     case 'full': return '#FFFBE6';
     case 'locked': return '#F6FFED';
     default: return 'var(--color-bg-container)';
@@ -47,9 +47,9 @@ export const getStatusBg = (status: LocationStatus): string => {
 export const getStatusBorder = (status: LocationStatus): string => {
   switch (status) {
     case 'empty': return 'var(--color-border-light)';
-    case 'normal': return '#b7eb8f';
-    case 'full': return '#ffe58f';
-    case 'locked': return '#ffccc7';
+    case 'normal': return 'var(--status-success-border)';
+    case 'full': return 'var(--status-warning-border)';
+    case 'locked': return 'var(--status-error-border)';
     default: return 'var(--color-border-light)';
   }
 };

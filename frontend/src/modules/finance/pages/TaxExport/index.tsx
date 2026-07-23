@@ -131,7 +131,7 @@ const TaxExport: React.FC = () => {
                   border: `2px solid ${selected ? 'var(--color-info)' : locked ? 'var(--color-border-light)' : 'var(--color-border-antd)'}`,
                   borderRadius: 8, padding: '12px 16px',
                   cursor: locked ? 'not-allowed' : 'pointer',
-                  background: selected ? '#e6f7ff' : locked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
+                  background: selected ? 'var(--status-processing-bg)' : locked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
                   transition: 'all 0.2s', position: 'relative',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>

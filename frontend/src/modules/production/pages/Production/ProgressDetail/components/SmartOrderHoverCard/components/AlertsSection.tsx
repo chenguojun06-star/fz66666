@@ -82,9 +82,9 @@ const AlertsSection: React.FC<Props> = ({
         {order.deliverySlaStatus && (
           <span style={{
             padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-            background: order.deliverySlaStatus === 'completed' ? '#f6ffed' :
+            background: order.deliverySlaStatus === 'completed' ? 'var(--status-success-bg)' :
                        order.deliverySlaStatus === 'on_track' ? '#e6f4ff' :
-                       order.deliverySlaStatus === 'at_risk' ? '#FFF7E6' : '#F6FFED',
+                       order.deliverySlaStatus === 'at_risk' ? 'var(--status-warning-bg)' : '#F6FFED',
             color: order.deliverySlaStatus === 'completed' ? '#389e0d' :
                    order.deliverySlaStatus === 'on_track' ? 'var(--color-primary)' :
                    order.deliverySlaStatus === 'at_risk' ? 'var(--color-warning)' : 'var(--color-danger)',
@@ -98,7 +98,7 @@ const AlertsSection: React.FC<Props> = ({
         {(order as any).cpk != null && (
           <span style={{
             padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-            background: (order as any).cpk >= 1.33 ? '#f6ffed' : (order as any).cpk >= 1.0 ? '#FFF7E6' : '#F6FFED',
+            background: (order as any).cpk >= 1.33 ? 'var(--status-success-bg)' : (order as any).cpk >= 1.0 ? 'var(--status-warning-bg)' : '#F6FFED',
             color: (order as any).cpk >= 1.33 ? '#389e0d' : (order as any).cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
           }}>
             Cpk {(order as any).cpk}{(order as any).ppk != null && ` / Ppk ${(order as any).ppk}`}

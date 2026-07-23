@@ -199,7 +199,7 @@ export function useMaterialInventoryColumns({
             </div>
             {isLow && (
               <div style={{
-                background: '#FFF7E6',
+                background: 'var(--status-warning-bg)',
                 border: '1px solid #ffd591',
                 borderRadius: 4,
                 padding: '2px 6px',

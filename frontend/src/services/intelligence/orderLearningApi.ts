@@ -1,15 +1,22 @@
 import api, { type ApiResult } from '@/utils/api';
 
-let recommendationEndpointUnavailable = false;
-const ENDPOINT_UNAVAILABLE_STORAGE_KEY = 'orderLearningRecommendationEndpointUnavailable';
+let recommendationEndpointUnavailableUntil = 0;
+const ENDPOINT_UNAVAILABLE_STORAGE_KEY = 'orderLearningRecommendationUnavailableUntil';
+const UNAVAILABLE_COOLDOWN_MS = 5 * 60 * 1000; // 5 分钟冷却，避免永久禁用
 const recommendationInflight = new Map<string, Promise<any>>();
 
 const readEndpointUnavailable = () => {
-  if (recommendationEndpointUnavailable) return true;
+  const now = Date.now();
+  if (recommendationEndpointUnavailableUntil > now) return true;
+  // 冷却期已过，自动恢复
+  if (recommendationEndpointUnavailableUntil > 0) {
+    recommendationEndpointUnavailableUntil = 0;
+    try { sessionStorage.removeItem(ENDPOINT_UNAVAILABLE_STORAGE_KEY); } catch { /* ignore */ }
+  }
   try {
-    const saved = String(sessionStorage.getItem(ENDPOINT_UNAVAILABLE_STORAGE_KEY) || '').trim();
-    if (saved === '1') {
-      recommendationEndpointUnavailable = true;
+    const saved = Number(sessionStorage.getItem(ENDPOINT_UNAVAILABLE_STORAGE_KEY) || '0');
+    if (saved > now) {
+      recommendationEndpointUnavailableUntil = saved;
       return true;
     }
   } catch { /* sessionStorage 不可用，忽略 */ }
@@ -17,9 +24,10 @@ const readEndpointUnavailable = () => {
 };
 
 const markEndpointUnavailable = () => {
-  recommendationEndpointUnavailable = true;
+  const until = Date.now() + UNAVAILABLE_COOLDOWN_MS;
+  recommendationEndpointUnavailableUntil = until;
   try {
-    sessionStorage.setItem(ENDPOINT_UNAVAILABLE_STORAGE_KEY, '1');
+    sessionStorage.setItem(ENDPOINT_UNAVAILABLE_STORAGE_KEY, String(until));
   } catch { /* sessionStorage 不可用，忽略 */ }
 };
 

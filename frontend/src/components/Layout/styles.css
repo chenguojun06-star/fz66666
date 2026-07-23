@@ -1041,7 +1041,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 14px;
 }
 
@@ -1390,7 +1390,7 @@
 }
 
 .announcement-banner.warning {
-  background: #FFF7E6;
+  background: var(--status-warning-bg);
   border-color: #ffd591;
 }
 

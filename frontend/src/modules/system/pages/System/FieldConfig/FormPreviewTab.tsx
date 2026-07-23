@@ -22,7 +22,7 @@ const FormPreviewTab: React.FC<FormPreviewTabProps> = ({
       <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         实时预览配置后的表单效果（扩展字段区）
       </Text>
-      <Card size="small" style={{ background: '#fafafa' }}>
+      <Card size="small" style={{ background: 'var(--color-bg-container)' }}>
         <div style={{ fontWeight: 600, marginBottom: 12, color: '#1f1f1f' }}>
           标准字段（固定）
         </div>

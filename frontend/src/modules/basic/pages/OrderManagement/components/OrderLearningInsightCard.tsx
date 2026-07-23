@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Empty, Spin, Tag } from 'antd';
-import { DownOutlined, RightOutlined } from '@ant-design/icons';
+import { DownOutlined, LoadingOutlined, RightOutlined } from '@ant-design/icons';
 import type { OrderLearningRecommendationResponse } from '@/services/intelligence/orderLearningApi';
 import OrderLearningFactoryScoreBoard from './OrderLearningFactoryScoreBoard';
 import { presentOrderLearningRecommendation } from './orderLearningPresenter';
@@ -38,6 +38,12 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-tertiary)' }}>AI 学习建议</span>
+          {loading && !expanded && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+              <LoadingOutlined style={{ fontSize: 12 }} />
+              <span>分析中...</span>
+            </span>
+          )}
           {presented && presented.tags.length > 0 && (
             <div style={{ display: 'flex', gap: 4 }}>
               {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} style={{ margin: 0 }}>{tag}</Tag>)}

@@ -111,8 +111,8 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
           />
 
           <div style={{
-            background: 'var(--color-primary-bg-light, #e6f7ff)',
-            border: '1px solid var(--color-primary-border, #91d5ff)',
+            background: 'var(--color-primary-bg-light, var(--status-processing-bg))',
+            border: '1px solid var(--color-primary-border, var(--status-processing-border))',
             padding: '8px 12px',
             fontSize: "var(--font-size-sm)",
             color: 'var(--color-primary)'

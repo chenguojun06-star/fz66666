@@ -26,6 +26,10 @@ import type {
   DeliveryDateSuggestionResponse,
   DeliveryPredictionResponse,
   DeliveryRiskResponse,
+  PreOrderDeliveryPredictionRequest,
+  PreOrderDeliveryPredictionResponse,
+  CapacityGapResponse,
+  FactoryActiveOrderDTO,
   DailyBriefing,
   PredictionDeliveryRiskItem,
   PredictionRestockSuggestionItem,
@@ -368,6 +372,14 @@ export const intelligenceApi = {
   predictDelivery: (payload: { orderId: string }) =>
     api.post<{ code: number; data: DeliveryPredictionResponse }>('/intelligence/delivery-prediction', payload),
 
+  /** ③b 预下单三档交期预测（不依赖 orderId，下单页详情抽屉用） */
+  predictPreOrderDelivery: (payload: PreOrderDeliveryPredictionRequest) =>
+    api.post<{ code: number; data: PreOrderDeliveryPredictionResponse }>('/intelligence/pre-order-delivery-prediction', payload),
+
+  /** ③c 工厂在产订单明细（下单页详情抽屉用） */
+  getFactoryActiveOrders: (factoryName: string) =>
+    api.get<{ code: number; data: FactoryActiveOrderDTO[] }>('/intelligence/factory-active-orders', { params: { factoryName } }),
+
   /** ④ 订单利润预估 */
   estimateProfit: (payload: { orderId: string }) =>
     api.post<{ code: number; data: ProfitEstimationResponse }>('/intelligence/profit-estimation', payload),
@@ -419,6 +431,10 @@ export const intelligenceApi = {
   /** ⑬ 财务审核智能分析 */
   getFinanceAudit: () =>
     api.post<{ code: number; data: FinanceAuditResponse }>('/intelligence/finance-audit', {}),
+
+  /** ⑭ 产能缺口分析（下单页详情抽屉用） */
+  getCapacityGap: () =>
+    api.get<{ code: number; data: CapacityGapResponse }>('/intelligence/capacity-gap'),
 
   // ── 嵌入式智能 API ──
 

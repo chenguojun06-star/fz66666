@@ -87,7 +87,7 @@
 .ef-delivery-badge--normal  { background: #e6f4ff; color: #1677ff; }
 .ef-delivery-badge--warning { background: #fff7e6; color: #fa8c16; }
 .ef-delivery-badge--danger  { background: #fff1f0; color: #ff4d4f; }
-.ef-delivery-badge--success { background: #f6ffed; color: #52c41a; }
+.ef-delivery-badge--success { background: var(--status-success-bg); color: #52c41a; }
 .ef-delivery-badge--scrapped { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
 
 /* ── 三栏布局微调 ── */

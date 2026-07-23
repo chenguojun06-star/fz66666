@@ -132,7 +132,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
           </Card>
         )}
         {scanResult && !scanResult.found && (
-          <Card style={{ background: '#FFFBE6', border: '1px solid #ffe58f' }}>
+          <Card style={{ background: '#FFFBE6', border: '1px solid var(--status-warning-border)' }}>
             <div style={{ marginBottom: 8, color: 'var(--color-warning)', fontWeight: 600 }}> 物料不存在，入库时将自动创建库存记录</div>
             <Row gutter={12}>
               <Col span={6}>

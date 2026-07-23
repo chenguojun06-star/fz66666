@@ -396,7 +396,7 @@ kbd.cp-kbd {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  background: #fafafa;
+  background: var(--color-bg-container);
   display: flex;
   align-items: center;
   justify-content: center;

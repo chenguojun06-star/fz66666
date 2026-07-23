@@ -267,7 +267,7 @@ export interface TemplateLibrary {
 }
 
 /** 样衣开发工作台可切换的 Tab 段落 */
-export type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'production' | 'quotation' | 'files';
+export type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'progress' | 'production' | 'quotation' | 'files';
 
 export interface ProductSku {
   id?: number;

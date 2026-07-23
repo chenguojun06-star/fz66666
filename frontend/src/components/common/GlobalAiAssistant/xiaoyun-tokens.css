@@ -5,11 +5,11 @@
   --xiaoyun-primary-border: #91caff;
 
   --xiaoyun-success: var(--color-success);
-  --xiaoyun-success-bg: #f6ffed;
-  --xiaoyun-success-border: #b7eb8f;
+  --xiaoyun-success-bg: var(--status-success-bg);
+  --xiaoyun-success-border: var(--status-success-border);
 
   --xiaoyun-warning: var(--color-warning);
-  --xiaoyun-warning-bg: #FFF7E6;
+  --xiaoyun-warning-bg: var(--status-warning-bg);
   --xiaoyun-warning-border: #ffd591;
 
   --xiaoyun-danger: var(--color-danger);

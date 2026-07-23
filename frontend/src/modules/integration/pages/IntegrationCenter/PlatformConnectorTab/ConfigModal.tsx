@@ -28,7 +28,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ open, activePlatform, form, t
       onCancel={onCancel}
       footer={null} width="40vw" destroyOnHidden
     >
-      <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
+      <div style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>💡 对接说明</div>
         <div style={{ fontSize: 14, color: '#595959', marginBottom: 8 }}>
           {PLATFORM_HELP_TIPS[activePlatform?.code || '']?.tip || '在对应平台开放平台创建应用，获取 AppKey 和 AppSecret'}

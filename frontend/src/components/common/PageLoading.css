@@ -12,15 +12,15 @@
 }
 
 .page-loading-wrapper .ant-spin {
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .page-loading-wrapper .ant-spin-dot-item {
-  background-color: #999;
+  background-color: var(--color-text-tertiary);
 }
 
 .page-loading-wrapper .ant-spin-text {
-  color: #999;
+  color: var(--color-text-tertiary);
   font-size: 13px;
   margin-top: 12px;
 }

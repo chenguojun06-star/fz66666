@@ -52,8 +52,8 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
   const statusPillStyle = locked
     ? { ...statusPillBaseStyle, color: '#0958d9', background: '#e6f4ff', border: '1px solid #91caff' }
     : unlockRemark
-      ? { ...statusPillBaseStyle, color: '#ad6800', background: '#FFF7E6', border: '1px solid #ffd591' }
-      : { ...statusPillBaseStyle, color: '#135200', background: '#f6ffed', border: '1px solid #b7eb8f' };
+      ? { ...statusPillBaseStyle, color: '#ad6800', background: 'var(--status-warning-bg)', border: '1px solid #ffd591' }
+      : { ...statusPillBaseStyle, color: '#135200', background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)' };
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
@@ -119,7 +119,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
         <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>历史封存版本</span>
-            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: '#FFF7E6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: 'var(--status-warning-bg)', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
           </div>
           <div>
             {patternVersionList

@@ -299,7 +299,7 @@ const SmartAlertBell: React.FC = () => {
                 {visibleNotices.slice(0, 8).map(n => (
                   <div key={n.id} className="sap-notice-row"
                     style={{
-                      background: n.isRead ? 'var(--color-bg-container)' : '#FFF7E6',
+                      background: n.isRead ? 'var(--color-bg-container)' : 'var(--status-warning-bg)',
                       borderLeft: `3px solid ${n.isRead ? '#ddd' : n.actionType === 'urge_order' ? 'var(--color-error)' : '#ffa940'}`,
                     }}
                     onClick={() => {

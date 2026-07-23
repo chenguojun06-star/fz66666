@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Popover, Spin, Tag } from 'antd';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -40,23 +40,24 @@ const StyleQuotePopover: React.FC<{
 }> = ({ styleNo, children }) => {
   const [data, setData] = useState<StyleQuoteData | null>(null);
   const [loading, setLoading] = useState(false);
-  const fetchedRef = useRef(false);
+  // 竞态保护：快速切换款号时丢弃旧请求的响应
+  const requestIdRef = useRef(0);
 
   const fetchData = async () => {
-    if (fetchedRef.current || !styleNo) return;
-    fetchedRef.current = true;
+    if (!styleNo) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setData(null); // 先清空，避免旧款数据残留导致"张冠李戴"
     try {
       const res = await intelligenceApi.getStyleQuoteSuggestion(styleNo);
+      if (requestIdRef.current !== requestId) return; // 丢弃过期响应
       if (res?.data) setData(res.data as unknown as StyleQuoteData);
     } catch {
-      // 静默失败
+      if (requestIdRef.current === requestId) setData(null);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   };
-
-  useEffect(() => { fetchedRef.current = false; setData(null); }, [styleNo]);
 
   const fmt = (v: number | null | undefined) =>
     v != null ? `¥${Number(v).toFixed(2)}` : '--';
@@ -101,7 +102,7 @@ const StyleQuotePopover: React.FC<{
       {/* 成本分解 */}
       {(data.materialCost != null || data.processCost != null || data.totalCost != null) && (
         <div style={{
-          background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4,
+          background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: 4,
           padding: '8px 10px', marginBottom: 8,
         }}>
           <div style={{ fontSize: 14, color: 'var(--color-success)', fontWeight: 600, marginBottom: 4 }}>成本拆解</div>
@@ -116,7 +117,7 @@ const StyleQuotePopover: React.FC<{
       {/* 建议价格 */}
       {data.suggestedPrice != null && (
         <div style={{
-          background: '#FFF7E6', border: '1px solid #ffd591', borderRadius: 4,
+          background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: 4,
           padding: '8px 10px', marginBottom: 8,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
@@ -127,7 +128,7 @@ const StyleQuotePopover: React.FC<{
 
       {/* 现有报价引用 */}
       {data.currentQuotation != null && data.currentQuotation > 0 && (
-        <div style={{ fontSize: 14, color: '#595959', marginBottom: 6 }}>
+        <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
            现有报价单价：<b>{fmt(data.currentQuotation)}</b>
         </div>
       )}
@@ -175,7 +176,7 @@ const StyleQuotePopover: React.FC<{
       destroyOnHidden
       overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
       getPopupContainer={(node) => node.closest('.ant-modal-body') || document.body}
-      onOpenChange={(open) => { if (open) fetchData(); }}
+      onOpenChange={(open) => { if (open) fetchData(); else requestIdRef.current++; }}
     >
       <div style={{ display: 'inline-block', cursor: 'pointer' }}>
         {children}

@@ -65,7 +65,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
       {cuttingSizeItems.length > 0 && (
         <div style={{
           padding: '8px 10px',
-          border: '1px solid #b7eb8f',
+          border: '1px solid var(--status-success-border)',
           background: 'rgba(34, 197, 94, 0.15)',
           borderRadius: 12,
           marginBottom: 6,
@@ -83,7 +83,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               padding: '2px 8px',
               background: 'var(--color-bg-base)',
               borderRadius: 4,
-              border: '1px solid #b7eb8f'
+              border: '1px solid var(--status-success-border)'
             }}>
               {item.size}: {item.quantity}
             </span>

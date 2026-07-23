@@ -26,17 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
 /**
- * 完工日期AI预测编排器 — 加权移动平均 + 三档置信区间
+ * 完工日期AI预测编排器 — ML模型 + 规则算法混合
  *
- * <p>算法：取近7天日产量，用加权移动平均（近日权重更高）预测日均速度，
- * 结合剩余件数推演乐观/可能/悲观三档完工日期。
- * <pre>
- *   velocity = WMA(day_qty, weights=[1,2,3,4,5,6,7])
- *   remaining = total - completed
- *   optimistic = remaining / (velocity * 1.2)
- *   mostLikely = remaining / velocity
- *   pessimistic = remaining / (velocity * 0.7)
- * </pre>
+ * <p>优先使用 LSTM 时序模型预测，模型不可用时自动降级到 EWMA 规则算法。
+ * <p>双路径防御：ML模型负责捕捉复杂趋势，规则算法确保稳定性和可解释性。
  */
 @Service
 @Lazy
@@ -57,10 +50,29 @@ public class DeliveryPredictionOrchestrator {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired(required = false)
+    private MlDeliveryPredictionOrchestrator mlDeliveryPredictionOrchestrator;
+
     private volatile Boolean predictionLogExtraColumnsReady;
     private final java.util.concurrent.locks.ReentrantLock schemaCheckLock = new java.util.concurrent.locks.ReentrantLock();
 
     public DeliveryPredictionResponse predict(DeliveryPredictionRequest request) {
+        if (mlDeliveryPredictionOrchestrator != null) {
+            try {
+                DeliveryPredictionResponse mlResp = mlDeliveryPredictionOrchestrator.predict(request);
+                if (mlResp.getConfidence() >= 70) {
+                    log.debug("[交期预测] 使用ML模型结果，置信度: {}", mlResp.getConfidence());
+                    return mlResp;
+                }
+            } catch (Exception e) {
+                log.debug("[交期预测] ML模型调用失败，降级到规则算法: {}", e.getMessage());
+            }
+        }
+
+        return predictWithRuleAlgorithm(request);
+    }
+
+    private DeliveryPredictionResponse predictWithRuleAlgorithm(DeliveryPredictionRequest request) {
         DeliveryPredictionResponse resp = new DeliveryPredictionResponse();
         if (request == null || request.getOrderId() == null) {
             resp.setRationale("请提供订单ID");
@@ -81,7 +93,6 @@ public class DeliveryPredictionOrchestrator {
                 return resp;
             }
 
-            // 获取近7天日产量
             double velocity = computeWeightedVelocity(order.getId());
             resp.setDailyVelocity(Math.round(velocity * 10.0) / 10.0);
 
@@ -96,10 +107,8 @@ public class DeliveryPredictionOrchestrator {
             long mlDays  = Math.max(1, Math.round(remaining / velocity));
             long pesDays = Math.max(1, Math.round(remaining / (velocity * 0.7)));
 
-            // ── 自我校准：基于工厂历史偏差修正 mlDays ──
             long correctedMlDays = computeCalibratedMlDays(order, mlDays);
 
-            // ── P80 历史百分位混合 ──
             long blendedMlDays = correctedMlDays;
             String p80Hint = "";
             OptionalDouble p80Opt = calcP80Days(UserContext.tenantId(), order.getFactoryName());
@@ -112,13 +121,11 @@ public class DeliveryPredictionOrchestrator {
             resp.setMostLikelyDate(today.plusDays(blendedMlDays).format(DATE_FMT));
             resp.setPessimisticDate(today.plusDays(pesDays).format(DATE_FMT));
 
-            // 是否延期
             if (order.getPlannedEndDate() != null) {
                 resp.setLikelyDelayed(today.plusDays(blendedMlDays).isAfter(
                         order.getPlannedEndDate().toLocalDate()));
             }
 
-            // 置信度（P80样本越多精度越高）
             int confidence = p80Opt.isPresent()
                     ? Math.min(85, 45 + (int) velocity)
                     : Math.min(90, 40 + (int) velocity);
@@ -127,7 +134,6 @@ public class DeliveryPredictionOrchestrator {
                     "基于近7天加权日均产量 %.1f 件/天，剩余 %d 件，预计 %d ~ %d 天完成%s",
                     velocity, remaining, optDays, pesDays, p80Hint));
 
-            // ── 保存预测日志（数据飞轮）──
             savePredictionLog(order, today, blendedMlDays, velocity, remaining, confidence);
 
         } catch (Exception e) {

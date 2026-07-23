@@ -52,62 +52,14 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<ConversationReflectionOrchestrator> reflectionOrchestratorProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SessionSearchService> sessionSearchServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<SkillEvolutionOrchestrator> skillEvolutionOrchestratorProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<MemoryNudgeOrchestrator> memoryNudgeOrchestratorProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<UserProfileEvolutionOrchestrator> userProfileEvolutionOrchestratorProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.AgentContextFileService> agentContextFileServiceProvider;
     @Autowired private com.fashion.supplychain.intelligence.gateway.AiInferenceGateway inferenceGateway;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.KnowledgeBaseService> knowledgeBaseServiceProvider;
     @Autowired private com.fashion.supplychain.intelligence.helper.PromptContextProvider promptContextProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.helper.PromptTemplateLoader> promptTemplateLoaderProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper> aiAgentPromptHelperProvider;
+    @Autowired private AiAgentComponentRegistry componentRegistry;
 
-    // P2-2: per-call model selection + 成本爆炸防御
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.ModelSelectionRouter> modelSelectionRouterProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.CostExplosionGuard> costExplosionGuardProvider;
-
-    // 自我进化系统组件
-    @Autowired private org.springframework.beans.factory.ObjectProvider<SelfCriticService> selfCriticServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<RealTimeLearningLoop> realTimeLearningLoopProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<QuickPathQualityGate> quickPathQualityGateProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.GoldenEvalService> goldenEvalServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.GuardrailsConfigService> guardrailsConfigServiceProvider;
-    /** P2升级: 结构化输出后处理 */
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer> outputEnforcerProvider;
-
-    // P0-2: 反思记忆闭环 — 低分回答写入 REFLECTIVE 长期记忆（@Lazy 避免循环依赖）
-    @Autowired
+    @Autowired(required = false)
     @org.springframework.context.annotation.Lazy
     private ReflectiveMemoryWriter reflectiveMemoryWriter;
 
-    // P1-4: 秒答缓存（预取的业务快照 + 预构建答案）
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.QuickAnswerCacheService> quickAnswerCacheServiceProvider;
-
-    // 五大Agent框架增强组件
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.MemoryBankService> memoryBankServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SkillAutoCreationService> skillAutoCreationServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.EntityMemoryContextService> entityMemoryContextServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<AiLongMemoryMapper> longMemoryMapperProvider;
-
-    // Phase 3/4 高级推理引擎
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine> treeOfThoughtsEngineProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine> graphOfThoughtsEngineProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService> intentDrivenDagServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService> dagVisualizationServiceProvider;
-
-    // P0升级: 多Agent图编排 — 主对话路由到专家Agent协作
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.agent.router.SemanticDomainRouter> semanticDomainRouterProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<MultiAgentGraphOrchestrator> multiAgentGraphOrchestratorProvider;
-
-    // P2升级: SwarmExecutionEngine — 多Agent并行协作引擎
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.agent.dag.SwarmExecutionEngine> swarmExecutionEngineProvider;
-
-    // P1升级: 意图组合引擎 — 一句话多意图识别与并行处理
-    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.IntentCompositionService> intentCompositionServiceProvider;
-
-    // P0-4: Langfuse 全链路追踪（required=false 兼容 Langfuse 未配置场景）
     @Autowired(required = false)
     private LangfuseTraceOrchestrator langfuseTraceOrchestrator;
     @Autowired(required = false)
@@ -188,7 +140,7 @@ public class AiAgentOrchestrator {
     }
 
     private String getOrRefreshSystemContext(Long tenantId) {
-        com.fashion.supplychain.intelligence.service.AgentContextFileService agentContextFileService = agentContextFileServiceProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.AgentContextFileService agentContextFileService = componentRegistry.getAgentContextFileService();
         if (agentContextFileService == null || tenantId == null) return "";
         TenantCachedContext cached = systemContextCache.get(tenantId);
         long now = System.currentTimeMillis();
@@ -201,7 +153,7 @@ public class AiAgentOrchestrator {
     }
 
     private String getOrRefreshSkillContext(Long tenantId) {
-        SkillEvolutionOrchestrator skillEvolutionOrchestrator = skillEvolutionOrchestratorProvider.getIfAvailable();
+        SkillEvolutionOrchestrator skillEvolutionOrchestrator = componentRegistry.getSkillEvolutionOrchestrator();
         if (skillEvolutionOrchestrator == null || tenantId == null) return "";
         TenantCachedContext cached = skillContextCache.get(tenantId);
         long now = System.currentTimeMillis();
@@ -330,8 +282,8 @@ public class AiAgentOrchestrator {
      */
     private Result<String> tryRouteToMultiAgentGraph(String userMessage, String pageContext) {
         try {
-            var router = semanticDomainRouterProvider.getIfAvailable();
-            var multiAgentGraph = multiAgentGraphOrchestratorProvider.getIfAvailable();
+            var router = componentRegistry.getSemanticDomainRouter();
+            var multiAgentGraph = componentRegistry.getMultiAgentGraphOrchestrator();
 
             if (router == null || multiAgentGraph == null) {
                 log.debug("[MultiAgent路由] 组件未就绪，降级到AgentLoop");
@@ -442,8 +394,8 @@ public class AiAgentOrchestrator {
     private boolean tryRouteToMultiAgentGraphStreaming(
             String userMessage, String pageContext, SseEmitter emitter, String cacheKey) {
         try {
-            var router = semanticDomainRouterProvider.getIfAvailable();
-            var multiAgentGraph = multiAgentGraphOrchestratorProvider.getIfAvailable();
+            var router = componentRegistry.getSemanticDomainRouter();
+            var multiAgentGraph = componentRegistry.getMultiAgentGraphOrchestrator();
 
             if (router == null || multiAgentGraph == null) {
                 log.debug("[MultiAgent路由-流式] 组件未就绪，降级到AgentLoop");
@@ -699,7 +651,7 @@ public class AiAgentOrchestrator {
     }
 
     private void learnEntityMemoryFromTools(Long tenantId, String toolResultsStr) {
-        AiLongMemoryMapper longMemoryMapper = longMemoryMapperProvider.getIfAvailable();
+        AiLongMemoryMapper longMemoryMapper = componentRegistry.getLongMemoryMapper();
         if (longMemoryMapper == null) return;
         String userId = UserContext.userId();
         try {
@@ -793,7 +745,7 @@ public class AiAgentOrchestrator {
         double selfScore = 80.0;
 
         // === 自我批评与实时学习（新增）===
-        SelfCriticService selfCriticService = selfCriticServiceProvider.getIfAvailable();
+        SelfCriticService selfCriticService = componentRegistry.getSelfCriticService();
         if (selfCriticService != null) {
             try {
                 AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
@@ -853,7 +805,7 @@ public class AiAgentOrchestrator {
 
         List<Runnable> postTurnTasks = new java.util.ArrayList<>();
 
-        RealTimeLearningLoop realTimeLearningLoop = realTimeLearningLoopProvider.getIfAvailable();
+        RealTimeLearningLoop realTimeLearningLoop = componentRegistry.getRealTimeLearningLoop();
         if (realTimeLearningLoop != null) {
             final double scoreForLearning = finalSelfScore;
             postTurnTasks.add(() -> {
@@ -867,7 +819,7 @@ public class AiAgentOrchestrator {
             });
         }
 
-        com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = componentRegistry.getMemoryBankService();
         if (memoryBankService != null) {
             final String focusMsg = userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage;
             postTurnTasks.add(() -> {
@@ -879,8 +831,8 @@ public class AiAgentOrchestrator {
             });
         }
 
-        com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = skillAutoCreationServiceProvider.getIfAvailable();
-        ConversationReflectionOrchestrator reflectionOrchestrator = reflectionOrchestratorProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = componentRegistry.getSkillAutoCreationService();
+        ConversationReflectionOrchestrator reflectionOrchestrator = componentRegistry.getReflectionOrchestrator();
         if (skillAutoCreationService != null && reflectionOrchestrator == null
                 && toolRecords != null && toolRecords.size() >= 3) {
             postTurnTasks.add(() -> {
@@ -903,7 +855,7 @@ public class AiAgentOrchestrator {
             });
         }
 
-        com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService = sessionSearchServiceProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService = componentRegistry.getSessionSearchService();
         if (sessionSearchService != null) {
             postTurnTasks.add(() -> {
                 try {
@@ -916,14 +868,14 @@ public class AiAgentOrchestrator {
             });
         }
 
-        com.fashion.supplychain.intelligence.service.GoldenEvalService goldenEvalService = goldenEvalServiceProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.GoldenEvalService goldenEvalService = componentRegistry.getGoldenEvalService();
         if (goldenEvalService != null && assistantResponse != null && !assistantResponse.isBlank()) {
             postTurnTasks.add(() -> {
                 goldenEvalService.maybeOnlineEvaluate(userMessage, assistantResponse, finalSelfScore);
             });
         }
 
-        MemoryNudgeOrchestrator memoryNudgeOrchestrator = memoryNudgeOrchestratorProvider.getIfAvailable();
+        MemoryNudgeOrchestrator memoryNudgeOrchestrator = componentRegistry.getMemoryNudgeOrchestrator();
         if (memoryNudgeOrchestrator != null) {
             postTurnTasks.add(() -> {
                 memoryNudgeOrchestrator.analyzeAndNudge(
@@ -932,7 +884,7 @@ public class AiAgentOrchestrator {
             });
         }
 
-        UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator = userProfileEvolutionOrchestratorProvider.getIfAvailable();
+        UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator = componentRegistry.getUserProfileEvolutionOrchestrator();
         if (userProfileEvolutionOrchestrator != null) {
             postTurnTasks.add(() -> {
                 userProfileEvolutionOrchestrator.evolveProfile(
@@ -968,7 +920,7 @@ public class AiAgentOrchestrator {
         }
 
         // P2升级: 安全护栏 — Guardrails-as-Code输出内容检查
-        com.fashion.supplychain.intelligence.service.GuardrailsConfigService guardrailsConfigService = guardrailsConfigServiceProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.GuardrailsConfigService guardrailsConfigService = componentRegistry.getGuardrailsConfigService();
         if (guardrailsConfigService != null && assistantResponse != null) {
             String blockReason = guardrailsConfigService.checkOutput(assistantResponse);
             if (blockReason != null) {
@@ -977,7 +929,7 @@ public class AiAgentOrchestrator {
         }
 
         // P2升级: 结构化输出后处理 — 修复模糊表述、重复段落、过长单行
-        com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer outputEnforcer = outputEnforcerProvider.getIfAvailable();
+        com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer outputEnforcer = componentRegistry.getStructuredOutputEnforcer();
         if (outputEnforcer != null && assistantResponse != null) {
             try {
                 String processed = outputEnforcer.postProcess(assistantResponse);
@@ -1070,7 +1022,7 @@ public class AiAgentOrchestrator {
     private boolean tryQuickAnswerCache(String userMessage, SseEmitter emitter) {
         try {
             com.fashion.supplychain.intelligence.service.QuickAnswerCacheService cache =
-                    quickAnswerCacheServiceProvider.getIfAvailable();
+                    componentRegistry.getQuickAnswerCacheService();
             if (cache == null) return false;
             if (!cache.isEnabled()) return false;
 
@@ -1137,7 +1089,7 @@ public class AiAgentOrchestrator {
             // ── 上下文四路并行构建（原串行累计 1-3s，并行后 ≤ max(单步)） ──
             // 四步之间无依赖关系：RAG / intelligence / memoryBank / entityMemory
             final java.util.concurrent.CompletableFuture<String> ragFuture;
-            com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService = knowledgeBaseServiceProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService = componentRegistry.getKnowledgeBaseService();
             if (knowledgeBaseService != null) {
                 ragFuture = java.util.concurrent.CompletableFuture.supplyAsync(
                         UserContext.wrapSupplier(() -> {
@@ -1164,7 +1116,7 @@ public class AiAgentOrchestrator {
                             }), quickPathCtxExecutor);
 
             final java.util.concurrent.CompletableFuture<String> memoryBankFuture;
-            com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = componentRegistry.getMemoryBankService();
             if (memoryBankService != null) {
                 memoryBankFuture = java.util.concurrent.CompletableFuture.supplyAsync(
                         UserContext.wrapSupplier(() -> {
@@ -1184,7 +1136,7 @@ public class AiAgentOrchestrator {
             }
 
             final java.util.concurrent.CompletableFuture<String> entityMemoryFuture;
-            com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService = entityMemoryContextServiceProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService = componentRegistry.getEntityMemoryContextService();
             if (entityMemoryContextService != null) {
                 entityMemoryFuture = java.util.concurrent.CompletableFuture.supplyAsync(
                         UserContext.wrapSupplier(() -> {
@@ -1217,7 +1169,7 @@ public class AiAgentOrchestrator {
             String entityMemCtx = safeGetNow(entityMemoryFuture);
 
             StringBuilder sysPrompt = new StringBuilder();
-            com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader = promptTemplateLoaderProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader = componentRegistry.getPromptTemplateLoader();
             String identity = promptTemplateLoader != null ? promptTemplateLoader.getBaseIdentity() : null;
             if (identity == null || identity.isBlank()) {
                 identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
@@ -1227,7 +1179,7 @@ public class AiAgentOrchestrator {
             if (principles != null && !principles.isBlank()) {
                 sysPrompt.append(principles).append("\n\n");
             }
-            com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper aiAgentPromptHelper = aiAgentPromptHelperProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper aiAgentPromptHelper = componentRegistry.getAiAgentPromptHelper();
             if (aiAgentPromptHelper != null) {
                 try {
                     String userCtx = aiAgentPromptHelper.buildUserContextBlock();
@@ -1277,7 +1229,7 @@ public class AiAgentOrchestrator {
             long elapsed = System.currentTimeMillis() - requestStartAt;
             log.info("[QuickPath] 快速通道完成(流式): {}字符, {}ms", answer.length(), elapsed);
 
-            QuickPathQualityGate quickPathQualityGate = quickPathQualityGateProvider.getIfAvailable();
+            QuickPathQualityGate quickPathQualityGate = componentRegistry.getQuickPathQualityGate();
             if (quickPathQualityGate != null) {
                 QuickPathQualityGate.QualityGateResult gateResult = quickPathQualityGate.review(userMessage, answer);
                 if (!gateResult.isPassed()) {
@@ -1322,7 +1274,7 @@ public class AiAgentOrchestrator {
                 return null;
             }
 
-            com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine gotEngine = graphOfThoughtsEngineProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine gotEngine = componentRegistry.getGraphOfThoughtsEngine();
             if (gotEngine != null) {
                 com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine.GotResult gotResult = gotEngine.reason(
                         "complex-analysis", userMessage, java.util.Collections.emptyList(), java.util.Collections.emptyList());
@@ -1332,7 +1284,7 @@ public class AiAgentOrchestrator {
                 }
             }
 
-            com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine totEngine = treeOfThoughtsEngineProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine totEngine = componentRegistry.getTreeOfThoughtsEngine();
             if (totEngine != null) {
                 com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine.TotResult totResult = totEngine.explore(
                         "complex-analysis", userMessage, java.util.Collections.emptyList(), java.util.Collections.emptyList());
@@ -1349,7 +1301,7 @@ public class AiAgentOrchestrator {
 
     private String tryIntentDrivenDag(String userMessage, String pageContext) {
         try {
-            com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService intentDagService = intentDrivenDagServiceProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService intentDagService = componentRegistry.getIntentDrivenDagService();
             if (intentDagService == null) return null;
 
             com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService.DagPlanResult planResult =
@@ -1361,7 +1313,7 @@ public class AiAgentOrchestrator {
 
             log.info("[IntentDag] 意图解析成功: intent={}, target={}", planResult.getIntent(), planResult.getTargetEntity());
 
-            com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService vizService = dagVisualizationServiceProvider.getIfAvailable();
+            com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService vizService = componentRegistry.getDagVisualizationService();
             if (vizService != null) {
                 try {
                     com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService.DagVisualResult vizResult =
@@ -1413,7 +1365,7 @@ public class AiAgentOrchestrator {
     private void applyCostExplosionGuard(AgentLoopContext ctx) {
         try {
             com.fashion.supplychain.intelligence.service.CostExplosionGuard guard =
-                    costExplosionGuardProvider.getIfAvailable();
+                    componentRegistry.getCostExplosionGuard();
             if (guard == null || !guard.isEnabled()) return;
             if (guard.checkContextBloat(ctx)) {
                 guard.compressContext(ctx);
@@ -1430,7 +1382,7 @@ public class AiAgentOrchestrator {
     private void selectAndLogModelTier(String userMessage, AgentLoopContext ctx) {
         try {
             com.fashion.supplychain.intelligence.service.ModelSelectionRouter router =
-                    modelSelectionRouterProvider.getIfAvailable();
+                    componentRegistry.getModelSelectionRouter();
             if (router == null || !router.isEnabled()) return;
             int estimatedTools = ctx != null && ctx.getVisibleTools() != null
                     ? Math.min(ctx.getVisibleTools().size(), 8) : 0;
@@ -1451,7 +1403,7 @@ public class AiAgentOrchestrator {
     private void recordToolCallsToCostGuard(List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
         try {
             com.fashion.supplychain.intelligence.service.CostExplosionGuard guard =
-                    costExplosionGuardProvider.getIfAvailable();
+                    componentRegistry.getCostExplosionGuard();
             if (guard == null || !guard.isEnabled() || toolRecords == null || toolRecords.isEmpty()) return;
             Long tenantId = UserContext.tenantId();
             if (tenantId == null) return;

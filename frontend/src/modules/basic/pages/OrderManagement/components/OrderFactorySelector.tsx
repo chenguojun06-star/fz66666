@@ -1,7 +1,89 @@
-import React from 'react';
-import { Form, Segmented, Select, Space, Tooltip } from 'antd';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Form, Segmented, Select, Space, Tooltip, Button } from 'antd';
+import { QuestionCircleOutlined, RightOutlined } from '@ant-design/icons';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
+import FactoryInsightDrawer from './FactoryInsightDrawer';
+
+/** 货期完成率兜底格式化：null/undefined/负值统一显示「暂无」 */
+const formatRate = (rate: number | null | undefined): { text: string; color: string } => {
+  if (rate == null || Number.isNaN(rate) || rate < 0) {
+    return { text: '暂无', color: 'var(--color-text-quaternary)' };
+  }
+  return {
+    text: `${rate}%`,
+    color: rate >= 80 ? 'var(--color-success)' : rate >= 60 ? 'var(--color-warning)' : 'var(--color-danger)',
+  };
+};
+
+/** 工厂产能数据展示块（INTERNAL/EXTERNAL 共用，消除重复 + 统一兜底） */
+const FactoryStatBlock: React.FC<{
+  stat: FactoryCapacityItem;
+  emptyHint: string;
+  onInsightClick: () => void;
+}> = ({ stat, emptyHint, onInsightClick }) => {
+  const rate = formatRate(stat.deliveryOnTimeRate);
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        padding: '6px 10px',
+        background: 'var(--color-bg-container)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 6,
+        fontSize: 14,
+        lineHeight: '20px',
+        color: 'var(--color-text-secondary)',
+      }}
+    >
+      {stat.matchScore > 0 && (
+        <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? 'var(--color-success)' : stat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
+            推荐指数 {stat.matchScore}分
+          </span>
+          {stat.matchScore >= 70 && <span style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-success-border)' }}>推荐</span>}
+          {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-warning-border)' }}>配置产能</span>}
+          {stat.capacitySource === 'none' && <span style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-error-border)' }}>无产能数据</span>}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalOrders}</b> 单</span>
+        <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
+        <span>
+          货期完成率
+          <b style={{ marginLeft: 4, color: rate.color }}>{rate.text}</b>
+        </span>
+        {stat.atRiskCount > 0 ? <span style={{ color: 'var(--color-warning)' }}>高风险 <b>{stat.atRiskCount}</b> 单</span> : null}
+        {stat.overdueCount > 0 ? <span style={{ color: 'var(--color-danger)' }}>逾期 <b>{stat.overdueCount}</b> 单</span> : null}
+      </div>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border)' }}>
+        <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{stat.activeWorkers}</b> 人</span>
+        {stat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: 'var(--color-info)' }}>{stat.avgDailyOutput}</b> 件/天{stat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
+        {stat.estimatedCompletionDays > 0 ? (
+          <span>
+            预计
+            <b style={{ marginInline: 4, color: stat.estimatedCompletionDays > 30 ? 'var(--color-danger)' : stat.estimatedCompletionDays > 15 ? 'var(--color-warning)' : 'var(--color-success)' }}>
+              {stat.estimatedCompletionDays}
+            </b>
+            天可完工
+          </span>
+        ) : null}
+        {stat.activeWorkers <= 0 && stat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（{emptyHint}近30天无扫码记录）</span> : null}
+      </div>
+      <div style={{ marginTop: 6, textAlign: 'right' }}>
+        <Button
+          size="small"
+          type="default"
+          onClick={onInsightClick}
+          style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
+          icon={<RightOutlined />}
+          iconPosition="end"
+        >
+          查看工厂全动态详情
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 interface OrderFactorySelectorProps {
   factoryMode: 'INTERNAL' | 'EXTERNAL';
@@ -27,7 +109,26 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
   selectedFactoryStat,
   tooltipTheme,
 }) => {
+  const [insightOpen, setInsightOpen] = useState(false);
+
+  const renderInsightDrawer = () => {
+    if (!selectedFactoryStat || !selectedFactoryStat.factoryName) return null;
+    const orderQuantity = form.getFieldValue('orderQuantity') as number | undefined;
+    const plannedEndDate = form.getFieldValue('plannedEndDate') as string | undefined;
+    return (
+      <FactoryInsightDrawer
+        open={insightOpen}
+        onClose={() => setInsightOpen(false)}
+        factoryName={selectedFactoryStat.factoryName}
+        orderQuantity={orderQuantity ?? 0}
+        plannedDeadline={plannedEndDate}
+        styleNo={form.getFieldValue('styleNo') as string | undefined}
+      />
+    );
+  };
+
   return (
+    <>
     <Form.Item
       label={(
         <Space size={4}>
@@ -103,55 +204,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
             />
           </Form.Item>
           {selectedFactoryStat && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: '6px 10px',
-                background: 'var(--color-bg-container, var(--color-bg-container))',
-                border: '1px solid var(--color-border, #e8e8e8)',
-                borderRadius: 6,
-                fontSize: 14,
-                lineHeight: '20px',
-                color: 'var(--color-text-secondary, #888)',
-              }}
-            >
-              {selectedFactoryStat.matchScore > 0 && (
-                <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontWeight: 600, color: selectedFactoryStat.matchScore >= 70 ? 'var(--color-success)' : selectedFactoryStat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-                    推荐指数 {selectedFactoryStat.matchScore}分
-                  </span>
-                  {selectedFactoryStat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #b7eb8f' }}>推荐</span>}
-                  {selectedFactoryStat.capacitySource === 'configured' && <span style={{ background: '#FFF7E6', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
-                  {selectedFactoryStat.capacitySource === 'none' && <span style={{ background: '#FFF1F0', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-                <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
-                <span>
-                  货期完成率
-                  <b style={{ marginLeft: 4, color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? 'var(--color-success)' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-                    {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
-                  </b>
-                </span>
-                {selectedFactoryStat.atRiskCount > 0 ? <span style={{ color: 'var(--color-warning)' }}>高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span> : null}
-                {selectedFactoryStat.overdueCount > 0 ? <span style={{ color: 'var(--color-danger)' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span> : null}
-              </div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-                <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
-                {selectedFactoryStat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: 'var(--color-info)' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天{selectedFactoryStat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
-                {selectedFactoryStat.estimatedCompletionDays > 0 ? (
-                  <span>
-                    预计
-                    <b style={{ marginInline: 4, color: selectedFactoryStat.estimatedCompletionDays > 30 ? 'var(--color-danger)' : selectedFactoryStat.estimatedCompletionDays > 15 ? 'var(--color-warning)' : 'var(--color-success)' }}>
-                      {selectedFactoryStat.estimatedCompletionDays}
-                    </b>
-                    天可完工
-                  </span>
-                ) : null}
-                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（该车间近30天无扫码记录）</span> : null}
-              </div>
-            </div>
+            <FactoryStatBlock stat={selectedFactoryStat} emptyHint="该车间" onInsightClick={() => setInsightOpen(true)} />
           )}
         </>
       ) : (
@@ -166,59 +219,13 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
             />
           </Form.Item>
           {selectedFactoryStat && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: '6px 10px',
-                background: 'var(--color-bg-container, var(--color-bg-container))',
-                border: '1px solid var(--color-border, #e8e8e8)',
-                borderRadius: 6,
-                fontSize: 14,
-                lineHeight: '20px',
-                color: 'var(--color-text-secondary, #888)',
-              }}
-            >
-              {selectedFactoryStat.matchScore > 0 && (
-                <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontWeight: 600, color: selectedFactoryStat.matchScore >= 70 ? 'var(--color-success)' : selectedFactoryStat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-                    推荐指数 {selectedFactoryStat.matchScore}分
-                  </span>
-                  {selectedFactoryStat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #b7eb8f' }}>推荐</span>}
-                  {selectedFactoryStat.capacitySource === 'configured' && <span style={{ background: '#FFF7E6', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
-                  {selectedFactoryStat.capacitySource === 'none' && <span style={{ background: '#FFF1F0', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-                <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
-                <span>
-                  货期完成率
-                  <b style={{ marginLeft: 4, color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? 'var(--color-success)' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-                    {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
-                  </b>
-                </span>
-                {selectedFactoryStat.atRiskCount > 0 ? <span style={{ color: 'var(--color-warning)' }}>高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span> : null}
-                {selectedFactoryStat.overdueCount > 0 ? <span style={{ color: 'var(--color-danger)' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span> : null}
-              </div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-                <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
-                {selectedFactoryStat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: 'var(--color-info)' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天{selectedFactoryStat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
-                {selectedFactoryStat.estimatedCompletionDays > 0 ? (
-                  <span>
-                    预计
-                    <b style={{ marginInline: 4, color: selectedFactoryStat.estimatedCompletionDays > 30 ? 'var(--color-danger)' : selectedFactoryStat.estimatedCompletionDays > 15 ? 'var(--color-warning)' : 'var(--color-success)' }}>
-                      {selectedFactoryStat.estimatedCompletionDays}
-                    </b>
-                    天可完工
-                  </span>
-                ) : null}
-                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（该工厂近30天无扫码记录）</span> : null}
-              </div>
-            </div>
+            <FactoryStatBlock stat={selectedFactoryStat} emptyHint="该工厂" onInsightClick={() => setInsightOpen(true)} />
           )}
         </>
       )}
     </Form.Item>
+    {renderInsightDrawer()}
+    </>
   );
 };
 

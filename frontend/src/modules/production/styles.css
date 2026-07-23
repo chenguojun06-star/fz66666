@@ -307,7 +307,7 @@
 }
 
 .smart-order-focus-row > td {
-  background: #FFF7E6 !important;
+  background: var(--status-warning-bg) !important;
   transition: background-color 0.25s ease;
 }
 

@@ -7,7 +7,7 @@
  *  - 第一屏 限制/紧张 风险 Banner
  *  - AI 文字建议
  */
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Button, Space, Spin, Tag } from 'antd';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { DownOutlined, ReloadOutlined, RightOutlined, WarningOutlined } from '@ant-design/icons';
@@ -37,15 +37,21 @@ interface StyleInsight {
 const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacityData }) => {
   const [insight, setInsight] = useState<StyleInsight | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [aiAdviceVisible, setAiAdviceVisible] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
+  // 竞态保护：快速切换款号时丢弃旧请求的响应
+  const requestIdRef = useRef(0);
 
   const calcInsight = useCallback(async () => {
     if (!styleNo) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setHasError(false);
     try {
-      // 拉取该款历史订单（最近100条）
-      const res = await productionOrderApi.list({ styleNo, pageSize: 100, page: 1 } as any) as any;
+      // 拉取该款历史订单（最近30条，足够计算周期/准时率/频率统计）
+      const res = await productionOrderApi.list({ styleNo, pageSize: 30, page: 1 } as any) as any;
+      if (requestIdRef.current !== requestId) return; // 旧请求丢弃
       const records: any[] = res?.data?.records ?? res?.records ?? [];
 
       if (records.length === 0) {
@@ -108,14 +114,30 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         onTimeRate,
       });
     } catch {
-      setInsight(null);
+      if (requestIdRef.current === requestId) {
+        setInsight(null);
+        setHasError(true); // 区分"加载失败"与"真无数据"
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [styleNo, factoryName]);
 
+  // 防抖 400ms，避免快速切换款号时连续拉取
+  const insightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    void calcInsight();
+    if (insightTimerRef.current) {
+      clearTimeout(insightTimerRef.current);
+    }
+    insightTimerRef.current = setTimeout(() => {
+      void calcInsight();
+    }, 400);
+    return () => {
+      if (insightTimerRef.current) {
+        clearTimeout(insightTimerRef.current);
+        insightTimerRef.current = null;
+      }
+    };
   }, [calcInsight]);
 
   const orderCount = insight?.orderCount ?? 0;
@@ -198,9 +220,9 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         fontSize: 14, color: 'var(--color-text-quaternary)', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span></span>
-        <span>该款暂无历史订单数据</span>
+        <span>{hasError ? '加载失败，请重试' : '该款暂无历史订单数据'}</span>
         <Button type="link" icon={<ReloadOutlined />} onClick={calcInsight}>
-          重新加载
+          {hasError ? '重试' : '重新加载'}
         </Button>
       </div>
     );
@@ -208,7 +230,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
   return (
     <div style={{
-      background: '#f0f5ff',
+      background: 'var(--color-bg-highlight)',
       border: '1px solid var(--color-border)',
       borderRadius: 6,
       padding: '12px 14px',
@@ -235,13 +257,13 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       {!collapsed && <>
       {factoryName && capacityData && (isFactoryHighRisk || isFactoryMedRisk) && (
         <div style={{
-          background: isFactoryHighRisk ? '#F6FFED' : '#FFFBE6',
-          border: `1px solid ${isFactoryHighRisk ? '#ffccc7' : '#ffe58f'}`,
+          background: isFactoryHighRisk ? 'var(--status-error-bg)' : 'var(--status-warning-bg)',
+          border: `1px solid ${isFactoryHighRisk ? 'var(--status-error-border)' : 'var(--status-warning-border)'}`,
           borderRadius: 6, padding: '6px 10px',
           marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <WarningOutlined style={{ color: isFactoryHighRisk ? 'var(--color-danger)' : 'var(--color-warning)' }} />
-          <span style={{ color: isFactoryHighRisk ? 'var(--color-error)' : '#874d00', fontSize: 14, flex: 1 }}>
+          <span style={{ color: isFactoryHighRisk ? 'var(--color-error)' : 'var(--color-warning)', fontSize: 14, flex: 1 }}>
             {isFactoryHighRisk
               ? `${factoryName} 当前接单紧张：${overdueCount > 0 ? `${overdueCount} 单逾期` : ''}${atRiskCount > 0 ? `、${atRiskCount} 单高风险` : ''}，建议提前沟通排期`
               : `${factoryName} 在产 ${factoryTotalOrders} 单${atRiskCount > 0 ? `，其中 ${atRiskCount} 单偏慢` : ''}，排产较满`}
@@ -251,7 +273,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         {metricItems.map((item) => (
-          <div key={item.label} style={{ background: 'var(--color-bg-base)', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
+          <div key={item.label} style={{ background: 'var(--color-bg-base)', borderRadius: 7, padding: '7px 10px', border: '1px solid var(--status-processing-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
               <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.suffix}</span>
@@ -263,7 +285,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {quickTags.map((text) => (
-          <Tag key={text} style={{ fontSize: 14, color: '#667085', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
+          <Tag key={text} style={{ fontSize: 14, color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -283,7 +305,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       )}
       {aiAdviceVisible && (
         <div style={{
-          background: 'var(--color-bg-base)', border: '1px solid #d6e8ff', borderRadius: 8,
+          background: 'var(--color-bg-base)', border: '1px solid var(--status-processing-border)', borderRadius: 8,
           padding: '10px 12px', marginTop: 4,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -304,7 +326,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
             {aiAdviceItems.map((item) => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, lineHeight: '18px' }}>
                 <span style={{ color: 'var(--color-text-secondary)' }}>{item.label}</span>
-                <span style={{ fontWeight: 600, color: '#1f2937', textAlign: 'right' }}>{item.value}</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'right' }}>{item.value}</span>
               </div>
             ))}
           </div>

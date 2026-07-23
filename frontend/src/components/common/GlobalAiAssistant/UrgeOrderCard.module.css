@@ -1,5 +1,5 @@
 .urgeOrderCard {
-  background: #FFF7E6;
+  background: var(--status-warning-bg);
   border: 1.5px solid #ffd591;
   border-radius: 12px;
   padding: 12px 14px;
@@ -99,8 +99,8 @@
   cursor: not-allowed;
 }
 .urgeCardSaved {
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
   border-radius: 10px;
   padding: 10px 14px;
   color: #389e0d;

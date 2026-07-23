@@ -324,7 +324,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
             </Upload.Dragger>
             
             {!ocrLoading && ocrFile && (
-              <div style={{ marginTop: 16, padding: 12, background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--status-success-border)' }}>
                 <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
                   已选择: {ocrFile.name}
                 </p>

@@ -104,8 +104,8 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
       {qcFilter === 'pending' && pendingQc.length > 0 && (
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: 12, padding: '10px 16px', background: '#e6f7ff', borderRadius: 8,
-          border: '1px solid #91d5ff',
+          marginBottom: 12, padding: '10px 16px', background: 'var(--status-processing-bg)', borderRadius: 8,
+          border: '1px solid var(--status-processing-border)',
         }}>
           <Space>
             <Checkbox
@@ -216,7 +216,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                             display: 'flex', alignItems: 'center', gap: 12,
                             padding: '10px 14px',
                             borderBottom: '1px solid var(--color-bg-subtle)',
-                            background: isSelected ? '#e6f7ff' : isUnqualified ? '#F6FFED' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
+                            background: isSelected ? 'var(--status-processing-bg)' : isUnqualified ? '#F6FFED' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
                           }}
                         >
                           {isPendingQc && qcFilter === 'pending' && (

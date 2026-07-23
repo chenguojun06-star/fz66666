@@ -221,9 +221,9 @@
 }
 
 .overdue-factory-row:hover {
-  background: #ffccc7;
+  background: var(--status-error-border);
   color: #a8071a;
-  border-color: #ffccc7;
+  border-color: var(--status-error-border);
 }
 
 .overdue-factory-row.active {

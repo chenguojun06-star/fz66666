@@ -1,5 +1,5 @@
 .pie-card {
-  --pie-bg: #ffffff;
+  --pie-bg: var(--color-bg-base);
   --pie-border: #e5e7eb;
   --pie-text: #1f2937;
   --pie-text-muted: #9ca3af;
@@ -47,7 +47,7 @@
 .pie-card-svg { width: calc(180px * var(--pie-scale)); height: calc(180px * var(--pie-scale)); }
 .pie-card-segment { opacity: 0.9; transition: opacity 0.2s; }
 .pie-card-segment:hover { opacity: 1; }
-.pie-card-center { fill: #ffffff; }
+.pie-card-center { fill: var(--color-bg-base); }
 .pie-card-total { fill: var(--pie-text); font-size: calc(18px * var(--pie-scale)); font-weight: 800; dominant-baseline: middle; }
 .pie-card-center-label { fill: var(--pie-text-muted); font-size: calc(10px * var(--pie-scale)); dominant-baseline: middle; }
 .pie-card-percent { font-size: calc(14px * var(--pie-scale)); font-weight: 700; dominant-baseline: middle; }

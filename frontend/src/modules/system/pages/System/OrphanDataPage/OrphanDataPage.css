@@ -59,15 +59,15 @@
 }
 
 .orphan-category-card:hover {
-  border-color: #91d5ff;
-  background: #e6f7ff;
+  border-color: var(--status-processing-border);
+  background: var(--status-processing-bg);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.12);
 }
 
 .orphan-category-active {
   border-color: var(--color-info);
-  background: #e6f7ff;
+  background: var(--status-processing-bg);
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
 }
 

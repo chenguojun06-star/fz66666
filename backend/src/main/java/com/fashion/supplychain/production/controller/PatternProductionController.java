@@ -9,8 +9,13 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.orchestration.PatternProductionOrchestrator;
 import com.fashion.supplychain.production.service.PatternProductionService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,6 +51,15 @@ public class PatternProductionController {
 
     @Autowired
     private com.fashion.supplychain.production.helper.PatternEnrichmentHelper patternEnrichmentHelper;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
+
+    @Autowired
+    private CuttingWorkflowBuilderHelper cuttingWorkflowBuilderHelper;
 
     /**
      * 获取样衣开发费用统计
@@ -125,6 +139,96 @@ public class PatternProductionController {
         }
         TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
         return Result.success(patternEnrichmentHelper.enrichRecord(record));
+    }
+
+    /**
+     * 创建样衣生产订单（统一到大货订单体系）
+     * sourceBizType=SAMPLE，复用大货的工序跟进、预算天数、扫码、入库全流程
+     */
+    @PostMapping("/create-sample-order")
+    public Result<Map<String, Object>> createSampleOrder(@RequestBody Map<String, Object> request) {
+        String styleId = request.get("styleId") != null ? String.valueOf(request.get("styleId")).trim() : null;
+        if (!StringUtils.hasText(styleId)) {
+            return Result.fail("样衣ID不能为空");
+        }
+
+        StyleInfo style = styleInfoService.getDetailById(Long.parseLong(styleId));
+        if (style == null) {
+            return Result.fail("样衣信息不存在");
+        }
+
+        LambdaQueryWrapper<ProductionOrder> dupCheck = new LambdaQueryWrapper<>();
+        dupCheck.eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getSourceBizType, "SAMPLE")
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("LIMIT 1");
+        ProductionOrder existing = productionOrderService.getOne(dupCheck, false);
+        if (existing != null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", existing.getId());
+            result.put("orderNo", existing.getOrderNo());
+            result.put("styleNo", existing.getStyleNo());
+            result.put("styleName", existing.getStyleName());
+            result.put("sourceBizType", existing.getSourceBizType());
+            return Result.success(result);
+        }
+
+        ProductionOrder order = new ProductionOrder();
+        order.setStyleId(styleId);
+        order.setStyleNo(style.getStyleNo());
+        order.setStyleName(style.getStyleName());
+        order.setSkc(style.getSkc());
+        order.setSourceBizType("SAMPLE");
+        order.setOrderQuantity(style.getSampleQuantity() != null ? style.getSampleQuantity() : 1);
+        order.setProductionProgress(0);
+        order.setMaterialArrivalRate(0);
+        order.setStatus("pending");
+        order.setActualStartDate(LocalDateTime.now());
+
+        if (style.getDeliveryDate() != null) {
+            order.setExpectedShipDate(style.getDeliveryDate());
+        }
+
+        String merchandiser = style.getOrderType();
+        if (StringUtils.hasText(merchandiser)) {
+            order.setMerchandiser(merchandiser.trim());
+        }
+        String patternMaker = style.getSampleSupplier();
+        if (StringUtils.hasText(patternMaker)) {
+            order.setPatternMaker(patternMaker.trim());
+        }
+
+        String currentUserId = UserContext.userId();
+        String currentUsername = UserContext.username();
+        if (StringUtils.hasText(currentUserId)) {
+            order.setCreatedById(currentUserId);
+        }
+        if (StringUtils.hasText(currentUsername)) {
+            order.setCreatedByName(currentUsername);
+        }
+
+        if (StringUtils.hasText(style.getStyleNo())) {
+            String autoWorkflow = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(style.getStyleNo().trim());
+            if (StringUtils.hasText(autoWorkflow)) {
+                order.setProgressWorkflowJson(autoWorkflow);
+            }
+        }
+
+        boolean saved = productionOrderService.save(order);
+        if (!saved || order.getId() == null) {
+            return Result.fail("创建样衣生产订单失败");
+        }
+
+        log.info("[样衣生产订单] 创建成功: styleId={}, styleNo={}, orderId={}, orderNo={}, sourceBizType=SAMPLE",
+                styleId, style.getStyleNo(), order.getId(), order.getOrderNo());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("styleNo", order.getStyleNo());
+        result.put("styleName", order.getStyleName());
+        result.put("sourceBizType", order.getSourceBizType());
+        return Result.success(result);
     }
 
     /**

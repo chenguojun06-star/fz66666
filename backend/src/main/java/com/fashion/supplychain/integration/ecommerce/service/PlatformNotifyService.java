@@ -237,4 +237,13 @@ public class PlatformNotifyService {
             log.warn("[物流回调][{}] 回传失败: {}", platformName, e.getMessage());
         }
     }
+
+    public Integer fetchPlatformStock(Long tenantId, String skuCode) {
+        log.debug("[库存同步] 查询平台库存 tenantId={} skuCode={}", tenantId, skuCode);
+        return null;
+    }
+
+    public void updatePlatformStock(Long tenantId, String skuCode, Integer quantity) {
+        log.info("[库存同步] 更新平台库存 tenantId={} skuCode={} quantity={}", tenantId, skuCode, quantity);
+    }
 }

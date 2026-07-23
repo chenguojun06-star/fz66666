@@ -37,7 +37,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
   <div
     style={{
       background: isHigh ? '#FFF1F0' : '#FFFBE6',
-      border: `1px solid ${isHigh ? '#ffccc7' : '#ffe58f'}`,
+      border: `1px solid ${isHigh ? 'var(--status-error-border)' : 'var(--status-warning-border)'}`,
       borderRadius: 8,
       padding: '10px 14px',
     }}

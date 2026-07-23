@@ -118,7 +118,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
                 </Form.Item>
               </Col>
             </Row>
-            <div style={{ padding: '8px 12px', border: '1px solid #ffccc7', borderRadius: 6, marginBottom: 12 }}>
+            <div style={{ padding: '8px 12px', border: '1px solid var(--status-error-border)', borderRadius: 6, marginBottom: 12 }}>
               <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
                 <Space>
                   <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />

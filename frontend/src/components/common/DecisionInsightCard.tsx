@@ -27,10 +27,10 @@ export interface DecisionInsight {
 }
 
 const paletteMap: Record<NonNullable<DecisionInsight['level']>, { bg: string; border: string; title: string; dot: string }> = {
-  danger: { bg: '#FFF1F0', border: '#ffccc7', title: 'var(--color-error)', dot: 'var(--color-danger)' },
-  warning: { bg: '#FFF7E6', border: '#ffd591', title: '#d46b08', dot: 'var(--color-warning)' },
+  danger: { bg: '#FFF1F0', border: 'var(--status-error-border)', title: 'var(--color-error)', dot: 'var(--color-danger)' },
+  warning: { bg: 'var(--status-warning-bg)', border: '#ffd591', title: '#d46b08', dot: 'var(--color-warning)' },
   info: { bg: '#f0f5ff', border: '#adc6ff', title: '#1d39c4', dot: 'var(--color-primary)' },
-  success: { bg: '#f6ffed', border: '#b7eb8f', title: '#389e0d', dot: 'var(--color-success)' },
+  success: { bg: 'var(--status-success-bg)', border: 'var(--status-success-border)', title: '#389e0d', dot: 'var(--color-success)' },
 };
 
 const DecisionInsightCard: React.FC<{

@@ -98,6 +98,9 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.FactoryCapacityWarningHelper factoryCapacityWarningHelper;
+
     // ---------- updateBasicInfo 相关常量 ----------
 
     private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of(
@@ -344,6 +347,8 @@ public class ProductionOrderOrchestrator {
             }
         }
         evictCacheAfterCommit(productionOrder.getId());
+        // 下单/编辑后异步产能预警（不阻断主流程，仅 warning 日志）
+        registerCapacityWarningAfterCommit(productionOrder.getFactoryName());
         return result;
     }
 
@@ -997,9 +1002,11 @@ public class ProductionOrderOrchestrator {
     }
 
     private void evictCacheAfterCommit(String orderId) {
+        Long tenantId = UserContext.tenantId();
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             orderListCacheHelper.evictTenantListCache();
             orderListCacheHelper.evictDetailCache(orderId);
+            factoryCapacityWarningHelper.evictFactoryCapacityCache(tenantId);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -1008,9 +1015,29 @@ public class ProductionOrderOrchestrator {
                 try {
                     orderListCacheHelper.evictTenantListCache();
                     orderListCacheHelper.evictDetailCache(orderId);
+                    factoryCapacityWarningHelper.evictFactoryCapacityCache(tenantId);
                 } catch (Exception e) {
                     log.debug("[OrderCache] 缓存清除失败: orderId={}", orderId);
                 }
+            }
+        });
+    }
+
+    /**
+     * 注册产能预警 afterCommit 回调（不阻断主流程，仅 warning 日志）
+     * 在事务提交后异步检查工厂负载，超阈值则记录 warning。
+     */
+    private void registerCapacityWarningAfterCommit(String factoryName) {
+        if (factoryName == null || factoryName.isBlank()) return;
+        Long tenantId = UserContext.tenantId();
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            factoryCapacityWarningHelper.warnIfOverloaded(factoryName, tenantId);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                factoryCapacityWarningHelper.warnIfOverloaded(factoryName, tenantId);
             }
         });
     }
