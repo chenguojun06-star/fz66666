@@ -16,6 +16,18 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-07-24 平台详情页顶部标签改为中文平台名 ✅
+
+用户反馈：点击电商中心平台卡片后，顶部最近访问标签显示 `/ecommerce/platform/xxx` 路径，应像其他页面一样显示中文。
+
+修复内容：
+- 文件：[frontend/src/components/Layout/router.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/components/Layout/router.tsx)
+- 在 `resolveRecentTitle` 中识别 `/ecommerce/platform/:code` 路径，从 `PLATFORM_LIST` 解析平台 code，返回「{平台名} - 平台详情」（如「聚水潭 - 平台详情」「淘宝 - 平台详情」）。
+- 验证：npx tsc --noEmit 通过。
+- 提交：ec985965f 已推送到 origin/main。
+
+---
+
 ### 2026-07-23 智能化开关补全 8 个 HIGH 风险自动执行点 ✅
 
 用户诉求："全部优化好这些 这些这些智能化的 还是不要自动 让用户可以设置这些 理解吗 怕出现问题"
