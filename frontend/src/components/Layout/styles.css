@@ -13,8 +13,8 @@
   left: 0;
   right: 0;
   height: 60px;
-  background-color: var(--color-primary);
-  border-bottom: var(--border-width) solid var(--color-primary-dark);
+  background-color: var(--color-bg-card);
+  border-bottom: var(--border-width) solid var(--color-border-light);
   display: flex;
   align-items: center;
   padding: 0 var(--spacing-md);
@@ -23,30 +23,30 @@
   z-index: var(--z-dropdown);
 }
 
-/* 蓝色导航栏上的文字/图标颜色 */
+/* 导航栏文字/图标颜色（跟随主题） */
 .layout-header,
 .layout-header .header-left,
 .layout-header .header-content {
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .layout-header .header-title {
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .layout-header .header-tenant-name {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-light);
 }
 
 .layout-header .ant-btn-text {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-secondary);
 }
 
 .layout-header .ant-btn-text:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff;
+  background: var(--color-bg-subtle) !important;
+  color: var(--color-text-primary);
 }
 
 .header-left {
@@ -78,14 +78,11 @@
   font-size: calc(var(--font-size-lg) + 1px);
   padding: 8px 14px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.75); /* @design-system: 纯色，禁止渐变 */
-  border: 1px solid rgba(45, 127, 249, 0.28);
-  box-shadow: 0 2px 8px rgba(11, 45, 92, 0.1); /* @design-system: 轻量阴影 */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--color-bg-subtle); /* @design-system: 纯色，禁止渐变 */
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm); /* @design-system: 轻量阴影 */
   max-width: 260px;
-  color: #0b2d5c;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
   /* 原 animation: header-brand-flow 7.5s ease-in-out infinite 已移除 */
@@ -107,17 +104,16 @@
 
 /* 深色主题下的品牌标签 - 增强对比度 */
 :root[data-theme="dark"] .header-title.header-brand {
-  background: rgba(107, 163, 255, 0.22);
-  border: 1px solid rgba(107, 163, 255, 0.45);
-  box-shadow: 0 2px 12px rgba(107, 163, 255, 0.25);
-  color: #c5d9ff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-primary);
 }
 
 /* 深色主题下的Header整体 */
 :root[data-theme="dark"] .layout-header {
   background-color: var(--color-bg-card);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+  border-bottom-color: var(--color-border-light);
 }
 
 /* 深色主题下的Header文字 */
@@ -136,7 +132,7 @@
 }
 
 :root[data-theme="dark"] .recent-tab.active .recent-tab-label.ant-btn {
-  color: #c5d9ff;
+  color: var(--color-text-primary);
 }
 
 .header-title.header-brand::after {
@@ -290,7 +286,7 @@
   border-radius: 999px;
   border: 1px solid var(--header-user-border);
   background: var(--header-user-bg);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 10px 22px rgba(11, 45, 92, 0.10);
+  box-shadow: var(--shadow-sm);
 }
 
 .user-trigger.ant-btn:hover {
@@ -298,8 +294,8 @@
 }
 
 .user-avatar.ant-avatar {
-  background: var(--primary-color);
-  color: rgba(255, 255, 255, 0.96);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 
@@ -313,7 +309,7 @@
 }
 
 .logout-button:hover {
-  color: var(--primary-color);
+  color: var(--color-text-primary);
   background-color: transparent;
 }
 
