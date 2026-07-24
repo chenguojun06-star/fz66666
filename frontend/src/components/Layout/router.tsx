@@ -4,6 +4,7 @@ import { menuConfig } from '../../routeConfig';
 import { type AppLanguage } from '../../i18n/languagePreference';
 import { t } from '../../i18n';
 import { normalizePath } from './useLayoutAuth';
+import { PLATFORM_LIST } from '../../modules/integration/pages/IntegrationCenter/PlatformConnectorConstants';
 
 type RecentPage = {
   path: string;
@@ -65,7 +66,11 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/intelligence/center') return '智能运营中心';
   if (base === '/intelligence/agent-traces') return 'AI执行记录中心';
   if (base === '/ecommerce/center') return '平台总览';
-  if (base === '/ecommerce/platform') return '平台详情';
+  if (base === '/ecommerce/platform' || pathname.startsWith('/ecommerce/platform/')) {
+    const code = pathname.split('/')[3];
+    const platform = PLATFORM_LIST.find((p) => p.code === code);
+    return platform ? `${platform.name} - 平台详情` : '平台详情';
+  }
   if (base === '/warehouse/ecommerce') return '电商订单';
   if (base === '/finance/ec-revenue') return 'EC销售收入';
   if (base === '/crm') return '客户档案';
