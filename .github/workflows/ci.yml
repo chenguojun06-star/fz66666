@@ -37,6 +37,19 @@ jobs:
     - name: 检查小程序 eventBus 订阅（防止操作后不刷新）
       run: node scripts/check-eventbus-subscription.js
 
+    - name: 多租户隔离审计（P0铁律：Entity/Mapper 必须带 tenant_id）
+      run: |
+        echo "🔍 开始多租户隔离审计..."
+        python3 scripts/audit-tenant-id.py
+        echo "✅ 多租户隔离审计通过"
+
+    - name: 前端硬编码颜色审计（不阻断，仅生成报告）
+      continue-on-error: true
+      run: |
+        echo "🎨 开始前端硬编码颜色审计..."
+        python3 scripts/audit-frontend-colors.py || true
+        echo "ℹ️  颜色审计报告已生成（历史遗留硬编码不会阻断 CI，新增硬编码请及时清理）"
+
     - name: 生产配置安全扫描
       run: |
         echo "🔍 开始生产配置安全扫描..."
@@ -155,8 +168,28 @@ jobs:
         else
           echo "⚠️  当前没有测试用例（surefire-reports 为空）"
         fi
-        if [ -f target/site/jacoco/index.html ]; then
-          echo "📊 Jacoco覆盖率报告: target/site/jacoco/index.html"
+
+    - name: JaCoCo 覆盖率报告（不阻断，仅输出当前覆盖率）
+      working-directory: ./backend
+      run: |
+        echo "📊 JaCoCo 覆盖率报告"
+        if [ -f target/site/jacoco/jacoco.csv ]; then
+          echo "GROUP,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED"
+          head -1 target/site/jacoco/jacoco.csv
+          TOTAL_MISS=$(awk -F',' 'NR>1 {miss+=$4} END {print miss}' target/site/jacoco/jacoco.csv)
+          TOTAL_COVER=$(awk -F',' 'NR>1 {cover+=$5} END {print cover}' target/site/jacoco/jacoco.csv)
+          if [ -n "$TOTAL_MISS" ] && [ -n "$TOTAL_COVER" ] && [ "$((TOTAL_MISS + TOTAL_COVER))" -gt 0 ]; then
+            PCT=$(awk "BEGIN {printf \"%.1f\", ($TOTAL_COVER / ($TOTAL_MISS + $TOTAL_COVER)) * 100}")
+            echo ""
+            echo "📊 总指令覆盖率: ${PCT}%（覆盖 $TOTAL_COVER / 未覆盖 $TOTAL_MISS）"
+            if (( $(echo "$PCT < 30" | bc -l) )); then
+              echo "⚠️  覆盖率低于 30%，建议补充核心业务路径单元测试"
+            else
+              echo "✅ 覆盖率达标（≥30%）"
+            fi
+          fi
+        else
+          echo "⚠️  未找到 jacoco.csv，跳过覆盖率统计"
         fi
 
   frontend-lint:
@@ -188,6 +221,22 @@ jobs:
     - name: TypeScript 类型检查
       working-directory: ./frontend
       run: npx tsc --noEmit
+
+    - name: 死代码检测（ts-prune，不阻断，仅生成报告）
+      continue-on-error: true
+      working-directory: ./frontend
+      run: |
+        echo "🧹 开始死代码检测..."
+        npx ts-prune 2>&1 | head -100 || true
+        echo "ℹ️  死代码检测报告已生成（未使用的导出不会阻断 CI，请定期清理）"
+
+    - name: 循环依赖检测（madge，不阻断，仅生成报告）
+      continue-on-error: true
+      working-directory: ./frontend
+      run: |
+        echo "🔄 开始循环依赖检测..."
+        npx madge --circular --extensions ts,tsx src/ 2>&1 | head -50 || true
+        echo "ℹ️  循环依赖检测报告已生成"
 
   frontend-build:
     name: 前端构建
