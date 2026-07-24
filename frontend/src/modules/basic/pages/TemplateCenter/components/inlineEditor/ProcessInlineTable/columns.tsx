@@ -35,15 +35,6 @@ export const buildProcessColumns = ({
 }: BuildProcessColumnsParams): ColumnsType<ProcessStepRow & { _origIdx: number }> => {
   return [
     {
-      title: '排序',
-      width: compact ? 40 : 50,
-      render: (_: unknown, __: ProcessStepRow, index: number) => (
-        <span style={{ color: 'var(--neutral-text-disabled)' }}>
-          {index + 1}
-        </span>
-      ),
-    },
-    {
       title: '工序编号',
       dataIndex: 'processCode',
       width: compact ? 60 : 80,

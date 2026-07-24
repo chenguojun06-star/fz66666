@@ -34,13 +34,6 @@ export default function useProcessPriceColumns(
     const editable = editMode;
     const baseColumns = [
       {
-        title: '排序',
-        dataIndex: 'sortOrder',
-        width: 60,
-        align: 'center' as const,
-        render: (_: any, __: StyleProcessRow, index: number) => index + 1,
-      },
-      {
         title: '工序编码',
         dataIndex: 'processCode',
         width: 88,

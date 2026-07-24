@@ -104,12 +104,6 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
   } = opts;
   return [
     {
-      title: '排序',
-      dataIndex: 'sortOrder',
-      width: 80,
-      render: (_: number, _record: StyleProcess, index: number) => index + 1,
-    },
-    {
       title: '工序编码',
       dataIndex: 'processCode',
       width: 100,
