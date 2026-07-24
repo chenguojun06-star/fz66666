@@ -99,7 +99,7 @@ const buildMaterialPrintHtml = (dataList: MaterialDatabase[]): string => {
 </head>
 <body>
   <div class="print-btn-bar no-print">
-    <button class="print-btn" onclick="window.print()">🖨️ 打印</button>
+    <button class="print-btn" onclick="window.print()">打印</button>
   </div>
 
   <div class="title">物 料 资 料 库</div>

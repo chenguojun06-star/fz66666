@@ -214,7 +214,7 @@ const TenantListTab: React.FC = () => {
           <div style={{ display: 'flex', gap: 12 }}><Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="租户编码" name="tenantCode" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input placeholder="唯一编码，工人注册用" /></Form.Item></div>
           <div style={{ display: 'flex', gap: 12 }}><Form.Item label="联系人" name="contactName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="联系电话" name="contactPhone" style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="最大用户数" name="maxUsers" style={{ flex: '0 0 120px', marginBottom: 12 }}><InputNumber min={1} max={9999} style={{ width: '100%' }} disabled /></Form.Item></div>
           <div style={{ background: 'rgba(82,196,26,0.06)', borderRadius: 8, padding: '12px 16px', marginTop: 8, marginBottom: 8 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>🤖 AI 能力配置（开户即用，租户无需自备Key）</div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>AI 能力配置（开户即用，租户无需自备Key）</div>
             <Form.Item label="AI配置方式" name="aiConfigMode" initialValue="platform" style={{ marginBottom: 8 }}>
               <Radio.Group>
                 <Radio value="platform">平台代充（推荐）— 租户直接用，含在套餐费里</Radio>
@@ -278,9 +278,9 @@ const TenantListTab: React.FC = () => {
                           </div>
                           <Space size={4}>
                             {!isActive && !willGrant && <Button type="link" onClick={() => setGrantAppCodes([...grantAppCodes, opt.value])}>开通</Button>}
-                            {willGrant && <Button type="link" style={{ color: 'var(--color-success)' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>✓ 将开通</Button>}
+                            {willGrant && <Button type="link" style={{ color: 'var(--color-success)' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>将开通</Button>}
                             {isActive && !willRevoke && <Button type="link" danger onClick={() => setRevokeAppCodes([...revokeAppCodes, opt.value])}>撤销</Button>}
-                            {willRevoke && <Button type="link" style={{ color: 'var(--color-danger)' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>✓ 将撤销</Button>}
+                            {willRevoke && <Button type="link" style={{ color: 'var(--color-danger)' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>将撤销</Button>}
                           </Space>
                         </div>
                       );

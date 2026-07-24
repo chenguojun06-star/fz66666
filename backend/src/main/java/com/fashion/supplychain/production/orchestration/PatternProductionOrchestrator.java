@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.helper.PatternStockHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.intelligence.helper.StatusTranslator;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -437,6 +438,7 @@ public class PatternProductionOrchestrator {
         result.put("color", pattern.getColor());
         result.put("operationType", scanRecord.getOperationType());
         result.put("newStatus", "PRODUCTION_COMPLETED");
+        result.put("newStatusLabel", StatusTranslator.translateStatus("PRODUCTION_COMPLETED"));
         return result;
     }
 
@@ -656,6 +658,7 @@ public class PatternProductionOrchestrator {
         result.put("warehouseCode", warehouseCode);
         result.put("scanTime", scanRecord.getScanTime());
         result.put("newStatus", pattern.getStatus());
+        result.put("newStatusLabel", StatusTranslator.translateStatus(pattern.getStatus()));
         return result;
     }
 
@@ -905,6 +908,7 @@ public class PatternProductionOrchestrator {
         response.put("reviewById", pattern.getReviewById());
         response.put("reviewTime", pattern.getReviewTime());
         response.put("newStatus", pattern.getStatus());
+        response.put("newStatusLabel", StatusTranslator.translateStatus(pattern.getStatus()));
         response.put("message", msg);
         return response;
     }

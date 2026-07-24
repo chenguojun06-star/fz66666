@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Row, Col, Card, Statistic, Button, Tag, Spin, Space, Typography, Empty, Tabs,
+  Row, Col, Card, Statistic, Button, Tag, Spin, Space, Typography, Empty, Tabs, message,
 } from 'antd';
 import {
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
@@ -22,6 +22,7 @@ import SmartRefundTab from './SmartRefundTab';
 import StockDiscrepancyTab from './StockDiscrepancyTab';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { paths } from '@/routeConfig';
+import PageLayout from '@/components/common/PageLayout';
 
 const { Text, Paragraph } = Typography;
 
@@ -75,7 +76,9 @@ const EcommerceCenter: React.FC = () => {
     try {
       await syncNow(p.code);
       loadAllStatus();
-    } catch { /* handled in hook */ }
+    } catch (e: any) {
+      message.error(`${p.name} 同步失败：${e?.message || '请稍后重试'}`);
+    }
   };
 
   const renderPlatformCard = (p: PlatformMeta) => {
@@ -282,12 +285,19 @@ const EcommerceCenter: React.FC = () => {
   ];
 
   return (
-    <Tabs
-      activeKey={activeTab}
-      onChange={setActiveTab}
-      items={tabs}
-      style={{ background: 'var(--color-bg-base)', padding: '0 16px', borderRadius: 8 }}
-    />
+    <PageLayout
+      title="电商中心"
+      headerContent={
+        <Text type="secondary">平台对接 · 订单同步 · 智能库存 · 智能定价 · 退款与差异</Text>
+      }
+    >
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={tabs}
+        style={{ background: 'var(--color-bg-base)', padding: '0 16px', borderRadius: 8 }}
+      />
+    </PageLayout>
   );
 };
 

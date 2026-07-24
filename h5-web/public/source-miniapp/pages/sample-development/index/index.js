@@ -261,7 +261,7 @@ function buildSubProcessRows(stage, order) {
 const STATUS_LABELS = {
   PENDING: '待领取',
   IN_PROGRESS: '开发中',
-  PRODUCTION_COMPLETED: '已完成',
+  PRODUCTION_COMPLETED: '生产完成',
   COMPLETED: '已完成',
   WAREHOUSE_IN: '已入库',
   WAREHOUSE_OUT: '已出库',

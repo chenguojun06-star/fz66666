@@ -83,7 +83,7 @@ const OrderListContent: React.FC<Props> = ({
               >
                 {viewMode === 'table' ? '卡片视图' : '列表视图'}
               </Button>
-              <Button type="primary" onClick={() => fetchStyles()}>刷新</Button>
+              <Button type="primary" loading={loading} onClick={() => fetchStyles()}>刷新</Button>
             </Space>
           )}
         />

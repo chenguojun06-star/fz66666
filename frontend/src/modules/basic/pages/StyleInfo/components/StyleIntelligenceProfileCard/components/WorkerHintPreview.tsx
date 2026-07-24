@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
+import { WarningOutlined } from '@ant-design/icons';
 import type { DifficultyAssessment } from '@/services/intelligence/intelligenceApi';
 
 interface WorkerHintPreviewProps {
@@ -13,7 +14,7 @@ const WorkerHintPreview: React.FC<WorkerHintPreviewProps> = ({ workerHint, activ
     <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-base)AEB', border: '1px solid #F5C451' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: '#B45309', fontWeight: 700 }}>⚠ 工人提示预览</span>
+          <span style={{ fontSize: 12, color: '#B45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><WarningOutlined /> 工人提示预览</span>
           <Tag color="gold" style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 5px' }}>工人扫码时可见</Tag>
         </div>
       </div>

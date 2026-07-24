@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StatusTranslator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
@@ -98,8 +99,11 @@ public class StyleInfoTool extends AbstractAgentTool {
             data.put("washInstructions", info.getWashInstructions());
             data.put("description", info.getDescription());
             data.put("patternStatus", info.getPatternStatus());
+            data.put("patternStatusLabel", StatusTranslator.translateStatus(info.getPatternStatus()));
             data.put("sampleStatus", info.getSampleStatus());
+            data.put("sampleStatusLabel", StatusTranslator.translateStatus(info.getSampleStatus()));
             data.put("sampleReviewStatus", info.getSampleReviewStatus());
+            data.put("sampleReviewStatusLabel", StatusTranslator.translateStatus(info.getSampleReviewStatus()));
             data.put("sampleProgress", info.getSampleProgress());
             data.put("progressNode", info.getProgressNode());
 

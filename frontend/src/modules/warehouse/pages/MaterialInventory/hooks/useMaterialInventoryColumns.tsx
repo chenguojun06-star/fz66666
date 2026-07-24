@@ -1,5 +1,6 @@
 import React from 'react';
 import { Space, Image } from 'antd';
+import { InboxOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
@@ -166,7 +167,7 @@ export function useMaterialInventoryColumns({
                 onClick={() => onPickStock?.(record)}
                 title={onPickStock ? '点击领取库存' : undefined}
               >
-                <div className="stock-label">可用库存 <span style={{fontSize:14,color:'var(--color-info)'}}>📦领</span></div>
+                <div className="stock-label">可用库存 <span style={{fontSize:14,color:'var(--color-info)',display:'inline-flex',alignItems:'center',gap:2}}><InboxOutlined /> 领</span></div>
                 <div className="stock-value stock-value--ok">
                   {availableQty.toLocaleString()}
                 </div>

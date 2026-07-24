@@ -58,16 +58,25 @@ const ExpenseReimbursementPage: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<ExpenseReimbursement | null>(null);
 
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await expenseReimbursementApi.delete(id);
-      if (res.code === 200) { message.success('删除成功'); fetchList(); }
-      else { reportSmartError('报销单删除失败', res.message || '请稍后重试', 'EXPENSE_DELETE_FAILED'); message.error(res.message || '删除失败'); }
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
-      reportSmartError('报销单删除失败', errMsg, 'EXPENSE_DELETE_EXCEPTION');
-      message.error(`删除报销单失败: ${err instanceof Error ? err.message : '未知错误'}`);
-    }
+  const handleDelete = (id: string) => {
+    modal.confirm({
+      title: '确认删除',
+      content: '确定要删除该报销单吗？此操作不可恢复。',
+      okText: '确认删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await expenseReimbursementApi.delete(id);
+          if (res.code === 200) { message.success('删除成功'); fetchList(); }
+          else { reportSmartError('报销单删除失败', res.message || '请稍后重试', 'EXPENSE_DELETE_FAILED'); message.error(res.message || '删除失败'); }
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+          reportSmartError('报销单删除失败', errMsg, 'EXPENSE_DELETE_EXCEPTION');
+          message.error(`删除报销单失败: ${errMsg}`);
+        }
+      },
+    });
   };
 
   // ---- 数据同步（45秒轮询，与 MaterialReconciliation 一致） ----

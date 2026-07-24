@@ -27,7 +27,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     autoParseEnabled = true,
   } = props;
 
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [images, setImages] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -283,30 +283,39 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     }
   };
 
-  const handleDelete = async (attachmentId: string | number, localIndex?: number) => {
-    // 新建模式下删除本地文件
+  const handleDelete = (attachmentId: string | number, localIndex?: number) => {
+    // 新建模式下删除本地文件（未保存到后端，无需确认）
     if (isNewMode && localIndex !== undefined) {
       handleRemoveLocalFile(localIndex);
       return;
     }
     if (!enabled) return;
-    try {
-      const res = await api.delete<ApiResult<boolean>>(`/style/attachment/${attachmentId}`);
-      if (isApiSuccess(res) && res?.data === true) {
-        message.success('删除成功');
-        const deletedUrl = String(displayImages.find((item) => String(item?.id) === String(attachmentId))?.fileUrl || '');
-        if (!deletedUrl || deletedUrl === currentImage?.fileUrl) {
-          const nextCover = displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as { isCoverFallback?: boolean })?.isCoverFallback)?.fileUrl || null;
-          onCoverChange?.(nextCover);
-          setStyleCoverOverride(styleId, undefined, nextCover);
+    modal.confirm({
+      title: '确认删除',
+      content: '确定要删除该图片吗？此操作不可恢复。',
+      okText: '确认删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await api.delete<ApiResult<boolean>>(`/style/attachment/${attachmentId}`);
+          if (isApiSuccess(res) && res?.data === true) {
+            message.success('删除成功');
+            const deletedUrl = String(displayImages.find((item) => String(item?.id) === String(attachmentId))?.fileUrl || '');
+            if (!deletedUrl || deletedUrl === currentImage?.fileUrl) {
+              const nextCover = displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as { isCoverFallback?: boolean })?.isCoverFallback)?.fileUrl || null;
+              onCoverChange?.(nextCover);
+              setStyleCoverOverride(styleId, undefined, nextCover);
+            }
+            fetchImages();
+          } else {
+            message.error(getApiMessage(res, '删除失败'));
+          }
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '删除失败');
         }
-        fetchImages();
-      } else {
-        message.error(getApiMessage(res, '删除失败'));
-      }
-    } catch (error: unknown) {
-      message.error(error instanceof Error ? error.message : '删除失败');
-    }
+      },
+    });
   };
 
   const handleSetCover = async (index: number) => {

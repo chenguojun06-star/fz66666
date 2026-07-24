@@ -78,7 +78,7 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
             color: 'var(--primary-color)',
             marginBottom: 6,
           }}>
-            🧵 面料属性
+            面料属性
           </div>
           <Descriptions
             column={3}

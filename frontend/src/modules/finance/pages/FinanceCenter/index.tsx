@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { Tabs } from 'antd';
+import { Tabs, Typography } from 'antd';
 import { ShopOutlined, AuditOutlined, DollarOutlined, ScanOutlined, BankOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
+import PageLayout from '@/components/common/PageLayout';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import ExternalScanContent from './ExternalScanContent';
 import FactorySummaryContent from './FactorySummaryContent';
 import PaidUnsettledContent from './PaidUnsettledContent';
 import PaidSettledContent from './PaidSettledContent';
 import styles from './index.module.css';
+
+const { Text } = Typography;
 
 type TabKey = 'settlement' | 'externalScan' | 'factorySummary' | 'unpaid' | 'paid';
 
@@ -108,17 +111,20 @@ const FinanceCenter: React.FC = () => {
   ];
 
   return (
-    <>
-      <div className={styles.container}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={handleTabChange}
-          items={tabItems}
-          className={styles.tabs}
-          size="large"
-        />
-      </div>
-    </>
+    <PageLayout
+      title="财务中心"
+      headerContent={
+        <Text type="secondary">外发结算 · 外部工厂扫码 · 工厂汇总 · 已审未付 · 已付款</Text>
+      }
+    >
+      <Tabs
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        items={tabItems}
+        className={styles.tabs}
+        size="large"
+      />
+    </PageLayout>
   );
 };
 

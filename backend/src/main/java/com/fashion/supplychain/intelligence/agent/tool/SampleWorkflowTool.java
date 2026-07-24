@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StatusTranslator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.orchestration.OrderManagementOrchestrator;
@@ -251,9 +252,12 @@ public class SampleWorkflowTool extends AbstractAgentTool {
         dto.put("styleName", style.getStyleName());
         dto.put("progressNode", style.getProgressNode());
         dto.put("patternStatus", style.getPatternStatus());
+        dto.put("patternStatusLabel", StatusTranslator.translateStatus(style.getPatternStatus()));
         dto.put("sampleStatus", style.getSampleStatus());
+        dto.put("sampleStatusLabel", StatusTranslator.translateStatus(style.getSampleStatus()));
         dto.put("sampleProgress", style.getSampleProgress());
         dto.put("sampleReviewStatus", style.getSampleReviewStatus());
+        dto.put("sampleReviewStatusLabel", StatusTranslator.translateStatus(style.getSampleReviewStatus()));
         return dto;
     }
 

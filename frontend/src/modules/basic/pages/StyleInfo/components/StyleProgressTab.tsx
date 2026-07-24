@@ -48,8 +48,14 @@ const PROD_STAGES_CONFIG = [
 const STATUS_LABELS: Record<string, string> = {
   PENDING: '待领取',
   IN_PROGRESS: '制作中',
-  PRODUCTION_COMPLETED: '已完成',
+  PRODUCTION_COMPLETED: '生产完成',
+  COMPLETED: '已完成',
   WAREHOUSE_IN: '已入库',
+  WAREHOUSE_OUT: '已出库',
+  WAREHOUSE_RETURN: '已归还',
+  SCRAPPED: '已报废',
+  RECEIVED: '已领取',
+  REWORK: '返工中',
 };
 
 const fmt = (v: string | null | undefined) => {

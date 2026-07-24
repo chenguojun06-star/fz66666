@@ -74,7 +74,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   return (
     <Card style={{ background: '#f0f5ff', border: '1px solid #adc6ff' }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#1d39c4' }}>
-        👤 客户信息 —— 出库发送给哪个客户
+        客户信息 —— 出库发送给哪个客户
       </div>
       <Row gutter={12}>
         <Col span={8}>

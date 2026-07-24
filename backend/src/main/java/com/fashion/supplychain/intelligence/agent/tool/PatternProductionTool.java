@@ -35,7 +35,7 @@ public class PatternProductionTool extends AbstractAgentTool {
         properties.put("page", intProp("页码，默认 1（list 时可选）"));
         properties.put("size", intProp("每页数量，默认 20（list 时可选）"));
         properties.put("keyword", stringProp("关键词搜索（list 时可选）"));
-        properties.put("status", stringProp("状态筛选（list 时可选）：PENDING / IN_PROGRESS / COMPLETED"));
+        properties.put("status", stringProp("状态筛选（list 时可选）：PENDING(待领取) / RECEIVED(已领取) / IN_PROGRESS(制作中) / PRODUCTION_COMPLETED(生产完成) / COMPLETED(已完成) / WAREHOUSE_IN(已入库) / WAREHOUSE_OUT(已出库) / SCRAPPED(已报废)"));
         properties.put("startDate", stringProp("开始日期，格式 yyyy-MM-dd（list 时可选）"));
         properties.put("endDate", stringProp("结束日期，格式 yyyy-MM-dd（list 时可选）"));
         properties.put("patternId", stringProp("样板ID（receive/review/warehouse_in 时使用）"));

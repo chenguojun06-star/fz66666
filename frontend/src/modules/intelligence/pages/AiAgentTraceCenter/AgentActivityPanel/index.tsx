@@ -19,11 +19,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const DEPT_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
-  production: { label: '生产管理部', color: '#4a6cf7', icon: '🏭' },
-  finance: { label: '财务管理部', color: '#ec4899', icon: '💰' },
-  warehouse: { label: '仓储管理部', color: '#f59e0b', icon: '📦' },
-  basic: { label: '基础业务部', color: '#14b8a6', icon: '✂️' },
-  intelligence: { label: '智能运营中心', color: '#8b5cf6', icon: '🧠' },
+  production: { label: '生产管理部', color: '#4a6cf7', icon: '' },
+  finance: { label: '财务管理部', color: '#ec4899', icon: '' },
+  warehouse: { label: '仓储管理部', color: '#f59e0b', icon: '' },
+  basic: { label: '基础业务部', color: '#14b8a6', icon: '' },
+  intelligence: { label: '智能运营中心', color: '#8b5cf6', icon: '' },
 };
 
 function scoreColor(score: number, type: 'int' | 'lazy'): string {
@@ -60,11 +60,11 @@ const Workstation: React.FC<{
               )}
               {!isWorking && !isSleeping && (
                 <div className="ws-screen-idle">
-                  <span className="ws-screen-logo">☁️</span>
+                  <span className="ws-screen-logo" />
                 </div>
               )}
               {isSleeping && (
-                <div className="ws-screen-sleep">💤</div>
+                <div className="ws-screen-sleep" />
               )}
             </div>
             <div className="ws-monitor-stand" />
@@ -105,7 +105,7 @@ const Workstation: React.FC<{
         </div>
         {isWorking && agent.currentTask && (
           <div className="ws-current-task" style={{ borderColor: agent.color }}>
-            ⚡ {agent.currentTask}
+            {agent.currentTask}
           </div>
         )}
       </div>
@@ -193,7 +193,7 @@ const AgentDetailCard: React.FC<{ agent: AgentInfo }> = ({ agent }) => {
       </div>
       {a.currentTask && (
         <div className="agent-detail-task" style={{ borderLeftColor: a.color }}>
-          ⚡ 当前任务：{a.currentTask}
+          当前任务：{a.currentTask}
         </div>
       )}
     </div>
@@ -272,7 +272,7 @@ const AgentActivityPanel: React.FC = () => {
       <div className="office-toolbar">
         <div className="office-toolbar-left">
           <div className="office-toolbar-title">
-            <span className="office-toolbar-logo">🏢</span>
+            <span className="office-toolbar-logo" />
             AI 智能体办公室
           </div>
           <Tag color="blue" style={{ margin: 0 }}><RobotOutlined /> {agents.length}人</Tag>

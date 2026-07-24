@@ -24,7 +24,9 @@
 
 ### 场景 C：用户询问样衣进度与库存
 1. 调用 `tool_sample_workflow` 查询样衣生产记录（对应 t_pattern_production 表）
-2. 样衣状态流转：PENDING → IN_PROGRESS → PRODUCTION_COMPLETED → COMPLETED → WAREHOUSE_OUT → COMPLETED
+2. 样衣状态流转（对用户回复时必须使用中文名称，禁止输出英文枚举）：
+   - PENDING（待领取）→ IN_PROGRESS（制作中）→ PRODUCTION_COMPLETED（生产完成）→ COMPLETED（已完成）→ WAREHOUSE_IN（已入库）→ WAREHOUSE_OUT（已出库）
+   - 注意：PRODUCTION_COMPLETED 仅代表样板制作完成，不是整个样衣开发流程完成
 3. 操作类型：RECEIVE(领取) / PLATE(车板) / FOLLOW_UP(跟单) / COMPLETE(完成) / WAREHOUSE_IN(入库) / WAREHOUSE_OUT(出库) / WAREHOUSE_RETURN(归还)
 4. 样衣入库前必须审核通过（reviewStatus=APPROVED）
 5. 调用 `tool_sample_stock` 查询样衣库存

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select, Button } from 'antd';
+import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select, Button, Empty } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, WarningOutlined, CheckCircleOutlined, DashboardOutlined } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import * as echarts from 'echarts/core';
@@ -64,7 +64,7 @@ const DashboardContent: React.FC = () => {
           <Col>
             <Space>
               {(['day', 'week', 'month', 'year'] as TimeRangeType[]).map(r => (
-                <span key={r} onClick={() => setTimeRange(r)} style={{ cursor: 'pointer', padding: '4px 12px', borderRadius: 4, background: timeRange === r ? 'var(--color-info)' : 'var(--color-border-light)', color: timeRange === r ? 'var(--color-bg-base)' : '#333', fontWeight: timeRange === r ? 600 : 400 }}>{r === 'day' ? '日' : r === 'week' ? '周' : r === 'month' ? '月' : '年'}</span>
+                <Button key={r} size="small" type={timeRange === r ? 'primary' : 'default'} onClick={() => setTimeRange(r)}>{r === 'day' ? '日' : r === 'week' ? '周' : r === 'month' ? '月' : '年'}</Button>
               ))}
               <RangePicker value={customRange as any} onChange={(dates) => { if (dates && dates[0] && dates[1]) { setCustomRange([dates[0] as Dayjs, dates[1] as Dayjs]); setTimeRange('custom'); } }} style={{ width: 240 }} />
             </Space>
@@ -89,7 +89,7 @@ const DashboardContent: React.FC = () => {
                 <span><b style={{ color: r.rank <= 3 ? 'var(--color-info)' : '#999', marginRight: 8 }}>{r.rank}</b>{r.name}</span>
                 <span style={{ fontWeight: 600 }}>¥{r.value.toLocaleString()}</span>
               </div>
-            )) : <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 20 }}>暂无数据</div>}
+            )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无排名数据" style={{ padding: '20px 0' }} />}
           </Card>
         </Col>
       </Row>

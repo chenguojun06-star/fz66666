@@ -34,7 +34,7 @@ interface ExpenseTabProps {
 }
 
 const ExpenseTab: React.FC<ExpenseTabProps> = ({ defaultExpenseType, createButtonText = '新建报销' }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [list, setList] = useState<ExpenseReimbursement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -92,14 +92,23 @@ const ExpenseTab: React.FC<ExpenseTabProps> = ({ defaultExpenseType, createButto
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await expenseReimbursementApi.delete(id);
-      if (res.code === 200) { message.success('删除成功'); void fetchList(); }
-      else { message.error(res.message || '删除失败'); }
-    } catch (err: unknown) {
-      message.error(err instanceof Error ? err.message : '删除失败');
-    }
+  const handleDelete = (id: string) => {
+    modal.confirm({
+      title: '确认删除',
+      content: '确定要删除该报销单吗？此操作不可恢复。',
+      okText: '确认删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await expenseReimbursementApi.delete(id);
+          if (res.code === 200) { message.success('删除成功'); void fetchList(); }
+          else { message.error(res.message || '删除失败'); }
+        } catch (err: unknown) {
+          message.error(err instanceof Error ? err.message : '删除失败');
+        }
+      },
+    });
   };
 
   const columns: ColumnsType<ExpenseReimbursement> = [

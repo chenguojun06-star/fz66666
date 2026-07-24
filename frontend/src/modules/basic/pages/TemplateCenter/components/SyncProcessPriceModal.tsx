@@ -83,7 +83,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         style={{ width: 280 }}
       />
       <span style={{ color: 'var(--color-text-3)', fontSize: 14 }}>
-        {matchedScope === 'style' ? '✅ 已匹配款号模板' : matchedScope === 'order' ? '📋 从订单工序数据加载' : '未匹配，将创建新模板'}
+        {matchedScope === 'style' ? '已匹配款号模板' : matchedScope === 'order' ? '从订单工序数据加载' : '未匹配，将创建新模板'}
       </span>
     </div>
   );

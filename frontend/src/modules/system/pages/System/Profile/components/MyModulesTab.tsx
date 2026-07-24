@@ -6,6 +6,9 @@ import { Row, Col, Card, Tag, Space, Spin, Typography, App, Divider, Statistic, 
 import {
   CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined,
   SyncOutlined,
+  ShopOutlined, SkinOutlined, InboxOutlined, HomeOutlined,
+  MoneyCollectOutlined, TeamOutlined, ShoppingCartOutlined,
+  SettingOutlined, DashboardOutlined, RobotOutlined, AppstoreOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { appStoreService } from '@/services/system/appStore';
@@ -17,17 +20,17 @@ import MyBillingTab from './MyBillingTab';
 const { Text, Title } = Typography;
 
 /** 核心系统模块（所有租户默认开通） */
-const CORE_MODULES = [
-  { code: 'PRODUCTION',   name: '生产管理', icon: '🏭', desc: '生产订单、裁剪分菲、工序扫码、进度跟踪' },
-  { code: 'STYLE',        name: '款式管理', icon: '👗', desc: '款式档案、BOM物料清单、样衣制作' },
-  { code: 'MATERIAL',     name: '物料管理', icon: '🧵', desc: '面辅料采购、库存管理、出入库记录' },
-  { code: 'WAREHOUSE',    name: '成品管理', icon: '📦', desc: '成品入库、发货管理、库存盘点' },
-  { code: 'FINANCE',      name: '财务管理', icon: '💰', desc: '工资结算、对账单、财务报表' },
-  { code: 'CRM',          name: 'CRM客户管理', icon: '🤝', desc: '客户档案、跟单记录、信用评级' },
-  { code: 'PROCUREMENT',  name: '供应商管理', icon: '🛒', desc: '供应商档案、采购协同' },
-  { code: 'SYSTEM',       name: '系统设置', icon: '⚙️', desc: '人员管理、岗位权限、组织架构、数据导入' },
-  { code: 'DASHBOARD',    name: '仪表盘',   icon: '📊', desc: '经营概览、数据统计、智能日报' },
-  { code: 'INTELLIGENCE', name: '智能运营', icon: '🤖', desc: '智能驾驶舱、AI助手、智能预警' },
+const CORE_MODULES: Array<{ code: string; name: string; icon: React.ReactNode; desc: string }> = [
+  { code: 'PRODUCTION',   name: '生产管理', icon: <ShopOutlined />, desc: '生产订单、裁剪分菲、工序扫码、进度跟踪' },
+  { code: 'STYLE',        name: '款式管理', icon: <SkinOutlined />, desc: '款式档案、BOM物料清单、样衣制作' },
+  { code: 'MATERIAL',     name: '物料管理', icon: <InboxOutlined />, desc: '面辅料采购、库存管理、出入库记录' },
+  { code: 'WAREHOUSE',    name: '成品管理', icon: <HomeOutlined />, desc: '成品入库、发货管理、库存盘点' },
+  { code: 'FINANCE',      name: '财务管理', icon: <MoneyCollectOutlined />, desc: '工资结算、对账单、财务报表' },
+  { code: 'CRM',          name: 'CRM客户管理', icon: <TeamOutlined />, desc: '客户档案、跟单记录、信用评级' },
+  { code: 'PROCUREMENT',  name: '供应商管理', icon: <ShoppingCartOutlined />, desc: '供应商档案、采购协同' },
+  { code: 'SYSTEM',       name: '系统设置', icon: <SettingOutlined />, desc: '人员管理、岗位权限、组织架构、数据导入' },
+  { code: 'DASHBOARD',    name: '仪表盘',   icon: <DashboardOutlined />, desc: '经营概览、数据统计、智能日报' },
+  { code: 'INTELLIGENCE', name: '智能运营', icon: <RobotOutlined />, desc: '智能驾驶舱、AI助手、智能预警' },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -153,7 +156,7 @@ const MyModulesTab: React.FC = () => {
                   <Card hoverable
                     style={{ borderLeft: `3px solid var(--ant-color-${sc.color === 'success' ? 'success' : sc.color === 'error' ? 'error' : 'primary'})` }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <span style={{ fontSize: 28, lineHeight: 1 }}>🔌</span>
+                      <span style={{ fontSize: 28, lineHeight: 1 }}><AppstoreOutlined /></span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                           <Text strong style={{ fontSize: 15 }}>{app.appName}</Text>

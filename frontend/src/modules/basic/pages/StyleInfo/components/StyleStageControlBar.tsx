@@ -117,9 +117,18 @@ const StyleStageControlBar: React.FC<Props> = ({
 
   // 状态标签
   const statusTag = useMemo(() => {
-    if (status === 'COMPLETED') return <Tag color="success">已完成</Tag>;
-    if (status === 'IN_PROGRESS') return <Tag color="processing">进行中</Tag>;
-    return <Tag color="default">未开始</Tag>;
+    switch (status) {
+      case 'COMPLETED': return <Tag color="success">已完成</Tag>;
+      case 'IN_PROGRESS': return <Tag color="processing">进行中</Tag>;
+      case 'PRODUCTION_COMPLETED': return <Tag color="success">生产完成</Tag>;
+      case 'WAREHOUSE_IN': return <Tag color="success">已入库</Tag>;
+      case 'WAREHOUSE_OUT': return <Tag color="processing">已出库</Tag>;
+      case 'WAREHOUSE_RETURN': return <Tag color="default">已归还</Tag>;
+      case 'SCRAPPED': return <Tag color="error">已报废</Tag>;
+      case 'RECEIVED': return <Tag color="processing">已领取</Tag>;
+      case 'REWORK': return <Tag color="warning">返工中</Tag>;
+      default: return <Tag color="default">未开始</Tag>;
+    }
   }, [status]);
 
   // 格式化时间

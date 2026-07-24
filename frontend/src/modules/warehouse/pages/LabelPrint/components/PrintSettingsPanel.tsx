@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Button, Space, InputNumber, Collapse, Popconfirm, Slider, Switch, Input, Select, Dropdown } from 'antd';
-import { PrinterOutlined, SettingOutlined, SaveOutlined, BookOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SettingOutlined, SaveOutlined, BookOutlined, DeleteOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import type { PrintType } from '../types';
 import type { HangSettings, BarSettings, WashSettings } from '../constants';
 import type { OrderInfo } from '../types';
@@ -83,7 +83,7 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
               key: tpl.id,
               label: (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <span>{tpl.templateName}{tpl.isDefault ? ' ★' : ''}</span>
+                  <span>{tpl.templateName}{tpl.isDefault ? <StarFilled style={{ marginLeft: 4 }} /> : null}</span>
                   <Space size={2}>
                     <Button type="link" size="small" icon={<StarOutlined />} onClick={e => { e.stopPropagation(); onSetDefaultTemplate(tpl.id); }} />
                     <Popconfirm title="确定删除此模板吗？" onConfirm={() => onDeleteTemplate(tpl.id)} okText="确定" cancelText="取消">
