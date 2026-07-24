@@ -10,6 +10,8 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
 import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,7 +27,7 @@ import java.util.Map;
 @Service
 @ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class EcRefundOrchestrator {
-    /** 自动审批金额阈值（元）：≤100元且未发货自动通过 */
+    /** 自动审批金额阈值（元）：≤100元且未发货且开关开启时自动通过 */
     private static final BigDecimal AUTO_APPROVE_THRESHOLD = new BigDecimal("100");
     @Autowired
     private EcommerceOrderService ecommerceOrderService;
@@ -33,6 +35,8 @@ public class EcRefundOrchestrator {
     private EcUniversalStockService ecUniversalStockService;
     @Autowired(required = false)
     private PlatformNotifyService platformNotifyService;
+    @Autowired
+    private BackendActionFlagService backendActionFlagService;
     /** 处理退款请求：将状态置为退款中（5），记录原因后尝试自动审批 */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> processRefundRequest(Long tenantId, String orderNo, String reason) {
@@ -50,7 +54,7 @@ public class EcRefundOrchestrator {
         return autoApproveRefund(tenantId, orderNo);
     }
 
-    /** 自动审批退款：未发货且金额≤100元自动通过执行退款，否则需人工审批 */
+    /** 自动审批退款：需开关开启且未发货且金额≤100元才自动通过，否则需人工审批 */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> autoApproveRefund(Long tenantId, String orderNo) {
         TenantAssert.requireTenantId();
@@ -59,6 +63,13 @@ public class EcRefundOrchestrator {
         BigDecimal payAmount = order.getPayAmount() != null ? order.getPayAmount() : BigDecimal.ZERO;
         boolean shipped = (order.getWarehouseStatus() != null && order.getWarehouseStatus() >= 2)
                 || StringUtils.hasText(order.getTrackingNo());
+        // 开关未开启时不自动审批，全部需人工处理（用户可配置）
+        boolean autoApproveEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_REFUND_APPROVE);
+        if (!autoApproveEnabled) {
+            log.info("[EC退款] 自动审批开关未开启，需人工审批 tenantId={} orderNo={}", tenantId, orderNo);
+            return Map.of("orderNo", orderNo, "status", 5, "payAmount", payAmount, "shipped", shipped,
+                    "message", "自动审批未开启，需人工审批");
+        }
         if (!shipped && payAmount.compareTo(AUTO_APPROVE_THRESHOLD) <= 0) {
             log.info("[EC退款] 自动审批通过 tenantId={} orderNo={} amount={}", tenantId, orderNo, payAmount);
             return executeRefund(tenantId, orderNo);
@@ -90,12 +101,12 @@ public class EcRefundOrchestrator {
                 log.info("[EC退款] 库存已恢复 tenantId={} skuCode={} restoreQty={}", tenantId, skuCode, qty);
             }
         }
-        // 通知平台（服务可用时，失败不阻断退款主流程）
+        // 通知平台退款已执行（语义正确：退款回调而非发货回调，失败不阻断退款主流程）
         if (platformNotifyService != null) {
             try {
-                platformNotifyService.notifyShipped(order);
+                platformNotifyService.notifyRefund(order);
             } catch (Exception e) {
-                log.warn("[EC退款] 平台通知失败，不阻断退款: orderNo={} {}", orderNo, e.getMessage());
+                log.warn("[EC退款] 平台退款通知失败，不阻断退款: orderNo={} {}", orderNo, e.getMessage());
             }
         }
         log.info("[EC退款] 退款执行完成 tenantId={} orderNo={}", tenantId, orderNo);

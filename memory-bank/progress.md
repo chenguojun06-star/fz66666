@@ -1,9 +1,83 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-23（下单页智能化模块 P2+P3 共 7 项修复 — 全部完成）
+> 最后更新：2026-07-23（智能化开关补全 8 个 HIGH 风险点，共 15 个开关全部默认关闭）
 
 ## 已完成
+
+### 2026-07-23 智能化开关补全 8 个 HIGH 风险自动执行点 ✅
+
+用户诉求："全部优化好这些 这些这些智能化的 还是不要自动 让用户可以设置这些 理解吗 怕出现问题"
+
+全系统核查发现仍有 8 个 HIGH 风险 @Scheduled 方法会自动执行写操作/对外通知/派单但无用户可配置开关，全部补齐：
+
+- [x] **AiPatrolJob 4 个跨租户巡检方法纳入 AUTO_PATROL_EXEC 开关**
+  - scanProductionAnomalies / scanExtendedAnomalies / runDailyPatrol / checkTaskOrderProgress
+  - 用 isActionEnabledForAnyTenant 粗粒度控制，全租户未开启则跳过
+- [x] **EcSyncJob.retryJob 纳入 AUTO_EC_STOCK_SYNC 开关**
+  - 按租户检查，关闭则不自动重试推库存/价格到电商平台
+- [x] **SmartNotifyJob.autoDetectAndNotify 纳入新开关 AUTO_MIND_PUSH**
+  - 在 doAutoDetect 租户循环内按租户检查，关闭则不自动推送微信/站内通知
+- [x] **XiaoyunDailyInsightJob 纳入新开关 AUTO_DAILY_INSIGHT_DISPATCH**
+  - 关闭则不自动生成洞察+派发协作任务
+- [x] **AgentBackgroundTaskJob 纳入新开关 AUTO_AGENT_BACKGROUND_TASK**
+  - 关闭则不自动执行 AI 后台任务
+- [x] **BackendActionFlagService 新增 3 个开关枚举**（AUTO_MIND_PUSH/AUTO_DAILY_INSIGHT_DISPATCH/AUTO_AGENT_BACKGROUND_TASK）
+- [x] **Flyway V202612070001 初始化 3 个新开关默认关闭**
+- [x] **前端 ProfileSmartSettingsPanel.tsx 补充 3 个新开关文案**
+
+**验证**：后端 mvn compile exit 0、前端 npx tsc --noEmit 0 errors
+**变更范围**：后端 6 文件（5 Job + 1 Service）+ 1 Flyway 迁移 + 前端 1 文件
+**决策记录**：D-044
+
+---
+
+### 2026-07-23 智能化功能全部改为用户可配置开关（用户核心诉求）✅
+
+用户决策："全部优化好这些 这些这些智能化的 还是不要自动 让用户可以设置这些 理解吗 怕出现问题"
+
+- [x] **AiPatrolJob 全部 @Scheduled 方法受开关控制**
+  - `scanPersonalTaskReminders` 新增 `AUTO_TASK_REMINDER` 开关检查（本次新增）
+  - `executeAutoActions` 已有 `AUTO_PATROL_EXEC` 开关
+  - `scanOverdueCollaborationTasks` 已有 `AUTO_TASK_ESCALATION` 开关
+  - `pushHighSeverityAlerts` 已有 `AUTO_HIGH_SEVERITY_DISPATCH` 开关
+- [x] **EcSyncJob stockSyncJob 受 `AUTO_EC_STOCK_SYNC` 开关控制**
+  - 注入 `BackendActionFlagService`，按租户判断开关
+  - 关闭时仅本地计算库存，不推送到平台
+- [x] **前端配置面板补充 5 个新开关文案**
+  - ProfileSmartSettingsPanel.tsx 的 BACKEND_ACTION_LABELS 新增 5 条
+- [x] **编译错误修复**
+  - EcPriceSyncItem.java 添加 @NoArgsConstructor + @AllArgsConstructor
+  - EcStockDiscrepancyOrchestrator.java getSkuName() 改为 buildSkuName(sku)
+- [x] **确认 P1-2 返工智能派单已是手动**（SmartAssignmentOrchestrator 仅推荐不派单）
+- [x] **确认 P1-3 物料对账差异已是仅展示**（explainException 只列原因不操作）
+
+**验证**：后端 mvn compile exit 0、前端 npx tsc --noEmit 0 errors
+
+---
+
+### 2026-07-23 撤销 AiUpgradeCenter 独立页面 + Skills市场（用户决策回滚）✅
+
+用户决策："集成到现有的这些里面来升级 不要多余的东西 很多用户都不知道这些玩意有什么用 要做好现有的升级就好 他们不是技术性的用户 都是普通用户 根本不需要技术性的东西 我们要做的是用户体验与使用这些好用"
+
+- [x] **前端清理**
+  - 删除 `frontend/src/modules/intelligence/pages/AiUpgradeCenter/` 整个目录（7 Tab + index.tsx）
+  - `frontend/src/modules/intelligence/index.tsx` 移除 AiUpgradeCenter 导出
+  - `frontend/src/routeConfig.ts` 移除 aiUpgradeCenter 路径/菜单项/页面元信息/权限码映射
+  - `frontend/src/App.tsx` 移除 AiUpgradeCenter 导入 + 路由注册
+- [x] **后端清理**
+  - 删除 6 个 Controller（BrowserAgent/VisualAIInspection/FashionAIAsset/SmartScheduling/DigitalTwinSnapshot/SkillMarket）
+  - 删除 6 个 Orchestrator（同上）
+  - SkillTemplate.java 移除 7 个市场字段
+- [x] **数据库回滚迁移（遵守 P0 #1 不修改已应用迁移）**
+  - V202607230001/V202607230002 保留不删
+  - 新增 V202607230003__rollback_ai_upgrade_tables.sql（幂等 DROP 5 表 + 7 字段 + 1 索引）
+
+**验证**：后端 mvn compile exit 0、前端 npx tsc --noEmit 0 errors、全代码库 grep 无残留引用
+
+**下一步方向**：智能化能力下沉到现有业务模块中作为内嵌辅助功能，不另立独立页面
+
+---
 
 ### 2026-07-23 下单页智能化模块 P2+P3 共 7 项修复（全部完成）✅
 

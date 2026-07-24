@@ -26,11 +26,23 @@ public class TenantSmartFeatureController {
         return Result.success(tenantSmartFeatureOrchestrator.listCurrentTenantFeatures());
     }
 
+    /** 查询所有智能开关（前端显示类 + 后端动作类，合并返回） */
+    @GetMapping("/all")
+    public Result<Map<String, Boolean>> listAll() {
+        return Result.success(tenantSmartFeatureOrchestrator.listAllSmartFeatures());
+    }
+
     @PutMapping
     public Result<Map<String, Boolean>> update(@RequestBody(required = false) TenantSmartFeatureSaveRequest request) {
         return Result.success(tenantSmartFeatureOrchestrator.saveCurrentTenantFeatures(
                 request == null ? null : request.getFeatures()
         ));
+    }
+
+    /** 保存后端动作类开关（backend.action.*，默认全部关闭，需用户手动开启） */
+    @PutMapping("/backend-actions")
+    public Result<Map<String, Boolean>> updateBackendActions(@RequestBody Map<String, Boolean> actionFlags) {
+        return Result.success(tenantSmartFeatureOrchestrator.saveBackendActionFlags(actionFlags));
     }
 
     /** @deprecated 使用 PUT / 替代 */

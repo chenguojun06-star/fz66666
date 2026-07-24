@@ -43,7 +43,7 @@ public class SourcingSpecialistPatrolJob extends AbstractPatrolJob {
                         .last("LIMIT 20")
                         .list();
 
-                if (!lowMaterial.isEmpty()) {
+                if (!lowMaterial.isEmpty() && isPatrolEnabledForTenant(tenantId)) {
                     String orderList = lowMaterial.stream()
                             .map(o -> o.getOrderNo() + "(物料" + o.getMaterialArrivalRate() + "%)")
                             .limit(5)
@@ -54,6 +54,8 @@ public class SourcingSpecialistPatrolJob extends AbstractPatrolJob {
                             "MEDIUM", "order", orderList,
                             "{\"action\":\"material_gap_alert\"}",
                             BigDecimal.valueOf(0.8), "NEED_APPROVAL");
+                } else if (!lowMaterial.isEmpty()) {
+                    log.debug("[SourcingSpecialist] 租户 {} 巡检自动执行开关未开启，跳过创建工单", tenantId);
                 }
 
                 traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_material_calculation",

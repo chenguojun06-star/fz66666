@@ -72,6 +72,14 @@ public class ProcessRewardOrchestrator {
     }
 
     /**
+     * 指定租户：工具表现聚合
+     */
+    public List<Map<String, Object>> aggregateByTenant(Long tenantId, LocalDateTime since) {
+        if (tenantId == null) return java.util.Collections.emptyList();
+        return rewardMapper.aggregateToolByTenant(tenantId, since);
+    }
+
+    /**
      * 获取当前租户近 N 天高分工具映射 toolName → avgScore（avgScore > 0 才入表）。
      * 用于 AiAgentToolAdvisor 做 PRM 引导的工具优先级提升：
      * 用户历史点赞最多的工具，在同类意图中排在前面。

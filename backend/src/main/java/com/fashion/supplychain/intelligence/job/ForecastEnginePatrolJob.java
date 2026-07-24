@@ -49,13 +49,14 @@ public class ForecastEnginePatrolJob extends AbstractPatrolJob {
                         .list();
 
                 int unlikelyCount = 0;
+                boolean patrolEnabled = isPatrolEnabledForTenant(tenantId);
                 for (ProductionOrder o : upcoming) {
                     long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), o.getPlannedEndDate().toLocalDate());
                     int progress = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
                     double dailyRateNeeded = daysLeft > 0 ? (100.0 - progress) / daysLeft : 999;
                     if (dailyRateNeeded > 10) {
                         unlikelyCount++;
-                        if (dailyRateNeeded > 20) {
+                        if (dailyRateNeeded > 20 && patrolEnabled) {
                             String issue = String.format("预测引擎：订单[%s]交期预测不乐观(剩余%d天,进度%d%%,需日增%.1f%%)",
                                     o.getOrderNo(), daysLeft, progress, dailyRateNeeded);
                             patrolOrchestrator.createAction("FORECAST_ENGINE_JOB", issue, "DELIVERY_UNLIKELY",
@@ -67,6 +68,9 @@ public class ForecastEnginePatrolJob extends AbstractPatrolJob {
                             findings++;
                         }
                     }
+                }
+                if (!patrolEnabled && unlikelyCount > 0) {
+                    log.debug("[ForecastEngine] 租户 {} 巡检自动执行开关未开启，跳过创建 {} 个工单", tenantId, unlikelyCount);
                 }
 
                 traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_delivery_prediction",

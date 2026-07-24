@@ -6,6 +6,8 @@ import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.SysNoticeService;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -43,6 +45,9 @@ public class SmartNotifyJob {
 
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
+
+    @Autowired
+    private BackendActionFlagService backendActionFlagService;
 
     @Scheduled(cron = "0 50 3 * * ?")
     public void cleanupOldNotices() {
@@ -117,6 +122,11 @@ public class SmartNotifyJob {
         int totalSent = 0;
         for (Long tenantId : tenantIds) {
             if (tenantId == null) continue;
+            // 用户诉求：智能化不自动执行，让用户可以设置。按租户检查生产智能提醒推送开关
+            if (!backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_MIND_PUSH)) {
+                log.debug("[SmartNotify] 租户 {} 生产智能提醒自动推送开关未开启，跳过", tenantId);
+                continue;
+            }
             if (!mindPushOrchestrator.isWithinPushWindow(tenantId)) {
                 log.debug("[SmartNotify] 租户 {} 当前不在推送时段内，跳过", tenantId);
                 continue;
@@ -151,6 +161,13 @@ public class SmartNotifyJob {
     }
 
     private int detectAndAlertAnomalies(Long tenantId) {
+        // 工人异常通知受开关控制（默认关闭，用户需在智能化配置面板手动开启）
+        boolean anomalyNotifyEnabled = backendActionFlagService.isEnabled(
+                tenantId, BackendActionKey.AUTO_WORKER_ANOMALY_NOTIFY);
+        if (!anomalyNotifyEnabled) {
+            log.debug("[SmartNotify] 租户 {} 工人异常通知开关未开启，跳过异常推送", tenantId);
+            return 0;
+        }
         AnomalyDetectionResponse result = anomalyDetectionOrchestrator.detect();
         int count = 0;
         for (AnomalyDetectionResponse.AnomalyItem item : result.getAnomalies()) {

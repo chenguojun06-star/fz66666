@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -186,6 +187,38 @@ public class IntelligenceAdminController {
                 "message", "style_images tenant_id补刷完成",
                 "totalStyles", styleIdToTenantId.size(),
                 "updated", updated));
+    }
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.SchemaVectorManager schemaVectorManager;
+
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/qdrant/vectorize-schema")
+    public Result<?> vectorizeSchema(@RequestBody(required = false) Map<String, Object> body) {
+        if (schemaVectorManager == null) {
+            return Result.fail("SchemaVectorManager未启用");
+        }
+        int count = schemaVectorManager.vectorizeAllSchemas();
+        return Result.success(Map.of(
+                "message", "数据库Schema向量化完成",
+                "vectorizedTables", count));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @GetMapping("/qdrant/schema-stats")
+    public Result<?> getSchemaStats() {
+        if (schemaVectorManager == null) {
+            return Result.fail("SchemaVectorManager未启用");
+        }
+        Collection<com.fashion.supplychain.intelligence.service.SchemaVectorManager.TableSchema> tables =
+                schemaVectorManager.getAllSchemas();
+        return Result.success(Map.of(
+                "totalTables", tables.size(),
+                "tables", tables.stream().limit(50).map(t -> Map.of(
+                        "tableName", t.getTableName(),
+                        "tableComment", t.getTableComment(),
+                        "columnCount", t.getColumns().size()
+                )).toList()));
     }
 
     // ── 知识图谱 ──

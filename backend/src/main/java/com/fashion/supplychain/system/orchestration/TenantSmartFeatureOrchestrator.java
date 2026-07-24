@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.TenantSmartFeature;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
 import com.fashion.supplychain.system.service.TenantSmartFeatureService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -115,6 +116,83 @@ public class TenantSmartFeatureOrchestrator {
 
     @Autowired
     private TenantSmartFeatureService tenantSmartFeatureService;
+
+    @Autowired
+    private BackendActionFlagService backendActionFlagService;
+
+    /**
+     * 查询当前租户的所有智能开关（前端显示类 + 后端动作类）。
+     *
+     * <p>前端显示类来自 {@link #SUPPORTED_FEATURE_KEYS}，后端动作类来自
+     * {@link BackendActionFlagService.BackendActionKey}，合并返回。
+     */
+    public Map<String, Boolean> listAllSmartFeatures() {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Boolean> flags = new LinkedHashMap<>();
+        // 前端显示类
+        flags.putAll(listCurrentTenantFeatures());
+        // 后端动作类（默认全部关闭）
+        if (tenantId != null) {
+            flags.putAll(backendActionFlagService.listFlags(tenantId));
+        } else {
+            for (BackendActionFlagService.BackendActionKey k : BackendActionFlagService.BackendActionKey.values()) {
+                flags.put(k.key(), false);
+            }
+        }
+        return flags;
+    }
+
+    /**
+     * 保存后端动作类开关。仅租户管理员可修改。
+     *
+     * @param actionFlags 动作开关 Map（key=backend.action.*, value=enabled）
+     * @return 保存后的开关状态
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Boolean> saveBackendActionFlags(Map<String, Boolean> actionFlags) {
+        TenantAssert.assertTenantContext();
+        assertWritable();
+        Long tenantId = TenantAssert.requireTenantId();
+
+        Map<String, Boolean> nextFlags = new LinkedHashMap<>();
+        for (BackendActionFlagService.BackendActionKey k : BackendActionFlagService.BackendActionKey.values()) {
+            nextFlags.put(k.key(), false);
+        }
+        if (actionFlags != null) {
+            actionFlags.forEach((key, value) -> {
+                if (BackendActionFlagService.ALL_BACKEND_ACTION_KEYS.contains(key)) {
+                    nextFlags.put(key, Boolean.TRUE.equals(value));
+                }
+            });
+        }
+
+        List<TenantSmartFeature> existing = tenantSmartFeatureService.list(
+                new LambdaQueryWrapper<TenantSmartFeature>()
+                        .eq(TenantSmartFeature::getTenantId, tenantId)
+                        .in(TenantSmartFeature::getFeatureKey, BackendActionFlagService.ALL_BACKEND_ACTION_KEYS)
+        );
+        Map<String, TenantSmartFeature> existingMap = existing.stream()
+                .filter(item -> StringUtils.hasText(item.getFeatureKey()))
+                .collect(Collectors.toMap(TenantSmartFeature::getFeatureKey, item -> item, (a, b) -> a, LinkedHashMap::new));
+
+        List<TenantSmartFeature> updates = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        for (String actionKey : BackendActionFlagService.ALL_BACKEND_ACTION_KEYS) {
+            TenantSmartFeature row = existingMap.get(actionKey);
+            if (row == null) {
+                row = new TenantSmartFeature();
+                row.setTenantId(tenantId);
+                row.setFeatureKey(actionKey);
+                row.setCreateTime(now);
+            }
+            row.setEnabled(Boolean.TRUE.equals(nextFlags.get(actionKey)));
+            row.setUpdateTime(now);
+            updates.add(row);
+        }
+        tenantSmartFeatureService.saveOrUpdateBatch(updates);
+        log.info("[TenantSmartFeature] 保存后端动作类开关 tenantId={} count={}", tenantId, updates.size());
+        return nextFlags;
+    }
 
     public Map<String, Boolean> listCurrentTenantFeatures() {
         Long tenantId = UserContext.tenantId();

@@ -534,13 +534,27 @@ public class QdrantService {
         }
     }
 
+    private final java.util.concurrent.atomic.AtomicLong lastHealthCheckTime = new java.util.concurrent.atomic.AtomicLong(0);
+    private volatile boolean lastHealthStatus = false;
+    private static final long HEALTH_CHECK_CACHE_MS = 30_000L;
+
     public boolean isAvailable() {
         if (!qdrantEnabled) return false;
+        long now = System.currentTimeMillis();
+        long last = lastHealthCheckTime.get();
+        if (now - last < HEALTH_CHECK_CACHE_MS) {
+            return lastHealthStatus;
+        }
         try {
             ResponseEntity<String> resp = restTemplate.getForEntity(
                     qdrantUrl + "/healthz", String.class);
-            return resp.getStatusCode().is2xxSuccessful();
+            boolean ok = resp.getStatusCode().is2xxSuccessful();
+            lastHealthStatus = ok;
+            lastHealthCheckTime.set(now);
+            return ok;
         } catch (Exception e) {
+            lastHealthStatus = false;
+            lastHealthCheckTime.set(now);
             return false;
         }
     }

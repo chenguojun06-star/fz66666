@@ -6,6 +6,8 @@ import com.fashion.supplychain.intelligence.entity.AgentBackgroundTask;
 import com.fashion.supplychain.intelligence.orchestration.AgentBackgroundTaskOrchestrator;
 import com.fashion.supplychain.intelligence.service.AgentBackgroundTaskService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,6 +40,10 @@ public class AgentBackgroundTaskJob {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    /** 后端动作类开关服务：AI 后台任务自动执行受开关控制（用户诉求：怕出问题，不要自动） */
+    @Autowired
+    private BackendActionFlagService backendActionFlagService;
+
     private static final int MAX_CONCURRENT_PER_TENANT = 2;
     private static final int TASK_BATCH_SIZE = 10;
     private static final String LOCK_KEY = "job:agent-background-task";
@@ -65,6 +71,11 @@ public class AgentBackgroundTaskJob {
         try {
             List<Long> tenantIds = getActiveTenantIds();
             for (Long tenantId : tenantIds) {
+                // 用户诉求：智能化不自动执行，让用户可以设置。按租户检查 AI 后台任务开关
+                if (!backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_AGENT_BACKGROUND_TASK)) {
+                    log.debug("[BackgroundTaskJob] 租户 {} AI 后台任务自动执行开关未开启，跳过", tenantId);
+                    continue;
+                }
                 try {
                     processTenantTasks(tenantId);
                 } catch (Exception e) {

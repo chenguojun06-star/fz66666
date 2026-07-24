@@ -18,6 +18,8 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -120,6 +122,10 @@ public class AiPatrolJob {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.TaskCenterOrchestrator taskCenterOrchestrator;
 
+    /** 后端动作类开关服务：所有自动执行操作均需先查询开关是否启用（用户诉求：怕出问题，不要自动） */
+    @Autowired
+    private BackendActionFlagService backendActionFlagService;
+
     /** P1-3：需要自动创建跟进任务的问题类型（MEDIUM+ 严重级别） */
     private static final Set<String> TASK_TRIGGERING_TYPES = Set.of(
             "DEADLINE_RISK", "FACTORY_SILENCE", "QUALITY_SPIKE", "CUTTING_BACKLOG", "CORRELATED_RISK"
@@ -148,15 +154,62 @@ public class AiPatrolJob {
             log.debug("[AiPatrolJob-Biz] 生产服务未注入，跳过业务异常巡查");
             return;
         }
-        log.info("[AiPatrolJob-Biz] ===== 开始生产业务异常巡查 =====");
+        List<Long> tenantIds = processStatsEngine != null
+                ? processStatsEngine.findActiveTenantIds()
+                : null;
+        if (tenantIds == null || tenantIds.isEmpty()) {
+            log.debug("[AiPatrolJob-Biz] 无活跃租户，跳过业务异常巡查");
+            return;
+        }
+        log.info("[AiPatrolJob-Biz] ===== 开始生产业务异常巡查，活跃租户数={} =====", tenantIds.size());
+        int totalFound = 0;
+
+        for (Long tenantId : tenantIds) {
+            if (tenantId == null) continue;
+            boolean actionEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_PATROL_EXEC);
+            UserContext previous = UserContext.get();
+            try {
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("system");
+                ctx.setUserId("system");
+                UserContext.set(ctx);
+
+                int found = scanProductionAnomaliesForTenant(tenantId, actionEnabled);
+                totalFound += found;
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob-Biz] 租户 {} 业务异常巡查异常: {}", tenantId, e.getMessage());
+            } finally {
+                if (previous != null) {
+                    UserContext.set(previous);
+                } else {
+                    UserContext.clear();
+                }
+            }
+        }
+
+        log.info("[AiPatrolJob-Biz] ===== 业务异常巡查完成，共发现 {} 个风险 =====", totalFound);
+
+        if (totalFound > 0) {
+            performCorrelationAnalysis();
+            if (isActionEnabledForAnyTenant(BackendActionKey.AUTO_HIGH_SEVERITY_DISPATCH)) {
+                pushHighSeverityAlerts();
+            } else {
+                log.debug("[AiPatrolJob-Biz] 高危告警自动派发开关未开启，跳过主动派发");
+            }
+        }
+    }
+
+    private int scanProductionAnomaliesForTenant(Long tenantId, boolean actionEnabled) {
         int found = 0;
+        LocalDate today = LocalDate.now();
+        LocalDate deadline = today.plusDays(DEADLINE_DAYS_THRESHOLD);
 
         // ── 1. 高危截止订单（5天内到期 + 进度 < 40%）──
         try {
-            LocalDate today = LocalDate.now();
-            LocalDate deadline = today.plusDays(DEADLINE_DAYS_THRESHOLD);
             LambdaQueryWrapper<ProductionOrder> q = new LambdaQueryWrapper<>();
-            q.eq(ProductionOrder::getDeleteFlag, 0)
+            q.eq(ProductionOrder::getTenantId, tenantId)
+             .eq(ProductionOrder::getDeleteFlag, 0)
              .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
              .isNotNull(ProductionOrder::getExpectedShipDate)
              .le(ProductionOrder::getExpectedShipDate, deadline)
@@ -167,45 +220,46 @@ public class AiPatrolJob {
             List<ProductionOrder> criticals = productionOrderService.list(q);
             for (ProductionOrder o : criticals) {
                 int progress = o.getProductionProgress() == null ? 0 : o.getProductionProgress();
-                if (progress >= PROGRESS_THRESHOLD) continue; // 进度达标，跳过
+                if (progress >= PROGRESS_THRESHOLD) continue;
                 long daysLeft = ChronoUnit.DAYS.between(today, o.getExpectedShipDate());
                 String issue = String.format(
                     "订单[%s] 仅剩 %d 天交货（%s），当前进度仅 %d%%，工厂：%s",
                     o.getOrderNo(), daysLeft, o.getExpectedShipDate(),
                     progress, Objects.toString(o.getFactoryName(), "未指定"));
-                patrolOrchestrator.createAction(
-                    "BIZ_PATROL_JOB", issue, "DEADLINE_RISK",
-                    daysLeft <= 2 ? "HIGH" : "MEDIUM",
-                    "order", o.getOrderNo(),
-                    "{\"action\":\"urge_production\",\"orderId\":\"" + o.getId() + "\"}",
-                    BigDecimal.valueOf(daysLeft <= 2 ? 0.95 : 0.75),
-                    daysLeft <= 2 ? "NEED_APPROVAL" : "AUTO_EXECUTE"
-                );
-                log.warn("[AiPatrolJob-Biz] 高危截止订单: {}", issue);
+                log.warn("[AiPatrolJob-Biz] 高危截止订单: tenant={}, {}", tenantId, issue);
                 found++;
+                if (actionEnabled) {
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "DEADLINE_RISK",
+                        daysLeft <= 2 ? "HIGH" : "MEDIUM",
+                        "order", o.getOrderNo(),
+                        "{\"action\":\"urge_production\",\"orderId\":\"" + o.getId() + "\"}",
+                        BigDecimal.valueOf(daysLeft <= 2 ? 0.95 : 0.75),
+                        daysLeft <= 2 ? "NEED_APPROVAL" : "AUTO_EXECUTE"
+                    );
+                }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob-Biz] 高危订单扫描异常: {}", e.getMessage());
+            log.warn("[AiPatrolJob-Biz] 租户 {} 高危订单扫描异常: {}", tenantId, e.getMessage());
         }
 
         // ── 2. 工厂沉默检测（有进行中订单但3天内无扫码）──
         try {
             LocalDateTime silenceThreshold = LocalDateTime.now().minusDays(FACTORY_SILENCE_DAYS);
 
-            // 找到有活跃订单的工厂（tenantId+factoryName 组合）
             LambdaQueryWrapper<ProductionOrder> activeQ = new LambdaQueryWrapper<>();
-            activeQ.eq(ProductionOrder::getDeleteFlag, 0)
+            activeQ.eq(ProductionOrder::getTenantId, tenantId)
+                   .eq(ProductionOrder::getDeleteFlag, 0)
                    .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                    .isNotNull(ProductionOrder::getFactoryName)
                    .select(ProductionOrder::getTenantId, ProductionOrder::getFactoryName,
                            ProductionOrder::getOrderNo);
             List<ProductionOrder> activeOrders = productionOrderService.list(activeQ);
 
-            // 按 tenantId+factoryName 分组，找到有活跃订单的工厂列表
             Map<String, Set<String>> activeFactories = activeOrders.stream()
                 .filter(o -> o.getFactoryName() != null && o.getTenantId() != null)
                 .collect(Collectors.groupingBy(
-                    o -> o.getTenantId() + "##" + o.getFactoryName(),
+                    ProductionOrder::getFactoryName,
                     Collectors.mapping(ProductionOrder::getOrderNo, Collectors.toSet())
                 ));
 
@@ -214,54 +268,50 @@ public class AiPatrolJob {
                 List<Map<String, Object>> latestScans = (List<Map<String, Object>>)
                     (Object) scanRecordService.listMaps(
                         new QueryWrapper<ScanRecord>()
-                            .select("sr.tenant_id, po.factory_name, MAX(sr.scan_time) as last_scan")
+                            .select("po.factory_name, MAX(sr.scan_time) as last_scan")
                             .apply("LEFT JOIN t_production_order po ON sr.factory_id = po.factory_id AND sr.tenant_id = po.tenant_id AND po.delete_flag = 0")
+                            .eq("sr.tenant_id", tenantId)
                             .eq("sr.scan_result", "success")
                             .ne("sr.scan_type", "orchestration")
                             .ge("sr.scan_time", silenceThreshold)
                             .isNotNull("sr.factory_id")
-                            .groupBy("sr.tenant_id, po.factory_name")
+                            .groupBy("po.factory_name")
                     );
 
                 Set<String> recentScanFactories = latestScans.stream()
-                    .filter(r -> r.get("tenant_id") != null && r.get("factory_name") != null)
-                    .map(r -> r.get("tenant_id") + "##" + r.get("factory_name"))
+                    .filter(r -> r.get("factory_name") != null)
+                    .map(r -> String.valueOf(r.get("factory_name")))
                     .collect(Collectors.toSet());
 
-                // 有活跃订单但无近期扫码的工厂 = 沉默工厂
                 for (Map.Entry<String, Set<String>> entry : activeFactories.entrySet()) {
-                    if (!recentScanFactories.contains(entry.getKey())) {
-                        String[] parts = entry.getKey().split("##", 2);
-                        String factoryName = parts.length > 1 ? parts[1] : entry.getKey();
+                    String factoryName = entry.getKey();
+                    if (!recentScanFactories.contains(factoryName)) {
                         Set<String> orders = entry.getValue();
                         String orderList = orders.stream().limit(3).collect(Collectors.joining("、"));
                         if (orders.size() > 3) orderList += "等";
                         String issue = String.format(
                             "工厂[%s] 已连续 %d 天无扫码记录，但仍有进行中订单：%s",
                             factoryName, FACTORY_SILENCE_DAYS, orderList);
-                        patrolOrchestrator.createAction(
-                            "BIZ_PATROL_JOB", issue, "FACTORY_SILENCE",
-                            "HIGH",
-                            "factory", factoryName,
-                            "{\"action\":\"contact_factory\",\"factoryName\":\"" + factoryName + "\"}",
-                            BigDecimal.valueOf(0.85),
-                            "NEED_APPROVAL"
-                        );
-                        log.warn("[AiPatrolJob-Biz] 工厂沉默告警: {}", issue);
+                        log.warn("[AiPatrolJob-Biz] 工厂沉默告警: tenant={}, {}", tenantId, issue);
                         found++;
+                        if (actionEnabled) {
+                            patrolOrchestrator.createAction(
+                                "BIZ_PATROL_JOB", issue, "FACTORY_SILENCE",
+                                "HIGH",
+                                "factory", factoryName,
+                                "{\"action\":\"contact_factory\",\"factoryName\":\"" + factoryName + "\"}",
+                                BigDecimal.valueOf(0.85),
+                                "NEED_APPROVAL"
+                            );
+                        }
                     }
                 }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob-Biz] 工厂沉默检测异常: {}", e.getMessage());
+            log.warn("[AiPatrolJob-Biz] 租户 {} 工厂沉默检测异常: {}", tenantId, e.getMessage());
         }
 
-        log.info("[AiPatrolJob-Biz] ===== 业务异常巡查完成，发现 {} 个风险 =====", found);
-
-        if (found > 0) {
-            performCorrelationAnalysis();
-            pushHighSeverityAlerts();
-        }
+        return found;
     }
 
     private void performCorrelationAnalysis() {
@@ -274,6 +324,7 @@ public class AiPatrolJob {
                 .collect(Collectors.groupingBy(AiPatrolAction::getTenantId));
 
             for (Map.Entry<Long, List<AiPatrolAction>> entry : byTenant.entrySet()) {
+                Long tenantId = entry.getKey();
                 List<AiPatrolAction> actions = entry.getValue();
                 boolean hasDeadlineRisk = actions.stream().anyMatch(a -> "DEADLINE_RISK".equals(a.getIssueType()));
                 boolean hasFactorySilence = actions.stream().anyMatch(a -> "FACTORY_SILENCE".equals(a.getIssueType()));
@@ -283,17 +334,31 @@ public class AiPatrolJob {
                 if (coOccurrence >= 2) {
                     String correlation = String.format(
                         "租户[%d] 同时出现多种风险信号（%s%s%s），极可能存在系统性交付风险，建议立即排查",
-                        entry.getKey(),
+                        tenantId,
                         hasDeadlineRisk ? "高危截止" : "",
                         hasFactorySilence ? "+工厂沉默" : "",
                         hasQualitySpike ? "+质量异常" : "");
-                    patrolOrchestrator.createAction(
-                        "BIZ_PATROL_JOB", correlation, "CORRELATED_RISK",
-                        "HIGH", "tenant", String.valueOf(entry.getKey()),
-                        "{\"action\":\"escalate_correlated_risk\"}",
-                        BigDecimal.valueOf(0.95), "NEED_APPROVAL"
-                    );
-                    log.warn("[AiPatrolJob-Biz] 关联风险升级: {}", correlation);
+                    UserContext previous = UserContext.get();
+                    try {
+                        UserContext ctx = new UserContext();
+                        ctx.setTenantId(tenantId);
+                        ctx.setUsername("system");
+                        ctx.setUserId("system");
+                        UserContext.set(ctx);
+                        patrolOrchestrator.createAction(
+                            "BIZ_PATROL_JOB", correlation, "CORRELATED_RISK",
+                            "HIGH", "tenant", String.valueOf(tenantId),
+                            "{\"action\":\"escalate_correlated_risk\"}",
+                            BigDecimal.valueOf(0.95), "NEED_APPROVAL"
+                        );
+                        log.warn("[AiPatrolJob-Biz] 关联风险升级: tenant={}, {}", tenantId, correlation);
+                    } finally {
+                        if (previous != null) {
+                            UserContext.set(previous);
+                        } else {
+                            UserContext.clear();
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
@@ -306,17 +371,56 @@ public class AiPatrolJob {
         if (productionOrderService == null || scanRecordService == null) {
             return;
         }
-        log.info("[AiPatrolJob-Ext] ===== 开始扩展业务异常巡查 =====");
+        List<Long> tenantIds = processStatsEngine != null
+                ? processStatsEngine.findActiveTenantIds()
+                : null;
+        if (tenantIds == null || tenantIds.isEmpty()) {
+            log.debug("[AiPatrolJob-Ext] 无活跃租户，跳过扩展业务异常巡查");
+            return;
+        }
+        log.info("[AiPatrolJob-Ext] ===== 开始扩展业务异常巡查，活跃租户数={} =====", tenantIds.size());
+        int totalFound = 0;
+
+        for (Long tenantId : tenantIds) {
+            if (tenantId == null) continue;
+            boolean actionEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_PATROL_EXEC);
+            UserContext previous = UserContext.get();
+            try {
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("system");
+                ctx.setUserId("system");
+                UserContext.set(ctx);
+
+                int found = scanExtendedAnomaliesForTenant(tenantId, actionEnabled);
+                totalFound += found;
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob-Ext] 租户 {} 扩展巡查异常: {}", tenantId, e.getMessage());
+            } finally {
+                if (previous != null) {
+                    UserContext.set(previous);
+                } else {
+                    UserContext.clear();
+                }
+            }
+        }
+
+        log.info("[AiPatrolJob-Ext] ===== 扩展巡查完成，共发现 {} 个风险 =====", totalFound);
+    }
+
+    private int scanExtendedAnomaliesForTenant(Long tenantId, boolean actionEnabled) {
         int found = 0;
 
+        // ── 1. 质量异常突增 ──
         try {
             LocalDateTime since = LocalDateTime.now().minusHours(24);
             QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-            qw.select("tenant_id, process_name, COUNT(*) as total",
+            qw.select("process_name, COUNT(*) as total",
                       "SUM(CASE WHEN scan_result='fail' THEN 1 ELSE 0 END) as fail_count")
+              .eq("tenant_id", tenantId)
               .ne("scan_type", "orchestration")
               .ge("scan_time", since)
-              .groupBy("tenant_id, process_name");
+              .groupBy("process_name");
             List<Map<String, Object>> qualityStats = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(qw);
 
             for (Map<String, Object> row : qualityStats) {
@@ -325,29 +429,33 @@ public class AiPatrolJob {
                 if (total == null || total.intValue() < 5) continue;
                 double failRate = failCount.doubleValue() / total.doubleValue();
                 if (failRate > 0.15) {
-                    String tenantId = String.valueOf(row.getOrDefault("tenant_id", ""));
                     String processName = String.valueOf(row.getOrDefault("process_name", "未知工序"));
                     String issue = String.format(
                         "工序[%s] 近24h次品率%.0f%%（共%d次扫码，失败%d次），超出15%%阈值",
                         processName, failRate * 100, total.intValue(), failCount.intValue());
-                    patrolOrchestrator.createAction(
-                        "BIZ_PATROL_JOB", issue, "QUALITY_SPIKE",
-                        failRate > 0.3 ? "HIGH" : "MEDIUM",
-                        "process", processName,
-                        "{\"action\":\"investigate_quality\",\"processName\":\"" + processName + "\"}",
-                        BigDecimal.valueOf(1.0 - failRate), "NEED_APPROVAL"
-                    );
+                    log.warn("[AiPatrolJob-Ext] 质量异常突增: tenant={}, {}", tenantId, issue);
                     found++;
+                    if (actionEnabled) {
+                        patrolOrchestrator.createAction(
+                            "BIZ_PATROL_JOB", issue, "QUALITY_SPIKE",
+                            failRate > 0.3 ? "HIGH" : "MEDIUM",
+                            "process", processName,
+                            "{\"action\":\"investigate_quality\",\"processName\":\"" + processName + "\"}",
+                            BigDecimal.valueOf(1.0 - failRate), "NEED_APPROVAL"
+                        );
+                    }
                 }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob-Ext] 质量异常检测失败: {}", e.getMessage());
+            log.warn("[AiPatrolJob-Ext] 租户 {} 质量异常检测失败: {}", tenantId, e.getMessage());
         }
 
+        // ── 2. 裁剪段积压（裁剪完成48h但车缝未开始）──
         try {
             LocalDateTime since = LocalDateTime.now().minusHours(48);
             LambdaQueryWrapper<ProductionOrder> cuttingDone = new LambdaQueryWrapper<>();
-            cuttingDone.eq(ProductionOrder::getDeleteFlag, 0)
+            cuttingDone.eq(ProductionOrder::getTenantId, tenantId)
+                       .eq(ProductionOrder::getDeleteFlag, 0)
                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                        .isNotNull(ProductionOrder::getFactoryName)
                        .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
@@ -356,14 +464,16 @@ public class AiPatrolJob {
 
             for (ProductionOrder order : inProgress) {
                 QueryWrapper<ScanRecord> sewQ = new QueryWrapper<>();
-                sewQ.eq("order_no", order.getOrderNo())
+                sewQ.eq("tenant_id", tenantId)
+                    .eq("order_no", order.getOrderNo())
                     .eq("scan_type", "production")
                     .ge("scan_time", since)
                     .last("LIMIT 1");
                 List<Map<String, Object>> sewScans = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(sewQ);
 
                 QueryWrapper<ScanRecord> cutQ = new QueryWrapper<>();
-                cutQ.eq("order_no", order.getOrderNo())
+                cutQ.eq("tenant_id", tenantId)
+                    .eq("order_no", order.getOrderNo())
                     .eq("scan_type", "cutting")
                     .lt("scan_time", since)
                     .last("LIMIT 1");
@@ -373,20 +483,23 @@ public class AiPatrolJob {
                     String issue = String.format(
                         "订单[%s] 裁剪完成已超48h但车缝未开始，工厂：%s",
                         order.getOrderNo(), Objects.toString(order.getFactoryName(), "未指定"));
-                    patrolOrchestrator.createAction(
-                        "BIZ_PATROL_JOB", issue, "CUTTING_BACKLOG",
-                        "MEDIUM", "order", order.getOrderNo(),
-                        "{\"action\":\"check_sewing_start\",\"orderNo\":\"" + order.getOrderNo() + "\"}",
-                        BigDecimal.valueOf(0.7), "NEED_APPROVAL"
-                    );
+                    log.warn("[AiPatrolJob-Ext] 裁剪积压: tenant={}, {}", tenantId, issue);
                     found++;
+                    if (actionEnabled) {
+                        patrolOrchestrator.createAction(
+                            "BIZ_PATROL_JOB", issue, "CUTTING_BACKLOG",
+                            "MEDIUM", "order", order.getOrderNo(),
+                            "{\"action\":\"check_sewing_start\",\"orderNo\":\"" + order.getOrderNo() + "\"}",
+                            BigDecimal.valueOf(0.7), "NEED_APPROVAL"
+                        );
+                    }
                 }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob-Ext] 裁剪积压检测失败: {}", e.getMessage());
+            log.warn("[AiPatrolJob-Ext] 租户 {} 裁剪积压检测失败: {}", tenantId, e.getMessage());
         }
 
-        log.info("[AiPatrolJob-Ext] ===== 扩展巡查完成，发现 {} 个风险 =====", found);
+        return found;
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -410,6 +523,11 @@ public class AiPatrolJob {
         for (Long tenantId : tenants) {
             if (tenantId == null) {
                 log.debug("[AiPatrolJob-TaskEscalation] 跳过空租户ID");
+                continue;
+            }
+            // 任务自动升级受开关控制（默认关闭，避免自动改变任务归属打扰用户）
+            if (!backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_TASK_ESCALATION)) {
+                log.debug("[AiPatrolJob-TaskEscalation] 租户 {} 任务升级开关未开启，跳过", tenantId);
                 continue;
             }
             UserContext previous = UserContext.get();
@@ -497,6 +615,14 @@ public class AiPatrolJob {
 
             for (AiPatrolAction action : pending) {
                 if (action.getId() == null) {
+                    continue;
+                }
+                // 按租户精确判断开关：未启用则跳过该动作的自动执行（用户诉求：怕出问题，不要自动）
+                Long actionTenantId = action.getTenantId();
+                if (actionTenantId == null
+                        || !backendActionFlagService.isEnabled(actionTenantId, BackendActionKey.AUTO_PATROL_EXEC)) {
+                    log.debug("[AiPatrolJob-AutoExec] 租户 {} 巡检自动执行开关未开启，跳过 actionId={}",
+                            actionTenantId, action.getId());
                     continue;
                 }
                 try {
@@ -672,46 +798,87 @@ public class AiPatrolJob {
      */
     @Scheduled(cron = "0 30 1 * * ?")
     public void runDailyPatrol() {
-        log.info("[AiPatrolJob] ===== 开始 AI 闭环质量巡检 =====");
+        List<Long> tenantIds = processStatsEngine != null
+                ? processStatsEngine.findActiveTenantIds()
+                : null;
+        if (tenantIds == null || tenantIds.isEmpty()) {
+            log.debug("[AiPatrolJob] 无活跃租户，跳过 AI 闭环质量巡检");
+            return;
+        }
+        log.info("[AiPatrolJob] ===== 开始 AI 闭环质量巡检，活跃租户数={} =====", tenantIds.size());
         LocalDateTime since = LocalDateTime.now().minusHours(24);
+        int totalIssues = 0;
+
+        for (Long tenantId : tenantIds) {
+            if (tenantId == null) continue;
+            boolean actionEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_PATROL_EXEC);
+            UserContext previous = UserContext.get();
+            try {
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("system");
+                ctx.setUserId("system");
+                UserContext.set(ctx);
+
+                int found = runDailyPatrolForTenant(tenantId, since, actionEnabled);
+                totalIssues += found;
+
+                generateReflectiveMemoriesForTenant(tenantId, since);
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob] 租户 {} 质量巡检异常: {}", tenantId, e.getMessage());
+            } finally {
+                if (previous != null) {
+                    UserContext.set(previous);
+                } else {
+                    UserContext.clear();
+                }
+            }
+        }
+
+        log.info("[AiPatrolJob] ===== 巡检完成，共发现 {} 个问题 =====", totalIssues);
+    }
+
+    private int runDailyPatrolForTenant(Long tenantId, LocalDateTime since, boolean actionEnabled) {
         int issuesFound = 0;
 
         // ── 1. 工具失败率检测 ──
         try {
-            List<Map<String, Object>> toolStats = processRewardOrchestrator.aggregateToolPerformance(since);
+            List<Map<String, Object>> toolStats = processRewardOrchestrator.aggregateByTenant(tenantId, since);
             for (Map<String, Object> row : toolStats) {
                 String toolName = getString(row, "tool_name");
                 Number totalNum = (Number) row.getOrDefault("total", 0);
                 Number positiveNum = (Number) row.getOrDefault("positive", 0);
-                if (totalNum == null || totalNum.intValue() < 5) continue; // 样本太小，跳过
+                if (totalNum == null || totalNum.intValue() < 5) continue;
                 int total = totalNum.intValue();
                 int failed = total - positiveNum.intValue();
                 double failRate = (double) failed / total;
                 if (failRate > TOOL_FAILURE_THRESHOLD) {
                     String issue = String.format("工具[%s] 过去24h失败率=%.0f%%（共%d次，失败%d次）",
                         toolName, failRate * 100, total, failed);
-                    patrolOrchestrator.createAction(
-                        "PATROL_JOB",
-                        issue,
-                        "TOOL_FAILURE_RATE",
-                        failRate > 0.8 ? "HIGH" : "MEDIUM",
-                        "tool",
-                        toolName,
-                        "{\"action\":\"review_tool_implementation\",\"toolName\":\"" + toolName + "\"}",
-                        BigDecimal.valueOf(1.0 - failRate),
-                        "NEED_APPROVAL"
-                    );
-                    log.warn("[AiPatrolJob] 工具失败率异常: {}", issue);
+                    log.warn("[AiPatrolJob] 工具失败率异常: tenant={}, {}", tenantId, issue);
                     issuesFound++;
+                    if (actionEnabled) {
+                        patrolOrchestrator.createAction(
+                            "PATROL_JOB",
+                            issue,
+                            "TOOL_FAILURE_RATE",
+                            failRate > 0.8 ? "HIGH" : "MEDIUM",
+                            "tool",
+                            toolName,
+                            "{\"action\":\"review_tool_implementation\",\"toolName\":\"" + toolName + "\"}",
+                            BigDecimal.valueOf(1.0 - failRate),
+                            "NEED_APPROVAL"
+                        );
+                    }
                 }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob] 工具失败率检测异常: {}", e.getMessage());
+            log.warn("[AiPatrolJob] 租户 {} 工具失败率检测异常: {}", tenantId, e.getMessage());
         }
 
         // ── 2. 决策卡采纳率检测 ──
         try {
-            List<Map<String, Object>> adoptionStats = decisionCardOrchestrator.aggregateAdoption(since);
+            List<Map<String, Object>> adoptionStats = decisionCardOrchestrator.aggregateByTenant(tenantId, since);
             for (Map<String, Object> row : adoptionStats) {
                 String scene = getString(row, "scene");
                 Number totalNum = (Number) row.getOrDefault("total", 0);
@@ -721,29 +888,28 @@ public class AiPatrolJob {
                 if (adoptionRate < ADOPTION_RATE_THRESHOLD) {
                     String issue = String.format("场景[%s] 过去24h决策卡采纳率=%.0f%%（共%d张，采纳%d张）",
                         scene, adoptionRate * 100, totalNum.intValue(), adoptedNum.intValue());
-                    patrolOrchestrator.createAction(
-                        "PATROL_JOB",
-                        issue,
-                        "LOW_ADOPTION_RATE",
-                        "LOW",
-                        "scene",
-                        scene,
-                        "{\"action\":\"review_recommendation_quality\",\"scene\":\"" + scene + "\"}",
-                        BigDecimal.valueOf(adoptionRate + 0.1),
-                        "AUTO_EXECUTE"
-                    );
-                    log.info("[AiPatrolJob] 决策卡采纳率偏低: {}", issue);
+                    log.info("[AiPatrolJob] 决策卡采纳率偏低: tenant={}, {}", tenantId, issue);
                     issuesFound++;
+                    if (actionEnabled) {
+                        patrolOrchestrator.createAction(
+                            "PATROL_JOB",
+                            issue,
+                            "LOW_ADOPTION_RATE",
+                            "LOW",
+                            "scene",
+                            scene,
+                            "{\"action\":\"review_recommendation_quality\",\"scene\":\"" + scene + "\"}",
+                            BigDecimal.valueOf(adoptionRate + 0.1),
+                            "AUTO_EXECUTE"
+                        );
+                    }
                 }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob] 决策卡采纳率检测异常: {}", e.getMessage());
+            log.warn("[AiPatrolJob] 租户 {} 决策卡采纳率检测异常: {}", tenantId, e.getMessage());
         }
 
-        log.info("[AiPatrolJob] ===== 巡检完成，发现 {} 个问题 =====", issuesFound);
-
-        // ── 3. REFLECTIVE 记忆生成：将高/低采纳率场景写入长期记忆 ──
-        generateReflectiveMemories(since);
+        return issuesFound;
     }
 
     /**
@@ -755,14 +921,46 @@ public class AiPatrolJob {
      * 写入 ai_long_memory.layer = 'REFLECTIVE'，subject_type = 'platform_scene'
      */
     private void generateReflectiveMemories(LocalDateTime since) {
+        List<Long> tenantIds = processStatsEngine != null
+                ? processStatsEngine.findActiveTenantIds()
+                : null;
+        if (tenantIds == null || tenantIds.isEmpty()) return;
+
+        int totalWritten = 0;
+        for (Long tenantId : tenantIds) {
+            if (tenantId == null) continue;
+            UserContext previous = UserContext.get();
+            try {
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("system");
+                ctx.setUserId("system");
+                UserContext.set(ctx);
+                totalWritten += generateReflectiveMemoriesForTenant(tenantId, since);
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob] 租户 {} REFLECTIVE 记忆生成异常: {}", tenantId, e.getMessage());
+            } finally {
+                if (previous != null) {
+                    UserContext.set(previous);
+                } else {
+                    UserContext.clear();
+                }
+            }
+        }
+        if (totalWritten > 0) {
+            log.info("[AiPatrolJob] REFLECTIVE 记忆生成完成，新增 {} 条", totalWritten);
+        }
+    }
+
+    private int generateReflectiveMemoriesForTenant(Long tenantId, LocalDateTime since) {
         int written = 0;
         try {
-            List<Map<String, Object>> adoptionStats = decisionCardOrchestrator.aggregateAdoption(since);
+            List<Map<String, Object>> adoptionStats = decisionCardOrchestrator.aggregateByTenant(tenantId, since);
             for (Map<String, Object> row : adoptionStats) {
                 String scene = getString(row, "scene");
                 Number totalNum = (Number) row.getOrDefault("total", 0);
                 Number adoptedNum = (Number) row.getOrDefault("adopted_count", 0);
-                if (totalNum == null || totalNum.intValue() < 5) continue; // 样本不足5条跳过
+                if (totalNum == null || totalNum.intValue() < 5) continue;
                 double rate = adoptedNum.doubleValue() / totalNum.doubleValue();
                 String content;
                 double confidence;
@@ -777,7 +975,7 @@ public class AiPatrolJob {
                         scene, rate * 100, totalNum.intValue());
                     confidence = 1.0 - rate;
                 } else {
-                    continue; // 中间区间不写记忆
+                    continue;
                 }
                 longTermMemoryOrchestrator.writePlatformMemory(
                     "REFLECTIVE",
@@ -789,11 +987,9 @@ public class AiPatrolJob {
                 written++;
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob] REFLECTIVE 记忆生成异常: {}", e.getMessage());
+            log.warn("[AiPatrolJob] 租户 {} REFLECTIVE 记忆生成异常: {}", tenantId, e.getMessage());
         }
-        if (written > 0) {
-            log.info("[AiPatrolJob] REFLECTIVE 记忆生成完成，新增 {} 条", written);
-        }
+        return written;
     }
 
     private void pushHighSeverityAlerts() {
@@ -819,6 +1015,12 @@ public class AiPatrolJob {
                 Long tenantId = action.getTenantId();
                 if (tenantId == null) continue;
                 if (processedTenants.contains(tenantId)) continue;
+                // 按租户精确判断开关：未启用则跳过该租户的自动派发
+                if (!backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_HIGH_SEVERITY_DISPATCH)) {
+                    log.debug("[AiPatrolJob-Push] 租户 {} 高危派发开关未开启，跳过", tenantId);
+                    processedTenants.add(tenantId);
+                    continue;
+                }
 
                 UserContext previous = UserContext.get();
                 try {
@@ -867,6 +1069,30 @@ public class AiPatrolJob {
             case "CORRELATED_RISK" -> "生产主管";
             default -> "跟单";
         };
+    }
+
+    /**
+     * 判断是否有任一活跃租户启用了指定开关。
+     * <p>用于巡检入口的快速短路：如果所有租户都未启用，则跳过后续按租户的逐个查询。
+     */
+    private boolean isActionEnabledForAnyTenant(BackendActionKey action) {
+        if (action == null || processStatsEngine == null) {
+            return false;
+        }
+        try {
+            List<Long> tenantIds = processStatsEngine.findActiveTenantIds();
+            if (tenantIds == null || tenantIds.isEmpty()) {
+                return false;
+            }
+            for (Long tenantId : tenantIds) {
+                if (tenantId != null && backendActionFlagService.isEnabled(tenantId, action)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AiPatrolJob] isActionEnabledForAnyTenant 查询失败 action={} 返回false", action, e);
+        }
+        return false;
     }
 
     private static String getString(Map<String, Object> map, String key) {
@@ -918,7 +1144,12 @@ public class AiPatrolJob {
                                     statusChangeCount++;
                                 }
                             }
-                            createTaskReminderAction(task, changes);
+                            boolean actionEnabled = backendActionFlagService.isEnabled(task.getTenantId(), BackendActionKey.AUTO_PATROL_EXEC);
+                            if (actionEnabled) {
+                                createTaskReminderAction(task, changes);
+                            } else {
+                                log.debug("[AiPatrolJob-TaskOrder] 租户 {} 巡检自动执行开关未开启，跳过创建提醒工单", task.getTenantId());
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -986,6 +1217,7 @@ public class AiPatrolJob {
         int totalReminded = 0;
         for (Long tenantId : tenants) {
             if (tenantId == null) continue;
+            boolean actionEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_TASK_REMINDER);
             UserContext previous = UserContext.get();
             try {
                 UserContext ctx = new UserContext();
@@ -994,7 +1226,7 @@ public class AiPatrolJob {
                 ctx.setUserId("system");
                 UserContext.set(ctx);
 
-                totalReminded += remindDueTasksForTenant(tenantId);
+                totalReminded += remindDueTasksForTenant(tenantId, actionEnabled);
             } catch (Exception e) {
                 log.warn("[AiPatrolJob-TaskReminder] 租户 {} 扫描异常: {}", tenantId, e.getMessage(), e);
             } finally {
@@ -1010,7 +1242,7 @@ public class AiPatrolJob {
         }
     }
 
-    private int remindDueTasksForTenant(Long tenantId) {
+    private int remindDueTasksForTenant(Long tenantId, boolean actionEnabled) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime soon = now.plusHours(24);
 
@@ -1062,21 +1294,26 @@ public class AiPatrolJob {
                 );
             }
 
-            SysNotice n = new SysNotice();
-            n.setTenantId(tenantId);
-            n.setToName(assignee);
-            n.setFromName("AI任务提醒");
-            n.setOrderNo(task.getOrderNo());
-            n.setTitle(title);
-            n.setContent(content);
-            n.setNoticeType(noticeType);
-            n.setActionType(noticeType);
-            n.setActionPayload("{\"taskId\":" + task.getId() + "}");
-            n.setIsRead(0);
-            n.setCreatedAt(now);
-            sysNoticeService.save(n);
-            count++;
-            log.info("[AiPatrolJob-TaskReminder] 任务{}提醒 {}: {}", task.getId(), assignee, title);
+            log.info("[AiPatrolJob-TaskReminder] 检测到任务{}需要提醒 {}: {}", task.getId(), assignee, title);
+            if (actionEnabled) {
+                SysNotice n = new SysNotice();
+                n.setTenantId(tenantId);
+                n.setToName(assignee);
+                n.setFromName("AI任务提醒");
+                n.setOrderNo(task.getOrderNo());
+                n.setTitle(title);
+                n.setContent(content);
+                n.setNoticeType(noticeType);
+                n.setActionType(noticeType);
+                n.setActionPayload("{\"taskId\":" + task.getId() + "}");
+                n.setIsRead(0);
+                n.setCreatedAt(now);
+                sysNoticeService.save(n);
+                count++;
+                log.info("[AiPatrolJob-TaskReminder] 任务{}提醒已发送 {}: {}", task.getId(), assignee, title);
+            } else {
+                log.debug("[AiPatrolJob-TaskReminder] 租户 {} 任务提醒开关未开启，跳过发送提醒", tenantId);
+            }
         }
         return count;
     }

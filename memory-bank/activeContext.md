@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-23（下单页智能化模块 P2+P3 共 7 项修复 — 全部完成）
+> 最后更新：2026-07-23（智能化功能全部改为用户可配置开关，默认关闭）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,103 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-23 智能化开关补全 8 个 HIGH 风险自动执行点 ✅
+
+用户诉求："全部优化好这些 这些这些智能化的 还是不要自动 让用户可以设置这些 理解吗 怕出现问题"
+
+全系统核查发现仍有 8 个 HIGH 风险 @Scheduled 方法自动执行写操作/对外通知/派单但无用户可配置开关，全部补齐：
+- AiPatrolJob 4 个跨租户巡检方法（scanProductionAnomalies/scanExtendedAnomalies/runDailyPatrol/checkTaskOrderProgress）→ AUTO_PATROL_EXEC
+- EcSyncJob.retryJob → AUTO_EC_STOCK_SYNC
+- SmartNotifyJob.autoDetectAndNotify → 新开关 AUTO_MIND_PUSH
+- XiaoyunDailyInsightJob.generateDailyInsights → 新开关 AUTO_DAILY_INSIGHT_DISPATCH
+- AgentBackgroundTaskJob.processPendingTasks → 新开关 AUTO_AGENT_BACKGROUND_TASK
+- BackendActionFlagService 新增 3 个枚举 + Flyway V202612070001 初始化默认关闭 + 前端文案补充
+- 验证：mvn compile exit 0、npx tsc --noEmit 0 errors
+- 决策记录：D-044
+
+---
+
+### 2026-07-23 智能化功能全部改为用户可配置开关（用户核心诉求）✅
+
+**用户决策**："全部优化好这些 这些这些智能化的 还是不要自动 让用户可以设置这些 理解吗 怕出现问题"
+
+**核心原则**：所有"会触发实际操作"的智能能力均改为开关控制，默认全部关闭，需租户管理员在「系统设置 → 自动执行开关」面板手动开启。关闭时系统仅生成建议/记录，不自动执行任何操作。
+
+**本次完成的开关控制改造**：
+
+1. **AiPatrolJob 全部 @Scheduled 方法受开关控制** — [AiPatrolJob.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/job/AiPatrolJob.java)
+   - `executeAutoActions` → `AUTO_PATROL_EXEC` 开关（巡检自动执行：创建跟进任务+微信通知）
+   - `scanOverdueCollaborationTasks` → `AUTO_TASK_ESCALATION` 开关（协作任务逾期自动升级）
+   - `scanPersonalTaskReminders` → `AUTO_TASK_REMINDER` 开关（个人任务到期自动提醒）★ 本次新增
+   - `pushHighSeverityAlerts` → `AUTO_HIGH_SEVERITY_DISPATCH` 开关（高危巡检告警自动派发）
+   - 仅检测/记录的方法（scanProductionAnomalies/scanExtendedAnomalies/runDailyPatrol/checkTaskOrderProgress）不加开关，因为只生成巡检记录不执行操作
+
+2. **EcSyncJob stockSyncJob 受开关控制** — [EcSyncJob.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/integration/sync/job/EcSyncJob.java)
+   - `stockSyncJob` → `AUTO_EC_STOCK_SYNC` 开关（电商库存自动同步到平台）
+   - 关闭时仅本地计算库存，不推送到平台，需手动触发同步
+   - 库存预警检查（checkAndCreateAlerts）不加开关，因为仅本地告警不涉及平台操作
+
+3. **前端配置面板补充 5 个新开关文案** — [ProfileSmartSettingsPanel.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/system/pages/System/Profile/components/ProfileSmartSettingsPanel.tsx)
+   - 巡检自动执行 / 协作任务逾期自动升级 / 个人任务到期自动提醒 / 电商库存自动同步 / 高危巡检告警自动派发
+   - 每个开关均有清晰的标题和描述，说明关闭后仅生成建议需手动确认
+
+4. **编译错误修复**（前序会话遗留）：
+   - [EcPriceSyncItem.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/integration/sync/dto/EcPriceSyncItem.java) 添加 `@NoArgsConstructor` + `@AllArgsConstructor`（@Builder 单独使用无无参构造器）
+   - [EcStockDiscrepancyOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/integration/ecommerce/orchestration/EcStockDiscrepancyOrchestrator.java) `getSkuName()` 改为 `buildSkuName(sku)`（ProductSku 无 skuName 字段，用 styleNo+color+size 构建）
+
+**已确认无需修改（已是手动/仅展示）**：
+- P1-2 返工智能派单：`SmartAssignmentOrchestrator.recommend()` 仅返回推荐（POST API），不自动派单；`workflowQualityReject` 创建的返工任务 `autoExecutable=false`、`ownerRole="system"`，需车间主任手动领取
+- P1-3 物料对账差异：`MaterialReconciliationTool.explainException` 仅列出异常原因（display only）；写操作需 `toolAccessService.hasManagerAccess()` 且由用户对话触发
+- `EcStockDiscrepancyOrchestrator.syncLocalToPlatform` 仅由 `reconcileDiscrepancy`（用户手动选择 ACCEPT_LOCAL）触发，非自动
+
+**完整开关清单（12 个，默认全部关闭）**：
+| 开关 Key | 说明 |
+|---------|------|
+| `backend.action.auto_price_sync` | 自动改价同步到平台 |
+| `backend.action.auto_refund_approve` | 退款自动审核通过 |
+| `backend.action.auto_stock_delist` | 缺货自动下架 |
+| `backend.action.auto_receivable_notify` | 逾期应收自动通知 |
+| `backend.action.auto_worker_anomaly_notify` | 工人效率异常自动通知 |
+| `backend.action.auto_delivery_risk_notify` | 交期风险自动通知 |
+| `backend.action.auto_stagnant_notify` | 工序停滞自动通知 |
+| `backend.action.auto_patrol_exec` | 巡检自动执行 |
+| `backend.action.auto_task_escalation` | 协作任务逾期自动升级 |
+| `backend.action.auto_task_reminder` | 个人任务到期自动提醒 |
+| `backend.action.auto_ec_stock_sync` | 电商库存自动同步 |
+| `backend.action.auto_high_severity_dispatch` | 高危巡检告警自动派发 |
+
+**验证**：
+- 后端 mvn compile exit 0
+- 前端 npx tsc --noEmit 0 errors
+
+---
+
+### 2026-07-23 撤销 AiUpgradeCenter 独立页面 + Skills市场（用户决策回滚）✅
+
+**用户决策**："集成到现有的这些里面来升级 不要多余的东西 很多用户都不知道这些玩意有什么用 要做好现有的升级就好 他们不是技术性的用户 都是普通用户 根本不需要技术性的东西 我们要做的是用户体验与使用这些好用"
+
+**清理范围**：
+- 前端：删除 `frontend/src/modules/intelligence/pages/AiUpgradeCenter/` 整个目录（含 7 个 Tab 文件 + index.tsx）
+- 前端入口：`frontend/src/modules/intelligence/index.tsx` 移除 `AiUpgradeCenter` 导出
+- 路由：`frontend/src/routeConfig.ts` 移除 `aiUpgradeCenter` 路径、菜单项、页面元信息、权限码映射
+- App.tsx：移除 AiUpgradeCenter 导入 + 路由注册
+- 后端：删除 6 个 Controller + 6 个 Orchestrator（BrowserAgent/VisualAIInspection/FashionAIAsset/SmartScheduling/DigitalTwinSnapshot/SkillMarket）
+- Entity：[SkillTemplate.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/entity/SkillTemplate.java) 移除 7 个市场字段（is_shared/share_scope/market_category/market_tags/install_count/author_name/origin_skill_id）
+
+**数据库迁移（遵守 P0 #1 不修改已应用迁移）**：
+- V202607230001（创建 5 张 AI 升级表）— 保留不删
+- V202607230002（t_skill_template 新增 7 个市场字段 + 索引）— 保留不删
+- [V202607230003__rollback_ai_upgrade_tables.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202607230003__rollback_ai_upgrade_tables.sql) — 回滚迁移：DROP 5 张表 + DROP 7 个字段 + DROP 1 个索引，幂等写法
+
+**验证**：
+- 后端 mvn compile exit 0
+- 前端 npx tsc --noEmit 0 errors
+- 全代码库 grep 确认无残留引用（仅迁移脚本 + memory-bank 文档中有历史记录）
+
+**下一步方向**：智能化能力下沉到现有业务模块（下单/生产/质检/财务/仓储等页面）中，作为内嵌的智能辅助功能，不另立独立页面。普通用户视角的体验优先。
+
+---
 
 ### 2026-07-23 下单页智能化模块 P2+P3 共 7 项修复（全部完成）✅
 

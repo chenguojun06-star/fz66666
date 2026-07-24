@@ -7,6 +7,8 @@ import com.fashion.supplychain.intelligence.service.AgentContextFileService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,19 @@ public abstract class AbstractPatrolJob {
     @Autowired protected PatrolClosedLoopOrchestrator patrolOrchestrator;
     @Autowired protected AgentContextFileService agentContextFileService;
     @Autowired protected JdbcTemplate jdbcTemplate;
+    @Autowired protected BackendActionFlagService backendActionFlagService;
+
+    protected boolean isPatrolEnabledForTenant(Long tenantId) {
+        if (tenantId == null || backendActionFlagService == null) {
+            return false;
+        }
+        try {
+            return backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_PATROL_EXEC);
+        } catch (Exception e) {
+            log.debug("[AbstractPatrol] 检查巡检开关失败 tenantId={} 返回false", tenantId, e);
+            return false;
+        }
+    }
 
     protected List<Long> getActiveTenantIds() {
         List<Long> tenants = processStatsEngine != null

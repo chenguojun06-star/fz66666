@@ -85,4 +85,11 @@ public class DecisionCardOrchestrator {
     public List<Map<String, Object>> aggregateAdoption(LocalDateTime since) {
         return cardMapper.aggregateAdoptionByScene(since);
     }
+
+    /**
+     * 单租户：采纳率聚合
+     */
+    public List<Map<String, Object>> aggregateByTenant(Long tenantId, LocalDateTime since) {
+        return cardMapper.aggregateAdoptionByTenant(tenantId, since);
+    }
 }

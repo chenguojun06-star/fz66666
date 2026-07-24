@@ -44,6 +44,7 @@ public class AnomalyDetectorPatrolJob extends AbstractPatrolJob {
                         .list();
 
                 int anomalyCount = 0;
+                boolean patrolEnabled = isPatrolEnabledForTenant(tenantId);
                 for (ProductionOrder o : activeOrders) {
                     if (o.getPlannedEndDate() != null) {
                         long hoursSinceUpdate = ChronoUnit.HOURS.between(
@@ -52,15 +53,20 @@ public class AnomalyDetectorPatrolJob extends AbstractPatrolJob {
                         
                         if (hoursSinceUpdate > 48 && o.getProductionProgress() != null && o.getProductionProgress() < 80) {
                             anomalyCount++;
-                            String issue = String.format("异常检测：订单[%s]超过48小时未更新(进度%d%%)",
-                                    o.getOrderNo(), o.getProductionProgress());
-                            patrolOrchestrator.createAction("ANOMALY_DETECTOR_JOB", issue, "STAGNANT_ORDER",
-                                    "MEDIUM", "order", o.getOrderNo(),
-                                    "{\"action\":\"stagnant_alert\"}",
-                                    BigDecimal.valueOf(0.7), "NEED_APPROVAL");
-                            findings++;
+                            if (patrolEnabled) {
+                                String issue = String.format("异常检测：订单[%s]超过48小时未更新(进度%d%%)",
+                                        o.getOrderNo(), o.getProductionProgress());
+                                patrolOrchestrator.createAction("ANOMALY_DETECTOR_JOB", issue, "STAGNANT_ORDER",
+                                        "MEDIUM", "order", o.getOrderNo(),
+                                        "{\"action\":\"stagnant_alert\"}",
+                                        BigDecimal.valueOf(0.7), "NEED_APPROVAL");
+                                findings++;
+                            }
                         }
                     }
+                }
+                if (!patrolEnabled && anomalyCount > 0) {
+                    log.debug("[AnomalyDetector] 租户 {} 巡检自动执行开关未开启，跳过创建 {} 个工单", tenantId, anomalyCount);
                 }
 
                 traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_anomaly_detection",

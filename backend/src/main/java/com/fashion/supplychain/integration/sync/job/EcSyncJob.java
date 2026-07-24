@@ -12,6 +12,8 @@ import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
 import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistry;
 import com.fashion.supplychain.integration.sync.dto.*;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -54,6 +56,10 @@ public class EcSyncJob {
     @Autowired
     private JushuitanSyncService jushuitanSyncService;
 
+    /** 后端动作类开关服务：库存自动同步到平台受 AUTO_EC_STOCK_SYNC 开关控制（用户诉求：怕出问题，不要自动） */
+    @Autowired
+    private BackendActionFlagService backendActionFlagService;
+
     /** 每个租户上次 JST 订单同步时间，用于增量拉取（避免重复） */
     private final Map<Long, LocalDateTime> jstLastSyncTime = new ConcurrentHashMap<>();
 
@@ -63,13 +69,21 @@ public class EcSyncJob {
         List<EcSyncConfig> allConfigs = syncConfigService.list();
         for (EcSyncConfig config : allConfigs) {
             if (!Boolean.TRUE.equals(config.getEnabled())) continue;
+            // 按租户精确判断开关：未启用则跳过库存推送（仅本地计算，不推到平台）
+            Long tenantId = config.getTenantId();
+            if (tenantId == null
+                    || !backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_EC_STOCK_SYNC)) {
+                log.debug("[定时同步] 租户 {} 电商库存自动同步开关未开启，跳过平台={}",
+                        tenantId, config.getPlatformCode());
+                continue;
+            }
             try {
                 syncStockForConfig(config);
             } catch (Exception e) {
                 log.warn("[定时同步] 库存同步失败 平台={}", config.getPlatformCode(), e);
             }
         }
-        // 检查库存预警
+        // 检查库存预警（仅本地告警，不涉及平台操作，不受开关控制）
         try {
             ecStockOrchestrator.checkAndCreateAlerts(com.fashion.supplychain.common.UserContext.tenantId());
         } catch (Exception e) {
@@ -81,6 +95,13 @@ public class EcSyncJob {
     public void retryJob() {
         List<EcSyncLog> retryable = syncLogService.findRetryable();
         for (EcSyncLog syncLog : retryable) {
+            // 用户诉求：智能化不自动执行，让用户可以设置。按租户检查电商库存同步开关，关闭则不自动重试推送到平台
+            Long logTenantId = syncLog.getTenantId();
+            if (logTenantId == null
+                    || !backendActionFlagService.isEnabled(logTenantId, BackendActionKey.AUTO_EC_STOCK_SYNC)) {
+                log.debug("[重试调度] 租户 {} 电商库存自动同步开关未开启，跳过 logId={}", logTenantId, syncLog.getId());
+                continue;
+            }
             try {
                 retrySync(syncLog);
             } catch (Exception e) {

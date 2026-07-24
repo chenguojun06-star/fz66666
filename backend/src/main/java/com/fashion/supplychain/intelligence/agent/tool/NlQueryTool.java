@@ -14,13 +14,20 @@ import org.springframework.context.annotation.Lazy;
 import java.util.*;
 
 /**
- * 自然语言查询工具 —— 让 AI 可以直接查询数据库中的业务数据。
+ * 自然语言查询工具 —— 让 AI 可以直接查询数据库中的所有业务数据。
+ *
+ * <p>支持 Text-to-SQL 能力：可以理解用户的自然语言问题，自动转换为 SQL 查询，
+ * 覆盖所有业务表（订单/生产/采购/库存/财务/工资/供应商/客户/工人/面料/物料/质检/入库/出库/裁剪/车缝/尾部/出货/交期 等）。
  *
  * 典型对话：
  *   "查询 PO202606010001 订单进度"
  *   "查看今天的产量统计"
  *   "哪些订单逾期了"
  *   "各工厂表现对比"
+ *   "本月工资最高的10个工人"
+ *   "最近一个月采购金额排名"
+ *   "库存不足的面料有哪些"
+ *   "质检合格率最低的工序"
  */
 @Slf4j
 @Component
@@ -29,16 +36,17 @@ import java.util.*;
         name = "tool_nl_query",
         description = "自然语言数据查询工具",
         domain = ToolDomain.ANALYSIS,
-        timeoutMs = 15000
+        timeoutMs = 30000
 )
 @McpToolAnnotation(
         name = "tool_nl_query",
-        description = "自然语言数据查询：通过自然语言直接查询订单、产量、库存、财务等所有业务数据。当用户问任何数据相关问题时，优先使用此工具。",
+        description = "自然语言数据查询：通过自然语言直接查询所有业务数据（订单/生产/采购/库存/财务/工资/供应商/客户/工人/面料/物料/质检/入库/出库/裁剪/车缝/尾部/出货/交期等）。"
+                + "支持Text-to-SQL，能理解复杂查询条件。当用户问任何数据相关问题时，优先使用此工具。",
         domain = ToolDomain.ANALYSIS,
         readOnly = true,
-        timeoutSeconds = 15,
+        timeoutSeconds = 30,
         requiresConfirmation = false,
-        tags = {"自然语言查询", "数据查询", "订单查询", "产量统计", "库存查询", "财务统计"}
+        tags = {"自然语言查询", "数据查询", "订单查询", "产量统计", "库存查询", "财务统计", "工资查询", "Text-to-SQL"}
 )
 public class NlQueryTool extends AbstractAgentTool {
 
@@ -63,11 +71,14 @@ public class NlQueryTool extends AbstractAgentTool {
                 + "「查询 PO202606010001 订单进度」、"
                 + "「查看今天的产量统计」、"
                 + "「哪些订单逾期了」、"
-                + "「各工厂表现对比」"));
+                + "「各工厂表现对比」、"
+                + "「本月工资最高的10个工人」、"
+                + "「最近一个月采购金额排名」、"
+                + "「库存不足的面料有哪些」"));
 
         return buildToolDef(
-                "自然语言数据查询：通过自然语言直接查询订单、产量、库存、财务等所有业务数据。"
-                + "当用户问任何数据相关问题时，优先使用此工具。",
+                "自然语言数据查询：通过自然语言直接查询所有业务数据（订单/生产/采购/库存/财务/工资/供应商/客户/工人/面料/物料/质检/入库/出库/裁剪/车缝/尾部/出货/交期等）。"
+                + "支持Text-to-SQL，能理解复杂查询条件。当用户问任何数据相关问题时，优先使用此工具。",
                 properties,
                 List.of("question")
         );

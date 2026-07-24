@@ -76,7 +76,7 @@ public class DataAnalystPatrolJob extends AbstractPatrolJob {
                         .last("LIMIT 10")
                         .list();
 
-                if (!criticalOrders.isEmpty()) {
+                if (!criticalOrders.isEmpty() && isPatrolEnabledForTenant(tenantId)) {
                     String orderList = criticalOrders.stream()
                             .map(o -> o.getOrderNo() + "(" + pct(o) + "%)")
                             .collect(Collectors.joining("、"));
@@ -87,6 +87,8 @@ public class DataAnalystPatrolJob extends AbstractPatrolJob {
                             "{\"action\":\"data_analysis_alert\"}",
                             BigDecimal.valueOf(0.85), "NEED_APPROVAL");
                     findings++;
+                } else if (!criticalOrders.isEmpty()) {
+                    log.debug("[DataAnalyst] 租户 {} 巡检自动执行开关未开启，跳过创建工单", tenantId);
                 }
 
                 traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_deep_analysis",

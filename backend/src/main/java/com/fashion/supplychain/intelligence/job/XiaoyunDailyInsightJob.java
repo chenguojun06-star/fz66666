@@ -8,6 +8,8 @@ import com.fashion.supplychain.intelligence.mapper.XiaoyunDailyInsightMapper;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +34,8 @@ public class XiaoyunDailyInsightJob {
     @Autowired private DistributedLockService distributedLockService;
     @Autowired(required = false) private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.orchestration.CollaborationDispatchOrchestrator collaborationDispatchOrchestrator;
+    /** 后端动作类开关服务：每日洞察自动派发受开关控制（用户诉求：怕出问题，不要自动） */
+    @Autowired private BackendActionFlagService backendActionFlagService;
 
     @Value("${xiaoyun.daily-insight.llm-enabled:true}")
     private boolean llmInsightEnabled;
@@ -49,6 +53,11 @@ public class XiaoyunDailyInsightJob {
             int success = 0, failed = 0;
             LocalDate today = LocalDate.now();
             for (Long tenantId : tenantIds) {
+                // 用户诉求：智能化不自动执行，让用户可以设置。按租户检查每日洞察开关
+                if (!backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_DAILY_INSIGHT_DISPATCH)) {
+                    log.debug("[XiaoyunInsightJob] 租户 {} 每日洞察自动派发开关未开启，跳过", tenantId);
+                    continue;
+                }
                 UserContext ctx = new UserContext();
                 ctx.setTenantId(tenantId);
                 ctx.setUserId("SYSTEM_JOB");

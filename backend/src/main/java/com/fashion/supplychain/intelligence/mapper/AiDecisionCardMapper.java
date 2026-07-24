@@ -19,4 +19,14 @@ public interface AiDecisionCardMapper extends BaseMapper<AiDecisionCard> {
         + "WHERE create_time >= #{since} "
         + "GROUP BY scene")
     List<Map<String, Object>> aggregateAdoptionByScene(@Param("since") java.time.LocalDateTime since);
+
+    /** 单租户采纳率聚合（按场景） */
+    @Select("SELECT scene, COUNT(*) AS total, "
+        + "SUM(CASE WHEN adopted = 1 THEN 1 ELSE 0 END) AS adopted_count, "
+        + "SUM(CASE WHEN adopted = -1 THEN 1 ELSE 0 END) AS rejected_count "
+        + "FROM t_ai_decision_card "
+        + "WHERE tenant_id = #{tenantId} AND create_time >= #{since} "
+        + "GROUP BY scene")
+    List<Map<String, Object>> aggregateAdoptionByTenant(@Param("tenantId") Long tenantId,
+                                                         @Param("since") java.time.LocalDateTime since);
 }

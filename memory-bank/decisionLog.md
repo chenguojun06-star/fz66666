@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-07-19（新增 D-042 员工打卡健壮性增强 — 实体注解对齐 + 跨天补卡 + 并发兜底）
+> 最后更新：2026-07-23（新增 D-044 智能化功能全量改为用户可配置开关 — 补全 8 个 HIGH 风险自动执行点）
 
 ---
 
@@ -665,4 +665,28 @@
   - 验证：mvn compile通过、audit-tenant-id.py通过、check-flyway-sql.py通过、代码搜索无残留
   - 后续所有新增 @Scheduled 任务必须带 enabled 开关
   - 后续所有 @Value 默认值必须与 application.yml 显式配置对齐
+
+## D-044：智能化功能全量改为用户可配置开关（补全 8 个 HIGH 风险自动执行点）
+
+- **日期**：2026-07-23
+- **上下文**：用户核心诉求"全部优化好这些 这些这些智能化的 还是不要自动 让用户可以设置这些 理解吗 怕出现问题"。前一轮已为 AiPatrolJob.executeAutoActions/scanOverdueCollaborationTasks/scanPersonalTaskReminders/pushHighSeverityAlerts + EcSyncJob.stockSyncJob + ReceivableOverdueJob 加了开关。本轮全系统核查发现仍有 8 个 HIGH 风险 @Scheduled 方法会"自动执行写操作/对外通知/派单"但没有用户可配置开关
+- **决策**：
+  1. **AiPatrolJob 4 个跨租户巡检方法统一纳入 AUTO_PATROL_EXEC 开关**：scanProductionAnomalies / scanExtendedAnomalies / runDailyPatrol / checkTaskOrderProgress 均在方法开头用 isActionEnabledForAnyTenant(AUTO_PATROL_EXEC) 检查，全租户未开启则跳过（避免自动创建巡检工单+写 REFLECTIVE 记忆）
+  2. **EcSyncJob.retryJob 纳入 AUTO_EC_STOCK_SYNC 开关**：按租户检查开关，关闭则不自动重试推库存/价格到电商平台（避免对外推送）
+  3. **SmartNotifyJob.autoDetectAndNotify 纳入新开关 AUTO_MIND_PUSH**：在 doAutoDetect 租户循环内按租户检查，关闭则不自动推送微信/站内通知
+  4. **XiaoyunDailyInsightJob 纳入新开关 AUTO_DAILY_INSIGHT_DISPATCH**：在 generateDailyInsights 租户循环内按租户检查，关闭则不自动生成洞察+派发协作任务
+  5. **AgentBackgroundTaskJob 纳入新开关 AUTO_AGENT_BACKGROUND_TASK**：在 processPendingTasks 租户循环内按租户检查，关闭则不自动执行 AI 后台任务
+  6. **BackendActionFlagService 新增 3 个开关枚举**：AUTO_MIND_PUSH / AUTO_DAILY_INSIGHT_DISPATCH / AUTO_AGENT_BACKGROUND_TASK，全部默认关闭
+  7. **Flyway V202612070001 初始化新开关**：为已有租户和活跃租户插入 3 个新开关记录，enabled=0（默认关闭）
+  8. **前端配置面板补充 3 个新开关文案**：ProfileSmartSettingsPanel.tsx 的 BACKEND_ACTION_LABELS 新增 3 条，含标题+描述+关闭后影响说明
+- **理由**：
+  - 用户明确"怕出现问题"，所有会触发实际操作（写数据/对外通知/派单/推送平台）的智能化能力必须默认关闭，由租户管理员显式开启
+  - 跨租户巡查方法用 isActionEnabledForAnyTenant 粗粒度控制（任一租户开启才执行），单租户精确方法用 isEnabled 细粒度控制（按租户精确跳过）
+  - 数据修复/清理类任务（FinanceDataConsistencyJob/AuditLogCleanupJob/cleanupOldNotices）不纳入开关，因为关掉会导致数据不一致或堆积，属于运维必需而非"智能化"范畴
+- **影响**：
+  - 后端修改 5 个 Job 文件 + 1 个 Service 文件（BackendActionFlagService）
+  - 新建 1 个 Flyway 迁移（V202612070001）
+  - 前端修改 1 个文件（ProfileSmartSettingsPanel.tsx）
+  - 验证：mvn compile exit 0、npx tsc --noEmit 0 errors
+  - 至此后端动作类智能开关共 15 个，全部默认关闭，覆盖所有 HIGH 风险自动执行点
 

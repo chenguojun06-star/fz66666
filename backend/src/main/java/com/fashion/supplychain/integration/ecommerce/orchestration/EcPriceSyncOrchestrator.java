@@ -6,20 +6,32 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
+import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
+import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistry;
+import com.fashion.supplychain.integration.sync.dto.EcPriceSyncItem;
+import com.fashion.supplychain.integration.sync.dto.EcPriceSyncResult;
+import com.fashion.supplychain.integration.sync.dto.EcSyncContext;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.system.entity.EcPlatformConfig;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
+import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** 电商自动改价编排器：基于库存水平、销量速率、价格弹性自动计算最优价格并同步到电商平台 */
@@ -36,6 +48,9 @@ public class EcPriceSyncOrchestrator {
     @Autowired private EcUniversalStockService universalStockService;
     @Autowired private EcommerceOrderService ecommerceOrderService;
     @Autowired private ProductSkuService productSkuService;
+    @Autowired private BackendActionFlagService backendActionFlagService;
+    @Autowired(required = false) private EcPlatformAdapterRegistry platformAdapterRegistry;
+    @Autowired(required = false) private EcPlatformConfigService ecPlatformConfigService;
 
     /** 计算指定 SKU 的最优价格：库存高+销量低→降价(≤10%)；库存低+销量高→涨价(≤5%)；库存正常→维持原价 */
     public BigDecimal calculateOptimalPrice(Long tenantId, Long skuId) {
@@ -65,20 +80,80 @@ public class EcPriceSyncOrchestrator {
         return newPrice;
     }
 
-    /** 同步价格到电商平台（mock OpenAPI 调用，实际对接时替换为真实平台 API） */
+    /** 同步价格到电商平台：优先走真实适配器，适配器不可用时记录日志不报错 */
     public boolean syncPriceToPlatform(Long tenantId, Long skuId, BigDecimal newPrice) {
         TenantAssert.requireTenantId();
         ProductSku sku = productSkuService.getById(skuId);
         if (sku == null) throw new IllegalArgumentException("SKU不存在: " + skuId);
-        log.info("[EcPriceSync] mock同步价格到平台: tenantId={}, skuCode={}, newPrice={}", tenantId, sku.getSkuCode(), newPrice);
+
+        // 优先走真实平台适配器
+        if (platformAdapterRegistry != null && ecPlatformConfigService != null) {
+            try {
+                for (String platformCode : platformAdapterRegistry.getSupportedPlatforms()) {
+                    EcPlatformConfig cfg = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
+                    if (cfg == null || !"ACTIVE".equals(cfg.getStatus())) continue;
+                    if (!StringUtils.hasText(cfg.getAppKey()) || !StringUtils.hasText(cfg.getAppSecret())) continue;
+
+                    Optional<EcPlatformAdapter> adapterOpt = platformAdapterRegistry.findAdapter(platformCode);
+                    if (adapterOpt.isEmpty()) continue;
+
+                    EcSyncContext ctx = EcSyncContext.builder()
+                            .tenantId(tenantId)
+                            .platformCode(platformCode)
+                            .appId(cfg.getAppKey())
+                            .appSecret(cfg.getAppSecret())
+                            .build();
+                    EcPriceSyncItem item = new EcPriceSyncItem();
+                    item.setSkuId(skuId);
+                    item.setSkuCode(sku.getSkuCode());
+                    item.setPrice(newPrice);
+                    EcPriceSyncResult result = adapterOpt.get().pushPrice(ctx, Collections.singletonList(item));
+                    if (result != null && result.isSuccess()) {
+                        PriceSuggestion s = suggestionCache.get(tenantId + ":" + skuId);
+                        if (s != null) s.setSynced(true);
+                        log.info("[EcPriceSync] 真实同步价格到平台成功: tenantId={}, platform={}, skuCode={}, newPrice={}",
+                                tenantId, platformCode, sku.getSkuCode(), newPrice);
+                        return true;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[EcPriceSync] 真实同步价格失败: tenantId={}, skuCode={}, 原因={}",
+                        tenantId, sku.getSkuCode(), e.getMessage());
+            }
+        }
+        // 适配器不可用，仅记录日志（不再 mock 返回 true）
+        log.info("[EcPriceSync] 平台适配器不可用，价格未同步到平台: tenantId={}, skuCode={}, newPrice={}",
+                tenantId, sku.getSkuCode(), newPrice);
         PriceSuggestion s = suggestionCache.get(tenantId + ":" + skuId);
-        if (s != null) s.setSynced(true);
-        return true;
+        if (s != null) s.setSynced(false);
+        return false;
     }
 
-    /** 批量同步所有需要调价的 SKU */
+    /** 批量同步所有需要调价的 SKU（受开关控制：未开启时只生成建议不同步到平台） */
     public int batchSyncPrices(Long tenantId) {
         TenantAssert.requireTenantId();
+        // 开关未开启时只生成调价建议，不同步到平台（用户可配置）
+        boolean autoSyncEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_PRICE_SYNC);
+        if (!autoSyncEnabled) {
+            log.info("[EcPriceSync] 自动改价同步开关未开启，仅生成调价建议不同步到平台 tenantId={}", tenantId);
+            int suggested = 0;
+            List<ProductSku> skus = productSkuService.listByTenantId(tenantId);
+            for (ProductSku sku : skus) {
+                try {
+                    BigDecimal currentPrice = sku.getSalesPrice() != null ? sku.getSalesPrice() : sku.getTagPrice();
+                    BigDecimal newPrice = calculateOptimalPrice(tenantId, sku.getId());
+                    if (currentPrice != null && newPrice.compareTo(currentPrice) != 0) {
+                        suggested++;
+                    }
+                } catch (Exception e) {
+                    log.warn("[EcPriceSync] 调价建议生成跳过失败SKU: skuId={}, {}", sku.getId(), e.getMessage());
+                }
+            }
+            log.info("[EcPriceSync] 调价建议生成完成（未同步）: tenantId={}, total={}, suggested={}",
+                    tenantId, skus.size(), suggested);
+            return 0;
+        }
+        // 开关开启时才真正同步到平台
         List<ProductSku> skus = productSkuService.listByTenantId(tenantId);
         int synced = 0;
         for (ProductSku sku : skus) {

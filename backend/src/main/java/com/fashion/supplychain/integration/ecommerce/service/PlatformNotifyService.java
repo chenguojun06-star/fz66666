@@ -246,4 +246,166 @@ public class PlatformNotifyService {
     public void updatePlatformStock(Long tenantId, String skuCode, Integer quantity) {
         log.info("[库存同步] 更新平台库存 tenantId={} skuCode={} quantity={}", tenantId, skuCode, quantity);
     }
+
+    /**
+     * 通知平台退款已执行（语义正确：退款回调，而非发货回调）。
+     *
+     * <p>失败不阻断退款主流程，仅记录告警日志。
+     *
+     * @param order 已执行退款的电商订单
+     */
+    public void notifyRefund(EcommerceOrder order) {
+        if (order == null) {
+            return;
+        }
+        String platform = order.getSourcePlatformCode();
+        if (!StringUtils.hasText(platform)) {
+            log.info("[退款回调] 平台为空，跳过 ecOrderNo={}", order.getOrderNo());
+            return;
+        }
+        try {
+            EcPlatformConfig config = ecPlatformConfigService.getByTenantAndPlatform(
+                    order.getTenantId(), platform);
+            if (config == null || !"ACTIVE".equals(config.getStatus())) {
+                log.info("[退款回调] 平台={} 未配置凭证或已禁用，跳过自动回传。ecOrderNo={} 需人工处理",
+                        platform, order.getOrderNo());
+                return;
+            }
+            if (!StringUtils.hasText(config.getAppKey()) || !StringUtils.hasText(config.getAppSecret())) {
+                log.info("[退款回调] 平台={} 凭证不完整(AppKey/AppSecret为空)，跳过自动回传", platform);
+                return;
+            }
+            notifyPlatformRefund(config, order);
+        } catch (Exception e) {
+            log.warn("[退款回调] 回传失败 平台={} ecOrderNo={} 原因={}",
+                    platform, order.getOrderNo(), e.getMessage());
+        }
+    }
+
+    private void notifyPlatformRefund(EcPlatformConfig config, EcommerceOrder order) {
+        String platform = config.getPlatformCode();
+        String callbackUrl = config.getCallbackUrl();
+        if (StringUtils.hasText(callbackUrl)) {
+            notifyRefundViaCallbackUrl(config, order, callbackUrl);
+            return;
+        }
+        switch (platform == null ? "" : platform) {
+            case "TAOBAO", "TMALL" -> notifyRefundTaobao(config, order);
+            case "JD"              -> notifyRefundJd(config, order);
+            case "PINDUODUO"       -> notifyRefundPdd(config, order);
+            case "DOUYIN"          -> notifyRefundDouyin(config, order);
+            case "WECHAT_SHOP"     -> notifyRefundWechat(config, order);
+            case "SHOPIFY"         -> notifyRefundShopify(config, order);
+            default -> log.info("[退款回调] 平台={} 暂不支持自动退款回传，ecOrderNo={} 需人工处理",
+                    platform, order.getOrderNo());
+        }
+    }
+
+    private void notifyRefundViaCallbackUrl(EcPlatformConfig config, EcommerceOrder order, String callbackUrl) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("platformOrderNo", order.getPlatformOrderNo());
+        payload.put("orderNo", order.getOrderNo());
+        payload.put("status", "refunded");
+        payload.put("refundReason", order.getSellerRemark());
+        payload.put("refundedAt", order.getCompleteTime() != null ? order.getCompleteTime().toString() : null);
+        try {
+            Map<String, String> headers = new LinkedHashMap<>();
+            headers.put("X-App-Key", config.getAppKey());
+            headers.put("X-Platform", config.getPlatformCode());
+            httpClient.postJson(callbackUrl, payload, Map.class, headers);
+            log.info("[退款回调] 通用回调成功 平台={} url={} platformOrderNo={}",
+                    config.getPlatformCode(), callbackUrl, order.getPlatformOrderNo());
+        } catch (Exception e) {
+            log.warn("[退款回调] 通用回调失败 平台={} url={} 原因={}",
+                    config.getPlatformCode(), callbackUrl, e.getMessage());
+        }
+    }
+
+    private void notifyRefundTaobao(EcPlatformConfig config, EcommerceOrder order) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("method", "alipay.trade.refund.notify");
+        payload.put("app_key", config.getAppKey());
+        payload.put("tid", order.getPlatformOrderNo());
+        payload.put("status", "refund_success");
+        sendRefundRequest("淘宝/天猫", config, payload);
+    }
+
+    private void notifyRefundJd(EcPlatformConfig config, EcommerceOrder order) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("method", "jingdong.order.refund.notify");
+        payload.put("app_key", config.getAppKey());
+        payload.put("jdOrderId", order.getPlatformOrderNo());
+        payload.put("status", "refund_success");
+        sendRefundRequest("京东", config, payload);
+    }
+
+    private void notifyRefundPdd(EcPlatformConfig config, EcommerceOrder order) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", "pdd.refund.notify");
+        payload.put("client_id", config.getAppKey());
+        payload.put("order_sn", order.getPlatformOrderNo());
+        payload.put("refund_status", "success");
+        sendRefundRequest("拼多多", config, payload);
+    }
+
+    private void notifyRefundDouyin(EcPlatformConfig config, EcommerceOrder order) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("order_id", order.getPlatformOrderNo());
+        payload.put("refund_status", "success");
+        payload.put("app_id", config.getAppKey());
+        payload.put("access_token", config.getExtraField());
+        sendRefundRequest("抖音", config, payload);
+    }
+
+    private void notifyRefundWechat(EcPlatformConfig config, EcommerceOrder order) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("order_id", order.getPlatformOrderNo());
+        payload.put("refund_status", "SUCCESS");
+        payload.put("access_token", config.getExtraField());
+        sendRefundRequest("微信小店", config, payload);
+    }
+
+    private void notifyRefundShopify(EcPlatformConfig config, EcommerceOrder order) {
+        String shopDomain = config.getExtraField();
+        if (!StringUtils.hasText(shopDomain)) {
+            log.warn("[退款回调][Shopify] 未配置店铺域名(extraField)");
+            return;
+        }
+        String url = "https://" + shopDomain + "/admin/api/2024-01/orders/"
+                + order.getPlatformOrderNo() + "/cancel.json";
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("reason", "customer_requested");
+        payload.put("email", true);
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("X-Shopify-Access-Token", config.getAppSecret());
+        headers.put("Content-Type", "application/json");
+        try {
+            httpClient.postJson(url, payload, Map.class, headers);
+            log.info("[退款回调][Shopify] 退款回传成功 orderNo={}", order.getPlatformOrderNo());
+        } catch (Exception e) {
+            log.warn("[退款回调][Shopify] 回传失败: {}", e.getMessage());
+        }
+    }
+
+    private void sendRefundRequest(String platformName, EcPlatformConfig config, Map<String, Object> payload) {
+        String apiUrl = config.getCallbackUrl();
+        if (!StringUtils.hasText(apiUrl)) {
+            String defaultUrl = PLATFORM_API_URLS.get(config.getPlatformCode());
+            if (StringUtils.hasText(defaultUrl)) {
+                apiUrl = defaultUrl;
+            }
+        }
+        if (!StringUtils.hasText(apiUrl)) {
+            log.info("[退款回调][{}] 未配置API地址且无默认地址，跳过自动回传。payload={}", platformName, payload);
+            return;
+        }
+        try {
+            Map<String, String> headers = new LinkedHashMap<>();
+            headers.put("X-App-Key", config.getAppKey());
+            httpClient.postJson(apiUrl, payload, Map.class, headers);
+            log.info("[退款回调][{}] 回传成功 platformOrderNo={}", platformName, payload.get("platformOrderNo"));
+        } catch (Exception e) {
+            log.warn("[退款回调][{}] 回传失败: {}", platformName, e.getMessage());
+        }
+    }
 }

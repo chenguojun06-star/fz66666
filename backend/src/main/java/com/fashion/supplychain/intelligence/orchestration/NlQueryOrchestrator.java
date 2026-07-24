@@ -34,6 +34,7 @@ public class NlQueryOrchestrator {
     @Autowired private NlQueryDataHandlers dataHandlers;
     @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
     @Autowired private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService tokenBudgetService;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.TextToSqlService textToSqlService;
 
     private static final int SESSION_CONTEXT_WINDOW = 3;
     private static final int SESSION_CACHE_MAX_SIZE = 200;
@@ -127,7 +128,20 @@ public class NlQueryOrchestrator {
         if ((resp = matchLogAndRemarkQuery(question, tenantId, factoryId)) != null) return resp;
         if ((resp = matchDirectActionAndHelp(question, tenantId, factoryId)) != null) return resp;
 
-        // ── 智能底：调用 DeepSeek 处理无法匹配关键词的自由问题
+        // ── 智能底：Text-to-SQL 自然语言转SQL查询所有业务数据 ──
+        if (textToSqlService != null && isDataQueryQuestion(question)) {
+            try {
+                NlQueryResponse sqlResp = textToSqlService.query(question, tenantId);
+                if (sqlResp != null && sqlResp.getConfidence() > 50) {
+                    log.info("[NlQuery] Text-to-SQL命中: question={}", question);
+                    return sqlResp;
+                }
+            } catch (Exception e) {
+                log.warn("[NlQuery] Text-to-SQL失败，降级到AI兜底: {}", e.getMessage());
+            }
+        }
+
+        // ── 最终兜底：调用 DeepSeek 处理无法匹配关键词的自由问题
         return dataHandlers.handleAiDeepFallback(question, tenantId, factoryId);
     }
 
@@ -378,6 +392,41 @@ public class NlQueryOrchestrator {
         for (String kw : keywords) {
             if (text.contains(kw)) return true;
         }
+        return false;
+    }
+
+    /** 判断是否是数据查询类问题（适合Text-to-SQL处理） */
+    private boolean isDataQueryQuestion(String question) {
+        if (question == null || question.isBlank()) return false;
+        if (question.length() < 4) return false;
+        if (question.length() > 200) return false; // 太长的问题不适合SQL
+
+        // 明显的对话/问候/操作类问题，不走 SQL
+        if (containsAny(question, "你好", "请问", "怎么用", "能不能", "可以吗",
+                "谢谢", "再见", "好的", "明白", "什么是", "是什么", "解释一下",
+                "帮我", "请帮我", "麻烦", "如何理解")) {
+            return false;
+        }
+
+        // 强数据查询信号
+        if (containsAny(question, "查询", "查找", "统计", "显示", "列出", "有哪些", "有多少",
+                "多少个", "几个", "哪些", "全部", "所有", "最近", "今天", "昨天", "本周", "本月",
+                "排行", "排名", "TOP", "top", "Top")) {
+            return true;
+        }
+
+        // 业务对象 + 状态/进度 = 数据查询
+        if (containsAny(question, "订单", "生产", "采购", "库存", "工资",
+                "供应商", "客户", "工人", "工厂", "面料", "物料", "质检", "入库",
+                "出库", "裁剪", "车缝", "尾部", "出货", "交期", "逾期", "延期",
+                "款号", "款式")) {
+            return containsAny(question, "状态", "进度", "详情", "多少", "几个", "哪些", "总数", "合计", "数量");
+        }
+
+        // 含 PO/订单号模式
+        if (question.matches(".*[PpOo]\\d{6,}.*")) return true;
+        if (question.matches(".*[A-Za-z]{2,}\\d{3,}.*")) return true;
+
         return false;
     }
 

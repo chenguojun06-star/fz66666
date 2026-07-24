@@ -45,6 +45,7 @@ public class RiskSentinelPatrolJob extends AbstractPatrolJob {
                         .list();
 
                 int comboRiskCount = 0;
+                boolean patrolEnabled = isPatrolEnabledForTenant(tenantId);
                 for (ProductionOrder o : atRisk) {
                     int riskFactors = 0;
                     if (o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(LocalDateTime.now())) {
@@ -59,16 +60,21 @@ public class RiskSentinelPatrolJob extends AbstractPatrolJob {
                     }
                     if (riskFactors >= 2) {
                         comboRiskCount++;
-                        String issue = String.format("风险哨兵：订单[%s]存在组合风险(逾期%s+进度%d%%+物料%d%%)",
-                                o.getOrderNo(),
-                                o.getPlannedEndDate().isBefore(LocalDateTime.now()) ? "是" : "否",
-                                o.getProductionProgress() != null ? o.getProductionProgress() : 0,
-                                o.getMaterialArrivalRate() != null ? o.getMaterialArrivalRate() : 0);
-                        patrolOrchestrator.createAction("RISK_SENTINEL_JOB", issue, "COMBO_RISK",
-                                "HIGH", "order", o.getOrderNo(),
-                                "{\"action\":\"combo_risk_alert\"}",
-                                BigDecimal.valueOf(0.9), "NEED_APPROVAL");
+                        if (patrolEnabled) {
+                            String issue = String.format("风险哨兵：订单[%s]存在组合风险(逾期%s+进度%d%%+物料%d%%)",
+                                    o.getOrderNo(),
+                                    o.getPlannedEndDate().isBefore(LocalDateTime.now()) ? "是" : "否",
+                                    o.getProductionProgress() != null ? o.getProductionProgress() : 0,
+                                    o.getMaterialArrivalRate() != null ? o.getMaterialArrivalRate() : 0);
+                            patrolOrchestrator.createAction("RISK_SENTINEL_JOB", issue, "COMBO_RISK",
+                                    "HIGH", "order", o.getOrderNo(),
+                                    "{\"action\":\"combo_risk_alert\"}",
+                                    BigDecimal.valueOf(0.9), "NEED_APPROVAL");
+                        }
                     }
+                }
+                if (!patrolEnabled && comboRiskCount > 0) {
+                    log.debug("[RiskSentinel] 租户 {} 巡检自动执行开关未开启，跳过创建 {} 个工单", tenantId, comboRiskCount);
                 }
 
                 traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_anomaly_detection",
