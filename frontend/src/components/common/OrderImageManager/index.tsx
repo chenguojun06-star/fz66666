@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Spin, Empty, Image } from 'antd';
+import { App, Button, Empty, Image, Popconfirm, Spin } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
@@ -20,7 +20,7 @@ interface OrderImageManagerProps {
 }
 
 const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true, coverUrl, styleId, styleNo }) => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [images, setImages] = useState<OrderImage[]>([]);
   const [styleImages, setStyleImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,20 +119,14 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     }
   };
 
-  const handleDelete = (id: number) => {
-    modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这张图片吗？',
-      onOk: async () => {
-        try {
-          await orderImageApi.delete(id);
-          message.success('图片已删除');
-          fetchImages();
-        } catch {
-          message.error('删除失败');
-        }
-      },
-    });
+  const handleDelete = async (id: number) => {
+    try {
+      await orderImageApi.delete(id);
+      message.success('图片已删除');
+      fetchImages();
+    } catch {
+      message.error('删除失败');
+    }
   };
 
   const handleViewHistory = async () => {
@@ -255,17 +249,18 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                     }
                   }}
                 />
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  style={{
-                    minWidth: 22, padding: 0,
-                    background: 'rgba(255,255,255,0.85)', borderRadius: 4,
-                  }}
-                  onClick={() => handleDelete(currentOrderImg.id)}
-                />
+                <Popconfirm title="确定删除这张图片吗？" onConfirm={() => handleDelete(currentOrderImg.id)} okText="确定" cancelText="取消">
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    style={{
+                      minWidth: 22, padding: 0,
+                      background: 'rgba(255,255,255,0.85)', borderRadius: 4,
+                    }}
+                  />
+                </Popconfirm>
               </div>
             )}
 

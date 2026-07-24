@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Progress, Tag, Button, Empty, Spin, Tooltip } from 'antd';
+import { Popconfirm, Progress, Tag, Button, Empty, Spin, Tooltip } from 'antd';
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -159,14 +159,15 @@ const BackgroundTaskPanel: React.FC<BackgroundTaskPanelProps> = ({
                   {task.createTime?.slice(0, 19).replace('T', ' ')}
                 </span>
                 {(task.status === 'PENDING' || task.status === 'RUNNING') && (
-                  <Button
-                    type="link"
-                    size="small"
-                    danger
-                    onClick={() => handleCancel(task.taskId)}
-                  >
-                    取消
-                  </Button>
+                  <Popconfirm title="确定取消此任务吗？" onConfirm={() => handleCancel(task.taskId)} okText="确定" cancelText="取消">
+                    <Button
+                      type="link"
+                      size="small"
+                      danger
+                    >
+                      取消
+                    </Button>
+                  </Popconfirm>
                 )}
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Space, InputNumber, Collapse, Slider, Switch, Input, Select, Dropdown } from 'antd';
+import { Card, Button, Space, InputNumber, Collapse, Popconfirm, Slider, Switch, Input, Select, Dropdown } from 'antd';
 import { PrinterOutlined, SettingOutlined, SaveOutlined, BookOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
 import type { PrintType } from '../types';
 import type { HangSettings, BarSettings, WashSettings } from '../constants';
@@ -86,7 +86,9 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
                   <span>{tpl.templateName}{tpl.isDefault ? ' ★' : ''}</span>
                   <Space size={2}>
                     <Button type="link" size="small" icon={<StarOutlined />} onClick={e => { e.stopPropagation(); onSetDefaultTemplate(tpl.id); }} />
-                    <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={e => { e.stopPropagation(); onDeleteTemplate(tpl.id); }} />
+                    <Popconfirm title="确定删除此模板吗？" onConfirm={() => onDeleteTemplate(tpl.id)} okText="确定" cancelText="取消">
+                      <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={e => e.stopPropagation()} />
+                    </Popconfirm>
                   </Space>
                 </div>
               ),
@@ -207,7 +209,9 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
               </Space>
             </>)}
 
-            <Button size="small" type="link" danger style={{ marginTop: 6, padding: 0 }} onClick={resetSettings}>恢复默认</Button>
+            <Popconfirm title="确定恢复默认设置吗？" onConfirm={resetSettings} okText="确定" cancelText="取消">
+              <Button size="small" type="link" danger style={{ marginTop: 6, padding: 0 }}>恢复默认</Button>
+            </Popconfirm>
           </div>
         ),
       }]} />

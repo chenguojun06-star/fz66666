@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Input, InputNumber, Space, Tag } from 'antd';
+import { Button, Card, Input, InputNumber, Popconfirm, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { CuttingCreateTaskState } from '../hooks';
 import { useMatrixInput } from './useMatrixInput';
@@ -91,14 +91,15 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
               placeholder="必填"
               onChange={(value) => createTask.updateCreateOrderLine(index, 'quantity', typeof value === 'number' ? value : null)}
             />
-            <Button
+            <Popconfirm title="确定删除此行吗？" onConfirm={() => createTask.removeCreateOrderLine(index)} okText="确定" cancelText="取消">
+              <Button
 
-              danger
-              disabled={createTask.createOrderLines.length <= 1}
-              onClick={() => createTask.removeCreateOrderLine(index)}
-            >
-              删除
-            </Button>
+                danger
+                disabled={createTask.createOrderLines.length <= 1}
+              >
+                删除
+              </Button>
+            </Popconfirm>
           </Space>
         ))}
       </div>

@@ -22,7 +22,7 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
         display: 'flex',
         gap: isMobile ? 10 : 12,
         padding: isMobile ? 8 : 10,
-        background: 'var(--color-bg-gray)',
+        background: 'var(--color-bg-subtle)',
         borderRadius: 12,
         marginBottom: 10,
         maxWidth: '100%',

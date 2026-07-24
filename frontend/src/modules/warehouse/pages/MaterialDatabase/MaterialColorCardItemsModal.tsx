@@ -1,5 +1,5 @@
 import React from 'react';
-import { App, Button, Card, Col, Image, Input, InputNumber, Modal, Row, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Col, Image, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Tag } from 'antd';
 import { AppstoreAddOutlined, PlusOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { MaterialColorCardItem } from './types';
@@ -100,7 +100,9 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
                 </Space.Compact>
               </Col>
               <Col xs={24} sm={2}>
-                <Button type="link" danger size="small" onClick={() => removeCardItem(idx)}>删除</Button>
+                <Popconfirm title="确定删除吗？" onConfirm={() => removeCardItem(idx)} okText="确定" cancelText="取消">
+                  <Button type="link" danger size="small">删除</Button>
+                </Popconfirm>
               </Col>
             </Row>
           </Card>

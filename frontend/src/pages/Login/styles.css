@@ -287,7 +287,7 @@
   width: clamp(100px, 10vw, 168px);
   height: clamp(100px, 10vw, 168px);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(31, 117, 234, 0.1), rgba(31, 117, 234, 0.02) 60%, transparent 78%);
+  background: rgba(31, 117, 234, 0.06);
   filter: blur(6px);
   animation: haloBreath 7s ease-in-out infinite;
 }
@@ -392,7 +392,7 @@
   right: clamp(8px, 1vw, 20px);
   padding: clamp(2px, 0.3vw, 5px) clamp(6px, 0.6vw, 10px);
   border-radius: 999px;
-  background: linear-gradient(135deg, #3a89f6, #1f75ea);
+  background: var(--color-primary);
   color: var(--color-bg-base);
   font-size: clamp(8px, 0.7vw, 12px);
   font-weight: 800;
@@ -424,7 +424,7 @@
 .login-divider {
   flex: 0 0 1px;
   position: relative;
-  background: linear-gradient(180deg, transparent 5%, rgba(31, 117, 234, 0.12) 30%, rgba(31, 117, 234, 0.18) 50%, rgba(31, 117, 234, 0.12) 70%, transparent 95%);
+  background: rgba(31, 117, 234, 0.15);
 }
 
 .login-divider::before {
@@ -448,7 +448,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(28px, 4vh, 56px) clamp(36px, 5vw, 96px);
-  background: linear-gradient(180deg, rgba(250, 252, 255, 0.8), rgba(246, 248, 252, 0.4));
+  background: rgba(250, 252, 255, 0.6);
 }
 
 .right-pane-hanger {
@@ -738,7 +738,7 @@
     min-height: 100vh;
     align-items: center;
     padding: 24px;
-    background: linear-gradient(160deg, #eef2f8, #f4f7fb);
+    background: #f4f7fb;
   }
   .login-form-wrapper { max-width: 100%; }
   .login-form-card { background: transparent; }

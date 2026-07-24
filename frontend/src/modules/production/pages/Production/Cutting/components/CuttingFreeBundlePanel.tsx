@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AutoComplete, Button, Dropdown, InputNumber, Space, Tag, Typography } from 'antd';
+import { AutoComplete, Button, Dropdown, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -214,14 +214,15 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                       </Space>
                     </td>
                     <td style={{ padding: '6px 12px', textAlign: 'center' }}>
-                      <Button
-                        type="text"
-                        danger
-                       
-                        icon={<DeleteOutlined />}
-                        disabled={disabled}
-                        onClick={() => deleteRow(row.key)}
-                      />
+                      <Popconfirm title="确定删除此行吗？" onConfirm={() => deleteRow(row.key)} okText="确定" cancelText="取消">
+                        <Button
+                          type="text"
+                          danger
+
+                          icon={<DeleteOutlined />}
+                          disabled={disabled}
+                        />
+                      </Popconfirm>
                     </td>
                   </tr>
                 );

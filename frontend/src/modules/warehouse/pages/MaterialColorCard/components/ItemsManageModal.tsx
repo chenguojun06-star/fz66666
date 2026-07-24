@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Modal, Button, Space, Tag, Row, Col, Input, InputNumber, Card, Image,
+  Modal, Button, Space, Tag, Row, Col, Input, InputNumber, Card, Image, Popconfirm,
   message as antdMessage,
 } from 'antd';
 import { AppstoreAddOutlined, PlusOutlined } from '@ant-design/icons';
@@ -98,7 +98,9 @@ const ItemsManageModal: React.FC<Props> = ({
                 </Space.Compact>
               </Col>
               <Col xs={24} sm={1}>
-                <Button type="link" danger size="small" onClick={() => onRemoveItem(idx)}>删除</Button>
+                <Popconfirm title="确定删除吗？" onConfirm={() => onRemoveItem(idx)} okText="确定" cancelText="取消">
+                  <Button type="link" danger size="small">删除</Button>
+                </Popconfirm>
               </Col>
               <Col xs={24} sm={8}>
                 <Input placeholder="备注" value={item.remark || ''}
