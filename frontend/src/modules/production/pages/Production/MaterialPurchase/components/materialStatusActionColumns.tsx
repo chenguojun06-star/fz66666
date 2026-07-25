@@ -161,22 +161,26 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         const canConfirmArrival = ['received', 'partial', 'partial_arrival'].includes(status) && !frozen;
         return (
           <RowActions
+            maxInline={3}
             actions={[
               {
                 key: 'view',
-                label: isPending ? '采购' : '查看',
+                label: isPending ? '去采购' : '查看',
+                title: isPending ? '打开采购详情，登记领取与到货' : '查看采购详情',
                 onClick: () => onView(record),
                 primary: true,
               },
               {
                 key: 'edit',
                 label: '编辑',
+                title: '编辑采购信息',
                 onClick: () => onEdit(record),
                 disabled: frozen || Number(record?.returnConfirmed || 0) === 1,
               },
               ...(canConfirmArrival && Number(record?.returnConfirmed || 0) !== 1 ? [{
                 key: 'confirm-arrival',
-                label: '到货入库',
+                label: '登记到货',
+                title: '登记本次到货数量',
                 onClick: () => {
                   const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
                   arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
@@ -185,27 +189,32 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
               }] : []),
               ...(onConfirmReturn && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) && Number(record?.returnConfirmed || 0) !== 1 ? [{
                 key: 'confirm-return',
-                label: Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认',
+                label: '回料确认',
+                title: '确认物料已回料到仓库',
                 onClick: () => onConfirmReturn(record),
               }] : []),
               ...(onReturnReset && (Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && isSupervisorOrAbove ? [{
                 key: 'return-reset',
                 label: '退回',
+                title: '退回已确认的回料',
                 onClick: () => onReturnReset(record),
               }] : []),
               ...(onQualityIssue && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) && Number(record?.returnConfirmed || 0) !== 1 ? [{
                 key: 'quality-issue',
                 label: '品质异常',
+                title: '登记物料品质问题',
                 onClick: () => onQualityIssue(record),
               }] : []),
               {
                 key: 'remark',
                 label: '备注',
+                title: '查看/编辑备注',
                 onClick: () => onRemark(record),
               },
               ...(canCancelReceive ? [{
                 key: 'cancel-receive',
-                label: '取消领取',
+                label: '撤回采购',
+                title: '撤回已领取的采购，恢复为待处理',
                 danger: true as const,
                 onClick: () => setCancelTarget(record),
               }] : []),

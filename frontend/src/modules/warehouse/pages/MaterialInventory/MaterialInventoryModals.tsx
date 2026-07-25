@@ -50,6 +50,10 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
     batchDetails,
     setBatchDetails,
     handleBatchQtyChange,
+    selectedBatchNos,
+    handleBatchSelect,
+    handleAutoAllocateByFifo,
+    handleClearBatches,
     factoryOptions,
     outboundOrderOptions,
     handleOutboundOrderInput,
@@ -119,6 +123,10 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
         batchDetails={batchDetails}
         setBatchDetails={setBatchDetails}
         handleBatchQtyChange={handleBatchQtyChange}
+        selectedBatchNos={selectedBatchNos}
+        handleBatchSelect={handleBatchSelect}
+        handleAutoAllocateByFifo={handleAutoAllocateByFifo}
+        handleClearBatches={handleClearBatches}
         factoryOptions={factoryOptions}
         outboundOrderOptions={outboundOrderOptions}
         handleOutboundOrderInput={handleOutboundOrderInput}

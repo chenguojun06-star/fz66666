@@ -74,11 +74,13 @@ export function useOutboundContext() {
   const handleOutboundOrderSelect = useCallback((orderNo: string) => {
     const option = outboundOrderOptions.find((o) => o.orderNo === orderNo || o.value === orderNo);
     if (!option) return;
+    const factoryType = option.factoryType || outboundForm.getFieldValue('factoryType');
     outboundForm.setFieldsValue({
       orderNo: option.orderNo, styleNo: option.styleNo,
       factoryId: option.factoryId || outboundForm.getFieldValue('factoryId'),
       factoryName: option.factoryName || outboundForm.getFieldValue('factoryName'),
-      factoryType: option.factoryType || outboundForm.getFieldValue('factoryType'),
+      factoryType,
+      pickupType: factoryType || outboundForm.getFieldValue('pickupType') || 'INTERNAL',
     });
   }, [outboundForm, outboundOrderOptions]);
 

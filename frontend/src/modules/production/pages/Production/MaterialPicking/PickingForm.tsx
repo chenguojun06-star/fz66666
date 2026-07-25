@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ResizableModal from '@/components/common/ResizableModal';
-import { Form, Modal, Select, Input, InputNumber } from 'antd';
+import { Form, Modal, Select, Input, InputNumber, Button, Space, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
@@ -66,22 +66,75 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
          }
       }
 
+      const orderQuantity = Number(order.orderQuantity || 0);
       const items = boms.map((bom: any) => {
           const matchedStock = stocks.filter((s: any) => s.materialId === bom.materialId);
+          const usageAmount = Number(bom.usageAmount || bom.devUsageAmount || 0);
+          const requiredQuantity = orderQuantity > 0 && usageAmount > 0
+            ? Math.ceil(orderQuantity * usageAmount)
+            : 0;
           return {
               ...bom,
               stocks: matchedStock,
               key: bom.id,
+              requiredQuantity,
+              totalAvailableQty: matchedStock.reduce((sum: number, s: any) => sum + Math.max(0, Number(s.quantity || 0) - Number(s.lockedQty || 0)), 0),
           };
       });
 
       setMaterials(items);
+      // 自动预选：为每条 BOM 选择可用库存最多的批次，并默认填充本次领用量
+      const initialSelected = items.map((item: any) => {
+          if (!item.stocks || item.stocks.length === 0) return null;
+          const sorted = [...item.stocks].sort((a: any, b: any) => {
+              const avA = Math.max(0, Number(a.quantity || 0) - Number(a.lockedQty || 0));
+              const avB = Math.max(0, Number(b.quantity || 0) - Number(b.lockedQty || 0));
+              return avB - avA;
+          });
+          const stock = sorted[0];
+          const availQty = Math.max(0, Number(stock.quantity || 0) - Number(stock.lockedQty || 0));
+          const pickQuantity = item.requiredQuantity > 0
+            ? Math.min(item.requiredQuantity, availQty)
+            : 0;
+          return {
+              ...item,
+              stockId: stock.id,
+              stock,
+              pickQuantity,
+          };
+      }).filter(Boolean);
+      setSelectedMaterials(initialSelected);
 
     } catch (e) {
       message.error('加载物料数据失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAutoSelectAll = () => {
+      const next = materials.map((item: any) => {
+          if (!item.stocks || item.stocks.length === 0) return null;
+          const existing = selectedMaterials.find((m: any) => m.key === item.key);
+          if (existing && existing.stockId) return existing;
+          const sorted = [...item.stocks].sort((a: any, b: any) => {
+              const avA = Math.max(0, Number(a.quantity || 0) - Number(a.lockedQty || 0));
+              const avB = Math.max(0, Number(b.quantity || 0) - Number(b.lockedQty || 0));
+              return avB - avA;
+          });
+          const stock = sorted[0];
+          const availQty = Math.max(0, Number(stock.quantity || 0) - Number(stock.lockedQty || 0));
+          const pickQuantity = item.requiredQuantity > 0
+            ? Math.min(item.requiredQuantity, availQty)
+            : 0;
+          return { ...item, stockId: stock.id, stock, pickQuantity };
+      }).filter(Boolean);
+      setSelectedMaterials(next);
+      message.success('已自动匹配库存批次');
+  };
+
+  const handleClearSelection = () => {
+      setSelectedMaterials([]);
   };
 
   const handleFinish = (values: Record<string, unknown>) => {
@@ -137,11 +190,14 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
   };
 
   const columns = [
-      { title: '物料编码', dataIndex: 'materialCode' },
-      { title: '物料名称', dataIndex: 'materialName' },
-      { title: '颜色', dataIndex: 'color' },
-      { title: '规格', dataIndex: 'specification' },
-      { title: '库存选择', width: 300, render: (r: any) => {
+      { title: '物料编码', dataIndex: 'materialCode', width: 120 },
+      { title: '物料名称', dataIndex: 'materialName', width: 140, ellipsis: true },
+      { title: '颜色', dataIndex: 'color', width: 80 },
+      { title: '规格', dataIndex: 'specification', width: 100, ellipsis: true },
+      { title: 'BOM用量', dataIndex: 'usageAmount', width: 90, align: 'center' as const, render: (v: number, r: any) => `${v || '-'} ${r.unit || ''}` },
+      { title: '订单需求', dataIndex: 'requiredQuantity', width: 100, align: 'center' as const, render: (v: number, r: any) => <Typography.Text strong>{v || 0} {r.unit || ''}</Typography.Text> },
+      { title: '库存余量', dataIndex: 'totalAvailableQty', width: 100, align: 'center' as const, render: (v: number, r: any) => <Typography.Text type={v < (r.requiredQuantity || 0) ? 'danger' : 'success'}>{v || 0} {r.unit || ''}</Typography.Text> },
+      { title: '库存选择', width: 260, render: (r: any) => {
           if (!r.stocks || r.stocks.length === 0) return <span style={{color: 'var(--color-danger)'}}>无库存</span>;
 
           const selected = selectedMaterials.find(m => m.key === r.key);
@@ -218,6 +274,14 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
         <Form.Item name="pickerName" label="领料人"><Input readOnly /></Form.Item>
         <Form.Item name="remark" label="备注"><Input.TextArea /></Form.Item>
 
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Typography.Text strong>领料明细</Typography.Text>
+          <Space>
+            <Button size="small" onClick={handleClearSelection}>清空选择</Button>
+            <Button size="small" type="primary" onClick={handleAutoSelectAll}>一键匹配库存</Button>
+          </Space>
+        </div>
+
         <ResizableTable
             storageKey="picking-form"
             emptyDescription="暂无领料明细"
@@ -225,6 +289,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
             columns={columns}
             rowKey="key"
             pagination={false}
+            scroll={{ x: 'max-content' }}
         />
       </Form>
     </ResizableModal>

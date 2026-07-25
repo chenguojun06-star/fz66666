@@ -31,6 +31,7 @@ export function useOutboundActions({
 }: OutboundActionsDeps) {
   const outboundModal = useModal<MaterialInventory>();
   const [batchDetails, setBatchDetails] = useState<MaterialBatchDetail[]>([]);
+  const [selectedBatchNos, setSelectedBatchNos] = useState<string[]>([]);
   const [outboundSubmitting, setOutboundSubmitting] = useState(false);
   const outboundSubmittingRef = useRef(false);
 
@@ -65,6 +66,7 @@ export function useOutboundActions({
       orderNo: '', styleNo: '', receiverId: undefined, receiverName: '',
     });
     outboundModal.open(record);
+    setSelectedBatchNos([]);
     if (receiverOptions.length === 0) { void loadReceivers(); }
     if (factoryOptions.length === 0) { void loadFactories(); }
     setOutboundOrderOptions([]);
@@ -84,10 +86,69 @@ export function useOutboundActions({
     } catch { message.error('加载批次明细失败'); setBatchDetails([]); }
   };
 
+  const handleBatchSelect = (keys: string[]) => {
+    setSelectedBatchNos(keys);
+    setBatchDetails(prev => prev.map((item) => {
+      const selected = keys.includes(item.batchNo);
+      if (selected && (item.outboundQty || 0) === 0) {
+        return { ...item, outboundQty: item.availableQty };
+      }
+      if (!selected) {
+        return { ...item, outboundQty: 0 };
+      }
+      return item;
+    }));
+  };
+
   const handleBatchQtyChange = (index: number, value: number | null) => {
     const newDetails = [...batchDetails];
-    newDetails[index].outboundQty = value || 0;
+    const qty = value || 0;
+    newDetails[index].outboundQty = qty;
     setBatchDetails(newDetails);
+    const batchNo = newDetails[index].batchNo;
+    if (qty > 0 && !selectedBatchNos.includes(batchNo)) {
+      setSelectedBatchNos(prev => [...prev, batchNo]);
+    } else if (qty === 0 && selectedBatchNos.includes(batchNo)) {
+      setSelectedBatchNos(prev => prev.filter(k => k !== batchNo));
+    }
+  };
+
+  const handleAutoAllocateByFifo = (targetQty: number) => {
+    if (!targetQty || targetQty <= 0) {
+      message.warning('请输入目标总量');
+      return;
+    }
+    const totalAvailable = batchDetails.reduce((sum, item) => sum + item.availableQty, 0);
+    if (targetQty > totalAvailable) {
+      message.warning(`目标总量超过可用库存（${totalAvailable}），已按最大可用量分配`);
+    }
+    let remaining = Math.min(targetQty, totalAvailable);
+    const sorted = [...batchDetails].sort((a, b) => {
+      const da = a.inboundDate ? dayjs(a.inboundDate).valueOf() : 0;
+      const db = b.inboundDate ? dayjs(b.inboundDate).valueOf() : 0;
+      return da - db;
+    });
+    const next = batchDetails.map(item => ({ ...item, outboundQty: 0 }));
+    const selectedKeys: string[] = [];
+    for (const s of sorted) {
+      if (remaining <= 0) break;
+      const idx = next.findIndex(i => i.batchNo === s.batchNo);
+      if (idx === -1) continue;
+      const qty = Math.min(s.availableQty, remaining);
+      next[idx].outboundQty = qty;
+      remaining -= qty;
+      if (qty > 0) selectedKeys.push(s.batchNo);
+    }
+    setBatchDetails(next);
+    setSelectedBatchNos(selectedKeys);
+    if (targetQty <= totalAvailable) {
+      message.success('已按先进先出规则自动分配出库数量');
+    }
+  };
+
+  const handleClearBatches = () => {
+    setBatchDetails(prev => prev.map(item => ({ ...item, outboundQty: 0 })));
+    setSelectedBatchNos([]);
   };
 
   const handleOutboundConfirm = async () => {
@@ -114,7 +175,7 @@ export function useOutboundActions({
         const outboundNo = res?.data?.outboundNo || `MOB-${Date.now()}`;
         message.success(`成功出库 ${totalQty} ${outboundModal.data?.unit || '件'}`);
         if (outboundModal.data) { openPrintModal(buildManualOutboundPrintPayload(outboundModal.data, values, outboundNo)); }
-        outboundModal.close(); setBatchDetails([]); outboundForm.resetFields(); void fetchData();
+        outboundModal.close(); setBatchDetails([]); setSelectedBatchNos([]); outboundForm.resetFields(); void fetchData();
       } else { message.error((res as any)?.message || (res as any)?.data?.message || '出库失败'); }
     } catch (error: unknown) {
       const errMsg = typeof error === 'object' && error !== null && 'response' in error
@@ -146,7 +207,9 @@ export function useOutboundActions({
 
   return {
     outboundModal, batchDetails, setBatchDetails,
+    selectedBatchNos, setSelectedBatchNos,
     outboundSubmitting,
-    handleOutbound, handleBatchQtyChange, handleOutboundConfirm, handlePrintOutbound,
+    handleOutbound, handleBatchQtyChange, handleBatchSelect,
+    handleAutoAllocateByFifo, handleClearBatches, handleOutboundConfirm, handlePrintOutbound,
   };
 }

@@ -17,6 +17,10 @@ interface OutboundModalProps {
   batchDetails: MaterialBatchDetail[];
   setBatchDetails: React.Dispatch<React.SetStateAction<MaterialBatchDetail[]>>;
   handleBatchQtyChange: (_index: number, _val: number | null) => void;
+  selectedBatchNos: string[];
+  handleBatchSelect: (keys: string[]) => void;
+  handleAutoAllocateByFifo: (targetQty: number) => void;
+  handleClearBatches: () => void;
   factoryOptions: any[];
   outboundOrderOptions: any[];
   handleOutboundOrderInput: (_value: string) => void;
@@ -36,6 +40,10 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
   batchDetails,
   setBatchDetails,
   handleBatchQtyChange,
+  selectedBatchNos,
+  handleBatchSelect,
+  handleAutoAllocateByFifo,
+  handleClearBatches,
   factoryOptions,
   outboundOrderOptions,
   handleOutboundOrderInput,
@@ -108,6 +116,10 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
             batchDetails={batchDetails}
             handleBatchQtyChange={handleBatchQtyChange}
             unit={outboundModal.data.unit}
+            selectedBatchNos={selectedBatchNos}
+            onSelectChange={handleBatchSelect}
+            onAutoAllocate={handleAutoAllocateByFifo}
+            onClear={handleClearBatches}
           />
 
           <div style={{
@@ -117,7 +129,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
             fontSize: "var(--font-size-sm)",
             color: 'var(--color-primary)'
           }}>
-             请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
+             请先勾选要出库的批次，再输入出库数量；或直接输入目标总量后点击"按FIFO分配"自动按入库日期从早到晚分配。
           </div>
         </Space>
       )}

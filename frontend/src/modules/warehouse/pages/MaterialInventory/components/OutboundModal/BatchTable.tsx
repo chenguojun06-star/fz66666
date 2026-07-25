@@ -1,5 +1,5 @@
-import React from 'react';
-import { Tag, InputNumber } from 'antd';
+import React, { useState } from 'react';
+import { Tag, InputNumber, Button, Space, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { MaterialBatchDetail } from '../../hooks/useMaterialInventoryData';
 
@@ -7,22 +7,80 @@ interface BatchTableProps {
   batchDetails: MaterialBatchDetail[];
   handleBatchQtyChange: (_index: number, _val: number | null) => void;
   unit: string;
+  selectedBatchNos: string[];
+  onSelectChange: (keys: string[]) => void;
+  onAutoAllocate: (targetQty: number) => void;
+  onClear: () => void;
 }
 
-const BatchTable: React.FC<BatchTableProps> = ({ batchDetails, handleBatchQtyChange, unit }) => {
+const BatchTable: React.FC<BatchTableProps> = ({
+  batchDetails,
+  handleBatchQtyChange,
+  unit,
+  selectedBatchNos,
+  onSelectChange,
+  onAutoAllocate,
+  onClear,
+}) => {
+  const [targetQty, setTargetQty] = useState<number | null>(null);
+
+  const selectedCount = selectedBatchNos.length;
+  const totalOutbound = batchDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
+  const totalAvailable = batchDetails.reduce((sum, item) => sum + item.availableQty, 0);
+
   return (
     <div>
       <div style={{
-        fontSize: "var(--font-size-base)",
-        fontWeight: 600,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 12,
-        color: 'var(--neutral-text)'
+        flexWrap: 'wrap',
+        gap: 8,
       }}>
-         请选择需要出库的批次，并输入数量：
+        <Typography.Text strong>批次出库明细</Typography.Text>
+        <Space size="small" wrap>
+          <InputNumber
+            min={0}
+            max={totalAvailable || undefined}
+            placeholder="目标总量"
+            value={targetQty}
+            onChange={(v) => setTargetQty(v as number | null)}
+            style={{ width: 130 }}
+            addonAfter={unit}
+            size="small"
+          />
+          <Button
+            size="small"
+            type="primary"
+            onClick={() => onAutoAllocate(targetQty || 0)}
+            disabled={!targetQty || targetQty <= 0}
+          >
+            按FIFO分配
+          </Button>
+          <Button size="small" onClick={onClear} disabled={selectedCount === 0}>
+            清空选择
+          </Button>
+        </Space>
       </div>
+
+      <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+        已选 <Typography.Text strong>{selectedCount}</Typography.Text> 项，
+        本次出库合计 <Typography.Text strong style={{ color: 'var(--color-primary)' }}>{totalOutbound} {unit}</Typography.Text>，
+        可用库存合计 <Typography.Text type="success">{totalAvailable} {unit}</Typography.Text>
+      </div>
+
       <ResizableTable
         storageKey="material-inventory-batch-out"
         emptyDescription="暂无出库批次数据"
+        rowSelection={{
+          type: 'checkbox',
+          selectedRowKeys: selectedBatchNos,
+          onChange: (keys) => onSelectChange(keys as string[]),
+          getCheckboxProps: (record: MaterialBatchDetail) => ({
+            disabled: record.availableQty <= 0,
+          }),
+        }}
         columns={[
           {
             title: '批次号',
@@ -79,47 +137,45 @@ const BatchTable: React.FC<BatchTableProps> = ({ batchDetails, handleBatchQtyCha
             title: '出库数量',
             dataIndex: 'outboundQty',
             key: 'outboundQty',
-            width: 120,
+            width: 140,
             align: 'center' as const,
-            render: (value: number, _record: MaterialBatchDetail, index: number) => (
-              <InputNumber
-                min={0}
-                max={_record.availableQty}
-                value={value}
-                onChange={(val) => handleBatchQtyChange(index, val)}
-                style={{ width: '100%' }}
-                placeholder="0"
-              />
-            ),
+            render: (value: number, _record: MaterialBatchDetail, index: number) => {
+              const selected = selectedBatchNos.includes(_record.batchNo);
+              return (
+                <InputNumber
+                  min={0}
+                  max={_record.availableQty}
+                  value={value}
+                  onChange={(val) => handleBatchQtyChange(index, val)}
+                  style={{ width: '100%' }}
+                  placeholder={selected ? '0' : '先勾选批次'}
+                  disabled={!selected}
+                />
+              );
+            },
           },
         ]}
         dataSource={batchDetails}
         rowKey="batchNo"
         pagination={false}
-       
-        bordered
-        summary={() => {
-          const totalOutbound = batchDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
-          const totalAvailable = batchDetails.reduce((sum, item) => sum + item.availableQty, 0);
-          return (
-            <ResizableTable.Summary fixed>
-              <ResizableTable.Summary.Row>
-                <ResizableTable.Summary.Cell key="label" index={0} colSpan={4} align="right">
-                  <strong>合计</strong>
-                </ResizableTable.Summary.Cell>
-                <ResizableTable.Summary.Cell key="available" index={1} align="center">
-                  <strong style={{ color: 'var(--color-success)' }}>{totalAvailable}</strong>
-                </ResizableTable.Summary.Cell>
-                <ResizableTable.Summary.Cell key="locked" index={2} />
-                <ResizableTable.Summary.Cell key="outbound" index={3} align="center">
-                  <strong style={{ color: 'var(--color-primary)', fontSize: "var(--font-size-md)" }}>
-                    {totalOutbound} {unit}
-                  </strong>
-                </ResizableTable.Summary.Cell>
-              </ResizableTable.Summary.Row>
-            </ResizableTable.Summary>
-          );
-        }}
+        summary={() => (
+          <ResizableTable.Summary fixed>
+            <ResizableTable.Summary.Row>
+              <ResizableTable.Summary.Cell key="label" index={0} colSpan={4} align="right">
+                <strong>合计</strong>
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell key="available" index={1} align="center">
+                <strong style={{ color: 'var(--color-success)' }}>{totalAvailable}</strong>
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell key="locked" index={2} />
+              <ResizableTable.Summary.Cell key="outbound" index={3} align="center">
+                <strong style={{ color: 'var(--color-primary)', fontSize: "var(--font-size-md)" }}>
+                  {totalOutbound} {unit}
+                </strong>
+              </ResizableTable.Summary.Cell>
+            </ResizableTable.Summary.Row>
+          </ResizableTable.Summary>
+        )}
       />
     </div>
   );
