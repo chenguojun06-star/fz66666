@@ -247,6 +247,7 @@ export default function StyleDevPage() {
                 <>
                   <button className="action-btn success" onClick={() => handleReview(selectedStyle.id, 'PASS')}>审核通过</button>
                   <button className="action-btn warning" onClick={() => handleReview(selectedStyle.id, 'REWORK')}>需返修</button>
+                  <button className="action-btn danger" onClick={() => handleReview(selectedStyle.id, 'REJECT')}>审核不通过</button>
                 </>
               )}
               {sampleStockMap[selectedStyle.styleNo] && (

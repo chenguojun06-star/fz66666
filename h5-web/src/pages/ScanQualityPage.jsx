@@ -24,6 +24,8 @@ export default function ScanQualityPage() {
   const [defectCategoryIndex, setDefectCategoryIndex] = useState(-1);
   const [remark, setRemark] = useState('');
   const [images, setImages] = useState([]);
+  // 菲号锁定（与 PC 端 QcRecordForm.lockBundle 对齐）：质检不合格时可选锁定菲号阻止下游扫码
+  const [lockBundle, setLockBundle] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiSuggestionList, setAiSuggestionList] = useState([]);
   const [historicalDefectRate, setHistoricalDefectRate] = useState('');
@@ -143,6 +145,8 @@ export default function ScanQualityPage() {
       if (defectCategoryIndex >= 0) payload.defectCategory = CATEGORY_VALUE_MAP[defectCategoryIndex];
       if (handleMethodIndex >= 0) payload.defectRemark = HANDLE_METHODS[handleMethodIndex];
       if (images.length > 0) payload.unqualifiedImageUrls = JSON.stringify(images);
+      // 与 PC 端 useProcessKanbanData 一致：不合格且勾选锁定时，将 lockBundle 传给后端
+      if (lockBundle) payload.lockBundle = true;
     }
     if (remark) payload.remark = remark;
 
@@ -150,7 +154,16 @@ export default function ScanQualityPage() {
       const res = await api.production.executeScan(payload);
       const hints = res?.bundleStatusHints || [];
       const statusText = res?.bundleStatusText || '';
-      toast.success(result === 'qualified' ? '质检合格，已记录' : '已记录不良品');
+      // 兜底：若 executeScan 未处理 lockBundle 且有 trackingId，单独调用 lock-bundle API
+      // 与 PC 端 handleLock 一致：POST /api/production/process-tracking/lock-bundle/{trackingId}
+      if (result === 'unqualified' && lockBundle) {
+        const trackingId = rawDetail?.trackingId || rawDetail?.id || rawDetail?.processTrackingId || '';
+        if (trackingId) {
+          try { await api.production.lockBundle(String(trackingId)); }
+          catch (lockErr) { /* 锁定失败不阻塞主流程，仅提示 */ console.warn('[ScanQuality] 锁定菲号失败:', lockErr?.message || lockErr); }
+        }
+      }
+      toast.success(result === 'qualified' ? '质检合格，已记录' : (lockBundle ? '已记录不良品，并锁定菲号' : '已记录不良品'));
       if (hints.length > 0) {
         setTimeout(() => { toast.info(statusText || hints.join(' → ')); }, 800);
       }
@@ -261,6 +274,26 @@ export default function ScanQualityPage() {
                 </button>
               )}
             </div>
+          </div>
+          {/* 菲号锁定（与 PC 端 QcRecordForm.lockBundle 对齐）：勾选后提交时一并调用 lock-bundle API */}
+          <div className="field-block" style={{ marginBottom: 0 }}>
+            <label
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                padding: '8px 12px', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)',
+                background: lockBundle ? 'rgba(var(--color-danger-rgb, 220, 38, 38), 0.06)' : 'transparent',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={lockBundle}
+                onChange={e => setLockBundle(e.target.checked)}
+                style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--color-danger)' }}
+              />
+              <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                锁定菲号，阻止下游扫码
+              </span>
+            </label>
           </div>
         </div>
       )}

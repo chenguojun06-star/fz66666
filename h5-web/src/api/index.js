@@ -133,6 +133,10 @@ const production = {
   transferCreate: (payload) => http.post('/api/production/order/transfer/create', payload),
   transferCreateToFactory: (payload) => http.post('/api/production/order/transfer/create-to-factory', payload),
   getProcessStatus: (orderId) => http.get(`/api/production/order/process-status/${encodeURIComponent(orderId)}`),
+  // 菲号锁定/解锁（与 PC 端 useProcessKanbanData.handleLock/handleUnlock 对齐）
+  // 后端：POST /api/production/process-tracking/lock-bundle/{trackingId}
+  lockBundle: (trackingId) => http.post(`/api/production/process-tracking/lock-bundle/${encodeURIComponent(trackingId)}`),
+  unlockBundle: (trackingId) => http.post(`/api/production/process-tracking/unlock-bundle/${encodeURIComponent(trackingId)}`),
   getOrderTracking: (orderId) => http.get(`/api/production/process-tracking/order/${encodeURIComponent(orderId)}`),
   getNodeOperations: (orderId) => http.get(`/api/production/order/node-operations/${encodeURIComponent(orderId)}`),
   saveNodeOperations: (payload) => http.post('/api/production/order/node-operations', payload),
