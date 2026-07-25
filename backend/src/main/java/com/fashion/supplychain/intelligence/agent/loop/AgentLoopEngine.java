@@ -98,6 +98,11 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<SemanticCacheService> semanticCacheServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<SkillCrystallizationService> skillCrystallizationServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ModelSelectionRouter> modelSelectionRouterProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SharedAgentMemoryService> sharedAgentMemoryProvider;
+
+    /** P0-3: 工具结果共享记忆开关，默认 true */
+    @Value("${xiaoyun.agent.shared-memory.enabled:true}")
+    private boolean sharedMemoryEnabled;
 
     // P0-4: Langfuse 全链路 span 追踪（required=false 兼容 Langfuse 未配置场景）
     @Autowired(required = false)
@@ -464,6 +469,9 @@ public class AgentLoopEngine {
         ctx.addExecRecords(execRecords);
         notifyToolResults(ctx, cb, execRecords);
 
+        // P0-3: 工具执行结果写回共享记忆（供同会话内 Sub-Agent 复用，避免重复查询）
+        writeToolResultsToSharedMemory(ctx, execRecords);
+
         recordPrmMetrics(ctx.getCommandId(), iter, execRecords);
         saveCheckpoint(ctx, "tool_execution",
                 execRecords.isEmpty() ? "none" : execRecords.get(0).toolName,
@@ -497,6 +505,45 @@ public class AgentLoopEngine {
             cb.onToolResult(rec.toolName,
                     !rec.rawResult.startsWith("{\"error\""),
                     AiAgentEvidenceHelper.truncateOneLine(rec.evidence, 200));
+        }
+    }
+
+    /**
+     * P0-3: 工具执行结果写回共享记忆
+     *
+     * <p>将每个工具的结果写入 t_shared_agent_memory，key = "tool_result_<toolName>"，
+     * 供同会话内 Sub-Agent 直接复用，避免扫码/质检/工资 Sub-Agent 重复查询相同数据。
+     *
+     * <p>设计要点：
+     * <ul>
+     *   <li>只写入成功结果（rawResult 不以 {"error" 开头）</li>
+     *   <li>factValue 截断到 1000 字符（共享记忆是会话级临时数据）</li>
+     *   <li>confidence = 0.90（工具直接输出，比 LLM 推理可信度高）</li>
+     *   <li>失败不影响主流程，异常吞掉仅 log.warn</li>
+     * </ul>
+     */
+    private void writeToolResultsToSharedMemory(AgentLoopContext ctx,
+                                                 List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {
+        if (!sharedMemoryEnabled) return;
+        if (ctx.getTenantId() == null || ctx.getCommandId() == null) return;
+        if (execRecords == null || execRecords.isEmpty()) return;
+        com.fashion.supplychain.intelligence.service.SharedAgentMemoryService service =
+                sharedAgentMemoryProvider.getIfAvailable();
+        if (service == null) return;
+        for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
+            try {
+                if (rec.rawResult == null || rec.rawResult.isBlank()) continue;
+                if (rec.rawResult.startsWith("{\"error")) continue;
+                String factKey = "tool_result_" + rec.toolName;
+                String factValue = rec.rawResult.length() <= 1000
+                        ? rec.rawResult
+                        : rec.rawResult.substring(0, 1000) + "...";
+                service.writeFact(ctx.getTenantId(), ctx.getCommandId(),
+                        "main_agent", factKey, factValue, new java.math.BigDecimal("0.90"));
+            } catch (Exception e) {
+                log.warn("[AgentLoop] 工具结果写入共享记忆失败(不影响主流程): tool={}, err={}",
+                        rec.toolName, e.getMessage());
+            }
         }
     }
 
