@@ -142,6 +142,19 @@
       </view>
     </view>
 
+    <!-- ══ ③-bis 订单生命周期操作（仅主管以上可见，与后端 ProductionOrderOperationController 对齐） ══ -->
+    <view class="lifecycle-bar" wx:if="{{isSupervisor && isEditable}}">
+      <view class="lifecycle-btn lifecycle-btn--complete" bindtap="onActionComplete">
+        <text class="lifecycle-text">完成生产</text>
+      </view>
+      <view class="lifecycle-btn lifecycle-btn--close" bindtap="onActionClose">
+        <text class="lifecycle-text">关闭订单</text>
+      </view>
+      <view class="lifecycle-btn lifecycle-btn--scrap" bindtap="onActionScrap">
+        <text class="lifecycle-text">报废订单</text>
+      </view>
+    </view>
+
     <!-- ══ ④ 工序进度时间线 ══ -->
     <view class="section-card" wx:if="{{stages.length > 0}}">
       <view class="section-hd">

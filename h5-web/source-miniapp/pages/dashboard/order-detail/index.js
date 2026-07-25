@@ -20,6 +20,8 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getUserInfo } = require('../../../utils/storage');
 const { eventBus, Events } = require('../../../utils/eventBus');
+// 订单生命周期操作（scrap/complete/close）仅主管以上可见，与后端 ProductionOrderOperationController @PreAuthorize 一致
+const permission = require('../../../utils/permission');
 
 /* ========== 业务类型 / 物料类型 / 计价方式 中文化 ========== */
 var BIZ_TYPE_LABELS = { FOB: 'FOB 离岸价', ODM: 'ODM 原厂设计', OEM: 'OEM 代工生产', CMT: 'CMT 来料加工' };
@@ -153,6 +155,8 @@ Page({
     // 订单基本信息
     order: null,
     isEditable: false,
+    // 主管以上才显示订单生命周期操作按钮（报废/完成/关闭），与后端 isSupervisorOrAbove 校验对齐
+    isSupervisor: false,
     statusInfo: { text: '', cls: '' },
     deliveryDateStr: '',
     remainDaysText: '',
@@ -512,6 +516,8 @@ Page({
       that.setData({
         order: order,
         isEditable: isEditable,
+        // 主管以上才显示订单生命周期操作按钮（报废/完成/关闭）
+        isSupervisor: permission.isAdminOrSupervisor(),
         statusInfo: statusInfo,
         deliveryDateStr: deliveryDateStr,
         remainDaysText: remainDaysText,
@@ -693,6 +699,105 @@ Page({
     safeNavigate({
       url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo)
     }).catch(function () {});
+  },
+
+  /* ======== 订单生命周期操作（仅主管以上可见，与后端 ProductionOrderOperationController 对齐） ======== */
+  /**
+   * 报废订单：POST /api/production/order/scrap  body: { id, remark }
+   */
+  onActionScrap: function () {
+    const that = this;
+    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!permission.isAdminOrSupervisor()) { toast.error('仅主管以上可报废订单'); return; }
+    const order = this.data.order;
+    if (!order || !order.id) { toast.error('订单数据缺失'); return; }
+    wx.showModal({
+      title: '报废订单',
+      content: '确认报废订单 ' + (order.orderNo || '') + '？此操作不可恢复，请输入报废原因',
+      editable: true,
+      placeholderText: '请输入报废原因（必填）',
+      confirmText: '确认报废',
+      confirmColor: '#e64340',
+      success: function (res) {
+        if (!res.confirm) return;
+        const remark = String(res.content || '').trim();
+        if (!remark) { toast.error('请输入报废原因'); return; }
+        wx.showLoading({ title: '报废中...', mask: true });
+        production.scrapOrder({ id: order.id, remark: remark }).then(function () {
+          wx.hideLoading();
+          toast.success('报废成功');
+          that._loadFlow();
+        }).catch(function (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '报废失败');
+        });
+      },
+    });
+  },
+
+  /**
+   * 完成生产：POST /api/production/order/complete  body: { id, tolerancePercent? }
+   */
+  onActionComplete: function () {
+    const that = this;
+    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!permission.isAdminOrSupervisor()) { toast.error('仅主管以上可完成生产'); return; }
+    const order = this.data.order;
+    if (!order || !order.id) { toast.error('订单数据缺失'); return; }
+    wx.showModal({
+      title: '完成生产',
+      content: '确认完成订单 ' + (order.orderNo || '') + ' 的生产？将触发后续入库流程',
+      confirmText: '确认完成',
+      success: function (res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中...', mask: true });
+        production.completeOrder({ id: order.id }).then(function () {
+          wx.hideLoading();
+          toast.success('已完成生产');
+          that._loadFlow();
+        }).catch(function (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '完成失败');
+        });
+      },
+    });
+  },
+
+  /**
+   * 关闭订单：POST /api/production/order/close  body: { id, sourceModule, remark?, specialClose? }
+   * sourceModule 固定为 'miniprogram_order_detail'，便于后端审计
+   */
+  onActionClose: function () {
+    const that = this;
+    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!permission.isAdminOrSupervisor()) { toast.error('仅主管以上可关闭订单'); return; }
+    const order = this.data.order;
+    if (!order || !order.id) { toast.error('订单数据缺失'); return; }
+    wx.showModal({
+      title: '关闭订单',
+      content: '确认关闭订单 ' + (order.orderNo || '') + '？关闭后将无法继续操作',
+      editable: true,
+      placeholderText: '可输入关闭原因（选填）',
+      confirmText: '确认关闭',
+      confirmColor: '#e64340',
+      success: function (res) {
+        if (!res.confirm) return;
+        const remark = String(res.content || '').trim();
+        wx.showLoading({ title: '处理中...', mask: true });
+        production.closeOrder({
+          id: order.id,
+          sourceModule: 'miniprogram_order_detail',
+          remark: remark,
+        }).then(function () {
+          wx.hideLoading();
+          toast.success('已关闭订单');
+          that._loadFlow();
+        }).catch(function (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '关闭失败');
+        });
+      },
+    });
   },
 
   /* ======== 查看全部裁剪扎 ======== */

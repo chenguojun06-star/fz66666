@@ -71,6 +71,21 @@ const production = {
   quickEditOrder(payload) {
     return ok('/api/production/order/quick-edit', 'PUT', payload || {});
   },
+  /**
+   * 订单生命周期操作（与后端 ProductionOrderOperationController 对齐，仅主管以上可调用）
+   * 后端：POST /api/production/order/scrap   body: { id, remark }
+   * 后端：POST /api/production/order/complete body: { id, tolerancePercent? }
+   * 后端：POST /api/production/order/close    body: { id, sourceModule, remark?, specialClose? }
+   */
+  scrapOrder(payload) {
+    return ok('/api/production/order/scrap', 'POST', payload || {});
+  },
+  completeOrder(payload) {
+    return ok('/api/production/order/complete', 'POST', payload || {});
+  },
+  closeOrder(payload) {
+    return ok('/api/production/order/close', 'POST', payload || {});
+  },
   listWarehousing(params) {
     return ok('/api/production/warehousing/list', 'GET', params || {});
   },
