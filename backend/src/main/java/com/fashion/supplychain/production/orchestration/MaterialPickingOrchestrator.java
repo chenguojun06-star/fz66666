@@ -75,13 +75,8 @@ public class MaterialPickingOrchestrator {
 
         for (MaterialPickingItem item : items) {
             if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
-                try {
-                    materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
-                    log.info("[Picking] 取消待出库: 解锁库存 stockId={}, qty={}", item.getMaterialStockId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.warn("[Picking] 取消待出库: 解锁库存失败 stockId={}, qty={}, error={}",
-                            item.getMaterialStockId(), item.getQuantity(), e.getMessage());
-                }
+                materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
+                log.info("[Picking] 取消待出库: 解锁库存 stockId={}, qty={}", item.getMaterialStockId(), item.getQuantity());
             }
         }
 
@@ -93,18 +88,14 @@ public class MaterialPickingOrchestrator {
             }
         }
         if (cancelPurchaseId != null && !cancelPurchaseId.isEmpty()) {
-            try {
-                MaterialPurchase purchase = materialPurchaseService.getById(cancelPurchaseId);
-                if (purchase != null && "WAREHOUSE_PENDING".equals(purchase.getStatus())) {
-                    purchase.setStatus("pending");
-                    purchase.setReceiverId(null);
-                    purchase.setReceiverName(null);
-                    purchase.setUpdateTime(java.time.LocalDateTime.now());
-                    materialPurchaseService.updateById(purchase);
-                    log.info("[Picking] 取消待出库: 恢复采购单状态 purchaseId={}", cancelPurchaseId);
-                }
-            } catch (Exception e) {
-                log.warn("[Picking] 取消待出库: 恢复采购单状态失败 purchaseId={}, error={}", cancelPurchaseId, e.getMessage());
+            MaterialPurchase purchase = materialPurchaseService.getById(cancelPurchaseId);
+            if (purchase != null && "WAREHOUSE_PENDING".equals(purchase.getStatus())) {
+                purchase.setStatus("pending");
+                purchase.setReceiverId(null);
+                purchase.setReceiverName(null);
+                purchase.setUpdateTime(java.time.LocalDateTime.now());
+                materialPurchaseService.updateById(purchase);
+                log.info("[Picking] 取消待出库: 恢复采购单状态 purchaseId={}", cancelPurchaseId);
             }
         }
 

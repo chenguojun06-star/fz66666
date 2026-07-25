@@ -501,7 +501,6 @@ public class MaterialPurchaseStatusHelper {
      * 将已领取/已到货的采购任务恢复为待处理状态，清空到货数量和领取人信息
      * @param body { purchaseId, reason }
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> cancelReceive(Map<String, Object> body) {
         String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
         String reason = ParamUtils.toTrimmedString(body == null ? null : body.get("reason"));
@@ -525,13 +524,29 @@ public class MaterialPurchaseStatusHelper {
         if (MaterialConstants.STATUS_CANCELLED.equals(currentStatus)) {
             throw new IllegalStateException("该采购单已取消，不可操作");
         }
+        if (purchase.getReturnConfirmed() != null && purchase.getReturnConfirmed() == 1) {
+            throw new IllegalStateException("该采购单已回料确认，请走退回流程");
+        }
 
         // 样衣采购不涉及出库单流程，跳过 MaterialPicking 查询
         if (!"sample".equals(purchase.getSourceType())) {
+            // P0-2: 检查已出库的领料单（status=completed），已出库则不能撤回
+            // P1-4: 用 purchaseId 查询而非 orderNo，避免同订单其他采购单的 picking 误判
+            com.fashion.supplychain.production.entity.MaterialPicking completedPicking = materialPickingService.getOne(
+                    new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPicking>()
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getPurchaseId, purchaseId)
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getStatus, "completed")
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getDeleteFlag, 0)
+                            .last("LIMIT 1"), false);
+            if (completedPicking != null) {
+                throw new IllegalStateException("该采购单已出库（" + completedPicking.getPickingNo() + "），请先撤销出库单");
+            }
+
             com.fashion.supplychain.production.entity.MaterialPicking pendingPicking = materialPickingService.getOne(
                     new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPicking>()
-                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getOrderNo, purchase.getOrderNo())
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getPurchaseId, purchaseId)
                             .eq(com.fashion.supplychain.production.entity.MaterialPicking::getStatus, "pending")
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getDeleteFlag, 0)
                             .orderByDesc(com.fashion.supplychain.production.entity.MaterialPicking::getCreateTime)
                             .last("LIMIT 1"), false);
             if (pendingPicking != null) {
@@ -601,7 +616,6 @@ public class MaterialPurchaseStatusHelper {
      * 将待确认完成(awaiting_confirm)状态的采购任务标记为已完成(completed)
      * @param body { purchaseId }
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> confirmComplete(Map<String, Object> body) {
         String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
 
@@ -621,11 +635,15 @@ public class MaterialPurchaseStatusHelper {
         if (MaterialConstants.STATUS_CANCELLED.equals(currentStatus)) {
             throw new IllegalStateException("该采购单已取消，无法确认完成");
         }
+        if (!MaterialConstants.STATUS_AWAITING_CONFIRM.equals(currentStatus)) {
+            throw new IllegalStateException("仅待确认状态可确认完成，当前状态: " + currentStatus);
+        }
 
         String operator = UserContext.username();
 
         LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<>();
         uw.eq(MaterialPurchase::getId, purchaseId)
+          .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_AWAITING_CONFIRM)
           .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED)
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         materialPurchaseService.update(uw);

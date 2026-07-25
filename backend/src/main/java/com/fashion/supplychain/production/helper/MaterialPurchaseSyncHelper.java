@@ -9,10 +9,13 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestratorHelper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialPickingService;
+import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +29,9 @@ import org.springframework.util.StringUtils;
 public class MaterialPurchaseSyncHelper {
 
     private final MaterialPurchaseService materialPurchaseService;
+    private final MaterialPickingService materialPickingService;
     private final ProductionOrderService productionOrderService;
+    private final PatternProductionService patternProductionService;
     private final ProductionOrderOrchestrator productionOrderOrchestrator;
     private final ProductionOrderScanRecordDomainService scanRecordDomainService;
     private final MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
@@ -92,8 +97,9 @@ public class MaterialPurchaseSyncHelper {
             }
         }
 
-        if (StringUtils.hasText(purchase.getOrderId())) {
-            String oid = purchase.getOrderId().trim();
+        String orderId = resolveOrderId(purchase);
+        if (StringUtils.hasText(orderId)) {
+            String oid = orderId.trim();
             try {
                 helper.ensureOrderStatusProduction(oid);
             } catch (Exception e) {
@@ -130,15 +136,16 @@ public class MaterialPurchaseSyncHelper {
     public void syncAfterCancelReceive(String purchaseId, MaterialPurchase purchase) {
         materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
         log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
-        if (StringUtils.hasText(purchase.getOrderId())) {
-            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
-            log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
+        String orderId = resolveOrderId(purchase);
+        if (StringUtils.hasText(orderId)) {
+            helper.recomputeAndUpdateMaterialArrivalRate(orderId, productionOrderOrchestrator);
+            log.info("cancelReceive 已重算面料到货率: orderId={}", orderId);
         }
     }
 
     public void tryMarkOrderProcurementComplete(MaterialPurchase purchase) {
-        if (!org.springframework.util.StringUtils.hasText(purchase.getOrderId())) return;
-        String oid = purchase.getOrderId().trim();
+        String oid = resolveOrderId(purchase);
+        if (!org.springframework.util.StringUtils.hasText(oid)) return;
         try {
             long inProgressCount = materialPurchaseService.count(
                     new LambdaQueryWrapper<MaterialPurchase>()
@@ -148,6 +155,17 @@ public class MaterialPurchaseSyncHelper {
                                     MaterialConstants.STATUS_COMPLETED,
                                     MaterialConstants.STATUS_CANCELLED));
             if (inProgressCount > 0) return;
+
+            // P1-3: 检查是否存在待确认出库的领料单，有则不标记采购完成
+            long pendingPickingCount = materialPickingService.count(
+                    new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPicking>()
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getOrderId, oid)
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getStatus, "pending")
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getDeleteFlag, 0));
+            if (pendingPickingCount > 0) {
+                log.info("采购阶段暂不标记完成（存在待确认出库的领料单）: orderId={}, pendingPickingCount={}", oid, pendingPickingCount);
+                return;
+            }
 
             ProductionOrder existOrder = productionOrderService.getOne(
                     new LambdaQueryWrapper<ProductionOrder>()
@@ -172,6 +190,24 @@ public class MaterialPurchaseSyncHelper {
         } catch (Exception e) {
             log.warn("[confirmComplete] 自动标记采购手工完成失败（不影响主流程）: orderId={}, error={}", oid, e.getMessage());
         }
+    }
+
+    private String resolveOrderId(MaterialPurchase purchase) {
+        if (StringUtils.hasText(purchase.getOrderId())) {
+            return purchase.getOrderId().trim();
+        }
+        if ("sample".equals(purchase.getSourceType()) && StringUtils.hasText(purchase.getPatternProductionId())) {
+            try {
+                PatternProduction pp = patternProductionService.getById(purchase.getPatternProductionId().trim());
+                if (pp != null && StringUtils.hasText(pp.getProductionOrderId())) {
+                    return pp.getProductionOrderId().trim();
+                }
+            } catch (Exception e) {
+                log.warn("[resolveOrderId] 样衣采购解析关联订单失败 patternProductionId={}, error={}",
+                        purchase.getPatternProductionId(), e.getMessage());
+            }
+        }
+        return null;
     }
 
     public LocalDateTime queryMaxPurchaseUpdateTime(String orderId) {

@@ -69,9 +69,11 @@ public class StyleBomPurchaseHelper {
 
         softDeleteExistingSamplePurchases(styleId, force);
 
-        // 查询该款式的样板生产记录，获取 patternProductionId
+        // 查询该款式的样板生产记录，获取 patternProductionId 和关联订单ID
         String patternProductionId = null;
+        String sampleOrderId = null;
         List<PatternProduction> patternRecords = patternProductionService.lambdaQuery()
+                .select(PatternProduction::getId, PatternProduction::getProductionOrderId)
                 .eq(PatternProduction::getStyleId, String.valueOf(styleId))
                 .eq(PatternProduction::getDeleteFlag, 0)
                 .orderByDesc(PatternProduction::getCreateTime)
@@ -79,7 +81,9 @@ public class StyleBomPurchaseHelper {
                 .list();
         if (patternRecords != null && !patternRecords.isEmpty()) {
             patternProductionId = patternRecords.get(0).getId();
-            log.info("样衣采购关联样板生产记录: styleId={}, patternProductionId={}", styleId, patternProductionId);
+            sampleOrderId = patternRecords.get(0).getProductionOrderId();
+            log.info("样衣采购关联样板生产记录: styleId={}, patternProductionId={}, sampleOrderId={}",
+                    styleId, patternProductionId, sampleOrderId);
         } else {
             log.warn("未找到样板生产记录，样衣采购将无 patternProductionId: styleId={}", styleId);
         }
@@ -101,7 +105,7 @@ public class StyleBomPurchaseHelper {
                 if (!orderHasMultipleColors) {
                     String displayColor = bomColorRaw.isEmpty() ? parseResult.colorStr : bomColorRaw;
                     MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult,
-                            displayColor, parseResult.sizeStr, patternProductionId);
+                            displayColor, parseResult.sizeStr, patternProductionId, sampleOrderId);
                     if (purchase == null) continue;
                     materialPurchaseService.save(purchase);
                     createdCount++;
@@ -113,7 +117,7 @@ public class StyleBomPurchaseHelper {
                                 .anyMatch(bc -> MaterialPurchaseHelper.normalizeMatchKey(bc).equals(normalizedOrderColor));
                         if (!matches) continue;
                         MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult,
-                                orderColor, parseResult.sizeStr, patternProductionId);
+                                orderColor, parseResult.sizeStr, patternProductionId, sampleOrderId);
                         if (purchase == null) continue;
                         materialPurchaseService.save(purchase);
                         createdCount++;
@@ -230,7 +234,7 @@ public class StyleBomPurchaseHelper {
 
     private MaterialPurchase buildPurchaseFromBom(StyleBom bom, StyleInfo styleInfo,
             SizeColorParseResult parseResult, String purchaseColor, String purchaseSize,
-            String patternProductionId) {
+            String patternProductionId, String sampleOrderId) {
         BigDecimal usageAmount = bom.getDevUsageAmount() != null ? bom.getDevUsageAmount()
                 : (bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO);
         BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
@@ -279,6 +283,9 @@ public class StyleBomPurchaseHelper {
 
         purchase.setSourceType("sample");
         purchase.setPatternProductionId(patternProductionId);
+        if (StringUtils.hasText(sampleOrderId)) {
+            purchase.setOrderId(sampleOrderId);
+        }
         purchase.setStatus(MaterialConstants.STATUS_PENDING);
         purchase.setDeleteFlag(0);
         purchase.setCreateTime(LocalDateTime.now());
