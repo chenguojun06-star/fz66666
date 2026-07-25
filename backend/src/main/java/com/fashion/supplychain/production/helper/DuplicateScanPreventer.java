@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ScanRecordService;
@@ -36,15 +37,24 @@ public class DuplicateScanPreventer {
     /**
      * 根据requestId查找扫码记录
      * 用于防止重复提交
+     *
+     * P0铁律4：多租户隔离，必须按 tenantId 过滤，防止跨租户通过 requestId 拉到他人扫码记录
+     * 调用方 ScanUndoHelper.findUndoTarget 在撤回扫码场景下使用，若跨租户命中将导致误撤回
      */
     public ScanRecord findByRequestId(String requestId) {
         if (!hasText(requestId)) {
             return null;
         }
         try {
-            return scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
+            Long tenantId = UserContext.tenantId();
+            LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getRequestId, requestId)
-                    .last("limit 1"));
+                    .last("limit 1");
+            // tenantId 可能在异步/系统任务上下文中为空，非空时强制隔离
+            if (tenantId != null) {
+                wrapper.eq(ScanRecord::getTenantId, tenantId);
+            }
+            return scanRecordService.getOne(wrapper);
         } catch (Exception e) {
             log.warn("Failed to query scan record by requestId: {}", requestId, e);
             return null;

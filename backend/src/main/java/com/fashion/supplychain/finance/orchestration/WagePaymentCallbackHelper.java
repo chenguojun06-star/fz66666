@@ -371,9 +371,12 @@ public class WagePaymentCallbackHelper {
             return;
         }
         try {
+            // P0铁律4：多租户隔离，必须按 tenantId 过滤，防止跨租户账单被误更新
+            Long tenantId = UserContext.tenantId();
             BillAggregation bill = billAggregationService.lambdaQuery()
                     .eq(BillAggregation::getSourceType, bizType)
                     .eq(BillAggregation::getSourceId, bizId)
+                    .eq(BillAggregation::getTenantId, tenantId)
                     .eq(BillAggregation::getDeleteFlag, 0)
                     .last("LIMIT 1")
                     .one();
@@ -403,9 +406,12 @@ public class WagePaymentCallbackHelper {
             return;
         }
         try {
+            // P0铁律4：多租户隔离，必须按 tenantId 过滤，防止跨租户账单被误更新
+            Long tenantId = UserContext.tenantId();
             BillAggregation bill = billAggregationService.lambdaQuery()
                     .eq(BillAggregation::getSourceType, bizType)
                     .eq(BillAggregation::getSourceId, bizId)
+                    .eq(BillAggregation::getTenantId, tenantId)
                     .eq(BillAggregation::getDeleteFlag, 0)
                     .last("LIMIT 1")
                     .one();

@@ -82,7 +82,7 @@ public class SupplierPortalController {
 
         Factory supplier = factoryService.getById(user.getSupplierId());
         if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)
-                || !"MATERIAL".equals(supplier.getSupplierType())) {
+                || !isAllowedSupplierType(supplier.getSupplierType())) {
             return Result.fail("供应商信息不存在");
         }
 
@@ -409,6 +409,20 @@ public class SupplierPortalController {
             return factoryId;
         }
         return null;
+    }
+
+    /**
+     * S-P0-1 修复：放宽供应商门户登录的 supplierType 校验
+     * 原实现仅允许 MATERIAL（物料供应商）登录，导致 CMT 外发工厂无法登录查看采购单/对账单
+     * 现允许 MATERIAL（物料）、CMT（外发加工）、BOTH（混合）三种类型登录
+     * supplierType 为空时默认允许（兼容历史数据，未设置类型的供应商仍可登录）
+     */
+    private boolean isAllowedSupplierType(String supplierType) {
+        if (!StringUtils.hasText(supplierType)) {
+            // 兼容历史数据：未设置类型的供应商默认允许登录
+            return true;
+        }
+        return Set.of("MATERIAL", "CMT", "BOTH").contains(supplierType);
     }
 
     private Map<String, Object> buildSupplierView(Factory f) {

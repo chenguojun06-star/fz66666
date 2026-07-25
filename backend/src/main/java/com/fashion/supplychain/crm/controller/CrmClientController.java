@@ -431,8 +431,11 @@ public class CrmClientController {
         wrapper.eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getTenantId, tenantId);
 
-        if (StringUtils.hasText(customer.getCompanyName())) {
-            wrapper.like(ProductionOrder::getCompany, customer.getCompanyName());
+        // E-P0-1 修复：改用 customer_id 精确匹配，避免 company like 模糊匹配导致跨客户数据泄露
+        // 原 like 实现："甲公司" 会匹配到 "甲公司分公司" 的订单，违反 P0 铁律4 多租户/客户隔离
+        // ProductionOrder.customerId 外键已存在（t_production_order.customer_id 列），直接精确匹配
+        if (StringUtils.hasText(customer.getId())) {
+            wrapper.eq(ProductionOrder::getCustomerId, customer.getId());
         } else {
             return Collections.emptyList();
         }
