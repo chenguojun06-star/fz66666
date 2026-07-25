@@ -1,5 +1,6 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
+const { intelligence } = require('../../../utils/api-modules/intelligence');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
@@ -189,6 +190,20 @@ Page({
       percent: 0,
     },
     progressSaving: false,
+
+    // AI 智能识别
+    aiRecognizing: false,
+    aiResult: {
+      visible: false,
+      title: '',
+      type: '',           // 'style' | 'size' | 'search'
+      fields: [],         // 款式字段识别结果
+      sizeRows: [],       // 尺寸表识别结果
+      sizeColumns: [],
+      matches: [],        // 以图搜款结果
+      canApply: false,
+      error: '',
+    },
   },
 
   onLoad(options) {
@@ -433,6 +448,9 @@ Page({
     if (!info) return;
     const rawCover = info.cover || info.coverUrl || info.coverImage || info.image || '';
     info._coverUrl = getAuthedImageUrl(rawCover);
+    // 多图列表：优先用 cover 作为第一张；附件中的图片附件会在 loadAttachments 中追加
+    info._coverUrls = rawCover ? [info._coverUrl] : [];
+    info._coverIndex = 0;
     // 状态标签来自 PatternProduction.status，不是 StyleInfo.status(ENABLED/DISABLED)
     info._statusTag = this.getStatusLabel(info._patternStatus || info.status);
     info._statusColorVar = this.getStatusColorVar(info._patternStatus || info.status);
@@ -447,6 +465,16 @@ Page({
     info._daysLeftText = this.calcDaysLeft(info.deliveryTime || info.deliveryDate, patternStatus);
     info._overdue = this.isOverdue(info.deliveryTime || info.deliveryDate, patternStatus);
     this.setData({ styleInfo: info });
+  },
+
+  // 点击封面图预览大图（支持多图滑动）
+  onPreviewCover() {
+    const urls = (this.data.styleInfo && this.data.styleInfo._coverUrls) || [];
+    if (urls.length === 0) return;
+    wx.previewImage({
+      current: urls[this.data.styleInfo._coverIndex || 0] || urls[0],
+      urls: urls,
+    });
   },
 
   getStatusLabel(status) {
@@ -555,6 +583,33 @@ Page({
         });
       }.bind(this));
       this.setData({ attachmentList: attachmentList });
+
+      // 分离图片附件并追加到 _coverUrls，构成多图列表
+      const imageExtReg = /\.(jpe?g|png|gif|webp|bmp|tiff?|svg)$/i;
+      const imageMimeReg = /^image\//i;
+      const imageAttachments = attachmentList.filter(function (item) {
+        const fileType = String(item.fileType || '').toLowerCase();
+        const fileName = String(item.fileName || item.name || '');
+        const fileUrl = String(item.fileUrl || item.url || '');
+        if (imageMimeReg.test(fileType)) return true;
+        if (imageExtReg.test(fileName)) return true;
+        if (imageExtReg.test(fileUrl)) return true;
+        return false;
+      }).map(function (item) {
+        return getAuthedImageUrl(item.fileUrl || item.url);
+      });
+      const styleInfo = this.data.styleInfo;
+      if (styleInfo && imageAttachments.length > 0) {
+        const baseList = (styleInfo._coverUrls && styleInfo._coverUrls.length > 0) ? styleInfo._coverUrls.slice() : [];
+        imageAttachments.forEach(function (url) {
+          if (baseList.indexOf(url) === -1) baseList.push(url);
+        });
+        this.setData({
+          'styleInfo._coverUrls': baseList,
+          'styleInfo._coverIndex': 0,
+          'styleInfo._coverUrl': baseList[0] || styleInfo._coverUrl,
+        });
+      }
     } catch (_e) {
       // 附件加载失败不阻塞主流程
     }
@@ -1216,5 +1271,202 @@ Page({
 
   onProgressCancel() {
     this.setData({ 'progressEditor.visible': false });
+  },
+
+  // === AI 智能识别（拍照识别款式字段 / 尺寸表 / 以图搜款） ===
+
+  onAiRecognize(e) {
+    if (this.data.aiRecognizing) return;
+    const action = e.currentTarget.dataset.action;  // 'style' | 'size' | 'search'
+    const that = this;
+    wx.showActionSheet({
+      itemList: ['拍照', '从相册选择'],
+      success: function (res) {
+        const sourceType = res.tapIndex === 0 ? 'camera' : 'album';
+        that._chooseAndRecognize(action, sourceType);
+      },
+    });
+  },
+
+  _chooseAndRecognize(action, sourceType) {
+    const that = this;
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: [sourceType],
+      sizeType: ['compressed'],
+      success: function (res) {
+        const tempFile = res.tempFiles && res.tempFiles[0];
+        if (!tempFile) return;
+        that._uploadAndRecognize(action, tempFile.tempFilePath);
+      },
+      fail: function (err) {
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '选择图片失败', icon: 'none' });
+        }
+      },
+    });
+  },
+
+  async _uploadAndRecognize(action, tempFilePath) {
+    this.setData({ aiRecognizing: true });
+    wx.showLoading({ title: '上传中...', mask: true });
+    let imageUrl = '';
+    try {
+      imageUrl = await new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: (getApp().globalData && getApp().globalData.baseUrl || '') + '/api/file/upload',
+          filePath: tempFilePath,
+          name: 'file',
+          header: this._getAuthHeader(),
+          success: (r) => {
+            try {
+              const data = JSON.parse(r.data);
+              const url = data.data || data.url || '';
+              if (url) resolve(url);
+              else reject(new Error('上传返回为空'));
+            } catch (_e) {
+              reject(new Error('上传响应解析失败'));
+            }
+          },
+          fail: reject,
+        });
+      });
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({ aiRecognizing: false });
+      wx.showToast({ title: '图片上传失败', icon: 'none' });
+      return;
+    }
+
+    wx.showLoading({ title: 'AI 识别中...', mask: true });
+    try {
+      if (action === 'style') {
+        await this._recognizeStyle(imageUrl);
+      } else if (action === 'size') {
+        await this._recognizeSizeChart(imageUrl);
+      } else if (action === 'search') {
+        await this._recognizeSearch(imageUrl);
+      }
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({
+        aiRecognizing: false,
+        aiResult: {
+          visible: true,
+          title: '识别失败',
+          type: action,
+          fields: [],
+          sizeRows: [],
+          sizeColumns: [],
+          matches: [],
+          canApply: false,
+          error: (e && e.errMsg) || 'AI 识别失败，请稍后重试',
+        },
+      });
+    }
+  },
+
+  async _recognizeStyle(imageUrl) {
+    const result = await intelligence.styleParseFromImage(imageUrl);
+    wx.hideLoading();
+    const fields = this._buildStyleFields(result);
+    this.setData({
+      aiRecognizing: false,
+      aiResult: {
+        visible: true,
+        title: '款式字段识别结果',
+        type: 'style',
+        fields: fields,
+        sizeRows: [],
+        sizeColumns: [],
+        matches: [],
+        canApply: false,  // 字段应用需要单独的接口，暂不开放
+        error: '',
+      },
+    });
+  },
+
+  async _recognizeSizeChart(imageUrl) {
+    const result = await intelligence.sizeChartParse(imageUrl);
+    wx.hideLoading();
+    const sizeRows = (result && result.sizeRows) || [];
+    const sizeColumns = (result && result.sizeColumns) || [];
+    this.setData({
+      aiRecognizing: false,
+      aiResult: {
+        visible: true,
+        title: '尺寸表识别结果',
+        type: 'size',
+        fields: [],
+        sizeRows: sizeRows,
+        sizeColumns: sizeColumns,
+        matches: [],
+        canApply: false,
+        error: sizeRows.length === 0 ? '未识别到尺寸数据，请确保图片清晰' : '',
+      },
+    });
+  },
+
+  async _recognizeSearch(imageUrl) {
+    const result = await intelligence.styleSearchByImage(imageUrl, 5);
+    wx.hideLoading();
+    const rawMatches = (result && result.matches) || [];
+    const matches = rawMatches.map(function (m) {
+      return {
+        styleNo: m.styleNo || m.styleCode || '',
+        styleName: m.styleName || m.name || '',
+        coverUrl: getAuthedImageUrl(m.coverUrl || m.cover || m.image || ''),
+        similarity: m.similarity || m.score || 0,
+      };
+    });
+    this.setData({
+      aiRecognizing: false,
+      aiResult: {
+        visible: true,
+        title: '相似款搜索结果',
+        type: 'search',
+        fields: [],
+        sizeRows: [],
+        sizeColumns: [],
+        matches: matches,
+        canApply: false,
+        error: matches.length === 0 ? '未找到相似款' : '',
+      },
+    });
+  },
+
+  _buildStyleFields(result) {
+    if (!result) return [];
+    const labelMap = {
+      styleName: '款名',
+      colors: '颜色',
+      category: '品类',
+      season: '季节',
+      pattern: '图案',
+      fabric: '面料',
+      sleeveType: '袖型',
+      collarType: '领型',
+      fitType: '版型',
+    };
+    const fields = [];
+    Object.keys(labelMap).forEach(function (key) {
+      let value = result[key];
+      if (Array.isArray(value)) value = value.join('、');
+      if (value === null || value === undefined || value === '') return;
+      // 置信度：colors 有 overallConfidence，其他字段用 overallConfidence 兜底
+      const confidence = Math.round((result.overallConfidence || 0) * 100);
+      fields.push({ key: key, label: labelMap[key], value: String(value), confidence: confidence });
+    });
+    return fields;
+  },
+
+  onAiResultClose() {
+    this.setData({ 'aiResult.visible': false });
+  },
+
+  onAiResultApply() {
+    // 当前阶段仅展示识别结果，应用功能后续迭代
+    wx.showToast({ title: '应用功能即将开放', icon: 'none' });
   },
 });

@@ -190,6 +190,32 @@ const intelligence = {
   runSelfHealing() {
     return ok('/api/intelligence/self-healing', 'POST', {});
   },
+
+  // === 视觉 AI 识别（与 PC 端 intelligenceApi 对齐） ===
+  // 通用视觉分析：DEFECT_DETECT(缺陷检测) / STYLE_IDENTIFY(款式识别) / COLOR_CHECK(色差检查)
+  visualAnalyze(payload) {
+    return ok('/api/intelligence/visual/analyze', 'POST', payload || {}, { timeout: 60000 });
+  },
+  // 以图搜款
+  styleSearchByImage(imageUrl, topK) {
+    return ok('/api/intelligence/visual/style-search', 'POST', { imageUrl: imageUrl, topK: topK || 5 }, { timeout: 60000 });
+  },
+  // 样衣图片结构化字段解析（颜色/品类/面料/袖型/领型/季节/图案等）
+  styleParseFromImage(imageUrl) {
+    return ok('/api/intelligence/visual/style-parse', 'POST', { imageUrl: imageUrl }, { timeout: 60000 });
+  },
+  // 尺寸表图片识别（S/M/L/XL 胸围/腰围/臀围/衣长/袖长/肩宽）
+  sizeChartParse(imageUrl) {
+    return ok('/api/intelligence/visual/size-chart-parse', 'POST', { imageUrl: imageUrl }, { timeout: 60000 });
+  },
+  // BOM 清单/工艺单图片识别
+  bomExtract(imageUrl) {
+    return ok('/api/intelligence/visual/bom-extract', 'POST', { imageUrl: imageUrl }, { timeout: 60000 });
+  },
+  // 发票/收据/采购单据 OCR
+  receiptParse(imageUrl) {
+    return ok('/api/intelligence/visual/receipt-parse', 'POST', { imageUrl: imageUrl }, { timeout: 60000 });
+  },
 };
 
 const notice = {

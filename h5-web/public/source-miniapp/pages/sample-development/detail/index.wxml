@@ -10,11 +10,12 @@
     <!-- 1. 款式信息卡片（蓝色渐变） -->
     <view class="info-card">
       <view class="info-card__body">
-        <view class="info-card__cover">
+        <view class="info-card__cover" bindtap="onPreviewCover">
           <image wx:if="{{styleInfo._coverUrl}}" src="{{styleInfo._coverUrl}}" mode="aspectFill" class="info-card__img" />
           <view wx:else class="info-card__placeholder">
             <view class="icon-sample" style="width:28px;height:28px;"></view>
           </view>
+          <view wx:if="{{styleInfo._coverUrls.length > 1}}" class="info-card__cover-count">{{styleInfo._coverIndex + 1}}/{{styleInfo._coverUrls.length}}</view>
         </view>
         <view class="info-card__content">
           <text class="info-card__no">{{styleInfo.styleNo || styleInfo.styleCode || '--'}}</text>
@@ -40,6 +41,28 @@
         <view wx:if="{{styleInfo._daysLeftText}}" class="delivery-right {{styleInfo._overdue ? 'is-overdue' : ''}}">
           <view class="icon-clock-gray" style="width:14px;height:14px;flex-shrink:0;"></view>
           <text class="delivery-countdown">{{styleInfo._daysLeftText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- AI 智能识别工具栏（拍照识别款式字段 / 尺寸表 / 以图搜款） -->
+    <view class="ai-recognize-card">
+      <view class="ai-recognize-card__title-row">
+        <text class="ai-recognize-card__title">AI 智能识别</text>
+        <text class="ai-recognize-card__hint">拍照识别图片字段，快速录入</text>
+      </view>
+      <view class="ai-recognize-card__btns">
+        <view class="ai-recognize-btn {{aiRecognizing ? 'is-disabled' : ''}}" data-action="style" bindtap="onAiRecognize">
+          <view class="icon-sample" style="width:18px;height:18px;"></view>
+          <text class="ai-recognize-btn__text">识别款式</text>
+        </view>
+        <view class="ai-recognize-btn {{aiRecognizing ? 'is-disabled' : ''}}" data-action="size" bindtap="onAiRecognize">
+          <view class="icon-paperclip" style="width:18px;height:18px;"></view>
+          <text class="ai-recognize-btn__text">识别尺寸表</text>
+        </view>
+        <view class="ai-recognize-btn {{aiRecognizing ? 'is-disabled' : ''}}" data-action="search" bindtap="onAiRecognize">
+          <view class="icon-cloud" style="width:18px;height:18px;"></view>
+          <text class="ai-recognize-btn__text">以图搜款</text>
         </view>
       </view>
     </view>
@@ -475,6 +498,81 @@
       </view>
       <view class="progress-editor__btn progress-editor__btn--save {{progressSaving ? 'is-disabled' : ''}}" bindtap="onProgressSave">
         <text class="progress-editor__btn-text">{{progressSaving ? '保存中' : '保存'}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- AI 识别结果弹窗 -->
+<view wx:if="{{aiResult.visible}}" class="ai-result-mask" bindtap="onAiResultClose">
+  <view class="ai-result-modal" catchtap="">
+    <view class="ai-result-modal__header">
+      <text class="ai-result-modal__title">{{aiResult.title}}</text>
+      <view class="ai-result-modal__close" bindtap="onAiResultClose">
+        <text class="ai-result-modal__close-text">×</text>
+      </view>
+    </view>
+    <scroll-view scroll-y class="ai-result-modal__body">
+      <view wx:if="{{aiRecognizing}}" class="ai-result-loading">
+        <view class="loading-spinner"></view>
+        <text class="ai-result-loading-text">AI 识别中，请稍候...</text>
+      </view>
+      <block wx:elif="{{aiResult.error}}">
+        <view class="ai-result-error">
+          <text class="ai-result-error-text">{{aiResult.error}}</text>
+        </view>
+      </block>
+      <!-- 款式字段识别结果 -->
+      <block wx:elif="{{aiResult.type === 'style' && aiResult.fields}}">
+        <view class="ai-field-list">
+          <view wx:for="{{aiResult.fields}}" wx:key="key" class="ai-field-item">
+            <text class="ai-field-item__label">{{item.label}}</text>
+            <view class="ai-field-item__right">
+              <text class="ai-field-item__value">{{item.value || '--'}}</text>
+              <view wx:if="{{item.confidence > 0}}" class="ai-field-item__conf">{{item.confidence}}%</view>
+            </view>
+          </view>
+        </view>
+      </block>
+      <!-- 尺寸表识别结果 -->
+      <block wx:elif="{{aiResult.type === 'size' && aiResult.sizeRows}}">
+        <view class="ai-size-table">
+          <view class="ai-size-row ai-size-row--head">
+            <text class="ai-size-cell ai-size-cell--part">部位</text>
+            <text wx:for="{{aiResult.sizeColumns}}" wx:key="*this" class="ai-size-cell">{{item}}</text>
+          </view>
+          <view wx:for="{{aiResult.sizeRows}}" wx:key="partName" class="ai-size-row">
+            <text class="ai-size-cell ai-size-cell--part">{{item.partName}}</text>
+            <block wx:for="{{aiResult.sizeColumns}}" wx:for-item="col" wx:key="*this">
+              <text class="ai-size-cell">{{item.values[col] || '--'}}</text>
+            </block>
+          </view>
+        </view>
+      </block>
+      <!-- 以图搜款结果 -->
+      <block wx:elif="{{aiResult.type === 'search' && aiResult.matches}}">
+        <view wx:if="{{aiResult.matches.length === 0}}" class="ai-result-empty">
+          <text class="ai-result-empty-text">未找到相似款</text>
+        </view>
+        <view wx:else class="ai-match-list">
+          <view wx:for="{{aiResult.matches}}" wx:key="styleNo" class="ai-match-item">
+            <image wx:if="{{item.coverUrl}}" src="{{item.coverUrl}}" mode="aspectFill" class="ai-match-item__img" />
+            <view wx:else class="ai-match-item__placeholder">无图</view>
+            <view class="ai-match-item__info">
+              <text class="ai-match-item__no">{{item.styleNo}}</text>
+              <text wx:if="{{item.styleName}}" class="ai-match-item__name">{{item.styleName}}</text>
+              <text wx:if="{{item.similarity}}" class="ai-match-item__sim">相似度 {{item.similarity}}%</text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </scroll-view>
+    <view wx:if="{{!aiRecognizing && !aiResult.error}}" class="ai-result-modal__footer">
+      <view class="ai-result-modal__btn ai-result-modal__btn--cancel" bindtap="onAiResultClose">
+        <text class="ai-result-modal__btn-text">关闭</text>
+      </view>
+      <view wx:if="{{aiResult.canApply}}" class="ai-result-modal__btn ai-result-modal__btn--apply" bindtap="onAiResultApply">
+        <text class="ai-result-modal__btn-text">应用</text>
       </view>
     </view>
   </view>

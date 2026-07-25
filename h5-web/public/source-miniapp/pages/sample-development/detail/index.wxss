@@ -65,6 +65,19 @@
   overflow: hidden;
   flex-shrink: 0;
   background: var(--color-bg-page);
+  position: relative;
+}
+
+.info-card__cover-count {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: var(--color-overlay);
+  color: var(--color-text-white);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  line-height: 1.4;
 }
 .info-card__img {
   width: 100%;
@@ -1463,4 +1476,338 @@
   font-size: 11px;
   color: var(--color-text-tertiary, #999);
   margin-right: 6px;
+}
+
+/* ========== AI 智能识别工具栏 ========== */
+.ai-recognize-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin: 8px 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.ai-recognize-card__title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ai-recognize-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  position: relative;
+  padding-left: 10px;
+}
+
+.ai-recognize-card__title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 13px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+.ai-recognize-card__hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.ai-recognize-card__btns {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-recognize-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: rgba(45, 127, 249, 0.05);
+  color: var(--color-primary);
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.ai-recognize-btn.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ai-recognize-btn__text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+/* ========== AI 识别结果弹窗 ========== */
+.ai-result-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.ai-result-modal {
+  width: 100%;
+  max-width: 360px;
+  max-height: 80vh;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-result-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.ai-result-modal__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.ai-result-modal__close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-result-modal__close-text {
+  font-size: 22px;
+  color: var(--color-text-tertiary);
+  line-height: 1;
+}
+
+.ai-result-modal__body {
+  flex: 1;
+  padding: 12px 16px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.ai-result-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 30px 0;
+}
+
+.ai-result-loading-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.ai-result-error,
+.ai-result-empty {
+  padding: 30px 0;
+  text-align: center;
+}
+
+.ai-result-error-text,
+.ai-result-empty-text {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+/* 款式字段识别结果 */
+.ai-field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-field-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+}
+
+.ai-field-item__label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  width: 60px;
+}
+
+.ai-field-item__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.ai-field-item__value {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  text-align: right;
+}
+
+.ai-field-item__conf {
+  font-size: 10px;
+  color: var(--color-primary);
+  background: rgba(45, 127, 249, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* 尺寸表识别结果 */
+.ai-size-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.ai-size-row {
+  display: flex;
+  background: var(--color-bg-card);
+}
+
+.ai-size-row--head {
+  background: var(--color-bg-page);
+}
+
+.ai-size-row + .ai-size-row {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.ai-size-cell {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px 6px;
+  text-align: center;
+  color: var(--color-text-primary);
+  min-width: 40px;
+}
+
+.ai-size-cell--part {
+  flex: 0 0 60px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* 以图搜款结果 */
+.ai-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-match-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+}
+
+.ai-match-item__img {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: var(--color-border-light);
+}
+
+.ai-match-item__placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.ai-match-item__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ai-match-item__no {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.ai-match-item__name {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-match-item__sim {
+  font-size: 11px;
+  color: var(--color-primary);
+}
+
+.ai-result-modal__footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.ai-result-modal__btn {
+  flex: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.ai-result-modal__btn--cancel {
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+}
+
+.ai-result-modal__btn--apply {
+  background: var(--color-primary);
+  color: var(--color-text-white);
 }
