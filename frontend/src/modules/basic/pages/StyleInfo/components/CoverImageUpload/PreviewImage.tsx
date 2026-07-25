@@ -56,14 +56,14 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
     >
       {currentImage ? (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-          <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="主图" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="主图" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           {/* 左上角：资产类型徽标（唯一一个常驻徽标） */}
-          <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 10px', borderRadius: 999, background: 'var(--color-primary)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600, pointerEvents: 'none' }}>
             {currentAssetMetaLabel}
           </div>
         </div>
       ) : coverUrl ? (
-        <Image loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <Image loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
       ) : (
         <div style={{ textAlign: 'center', padding: '24px 16px', width: '100%' }}>
           {isNewMode ? (
@@ -88,12 +88,12 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
             onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex <= 0 ? displayImages.length - 1 : currentIndex - 1); }}
             style={{
               position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-              width: 32, height: 56, background: 'rgba(17, 24, 39, 0.5)',
+              width: 32, height: 56, background: 'var(--color-overlay)',
               borderRadius: '0 8px 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.75)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.5)'; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay-strong)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay)'; }}
           >
             <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 14 }} />
           </div>
@@ -101,14 +101,20 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
             onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex >= displayImages.length - 1 ? 0 : currentIndex + 1); }}
             style={{
               position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-              width: 32, height: 56, background: 'rgba(17, 24, 39, 0.5)',
+              width: 32, height: 56, background: 'var(--color-overlay)',
               borderRadius: '8px 0 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.75)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.5)'; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay-strong)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay)'; }}
           >
             <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 14 }} />
+          </div>
+          {/* P2: 底部圆点指示器 — 移动端/触屏友好，不依赖 hover */}
+          <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, pointerEvents: 'none' }}>
+            {displayImages.map((_, idx) => (
+              <span key={idx} style={{ width: 6, height: 6, borderRadius: '50%', background: idx === currentIndex ? 'var(--color-primary)' : 'var(--color-overlay)', opacity: 0.9 }} />
+            ))}
           </div>
         </>
       )}

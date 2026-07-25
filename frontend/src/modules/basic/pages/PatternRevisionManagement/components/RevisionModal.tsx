@@ -2,6 +2,7 @@ import React from 'react';
 import { DatePicker, Form, Input, Select } from 'antd';
 import type { FormInstance } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import type { PatternRevision } from '@/types/patternRevision';
 import { REVISION_TYPE_OPTIONS } from '@/types/patternRevision';
@@ -52,6 +53,18 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
         layout="vertical"
         disabled={modalMode === 'view'}
       >
+        {/* 查看模式展示款式封面图（与列表图片列保持视觉一致） */}
+        {modalMode === 'view' && currentRecord && (currentRecord.styleId || currentRecord.styleNo) && (
+          <Form.Item label="款式图片">
+            <StyleCoverThumb
+              styleId={currentRecord.styleId}
+              styleNo={currentRecord.styleNo}
+              size={96}
+              borderRadius={6}
+            />
+          </Form.Item>
+        )}
+
         <Form.Item
           name="styleNo"
           label="款号"

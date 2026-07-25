@@ -19,6 +19,10 @@
   --color-success: #52c41a; /* Ant Design 默认 success */
   --color-info: #722ed1;    /* Ant Design 默认 purple/info */
 
+  /* 遮罩层 — 用于图片切换箭头、徽标背景等半透明场景 */
+  --color-overlay: rgba(17, 24, 39, 0.5);
+  --color-overlay-strong: rgba(17, 24, 39, 0.75);
+
   /* 状态标签颜色 - 6色系统（与Ant Design Tag color对应） */
   --status-success: #52c41a;
   --status-success-bg: #f6ffed;

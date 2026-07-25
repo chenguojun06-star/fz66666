@@ -2,6 +2,7 @@ import React from 'react';
 import type { ColumnsType } from 'antd/es/table';
 import { Tag } from 'antd';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import type { PatternRevision } from '@/types/patternRevision';
 import {
@@ -41,6 +42,22 @@ export function buildColumns(handlers: ColumnHandlers): ColumnsType<PatternRevis
   } = handlers;
 
   return [
+    {
+      title: '图片',
+      dataIndex: 'styleId',
+      key: 'styleImage',
+      width: 72,
+      align: 'center',
+      fixed: isMobile ? undefined : 'left',
+      render: (_, record) => (
+        <StyleCoverThumb
+          styleId={record.styleId}
+          styleNo={record.styleNo}
+          size={48}
+          borderRadius={4}
+        />
+      ),
+    },
     {
       title: '款号',
       dataIndex: 'styleNo',

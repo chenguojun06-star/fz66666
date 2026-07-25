@@ -64,7 +64,8 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
             <img
               src={getFullAuthedFileUrl(img.fileUrl)}
               alt={assetMeta.label}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              loading="lazy"
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               onClick={() => setCurrentIndex(idx)}
             />
             {/* Hover显示操作按钮（兜底参考图不可编辑） */}
@@ -76,7 +77,7 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: 'rgba(0,0,0,0.5)',
+                  background: 'var(--color-overlay)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
