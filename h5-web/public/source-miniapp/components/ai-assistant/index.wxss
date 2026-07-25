@@ -737,6 +737,124 @@
   text-overflow: ellipsis;
   margin-top: 2px;
 }
+/* P1-1: 预填参数中文化标签 — 让用户一眼看到关键信息（款号/数量/工厂） */
+.action-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.action-card-tag {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-page);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+
+/* P1-3: 小云主动洞察卡片 — 红点+列表+已读按钮 */
+.proactive-insights {
+  padding: 8px 12px 0;
+}
+.proactive-insights-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+.proactive-insights-badge {
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-xl);
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  text-align: center;
+  margin-left: 4px;
+}
+.proactive-insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.proactive-insight-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  border-left: 3px solid var(--color-info);
+  box-shadow: var(--shadow-sm);
+}
+.proactive-severity-high { border-left-color: var(--color-danger); }
+.proactive-severity-medium { border-left-color: var(--color-warning); }
+.proactive-severity-low { border-left-color: var(--color-info); }
+.proactive-insight-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.proactive-insight-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+.proactive-insight-content {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.proactive-insight-read-btn {
+  flex-shrink: 0;
+  font-size: var(--font-size-xxs);
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  color: var(--color-warning);
+}
+.proactive-insight-read-btn-hover {
+  background: var(--color-warning-bg);
+  transform: scale(0.96);
+}
+
+/* P1-2: 错误消息气泡 + 重试按钮 — 不暴露技术细节，可重试 */
+.bubble-error-warning {
+  background: var(--color-warning-bg) !important;
+  border: 1px solid var(--color-warning-border);
+}
+.bubble-error-error {
+  background: var(--color-danger-bg) !important;
+  border: 1px solid var(--color-danger-border);
+}
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  line-height: 1.4;
+}
+.retry-btn-hover {
+  background: var(--color-info-bg);
+  transform: scale(0.96);
+}
 .action-card-btn {
   flex-shrink: 0;
   background: transparent;

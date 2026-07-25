@@ -51,6 +51,24 @@
         </view>
       </view>
     </view>
+    <!-- P1-3: 小云主动洞察（Redis 未读，巡检写入的 delay_risk/combo_risk） -->
+    <view class="proactive-insights" wx:if="{{proactiveInsights.length > 0 && messages.length <= 1 && !isLoading}}">
+      <view class="proactive-insights-label">
+        <view class="line-icon line-icon--sm icon-bell"></view><text>小云主动洞察</text>
+        <view class="proactive-insights-badge">{{proactiveInsights.length}}</view>
+      </view>
+      <view class="proactive-insights-list">
+        <view class="proactive-insight-card proactive-severity-{{item.severity || 'low'}}" wx:for="{{proactiveInsights}}" wx:key="id">
+          <view class="proactive-insight-body">
+            <text class="proactive-insight-title">{{item.title}}</text>
+            <text class="proactive-insight-content" wx:if="{{item.content}}">{{item.content}}</text>
+          </view>
+          <view class="proactive-insight-read-btn" hover-class="proactive-insight-read-btn-hover" hover-stay-time="100" catchtap="onMarkInsightRead" data-id="{{item.id}}">
+            <text>已读</text>
+          </view>
+        </view>
+      </view>
+    </view>
     <!-- 角色默认建议 -->
     <view class="dynamic-suggestions" wx:if="{{dynamicSuggestions.length > 0 && messages.length <= 1 && !isLoading}}">
       <view class="dynamic-suggestions-label"><view class="line-icon line-icon--sm icon-bell"></view><text>实时提醒</text></view>
@@ -88,8 +106,11 @@
                 <view class="chat-cloud-smile"></view>
               </view>
             </view>
-            <view class="bubble">
+            <view class="bubble {{item.error ? 'bubble-error-' + item.error.level : ''}}">
               <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
+              <view class="retry-btn" wx:if="{{item.error && item.error.retryable}}" hover-class="retry-btn-hover" hover-stay-time="100" catchtap="onRetrySend" data-msg-id="{{item.id}}">
+                <view class="line-icon line-icon--sm icon-refresh"></view><text>重试</text>
+              </view>
               <view class="action-cards" wx:if="{{item.actions && item.actions.length > 0}}">
                 <view class="action-card" wx:for="{{item.actions}}" wx:for-item="act" wx:key="label">
                   <view class="action-card-body">
@@ -99,6 +120,9 @@
                     <view class="action-card-info">
                       <text class="action-card-label">{{act.label}}</text>
                       <text class="action-card-desc" wx:if="{{act.description}}">{{act.description}}</text>
+                      <view class="action-card-tags" wx:if="{{act.prefilledTags && act.prefilledTags.length > 0}}">
+                        <text class="action-card-tag" wx:for="{{act.prefilledTags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+                      </view>
                     </view>
                   </view>
                   <view class="action-card-btn" hover-class="action-card-btn-hover" hover-stay-time="100" catchtap="onActionTap" data-action="{{act}}" wx:if="{{act.type !== 'info'}}">

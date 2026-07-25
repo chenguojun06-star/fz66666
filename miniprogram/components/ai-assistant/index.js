@@ -116,6 +116,57 @@ function parseAiCards(text) {
   return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, teamStatusCards: teamStatusCards };
 }
 
+// P1-1: 预填参数中英文映射 — 让用户看到"款号: A001"而非"styleNo: A001"
+const PREFILLED_LABEL_MAP = {
+  styleNo: '款号', color: '颜色', quantity: '数量',
+  orderNo: '订单号', factoryName: '工厂', defectCount: '次品数',
+  targetFactory: '目标工厂', recipient: '接收人',
+  expectedShipDate: '新交期', remark: '备注', action: '处理方式',
+};
+const PREFILLED_HIDDEN_KEYS = { orderId: true };
+
+function buildPrefilledTags(prefilledParams) {
+  if (!prefilledParams || typeof prefilledParams !== 'object') return [];
+  const tags = [];
+  Object.keys(prefilledParams).forEach(function (k) {
+    if (PREFILLED_HIDDEN_KEYS[k]) return;
+    const label = PREFILLED_LABEL_MAP[k];
+    if (!label) return;
+    const v = prefilledParams[k];
+    if (v == null || v === '') return;
+    tags.push(label + ': ' + (typeof v === 'number' ? v.toLocaleString('zh-CN') : String(v)));
+  });
+  return tags;
+}
+
+// P1-2: 错误文案分级 — 把技术错误转成用户友好的中文文案，不暴露技术细节
+// 返回 { message, retryable, level }
+function classifyError(err) {
+  const raw = (err && (err.errMsg || err.message || String(err))) || '';
+  const lower = raw.toLowerCase();
+  // 网络类
+  if (lower.indexOf('timeout') >= 0 || lower.indexOf('超时') >= 0) {
+    return { message: '小云响应有点慢，请稍后重试', retryable: true, level: 'warning' };
+  }
+  if (lower.indexOf('network') >= 0 || lower.indexOf('网络') >= 0
+      || lower.indexOf('fail') >= 0 || lower.indexOf('interrupted') >= 0
+      || lower.indexOf('abort') >= 0) {
+    return { message: '网络不太稳定，请检查后重试', retryable: true, level: 'warning' };
+  }
+  // 服务类
+  if (lower.indexOf('500') >= 0 || lower.indexOf('502') >= 0
+      || lower.indexOf('503') >= 0 || lower.indexOf('504') >= 0
+      || lower.indexOf('internal') >= 0) {
+    return { message: '小云暂时打了个盹，请稍后重试', retryable: true, level: 'error' };
+  }
+  if (lower.indexOf('401') >= 0 || lower.indexOf('403') >= 0
+      || lower.indexOf('unauthorized') >= 0 || lower.indexOf('forbidden') >= 0) {
+    return { message: '登录已过期，请重新登录后再试', retryable: false, level: 'error' };
+  }
+  // 兜底
+  return { message: '小云暂时无法回答，请稍后再试', retryable: true, level: 'warning' };
+}
+
 Component({
   properties: {
     visible: { type: Boolean, value: true },
@@ -144,6 +195,7 @@ Component({
     pageSuggestions: [],
     conversationId: '',
     dynamicSuggestions: [],
+    proactiveInsights: [],
     wizardStates: {},
   },
   lifetimes: {
@@ -197,6 +249,7 @@ Component({
         this._screenWidth = sw;
         this._screenHeight = sh;
         this._loadDynamicSuggestions();
+        this._loadProactiveInsights();
       }, 0);
     },
   },
@@ -216,6 +269,7 @@ Component({
       }
       this._refreshPageSuggestions();
       this._loadDynamicSuggestions();
+      this._loadProactiveInsights();
       // 修复：tabBar页面常驻不销毁，attached()只执行一次。
       // 用户在其他页面拖动按钮后，当前页面实例不会感知到 storage 变化。
       // 每次页面 show 时主动同步一次位置，确保所有页面保持一致。
@@ -371,6 +425,32 @@ Component({
           self.setData({ dynamicSuggestions: suggestions });
         }
       }).catch(function (e) { console.warn('[XiaoYun] 待办任务加载失败:', e); });
+    },
+
+    // P1-3: 加载小云主动洞察（Redis 未读列表，巡检写入的 delay_risk/combo_risk）
+    _loadProactiveInsights() {
+      if (!(wx.getStorageSync('auth_token') || '')) return;
+      const self = this;
+      api.intelligence.getProactiveInsights().then(function (res) {
+        const list = Array.isArray(res) ? res : [];
+        // 最多展示 5 条，按 createdAt 倒序
+        list.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+        self.setData({ proactiveInsights: list.slice(0, 5) });
+      }).catch(function (_e) { /* 静默失败，不打扰用户 */ });
+    },
+
+    // P1-3: 标记洞察已读（乐观移除，失败回滚）
+    onMarkInsightRead(e) {
+      const id = e.currentTarget.dataset.id;
+      if (!id) return;
+      const prev = this.data.proactiveInsights;
+      const next = prev.filter(function (it) { return it.id !== id; });
+      this.setData({ proactiveInsights: next });
+      const self = this;
+      api.intelligence.markProactiveInsightRead(id).catch(function () {
+        // 失败回滚
+        self.setData({ proactiveInsights: prev });
+      });
     },
 
     _saveChatHistory() {
@@ -568,6 +648,7 @@ Component({
                   command: a.command || '',
                   urgency: a.icon === 'alert' ? 'high' : 'medium',
                   buttonText: actType === 'execute' ? '执行' : '追问',
+                  prefilledTags: buildPrefilledTags(a.prefilledParams),
                 };
               }).filter(Boolean);
             }
@@ -616,6 +697,7 @@ Component({
                       command: a.command || '',
                       urgency: a.icon === 'alert' ? 'high' : 'medium',
                       buttonText: a.actionType === 'EXECUTE' ? '执行' : a.actionType === 'ASK' ? '追问' : '查看',
+                      prefilledTags: buildPrefilledTags(a.prefilledParams),
                     };
                   });
                 }
@@ -651,7 +733,9 @@ Component({
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
-              const errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
+              // P1-2: 用 classifyError 替代裸文案，不暴露技术细节
+              const errInfo = classifyError(syncErr);
+              const errMsg = { id: aiMsgId, role: 'ai', content: errInfo.message, error: errInfo, retryQuestion: text };
               self._setMessages([].concat(self.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
             }
@@ -661,11 +745,30 @@ Component({
 
       } catch (err) {
         console.error('[XiaoYun] sendMessage error:', err);
-        const errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
-        const errMsg = { id: Date.now(), role: 'ai', content: errContent };
+        // P1-2: 用 classifyError 替代裸 errMsg，不暴露技术细节
+        const errInfo = classifyError(err);
+        const errMsg = { id: Date.now(), role: 'ai', content: errInfo.message, error: errInfo, retryQuestion: text };
         this._setMessages([].concat(this.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
         this.scrollToBottom();
       }
+    },
+
+    // P1-2: 重试按钮 — 用错误消息上保存的 retryQuestion 重新发送
+    onRetrySend(e) {
+      const msgId = e.currentTarget.dataset.msgId;
+      if (!msgId) return;
+      let retryText = '';
+      for (let i = 0; i < this.data.messages.length; i++) {
+        if (this.data.messages[i].id === msgId) {
+          retryText = this.data.messages[i].retryQuestion || '';
+          break;
+        }
+      }
+      if (!retryText) return;
+      // 移除报错消息
+      const remaining = this.data.messages.filter(function (m) { return m.id !== msgId; });
+      this._setMessages(remaining);
+      this.setData({ inputValue: retryText }, () => { this.sendMessage(); });
     },
 
     onActionTap(e) {
