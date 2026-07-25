@@ -302,13 +302,16 @@ public class SalesReturnOrchestrator {
 
         salesReturnService.updateById(returnOrder);
 
-        // P0-8 修复：拒绝退货时联动取消已推送的应付账单（数据链路闭环）
+        // P0 财务闭环修复：拒绝退货时联动反向已推送的应付账单（数据链路闭环）
+        // 改用 reverseBySource 联动反向全链路（Bill → Payable/Receivable）
+        // 原 cancelBySource 仅取消未结清账单，不联动 Payable/Receivable，导致拒绝后应付记录悬挂
         if (billAggregationOrchestrator != null) {
             try {
-                billAggregationOrchestrator.cancelBySource("SALES_RETURN", String.valueOf(returnId));
-                log.info("[销售退货] 拒绝联动取消账单: returnId={}", returnId);
+                billAggregationOrchestrator.reverseBySource("SALES_RETURN",
+                        String.valueOf(returnId), "销售退货拒绝");
+                log.info("[销售退货] 拒绝联动反向账单: returnId={}", returnId);
             } catch (Exception e) {
-                log.warn("[销售退货] 拒绝联动取消账单失败（不阻塞主流程）: returnId={}, err={}",
+                log.warn("[销售退货] 拒绝联动反向账单失败（不阻塞主流程）: returnId={}, err={}",
                         returnId, e.getMessage());
             }
         }

@@ -428,6 +428,53 @@ public class InventoryCheckOrchestrator {
         check.setStatus("cancelled");
         check.setUpdateTime(LocalDateTime.now());
         checkService.updateById(check);
+
+        // P0 财务闭环修复：盘点单取消时反向关联的盘点差异账单（INVENTORY_CHECK）
+        // 账单在 confirmCheck → generateInventoryCheckBills 时按 item.getId() 为 sourceId 推送，
+        // 此处反查所有明细逐条反向，避免账单悬挂（防御性：draft 状态无账单时 reverseBySource 内部优雅返回）
+        reverseInventoryCheckBills(checkId);
+    }
+
+    /**
+     * P0 财务闭环修复：反向盘点单关联的差异账单
+     * <p>
+     * confirmCheck 时 generateInventoryCheckBills 以 sourceType=INVENTORY_CHECK、sourceId=itemId 推送账单，
+     * 此处按 checkId 反查所有 InventoryCheckItem，逐条反向账单。
+     * 失败不阻塞主流程（账务异常走人工对账）。
+     *
+     * @param checkId 盘点单ID
+     */
+    private void reverseInventoryCheckBills(String checkId) {
+        if (!StringUtils.hasText(checkId)) {
+            return;
+        }
+        try {
+            List<InventoryCheckItem> items = itemService.list(
+                    new LambdaQueryWrapper<InventoryCheckItem>()
+                            .eq(InventoryCheckItem::getCheckId, checkId)
+                            .eq(InventoryCheckItem::getDeleteFlag, 0));
+            if (items == null || items.isEmpty()) {
+                return;
+            }
+            int reversed = 0;
+            for (InventoryCheckItem item : items) {
+                if (item.getId() == null) continue;
+                try {
+                    billAggregationOrchestrator.reverseBySource("INVENTORY_CHECK",
+                            item.getId(), "盘点单取消");
+                    reversed++;
+                } catch (Exception e) {
+                    // 单条失败不中断后续反向（已结清账单需手动冲账）
+                    log.warn("[cancelCheck] 账单反向失败（不阻塞主流程）: itemId={}, err={}",
+                            item.getId(), e.getMessage());
+                }
+            }
+            log.info("[cancelCheck] 盘点差异账单反向完成: checkId={}, total={}, reversed={}",
+                    checkId, items.size(), reversed);
+        } catch (Exception e) {
+            log.warn("[cancelCheck] 查询盘点明细失败（不阻塞主流程）: checkId={}, err={}",
+                    checkId, e.getMessage());
+        }
     }
 
     public IPage<InventoryCheck> listChecks(Map<String, Object> params) {

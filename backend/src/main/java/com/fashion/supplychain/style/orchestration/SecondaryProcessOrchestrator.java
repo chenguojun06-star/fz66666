@@ -168,6 +168,17 @@ public class SecondaryProcessOrchestrator {
             }
         } else {
             process.setApprovalStatus("rejected");
+            // P0 财务闭环修复：审核拒绝时反向已推送的二次工艺账单（sourceType=SECONDARY_PROCESS）
+            // 避免账单悬挂（审核通过时已推 PAYABLE 账单，拒绝时需反向）
+            try {
+                billAggregationOrchestrator.reverseBySource("SECONDARY_PROCESS",
+                        String.valueOf(id), "二次工艺审核拒绝");
+                log.info("[二次工艺] 拒绝联动反向账单: processId={}", id);
+            } catch (Exception e) {
+                // 已结清账单会抛异常 — 不阻塞拒绝主流程，记录告警供财务对账
+                log.warn("[二次工艺] 拒绝联动反向账单失败（可能存在已结清账单需手动冲账）: processId={}, err={}",
+                        id, e.getMessage());
+            }
         }
 
         process.setUpdatedAt(LocalDateTime.now());

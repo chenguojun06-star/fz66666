@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
@@ -44,10 +43,6 @@ public class FinishedWarehouseOperationOrchestrator {
     private final StockChangeLogService stockChangeLogService;
     private final WarehouseLocationOrchestrator warehouseLocationOrchestrator;
     private final ObjectMapper objectMapper;
-
-    // P0-9 修复：可选注入账单orchestrator（避免循环依赖）
-    @Autowired(required = false)
-    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     @Autowired(required = false)
     private ProductionOrderService productionOrderService;
@@ -327,38 +322,17 @@ public class FinishedWarehouseOperationOrchestrator {
                 reversal.getWarehousingNo(), "reversal",
                 original.getUnitPrice(), reversal.getTotalAmount(), traceId, userId, username, tenantId);
 
-        // P0-9 修复：成品冲销联动对账（数据链路闭环）
-        // 1. 反向入库相关账单（如有）— sourceType=WAREHOUSING, sourceId=originalId
-        // 2. 重算订单进度（如有 orderId 关联），避免冲销后进度异常
-        reverseReconciliationOnReversal(original, reversal, reason);
+        // P0 财务闭环修复：清理 WAREHOUSING 断头反向调用
+        // 原代码 reverseBySource("WAREHOUSING", original.getId(), ...) 为断头调用 ——
+        // 入库记录本身不推送账单（pushBill 仅在成品出库时以 PRODUCT_OUTSTOCK 为 sourceType），
+        // 因此该 reverse 找不到匹配账单，属于无效代码。冲销时的库存调整已在上方完成，
+        // 关联出库账单的反向由出库冲销流程独立处理，不在此处重复。
+        // 保留：重算订单进度（避免冲销后进度异常）
         recomputeOrderProgressAfterReversal(original);
 
         log.info("[成品冲销] originalId={} reversalId={} skuCode={} -{} reason={}",
                 original.getId(), reversal.getId(), skuCode, reverseQty, reason);
         return reversal;
-    }
-
-    /**
-     * P0-9 修复：成品冲销联动反向账单
-     * <p>
-     * 入库本身可能推过账单（如外发加工费 PAYABLE、销售出货 RECEIVABLE），
-     * 冲销时通过 reverseBySource 反向关联账单 + 联动 Payable/Receivable 状态
-     */
-    private void reverseReconciliationOnReversal(ProductWarehousing original, ProductWarehousing reversal, String reason) {
-        if (billAggregationOrchestrator == null) {
-            log.warn("[成品冲销] BillAggregationOrchestrator 未注入，跳过账单反向: originalId={}", original.getId());
-            return;
-        }
-        try {
-            // 入库单作为 source 反向账单
-            billAggregationOrchestrator.reverseBySource("WAREHOUSING", original.getId(),
-                    "成品冲销: " + reason + " | reversalNo=" + reversal.getWarehousingNo());
-            log.info("[成品冲销] 联动反向账单完成: originalId={}", original.getId());
-        } catch (Exception e) {
-            // 已结清账单会抛异常 — 不阻塞冲销主流程，记录告警供财务对账
-            log.warn("[成品冲销] 联动反向账单失败（可能存在已结清账单需手动冲账）: originalId={}, err={}",
-                    original.getId(), e.getMessage());
-        }
     }
 
     /**

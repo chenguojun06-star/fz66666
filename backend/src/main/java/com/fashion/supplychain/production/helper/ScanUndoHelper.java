@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
@@ -43,6 +44,9 @@ public class ScanUndoHelper {
     @Autowired private ScanRecordPermissionHelper scanRecordPermissionHelper;
     @Autowired private ScanRecordEnrichHelper scanRecordEnrichHelper;
     @Autowired private DistributedLockService distributedLockService;
+    // P0 财务闭环修复：可选注入账单orchestrator，撤销扫码时反向关联账单
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     public Map<String, Object> undo(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -280,6 +284,9 @@ public class ScanUndoHelper {
         body.put("rollbackRemark", "撤销扫码");
         boolean ok = productWarehousingOrchestrator.rollbackByBundle(body);
 
+        // P0 财务闭环修复：撤销入库扫码时反向关联账单（如有），避免账单悬挂
+        reverseBillOnUndo(target, "WAREHOUSING", "撤销入库扫码");
+
         resetTrackingByScanRecord(target.getId());
         scanRecordService.removeById(target.getId());
         log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
@@ -307,6 +314,9 @@ public class ScanUndoHelper {
         String scanTypeForLog = target.getScanType();
         String bundleNoForLog = target.getCuttingBundleNo() == null ? null : String.valueOf(target.getCuttingBundleNo());
 
+        // P0 财务闭环修复：撤销普通扫码时反向关联账单（如有），避免账单悬挂
+        reverseBillOnUndo(target, "SCAN_RECORD", "撤销扫码");
+
         resetTrackingByScanRecord(target.getId());
         scanRecordService.removeById(target.getId());
         log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
@@ -326,6 +336,34 @@ public class ScanUndoHelper {
         return resp;
     }
 
+    /**
+     * P0 财务闭环修复：撤销扫码时反向关联账单
+     * 通过 reverseBySource 反向以扫码记录为来源的账单（如有），
+     * 失败不阻塞主流程（账务异常走人工对账）。
+     *
+     * @param target    扫码记录
+     * @param sourceType 账单来源类型
+     * @param reason    反向原因
+     */
+    private void reverseBillOnUndo(ScanRecord target, String sourceType, String reason) {
+        if (billAggregationOrchestrator == null) {
+            log.warn("[reverseBillOnUndo] BillAggregationOrchestrator 未注入，跳过账单反向: recordId={}", target.getId());
+            return;
+        }
+        String sourceId = target.getId();
+        if (!hasText(sourceId)) {
+            return;
+        }
+        try {
+            billAggregationOrchestrator.reverseBySource(sourceType, sourceId, reason);
+            log.info("[reverseBillOnUndo] 账单反向完成: sourceType={}, sourceId={}", sourceType, sourceId);
+        } catch (Exception e) {
+            // 已结清账单会抛异常 — 不阻塞撤销主流程，记录告警供财务对账
+            log.warn("[reverseBillOnUndo] 账单反向失败（可能存在已结清账单需手动冲账）: sourceType={}, sourceId={}, err={}",
+                    sourceType, sourceId, e.getMessage());
+        }
+    }
+
     private void safeRecomputeProgress(String orderId) {
         String oid = TextUtils.safeText(orderId);
         if (!hasText(oid)) return;
@@ -336,33 +374,31 @@ public class ScanUndoHelper {
         }
     }
 
+    // 撤回操作中 ScanRecord 镜像删除需移除 try-catch，让异常传播触发事务回滚（符合 D-001）
     private void resetTrackingByScanRecord(String scanRecordId) {
         if (!hasText(scanRecordId)) return;
-        try {
-            ProductionProcessTracking tracking = processTrackingService.getOne(
-                    new LambdaQueryWrapper<ProductionProcessTracking>()
-                            .eq(ProductionProcessTracking::getScanRecordId, scanRecordId)
-                            .last("LIMIT 1"),
-                    false);
-            if (tracking == null) return;
-            if (Boolean.TRUE.equals(tracking.getIsSettled())) {
-                log.warn("[resetTracking] 该工序跟踪记录已结算，跳过重置: trackingId={}", tracking.getId());
-                return;
-            }
-            LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
-            uw.eq(ProductionProcessTracking::getId, tracking.getId())
-              .set(ProductionProcessTracking::getScanStatus, "pending")
-              .set(ProductionProcessTracking::getScanTime, null)
-              .set(ProductionProcessTracking::getScanRecordId, null)
-              .set(ProductionProcessTracking::getOperatorId, null)
-              .set(ProductionProcessTracking::getOperatorName, null)
-              .set(ProductionProcessTracking::getSettlementAmount, null);
-            processTrackingService.update(uw);
-            log.info("[resetTracking] 工序跟踪已还原为 pending: trackingId={}, 菲号={}, 工序={}",
-                    tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
-        } catch (Exception e) {
-            log.error("[resetTracking] 重置失败（不影响主流程）: scanRecordId={}", scanRecordId, e);
+        ProductionProcessTracking tracking = processTrackingService.getOne(
+                new LambdaQueryWrapper<ProductionProcessTracking>()
+                        .eq(ProductionProcessTracking::getScanRecordId, scanRecordId)
+                        .eq(ProductionProcessTracking::getTenantId, UserContext.tenantId())
+                        .last("LIMIT 1"),
+                false);
+        if (tracking == null) return;
+        if (Boolean.TRUE.equals(tracking.getIsSettled())) {
+            log.warn("[resetTracking] 该工序跟踪记录已结算，跳过重置: trackingId={}", tracking.getId());
+            return;
         }
+        LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
+        uw.eq(ProductionProcessTracking::getId, tracking.getId())
+          .set(ProductionProcessTracking::getScanStatus, "pending")
+          .set(ProductionProcessTracking::getScanTime, null)
+          .set(ProductionProcessTracking::getScanRecordId, null)
+          .set(ProductionProcessTracking::getOperatorId, null)
+          .set(ProductionProcessTracking::getOperatorName, null)
+          .set(ProductionProcessTracking::getSettlementAmount, null);
+        processTrackingService.update(uw);
+        log.info("[resetTracking] 工序跟踪已还原为 pending: trackingId={}, 菲号={}, 工序={}",
+                tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
     }
 
     private boolean isAdminRole(UserContext ctx) {

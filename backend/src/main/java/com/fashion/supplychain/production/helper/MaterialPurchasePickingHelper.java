@@ -795,6 +795,12 @@ public class MaterialPurchasePickingHelper {
 
         if (wasCompleted) externalFactoryDeductionHelper.rollbackMaterialDeduction(pickingId);
 
+        // P0 财务闭环修复：撤销已完成的出库单时，反向关联的物料出库账单（MATERIAL_OUTBOUND）
+        // 仅 wasCompleted=true 时才需反向（pending 状态未扣库存、未推送账单）
+        if (wasCompleted) {
+            reverseMaterialOutboundBills(pickingId, reason);
+        }
+
         restoreRelatedPurchaseStatus(picking.getOrderNo(), items);
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
@@ -816,6 +822,49 @@ public class MaterialPurchasePickingHelper {
                     materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
                 }
             }
+        }
+    }
+
+    /**
+     * P0 财务闭环修复：反向撤销出库单关联的物料出库账单
+     * <p>
+     * 出库确认时 pushMaterialOutboundBill 以 sourceType=MATERIAL_OUTBOUND、sourceId=outboundLog.id 推送账单，
+     * 此处按 pickingId 反查所有关联的 MaterialOutboundLog，逐条反向账单。
+     * 失败不阻塞主流程（账务异常走人工对账）。
+     *
+     * @param pickingId 出库单ID
+     * @param reason    撤销原因
+     */
+    private void reverseMaterialOutboundBills(String pickingId, String reason) {
+        if (billAggregationOrchestrator == null || !StringUtils.hasText(pickingId)) {
+            return;
+        }
+        try {
+            List<MaterialOutboundLog> outboundLogs = materialOutboundLogMapper.selectList(
+                    new LambdaQueryWrapper<MaterialOutboundLog>()
+                            .eq(MaterialOutboundLog::getPickingId, pickingId));
+            if (outboundLogs == null || outboundLogs.isEmpty()) {
+                log.info("[cancelPicking] 未找到关联出库日志，跳过账单反向: pickingId={}", pickingId);
+                return;
+            }
+            String reverseReason = "取消采购领取: " + reason;
+            int reversed = 0;
+            for (MaterialOutboundLog outboundLog : outboundLogs) {
+                if (outboundLog.getId() == null) continue;
+                try {
+                    billAggregationOrchestrator.reverseBySource("MATERIAL_OUTBOUND", outboundLog.getId(), reverseReason);
+                    reversed++;
+                } catch (Exception e) {
+                    // 单条失败不中断后续反向（已结清账单需手动冲账）
+                    log.warn("[cancelPicking] 账单反向失败（不阻塞主流程）: outboundLogId={}, err={}",
+                            outboundLog.getId(), e.getMessage());
+                }
+            }
+            log.info("[cancelPicking] 物料出库账单反向完成: pickingId={}, total={}, reversed={}",
+                    pickingId, outboundLogs.size(), reversed);
+        } catch (Exception e) {
+            log.warn("[cancelPicking] 查询出库日志失败（不阻塞主流程）: pickingId={}, err={}",
+                    pickingId, e.getMessage());
         }
     }
 

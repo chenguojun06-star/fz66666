@@ -720,10 +720,13 @@ public class PayrollSettlementOrchestrator {
 
         try {
             if (billAggregationOrchestrator != null) {
-                billAggregationOrchestrator.cancelBySource("PAYROLL_SETTLEMENT", settlementId.trim());
+                // P0 财务闭环修复：改用 reverseBySource 联动反向全链路（Bill → Payable/Receivable）
+                // 原 cancelBySource 仅取消未结清账单，不联动 Payable/Receivable，导致工资取消后应付记录悬挂
+                billAggregationOrchestrator.reverseBySource("PAYROLL_SETTLEMENT",
+                        settlementId.trim(), "工资结算取消");
             }
         } catch (Exception e) {
-            log.warn("工资结算取消联动账单取消失败（不影响主流程）: settlementId={}, err={}", settlementId, e.getMessage());
+            log.warn("工资结算取消联动账单反向失败（不影响主流程）: settlementId={}, err={}", settlementId, e.getMessage());
         }
     }
 
