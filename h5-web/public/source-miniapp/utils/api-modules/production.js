@@ -153,6 +153,14 @@ const production = {
   confirmPurchaseComplete(payload) {
     return ok('/api/production/purchase/confirm-complete', 'POST', payload || {});
   },
+  /**
+   * 撤回采购（清空到货数量 + 恢复 pending 状态）
+   * 后端：POST /api/production/purchase/cancel-receive
+   * 与 PC 端 CancelReceiveModal 对齐
+   */
+  cancelReceivePurchase(payload) {
+    return ok('/api/production/purchase/cancel-receive', 'POST', payload || {});
+  },
   createPurchaseInstruction(payload) {
     return ok('/api/production/purchase/instruction', 'POST', payload || {});
   },
@@ -433,6 +441,43 @@ const production = {
 
   createCuttingTask(payload) {
     return ok('/api/production/cutting-task/custom/create', 'POST', payload || {});
+  },
+
+  /* -------- 领料出库（与 PC 端 MaterialPicking 对齐） -------- */
+  /**
+   * 创建待出库领料单（两步流第一步：锁定库存）
+   * 后端：POST /api/production/picking/pending
+   */
+  createPickingPending(payload) {
+    return ok('/api/production/picking/pending', 'POST', payload || {});
+  },
+  /**
+   * 领料单列表
+   * 后端：GET /api/production/picking/list
+   */
+  getPickingList(params) {
+    return ok('/api/production/picking/list', 'GET', params || {});
+  },
+  /**
+   * 领料单明细
+   * 后端：GET /api/production/picking/{id}/items
+   */
+  getPickingItems(pickingId) {
+    return ok(`/api/production/picking/${pickingId}/items`, 'GET', {});
+  },
+  /**
+   * 仓库确认出库（两步流第二步：扣减库存 + 状态 completed）
+   * 后端：POST /api/production/picking/{id}/confirm-outbound
+   */
+  confirmPickingOutbound(pickingId) {
+    return ok(`/api/production/picking/${pickingId}/confirm-outbound`, 'POST', {});
+  },
+  /**
+   * 取消待出库领料单（回退库存 + 恢复采购单状态）
+   * 后端：POST /api/production/picking/{id}/cancel-pending
+   */
+  cancelPickingPending(pickingId) {
+    return ok(`/api/production/picking/${pickingId}/cancel-pending`, 'POST', {});
   },
 };
 

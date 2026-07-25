@@ -148,6 +148,28 @@
             >确认回料</view>
           </view>
 
+          <!-- 单条操作按钮：确认完成 / 撤回到货 -->
+          <view class="item-action-row" wx:if="{{(item.canConfirmComplete || item.canCancelReceive) && !item.returnConfirmed}}">
+            <view
+              wx:if="{{item.canConfirmComplete}}"
+              class="btn-action btn-action-primary"
+              data-id="{{item.id || item.purchaseId}}"
+              data-name="{{item.materialName}}"
+              bindtap="onConfirmComplete"
+              hover-class="btn-hover"
+              hover-stay-time="100"
+            >确认完成</view>
+            <view
+              wx:if="{{item.canCancelReceive}}"
+              class="btn-action btn-action-danger"
+              data-id="{{item.id || item.purchaseId}}"
+              data-name="{{item.materialName}}"
+              bindtap="onCancelReceive"
+              hover-class="btn-hover"
+              hover-stay-time="100"
+            >撤回到货</view>
+          </view>
+
           <!-- 需采购提示 -->
           <view class="receive-hint" wx:if="{{item.needsReceive}}">
             <text>需采购后可登记到货</text>
@@ -175,21 +197,68 @@
   <ai-assistant />
 </view>
 
-<!-- 底部操作栏：3 按钮 -->
-<view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
+<!-- 底部操作栏：领料出库 + 3 主操作 -->
+<view class="footer-bar footer-bar-stack" wx:if="{{materialPurchases.length > 0 && !loading}}">
   <view
-    class="btn-outline {{hasReturnConfirmed ? 'btn-disabled' : ''}}"
+    class="btn-picking-outline {{hasReturnConfirmed ? 'btn-disabled' : ''}}"
     hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}"
-    bindtap="onReceiveAll"
-  >一键采购</view>
-  <view
-    class="btn-outline {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
-    hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
-    bindtap="onSubmit"
-  >提交到货</view>
-  <view
-    class="btn-primary {{(!canConfirmProcurement || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
-    hover-class="{{(canConfirmProcurement && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
-    bindtap="onConfirmProcurement"
-  >一键全部完成</view>
+    bindtap="onOpenPicking"
+  >领料出库</view>
+  <view class="footer-bar-row">
+    <view
+      class="btn-outline {{hasReturnConfirmed ? 'btn-disabled' : ''}}"
+      hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}"
+      bindtap="onReceiveAll"
+    >一键采购</view>
+    <view
+      class="btn-outline {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
+      hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
+      bindtap="onSubmit"
+    >提交到货</view>
+    <view
+      class="btn-primary {{(!canConfirmProcurement || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
+      hover-class="{{(canConfirmProcurement && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
+      bindtap="onConfirmProcurement"
+    >一键全部完成</view>
+  </view>
+</view>
+
+<!-- 领料出库弹窗 -->
+<view class="picking-modal-mask" wx:if="{{showPickingModal}}" bindtap="onPickingModalClose">
+  <view class="picking-modal" catchtap="">
+    <view class="picking-modal-header">
+      <text class="picking-modal-title">领料出库</text>
+      <view class="picking-modal-close" bindtap="onPickingModalClose">×</view>
+    </view>
+    <view class="picking-modal-tip">填写领料数量，提交后由仓库确认出库</view>
+    <scroll-view scroll-y class="picking-modal-body">
+      <view
+        wx:for="{{pickingItems}}"
+        wx:key="id"
+        class="picking-item"
+      >
+        <view class="picking-item-info">
+          <text class="picking-item-name">{{item.materialName || '未知物料'}}</text>
+          <text class="picking-item-desc">{{item.materialCode ? '编号 ' + item.materialCode + ' · ' : ''}}{{item.specifications ? '规格 ' + item.specifications + ' · ' : ''}}单位 {{item.unit || '米'}}</text>
+          <text class="picking-item-stock">到货可用：{{item.arrivedQuantity || 0}}{{item.unit || ''}}</text>
+        </view>
+        <view class="picking-item-input">
+          <input
+            class="picking-input"
+            type="digit"
+            placeholder="领料量"
+            placeholder-class="picking-input-placeholder"
+            data-index="{{index}}"
+            bindinput="onPickQtyInput"
+            value="{{item.pickQuantity}}"
+          />
+        </view>
+      </view>
+      <view wx:if="{{pickingItems.length === 0}}" class="picking-empty">暂无可领料物料</view>
+    </scroll-view>
+    <view class="picking-modal-footer">
+      <view class="picking-btn-cancel" bindtap="onPickingModalClose" hover-class="btn-hover" hover-stay-time="100">取消</view>
+      <view class="picking-btn-confirm" bindtap="onConfirmPicking" hover-class="btn-hover" hover-stay-time="100">提交领料</view>
+    </view>
+  </view>
 </view>

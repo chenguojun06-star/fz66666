@@ -22,6 +22,9 @@ Page({
     canConfirmProcurement: false,
     hasReturnConfirmed: false,
     overallArrivalRate: -1,
+    // 领料出库弹窗
+    showPickingModal: false,
+    pickingItems: [],
   },
 
   onLoad(options) {
@@ -72,7 +75,7 @@ Page({
 
       let totalPurchased = 0;
       let totalArrived = 0;
-      let hasUnconfirmed = false;
+      let hasAwaitingConfirm = false;
       let hasReturnConfirmed = false;
 
       const materialPurchases = list.map(item => {
@@ -82,12 +85,18 @@ Page({
         const needsReceive = this._shouldCallReceive(item, receiverId, receiverName);
         const returnConfirmed = Number(item.returnConfirmed || 0) === 1;
         const canConfirmReturn = !returnConfirmed && (status === 'received' || status === 'partial' || status === 'completed');
+        // 撤回到货：对齐 PC 端 canCancelReceive
+        // PC: !isPending && !['completed','cancelled'].includes(status) && !frozen && !returnConfirmed
+        const canCancelReceive = !returnConfirmed && !isComplete && status !== 'cancelled'
+          && status !== 'pending' && Number(item.arrivedQuantity || 0) > 0;
+        // 单条确认完成：对齐 PC 端，仅 awaiting_confirm 状态可操作
+        const canConfirmComplete = !returnConfirmed && !isComplete && status === 'awaiting_confirm';
 
         const purchaseQty = Number(item.purchaseQuantity || 0);
         const arrivedQty = Number(item.arrivedQuantity || 0);
         totalPurchased += purchaseQty;
         totalArrived += arrivedQty;
-        if (!returnConfirmed) hasUnconfirmed = true;
+        if (status === 'awaiting_confirm') hasAwaitingConfirm = true;
         if (returnConfirmed) hasReturnConfirmed = true;
 
         const returnConfirmTimeText = item.returnConfirmTime
@@ -104,6 +113,8 @@ Page({
           isComplete,
           returnConfirmed,
           canConfirmReturn,
+          canCancelReceive,
+          canConfirmComplete,
           inputQuantity: '',
           arrivalRate: purchaseQty > 0 ? Math.round(arrivedQty / purchaseQty * 100) : 0,
           returnConfirmTimeText,
@@ -112,7 +123,9 @@ Page({
 
       const orderId = (materialPurchases[0] && (materialPurchases[0].orderId || materialPurchases[0].order_id)) || '';
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
-      const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
+      // 对齐 PC 端 footer "确认完成"按钮条件：
+      // 有 awaiting_confirm 状态记录 且 无 returnConfirmed=1 锁定（不校验到货率）
+      const canConfirmProcurement = hasAwaitingConfirm && !hasReturnConfirmed;
 
       // 头部状态：基于物料实际状态计算（不依赖到货率，对齐用户诉求"已完成的任务要显示已完成"）
       // 优先级：全部 completed → 已完成；含 cancelled 且其他都完成 → 已完成（取消的物料不阻断）
@@ -133,9 +146,10 @@ Page({
       let overallStatus = 'procuring';
       let overallStatusColor = 'blue';
       if (allCompleted) { overallStatus = 'completed'; overallStatusColor = 'green'; }
-      else if (allReceived) { overallStatus = 'received'; overallStatusColor = 'blue'; }
+      else if (allReceived) { overallStatus = 'received'; overallStatusColor = 'green'; }
       else if (hasPending) { overallStatus = 'pending'; overallStatusColor = 'orange'; }
-      const overallStatusText = this._getStatusText(overallStatus);
+      // overallStatus='procuring' 不在 _getStatusText map 中，单独处理
+      const overallStatusText = overallStatus === 'procuring' ? '采购中' : this._getStatusText(overallStatus);
 
       this.setData({
         orderId, materialPurchases, loading: false,
@@ -296,6 +310,74 @@ Page({
     });
   },
 
+  /**
+   * 撤回采购（单条）：清空到货数量 + 恢复 pending 状态
+   * 与 PC 端 CancelReceiveModal 对齐
+   */
+  onCancelReceive(e) {
+    const { id, name } = e.currentTarget.dataset;
+    if (!id) return;
+
+    wx.showModal({
+      title: '撤回到货',
+      content: `确认撤回「${name || '该物料'}」的到货登记？到货数量将清零，状态恢复为待采购。`,
+      confirmText: '确认撤回',
+      confirmColor: '#e74c3c',
+      editable: true,
+      placeholderText: '撤回原因（选填）',
+      success: async (res) => {
+        if (!res.confirm) return;
+
+        wx.showLoading({ title: '撤回中...', mask: true });
+        try {
+          const reason = (res.content || '').trim();
+          await api.production.cancelReceivePurchase({
+            purchaseId: id,
+            reason,
+          });
+          wx.hideLoading();
+          toast.success('已撤回到货');
+          triggerDataRefresh('procurement');
+          this._loadDetail();
+        } catch (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '撤回失败');
+        }
+      },
+    });
+  },
+
+  /**
+   * 单条确认完成：将待确认完成的采购任务标记为已完成
+   * 与 PC 端 useSampleProcurementQuickActions.confirmPurchaseComplete 对齐
+   */
+  onConfirmComplete(e) {
+    const { id, name } = e.currentTarget.dataset;
+    if (!id) return;
+
+    wx.showModal({
+      title: '确认完成',
+      content: `确认「${name || '该物料'}」采购已完成？`,
+      confirmText: '确认完成',
+      confirmColor: '#007aff',
+      success: async (res) => {
+        if (!res.confirm) return;
+
+        wx.showLoading({ title: '确认中...', mask: true });
+        try {
+          await api.production.confirmPurchaseComplete({ purchaseId: id });
+          wx.hideLoading();
+          toast.success('已确认完成');
+          triggerDataRefresh('procurement');
+          this._loadDetail();
+        } catch (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '确认失败');
+        }
+      },
+    });
+  },
+
   async onSubmit() {
     if (this.data.hasReturnConfirmed) {
       toast.warning('已有物料完成回料确认，无法继续到货登记');
@@ -391,10 +473,12 @@ Page({
   },
 
   _getStatusText(status) {
+    // 对齐 PC 端 MATERIAL_PURCHASE_STATUS_MAP (src/constants/statusMaps.ts)
     const map = {
-      pending: '待采购', received: '已采购', partial: '部分到货',
-      partial_arrival: '部分到货', awaiting_confirm: '待确认完成',
-      completed: '已完成', cancelled: '已取消', warehouse_pending: '待仓库出库',
+      pending: '待采购', received: '已到货', partial: '部分到货',
+      partial_arrival: '部分到货', partial_arrived: '部分到货',
+      awaiting_confirm: '待确认', completed: '已完成', cancelled: '已取消',
+      canceled: '已取消', warehouse_pending: '待仓库出库',
       waiting_procurement: '待采购', procurement_in_progress: '采购中',
       purchasing: '采购中', material_preparation: '备料中',
       procurement_completed: '已完成',
@@ -403,11 +487,21 @@ Page({
   },
 
   _getStatusColor(status) {
+    // 对齐 PC 端 Tag color 映射（success/warning/processing/default）
+    // 小程序用 green/orange/blue/gold/red/cyan 近似映射
     const map = {
-      pending: 'orange', received: 'blue', partial: 'blue',
-      partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
-      cancelled: 'red', warehouse_pending: 'cyan',
-      waiting_procurement: 'orange', procurement_in_progress: 'blue',
+      pending: 'orange',          // warning
+      received: 'green',          // success（PC: 已到货=success）
+      partial: 'orange',          // warning
+      partial_arrival: 'orange',  // warning
+      partial_arrived: 'orange',  // warning
+      awaiting_confirm: 'blue',   // processing
+      completed: 'green',         // success
+      cancelled: 'default',       // default（灰色）
+      canceled: 'default',
+      warehouse_pending: 'blue',  // processing
+      waiting_procurement: 'orange',
+      procurement_in_progress: 'blue',
       procurement_completed: 'green',
     };
     return map[status] || 'orange';
@@ -439,5 +533,99 @@ Page({
     return false;
   },
 
+  /**
+   * 领料出库：打开领料弹窗
+   * 从已采购物料中选择领料数量，调用 createPickingPending 创建待出库领料单
+   */
+  onOpenPicking() {
+    const pickableItems = this.data.materialPurchases.filter(m => {
+      const status = this._normalizeStatus(m.status);
+      return status !== 'cancelled' && status !== 'pending'
+        && Number(m.arrivedQuantity || 0) > 0;
+    });
+    if (pickableItems.length === 0) {
+      toast.warning('暂无可领料的物料（需先采购到货）');
+      return;
+    }
+    const pickingItems = pickableItems.map(m => ({
+      id: m.id || m.purchaseId,
+      materialName: m.materialName,
+      materialCode: m.materialCode,
+      specifications: m.specifications,
+      unit: m.unit || '',
+      arrivedQuantity: Number(m.arrivedQuantity || 0),
+      pickQuantity: '',
+    }));
+    this.setData({ showPickingModal: true, pickingItems });
+  },
+
+  onPickingModalClose() {
+    this.setData({ showPickingModal: false, pickingItems: [] });
+  },
+
+  onPickQtyInput(e) {
+    const { index } = e.currentTarget.dataset;
+    const value = e.detail.value;
+    const pickingItems = this.data.pickingItems.map((item, i) =>
+      i === index ? { ...item, pickQuantity: value } : item
+    );
+    this.setData({ pickingItems });
+  },
+
+  async onConfirmPicking() {
+    const { pickingItems, orderId, orderNo, styleNo } = this.data;
+    const userInfo = getUserInfo() || {};
+    const pickerId = String(userInfo.id || userInfo.userId || '').trim();
+    const pickerName = String(userInfo.name || userInfo.username || '').trim();
+
+    const items = pickingItems
+      .filter(m => Number(m.pickQuantity || 0) > 0)
+      .map(m => ({
+        materialCode: m.materialCode,
+        materialName: m.materialName,
+        specifications: m.specifications,
+        unit: m.unit,
+        quantity: Number(m.pickQuantity),
+        purchaseId: m.id,
+      }));
+
+    if (items.length === 0) {
+      toast.error('请至少填写一种物料的领料数量');
+      return;
+    }
+
+    // 校验领料数量不超过到货数量
+    for (const it of items) {
+      const src = pickingItems.find(m => m.id === it.purchaseId);
+      if (src && it.quantity > src.arrivedQuantity) {
+        toast.error(`「${it.materialName}」领料数量不能超过到货数量(${src.arrivedQuantity})`);
+        return;
+      }
+    }
+
+    wx.showLoading({ title: '提交领料...', mask: true });
+    try {
+      await api.production.createPickingPending({
+        picking: {
+          orderId: orderId || '',
+          orderNo: orderNo || '',
+          styleNo: styleNo || '',
+          pickerId,
+          pickerName,
+          usageType: 'PRODUCTION',
+          pickupType: 'INTERNAL',
+        },
+        items,
+      });
+      wx.hideLoading();
+      toast.success('领料申请已提交，等待仓库确认出库');
+      this.setData({ showPickingModal: false, pickingItems: [] });
+      triggerDataRefresh('procurement');
+      this._loadDetail();
+    } catch (err) {
+      wx.hideLoading();
+      toast.error(err.errMsg || err.message || '领料提交失败');
+    }
+  },
 
 });
