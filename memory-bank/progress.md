@@ -1,9 +1,40 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-23（智能化开关补全 8 个 HIGH 风险点，共 15 个开关全部默认关闭）
+> 最后更新：2026-07-26（P0多租户+财务闭环+AI持久化+多端补齐 6 commits 推送）
 
 ## 已完成
+
+### 2026-07-26 P0多租户隔离+财务闭环+生产备注+AI持久化+多端补齐（6 commits）✅
+
+用户诉求："全部开始优化 注意优化细节与数据链路的闭环"。
+
+- [x] **P0多租户隔离修复**（commit 379554a3c）
+  - CrmClientController: company like → customerId 精确匹配
+  - WagePaymentCallbackHelper: 2 处查询补 tenantId 过滤
+  - SupplierPortalController: supplierType 放宽为 MATERIAL/CMT/BOTH
+  - DuplicateScanPreventer: findByRequestId 补 tenantId 过滤
+- [x] **P0财务闭环反向账单统一**（commit b763df5a8）
+  - 7 处 cancelBySource → reverseBySource（销售退货/工资/二次工艺/盘点/出库/扫码撤回）
+  - 清理 FinishedWarehouseOperationOrchestrator WAREHOUSING 断头调用
+- [x] **生产备注+异常传播+AI持久化**（commit a95f22685）
+  - ScanRescanHelper/ScanUndoHelper: 移除 try-catch 让异常传播触发事务回滚（D-001）
+  - ProductionOrderWorkflowHelper: 工序锁定/回滚/委派同步写入 OrderRemark 表
+  - AiAgentMemoryHelper: 程序记忆持久化到 t_procedural_memory
+- [x] **电商平台可用性标记**（commit 5ef6051cd）
+  - 6 个未实现平台标记 available=false + "即将推出"角标
+- [x] **H5 多端补齐**（commit 522ee5ba4）
+  - api/index.js 新增 lockBundle/unlockBundle 接口
+  - ScanQualityPage 菲号锁定/解锁
+  - StyleDevPage REJECT 按钮
+- [x] **三端订单生命周期同步**（commit 034b76470）
+  - production.js 新增 completeOrder/closeOrder/scrapOrder API
+  - order-detail 新增 onActionComplete/onActionClose/onActionScrap
+  - 三端副本 MD5 一致
+- [x] 质量门控全部通过：mvn compile ✅ / npx tsc ✅ / audit-tenant-id（仅 RoleTemplate 历史遗留）
+- [x] 6 commits 推送至 origin/main（379554a3c → 034b76470）
+
+---
 
 ### 2026-07-25 物料采购/领料/出库流程交互优化 ✅
 

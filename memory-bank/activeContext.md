@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-23（智能化功能全部改为用户可配置开关，默认关闭）
+> 最后更新：2026-07-26（P0多租户+财务闭环+AI持久化+多端补齐 6 commits 推送）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,54 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-26 P0多租户隔离+财务闭环+生产备注+AI持久化+多端补齐（6 commits）✅
+
+用户诉求："全部开始优化 注意优化细节与数据链路的闭环"。系统梳理全部链路并按主题分 6 组提交推送（379554a3c → 034b76470）：
+
+**1. fix(security): P0多租户隔离漏洞修复**（379554a3c）
+- CrmClientController: 客户订单查询从 company like 改为 customerId 精确匹配
+- WagePaymentCallbackHelper: syncBillAggregationOnPaid/OnRefund 增加 tenantId 过滤
+- SupplierPortalController: supplierType 校验放宽为 MATERIAL/CMT/BOTH（兼容空值）
+- DuplicateScanPreventer: findByRequestId 增加 tenantId 过滤
+
+**2. fix(finance): P0财务闭环反向账单统一接入**（b763df5a8）
+统一 cancelBySource → reverseBySource，覆盖 7 处悬挂反向：
+- SalesReturnOrchestrator: 销售退货拒绝反向 SALES_RETURN
+- PayrollSettlementOrchestrator: 工资取消反向 PAYROLL_SETTLEMENT
+- SecondaryProcessOrchestrator: 二次工艺审核拒绝反向 SECONDARY_PROCESS
+- InventoryCheckOrchestrator: 盘点取消按 itemId 逐条反向 INVENTORY_CHECK
+- MaterialPurchasePickingHelper: 撤销已完成的出库单反向 MATERIAL_OUTBOUND
+- ScanUndoHelper: 撤销入库/普通扫码分别反向 WAREHOUSING/SCAN_RECORD
+- FinishedWarehouseOperationOrchestrator: 清理 WAREHOUSING 断头调用
+
+**3. feat(production+ai): 异常传播+订单备注+AI程序记忆持久化**（a95f22685）
+- ScanRescanHelper.rollbackCuttingOnRescan: 移除 try-catch 让异常传播触发事务回滚（D-001）
+- ScanUndoHelper.resetTrackingByScanRecord: 移除 try-catch + 补 tenantId 过滤
+- ProductionOrderWorkflowHelper: 工序锁定/回滚/委派同步写入 OrderRemark 表（双写）
+- AiAgentMemoryHelper: 程序记忆模式从 ConcurrentHashMap 持久化到 t_procedural_memory，@PostConstruct 加载
+
+**4. feat(ecommerce+integration): 标记未实现电商平台为"即将推出"**（5ef6051cd）
+- PlatformConnectorConstants: 新增 available 字段，6 个未实现平台（SHEIN/TEMU/TikTok/Amazon/Shopee/AliExpress）置为 false
+- PlatformCard/EcommerceCenter/PlatformDetail: 同步渲染"即将推出"角标并禁用配置入口
+
+**5. feat(h5): 补齐H5扫码质检菲号锁定与样衣审核REJECT按钮**（522ee5ba4）
+- api/index.js: 新增 lockBundle/unlockBundle 接口
+- ScanQualityPage: 质检扫码后增加菲号锁定/解锁按钮
+- StyleDevPage: 样衣审核弹窗补齐"审核不通过"按钮（PASS/REJECT/REWORK 三档）
+
+**6. feat(miniprogram+h5): 三端同步新增订单生命周期操作**（034b76470）
+- production.js: 新增 completeOrder/closeOrder/scrapOrder API
+- order-detail/index.js: 新增 onActionComplete/onActionClose/onActionScrap 方法，含权限校验 + wx.showModal 二次确认
+- 三端副本（miniprogram + h5-web/source-miniapp + h5-web/public/source-miniapp）保持 MD5 一致
+
+**质量门控全部通过**：
+- ✅ mvn compile（exit 0）
+- ✅ npx tsc --noEmit（exit 0）
+- ✅ audit-tenant-id.py：仅 RoleTemplate 历史遗留（系统表，与本次改动无关）
+- ℹ️ audit-frontend-colors.py：3083 处历史遗留硬编码（与本次改动无关）
+
+---
 
 ### 2026-07-25 物料采购/领料/出库流程交互优化 ✅
 
