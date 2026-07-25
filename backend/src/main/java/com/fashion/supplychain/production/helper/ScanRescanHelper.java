@@ -176,6 +176,7 @@ public class ScanRescanHelper {
         }
     }
 
+    // 裁剪菲号删除失败会导致裁剪菲号残留（数据不一致），移除 try-catch 让异常传播触发事务回滚（符合 D-001）
     private void rollbackCuttingOnRescan(ScanRecord target, String scanType) {
         String reqId = hasText(target.getRequestId()) ? target.getRequestId().trim() : "";
         boolean isCuttingBundled = reqId.startsWith("CUTTING_BUNDLED:");
@@ -187,25 +188,21 @@ public class ScanRescanHelper {
         String oid = TextUtils.safeText(target.getOrderId());
         if (!hasText(oid)) return;
 
-        try {
-            cuttingBundleService.remove(new LambdaQueryWrapper<CuttingBundle>()
-                    .eq(CuttingBundle::getProductionOrderId, oid));
-            log.info("[rescan] 已删除裁剪菲号(整批): orderId={}", oid);
+        cuttingBundleService.remove(new LambdaQueryWrapper<CuttingBundle>()
+                .eq(CuttingBundle::getProductionOrderId, oid));
+        log.info("[rescan] 已删除裁剪菲号(整批): orderId={}", oid);
 
-            CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
-                    .eq(CuttingTask::getProductionOrderId, oid)
-                    .last("limit 1"));
-            if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
-                LambdaUpdateWrapper<CuttingTask> cTaskUw = new LambdaUpdateWrapper<>();
-                cTaskUw.eq(CuttingTask::getId, cuttingTask.getId())
-                       .set(CuttingTask::getStatus, "received")
-                       .set(CuttingTask::getBundledTime, null)
-                       .set(CuttingTask::getUpdateTime, LocalDateTime.now());
-                cuttingTaskService.update(cTaskUw);
-                log.info("[rescan] 裁剪任务状态已退回到received: taskId={}, orderId={}", cuttingTask.getId(), oid);
-            }
-        } catch (Exception e) {
-            log.warn("[rescan] 裁剪数据回滚失败，继续撤销扫码记录: recordId={}, error={}", target.getId(), e.getMessage());
+        CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
+                .eq(CuttingTask::getProductionOrderId, oid)
+                .last("limit 1"));
+        if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
+            LambdaUpdateWrapper<CuttingTask> cTaskUw = new LambdaUpdateWrapper<>();
+            cTaskUw.eq(CuttingTask::getId, cuttingTask.getId())
+                   .set(CuttingTask::getStatus, "received")
+                   .set(CuttingTask::getBundledTime, null)
+                   .set(CuttingTask::getUpdateTime, LocalDateTime.now());
+            cuttingTaskService.update(cTaskUw);
+            log.info("[rescan] 裁剪任务状态已退回到received: taskId={}, orderId={}", cuttingTask.getId(), oid);
         }
     }
 

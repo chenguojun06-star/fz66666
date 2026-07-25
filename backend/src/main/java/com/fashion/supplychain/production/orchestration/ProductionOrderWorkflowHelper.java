@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
@@ -47,6 +48,8 @@ public class ProductionOrderWorkflowHelper {
     private ProductionOrderLogAppendHelper logAppendHelper;
     @Autowired
     private CuttingBundleService cuttingBundleService;
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder lockProgressWorkflow(String id, String workflowJson) {
@@ -113,6 +116,16 @@ public class ProductionOrderWorkflowHelper {
             log.warn("[锁定工序] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
         }
 
+        // 同步写入 OrderRemark 表（带 tenantId 隔离），失败不阻断主流程
+        try {
+            String lockDetail = String.format("操作人=%s, 时间=%s, 工序流程已锁定",
+                    userName != null ? userName : UserContext.username(),
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            orderRemarkHelper.append(existed, "工序流程锁定", lockDetail);
+        } catch (Exception e) {
+            log.warn("[锁定工序] 写 OrderRemark 失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
+        }
+
         return productionOrderQueryService.getDetailById(oid);
     }
 
@@ -152,6 +165,18 @@ public class ProductionOrderWorkflowHelper {
             logAppendHelper.appendRollbackWorkflow(oid, reason);
         } catch (Exception e) {
             log.warn("[回滚工序] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
+        }
+
+        // 同步写入 OrderRemark 表（带 tenantId 隔离），失败不阻断主流程
+        try {
+            String rollbackUser = UserContext.username();
+            String rollbackDetail = String.format("操作人=%s, 时间=%s, 回滚原因=%s",
+                    rollbackUser,
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                    StringUtils.hasText(reason) ? reason : "未提供");
+            orderRemarkHelper.append(existed, "工序流程回滚", rollbackDetail);
+        } catch (Exception e) {
+            log.warn("[回滚工序] 写 OrderRemark 失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
         }
 
         return productionOrderQueryService.getDetailById(oid);
@@ -303,6 +328,19 @@ public class ProductionOrderWorkflowHelper {
             logAppendHelper.appendDelegateProcess(oid, delegateNote);
         } catch (Exception e) {
             log.warn("[工序委派] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
+        }
+
+        // 同步写入 OrderRemark 表（带 tenantId 隔离），失败不阻断主流程
+        try {
+            String delegateDetail = String.format("操作人=%s, 工序=%s, 委外工厂=%s, 单价=%s, 时间=%s",
+                    UserContext.username(),
+                    nodeName,
+                    StringUtils.hasText(factoryId) ? factoryId : "未指定",
+                    unitPrice != null ? unitPrice.toString() : "未指定",
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            orderRemarkHelper.append(order, "工序委派", delegateDetail);
+        } catch (Exception e) {
+            log.warn("[工序委派] 写 OrderRemark 失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
         }
 
         Map<String, Object> result = new LinkedHashMap<>();

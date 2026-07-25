@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.helper;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -7,7 +8,9 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
+import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
+import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
@@ -19,9 +22,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,6 +80,14 @@ public class AiAgentMemoryHelper {
     @Autowired private AiMemoryOrchestrator aiMemoryOrchestrator;
     @Autowired private KnowledgeBaseMapper knowledgeBaseMapper;
     @Autowired(required = false) private StringRedisTemplate stringRedisTemplate;
+    /**
+     * 【A-P0-1修复】注入 ProceduralMemoryMapper，将自动学习的工具调用模式
+     * 持久化到 t_procedural_memory（source=crystallized, tenant_id=0 表示全局公共）。
+     * 使用 @Lazy 避免潜在的循环依赖。
+     */
+    @Autowired(required = false)
+    @Lazy
+    private ProceduralMemoryMapper proceduralMemoryMapper;
 
     private final Cache<String, List<AiMessage>> conversationMemory = Caffeine.newBuilder()
             .maximumSize(MAX_USERS_CACHED)
@@ -90,6 +104,44 @@ public class AiAgentMemoryHelper {
     @PreDestroy
     public void shutdown() {
         memoryExecutor.shutdownNow();
+    }
+
+    /**
+     * 【A-P0-1修复】进程启动时从 t_procedural_memory 加载已存在的 crystallized 记录到缓存。
+     * - 仅加载 tenant_id=0（全局公共）、source=crystallized、未删除的记录
+     * - 按 update_time 倒序，最多加载 MAX_PROCEDURAL_PATTERNS 条
+     * - 失败不影响主流程，仅记录警告
+     */
+    @PostConstruct
+    public void loadProceduralPatternsFromDb() {
+        if (proceduralMemoryMapper == null) {
+            log.warn("[AiAgent-PM] ProceduralMemoryMapper 未注入，程序记忆将仅使用内存缓存（重启丢失）");
+            return;
+        }
+        try {
+            LambdaQueryWrapper<ProceduralMemory> wrapper = new LambdaQueryWrapper<ProceduralMemory>()
+                    .eq(ProceduralMemory::getTenantId, 0L)
+                    .eq(ProceduralMemory::getSopType, ProceduralMemory.SOP_TYPE_CRYSTALLIZED)
+                    .eq(ProceduralMemory::getSource, ProceduralMemory.SOURCE_CRYSTALLIZED)
+                    .eq(ProceduralMemory::getDeleteFlag, 0)
+                    .orderByDesc(ProceduralMemory::getUpdateTime)
+                    .last("LIMIT " + MAX_PROCEDURAL_PATTERNS);
+            List<ProceduralMemory> records = proceduralMemoryMapper.selectList(wrapper);
+            for (ProceduralMemory pm : records) {
+                ProceduralPattern p = new ProceduralPattern();
+                p.intentKey = pm.getSopName();
+                p.toolSequence = parseToolSequence(pm.getStepsJson());
+                p.successCount = pm.getSuccessCount() != null ? pm.getSuccessCount() : 0;
+                p.avgQualityScore = pm.getConfidence() != null ? pm.getConfidence().doubleValue() * 100 : 0;
+                p.lastUsedAt = pm.getUpdateTime() != null
+                        ? pm.getUpdateTime().toEpochSecond(java.time.ZoneOffset.UTC) * 1000
+                        : System.currentTimeMillis();
+                proceduralMemory.put(p.intentKey, p);
+            }
+            log.info("[AiAgent-PM] 从 DB 加载 {} 条程序记忆到缓存", records.size());
+        } catch (Exception e) {
+            log.warn("[AiAgent-PM] 加载程序记忆失败（不影响主流程）: {}", e.getMessage());
+        }
     }
 
     /** 构建租户+用户维度的内存键，防止跨租户对话记忆泄漏 */
@@ -366,8 +418,132 @@ public class AiAgentMemoryHelper {
                     .map(java.util.Map.Entry::getKey).orElse(null);
             if (oldest != null) proceduralMemory.remove(oldest);
         }
+        // 【A-P0-1修复】异步持久化到 t_procedural_memory，进程重启不丢失
+        persistProceduralPatternAsync(existing != null ? existing : proceduralMemory.get(intentKey));
         log.debug("[AiAgent-PM] 记录程序记忆: intent={} tools={} score={} count={}",
                 intentKey, toolNames, qualityScore, existing != null ? existing.successCount : 1);
+    }
+
+    /**
+     * 【A-P0-1修复】异步持久化程序记忆到 t_procedural_memory。
+     * - tenant_id=0 表示全局公共（程序记忆是通用工具调用模式，非租户业务数据）
+     * - sop_type=CRYSTALLIZED，source=crystallized，与人工 SOP 区分
+     * - upsert：存在则更新统计，不存在则插入
+     * - 失败不影响主流程
+     */
+    private void persistProceduralPatternAsync(ProceduralPattern p) {
+        if (proceduralMemoryMapper == null || p == null) return;
+        CompletableFuture.runAsync(() -> {
+            try {
+                ProceduralMemory existing = proceduralMemoryMapper.selectOne(
+                        new LambdaQueryWrapper<ProceduralMemory>()
+                                .eq(ProceduralMemory::getTenantId, 0L)
+                                .eq(ProceduralMemory::getSopName, p.intentKey)
+                                .eq(ProceduralMemory::getSource, ProceduralMemory.SOURCE_CRYSTALLIZED)
+                                .eq(ProceduralMemory::getDeleteFlag, 0));
+                String stepsJson = serializeToolSequence(p.toolSequence);
+                BigDecimal confidence = BigDecimal.valueOf(p.avgQualityScore / 100.0)
+                        .setScale(2, RoundingMode.HALF_UP);
+                if (existing == null) {
+                    ProceduralMemory pm = new ProceduralMemory();
+                    pm.setTenantId(0L);
+                    pm.setSopName(p.intentKey);
+                    pm.setSopType(ProceduralMemory.SOP_TYPE_CRYSTALLIZED);
+                    pm.setStepsJson(stepsJson);
+                    pm.setTriggerKeywords(p.intentKey);
+                    pm.setConfidence(confidence);
+                    pm.setUsageCount(p.successCount);
+                    pm.setSuccessCount(p.successCount);
+                    pm.setSource(ProceduralMemory.SOURCE_CRYSTALLIZED);
+                    pm.setEnabled(1);
+                    pm.setVersion(1);
+                    pm.setDeleteFlag(0);
+                    proceduralMemoryMapper.insert(pm);
+                } else {
+                    ProceduralMemory update = new ProceduralMemory();
+                    update.setId(existing.getId());
+                    update.setStepsJson(stepsJson);
+                    update.setConfidence(confidence);
+                    update.setUsageCount(p.successCount);
+                    update.setSuccessCount(p.successCount);
+                    proceduralMemoryMapper.updateById(update);
+                }
+                // 保持 DB 中 crystallized 记录数 ≤ MAX_PROCEDURAL_PATTERNS，软删除最旧的
+                evictOldCrystallizedPatternsIfNeeded();
+            } catch (Exception e) {
+                log.debug("[AiAgent-PM] 持久化程序记忆失败（不影响主流程）: {}", e.getMessage());
+            }
+        }, memoryExecutor);
+    }
+
+    /**
+     * 【A-P0-1修复】淘汰 DB 中最旧的 crystallized 记录，保持 ≤ MAX_PROCEDURAL_PATTERNS 条。
+     * 使用软删除（delete_flag=1），与现有 ProceduralMemoryService.deleteSop 语义一致。
+     */
+    private void evictOldCrystallizedPatternsIfNeeded() {
+        try {
+            Long count = proceduralMemoryMapper.selectCount(
+                    new LambdaQueryWrapper<ProceduralMemory>()
+                            .eq(ProceduralMemory::getTenantId, 0L)
+                            .eq(ProceduralMemory::getSource, ProceduralMemory.SOURCE_CRYSTALLIZED)
+                            .eq(ProceduralMemory::getDeleteFlag, 0));
+            if (count == null || count <= MAX_PROCEDURAL_PATTERNS) return;
+            int toEvict = count.intValue() - MAX_PROCEDURAL_PATTERNS;
+            LambdaQueryWrapper<ProceduralMemory> wrapper = new LambdaQueryWrapper<ProceduralMemory>()
+                    .eq(ProceduralMemory::getTenantId, 0L)
+                    .eq(ProceduralMemory::getSource, ProceduralMemory.SOURCE_CRYSTALLIZED)
+                    .eq(ProceduralMemory::getDeleteFlag, 0)
+                    .orderByAsc(ProceduralMemory::getUpdateTime)
+                    .last("LIMIT " + toEvict);
+            List<ProceduralMemory> toEvictList = proceduralMemoryMapper.selectList(wrapper);
+            for (ProceduralMemory pm : toEvictList) {
+                ProceduralMemory update = new ProceduralMemory();
+                update.setId(pm.getId());
+                update.setDeleteFlag(1);
+                proceduralMemoryMapper.updateById(update);
+            }
+            if (!toEvictList.isEmpty()) {
+                log.debug("[AiAgent-PM] 软删除 {} 条最旧的 crystallized 程序记忆", toEvictList.size());
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent-PM] 淘汰旧程序记忆失败（不影响主流程）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 【A-P0-1修复】序列化工具调用序列为 steps_json 格式。
+     * 格式：[{"step":1,"action":"tool1"},{"step":2,"action":"tool2"}]
+     */
+    private String serializeToolSequence(List<String> toolSequence) {
+        if (toolSequence == null || toolSequence.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < toolSequence.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("{\"step\":").append(i + 1).append(",\"action\":\"")
+                    .append(toolSequence.get(i).replace("\\", "\\\\").replace("\"", "\\\""))
+                    .append("\"}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    /**
+     * 【A-P0-1修复】从 steps_json 解析工具调用序列。
+     * 兼容简单正则解析（避免依赖完整 JSON 解析），按 step 顺序提取 action 字段。
+     */
+    private List<String> parseToolSequence(String stepsJson) {
+        if (stepsJson == null || stepsJson.isBlank()) return new ArrayList<>();
+        List<String> tools = new ArrayList<>();
+        try {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile("\"action\"\\s*:\\s*\"([^\"]+)\"");
+            java.util.regex.Matcher m = p.matcher(stepsJson);
+            while (m.find()) {
+                tools.add(m.group(1));
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent-PM] 解析工具序列失败: {}", e.getMessage());
+        }
+        return tools;
     }
 
     /** 获取排名靠前的程序记忆，作为few-shot注入system prompt */
