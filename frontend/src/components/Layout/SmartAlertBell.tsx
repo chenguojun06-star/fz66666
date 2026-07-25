@@ -14,6 +14,7 @@ import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard from '../common/XiaoyunInsightCard';
 import BackgroundTaskPanel from '../common/BackgroundTaskPanel';
 import { useAlertData } from './SmartAlertBell/hooks/useAlertData';
+import { useProactiveInsights } from './SmartAlertBell/hooks/useProactiveInsights';
 import { choose, getEventNav } from './SmartAlertBell/helpers';
 import UrgeReplyInline from './SmartAlertBell/components/UrgeReplyInline';
 import OneClickActionInline from './SmartAlertBell/components/OneClickActionInline';
@@ -44,6 +45,10 @@ const SmartAlertBell: React.FC = () => {
     dismissNoticeLocally,
   } = useAlertData();
 
+  // P1-3: 小云主动洞察（Redis 未读列表，独立于 useAlertData）
+  const { insights: proactiveInsights, markRead: markInsightRead } = useProactiveInsights();
+  const totalWithInsights = alertCount + proactiveInsights.length;
+
   return (
     <div className="smart-alert-wrap">
       {/* ── 按钮 ── */}
@@ -55,17 +60,16 @@ const SmartAlertBell: React.FC = () => {
       >
         <span className="smart-alert-btn-icon">
           <ThunderboltOutlined style={{ fontSize: 15 }} />
-          {alertCount > 0 && (
+          {totalWithInsights > 0 && (
             <span className="smart-alert-dot" style={{ background: dotColor }} />
           )}
         </span>
         <span className="smart-alert-btn-label">
           <span className="smart-alert-btn-main">今日预警</span>
         </span>
-        {alertCount > 0 && (
+        {totalWithInsights > 0 && (
           <Badge
-            count={alertCount}
-
+            count={totalWithInsights}
             style={{ marginLeft: 4, background: dotColor, boxShadow: 'none' }}
           />
         )}
@@ -97,6 +101,46 @@ const SmartAlertBell: React.FC = () => {
 
         {!loading && (
           <div className="sap-body-scroll">
+
+            {/* ── P1-3: 小云主动洞察（Redis 未读，最顶部） ── */}
+            {proactiveInsights.length > 0 && (
+              <div className="sap-section">
+                <div className="sap-section-title">
+                  <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> 小云主动洞察
+                  <Badge count={proactiveInsights.length} size="small"
+                    style={{ marginLeft: 8, background: 'var(--color-error)', boxShadow: 'none' }} />
+                </div>
+                {proactiveInsights.slice(0, 5).map((it) => (
+                  <div key={it.id} className="sap-insight-row"
+                    style={{
+                      borderLeft: `3px solid ${
+                        it.severity === 'high' ? 'var(--color-error)'
+                        : it.severity === 'medium' ? 'var(--color-warning)'
+                        : 'var(--color-info)'
+                      }`,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
+                        {it.title}
+                      </div>
+                      {it.content && (
+                        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2, whiteSpace: 'pre-wrap' }}>
+                          {it.content}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="sap-notice-read-btn"
+                      onClick={(e) => { e.stopPropagation(); markInsightRead(it.id); }}
+                      title="标记为已读"
+                    >
+                      已读
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* ── AI 巡检简报 ── */}
             {patrolSummary && (patrolSummary.autoExecutedToday > 0 || patrolSummary.recentActions.length > 0) && (

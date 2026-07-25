@@ -1225,6 +1225,15 @@
   transition: background 0.12s;
 }
 .sap-notice-row:hover { filter: brightness(0.97); }
+/* P1-3: 小云主动洞察行 — 复用 sap-notice-row 视觉，但默认无 cursor */
+.sap-insight-row {
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 6px 8px; margin-bottom: 4px;
+  border-radius: 5px;
+  background: var(--color-bg-container);
+  transition: filter 0.12s;
+}
+.sap-insight-row:hover { filter: brightness(0.97); }
 .sap-notice-read-btn {
   flex-shrink: 0; font-size: 14px; padding: 1px 5px; cursor: pointer;
   background: var(--color-bg-base); border: 1px solid #ffa940; border-radius: 4px; color: #d46b08;

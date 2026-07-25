@@ -125,6 +125,13 @@ const intelligence = {
   getMyPendingTaskSummary() {
     return ok('/api/intelligence/pending-tasks/summary', 'GET', {});
   },
+  // P1-3: 小云主动洞察（Redis 未读列表 + 标记已读）
+  getProactiveInsights() {
+    return ok('/api/intelligence/insights', 'GET', {});
+  },
+  markProactiveInsightRead(id) {
+    return ok('/api/intelligence/insights/' + id + '/read', 'POST', {});
+  },
   aiAdvisorScenario(key, payload) {
     return ok('/api/intelligence/ai-advisor/scenario/' + key, 'POST', payload || {}, { timeout: 90000 });
   },

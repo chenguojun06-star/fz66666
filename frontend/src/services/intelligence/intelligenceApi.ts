@@ -78,6 +78,7 @@ import type {
   WhatIfParams,
   WhatIfResult,
   WorkerEfficiencyResponse,
+  ProactiveInsightItem,
 } from './intelligenceTypes';
 
 // 类型定义已提取至 intelligenceTypes.ts，此处 re-export 以保持所有消费方导入兼容
@@ -1133,6 +1134,17 @@ export const intelligenceApi = {
         `/intelligence/background-task/${taskId}/cancel`,
       )
       .then((r) => (r?.data ?? false)),
+
+  // ── P1-3: 小云主动洞察（Redis 未读列表 + 标记已读） ──
+  getProactiveInsights: (): Promise<ProactiveInsightItem[]> =>
+    api
+      .get<ApiResult<ProactiveInsightItem[]>>('/intelligence/insights', { retry: 0 } as ApiRequestConfig)
+      .then((r) => r?.data ?? []),
+
+  markProactiveInsightRead: (id: string): Promise<boolean> =>
+    api
+      .post<ApiResult<null>>(`/intelligence/insights/${id}/read`)
+      .then((r) => r?.code === 200 || r?.code === 0),
 
 };
 

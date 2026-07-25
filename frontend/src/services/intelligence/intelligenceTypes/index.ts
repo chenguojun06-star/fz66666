@@ -9,3 +9,4 @@ export * from './execution';
 export * from './patrol';
 export * from './graph';
 export * from './simulation';
+export * from './insight';
