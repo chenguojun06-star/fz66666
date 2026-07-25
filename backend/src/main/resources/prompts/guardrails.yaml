@@ -41,6 +41,36 @@ output_filters:
     action: block
     message: "抱歉，我是服装供应链智能助手，无法回答此类问题。"
 
+  # P0-2: 技术术语泄露拦截（防 AI 回复暴露内部架构）
+  # 用户不应看到 Qdrant/Langfuse/Flyway 等技术词，他们只关心业务数据
+  # 平台超管看 PlatformDashboard 即可，无需在对话中暴露技术细节
+  - id: "no_tech_term_leak"
+    description: "禁止在回复中泄露技术架构术语和内部工具名"
+    patterns:
+      # 技术架构术语
+      - "(?i)Qdrant|Langfuse|Flyway|MyBatis|Orchestrator|Caffeine|Redis\\s|PostgreSQL|MySQL\\s"
+      - "(?i)MCP\\b|LLM\\b|token\\s|embedding|vector\\s|prompt\\s|guardrail"
+      - "(?i)NullPointerException|ClassCastException|SQLException|StackOverflow"
+      - "(?i)HTTP\\s*\\d{3}|404|500|503|502\\s|timeout|connection\\s*refused"
+      # 内部工具标识（tool_xxx 开头）
+      - "tool_[a-z_]+"
+      # Prompt 模板标记（HTML 注释形式）
+      - "<!--BLOCK:[a-zA-Z]+-->"
+      - "<!--[A-Z_]+_BEGIN-->"
+      - "<!--[A-Z_]+_END-->"
+      # Java 类名/方法名
+      - "[A-Z][a-z]+[A-Z][a-z]+Service"
+      - "[a-z]+\\.[a-z]+\\([^)]*\\)"
+      # SQL 关键词组合
+      - "(?i)SELECT\\s.+\\sFROM\\s"
+      - "(?i)INSERT\\sINTO|UPDATE\\s.+\\sSET|DELETE\\sFROM"
+      # 数据库表名/列名
+      - "t_[a-z_]+\\b"
+      - "tenant_id|delete_flag|create_time|update_time"
+    action: mask
+    replacement: "（内部数据）"
+    message: "[安全拦截] 回复中包含技术术语，已替换为通用表述"
+
 content_quality:
   - id: "no_empty_answer"
     description: "确保回答非空"

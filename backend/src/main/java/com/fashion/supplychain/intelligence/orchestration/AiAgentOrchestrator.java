@@ -259,6 +259,9 @@ public class AiAgentOrchestrator {
                 return Result.success(getDefaultAnswer(userMessage));
             }
 
+            // P0-4: 净化输出 — 剥离 prompt 内部标记 + 应用敏感信息屏蔽，确保用户看到的是干净业务内容
+            content = sanitizeAssistantResponse(content);
+
             triggerPostTurnHooks(ctx, userMessage, content, cb.getExecRecords(), false);
 
             return Result.success(content);
@@ -613,7 +616,9 @@ public class AiAgentOrchestrator {
                 queryCache.put(cacheKey, deduplicateAnswer(cb.getFinalContent()));
             }
 
-            triggerPostTurnHooks(ctx, userMessage, cb.getFinalContent(), cb.getExecRecords(), false);
+            // P0-4: 净化输出 — 剥离 prompt 内部标记，确保后处理与记忆存储的是干净内容
+            String sanitizedFinal = sanitizeAssistantResponse(cb.getFinalContent());
+            triggerPostTurnHooks(ctx, userMessage, sanitizedFinal, cb.getExecRecords(), false);
 
         } catch (Exception e) {
             log.error("[AiAgent-Stream] 流式执行异常", e);
@@ -714,6 +719,23 @@ public class AiAgentOrchestrator {
         if (entityName.startsWith("PO") || entityName.matches("[A-Z]{2,4}\\d{8,}")) return "order";
         if (entityName.matches("[A-Z]{2,4}-?\\d{4,}[A-Z]?")) return "style";
         return "unknown";
+    }
+
+    /**
+     * P0-4: 净化 LLM 输出 — 剥离 prompt 内部 HTML 注释标记 + 应用敏感信息屏蔽。
+     * 在 LLM 回复送回前端之前调用，确保用户看到的是干净业务内容，不暴露内部架构。
+     * 失败不阻塞主流程，返回原文。
+     */
+    private String sanitizeAssistantResponse(String content) {
+        if (content == null || content.isEmpty()) return content;
+        com.fashion.supplychain.intelligence.service.GuardrailsConfigService guardrailsConfigService = componentRegistry.getGuardrailsConfigService();
+        if (guardrailsConfigService == null) return content;
+        try {
+            return guardrailsConfigService.sanitizeOutput(content);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Sanitize] 净化失败，返回原文: {}", e.getMessage());
+            return content;
+        }
     }
 
     private void triggerPostTurnHooks(AgentLoopContext ctx, String userMessage,
@@ -1237,6 +1259,9 @@ public class AiAgentOrchestrator {
                     return false;
                 }
             }
+
+            // P0-4: 净化输出 — 剥离 prompt 内部标记 + 敏感信息屏蔽，确保前端展示干净业务内容
+            answer = sanitizeAssistantResponse(answer);
 
             // 发送最终 answer 事件，确保前端能解析卡片等结构化内容
             emitSse(emitter, "answer", java.util.Map.of("content", answer, "commandId", commandId));

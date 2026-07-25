@@ -80,6 +80,31 @@ public class GuardrailsConfigService {
         return content;
     }
 
+    // P0-4: 输出净化 — 剥离 prompt 内部 HTML 注释标记，防止 LLM 复述时回显给用户
+    // 匹配 <!--BLOCK:xxx-->、<!--/BLOCK:xxx-->、<!--CACHE_xxx_BEGIN-->、<!--CACHE_xxx_END--> 等内部标记
+    // 这些标记只用于 prompt 拼接时让 LLM 识别上下文边界，不应出现在最终回复中
+    public static final java.util.regex.Pattern PROMPT_MARKER_PATTERN =
+            java.util.regex.Pattern.compile("<!--[/]?(BLOCK:[a-zA-Z]+|CACHE_[A-Z_]+|MEMORY_LIMITATIONS)-->");
+
+    /**
+     * 剥离 prompt 内部 HTML 注释标记（静态方法，供非 Spring 管理的回调类调用）。
+     * 仅剥离标记，不应用敏感信息屏蔽（屏蔽需加载规则，必须实例方法）。
+     */
+    public static String stripPromptMarkers(String content) {
+        if (content == null || content.isEmpty()) return content;
+        String cleaned = PROMPT_MARKER_PATTERN.matcher(content).replaceAll("");
+        return cleaned.replaceAll("\n{3,}", "\n\n");
+    }
+
+    /**
+     * 净化 AI 输出：剥离 prompt 内部标记 + 应用敏感信息屏蔽。
+     * 在 LLM 回复送回前端之前调用，确保用户看到的是干净的业务内容。
+     */
+    public String sanitizeOutput(String content) {
+        if (content == null || content.isEmpty()) return content;
+        return applyMasks(stripPromptMarkers(content));
+    }
+
     /** 检查质量规则，返回问题列表 */
     public List<String> checkQuality(String content) {
         List<String> issues = new ArrayList<>();

@@ -744,7 +744,9 @@ export const routeToPermissionCode: Record<string, string> = {
 
 /** 仅超级管理员可见/可访问的路径集合 */
 export const superAdminOnlyPaths = new Set(
-  menuConfig.filter((s) => s.superAdminOnly).map((s) => s.path).filter(Boolean) as string[]
+  (menuConfig.filter((s) => s.superAdminOnly).map((s) => s.path).filter(Boolean) as string[])
+    // P0-1: AiAgentTraceCenter 含原始工具名/JSON/错误栈等技术细节，仅超管可访问
+    .concat([paths.cockpitTrace])
 );
 
 const normalizePath = (p: string) => String(p || '').split('?')[0];

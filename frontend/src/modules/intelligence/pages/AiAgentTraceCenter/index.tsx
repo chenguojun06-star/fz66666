@@ -9,6 +9,7 @@ import PageLayout from '@/components/common/PageLayout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
 import { useDebouncedValue } from '@/hooks/usePerformance';
+import { useUser } from '@/utils/AuthContext';
 import AgentActivityPanel from './AgentActivityPanel';
 
 type TraceRow = {
@@ -101,6 +102,7 @@ const statusColor = (status?: string) => {
 
 const AiAgentTraceCenter: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<TraceRow[]>([]);
@@ -117,6 +119,23 @@ const AiAgentTraceCenter: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<{ commandId?: string; logs?: TraceRow[]; count?: number } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('activity');
+
+  // P0-1: 仅平台超级管理员可访问（含原始工具名/JSON/错误栈等技术细节）
+  // 普通用户访问会暴露 tool_xxx 等内部标识，违反 prompt 中"禁止暴露工具名"原则
+  // 注意：Hook 必须在所有 early return 之前调用，所以放在 useState 之后
+  if (!user?.isSuperAdmin) {
+    return (
+      <PageLayout>
+        <Alert
+          type="error"
+          showIcon
+          title="无权限"
+          description="仅平台超级管理员可访问本页面"
+          action={<Button type="primary" onClick={() => navigate(paths.dashboard)}>返回首页</Button>}
+        />
+      </PageLayout>
+    );
+  }
 
   const fetchRecent = useCallback(async () => {
     setLoading(true);

@@ -63,11 +63,13 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     @Override
     public void onAnswer(String content, String commandId) {
         this.finalContent = content;
-        String deduped = deduplicateAnswer(content);
+        // P0-4: 剥离 prompt 内部 HTML 注释标记，防止 LLM 复述时回显给用户
+        String deduped = com.fashion.supplychain.intelligence.service.GuardrailsConfigService
+                .stripPromptMarkers(deduplicateAnswer(content));
         emitSse("answer", Map.of("content", deduped, "commandId", commandId));
 
-        memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), content);
-        memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), content);
+        memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), deduped);
+        memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), deduped);
 
         // 幂等关闭：只有未关闭时才关闭SSE（异步后处理可能重复调用onAnswer）
         if (!emitterClosed) {
