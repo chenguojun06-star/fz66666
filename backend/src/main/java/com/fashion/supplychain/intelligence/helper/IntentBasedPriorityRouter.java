@@ -29,7 +29,7 @@ public class IntentBasedPriorityRouter {
     private static final Set<String> DEFAULT_LOW_PRIORITY = new HashSet<>(Arrays.asList(
             "proceduralMem", "userBehavior", "longTermMem", "masInsight",
             "contextFile", "selfCritique", "graphRag", "factoryProfile",
-            "reflectiveMem"
+            "reflectiveMem", "proceduralSop", "archivalMem"
     ));
 
     /**
@@ -71,6 +71,18 @@ public class IntentBasedPriorityRouter {
         // P0-2: 反思记忆保护 — 用户问建议/优化/踩坑/类似/历史/教训/反思时，保护 reflectiveMem 不被缩减
         if (containsAny(lower, "建议", "优化", "踩坑", "类似", "之前", "上次", "历史", "教训", "反思")) {
             lowPriority.remove("reflectiveMem"); // 反思记忆保护
+        }
+        // P0 L4 升级：程序性 SOP 保护 — 用户问流程/操作/怎么扫码/怎么结算等流程类问题时，保护 proceduralSop 不被缩减
+        // 触发关键词与 t_procedural_memory 的 5 类 SOP trigger_keywords 对齐
+        if (containsAny(lower, "扫码", "扫描", "工资", "结算", "计件", "报工", "交期", "预测", "延期",
+                "供应商", "评估", "评级", "质检", "检验", "次品", "返工", "采购", "到货", "回料",
+                "流程", "怎么", "如何", "步骤", "标准", "规范", "sop")) {
+            lowPriority.remove("proceduralSop"); // L4 程序性 SOP 保护
+        }
+        // P0 L5 升级：归档记忆保护 — 用户问历史/之前/上次/记得时，保护 archivalMem 不被缩减
+        // 与 longTermMem 保护逻辑联动，但 archivalMem 是冷数据召回，独立保护
+        if (containsAny(lower, "之前", "上次", "历史", "记住", "记得", "你说过", "上次问", "以前")) {
+            lowPriority.remove("archivalMem"); // L5 归档记忆保护
         }
 
         return lowPriority.toArray(new String[0]);
