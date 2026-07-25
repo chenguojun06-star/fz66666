@@ -16,6 +16,45 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-07-25 物料采购/领料/出库流程交互优化 ✅
+
+用户诉求："全部核实清楚就开始优化修复，样衣那边的采购与领取，还有大货这边也是一样的"。基于问题分析对 PC 端采购、领料、出库流程做一致性优化：
+
+**1. 采购按钮命名与操作 clarity**
+- 文件：[frontend/src/modules/production/pages/Production/MaterialPurchase/components/materialStatusActionColumns.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/production/pages/Production/MaterialPurchase/components/materialStatusActionColumns.tsx)
+- 文件：[
+  frontend/src/modules/production/pages/Production/MaterialPurchaseDetail/columns.tsx
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/production/pages/Production/MaterialPurchaseDetail/columns.tsx)
+- 变更："采购"→"去采购"/"查看"，"到货入库"→"登记到货"，"取消领取"→"撤回采购"；增加 title 提示；RowActions maxInline 调整为 3。
+
+**2. 领料表单 BOM 自动预选与需求对照**
+- 文件：[
+  frontend/src/modules/production/pages/Production/MaterialPicking/PickingForm.tsx
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/production/pages/Production/MaterialPicking/PickingForm.tsx)
+- 变更：选择生产订单后自动拉取 BOM 与库存摘要；按 `orderQuantity × usageAmount` 计算订单需求；展示 BOM 用量/订单需求/库存余量；自动为每条 BOM 选择可用库存最多的批次并预填领用量；增加"一键匹配库存"/"清空选择"。
+
+**3. 出库批次选择交互与表单联动**
+- 文件：[
+  frontend/src/modules/warehouse/pages/MaterialInventory/components/OutboundModal/BatchTable.tsx
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/warehouse/pages/MaterialInventory/components/OutboundModal/BatchTable.tsx)
+- 文件：[
+  frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useOutboundActions.ts
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useOutboundActions.ts)
+- 文件：[
+  frontend/src/modules/warehouse/pages/MaterialInventory/components/OutboundModal/index.tsx
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/warehouse/pages/MaterialInventory/components/OutboundModal/index.tsx)
+- 文件：[
+  frontend/src/modules/warehouse/pages/MaterialInventory/MaterialInventoryModals.tsx
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/warehouse/pages/MaterialInventory/MaterialInventoryModals.tsx)
+- 文件：[
+  frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useOutboundContext.ts
+](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useOutboundContext.ts)
+- 变更：批次表增加 checkbox 选择，未选中批次禁用数量输入；增加"目标总量"输入与"按 FIFO 分配"自动按入库日期从早到晚分配；增加"清空选择"；选中行自动填充全部可用库存；订单选择后自动同步 pickupType 与 factoryType。
+
+**验证**：`npm run type-check` 0 errors；`npx eslint <修改文件>` 0 errors。
+
+---
+
 ### 2026-07-24 平台详情页顶部标签改为中文平台名 ✅
 
 用户反馈：点击电商中心平台卡片后，顶部最近访问标签显示 `/ecommerce/platform/xxx` 路径，应像其他页面一样显示中文。
