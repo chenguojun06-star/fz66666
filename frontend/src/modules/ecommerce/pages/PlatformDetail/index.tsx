@@ -8,6 +8,7 @@ import {
   SettingOutlined, ThunderboltOutlined, SyncOutlined, CheckCircleOutlined,
   WarningOutlined, CloseCircleOutlined, KeyOutlined,
   SafetyCertificateOutlined, LinkOutlined, SearchOutlined, ReloadOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ExpressOrderModal from '../../components/ExpressOrderModal';
@@ -43,6 +44,9 @@ const PlatformDetail: React.FC = () => {
   if (!platform) {
     return <Empty description="平台不存在" />;
   }
+
+  // 【E-P0-2修复】available=false 的平台 Adapter 未实现，详情页显示"敬请期待"提示
+  const isAvailable = platform.available !== false;
 
   const guide = CREDENTIAL_GUIDES[platform.code] || CREDENTIAL_GUIDES.DEFAULT;
 
@@ -154,6 +158,17 @@ const PlatformDetail: React.FC = () => {
       label: <span><SettingOutlined /> 平台配置</span>,
       children: (
         <div>
+          {/* 【E-P0-2修复】available=false 时显示"敬请期待"提示，禁用配置 */}
+          {!isAvailable && (
+            <Alert
+              type="warning"
+              showIcon
+              icon={<ClockCircleOutlined />}
+              style={{ marginBottom: 16, borderRadius: 8 }}
+              title={<span><strong>{platform.name} 平台 Adapter 正在开发中，敬请期待</strong></span>}
+              description="该平台后端 Adapter 尚未实现，配置凭证后无法同步订单。请优先选择已支持的平台：聚水潭 / 淘宝 / 京东 / 拼多多。"
+            />
+          )}
           {!showGuide ? (
             <Alert type="warning" showIcon icon={<WarningOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
               title={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>点击查看获取教程 →</Button></span>}
@@ -181,19 +196,19 @@ const PlatformDetail: React.FC = () => {
           <Divider />
           <Form form={configForm} layout="vertical">
             <Form.Item name="appKey" label={<span><KeyOutlined /> 应用标识 (AppKey)</span>} rules={[{ required: true, message: '请输入应用标识' }]}>
-              <Input placeholder={`请输入 ${platform.name} 的应用标识`} autoComplete="off" />
+              <Input placeholder={`请输入 ${platform.name} 的应用标识`} autoComplete="off" disabled={!isAvailable} />
             </Form.Item>
             <Form.Item name="appSecret" label={<span><SafetyCertificateOutlined /> 应用密钥 (AppSecret)</span>} rules={[{ required: true, message: '请输入应用密钥' }]}>
-              <Input.Password placeholder={`请输入 ${platform.name} 的应用密钥`} autoComplete="off" />
+              <Input.Password placeholder={`请输入 ${platform.name} 的应用密钥`} autoComplete="off" disabled={!isAvailable} />
             </Form.Item>
             <Form.Item name="shopName" label={<span><ShopOutlined /> 店铺名称（可选）</span>}>
-              <Input placeholder="给这个连接起个名字" />
+              <Input placeholder="给这个连接起个名字" disabled={!isAvailable} />
             </Form.Item>
           </Form>
 
           <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-            <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={handleTestConnection} style={{ flex: 1 }}>保存并测试连接</Button>
-            <Button icon={<SettingOutlined />} onClick={handleSaveConfig} style={{ flex: 1 }}>仅保存</Button>
+            <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={handleTestConnection} disabled={!isAvailable} style={{ flex: 1 }}>保存并测试连接</Button>
+            <Button icon={<SettingOutlined />} onClick={handleSaveConfig} disabled={!isAvailable} style={{ flex: 1 }}>仅保存</Button>
           </div>
 
           {testResult && (
@@ -228,7 +243,9 @@ const PlatformDetail: React.FC = () => {
             <Text type="secondary" style={{ fontSize: 14 }}>{platform.desc}</Text>
           </div>
           <div style={{ marginLeft: 'auto' }}>
-            {configured ? (
+            {!isAvailable ? (
+              <Tag icon={<ClockCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>敬请期待</Tag>
+            ) : configured ? (
               <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 14, padding: '2px 12px' }}>已连接</Tag>
             ) : (
               <Tag icon={<CloseCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>未配置</Tag>

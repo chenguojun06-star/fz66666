@@ -3,7 +3,7 @@ import { Col, Card, Badge, Tag, Tooltip, Space, Divider, Row, Button, Typography
 import {
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
   SettingOutlined, SyncOutlined, LinkOutlined,
-  ThunderboltOutlined, NumberOutlined,
+  ThunderboltOutlined, NumberOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import { SYNC_MODE_LABELS, type PlatformMeta } from '../PlatformConnectorConstants';
 import { renderIcon } from './icons';
@@ -37,8 +37,11 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
   const isConfigured = status?.configured;
   const isConnected = status?.status === 'ACTIVE' || status?.status === 'CONNECTED';
   const statsData = shopStatsMap[p.code];
+  // 【E-P0-2修复】available=false 的平台 Adapter 未实现，仅展示"敬请期待"
+  const isAvailable = p.available !== false;
 
-  const statusDot = !status ? { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' }
+  const statusDot = !isAvailable ? { color: 'var(--color-text-quaternary)', icon: <ClockCircleOutlined />, text: '敬请期待' }
+    : !status ? { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' }
     : isConfigured && isConnected ? { color: 'var(--color-success)', icon: <CheckCircleOutlined />, text: '已连接' }
     : isConfigured ? { color: 'var(--color-warning)', icon: <WarningOutlined />, text: '已配置' }
     : { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' };
@@ -46,8 +49,8 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
   return (
     <Col key={p.code} xs={24} sm={12} lg={8} xl={6}>
       <Badge.Ribbon
-        text={p.syncMode === 'pull' ? '主动同步' : '回调推送'}
-        color={p.syncMode === 'pull' ? 'blue' : 'green'}
+        text={isAvailable ? (p.syncMode === 'pull' ? '主动同步' : '回调推送') : '敬请期待'}
+        color={isAvailable ? (p.syncMode === 'pull' ? 'blue' : 'green') : 'default'}
         style={{ opacity: 0.85 }}
       >
         <Card hoverable style={{ borderRadius: 12, height: '100%' }} styles={{ body: { padding: '20px 16px 12px' } }}>
@@ -57,7 +60,7 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
               <span style={{ fontSize: 24 }}>{renderIcon(p.icon)}</span>
               <Text strong style={{ fontSize: 16 }}>{p.name}</Text>
             </Space>
-            <Tag icon={statusDot.icon} color={isConfigured && isConnected ? 'success' : isConfigured ? 'warning' : 'default'} style={{ margin: 0 }}>
+            <Tag icon={statusDot.icon} color={!isAvailable ? 'default' : (isConfigured && isConnected ? 'success' : isConfigured ? 'warning' : 'default')} style={{ margin: 0 }}>
               {statusDot.text}
             </Tag>
           </div>
@@ -74,7 +77,7 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
           </div>
 
           {/* 连接后的迷你数据 */}
-          {isConfigured && statsData && (
+          {isAvailable && isConfigured && statsData && (
             <Row gutter={8} style={{ marginBottom: 8 }}>
               <Col span={12}>
                 <div style={{ fontSize: 14, color: '#888' }}>今日订单</div>
@@ -88,23 +91,34 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
           )}
 
           <Divider style={{ margin: '8px 0' }} />
-          <Space orientation="vertical" style={{ width: '100%' }} size={6}>
-            <Button type={isConfigured ? 'default' : 'primary'} icon={<SettingOutlined />} block onClick={() => onConfig(p)}>
-              {isConfigured ? '修改凭证' : '配置连接'}
-            </Button>
-            {isConfigured && (
-              <Button icon={<ThunderboltOutlined />} block loading={testing} onClick={() => onTest(p)}>连接测试</Button>
-            )}
-            {isConfigured && (
-              <Button icon={<NumberOutlined />} block onClick={() => onViewStats(p)}>店铺数据</Button>
-            )}
-            {isConfigured && p.syncMode === 'pull' && (
-              <Button icon={<SyncOutlined />} block loading={syncing && activePlatformCode === p.code} onClick={() => onSync(p)}>同步订单</Button>
-            )}
-            {p.docUrl && (
-              <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
-            )}
-          </Space>
+          {isAvailable ? (
+            <Space orientation="vertical" style={{ width: '100%' }} size={6}>
+              <Button type={isConfigured ? 'default' : 'primary'} icon={<SettingOutlined />} block onClick={() => onConfig(p)}>
+                {isConfigured ? '修改凭证' : '配置连接'}
+              </Button>
+              {isConfigured && (
+                <Button icon={<ThunderboltOutlined />} block loading={testing} onClick={() => onTest(p)}>连接测试</Button>
+              )}
+              {isConfigured && (
+                <Button icon={<NumberOutlined />} block onClick={() => onViewStats(p)}>店铺数据</Button>
+              )}
+              {isConfigured && p.syncMode === 'pull' && (
+                <Button icon={<SyncOutlined />} block loading={syncing && activePlatformCode === p.code} onClick={() => onSync(p)}>同步订单</Button>
+              )}
+              {p.docUrl && (
+                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
+              )}
+            </Space>
+          ) : (
+            <Space orientation="vertical" style={{ width: '100%' }} size={6}>
+              <Button type="default" icon={<ClockCircleOutlined />} block disabled>
+                敬请期待
+              </Button>
+              {p.docUrl && (
+                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
+              )}
+            </Space>
+          )}
         </Card>
       </Badge.Ribbon>
     </Col>

@@ -10,6 +10,14 @@ export interface PlatformMeta {
   features: string[];
   docUrl: string;
   monthlyPrice: number;
+  /**
+   * 【E-P0-2修复】平台 Adapter 是否已实现
+   * - true: 后端已有 Adapter，可正常配置和同步
+   * - false: 后端 Adapter 未实现，前端显示"敬请期待"，禁用配置按钮
+   * 已实现：JST / TAOBAO / JD / PINDUODUO
+   * 未实现：SHEIN / DOUYIN / TMALL / XIAOHONGSHU / WECHAT_SHOP / SHOPIFY
+   */
+  available: boolean;
 }
 
 export const PLATFORM_LIST: PlatformMeta[] = [
@@ -24,6 +32,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['多平台订单聚合', '自动店铺发现', '客户归集', '物流自动回传'],
     docUrl: 'https://open.jushuitan.com',
     monthlyPrice: 299,
+    available: true,
   },
   {
     code: 'SHEIN',
@@ -36,6 +45,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单同步', '物流回传', '库存同步'],
     docUrl: 'https://open.shein.com',
     monthlyPrice: 299,
+    available: false,
   },
   {
     code: 'TAOBAO',
@@ -48,6 +58,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单导入', '库存同步', '物流回传'],
     docUrl: 'https://open.taobao.com',
     monthlyPrice: 149,
+    available: true,
   },
   {
     code: 'DOUYIN',
@@ -60,6 +71,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单导入', '直播订单', '物流回传'],
     docUrl: 'https://open.douyin.com',
     monthlyPrice: 299,
+    available: false,
   },
   {
     code: 'JD',
@@ -72,6 +84,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单同步', '物流跟踪', '库存管理'],
     docUrl: 'https://open.jd.com',
     monthlyPrice: 249,
+    available: true,
   },
   {
     code: 'TMALL',
@@ -84,6 +97,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单导入', '库存同步', '退换货管理'],
     docUrl: 'https://open.taobao.com',
     monthlyPrice: 199,
+    available: false,
   },
   {
     code: 'PINDUODUO',
@@ -96,6 +110,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单导入', '批量发货', '库存同步'],
     docUrl: 'https://open.pinduoduo.com',
     monthlyPrice: 149,
+    available: true,
   },
   {
     code: 'XIAOHONGSHU',
@@ -108,6 +123,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单管理', '笔记联动', '库存同步'],
     docUrl: 'https://open.xiaohongshu.com',
     monthlyPrice: 199,
+    available: false,
   },
   {
     code: 'WECHAT_SHOP',
@@ -120,6 +136,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单同步', '私域管理', '客户管理'],
     docUrl: 'https://developers.weixin.qq.com',
     monthlyPrice: 149,
+    available: false,
   },
   {
     code: 'SHOPIFY',
@@ -132,6 +149,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     features: ['订单同步', '多币种', '物流对接'],
     docUrl: 'https://shopify.dev',
     monthlyPrice: 299,
+    available: false,
   },
 ];
 

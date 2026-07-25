@@ -7,7 +7,7 @@ import {
   ApiOutlined, ShopOutlined, ShoppingCartOutlined, DollarOutlined,
   SyncOutlined, CloudOutlined, InboxOutlined, ArrowRightOutlined, CloudUploadOutlined,
   CreditCardOutlined, CarOutlined, BellOutlined, StockOutlined, TeamOutlined,
-  ArrowUpOutlined, ThunderboltOutlined,
+  ArrowUpOutlined, ThunderboltOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformConnector, type ShopStats } from '../../../integration/pages/IntegrationCenter/usePlatformConnector';
@@ -86,20 +86,24 @@ const EcommerceCenter: React.FC = () => {
     const isConfigured = status?.configured;
     const isConnected = status?.status === 'ACTIVE' || status?.status === 'CONNECTED';
     const statsData = shopStatsMap[p.code];
+    // 【E-P0-2修复】available=false 的平台 Adapter 未实现，显示"敬请期待"
+    const isAvailable = p.available !== false;
 
-    const statusConfig = !status
-      ? { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' }
-      : isConfigured && isConnected
-        ? { color: 'var(--color-success)', icon: <CheckCircleOutlined />, text: '已连接' }
-        : isConfigured
-          ? { color: 'var(--color-warning)', icon: <WarningOutlined />, text: '已配置' }
-          : { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' };
+    const statusConfig = !isAvailable
+      ? { color: 'var(--color-text-quaternary)', icon: <ClockCircleOutlined />, text: '敬请期待' }
+      : !status
+        ? { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' }
+        : isConfigured && isConnected
+          ? { color: 'var(--color-success)', icon: <CheckCircleOutlined />, text: '已连接' }
+          : isConfigured
+            ? { color: 'var(--color-warning)', icon: <WarningOutlined />, text: '已配置' }
+            : { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' };
 
     return (
       <Card
         key={p.code}
         hoverable
-        style={{ borderRadius: 12, border: `1px solid ${isConnected ? 'var(--status-success-border)' : isConfigured ? 'var(--status-warning-border)' : 'var(--color-border-light)'}` }}
+        style={{ borderRadius: 12, border: `1px solid ${!isAvailable ? 'var(--color-border-light)' : isConnected ? 'var(--status-success-border)' : isConfigured ? 'var(--status-warning-border)' : 'var(--color-border-light)'}` }}
         styles={{ body: { padding: 20 } }}
         onClick={() => navigate(`${paths.ecommercePlatform}/${p.code}`)}
       >
@@ -107,7 +111,7 @@ const EcommerceCenter: React.FC = () => {
           <Space size={10}>
             <span style={{
               width: 42, height: 42, borderRadius: 10,
-              background: isConnected ? 'var(--status-success-bg)' : isConfigured ? 'var(--status-warning-bg)' : 'var(--color-bg-subtle)',
+              background: !isAvailable ? 'var(--color-bg-subtle)' : (isConnected ? 'var(--status-success-bg)' : isConfigured ? 'var(--status-warning-bg)' : 'var(--color-bg-subtle)'),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20, color: p.color,
             }}>
@@ -115,13 +119,13 @@ const EcommerceCenter: React.FC = () => {
             </span>
             <div>
               <Text strong style={{ fontSize: 16 }}>{p.name}</Text>
-              <div style={{ marginTop: 2 }}><Tag icon={statusConfig.icon} color={isConnected ? 'success' : isConfigured ? 'warning' : 'default'} style={{ margin: 0 }}>{statusConfig.text}</Tag></div>
+              <div style={{ marginTop: 2 }}><Tag icon={statusConfig.icon} color={!isAvailable ? 'default' : (isConnected ? 'success' : isConfigured ? 'warning' : 'default')} style={{ margin: 0 }}>{statusConfig.text}</Tag></div>
             </div>
           </Space>
           <ArrowRightOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 16 }} />
         </div>
 
-        {isConfigured && statsData ? (
+        {isAvailable && isConfigured && statsData ? (
           <Row gutter={8}>
             <Col span={8}>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日订单</div>
@@ -140,7 +144,7 @@ const EcommerceCenter: React.FC = () => {
           <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 0, minHeight: 50 }}>{p.desc}</Paragraph>
         )}
 
-        {isConfigured && statsData && (
+        {isAvailable && isConfigured && statsData && (
           <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {statsData.pendingPick > 0 && <Tag color="orange">待拣货 {statsData.pendingPick}</Tag>}
             {statsData.noStockWarn > 0 && <Tag color="red">缺货 {statsData.noStockWarn}</Tag>}
@@ -153,13 +157,21 @@ const EcommerceCenter: React.FC = () => {
           {p.features.slice(0, 3).map(f => <Tag key={f}>{f}</Tag>)}
         </div>
 
-        {isConfigured && p.syncMode === 'pull' && (
+        {isAvailable && isConfigured && p.syncMode === 'pull' && (
           <Button
             size="small" icon={<SyncOutlined />} loading={syncing}
             onClick={(e) => { e.stopPropagation(); handleSync(p); }}
             style={{ marginTop: 10, width: '100%' }}
           >
             同步订单
+          </Button>
+        )}
+        {!isAvailable && (
+          <Button
+            size="small" icon={<ClockCircleOutlined />} disabled
+            style={{ marginTop: 10, width: '100%' }}
+          >
+            敬请期待
           </Button>
         )}
       </Card>
