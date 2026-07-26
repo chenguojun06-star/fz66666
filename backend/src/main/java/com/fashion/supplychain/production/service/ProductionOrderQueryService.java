@@ -162,7 +162,10 @@ public class ProductionOrderQueryService {
 
     private QueryWrapper<ProductionOrder> buildQueryWrapper(QueryParams qp) {
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
-        wrapper.eq(StringUtils.hasText(qp.orderNo), "order_no", qp.orderNo)
+        // P0铁律4：所有查询必须带 tenantId 过滤，防止跨租户数据泄露
+        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        wrapper.eq("tenant_id", currentTenantId)
+                .eq(StringUtils.hasText(qp.orderNo), "order_no", qp.orderNo)
                 .like(StringUtils.hasText(qp.styleNo), "style_no", qp.styleNo)
                 .like(StringUtils.hasText(qp.factoryName), "factory_name", qp.factoryName)
             .and(StringUtils.hasText(qp.keyword), w -> w
@@ -227,11 +230,8 @@ public class ProductionOrderQueryService {
     }
 
     private void applyDataPermissionFilter(QueryWrapper<ProductionOrder> wrapper) {
-        if (com.fashion.supplychain.common.UserContext.isTenantOwner()
-                || com.fashion.supplychain.common.UserContext.isSuperAdmin()) {
-            return;
-        }
-
+        // P0铁律4：移除 SuperAdmin/TenantOwner 绕过租户校验的逻辑
+        // buildQueryWrapper 已强制注入 tenant_id 过滤，所有用户均受租户隔离约束
         String dataScope = com.fashion.supplychain.common.UserContext.getDataScope();
 
         if ("all".equals(dataScope)) {
@@ -330,8 +330,10 @@ public class ProductionOrderQueryService {
         }
 
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getId, id)
+                .eq(ProductionOrder::getTenantId, currentTenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(org.springframework.util.StringUtils.hasText(ctxFactoryId), ProductionOrder::getFactoryId, ctxFactoryId);
         ProductionOrder productionOrder = productionOrderMapper.selectOne(wrapper);
@@ -350,8 +352,10 @@ public class ProductionOrderQueryService {
 
     public ProductionOrder getDetailByOrderNo(String orderNo) {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getOrderNo, orderNo)
+                .eq(ProductionOrder::getTenantId, currentTenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(org.springframework.util.StringUtils.hasText(ctxFactoryId), ProductionOrder::getFactoryId, ctxFactoryId)
                 .last("limit 1");
@@ -654,6 +658,9 @@ public class ProductionOrderQueryService {
         String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
+        // P0铁律4：所有统计查询必须带 tenantId 过滤，防止跨租户数据汇总
+        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        wrapper.eq("tenant_id", currentTenantId);
         wrapper.eq("delete_flag", 0);
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
             .eq(StringUtils.hasText(styleNo), "style_no", styleNo)

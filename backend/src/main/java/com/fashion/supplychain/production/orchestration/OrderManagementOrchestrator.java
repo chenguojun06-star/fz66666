@@ -80,8 +80,12 @@ public class OrderManagementOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("缺少styleId");
         }
-
-        StyleInfo style = styleInfoService.getById(styleId);
+        // P0铁律4：getById 增补 tenantId 过滤，防止跨租户访问款式
+        Long currentTenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, currentTenantId)
+                .one();
         if (style == null) {
             throw new IllegalArgumentException("款号不存在");
         }

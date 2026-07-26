@@ -981,8 +981,8 @@ public class ProductionOrderOrchestrator {
     }
 
     private void assertOrderBelongsToCurrentTenant(String orderId, String operation) {
-        Long currentTenantId = UserContext.tenantId();
-        if (currentTenantId == null) return;
+        // P0铁律4：强制要求租户上下文，禁止 null tenantId 绕过租户校验
+        Long currentTenantId = TenantAssert.requireTenantId();
         ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
         if (order == null) return;
         if (order.getTenantId() != null && !order.getTenantId().equals(currentTenantId)) {

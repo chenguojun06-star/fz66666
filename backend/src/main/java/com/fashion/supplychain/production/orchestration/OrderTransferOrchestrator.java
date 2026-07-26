@@ -192,22 +192,28 @@ public class OrderTransferOrchestrator {
         if (currentUserId == null) {
             throw new BusinessException("未登录或登录已过期");
         }
+        // P0铁律4：强制租户上下文 + getById 增补 tenantId 过滤
+        Long currentTenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
 
-        ProductionOrder order = productionOrderService.getById(orderId);
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, currentTenantId)
+                .one();
         if (order == null) {
             throw new BusinessException("订单不存在");
         }
 
-        User toUser = userService.getById(toUserId);
+        User toUser = userService.lambdaQuery()
+                .eq(User::getId, toUserId)
+                .eq(User::getTenantId, currentTenantId)
+                .one();
         if (toUser == null) {
             throw new BusinessException("接收人不存在");
         }
 
-        Long currentTenantId = UserContext.tenantId();
-        if (!UserContext.isSuperAdmin()) {
-            if (currentTenantId == null || !currentTenantId.equals(toUser.getTenantId())) {
-                throw new BusinessException("只能转移给本系统内部人员，禁止转移给外部用户");
-            }
+        // P0铁律4：移除 SuperAdmin 绕过租户校验的逻辑，所有用户均需校验同租户
+        if (!currentTenantId.equals(toUser.getTenantId())) {
+            throw new BusinessException("只能转移给本系统内部人员，禁止转移给外部用户");
         }
 
         if (currentUserId.equals(toUserId)) {
@@ -255,22 +261,28 @@ public class OrderTransferOrchestrator {
         if (currentUserId == null) {
             throw new BusinessException("未登录或登录已过期");
         }
+        // P0铁律4：强制租户上下文 + getById 增补 tenantId 过滤
+        Long currentTenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
 
-        ProductionOrder order = productionOrderService.getById(orderId);
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, currentTenantId)
+                .one();
         if (order == null) {
             throw new BusinessException("订单不存在");
         }
 
-        Factory toFactory = factoryService.getById(toFactoryId);
+        Factory toFactory = factoryService.lambdaQuery()
+                .eq(Factory::getId, toFactoryId)
+                .eq(Factory::getTenantId, currentTenantId)
+                .one();
         if (toFactory == null) {
             throw new BusinessException("目标工厂不存在");
         }
 
-        Long currentTenantId = UserContext.tenantId();
-        if (!UserContext.isSuperAdmin()) {
-            if (currentTenantId == null || !currentTenantId.equals(toFactory.getTenantId())) {
-                throw new BusinessException("只能转移给本系统内部工厂，禁止转移给外部工厂");
-            }
+        // P0铁律4：移除 SuperAdmin 绕过租户校验的逻辑，所有用户均需校验同租户
+        if (!currentTenantId.equals(toFactory.getTenantId())) {
+            throw new BusinessException("只能转移给本系统内部工厂，禁止转移给外部工厂");
         }
 
         if (!"active".equals(toFactory.getStatus())) {

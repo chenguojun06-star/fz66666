@@ -37,17 +37,15 @@ public class ProcessParentMappingOrchestrator {
         if (ctx == null) {
             throw new BusinessException("用户未登录");
         }
-        if (ctx.isSuperAdmin()) {
-            mapping.setTenantId(null);
-        } else {
-            mapping.setTenantId(ctx.getTenantId());
-        }
+        // P0铁律4：禁止 SuperAdmin 创建 tenantId=null 的全局映射，强制绑定当前租户
+        Long currentTenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
+        mapping.setTenantId(currentTenantId);
         if (mapping.getCreateTime() == null) {
             mapping.setCreateTime(LocalDateTime.now());
         }
 
         mappingMapper.insert(mapping);
-        mappingService.reload(ctx.isSuperAdmin() ? null : ctx.getTenantId());
+        mappingService.reload(currentTenantId);
         log.info("[ProcessMapping] 已新增映射 id={} keyword={} parentNode={}",
                 mapping.getId(), mapping.getProcessKeyword(), mapping.getParentNode());
         return mapping;
@@ -59,9 +57,13 @@ public class ProcessParentMappingOrchestrator {
         if (existing == null) {
             throw new BusinessException("映射不存在");
         }
+        // P0铁律4：移除 SuperAdmin 绕过租户校验的逻辑，所有用户均需校验同租户
         UserContext ctx = UserContext.get();
-        if (ctx != null && !ctx.isSuperAdmin()
-                && !Objects.equals(existing.getTenantId(), ctx.getTenantId())) {
+        if (ctx == null) {
+            throw new BusinessException("用户未登录");
+        }
+        Long currentTenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
+        if (!Objects.equals(existing.getTenantId(), currentTenantId)) {
             throw new BusinessException("无权删除其他租户的映射");
         }
         mappingMapper.deleteById(id);
