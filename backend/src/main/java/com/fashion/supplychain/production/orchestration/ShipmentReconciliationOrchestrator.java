@@ -131,8 +131,11 @@ public class ShipmentReconciliationOrchestrator {
         int shippedQty = productOutstockService.sumOutstockByOrderId(oid);
         if (shippedQty <= 0) {
             try {
+                Long tenantId = UserContext.tenantId();
                 ShipmentReconciliation existed = shipmentReconciliationService.lambdaQuery()
                         .select(ShipmentReconciliation::getId, ShipmentReconciliation::getStatus)
+                        // P2 修复（纵深防御）：子查询显式带 tenant_id，避免 orderId 被篡改时跨租户读取
+                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
                         .eq(ShipmentReconciliation::getOrderId, oid)
                         .orderByDesc(ShipmentReconciliation::getCreateTime)
                         .last("limit 1")
@@ -165,9 +168,12 @@ public class ShipmentReconciliationOrchestrator {
     }
 
     private ShipmentReconciliation findExistingReconciliation(String oid, String orderNo) {
+        Long tenantId = UserContext.tenantId();
         ShipmentReconciliation sr = null;
         try {
             sr = shipmentReconciliationService.lambdaQuery()
+                    // P2 修复（纵深防御）：子查询显式带 tenant_id
+                    .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
                     .eq(ShipmentReconciliation::getOrderId, oid)
                     .orderByDesc(ShipmentReconciliation::getCreateTime)
                     .last("limit 1")
@@ -178,6 +184,7 @@ public class ShipmentReconciliationOrchestrator {
         if (sr == null && StringUtils.hasText(orderNo)) {
             try {
                 sr = shipmentReconciliationService.lambdaQuery()
+                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
                         .eq(ShipmentReconciliation::getOrderNo, orderNo.trim())
                         .orderByDesc(ShipmentReconciliation::getCreateTime)
                         .last("limit 1")
@@ -492,8 +499,11 @@ public class ShipmentReconciliationOrchestrator {
 
         try {
             if ("shipment".equals(tp)) {
+                Long tenantId = UserContext.tenantId();
                 ShipmentReconciliation sr = shipmentReconciliationService.lambdaQuery()
                         .select(ShipmentReconciliation::getUnitPrice)
+                        // P2 修复（纵深防御）：子查询显式带 tenant_id
+                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
                         .eq(ShipmentReconciliation::getOrderId, oid)
                         .orderByDesc(ShipmentReconciliation::getCreateTime)
                         .last("limit 1")

@@ -659,6 +659,7 @@ public class ProductionOrderQueryService {
         String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
         String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
+        String includeSample = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeSample"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
         // P0铁律4：所有统计查询必须带 tenantId 过滤，防止跨租户数据汇总
@@ -678,6 +679,13 @@ public class ProductionOrderQueryService {
             .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
             .eq(StringUtils.hasText(factoryType), "factory_type", factoryType)
             .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
+
+        // P1 修复（数据一致性）：与 buildQueryWrapper 行为对齐
+        // 默认排除 source_biz_type='SAMPLE' 的样衣类型大货订单，避免历史脏数据污染大货统计
+        // 旧逻辑 stats 不过滤 SAMPLE，导致 stats 数字比 list 实际返回多
+        if (!"true".equalsIgnoreCase(includeSample)) {
+            wrapper.and(w -> w.isNull("source_biz_type").or().ne("source_biz_type", "SAMPLE"));
+        }
 
         if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
             wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);

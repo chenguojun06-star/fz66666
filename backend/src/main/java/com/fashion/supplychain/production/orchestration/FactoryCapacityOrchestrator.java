@@ -75,6 +75,12 @@ public class FactoryCapacityOrchestrator {
      * @return 按工厂分组的产能列表，按订单数降序排列
      */
     public List<FactoryCapacityItem> getFactoryCapacity() {
+        // P2 修复（数据隔离）：工厂账号不应访问租户级全量产能数据
+        // 旧逻辑无工厂账号判断，工厂账号调用会看到所有工厂的产能，存在跨工厂数据泄露
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return java.util.Collections.emptyList();
+        }
+
         Long tenantId = UserContext.tenantId();
 
         if (stringRedisTemplate != null && tenantId != null) {

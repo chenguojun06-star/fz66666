@@ -1120,6 +1120,11 @@ public class ProductionOrderOrchestrator {
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getTenantId, UserContext.tenantId())
                 .eq(ProductionOrder::getFactoryType, "EXTERNAL")
+                // P2 修复（数据一致性）：与 buildQueryWrapper 默认行为对齐，排除 scrapped 订单
+                // 旧逻辑未排除 scrapped，导致外发工厂 stats 的 orderCount 比列表默认显示的多
+                .ne(ProductionOrder::getStatus, "scrapped")
+                // 同步排除 source_biz_type='SAMPLE' 的样衣类型大货订单，与 list 默认行为一致
+                .and(w -> w.isNull(ProductionOrder::getSourceBizType).or().ne(ProductionOrder::getSourceBizType, "SAMPLE"))
                 .list();
 
         java.util.Map<String, com.fashion.supplychain.production.dto.ExternalFactoryStatsVO> statsMap = new java.util.LinkedHashMap<>();
