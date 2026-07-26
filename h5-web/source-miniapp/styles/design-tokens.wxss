@@ -11,11 +11,11 @@
  */
 
 page {
-  /* ========== 品牌色（Apple System Blue） ========== */
-  --color-primary: #007aff;
-  --color-primary-light: #2e8dff;
-  --color-primary-dark: #0064d6;
-  --color-primary-rgb: 0, 122, 255;
+  /* ========== 品牌色（与PC端统一 #2D7FF9） ========== */
+  --color-primary: #2D7FF9;
+  --color-primary-light: #5B9CFA;
+  --color-primary-dark: #1E6FE8;
+  --color-primary-rgb: 45, 127, 249;
   --color-primary-bg: #e8f2ff;
   --color-primary-bg-dark: #cfe5ff;
   --color-primary-border: rgba(0, 122, 255, 0.2);
