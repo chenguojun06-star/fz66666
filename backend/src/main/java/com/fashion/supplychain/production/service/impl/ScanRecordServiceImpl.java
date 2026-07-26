@@ -83,10 +83,16 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 .le(endTime != null, ScanRecord::getScanTime, endTime)
                                 .orderByDesc(ScanRecord::getScanTime);
 
-                // 排除已关闭/取消/完成/归档订单的扫码记录
+                // P0 修复（数据一致性）：默认排除已取消订单的扫码记录
+                // 原因：selectPersonalStats SQL 强制排除 cancelled 订单（NOT EXISTS），
+                // 但 list 默认不排除，导致工人"我的统计"数 ≠ "我的历史"列表条数
+                // 修复：list 默认排除 cancelled 订单（与 stats 一致）；
+                // excludeClosedOrders=true 时额外排除 closed/completed/archived 订单（管理员视图）
+                wrapper.notInSql(ScanRecord::getOrderId,
+                        "SELECT id FROM t_production_order WHERE status = 'cancelled' OR delete_flag = 1");
                 if ("true".equalsIgnoreCase(excludeClosedOrders)) {
                         wrapper.notInSql(ScanRecord::getOrderId,
-                                "SELECT id FROM t_production_order WHERE status IN ('closed', 'cancelled', 'completed', 'archived') OR delete_flag = 1");
+                                "SELECT id FROM t_production_order WHERE status IN ('closed', 'completed', 'archived')");
                 }
 
                 // 工厂账号隔离：限制只能查看本工厂的扫码记录

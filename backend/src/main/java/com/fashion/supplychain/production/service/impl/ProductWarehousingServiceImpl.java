@@ -127,7 +127,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 .like(StringUtils.hasText(styleNo), ProductWarehousing::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(warehouse), ProductWarehousing::getWarehouse, warehouse)
                 .eq(StringUtils.hasText(warehouseAreaId), ProductWarehousing::getWarehouseAreaId, warehouseAreaId)
-                .eq(StringUtils.hasText(qualityStatus), ProductWarehousing::getQualityStatus, qualityStatus)
+                // P1 修复（数据一致性）：与 stats SQL 的 LOWER() 大小写不敏感保持一致
+                // 旧逻辑严格大小写敏感，若库存表存 "Qualified"/"UNQUALIFIED" 等非小写值，
+                // list 按 "qualified" 筛选会查不到，但 stats 会统计到，导致列表数 ≠ 统计数
+                .apply(StringUtils.hasText(qualityStatus),
+                        "LOWER(COALESCE(quality_status,'')) = LOWER({0})", qualityStatus)
                 .eq(StringUtils.hasText(cuttingBundleId), ProductWarehousing::getCuttingBundleId, cuttingBundleId)
                 .eq(StringUtils.hasText(cuttingBundleQrCode), ProductWarehousing::getCuttingBundleQrCode, cuttingBundleQrCode)
                 .orderByDesc(ProductWarehousing::getCreateTime);
