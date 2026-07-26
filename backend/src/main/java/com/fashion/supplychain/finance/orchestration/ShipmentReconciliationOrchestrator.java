@@ -260,7 +260,12 @@ public class ShipmentReconciliationOrchestrator {
         }
         String id = shipmentReconciliation.getId().trim();
         shipmentReconciliation.setId(id);
-        ShipmentReconciliation current = shipmentReconciliationService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ShipmentReconciliation current = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getId, id)
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("对账单不存在");
         }
@@ -307,7 +312,12 @@ public class ShipmentReconciliationOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        ShipmentReconciliation current = shipmentReconciliationService.getById(key);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ShipmentReconciliation current = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getId, key)
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("对账单不存在");
         }
@@ -318,7 +328,11 @@ public class ShipmentReconciliationOrchestrator {
         }
         boolean ok = shipmentReconciliationService.removeById(key);
         if (!ok) {
-            if (shipmentReconciliationService.getById(key) == null) {
+            Long stillExists = shipmentReconciliationService.lambdaQuery()
+                    .eq(ShipmentReconciliation::getId, key)
+                    .eq(ShipmentReconciliation::getTenantId, tenantId)
+                    .count();
+            if (stillExists == null || stillExists == 0) {
                 log.warn("[RECON-DELETE] id={} already deleted, idempotent success", key);
                 // P0-3 修复：幂等场景也联动反向账单（避免脏数据残留）
                 reverseBillsOnReconDelete(key, current.getReconciliationNo());
@@ -427,7 +441,12 @@ public class ShipmentReconciliationOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
 
-        ShipmentReconciliation current = shipmentReconciliationService.getById(rid);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ShipmentReconciliation current = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getId, rid)
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("对账单不存在");
         }

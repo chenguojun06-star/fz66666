@@ -613,7 +613,11 @@ public class PayrollSettlementOrchestrator {
         if (!StringUtils.hasText(settlementId)) {
             throw new IllegalArgumentException("结算单ID不能为空");
         }
-        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, settlementId.trim())
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
@@ -647,7 +651,6 @@ public class PayrollSettlementOrchestrator {
 
         // 确认关联扫码记录的结算状态（payrollSettlementId 已在 generate() 时绑定）
         // 审核通过后 payrollSettlementId 保持不变，undo 操作会据此阻止撤回
-        Long tenantId = UserContext.tenantId();
         LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
                 .set(ScanRecord::getSettlementStatus, "payroll_approved")
                 .set(ScanRecord::getUpdateTime, now)
@@ -689,7 +692,11 @@ public class PayrollSettlementOrchestrator {
         if (!StringUtils.hasText(settlementId)) {
             throw new IllegalArgumentException("结算单ID不能为空");
         }
-        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, settlementId.trim())
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
@@ -742,7 +749,11 @@ public class PayrollSettlementOrchestrator {
         if (!StringUtils.hasText(settlementId)) {
             throw new IllegalArgumentException("结算单ID不能为空");
         }
-        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, settlementId.trim())
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
@@ -769,7 +780,11 @@ public class PayrollSettlementOrchestrator {
         if (paymentAmount == null || paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("打款金额必须大于0");
         }
-        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, settlementId.trim())
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
@@ -803,7 +818,11 @@ public class PayrollSettlementOrchestrator {
         if (deductionAmount == null || deductionAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("扣款金额必须大于0");
         }
-        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, settlementId.trim())
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }

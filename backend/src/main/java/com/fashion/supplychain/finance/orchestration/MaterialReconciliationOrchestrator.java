@@ -68,7 +68,11 @@ public class MaterialReconciliationOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        MaterialReconciliation r = materialReconciliationService.getById(key);
+        Long tenantId = UserContext.tenantId();
+        MaterialReconciliation r = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, key)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .one();
         if (r == null || (r.getDeleteFlag() != null && r.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("对账单不存在");
         }
@@ -247,7 +251,12 @@ public class MaterialReconciliationOrchestrator {
         }
         String id = materialReconciliation.getId().trim();
         materialReconciliation.setId(id);
-        MaterialReconciliation current = materialReconciliationService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        MaterialReconciliation current = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, id)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("对账单不存在");
         }
@@ -295,7 +304,12 @@ public class MaterialReconciliationOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        MaterialReconciliation current = materialReconciliationService.getById(key);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        MaterialReconciliation current = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, key)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .one();
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("对账单不存在");
         }
@@ -329,8 +343,13 @@ public class MaterialReconciliationOrchestrator {
         if (!StringUtils.hasText(pid)) {
             return;
         }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
-        MaterialPurchase purchase = materialPurchaseService.getById(pid);
+        MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, pid)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
 
         if (purchase != null) {
             TenantAssert.assertBelongsToCurrentTenant(purchase.getTenantId(), "采购单");
@@ -387,7 +406,11 @@ public class MaterialReconciliationOrchestrator {
         }
 
         try {
-            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
+            Long tenantId = UserContext.tenantId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, purchase.getOrderId().trim())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             return order != null
                     && StringUtils.hasText(order.getFactoryType())
                     && "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());

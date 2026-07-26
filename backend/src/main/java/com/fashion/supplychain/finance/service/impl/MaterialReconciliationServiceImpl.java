@@ -46,16 +46,33 @@ public class MaterialReconciliationServiceImpl
         String sourceType = (String) params.getOrDefault("sourceType", ""); // 采购来源筛选
         String purchaseId = (String) params.getOrDefault("purchaseId", "");
 
+        // P0 防御性双重隔离：显式 tenant_id 过滤（与 stats 接口风格统一，符合 P0 铁律 4）
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+
         // sourceType筛选：batch同时匹配batch、stock和manual（均为非订单采购）
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReconciliation> wrapper =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReconciliation>()
+                        .eq(MaterialReconciliation::getDeleteFlag, 0)
+                        .eq(tenantId != null, MaterialReconciliation::getTenantId, tenantId)
                         .eq(StringUtils.hasText(reconciliationNo), MaterialReconciliation::getReconciliationNo,
                                 reconciliationNo)
                         .like(StringUtils.hasText(supplierName), MaterialReconciliation::getSupplierName, supplierName)
                         .like(StringUtils.hasText(materialCode), MaterialReconciliation::getMaterialCode, materialCode)
                         .eq(StringUtils.hasText(purchaseId), MaterialReconciliation::getPurchaseId, purchaseId)
-                        .eq(StringUtils.hasText(status), MaterialReconciliation::getStatus, status)
-                        .eq(MaterialReconciliation::getDeleteFlag, 0)
+                        // 状态过滤：支持多值（逗号分隔），与 stats 的 in 分类对齐
+                        // 例：status=approved,paid → in("approved","paid")，与 FinanceDashboardHelper.sumMaterialCost 一致
+                        .and(StringUtils.hasText(status), w -> {
+                            String[] parts = status.split(",");
+                            if (parts.length == 1) {
+                                w.eq(MaterialReconciliation::getStatus, parts[0].trim());
+                            } else {
+                                java.util.List<String> statusList = java.util.Arrays.stream(parts)
+                                        .map(String::trim)
+                                        .filter(StringUtils::hasText)
+                                        .collect(java.util.stream.Collectors.toList());
+                                w.in(MaterialReconciliation::getStatus, statusList);
+                            }
+                        })
                         .orderByDesc(MaterialReconciliation::getCreateTime);
         if (StringUtils.hasText(sourceType)) {
             if ("batch".equals(sourceType)) {

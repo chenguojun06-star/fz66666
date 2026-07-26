@@ -1,7 +1,9 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialInbound;
@@ -50,6 +52,9 @@ public class MaterialReconciliationSyncOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public String syncFromInbound(MaterialInbound inbound, MaterialPurchase purchase) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
         if (inbound == null) {
             throw new RuntimeException("入库记录不能为空");
         }
@@ -64,6 +69,7 @@ public class MaterialReconciliationSyncOrchestrator {
         // 1. 检查是否已同步（避免重复）— 先按采购单维度检查是否已有对账单
         LambdaQueryWrapper<MaterialReconciliation> purchaseCheck = new LambdaQueryWrapper<>();
         purchaseCheck.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
+                     .eq(MaterialReconciliation::getTenantId, tenantId)
                      .eq(MaterialReconciliation::getDeleteFlag, 0)
                      .last("LIMIT 1");
         MaterialReconciliation purchaseExisting = materialReconciliationService.getOne(purchaseCheck);
@@ -76,6 +82,7 @@ public class MaterialReconciliationSyncOrchestrator {
         // 再按采购单+物料编码+入库单号三维度去重，支持部分入库场景
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
+               .eq(MaterialReconciliation::getTenantId, tenantId)
                .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode())
                .like(MaterialReconciliation::getRemark, inbound.getInboundNo());
 
@@ -156,12 +163,18 @@ public class MaterialReconciliationSyncOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public int syncFromPurchase(String purchaseId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
         if (purchaseId == null || purchaseId.trim().isEmpty()) {
             throw new RuntimeException("采购单ID不能为空");
         }
 
         // 1. 查询采购单
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         if (purchase == null) {
             throw new RuntimeException("采购单不存在: " + purchaseId);
         }
@@ -201,6 +214,7 @@ public class MaterialReconciliationSyncOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public int syncByDateRange(String startDate, String endDate) {
+        TenantAssert.assertTenantContext();
         // 1. 查询指定时间范围的入库记录
         LambdaQueryWrapper<MaterialInbound> wrapper = new LambdaQueryWrapper<>();
 
@@ -258,18 +272,25 @@ public class MaterialReconciliationSyncOrchestrator {
      * @return 是否已同步
      */
     public boolean isInboundSynced(String inboundId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
         if (inboundId == null || inboundId.trim().isEmpty()) {
             return false;
         }
 
         // 通过remark字段判断（包含入库单号）
-        MaterialInbound inbound = materialInboundService.getById(inboundId);
+        MaterialInbound inbound = materialInboundService.lambdaQuery()
+                .eq(MaterialInbound::getId, inboundId)
+                .eq(MaterialInbound::getTenantId, tenantId)
+                .one();
         if (inbound == null) {
             return false;
         }
 
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialReconciliation::getPurchaseId, inbound.getPurchaseId())
+               .eq(MaterialReconciliation::getTenantId, tenantId)
                .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode())
                .like(MaterialReconciliation::getRemark, inbound.getInboundNo());
 
@@ -287,12 +308,14 @@ public class MaterialReconciliationSyncOrchestrator {
     }
 
     private String doGenerateReconciliationNo() {
+        Long tenantId = UserContext.tenantId();
         String monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
         String prefix = "MR" + monthPrefix;
 
         // 查询当月最大序号
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.likeRight(MaterialReconciliation::getReconciliationNo, prefix)
+               .eq(MaterialReconciliation::getTenantId, tenantId)
                .orderByDesc(MaterialReconciliation::getReconciliationNo)
                .last("LIMIT 1");
 

@@ -86,15 +86,32 @@ public class ShipmentReconciliationServiceImpl extends BaseReconciliationService
         String styleNo = (String) params.getOrDefault("styleNo", "");
         String status = (String) params.getOrDefault("status", "");
 
+        // P0 防御性双重隔离：显式 tenant_id 过滤（与 stats 接口风格统一，符合 P0 铁律 4）
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+
         // 使用条件构造器进行查询
         IPage<ShipmentReconciliation> pageResult = baseMapper.selectPage(pageInfo,
                 new LambdaQueryWrapper<ShipmentReconciliation>()
+                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
                         .eq(StringUtils.hasText(reconciliationNo), ShipmentReconciliation::getReconciliationNo,
                                 reconciliationNo)
                         .like(StringUtils.hasText(customerName), ShipmentReconciliation::getCustomerName, customerName)
                         .like(StringUtils.hasText(orderNo), ShipmentReconciliation::getOrderNo, orderNo)
                         .like(StringUtils.hasText(styleNo), ShipmentReconciliation::getStyleNo, styleNo)
-                        .eq(StringUtils.hasText(status), ShipmentReconciliation::getStatus, status)
+                        // 状态过滤：支持多值（逗号分隔），与 stats 的分类对齐
+                        // 例：status=approved,paid → in("approved","paid")
+                        .and(StringUtils.hasText(status), w -> {
+                            String[] parts = status.split(",");
+                            if (parts.length == 1) {
+                                w.eq(ShipmentReconciliation::getStatus, parts[0].trim());
+                            } else {
+                                java.util.List<String> statusList = java.util.Arrays.stream(parts)
+                                        .map(String::trim)
+                                        .filter(StringUtils::hasText)
+                                        .collect(java.util.stream.Collectors.toList());
+                                w.in(ShipmentReconciliation::getStatus, statusList);
+                            }
+                        })
                         .orderByDesc(ShipmentReconciliation::getCreateTime));
 
         // 自动修复单价

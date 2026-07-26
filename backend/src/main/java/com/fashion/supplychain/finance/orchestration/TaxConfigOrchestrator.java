@@ -91,7 +91,11 @@ public class TaxConfigOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
-        taxConfigService.removeById(id);
+        Long tenantId = UserContext.tenantId();
+        taxConfigService.lambdaUpdate()
+                .eq(TaxConfig::getId, id)
+                .eq(TaxConfig::getTenantId, tenantId)
+                .remove();
     }
 
     /**

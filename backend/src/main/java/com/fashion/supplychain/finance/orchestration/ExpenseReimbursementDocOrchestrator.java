@@ -1,5 +1,7 @@
 package com.fashion.supplychain.finance.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursementDoc;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementDocService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +27,14 @@ public class ExpenseReimbursementDocOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void linkDocs(List<String> docIds, String reimbursementId, String reimbursementNo) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         if (docIds == null || docIds.isEmpty()) return;
         for (String docId : docIds) {
-            ExpenseReimbursementDoc doc = docService.getById(docId);
+            ExpenseReimbursementDoc doc = docService.lambdaQuery()
+                    .eq(ExpenseReimbursementDoc::getId, docId)
+                    .eq(ExpenseReimbursementDoc::getTenantId, tenantId)
+                    .one();
             if (doc != null && doc.getReimbursementId() == null) {
                 doc.setReimbursementId(reimbursementId);
                 doc.setReimbursementNo(reimbursementNo);

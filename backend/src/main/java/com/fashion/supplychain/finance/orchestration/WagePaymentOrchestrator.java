@@ -98,9 +98,12 @@ public class WagePaymentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void removeAccount(String accountId) {
         TenantAssert.assertTenantContext();
-        TenantAssert.requireTenantId();
+        Long tenantId = TenantAssert.requireTenantId();
 
-        PaymentAccount account = paymentAccountService.getById(accountId);
+        PaymentAccount account = paymentAccountService.lambdaQuery()
+                .eq(PaymentAccount::getId, accountId)
+                .eq(PaymentAccount::getTenantId, tenantId)
+                .one();
         if (account == null) {
             throw new IllegalArgumentException("收款账户不存在");
         }
@@ -173,8 +176,12 @@ public class WagePaymentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public WagePayment confirmOfflinePayment(String paymentId, String proofUrl, String remark) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        WagePayment payment = wagePaymentService.getById(paymentId);
+        WagePayment payment = wagePaymentService.lambdaQuery()
+                .eq(WagePayment::getId, paymentId)
+                .eq(WagePayment::getTenantId, tenantId)
+                .one();
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
@@ -197,8 +204,12 @@ public class WagePaymentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public WagePayment confirmReceived(String paymentId) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        WagePayment payment = wagePaymentService.getById(paymentId);
+        WagePayment payment = wagePaymentService.lambdaQuery()
+                .eq(WagePayment::getId, paymentId)
+                .eq(WagePayment::getTenantId, tenantId)
+                .one();
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
@@ -218,8 +229,12 @@ public class WagePaymentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public WagePayment cancelPayment(String paymentId, String reason) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        WagePayment payment = wagePaymentService.getById(paymentId);
+        WagePayment payment = wagePaymentService.lambdaQuery()
+                .eq(WagePayment::getId, paymentId)
+                .eq(WagePayment::getTenantId, tenantId)
+                .one();
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
@@ -245,8 +260,12 @@ public class WagePaymentOrchestrator {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new org.springframework.security.access.AccessDeniedException("仅主管级别及以上可执行退回操作");
         }
+        Long tenantId = UserContext.tenantId();
 
-        WagePayment payment = wagePaymentService.getById(paymentId);
+        WagePayment payment = wagePaymentService.lambdaQuery()
+                .eq(WagePayment::getId, paymentId)
+                .eq(WagePayment::getTenantId, tenantId)
+                .one();
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
@@ -302,8 +321,12 @@ public class WagePaymentOrchestrator {
 
     public WagePaymentDetailDTO getPaymentDetail(String paymentId) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        WagePayment payment = wagePaymentService.getById(paymentId);
+        WagePayment payment = wagePaymentService.lambdaQuery()
+                .eq(WagePayment::getId, paymentId)
+                .eq(WagePayment::getTenantId, tenantId)
+                .one();
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
@@ -383,7 +406,11 @@ public class WagePaymentOrchestrator {
     private Payable resolvePayableFromRequest(WagePaymentRequest request) {
         if (request.getBizId() == null) return null;
         try {
-            Payable p = payableService.getById(request.getBizId());
+            Long tenantId = UserContext.tenantId();
+            Payable p = payableService.lambdaQuery()
+                    .eq(Payable::getId, request.getBizId())
+                    .eq(Payable::getTenantId, tenantId)
+                    .one();
             if (p != null && p.getDeleteFlag() != null && p.getDeleteFlag() == 0) return p;
         } catch (Exception e) {
             log.warn("[付款中心] 查询应付单失败: bizId={}", request.getBizId(), e);
@@ -394,7 +421,11 @@ public class WagePaymentOrchestrator {
     private Payable resolvePayableFromPayment(WagePayment payment) {
         if (payment.getBizId() == null) return null;
         try {
-            Payable p = payableService.getById(payment.getBizId());
+            Long tenantId = UserContext.tenantId();
+            Payable p = payableService.lambdaQuery()
+                    .eq(Payable::getId, payment.getBizId())
+                    .eq(Payable::getTenantId, tenantId)
+                    .one();
             if (p != null && p.getDeleteFlag() != null && p.getDeleteFlag() == 0) return p;
         } catch (Exception e) {
             log.warn("[付款中心] 查询应付单失败: bizId={}", payment.getBizId(), e);
@@ -409,7 +440,11 @@ public class WagePaymentOrchestrator {
             log.warn("[付款中心] 原子更新应付单失败: payableId={}", payable.getId());
             return;
         }
-        Payable refreshed = payableService.getById(payable.getId());
+        Long tenantId = UserContext.tenantId();
+        Payable refreshed = payableService.lambdaQuery()
+                .eq(Payable::getId, payable.getId())
+                .eq(Payable::getTenantId, tenantId)
+                .one();
         BigDecimal newPaid = refreshed != null ? refreshed.getPaidAmount() : BigDecimal.ZERO;
         log.info("[付款中心] 同步应付单状态: payableNo={}, newStatus={}, paid={}", payable.getPayableNo(), refreshed != null ? refreshed.getStatus() : "UNKNOWN", newPaid);
 

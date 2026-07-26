@@ -1,6 +1,8 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.DataPermissionHelper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.entity.WagePayment;
@@ -32,19 +34,29 @@ public class WagePaymentDashboardHelper {
             return buildEmptyStats();
         }
 
+        // P0 修复：工厂账号 stats 与 list 数据范围对齐
+        // 原 stats 不区分 payeeId，工厂账号看到全租户金额 → 工厂账号场景下叠加 payeeId=factoryId 过滤
+        String factoryPayeeId = null;
+        if (DataPermissionHelper.isFactoryAccount()) {
+            factoryPayeeId = UserContext.factoryId();
+            if (factoryPayeeId == null) {
+                return buildEmptyStats();
+            }
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
 
-        BigDecimal totalPaid = sumPaidAmount(tenantId, startDate, endDate);
-        BigDecimal totalPending = sumPendingAmount(tenantId);
-        BigDecimal totalReceived = sumReceivedAmount(tenantId, startDate, endDate);
-        int overdueCount = countOverduePayables(tenantId);
+        BigDecimal totalPaid = sumPaidAmount(tenantId, factoryPayeeId, startDate, endDate);
+        BigDecimal totalPending = sumPendingAmount(tenantId, factoryPayeeId);
+        BigDecimal totalReceived = sumReceivedAmount(tenantId, factoryPayeeId, startDate, endDate);
+        int overdueCount = countOverduePayables(tenantId, factoryPayeeId);
 
         result.put("totalPaid", totalPaid);
         result.put("totalPending", totalPending);
         result.put("totalReceived", totalReceived);
         result.put("overdueCount", overdueCount);
 
-        putTrendData(result, tenantId, startDate, endDate);
+        putTrendData(result, tenantId, factoryPayeeId, startDate, endDate);
 
         return result;
     }
@@ -61,11 +73,13 @@ public class WagePaymentDashboardHelper {
         return empty;
     }
 
-    private BigDecimal sumPaidAmount(Long tenantId, String startDate, String endDate) {
+    private BigDecimal sumPaidAmount(Long tenantId, String factoryPayeeId, String startDate, String endDate) {
         try {
             LambdaQueryWrapper<WagePayment> qw = new LambdaQueryWrapper<>();
             qw.eq(WagePayment::getTenantId, tenantId)
               .eq(WagePayment::getStatus, "success")
+              .eq(factoryPayeeId != null, WagePayment::getPayeeType, "FACTORY")
+              .eq(factoryPayeeId != null, WagePayment::getPayeeId, factoryPayeeId)
               .ge(WagePayment::getCreateTime, startDate + " 00:00:00")
               .le(WagePayment::getCreateTime, endDate + " 23:59:59")
               .last("LIMIT 5000");
@@ -79,11 +93,13 @@ public class WagePaymentDashboardHelper {
         }
     }
 
-    private BigDecimal sumPendingAmount(Long tenantId) {
+    private BigDecimal sumPendingAmount(Long tenantId, String factoryPayeeId) {
         try {
             LambdaQueryWrapper<WagePayment> qw = new LambdaQueryWrapper<>();
             qw.eq(WagePayment::getTenantId, tenantId)
               .eq(WagePayment::getStatus, "pending")
+              .eq(factoryPayeeId != null, WagePayment::getPayeeType, "FACTORY")
+              .eq(factoryPayeeId != null, WagePayment::getPayeeId, factoryPayeeId)
               .last("LIMIT 5000");
             List<WagePayment> payments = wagePaymentService.list(qw);
             return payments.stream()
@@ -95,11 +111,13 @@ public class WagePaymentDashboardHelper {
         }
     }
 
-    private BigDecimal sumReceivedAmount(Long tenantId, String startDate, String endDate) {
+    private BigDecimal sumReceivedAmount(Long tenantId, String factoryPayeeId, String startDate, String endDate) {
         try {
             LambdaQueryWrapper<WagePayment> qw = new LambdaQueryWrapper<>();
             qw.eq(WagePayment::getTenantId, tenantId)
               .eq(WagePayment::getStatus, "received")
+              .eq(factoryPayeeId != null, WagePayment::getPayeeType, "FACTORY")
+              .eq(factoryPayeeId != null, WagePayment::getPayeeId, factoryPayeeId)
               .ge(WagePayment::getCreateTime, startDate + " 00:00:00")
               .le(WagePayment::getCreateTime, endDate + " 23:59:59")
               .last("LIMIT 5000");
@@ -113,12 +131,14 @@ public class WagePaymentDashboardHelper {
         }
     }
 
-    private int countOverduePayables(Long tenantId) {
+    private int countOverduePayables(Long tenantId, String factoryPayeeId) {
         try {
             LambdaQueryWrapper<Payable> qw = new LambdaQueryWrapper<>();
             qw.eq(Payable::getTenantId, tenantId)
               .eq(Payable::getDeleteFlag, 0)
               .eq(Payable::getStatus, "OVERDUE")
+              // 工厂账号仅统计自己的逾期款项（Payable 用 counterpartyId 而非 payeeId）
+              .eq(factoryPayeeId != null, Payable::getCounterpartyId, factoryPayeeId)
               .last("LIMIT 5000");
             return (int) payableService.count(qw);
         } catch (Exception e) {
@@ -127,7 +147,7 @@ public class WagePaymentDashboardHelper {
         }
     }
 
-    private void putTrendData(Map<String, Object> result, Long tenantId, String startDate, String endDate) {
+    private void putTrendData(Map<String, Object> result, Long tenantId, String factoryPayeeId, String startDate, String endDate) {
         List<String> trendDates = new ArrayList<>();
         List<BigDecimal> trendPaid = new ArrayList<>();
         List<BigDecimal> trendReceived = new ArrayList<>();
@@ -147,8 +167,8 @@ public class WagePaymentDashboardHelper {
             String dayStart = start.format(DateTimeFormatter.ISO_LOCAL_DATE) + " 00:00:00";
             String dayEnd = end.format(DateTimeFormatter.ISO_LOCAL_DATE) + " 23:59:59";
 
-            aggregateDailyPaid(tenantId, dayStart, dayEnd, paidByDay);
-            aggregateDailyReceived(tenantId, dayStart, dayEnd, receivedByDay);
+            aggregateDailyPaid(tenantId, factoryPayeeId, dayStart, dayEnd, paidByDay);
+            aggregateDailyReceived(tenantId, factoryPayeeId, dayStart, dayEnd, receivedByDay);
 
             trendDates.addAll(paidByDay.keySet());
             trendPaid.addAll(paidByDay.values());
@@ -162,10 +182,12 @@ public class WagePaymentDashboardHelper {
         result.put("trendReceived", trendReceived);
     }
 
-    private void aggregateDailyPaid(Long tenantId, String dayStart, String dayEnd, Map<String, BigDecimal> paidByDay) {
+    private void aggregateDailyPaid(Long tenantId, String factoryPayeeId, String dayStart, String dayEnd, Map<String, BigDecimal> paidByDay) {
         List<WagePayment> allPaidInPeriod = wagePaymentService.list(new LambdaQueryWrapper<WagePayment>()
                 .eq(WagePayment::getTenantId, tenantId)
                 .eq(WagePayment::getStatus, "success")
+                .eq(factoryPayeeId != null, WagePayment::getPayeeType, "FACTORY")
+                .eq(factoryPayeeId != null, WagePayment::getPayeeId, factoryPayeeId)
                 .ge(WagePayment::getCreateTime, dayStart)
                 .le(WagePayment::getCreateTime, dayEnd)
                 .last("LIMIT 5000"));
@@ -179,10 +201,12 @@ public class WagePaymentDashboardHelper {
         }
     }
 
-    private void aggregateDailyReceived(Long tenantId, String dayStart, String dayEnd, Map<String, BigDecimal> receivedByDay) {
+    private void aggregateDailyReceived(Long tenantId, String factoryPayeeId, String dayStart, String dayEnd, Map<String, BigDecimal> receivedByDay) {
         List<WagePayment> allReceivedInPeriod = wagePaymentService.list(new LambdaQueryWrapper<WagePayment>()
                 .eq(WagePayment::getTenantId, tenantId)
                 .eq(WagePayment::getStatus, "received")
+                .eq(factoryPayeeId != null, WagePayment::getPayeeType, "FACTORY")
+                .eq(factoryPayeeId != null, WagePayment::getPayeeId, factoryPayeeId)
                 .ge(WagePayment::getCreateTime, dayStart)
                 .le(WagePayment::getCreateTime, dayEnd)
                 .last("LIMIT 5000"));

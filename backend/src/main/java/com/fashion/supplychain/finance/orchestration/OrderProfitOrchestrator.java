@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
@@ -75,6 +76,9 @@ public class OrderProfitOrchestrator {
      * @return 利润分析结果（包含 order, summary, materials, shipments, timeline）
      */
     public Map<String, Object> computeOrderProfit(String orderId, String orderNo) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
         String oid = orderId == null ? null : orderId.trim();
         String ono = orderNo == null ? null : orderNo.trim();
         if ((oid == null || oid.isEmpty()) && (ono == null || ono.isEmpty())) {
@@ -95,6 +99,7 @@ public class OrderProfitOrchestrator {
         List<ProductWarehousing> warehousings = productWarehousingService
                 .list(new LambdaQueryWrapper<ProductWarehousing>()
                         .eq(ProductWarehousing::getOrderId, resolvedOrderId)
+                        .eq(ProductWarehousing::getTenantId, tenantId)
                         .eq(ProductWarehousing::getDeleteFlag, 0)
                         .orderByDesc(ProductWarehousing::getCreateTime));
         int warehousingQty = computeWarehousingQty(warehousings);
@@ -103,6 +108,7 @@ public class OrderProfitOrchestrator {
         List<MaterialPurchase> purchases = materialPurchaseService
                 .list(new LambdaQueryWrapper<MaterialPurchase>()
                         .eq(MaterialPurchase::getOrderId, resolvedOrderId)
+                        .eq(MaterialPurchase::getTenantId, tenantId)
                         .eq(MaterialPurchase::getDeleteFlag, 0)
                         .orderByDesc(MaterialPurchase::getCreateTime));
 
@@ -110,6 +116,7 @@ public class OrderProfitOrchestrator {
         List<ShipmentReconciliation> shipmentRecs = shipmentReconciliationService
                 .list(new LambdaQueryWrapper<ShipmentReconciliation>()
                         .eq(ShipmentReconciliation::getOrderId, resolvedOrderId)
+                        .eq(ShipmentReconciliation::getTenantId, tenantId)
                         .orderByDesc(ShipmentReconciliation::getCreateTime));
 
         // 5. 计算物料成本
@@ -283,12 +290,14 @@ public class OrderProfitOrchestrator {
     // ========================== 私有辅助方法 ==========================
 
     private ProductionOrder resolveOrder(String orderId, String orderNo) {
+        Long tenantId = UserContext.tenantId();
         ProductionOrder order;
         if (orderId != null && !orderId.isEmpty()) {
             order = productionOrderService.getById(orderId);
         } else {
             order = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
                     .eq(ProductionOrder::getOrderNo, orderNo)
+                    .eq(ProductionOrder::getTenantId, tenantId)
                     .eq(ProductionOrder::getDeleteFlag, 0)
                     .last("limit 1"));
         }
