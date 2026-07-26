@@ -110,6 +110,7 @@ public class FinishedInventoryOrchestrator {
         if (StringUtils.hasText(ctxFactoryId)) {
             List<String> factoryStyleNos = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                    .eq(ProductionOrder::getTenantId, tid)
                     .eq(ProductionOrder::getDeleteFlag, 0)
                     .select(ProductionOrder::getStyleNo)
                     .list()
@@ -256,6 +257,7 @@ public class FinishedInventoryOrchestrator {
         if (styleIds.isEmpty()) {
             return;
         }
+        Long tid = UserContext.tenantId();
         List<ProductWarehousing> warehousingList = productWarehousingMapper.selectList(
                 new LambdaQueryWrapper<ProductWarehousing>()
                     .select(
@@ -272,6 +274,7 @@ public class FinishedInventoryOrchestrator {
                         ProductWarehousing::getDeleteFlag)
                         .in(ProductWarehousing::getStyleId,
                                 styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                        .eq(ProductWarehousing::getTenantId, tid)
                         .eq(ProductWarehousing::getDeleteFlag, 0)
                         .orderByDesc(ProductWarehousing::getWarehousingEndTime)
         );
@@ -347,11 +350,13 @@ public class FinishedInventoryOrchestrator {
     }
 
     private void batchLoadOutstockRecords(InventoryLookupContext ctx, List<Long> styleIds, List<String> styleNos) {
+        Long tid = UserContext.tenantId();
         if (!styleIds.isEmpty()) {
             try {
                 productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
                                 .in(ProductOutstock::getStyleId,
                                         styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                                .eq(ProductOutstock::getTenantId, tid)
                                 .eq(ProductOutstock::getDeleteFlag, 0)
                                 .orderByDesc(ProductOutstock::getCreateTime))
                         .forEach(outstock -> {
@@ -367,6 +372,7 @@ public class FinishedInventoryOrchestrator {
             try {
                 productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
                                 .in(ProductOutstock::getStyleNo, styleNos)
+                                .eq(ProductOutstock::getTenantId, tid)
                                 .eq(ProductOutstock::getDeleteFlag, 0)
                                 .orderByDesc(ProductOutstock::getCreateTime))
                         .forEach(outstock -> {
@@ -384,6 +390,7 @@ public class FinishedInventoryOrchestrator {
         if (styleIds.isEmpty()) {
             return;
         }
+        Long tid = UserContext.tenantId();
         List<ProductWarehousing> allWarehousing = productWarehousingMapper.selectList(
                 new LambdaQueryWrapper<ProductWarehousing>()
                     .select(
@@ -392,6 +399,7 @@ public class FinishedInventoryOrchestrator {
                         ProductWarehousing::getDeleteFlag)
                         .in(ProductWarehousing::getStyleId,
                                 styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                        .eq(ProductWarehousing::getTenantId, tid)
                         .eq(ProductWarehousing::getDeleteFlag, 0)
         );
         allWarehousing.forEach(w -> {
@@ -545,7 +553,11 @@ public class FinishedInventoryOrchestrator {
             return Collections.emptyList();
         }
         try {
-            return productionOrderService.listByIds(orderIds);
+            Long tid = UserContext.tenantId();
+            return productionOrderService.lambdaQuery()
+                    .in(ProductionOrder::getId, orderIds)
+                    .eq(ProductionOrder::getTenantId, tid)
+                    .list();
         } catch (Exception ex) {
             log.error("[{}] 按ID加载生产订单失败，跳过订单补充字段，orderIds={}", scene, orderIds, ex);
             return Collections.emptyList();
@@ -557,8 +569,10 @@ public class FinishedInventoryOrchestrator {
             return Collections.emptyList();
         }
         try {
+            Long tid = UserContext.tenantId();
             return productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
                     .in(ProductionOrder::getOrderNo, orderNos)
+                    .eq(ProductionOrder::getTenantId, tid)
                     .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0)));
         } catch (Exception ex) {
             log.error("[{}] 按单号加载生产订单失败，跳过订单补充字段，orderNos={}", scene, orderNos, ex);

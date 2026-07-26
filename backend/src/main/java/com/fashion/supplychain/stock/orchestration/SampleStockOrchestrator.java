@@ -588,8 +588,10 @@ public class SampleStockOrchestrator {
         if (stock == null) {
             return null;
         }
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<PatternProduction> query = new LambdaQueryWrapper<PatternProduction>()
                 .eq(PatternProduction::getDeleteFlag, 0)
+                .eq(PatternProduction::getTenantId, tenantId)
                 .eq(StringUtils.hasText(stock.getStyleId()), PatternProduction::getStyleId, stock.getStyleId())
                 .eq(!StringUtils.hasText(stock.getStyleId()) && StringUtils.hasText(stock.getStyleNo()), PatternProduction::getStyleNo, stock.getStyleNo())
                 .eq(StringUtils.hasText(stock.getColor()), PatternProduction::getColor, stock.getColor())
@@ -685,8 +687,10 @@ public class SampleStockOrchestrator {
         if (matrixQuantity > 0) {
             return matrixQuantity;
         }
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<PatternProduction> query = new LambdaQueryWrapper<PatternProduction>()
                 .eq(PatternProduction::getDeleteFlag, 0)
+                .eq(PatternProduction::getTenantId, tenantId)
                 .eq(StringUtils.hasText(String.valueOf(style.getId())), PatternProduction::getStyleId, String.valueOf(style.getId()))
                 .eq(StringUtils.hasText(color), PatternProduction::getColor, color)
                 .orderByDesc(PatternProduction::getUpdateTime)

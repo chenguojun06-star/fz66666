@@ -436,7 +436,11 @@ public class FinishedWarehouseOperationOrchestrator {
     }
 
     public List<Map<String, Object>> getEditHistory(String warehousingId) {
-        ProductWarehousing w = productWarehousingMapper.selectById(warehousingId);
+        Long tenantId = UserContext.tenantId();
+        ProductWarehousing w = productWarehousingMapper.selectOne(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getId, warehousingId)
+                        .eq(ProductWarehousing::getTenantId, tenantId));
         if (w == null || !StringUtils.hasText(w.getEditHistory())) {
             return Collections.emptyList();
         }
