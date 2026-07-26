@@ -21,6 +21,7 @@ export interface PatternUsageCardProps {
   onAddSizes: (values: string[]) => void;
   onSaveUsage: () => Promise<void>;
   setSizeOptions: React.Dispatch<React.SetStateAction<Array<{ value: string; label: string }>>>;
+  onApplyPickup?: (record: StyleBom) => void;
 }
 
 // 各码实际用量配比卡片

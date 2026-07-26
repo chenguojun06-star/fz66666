@@ -85,6 +85,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
               <Card title="纸样开发" id="section-pattern" style={{ marginTop: 8, borderRadius: 8 }}>
                 <StylePatternTab
                   styleId={styleId}
+                  styleNo={styleNo}
                   sizeColorConfig={sizeColorConfig}
                   readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
                   patternAssignee={(currentStyle as any)?.patternAssignee}

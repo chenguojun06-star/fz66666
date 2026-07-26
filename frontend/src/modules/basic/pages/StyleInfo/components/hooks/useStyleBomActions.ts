@@ -129,9 +129,10 @@ const useStyleBomActions = ({
     }
   }, [data, isTempId, message, setCheckingStock, setData, sortBomRows, styleId]);
 
-  const handleApplyPickup = useCallback((record: StyleBom) => {
+  const handleApplyPickup = useCallback((record: StyleBom, usageType: 'PATTERN' | 'SAMPLE' | 'BULK' = 'SAMPLE') => {
     const pickupQty = record.devUsageAmount ?? record.usageAmount;
-    confirmAction('申请领取', `确认申请领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`, async () => {
+    const usageLabel = usageType === 'PATTERN' ? '纸样开发' : usageType === 'BULK' ? '大货生产' : '样衣采购';
+    confirmAction(`${usageLabel}领取`, `确认领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`, async () => {
       try {
         await api.post('/production/picking/pending', {
           picking: {
@@ -140,8 +141,8 @@ const useStyleBomActions = ({
             pickerId: String(user?.id || ''),
             pickerName: String(user?.name || user?.username || ''),
             pickupType: 'INTERNAL',
-            usageType: 'SAMPLE',
-            remark: 'BOM_PICK',
+            usageType,
+            remark: `BOM_PICK_${usageType}`,
           },
           items: [{
             materialId: record.materialId,
@@ -153,11 +154,11 @@ const useStyleBomActions = ({
             unit: record.unit ?? '',
           }],
         });
-        message.success('申请领取成功，将在「面辅料出入库 → 待出库领料」中显示');
+        message.success('领取成功，将在「面辅料出入库 → 待出库领料」中显示');
       } catch (error: unknown) {
-        message.error(`申请失败：${error instanceof Error ? error.message : '请求错误'}`);
+        message.error(`领取失败：${error instanceof Error ? error.message : '请求错误'}`);
       }
-    }, { okText: '确认申请' });
+    }, { okText: '确认领取' });
   }, [currentStyleNo, message, styleId, user]);
 
   const handleDelete = useCallback(async (id: string | number) => {
