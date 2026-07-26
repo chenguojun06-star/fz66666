@@ -159,11 +159,15 @@ public class MaterialPurchaseOrchestrator {
         if (materialPurchase == null || !StringUtils.hasText(materialPurchase.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
-        MaterialPurchase current = materialPurchaseService.getById(materialPurchase.getId().trim());
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialPurchase current = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, materialPurchase.getId().trim())
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
         boolean ok = updateAndSync(materialPurchase);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -177,6 +181,8 @@ public class MaterialPurchaseOrchestrator {
         if (purchases == null || purchases.isEmpty()) {
             throw new IllegalArgumentException("采购明细不能为空");
         }
+        // P1 多租户隔离：物料资料库查询时增补 tenantId 过滤
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         // 从物料资料库补全缺失属性（颜色/规格/幅宽/克重/成分），确保仓库批量采购也能显示完整物料信息
         List<String> matCodes = purchases.stream()
                 .map(MaterialPurchase::getMaterialCode)
@@ -186,7 +192,8 @@ public class MaterialPurchaseOrchestrator {
         if (!matCodes.isEmpty()) {
             Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialDatabase>()
-                            .in(MaterialDatabase::getMaterialCode, matCodes))
+                            .in(MaterialDatabase::getMaterialCode, matCodes)
+                            .eq(MaterialDatabase::getTenantId, tenantId))
                     .stream()
                     .filter(d -> d != null && org.springframework.util.StringUtils.hasText(d.getMaterialCode()))
                     .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
@@ -228,11 +235,13 @@ public class MaterialPurchaseOrchestrator {
         if (arrivedQuantity < 0) {
             throw new IllegalArgumentException("arrivedQuantity不能小于0");
         }
-        MaterialPurchase current = materialPurchaseService.getById(key);
+        MaterialPurchase current = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, key)
+                .eq(MaterialPurchase::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .one();
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
         int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity().intValue();
         if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK) {
             if (!StringUtils.hasText(remark)) {
@@ -288,15 +297,21 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // 从物料资料库自动补全缺失属性（前端可能未传全部字段）
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById / getOne
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         MaterialDatabase dbMaterial = null;
         if (StringUtils.hasText(materialId)) {
-            dbMaterial = materialDatabaseService.getById(materialId);
+            dbMaterial = materialDatabaseService.lambdaQuery()
+                    .eq(MaterialDatabase::getId, materialId)
+                    .eq(MaterialDatabase::getTenantId, tenantId)
+                    .one();
         }
         if (dbMaterial == null && StringUtils.hasText(materialCode)) {
-            dbMaterial = materialDatabaseService.getOne(
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialDatabase>()
-                            .eq(MaterialDatabase::getMaterialCode, materialCode)
-                            .last("LIMIT 1"));
+            dbMaterial = materialDatabaseService.lambdaQuery()
+                    .eq(MaterialDatabase::getMaterialCode, materialCode)
+                    .eq(MaterialDatabase::getTenantId, tenantId)
+                    .last("LIMIT 1")
+                    .one();
         }
         if (dbMaterial != null) {
             if (!StringUtils.hasText(color)) color = dbMaterial.getColor();
@@ -341,7 +356,11 @@ public class MaterialPurchaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("创建采购指令失败");
         }
-        return materialPurchaseService.getById(purchase.getId());
+        // P1 多租户隔离：返回时按 tenantId 过滤
+        return materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchase.getId())
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
     }
 
     public Object previewDemand(String orderId) {
@@ -425,11 +444,15 @@ public class MaterialPurchaseOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        MaterialPurchase current = materialPurchaseService.getById(key);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialPurchase current = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, key)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
         logAppendHelper.appendCancel(key, "删除采购单");
         boolean ok = materialPurchaseService.deleteById(key);
         if (!ok) {

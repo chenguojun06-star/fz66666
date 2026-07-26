@@ -89,12 +89,13 @@ public class PurchaseReturnOrchestrator {
         }
 
         // 2. 查询原采购单（多租户校验）
-        MaterialPurchase originalPurchase = materialPurchaseService.getById(originalPurchaseId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById + 后置校验
+        MaterialPurchase originalPurchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, originalPurchaseId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         if (originalPurchase == null) {
-            throw new IllegalArgumentException("原采购单不存在: " + originalPurchaseId);
-        }
-        if (originalPurchase.getTenantId() == null || !originalPurchase.getTenantId().equals(tenantId)) {
-            throw new IllegalArgumentException("原采购单不属于当前租户");
+            throw new IllegalArgumentException("原采购单不存在或不属于当前租户: " + originalPurchaseId);
         }
 
         // 3. 生成退货单号（P1#1: 加随机后缀防碰撞）
@@ -142,7 +143,11 @@ public class PurchaseReturnOrchestrator {
         List<String> purchaseIds = items.stream()
                 .map(item -> (String) item.get("purchaseId"))
                 .collect(Collectors.toList());
-        List<MaterialPurchase> purchaseRecords = materialPurchaseService.listByIds(purchaseIds);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 listByIds，避免跨租户读取
+        List<MaterialPurchase> purchaseRecords = materialPurchaseService.list(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .in(MaterialPurchase::getId, purchaseIds)
+                        .eq(MaterialPurchase::getTenantId, tenantId));
         Map<String, MaterialPurchase> purchaseMap = purchaseRecords.stream()
                 .collect(Collectors.toMap(MaterialPurchase::getId, p -> p, (a, b) -> a));
 

@@ -573,18 +573,21 @@ public class ProductionOrderOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public UrgeRecord urge(String orderId, String remark) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        ProductionOrder order = productionOrderService.getById(orderId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null) {
             throw new IllegalArgumentException("订单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
 
         if (!StringUtils.hasText(order.getMerchandiser())) {
             throw new IllegalArgumentException("该订单未设置跟单员，无法发送催单通知");
         }
 
-        Long tenantId = UserContext.tenantId();
         String senderUsername = UserContext.username();
         String senderName = sysNoticeOrchestrator.resolveDisplayName(senderUsername, tenantId);
 
@@ -671,7 +674,12 @@ public class ProductionOrderOrchestrator {
             throw new IllegalArgumentException("缺少id参数");
         }
 
-        ProductionOrder order = productionOrderService.getById(id);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, id)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null) {
             throw new IllegalArgumentException("订单不存在");
         }
@@ -788,7 +796,12 @@ public class ProductionOrderOrchestrator {
             throw new IllegalArgumentException("值不能为空");
         }
 
-        ProductionOrder order = productionOrderService.getById(id);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, id)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null) {
             throw new IllegalArgumentException("订单不存在");
         }
@@ -835,7 +848,12 @@ public class ProductionOrderOrchestrator {
             throw new IllegalArgumentException("缺少urgeRecordId参数");
         }
 
-        UrgeRecord record = urgeRecordService.getById(urgeRecordId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        UrgeRecord record = urgeRecordService.lambdaQuery()
+                .eq(UrgeRecord::getId, urgeRecordId)
+                .eq(UrgeRecord::getTenantId, tenantId)
+                .one();
         if (record == null) {
             throw new IllegalArgumentException("催单记录不存在");
         }
@@ -1067,14 +1085,16 @@ public class ProductionOrderOrchestrator {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("id不能为空");
         }
+        // P1 多租户隔离：lambdaQuery 增补 .eq(ProductionOrder::getTenantId, tenantId)
+        Long tenantId = UserContext.tenantId();
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getId, id)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .one();
         if (order == null) {
             throw new IllegalArgumentException("订单不存在");
         }
-        assertOrderBelongsToCurrentTenant(id, "生产订单");
         order.setNodeOperations(nodeOperations);
         return productionOrderService.updateById(order);
     }

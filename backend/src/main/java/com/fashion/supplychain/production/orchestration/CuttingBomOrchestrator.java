@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingBom;
 import com.fashion.supplychain.production.entity.CuttingTask;
@@ -58,11 +59,15 @@ public class CuttingBomOrchestrator {
 
     @Transactional
     public CuttingBom update(CuttingBom bom) {
-        CuttingBom existing = cuttingBomService.getById(bom.getId());
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        CuttingBom existing = cuttingBomService.lambdaQuery()
+                .eq(CuttingBom::getId, bom.getId())
+                .eq(CuttingBom::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             throw new IllegalArgumentException("裁剪面辅料记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "裁剪面辅料");
         validateCuttingTaskEditable(existing.getCuttingTaskId());
         fillDefaults(bom);
         calculateTotalPrice(bom);
@@ -75,11 +80,15 @@ public class CuttingBomOrchestrator {
 
     @Transactional
     public void delete(String id) {
-        CuttingBom existing = cuttingBomService.getById(id);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        CuttingBom existing = cuttingBomService.lambdaQuery()
+                .eq(CuttingBom::getId, id)
+                .eq(CuttingBom::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             return;
         }
-        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "裁剪面辅料");
         validateCuttingTaskEditable(existing.getCuttingTaskId());
         existing.setDeleteFlag(1);
         existing.setUpdateTime(LocalDateTime.now());
@@ -89,7 +98,12 @@ public class CuttingBomOrchestrator {
     @Transactional
     public void batchSave(String cuttingTaskId, List<CuttingBom> bomList) {
         validateCuttingTaskEditable(cuttingTaskId);
-        CuttingTask task = cuttingTaskService.getById(cuttingTaskId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        CuttingTask task = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, cuttingTaskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         for (CuttingBom bom : bomList) {
             bom.setCuttingTaskId(cuttingTaskId);
             if (task != null) {
@@ -109,11 +123,15 @@ public class CuttingBomOrchestrator {
         if (!StringUtils.hasText(cuttingTaskId)) {
             throw new IllegalArgumentException("裁剪任务ID不能为空");
         }
-        CuttingTask task = cuttingTaskService.getById(cuttingTaskId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        CuttingTask task = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, cuttingTaskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         if (task == null) {
             throw new IllegalArgumentException("裁剪任务不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
         if ("bundled".equals(task.getStatus())) {
             throw new IllegalArgumentException("裁剪已完成，不可修改面辅料信息");
         }

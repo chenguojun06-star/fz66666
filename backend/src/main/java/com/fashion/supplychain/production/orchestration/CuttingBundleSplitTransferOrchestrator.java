@@ -133,7 +133,12 @@ public class CuttingBundleSplitTransferOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public CuttingBundleSplitTransferResponse confirmSplit(String splitLogId) {
-        CuttingBundleSplitLog splitLog = splitLogService.getById(splitLogId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        CuttingBundleSplitLog splitLog = splitLogService.lambdaQuery()
+                .eq(CuttingBundleSplitLog::getId, splitLogId)
+                .eq(CuttingBundleSplitLog::getTenantId, tenantId)
+                .one();
         if (splitLog == null) {
             throw new BusinessException("拆菲记录不存在");
         }
@@ -144,7 +149,11 @@ public class CuttingBundleSplitTransferOrchestrator {
         if (!currentUserId.equals(splitLog.getToWorkerId())) {
             throw new BusinessException("该拆菲请求不属于当前用户，无权确认");
         }
-        CuttingBundle source = cuttingBundleService.getById(splitLog.getSourceBundleId());
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        CuttingBundle source = cuttingBundleService.lambdaQuery()
+                .eq(CuttingBundle::getId, splitLog.getSourceBundleId())
+                .eq(CuttingBundle::getTenantId, tenantId)
+                .one();
         if (source == null) {
             throw new BusinessException("原菲号已不存在");
         }
@@ -218,7 +227,12 @@ public class CuttingBundleSplitTransferOrchestrator {
     }
 
     public CuttingBundleSplitTransferResponse queryFamily(String bundleId) {
-        CuttingBundle current = cuttingBundleService.getById(bundleId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        CuttingBundle current = cuttingBundleService.lambdaQuery()
+                .eq(CuttingBundle::getId, bundleId)
+                .eq(CuttingBundle::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new BusinessException("未找到对应菲号");
         }
@@ -547,17 +561,30 @@ public class CuttingBundleSplitTransferOrchestrator {
     }
 
     private CuttingBundle resolveBundle(String bundleId, String qrCode, String orderNo, Integer bundleNo) {
+        Long tenantId = UserContext.tenantId();
         if (StringUtils.hasText(bundleId)) {
-            CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+            CuttingBundle bundle = cuttingBundleService.lambdaQuery()
+                    .eq(CuttingBundle::getId, bundleId.trim())
+                    .eq(CuttingBundle::getTenantId, tenantId)
+                    .one();
             if (bundle != null) return bundle;
         }
         if (StringUtils.hasText(qrCode)) {
             CuttingBundle bundle = cuttingBundleService.getByQrCode(qrCode.trim());
-            if (bundle != null) return bundle;
+            // P1 多租户隔离：通过 QR 码查询后，校验菲号归属当前租户
+            if (bundle != null) {
+                com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(bundle.getTenantId(), "裁剪扎号");
+                return bundle;
+            }
         }
         if (StringUtils.hasText(orderNo) && bundleNo != null) {
             CuttingBundle bundle = cuttingBundleService.getByBundleNo(orderNo.trim(), bundleNo);
-            if (bundle != null) return bundle;
+            // P1 多租户隔离：通过订单号+菲号查询后，校验归属当前租户
+            if (bundle != null) {
+                com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(bundle.getTenantId(), "裁剪扎号");
+                return bundle;
+            }
         }
         return null;
     }
@@ -567,7 +594,12 @@ public class CuttingBundleSplitTransferOrchestrator {
             return current;
         }
         if ("split_child".equals(current.getSplitStatus()) && StringUtils.hasText(current.getSourceBundleId())) {
-            CuttingBundle source = cuttingBundleService.getById(current.getSourceBundleId());
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+            Long tenantId = UserContext.tenantId();
+            CuttingBundle source = cuttingBundleService.lambdaQuery()
+                    .eq(CuttingBundle::getId, current.getSourceBundleId())
+                    .eq(CuttingBundle::getTenantId, tenantId)
+                    .one();
             if (source != null) {
                 return source;
             }
@@ -589,11 +621,20 @@ public class CuttingBundleSplitTransferOrchestrator {
     private void validateOrderStatus(CuttingBundle source) {
         String orderNo = source.getProductionOrderNo();
         ProductionOrder order = null;
+        Long tenantId = UserContext.tenantId();
         if (StringUtils.hasText(orderNo)) {
-            order = productionOrderService.getByOrderNo(orderNo);
+            // P1 多租户隔离：通过 orderNo 查询时增补 tenantId 过滤
+            order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, orderNo)
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
         }
         if (order == null && StringUtils.hasText(source.getProductionOrderId())) {
-            order = productionOrderService.getById(source.getProductionOrderId());
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+            order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, source.getProductionOrderId())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
         }
         if (order == null) {
             throw new BusinessException("未找到关联的生产订单，无法拆菲");
@@ -719,7 +760,12 @@ public class CuttingBundleSplitTransferOrchestrator {
     private boolean isAutoSku(String productionOrderId) {
         if (!StringUtils.hasText(productionOrderId)) return false;
         try {
-            ProductionOrder order = productionOrderService.getById(productionOrderId);
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+            Long tenantId = UserContext.tenantId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, productionOrderId)
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             return order != null && Boolean.TRUE.equals(order.getSkuAutoGenerate());
         } catch (Exception e) {
             log.warn("[CuttingBundleSplitTransfer] 查询订单 SKU 自动生成开关失败，默认关闭: orderId={}, err={}", productionOrderId, e.getMessage());

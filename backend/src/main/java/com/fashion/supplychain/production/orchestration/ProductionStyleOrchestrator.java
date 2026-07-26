@@ -39,8 +39,11 @@ public class ProductionStyleOrchestrator {
             return List.of();
         }
 
+        // P1 多租户隔离：增补 tenantId 过滤
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .last("LIMIT 5000")
                 .list();
@@ -57,8 +60,11 @@ public class ProductionStyleOrchestrator {
             return List.of();
         }
 
+        // P1 多租户隔离：增补 tenantId 过滤
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleNo, styleNo.trim())
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .last("LIMIT 5000")
                 .list();
@@ -75,12 +81,21 @@ public class ProductionStyleOrchestrator {
             return null;
         }
 
-        ProductionOrder order = productionOrderService.getById(orderId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null || order.getStyleId() == null) {
             return null;
         }
 
-        return styleInfoService.getById(order.getStyleId());
+        // P1 多租户隔离：款式查询也带 tenantId
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, order.getStyleId())
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
     }
 
     /**
@@ -96,7 +111,12 @@ public class ProductionStyleOrchestrator {
             return 0;
         }
 
-        StyleInfo style = styleInfoService.getById(styleId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
         if (style == null) {
             throw new NoSuchElementException("款式不存在: " + styleId);
         }
@@ -156,8 +176,11 @@ public class ProductionStyleOrchestrator {
             return false;
         }
 
+        // P1 多租户隔离：增补 tenantId 过滤
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .count() > 0;
     }
@@ -173,8 +196,11 @@ public class ProductionStyleOrchestrator {
             return 0;
         }
 
+        // P1 多租户隔离：增补 tenantId 过滤
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .count();
     }

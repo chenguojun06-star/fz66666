@@ -65,9 +65,13 @@ public class MaterialRollOrchestrator {
             String unit) {
 
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        // 查询入库单
-        MaterialInbound inbound = materialInboundService.getById(inboundId);
+        // 查询入库单（P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById）
+        MaterialInbound inbound = materialInboundService.lambdaQuery()
+                .eq(MaterialInbound::getId, inboundId)
+                .eq(MaterialInbound::getTenantId, tenantId)
+                .one();
         if (inbound == null) {
             throw new RuntimeException("入库单不存在: " + inboundId);
         }
@@ -75,7 +79,6 @@ public class MaterialRollOrchestrator {
             throw new RuntimeException("料卷数量必须在 1~500 之间");
         }
 
-        Long tenantId = UserContext.tenantId();
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (int i = 0; i < rollCount; i++) {
@@ -222,7 +225,13 @@ public class MaterialRollOrchestrator {
      * 查询入库单下所有料卷
      */
     public List<MaterialRoll> listRollsByInbound(String inboundId) {
-        return materialRollService.listByInboundId(inboundId);
+        // P1 多租户隔离：增补 tenantId 过滤
+        Long tenantId = UserContext.tenantId();
+        return materialRollService.lambdaQuery()
+                .eq(MaterialRoll::getInboundId, inboundId)
+                .eq(MaterialRoll::getTenantId, tenantId)
+                .orderByAsc(MaterialRoll::getRollCode)
+                .list();
     }
 
     // ----------------------------------------------------------------

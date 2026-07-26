@@ -88,7 +88,11 @@ public class MaterialPickingOrchestrator {
             }
         }
         if (cancelPurchaseId != null && !cancelPurchaseId.isEmpty()) {
-            MaterialPurchase purchase = materialPurchaseService.getById(cancelPurchaseId);
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+            MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                    .eq(MaterialPurchase::getId, cancelPurchaseId)
+                    .eq(MaterialPurchase::getTenantId, tenantId)
+                    .one();
             if (purchase != null && "WAREHOUSE_PENDING".equals(purchase.getStatus())) {
                 purchase.setStatus("pending");
                 purchase.setReceiverId(null);
@@ -125,9 +129,13 @@ public class MaterialPickingOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void audit(String id, Map<String, Object> body) {
-        MaterialPicking picking = materialPickingService.getById(id);
-        if (picking == null) throw new java.util.NoSuchElementException("领料单不存在");
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
         Long tenantId = UserContext.tenantId();
+        MaterialPicking picking = materialPickingService.lambdaQuery()
+                .eq(MaterialPicking::getId, id)
+                .eq(MaterialPicking::getTenantId, tenantId)
+                .one();
+        if (picking == null) throw new java.util.NoSuchElementException("领料单不存在");
         if (!UserContext.isSuperAdmin()) {
             if (tenantId == null || !tenantId.equals(picking.getTenantId())) {
                 throw new IllegalStateException("无权操作此领料单");
@@ -202,7 +210,12 @@ public class MaterialPickingOrchestrator {
         if (StringUtils.hasText(picking.getFactoryType())) return picking.getFactoryType();
         if (StringUtils.hasText(picking.getOrderId())) {
             try {
-                ProductionOrder order = productionOrderService.getById(picking.getOrderId().trim());
+                // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+                Long tenantId = UserContext.tenantId();
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getId, picking.getOrderId().trim())
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .one();
                 if (order != null && StringUtils.hasText(order.getFactoryType())) return order.getFactoryType();
             } catch (Exception e) {
                 log.warn("[Picking] 解析工厂类型失败: orderId={}", picking.getOrderId(), e);

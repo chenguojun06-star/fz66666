@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
@@ -36,9 +37,12 @@ public class CuttingBundleOrchestrator {
 
     public IPage<CuttingBundle> list(Map<String, Object> params) {
         try {
-            IPage<CuttingBundle> page = doList(params);
+            // P1 多租户隔离：强制租户上下文校验
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
+            IPage<CuttingBundle> page = doList(params, tenantId);
             // P1-6 数据链路：查询后补齐 styleName/styleCover，供前端展示
-            enrichStyleInfo(page);
+            enrichStyleInfo(page, tenantId);
             return page;
         } catch (Exception e) {
             log.error("[CuttingBundle.list] 查询失败（可能为 schema 漂移）: {}", e.getMessage());
@@ -46,13 +50,14 @@ public class CuttingBundleOrchestrator {
         }
     }
 
-    private IPage<CuttingBundle> doList(Map<String, Object> params) {
+    private IPage<CuttingBundle> doList(Map<String, Object> params, Long tenantId) {
         // 工厂账号隔离：只能查看本工厂订单的裁剪格号
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
             List<String> factoryOrderNos = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getOrderNo)
+                            .eq(ProductionOrder::getTenantId, tenantId)
                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream()
@@ -72,7 +77,7 @@ public class CuttingBundleOrchestrator {
     /**
      * 批量补齐 styleName/styleCover：通过 productionOrderId 关联 ProductionOrder 查询
      */
-    private void enrichStyleInfo(IPage<CuttingBundle> page) {
+    private void enrichStyleInfo(IPage<CuttingBundle> page, Long tenantId) {
         if (page == null) return;
         List<CuttingBundle> records = page.getRecords();
         if (records == null || records.isEmpty()) return;
@@ -85,7 +90,12 @@ public class CuttingBundleOrchestrator {
         if (orderIds.isEmpty()) return;
 
         try {
-            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 listByIds，避免跨租户读取
+            Map<String, ProductionOrder> orderMap = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .in(ProductionOrder::getId, orderIds)
+                            .eq(ProductionOrder::getTenantId, tenantId)
+            ).stream()
                     .filter(o -> o != null && StringUtils.hasText(o.getId()))
                     .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
             for (CuttingBundle b : records) {
@@ -107,12 +117,16 @@ public class CuttingBundleOrchestrator {
     }
 
     public Map<String, Object> summary(String orderNo, String orderId) {
+        // P1 多租户隔离：summary 委托时增补 tenantId 上下文校验
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         String on = orderNo == null ? null : orderNo.trim();
         String oid = orderId == null ? null : orderId.trim();
         if (!StringUtils.hasText(on) && !StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("参数错误");
         }
         try {
+            // tenantId 已校验，cuttingBundleService.summarize 内部按订单号聚合（订单归属由调用方保证）
             return cuttingBundleService.summarize(on, oid);
         } catch (Exception e) {
             log.error("[CuttingBundle.summary] 查询失败（可能为 schema 漂移）: {}", e.getMessage());
@@ -140,10 +154,14 @@ public class CuttingBundleOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
 
+        // P1 多租户隔离：写订单备注前校验订单归属当前租户
         List<CuttingBundle> result = cuttingBundleService.generateBundles(orderId, bundles);
-        // 写订单备注时间线：分扎生成
         try {
-            ProductionOrder order = productionOrderService.getById(orderId);
+            Long tenantId = UserContext.tenantId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, orderId)
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             if (order != null) {
                 orderRemarkHelper.append(order, "分扎生成", "生成 " + bundles.size() + " 个菲号");
             }
@@ -162,6 +180,8 @@ public class CuttingBundleOrchestrator {
         if (bundle == null) {
             throw new NoSuchElementException("未找到对应的裁剪扎号");
         }
+        // P1 多租户隔离：通过 QR 码查询后，校验菲号归属当前租户
+        TenantAssert.assertBelongsToCurrentTenant(bundle.getTenantId(), "裁剪扎号");
         return bundle;
     }
 
@@ -170,11 +190,18 @@ public class CuttingBundleOrchestrator {
         if (bundle == null) {
             throw new NoSuchElementException("未找到对应的裁剪扎号");
         }
+        // P1 多租户隔离：通过 bundleNo 查询后，校验菲号归属当前租户
+        TenantAssert.assertBelongsToCurrentTenant(bundle.getTenantId(), "裁剪扎号");
         return bundle;
     }
 
     public CuttingBundle toggleScanBlocked(String bundleId, boolean blocked) {
-        CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById，避免跨租户读取
+        Long tenantId = UserContext.tenantId();
+        CuttingBundle bundle = cuttingBundleService.lambdaQuery()
+                .eq(CuttingBundle::getId, bundleId)
+                .eq(CuttingBundle::getTenantId, tenantId)
+                .one();
         if (bundle == null) {
             throw new NoSuchElementException("未找到对应的菲号");
         }

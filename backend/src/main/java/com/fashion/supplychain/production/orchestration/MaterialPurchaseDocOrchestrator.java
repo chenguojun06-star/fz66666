@@ -444,9 +444,13 @@ public class MaterialPurchaseDocOrchestrator {
     private PurchaseOrderDoc resolveDoc(String docId, String orderNo) {
         Long tenantId = UserContext.tenantId();
         if (docId != null && !docId.isBlank()) {
-            PurchaseOrderDoc doc = purchaseOrderDocService.getById(docId.trim());
-            if (doc == null || !Objects.equals(doc.getTenantId(), tenantId)) {
-                throw new IllegalArgumentException("采购单据不存在");
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById + 后置校验（前置校验）
+            PurchaseOrderDoc doc = purchaseOrderDocService.lambdaQuery()
+                    .eq(PurchaseOrderDoc::getId, docId.trim())
+                    .eq(PurchaseOrderDoc::getTenantId, tenantId)
+                    .one();
+            if (doc == null) {
+                throw new IllegalArgumentException("采购单据不存在或不属于当前租户");
             }
             return doc;
         }

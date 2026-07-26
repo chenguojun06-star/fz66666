@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.service.MaterialInboundService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
@@ -83,10 +84,14 @@ public class MaterialInboundOrchestrator {
             String remark) {
 
         TenantAssert.assertTenantContext(); // 入库操作必须有租户上下文
+        Long tenantId = UserContext.tenantId();
         log.info("开始采购到货入库流程: purchaseId={}, arrivedQuantity={}", purchaseId, arrivedQuantity);
 
-        // 1. 查询采购单
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        // 1. 查询采购单（P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById）
+        MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         if (purchase == null) {
             throw new RuntimeException("采购单不存在: " + purchaseId);
         }
@@ -141,7 +146,11 @@ public class MaterialInboundOrchestrator {
             throw new RuntimeException("更新采购单到货数量失败: purchaseId=" + purchaseId);
         }
 
-        purchase = materialPurchaseService.getById(purchaseId);
+        // P1 多租户隔离：重新查询采购单时用 lambdaQuery 带 tenantId
+        purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         totalArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
         purchase.setInboundRecordId(inbound.getId());
 
@@ -302,7 +311,14 @@ public class MaterialInboundOrchestrator {
     public List<MaterialInbound> queryInboundRecords(String purchaseId, String materialCode) {
         Long tenantId = TenantAssert.requireTenantId();
         if (purchaseId != null && !purchaseId.trim().isEmpty()) {
-            return materialInboundService.listByPurchaseId(purchaseId);
+            // P1 多租户隔离：listByPurchaseId 后追加 tenantId 过滤
+            List<MaterialInbound> raw = materialInboundService.listByPurchaseId(purchaseId);
+            if (raw == null || raw.isEmpty()) {
+                return java.util.Collections.emptyList();
+            }
+            return raw.stream()
+                    .filter(item -> item != null && tenantId.equals(item.getTenantId()))
+                    .collect(java.util.stream.Collectors.toList());
         }
         if (materialCode != null && !materialCode.trim().isEmpty()) {
             return materialInboundService.list(

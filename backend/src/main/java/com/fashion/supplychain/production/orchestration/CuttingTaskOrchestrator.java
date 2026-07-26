@@ -246,11 +246,15 @@ public class CuttingTaskOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
 
-        CuttingTask task = cuttingTaskService.getById(taskId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        CuttingTask task = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         if (task == null) {
             throw new NoSuchElementException("裁剪任务不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
 
         assertMaterialReady(task);
         assertNotReceivedByOther(task, receiverId, receiverName);
@@ -261,7 +265,11 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("领取失败");
         }
 
-        CuttingTask updated = cuttingTaskService.getById(taskId);
+        // P1 多租户隔离：领取后重新查询也带 tenantId
+        CuttingTask updated = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         if (updated == null) {
             throw new IllegalStateException("领取失败");
         }
@@ -277,10 +285,12 @@ public class CuttingTaskOrchestrator {
     private void assertMaterialReady(CuttingTask task) {
         String orderId = task.getProductionOrderId();
         if (StringUtils.hasText(orderId)) {
-            ProductionOrder order = productionOrderService.getById(orderId.trim());
-            if (order != null) {
-                TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
-            }
+            // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+            Long tenantId = UserContext.tenantId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, orderId.trim())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             if (!hasCuttingMaterialReady(order, task)) {
                 throw new IllegalStateException("主面料尚未完成可裁确认，无法领取裁剪任务");
             }
@@ -302,7 +312,12 @@ public class CuttingTaskOrchestrator {
     }
 
     private void assertNotReceivedByOtherAfterFail(String taskId, String receiverId, String receiverName) {
-        CuttingTask latest = cuttingTaskService.getById(taskId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        CuttingTask latest = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         if (latest != null) {
             String latestReceiverId = latest.getReceiverId() == null ? null : latest.getReceiverId().trim();
             String latestReceiverName = latest.getReceiverName() == null ? null : latest.getReceiverName().trim();
@@ -330,7 +345,11 @@ public class CuttingTaskOrchestrator {
             String receiver = updated.getReceiverName() != null ? updated.getReceiverName() : "未知";
             String toName = receiver;
             if (StringUtils.hasText(updated.getProductionOrderId())) {
-                ProductionOrder order = productionOrderService.getById(updated.getProductionOrderId().trim());
+                // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getId, updated.getProductionOrderId().trim())
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .one();
                 if (order != null && StringUtils.hasText(order.getMerchandiser())) {
                     toName = order.getMerchandiser();
                 }
@@ -371,11 +390,15 @@ public class CuttingTaskOrchestrator {
             throw new AccessDeniedException("未登录或登录已过期");
         }
 
-        CuttingTask task = cuttingTaskService.getById(taskId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        CuttingTask task = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         if (task == null) {
             throw new NoSuchElementException("裁剪任务不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
 
         if (scanRecordDomainService.hasProductionTypeScanRecords(task.getProductionOrderId())) {
             throw new IllegalStateException("该裁剪任务已存在生产扫码记录，无法退回");
@@ -390,11 +413,14 @@ public class CuttingTaskOrchestrator {
 
         cuttingTaskService.insertRollbackLog(task, currentUserId, currentUsername, reason);
 
-        CuttingTask updated = cuttingTaskService.getById(taskId);
+        // P1 多租户隔离：退回后重新查询也带 tenantId
+        CuttingTask updated = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getTenantId, tenantId)
+                .one();
         if (updated == null) {
             throw new IllegalStateException("退回失败");
         }
-        TenantAssert.assertBelongsToCurrentTenant(updated.getTenantId(), "裁剪任务");
 
         logAppendHelper.appendCancel(taskId, reason);
         return updated;
@@ -409,7 +435,12 @@ public class CuttingTaskOrchestrator {
             return;
         }
 
-        ProductionOrder order = productionOrderService.getById(task.getProductionOrderId().trim());
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, task.getProductionOrderId().trim())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null || order.getDeleteFlag() != 0) {
             return;
         }

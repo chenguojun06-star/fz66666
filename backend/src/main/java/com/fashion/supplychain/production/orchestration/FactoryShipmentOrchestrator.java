@@ -69,11 +69,15 @@ public class FactoryShipmentOrchestrator {
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少 orderId");
         }
-        ProductionOrder order = productionOrderService.getById(orderId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null) {
             return Result.fail("订单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         if (!"EXTERNAL".equalsIgnoreCase(order.getFactoryType())) {
             return Result.fail("仅外发订单可创建发货单，当前订单工厂类型为 " + order.getFactoryType());
         }
@@ -142,11 +146,15 @@ public class FactoryShipmentOrchestrator {
         if (!StringUtils.hasText(shipmentId)) {
             return Result.fail("缺少发货单 ID");
         }
-        FactoryShipment fs = factoryShipmentService.getById(shipmentId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        FactoryShipment fs = factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getId, shipmentId)
+                .eq(FactoryShipment::getTenantId, tenantId)
+                .one();
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
         if (!"pending".equals(fs.getReceiveStatus())) {
             return Result.fail("该发货单状态为 " + fs.getReceiveStatus() + "，无法收货");
         }
@@ -189,11 +197,15 @@ public class FactoryShipmentOrchestrator {
         if (!StringUtils.hasText(shipmentId)) {
             return Result.fail("缺少发货单 ID");
         }
-        FactoryShipment fs = factoryShipmentService.getById(shipmentId);
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        FactoryShipment fs = factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getId, shipmentId)
+                .eq(FactoryShipment::getTenantId, tenantId)
+                .one();
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
         if ("received".equals(fs.getReceiveStatus())) {
             return Result.fail("已收货的发货单不可删除，如需退货请联系管理员");
         }

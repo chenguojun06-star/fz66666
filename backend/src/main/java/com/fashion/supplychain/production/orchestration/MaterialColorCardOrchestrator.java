@@ -513,8 +513,13 @@ public class MaterialColorCardOrchestrator {
     public String addItemFromMaterial(String cardId, String materialId) {
         MaterialColorCard card = getCardById(cardId);
         if (!StringUtils.hasText(materialId)) throw new IllegalArgumentException("materialId不能为空");
-        MaterialDatabase md = materialDatabaseService.getById(materialId.trim());
-        if (md == null) throw new NoSuchElementException("物料不存在");
+        // P1 多租户隔离：用 lambdaQuery 带 tenantId 替代 getById（前置校验）
+        Long tenantId = UserContext.tenantId();
+        MaterialDatabase md = materialDatabaseService.lambdaQuery()
+                .eq(MaterialDatabase::getId, materialId.trim())
+                .eq(MaterialDatabase::getTenantId, tenantId)
+                .one();
+        if (md == null) throw new NoSuchElementException("物料不存在或不属于当前租户");
         if (!card.getTenantId().equals(md.getTenantId())) throw new IllegalStateException("无权限");
 
         MaterialColorCardItem item = new MaterialColorCardItem();
