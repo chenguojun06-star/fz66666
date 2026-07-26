@@ -253,9 +253,15 @@ public class UserController {
 
     @GetMapping("/online-count")
     public Result<?> onlineCount() {
+        // P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计在线用户数
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.success(0);
+        }
         LocalDateTime since = LocalDateTime.now().minusMinutes(10);
         List<LoginLog> logs = loginLogService.list(new LambdaQueryWrapper<LoginLog>()
                 .select(LoginLog::getUsername, LoginLog::getLoginTime, LoginLog::getLoginStatus)
+                .eq(LoginLog::getTenantId, tenantId)
                 .eq(LoginLog::getLoginStatus, "SUCCESS")
                 .ge(LoginLog::getLoginTime, since));
         Set<String> users = new HashSet<>();
