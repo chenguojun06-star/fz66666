@@ -1,5 +1,7 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -48,7 +50,11 @@ public class StyleQuotationOrchestrator {
     private StyleLogHelper styleLogHelper;
 
     public StyleQuotation getByStyleId(Long styleId) {
-        return styleQuotationService.getByStyleId(styleId);
+        Long tenantId = UserContext.tenantId();
+        return styleQuotationService.lambdaQuery()
+                .eq(StyleQuotation::getStyleId, styleId)
+                .eq(StyleQuotation::getTenantId, tenantId)
+                .one();
     }
 
     /**
@@ -60,8 +66,13 @@ public class StyleQuotationOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void recalculateFromLiveData(Long styleId) {
         if (styleId == null) return;
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        StyleQuotation existing = styleQuotationService.getByStyleId(styleId);
+        StyleQuotation existing = styleQuotationService.lambdaQuery()
+                .eq(StyleQuotation::getStyleId, styleId)
+                .eq(StyleQuotation::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             // 尚无报价单，跳过自动同步
             log.debug("No quotation found for styleId={}, skip auto-sync", styleId);
@@ -69,7 +80,10 @@ public class StyleQuotationOrchestrator {
         }
 
         // --- 实时汇总 BOM 面辅料成本 ---
-        List<StyleBom> bomItems = styleBomService.listByStyleId(styleId);
+        List<StyleBom> bomItems = styleBomService.lambdaQuery()
+                .eq(StyleBom::getStyleId, styleId)
+                .eq(StyleBom::getTenantId, tenantId)
+                .list();
         double materialTotal = bomItems.stream().mapToDouble(bom -> {
             BigDecimal tp = bom.getTotalPrice();
             if (tp != null) return tp.doubleValue();
@@ -80,13 +94,19 @@ public class StyleQuotationOrchestrator {
         }).sum();
 
         // --- 实时汇总工序成本（含二次工艺）---
-        List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);
+        List<StyleProcess> processes = styleProcessService.lambdaQuery()
+                .eq(StyleProcess::getStyleId, styleId)
+                .eq(StyleProcess::getTenantId, tenantId)
+                .list();
         double processTotal = processes.stream()
                 .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
                 .sum();
 
         // 二次工艺用单价（unitPrice）并入工序成本，报价单核算单件成本
-        List<SecondaryProcess> secondaryList = secondaryProcessService.listByStyleId(styleId);
+        List<SecondaryProcess> secondaryList = secondaryProcessService.lambdaQuery()
+                .eq(SecondaryProcess::getStyleId, styleId)
+                .eq(SecondaryProcess::getTenantId, tenantId)
+                .list();
         double secondaryTotal = secondaryList.stream()
                 .mapToDouble(sp -> sp.getUnitPrice() != null ? sp.getUnitPrice().doubleValue() : 0.0)
                 .sum();
@@ -121,6 +141,7 @@ public class StyleQuotationOrchestrator {
         // 同步到 StyleInfo.price
         styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .set(StyleInfo::getPrice, totalPrice)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
@@ -137,8 +158,14 @@ public class StyleQuotationOrchestrator {
         if (styleQuotation == null || styleQuotation.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        styleQuotation.setTenantId(tenantId);
 
-        StyleQuotation existingQuotation = styleQuotationService.getByStyleId(styleQuotation.getStyleId());
+        StyleQuotation existingQuotation = styleQuotationService.lambdaQuery()
+                .eq(StyleQuotation::getStyleId, styleQuotation.getStyleId())
+                .eq(StyleQuotation::getTenantId, tenantId)
+                .one();
         if (existingQuotation != null) {
             styleQuotation.setId(existingQuotation.getId());
             if (styleQuotation.getCreateTime() == null) {
@@ -176,6 +203,7 @@ public class StyleQuotationOrchestrator {
         // totalPrice = totalCost * (1 + profitRate%)
         boolean syncOk = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, styleQuotation.getStyleId())
+                .eq(StyleInfo::getTenantId, tenantId)
                 .set(StyleInfo::getPrice, styleQuotation.getTotalPrice())
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
@@ -192,7 +220,12 @@ public class StyleQuotationOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void unlockQuotation(Long styleId, String remark) {
-        StyleQuotation existing = styleQuotationService.getByStyleId(styleId);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        StyleQuotation existing = styleQuotationService.lambdaQuery()
+                .eq(StyleQuotation::getStyleId, styleId)
+                .eq(StyleQuotation::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             throw new RuntimeException("报价单不存在");
         }

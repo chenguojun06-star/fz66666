@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -46,10 +47,17 @@ public class ProductSkuOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        List<ProductSku> skus = productSkuService.listByStyleId(styleId);
+        Long tenantId = UserContext.tenantId();
+        List<ProductSku> skus = productSkuService.lambdaQuery()
+                .eq(ProductSku::getStyleId, styleId)
+                .eq(ProductSku::getTenantId, tenantId)
+                .list();
         if (skus.isEmpty()) {
             tryAutoGenerateOnEmptyList(styleId);
-            skus = productSkuService.listByStyleId(styleId);
+            skus = productSkuService.lambdaQuery()
+                    .eq(ProductSku::getStyleId, styleId)
+                    .eq(ProductSku::getTenantId, tenantId)
+                    .list();
         }
         return skus;
     }
@@ -82,16 +90,25 @@ public class ProductSkuOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        StyleInfo style = styleInfoMapper.selectById(styleId);
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoMapper.selectOne(new LambdaQueryWrapper<StyleInfo>()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId));
         if (style == null) {
             throw new IllegalArgumentException("款式不存在: " + styleId);
         }
 
         if (deletedIds != null && !deletedIds.isEmpty()) {
             for (Long id : deletedIds) {
-                ProductSku existing = productSkuService.getById(id);
+                ProductSku existing = productSkuService.lambdaQuery()
+                        .eq(ProductSku::getId, id)
+                        .eq(ProductSku::getTenantId, tenantId)
+                        .one();
                 if (existing != null && existing.getStyleId().equals(styleId)) {
-                    productSkuService.removeById(id);
+                    productSkuService.lambdaUpdate()
+                            .eq(ProductSku::getId, id)
+                            .eq(ProductSku::getTenantId, tenantId)
+                            .remove();
                     log.info("Deleted SKU id={}, skuCode={}", id, existing.getSkuCode());
                 }
             }
@@ -110,6 +127,14 @@ public class ProductSkuOrchestrator {
         if (!"AUTO".equals(skuMode) && !"MANUAL".equals(skuMode)) {
             throw new IllegalArgumentException("skuMode must be AUTO or MANUAL");
         }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoMapper.selectOne(new LambdaQueryWrapper<StyleInfo>()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId));
+        if (style == null) {
+            throw new IllegalArgumentException("款式不存在: " + styleId);
+        }
         productSkuService.updateSkuMode(styleId, skuMode);
         if ("AUTO".equals(skuMode)) {
             productSkuService.syncSkusToProduction(styleId);
@@ -122,6 +147,7 @@ public class ProductSkuOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
+        TenantAssert.assertTenantContext();
         productSkuService.syncSkusToProduction(styleId);
     }
 
@@ -130,6 +156,7 @@ public class ProductSkuOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
+        TenantAssert.assertTenantContext();
         productSkuService.generateSkusForStyle(styleId);
     }
 
@@ -141,7 +168,10 @@ public class ProductSkuOrchestrator {
         if (!StringUtils.hasText(newSkc)) {
             throw new IllegalArgumentException("SKC不能为空");
         }
-        StyleInfo style = styleInfoMapper.selectById(styleId);
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoMapper.selectOne(new LambdaQueryWrapper<StyleInfo>()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId));
         if (style == null) {
             throw new IllegalArgumentException("款式不存在: " + styleId);
         }
@@ -189,6 +219,15 @@ public class ProductSkuOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void updateStock(String skuCode, int quantity) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ProductSku existing = productSkuService.lambdaQuery()
+                .eq(ProductSku::getSkuCode, skuCode)
+                .eq(ProductSku::getTenantId, tenantId)
+                .one();
+        if (existing == null) {
+            throw new IllegalArgumentException("SKU不存在: " + skuCode);
+        }
         productSkuService.updateStock(skuCode, quantity);
     }
 

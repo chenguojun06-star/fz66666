@@ -33,8 +33,10 @@ public class StyleQuotationAuditOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public StyleQuotation audit(Long styleId, Integer auditStatus, String auditRemark) {
+        Long tenantId = UserContext.tenantId();
         StyleQuotation q = styleQuotationService.lambdaQuery()
                 .eq(StyleQuotation::getStyleId, styleId)
+                .eq(StyleQuotation::getTenantId, tenantId)
                 .one();
         if (q == null) {
             throw new IllegalArgumentException("报价单不存在，请先保存报价单");
@@ -64,8 +66,10 @@ public class StyleQuotationAuditOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void resetAuditStatus(Long styleId) {
+        Long tenantId = UserContext.tenantId();
         StyleQuotation q = styleQuotationService.lambdaQuery()
                 .eq(StyleQuotation::getStyleId, styleId)
+                .eq(StyleQuotation::getTenantId, tenantId)
                 .one();
         if (q == null) {
             return;

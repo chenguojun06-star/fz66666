@@ -64,7 +64,12 @@ public class StyleSizePriceOrchestrator {
         if (id == null || id.isBlank()) {
             return false;
         }
-        boolean success = styleSizePriceService.removeById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        boolean success = styleSizePriceService.lambdaUpdate()
+                .eq(StyleSizePrice::getId, id)
+                .eq(StyleSizePrice::getTenantId, tenantId)
+                .remove();
         if (success) {
             log.info("[StyleSizePriceOrchestrator] 多码单价记录已删除: id={}", id);
         }

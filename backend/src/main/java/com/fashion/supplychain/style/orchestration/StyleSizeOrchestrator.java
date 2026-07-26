@@ -1,5 +1,7 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleSize;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleSizeService;
@@ -25,7 +27,11 @@ public class StyleSizeOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        return styleSizeService.listByStyleId(styleId);
+        Long tenantId = UserContext.tenantId();
+        return styleSizeService.lambdaQuery()
+                .eq(StyleSize::getStyleId, styleId)
+                .eq(StyleSize::getTenantId, tenantId)
+                .list();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -33,6 +39,9 @@ public class StyleSizeOrchestrator {
         if (styleSize == null || styleSize.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        styleSize.setTenantId(tenantId);
         if (styleInfoService.isPatternLocked(styleSize.getStyleId())) {
             throw new IllegalStateException("纸样已完成，不允许修改");
         }
@@ -52,7 +61,11 @@ public class StyleSizeOrchestrator {
         if (styleSize == null || styleSize.getId() == null) {
             throw new IllegalArgumentException("id不能为空");
         }
-        StyleSize current = styleSizeService.getById(styleSize.getId());
+        Long tenantId = UserContext.tenantId();
+        StyleSize current = styleSizeService.lambdaQuery()
+                .eq(StyleSize::getId, styleSize.getId())
+                .eq(StyleSize::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
@@ -70,16 +83,26 @@ public class StyleSizeOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
-        StyleSize current = styleSizeService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        StyleSize current = styleSizeService.lambdaQuery()
+                .eq(StyleSize::getId, id)
+                .eq(StyleSize::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
         if (styleInfoService.isPatternLocked(current.getStyleId())) {
             throw new IllegalStateException("纸样已完成，不允许修改");
         }
-        boolean ok = styleSizeService.removeById(id);
+        boolean ok = styleSizeService.lambdaUpdate()
+                .eq(StyleSize::getId, id)
+                .eq(StyleSize::getTenantId, tenantId)
+                .remove();
         if (!ok) {
-            if (styleSizeService.getById(id) == null) {
+            if (styleSizeService.lambdaQuery()
+                    .eq(StyleSize::getId, id)
+                    .eq(StyleSize::getTenantId, tenantId)
+                    .one() == null) {
                 log.warn("[SIZE-DELETE] id={} already deleted, idempotent success", id);
                 return true;
             }

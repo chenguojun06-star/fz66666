@@ -58,7 +58,11 @@ public class StyleBomOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        return styleBomService.listByStyleId(styleId);
+        Long tenantId = UserContext.tenantId();
+        return styleBomService.lambdaQuery()
+                .eq(StyleBom::getStyleId, styleId)
+                .eq(StyleBom::getTenantId, tenantId)
+                .list();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -202,6 +206,7 @@ public class StyleBomOrchestrator {
         if (productionQty == null || productionQty <= 0) {
             throw new RuntimeException("生产数量必须大于0");
         }
+        TenantAssert.assertTenantContext();
 
         Long styleId = bomList.get(0).getStyleId();
         log.info("开始保存BOM并检查库存: 款号ID={}, 生产数量={}, BOM条数={}",
@@ -256,7 +261,11 @@ public class StyleBomOrchestrator {
     }
 
     public Map<String, Object> getBomStockSummary(Long styleId, Integer productionQty) {
-        List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
+        Long tenantId = UserContext.tenantId();
+        List<StyleBom> bomList = styleBomService.lambdaQuery()
+                .eq(StyleBom::getStyleId, styleId)
+                .eq(StyleBom::getTenantId, tenantId)
+                .list();
 
         if (bomList.isEmpty()) {
             Map<String, Object> emptySummary = new HashMap<>();
@@ -347,8 +356,10 @@ public class StyleBomOrchestrator {
     }
 
     private MaterialStock findStock(StyleBom bom) {
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialStock::getMaterialCode, bom.getMaterialCode());
+        wrapper.eq(MaterialStock::getTenantId, tenantId);
         if (bom.getColor() != null && !bom.getColor().trim().isEmpty()) {
             wrapper.eq(MaterialStock::getColor, bom.getColor());
         }

@@ -150,20 +150,24 @@ public class StyleInfoOrchestrator {
             return page;
         }
 
+        Long tenantId = UserContext.tenantId();
         Map<Long, List<StyleBom>> bomByStyleId = styleBomService.lambdaQuery()
                 .in(StyleBom::getStyleId, styleIds)
+                .eq(StyleBom::getTenantId, tenantId)
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(StyleBom::getStyleId));
 
         Map<Long, List<StyleProcess>> processByStyleId = styleProcessService.lambdaQuery()
                 .in(StyleProcess::getStyleId, styleIds)
+                .eq(StyleProcess::getTenantId, tenantId)
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(StyleProcess::getStyleId));
 
         Map<Long, List<SecondaryProcess>> secondaryByStyleId = secondaryProcessService.lambdaQuery()
                 .in(SecondaryProcess::getStyleId, styleIds)
+                .eq(SecondaryProcess::getTenantId, tenantId)
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(SecondaryProcess::getStyleId));
@@ -200,6 +204,11 @@ public class StyleInfoOrchestrator {
         if (isNumericKey(key)) {
             StyleInfo styleInfo = styleInfoService.getDetailById(Long.parseLong(key));
             if (styleInfo != null) {
+                // P0铁律4：数字ID查询需校验租户归属，防止IDOR跨租户访问
+                if (tenantScopedRead && styleInfo.getTenantId() != null
+                        && !styleInfo.getTenantId().equals(readableTenantId)) {
+                    throw new NoSuchElementException("款号不存在");
+                }
                 return styleInfo;
             }
         }
@@ -267,6 +276,7 @@ public class StyleInfoOrchestrator {
                     if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
                         StyleInfo savedStyle = styleInfoService.lambdaQuery()
                                 .eq(StyleInfo::getStyleNo, styleInfo.getStyleNo())
+                                .eq(StyleInfo::getTenantId, currentTenantId)
                                 .orderByDesc(StyleInfo::getCreateTime)
                                 .last("LIMIT 1")
                                 .one();
@@ -353,7 +363,11 @@ public class StyleInfoOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void updateSizeColorConfig(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
-        StyleInfo style = styleInfoService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
         if (style == null) {
             throw new IllegalArgumentException("款式不存在: " + id);
         }
@@ -565,9 +579,10 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean scrap(Long id, String reason) {
+        Long tenantId = UserContext.tenantId();
         StyleInfo style = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getId, id)
-                .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                .eq(StyleInfo::getTenantId, tenantId)
                 .one();
         if (style == null) {
             throw new NoSuchElementException("款式不存在");
@@ -582,6 +597,7 @@ public class StyleInfoOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getStyleId, String.valueOf(id))
                         .eq(ProductionOrder::getDeleteFlag, 0)
+                        .eq(ProductionOrder::getTenantId, tenantId)
                         .notIn(ProductionOrder::getStatus, OrderStatusConstants.TERMINAL_STATUSES));
         if (activeOrders > 0) {
             throw new IllegalStateException("该款式下存在 " + activeOrders + " 个进行中的生产订单，无法报废");
@@ -589,6 +605,7 @@ public class StyleInfoOrchestrator {
 
         boolean result = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .set(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
@@ -600,6 +617,7 @@ public class StyleInfoOrchestrator {
             try {
                 patternProductionService.lambdaUpdate()
                         .eq(PatternProduction::getStyleId, String.valueOf(id))
+                        .eq(PatternProduction::getTenantId, tenantId)
                         .eq(PatternProduction::getDeleteFlag, 0)
                         .set(PatternProduction::getStatus, "SCRAPPED")
                         .update();
@@ -619,13 +637,20 @@ public class StyleInfoOrchestrator {
             return false;
         }
 
-        StyleInfo styleInfo = styleInfoService.getById(styleId);
+        Long tenantId = UserContext.tenantId();
+        StyleInfo styleInfo = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
         if (styleInfo == null || !StringUtils.hasText(styleInfo.getStyleNo())) {
             return false;
         }
 
         QueryWrapper<ProductionOrder> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("style_no", styleInfo.getStyleNo());
+        if (tenantId != null) {
+            queryWrapper.eq("tenant_id", tenantId);
+        }
         queryWrapper.last("LIMIT 1");
 
         try {
@@ -654,9 +679,11 @@ public class StyleInfoOrchestrator {
     }
 
     private boolean styleNoExists(String styleNo) {
+        Long tenantId = UserContext.tenantId();
         return styleInfoService.lambdaQuery()
                 .select(StyleInfo::getId)
                 .eq(StyleInfo::getStyleNo, styleNo)
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
                 .last("LIMIT 1")
                 .one() != null;
     }
@@ -754,7 +781,12 @@ public class StyleInfoOrchestrator {
     }
 
     private void ensureStyleNotScrapped(Long id) {
-        ensureNotScrapped(styleInfoService.getById(id));
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .one();
+        ensureNotScrapped(style);
     }
 
     private void ensureNotScrapped(StyleInfo style) {
@@ -828,7 +860,11 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment, Object reviewImages) {
-        StyleInfo style = styleInfoService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .one();
         if (style == null) {
             throw new RuntimeException("款式不存在：" + id);
         }
@@ -862,7 +898,10 @@ public class StyleInfoOrchestrator {
                     "样衣审核" + ("REJECT".equalsIgnoreCase(reviewStatus) ? "驳回" : "返工"));
         }
 
-        return styleInfoService.getById(id);
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .one();
     }
 
     /**
@@ -1015,7 +1054,11 @@ public class StyleInfoOrchestrator {
                 log.info("SKUs already exist for styleId={}, skip auto-generate", styleId);
                 return;
             }
-            StyleInfo style = styleInfoService.getById(styleId);
+            Long tenantId = UserContext.tenantId();
+            StyleInfo style = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getId, styleId)
+                    .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                    .one();
             if (style == null || !StringUtils.hasText(style.getSizeColorConfig())) {
                 log.info("No sizeColorConfig for styleId={}, skip auto-generate", styleId);
                 return;
@@ -1037,9 +1080,11 @@ public class StyleInfoOrchestrator {
 
     private void syncPatternProductionReviewFields(Long styleId, String reviewStatus, String reviewComment, Object reviewImages) {
         try {
+            Long tenantId = UserContext.tenantId();
             PatternProduction pattern = patternProductionService.lambdaQuery()
                     .eq(PatternProduction::getStyleId, String.valueOf(styleId))
                     .eq(PatternProduction::getDeleteFlag, 0)
+                    .eq(tenantId != null, PatternProduction::getTenantId, tenantId)
                     .last("LIMIT 1")
                     .one();
             if (pattern == null) {
@@ -1085,7 +1130,11 @@ public class StyleInfoOrchestrator {
             throw new IllegalArgumentException("颜色不能为空");
         }
 
-        StyleInfo source = styleInfoService.getById(sourceStyleId);
+        Long tenantId = UserContext.tenantId();
+        StyleInfo source = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, sourceStyleId)
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .one();
         if (source == null) {
             throw new NoSuchElementException("源款式不存在");
         }
@@ -1093,7 +1142,7 @@ public class StyleInfoOrchestrator {
 
         boolean exists = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, newStyleNo.trim())
-                .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
                 .exists();
         if (exists) {
             throw new IllegalArgumentException("款号 " + newStyleNo.trim() + " 已存在，请换一个款号");
@@ -1107,6 +1156,7 @@ public class StyleInfoOrchestrator {
 
         StyleInfo savedStyle = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, newStyle.getStyleNo())
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
                 .orderByDesc(StyleInfo::getCreateTime)
                 .last("LIMIT 1")
                 .one();
@@ -1230,8 +1280,10 @@ public class StyleInfoOrchestrator {
     }
 
     private void copyProcessToNewStyle(Long sourceStyleId, Long newStyleId) {
+        Long tenantId = UserContext.tenantId();
         List<StyleProcess> sourceProcesses = styleProcessService.lambdaQuery()
                 .eq(StyleProcess::getStyleId, sourceStyleId)
+                .eq(tenantId != null, StyleProcess::getTenantId, tenantId)
                 .list();
         if (sourceProcesses == null || sourceProcesses.isEmpty()) {
             return;
@@ -1259,8 +1311,10 @@ public class StyleInfoOrchestrator {
     }
 
     private void copySecondaryProcessToNewStyle(Long sourceStyleId, Long newStyleId) {
+        Long tenantId = UserContext.tenantId();
         List<SecondaryProcess> sourceSecondaries = secondaryProcessService.lambdaQuery()
                 .eq(SecondaryProcess::getStyleId, sourceStyleId)
+                .eq(tenantId != null, SecondaryProcess::getTenantId, tenantId)
                 .list();
         if (sourceSecondaries == null || sourceSecondaries.isEmpty()) {
             return;
@@ -1290,8 +1344,10 @@ public class StyleInfoOrchestrator {
     }
 
     private void copyQuotationToNewStyle(Long sourceStyleId, Long newStyleId) {
+        Long tenantId = UserContext.tenantId();
         StyleQuotation sourceQuotation = styleQuotationService.lambdaQuery()
                 .eq(StyleQuotation::getStyleId, sourceStyleId)
+                .eq(tenantId != null, StyleQuotation::getTenantId, tenantId)
                 .orderByDesc(StyleQuotation::getCreateTime)
                 .last("LIMIT 1")
                 .one();
@@ -1338,7 +1394,11 @@ public class StyleInfoOrchestrator {
 
     private void tryAutoGenerateSkus(Long styleId) {
         try {
-            StyleInfo style = styleInfoService.getById(styleId);
+            Long tenantId = UserContext.tenantId();
+            StyleInfo style = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getId, styleId)
+                    .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                    .one();
             if (style == null) {
                 return;
             }

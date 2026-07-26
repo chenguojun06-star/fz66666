@@ -44,14 +44,22 @@ public class SecondaryProcessOrchestrator {
         if (styleId == null) {
             return List.of();
         }
-        return secondaryProcessService.listByStyleId(styleId);
+        Long tenantId = UserContext.tenantId();
+        return secondaryProcessService.lambdaQuery()
+                .eq(SecondaryProcess::getStyleId, styleId)
+                .eq(SecondaryProcess::getTenantId, tenantId)
+                .list();
     }
 
     public SecondaryProcess getById(Long id) {
         if (id == null) {
             return null;
         }
-        return secondaryProcessService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        return secondaryProcessService.lambdaQuery()
+                .eq(SecondaryProcess::getId, id)
+                .eq(SecondaryProcess::getTenantId, tenantId)
+                .one();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -59,6 +67,9 @@ public class SecondaryProcessOrchestrator {
         if (process == null) {
             throw new IllegalArgumentException("参数不能为空");
         }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        process.setTenantId(tenantId);
         normalizeProcess(process, null);
         boolean ok = secondaryProcessService.save(process);
         if (!ok) {
@@ -77,7 +88,11 @@ public class SecondaryProcessOrchestrator {
         if (id == null || process == null) {
             throw new IllegalArgumentException("参数不能为空");
         }
-        SecondaryProcess existing = secondaryProcessService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        SecondaryProcess existing = secondaryProcessService.lambdaQuery()
+                .eq(SecondaryProcess::getId, id)
+                .eq(SecondaryProcess::getTenantId, tenantId)
+                .one();
         process.setId(id);
         normalizeProcess(process, existing);
         boolean ok = secondaryProcessService.updateById(process);
@@ -103,12 +118,22 @@ public class SecondaryProcessOrchestrator {
         if (id == null) {
             throw new IllegalArgumentException("id不能为空");
         }
-        SecondaryProcess existing = secondaryProcessService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        SecondaryProcess existing = secondaryProcessService.lambdaQuery()
+                .eq(SecondaryProcess::getId, id)
+                .eq(SecondaryProcess::getTenantId, tenantId)
+                .one();
         Long styleId = existing != null ? existing.getStyleId() : null;
 
-        boolean ok = secondaryProcessService.removeById(id);
+        boolean ok = secondaryProcessService.lambdaUpdate()
+                .eq(SecondaryProcess::getId, id)
+                .eq(SecondaryProcess::getTenantId, tenantId)
+                .remove();
         if (!ok) {
-            if (secondaryProcessService.getById(id) == null) {
+            if (secondaryProcessService.lambdaQuery()
+                    .eq(SecondaryProcess::getId, id)
+                    .eq(SecondaryProcess::getTenantId, tenantId)
+                    .one() == null) {
                 log.warn("[SECONDARY-PROCESS-DELETE] id={} already deleted, idempotent success", id);
                 return;
             }

@@ -41,12 +41,14 @@ public class StyleAttachmentOrchestrator {
     private String uploadPath;
 
     public List<StyleAttachment> list(String styleId, String styleNo, String bizType) {
+        Long tenantId = UserContext.tenantId();
         String sid = normalizeNullable(styleId);
         String normalizedStyleNo = normalizeNullable(styleNo);
         if (!StringUtils.hasText(sid) && StringUtils.hasText(normalizedStyleNo)) {
             StyleInfo style = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
                     .select(StyleInfo::getId)
                     .eq(StyleInfo::getStyleNo, normalizedStyleNo)
+                    .eq(StyleInfo::getTenantId, tenantId)
                     .last("limit 1"), false);
             if (style == null || style.getId() == null) {
                 // 款式不存在时返回空列表，而非 404（前端可能在款式创建完成前就查询附件）
@@ -63,8 +65,16 @@ public class StyleAttachmentOrchestrator {
 
         // 纸样 / 放码纸样 展示时，同时包含已流转版本（*_final）避免样衣完成后附件消失
         if ("pattern".equals(type)) {
-            List<StyleAttachment> base = styleAttachmentService.listByStyleId(sid.trim(), "pattern");
-            List<StyleAttachment> finalFiles = styleAttachmentService.listByStyleId(sid.trim(), "pattern_final");
+            List<StyleAttachment> base = styleAttachmentService.lambdaQuery()
+                    .eq(StyleAttachment::getStyleId, sid.trim())
+                    .eq(StyleAttachment::getBizType, "pattern")
+                    .eq(StyleAttachment::getTenantId, tenantId)
+                    .list();
+            List<StyleAttachment> finalFiles = styleAttachmentService.lambdaQuery()
+                    .eq(StyleAttachment::getStyleId, sid.trim())
+                    .eq(StyleAttachment::getBizType, "pattern_final")
+                    .eq(StyleAttachment::getTenantId, tenantId)
+                    .list();
             if (!finalFiles.isEmpty()) {
                 List<StyleAttachment> merged = new ArrayList<>(base);
                 merged.addAll(finalFiles);
@@ -73,8 +83,16 @@ public class StyleAttachmentOrchestrator {
             return base;
         }
         if ("pattern_grading".equals(type)) {
-            List<StyleAttachment> base = styleAttachmentService.listByStyleId(sid.trim(), "pattern_grading");
-            List<StyleAttachment> finalFiles = styleAttachmentService.listByStyleId(sid.trim(), "pattern_grading_final");
+            List<StyleAttachment> base = styleAttachmentService.lambdaQuery()
+                    .eq(StyleAttachment::getStyleId, sid.trim())
+                    .eq(StyleAttachment::getBizType, "pattern_grading")
+                    .eq(StyleAttachment::getTenantId, tenantId)
+                    .list();
+            List<StyleAttachment> finalFiles = styleAttachmentService.lambdaQuery()
+                    .eq(StyleAttachment::getStyleId, sid.trim())
+                    .eq(StyleAttachment::getBizType, "pattern_grading_final")
+                    .eq(StyleAttachment::getTenantId, tenantId)
+                    .list();
             if (!finalFiles.isEmpty()) {
                 List<StyleAttachment> merged = new ArrayList<>(base);
                 merged.addAll(finalFiles);
@@ -82,7 +100,10 @@ public class StyleAttachmentOrchestrator {
             }
             return base;
         }
-        return styleAttachmentService.listByStyleId(sid.trim(), type);
+        return styleAttachmentService.lambdaQuery()
+                .eq(StyleAttachment::getStyleId, sid.trim())
+                .eq(StyleAttachment::getTenantId, tenantId)
+                .list();
     }
 
     public StyleAttachment upload(MultipartFile file, String styleId, String bizType) {
@@ -251,19 +272,30 @@ public class StyleAttachmentOrchestrator {
     }
 
     public boolean delete(String id) {
-        StyleAttachment current = styleAttachmentService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        StyleAttachment current = styleAttachmentService.lambdaQuery()
+                .eq(StyleAttachment::getId, id)
+                .eq(StyleAttachment::getTenantId, tenantId)
+                .one();
         if (current == null) {
             throw new NoSuchElementException("附件不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "款式附件");
         StyleInfo style = null;
         try {
             style = styleInfoService.getById(Long.valueOf(String.valueOf(current.getStyleId())));
         } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         String type = StringUtils.hasText(current.getBizType()) ? current.getBizType().trim() : null;
         // 纸样锁定检查已移除：全部开放
-        boolean ok = styleAttachmentService.removeById(id);
+        boolean ok = styleAttachmentService.lambdaUpdate()
+                .eq(StyleAttachment::getId, id)
+                .eq(StyleAttachment::getTenantId, tenantId)
+                .remove();
         if (!ok) {
-            if (styleAttachmentService.getById(id) == null) {
+            if (styleAttachmentService.lambdaQuery()
+                    .eq(StyleAttachment::getId, id)
+                    .eq(StyleAttachment::getTenantId, tenantId)
+                    .one() == null) {
                 log.warn("[ATTACHMENT-DELETE] id={} already deleted, idempotent success", id);
                 return true;
             }
@@ -271,7 +303,10 @@ public class StyleAttachmentOrchestrator {
         }
         String currentCover = style == null ? null : style.getCover();
         if (StringUtils.hasText(currentCover) && currentCover.trim().equals(String.valueOf(current.getFileUrl()).trim())) {
-            List<StyleAttachment> remainingImages = styleAttachmentService.listByStyleId(String.valueOf(current.getStyleId()))
+            List<StyleAttachment> remainingImages = styleAttachmentService.lambdaQuery()
+                    .eq(StyleAttachment::getStyleId, String.valueOf(current.getStyleId()))
+                    .eq(StyleAttachment::getTenantId, tenantId)
+                    .list()
                     .stream()
                     .filter(item -> item != null && StringUtils.hasText(item.getFileType()) && item.getFileType().contains("image"))
                     .toList();
@@ -279,6 +314,7 @@ public class StyleAttachmentOrchestrator {
             try {
                 styleInfoService.lambdaUpdate()
                         .eq(StyleInfo::getId, Long.valueOf(String.valueOf(current.getStyleId())))
+                        .eq(StyleInfo::getTenantId, tenantId)
                         .set(StyleInfo::getCover, nextCover)
                         .update();
             } catch (Exception e) {
@@ -415,11 +451,18 @@ public class StyleAttachmentOrchestrator {
             missingItems.add("styleId不能为空");
             return result;
         }
+        Long tenantId = UserContext.tenantId();
 
         // 优先查开发中的纸样文件（pattern），不存在则检查已流转版本（pattern_final）
         StyleAttachment pattern = styleAttachmentService.getLatestPattern(styleId, "pattern");
+        if (pattern != null && !tenantId.equals(pattern.getTenantId())) {
+            pattern = null;
+        }
         if (pattern == null) {
             pattern = styleAttachmentService.getLatestPattern(styleId, "pattern_final");
+            if (pattern != null && !tenantId.equals(pattern.getTenantId())) {
+                pattern = null;
+            }
         }
         if (pattern == null) {
             missingItems.add("纸样文件");
@@ -427,8 +470,14 @@ public class StyleAttachmentOrchestrator {
 
         // 放码纸样改为可选（不再强制要求）
         StyleAttachment grading = styleAttachmentService.getLatestPattern(styleId, "pattern_grading");
+        if (grading != null && !tenantId.equals(grading.getTenantId())) {
+            grading = null;
+        }
         if (grading == null) {
             grading = styleAttachmentService.getLatestPattern(styleId, "pattern_grading_final");
+            if (grading != null && !tenantId.equals(grading.getTenantId())) {
+                grading = null;
+            }
         }
 
         result.put("complete", missingItems.isEmpty());
@@ -478,15 +527,20 @@ public class StyleAttachmentOrchestrator {
         if (!StringUtils.hasText(attachmentId)) {
             throw new IllegalArgumentException("attachmentId不能为空");
         }
-        StyleAttachment attachment = styleAttachmentService.getById(attachmentId.trim());
+        Long tenantId = UserContext.tenantId();
+        StyleAttachment attachment = styleAttachmentService.lambdaQuery()
+                .eq(StyleAttachment::getId, attachmentId.trim())
+                .eq(StyleAttachment::getTenantId, tenantId)
+                .one();
         if (attachment == null) {
             throw new NoSuchElementException("附件不存在：" + attachmentId);
         }
-        TenantAssert.assertTenantContext();
+        TenantAssert.assertBelongsToCurrentTenant(attachment.getTenantId(), "款式附件");
         try {
             Long sid = Long.valueOf(attachment.getStyleId());
             styleInfoService.lambdaUpdate()
                     .eq(StyleInfo::getId, sid)
+                    .eq(StyleInfo::getTenantId, tenantId)
                     .set(StyleInfo::getCover, attachment.getFileUrl())
                     .update();
             log.info("[StyleAttachment] 封面已更新: styleId={}, fileUrl={}", sid, attachment.getFileUrl());
