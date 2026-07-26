@@ -110,7 +110,9 @@ public class SemanticDomainRouter {
             return MultiRoutingResult.defaultResult();
         }
 
-        String cacheKey = userMessage.trim().toLowerCase();
+        // P1 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，避免跨租户命中差异化路由
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String cacheKey = (tenantId == null ? "0" : tenantId.toString()) + ":" + userMessage.trim().toLowerCase();
         CachedMultiRouting cached = multiRoutingCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
             log.debug("[SemanticRouter] 多域缓存命中: domains={}", cached.result.domains);

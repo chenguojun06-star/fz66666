@@ -409,7 +409,10 @@ public class AiAgentToolAccessService {
 
     private String buildToolCacheKey(List<AgentTool> tools) {
         if (tools == null || tools.isEmpty()) return "empty";
+        // P1 修复（铁律4 多租户隔离）：缓存键含 tenantId，避免跨租户共享工具可见性配置
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         StringBuilder sb = new StringBuilder();
+        sb.append("t").append(tenantId == null ? 0 : tenantId).append(':');
         sb.append(hasManagerAccess() ? "M" : "W");
         for (AgentTool t : tools) sb.append('|').append(t.getName());
         return sb.toString();

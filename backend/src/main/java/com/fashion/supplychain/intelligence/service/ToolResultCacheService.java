@@ -188,10 +188,22 @@ public class ToolResultCacheService {
 
     /**
      * 构建缓存 key（SHA-256 hash，避免敏感参数泄露）。
+     *
+     * <p>P0 修复（铁律4 多租户隔离）：rawKey 必须包含 tenantId，防止跨租户缓存串数据。
+     * 旧逻辑仅 hash(toolName + argsJson)，租户 A 查询"我的订单"被缓存后，
+     * 租户 B 用相同参数查询会直接命中缓存返回租户 A 的数据 — 跨租户数据泄漏。
      */
     private String buildCacheKey(String toolName, String argsJson) {
         try {
-            String rawKey = toolName + ":" + (argsJson != null ? argsJson : "{}");
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+            String ctxUserId = com.fashion.supplychain.common.UserContext.userId();
+            // 多租户隔离：tenantId 必填；factoryId/userId 可选（用于工厂/个人数据隔离）
+            String tenantPart = tenantId == null ? "0" : tenantId.toString();
+            String factoryPart = ctxFactoryId == null || ctxFactoryId.isEmpty() ? "_" : ctxFactoryId;
+            String userPart = ctxUserId == null || ctxUserId.isEmpty() ? "_" : ctxUserId;
+            String rawKey = tenantPart + ":" + factoryPart + ":" + userPart + ":"
+                    + toolName + ":" + (argsJson != null ? argsJson : "{}");
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(rawKey.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
@@ -201,7 +213,9 @@ public class ToolResultCacheService {
             return toolName + ":" + sb.substring(0, 16); // 取前16位，足够唯一
         } catch (Exception e) {
             // 降级：直接用原字符串
-            return toolName + ":" + (argsJson != null ? argsJson.hashCode() : 0);
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            return toolName + ":t" + (tenantId == null ? 0 : tenantId) + ":"
+                    + (argsJson != null ? argsJson.hashCode() : 0);
         }
     }
 

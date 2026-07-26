@@ -83,7 +83,9 @@ public class MultiIntentRecognizer {
 
     private MultiIntentResult recognizeWithLlm(String query, Long tenantId) {
         if (inferenceOrchestrator == null) return null;
-        String cacheKey = query.toLowerCase().trim();
+        // P1 修复（铁律4 多租户隔离）：缓存键必须含 tenantId
+        // MultiIntentResult 内含 tenantId 字段，跨租户命中会返回错误的 tenantId
+        String cacheKey = (tenantId == null ? "0" : tenantId.toString()) + ":" + query.toLowerCase().trim();
         MultiIntentResult cached = llmCache.get(cacheKey);
         if (cached != null) return cached;
         try {

@@ -34,10 +34,20 @@ public class SKUDataResolver {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，防止跨租户串数据。
+     * 旧逻辑键为 orderNo（String），若两个租户存在相同 orderNo 会导致订单详情数据串通；
+     * 修复后键为 tenantId + ":" + orderNo，显式按租户隔离。
+     */
     private final Cache<String, List<Map<String, Object>>> orderDetailsCache = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.MINUTES)
             .maximumSize(1000)
             .build();
+
+    private static String buildCacheKey(String orderNo) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return (tenantId == null ? "0" : tenantId.toString()) + ":" + orderNo;
+    }
 
     public ProductionOrder getActiveOrderByNo(String orderNo) {
         String on = StringUtils.hasText(orderNo) ? orderNo.trim() : null;
@@ -87,7 +97,8 @@ public class SKUDataResolver {
     }
 
     public List<Map<String, Object>> resolveSkuListFromOrderDetails(String orderNo) {
-        List<Map<String, Object>> cached = orderDetailsCache.getIfPresent(orderNo);
+        String cacheKey = buildCacheKey(orderNo);
+        List<Map<String, Object>> cached = orderDetailsCache.getIfPresent(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -137,7 +148,7 @@ public class SKUDataResolver {
         }
 
         List<Map<String, Object>> result = new ArrayList<>(agg.values());
-        orderDetailsCache.put(orderNo, result);
+        orderDetailsCache.put(cacheKey, result);
         return result;
     }
 
