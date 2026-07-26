@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import com.fashion.supplychain.intelligence.mapper.AiPatrolActionMapper;
 import java.math.BigDecimal;
@@ -252,9 +253,11 @@ public class PatrolClosedLoopOrchestrator {
     }
 
     public List<AiPatrolAction> recentForCurrentTenant(int limit) {
+        // P0 修复（铁律4 多租户隔离）：tenantId 必须存在，禁止 null 时查询全表
         Long tid = UserContext.tenantId();
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
-        if (tid != null) w.eq(AiPatrolAction::getTenantId, tid);
+        w.eq(AiPatrolAction::getTenantId, tid);
         w.orderByDesc(AiPatrolAction::getId).last("LIMIT " + Math.min(Math.max(limit, 1), 200));
         return actionMapper.selectList(w);
     }
@@ -275,8 +278,10 @@ public class PatrolClosedLoopOrchestrator {
     }
 
     public List<AiPatrolAction> listByTarget(Long tenantId, String targetType, String targetId, int limit) {
+        // P0 修复（铁律4 多租户隔离）：tenantId 必须存在，禁止 null 时查询全表
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
-        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getTenantId, tenantId);
         if (targetType != null && !targetType.isBlank()) w.eq(AiPatrolAction::getTargetType, targetType);
         if (targetId != null && !targetId.isBlank()) w.eq(AiPatrolAction::getTargetId, targetId);
         w.in(AiPatrolAction::getStatus, "PENDING", "APPROVED", "AUTO_RUNNING");
@@ -285,8 +290,10 @@ public class PatrolClosedLoopOrchestrator {
     }
 
     public List<AiPatrolAction> listRecentByTenant(Long tenantId, int limit) {
+        // P0 修复（铁律4 多租户隔离）：tenantId 必须存在，禁止 null 时查询全表
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
-        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getTenantId, tenantId);
         w.orderByDesc(AiPatrolAction::getId).last("LIMIT " + Math.min(Math.max(limit, 1), 50));
         return actionMapper.selectList(w);
     }
@@ -307,23 +314,29 @@ public class PatrolClosedLoopOrchestrator {
     }
 
     public int countPendingByTenant(Long tenantId) {
+        // P0 修复（铁律4 多租户隔离）：tenantId 必须存在，禁止 null 时查询全表
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
-        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getTenantId, tenantId);
         w.eq(AiPatrolAction::getStatus, "PENDING");
         return Math.toIntExact(actionMapper.selectCount(w));
     }
 
     public int countAutoExecutedToday(Long tenantId) {
+        // P0 修复（铁律4 多租户隔离）：tenantId 必须存在，禁止 null 时查询全表
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
-        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getTenantId, tenantId);
         w.eq(AiPatrolAction::getStatus, "AUTO_EXECUTED")
          .ge(AiPatrolAction::getExecutionTime, LocalDate.now().atStartOfDay());
         return Math.toIntExact(actionMapper.selectCount(w));
     }
 
     public int countHighRiskPending(Long tenantId) {
+        // P0 修复（铁律4 多租户隔离）：tenantId 必须存在，禁止 null 时查询全表
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
-        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getTenantId, tenantId);
         w.eq(AiPatrolAction::getStatus, "PENDING")
          .eq(AiPatrolAction::getRiskLevel, "NEED_APPROVAL");
         return Math.toIntExact(actionMapper.selectCount(w));

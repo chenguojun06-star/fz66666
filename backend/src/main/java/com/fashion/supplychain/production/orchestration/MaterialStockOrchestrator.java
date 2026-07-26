@@ -86,6 +86,8 @@ public class MaterialStockOrchestrator {
 
         List<MaterialPickingItem> pickingItems = materialPickingItemMapper.selectList(
                 new LambdaQueryWrapper<MaterialPickingItem>()
+                        // P0 修复（铁律4 多租户隔离）：必须带 tenantId 过滤，避免跨租户读取
+                        .eq(MaterialPickingItem::getTenantId, tenantId)
                         .ge(MaterialPickingItem::getCreateTime, startTime));
 
         Map<String, BigDecimal> usageByMaterial = buildUsageMap(stocks);

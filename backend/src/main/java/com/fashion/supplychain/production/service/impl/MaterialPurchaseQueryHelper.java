@@ -267,8 +267,22 @@ class MaterialPurchaseQueryHelper {
                 .eq(StringUtils.hasText(receiverId), MaterialPurchase::getReceiverId, receiverId)
                 .like(StringUtils.hasText(receiverName), MaterialPurchase::getReceiverName, receiverName)
                 .and(StringUtils.hasText(status), w -> {
-                    if ("partial".equals(status)) w.in(MaterialPurchase::getStatus, "partial", "partial_arrival");
-                    else w.eq(MaterialPurchase::getStatus, status);
+                    // 状态分组必须与 MaterialPurchaseQueryHelper.computeStatusStats 保持一致
+                    // 任何新增状态必须同时更新此处和 computeStatusStats，否则会出现"统计数≠列表数"的 P0 bug
+                    if ("pending".equals(status)) {
+                        w.eq(MaterialPurchase::getStatus, "pending");
+                    } else if ("received".equals(status)) {
+                        // 已采购：received + warehouse_pending（待仓库出库）
+                        w.in(MaterialPurchase::getStatus, "received", "warehouse_pending");
+                    } else if ("partial".equals(status)) {
+                        // 部分到货：partial + partial_arrival
+                        w.in(MaterialPurchase::getStatus, "partial", "partial_arrival");
+                    } else if ("completed".equals(status)) {
+                        // 全部到货：completed + awaiting_confirm（待确认完成）
+                        w.in(MaterialPurchase::getStatus, "completed", "awaiting_confirm");
+                    } else {
+                        w.eq(MaterialPurchase::getStatus, status);
+                    }
                 })
                 .orderByDesc(MaterialPurchase::getCreateTime);
     }

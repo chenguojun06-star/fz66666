@@ -322,15 +322,14 @@ public class MaterialPickupOrchestrator {
     }
 
     private MaterialPickupRecord getByIdAndTenant(String id) {
+        // P0 修复（铁律4 多租户隔离）：超管也必须遵循租户隔离，禁止跳过校验
         Long tenantId = currentTenantId();
         MaterialPickupRecord record = pickupMapper.selectById(id);
         if (record == null || record.getDeleteFlag() != null && record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
-        if (!UserContext.isSuperAdmin()) {
-            if (tenantId == null || !String.valueOf(tenantId).equals(record.getTenantId())) {
-                throw new SecurityException("无权操作该记录");
-            }
+        if (tenantId == null || !String.valueOf(tenantId).equals(record.getTenantId())) {
+            throw new SecurityException("无权操作该记录");
         }
         return record;
     }

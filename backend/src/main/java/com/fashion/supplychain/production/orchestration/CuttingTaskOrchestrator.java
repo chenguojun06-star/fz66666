@@ -82,21 +82,27 @@ public class CuttingTaskOrchestrator {
     }
 
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
+        // P0 修复（铁律4 多租户隔离）：强制租户上下文校验
+        Long tenantId = TenantAssert.requireTenantId();
+        Map<String, Object> pcParams = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
+        pcParams.put("_tenantId", tenantId);
+
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
+            // P0 修复：工厂账号严格匹配 factoryId，移除 .or().isNull(factoryId) 防止跨工厂数据泄露
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .and(w -> w.eq(ProductionOrder::getFactoryId, ctxFactoryId).or().isNull(ProductionOrder::getFactoryId))
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
             if (factoryOrderIds.isEmpty()) {
                 return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
             }
-            Map<String, Object> mutableParams = new java.util.HashMap<>(params != null ? params : new java.util.HashMap<>());
-            mutableParams.put("_factoryOrderIds", factoryOrderIds);
-            IPage<CuttingTask> factoryPage = cuttingTaskService.queryPage(mutableParams);
+            pcParams.put("_factoryOrderIds", factoryOrderIds);
+            IPage<CuttingTask> factoryPage = cuttingTaskService.queryPage(pcParams);
             java.util.Set<String> scannedIds = scanRecordDomainService.batchHasProductionTypeScanRecords(
                     factoryPage.getRecords().stream()
                             .map(CuttingTask::getProductionOrderId)
@@ -105,7 +111,25 @@ public class CuttingTaskOrchestrator {
             factoryPage.getRecords().forEach(t -> t.setHasScanRecords(scannedIds.contains(t.getProductionOrderId())));
             return factoryPage;
         }
-        Map<String, Object> pcParams = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
+
+        // P1 修复：与 getStatusStats 对齐，PC端默认仅查 INTERNAL 工厂裁剪任务（除非显式指定 factoryType）
+        String factoryType = normalizeFactoryType(getTrimmedText(params, "factoryType"));
+        if (factoryType == null) {
+            factoryType = FACTORY_TYPE_INTERNAL;
+        }
+        List<String> matchedOrderIds = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getFactoryType, factoryType)
+                        .ne(ProductionOrder::getStatus, "scrapped")
+                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+        ).stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
+        if (matchedOrderIds.isEmpty()) {
+            return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+        }
+        pcParams.put("_factoryOrderIds", matchedOrderIds);
+
         IPage<CuttingTask> page = cuttingTaskService.queryPage(pcParams);
         java.util.Set<String> scannedIds = scanRecordDomainService.batchHasProductionTypeScanRecords(
                 page.getRecords().stream()
@@ -117,21 +141,27 @@ public class CuttingTaskOrchestrator {
     }
 
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
+        // P0 修复（铁律4 多租户隔离）：强制租户上下文校验 + 显式 tenantId 过滤
+        Long tenantId = TenantAssert.requireTenantId();
         String orderNo = params != null ? getTrimmedText(params, "orderNo") : null;
         String styleNo = params != null ? getTrimmedText(params, "styleNo") : null;
         String factoryType = normalizeFactoryType(params != null ? getTrimmedText(params, "factoryType") : null);
 
         LambdaQueryWrapper<CuttingTask> baseWrapper = new LambdaQueryWrapper<CuttingTask>()
                 .select(CuttingTask::getId, CuttingTask::getStatus, CuttingTask::getOrderQuantity, CuttingTask::getProductionOrderId)
+                // P0 修复：显式 tenantId 过滤，避免依赖全局拦截器（CuttingTask 无 deleteFlag 字段）
+                .eq(CuttingTask::getTenantId, tenantId)
                 .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
                 .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo);
 
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
+            // P0 修复：工厂账号严格匹配 factoryId，移除 .or().isNull(factoryId)
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .and(w -> w.eq(ProductionOrder::getFactoryId, ctxFactoryId).or().isNull(ProductionOrder::getFactoryId))
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
@@ -145,14 +175,13 @@ public class CuttingTaskOrchestrator {
                 return emptyStats;
             }
             baseWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
-        }
-
-        String effectiveFactoryType = StringUtils.hasText(factoryType) ? factoryType :
-                (!DataPermissionHelper.isFactoryAccount() ? "INTERNAL" : null);
-        if (StringUtils.hasText(effectiveFactoryType)) {
+        } else {
+            // P1 修复：与 queryPage 默认 factoryType 对齐（PC端默认 INTERNAL）
+            String effectiveFactoryType = StringUtils.hasText(factoryType) ? factoryType : FACTORY_TYPE_INTERNAL;
             List<String> matchedOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getTenantId, tenantId)
                             .eq(ProductionOrder::getFactoryType, effectiveFactoryType)
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
@@ -401,6 +430,8 @@ public class CuttingTaskOrchestrator {
     }
 
     public List<CuttingTask> getMyTasks() {
+        // P0 修复（铁律4 多租户隔离）：强制租户上下文校验 + 显式 tenantId 过滤
+        Long tenantId = TenantAssert.requireTenantId();
         UserContext ctx = UserContext.get();
         String userId = ctx == null ? null : ctx.getUserId();
         if (!StringUtils.hasText(userId)) {
@@ -422,6 +453,8 @@ public class CuttingTaskOrchestrator {
                         CuttingTask::getExpectedShipDate,
                         CuttingTask::getStatus
                 )
+                // P0 修复：显式 tenantId 过滤，避免跨租户读取
+                .eq(CuttingTask::getTenantId, tenantId)
                 .and(w -> w
                         .isNull(CuttingTask::getReceiverId).eq(CuttingTask::getStatus, "pending")
                         .or()
@@ -444,9 +477,11 @@ public class CuttingTaskOrchestrator {
             return tasks;
         }
 
+        // P0 修复：校验订单归属当前租户
         Set<String> validOrderIds = productionOrderService.lambdaQuery()
             .select(ProductionOrder::getId)
                 .in(ProductionOrder::getId, orderIds)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .list()

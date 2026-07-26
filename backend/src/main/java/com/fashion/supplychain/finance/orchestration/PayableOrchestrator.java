@@ -57,6 +57,11 @@ public class PayableOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
+        // P0 修复（铁律4 多租户隔离）：工厂账号只能看到自己的应付账款
+        // 与 WagePaymentDashboardHelper 保持一致，使用 counterpartyId=factoryId 或 supplierId=factoryId 过滤
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
+
         LambdaQueryWrapper<Payable> qw = new LambdaQueryWrapper<Payable>()
                 .eq(Payable::getDeleteFlag, 0)
                 .eq(Payable::getTenantId, tenantId)
@@ -66,6 +71,9 @@ public class PayableOrchestrator {
                         .like(Payable::getPayableNo, keyword)
                         .or().like(Payable::getSupplierName, keyword)
                         .or().like(Payable::getOrderNo, keyword))
+                .and(isFactoryAccount && StringUtils.hasText(ctxFactoryId), w -> w
+                        .eq(Payable::getCounterpartyId, ctxFactoryId)
+                        .or().eq(Payable::getSupplierId, ctxFactoryId))
                 .orderByDesc(Payable::getCreateTime);
 
         return payableService.page(new Page<>(page, pageSize), qw);
@@ -98,11 +106,19 @@ public class PayableOrchestrator {
     public Map<String, Object> getStats() {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        List<Payable> all = payableService.list(
-                new LambdaQueryWrapper<Payable>()
-                        .eq(Payable::getDeleteFlag, 0)
-                        .eq(Payable::getTenantId, tenantId)
-                        .last("LIMIT 5000"));
+
+        // P0 修复（铁律4 多租户隔离）：工厂账号 stats 与 list 数据范围对齐
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
+
+        LambdaQueryWrapper<Payable> wrapper = new LambdaQueryWrapper<Payable>()
+                .eq(Payable::getDeleteFlag, 0)
+                .eq(Payable::getTenantId, tenantId)
+                .and(isFactoryAccount && StringUtils.hasText(ctxFactoryId), w -> w
+                        .eq(Payable::getCounterpartyId, ctxFactoryId)
+                        .or().eq(Payable::getSupplierId, ctxFactoryId))
+                .last("LIMIT 5000");
+        List<Payable> all = payableService.list(wrapper);
 
         BigDecimal pendingAmount = BigDecimal.ZERO;
         BigDecimal overdueAmount = BigDecimal.ZERO;

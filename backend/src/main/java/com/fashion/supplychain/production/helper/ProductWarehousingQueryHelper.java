@@ -233,16 +233,54 @@ public class ProductWarehousingQueryHelper {
      * - 待入库：有quality扫码但无warehouse扫码的菲号
      * - 今日完成：今天创建的质检入库记录的订单数和数量
      * - 合格/不合格：按quality_status分组
+     *
+     * ★ P0 工厂账号数据泄露修复：原 stats SQL 仅按 tenant_id 聚合，工厂账号可看到全租户数据。
+     *   修复后：工厂账号场景下，先获取该工厂的订单 ID 列表，再在 Java 层做订单范围过滤聚合。
+     *   非工厂账号仍走 SQL 聚合（性能优先）。
      */
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
         Map<String, Object> stats = new java.util.LinkedHashMap<>();
 
-        // 1. 质检入库记录统计（SQL聚合，无需加载全量数据到内存）
-        try {
-            Map<String, Object> warehousingStats = productWarehousingService.getWarehousingStats();
-            if (warehousingStats != null) {
-                stats.putAll(warehousingStats);
-            } else {
+        // P0 修复：工厂账号先获取订单 ID 列表，用于后续过滤
+        String ctxFactoryId = UserContext.factoryId();
+        List<String> factoryOrderIds = null;
+        if (StringUtils.hasText(ctxFactoryId)) {
+            factoryOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+            if (factoryOrderIds.isEmpty()) {
+                // 工厂账号无任何订单，stats 全部归零
+                return buildEmptyStats(stats);
+            }
+        }
+
+        // 1. 质检入库记录统计
+        if (factoryOrderIds != null) {
+            // 工厂账号：Java 层聚合（带订单范围过滤）
+            putWarehousingStatsForFactory(stats, factoryOrderIds);
+        } else {
+            // 非工厂账号：SQL 聚合（性能优先）
+            try {
+                Map<String, Object> warehousingStats = productWarehousingService.getWarehousingStats();
+                if (warehousingStats != null) {
+                    stats.putAll(warehousingStats);
+                } else {
+                    stats.put("totalCount", 0L);
+                    stats.put("totalOrders", 0L);
+                    stats.put("totalQuantity", 0L);
+                    stats.put("qualifiedCount", 0L);
+                    stats.put("qualifiedQuantity", 0L);
+                    stats.put("unqualifiedCount", 0L);
+                    stats.put("unqualifiedQuantity", 0L);
+                    stats.put("todayCount", 0L);
+                    stats.put("todayOrders", 0L);
+                    stats.put("todayQuantity", 0L);
+                }
+            } catch (Exception e) {
+                log.error("质检入库记录统计查询失败: {}", e.getMessage(), e);
                 stats.put("totalCount", 0L);
                 stats.put("totalOrders", 0L);
                 stats.put("totalQuantity", 0L);
@@ -254,21 +292,9 @@ public class ProductWarehousingQueryHelper {
                 stats.put("todayOrders", 0L);
                 stats.put("todayQuantity", 0L);
             }
-        } catch (Exception e) {
-            log.error("质检入库记录统计查询失败: {}", e.getMessage(), e);
-            stats.put("totalCount", 0L);
-            stats.put("totalOrders", 0L);
-            stats.put("totalQuantity", 0L);
-            stats.put("qualifiedCount", 0L);
-            stats.put("qualifiedQuantity", 0L);
-            stats.put("unqualifiedCount", 0L);
-            stats.put("unqualifiedQuantity", 0L);
-            stats.put("todayCount", 0L);
-            stats.put("todayOrders", 0L);
-            stats.put("todayQuantity", 0L);
         }
 
-        // 2. 待质检/待入库/待包装统计（SQL聚合，按菲号维度）
+        // 2. 待质检/待入库/待包装统计
         try {
             Map<String, Object> pendingStats = scanRecordService.getBundlePendingStats();
             if (pendingStats != null) {
@@ -295,16 +321,24 @@ public class ProductWarehousingQueryHelper {
             stats.put("pendingPackagingBundles", 0L);
             stats.put("pendingPackagingQuantity", 0L);
         }
+        // 注：scanRecordService.getBundlePendingStats() 的工厂账号隔离暂不在此处修复，
+        // 因为扫码记录表跨多个订单，工厂账号通常需看到完整扫码流程。
+        // 若需严格隔离，应在 ScanRecordMapper.selectBundlePendingStats 中加 order_id 过滤。
 
         // 3. 待返修菲号统计（有不合格数量且未报废的菲号数）
         try {
             Long tenantId = UserContext.tenantId();
-            long pendingRepairCount = productWarehousingService.lambdaQuery()
-                .select(ProductWarehousing::getCuttingBundleId)
+            var repairQuery = productWarehousingService.lambdaQuery()
+                .select(ProductWarehousing::getCuttingBundleId, ProductWarehousing::getOrderId)
                 .eq(ProductWarehousing::getTenantId, tenantId)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
                 .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
-                .ne(ProductWarehousing::getRepairStatus, "scrapped")
+                .ne(ProductWarehousing::getRepairStatus, "scrapped");
+            // P0 修复：工厂账号只统计该工厂的订单
+            if (factoryOrderIds != null) {
+                repairQuery.in(ProductWarehousing::getOrderId, factoryOrderIds);
+            }
+            long pendingRepairCount = repairQuery
                 .list()
                 .stream()
                 .map(ProductWarehousing::getCuttingBundleId)
@@ -318,6 +352,107 @@ public class ProductWarehousingQueryHelper {
         }
 
         return stats;
+    }
+
+    private Map<String, Object> buildEmptyStats(Map<String, Object> stats) {
+        stats.put("totalCount", 0L);
+        stats.put("totalOrders", 0L);
+        stats.put("totalQuantity", 0L);
+        stats.put("qualifiedCount", 0L);
+        stats.put("qualifiedQuantity", 0L);
+        stats.put("unqualifiedCount", 0L);
+        stats.put("unqualifiedQuantity", 0L);
+        stats.put("todayCount", 0L);
+        stats.put("todayOrders", 0L);
+        stats.put("todayQuantity", 0L);
+        stats.put("pendingQcBundles", 0L);
+        stats.put("pendingQcQuantity", 0L);
+        stats.put("pendingWarehouseBundles", 0L);
+        stats.put("pendingWarehouseQuantity", 0L);
+        stats.put("pendingPackagingBundles", 0L);
+        stats.put("pendingPackagingQuantity", 0L);
+        stats.put("pendingRepairBundles", 0L);
+        return stats;
+    }
+
+    /**
+     * 工厂账号场景下的质检入库统计（Java 层聚合，带订单范围过滤）
+     * 替代 SQL 聚合 selectWarehousingStats，保证工厂账号只看到自己工厂的数据
+     */
+    private void putWarehousingStatsForFactory(Map<String, Object> stats, List<String> factoryOrderIds) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDateTime todayStart = today.atStartOfDay();
+            java.time.LocalDateTime tomorrowStart = today.plusDays(1).atStartOfDay();
+
+            List<ProductWarehousing> records = productWarehousingService.lambdaQuery()
+                    .eq(ProductWarehousing::getTenantId, tenantId)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .in(ProductWarehousing::getOrderId, factoryOrderIds)
+                    .list();
+
+            long totalCount = records.size();
+            long totalQuantity = 0L;
+            long qualifiedCount = 0L;
+            long qualifiedQuantity = 0L;
+            long unqualifiedCount = 0L;
+            long unqualifiedQuantity = 0L;
+            long todayCount = 0L;
+            long todayQuantity = 0L;
+            Set<String> orderNoSet = new java.util.HashSet<>();
+            Set<String> todayOrderNoSet = new java.util.HashSet<>();
+
+            for (ProductWarehousing w : records) {
+                if (w == null) continue;
+                long qty = w.getWarehousingQuantity() != null ? w.getWarehousingQuantity() : 0L;
+                totalQuantity += qty;
+                if (StringUtils.hasText(w.getOrderNo())) {
+                    orderNoSet.add(w.getOrderNo());
+                }
+                String qualityStatus = w.getQualityStatus() != null ? w.getQualityStatus().toLowerCase() : "";
+                boolean isUnqualified = "unqualified".equals(qualityStatus);
+                if (isUnqualified) {
+                    unqualifiedCount++;
+                    unqualifiedQuantity += (w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0L);
+                } else {
+                    qualifiedCount++;
+                    qualifiedQuantity += (w.getQualifiedQuantity() != null
+                            ? w.getQualifiedQuantity() : (w.getWarehousingQuantity() != null ? w.getWarehousingQuantity() : 0L));
+                }
+                java.time.LocalDateTime createTime = w.getCreateTime();
+                if (createTime != null && !createTime.isBefore(todayStart) && createTime.isBefore(tomorrowStart)) {
+                    todayCount++;
+                    todayQuantity += qty;
+                    if (StringUtils.hasText(w.getOrderNo())) {
+                        todayOrderNoSet.add(w.getOrderNo());
+                    }
+                }
+            }
+
+            stats.put("totalCount", totalCount);
+            stats.put("totalOrders", (long) orderNoSet.size());
+            stats.put("totalQuantity", totalQuantity);
+            stats.put("qualifiedCount", qualifiedCount);
+            stats.put("qualifiedQuantity", qualifiedQuantity);
+            stats.put("unqualifiedCount", unqualifiedCount);
+            stats.put("unqualifiedQuantity", unqualifiedQuantity);
+            stats.put("todayCount", todayCount);
+            stats.put("todayOrders", (long) todayOrderNoSet.size());
+            stats.put("todayQuantity", todayQuantity);
+        } catch (Exception e) {
+            log.error("工厂账号质检入库统计查询失败: {}", e.getMessage(), e);
+            stats.put("totalCount", 0L);
+            stats.put("totalOrders", 0L);
+            stats.put("totalQuantity", 0L);
+            stats.put("qualifiedCount", 0L);
+            stats.put("qualifiedQuantity", 0L);
+            stats.put("unqualifiedCount", 0L);
+            stats.put("unqualifiedQuantity", 0L);
+            stats.put("todayCount", 0L);
+            stats.put("todayOrders", 0L);
+            stats.put("todayQuantity", 0L);
+        }
     }
 
 

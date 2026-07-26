@@ -290,14 +290,22 @@ public class MaterialPurchaseQueryHelper {
             String status = p.getStatus() == null ? "" : p.getStatus().trim().toLowerCase();
             int qty = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity().intValue();
             totalQuantity += qty;
+            // 状态分类必须与 applyBasicFilters 的 status 过滤分组保持一致
+            // 任何新增状态必须同时更新此处和 applyBasicFilters，否则会出现"统计数≠列表数"的 P0 bug
             switch (status) {
                 case "pending": pendingCount++; break;
-                case "received": receivedCount++; break;
+                case "received":
+                case "warehouse_pending":       // 待仓库出库 → 归入"已采购"
+                    receivedCount++; break;
                 case "partial":
                 case "partial_arrival": partialCount++; break;
-                case "completed": completedCount++; break;
+                case "completed":
+                case "awaiting_confirm":        // 待确认完成 → 归入"全部到货"
+                    completedCount++; break;
                 case "cancelled": cancelledCount++; break;
-                default: pendingCount++; break;
+                default:
+                    // 未知状态保守计入 pending（向后兼容历史脏数据）
+                    pendingCount++; break;
             }
         }
 

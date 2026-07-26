@@ -275,10 +275,12 @@ public class FinishedProductSettlementController {
         if (tenantId == null) {
             tenantId = UserContext.tenantId();
         }
+        // P0 修复（铁律4 多租户隔离）：markApproved 内部强制从 UserContext 取 tenantId
+        // 这里仅做权限校验，确保当前用户有权操作该租户的结算单
+        TenantAssert.assertBelongsToCurrentTenant(tenantId, "成品结算单");
 
         boolean approved = settlementOrchestrator.markApproved(
                 id,
-                tenantId,
                 UserContext.userId(),
                 UserContext.username()
         );

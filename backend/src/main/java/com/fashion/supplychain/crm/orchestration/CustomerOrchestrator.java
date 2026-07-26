@@ -3,6 +3,7 @@ package com.fashion.supplychain.crm.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * CRM 客户管理编排层
@@ -47,9 +49,17 @@ public class CustomerOrchestrator {
 
         Long tenantId = currentTenantId();
 
+        // P0 修复（铁律4 多租户隔离）：工厂账号只能看到与自己订单关联的客户
+        // 与 getStats 接口数据范围对齐，避免跨工厂数据泄露
+        List<String> factoryCustomerIds = getFactoryCustomerIdsOrNull();
+        if (factoryCustomerIds != null && factoryCustomerIds.isEmpty()) {
+            return new Page<>(page, pageSize);
+        }
+
         LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<Customer>()
                 .eq(Customer::getDeleteFlag, 0)
                 .eq(Customer::getTenantId, tenantId)
+                .in(factoryCustomerIds != null, Customer::getId, factoryCustomerIds)
                 .and(StringUtils.hasText(keyword), w -> w
                         .like(Customer::getCompanyName, keyword)
                         .or().like(Customer::getContactPerson, keyword)
@@ -59,6 +69,30 @@ public class CustomerOrchestrator {
                 .orderByDesc(Customer::getCreateTime);
 
         return customerService.page(new Page<>(page, pageSize), wrapper);
+    }
+
+    /**
+     * 工厂账号隔离：获取当前工厂关联订单的客户ID列表
+     * 非工厂账号返回 null（不限制）；工厂账号但无关联订单返回空列表
+     */
+    private List<String> getFactoryCustomerIdsOrNull() {
+        if (!DataPermissionHelper.isFactoryAccount()) {
+            return null;
+        }
+        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds == null || factoryOrderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getCustomerId)
+                        .in(ProductionOrder::getId, factoryOrderIds)
+                        .isNotNull(ProductionOrder::getCustomerId)
+        ).stream()
+                .map(ProductionOrder::getCustomerId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     public Customer getById(String id) {
@@ -107,10 +141,24 @@ public class CustomerOrchestrator {
 
     public Map<String, Object> getStats() {
         Long tenantId = currentTenantId();
+
+        // P0 修复（铁律4 多租户隔离）：工厂账号 stats 与 list 数据范围对齐
+        List<String> factoryCustomerIds = getFactoryCustomerIdsOrNull();
+        if (factoryCustomerIds != null && factoryCustomerIds.isEmpty()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("total", 0L);
+            empty.put("newThisMonth", 0L);
+            empty.put("vip", 0L);
+            empty.put("activeCount", 0L);
+            empty.put("linkedOrderCount", 0L);
+            return empty;
+        }
+
         List<Customer> all = customerService.lambdaQuery()
                 .eq(Customer::getDeleteFlag, 0)
                 .eq(Customer::getTenantId, tenantId)
-                .select(Customer::getCustomerLevel, Customer::getStatus, Customer::getCreateTime)
+                .in(factoryCustomerIds != null, Customer::getId, factoryCustomerIds)
+                .select(Customer::getCustomerLevel, Customer::getStatus, Customer::getCreateTime, Customer::getId)
                 .last("LIMIT 5000")
                 .list();
 
@@ -123,11 +171,24 @@ public class CustomerOrchestrator {
         long vip = all.stream().filter(c -> "VIP".equals(c.getCustomerLevel())).count();
         long activeCount = all.stream().filter(c -> "ACTIVE".equals(c.getStatus())).count();
 
-        long linkedOrderCount = productionOrderService.count(
-                new LambdaQueryWrapper<ProductionOrder>()
-                        .eq(ProductionOrder::getDeleteFlag, 0)
-                        .eq(ProductionOrder::getTenantId, tenantId)
-                        .isNotNull(ProductionOrder::getCustomerId));
+        // P0 修复：工厂账号 linkedOrderCount 仅统计本工厂关联订单
+        long linkedOrderCount;
+        if (factoryCustomerIds != null) {
+            List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+            linkedOrderCount = factoryOrderIds == null ? 0L :
+                    productionOrderService.count(
+                            new LambdaQueryWrapper<ProductionOrder>()
+                                    .eq(ProductionOrder::getDeleteFlag, 0)
+                                    .eq(ProductionOrder::getTenantId, tenantId)
+                                    .in(ProductionOrder::getId, factoryOrderIds)
+                                    .isNotNull(ProductionOrder::getCustomerId));
+        } else {
+            linkedOrderCount = productionOrderService.count(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getDeleteFlag, 0)
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .isNotNull(ProductionOrder::getCustomerId));
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);
@@ -140,9 +201,15 @@ public class CustomerOrchestrator {
 
     public List<Customer> listActive() {
         Long tenantId = currentTenantId();
+        // P0 修复（铁律4 多租户隔离）：工厂账号仅返回自己关联的活跃客户
+        List<String> factoryCustomerIds = getFactoryCustomerIdsOrNull();
+        if (factoryCustomerIds != null && factoryCustomerIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         return customerService.lambdaQuery()
                 .eq(Customer::getDeleteFlag, 0)
                 .eq(Customer::getTenantId, tenantId)
+                .in(factoryCustomerIds != null, Customer::getId, factoryCustomerIds)
                 .eq(Customer::getStatus, "ACTIVE")
                 .orderByDesc(Customer::getCreateTime)
                 .last("LIMIT 500")

@@ -382,30 +382,40 @@ public class TaskCenterOrchestrator {
     }
 
     public Map<String, Object> getTaskStats() {
+        // P0 修复：
+        // 1. 原 findActiveByTenant 已过滤 COMPLETED，导致 completed 永远为 0 → 改用 countByTenantAndStatus 独立查询
+        // 2. 与 getDashboard 的状态分类对齐：inProgress = IN_PROGRESS + ACCEPTED，total 含 escalated
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String username = StringUtils.hasText(UserContext.username()) ? UserContext.username() : null;
 
-        List<CollaborationTask> all = collaborationTaskMapper.findActiveByTenant(tenantId, 500);
-        int pending = 0, inProgress = 0, completed = 0, highPriority = 0;
+        // 用 SQL count 替代内存过滤（避免 findActiveByTenant 漏掉 COMPLETED）
+        int pending = collaborationTaskMapper.countByTenantAndStatus(tenantId, "PENDING");
+        int inProgressRaw = collaborationTaskMapper.countByTenantAndStatus(tenantId, "IN_PROGRESS");
+        int accepted = collaborationTaskMapper.countByTenantAndStatus(tenantId, "ACCEPTED");
+        int inProgress = inProgressRaw + accepted;  // 合并 IN_PROGRESS + ACCEPTED，与 getDashboard 区别但与原 getTaskStats 语义一致
+        int completed = collaborationTaskMapper.countByTenantAndStatus(tenantId, "COMPLETED");
+        int escalated = collaborationTaskMapper.countByTenantAndStatus(tenantId, "ESCALATED");
 
-        for (CollaborationTask t : all) {
-            boolean isMine = username != null && username.equals(t.getAssigneeName());
-            boolean isManual = CollaborationTask.SourceType.MANUAL.name().equals(t.getSourceType());
-            if (!isMine && !isManual) continue;
-
-            String s = t.getTaskStatus();
-            if ("PENDING".equals(s)) pending++;
-            else if ("IN_PROGRESS".equals(s) || "ACCEPTED".equals(s)) inProgress++;
-            else if ("COMPLETED".equals(s)) completed++;
-            if ("HIGH".equals(t.getPriority()) || "CRITICAL".equals(t.getPriority())) highPriority++;
+        // highPriority 仍走内存过滤（需要同时按 assignee/sourceType 过滤）
+        int highPriority = 0;
+        if (username != null) {
+            List<CollaborationTask> all = collaborationTaskMapper.findActiveByTenant(tenantId, 500);
+            for (CollaborationTask t : all) {
+                boolean isMine = username.equals(t.getAssigneeName());
+                boolean isManual = CollaborationTask.SourceType.MANUAL.name().equals(t.getSourceType());
+                if (!isMine && !isManual) continue;
+                if ("HIGH".equals(t.getPriority()) || "CRITICAL".equals(t.getPriority())) highPriority++;
+            }
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("pendingCount", pending);
         result.put("inProgressCount", inProgress);
         result.put("completedCount", completed);
-        result.put("totalCount", pending + inProgress + completed);
+        result.put("escalatedCount", escalated);
+        // P0 修复：total 含 escalated（与 getDashboard 一致），避免 ESCALATED 任务消失
+        result.put("totalCount", pending + inProgress + completed + escalated);
         result.put("highPriorityCount", highPriority);
         return result;
     }

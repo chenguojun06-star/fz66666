@@ -138,9 +138,12 @@ public class MaterialPickupReceivableOrchestrator {
         if (orderNos.isEmpty()) {
             return;
         }
+        // P0 修复（铁律4 多租户隔离）：查询 ProductionOrder 必须带 tenantId 过滤
+        Long tenantId = UserContext.tenantId();
         List<ProductionOrder> orders = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getDeleteFlag, 0)
+                        .eq(ProductionOrder::getTenantId, tenantId)
                         .in(ProductionOrder::getOrderNo, orderNos)
                         .select(ProductionOrder::getOrderNo,
                                 ProductionOrder::getFactoryName,
@@ -212,14 +215,21 @@ public class MaterialPickupReceivableOrchestrator {
     }
 
     private Receivable findReceivableByPickup(MaterialPickupRecord record) {
+        // P0 修复（铁律4 多租户隔离）：查询 Receivable 必须带 tenantId 过滤
+        Long tenantId = UserContext.tenantId();
         if (StringUtils.hasText(record.getReceivableId())) {
-            Receivable direct = receivableService.getById(record.getReceivableId());
+            Receivable direct = receivableService.lambdaQuery()
+                    .eq(Receivable::getId, record.getReceivableId())
+                    .eq(Receivable::getTenantId, tenantId)
+                    .eq(Receivable::getDeleteFlag, 0)
+                    .one();
             if (direct != null) {
                 return direct;
             }
         }
         return receivableService.lambdaQuery()
                 .eq(Receivable::getDeleteFlag, 0)
+                .eq(Receivable::getTenantId, tenantId)
                 .eq(Receivable::getSourceBizType, "MATERIAL_PICKUP")
                 .eq(Receivable::getSourceBizId, record.getId())
                 .last("LIMIT 1")
@@ -264,15 +274,14 @@ public class MaterialPickupReceivableOrchestrator {
     }
 
     private MaterialPickupRecord getByIdAndTenant(String id) {
+        // P0 修复（铁律4 多租户隔离）：超管也必须遵循租户隔离，禁止跳过校验
         Long tenantId = currentTenantId();
         MaterialPickupRecord record = pickupMapper.selectById(id);
         if (record == null || record.getDeleteFlag() != null && record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
-        if (!UserContext.isSuperAdmin()) {
-            if (tenantId == null || !String.valueOf(tenantId).equals(record.getTenantId())) {
-                throw new SecurityException("无权操作该记录");
-            }
+        if (tenantId == null || !String.valueOf(tenantId).equals(record.getTenantId())) {
+            throw new SecurityException("无权操作该记录");
         }
         return record;
     }

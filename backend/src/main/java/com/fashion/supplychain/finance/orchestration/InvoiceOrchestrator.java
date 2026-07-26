@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.Invoice;
@@ -53,6 +54,12 @@ public class InvoiceOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
+        // P0 修复（铁律4 多租户隔离）：工厂账号不应看到发票（属于租户级财务数据）
+        // 与 ReceivableOrchestrator.list 的工厂账号禁用策略保持一致
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return new Page<>(page, pageSize);
+        }
+
         LambdaQueryWrapper<Invoice> qw = new LambdaQueryWrapper<Invoice>()
                 .eq(Invoice::getDeleteFlag, 0)
                 .eq(Invoice::getTenantId, tenantId)
@@ -80,6 +87,17 @@ public class InvoiceOrchestrator {
     public Map<String, Object> getStats() {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
+
+        // P0 修复（铁律4 多租户隔离）：工厂账号不应看到发票统计（属于租户级财务数据）
+        if (DataPermissionHelper.isFactoryAccount()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("totalIssued", BigDecimal.ZERO);
+            empty.put("issuedCount", 0L);
+            empty.put("draftCount", 0L);
+            empty.put("monthAmount", BigDecimal.ZERO);
+            return empty;
+        }
+
         List<Invoice> all = invoiceService.list(
                 new LambdaQueryWrapper<Invoice>()
                         .eq(Invoice::getDeleteFlag, 0)

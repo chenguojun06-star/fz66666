@@ -2,12 +2,15 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.BillAggregationService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +21,11 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 账单汇总编排器 — 统一收付款账单聚合
@@ -45,6 +50,30 @@ public class BillAggregationOrchestrator {
 
     @Autowired(required = false)
     private ReceivableOrchestrator receivableOrchestrator;
+
+    @Autowired(required = false)
+    private ProductionOrderService productionOrderService;
+
+    /**
+     * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
+     * 非工厂账号返回 null（表示不限制）
+     */
+    private List<String> getFactoryOrderIdsOrNull() {
+        if (!DataPermissionHelper.isFactoryAccount()) {
+            return null;
+        }
+        if (productionOrderService == null) {
+            return Collections.emptyList();
+        }
+        List<String> ids = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .eq(ProductionOrder::getFactoryId, UserContext.factoryId())
+                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
+                                .or().eq(ProductionOrder::getDeleteFlag, 0))
+        ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+        return ids;
+    }
 
     // ==================== 1. 账单推送（各模块调用） ====================
 
@@ -159,18 +188,35 @@ public class BillAggregationOrchestrator {
         Long tenantId = TenantAssert.requireTenantId();
         Page<BillAggregation> page = new Page<>(query.getPageNum(), query.getPageSize());
 
+        // P0 修复：工厂账号只能看到本工厂订单关联的账单
+        List<String> factoryOrderIds = getFactoryOrderIdsOrNull();
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            return new Page<>(query.getPageNum(), query.getPageSize());
+        }
+
         LambdaQueryWrapper<BillAggregation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BillAggregation::getTenantId, tenantId)
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(query.getBillType()), BillAggregation::getBillType, query.getBillType())
                 .eq(StringUtils.hasText(query.getBillCategory()), BillAggregation::getBillCategory, query.getBillCategory())
-                .eq(StringUtils.hasText(query.getStatus()), BillAggregation::getStatus, query.getStatus())
+                // 状态分组必须与 getStats 的 switch 分组保持一致，否则会出现"统计数≠列表数"的 P0 bug
+                // CONFIRMED 分类包含 SETTLING（结算中）；SETTLED 分类独立；PENDING/CANCELLED 各自独立
+                .and(StringUtils.hasText(query.getStatus()), w -> {
+                    String s = query.getStatus();
+                    if ("CONFIRMED".equals(s)) {
+                        w.in(BillAggregation::getStatus, "CONFIRMED", "SETTLING");
+                    } else {
+                        w.eq(BillAggregation::getStatus, s);
+                    }
+                })
                 .eq(StringUtils.hasText(query.getSettlementMonth()), BillAggregation::getSettlementMonth, query.getSettlementMonth())
                 .like(StringUtils.hasText(query.getCounterpartyName()), BillAggregation::getCounterpartyName, query.getCounterpartyName())
                 .like(StringUtils.hasText(query.getOrderNo()), BillAggregation::getOrderNo, query.getOrderNo())
                 // 日期范围过滤：若传入创建时间范围，则过滤 createTime 在该范围内的账单
                 .ge(StringUtils.hasText(query.getCreateTimeStart()), BillAggregation::getCreateTime, query.getCreateTimeStart())
                 .le(StringUtils.hasText(query.getCreateTimeEnd()), BillAggregation::getCreateTime, query.getCreateTimeEnd())
+                // P0 修复：工厂账号通过 orderId 列表过滤，与 stats 数据范围对齐
+                .in(factoryOrderIds != null, BillAggregation::getOrderId, factoryOrderIds)
                 .orderByDesc(BillAggregation::getCreateTime);
 
         return billAggregationService.page(page, wrapper);
@@ -181,10 +227,26 @@ public class BillAggregationOrchestrator {
      */
     public Map<String, Object> getStats(String billType) {
         Long tenantId = TenantAssert.requireTenantId();
+
+        // P0 修复：工厂账号 stats 与 list 数据范围对齐（通过 orderId 列表过滤）
+        List<String> factoryOrderIds = getFactoryOrderIdsOrNull();
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("pendingAmount", BigDecimal.ZERO);
+            empty.put("pendingCount", 0);
+            empty.put("confirmedAmount", BigDecimal.ZERO);
+            empty.put("confirmedCount", 0);
+            empty.put("settledAmount", BigDecimal.ZERO);
+            empty.put("settledCount", 0);
+            empty.put("totalCount", 0);
+            return empty;
+        }
+
         List<BillAggregation> all = billAggregationService.lambdaQuery()
                 .eq(BillAggregation::getTenantId, tenantId)
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(billType), BillAggregation::getBillType, billType)
+                .in(factoryOrderIds != null, BillAggregation::getOrderId, factoryOrderIds)
                 .select(BillAggregation::getStatus, BillAggregation::getAmount, BillAggregation::getSettledAmount)
                 .last("LIMIT 5000")
                 .list();

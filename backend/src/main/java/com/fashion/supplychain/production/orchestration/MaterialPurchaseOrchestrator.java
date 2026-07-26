@@ -92,11 +92,13 @@ public class MaterialPurchaseOrchestrator {
             effectiveParams = new java.util.HashMap<>(effectiveParams);
             effectiveParams.put("factoryType", "INTERNAL");
         }
-        // 工厂账号强制隔离：只能查看关联到自己工厂的采购记录
-        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
-        if (StringUtils.hasText(ctxFactoryId)) {
+        // P0 修复（铁律4 多租户隔离）：工厂账号强制隔离，只能查看关联到自己工厂订单的采购记录
+        // 原 _factoryId 参数未被 MaterialPurchaseQueryHelper 读取，导致工厂账号 list 接口未过滤
+        // 改为注入 _factoryOrderIds，与 stats 接口数据范围对齐
+        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null) {
             effectiveParams = new java.util.HashMap<>(effectiveParams);
-            effectiveParams.put("_factoryId", ctxFactoryId);
+            effectiveParams.put("_factoryOrderIds", factoryOrderIds);
         }
         return materialPurchaseService.queryPage(effectiveParams);
     }

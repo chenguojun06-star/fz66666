@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -13,7 +15,10 @@ import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -46,7 +51,27 @@ public class ProductOutstockOrchestrator {
     private ProductOutstockLogAppendHelper logAppendHelper;
 
     public IPage<ProductOutstock> list(Map<String, Object> params) {
-        return productOutstockService.queryPage(params);
+        // P1 修复（铁律4 多租户隔离）：工厂账号强制隔离，只能查看自己工厂订单的出库单
+        Map<String, Object> effectiveParams = params != null ? new HashMap<>(params) : new HashMap<>();
+        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null) {
+            if (factoryOrderIds.isEmpty()) {
+                return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+            }
+            // 工厂账号按 orderId 列表过滤
+            effectiveParams.put("_factoryOrderIds", factoryOrderIds);
+            // 通过 orderNo 列表传给 Service 层过滤（ProductOutstock 表无 orderId 时回退到 orderNo）
+            List<String> factoryOrderNos = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getOrderNo)
+                            .in(ProductionOrder::getId, factoryOrderIds)
+            ).stream().map(ProductionOrder::getOrderNo).filter(StringUtils::hasText).collect(Collectors.toList());
+            if (factoryOrderNos.isEmpty()) {
+                return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+            }
+            effectiveParams.put("_factoryOrderNos", factoryOrderNos);
+        }
+        return productOutstockService.queryPage(effectiveParams);
     }
 
     public ProductOutstock getById(String id) {
@@ -61,6 +86,20 @@ public class ProductOutstockOrchestrator {
                 .one();
         if (outstock == null || (outstock.getDeleteFlag() != null && outstock.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("出库单不存在");
+        }
+        // P1 修复：工厂账号校验出库单归属
+        if (DataPermissionHelper.isFactoryAccount() && StringUtils.hasText(outstock.getOrderNo())) {
+            String ctxFactoryId = UserContext.factoryId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .select(ProductionOrder::getId, ProductionOrder::getFactoryId)
+                    .eq(ProductionOrder::getOrderNo, outstock.getOrderNo())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .last("LIMIT 1")
+                    .one();
+            if (order == null || !ctxFactoryId.equals(order.getFactoryId())) {
+                throw new NoSuchElementException("出库单不存在");
+            }
         }
         return outstock;
     }

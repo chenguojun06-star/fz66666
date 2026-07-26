@@ -255,11 +255,20 @@ public class FactoryShipmentOrchestrator {
     // ===== 查询 =====
 
     public Map<String, Object> getShippableInfo(String orderId) {
+        // P0 修复（铁律4 多租户隔离）：强制租户上下文校验
+        Long tenantId = TenantAssert.requireTenantId();
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getId, orderId)
-                .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .one();
+        // P0 修复：工厂账号只能查看自己工厂订单的可发货信息
+        if (order != null) {
+            String ctxFactoryId = UserContext.factoryId();
+            if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
+                throw new org.springframework.security.access.AccessDeniedException("无权查看其他工厂订单的发货信息");
+            }
+        }
         int cuttingTotal = 0;
         if (order != null) {
             Map<String, Object> summary = cuttingBundleService.summarize(order.getOrderNo(), orderId);
@@ -275,8 +284,11 @@ public class FactoryShipmentOrchestrator {
     }
 
     public List<Map<String, Object>> getOrderShipmentDetailSum(String orderId) {
+        // P0 修复（铁律4 多租户隔离）：必须按 tenantId 过滤，禁止跨租户读取
+        Long tenantId = TenantAssert.requireTenantId();
         List<FactoryShipment> shipments = factoryShipmentService.lambdaQuery()
                 .eq(FactoryShipment::getOrderId, orderId)
+                .eq(FactoryShipment::getTenantId, tenantId)
                 .eq(FactoryShipment::getDeleteFlag, 0)
                 .list();
         Set<String> shipmentIds = shipments.stream()

@@ -1,5 +1,7 @@
 package com.fashion.supplychain.finance.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
@@ -41,7 +43,12 @@ public class SettlementOrchestrator {
         if (orderId == null || orderId.isBlank()) {
             return false;
         }
-        FinishedProductSettlement settlement = settlementService.getById(orderId.trim());
+        // P0 修复（铁律4 多租户隔离）：必须按 tenantId 过滤查询，禁止 getById 绕过租户校验
+        Long tenantId = TenantAssert.requireTenantId();
+        FinishedProductSettlement settlement = settlementService.lambdaQuery()
+                .eq(FinishedProductSettlement::getOrderId, orderId.trim())
+                .eq(FinishedProductSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             return false;
         }
@@ -62,21 +69,26 @@ public class SettlementOrchestrator {
     /**
      * 审批核实成品结算单
      *
+     * <p>P0 修复（铁律4 多租户隔离）：tenantId 强制从 UserContext 获取，
+     * 禁止外部传入绕过租户上下文。
+     *
      * @param orderId  结算单orderId（主键）
-     * @param tenantId 租户ID
      * @param userId   审核人用户ID
      * @param username 审核人用户名
      * @return true 成功，false 失败
      */
     @Transactional(rollbackFor = Exception.class)
-    public boolean markApproved(String orderId, Long tenantId, String userId, String username) {
+    public boolean markApproved(String orderId, String userId, String username) {
         if (orderId == null || orderId.isBlank()) {
             return false;
         }
-        if (tenantId == null) {
-            tenantId = TenantAssert.requireTenantId();
-        }
-        FinishedProductSettlement settlement = settlementService.getById(orderId);
+        // P0 修复：强制从 UserContext 获取 tenantId，禁止外部传入
+        Long tenantId = TenantAssert.requireTenantId();
+        // P0 修复：必须按 tenantId 过滤查询
+        FinishedProductSettlement settlement = settlementService.lambdaQuery()
+                .eq(FinishedProductSettlement::getOrderId, orderId)
+                .eq(FinishedProductSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             return false;
         }

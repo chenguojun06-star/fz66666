@@ -214,8 +214,12 @@ public class PatternProductionOrchestrator {
      */
     public Map<String, Object> calcSampleStats() {
         // 查询所有未删除的样衣生产记录
+        // 显式带 tenant_id 过滤（防御性编程，符合 P0 铁律 4：多租户隔离）
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PatternProduction::getDeleteFlag, 0);
+        wrapper.eq(PatternProduction::getTenantId, tenantId)
+                .eq(PatternProduction::getDeleteFlag, 0);
         List<PatternProduction> allPatterns = patternProductionService.list(wrapper);
 
         // 收集关联的 styleId，批量查询 StyleInfo（StyleInfo.id 是 Long，PatternProduction.styleId 是 String）

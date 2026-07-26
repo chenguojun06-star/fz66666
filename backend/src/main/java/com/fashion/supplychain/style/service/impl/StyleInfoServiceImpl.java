@@ -79,10 +79,13 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .like(StyleInfo::getStyleName, keyword)
                     .or()
                     .like(StyleInfo::getCategory, keyword))
-                .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
+                // onlyCompleted：与 stats 的 completedStyles 分类保持一致（双大小写匹配）
+                .and(onlyCompleted, w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED")
+                        .or().eq(StyleInfo::getSampleStatus, "Completed"))
+                // onlyInProgress：未完成 = IS NULL 或 NOT IN ('COMPLETED','Completed')
+                // 修复 P1 bug：原 ne+OR 链导致条件恒为真（任何值都至少满足一个 ne），已完成记录也会被计入
                 .and(onlyInProgress, w -> w.isNull(StyleInfo::getSampleStatus)
-                        .or().ne(StyleInfo::getSampleStatus, "COMPLETED")
-                        .or().ne(StyleInfo::getSampleStatus, "Completed"))
+                        .or().notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed"))
                 .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1);
 
         applyStatusFilter(wrapper, excludeScrapped);
