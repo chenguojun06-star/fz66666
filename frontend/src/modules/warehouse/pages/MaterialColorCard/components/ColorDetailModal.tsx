@@ -1,6 +1,7 @@
 import React from 'react';
-import { Modal, Button, Image, Descriptions } from 'antd';
+import { Button, Image, Descriptions } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
+import ResizableModal from '@/components/common/ResizableModal';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import type { MaterialColorCard, MaterialColorCardItem } from '../types';
@@ -16,18 +17,18 @@ const ColorDetailModal: React.FC<Props> = ({
   visible, onCancel, colorDetailItem, colorDetailParent,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title={`颜色详情 - ${colorDetailParent?.cardName || ''}`}
       open={visible}
       onCancel={onCancel}
+      width={720}
+      destroyOnClose
       footer={[
         <Button key="close" onClick={onCancel}>关闭</Button>,
       ]}
-      width={720}
     >
       {colorDetailItem && colorDetailParent && (
         <div>
-          {/* 左侧图片 + 右侧信息 */}
           <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
             <div style={{ width: 180, flexShrink: 0 }}>
               {colorDetailItem.image ? (
@@ -42,7 +43,7 @@ const ColorDetailModal: React.FC<Props> = ({
                   width: 180, height: 180, borderRadius: 8,
                   border: '1px dashed var(--color-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'var(--color-bg-page)', color: '#94a3b8',
+                  background: 'var(--color-bg-page)', color: 'var(--color-text-quaternary)',
                 }}>
                   <FileTextOutlined style={{ fontSize: 40 }} />
                 </div>
@@ -73,7 +74,7 @@ const ColorDetailModal: React.FC<Props> = ({
           </div>
         </div>
       )}
-    </Modal>
+    </ResizableModal>
   );
 };
 

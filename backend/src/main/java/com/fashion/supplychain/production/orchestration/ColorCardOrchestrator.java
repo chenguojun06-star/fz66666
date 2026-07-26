@@ -243,6 +243,7 @@ public class ColorCardOrchestrator {
     }
 
     /** 更新单个颜色条目 */
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateItem(String itemId, ColorCardItem item) {
         if (!StringUtils.hasText(itemId)) throw new IllegalArgumentException("id不能为空");
         ColorCardItem current = colorCardItemMapper.selectById(itemId.trim());

@@ -39,9 +39,16 @@ export function useMaterialColorCard() {
       if (res.code === 200) {
         setCardDataList(res.data?.records || []);
         setCardTotal(res.data?.total || 0);
+      } else {
+        // 业务错误（如迁移未跑）需要让用户感知，不能静默吞掉
+        console.warn('[MaterialColorCard] 拉取色卡列表失败:', res.message);
+        setCardDataList([]);
+        setCardTotal(0);
       }
     } catch (err: any) {
-      // 表格不存在时静默（迁移未跑）
+      console.error('[MaterialColorCard] 拉取色卡列表异常:', err);
+      setCardDataList([]);
+      setCardTotal(0);
     } finally {
       setCardLoading(false);
     }
@@ -133,7 +140,7 @@ export function useMaterialColorCard() {
       const values = await cardForm.validateFields();
       if (coverImageFiles.length > 0) values.coverImage = (coverImageFiles[0] as any)?.url || '';
       if (currentCard?.id) {
-        await api.put('/material-color-card', { id: currentCard.id, ...values });
+        await api.put(`/material-color-card/${currentCard.id}`, values);
         message.success('更新成功');
       } else {
         await api.post('/material-color-card', values);
@@ -152,8 +159,9 @@ export function useMaterialColorCard() {
   const uploadCardImage = useCallback(async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
+    // 不要显式设置 Content-Type，让浏览器自动添加 boundary
     const res = await api.post<{ code: number; data: string }>(
-      '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
+      '/common/upload', formData,
     );
     if (res.code !== 200 || !res.data) throw new Error('上传失败');
     return res.data;

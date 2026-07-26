@@ -100,7 +100,7 @@ export function useColorCardData() {
         values.image = getCoverImageUrl(coverImageFiles);
       }
       if (currentCard?.id) {
-        await api.put('/color-card', { id: currentCard.id, ...values });
+        await api.put(`/color-card/${currentCard.id}`, values);
         antdMessage.success('更新成功');
       } else {
         await api.post('/color-card', values);

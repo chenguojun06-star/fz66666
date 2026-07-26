@@ -1,11 +1,14 @@
 import React from 'react';
 import {
-  Modal, Button, Space, Tag, Row, Col, Input, InputNumber, Card, Image, Popconfirm,
-  message as antdMessage,
+  Button, Space, Tag, Input, InputNumber, Modal,
 } from 'antd';
 import { AppstoreAddOutlined, PlusOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import ResizableModal from '@/components/common/ResizableModal';
+import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { MaterialColorCard, MaterialColorCardItem } from '../types';
 
 interface Props {
@@ -25,92 +28,149 @@ const ItemsManageModal: React.FC<Props> = ({
   visible, onCancel, onSave, currentCardName, currentItems,
   colorDetailParent, onAddEmptyItem, onUpdateItem, onRemoveItem, onOpenColorDetail,
 }) => {
+  const columns: ColumnsType<MaterialColorCardItem & { __idx: number }> = [
+    {
+      title: '#', dataIndex: '__idx', width: 60, fixed: 'left',
+      render: (idx, record) => (
+        <Tag
+          color="blue"
+          style={{ cursor: 'pointer' }}
+          title="查看完整信息"
+          onClick={() => colorDetailParent && onOpenColorDetail(colorDetailParent, record)}
+        >
+          #{idx + 1}
+        </Tag>
+      ),
+    },
+    {
+      title: '颜色', dataIndex: 'color', width: 120,
+      render: (_, r) => (
+        <Input
+          placeholder="颜色"
+          value={r.color || ''}
+          onChange={(e) => onUpdateItem(r.__idx, 'color', e.target.value)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: <span>物料名称 <span style={{ color: 'var(--color-error)' }}>*</span></span>, dataIndex: 'materialName', width: 180,
+      render: (_, r) => (
+        <Input
+          placeholder="物料名称（必填）"
+          value={r.materialName || ''}
+          onChange={(e) => onUpdateItem(r.__idx, 'materialName', e.target.value)}
+          size="small"
+          status={!r.materialName?.trim() ? 'warning' : ''}
+        />
+      ),
+    },
+    {
+      title: '编号', dataIndex: 'materialCode', width: 120,
+      render: (_, r) => (
+        <Input
+          placeholder="编号"
+          value={r.materialCode || ''}
+          onChange={(e) => onUpdateItem(r.__idx, 'materialCode', e.target.value)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '单价', dataIndex: 'unitPrice', width: 120,
+      render: (_, r) => (
+        <InputNumber
+          placeholder="单价"
+          value={r.unitPrice}
+          onChange={(v) => onUpdateItem(r.__idx, 'unitPrice', v)}
+          min={0}
+          step={0.01}
+          style={{ width: '100%' }}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '图片', dataIndex: 'image', width: 110,
+      render: (_, r) => (
+        <ImageUploadBox
+          value={r.image || null}
+          onChange={(url) => onUpdateItem(r.__idx, 'image', url || '')}
+          uploadFn={async (file: File) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await api.post<{ code: number; data: string }>('/common/upload', formData);
+            if (res.code !== 200 || !res.data) throw new Error('上传失败');
+            return res.data;
+          }}
+          size={48}
+          label=""
+          showClear
+        />
+      ),
+    },
+    {
+      title: '备注', dataIndex: 'remark', width: 200,
+      render: (_, r) => (
+        <Input
+          placeholder="备注"
+          value={r.remark || ''}
+          onChange={(e) => onUpdateItem(r.__idx, 'remark', e.target.value)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '操作', dataIndex: 'op', width: 80, fixed: 'right',
+      render: (_, r) => (
+        <RowActions actions={[
+          {
+            key: 'delete', label: '删除', danger: true,
+            onClick: () => {
+              Modal.confirm({
+                title: '确定删除吗？',
+                onOk: () => onRemoveItem(r.__idx),
+                okText: '确定',
+                cancelText: '取消',
+              });
+            },
+          },
+        ]} />
+      ),
+    },
+  ];
+
+  const dataSource = currentItems.map((item, idx) => ({ ...item, __idx: idx }));
+
   return (
-    <Modal
+    <ResizableModal
       title={<Space><AppstoreAddOutlined /> {currentCardName} - 物料管理</Space>}
       open={visible}
       onCancel={onCancel}
-      width={960}
+      width={1080}
+      destroyOnClose
       footer={[
         <Button key="close" onClick={onCancel}>关闭</Button>,
         <Button key="save" type="primary" onClick={onSave}>保存全部</Button>,
       ]}
     >
-      <Space style={{ marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAddEmptyItem}>+ 添加颜色</Button>
-        <span style={{ color: '#888' }}>共 {currentItems.length} 条</span>
-        <span style={{ color: '#bbb', fontSize: 12 }}>规格/成分/幅宽继承自母卡</span>
-      </Space>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 500, overflowY: 'auto' }}>
-        {currentItems.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
-            暂无颜色条目，点击"+ 添加颜色"开始录入
-          </div>
-        )}
-        {currentItems.map((item, idx) => (
-          <Card key={idx} size="small" style={{ border: '1px solid #eee' }}>
-            <Row gutter={[8, 8]} align="middle">
-              <Col xs={24} sm={1}>
-                <Tag color="blue" style={{ cursor: 'pointer' }}
-                  title="查看完整信息"
-                  onClick={() => colorDetailParent && onOpenColorDetail(colorDetailParent, item)}>#{idx + 1}</Tag>
-              </Col>
-              <Col xs={24} sm={3}>
-                <Input placeholder="颜色" value={item.color || ''}
-                  onChange={(e) => onUpdateItem(idx, 'color', e.target.value)} size="small" />
-              </Col>
-              <Col xs={24} sm={4}>
-                <Input placeholder="物料名称*" value={item.materialName || ''}
-                  onChange={(e) => onUpdateItem(idx, 'materialName', e.target.value)} size="small" />
-              </Col>
-              <Col xs={24} sm={2}>
-                <Input placeholder="编号" value={item.materialCode || ''}
-                  onChange={(e) => onUpdateItem(idx, 'materialCode', e.target.value)} size="small" />
-              </Col>
-              <Col xs={24} sm={2}>
-                <InputNumber placeholder="单价" value={item.unitPrice}
-                  onChange={(v) => onUpdateItem(idx, 'unitPrice', v)}
-                  min={0} step={0.01} style={{ width: '100%' }} size="small" />
-              </Col>
-              <Col xs={24} sm={3}>
-                <Space.Compact>
-                  <Button size="small" icon={<PlusOutlined />} onClick={async () => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    const file: File = await new Promise((resolve) => {
-                      input.onchange = (ev: any) => resolve(ev.target.files[0]);
-                      input.click();
-                    });
-                    try {
-                      const formData = new FormData();
-                      formData.append('file', file);
-                      const res = await api.post<{ code: number; data: string }>(
-                        '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
-                      );
-                      if (res.code === 200) onUpdateItem(idx, 'image', res.data);
-                    } catch (e) { console.error('[MaterialColorCard] 上传色卡图片失败:', e); antdMessage.error('上传图片失败'); }
-                  }}>上传图片</Button>
-                  {item.image && (
-                    <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32}
-                      style={{ objectFit: 'cover' }} preview />
-                  )}
-                </Space.Compact>
-              </Col>
-              <Col xs={24} sm={1}>
-                <Popconfirm title="确定删除吗？" onConfirm={() => onRemoveItem(idx)} okText="确定" cancelText="取消">
-                  <Button type="link" danger size="small">删除</Button>
-                </Popconfirm>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Input placeholder="备注" value={item.remark || ''}
-                  onChange={(e) => onUpdateItem(idx, 'remark', e.target.value)} size="small" />
-              </Col>
-            </Row>
-          </Card>
-        ))}
+      <div>
+        <Space style={{ marginBottom: 12 }}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onAddEmptyItem}>+ 添加颜色</Button>
+          <span style={{ color: 'var(--color-text-tertiary)' }}>共 {currentItems.length} 条</span>
+          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>规格/成分/幅宽继承自母卡</span>
+        </Space>
+        <ResizableTable<MaterialColorCardItem & { __idx: number }>
+          columns={columns}
+          dataSource={dataSource}
+          rowKey={(r) => String(r.__idx)}
+          size="small"
+          scroll={{ x: 1080 }}
+          pagination={false}
+          emptyDescription="暂无颜色条目，点击「+ 添加颜色」开始录入"
+        />
       </div>
-    </Modal>
+    </ResizableModal>
   );
 };
 

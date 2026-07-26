@@ -257,6 +257,7 @@ public class MaterialColorCardOrchestrator {
     }
 
     /** 更新单个子条目 */
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateItem(String itemId, MaterialColorCardItem item) {
         if (!StringUtils.hasText(itemId)) throw new IllegalArgumentException("id不能为空");
         MaterialColorCardItem current = itemMapper.selectById(itemId.trim());

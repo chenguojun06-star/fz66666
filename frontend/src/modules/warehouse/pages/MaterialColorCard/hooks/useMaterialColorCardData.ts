@@ -174,7 +174,22 @@ export const useMaterialColorCardData = () => {
 
   const saveItems = async () => {
     if (!currentCardId) return;
-    const validItems = currentItems.filter((it) => it.materialName);
+    // 校验：物料名称必填，单价必须 >=0
+    const invalidName: number[] = [];
+    const invalidPrice: number[] = [];
+    currentItems.forEach((it, idx) => {
+      if (!it.materialName || !it.materialName.trim()) invalidName.push(idx + 1);
+      if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice < 0) invalidPrice.push(idx + 1);
+    });
+    if (invalidName.length > 0) {
+      antdMessage.warning(`第 ${invalidName.join('、')} 行物料名称未填写，请补全后再保存`);
+      return;
+    }
+    if (invalidPrice.length > 0) {
+      antdMessage.warning(`第 ${invalidPrice.join('、')} 行单价不能为负数`);
+      return;
+    }
+    const validItems = currentItems.filter((it) => it.materialName && it.materialName.trim());
     if (validItems.length === 0) {
       antdMessage.warning('至少填写一条物料');
       return;

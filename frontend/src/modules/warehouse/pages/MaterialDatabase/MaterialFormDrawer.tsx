@@ -7,6 +7,7 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { MaterialDatabase } from '@/types/production';
+import { MATERIAL_TYPE_OPTIONS } from './types';
 
 // ===== 物料新增/编辑 Drawer（从 index.tsx 抽取） =====
 interface MaterialFormDrawerProps {
@@ -45,7 +46,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
         </Button>,
       ]}
     >
-      <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
+      <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--color-border)' }}>
         <MaterialColorCardRecognizer
           form={form}
           onMaterialTypeRecognized={(type) => fetchMaterialCode(type)}
@@ -54,7 +55,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             setImageFiles([{ uid: '-1', name: 'image', status: 'done' as const, url }]);
           }}
         />
-        <span style={{ color: '#999', fontSize: 12, marginLeft: 12 }}>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 12 }}>
           提示：拍照色卡图片，AI 自动识别物料信息，识别后可编辑再保存
         </span>
       </div>
@@ -93,7 +94,9 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
           <Col xs={24} sm={8} md={6} lg={5} xl={4}>
             <Form.Item name="materialType" label="物料类型" rules={[{ required: true, message: '请选择物料类型' }]}>
               <Select placeholder="请选择物料类型" onChange={(value) => { if (!currentMaterial?.id) fetchMaterialCode(value); }}>
-                <Option value="fabric">面料</Option><Option value="lining">里料</Option><Option value="accessory">辅料</Option>
+                {MATERIAL_TYPE_OPTIONS.map((o) => (
+                  <Option key={o.value} value={o.value}>{o.label}</Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>

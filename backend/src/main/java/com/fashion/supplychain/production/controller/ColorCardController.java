@@ -53,8 +53,9 @@ public class ColorCardController {
         return Result.success(colorCardOrchestrator.saveCard(card));
     }
 
-    @PutMapping
-    public Result<Boolean> update(@RequestBody ColorCard card) {
+    @PutMapping("/{id}")
+    public Result<Boolean> update(@PathVariable String id, @RequestBody ColorCard card) {
+        if (card != null) card.setId(id);
         return Result.success(colorCardOrchestrator.updateCard(card));
     }
 

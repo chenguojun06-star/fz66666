@@ -1,7 +1,9 @@
 import React from 'react';
-import { Button, Card, Input, Select, Space, Tag } from 'antd';
+import { Button, Card, Tag } from 'antd';
 import { PlusOutlined, ReloadOutlined, FileTextOutlined, AppstoreAddOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import StandardToolbar from '@/components/common/StandardToolbar';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import type { MaterialColorCard } from './types';
 import { MATERIAL_TYPE_OPTIONS } from './types';
@@ -34,21 +36,44 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
 }) => {
   return (
     <>
-      {/* 卡片视图搜索栏 */}
+      {/* 卡片视图搜索栏 —— 使用标准 StandardToolbar + StandardSearchBar */}
       <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
-        <Space.Compact style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <Input placeholder="搜索编号/名称/供应商" value={cardKeyword}
-            onChange={(e) => setCardKeyword(e.target.value)} style={{ maxWidth: 240 }} allowClear />
-          <Select placeholder="物料类型" value={cardMaterialType || undefined} onChange={(v) => { setCardMaterialType(v || ''); setCardPage(1); }}
-            style={{ width: 130 }} allowClear>
-            {MATERIAL_TYPE_OPTIONS.map((o) => (
-              <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-            ))}
-          </Select>
-          <Button icon={<ReloadOutlined />} onClick={fetchCardList}>刷新</Button>
-          <div style={{ flex: 1 }} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCardCreateDialog}>新建物料色卡</Button>
-        </Space.Compact>
+        <StandardToolbar
+          left={
+            <StandardSearchBar
+              searchValue={cardKeyword}
+              onSearchChange={(v) => { setCardKeyword(v); setCardPage(1); }}
+              searchPlaceholder="搜索编号/名称/供应商"
+              showDate={false}
+              showStatus={false}
+              showSearchButton={false}
+              showResetButton
+              onReset={() => { setCardKeyword(''); setCardMaterialType(''); setCardPage(1); fetchCardList(); }}
+              extraFilters={[
+                {
+                  key: 'materialType',
+                  label: '物料类型',
+                  type: 'select',
+                  placeholder: '全部类型',
+                  width: 130,
+                  options: MATERIAL_TYPE_OPTIONS,
+                },
+              ]}
+              onFilterChange={(key, value) => {
+                if (key === 'materialType') {
+                  setCardMaterialType((value as string) || '');
+                  setCardPage(1);
+                }
+              }}
+            />
+          }
+          right={
+            <>
+              <Button icon={<ReloadOutlined />} onClick={fetchCardList}>刷新</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCardCreateDialog}>新建物料色卡</Button>
+            </>
+          }
+        />
       </Card>
 
       {/* 通用卡片网格 */}
@@ -92,7 +117,7 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
         }}
         hoverRender={(record) => (
           <div style={{ maxWidth: 400 }}>
-            {record.remark && <div style={{ marginBottom: 8, color: '#874d00' }}>备注：{record.remark}</div>}
+            {record.remark && <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>备注：{record.remark}</div>}
             {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}</div>}
             {record.supplierContactPhone && <div>电话：{record.supplierContactPhone}</div>}
             <div>创建时间：{record.createTime?.slice(0, 19).replace('T', ' ')}</div>
@@ -102,7 +127,7 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
 
       {/* 空状态 */}
       {cardDataList.length === 0 && !cardLoading && (
-        <Card style={{ textAlign: 'center', padding: '60px 0', color: '#8c8c8c', marginTop: 12 }}>
+        <Card style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-tertiary)', marginTop: 12 }}>
           <FileTextOutlined style={{ fontSize: 48, marginBottom: 12 }} />
           <div>暂无物料色卡，点击右上角"新建物料色卡"开始创建</div>
         </Card>

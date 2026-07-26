@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Button, Card, Input, Select, Row, Col, Space,
+  Button, Card, Input, Select, Row, Col, Space, Pagination, Empty,
 } from 'antd';
 import {
   PlusOutlined, ReloadOutlined, FileTextOutlined,
@@ -56,9 +56,11 @@ const MaterialColorCardPage: React.FC = () => {
 
       {/* 卡片网格 */}
       {dataList.length === 0 && !loading ? (
-        <Card style={{ textAlign: 'center', padding: '60px 0', color: '#8c8c8c' }}>
-          <FileTextOutlined style={{ fontSize: 48, marginBottom: 12 }} />
-          <div>暂无物料色卡，点击右上角"新建物料色卡"开始创建</div>
+        <Card style={{ textAlign: 'center', padding: '60px 0' }}>
+          <Empty
+            image={<FileTextOutlined style={{ fontSize: 48, color: 'var(--color-text-quaternary)', marginBottom: 12 }} />}
+            description={<span style={{ color: 'var(--color-text-tertiary)' }}>暂无物料色卡，点击右上角「新建物料色卡」开始创建</span>}
+          />
         </Card>
       ) : (
         <Row gutter={[16, 16]}>
@@ -76,20 +78,18 @@ const MaterialColorCardPage: React.FC = () => {
         </Row>
       )}
 
-      {/* 分页 */}
-      {total > pageSize && (
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
-          <Space>
-            <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>上一页</Button>
-            <span>第 {page} 页 / 共 {Math.ceil(total / pageSize)} 页</span>
-            <Button disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(page + 1)}>下一页</Button>
-            <Select value={pageSize} onChange={(v) => { setPageSize(v as number); setPage(1); }}
-              style={{ width: 110 }}>
-              <Select.Option value={12}>12/页</Select.Option>
-              <Select.Option value={24}>24/页</Select.Option>
-              <Select.Option value={48}>48/页</Select.Option>
-            </Select>
-          </Space>
+      {/* 分页：使用 antd Pagination */}
+      {total > 0 && (
+        <div style={{ marginTop: 16, textAlign: 'right' }}>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={total}
+            showSizeChanger
+            showTotal={(t) => `共 ${t} 张色卡`}
+            pageSizeOptions={[12, 24, 48]}
+            onChange={(p, ps) => { setPage(p); setPageSize(ps); }}
+          />
         </div>
       )}
 

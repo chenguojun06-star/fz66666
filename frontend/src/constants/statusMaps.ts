@@ -122,15 +122,35 @@ export const MATERIAL_PURCHASE_STATUS_MAP: StatusMap = {
 /* =========================== 纸样生产状态（PatternProduction）============================
  * 三端统一（PC / 小程序 / H5）：枚举值大写。
  * 小程序/H5 引用 h5-web/source-miniapp/shared/statusMap.js 中的 PATTERN_STATUS_LABELS
+ *
+ * 后端状态来源：PatternStatusHelper.java / PatternProduction.status
+ *   PENDING               未开始（初始）
+ *   IN_PROGRESS           进行中（含 REWORK 操作后回到 IN_PROGRESS）
+ *   PRODUCTION_COMPLETED  生产完成（待入库）
+ *   COMPLETED             已完成（已入库）
+ *   WAREHOUSE_OUT         已出库
+ *   WAREHOUSE_RETURN      已归还（状态归到 COMPLETED，但保留映射兼容历史）
+ *   RECEIVED              已领取（历史状态，新流程不再使用）
+ *   SCRAPPED              已报废
+ *   LOCKED / UNLOCKED     工序流程锁定状态
+ *
+ * 注：REWORK 是审核结果（sampleReviewStatus），不是 PatternProduction.status，
+ *     在 SAMPLE_REVIEW_STATUS_MAP 中定义。
  */
 export const PATTERN_STATUS_MAP: StatusMap = {
-  PENDING:      { text: '未开始',  color: 'default' },
-  NOT_STARTED:  { text: '未开始',  color: 'default' },
-  IN_PROGRESS:  { text: '进行中',  color: 'processing' },
-  COMPLETED:    { text: '已完成',  color: 'success' },
-  RETURNED:     { text: '已退回',  color: 'error' },
-  LOCKED:       { text: '已锁定',  color: 'processing' },
-  UNLOCKED:     { text: '未锁定',  color: 'default' },
+  PENDING:               { text: '未开始',    color: 'default' },
+  NOT_STARTED:           { text: '未开始',    color: 'default' },
+  RECEIVED:              { text: '已领取',    color: 'processing' },
+  IN_PROGRESS:           { text: '进行中',    color: 'processing' },
+  PRODUCTION_COMPLETED:  { text: '生产完成',  color: 'success' },
+  COMPLETED:             { text: '已完成',    color: 'success' },
+  WAREHOUSE_IN:          { text: '已入库',    color: 'success' },
+  WAREHOUSE_OUT:         { text: '已出库',    color: 'processing' },
+  WAREHOUSE_RETURN:      { text: '已归还',    color: 'default' },
+  SCRAPPED:              { text: '已报废',    color: 'error' },
+  RETURNED:              { text: '已退回',    color: 'error' },
+  LOCKED:                { text: '已锁定',    color: 'processing' },
+  UNLOCKED:              { text: '未锁定',    color: 'default' },
 };
 
 /* =========================== 物料对账状态 ============================ */

@@ -28,10 +28,11 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    const file: File = await new Promise((resolve) => {
-      input.onchange = (ev: any) => resolve(ev.target.files[0]);
+    const file: File | undefined = await new Promise((resolve) => {
+      input.onchange = (ev: any) => resolve(ev.target.files?.[0]);
       input.click();
     });
+    if (!file) return; // 用户取消选择
     try {
       const url = await uploadCardImage(file);
       updateCardItem(idx, 'image', url);
@@ -54,14 +55,14 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
     >
       <Space style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={addEmptyCardItem}>+ 添加物料</Button>
-        <span style={{ color: '#888' }}>共 {currentItems.length} 条</span>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>共 {currentItems.length} 条</span>
       </Space>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 480, overflowY: 'auto' }}>
         {currentItems.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无物料，点击"添加物料"开始添加</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-tertiary)' }}>暂无物料，点击"添加物料"开始添加</div>
         )}
         {currentItems.map((item, idx) => (
-          <Card key={idx} size="small" style={{ border: '1px solid #eee' }}>
+          <Card key={idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
             <Row gutter={[8, 8]} align="middle">
               <Col xs={24} sm={1}>
                 <Tag color="blue">#{idx + 1}</Tag>

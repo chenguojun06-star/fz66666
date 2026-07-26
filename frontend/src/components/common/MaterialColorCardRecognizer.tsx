@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Button, Modal, Upload, Image, Tag, Input, Alert, Space, Progress, message as antdMessage,
+  Button, Upload, Image, Tag, Input, Alert, Space, Progress, message as antdMessage,
 } from 'antd';
 import {
   CameraOutlined, UploadOutlined, ScanOutlined, EditOutlined,
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd/es/upload/interface';
+import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { FormInstance } from 'antd';
@@ -101,11 +102,11 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
     setProgressPercent(10);
 
     try {
-      // 1) 上传图片
+      // 1) 上传图片（不要显式设置 Content-Type，让浏览器自动加 boundary）
       const formData = new FormData();
       formData.append('file', imageFile);
       const uploadResp = await api.post<{ code: number; data: string; message?: string }>(
-        '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
+        '/common/upload', formData,
       );
       setProgressPercent(40);
 
@@ -222,11 +223,12 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
         </Button>
       </Space>
 
-      <Modal
+      <ResizableModal
         title="物料色卡智能识别"
         open={visible}
         onCancel={close}
         width={680}
+        destroyOnClose
         footer={[
           <Button key="cancel" onClick={close}>取消</Button>,
           <Button
@@ -242,145 +244,145 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
       >
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
 
-          {!result && (
-            <Alert
-              message="提示"
-              description="请先拍照或上传一张清晰的色卡/标签图片。AI 会自动识别物料信息并填回表单。"
-              type="info" showIcon
-            />
-          )}
-
-          {/* 图片上传区 */}
-          <div style={{ textAlign: 'center' }}>
-            {imageUrl ? (
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <Image
-                  src={getFullAuthedFileUrl(imageUrl)}
-                  alt="色卡图片"
-                  width={220}
-                  height={220}
-                  style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid #e8e8e8' }}
-                  preview
-                />
-              </div>
-            ) : (
-              <div style={{
-                width: 220, height: 220, margin: '0 auto', border: '2px dashed var(--color-border-antd)',
-                borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#999',
-              }}>
-                未选择图片
-              </div>
+            {!result && (
+              <Alert
+                message="提示"
+                description="请先拍照或上传一张清晰的色卡/标签图片。AI 会自动识别物料信息并填回表单。"
+                type="info" showIcon
+              />
             )}
-            <div style={{ marginTop: 12 }}>
-              <Upload
-                accept="image/*"
-                showUploadList={false}
-                beforeUpload={onFilePick}
-                multiple={false}
-                capture="environment"
-              >
-                <Button icon={<CameraOutlined />} disabled={uploading}>📷 拍照</Button>
-              </Upload>
-              <span style={{ marginLeft: 8 }} />
-              <Upload
-                accept="image/*"
-                showUploadList={false}
-                beforeUpload={onFilePick}
-                multiple={false}
-              >
-                <Button icon={<UploadOutlined />} disabled={uploading}>🖼️ 选择图片</Button>
-              </Upload>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <Button
-                type="primary"
-                icon={<ScanOutlined />}
-                onClick={uploadAndRecognize}
-                disabled={!imageFile || uploading}
-                loading={uploading}
-              >
-                {recognizing ? 'AI 识别中...' : '上传并识别'}
-              </Button>
-            </div>
-          </div>
 
-          {/* 进度条（仅识别中显示） */}
-          {recognizing && (
-            <Progress
-              percent={progressPercent}
-              status="active"
-              showInfo={false}
-              strokeWidth={6}
-            />
-          )}
-
-          {/* 识别结果展示 */}
-          {result && (
-            <>
-              {result.errorMessage && !result.success && (
-                <Alert type="error" showIcon message="识别失败" description={result.errorMessage} />
-              )}
-
-              {result.success && result.aiHint && (
-                <Alert type="warning" showIcon message="AI 提示" description={result.aiHint} />
-              )}
-
-              {result.success && (
-                <div>
-                  <div style={{ fontSize: 13, color: '#333', fontWeight: 600, marginBottom: 8 }}>
-                    识别结果（可编辑，低置信度字段请特别留意）：
-                  </div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '8px 12px',
-                  }}>
-                    {FIELD_DISPLAY.map(({ key, label }) => {
-                      const fv = result[key] as MaterialFieldValue | undefined;
-                      const displayValue = getFieldDisplayValue(fv);
-                      const userValue = editValues[key as string];
-                      const showValue = userValue !== undefined ? userValue : displayValue;
-                      const conf = fv?.confidence;
-                      return (
-                        <div key={key as string} style={{
-                          padding: 8, border: '1px solid #e8e8e8',
-                          borderRadius: 4, background: 'var(--color-bg-container)',
-                        }}>
-                          <div style={{ fontSize: 12, color: '#666', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>{label}</span>
-                            {fv && (
-                              <Tag
-                                color={confidenceColor(conf)}
-                                style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}
-                              >
-                                {confidenceLabel(conf)}
-                              </Tag>
-                            )}
-                          </div>
-                          <Input
-                            value={showValue || ''}
-                            onChange={(e) => onEditChange(key as string, e.target.value)}
-                            placeholder={fv ? '' : '（未识别到）'}
-                            size="small"
-                            style={{ marginTop: 4 }}
-                          />
-                          {fv && fv.rawText && fv.rawText !== displayValue && (
-                            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-                              原文：{fv.rawText}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+            {/* 图片上传区 */}
+            <div style={{ textAlign: 'center' }}>
+              {imageUrl ? (
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <Image
+                    src={getFullAuthedFileUrl(imageUrl)}
+                    alt="色卡图片"
+                    width={220}
+                    height={220}
+                    style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)' }}
+                    preview
+                  />
+                </div>
+              ) : (
+                <div style={{
+                  width: 220, height: 220, margin: '0 auto', border: '2px dashed var(--color-border-antd)',
+                  borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--color-text-quaternary)',
+                }}>
+                  未选择图片
                 </div>
               )}
-            </>
-          )}
+              <div style={{ marginTop: 12 }}>
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={onFilePick}
+                  multiple={false}
+                  capture="environment"
+                >
+                  <Button icon={<CameraOutlined />} disabled={uploading}>拍照</Button>
+                </Upload>
+                <span style={{ marginLeft: 8 }} />
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={onFilePick}
+                  multiple={false}
+                >
+                  <Button icon={<UploadOutlined />} disabled={uploading}>选择图片</Button>
+                </Upload>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Button
+                  type="primary"
+                  icon={<ScanOutlined />}
+                  onClick={uploadAndRecognize}
+                  disabled={!imageFile || uploading}
+                  loading={uploading}
+                >
+                  {recognizing ? 'AI 识别中...' : '上传并识别'}
+                </Button>
+              </div>
+            </div>
 
-        </Space>
-      </Modal>
+            {/* 进度条（仅识别中显示） */}
+            {recognizing && (
+              <Progress
+                percent={progressPercent}
+                status="active"
+                showInfo={false}
+                strokeWidth={6}
+              />
+            )}
+
+            {/* 识别结果展示 */}
+            {result && (
+              <>
+                {result.errorMessage && !result.success && (
+                  <Alert type="error" showIcon message="识别失败" description={result.errorMessage} />
+                )}
+
+                {result.success && result.aiHint && (
+                  <Alert type="warning" showIcon message="AI 提示" description={result.aiHint} />
+                )}
+
+                {result.success && (
+                  <div>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 600, marginBottom: 8 }}>
+                      识别结果（可编辑，低置信度字段请特别留意）：
+                    </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px 12px',
+                    }}>
+                      {FIELD_DISPLAY.map(({ key, label }) => {
+                        const fv = result[key] as MaterialFieldValue | undefined;
+                        const displayValue = getFieldDisplayValue(fv);
+                        const userValue = editValues[key as string];
+                        const showValue = userValue !== undefined ? userValue : displayValue;
+                        const conf = fv?.confidence;
+                        return (
+                          <div key={key as string} style={{
+                            padding: 8, border: '1px solid var(--color-border-light)',
+                            borderRadius: 4, background: 'var(--color-bg-container)',
+                          }}>
+                            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{label}</span>
+                              {fv && (
+                                <Tag
+                                  color={confidenceColor(conf)}
+                                  style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}
+                                >
+                                  {confidenceLabel(conf)}
+                                </Tag>
+                              )}
+                            </div>
+                            <Input
+                              value={showValue || ''}
+                              onChange={(e) => onEditChange(key as string, e.target.value)}
+                              placeholder={fv ? '' : '（未识别到）'}
+                              size="small"
+                              style={{ marginTop: 4 }}
+                            />
+                            {fv && fv.rawText && fv.rawText !== displayValue && (
+                              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                                原文：{fv.rawText}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+          </Space>
+      </ResizableModal>
     </>
   );
 };

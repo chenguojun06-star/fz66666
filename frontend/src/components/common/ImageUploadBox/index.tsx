@@ -68,10 +68,10 @@ function ImageUploadBox({
       } else {
         const formData = new FormData();
         formData.append('file', file);
+        // 不要显式设置 Content-Type，让浏览器自动添加 boundary
         const res = await api.post<{ code: number; data: string; message?: string }>(
           '/common/upload',
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
+          formData
         );
         if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
         url = res.data;
