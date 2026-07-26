@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Tag } from 'antd';
+import { Button, Card, Tag, Input, Select, Space } from 'antd';
 
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -13,6 +13,23 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 
+/**
+ * 状态筛选选项 — 与后端 MaterialPickingController.page 完全对齐
+ * 后端状态值：pending（待出库）/ completed（已完成）/ cancelled（已取消）
+ */
+const PICKING_STATUS_OPTIONS = [
+  { label: '全部', value: '' },
+  { label: '待出库', value: 'pending' },
+  { label: '已完成', value: 'completed' },
+  { label: '已取消', value: 'cancelled' },
+];
+
+const PICKING_USAGE_TYPE_OPTIONS = [
+  { label: '全部用途', value: '' },
+  { label: '生产领料', value: 'production' },
+  { label: '样品领料', value: 'sample' },
+];
+
 const MaterialPickingList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<any[]>([]);
@@ -25,17 +42,27 @@ const MaterialPickingList: React.FC = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
+  // 筛选状态
+  const [keyword, setKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [usageType, setUsageType] = useState('');
+
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
   };
 
-  const fetchList = async (page = current, size = pageSize) => {
+  const fetchList = async (page = current, size = pageSize, overrides?: { keyword?: string; status?: string; usageType?: string }) => {
     setLoading(true);
     try {
-      const res: any = await api.get('/production/picking/list', {
-        params: { page, pageSize: size },
-      });
+      const params: Record<string, unknown> = { page, pageSize: size };
+      const kw = overrides?.keyword ?? keyword;
+      const st = overrides?.status ?? statusFilter;
+      const ut = overrides?.usageType ?? usageType;
+      if (kw) params.keyword = kw;
+      if (st) params.status = st;
+      if (ut) params.usageType = ut;
+      const res: any = await api.get('/production/picking/list', { params });
       if (res?.code === 200) {
         setDataSource(res.data.records);
         setTotal(res.data.total);
@@ -50,8 +77,8 @@ const MaterialPickingList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchList();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchList(1, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const columns = [
@@ -146,6 +173,28 @@ const MaterialPickingList: React.FC = () => {
     },
   ];
 
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    fetchList(1, pageSize, { status: value });
+  };
+
+  const handleUsageTypeChange = (value: string) => {
+    setUsageType(value);
+    fetchList(1, pageSize, { usageType: value });
+  };
+
+  const handleKeywordSearch = (value: string) => {
+    setKeyword(value);
+    fetchList(1, pageSize, { keyword: value });
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setStatusFilter('');
+    setUsageType('');
+    fetchList(1, pageSize, { keyword: '', status: '', usageType: '' });
+  };
+
   return (
     <>
       <Card variant="borderless">
@@ -154,7 +203,32 @@ const MaterialPickingList: React.FC = () => {
             <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />
           </Card>
         ) : null}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <Space wrap>
+            <Input.Search
+              placeholder="搜索领料单号/订单/款号/领料人"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onSearch={handleKeywordSearch}
+              style={{ width: 280 }}
+              allowClear
+            />
+            <Select
+              value={statusFilter}
+              onChange={handleStatusChange}
+              options={PICKING_STATUS_OPTIONS}
+              style={{ width: 120 }}
+              placeholder="状态"
+            />
+            <Select
+              value={usageType}
+              onChange={handleUsageTypeChange}
+              options={PICKING_USAGE_TYPE_OPTIONS}
+              style={{ width: 130 }}
+              placeholder="用途"
+            />
+            <Button onClick={handleReset}>重置</Button>
+          </Space>
           <Button type="primary" onClick={() => setModalVisible(true)}>
             新建领料
           </Button>
