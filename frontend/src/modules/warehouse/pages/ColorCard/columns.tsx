@@ -1,11 +1,10 @@
 import React from 'react';
-import { Button, Checkbox, Image, Popconfirm, Space, Tag } from 'antd';
+import { Checkbox, Image, Modal, Tag } from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import {
-  CameraOutlined, DeleteOutlined, EditOutlined, EyeOutlined,
-} from '@ant-design/icons';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import RowActions from '@/components/common/RowActions';
 import type { ColorCard, ColorCardItem } from './types';
 
 // ===== 主表格列定义（操作列依赖外部回调） =====
@@ -27,18 +26,47 @@ export function buildColumns(handlers: {
     { title: '颜色数量', dataIndex: 'colorCount', width: 90,
       render: (v: number) => <Tag color={v > 0 ? 'blue' : 'default'}>{v || 0}</Tag> },
     { title: '创建时间', dataIndex: 'createTime', width: 160 },
-    { title: '操作', dataIndex: 'op', width: 340, fixed: 'right',
-      render: (_, r: ColorCard) => (
-        <Space size="small" wrap>
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handlers.onEdit(r)}>编辑</Button>
-          <Button size="small" type="link" onClick={() => handlers.onItems(r)}>颜色管理</Button>
-          <Button size="small" type="link" icon={<CameraOutlined />} onClick={() => handlers.onRecognize(r)}>拍照识别</Button>
-          <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => handlers.onPreview(r)}>生成物料</Button>
-          <Popconfirm title="确认删除？" onConfirm={() => handlers.onDelete(r.id)} okText="确认" cancelText="取消">
-            <Button size="small" type="link" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+    { title: '操作', dataIndex: 'op', width: 130, fixed: 'right',
+      render: (_, r: ColorCard) => {
+        const moreItems: MenuProps['items'] = [];
+        // 备注统一收敛到「更多」里查看，避免列表被长文本撑开
+        if (r.remark) {
+          moreItems.push({
+            key: 'remark',
+            label: '查看备注',
+            onClick: () => Modal.info({
+              title: '色卡本备注',
+              content: <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 320, overflow: 'auto' }}>{r.remark}</div>,
+              width: 480,
+              okText: '关闭',
+            }),
+          });
+        }
+        moreItems.push({ key: 'items', label: '颜色管理', onClick: () => handlers.onItems(r) });
+        moreItems.push({ key: 'recognize', label: '拍照识别', onClick: () => handlers.onRecognize(r) });
+        moreItems.push({ key: 'preview', label: '生成物料', onClick: () => handlers.onPreview(r) });
+        moreItems.push({
+          key: 'delete',
+          label: '删除',
+          danger: true,
+          onClick: () => {
+            Modal.confirm({
+              title: '确认删除？',
+              content: `删除后将无法恢复，是否继续删除色卡本「${r.colorCardName || r.colorCardCode || ''}」？`,
+              okText: '确认',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => handlers.onDelete(r.id),
+            });
+          },
+        });
+        return (
+          <RowActions actions={[
+            { key: 'edit', label: '编辑', onClick: () => handlers.onEdit(r), primary: true },
+            { key: 'more', label: '更多', children: moreItems },
+          ]} />
+        );
+      },
     },
   ];
 }

@@ -1,6 +1,6 @@
 import type { ColumnsType } from 'antd/es/table';
 import type { MenuProps } from 'antd';
-import { Tag } from 'antd';
+import { Modal, Tag } from 'antd';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import RowActions from '@/components/common/RowActions';
@@ -61,7 +61,6 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
       title: '换算', dataIndex: 'conversionRate', key: 'conversionRate', width: 130, align: 'right' as const,
       render: (value: unknown) => { const num = Number(value); return Number.isFinite(num) && num > 0 ? `${num} 米/公斤` : '-'; },
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 100,
       render: (v: unknown, record: MaterialDatabase) => {
@@ -102,6 +101,19 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
         const isCompleted = record.status === 'completed';
         const isDisabled = record.disabled === 1;
         const moreItems: MenuProps['items'] = [];
+        // 备注统一收敛到「更多」里查看，避免列表被长文本撑开
+        if (record.remark) {
+          moreItems.push({
+            key: 'remark',
+            label: '查看备注',
+            onClick: () => Modal.info({
+              title: '物料备注',
+              content: <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 320, overflow: 'auto' }}>{record.remark}</div>,
+              width: 480,
+              okText: '关闭',
+            }),
+          });
+        }
         moreItems.push({ key: 'copy', label: '复制新建', onClick: () => openDialog('copy', record) });
         if (isCompleted) { moreItems.push({ key: 'return', label: '退回编辑', danger: true, onClick: () => void handleReturn(record) }); }
         if (!isCompleted) {
