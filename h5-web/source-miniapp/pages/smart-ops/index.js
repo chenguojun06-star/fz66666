@@ -99,7 +99,10 @@ function isHighRisk(o) {
   return daysLeft >= 0 && daysLeft <= 7 && prog < 50;
 }
 
-function isRisk(o) { return isDelayed(o) || isHighRisk(o); }
+// P0 修复（数据一致性）：与后端 ProductionOrderQueryService.getGlobalStats 的 risk_orders 定义对齐
+// risk_orders 仅统计"未来7天内到期 + 进度<50%"的高风险订单，不含已延期（已延期由 delayedOrders 统计）
+// 旧逻辑 isDelayed || isHighRisk 会导致 stats 数与点击过滤的列表数不一致，且 totalWarn 重复计算
+function isRisk(o) { return isHighRisk(o); }
 
 Page({
   data: {
