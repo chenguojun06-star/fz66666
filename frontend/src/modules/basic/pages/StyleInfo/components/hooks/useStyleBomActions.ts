@@ -5,6 +5,7 @@ import type { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 import { confirmAction } from '@/utils/confirm';
 import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
+import type { MaterialPickupRecord } from '@/components/common/MaterialPickupModal';
 
 interface UseStyleBomActionsOptions {
   locked: boolean;
@@ -129,37 +130,20 @@ const useStyleBomActions = ({
     }
   }, [data, isTempId, message, setCheckingStock, setData, sortBomRows, styleId]);
 
-  const handleApplyPickup = useCallback((record: StyleBom, usageType: 'PATTERN' | 'SAMPLE' | 'BULK' = 'SAMPLE') => {
-    const pickupQty = record.devUsageAmount ?? record.usageAmount;
-    const usageLabel = usageType === 'PATTERN' ? '纸样开发' : usageType === 'BULK' ? '大货生产' : '样衣采购';
-    confirmAction(`${usageLabel}领取`, `确认领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`, async () => {
-      try {
-        await api.post('/production/picking/pending', {
-          picking: {
-            styleId: String(styleId || ''),
-            styleNo: currentStyleNo,
-            pickerId: String(user?.id || ''),
-            pickerName: String(user?.name || user?.username || ''),
-            pickupType: 'INTERNAL',
-            usageType,
-            remark: `BOM_PICK_${usageType}`,
-          },
-          items: [{
-            materialId: record.materialId,
-            materialCode: record.materialCode,
-            materialName: record.materialName,
-            color: record.color ?? '',
-            size: '',
-            quantity: pickupQty != null ? Number(pickupQty) : 1,
-            unit: record.unit ?? '',
-          }],
-        });
-        message.success('领取成功，将在「面辅料出入库 → 待出库领料」中显示');
-      } catch (error: unknown) {
-        message.error(`领取失败：${error instanceof Error ? error.message : '请求错误'}`);
-      }
-    }, { okText: '确认领取' });
-  }, [currentStyleNo, message, styleId, user]);
+  /** 将 StyleBom 转为领取弹窗所需的 record（仅组装数据，不直接调 API） */
+  const buildPickupRecord = useCallback((record: StyleBom): MaterialPickupRecord => {
+    return {
+      materialId: record.materialId,
+      materialCode: record.materialCode,
+      materialName: record.materialName,
+      color: record.color,
+      size: '',
+      unit: record.unit,
+      defaultQuantity: record.devUsageAmount ?? record.usageAmount,
+      availableStock: record.availableStock,
+      stockStatus: record.stockStatus,
+    };
+  }, []);
 
   const handleDelete = useCallback(async (id: string | number) => {
     if (locked) {
@@ -254,7 +238,7 @@ const useStyleBomActions = ({
   return {
     handleGeneratePurchase,
     handleCheckStock,
-    handleApplyPickup,
+    buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
   };

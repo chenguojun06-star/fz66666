@@ -91,24 +91,12 @@ export const buildStatusActionColumns = (ctx: BomColumnsContext) => {
       width: 150,
       resizable: false,
       render: (_: unknown, record: StyleBom) => {
-        // locked（已完成）时仍允许领取，仅禁止编辑/删除
+        // locked（已完成）时不再显示操作按钮，领取入口在库存状态列
         if (locked) {
-          const canPickup = record.stockStatus === 'sufficient' && !!onApplyPickup && !pickupDisabled;
           return (
             <Space>
               <Tag color="default">已完成</Tag>
-              {canPickup ? (
-                <Button
-                  type="link"
-                  size="small"
-                  style={{ padding: 0 }}
-                  onClick={() => onApplyPickup!(record)}
-                >
-                  领取
-                </Button>
-              ) : (
-                <span style={{ color: 'var(--neutral-text-lighter)' }}>无法操作</span>
-              )}
+              <span style={{ color: 'var(--neutral-text-lighter)' }}>—</span>
             </Space>
           );
         }
@@ -163,7 +151,7 @@ export const buildStatusActionColumns = (ctx: BomColumnsContext) => {
           />
         ) : (
           <RowActions
-            maxInline={3}
+            maxInline={2}
             actions={[
               {
                 key: 'edit',
@@ -172,13 +160,6 @@ export const buildStatusActionColumns = (ctx: BomColumnsContext) => {
                 disabled: editingKey !== '',
                 onClick: () => edit(record),
                 primary: true,
-              },
-              {
-                key: 'apply_pickup',
-                label: '领取',
-                title: record.stockStatus === 'sufficient' ? '申请领取面辅料' : '需先检查库存且库存充足才可申请',
-                disabled: editingKey !== '' || !onApplyPickup || record.stockStatus !== 'sufficient',
-                onClick: () => onApplyPickup?.(record),
               },
               {
                 key: 'delete',

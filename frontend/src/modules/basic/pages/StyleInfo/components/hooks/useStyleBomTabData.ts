@@ -27,6 +27,7 @@ export interface UseStyleBomTabDataOptions {
   styleId: string | number;
   readOnly?: boolean;
   onCartAdded?: () => void;
+  onApplyPickup?: (record: StyleBom) => void;
   sizeColorConfig?: {
     sizes?: string[];
     colors?: string[];
@@ -94,7 +95,7 @@ export interface UseStyleBomTabDataResult {
   // actions
   handleGeneratePurchase: () => Promise<void> | void;
   handleCheckStock: () => Promise<void> | void;
-  handleApplyPickup: (record: StyleBom) => Promise<void> | void;
+  buildPickupRecord: (record: StyleBom) => import('@/components/common/MaterialPickupModal').MaterialPickupRecord;
   handleDelete: (id: string | number) => Promise<void>;
   handleAddToPurchaseCart: () => Promise<void> | void;
   handleAddCartWithCallback: () => Promise<void>;
@@ -109,6 +110,7 @@ export const useStyleBomTabData = ({
   styleId,
   readOnly,
   onCartAdded,
+  onApplyPickup,
   sizeColorConfig,
 }: UseStyleBomTabDataOptions): UseStyleBomTabDataResult => {
   const { user } = useUser();
@@ -258,7 +260,7 @@ export const useStyleBomTabData = ({
   const {
     handleGeneratePurchase,
     handleCheckStock,
-    handleApplyPickup,
+    buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
   } = useStyleBomActions({
@@ -314,7 +316,7 @@ export const useStyleBomTabData = ({
     setMaterialModalOpen,
     setMaterialTab,
     setMaterialTargetRowId,
-    onApplyPickup: handleApplyPickup,
+    onApplyPickup: onApplyPickup,
     activeSizes,
   });
 
@@ -357,7 +359,7 @@ export const useStyleBomTabData = ({
     applyBomTemplate,
     handleGeneratePurchase,
     handleCheckStock,
-    handleApplyPickup,
+    buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
     handleAddCartWithCallback,

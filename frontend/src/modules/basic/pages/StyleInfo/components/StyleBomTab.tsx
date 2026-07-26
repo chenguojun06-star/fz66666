@@ -6,6 +6,8 @@ import { useStyleBomTabData } from './hooks/useStyleBomTabData';
 import StyleBomMaterialModal from './styleBom/StyleBomMaterialModal';
 import StyleBomSizeColorSummary from './styleBom/StyleBomSizeColorSummary';
 import StyleBomToolbar from './styleBom/StyleBomToolbar';
+import MaterialPickupModal, { type MaterialPickupRecord } from '@/components/common/MaterialPickupModal';
+import type { StyleBom } from '@/types/style';
 
 interface Props {
   styleId: string | number;
@@ -33,6 +35,22 @@ const StyleBomTab: React.FC<Props> = ({
   sizeColorConfig,
 }) => {
   const { message } = App.useApp();
+  const [pickupRecord, setPickupRecord] = React.useState<MaterialPickupRecord | null>(null);
+
+  const handleApplyPickup = React.useCallback((record: StyleBom) => {
+    setPickupRecord({
+      materialId: record.materialId,
+      materialCode: record.materialCode,
+      materialName: record.materialName,
+      color: record.color,
+      size: '',
+      unit: record.unit,
+      defaultQuantity: record.devUsageAmount ?? record.usageAmount,
+      availableStock: record.availableStock,
+      stockStatus: record.stockStatus,
+    });
+  }, []);
+
   const {
     activeSizes,
     activeColors,
@@ -79,6 +97,7 @@ const StyleBomTab: React.FC<Props> = ({
     styleId,
     readOnly,
     onCartAdded,
+    onApplyPickup: handleApplyPickup,
     sizeColorConfig,
   });
 
@@ -192,6 +211,13 @@ const StyleBomTab: React.FC<Props> = ({
           />
         )}
       </Form>
+      <MaterialPickupModal
+        open={pickupRecord !== null}
+        record={pickupRecord}
+        usageType="SAMPLE"
+        styleId={styleId}
+        onCancel={() => setPickupRecord(null)}
+      />
     </div>
   );
 };
