@@ -513,21 +513,30 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getStyleId, String.valueOf(id))
                         .eq(ProductionOrder::getDeleteFlag, 0)
+                        .eq(ProductionOrder::getTenantId, tenantId)
                         .notIn(ProductionOrder::getStatus, OrderStatusConstants.TERMINAL_STATUSES));
         if (activeOrders > 0) {
             throw new IllegalStateException("该款式下存在 " + activeOrders + " 个进行中的生产订单，无法删除");
         }
         if (patternProductionService != null) {
             patternProductionService.lambdaUpdate()
-                    .eq(com.fashion.supplychain.production.entity.PatternProduction::getStyleId, id)
+                    .eq(PatternProduction::getStyleId, id)
+                    .eq(PatternProduction::getTenantId, tenantId)
                     .remove();
         }
         evictCurrentTenantCache();
-        return styleInfoService.deleteById(id);
+        return styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .set(StyleInfo::getDeleteFlag, 1)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -796,13 +805,14 @@ public class StyleInfoOrchestrator {
                             .or().eq(StyleInfo::getSampleStatus, "Completed"))
                     .count();
 
+            // P0 修复：原 ne+OR 链恒为真（任何值都至少满足一个 ne），导致已完成款式被误算为延期
+            // 改为 notIn，与 StyleInfoServiceImpl.queryPage 的 onlyInProgress 修复保持一致
             delayedStyles = styleInfoService.lambdaQuery()
                     .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                     .eq(StyleInfo::getStatus, "ENABLED")
                     .eq(orderMode, StyleInfo::getPushedToOrder, 1)
                     .and(w -> w.isNull(StyleInfo::getSampleStatus)
-                            .or().ne(StyleInfo::getSampleStatus, "COMPLETED")
-                            .or().ne(StyleInfo::getSampleStatus, "Completed"))
+                            .or().notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed"))
                     .lt(StyleInfo::getDeliveryDate, LocalDateTime.now())
                     .count();
         } catch (Exception e) {

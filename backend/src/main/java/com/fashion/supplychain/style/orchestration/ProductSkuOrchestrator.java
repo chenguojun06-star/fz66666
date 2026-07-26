@@ -2,6 +2,7 @@ package com.fashion.supplychain.style.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
@@ -237,7 +238,10 @@ public class ProductSkuOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> recalculateSkuStock() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         List<ProductSku> allSkus = productSkuService.lambdaQuery()
+                .eq(ProductSku::getTenantId, tenantId)
                 .last("LIMIT 5000")
                 .list();
         int fixed = 0;
@@ -249,6 +253,7 @@ public class ProductSkuOrchestrator {
             List<ProductWarehousing> inboundRecords = productWarehousingService.lambdaQuery()
                     .eq(ProductWarehousing::getStyleNo, sku.getStyleNo())
                     .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .eq(ProductWarehousing::getTenantId, tenantId)
                     .eq(ProductWarehousing::getColor, sku.getColor())
                     .eq(ProductWarehousing::getSize, sku.getSize())
                     .last("LIMIT 5000")

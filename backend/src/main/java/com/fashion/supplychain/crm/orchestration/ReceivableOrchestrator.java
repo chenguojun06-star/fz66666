@@ -3,6 +3,7 @@ package com.fashion.supplychain.crm.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
@@ -66,6 +67,12 @@ public class ReceivableOrchestrator {
         String styleNo = strOf(params.get("styleNo"));
 
         Long tenantId = UserContext.tenantId();
+
+        // P0 修复（铁律4 多租户隔离）：工厂账号不应看到应收账款（属于租户级财务数据）
+        // 与 WagePaymentController.listPendingPayables 的工厂账号禁用策略保持一致
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return new Page<>(page, pageSize);
+        }
 
         LambdaQueryWrapper<Receivable> qw = new LambdaQueryWrapper<Receivable>()
                 .eq(Receivable::getDeleteFlag, 0)
@@ -196,6 +203,18 @@ public class ReceivableOrchestrator {
      */
     public Map<String, Object> getStats() {
         Long tenantId = UserContext.tenantId();
+
+        // P0 修复（铁律4 多租户隔离）：工厂账号不应看到应收账款（属于租户级财务数据）
+        // 与 list 接口的工厂账号禁用策略保持一致
+        if (DataPermissionHelper.isFactoryAccount()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("totalPending", BigDecimal.ZERO);
+            empty.put("totalOverdue", BigDecimal.ZERO);
+            empty.put("overdueCount", 0L);
+            empty.put("newThisMonth", 0L);
+            return empty;
+        }
+
         List<Receivable> all = receivableService.list(
                 new LambdaQueryWrapper<Receivable>()
                         .eq(Receivable::getDeleteFlag, 0)
@@ -271,6 +290,7 @@ public class ReceivableOrchestrator {
             Customer customer = customerService.lambdaQuery()
                     .eq(Customer::getId, receivable.getCustomerId())
                     .eq(Customer::getDeleteFlag, 0)
+                    .eq(Customer::getTenantId, tenantId)
                     .one();
             if (customer != null) {
                 receivable.setCustomerName(customer.getCompanyName());
@@ -393,14 +413,19 @@ public class ReceivableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         Receivable existing = receivableService.lambdaQuery()
                 .eq(Receivable::getId, id)
                 .eq(Receivable::getDeleteFlag, 0)
+                .eq(Receivable::getTenantId, tenantId)
                 .one();
         if (existing != null) {
             logAppendHelper.appendDelete(existing, UserContext.username());
         }
-        receivableService.removeById(id);
+        receivableService.lambdaUpdate()
+                .eq(Receivable::getId, id)
+                .eq(Receivable::getTenantId, tenantId)
+                .remove();
     }
 
     /**
@@ -436,9 +461,11 @@ public class ReceivableOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public int markOverdue() {
+        Long tenantId = UserContext.tenantId();
         List<Receivable> list = receivableService.list(
                 new LambdaQueryWrapper<Receivable>()
                         .eq(Receivable::getDeleteFlag, 0)
+                        .eq(tenantId != null, Receivable::getTenantId, tenantId)
                         .in(Receivable::getStatus, "PENDING", "PARTIAL")
                         .lt(Receivable::getDueDate, LocalDate.now()));
         int count = 0;
