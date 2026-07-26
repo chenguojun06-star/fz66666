@@ -117,11 +117,10 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
         // 工厂账号隔离：优先使用菲号级 factoryId（支持部分转单场景）
         if (isFactoryAccount && StringUtils.hasText(ctxFactoryId)) {
-            // 菲号级隔离：只显示 factory_id = 当前工厂 的菲号
-            // 同时兼容订单级隔离（旧数据可能没有 factory_id）
-            wrapper.and(w -> w.eq(CuttingBundle::getFactoryId, ctxFactoryId)
-                    .or().and(w2 -> w2.isNull(CuttingBundle::getFactoryId)
-                            .or().eq(CuttingBundle::getFactoryId, "")));
+            // P0 修复：菲号级严格隔离，只显示 factory_id = 当前工厂 的菲号
+            // 旧逻辑会通过 isNull/eq("") 兜底显示无工厂归属菲号，存在跨工厂数据泄露风险
+            // 历史无 factory_id 的脏数据应通过数据迁移补全，而非放宽查询隔离
+            wrapper.eq(CuttingBundle::getFactoryId, ctxFactoryId);
         } else if (factoryOrderNos != null && !factoryOrderNos.isEmpty()) {
             // 非工厂账号但传入了工厂订单号限制（如内部员工查看特定工厂订单）
             wrapper.in(CuttingBundle::getProductionOrderNo, factoryOrderNos);

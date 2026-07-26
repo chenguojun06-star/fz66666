@@ -207,7 +207,10 @@ public class ProductionOrderQueryService {
         }
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
-            wrapper.and(w -> w.eq("factory_id", ctxFactoryId).or().isNull("factory_id"));
+            // P0 修复：工厂账号严格匹配 factory_id，移除 .or().isNull("factory_id")
+            // 旧逻辑会让工厂账号看到所有无工厂归属的订单，存在跨工厂数据泄露风险
+            // 同时与 buildStatsQueryWrapper 行为对齐，避免 stats/list 计数不一致
+            wrapper.eq("factory_id", ctxFactoryId);
         } else if (org.springframework.util.StringUtils.hasText(qp.factoryId)) {
             wrapper.eq("factory_id", qp.factoryId);
         }

@@ -120,11 +120,10 @@ public class CuttingTaskQueryHelper {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
         if (isFactoryAccount && StringUtils.hasText(ctxFactoryId)) {
-            // 裁剪任务级隔离：只显示 factory_id = 当前工厂 的任务
-            // 同时兼容订单级隔离（旧数据可能没有 factory_id）
-            queryWrapper.and(w -> w.eq(CuttingTask::getFactoryId, ctxFactoryId)
-                    .or().and(w2 -> w2.isNull(CuttingTask::getFactoryId)
-                            .or().eq(CuttingTask::getFactoryId, "")));
+            // P0 修复：裁剪任务级严格隔离，只显示 factory_id = 当前工厂 的任务
+            // 旧逻辑会通过 isNull/eq("") 兜底显示无工厂归属任务，存在跨工厂数据泄露风险
+            // 历史无 factory_id 的脏数据应通过数据迁移补全，而非放宽查询隔离
+            queryWrapper.eq(CuttingTask::getFactoryId, ctxFactoryId);
         } else {
             @SuppressWarnings("unchecked")
             List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");

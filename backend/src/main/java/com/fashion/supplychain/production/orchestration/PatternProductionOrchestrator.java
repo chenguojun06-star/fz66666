@@ -128,14 +128,48 @@ public class PatternProductionOrchestrator {
 
     /**
      * 按交期过滤记录（OVERDUE：已延期，WARNING：3天内到期）
+     * <p>
+     * 排除规则与 {@link #calcSampleStats()} 保持一致：
+     * 1. 已完成：patternStatus/sampleStatus = COMPLETED/WAREHOUSE_IN 或 progressNode = 样衣完成
+     * 2. 已排除：styleStatus = archived/scrapped 或 progressNode = 开发样报废 或 sampleReviewStatus = PASS/APPROVED
+     * <p>
+     * P0 修复（stats/list 一致性）：旧版仅排除 COMPLETED/WAREHOUSE_IN/SCRAPPED，
+     * 会将已归档/审核通过的订单计入延期/临近交期，导致 stats 与 list 计数不一致
      */
     private List<Map<String, Object>> filterByDueDate(List<Map<String, Object>> records, String status) {
         java.time.LocalDate today = java.time.LocalDate.now();
         return records.stream().filter(m -> {
             String recordStatus = String.valueOf(m.get("status") == null ? "" : m.get("status")).trim().toUpperCase();
-            // 排除已完成/已入库/已报废
-            if ("COMPLETED".equals(recordStatus) || "WAREHOUSE_IN".equals(recordStatus)
-                    || "SCRAPPED".equals(recordStatus)) {
+            // 已完成（与 calcSampleStats.isCompleted 一致）
+            if ("COMPLETED".equals(recordStatus) || "WAREHOUSE_IN".equals(recordStatus)) {
+                return false;
+            }
+            // 从 styleInfo 获取复合状态（与 calcSampleStats 一致）
+            String styleStatus = "";
+            String progressNode = "";
+            String sampleStatus = "";
+            String sampleReviewStatus = "";
+            Object styleInfoObj = m.get("styleInfo");
+            if (styleInfoObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> styleInfo = (Map<String, Object>) styleInfoObj;
+                styleStatus = String.valueOf(styleInfo.getOrDefault("status", "")).trim().toLowerCase();
+                progressNode = String.valueOf(styleInfo.getOrDefault("progressNode", "")).trim();
+                sampleStatus = String.valueOf(styleInfo.getOrDefault("sampleStatus", "")).trim().toUpperCase();
+                sampleReviewStatus = String.valueOf(styleInfo.getOrDefault("sampleReviewStatus", "")).trim().toUpperCase();
+                if ("COMPLETED".equals(sampleStatus) || "WAREHOUSE_IN".equals(sampleStatus)
+                        || "样衣完成".equals(progressNode)) {
+                    return false;
+                }
+            }
+            // 已排除（与 calcSampleStats.isExcluded 一致）
+            if ("archived".equals(styleStatus) || "scrapped".equals(styleStatus)
+                    || "开发样报废".equals(progressNode)
+                    || "PASS".equals(sampleReviewStatus) || "APPROVED".equals(sampleReviewStatus)) {
+                return false;
+            }
+            // 已报废（保留旧逻辑，与 SCRAPPED 等价）
+            if ("SCRAPPED".equals(recordStatus)) {
                 return false;
             }
             java.time.LocalDate deliveryDate = resolveDeliveryDate(m);

@@ -104,11 +104,13 @@ public class ProcurementOrchestrator {
      * 综合统计数据：供应商数量 + 采购单统计
      */
     public Map<String, Object> getStats(Map<String, Object> params) {
-        // 供应商总数（MATERIAL 类型）
+        // P0 修复（铁律4 多租户隔离）：供应商总数必须按 tenant_id 过滤，防止跨租户统计
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         long supplierCount = factoryService.count(
                 new LambdaQueryWrapper<Factory>()
                         .eq(Factory::getDeleteFlag, 0)
                         .eq(Factory::getSupplierType, "MATERIAL")
+                        .eq(tenantId != null, Factory::getTenantId, tenantId)
         );
 
         // 采购单状态汇总
