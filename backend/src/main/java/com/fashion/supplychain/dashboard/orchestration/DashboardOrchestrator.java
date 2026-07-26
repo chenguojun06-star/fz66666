@@ -60,9 +60,12 @@ public class DashboardOrchestrator {
     }
 
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，防止跨租户缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new DashboardResponse();
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
-            String factoryCacheKey = "factory_dashboard:" + ctxFactoryId;
+            String factoryCacheKey = "factory_dashboard:" + tenantId + ":" + ctxFactoryId;
             DashboardResponse cached = cacheHelper.getFromCache(factoryCacheKey);
             if (cached != null) return cached;
             DashboardResponse result = buildFactoryDashboard(ctxFactoryId);
@@ -70,7 +73,7 @@ public class DashboardOrchestrator {
             return result;
         }
 
-        String cacheKey = "main_dashboard";
+        String cacheKey = "main_dashboard:" + tenantId;
         DashboardResponse cachedMain = cacheHelper.getFromCache(cacheKey);
         if (cachedMain != null) return cachedMain;
 
@@ -156,9 +159,13 @@ public class DashboardOrchestrator {
     }
 
     private DashboardResponse buildFactoryDashboard(String factoryId) {
+        // P0 修复（铁律4 多租户隔离）：工厂账号查询必须同时过滤 tenant_id + factory_id
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         DashboardResponse data = new DashboardResponse();
+        if (tenantId == null) return data;
         List<ProductionOrder> factoryOrders = productionOrderService.lambdaQuery()
             .select(ProductionOrder::getOrderQuantity, ProductionOrder::getStatus, ProductionOrder::getPlannedEndDate)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .last("LIMIT 5000")
@@ -188,7 +195,10 @@ public class DashboardOrchestrator {
     }
 
     private TopStatsResponse buildFactoryTopStats(String factoryId) {
+        // P0 修复（铁律4 多租户隔离）：工厂账号查询必须同时过滤 tenant_id + factory_id
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         TopStatsResponse response = new TopStatsResponse();
+        if (tenantId == null) return response;
         LocalDateTime endTime = LocalDateTime.now();
         LocalDate today = LocalDate.now();
         LocalDateTime dayStart = LocalDateTime.of(today, LocalTime.MIN);
@@ -201,6 +211,7 @@ public class DashboardOrchestrator {
         response.setSampleDevelopment(new TopStatsResponse.TimeRangeStats());
 
         List<ProductionOrder> factoryOrders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .select(ProductionOrder::getOrderQuantity, ProductionOrder::getCreateTime)
@@ -297,16 +308,17 @@ public class DashboardOrchestrator {
     }
 
     public DeliveryAlertResponse getDeliveryAlert() {
-        String cacheKey = "delivery_alert";
+        TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId + factoryId，防止跨租户/跨工厂缓存串数据
+        String cacheKey = "delivery_alert:" + tenantId + ":" + (org.springframework.util.StringUtils.hasText(factoryId) ? factoryId : "0");
         DeliveryAlertResponse cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 
         DeliveryAlertResponse response = new DeliveryAlertResponse();
         LocalDate today = LocalDate.now();
 
-        TenantAssert.assertTenantContext();
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
         List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()
             .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getStyleNo,
                     ProductionOrder::getStyleName, ProductionOrder::getFactoryName,
@@ -340,7 +352,10 @@ public class DashboardOrchestrator {
     }
 
     public QualityStatsResponse getQualityStats(String range) {
-        String cacheKey = "quality_stats_" + range;
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，防止跨租户缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new QualityStatsResponse();
+        String cacheKey = "quality_stats_" + range + ":" + tenantId;
         QualityStatsResponse cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 
@@ -377,10 +392,13 @@ public class DashboardOrchestrator {
     }
 
     public TopStatsResponse getTopStats(String range) {
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，防止跨租户缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new TopStatsResponse();
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
             // 工厂账号：按工厂 ID 分别缓存 5 分钟
-            String factoryCacheKey = "topstats_factory_" + ctxFactoryId;
+            String factoryCacheKey = "topstats_factory_" + tenantId + "_" + ctxFactoryId;
             TopStatsResponse factoryCached = cacheHelper.getFromCache(factoryCacheKey);
             if (factoryCached != null) return factoryCached;
             TopStatsResponse factoryResult = buildFactoryTopStats(ctxFactoryId);
@@ -389,7 +407,7 @@ public class DashboardOrchestrator {
         }
 
         // 管理员/租户账号：全量统计结果缓存 5 分钟（每个方法 ×5 范围 = 约 20 次 DB 查询降为 0）
-        String cacheKey = "topstats";
+        String cacheKey = "topstats:" + tenantId;
         TopStatsResponse cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 
@@ -444,7 +462,10 @@ public class DashboardOrchestrator {
     }
 
     public OrderCuttingChartResponse getOrderCuttingChart() {
-        String cacheKey = "order_cutting_chart";
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，防止跨租户缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new OrderCuttingChartResponse(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        String cacheKey = "order_cutting_chart:" + tenantId;
         OrderCuttingChartResponse cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 
@@ -466,7 +487,10 @@ public class DashboardOrchestrator {
     }
 
     public ScanCountChartResponse getScanCountChart() {
-        String cacheKey = "scan_count_chart";
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId，防止跨租户缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new ScanCountChartResponse(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        String cacheKey = "scan_count_chart:" + tenantId;
         ScanCountChartResponse cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 
@@ -488,7 +512,11 @@ public class DashboardOrchestrator {
     }
 
     public List<OverdueOrderDto> getOverdueOrders() {
-        String cacheKey = "overdue_orders";
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId + factoryId，防止跨租户/跨工厂缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new ArrayList<>();
+        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        String cacheKey = "overdue_orders:" + tenantId + ":" + (org.springframework.util.StringUtils.hasText(factoryId) ? factoryId : "0");
         List<OverdueOrderDto> cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 
@@ -524,7 +552,11 @@ public class DashboardOrchestrator {
      * 获取延期环节统计（样衣开发+大货生产，按环节分组）
      */
     public DelayedStageBreakdownResponse getDelayedStageBreakdown() {
-        String cacheKey = "delayed_stage_breakdown";
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId + factoryId，防止跨租户/跨工厂缓存串数据
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return new DelayedStageBreakdownResponse();
+        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        String cacheKey = "delayed_stage_breakdown:" + tenantId + ":" + (org.springframework.util.StringUtils.hasText(factoryId) ? factoryId : "0");
         DelayedStageBreakdownResponse cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached;
 

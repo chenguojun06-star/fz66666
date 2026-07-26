@@ -37,20 +37,36 @@ public class DashboardInventoryQueryHelper {
         this.cacheHelper = cacheHelper;
     }
 
+    /**
+     * 入库单数（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countWarehousingBetween(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             return 0;
         }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return productWarehousingService.lambdaQuery()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getTenantId, tenantId)
                 .between(ProductWarehousing::getCreateTime, start, end)
                 .count();
     }
 
+    /**
+     * 不合格品数量（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumUnqualifiedQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
                 .select("COALESCE(SUM(unqualified_quantity), 0) as total")
                 .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId)
                 .ge(start != null, "create_time", start)
                 .le(end != null, "create_time", end);
         List<Map<String, Object>> rows = productWarehousingMapper.selectMaps(qw);
@@ -69,63 +85,127 @@ public class DashboardInventoryQueryHelper {
         }
     }
 
+    /**
+     * 入库单总数
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countTotalWarehousing() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return productWarehousingService.lambdaQuery()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getTenantId, tenantId)
                 .count();
     }
 
+    /**
+     * 合格品总数量
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumTotalQualifiedQuantity() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
                 .select("COALESCE(SUM(COALESCE(qualified_quantity, 0)), 0) as total")
-                .eq("delete_flag", 0);
+                .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId);
         return cacheHelper.extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
+    /**
+     * 不合格品总数量
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumTotalUnqualifiedQuantity() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
                 .select("COALESCE(SUM(COALESCE(unqualified_quantity, 0)), 0) as total")
-                .eq("delete_flag", 0);
+                .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId);
         return cacheHelper.extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
+    /**
+     * 返修单数量
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countRepairIssues() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return productWarehousingService.lambdaQuery()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getTenantId, tenantId)
                 .like(ProductWarehousing::getDefectRemark, "返修")
                 .count();
     }
 
+    /**
+     * 合格品数量（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumQualifiedQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
                 .select("COALESCE(SUM(COALESCE(qualified_quantity, 0)), 0) as total")
                 .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId)
                 .ge(start != null, "warehousing_end_time", start)
                 .le(end != null, "warehousing_end_time", end);
         return cacheHelper.extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
+    /**
+     * 返修单数量（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countRepairIssuesBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return productWarehousingService.lambdaQuery()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getTenantId, tenantId)
                 .ge(start != null, ProductWarehousing::getWarehousingEndTime, start)
                 .le(end != null, ProductWarehousing::getWarehousingEndTime, end)
                 .like(ProductWarehousing::getDefectRemark, "返修")
                 .count();
     }
 
+    /**
+     * 入库数量合计（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
                 .select("COALESCE(SUM(COALESCE(qualified_quantity, 0) + COALESCE(unqualified_quantity, 0)), 0) as total")
                 .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId)
                 .ge(start != null, "warehousing_end_time", start)
                 .le(end != null, "warehousing_end_time", end);
         return cacheHelper.extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
+    /**
+     * 裁剪数量合计（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
                 .select(CuttingTask::getOrderQuantity)
+                .eq(CuttingTask::getTenantId, tenantId)
                 .eq(CuttingTask::getStatus, "bundled")
                 .ge(start != null, CuttingTask::getBundledTime, start)
                 .le(end != null, CuttingTask::getBundledTime, end)
@@ -144,10 +224,18 @@ public class DashboardInventoryQueryHelper {
         return total;
     }
 
+    /**
+     * 每日裁剪数量（30 天趋势）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) return java.util.Collections.nCopies(30, 0);
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return java.util.Collections.nCopies(30, 0);
         QueryWrapper<CuttingTask> qw = new QueryWrapper<CuttingTask>()
                 .select("DATE(bundled_time) as d", "COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
+                .eq("tenant_id", tenantId)
                 .eq("status", "bundled")
                 .ge(start != null, "bundled_time", start)
                 .le(end != null, "bundled_time", end)
@@ -169,23 +257,39 @@ public class DashboardInventoryQueryHelper {
         return result;
     }
 
+    /**
+     * 出库单数（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countOutstockBetween(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             return 0;
         }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return productOutstockService.lambdaQuery()
                 .eq(ProductOutstock::getDeleteFlag, 0)
+                .eq(ProductOutstock::getTenantId, tenantId)
                 .between(ProductOutstock::getCreateTime, start, end)
                 .count();
     }
 
+    /**
+     * 出库数量合计（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumOutstockQuantityBetween(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             return 0;
         }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductOutstock> qw = new QueryWrapper<ProductOutstock>()
                 .select("COALESCE(SUM(COALESCE(outstock_quantity, 0)), 0) as total")
                 .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId)
                 .between("create_time", start, end);
         return cacheHelper.extractLongScalar(productOutstockService.getBaseMapper().selectMaps(qw), "total");
     }

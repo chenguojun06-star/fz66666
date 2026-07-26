@@ -45,31 +45,53 @@ public class DashboardOrderQueryHelper {
         this.cacheHelper = cacheHelper;
     }
 
+    /**
+     * 已启用款式数量
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     * 缓存键增加 tenantId 后缀，避免不同租户缓存串数据
+     */
     public long countEnabledStyles() {
-        Number cached = cacheHelper.getFromCache("enabledStyles");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
+        String cacheKey = "enabledStyles." + tenantId;
+        Number cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
         long result = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getTenantId, tenantId)
                 .eq(StyleInfo::getStatus, "ENABLED").count();
-        cacheHelper.putToCache("enabledStyles", result);
+        cacheHelper.putToCache(cacheKey, result);
         return result;
     }
 
+    /**
+     * 在产订单数量
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     * 缓存键增加 tenantId 后缀，避免不同租户缓存串数据
+     */
     public long countProductionOrders() {
-        Number cached = cacheHelper.getFromCache("productionOrders");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
+        String cacheKey = "productionOrders." + tenantId;
+        Number cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
         long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .count();
-        cacheHelper.putToCache("productionOrders", result);
+        cacheHelper.putToCache(cacheKey, result);
         return result;
     }
 
     public long countUrgentEvents() {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId + factoryId，防止跨租户/跨工厂缓存串数据
         String factorySuffix = org.springframework.util.StringUtils.hasText(factoryId) ? "." + factoryId : "";
-        String cacheKey = "urgentEvents" + factorySuffix;
+        String cacheKey = "urgentEvents." + tenantId + factorySuffix;
         Number cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
 
@@ -95,61 +117,94 @@ public class DashboardOrderQueryHelper {
         return result;
     }
 
+    /**
+     * 最近新增款号
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户返回数据
+     */
     public List<StyleInfo> listRecentStyles(int limit) {
-        if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) {
             return Collections.emptyList();
         }
         int lim = Math.max(1, limit);
         return styleInfoService.lambdaQuery()
                 .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCreateTime)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .eq(StyleInfo::getStatus, "ENABLED")
                 .orderByDesc(StyleInfo::getCreateTime)
                 .page(new Page<>(1, lim))
                 .getRecords();
     }
 
+    /**
+     * 最近新增订单
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户返回数据
+     */
     public List<ProductionOrder> listRecentOrders(int limit) {
-        if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) {
             return Collections.emptyList();
         }
         int lim = Math.max(1, limit);
         return productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getCreateTime)
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .orderByDesc(ProductionOrder::getCreateTime)
                 .page(new Page<>(1, lim))
                 .getRecords();
     }
 
+    /**
+     * 最近新增采购单
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户返回数据
+     */
     public List<MaterialPurchase> listRecentPurchases(int limit) {
-        if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) {
             return Collections.emptyList();
         }
         int lim = Math.max(1, limit);
         return materialPurchaseService.lambdaQuery()
                 .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo, MaterialPurchase::getCreateTime)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(MaterialPurchase::getTenantId, tenantId)
                 .orderByDesc(MaterialPurchase::getCreateTime)
                 .page(new Page<>(1, lim))
                 .getRecords();
     }
 
+    /**
+     * 订单总数量
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     * 缓存键增加 tenantId 后缀，避免不同租户缓存串数据
+     */
     public long sumTotalOrderQuantity() {
-        Number cached = cacheHelper.getFromCache("totalOrderQuantity");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
+        String cacheKey = "totalOrderQuantity." + tenantId;
+        Number cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
                 .select("COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
-                .eq("delete_flag", 0);
+                .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId);
         long result = cacheHelper.extractLongScalar(productionOrderMapper.selectMaps(qw), "total");
-        cacheHelper.putToCache("totalOrderQuantity", result);
+        cacheHelper.putToCache(cacheKey, result);
         return result;
     }
 
     public long countOverdueOrders() {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        // P0 修复（铁律4 多租户隔离）：缓存键必须含 tenantId + factoryId，防止跨租户/跨工厂缓存串数据
         String factorySuffix = org.springframework.util.StringUtils.hasText(factoryId) ? "." + factoryId : "";
-        String cacheKey = "overdueOrders" + factorySuffix;
+        String cacheKey = "overdueOrders." + tenantId + factorySuffix;
         Number cached = cacheHelper.getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
         LocalDateTime now = LocalDateTime.now();
@@ -219,36 +274,68 @@ public class DashboardOrderQueryHelper {
                 .list();
     }
 
+    /**
+     * 样衣款数（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countSampleStylesBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getTenantId, tenantId)
                 .isNotNull(StyleInfo::getSampleStatus)
                 .ge(start != null, StyleInfo::getCreateTime, start)
                 .le(end != null, StyleInfo::getCreateTime, end)
                 .count();
     }
 
+    /**
+     * 生产订单数（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long countProductionOrdersBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
                 .count();
     }
 
+    /**
+     * 订单数量合计（按时间区间）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return 0L;
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
             .select("COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
             .eq("delete_flag", 0)
+            .eq("tenant_id", tenantId)
             .ge(start != null, "create_time", start)
             .le(end != null, "create_time", end);
         return cacheHelper.extractLongScalar(productionOrderMapper.selectMaps(qw), "total");
     }
 
+    /**
+     * 每日订单数量（30 天趋势）
+     * <p>
+     * P0 修复（铁律4 多租户隔离）：必须按 tenant_id 过滤，防止跨租户统计
+     */
     public List<Integer> getDailyOrderQuantities(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) return Collections.nCopies(30, 0);
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return Collections.nCopies(30, 0);
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
                 .select("DATE(create_time) as d", "COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
                 .eq("delete_flag", 0)
+                .eq("tenant_id", tenantId)
                 .ge(start != null, "create_time", start)
                 .le(end != null, "create_time", end)
                 .groupBy("DATE(create_time)");
