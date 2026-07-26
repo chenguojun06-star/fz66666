@@ -136,11 +136,14 @@ public class ReconciliationStatusOrchestrator {
         String rid = id.trim();
         String to = status.trim();
         LocalDateTime now = LocalDateTime.now();
+        Long tenantId = UserContext.tenantId();
 
         if (scope == Scope.MATERIAL || scope == Scope.AUTO) {
-            MaterialReconciliation mr = materialReconciliationService.getById(rid);
+            MaterialReconciliation mr = materialReconciliationService.lambdaQuery()
+                    .eq(MaterialReconciliation::getId, rid)
+                    .eq(MaterialReconciliation::getTenantId, tenantId)
+                    .one();
             if (mr != null) {
-                TenantAssert.assertBelongsToCurrentTenant(mr.getTenantId(), "物料对账单");
                 guardTransition(mr.getStatus(), to);
                 assertApprovePermission(to);
                 assertRejectPermission(to);
@@ -167,9 +170,11 @@ public class ReconciliationStatusOrchestrator {
         }
 
         if (scope == Scope.SHIPMENT || scope == Scope.AUTO) {
-            ShipmentReconciliation sr = shipmentReconciliationService.getById(rid);
+            ShipmentReconciliation sr = shipmentReconciliationService.lambdaQuery()
+                    .eq(ShipmentReconciliation::getId, rid)
+                    .eq(ShipmentReconciliation::getTenantId, tenantId)
+                    .one();
             if (sr != null) {
-                TenantAssert.assertBelongsToCurrentTenant(sr.getTenantId(), "成品对账单");
                 guardTransition(sr.getStatus(), to);
                 assertApprovePermission(to);
                 assertRejectPermission(to);
@@ -395,9 +400,10 @@ public class ReconciliationStatusOrchestrator {
             throw new AccessDeniedException("仅主管级别及以上可执行退回");
         }
         String rid = id.trim();
+        Long tenantId = UserContext.tenantId();
 
         if (scope == Scope.MATERIAL || scope == Scope.AUTO) {
-            String result = tryReturnMaterial(rid, reason);
+            String result = tryReturnMaterial(rid, reason, tenantId);
             if (result != null) return result;
             if (scope == Scope.MATERIAL) {
                 throw new NoSuchElementException("对账单不存在");
@@ -405,7 +411,7 @@ public class ReconciliationStatusOrchestrator {
         }
 
         if (scope == Scope.SHIPMENT || scope == Scope.AUTO) {
-            String result = tryReturnShipment(rid, reason);
+            String result = tryReturnShipment(rid, reason, tenantId);
             if (result != null) return result;
             if (scope == Scope.SHIPMENT) {
                 throw new NoSuchElementException("对账单不存在");
@@ -415,10 +421,12 @@ public class ReconciliationStatusOrchestrator {
         throw new NoSuchElementException("对账单不存在");
     }
 
-    private String tryReturnMaterial(String rid, String reason) {
-        MaterialReconciliation mr = materialReconciliationService.getById(rid);
+    private String tryReturnMaterial(String rid, String reason, Long tenantId) {
+        MaterialReconciliation mr = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, rid)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .one();
         if (mr == null) return null;
-        TenantAssert.assertBelongsToCurrentTenant(mr.getTenantId(), "物料对账单");
         String from = mr.getStatus();
         String to = previousStatus(mr.getStatus());
         if (to == null) {
@@ -443,10 +451,12 @@ public class ReconciliationStatusOrchestrator {
         return "退回成功";
     }
 
-    private String tryReturnShipment(String rid, String reason) {
-        ShipmentReconciliation sr = shipmentReconciliationService.getById(rid);
+    private String tryReturnShipment(String rid, String reason, Long tenantId) {
+        ShipmentReconciliation sr = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getId, rid)
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .one();
         if (sr == null) return null;
-        TenantAssert.assertBelongsToCurrentTenant(sr.getTenantId(), "成品对账单");
         String from = sr.getStatus();
         String to = previousStatus(sr.getStatus());
         if (to == null) {

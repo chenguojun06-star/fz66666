@@ -295,9 +295,12 @@ public class PayableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Payable markPaid(String id, BigDecimal paymentAmount) {
         TenantAssert.assertTenantContext();
-        Payable p = payableService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        Payable p = payableService.lambdaQuery()
+                .eq(Payable::getId, id)
+                .eq(Payable::getTenantId, tenantId)
+                .one();
         if (p == null) throw new RuntimeException("应付单不存在");
-        TenantAssert.assertBelongsToCurrentTenant(p.getTenantId(), "应付单");
         if ("PAID".equals(p.getStatus())) throw new RuntimeException("该应付单已结清，无法重复付款");
 
         // amount为null时默认结清全部剩余款项
@@ -330,8 +333,13 @@ public class PayableOrchestrator {
         if (payable == null || !StringUtils.hasText(payable.getBillAggregationId())) {
             return;
         }
-        BillAggregation bill = billAggregationService.getById(payable.getBillAggregationId());
-        if (bill == null || bill.getDeleteFlag() == null || bill.getDeleteFlag() != 0) {
+        Long tenantId = UserContext.tenantId();
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getId, payable.getBillAggregationId())
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .one();
+        if (bill == null) {
             return;
         }
         BigDecimal settled = bill.getSettledAmount() == null ? BigDecimal.ZERO : bill.getSettledAmount();

@@ -32,10 +32,7 @@ public class WageSettlementFeedbackOrchestrator {
     private PayrollSettlementItemService settlementItemService;
 
     public WageSettlementFeedback submitFeedback(Map<String, Object> params) {
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
-        if (tenantId == null) {
-            throw new BusinessException("超管无法提交工资结算反馈");
-        }
+        Long tenantId = TenantAssert.requireTenantId();
 
         String settlementId = (String) params.get("settlementId");
         String feedbackType = (String) params.get("feedbackType");
@@ -82,10 +79,7 @@ public class WageSettlementFeedbackOrchestrator {
     }
 
     public List<WageSettlementFeedback> listMyFeedback(Map<String, Object> params) {
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
-        if (tenantId == null) {
-            return List.of();
-        }
+        Long tenantId = TenantAssert.requireTenantId();
 
         String operatorId = UserContext.userId();
         LambdaQueryWrapper<WageSettlementFeedback> qw = new LambdaQueryWrapper<>();
@@ -107,10 +101,7 @@ public class WageSettlementFeedbackOrchestrator {
     }
 
     public List<WageSettlementFeedback> listAllFeedback(Map<String, Object> params) {
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
-        if (tenantId == null) {
-            return List.of();
-        }
+        Long tenantId = TenantAssert.requireTenantId();
 
         LambdaQueryWrapper<WageSettlementFeedback> qw = new LambdaQueryWrapper<>();
         qw.eq(WageSettlementFeedback::getTenantId, tenantId);
@@ -134,16 +125,8 @@ public class WageSettlementFeedbackOrchestrator {
     }
 
     public Map<String, Object> getFeedbackStats() {
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
+        Long tenantId = TenantAssert.requireTenantId();
         Map<String, Object> result = new LinkedHashMap<>();
-
-        if (tenantId == null) {
-            result.put("totalCount", 0);
-            result.put("pendingCount", 0);
-            result.put("resolvedCount", 0);
-            result.put("rejectedCount", 0);
-            return result;
-        }
 
         result.put("totalCount", feedbackService.count(new LambdaQueryWrapper<WageSettlementFeedback>()
                 .eq(WageSettlementFeedback::getTenantId, tenantId)));
@@ -192,10 +175,7 @@ public class WageSettlementFeedbackOrchestrator {
     }
 
     public List<Map<String, Object>> listMyPaidSettlements() {
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
-        if (tenantId == null) {
-            return List.of();
-        }
+        Long tenantId = TenantAssert.requireTenantId();
 
         String operatorId = UserContext.userId();
 

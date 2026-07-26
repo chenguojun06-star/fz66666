@@ -32,6 +32,7 @@ public class BargainPriceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public BargainPrice submit(BargainPrice bargainPrice) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
         String userId = UserContext.userId();
         String username = UserContext.username();
@@ -46,7 +47,10 @@ public class BargainPriceOrchestrator {
         bargainPriceService.save(bargainPrice);
 
         if ("order".equals(bargainPrice.getTargetType()) && StringUtils.hasText(bargainPrice.getTargetId())) {
-            ProductionOrder order = productionOrderService.getById(bargainPrice.getTargetId());
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, bargainPrice.getTargetId())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             if (order != null) {
                 String detail = "原始单价" + (bargainPrice.getOriginalPrice() != null ? bargainPrice.getOriginalPrice() : "-")
                         + "→" + (bargainPrice.getBargainedPrice() != null ? bargainPrice.getBargainedPrice() : "-")
@@ -63,12 +67,15 @@ public class BargainPriceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public BargainPrice approve(Long id) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        BargainPrice bp = bargainPriceService.getById(id);
+        BargainPrice bp = bargainPriceService.lambdaQuery()
+                .eq(BargainPrice::getId, id)
+                .eq(BargainPrice::getTenantId, tenantId)
+                .one();
         if (bp == null) {
             throw new RuntimeException("还价记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(bp.getTenantId(), "还价记录");
 
         bp.setStatus("approved");
         bp.setApprovedBy(UserContext.userId());
@@ -77,13 +84,19 @@ public class BargainPriceOrchestrator {
         bargainPriceService.updateById(bp);
 
         if ("order".equals(bp.getTargetType()) && StringUtils.hasText(bp.getTargetId()) && bp.getBargainedPrice() != null) {
-            ProductionOrder latestOrder = productionOrderService.getById(bp.getTargetId());
+            ProductionOrder latestOrder = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, bp.getTargetId())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             if (latestOrder != null) {
                 String detail = "还价审批通过，单价" + (bp.getOriginalPrice() != null ? bp.getOriginalPrice() : "-")
                         + "→" + bp.getBargainedPrice();
                 orderRemarkHelper.append(latestOrder, "还价审批", detail);
 
-                ProductionOrder freshOrder = productionOrderService.getById(bp.getTargetId());
+                ProductionOrder freshOrder = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getId, bp.getTargetId())
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .one();
                 freshOrder.setOrderUnitPrice(bp.getBargainedPrice());
                 productionOrderService.updateById(freshOrder);
                 log.info("[BargainPrice] 还价审批通过，订单 {} 单价更新为 {}",
@@ -98,12 +111,15 @@ public class BargainPriceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public BargainPrice reject(Long id) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
-        BargainPrice bp = bargainPriceService.getById(id);
+        BargainPrice bp = bargainPriceService.lambdaQuery()
+                .eq(BargainPrice::getId, id)
+                .eq(BargainPrice::getTenantId, tenantId)
+                .one();
         if (bp == null) {
             throw new RuntimeException("还价记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(bp.getTenantId(), "还价记录");
 
         bp.setStatus("rejected");
         bp.setApprovedBy(UserContext.userId());

@@ -530,11 +530,15 @@ public class BillAggregationOrchestrator {
     // ==================== 内部方法 ====================
 
     private BillAggregation getBillOrThrow(String billId) {
-        BillAggregation bill = billAggregationService.getById(billId);
-        if (bill == null || bill.getDeleteFlag() != 0) {
+        Long tenantId = UserContext.tenantId();
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getId, billId)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .one();
+        if (bill == null) {
             throw new RuntimeException("账单不存在: " + billId);
         }
-        TenantAssert.assertBelongsToCurrentTenant(bill.getTenantId(), "账单");
         return bill;
     }
 

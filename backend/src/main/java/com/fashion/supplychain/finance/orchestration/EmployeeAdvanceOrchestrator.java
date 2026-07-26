@@ -88,14 +88,18 @@ public class EmployeeAdvanceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void approve(String advanceId, String remark) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         if (!UserContext.isTopAdmin()) {
             throw new org.springframework.security.access.AccessDeniedException("仅管理员及以上可审批借支");
         }
-        EmployeeAdvance advance = employeeAdvanceService.getById(advanceId);
-        if (advance == null || advance.getDeleteFlag() == 1) {
+        EmployeeAdvance advance = employeeAdvanceService.lambdaQuery()
+                .eq(EmployeeAdvance::getId, advanceId)
+                .eq(EmployeeAdvance::getTenantId, tenantId)
+                .eq(EmployeeAdvance::getDeleteFlag, 0)
+                .one();
+        if (advance == null) {
             throw new NoSuchElementException("借支记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "借支记录");
         UserContext ctx = UserContext.get();
         String approverId = ctx != null ? ctx.getUserId() : null;
         String approverName = ctx != null ? ctx.getUsername() : null;
@@ -109,14 +113,18 @@ public class EmployeeAdvanceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void reject(String advanceId, String remark) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         if (!UserContext.isTopAdmin()) {
             throw new org.springframework.security.access.AccessDeniedException("仅管理员及以上可审批借支");
         }
-        EmployeeAdvance advance = employeeAdvanceService.getById(advanceId);
-        if (advance == null || advance.getDeleteFlag() == 1) {
+        EmployeeAdvance advance = employeeAdvanceService.lambdaQuery()
+                .eq(EmployeeAdvance::getId, advanceId)
+                .eq(EmployeeAdvance::getTenantId, tenantId)
+                .eq(EmployeeAdvance::getDeleteFlag, 0)
+                .one();
+        if (advance == null) {
             throw new NoSuchElementException("借支记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "借支记录");
         UserContext ctx = UserContext.get();
         String approverId = ctx != null ? ctx.getUserId() : null;
         String approverName = ctx != null ? ctx.getUsername() : null;
@@ -130,14 +138,18 @@ public class EmployeeAdvanceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void repay(String advanceId, BigDecimal repayAmount) {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         if (repayAmount == null || repayAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("还款金额必须大于0");
         }
-        EmployeeAdvance advance = employeeAdvanceService.getById(advanceId);
-        if (advance == null || advance.getDeleteFlag() == 1) {
+        EmployeeAdvance advance = employeeAdvanceService.lambdaQuery()
+                .eq(EmployeeAdvance::getId, advanceId)
+                .eq(EmployeeAdvance::getTenantId, tenantId)
+                .eq(EmployeeAdvance::getDeleteFlag, 0)
+                .one();
+        if (advance == null) {
             throw new NoSuchElementException("借支记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "员工借支");
         if (!"approved".equalsIgnoreCase(advance.getStatus())) {
             throw new IllegalStateException("只有已审批的借支可还款");
         }

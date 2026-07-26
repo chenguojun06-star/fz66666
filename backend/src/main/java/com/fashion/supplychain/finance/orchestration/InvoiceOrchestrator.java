@@ -161,9 +161,12 @@ public class InvoiceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Invoice update(Invoice invoice) {
         TenantAssert.assertTenantContext();
-        Invoice existing = invoiceService.getById(invoice.getId());
+        Long tenantId = UserContext.tenantId();
+        Invoice existing = invoiceService.lambdaQuery()
+                .eq(Invoice::getId, invoice.getId())
+                .eq(Invoice::getTenantId, tenantId)
+                .one();
         if (existing == null) throw new RuntimeException("发票不存在");
-        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "发票");
         if (!"DRAFT".equals(existing.getStatus())) throw new RuntimeException("只有草稿状态的发票可以编辑");
 
         // 保护不可修改的字段
@@ -183,9 +186,12 @@ public class InvoiceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Invoice issue(String id) {
         TenantAssert.assertTenantContext();
-        Invoice inv = invoiceService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        Invoice inv = invoiceService.lambdaQuery()
+                .eq(Invoice::getId, id)
+                .eq(Invoice::getTenantId, tenantId)
+                .one();
         if (inv == null) throw new RuntimeException("发票不存在");
-        TenantAssert.assertBelongsToCurrentTenant(inv.getTenantId(), "发票");
         if (!"DRAFT".equals(inv.getStatus())) throw new RuntimeException("只有草稿状态的发票可以开具");
 
         inv.setStatus("ISSUED");
@@ -198,9 +204,12 @@ public class InvoiceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Invoice cancel(String id) {
         TenantAssert.assertTenantContext();
-        Invoice inv = invoiceService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        Invoice inv = invoiceService.lambdaQuery()
+                .eq(Invoice::getId, id)
+                .eq(Invoice::getTenantId, tenantId)
+                .one();
         if (inv == null) throw new RuntimeException("发票不存在");
-        TenantAssert.assertBelongsToCurrentTenant(inv.getTenantId(), "发票");
         if ("CANCELLED".equals(inv.getStatus())) throw new RuntimeException("发票已作废");
 
         inv.setStatus("CANCELLED");

@@ -289,16 +289,7 @@ public class FinancialReportOrchestrator {
 
     public Map<String, Object> generateAgingAnalysis(String type) {
         assertNotFactoryAccount();
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
-        if (tenantId == null) {
-            Map<String, Object> empty = new LinkedHashMap<>();
-            empty.put("reportType", "AGING_ANALYSIS");
-            empty.put("type", type);
-            empty.put("asOfDate", LocalDate.now().toString());
-            empty.put("buckets", Collections.emptyList());
-            empty.put("totalAmount", BigDecimal.ZERO);
-            return empty;
-        }
+        Long tenantId = TenantAssert.requireTenantId();
         LocalDate today = LocalDate.now();
 
         Map<String, Object> result = new LinkedHashMap<>();
