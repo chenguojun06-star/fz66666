@@ -1,10 +1,12 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -41,6 +44,9 @@ public class MaterialPurchaseOrchestratorHelper {
 
     @Autowired
     private StyleBomService styleBomService;
+
+    @Autowired
+    private MaterialStockService materialStockService;
 
     /* ========== 列表富化 ========== */
 
@@ -101,10 +107,14 @@ public class MaterialPurchaseOrchestratorHelper {
         loadPatternFields(patternProductionIds, patternQuantityMap, patternColorMap,
                 patternFactoryNameMap, patternFactoryTypeMap, patternOrderBizTypeMap);
 
+        // 批量查询库存，按 materialCode|color|size 分组（1 次 SQL，避免 N+1）
+        Map<String, List<MaterialStock>> stockCache = batchQueryStockByPurchases(records);
+
         List<Map<String, Object>> enrichedRecords = records.stream()
             .map(record -> enrichRecord(record, orderQuantityMap, patternQuantityMap, orderColorMap, patternColorMap,
                     orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap,
-                    patternFactoryNameMap, patternFactoryTypeMap, patternOrderBizTypeMap))
+                    patternFactoryNameMap, patternFactoryTypeMap, patternOrderBizTypeMap,
+                    stockCache))
                 .collect(Collectors.toList());
 
         return buildPageResult(enrichedRecords, page);
@@ -189,7 +199,8 @@ public class MaterialPurchaseOrchestratorHelper {
             Map<String, String> orderFactoryNameMap, Map<String, String> orderFactoryTypeMap,
             Map<String, String> orderBizTypeMap,
             Map<String, String> patternFactoryNameMap, Map<String, String> patternFactoryTypeMap,
-            Map<String, String> patternOrderBizTypeMap) {
+            Map<String, String> patternOrderBizTypeMap,
+            Map<String, List<MaterialStock>> stockCache) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", record.getId());
         map.put("purchaseNo", record.getPurchaseNo());
@@ -259,7 +270,68 @@ public class MaterialPurchaseOrchestratorHelper {
                 && StringUtils.hasText(record.getOrderId())
                 && !orderQuantityMap.containsKey(record.getOrderId());
         map.put("isOrphan", isOrphan);
+
+        // 库存状态 + 可用库存数（按 materialCode + color + size 匹配，与 StyleBom 逻辑一致）
+        String stockKey = buildStockKey(record.getMaterialCode(), record.getColor(), record.getSize());
+        List<MaterialStock> stockList = stockCache.getOrDefault(stockKey, Collections.emptyList());
+        int availableStock = calcAvailableStock(stockList);
+        // 采购数量作为需求量（考虑已到货部分）
+        BigDecimal purchaseQty = record.getPurchaseQuantity();
+        int requiredQty = purchaseQty != null ? purchaseQty.intValue() : 0;
+        String stockStatus;
+        if (availableStock >= requiredQty && requiredQty > 0) {
+            stockStatus = "sufficient";
+        } else if (availableStock > 0) {
+            stockStatus = "insufficient";
+        } else {
+            stockStatus = "none";
+        }
+        map.put("stockStatus", stockStatus);
+        map.put("availableStock", availableStock);
         return map;
+    }
+
+    /**
+     * 批量查询采购单关联的物料库存，按 materialCode|color|size 分组。
+     * 1 次 SQL 查询所有 materialCode，避免 N+1。
+     */
+    private Map<String, List<MaterialStock>> batchQueryStockByPurchases(List<MaterialPurchase> purchases) {
+        Set<String> materialCodes = purchases.stream()
+                .map(MaterialPurchase::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (materialCodes.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            List<MaterialStock> allStocks = materialStockService.list(
+                    new LambdaQueryWrapper<MaterialStock>()
+                            .in(MaterialStock::getMaterialCode, materialCodes));
+            return allStocks.stream()
+                    .collect(Collectors.groupingBy(s -> buildStockKey(s.getMaterialCode(), s.getColor(), s.getSize())));
+        } catch (Exception e) {
+            log.warn("Failed to batch query stock for purchase list enrichment", e);
+            return Collections.emptyMap();
+        }
+    }
+
+    private String buildStockKey(String materialCode, String color, String size) {
+        return (materialCode == null ? "" : materialCode) + "|"
+                + (color == null ? "" : color) + "|"
+                + (size == null ? "" : size);
+    }
+
+    private int calcAvailableStock(List<MaterialStock> stockList) {
+        if (stockList == null || stockList.isEmpty()) {
+            return 0;
+        }
+        return stockList.stream()
+                .mapToInt(stock -> {
+                    int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                    int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
+                    return Math.max(0, qty - locked);
+                })
+                .sum();
     }
 
     private Map<String, Object> buildPageResult(Object records, IPage<?> page) {

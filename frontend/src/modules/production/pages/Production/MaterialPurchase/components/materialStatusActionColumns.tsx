@@ -1,4 +1,4 @@
-import { Tag, Modal } from 'antd';
+import { Tag, Modal, Button, Space, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
@@ -13,8 +13,16 @@ import {
 } from './MaterialTable.helpers';
 import type { UseMaterialColumnsParams } from './useMaterialColumns';
 
+// 库存状态配置（与 BOM 列表保持一致）
+const STOCK_STATUS_CONFIG: Record<string, { color: string; text: string }> = {
+  sufficient: { color: 'success', text: '库存充足' },
+  insufficient: { color: 'warning', text: '库存不足' },
+  none: { color: 'error', text: '无库存' },
+  unchecked: { color: 'default', text: '未检查' },
+};
+
 /**
- * 状态/时间/操作列：状态/来源/下单时间/预计出货/采购时间/采购完成/采购员/备注/操作
+ * 状态/时间/操作列：库存状态/状态/来源/下单时间/预计出货/采购时间/采购完成/采购员/备注/操作
  */
 export const buildStatusActionColumns = (params: UseMaterialColumnsParams): ColumnsType<MaterialPurchaseType> => {
   const {
@@ -36,8 +44,52 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
     arrivalForm,
     setArrivalTarget,
     setCancelTarget,
+    onApplyPickup,
   } = params;
   return [
+    {
+      title: '库存/领取',
+      dataIndex: 'stockStatus',
+      key: 'stockStatus',
+      width: 130,
+      render: (_: unknown, record: MaterialPurchaseType) => {
+        const status = record.stockStatus;
+        if (!status) {
+          return <Tag color="default">未检查</Tag>;
+        }
+        const config = STOCK_STATUS_CONFIG[status] || { color: 'default', text: status };
+        const stockNum = record.availableStock;
+        const hasStockNum = stockNum != null && stockNum > 0;
+        const stockText = hasStockNum ? `${stockNum}${record.unit || ''}` : '';
+        const canPickup = status === 'sufficient' && !!onApplyPickup && hasStockNum;
+
+        if (canPickup) {
+          return (
+            <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
+              <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
+              <Tooltip title="点击领取">
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, height: 'auto', fontSize: '13px', fontWeight: 500 }}
+                  onClick={() => onApplyPickup!(record)}
+                >
+                  {stockText} · 领取
+                </Button>
+              </Tooltip>
+            </Space>
+          );
+        }
+        return (
+          <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
+            <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
+            {stockText && (
+              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{stockText}</span>
+            )}
+          </Space>
+        );
+      },
+    },
     {
       title: '状态',
       dataIndex: 'status',

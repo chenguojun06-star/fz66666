@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form } from 'antd';
+import { Form, App } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams } from '@/types/production';
@@ -7,6 +7,9 @@ import { useMaterialColumns } from './useMaterialColumns';
 import CancelReceiveModal from './CancelReceiveModal';
 import ArrivalConfirmModal from './ArrivalConfirmModal';
 import SelectedRowsBar from './SelectedRowsBar';
+import { useUser } from '@/utils/AuthContext';
+import { confirmAction } from '@/utils/confirm';
+import api from '@/utils/api';
 
 interface MaterialTableProps {
   loading: boolean;
@@ -62,10 +65,46 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   onBatchAddToCart,
 }) => {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const { message } = App.useApp();
   const [selectedRows, setSelectedRows] = useState<MaterialPurchaseType[]>([]);
   const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
   const [arrivalTarget, setArrivalTarget] = useState<MaterialPurchaseType | null>(null);
   const [arrivalForm] = Form.useForm();
+
+  // 大货采购领取面辅料
+  const handleApplyPickup = React.useCallback((record: MaterialPurchaseType) => {
+    const pickupQty = record.purchaseQuantity;
+    confirmAction('大货生产领取', `确认领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`, async () => {
+      try {
+        await api.post('/production/picking/pending', {
+          picking: {
+            styleId: String(record.styleId || ''),
+            styleNo: record.styleNo || '',
+            orderNo: record.orderNo || '',
+            orderId: String(record.orderId || ''),
+            pickerId: String(user?.id || ''),
+            pickerName: String(user?.name || user?.username || ''),
+            pickupType: record.factoryType === 'EXTERNAL' ? 'EXTERNAL' : 'INTERNAL',
+            usageType: 'BULK',
+            remark: 'BOM_PICK_BULK',
+          },
+          items: [{
+            materialId: record.materialId,
+            materialCode: record.materialCode,
+            materialName: record.materialName,
+            color: record.color ?? '',
+            size: record.size ?? '',
+            quantity: pickupQty != null ? Number(pickupQty) : 1,
+            unit: record.unit ?? '',
+          }],
+        });
+        message.success('领取成功，将在「面辅料出入库 → 待出库领料」中显示');
+      } catch (error: unknown) {
+        message.error(`领取失败：${error instanceof Error ? error.message : '请求错误'}`);
+      }
+    }, { okText: '确认领取' });
+  }, [user, message]);
 
   const columns = useMaterialColumns({
     dataSource,
@@ -89,6 +128,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
     arrivalForm,
     setArrivalTarget,
     setCancelTarget,
+    onApplyPickup: handleApplyPickup,
   });
 
   return (

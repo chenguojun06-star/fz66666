@@ -29,6 +29,7 @@ export interface UseMaterialColumnsParams {
   arrivalForm: FormInstance;
   setArrivalTarget: Dispatch<SetStateAction<MaterialPurchaseType | null>>;
   setCancelTarget: Dispatch<SetStateAction<MaterialPurchaseType | null>>;
+  onApplyPickup?: (record: MaterialPurchaseType) => void;
 }
 
 /**

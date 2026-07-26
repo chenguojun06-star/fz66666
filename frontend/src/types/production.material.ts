@@ -80,6 +80,9 @@ export interface MaterialPurchase extends Record<string, unknown> {
   auditOperatorId?: string;
   auditOperatorName?: string;
   isOrphan?: boolean;  // 孤儿单：父订单已被删除（由后端 enrichRecord 填充）
+  // 库存状态（由后端 enrichRecord 批量查询注入）
+  stockStatus?: 'sufficient' | 'insufficient' | 'none' | 'unchecked';
+  availableStock?: number;  // 可用库存数量
 }
 
 export interface MaterialQueryParams {
