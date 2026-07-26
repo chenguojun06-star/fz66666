@@ -117,15 +117,23 @@ const StyleInfoDetailPage: React.FC = () => {
     return editLocked && Boolean(currentStyle?.id);
   };
 
+  // 用 ref 持有最新值，避免事件监听 effect 频繁重订阅导致闪动
+  const editLockedRef = useRef(editLocked);
+  editLockedRef.current = editLocked;
+  const currentStyleIdRef = useRef(currentStyle?.id);
+  currentStyleIdRef.current = currentStyle?.id;
+  const fetchDetailRef = useRef(fetchDetail);
+  fetchDetailRef.current = fetchDetail;
+
   useEffect(() => {
     if (!styleIdParam || isNewPage) return;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleChange = () => {
-      if (editLocked && Boolean(currentStyle?.id)) return;
+      if (editLockedRef.current && Boolean(currentStyleIdRef.current)) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        if (editLocked && Boolean(currentStyle?.id)) return;
-        void fetchDetail(styleIdParam);
+        if (editLockedRef.current && Boolean(currentStyleIdRef.current)) return;
+        void fetchDetailRef.current(styleIdParam);
       }, 500);
     };
     window.addEventListener('order:progress:changed', handleChange);
@@ -135,7 +143,7 @@ const StyleInfoDetailPage: React.FC = () => {
       window.removeEventListener('order:progress:changed', handleChange);
       window.removeEventListener('data:changed', handleChange);
     };
-  }, [styleIdParam, isNewPage, editLocked, currentStyle?.id, fetchDetail]);
+  }, [styleIdParam, isNewPage]);
 
   if (!isDetailPage && !isNewPage) {
     return null;

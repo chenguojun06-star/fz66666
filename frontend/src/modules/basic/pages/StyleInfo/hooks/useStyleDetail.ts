@@ -88,9 +88,24 @@ export const useStyleDetail = (styleId?: string) => {
     setActiveTabKey(tabKeyFromQuery || '1');
   }, [styleId, tabKeyFromQuery, isNewPage, fetchDetail, resetForm]);
 
-  // 当详情数据变化时，同步到表单
+  // 当详情数据变化时，同步到表单（仅在 currentStyle 内容真正变化时才 setFieldsValue，避免闪动）
+  const lastSyncedStyleRef = useRef<string>('');
   useEffect(() => {
     if (!isEditorOpen || !currentStyle) return;
+
+    // 用 id + updateTime + 关键字段指纹判断是否真正变化，避免引用变化但内容相同也重置表单
+    const fingerprint = JSON.stringify({
+      id: currentStyle.id,
+      updateTime: currentStyle.updateTime,
+      styleName: currentStyle.styleName,
+      category: currentStyle.category,
+      season: currentStyle.season,
+      colors: currentStyle.colors,
+      sizes: currentStyle.sizes,
+      extJson: currentStyle.extJson,
+    });
+    if (lastSyncedStyleRef.current === fingerprint) return;
+    lastSyncedStyleRef.current = fingerprint;
 
     const nextValues: Record<string, any> = { ...currentStyle };
     const rawCreateTime = nextValues.createTime;
