@@ -121,7 +121,7 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
     return () => clearTimeout(timer);
   }, [styleId, colorOptions, sizeOptions, sizeColorMatrixRows, message]);
 
-  // 智能识别结果填充：款名/品类/季节/颜色/尺码，面料袖型领型版型图案放备注
+  // 智能识别结果填充：款名/品类/季节/颜色/尺码 + 款式特征（面料/袖型/领型/版型/图案）
   const applyStyleParseResult = (result: StyleFieldParseResult) => {
     if (!result || result.available === false) return;
 
@@ -146,6 +146,40 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
         o.value === result.season || String(o.label || '').includes(result.season!)
       );
       if (sea) updates.season = sea.value;
+    }
+
+    // 款式特征：面料/袖型/领型/版型/图案 — 回填到对应字段（而非堆在备注）
+    const currentExtJson = _form.getFieldValue('extJson') || {};
+    const extJsonUpdates: Record<string, any> = { ...(typeof currentExtJson === 'object' ? currentExtJson : {}) };
+    let extJsonChanged = false;
+
+    if (result.fabric && !extJsonUpdates.fabric) {
+      extJsonUpdates.fabric = result.fabric;
+      extJsonChanged = true;
+    }
+    if (result.sleeveType && !extJsonUpdates.sleeveType) {
+      extJsonUpdates.sleeveType = result.sleeveType;
+      extJsonChanged = true;
+    }
+    if (result.neckline && !extJsonUpdates.neckline) {
+      extJsonUpdates.neckline = result.neckline;
+      extJsonChanged = true;
+    }
+    if (result.version && !extJsonUpdates.version) {
+      extJsonUpdates.version = result.version;
+      extJsonChanged = true;
+    }
+    if (result.pattern && !extJsonUpdates.pattern) {
+      extJsonUpdates.pattern = result.pattern;
+      extJsonChanged = true;
+    }
+    if (result.summary && !extJsonUpdates.craftStyle) {
+      extJsonUpdates.craftStyle = result.summary;
+      extJsonChanged = true;
+    }
+
+    if (extJsonChanged) {
+      updates.extJson = extJsonUpdates;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -176,22 +210,6 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
       const newSizeOptions = recommended.filter((s: string) => !commonSizes.includes(s));
       if (newSizeOptions.length > 0) {
         setCommonSizes([...commonSizes, ...newSizeOptions]);
-      }
-    }
-
-    // 备注字段：综合面料/袖型/领型/版型/图案 + 置信度
-    if (!_form.getFieldValue('remark')) {
-      const remarkParts: string[] = [];
-      if (result.pattern) remarkParts.push(`图案:${result.pattern}`);
-      if (result.fabric) remarkParts.push(`面料:${result.fabric}`);
-      if (result.sleeveType) remarkParts.push(`袖型:${result.sleeveType}`);
-      if (result.neckline) remarkParts.push(`领型:${result.neckline}`);
-      if (result.version) remarkParts.push(`版型:${result.version}`);
-      if (typeof result.overallConfidence === 'number') {
-        remarkParts.push(`置信度:${result.overallConfidence}%`);
-      }
-      if (remarkParts.length > 0) {
-        _form.setFieldsValue({ remark: remarkParts.join(' | ') });
       }
     }
   };

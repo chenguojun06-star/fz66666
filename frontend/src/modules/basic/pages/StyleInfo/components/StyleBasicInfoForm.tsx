@@ -6,6 +6,7 @@ import { useStyleBasicInfoForm } from './StyleBasicInfoForm/useStyleBasicInfoFor
 import BasicInfoSection from './StyleBasicInfoForm/BasicInfoSection';
 import CustomerInfoSection from './StyleBasicInfoForm/CustomerInfoSection';
 import PlateInfoSection from './StyleBasicInfoForm/PlateInfoSection';
+import StyleFeatureSection from './StyleBasicInfoForm/StyleFeatureSection';
 import TimeRemarkSection from './StyleBasicInfoForm/TimeRemarkSection';
 import ColorSizeSkuSection from './StyleBasicInfoForm/ColorSizeSkuSection';
 import ExtFieldsSectionBlock from './StyleBasicInfoForm/ExtFieldsSectionBlock';
@@ -103,7 +104,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         {/* 区3：版次与版型信息 */}
         <PlateInfoSection {...sectionFormContext} />
 
-        {/* 区4：时间与备注 */}
+        {/* 区4：款式特征 · AI识别（面料/袖型/领型/版型/图案/工艺风格） */}
+        <StyleFeatureSection {...sectionFormContext} isNewPage={isNewPage} />
+
+        {/* 区5：时间与备注 */}
         <TimeRemarkSection {...sectionFormContext} />
 
         {/* 区5：颜色 / 尺码 / SKU 配置 */}
