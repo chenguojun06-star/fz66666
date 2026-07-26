@@ -51,6 +51,19 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const manualCloseRef = useRef(false);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 检查 JWT token 是否已过期（仅检查 exp 字段，不验证签名）
+  const isTokenExpired = useCallback((token: string): boolean => {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return false; // 格式异常不阻断，交给后端校验
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (!payload.exp) return false; // 无 exp 字段，不阻断
+      return Date.now() >= payload.exp * 1000;
+    } catch {
+      return false; // 解析失败不阻断，交给后端校验
+    }
+  }, []);
+
   const connect = useCallback(() => {
     if (!enabled || !userId || tenantId === undefined) return;
 
@@ -63,6 +76,13 @@ export function useWebSocket(options: UseWebSocketOptions) {
       localStorage.getItem('token');
     if (!token) {
       console.warn('[WS] 缺失token，无法建立WebSocket连接');
+      return;
+    }
+
+    // token 已过期则停止重连，避免后端反复拒绝握手刷 ERROR 日志
+    if (isTokenExpired(token)) {
+      console.warn('[WS] token已过期，停止WebSocket重连');
+      reconnectAttemptsRef.current = maxReconnectAttempts; // 触发上限停止
       return;
     }
 
@@ -140,7 +160,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     };
 
     wsRef.current = ws;
-  }, [enabled, userId, tenantId, reconnectInterval, maxReconnectAttempts, explicitToken]);
+  }, [enabled, userId, tenantId, reconnectInterval, maxReconnectAttempts, explicitToken, isTokenExpired]);
 
   useEffect(() => {
     if (enabled) {

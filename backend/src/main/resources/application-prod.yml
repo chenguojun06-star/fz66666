@@ -67,6 +67,12 @@ spring:
     org.springframework.security: warn
     org.apache.ibatis: warn
     com.baomidou.mybatisplus: warn
+    # SSE/流式接口 response 已提交时 Spring 尝试渲染 error 页产生的已知无害噪音，直接屏蔽
+    '[org.springframework.boot.autoconfigure.web.servlet.error]': off
+    # WebSocket 握手失败（如 token 过期）在 Tomcat dispatcherServlet 层的 ERROR 日志，
+    # GlobalExceptionHandler 捕获不到（异常发生在 WsFilter 层，早于 DispatcherServlet），
+    # 真正的握手拒绝原因已在 WebSocketHandshakeInterceptor 中以 WARN 日志输出，此处屏蔽噪音
+    '[org.apache.catalina.core.ContainerBase.[Tomcat].[host].[context].[dispatcherServlet]]': off
   file:
     name: /logs/fashion-supplychain.log
     max-size: 100MB
