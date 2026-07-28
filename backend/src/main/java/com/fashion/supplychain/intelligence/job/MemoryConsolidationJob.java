@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,10 @@ public class MemoryConsolidationJob {
     /** 单次最多处理的租户数（容量保护） */
     private static final int MAX_TENANTS_PER_RUN = 100;
 
+    /** P0 修复：添加 enabled 开关，避免合并逻辑 bug 不可逆破坏所有租户的长期记忆 */
+    @Value("${xiaoyun.job.memory-consolidation.enabled:true}")
+    private boolean enabled;
+
     @Autowired
     private MemoryConsolidationService memoryConsolidationService;
 
@@ -51,6 +56,10 @@ public class MemoryConsolidationJob {
      */
     @Scheduled(cron = "0 30 3 * * ?")
     public void consolidateMemories() {
+        if (!enabled) {
+            log.debug("[MemoryConsolidationJob] 已禁用");
+            return;
+        }
         log.info("[MemoryConsolidationJob] ===== 开始离线记忆巩固 =====");
 
         List<Long> tenants = null;

@@ -28,6 +28,19 @@ public class DagExecutionEngine {
             },
             new ThreadPoolExecutor.CallerRunsPolicy());
 
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        parallelExecutor.shutdown();
+        try {
+            if (!parallelExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                parallelExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            parallelExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public void registerExecutor(String nodeId, DagNodeExecutor executor) {
         executorRegistry.put(nodeId, executor);
     }

@@ -143,9 +143,9 @@ public class LongTermMemoryOrchestrator {
         return base * factor;
     }
 
-    public void incrementHit(Long id) {
+    public void incrementHit(Long id, Long tenantId) {
         try {
-            memoryMapper.incrementHit(id);
+            memoryMapper.incrementHit(id, tenantId);
         } catch (Exception e) {
             log.warn("[Memory] 递增命中失败 id={} err={}", id, e.getMessage());
         }

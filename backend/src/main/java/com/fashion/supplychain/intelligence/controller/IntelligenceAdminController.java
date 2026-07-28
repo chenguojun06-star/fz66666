@@ -93,6 +93,7 @@ public class IntelligenceAdminController {
         return Result.success(orphanDataDetector.listOrphanData(tableName, page, pageSize));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/orphan-data/delete")
     public Result<Integer> deleteOrphanData(@RequestBody Map<String, Object> body) {
         String tableName = (String) body.get("tableName");
@@ -272,6 +273,7 @@ public class IntelligenceAdminController {
 
     // ── 工作流执行 ──
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/workflow/execute")
     public Result<com.fashion.supplychain.intelligence.entity.WorkflowExecution> executeWorkflow(
             @RequestBody Map<String, Object> body) {
@@ -301,6 +303,7 @@ public class IntelligenceAdminController {
         return Result.success(result);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/agent-state/session/{sessionId}/rollback")
     public Result<Void> rollbackAgentSession(@PathVariable String sessionId,
                                               @RequestBody Map<String, Object> body) {
@@ -311,6 +314,7 @@ public class IntelligenceAdminController {
 
     // ── Agent 会议 ──
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/meeting/hold")
     public Result<com.fashion.supplychain.intelligence.entity.AgentMeeting> holdMeeting(
             @RequestBody Map<String, String> body) {
@@ -339,6 +343,7 @@ public class IntelligenceAdminController {
         return Result.success(checkpointService.getCheckpointHistory(UserContext.tenantId(), threadId));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/checkpoint/restore")
     public Result<AgentState> restoreFromCheckpoint(@RequestParam String threadId) {
         AgentState state = checkpointService.restoreFromCheckpoint(UserContext.tenantId(), threadId);
@@ -356,6 +361,7 @@ public class IntelligenceAdminController {
         return Result.success(memoryService.getAllCoreMemory(UserContext.tenantId(), agentId));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/memory/core")
     public Result<Void> setCoreMemory(@RequestBody Map<String, String> body) {
         memoryService.setCoreMemory(UserContext.tenantId(),
@@ -371,6 +377,7 @@ public class IntelligenceAdminController {
         return Result.success(memoryService.recallArchival(UserContext.tenantId(), agentId, contentType, limit));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/memory/decay")
     public Result<Integer> applyDecayCurve() {
         return Result.success(memoryService.applyDecayCurve(UserContext.tenantId()));

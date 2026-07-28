@@ -11,9 +11,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @Lazy
@@ -48,6 +53,16 @@ public class ProducesRelationExtractor implements RelationExtractor {
                         .eq(ProductionOrder::getDeleteFlag, 0)
                         .last("LIMIT 1000"));
 
+        // 批量预加载 StyleInfo（修复 N+1 查询）
+        Set<String> styleIds = orders.stream()
+                .map(ProductionOrder::getStyleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, StyleInfo> styleMap = styleIds.isEmpty()
+                ? Collections.emptyMap()
+                : styleInfoMapper.selectBatchIds(styleIds).stream()
+                        .collect(Collectors.toMap(s -> String.valueOf(s.getId()), Function.identity(), (a, b) -> a));
+
         Set<String> seen = new HashSet<>();
         List<KgRelation> results = new ArrayList<>();
         for (ProductionOrder o : orders) {
@@ -56,7 +71,7 @@ public class ProducesRelationExtractor implements RelationExtractor {
             String key = o.getFactoryId() + "|" + o.getStyleId();
             if (!seen.add(key)) continue;
 
-            StyleInfo style = styleInfoMapper.selectById(o.getStyleId());
+            StyleInfo style = styleMap.get(o.getStyleId());
             if (style == null) continue;
 
             KgRelation rel = new KgRelation();

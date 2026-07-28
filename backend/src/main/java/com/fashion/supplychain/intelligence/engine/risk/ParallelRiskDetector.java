@@ -33,6 +33,19 @@ public class ParallelRiskDetector {
                 return t;
             });
 
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public Map<RiskType, List<RiskItem>> detectAll(Long tenantId) {
         if (tenantId == null) return new EnumMap<>(RiskType.class);
 

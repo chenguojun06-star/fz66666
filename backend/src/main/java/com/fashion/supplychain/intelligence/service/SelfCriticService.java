@@ -244,7 +244,11 @@ public class SelfCriticService {
                         com.fashion.supplychain.intelligence.gateway.ModelConsortiumRouter.Complexity.MODERATE,
                         score);
                 log.debug("[SelfCritic→Router] 质量反馈: model={} score={} session={}", modelName, score, sessionId);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                // 质量反馈失败不影响主流程，但需记录便于排查 RouteLLM 路由失效问题
+                log.warn("[SelfCritic→Router] 质量反馈失败 (不影响评分主流程): model={}, session={}, err={}",
+                        metrics.getModelName(), sessionId, e.getMessage());
+            }
         }
 
         log.info("[SelfCritic] session={} score={} quickPath={} tools={}耗时={}ms",

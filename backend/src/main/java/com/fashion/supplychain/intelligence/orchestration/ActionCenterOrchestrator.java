@@ -417,7 +417,7 @@ public class ActionCenterOrchestrator {
                             ? insight.getContent().substring(0, 100) + "..."
                             : insight.getContent();
                         task.setReason(task.getReason() + " | 跨租户最佳实践: " + snippet);
-                        longTermMemory.incrementHit(insight.getId());
+                        longTermMemory.incrementHit(insight.getId(), insight.getTenantId());
                     }
                 }
 
@@ -436,7 +436,7 @@ public class ActionCenterOrchestrator {
                 String enriched = task.getReason() + " | AI记忆参考: " + insightText;
                 task.setReason(enriched);
 
-                longTermMemory.incrementHit(best.getId());
+                longTermMemory.incrementHit(best.getId(), best.getTenantId());
             } catch (Exception e) {
                 log.debug("[ActionCenter] memory enrichment failed for task={}: {}",
                     task.getTaskCode(), e.getMessage());

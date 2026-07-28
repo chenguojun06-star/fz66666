@@ -1,6 +1,8 @@
 package com.fashion.supplychain.intelligence.job;
 
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.service.SharedAgentMemoryService;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -23,12 +25,23 @@ public class SharedAgentMemoryCleanupJob {
     @Autowired
     private SharedAgentMemoryService sharedAgentMemoryService;
 
+    @Autowired
+    private DistributedLockService distributedLockService;
+
     @Scheduled(cron = "0 0 4 * * ?")
     public void cleanup() {
+        String lockValue = distributedLockService.tryLock(
+                "job:shared-agent-memory-cleanup", 30, TimeUnit.MINUTES);
+        if (lockValue == null) {
+            log.info("[SharedAgentMemoryCleanup] 未获取到分布式锁，跳过本次执行");
+            return;
+        }
         try {
             sharedAgentMemoryService.purgeExpired();
         } catch (Exception e) {
             log.warn("[SharedAgentMemoryCleanup] 清理失败(不影响主流程): {}", e.getMessage());
+        } finally {
+            distributedLockService.unlock("job:shared-agent-memory-cleanup", lockValue);
         }
     }
 }

@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
+import com.fashion.supplychain.intelligence.service.GuardrailsConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -22,6 +23,8 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     private final AiAgentMemoryHelper memoryHelper;
     private final DecisionCardOrchestrator decisionCardOrchestrator;
     private final LongTermMemoryOrchestrator longTermMemoryOrchestrator;
+    /** P0-4: 用于完整净化输出（剥离标记 + 敏感信息屏蔽），可为null（降级到静态stripPromptMarkers） */
+    private final GuardrailsConfigService guardrailsConfigService;
 
     private String finalContent;
     private List<AiAgentToolExecHelper.ToolExecRecord> execRecords;
@@ -31,12 +34,14 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
                                        AgentLoopContext ctx,
                                        AiAgentMemoryHelper memoryHelper,
                                        DecisionCardOrchestrator decisionCardOrchestrator,
-                                       LongTermMemoryOrchestrator longTermMemoryOrchestrator) {
+                                       LongTermMemoryOrchestrator longTermMemoryOrchestrator,
+                                       GuardrailsConfigService guardrailsConfigService) {
         this.emitter = emitter;
         this.ctx = ctx;
         this.memoryHelper = memoryHelper;
         this.decisionCardOrchestrator = decisionCardOrchestrator;
         this.longTermMemoryOrchestrator = longTermMemoryOrchestrator;
+        this.guardrailsConfigService = guardrailsConfigService;
     }
 
     @Override
@@ -62,14 +67,13 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
     @Override
     public void onAnswer(String content, String commandId) {
-        this.finalContent = content;
-        // P0-4: 剥离 prompt 内部 HTML 注释标记，防止 LLM 复述时回显给用户
-        String deduped = com.fashion.supplychain.intelligence.service.GuardrailsConfigService
-                .stripPromptMarkers(deduplicateAnswer(content));
-        emitSse("answer", Map.of("content", deduped, "commandId", commandId));
+        // P0-4: 完整净化输出 — 剥离 prompt 内部标记 + 应用敏感信息屏蔽，确保 SSE 发送和记忆存储的都是干净内容
+        String sanitized = sanitize(deduplicateAnswer(content));
+        this.finalContent = sanitized;
+        emitSse("answer", Map.of("content", sanitized, "commandId", commandId));
 
-        memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), deduped);
-        memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), deduped);
+        memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
+        memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), sanitized);
 
         // 幂等关闭：只有未关闭时才关闭SSE（异步后处理可能重复调用onAnswer）
         if (!emitterClosed) {
@@ -220,6 +224,25 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * P0-4: 完整净化输出 — 剥离 prompt 内部标记 + 应用敏感信息屏蔽。
+     * 优先使用注入的 GuardrailsConfigService 实例（完整净化），
+     * 实例不可用时降级到静态 stripPromptMarkers（仅剥离标记）。
+     * 失败不阻塞主流程，返回原文。
+     */
+    private String sanitize(String content) {
+        if (content == null || content.isEmpty()) return content;
+        try {
+            if (guardrailsConfigService != null) {
+                return guardrailsConfigService.sanitizeOutput(content);
+            }
+            return GuardrailsConfigService.stripPromptMarkers(content);
+        } catch (Exception e) {
+            log.debug("[StreamCallback] 净化失败，返回原文: {}", e.getMessage());
+            return content;
+        }
     }
 
     private void recordDecisionCard(List<AiAgentToolExecHelper.ToolExecRecord> records) {

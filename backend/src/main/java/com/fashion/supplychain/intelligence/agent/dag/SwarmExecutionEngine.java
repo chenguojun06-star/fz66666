@@ -29,6 +29,19 @@ public class SwarmExecutionEngine {
             },
             new ThreadPoolExecutor.CallerRunsPolicy());
 
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        swarmExecutor.shutdown();
+        try {
+            if (!swarmExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                swarmExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            swarmExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public enum SwarmTopology {
         HIERARCHICAL,
         MESH,

@@ -19,11 +19,14 @@ import org.springframework.web.bind.annotation.RestController;
  * <ul>
  *   <li>GET /api/intelligence/accuracy/dashboard  — 主仪表板数据</li>
  * </ul>
+ *
+ * <p>【P0修复】原 @PreAuthorize("isAuthenticated()") 允许普通登录用户调用，
+ * 但该接口会触发昂贵的 LLM 推理和数据聚合，存在成本失控风险。收口到 ROLE_SUPER_ADMIN。
  */
 @RestController
 @RequestMapping("/api/intelligence/accuracy")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class AiAccuracyController {
 
     private final AiAccuracyOrchestrator aiAccuracyOrchestrator;

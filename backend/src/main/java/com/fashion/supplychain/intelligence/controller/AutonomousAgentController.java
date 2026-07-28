@@ -17,11 +17,15 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 自主Agent能力端点 — 根因分析 / 规律发现 / 目标拆解 / Agent例会。
+ *
+ * <p>【P0修复】原类级 @PreAuthorize("isAuthenticated()") 允许普通登录用户调用，
+ * 但这些端点会触发昂贵的 LLM 多轮推理（根因分析、规律发现、目标拆解、Agent例会），
+ * 存在成本失控和资源滥用风险。收口到 ROLE_SUPER_ADMIN。
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/intelligence/autonomous")
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class AutonomousAgentController {
 
     @Autowired private RootCauseAnalysisOrchestrator rcaOrchestrator;
@@ -33,6 +37,7 @@ public class AutonomousAgentController {
 
     @PostMapping("/rca/analyze")
     public Result<RootCauseAnalysis> analyzeRootCause(@RequestBody Map<String, String> body) {
+        TenantAssert.assertTenantContext();
         String triggerType = body.getOrDefault("triggerType", "manual");
         String description = body.getOrDefault("description", "");
         String linkedOrderIds = body.getOrDefault("linkedOrderIds", "");

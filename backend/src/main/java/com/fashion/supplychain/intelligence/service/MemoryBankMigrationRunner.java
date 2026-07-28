@@ -100,7 +100,8 @@ public class MemoryBankMigrationRunner implements ApplicationRunner {
             try {
                 Boolean exists = redisTemplate.hasKey(MIGRATED_REDIS_KEY);
                 if (Boolean.TRUE.equals(exists)) return true;
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.error("[MemoryBankMigration] 迁移失败，可能影响 L5 Archival 数据完整性: {}", e.getMessage(), e);
             }
         }
         // Redis 不可用时降级检查数据库条目数
@@ -115,7 +116,8 @@ public class MemoryBankMigrationRunner implements ApplicationRunner {
         if (redisTemplate != null) {
             try {
                 redisTemplate.opsForValue().set(MIGRATED_REDIS_KEY, "1");
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.error("[MemoryBankMigration] 迁移失败，可能影响 L5 Archival 数据完整性: {}", e.getMessage(), e);
             }
         }
     }

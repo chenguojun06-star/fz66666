@@ -61,13 +61,27 @@ public class IntentCompositionService {
     );
 
     private ExecutorService executorService;
+    private final java.util.concurrent.atomic.AtomicInteger seq = new java.util.concurrent.atomic.AtomicInteger();
 
     public IntentCompositionService() {
         this.executorService = Executors.newFixedThreadPool(3, r -> {
-            Thread t = new Thread(r, "intent-composition-%d");
+            Thread t = new Thread(r, "intent-composition-" + seq.incrementAndGet());
             t.setDaemon(true);
             return t;
         });
+    }
+
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

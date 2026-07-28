@@ -63,13 +63,30 @@ public class PermissionDecisionOrchestrator {
                 .build();
         }
 
-        // 2. 检查用户是否存在
+        // 2. P0 铁律4：多租户隔离 — 校验当前用户必须属于命令的租户
+        Long commandTenantId = command.getTenantId();
+        if (commandTenantId == null) {
+            return ExecutionDecision.builder()
+                .decision(ExecutionDecisionType.DENIED)
+                .reason("命令租户信息缺失")
+                .riskScore(0)
+                .build();
+        }
         User currentUser = userService.getById(currentUserId);
         if (currentUser == null) {
             log.warn("[PermissionDecision] 用户不存在: userId={}", currentUserId);
             return ExecutionDecision.builder()
                 .decision(ExecutionDecisionType.DENIED)
                 .reason("用户不存在或已被禁用")
+                .riskScore(0)
+                .build();
+        }
+        if (currentUser.getTenantId() == null || !commandTenantId.equals(currentUser.getTenantId())) {
+            log.warn("[PermissionDecision] 用户与命令租户不匹配: userId={}, commandTenantId={}, userTenantId={}",
+                currentUserId, commandTenantId, currentUser.getTenantId());
+            return ExecutionDecision.builder()
+                .decision(ExecutionDecisionType.DENIED)
+                .reason("用户与命令租户不匹配")
                 .riskScore(0)
                 .build();
         }

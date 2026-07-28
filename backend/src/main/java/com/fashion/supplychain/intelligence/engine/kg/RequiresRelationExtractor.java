@@ -10,9 +10,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @Lazy
@@ -37,6 +42,16 @@ public class RequiresRelationExtractor implements RelationExtractor {
                         .last("LIMIT 2000"));
         if (purchases.isEmpty()) return List.of();
 
+        // 批量预加载 StyleInfo（修复 N+1 查询）
+        Set<String> styleIds = purchases.stream()
+                .map(MaterialPurchase::getStyleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, StyleInfo> styleMap = styleIds.isEmpty()
+                ? Collections.emptyMap()
+                : styleInfoMapper.selectBatchIds(styleIds).stream()
+                        .collect(Collectors.toMap(s -> String.valueOf(s.getId()), Function.identity(), (a, b) -> a));
+
         Set<String> seen = new HashSet<>();
         List<KgRelation> results = new ArrayList<>();
         for (MaterialPurchase mp : purchases) {
@@ -44,7 +59,7 @@ public class RequiresRelationExtractor implements RelationExtractor {
             String key = mp.getStyleId() + "|" + mp.getMaterialId();
             if (!seen.add(key)) continue;
 
-            StyleInfo style = styleInfoMapper.selectById(mp.getStyleId());
+            StyleInfo style = styleMap.get(mp.getStyleId());
             if (style == null) continue;
 
             String materialName = mp.getMaterialName() != null ? mp.getMaterialName() : mp.getMaterialCode();

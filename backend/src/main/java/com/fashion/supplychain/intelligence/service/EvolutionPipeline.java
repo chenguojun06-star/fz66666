@@ -296,7 +296,9 @@ public class EvolutionPipeline {
             if (!tenants.isEmpty()) {
                 return toLong(tenants.get(0).get("tenant_id"));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[EvolutionPipeline] 进化阶段失败: {}", e.getMessage());
+        }
 
         try {
             List<Map<String, Object>> tenants = jdbc.queryForList(
@@ -306,7 +308,9 @@ public class EvolutionPipeline {
             if (!tenants.isEmpty()) {
                 return toLong(tenants.get(0).get("tenant_id"));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[EvolutionPipeline] 进化阶段失败: {}", e.getMessage());
+        }
 
         return 1L;
     }

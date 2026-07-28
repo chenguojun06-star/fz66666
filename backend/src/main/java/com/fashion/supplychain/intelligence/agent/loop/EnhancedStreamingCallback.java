@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.agent.sse.SseEvent;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
+import com.fashion.supplychain.intelligence.service.GuardrailsConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -36,8 +37,9 @@ public class EnhancedStreamingCallback extends StreamingAgentLoopCallback {
                                      AgentLoopContext ctx,
                                      AiAgentMemoryHelper memoryHelper,
                                      DecisionCardOrchestrator decisionCardOrchestrator,
-                                     LongTermMemoryOrchestrator longTermMemoryOrchestrator) {
-        super(emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
+                                     LongTermMemoryOrchestrator longTermMemoryOrchestrator,
+                                     GuardrailsConfigService guardrailsConfigService) {
+        super(emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator, guardrailsConfigService);
         this.emitter = emitter;
         this.requestStartTime = Instant.now();
     }

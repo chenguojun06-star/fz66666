@@ -25,7 +25,14 @@ public class SqlSecurityValidator {
 
     private static final List<String> SENSITIVE_COLUMNS = Arrays.asList(
             "password", "passwd", "secret", "token", "api_key", "apikey",
-            "private_key", "salt", "credential"
+            "private_key", "salt", "credential",
+            // P0 修复：补齐 PII 字段，防止 AI 通过 Text-to-SQL 泄露客户/工人/供应商联系方式
+            "phone", "mobile", "telephone", "tel_no", "tel_number",
+            "id_card", "idcard", "id_number", "identity_card",
+            "email", "mail", "email_address",
+            "wechat", "wechat_id", "wx_id",
+            "qq", "qq_number",
+            "bank_card", "bank_account", "card_no", "account_no"
     );
 
     /** 预编译的 forbidden 关键词 Pattern（避免每次调用都编译正则） */

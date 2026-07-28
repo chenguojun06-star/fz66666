@@ -435,16 +435,6 @@ public class IntelligenceAiAdvisorController {
         return Result.success(diag);
     }
 
-    private Map<String, Object> visualStyleSearch(String imageUrl, int topK) {
-        // 已废弃：之前用 Qdrant 向量搜索，现在用 Agnes 识别 + MySQL 关键词搜索
-        // 见 visualAIOrchestrator.searchSimilarStylesByImage
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("success", false);
-        result.put("error", "方法已废弃，请使用新的 visualAIOrchestrator.searchSimilarStylesByImage");
-        return result;
-    }
-
-
     @GetMapping("/benchmark/performance")
     public Result<CrossTenantBenchmarkResponse> benchmarkPerformance() {
         return Result.success(crossTenantBenchmarkOrchestrator.getBenchmark());

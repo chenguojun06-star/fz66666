@@ -13,6 +13,6 @@ public interface AiLongMemoryMapper extends BaseMapper<AiLongMemory> {
      * 命中后递增计数（避免锁）
      */
     @Update("UPDATE t_ai_long_memory SET hit_count = hit_count + 1, "
-        + "last_hit_time = NOW() WHERE id = #{id}")
-    int incrementHit(@Param("id") Long id);
+        + "last_hit_time = NOW() WHERE id = #{id} AND tenant_id = #{tenantId}")
+    int incrementHit(@Param("id") Long id, @Param("tenantId") Long tenantId);
 }

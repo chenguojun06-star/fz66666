@@ -11,8 +11,8 @@ import java.util.List;
 @Mapper
 public interface KgRelationMapper extends BaseMapper<KgRelation> {
 
-    @Select("SELECT * FROM t_kg_relation WHERE source_id = #{sourceId} AND delete_flag = 0")
-    List<KgRelation> findBySourceId(@Param("sourceId") Long sourceId);
+    @Select("SELECT * FROM t_kg_relation WHERE source_id = #{sourceId} AND delete_flag = 0 AND tenant_id = #{tenantId}")
+    List<KgRelation> findBySourceId(@Param("sourceId") Long sourceId, @Param("tenantId") Long tenantId);
 
     @Select("""
         SELECT r.* FROM t_kg_relation r

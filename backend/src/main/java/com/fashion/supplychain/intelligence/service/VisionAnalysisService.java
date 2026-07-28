@@ -733,9 +733,9 @@ public class VisionAnalysisService {
             if (size == null) continue;
             SizeRow sr = new SizeRow();
             sr.setSize(size);
-            try { sr.setBust(Double.parseDouble(m.group(2))); } catch (Exception ignored) {}
-            try { sr.setWaist(Double.parseDouble(m.group(3))); } catch (Exception ignored) {}
-            try { sr.setHip(Double.parseDouble(m.group(4))); } catch (Exception ignored) {}
+            try { sr.setBust(Double.parseDouble(m.group(2))); } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
+            try { sr.setWaist(Double.parseDouble(m.group(3))); } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
+            try { sr.setHip(Double.parseDouble(m.group(4))); } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
             if (autoCols.isEmpty()) {
                 autoCols.add("尺码"); autoCols.add("胸围"); autoCols.add("腰围"); autoCols.add("臀围");
             }
@@ -768,7 +768,7 @@ public class VisionAnalysisService {
             try {
                 double d = Double.parseDouble(String.valueOf(v).replaceAll("[^0-9.]", ""));
                 if (d > 0 && d < 500) return d; // 合理范围 0-500cm
-            } catch (Exception ignored) {}
+            } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
         }
         return null;
     }
@@ -838,7 +838,7 @@ public class VisionAnalysisService {
                 java.util.regex.Pattern amountP = java.util.regex.Pattern.compile("(?:金额|合计|总计|￥|¥|RMB)\\s*[:：]?\\s*(\\d+(?:[.,]\\d+)?)");
                 java.util.regex.Matcher amountM = amountP.matcher(raw);
                 if (amountM.find()) {
-                    try { r.setAmount(Double.parseDouble(amountM.group(1).replace(",", ""))); } catch (Exception ignored) {}
+                    try { r.setAmount(Double.parseDouble(amountM.group(1).replace(",", ""))); } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
                 }
 
                 java.util.regex.Pattern dateP = java.util.regex.Pattern.compile("(\\d{4})[年./\\-](\\d{1,2})[月./\\-](\\d{1,2})");
@@ -884,7 +884,7 @@ public class VisionAnalysisService {
             if (v != null) {
                 try {
                     return Double.parseDouble(String.valueOf(v).replaceAll("[^0-9.]", ""));
-                } catch (Exception ignored) {}
+                } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
             }
         }
         return null;
@@ -1158,7 +1158,7 @@ public class VisionAnalysisService {
             row.setMaterialName(name);
             row.setSpecification(m.group(2) != null ? m.group(2).trim() : null);
             if (m.group(3) != null) {
-                try { row.setUsageAmount(Double.parseDouble(m.group(3))); } catch (Exception ignored) {}
+                try { row.setUsageAmount(Double.parseDouble(m.group(3))); } catch (Exception e) { log.debug("[VisionAnalysis] 数值解析失败: {}", e.getMessage()); }
             }
             row.setUnit(m.group(4));
             r.getItems().add(row);

@@ -172,7 +172,10 @@ public class HighRiskAuditService extends ServiceImpl<HighRiskAuditLogMapper, Hi
     }
 
     private String buildPendingKey(String userId, String toolName, String args) {
-        return PENDING_KEY_PREFIX + (userId == null ? "anon" : userId) + ":" + toolName + ":" + sha256(args);
+        // P0 修复：键含 tenantId 防止跨租户复用 pending 标记（违反 P0 铁律 4 多租户隔离）
+        Long tenantId = UserContext.tenantId();
+        String tenantPart = tenantId == null ? "0" : tenantId.toString();
+        return PENDING_KEY_PREFIX + tenantPart + ":" + (userId == null ? "anon" : userId) + ":" + toolName + ":" + sha256(args);
     }
 
     private String truncate(String s, int maxLen) {

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.helper.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * GEPA 遗传优化器（借鉴 Hermes Self-Evolution GEPA）。
@@ -66,6 +68,7 @@ public class GepaPromptOptimizer {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private ConstraintGates constraintGates;
     @Autowired(required = false) private EvolutionEventLogger eventLogger;
+    @Autowired private DistributedLockService distributedLockService;
 
     private final Random random = new Random();
 
@@ -79,6 +82,12 @@ public class GepaPromptOptimizer {
     @Async("aiSelfCriticExecutor")
     @Scheduled(cron = "0 20 4 * * ?")
     public void scheduledOptimize() {
+        String lockValue = distributedLockService.tryLock(
+                "job:gepa-prompt-optimizer", 30, TimeUnit.MINUTES);
+        if (lockValue == null) {
+            log.info("[GEPA] 未获取到分布式锁，跳过本次执行");
+            return;
+        }
         try {
             List<Long> tenantIds = jdbc.queryForList(
                     "SELECT DISTINCT tenant_id FROM t_intelligence_feedback WHERE tenant_id IS NOT NULL",
@@ -92,6 +101,8 @@ public class GepaPromptOptimizer {
             }
         } catch (Exception e) {
             log.warn("[GEPA] 定时优化任务失败: {}", e.getMessage());
+        } finally {
+            distributedLockService.unlock("job:gepa-prompt-optimizer", lockValue);
         }
     }
 

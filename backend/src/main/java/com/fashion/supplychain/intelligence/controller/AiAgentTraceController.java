@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/intelligence/ai-agent")
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class AiAgentTraceController {
 
     @Autowired

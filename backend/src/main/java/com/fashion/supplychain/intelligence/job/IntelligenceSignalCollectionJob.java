@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
@@ -25,6 +26,10 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 public class IntelligenceSignalCollectionJob {
 
+    /** P0 修复：添加 enabled 开关，避免持续向所有租户写入垃圾数据 */
+    @Value("${xiaoyun.job.signal-collection.enabled:true}")
+    private boolean enabled;
+
     @Autowired
     private IntelligenceSignalOrchestrator signalOrchestrator;
 
@@ -37,6 +42,10 @@ public class IntelligenceSignalCollectionJob {
     // 错开到 :10 和 :40，避免与其他定时任务同时触发 DB/Redis 连接风暴
     @Scheduled(cron = "0 10/30 * * * ?")
     public void periodicCollect() {
+        if (!enabled) {
+            log.debug("[信号采集Job] 已禁用");
+            return;
+        }
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:signal-collection", 25, TimeUnit.MINUTES);
             if (lockValue == null) {

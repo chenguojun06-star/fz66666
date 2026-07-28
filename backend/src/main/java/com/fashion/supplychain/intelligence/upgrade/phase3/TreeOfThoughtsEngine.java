@@ -36,6 +36,19 @@ public class TreeOfThoughtsEngine {
 
     private final ExecutorService executor = Executors.newFixedThreadPool(4);
 
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public TotResult explore(String scene, String question, List<AiMessage> context, List<AiTool> tools) {
         if (!enabled) {
             TotResult r = new TotResult();

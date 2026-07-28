@@ -23,6 +23,7 @@ public class SchemaVectorManager {
 
     private final Map<String, TableSchema> schemaCache = new ConcurrentHashMap<>();
     private volatile boolean schemaLoaded = false;
+    private java.util.concurrent.ScheduledExecutorService preheatScheduler;
 
     private static final String SCHEMA_VECTOR_PREFIX = "schema_";
 
@@ -62,16 +63,35 @@ public class SchemaVectorManager {
             log.warn("[SchemaVectorManager] 初始加载Schema失败: {}", e.getMessage());
         }
         // 异步预向量化 Schema（不阻塞启动）
-        new Thread(() -> {
+        preheatScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "schema-vector-preheat");
+            t.setDaemon(true);
+            return t;
+        });
+        preheatScheduler.schedule(() -> {
             try {
-                Thread.sleep(5000);
                 log.info("[SchemaVectorManager] 启动5秒后开始异步预向量化Schema");
                 int count = vectorizeAllSchemas();
                 log.info("[SchemaVectorManager] 启动时预向量化完成，共 {} 张表", count);
             } catch (Exception e) {
                 log.debug("[SchemaVectorManager] 启动时预向量化失败（可后续手动触发）: {}", e.getMessage());
             }
-        }, "schema-vector-preheat").start();
+        }, 5, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        if (preheatScheduler != null) {
+            preheatScheduler.shutdown();
+            try {
+                if (!preheatScheduler.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    preheatScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                preheatScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     public void loadSchemaFromDb() {

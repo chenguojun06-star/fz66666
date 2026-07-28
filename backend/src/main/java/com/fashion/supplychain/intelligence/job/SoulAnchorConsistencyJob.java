@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.job;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.service.SoulAnchorRebuildService;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.service.TenantService;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * soul.py 多锚点身份一致性校验定时任务（五层记忆模型第七章）
@@ -49,6 +51,7 @@ public class SoulAnchorConsistencyJob {
 
     @Autowired private SoulAnchorRebuildService soulAnchorRebuildService;
     @Autowired private TenantService tenantService;
+    @Autowired private DistributedLockService distributedLockService;
 
     @Value("${xiaoyun.soul.consistency-check.enabled:true}")
     private boolean checkEnabled;
@@ -69,60 +72,70 @@ public class SoulAnchorConsistencyJob {
             log.debug("[SoulAnchor] 一致性校验已禁用（xiaoyun.soul.consistency-check.enabled=false）");
             return;
         }
-        log.info("[SoulAnchor] 多锚点一致性校验开始");
-        List<Tenant> tenants;
+        String lockValue = distributedLockService.tryLock(
+                "job:soul-anchor-consistency", 60, TimeUnit.MINUTES);
+        if (lockValue == null) {
+            log.info("[SoulAnchor] 未获取到分布式锁，跳过本次执行");
+            return;
+        }
         try {
-            tenants = tenantService.list();
-        } catch (Exception e) {
-            log.warn("[SoulAnchor] 加载租户列表失败: {}", e.getMessage());
-            return;
-        }
-        if (tenants == null || tenants.isEmpty()) {
-            log.info("[SoulAnchor] 无租户，跳过");
-            return;
-        }
-
-        int totalChecked = 0;
-        int totalInconsistent = 0;
-        int totalRebuilt = 0;
-        List<String> inconsistentTenants = new ArrayList<>();
-
-        for (Tenant tenant : tenants) {
-            if (tenant.getId() == null) continue;
-            Long tenantId = tenant.getId();
+            log.info("[SoulAnchor] 多锚点一致性校验开始");
+            List<Tenant> tenants;
             try {
-                UserContext.set(buildContext(tenant));
-                totalChecked++;
-                SoulAnchorRebuildService.SoulAnchorStatus status =
-                        soulAnchorRebuildService.detectAnchors(tenantId);
-                if (!status.isAllExists()) {
-                    totalInconsistent++;
-                    inconsistentTenants.add(String.format("tenant=%d(factory=%s/user=%s/decision=%s/reflective=%s)",
-                            tenantId,
-                            status.isFactoryProfileExists() ? "OK" : "MISSING",
-                            status.isUserProfileExists() ? "OK" : "MISSING",
-                            status.isDecisionLogExists() ? "OK" : "MISSING",
-                            status.isReflectiveMemExists() ? "OK" : "MISSING"));
-                    log.warn("[SoulAnchor] 租户{}锚点不完整: {}", tenantId, status.toMap());
-
-                    // 自动重建缺失锚点
-                    SoulAnchorRebuildService.RebuildResult result =
-                            soulAnchorRebuildService.rebuildMissingAnchors(tenantId);
-                    if (result.isDecisionLogRebuilt()) {
-                        totalRebuilt++;
-                    }
-                }
+                tenants = tenantService.list();
             } catch (Exception e) {
-                log.warn("[SoulAnchor] 租户{}一致性校验失败: {}", tenantId, e.getMessage());
-            } finally {
-                UserContext.clear();
+                log.warn("[SoulAnchor] 加载租户列表失败: {}", e.getMessage());
+                return;
             }
-        }
+            if (tenants == null || tenants.isEmpty()) {
+                log.info("[SoulAnchor] 无租户，跳过");
+                return;
+            }
 
-        log.info("[SoulAnchor] 多锚点一致性校验完成: 检查{}租户, 不完整{}, 自动重建decisionLog {}",
-                totalChecked, totalInconsistent, totalRebuilt);
-        if (!inconsistentTenants.isEmpty()) {
-            log.warn("[SoulAnchor] 不完整租户列表: {}", inconsistentTenants);
+            int totalChecked = 0;
+            int totalInconsistent = 0;
+            int totalRebuilt = 0;
+            List<String> inconsistentTenants = new ArrayList<>();
+
+            for (Tenant tenant : tenants) {
+                if (tenant.getId() == null) continue;
+                Long tenantId = tenant.getId();
+                try {
+                    UserContext.set(buildContext(tenant));
+                    totalChecked++;
+                    SoulAnchorRebuildService.SoulAnchorStatus status =
+                            soulAnchorRebuildService.detectAnchors(tenantId);
+                    if (!status.isAllExists()) {
+                        totalInconsistent++;
+                        inconsistentTenants.add(String.format("tenant=%d(factory=%s/user=%s/decision=%s/reflective=%s)",
+                                tenantId,
+                                status.isFactoryProfileExists() ? "OK" : "MISSING",
+                                status.isUserProfileExists() ? "OK" : "MISSING",
+                                status.isDecisionLogExists() ? "OK" : "MISSING",
+                                status.isReflectiveMemExists() ? "OK" : "MISSING"));
+                        log.warn("[SoulAnchor] 租户{}锚点不完整: {}", tenantId, status.toMap());
+
+                        // 自动重建缺失锚点
+                        SoulAnchorRebuildService.RebuildResult result =
+                                soulAnchorRebuildService.rebuildMissingAnchors(tenantId);
+                        if (result.isDecisionLogRebuilt()) {
+                            totalRebuilt++;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[SoulAnchor] 租户{}一致性校验失败: {}", tenantId, e.getMessage());
+                } finally {
+                    UserContext.clear();
+                }
+            }
+
+            log.info("[SoulAnchor] 多锚点一致性校验完成: 检查{}租户, 不完整{}, 自动重建decisionLog {}",
+                    totalChecked, totalInconsistent, totalRebuilt);
+            if (!inconsistentTenants.isEmpty()) {
+                log.warn("[SoulAnchor] 不完整租户列表: {}", inconsistentTenants);
+            }
+        } finally {
+            distributedLockService.unlock("job:soul-anchor-consistency", lockValue);
         }
     }
 

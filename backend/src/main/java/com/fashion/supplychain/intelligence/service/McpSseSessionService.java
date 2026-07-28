@@ -44,6 +44,9 @@ public class McpSseSessionService {
     /** SSE 连接最长保持时间：10 分钟（之后客户端自动重连） */
     private static final long SSE_TIMEOUT_MS = 10 * 60 * 1000L;
 
+    /** 【P0 安全】最大并发 SSE 会话数，防止恶意客户端耗尽内存 */
+    private static final int MAX_SESSIONS = 1000;
+
     public McpSseSessionService() {
         // 每 20 秒向所有活跃会话发送心跳注释（SSE comment，不触发 onmessage）
         scheduler.scheduleAtFixedRate(this::sendHeartbeats, 20, 20, TimeUnit.SECONDS);
@@ -57,6 +60,10 @@ public class McpSseSessionService {
      * @param tenantId 租户ID，仅用于日志追踪
      */
     public SessionEntry createSession(Long tenantId) {
+        if (sessions.size() >= MAX_SESSIONS) {
+            log.warn("[McpSse] SSE 连接数已达上限 {}，拒绝新连接", MAX_SESSIONS);
+            throw new com.fashion.supplychain.common.BusinessException("SSE 连接数已达上限，请稍后重试");
+        }
         String sessionId = UUID.randomUUID().toString().replace("-", "");
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 

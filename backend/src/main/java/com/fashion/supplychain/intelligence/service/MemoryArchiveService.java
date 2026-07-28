@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.entity.AiConversationMemory;
 import com.fashion.supplychain.intelligence.mapper.AiConversationMemoryMapper;
 import lombok.Data;
@@ -17,6 +18,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * L5 归档记忆服务（五层记忆模型第五章）。
@@ -66,6 +68,9 @@ public class MemoryArchiveService {
     @Autowired(required = false)
     private QdrantService qdrantService;
 
+    @Autowired
+    private DistributedLockService distributedLockService;
+
     /**
      * 每天 03:45 归档 6 个月+ 的对话记忆到 Qdrant。
      *
@@ -99,32 +104,42 @@ public class MemoryArchiveService {
             log.debug("[L5-Archive] 已禁用（xiaoyun.memory.archive.enabled=false）");
             return;
         }
-        log.info("[L5-Archive] 开始归档 {} 个月+ 的对话记忆", ARCHIVE_MONTHS);
-        int totalArchived = 0;
-        int totalFailed = 0;
+        String lockValue = distributedLockService.tryLock(
+                "job:memory-archive", 30, TimeUnit.MINUTES);
+        if (lockValue == null) {
+            log.info("[L5-Archive] 未获取到分布式锁，跳过本次执行");
+            return;
+        }
         try {
-            LocalDateTime cutoff = LocalDateTime.now().minusMonths(ARCHIVE_MONTHS);
-            // 分批查询 + 归档，直到没有更多记录
-            while (true) {
-                List<AiConversationMemory> batch = conversationMemoryMapper.selectList(
-                        new LambdaQueryWrapper<AiConversationMemory>()
-                                .lt(AiConversationMemory::getCreateTime, cutoff)
-                                .eq(AiConversationMemory::getDeleteFlag, 0)
-                                .orderByAsc(AiConversationMemory::getCreateTime)
-                                .last("LIMIT " + ARCHIVE_BATCH_SIZE));
-                if (batch == null || batch.isEmpty()) break;
+            log.info("[L5-Archive] 开始归档 {} 个月+ 的对话记忆", ARCHIVE_MONTHS);
+            int totalArchived = 0;
+            int totalFailed = 0;
+            try {
+                LocalDateTime cutoff = LocalDateTime.now().minusMonths(ARCHIVE_MONTHS);
+                // 分批查询 + 归档，直到没有更多记录
+                while (true) {
+                    List<AiConversationMemory> batch = conversationMemoryMapper.selectList(
+                            new LambdaQueryWrapper<AiConversationMemory>()
+                                    .lt(AiConversationMemory::getCreateTime, cutoff)
+                                    .eq(AiConversationMemory::getDeleteFlag, 0)
+                                    .orderByAsc(AiConversationMemory::getCreateTime)
+                                    .last("LIMIT " + ARCHIVE_BATCH_SIZE));
+                    if (batch == null || batch.isEmpty()) break;
 
-                try {
-                    int archived = batchArchive(batch);
-                    totalArchived += archived;
-                } catch (Exception e) {
-                    totalFailed += batch.size();
-                    log.warn("[L5-Archive] 批次归档失败（不影响其他批）: {}", e.getMessage());
+                    try {
+                        int archived = batchArchive(batch);
+                        totalArchived += archived;
+                    } catch (Exception e) {
+                        totalFailed += batch.size();
+                        log.warn("[L5-Archive] 批次归档失败（不影响其他批）: {}", e.getMessage());
+                    }
                 }
+                log.info("[L5-Archive] 归档完成，成功 {} 条，失败 {} 条", totalArchived, totalFailed);
+            } catch (Exception e) {
+                log.error("[L5-Archive] 归档任务异常: {}", e.getMessage(), e);
             }
-            log.info("[L5-Archive] 归档完成，成功 {} 条，失败 {} 条", totalArchived, totalFailed);
-        } catch (Exception e) {
-            log.error("[L5-Archive] 归档任务异常: {}", e.getMessage(), e);
+        } finally {
+            distributedLockService.unlock("job:memory-archive", lockValue);
         }
     }
 

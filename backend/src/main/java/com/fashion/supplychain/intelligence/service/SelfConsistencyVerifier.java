@@ -42,6 +42,19 @@ public class SelfConsistencyVerifier {
             r -> { Thread t = new Thread(r, "sc-verify"); t.setDaemon(true); return t; }
     );
 
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private final AiInferenceGateway inferenceGateway;
 
     public SelfConsistencyVerifier(AiInferenceGateway inferenceGateway) {

@@ -18,17 +18,19 @@ public interface KgEntityMapper extends BaseMapper<KgEntity> {
             FROM t_kg_entity e
             JOIN t_kg_relation r ON r.source_id = e.id
             WHERE e.id = #{startId} AND e.delete_flag = 0 AND r.delete_flag = 0
+              AND e.tenant_id = #{tenantId} AND r.tenant_id = #{tenantId}
             UNION ALL
             SELECT child.id, child.entity_name, child.entity_type, child_r.relation_type, child_r.target_id, gp.hop + 1
             FROM graph_path gp
             JOIN t_kg_entity child ON child.id = gp.target_id AND child.delete_flag = 0
             JOIN t_kg_relation child_r ON child_r.source_id = child.id AND child_r.delete_flag = 0
             WHERE gp.hop < #{maxHops}
+              AND child.tenant_id = #{tenantId} AND child_r.tenant_id = #{tenantId}
         )
         SELECT id, entity_name, entity_type, relation_type, target_id, hop
         FROM graph_path
         """)
-    List<Map<String, Object>> traverseGraph(@Param("startId") Long startId, @Param("maxHops") int maxHops);
+    List<Map<String, Object>> traverseGraph(@Param("startId") Long startId, @Param("maxHops") int maxHops, @Param("tenantId") Long tenantId);
 
     @Select("""
         SELECT * FROM t_kg_entity

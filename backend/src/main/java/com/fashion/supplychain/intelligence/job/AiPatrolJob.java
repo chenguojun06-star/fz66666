@@ -148,7 +148,7 @@ public class AiPatrolJob {
      * <p>产生的 AiPatrolAction 会被 {@code AiAgentPromptHelper} 实时注入 System Prompt，
      * 使 AI 在每次对话时均可感知当前生产风险，实现「主动意识」而非「被动问答」。
      */
-    @Scheduled(cron = "0 0 */4 * * ?")
+    @Scheduled(cron = "0 0 0,8,12,16,20 * * ?")
     public void scanProductionAnomalies() {
         if (productionOrderService == null || scanRecordService == null) {
             log.debug("[AiPatrolJob-Biz] 生产服务未注入，跳过业务异常巡查");
@@ -366,7 +366,7 @@ public class AiPatrolJob {
         }
     }
 
-    @Scheduled(cron = "0 30 */4 * * ?")
+    @Scheduled(cron = "0 30 0,8,12,16,20 * * ?")
     public void scanExtendedAnomalies() {
         if (productionOrderService == null || scanRecordService == null) {
             return;
@@ -520,16 +520,15 @@ public class AiPatrolJob {
             return;
         }
         int totalEscalated = 0;
+        int totalScanned = 0;
         for (Long tenantId : tenants) {
             if (tenantId == null) {
                 log.debug("[AiPatrolJob-TaskEscalation] 跳过空租户ID");
                 continue;
             }
-            // 任务自动升级受开关控制（默认关闭，避免自动改变任务归属打扰用户）
-            if (!backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_TASK_ESCALATION)) {
-                log.debug("[AiPatrolJob-TaskEscalation] 租户 {} 任务升级开关未开启，跳过", tenantId);
-                continue;
-            }
+            // 【P0修复】开关关闭时仍继续扫描和记录日志，仅跳过 escalateTask + createAction
+            // 符合规则：巡检开关关闭时系统继续运行巡检、分析数据和记录日志，但不创建工单或发送通知
+            boolean actionEnabled = backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_TASK_ESCALATION);
             UserContext previous = UserContext.get();
             try {
                 UserContext ctx = new UserContext();
@@ -546,6 +545,20 @@ public class AiPatrolJob {
                     if (task.getCreatedAt() == null) continue;
                     long hoursSinceCreation = java.time.Duration.between(task.getCreatedAt(), LocalDateTime.now()).toHours();
                     if (hoursSinceCreation < ESCALATION_HOURS_THRESHOLD) continue;
+                    totalScanned++;
+
+                    String issue = String.format(
+                            "协作任务[%s] 逾期%d小时未处理（订单:%s, 岗位:%s）",
+                            task.getId(), hoursSinceCreation,
+                            task.getOrderNo() != null ? task.getOrderNo() : "无",
+                            task.getTargetRole() != null ? task.getTargetRole() : "未知");
+                    log.warn("[AiPatrolJob-TaskEscalation] 租户={} 检测到逾期任务: {}", tenantId, issue);
+
+                    if (!actionEnabled) {
+                        log.debug("[AiPatrolJob-TaskEscalation] 租户 {} 任务升级开关未开启，跳过升级动作 taskId={}",
+                                tenantId, task.getId());
+                        continue;
+                    }
 
                     String escalationLevel = smartEscalationOrchestrator != null
                             ? smartEscalationOrchestrator.escalationByRisk("overdue")
@@ -554,19 +567,19 @@ public class AiPatrolJob {
                     String escalatedTo = resolveEscalationTarget(task);
                     collaborationTaskMapper.escalateTask(task.getId(), task.getTenantId(), escalatedTo);
 
-                    String issue = String.format(
+                    String escalateIssue = String.format(
                             "协作任务[%s] 逾期%d小时未处理（订单:%s, 岗位:%s），已自动升级至%s",
                             task.getId(), hoursSinceCreation,
                             task.getOrderNo() != null ? task.getOrderNo() : "无",
                             task.getTargetRole() != null ? task.getTargetRole() : "未知",
                             escalatedTo);
                     patrolOrchestrator.createAction(
-                            "TASK_ESCALATION_JOB", issue, "COLLAB_TASK_OVERDUE",
+                            "TASK_ESCALATION_JOB", escalateIssue, "COLLAB_TASK_OVERDUE",
                             "HIGH", "collab_task", String.valueOf(task.getId()),
                             "{\"action\":\"escalate_task\",\"taskId\":" + task.getId() + ",\"level\":\"" + escalationLevel + "\"}",
                             BigDecimal.valueOf(0.9), "NEED_APPROVAL"
                     );
-                    log.warn("[AiPatrolJob-TaskEscalation] {}", issue);
+                    log.warn("[AiPatrolJob-TaskEscalation] {}", escalateIssue);
                     escalated++;
                 }
                 totalEscalated += escalated;
@@ -580,8 +593,9 @@ public class AiPatrolJob {
                 }
             }
         }
-        if (totalEscalated > 0) {
-            log.info("[AiPatrolJob-TaskEscalation] ===== 任务升级扫描完成，升级 {} 个逾期任务 =====", totalEscalated);
+        if (totalScanned > 0) {
+            log.info("[AiPatrolJob-TaskEscalation] ===== 任务升级扫描完成，扫描 {} 个逾期任务，升级 {} 个 =====",
+                    totalScanned, totalEscalated);
         }
     }
 

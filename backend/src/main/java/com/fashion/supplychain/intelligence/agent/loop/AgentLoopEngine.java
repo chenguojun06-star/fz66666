@@ -552,6 +552,7 @@ public class AgentLoopEngine {
                 System.currentTimeMillis() - ctx.getRequestStartAt());
         failSession(ctx, "对话轮数超过限制");
         cb.onMaxIterationsExceeded();
+        // 保留原标识符以便 Orchestrator 识别并转译为友好提示；SSE 路径由前端 onMaxIterationsExceeded 事件处理
         return "max_iterations_exceeded";
     }
 

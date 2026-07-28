@@ -120,7 +120,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
                     result.put("负载提示", "系统负载较高，可能影响响应速度");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 耗时查询计数
         try {
@@ -129,7 +131,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
             if (slowQueries != null && slowQueries > 50) {
                 result.put("耗时查询提示", "存在较多耗时查询（" + slowQueries + "次），可能影响系统速度");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 数据访问冲突
         try {
@@ -138,7 +142,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
             if (deadlocks != null && deadlocks > 0) {
                 result.put("冲突提示", "检测到" + deadlocks + "次数据访问冲突，系统已自动恢复");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 存储空间
         try {
@@ -148,7 +154,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
             if (dbSizeBytes != null) {
                 result.put("存储空间", Math.round(dbSizeBytes / 1024.0 / 1024.0) + "MB");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 数据更新记录异常
         try {
@@ -163,7 +171,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
                     result.put("更新记录提示", "有" + failedCount + "次系统更新记录异常，可能影响系统稳定性");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         return successJson("系统健康总览", result);
     }
@@ -364,7 +374,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
                 if (usage > 90) criticals.add("系统负载" + Math.round(usage) + "%，即将达到上限，可能影响使用");
                 else if (usage > 70) warnings.add("系统负载" + Math.round(usage) + "%，偏高");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 3. 耗时查询
         try {
@@ -373,7 +385,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
             if (slowQueries != null && slowQueries > 100) {
                 warnings.add("耗时查询较多（" + slowQueries + "次），系统响应可能变慢");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 4. 数据访问冲突
         try {
@@ -382,7 +396,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
             if (deadlocks != null && deadlocks > 5) {
                 warnings.add("数据访问冲突" + deadlocks + "次，冲突较多建议检查");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 5. 系统更新失败
         try {
@@ -391,7 +407,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
             if (failedCount != null && failedCount > 0) {
                 criticals.add("有" + failedCount + "次系统更新失败，可能影响系统稳定性");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         // 6. 数据归属检查（多租户隔离）
         String[][] businessChecks = {
@@ -406,7 +424,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
                 if (nullCount != null && nullCount > 0) {
                     criticals.add(check[1] + "中有" + nullCount + "条数据缺少归属信息，存在数据安全风险");
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+            }
         }
 
         // 7. 大数据量检查
@@ -420,7 +440,9 @@ public class DatabaseHealthCheckTool extends AbstractAgentTool {
                         bt.get("name").toString(), translateTableName(bt.get("name").toString()));
                 warnings.add(bizName + "数据量较大（" + bt.get("rows") + "条），建议定期归档历史数据");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[DatabaseHealthCheck] 查询失败: {}", e.getMessage());
+        }
 
         result.put("严重问题", criticals.isEmpty() ? "无" : criticals);
         result.put("一般提醒", warnings.isEmpty() ? "无" : warnings);

@@ -25,7 +25,7 @@ public class IntelligenceQualityController {
 
     /** P1: 运行Golden Test Dataset回归测试 */
     @PostMapping("/golden-eval")
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ai:manage')")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> runGoldenEval() {
         if (goldenEvalService == null) {
             return ResponseEntity.ok("{\"status\":\"unavailable\",\"reason\":\"GoldenEvalService未初始化\"}");
@@ -35,7 +35,7 @@ public class IntelligenceQualityController {
 
     /** P2: 查看安全规则配置 */
     @GetMapping("/guardrails")
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ai:manage')")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> getGuardrails() {
         if (guardrailsConfigService == null) {
             return ResponseEntity.ok(Map.of("status", "unavailable"));
@@ -45,7 +45,7 @@ public class IntelligenceQualityController {
 
     /** P2: 热更新安全规则 */
     @PostMapping("/guardrails/reload")
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ai:manage')")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> reloadGuardrails() {
         if (guardrailsConfigService == null) {
             return ResponseEntity.ok(Map.of("status", "unavailable"));

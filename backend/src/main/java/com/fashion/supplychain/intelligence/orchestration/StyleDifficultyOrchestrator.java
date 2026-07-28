@@ -74,7 +74,14 @@ public class StyleDifficultyOrchestrator {
 
     public DifficultyAssessment assessWithAiById(Long styleId, String coverUrl) {
         if (styleId == null) return defaultAssessment();
-        StyleInfo style = styleInfoService.getById(styleId);
+        // P0 铁律4：多租户隔离 — AI 难度评估必须校验租户归属
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
         if (style == null) return defaultAssessment();
         List<StyleBom> boms = styleBomService.listByStyleId(styleId);
         List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);

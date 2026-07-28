@@ -9,6 +9,7 @@ import com.fashion.supplychain.system.orchestration.SystemIssueCollectorOrchestr
 import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
@@ -19,6 +20,10 @@ import java.util.List;
 @Component
 @Lazy
 public class DataConsistencyPatrolJob {
+
+    /** P0 修复：3 个 @Scheduled 方法均加 enabled 开关，避免误触发污染数据 */
+    @Value("${xiaoyun.job.data-consistency-patrol.enabled:true}")
+    private boolean enabled;
 
     @Autowired
     private SelfHealingOrchestrator selfHealingOrchestrator;
@@ -34,6 +39,10 @@ public class DataConsistencyPatrolJob {
 
     @Scheduled(fixedRate = 6 * 60 * 60 * 1000, initialDelay = 10 * 60 * 1000)
     public void selfHealingPatrol() {
+        if (!enabled) {
+            log.debug("[DataConsistencyPatrol] 自愈巡检已禁用");
+            return;
+        }
         log.info("[DataConsistencyPatrol] 自愈巡检开始");
         List<Tenant> tenants = tenantService.list();
         for (Tenant tenant : tenants) {
@@ -56,6 +65,10 @@ public class DataConsistencyPatrolJob {
 
     @Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 5 * 60 * 1000)
     public void systemIssuePatrol() {
+        if (!enabled) {
+            log.debug("[DataConsistencyPatrol] 系统问题巡检已禁用");
+            return;
+        }
         log.info("[DataConsistencyPatrol] 系统问题巡检开始");
         try {
             systemIssueCollectorOrchestrator.collect();
@@ -67,6 +80,10 @@ public class DataConsistencyPatrolJob {
 
     @Scheduled(cron = "0 0 8 * * ?")
     public void reconciliationAnomalyPatrol() {
+        if (!enabled) {
+            log.debug("[DataConsistencyPatrol] 对账异常巡检已禁用");
+            return;
+        }
         log.info("[DataConsistencyPatrol] 对账异常巡检开始");
         List<Tenant> tenants = tenantService.list();
         for (Tenant tenant : tenants) {

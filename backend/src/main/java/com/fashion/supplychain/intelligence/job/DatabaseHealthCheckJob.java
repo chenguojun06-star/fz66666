@@ -98,7 +98,9 @@ public class DatabaseHealthCheckJob {
             if (longHeld > 5) {
                 warnings.add("长连接数偏多 (" + longHeld + "个>5分钟)");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[DB健康巡检] 连接池检查失败 (跳过该项): err={}", e.getMessage());
+        }
     }
 
     private void checkSlowQueries(List<String> warnings, List<String> infos) {
@@ -123,7 +125,9 @@ public class DatabaseHealthCheckJob {
                     warnings.add("慢查询比例超过1% (" + String.format("%.3f", slowRate) + "%)，需重点关注");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[DB健康巡检] 慢查询检查失败 (跳过该项): err={}", e.getMessage());
+        }
     }
 
     private void checkDeadlocks(List<String> warnings, List<String> infos) {
@@ -137,7 +141,9 @@ public class DatabaseHealthCheckJob {
                     warnings.add("死锁次数偏多 (" + deadlocks + ")，建议检查事务逻辑");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[DB健康巡检] 死锁检查失败 (跳过该项): err={}", e.getMessage());
+        }
     }
 
     private void checkFlywayStatus(List<String> criticals, List<String> infos) {
@@ -160,7 +166,9 @@ public class DatabaseHealthCheckJob {
                     criticals.add("有 " + failedCount + " 次数据库迁移失败，需要立即处理");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[DB健康巡检] Flyway迁移状态检查失败 (跳过该项): err={}", e.getMessage());
+        }
     }
 
     private void checkTenantIsolation(List<String> criticals) {
@@ -188,7 +196,9 @@ public class DatabaseHealthCheckJob {
                 if (nullCount != null && nullCount > 0) {
                     criticals.add(check[1] + "中有 " + nullCount + " 条数据缺少tenant_id，存在数据安全风险");
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[DB健康巡检] 租户隔离检查失败 (跳过表 {}): err={}", check[0], e.getMessage());
+            }
         }
     }
 
@@ -220,6 +230,8 @@ public class DatabaseHealthCheckJob {
                 }
                 warnings.add(sb.toString());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[DB健康巡检] 存储空间检查失败 (跳过该项): err={}", e.getMessage());
+        }
     }
 }

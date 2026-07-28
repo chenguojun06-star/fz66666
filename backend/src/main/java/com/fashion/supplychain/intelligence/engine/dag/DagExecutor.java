@@ -25,6 +25,19 @@ public class DagExecutor {
         return t;
     });
 
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        parallelExecutor.shutdown();
+        try {
+            if (!parallelExecutor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                parallelExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            parallelExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public String newThreadId() {
         return UUID.randomUUID().toString();
     }

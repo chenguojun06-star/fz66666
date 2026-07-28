@@ -43,7 +43,7 @@ public class GraphRagService {
                     if (graphLines.size() >= MAX_OUTPUT_LINES) break;
                     if (!seenEntityIds.add(entity.getId())) continue;
 
-                    List<Map<String, Object>> paths = kgEntityMapper.traverseGraph(entity.getId(), MAX_HOPS);
+                    List<Map<String, Object>> paths = kgEntityMapper.traverseGraph(entity.getId(), MAX_HOPS, tenantId);
                     if (paths.isEmpty()) {
                         graphLines.add(String.format("  %s [%s] (无关联实体)",
                                 entity.getEntityName(), translateType(entity.getEntityType())));
@@ -337,7 +337,7 @@ public class GraphRagService {
                 int levelSize = queue.size();
                 for (int i = 0; i < levelSize && communityEntityIds.size() < 20; i++) {
                     Long currentId = queue.poll();
-                    List<Map<String, Object>> neighbors = kgEntityMapper.traverseGraph(currentId, 1);
+                    List<Map<String, Object>> neighbors = kgEntityMapper.traverseGraph(currentId, 1, tenantId);
 
                     for (Map<String, Object> neighbor : neighbors) {
                         Object targetIdObj = neighbor.get("target_id");

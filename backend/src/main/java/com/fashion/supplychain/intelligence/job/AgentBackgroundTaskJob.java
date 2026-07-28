@@ -50,7 +50,11 @@ public class AgentBackgroundTaskJob {
     private static final long LOCK_TIMEOUT_MINUTES = 10;
 
     private final Map<Long, Semaphore> tenantSemaphores = new ConcurrentHashMap<>();
-    private final ExecutorService taskExecutor = Executors.newCachedThreadPool();
+    private final ExecutorService taskExecutor = new java.util.concurrent.ThreadPoolExecutor(
+            2, 16, 60L, java.util.concurrent.TimeUnit.SECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<>(100),
+            r -> { Thread t = new Thread(r, "agent-bg-task-" + System.nanoTime()); t.setDaemon(true); return t; },
+            new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
     private final Map<String, BackgroundTaskExecutor> executors = new ConcurrentHashMap<>();
 
     public interface BackgroundTaskExecutor {
@@ -60,6 +64,19 @@ public class AgentBackgroundTaskJob {
     public void registerExecutor(String taskType, BackgroundTaskExecutor executor) {
         executors.put(taskType, executor);
         log.info("[BackgroundTaskJob] 注册任务执行器: taskType={}", taskType);
+    }
+
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        taskExecutor.shutdown();
+        try {
+            if (!taskExecutor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                taskExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            taskExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Scheduled(fixedDelay = 10000)

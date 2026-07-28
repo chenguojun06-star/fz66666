@@ -236,7 +236,8 @@ public class AiAgentOrchestrator {
 
         try {
             SyncAgentLoopCallback cb = new SyncAgentLoopCallback(
-                    ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
+                    ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator,
+                    componentRegistry.getGuardrailsConfigService());
             String loopResult = loopEngine.run(ctx, cb);
             log.info("[DEBUG-AI] loopResult={}, finalContent={}, toolRecords={}",
                     loopResult, cb.getFinalContent() != null ? cb.getFinalContent().length() + "chars" : "null",
@@ -246,7 +247,8 @@ public class AiAgentOrchestrator {
                 return Result.success("抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。");
             }
             if ("max_iterations_exceeded".equals(loopResult)) {
-                return Result.fail("对话轮数超过限制 (" + ctx.getMaxIterations() + ")，可能陷入了死循环。");
+                // P0修复：原"对话轮数超过限制 (N)，可能陷入了死循环"对用户不友好，改为中文提示
+                return Result.success("抱歉，处理该问题需要的步骤过多，已自动终止。请尝试简化问题或拆分提问。");
             }
             if ("plan_mode".equals(loopResult)) {
                 return Result.success(cb.getFinalContent());
@@ -525,8 +527,12 @@ public class AiAgentOrchestrator {
             }
 
             String pageContextKeyPart = pageContext != null ? String.valueOf(pageContext.hashCode()) : "no_ctx";
-            String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage + ":" + pageContextKeyPart;
+            Long currentTenantId = UserContext.tenantId();
+            String cacheKey = currentTenantId + ":" + UserContext.userId() + ":" + userMessage + ":" + pageContextKeyPart;
             String cached = queryCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                cached = unwrapCacheValue(cached, currentTenantId);
+            }
             if (cached != null) {
                 log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.length());
                 AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
@@ -604,7 +610,8 @@ public class AiAgentOrchestrator {
             selectAndLogModelTier(userMessage, ctx);
 
             StreamingAgentLoopCallback cb = new StreamingAgentLoopCallback(
-                    emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
+                    emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator,
+                    componentRegistry.getGuardrailsConfigService());
 
             String loopResult = loopEngine.run(ctx, cb);
 
@@ -613,7 +620,7 @@ public class AiAgentOrchestrator {
                     || "cancelled".equals(loopResult) || "deadline_exceeded".equals(loopResult)) {
                 // 失败或取消不缓存
             } else if (cb.getFinalContent() != null) {
-                queryCache.put(cacheKey, deduplicateAnswer(cb.getFinalContent()));
+                queryCache.put(cacheKey, wrapCacheValue(UserContext.tenantId(), deduplicateAnswer(cb.getFinalContent())));
             }
 
             // P0-4: 净化输出 — 剥离 prompt 内部标记，确保后处理与记忆存储的是干净内容
@@ -1033,6 +1040,34 @@ public class AiAgentOrchestrator {
         return sb.toString();
     }
 
+    /**
+     * 【P0 #4 多租户隔离】缓存值包装 tenantId 标记。
+     * 缓存值格式：{tenantId}::{content}，命中后由 unwrapCacheValue 二次校验 tenantId。
+     */
+    private String wrapCacheValue(Long tenantId, String content) {
+        return tenantId + "::" + content;
+    }
+
+    /**
+     * 【P0 #4 多租户隔离】解包缓存值并二次校验 tenantId。
+     * tenantId 不匹配返回 null（视为缓存未命中），防止 key 碰撞导致跨租户数据泄漏。
+     */
+    private String unwrapCacheValue(String cached, Long expectedTenantId) {
+        if (cached == null) return null;
+        int sepIdx = cached.indexOf("::");
+        if (sepIdx <= 0) return null;
+        try {
+            Long cachedTenantId = Long.parseLong(cached.substring(0, sepIdx));
+            if (!cachedTenantId.equals(expectedTenantId)) {
+                log.warn("[AiAgent-Cache] 缓存 tenantId 不匹配，丢弃: cached={}, expected={}", cachedTenantId, expectedTenantId);
+                return null;
+            }
+            return cached.substring(sepIdx + 2);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
 
     /**
      * P1-4: 秒答缓存检查。
@@ -1268,7 +1303,7 @@ public class AiAgentOrchestrator {
             emitSse(emitter, "done", java.util.Map.of());
             emitter.complete();
 
-            queryCache.put(cacheKey, deduplicateAnswer(answer));
+            queryCache.put(cacheKey, wrapCacheValue(UserContext.tenantId(), deduplicateAnswer(answer)));
 
             // 触发后处理（标记为快速通道）
             triggerPostTurnHooks(null, userMessage, answer, java.util.Collections.emptyList(), true);

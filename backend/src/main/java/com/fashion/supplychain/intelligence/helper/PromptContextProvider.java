@@ -175,9 +175,13 @@ public class PromptContextProvider {
             sb.append("（以上为系统从历史对话中提炼的记忆，请结合工具查询数据综合判断，不要只依赖记忆）\n\n");
             // 异步更新命中计数，不阻塞主流程（原同步 forEach 内逐条 incrementHit）
             if (!hitIds.isEmpty()) {
+                java.util.Map<Long, Long> idTenantMap = new java.util.HashMap<>();
+                for (AiLongMemory m : mems) {
+                    if (m.getId() != null) idTenantMap.put(m.getId(), m.getTenantId());
+                }
                 CompletableFuture.runAsync(() -> {
                     hitIds.forEach(id -> {
-                        try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception e) { log.warn("[AiAgent-LTM] 命中计数更新失败: id={}", id); }
+                        try { longTermMemoryOrchestrator.incrementHit(id, idTenantMap.get(id)); } catch (Exception e) { log.warn("[AiAgent-LTM] 命中计数更新失败: id={}", id); }
                     });
                 });
             }

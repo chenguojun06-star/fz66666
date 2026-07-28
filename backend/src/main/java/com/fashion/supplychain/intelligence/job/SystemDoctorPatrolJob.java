@@ -1,11 +1,14 @@
 package com.fashion.supplychain.intelligence.job;
 
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -19,36 +22,49 @@ public class SystemDoctorPatrolJob extends AbstractPatrolJob {
     @org.springframework.beans.factory.annotation.Value("${xiaoyun.job.system-doctor-patrol.enabled:true}")
     private boolean enabled;
 
+    @Autowired
+    private DistributedLockService distributedLockService;
+
     @Scheduled(cron = "0 0 4 * * ?")
     public void patrol() {
         if (!enabled) {
             log.debug("[SystemDoctor] 已禁用（xiaoyun.job.system-doctor-patrol.enabled=false）");
             return;
         }
-        log.info("[SystemDoctor] ===== 开始系统医生巡检 =====");
-        List<Long> tenants = getActiveTenantIds();
+        String lockValue = distributedLockService.tryLock(
+                "job:system-doctor-patrol", 30, TimeUnit.MINUTES);
+        if (lockValue == null) {
+            log.info("[SystemDoctor] 未获取到分布式锁，跳过本次执行");
+            return;
+        }
+        try {
+            log.info("[SystemDoctor] ===== 开始系统医生巡检 =====");
+            List<Long> tenants = getActiveTenantIds();
 
-        for (Long tenantId : tenants) {
-            long start = System.currentTimeMillis();
-            String commandId = null;
-            try {
-                commandId = traceOrchestrator.startPatrolRequest(tenantId, "system-doctor",
-                        "系统医生：系统健康诊断");
+            for (Long tenantId : tenants) {
+                long start = System.currentTimeMillis();
+                String commandId = null;
+                try {
+                    commandId = traceOrchestrator.startPatrolRequest(tenantId, "system-doctor",
+                            "系统医生：系统健康诊断");
 
-                long s1 = System.currentTimeMillis();
-                traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_system_health",
-                        "系统健康诊断完成", System.currentTimeMillis() - s1, true);
+                    long s1 = System.currentTimeMillis();
+                    traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_system_health",
+                            "系统健康诊断完成", System.currentTimeMillis() - s1, true);
 
-                finishAndSnapshot(tenantId, commandId, "system-doctor", "系统医生",
-                        "系统健康诊断完成", System.currentTimeMillis() - start);
-            } catch (Exception e) {
-                log.warn("[SystemDoctor] 租户{}巡检异常: {}", tenantId, e.getMessage());
-                if (commandId != null) {
-                    traceOrchestrator.finishPatrolRequest(tenantId, commandId,
-                            null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
+                    finishAndSnapshot(tenantId, commandId, "system-doctor", "系统医生",
+                            "系统健康诊断完成", System.currentTimeMillis() - start);
+                } catch (Exception e) {
+                    log.warn("[SystemDoctor] 租户{}巡检异常: {}", tenantId, e.getMessage());
+                    if (commandId != null) {
+                        traceOrchestrator.finishPatrolRequest(tenantId, commandId,
+                                null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
+                    }
                 }
             }
+            log.info("[SystemDoctor] ===== 巡检完成 =====");
+        } finally {
+            distributedLockService.unlock("job:system-doctor-patrol", lockValue);
         }
-        log.info("[SystemDoctor] ===== 巡检完成 =====");
     }
 }

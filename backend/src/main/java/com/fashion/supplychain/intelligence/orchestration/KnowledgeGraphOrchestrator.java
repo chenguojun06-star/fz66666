@@ -104,7 +104,7 @@ public class KnowledgeGraphOrchestrator {
 
         List<ReasoningPath> allPaths = new ArrayList<>();
         for (KgEntity entity : matchedEntities.subList(0, Math.min(3, matchedEntities.size()))) {
-            List<Map<String, Object>> rawPaths = entityMapper.traverseGraph(entity.getId(), maxHops);
+            List<Map<String, Object>> rawPaths = entityMapper.traverseGraph(entity.getId(), maxHops, tenantId);
             allPaths.addAll(convertToReasoningPaths(rawPaths, entity.getEntityName()));
         }
         allPaths.sort((a, b) -> Double.compare(b.getConfidence(), a.getConfidence()));
