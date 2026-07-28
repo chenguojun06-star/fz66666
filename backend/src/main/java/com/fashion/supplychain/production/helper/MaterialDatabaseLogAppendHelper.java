@@ -1,30 +1,44 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Slf4j
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class MaterialDatabaseLogAppendHelper {
+public class MaterialDatabaseLogAppendHelper extends AbstractOperationLogAppendHelper<MaterialDatabase, String> {
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
 
+    @Override
+    protected IService<MaterialDatabase> getService() {
+        return materialDatabaseService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "物料数据库";
+    }
+
+    @Override
+    protected Function<MaterialDatabase, String> getRemarkGetter() {
+        return MaterialDatabase::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<MaterialDatabase, String> getRemarkSetter() {
+        return MaterialDatabase::setRemark;
+    }
+
+    @Override
     public void appendOperation(String materialId, String action, String detail) {
-        if (materialId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            materialId,
-            materialDatabaseService,
-            MaterialDatabase::getRemark,
-            MaterialDatabase::setRemark,
-            action,
-            detail,
-            "物料数据库"
-        );
+        super.appendOperation(materialId, action, detail);
     }
 
     public void appendCreate(String materialId) {

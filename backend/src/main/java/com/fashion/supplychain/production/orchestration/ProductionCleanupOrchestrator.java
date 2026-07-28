@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
@@ -386,6 +387,8 @@ public class ProductionCleanupOrchestrator {
         if (order == null || !StringUtils.hasText(order.getId())) {
             throw new NoSuchElementException("生产订单不存在");
         }
+        // P0 铁律4：多租户隔离 — 必须校验订单归属当前租户，防止跨租户清理他人数据
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         return order;
     }
 
@@ -416,10 +419,12 @@ public class ProductionCleanupOrchestrator {
     }
 
     private List<String> collectShipmentRecIds(String oid) {
+        Long tenantId = TenantAssert.requireTenantId();
         List<ShipmentReconciliation> recs = shipmentReconciliationService.list(
                 new LambdaQueryWrapper<ShipmentReconciliation>()
                         .select(ShipmentReconciliation::getId)
-                        .eq(ShipmentReconciliation::getOrderId, oid));
+                        .eq(ShipmentReconciliation::getOrderId, oid)
+                        .eq(ShipmentReconciliation::getTenantId, tenantId));
         List<String> ids = new ArrayList<>();
         if (recs != null) {
             for (ShipmentReconciliation r : recs) {

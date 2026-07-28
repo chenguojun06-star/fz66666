@@ -56,4 +56,12 @@ public class ProductOutstockController {
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(productOutstockOrchestrator.delete(id));
     }
+
+    /**
+     * 成品出库冲销（恢复SKU库存 + 创建冲销记录）
+     */
+    @PostMapping("/{id}/reverse")
+    public Result<ProductOutstock> reverse(@PathVariable String id, @RequestParam String reason) {
+        return Result.success(productOutstockOrchestrator.reverse(id, reason));
+    }
 }

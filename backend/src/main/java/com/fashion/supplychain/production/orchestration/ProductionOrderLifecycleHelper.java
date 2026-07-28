@@ -80,7 +80,7 @@ public class ProductionOrderLifecycleHelper {
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001: @Transactional 已由调用方 ProductionOrderOrchestrator.deleteById 声明，Helper 层不再重复
     public boolean deleteById(String id) {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) {
@@ -209,7 +209,7 @@ public class ProductionOrderLifecycleHelper {
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001: @Transactional 已由调用方 ProductionOrderOrchestrator.closeOrder 声明，Helper 层不再重复
     public ProductionOrder closeOrder(String id, String remark) {
         TenantAssert.assertTenantContext();
         ProductionOrder result = financeOrchestrationService.closeOrder(id);

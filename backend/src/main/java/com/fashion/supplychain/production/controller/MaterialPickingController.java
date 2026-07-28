@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -55,7 +56,7 @@ public class MaterialPickingController {
     @PostMapping("/pending")
     public Result<String> createPending(@RequestBody PickingRequest request) {
         // 强制设置 status=pending，前端可能未传此字段
-        request.getPicking().setStatus("pending");
+        request.getPicking().setStatus(MaterialConstants.STATUS_PENDING);
         // BOM领取默认为样衣用料（开发场景），前端未传时兜底
         if (request.getPicking().getUsageType() == null || request.getPicking().getUsageType().isEmpty()) {
             request.getPicking().setUsageType("SAMPLE");

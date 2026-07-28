@@ -34,6 +34,7 @@ public class CuttingBundleCompletionHelper {
     @Autowired private SKUService skuService;
     @Autowired private TemplateLibraryService templateLibraryService;
     @Autowired private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+    @Autowired private com.fashion.supplychain.production.service.CuttingTaskService cuttingTaskService;
 
     public boolean markBundled(CuttingTask task) {
         if (task == null || !StringUtils.hasText(task.getProductionOrderId())) {
@@ -50,10 +51,17 @@ public class CuttingBundleCompletionHelper {
                     .last("limit 1"));
 
             long cuttingQty = computeCuttingQuantityFromBundles(oid);
+            long bundleCount = computeBundleCount(oid);
             if (cuttingQty <= 0) {
                 int oq = task.getOrderQuantity() == null ? 0 : task.getOrderQuantity();
                 if (oq > 0) cuttingQty = oq;
             }
+
+            // 持久化裁剪数量和扎数到 CuttingTask（原为临时字段，现持久化到数据库）
+            task.setCuttingQuantity((int) cuttingQty);
+            task.setCuttingBundleCount((int) bundleCount);
+            task.setUpdateTime(now);
+            cuttingTaskService.updateById(task);
 
             long already = computeAlreadyScannedQuantity(oid, requestId);
             long qtyToWrite = Math.max(0, cuttingQty - already);
@@ -81,6 +89,13 @@ public class CuttingBundleCompletionHelper {
                     task == null ? null : task.getProductionOrderId(), e);
         }
         return true;
+    }
+
+    private long computeBundleCount(String orderId) {
+        Long count = cuttingBundleMapper.selectCount(new LambdaQueryWrapper<CuttingBundle>()
+                .eq(CuttingBundle::getProductionOrderId, orderId)
+                .ne(CuttingBundle::getSplitStatus, "split_parent"));
+        return count != null ? count : 0L;
     }
 
     private long computeCuttingQuantityFromBundles(String orderId) {

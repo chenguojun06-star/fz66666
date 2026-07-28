@@ -19,7 +19,6 @@ import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import org.springframework.security.access.AccessDeniedException;
@@ -61,7 +60,7 @@ public class ProductWarehousingRollbackHelper {
     /**
      * 更新 SKU 库存（公开方法，供外部调用）
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.rollbackByBundle 已有事务保护）
     public void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
         if (deltaQuantity == 0) {
             return;
@@ -109,7 +108,7 @@ public class ProductWarehousingRollbackHelper {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.rollbackByBundle 已有事务保护）
     public boolean rollbackByBundle(Map<String, Object> body) {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限回退");

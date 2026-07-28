@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * 采购操作日志追加
@@ -18,7 +21,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class MaterialPurchaseLogAppendHelper {
+public class MaterialPurchaseLogAppendHelper extends AbstractOperationLogAppendHelper<MaterialPurchase, String> {
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
@@ -29,19 +32,30 @@ public class MaterialPurchaseLogAppendHelper {
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
 
+    @Override
+    protected IService<MaterialPurchase> getService() {
+        return materialPurchaseService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "物料采购";
+    }
+
+    @Override
+    protected Function<MaterialPurchase, String> getRemarkGetter() {
+        return MaterialPurchase::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<MaterialPurchase, String> getRemarkSetter() {
+        return MaterialPurchase::setRemark;
+    }
+
+    @Override
     public void appendOperation(String purchaseId, String action, String detail) {
         if (purchaseId == null) return;
-        // 1. 写 MaterialPurchase.remark
-        OperationLogAppendUtil.appendOperation(
-            purchaseId,
-            materialPurchaseService,
-            MaterialPurchase::getRemark,
-            MaterialPurchase::setRemark,
-            action,
-            detail,
-            "物料采购"
-        );
-        // 2. 同步到 ProductionOrder.remarks
+        super.appendOperation(purchaseId, action, detail);
         syncToProductionOrder(purchaseId, action, detail);
     }
 
@@ -61,7 +75,6 @@ public class MaterialPurchaseLogAppendHelper {
             if (orderId == null || orderId.trim().isEmpty()) return;
             ProductionOrder order = productionOrderService.getById(orderId);
             if (order == null) return;
-            // 拼物料名前缀，方便在订单备注时间线识别
             String materialName = p.getMaterialName();
             String richDetail = detail;
             if (materialName != null && !materialName.isEmpty()) {
@@ -120,9 +133,7 @@ public class MaterialPurchaseLogAppendHelper {
     public void appendBatchReceive(List<String> purchaseIds, String receiverName, int successCount, int skipCount) {
         if (purchaseIds == null || purchaseIds.isEmpty()) return;
         String detail = "领取人：" + receiverName + "，成功：" + successCount + "，跳过：" + skipCount + "，共：" + purchaseIds.size();
-        // 批量查询 MaterialPurchase（避免 N+1：原循环内 getById 改为 listByIds）
         List<MaterialPurchase> purchases = materialPurchaseService.listByIds(purchaseIds);
-        // 收集 orderId，批量查询 ProductionOrder（避免 N+1）
         List<String> orderIds = purchases.stream()
                 .map(MaterialPurchase::getOrderId)
                 .filter(id -> id != null && !id.trim().isEmpty())

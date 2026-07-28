@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -42,7 +41,7 @@ public class OrderWorkflowHelper {
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductionOrderOrchestrator.lockProgressWorkflow 已有事务保护）
     public ProductionOrder lockProgressWorkflow(String id, String workflowJson) {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作进度节点");
@@ -115,7 +114,7 @@ public class OrderWorkflowHelper {
         return productionOrderQueryService.getDetailById(oid);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductionOrderOrchestrator.rollbackProgressWorkflow 已有事务保护）
     public ProductionOrder rollbackProgressWorkflow(String id, String reason) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
@@ -244,7 +243,7 @@ public class OrderWorkflowHelper {
      * @param remark 确认备注（说明物料到货情况和确认原因）
      * @return 更新后的订单
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductionOrderOrchestrator.confirmProcurement 已有事务保护）
     public ProductionOrder confirmProcurement(String orderId, String remark) {
         if (!StringUtils.hasText(orderId)) {
             throw new IllegalArgumentException("订单ID不能为空");

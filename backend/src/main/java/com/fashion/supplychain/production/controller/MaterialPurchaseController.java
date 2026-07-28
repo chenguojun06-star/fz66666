@@ -344,4 +344,13 @@ public class MaterialPurchaseController {
         }
         return Result.success(null);
     }
+
+    /**
+     * 按款号汇总面辅料采购数据（采购量/到货量/使用量/剩余量）
+     * 参数：styleId 或 orderNo
+     */
+    @GetMapping("/style-summary")
+    public Result<?> styleSummary(@RequestParam Map<String, Object> params) {
+        return Result.success(materialPurchaseOrchestrator.getStyleSummary(params));
+    }
 }

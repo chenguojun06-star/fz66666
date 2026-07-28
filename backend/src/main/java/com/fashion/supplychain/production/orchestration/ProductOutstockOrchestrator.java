@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -49,6 +50,10 @@ public class ProductOutstockOrchestrator {
 
     @Autowired
     private ProductOutstockLogAppendHelper logAppendHelper;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
 
     public IPage<ProductOutstock> list(Map<String, Object> params) {
         // P1 修复（铁律4 多租户隔离）：工厂账号强制隔离，只能查看自己工厂订单的出库单
@@ -298,6 +303,19 @@ public class ProductOutstockOrchestrator {
             throw new IllegalStateException("删除失败");
         }
 
+        // P1-2 修复：删除出库单时反向 PRODUCT_OUTSTOCK 账单（数据链路闭环）
+        // 失败不阻塞主流程（账单可能已结清需人工冲账）
+        if (billAggregationOrchestrator != null) {
+            try {
+                billAggregationOrchestrator.reverseBySource("PRODUCT_OUTSTOCK",
+                        key, "出库单删除: " + current.getOutstockNo());
+                log.info("[出库删除] 反向账单: outstockId={}", key);
+            } catch (Exception e) {
+                log.warn("[出库删除] 反向账单失败（不阻塞主流程）: outstockId={}, err={}",
+                        key, e.getMessage());
+            }
+        }
+
         if (StringUtils.hasText(orderId)) {
             try {
                 ProductionOrder orderPatch = new ProductionOrder();
@@ -330,5 +348,120 @@ public class ProductOutstockOrchestrator {
             }
         }
         return true;
+    }
+
+    /**
+     * 成品出库冲销（对齐 ProductWarehousing 冲销模式）
+     * 1. 校验原记录存在 + 未被冲销
+     * 2. 恢复 SKU 库存
+     * 3. 原记录标记 REVERSED
+     * 4. 创建冲销新记录（数量取反/金额取反）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ProductOutstock reverse(String id, String reason) {
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("出库单ID不能为空");
+        }
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("冲销原因不能为空");
+        }
+        Long tenantId = UserContext.tenantId();
+        String userId = UserContext.userId();
+        String username = UserContext.username();
+        LocalDateTime now = LocalDateTime.now();
+
+        ProductOutstock original = productOutstockService.lambdaQuery()
+                .eq(ProductOutstock::getId, id.trim())
+                .eq(ProductOutstock::getTenantId, tenantId)
+                .one();
+        if (original == null || (original.getDeleteFlag() != null && original.getDeleteFlag() != 0)) {
+            throw new NoSuchElementException("出库单不存在");
+        }
+        if ("REVERSED".equals(original.getReversalStatus())) {
+            throw new IllegalArgumentException("该出库记录已被冲销，不能重复操作");
+        }
+
+        int reverseQty = original.getOutstockQuantity() != null ? original.getOutstockQuantity() : 0;
+        String orderId = original.getOrderId();
+        String skuCode = original.getSkuCode();
+
+        // 1. 恢复 SKU 库存
+        if (reverseQty > 0 && StringUtils.hasText(skuCode)) {
+            productSkuService.updateStock(skuCode, reverseQty);
+            log.info("[出库冲销] 恢复SKU库存: skuCode={}, qty={}", skuCode, reverseQty);
+        }
+
+        // 2. 原记录标记 REVERSED
+        original.setReversalStatus("REVERSED");
+        original.setReversalReason(reason);
+        original.setUpdateTime(now);
+        productOutstockService.updateById(original);
+
+        // P1-2 修复：出库冲销时反向 PRODUCT_OUTSTOCK 账单（数据链路闭环）
+        // 失败不阻塞主流程（账单可能已结清需人工冲账）
+        if (billAggregationOrchestrator != null) {
+            try {
+                billAggregationOrchestrator.reverseBySource("PRODUCT_OUTSTOCK",
+                        original.getId(), "出库冲销: " + reason);
+                log.info("[出库冲销] 反向账单: originalId={}", original.getId());
+            } catch (Exception e) {
+                log.warn("[出库冲销] 反向账单失败（不阻塞主流程）: originalId={}, err={}",
+                        original.getId(), e.getMessage());
+            }
+        }
+
+        // 3. 创建冲销新记录
+        ProductOutstock reversal = new ProductOutstock();
+        String reversalId = java.util.UUID.randomUUID().toString().replace("-", "");
+        reversal.setId(reversalId);
+        reversal.setOutstockNo("RV" + original.getOutstockNo());
+        reversal.setOrderId(original.getOrderId());
+        reversal.setOrderNo(original.getOrderNo());
+        reversal.setStyleId(original.getStyleId());
+        reversal.setStyleNo(original.getStyleNo());
+        reversal.setStyleName(original.getStyleName());
+        reversal.setOutstockQuantity(reverseQty);
+        reversal.setOutstockType("reversal");
+        reversal.setSourceType(original.getSourceType());
+        reversal.setWarehouse(original.getWarehouse());
+        reversal.setWarehouseAreaId(original.getWarehouseAreaId());
+        reversal.setWarehouseAreaName(original.getWarehouseAreaName());
+        reversal.setSkuCode(skuCode);
+        reversal.setColor(original.getColor());
+        reversal.setSize(original.getSize());
+        reversal.setCostPrice(original.getCostPrice());
+        reversal.setSalesPrice(original.getSalesPrice());
+        reversal.setTotalAmount(original.getTotalAmount() != null ? original.getTotalAmount().negate() : null);
+        reversal.setPaidAmount(java.math.BigDecimal.ZERO);
+        reversal.setPaymentStatus("reversed");
+        reversal.setCustomerName(original.getCustomerName());
+        reversal.setCustomerPhone(original.getCustomerPhone());
+        reversal.setShippingAddress(original.getShippingAddress());
+        reversal.setReversalId(original.getId());
+        reversal.setReversalStatus("NONE");
+        reversal.setReversalReason(reason);
+        reversal.setRemark("冲销出库: " + reason);
+        reversal.setCreateTime(now);
+        reversal.setUpdateTime(now);
+        reversal.setDeleteFlag(0);
+        reversal.setTenantId(tenantId);
+        productOutstockService.save(reversal);
+
+        // 4. 回填原记录的 reversedById
+        original.setReversedById(reversalId);
+        original.setUpdateTime(now);
+        productOutstockService.updateById(original);
+
+        // 5. 记录操作日志
+        try {
+            logAppendHelper.appendOperation(reversalId, "出库冲销",
+                    "原出库单号:" + original.getOutstockNo() + " 冲销数量:" + reverseQty + " 原因:" + reason);
+        } catch (Exception e) {
+            log.warn("[出库冲销] 记录日志失败: reversalId={}", reversalId, e);
+        }
+
+        log.info("[出库冲销] 完成: originalId={}, reversalId={}, qty={}, reason={}",
+                original.getId(), reversalId, reverseQty, reason);
+        return reversal;
     }
 }

@@ -1,30 +1,44 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.service.MaterialInboundService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Slf4j
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class MaterialInboundLogAppendHelper {
+public class MaterialInboundLogAppendHelper extends AbstractOperationLogAppendHelper<MaterialInbound, String> {
 
     @Autowired
     private MaterialInboundService materialInboundService;
 
+    @Override
+    protected IService<MaterialInbound> getService() {
+        return materialInboundService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "物料入库";
+    }
+
+    @Override
+    protected Function<MaterialInbound, String> getRemarkGetter() {
+        return MaterialInbound::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<MaterialInbound, String> getRemarkSetter() {
+        return MaterialInbound::setRemark;
+    }
+
+    @Override
     public void appendOperation(String inboundId, String action, String detail) {
-        if (inboundId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            inboundId,
-            materialInboundService,
-            MaterialInbound::getRemark,
-            MaterialInbound::setRemark,
-            action,
-            detail,
-            "物料入库"
-        );
+        super.appendOperation(inboundId, action, detail);
     }
 
     public void appendCreate(String inboundId) {

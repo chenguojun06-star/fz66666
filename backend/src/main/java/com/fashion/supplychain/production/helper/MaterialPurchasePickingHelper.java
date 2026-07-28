@@ -35,7 +35,6 @@ import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrato
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
@@ -97,7 +96,7 @@ public class MaterialPurchasePickingHelper {
      * @param body 包含 orderNo(订单号), receiverId, receiverName
      * @return 汇总结果 { outboundCount, purchaseCount, details }
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.smartReceiveAll 已有事务保护）
     public Map<String, Object> smartReceiveAll(Map<String, Object> body) {
         String orderNo = body == null ? null
             : (body.get("orderNo") == null ? null : String.valueOf(body.get("orderNo")).trim());
@@ -533,7 +532,7 @@ public class MaterialPurchasePickingHelper {
      * 执行单项仓库领取（从仓库出库指定物料指定数量）
      * @param body { purchaseId, pickQty, receiverId, receiverName }
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.warehousePickSingle 已有事务保护）
     public Map<String, Object> warehousePickSingle(Map<String, Object> body) {
         String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
         int pickQty = ParamUtils.toIntSafe(body == null ? null : body.get("pickQty"));
@@ -643,7 +642,7 @@ public class MaterialPurchasePickingHelper {
      * 实际扣减库存 + picking 状态改为 completed + 关联采购单改为 completed
      * @param pickingId 待出库单ID（status=pending 的 MaterialPicking）
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.confirmPickingOutbound 已有事务保护）
     public void confirmPickingOutbound(String pickingId) {
         if (!StringUtils.hasText(pickingId)) throw new IllegalArgumentException("出库单ID不能为空");
         MaterialPicking picking = materialPickingService.getById(pickingId);
@@ -762,7 +761,7 @@ public class MaterialPurchasePickingHelper {
      * 回退库存，恢复采购任务状态，需填写备注原因
      * @param body { pickingId, reason }
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.cancelPicking 已有事务保护）
     public Map<String, Object> cancelPicking(Map<String, Object> body) {
         String pickingId = ParamUtils.toTrimmedString(body == null ? null : body.get("pickingId"));
         String reason = ParamUtils.toTrimmedString(body == null ? null : body.get("reason"));

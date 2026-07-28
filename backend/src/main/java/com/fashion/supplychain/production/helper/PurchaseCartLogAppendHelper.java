@@ -1,30 +1,54 @@
 package com.fashion.supplychain.production.helper;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.PurchaseCart;
-import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
+import com.fashion.supplychain.production.service.PurchaseCartService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Slf4j
 @Component
-public class PurchaseCartLogAppendHelper {
+public class PurchaseCartLogAppendHelper extends AbstractOperationLogAppendHelper<PurchaseCart, String> {
 
     @Autowired
-    private PurchaseCartMapper purchaseCartMapper;
+    private PurchaseCartService purchaseCartService;
 
+    @Override
+    protected IService<PurchaseCart> getService() {
+        return purchaseCartService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "采购车";
+    }
+
+    @Override
+    protected Function<PurchaseCart, String> getRemarkGetter() {
+        return PurchaseCart::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<PurchaseCart, String> getRemarkSetter() {
+        return PurchaseCart::setRemark;
+    }
+
+    @Override
     public void appendOperation(String cartId, String action, String detail) {
         if (cartId == null) return;
-        PurchaseCart cart = purchaseCartMapper.selectById(cartId);
+        PurchaseCart cart = purchaseCartService.getById(cartId);
         if (cart == null) return;
         String remark = cart.getRemark();
         String newRemark = buildRemark(remark, action, detail);
         cart.setRemark(newRemark);
-        purchaseCartMapper.updateById(cart);
+        purchaseCartService.updateById(cart);
     }
 
     private String buildRemark(String existing, String action, String detail) {

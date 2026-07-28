@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.DataPermissionHelper;
@@ -401,12 +403,21 @@ public class MaterialPurchaseOrchestrator {
         List<String> explicitOrderIds = helper.coerceStringList(orderIdsRaw);
 
         if (explicitOrderIds != null && !explicitOrderIds.isEmpty()) {
+            // 预处理：trim 并过滤空值
+            List<String> validOrderIds = explicitOrderIds.stream()
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+            // 批量预加载 ProductionOrder，避免循环内 N+1 查询
+            Map<String, ProductionOrder> orderMap = validOrderIds.isEmpty()
+                    ? Collections.emptyMap()
+                    : productionOrderService.listByIds(validOrderIds).stream()
+                            .collect(Collectors.toMap(ProductionOrder::getId, Function.identity()));
             LinkedHashMap<LocalDate, List<String>> orderIdsByDate = new LinkedHashMap<>();
-            for (String x : explicitOrderIds) {
-                String id = StringUtils.hasText(x) ? x.trim() : null;
-                if (!StringUtils.hasText(id)) continue;
+            for (String id : validOrderIds) {
+                // TODO: existsActivePurchaseForOrder 改为批量 IN 查询（P1）
                 if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(id)) continue;
-                ProductionOrder o = productionOrderService.getDetailById(id);
+                ProductionOrder o = orderMap.get(id);
                 if (o == null) continue;
                 LocalDate day = (o.getCreateTime() != null) ? o.getCreateTime().toLocalDate() : LocalDate.now();
                 orderIdsByDate.computeIfAbsent(day, k -> new ArrayList<>()).add(id);
@@ -492,6 +503,7 @@ public class MaterialPurchaseOrchestrator {
         return statusHelper.batchReceive(body);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public MaterialPurchase returnConfirm(Map<String, Object> body) {
         return statusHelper.returnConfirm(body);
     }
@@ -501,6 +513,7 @@ public class MaterialPurchaseOrchestrator {
         return statusHelper.batchReturnConfirm(body);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public MaterialPurchase resetReturnConfirm(Map<String, Object> body) {
         return statusHelper.resetReturnConfirm(body);
     }
@@ -523,6 +536,13 @@ public class MaterialPurchaseOrchestrator {
 
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
         return queryHelper.getStatusStats(params);
+    }
+
+    /**
+     * 按款号/订单号汇总面辅料采购数据（采购量/到货量/使用量/剩余量）
+     */
+    public List<Map<String, Object>> getStyleSummary(Map<String, Object> params) {
+        return queryHelper.getStyleSummary(params);
     }
 
     // ── Picking / Outbound (delegated to PickingHelper) ─────
@@ -626,10 +646,10 @@ public class MaterialPurchaseOrchestrator {
 
         boolean changed = false;
         if (StringUtils.hasText(newStatus)) {
-            if ("partial_arrival".equals(newStatus) || "shipped".equals(newStatus)) {
-                purchase.setStatus("partial_arrival");
+            if (MaterialConstants.STATUS_PARTIAL_ARRIVAL.equals(newStatus) || MaterialConstants.STATUS_SHIPPED.equals(newStatus)) {
+                purchase.setStatus(MaterialConstants.STATUS_PARTIAL_ARRIVAL);
                 changed = true;
-            } else if ("completed".equals(newStatus)) {
+            } else if (MaterialConstants.STATUS_COMPLETED.equals(newStatus)) {
                 purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
                 purchase.setActualArrivalDate(LocalDateTime.now());
                 changed = true;

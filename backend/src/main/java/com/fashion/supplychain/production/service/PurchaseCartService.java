@@ -1,10 +1,11 @@
 package com.fashion.supplychain.production.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.fashion.supplychain.production.dto.*;
 import com.fashion.supplychain.production.entity.PurchaseCart;
 import java.util.List;
 
-public interface PurchaseCartService {
+public interface PurchaseCartService extends IService<PurchaseCart> {
     
     PurchaseCart getOrCreateCart(Long tenantId, String userId);
     

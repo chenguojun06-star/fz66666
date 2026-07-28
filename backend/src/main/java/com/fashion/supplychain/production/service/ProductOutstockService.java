@@ -17,5 +17,5 @@ public interface ProductOutstockService extends IService<ProductOutstock> {
 
     boolean softDeleteByOrderId(String orderId);
 
-    int atomicAddPaidAmount(String id, BigDecimal delta);
+    int atomicAddPaidAmount(String id, BigDecimal delta, Long tenantId);
 }

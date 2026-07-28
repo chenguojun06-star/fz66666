@@ -105,6 +105,12 @@ public class MaterialPurchase {
 
     private BigDecimal returnQuantity;
 
+    /**
+     * 使用量（已出库领料数量，由仓库确认出库时自动累加）
+     * 剩余量 = arrivedQuantity - usedQuantity
+     */
+    private BigDecimal usedQuantity;
+
     private String returnConfirmerId;
 
     private String returnConfirmerName;

@@ -130,6 +130,6 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "arrived_quantity = COALESCE(arrived_quantity, 0) + #{delta}, " +
             "actual_arrival_date = NOW(), " +
             "update_time = NOW() " +
-            "WHERE id = #{id} AND delete_flag = 0")
-    int atomicAddArrivedQuantity(@Param("id") String id, @Param("delta") int delta);
+            "WHERE id = #{id} AND tenant_id = #{tenantId} AND delete_flag = 0")
+    int atomicAddArrivedQuantity(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 }

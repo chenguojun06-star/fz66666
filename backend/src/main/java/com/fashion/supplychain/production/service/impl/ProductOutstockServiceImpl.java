@@ -214,7 +214,7 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
     }
 
     @Override
-    public int atomicAddPaidAmount(String id, BigDecimal delta) {
-        return baseMapper.atomicAddPaidAmount(id, delta);
+    public int atomicAddPaidAmount(String id, BigDecimal delta, Long tenantId) {
+        return baseMapper.atomicAddPaidAmount(id, delta, tenantId);
     }
 }

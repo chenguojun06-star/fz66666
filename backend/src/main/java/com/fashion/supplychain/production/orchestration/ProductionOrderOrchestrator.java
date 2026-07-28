@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -54,7 +55,7 @@ public class ProductionOrderOrchestrator {
     private ProductionOrderQueryService productionOrderQueryService;
 
     @Autowired
-    private ProductionOrderProgressOrchestrationService progressOrchestrationService;
+    private ProductionOrderProgressOrchestrator progressOrchestrationService;
 
     @Autowired
     private ProductionOrderFinanceOrchestrationService financeOrchestrationService;
@@ -182,8 +183,16 @@ public class ProductionOrderOrchestrator {
 
     private void enrichEcAndDefect(IPage<ProductionOrder> page) {
         if (page == null || page.getRecords().isEmpty()) return;
-        enrichEcOrders(page);
-        enrichDefectQuantity(page);
+        // 并行执行 EC 关联和次品数量填充（两者互不依赖）
+        CompletableFuture<Void> ecFuture = CompletableFuture.runAsync(
+                UserContext.wrap(() -> enrichEcOrders(page)));
+        CompletableFuture<Void> defectFuture = CompletableFuture.runAsync(
+                UserContext.wrap(() -> enrichDefectQuantity(page)));
+        try {
+            CompletableFuture.allOf(ecFuture, defectFuture).get();
+        } catch (Exception e) {
+            log.warn("[OrderList] enrichEcAndDefect 并行填充部分失败: {}", e.getMessage());
+        }
     }
 
     private void enrichEcOrders(IPage<ProductionOrder> page) {

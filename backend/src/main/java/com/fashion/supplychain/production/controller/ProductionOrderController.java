@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
@@ -264,7 +265,7 @@ public class ProductionOrderController {
         copy.setProgressWorkflowJson(source.getProgressWorkflowJson());
         copy.setNodeOperations(source.getNodeOperations());
         copy.setRemarks("复制自订单: " + source.getOrderNo());
-        copy.setStatus("pending");
+        copy.setStatus(OrderStatusConstants.PENDING);
         copy.setProductionProgress(0);
         return upsert(copy);
     }

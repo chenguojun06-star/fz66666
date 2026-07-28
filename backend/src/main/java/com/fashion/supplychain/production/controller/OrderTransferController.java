@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.OrderTransfer;
 import com.fashion.supplychain.production.orchestration.OrderTransferOrchestrator;
 import com.fashion.supplychain.production.service.OrderTransferService;
@@ -47,7 +48,7 @@ public class OrderTransferController {
         String type = (String) params.get("type");
 
         try {
-            if ("pending".equals(type)) {
+            if (OrderStatusConstants.PENDING.equals(type)) {
                 IPage<OrderTransfer> page = orderTransferService.queryPendingTransfers(params);
                 return Result.success(page);
             } else if ("my-transfers".equals(type)) {

@@ -1,30 +1,44 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.CuttingBom;
 import com.fashion.supplychain.production.service.CuttingBomService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Slf4j
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class CuttingBomLogAppendHelper {
+public class CuttingBomLogAppendHelper extends AbstractOperationLogAppendHelper<CuttingBom, String> {
 
     @Autowired
     private CuttingBomService cuttingBomService;
 
+    @Override
+    protected IService<CuttingBom> getService() {
+        return cuttingBomService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "裁剪BOM";
+    }
+
+    @Override
+    protected Function<CuttingBom, String> getRemarkGetter() {
+        return CuttingBom::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<CuttingBom, String> getRemarkSetter() {
+        return CuttingBom::setRemark;
+    }
+
+    @Override
     public void appendOperation(String bomId, String action, String detail) {
-        if (bomId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            bomId,
-            cuttingBomService,
-            CuttingBom::getRemark,
-            CuttingBom::setRemark,
-            action,
-            detail,
-            "裁剪BOM"
-        );
+        super.appendOperation(bomId, action, detail);
     }
 
     public void appendCreate(String bomId) {

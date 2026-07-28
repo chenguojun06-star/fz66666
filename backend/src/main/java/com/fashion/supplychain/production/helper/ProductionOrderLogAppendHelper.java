@@ -1,30 +1,45 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-@Slf4j
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class ProductionOrderLogAppendHelper {
+public class ProductionOrderLogAppendHelper extends AbstractOperationLogAppendHelper<ProductionOrder, String> {
 
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Override
+    protected IService<ProductionOrder> getService() {
+        return productionOrderService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "生产订单";
+    }
+
+    @Override
+    protected Function<ProductionOrder, String> getRemarkGetter() {
+        return ProductionOrder::getRemarks;
+    }
+
+    @Override
+    protected BiConsumer<ProductionOrder, String> getRemarkSetter() {
+        return ProductionOrder::setRemarks;
+    }
+
+    @Override
     public void appendOperation(String orderId, String action, String detail) {
-        OperationLogAppendUtil.appendOperation(
-            orderId,
-            productionOrderService,
-            ProductionOrder::getRemarks,
-            ProductionOrder::setRemarks,
-            action,
-            detail,
-            "生产订单"
-        );
+        super.appendOperation(orderId, action, detail);
     }
 
     public void appendCreate(String orderId) {

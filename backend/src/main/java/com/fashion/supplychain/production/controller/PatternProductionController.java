@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.entity.PatternProduction;
@@ -182,7 +183,7 @@ public class PatternProductionController {
         order.setOrderQuantity(style.getSampleQuantity() != null ? style.getSampleQuantity() : 1);
         order.setProductionProgress(0);
         order.setMaterialArrivalRate(0);
-        order.setStatus("pending");
+        order.setStatus(OrderStatusConstants.PENDING);
         order.setActualStartDate(LocalDateTime.now());
 
         if (style.getDeliveryDate() != null) {

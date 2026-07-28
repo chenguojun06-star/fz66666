@@ -82,8 +82,9 @@ public class ExternalFactoryDefectDeductionHelper {
             String orderNo = warehousing.getOrderNo();
             String factoryName = warehousing.getFactoryName() != null ? warehousing.getFactoryName() : "外发工厂";
 
-            // 查找关联的出货对账单
+            // 查找关联的出货对账单（P1-8: 显式带 tenant_id 隔离）
             ShipmentReconciliation recon = shipmentReconciliationService.lambdaQuery()
+                    .eq(ShipmentReconciliation::getTenantId, UserContext.tenantId())
                     .and(w -> {
                         if (StringUtils.hasText(orderId)) w.eq(ShipmentReconciliation::getOrderId, orderId);
                         if (StringUtils.hasText(orderNo)) w.or().eq(ShipmentReconciliation::getOrderNo, orderNo);
@@ -134,7 +135,7 @@ public class ExternalFactoryDefectDeductionHelper {
                 return;
             }
 
-            shipmentReconciliationMapper.recalculateDeductionAndFinal(recon.getId());
+            shipmentReconciliationMapper.recalculateDeductionAndFinal(recon.getId(), recon.getTenantId());
 
             log.info("[DefectDeduction] {}扣款已记录: orderNo={}, factory={}, defectQty={}, amount={}",
                     deductionType, orderNo, factoryName, unqualified, defectCost);
@@ -161,7 +162,7 @@ public class ExternalFactoryDefectDeductionHelper {
                 deductionItemMapper.deleteById(item.getId());
 
                 if (StringUtils.hasText(reconId)) {
-                    shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId);
+                    shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId, UserContext.tenantId());
                 }
             }
             log.info("[DefectDeduction] 次品扣款已撤销: warehousingId={}", warehousingId);
@@ -201,7 +202,7 @@ public class ExternalFactoryDefectDeductionHelper {
         }
 
         if (totalOrphanAmount.compareTo(BigDecimal.ZERO) > 0) {
-            shipmentReconciliationMapper.recalculateDeductionAndFinal(reconciliationId);
+            shipmentReconciliationMapper.recalculateDeductionAndFinal(reconciliationId, recon.getTenantId());
             log.info("[DefectDeduction] 暂存次品扣款已归集到出货对账单: orderId={}, reconId={}, totalOrphanAmount={}",
                     orderId, reconciliationId, totalOrphanAmount);
         }

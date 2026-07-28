@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -273,7 +272,7 @@ public class MaterialPurchaseStatusHelper {
         return "success";
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.returnConfirm 已有事务保护）
     public MaterialPurchase returnConfirm(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -403,7 +402,7 @@ public class MaterialPurchaseStatusHelper {
         return result;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.resetReturnConfirm 已有事务保护）
     public MaterialPurchase resetReturnConfirm(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));

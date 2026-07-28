@@ -229,7 +229,14 @@ public class QualityAiSuggestionOrchestrator {
             return buildEmpty();
         }
 
-        ProductionOrder order = productionOrderService.getById(orderId.trim());
+        // P0 铁律4：多租户隔离 — AI质检建议必须校验租户上下文和订单归属
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId.trim())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
         if (order == null) {
             return buildEmpty();
         }

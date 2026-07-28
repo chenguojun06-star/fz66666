@@ -103,7 +103,16 @@ public class OrderReconciliationHelper {
         recon.setStyleNo(order.getStyleNo());
         recon.setStyleName(order.getStyleName());
         recon.setQuantity(order.getCompletedQuantity());
-        recon.setIsOwnFactory(isOwn ? 1 : 0);
+        // P0-7 修复：isOwnFactory 支持三态（1=本厂, 0=外发工厂, null=销售出货）
+        Integer isOwnFactoryValue;
+        if (isOwn) {
+            isOwnFactoryValue = 1;  // 本厂
+        } else if (StringUtils.hasText(order.getFactoryId())) {
+            isOwnFactoryValue = 0;  // 外发工厂
+        } else {
+            isOwnFactoryValue = null;  // 销售出货（无关联工厂）
+        }
+        recon.setIsOwnFactory(isOwnFactoryValue);
 
         // 计算扫码工资成本（本厂和加工厂都可能有扫码记录）
         BigDecimal scanCost = calculateScanCostForOrder(orderId);

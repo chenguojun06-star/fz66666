@@ -58,7 +58,7 @@ public class ProductionOrderCreationHelper {
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001: @Transactional 已由调用方 ProductionOrderOrchestrator.saveOrUpdateOrder 声明，Helper 层不再重复
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         if (productionOrder == null) {
             throw new IllegalArgumentException("参数错误");

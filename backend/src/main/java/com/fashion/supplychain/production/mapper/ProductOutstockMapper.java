@@ -16,6 +16,6 @@ public interface ProductOutstockMapper extends BaseMapper<ProductOutstock> {
             "payment_status = CASE WHEN COALESCE(paid_amount, 0) + #{delta} >= COALESCE(total_amount, 0) THEN 'paid' ELSE 'partial' END, " +
             "settlement_time = CASE WHEN COALESCE(paid_amount, 0) + #{delta} >= COALESCE(total_amount, 0) THEN NOW() ELSE settlement_time END, " +
             "update_time = NOW() " +
-            "WHERE id = #{id}")
-    int atomicAddPaidAmount(@Param("id") String id, @Param("delta") BigDecimal delta);
+            "WHERE id = #{id} AND tenant_id = #{tenantId} AND delete_flag = 0")
+    int atomicAddPaidAmount(@Param("id") String id, @Param("delta") BigDecimal delta, @Param("tenantId") Long tenantId);
 }

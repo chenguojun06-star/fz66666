@@ -8,7 +8,6 @@ import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,7 +31,7 @@ public class OrderCostSummaryHelper {
      * 内部工厂：物料成本汇总到订单的 material_cost 字段
      * 外部工厂：物料成本作为扣款（已在 ExternalFactoryMaterialDeductionHelper 处理）
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPickupOrchestrator.audit 已有事务保护）
     public void summaryOrderMaterialCost(String orderNo) {
         Long tenantId = UserContext.tenantId();
         
@@ -95,7 +94,7 @@ public class OrderCostSummaryHelper {
     /**
      * 汇总所有内部工厂订单的成本（批量）
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方应有事务保护）
     public int summaryAllInternalOrders() {
         Long tenantId = UserContext.tenantId();
         

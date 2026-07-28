@@ -375,16 +375,23 @@ public class ProductionOrderQueryService {
         if (productionOrders == null || productionOrders.isEmpty()) {
             return;
         }
-        fillStyleCover(productionOrders);
-        orderCuttingFillService.fillCuttingSummary(productionOrders);
-        progressFillHelper.fillCurrentProcessName(productionOrders);
-        orderStockFillService.fillStockSummary(productionOrders);
-        flowStageFillHelper.fillFlowStageFields(productionOrders);
-        orderQualityFillService.fillQualityStats(productionOrders);
-        priceFillHelper.fillFactoryUnitPrice(productionOrders);
-        priceFillHelper.fillQuotationUnitPrice(productionOrders);
-        fillProgressWorkflowFromStyleProcess(productionOrders);
-        priceFillHelper.fillProgressNodeUnitPrices(productionOrders);
+        // 并行执行所有填充操作（与 enrichOrderList 保持一致）
+        List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> fillStyleCover(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> orderCuttingFillService.fillCuttingSummary(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> progressFillHelper.fillCurrentProcessName(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> orderStockFillService.fillStockSummary(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> flowStageFillHelper.fillFlowStageFields(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> orderQualityFillService.fillQualityStats(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillFactoryUnitPrice(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillQuotationUnitPrice(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> fillProgressWorkflowFromStyleProcess(productionOrders)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillProgressNodeUnitPrices(productionOrders)), enrichExecutor));
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+        } catch (Exception e) {
+            log.warn("[OrderDetail] 并行填充部分任务失败: {}", e.getMessage());
+        }
     }
 
     /**

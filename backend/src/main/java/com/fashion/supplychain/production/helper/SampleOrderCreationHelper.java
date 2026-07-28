@@ -18,8 +18,6 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
@@ -43,7 +41,8 @@ public class SampleOrderCreationHelper {
     @Autowired
     private SerialOrchestrator serialOrchestrator;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    // 事务边界在调用方 StylePatternProductionHelper 通过 TransactionTemplate 显式控制（D-001 铁律：Helper 禁止 @Transactional）
+    // 调用方在 afterCommit 回调或无事务上下文中通过 REQUIRES_NEW TransactionTemplate 包装本方法，确保子操作独立提交
     public Map<String, Object> createSampleProductionOrder(String patternProductionId) {
         PatternProduction pattern = patternProductionService.getById(patternProductionId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {

@@ -8,8 +8,8 @@ import java.util.List;
 
 @Mapper
 public interface PurchaseCartItemMapper extends BaseMapper<PurchaseCartItem> {
-    
-    List<PurchaseCartItem> selectByCartId(@Param("cartId") String cartId);
-    
-    void deleteByIds(@Param("ids") List<String> ids);
+
+    List<PurchaseCartItem> selectByCartId(@Param("cartId") String cartId, @Param("tenantId") Long tenantId);
+
+    void deleteByIds(@Param("ids") List<String> ids, @Param("tenantId") Long tenantId);
 }

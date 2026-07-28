@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.service.PurchaseReturnItemService;
 import com.fashion.supplychain.production.service.PurchaseReturnService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -57,6 +58,7 @@ public class PurchaseReturnOrchestrator {
     @Autowired(required = false)
     private MaterialReconciliationService materialReconciliationService;
 
+    @Lazy
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
 
@@ -227,6 +229,50 @@ public class PurchaseReturnOrchestrator {
 
         purchaseReturnService.updateById(returnEntity);
         log.info("采购退货单审核完成: returnId={}, approved={}, status={}", returnId, approved, returnEntity.getReturnStatus());
+
+        // P0-2 + P1-5 修复：采购退货接入 BillAggregation 聚合层（与销售退货保持一致）
+        // - approved=true：推送 PAYABLE 账单（冲减应付），幂等预检
+        // - approved=false：反向已推送的账单（如有）
+        // - 失败不阻塞主流程（账单异常走人工对账）
+        if (billAggregationOrchestrator != null) {
+            if (approved) {
+                try {
+                    String sourceId = String.valueOf(returnId);
+                    if (!billAggregationOrchestrator.billExists("PURCHASE_RETURN", sourceId)) {
+                        BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+                        req.setBillType("PAYABLE");
+                        req.setBillCategory("MATERIAL");
+                        req.setSourceType("PURCHASE_RETURN");
+                        req.setSourceId(sourceId);
+                        req.setSourceNo(returnEntity.getReturnNo());
+                        req.setCounterpartyType("SUPPLIER");
+                        req.setCounterpartyId(returnEntity.getSupplierId());
+                        req.setCounterpartyName(returnEntity.getSupplierName());
+                        req.setAmount(returnEntity.getTotalAmount());
+                        req.setRemark("采购退货审核通过: " + returnEntity.getReturnNo());
+                        req.setSettlementMonth(LocalDateTime.now().format(
+                                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+                        billAggregationOrchestrator.pushBill(req);
+                        log.info("[采购退货] 推送账单成功: returnId={}, amount={}",
+                                returnId, returnEntity.getTotalAmount());
+                    } else {
+                        log.info("[采购退货] 账单已存在，跳过推送: returnId={}", returnId);
+                    }
+                } catch (Exception e) {
+                    log.warn("[采购退货] 推送账单失败（不阻塞主流程）: returnId={}, err={}",
+                            returnId, e.getMessage());
+                }
+            } else {
+                try {
+                    billAggregationOrchestrator.reverseBySource("PURCHASE_RETURN",
+                            String.valueOf(returnId), "采购退货拒绝: " + reason);
+                    log.info("[采购退货] 驳回联动反向账单: returnId={}", returnId);
+                } catch (Exception e) {
+                    log.warn("[采购退货] 驳回联动反向账单失败（不阻塞主流程）: returnId={}, err={}",
+                            returnId, e.getMessage());
+                }
+            }
+        }
     }
 
     /**
@@ -244,6 +290,11 @@ public class PurchaseReturnOrchestrator {
                 .one();
         if (returnEntity == null) {
             throw new IllegalArgumentException("退货单不存在或不属于当前租户");
+        }
+        // P0-2 修复：状态幂等检查，避免重复 completeReturn 导致库存/应付重复扣减
+        if ("RETURNED".equals(returnEntity.getReturnStatus())) {
+            log.info("[采购退货] 退货单已完成，幂等返回: returnId={}", returnId);
+            return;
         }
         if (!"APPROVED".equals(returnEntity.getReturnStatus())) {
             throw new IllegalArgumentException("退货单状态不是已审核，无法完成退货");
@@ -274,6 +325,25 @@ public class PurchaseReturnOrchestrator {
         returnEntity.setReturnStatus("RETURNED");
         returnEntity.setReturnTime(LocalDateTime.now());
         purchaseReturnService.updateById(returnEntity);
+
+        // P0-4 修复：完成退货后同步 BillAggregation 账单状态（避免绕过聚合层）
+        // approveReturn 已推送 PURCHASE_RETURN 账单（PENDING），completeReturn 完成实际冲减后：
+        // - 将账单 settledAmount 同步为退货总额（表示已冲减完成）
+        // - 自动流转为 SETTLED 状态（syncSettledAmountBySource 内部处理）
+        // - 失败不阻塞主流程（账单异常走人工对账）
+        if (billAggregationOrchestrator != null && returnEntity.getTotalAmount() != null) {
+            try {
+                billAggregationOrchestrator.syncSettledAmountBySource(
+                        com.fashion.supplychain.finance.constant.BillConstants.SOURCE_PURCHASE_RETURN,
+                        String.valueOf(returnId),
+                        returnEntity.getTotalAmount());
+                log.info("[采购退货] 完成退货联动账单结清: returnId={}, settled={}",
+                        returnId, returnEntity.getTotalAmount());
+            } catch (Exception e) {
+                log.warn("[采购退货] 完成退货联动账单失败（不阻塞主流程）: returnId={}, err={}",
+                        returnId, e.getMessage());
+            }
+        }
 
         // P0-7 修复：完成退货后联动反向未审批的对账单（数据链路闭环）
         reversePendingReconciliationForReturn(returnEntity, tenantId);

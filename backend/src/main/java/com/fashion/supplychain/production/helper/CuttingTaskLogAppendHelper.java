@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingTaskService;
@@ -9,13 +10,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 /**
  * 裁剪任务操作日志追加
  * 双写策略：CuttingTask.remarks + ProductionOrder.remarks（用户要求所有操作记录都进订单备注时间线）
  */
 @Slf4j
 @Component
-public class CuttingTaskLogAppendHelper {
+public class CuttingTaskLogAppendHelper extends AbstractOperationLogAppendHelper<CuttingTask, String> {
 
     @Autowired
     private CuttingTaskService cuttingTaskService;
@@ -26,19 +30,30 @@ public class CuttingTaskLogAppendHelper {
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
 
+    @Override
+    protected IService<CuttingTask> getService() {
+        return cuttingTaskService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "裁剪任务";
+    }
+
+    @Override
+    protected Function<CuttingTask, String> getRemarkGetter() {
+        return CuttingTask::getRemarks;
+    }
+
+    @Override
+    protected BiConsumer<CuttingTask, String> getRemarkSetter() {
+        return CuttingTask::setRemarks;
+    }
+
+    @Override
     public void appendOperation(String taskId, String action, String detail) {
         if (taskId == null) return;
-        // 1. 写 CuttingTask.remarks
-        OperationLogAppendUtil.appendOperation(
-            taskId,
-            cuttingTaskService,
-            CuttingTask::getRemarks,
-            CuttingTask::setRemarks,
-            action,
-            detail,
-            "裁剪任务"
-        );
-        // 2. 同步到 ProductionOrder.remarks
+        super.appendOperation(taskId, action, detail);
         syncToProductionOrder(taskId, action, detail);
     }
 

@@ -5,7 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderFinanceOrchestrationService;
-import com.fashion.supplychain.production.orchestration.ProductionOrderProgressOrchestrationService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderProgressOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderProgressRecomputeService;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -71,7 +71,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private ObjectProvider<ProductionOrderProgressOrchestrationService> progressOrchestrationServiceProvider;
+    private ObjectProvider<ProductionOrderProgressOrchestrator> progressOrchestrationServiceProvider;
 
     @Autowired
     private ObjectProvider<ProductionOrderFinanceOrchestrationService> financeOrchestrationServiceProvider;
@@ -278,7 +278,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     public boolean updateProductionProgress(String id, Integer progress, String rollbackRemark,
             String rollbackToProcessName) {
         try {
-            ProductionOrderProgressOrchestrationService svc = progressOrchestrationServiceProvider.getIfAvailable();
+            ProductionOrderProgressOrchestrator svc = progressOrchestrationServiceProvider.getIfAvailable();
             if (svc == null) {
                 throw new IllegalStateException("进度服务不可用");
             }
@@ -311,7 +311,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     @Override
     public boolean updateMaterialArrivalRate(String id, Integer rate) {
         try {
-            ProductionOrderProgressOrchestrationService svc = progressOrchestrationServiceProvider.getIfAvailable();
+            ProductionOrderProgressOrchestrator svc = progressOrchestrationServiceProvider.getIfAvailable();
             if (svc == null) {
                 throw new IllegalStateException("进度服务不可用");
             }

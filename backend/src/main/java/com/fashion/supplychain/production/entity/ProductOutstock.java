@@ -129,4 +129,26 @@ public class ProductOutstock {
     private String approveByName;
 
     private LocalDateTime approveTime;
+
+    // ==================== 冲销字段（对齐 ProductWarehousing）====================
+
+    /**
+     * 冲销关联原出库记录ID（在冲销新记录上指向原记录）
+     */
+    private String reversalId;
+
+    /**
+     * 原记录被冲销新记录ID（在原记录上指向冲销新记录）
+     */
+    private String reversedById;
+
+    /**
+     * 冲销状态: NONE / REVERSED
+     */
+    private String reversalStatus;
+
+    /**
+     * 冲销原因
+     */
+    private String reversalReason;
 }

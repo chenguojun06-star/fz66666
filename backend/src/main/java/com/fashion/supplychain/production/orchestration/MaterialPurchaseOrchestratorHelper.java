@@ -349,11 +349,37 @@ public class MaterialPurchaseOrchestratorHelper {
     public List<String> resolveTargetOrderIds(ProductionOrder seed, boolean overwrite) {
         List<ProductionOrder> matchedOrders = resolveSameDaySameStyleOrders(seed);
         List<String> out = new ArrayList<>();
+
+        // 批量预加载已存在 active purchase 的 orderId 集合（修复 N+1 查询）
+        // active 定义与 existsActivePurchaseForOrder 一致：deleteFlag=0
+        Set<String> existingOrderIds;
+        if (overwrite) {
+            existingOrderIds = Collections.emptySet();
+        } else {
+            Set<String> candidateIds = matchedOrders.stream()
+                    .filter(o -> o != null && StringUtils.hasText(o.getId()))
+                    .map(o -> o.getId().trim())
+                    .collect(Collectors.toSet());
+            if (candidateIds.isEmpty()) {
+                existingOrderIds = Collections.emptySet();
+            } else {
+                existingOrderIds = new HashSet<>(materialPurchaseService.lambdaQuery()
+                        .select(MaterialPurchase::getOrderId)
+                        .in(MaterialPurchase::getOrderId, candidateIds)
+                        .eq(MaterialPurchase::getDeleteFlag, 0)
+                        .list()
+                        .stream()
+                        .map(p -> p.getOrderId() != null ? p.getOrderId().trim() : null)
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toSet()));
+            }
+        }
+
         for (ProductionOrder o : matchedOrders) {
             if (o == null || !StringUtils.hasText(o.getId())) continue;
             String oid = o.getId().trim();
             if (!StringUtils.hasText(oid)) continue;
-            if (!overwrite && materialPurchaseService.existsActivePurchaseForOrder(oid)) continue;
+            if (!overwrite && existingOrderIds.contains(oid)) continue;
             out.add(oid);
         }
         return out;

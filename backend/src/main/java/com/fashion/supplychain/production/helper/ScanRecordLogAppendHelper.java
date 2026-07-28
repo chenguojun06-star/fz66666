@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -9,9 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Slf4j
 @Component
-public class ScanRecordLogAppendHelper {
+public class ScanRecordLogAppendHelper extends AbstractOperationLogAppendHelper<ScanRecord, String> {
 
     @Autowired
     private ScanRecordService scanRecordService;
@@ -22,6 +26,26 @@ public class ScanRecordLogAppendHelper {
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
 
+    @Override
+    protected IService<ScanRecord> getService() {
+        return scanRecordService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "扫码记录";
+    }
+
+    @Override
+    protected Function<ScanRecord, String> getRemarkGetter() {
+        return ScanRecord::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<ScanRecord, String> getRemarkSetter() {
+        return ScanRecord::setRemark;
+    }
+
     public void appendScan(String scanRecordId, String scanType, String bundleNo, String result) {
         if (scanRecordId == null || scanRecordId.trim().isEmpty()) return;
         String id = scanRecordId.trim();
@@ -30,15 +54,7 @@ public class ScanRecordLogAppendHelper {
         String resultLabel = "success".equalsIgnoreCase(result) ? "成功" : "失败";
         String detail = typeLabel + "扫码" + resultLabel;
 
-        OperationLogAppendUtil.appendOperation(
-            id,
-            scanRecordService,
-            ScanRecord::getRemark,
-            ScanRecord::setRemark,
-            typeLabel + "扫码",
-            detail,
-            "扫码记录"
-        );
+        appendOperation(id, typeLabel + "扫码", detail);
 
         syncScanRecordToOrder(id, typeLabel + "扫码", detail);
     }

@@ -1,34 +1,51 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * 成品入库操作日志追加（追加到生产订单的remarks字段）
  * P0铁律#6: 操作日志必须记录关键业务操作
  */
 @Component
-public class ProductWarehousingLogAppendHelper {
+public class ProductWarehousingLogAppendHelper extends AbstractOperationLogAppendHelper<ProductionOrder, String> {
 
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    private void appendOperation(String orderId, String action, String detail) {
+    @Override
+    protected IService<ProductionOrder> getService() {
+        return productionOrderService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "生产订单";
+    }
+
+    @Override
+    protected Function<ProductionOrder, String> getRemarkGetter() {
+        return ProductionOrder::getRemarks;
+    }
+
+    @Override
+    protected BiConsumer<ProductionOrder, String> getRemarkSetter() {
+        return ProductionOrder::setRemarks;
+    }
+
+    @Override
+    public void appendOperation(String orderId, String action, String detail) {
         if (orderId == null || orderId.trim().isEmpty()) {
             return;
         }
-        OperationLogAppendUtil.appendOperation(
-            orderId.trim(),
-            productionOrderService,
-            ProductionOrder::getRemarks,
-            ProductionOrder::setRemarks,
-            action,
-            detail,
-            "生产订单"
-        );
+        super.appendOperation(orderId.trim(), action, detail);
     }
 
     public void appendSingleWarehousing(String orderId, int qualifiedQty, int unqualifiedQty) {

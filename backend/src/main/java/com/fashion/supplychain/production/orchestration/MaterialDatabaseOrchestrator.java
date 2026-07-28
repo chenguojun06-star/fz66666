@@ -162,9 +162,18 @@ public class MaterialDatabaseOrchestrator {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("id不能为空");
         }
-        // 直接查 service 避免 getById() 在软删除记录上抛异常（幂等性）
-        MaterialDatabase current = materialDatabaseService.getById(id.trim());
-        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+        // P0 铁律4：多租户隔离 — 删除前必须校验租户归属（含软删除记录的幂等性处理）
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialDatabase current = materialDatabaseService.lambdaQuery()
+                .eq(MaterialDatabase::getId, id.trim())
+                .eq(MaterialDatabase::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
+        if (current == null) {
+            throw new NoSuchElementException("物料库记录不存在");
+        }
+        if (current.getDeleteFlag() != null && current.getDeleteFlag() != 0) {
             log.warn("[MATERIAL-DB-DELETE] id={} already deleted, idempotent success", id);
             return true;
         }

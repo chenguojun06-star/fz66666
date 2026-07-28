@@ -297,9 +297,18 @@ public class ShipmentReconciliationOrchestrator {
             sr.setFinalAmount(total.subtract(sr.getDeductionAmount()).setScale(2, RoundingMode.HALF_UP));
         }
 
+        // P0-7 修复：isOwnFactory 支持三态（1=本厂, 0=外发工厂, null=销售出货）
+        Integer isOwnFactoryValue;
+        if (isOwnFactory) {
+            isOwnFactoryValue = 1;  // 本厂
+        } else if (StringUtils.hasText(order.getFactoryId())) {
+            isOwnFactoryValue = 0;  // 外发工厂
+        } else {
+            isOwnFactoryValue = null;  // 销售出货（无关联工厂）
+        }
         try {
             java.lang.reflect.Method setOwn = sr.getClass().getMethod("setIsOwnFactory", Integer.class);
-            setOwn.invoke(sr, isOwnFactory ? 1 : 0);
+            setOwn.invoke(sr, isOwnFactoryValue);
         } catch (Exception e) {
             log.warn("[FinanceOrch] 设置isOwnFactory失败: orderId={}, error={}", sr.getId(), e.getMessage());
         }

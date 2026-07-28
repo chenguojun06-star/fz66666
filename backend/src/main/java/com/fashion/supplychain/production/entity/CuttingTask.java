@@ -54,10 +54,14 @@ public class CuttingTask {
 
     private java.time.LocalDate expectedShipDate;
 
-    @TableField(exist = false)
+    /**
+     * 裁剪数量（分扎完成时从 CuttingBundle 汇总持久化，用于历史用料分析）
+     */
     private Integer cuttingQuantity;
 
-    @TableField(exist = false)
+    /**
+     * 裁剪扎数（分扎完成时持久化）
+     */
     private Integer cuttingBundleCount;
 
     // ==================== 订单关联字段（非数据库字段）====================

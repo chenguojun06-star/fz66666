@@ -19,7 +19,6 @@ import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
@@ -413,7 +412,7 @@ public class ProductWarehousingRepairHelper {
      * 适用场景：质检员在PC端确认工厂已完成返修，无需等待小程序扫码
      * 前置条件：bundle.status 必须为 unqualified
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.markBundleRepaired 已有事务保护）
     public boolean markBundleRepaired(String bundleId) {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
@@ -436,7 +435,7 @@ public class ProductWarehousingRepairHelper {
     /**
      * AI次品处理：标记菲号为「返修中」
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.startBundleRepair 已有事务保护）
     public void startBundleRepair(String bundleId, String operatorName) {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
@@ -452,7 +451,7 @@ public class ProductWarehousingRepairHelper {
     /**
      * AI次品处理：标记返修完成 → 进入待质检
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.completeBundleRepair 已有事务保护）
     public void completeBundleRepair(String bundleId) {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
@@ -471,7 +470,7 @@ public class ProductWarehousingRepairHelper {
     /**
      * AI次品处理：标记菲号为报废
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.scrapBundle 已有事务保护）
     public void scrapBundle(String bundleId) {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");

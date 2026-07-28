@@ -106,9 +106,12 @@ public class PurchaseReturnStockHelper {
             targetPayable = findLatestUnpaidPayable(returnEntity, tenantId);
         }
         if (targetPayable == null) {
-            log.warn("采购退货未找到对应应付账款记录，跳过应付更新: returnNo={}, supplierId={}, originalPurchaseId={}",
-                    returnEntity.getReturnNo(), returnEntity.getSupplierId(), returnEntity.getOriginalPurchaseId());
-            return;
+            // P0-2 修复：找不到 Payable 时抛异常（不静默跳过），触发事务回滚避免账实不一致
+            // 调用方（Orchestrator）可捕获并决定是否继续；默认行为是回滚 completeReturn
+            throw new BusinessException("采购退货未找到对应应付账款记录，无法冲减应付: returnNo="
+                    + returnEntity.getReturnNo() + ", supplierId=" + returnEntity.getSupplierId()
+                    + ", originalPurchaseId=" + returnEntity.getOriginalPurchaseId()
+                    + "。请先确认采购入库已生成应付单后再完成退货");
         }
 
         // 已结清的应付单不冲减（避免出现负数或回滚已付款状态）
@@ -118,11 +121,14 @@ public class PurchaseReturnStockHelper {
             return;
         }
 
-        BigDecimal paidAmountDelta = totalAmount.negate(); // 负数：减少应付
-        payableService.atomicAddPaidAmount(targetPayable.getId(), paidAmountDelta);
-        log.info("采购退货应付账款更新成功: returnNo={}, payableId={}, payableNo={}, delta={}, originalPurchaseId={}",
+        // P0-2 修复：使用 returned_amount 字段记录退货冲减金额（正数），不再用 paid_amount 负数冲减
+        // - 原实现：paid_amount -= totalAmount，导致"已付款金额"虚低，财务报表无法区分真实付款与退货冲减
+        // - 新实现：returned_amount += totalAmount，独立记录退货金额
+        // - 状态判断：returned_amount >= amount - paid_amount 时置为 PAID（退货覆盖未付款部分）
+        payableService.atomicAddReturnedAmount(targetPayable.getId(), totalAmount, tenantId);
+        log.info("采购退货应付账款更新成功（returned_amount）: returnNo={}, payableId={}, payableNo={}, returnedDelta={}, originalPurchaseId={}",
                 returnEntity.getReturnNo(), targetPayable.getId(), targetPayable.getPayableNo(),
-                paidAmountDelta, returnEntity.getOriginalPurchaseId());
+                totalAmount, returnEntity.getOriginalPurchaseId());
     }
 
     /**

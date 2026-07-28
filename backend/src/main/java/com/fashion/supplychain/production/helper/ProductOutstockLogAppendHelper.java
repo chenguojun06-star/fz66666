@@ -1,30 +1,44 @@
 package com.fashion.supplychain.production.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.service.ProductOutstockService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Slf4j
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class ProductOutstockLogAppendHelper {
+public class ProductOutstockLogAppendHelper extends AbstractOperationLogAppendHelper<ProductOutstock, String> {
 
     @Autowired
     private ProductOutstockService productOutstockService;
 
+    @Override
+    protected IService<ProductOutstock> getService() {
+        return productOutstockService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "成品出库";
+    }
+
+    @Override
+    protected Function<ProductOutstock, String> getRemarkGetter() {
+        return ProductOutstock::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<ProductOutstock, String> getRemarkSetter() {
+        return ProductOutstock::setRemark;
+    }
+
+    @Override
     public void appendOperation(String outstockId, String action, String detail) {
-        if (outstockId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            outstockId,
-            productOutstockService,
-            ProductOutstock::getRemark,
-            ProductOutstock::setRemark,
-            action,
-            detail,
-            "成品出库"
-        );
+        super.appendOperation(outstockId, action, detail);
     }
 
     public void appendCreate(String outstockId) {

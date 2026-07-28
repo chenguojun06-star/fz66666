@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -317,6 +318,79 @@ public class MaterialPurchaseQueryHelper {
         result.put("partialCount", partialCount);
         result.put("completedCount", completedCount);
         result.put("cancelledCount", cancelledCount);
+        return result;
+    }
+
+    /**
+     * 按款号/订单号汇总面辅料采购数据（采购量/到货量/使用量/剩余量）
+     * 支持按 styleId 或 orderNo 过滤，按物料编码+物料名称分组汇总。
+     */
+    public List<Map<String, Object>> getStyleSummary(Map<String, Object> params) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String styleId = params == null ? "" : String.valueOf(params.getOrDefault("styleId", "")).trim();
+        String orderNo = params == null ? "" : String.valueOf(params.getOrDefault("orderNo", "")).trim();
+
+        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .ne(MaterialPurchase::getStatus, MaterialConstants.STATUS_CANCELLED);
+        if (StringUtils.hasText(styleId)) {
+            wrapper.eq(MaterialPurchase::getStyleId, styleId);
+        }
+        if (StringUtils.hasText(orderNo)) {
+            wrapper.eq(MaterialPurchase::getOrderNo, orderNo);
+        }
+        if (!StringUtils.hasText(styleId) && !StringUtils.hasText(orderNo)) {
+            return List.of();
+        }
+
+        List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
+
+        // 按物料编码+物料名称分组汇总
+        Map<String, Map<String, Object>> grouped = new java.util.LinkedHashMap<>();
+        for (MaterialPurchase p : purchases) {
+            String key = (p.getMaterialCode() != null ? p.getMaterialCode() : "") + "|" + (p.getMaterialName() != null ? p.getMaterialName() : "");
+            Map<String, Object> row = grouped.computeIfAbsent(key, k -> {
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("materialCode", p.getMaterialCode());
+                m.put("materialName", p.getMaterialName());
+                m.put("materialType", p.getMaterialType());
+                m.put("unit", p.getUnit());
+                m.put("color", p.getColor());
+                m.put("styleNo", p.getStyleNo());
+                m.put("styleName", p.getStyleName());
+                m.put("orderNo", p.getOrderNo());
+                m.put("purchaseQuantity", BigDecimal.ZERO);
+                m.put("arrivedQuantity", 0);
+                m.put("usedQuantity", BigDecimal.ZERO);
+                m.put("returnQuantity", BigDecimal.ZERO);
+                m.put("purchaseCount", 0);
+                return m;
+            });
+            BigDecimal purchaseQty = p.getPurchaseQuantity() != null ? p.getPurchaseQuantity() : BigDecimal.ZERO;
+            Integer arrivedQty = p.getArrivedQuantity() != null ? p.getArrivedQuantity() : 0;
+            BigDecimal usedQty = p.getUsedQuantity() != null ? p.getUsedQuantity() : BigDecimal.ZERO;
+            BigDecimal returnQty = p.getReturnQuantity() != null ? p.getReturnQuantity() : BigDecimal.ZERO;
+            row.put("purchaseQuantity", ((BigDecimal) row.get("purchaseQuantity")).add(purchaseQty));
+            row.put("arrivedQuantity", (Integer) row.get("arrivedQuantity") + arrivedQty);
+            row.put("usedQuantity", ((BigDecimal) row.get("usedQuantity")).add(usedQty));
+            row.put("returnQuantity", ((BigDecimal) row.get("returnQuantity")).add(returnQty));
+            row.put("purchaseCount", (Integer) row.get("purchaseCount") + 1);
+        }
+
+        // 计算剩余量 = 到货量 - 使用量
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Map<String, Object> row : grouped.values()) {
+            Integer arrived = (Integer) row.get("arrivedQuantity");
+            BigDecimal used = (BigDecimal) row.get("usedQuantity");
+            BigDecimal remaining = BigDecimal.valueOf(arrived).subtract(used);
+            if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+                remaining = BigDecimal.ZERO;
+            }
+            row.put("remainingQuantity", remaining);
+            result.add(row);
+        }
         return result;
     }
 }

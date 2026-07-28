@@ -126,9 +126,7 @@
           <foreach collection="orderIds" item="id" open="(" separator="," close=")">
               #{id}
           </foreach>
-          <if test="tenantId != null">
           AND tenant_id = #{tenantId}
-          </if>
         GROUP BY production_order_id, process_name
     </select>
 

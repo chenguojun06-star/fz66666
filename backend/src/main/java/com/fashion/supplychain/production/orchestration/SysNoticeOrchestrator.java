@@ -23,7 +23,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 站内通知编排器 — 跟单员收件箱
@@ -493,12 +499,18 @@ public class SysNoticeOrchestrator {
                 .list();
 
         List<SysNotice> notices = new ArrayList<>();
+        // 批量预加载所有 owner User，避免循环内 N+1 查询
+        Set<Long> ownerUserIds = tenants.stream()
+                .map(Tenant::getOwnerUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, User> ownerMap = ownerUserIds.isEmpty() ? Collections.emptyMap() :
+                userService.listByIds(ownerUserIds).stream()
+                        .collect(Collectors.toMap(User::getId, Function.identity()));
         for (Tenant t : tenants) {
             String toName = null;
             if (t.getOwnerUserId() != null) {
-                User owner = userService.lambdaQuery()
-                        .eq(User::getId, t.getOwnerUserId())
-                        .one();
+                User owner = ownerMap.get(t.getOwnerUserId());
                 if (owner != null) {
                     toName = owner.getName() != null ? owner.getName() : owner.getUsername();
                 }

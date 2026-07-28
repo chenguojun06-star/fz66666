@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -609,12 +610,23 @@ public class OrderTransferOrchestrator {
         }
 
         if (StringUtils.hasText(bundleIds)) {
-            String[] ids = bundleIds.split(",");
-            for (String id : ids) {
+            // 批量预加载（修复 N+1 查询）：复用 allScans 按 cuttingBundleId 分组，避免循环内逐条查询
+            Set<String> bundleIdSet = Arrays.stream(bundleIds.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toSet());
+            Map<String, List<ScanRecord>> scansByBundle = allScans.stream()
+                    .filter(s -> s.getCuttingBundleId() != null)
+                    .collect(Collectors.groupingBy(ScanRecord::getCuttingBundleId));
+            Map<String, CuttingBundle> bundleMap = bundleIdSet.isEmpty()
+                    ? new HashMap<>()
+                    : cuttingBundleService.listByIds(bundleIdSet).stream()
+                            .collect(Collectors.toMap(CuttingBundle::getId, b -> b, (a, b) -> a));
+            for (String id : bundleIds.split(",")) {
                 String bid = id.trim();
-                List<ScanRecord> bundleScans = scanRecordService.listByCondition(order.getId(), bid, null, "success", null);
-                if (!bundleScans.isEmpty()) {
-                    CuttingBundle bundle = cuttingBundleService.getById(bid);
+                List<ScanRecord> bundleScans = scansByBundle.get(bid);
+                if (bundleScans != null && !bundleScans.isEmpty()) {
+                    CuttingBundle bundle = bundleMap.get(bid);
                     String label = bundle != null
                             ? (StringUtils.hasText(bundle.getBundleLabel()) ? bundle.getBundleLabel() : String.valueOf(bundle.getBundleNo()))
                             : bid;

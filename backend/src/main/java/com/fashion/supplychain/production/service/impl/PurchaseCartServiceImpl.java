@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.production.dto.*;
 import com.fashion.supplychain.production.entity.PurchaseCart;
 import com.fashion.supplychain.production.entity.PurchaseCartItem;
@@ -17,7 +18,7 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class PurchaseCartServiceImpl implements PurchaseCartService {
+public class PurchaseCartServiceImpl extends ServiceImpl<PurchaseCartMapper, PurchaseCart> implements PurchaseCartService {
     
     @Autowired
     private PurchaseCartMapper purchaseCartMapper;
@@ -55,7 +56,7 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     @Override
     public PurchaseCart getCartWithItems(Long tenantId, String userId) {
         PurchaseCart cart = getOrCreateCart(tenantId, userId);
-        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cart.getId());
+        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cart.getId(), tenantId);
         cart.setItems(items);
         return cart;
     }

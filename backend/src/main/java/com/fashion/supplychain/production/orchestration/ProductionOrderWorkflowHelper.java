@@ -129,7 +129,7 @@ public class ProductionOrderWorkflowHelper {
         return productionOrderQueryService.getDetailById(oid);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001: @Transactional 已由调用方 ProductionOrderOrchestrator.rollbackProgressWorkflow 声明，Helper 层不再重复
     public ProductionOrder rollbackProgressWorkflow(String id, String reason) {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) { throw new IllegalArgumentException("参数错误"); }
@@ -182,7 +182,7 @@ public class ProductionOrderWorkflowHelper {
         return productionOrderQueryService.getDetailById(oid);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001: @Transactional 已由调用方 ProductionOrderOrchestrator.confirmProcurement 声明，Helper 层不再重复
     public ProductionOrder confirmProcurement(String orderId, String remark) {
         TenantAssert.assertTenantContext();
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;

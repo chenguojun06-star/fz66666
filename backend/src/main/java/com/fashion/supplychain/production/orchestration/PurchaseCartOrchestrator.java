@@ -361,7 +361,7 @@ public class PurchaseCartOrchestrator {
     public ConfirmResultDto confirm(Long tenantId, String userId, List<String> itemIds) {
         // 获取购物车并验证租户
         PurchaseCart cart = purchaseCartService.getOrCreateCart(tenantId, userId);
-        List<PurchaseCartItem> allItems = purchaseCartItemMapper.selectByCartId(cart.getId());
+        List<PurchaseCartItem> allItems = purchaseCartItemMapper.selectByCartId(cart.getId(), tenantId);
         
         // 过滤要处理的物料
         List<PurchaseCartItem> itemsToProcess;
@@ -434,7 +434,7 @@ public class PurchaseCartOrchestrator {
         
         // 删除已下单的物料
         if (itemIds != null && !itemIds.isEmpty()) {
-            purchaseCartItemMapper.deleteByIds(itemIds);
+            purchaseCartItemMapper.deleteByIds(itemIds, tenantId);
         } else {
             purchaseCartService.clearCart(tenantId, userId);
         }
@@ -534,9 +534,9 @@ public class PurchaseCartOrchestrator {
     }
     
     private void recalculateCartTotal(String cartId) {
-        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cartId);
-        
         PurchaseCart cart = purchaseCartMapper.selectById(cartId);
+        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cartId, cart.getTenantId());
+
         cart.setTotalItems(items.size());
         cart.setTotalAmount(items.stream()
             .map(PurchaseCartItem::getTotalAmount)

@@ -34,12 +34,19 @@ public class ProductionOrderOperationController {
      */
     private boolean assertFactoryOrderAccess(String orderId) {
         String ctxFactoryId = UserContext.factoryId();
-        if (!StringUtils.hasText(ctxFactoryId)) {
-            return true; // 非工厂账号，跳过
-        }
-        ProductionOrder order = productionOrderService.getById(orderId);
+        // P0 铁律4：多租户隔离 — 所有订单操作必须在租户上下文中
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
         if (order == null) {
             return false;
+        }
+        if (!StringUtils.hasText(ctxFactoryId)) {
+            return true; // 非工厂账号，跳过
         }
         return ctxFactoryId.equals(order.getFactoryId());
     }

@@ -141,7 +141,7 @@ public class MaterialInboundOrchestrator {
         log.info("库存已更新: materialCode={}, quantity=+{}, location={}", purchase.getMaterialCode(), arrivedQuantity, warehouseLocation);
 
         // 5. 原子更新采购单到货数量
-        int rows = materialPurchaseMapper.atomicAddArrivedQuantity(purchaseId, arrivedQuantity);
+        int rows = materialPurchaseMapper.atomicAddArrivedQuantity(purchaseId, arrivedQuantity, tenantId);
         if (rows == 0) {
             throw new RuntimeException("更新采购单到货数量失败: purchaseId=" + purchaseId);
         }

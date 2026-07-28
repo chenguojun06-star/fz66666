@@ -99,7 +99,7 @@ public class ExternalFactoryMaterialDeductionHelper {
                 return;
             }
 
-            shipmentReconciliationMapper.recalculateDeductionAndFinal(recon.getId());
+            shipmentReconciliationMapper.recalculateDeductionAndFinal(recon.getId(), recon.getTenantId());
 
             log.info("外发工厂面料扣款已记录: orderNo={}, pickingNo={}, deductionAmount={}",
                     orderNo, picking.getPickingNo(), totalMaterialCost);
@@ -140,7 +140,7 @@ public class ExternalFactoryMaterialDeductionHelper {
 
                 ShipmentReconciliation recon = reconMap.get(reconId);
                 if (recon != null) {
-                    shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId);
+                    shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId, recon.getTenantId());
                     log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
                 }
             }
@@ -180,7 +180,7 @@ public class ExternalFactoryMaterialDeductionHelper {
         }
 
         if (totalOrphanAmount.compareTo(BigDecimal.ZERO) > 0) {
-            shipmentReconciliationMapper.recalculateDeductionAndFinal(reconciliationId);
+            shipmentReconciliationMapper.recalculateDeductionAndFinal(reconciliationId, recon.getTenantId());
             log.info("外发工厂暂存扣款已归集到出货对账单: orderId={}, reconId={}, totalOrphanAmount={}",
                     orderId, reconciliationId, totalOrphanAmount);
         }
