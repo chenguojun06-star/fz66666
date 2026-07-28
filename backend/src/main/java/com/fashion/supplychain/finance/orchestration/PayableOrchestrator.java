@@ -42,6 +42,11 @@ public class PayableOrchestrator {
     @Autowired
     private PayableLogAppendHelper logAppendHelper;
 
+    /** 懒加载避免与 BillAggregationOrchestrator 循环依赖 */
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
+
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
 
@@ -330,6 +335,36 @@ public class PayableOrchestrator {
     }
 
     private void syncBillAggregationAfterPayment(Payable payable, BigDecimal paymentAmount) {
+        if (payable == null || !StringUtils.hasText(payable.getSourceType())
+                || !StringUtils.hasText(payable.getSourceId())) {
+            // 兼容旧逻辑：无 sourceType/sourceId 时回退到直接更新 BillAggregation
+            syncBillAggregationAfterPaymentLegacy(payable, paymentAmount);
+            return;
+        }
+        // P1 修复：使用官方 BillAggregationOrchestrator.syncSettledAmountBySource API
+        // - 复用终态保护、日志审计、自动结清逻辑
+        // - 与 EmployeeAdvanceOrchestrator.repay / MaterialPickupReceivableOrchestrator 保持一致
+        if (billAggregationOrchestrator == null) {
+            syncBillAggregationAfterPaymentLegacy(payable, paymentAmount);
+            return;
+        }
+        try {
+            BigDecimal newSettled = payable.getPaidAmount() != null ? payable.getPaidAmount() : BigDecimal.ZERO;
+            billAggregationOrchestrator.syncSettledAmountBySource(
+                    payable.getSourceType(), payable.getSourceId(), newSettled);
+            log.info("[PayableOrchestrator] 付款联动账单 settledAmount: payableNo={}, sourceType={}, sourceId={}, settled={}",
+                    payable.getPayableNo(), payable.getSourceType(), payable.getSourceId(), newSettled);
+        } catch (Exception e) {
+            log.warn("[PayableOrchestrator] 付款联动账单失败（不阻塞主流程）: payableNo={}, err={}",
+                    payable.getPayableNo(), e.getMessage());
+        }
+    }
+
+    /**
+     * 旧逻辑兜底：无 sourceType/sourceId 时直接更新 BillAggregation 表
+     * 仅用于兼容历史数据，新数据应通过 pushBill 派生 Payable 自动携带 sourceType/sourceId
+     */
+    private void syncBillAggregationAfterPaymentLegacy(Payable payable, BigDecimal paymentAmount) {
         if (payable == null || !StringUtils.hasText(payable.getBillAggregationId())) {
             return;
         }

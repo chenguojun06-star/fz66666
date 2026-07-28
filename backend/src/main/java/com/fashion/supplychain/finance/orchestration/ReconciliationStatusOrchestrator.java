@@ -322,9 +322,10 @@ public class ReconciliationStatusOrchestrator {
     private void cancelBillOnRejected(String to, String sourceType, String sourceId, String label) {
         if (!"rejected".equals(to) || billAggregationOrchestrator == null) return;
         try {
-            billAggregationOrchestrator.cancelBySource(sourceType, sourceId);
+            // P1-1 修复：cancelBySource 升级为 reverseBySource，联动 Payable/Receivable 全链路反向
+            billAggregationOrchestrator.reverseBySource(sourceType, sourceId, label + "驳回");
         } catch (Exception e) {
-            log.warn("{}驳回联动取消账单失败（不影响主流程）: id={}", label, sourceId, e);
+            log.warn("{}驳回联动反向账单失败（不影响主流程）: id={}", label, sourceId, e);
         }
     }
 
@@ -508,10 +509,17 @@ public class ReconciliationStatusOrchestrator {
                             sourceType, sourceId, e.getMessage());
                 }
             } else {
-                // from=approved
-                billAggregationOrchestrator.cancelBySource(sourceType, sourceId);
-                log.info("[ReconciliationStatus] 退回联动取消账单: sourceType={}, sourceId={}",
-                        sourceType, sourceId);
+                // P1-1 修复：from=approved 时 cancelBySource 升级为 reverseBySource，
+                // 联动 Payable/Receivable 全链路反向（已结清账单会抛异常，try-catch 不阻塞主流程）
+                try {
+                    billAggregationOrchestrator.reverseBySource(sourceType, sourceId,
+                            "对账单 approved 退回: " + reason);
+                    log.info("[ReconciliationStatus] 退回联动反向账单: sourceType={}, sourceId={}",
+                            sourceType, sourceId);
+                } catch (Exception e) {
+                    log.warn("[ReconciliationStatus] 退回反向账单失败（可能已结清需冲账）: sourceType={}, sourceId={}, err={}",
+                            sourceType, sourceId, e.getMessage());
+                }
             }
         } catch (Exception e) {
             log.warn("[ReconciliationStatus] 退回联动账单失败（不阻塞主流程）: sourceType={}, sourceId={}, err={}",

@@ -328,8 +328,16 @@ public class PayrollAggregationOrchestrator {
                     result.put(name, id);
                 }
             }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException jpe) {
+            // 工资单价计算关键路径：workflow JSON 解析失败会导致 processCode 无法回填，
+            // 进而导致 unitPrice 反推精度损失。必须记录告警，便于排查。
+            org.slf4j.LoggerFactory.getLogger(PayrollAggregationOrchestrator.class)
+                    .warn("[PayrollAggregation] 解析订单 workflow JSON 失败 (影响 processCode 回填): orderNo={}, err={}",
+                            order.getOrderNo(), jpe.getMessage());
         } catch (Exception e) {
-            // ignore
+            org.slf4j.LoggerFactory.getLogger(PayrollAggregationOrchestrator.class)
+                    .warn("[PayrollAggregation] 解析订单 workflow 发生异常: orderNo={}, err={}",
+                            order.getOrderNo(), e.getMessage());
         }
         return result;
     }

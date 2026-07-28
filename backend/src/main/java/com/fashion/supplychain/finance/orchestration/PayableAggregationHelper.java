@@ -12,7 +12,6 @@ import com.fashion.supplychain.finance.service.WagePaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -145,7 +144,7 @@ public class PayableAggregationHelper {
         return "FACTORY";
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 WagePaymentOrchestrator.createPendingPayable 已有事务保护）
     public WagePayment createPendingPayable(WagePaymentRequest request) {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();
@@ -169,7 +168,7 @@ public class PayableAggregationHelper {
         return payment;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 WagePaymentOrchestrator.rejectPayable 已有事务保护）
     public void rejectPayable(String paymentId, String bizType, String bizId, String reason) {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();

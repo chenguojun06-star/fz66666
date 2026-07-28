@@ -435,12 +435,12 @@ public class WagePaymentOrchestrator {
 
     private void syncPayableStatusOnPaid(Payable payable, BigDecimal paymentAmount) {
         BigDecimal delta = paymentAmount != null ? paymentAmount : BigDecimal.ZERO;
-        int rows = payableService.atomicAddPaidAmount(payable.getId(), delta);
+        Long tenantId = UserContext.tenantId();
+        int rows = payableService.atomicAddPaidAmount(payable.getId(), delta, tenantId);
         if (rows == 0) {
             log.warn("[付款中心] 原子更新应付单失败: payableId={}", payable.getId());
             return;
         }
-        Long tenantId = UserContext.tenantId();
         Payable refreshed = payableService.lambdaQuery()
                 .eq(Payable::getId, payable.getId())
                 .eq(Payable::getTenantId, tenantId)

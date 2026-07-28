@@ -233,6 +233,16 @@ public class ExpenseReimbursementOrchestrator {
             throw new RuntimeException("只能删除自己的报销单");
         }
 
+        // P1-2 修复：删除前反向 EXPENSE_REIMBURSEMENT 账单（防御性，pending/rejected 状态通常无账单）
+        // 失败不阻塞主流程
+        try {
+            billAggregationOrchestrator.reverseBySource("EXPENSE_REIMBURSEMENT",
+                    id, "报销单删除: " + entity.getReimbursementNo());
+            log.info("[报销单删除] 反向账单: id={}", id);
+        } catch (Exception e) {
+            log.warn("[报销单删除] 反向账单失败（不阻塞主流程）: id={}, err={}", id, e.getMessage());
+        }
+
         // 软删除
         expenseReimbursementService.removeById(id);
         log.info("报销单已删除: no={}", entity.getReimbursementNo());

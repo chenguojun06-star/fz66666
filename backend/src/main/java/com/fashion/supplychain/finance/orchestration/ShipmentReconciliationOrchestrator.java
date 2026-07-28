@@ -372,10 +372,12 @@ public class ShipmentReconciliationOrchestrator {
                     reconId, e.getMessage());
         }
         try {
-            billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION_DEDUCTION", reconId);
-            log.info("[RECON-DELETE] 取消扣款账单: reconId={}", reconId);
+            // P1-1 修复：cancelBySource 升级为 reverseBySource，联动 Payable/Receivable 全链路反向
+            billAggregationOrchestrator.reverseBySource("SHIPMENT_RECONCILIATION_DEDUCTION",
+                    reconId, "对账单删除");
+            log.info("[RECON-DELETE] 反向扣款账单: reconId={}", reconId);
         } catch (Exception e) {
-            log.warn("[RECON-DELETE] 取消扣款账单失败（不阻塞）: reconId={}, err={}",
+            log.warn("[RECON-DELETE] 反向扣款账单失败（不阻塞）: reconId={}, err={}",
                     reconId, e.getMessage());
         }
     }
@@ -573,10 +575,20 @@ public class ShipmentReconciliationOrchestrator {
         if (items == null || items.isEmpty() || billAggregationOrchestrator == null) {
             return;
         }
+        // P0-6 修复：根据 isOwnFactory 三态判断扣款账单方向
+        // - 本厂（isOwnFactory=1）：不推扣款账单
+        // - 外发工厂（isOwnFactory=0）：扣款作为 PAYABLE 红冲（与主账单方向一致）
+        // - 销售出货（isOwnFactory=null）：扣款作为 RECEIVABLE 减少（保持原逻辑）
+        boolean isOwn = recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 1;
+        if (isOwn) {
+            log.info("[ShipmentRecon] 本厂订单对账不推扣款账单: reconNo={}", recon.getReconciliationNo());
+            return;
+        }
+        boolean isExternalFactory = recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0;
         try {
             // 先删除该对账单已推送的扣款账单（幂等性）
             billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION_DEDUCTION", reconciliationId);
-            
+
             // 推送每笔扣款作为独立账单
             for (DeductionItem item : items) {
                 if (item == null || item.getDeductionAmount() == null || item.getDeductionAmount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -586,14 +598,11 @@ public class ShipmentReconciliationOrchestrator {
                 if ("SUPPLEMENT".equalsIgnoreCase(item.getDeductionType())) {
                     continue;
                 }
-                
+
                 BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
-                req.setBillType("RECEIVABLE");  // 扣款也是应收（我们要向对方收取扣款金额）
-                req.setBillCategory("DEDUCTION");
                 req.setSourceType("SHIPMENT_RECONCILIATION_DEDUCTION");
                 req.setSourceId(item.getId() != null ? item.getId().toString() : reconciliationId + "_" + System.nanoTime());
                 req.setSourceNo(recon.getReconciliationNo() + "-" + item.getDeductionType());
-                req.setCounterpartyType("CUSTOMER");
                 req.setCounterpartyId(recon.getCustomerId());
                 req.setCounterpartyName(recon.getCustomerName());
                 req.setOrderId(recon.getOrderId());
@@ -602,9 +611,21 @@ public class ShipmentReconciliationOrchestrator {
                 req.setAmount(item.getDeductionAmount());
                 req.setRemark(buildDeductionDescription(item));
                 req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                if (isExternalFactory) {
+                    // 外发工厂扣款：红冲应付（与主账单 PAYABLE+EXTERNAL_FACTORY 方向一致）
+                    req.setBillType("PAYABLE");
+                    req.setBillCategory("DEDUCTION");
+                    req.setCounterpartyType("FACTORY");
+                } else {
+                    // 销售出货扣款：冲减应收（保持原逻辑）
+                    req.setBillType("RECEIVABLE");
+                    req.setBillCategory("DEDUCTION");
+                    req.setCounterpartyType("CUSTOMER");
+                }
                 billAggregationOrchestrator.pushBill(req);
             }
-            log.info("[ShipmentRecon] 推送扣款明细账单: reconciliationId={}, count={}", reconciliationId, items.size());
+            log.info("[ShipmentRecon] 推送扣款明细账单: reconciliationId={}, count={}, isExternalFactory={}",
+                    reconciliationId, items.size(), isExternalFactory);
         } catch (Exception e) {
             log.warn("[ShipmentRecon] 推送扣款明细账单失败: reconciliationId={}, err={}", reconciliationId, e.getMessage());
         }

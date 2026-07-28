@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,16 +31,23 @@ public class ExpenseReimbursementDocOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (docIds == null || docIds.isEmpty()) return;
-        for (String docId : docIds) {
-            ExpenseReimbursementDoc doc = docService.lambdaQuery()
-                    .eq(ExpenseReimbursementDoc::getId, docId)
-                    .eq(ExpenseReimbursementDoc::getTenantId, tenantId)
-                    .one();
-            if (doc != null && doc.getReimbursementId() == null) {
+        // 批量查询所有 doc（保留 tenantId 过滤，P0 #4 多租户隔离）
+        List<ExpenseReimbursementDoc> docs = docService.lambdaQuery()
+                .in(ExpenseReimbursementDoc::getId, docIds)
+                .eq(ExpenseReimbursementDoc::getTenantId, tenantId)
+                .list();
+        // 筛选未关联的 doc 并修改字段
+        List<ExpenseReimbursementDoc> toUpdate = new ArrayList<>();
+        for (ExpenseReimbursementDoc doc : docs) {
+            if (doc.getReimbursementId() == null) {
                 doc.setReimbursementId(reimbursementId);
                 doc.setReimbursementNo(reimbursementNo);
-                docService.updateById(doc);
+                toUpdate.add(doc);
             }
+        }
+        // 批量更新
+        if (!toUpdate.isEmpty()) {
+            docService.updateBatchById(toUpdate);
         }
     }
 }

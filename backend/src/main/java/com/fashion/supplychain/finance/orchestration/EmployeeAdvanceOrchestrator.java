@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.EmployeeAdvance;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.service.EmployeeAdvanceService;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +28,24 @@ import org.springframework.util.StringUtils;
 public class EmployeeAdvanceOrchestrator {
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     @Autowired
     private EmployeeAdvanceService employeeAdvanceService;
 
     @Autowired
     private PayrollSettlementService payrollSettlementService;
+
+    /**
+     * P0-2 修复：借支接入 BillAggregation 聚合层
+     * - approve：推送 PAYABLE 账单（费用报销类，对方 EMPLOYEE）
+     * - reject：反向已推送账单
+     * - repay：联动 Payable paidAmount（部分/全部还款）
+     * 使用 @Lazy 避免循环依赖（BillAggregationOrchestrator 依赖 PayableOrchestrator 等）
+     */
+    @Lazy
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     public com.baomidou.mybatisplus.core.metadata.IPage<EmployeeAdvance> list(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -103,9 +117,42 @@ public class EmployeeAdvanceOrchestrator {
         UserContext ctx = UserContext.get();
         String approverId = ctx != null ? ctx.getUserId() : null;
         String approverName = ctx != null ? ctx.getUsername() : null;
-        int rows = employeeAdvanceService.atomicApprove(advanceId, approverId, approverName, remark);
+        int rows = employeeAdvanceService.atomicApprove(advanceId, approverId, approverName, remark, tenantId);
         if (rows == 0) {
             throw new OptimisticLockingFailureException("借支审批冲突，记录可能已被处理，请刷新后重试");
+        }
+        // P0-2 修复：审批通过后推送 PAYABLE 账单到 BillAggregation 聚合层
+        // - billType=PAYABLE / billCategory=EXPENSE / sourceType=EMPLOYEE_ADVANCE
+        // - counterpartyType=EMPLOYEE / 幂等预检 billExists
+        // - 失败不阻塞主流程（账单异常走人工对账，但事务已提交）
+        if (billAggregationOrchestrator != null && advance.getAmount() != null
+                && advance.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                String sourceId = String.valueOf(advance.getId());
+                if (!billAggregationOrchestrator.billExists(BillConstants.SOURCE_EMPLOYEE_ADVANCE, sourceId)) {
+                    BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+                    req.setBillType(BillConstants.BILL_TYPE_PAYABLE);
+                    req.setBillCategory(BillConstants.CATEGORY_EXPENSE);
+                    req.setSourceType(BillConstants.SOURCE_EMPLOYEE_ADVANCE);
+                    req.setSourceId(sourceId);
+                    req.setSourceNo(advance.getAdvanceNo());
+                    req.setCounterpartyType(BillConstants.COUNTERPARTY_EMPLOYEE);
+                    req.setCounterpartyId(advance.getEmployeeId());
+                    req.setCounterpartyName(advance.getEmployeeName());
+                    req.setAmount(advance.getAmount());
+                    req.setSettlementMonth(LocalDateTime.now().format(MONTH_FMT));
+                    req.setRemark("员工借支审批: " + advance.getAdvanceNo()
+                            + (StringUtils.hasText(remark) ? " | 备注: " + remark : ""));
+                    billAggregationOrchestrator.pushBill(req);
+                    log.info("[EmployeeAdvance] 推送账单成功: advanceNo={}, amount={}",
+                            advance.getAdvanceNo(), advance.getAmount());
+                } else {
+                    log.info("[EmployeeAdvance] 账单已存在，跳过推送: advanceNo={}", advance.getAdvanceNo());
+                }
+            } catch (Exception e) {
+                log.warn("[EmployeeAdvance] 推送账单失败（不阻塞主流程）: advanceNo={}, err={}",
+                        advance.getAdvanceNo(), e.getMessage());
+            }
         }
         log.info("[EmployeeAdvance] 借支已审批通过: advanceNo={}, approver={}", advance.getAdvanceNo(), approverName);
     }
@@ -128,9 +175,23 @@ public class EmployeeAdvanceOrchestrator {
         UserContext ctx = UserContext.get();
         String approverId = ctx != null ? ctx.getUserId() : null;
         String approverName = ctx != null ? ctx.getUsername() : null;
-        int rows = employeeAdvanceService.atomicReject(advanceId, approverId, approverName, remark);
+        int rows = employeeAdvanceService.atomicReject(advanceId, approverId, approverName, remark, tenantId);
         if (rows == 0) {
             throw new OptimisticLockingFailureException("借支驳回冲突，记录可能已被处理，请刷新后重试");
+        }
+        // P0-2 修复：驳回时反向已推送的账单（如有）
+        // - 已结清账单会抛异常 → 不阻塞驳回主流程，记录告警供财务对账
+        if (billAggregationOrchestrator != null) {
+            try {
+                billAggregationOrchestrator.reverseBySource(
+                        BillConstants.SOURCE_EMPLOYEE_ADVANCE,
+                        String.valueOf(advance.getId()),
+                        "员工借支驳回: " + (StringUtils.hasText(remark) ? remark : "无"));
+                log.info("[EmployeeAdvance] 驳回联动反向账单: advanceNo={}", advance.getAdvanceNo());
+            } catch (Exception e) {
+                log.warn("[EmployeeAdvance] 驳回联动反向账单失败（可能存在已结清账单需手动冲账）: advanceNo={}, err={}",
+                        advance.getAdvanceNo(), e.getMessage());
+            }
         }
         log.info("[EmployeeAdvance] 借支已驳回: advanceNo={}, approver={}", advance.getAdvanceNo(), approverName);
     }
@@ -157,12 +218,28 @@ public class EmployeeAdvanceOrchestrator {
         if (repayAmount.compareTo(remaining) > 0) {
             throw new IllegalArgumentException("还款金额不能超过剩余未还金额: " + remaining);
         }
-        int rows = employeeAdvanceService.atomicRepay(advance.getId(), repayAmount, advance.getRepaymentAmount());
+        int rows = employeeAdvanceService.atomicRepay(advance.getId(), repayAmount, advance.getRepaymentAmount(), tenantId);
         if (rows == 0) {
             throw new OptimisticLockingFailureException("还款操作冲突，请重试");
         }
         BigDecimal newRepaid = advance.getRepaymentAmount().add(repayAmount);
         BigDecimal newRemaining = advance.getAmount().subtract(newRepaid);
+        // P0-2 修复：还款联动 BillAggregation.settledAmount
+        // - 部分还款：仅更新 settledAmount = newRepaid
+        // - 全部还清：syncSettledAmountBySource 内部会自动流转为 SETTLED
+        if (billAggregationOrchestrator != null) {
+            try {
+                billAggregationOrchestrator.syncSettledAmountBySource(
+                        BillConstants.SOURCE_EMPLOYEE_ADVANCE,
+                        String.valueOf(advance.getId()),
+                        newRepaid);
+                log.info("[EmployeeAdvance] 还款联动账单 settledAmount: advanceNo={}, newRepaid={}",
+                        advance.getAdvanceNo(), newRepaid);
+            } catch (Exception e) {
+                log.warn("[EmployeeAdvance] 还款联动账单失败（不阻塞主流程）: advanceNo={}, err={}",
+                        advance.getAdvanceNo(), e.getMessage());
+            }
+        }
         log.info("[EmployeeAdvance] 借支还款: advanceNo={}, repayAmount={}, remaining={}",
                 advance.getAdvanceNo(), repayAmount, newRemaining);
     }

@@ -62,6 +62,9 @@ public class PayrollSettlementOrchestrator {
     @Autowired
     private PayrollSettlementLogAppendHelper logAppendHelper;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
+
     private static final class PayrollQuery {
         private String orderId;
         private String orderNo;
@@ -113,15 +116,18 @@ public class PayrollSettlementOrchestrator {
         if (!StringUtils.hasText(sid)) {
             throw new IllegalArgumentException("参数错误");
         }
+        Long tenantId = UserContext.tenantId();
         PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
                 .eq(PayrollSettlement::getId, sid)
-                .eq(PayrollSettlement::getTenantId, UserContext.tenantId())
+                .eq(PayrollSettlement::getTenantId, tenantId)
                 .one();
         if (settlement == null) {
             throw new NoSuchElementException("工资结算单不存在");
         }
+        // 显式带 tenant_id 查询明细（双保险）
         return payrollSettlementItemService.lambdaQuery()
                 .eq(PayrollSettlementItem::getSettlementId, sid)
+                .eq(PayrollSettlementItem::getTenantId, tenantId)
                 .orderByAsc(PayrollSettlementItem::getOperatorName)
                 .orderByAsc(PayrollSettlementItem::getProcessName)
                 .list();
@@ -215,6 +221,17 @@ public class PayrollSettlementOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
 
+        // P0-9: 分布式锁防止并发生成同一维度的工资结算单
+        Long tenantId = UserContext.tenantId();
+        String lockKey = "payroll:generate:" + tenantId + ":" + q.orderId + ":" + q.operatorId;
+        if (distributedLockService != null) {
+            return distributedLockService.executeWithLock(lockKey, 30, java.util.concurrent.TimeUnit.SECONDS,
+                    () -> doGenerate(q));
+        }
+        return doGenerate(q);
+    }
+
+    private PayrollSettlement doGenerate(PayrollQuery q) {
         List<Map<String, Object>> rows = scanRecordMapper.selectPayrollAggregation(
                 q.orderId, q.orderNo, q.styleNo, q.operatorId, q.operatorName,
                 q.scanType, PAYROLL_SCAN_TYPES, q.processName,
@@ -360,12 +377,20 @@ public class PayrollSettlementOrchestrator {
                         }
                     }
                     if (!nameToCode.isEmpty()) result.put(order.getOrderNo(), nameToCode);
+                } catch (com.fasterxml.jackson.core.JsonProcessingException jpe) {
+                    log.warn("[PayrollSettlement] 解析订单 workflow JSON 失败 (跳过该订单 processCode 回填): orderNo={}, err={}",
+                            order.getOrderNo(), jpe.getMessage());
                 } catch (Exception e) {
-                    // ignore
+                    log.warn("[PayrollSettlement] 解析订单 workflow 发生异常: orderNo={}, err={}",
+                            order.getOrderNo(), e.getMessage());
                 }
             }
         } catch (Exception e) {
-            // ignore
+            // 工资单价计算关键路径：批量查询订单失败会导致 processCode 无法回填，
+            // 进而导致 unitPrice 反推精度损失（详见 buildSettlementItems 注释）。
+            // 必须记录告警，便于排查为何部分工资单价的 processCode 缺失。
+            log.warn("[PayrollSettlement] 批量查询订单构建 processCode 映射失败 (可能影响工资单价精度): orderNos={}, err={}",
+                    orderNos, e.getMessage());
         }
         return result;
     }
@@ -680,6 +705,70 @@ public class PayrollSettlementOrchestrator {
     }
 
     /**
+     * 反向审核工资结算单
+     * 只允许 approved 状态的结算单进行反向审核，将状态改回 pending，
+     * 同时将关联扫码记录的 settlementStatus 从 payroll_approved 改回 payroll_settled，
+     * 并联动反向已推送的账单。
+     *
+     * @param settlementId 结算单ID
+     * @param reason       反向审核原因
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void reverseApprove(String settlementId, String reason) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(settlementId)) {
+            throw new IllegalArgumentException("结算单ID不能为空");
+        }
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, settlementId.trim())
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
+        if (settlement == null) {
+            throw new NoSuchElementException("结算单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
+        if (!"approved".equalsIgnoreCase(settlement.getStatus())) {
+            throw new IllegalStateException("仅 approved 状态可反向审核");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String operatorName = UserContext.username();
+
+        // 1. 状态回退：approved -> pending
+        LambdaUpdateWrapper<PayrollSettlement> uw = new LambdaUpdateWrapper<PayrollSettlement>()
+                .set(PayrollSettlement::getStatus, "pending")
+                .set(PayrollSettlement::getUpdateTime, now)
+                .eq(PayrollSettlement::getId, settlementId.trim());
+        payrollSettlementService.update(uw);
+
+        // 2. 关联扫码记录 settlementStatus: payroll_approved -> payroll_settled
+        LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
+                .set(ScanRecord::getSettlementStatus, "payroll_settled")
+                .set(ScanRecord::getUpdateTime, now)
+                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim())
+                .eq(ScanRecord::getSettlementStatus, "payroll_approved")
+                .eq(ScanRecord::getTenantId, tenantId)
+                .isNull(ScanRecord::getFactoryId);
+        scanRecordMapper.update(new ScanRecord(), scanUw);
+
+        log.info("[PayrollReverseApprove] 工资结算单反向审核: operator={}, settlementId={}, settlementNo={}, reason={}",
+                operatorName, settlement.getId(), settlement.getSettlementNo(), reason);
+
+        // 3. 联动反向账单（已结清账单会抛异常，需提示用户先冲账）
+        try {
+            if (billAggregationOrchestrator != null) {
+                billAggregationOrchestrator.reverseBySource("PAYROLL_SETTLEMENT",
+                        settlementId.trim(), "工资结算反向审核: " + (reason == null ? "" : reason));
+            }
+        } catch (Exception e) {
+            log.warn("[PayrollReverseApprove] 账单反向失败（可能存在已结清账单需手动冲账）: settlementId={}, err={}",
+                    settlementId, e.getMessage());
+            throw new IllegalStateException("账单反向失败，可能存在已结清账单，请先冲账后再反向审核: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 取消工资结算单
      * 只允许取消 pending 状态的结算单，取消后释放已关联的扫码记录
      *
@@ -799,7 +888,7 @@ public class PayrollSettlementOrchestrator {
             throw new IllegalArgumentException("打款金额不能超过剩余未付金额: " + currentRemaining);
         }
 
-        int rows = payrollSettlementService.atomicAddPaidAmount(settlementId.trim(), paymentAmount, currentPaid);
+        int rows = payrollSettlementService.atomicAddPaidAmount(settlementId.trim(), paymentAmount, currentPaid, tenantId);
         if (rows == 0) {
             throw new OptimisticLockingFailureException("工资打款并发冲突，请重试: settlementId=" + settlementId);
         }
@@ -807,6 +896,22 @@ public class PayrollSettlementOrchestrator {
         log.info("[PayrollPayment] 工资打款记录: settlementId={}, paymentAmount={}, previousPaid={}",
                 settlementId, paymentAmount, currentPaid);
         logAppendHelper.appendPayment(settlement, paymentAmount, UserContext.username());
+
+        // P0 修复：打款联动 BillAggregation 聚合层 settledAmount
+        // - 与 EmployeeAdvanceOrchestrator.repay 保持一致
+        // - 否则聚合视图已结算金额与明细不一致，违反财务数据链路闭环
+        if (billAggregationOrchestrator != null) {
+            try {
+                BigDecimal newPaid = currentPaid.add(paymentAmount);
+                billAggregationOrchestrator.syncSettledAmountBySource(
+                        "PAYROLL_SETTLEMENT", settlementId.trim(), newPaid);
+                log.info("[PayrollPayment] 联动账单 settledAmount: settlementId={}, newPaid={}",
+                        settlementId, newPaid);
+            } catch (Exception e) {
+                log.warn("[PayrollPayment] 联动账单失败（不阻塞主流程）: settlementId={}, err={}",
+                        settlementId, e.getMessage());
+            }
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -843,7 +948,7 @@ public class PayrollSettlementOrchestrator {
         }
         deductionItemMapper.insert(deduction);
 
-        int rows = payrollSettlementService.atomicAddDeductionAmount(settlementId.trim(), deductionAmount, currentDeduction);
+        int rows = payrollSettlementService.atomicAddDeductionAmount(settlementId.trim(), deductionAmount, currentDeduction, tenantId);
         if (rows == 0) {
             throw new OptimisticLockingFailureException("工资扣款并发冲突，请重试: settlementId=" + settlementId);
         }

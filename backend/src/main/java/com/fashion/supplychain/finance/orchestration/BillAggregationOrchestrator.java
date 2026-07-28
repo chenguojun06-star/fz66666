@@ -6,6 +6,7 @@ import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
+import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.BillAggregationService;
@@ -113,11 +114,57 @@ public class BillAggregationOrchestrator {
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .last("LIMIT 1")
                 .one();
-        if (bill != null && !"SETTLED".equals(bill.getStatus()) && !"CANCELLED".equals(bill.getStatus())) {
+        if (bill != null && !BillConstants.isTerminalStatus(bill.getStatus())) {
             bill.setAmount(newAmount);
             billAggregationService.updateById(bill);
             log.info("[BillAggregation] 同步金额: sourceType={}, sourceId={}, newAmount={}, billStatus={}", sourceType, sourceId, newAmount, bill.getStatus());
         }
+    }
+
+    /**
+     * 同步账单已结算金额（用于部分还款/部分付款场景）
+     * <p>
+     * P0-2 修复：员工借支还款、工资结算部分付款等场景需要联动更新 BillAggregation.settledAmount
+     * - 仅更新 settledAmount，不改变 status
+     * - 若 newSettledAmount >= amount 且状态为 CONFIRMED/SETTLING，自动流转为 SETTLED
+     * - 终态（SETTLED/CANCELLED）账单不更新
+     *
+     * @param sourceType       来源类型
+     * @param sourceId         来源ID
+     * @param newSettledAmount 新的已结算金额
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void syncSettledAmountBySource(String sourceType, String sourceId, BigDecimal newSettledAmount) {
+        if (!StringUtils.hasText(sourceType) || !StringUtils.hasText(sourceId) || newSettledAmount == null) {
+            return;
+        }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getSourceId, sourceId)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (bill == null || BillConstants.isTerminalStatus(bill.getStatus())) {
+            return;
+        }
+        bill.setSettledAmount(newSettledAmount);
+        // 已结算金额 ≥ 账单金额 → 自动结清
+        BigDecimal amount = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
+        if (newSettledAmount.compareTo(amount) >= 0
+                && BillConstants.isConfirmedGroup(bill.getStatus())) {
+            bill.setStatus(BillConstants.STATUS_SETTLED);
+            bill.setSettledById(UserContext.userId());
+            bill.setSettledByName(UserContext.username());
+            bill.setSettledAt(LocalDateTime.now());
+            log.info("[BillAggregation] 部分还款累计达到账单金额，自动结清: billNo={}, amount={}, settled={}",
+                    bill.getBillNo(), amount, newSettledAmount);
+        }
+        billAggregationService.updateById(bill);
+        log.info("[BillAggregation] 同步已结算金额: sourceType={}, sourceId={}, newSettled={}, billStatus={}",
+                sourceType, sourceId, newSettledAmount, bill.getStatus());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -134,7 +181,7 @@ public class BillAggregationOrchestrator {
         if (existing != null) {
             if (request.getAmount() != null && existing.getAmount() != null
                     && request.getAmount().compareTo(existing.getAmount()) != 0
-                    && !"SETTLED".equals(existing.getStatus()) && !"CANCELLED".equals(existing.getStatus())) {
+                    && !BillConstants.isTerminalStatus(existing.getStatus())) {
                 existing.setAmount(request.getAmount());
                 existing.setRemark((existing.getRemark() != null ? existing.getRemark() + " | " : "")
                         + "金额同步更新: " + existing.getAmount() + "→" + request.getAmount());
@@ -162,7 +209,7 @@ public class BillAggregationOrchestrator {
         bill.setStyleNo(request.getStyleNo());
         bill.setAmount(request.getAmount());
         bill.setSettledAmount(BigDecimal.ZERO);
-        bill.setStatus("PENDING");
+        bill.setStatus(BillConstants.STATUS_PENDING);
         bill.setSettlementMonth(request.getSettlementMonth());
         bill.setRemark(request.getRemark());
         bill.setCreatorId(UserContext.userId());
@@ -203,8 +250,8 @@ public class BillAggregationOrchestrator {
                 // CONFIRMED 分类包含 SETTLING（结算中）；SETTLED 分类独立；PENDING/CANCELLED 各自独立
                 .and(StringUtils.hasText(query.getStatus()), w -> {
                     String s = query.getStatus();
-                    if ("CONFIRMED".equals(s)) {
-                        w.in(BillAggregation::getStatus, "CONFIRMED", "SETTLING");
+                    if (BillConstants.STATUS_CONFIRMED.equals(s)) {
+                        w.in(BillAggregation::getStatus, BillConstants.STATUS_CONFIRMED, BillConstants.STATUS_SETTLING);
                     } else {
                         w.eq(BillAggregation::getStatus, s);
                     }
@@ -260,16 +307,16 @@ public class BillAggregationOrchestrator {
             BigDecimal amt = b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO;
             if (b.getStatus() == null) continue;
             switch (b.getStatus()) {
-                case "PENDING":
+                case BillConstants.STATUS_PENDING:
                     pendingAmount = pendingAmount.add(amt);
                     pendingCount++;
                     break;
-                case "CONFIRMED":
-                case "SETTLING":
+                case BillConstants.STATUS_CONFIRMED:
+                case BillConstants.STATUS_SETTLING:
                     confirmedAmount = confirmedAmount.add(amt);
                     confirmedCount++;
                     break;
-                case "SETTLED":
+                case BillConstants.STATUS_SETTLED:
                     settledAmount = settledAmount.add(b.getSettledAmount() != null ? b.getSettledAmount() : amt);
                     settledCount++;
                     break;
@@ -297,10 +344,10 @@ public class BillAggregationOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void confirmBill(String billId) {
         BillAggregation bill = getBillOrThrow(billId);
-        if (!"PENDING".equals(bill.getStatus())) {
+        if (!BillConstants.STATUS_PENDING.equals(bill.getStatus())) {
             throw new RuntimeException("只有待确认状态的账单可以确认");
         }
-        bill.setStatus("CONFIRMED");
+        bill.setStatus(BillConstants.STATUS_CONFIRMED);
         bill.setConfirmedById(UserContext.userId());
         bill.setConfirmedByName(UserContext.username());
         bill.setConfirmedAt(LocalDateTime.now());
@@ -332,11 +379,11 @@ public class BillAggregationOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void settleBill(String billId, BigDecimal settledAmount) {
         BillAggregation bill = getBillOrThrow(billId);
-        if (!"CONFIRMED".equals(bill.getStatus()) && !"SETTLING".equals(bill.getStatus())) {
+        if (!BillConstants.isConfirmedGroup(bill.getStatus())) {
             throw new RuntimeException("只有已确认/结算中的账单可以结清");
         }
         bill.setSettledAmount(settledAmount != null ? settledAmount : bill.getAmount());
-        bill.setStatus("SETTLED");
+        bill.setStatus(BillConstants.STATUS_SETTLED);
         bill.setSettledById(UserContext.userId());
         bill.setSettledByName(UserContext.username());
         bill.setSettledAt(LocalDateTime.now());
@@ -350,10 +397,10 @@ public class BillAggregationOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void cancelBill(String billId, String reason) {
         BillAggregation bill = getBillOrThrow(billId);
-        if ("SETTLED".equals(bill.getStatus())) {
+        if (BillConstants.STATUS_SETTLED.equals(bill.getStatus())) {
             throw new RuntimeException("已结清的账单不可取消");
         }
-        bill.setStatus("CANCELLED");
+        bill.setStatus(BillConstants.STATUS_CANCELLED);
         bill.setRemark(reason);
         billAggregationService.updateById(bill);
         log.info("[BillAggregation] 取消账单: billNo={}, reason={}", bill.getBillNo(), reason);
@@ -371,12 +418,12 @@ public class BillAggregationOrchestrator {
         if (existing == null) {
             return;
         }
-        if ("SETTLED".equals(existing.getStatus())) {
+        if (BillConstants.STATUS_SETTLED.equals(existing.getStatus())) {
             log.warn("[BillAggregation] 已结清账单不可取消: billNo={}, source={}:{}",
                     existing.getBillNo(), sourceType, sourceId);
             return;
         }
-        existing.setStatus("CANCELLED");
+        existing.setStatus(BillConstants.STATUS_CANCELLED);
         existing.setRemark("上游单据操作自动取消: sourceType=" + sourceType);
         billAggregationService.updateById(existing);
         log.info("[BillAggregation] 联动取消账单: billNo={}, source={}:{}", existing.getBillNo(), sourceType, sourceId);
@@ -432,7 +479,7 @@ public class BillAggregationOrchestrator {
                 .eq(BillAggregation::getOrderId, orderId)
                 .eq(BillAggregation::getTenantId, tenantId)
                 .eq(BillAggregation::getDeleteFlag, 0)
-                .ne(BillAggregation::getStatus, "CANCELLED")
+                .ne(BillAggregation::getStatus, BillConstants.STATUS_CANCELLED)
                 .list();
         int count = 0;
         for (BillAggregation bill : bills) {
@@ -453,7 +500,7 @@ public class BillAggregationOrchestrator {
      */
     private void reverseBillInternal(BillAggregation bill, String reason) {
         // 已结清账单：禁止反向（需先冲账）
-        if ("SETTLED".equals(bill.getStatus())) {
+        if (BillConstants.STATUS_SETTLED.equals(bill.getStatus())) {
             BigDecimal settled = bill.getSettledAmount() != null ? bill.getSettledAmount() : BigDecimal.ZERO;
             if (settled.compareTo(BigDecimal.ZERO) > 0) {
                 throw new RuntimeException("账单 " + bill.getBillNo()
@@ -466,20 +513,20 @@ public class BillAggregationOrchestrator {
                 + " | 时间: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         // 1. 账单置为 CANCELLED
-        bill.setStatus("CANCELLED");
+        bill.setStatus(BillConstants.STATUS_CANCELLED);
         bill.setRemark(StringUtils.hasText(bill.getRemark())
                 ? bill.getRemark() + "\n" + reverseRemark : reverseRemark);
         billAggregationService.updateById(bill);
 
         // 2. 联动 Payable（仅未付款的可直接取消；已付款的保留痕迹）
-        if ("PAYABLE".equalsIgnoreCase(bill.getBillType()) && payableOrchestrator != null) {
+        if (BillConstants.isPayable(bill.getBillType()) && payableOrchestrator != null) {
             try {
                 Payable payable = payableOrchestrator.findByBillAggregationId(bill.getId());
                 if (payable != null) {
                     BigDecimal paidAmount = payable.getPaidAmount() != null ? payable.getPaidAmount() : BigDecimal.ZERO;
                     if (paidAmount.compareTo(BigDecimal.ZERO) == 0) {
                         // 未付款：直接标记 CANCELLED（保留 deleteFlag=0 以便查询历史）
-                        payable.setStatus("CANCELLED");
+                        payable.setStatus(BillConstants.STATUS_CANCELLED);
                         payable.setDescription((payable.getDescription() != null ? payable.getDescription() + " | " : "")
                                 + reverseRemark);
                         payable.setUpdateTime(LocalDateTime.now());
@@ -498,14 +545,14 @@ public class BillAggregationOrchestrator {
         }
 
         // 3. 联动 Receivable（仅未收款的可直接取消；已收款的保留痕迹）
-        if ("RECEIVABLE".equalsIgnoreCase(bill.getBillType()) && receivableOrchestrator != null) {
+        if (BillConstants.isReceivable(bill.getBillType()) && receivableOrchestrator != null) {
             try {
                 com.fashion.supplychain.crm.entity.Receivable receivable = receivableOrchestrator.findByBillAggregationId(bill.getId());
                 if (receivable != null) {
                     BigDecimal received = receivable.getReceivedAmount() != null ? receivable.getReceivedAmount() : BigDecimal.ZERO;
                     if (received.compareTo(BigDecimal.ZERO) == 0) {
                         // 未收款：直接标记 CANCELLED
-                        receivable.setStatus("CANCELLED");
+                        receivable.setStatus(BillConstants.STATUS_CANCELLED);
                         receivable.setDescription((receivable.getDescription() != null ? receivable.getDescription() + " | " : "")
                                 + reverseRemark);
                         receivable.setUpdateTime(LocalDateTime.now());
@@ -557,7 +604,7 @@ public class BillAggregationOrchestrator {
             return;
         }
         try {
-            if ("PAYABLE".equalsIgnoreCase(bill.getBillType())) {
+            if (BillConstants.isPayable(bill.getBillType())) {
                 if (payableOrchestrator == null) {
                     log.warn("[BillAggregation] PayableOrchestrator 不可用，跳过应付派生: billNo={}", bill.getBillNo());
                     return;
@@ -569,7 +616,7 @@ public class BillAggregationOrchestrator {
                         bill.getBillNo(), merged.getPayableNo(), merged.getAmount());
                 return;
             }
-            if ("RECEIVABLE".equalsIgnoreCase(bill.getBillType())) {
+            if (BillConstants.isReceivable(bill.getBillType())) {
                 if (receivableOrchestrator == null) {
                     log.warn("[BillAggregation] ReceivableOrchestrator 不可用，跳过应收派生: billNo={}", bill.getBillNo());
                     return;
@@ -589,7 +636,7 @@ public class BillAggregationOrchestrator {
     @Data
     public static class BillPushRequest {
         private String billType;       // PAYABLE / RECEIVABLE
-        private String billCategory;   // MATERIAL / SHIPMENT / PAYROLL / EXPENSE / ...
+        private String billCategory;   // MATERIAL / PRODUCT / EXTERNAL_FACTORY / PAYROLL / EXPENSE / SHIPMENT / DEDUCTION / INVENTORY_PROFIT（盘盈） / INVENTORY_LOSS（盘亏）
         private String sourceType;     // MATERIAL_RECONCILIATION / PAYROLL_SETTLEMENT / ...
         private String sourceId;
         private String sourceNo;

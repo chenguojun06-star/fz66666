@@ -49,6 +49,9 @@ public class MaterialReconciliationOrchestrator {
     @Autowired
     private MaterialReconciliationLogAppendHelper logAppendHelper;
 
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
+
     public IPage<MaterialReconciliation> list(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
@@ -325,6 +328,17 @@ public class MaterialReconciliationOrchestrator {
         boolean ok = materialReconciliationService.updateById(patch);
         if (!ok) {
             throw new IllegalStateException("删除失败");
+        }
+        // P0 修复：已审批物料对账单删除时反向账单，防止 BillAggregation/Payable 悬挂
+        if (billAggregationOrchestrator != null) {
+            try {
+                billAggregationOrchestrator.reverseBySource(
+                        com.fashion.supplychain.finance.constant.BillConstants.SOURCE_MATERIAL_RECONCILIATION,
+                        key,
+                        "物料对账单删除");
+            } catch (Exception e) {
+                log.warn("[MaterialReconciliation] 删除反向账单失败 id={}, err={}", key, e.getMessage());
+            }
         }
         logAppendHelper.appendDelete(current, UserContext.username());
         return true;
