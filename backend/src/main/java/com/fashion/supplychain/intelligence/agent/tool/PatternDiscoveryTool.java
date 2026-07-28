@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_pattern_discovery", description = "规律发现工具，从历史Agent执行日志中挖掘业务规律和异常趋势，支持discover和list两种操作", domain = ToolDomain.ANALYSIS)
 public class PatternDiscoveryTool extends AbstractAgentTool {
 
     @Autowired private PatternDiscoveryOrchestrator patternOrchestrator;

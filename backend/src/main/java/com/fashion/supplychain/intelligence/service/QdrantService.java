@@ -1074,6 +1074,206 @@ public class QdrantService {
     }
 
     // ──────────────────────────────────────────────────────────────
+    //  L5 Archival Memory — 每租户独立 collection，承载 6 个月+ 冷数据
+    //  设计参考：five-layer-memory-design.md 第五章
+    //  多租户安全：collection 名按 tenantId 隔离；payload 必含 tenant_id（双保险）
+    // ──────────────────────────────────────────────────────────────
+
+    /** 归档 collection 前缀，最终 collection 名为 archival_memory_{tenantId} */
+    private static final String ARCHIVAL_COLLECTION_PREFIX = "archival_memory_";
+
+    /** 已验证存在的归档 collection 缓存（避免每次查询都检查） */
+    private final java.util.Set<Long> archivalCollectionsVerified =
+            java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    /**
+     * 获取租户归档 collection 名。
+     * @param tenantId 租户ID（必填，符合 P0 铁律 4）
+     */
+    private String archivalCollectionName(Long tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("[Archival] tenantId 不能为空（P0 铁律 4：多租户隔离）");
+        }
+        return ARCHIVAL_COLLECTION_PREFIX + tenantId;
+    }
+
+    /**
+     * 确保租户归档 collection 存在（幂等）。
+     * 启动时或首次写入前调用。
+     * @param tenantId 租户ID
+     * @return true=新建了 collection；false=已存在或 Qdrant 不可用
+     */
+    public synchronized boolean ensureArchivalCollection(Long tenantId) {
+        if (!qdrantEnabled) return false;
+        if (tenantId == null) return false;
+        if (archivalCollectionsVerified.contains(tenantId)) return false;
+
+        String collection = archivalCollectionName(tenantId);
+        try {
+            restTemplate.getForEntity(qdrantUrl + "/collections/" + collection, String.class);
+            archivalCollectionsVerified.add(tenantId);
+            return false; // 已存在
+        } catch (Exception e) {
+            try {
+                ObjectNode body = objectMapper.createObjectNode();
+                ObjectNode params = body.putObject("vectors");
+                params.put("size", getVectorDim());
+                params.put("distance", "Cosine");
+                restTemplate.postForEntity(
+                        qdrantUrl + "/collections/" + collection,
+                        jsonEntity(body.toString()), String.class);
+                log.info("[Archival] 租户 {} 归档 collection 已创建: {}", tenantId, collection);
+                archivalCollectionsVerified.add(tenantId);
+                return true;
+            } catch (Exception ex) {
+                log.warn("[Archival] 租户 {} 归档 collection 创建失败: {}", tenantId, ex.getMessage());
+                return false;
+            }
+        }
+    }
+
+    /**
+     * 写入一条归档记忆（L5）。
+     * @param tenantId 租户ID（必填）
+     * @param originalId 原表记录ID（t_ai_conversation_memory.id 或 t_ai_long_memory.id）
+     * @param memoryType 记忆类型：conversation_summary / long_fact / long_episodic / long_reflective
+     * @param summary 摘要文本（用于向量化）
+     * @param keyEntities 关键实体 JSON（如 orderNo/styleNo/userId）
+     * @param createTime 原记录创建时间（用于时间范围过滤）
+     * @return true=成功；false=失败或 Qdrant 不可用
+     */
+    public boolean upsertArchival(Long tenantId, String originalId, String memoryType,
+                                   String summary, String keyEntities, String createTime) {
+        if (!qdrantEnabled) return false;
+        if (tenantId == null || originalId == null) return false;
+        if (summary == null || summary.isBlank()) return false;
+
+        ensureArchivalCollection(tenantId);
+
+        try {
+            float[] vector = computeEmbedding(summary);
+            if (vector == null) {
+                log.debug("[Archival] 向量生成失败，跳过归档 tenantId={} originalId={}", tenantId, originalId);
+                return false;
+            }
+
+            String pointId = tenantId + ":" + originalId;
+            ObjectNode body = objectMapper.createObjectNode();
+            ArrayNode points = body.putArray("points");
+            ObjectNode point = points.addObject();
+            point.put("id", pointId);
+            point.put("vector", toJsonArray(vector));
+
+            ObjectNode payload = point.putObject("payload");
+            payload.put("tenant_id", tenantId); // P0 铁律 4：payload 必含 tenant_id
+            payload.put("original_id", originalId);
+            payload.put("memory_type", memoryType != null ? memoryType : "unknown");
+            payload.put("summary", summary.length() > 1000 ? summary.substring(0, 1000) : summary);
+            payload.put("key_entities", keyEntities != null ? keyEntities : "");
+            payload.put("create_time", createTime != null ? createTime : "");
+            payload.put("archived_at", System.currentTimeMillis());
+
+            String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId) + "/points?wait=true";
+            restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
+            return true;
+        } catch (Exception e) {
+            log.warn("[Archival] 写入归档失败 tenantId={} originalId={}: {}", tenantId, originalId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 检索归档记忆（L5 召回）。
+     * @param tenantId 租户ID（必填，跨租户隔离）
+     * @param queryText 查询文本
+     * @param topK 返回条数（默认 5）
+     * @param startTimeIso 可选起始时间（ISO 格式，如 "2026-01-01T00:00:00"），null 不过滤
+     * @param endTimeIso 可选结束时间，null 不过滤
+     * @return 命中结果列表（按相似度降序）；空列表表示无结果或 Qdrant 不可用
+     */
+    public List<ScoredPoint> searchArchival(Long tenantId, String queryText, int topK,
+                                             String startTimeIso, String endTimeIso) {
+        if (!qdrantEnabled) return List.of();
+        if (tenantId == null || queryText == null || queryText.isBlank()) return List.of();
+        if (topK <= 0 || topK > 50) topK = 5;
+
+        ensureArchivalCollection(tenantId);
+
+        try {
+            float[] vector = computeEmbedding(queryText);
+            if (vector == null) return List.of();
+
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("vector", toJsonArray(vector));
+            body.put("limit", topK);
+            body.put("with_payload", true);
+
+            // 必带 tenant_id 过滤（双保险，即使 collection 名已含 tenantId）
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode must = filter.putArray("must");
+            ObjectNode tenantCond = must.addObject();
+            tenantCond.put("key", "tenant_id");
+            tenantCond.putObject("match").put("integer", tenantId);
+
+            // 时间范围过滤（可选）
+            if (startTimeIso != null && !startTimeIso.isBlank()
+                    && endTimeIso != null && !endTimeIso.isBlank()) {
+                ObjectNode rangeCond = must.addObject();
+                rangeCond.put("key", "create_time");
+                ObjectNode range = rangeCond.putObject("range");
+                range.put("gte", startTimeIso);
+                range.put("lte", endTimeIso);
+            }
+
+            String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId) + "/points/search";
+            ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
+            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) return List.of();
+
+            JsonNode root = objectMapper.readTree(resp.getBody());
+            JsonNode resultArr = root.path("result");
+            if (!resultArr.isArray()) return List.of();
+
+            List<ScoredPoint> results = new ArrayList<>();
+            for (JsonNode item : resultArr) {
+                ScoredPoint sp = new ScoredPoint();
+                sp.setPointId(item.path("id").asText());
+                sp.setScore((float) item.path("score").asDouble());
+                sp.setPayload(readPayload(item.path("payload")));
+                results.add(sp);
+            }
+            return results;
+        } catch (Exception e) {
+            log.debug("[Archival] 检索归档失败 tenantId={}: {}", tenantId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 删除租户归档 collection（用于租户注销/数据清理）。
+     * @return true=成功；false=失败或 Qdrant 不可用
+     */
+    public boolean deleteArchivalCollection(Long tenantId) {
+        if (!qdrantEnabled) return false;
+        if (tenantId == null) return false;
+        try {
+            restTemplate.delete(qdrantUrl + "/collections/" + archivalCollectionName(tenantId));
+            archivalCollectionsVerified.remove(tenantId);
+            log.info("[Archival] 租户 {} 归档 collection 已删除", tenantId);
+            return true;
+        } catch (Exception e) {
+            log.warn("[Archival] 删除租户 {} 归档 collection 失败: {}", tenantId, e.getMessage());
+            return false;
+        }
+    }
+
+    /** 数组转换辅助 */
+    private ArrayNode toJsonArray(float[] vector) {
+        ArrayNode arr = objectMapper.createArrayNode();
+        for (float v : vector) arr.add(v);
+        return arr;
+    }
+
+    // ──────────────────────────────────────────────────────────────
     //  内嵌 DTO
     // ──────────────────────────────────────────────────────────────
 

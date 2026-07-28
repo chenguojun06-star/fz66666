@@ -23,6 +23,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_change_approval", description = "变更审批工具，查看待审批申请列表，审批通过或驳回申请", domain = ToolDomain.SYSTEM, readOnly = false)
 public class ChangeApprovalTool extends AbstractAgentTool {
 
     @Autowired

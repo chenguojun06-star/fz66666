@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_reconciliation", description = "物料对账链路：查看对账单、更新状态、退回上一步、解释异常、派发给财务/采购/跟单继续处理", domain = ToolDomain.FINANCE, readOnly = false)
 public class MaterialReconciliationTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

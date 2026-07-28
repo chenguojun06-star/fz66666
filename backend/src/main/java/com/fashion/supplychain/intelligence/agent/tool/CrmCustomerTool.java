@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_crm_customer", description = "CRM客户智能管理：查询客户列表、详情、客户分析（级别分布/行业分布）、客户价值分析", domain = ToolDomain.FINANCE)
 public class CrmCustomerTool extends AbstractAgentTool {
 
     @Autowired

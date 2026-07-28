@@ -19,6 +19,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_roll", description = "物料卷管理：查看物料卷列表、物料卷详情、物料卷扫码", domain = ToolDomain.WAREHOUSE)
 public class MaterialRollTool extends AbstractAgentTool {
 
     @Autowired

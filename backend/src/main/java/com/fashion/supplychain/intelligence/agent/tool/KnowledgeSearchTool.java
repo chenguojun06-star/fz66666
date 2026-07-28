@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_knowledge_search", description = "RAG知识库检索工具，回答行业术语、系统操作、业务FAQ等问题，支持Qdrant向量检索+Cohere Rerank+知识图谱三路召回", domain = ToolDomain.GENERAL)
 public class KnowledgeSearchTool extends AbstractAgentTool {
 
     @Autowired

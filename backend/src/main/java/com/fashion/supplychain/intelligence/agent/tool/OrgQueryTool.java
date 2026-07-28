@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_org_query", description = "组织架构与产能分析：查询部门树/部门列表/成员分布、产能分析（各工厂产能利用率/瓶颈识别）、工作量分析", domain = ToolDomain.PRODUCTION)
 public class OrgQueryTool extends AbstractAgentTool {
 
     @Autowired

@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_team_dispatch", description = "团队任务派发工具，自动识别责任岗位、匹配系统内人员并发送站内通知，支持查询协同状态、接单、开始处理、完成回写", domain = ToolDomain.SYSTEM, readOnly = false)
 public class TeamDispatchTool extends AbstractAgentTool {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

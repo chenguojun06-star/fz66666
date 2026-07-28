@@ -15,6 +15,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_sample_delay_analysis", description = "样板延期分析工具，分析打样/样衣延期情况，输出延期率、按纸样师分组、待交样板列表", domain = ToolDomain.STYLE)
 public class SampleDelayAnalysisTool extends AbstractAgentTool {
 
     @Autowired

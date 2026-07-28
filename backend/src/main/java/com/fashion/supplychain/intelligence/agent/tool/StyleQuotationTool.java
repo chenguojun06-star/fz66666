@@ -21,6 +21,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_style_quotation", description = "款式报价管理：查询报价、创建报价、审核报价、解锁报价", domain = ToolDomain.STYLE, readOnly = false)
 public class StyleQuotationTool extends AbstractAgentTool {
 
     @Autowired

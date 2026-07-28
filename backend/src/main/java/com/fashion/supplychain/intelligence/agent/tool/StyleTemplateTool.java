@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_style_template", description = "款式模板工具：从款式生成模板、应用模板到款式、同步工序价格、查询/保存多码单价", domain = ToolDomain.STYLE, readOnly = false)
 public class StyleTemplateTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

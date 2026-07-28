@@ -773,3 +773,38 @@
 - CuttingTaskLogAppendHelper：覆盖 appendOperation 实现双写 + appendOrderOnly 仅同步方法
 - PurchaseCartLogAppendHelper：覆盖 appendOperation 使用自定义 buildRemark 格式
 
+---
+
+## D-049：SoulAnchor 4锚点 LLM 重建 + @AgentToolDef 覆盖率提升（2026-07-28）
+
+### 上下文
+1. SoulAnchor 多锚点身份重建此前仅实现 decisionLog 锚点的完整重建（从 md 文件回灌），其他 3 个锚点（factoryProfile/userProfile/reflectiveMem）只做告警，需 LLM 推理（原标 P3 阶段）。
+2. `@AgentToolDef` 注解覆盖率仅 25%（25/106），未达到 Agent 工具治理目标 80%+，影响工具元数据可观测性和自动化注册。
+
+### 决策
+#### D-049-1 SoulAnchor 4锚点 LLM 重建（P2-1 提前实施）
+1. 注入 `IntelligenceInferenceOrchestrator`（懒加载）和 `QdrantService`（懒加载）到 `SoulAnchorRebuildService`
+2. 新增 3 个 LLM 重建方法：
+   - `rebuildFactoryProfileWithLLM(tenantId)`：从 AiLongMemory(FACT) 拉取工厂事实 → LLM 总结 → 写入 MemoryBankEntry(category=factory_profile)
+   - `rebuildUserProfileWithLLM(tenantId)`：从 t_ai_conversation_memory 拉取会话摘要 → LLM 推断 → 写入 MemoryBankEntry(category=user_profile)
+   - `rebuildReflectiveMemWithLLM(tenantId)`：从 L5 Archival Qdrant 召回 → LLM 反思 → 写入 AiLongMemory(layer=REFLECTIVE)
+3. 容错：LLM 不可用/无素材/调用失败 → 返回 0 不抛异常，退化为告警模式
+4. 开关：`xiaoyun.soul.llm-rebuild.enabled=true`（默认开启）
+
+#### D-049-2 @AgentToolDef 覆盖率提升至 98%（P2-2）
+1. 扫描 `agent/tool/*.java` 共 113 个文件，排除 7 个非Tool文件（基类/接口/枚举/注解/扫描器）
+2. 批量补齐 80 个 Tool 的 `@AgentToolDef` 注解，覆盖率 25% → 98%（105/106）
+3. 标注规则：name() 用类 getName() 返回值；description() 精简到 1 句话；domain() 按 ToolDomain 枚举分类；readOnly() 写操作 Tool 设为 false
+4. 不修改 @McpToolAnnotation 注解、方法逻辑、字段定义
+
+### 理由
+- SoulAnchor 4 锚点 LLM 重建：避免人工介入的延迟，使租户切换/数据恢复后能快速重建身份锚点
+- @AgentToolDef 覆盖率：工具元数据是 Agent 工具系统的基础，未标注的 Tool 无法被自动化注册/治理/可观测
+- 懒加载依赖：避免循环依赖（IntelligenceInferenceOrchestrator 已依赖其他 Service）
+- LLM 容错降级：保证 LLM 不可用时不影响 SoulAnchor 一致性校验主流程
+
+### 验证
+- 后端 `mvn compile -q -DskipTests` ✅ BUILD SUCCESS
+- 前端 `npx tsc --noEmit` ✅ 0 errors
+- @AgentToolDef 覆盖率核实：`grep -l "@AgentToolDef" ... | wc -l` = 105
+

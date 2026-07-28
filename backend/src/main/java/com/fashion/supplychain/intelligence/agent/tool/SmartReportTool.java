@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_smart_report", description = "智能报表生成工具，生成日报/周报/月报，自动聚合扫码趋势、产能变化、工厂效率对比、逾期风险变化、成本统计", domain = ToolDomain.ANALYSIS)
 public class SmartReportTool extends AbstractAgentTool {
 
     @Autowired

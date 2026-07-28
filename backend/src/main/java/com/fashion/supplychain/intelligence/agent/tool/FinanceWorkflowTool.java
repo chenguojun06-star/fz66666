@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_finance_workflow", description = "财务审批工作流：待付列表、审批列表、发起付款、确认线下付款、拒绝应付款、审批/拒绝报销、审批成品结算、批量执行", domain = ToolDomain.FINANCE, readOnly = false)
 public class FinanceWorkflowTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

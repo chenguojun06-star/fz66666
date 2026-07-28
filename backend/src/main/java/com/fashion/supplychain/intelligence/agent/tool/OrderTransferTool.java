@@ -20,6 +20,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_transfer", description = "订单转单管理：查看转单列表、创建转单、接受/拒绝转单、待处理数量", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class OrderTransferTool extends AbstractAgentTool {
 
     @Autowired

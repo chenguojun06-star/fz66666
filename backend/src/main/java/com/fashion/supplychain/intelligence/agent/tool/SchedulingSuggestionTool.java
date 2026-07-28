@@ -18,6 +18,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_scheduling_suggestion", description = "排产建议工具，基于工厂真实历史数据（产能/交期达成率/品类匹配/完成质量四维度评分）推荐最优排产方案，含甘特图", domain = ToolDomain.ANALYSIS)
 public class SchedulingSuggestionTool extends AbstractAgentTool {
 
     @Autowired

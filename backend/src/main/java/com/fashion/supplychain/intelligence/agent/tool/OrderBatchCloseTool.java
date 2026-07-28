@@ -17,6 +17,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_batch_close", description = "批量关闭生产订单，支持按订单ID或订单号批量关闭，正常关单需满足裁剪数>=90%条件，不满足时需特需关单", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class OrderBatchCloseTool extends AbstractAgentTool {
 
     @Autowired

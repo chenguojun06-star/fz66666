@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-28（测试修复：PayrollSettlementOrchestratorTest + PayableOrchestratorTest）
+> 最后更新：2026-07-28（智能化升级：P2-1 SoulAnchor 4锚点LLM重建 + P2-2 @AgentToolDef覆盖率提升至98%）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,43 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-28 智能化升级 P2-1 + P2-2 ✅
+
+#### P2-1 SoulAnchor 4锚点 LLM 重建
+
+升级 `SoulAnchorRebuildService`，将 4 锚点重建从"告警+人工"升级为"LLM 自动重建"：
+
+1. **factoryProfile 锚点**：从 `AiLongMemory(FACT, subjectType=factory)` 拉取工厂事实，调 LLM 总结画像，写入 `MemoryBankEntry(category=factory_profile)`
+2. **userProfile 锚点**：从 `t_ai_conversation_memory` 拉取会话摘要，调 LLM 推断用户偏好，写入 `MemoryBankEntry(category=user_profile)`
+3. **reflectiveMem 锚点**：从 L5 Archival Qdrant 召回冷数据，调 LLM 反思重写，写入 `AiLongMemory(layer=REFLECTIVE)`
+4. **decisionLog 锚点**：保持原文件回灌逻辑（无需 LLM）
+
+**容错策略**：LLM 调用失败/服务不可用 → 退化为告警模式（不抛异常，不影响其他锚点）
+**开关**：`xiaoyun.soul.llm-rebuild.enabled=true`
+**依赖**：`IntelligenceInferenceOrchestrator`（懒加载）+ `QdrantService`（懒加载）
+
+#### P2-2 @AgentToolDef 覆盖率提升
+
+将 `@AgentToolDef` 注解覆盖率从 25%（25 个文件）提升至 **98%（105 个文件）**：
+
+1. **扫描范围**：`backend/src/main/java/com/fashion/supplychain/intelligence/agent/tool/*.java` 共 113 个文件
+2. **排除 7 个非Tool文件**：AbstractAgentTool/AgentTool/AgentToolDef/McpToolAnnotation/ToolDomain/ToolDiscoveryRag/McpToolScanner
+3. **新增 80 个 Tool 标注**：涵盖财务/订单/生产/采购/库存/质检/样衣/分析/系统等所有业务模块
+4. **标注策略**：
+   - `name()` 用类中 `getName()` 返回值
+   - `description()` 精简到 1 句话
+   - `domain()` 按 ToolDomain 枚举值分类
+   - `readOnly()` 写操作 Tool 设为 false
+5. **不修改**：`@McpToolAnnotation` 注解、方法逻辑、字段定义
+
+#### 验证
+
+- 后端 `mvn compile -q -DskipTests` ✅ BUILD SUCCESS
+- 前端 `npx tsc --noEmit` ✅ 0 errors
+- 已标注文件数：`grep -l "@AgentToolDef" ... | wc -l` = 105
+
+---
 
 ### 2026-07-28 测试修复：Mock字段声明优化 ✅
 

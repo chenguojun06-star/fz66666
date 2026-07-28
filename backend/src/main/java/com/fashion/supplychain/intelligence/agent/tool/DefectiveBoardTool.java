@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_defective_board", description = "次品处理工具，查看待处理次品列表、开始返修、返修完成进入待质检、报废菲号", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class DefectiveBoardTool extends AbstractAgentTool {
 
     @Autowired

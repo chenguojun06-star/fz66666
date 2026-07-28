@@ -25,6 +25,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_picking", description = "面料领料工具，查询、创建和管理面料领料单，包括查询领料单列表、查询领料明细、发起新的领料申请", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class MaterialPickingTool extends AbstractAgentTool {
 
     @Autowired

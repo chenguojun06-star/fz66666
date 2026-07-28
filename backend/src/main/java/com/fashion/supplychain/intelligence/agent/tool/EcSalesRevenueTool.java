@@ -20,6 +20,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_ec_sales_revenue", description = "电商营收查询：查看电商渠道营收记录、营收统计汇总", domain = ToolDomain.FINANCE)
 public class EcSalesRevenueTool extends AbstractAgentTool {
 
     @Autowired

@@ -15,6 +15,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_delay_trend", description = "延期趋势分析工具，输出逐周延期率曲线和趋势方向", domain = ToolDomain.ANALYSIS)
 public class DelayTrendTool extends AbstractAgentTool {
 
     @Autowired

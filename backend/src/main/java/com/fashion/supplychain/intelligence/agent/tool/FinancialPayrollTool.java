@@ -29,6 +29,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_financial_payroll", description = "财务计件工资结算查询工具，按订单/工人/月份查询工资结算明细", domain = ToolDomain.FINANCE)
 public class FinancialPayrollTool extends AbstractAgentTool {
 
     @Autowired

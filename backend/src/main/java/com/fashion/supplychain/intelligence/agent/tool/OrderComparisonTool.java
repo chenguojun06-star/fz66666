@@ -36,6 +36,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_comparison", description = "对比异常订单与同款同尺码的正常订单差异，定位异常根因，返回目标订单、对照组、逐项偏差和排查方向", domain = ToolDomain.ANALYSIS)
 public class OrderComparisonTool extends AbstractAgentTool {
 
     @Autowired private ProductionOrderService productionOrderService;

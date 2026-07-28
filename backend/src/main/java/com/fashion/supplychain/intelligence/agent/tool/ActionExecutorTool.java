@@ -31,6 +31,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_action_executor", description = "行动执行器：标记订单紧急、添加备注、发送通知等写操作，所有操作记录审计日志", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class ActionExecutorTool extends AbstractAgentTool {
 
     @Autowired

@@ -31,6 +31,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_style_difficulty", description = "款式制作难度查询工具，按款号或关键词查询款式的AI难度摘要，包含工艺难点和制版注意事项", domain = ToolDomain.STYLE)
 public class StyleDifficultyQueryTool extends AbstractAgentTool {
 
     @Autowired

@@ -18,6 +18,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_tax_config", description = "税务配置查询：查看税率列表、当前生效税率、计算税费", domain = ToolDomain.FINANCE)
 public class TaxConfigTool extends AbstractAgentTool {
 
     @Autowired

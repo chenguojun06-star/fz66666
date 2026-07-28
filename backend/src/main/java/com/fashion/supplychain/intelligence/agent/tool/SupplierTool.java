@@ -19,6 +19,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_supplier", description = "供应商查询：查看供应商列表、供应商详情(复用工厂实体)", domain = ToolDomain.WAREHOUSE)
 public class SupplierTool extends AbstractAgentTool {
 
     @Autowired

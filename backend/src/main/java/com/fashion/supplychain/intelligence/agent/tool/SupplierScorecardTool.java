@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_supplier_scorecard", description = "供应商/工厂综合评分卡：基于准时率、质量分、完成率三维评估近3个月合作工厂表现", domain = ToolDomain.WAREHOUSE)
 public class SupplierScorecardTool extends AbstractAgentTool {
 
     @Autowired

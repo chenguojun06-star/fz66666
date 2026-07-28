@@ -25,6 +25,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_finished_product_stock", description = "成品/大货库存查询工具，按款号/颜色/尺码/SKU查询t_product_sku表中库存数量大于0的成品库存", domain = ToolDomain.WAREHOUSE)
 public class FinishedProductStockTool extends AbstractAgentTool {
 
     @Autowired

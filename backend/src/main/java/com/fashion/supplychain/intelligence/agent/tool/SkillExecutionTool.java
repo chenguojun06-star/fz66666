@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_skill_execute", description = "技能执行工具：通过工具名调用预定义多步工作流（技能链），如月底财务结算、质检异常批量处理、逾期风险订单巡检等", domain = ToolDomain.SYSTEM, readOnly = false)
 public class SkillExecutionTool extends AbstractAgentTool {
 
     @Autowired

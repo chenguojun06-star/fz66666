@@ -22,6 +22,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_cutting_task_create", description = "裁剪单创建工具，让管理者通过小云AI对话快速创建裁剪任务", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class CuttingTaskTool extends AbstractAgentTool {
 
     @Autowired

@@ -15,6 +15,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_personnel_delay_analysis", description = "人员延期分析工具，按跟单员/纸样师/工厂分组分析延期情况，输出延期率、平均延期天数、最严重订单", domain = ToolDomain.ANALYSIS)
 public class PersonnelDelayAnalysisTool extends AbstractAgentTool {
 
     @Autowired

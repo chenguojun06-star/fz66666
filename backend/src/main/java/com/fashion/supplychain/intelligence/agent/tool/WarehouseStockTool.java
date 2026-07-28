@@ -25,6 +25,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_warehouse_stock", description = "仓库进销存查询工具，主要查询面辅料库存", domain = ToolDomain.WAREHOUSE)
 public class WarehouseStockTool extends AbstractAgentTool {
 
     @Autowired

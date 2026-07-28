@@ -31,6 +31,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_quality_inbound", description = "成品质检入库工具，支持查询待入库菲号汇总并执行质检入库", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class QualityInboundTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

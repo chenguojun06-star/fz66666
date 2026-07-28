@@ -25,6 +25,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_finished_outbound", description = "成品大货出库工具，按SKU明细出库并写入审计日志", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class FinishedOutboundTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

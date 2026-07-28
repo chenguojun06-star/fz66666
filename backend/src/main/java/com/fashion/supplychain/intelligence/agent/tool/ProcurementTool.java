@@ -23,6 +23,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_procurement", description = "采购管理：查询采购单列表、查看详情、获取统计数据、创建新采购单、确认到货并入库", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class ProcurementTool extends AbstractAgentTool {
 
     @Autowired

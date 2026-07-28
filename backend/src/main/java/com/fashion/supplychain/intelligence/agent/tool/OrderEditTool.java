@@ -28,6 +28,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_edit", description = "通过AI对话修改订单核心字段：备注、预计出货日、紧急程度、计划完成日期、工厂名称、客户名称", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class OrderEditTool extends AbstractAgentTool {
 
     @Autowired

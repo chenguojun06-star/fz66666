@@ -22,6 +22,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_payroll_approve", description = "工资结算审批工具，支持审核通过(approve)和取消/驳回(cancel)操作", domain = ToolDomain.FINANCE, readOnly = false)
 public class PayrollApproveTool extends AbstractAgentTool {
 
     @Autowired

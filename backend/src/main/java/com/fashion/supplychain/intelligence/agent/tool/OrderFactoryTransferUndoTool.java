@@ -20,6 +20,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_factory_transfer_undo", description = "撤回订单最近一次转厂操作，支持preview预览撤回影响后再执行undo，自动通知原工厂与目标工厂相关人员", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class OrderFactoryTransferUndoTool extends AbstractAgentTool {
 
     @Autowired

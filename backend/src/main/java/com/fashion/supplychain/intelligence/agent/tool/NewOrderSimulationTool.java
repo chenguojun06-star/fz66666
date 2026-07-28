@@ -20,6 +20,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_simulate_new_order", description = "空降新订单推演沙盘工具，分析哪个工厂最适合接单、接该单后会导致完工时间延长几天", domain = ToolDomain.ANALYSIS)
 public class NewOrderSimulationTool extends AbstractAgentTool {
 
     @Autowired

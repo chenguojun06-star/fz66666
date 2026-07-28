@@ -29,6 +29,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_sample_loan", description = "样衣借调与归还工具，支持借调loan和归还return操作，每次操作写入审计日志", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class SampleLoanTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

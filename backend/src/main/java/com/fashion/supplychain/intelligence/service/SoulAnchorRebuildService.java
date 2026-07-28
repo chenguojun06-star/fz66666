@@ -1,10 +1,14 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.entity.AiConversationMemory;
 import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.entity.MemoryBankEntry;
+import com.fashion.supplychain.intelligence.mapper.AiConversationMemoryMapper;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import com.fashion.supplychain.intelligence.mapper.MemoryBankEntryMapper;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.mapper.FactoryMapper;
 import lombok.Data;
@@ -38,14 +42,16 @@ import java.util.Map;
  * <p>设计原则：
  * <ul>
  *   <li>只重建"已确认丢失"的锚点（count=0 或文件不存在）</li>
- *   <li>decisionLog 可完整重建（从 memory-bank/decisionLog.md 回灌）</li>
- *   <li>其他锚点：检测+告警+记录，完整重建需 LLM 推理（P3 阶段实现）</li>
+ *   <li>decisionLog 可完整重建（从 memory-bank/decisionLog.md 回灌，无 LLM）</li>
+ *   <li>其他 3 个锚点：P2-1 升级为 LLM 重建（2026-07-28）</li>
  *   <li>所有操作多租户隔离（P0 铁律 4）</li>
  *   <li>Service 层无 @Transactional（D-001），单条失败不影响其他条</li>
+ *   <li>LLM 调用失败/服务不可用 → 退化为告警模式（不抛异常）</li>
  * </ul>
  *
  * @author xiaoyun
  * @since 2026-07-26
+ * @version P2-1 2026-07-28 4 锚点 LLM 重建
  */
 @Slf4j
 @Service
@@ -53,15 +59,36 @@ import java.util.Map;
 public class SoulAnchorRebuildService {
 
     private static final String CATEGORY_DECISION_LOG = "decision_log";
+    private static final String CATEGORY_FACTORY_PROFILE = "factory_profile";
+    private static final String CATEGORY_USER_PROFILE = "user_profile";
     private static final String LAYER_REFLECTIVE = "REFLECTIVE";
+    private static final String LAYER_FACT = "FACT";
+    private static final String SUBJECT_TYPE_FACTORY = "factory";
+
+    /** LLM 重建单租户最大样本数（防止 token 超限） */
+    private static final int LLM_SAMPLE_LIMIT = 20;
+
+    /** LLM 重建场景标识 */
+    private static final String SCENE_SOUL_REBUILD = "memory_summarize";
 
     @Autowired private FactoryMapper factoryMapper;
     @Autowired private AiLongMemoryMapper aiLongMemoryMapper;
     @Autowired private MemoryBankEntryMapper memoryBankEntryMapper;
+    @Autowired private AiConversationMemoryMapper aiConversationMemoryMapper;
     @Autowired(required = false) private MemoryBankDbService memoryBankDbService;
+    /** P2-1：LLM 推理服务（用于 4 锚点 LLM 重建） */
+    @Autowired(required = false) @Lazy
+    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+    /** P2-1：Qdrant 向量服务（用于从 L5 归档召回反思素材） */
+    @Autowired(required = false) @Lazy
+    private QdrantService qdrantService;
 
     @Value("${fashion.memory-bank.dir:memory-bank}")
     private String memoryBankDir;
+
+    /** P2-1 开关：是否启用 LLM 重建（关闭则只走文件/告警路径，与原逻辑一致） */
+    @Value("${xiaoyun.soul.llm-rebuild.enabled:true}")
+    private boolean llmRebuildEnabled;
 
     /**
      * 检测指定租户的 4 个锚点完整性
@@ -102,11 +129,15 @@ public class SoulAnchorRebuildService {
     /**
      * 重建缺失的锚点
      *
-     * <p>当前实现：
+     * <p>P2-1 升级（2026-07-28）：4 锚点 LLM 重建
      * <ul>
-     *   <li>decisionLog: 从 memory-bank/decisionLog.md 回灌（完整重建）</li>
-     *   <li>其他: 仅 log.warn 告警，完整重建需 LLM 推理（P3 阶段）</li>
+     *   <li>decisionLog: 从 memory-bank/decisionLog.md 回灌（完整重建，无 LLM）</li>
+     *   <li>factoryProfile: 从 AiLongMemory(FACT, subjectType=factory) 调用 LLM 总结工厂画像</li>
+     *   <li>userProfile: 从 t_ai_conversation_memory 历史摘要调用 LLM 推断用户偏好</li>
+     *   <li>reflectiveMem: 从 L5 Archival 归档调用 LLM 反思重写</li>
      * </ul>
+     *
+     * <p>容错：LLM 调用失败/服务不可用 → 退化为告警模式（不影响其他锚点）
      *
      * @param tenantId 租户ID
      * @return 重建结果（含每个锚点的处理动作）
@@ -120,25 +151,47 @@ public class SoulAnchorRebuildService {
 
         List<String> actions = new ArrayList<>();
 
-        // 重建 decisionLog（可完整重建）
+        // 重建 decisionLog（可完整重建，无需 LLM）
         if (!status.isDecisionLogExists()) {
             int imported = rebuildDecisionLogFromFile(tenantId);
             actions.add(String.format("decisionLog: 从文件回灌 %d 条决策记录", imported));
             result.setDecisionLogRebuilt(imported > 0);
         }
 
-        // 其他锚点告警（完整重建需 LLM，P3 阶段实现）
+        // P2-1：工厂画像 LLM 重建
         if (!status.isFactoryProfileExists()) {
-            actions.add("factoryProfile: 缺失，需人工录入工厂基础数据（t_factory.supplier_tier）以启用画像");
-            log.warn("[SoulAnchor] 工厂画像锚点缺失 tenantId={}，需人工录入工厂基础数据", tenantId);
+            int rebuilt = rebuildFactoryProfileWithLLM(tenantId);
+            if (rebuilt > 0) {
+                actions.add(String.format("factoryProfile: LLM 重建 %d 条工厂画像", rebuilt));
+                result.setFactoryProfileRebuilt(true);
+            } else {
+                actions.add("factoryProfile: LLM 重建失败或未启用，需人工录入工厂基础数据");
+                log.warn("[SoulAnchor] 工厂画像 LLM 重建未成功 tenantId={}", tenantId);
+            }
         }
+
+        // P2-1：用户偏好 LLM 重建
         if (!status.isUserProfileExists()) {
-            actions.add("userProfile: 缺失，将在用户下次对话时由 UserProfileEvolutionOrchestrator 自动重建");
-            log.warn("[SoulAnchor] 用户偏好锚点缺失 tenantId={}，将在下次对话时自动重建", tenantId);
+            int rebuilt = rebuildUserProfileWithLLM(tenantId);
+            if (rebuilt > 0) {
+                actions.add(String.format("userProfile: LLM 重建 %d 条用户偏好", rebuilt));
+                result.setUserProfileRebuilt(true);
+            } else {
+                actions.add("userProfile: LLM 重建失败或会话历史不足，将在用户下次对话时自动重建");
+                log.warn("[SoulAnchor] 用户偏好 LLM 重建未成功 tenantId={}", tenantId);
+            }
         }
+
+        // P2-1：反思记忆 LLM 重建
         if (!status.isReflectiveMemExists()) {
-            actions.add("reflectiveMem: 缺失，可从 L5 Archival 归档召回（需 MemoryArchiveService 配合）");
-            log.warn("[SoulAnchor] 反思记忆锚点缺失 tenantId={}，可从 L5 归档召回", tenantId);
+            int rebuilt = rebuildReflectiveMemWithLLM(tenantId);
+            if (rebuilt > 0) {
+                actions.add(String.format("reflectiveMem: LLM 重建 %d 条反思记忆", rebuilt));
+                result.setReflectiveMemRebuilt(true);
+            } else {
+                actions.add("reflectiveMem: L5 归档无素材或 LLM 重建失败，跳过");
+                log.warn("[SoulAnchor] 反思记忆 LLM 重建未成功 tenantId={}", tenantId);
+            }
         }
 
         result.setActions(actions);
@@ -195,6 +248,228 @@ public class SoulAnchorRebuildService {
             return imported;
         } catch (Exception e) {
             log.warn("[SoulAnchor] decisionLog 重建失败 tenant={}: {}", tenantId, e.getMessage());
+            return 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // P2-1：4 锚点 LLM 重建（2026-07-28 升级）
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * P2-1：工厂画像 LLM 重建
+     *
+     * <p>从 AiLongMemory(FACT, subjectType=factory) 拉取所有工厂相关事实，
+     * 拼装 prompt 调 LLM 总结工厂画像（专长/产能/历史交付/质量等级），
+     * 写入 t_memory_bank_entry(category=factory_profile)。
+     *
+     * <p>容错：无素材/LLM不可用/调用失败 → 返回 0，不抛异常
+     *
+     * @param tenantId 租户ID
+     * @return 重建条数（0 表示未重建）
+     */
+    public int rebuildFactoryProfileWithLLM(Long tenantId) {
+        if (!llmRebuildEnabled || inferenceOrchestrator == null || memoryBankDbService == null) {
+            log.debug("[SoulAnchor] 工厂画像 LLM 重建跳过（开关关闭或依赖未就绪）tenantId={}", tenantId);
+            return 0;
+        }
+        try {
+            // 拉取工厂相关事实
+            List<AiLongMemory> facts = aiLongMemoryMapper.selectList(new LambdaQueryWrapper<AiLongMemory>()
+                    .eq(AiLongMemory::getTenantId, tenantId)
+                    .eq(AiLongMemory::getLayer, LAYER_FACT)
+                    .eq(AiLongMemory::getSubjectType, SUBJECT_TYPE_FACTORY)
+                    .eq(AiLongMemory::getDeleteFlag, 0)
+                    .orderByDesc(AiLongMemory::getCreateTime)
+                    .last("LIMIT " + LLM_SAMPLE_LIMIT));
+
+            if (facts == null || facts.isEmpty()) {
+                log.info("[SoulAnchor] 工厂画像 LLM 重建无素材 tenantId={}", tenantId);
+                return 0;
+            }
+
+            // 拼装 prompt
+            StringBuilder factBlock = new StringBuilder();
+            for (AiLongMemory f : facts) {
+                factBlock.append("- ").append(f.getContent() != null ? f.getContent() : "")
+                        .append("\n");
+            }
+
+            String systemPrompt = "你是工厂画像分析助手。根据输入的工厂事实记录，"
+                    + "总结该租户的工厂画像，包含：专长品类、产能规模、历史交付表现、质量等级、合作偏好。"
+                    + "输出 JSON 格式：{\"specialty\":\"\",\"capacity\":\"\",\"delivery\":\"\",\"quality\":\"\",\"preference\":\"\"}";
+
+            String userMessage = "租户ID: " + tenantId + "\n工厂事实记录:\n" + factBlock;
+
+            IntelligenceInferenceResult result = inferenceOrchestrator.chat(
+                    SCENE_SOUL_REBUILD, systemPrompt, userMessage);
+
+            if (result == null || !result.isSuccess() || result.getContent() == null
+                    || result.getContent().isBlank()) {
+                log.warn("[SoulAnchor] 工厂画像 LLM 调用失败 tenantId={}: {}", tenantId,
+                        result != null ? result.getErrorMessage() : "null result");
+                return 0;
+            }
+
+            // 写入 memoryBankEntry
+            String entryKey = "factory_profile_llm_" + tenantId;
+            String title = "LLM 重建工厂画像（基于 " + facts.size() + " 条事实）";
+            memoryBankDbService.upsertEntry(tenantId, CATEGORY_FACTORY_PROFILE, entryKey,
+                    title, result.getContent(), null);
+            log.info("[SoulAnchor] 工厂画像 LLM 重建成功 tenantId={} facts={}", tenantId, facts.size());
+            return 1;
+        } catch (Exception e) {
+            log.warn("[SoulAnchor] 工厂画像 LLM 重建异常 tenantId={}: {}", tenantId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * P2-1：用户偏好 LLM 重建
+     *
+     * <p>从 t_ai_conversation_memory 拉取最近会话摘要，调 LLM 推断用户偏好
+     * （沟通风格/关注点/权限习惯），写入 t_memory_bank_entry(category=user_profile)。
+     *
+     * <p>容错：会话历史不足/LLM失败 → 返回 0，不抛异常
+     *
+     * @param tenantId 租户ID
+     * @return 重建条数（0 表示未重建）
+     */
+    public int rebuildUserProfileWithLLM(Long tenantId) {
+        if (!llmRebuildEnabled || inferenceOrchestrator == null || memoryBankDbService == null) {
+            log.debug("[SoulAnchor] 用户偏好 LLM 重建跳过（开关关闭或依赖未就绪）tenantId={}", tenantId);
+            return 0;
+        }
+        try {
+            // 拉取最近会话摘要
+            List<AiConversationMemory> summaries = aiConversationMemoryMapper.selectList(
+                    new LambdaQueryWrapper<AiConversationMemory>()
+                            .eq(AiConversationMemory::getTenantId, tenantId)
+                            .eq(AiConversationMemory::getDeleteFlag, 0)
+                            .orderByDesc(AiConversationMemory::getCreateTime)
+                            .last("LIMIT " + LLM_SAMPLE_LIMIT));
+
+            if (summaries == null || summaries.isEmpty()) {
+                log.info("[SoulAnchor] 用户偏好 LLM 重建无会话历史 tenantId={}", tenantId);
+                return 0;
+            }
+
+            // 拼装 prompt
+            StringBuilder summaryBlock = new StringBuilder();
+            for (AiConversationMemory s : summaries) {
+                summaryBlock.append("- ").append(s.getMemorySummary() != null ? s.getMemorySummary() : "")
+                        .append("\n");
+            }
+
+            String systemPrompt = "你是用户偏好分析助手。根据输入的会话摘要，"
+                    + "推断用户偏好，包含：沟通风格（简洁/详细）、关注点（生产/质量/财务/交期）、"
+                    + "权限习惯（只读/写操作）、决策风格（数据驱动/直觉）。"
+                    + "输出 JSON 格式：{\"communicationStyle\":\"\",\"focusArea\":\"\",\"permissionHabit\":\"\",\"decisionStyle\":\"\"}";
+
+            String userMessage = "租户ID: " + tenantId + "\n最近会话摘要:\n" + summaryBlock;
+
+            IntelligenceInferenceResult result = inferenceOrchestrator.chat(
+                    SCENE_SOUL_REBUILD, systemPrompt, userMessage);
+
+            if (result == null || !result.isSuccess() || result.getContent() == null
+                    || result.getContent().isBlank()) {
+                log.warn("[SoulAnchor] 用户偏好 LLM 调用失败 tenantId={}: {}", tenantId,
+                        result != null ? result.getErrorMessage() : "null result");
+                return 0;
+            }
+
+            // 写入 memoryBankEntry
+            String entryKey = "user_profile_llm_" + tenantId;
+            String title = "LLM 重建用户偏好（基于 " + summaries.size() + " 条会话摘要）";
+            memoryBankDbService.upsertEntry(tenantId, CATEGORY_USER_PROFILE, entryKey,
+                    title, result.getContent(), null);
+            log.info("[SoulAnchor] 用户偏好 LLM 重建成功 tenantId={} summaries={}", tenantId, summaries.size());
+            return 1;
+        } catch (Exception e) {
+            log.warn("[SoulAnchor] 用户偏好 LLM 重建异常 tenantId={}: {}", tenantId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * P2-1：反思记忆 LLM 重建
+     *
+     * <p>从 L5 Archival Qdrant 归档召回近期冷数据，调 LLM 做反思性总结，
+     * 写入 t_ai_long_memory(layer=REFLECTIVE)。
+     *
+     * <p>容错：Qdrant不可用/无归档/LLM失败 → 返回 0，不抛异常
+     *
+     * @param tenantId 租户ID
+     * @return 重建条数（0 表示未重建）
+     */
+    public int rebuildReflectiveMemWithLLM(Long tenantId) {
+        if (!llmRebuildEnabled || inferenceOrchestrator == null || qdrantService == null) {
+            log.debug("[SoulAnchor] 反思记忆 LLM 重建跳过（开关关闭或依赖未就绪）tenantId={}", tenantId);
+            return 0;
+        }
+        try {
+            // 用通用关键词召回 L5 归档
+            List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> archivals =
+                    qdrantService.search(tenantId, "工厂历史会话反思总结", LLM_SAMPLE_LIMIT);
+
+            if (archivals == null || archivals.isEmpty()) {
+                log.info("[SoulAnchor] 反思记忆 LLM 重建无 L5 归档素材 tenantId={}", tenantId);
+                return 0;
+            }
+
+            // 拼装 prompt
+            StringBuilder archiveBlock = new StringBuilder();
+            for (com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint sp : archivals) {
+                String summary = sp.getPayload() != null ? sp.getPayload().get("summary") : null;
+                if (summary != null && !summary.isBlank()) {
+                    archiveBlock.append("- ").append(summary).append("\n");
+                }
+            }
+
+            if (archiveBlock.length() == 0) {
+                log.info("[SoulAnchor] 反思记忆 LLM 重建归档素材均为空 tenantId={}", tenantId);
+                return 0;
+            }
+
+            String systemPrompt = "你是反思记忆重建助手。根据输入的归档历史摘要，"
+                    + "提炼该租户的反思性记忆，包含：经验教训、改进方向、长期模式、需规避的陷阱。"
+                    + "输出 3-5 条要点，每条不超过 100 字。";
+
+            String userMessage = "租户ID: " + tenantId + "\n归档历史摘要:\n" + archiveBlock;
+
+            IntelligenceInferenceResult result = inferenceOrchestrator.chat(
+                    SCENE_SOUL_REBUILD, systemPrompt, userMessage);
+
+            if (result == null || !result.isSuccess() || result.getContent() == null
+                    || result.getContent().isBlank()) {
+                log.warn("[SoulAnchor] 反思记忆 LLM 调用失败 tenantId={}: {}", tenantId,
+                        result != null ? result.getErrorMessage() : "null result");
+                return 0;
+            }
+
+            // 写入 AiLongMemory(REFLECTIVE)
+            AiLongMemory reflectiveMem = new AiLongMemory();
+            reflectiveMem.setTenantId(tenantId);
+            reflectiveMem.setLayer(LAYER_REFLECTIVE);
+            reflectiveMem.setSubjectType("soul");
+            reflectiveMem.setSubjectId(String.valueOf(tenantId));
+            reflectiveMem.setSubjectName("LLM 重建反思记忆");
+            reflectiveMem.setContent(result.getContent());
+            reflectiveMem.setConfidence(new java.math.BigDecimal("0.70"));
+            reflectiveMem.setValidFrom(LocalDateTime.now());
+            reflectiveMem.setHitCount(0);
+            reflectiveMem.setLastHitTime(LocalDateTime.now());
+            reflectiveMem.setSourceSessionId("soul-rebuild-" + System.currentTimeMillis());
+            reflectiveMem.setVerified(0);
+            reflectiveMem.setDeleteFlag(0);
+            reflectiveMem.setCreateTime(LocalDateTime.now());
+            aiLongMemoryMapper.insert(reflectiveMem);
+
+            log.info("[SoulAnchor] 反思记忆 LLM 重建成功 tenantId={} archivals={}",
+                    tenantId, archivals.size());
+            return 1;
+        } catch (Exception e) {
+            log.warn("[SoulAnchor] 反思记忆 LLM 重建异常 tenantId={}: {}", tenantId, e.getMessage());
             return 0;
         }
     }
@@ -284,6 +559,12 @@ public class SoulAnchorRebuildService {
         private SoulAnchorStatus statusAfter;
         private List<String> actions;
         private boolean decisionLogRebuilt;
+        /** P2-1：工厂画像 LLM 重建结果 */
+        private boolean factoryProfileRebuilt;
+        /** P2-1：用户偏好 LLM 重建结果 */
+        private boolean userProfileRebuilt;
+        /** P2-1：反思记忆 LLM 重建结果 */
+        private boolean reflectiveMemRebuilt;
 
         public Map<String, Object> toMap() {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -293,6 +574,9 @@ public class SoulAnchorRebuildService {
             m.put("statusAfter", statusAfter != null ? statusAfter.toMap() : null);
             m.put("actions", actions);
             m.put("decisionLogRebuilt", decisionLogRebuilt);
+            m.put("factoryProfileRebuilt", factoryProfileRebuilt);
+            m.put("userProfileRebuilt", userProfileRebuilt);
+            m.put("reflectiveMemRebuilt", reflectiveMemRebuilt);
             return m;
         }
     }

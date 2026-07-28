@@ -8,6 +8,8 @@ import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,6 +18,10 @@ import java.util.List;
  * L4程序性记忆服务
  *
  * <p>用途：SOP结构化存储与检索，流程类问题直接调用而非推理</p>
+ *
+ * <p>P1-2 升级（2026-07-28）：新增 Qdrant 语义搜索兜底。
+ * 当 trigger_keywords 精确匹配无结果时，自动降级到向量搜索，
+ * 通过 SOP 内容向量化后的相似度匹配，提升流程类问题的召回率。</p>
  *
  * @author xiaoyun
  * @since 2026-06-24
@@ -26,6 +32,21 @@ import java.util.List;
 public class ProceduralMemoryService {
 
     private final ProceduralMemoryMapper proceduralMemoryMapper;
+
+    /**
+     * Qdrant 向量检索服务（P1-2 语义搜索兜底）。
+     * 使用 @Autowired(required=false) + @Lazy 避免循环依赖；
+     * Qdrant 不可用时降级为纯关键词匹配。
+     */
+    @Autowired(required = false)
+    @Lazy
+    private QdrantService qdrantService;
+
+    /** SOP 在 Qdrant 中的 payload memory_type 标识 */
+    private static final String MEMORY_TYPE_SOP = "procedural_memory";
+
+    /** Qdrant point ID 前缀，避免与其他记忆类型冲突 */
+    private static final String SOP_POINT_ID_PREFIX = "sop:";
 
     /**
      * 根据用户消息检索匹配的SOP
@@ -165,6 +186,12 @@ public class ProceduralMemoryService {
     /**
      * 根据用户消息匹配SOP
      *
+     * <p>P1-2 升级：双层匹配策略
+     * <ol>
+     *   <li>精确匹配（优先）：trigger_keywords LIKE 匹配</li>
+     *   <li>语义搜索（兜底）：Qdrant 向量相似度检索</li>
+     * </ol>
+     *
      * @param tenantId 租户ID
      * @param userMessage 用户消息
      * @return 匹配的SOP（置信度最高的）
@@ -174,23 +201,126 @@ public class ProceduralMemoryService {
             return null;
         }
 
+        // 第 1 层：trigger_keywords 精确匹配
         String keyword = extractKeyword(userMessage);
-        if (keyword == null || keyword.isBlank()) {
-            return null;
+        if (keyword != null && !keyword.isBlank()) {
+            log.debug("[ProceduralMemory.matchSOP] L1 关键词匹配 tenantId={}, keyword={}", tenantId, keyword);
+            List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
+            if (sops != null && !sops.isEmpty()) {
+                ProceduralMemory bestSOP = sops.get(0);
+                log.debug("[ProceduralMemory.matchSOP] L1 命中: {}", bestSOP.getSopName());
+                return new MatchedSOP(bestSOP);
+            }
         }
 
-        log.debug("[ProceduralMemory.matchSOP] tenantId={}, keyword={}", tenantId, keyword);
-        List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
-
-        if (sops == null || sops.isEmpty()) {
-            log.debug("[ProceduralMemory.matchSOP] 未找到匹配的SOP，keyword={}", keyword);
-            return null;
+        // 第 2 层：Qdrant 语义搜索兜底
+        MatchedSOP semanticMatch = searchSopsSemantic(tenantId, userMessage);
+        if (semanticMatch != null) {
+            log.debug("[ProceduralMemory.matchSOP] L2 语义兜底命中: {}", semanticMatch.getSOP().getSopName());
+            return semanticMatch;
         }
 
-        ProceduralMemory bestSOP = sops.get(0);
-        log.debug("[ProceduralMemory.matchSOP] 匹配到SOP: {}", bestSOP.getSopName());
+        log.debug("[ProceduralMemory.matchSOP] 未找到匹配的SOP");
+        return null;
+    }
 
-        return new MatchedSOP(bestSOP);
+    /**
+     * P1-2：Qdrant 语义搜索兜底。
+     *
+     * <p>当 trigger_keywords 精确匹配无结果时，通过向量相似度检索 SOP。
+     * 仅返回 payload.memory_type=procedural_memory 的点，且按 confidence 过滤。
+     *
+     * @param tenantId 租户ID
+     * @param userMessage 用户消息
+     * @return 匹配的SOP；null 表示无结果或 Qdrant 不可用
+     */
+    private MatchedSOP searchSopsSemantic(Long tenantId, String userMessage) {
+        if (qdrantService == null) return null;
+        if (tenantId == null || userMessage == null || userMessage.isBlank()) return null;
+
+        try {
+            List<QdrantService.ScoredPoint> results = qdrantService.search(tenantId, userMessage, 10);
+            if (results == null || results.isEmpty()) return null;
+
+            // 遍历结果，过滤 memory_type=procedural_memory 的点
+            for (QdrantService.ScoredPoint sp : results) {
+                if (sp.getPayload() == null) continue;
+                String memType = sp.getPayload().get("memory_type");
+                if (!MEMORY_TYPE_SOP.equals(memType)) continue;
+
+                String pointId = sp.getPointId();
+                if (pointId == null || !pointId.startsWith(SOP_POINT_ID_PREFIX)) continue;
+
+                // 从 pointId 提取 SOP ID（格式：sop:{tenantId}:{sopId}）
+                String[] parts = pointId.split(":");
+                if (parts.length < 3) continue;
+
+                try {
+                    Long sopId = Long.parseLong(parts[2]);
+                    ProceduralMemory sop = proceduralMemoryMapper.selectOne(
+                            new LambdaQueryWrapper<ProceduralMemory>()
+                                    .eq(ProceduralMemory::getId, sopId)
+                                    .eq(ProceduralMemory::getTenantId, tenantId)
+                                    .eq(ProceduralMemory::getDeleteFlag, 0)
+                                    .eq(ProceduralMemory::getEnabled, 1));
+                    if (sop != null && sop.getConfidence() != null
+                            && sop.getConfidence().compareTo(BigDecimal.valueOf(0.60)) >= 0) {
+                        return new MatchedSOP(sop);
+                    }
+                } catch (NumberFormatException e) {
+                    log.debug("[ProceduralMemory.searchSopsSemantic] 无效的 SOP ID: {}", pointId);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[ProceduralMemory.searchSopsSemantic] 语义搜索失败(降级为null): {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * P1-2：将 SOP 索引到 Qdrant，供语义搜索使用。
+     *
+     * <p>调用时机：
+     * <ul>
+     *   <li>{@link #createSop} 创建后</li>
+     *   <li>{@link #updateSop} 更新后</li>
+     *   <li>{@link ProceduralMemoryInitializer} 初始化时批量索引</li>
+     * </ul>
+     *
+     * @param sop 要索引的 SOP
+     * @return true=成功；false=失败或 Qdrant 不可用
+     */
+    public boolean indexSopToQdrant(ProceduralMemory sop) {
+        if (qdrantService == null) return false;
+        if (sop == null || sop.getId() == null || sop.getTenantId() == null) return false;
+
+        try {
+            String pointId = SOP_POINT_ID_PREFIX + sop.getTenantId() + ":" + sop.getId();
+            // 向量化内容：SOP 名称 + 触发关键词 + 步骤摘要
+            String content = buildSopIndexContent(sop);
+
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("memory_type", MEMORY_TYPE_SOP);
+            payload.put("sop_id", String.valueOf(sop.getId()));
+            payload.put("sop_type", sop.getSopType() != null ? sop.getSopType() : "");
+            payload.put("sop_name", sop.getSopName() != null ? sop.getSopName() : "");
+            payload.put("confidence", sop.getConfidence() != null ? sop.getConfidence().toPlainString() : "0.80");
+
+            return qdrantService.upsertVector(pointId, sop.getTenantId(), content, payload);
+        } catch (Exception e) {
+            log.warn("[ProceduralMemory.indexSopToQdrant] 索引失败 sopId={}: {}", sop.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /** 构建 SOP 索引内容（用于向量化） */
+    private String buildSopIndexContent(ProceduralMemory sop) {
+        StringBuilder sb = new StringBuilder();
+        if (sop.getSopName() != null) sb.append(sop.getSopName()).append(" ");
+        if (sop.getSopType() != null) sb.append(sop.getSopType()).append(" ");
+        if (sop.getTriggerKeywords() != null) sb.append(sop.getTriggerKeywords()).append(" ");
+        if (sop.getStepsJson() != null) sb.append(sop.getStepsJson());
+        return sb.toString().trim();
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -232,6 +362,8 @@ public class ProceduralMemoryService {
         proceduralMemoryMapper.insert(sop);
         log.info("[ProceduralMemory.createSop] 创建SOP成功，tenantId={}, id={}, name={}",
                 tenantId, sop.getId(), sop.getSopName());
+        // P1-2：创建后索引到 Qdrant，供语义搜索兜底（失败不阻塞主流程）
+        indexSopToQdrant(sop);
         return sop;
     }
 
@@ -269,7 +401,12 @@ public class ProceduralMemoryService {
 
         proceduralMemoryMapper.updateById(update);
         log.info("[ProceduralMemory.updateSop] 更新SOP成功，tenantId={}, id={}", tenantId, id);
-        return proceduralMemoryMapper.selectById(id);
+        // P1-2：更新后重新索引到 Qdrant（失败不阻塞主流程）
+        ProceduralMemory updated = proceduralMemoryMapper.selectById(id);
+        if (updated != null) {
+            indexSopToQdrant(updated);
+        }
+        return updated;
     }
 
     /**

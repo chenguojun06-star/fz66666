@@ -23,6 +23,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_management_dashboard", description = "管理层经营仪表盘：查询款式利润排名、工厂绩效对比、关键风险订单、老板级经营概览，仅管理层可用", domain = ToolDomain.ANALYSIS)
 public class ManagementDashboardTool extends AbstractAgentTool {
 
     @Autowired

@@ -21,6 +21,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_whatif", description = "What-If推演沙盘工具，分析提前交货/换工厂/加工人/降成本/推迟开工等决策对完工日、成本、逾期风险的影响，给出最优策略建议", domain = ToolDomain.ANALYSIS)
 public class WhatIfSimulationTool extends AbstractAgentTool {
 
     @Autowired

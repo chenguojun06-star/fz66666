@@ -23,6 +23,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_standard_action", description = "标准动作工具，触发前端弹窗或跳转，如打开下单界面、打开样衣借调弹窗", domain = ToolDomain.SYSTEM)
 public class StandardActionTool extends AbstractAgentTool {
 
     @Override

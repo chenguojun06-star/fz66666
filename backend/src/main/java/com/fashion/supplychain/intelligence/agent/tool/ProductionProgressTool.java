@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_production_progress", description = "查询订单生产进度详情，包含6大工序节点进度、当前扫码数量、裁剪数量、菲号数量、参与工人数量、出货预测", domain = ToolDomain.PRODUCTION)
 public class ProductionProgressTool extends AbstractAgentTool {
 
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

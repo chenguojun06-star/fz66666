@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_audit", description = "面辅料审核与审批：查看待发起初审的采购单、待初审采购单、待审核领取单，支持发起采购初审、通过/驳回采购初审、通过/驳回领取审核", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class MaterialAuditTool extends AbstractAgentTool {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     @Autowired private MaterialPurchaseService materialPurchaseService;

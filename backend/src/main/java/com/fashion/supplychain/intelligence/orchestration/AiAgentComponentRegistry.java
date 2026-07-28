@@ -81,6 +81,14 @@ public class AiAgentComponentRegistry {
     private SwarmExecutionEngine swarmExecutionEngine;
     @Autowired(required = false)
     private IntentCompositionService intentCompositionService;
+    /**
+     * P0 安全升级组件 — 越狱检测 + PII 脱敏
+     * 通过 ComponentRegistry 集中管理，避免直接 @Autowired 导致循环依赖
+     */
+    @Autowired(required = false)
+    private JailbreakDetector jailbreakDetector;
+    @Autowired(required = false)
+    private PiiMaskingService piiMaskingService;
 
     public ConversationReflectionOrchestrator getReflectionOrchestrator() {
         return reflectionOrchestrator;
@@ -200,6 +208,16 @@ public class AiAgentComponentRegistry {
 
     public IntentCompositionService getIntentCompositionService() {
         return intentCompositionService;
+    }
+
+    /** P0 安全升级：获取越狱检测器（用户输入侧防护） */
+    public JailbreakDetector getJailbreakDetector() {
+        return jailbreakDetector;
+    }
+
+    /** P0 安全升级：获取 PII 脱敏服务（输入侧+输出侧兜底） */
+    public PiiMaskingService getPiiMaskingService() {
+        return piiMaskingService;
     }
 
     public <T> T safeGet(Supplier<T> provider, String componentName) {

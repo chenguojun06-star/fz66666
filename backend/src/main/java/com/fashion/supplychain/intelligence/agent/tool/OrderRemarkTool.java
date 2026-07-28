@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_order_remarks", description = "查询指定订单的备注历史，包含系统自动备注和人工手动备注，支持智能摘要提取关键信息、异常告警标注", domain = ToolDomain.PRODUCTION)
 public class OrderRemarkTool extends AbstractAgentTool {
 
     private static final Set<String> URGENCY_KEYWORDS = Set.of(

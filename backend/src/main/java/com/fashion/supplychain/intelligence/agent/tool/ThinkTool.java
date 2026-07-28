@@ -34,6 +34,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_think", description = "AI增强版完整推理引擎，支持结构化思考记录、问题复杂度分析、执行路径规划、风险识别与预警、推理质量自检", domain = ToolDomain.GENERAL)
 public class ThinkTool extends AbstractAgentTool {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

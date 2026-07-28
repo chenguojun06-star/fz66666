@@ -20,6 +20,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_quality_issue", description = "物料质量管理：查看物料质量问题、问题统计、解决质量问题", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class MaterialQualityIssueTool extends AbstractAgentTool {
 
     @Autowired

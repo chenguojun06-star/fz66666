@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_warehouse_op_log", description = "仓库操作日志查询：样衣借调/归还、成品出库的历史审计记录，支持按操作人、操作类型、时间范围过滤", domain = ToolDomain.WAREHOUSE)
 public class WarehouseOpLogTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

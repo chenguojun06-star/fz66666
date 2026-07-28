@@ -31,6 +31,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_payroll_anomaly_detector", description = "工资异常检测工具，对比工人当月产量与近60天基线，筛选出产量异常的工人，防止数据录入错误或恶意刷量", domain = ToolDomain.FINANCE)
 public class PayrollAnomalyDetectorTool extends AbstractAgentTool {
 
     private static final ObjectMapper OM = new ObjectMapper();

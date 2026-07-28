@@ -15,6 +15,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_anomaly_detection", description = "异常检测工具，基于z-score统计检测4维度异常（产量飙升/质量异常/工人闲置/夜间扫码），自动识别生产中的风险信号", domain = ToolDomain.ANALYSIS)
 public class AnomalyDetectionTool extends AbstractAgentTool {
 
     @Autowired

@@ -17,6 +17,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_pattern_production", description = "样板生产管理工具，查询样板列表、收样、审样、样板入库", domain = ToolDomain.STYLE, readOnly = false)
 public class PatternProductionTool extends AbstractAgentTool {
 
     @Autowired

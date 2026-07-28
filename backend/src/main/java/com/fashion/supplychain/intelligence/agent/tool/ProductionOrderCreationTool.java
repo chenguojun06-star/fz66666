@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_create_production_order", description = "AI完整建单工具，让用户在自然语言里直接给出款式/工厂/颜色尺码数量/开工日期/交期，按正式生产订单链路创建完整订单", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class ProductionOrderCreationTool extends AbstractAgentTool {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

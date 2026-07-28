@@ -17,6 +17,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_financial_report", description = "财务报表：利润表(损益)、资产负债表、现金流量表、利润环比分析、财务健康诊断、单个订单利润明细", domain = ToolDomain.FINANCE)
 public class FinancialReportTool extends AbstractAgentTool {
 
     @Autowired

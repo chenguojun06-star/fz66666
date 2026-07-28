@@ -25,6 +25,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_system_user", description = "系统人员/用户查询工具，按账号/角色/工序查询系统内人员", domain = ToolDomain.SYSTEM)
 public class SystemUserTool extends AbstractAgentTool {
 
     @Autowired

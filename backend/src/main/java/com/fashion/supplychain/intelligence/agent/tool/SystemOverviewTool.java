@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_system_overview", description = "系统全局概览统计工具，提供聚合数据帮助AI回答系统状态/进度/卡点，含昨日对比、本周扫码趋势、紧急事项优先级排序", domain = ToolDomain.SYSTEM)
 public class SystemOverviewTool extends AbstractAgentTool {
 
     @Autowired

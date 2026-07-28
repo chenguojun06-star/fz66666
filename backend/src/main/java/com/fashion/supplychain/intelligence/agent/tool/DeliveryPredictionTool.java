@@ -16,6 +16,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_delivery_prediction", description = "交期预测工具，基于近7天加权移动平均产量+P80历史百分位+工厂校准，预测订单完工日期（乐观/可能/悲观三档）", domain = ToolDomain.ANALYSIS)
 public class DeliveryPredictionTool extends AbstractAgentTool {
 
     @Autowired

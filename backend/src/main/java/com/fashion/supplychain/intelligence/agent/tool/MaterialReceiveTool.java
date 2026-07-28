@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_receive", description = "面辅料到货、入库、领取和智能收货：查看智能收货预览、一键智能收货、单条领取、仓库单项领取、更新到货数量、到货并入库、撤回收货", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class MaterialReceiveTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

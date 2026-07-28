@@ -20,6 +20,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_pattern_revision", description = "样衣改版管理：查看改版记录、创建改版、提交审批、审批/驳回改版", domain = ToolDomain.STYLE, readOnly = false)
 public class PatternRevisionTool extends AbstractAgentTool {
 
     @Autowired

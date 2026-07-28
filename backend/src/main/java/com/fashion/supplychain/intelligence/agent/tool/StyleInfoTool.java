@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_query_style_info", description = "款式档案全功能AI工具：查询款式详情+工序列表、新建/更新款式、推进开发阶段", domain = ToolDomain.STYLE, readOnly = false)
 public class StyleInfoTool extends AbstractAgentTool {
 
     @Autowired private StyleInfoService styleInfoService;

@@ -34,6 +34,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_factory_transfer", description = "订单转厂工具，支持整单转厂和部分转厂，自动向原工厂和新工厂发送站内通知", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class OrderFactoryTransferTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

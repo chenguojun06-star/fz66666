@@ -22,6 +22,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_secondary_process", description = "二次加工工序管理：查询、创建和更新款式的二次加工工序，包括印花、绣花、洗水等", domain = ToolDomain.STYLE, readOnly = false)
 public class SecondaryProcessTool extends AbstractAgentTool {
 
     @Autowired

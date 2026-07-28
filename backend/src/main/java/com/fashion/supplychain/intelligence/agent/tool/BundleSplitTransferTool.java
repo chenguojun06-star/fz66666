@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_bundle_split_transfer", description = "拆菲转派工具：支持拆菲转派、预览拆菲影响、可行性检查、查询拆分家族关系，以及撤回拆菲", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class BundleSplitTransferTool extends AbstractAgentTool {
 
     @Autowired

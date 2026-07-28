@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_deep_analysis", description = "深度分析工具，提供工厂排名/瓶颈分析/跟单员负载/交期风险/成本分析/订单类型分布等多维度业务洞察", domain = ToolDomain.ANALYSIS)
 public class DeepAnalysisTool extends AbstractAgentTool {
 
     @Autowired

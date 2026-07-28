@@ -36,6 +36,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_ai_accuracy_query", description = "AI准确率查询工具，查看交期预测命中率、AI建议采纳率、平均偏差天数等AI能力数据", domain = ToolDomain.ANALYSIS)
 public class AiAccuracyQueryTool extends AbstractAgentTool {
 
     @Autowired

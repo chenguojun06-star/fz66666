@@ -15,6 +15,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_doc_receive", description = "处理已上传的采购单据识别结果，支持回放识别结果、预览到货影响、自动登记到货或自动到货入库", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class MaterialDocReceiveTool extends AbstractAgentTool {
 
     @Autowired

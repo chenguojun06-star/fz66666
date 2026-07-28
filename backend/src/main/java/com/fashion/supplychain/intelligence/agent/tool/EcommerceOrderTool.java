@@ -20,6 +20,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_ecommerce_order", description = "电商订单查询：查看电商渠道订单列表、订单详情、订单统计", domain = ToolDomain.PRODUCTION)
 public class EcommerceOrderTool extends AbstractAgentTool {
 
     @Autowired

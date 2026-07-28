@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_sample_workflow", description = "样衣工作流管理：样衣款式阶段动作、样衣审核保存、推送到下单管理、样板生产工作流动作", domain = ToolDomain.STYLE, readOnly = false)
 public class SampleWorkflowTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_invoice", description = "发票智能管理：查询发票列表、详情、统计、智能分析（开票效率/税负/异常检测）、创建/开票/作废", domain = ToolDomain.FINANCE, readOnly = false)
 public class InvoiceTool extends AbstractAgentTool {
 
     @Autowired

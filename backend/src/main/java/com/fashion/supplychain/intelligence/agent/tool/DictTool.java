@@ -18,6 +18,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_dict", description = "数据字典查询：查看字典列表、按类型查询字典项，支持租户隔离", domain = ToolDomain.SYSTEM)
 public class DictTool extends AbstractAgentTool {
 
     @Autowired

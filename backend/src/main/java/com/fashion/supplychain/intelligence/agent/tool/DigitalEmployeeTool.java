@@ -37,6 +37,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_digital_employee", description = "数字员工工具，接入ExecutionEngine的20+种业务操作：订单/质检/采购/生产/财务/款式等操作，AI理解意图后由引擎执行", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class DigitalEmployeeTool extends AbstractAgentTool {
 
     @Autowired

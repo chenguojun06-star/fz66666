@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_learning", description = "订单学习建议/解释订单实际价格/刷新单笔或近期订单学习结果/刷新某款历史学习样本", domain = ToolDomain.ANALYSIS)
 public class OrderLearningTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

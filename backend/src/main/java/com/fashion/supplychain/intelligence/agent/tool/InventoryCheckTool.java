@@ -21,6 +21,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_inventory_check", description = "盘点管理：查看盘点记录、盘点统计、创建盘点、确认/取消盘点", domain = ToolDomain.WAREHOUSE, readOnly = false)
 public class InventoryCheckTool extends AbstractAgentTool {
 
     @Autowired

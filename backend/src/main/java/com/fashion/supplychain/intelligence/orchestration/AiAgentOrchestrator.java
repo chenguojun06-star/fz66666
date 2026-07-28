@@ -188,6 +188,13 @@ public class AiAgentOrchestrator {
     }
 
     public Result<String> executeAgent(String userMessage, String pageContext) {
+        // 【P0安全升级】输入侧三层防护：越狱检测 + PII脱敏 + 注入清洗
+        userMessage = applyInputSecurityGuard(userMessage);
+        if (userMessage == null) {
+            // 越狱检测命中，已被拦截
+            return Result.fail("[安全拦截] 检测到 prompt injection 尝试，请求已被阻止");
+        }
+
         // 【P0升级】多Agent图编排路由决策：复杂/多领域问题路由到专家Agent协作
         Result<String> multiAgentResult = tryRouteToMultiAgentGraph(userMessage, pageContext);
         if (multiAgentResult != null) {
@@ -510,6 +517,16 @@ public class AiAgentOrchestrator {
         ScheduledFuture<?> heartbeatFuture = null;
         AtomicBoolean cancelled = new AtomicBoolean(false);
         try {
+            // 【P0安全升级】流式入口同样应用输入侧三层防护
+            userMessage = applyInputSecurityGuard(userMessage);
+            if (userMessage == null) {
+                emitSse(emitter, "error", java.util.Map.of(
+                        "content", "[安全拦截] 检测到 prompt injection 尝试，请求已被阻止",
+                        "retryable", false));
+                emitter.complete();
+                return;
+            }
+
             // 【v2】关键词只作为路由 hint，不直接短路
             String keywordHint = extractKeywordDataHint(userMessage);
             String augmentedCtx = pageContext != null ? pageContext : "";
@@ -729,7 +746,7 @@ public class AiAgentOrchestrator {
     }
 
     /**
-     * P0-4: 净化 LLM 输出 — 剥离 prompt 内部 HTML 注释标记 + 应用敏感信息屏蔽。
+     * P0-4: 净化 LLM 输出 — 剥离 prompt 内部 HTML 注释标记 + 应用敏感信息屏蔽 + PII 脱敏兜底。
      * 在 LLM 回复送回前端之前调用，确保用户看到的是干净业务内容，不暴露内部架构。
      * 失败不阻塞主流程，返回原文。
      */
@@ -738,11 +755,72 @@ public class AiAgentOrchestrator {
         com.fashion.supplychain.intelligence.service.GuardrailsConfigService guardrailsConfigService = componentRegistry.getGuardrailsConfigService();
         if (guardrailsConfigService == null) return content;
         try {
-            return guardrailsConfigService.sanitizeOutput(content);
+            // 输出侧净化：剥离标记 + YAML 规则屏蔽 + PII 兜底脱敏
+            String cleaned = guardrailsConfigService.sanitizeOutput(content);
+            // P0-2: PII 兜底 — 即使 YAML 规则未命中，独立 PiiMaskingService 再扫一遍
+            com.fashion.supplychain.intelligence.service.PiiMaskingService piiMaskingService = componentRegistry.getPiiMaskingService();
+            if (piiMaskingService != null) {
+                cleaned = piiMaskingService.mask(cleaned);
+            }
+            return cleaned;
         } catch (Exception e) {
             log.debug("[AiAgent-Sanitize] 净化失败，返回原文: {}", e.getMessage());
             return content;
         }
+    }
+
+    /**
+     * P0 安全升级：输入侧三层防护（越狱检测 + PII 脱敏 + 注入清洗）。
+     *
+     * <p>调用点：{@link #executeAgent(String, String)} 入口最前端。
+     *
+     * <p>防护顺序：
+     * <ol>
+     *   <li>越狱检测（命中即拦截，返回 null 表示阻止请求）</li>
+     *   <li>PII 脱敏（手机号/身份证/邮箱等 7 类，防止进入 LLM 上下文）</li>
+     *   <li>注入清洗（移除 XML 标签 + 控制字符 + 已知注入短语，不拦截只清洗）</li>
+     * </ol>
+     *
+     * @param userInput 用户原始输入
+     * @return 清洗后的输入（继续处理）；null 表示已被越狱检测拦截
+     */
+    private String applyInputSecurityGuard(String userInput) {
+        if (userInput == null || userInput.isEmpty()) return userInput;
+
+        com.fashion.supplychain.intelligence.service.JailbreakDetector jailbreakDetector = componentRegistry.getJailbreakDetector();
+        com.fashion.supplychain.intelligence.service.PiiMaskingService piiMaskingService = componentRegistry.getPiiMaskingService();
+
+        // 第 1 层：越狱检测 — 命中即拦截
+        if (jailbreakDetector != null) {
+            try {
+                com.fashion.supplychain.intelligence.service.JailbreakDetector.DetectionResult jr =
+                        jailbreakDetector.detect(userInput);
+                if (jr.isBlocked()) {
+                    log.warn("[AiAgent-Security] 越狱检测拦截: {}", jr.getReason());
+                    return null;
+                }
+            } catch (Exception e) {
+                log.debug("[AiAgent-Security] 越狱检测异常（继续处理）: {}", e.getMessage());
+            }
+        }
+
+        // 第 2 层：PII 脱敏 — 防止用户输入的 PII 进入 LLM 上下文
+        if (piiMaskingService != null) {
+            try {
+                userInput = piiMaskingService.mask(userInput);
+            } catch (Exception e) {
+                log.debug("[AiAgent-Security] PII 脱敏异常（继续处理）: {}", e.getMessage());
+            }
+        }
+
+        // 第 3 层：注入清洗 — 移除 XML 标签 + 控制字符（不拦截，仅清洗）
+        try {
+            userInput = com.fashion.supplychain.intelligence.service.PromptInjectionPatterns.scrub(userInput);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Security] 注入清洗异常（继续处理）: {}", e.getMessage());
+        }
+
+        return userInput;
     }
 
     private void triggerPostTurnHooks(AgentLoopContext ctx, String userMessage,

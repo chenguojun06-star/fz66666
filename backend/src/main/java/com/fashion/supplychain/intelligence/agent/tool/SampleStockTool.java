@@ -26,6 +26,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_sample_stock", description = "样衣库存查询工具，查询t_sample_stock表中开发样/产前样/大货样/销售样的库存", domain = ToolDomain.WAREHOUSE)
 public class SampleStockTool extends AbstractAgentTool {
 
     @Autowired

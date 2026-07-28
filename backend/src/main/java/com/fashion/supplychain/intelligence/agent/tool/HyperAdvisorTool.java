@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_hyper_advisor", description = "高级供应链AI顾问工具，提供风险量化、延期推演、产能模拟、策略建议等专业分析", domain = ToolDomain.ANALYSIS)
 public class HyperAdvisorTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

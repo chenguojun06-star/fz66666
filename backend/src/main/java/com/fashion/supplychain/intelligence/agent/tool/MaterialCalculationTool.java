@@ -32,6 +32,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_material_calculation", description = "BOM物料用量与成本计算工具，计算指定款号、数量下的面辅料需求及成本", domain = ToolDomain.STYLE)
 public class MaterialCalculationTool extends AbstractAgentTool {
 
     @Autowired

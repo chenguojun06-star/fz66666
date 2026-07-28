@@ -25,6 +25,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_order_contact_urge", description = "查询订单跟单员和工厂联系人，并自动发送催单站内通知", domain = ToolDomain.PRODUCTION, readOnly = false)
 public class OrderContactUrgeTool extends AbstractAgentTool {
 
     @Autowired

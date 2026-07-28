@@ -17,6 +17,7 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_multi_agent_debate", description = "多智能体联合诊断工具：启动PMC(进度)、财务(成本)、品控(质量)三个AI专家并发分析，再由CEO智能体综合决策", domain = ToolDomain.ANALYSIS)
 public class MultiAgentDebateTool extends AbstractAgentTool {
 
     @Autowired

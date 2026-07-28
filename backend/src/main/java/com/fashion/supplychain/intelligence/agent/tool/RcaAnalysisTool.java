@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_root_cause_analysis", description = "根因分析工具，对生产问题进行5-Why根因分析，找出根本原因并生成鱼骨图分类", domain = ToolDomain.ANALYSIS)
 public class RcaAnalysisTool extends AbstractAgentTool {
 
     @Autowired private RootCauseAnalysisOrchestrator rcaOrchestrator;

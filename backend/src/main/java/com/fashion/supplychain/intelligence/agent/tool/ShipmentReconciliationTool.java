@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(name = "tool_shipment_reconciliation", description = "出货对账管理：查询对账单列表、查看详情与利润统计", domain = ToolDomain.FINANCE)
 public class ShipmentReconciliationTool extends AbstractAgentTool {
 
     @Autowired
