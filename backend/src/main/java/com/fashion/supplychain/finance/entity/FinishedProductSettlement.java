@@ -114,6 +114,21 @@ public class FinishedProductSettlement implements Serializable {
     private BigDecimal productionCost;
 
     /**
+     * 出库数量（排除冲销记录）
+     */
+    private Integer outstockQuantity;
+
+    /**
+     * 出库总金额（冲销记录金额取反后汇总）
+     */
+    private BigDecimal outstockAmount;
+
+    /**
+     * 当前库存 = 入库数量 - 出库数量
+     */
+    private Integer currentStock;
+
+    /**
      * 次品报废金额
      */
     private BigDecimal defectLoss;

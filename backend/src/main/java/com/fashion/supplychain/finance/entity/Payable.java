@@ -36,6 +36,8 @@ public class Payable {
     private BigDecimal amount;
     /** 已付金额 */
     private BigDecimal paidAmount;
+    /** 退货冲减金额（采购退货时累计，独立于 paidAmount 以区分真实付款与退货冲减） */
+    private BigDecimal returnedAmount;
 
     /** 约定付款日期 */
     private LocalDate dueDate;

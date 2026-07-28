@@ -12,17 +12,17 @@ import java.math.BigDecimal;
 public class EmployeeAdvanceServiceImpl extends ServiceImpl<EmployeeAdvanceMapper, EmployeeAdvance> implements EmployeeAdvanceService {
 
     @Override
-    public int atomicRepay(String id, BigDecimal delta, BigDecimal expectedRepaymentAmount) {
-        return baseMapper.atomicRepay(id, delta, expectedRepaymentAmount);
+    public int atomicRepay(String id, BigDecimal delta, BigDecimal expectedRepaymentAmount, Long tenantId) {
+        return baseMapper.atomicRepay(id, delta, expectedRepaymentAmount, tenantId);
     }
 
     @Override
-    public int atomicApprove(String id, String approverId, String approverName, String remark) {
-        return baseMapper.atomicApprove(id, approverId, approverName, remark);
+    public int atomicApprove(String id, String approverId, String approverName, String remark, Long tenantId) {
+        return baseMapper.atomicApprove(id, approverId, approverName, remark, tenantId);
     }
 
     @Override
-    public int atomicReject(String id, String approverId, String approverName, String remark) {
-        return baseMapper.atomicReject(id, approverId, approverName, remark);
+    public int atomicReject(String id, String approverId, String approverName, String remark, Long tenantId) {
+        return baseMapper.atomicReject(id, approverId, approverName, remark, tenantId);
     }
 }

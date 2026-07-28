@@ -12,7 +12,12 @@ import java.math.BigDecimal;
 public class PayableServiceImpl extends ServiceImpl<PayableMapper, Payable> implements PayableService {
 
     @Override
-    public int atomicAddPaidAmount(String id, BigDecimal delta) {
-        return baseMapper.atomicAddPaidAmount(id, delta);
+    public int atomicAddPaidAmount(String id, BigDecimal delta, Long tenantId) {
+        return baseMapper.atomicAddPaidAmount(id, delta, tenantId);
+    }
+
+    @Override
+    public int atomicAddReturnedAmount(String id, BigDecimal delta, Long tenantId) {
+        return baseMapper.atomicAddReturnedAmount(id, delta, tenantId);
     }
 }

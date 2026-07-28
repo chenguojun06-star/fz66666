@@ -16,10 +16,11 @@ public interface EmployeeAdvanceMapper extends BaseMapper<EmployeeAdvance> {
             "remaining_amount = amount - (repayment_amount + #{delta}), " +
             "repayment_status = CASE WHEN amount - (repayment_amount + #{delta}) = 0 THEN 'repaid' ELSE 'partial' END, " +
             "update_time = NOW() " +
-            "WHERE id = #{id} AND repayment_amount = #{expectedRepaymentAmount}")
+            "WHERE id = #{id} AND tenant_id = #{tenantId} AND repayment_amount = #{expectedRepaymentAmount}")
     int atomicRepay(@Param("id") String id,
                     @Param("delta") BigDecimal delta,
-                    @Param("expectedRepaymentAmount") BigDecimal expectedRepaymentAmount);
+                    @Param("expectedRepaymentAmount") BigDecimal expectedRepaymentAmount,
+                    @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_employee_advance SET " +
             "status = 'approved', " +
@@ -28,11 +29,12 @@ public interface EmployeeAdvanceMapper extends BaseMapper<EmployeeAdvance> {
             "approval_time = NOW(), " +
             "approval_remark = #{remark}, " +
             "update_time = NOW() " +
-            "WHERE id = #{id} AND status = 'pending'")
+            "WHERE id = #{id} AND tenant_id = #{tenantId} AND status = 'pending'")
     int atomicApprove(@Param("id") String id,
                       @Param("approverId") String approverId,
                       @Param("approverName") String approverName,
-                      @Param("remark") String remark);
+                      @Param("remark") String remark,
+                      @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_employee_advance SET " +
             "status = 'rejected', " +
@@ -41,9 +43,10 @@ public interface EmployeeAdvanceMapper extends BaseMapper<EmployeeAdvance> {
             "approval_time = NOW(), " +
             "approval_remark = #{remark}, " +
             "update_time = NOW() " +
-            "WHERE id = #{id} AND status = 'pending'")
+            "WHERE id = #{id} AND tenant_id = #{tenantId} AND status = 'pending'")
     int atomicReject(@Param("id") String id,
                      @Param("approverId") String approverId,
                      @Param("approverName") String approverName,
-                     @Param("remark") String remark);
+                     @Param("remark") String remark,
+                     @Param("tenantId") Long tenantId);
 }

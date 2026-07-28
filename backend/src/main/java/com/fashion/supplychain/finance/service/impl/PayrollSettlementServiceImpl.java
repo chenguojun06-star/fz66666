@@ -45,7 +45,13 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
 
     @Override
     public PayrollSettlement getDetailById(String id) {
-        return baseMapper.selectById(id);
+        PayrollSettlement entity = baseMapper.selectById(id);
+        if (entity != null) {
+            // P0 铁律4：多租户隔离 — 详情查询必须校验租户归属，防止跨租户读取工资单
+            com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(
+                    entity.getTenantId(), "工资结算单");
+        }
+        return entity;
     }
 
     @Override
@@ -56,12 +62,12 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
     }
 
     @Override
-    public int atomicAddPaidAmount(String id, BigDecimal delta, BigDecimal expectedPaidAmount) {
-        return baseMapper.atomicAddPaidAmount(id, delta, expectedPaidAmount);
+    public int atomicAddPaidAmount(String id, BigDecimal delta, BigDecimal expectedPaidAmount, Long tenantId) {
+        return baseMapper.atomicAddPaidAmount(id, delta, expectedPaidAmount, tenantId);
     }
 
     @Override
-    public int atomicAddDeductionAmount(String id, BigDecimal delta, BigDecimal expectedDeductionAmount) {
-        return baseMapper.atomicAddDeductionAmount(id, delta, expectedDeductionAmount);
+    public int atomicAddDeductionAmount(String id, BigDecimal delta, BigDecimal expectedDeductionAmount, Long tenantId) {
+        return baseMapper.atomicAddDeductionAmount(id, delta, expectedDeductionAmount, tenantId);
     }
 }

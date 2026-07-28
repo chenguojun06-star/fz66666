@@ -13,7 +13,7 @@ public interface PayrollSettlementService extends IService<PayrollSettlement> {
 
     void deleteByOrderId(String orderId);
 
-    int atomicAddPaidAmount(String id, BigDecimal delta, BigDecimal expectedPaidAmount);
+    int atomicAddPaidAmount(String id, BigDecimal delta, BigDecimal expectedPaidAmount, Long tenantId);
 
-    int atomicAddDeductionAmount(String id, BigDecimal delta, BigDecimal expectedDeductionAmount);
+    int atomicAddDeductionAmount(String id, BigDecimal delta, BigDecimal expectedDeductionAmount, Long tenantId);
 }

@@ -1,6 +1,8 @@
 package com.fashion.supplychain.finance.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -25,7 +27,7 @@ public class BillAggregation {
     /** PAYABLE=应付, RECEIVABLE=应收 */
     private String billType;
 
-    /** MATERIAL / PRODUCT / EXTERNAL_FACTORY / PAYROLL / EXPENSE / SHIPMENT / DEDUCTION */
+    /** MATERIAL / PRODUCT / EXTERNAL_FACTORY / PAYROLL / EXPENSE / SHIPMENT / DEDUCTION / INVENTORY_PROFIT（盘盈） / INVENTORY_LOSS（盘亏） */
     private String billCategory;
 
     /** 来源类型 */
@@ -70,6 +72,7 @@ public class BillAggregation {
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
     private Integer deleteFlag;
 }
