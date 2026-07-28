@@ -603,7 +603,7 @@ public class TenantAppOrchestrator {
         }
 
         // 递增计数
-        tenantAppService.atomicIncrementCallCount(app.getId());
+        tenantAppService.atomicIncrementCallCount(app.getId(), app.getTenantId());
     }
 
     private String generateAppKey(String appType) {

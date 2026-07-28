@@ -13,6 +13,6 @@ public interface TenantAppMapper extends BaseMapper<TenantApp> {
             "daily_used = COALESCE(daily_used, 0) + 1, " +
             "total_calls = COALESCE(total_calls, 0) + 1, " +
             "last_call_time = NOW() " +
-            "WHERE id = #{id}")
-    int atomicIncrementCallCount(@Param("id") String id);
+            "WHERE id = #{id} AND tenant_id = #{tenantId}")
+    int atomicIncrementCallCount(@Param("id") String id, @Param("tenantId") Long tenantId);
 }

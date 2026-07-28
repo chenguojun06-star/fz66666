@@ -51,6 +51,11 @@ public class ReceivableOrchestrator {
     @Autowired
     private ReceivableLogAppendHelper logAppendHelper;
 
+    /** 懒加载避免与 BillAggregationOrchestrator 循环依赖 */
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
+
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
 
@@ -382,6 +387,38 @@ public class ReceivableOrchestrator {
     }
 
     private void syncBillAggregationAfterReceipt(Receivable receivable, BigDecimal paymentAmount) {
+        if (receivable == null) {
+            return;
+        }
+        // P1 修复：优先使用官方 BillAggregationOrchestrator.syncSettledAmountBySource API
+        // - Receivable.sourceBizType/sourceBizId 对应 BillAggregation.sourceType/sourceId
+        // - 复用终态保护、日志审计、自动结清逻辑
+        if (billAggregationOrchestrator != null
+                && StringUtils.hasText(receivable.getSourceBizType())
+                && StringUtils.hasText(receivable.getSourceBizId())) {
+            try {
+                BigDecimal newSettled = receivable.getReceivedAmount() != null
+                        ? receivable.getReceivedAmount() : BigDecimal.ZERO;
+                billAggregationOrchestrator.syncSettledAmountBySource(
+                        receivable.getSourceBizType(), receivable.getSourceBizId(), newSettled);
+                log.info("[ReceivableOrchestrator] 收款联动账单 settledAmount: receivableNo={}, sourceBizType={}, sourceBizId={}, settled={}",
+                        receivable.getReceivableNo(), receivable.getSourceBizType(),
+                        receivable.getSourceBizId(), newSettled);
+            } catch (Exception e) {
+                log.warn("[ReceivableOrchestrator] 收款联动账单失败（不阻塞主流程）: receivableNo={}, err={}",
+                        receivable.getReceivableNo(), e.getMessage());
+            }
+            return;
+        }
+        // 兜底：无 sourceBizType/sourceBizId 时回退到直接更新 BillAggregation
+        syncBillAggregationAfterReceiptLegacy(receivable, paymentAmount);
+    }
+
+    /**
+     * 旧逻辑兜底：无 sourceBizType/sourceBizId 时直接更新 BillAggregation 表
+     * 仅用于兼容历史数据，新数据应通过 pushBill 派生 Receivable 自动携带 sourceBizType/sourceBizId
+     */
+    private void syncBillAggregationAfterReceiptLegacy(Receivable receivable, BigDecimal paymentAmount) {
         if (receivable == null || !StringUtils.hasText(receivable.getBillAggregationId())) {
             return;
         }

@@ -18,7 +18,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -155,10 +160,18 @@ public class ProductSyncOrchestrator {
 
     private List<EcStockSyncItem> buildStockItems(List<EcProductMapping> mappings, Long tenantId) {
         List<EcStockSyncItem> items = new ArrayList<>();
+        // 预加载所有 SKU，避免循环内 N+1 查询
+        Set<Long> skuIds = mappings.stream()
+                .map(EcProductMapping::getSkuId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, ProductSku> skuMap = skuIds.isEmpty() ? Collections.emptyMap() :
+                productSkuService.listByIds(skuIds).stream()
+                        .collect(Collectors.toMap(ProductSku::getId, Function.identity()));
         for (EcProductMapping m : mappings) {
             if (m.getSkuId() == null || m.getPlatformSkuId() == null) continue;
             int available = stockCalculator.calculateAvailableStock(m.getStyleId(), m.getSkuId());
-            ProductSku sku = productSkuService.getById(m.getSkuId());
+            ProductSku sku = skuMap.get(m.getSkuId());
             items.add(EcStockSyncItem.builder()
                     .skuId(m.getSkuId())
                     .skuCode(sku != null ? sku.getSkuCode() : null)
@@ -173,9 +186,17 @@ public class ProductSyncOrchestrator {
 
     private List<EcPriceSyncItem> buildPriceItems(List<EcProductMapping> mappings, Long tenantId) {
         List<EcPriceSyncItem> items = new ArrayList<>();
+        // 预加载所有 SKU，避免循环内 N+1 查询
+        Set<Long> skuIds = mappings.stream()
+                .map(EcProductMapping::getSkuId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, ProductSku> skuMap = skuIds.isEmpty() ? Collections.emptyMap() :
+                productSkuService.listByIds(skuIds).stream()
+                        .collect(Collectors.toMap(ProductSku::getId, Function.identity()));
         for (EcProductMapping m : mappings) {
             if (m.getSkuId() == null || m.getPlatformSkuId() == null) continue;
-            ProductSku sku = productSkuService.getById(m.getSkuId());
+            ProductSku sku = skuMap.get(m.getSkuId());
             if (sku == null || sku.getSalesPrice() == null) continue;
             items.add(EcPriceSyncItem.builder()
                     .skuId(m.getSkuId())

@@ -1,32 +1,47 @@
 package com.fashion.supplychain.crm.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.service.ReceivableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Component
-public class ReceivableLogAppendHelper {
+public class ReceivableLogAppendHelper extends AbstractOperationLogAppendHelper<Receivable, String> {
 
     @Autowired
     private ReceivableService receivableService;
 
-    private void appendOperation(String receivableId, String action, String detail) {
+    @Override
+    protected ReceivableService getService() {
+        return receivableService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "应收账款";
+    }
+
+    @Override
+    protected Function<Receivable, String> getRemarkGetter() {
+        return Receivable::getDescription;
+    }
+
+    @Override
+    protected BiConsumer<Receivable, String> getRemarkSetter() {
+        return Receivable::setDescription;
+    }
+
+    @Override
+    public void appendOperation(String receivableId, String action, String detail) {
         if (receivableId == null || receivableId.trim().isEmpty()) {
             return;
         }
-        OperationLogAppendUtil.appendOperation(
-            receivableId.trim(),
-            receivableService,
-            Receivable::getDescription,
-            Receivable::setDescription,
-            action,
-            detail,
-            "应收账款"
-        );
+        super.appendOperation(receivableId.trim(), action, detail);
     }
 
     public void appendCreate(Receivable receivable, String operatorName) {

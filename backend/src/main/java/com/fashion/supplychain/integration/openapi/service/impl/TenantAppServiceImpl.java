@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 public class TenantAppServiceImpl extends ServiceImpl<TenantAppMapper, TenantApp> implements TenantAppService {
 
     @Override
-    public int atomicIncrementCallCount(String id) {
-        return baseMapper.atomicIncrementCallCount(id);
+    public int atomicIncrementCallCount(String id, Long tenantId) {
+        return baseMapper.atomicIncrementCallCount(id, tenantId);
     }
 }
