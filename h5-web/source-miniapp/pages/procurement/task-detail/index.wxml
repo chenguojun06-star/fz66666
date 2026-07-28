@@ -262,3 +262,65 @@
     </view>
   </view>
 </view>
+
+<!-- 回料确认弹窗（含图片上传，对齐PC端） -->
+<view class="return-confirm-modal-mask" wx:if="{{showReturnConfirmModal}}" bindtap="onReturnConfirmModalClose">
+  <view class="return-confirm-modal" catchtap="">
+    <view class="return-confirm-modal-header">
+      <text class="return-confirm-modal-title">确认回料</text>
+      <view class="return-confirm-modal-close" bindtap="onReturnConfirmModalClose">×</view>
+    </view>
+    <view class="return-confirm-modal-body">
+      <text class="return-confirm-material-name">{{returnConfirmItem.name || '未知物料'}}</text>
+      <view class="return-confirm-input-wrap">
+        <text class="return-confirm-input-label">回料数量</text>
+        <input
+          class="return-confirm-input"
+          type="digit"
+          value="{{returnConfirmQty}}"
+          bindinput="onReturnConfirmQtyInput"
+          placeholder="请输入回料数量"
+          placeholder-class="return-confirm-input-placeholder"
+        />
+        <text class="return-confirm-input-unit">{{returnConfirmItem.unit || ''}}</text>
+      </view>
+
+      <!-- 图片上传 -->
+      <view class="return-confirm-image-section">
+        <text class="return-confirm-image-label">回料凭证（选填）</text>
+        <view class="return-confirm-image-grid">
+          <view
+            wx:for="{{returnConfirmImages}}"
+            wx:key="index"
+            class="return-confirm-image-item"
+          >
+            <image
+              class="return-confirm-image-thumb"
+              src="{{item.authed}}"
+              mode="aspectFill"
+              bindtap="onPreviewReturnImage"
+              data-url="{{item.authed}}"
+            />
+            <view
+              class="return-confirm-image-delete"
+              bindtap="onDeleteReturnImage"
+              data-index="{{index}}"
+            >×</view>
+          </view>
+          <view
+            wx:if="{{returnConfirmImages.length < 5}}"
+            class="return-confirm-image-add"
+            bindtap="onUploadReturnImage"
+          >
+            <text class="return-confirm-image-add-icon">+</text>
+            <text class="return-confirm-image-add-text">上传凭证</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="return-confirm-modal-footer">
+      <view class="return-confirm-btn-cancel" bindtap="onReturnConfirmModalClose" hover-class="btn-hover" hover-stay-time="100">取消</view>
+      <view class="return-confirm-btn-confirm {{returnConfirmSubmitting ? 'btn-disabled' : ''}}" bindtap="onSubmitReturnConfirm" hover-class="btn-hover" hover-stay-time="100">确认回料</view>
+    </view>
+  </view>
+</view>

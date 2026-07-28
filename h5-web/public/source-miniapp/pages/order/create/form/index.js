@@ -130,14 +130,17 @@ Page({
 
   _loadProcessPrices: function () {
     const self = this;
-    api.production.listStyleProcesses(self.data.styleId).then(function (res) {
-      const list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+    const styleNo = self.data.styleNo;
+    if (!styleNo) { self._processPrices = []; self._processTotal = 0; self._recalcComputedPrice(); return; }
+    api.templateLibrary.processPriceTemplate(styleNo).then(function (res) {
+      const content = (res && res.content) || (res && res.data && res.data.content) || {};
+      const steps = Array.isArray(content.steps) ? content.steps : [];
       let total = 0;
-      list.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
-      self._processPrices = list;
+      steps.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
+      self._processPrices = steps;
       self._processTotal = total;
       self._recalcComputedPrice();
-    }).catch(function () {});
+    }).catch(function () { self._processPrices = []; self._processTotal = 0; self._recalcComputedPrice(); });
   },
 
   _loadQuotation: function () {

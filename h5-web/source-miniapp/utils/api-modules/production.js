@@ -402,15 +402,6 @@ const production = {
   delegateProcess(payload) {
     return ok('/api/production/order/delegate-process', 'POST', payload || {});
   },
-  listStyleProcesses(styleId) {
-    return ok('/api/style/process/list', 'GET', { styleId: styleId });
-  },
-  saveStyleProcess(payload) {
-    return ok('/api/style/process', payload.id ? 'PUT' : 'POST', payload || {});
-  },
-  deleteStyleProcess(id) {
-    return ok('/api/style/process/' + encodeURIComponent(id), 'DELETE', {});
-  },
   listSizePrices(styleId) {
     return ok('/api/style/size-price/list', 'GET', { styleId: styleId });
   },

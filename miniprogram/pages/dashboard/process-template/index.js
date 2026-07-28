@@ -62,18 +62,48 @@ Page({
     unbindPageEvents(this);
   },
 
-  _loadProcesses(styleId) {
+  async _loadProcesses(styleId) {
     this.setData({ loading: true });
-    api.production.listStyleProcesses(styleId).then((res) => {
-      const list = Array.isArray(res) ? res : (res && res.records) || [];
+    try {
+      // 如果没有 styleNo，先根据 styleId 获取款式详情
+      let styleNo = this.data.styleNo;
+      if (!styleNo && styleId) {
+        const styleRes = await api.style.detail(styleId);
+        styleNo = styleRes && (styleRes.styleNo || styleRes.data && styleRes.data.styleNo) || '';
+        if (styleNo) {
+          this.setData({ styleNo });
+        }
+      }
+      if (!styleNo) {
+        this.setData({ loading: false });
+        toast.error('缺少款号，无法加载工序模板');
+        return;
+      }
+      // 调用与PC端统一的工序单价模板API（TemplateLibrary）
+      const res = await api.templateLibrary.processPriceTemplate(styleNo);
+      const content = (res && res.content) || (res && res.data && res.data.content) || {};
+      const steps = Array.isArray(content.steps) ? content.steps : [];
+      // 映射 unitPrice → price，与小程序端UI字段保持一致
+      const list = steps.map((s, idx) => ({
+        id: s.processCode || String(idx),
+        processName: s.processName || '',
+        processCode: s.processCode || String(idx + 1).padStart(2, '0'),
+        progressStage: s.progressStage || '',
+        machineType: s.machineType || '',
+        difficulty: s.difficulty || '中',
+        standardTime: s.standardTime || 0,
+        price: Number(s.unitPrice || s.price || 0),
+        description: s.description || '',
+        sortOrder: idx,
+      }));
       this._buildStages(list);
       this._originalData = JSON.parse(JSON.stringify(list));
       this.setData({ loading: false });
-    }).catch((err) => {
+    } catch (err) {
       console.error('[process-template] load error', err);
       this.setData({ loading: false });
       toast.error('加载工序模板失败');
-    });
+    }
   },
 
   _buildStages(processes) {
@@ -169,7 +199,7 @@ Page({
     const { stageId, processId } = e.currentTarget.dataset;
     wx.showModal({
       title: '确认删除',
-      content: '确定删除此工序吗？',
+      content: '确定删除此工序吗？（保存后生效）',
       success: (res) => {
         if (!res.confirm) return;
         const stages = this.data.stages.map((s) => {
@@ -178,12 +208,7 @@ Page({
         });
         this.setData({ stages });
         this._recalcTotals();
-        // 如果是已保存的工序，调用删除 API
-        if (processId && !String(processId).startsWith('temp_')) {
-          api.production.deleteStyleProcess(processId).catch(() => {
-            toast.error('删除失败，请重试');
-          });
-        }
+        // process-price-template 是整体保存模式，无需单独调用删除API
       },
     });
   },
@@ -264,44 +289,42 @@ Page({
   },
 
   async onSaveAll() {
-    const { stages, styleId } = this.data;
-    if (!styleId) return;
+    const { stages, styleNo } = this.data;
+    if (!styleNo) {
+      toast.error('缺少款号，无法保存');
+      return;
+    }
 
-    const allProcesses = [];
+    const steps = [];
     stages.forEach((s) => {
       s.processes.forEach((p) => {
-        allProcesses.push({ ...p, sortOrder: allProcesses.length });
+        steps.push({
+          processCode: p.processCode || String(steps.length + 1).padStart(2, '0'),
+          processName: p.processName,
+          progressStage: p.progressStage || '',
+          machineType: p.machineType || '',
+          difficulty: p.difficulty || '中',
+          standardTime: Number(p.standardTime) || 0,
+          unitPrice: Number(p.price) || 0,
+          description: p.description || '',
+        });
       });
     });
 
-    if (allProcesses.length === 0) {
+    if (steps.length === 0) {
       toast.error('请至少添加一个工序');
       return;
     }
 
     this.setData({ saving: true });
     try {
-      // 逐个保存新增和修改的工序
-      const savePromises = allProcesses.map((p) => {
-        const payload = {
-          id: p._isNew ? undefined : p.id,
-          styleId,
-          processCode: p.processCode,
-          processName: p.processName,
-          progressStage: p.progressStage,
-          machineType: p.machineType,
-          difficulty: p.difficulty,
-          standardTime: p.standardTime,
-          price: p.price,
-          description: p.description,
-          sortOrder: p.sortOrder,
-        };
-        return api.production.saveStyleProcess(payload);
+      // 统一调用与PC端相同的 process-price-template API（整体保存）
+      await api.templateLibrary.saveProcessPriceTemplate({
+        styleNo,
+        templateContent: { steps },
       });
-
-      await Promise.all(savePromises);
       toast.success('工序模板已保存');
-      this._loadProcesses(styleId);
+      this._loadProcesses(this.data.styleId);
     } catch (err) {
       console.error('[process-template] save error', err);
       toast.error('保存失败：' + (err.errMsg || err.message || '请重试'));

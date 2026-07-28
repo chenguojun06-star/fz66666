@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
@@ -25,6 +26,12 @@ Page({
     // 领料出库弹窗
     showPickingModal: false,
     pickingItems: [],
+    // 回料确认弹窗
+    showReturnConfirmModal: false,
+    returnConfirmItem: {},
+    returnConfirmQty: '',
+    returnConfirmImages: [],
+    returnConfirmSubmitting: false,
   },
 
   onLoad(options) {
@@ -219,54 +226,105 @@ Page({
     }
   },
 
-  async onReturnConfirm(e) {
-    const { id, name, arrived, purchase } = e.currentTarget.dataset;
+  onReturnConfirm(e) {
+    const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
     if (!id) return;
+    const defaultQty = String((Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0);
+    this.setData({
+      showReturnConfirmModal: true,
+      returnConfirmItem: { id, name, unit: unit || '' },
+      returnConfirmQty: defaultQty,
+      returnConfirmImages: [],
+      returnConfirmSubmitting: false,
+    });
+  },
 
-    const defaultQty = (Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0;
+  onReturnConfirmModalClose() {
+    this.setData({ showReturnConfirmModal: false, returnConfirmItem: {}, returnConfirmImages: [] });
+  },
 
-    wx.showModal({
-      title: '确认回料',
-      content: `确认「${name || '该物料'}」回料数量（可修改）:`,
-      editable: true,
-      placeholderText: String(defaultQty),
-      confirmText: '确认回料',
-      confirmColor: '#007aff',
-      success: async (res) => {
-        if (!res.confirm) return;
+  onReturnConfirmQtyInput(e) {
+    this.setData({ returnConfirmQty: e.detail.value });
+  },
 
-        const qty = (res.content !== undefined && res.content !== '')
-          ? Number(res.content)
-          : defaultQty;
-        if (isNaN(qty) || qty < 0) {
-          toast.error('请输入有效的回料数量');
-          return;
-        }
-
-        const userInfo = getUserInfo() || {};
-        const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
-        const confirmerName = String(userInfo.name || userInfo.username || '').trim();
-
-        wx.showLoading({ title: '确认中...', mask: true });
-        try {
-          await api.production.confirmReturnPurchase({
-            purchaseId: id,
-            confirmerId,
-            confirmerName,
-            returnQuantity: qty,
+  onUploadReturnImage() {
+    const self = this;
+    if (self.data.returnConfirmImages.length >= 5) {
+      toast.error('最多上传5张');
+      return;
+    }
+    wx.chooseMedia({
+      count: 5 - self.data.returnConfirmImages.length,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success(res) {
+        const files = res.tempFiles || [];
+        const tasks = files.map(f => api.common.uploadImage(f.tempFilePath));
+        Promise.all(tasks).then(urls => {
+          const newImages = urls.filter(Boolean).map(raw => ({ raw, authed: getAuthedImageUrl(raw) }));
+          self.setData({ returnConfirmImages: self.data.returnConfirmImages.concat(newImages) });
+        }).catch(() => toast.error('图片上传失败'));
+      },
+      fail(err) {
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showModal({
+            title: '相机/相册权限',
+            content: '需要相机或相册权限才能上传照片，请在设置中允许',
+            confirmText: '去设置',
+            cancelText: '取消',
+            success(modalRes) { if (modalRes.confirm) wx.openSetting({ success() {} }); },
           });
-          wx.hideLoading();
-          toast.success('回料确认成功');
-
-          triggerDataRefresh('procurement');
-
-          this._loadDetail();
-        } catch (err) {
-          wx.hideLoading();
-          toast.error(err.errMsg || err.message || '确认失败');
         }
       },
     });
+  },
+
+  onDeleteReturnImage(e) {
+    const idx = e.currentTarget.dataset.index;
+    const imgs = this.data.returnConfirmImages.slice();
+    imgs.splice(idx, 1);
+    this.setData({ returnConfirmImages: imgs });
+  },
+
+  onPreviewReturnImage(e) {
+    const url = e.currentTarget.dataset.url;
+    wx.previewImage({ current: url, urls: this.data.returnConfirmImages.map(i => i.authed) });
+  },
+
+  async onSubmitReturnConfirm() {
+    if (this.data.returnConfirmSubmitting) return;
+    const { returnConfirmItem, returnConfirmQty, returnConfirmImages } = this.data;
+    const qty = Number(returnConfirmQty);
+    if (isNaN(qty) || qty < 0) {
+      toast.error('请输入有效的回料数量');
+      return;
+    }
+    const userInfo = getUserInfo() || {};
+    const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
+    const confirmerName = String(userInfo.name || userInfo.username || '').trim();
+    const evidenceImageUrls = returnConfirmImages.map(i => i.raw).join(',') || undefined;
+
+    this.setData({ returnConfirmSubmitting: true });
+    wx.showLoading({ title: '确认中...', mask: true });
+    try {
+      await api.production.confirmReturnPurchase({
+        purchaseId: returnConfirmItem.id,
+        confirmerId,
+        confirmerName,
+        returnQuantity: qty,
+        ...(evidenceImageUrls ? { evidenceImageUrls } : {}),
+      });
+      wx.hideLoading();
+      toast.success('回料确认成功');
+      this.setData({ showReturnConfirmModal: false, returnConfirmImages: [] });
+      triggerDataRefresh('procurement');
+      this._loadDetail();
+    } catch (err) {
+      wx.hideLoading();
+      toast.error(err.errMsg || err.message || '确认失败');
+    } finally {
+      this.setData({ returnConfirmSubmitting: false });
+    }
   },
 
   async onConfirmProcurement() {
