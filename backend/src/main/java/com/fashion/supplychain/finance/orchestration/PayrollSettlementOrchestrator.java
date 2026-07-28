@@ -14,9 +14,11 @@ import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -64,6 +66,9 @@ public class PayrollSettlementOrchestrator {
 
     @Autowired(required = false)
     private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
+
+    @Autowired
+    private ProductionProcessTrackingService processTrackingService;
 
     private static final class PayrollQuery {
         private String orderId;
@@ -429,6 +434,44 @@ public class PayrollSettlementOrchestrator {
         if (q.startTime != null) uw.ge(ScanRecord::getScanTime, q.startTime);
         if (q.endTime != null) uw.le(ScanRecord::getScanTime, q.endTime);
         scanRecordMapper.update(null, uw);
+
+        // P1 修复：同步更新 t_production_process_tracking 表的结算字段
+        // 原问题：tracking 表 is_settled/settled_at/settled_batch_no/settled_by 字段从未被更新，
+        //         导致 ScanUndoHelper.resetTrackingByScanRecord 和 ProductionProcessTrackingOrchestrator.resetScanRecord
+        //         的"已结算不可重置"校验失效。
+        syncTrackingSettlementState(q, settlementId, now);
+    }
+
+    /**
+     * 同步 tracking 表的结算字段（与 ScanRecord.settlementStatus 保持一致）。
+     * <p>
+     * 策略：根据 PayrollQuery 条件查询 matching tracking 记录，
+     * - 已扫码（scan_status=scanned）的 tracking 标记为已结算
+     * - 排除外发工厂菲号（factory_id 不为空，与 ScanRecord.isNull(factoryId) 对齐）
+     * <p>
+     * 注意：tracking 表的 is_settled 字段是工资结算闭环的关键校验依据，必须与 ScanRecord 同步。
+     */
+    private void syncTrackingSettlementState(PayrollQuery q, String settlementId, LocalDateTime now) {
+        try {
+            String operatorName = UserContext.username();
+            Long tenantId = UserContext.tenantId();
+            LambdaUpdateWrapper<ProductionProcessTracking> tuw = new LambdaUpdateWrapper<ProductionProcessTracking>()
+                    .set(ProductionProcessTracking::getIsSettled, true)
+                    .set(ProductionProcessTracking::getSettledAt, now)
+                    .set(ProductionProcessTracking::getSettledBatchNo, settlementId)
+                    .set(ProductionProcessTracking::getSettledBy, operatorName)
+                    .eq(ProductionProcessTracking::getScanStatus, "scanned")
+                    .eq(ProductionProcessTracking::getTenantId, tenantId);
+            if (StringUtils.hasText(q.orderId)) tuw.eq(ProductionProcessTracking::getProductionOrderId, q.orderId);
+            if (StringUtils.hasText(q.orderNo)) tuw.eq(ProductionProcessTracking::getProductionOrderNo, q.orderNo);
+            if (q.startTime != null) tuw.ge(ProductionProcessTracking::getScanTime, q.startTime);
+            if (q.endTime != null) tuw.le(ProductionProcessTracking::getScanTime, q.endTime);
+            if (StringUtils.hasText(q.operatorId)) tuw.eq(ProductionProcessTracking::getOperatorId, q.operatorId);
+            if (StringUtils.hasText(q.operatorName)) tuw.eq(ProductionProcessTracking::getOperatorName, q.operatorName);
+            processTrackingService.update(tuw);
+        } catch (Exception e) {
+            log.warn("[PayrollSettle] 同步tracking结算字段失败 settlementId={}: {}", settlementId, e.getMessage());
+        }
     }
 
 
