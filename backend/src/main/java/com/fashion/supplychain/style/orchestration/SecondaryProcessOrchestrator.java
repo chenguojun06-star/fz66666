@@ -99,6 +99,75 @@ public class SecondaryProcessOrchestrator {
         if (!ok) {
             throw new IllegalStateException("更新失败");
         }
+
+        // P1-3 修复：已审批的二次工艺，若 totalPrice 或 factoryId 变化，同步账单
+        // P0-5 修复：再激活逻辑 — 审批状态从 approved 改回 pending/rejected 时反向账单
+        // - totalPrice 变化 → syncAmountBySource 同步金额
+        // - factoryId 变化 → 先 reverseBySource 再 pushBill（重推）
+        // - approvalStatus 从 approved → 非 approved → reverseBySource（再激活/撤销审批）
+        // - 失败不阻塞主流程（账单异常走人工对账）
+        if (existing != null && "approved".equals(existing.getApprovalStatus())
+                && billAggregationOrchestrator != null) {
+            java.math.BigDecimal existingTotal = existing.getTotalPrice();
+            java.math.BigDecimal newTotal = process.getTotalPrice();
+            String existingFactoryId = existing.getFactoryId();
+            String newFactoryId = process.getFactoryId();
+            String newApprovalStatus = process.getApprovalStatus();
+            boolean totalPriceChanged = newTotal != null
+                    && (existingTotal == null || newTotal.compareTo(existingTotal) != 0);
+            boolean factoryIdChanged = newFactoryId != null
+                    && !newFactoryId.equals(existingFactoryId);
+            // P0-5 再激活：审批状态从 approved 变为其他状态（pending/rejected/cancelled）
+            boolean approvalReverted = StringUtils.hasText(newApprovalStatus)
+                    && !"approved".equals(newApprovalStatus);
+            try {
+                if (approvalReverted) {
+                    // 再激活/撤销审批：反向已推送的账单
+                    try {
+                        billAggregationOrchestrator.reverseBySource("SECONDARY_PROCESS",
+                                String.valueOf(id), "二次工艺撤销审批（再激活）: oldStatus=approved, newStatus="
+                                        + newApprovalStatus);
+                        log.info("[SECONDARY-PROCESS-UPDATE] 撤销审批联动反向账单: id={}, newStatus={}",
+                                id, newApprovalStatus);
+                    } catch (Exception e) {
+                        log.warn("[SECONDARY-PROCESS-UPDATE] 撤销审批反向账单失败(不阻塞主流程): id={}, err={}",
+                                id, e.getMessage());
+                    }
+                } else if (factoryIdChanged) {
+                    // 工厂变更：先反向旧账单，再按新工厂重推
+                    try {
+                        billAggregationOrchestrator.reverseBySource("SECONDARY_PROCESS",
+                                String.valueOf(id), "二次工艺工厂变更重推: oldFactory=" + existingFactoryId
+                                        + ", newFactory=" + newFactoryId);
+                    } catch (Exception e) {
+                        log.warn("[SECONDARY-PROCESS-UPDATE] 工厂变更反向旧账单失败(继续重推): id={}, err={}",
+                                id, e.getMessage());
+                    }
+                    BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+                    req.setBillType("PAYABLE");
+                    req.setBillCategory("EXTERNAL_FACTORY");
+                    req.setSourceType("SECONDARY_PROCESS");
+                    req.setSourceId(String.valueOf(id));
+                    req.setSourceNo("SP-" + id);
+                    req.setCounterpartyType("FACTORY");
+                    req.setCounterpartyId(newFactoryId);
+                    req.setCounterpartyName(process.getFactoryName());
+                    req.setAmount(newTotal != null ? newTotal : existingTotal);
+                    req.setRemark("二次工艺工厂变更重推: " + process.getProcessName());
+                    req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                    billAggregationOrchestrator.pushBill(req);
+                    log.info("[SECONDARY-PROCESS-UPDATE] 工厂变更重推账单: id={}, newFactoryId={}", id, newFactoryId);
+                } else if (totalPriceChanged) {
+                    billAggregationOrchestrator.syncAmountBySource("SECONDARY_PROCESS",
+                            String.valueOf(id), newTotal);
+                    log.info("[SECONDARY-PROCESS-UPDATE] 同步账单金额: id={}, newTotal={}", id, newTotal);
+                }
+            } catch (Exception e) {
+                log.warn("[SECONDARY-PROCESS-UPDATE] 账单同步失败(不阻塞主流程): id={}, err={}",
+                        id, e.getMessage());
+            }
+        }
+
         Long styleId = process.getStyleId();
         if (styleId == null) {
             styleId = existing != null ? existing.getStyleId() : null;
@@ -124,6 +193,20 @@ public class SecondaryProcessOrchestrator {
                 .eq(SecondaryProcess::getTenantId, tenantId)
                 .one();
         Long styleId = existing != null ? existing.getStyleId() : null;
+
+        // P0-3 + P1-3 修复：删除前若已审批，反向已推送的账单（避免账单悬挂）
+        // 放在 removeById 之前，确保账单反向在事务内完成
+        if (existing != null && "approved".equals(existing.getApprovalStatus())) {
+            try {
+                if (billAggregationOrchestrator != null) {
+                    billAggregationOrchestrator.reverseBySource("SECONDARY_PROCESS",
+                            String.valueOf(id), "二次工艺删除");
+                    log.info("[SECONDARY-PROCESS-DELETE] 删除联动反向账单: id={}", id);
+                }
+            } catch (Exception e) {
+                log.warn("[SECONDARY-PROCESS-DELETE] 反向账单失败(不阻塞删除): id={}, err={}", id, e.getMessage());
+            }
+        }
 
         boolean ok = secondaryProcessService.lambdaUpdate()
                 .eq(SecondaryProcess::getId, id)

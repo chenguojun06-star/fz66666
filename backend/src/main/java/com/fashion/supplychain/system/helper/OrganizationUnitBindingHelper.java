@@ -18,7 +18,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -46,7 +45,7 @@ public class OrganizationUnitBindingHelper {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 OrganizationUnitOrchestrator/FactoryOrchestrator 已有事务保护）
     public FactoryOrganizationSnapshot syncFactoryNode(Factory factory) {
         if (factory == null || !StringUtils.hasText(factory.getId())) {
             throw new IllegalArgumentException("工厂信息不完整");
@@ -65,12 +64,13 @@ public class OrganizationUnitBindingHelper {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        Long tenantId = factory.getTenantId() != null ? factory.getTenantId() : UserContext.tenantId();
         if (node == null) {
-            node = organizationUnitMapper.selectOneByFactoryIdIgnoreDelete(factory.getId());
+            node = organizationUnitMapper.selectOneByFactoryIdIgnoreDelete(factory.getId(), tenantId);
             if (node != null && node.getDeleteFlag() != null && node.getDeleteFlag() != 0) {
                 node.setDeleteFlag(0);
                 List<com.fashion.supplychain.system.entity.OrganizationUnit> duplicates =
-                        organizationUnitMapper.selectDeletedByFactoryId(factory.getId());
+                        organizationUnitMapper.selectDeletedByFactoryId(factory.getId(), tenantId);
                 if (duplicates != null) {
                     for (com.fashion.supplychain.system.entity.OrganizationUnit dup : duplicates) {
                         if (!dup.getId().equals(node.getId())) {
@@ -84,7 +84,7 @@ public class OrganizationUnitBindingHelper {
                 node.setCreateTime(now);
                 node.setDeleteFlag(0);
                 node.setSortOrder(0);
-                node.setTenantId(factory.getTenantId() != null ? factory.getTenantId() : UserContext.tenantId());
+                node.setTenantId(tenantId);
             }
         }
         node.setParentId(trim(factory.getParentOrgUnitId()));
@@ -107,7 +107,7 @@ public class OrganizationUnitBindingHelper {
         return snapshot;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 FactoryOrchestrator.delete 已有事务保护）
     public void deleteFactoryNode(String orgUnitId, String factoryId) {
         OrganizationUnit node = null;
         if (StringUtils.hasText(orgUnitId)) {
@@ -161,7 +161,7 @@ public class OrganizationUnitBindingHelper {
         return organizationUnitService.list(wrapper);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 OrganizationUnitOrchestrator 三个方法均已有事务保护）
     public void refreshPaths(Long tenantId) {
         List<OrganizationUnit> nodes = listTenantNodes(tenantId);
         Map<String, OrganizationUnit> byId = nodes.stream()

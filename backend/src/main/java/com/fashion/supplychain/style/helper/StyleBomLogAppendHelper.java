@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.helper;
 
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.common.OperationLogAppendUtil;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -8,12 +9,15 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 /**
  * 款式BOM操作日志追加
  * P0铁律#6: 操作日志必须记录关键业务操作
  */
 @Component
-public class StyleBomLogAppendHelper {
+public class StyleBomLogAppendHelper extends AbstractOperationLogAppendHelper<StyleBom, String> {
 
     @Autowired
     private StyleBomService styleBomService;
@@ -21,19 +25,24 @@ public class StyleBomLogAppendHelper {
     @Autowired
     private StyleInfoService styleInfoService;
 
-    private void appendOperation(String bomId, String action, String detail) {
-        if (bomId == null || bomId.trim().isEmpty()) {
-            return;
-        }
-        OperationLogAppendUtil.appendOperation(
-            bomId.trim(),
-            styleBomService,
-            StyleBom::getRemark,
-            StyleBom::setRemark,
-            action,
-            detail,
-            "BOM记录"
-        );
+    @Override
+    protected StyleBomService getService() {
+        return styleBomService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "BOM记录";
+    }
+
+    @Override
+    protected Function<StyleBom, String> getRemarkGetter() {
+        return StyleBom::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<StyleBom, String> getRemarkSetter() {
+        return StyleBom::setRemark;
     }
 
     private void appendStyleOperation(Long styleId, String action, String detail) {

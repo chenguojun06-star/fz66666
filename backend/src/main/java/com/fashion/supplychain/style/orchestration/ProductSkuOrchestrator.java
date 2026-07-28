@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -99,17 +101,22 @@ public class ProductSkuOrchestrator {
         }
 
         if (deletedIds != null && !deletedIds.isEmpty()) {
-            for (Long id : deletedIds) {
-                ProductSku existing = productSkuService.lambdaQuery()
-                        .eq(ProductSku::getId, id)
-                        .eq(ProductSku::getTenantId, tenantId)
-                        .one();
-                if (existing != null && existing.getStyleId().equals(styleId)) {
-                    productSkuService.lambdaUpdate()
-                            .eq(ProductSku::getId, id)
-                            .eq(ProductSku::getTenantId, tenantId)
-                            .remove();
-                    log.info("Deleted SKU id={}, skuCode={}", id, existing.getSkuCode());
+            // 批量查询待删除的 SKU（保留 tenantId 过滤，P0 #4 多租户隔离）
+            List<ProductSku> toDelete = productSkuService.lambdaQuery()
+                    .in(ProductSku::getId, deletedIds)
+                    .eq(ProductSku::getTenantId, tenantId)
+                    .list();
+            // 保留 styleId 过滤
+            List<ProductSku> removable = toDelete.stream()
+                    .filter(sku -> styleId.equals(sku.getStyleId()))
+                    .collect(Collectors.toList());
+            if (!removable.isEmpty()) {
+                List<Long> idsToRemove = removable.stream()
+                        .map(ProductSku::getId)
+                        .collect(Collectors.toList());
+                productSkuService.removeByIds(idsToRemove);
+                for (ProductSku sku : removable) {
+                    log.info("Deleted SKU id={}, skuCode={}", sku.getId(), sku.getSkuCode());
                 }
             }
         }
@@ -287,26 +294,43 @@ public class ProductSkuOrchestrator {
         int unchanged = 0;
         List<Map<String, Object>> details = new ArrayList<>();
 
-        for (ProductSku sku : allSkus) {
-            int inboundTotal = 0;
-            List<ProductWarehousing> inboundRecords = productWarehousingService.lambdaQuery()
-                    .eq(ProductWarehousing::getStyleNo, sku.getStyleNo())
+        // 批量预加载所有相关入库记录（修复 N+1 查询）：按 styleNo IN 一次查询
+        Set<String> styleNos = allSkus.stream()
+                .map(ProductSku::getStyleNo)
+                .filter(s -> s != null && !s.isEmpty())
+                .collect(Collectors.toSet());
+        Map<String, List<ProductWarehousing>> recordMap = new HashMap<>();
+        if (!styleNos.isEmpty()) {
+            List<ProductWarehousing> allRecords = productWarehousingService.lambdaQuery()
+                    .in(ProductWarehousing::getStyleNo, styleNos)
                     .eq(ProductWarehousing::getDeleteFlag, 0)
                     .eq(ProductWarehousing::getTenantId, tenantId)
-                    .eq(ProductWarehousing::getColor, sku.getColor())
-                    .eq(ProductWarehousing::getSize, sku.getSize())
-                    .last("LIMIT 5000")
                     .list();
-            for (ProductWarehousing pw : inboundRecords) {
-                if (pw.getQualifiedQuantity() != null && pw.getQualifiedQuantity() > 0) {
-                    inboundTotal += pw.getQualifiedQuantity();
+            recordMap = allRecords.stream()
+                    .collect(Collectors.groupingBy(
+                            r -> r.getStyleNo() + "|" + r.getColor() + "|" + r.getSize()));
+        }
+
+        List<ProductSku> toUpdate = new ArrayList<>();
+        for (ProductSku sku : allSkus) {
+            int inboundTotal = 0;
+            // 原始查询用 .eq(field, null) 返回 0 行（SQL 中 NULL != NULL），此处保持一致
+            if (sku.getStyleNo() != null && sku.getColor() != null && sku.getSize() != null) {
+                String key = sku.getStyleNo() + "|" + sku.getColor() + "|" + sku.getSize();
+                List<ProductWarehousing> inboundRecords = recordMap.get(key);
+                if (inboundRecords != null) {
+                    for (ProductWarehousing pw : inboundRecords) {
+                        if (pw.getQualifiedQuantity() != null && pw.getQualifiedQuantity() > 0) {
+                            inboundTotal += pw.getQualifiedQuantity();
+                        }
+                    }
                 }
             }
 
             int oldStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
             if (oldStock != inboundTotal) {
                 sku.setStockQuantity(inboundTotal);
-                productSkuService.updateById(sku);
+                toUpdate.add(sku);
                 fixed++;
                 Map<String, Object> d = new HashMap<>();
                 d.put("skuCode", sku.getSkuCode());
@@ -322,6 +346,11 @@ public class ProductSkuOrchestrator {
             } else {
                 unchanged++;
             }
+        }
+
+        // 批量更新（修复 N+1 更新）
+        if (!toUpdate.isEmpty()) {
+            productSkuService.updateBatchById(toUpdate);
         }
 
         Map<String, Object> result = new HashMap<>();

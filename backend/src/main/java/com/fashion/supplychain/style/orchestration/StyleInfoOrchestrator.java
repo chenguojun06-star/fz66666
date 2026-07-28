@@ -954,10 +954,26 @@ public class StyleInfoOrchestrator {
         req.setSourceId(String.valueOf(style.getId()));
         req.setSourceNo("SD-" + style.getId());
         req.setCounterpartyType("EMPLOYEE");
-        // 审核人作为开发费用承担方（可后续扩展为制版师/开发员字段）
-        req.setCounterpartyId(UserContext.userId());
-        req.setCounterpartyName(style.getSampleReviewer() != null
-                ? style.getSampleReviewer() : UserContext.username());
+        // P1-4 修复：counterpartyId 优先级：制版师(plateWorker) > 审核人
+        // plateWorker 当前存储的是姓名（非 userId），暂以姓名作为 counterpartyId 占位
+        // TODO: 后续接入 UserService.resolveUserIdByName 将姓名转换为 userId
+        String plateWorker = style.getPlateWorker();
+        String counterpartyId = null;
+        String counterpartyName = null;
+        if (org.springframework.util.StringUtils.hasText(plateWorker)) {
+            // 制版师优先：若 plateWorker 恰好是 userId 格式（纯数字）则直接用，否则用姓名占位
+            counterpartyId = plateWorker.trim();
+            counterpartyName = plateWorker.trim();
+        }
+        if (!org.springframework.util.StringUtils.hasText(counterpartyId)) {
+            counterpartyId = UserContext.userId();
+        }
+        if (!org.springframework.util.StringUtils.hasText(counterpartyName)) {
+            counterpartyName = style.getSampleReviewer() != null
+                    ? style.getSampleReviewer() : UserContext.username();
+        }
+        req.setCounterpartyId(counterpartyId);
+        req.setCounterpartyName(counterpartyName);
         req.setOrderId(String.valueOf(style.getId()));
         req.setOrderNo(style.getStyleNo());
         req.setStyleNo(style.getStyleNo());

@@ -5,6 +5,8 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.crm.service.ReceivableService;
+import com.fashion.supplychain.finance.constant.BillConstants;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
@@ -33,6 +35,7 @@ public class MaterialPickupReceivableOrchestrator {
     private final ProductionOrderService productionOrderService;
     private final ReceivableOrchestrator receivableOrchestrator;
     private final ReceivableService receivableService;
+    private final BillAggregationOrchestrator billAggregationOrchestrator;
 
     public void syncAfterApproval(MaterialPickupRecord record, String auditRemark) {
         Receivable receivable = syncReceivableForRecord(record, true);
@@ -57,8 +60,23 @@ public class MaterialPickupReceivableOrchestrator {
         if (ids == null || ids.isEmpty()) {
             throw new IllegalArgumentException("请选择要登记收款的记录");
         }
+        // 批量查询（修复 N+1 查询）：一次性获取所有记录，避免循环内逐条 selectById
+        Long tenantId = currentTenantId();
+        List<MaterialPickupRecord> records = pickupMapper.selectList(
+                new LambdaQueryWrapper<MaterialPickupRecord>()
+                        .in(MaterialPickupRecord::getId, ids)
+                        .eq(MaterialPickupRecord::getDeleteFlag, 0));
+        Map<String, MaterialPickupRecord> recordMap = records.stream()
+                .collect(Collectors.toMap(MaterialPickupRecord::getId, r -> r, (a, b) -> a));
         for (String id : ids) {
-            MaterialPickupRecord record = getByIdAndTenant(id);
+            MaterialPickupRecord record = recordMap.get(id);
+            // 保留原有的存在性校验与租户隔离校验（P0铁律4：多租户隔离）
+            if (record == null) {
+                throw new IllegalArgumentException("记录不存在");
+            }
+            if (tenantId == null || !String.valueOf(tenantId).equals(record.getTenantId())) {
+                throw new SecurityException("无权操作该记录");
+            }
             if (!"APPROVED".equals(record.getAuditStatus())) {
                 throw new IllegalStateException("仅已审核通过的记录可登记收款");
             }
@@ -78,6 +96,33 @@ public class MaterialPickupReceivableOrchestrator {
             }
             record.setUpdateTime(LocalDateTime.now());
             pickupMapper.updateById(record);
+            // P0-8 修复：收款联动 BillAggregation 聚合层 settledAmount
+            // - Receivable 表已更新 receivedAmount，BillAggregation 聚合层必须同步
+            // - 否则聚合视图与明细数据不一致，违反财务数据链路闭环
+            syncBillAggregationSettledAmount(record.getId(), updated.getReceivedAmount());
+        }
+    }
+
+    /**
+     * 同步 BillAggregation 聚合层已结算金额
+     * <p>
+     * P0-8 修复：原 markPaymentReceived 仅更新 Receivable 表，未同步 BillAggregation 聚合层
+     * 导致聚合视图（财务看板）与明细数据不一致
+     */
+    private void syncBillAggregationSettledAmount(String pickupId, BigDecimal receivedAmount) {
+        if (billAggregationOrchestrator == null || !StringUtils.hasText(pickupId)) {
+            return;
+        }
+        try {
+            BigDecimal settledAmount = receivedAmount != null ? receivedAmount : BigDecimal.ZERO;
+            billAggregationOrchestrator.syncSettledAmountBySource(
+                    BillConstants.SOURCE_MATERIAL_PICKUP, pickupId, settledAmount);
+            log.info("[MaterialPickupReceivable] 收款联动 BillAggregation settledAmount: pickupId={}, settled={}",
+                    pickupId, settledAmount);
+        } catch (Exception e) {
+            // 不阻塞主流程（明细已更新），仅记录告警供财务对账
+            log.warn("[MaterialPickupReceivable] 收款联动 BillAggregation 失败（不阻塞主流程）: pickupId={}, err={}",
+                    pickupId, e.getMessage());
         }
     }
 

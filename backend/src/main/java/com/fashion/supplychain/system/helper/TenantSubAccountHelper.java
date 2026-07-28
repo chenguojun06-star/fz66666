@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -30,7 +29,7 @@ public class TenantSubAccountHelper {
     @Autowired private UserService userService;
     @Autowired private RoleService roleService;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 TenantOrchestrator.addSubAccount 已有事务保护）
     public User addSubAccount(User userData) {
         assertTenantOwner();
 

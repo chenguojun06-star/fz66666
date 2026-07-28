@@ -207,9 +207,11 @@ public class MaterialPickupOrchestrator {
 
         if ("REJECTED".equals(newStatus)) {
             try {
-                billAggregationOrchestrator.cancelBySource("MATERIAL_PICKUP", record.getId());
+                // P1-1 修复：cancelBySource 升级为 reverseBySource，联动 Payable/Receivable 全链路反向
+                billAggregationOrchestrator.reverseBySource("MATERIAL_PICKUP",
+                        record.getId(), "物料领料驳回");
             } catch (Exception e) {
-                log.warn("[MaterialPickup] 驳回联动取消账单失败: id={}", record.getId(), e);
+                log.warn("[MaterialPickup] 驳回联动反向账单失败: id={}", record.getId(), e);
             }
         }
 
@@ -233,6 +235,7 @@ public class MaterialPickupOrchestrator {
         }
         // 允许财务修正单价重新计算金额
         BigDecimal patchPrice = toBigDecimal(body.get("unitPrice"));
+        BigDecimal oldAmount = record.getAmount();
         if (patchPrice != null) {
             record.setUnitPrice(patchPrice);
             if (record.getQuantity() != null) {
@@ -244,6 +247,19 @@ public class MaterialPickupOrchestrator {
         record.setUpdateTime(LocalDateTime.now());
 
         pickupMapper.updateById(record);
+        // P0-8 修复：财务核算修改金额后，同步 BillAggregation 聚合层 amount
+        // - pushPickupBill 是幂等的，已存在账单会自动更新 amount
+        // - 否则聚合视图金额与明细不一致，违反财务数据链路闭环
+        if (record.getAmount() != null && (oldAmount == null
+                || record.getAmount().compareTo(oldAmount) != 0)
+                && "EXTERNAL".equalsIgnoreCase(record.getFactoryType())) {
+            try {
+                pushPickupBill(record);
+            } catch (Exception e) {
+                log.warn("[MaterialPickup] 财务核算联动 BillAggregation 金额同步失败: pickupNo={}, err={}",
+                        record.getPickupNo(), e.getMessage());
+            }
+        }
         log.info("[MaterialPickup] 财务核算完成: {}, 金额: {}", record.getPickupNo(), record.getAmount());
     }
 

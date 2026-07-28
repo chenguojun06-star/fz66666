@@ -3,6 +3,7 @@ package com.fashion.supplychain.template.orchestration;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
@@ -62,15 +63,20 @@ public class TemplateStyleOrchestrator {
             throw new IllegalArgumentException("targetStyleId不能为空");
         }
 
+        // P0 铁律4：多租户隔离 — 必须校验租户上下文，防止跨租户应用模板
+        TenantAssert.assertTenantContext();
+
         StyleInfo style = styleInfoService.getById(targetStyleId);
         if (style == null) {
             throw new NoSuchElementException("目标款号不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(style.getTenantId(), "款式");
 
         TemplateLibrary template = templateLibraryService.getById(templateId);
         if (template == null) {
             throw new NoSuchElementException("模板不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(template.getTenantId(), "模板");
 
         String templateType = template.getTemplateType();
         if (templateType == null) {
@@ -108,8 +114,13 @@ public class TemplateStyleOrchestrator {
             throw new IllegalArgumentException("sourceStyleNo不能为空");
         }
 
+        // P0 铁律4：多租户隔离 — 必须校验租户上下文，防止跨租户从款式创建模板
+        TenantAssert.assertTenantContext();
+        Long tenantId = TenantAssert.requireTenantId();
+
         StyleInfo style = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, sourceStyleNo.trim())
+                .eq(StyleInfo::getTenantId, tenantId)
                 .one();
         if (style == null || style.getId() == null) {
             throw new NoSuchElementException("款号不存在: " + sourceStyleNo);

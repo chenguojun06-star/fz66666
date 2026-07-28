@@ -1,5 +1,6 @@
 package com.fashion.supplychain.warehouse.helper;
 
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.warehouse.entity.InventoryCheckItem;
 import com.fashion.supplychain.warehouse.service.InventoryCheckItemService;
 import lombok.extern.slf4j.Slf4j;
@@ -8,14 +9,37 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Slf4j
 @Component
-public class InventoryCheckLogAppendHelper {
+public class InventoryCheckLogAppendHelper extends AbstractOperationLogAppendHelper<InventoryCheckItem, String> {
 
     @Autowired
     private InventoryCheckItemService inventoryCheckItemService;
 
+    @Override
+    protected InventoryCheckItemService getService() {
+        return inventoryCheckItemService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "盘点明细";
+    }
+
+    @Override
+    protected Function<InventoryCheckItem, String> getRemarkGetter() {
+        return InventoryCheckItem::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<InventoryCheckItem, String> getRemarkSetter() {
+        return InventoryCheckItem::setRemark;
+    }
+
+    @Override
     public void appendOperation(String itemId, String action, String detail) {
         if (itemId == null) return;
         InventoryCheckItem item = inventoryCheckItemService.getById(itemId);

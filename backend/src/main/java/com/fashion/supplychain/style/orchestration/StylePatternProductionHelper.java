@@ -8,11 +8,16 @@ import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 /**
@@ -27,6 +32,17 @@ public class StylePatternProductionHelper {
 
     @Autowired
     private SampleOrderCreationHelper sampleOrderCreationHelper;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate requiresNewTx;
+
+    @PostConstruct
+    private void initRequiresNewTx() {
+        requiresNewTx = new TransactionTemplate(transactionManager);
+        requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
 
     /**
      * 款式保存时自动创建样板生产记录
@@ -98,7 +114,7 @@ public class StylePatternProductionHelper {
                             if (savedCtx != null) {
                                 UserContext.set(savedCtx);
                             }
-                            var orderResult = sampleOrderCreationHelper.createSampleProductionOrder(patternId);
+                            var orderResult = requiresNewTx.execute(status -> sampleOrderCreationHelper.createSampleProductionOrder(patternId));
                             log.info("[样衣创建] 自动创建生产订单+菲号+QR码: patternId={}, orderId={}",
                                     patternId, orderResult.get("orderId"));
                         } catch (Exception e) {
@@ -111,7 +127,7 @@ public class StylePatternProductionHelper {
                 log.info("[样衣创建] 已注册事务后置回调，将在事务提交后创建生产订单: patternId={}", patternId);
             } else {
                 try {
-                    var orderResult = sampleOrderCreationHelper.createSampleProductionOrder(patternId);
+                    var orderResult = requiresNewTx.execute(status -> sampleOrderCreationHelper.createSampleProductionOrder(patternId));
                     log.info("[样衣创建] 自动创建生产订单+菲号+QR码: patternId={}, orderId={}",
                             patternId, orderResult.get("orderId"));
                 } catch (Exception e) {

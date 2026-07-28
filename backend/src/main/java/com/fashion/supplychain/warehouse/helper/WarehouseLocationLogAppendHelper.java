@@ -1,30 +1,40 @@
 package com.fashion.supplychain.warehouse.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
 import com.fashion.supplychain.warehouse.service.WarehouseLocationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Slf4j
 @Component
-public class WarehouseLocationLogAppendHelper {
+public class WarehouseLocationLogAppendHelper extends AbstractOperationLogAppendHelper<WarehouseLocation, String> {
 
     @Autowired
     private WarehouseLocationService warehouseLocationService;
 
-    public void appendOperation(String locationId, String action, String detail) {
-        if (locationId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            locationId,
-            warehouseLocationService,
-            WarehouseLocation::getDescription,
-            WarehouseLocation::setDescription,
-            action,
-            detail,
-            "仓库库位"
-        );
+    @Override
+    protected WarehouseLocationService getService() {
+        return warehouseLocationService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "仓库库位";
+    }
+
+    @Override
+    protected Function<WarehouseLocation, String> getRemarkGetter() {
+        return WarehouseLocation::getDescription;
+    }
+
+    @Override
+    protected BiConsumer<WarehouseLocation, String> getRemarkSetter() {
+        return WarehouseLocation::setDescription;
     }
 
     public void appendCreate(String locationId) {

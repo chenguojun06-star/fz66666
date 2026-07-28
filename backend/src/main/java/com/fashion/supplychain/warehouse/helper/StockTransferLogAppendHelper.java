@@ -1,30 +1,40 @@
 package com.fashion.supplychain.warehouse.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.warehouse.entity.StockTransfer;
 import com.fashion.supplychain.warehouse.service.StockTransferService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Slf4j
 @Component
-public class StockTransferLogAppendHelper {
+public class StockTransferLogAppendHelper extends AbstractOperationLogAppendHelper<StockTransfer, String> {
 
     @Autowired
     private StockTransferService stockTransferService;
 
-    public void appendOperation(String transferId, String action, String detail) {
-        if (transferId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            transferId,
-            stockTransferService,
-            StockTransfer::getRemark,
-            StockTransfer::setRemark,
-            action,
-            detail,
-            "库存调拨"
-        );
+    @Override
+    protected StockTransferService getService() {
+        return stockTransferService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "库存调拨";
+    }
+
+    @Override
+    protected Function<StockTransfer, String> getRemarkGetter() {
+        return StockTransfer::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<StockTransfer, String> getRemarkSetter() {
+        return StockTransfer::setRemark;
     }
 
     public void appendCreate(String transferId) {

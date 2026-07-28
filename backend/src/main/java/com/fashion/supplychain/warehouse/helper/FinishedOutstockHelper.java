@@ -26,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -76,7 +75,7 @@ public class FinishedOutstockHelper {
         this.productWarehousingService = productWarehousingService;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.outbound 已有事务保护）
     public void outbound(Map<String, Object> params) {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> items = (List<Map<String, Object>>) params.get("items");
@@ -239,7 +238,7 @@ public class FinishedOutstockHelper {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.qrcodeOutbound 已有事务保护）
     public void qrcodeOutbound(Map<String, Object> params) {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> items = (List<Map<String, Object>>) params.get("items");
@@ -407,7 +406,7 @@ public class FinishedOutstockHelper {
         return productOutstockService.page(new Page<>(page, pageSize), wrapper);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.confirmPayment 已有事务保护）
     public void confirmPayment(String id, BigDecimal paidAmount) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("出库记录ID不能为空");
@@ -424,7 +423,7 @@ public class FinishedOutstockHelper {
             throw new SecurityException("无权操作该出库记录");
         }
 
-        productOutstockService.atomicAddPaidAmount(outstock.getId(), paidAmount);
+        productOutstockService.atomicAddPaidAmount(outstock.getId(), paidAmount, tenantId);
         ProductOutstock refreshed = productOutstockService.getById(outstock.getId());
         syncOutstockBillAfterPayment(refreshed);
     }
@@ -461,7 +460,7 @@ public class FinishedOutstockHelper {
         billAggregationService.updateById(bill);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.approveOutstock 已有事务保护）
     public Map<String, Object> approveOutstock(String id, String remark) {
         ProductOutstock outstock = productOutstockService.getById(id);
         if (outstock == null) {
@@ -488,7 +487,7 @@ public class FinishedOutstockHelper {
         return Map.of("id", id, "status", "approved");
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.batchApproveOutstocks 已有事务保护）
     public List<Map<String, Object>> batchApproveOutstocks(List<String> ids, String remark) {
         List<Map<String, Object>> results = new java.util.ArrayList<>();
         for (String id : ids) {

@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -33,7 +32,7 @@ public class TenantApplicationHelper {
     @Autowired private TenantRoleInitHelper roleInitHelper;
     @Autowired private TenantSubscriptionGrantHelper subscriptionGrantHelper;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 TenantOrchestrator.applyForTenant 已有事务保护）
     public Map<String, Object> applyForTenant(String tenantName, String contactName,
                                                String contactPhone, String applyUsername,
                                                String applyPassword,
@@ -73,7 +72,7 @@ public class TenantApplicationHelper {
         return result;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 TenantOrchestrator.approveApplication 已有事务保护）
     public Map<String, Object> approveApplication(Long tenantId, String planType, Integer trialDays,
                                                     String enabledModules,
                                                     java.util.function.BiConsumer<Tenant, String> planSettingsApplier) {
@@ -180,7 +179,7 @@ public class TenantApplicationHelper {
         return result;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 TenantOrchestrator.updateApplication 已有事务保护）
     public boolean updateApplication(Long tenantId, Map<String, String> params) {
         assertSuperAdmin();
         Tenant tenant = tenantService.getById(tenantId);
@@ -210,7 +209,7 @@ public class TenantApplicationHelper {
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 TenantOrchestrator.rejectApplication 已有事务保护）
     public boolean rejectApplication(Long tenantId, String reason) {
         assertSuperAdmin();
         Tenant tenant = tenantService.getById(tenantId);

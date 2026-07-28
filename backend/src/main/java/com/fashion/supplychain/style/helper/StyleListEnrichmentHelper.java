@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -264,7 +263,7 @@ public class StyleListEnrichmentHelper {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（价格修正为独立逐条更新，每条 try-catch 隔离失败，无需整体事务）
     public void fillQuotationPriceFields(List<StyleInfo> records) {
         if (records == null || records.isEmpty()) return;
 

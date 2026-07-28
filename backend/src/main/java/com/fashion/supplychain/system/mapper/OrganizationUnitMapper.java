@@ -10,12 +10,12 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface OrganizationUnitMapper extends BaseMapper<OrganizationUnit> {
 
-    @Select("SELECT * FROM t_organization_unit WHERE factory_id = #{factoryId} AND node_type = 'FACTORY' ORDER BY id DESC LIMIT 1")
-    OrganizationUnit selectOneByFactoryIdIgnoreDelete(@Param("factoryId") String factoryId);
+    @Select("SELECT * FROM t_organization_unit WHERE factory_id = #{factoryId} AND node_type = 'FACTORY' AND tenant_id = #{tenantId} ORDER BY id DESC LIMIT 1")
+    OrganizationUnit selectOneByFactoryIdIgnoreDelete(@Param("factoryId") String factoryId, @Param("tenantId") Long tenantId);
 
-    @Select("SELECT * FROM t_organization_unit WHERE factory_id = #{factoryId} AND node_type = 'FACTORY' AND delete_flag = 0")
-    List<OrganizationUnit> selectActiveByFactoryId(@Param("factoryId") String factoryId);
+    @Select("SELECT * FROM t_organization_unit WHERE factory_id = #{factoryId} AND node_type = 'FACTORY' AND delete_flag = 0 AND tenant_id = #{tenantId}")
+    List<OrganizationUnit> selectActiveByFactoryId(@Param("factoryId") String factoryId, @Param("tenantId") Long tenantId);
 
-    @Select("SELECT * FROM t_organization_unit WHERE factory_id = #{factoryId} AND node_type = 'FACTORY' AND delete_flag = 1")
-    List<OrganizationUnit> selectDeletedByFactoryId(@Param("factoryId") String factoryId);
+    @Select("SELECT * FROM t_organization_unit WHERE factory_id = #{factoryId} AND node_type = 'FACTORY' AND delete_flag = 1 AND tenant_id = #{tenantId}")
+    List<OrganizationUnit> selectDeletedByFactoryId(@Param("factoryId") String factoryId, @Param("tenantId") Long tenantId);
 }

@@ -26,7 +26,6 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -45,12 +44,12 @@ public class StyleBomPurchaseHelper {
     @Autowired
     private PatternProductionService patternProductionService;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 StyleBomOrchestrator.generatePurchase 已有事务保护）
     public int generatePurchase(Long styleId) {
         return generatePurchase(styleId, false);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 StyleBomOrchestrator.generatePurchase 已有事务保护）
     public int generatePurchase(Long styleId, boolean force) {
         if (styleId == null || styleId <= 0) {
             throw new IllegalArgumentException("款式ID不能为空");

@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -27,7 +26,7 @@ public class FactoryAccountHelper {
     @Autowired(required = false)
     private com.fashion.supplychain.system.service.RoleService roleService;
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 OrganizationUnitOrchestrator.createFactoryAccount 已有事务保护）
     public void createFactoryAccount(String factoryId, String username, String password,
                                       String name, String phone) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -106,7 +105,7 @@ public class FactoryAccountHelper {
         userService.saveUser(user);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // D-001 修复：移除 Helper 层 @Transactional（调用方 OrganizationUnitOrchestrator.setFactoryOwner 已有事务保护）
     public void setFactoryOwner(String userId, String factoryId) {
         if (!StringUtils.hasText(userId) || !StringUtils.hasText(factoryId)) {
             throw new IllegalArgumentException("参数不完整");
