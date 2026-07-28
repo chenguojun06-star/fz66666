@@ -24,7 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -133,18 +136,44 @@ public class FinanceDataConsistencyJob {
         if (externalOrders == null || externalOrders.isEmpty()) return 0;
 
         int fixed = 0;
+        // 批量预加载（修复 N+1 查询）
+        Set<String> orderIds = externalOrders.stream()
+                .map(ProductionOrder::getId)
+                .filter(id -> id != null && !id.isEmpty())
+                .collect(Collectors.toSet());
+
+        // 批量查询入库数量：按 orderId 分组统计（保留 tenantId 过滤，P0铁律4）
+        Map<String, Long> whCountMap = orderIds.isEmpty()
+                ? Collections.emptyMap()
+                : productWarehousingService.lambdaQuery()
+                        .select(ProductWarehousing::getOrderId)
+                        .in(ProductWarehousing::getOrderId, orderIds)
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .eq(ProductWarehousing::getTenantId, tenantId)
+                        .list()
+                        .stream()
+                        .filter(r -> r.getOrderId() != null)
+                        .collect(Collectors.groupingBy(ProductWarehousing::getOrderId, Collectors.counting()));
+
+        // 批量查询已存在对账单的 orderId 集合（保留 tenantId 过滤，P0铁律4）
+        Set<String> reconOrderIds = orderIds.isEmpty()
+                ? Collections.emptySet()
+                : new HashSet<>(shipmentReconciliationService.lambdaQuery()
+                        .select(ShipmentReconciliation::getOrderId)
+                        .in(ShipmentReconciliation::getOrderId, orderIds)
+                        .eq(ShipmentReconciliation::getTenantId, tenantId)
+                        .list()
+                        .stream()
+                        .map(ShipmentReconciliation::getOrderId)
+                        .filter(id -> id != null && !id.isEmpty())
+                        .collect(Collectors.toSet()));
+
         for (ProductionOrder order : externalOrders) {
             try {
-                int whQty = productWarehousingService.lambdaQuery()
-                        .eq(ProductWarehousing::getOrderId, order.getId())
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                        .count()
-                        .intValue();
+                int whQty = whCountMap.getOrDefault(order.getId(), 0L).intValue();
                 if (whQty <= 0) continue;
 
-                boolean hasRecon = shipmentReconciliationService.lambdaQuery()
-                        .eq(ShipmentReconciliation::getOrderId, order.getId())
-                        .count() > 0;
+                boolean hasRecon = reconOrderIds.contains(order.getId());
                 if (hasRecon) continue;
 
                 try {

@@ -1,34 +1,39 @@
 package com.fashion.supplychain.finance.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * 工资支付操作日志追加
- * P0铁律#6: 操作日志必须记录关键业务操作
- */
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class WagePaymentLogAppendHelper {
+public class WagePaymentLogAppendHelper extends AbstractOperationLogAppendHelper<WagePayment, String> {
 
     @Autowired
     private WagePaymentService wagePaymentService;
 
-    private void appendOperation(String paymentId, String action, String detail) {
-        if (paymentId == null || paymentId.trim().isEmpty()) {
-            return;
-        }
-        OperationLogAppendUtil.appendOperation(
-            paymentId.trim(),
-            wagePaymentService,
-            WagePayment::getPaymentRemark,
-            WagePayment::setPaymentRemark,
-            action,
-            detail,
-            "工资支付"
-        );
+    @Override
+    protected IService<WagePayment> getService() {
+        return wagePaymentService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "工资支付";
+    }
+
+    @Override
+    protected Function<WagePayment, String> getRemarkGetter() {
+        return WagePayment::getPaymentRemark;
+    }
+
+    @Override
+    protected BiConsumer<WagePayment, String> getRemarkSetter() {
+        return WagePayment::setPaymentRemark;
     }
 
     public void appendSaveAccount(String ownerId, String ownerType, String accountType) {

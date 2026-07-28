@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.orchestration.SettlementOrchestrator;
@@ -101,7 +102,7 @@ public class FinishedProductSettlementController {
         }
 
         // 始终排除已取消/报废/逻辑删除的订单（不参与结算）
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
+        wrapper.notIn(FinishedProductSettlement::getStatus, OrderStatusConstants.CANCELLED, OrderStatusConstants.DELETED, OrderStatusConstants.SCRAPPED, OrderStatusConstants.ARCHIVED);
 
         // 日期范围筛选
         if (StringUtils.isNotBlank(startDate)) {
@@ -184,7 +185,7 @@ public class FinishedProductSettlementController {
             wrapper.eq(FinishedProductSettlement::getStatus, status);
         }
         // 排除已取消/报废的订单
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
+        wrapper.notIn(FinishedProductSettlement::getStatus, OrderStatusConstants.CANCELLED, OrderStatusConstants.DELETED, OrderStatusConstants.SCRAPPED, OrderStatusConstants.ARCHIVED);
         if (StringUtils.isNotBlank(startDate)) {
             LocalDateTime startDateTime = LocalDate.parse(startDate).atStartOfDay();
             wrapper.ge(FinishedProductSettlement::getCreateTime, startDateTime);
@@ -328,7 +329,7 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(status)) {
             wrapper.eq(FinishedProductSettlement::getStatus, status);
         }
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
+        wrapper.notIn(FinishedProductSettlement::getStatus, OrderStatusConstants.CANCELLED, OrderStatusConstants.DELETED, OrderStatusConstants.SCRAPPED, OrderStatusConstants.ARCHIVED);
         if (StringUtils.isNotBlank(startDate)) {
             wrapper.ge(FinishedProductSettlement::getCreateTime,
                     LocalDate.parse(startDate).atStartOfDay());
@@ -633,7 +634,7 @@ public class FinishedProductSettlementController {
         TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "结算单");
 
         String currentStatus = settlement.getStatus();
-        if ("cancelled".equalsIgnoreCase(currentStatus) || "CANCELLED".equals(currentStatus)) {
+        if (OrderStatusConstants.CANCELLED.equalsIgnoreCase(currentStatus)) {
             return Result.fail("该结算单已取消，无需重复操作");
         }
 
@@ -672,7 +673,7 @@ public class FinishedProductSettlementController {
         wrapper.ge(FinishedProductSettlement::getCreateTime, startDateTime);
         wrapper.le(FinishedProductSettlement::getCreateTime, endDateTime);
         wrapper.notIn(FinishedProductSettlement::getStatus,
-                "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
+                OrderStatusConstants.CANCELLED, OrderStatusConstants.DELETED, OrderStatusConstants.SCRAPPED, OrderStatusConstants.ARCHIVED);
 
         // 外发工厂账号强制只看自己工厂数据
         String ctxFactoryId = UserContext.factoryId();

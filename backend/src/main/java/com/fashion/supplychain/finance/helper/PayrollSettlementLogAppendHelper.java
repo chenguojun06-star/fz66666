@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import lombok.extern.slf4j.Slf4j;
@@ -8,25 +9,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Slf4j
 @Component
-public class PayrollSettlementLogAppendHelper {
+public class PayrollSettlementLogAppendHelper extends AbstractOperationLogAppendHelper<PayrollSettlement, String> {
 
     @Autowired
     private PayrollSettlementService payrollSettlementService;
 
-    private void appendOperation(String settlementId, String action, String detail) {
-        if (settlementId == null) return;
-        OperationLogAppendUtil.appendOperation(
-            settlementId,
-            payrollSettlementService,
-            PayrollSettlement::getRemark,
-            PayrollSettlement::setRemark,
-            action,
-            detail,
-            "工资结算"
-        );
+    @Override
+    protected IService<PayrollSettlement> getService() {
+        return payrollSettlementService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "工资结算";
+    }
+
+    @Override
+    protected Function<PayrollSettlement, String> getRemarkGetter() {
+        return PayrollSettlement::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<PayrollSettlement, String> getRemarkSetter() {
+        return PayrollSettlement::setRemark;
     }
 
     public void appendCreate(PayrollSettlement settlement, String operatorName) {

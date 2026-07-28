@@ -1,34 +1,39 @@
 package com.fashion.supplychain.finance.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.PayableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * 应付账款操作日志追加（追加到description字段）
- * P0铁律#6: 操作日志必须记录关键业务操作
- */
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class PayableLogAppendHelper {
+public class PayableLogAppendHelper extends AbstractOperationLogAppendHelper<Payable, String> {
 
     @Autowired
     private PayableService payableService;
 
-    private void appendOperation(String payableId, String action, String detail) {
-        if (payableId == null || payableId.trim().isEmpty()) {
-            return;
-        }
-        OperationLogAppendUtil.appendOperation(
-            payableId.trim(),
-            payableService,
-            Payable::getDescription,
-            Payable::setDescription,
-            action,
-            detail,
-            "应付账款"
-        );
+    @Override
+    protected IService<Payable> getService() {
+        return payableService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "应付账款";
+    }
+
+    @Override
+    protected Function<Payable, String> getRemarkGetter() {
+        return Payable::getDescription;
+    }
+
+    @Override
+    protected BiConsumer<Payable, String> getRemarkSetter() {
+        return Payable::setDescription;
     }
 
     public void appendCreate(String payableId, String amount) {

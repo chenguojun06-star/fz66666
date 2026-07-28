@@ -1,34 +1,39 @@
 package com.fashion.supplychain.finance.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * 费用报销操作日志追加（追加到description字段）
- * P0铁律#6: 操作日志必须记录关键业务操作
- */
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 @Component
-public class ExpenseReimbursementLogAppendHelper {
+public class ExpenseReimbursementLogAppendHelper extends AbstractOperationLogAppendHelper<ExpenseReimbursement, String> {
 
     @Autowired
     private ExpenseReimbursementService expenseReimbursementService;
 
-    private void appendOperation(String reimbursementId, String action, String detail) {
-        if (reimbursementId == null || reimbursementId.trim().isEmpty()) {
-            return;
-        }
-        OperationLogAppendUtil.appendOperation(
-            reimbursementId.trim(),
-            expenseReimbursementService,
-            ExpenseReimbursement::getDescription,
-            ExpenseReimbursement::setDescription,
-            action,
-            detail,
-            "费用报销"
-        );
+    @Override
+    protected IService<ExpenseReimbursement> getService() {
+        return expenseReimbursementService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "费用报销";
+    }
+
+    @Override
+    protected Function<ExpenseReimbursement, String> getRemarkGetter() {
+        return ExpenseReimbursement::getDescription;
+    }
+
+    @Override
+    protected BiConsumer<ExpenseReimbursement, String> getRemarkSetter() {
+        return ExpenseReimbursement::setDescription;
     }
 
     public void appendCreate(String reimbursementId, String title, String amount) {

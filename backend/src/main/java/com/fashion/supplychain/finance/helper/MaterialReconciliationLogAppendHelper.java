@@ -1,32 +1,40 @@
 package com.fashion.supplychain.finance.helper;
 
-import com.fashion.supplychain.common.OperationLogAppendUtil;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Component
-public class MaterialReconciliationLogAppendHelper {
+public class MaterialReconciliationLogAppendHelper extends AbstractOperationLogAppendHelper<MaterialReconciliation, String> {
 
     @Autowired
     private MaterialReconciliationService materialReconciliationService;
 
-    private void appendOperation(String reconId, String action, String detail) {
-        if (reconId == null || reconId.trim().isEmpty()) {
-            return;
-        }
-        OperationLogAppendUtil.appendOperation(
-            reconId.trim(),
-            materialReconciliationService,
-            MaterialReconciliation::getRemark,
-            MaterialReconciliation::setRemark,
-            action,
-            detail,
-            "物料对账"
-        );
+    @Override
+    protected IService<MaterialReconciliation> getService() {
+        return materialReconciliationService;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "物料对账";
+    }
+
+    @Override
+    protected Function<MaterialReconciliation, String> getRemarkGetter() {
+        return MaterialReconciliation::getRemark;
+    }
+
+    @Override
+    protected BiConsumer<MaterialReconciliation, String> getRemarkSetter() {
+        return MaterialReconciliation::setRemark;
     }
 
     public void appendCreate(MaterialReconciliation recon, String operatorName) {

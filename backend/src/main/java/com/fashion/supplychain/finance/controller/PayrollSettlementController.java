@@ -8,6 +8,7 @@ import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusS
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -129,7 +130,7 @@ public class PayrollSettlementController {
                 wpWrapper.eq(WagePayment::getBizType, "PAYROLL_SETTLEMENT")
                          .eq(WagePayment::getTenantId, tenantId)
                          .in(WagePayment::getBizId, settlementIds)
-                         .in(WagePayment::getStatus, Arrays.asList("pending", "success"))
+                         .in(WagePayment::getStatus, Arrays.asList(MaterialConstants.STATUS_PENDING, "success"))
                          .last("LIMIT 5000");
                 List<WagePayment> payments = wagePaymentService.list(wpWrapper);
                 Map<String, String> settlementPaymentStatus = new HashMap<>();
@@ -138,7 +139,7 @@ public class PayrollSettlementController {
                     if ("success".equals(wp.getStatus())) {
                         settlementPaymentStatus.put(bid, "success");
                     } else if (!"success".equals(settlementPaymentStatus.get(bid))) {
-                        settlementPaymentStatus.put(bid, "pending");
+                        settlementPaymentStatus.put(bid, MaterialConstants.STATUS_PENDING);
                     }
                 }
                 result.forEach(row -> {
@@ -211,6 +212,25 @@ public class PayrollSettlementController {
         Object remarkObj = params == null ? null : params.get("remark");
         String remark = remarkObj != null ? String.valueOf(remarkObj).trim() : null;
         payrollSettlementOrchestrator.cancel(id, remark);
+        return Result.success(null);
+    }
+
+    /**
+     * 反向审核工资结算单
+     * 仅允许 approved 状态的结算单反向审核，将状态改回 pending
+     *
+     * @param id     结算单ID（路径参数）
+     * @param params 请求体，包含 reason（反向审核原因）
+     */
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
+    @PostMapping("/{id}/reverse-approve")
+    public Result<Void> reverseApprove(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可反向审核工资结算单");
+        }
+        Object reasonObj = params == null ? null : params.get("reason");
+        String reason = reasonObj != null ? String.valueOf(reasonObj).trim() : null;
+        payrollSettlementOrchestrator.reverseApprove(id, reason);
         return Result.success(null);
     }
 
