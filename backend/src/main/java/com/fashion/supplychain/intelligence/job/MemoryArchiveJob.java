@@ -160,13 +160,15 @@ public class MemoryArchiveJob {
         int archived = 0;
         for (AiConversationMemory mem : records) {
             try {
-                boolean ok = qdrantService.upsertArchival(
+                // P3-3：分级写入（createTime 决定 tier，由 QdrantService 自动计算）
+                boolean ok = qdrantService.upsertArchivalTiered(
                         tenantId,
                         String.valueOf(mem.getId()),
                         "conversation_summary",
                         mem.getMemorySummary() != null ? mem.getMemorySummary() : "",
                         mem.getUserId() != null ? "{\"userId\":\"" + mem.getUserId() + "\"}" : "",
-                        mem.getCreateTime() != null ? mem.getCreateTime().toString() : "");
+                        mem.getCreateTime() != null ? mem.getCreateTime().toString() : "",
+                        null);
                 if (ok) {
                     // 软删除原记录
                     mem.setDeleteFlag(1);
@@ -195,13 +197,15 @@ public class MemoryArchiveJob {
         for (AiLongMemory mem : records) {
             try {
                 String memoryType = "long_" + (mem.getLayer() != null ? mem.getLayer().toLowerCase() : "fact");
-                boolean ok = qdrantService.upsertArchival(
+                // P3-3：分级写入（createTime 决定 tier，由 QdrantService 自动计算）
+                boolean ok = qdrantService.upsertArchivalTiered(
                         tenantId,
                         mem.getMemoryUid() != null ? mem.getMemoryUid() : String.valueOf(mem.getId()),
                         memoryType,
                         mem.getContent() != null ? mem.getContent() : "",
                         buildKeyEntitiesJson(mem),
-                        mem.getCreateTime() != null ? mem.getCreateTime().toString() : "");
+                        mem.getCreateTime() != null ? mem.getCreateTime().toString() : "",
+                        null);
                 if (ok) {
                     mem.setDeleteFlag(1);
                     longMemoryMapper.updateById(mem);

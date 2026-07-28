@@ -208,6 +208,65 @@ public class MemoryArchiveService {
     }
 
     /**
+     * P3-3：分级智能召回（优先 HOT 层，不足时扩展 WARM/COLD）。
+     *
+     * <p>调用 QdrantService.searchArchivalSmart，按访问频率分级召回：
+     * <ul>
+     *   <li>第1轮：仅搜 HOT 层（6 个月~1 年）</li>
+     *   <li>第2轮：HOT 不足时扩展到 HOT+WARM（1~2 年）</li>
+     *   <li>第3轮：仍不足且 includeCold=true 时全量搜索（含 2 年+）</li>
+     * </ul>
+     *
+     * @param tenantId    租户ID（必填）
+     * @param query       查询文本
+     * @param topK        返回条数
+     * @param includeCold 是否最终兜底到 COLD 层
+     * @return 召回的归档记忆列表（可能为空，不返回 null）
+     */
+    public List<ArchivalMemoryHit> searchArchivalSmart(Long tenantId, String query, int topK,
+                                                        boolean includeCold) {
+        if (tenantId == null || query == null || query.isBlank()) return Collections.emptyList();
+        if (!isQdrantAvailable()) return Collections.emptyList();
+        try {
+            List<QdrantService.ScoredPoint> hits = qdrantService.searchArchivalSmart(
+                    tenantId, query, topK, null, null, includeCold);
+            if (hits == null || hits.isEmpty()) return Collections.emptyList();
+
+            List<ArchivalMemoryHit> result = new ArrayList<>();
+            for (QdrantService.ScoredPoint sp : hits) {
+                Map<String, String> payload = sp.getPayload();
+                if (payload == null) continue;
+                ArchivalMemoryHit hit = new ArchivalMemoryHit();
+                hit.setSummary(payload.getOrDefault("summary", ""));
+                hit.setCreateTime(payload.get("create_time"));
+                hit.setScore(sp.getScore());
+                hit.setOriginalId(payload.get("original_id"));
+                result.add(hit);
+                if (result.size() >= topK) break;
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[L5-Archive] searchArchivalSmart 失败 tenantId={}: {}", tenantId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * P3-3：统计租户归档数据的分级分布。
+     *
+     * @return Map：tier 名 → 计数；空 Map 表示 Qdrant 不可用
+     */
+    public Map<String, Long> countArchivalByTier(Long tenantId) {
+        if (tenantId == null || !isQdrantAvailable()) return Collections.emptyMap();
+        try {
+            return qdrantService.countArchivalByTier(tenantId);
+        } catch (Exception e) {
+            log.warn("[L5-Archive] countArchivalByTier 失败 tenantId={}: {}", tenantId, e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
      * 检查 Qdrant 是否可用。
      */
     private boolean isQdrantAvailable() {

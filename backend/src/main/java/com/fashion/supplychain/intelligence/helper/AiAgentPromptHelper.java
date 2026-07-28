@@ -475,8 +475,10 @@ public class AiAgentPromptHelper {
         // 关键词触发（低优先级，避免每轮都查 Qdrant）
         if (!containsHistoryKeywords(userMessage)) return "";
         try {
+            // P3-3：使用智能分级召回（HOT 优先，不足扩展 WARM，明确历史查询兜底 COLD）
+            // includeCold=true：用户明确问"之前/历史/上次"时，允许全量召回（含2年+冷数据）
             java.util.List<com.fashion.supplychain.intelligence.service.MemoryArchiveService.ArchivalMemoryHit> hits =
-                    memoryArchiveService.searchArchival(tenantId, userMessage, 3);
+                    memoryArchiveService.searchArchivalSmart(tenantId, userMessage, 3, true);
             if (hits == null || hits.isEmpty()) return "";
             StringBuilder sb = new StringBuilder("\n【L5 归档记忆：历史召回】\n");
             sb.append("以下是从 6 个月前的历史会话中召回的相关记忆（可能已过时，请用工具验证关键数据）：\n\n");

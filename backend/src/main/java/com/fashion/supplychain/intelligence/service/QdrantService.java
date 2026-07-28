@@ -1144,11 +1144,35 @@ public class QdrantService {
      */
     public boolean upsertArchival(Long tenantId, String originalId, String memoryType,
                                    String summary, String keyEntities, String createTime) {
+        return upsertArchivalTiered(tenantId, originalId, memoryType, summary, keyEntities,
+                createTime, null);
+    }
+
+    /**
+     * 写入一条归档记忆（L5，P3-3 分级存储版本）。
+     *
+     * <p>根据 originalCreateTime 自动计算分级（HOT/WARM/COLD），写入 payload.tier 字段。
+     * 召回时 {@link #searchArchivalTiered} 可按 tier 过滤，优先返回 HOT 数据。
+     *
+     * @param tier 分级（null 时根据 createTime 自动计算；createTime 也为空时默认 HOT）
+     * @return true=成功；false=失败或 Qdrant 不可用
+     */
+    public boolean upsertArchivalTiered(Long tenantId, String originalId, String memoryType,
+                                         String summary, String keyEntities, String createTime,
+                                         com.fashion.supplychain.intelligence.entity.ArchivalTier tier) {
         if (!qdrantEnabled) return false;
         if (tenantId == null || originalId == null) return false;
         if (summary == null || summary.isBlank()) return false;
 
         ensureArchivalCollection(tenantId);
+
+        // P3-3：分级计算（优先使用传入 tier，否则根据 createTime 推导）
+        com.fashion.supplychain.intelligence.entity.ArchivalTier finalTier = tier;
+        if (finalTier == null) {
+            java.time.LocalDateTime originalTime = parseCreateTime(createTime);
+            finalTier = com.fashion.supplychain.intelligence.entity.ArchivalTier.of(
+                    originalTime, java.time.LocalDateTime.now());
+        }
 
         try {
             float[] vector = computeEmbedding(summary);
@@ -1172,6 +1196,7 @@ public class QdrantService {
             payload.put("key_entities", keyEntities != null ? keyEntities : "");
             payload.put("create_time", createTime != null ? createTime : "");
             payload.put("archived_at", System.currentTimeMillis());
+            payload.put("tier", finalTier.name()); // P3-3：分级字段
 
             String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId) + "/points?wait=true";
             restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
@@ -1179,6 +1204,23 @@ public class QdrantService {
         } catch (Exception e) {
             log.warn("[Archival] 写入归档失败 tenantId={} originalId={}: {}", tenantId, originalId, e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * P3-3：解析 create_time 字符串为 LocalDateTime（容错处理）。
+     */
+    private java.time.LocalDateTime parseCreateTime(String createTime) {
+        if (createTime == null || createTime.isBlank()) return null;
+        try {
+            return java.time.LocalDateTime.parse(createTime);
+        } catch (Exception e) {
+            // 兼容 ISO 末尾带 Z 的格式
+            try {
+                return java.time.LocalDateTime.parse(createTime.replace("Z", ""));
+            } catch (Exception ex) {
+                return null;
+            }
         }
     }
 
@@ -1246,6 +1288,184 @@ public class QdrantService {
             log.debug("[Archival] 检索归档失败 tenantId={}: {}", tenantId, e.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * P3-3：分级召回策略 — 默认只搜 HOT 层；HOT 不足时扩展到 WARM；全量查询时搜全部。
+     *
+     * <p>策略说明：
+     * <ul>
+     *   <li>{@code tierFilter=null}：全量搜索（HOT+WARM+COLD），用于明确历史查询</li>
+     *   <li>{@code tierFilter=[HOT]}：仅搜 HOT（默认场景，速度快）</li>
+     *   <li>{@code tierFilter=[HOT, WARM]}：HOT 不足时扩展（兜底场景）</li>
+     * </ul>
+     *
+     * @param tierFilter 分级过滤（null 表示全量搜索）
+     */
+    public List<ScoredPoint> searchArchivalTiered(Long tenantId, String queryText, int topK,
+                                                   String startTimeIso, String endTimeIso,
+                                                   java.util.List<com.fashion.supplychain.intelligence.entity.ArchivalTier> tierFilter) {
+        if (!qdrantEnabled) return List.of();
+        if (tenantId == null || queryText == null || queryText.isBlank()) return List.of();
+        if (topK <= 0 || topK > 50) topK = 5;
+
+        ensureArchivalCollection(tenantId);
+
+        try {
+            float[] vector = computeEmbedding(queryText);
+            if (vector == null) return List.of();
+
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("vector", toJsonArray(vector));
+            body.put("limit", topK);
+            body.put("with_payload", true);
+
+            // 必带 tenant_id 过滤（双保险）
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode must = filter.putArray("must");
+            ObjectNode tenantCond = must.addObject();
+            tenantCond.put("key", "tenant_id");
+            tenantCond.putObject("match").put("integer", tenantId);
+
+            // P3-3：分级过滤
+            if (tierFilter != null && !tierFilter.isEmpty()) {
+                ObjectNode tierCond = must.addObject();
+                tierCond.put("key", "tier");
+                ObjectNode matchAny = tierCond.putObject("match");
+                ArrayNode any = matchAny.putArray("any");
+                for (com.fashion.supplychain.intelligence.entity.ArchivalTier t : tierFilter) {
+                    any.add(t.name());
+                }
+            }
+
+            // 时间范围过滤（可选）
+            if (startTimeIso != null && !startTimeIso.isBlank()
+                    && endTimeIso != null && !endTimeIso.isBlank()) {
+                ObjectNode rangeCond = must.addObject();
+                rangeCond.put("key", "create_time");
+                ObjectNode range = rangeCond.putObject("range");
+                range.put("gte", startTimeIso);
+                range.put("lte", endTimeIso);
+            }
+
+            String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId) + "/points/search";
+            ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.POST,
+                    jsonEntity(body.toString()), String.class);
+            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) return List.of();
+
+            JsonNode root = objectMapper.readTree(resp.getBody());
+            JsonNode resultArr = root.path("result");
+            if (!resultArr.isArray()) return List.of();
+
+            List<ScoredPoint> results = new ArrayList<>();
+            for (JsonNode item : resultArr) {
+                ScoredPoint sp = new ScoredPoint();
+                sp.setPointId(item.path("id").asText());
+                sp.setScore((float) item.path("score").asDouble());
+                sp.setPayload(readPayload(item.path("payload")));
+                results.add(sp);
+            }
+            return results;
+        } catch (Exception e) {
+            log.debug("[Archival] 分级检索失败 tenantId={}: {}", tenantId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * P3-3：分级召回 — 智能扩展策略。
+     *
+     * <p>调用流程：
+     * <ol>
+     *   <li>先搜 HOT 层（topK）</li>
+     *   <li>若 HOT 结果不足 half（topK/2），扩展到 HOT+WARM</li>
+     *   <li>若仍不足且 includeCold=true，扩展到全部 tier</li>
+     * </ol>
+     *
+     * @param includeCold 是否最终兜底到 COLD 层
+     */
+    public List<ScoredPoint> searchArchivalSmart(Long tenantId, String queryText, int topK,
+                                                  String startTimeIso, String endTimeIso,
+                                                  boolean includeCold) {
+        if (!qdrantEnabled) return List.of();
+        if (tenantId == null || queryText == null || queryText.isBlank()) return List.of();
+        if (topK <= 0 || topK > 50) topK = 5;
+
+        // 第1轮：仅 HOT
+        List<ScoredPoint> hotResults = searchArchivalTiered(tenantId, queryText, topK,
+                startTimeIso, endTimeIso, List.of(com.fashion.supplychain.intelligence.entity.ArchivalTier.HOT));
+        if (hotResults.size() >= topK) {
+            return hotResults;
+        }
+
+        // 第2轮：HOT + WARM
+        int half = Math.max(1, topK / 2);
+        if (hotResults.size() < half) {
+            List<ScoredPoint> warmResults = searchArchivalTiered(tenantId, queryText, topK,
+                    startTimeIso, endTimeIso,
+                    List.of(com.fashion.supplychain.intelligence.entity.ArchivalTier.HOT,
+                            com.fashion.supplychain.intelligence.entity.ArchivalTier.WARM));
+            if (warmResults.size() >= topK || !includeCold) {
+                return warmResults;
+            }
+
+            // 第3轮：全量（HOT+WARM+COLD）
+            if (warmResults.size() < half) {
+                return searchArchivalTiered(tenantId, queryText, topK,
+                        startTimeIso, endTimeIso,
+                        List.of(com.fashion.supplychain.intelligence.entity.ArchivalTier.HOT,
+                                com.fashion.supplychain.intelligence.entity.ArchivalTier.WARM,
+                                com.fashion.supplychain.intelligence.entity.ArchivalTier.COLD));
+            }
+        }
+
+        return hotResults;
+    }
+
+    /**
+     * P3-3：统计租户归档 collection 的分级分布。
+     *
+     * @return Map：tier 名 → 计数；空 Map 表示 Qdrant 不可用或 collection 不存在
+     */
+    public java.util.Map<String, Long> countArchivalByTier(Long tenantId) {
+        java.util.Map<String, Long> result = new java.util.LinkedHashMap<>();
+        if (!qdrantEnabled) return result;
+        if (tenantId == null) return result;
+
+        ensureArchivalCollection(tenantId);
+
+        try {
+            for (com.fashion.supplychain.intelligence.entity.ArchivalTier tier :
+                    com.fashion.supplychain.intelligence.entity.ArchivalTier.values()) {
+                ObjectNode body = objectMapper.createObjectNode();
+                body.put("exact", true);
+                ObjectNode filter = body.putObject("filter");
+                ArrayNode must = filter.putArray("must");
+
+                ObjectNode tenantCond = must.addObject();
+                tenantCond.put("key", "tenant_id");
+                tenantCond.putObject("match").put("integer", tenantId);
+
+                ObjectNode tierCond = must.addObject();
+                tierCond.put("key", "tier");
+                tierCond.putObject("match").put("keyword", tier.name());
+
+                String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId)
+                        + "/points/count";
+                ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.POST,
+                        jsonEntity(body.toString()), String.class);
+                if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                    JsonNode root = objectMapper.readTree(resp.getBody());
+                    long count = root.path("result").path("count").asLong(0);
+                    result.put(tier.name(), count);
+                } else {
+                    result.put(tier.name(), 0L);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[Archival] 分级统计失败 tenantId={}: {}", tenantId, e.getMessage());
+        }
+        return result;
     }
 
     /**
