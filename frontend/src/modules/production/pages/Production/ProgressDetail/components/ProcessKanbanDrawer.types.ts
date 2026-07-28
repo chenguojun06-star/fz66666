@@ -35,6 +35,8 @@ export interface TrackingRecord {
   settlementAmount?: number;
   isSettled?: boolean;
   scanBlocked?: boolean;
+  /** 工序已从当前工艺流程中删除（废弃记录，前端可折叠/灰显） */
+  obsolete?: boolean;
   cuttingBundleId?: string;
   qualityStatus?: string;
   defectQuantity?: number;

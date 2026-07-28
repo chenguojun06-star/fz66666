@@ -207,6 +207,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                       const isUnqualified = r.qualityStatus === 'unqualified';
                       const isRepairDone = r.repairStatus === 'repair_done';
                       const isLocked = !!r.scanBlocked;
+                      const isObsolete = !!r.obsolete;
                       const isSelected = selectedIds.has(r.id);
 
                       return (
@@ -217,6 +218,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                             padding: '10px 14px',
                             borderBottom: '1px solid var(--color-bg-subtle)',
                             background: isSelected ? 'var(--status-processing-bg)' : isUnqualified ? '#F6FFED' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
+                            opacity: isObsolete ? 0.55 : 1,
                           }}
                         >
                           {isPendingQc && qcFilter === 'pending' && (
@@ -228,6 +230,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                               <span style={{ fontWeight: 700, fontSize: 14 }}>#{r.bundleNo}</span>
                               {r.color && <Tag>{r.color}</Tag>}
                               {r.size && <Tag>{r.size}</Tag>}
+                              {isObsolete && <Tag color="default">已废弃</Tag>}
                             </div>
                             <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                               {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}

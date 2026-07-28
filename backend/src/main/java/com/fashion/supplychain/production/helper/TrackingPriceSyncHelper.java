@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 工序跟踪价格同步与查询辅助类
@@ -111,7 +112,54 @@ public class TrackingPriceSyncHelper {
         fillNextStageScanned(records, productionOrderId);
         fillProgressStage(records, order);
         fillScanBlocked(records);
+        markObsoleteRecords(records, order);
         return records;
+    }
+
+    /**
+     * 标记废弃tracking记录（工序已从当前工艺流程中删除但scanned状态保留的记录）。
+     * <p>
+     * 基于 order.progressWorkflowJson 解析当前工序节点，对 tracking 记录中
+     * processName/processCode 都不在当前节点列表的 scanned/reset 记录标记 obsolete=true。
+     * <p>
+     * 注意：pending 状态的废弃记录已在 appendProcessTracking 中物理删除，不会出现这里。
+     */
+    private void markObsoleteRecords(List<ProductionProcessTracking> records, ProductionOrder order) {
+        try {
+            List<Map<String, Object>> processNodes = initHelper.parseProcessNodes(order);
+            if (CollectionUtils.isEmpty(processNodes)) return;
+
+            Set<String> currentNames = processNodes.stream()
+                    .map(n -> initHelper.getStringValue(n, "name", "").trim())
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toSet());
+            Set<String> currentCodes = processNodes.stream()
+                    .map(n -> initHelper.getStringValue(n, "processCode",
+                            initHelper.getStringValue(n, "code", "")).trim())
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toSet());
+
+            int obsoleteCount = 0;
+            for (ProductionProcessTracking r : records) {
+                String name = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                String code = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
+                boolean nameMatched = StringUtils.hasText(name) && currentNames.contains(name);
+                boolean codeMatched = StringUtils.hasText(code) && currentCodes.contains(code);
+                if (!nameMatched && !codeMatched) {
+                    // 工序已从当前工艺流程中删除
+                    r.setObsolete(true);
+                    obsoleteCount++;
+                } else {
+                    r.setObsolete(false);
+                }
+            }
+            if (obsoleteCount > 0) {
+                log.info("[查询tracking] 订单 {} 标记 {} 条废弃记录（工序已删除但保留scanned状态）",
+                        order.getOrderNo(), obsoleteCount);
+            }
+        } catch (Exception e) {
+            log.warn("标记废弃tracking记录失败，忽略 orderNo={}: {}", order.getOrderNo(), e.getMessage());
+        }
     }
 
     /**
@@ -377,7 +425,7 @@ public class TrackingPriceSyncHelper {
             Set<String> bundleIds = records.stream()
                     .map(ProductionProcessTracking::getCuttingBundleId)
                     .filter(id -> id != null && !id.isEmpty())
-                    .collect(java.util.stream.Collectors.toSet());
+                    .collect(Collectors.toSet());
             if (bundleIds.isEmpty()) return;
 
             Map<String, Boolean> blockedMap = new HashMap<>();

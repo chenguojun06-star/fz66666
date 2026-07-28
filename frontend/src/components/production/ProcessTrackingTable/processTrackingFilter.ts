@@ -21,6 +21,8 @@ export interface ProcessTrackingRecord {
   scanRecordId?: string;
   isSettled?: boolean;
   hasNextStageScanned?: boolean;
+  /** 工序已从当前工艺流程中删除（废弃记录） */
+  obsolete?: boolean;
   extJson?: string | Record<string, unknown> | null;
 }
 

@@ -142,6 +142,18 @@ public class TrackingRecordInitHelper {
         int insertedCount = 0;
         int deletedCount = 0;
         int scannedObsoleteRetained = 0;
+        int orderUpdatedCount = 0;
+
+        // 构建工序名→新顺序映射（用于同步已有tracking的processOrder）
+        Map<String, Integer> nameToOrder = new HashMap<>();
+        Map<String, Integer> codeToOrder = new HashMap<>();
+        for (int i = 0; i < processNodes.size(); i++) {
+            String name = getStringValue(processNodes.get(i), "name", "").trim();
+            String code = getStringValue(processNodes.get(i), "processCode",
+                    getStringValue(processNodes.get(i), "code", "")).trim();
+            if (StringUtils.hasText(name)) nameToOrder.put(name, i + 1);
+            if (StringUtils.hasText(code)) codeToOrder.put(code, i + 1);
+        }
 
         for (CuttingBundle bundle : targets) {
             List<ProductionProcessTracking> existing = trackingService.getByBundleId(bundle.getId());
@@ -151,7 +163,10 @@ public class TrackingRecordInitHelper {
             deletedCount += obsoleteStats[0];
             scannedObsoleteRetained += obsoleteStats[1];
 
-            // 2. 补建新增工序的 tracking 记录（新增工序场景）
+            // 2. 同步已有tracking的processOrder（工序顺序调整场景）
+            orderUpdatedCount += syncProcessOrder(existing, nameToOrder, codeToOrder);
+
+            // 3. 补建新增工序的 tracking 记录（新增工序场景）
             List<ProductionProcessTracking> toInsert = buildTrackingRecordsForMissing(
                     order, bundle, processNodes, taskBySizeKey, anyReceivedTask, existing);
             if (!toInsert.isEmpty()) {
@@ -159,11 +174,55 @@ public class TrackingRecordInitHelper {
             }
         }
 
-        if (insertedCount > 0 || deletedCount > 0) {
-            log.info("订单 {} 工序跟踪同步：补建 {} 条，清理 pending {} 条，保留 scanned废弃 {} 条（涉及 {} 个菲号）",
-                    order.getOrderNo(), insertedCount, deletedCount, scannedObsoleteRetained, targets.size());
+        if (insertedCount > 0 || deletedCount > 0 || orderUpdatedCount > 0) {
+            log.info("订单 {} 工序跟踪同步：补建 {} 条，清理 pending {} 条，更新顺序 {} 条，保留 scanned废弃 {} 条（涉及 {} 个菲号）",
+                    order.getOrderNo(), insertedCount, deletedCount, orderUpdatedCount,
+                    scannedObsoleteRetained, targets.size());
         }
         return insertedCount;
+    }
+
+    /**
+     * 同步已有tracking记录的processOrder字段（工序顺序调整场景）。
+     * <p>
+     * 当管理员调整工序顺序并锁定workflow后，已有tracking记录的processOrder需要同步更新，
+     * 否则前端按processOrder排序时显示顺序与最新工艺流程不一致。
+     * <p>
+     * 策略：按 processName/processCode 匹配最新顺序，仅更新有变化的记录。
+     *
+     * @param existing 该菲号已有的tracking记录
+     * @param nameToOrder 工序名→新顺序映射
+     * @param codeToOrder 工序编号→新顺序映射
+     * @return 更新的记录数
+     */
+    private int syncProcessOrder(List<ProductionProcessTracking> existing,
+                                  Map<String, Integer> nameToOrder,
+                                  Map<String, Integer> codeToOrder) {
+        if (CollectionUtils.isEmpty(existing) || (nameToOrder.isEmpty() && codeToOrder.isEmpty())) {
+            return 0;
+        }
+        int updated = 0;
+        for (ProductionProcessTracking t : existing) {
+            String name = t.getProcessName() == null ? "" : t.getProcessName().trim();
+            String code = t.getProcessCode() == null ? "" : t.getProcessCode().trim();
+            Integer newOrder = null;
+            if (StringUtils.hasText(code) && codeToOrder.containsKey(code)) {
+                newOrder = codeToOrder.get(code);
+            } else if (StringUtils.hasText(name) && nameToOrder.containsKey(name)) {
+                newOrder = nameToOrder.get(name);
+            }
+            if (newOrder != null && !newOrder.equals(t.getProcessOrder())) {
+                t.setProcessOrder(newOrder);
+                try {
+                    trackingService.updateById(t);
+                    updated++;
+                } catch (Exception e) {
+                    log.warn("[工序同步-顺序] 更新processOrder失败 trackingId={}: {}",
+                            t.getId(), e.getMessage());
+                }
+            }
+        }
+        return updated;
     }
 
     /**

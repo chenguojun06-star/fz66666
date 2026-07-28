@@ -176,4 +176,12 @@ public class ProductionProcessTracking {
 
     @TableField(exist = false)
     private Boolean scanBlocked;
+
+    /**
+     * 临时字段：标记该tracking记录对应的工序已从当前工艺流程中删除（废弃记录）。
+     * 仅在查询时由TrackingPriceSyncHelper基于progressWorkflowJson动态计算。
+     * 前端可据此折叠/灰显，避免已删除工序的scanned记录造成显示错乱。
+     */
+    @TableField(exist = false)
+    private Boolean obsolete;
 }
