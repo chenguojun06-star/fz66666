@@ -690,3 +690,86 @@
   - 验证：mvn compile exit 0、npx tsc --noEmit 0 errors
   - 至此后端动作类智能开关共 15 个，全部默认关闭，覆盖所有 HIGH 风险自动执行点
 
+## D-045：财务链路全链路闭环 + BillConstants 常量类引入
+
+- **日期**：2026-07-28
+- **上下文**：用户诉求"全部一次性修复所有财务链路问题"。系统核查发现 11 条 P0 级风险：BillAggregation 唯一索引被降级为普通索引存在并发幂等风险、财务结算视图 outstock_amount CASE 表达式两分支相同导致冲销金额未排除、closed 状态过滤缺失导致关单订单出现在结算列表、工资结算 generate 无分布式锁可能并发重复结算、外发工厂扣款账单方向错误（误推 RECEIVABLE+CUSTOMER 而非 PAYABLE+FACTORY）、BillAggregationOrchestrator 内 15 处硬编码字符串等
+- **决策**：
+  1. **BillAggregation 唯一索引恢复**（V202707280001）：重建复合唯一索引 `uk_source_active (source_type, source_id, tenant_id, delete_flag)`，未删除记录唯一，已删除记录不约束允许同来源重新创建
+  2. **财务结算视图修复**（V202707280002）：outstock_amount 冲销分支改为 ELSE 0、补回 closed 状态排除、添加 factory_type 等组织字段、t_scan_record 不加 delete_flag 过滤（表无该字段）
+  3. **DbViewRepairHelper 同步**：新增 missingOutstockQuantity/missingFactoryType 检查
+  4. **工资结算 reverseApprove()**：新增反向审核方法，已审核工资单可反向账单（调用 billAggregationOrchestrator.reverseBySource）
+  5. **工资结算分布式锁**：generate() 方法用 DistributedLockService.executeWithLock 防并发，lockKey=`payroll:generate:{tenantId}:{orderId}:{operatorId}`
+  6. **外发工厂扣款账单方向修复**：ShipmentReconciliationOrchestrator.pushDeductionBills 按 isOwnFactory 三态判断（null/0/1），外发工厂订单推 PAYABLE+DEDUCTION+FACTORY
+  7. **BillConstants 常量类引入**：新建 `finance/constant/BillConstants.java` 集中管理账单常量，涵盖 5 大维度（BILL_TYPE 2/CATEGORY 9/STATUS 5/SOURCE_TYPE 14/COUNTERPARTY_TYPE 6）+ 4 个便捷判断方法（isPayable/isReceivable/isTerminalStatus/isConfirmedGroup），BillAggregationOrchestrator 内 15 处硬编码字符串全部替换
+- **理由**：
+  - 财务数据准确性是 P0 底线，任何冲销/状态/方向错误都会导致账务悬挂或对账失败
+  - 工资结算并发场景必须用分布式锁，否则可能产生重复结算单（已发生过类似事故）
+  - 硬编码字符串分散在 18+ 文件中，新增分类时容易遗漏，集中常量化便于维护
+  - DB 字段保持 VARCHAR 不变，仅代码层常量化，避免破坏现有 API 契约和数据库兼容性
+- **影响**：
+  - 新建文件：BillConstants.java、V202707280001/V202707280002 Flyway 迁移
+  - 修改文件：BillAggregationOrchestrator.java、DbViewRepairHelper.java、PayrollSettlementOrchestrator.java、ShipmentReconciliationOrchestrator.java
+  - 验证：mvn compile exit 0、mvn test-compile exit 0、npx tsc --noEmit 0 errors
+  - 后续待办：外部模块（ShipmentReconciliationOrchestrator/SalesReturnOrchestrator/ExpenseReimbursementOrchestrator 等）调用 pushBill 时仍使用字符串字面量，可渐进迁移到 BillConstants 常量（不阻塞当前功能）
+
+## D-046：全系统核查 — AI输出净化 + Helper事务边界 + Job开关控制
+
+- **日期**：2026-07-28
+- **上下文**：用户诉求"还有多少需要优化的 全系统都核实清楚 不要出现任何问题"。在 D-045 财务链路修复基础上，继续系统性核查全系统剩余优化项，发现 3 类 P0 级问题
+- **决策**：
+  1. **AI 输出净化 P0 修复**：StreamingAgentLoopCallback / SyncAgentLoopCallback 注入 `GuardrailsConfigService`，新增 `sanitize()` 方法调用 `sanitizeOutput()` 实现完整净化（剥离 prompt 标记 + 敏感信息屏蔽）。`onAnswer` / `onPlanMode` 改为使用净化后内容。EnhancedStreamingCallback 构造函数同步添加参数。AiAgentOrchestrator 创建回调时传递 `componentRegistry.getGuardrailsConfigService()`
+  2. **Helper 层 @Transactional 残留 P0 修复**：移除 4 个 Helper 类共 10 处冗余 @Transactional 注解（ProductionOrderCreationHelper 2处 / ProductionOrderLifecycleHelper 3处 / ProductionOrderWorkflowHelper 4处 / SampleOrderCreationHelper 1处），每处添加注释说明事务由调用方 Orchestrator 声明
+  3. **Job 开关控制违规 P0 修复**：AiPatrolJob.scanOverdueCollaborationTasks 原实现 `if (!isEnabled) continue;` 跳过整个租户扫描，违反"开关关闭时继续扫描记录日志，仅跳过创建动作"规则。改为 `boolean actionEnabled = ...`，在循环内部用 actionEnabled 控制 escalateTask + createAction 调用，新增 totalScanned 计数器
+- **理由**：
+  - AI 输出净化不完整会导致敏感信息通过 SSE 或记忆存储泄露，是安全底线
+  - D-001 铁律要求事务仅在 Orchestrator 层，Helper 层冗余事务会导致嵌套回滚和连接泄漏
+  - 巡检开关的语义是"控制写操作"，不是"停止巡检"，关闭时仍需扫描记录日志供运维查看
+- **影响**：
+  - 修改文件：StreamingAgentLoopCallback.java、SyncAgentLoopCallback.java、EnhancedStreamingCallback.java、AiAgentOrchestrator.java、ProductionOrderCreationHelper.java、ProductionOrderLifecycleHelper.java、ProductionOrderWorkflowHelper.java、SampleOrderCreationHelper.java、AiPatrolJob.java
+  - 验证：mvn compile ✅ BUILD SUCCESS
+  - Flyway 迁移脚本核查：check-flyway-sql.py 全量扫描，254 个警告均为历史迁移（已存在，不修复），无 P0 新问题
+
+## D-047：全系统稳定性核查与优化（2026-07-28）
+
+### 上下文
+用户要求"全部都看看 智能化的这些还有什么 全系统的稳定度 操作交互 整体布局 代码冗余"，启动全系统扫描。
+
+### 决策
+1. **AI 线程池统一有界化**：所有 `Executors.newFixedThreadPool` / `newCachedThreadPool` 改为有界 `ThreadPoolExecutor`，队列容量 ≤128，拒绝策略 CallerRunsPolicy，必须 @PreDestroy 优雅关闭
+2. **缓存多租户隔离**：所有 Caffeine/Redis 缓存的 key 必须包含 tenantId 前缀，命中后二次校验 tenantId（防 key 碰撞）
+3. **N+1 查询零容忍**：循环内禁止 `getById/selectById/lambdaQuery().one()`，必须先批量 IN 查询 + Map 内存查找
+4. **Job 凌晨 4 点错峰**：禁止使用 `*/4` 类 cron（必然撞 4 点档），改为具体小时列表如 `0,8,12,16,20`；批量 Job 必须有分布式锁
+5. **Modal 统一 ResizableModal**：含 Form/Table/Upload 等复杂内容的 Modal 必须用 ResizableModal，禁止直接用 antd Modal
+6. **渐变色零容忍**：页面背景/卡片/按钮禁止 linear-gradient/radial-gradient，统一用纯色 CSS 变量
+
+### 理由
+- AI 模块改动多，线程池/缓存/SSE 等基础组件问题影响全系统稳定
+- N+1 查询在数据量增长后会导致接口超时
+- Job 冲突在多实例部署时会重复执行昂贵操作
+- UI 规范统一提升品牌一致性
+
+## D-048：*LogAppendHelper 泛型基类重构（2026-07-28）
+
+### 上下文
+24个 `*LogAppendHelper` 类（分布在 finance/production/warehouse/stock/crm/style 6个模块）存在大量重复样板代码：每个类都重复声明 Service、Entity、getter/setter、appendOperation 方法，代码重复率超过 80%。
+
+### 决策
+1. 创建 `AbstractOperationLogAppendHelper<T, ID>` 泛型基类，封装通用逻辑
+2. 子类只需实现4个抽象方法：getService()、getEntityName()、getRemarkGetter()、getRemarkSetter()
+3. 基类提供 appendOperation() + 10个常用便捷方法（appendCreate/appendUpdate/appendDelete/appendClose等）
+4. 复杂型Helper（双写、自定义格式、多实体同步）通过覆盖 `appendOperation` 方法扩展
+5. PurchaseCartService 接口改造：新增 `extends IService<PurchaseCart>` 确保基类 getService() 返回类型兼容
+
+### 理由
+- 消除重复代码，24个Helper从平均80行缩减到平均30行
+- 统一 null 防护和日志格式
+- 基类新增便捷方法可被所有子类复用，新Helper可快速创建
+- 复杂型Helper通过覆盖而非继承全部方法，保持灵活性
+
+### 例外处理
+- MaterialPurchaseLogAppendHelper：覆盖 appendOperation 实现双写策略（MaterialPurchase.remark + ProductionOrder.remarks）
+- ScanRecordLogAppendHelper：保留 syncScanRecordToOrder 多实体同步逻辑
+- CuttingTaskLogAppendHelper：覆盖 appendOperation 实现双写 + appendOrderOnly 仅同步方法
+- PurchaseCartLogAppendHelper：覆盖 appendOperation 使用自定义 buildRemark 格式
+
