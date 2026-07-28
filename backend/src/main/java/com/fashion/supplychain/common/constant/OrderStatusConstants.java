@@ -37,6 +37,7 @@ public class OrderStatusConstants {
     public static final String RETURNED = "returned";
     public static final String CLOSED = "closed";
     public static final String ARCHIVED = "archived";
+    public static final String DELETED = "deleted";
 
     /** 终止状态集合 — 这些状态下订单不再推进工序 */
     public static final Set<String> TERMINAL_STATUSES = Set.of(
@@ -77,5 +78,6 @@ public class OrderStatusConstants {
         LABEL_MAP.put(RETURNED, "已退回");
         LABEL_MAP.put(CLOSED, "已关单");
         LABEL_MAP.put(ARCHIVED, "已归档");
+        LABEL_MAP.put(DELETED, "已删除");
     }
 }
