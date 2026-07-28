@@ -1,7 +1,8 @@
 import React from 'react';
-import { Button, Checkbox, Modal, Space, Table } from 'antd';
+import { Button, Checkbox, Space, Table } from 'antd';
 import { ShareAltOutlined } from '@ant-design/icons';
 import { getMaterialTypeLabel } from '@/utils/materialType';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { ColumnsType } from 'antd/es/table';
 import type { ColorCard, ColorCardItem } from '../types';
 
@@ -22,7 +23,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({
   onConfirmGenerate, onSelectAll, onCancel,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title={<Space><ShareAltOutlined /> 生成物料预览 - {previewCard?.colorCardName}</Space>}
       open={open}
       onCancel={onCancel}
@@ -60,11 +61,11 @@ const PreviewModal: React.FC<PreviewModalProps> = ({
             >
               全选 ({selectedItems.size}/{previewItems.length})
             </Checkbox>
-            <span style={{ color: '#888' }}>勾选的颜色将被生成到物料资料库</span>
+            <span style={{ color: 'var(--color-text-muted)' }}>勾选的颜色将被生成到物料资料库</span>
           </Space>
         )}
       />
-    </Modal>
+    </ResizableModal>
   );
 };
 

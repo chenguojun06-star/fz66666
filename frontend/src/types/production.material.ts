@@ -45,8 +45,10 @@ export interface MaterialPurchase extends Record<string, unknown> {
   styleNo?: string;
   styleName?: string;
   styleCover?: string;
-  returnConfirmed?: boolean;
+  /** P0 修复：与后端 MaterialPurchase.returnConfirmed 类型对齐（Integer 0/1） */
+  returnConfirmed?: number;
   returnQuantity?: number;
+  usedQuantity?: number;  // 使用量（已出库领料数量）
   returnConfirmerId?: string;
   returnConfirmerName?: string;
   returnConfirmTime?: string;
@@ -155,4 +157,22 @@ export interface MaterialDatabaseQueryParams {
   disabled?: number;
   page: number;
   pageSize: number;
+}
+
+// 面辅料采购款号汇总（采购量/到货量/使用量/剩余量）
+export interface MaterialStyleSummary {
+  materialCode: string;
+  materialName: string;
+  materialType?: string;
+  unit?: string;
+  color?: string;
+  styleNo?: string;
+  styleName?: string;
+  orderNo?: string;
+  purchaseQuantity: number;
+  arrivedQuantity: number;
+  usedQuantity: number;
+  returnQuantity: number;
+  remainingQuantity: number;
+  purchaseCount: number;
 }

@@ -30,7 +30,7 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
           </span>
         )}
         {order.styleName && (
-          <span style={{ fontSize: 11, color: '#888', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {order.styleName}
           </span>
         )}

@@ -141,6 +141,12 @@ export const materialPurchaseApi = {
       '/production/purchase/list',
       { params: { orderNo: String(orderNo || '').trim(), sourceType: 'order', pageSize: 200, page: 1 } },
     ),
+
+  /**
+   * 按款号/订单号汇总面辅料采购数据（采购量/到货量/使用量/剩余量）
+   */
+  styleSummary: (params: { styleId?: string; orderNo?: string }) =>
+    api.get<{ code: number; data: unknown[] }>('/production/purchase/style-summary', { params }),
 };
 
 /** 样衣生产详情 API */

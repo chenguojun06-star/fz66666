@@ -208,7 +208,7 @@ const InvoiceTab: React.FC = () => {
           <ModalFieldRow label="未税金额(元)"><Form.Item name="amount" noStyle rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="税率(%)"><Form.Item name="taxRate" noStyle><InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} placeholder="留空则按默认 VAT 税率" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="税额(自动计算)">
-            <div style={{ lineHeight: '32px', color: '#595959' }}>
+            <div style={{ lineHeight: '32px', color: 'var(--color-gray-700)' }}>
               {calcTaxAmount.toFixed(2)} 元
               <Text type="secondary" style={{ fontSize: 14, marginLeft: 8 }}>(未税金额 × 税率)</Text>
             </div>

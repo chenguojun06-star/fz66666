@@ -21,7 +21,7 @@
 }
 
 .ai-execution-panel .ai-panel-card .ant-card-head-title {
-  color: #00e5ff !important;
+  color: var(--color-accent-cyan-bright) !important;
   font-weight: 500 !important;
   font-size: 14px !important;
   padding: 7px 0 !important;
@@ -34,7 +34,7 @@
 }
 
 .ai-execution-panel .ai-panel-card .ant-card-head .ant-btn-link:hover {
-  color: #00e5ff !important;
+  color: var(--color-accent-cyan-bright) !important;
 }
 
 /* 卡片内容区 */
@@ -93,7 +93,7 @@
 
 /* Spin loading */
 .ai-execution-panel .ant-spin-dot-item {
-  background: #00e5ff !important;
+  background: var(--color-accent-cyan-bright) !important;
 }
 
 /* Alert */
@@ -116,7 +116,7 @@
 .ai-execution-panel .command-detail-section h4 {
   margin: 0 0 10px 0;
   font-weight: 600;
-  color: #00e5ff;
+  color: var(--color-accent-cyan-bright);
   border-bottom: 1px solid rgba(0, 229, 255, 0.2);
   padding-bottom: 6px;
   font-size: 14px;
@@ -164,7 +164,7 @@
 .ai-execution-panel .result-content h4 {
   margin: 10px 0 6px 0;
   font-weight: 600;
-  color: #00e5ff;
+  color: var(--color-accent-cyan-bright);
   font-size: 14px;
 }
 

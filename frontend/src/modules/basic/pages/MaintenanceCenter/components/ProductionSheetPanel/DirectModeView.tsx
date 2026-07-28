@@ -76,7 +76,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
             </Form.Item>
           </Form>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button danger type="default" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: 'var(--color-bg-base)', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>确认退回</Button>
+            <Button danger ghost loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button>
           </div>
         </div>
         <div style={directCardStyle}>

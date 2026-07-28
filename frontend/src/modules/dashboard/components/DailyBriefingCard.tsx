@@ -122,7 +122,7 @@ const DailyBriefingCard: React.FC = () => {
           style={{
             padding: '12px 16px',
             borderRadius: 8,
-            background: 'linear-gradient(90deg, var(--color-primary-bg, #e6f4ff) 0%, var(--color-bg-container, var(--color-bg-container)) 100%)',
+            background: 'var(--color-primary-bg)',
             border: '1px solid var(--color-border-secondary, var(--color-border-light))',
           }}
         >

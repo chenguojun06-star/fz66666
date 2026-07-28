@@ -105,7 +105,7 @@ export const GROUP_TONE_METAS: Record<GroupToneMeta['key'], GroupToneMeta> = {
     key: 'other',
     tint: 'var(--color-bg-container)',
     tagBg: 'var(--color-border-light)',
-    tagColor: '#595959',
+    tagColor: 'var(--color-gray-700)',
   },
 };
 

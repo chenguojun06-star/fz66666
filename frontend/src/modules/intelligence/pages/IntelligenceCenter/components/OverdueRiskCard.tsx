@@ -23,13 +23,13 @@ const OverdueRiskCard: React.FC<any> = ({
         <span style={{ background: '#e8686a', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px', marginLeft: 2 }}>逾期 {overdueRisk.overdue.length} 单</span>
       )}
       {overdueRisk.highRisk.length > 0 && (
-        <span style={{ background: '#f7a600', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
+        <span style={{ background: 'var(--color-warning-deep)', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
       )}
       <span onClick={() => toggleCollapse('overdueRisk')} style={{ cursor: 'pointer' }}><CollapseChevron panelKey="overdueRisk" collapsed={!!collapsedPanels['overdueRisk']} /></span>
     </div>
     <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['overdueRisk'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
       {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#39ff14', padding: '20px 0', fontSize: 14, fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', color: 'var(--color-accent-neon)', padding: '20px 0', fontSize: 14, fontWeight: 600 }}>
           <CheckCircleOutlined style={{ fontSize: 28, marginBottom: 6 }} /><br />所有订单均在健康交期内
         </div>
       ) : (
@@ -50,11 +50,11 @@ const OverdueRiskCard: React.FC<any> = ({
             const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
             return (
               <div key={String(o.id)} className="c-risk-row" style={{ cursor: 'pointer' }} onClick={() => goToOrder(o.orderNo)}>
-                <span className="c-risk-badge" style={{ background: '#f7a600' }}>剩{d}天</span>
+                <span className="c-risk-badge" style={{ background: 'var(--color-warning-deep)' }}>剩{d}天</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
                 <span className="c-risk-prog">{calcOrderProgress(o)}%</span>
-                <span className="c-risk-action" style={{ color: '#f7a600' }}>加急协调</span>
+                <span className="c-risk-action" style={{ color: 'var(--color-warning-deep)' }}>加急协调</span>
               </div>
             );
           })}

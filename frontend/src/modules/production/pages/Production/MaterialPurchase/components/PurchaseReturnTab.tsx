@@ -134,7 +134,7 @@ const PurchaseReturnTab: React.FC = () => {
         if (record.returnStatus === 'APPROVED') {
           return <Button type="link" size="small" icon={<RollbackOutlined />} onClick={() => handleComplete(record)}>完成退货</Button>;
         }
-        return <span style={{ color: '#999' }}>-</span>;
+        return <span style={{ color: 'var(--color-gray-label)' }}>-</span>;
       },
     },
   ];

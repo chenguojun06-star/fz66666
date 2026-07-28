@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Button, Descriptions, List, Space, Spin, Tag, Typography } from 'antd';
-import { ShopOutlined } from '@ant-design/icons';
+import { ShopOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { message } from '@/utils/antdStatic';
 import type { PlatformMeta } from '../PlatformConnectorConstants';
@@ -32,7 +32,7 @@ const TestResultModal: React.FC<TestResultModalProps> = ({ open, testResult, act
           )}
           {testResult.webhookUrl && (
             <div style={{ background: '#f0f9ff', border: '1px solid #91caff', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>✅ 下一步：配置回调地址</div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}><CheckCircleOutlined /> 下一步：配置回调地址</div>
               <div style={{ fontSize: 14, marginBottom: 8 }}>复制下方地址，粘贴到 {activePlatform?.name} 平台的 Webhook 设置中：</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <code style={{ flex: 1, background: '#fff', border: '1px solid #d9d9d9', padding: '8px 12px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>

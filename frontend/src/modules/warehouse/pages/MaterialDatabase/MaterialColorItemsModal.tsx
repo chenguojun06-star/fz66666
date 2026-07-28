@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Col, Modal, Row } from 'antd';
+import { Card, Col, Row } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 
 // ===== 色卡本颜色详情弹窗（从 index.tsx 抽取） =====
 interface ColorItemEntry {
@@ -29,7 +30,7 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
   open, loading, data, onCancel,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title={
         data?.card?.colorCardName
           ? `色卡本 "${data.card.colorCardName}" - 颜色详情`
@@ -68,7 +69,7 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
           </div>
         </>
       )}
-    </Modal>
+    </ResizableModal>
   );
 };
 

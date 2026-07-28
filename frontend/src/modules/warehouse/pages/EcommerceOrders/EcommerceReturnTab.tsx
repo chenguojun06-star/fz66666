@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Form, Input, Select, Button, Space, Tag, App, Popconfirm, Modal, InputNumber } from 'antd';
+import { Form, Input, Select, Button, Space, Tag, App, Popconfirm, InputNumber } from 'antd';
 import { RollbackOutlined, ReloadOutlined, CheckOutlined, CloseOutlined, DollarOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import ResizableModal from '@/components/common/ResizableModal';
 import { getSalesReturnList, approveSalesReturn, rejectSalesReturn, markRefunded, createSalesReturn } from '@/modules/crm/api/salesReturn';
 import type { SalesReturn } from '@/modules/crm/types/salesReturn';
 import { formatMoney } from '@/utils/format';
@@ -185,7 +186,7 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
         if (record.returnStatus === 'APPROVED') {
           return <Button type="link" size="small" icon={<DollarOutlined />} onClick={() => handleRefund(record.id)}>标记退款</Button>;
         }
-        return <span style={{ color: '#999' }}>-</span>;
+        return <span style={{ color: 'var(--color-gray-label)' }}>-</span>;
       },
     },
   ];
@@ -234,7 +235,7 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
         }}
       />
 
-      <Modal
+      <ResizableModal
         title={`发起退货 - ${selectedOrder?.orderNo || ''}`}
         open={createOpen}
         onCancel={() => setCreateOpen(false)}
@@ -256,7 +257,7 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
             <Input.TextArea rows={1} placeholder="备注（可选）" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

@@ -165,7 +165,7 @@ export default function SystemIssueBoard() {
           <Text strong style={{ wordBreak: 'break-all' }}>{r.message}</Text>
           <Text type="secondary" style={{ fontSize: 14, wordBreak: 'break-all' }}>{r.url}</Text>
           {r.stack && (
-            <pre style={{ fontSize: 14, color: '#888', margin: 0, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            <pre style={{ fontSize: 14, color: 'var(--color-text-muted)', margin: 0, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
               {r.stack.slice(0, 400)}
             </pre>
           )}
@@ -190,7 +190,7 @@ export default function SystemIssueBoard() {
               <BugOutlined style={{ fontSize: 22, color: errCount > 0 ? 'var(--color-danger)' : '#aaa' }} />
               <div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: errCount > 0 ? 'var(--color-danger)' : '#aaa' }}>{errCount}</div>
-                <div style={{ fontSize: 14, color: '#888' }}>紧急问题</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>紧急问题</div>
               </div>
             </Space>
           </Card>
@@ -201,7 +201,7 @@ export default function SystemIssueBoard() {
               <WarningOutlined style={{ fontSize: 22, color: warnCount > 0 ? 'var(--color-warning)' : '#aaa' }} />
               <div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: warnCount > 0 ? 'var(--color-warning)' : '#aaa' }}>{warnCount}</div>
-                <div style={{ fontSize: 14, color: '#888' }}>警告问题</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>警告问题</div>
               </div>
             </Space>
           </Card>
@@ -212,7 +212,7 @@ export default function SystemIssueBoard() {
               <CheckCircleOutlined style={{ fontSize: 22, color: infoCount > 0 ? 'var(--color-primary)' : '#aaa' }} />
               <div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)' }}>{infoCount}</div>
-                <div style={{ fontSize: 14, color: '#888' }}>提示信息</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>提示信息</div>
               </div>
             </Space>
           </Card>

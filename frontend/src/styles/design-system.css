@@ -68,6 +68,18 @@
   --color-accent-emerald: #10b981;
   --color-error: #f5222d;
 
+  /* 高频硬编码色补充（值与原色值完全一致，避免视觉变化） */
+  --color-black: #000000;          /* 纯黑 - SVG/打印/强调 */
+  --color-text-muted: #888888;     /* 静音灰 - 辅助文字 */
+  --color-gray-label: #999999;     /* 标签灰 - 标签/备注 */
+  --color-gray-dark: #666666;      /* 深灰 - 次级文字 */
+  --color-gray-700: #595959;       /* 中深灰 */
+  --color-gray-800: #333333;       /* 深灰 */
+  --color-bg-dark: #1a1d24;        /* 深色背景 - 暗色面板/侧栏 */
+  --color-accent-neon: #39ff14;    /* 霓虹绿 - 情报中心/状态高亮 */
+  --color-accent-cyan-bright: #00e5ff; /* 亮青 - 图表/可视化 */
+  --color-warning-deep: #f7a600;   /* 深黄 - 警告/警示强调 */
+
   /* 玻璃拟态 */
   --glass-bg: rgba(255, 255, 255, 0.75);
   --glass-border: rgba(255, 255, 255, 0.5);

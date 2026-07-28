@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Empty, InputNumber, Select, Space, Tag } from 'antd';
+import { WarningOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import type { OrderLine } from '../types';
 
@@ -291,7 +292,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
             <span>正在查询该款式的在途、库存、销售欠数...</span>
           ) : summary ? (
             <span>
-              ⚠️ 该款式当前：
+              <WarningOutlined /> 该款式当前：
               {summary.inProduction > 0 && <strong style={{ fontSize: 15 }}>在途 {summary.inProduction}</strong>}
               {summary.stock > 0 && <strong style={{ fontSize: 15, marginLeft: 8 }}>库存 {summary.stock}</strong>}
               {summary.pendingSales > 0 && <strong style={{ fontSize: 15, marginLeft: 8, color: 'var(--color-error)' }}>欠数 {summary.pendingSales}</strong>}

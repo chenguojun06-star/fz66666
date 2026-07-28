@@ -415,7 +415,7 @@
 :root[data-theme="dark"] .adviceActionBtnPrimary {
   background: rgba(0, 229, 255, 0.1);
   border-color: rgba(0, 229, 255, 0.25);
-  color: #00e5ff;
+  color: var(--color-accent-cyan-bright);
 }
 :root[data-theme="dark"] .adviceActionBtnPrimary:hover {
   background: rgba(0, 229, 255, 0.18);

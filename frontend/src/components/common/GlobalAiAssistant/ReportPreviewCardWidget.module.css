@@ -73,7 +73,7 @@
 
 .kpiUnit {
   font-size: 13px;
-  color: #595959;
+  color: var(--color-gray-700);
   margin-left: 2px;
 }
 
@@ -99,7 +99,7 @@
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 13px;
-  color: #595959;
+  color: var(--color-gray-700);
 }
 
 .distChip strong {
@@ -183,7 +183,7 @@
 
 .riskLabel {
   font-size: 12px;
-  color: #595959;
+  color: var(--color-gray-700);
   margin-top: 2px;
 }
 

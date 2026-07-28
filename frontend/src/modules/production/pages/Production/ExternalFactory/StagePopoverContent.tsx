@@ -86,7 +86,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
           <div style={{ color: 'var(--color-text-tertiary)', marginBottom: 4 }}>子工序明细</div>
           {scanData.subProcesses.map(sp => (
             <div key={sp.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
-              <span style={{ color: '#595959', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{sp.name}</span>
+              <span style={{ color: 'var(--color-gray-700)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{sp.name}</span>
               <span style={{ color: 'var(--color-primary)', fontWeight: 600, flexShrink: 0 }}>{sp.qty}</span>
             </div>
           ))}

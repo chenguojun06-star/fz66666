@@ -268,7 +268,7 @@ const EcSalesRevenue: React.FC = () => {
 
         {/* 按平台分组统计 */}
         {summaryLoading && !summary ? (
-          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: '#888' }}>加载中...</div></Card>
+          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>加载中...</div></Card>
         ) : summary?.platformBreakdown && summary.platformBreakdown.length > 0 ? (
           <Card title="平台销售分布" size="small">
             <Row gutter={[8, 8]}>
@@ -287,7 +287,7 @@ const EcSalesRevenue: React.FC = () => {
                             ¥{formatMoney(item.totalPayAmount)}
                           </Text>
                         </div>
-                        <div style={{ fontSize: 12, color: '#888' }}>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                           {item.totalQuantity.toLocaleString()}件 · 运费¥{formatMoney(item.totalFreight)} · 净¥{formatMoney(item.netRevenue)}
                         </div>
                       </Space>
@@ -298,7 +298,7 @@ const EcSalesRevenue: React.FC = () => {
             </Row>
           </Card>
         ) : summary && !summaryLoading ? (
-          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: '#888' }}>暂无平台销售数据</div></Card>
+          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>暂无平台销售数据</div></Card>
         ) : null}
 
         {/* 筛选栏 */}

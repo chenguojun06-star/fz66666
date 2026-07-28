@@ -70,13 +70,22 @@ export interface ShipmentReconciliation {
   reReviewReason?: string;
   createTime?: string;
   updateTime?: string;
-  // Phase 6: 成本利润字段
-  totalMaterialCost?: number;     // 总物料成本
-  totalProcessCost?: number;      // 总工序成本
-  totalCost?: number;             // 总成本
-  profit?: number;                // 利润
+  // Phase 6: 成本利润字段（P0 修复：字段名与后端 ShipmentReconciliation entity 对齐）
+  scanCost?: number;              // 工序成本（后端字段名 scanCost）
+  materialCost?: number;          // 物料成本（后端字段名 materialCost）
+  totalCost?: number;             // 总成本 = scanCost + materialCost
+  profitAmount?: number;          // 利润（后端字段名 profitAmount）
   profitMargin?: number;          // 利润率（百分比）
-  costBreakdown?: string;         // 成本明细JSON
+  /** 是否本厂(0:加工厂, 1:本厂) — P1 修复：与后端 isOwnFactory 对齐 */
+  isOwnFactory?: number;
+  // 以下字段保留向后兼容（旧代码可能仍引用 totalMaterialCost/totalProcessCost/profit）
+  /** @deprecated 请使用 materialCost */
+  totalMaterialCost?: number;
+  /** @deprecated 请使用 scanCost */
+  totalProcessCost?: number;
+  /** @deprecated 请使用 profitAmount */
+  profit?: number;
+  costBreakdown?: string;         // 成本明细JSON（后端动态计算，非 entity 字段）
 }
 
 export interface DeductionItem {
@@ -174,6 +183,7 @@ export interface OrderProfitMaterialItem {
   unit?: string;
   purchaseQuantity?: number;
   arrivedQuantity?: number;
+  usedQuantity?: number;
   supplierName?: string;
   unitPrice?: number;
   totalAmount?: number;
@@ -219,18 +229,48 @@ export interface PayrollOperatorProcessSummaryRow {
 
 export interface PayrollSettlement extends Record<string, unknown> {
   id?: string;
-  operatorId?: string;
-  operatorName?: string;
+  /** P0 修复：与后端 PayrollSettlement entity 字段对齐 */
+  settlementNo?: string;
+  orderId?: string;
+  orderNo?: string;
+  styleId?: string;
+  styleNo?: string;
+  styleName?: string;
+  startTime?: string;
+  endTime?: string;
+  totalQuantity?: number;
   totalAmount?: number;
   paidAmount?: number;
   remainingAmount?: number;
   deductionAmount?: number;
   advanceAmount?: number;
   paymentStatus?: 'unpaid' | 'partially_paid' | 'fully_paid';
-  totalQuantity?: number;
-  recordCount?: number;
-  orderCount?: number;
+  /** 审批状态: pending/approved/cancelled（P0 修复：原前端缺失） */
+  status?: 'pending' | 'approved' | 'cancelled';
   remark?: string;
+  // 操作人字段（与后端 entity 对齐）
+  auditorId?: string;
+  auditorName?: string;
+  auditTime?: string;
+  confirmerId?: string;
+  confirmerName?: string;
+  confirmTime?: string;
+  createBy?: string;
+  updateBy?: string;
+  tenantId?: number;
+  createTime?: string;
+  updateTime?: string;
+  // 以下字段保留向后兼容（聚合 DTO 使用，非 entity 字段）
+  /** @deprecated 聚合 DTO 字段，entity 无此字段 */
+  operatorId?: string;
+  /** @deprecated 聚合 DTO 字段，entity 无此字段 */
+  operatorName?: string;
+  /** @deprecated 聚合 DTO 字段，entity 无此字段 */
+  recordCount?: number;
+  /** @deprecated 聚合 DTO 字段，entity 无此字段 */
+  orderCount?: number;
+  /** @deprecated 请使用 auditTime */
   approvalTime?: string;
+  /** @deprecated 请使用 confirmTime */
   paymentTime?: string;
 }

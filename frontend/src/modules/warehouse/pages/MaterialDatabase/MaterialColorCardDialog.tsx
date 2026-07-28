@@ -1,8 +1,9 @@
 import React from 'react';
-import { Col, Form, Input, Modal, Row, Select } from 'antd';
+import { Col, Form, Input, Row, Select } from 'antd';
 import type { FormInstance } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { MaterialColorCard } from './types';
 import { MATERIAL_TYPE_OPTIONS } from './types';
 
@@ -22,7 +23,7 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
   open, currentCard, cardForm, coverImageFiles, setCoverImageFiles, uploadCardImage, onCancel, onOk,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title={currentCard?.id ? '编辑物料色卡' : '新建物料色卡'}
       open={open}
       onCancel={onCancel}
@@ -116,7 +117,7 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
           <Input.TextArea placeholder="备注信息" autoSize={{ minRows: 2, maxRows: 4 }} />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

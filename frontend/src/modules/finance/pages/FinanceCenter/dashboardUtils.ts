@@ -83,7 +83,7 @@ export const generateTrendData = (
   const end = dayjs(currentEnd);
   const dates: string[] = [];
   const amounts: number[] = [];
-  const inboundQuantities: number[] = [];
+  const warehousedQuantities: number[] = [];
   const orderCounts: number[] = [];
   const defectQuantities: number[] = [];
 
@@ -93,7 +93,7 @@ export const generateTrendData = (
       dates.push(label);
       const hourRows = rows.filter(r => dayjs(r.settlementDate || r.createTime).hour() === h);
       amounts.push(hourRows.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0));
-      inboundQuantities.push(hourRows.reduce((s, r) => s + (Number(r.inboundQuantity) || 0), 0));
+      warehousedQuantities.push(hourRows.reduce((s, r) => s + (Number(r.warehousedQuantity) || 0), 0));
       orderCounts.push(hourRows.length);
       defectQuantities.push(hourRows.reduce((s, r) => s + (Number(r.defectQuantity) || 0), 0));
     }
@@ -104,7 +104,7 @@ export const generateTrendData = (
       dates.push(label);
       const dayRows = rows.filter(r => dayjs(r.settlementDate || r.createTime).isSame(cur, 'day'));
       amounts.push(dayRows.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0));
-      inboundQuantities.push(dayRows.reduce((s, r) => s + (Number(r.inboundQuantity) || 0), 0));
+      warehousedQuantities.push(dayRows.reduce((s, r) => s + (Number(r.warehousedQuantity) || 0), 0));
       orderCounts.push(dayRows.length);
       defectQuantities.push(dayRows.reduce((s, r) => s + (Number(r.defectQuantity) || 0), 0));
       cur = cur.add(1, 'day');
@@ -117,7 +117,7 @@ export const generateTrendData = (
       dates.push(label);
       const weekRows = rows.filter(r => { const d = dayjs(r.settlementDate || r.createTime); return (d.isAfter(cur) || d.isSame(cur, 'day')) && (d.isBefore(weekEnd) || d.isSame(weekEnd, 'day')); });
       amounts.push(weekRows.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0));
-      inboundQuantities.push(weekRows.reduce((s, r) => s + (Number(r.inboundQuantity) || 0), 0));
+      warehousedQuantities.push(weekRows.reduce((s, r) => s + (Number(r.warehousedQuantity) || 0), 0));
       orderCounts.push(weekRows.length);
       defectQuantities.push(weekRows.reduce((s, r) => s + (Number(r.defectQuantity) || 0), 0));
       cur = cur.add(1, 'week');
@@ -129,12 +129,12 @@ export const generateTrendData = (
       dates.push(label);
       const monthRows = rows.filter(r => dayjs(r.settlementDate || r.createTime).isSame(cur, 'month'));
       amounts.push(monthRows.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0));
-      inboundQuantities.push(monthRows.reduce((s, r) => s + (Number(r.inboundQuantity) || 0), 0));
+      warehousedQuantities.push(monthRows.reduce((s, r) => s + (Number(r.warehousedQuantity) || 0), 0));
       orderCounts.push(monthRows.length);
       defectQuantities.push(monthRows.reduce((s, r) => s + (Number(r.defectQuantity) || 0), 0));
       cur = cur.add(1, 'month');
     }
   }
 
-  return { dates, amounts, inboundQuantities, orderCounts, defectQuantities };
+  return { dates, amounts, warehousedQuantities, orderCounts, defectQuantities };
 };

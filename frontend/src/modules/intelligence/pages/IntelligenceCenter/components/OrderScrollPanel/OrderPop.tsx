@@ -145,8 +145,8 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           </div>
           {(intel.riskItem.requiredDailyOutput || intel.riskItem.currentDailyOutput) ? (
             <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 14 }}>
-              <span style={{ color: '#7aaec8' }}>日产需 <b style={{ color: '#f7a600' }}>{intel.riskItem.requiredDailyOutput}</b> 件</span>
-              <span style={{ color: '#7aaec8' }}>当前 <b style={{ color: '#00e5ff' }}>{intel.riskItem.currentDailyOutput}</b> 件</span>
+              <span style={{ color: '#7aaec8' }}>日产需 <b style={{ color: 'var(--color-warning-deep)' }}>{intel.riskItem.requiredDailyOutput}</b> 件</span>
+              <span style={{ color: '#7aaec8' }}>当前 <b style={{ color: 'var(--color-accent-cyan-bright)' }}>{intel.riskItem.currentDailyOutput}</b> 件</span>
             </div>
           ) : null}
         </div>
@@ -156,7 +156,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         <div style={{ marginBottom: 6, padding: '6px 8px',
           background: 'rgba(255,200,0,0.04)', borderRadius: 5,
           border: '1px solid rgba(255,200,0,0.12)' }}>
-          <div style={{ fontSize: 14, color: '#f7a600', fontWeight: 700, marginBottom: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-warning-deep)', fontWeight: 700, marginBottom: 4 }}>
              异常行为 ({intel.anomalies.length})
           </div>
           {intel.anomalies.map((a, i) => (

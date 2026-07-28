@@ -44,13 +44,13 @@ const CardHeader: React.FC<CardHeaderProps> = ({
       <span style={{ fontSize: 14, fontWeight: 700, color: '#1f1f1f' }}>款式智能档案卡</span>
       {/* 关键摘要 */}
       <Tag color={deliveryMeta.color} style={{ margin: 0 }}>{deliveryMeta.label}</Tag>
-      <span style={{ fontSize: 14, color: '#595959' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>
+      <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>
       {doneCount < stageTotal ? (
-        <span style={{ fontSize: 14, color: '#595959' }}>剩 <b style={{ color: 'var(--color-danger)' }}>{stageTotal - doneCount}</b> 环节未完成</span>
+        <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>剩 <b style={{ color: 'var(--color-danger)' }}>{stageTotal - doneCount}</b> 环节未完成</span>
       ) : (
         <span style={{ fontSize: 14, color: 'var(--color-success)' }}>✓ {stageTotal} 环节已全部完成</span>
       )}
-      <span style={{ fontSize: 14, color: '#595959' }}>订单 <b style={{ color: 'var(--color-accent-purple)' }}>{orderCount} 单</b></span>
+      <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>订单 <b style={{ color: 'var(--color-accent-purple)' }}>{orderCount} 单</b></span>
       {/* 难度徽章 */}
       {activeDifficulty && (
         <Tooltip title={`难度分 ${activeDifficulty.difficultyScore}/10，定价倍率 ×${activeDifficulty.pricingMultiplier}`}>

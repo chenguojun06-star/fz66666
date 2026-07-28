@@ -104,7 +104,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
                 </Form.Item>
               </Form>
               <div style={actionBarStyle}>
-                <Button danger type="default" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: 'var(--color-bg-base)', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>确认退回</Button>
+                <Button danger ghost loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button>
               </div>
             </div>
             <div style={directCardStyle}><PatternSummary record={directRow} readOnly {...summaryProps} /></div>

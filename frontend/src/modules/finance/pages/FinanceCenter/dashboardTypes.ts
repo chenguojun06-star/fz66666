@@ -3,8 +3,8 @@ export type { Factory } from '@/types/system';
 export interface StatCardData {
   totalAmount: number;
   totalAmountChange: number;
-  inboundQuantity: number;
-  inboundQuantityChange: number;
+  warehousedQuantity: number;
+  warehousedQuantityChange: number;
   orderCount: number;
   orderCountChange: number;
   defectQuantity: number;
@@ -26,7 +26,7 @@ export interface RankData {
 export interface SettlementRow {
   orderNo: string;
   factoryName: string;
-  inboundQuantity: number;
+  warehousedQuantity: number;
   defectQuantity: number;
   totalAmount: number;
   materialCost: number;
@@ -41,14 +41,14 @@ export type TimeRangeType = 'day' | 'week' | 'month' | 'year' | 'custom';
 export interface EChartData {
   dates: string[];
   amounts: number[];
-  inboundQuantities: number[];
+  warehousedQuantities: number[];
   orderCounts: number[];
   defectQuantities: number[];
 }
 
 export const DEFAULT_STAT_DATA: StatCardData = {
   totalAmount: 0, totalAmountChange: 0,
-  inboundQuantity: 0, inboundQuantityChange: 0,
+  warehousedQuantity: 0, warehousedQuantityChange: 0,
   orderCount: 0, orderCountChange: 0,
   defectQuantity: 0, defectQuantityChange: 0,
   profitRate: 0, profitRateChange: 0,
@@ -56,5 +56,5 @@ export const DEFAULT_STAT_DATA: StatCardData = {
 };
 
 export const DEFAULT_CHART_DATA: EChartData = {
-  dates: [], amounts: [], inboundQuantities: [], orderCounts: [], defectQuantities: [],
+  dates: [], amounts: [], warehousedQuantities: [], orderCounts: [], defectQuantities: [],
 };

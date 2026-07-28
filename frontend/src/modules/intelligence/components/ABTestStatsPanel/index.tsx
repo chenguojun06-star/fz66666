@@ -44,7 +44,7 @@ const ABTestStatsPanel: React.FC = () => {
   return (
     <Spin spinning={loading}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, color: '#888' }}>按场景对比近 {days} 天数据</span>
+        <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>按场景对比近 {days} 天数据</span>
         <Select id="abTestDays" value={days} onChange={setDays} style={{ width: 100 }}
                 options={[{ value: 7, label: '7 天' }, { value: 14, label: '14 天' }, { value: 30, label: '30 天' }]} />
       </div>
@@ -84,7 +84,7 @@ const ABTestStatsPanel: React.FC = () => {
 function Metric({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, lineHeight: '22px' }}>
-      <span style={{ color: '#888' }}>{label}</span>
+      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
       <span style={{ color: color ?? '#d4d4d8', fontWeight: 500 }}>{value}</span>
     </div>
   );

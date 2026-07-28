@@ -1,8 +1,9 @@
 import React from 'react';
-import { Col, Form, Input, Modal, Row, Select } from 'antd';
+import { Col, Form, Input, Row, Select } from 'antd';
 import type { FormInstance } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { ColorCard, ImageUploadFile, SupplierSelectOption } from '../types';
 import { MATERIAL_TYPE_OPTIONS } from '../types';
 
@@ -24,7 +25,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({
   uploadImage, onCancel, onOk,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title={currentCard?.id ? '编辑色卡本' : '新建色卡本'}
       open={open}
       onCancel={onCancel}
@@ -123,7 +124,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({
           <Input.TextArea placeholder="备注信息" autoSize={{ minRows: 2, maxRows: 4 }} />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

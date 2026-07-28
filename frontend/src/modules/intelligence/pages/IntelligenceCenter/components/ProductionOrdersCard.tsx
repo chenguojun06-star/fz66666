@@ -13,7 +13,7 @@ const ProductionOrdersCard: React.FC<any> = ({
     <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['productionOrders'] ? 0 : 1200, transition: 'max-height 0.28s ease' }}>
     {/* 主数字 + 总件数 */}
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-      <span style={{ color: '#f7a600', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+      <span style={{ color: 'var(--color-warning-deep)', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
         <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
       </span>
       <span style={{ color: '#7dacc4', fontSize: 14, fontWeight: 600 }}>单生产中</span>
@@ -31,7 +31,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.1)')}
       >
         <div style={{ color: '#b8d4e8', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日下单</div>
-        <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span style={{ color: '#f7c44a', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span></div>
+        <div style={{ color: 'var(--color-warning-deep)', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span style={{ color: '#f7c44a', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span></div>
         <div style={{ color: '#f7c44a', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOrderQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>件</span></div>
       </div>
       <div
@@ -41,7 +41,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.08)')}
       >
         <div style={{ color: '#b8d4e8', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日入库</div>
-        <div style={{ color: '#39ff14', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span style={{ color: '#7ddd5a', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
+        <div style={{ color: 'var(--color-accent-neon)', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span style={{ color: '#7ddd5a', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
         <div style={{ color: '#7ddd5a', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayInboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>单</span></div>
       </div>
       <div
@@ -51,7 +51,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
       >
         <div style={{ color: '#b8d4e8', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日出库</div>
-        <div style={{ color: '#00e5ff', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
+        <div style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
         <div style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOutboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>单</span></div>
       </div>
     </div>
@@ -76,8 +76,8 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.25)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.12)')}
       >
-        <div style={{ color: '#f7a600', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>高风险</div>
-        <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+        <div style={{ color: 'var(--color-warning-deep)', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>高风险</div>
+        <div style={{ color: 'var(--color-warning-deep)', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
           {overdueRisk.highRisk.length}<span style={{ color: '#f7c44a', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span>
         </div>
         <div style={{ color: '#f7c44a', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{orderStats.highRiskQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>件</span></div>

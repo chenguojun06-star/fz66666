@@ -1,8 +1,9 @@
 import React from 'react';
-import { Modal, Form, Input, Select, Switch, Row, Col, Tag } from 'antd';
+import { Form, Input, Select, Switch, Row, Col, Tag } from 'antd';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import { FIELD_TYPE_OPTIONS } from '@/services/system/fieldConfigApi';
 import type { FormInstance } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 
 interface EditFieldModalProps {
   open: boolean;
@@ -22,7 +23,7 @@ const EditFieldModal: React.FC<EditFieldModalProps> = ({
   const fieldType = Form.useWatch('fieldType', form);
 
   return (
-    <Modal
+    <ResizableModal
       title={editing?.fieldKey ? '编辑字段' : '新增自定义字段'}
       open={open}
       onCancel={onCancel}
@@ -79,7 +80,7 @@ const EditFieldModal: React.FC<EditFieldModalProps> = ({
           <Input.TextArea rows={2} placeholder="可选，字段用途说明" />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

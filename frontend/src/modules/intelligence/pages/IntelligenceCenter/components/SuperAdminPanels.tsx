@@ -23,7 +23,7 @@ const SuperAdminPanels: React.FC<SuperAdminPanelsProps> = ({ collapsedPanels, to
       </div>
       <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
         <div style={{ padding: '0 24px 20px' }}>
-          <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: '#888' }}>加载中…</div>}>
+          <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: 'var(--color-text-muted)' }}>加载中…</div>}>
             <AgentGraphPanel />
           </Suspense>
         </div>
@@ -40,7 +40,7 @@ const SuperAdminPanels: React.FC<SuperAdminPanelsProps> = ({ collapsedPanels, to
       </div>
       <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
         <div style={{ padding: '0 24px 20px' }}>
-          <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: '#888' }}>加载中…</div>}>
+          <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: 'var(--color-text-muted)' }}>加载中…</div>}>
             <ABTestStatsPanel />
           </Suspense>
         </div>

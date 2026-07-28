@@ -206,7 +206,7 @@ const CuttingSizeDetail: React.FC<{ items: Array<{ size: string; quantity: numbe
     gap: 8,
     flexWrap: 'wrap'
   }}>
-    <span style={{ color: '#595959', fontWeight: 600 }}>裁剪数明细：</span>
+    <span style={{ color: 'var(--color-gray-700)', fontWeight: 600 }}>裁剪数明细：</span>
     {items.map((item) => (
       <span key={item.size} style={{
         color: 'var(--color-success)',

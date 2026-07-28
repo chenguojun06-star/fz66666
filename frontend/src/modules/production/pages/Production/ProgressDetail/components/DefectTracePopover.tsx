@@ -88,7 +88,7 @@ const DefectTracePopover: React.FC<{
       </div>
 
       {/* 总览 */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 14, color: '#595959' }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 14, color: 'var(--color-gray-700)' }}>
         <span>次品 <b style={{ color: 'var(--color-danger)' }}>{data.totalDefects}</b> 次</span>
         <span>总扫码 <b>{data.totalScans}</b> 次</span>
       </div>

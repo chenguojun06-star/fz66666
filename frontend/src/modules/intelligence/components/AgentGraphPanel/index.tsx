@@ -67,7 +67,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
                 fontWeight: 600,
                 border: `1.5px solid ${done ? color : active ? color : 'rgba(255,255,255,0.15)'}`,
                 background: done ? `${color}22` : active ? `${color}11` : 'transparent',
-                color: done ? color : active ? color : '#666',
+                color: done ? color : active ? color : 'var(--color-gray-dark)',
                 transition: 'all 0.3s',
                 whiteSpace: 'nowrap',
                 position: 'relative',
@@ -273,7 +273,7 @@ const AgentGraphPanel: React.FC = () => {
                 <BranchesOutlined style={{ color: '#a78bfa' }} />
                 <RouteTag route={result.route} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>置信度</div>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>置信度</div>
                   <Progress
                     percent={result.confidenceScore}
                     strokeColor={confColor(result.confidenceScore)}
@@ -288,7 +288,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 节点轨迹 */}
               {result.nodeTrace && result.nodeTrace.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, color: '#888', marginRight: 6 }}>执行路径:</span>
+                  <span style={{ fontSize: 14, color: 'var(--color-text-muted)', marginRight: 6 }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => {
                     const [label] = NODE_LABELS[n] ?? ['未知', '#999'];
                     return <Tag key={i} style={{ fontSize: 14 }}>{label}</Tag>;
@@ -344,7 +344,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 反馈评分 */}
               {result.executionId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 14, color: '#888' }}>结果评分:</span>
+                  <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>结果评分:</span>
                   <Rate
                     count={5}
                     style={{ fontSize: 14 }}

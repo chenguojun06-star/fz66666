@@ -19,7 +19,7 @@ const ShipHistoryList: React.FC<ShipHistoryListProps> = ({ shipHistory }) => {
       }}>
         {shipHistory.map((rec, i) => (
           <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 14, borderBottom: i < shipHistory.length - 1 ? '1px solid var(--color-bg-subtle)' : 'none' }}>
-            <span style={{ color: '#888', minWidth: 80 }}>
+            <span style={{ color: 'var(--color-text-muted)', minWidth: 80 }}>
               {rec.shipTime ? dayjs(rec.shipTime).format('MM-DD HH:mm') : '-'}
             </span>
             <span><b>{rec.shipQuantity ?? '-'}</b> 件</span>

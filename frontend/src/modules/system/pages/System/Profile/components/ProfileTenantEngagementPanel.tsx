@@ -52,7 +52,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'flex-start' }}>
-              <span style={{ color: '#888', fontSize: 14, whiteSpace: 'nowrap' }}>工厂码</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 14, whiteSpace: 'nowrap' }}>工厂码</span>
               <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 16, fontWeight: 700 }}>
                 {tenantInfo.tenantCode}
               </Typography.Text>

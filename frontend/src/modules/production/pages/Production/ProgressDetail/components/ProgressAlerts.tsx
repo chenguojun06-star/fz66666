@@ -50,7 +50,7 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
               {bottleneckItems.slice(0, 4).map((it, idx) => (
                 <li key={idx}>
                   <b>{it.stageName}</b>
-                  {it.backlog > 0 && <span style={{ marginLeft: 6, color: '#888' }}>积压 {it.backlog} 件</span>}
+                  {it.backlog > 0 && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)' }}>积压 {it.backlog} 件</span>}
                   {it.suggestion && <span style={{ marginLeft: 6, color: 'var(--color-text-secondary)' }}>{it.suggestion}</span>}
                 </li>
               ))}

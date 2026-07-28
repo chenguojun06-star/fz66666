@@ -144,7 +144,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         radius: '55%',
         center: ['50%', (chart.series ?? []).length > 1 ? '58%' : '52%'],
         splitArea: { areaStyle: { color: ['var(--color-bg-base)', '#f5f7ff'] } },
-        axisName: { fontSize: 14, color: '#595959' },
+        axisName: { fontSize: 14, color: 'var(--color-gray-700)' },
       },
       series: [{
         type: 'radar',

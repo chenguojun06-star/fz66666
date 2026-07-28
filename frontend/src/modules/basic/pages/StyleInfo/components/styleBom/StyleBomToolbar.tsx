@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Dropdown, Modal, Select, Space, Spin, Upload, message } from 'antd';
+import { Button, Dropdown, Select, Space, Spin, Upload, message } from 'antd';
 import { DownOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
+import ResizableModal from '@/components/common/ResizableModal';
 
 interface AiBomRecognizedItem {
   id: string;
@@ -211,7 +212,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         />
       </Space>
 
-      <Modal
+      <ResizableModal
         title="AI识别BOM清单"
         open={ocrModalOpen}
         onCancel={() => { setOcrModalOpen(false); setOcrFile(null); }}
@@ -253,7 +254,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
             )}
           </div>
         </Spin>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

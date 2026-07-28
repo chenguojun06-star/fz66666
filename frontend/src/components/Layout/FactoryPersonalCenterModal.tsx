@@ -226,19 +226,19 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                     </Avatar>
                     <div>
                       <div style={{ fontSize: 16, fontWeight: 600 }}>{userDisplayName}</div>
-                      <div style={{ color: '#888', marginTop: 4 }}>
+                      <div style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>
                         {(user as any)?.factoryName || '外发工厂'}
                       </div>
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', rowGap: 12 }}>
-                    <span style={{ color: '#888' }}>账号</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>账号</span>
                     <span>{(user as any)?.username || '-'}</span>
-                    <span style={{ color: '#888' }}>手机号</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>手机号</span>
                     <span>{(user as any)?.phone || '-'}</span>
-                    <span style={{ color: '#888' }}>角色</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>角色</span>
                     <span>{(user as any)?.roleName || '-'}</span>
-                    <span style={{ color: '#888' }}>所属工厂</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>所属工厂</span>
                     <span>{(user as any)?.factoryName || '-'}</span>
                   </div>
                 </div>

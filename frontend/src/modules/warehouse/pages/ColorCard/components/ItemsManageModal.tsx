@@ -1,8 +1,9 @@
 import React from 'react';
-import { Button, Card, Image, Input, InputNumber, Modal, Row, Col, Space, Tag, message as antdMessage } from 'antd';
+import { Button, Card, Image, Input, InputNumber, Row, Col, Space, Tag, message as antdMessage } from 'antd';
 import { CameraOutlined, FileImageOutlined, PlusOutlined } from '@ant-design/icons';
 import type { RefObject } from 'react';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { ColorCardItem } from '../types';
 
 // ===== 颜色管理弹窗（从 index.tsx 抽取） =====
@@ -26,7 +27,7 @@ const ItemsManageModal: React.FC<ItemsManageModalProps> = ({
   uploadImage,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title={<Space><FileImageOutlined /> {currentCardName} - 颜色管理</Space>}
       open={open}
       onCancel={onCancel}
@@ -39,11 +40,11 @@ const ItemsManageModal: React.FC<ItemsManageModalProps> = ({
       <Space style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={onAddEmptyItem}>+ 添加颜色</Button>
         <Button icon={<CameraOutlined />} onClick={onOpenRecognize}>拍照识别</Button>
-        <span style={{ color: '#888' }}>共 {currentItems.length} 条 | 下一个编号：{nextColorNoRef.current}</span>
+        <span style={{ color: 'var(--color-text-muted)' }}>共 {currentItems.length} 条 | 下一个编号：{nextColorNoRef.current}</span>
       </Space>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 500, overflowY: 'auto' }}>
         {currentItems.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-gray-label)' }}>
             暂无颜色，点击"添加颜色"或"拍照识别"添加
           </div>
         )}
@@ -100,7 +101,7 @@ const ItemsManageModal: React.FC<ItemsManageModalProps> = ({
           </Card>
         ))}
       </div>
-    </Modal>
+    </ResizableModal>
   );
 };
 

@@ -260,7 +260,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       size={80}
                     />
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
-                      <div style={{ fontWeight: 500, color: '#595959' }}>工人扫码领取/完成</div>
+                      <div style={{ fontWeight: 500, color: 'var(--color-gray-700)' }}>工人扫码领取/完成</div>
                       <div>样衣单号: {sample.sampleSnapshot.id}</div>
                     </div>
                   </div>

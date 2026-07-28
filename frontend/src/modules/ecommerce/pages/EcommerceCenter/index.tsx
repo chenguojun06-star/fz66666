@@ -128,15 +128,15 @@ const EcommerceCenter: React.FC = () => {
         {isAvailable && isConfigured && statsData ? (
           <Row gutter={8}>
             <Col span={8}>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日订单</div>
+              <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>今日订单</div>
               <Text strong style={{ color: 'var(--color-primary)', fontSize: 20 }}>{statsData.todayOrders}</Text>
             </Col>
             <Col span={8}>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日销售</div>
+              <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>今日销售</div>
               <Text strong style={{ color: 'var(--color-success)', fontSize: 20 }}>¥{parseFloat(statsData.todaySales).toFixed(0)}</Text>
             </Col>
             <Col span={8}>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>待发货</div>
+              <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>待发货</div>
               <Text strong style={{ color: statsData.pendingShip > 0 ? 'var(--color-warning)' : '#999', fontSize: 20 }}>{statsData.pendingShip}</Text>
             </Col>
           </Row>
@@ -185,22 +185,22 @@ const EcommerceCenter: React.FC = () => {
     <div style={{ padding: '0 8px' }}>
       <Row gutter={16} style={{ marginBottom: 12, marginTop: 8 }}>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
               <Statistic title="已对接平台" value={globalStats.connected} suffix={`/ ${PLATFORM_LIST.length}`} prefix={<ApiOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-success-bg) 0%, #fcffe6 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
               <Statistic title="今日总订单" value={globalStats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-success)' }} />} styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
               <Statistic title="今日销售额" value={globalStats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: 'var(--color-warning)' }} />} suffix="元" styles={{ content: { color: 'var(--color-warning)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: globalStats.pendingShip > 0 ? 'linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: globalStats.pendingShip > 0 ? 'var(--status-error-bg)' : 'var(--color-bg-subtle)', borderRadius: 12 }}>
               <Statistic title="待发货" value={globalStats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: globalStats.pendingShip > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' }} />} styles={{ content: { color: globalStats.pendingShip > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' } }} />
             </Card>
           </Col>

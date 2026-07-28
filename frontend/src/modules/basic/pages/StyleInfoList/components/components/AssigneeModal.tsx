@@ -1,6 +1,7 @@
 import React from 'react';
-import { Form, Input, Modal } from 'antd';
+import { Form, Input } from 'antd';
 import type { FormInstance } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { SubProcessRow } from '../SampleProcessList.helpers';
 
 // 指派人员弹窗（从 SampleProcessList.tsx 拆分而来）
@@ -16,7 +17,7 @@ export interface AssigneeModalProps {
 
 const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loading, form, onCancel, onOk }) => {
   return (
-    <Modal
+    <ResizableModal
       title={`指派 — ${assigningRow?.name || ''}`}
       open={open}
       onCancel={onCancel}
@@ -30,7 +31,7 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
           <Input placeholder="输入人员姓名" />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

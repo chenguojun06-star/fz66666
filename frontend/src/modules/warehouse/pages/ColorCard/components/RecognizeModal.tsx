@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Image, Modal } from 'antd';
+import { Button, Image } from 'antd';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import ResizableModal from '@/components/common/ResizableModal';
 
 // ===== 拍照识别弹窗（从 index.tsx 抽取） =====
 interface RecognizeModalProps {
@@ -16,7 +17,7 @@ const RecognizeModal: React.FC<RecognizeModalProps> = ({
   open, recognizeImage, recognizing, onPickImage, onRunRecognition, onCancel,
 }) => {
   return (
-    <Modal
+    <ResizableModal
       title="拍照识别色卡"
       open={open}
       onCancel={onCancel}
@@ -35,17 +36,17 @@ const RecognizeModal: React.FC<RecognizeModalProps> = ({
         ) : (
           <div style={{ width: 240, height: 240, margin: '0 auto 16px',
             border: '2px dashed var(--color-border-antd)', borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)' }}>
             请选择色卡图片
           </div>
         )}
         <input type="file" accept="image/*" capture="environment" onChange={onPickImage}
           style={{ marginBottom: 12 }} />
-        <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+        <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 8 }}>
           上传后点击"开始识别"，AI 自动提取颜色信息并添加到颜色列表
         </div>
       </div>
-    </Modal>
+    </ResizableModal>
   );
 };
 

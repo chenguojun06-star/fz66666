@@ -78,7 +78,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           alignItems: 'center',
           gap: 8,
           padding: '10px 14px',
-          background: 'linear-gradient(90deg, #F0FFF4 0%, var(--status-warning-bg) 100%)',
+          background: 'var(--status-warning-bg)',
           cursor: 'pointer',
         }}
       >
@@ -135,7 +135,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                 ))}
               </div>
 
-              <div style={{ fontSize: 14, color: '#595959', lineHeight: 1.7, marginBottom: 10 }}>
+              <div style={{ fontSize: 14, color: 'var(--color-gray-700)', lineHeight: 1.7, marginBottom: 10 }}>
                 <div>历史接单：{data.historicalOrderCount || 0} 单 / {data.historicalTotalQuantity || 0} 件</div>
                 <div>建议说明：{data.suggestion || 'AI已结合历史报价、物料成本和工序成本给出建议'}</div>
               </div>

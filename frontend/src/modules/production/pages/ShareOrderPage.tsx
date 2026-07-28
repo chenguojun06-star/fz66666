@@ -152,7 +152,7 @@ const ShareOrderPage: React.FC = () => {
     ? { label: '已逾期', color: '#ff4136' }
     : ai?.riskLevel
       ? { label: RISK_LABEL[ai.riskLevel], color: RISK_COLOR[ai.riskLevel] }
-      : { label: '跟踪中', color: '#00e5ff' };
+      : { label: '跟踪中', color: 'var(--color-accent-cyan-bright)' };
   const shareInfoLabelStyle: React.CSSProperties = { color: '#79a8c7', fontSize: 14 };
   const shareInfoValueStyle: React.CSSProperties = { color: '#dff3ff', fontSize: 14, fontWeight: 600 };
 
@@ -205,7 +205,7 @@ const ShareOrderPage: React.FC = () => {
               { label: '预计交期', value: formatDate(data.plannedEndDate), labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
               {
                 label: '总体进度',
-                value: <span style={{ color: '#00e5ff', fontWeight: 700 }}>{clampProgress(data.productionProgress ?? 0)}%</span>,
+                value: <span style={{ color: 'var(--color-accent-cyan-bright)', fontWeight: 700 }}>{clampProgress(data.productionProgress ?? 0)}%</span>,
                 labelStyle: shareInfoLabelStyle,
                 valueStyle: shareInfoValueStyle,
               },
@@ -283,7 +283,7 @@ const ShareOrderPage: React.FC = () => {
             {data.recentScans.map((s: ScanEntry, i: number) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans!.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: '#39ff14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: 'var(--color-accent-neon)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
 
                   </div>
                   <div>
@@ -291,7 +291,7 @@ const ShareOrderPage: React.FC = () => {
                     <div style={{ fontSize: 14, color: '#7fa7c2' }}>{formatTime(s.scanTime as string | null | undefined)}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#00e5ff' }}>×{s.quantity as React.ReactNode}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-accent-cyan-bright)' }}>×{s.quantity as React.ReactNode}</div>
               </div>
             ))}
           </div>

@@ -185,7 +185,7 @@ const SmartRefundTab: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
             <Statistic
               title="退款申请"
               value={stats?.totalRequests || 0}
@@ -196,7 +196,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
             <Statistic
               title="待处理"
               value={stats?.pendingCount || 0}
@@ -207,7 +207,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-success-bg) 0%, #fcffe6 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
             <Statistic
               title="自动通过"
               value={stats?.autoApprovedCount || 0}
@@ -218,7 +218,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-error-bg)', borderRadius: 12 }}>
             <Statistic
               title="退款总额"
               value={Number(stats?.totalRefundAmount || 0)}

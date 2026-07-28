@@ -23,6 +23,8 @@ export interface BillAggregation {
   status: string;
   settlementMonth?: string;
   remark?: string;
+  /** 关联应付/应收单ID（P0 修复：与后端 BillAggregation.payableId 对齐） */
+  payableId?: string;
   confirmedById?: string;
   confirmedByName?: string;
   confirmedAt?: string;
@@ -76,6 +78,9 @@ export const BILL_CATEGORY_MAP: Record<string, { text: string; color: string }> 
   EXPENSE: { text: '费用', color: 'magenta' },
   SHIPMENT: { text: '成品发货', color: 'geekblue' },
   DEDUCTION: { text: '扣款', color: 'volcano' },
+  // P1 修复：补齐盘点分类枚举，与后端 BillConstants.CATEGORY_INVENTORY_PROFIT/LOSS 对齐
+  INVENTORY_PROFIT: { text: '盘盈', color: 'lime' },
+  INVENTORY_LOSS: { text: '盘亏', color: 'red' },
 };
 
 export const BILL_STATUS_MAP: Record<string, { text: string; color: string }> = {
@@ -102,6 +107,9 @@ export const BILL_CATEGORY_OPTIONS = [
   // P2-2 修复：补充 SHIPMENT（成品发货）选项，与 BILL_CATEGORY_MAP 对齐
   { label: '成品发货', value: 'SHIPMENT' },
   { label: '扣款', value: 'DEDUCTION' },
+  // P1 修复：补齐盘点分类选项
+  { label: '盘盈', value: 'INVENTORY_PROFIT' },
+  { label: '盘亏', value: 'INVENTORY_LOSS' },
 ];
 
 export const BILL_STATUS_OPTIONS = [

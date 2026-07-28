@@ -68,7 +68,7 @@ const AiHoverCard: React.FC<{
           )}
         </>
       ) : (
-        <div style={{ textAlign: 'center', padding: '12px 0 8px', color: '#888', fontSize: 14 }}>
+        <div style={{ textAlign: 'center', padding: '12px 0 8px', color: 'var(--color-text-muted)', fontSize: 14 }}>
           {aiLoading ? '正在生成 AI 分析...' : '悬停后自动分析趋势、价值与决策建议'}
         </div>
       )}

@@ -1,7 +1,8 @@
 import React from 'react';
-import { App, Button, Card, Col, Image, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Col, Image, Input, InputNumber, Popconfirm, Row, Select, Space, Tag } from 'antd';
 import { AppstoreAddOutlined, PlusOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { MaterialColorCardItem } from './types';
 import { MATERIAL_TYPE_OPTIONS } from './types';
 
@@ -43,7 +44,7 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
   };
 
   return (
-    <Modal
+    <ResizableModal
       title={<Space><AppstoreAddOutlined /> {currentCardName} - 物料管理</Space>}
       open={open}
       onCancel={onCancel}
@@ -109,7 +110,7 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
           </Card>
         ))}
       </div>
-    </Modal>
+    </ResizableModal>
   );
 };
 

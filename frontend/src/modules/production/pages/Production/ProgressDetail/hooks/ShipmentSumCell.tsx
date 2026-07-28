@@ -17,7 +17,7 @@ export const ShipmentSumCell: React.FC<{ orderId: string }> = ({ orderId }) => {
     <div style={{ fontSize: 12, lineHeight: '18px' }}>
       {data.map(row => (
         <div key={row.color} style={{ marginBottom: 1 }}>
-          <span style={{ color: '#595959' }}>{row.color}: </span>
+          <span style={{ color: 'var(--color-gray-700)' }}>{row.color}: </span>
           {row.sizes.map(s => `${s.sizeName}:${s.quantity}`).join(' ')}
           <span style={{ color: 'var(--color-text-quaternary)', marginLeft: 4 }}>共{row.total}</span>
         </div>

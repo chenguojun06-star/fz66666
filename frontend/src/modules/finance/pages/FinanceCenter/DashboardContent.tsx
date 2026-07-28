@@ -37,7 +37,7 @@ const DashboardContent: React.FC = () => {
     ],
     series: [
       { name: '总金额', type: 'line', smooth: true, data: chartData.amounts, yAxisIndex: 0, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(24,144,255,0.3)' }, { offset: 1, color: 'rgba(24,144,255,0.02)' }]) }, itemStyle: { color: 'var(--color-info)' } },
-      { name: '入库数量', type: 'line', smooth: true, data: chartData.inboundQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(82,196,26,0.3)' }, { offset: 1, color: 'rgba(82,196,26,0.02)' }]) }, itemStyle: { color: 'var(--color-success)' } },
+      { name: '入库数量', type: 'line', smooth: true, data: chartData.warehousedQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(82,196,26,0.3)' }, { offset: 1, color: 'rgba(82,196,26,0.02)' }]) }, itemStyle: { color: 'var(--color-success)' } },
       { name: '订单数量', type: 'line', smooth: true, data: chartData.orderCounts, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(250,173,20,0.3)' }, { offset: 1, color: 'rgba(250,173,20,0.02)' }]) }, itemStyle: { color: 'var(--color-warning)' } },
       { name: '次品数量', type: 'line', smooth: true, data: chartData.defectQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(255,77,79,0.3)' }, { offset: 1, color: 'rgba(255,77,79,0.02)' }]) }, itemStyle: { color: 'var(--color-danger)' } },
     ],
@@ -49,7 +49,7 @@ const DashboardContent: React.FC = () => {
     <Spin spinning={loading}>
       {smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={loadData} /></Card>}
       {healthData && !healthCollapsed && (
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg, #f0f5ff 0%, var(--status-processing-bg) 100%)', border: '1px solid #bae7ff' }}
+        <Card style={{ marginBottom: 12, background: 'var(--status-processing-bg)', border: '1px solid #bae7ff' }}
           title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 15, color: healthData.score >= 80 ? 'var(--color-success)' : healthData.score >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{healthData.score}</b> 分</span>}
           extra={<Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => setHealthCollapsed(true)}>收起</Button>}>
           <Row gutter={16}>
@@ -76,7 +76,7 @@ const DashboardContent: React.FC = () => {
         <Col span={18}>
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div><div style={{ fontSize: 15, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div>{renderChange(statData.totalAmountChange, compareLabel)}</Card></Col>
-            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div>{renderChange(statData.inboundQuantityChange, compareLabel)}</Card></Col>
+            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{(statData.warehousedQuantity || 0).toLocaleString()}</div>{renderChange(statData.warehousedQuantityChange, compareLabel)}</Card></Col>
             <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{statData.orderCount || 0}</div>{renderChange(statData.orderCountChange, compareLabel)}</Card></Col>
             <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>次品数量</div><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-danger)' }}>{statData.defectQuantity || 0}</div>{renderChange(statData.defectQuantityChange, compareLabel)}</Card></Col>
           </Row>
@@ -96,7 +96,7 @@ const DashboardContent: React.FC = () => {
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div></Card></Col>
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{statData.orderCount || 0}</div></Card></Col>
-        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div></Card></Col>
+        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{(statData.warehousedQuantity || 0).toLocaleString()}</div></Card></Col>
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>面辅料总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.materialCost || 0).toLocaleString()}</div></Card></Col>
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>生产总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.productionCost || 0).toLocaleString()}</div></Card></Col>
         <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profit || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>¥{(statData.profit || 0).toLocaleString()}</div></Card></Col>

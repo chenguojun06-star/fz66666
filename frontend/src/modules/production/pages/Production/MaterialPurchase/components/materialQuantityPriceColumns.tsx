@@ -37,11 +37,31 @@ export const buildQuantityPriceColumns = (_params: UseMaterialColumnsParams): Co
     },
     {
       title: '待到数量',
-      key: 'remainingQuantity',
+      key: 'pendingArrivalQuantity',
       width: 100,
       align: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
         const remaining = subtractMaterialQuantity(record?.purchaseQuantity, record?.arrivedQuantity);
+        return formatMaterialQuantityWithUnit(remaining, record.unit);
+      },
+    },
+    {
+      title: '使用量',
+      dataIndex: 'usedQuantity',
+      key: 'usedQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v ?? 0, record.unit),
+    },
+    {
+      title: '库存余量',
+      key: 'stockRemainingQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (_: any, record: MaterialPurchaseType) => {
+        const arrived = record?.arrivedQuantity ?? 0;
+        const used = record?.usedQuantity ?? 0;
+        const remaining = Math.max(0, arrived - used);
         return formatMaterialQuantityWithUnit(remaining, record.unit);
       },
     },

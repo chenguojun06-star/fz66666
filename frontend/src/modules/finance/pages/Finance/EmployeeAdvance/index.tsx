@@ -58,7 +58,7 @@ const EmployeeAdvancePage: React.FC = () => {
   const advanceStats = useMemo(() => {
     const pending = (list || []).filter((r: any) => r.status === 'pending').length;
     const approved = (list || []).filter((r: any) => r.status === 'approved').length;
-    const paid = (list || []).filter((r: any) => r.repaymentStatus === 'full').length;
+    const paid = (list || []).filter((r: any) => r.repaymentStatus === 'repaid').length;
     const total = (list || []).reduce((acc: number, r: any) => acc + (Number(r.amount) || 0), 0);
     return { pending, approved, paid, total };
   }, [list]);

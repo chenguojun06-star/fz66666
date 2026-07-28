@@ -175,7 +175,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
         destroyOnHidden
       >
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: '#888' }}>供应商通过 H5 页面「供应商登录」入口登录，账号由管理员创建和管理</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>供应商通过 H5 页面「供应商登录」入口登录，账号由管理员创建和管理</span>
           <Button type="primary" onClick={() => setCreateOpen(true)}>新增账号</Button>
         </div>
         <ResizableTable

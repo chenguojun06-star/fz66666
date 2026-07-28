@@ -1,5 +1,6 @@
 import React from 'react';
-import { App, Form, Input, Modal } from 'antd';
+import { App, Form, Input } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { SampleStock } from '../types';
 
@@ -49,7 +50,7 @@ const DestroyModal: React.FC<DestroyModalProps> = ({ visible, stock, onCancel, o
   };
 
   return (
-    <Modal
+    <ResizableModal
       open={visible}
       title={`销毁样衣库存${stock?.styleNo ? ` - ${stock.styleNo}` : ''}`}
       onCancel={onCancel}
@@ -83,7 +84,7 @@ const DestroyModal: React.FC<DestroyModalProps> = ({ visible, stock, onCancel, o
           <Input.TextArea rows={4} maxLength={300} showCount placeholder="请填写销毁原因、处理说明、责任说明等" />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

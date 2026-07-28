@@ -51,7 +51,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
       </Text>
     </div>
     {issue.reason && (
-      <div style={{ color: '#595959', fontSize: 14, lineHeight: '18px' }}>{issue.reason}</div>
+      <div style={{ color: 'var(--color-gray-700)', fontSize: 14, lineHeight: '18px' }}>{issue.reason}</div>
     )}
     {issue.suggestion && (
       <div style={{ color: '#096dd9', fontSize: 14, marginTop: 4 }}>

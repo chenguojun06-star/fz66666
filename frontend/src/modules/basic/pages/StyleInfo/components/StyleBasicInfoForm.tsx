@@ -1,6 +1,7 @@
 import React from 'react';
 import { Row } from 'antd';
 import CoverImageUpload from './CoverImageUpload';
+import StyleStatusCard from './StyleStatusCard';
 import type { StyleBasicInfoFormProps } from './StyleBasicInfoForm/types';
 import { useStyleBasicInfoForm } from './StyleBasicInfoForm/useStyleBasicInfoForm';
 import BasicInfoSection from './StyleBasicInfoForm/BasicInfoSection';
@@ -76,9 +77,9 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   };
 
   return (
-    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
-      {/* 左侧：封面图上传 + 快速提示 */}
-      <div style={{ minWidth: 0 }}>
+    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(220px, 20vw, 280px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
+      {/* 左侧：封面图上传 + 款式状态卡片（sticky 跟随滚动，避免下方空白） */}
+      <div style={{ minWidth: 0, position: 'sticky', top: 16, alignSelf: 'flex-start' }}>
         <CoverImageUpload
           styleId={currentStyle?.id}
           styleNo={currentStyle?.styleNo || _form.getFieldValue('styleNo')}
@@ -91,6 +92,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           onCoverChange={onCoverChange}
           onStyleParseResult={handleStyleParseResult}
         />
+        {/* 仅在已存在款式时显示状态卡片，新建页面不显示 */}
+        {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} /> : null}
       </div>
 
       {/* 右侧：表单字段（按业务流程自上而下分区） */}

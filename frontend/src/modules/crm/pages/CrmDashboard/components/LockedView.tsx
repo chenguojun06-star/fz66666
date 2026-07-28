@@ -9,7 +9,7 @@ const { Title, Text, Paragraph } = Typography;
 const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
   <>
     <Card
-      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', marginBottom: 12 }}
+      style={{ background: 'var(--color-primary-bg)', border: 'none', marginBottom: 12 }}
       styles={{ body: { padding: '32px 40px' } }}
     >
       <Row align="middle" gutter={24}>

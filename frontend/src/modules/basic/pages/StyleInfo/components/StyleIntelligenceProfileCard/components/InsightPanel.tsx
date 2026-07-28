@@ -58,7 +58,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
             }}
           >
             <b style={{ color: INSIGHT_COLOR[it.category] }}>{INSIGHT_LABEL[it.category]}</b>
-            <span style={{ color: '#595959', marginLeft: 6 }}>{it.text}</span>
+            <span style={{ color: 'var(--color-gray-700)', marginLeft: 6 }}>{it.text}</span>
           </Tag>
         ))}
       </div>

@@ -162,7 +162,7 @@ export default function SampleStageExpandedContent({
               style={{ flexShrink: 0 }}
             />
             <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
-              <div style={{ fontWeight: 500, color: '#595959', marginBottom: 2 }}>工人扫码领取 / 完成</div>
+              <div style={{ fontWeight: 500, color: 'var(--color-gray-700)', marginBottom: 2 }}>工人扫码领取 / 完成</div>
               <div style={{ fontSize: 12 }}>样衣单号: {patternProductionId || patternId || '-'}</div>
             </div>
 

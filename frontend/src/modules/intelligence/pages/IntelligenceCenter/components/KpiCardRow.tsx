@@ -29,7 +29,7 @@ const KpiCardRow: React.FC<any> = ({
             <div className="c-kpi-label"><LiveDot size={7} />今日生产扫码量</div>
             <div className="c-kpi-val cyan neon-cyan"><AnimatedNum val={pulse?.todayScanQty?.toLocaleString() ?? '—'} /></div>
             <div className="c-kpi-unit">件</div>
-            <div className="c-kpi-sub">速率&nbsp;<b style={{ color: '#00e5ff' }}><AnimatedNum val={pulse?.scanRatePerHour ?? '—'} /></b>&nbsp;件/时</div>
+            <div className="c-kpi-sub">速率&nbsp;<b style={{ color: 'var(--color-accent-cyan-bright)' }}><AnimatedNum val={pulse?.scanRatePerHour ?? '—'} /></b>&nbsp;件/时</div>
             <div className="c-kpi-delta-row">
               {renderDeltaBadge(kpiDelta.todayScanQty, { flatText: '本轮无新增', suffix: '件' })}
               <span className="c-kpi-delta-note">速率 {formatDeltaText(kpiDelta.scanRatePerHour, '/h')}</span>
@@ -49,14 +49,14 @@ const KpiCardRow: React.FC<any> = ({
               <LiveDot size={7} color={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? '#e03030' : undefined} />
               活跃工厂
             </div>
-            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: '#e03030' } : { color: '#39ff14' }}>
+            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: '#e03030' } : { color: 'var(--color-accent-neon)' }}>
               <AnimatedNum val={pulse?.activeFactories ?? '—'} />
             </div>
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">
               {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
                 ? <span style={{ color: '#e03030' }}> 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
-                : <>员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
+                : <>员工&nbsp;<b style={{ color: 'var(--color-accent-neon)' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
             </div>
             <div className="c-kpi-delta-row">
               {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
@@ -108,7 +108,7 @@ const KpiCardRow: React.FC<any> = ({
               {(pulse?.stagnantFactories?.length ?? 0) > 0
                 ? <span className="blink-text"> 需立即处理</span>
                 : currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
-                  ? <span style={{ color: '#f7a600' }}> 无工厂活跃·生产停滞</span>
+                  ? <span style={{ color: 'var(--color-warning-deep)' }}> 无工厂活跃·生产停滞</span>
                   : '生产运转正常'}
             </div>
             <div className="c-kpi-delta-row">
@@ -138,7 +138,7 @@ const KpiCardRow: React.FC<any> = ({
             <div className="c-kpi-unit">项缺料</div>
             <div className="c-kpi-sub">
               {(shortage?.shortageItems?.length ?? 0) > 0
-                ? <span style={{ color: '#f7a600' }}> 请及时补单</span>
+                ? <span style={{ color: 'var(--color-warning-deep)' }}> 请及时补单</span>
                 : '库存储备充足'}
             </div>
             <div className="c-kpi-delta-row">

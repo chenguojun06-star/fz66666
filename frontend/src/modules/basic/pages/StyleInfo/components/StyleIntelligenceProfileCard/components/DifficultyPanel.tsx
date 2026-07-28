@@ -39,7 +39,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
             <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
               strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? 'var(--color-success)' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? 'var(--color-warning)' : 'var(--color-danger)'}
               style={{ flex: 1, margin: 0 }} />
-            <span style={{ fontSize: 12, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: 'var(--color-accent-purple)' }}>{activeDifficulty.pricingMultiplier}</b></span>
+            <span style={{ fontSize: 12, color: 'var(--color-gray-700)', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: 'var(--color-accent-purple)' }}>{activeDifficulty.pricingMultiplier}</b></span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
           {activeDifficulty.imageInsight && (() => {
@@ -60,7 +60,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
                 )}
                 <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
               </div>
-              <div style={{ fontSize: 12, color: '#595959', lineHeight: 1.5 }}>{visualResult.summary}</div>
+              <div style={{ fontSize: 12, color: 'var(--color-gray-700)', lineHeight: 1.5 }}>{visualResult.summary}</div>
               {visualResult.defects && visualResult.defects.length > 0 && (
                 <div style={{ marginTop: 3 }}>
                   {visualResult.defects.slice(0, 3).map((d, i) => (

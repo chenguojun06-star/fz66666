@@ -38,7 +38,7 @@
 }
 
 .emojiTabBtn:hover {
-  color: #595959;
+  color: var(--color-gray-700);
 }
 
 .emojiTabActive {

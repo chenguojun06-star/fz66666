@@ -77,7 +77,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
       <video
         src={u}
         controls
-        style={{ width: '100%', maxHeight: 480, background: '#000', display: 'block', borderRadius: 6 }}
+        style={{ width: '100%', maxHeight: 480, background: 'var(--color-black)', display: 'block', borderRadius: 6 }}
         preload="metadata"
       >
         您的浏览器不支持 video 标签，请

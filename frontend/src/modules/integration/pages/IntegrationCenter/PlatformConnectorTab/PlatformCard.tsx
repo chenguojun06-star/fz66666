@@ -80,11 +80,11 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
           {isAvailable && isConfigured && statsData && (
             <Row gutter={8} style={{ marginBottom: 8 }}>
               <Col span={12}>
-                <div style={{ fontSize: 14, color: '#888' }}>今日订单</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>今日订单</div>
                 <Text strong style={{ color: 'var(--color-primary)' }}>{statsData.todayOrders}</Text>
               </Col>
               <Col span={12}>
-                <div style={{ fontSize: 14, color: '#888' }}>今日销售额</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>今日销售额</div>
                 <Text strong style={{ color: 'var(--color-success)' }}>¥{statsData.todaySales}</Text>
               </Col>
             </Row>

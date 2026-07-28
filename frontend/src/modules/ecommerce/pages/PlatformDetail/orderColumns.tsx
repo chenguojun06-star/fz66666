@@ -25,7 +25,7 @@ export function buildOrderColumns(handlers: OrderColumnsHandlers): ColumnsType<E
       render: (v, r) => (
         <div>
           <div style={{ fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 14, color: '#888' }}>内部 {r.orderNo}</div>}
+          {v && <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -42,7 +42,7 @@ export function buildOrderColumns(handlers: OrderColumnsHandlers): ColumnsType<E
         <div>
           <div>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
           {r.skuCode && <div style={{ fontSize: 14, color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 14, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -69,7 +69,7 @@ export function buildOrderColumns(handlers: OrderColumnsHandlers): ColumnsType<E
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
-      render: (v, r) => v ? <div><div style={{ fontSize: 14, color: '#888' }}>{r.expressCompany}</div><div>{v}</div></div> : <Text type="secondary">-</Text>,
+      render: (v, r) => v ? <div><div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.expressCompany}</div><div>{v}</div></div> : <Text type="secondary">-</Text>,
     },
     {
       title: '下单时间', dataIndex: 'createTime', width: 110,

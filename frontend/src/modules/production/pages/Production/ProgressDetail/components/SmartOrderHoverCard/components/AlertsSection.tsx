@@ -54,7 +54,7 @@ const AlertsSection: React.FC<Props> = ({
       }}>
         {risk.text}
         {speed > 0 && total > 0 && daysLeft !== null && daysLeft >= 0 && (
-          <span style={{ fontWeight: 400, color: '#888', marginLeft: 8 }}>
+          <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 8 }}>
             {speed.toFixed(1)} 件/天，还需约 {Math.ceil((total - Math.round(prog / 100 * total)) / speed)} 天
           </span>
         )}

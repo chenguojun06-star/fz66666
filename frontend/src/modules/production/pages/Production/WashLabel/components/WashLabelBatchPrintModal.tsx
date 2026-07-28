@@ -252,7 +252,7 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
                   {it.styleNo}{it.color ? ' / ' + it.color : ''}{it.size ? ' / ' + it.size : ''}
                 </span>
                 {labelType === 'ucode' && it.uCode && (
-                  <Tag style={{ fontSize: 14, color: '#888' }}>U: {it.uCode}</Tag>
+                  <Tag style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>U: {it.uCode}</Tag>
                 )}
               </div>
             ))}

@@ -36,7 +36,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       render: (v, r) => (
         <div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 14, color: '#888' }}>内部 {r.orderNo}</div>}
+          {v && <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -74,7 +74,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
         <div>
           <div style={{ fontSize: 14 }}>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
           {r.skuCode && <div style={{ fontSize: 14, color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 14, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -82,7 +82,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '金额', width: 130,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          {r.unitPrice ? <div style={{ fontSize: 14, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
+          {r.unitPrice ? <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
           <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
           {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
         </div>
@@ -106,7 +106,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '快递', dataIndex: 'trackingNo', width: 130,
       render: (v, r) => v
         ? <div>
-            <div style={{ fontSize: 14, color: '#888' }}>{r.expressCompany}</div>
+            <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.expressCompany}</div>
             <div style={{ fontSize: 14 }}>{v}</div>
           </div>
         : <Text type="secondary">-</Text>,
@@ -175,7 +175,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
         ? <InputNumber value={editRow.costPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
             onChange={onCostChange} />
-        : <Text style={{ color: '#888' }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
+        : <Text style={{ color: 'var(--color-text-muted)' }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
     },
     {
       title: '单价 (¥)', dataIndex: 'salesPrice', width: 140,

@@ -198,7 +198,7 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
 
       {/* ── 提示区域标题 ── */}
       {visibleHints.length > 0 && (
-        <span style={{ color: '#595959', fontWeight: 500, fontSize: TAG_FONT_SIZE, flexShrink: 0 }}>
+        <span style={{ color: 'var(--color-gray-700)', fontWeight: 500, fontSize: TAG_FONT_SIZE, flexShrink: 0 }}>
           {hintTitle}
         </span>
       )}

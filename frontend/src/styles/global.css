@@ -581,7 +581,7 @@ body {
 }
 
 :root[data-theme="dark"] .ant-select-dropdown {
-  background: #1a1d24 !important;
+  background: var(--color-bg-dark) !important;
 }
 
 :root[data-theme="dark"] .ant-select-item {
@@ -593,7 +593,7 @@ body {
 }
 
 :root[data-theme="dark"] .ant-picker {
-  background: #1a1d24 !important;
+  background: var(--color-bg-dark) !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -606,7 +606,7 @@ body {
 }
 
 :root[data-theme="dark"] .ant-card {
-  background: #1a1d24 !important;
+  background: var(--color-bg-dark) !important;
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
@@ -1798,7 +1798,7 @@ body {
     flex-direction: column !important;
     justify-content: space-evenly !important;
     font-weight: 600 !important;
-    color: #000 !important;
+    color: var(--color-black) !important;
   }
 
   .cutting-qr-print-single .cutting-qr-label-text > div {
@@ -1806,7 +1806,7 @@ body {
     padding: 0 !important;
     word-break: break-all !important;
     overflow-wrap: anywhere !important;
-    color: #000 !important;
+    color: var(--color-black) !important;
     opacity: 1 !important;
     visibility: visible !important;
     -webkit-print-color-adjust: exact !important;
@@ -1832,7 +1832,7 @@ body {
   }
 
   #style-print-temp * {
-    color: #000 !important;
+    color: var(--color-black) !important;
     background: transparent !important;
   }
 }

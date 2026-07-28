@@ -1,7 +1,7 @@
 import React from 'react';
 import { Row, Col, Card, Statistic, Button, Spin, Alert, Empty } from 'antd';
 import {
-  ApiOutlined, ShoppingCartOutlined, DollarOutlined, CloudUploadOutlined,
+  ApiOutlined, ShoppingCartOutlined, DollarOutlined, CloudUploadOutlined, InboxOutlined,
 } from '@ant-design/icons';
 import { PLATFORM_LIST } from '../PlatformConnectorConstants';
 import { usePlatformConnectorTabData } from './usePlatformConnectorTabData';
@@ -31,29 +31,29 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         {/* ====== 数据总览 ====== */}
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
               <Statistic title="已对接平台" value={stats.connected} suffix={`/ ${stats.total}`} prefix={<ApiOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-success-bg) 0%, #fcffe6 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
               <Statistic title="今日总订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-success)' }} />} styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
               <Statistic title="今日销售额" value={stats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: 'var(--color-warning)' }} />} suffix="元" styles={{ content: { color: 'var(--color-warning)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
               <Statistic title="平台总数" value={PLATFORM_LIST.length} suffix="个" prefix={<CloudUploadOutlined style={{ color: 'var(--color-accent-purple)' }} />} styles={{ content: { color: 'var(--color-accent-purple)' } }} />
             </Card>
           </Col>
         </Row>
 
         <Alert type="success" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
-          title={<span>📦 <strong>三步傻瓜式对接</strong>：选择平台 → 粘贴凭证 → 复制回调地址到平台</span>}
+          title={<span><InboxOutlined /> <strong>三步傻瓜式对接</strong>：选择平台 → 粘贴凭证 → 复制回调地址到平台</span>}
           description="支持 10 大电商平台一键对接，订单自动同步，物流自动回传"
         />
         <Row gutter={[16, 16]}>

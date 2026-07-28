@@ -67,22 +67,22 @@ export const useDashboardData = () => {
       const currentRows: SettlementRow[] = (currentRes?.data?.records || []) as SettlementRow[];
       const prevRows: SettlementRow[] = (prevRes?.data?.records || []) as SettlementRow[];
       const curTotalAmount = currentRows.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0);
-      const curInboundQty = currentRows.reduce((s, r) => s + (Number(r.inboundQuantity) || 0), 0);
+      const curWarehousedQty = currentRows.reduce((s, r) => s + (Number(r.warehousedQuantity) || 0), 0);
       const curOrderCount = currentRows.length;
       const curDefectQty = currentRows.reduce((s, r) => s + (Number(r.defectQuantity) || 0), 0);
       const curMaterialCost = currentRows.reduce((s, r) => s + (Number(r.materialCost) || 0), 0);
       const curProductionCost = currentRows.reduce((s, r) => s + (Number(r.productionCost) || 0), 0);
       const curProfit = curTotalAmount - curMaterialCost - curProductionCost;
       const curProfitRate = curTotalAmount > 0 ? Math.round((curProfit / curTotalAmount) * 10000) / 100 : 0;
-      const curDefectRate = curInboundQty > 0 ? Math.round((curDefectQty / curInboundQty) * 10000) / 100 : 0;
+      const curDefectRate = curWarehousedQty > 0 ? Math.round((curDefectQty / curWarehousedQty) * 10000) / 100 : 0;
       const prevTotalAmount = prevRows.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0);
-      const prevInboundQty = prevRows.reduce((s, r) => s + (Number(r.inboundQuantity) || 0), 0);
+      const prevWarehousedQty = prevRows.reduce((s, r) => s + (Number(r.warehousedQuantity) || 0), 0);
       const prevOrderCount = prevRows.length;
       const prevDefectQty = prevRows.reduce((s, r) => s + (Number(r.defectQuantity) || 0), 0);
       const prevProfitRate = prevTotalAmount > 0 ? Math.round(((prevTotalAmount - prevRows.reduce((s, r) => s + (Number(r.materialCost) || 0), 0) - prevRows.reduce((s, r) => s + (Number(r.productionCost) || 0), 0)) / prevTotalAmount) * 10000) / 100 : 0;
       setStatData({
         totalAmount: curTotalAmount, totalAmountChange: calcChange(curTotalAmount, prevTotalAmount),
-        inboundQuantity: curInboundQty, inboundQuantityChange: calcChange(curInboundQty, prevInboundQty),
+        warehousedQuantity: curWarehousedQty, warehousedQuantityChange: calcChange(curWarehousedQty, prevWarehousedQty),
         orderCount: curOrderCount, orderCountChange: calcChange(curOrderCount, prevOrderCount),
         defectQuantity: curDefectQty, defectQuantityChange: calcChange(curDefectQty, prevDefectQty),
         profitRate: curProfitRate, profitRateChange: calcChange(curProfitRate, prevProfitRate),

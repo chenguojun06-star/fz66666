@@ -32,7 +32,7 @@ const WorkerEfficiencyPanel: React.FC<WorkerEfficiencyPanelProps> = ({
                 <td>{w.stabilityScore}</td>
                 <td>{w.versatilityScore}</td>
                 <td>{w.attendanceScore}</td>
-                <td><b style={{ color: '#00e5ff' }}>{w.overallScore}</b></td>
+                <td><b style={{ color: 'var(--color-accent-cyan-bright)' }}>{w.overallScore}</b></td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {(() => {
                     const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }

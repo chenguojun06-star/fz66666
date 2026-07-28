@@ -1,6 +1,7 @@
 import React from 'react';
-import { Form, Input, Modal } from 'antd';
+import { Form, Input } from 'antd';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import StyleCopyModal from './StyleCopyModal';
 import type { UseStyleTableViewDataReturn } from './useStyleTableViewData';
 
@@ -68,7 +69,7 @@ const StyleTableMiscModals: React.FC<StyleTableMiscModalsProps> = ({
       />
 
       {/* 样衣指派弹窗 */}
-      <Modal
+      <ResizableModal
         title="指派样板生产"
         open={assigningData.open}
         onOk={handleAssignPattern}
@@ -88,7 +89,7 @@ const StyleTableMiscModals: React.FC<StyleTableMiscModalsProps> = ({
             当前领取人：{assigningData.currentAssignee || '无'}
           </div>
         </Form>
-      </Modal>
+      </ResizableModal>
     </>
   );
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, Button, Typography, Alert } from 'antd';
 import { UserOutlined, LockOutlined, IdcardOutlined, PhoneOutlined, BankOutlined } from '@ant-design/icons';
+import LoginFooter from '../Login/components/LoginFooter';
 
 const { Title } = Typography;
 
@@ -44,7 +45,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
             <Title level={2} className="login-title">
               云裳智链
             </Title>
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
+            <p style={{ textAlign: 'center', color: '#5a6678', marginTop: 8, fontSize: 13 }}>
               {isWorkerInvite
                 ? isFactoryInvite
                   ? '外发工厂工人注册'
@@ -66,7 +67,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
           >
             {isWorkerInvite && (
               <Alert
-                title={belongLabel}
+                message={belongLabel}
                 description={isFactoryInvite
                   ? `欢迎加入「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`
                   : `欢迎加入「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`}
@@ -170,7 +171,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
 
             {!isWorkerInvite && (
               <Alert
-                title="以下账号信息用于审批通过后登录系统"
+                message="以下账号信息用于审批通过后登录系统"
                 type="info"
                 showIcon
                 style={{ marginBottom: 16, borderRadius: 8 }}
@@ -266,25 +267,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
               </Button>
             </Form.Item>
           </Form>
-          <div className="login-footer">© {year} 云裳智链</div>
-          <div className="login-footer" style={{ marginTop: 2, fontSize: 14 }}>
-            部署版本：{buildCommit} · 构建时间：{buildTimeText}
-          </div>
-          <div className="login-footer" style={{ marginTop: 8, fontSize: 11, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <img loading="lazy" src="/police.png" alt="公安备案图标" style={{ width: 11, height: 11, marginRight: 4 }} />
-                <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  粤公网安备44011302005352号
-                </a>
-              </div>
-              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
-                style={{ color: 'rgba(255,255,255,0.45)' }}>
-                粤ICP备2026026776号-1
-              </a>
-            </div>
-          </div>
+          <LoginFooter year={year} buildCommit={buildCommit} buildTimeText={buildTimeText} />
         </div>
       </div>
     </div>

@@ -39,7 +39,7 @@ const ReferenceMatrix: React.FC<ReferenceMatrixProps> = ({ orderRecord, detailSu
     <>
       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
         下单与已发明细参考
-        <span style={{ fontWeight: 400, color: '#888', marginLeft: 8 }}>
+        <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 8 }}>
           （格式：下单数 / <span style={{ color: '#096dd9' }}>已发数</span>）
         </span>
       </div>

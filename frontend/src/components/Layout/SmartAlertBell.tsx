@@ -372,7 +372,7 @@ const SmartAlertBell: React.FC = () => {
                       <div style={{ fontSize: 14, fontWeight: n.isRead ? 400 : 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
                         {n.title}
                       </div>
-                      <div style={{ fontSize: 14, color: '#888', marginTop: 1 }}>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 1 }}>
                         {n.fromName} · {n.createdAt?.slice(5, 16)}
                       </div>
                       {n.actionType === 'urge_order' && n.urgeRecordId && !n.isRead && (

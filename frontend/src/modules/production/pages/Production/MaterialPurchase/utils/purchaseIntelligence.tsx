@@ -216,7 +216,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.supplierIssues.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.supplierIssues.map((s, i) => (
-            <div key={`sp${i}`} style={{ color: '#595959' }}> {s}</div>
+            <div key={`sp${i}`} style={{ color: 'var(--color-gray-700)' }}> {s}</div>
           ))}
         </div>
       )}

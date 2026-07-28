@@ -165,7 +165,7 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
                 <div>
                   <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>④ 生产制造</div>
                   <Text style={{ fontSize: 14 }}>MADE IN CHINA</Text>
-                  <Text style={{ fontSize: 14, color: '#888', marginLeft: 12 }}>{getDefaultDateText()}</Text>
+                  <Text style={{ fontSize: 14, color: 'var(--color-text-muted)', marginLeft: 12 }}>{getDefaultDateText()}</Text>
                 </div>
               </div>
             ),

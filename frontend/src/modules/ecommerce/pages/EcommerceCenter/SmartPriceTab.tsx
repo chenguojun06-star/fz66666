@@ -165,7 +165,7 @@ const SmartPriceTab: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
             <Statistic
               title="定价建议"
               value={stats?.totalSuggestions || 0}
@@ -176,7 +176,7 @@ const SmartPriceTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
             <Statistic
               title="待处理"
               value={stats?.pendingCount || 0}
@@ -187,7 +187,7 @@ const SmartPriceTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-success-bg) 0%, #fcffe6 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
             <Statistic
               title="已同步"
               value={stats?.appliedCount || 0}
@@ -198,7 +198,7 @@ const SmartPriceTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
             <Statistic
               title="平均置信度"
               value={stats?.avgConfidence || 0}

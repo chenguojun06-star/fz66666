@@ -40,11 +40,11 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
         <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>市场判断</div>
         <DecisionInsightCard compact insight={insight} />
         {analysis && analysis.avgPrice > 0 && (
-          <div style={{ marginTop: 8, fontSize: 14, color: '#595959', lineHeight: 1.6 }}>
+          <div style={{ marginTop: 8, fontSize: 14, color: 'var(--color-gray-700)', lineHeight: 1.6 }}>
             价格区间：¥{analysis.minPrice.toFixed(0)} ~ ¥{analysis.maxPrice.toFixed(0)}（均价 ¥{analysis.avgPrice.toFixed(0)}）
           </div>
         )}
-        <div style={{ marginTop: 6, fontSize: 14, color: '#595959', lineHeight: 1.6 }}>
+        <div style={{ marginTop: 6, fontSize: 14, color: 'var(--color-gray-700)', lineHeight: 1.6 }}>
           竞品数量：{analysis?.total || 0} 款在售
           {analysis?.sources?.length ? ` · 渠道覆盖 ${analysis.sources.slice(0, 5).join('、')}` : ''}
         </div>

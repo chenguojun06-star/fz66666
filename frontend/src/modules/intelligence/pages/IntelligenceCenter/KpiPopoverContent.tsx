@@ -22,7 +22,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
     <KpiPop
       title="今日生产扫码详情"
       items={[
-        { label: '生产扫码总量',  value: `${pulse?.todayScanQty?.toLocaleString() ?? '—'} 件`, color: '#00e5ff' },
+        { label: '生产扫码总量',  value: `${pulse?.todayScanQty?.toLocaleString() ?? '—'} 件`, color: 'var(--color-accent-cyan-bright)' },
         { label: '实时速率',  value: `${pulse?.scanRatePerHour ?? '—'} 件/时` },
         { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
         { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家` },
@@ -36,7 +36,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
     <KpiPop
       title="工厂在线状态"
       items={[
-        { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家`, color: '#39ff14' },
+        { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家`, color: 'var(--color-accent-neon)' },
         { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
         { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14' },
         ...(ranking?.rankings?.slice(0, 3).map((r, i) => ({
@@ -93,7 +93,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
             value: `缺 ${item.shortageQuantity} ${item.unit}`,
             color: risk2color(item.riskLevel),
           }))
-        : [{ label: '状态', value: '所有面辅料库存充足', color: '#39ff14' }]}
+        : [{ label: '状态', value: '所有面辅料库存充足', color: 'var(--color-accent-neon)' }]}
       warning={(shortage?.shortageItems?.length ?? 0) > 0 ? (shortage?.summary ?? undefined) : undefined}
       aiTip={(shortage?.shortageItems?.length ?? 0) > 0
         ? 'HIGH 级缺料将影响 3 天内生产，建议立即下补采购单'

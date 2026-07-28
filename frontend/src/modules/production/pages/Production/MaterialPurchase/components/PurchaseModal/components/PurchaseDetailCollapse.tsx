@@ -114,11 +114,32 @@ const PurchaseDetailCollapse: React.FC<PurchaseDetailCollapseProps> = ({
           },
           {
             title: '待到数量',
-            key: 'remainingQuantity',
+            key: 'pendingArrivalQuantity',
             width: 100,
             align: 'right' as const,
             render: (_: any, r: MaterialPurchaseType) => {
               const remaining = subtractMaterialQuantity(r?.purchaseQuantity, r?.arrivedQuantity);
+              return formatMaterialQuantityWithUnit(remaining, r.unit);
+            },
+          },
+          {
+            title: '使用量',
+            key: 'usedQuantity',
+            width: 90,
+            align: 'right' as const,
+            render: (_: any, r: MaterialPurchaseType) => {
+              return formatMaterialQuantityWithUnit(r?.usedQuantity ?? 0, r.unit);
+            },
+          },
+          {
+            title: '库存余量',
+            key: 'stockRemainingQuantity',
+            width: 90,
+            align: 'right' as const,
+            render: (_: any, r: MaterialPurchaseType) => {
+              const arrived = r?.arrivedQuantity ?? 0;
+              const used = r?.usedQuantity ?? 0;
+              const remaining = Math.max(0, arrived - used);
               return formatMaterialQuantityWithUnit(remaining, r.unit);
             },
           },

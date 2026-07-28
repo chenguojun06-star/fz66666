@@ -76,7 +76,7 @@ const WashLabelPage: React.FC = () => {
             <TagOutlined style={{ marginRight: 8, color: 'var(--primary-color)' }} />
             标签管理（洗水唛 / U编码）
           </h2>
-          <div style={{ marginTop: 4, fontSize: 14, color: '#888' }}>
+          <div style={{ marginTop: 4, fontSize: 14, color: 'var(--color-text-muted)' }}>
             洗水唛数据来源于款式开发，下单后自动同步；U编码支持行内修改
           </div>
         </div>

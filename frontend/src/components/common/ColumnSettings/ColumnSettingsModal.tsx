@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Modal, Checkbox, Button, Space, Divider, Typography } from 'antd';
+import { Checkbox, Button, Space, Divider, Typography } from 'antd';
 import { SettingOutlined, ReloadOutlined } from '@ant-design/icons';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { ColumnOption } from './useColumnSettings';
 
 /**
@@ -34,7 +35,7 @@ export const ColumnSettingsModal: React.FC<ColumnSettingsModalProps> = ({
   );
 
   return (
-    <Modal
+    <ResizableModal
       title={
         <Space>
           <SettingOutlined />
@@ -77,7 +78,7 @@ export const ColumnSettingsModal: React.FC<ColumnSettingsModalProps> = ({
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
         勾选要显示的列，取消勾选的列将隐藏。设置会自动保存到你的账号。
       </Typography.Text>
-    </Modal>
+    </ResizableModal>
   );
 };
 

@@ -489,7 +489,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
-  color: #595959;
+  color: var(--color-gray-700);
   font-size: var(--font-size-sm);
 }
 

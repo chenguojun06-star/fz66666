@@ -88,7 +88,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
             content={
               <div style={{ width: 260 }}>
                 <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--color-accent-purple)' }}> AI 智能 IE 指导价 & 全套工序生成</div>
-                <div style={{ marginBottom: 8, fontSize: 14, color: '#888' }}>选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。</div>
+                <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-muted)' }}>选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。</div>
                 <Select style={{ width: '100%', marginBottom: 8 }} placeholder="选择衣服品类（必选）" allowClear showSearch optionFilterProp="label" value={aiCategory} onChange={setAiCategory} options={categoryOptions} />
                 <Button type="primary" block loading={aiLoading} disabled={aiLoading || !aiCategory} style={{ borderColor: 'var(--color-accent-purple)', color: 'var(--color-accent-purple)' }} onClick={() => handleAiTemplate(setData)}>{aiLoading ? '生成中…' : ' 一键生成全套工序与指导价'}</Button>
               </div>

@@ -43,7 +43,7 @@ const InProgressList: React.FC<Props> = ({
           <React.Fragment key={s.label}>
             {showGroupHeader && (
               <div style={{
-                fontSize: 11, color: '#888', fontWeight: 600,
+                fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600,
                 marginTop: idx > 0 ? 6 : 0, marginBottom: 2,
                 display: 'flex', alignItems: 'center', gap: 4,
               }}>
@@ -76,7 +76,7 @@ const InProgressList: React.FC<Props> = ({
               </div>
               {/* 第二行：件数 + 操作人数 + 人均产能 + 最近扫码时间 + 预计完成日 */}
               <div style={{ paddingLeft: 17, fontSize: 11, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ color: '#888' }}>{s.qty}/{total}件</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>{s.qty}/{total}件</span>
                 {s.workerCount > 0 && (
                   <span style={{
                     color: 'var(--color-primary)', background: '#e6f4ff',

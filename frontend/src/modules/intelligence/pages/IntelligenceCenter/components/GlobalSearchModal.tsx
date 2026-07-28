@@ -15,6 +15,7 @@ import {
   SearchOutlined, FileTextOutlined, AppstoreOutlined,
   UserOutlined, RightOutlined, PlusCircleOutlined,
   ClockCircleOutlined, WarningOutlined, QuestionCircleOutlined, HomeOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -191,7 +192,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         <div style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
           {loading
             ? <Spin style={{ marginRight: 12 }} />
-            : <SearchOutlined style={{ color: '#00e5ff', fontSize: 14, marginRight: 12 }} />
+            : <SearchOutlined style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 14, marginRight: 12 }} />
           }
           <Input
             ref={inputRef}
@@ -223,7 +224,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         {/* 命令模式 */}
         {isCommandMode && (
           <div style={{ maxHeight: 460, overflowY: 'auto', padding: '6px 0 10px' }}>
-            <div style={{ padding: '6px 18px 4px', fontSize: 14, color: '#00e5ff', fontWeight: 600, letterSpacing: 1 }}>
+            <div style={{ padding: '6px 18px 4px', fontSize: 14, color: 'var(--color-accent-cyan-bright)', fontWeight: 600, letterSpacing: 1 }}>
               快捷命令
             </div>
             {filteredCommands.map((cmd, i) => (
@@ -237,7 +238,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                 onClick={() => executeCommand(cmd.action)}
                 onMouseEnter={() => setActiveIdx(i)}
               >
-                <span style={{ color: '#00e5ff', fontSize: 13 }}>{cmd.icon}</span>
+                <span style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 13 }}>{cmd.icon}</span>
                 <span style={{ color: '#e8f4ff', fontWeight: 500, fontSize: 14 }}>{cmd.label}</span>
                 <RightOutlined style={{ color: '#2a4060', fontSize: 12, marginLeft: 'auto' }} />
               </div>
@@ -260,7 +261,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                 marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '8px 20px', borderRadius: 20, cursor: 'pointer',
                 background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.25)',
-                color: '#00e5ff', fontSize: 14, fontWeight: 500, transition: 'all 0.2s',
+                color: 'var(--color-accent-cyan-bright)', fontSize: 14, fontWeight: 500, transition: 'all 0.2s',
               }}
               onClick={() => {
                 onClose();
@@ -269,7 +270,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.16)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.08)'; }}
             >
-              🤖 让小云帮你找
+              <RobotOutlined /> 让小云帮你找
             </div>
           </div>
         )}
@@ -295,7 +296,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('order', o)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <span style={{ color: '#00e5ff', fontWeight: 600, fontSize: 14, minWidth: 120 }}>{o.orderNo}</span>
+                      <span style={{ color: 'var(--color-accent-cyan-bright)', fontWeight: 600, fontSize: 14, minWidth: 120 }}>{o.orderNo}</span>
                       <span style={{ flex: 1, fontSize: 14, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {o.styleName || o.styleNo}
                       </span>
@@ -363,7 +364,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('worker', w)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <UserOutlined style={{ color: '#39ff14', fontSize: 12 }} />
+                      <UserOutlined style={{ color: 'var(--color-accent-neon)', fontSize: 12 }} />
                       <span style={{ color: '#e8f4ff', fontWeight: 600, fontSize: 14, minWidth: 72 }}>{w.name}</span>
                       <span style={{ fontSize: 14, color: '#5a7a9a', flex: 1 }}>{w.factoryName}</span>
                       {w.role && <span style={{ fontSize: 14, color: '#3a6080' }}>{w.role}</span>}

@@ -67,7 +67,7 @@ const InlineEditableField: React.FC<{
           <Button size="small" type="link" icon={<SaveOutlined />} onClick={handleSave} loading={saving} style={{ padding: 0, color: 'var(--color-success)' }} />
         </Tooltip>
         <Tooltip title="取消">
-          <Button size="small" type="link" icon={<CloseOutlined />} onClick={() => { setEditing(false); setDraft(value); }} style={{ padding: 0, color: '#999' }} />
+          <Button size="small" type="link" icon={<CloseOutlined />} onClick={() => { setEditing(false); setDraft(value); }} style={{ padding: 0, color: 'var(--color-gray-label)' }} />
         </Tooltip>
       </Space>
     );

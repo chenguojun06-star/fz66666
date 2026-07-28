@@ -12,12 +12,17 @@ export interface EmployeeAdvance {
   orderNo?: string;
   status?: 'pending' | 'approved' | 'rejected';
   repaymentStatus?: 'unrepaid' | 'partial' | 'repaid';
-  repaidAmount?: number;
+  /** P0 修复：与后端 EmployeeAdvance.repaymentAmount 字段名对齐（原 repaidAmount） */
+  repaymentAmount?: number;
   remainingAmount?: number;
   approverId?: string;
   approverName?: string;
   approvalTime?: string;
   approvalRemark?: string;
+  createBy?: string;
+  updateBy?: string;
+  tenantId?: number;
+  deleteFlag?: number;
   createTime?: string;
   updateTime?: string;
 }

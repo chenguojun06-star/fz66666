@@ -198,7 +198,7 @@ const LocationLabelPrintModal: React.FC<Props> = ({
             }}
           >
             <div style={{ fontSize: 10, fontWeight: 600 }}>{areaName}</div>
-            <div style={{ fontSize: 9, color: '#666' }}>{locations[0]?.zoneName || '-'}</div>
+            <div style={{ fontSize: 9, color: 'var(--color-gray-dark)' }}>{locations[0]?.zoneName || '-'}</div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>{locations[0]?.locationCode || '-'}</div>
             {previewQrUrl ? (
               <img src={previewQrUrl} alt="QR预览" style={{ width: 36, height: 36 }} />

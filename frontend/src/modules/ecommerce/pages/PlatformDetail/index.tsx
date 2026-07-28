@@ -256,22 +256,22 @@ const PlatformDetail: React.FC = () => {
         {configured && stats && (
           <Row gutter={16} style={{ marginBottom: 12 }}>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
                 <Statistic title="今日订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-success-bg) 0%, #fcffe6 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
                 <Statistic title="今日销售" value={formatMoney(parseFloat(stats.todaySales))} styles={{ content: { color: 'var(--color-success)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
                 <Statistic title="待发货" value={stats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: 'var(--color-warning)' }} />} styles={{ content: { color: 'var(--color-warning)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: (stats.noStockWarn ?? 0) > 0 ? 'linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+              <Card variant="borderless" style={{ background: (stats.noStockWarn ?? 0) > 0 ? 'var(--status-error-bg)' : 'var(--color-bg-subtle)', borderRadius: 12 }}>
                 <Statistic title="缺货预警" value={stats.noStockWarn} suffix="单" prefix={<WarningOutlined style={{ color: (stats.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' }} />} styles={{ content: { color: (stats.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' } }} />
               </Card>
             </Col>

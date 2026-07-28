@@ -364,7 +364,7 @@ const AiAgentTraceCenter: React.FC = () => {
                       <span>{item.createdAt || '--'}</span>
                       {typeof item.durationMs === 'number' ? <span>{item.durationMs}ms</span> : null}
                     </Space>
-                    {item.reason ? <div style={{ marginTop: 6, color: '#595959' }}>{item.reason}</div> : null}
+                    {item.reason ? <div style={{ marginTop: 6, color: 'var(--color-gray-700)' }}>{item.reason}</div> : null}
                     {item.errorMessage ? <div style={{ marginTop: 6, color: 'var(--color-error)' }}>{item.errorMessage}</div> : null}
                     {item.status === 'FAILED' ? <div style={{ marginTop: 6, color: '#d46b08' }}>补救建议：{buildSuggestion(item)}</div> : null}
                     {item.resultData ? (

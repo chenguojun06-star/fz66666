@@ -17,9 +17,9 @@ export const sev2c = (s: string) => ({ critical: '#e03030', warning: '#f7a600', 
 export const risk2badge = (r: string) => ({
   overdue: { label: '已逾期', color: '#e03030' },
   danger:  { label: '高风险', color: '#e03030' },
-  warning: { label: '预警',   color: '#f7a600' },
-  safe:    { label: '安全',   color: '#39ff14' },
-}[r] ?? { label: r, color: '#888' });
+  warning: { label: '预警',   color: 'var(--color-warning-deep)' },
+  safe:    { label: '安全',   color: 'var(--color-accent-neon)' },
+}[r] ?? { label: r, color: 'var(--color-text-muted)' });
 
 export const STAGE_FIELDS = [
   { key: 'procurementCompletionRate', label: '采购' },

@@ -75,7 +75,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           gap: 8,
           flexWrap: 'wrap'
         }}>
-          <span style={{ color: '#595959', fontWeight: 600 }}>裁剪数量：</span>
+          <span style={{ color: 'var(--color-gray-700)', fontWeight: 600 }}>裁剪数量：</span>
           {cuttingSizeItems.map(item => (
             <span key={item.size} style={{
               color: 'var(--color-success)',

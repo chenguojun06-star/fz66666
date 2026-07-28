@@ -4,7 +4,8 @@
  * 打印内容：款式图、订单号、款号、菲号、颜色、码数、数量、床号
  */
 import React from 'react';
-import { Modal, Button, Space, Radio } from 'antd';
+import { Button, Space, Radio } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 
 import type { CuttingSheetPrintModalProps } from './types';
 import { useCuttingSheetPrint } from './useCuttingSheetPrint';
@@ -26,7 +27,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
   });
 
   return (
-    <Modal
+    <ResizableModal
       title="打印裁剪单"
       open={open}
       onCancel={onCancel}
@@ -71,7 +72,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
           </div>
         </div>
       </div>
-    </Modal>
+    </ResizableModal>
   );
 };
 

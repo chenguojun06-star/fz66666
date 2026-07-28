@@ -238,7 +238,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       </div>
 
       {/* 说明：仅保留核心操作提示 */}
-      <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--color-bg-subtle)', borderRadius: 4, fontSize: 12, color: '#666' }}>
+      <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--color-bg-subtle)', borderRadius: 4, fontSize: 12, color: 'var(--color-gray-dark)' }}>
         勾选颜色后可批量应用同一张图片，也可以点击单个颜色上传专属图片。
       </div>
 

@@ -85,7 +85,7 @@ export default function WashLabelTab({
             if (selectedInCat.length === 0) return null;
             return (
               <div key={cat.key}>
-                <div style={{ fontSize: 13, color: '#888', marginBottom: 3 }}>{cat.label}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 3 }}>{cat.label}</div>
                 <Space orientation="vertical" wrap size={4}>
                   {selectedInCat.map(code => {
                     const icon = CARE_ICONS[code];

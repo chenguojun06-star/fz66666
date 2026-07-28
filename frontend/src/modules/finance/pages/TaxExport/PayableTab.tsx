@@ -218,7 +218,7 @@ const PayableTab: React.FC = () => {
               onChange={(v) => setPayAmount(v)}
               placeholder="输入付款金额"
             />
-            <span style={{ marginLeft: 8, color: '#888' }}>元</span>
+            <span style={{ marginLeft: 8, color: 'var(--color-text-muted)' }}>元</span>
           </div>
         </div>
       </SmallModal>

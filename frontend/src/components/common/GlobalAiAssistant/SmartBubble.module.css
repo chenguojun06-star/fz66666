@@ -76,7 +76,7 @@
 }
 
 .bubbleCloseBtn:hover {
-  color: #595959;
+  color: var(--color-gray-700);
   background: var(--color-bg-subtle);
 }
 
@@ -129,7 +129,7 @@
 
 .bubbleStatTotal {
   font-size: 14px;
-  color: #595959;
+  color: var(--color-gray-700);
 }
 
 .bubbleStatTotal strong {
@@ -167,7 +167,7 @@
 
 .bubbleCategoryTag {
   font-size: 14px;
-  color: #595959;
+  color: var(--color-gray-700);
   background: var(--color-bg-subtle);
   border-radius: 8px;
   padding: 2px 6px;

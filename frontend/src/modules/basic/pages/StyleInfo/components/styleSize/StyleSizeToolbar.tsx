@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, Modal, Popover, Select, Space, Upload, message as antMessage, Spin } from 'antd';
+import { App, Button, Dropdown, Input, Popover, Select, Space, Upload, message as antdMessage, Spin } from 'antd';
 import { DownOutlined, RobotOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
 import logger from '@/utils/logger';
 import { TemplateLibrary } from '@/types/style';
+import ResizableModal from '@/components/common/ResizableModal';
 
 interface Props {
   editMode: boolean;
@@ -53,7 +54,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
 
   const handleOcrRecognize = async () => {
     if (!ocrFile) {
-      antMessage.error('请先上传尺寸表图片');
+      antdMessage.error('请先上传尺寸表图片');
       return;
     }
     setOcrLoading(true);
@@ -67,7 +68,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
       });
       
       if (res.code !== 200) {
-        antMessage.error(res.message || 'AI识别失败');
+        antdMessage.error(res.message || 'AI识别失败');
       } else {
         const data = res.data || {};
         logger.debug('[AI识别] 后端解析结果:', data, ' 原始AI文本:', data?.rawJson);
@@ -116,14 +117,14 @@ const StyleSizeToolbar: React.FC<Props> = ({
 
         if (finalSizes.length === 0 && finalParts.length === 0) {
           const preview = String(data?.rawJson || '').replace(/^[`\s]+|[`\s]+$/g, '').slice(0, 80);
-          antMessage.error(preview ? `AI返回：${preview}（请上传尺码表图片重试）` : 'AI返回为空，请重试');
+          antdMessage.error(preview ? `AI返回：${preview}（请上传尺码表图片重试）` : 'AI返回为空，请重试');
           return;
         }
 
         onSizeTableRecognized({ sizes: finalSizes, parts: finalParts });
         setOcrModalOpen(false);
         setOcrFile(null);
-        antMessage.success(
+        antdMessage.success(
           finalSizes.length
             ? `识别成功！新增 ${finalSizes.length} 个尺码、${finalParts.length} 个部位`
             : `识别成功！导入 ${finalParts.length} 个部位数据`,
@@ -131,7 +132,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
       }
     } catch (e: unknown) {
       console.error('[AI识别] 请求失败:', e);
-      antMessage.error(e instanceof Error ? e.message : 'AI识别失败，请重试');
+      antdMessage.error(e instanceof Error ? e.message : 'AI识别失败，请重试');
     } finally {
       setOcrLoading(false);
     }
@@ -270,7 +271,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
       </Space>
 
       {/* AI识别尺寸表 Modal */}
-      <Modal
+      <ResizableModal
         title="AI识别尺寸表"
         open={ocrModalOpen}
         onCancel={() => { setOcrModalOpen(false); setOcrFile(null); }}
@@ -335,7 +336,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
             )}
           </div>
         </Spin>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

@@ -47,7 +47,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
               style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid #e0e0e0' }} preview={{ cover: <span>预览</span> }} />
           ) : (
-            <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed #ccc', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
+            <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed #ccc', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
           )}
           {/* 二维码 */}
           <div style={{ width: 90, height: 90, padding: 4, border: '1px solid #e0e0e0', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -56,7 +56,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               : <QRCode value={qrValue} size={80} />}
             {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 20, height: 20, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
           </div>
-          <div style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>扫码查看详情</div>
+          <div style={{ fontSize: 11, color: 'var(--color-gray-label)', textAlign: 'center' }}>扫码查看详情</div>
         </div>
 
         {/* 右侧：字段信息 */}
@@ -192,7 +192,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         </div>
       </div>
 
-      <div style={{ textAlign: 'right', marginTop: 8, color: '#999', fontSize: 12 }}>
+      <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-gray-label)', fontSize: 12 }}>
         打印时间：{formatDateTime(new Date())}
       </div>
     </div>

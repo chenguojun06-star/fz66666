@@ -29,7 +29,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                 top: 0,
                 height: '100%',
                 width: `${(item.revenue / max) * 100}%`,
-                background: 'linear-gradient(90deg, #1890ff, #40a9ff)',
+                background: 'var(--color-primary)',
                 borderRadius: 4,
               }}
             />

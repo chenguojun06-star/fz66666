@@ -49,7 +49,7 @@ const TaxExport: React.FC = () => {
         content: (
           <div>
             <p style={{ marginBottom: 8 }}>金蝶/用友专用格式需要开通<strong>财税对接模块</strong>（¥499/月）。</p>
-            <p style={{ color: '#888', fontSize: 14 }}>通用标准格式永久免费，适合手工导入任意财务软件。</p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>通用标准格式永久免费，适合手工导入任意财务软件。</p>
           </div>
         ),
         okText: '前往开通',

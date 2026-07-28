@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Button, Card, Col, Descriptions, Row, Space, Spin, Statistic, Tag, Typography } from 'antd';
-import { ShopOutlined, ShoppingCartOutlined, SyncOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ShopOutlined, ShoppingCartOutlined, SyncOutlined, CheckCircleOutlined, InboxOutlined, BarChartOutlined, WarningOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { formatMoney } from '@/utils/format';
 import type { PlatformMeta } from '../PlatformConnectorConstants';
@@ -55,7 +55,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-primary)' }}>
-                      📦 链路一：成品仓（有生产单）
+                      <InboxOutlined /> 链路一：成品仓（有生产单）
                     </div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
@@ -69,7 +69,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid var(--status-success-border)', background: 'var(--status-success-bg)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-success)' }}>
-                      🛒 链路二：电商仓（现货发货）
+                      <ShoppingCartOutlined /> 链路二：电商仓（现货发货）
                     </div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → <Tag color="orange" style={{ fontSize: 14 }}>待拣货</Tag>
@@ -86,7 +86,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
           />
 
           {/* 订单状态分解 */}
-          <Text strong style={{ display: 'block', marginBottom: 8 }}>📊 今日订单状态</Text>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}><BarChartOutlined /> 今日订单状态</Text>
           <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
             <Col span={8}>
               <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid #ffd591' }}>
@@ -121,7 +121,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
 
           {activeStats.noStockWarn > 0 && (
             <Alert type="error" showIcon style={{ borderRadius: 8 }}
-              title={`⚠️ 缺货预警：${activeStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划`} />
+              title={<React.Fragment><WarningOutlined /> {`缺货预警：${activeStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划`}</React.Fragment>} />
           )}
         </div>
       ) : (<Spin />)}

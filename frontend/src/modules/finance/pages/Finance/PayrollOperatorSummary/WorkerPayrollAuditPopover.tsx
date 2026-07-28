@@ -187,7 +187,7 @@ const WorkerPayrollAuditPopover: React.FC<{
       {analysis.breakdown.length > 0 && (
         <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: 'var(--color-bg-container)', borderRadius: 6 }}>
           {analysis.breakdown.slice(0, 6).map((b, i) => (
-            <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 14 }}>
+            <span key={i} style={{ whiteSpace: 'nowrap', color: 'var(--color-gray-700)', fontSize: 14 }}>
               <span style={{ color: 'var(--color-text-tertiary)' }}>{b.label}：</span>
               <span style={{ fontWeight: 500 }}>{b.value}</span>
             </span>

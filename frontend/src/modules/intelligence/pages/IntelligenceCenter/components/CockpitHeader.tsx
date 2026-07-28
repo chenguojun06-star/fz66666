@@ -30,7 +30,7 @@ const CockpitHeader: React.FC<CockpitHeaderProps> = ({
       <div className="cockpit-header-left">
         <LiveDot size={10} />
         <span className="cockpit-badge-live">LIVE</span>
-        <ThunderboltOutlined style={{ color: '#00e5ff', fontSize: 18 }} />
+        <ThunderboltOutlined style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 18 }} />
         <span className="cockpit-title">智能运营驾驶舱</span>
         <span className="cockpit-subtitle">全链路实时指挥 · AI 决策引擎</span>
       </div>

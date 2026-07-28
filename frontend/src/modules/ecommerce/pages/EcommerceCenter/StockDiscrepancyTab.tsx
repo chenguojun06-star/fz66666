@@ -171,7 +171,7 @@ const StockDiscrepancyTab: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-processing-bg) 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
             <Statistic
               title="差异记录"
               value={stats?.totalDiscrepancies || 0}
@@ -182,7 +182,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-error-bg)', borderRadius: 12 }}>
             <Statistic
               title="未解决"
               value={stats?.unresolvedCount || 0}
@@ -193,7 +193,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, var(--status-warning-bg) 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
             <Statistic
               title="盘盈"
               value={stats?.surplusCount || 0}
@@ -204,7 +204,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+          <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
             <Statistic
               title="盘亏"
               value={stats?.shortageCount || 0}
