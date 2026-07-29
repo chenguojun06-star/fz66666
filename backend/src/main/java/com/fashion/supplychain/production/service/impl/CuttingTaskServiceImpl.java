@@ -91,8 +91,10 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                     log.warn("裁剪任务跨岗位领取: taskId={}, receiverId={}, role={}", taskIdTrim, receiverId, role);
                 }
             }
-        } catch (Exception ignored) {
-            // UserContext 不可用时跳过校验，不阻断业务
+        } catch (Exception e) {
+            // UserContext 不可用时跳过职务软校验，不阻断业务
+            log.warn("[CuttingTask] 职务软校验失败（不阻断）taskId={} receiverId={}: {}",
+                    taskIdTrim, receiverId, e.getMessage());
         }
 
         CuttingTask task = this.getById(taskIdTrim);

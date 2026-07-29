@@ -34,7 +34,7 @@ const BatchQcForm: React.FC<BatchQcFormProps> = ({
           <CloseCircleOutlined style={{ marginRight: 4 }} />批量不合格 — 已选 {selectedCount} 条菲号
         </span>
       </div>
-      <div style={{ marginBottom: 12, padding: '10px 14px', background: '#F6FFED', borderRadius: 8, border: '1px solid var(--status-error-border)' }}>
+      <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--status-error-border)' }}>
         <span style={{ color: 'var(--color-error)', fontWeight: 500 }}>
           将对选中的 {selectedCount} 条菲号统一标记为不合格，请填写次品信息：
         </span>

@@ -29,7 +29,7 @@ export function getSkuInventoryColumns(handlers: SkuInventoryHandlers): ColumnsT
       align: 'center',
       render: (qty: number) => {
         if (!qty || qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
-        return <span style={{ color: '#d46b08', fontWeight: 600 }}>{qty}</span>;
+        return <span style={{ color: 'var(--color-warning-deep)', fontWeight: 600 }}>{qty}</span>;
       },
     },
     {

@@ -84,7 +84,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
         <div>
           {r.unitPrice ? <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
           <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
+          {r.freight ? <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },

@@ -484,8 +484,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                     log.warn("采购任务跨岗位领取: purchaseId={}, receiverId={}, role={}", purchaseId, receiverId, role);
                 }
             }
-        } catch (Exception ignored) {
-            // UserContext 不可用时（如异步线程）跳过校验，不阻断业务
+        } catch (Exception e) {
+            // UserContext 不可用时（如异步线程）跳过职务软校验，不阻断业务
+            log.warn("[MaterialPurchase] 职务软校验失败（不阻断）purchaseId={} receiverId={}: {}",
+                    purchaseId, receiverId, e.getMessage());
         }
         MaterialPurchase existed = this.getById(purchaseId);
         if (existed == null) {

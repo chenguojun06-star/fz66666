@@ -112,7 +112,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
           </Space.Compact>
         </div>
         {scanResult?.found && (
-          <Card style={{ background: '#f6f8fa' }}>
+          <Card style={{ background: 'var(--color-bg-stripe)' }}>
             <Descriptions column={3}>
               <Descriptions.Item label="款号">{scanResult.styleNo}</Descriptions.Item>
               <Descriptions.Item label="颜色">{scanResult.color}</Descriptions.Item>
@@ -124,7 +124,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
           </Card>
         )}
         {scanResult && !scanResult.found && (
-          <Card style={{ background: '#FFFBE6', border: '1px solid var(--status-warning-border)' }}>
+          <Card style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
             <div style={{ marginBottom: 8, color: 'var(--color-warning)', fontWeight: 600 }}> SKU不存在，入库时将自动创建</div>
             <Row gutter={12}>
               <Col span={8}>

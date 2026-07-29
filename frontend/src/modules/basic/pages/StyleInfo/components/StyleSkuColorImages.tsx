@@ -278,7 +278,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                           }}
                         />
                       ) : (
-                        <div style={{ textAlign: 'center', color: '#ccc' }}>
+                        <div style={{ textAlign: 'center', color: 'var(--color-text-quaternary)' }}>
                           <PictureOutlined style={{ fontSize: 48 }} />
                           <div style={{ marginTop: 8 }}>未上传</div>
                         </div>

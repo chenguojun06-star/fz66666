@@ -327,7 +327,7 @@ Page({
       content: '确认取消此笔支付？',
       success: function (res) {
         if (!res.confirm) return;
-        api.wagePayment.cancelPayment(id).then(function () {
+        api.wagePayment.cancelPayment(id, {}).then(function () {
           toast('已取消');
           that._resetAndLoad();
         }).catch(function (err) { toast('取消失败: ' + (err && err.message ? err.message : String(err))); });
@@ -344,7 +344,7 @@ Page({
       content: '确认此笔支付已完成？',
       success: function (res) {
         if (!res.confirm) return;
-        api.wagePayment.confirmOffline(id).then(function () {
+        api.wagePayment.confirmOffline(id, {}).then(function () {
           toast('已确认');
           that._loadStats();
           that._resetAndLoad();

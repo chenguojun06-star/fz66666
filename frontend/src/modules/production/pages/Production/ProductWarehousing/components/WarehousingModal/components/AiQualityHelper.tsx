@@ -115,7 +115,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
               return (
                 <div key={idx} style={{
                   padding: '4px 8px', fontSize: 14,
-                  background: isRed ? '#FFF1F0' : isYellow ? '#FFFBE6' : '#f0f7ff',
+                  background: isRed ? 'var(--status-error-bg)' : isYellow ? 'var(--status-warning-bg)' : '#f0f7ff',
                   borderLeft: `3px solid ${isRed ? 'var(--color-danger)' : isYellow ? 'var(--color-warning)' : 'var(--color-primary)'}`,
                   borderRadius: '0 4px 4px 0', color: 'var(--color-text-primary)',
                 }}>{point}</div>
@@ -128,7 +128,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 异常建议 + 采纳按钮 */}
       {defectCategory && !loading && (
         suggestion ? (
-          <div style={{ marginTop: 8, padding: '8px 10px', background: '#FFFBE6', borderRadius: 4, border: '1px solid var(--status-warning-border)' }}>
+          <div style={{ marginTop: 8, padding: '8px 10px', background: 'var(--status-warning-bg)', borderRadius: 4, border: '1px solid var(--status-warning-border)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <CheckCircleOutlined style={{ color: 'var(--color-warning)', marginTop: 2, flexShrink: 0 }} />
               <Text style={{ fontSize: 14, flex: 1 }}>{suggestion}</Text>

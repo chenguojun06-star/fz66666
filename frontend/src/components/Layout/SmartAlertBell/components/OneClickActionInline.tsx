@@ -51,7 +51,7 @@ const OneClickActionInline: React.FC<{
   return (
     <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
       {done ? (
-        <div style={{ fontSize: 12, color: '#389e0d' }}>
+        <div style={{ fontSize: 12, color: 'var(--color-success)' }}>
           ✅ 已催单，工厂已收到通知
         </div>
       ) : (

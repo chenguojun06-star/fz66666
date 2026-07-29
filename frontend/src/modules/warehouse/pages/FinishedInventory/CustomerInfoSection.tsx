@@ -36,7 +36,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
 
   if (variant === 'inline') {
     return (
-      <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
+      <div style={{ background: 'var(--color-bg-page)', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
         <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>客户信息</Typography.Text>
         <Space wrap style={{ width: '100%' }}>
           <span>

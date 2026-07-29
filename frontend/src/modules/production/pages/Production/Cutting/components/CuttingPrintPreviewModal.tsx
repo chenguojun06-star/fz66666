@@ -131,7 +131,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         style={{
           padding: '8px 14px',
           background: 'var(--status-success-bg)',
-          color: '#389e0d',
+          color: 'var(--color-success)',
           marginBottom: '12px',
           borderRadius: '4px',
           border: '1px solid var(--status-success-border)',

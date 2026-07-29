@@ -64,7 +64,7 @@ const AlertsSection: React.FC<Props> = ({
     {/* 次品预警 - 有次品才显示 */}
     {(order.unqualifiedQuantity ?? 0) > 0 && (
       <div style={{
-        padding: '3px 10px', background: '#F6FFED', borderRadius: 6,
+        padding: '3px 10px', background: 'var(--status-success-bg)', borderRadius: 6,
         marginBottom: 8, fontSize: 11, color: 'var(--color-danger)', fontWeight: 700,
         display: 'flex', alignItems: 'center', gap: 5,
       }}>
@@ -83,9 +83,9 @@ const AlertsSection: React.FC<Props> = ({
           <span style={{
             padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
             background: order.deliverySlaStatus === 'completed' ? 'var(--status-success-bg)' :
-                       order.deliverySlaStatus === 'on_track' ? '#e6f4ff' :
-                       order.deliverySlaStatus === 'at_risk' ? 'var(--status-warning-bg)' : '#F6FFED',
-            color: order.deliverySlaStatus === 'completed' ? '#389e0d' :
+                       order.deliverySlaStatus === 'on_track' ? 'var(--status-processing-bg)' :
+                       order.deliverySlaStatus === 'at_risk' ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
+            color: order.deliverySlaStatus === 'completed' ? 'var(--color-success)' :
                    order.deliverySlaStatus === 'on_track' ? 'var(--color-primary)' :
                    order.deliverySlaStatus === 'at_risk' ? 'var(--color-warning)' : 'var(--color-danger)',
           }}>
@@ -98,8 +98,8 @@ const AlertsSection: React.FC<Props> = ({
         {(order as any).cpk != null && (
           <span style={{
             padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-            background: (order as any).cpk >= 1.33 ? 'var(--status-success-bg)' : (order as any).cpk >= 1.0 ? 'var(--status-warning-bg)' : '#F6FFED',
-            color: (order as any).cpk >= 1.33 ? '#389e0d' : (order as any).cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
+            background: (order as any).cpk >= 1.33 ? 'var(--status-success-bg)' : (order as any).cpk >= 1.0 ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
+            color: (order as any).cpk >= 1.33 ? 'var(--color-success)' : (order as any).cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
           }}>
             Cpk {(order as any).cpk}{(order as any).ppk != null && ` / Ppk ${(order as any).ppk}`}
           </span>

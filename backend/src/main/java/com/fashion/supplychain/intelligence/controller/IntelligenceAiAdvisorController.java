@@ -218,7 +218,11 @@ public class IntelligenceAiAdvisorController {
 
         // P1-5 Hermes Learning Loop：异步回写到结晶化技能（successCount/avgRating 更新）
         Long tenantId = null;
-        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        try {
+            tenantId = UserContext.tenantId();
+        } catch (Exception e) {
+            log.warn("[AiFeedback] 获取租户上下文失败（技能回写将跳过）: {}", e.getMessage());
+        }
         if (skillCrystallizationService != null && tenantId != null) {
             try {
                 skillCrystallizationService.recordFeedback(commandId, tenantId, score, comment);
@@ -339,7 +343,11 @@ public class IntelligenceAiAdvisorController {
         }
 
         Long tenantId = null;
-        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        try {
+            tenantId = UserContext.tenantId();
+        } catch (Exception e) {
+            log.warn("[以图搜款] 获取租户上下文失败: {}", e.getMessage());
+        }
         log.info("[以图搜款] 请求 tenantId={} imageUrlLen={} 算法=Agnes识别+MySQL关键词搜索",
                 tenantId, imageUrl.length());
 

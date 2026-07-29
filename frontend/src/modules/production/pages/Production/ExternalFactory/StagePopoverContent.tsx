@@ -60,19 +60,19 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
 
   return (
     <div style={{ minWidth: 168, maxWidth: 230, fontSize: 14 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, color: '#262626', fontSize: 14 }}>{label}</div>
+      <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)', fontSize: 14 }}>{label}</div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
         <span style={{ color: 'var(--color-text-tertiary)' }}>已生产</span>
-        <span style={{ color: '#262626', fontWeight: 600 }}>{doneQty} 件</span>
+        <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{doneQty} 件</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
         <span style={{ color: 'var(--color-text-tertiary)' }}>还剩</span>
-        <span style={{ color: leftQty > 0 ? '#595959' : 'var(--color-success)', fontWeight: 600 }}>{leftQty} 件</span>
+        <span style={{ color: leftQty > 0 ? 'var(--color-text-secondary)' : 'var(--color-success)', fontWeight: 600 }}>{leftQty} 件</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
         <span style={{ color: 'var(--color-text-tertiary)' }}>近7天工人</span>
-        <span style={{ color: scanData.workerCount > 0 ? '#262626' : 'var(--color-text-quaternary)', fontWeight: 600 }}>
+        <span style={{ color: scanData.workerCount > 0 ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)', fontWeight: 600 }}>
           {scanData.loading ? '…' : scanData.workerCount > 0 ? `${scanData.workerCount} 人` : '-'}
         </span>
       </div>

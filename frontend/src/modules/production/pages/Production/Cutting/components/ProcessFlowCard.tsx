@@ -112,7 +112,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={cardStyle}>
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>工序单价（总计）</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>¥{totalCost.toFixed(2)}</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>¥{totalCost.toFixed(2)}</span>
           <span style={{ fontSize: 14, color: 'var(--color-text-quaternary)', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
         </div>
       </div>

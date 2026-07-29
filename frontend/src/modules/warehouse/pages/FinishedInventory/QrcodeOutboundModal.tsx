@@ -304,14 +304,14 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       </Typography.Text>
 
       {items.length > 0 && (
-        <div style={{ background: '#f5f7fa', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
+        <div style={{ background: 'var(--color-bg-stripe)', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             出库将自动从各 SKU 当前存储的库位扣减，无需手动选择仓库
           </Typography.Text>
         </div>
       )}
 
-      <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
+      <div style={{ background: 'var(--color-bg-page)', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
         <Space wrap style={{ width: '100%' }}>
           <span>
             出库类型：

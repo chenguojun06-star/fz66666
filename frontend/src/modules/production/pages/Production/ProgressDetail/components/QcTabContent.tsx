@@ -63,7 +63,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
     <div>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: 12, padding: '12px 16px', background: '#f8f9fa', borderRadius: 8,
+        marginBottom: 12, padding: '12px 16px', background: 'var(--color-bg-page)', borderRadius: 8,
       }}>
         <Space size={12}>
           <Badge count={pendingQc.length} overflowCount={999}>
@@ -217,7 +217,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                             display: 'flex', alignItems: 'center', gap: 12,
                             padding: '10px 14px',
                             borderBottom: '1px solid var(--color-bg-subtle)',
-                            background: isSelected ? 'var(--status-processing-bg)' : isUnqualified ? '#F6FFED' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
+                            background: isSelected ? 'var(--status-processing-bg)' : isUnqualified ? 'var(--status-success-bg)' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
                             opacity: isObsolete ? 0.55 : 1,
                           }}
                         >

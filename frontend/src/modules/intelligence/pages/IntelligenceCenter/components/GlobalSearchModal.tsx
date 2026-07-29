@@ -233,7 +233,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
                   cursor: 'pointer', transition: 'all 0.12s',
                   background: i === activeIdx ? 'rgba(0,229,255,0.06)' : 'transparent',
-                  borderLeft: i === activeIdx ? '2px solid #00e5ff' : '2px solid transparent',
+                  borderLeft: i === activeIdx ? '2px solid var(--color-accent-cyan-bright)' : '2px solid transparent',
                 }}
                 onClick={() => executeCommand(cmd.action)}
                 onMouseEnter={() => setActiveIdx(i)}
@@ -291,7 +291,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '9px 18px', cursor: 'pointer',
                         background: idx === activeIdx ? 'rgba(0,229,255,0.06)' : 'transparent',
-                        borderLeft: idx === activeIdx ? '2px solid #00e5ff' : '2px solid transparent',
+                        borderLeft: idx === activeIdx ? '2px solid var(--color-accent-cyan-bright)' : '2px solid transparent',
                         transition: 'all 0.12s',
                       }}
                       onClick={() => handleSelect('order', o)}
@@ -359,7 +359,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '9px 18px', cursor: 'pointer',
                         background: idx === activeIdx ? 'rgba(57,255,20,0.04)' : 'transparent',
-                        borderLeft: idx === activeIdx ? '2px solid #39ff14' : '2px solid transparent',
+                        borderLeft: idx === activeIdx ? '2px solid var(--color-accent-neon)' : '2px solid transparent',
                         transition: 'all 0.12s',
                       }}
                       onClick={() => handleSelect('worker', w)}

@@ -88,7 +88,7 @@ const PredictionFeedbackBar: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #e0e0e0', width: '100%' }}>
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-antd)', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <span style={{ color: 'var(--color-text-primary)', fontSize: 14, fontWeight: 500 }}>这条预测是否可执行？</span>
         <Button

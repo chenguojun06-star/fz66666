@@ -169,8 +169,8 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                 <Tooltip
                   title={
                     <div style={{ fontSize: 14, lineHeight: 1.8 }}>
-                      <div><strong>内部工厂</strong>：组织内部产能，完成后按人员工序统计工资（<span style={{ color: '#ffd666' }}>工资结算</span>）</div>
-                      <div><strong>外部工厂</strong>：外发加工厂，完成后按工厂结算加工费（<span style={{ color: '#95de64' }}>订单结算</span>）</div>
+                      <div><strong>内部工厂</strong>：组织内部产能，完成后按人员工序统计工资（<span style={{ color: 'var(--color-warning)' }}>工资结算</span>）</div>
+                      <div><strong>外部工厂</strong>：外发加工厂，完成后按工厂结算加工费（<span style={{ color: 'var(--color-success)' }}>订单结算</span>）</div>
                     </div>
                   }
                 >
@@ -307,8 +307,8 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           />
         </Form.Item>
         {customFields.length > 0 && (
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: '#1f1f1f' }}>扩展字段</div>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: 'var(--color-text-primary)' }}>扩展字段</div>
             <ExtFieldsSection
               fields={customFields}
               disabled={mode === 'view'}

@@ -145,8 +145,8 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({
             <Select options={CUSTOMER_STATUS_OPTIONS} />
           </Form.Item>
           {customFields.length > 0 && (
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-              <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: '#1f1f1f' }}>扩展字段</div>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+              <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: 'var(--color-text-primary)' }}>扩展字段</div>
               <ExtFieldsSection
                 fields={customFields}
                 disabled={mode === 'view'}

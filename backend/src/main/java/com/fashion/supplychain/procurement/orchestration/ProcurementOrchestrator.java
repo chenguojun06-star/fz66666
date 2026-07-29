@@ -48,10 +48,13 @@ public class ProcurementOrchestrator {
         int page = parseIntOrDefault(params, "page", 1);
         int pageSize = parseIntOrDefault(params, "pageSize", 20);
         String keyword = (String) params.getOrDefault("keyword", "");
+        // P0铁律4：多租户隔离（superadmin 场景 tenantId=null 时不过滤）
+        Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<Factory>()
                 .eq(Factory::getDeleteFlag, 0)
                 .eq(Factory::getSupplierType, "MATERIAL")
+                .eq(tenantId != null, Factory::getTenantId, tenantId)
                 .and(StringUtils.hasText(keyword), w -> w
                         .like(Factory::getFactoryName, keyword)
                         .or().like(Factory::getFactoryCode, keyword)

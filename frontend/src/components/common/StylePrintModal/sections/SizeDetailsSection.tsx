@@ -18,7 +18,7 @@ const SizeDetailsSection: React.FC<SizeDetailsSectionProps> = ({ sizeDetails }) 
   const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
   return (
     <div className="print-section" style={{ padding: 16, border: '0.5px solid #d0d0d0', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
-      <div style={{ fontWeight: 600, color: 'var(--color-gray-800)', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '0.75px solid #ccc' }}>下单明细</div>
+      <div style={{ fontWeight: 600, color: 'var(--color-gray-800)', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '0.75px solid var(--color-text-quaternary)' }}>下单明细</div>
       <table className="pt">
         <thead>
           <tr>

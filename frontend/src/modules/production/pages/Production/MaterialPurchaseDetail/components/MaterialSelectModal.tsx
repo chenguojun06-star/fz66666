@@ -101,7 +101,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({ open, onClose
                         const raw = String(value || '').trim();
                         if (!raw) return null;
                         const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
-                        return <Image src={url} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} preview={{ src: url }} />;
+                        return <Image src={url} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }} preview={{ src: url }} />;
                       },
                     },
                     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },

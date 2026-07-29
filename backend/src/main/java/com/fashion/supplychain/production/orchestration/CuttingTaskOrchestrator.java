@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.factory.CuttingOrderFactory;
 import com.fashion.supplychain.production.helper.CuttingTaskLogAppendHelper;
 import com.fashion.supplychain.production.helper.OrderRemarkHelper;
+import com.fashion.supplychain.production.helper.OrderStatusGuardHelper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -54,6 +55,9 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private CuttingTaskLogAppendHelper logAppendHelper;
+
+    @Autowired
+    private OrderStatusGuardHelper orderStatusGuardHelper;
 
     private boolean isDirectCuttingOrder(ProductionOrder order, CuttingTask task) {
         String orderNo = order != null && StringUtils.hasText(order.getOrderNo())
@@ -448,6 +452,10 @@ public class CuttingTaskOrchestrator {
         if ("scrapped".equals(currentStatus)) {
             return;
         }
+
+        // P0-7: 状态机守卫校验（宽松模式：仅 warn，不阻断裁剪退回的报废流程）
+        // 此处是裁剪退回触发的隐式报废，业务上允许从 cutting/production 等活跃态报废
+        orderStatusGuardHelper.warnIfIllegal(currentStatus, "scrapped", "cuttingRollbackScrap");
 
         order.setStatus("scrapped");
         order.setUpdateTime(LocalDateTime.now());

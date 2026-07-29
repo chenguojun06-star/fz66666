@@ -100,7 +100,7 @@ const KpiCardRow: React.FC<any> = ({
               <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14'} />
               停工预警
             </div>
-            <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14' }}>
+            <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : 'var(--color-accent-neon)' }}>
               <AnimatedNum val={pulse?.stagnantFactories?.length ?? 0} />
             </div>
             <div className="c-kpi-unit">家停滞</div>
@@ -132,7 +132,7 @@ const KpiCardRow: React.FC<any> = ({
               <LiveDot size={7} color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
               面料缺口
             </div>
-            <div className="c-kpi-val" style={{ color: (shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14' }}>
+            <div className="c-kpi-val" style={{ color: (shortage?.shortageItems?.length ?? 0) > 0 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)' }}>
               <AnimatedNum val={shortage?.shortageItems?.length ?? 0} />
             </div>
             <div className="c-kpi-unit">项缺料</div>

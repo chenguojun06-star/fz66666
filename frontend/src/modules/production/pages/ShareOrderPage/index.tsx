@@ -51,7 +51,7 @@ const ShareOrderPage: React.FC = () => {
   const completedSummaryText = `已完成 ${data.completedQuantity ?? 0} / ${data.orderQuantity ?? 0} 件`;
   const displayColorText = Array.from(new Set(colorSizeQuantities.map((item) => String(item.color || '').trim()).filter(Boolean))).join(' / ') || (String(data.color || '').trim() || '—');
   const infoLabelStyle: React.CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 14 };
-  const infoValueStyle: React.CSSProperties = { color: '#0f172a', fontSize: 14, fontWeight: 700 };
+  const infoValueStyle: React.CSSProperties = { color: 'var(--color-text-primary)', fontSize: 14, fontWeight: 700 };
   const shareMatrixItems = createOrderColorSizeMatrixInfoItems({
     items: colorSizeQuantities.map((item) => ({ color: String(item.color || '').trim(), size: String(item.size || '').trim(), quantity: Number(item.quantity ?? 0) })),
     fallbackColor: displayColorText, fallbackSize: String(data.size || '').trim(), fallbackQuantity: data.orderQuantity ?? 0,
@@ -115,7 +115,7 @@ const ShareOrderPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <XiaoyunMascotLink riskTone={riskTone} />
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{riskTone.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>{riskTone.label}</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{deliveryDiffText}</div>
                     <div style={S.aiSupportTextStyle}>数据由 云裳智链 · 实时智能化平台提供支持</div>
                   </div>
@@ -136,7 +136,7 @@ const ShareOrderPage: React.FC = () => {
                   return (
                     <div key={stage.stageName} style={{ ...S.stageCardStyle, borderColor: active ? tone.color : 'rgba(148, 163, 184, 0.18)', boxShadow: active ? `0 10px 24px ${tone.shadow}` : 'none' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>
                           <span style={{ color: tone.color }}>{stageIconMap[stage.stageName] || <DeploymentUnitOutlined />}</span><span>{stage.stageName}</span>
                         </div>
                         <Tag color={tone.tagColor} style={{ marginInlineEnd: 0, paddingInline: 6, lineHeight: '16px', fontSize: 14 }}>{tone.label}</Tag>
@@ -152,7 +152,7 @@ const ShareOrderPage: React.FC = () => {
             {data.remarks && (
               <div style={S.panelStyle}>
                 <div style={S.panelTitleStyle}>订单备注</div>
-                <div style={S.remarkCardStyle}><MessageOutlined style={{ color: '#3b82f6', fontSize: 13, marginTop: 2 }} /><div style={S.remarkTextStyle}>{data.remarks}</div></div>
+                <div style={S.remarkCardStyle}><MessageOutlined style={{ color: 'var(--color-primary)', fontSize: 13, marginTop: 2 }} /><div style={S.remarkTextStyle}>{data.remarks}</div></div>
               </div>
             )}
           </div>
@@ -173,7 +173,7 @@ const ShareOrderPage: React.FC = () => {
                   <div key={`${scan.processName || 'scan'}-${scan.scanTime || index}`} style={S.timelineItemStyle}>
                     <div style={S.timelineDotStyle} />
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{scan.processName || '生产更新'}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{scan.processName || '生产更新'}</div>
                       <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
                       <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{formatDateTime(scan.scanTime)}</div>
                     </div>

@@ -245,10 +245,10 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-<Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>开发色 {availableColors.length}</Tag>
-              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>开发码 {availableSizes.length}</Tag>
-              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
-              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>组合 {orderLines.length}</Tag>
+<Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: '#91caff' }}>开发色 {availableColors.length}</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: '#91caff' }}>开发码 {availableSizes.length}</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: '#91caff' }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: '#91caff' }}>组合 {orderLines.length}</Tag>
         </div>
         <div style={{ color: 'var(--neutral-text-light)' }}>
           总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
@@ -287,7 +287,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       </Space>
 
       {(summary && (summary.inProduction > 0 || summary.stock > 0 || summary.pendingSales > 0)) || availabilityLoading ? (
-        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? 'var(--status-warning-bg)' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: '#d46b08' }}>
+        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? 'var(--status-warning-bg)' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: 'var(--color-warning-deep)' }}>
           {availabilityLoading ? (
             <span>正在查询该款式的在途、库存、销售欠数...</span>
           ) : summary ? (
@@ -339,7 +339,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                           />
                           {hasInfo ? (
                             <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.4, display: 'flex', gap: 4, justifyContent: 'center' }}>
-                              {avail.inProduction > 0 && <span style={{ color: '#d46b08' }}>在途{avail.inProduction}</span>}
+                              {avail.inProduction > 0 && <span style={{ color: 'var(--color-warning-deep)' }}>在途{avail.inProduction}</span>}
                               {avail.stock > 0 && <span style={{ color: 'var(--color-success)' }}>库存{avail.stock}</span>}
                               {avail.pendingSales > 0 && <span style={{ color: 'var(--color-error)' }}>欠{avail.pendingSales}</span>}
                             </div>

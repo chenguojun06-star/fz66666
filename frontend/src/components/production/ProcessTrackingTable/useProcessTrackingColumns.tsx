@@ -31,7 +31,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
           displayText = `${orderNo}-${bundleNo}`;
         }
         return (
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>{displayText || bundleNo}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>{displayText || bundleNo}</span>
         );
       },
     },
@@ -102,7 +102,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       dataIndex: 'scanTime',
       key: 'scanTime',
       width: 140,
-      render: (v: string) => <span style={{ fontSize: 13, color: '#475569' }}>{v || '-'}</span>,
+      render: (v: string) => <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{v || '-'}</span>,
     },
     {
       title: '操作人',

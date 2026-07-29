@@ -27,8 +27,8 @@ const WorkerEfficiencyPanel: React.FC<WorkerEfficiencyPanelProps> = ({
             {workers?.workers?.slice(0, 7).map((w: any) => (
               <tr key={w.workerName ?? w.workerId}>
                 <td>{w.workerName}</td>
-                <td style={{ color: w.speedScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.speedScore}</td>
-                <td style={{ color: w.qualityScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.qualityScore}</td>
+                <td style={{ color: w.speedScore >= 80 ? 'var(--color-accent-neon)' : 'var(--color-warning-deep)' }}>{w.speedScore}</td>
+                <td style={{ color: w.qualityScore >= 80 ? 'var(--color-accent-neon)' : 'var(--color-warning-deep)' }}>{w.qualityScore}</td>
                 <td>{w.stabilityScore}</td>
                 <td>{w.versatilityScore}</td>
                 <td>{w.attendanceScore}</td>

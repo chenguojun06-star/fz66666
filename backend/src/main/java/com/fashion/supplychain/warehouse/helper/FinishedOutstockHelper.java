@@ -82,6 +82,8 @@ public class FinishedOutstockHelper {
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("出库明细不能为空");
         }
+        // P0铁律4：多租户隔离，方法顶部统一获取 tenantId
+        Long tenantId = UserContext.tenantId();
         String requestOrderId = trimToNull(params.get("orderId"));
         String requestOrderNo = trimToNull(params.get("orderNo"));
         String requestWarehouse = trimToNull(params.get("warehouseLocation"));
@@ -104,11 +106,10 @@ public class FinishedOutstockHelper {
         // 如果未传入 platformCode，尝试从生产订单查询（带 tenant_id 隔离，P0铁律4）
         if (!StringUtils.hasText(platformCode) && StringUtils.hasText(requestOrderNo)) {
             try {
-                Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
                 ProductionOrder prodOrder = productionOrderService.lambdaQuery()
                         .select(ProductionOrder::getId, ProductionOrder::getPlatformCode)
                         .eq(ProductionOrder::getOrderNo, requestOrderNo)
-                        .eq(currentTenantId != null, ProductionOrder::getTenantId, currentTenantId)
+                        .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                         .one();
                 if (prodOrder != null && StringUtils.hasText(prodOrder.getPlatformCode())) {
                     platformCode = prodOrder.getPlatformCode();
@@ -131,7 +132,8 @@ public class FinishedOutstockHelper {
                 throw new IllegalArgumentException("出库数量必须大于0: " + skuCode);
             }
             LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<ProductSku>()
-                    .eq(ProductSku::getSkuCode, skuCode);
+                    .eq(ProductSku::getSkuCode, skuCode)
+                    .eq(tenantId != null, ProductSku::getTenantId, tenantId);
             ProductSku sku = productSkuService.getOne(wrapper);
             if (sku == null) {
                 throw new IllegalArgumentException("SKU不存在: " + skuCode);
@@ -155,8 +157,7 @@ public class FinishedOutstockHelper {
             String effectiveAreaId = warehouseAreaId;
             String effectiveAreaName = warehouseAreaName;
             if (!StringUtils.hasText(effectiveWarehouse) && !StringUtils.hasText(effectiveAreaId)) {
-                Long currentTenantId = UserContext.tenantId();
-                String[] resolved = resolveWarehouseFromLatestInbound(skuCode, currentTenantId);
+                String[] resolved = resolveWarehouseFromLatestInbound(skuCode, tenantId);
                 if (resolved != null) {
                     effectiveWarehouse = resolved[0];
                     effectiveAreaId = resolved[1];
@@ -211,10 +212,10 @@ public class FinishedOutstockHelper {
                 order = productionOrderService.getById(orderId);
             }
             if (order == null && StringUtils.hasText(orderNo)) {
-                Long currentTenantId = UserContext.tenantId();
+                Long tenantId = UserContext.tenantId();
                 order = productionOrderService.lambdaQuery()
                         .eq(ProductionOrder::getOrderNo, orderNo)
-                        .eq(currentTenantId != null, ProductionOrder::getTenantId, currentTenantId)
+                        .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                         .one();
             }
             if (order == null) {

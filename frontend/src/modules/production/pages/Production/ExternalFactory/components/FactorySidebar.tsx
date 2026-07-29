@@ -62,7 +62,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
             style={{
               padding: '12px 16px',
               cursor: 'pointer',
-              background: selectedFactoryId === null ? '#e6f4ff' : 'transparent',
+              background: selectedFactoryId === null ? 'var(--status-processing-bg)' : 'transparent',
               borderBottom: '1px solid var(--color-border-light)',
             }}
           >
@@ -95,7 +95,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
               style={{
                 padding: '12px 16px',
                 cursor: 'pointer',
-                background: selectedFactoryId === item.factoryId ? '#e6f4ff' : 'transparent',
+                background: selectedFactoryId === item.factoryId ? 'var(--status-processing-bg)' : 'transparent',
                 borderBottom: '1px solid var(--color-border-light)',
               }}
             >

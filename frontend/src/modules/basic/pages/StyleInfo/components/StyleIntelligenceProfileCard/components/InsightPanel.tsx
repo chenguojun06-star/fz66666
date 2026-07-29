@@ -30,7 +30,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <BulbOutlined style={{ color: 'var(--color-accent-purple)', fontSize: 14 }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#1f1f1f' }}>AI 洞察</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>AI 洞察</span>
         </div>
         <Button
           size="small"

@@ -39,7 +39,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
       <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0f2f5', borderRadius: 12, border: '1px solid var(--color-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
+            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
             <Checkbox.Group
               value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
               onChange={(values) => {
@@ -102,7 +102,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
       {labelPrintMode && (
         <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-base)7E6', borderRadius: 12, border: '1px solid #ffd591' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
+            <span style={{ fontWeight: 600, color: 'var(--color-warning-deep)', whiteSpace: 'nowrap' }}>标签打印：</span>
             <Radio.Group value={labelSize} onChange={e => onLabelSizeChange(e.target.value)}>
               <Radio.Button value="40x70">4 × 7 cm</Radio.Button>
               <Radio.Button value="50x100">5 × 10 cm</Radio.Button>

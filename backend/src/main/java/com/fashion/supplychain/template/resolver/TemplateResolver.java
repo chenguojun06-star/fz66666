@@ -68,6 +68,15 @@ public class TemplateResolver {
         return tenantPart + ":" + stylePart;
     }
 
+    /**
+     * 获取当前租户ID（P0铁律4：多租户隔离）。
+     * <p>用于 LambdaQueryWrapper 拼接 .eq(TemplateLibrary::getTenantId, tenantId)。
+     * <p>superadmin 场景（tenantId=null）下返回 null，调用方用条件式 eq 注入。
+     */
+    private Long currentTenantId() {
+        return UserContext.tenantId();
+    }
+
     public TemplateLibrary resolveProgressTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
         String cacheKey = buildTemplateCacheKey(sn);
@@ -76,11 +85,13 @@ public class TemplateResolver {
             return cached;
         }
         TemplateLibrary tpl = null;
+        Long tenantId = currentTenantId();
         try {
             if (StringUtils.hasText(sn)) {
                 tpl = templateLibraryMapper.selectOne(new LambdaQueryWrapper<TemplateLibrary>()
                         .eq(TemplateLibrary::getTemplateType, "progress")
                         .eq(TemplateLibrary::getSourceStyleNo, sn)
+                        .eq(tenantId != null, TemplateLibrary::getTenantId, tenantId)
                         .orderByDesc(TemplateLibrary::getUpdateTime)
                         .orderByDesc(TemplateLibrary::getCreateTime)
                         .last("limit 1"));
@@ -90,6 +101,7 @@ public class TemplateResolver {
                 tpl = templateLibraryMapper.selectOne(new LambdaQueryWrapper<TemplateLibrary>()
                         .eq(TemplateLibrary::getTemplateType, "progress")
                         .eq(TemplateLibrary::getTemplateKey, "default")
+                        .eq(tenantId != null, TemplateLibrary::getTenantId, tenantId)
                         .orderByDesc(TemplateLibrary::getUpdateTime)
                         .orderByDesc(TemplateLibrary::getCreateTime)
                         .last("limit 1"));
@@ -98,6 +110,7 @@ public class TemplateResolver {
             if (tpl == null) {
                 tpl = templateLibraryMapper.selectOne(new LambdaQueryWrapper<TemplateLibrary>()
                         .eq(TemplateLibrary::getTemplateType, "progress")
+                        .eq(tenantId != null, TemplateLibrary::getTenantId, tenantId)
                         .orderByDesc(TemplateLibrary::getUpdateTime)
                         .orderByDesc(TemplateLibrary::getCreateTime)
                         .last("limit 1"));
@@ -123,10 +136,12 @@ public class TemplateResolver {
             return cached;
         }
         TemplateLibrary tpl = null;
+        Long tenantId = currentTenantId();
         try {
             tpl = templateLibraryMapper.selectOne(new LambdaQueryWrapper<TemplateLibrary>()
                     .eq(TemplateLibrary::getTemplateType, "process_price")
                     .eq(TemplateLibrary::getSourceStyleNo, sn)
+                    .eq(tenantId != null, TemplateLibrary::getTenantId, tenantId)
                     .orderByDesc(TemplateLibrary::getUpdateTime)
                     .orderByDesc(TemplateLibrary::getCreateTime)
                     .last("limit 1"));
@@ -215,10 +230,12 @@ public class TemplateResolver {
         if (!StringUtils.hasText(styleNo)) {
             return result;
         }
+        Long tenantId = currentTenantId();
         try {
             TemplateLibrary tpl = templateLibraryMapper.selectOne(new LambdaQueryWrapper<TemplateLibrary>()
                     .eq(TemplateLibrary::getTemplateType, "process")
                     .eq(TemplateLibrary::getSourceStyleNo, styleNo.trim())
+                    .eq(tenantId != null, TemplateLibrary::getTenantId, tenantId)
                     .orderByDesc(TemplateLibrary::getUpdateTime)
                     .last("limit 1"));
             if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
@@ -311,10 +328,12 @@ public class TemplateResolver {
 
     private List<Map<String, Object>> resolveFromProcessTemplate(String sn, Map<String, BigDecimal> processPriceOverrides) {
         List<Map<String, Object>> out = new ArrayList<>();
+        Long tenantId = currentTenantId();
         try {
             TemplateLibrary processTpl = templateLibraryMapper.selectOne(new LambdaQueryWrapper<TemplateLibrary>()
                     .eq(TemplateLibrary::getTemplateType, "process")
                     .eq(TemplateLibrary::getSourceStyleNo, sn)
+                    .eq(tenantId != null, TemplateLibrary::getTenantId, tenantId)
                     .orderByDesc(TemplateLibrary::getUpdateTime)
                     .orderByDesc(TemplateLibrary::getCreateTime)
                     .last("LIMIT 1"));

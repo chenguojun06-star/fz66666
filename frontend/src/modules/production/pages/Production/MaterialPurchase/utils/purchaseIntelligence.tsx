@@ -198,7 +198,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
 
       {/* 关键路径 */}
       {insight.criticalPath && (
-        <div style={{ marginBottom: 6, fontWeight: 500, color: '#262626' }}>
+        <div style={{ marginBottom: 6, fontWeight: 500, color: 'var(--color-text-primary)' }}>
            {insight.criticalPath}
         </div>
       )}
@@ -234,7 +234,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.suggestions.length > 0 && (
         <div>
           {insight.suggestions.map((s, i) => (
-            <div key={`s${i}`} style={{ color: '#389e0d' }}> {s}</div>
+            <div key={`s${i}`} style={{ color: 'var(--color-success)' }}> {s}</div>
           ))}
         </div>
       )}

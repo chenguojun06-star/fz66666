@@ -42,7 +42,7 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
               </Tag>
             )}
             <span style={{
-              fontSize: 11, color: 'var(--color-primary)', background: '#e6f4ff',
+              fontSize: 11, color: 'var(--color-primary)', background: 'var(--status-processing-bg)',
               padding: '1px 7px', borderRadius: 10, fontWeight: 600,
             }}>
               {order.ecOrderNo}

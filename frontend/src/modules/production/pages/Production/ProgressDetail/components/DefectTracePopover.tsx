@@ -144,7 +144,7 @@ const DefectTracePopover: React.FC<{
                     style={{
                       width: '100%',
                       height: h,
-                      background: t.defectCount > 0 ? 'var(--color-danger)' : '#e8e8e8',
+                      background: t.defectCount > 0 ? 'var(--color-danger)' : 'var(--color-border-antd)',
                       borderRadius: 2,
                       opacity: t.defectCount > 0 ? 0.8 : 0.3,
                     }}

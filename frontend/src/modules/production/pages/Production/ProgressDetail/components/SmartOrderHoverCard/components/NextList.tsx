@@ -73,7 +73,7 @@ const NextList: React.FC<Props> = ({
     {stuckNode && (
       <div style={{
         marginTop: 6, padding: '3px 8px', background: 'var(--status-warning-bg)',
-        borderRadius: 5, fontSize: 11, color: '#d46b08',
+        borderRadius: 5, fontSize: 11, color: 'var(--color-warning-deep)',
         display: 'flex', alignItems: 'center', gap: 4,
       }}>
         <span>⏸</span>

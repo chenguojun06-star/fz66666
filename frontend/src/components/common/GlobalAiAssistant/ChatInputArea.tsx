@@ -91,7 +91,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             }}
           />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
               {attachedFile?.name || '图片'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>

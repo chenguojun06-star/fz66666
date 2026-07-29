@@ -6,6 +6,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.OrderStatusGuardHelper;
 import com.fashion.supplychain.production.util.ProductionOrderUtils;
 import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
 import com.fashion.supplychain.system.entity.Factory;
@@ -38,6 +39,7 @@ public class ProductionOrderCommandService {
     private final OrganizationUnitBindingHelper organizationUnitBindingHelper;
     private final CustomerService customerService;
     private final JdbcTemplate jdbcTemplate;
+    private final OrderStatusGuardHelper orderStatusGuardHelper;
 
     @Autowired
     public ProductionOrderCommandService(
@@ -46,13 +48,15 @@ public class ProductionOrderCommandService {
             FactoryService factoryService,
             OrganizationUnitBindingHelper organizationUnitBindingHelper,
             CustomerService customerService,
-            JdbcTemplate jdbcTemplate) {
+            JdbcTemplate jdbcTemplate,
+            OrderStatusGuardHelper orderStatusGuardHelper) {
         this.productionOrderService = productionOrderService;
         this.styleInfoService = styleInfoService;
         this.factoryService = factoryService;
         this.organizationUnitBindingHelper = organizationUnitBindingHelper;
         this.customerService = customerService;
         this.jdbcTemplate = jdbcTemplate;
+        this.orderStatusGuardHelper = orderStatusGuardHelper;
     }
 
     /**
@@ -159,6 +163,9 @@ public class ProductionOrderCommandService {
         if (isTerminalStatus(status)) {
             throw new IllegalStateException("订单已终态(" + status + ")，无法报废");
         }
+
+        // P0-7: 状态机守卫校验
+        orderStatusGuardHelper.guardTransition(status, "scrapped", "scrapOrder");
 
         // 更新订单状态为报废
         order.setStatus("scrapped");

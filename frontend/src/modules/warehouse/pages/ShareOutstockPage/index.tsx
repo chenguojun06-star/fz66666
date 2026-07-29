@@ -69,7 +69,7 @@ const ShareOutstockPage: React.FC = () => {
           <div style={heroHeaderStyle}>
             <div>
               <div style={brandTitleStyle}>
-                <InboxOutlined style={{ marginRight: 6, color: '#3b82f6' }} />
+                <InboxOutlined style={{ marginRight: 6, color: 'var(--color-primary)' }} />
                 出货追踪
               </div>
               <div style={brandSubtitleStyle}>

@@ -39,7 +39,7 @@ const OutstockTable: React.FC<OutstockTableProps> = ({ items }) => (
               <td style={tdStyle}>{item.outstockNo || '—'}</td>
               <td style={tdStyle}>{item.orderNo || '—'}</td>
               <td style={tdStyle}>
-                <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.styleNo || '—'}</div>
+                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.styleNo || '—'}</div>
                 {item.styleName && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.styleName}</div>}
               </td>
               <td style={tdStyle}>{item.color} / {item.size}</td>
@@ -47,7 +47,7 @@ const OutstockTable: React.FC<OutstockTableProps> = ({ items }) => (
               <td style={{ ...tdStyle, textAlign: 'right' }}>
                 {item.salesPrice != null ? formatMoney(item.salesPrice) : '—'}
               </td>
-              <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
+              <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                 {item.totalAmount != null ? formatMoney(item.totalAmount) : '—'}
               </td>
               <td style={tdStyle}>

@@ -45,8 +45,8 @@ const QuickEditModalSection: React.FC<QuickEditModalSectionProps> = ({
       onCancel={() => { quickEditModal.close(); }}
     >
       {customFields.length > 0 && (
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-          <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: '#1f1f1f' }}>扩展字段</div>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+          <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: 'var(--color-text-primary)' }}>扩展字段</div>
           <ExtFieldsSection
             fields={customFields}
             colSpan={24}

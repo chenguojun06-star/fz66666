@@ -50,7 +50,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
       title: '图片', dataIndex: 'styleCoverUrl', key: 'styleCoverUrl', width: 72, align: 'center' as const,
       render: (url: string) => url
         ? <Image src={getFullAuthedFileUrl(url)} width={48} style={{ height: 'auto', display: 'block', borderRadius: 4 }} preview={false} />
-        : <div style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无图</div>,
+        : <div style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>无图</div>,
     },
     { title: '名称', dataIndex: 'templateName', key: 'templateName', width: 220, render: (v) => String(v || '-') },
     { title: '类型', dataIndex: 'templateType', key: 'templateType', width: 90,
@@ -133,7 +133,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
       <div style={directCardStyle}>
         {isProcessing(directRow) ? (
           <div style={processingBannerStyle}>
-            <div style={{ ...directTitleStyle, color: '#d46b08' }}>处理中</div>
+            <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
             <div style={{ ...directMetaStyle, color: '#ad6800' }}>这份工序单价模板已退回，保存后会自动重新锁定。</div>
           </div>
         ) : null}

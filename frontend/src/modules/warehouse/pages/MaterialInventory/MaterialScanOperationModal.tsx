@@ -120,7 +120,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
           </Space.Compact>
         </div>
         {scanResult?.found && (
-          <Card style={{ background: '#f6f8fa' }}>
+          <Card style={{ background: 'var(--color-bg-stripe)' }}>
             <Descriptions column={3}>
               <Descriptions.Item label="物料名称">{scanResult.materialName}</Descriptions.Item>
               <Descriptions.Item label="类型">{getMaterialTypeLabel(scanResult.materialType) || '未知'}</Descriptions.Item>
@@ -132,7 +132,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
           </Card>
         )}
         {scanResult && !scanResult.found && (
-          <Card style={{ background: '#FFFBE6', border: '1px solid var(--status-warning-border)' }}>
+          <Card style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
             <div style={{ marginBottom: 8, color: 'var(--color-warning)', fontWeight: 600 }}> 物料不存在，入库时将自动创建库存记录</div>
             <Row gutter={12}>
               <Col span={6}>

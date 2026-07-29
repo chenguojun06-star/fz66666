@@ -183,7 +183,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           <Input.TextArea rows={2} />
         </Form.Item>
         {(stock?.warehouseAreaName || stock?.location) && (
-          <div style={{ background: '#f5f7fa', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
+          <div style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
             <Typography.Text type="secondary" style={{ fontSize: 13 }}>
               出库仓库：{stock.warehouseAreaName || '-'}
               {stock?.location ? ` | 库位：${stock.location}` : ''}

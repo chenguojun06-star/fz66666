@@ -73,7 +73,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           })()}
           {daysLeft !== null && (
             <span className="order-pop-days" style={{
-              color: daysLeft < 0 ? '#e03030' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
+              color: daysLeft < 0 ? '#e03030' : daysLeft <= 3 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)',
             }}>
               {daysLeft < 0 ? ` 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
             </span>
@@ -162,7 +162,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           {intel.anomalies.map((a, i) => (
             <div key={i} style={{
               fontSize: 14, lineHeight: 1.5, marginBottom: i < intel.anomalies.length - 1 ? 3 : 0,
-              color: ({ critical: '#e03030', warning: '#f7a600', info: '#00e5ff' } as Record<string, string>)[a.severity] ?? '#888',
+              color: ({ critical: '#e03030', warning: 'var(--color-warning-deep)', info: 'var(--color-accent-cyan-bright)' } as Record<string, string>)[a.severity] ?? '#888',
             }}>
               · <b>{a.title}</b>: {a.description}
             </div>

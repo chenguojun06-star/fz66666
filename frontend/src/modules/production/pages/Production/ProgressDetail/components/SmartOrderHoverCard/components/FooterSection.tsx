@@ -32,7 +32,7 @@ const FooterSection: React.FC<Props> = ({ order, progressInsight }) => (
         )}
         {(order as any).operationRemark && (
           <span style={{
-            color: '#d46b08', background: 'rgba(250,173,20,0.1)',
+            color: 'var(--color-warning-deep)', background: 'rgba(250,173,20,0.1)',
             padding: '1px 5px', borderRadius: 3,
           }}>
             {(order as any).operationRemark}

@@ -151,7 +151,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: '#fcfcfd', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面料差异</div>
-            <div style={{ color: orchestration.scatterLevel === 'high' ? 'var(--color-error)' : orchestration.scatterLevel === 'medium' ? '#d48806' : '#389e0d' }}>
+            <div style={{ color: orchestration.scatterLevel === 'high' ? 'var(--color-error)' : orchestration.scatterLevel === 'medium' ? '#d48806' : 'var(--color-success)' }}>
               {scatterDecisionText}
             </div>
           </div>
@@ -177,7 +177,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
               <span>散剪偏差：{formatMoney(orchestration.scatterPremiumPerPiece)} / 件</span>
               <span>整单偏差：{formatMoney(orchestration.scatterPremiumTotal)}</span>
             </div>
-            <div style={{ color: orchestration.scatterPremiumPerPiece > 0 ? 'var(--color-error)' : '#389e0d', fontWeight: 600 }}>
+            <div style={{ color: orchestration.scatterPremiumPerPiece > 0 ? 'var(--color-error)' : 'var(--color-success)', fontWeight: 600 }}>
               {orchestration.scatterPremiumPerPiece > 0
                 ? `散剪会让成本单件增加 ${formatMoney(orchestration.scatterPremiumPerPiece)} / 件`
                 : '当前散剪不会额外拉高单件成本'}

@@ -215,7 +215,7 @@ const OutboundForm: React.FC<OutboundFormProps> = ({
             </Form.Item>
           </Col>
           <Col span={24}>
-            <div style={{ background: '#f5f7fa', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
+            <div style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
               <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 当前库存位置：{warehouseLocation || '-'}（出库将自动从该位置扣减）
               </Typography.Text>

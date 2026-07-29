@@ -34,7 +34,7 @@ export const buildColumns = (options: BuildColumnsOptions): ColumnsType<SampleSt
               preview={false}
             />
           ) : (
-            <span style={{ color: '#ccc', fontSize: 14, height: 48, display: 'flex', alignItems: 'center' }}>无图</span>
+            <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14, height: 48, display: 'flex', alignItems: 'center' }}>无图</span>
           )}
         </div>
       ),

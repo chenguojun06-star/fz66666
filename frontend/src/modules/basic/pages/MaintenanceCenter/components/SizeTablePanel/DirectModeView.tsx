@@ -114,7 +114,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
     <div style={directCardStyle}>
       {isProcessing(directRow) ? (
         <div style={processingBannerStyle}>
-          <div style={{ ...directTitleStyle, color: '#d46b08' }}>处理中</div>
+          <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
           <div style={{ ...directMetaStyle, color: '#ad6800' }}>这份尺寸模板已退回，当前还没有重新保存提交，保存后会自动重新锁定。</div>
         </div>
       ) : null}

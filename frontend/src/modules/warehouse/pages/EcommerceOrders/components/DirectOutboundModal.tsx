@@ -20,7 +20,7 @@ const DirectOutboundModal: React.FC<Props> = ({ open, target, outbounding, form,
       open={open} onCancel={onCancel}
       onOk={onOk} confirmLoading={outbounding} okText="确认出库" width="85vw" maskClosable={false}>
       {target && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 14 }}>
+        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-stripe)', borderRadius: 6, fontSize: 14 }}>
           <div>平台订单: <b>{target.platformOrderNo || target.orderNo}</b></div>
           <div>商品: {target.productName} × {target.quantity}</div>
           <div>收件人: {target.receiverName} &nbsp;{target.receiverPhone}</div>

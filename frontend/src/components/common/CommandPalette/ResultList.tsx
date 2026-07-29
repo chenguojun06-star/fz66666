@@ -80,7 +80,7 @@ const ResultList: React.FC<ResultListProps> = ({ items, activeIdx, setActiveIdx,
             <span className="cp-item-sub">{o.styleName}{o.factoryName ? ` · ${o.factoryName}` : ''}</span>
           </span>
           <span className="cp-item-meta">
-            <span className="cp-status-dot" style={{ background: STATUS_COLOR[o.status] || '#ccc' }} />
+            <span className="cp-status-dot" style={{ background: STATUS_COLOR[o.status] || 'var(--color-text-quaternary)' }} />
             <span className="cp-item-status">{STATUS_LABEL_ZH[o.status] || o.statusLabel}</span>
             {o.progress != null && <span className="cp-item-pct">{o.progress}%</span>}
           </span>

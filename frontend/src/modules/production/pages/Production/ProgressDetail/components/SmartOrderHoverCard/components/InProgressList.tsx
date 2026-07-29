@@ -60,7 +60,7 @@ const InProgressList: React.FC<Props> = ({
                 {/* 瓶颈标记：当前工序与 progressInsight 检测到的瓶颈匹配 */}
                 {progressInsight?.bottleneck?.stage === s.label && (
                   <span style={{
-                    background: '#F6FFED', color: 'var(--color-danger)',
+                    background: 'var(--status-success-bg)', color: 'var(--color-danger)',
                     borderRadius: 8, padding: '0 5px', fontSize: 11, fontWeight: 700,
                   }}>瓶颈</span>
                 )}
@@ -75,11 +75,11 @@ const InProgressList: React.FC<Props> = ({
                 </span>
               </div>
               {/* 第二行：件数 + 操作人数 + 人均产能 + 最近扫码时间 + 预计完成日 */}
-              <div style={{ paddingLeft: 17, fontSize: 11, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ paddingLeft: 17, fontSize: 11, color: 'var(--color-text-quaternary)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ color: 'var(--color-text-muted)' }}>{s.qty}/{total}件</span>
                 {s.workerCount > 0 && (
                   <span style={{
-                    color: 'var(--color-primary)', background: '#e6f4ff',
+                    color: 'var(--color-primary)', background: 'var(--status-processing-bg)',
                     padding: '0px 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
                   }}>
                      {s.workerCount}人

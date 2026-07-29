@@ -126,7 +126,7 @@ const ShareOrderPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f7fa' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
         <Spin size="large" spinning tip="加载中..."><div /></Spin>
       </div>
     );
@@ -134,7 +134,7 @@ const ShareOrderPage: React.FC = () => {
 
   if (error || !data) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f7fa' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
         <div style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}></div>
           <div style={{ fontSize: 18, color: 'var(--color-text-secondary)', marginBottom: 8 }}>链接无效或已过期</div>

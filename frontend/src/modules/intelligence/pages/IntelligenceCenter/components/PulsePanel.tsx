@@ -37,9 +37,9 @@ const PulsePanel: React.FC<PulsePanelProps> = ({
               const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
               return (
                 <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
-                  <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e03030' }} />
+                  <span className="c-fa-dot" style={{ background: f.active ? 'var(--color-accent-neon)' : mins < 90 ? 'var(--color-warning-deep)' : '#e03030' }} />
                   <span className="c-fa-name">{f.factoryName}</span>
-                  <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e03030' }}>{timeStr}</span>
+                  <span className="c-fa-time" style={{ color: f.active ? 'var(--color-accent-neon)' : mins < 90 ? 'var(--color-warning-deep)' : '#e03030' }}>{timeStr}</span>
                   <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
                 </div>
               );

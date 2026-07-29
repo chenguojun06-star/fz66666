@@ -130,7 +130,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                     }}
                   >
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{item.label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? '#d48806' : '#262626' }}>{item.value}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? '#d48806' : 'var(--color-text-primary)' }}>{item.value}</div>
                   </div>
                 ))}
               </div>

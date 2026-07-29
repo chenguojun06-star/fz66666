@@ -96,10 +96,10 @@ const SizeTableSection: React.FC<SizeTableSectionProps> = ({ sizes }) => {
                 {row.chunkImgs.length > 0
                   ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
                       {row.chunkImgs.map((url: string) => (
-                        <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
+                        <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
                       ))}
                     </div>
-                  : <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+                  : <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>无图</span>
                 }
               </td>
             )}

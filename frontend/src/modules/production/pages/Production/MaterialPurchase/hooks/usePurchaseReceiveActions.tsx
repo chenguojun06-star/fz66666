@@ -119,7 +119,7 @@ export function usePurchaseReceiveActions({
               <p style={{ marginBottom: 8 }}>当天有 <strong>{mergeableCount}</strong> 条相同面辅料（<strong>{materialInfo}</strong>）的待采购任务，是否合并采购？</p>
               <div style={{ maxHeight: 200, overflow: 'auto', background: 'var(--color-bg-subtle)', padding: '8px 12px', borderRadius: 4, fontSize: 14 }}>
                 {mergeableItems.map((item, i) => (
-                  <div key={item.id} style={{ marginBottom: 4, borderBottom: i < mergeableItems.length - 1 ? '1px solid #e8e8e8' : 'none', paddingBottom: 4 }}>
+                  <div key={item.id} style={{ marginBottom: 4, borderBottom: i < mergeableItems.length - 1 ? '1px solid var(--color-border-antd)' : 'none', paddingBottom: 4 }}>
                     <span style={{ color: 'var(--color-text-secondary)' }}>{item.orderNo || item.styleNo || '-'}</span>{' '}
                     <span>{item.materialName}</span>{' '}
                     <span style={{ color: 'var(--color-primary)' }}>{formatMaterialQuantity(item.purchaseQuantity)}{item.unit || ''}</span>

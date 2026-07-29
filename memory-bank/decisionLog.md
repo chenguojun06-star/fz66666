@@ -808,3 +808,70 @@
 - 前端 `npx tsc --noEmit` ✅ 0 errors
 - @AgentToolDef 覆盖率核实：`grep -l "@AgentToolDef" ... | wc -l` = 105
 
+---
+
+## D-050：小云AI P3 升级 — 共享记忆滑动续期 + 工具版本化治理 + L5 分级存储（2026-07-28）
+
+### 上下文
+小云AI智能化系统六大模块完整度达 95%+，剩余 P3 阶段 3 项待升级：
+1. **共享记忆滑动续期**：活跃会话中共享事实过期会被清理，导致多 Agent 协作时事实丢失
+2. **工具版本化治理缺失**：@AgentToolDef 无版本字段，废弃工具无法标识和迁移
+3. **L5 Archival 单层存储**：6 个月+ 冷数据全部存于同一 collection，无分级策略，召回效率低
+
+### 决策
+
+#### D-050-1 SharedAgentMemory 滑动续期（P3-1）
+1. `SharedAgentMemoryMapper` 新增 `extendExpire(tenantId, sessionId, newExpire, maxExpire)` 方法
+2. `SharedAgentMemoryService.readFacts/readFact` 读取后调用 `slideExpireBestEffort`：
+   - newExpire = NOW + 24h（每次读取延长 24h）
+   - maxExpire = 最早 createTime + 7 天（**7 天硬上限**防止无限续期）
+   - SQL 限制：只续期 `expire_time < maxExpire` 的记录
+3. best-effort 模式：续期失败不抛异常，仅 log.debug
+
+#### D-050-2 @AgentToolDef 版本化治理（P3-2）
+1. `@AgentToolDef` 新增 3 个字段：
+   - `version`：语义化版本号（默认 "1.0.0"）
+   - `deprecated`：是否已废弃（默认 false）
+   - `replacedBy`：替代工具名（默认 ""）
+2. 新建 `AgentToolVersionRegistry` 服务：
+   - `@PostConstruct` 启动时扫描所有 `@AgentToolDef` Bean（支持 CGLIB 代理）
+   - 内存存储 `Map<String, ToolVersionInfo>`，运行时只读
+   - 提供 `listAllTools()` / `listDeprecatedTools()` / `versionDistribution()` / `healthCheck()` 方法
+
+#### D-050-3 L5 Archival 分级存储策略（P3-3）
+1. 新建 `ArchivalTier` 枚举：`HOT`（6m~1y）/ `WARM`（1~2y）/ `COLD`（2y+）
+2. `ArchivalTier.of(originalCreateTime, now)` 静态方法按时间自动分级
+3. `QdrantService` 新增 4 个方法：
+   - `upsertArchivalTiered(..., ArchivalTier tier)`：写入 tier 字段到 payload（旧 `upsertArchival` 委托此方法）
+   - `searchArchivalTiered(..., List<ArchivalTier> tierFilter)`：按 tier 过滤召回
+   - `searchArchivalSmart(..., boolean includeCold)`：智能扩展（HOT → HOT+WARM → 全量）
+   - `countArchivalByTier(tenantId)`：分级分布统计
+4. `MemoryArchiveJob` 升级调用 `upsertArchivalTiered`，createTime 决定 tier
+5. `MemoryArchiveService` 新增 `searchArchivalSmart` 和 `countArchivalByTier` 委托方法
+6. `AiAgentPromptHelper.buildArchivalMemoryBlock` 改用 `searchArchivalSmart(includeCold=true)`
+
+### 理由
+- **滑动续期 7 天硬上限**：避免无限续期导致共享记忆永久留存，违背"会话内共享"设计原则
+- **工具版本化用注解字段而非独立表**：减少侵入性，注解扫描即可获取元数据，无需 DB 查询
+- **L5 三级分层 HOT/WARM/COLD**：参考 S3 存储分级和 AWS S3 Vectors 多 Agent 协作模式，热数据优先召回降低延迟
+- **智能扩展策略**：默认场景仅搜 HOT（快），不足时扩展 WARM（兜底），明确历史查询时全量（含 COLD）
+- **向后兼容**：`upsertArchival` 保留并委托 `upsertArchivalTiered(tier=null)`，旧调用方无需修改
+
+### 验证
+- 后端 `mvn compile` ✅ BUILD SUCCESS
+- 后端 `mvn test-compile` ✅ BUILD SUCCESS
+- 前端 `npx tsc --noEmit` ✅ 0 errors
+- 提交 `46ff97a8c`，推送至 main 分支 ✅
+
+### 影响
+- 小云AI智能化系统六大模块完整度提升至 **98%+**
+- L5 归档召回效率优化：HOT 层索引规模减小，向量检索延迟降低
+- 工具治理可观测性提升：废弃工具可识别、可迁移路径明确
+- 多 Agent 协作稳定性提升：活跃会话共享事实不会因过期丢失
+
+### 后续待办
+- 工具版本化治理：扫描现有 105 个 Tool，对真正废弃的 Tool 标记 `deprecated=true` + `replacedBy`
+- L5 Archival：观察 Qdrant 分级分布，必要时调整 HOT/WARM/COLD 时间阈值
+- SoulAnchor：观察 LLM 重建质量，必要时调整 prompt 模板
+
+

@@ -38,7 +38,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({
     >
       {previewCard && (
         <div style={{ marginBottom: 16, padding: 12, background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
-          <Space split={<span style={{ color: '#ccc' }}>|</span>}>
+          <Space split={<span style={{ color: 'var(--color-text-quaternary)' }}>|</span>}>
             <span>编号：<b>{previewCard.colorCardCode}</b></span>
             <span>类型：<b>{getMaterialTypeLabel(previewCard.materialType)}</b></span>
             <span>供应商：<b>{previewCard.supplierName || '-'}</b></span>

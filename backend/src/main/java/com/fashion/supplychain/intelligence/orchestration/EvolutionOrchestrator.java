@@ -105,7 +105,8 @@ public class EvolutionOrchestrator {
                 if (!rows.isEmpty()) {
                     stats.put("last7Days", rows.get(0));
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
             return stats;
         } catch (Exception e) {
@@ -157,7 +158,8 @@ public class EvolutionOrchestrator {
                                 + "WHERE create_time > DATE_SUB(NOW(), INTERVAL 7 DAY) "
                                 + "GROUP BY type");
                 stats.put("last7DaysLogs", rows);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
             return stats;
         } catch (Exception e) {
@@ -181,7 +183,8 @@ public class EvolutionOrchestrator {
                                     + "GROUP BY user_id ORDER BY evidence_count DESC LIMIT 5",
                             tenantId);
                     stats.put("topUsers", topProfiles);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("[EvolutionOrchestrator] aggregateUserProfileStats 子查询失败 tenantId={}: {}", tenantId, e.getMessage());
                 }
             }
             return stats;
@@ -202,7 +205,8 @@ public class EvolutionOrchestrator {
                         ? jdbc.queryForList(sql, tenantId)
                         : jdbc.queryForList(sql);
                 stats.put("byStatus", rows);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
             return stats;
         } catch (Exception e) {
@@ -228,7 +232,8 @@ public class EvolutionOrchestrator {
                 if (!rows.isEmpty()) {
                     stats.put("summary", rows.get(0));
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
             return stats;
         } catch (Exception e) {
@@ -264,7 +269,8 @@ public class EvolutionOrchestrator {
                 if (!rows.isEmpty()) {
                     stats.put("summary", rows.get(0));
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
             return stats;
         } catch (Exception e) {
@@ -286,7 +292,8 @@ public class EvolutionOrchestrator {
                     ? jdbc.queryForList(sql, tenantId)
                     : jdbc.queryForList(sql);
             if (!rows.isEmpty()) stats.put("summary", rows.get(0));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[EvolutionOrchestrator] 指标聚合子查询失败 tenantId={}: {}", tenantId, e.getMessage());
         }
         return stats;
     }
@@ -315,7 +322,8 @@ public class EvolutionOrchestrator {
                     stats.put("constraintGatePassRate", totalLong > 0 ? (double) passedLong / totalLong : 0.0);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[EvolutionOrchestrator] 指标聚合子查询失败 tenantId={}: {}", tenantId, e.getMessage());
         }
         return stats;
     }
@@ -327,7 +335,8 @@ public class EvolutionOrchestrator {
         if (logger != null) {
             try {
                 stats.put("evolutionEventCount", logger.countTodayEvents());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
         }
         return stats;
@@ -348,7 +357,8 @@ public class EvolutionOrchestrator {
                 stats.put("memoryBankRelationCount", dbService.getRelationCount(0L));
             }
             stats.put("memoryBankSemanticSearchCount", dbService.getSemanticSearchCount());
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[EvolutionOrchestrator] 指标聚合子查询失败 tenantId={}: {}", tenantId, e.getMessage());
         }
         return stats;
     }
@@ -361,7 +371,8 @@ public class EvolutionOrchestrator {
         if (router != null) {
             try {
                 stats.putAll(router.getSelectionStats());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
         }
         return stats;
@@ -375,7 +386,8 @@ public class EvolutionOrchestrator {
         if (guard != null) {
             try {
                 stats.putAll(guard.getGuardStats());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[EvolutionOrchestrator] 指标聚合子查询失败: {}", e.getMessage());
             }
         }
         return stats;

@@ -19,9 +19,9 @@ const ShipSummaryBar: React.FC<ShipSummaryBarProps> = ({
     }}>
       <span>裁片总数：<b>{shippableInfo?.cuttingTotal ?? '-'}</b></span>
       <span>已发：<b style={{ color: '#096dd9' }}>{alreadyShipped}</b></span>
-      <span>剩余可发：<b style={{ color: '#389e0d' }}>{canShip}</b></span>
+      <span>剩余可发：<b style={{ color: 'var(--color-success)' }}>{canShip}</b></span>
       {currentTotal > 0 && (
-        <span>本次发货：<b style={{ color: currentTotal > canShip ? 'var(--color-error)' : '#d46b08' }}>{currentTotal}</b>
+        <span>本次发货：<b style={{ color: currentTotal > canShip ? 'var(--color-error)' : 'var(--color-warning-deep)' }}>{currentTotal}</b>
           {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 14 }}>超出可发数量</Tag>}
         </span>
       )}

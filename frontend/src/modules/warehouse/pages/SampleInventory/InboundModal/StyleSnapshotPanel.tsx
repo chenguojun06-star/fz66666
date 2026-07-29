@@ -22,7 +22,7 @@ const StyleSnapshotPanel: React.FC<StyleSnapshotPanelProps> = ({ snapshot }) => 
               style={{ objectFit: 'cover', borderRadius: 8 }}
             />
           ) : (
-            <div style={{ width: 96, height: 96, borderRadius: 8, background: '#f3f4f6', color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+            <div style={{ width: 96, height: 96, borderRadius: 8, background: 'var(--color-bg-subtle)', color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
               暂无图片
             </div>
           )}

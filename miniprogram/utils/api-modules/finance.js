@@ -58,8 +58,8 @@ const wagePayment = {
   confirmReceived: function (id) {
     return ok('/api/finance/wage-payments/' + encodeURIComponent(id) + '/confirm-received', 'POST', {});
   },
-  cancelPayment: function (id) {
-    return ok('/api/finance/wage-payments/' + encodeURIComponent(id) + '/cancel', 'POST', {});
+  cancelPayment: function (id, data) {
+    return ok('/api/finance/wage-payments/' + encodeURIComponent(id) + '/cancel', 'POST', data || {});
   },
   searchPayee: function (params) {
     return ok('/api/finance/payee-search', 'POST', params || {});

@@ -49,7 +49,7 @@ const ItemsManageModal: React.FC<ItemsManageModalProps> = ({
           </div>
         )}
         {currentItems.map((item, idx) => (
-          <Card key={idx} size="small" style={{ border: '1px solid #eee' }}>
+          <Card key={idx} size="small" style={{ border: '1px solid var(--color-border-light)' }}>
             <Row gutter={8} align="middle">
               <Col xs={24} sm={2}>
                 <Tag color="blue">#{idx + 1}</Tag>

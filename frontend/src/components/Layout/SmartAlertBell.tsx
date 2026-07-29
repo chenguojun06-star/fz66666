@@ -83,7 +83,7 @@ const SmartAlertBell: React.FC = () => {
         {/* 面板头 */}
         <div className="sap-header">
           <div className="sap-title">
-            <ThunderboltOutlined style={{ color: '#6d28d9' }} />
+            <ThunderboltOutlined style={{ color: 'var(--color-accent-purple)' }} />
             <span>今日跟踪预警</span>
             {brief?.date && <span className="sap-date">{brief.date}</span>}
           </div>
@@ -148,7 +148,7 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> AI巡检简报
                   {patrolSummary.autoExecutedToday > 0 && (
-                    <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-accent-purple)', background: '#f9f0ff', borderRadius: 10, padding: '1px 8px' }}>
+                    <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-accent-purple)', background: 'var(--status-info-bg)', borderRadius: 10, padding: '1px 8px' }}>
                       今日自动执行 {patrolSummary.autoExecutedToday} 次
                     </span>
                   )}
@@ -181,7 +181,7 @@ const SmartAlertBell: React.FC = () => {
             {brief?.topPriorityOrder && !dismissedIds.has('topPriority') && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <AlertOutlined style={{ color: '#6d28d9' }} /> 首要关注
+                  <AlertOutlined style={{ color: 'var(--color-accent-purple)' }} /> 首要关注
                   <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
                 <div
@@ -210,7 +210,7 @@ const SmartAlertBell: React.FC = () => {
                     <span className="sap-priority-pct">{brief.topPriorityOrder.progress}%</span>
                     <span
                       className="sap-priority-days"
-                      style={{ color: brief.topPriorityOrder.daysLeft <= 3 ? '#ef4444' : '#888' }}
+                      style={{ color: brief.topPriorityOrder.daysLeft <= 3 ? '#ef4444' : 'var(--color-text-muted)' }}
                     >
                       剩 {brief.topPriorityOrder.daysLeft} 天
                     </span>
@@ -324,9 +324,9 @@ const SmartAlertBell: React.FC = () => {
             {visibleNotices.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <span style={{ color: '#d46b08' }}></span> 我的通知
+                  <span style={{ color: 'var(--color-warning-deep)' }}></span> 我的通知
                   {unreadNoticeCount > 0 && (
-                    <span style={{ marginLeft: 4, fontSize: 11, background: '#ffa940', color: 'var(--color-bg-base)', borderRadius: 10, padding: '1px 8px' }}>
+                    <span style={{ marginLeft: 4, fontSize: 11, background: 'var(--color-warning)', color: 'var(--color-bg-base)', borderRadius: 10, padding: '1px 8px' }}>
                       {unreadNoticeCount} 未读
                     </span>
                   )}

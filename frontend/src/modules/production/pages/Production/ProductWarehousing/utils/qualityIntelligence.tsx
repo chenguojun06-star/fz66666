@@ -202,7 +202,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
       {insight.suggestions.length > 0 && (
         <div>
           {insight.suggestions.map((s, i) => (
-            <div key={`s${i}`} style={{ color: '#389e0d' }}> {s}</div>
+            <div key={`s${i}`} style={{ color: 'var(--color-success)' }}> {s}</div>
           ))}
         </div>
       )}

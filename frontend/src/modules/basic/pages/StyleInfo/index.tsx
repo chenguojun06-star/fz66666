@@ -166,7 +166,7 @@ const StyleInfoDetailPage: React.FC = () => {
         <StyleIntelligenceProfileCard style={currentStyle} />
         <Card
           title={
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>样衣详情</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)' }}>样衣详情</span>
           }
           style={{ marginBottom: 16, borderRadius: 10 }}
           bodyStyle={{ padding: 20 }}

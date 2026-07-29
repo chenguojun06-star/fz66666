@@ -28,7 +28,7 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
               </span>
               <span className="c-rank-name">{r.factoryName}</span>
               <div className="c-rank-bar-wrap">
-                <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? '#f7a600' : '#0098aa' }} />
+                <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'var(--color-warning-deep)' : '#0098aa' }} />
               </div>
               <span className="c-rank-score"><AnimatedNum val={r.totalScore} /></span>
             </div>

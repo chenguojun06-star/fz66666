@@ -30,7 +30,7 @@ const ShortagePanel: React.FC<ShortagePanelProps> = ({
               <span className="c-shortage-qty">缺&nbsp;{item.shortageQuantity}&nbsp;{item.unit}</span>
               <span style={{
                 marginLeft: 'auto', fontSize: 14, flexShrink: 0, fontWeight: 600,
-                color: item.riskLevel === 'HIGH' ? '#e03030' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
+                color: item.riskLevel === 'HIGH' ? '#e03030' : item.riskLevel === 'MEDIUM' ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)',
               }}>
                 {item.riskLevel === 'HIGH' ? ' 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
               </span>

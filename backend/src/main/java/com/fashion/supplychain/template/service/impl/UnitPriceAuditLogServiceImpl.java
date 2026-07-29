@@ -63,8 +63,11 @@ public class UnitPriceAuditLogServiceImpl extends ServiceImpl<UnitPriceAuditLogM
         if (!StringUtils.hasText(styleNo)) {
             return Collections.emptyList();
         }
+        // P0铁律4：多租户隔离（superadmin 场景 tenantId=null 时不过滤）
+        Long tenantId = UserContext.tenantId();
         return list(new LambdaQueryWrapper<UnitPriceAuditLog>()
                 .eq(UnitPriceAuditLog::getStyleNo, styleNo.trim())
+                .eq(tenantId != null, UnitPriceAuditLog::getTenantId, tenantId)
                 .orderByDesc(UnitPriceAuditLog::getCreateTime));
     }
 
@@ -73,9 +76,12 @@ public class UnitPriceAuditLogServiceImpl extends ServiceImpl<UnitPriceAuditLogM
         if (!StringUtils.hasText(styleNo) || !StringUtils.hasText(processName)) {
             return Collections.emptyList();
         }
+        // P0铁律4：多租户隔离（superadmin 场景 tenantId=null 时不过滤）
+        Long tenantId = UserContext.tenantId();
         return list(new LambdaQueryWrapper<UnitPriceAuditLog>()
                 .eq(UnitPriceAuditLog::getStyleNo, styleNo.trim())
                 .eq(UnitPriceAuditLog::getProcessName, processName.trim())
+                .eq(tenantId != null, UnitPriceAuditLog::getTenantId, tenantId)
                 .orderByDesc(UnitPriceAuditLog::getCreateTime));
     }
 }

@@ -87,7 +87,7 @@ export default function SelectionCenter() {
                           {img ? (
                             <Image loading="lazy" src={img} alt={item.styleName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: '#ccc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: 'var(--color-text-quaternary)' }}>
                               <FireOutlined style={{ fontSize: 24 }} />
                               <div style={{ fontSize: 14, marginTop: 6 }}>暂无参考图</div>
                             </div>

@@ -53,12 +53,12 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
               <Tag color={tierColorMap[score.tier] ?? '#888'} style={{ fontWeight: 700, fontSize: 14 }}>
                 {score.tier}级
               </Tag>
-              <span style={{ color: tierColorMap[score.tier] ?? '#ccc', fontWeight: 600 }}>
+              <span style={{ color: tierColorMap[score.tier] ?? 'var(--color-text-quaternary)', fontWeight: 600 }}>
                 综合分 {score.overallScore?.toFixed(1)}
               </span>
             </div>
-            <div>准时率：<span style={{ color: score.onTimeRate >= 0.9 ? '#39ff14' : score.onTimeRate >= 0.75 ? '#f7a600' : '#ff4136' }}>{(score.onTimeRate * 100).toFixed(0)}%</span></div>
-            <div>质量分：<span style={{ color: score.qualityScore >= 90 ? '#39ff14' : score.qualityScore >= 75 ? '#f7a600' : '#ff4136' }}>{score.qualityScore?.toFixed(1)}</span></div>
+            <div>准时率：<span style={{ color: score.onTimeRate >= 0.9 ? 'var(--color-accent-neon)' : score.onTimeRate >= 0.75 ? 'var(--color-warning-deep)' : '#ff4136' }}>{(score.onTimeRate * 100).toFixed(0)}%</span></div>
+            <div>质量分：<span style={{ color: score.qualityScore >= 90 ? 'var(--color-accent-neon)' : score.qualityScore >= 75 ? 'var(--color-warning-deep)' : '#ff4136' }}>{score.qualityScore?.toFixed(1)}</span></div>
             <div>已完成 / 总接单：{score.completedOrders} / {score.totalOrders} 单</div>
             <div>逾期：{score.overdueOrders} 单</div>
           </div>

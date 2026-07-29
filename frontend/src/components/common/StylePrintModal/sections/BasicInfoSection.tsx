@@ -45,12 +45,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 100 }}>
           {resolvedCover ? (
             <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-              style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid #e0e0e0' }} preview={{ cover: <span>预览</span> }} />
+              style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border-antd)' }} preview={{ cover: <span>预览</span> }} />
           ) : (
-            <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed #ccc', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
+            <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed var(--color-text-quaternary)', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
           )}
           {/* 二维码 */}
-          <div style={{ width: 90, height: 90, padding: 4, border: '1px solid #e0e0e0', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          <div style={{ width: 90, height: 90, padding: 4, border: '1px solid var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
             {qrPngDataUrl
               ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
               : <QRCode value={qrValue} size={80} />}

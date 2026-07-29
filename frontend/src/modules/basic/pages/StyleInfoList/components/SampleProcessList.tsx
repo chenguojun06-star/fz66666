@@ -104,7 +104,7 @@ export default function SampleProcessList({
         marginBottom: 8,
       }}>
         <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-          工序列表 <strong style={{ color: '#1f2937' }}>{completedCount}/{stages.length}</strong> 完成
+          工序列表 <strong style={{ color: 'var(--color-text-primary)' }}>{completedCount}/{stages.length}</strong> 完成
         </span>
         {patternProductionId ? (
           <Button
@@ -135,9 +135,9 @@ export default function SampleProcessList({
           fontSize: 13,
           color: 'var(--color-text-secondary)',
         }}>
-          <span>款号: <strong style={{ color: '#1f2937' }}>{styleNo || '-'}</strong></span>
-          <span>颜色: <strong style={{ color: '#1f2937' }}>{color || '-'}</strong></span>
-          <span>尺码: <strong style={{ color: '#1f2937' }}>{parseSizeDisplay(size)}</strong></span>
+          <span>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{styleNo || '-'}</strong></span>
+          <span>颜色: <strong style={{ color: 'var(--color-text-primary)' }}>{color || '-'}</strong></span>
+          <span>尺码: <strong style={{ color: 'var(--color-text-primary)' }}>{parseSizeDisplay(size)}</strong></span>
         </div>
       )}
 

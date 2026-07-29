@@ -36,7 +36,7 @@ export interface PrecheckData {
 const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue, isHigh }) => (
   <div
     style={{
-      background: isHigh ? '#FFF1F0' : '#FFFBE6',
+      background: isHigh ? 'var(--status-error-bg)' : 'var(--status-warning-bg)',
       border: `1px solid ${isHigh ? 'var(--status-error-border)' : 'var(--status-warning-border)'}`,
       borderRadius: 8,
       padding: '10px 14px',

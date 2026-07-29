@@ -178,7 +178,7 @@ const ProcessOrderInfoGrid: React.FC<{
         </div>
         <div>
           <span style={{ color: 'var(--color-text-secondary)' }}>{operatorInfo.processName}完成：</span>
-          <span style={{ fontWeight: 500, color: '#111827' }}>
+          <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
             {operatorInfo.endTime ? (
               new Date(operatorInfo.endTime as string).toLocaleString('zh-CN', {
                 month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'

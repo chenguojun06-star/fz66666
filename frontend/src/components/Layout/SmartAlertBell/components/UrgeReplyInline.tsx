@@ -28,7 +28,7 @@ const UrgeReplyInline: React.FC<{
 
   if (submitted) {
     return (
-      <div style={{ fontSize: 12, color: '#389e0d', marginTop: 4 }}>
+      <div style={{ fontSize: 12, color: 'var(--color-success)', marginTop: 4 }}>
         ✅ 已回复
       </div>
     );

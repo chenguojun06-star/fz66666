@@ -109,7 +109,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {filterType && (
             <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
-              当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
+              当前筛选：<strong style={{ color: 'var(--color-text-primary)' }}>{nodeName || filterType}</strong>
             </span>
           )}
           {isWarehousingType(filterType, nodeName) && orderId && factoryType !== 'EXTERNAL' && (

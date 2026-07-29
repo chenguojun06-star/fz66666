@@ -134,7 +134,7 @@ const StageHeader: React.FC<{
     borderBottom: '1px solid var(--color-border)'
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ fontWeight: 700, fontSize: '15px', color: '#374151' }}>
+      <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-text-secondary)' }}>
         {stageName}
       </span>
       <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
@@ -184,7 +184,7 @@ const ProcurementStatus: React.FC<{
         )}
         {status.completedTime && (
           <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-            完成时间: <span style={{ fontWeight: 600, color: '#374151' }}>
+            完成时间: <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>
               {new Date(status.completedTime).toLocaleString('zh-CN', {
                 year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
               })}

@@ -19,7 +19,7 @@ const LinkProductionModal: React.FC<Props> = ({ open, target, linking, form, onO
       open={open} onCancel={onCancel}
       onOk={onOk} confirmLoading={linking} okText="确认关联" width="85vw" maskClosable={false}>
       {target && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 14 }}>
+        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-stripe)', borderRadius: 6, fontSize: 14 }}>
           <div>平台订单: <b>{target.platformOrderNo}</b></div>
           <div>商品: {target.productName} × {target.quantity}</div>
           <div>实付: ¥{target.payAmount} &nbsp;|&nbsp; 买家: {target.buyerNick || target.receiverName}</div>

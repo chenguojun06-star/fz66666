@@ -55,7 +55,7 @@ export const buildColumns = (handlers: ColumnHandlers) => [
   {
     title: '状态', dataIndex: 'status', key: 'status', width: 60,
     render: (v: string) => {
-      if (v === 'ENABLED') return <span style={{ color: '#16a34a', fontWeight: 500 }}>启用</span>;
+      if (v === 'ENABLED') return <span style={{ color: 'var(--color-success)', fontWeight: 500 }}>启用</span>;
       if (v === 'DISABLED') return <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400 }}>停用</span>;
       return <span style={{ color: 'var(--color-text-tertiary)' }}>{v || '-'}</span>;
     },

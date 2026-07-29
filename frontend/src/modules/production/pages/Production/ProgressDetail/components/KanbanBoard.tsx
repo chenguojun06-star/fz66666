@@ -20,7 +20,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ nodeStats }) => {
           key={stage.stageName}
           title={
             <Space>
-              <span style={{ color: STAGE_COLORS[stage.stageName] || '#666', fontWeight: 600 }}>{stage.stageName}</span>
+              <span style={{ color: STAGE_COLORS[stage.stageName] || 'var(--color-text-secondary)', fontWeight: 600 }}>{stage.stageName}</span>
               <Tag color={stage.completionRate >= 100 ? 'success' : stage.completionRate >= 50 ? 'warning' : 'error'}>
                 {stage.completionRate}%
               </Tag>

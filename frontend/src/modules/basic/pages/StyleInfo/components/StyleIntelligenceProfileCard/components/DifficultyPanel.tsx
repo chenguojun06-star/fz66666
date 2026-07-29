@@ -46,7 +46,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
             const insight = activeDifficulty.imageInsight as string;
             const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');
             return (
-              <div style={{ fontSize: 12, color: isError ? '#8c8c8c' : '#595959', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
+              <div style={{ fontSize: 12, color: isError ? '#8c8c8c' : 'var(--color-text-secondary)', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
                 {insight}
               </div>
             );

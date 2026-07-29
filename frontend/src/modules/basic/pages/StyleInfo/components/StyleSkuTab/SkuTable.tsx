@@ -45,7 +45,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
           );
         }
         return (
-          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: '#ccc' }}>
+          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: 'var(--color-text-quaternary)' }}>
             <PictureOutlined />
           </div>
         );

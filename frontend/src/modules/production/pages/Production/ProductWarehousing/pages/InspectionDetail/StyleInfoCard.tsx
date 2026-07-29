@@ -17,7 +17,7 @@ const StyleInfoCard: React.FC<StyleInfoCardProps> = ({ order, style }) => {
             width={200} height={240} style={{ objectFit: 'cover', borderRadius: 8 }}
             fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNjY2MiIGZvbnQtc2l6ZT0iMTQiPuaXoOWbvueJhzwvdGV4dD48L3N2Zz4=" />
         ) : (
-          <div style={{ width: 200, height: 240, background: 'var(--color-bg-subtle)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', margin: '0 auto' }}>无图片</div>
+          <div style={{ width: 200, height: 240, background: 'var(--color-bg-subtle)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', margin: '0 auto' }}>无图片</div>
         )}
       </div>
       <Descriptions column={1}>

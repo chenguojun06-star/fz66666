@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-28（智能化升级：P2-1 SoulAnchor 4锚点LLM重建 + P2-2 @AgentToolDef覆盖率提升至98%）
+> 最后更新：2026-07-28（P3 智能化升级：共享记忆滑动续期 + 工具版本化治理 + L5 分级存储策略）
 
 ## ⚠️ 记忆同步规则（2026-07-08 用户强调）
 
@@ -15,6 +15,53 @@
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-07-28 智能化升级 P3-1 + P3-2 + P3-3 ✅
+
+#### P3-1 SharedAgentMemory 滑动续期
+
+解决多 Agent 协作时活跃会话共享事实过期问题：
+
+1. **SharedAgentMemoryMapper** 新增 `extendExpire` 方法，读取命中时延长 24h 过期时间
+2. **SharedAgentMemoryService** 新增 `slideExpireBestEffort` 方法：
+   - 每次读取事实时自动延长过期时间 24h
+   - 设置 **7 天硬上限**（从 createTime 起算）防止无限续期
+   - best-effort 模式：续期失败不抛异常，不影响读取
+3. 滑动续期仅在 `expire_time < maxExpire` 时生效，已到期记录不续期
+
+#### P3-2 Agent 工具版本化治理
+
+建立 Agent 工具版本化管理体制，支持工具废弃和迁移：
+
+1. **@AgentToolDef 注解扩展**：新增 `version`（语义化版本）、`deprecated`（是否废弃）、`replacedBy`（替代工具名）三个字段
+2. **新建 AgentToolVersionRegistry 服务**：
+   - `@PostConstruct` 启动时扫描所有 `@AgentToolDef` Bean
+   - 提供版本查询、废弃工具检测、版本分布统计、健康检查能力
+   - 支持 CGLIB 代理类（取父类注解）
+3. 默认 version="1.0.0"，deprecated=false，保持向后兼容
+
+#### P3-3 L5 Archival 分级存储策略
+
+基于访问频率和重要性对归档数据分级，优化 Qdrant 召回效率：
+
+1. **新建 ArchivalTier 枚举**：HOT（6m~1y）/ WARM（1~2y）/ COLD（2y+）
+2. **QdrantService 升级**：
+   - `upsertArchivalTiered`：写入 `tier` 字段到 payload
+   - `searchArchivalTiered`：按 tier 过滤召回
+   - `searchArchivalSmart`：智能扩展策略（HOT → HOT+WARM → 全量）
+   - `countArchivalByTier`：分级分布统计
+3. **MemoryArchiveJob 升级**：调用 `upsertArchivalTiered` 自动按 createTime 分级
+4. **MemoryArchiveService 新增**：`searchArchivalSmart`（智能分级召回）+ `countArchivalByTier`（统计）
+5. **AiAgentPromptHelper 升级**：归档召回改用 `searchArchivalSmart(includeCold=true)`，用户明确历史查询时全量召回
+
+#### 验证与推送
+
+- 后端 `mvn compile` ✅ BUILD SUCCESS
+- 后端 `mvn test-compile` ✅ BUILD SUCCESS
+- 前端 `npx tsc --noEmit` ✅ 0 errors
+- 提交 `46ff97a8c`，推送至 main 分支 ✅
+
+---
 
 ### 2026-07-28 智能化升级 P2-1 + P2-2 ✅
 

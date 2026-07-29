@@ -116,7 +116,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
       <div style={directStackStyle}>
         {directProcessing ? (
           <div style={processingBannerStyle}>
-            <div style={{ ...directTitleStyle, color: '#d46b08' }}>处理中</div>
+            <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
             <div style={{ ...directMetaStyle, color: '#ad6800' }}>当前记录已解锁，保存后会结束本次处理。</div>
           </div>
         ) : null}

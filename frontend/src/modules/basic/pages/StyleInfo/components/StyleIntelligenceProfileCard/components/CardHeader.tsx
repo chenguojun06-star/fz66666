@@ -41,7 +41,7 @@ const CardHeader: React.FC<CardHeaderProps> = ({
       }}
     >
       <RadarChartOutlined style={{ color: 'var(--color-primary)', fontSize: 15 }} />
-      <span style={{ fontSize: 14, fontWeight: 700, color: '#1f1f1f' }}>款式智能档案卡</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>款式智能档案卡</span>
       {/* 关键摘要 */}
       <Tag color={deliveryMeta.color} style={{ margin: 0 }}>{deliveryMeta.label}</Tag>
       <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>

@@ -96,7 +96,7 @@ export default function WashLabelTab({
                           display: 'inline-flex', alignItems: 'center', gap: 3,
                           padding: '2px 6px', borderRadius: 4,
                           border: '1.5px solid var(--color-primary)',
-                          background: '#e6f4ff',
+                          background: 'var(--status-processing-bg)',
                         }}
                       >
                         <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 18, height: 18, flexShrink: 0 }} />

@@ -15,9 +15,9 @@ const ExpandedDetail: React.FC<ExpandedDetailProps> = ({ details, loading }) => 
     <table style={{ fontSize: 14, borderCollapse: 'collapse' as const }}>
       <thead>
         <tr>
-          <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>颜色</th>
-          <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>尺码</th>
-          <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>数量</th>
+          <th style={{ padding: '2px 12px', borderBottom: '1px solid var(--color-border-light)' }}>颜色</th>
+          <th style={{ padding: '2px 12px', borderBottom: '1px solid var(--color-border-light)' }}>尺码</th>
+          <th style={{ padding: '2px 12px', borderBottom: '1px solid var(--color-border-light)' }}>数量</th>
         </tr>
       </thead>
       <tbody>

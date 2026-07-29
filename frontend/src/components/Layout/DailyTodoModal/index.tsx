@@ -174,7 +174,7 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 决策卡片：问题 + 方案 + 行动 ── */}
           {cards.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
                 🎯 今日需要解决的问题
               </div>
               {cards.map((card, i) => (

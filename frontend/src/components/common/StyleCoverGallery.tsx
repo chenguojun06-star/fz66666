@@ -233,7 +233,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
             style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
           />
         ) : (
-          <span style={{ color: '#ccc', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
         )}
         {assets.length > 1 && isHovered && (
           <>

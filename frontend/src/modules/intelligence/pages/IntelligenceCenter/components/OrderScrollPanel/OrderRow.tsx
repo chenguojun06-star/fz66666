@@ -40,7 +40,7 @@ export const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
             {daysLeft !== null && (
               <span className="c-order-days" style={{
-                color: daysLeft < 0 ? '#e03030' : daysLeft <= 3 ? '#f7a600' : '#3ab870',
+                color: daysLeft < 0 ? '#e03030' : daysLeft <= 3 ? 'var(--color-warning-deep)' : '#3ab870',
               }}>
                 {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
               </span>

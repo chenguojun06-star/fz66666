@@ -58,7 +58,7 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
   return (
     <div>
       {/* 今日热榜 */}
-      <div style={{ marginBottom: 16, border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 16px', background: '#F6FFED' }}>
+      <div style={{ marginBottom: 16, border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 16px', background: 'var(--status-success-bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <Space size={6}>
             <FireOutlined style={{ color: 'var(--color-warning)' }} />

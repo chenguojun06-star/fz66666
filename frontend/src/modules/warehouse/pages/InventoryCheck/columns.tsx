@@ -11,7 +11,7 @@ export const renderDiffType = (v: string) => { const m = DIFF_TYPE_MAP[v] || { l
 
 export const imageColumn = {
   title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
-  render: (v: string) => v ? <Image src={getFullAuthedFileUrl(v)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
+  render: (v: string) => v ? <Image src={getFullAuthedFileUrl(v)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>无</div>,
 };
 
 export const styleNoColumn = {

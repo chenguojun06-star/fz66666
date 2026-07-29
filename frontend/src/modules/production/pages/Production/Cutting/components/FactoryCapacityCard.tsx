@@ -21,7 +21,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
         </span>
         {stat.matchScore >= 70 && <span style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-success-border)' }}>推荐</span>}
         {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
-        {stat.capacitySource === 'none' && <span style={{ background: '#FFF1F0', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
+        {stat.capacitySource === 'none' && <span style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
       </div>
     )}
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -29,7 +29,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
       <span>
         货期完成率
-        <b style={{ marginLeft: 4, color: stat.deliveryOnTimeRate < 0 ? '#888' : stat.deliveryOnTimeRate >= 80 ? 'var(--color-success)' : stat.deliveryOnTimeRate >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
+        <b style={{ marginLeft: 4, color: stat.deliveryOnTimeRate < 0 ? 'var(--color-text-muted)' : stat.deliveryOnTimeRate >= 80 ? 'var(--color-success)' : stat.deliveryOnTimeRate >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
           {stat.deliveryOnTimeRate < 0 ? '暂无' : `${stat.deliveryOnTimeRate}%`}
         </b>
       </span>

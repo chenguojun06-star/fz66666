@@ -175,7 +175,7 @@ const StyleCoverThumb: React.FC<{
       }}
     >
       {loading ? (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
+        <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (
         <img
           src={getFullAuthedFileUrl(url)}
@@ -198,7 +198,7 @@ const StyleCoverThumb: React.FC<{
           }}
         />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+        <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
       )}
     </div>
   );

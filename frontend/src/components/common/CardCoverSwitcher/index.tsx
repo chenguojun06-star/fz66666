@@ -156,7 +156,7 @@ function CardCoverSwitcher({
           alignItems: 'center', justifyContent: 'center',
           background: 'var(--color-bg-subtle)',
         }}>
-          <span style={{ color: '#ccc', fontSize: 14 }}>...</span>
+          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>...</span>
         </div>
       ) : authedUrl ? (
         <img
@@ -176,7 +176,7 @@ function CardCoverSwitcher({
           alignItems: 'center', justifyContent: 'center',
           background: 'var(--color-bg-subtle)',
         }}>
-          <span style={{ color: '#ccc', fontSize: 14 }}>无图</span>
+          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>无图</span>
         </div>
       )}
 

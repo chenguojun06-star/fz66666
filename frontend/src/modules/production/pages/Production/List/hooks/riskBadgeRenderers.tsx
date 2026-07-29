@@ -166,7 +166,7 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
       )}
       <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
+          <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{name || '-'}</span>
           {remark && (
             <Badge dot color="var(--color-text-tertiary)" offset={[0, -2]}>
               <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }} />

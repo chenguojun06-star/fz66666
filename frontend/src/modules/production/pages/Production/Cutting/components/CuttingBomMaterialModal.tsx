@@ -110,7 +110,7 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
                           src={url}
                           width={40}
                           height={40}
-                          style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                          style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }}
                           preview={{ src: url }}
                         />
                       );

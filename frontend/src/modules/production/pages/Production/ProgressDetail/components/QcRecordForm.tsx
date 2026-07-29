@@ -44,7 +44,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
           {qcRecord.repairStatus === 'repair_done' ? '复检' : '工序质检'} — 菲号#{qcRecord.bundleNo} {qcRecord.processName}
         </span>
       </div>
-      <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f8f9fa', borderRadius: 8 }}>
+      <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--color-bg-page)', borderRadius: 8 }}>
         <Row gutter={16}>
           <Col span={8}><Statistic title="菲号" value={qcRecord.bundleNo} styles={{ content: { fontSize: 18 } }} /></Col>
           <Col span={8}><Statistic title="总数量" value={qcRecord.quantity} styles={{ content: { fontSize: 18 } }} /></Col>

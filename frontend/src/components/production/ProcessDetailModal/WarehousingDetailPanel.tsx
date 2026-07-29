@@ -91,18 +91,18 @@ const WarehouseOperationInfo: React.FC<{
           {record.warehousingOperatorName}
         </a>
       ) : (
-        <span style={{ fontWeight: 600, color: '#111827' }}>-</span>
+        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>-</span>
       )}
     </div>
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>开始时间：</span>
-      <span style={{ fontWeight: 500, color: '#111827' }}>
+      <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
         {formatDateTime(record.warehousingStartTime)}
       </span>
     </div>
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span>
-      <span style={{ fontWeight: 500, color: '#111827' }}>
+      <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
         {formatDateTime(record.warehousingEndTime)}
       </span>
     </div>
@@ -165,7 +165,7 @@ const WarehouseSizeTable: React.FC<{
     borderRadius: '6px',
     padding: '12px',
   }}>
-    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#111827' }}>
+    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--color-text-primary)' }}>
       码数明细
     </div>
     <ResizableTable

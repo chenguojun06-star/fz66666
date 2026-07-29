@@ -162,7 +162,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <span style={{ color: isCompleted ? 'var(--color-success)' : '#888' }}>
+        <span style={{ color: isCompleted ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
           {isCompleted
             ? ` ${completedTimeStr ? completedTimeStr + ' 完成' : '全部完成'}`
             : doneCount === 0

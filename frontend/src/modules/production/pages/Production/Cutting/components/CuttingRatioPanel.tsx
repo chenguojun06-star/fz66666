@@ -164,7 +164,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       render: (_: unknown, row: BundleRow) => {
         const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
         return (
-          <Text style={{ color: alreadyCut > 0 ? 'var(--color-primary)' : '#999', fontWeight: alreadyCut > 0 ? 500 : 400 }}>
+          <Text style={{ color: alreadyCut > 0 ? 'var(--color-primary)' : 'var(--color-text-tertiary)', fontWeight: alreadyCut > 0 ? 500 : 400 }}>
             {alreadyCut} 件
           </Text>
         );
@@ -179,7 +179,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
         const remaining = row.quantity - alreadyCut;
         return (
-          <Text style={{ color: remaining < 0 ? 'var(--color-error)' : remaining === 0 ? '#999' : '#389e0d' }}>
+          <Text style={{ color: remaining < 0 ? 'var(--color-error)' : remaining === 0 ? 'var(--color-text-tertiary)' : 'var(--color-success)' }}>
             {remaining} 件
           </Text>
         );
@@ -192,7 +192,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       width: 110,
       render: (val: number, row: BundleRow) =>
         val !== row.quantity ? (
-          <Text style={{ color: '#d46b08', fontWeight: 500 }}>{val} 件</Text>
+          <Text style={{ color: 'var(--color-warning-deep)', fontWeight: 500 }}>{val} 件</Text>
         ) : (
           <Text>{val} 件</Text>
         ),
