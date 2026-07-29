@@ -240,7 +240,9 @@ public class AiAgentToolExecHelper {
         while (!remaining.isEmpty()) {
             try {
                 CompletableFuture.anyOf(remaining.toArray(new CompletableFuture[0])).join();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[AiAgent] 等待并发工具完成失败: {}", e.getMessage());
+            }
 
             java.util.Iterator<CompletableFuture<ToolExecRecord>> it = remaining.iterator();
             while (it.hasNext()) {

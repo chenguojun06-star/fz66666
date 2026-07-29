@@ -149,7 +149,9 @@ public class FinishedOutstockHelper {
             BigDecimal overrideSalesPrice = null;
             Object priceObj = item.get("salesPrice");
             if (priceObj != null) {
-                try { overrideSalesPrice = new BigDecimal(priceObj.toString()); } catch (NumberFormatException ignore) {}
+                try { overrideSalesPrice = new BigDecimal(priceObj.toString()); } catch (NumberFormatException e) {
+                    log.warn("[FinishedOutstock] 解析销售单价失败: {}", e.getMessage());
+                }
             }
             String priceAdjustmentReason = trimToNull(item.get("priceAdjustmentReason"));
 

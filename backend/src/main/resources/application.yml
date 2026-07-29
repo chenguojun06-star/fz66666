@@ -202,6 +202,7 @@ app:
   # 云端生产配 APP_PUBLIC_BASE_URL=https://api.webyszl.cn
   public-base-url: ${APP_PUBLIC_BASE_URL:https://api.webyszl.cn}
   auth:
+    # 开发环境默认密钥，生产环境必须配置 APP_AUTH_JWT_SECRET 覆盖
     jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
     jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:4}
     refresh-token-ttl-hours: ${APP_AUTH_REFRESH_TOKEN_TTL_HOURS:72}
@@ -222,6 +223,7 @@ app:
         read-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_READ_TIMEOUT_SECONDS:10}
         write-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_WRITE_TIMEOUT_SECONDS:10}
   security:
+    # 开发环境默认密钥，生产环境必须配置 APP_PII_ENCRYPTION_KEY 覆盖（prod已强制要求）
     pii-encryption-key: ${APP_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
     trusted-ips:
       - "127.0.0.1"

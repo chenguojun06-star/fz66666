@@ -481,7 +481,9 @@ public class ColorCardOrchestrator {
                 try {
                     int seq = Integer.parseInt(code.substring(("CC" + today).length()));
                     if (seq > maxSeq) maxSeq = seq;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException e) {
+                    log.warn("[ColorCard] 解析色卡编号序号失败: {}", e.getMessage());
+                }
             }
         }
         return "CC" + today + String.format("%02d", maxSeq + 1);
@@ -501,7 +503,9 @@ public class ColorCardOrchestrator {
                 try {
                     int seq = Integer.parseInt(no.substring(1));
                     if (seq > maxSeq) maxSeq = seq;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException e) {
+                    log.warn("[ColorCard] 解析颜色编号序号失败: {}", e.getMessage());
+                }
             }
         }
         return "C" + String.format("%03d", maxSeq + 1);

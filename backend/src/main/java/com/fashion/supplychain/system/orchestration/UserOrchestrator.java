@@ -79,7 +79,9 @@ public class UserOrchestrator {
             try {
                 String v = stringRedisTemplate.opsForValue().get("pwd:ver:" + user.getId());
                 if (v != null) pwdVersion = Long.parseLong(v);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[UserOrchestrator] 读取密码版本失败: {}", e.getMessage());
+            }
         }
         currentSubject.setPwdVersion(pwdVersion);
         String newToken = authTokenService.refreshAccessToken(refreshToken, currentSubject);

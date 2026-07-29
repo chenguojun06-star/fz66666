@@ -259,7 +259,9 @@ public class EmployeeAdvanceOrchestrator {
             if (v.length() >= prefix.length() + 3) {
                 try {
                     seq = Integer.parseInt(v.substring(v.length() - 3)) + 1;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException e) {
+                    log.warn("[EmployeeAdvance] 解析借支编号序号失败: {}", e.getMessage());
+                }
             }
         }
         for (int i = 0; i < 200; i++) {

@@ -363,7 +363,9 @@ public class TrackingPriceSyncHelper {
                             if (r.getQuantity() != null && price != null) {
                                 r.setSettlementAmount(price.multiply(BigDecimal.valueOf(r.getQuantity())));
                             }
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException e) {
+                            log.warn("[TrackingPriceSync] 解析工价失败: {}", e.getMessage());
+                        }
                     }
                     continue;
                 }

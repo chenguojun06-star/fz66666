@@ -550,7 +550,9 @@ public class PatternEnrichmentHelper {
                 if (priceObj instanceof BigDecimal bd) {
                     unitPrice = bd;
                 } else if (priceObj != null) {
-                    try { unitPrice = new BigDecimal(String.valueOf(priceObj)); } catch (Exception ignore) {}
+                    try { unitPrice = new BigDecimal(String.valueOf(priceObj)); } catch (Exception e) {
+                        log.warn("[PatternEnrichment] 解析工序单价失败: {}", e.getMessage());
+                    }
                 }
 
                 Map<String, Object> item = new LinkedHashMap<>();

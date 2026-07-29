@@ -249,7 +249,9 @@ public class StructuredResponseService {
                     dataPoints.put("data_" + count, value);
                     count++;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[StructuredResponse] 提取数据点失败: {}", e.getMessage());
+            }
         }
 
         return dataPoints;

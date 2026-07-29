@@ -62,7 +62,9 @@ public class IntentDrivenDagService {
         try {
             com.fasterxml.jackson.databind.JsonNode node = extractJson(content);
             if (node != null && node.has("intent")) return node.get("intent").asText();
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[IntentDag] 解析意图失败: {}", e.getMessage());
+        }
         return "unknown";
     }
 
@@ -70,7 +72,9 @@ public class IntentDrivenDagService {
         try {
             com.fasterxml.jackson.databind.JsonNode node = extractJson(content);
             if (node != null && node.has("target")) return node.get("target").asText();
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[IntentDag] 解析目标实体失败: {}", e.getMessage());
+        }
         return null;
     }
 
@@ -120,7 +124,9 @@ public class IntentDrivenDagService {
             if (start >= 0 && end > start) {
                 try {
                     return new com.fasterxml.jackson.databind.ObjectMapper().readTree(content.substring(start, end + 1));
-                } catch (Exception ignored) {}
+                } catch (Exception ex) {
+                    log.warn("[IntentDag] 容错解析JSON失败: {}", ex.getMessage());
+                }
             }
             return null;
         }

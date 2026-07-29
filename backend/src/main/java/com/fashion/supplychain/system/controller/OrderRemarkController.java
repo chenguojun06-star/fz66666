@@ -324,15 +324,21 @@ public class OrderRemarkController {
             if (trimmed.matches("\\d{4}-\\d{2}-\\d{2}.*")) {
                 DateTimeFormatter fmtSec = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 DateTimeFormatter fmtMin = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-                try { return LocalDateTime.parse(trimmed, fmtSec); } catch (Exception ignored) {}
-                try { return LocalDateTime.parse(trimmed, fmtMin); } catch (Exception ignored) {}
+                try { return LocalDateTime.parse(trimmed, fmtSec); } catch (Exception e) {
+                    log.warn("[OrderRemark] 解析时间(秒)失败: {}", e.getMessage());
+                }
+                try { return LocalDateTime.parse(trimmed, fmtMin); } catch (Exception e) {
+                    log.warn("[OrderRemark] 解析时间(分)失败: {}", e.getMessage());
+                }
             }
             // 旧格式无年份：MM-DD HH:mm 或 MM-DD HH:mm:ss,补当前年份
             int currentYear = LocalDateTime.now().getYear();
             String fullTimeStr = currentYear + "-" + trimmed;
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             DateTimeFormatter fmtSec = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            try { return LocalDateTime.parse(fullTimeStr, fmtSec); } catch (Exception ignored) {}
+            try { return LocalDateTime.parse(fullTimeStr, fmtSec); } catch (Exception e) {
+                log.warn("[OrderRemark] 解析补年份时间(秒)失败: {}", e.getMessage());
+            }
             return LocalDateTime.parse(fullTimeStr, fmt);
         } catch (Exception e) {
             log.debug("[OrderRemark] parseTimeStr失败: timeStr={}", timeStr);

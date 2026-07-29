@@ -567,13 +567,17 @@ public class OrderTransferOrchestrator {
             if (StringUtils.hasText(processCode) && priceMap.containsKey(processCode)) {
                 Object val = priceMap.get(processCode);
                 if (val != null) {
-                    try { newPrice = new BigDecimal(val.toString()); } catch (Exception ignored) {}
+                    try { newPrice = new BigDecimal(val.toString()); } catch (Exception e) {
+                        log.warn("[OrderTransfer] 解析工序编码价格失败: {}", e.getMessage());
+                    }
                 }
             }
             if (newPrice == null && StringUtils.hasText(processName) && priceMap.containsKey(processName)) {
                 Object val = priceMap.get(processName);
                 if (val != null) {
-                    try { newPrice = new BigDecimal(val.toString()); } catch (Exception ignored) {}
+                    try { newPrice = new BigDecimal(val.toString()); } catch (Exception e) {
+                        log.warn("[OrderTransfer] 解析工序名称价格失败: {}", e.getMessage());
+                    }
                 }
             }
 

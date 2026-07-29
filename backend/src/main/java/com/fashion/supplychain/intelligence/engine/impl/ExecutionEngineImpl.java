@@ -100,7 +100,8 @@ public class ExecutionEngineImpl implements ExecutionEngine {
                 if (domains instanceof java.util.Collection<?> col) {
                     return col.stream().map(String::valueOf).toList();
                 }
-            } catch (NoSuchMethodException ignored) {
+            } catch (NoSuchMethodException e) {
+                log.warn("[ExecutionEngine] 反射获取domains方法失败: {}", e.getMessage());
             }
             return List.of(String.valueOf(multi));
         } catch (Exception e) {

@@ -79,10 +79,14 @@ public class EntityMemoryContextService {
         }
         try {
             entityCtx = entityFuture.getNow("");
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            log.warn("[EntityMemory] 获取实体上下文失败: {}", e.getMessage());
+        }
         try {
             semanticCtx = semanticFuture.getNow("");
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            log.warn("[EntityMemory] 获取语义上下文失败: {}", e.getMessage());
+        }
 
         // 保持原有合并格式：entityCtx 在前，semanticCtx 在后，中间用 \n 分隔
         StringBuilder ctx = new StringBuilder();

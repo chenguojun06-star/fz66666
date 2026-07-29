@@ -177,6 +177,7 @@ public class TenantInterceptor implements InnerInterceptor {
                 }
             }
         } catch (ClassNotFoundException e) {
+            log.warn("[TenantInterceptor] 解析Mapper类失败: {}", e.getMessage());
         }
         return false;
     }

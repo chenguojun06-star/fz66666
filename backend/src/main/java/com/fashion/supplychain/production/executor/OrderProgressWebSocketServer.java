@@ -46,7 +46,9 @@ public class OrderProgressWebSocketServer {
             log.warn("[WS] 无效租户ID: {}", tenantIdStr);
             try {
                 session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "无效租户ID"));
-            } catch (IOException ignored) {}
+            } catch (IOException ex) {
+                log.warn("[WS] 关闭无效租户连接失败: {}", ex.getMessage());
+            }
         }
     }
 
@@ -60,7 +62,9 @@ public class OrderProgressWebSocketServer {
                 log.info("[WS] 连接关闭: tenantId={}, sessionId={}, 剩余连接数={}",
                         tenantId, session.getId(), sessions.size());
             }
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException e) {
+            log.warn("[WS] 关闭连接解析租户ID失败: {}", e.getMessage());
+        }
     }
 
     @OnError

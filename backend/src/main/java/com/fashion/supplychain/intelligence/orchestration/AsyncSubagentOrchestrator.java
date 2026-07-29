@@ -41,7 +41,9 @@ public class AsyncSubagentOrchestrator {
             Long tid = UserContext.tenantId();
             var discovered = agentCardService.discoverAgents(tid, route);
             log.debug("[AsyncSubagent] A2A discovery: route={}, local={}, registry={}", route, targets.size(), discovered.size());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[AsyncSubagent] A2A发现代理失败: {}", e.getMessage());
+        }
 
         if (!parallel || targets.size() == 1) {
             for (SpecialistAgent agent : targets) {

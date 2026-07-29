@@ -120,7 +120,9 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
                         if (second >= 16 && second <= 31) {
                             throw new IllegalArgumentException("callbackUrl 不允许指向内网地址: " + host);
                         }
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException e) {
+                        log.warn("[EcPlatformConfig] 解析IP地址段失败: {}", e.getMessage());
+                    }
                 }
             }
             try {

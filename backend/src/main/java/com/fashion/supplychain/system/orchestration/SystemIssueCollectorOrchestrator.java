@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.dto.SystemIssueItemDTO;
 import com.fashion.supplychain.system.dto.SystemIssueSummaryDTO;
 import com.fashion.supplychain.system.store.FrontendErrorStore;
@@ -34,6 +35,12 @@ public class SystemIssueCollectorOrchestrator {
      * 收集系统当前存在的所有问题
      */
     public SystemIssueSummaryDTO collect() {
+        // 防御性校验：仅超管可执行全局统计查询
+        if (!UserContext.isSuperAdmin()) {
+            log.warn("[SystemIssueCollector] 非超管用户尝试调用全局问题收集，已拒绝: userId={}", UserContext.userId());
+            return new SystemIssueSummaryDTO(0, 0, 0, List.of(), LocalDateTime.now());
+        }
+
         List<SystemIssueItemDTO> issues = new ArrayList<>();
 
         // ── 永久 INFO 统计条目（始终展示，让看板始终有内容）──

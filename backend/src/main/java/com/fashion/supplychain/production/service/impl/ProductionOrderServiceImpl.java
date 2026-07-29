@@ -356,7 +356,9 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         if (!StringUtils.hasText(id)) {
             return null;
         }
-        return baseMapper.selectByIdIgnoreTenant(id);
+        // 超管传 null 允许跨租户查；普通用户传当前 tenantId 做二次过滤
+        Long tenantFilter = UserContext.isSuperAdmin() ? null : UserContext.tenantId();
+        return baseMapper.selectByIdIgnoreTenant(id, tenantFilter);
     }
 
     private void generateMaterialPurchases(ProductionOrder order) {

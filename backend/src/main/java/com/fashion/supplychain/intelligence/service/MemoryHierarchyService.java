@@ -283,7 +283,9 @@ public class MemoryHierarchyService {
                     ep.setTimestamp(mem.getCreateTime());
 
                     episodes.add(ep);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[MemoryHierarchy] 加载情景记忆条目失败: {}", e.getMessage());
+                }
             }
         } catch (Exception e) {
             log.debug("[MemoryHierarchy] 情景记忆加载跳过: {}", e.getMessage());
@@ -321,7 +323,9 @@ public class MemoryHierarchyService {
                     item.setHitCount(mem.getHitCount() != null ? mem.getHitCount() : 0);
 
                     concepts.add(item);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[MemoryHierarchy] 加载语义记忆条目失败: {}", e.getMessage());
+                }
             }
         } catch (Exception e) {
             log.debug("[MemoryHierarchy] 语义记忆加载跳过: {}", e.getMessage());

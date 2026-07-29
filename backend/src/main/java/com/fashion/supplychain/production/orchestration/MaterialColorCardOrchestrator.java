@@ -708,7 +708,9 @@ public class MaterialColorCardOrchestrator {
                 try {
                     int seq = Integer.parseInt(code.substring(("MCC" + today).length()));
                     if (seq > maxSeq) maxSeq = seq;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException e) {
+                    log.warn("[MaterialColorCard] 解析色卡编号序号失败: {}", e.getMessage());
+                }
             }
         }
         return "MCC" + today + String.format("%02d", maxSeq + 1);

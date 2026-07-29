@@ -160,7 +160,9 @@ public class ConversationMemoryService {
             }
             compressOldTurns(tenantId, sessionId);
         } finally {
-            try { stringRedisTemplate.delete(lockKey); } catch (Exception ignored) {}
+            try { stringRedisTemplate.delete(lockKey); } catch (Exception e) {
+                log.warn("[ConversationMemory] 释放压缩锁失败: {}", e.getMessage());
+            }
         }
     }
 
@@ -228,7 +230,9 @@ public class ConversationMemoryService {
                             context.append("[").append(role).append("] ")
                                     .append(content).append("\n");
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        log.warn("[ConversationMemory] 加载历史消息失败: {}", e.getMessage());
+                    }
                 }
             }
 

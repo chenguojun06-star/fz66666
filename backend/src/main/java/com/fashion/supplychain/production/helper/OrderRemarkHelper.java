@@ -108,7 +108,8 @@ public class OrderRemarkHelper {
             if (StringUtils.hasText(uid)) {
                 return uid;
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[OrderRemark] 获取当前用户失败: {}", e.getMessage());
         }
         return "系统";
     }

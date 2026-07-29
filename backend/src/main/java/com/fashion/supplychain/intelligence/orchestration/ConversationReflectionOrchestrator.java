@@ -141,7 +141,9 @@ public class ConversationReflectionOrchestrator {
                     if (!numPart.isEmpty()) return new BigDecimal(numPart);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[ConversationReflection] 解析反思评分失败: {}", e.getMessage());
+        }
         return new BigDecimal("0.50");
     }
 

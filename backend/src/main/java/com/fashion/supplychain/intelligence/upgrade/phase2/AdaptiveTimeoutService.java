@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.upgrade.phase2;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
@@ -10,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Service
 @Lazy
+@Slf4j
 public class AdaptiveTimeoutService {
 
     private static final int MAX_SAMPLES = 200;
@@ -69,7 +71,9 @@ public class AdaptiveTimeoutService {
                 result.recovered = true;
                 result.content = sb.toString();
                 result.recoveryReason = "auto-closed " + depth + " brackets";
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[AdaptiveTimeout] JSON括号自动补全失败: {}", e.getMessage());
+            }
         } else if (trimmed.startsWith("[") && !trimmed.endsWith("]")) {
             result.content = trimmed + "]";
             result.recovered = true;

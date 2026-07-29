@@ -698,7 +698,9 @@ public class TenantAppOrchestrator {
                         if (second >= 16 && second <= 31) {
                             throw new IllegalArgumentException(fieldName + " 不允许指向内网地址: " + host);
                         }
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException e) {
+                        log.warn("[TenantApp] 解析IP地址段失败: {}", e.getMessage());
+                    }
                 }
             }
             try {

@@ -887,7 +887,9 @@ public class AiAgentOrchestrator {
             try {
                 Long userIdLong = null;
                 if (userId != null) {
-                    try { userIdLong = Long.parseLong(userId); } catch (NumberFormatException ignored) {}
+                    try { userIdLong = Long.parseLong(userId); } catch (NumberFormatException e) {
+                        log.warn("[AiAgent] 解析用户ID失败: {}", e.getMessage());
+                    }
                 }
                 SelfCritiqueResult critiqueResult = SelfCritiqueResult.of(selfScore);
                 reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,

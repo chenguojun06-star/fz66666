@@ -105,7 +105,9 @@ public class PreOrderDeliveryPredictionOrchestrator {
                 try {
                     LocalDate planned = LocalDate.parse(request.getPlannedDeadline(), DATE_FMT);
                     resp.setLikelyDelayed(today.plusDays(blendedMlDays).isAfter(planned));
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("[预下单预测] 解析计划交期失败: {}", e.getMessage());
+                }
             }
 
             // 7. 置信度
@@ -140,7 +142,9 @@ public class PreOrderDeliveryPredictionOrchestrator {
                 int days = (int) java.time.temporal.ChronoUnit.DAYS.between(today, planned);
                 String risk = days < 0 ? "danger" : (days < mlDays ? "warning" : "safe");
                 nodes.add(new TimelineNode("plannedDeadline", planned.format(DATE_FMT), days, "计划交期", risk));
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[预下单预测] 构建时间线解析交期失败: {}", e.getMessage());
+            }
         }
         return nodes;
     }
@@ -153,7 +157,9 @@ public class PreOrderDeliveryPredictionOrchestrator {
                 LocalDate planned = LocalDate.parse(plannedDeadline, DATE_FMT);
                 int days = (int) java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), planned);
                 nodes.add(new TimelineNode("plannedDeadline", planned.format(DATE_FMT), days, "计划交期", days < 0 ? "danger" : "warning"));
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[预下单预测] 构建精简时间线解析交期失败: {}", e.getMessage());
+            }
         }
         return nodes;
     }

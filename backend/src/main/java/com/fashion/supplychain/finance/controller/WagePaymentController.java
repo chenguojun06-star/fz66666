@@ -15,6 +15,7 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.UserService;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +36,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/finance")
 @PreAuthorize("isAuthenticated()")
+@Slf4j
 public class WagePaymentController {
 
     @Autowired
@@ -507,7 +509,8 @@ public class WagePaymentController {
                     TenantAssert.assertBelongsToCurrentTenant(user.getTenantId(), "员工");
                     return user.getName() != null ? user.getName() : user.getUsername();
                 }
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.warn("[WagePayment] 解析收款方ID失败: {}", e.getMessage());
             }
             return null;
         }

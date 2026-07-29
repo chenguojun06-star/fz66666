@@ -110,7 +110,9 @@ public class AuthTokenService {
         Object pwdVerObj = JWT.of(refreshToken.trim()).setKey(secret).getPayload("pwdVer");
         long tokenPwdVer = 0L;
         if (pwdVerObj != null) {
-            try { tokenPwdVer = Long.valueOf(String.valueOf(pwdVerObj)); } catch (NumberFormatException ignored) {}
+            try { tokenPwdVer = Long.valueOf(String.valueOf(pwdVerObj)); } catch (NumberFormatException e) {
+                log.warn("[AuthToken] 解析密码版本失败: {}", e.getMessage());
+            }
         }
         long currentPwdVer = currentSubject.getPwdVersion() != null ? currentSubject.getPwdVersion() : 0L;
         if (tokenPwdVer != currentPwdVer) {

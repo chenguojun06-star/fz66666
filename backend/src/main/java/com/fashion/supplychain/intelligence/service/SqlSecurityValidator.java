@@ -158,6 +158,7 @@ public class SqlSecurityValidator {
                     return sql;
                 }
             } catch (NumberFormatException e) {
+                log.warn("[SqlSecurity] 解析已有LIMIT值失败: {}", e.getMessage());
             }
         }
 

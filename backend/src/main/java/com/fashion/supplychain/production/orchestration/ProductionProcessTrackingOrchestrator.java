@@ -609,7 +609,9 @@ public class ProductionProcessTrackingOrchestrator {
                             java.util.List<String> problems = new com.fasterxml.jackson.databind.ObjectMapper()
                                     .readValue(defectProblemsJson, java.util.List.class);
                             problemsStr = String.join("、", problems);
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            log.warn("[ProcessTracking] 解析缺陷问题JSON失败: {}", e.getMessage());
+                        }
                     }
                     String remarkContent = String.format("[质检不合格] 菲号#%d %s: 次品%d件(总%d件), 缺陷: %s",
                             tracking.getBundleNo(), tracking.getProcessName(),

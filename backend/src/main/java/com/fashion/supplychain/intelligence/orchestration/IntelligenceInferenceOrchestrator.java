@@ -555,7 +555,8 @@ public class IntelligenceInferenceOrchestrator {
                     ? response.body().limit(10).reduce("", (a, b) -> a + b)
                     : "";
             log.warn("[StreamInference] 非200响应 body={}", body.length() > 500 ? body.substring(0, 500) : body);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[StreamInference] 读取错误响应体失败: {}", e.getMessage());
         }
     }
 

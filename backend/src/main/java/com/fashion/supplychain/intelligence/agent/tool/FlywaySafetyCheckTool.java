@@ -133,7 +133,9 @@ public class FlywaySafetyCheckTool extends AbstractAgentTool {
                     errors.add("版本号 " + version + " 已存在，会导致 checksum 校验失败");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[FlywaySafetyCheck] 校验版本号是否存在失败: {}", e.getMessage());
+        }
 
         result.put("errors", errors);
         result.put("warnings", warnings);
@@ -164,7 +166,9 @@ public class FlywaySafetyCheckTool extends AbstractAgentTool {
                         executedVersions.add(row.get("version").toString());
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[FlywaySafetyCheck] 查询已执行迁移版本失败: {}", e.getMessage());
+            }
 
             Set<String> seenVersions = new HashSet<>();
 
@@ -314,7 +318,9 @@ public class FlywaySafetyCheckTool extends AbstractAgentTool {
                         trapResult.put("severity", traps.size() > 1 ? "HIGH" : "MEDIUM");
                         trapResults.add(trapResult);
                     }
-                } catch (IOException ignored) {}
+                } catch (IOException e) {
+                    log.warn("[FlywaySafetyCheck] 扫描迁移文件陷阱失败: {}", e.getMessage());
+                }
             }
         } catch (IOException e) {
             result.put("error", "无法扫描迁移文件：" + e.getMessage());

@@ -186,7 +186,9 @@ public class TaskTrackerOrchestrator {
                     if (t != null && "PENDING".equals(t.getStatus())) {
                         tasks.add(t);
                     }
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException e) {
+                    log.warn("[TaskTracker] 解析任务ID失败: {}", e.getMessage());
+                }
             }
             return tasks;
         } catch (Exception e) {
@@ -281,11 +283,15 @@ public class TaskTrackerOrchestrator {
             t.setAssignedTo((String) data.get("assignedTo"));
             String createdAtStr = (String) data.get("createdAt");
             if (createdAtStr != null && !createdAtStr.isBlank()) {
-                try { t.setCreatedAt(LocalDateTime.parse(createdAtStr)); } catch (Exception ignored) {}
+                try { t.setCreatedAt(LocalDateTime.parse(createdAtStr)); } catch (Exception e) {
+                    log.warn("[TaskTracker] 解析创建时间失败: {}", e.getMessage());
+                }
             }
             String completedAtStr = (String) data.get("completedAt");
             if (completedAtStr != null && !completedAtStr.isBlank()) {
-                try { t.setCompletedAt(LocalDateTime.parse(completedAtStr)); } catch (Exception ignored) {}
+                try { t.setCompletedAt(LocalDateTime.parse(completedAtStr)); } catch (Exception e) {
+                    log.warn("[TaskTracker] 解析完成时间失败: {}", e.getMessage());
+                }
             }
             t.setResultSummary((String) data.get("resultSummary"));
             return t;

@@ -573,7 +573,9 @@ public class DataTruthGuard {
             try {
                 double val = Double.parseDouble(m.group(1));
                 result.computeIfAbsent(unit, k -> new ArrayList<>()).add(val);
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) {
+                log.warn("[DataTruthGuard] 解析数量值失败: {}", e.getMessage());
+            }
         }
         return result;
     }

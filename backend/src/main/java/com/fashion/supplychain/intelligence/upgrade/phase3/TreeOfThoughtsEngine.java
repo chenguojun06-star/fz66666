@@ -114,7 +114,9 @@ public class TreeOfThoughtsEngine {
             try {
                 TotNode n = f.get(timeoutSeconds, TimeUnit.SECONDS);
                 if (n != null) candidates.add(n);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("[ToT] 并行收集思路候选失败: {}", e.getMessage());
+            }
         }
         return candidates;
     }
@@ -157,7 +159,9 @@ public class TreeOfThoughtsEngine {
                     scores[arr.get(i).get("index").asInt()] = arr.get(i).get("score").asDouble(0.5);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[ToT] 解析评分结果失败: {}", e.getMessage());
+        }
         return scores;
     }
 

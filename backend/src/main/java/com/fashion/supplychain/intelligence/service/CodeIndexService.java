@@ -105,7 +105,9 @@ public class CodeIndexService {
             if (domainFilter != null && !domainFilter.isBlank()) {
                 try {
                     if (domain != ToolDomain.valueOf(domainFilter.toUpperCase())) continue;
-                } catch (IllegalArgumentException ignored) {}
+                } catch (IllegalArgumentException e) {
+                    log.warn("[CodeIndex] 解析工具域过滤失败: {}", e.getMessage());
+                }
             }
 
             int score = 0;
