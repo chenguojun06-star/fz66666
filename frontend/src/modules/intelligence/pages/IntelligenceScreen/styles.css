@@ -5,8 +5,8 @@
   flex-direction: column;
   width: 100vw;
   height: 100vh;
-  background: #060c1a;
-  color: #e0e6f5;
+  background: var(--color-slate-900);
+  color: var(--color-indigo-100);
   font-family: var(--font-family-base);
   overflow: hidden;
 }
@@ -22,10 +22,10 @@
   flex-shrink: 0;
 }
 .screen-header-left { display: flex; align-items: center; gap: 12px; }
-.screen-title { font-size: 15px; font-weight: 700; color: #36cfc9; letter-spacing: 2px; }
-.screen-subtitle { font-size: 12px; color: #6b7fa8; margin-left: 4px; }
+.screen-title { font-size: 15px; font-weight: 700; color: var(--color-cyan-400); letter-spacing: 2px; }
+.screen-subtitle { font-size: 12px; color: var(--color-slate-500); margin-left: 4px; }
 .screen-header-right { display: flex; align-items: center; }
-.screen-ts { font-size: 14px; color: #8ea5c8; font-variant-numeric: tabular-nums; }
+.screen-ts { font-size: 14px; color: var(--color-blue-300); font-variant-numeric: tabular-nums; }
 
 /* KPI 行 */
 .screen-kpi-row {
@@ -48,7 +48,7 @@
 .screen-kpi-icon { font-size: 14px; }
 .screen-kpi-value { font-size: 18px; font-weight: 700; line-height: 1.1; }
 .screen-kpi-unit { font-size: 13px; font-weight: 400; margin-left: 2px; opacity: 0.7; }
-.screen-kpi-label { font-size: 12px; color: #8ea5c8; }
+.screen-kpi-label { font-size: 12px; color: var(--color-blue-300); }
 
 /* 主内容区 */
 .screen-main {
@@ -78,7 +78,7 @@
 .screen-col::-webkit-scrollbar { width: 4px; }
 .screen-col::-webkit-scrollbar-thumb { background: rgba(54, 207, 201, 0.3); border-radius: 2px; }
 
-.screen-panel-title { font-size: 14px; font-weight: 600; color: #8ea5c8; padding-bottom: 8px;
+.screen-panel-title { font-size: 14px; font-weight: 600; color: var(--color-blue-300); padding-bottom: 8px;
   border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 4px; }
 
 /* 工厂排行 */
@@ -87,17 +87,17 @@
 .screen-rank-name { font-size: 13px; width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
 .screen-rank-bar-wrap { flex: 1; background: rgba(255,255,255,0.07); border-radius: 3px; height: 6px; }
 .screen-rank-bar { height: 6px; background: linear-gradient(90deg, #36cfc9, var(--color-primary)); border-radius: 3px; transition: width 0.5s ease; }
-.screen-rank-pct { font-size: 12px; color: #8ea5c8; width: 36px; text-align: right; flex-shrink: 0; }
+.screen-rank-pct { font-size: 12px; color: var(--color-blue-300); width: 36px; text-align: right; flex-shrink: 0; }
 
 /* 订单列表 */
 .screen-order-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-.screen-order-no { font-size: 12px; color: #8ea5c8; width: 100px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.screen-order-no { font-size: 12px; color: var(--color-blue-300); width: 100px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .screen-progress-bar-wrap { flex: 1; background: rgba(255,255,255,0.07); border-radius: 3px; height: 6px; }
 .screen-progress-bar { height: 6px; border-radius: 3px; transition: width 0.5s ease; }
-.screen-progress-pct { font-size: 12px; color: #8ea5c8; width: 32px; text-align: right; flex-shrink: 0; }
+.screen-progress-pct { font-size: 12px; color: var(--color-blue-300); width: 32px; text-align: right; flex-shrink: 0; }
 
 /* 通知列表 */
 .screen-notify-row { display: flex; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
 
 /* 空状态 */
-.screen-empty { font-size: 13px; color: #4a5a7a; text-align: center; padding: 24px 0; }
+.screen-empty { font-size: 13px; color: var(--color-slate-700); text-align: center; padding: 24px 0; }

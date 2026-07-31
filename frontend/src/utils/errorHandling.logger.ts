@@ -39,16 +39,16 @@ export class Logger {
       const prefix = `[${level}${traceId ? ` ${traceId}` : ''}] ${message}`;
       switch (level) {
         case LogLevel.Debug:
-          console.log(`%c${prefix}`, 'color: #888', data);
+          console.log(`%c${prefix}`, 'color: var(--color-text-muted)', data);
           break;
         case LogLevel.Info:
-          console.log(`%c${prefix}`, 'color: #0066cc', data);
+          console.log(`%c${prefix}`, 'color: var(--color-blue-600)', data);
           break;
         case LogLevel.Warn:
-          console.warn(`%c${prefix}`, 'color: #ff9900', data);
+          console.warn(`%c${prefix}`, 'color: var(--color-amber-500)', data);
           break;
         case LogLevel.Error:
-          console.error(`%c${prefix}`, 'color: #ff0000', data);
+          console.error(`%c${prefix}`, 'color: var(--color-red-500)', data);
           break;
       }
     }

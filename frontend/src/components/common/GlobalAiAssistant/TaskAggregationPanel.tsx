@@ -13,9 +13,9 @@ interface TaskAggregationPanelProps {
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  high: { label: '紧急', color: 'var(--color-error)', bg: '#FFF1F0', border: '#ffa39e' },
-  medium: { label: '一般', color: '#d48806', bg: '#FFFBE6', border: 'var(--status-warning-border)' },
-  low: { label: '低', color: '#389e0d', bg: 'var(--status-success-bg)', border: 'var(--status-success-border)' },
+  high: { label: '紧急', color: 'var(--color-error)', bg: 'var(--color-bg-base)1F0', border: 'var(--status-error-border)' },
+  medium: { label: '一般', color: 'var(--color-warning)', bg: 'var(--color-bg-base)BE6', border: 'var(--status-warning-border)' },
+  low: { label: '低', color: 'var(--color-success)', bg: 'var(--status-success-bg)', border: 'var(--status-success-border)' },
 };
 
 const MODULE_LABELS: Record<string, string> = {
@@ -145,7 +145,7 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
           <button
             className={`${styles.filterChip} ${activeFilter === '__high__' ? styles.filterChipActive : ''}`}
             onClick={() => setActiveFilter(activeFilter === '__high__' ? 'all' : '__high__')}
-            style={activeFilter === '__high__' ? { background: '#FFF1F0', borderColor: '#ffa39e', color: 'var(--color-error)' } : {}}
+            style={activeFilter === '__high__' ? { background: 'var(--color-bg-base)1F0', borderColor: 'var(--status-error-border)', color: 'var(--color-error)' } : {}}
           >
             🔴 紧急 ({highCount})
           </button>

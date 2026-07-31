@@ -14,7 +14,7 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
   return (
     <div className="c-card">
       <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('ranking')}>
-        <LiveDot size={7} color="#ffd700" />
+        <LiveDot size={7} color="var(--color-gold)" />
         工厂绩效排行榜
         <span className="c-card-badge purple-badge">实时评分</span>
         <CollapseChevron panelKey="ranking" collapsed={!!collapsedPanels['ranking']} />
@@ -23,12 +23,12 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
         {ranking?.rankings?.length ? (
           ranking.rankings.slice(0, 5).map((r: any, i: number) => (
             <div key={r.factoryId} className="c-rank-row">
-              <span className="c-rank-medal" style={{ color: medalColor[i] ?? '#7a8999' }}>
+              <span className="c-rank-medal" style={{ color: medalColor[i] ?? 'var(--color-slate-500)' }}>
                 {i < 3 ? ['','',''][i] : `#${r.rank}`}
               </span>
               <span className="c-rank-name">{r.factoryName}</span>
               <div className="c-rank-bar-wrap">
-                <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'var(--color-warning-deep)' : '#0098aa' }} />
+                <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'var(--color-warning-deep)' : 'var(--color-cyan-700)' }} />
               </div>
               <span className="c-rank-score"><AnimatedNum val={r.totalScore} /></span>
             </div>

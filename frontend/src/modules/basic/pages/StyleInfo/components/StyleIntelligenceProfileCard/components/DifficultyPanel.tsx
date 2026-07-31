@@ -46,7 +46,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
             const insight = activeDifficulty.imageInsight as string;
             const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');
             return (
-              <div style={{ fontSize: 12, color: isError ? '#8c8c8c' : 'var(--color-text-secondary)', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
+              <div style={{ fontSize: 12, color: isError ? 'var(--color-text-muted)' : 'var(--color-text-secondary)', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
                 {insight}
               </div>
             );
@@ -54,7 +54,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
           {visualResult && (
             <div style={{ marginTop: 4, padding: '4px 6px', borderRadius: 4, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.15)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                <span style={{ fontSize: 12, color: '#00bcd4', fontWeight: 600 }}>视觉AI</span>
+                <span style={{ fontSize: 12, color: 'var(--color-accent-cyan)', fontWeight: 600 }}>视觉AI</span>
                 {visualResult.severity && visualResult.severity !== 'NONE' && (
                   <Tag style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
                 )}

@@ -210,7 +210,7 @@ const SmartAlertBell: React.FC = () => {
                     <span className="sap-priority-pct">{brief.topPriorityOrder.progress}%</span>
                     <span
                       className="sap-priority-days"
-                      style={{ color: brief.topPriorityOrder.daysLeft <= 3 ? '#ef4444' : 'var(--color-text-muted)' }}
+                      style={{ color: brief.topPriorityOrder.daysLeft <= 3 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}
                     >
                       剩 {brief.topPriorityOrder.daysLeft} 天
                     </span>
@@ -223,7 +223,7 @@ const SmartAlertBell: React.FC = () => {
             {visibleEvents.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 待处理事项
+                  <ExclamationCircleOutlined style={{ color: 'var(--color-danger)' }} /> 待处理事项
                   <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒，明日自动重检</span>
                 </div>
                 {visibleEvents.slice(0, 6).map(ev => (
@@ -253,7 +253,7 @@ const SmartAlertBell: React.FC = () => {
             {brief?.suggestions && brief.suggestions.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <CheckCircleOutlined style={{ color: '#0284c7' }} /> 提醒建议
+                  <CheckCircleOutlined style={{ color: 'var(--color-sky-500)' }} /> 提醒建议
                   <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
@@ -344,7 +344,7 @@ const SmartAlertBell: React.FC = () => {
                   <div key={n.id} className="sap-notice-row"
                     style={{
                       background: n.isRead ? 'var(--color-bg-container)' : 'var(--status-warning-bg)',
-                      borderLeft: `3px solid ${n.isRead ? '#ddd' : n.actionType === 'urge_order' ? 'var(--color-error)' : '#ffa940'}`,
+                      borderLeft: `3px solid ${n.isRead ? 'var(--color-zinc-300)' : n.actionType === 'urge_order' ? 'var(--color-error)' : 'var(--color-orange-300)'}`,
                     }}
                     onClick={() => {
                       if (!n.isRead) {

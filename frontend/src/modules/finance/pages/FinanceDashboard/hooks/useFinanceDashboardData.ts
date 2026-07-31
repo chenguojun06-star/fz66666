@@ -169,9 +169,9 @@ const buildStatCards = (
   { key: 'profit', title: '净利润', value: summary.netProfit, color: summary.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)' },
   { key: 'approval', title: `待审批 / 逾期`, value: summary.pendingApprovals, color: 'var(--color-info)' },
   { key: 'wage', title: '工资支出', value: summary.wageExpense, color: 'var(--color-danger)' },
-  { key: 'material', title: '物料成本', value: summary.materialCost, color: '#13c2c2' },
-  { key: 'expense', title: '费用支出', value: summary.expenseCost, color: '#ffa940' },
-  { key: 'advance', title: '员工借支', value: summary.advanceAmount, color: '#ff7875' },
+  { key: 'material', title: '物料成本', value: summary.materialCost, color: 'var(--color-accent-cyan)' },
+  { key: 'expense', title: '费用支出', value: summary.expenseCost, color: 'var(--color-orange-300)' },
+  { key: 'advance', title: '员工借支', value: summary.advanceAmount, color: 'var(--color-danger)' },
 ];
 
 const buildDetailConfig = (

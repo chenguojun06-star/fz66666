@@ -27,7 +27,7 @@
 .ranking-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--neutral-text, #262626);
+  color: var(--neutral-text, var(--color-gray-800));
   margin-right: auto;
 }
 
@@ -35,11 +35,11 @@
   display: flex;
   gap: 12px;
   font-size: 14px;
-  color: var(--neutral-text-light, #8c8c8c);
+  color: var(--neutral-text-light, var(--color-text-muted));
 }
 
 .ranking-stats b {
-  color: var(--neutral-text, #262626);
+  color: var(--neutral-text, var(--color-gray-800));
   font-weight: 600;
 }
 
@@ -115,7 +115,7 @@
 .style-no {
   font-size: 14px;
   font-weight: 500;
-  color: var(--neutral-text, #262626);
+  color: var(--neutral-text, var(--color-gray-800));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -131,7 +131,7 @@
 .ranking-empty {
   grid-column: 1 / -1;
   text-align: center;
-  color: var(--neutral-text-light, #8c8c8c);
+  color: var(--neutral-text-light, var(--color-text-muted));
   font-size: 14px;
   padding: 24px;
 }
@@ -210,9 +210,9 @@
 
 /* 暗色主题 */
 [data-theme='dark'] .ranking-grid-item {
-  background: var(--table-row-hover-bg, #2a2a2a);
+  background: var(--table-row-hover-bg, var(--color-zinc-800));
 }
 
 [data-theme='dark'] .ranking-grid-item:hover {
-  background: #1a3a5c;
+  background: var(--color-ocean-light);
 }

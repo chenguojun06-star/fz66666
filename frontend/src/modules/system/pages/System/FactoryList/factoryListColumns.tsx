@@ -6,7 +6,7 @@ import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 import { formatDateTime } from '@/utils/datetime';
 import { paths } from '@/routeConfig';
 
-const tierColorMap: Record<string, string> = { S: '#f7a600', A: '#39ff14', B: '#4fc3f7', C: '#ff4136' };
+const tierColorMap: Record<string, string> = { S: 'var(--color-warning-deep)', A: 'var(--color-accent-neon)', B: 'var(--color-sky-400)', C: 'var(--color-red-500)' };
 
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = { active: '启用', inactive: '停用' };
@@ -50,15 +50,15 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
         ) : score ? (
           <div style={{ fontSize: 14, lineHeight: 1.8, minWidth: 160 }}>
             <div style={{ marginBottom: 4 }}>
-              <Tag color={tierColorMap[score.tier] ?? '#888'} style={{ fontWeight: 700, fontSize: 14 }}>
+              <Tag color={tierColorMap[score.tier] ?? 'var(--color-text-muted)'} style={{ fontWeight: 700, fontSize: 14 }}>
                 {score.tier}级
               </Tag>
               <span style={{ color: tierColorMap[score.tier] ?? 'var(--color-text-quaternary)', fontWeight: 600 }}>
                 综合分 {score.overallScore?.toFixed(1)}
               </span>
             </div>
-            <div>准时率：<span style={{ color: score.onTimeRate >= 0.9 ? 'var(--color-accent-neon)' : score.onTimeRate >= 0.75 ? 'var(--color-warning-deep)' : '#ff4136' }}>{(score.onTimeRate * 100).toFixed(0)}%</span></div>
-            <div>质量分：<span style={{ color: score.qualityScore >= 90 ? 'var(--color-accent-neon)' : score.qualityScore >= 75 ? 'var(--color-warning-deep)' : '#ff4136' }}>{score.qualityScore?.toFixed(1)}</span></div>
+            <div>准时率：<span style={{ color: score.onTimeRate >= 0.9 ? 'var(--color-accent-neon)' : score.onTimeRate >= 0.75 ? 'var(--color-warning-deep)' : 'var(--color-red-500)' }}>{(score.onTimeRate * 100).toFixed(0)}%</span></div>
+            <div>质量分：<span style={{ color: score.qualityScore >= 90 ? 'var(--color-accent-neon)' : score.qualityScore >= 75 ? 'var(--color-warning-deep)' : 'var(--color-red-500)' }}>{score.qualityScore?.toFixed(1)}</span></div>
             <div>已完成 / 总接单：{score.completedOrders} / {score.totalOrders} 单</div>
             <div>逾期：{score.overdueOrders} 单</div>
           </div>

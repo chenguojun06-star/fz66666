@@ -43,7 +43,7 @@ const renderMiniPie = (value: number, total: number, color: string) => {
         strokeLinecap="round"
         transform={`rotate(-90 ${center} ${center})`}
       />
-      <text x={center} y={center} textAnchor="middle" dominantBaseline="middle" className="pie-value" fill="#94a3b8">
+      <text x={center} y={center} textAnchor="middle" dominantBaseline="middle" className="pie-value" fill="var(--color-slate-400)">
         {Math.round(percent)}%
       </text>
     </svg>

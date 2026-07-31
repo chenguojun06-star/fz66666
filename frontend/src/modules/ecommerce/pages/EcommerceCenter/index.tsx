@@ -137,7 +137,7 @@ const EcommerceCenter: React.FC = () => {
             </Col>
             <Col span={8}>
               <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>待发货</div>
-              <Text strong style={{ color: statsData.pendingShip > 0 ? 'var(--color-warning)' : '#999', fontSize: 20 }}>{statsData.pendingShip}</Text>
+              <Text strong style={{ color: statsData.pendingShip > 0 ? 'var(--color-warning)' : 'var(--color-gray-label)', fontSize: 20 }}>{statsData.pendingShip}</Text>
             </Col>
           </Row>
         ) : (
@@ -207,7 +207,7 @@ const EcommerceCenter: React.FC = () => {
         </Row>
 
         {globalStats.noStockWarn > 0 && (
-          <Card style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffa39e', background: '#FFF1F0' }} styles={{ body: { padding: '10px 16px' } }}>
+          <Card style={{ marginBottom: 16, borderRadius: 8, border: '1px solid var(--status-error-border)', background: 'var(--color-bg-base)1F0' }} styles={{ body: { padding: '10px 16px' } }}>
             <Space>
               <WarningOutlined style={{ color: 'var(--color-danger)', fontSize: 18 }} />
               <Text strong style={{ color: 'var(--color-danger)', fontSize: 14 }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>

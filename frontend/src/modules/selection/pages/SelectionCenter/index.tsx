@@ -83,7 +83,7 @@ export default function SelectionCenter() {
                       <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-base)', cursor: 'pointer', transition: 'box-shadow 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)')}
                         onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}>
-                        <div style={{ position: 'relative', height: 260, background: '#f7f7f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+                        <div style={{ position: 'relative', height: 260, background: 'var(--color-slate-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
                           {img ? (
                             <Image loading="lazy" src={img} alt={item.styleName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           ) : (
@@ -102,7 +102,7 @@ export default function SelectionCenter() {
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
                           <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? '未知'].filter(Boolean).join(' · ')}</div>
-                          <div style={{ fontSize: 14, color: '#777', marginBottom: 8, minHeight: 18 }}>
+                          <div style={{ fontSize: 14, color: 'var(--color-zinc-500)', marginBottom: 8, minHeight: 18 }}>
                             {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}{item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
                           </div>
                           <div style={{ marginBottom: 8, minHeight: 22 }}>

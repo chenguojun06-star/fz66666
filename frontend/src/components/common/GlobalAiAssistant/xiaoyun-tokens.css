@@ -1,8 +1,8 @@
 :root {
   --xiaoyun-primary: var(--color-primary);
-  --xiaoyun-primary-hover: #0958d9;
-  --xiaoyun-primary-bg: #e6f4ff;
-  --xiaoyun-primary-border: #91caff;
+  --xiaoyun-primary-hover: var(--color-primary-dark);
+  --xiaoyun-primary-bg: var(--status-processing-bg);
+  --xiaoyun-primary-border: var(--status-processing-border);
 
   --xiaoyun-success: var(--color-success);
   --xiaoyun-success-bg: var(--status-success-bg);
@@ -10,15 +10,15 @@
 
   --xiaoyun-warning: var(--color-warning);
   --xiaoyun-warning-bg: var(--status-warning-bg);
-  --xiaoyun-warning-border: #ffd591;
+  --xiaoyun-warning-border: var(--status-warning-border);
 
   --xiaoyun-danger: var(--color-danger);
-  --xiaoyun-danger-bg: #FFF1F0;
-  --xiaoyun-danger-border: #ffa39e;
+  --xiaoyun-danger-bg: var(--color-bg-base)1F0;
+  --xiaoyun-danger-border: var(--status-error-border);
 
   --xiaoyun-info: var(--color-primary);
-  --xiaoyun-info-bg: #f0f5ff;
-  --xiaoyun-info-border: #adc6ff;
+  --xiaoyun-info-bg: var(--color-bg-highlight);
+  --xiaoyun-info-border: var(--color-blue-200);
 
   --xiaoyun-text-primary: rgba(0, 0, 0, 0.88);
   --xiaoyun-text-secondary: rgba(0, 0, 0, 0.65);
@@ -55,7 +55,7 @@
   --xiaoyun-chart-4: var(--color-danger);
   --xiaoyun-chart-5: var(--color-accent-purple);
   --xiaoyun-chart-6: var(--color-accent-cyan);
-  --xiaoyun-chart-7: #eb2f96;
+  --xiaoyun-chart-7: var(--color-magenta);
 }
 
 :root[data-theme="dark"] {
@@ -63,23 +63,23 @@
   --xiaoyun-text-secondary: rgba(255, 255, 255, 0.65);
   --xiaoyun-text-tertiary: rgba(255, 255, 255, 0.45);
 
-  --xiaoyun-bg-card: #1f1f1f;
-  --xiaoyun-bg-page: #141414;
-  --xiaoyun-bg-ai-bubble: #1f1f1f;
+  --xiaoyun-bg-card: var(--color-gray-800);
+  --xiaoyun-bg-page: var(--color-slate-900);
+  --xiaoyun-bg-ai-bubble: var(--color-gray-800);
   --xiaoyun-bg-user-bubble: var(--color-primary);
 
-  --xiaoyun-border-card: #303030;
+  --xiaoyun-border-card: var(--color-slate-800);
 
-  --xiaoyun-primary-bg: #111d2c;
-  --xiaoyun-primary-border: #15325b;
-  --xiaoyun-success-bg: #162312;
-  --xiaoyun-success-border: #274916;
-  --xiaoyun-warning-bg: #2b2111;
-  --xiaoyun-warning-border: #594214;
-  --xiaoyun-danger-bg: #2a1215;
-  --xiaoyun-danger-border: #58181c;
-  --xiaoyun-info-bg: #111d2c;
-  --xiaoyun-info-border: #15325b;
+  --xiaoyun-primary-bg: var(--color-dark-bg);
+  --xiaoyun-primary-border: var(--color-ocean);
+  --xiaoyun-success-bg: var(--color-slate-900);
+  --xiaoyun-success-border: var(--color-emerald-900);
+  --xiaoyun-warning-bg: var(--color-amber-900);
+  --xiaoyun-warning-border: var(--color-amber-800);
+  --xiaoyun-danger-bg: var(--color-red-900);
+  --xiaoyun-danger-border: var(--color-red-900);
+  --xiaoyun-info-bg: var(--color-dark-bg);
+  --xiaoyun-info-border: var(--color-ocean);
 
   --xiaoyun-shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 1px 6px -1px rgba(0, 0, 0, 0.15);
   --xiaoyun-shadow-hover: 0 3px 6px -4px rgba(0, 0, 0, 0.35), 0 6px 16px 0 rgba(0, 0, 0, 0.25);
@@ -114,6 +114,6 @@
   color: var(--xiaoyun-primary); cursor: pointer; text-decoration: underline;
 }
 
-:root[data-theme="dark"] .md-code-block { background: #2a2a2a; }
+:root[data-theme="dark"] .md-code-block { background: var(--color-zinc-800); }
 :root[data-theme="dark"] .inline-code { background: rgba(255,255,255,0.1); }
-:root[data-theme="dark"] .md-table th { background: #2a2a2a; }
+:root[data-theme="dark"] .md-table th { background: var(--color-zinc-800); }

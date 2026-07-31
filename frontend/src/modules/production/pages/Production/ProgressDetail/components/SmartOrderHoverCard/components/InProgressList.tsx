@@ -49,7 +49,7 @@ const InProgressList: React.FC<Props> = ({
               }}>
                 <span style={{ color: 'var(--color-primary)' }}>◆</span>
                 <span>{s.stageName}</span>
-                <div style={{ flex: 1, height: 1, background: '#e8f4ff', marginLeft: 2 }} />
+                <div style={{ flex: 1, height: 1, background: 'var(--color-blue-100)', marginLeft: 2 }} />
               </div>
             )}
             <div style={{ paddingLeft: isSubProcess ? 10 : 0, marginBottom: 6 }}>
@@ -64,7 +64,7 @@ const InProgressList: React.FC<Props> = ({
                     borderRadius: 8, padding: '0 5px', fontSize: 11, fontWeight: 700,
                   }}>瓶颈</span>
                 )}
-                <div style={{ width: 60, flexShrink: 0, height: 4, background: '#f0f5ff', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ width: 60, flexShrink: 0, height: 4, background: 'var(--color-bg-highlight)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{
                     width: `${Math.min(100, s.pct)}%`, height: '100%',
                     borderRadius: 2, background: 'var(--color-primary)',

@@ -101,12 +101,12 @@ export const buildOrdersCsv = (rows: ProductionOrder[]) => {
 // === 主要阶段定义（关键词统一从 productionStage.ts 导入，禁止在此处内联数组） ===
 
 export const mainStages = [
-  { key: 'procurement',      name: '采购',     color: '#1e40af', keywords: stageAliasMap.procurement },
-  { key: 'cutting',          name: '裁剪',     color: '#92400e', keywords: stageAliasMap.cutting },
-  { key: 'carSewing',        name: '车缝',     color: '#065f46', keywords: carSewingKeywords },
-  { key: 'secondaryProcess', name: '二次工艺', color: '#5b21b6', keywords: stageAliasMap.secondaryProcess },
-  { key: 'tailProcess',      name: '尾部',     color: '#9d174d', keywords: tailProcessKeywords },
-  { key: 'warehousing',      name: '入库',     color: '#374151', keywords: stageAliasMap.warehousing },
+  { key: 'procurement',      name: '采购',     color: 'var(--color-blue-800)', keywords: stageAliasMap.procurement },
+  { key: 'cutting',          name: '裁剪',     color: 'var(--color-amber-800)', keywords: stageAliasMap.cutting },
+  { key: 'carSewing',        name: '车缝',     color: 'var(--color-emerald-800)', keywords: carSewingKeywords },
+  { key: 'secondaryProcess', name: '二次工艺', color: 'var(--color-violet-700)', keywords: stageAliasMap.secondaryProcess },
+  { key: 'tailProcess',      name: '尾部',     color: 'var(--color-pink-800)', keywords: tailProcessKeywords },
+  { key: 'warehousing',      name: '入库',     color: 'var(--color-slate-700)', keywords: stageAliasMap.warehousing },
 ];
 
 export const stageKeyByType: Record<string, string> = {

@@ -94,9 +94,9 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>料卷二维码标签</title><style>
       body{font-family:'Heiti SC','Songti SC','Hiragino Sans GB','STSong','Arial Unicode MS',serif;padding:10px}
       .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-      .card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;break-inside:avoid}
-      .code{font-size:13px;color:#666;margin:2px 0}.name{font-size:12px;font-weight:bold;margin:2px 0}
-      .qty{font-size:12px;color:#333;margin:2px 0} img{width:140px;height:140px}
+      .card{border:1px solid var(--color-zinc-300);border-radius:6px;padding:8px;text-align:center;break-inside:avoid}
+      .code{font-size:13px;color:var(--color-gray-dark);margin:2px 0}.name{font-size:12px;font-weight:bold;margin:2px 0}
+      .qty{font-size:12px;color:var(--color-gray-800);margin:2px 0} img{width:140px;height:140px}
       @media print{body{padding:0}.grid{gap:8px}}
     </style></head><body>
       <h2 style="text-align:center;margin-bottom:12px">面辅料料卷二维码标签</h2>

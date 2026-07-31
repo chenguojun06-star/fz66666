@@ -38,7 +38,7 @@ const ZipImportPanel: React.FC = () => {
   return (
     <div>
       {/* 说明 */}
-      <Card style={{ marginBottom: 16, background: '#f0f7ff', border: '1px solid #91caff' }}>
+      <Card style={{ marginBottom: 16, background: 'var(--status-processing-bg)', border: '1px solid var(--status-processing-border)' }}>
         <Paragraph style={{ marginBottom: 8 }}>
           <Text strong><FileZipOutlined style={{ marginRight: 6 }} />ZIP 打包导入：一次性导入款式数据 + 封面图片</Text>
         </Paragraph>

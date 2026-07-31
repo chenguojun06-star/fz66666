@@ -22,7 +22,7 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
     }}>
       {stages.map((stage) => {
         const isActive = activeTab === stage.key;
-        const c = STAGE_COLORS[stage.key] || '#8c8c8c';
+        const c = STAGE_COLORS[stage.key] || 'var(--color-text-muted)';
         const isDone = stage.percent >= 100;
         return (
           <div

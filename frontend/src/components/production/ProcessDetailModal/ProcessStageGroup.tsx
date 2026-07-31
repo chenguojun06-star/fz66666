@@ -87,7 +87,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
             width: '14%',
             align: 'right' as const,
             render: (v: number) => (
-              <span style={{ fontWeight: 600, color: '#dc2626' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>
                 ¥{(v || 0).toFixed(2)}
               </span>
             ),
@@ -126,7 +126,7 @@ const StageHeader: React.FC<{
   onNavigateToPayroll: (processName: string) => void;
 }> = ({ stageKey, stageName, processCount, stageTotal, cuttingQty, procurementStatus, processStatus, orderNo, onNavigateToPayroll }) => (
   <div style={{
-    background: '#f3f4f6',
+    background: 'var(--color-bg-stripe)',
     padding: '10px 16px',
     display: 'flex',
     justifyContent: 'space-between',
@@ -148,7 +148,7 @@ const StageHeader: React.FC<{
       )}
     </div>
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-      <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>
+      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-error)' }}>
         小计: ¥{stageTotal.toFixed(2)}
       </span>
       <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-success)' }}>
@@ -207,8 +207,8 @@ const CuttingStatus: React.FC<{ status: any }> = ({ status }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
     <span style={{
       fontSize: '13px', fontWeight: 600,
-      color: status.completed ? '#059669' : '#f59e0b',
-      background: status.completed ? '#d1fae5' : '#fef3c7',
+      color: status.completed ? 'var(--color-emerald-600)' : 'var(--color-warning)',
+      background: status.completed ? 'var(--color-emerald-100)' : 'var(--color-amber-100)',
       padding: '2px 8px', borderRadius: '4px'
     }}>
       {status.completed ? ' 已完成' : `进行中 (${status.completionRate}%)`}

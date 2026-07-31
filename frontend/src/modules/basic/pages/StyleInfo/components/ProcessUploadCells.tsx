@@ -64,7 +64,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
       {imgs.length > 2 && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>+{imgs.length - 2}</span>}
       {!readOnly && record.id && (
         <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
-          <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
+          <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
             onClick={() => fileInputRef.current?.click()} />
         </Tooltip>
       )}
@@ -138,7 +138,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
       <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
         onClick={(e) => e.stopPropagation()}>
-        <PaperClipOutlined style={{ fontSize: 12, color: files.length > 0 ? 'var(--color-primary)' : '#bbb' }} />
+        <PaperClipOutlined style={{ fontSize: 12, color: files.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
         {files.length > 0 && <span style={{ fontSize: 14, color: 'var(--color-primary)' }}>{files.length}</span>}
       </div>
     </Popover>
@@ -195,7 +195,7 @@ export const NewRowImageUpload: React.FC<{
       )}
       {value.length > 2 && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>+{value.length - 2}</span>}
       <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
-        <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
+        <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
           onClick={() => fileInputRef.current?.click()} />
       </Tooltip>
     </div>
@@ -259,7 +259,7 @@ export const NewRowAttachmentUpload: React.FC<{
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
       <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
         onClick={(e) => e.stopPropagation()}>
-        <PaperClipOutlined style={{ fontSize: 12, color: value.length > 0 ? 'var(--color-primary)' : '#bbb' }} />
+        <PaperClipOutlined style={{ fontSize: 12, color: value.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
         {value.length > 0 && <span style={{ fontSize: 14, color: 'var(--color-primary)' }}>{value.length}</span>}
       </div>
     </Popover>

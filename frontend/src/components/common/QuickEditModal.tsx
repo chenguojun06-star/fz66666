@@ -118,7 +118,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
         </Form.Item>
         {aiRemarks.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 6, fontSize: 14, color: 'var(--color-text-tertiary, #999)' }}>
+            <div style={{ marginBottom: 6, fontSize: 14, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
               AI巡检记录（不可编辑）
             </div>
             <div style={{
@@ -129,7 +129,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
               overflowY: 'auto',
               fontSize: 14,
               lineHeight: '20px',
-              color: 'var(--color-text-secondary, #666)',
+              color: 'var(--color-text-secondary, var(--color-gray-dark))',
             }}>
               {aiRemarks.map((line, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: i < aiRemarks.length - 1 ? 4 : 0 }}>

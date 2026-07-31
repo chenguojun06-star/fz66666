@@ -114,17 +114,17 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
 @page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:var(--color-black);background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm;page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .label-page:last-child{page-break-after:auto}
-.dash-sep{border:none;border-top:0.8pt dashed #555;width:calc(100% + 6mm);margin-left:-3mm;flex:0 0 auto}
+.dash-sep{border:none;border-top:0.8pt dashed var(--color-zinc-600);width:calc(100% + 6mm);margin-left:-3mm;flex:0 0 auto}
 .content-area{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center;padding-top:2mm}
-.sub{font-size:${fs}pt;color:#555;text-align:center}
-.hr{border:none;border-top:0.3pt solid #bbb;margin:1.2mm 0}
+.sub{font-size:${fs}pt;color:var(--color-zinc-600);text-align:center}
+.hr{border:none;border-top:0.3pt solid var(--color-text-quaternary);margin:1.2mm 0}
 .ucode-val{font-size:${w >= 45 ? 9 : 7.5}pt;font-weight:700;text-align:center;letter-spacing:0.5mm;margin:1.5mm 0;word-break:break-all}
 .qr{text-align:center;margin:1mm 0}
-.small{font-size:${fs - 0.5}pt;color:#888;text-align:center}
-.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:#777;text-align:center;letter-spacing:0.2mm}
+.small{font-size:${fs - 0.5}pt;color:var(--color-text-muted);text-align:center}
+.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:var(--color-zinc-500);text-align:center;letter-spacing:0.2mm}
 </style></head><body>${pages}</body></html>`;
       safePrint(html);
     }

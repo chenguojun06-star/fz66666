@@ -20,21 +20,21 @@
 .sample-metric-value {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-slate-900);
   line-height: 1.2;
 }
 
 .sample-metric-value--primary {
-  color: #2563eb;
+  color: var(--color-primary-dark);
 }
 
 .sample-metric-value--success {
-  color: #059669;
+  color: var(--color-emerald-600);
 }
 
 .sample-metric-label {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-top: 4px;
 }
 
@@ -56,12 +56,12 @@
 }
 
 .sample-stage-label {
-  color: #475569;
+  color: var(--color-slate-600);
 }
 
 .sample-stage-count {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-slate-900);
 }
 
 .sample-today-row {
@@ -81,16 +81,16 @@
 }
 
 .sample-today-label {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .sample-today-value {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-slate-900);
 }
 
 .sample-today-value--success {
-  color: #059669;
+  color: var(--color-emerald-600);
 }
 
 .sample-warning-row {
@@ -98,19 +98,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #fef2f2;
+  background: var(--color-red-100);
   border-radius: 4px;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--color-red-200);
   font-size: 14px;
 }
 
 .sample-warning-label {
-  color: #dc2626;
+  color: var(--color-error);
   font-weight: 500;
 }
 
 .sample-warning-value {
-  color: #dc2626;
+  color: var(--color-error);
   font-weight: 600;
 }
 

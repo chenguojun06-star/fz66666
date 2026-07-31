@@ -1,5 +1,5 @@
 export const directCardStyle = {
-  border: '1px solid #ececec',
+  border: '1px solid var(--color-zinc-200)',
   borderRadius: 12,
   padding: 16,
   background: 'var(--color-bg-base)',
@@ -53,7 +53,7 @@ export const summaryCardStyle = {
 export const metaCardStyle = {
   marginTop: 10,
   padding: '12px 14px',
-  border: '1px solid #e8edf4',
+  border: '1px solid var(--color-slate-200)',
   borderRadius: 10,
   background: 'linear-gradient(180deg, #fbfcfe 0%, #f6f8fb 100%)',
   display: 'grid',
@@ -111,7 +111,7 @@ export const editorGridStyle = {
 export const unlockNoteStyle = {
   padding: '8px 12px',
   borderRadius: 10,
-  border: '1px dashed #d7dde7',
+  border: '1px dashed var(--color-slate-200)',
   background: 'var(--color-bg-base)',
   display: 'grid',
   gap: 2,
@@ -120,7 +120,7 @@ export const unlockNoteStyle = {
 export const uploadAreaStyle = {
   padding: '12px 14px',
   borderRadius: 12,
-  border: '1px dashed #cfd8e3',
+  border: '1px dashed var(--color-slate-200)',
   background: 'var(--color-bg-base)',
   display: 'grid',
   gap: 10,
@@ -142,8 +142,8 @@ export const processingBannerStyle = {
   marginBottom: 0,
   padding: '10px 12px',
   borderRadius: 10,
-  border: '1px solid #ffd591',
-  background: '#fff7e6',
+  border: '1px solid var(--status-warning-border)',
+  background: 'var(--color-bg-base)7e6',
   display: 'grid',
   gap: 4,
 } as const;

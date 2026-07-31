@@ -117,7 +117,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         {directProcessing ? (
           <div style={processingBannerStyle}>
             <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
-            <div style={{ ...directMetaStyle, color: '#ad6800' }}>当前记录已解锁，保存后会结束本次处理。</div>
+            <div style={{ ...directMetaStyle, color: 'var(--color-warning-deep)' }}>当前记录已解锁，保存后会结束本次处理。</div>
           </div>
         ) : null}
         <div style={directCardStyle}><PatternSummary record={directRow} {...summaryProps} /></div>
@@ -163,7 +163,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         onCancel={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}>取消</Button><Button danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button></Space>}>
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--status-warning-bg)', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}

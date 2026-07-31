@@ -82,7 +82,7 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
             justifyContent: 'center',
             background: 'var(--color-bg-subtle)',
             borderRadius: 4,
-            color: '#ccc',
+            color: 'var(--color-zinc-300)',
             fontSize: size * 0.5,
           }}
         >

@@ -157,7 +157,7 @@
 :root[data-theme="dark"] .ant-input-affix-wrapper:focus,
 :root[data-theme="dark"] .ant-input-affix-wrapper-focused,
 :root[data-theme="dark"] .ant-input-focused {
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
   box-shadow: 0 0 0 2px rgba(107, 163, 255, 0.2) !important;
 }
 
@@ -191,7 +191,7 @@
 :root[data-theme="dark"] .ant-select-item-option-selected,
 :root[data-theme="dark"] .ant-select-dropdown .ant-select-item-option-selected {
   background: rgba(107, 163, 255, 0.15) !important;
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-select-item-option:hover,
@@ -250,11 +250,11 @@
 }
 
 :root[data-theme="dark"] .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-tabs-ink-bar {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-tabs-content-holder {
@@ -350,14 +350,14 @@
 
 :root[data-theme="dark"] .ant-btn-primary {
   background: transparent !important;
-  border-color: #6ba3ff !important;
-  color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
+  color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-btn-primary:hover {
   background: rgba(107, 163, 255, 0.1) !important;
-  border-color: #93c5fd !important;
-  color: #93c5fd !important;
+  border-color: var(--color-blue-300) !important;
+  color: var(--color-blue-300) !important;
 }
 
 /* ========== Message/Notification 消息提示 ========== */
@@ -440,12 +440,12 @@
 }
 
 :root[data-theme="dark"] .ant-pagination-item:hover {
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-pagination-item-active {
   background: rgba(107, 163, 255, 0.15) !important;
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-pagination-prev button,
@@ -459,7 +459,7 @@
 }
 
 :root[data-theme="dark"] .ant-breadcrumb a:hover {
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-breadcrumb-separator {
@@ -497,7 +497,7 @@
 }
 
 :root[data-theme="dark"] .universal-card-subtitle {
-  color: #d1d5db !important;
+  color: var(--color-border) !important;
   font-weight: 500 !important;
 }
 
@@ -513,7 +513,7 @@
 
 /* 统计数字 */
 :root[data-theme="dark"] .ant-statistic-title {
-  color: #d1d5db !important;
+  color: var(--color-border) !important;
   font-weight: 500 !important;
 }
 
@@ -576,16 +576,16 @@
 :root[data-theme="dark"] p,
 :root[data-theme="dark"] span,
 :root[data-theme="dark"] div {
-  color: #f0f2f5;
+  color: var(--color-bg-page);
 }
 
 /* ========== 深色主题下的链接 ========== */
 :root[data-theme="dark"] a {
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] a:hover {
-  color: #93c5fd !important;
+  color: var(--color-blue-300) !important;
 }
 
 /* ========== DatePicker/TimePicker 日期时间选择器 ========== */
@@ -626,7 +626,7 @@
 }
 
 :root[data-theme="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
   color: var(--color-bg-base) !important;
 }
 
@@ -636,7 +636,7 @@
 }
 
 :root[data-theme="dark"] .ant-switch-checked {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 /* ========== Checkbox 复选框 ========== */
@@ -650,8 +650,8 @@
 }
 
 :root[data-theme="dark"] .ant-checkbox-checked .ant-checkbox-inner {
-  background: #6ba3ff !important;
-  border-color: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 /* ========== Radio 单选框 ========== */
@@ -665,11 +665,11 @@
 }
 
 :root[data-theme="dark"] .ant-radio-checked .ant-radio-inner {
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-radio-inner::after {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 /* ========== Scrollbar滚动条深色主题 ========== */
@@ -707,13 +707,13 @@
 
 /* 主内容区 - 强制深色背景 */
 :root[data-theme="dark"] .layout-content {
-  background-color: #0f1115 !important;
+  background-color: var(--color-dark-bg) !important;
 }
 
 /* 侧边栏菜单 */
 :root[data-theme="dark"] .sidebar-menu.ant-menu {
   background: transparent !important;
-  color: #f0f2f5 !important;
+  color: var(--color-bg-page) !important;
 }
 
 :root[data-theme="dark"] .sidebar-menu.ant-menu .ant-menu-item,
@@ -723,13 +723,13 @@
 
 :root[data-theme="dark"] .sidebar-menu.ant-menu .ant-menu-item-selected {
   background: rgba(107, 163, 255, 0.15) !important;
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .sidebar-menu.ant-menu .ant-menu-item:hover,
 :root[data-theme="dark"] .sidebar-menu.ant-menu .ant-menu-submenu-title:hover {
   background: rgba(255, 255, 255, 0.08) !important;
-  color: #f0f2f5 !important;
+  color: var(--color-bg-page) !important;
 }
 
 /* 移动端抽屉导航 - 纯色背景 */
@@ -743,13 +743,13 @@
 }
 
 :root[data-theme="dark"] .mobile-nav-drawer .ant-drawer-title {
-  color: #f0f2f5 !important;
+  color: var(--color-bg-page) !important;
 }
 
 /* 顶部品牌标签 - 深色主题下使用亮色（纯色） */
 :root[data-theme="dark"] .header-brand {
   background: rgba(107, 163, 255, 0.18) !important; /* @design-system: 纯色 */
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
   border: 1px solid rgba(107, 163, 255, 0.3) !important;
 }
 
@@ -760,17 +760,17 @@
 
 :root[data-theme="dark"] .nav-link:hover {
   background: rgba(255, 255, 255, 0.08) !important;
-  color: #f0f2f5 !important;
+  color: var(--color-bg-page) !important;
 }
 
 :root[data-theme="dark"] .nav-item.active .nav-link {
   background: rgba(107, 163, 255, 0.15) !important;
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }
 
 /* 用户头像区域 */
 :root[data-theme="dark"] .user-info-name {
-  color: #f0f2f5 !important;
+  color: var(--color-bg-page) !important;
 }
 
 :root[data-theme="dark"] .user-info-role {
@@ -870,8 +870,8 @@
 }
 
 :root[data-theme="dark"] .ant-pagination-item-active {
-  background: #6ba3ff !important;
-  border-color: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-pagination-item-active a {
@@ -913,12 +913,12 @@
 }
 
 :root[data-theme="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
   color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-cell-today .ant-picker-cell-inner::before {
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 /* ========== Upload 上传组件 ========== */
@@ -937,7 +937,7 @@
 }
 
 :root[data-theme="dark"] .ant-upload-drag:hover {
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 /* ========== Spin 加载中 ========== */
@@ -962,13 +962,13 @@
 }
 
 :root[data-theme="dark"] .ant-radio-checked .ant-radio-inner {
-  border-color: #6ba3ff !important;
-  background: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
+  background: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-checkbox-checked .ant-checkbox-inner {
-  background: #6ba3ff !important;
-  border-color: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-primary-light) !important;
 }
 
 /* ========== Switch 开关 ========== */
@@ -977,7 +977,7 @@
 }
 
 :root[data-theme="dark"] .ant-switch-checked {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 /* ========== Slider 滑动输入条 ========== */
@@ -986,11 +986,11 @@
 }
 
 :root[data-theme="dark"] .ant-slider-track {
-  background: #6ba3ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 :root[data-theme="dark"] .ant-slider-handle {
-  border-color: #6ba3ff !important;
+  border-color: var(--color-primary-light) !important;
   background: var(--color-bg-base) !important;
 }
 
@@ -1007,5 +1007,5 @@
 }
 
 :root[data-theme="dark"] .ant-input-number-handler:hover {
-  color: #6ba3ff !important;
+  color: var(--color-primary-light) !important;
 }

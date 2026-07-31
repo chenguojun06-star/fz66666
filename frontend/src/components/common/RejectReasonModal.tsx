@@ -76,7 +76,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
       afterClose={() => form.resetFields()}
     >
       {description && (
-        <div style={{ marginBottom: 16, color: 'var(--text-secondary, #888)' }}>
+        <div style={{ marginBottom: 16, color: 'var(--text-secondary, var(--color-text-muted))' }}>
           {description}
         </div>
       )}

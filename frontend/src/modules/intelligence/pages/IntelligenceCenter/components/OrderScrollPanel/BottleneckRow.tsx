@@ -4,7 +4,7 @@ import type { FactoryBottleneckItem } from '@/services/intelligence/intelligence
 
 export const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item }) => {
   const navigate = useNavigate();
-  const c = item.stuckPct < 20 ? '#e03030' : item.stuckPct < 50 ? '#f7a600' : '#39ff14';
+  const c = item.stuckPct < 20 ? 'var(--color-danger)' : item.stuckPct < 50 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)';
   const focusNode = String(item.stuckStage || '').trim();
   const primaryOrderNo = String(item.worstOrders?.[0]?.orderNo || '').trim();
 

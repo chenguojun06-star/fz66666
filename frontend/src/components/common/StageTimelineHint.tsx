@@ -46,7 +46,7 @@ function computeGapMs(prevEnd: string | null | undefined, currStart: string | nu
 }
 
 function gapColorForDays(days: number): string {
-  if (days >= 3) return '#ff7875';
+  if (days >= 3) return 'var(--color-danger)';
   if (days >= 1) return 'var(--color-warning)';
   return 'var(--color-text-quaternary, var(--color-text-quaternary))';
 }

@@ -19,7 +19,7 @@ export interface SubProcessRow {
 export const STAGE_COLORS: Record<string, string> = {
   procurement: 'var(--color-info)',
   cutting: 'var(--color-accent-purple)',
-  secondary: '#eb2f96',
+  secondary: 'var(--color-magenta)',
   sewing: 'var(--color-warning)',
   tail: 'var(--color-accent-cyan)',
   warehousing: 'var(--color-success)',

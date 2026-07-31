@@ -240,7 +240,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     if (!formatted) {
       return (
         <div
-          style={{ fontSize: 14, color: '#d1d5db', lineHeight: 1.2, marginBottom: 1, textAlign: align }}
+          style={{ fontSize: 14, color: 'var(--color-border)', lineHeight: 1.2, marginBottom: 1, textAlign: align }}
           onMouseEnter={triggerPredictOnHover}
           title={predictHint ? `预计完成：${predictHint}` : '--'}
         >

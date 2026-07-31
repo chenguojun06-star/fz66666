@@ -17,7 +17,7 @@ const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
   return (
     <div className="c-card">
       <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('heatmap')}>
-        <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#e03030' : '#39ff14'} />
+        <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-neon)'} />
         质量缺陷热力图
         {heatmap && (
           <span className="c-card-badge red-badge">
@@ -30,8 +30,8 @@ const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
         {heatmap?.cells?.length ? (
           <>
             <div className="c-heatmap-meta">
-              风险工序：<b style={{ color: '#e03030' }}>{heatmap.worstProcess}</b>
-              &nbsp;·&nbsp;风险工厂：<b style={{ color: '#e03030' }}>{heatmap.worstFactory}</b>
+              风险工序：<b style={{ color: 'var(--color-danger)' }}>{heatmap.worstProcess}</b>
+              &nbsp;·&nbsp;风险工厂：<b style={{ color: 'var(--color-danger)' }}>{heatmap.worstFactory}</b>
             </div>
             {!isLowEnd && <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${(heatmap.factories || []).length}, 1fr)` }}>
               <div />
@@ -48,7 +48,7 @@ const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
                     const alpha = cell ? Math.min(cell.intensity, 0.9) : 0;
                     return (
                       <div key={fac} className="c-heat-cell"
-                        style={{ background: `rgba(224,48,48,${alpha})`, color: alpha > 0.45 ? 'var(--color-bg-base)' : '#aaa' }}>
+                        style={{ background: `rgba(224,48,48,${alpha})`, color: alpha > 0.45 ? 'var(--color-bg-base)' : 'var(--color-text-quaternary)' }}>
                         {cell?.defectCount || ''}
                       </div>
                     );
@@ -56,7 +56,7 @@ const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
                 </React.Fragment>
               ))}
             </div>}
-            {isLowEnd && <div style={{ fontSize: 14, color: '#7aaec8', padding: '8px 0' }}>
+            {isLowEnd && <div style={{ fontSize: 14, color: 'var(--color-blue-300)', padding: '8px 0' }}>
               共 {heatmap.totalDefects} 个缺陷，涉及 {(heatmap.processes || []).length} 个工序、{(heatmap.factories || []).length} 个工厂
             </div>}
           </>

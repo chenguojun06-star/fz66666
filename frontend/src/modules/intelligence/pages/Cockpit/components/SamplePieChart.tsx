@@ -12,11 +12,11 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { key: 'pattern', label: '纸样', color: '#3b82f6' },
+  { key: 'pattern', label: '纸样', color: 'var(--color-secondary)' },
   { key: 'sample', label: '样衣', color: 'var(--color-accent-emerald)' },
-  { key: 'bom', label: 'BOM', color: '#f59e0b' },
-  { key: 'process', label: '工序', color: '#8b5cf6' },
-  { key: 'size', label: '码数', color: '#ec4899' },
+  { key: 'bom', label: 'BOM', color: 'var(--color-warning)' },
+  { key: 'process', label: '工序', color: 'var(--color-violet-500)' },
+  { key: 'size', label: '码数', color: 'var(--color-pink-500)' },
 ];
 
 const isCompleted = (stage: string, style: StyleInfo): boolean => {

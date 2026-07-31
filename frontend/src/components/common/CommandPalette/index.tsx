@@ -70,7 +70,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         {/* ── 搜索框 ── */}
         <div className="cp-input-row">
           {imageSearchMode ? (
-            <PictureOutlined className="cp-search-icon" style={{ color: '#a855f7' }} />
+            <PictureOutlined className="cp-search-icon" style={{ color: 'var(--color-purple-500)' }} />
           ) : (
             <SearchOutlined className="cp-search-icon" />
           )}
@@ -124,7 +124,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         {isDragging && (
           <div className="cp-drop-overlay">
             <div className="cp-drop-inner">
-              <PictureOutlined style={{ fontSize: 48, color: '#a855f7', marginBottom: 12 }} />
+              <PictureOutlined style={{ fontSize: 48, color: 'var(--color-purple-500)', marginBottom: 12 }} />
               <div className="cp-drop-title">松开以图搜款</div>
               <div className="cp-drop-tip">支持 PNG / JPG / WEBP 等常见图片格式</div>
             </div>

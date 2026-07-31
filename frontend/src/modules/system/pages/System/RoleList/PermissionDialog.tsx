@@ -191,14 +191,14 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
             const borderColor = state.allSelected
               ? 'var(--primary-color, var(--color-primary))'
               : state.someSelected
-                ? '#91caff'
-                : '#d1d5db';
+                ? 'var(--status-processing-border)'
+                : 'var(--color-border)';
             const headerBg = state.allSelected
               ? 'var(--primary-color, var(--color-primary))'
               : state.someSelected
-                ? '#e6f4ff'
+                ? 'var(--status-processing-bg)'
                 : 'var(--primary-color, var(--color-primary))';
-            const headerTextColor = state.someSelected && !state.allSelected ? '#1677ff' : 'var(--color-bg-base)';
+            const headerTextColor = state.someSelected && !state.allSelected ? 'var(--color-primary)' : 'var(--color-bg-base)';
             return (
               <div key={module.moduleId} style={{ minWidth: 140, maxWidth: 220, border: `1px solid ${borderColor}`, borderRadius: 6, overflow: 'hidden', fontSize: 14, flexShrink: 0, boxShadow: state.someSelected ? '0 1px 4px rgba(22,119,255,0.08)' : 'none' }}>
                 <div style={{ background: headerBg, padding: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -210,7 +210,7 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
                   >
                     {module.moduleName}
                   </Checkbox>
-                  <Tag color={state.allSelected ? 'success' : state.someSelected ? 'processing' : 'default'} style={{ fontSize: 11, padding: '0 6px', margin: 0, color: state.someSelected && !state.allSelected ? '#1677ff' : undefined }}>
+                  <Tag color={state.allSelected ? 'success' : state.someSelected ? 'processing' : 'default'} style={{ fontSize: 11, padding: '0 6px', margin: 0, color: state.someSelected && !state.allSelected ? 'var(--color-primary)' : undefined }}>
                     {state.checked}/{state.total}
                   </Tag>
                 </div>
@@ -218,7 +218,7 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
                   const gState = getGroupCheckState(group);
                   return (
                   <div key={group.groupId} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                    <div style={{ background: gState.allSelected ? '#dbeafe' : gState.someSelected ? '#e6f4ff' : '#f0f4ff', padding: '4px 6px', borderBottom: '1px solid #e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ background: gState.allSelected ? 'var(--color-blue-100)' : gState.someSelected ? 'var(--status-processing-bg)' : 'var(--color-indigo-50)', padding: '4px 6px', borderBottom: '1px solid var(--color-slate-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Checkbox
                         checked={gState.allSelected}
                         indeterminate={gState.someSelected}
@@ -230,13 +230,13 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
                       <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{gState.checked}/{gState.total}</span>
                     </div>
                     <div style={{ padding: '2px 4px 4px 16px' }}>
-                      {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}
+                      {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? 'var(--status-processing-bg)' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}
                       {group.buttons.length === 0 && <span style={{ color: 'var(--color-text-quaternary)', fontSize: 13 }}>仅菜单权限</span>}
                     </div>
                   </div>
                 );})}
-                {module.directButtons.length > 0 && (<div style={{ padding: '4px 6px' }}>{module.directButtons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}</div>)}
-                {module.groups.length === 0 && module.directButtons.length === 0 && (<div style={{ padding: '4px 8px', color: '#aaa', fontSize: 13 }}>仅页面入口</div>)}
+                {module.directButtons.length > 0 && (<div style={{ padding: '4px 6px' }}>{module.directButtons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? 'var(--status-processing-bg)' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}</div>)}
+                {module.groups.length === 0 && module.directButtons.length === 0 && (<div style={{ padding: '4px 8px', color: 'var(--color-text-quaternary)', fontSize: 13 }}>仅页面入口</div>)}
               </div>
             );
           })}

@@ -34,7 +34,7 @@ const resolveSourceMeta = (plan: SchedulePlan) => {
   if (plan.capacitySource === 'configured') {
     return { label: '已配置', tone: 'var(--color-success)' };
   }
-  return { label: '估算', tone: '#d48806' };
+  return { label: '估算', tone: 'var(--color-warning)' };
 };
 
 export const buildSchedulingInsightItems = (

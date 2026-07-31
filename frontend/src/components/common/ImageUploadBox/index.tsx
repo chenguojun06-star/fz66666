@@ -22,11 +22,11 @@ export interface ImageUploadBoxProps {
   uploadFn?: (file: File) => Promise<string>;
 }
 
-const MUTED_COLOR = '#94a3b8';
-const LIGHT_GRAY = '#d1d5db';
+const MUTED_COLOR = 'var(--color-slate-400)';
+const LIGHT_GRAY = 'var(--color-border)';
 const ADD_BG = 'var(--color-bg-page)';
 const BORDER_COLOR = 'var(--color-border)';
-const DASHED_BORDER = '#cbd5e1';
+const DASHED_BORDER = 'var(--color-slate-300)';
 
 function ImageUploadBox({
   value,

@@ -35,12 +35,12 @@ const SectionBox: React.FC<SectionBoxProps> = ({
         style={{
           fontSize: 14,
           fontWeight: 600,
-          color: '#1f2937',
+          color: 'var(--color-bg-dark)',
           marginBottom: 12,
           paddingLeft: 12,
           lineHeight: 1.4,
           position: 'relative',
-          borderLeft: `3px solid ${usePrimaryHighlight ? 'var(--color-primary)' : '#cbd5e1'}`,
+          borderLeft: `3px solid ${usePrimaryHighlight ? 'var(--color-primary)' : 'var(--color-slate-300)'}`,
         }}
       >
         {title}

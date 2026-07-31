@@ -187,9 +187,9 @@ export default function SystemIssueBoard() {
         <Col span={8}>
           <Card style={{ borderColor: errCount > 0 ? 'var(--color-danger)' : 'var(--color-border-antd)' }}>
             <Space>
-              <BugOutlined style={{ fontSize: 22, color: errCount > 0 ? 'var(--color-danger)' : '#aaa' }} />
+              <BugOutlined style={{ fontSize: 22, color: errCount > 0 ? 'var(--color-danger)' : 'var(--color-text-quaternary)' }} />
               <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: errCount > 0 ? 'var(--color-danger)' : '#aaa' }}>{errCount}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: errCount > 0 ? 'var(--color-danger)' : 'var(--color-text-quaternary)' }}>{errCount}</div>
                 <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>紧急问题</div>
               </div>
             </Space>
@@ -198,9 +198,9 @@ export default function SystemIssueBoard() {
         <Col span={8}>
           <Card style={{ borderColor: warnCount > 0 ? 'var(--color-warning)' : 'var(--color-border-antd)' }}>
             <Space>
-              <WarningOutlined style={{ fontSize: 22, color: warnCount > 0 ? 'var(--color-warning)' : '#aaa' }} />
+              <WarningOutlined style={{ fontSize: 22, color: warnCount > 0 ? 'var(--color-warning)' : 'var(--color-text-quaternary)' }} />
               <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: warnCount > 0 ? 'var(--color-warning)' : '#aaa' }}>{warnCount}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: warnCount > 0 ? 'var(--color-warning)' : 'var(--color-text-quaternary)' }}>{warnCount}</div>
                 <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>警告问题</div>
               </div>
             </Space>
@@ -209,7 +209,7 @@ export default function SystemIssueBoard() {
         <Col span={8}>
           <Card>
             <Space>
-              <CheckCircleOutlined style={{ fontSize: 22, color: infoCount > 0 ? 'var(--color-primary)' : '#aaa' }} />
+              <CheckCircleOutlined style={{ fontSize: 22, color: infoCount > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
               <div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)' }}>{infoCount}</div>
                 <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>提示信息</div>
@@ -309,8 +309,8 @@ export default function SystemIssueBoard() {
       />
 
       <style>{`
-        .issue-row-error td { background: #F6FFED !important; }
-        .issue-row-warn  td { background: #FFFBE6 !important; }
+        .issue-row-error td { background: var(--status-success-bg) !important; }
+        .issue-row-warn  td { background: var(--color-bg-base)BE6 !important; }
       `}</style>
     </div>
   );

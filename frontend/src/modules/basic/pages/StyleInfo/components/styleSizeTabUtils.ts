@@ -91,15 +91,15 @@ export const normalizeSizeList = (sizes: string[] = []) => {
 export const GROUP_TONE_METAS: Record<GroupToneMeta['key'], GroupToneMeta> = {
   upper: {
     key: 'upper',
-    tint: '#f7fbff',
-    tagBg: '#e8f3ff',
+    tint: 'var(--color-slate-50)',
+    tagBg: 'var(--color-blue-50)',
     tagColor: 'var(--color-primary)',
   },
   lower: {
     key: 'lower',
-    tint: '#f0fff0',
-    tagBg: '#e6fff0',
-    tagColor: '#d48806',
+    tint: 'var(--status-success-bg)',
+    tagBg: 'var(--color-emerald-50)',
+    tagColor: 'var(--color-warning)',
   },
   other: {
     key: 'other',

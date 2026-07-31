@@ -272,20 +272,20 @@ function generateWaybillHtml(result: ShipResult, order: EcOrder): string {
 <style>
   @page { size: 100mm 180mm; margin: 0; }
   body { font-family: "Microsoft YaHei", sans-serif; font-size: 12px; margin: 0; padding: 5mm; }
-  .waybill { border: 1.5px solid #000; padding: 4mm; min-height: 165mm; }
-  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #000; padding-bottom: 2mm; margin-bottom: 3mm; }
+  .waybill { border: 1.5px solid var(--color-black); padding: 4mm; min-height: 165mm; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-black); padding-bottom: 2mm; margin-bottom: 3mm; }
   .header .logo { font-size: 16px; font-weight: bold; }
   .header .no { font-size: 11px; }
   .barcode { text-align: center; margin: 3mm 0; font-family: "Libre Barcode 128", monospace; font-size: 28px; letter-spacing: 2px; }
   .section { margin-bottom: 3mm; }
-  .section-title { font-weight: bold; font-size: 13px; border-bottom: 0.5px solid #999; padding-bottom: 1mm; margin-bottom: 2mm; }
+  .section-title { font-weight: bold; font-size: 13px; border-bottom: 0.5px solid var(--color-gray-label); padding-bottom: 1mm; margin-bottom: 2mm; }
   .row { display: flex; margin-bottom: 1.5mm; }
-  .label { width: 28mm; color: #666; flex-shrink: 0; }
+  .label { width: 28mm; color: var(--color-gray-dark); flex-shrink: 0; }
   .value { flex: 1; font-weight: bold; }
   .two-col { display: flex; gap: 3mm; }
   .two-col > div { flex: 1; }
   .stamp { text-align: right; margin-top: 5mm; }
-  .stamp .box { display: inline-block; border: 1px solid #f00; color: #f00; padding: 2mm 4mm; font-size: 14px; }
+  .stamp .box { display: inline-block; border: 1px solid var(--color-red-500); color: var(--color-red-500); padding: 2mm 4mm; font-size: 14px; }
   @media print { body { -webkit-print-color-adjust: exact; } }
 </style></head><body>
 <div class="waybill">

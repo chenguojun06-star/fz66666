@@ -120,11 +120,11 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
         </defs>
 
         {/* ⓪ 球体背景圆 —— 白底上保持可见（不用纯白，用浅蓝灰） */}
-        <circle cx={C} cy={C} r={C} fill="#e8edf4" />
+        <circle cx={C} cy={C} r={C} fill="var(--color-slate-200)" />
 
         {/* ① 轨道环（灰色衬底，加深确保白底可见） */}
         <circle cx={C} cy={C} r={R}
-          fill="none" stroke="#c8d0db" strokeWidth={SW} />
+          fill="none" stroke="var(--color-slate-300)" strokeWidth={SW} />
 
 
 
@@ -194,7 +194,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
           // 双行：数量显示在上方（替代工序名位置）
           text ? (
             <text x={C} y={nameY} textAnchor="middle" dominantBaseline="middle"
-              fill={isDone ? '#237804' : 'var(--color-text-primary)'} fontSize={FS} fontWeight="600" fontFamily="inherit">
+              fill={isDone ? 'var(--color-emerald-700)' : 'var(--color-text-primary)'} fontSize={FS} fontWeight="600" fontFamily="inherit">
               {text}
             </text>
           ) : null
@@ -207,7 +207,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
 
         {/* ⑦ 百分比/进度文字行 */}
         <text x={C} y={textY} textAnchor="middle" dominantBaseline="middle"
-          fill={isDone ? '#237804' : 'var(--color-text-tertiary)'}
+          fill={isDone ? 'var(--color-emerald-700)' : 'var(--color-text-tertiary)'}
           fontSize={FS} fontWeight="600" fontFamily="inherit">
           {hasDual ? (subText || `${pct}%`) : (text || `${pct}%`)}
         </text>

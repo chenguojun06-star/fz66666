@@ -6,7 +6,7 @@ export const loadingStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   minHeight: '100vh',
-  background: '#f8fbff',
+  background: 'var(--color-slate-50)',
 };
 
 export const pageStyle: CSSProperties = {
@@ -43,7 +43,7 @@ export const heroHeaderStyle: CSSProperties = {
 export const brandTitleStyle: CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
-  color: '#0f172a',
+  color: 'var(--color-slate-900)',
 };
 
 export const brandSubtitleStyle: CSSProperties = {
@@ -70,7 +70,7 @@ export const customerCardStyle: CSSProperties = {
 export const customerTitleStyle: CSSProperties = {
   fontSize: 14,
   fontWeight: 700,
-  color: '#0f172a',
+  color: 'var(--color-slate-900)',
   marginBottom: 10,
 };
 
@@ -109,7 +109,7 @@ export const panelStyle: CSSProperties = {
 export const panelTitleStyle: CSSProperties = {
   fontSize: 15,
   fontWeight: 700,
-  color: '#0f172a',
+  color: 'var(--color-slate-900)',
   marginBottom: 16,
   borderBottom: '1px solid rgba(148,163,184,0.12)',
   paddingBottom: 10,
@@ -139,7 +139,7 @@ export const thStyle: CSSProperties = {
 
 export const tdStyle: CSSProperties = {
   padding: '10px 12px',
-  color: '#334155',
+  color: 'var(--color-slate-700)',
   borderBottom: '1px solid rgba(148,163,184,0.10)',
   whiteSpace: 'nowrap',
 };

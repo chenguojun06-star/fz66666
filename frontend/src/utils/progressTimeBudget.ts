@@ -78,13 +78,13 @@ export function computeStageBudgetHint(params: {
     if (remaining === 0) {
       return { text: `预算${budgetDays}天 · 今天到期`, color: 'var(--color-warning)', budgetDays };
     }
-    return { text: `预算${budgetDays}天 · 超${Math.abs(remaining)}天`, color: '#ff7875', budgetDays };
+    return { text: `预算${budgetDays}天 · 超${Math.abs(remaining)}天`, color: 'var(--color-danger)', budgetDays };
   }
 
   if (isProcureNode) {
     const waitDays = now.diff(create, 'day');
     if (waitDays > budgetDays) {
-      return { text: `预算${budgetDays}天 · 待开始超${waitDays - budgetDays}天`, color: '#ff7875', budgetDays };
+      return { text: `预算${budgetDays}天 · 待开始超${waitDays - budgetDays}天`, color: 'var(--color-danger)', budgetDays };
     }
   }
 

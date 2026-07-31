@@ -64,7 +64,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
     : null;
 
   return (
-    <div style={{ margin: '8px 0', padding: '10px 12px', background: '#f0f7ff', borderRadius: 6, border: '1px solid #d0e8ff' }}>
+    <div style={{ margin: '8px 0', padding: '10px 12px', background: 'var(--status-processing-bg)', borderRadius: 6, border: '1px solid var(--color-blue-100)' }}>
       {/* 标题行 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <XiaoyunCloudAvatar size={16} active />
@@ -115,7 +115,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
               return (
                 <div key={idx} style={{
                   padding: '4px 8px', fontSize: 14,
-                  background: isRed ? 'var(--status-error-bg)' : isYellow ? 'var(--status-warning-bg)' : '#f0f7ff',
+                  background: isRed ? 'var(--status-error-bg)' : isYellow ? 'var(--status-warning-bg)' : 'var(--status-processing-bg)',
                   borderLeft: `3px solid ${isRed ? 'var(--color-danger)' : isYellow ? 'var(--color-warning)' : 'var(--color-primary)'}`,
                   borderRadius: '0 4px 4px 0', color: 'var(--color-text-primary)',
                 }}>{point}</div>

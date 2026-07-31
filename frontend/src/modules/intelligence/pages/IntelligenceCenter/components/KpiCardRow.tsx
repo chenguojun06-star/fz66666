@@ -17,7 +17,7 @@ const KpiCardRow: React.FC<any> = ({
             ║   第一行：6 大核心 KPI 闪光数字卡            ║
             ╚══════════════════════════════════════════════╝ */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '0 20px 4px', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleCollapse('kpiRow6')}>
-          <span style={{ color: '#5a7a9a', fontSize: 14 }}>核心 KPI 指标</span>
+          <span style={{ color: 'var(--color-blue-400)', fontSize: 14 }}>核心 KPI 指标</span>
           <CollapseChevron panelKey="kpiRow6" collapsed={!!collapsedPanels['kpiRow6']} />
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['kpiRow6'] ? 0 : 420, transition: 'max-height 0.28s ease' }}>
@@ -35,7 +35,7 @@ const KpiCardRow: React.FC<any> = ({
               <span className="c-kpi-delta-note">速率 {formatDeltaText(kpiDelta.scanRatePerHour, '/h')}</span>
             </div>
             <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('todayScanQty')} color="#00e5ff" width={88} height={22} />
+              <Sparkline pts={getKpiTrend('todayScanQty')} color="var(--color-accent-cyan-bright)" width={88} height={22} />
               <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
@@ -46,16 +46,16 @@ const KpiCardRow: React.FC<any> = ({
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? 'c-kpi-danger' : ''}`}>
             <div className="c-kpi-label">
-              <LiveDot size={7} color={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? '#e03030' : undefined} />
+              <LiveDot size={7} color={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? 'var(--color-danger)' : undefined} />
               活跃工厂
             </div>
-            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: '#e03030' } : { color: 'var(--color-accent-neon)' }}>
+            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: 'var(--color-danger)' } : { color: 'var(--color-accent-neon)' }}>
               <AnimatedNum val={pulse?.activeFactories ?? '—'} />
             </div>
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">
               {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
-                ? <span style={{ color: '#e03030' }}> 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
+                ? <span style={{ color: 'var(--color-danger)' }}> 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
                 : <>员工&nbsp;<b style={{ color: 'var(--color-accent-neon)' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
             </div>
             <div className="c-kpi-delta-row">
@@ -65,7 +65,7 @@ const KpiCardRow: React.FC<any> = ({
               <span className="c-kpi-delta-note">员工 {formatDeltaText(kpiDelta.activeWorkers, '人')}</span>
             </div>
             <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('activeFactories')} color="#39ff14" width={88} height={22} />
+              <Sparkline pts={getKpiTrend('activeFactories')} color="var(--color-accent-neon)" width={88} height={22} />
               <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
@@ -86,7 +86,7 @@ const KpiCardRow: React.FC<any> = ({
               <span className="c-kpi-delta-note">异常 {formatDeltaText(-(Number(healing?.issuesFound) || 0), '项基线')}</span>
             </div>
             <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('healthIndex')} color={grade2color(health?.grade ?? '') || '#39ff14'} width={88} height={22} />
+              <Sparkline pts={getKpiTrend('healthIndex')} color={grade2color(health?.grade ?? '') || 'var(--color-accent-neon)'} width={88} height={22} />
               <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
@@ -97,10 +97,10 @@ const KpiCardRow: React.FC<any> = ({
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={stagnantPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'c-kpi-danger' : ''}`}>
             <div className="c-kpi-label">
-              <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14'} />
+              <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-neon)'} />
               停工预警
             </div>
-            <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : 'var(--color-accent-neon)' }}>
+            <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-neon)' }}>
               <AnimatedNum val={pulse?.stagnantFactories?.length ?? 0} />
             </div>
             <div className="c-kpi-unit">家停滞</div>
@@ -118,7 +118,7 @@ const KpiCardRow: React.FC<any> = ({
               <span className="c-kpi-delta-note">异常越少越好</span>
             </div>
             <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('stagnantFactories')} color="#ff6b6b" width={88} height={22} />
+              <Sparkline pts={getKpiTrend('stagnantFactories')} color="var(--color-coral)" width={88} height={22} />
               <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
@@ -129,7 +129,7 @@ const KpiCardRow: React.FC<any> = ({
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={shortagePop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${(shortage?.shortageItems?.length ?? 0) > 0 ? 'c-kpi-warn' : ''}`}>
             <div className="c-kpi-label">
-              <LiveDot size={7} color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
+              <LiveDot size={7} color={(shortage?.shortageItems?.length ?? 0) > 0 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)'} />
               面料缺口
             </div>
             <div className="c-kpi-val" style={{ color: (shortage?.shortageItems?.length ?? 0) > 0 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)' }}>
@@ -146,7 +146,7 @@ const KpiCardRow: React.FC<any> = ({
               <span className="c-kpi-delta-note">补单越快越稳</span>
             </div>
             <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('shortageItems')} color="#f7a600" width={88} height={22} />
+              <Sparkline pts={getKpiTrend('shortageItems')} color="var(--color-warning-deep)" width={88} height={22} />
               <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
@@ -156,16 +156,16 @@ const KpiCardRow: React.FC<any> = ({
           {/* 待处理通知 */}
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={notifyPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className="c-card c-kpi c-kpi-hoverable">
-            <div className="c-kpi-label"><LiveDot size={7} color="#7c4dff" />待处理通知</div>
+            <div className="c-kpi-label"><LiveDot size={7} color="var(--color-accent-neon-purple)" />待处理通知</div>
             <div className="c-kpi-val purple"><AnimatedNum val={notify?.pendingCount ?? '—'} /></div>
             <div className="c-kpi-unit">条待发</div>
-            <div className="c-kpi-sub">今日已发&nbsp;<b style={{ color: '#7c4dff' }}><AnimatedNum val={notify?.sentToday ?? 0} /></b>&nbsp;条</div>
+            <div className="c-kpi-sub">今日已发&nbsp;<b style={{ color: 'var(--color-accent-neon-purple)' }}><AnimatedNum val={notify?.sentToday ?? 0} /></b>&nbsp;条</div>
             <div className="c-kpi-delta-row">
               {renderDeltaBadge(kpiDelta.pendingNotify, { flatText: '待发稳定', suffix: '条' })}
               <span className="c-kpi-delta-note">已发 {formatDeltaText(kpiDelta.sentToday, '条')}</span>
             </div>
             <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('pendingNotify')} color="#a78bfa" width={88} height={22} />
+              <Sparkline pts={getKpiTrend('pendingNotify')} color="var(--color-accent-purple)" width={88} height={22} />
               <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>

@@ -204,7 +204,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
             const materialType = getFieldValue('materialType');
             if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
             return (
-              <Row gutter={12} style={{ background: 'var(--color-primary-bg-light, #f0f7ff)', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
+              <Row gutter={12} style={{ background: 'var(--color-primary-bg-light, var(--status-processing-bg))', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
                 <Col span={24} style={{ marginBottom: 6 }}>
                   <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary)' }}> 面料属性</span>
                 </Col>

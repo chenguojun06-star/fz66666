@@ -183,7 +183,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
     fontWeight: 600,
-    color: 'var(--color-text-primary, #333)',
+    color: 'var(--color-text-primary, var(--color-gray-800))',
     marginBottom: 8,
     paddingBottom: 6,
     borderBottom: '2px solid var(--color-primary, var(--color-primary))',
@@ -200,7 +200,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           alignItems: 'center',
           marginBottom: 16,
           padding: '10px 14px',
-          background: isEditing ? 'var(--color-primary-bg, #e6f4ff)' : 'var(--color-bg-container, var(--color-bg-container))',
+          background: isEditing ? 'var(--color-primary-bg, var(--status-processing-bg))' : 'var(--color-bg-container, var(--color-bg-container))',
           borderRadius: 8,
           border: isEditing ? '1px solid var(--color-primary, var(--color-primary))' : '1px solid var(--color-border-light, var(--color-border-light))',
         }}>
@@ -213,7 +213,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             <span style={{
               fontSize: 14,
               fontWeight: 600,
-              color: isEditing ? 'var(--color-primary, var(--color-primary))' : 'var(--color-text-tertiary, #8c8c8c)',
+              color: isEditing ? 'var(--color-primary, var(--color-primary))' : 'var(--color-text-tertiary, var(--color-text-muted))',
             }}>
               {isEditing ? '编辑中' : '查看模式'}
             </span>
@@ -261,7 +261,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
         <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
           <div style={sectionTitleStyle}>面料成分 / 洗涤说明</div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', marginBottom: 8 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', marginBottom: 8 }}>
             每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出
           </div>
           <CompositionPartsEditor
@@ -302,7 +302,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
         <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
           <div style={sectionTitleStyle}>洗涤护理图标</div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', marginBottom: 12 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', marginBottom: 12 }}>
             点击图标选择/取消，每个类别可选择多个图标；选中的图标将显示在洗水唛底部
           </div>
           <CareIconSelector
@@ -353,10 +353,10 @@ const StyleWashLabelTab: React.FC<Props> = ({
         <div style={{
           fontSize: 14,
           fontWeight: 600,
-          color: 'var(--color-text-primary, #333)',
+          color: 'var(--color-text-primary, var(--color-gray-800))',
           marginBottom: 8,
           paddingBottom: 6,
-          borderBottom: '2px solid #13C2C2',
+          borderBottom: '2px solid var(--color-cyan-500)',
           display: 'inline-block',
         }}>
           <EyeOutlined style={{ marginRight: 6 }} />

@@ -77,7 +77,7 @@ const PayModal: React.FC<Props> = ({ open, payingBill, onClose, onCopy }) => {
                 </Space>
               </Descriptions.Item>
             </Descriptions>
-            <div style={{ marginTop: 12, padding: '10px 12px', background: '#FFFBE6', borderRadius: 6, fontSize: 14, color: '#ad6800' }}>
+            <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--color-bg-base)BE6', borderRadius: 6, fontSize: 14, color: 'var(--color-warning-deep)' }}>
                请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
             </div>
           </Card>

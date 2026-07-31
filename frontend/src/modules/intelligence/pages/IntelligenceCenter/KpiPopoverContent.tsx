@@ -38,11 +38,11 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
       items={[
         { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家`, color: 'var(--color-accent-neon)' },
         { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
-        { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14' },
+        { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-neon)' },
         ...(ranking?.rankings?.slice(0, 3).map((r, i) => ({
           label: ([' ', ' ', ' '][i] ?? '') + r.factoryName,
           value: `${r.totalScore} 分`,
-          color: (['#ffd700', '#c0c0c0', '#cd7f32'][i] as string | undefined),
+          color: (['var(--color-gold)', 'var(--color-silver)', 'var(--color-bronze)'][i] as string | undefined),
         })) ?? []),
       ]}
       aiTip="高产工厂建议持续跟踪，停工工厂建议立即联系确认"
@@ -55,7 +55,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
       items={[
         { label: '健康指数',  value: `${health?.healthIndex ?? '—'} 分`, color: grade2color(health?.grade ?? '') },
         { label: '评级',      value: `${health?.grade ?? '—'} 级`,       color: grade2color(health?.grade ?? '') },
-        { label: '异常项目',  value: `${healing?.issuesFound ?? 0} 项`,  color: (healing?.issuesFound ?? 0) > 0 ? '#f7a600' : '#39ff14' },
+        { label: '异常项目',  value: `${healing?.issuesFound ?? 0} 项`,  color: (healing?.issuesFound ?? 0) > 0 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)' },
         { label: '自愈健康',  value: `${healing?.healthScore ?? '—'} 分` },
       ]}
       aiTip={health?.grade === 'A' ? '系统运行优秀，继续保持' : health?.grade === 'B' ? '整体良好，关注预警项' : '建议立即处理异常，提升供应链健康'}
@@ -69,11 +69,11 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
         ? pulse.stagnantFactories.slice(0, 5).map(f => ({
             label: f.factoryName,
             value: `停滞 ${Math.floor(f.minutesSilent / 60)}h ${Math.round(f.minutesSilent % 60)}m`,
-            color: '#e03030',
+            color: 'var(--color-danger)',
           }))
         : [{ label: '状态', value: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0
             ? '无工厂活跃，生产可能停滞' : '所有工厂正常运转',
-            color: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? '#f7a600' : '#39ff14' }]}
+            color: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)' }]}
       warning={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '建议 15 分钟内联系工厂确认原因'
         : currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? `有 ${currentKpiMetrics.productionOrderCount} 单在制但无工厂生产动态，建议检查工厂状态` : undefined}
       aiTip={(pulse?.stagnantFactories?.length ?? 0) > 0
@@ -105,7 +105,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
     <KpiPop
       title="智能通知概况"
       items={[
-        { label: '待发送', value: `${notify?.pendingCount ?? '—'} 条`, color: '#a78bfa' },
+        { label: '待发送', value: `${notify?.pendingCount ?? '—'} 条`, color: 'var(--color-accent-purple)' },
         { label: '今日已发', value: `${notify?.sentToday ?? 0} 条` },
         { label: '通知命中率', value: notify?.sentToday
           ? `${Math.round(Math.min(100, ((notify.sentToday) / Math.max(notify.sentToday + (notify.pendingCount ?? 0), 1)) * 100))}%`

@@ -27,7 +27,7 @@ const StatsBar: React.FC<StatsBarProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <Space size={16} wrap>
           <Space size={4}>
-            <TeamOutlined style={{ fontSize: 14, color: 'var(--color-text-secondary, #666)' }} />
+            <TeamOutlined style={{ fontSize: 14, color: 'var(--color-text-secondary, var(--color-gray-dark))' }} />
             <Text type="secondary" style={{ fontSize: 12 }}>总人数</Text>
             <Text strong style={{ fontSize: 16, color: 'var(--primary-color, var(--color-primary))' }}>{total}</Text>
           </Space>

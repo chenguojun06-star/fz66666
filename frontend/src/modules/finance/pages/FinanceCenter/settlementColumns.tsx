@@ -95,7 +95,7 @@ export function getSettlementColumns(
       width: 100,
       align: 'right',
       render: (val) => (
-        <span style={{ color: val > 0 ? 'var(--color-danger)' : '#666' }}>
+        <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--color-gray-dark)' }}>
           {val?.toLocaleString() || '-'}
         </span>
       ),

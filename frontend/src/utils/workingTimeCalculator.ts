@@ -174,7 +174,7 @@ export function computeBudgetStatus(
       return { text: '准时', color: 'var(--color-success, var(--color-success))' };
     }
     const overSeconds = actualSeconds - budgetSeconds;
-    return { text: `超${formatWorkingDuration(overSeconds)}`, color: 'var(--color-error, #ff7875)' };
+    return { text: `超${formatWorkingDuration(overSeconds)}`, color: 'var(--color-error, var(--color-danger))' };
   }
 
   // 未完成（含未领取）：从可用时间到现在的已耗时
@@ -186,5 +186,5 @@ export function computeBudgetStatus(
   if (remainingSeconds > -3600) {
     return { text: '即将超时', color: 'var(--color-warning, var(--color-warning))' };
   }
-  return { text: `超${formatWorkingDuration(-remainingSeconds)}`, color: 'var(--color-error, #ff7875)' };
+  return { text: `超${formatWorkingDuration(-remainingSeconds)}`, color: 'var(--color-error, var(--color-danger))' };
 }

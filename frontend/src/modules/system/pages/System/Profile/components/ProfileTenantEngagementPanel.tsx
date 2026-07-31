@@ -45,7 +45,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
         <TeamOutlined style={{ color: 'var(--primary-color)' }} />
         <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
       </div>
-      <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+      <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
             <QRCode value={registerUrl} size={160} />
@@ -73,7 +73,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           <MessageOutlined style={{ color: 'var(--primary-color)' }} />
           <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
         </div>
-        <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+        <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
           <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block', marginBottom: 12 }}>
             遇到问题或有改进建议？提交反馈帮助我们优化系统
           </Typography.Text>

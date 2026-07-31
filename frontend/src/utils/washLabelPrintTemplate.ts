@@ -36,26 +36,26 @@ function buildLabelCss(w: number, h: number, iconSize: number): string {
   return `@page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:var(--color-black);background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
-.dash-sep{border:none;border-top:0.8pt dashed #555;width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}
+.dash-sep{border:none;border-top:0.8pt dashed var(--color-zinc-600);width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}
 .content-block{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center;padding-top:2mm}
 .comp-mats{font-size:${w <= 30 ? fs + 1.5 : fs + 0.5}pt;line-height:1.6;font-weight:600;text-align:center}
-.section-sep{width:40%;height:0;border-top:0.3pt solid #bbb;margin:1.5mm auto}
-.care-wash{font-size:${fs}pt;color:#444;line-height:1.6;text-align:center}
+.section-sep{width:40%;height:0;border-top:0.3pt solid var(--color-text-quaternary);margin:1.5mm auto}
+.care-wash{font-size:${fs}pt;color:var(--color-zinc-700);line-height:1.6;text-align:center}
 .bottom-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:100%;margin-top:auto}
 .icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin:0.5mm auto 0}
 .icon-cell{width:${iconSize}mm;height:${iconSize}mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .icons svg{width:100%;height:100%}
 .footer{margin-top:1.5mm;font-size:${w <= 30 ? fs - 0.2 : fs}pt;font-weight:700;letter-spacing:0.8mm;line-height:1.3;text-align:center;white-space:nowrap}
-.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:#777;text-align:center;letter-spacing:0.2mm}`;
+.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:var(--color-zinc-500);text-align:center;letter-spacing:0.2mm}`;
 }
 
 function buildLabelContentHtml(data: WashLabelPrintData, iconSize: number): string {
   const compositionHtml = data.compositionText.trim()
     ? `<div class="comp-mats">${data.compositionText.replace(/\n/g, '<br/>')}</div>`
-    : '<div class="comp-mats" style="color:#aaa">（成分未填写）</div>';
+    : '<div class="comp-mats" style="color:var(--color-text-quaternary)">（成分未填写）</div>';
 
   const washHtml = data.washInstructionsText.trim()
     ? `<div class="section-sep"></div><div class="care-wash">${data.washInstructionsText.replace(/\n/g, '<br/>')}</div>`

@@ -31,7 +31,7 @@ export function buildTrendOption(trend: TrendPoint[]) {
     grid: { left: 36, right: 16, top: 10, bottom: 32, containLabel: false },
     xAxis: {
       type: 'category' as const, data: dates, boundaryGap: false,
-      axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLine: { lineStyle: { color: 'var(--color-border-light)' } },
       axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
     },
     yAxis: {

@@ -27,6 +27,6 @@ export const formatDateTime = (value?: string | number | Date) => {
 
 export const paymentLabel = (status?: string) => {
   if (status === 'paid') return { text: '已收款', color: 'var(--color-accent-emerald)' };
-  if (status === 'partial') return { text: '部分收款', color: '#f59e0b' };
+  if (status === 'partial') return { text: '部分收款', color: 'var(--color-warning)' };
   return { text: '待收款', color: 'var(--color-text-tertiary)' };
 };

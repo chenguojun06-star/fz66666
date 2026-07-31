@@ -6,8 +6,8 @@
 
 /* ECharts 容器 */
 .miniEChart {
-  background: #f9fbff;
-  border: 1px solid #e6f0ff;
+  background: var(--color-slate-50);
+  border: 1px solid var(--color-blue-50);
   border-radius: 10px;
   padding: 8px;
   margin: 6px 0;
@@ -17,7 +17,7 @@
 .miniChartTitle {
   font-size: 12px;
   font-weight: 600;
-  color: #003a8c;
+  color: var(--color-blue-800);
   margin-bottom: 4px;
 }
 
@@ -36,8 +36,8 @@
 
 /* progress 纯 CSS 进度条 */
 .miniProgressChart {
-  background: #f9fbff;
-  border: 1px solid #e6f0ff;
+  background: var(--color-slate-50);
+  border: 1px solid var(--color-blue-50);
   border-radius: 10px;
   padding: 10px 12px;
   margin: 6px 0;
@@ -45,7 +45,7 @@
 
 .progressBarWrap {
   height: 8px;
-  background: #f0f0f0;
+  background: var(--color-border-light);
   border-radius: 4px;
   overflow: hidden;
   margin: 6px 0;

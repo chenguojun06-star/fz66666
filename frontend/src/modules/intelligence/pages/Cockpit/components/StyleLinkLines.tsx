@@ -5,14 +5,14 @@ import './StyleLinkLines.css';
 const MODULE_ORDER = ['sample', 'order', 'production', 'procurement', 'warehouse', 'overview'];
 
 const COLORS = [
-  '#3b82f6',
+  'var(--color-secondary)',
   'var(--color-accent-emerald)',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#ef4444',
-  '#14b8a6',
+  'var(--color-warning)',
+  'var(--color-violet-500)',
+  'var(--color-pink-500)',
+  'var(--color-cyan-500)',
+  'var(--color-danger)',
+  'var(--color-teal-500)',
 ];
 
 const getModuleCenter = (data: StyleLinkData): { x: number; y: number } => {

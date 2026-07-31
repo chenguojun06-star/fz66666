@@ -51,7 +51,7 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
   const valueStyle: React.CSSProperties = {
     fontSize: 14,
     fontWeight: 600,
-    color: '#262626',
+    color: 'var(--color-gray-800)',
   };
 
   const subStyle: React.CSSProperties = {

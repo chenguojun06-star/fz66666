@@ -95,7 +95,7 @@ const DailyBriefingCard: React.FC = () => {
 
     if (error) {
       return (
-        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, #666)' }}>
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
           <WarningOutlined style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div style={{ marginTop: 8 }}>{error}</div>
           <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
@@ -107,7 +107,7 @@ const DailyBriefingCard: React.FC = () => {
 
     if (isEmpty) {
       return (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, #999)' }}>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
           <InboxOutlined style={{ fontSize: 32 }} />
           <div style={{ marginTop: 8 }}>暂无简报数据</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>稍后刷新重试</div>
@@ -130,7 +130,7 @@ const DailyBriefingCard: React.FC = () => {
             <Tag color="processing" style={{ margin: 0 }}>
               AI 摘要
             </Tag>
-            <Text style={{ color: 'var(--color-text-primary, #333)' }}>{summaryText}</Text>
+            <Text style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{summaryText}</Text>
           </Space>
         </div>
         <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
@@ -158,8 +158,8 @@ const DailyBriefingCard: React.FC = () => {
                         {metric.icon}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, #999)' }}>{metric.label}</div>
-                        <Title level={5} style={{ margin: '2px 0 0 0', color: 'var(--color-text-primary, #333)', fontWeight: 600 }}>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>{metric.label}</div>
+                        <Title level={5} style={{ margin: '2px 0 0 0', color: 'var(--color-text-primary, var(--color-gray-800))', fontWeight: 600 }}>
                           {metric.formatter(raw)}
                         </Title>
                       </div>
@@ -184,7 +184,7 @@ const DailyBriefingCard: React.FC = () => {
           <Tag color="green" style={{ marginLeft: 8 }}>
             系统健康
           </Tag>
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #999)', marginLeft: 4 }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))', marginLeft: 4 }}>
             {collapsed ? '点击展开' : '点击收起'}
           </span>
         </Space>
@@ -195,7 +195,7 @@ const DailyBriefingCard: React.FC = () => {
           icon={<ReloadOutlined />}
           onClick={fetchData}
           loading={loading}
-          style={{ color: 'var(--color-text-secondary, #666)' }}
+          style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}
         >
           刷新
         </Button>

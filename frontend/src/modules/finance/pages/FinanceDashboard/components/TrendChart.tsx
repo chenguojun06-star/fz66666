@@ -40,7 +40,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                 bottom: 0,
                 height: '40%',
                 width: `${(item.cost / max) * 100}%`,
-                background: '#ffa940',
+                background: 'var(--color-orange-300)',
                 borderRadius: 4,
                 opacity: 0.85,
               }}
@@ -52,8 +52,8 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
         </div>
       ))}
       <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-tertiary)' }}>
-        <span style={{ display: 'inline-block', width: 10, height: 10, background: '#1890ff', marginRight: 4, borderRadius: 2 }} />营收
-        <span style={{ display: 'inline-block', width: 10, height: 10, background: '#ffa940', margin: '0 4px 0 12px', borderRadius: 2 }} />成本
+        <span style={{ display: 'inline-block', width: 10, height: 10, background: 'var(--color-info)', marginRight: 4, borderRadius: 2 }} />营收
+        <span style={{ display: 'inline-block', width: 10, height: 10, background: 'var(--color-orange-300)', margin: '0 4px 0 12px', borderRadius: 2 }} />成本
       </div>
     </div>
   );

@@ -99,7 +99,7 @@ const ShareOutstockPage: React.FC = () => {
               icon={<InboxOutlined />}
               label="出货总数"
               value={`${data.totalQuantity ?? 0} 件`}
-              color="#3b82f6"
+              color="var(--color-secondary)"
             />
             <SummaryCard
               icon={<DollarOutlined />}
@@ -111,13 +111,13 @@ const ShareOutstockPage: React.FC = () => {
               icon={<CheckCircleOutlined />}
               label="收款进度"
               value={`${paidCount} / ${totalItems}`}
-              color={paidCount === totalItems && totalItems > 0 ? 'var(--color-accent-emerald)' : '#f59e0b'}
+              color={paidCount === totalItems && totalItems > 0 ? 'var(--color-accent-emerald)' : 'var(--color-warning)'}
             />
             <SummaryCard
               icon={<CalendarOutlined />}
               label="出货笔数"
               value={`${totalItems} 笔`}
-              color="#8b5cf6"
+              color="var(--color-violet-500)"
             />
           </div>
         </div>

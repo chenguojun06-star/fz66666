@@ -155,7 +155,7 @@
 
 .intelligence-agent-card:hover {
   will-change: transform;
-  background: #f4f7ff;
+  background: var(--color-indigo-50);
   transform: translateX(4px);
   box-shadow: 0 4px 14px rgba(var(--ls-primary), 0.08);
 }

@@ -152,10 +152,10 @@ const OrderCuttingChart: React.FC = () => {
         data: data.orderQuantities,
         lineStyle: {
           width: 2,
-          color: '#6366f1', // 紫色
+          color: 'var(--color-indigo-500)', // 紫色
         },
         itemStyle: {
-          color: '#6366f1',
+          color: 'var(--color-indigo-500)',
         },
         areaStyle: {
           color: {
@@ -178,10 +178,10 @@ const OrderCuttingChart: React.FC = () => {
         data: data.cuttingQuantities,
         lineStyle: {
           width: 2,
-          color: '#f59e0b', // 橙色
+          color: 'var(--color-warning)', // 橙色
         },
         itemStyle: {
-          color: '#f59e0b',
+          color: 'var(--color-warning)',
         },
         areaStyle: {
           color: {

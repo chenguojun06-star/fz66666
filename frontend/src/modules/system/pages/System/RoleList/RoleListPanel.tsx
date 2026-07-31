@@ -54,7 +54,7 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
               className={`role-list-item${isActive ? ' role-list-item-active' : ''}`}
               onClick={() => { onSelect(role); }}
             >
-              <span className="role-list-item-icon" style={{ color: isActive ? '#cf1322' : 'var(--color-text-secondary, #666)' }}>
+              <span className="role-list-item-icon" style={{ color: isActive ? 'var(--color-error)' : 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 {getRoleIcon(String(role.roleName || ''))}
               </span>
               <span className="role-list-item-name">{role.roleName}</span>
@@ -63,14 +63,14 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                   type="text"
                   size="small"
                   icon={<EditOutlined style={{ fontSize: 12 }} />}
-                  style={{ color: isActive ? '#cf1322' : 'var(--color-text-secondary, #666)' }}
+                  style={{ color: isActive ? 'var(--color-error)' : 'var(--color-text-secondary, var(--color-gray-dark))' }}
                   onClick={() => onEdit(role as any)}
                 />
                 <Button
                   type="text"
                   size="small"
                   icon={<DeleteOutlined style={{ fontSize: 12 }} />}
-                  style={{ color: isActive ? '#cf1322' : 'var(--color-text-secondary, #666)' }}
+                  style={{ color: isActive ? 'var(--color-error)' : 'var(--color-text-secondary, var(--color-gray-dark))' }}
                   onClick={() => onDelete(role.id)}
                 />
               </span>

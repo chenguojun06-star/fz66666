@@ -40,13 +40,13 @@ const OrderInfoGrid: React.FC<OrderInfoGridProps> = ({
   // 合并默认 label/content 样式
   const mergedStyles: DescriptionsProps['styles'] = React.useMemo(() => {
     const baseLabelStyle: React.CSSProperties = {
-      color: 'var(--neutral-text-light, #98a2b3)',
+      color: 'var(--neutral-text-light, var(--color-slate-400))',
       whiteSpace: 'nowrap',
       textAlign: 'left',
       fontSize,
     };
     const baseContentStyle: React.CSSProperties = {
-      color: 'var(--neutral-text, #111827)',
+      color: 'var(--neutral-text, var(--color-slate-900))',
       minWidth: 0,
       maxWidth: 'fit-content',
       textAlign: 'left',

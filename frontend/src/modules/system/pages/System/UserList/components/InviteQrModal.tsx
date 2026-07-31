@@ -33,11 +33,11 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, onClose, user }
         ) : inviteQr.qrBase64 ? (
           <>
             <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 200, height: 200, display: 'block', margin: '0 auto 12px' }} />
-            <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 13 }}>
+            <div style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))', fontSize: 13 }}>
               员工用微信扫码后，输入系统账号密码即可完成绑定
             </div>
             {inviteQr.expiresAt && (
-              <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 12, marginTop: 6 }}>
+              <div style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 12, marginTop: 6 }}>
                 有效期至：{formatDateTime(inviteQr.expiresAt)}
               </div>
             )}
@@ -62,7 +62,7 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, onClose, user }
             </div>
           </>
         ) : (
-          <div style={{ color: 'var(--color-text-tertiary, #999)', padding: '24px 0' }}>二维码生成失败，请重试</div>
+          <div style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', padding: '24px 0' }}>二维码生成失败，请重试</div>
         )}
       </div>
     </SmallModal>

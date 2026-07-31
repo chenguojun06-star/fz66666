@@ -14,19 +14,19 @@ try {
 export const logger = {
   trace: (message: string, ...args: unknown[]) => {
     if (isDev && traceEnabled) {
-      console.log(`%c[TRACE] ${message}`, 'color: #aaa', ...args);
+      console.log(`%c[TRACE] ${message}`, 'color: var(--color-text-quaternary)', ...args);
     }
   },
 
   debug: (message: string, ...args: unknown[]) => {
     if (isDev) {
-      console.log(`%c[DEBUG] ${message}`, 'color: #888', ...args);
+      console.log(`%c[DEBUG] ${message}`, 'color: var(--color-text-muted)', ...args);
     }
   },
 
   info: (message: string, ...args: unknown[]) => {
     if (isDev) {
-      console.log(`%c[INFO] ${message}`, 'color: #0066cc', ...args);
+      console.log(`%c[INFO] ${message}`, 'color: var(--color-blue-600)', ...args);
     }
   },
 

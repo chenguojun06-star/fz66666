@@ -25,8 +25,8 @@ export const buildTooltipTheme = () => {
   const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
   const isDark = theme === 'dark';
   return {
-    background: isDark ? 'var(--color-bg-base)' : '#111827',
-    text: isDark ? '#1f1f1f' : 'var(--color-bg-page)',
+    background: isDark ? 'var(--color-bg-base)' : 'var(--color-slate-900)',
+    text: isDark ? 'var(--color-gray-800)' : 'var(--color-bg-page)',
     border: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)',
     divider: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.2)',
   };

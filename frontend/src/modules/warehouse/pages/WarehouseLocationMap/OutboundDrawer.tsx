@@ -191,7 +191,7 @@ const OutboundDrawer: React.FC<Props> = ({
                           display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
                           padding: '8px 12px', alignItems: 'center',
                           borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
-                          backgroundColor: item.selected ? 'var(--color-bg-highlight, #e6f4ff)' : 'transparent',
+                          backgroundColor: item.selected ? 'var(--color-bg-highlight, var(--status-processing-bg))' : 'transparent',
                         }}>
                           <div>
                             <Checkbox

@@ -24,7 +24,7 @@ interface FactoryStatementPrintModalProps {
 const PRINT_STYLES = `
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; padding: 20px; }
     .slip-container {
-        border: 1px solid #000;
+        border: 1px solid var(--color-black);
         margin-bottom: 40px;
         padding: 20px;
         page-break-after: always;
@@ -33,10 +33,10 @@ const PRINT_STYLES = `
         page-break-after: auto;
     }
     .header { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
-    .sub-header { text-align: center; font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+    .sub-header { text-align: center; font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid var(--color-black); padding-bottom: 15px; }
     .info-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 13px; }
-    th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+    th, td { border: 1px solid var(--color-black); padding: 8px; text-align: center; }
     th { background-color: var(--color-border-light); }
     .footer { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin-top: 15px; }
     .amount-words { margin-top: 10px; font-size: 14px; }
@@ -274,7 +274,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                                 <div className="header" style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', marginBottom: 4 }}>
                                     {factory.factoryName} - 加工费结算对账单{printVersion === 'simple' ? '（简版）' : ''}
                                 </div>
-                                <div className="sub-header" style={{ fontSize: 14, marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid #000' }}>
+                                <div className="sub-header" style={{ fontSize: 14, marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--color-black)' }}>
                                 </div>
                                 <div className="info-row">
                                     <span><strong>结算周期：</strong>{dateRange[0]} 至 {dateRange[1]}</span>

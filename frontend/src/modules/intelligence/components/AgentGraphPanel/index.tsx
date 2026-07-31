@@ -14,7 +14,7 @@ const SCENES = [
 ];
 
 const ROUTE_MAP: Record<string, [string, string]> = {
-  delivery_risk: ['货期风险路由', '#ff7875'],
+  delivery_risk: ['货期风险路由', 'var(--color-danger)'],
   sourcing:      ['采购路由',     'var(--color-info)'],
   compliance:    ['合规路由',     'var(--color-success)'],
   logistics:     ['物流路由',     'var(--color-accent-cyan)'],
@@ -22,18 +22,18 @@ const ROUTE_MAP: Record<string, [string, string]> = {
 };
 
 const NODE_LABELS: Record<string, [string, string]> = {
-  digital_twin:  ['数字孪生',  '#818cf8'],
-  supervisor:    ['主管智能体', '#a78bfa'],
-  specialists:   ['专家智能体', '#60a5fa'],
-  reflection:    ['反思校验',   '#facc15'],
-  re_route:      ['重路由',     '#f97316'],
+  digital_twin:  ['数字孪生',  'var(--color-indigo-400)'],
+  supervisor:    ['主管智能体', 'var(--color-accent-purple)'],
+  specialists:   ['专家智能体', 'var(--color-blue-400)'],
+  reflection:    ['反思校验',   'var(--color-amber-400)'],
+  re_route:      ['重路由',     'var(--color-orange-500)'],
 };
 
 const confColor = (v: number) =>
-  v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : '#ff7875';
+  v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)';
 
 const RouteTag: React.FC<{ route?: string }> = ({ route }) => {
-  const [label, color] = ROUTE_MAP[route ?? ''] ?? ['未知', '#999'];
+  const [label, color] = ROUTE_MAP[route ?? ''] ?? ['未知', 'var(--color-gray-label)'];
   return <Tag color={color} style={{ fontWeight: 600 }}>{label}</Tag>;
 };
 
@@ -49,7 +49,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
       {allNodes.map((node, idx) => {
         const done = completedNodes.has(node);
         const active = streaming && !done && idx === completedNodes.size;
-        const [label, color] = NODE_LABELS[node] ?? ['未知', '#999'];
+        const [label, color] = NODE_LABELS[node] ?? ['未知', 'var(--color-gray-label)'];
         return (
           <React.Fragment key={node}>
             {idx > 0 && (
@@ -83,10 +83,10 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
       {/* re_route 可选节点 */}
       {completedNodes.has('re_route') && (
         <>
-          <div style={{ width: 32, height: 2, background: '#f97316' }} />
+          <div style={{ width: 32, height: 2, background: 'var(--color-orange-500)' }} />
           <div style={{
             padding: '6px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600,
-            border: '1.5px solid #f97316', background: '#f9731622', color: '#f97316',
+            border: '1.5px solid var(--color-orange-500)', background: '#f9731622', color: 'var(--color-orange-500)',
             whiteSpace: 'nowrap',
           }}> 重路由 </div>
         </>
@@ -109,7 +109,7 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
           background: 'rgba(0,0,0,0.18)', borderRadius: 6, padding: '8px 10px',
           border: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-accent-purple)', marginBottom: 4 }}>
             {nameMap[key] ?? '分析结果'}
           </div>
           <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
@@ -229,7 +229,7 @@ const AgentGraphPanel: React.FC = () => {
               icon={<ThunderboltOutlined />}
               loading={loading}
               onClick={runGraphStream}
-              style={{ background: '#7c3aed', borderColor: '#7c3aed', whiteSpace: 'nowrap' }}
+              style={{ background: 'var(--color-violet-600)', borderColor: 'var(--color-violet-600)', whiteSpace: 'nowrap' }}
             >
               流式执行
             </Button>
@@ -242,7 +242,7 @@ const AgentGraphPanel: React.FC = () => {
 
           {/* ── 执行中 ────────────────────────────────────── */}
           {streaming && nodeEvents.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: '#a78bfa' }}>
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-accent-purple)' }}>
               <Spin />
               <span style={{ marginLeft: 8, fontSize: 14 }}>
                 AI 多代理图推理中… 数字孪生 → 主管 → 专家 → 反思
@@ -270,7 +270,7 @@ const AgentGraphPanel: React.FC = () => {
             }}>
               {/* 路由 + 置信度 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <BranchesOutlined style={{ color: '#a78bfa' }} />
+                <BranchesOutlined style={{ color: 'var(--color-accent-purple)' }} />
                 <RouteTag route={result.route} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>置信度</div>
@@ -290,7 +290,7 @@ const AgentGraphPanel: React.FC = () => {
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ fontSize: 14, color: 'var(--color-text-muted)', marginRight: 6 }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => {
-                    const [label] = NODE_LABELS[n] ?? ['未知', '#999'];
+                    const [label] = NODE_LABELS[n] ?? ['未知', 'var(--color-gray-label)'];
                     return <Tag key={i} style={{ fontSize: 14 }}>{label}</Tag>;
                   })}
                 </div>
@@ -304,10 +304,10 @@ const AgentGraphPanel: React.FC = () => {
               {/* 分析摘要 */}
               {result.contextSummary && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-accent-purple)', fontWeight: 600, marginBottom: 4 }}>
                     <XiaoyunCloudAvatar size={16} active />分析结果
                   </div>
-                  <div style={{ fontSize: 14, color: '#d4d4d4', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-neutral-300)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
                     {result.contextSummary}
                   </div>
                 </div>
@@ -316,10 +316,10 @@ const AgentGraphPanel: React.FC = () => {
               {/* 优化建议 */}
               {result.optimizationSuggestion && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: '#34d399', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-emerald-400)', fontWeight: 600, marginBottom: 4 }}>
                      AI 优化建议
                   </div>
-                  <div style={{ fontSize: 14, color: '#d4d4d4', lineHeight: 1.65 }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-neutral-300)', lineHeight: 1.65 }}>
                     {result.optimizationSuggestion}
                   </div>
                 </div>
@@ -332,7 +332,7 @@ const AgentGraphPanel: React.FC = () => {
                      自我反思（置信评估）
                   </div>
                   <div style={{
-                    fontSize: 14, color: '#8b8b8b', fontFamily: 'monospace',
+                    fontSize: 14, color: 'var(--color-slate-500)', fontFamily: 'monospace',
                     background: 'rgba(0,0,0,0.22)',
                     padding: '6px 8px', borderRadius: 4, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   }}>

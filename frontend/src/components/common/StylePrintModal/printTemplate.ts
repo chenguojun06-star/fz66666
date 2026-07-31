@@ -18,7 +18,7 @@ export function buildPrintHtml({
     const title = pageTitle?.trim() || '';
     if (!factory && !title) return '';
     const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
-    return `<div style="text-align:center;font-size:22px;font-weight:700;color:#000;margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+    return `<div style="text-align:center;font-size:22px;font-weight:700;color:var(--color-black);margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   })();
 
   return `
@@ -34,9 +34,9 @@ export function buildPrintHtml({
             --color-bg-container: var(--color-bg-container);
             --color-border: var(--color-border-antd);
             --color-primary: var(--color-info);
-            --color-text-secondary: #666666;
-            --color-text-tertiary: #999999;
-            --color-text-quaternary: #bbbbbb;
+            --color-text-secondary: var(--color-gray-dark);
+            --color-text-tertiary: var(--color-gray-label);
+            --color-text-quaternary: var(--color-text-quaternary)bbb;
           }
 
           @page {
@@ -46,7 +46,7 @@ export function buildPrintHtml({
 
           /* 暗色主题修复：强制黑色文字 + 白色背景 */
           html, body {
-            color: #000000 !important;
+            color: var(--color-black) !important;
             
             background: var(--color-bg-base) !important;
           }
@@ -59,11 +59,11 @@ export function buildPrintHtml({
             justify-content: flex-end;
             align-items: center;
             font-size: 11px;
-            color: #999;
+            color: var(--color-gray-label);
             padding: 6px 5mm;
             margin-top: 16px;
             background: var(--color-bg-base);
-            border-top: 0.5px solid #d0d0d0;
+            border-top: 0.5px solid var(--color-zinc-300);
           }
           .print-footer-right {
             white-space: nowrap;
@@ -92,7 +92,7 @@ export function buildPrintHtml({
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif;
             font-size: 12px;
             line-height: 1.6;
-            color: #333;
+            color: var(--color-gray-800);
             padding: 20px;
             background: var(--color-bg-base);
             -webkit-font-smoothing: antialiased;
@@ -110,7 +110,7 @@ export function buildPrintHtml({
             color: var(--color-text-primary);
             margin-bottom: 10px;
             padding-bottom: 6px;
-            border-bottom: 0.75px solid #ccc;
+            border-bottom: 0.75px solid var(--color-zinc-300);
           }
 
           /* 表格样式 */
@@ -129,7 +129,7 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           th, td {
-            border: 0.5px solid #d0d0d0;
+            border: 0.5px solid var(--color-zinc-300);
             padding: 5px 7px;
             text-align: left;
             vertical-align: top;
@@ -137,7 +137,7 @@ export function buildPrintHtml({
           th {
             background: var(--color-bg-subtle);
             font-weight: 600;
-            color: #333;
+            color: var(--color-gray-800);
           }
           tr:nth-child(even) {
             background: var(--color-bg-container);
@@ -155,11 +155,11 @@ export function buildPrintHtml({
             gap: 8px;
           }
           .info-label {
-            color: #666;
+            color: var(--color-gray-dark);
             min-width: 80px;
           }
           .info-value {
-            color: #333;
+            color: var(--color-gray-800);
             font-weight: 500;
           }
 
@@ -167,7 +167,7 @@ export function buildPrintHtml({
           .attachment-image {
             max-width: 200px;
             max-height: 200px;
-            border: 1px solid #e8e8e8;
+            border: 1px solid var(--color-border-light);
             border-radius: 4px;
             margin: 4px;
           }

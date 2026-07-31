@@ -51,7 +51,7 @@ export function buildOrderColumns(handlers: OrderColumnsHandlers): ColumnsType<E
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
+          {r.freight ? <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },

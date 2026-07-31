@@ -29,8 +29,8 @@ import api from '@/utils/api';
 // ---------- 图标映射 ----------
 const accountTypeIconMap: Record<string, React.ReactNode> = {
   BANK: <CreditCardOutlined />,
-  WECHAT: <WechatOutlined style={{ color: '#07C160' }} />,
-  ALIPAY: <AlipayCircleOutlined style={{ color: '#1677FF' }} />,
+  WECHAT: <WechatOutlined style={{ color: 'var(--color-emerald-500)' }} />,
+  ALIPAY: <AlipayCircleOutlined style={{ color: 'var(--color-primary)' }} />,
 };
 
 // ---------- Props ----------
@@ -176,7 +176,7 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       <div style={{ padding: '0 8px' }}>
         {/* 头部 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <span style={{ color: 'var(--neutral-text-secondary, #999)' }}>
+          <span style={{ color: 'var(--neutral-text-secondary, var(--color-gray-label))' }}>
             {ownerLabel}：{ownerName}
           </span>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
@@ -186,11 +186,11 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
 
         {/* 账户列表 */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 32, color: 'var(--neutral-text-secondary, #999)' }}>
+          <div style={{ textAlign: 'center', padding: 32, color: 'var(--neutral-text-secondary, var(--color-gray-label))' }}>
             加载中...
           </div>
         ) : accounts.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--neutral-text-secondary, #999)', padding: 32 }}>
+          <div style={{ textAlign: 'center', color: 'var(--neutral-text-secondary, var(--color-gray-label))', padding: 32 }}>
             暂无收款账户，请点击「添加账户」
           </div>
         ) : (
@@ -230,11 +230,11 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
                     )}
                   </div>
                   {acc.accountType === 'BANK' ? (
-                    <span style={{ color: 'var(--neutral-text-secondary, #666)' }}>
+                    <span style={{ color: 'var(--neutral-text-secondary, var(--color-gray-dark))' }}>
                       {acc.bankName} {acc.accountNo}
                     </span>
                   ) : (
-                    <span style={{ color: 'var(--neutral-text-secondary, #666)' }}>
+                    <span style={{ color: 'var(--neutral-text-secondary, var(--color-gray-dark))' }}>
                       {acc.accountName || '已上传二维码'}
                     </span>
                   )}

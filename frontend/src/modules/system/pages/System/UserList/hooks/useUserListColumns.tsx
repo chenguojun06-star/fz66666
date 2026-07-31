@@ -173,7 +173,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
           return (
             <Dropdown menu={{ items: noRoleItems }} disabled={roleOptionsLoading} trigger={['click']}>
               <Button size="small" type="dashed">
-                <span style={{ fontSize: 12, color: "var(--color-text-secondary, #666)" }}>
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary, var(--color-gray-dark))" }}>
                   <UserOutlined style={{ fontSize: 11 }} />
                   <span style={{ marginLeft: 4 }}>点击设置角色</span>
                 </span>
@@ -194,7 +194,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
                 )}
                 {role.roleName}
                 {isCurrent && (
-                  <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-quaternary, #999)' }}>
+                  <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-quaternary, var(--color-gray-label))' }}>
                     （当前）
                   </span>
                 )}
@@ -218,7 +218,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
               }}
             >
               <span style={{ fontSize: 12 }}>{v}</span>
-              <span style={{ fontSize: 10, marginLeft: 4, color: 'var(--color-text-quaternary, #999)' }}>
+              <span style={{ fontSize: 10, marginLeft: 4, color: 'var(--color-text-quaternary, var(--color-gray-label))' }}>
                 点击切换
               </span>
             </Tag>

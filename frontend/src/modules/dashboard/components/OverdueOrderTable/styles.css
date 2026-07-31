@@ -16,7 +16,7 @@
 .overdue-order-table-card .ant-card-head-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-bg-dark);
 }
 
 .overdue-order-table-card .ant-card-body {
@@ -107,7 +107,7 @@
 .overdue-order-table .ant-table-thead > tr > th {
   background: var(--color-bg-container);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-bg-dark);
   padding: 10px 12px;
   white-space: nowrap;
 }
@@ -157,39 +157,39 @@
 
 /* 0天或极轻微延期 */
 .overdue-days-warn {
-  color: #d46b08;
+  color: var(--color-amber-700);
   background: rgba(250, 173, 20, 0.12);
 }
 
 /* 1-7天中等延期 */
 .overdue-days-mid {
-  color: #d4380d;
+  color: var(--color-orange-700);
   background: rgba(255, 120, 50, 0.12);
 }
 
 /* 7天以上严重延期 */
 .overdue-days-danger {
-  color: #a8071a;
+  color: var(--color-red-700);
   background: rgba(239, 68, 68, 0.13);
 }
 
 .overdue-order-table .ant-table-tbody > tr:hover > td {
-  background: #f9fafb;
+  background: var(--color-bg-subtle);
 }
 
 /* 深色主题下延期天数 */
 :root[data-theme="dark"] .overdue-days-warn {
-  color: #ffd666;
+  color: var(--color-amber-300);
   background: rgba(250, 173, 20, 0.2);
 }
 
 :root[data-theme="dark"] .overdue-days-mid {
-  color: #ff9c6e;
+  color: var(--color-orange-300);
   background: rgba(255, 120, 50, 0.2);
 }
 
 :root[data-theme="dark"] .overdue-days-danger {
-  color: #fca5a5;
+  color: var(--color-red-300);
   background: rgba(239, 68, 68, 0.22);
 }
 
@@ -222,7 +222,7 @@
 
 .overdue-factory-row:hover {
   background: var(--status-error-border);
-  color: #a8071a;
+  color: var(--color-red-700);
   border-color: var(--status-error-border);
 }
 
@@ -233,16 +233,16 @@
 }
 
 .overdue-factory-row-total {
-  background: #F6FFED;
-  border-color: #ffbb96;
-  color: #d4380d;
+  background: var(--status-success-bg);
+  border-color: var(--color-orange-300);
+  color: var(--color-orange-700);
   font-weight: 600;
 }
 
 .overdue-factory-row-total:hover {
-  background: #ff7875;
+  background: var(--color-danger);
   color: var(--color-bg-base);
-  border-color: #ff7875;
+  border-color: var(--color-danger);
 }
 
 .overdue-factory-row-total.active {
@@ -293,23 +293,23 @@
 
 :root[data-theme="dark"] .overdue-factory-row:hover {
   background: rgba(255, 120, 117, 0.25);
-  color: #ffa39e;
+  color: var(--status-error-border);
   border-color: rgba(255, 120, 117, 0.4);
 }
 
 :root[data-theme="dark"] .overdue-factory-row.active {
-  background: #a8071a;
+  background: var(--color-red-700);
   color: var(--color-bg-base);
-  border-color: #a8071a;
+  border-color: var(--color-red-700);
 }
 
 :root[data-theme="dark"] .overdue-factory-row-total {
   background: rgba(255, 77, 79, 0.15);
   border-color: rgba(255, 77, 79, 0.4);
-  color: #ff7875;
+  color: var(--color-danger);
 }
 
 :root[data-theme="dark"] .overdue-factory-row-total:hover {
-  background: #a8071a;
+  background: var(--color-red-700);
   color: var(--color-bg-base);
 }

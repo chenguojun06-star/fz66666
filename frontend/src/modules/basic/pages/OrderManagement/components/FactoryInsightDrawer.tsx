@@ -129,14 +129,14 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
     return (
       <div style={{ position: 'relative', padding: '24px 12px 12px' }}>
         <div style={{ position: 'relative', height: 60 }}>
-          <div style={{ position: 'absolute', top: 11, left: 12, right: 12, height: 2, background: 'var(--color-border, #e8e8e8)' }} />
+          <div style={{ position: 'absolute', top: 11, left: 12, right: 12, height: 2, background: 'var(--color-border, var(--color-border-light))' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
             {sorted.map((n) => {
               const color = RISK_COLOR[n.riskLevel] || 'var(--color-text-secondary)';
               return (
                 <Tooltip key={n.type} title={`${n.label}: ${n.date}（${n.daysFromToday >= 0 ? '+' : ''}${n.daysFromToday}天）`}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '2px solid var(--color-bg-container, #fff)', boxShadow: `0 0 0 2px ${color}33` }} />
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '2px solid var(--color-bg-container, var(--color-bg-base))', boxShadow: `0 0 0 2px ${color}33` }} />
                     <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center', whiteSpace: 'nowrap' }}>
                       {n.label}
                     </div>
@@ -216,7 +216,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
           {prediction ? (
             <>
               {renderTimeline(prediction.timelineNodes)}
-              <div style={{ padding: '8px 12px', background: 'var(--color-bg-layout, #f5f5f5)', borderRadius: 6, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+              <div style={{ padding: '8px 12px', background: 'var(--color-bg-layout, var(--color-bg-subtle))', borderRadius: 6, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
                 {prediction.rationale}
               </div>
               {prediction.factoryDailyVelocity > 0 && (
@@ -240,7 +240,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)' }}>产能缺口分析</div>
           {gapList ? (
-            <div style={{ padding: '10px 12px', background: 'var(--color-bg-layout, #f5f5f5)', borderRadius: 6 }}>
+            <div style={{ padding: '10px 12px', background: 'var(--color-bg-layout, var(--color-bg-subtle))', borderRadius: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <Tag style={{
                   color: GAP_LEVEL_META[gapList.gapLevel]?.color,

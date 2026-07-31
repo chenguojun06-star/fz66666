@@ -34,8 +34,8 @@ export const CASH_FLOW_DAYS_OPTIONS: { label: string; value: CashFlowDays }[] = 
 
 export const PIE_COLORS = [
   'var(--color-primary)',
-  '#ffa940',
-  '#ff7875',
+  'var(--color-orange-300)',
+  'var(--color-danger)',
   'var(--color-success)',
 ];
 

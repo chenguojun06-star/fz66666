@@ -46,7 +46,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
       <Tag color={isHigh ? 'error' : 'warning'} style={{ marginRight: 6, fontWeight: 600 }}>
         {issue.level || (isHigh ? 'HIGH' : 'MEDIUM')}
       </Tag>
-      <Text strong style={{ color: isHigh ? 'var(--color-error)' : '#ad6800' }}>
+      <Text strong style={{ color: isHigh ? 'var(--color-error)' : 'var(--color-warning-deep)' }}>
         {issue.title || '未知风险项'}
       </Text>
     </div>
@@ -54,7 +54,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
       <div style={{ color: 'var(--color-gray-700)', fontSize: 14, lineHeight: '18px' }}>{issue.reason}</div>
     )}
     {issue.suggestion && (
-      <div style={{ color: '#096dd9', fontSize: 14, marginTop: 4 }}>
+      <div style={{ color: 'var(--color-primary)', fontSize: 14, marginTop: 4 }}>
         <BulbOutlined style={{ marginRight: 4 }} />
         {issue.suggestion}
       </div>
@@ -115,7 +115,7 @@ export function confirmPrecheckRisk(data: PrecheckData): Promise<boolean> {
         ? <StopOutlined style={{ color: 'var(--color-danger)' }} />
         : <WarningOutlined style={{ color: 'var(--color-warning)' }} />,
       title: (
-        <span style={{ color: isHigh ? 'var(--color-error)' : '#ad6800', fontWeight: 700 }}>
+        <span style={{ color: isHigh ? 'var(--color-error)' : 'var(--color-warning-deep)', fontWeight: 700 }}>
           {isHigh ? ' 高风险' : ' 中风险'}
         </span>
       ),

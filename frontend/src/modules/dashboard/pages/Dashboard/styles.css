@@ -32,7 +32,7 @@
 /* 搜索框简洁效果 - 仅限仪表盘页面 */
 .dashboard-page .filter-card {
   background: rgba(255, 255, 255, 0.92) !important;
-  border: 1px solid var(--color-border-light, #e8e8e8) !important;
+  border: 1px solid var(--color-border-light, var(--color-border-light)) !important;
   border-radius: 12px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   position: relative;
@@ -49,7 +49,7 @@
 
 .dashboard-page .filter-card .ant-input-affix-wrapper:focus,
 .dashboard-page .filter-card .ant-input-affix-wrapper-focused {
-  border-color: #2D7FF9 !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1) !important;
 }
 
@@ -97,8 +97,8 @@
   font-weight: 600 !important;
   border-radius: 0 999px 999px 0 !important;
   background: var(--color-bg-base) !important;
-  border: 2px solid #40a9ff !important;
-  color: #40a9ff !important;
+  border: 2px solid var(--color-primary-light) !important;
+  color: var(--color-primary-light) !important;
   box-shadow: 0 2px 8px rgba(64, 169, 255, 0.15) !important;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   padding: 0 32px !important;
@@ -106,17 +106,17 @@
 
 .dashboard-page .filter-card .ant-btn-primary:hover {
   transform: translateY(-2px) !important;
-  background: #f0f9ff !important;
-  border-color: #1890ff !important;
-  color: #1890ff !important;
+  background: var(--color-slate-50) !important;
+  border-color: var(--color-info) !important;
+  color: var(--color-info) !important;
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25) !important;
 }
 
 /* 深色主题搜索按钮 - 仅限仪表盘页面 */
 [data-theme="dark"] .dashboard-page .filter-card .ant-btn-primary {
   background: rgba(26, 32, 39, 0.8) !important;
-  border-color: #69b1ff !important;
-  color: #69b1ff !important;
+  border-color: var(--color-accent-sky) !important;
+  color: var(--color-accent-sky) !important;
   box-shadow: 0 2px 8px rgba(105, 177, 255, 0.15) !important;
 }
 
@@ -170,7 +170,7 @@
 
 .stat-card {
   background: var(--color-bg-base);
-  border: 1px solid var(--color-border-light, #e8e8e8);
+  border: 1px solid var(--color-border-light, var(--color-border-light));
   border-radius: 12px;
   padding: 24px;
   display: flex;
@@ -209,68 +209,68 @@
 
 /* 新的8个统计卡片样式 */
 .stat-card--sample {
-  border-color: #1677ff;
-  background: #f0f7ff;
+  border-color: var(--color-primary);
+  background: var(--status-processing-bg);
 }
 
 .stat-card--production {
-  border-color: #13c2c2;
-  background: #e6fffb;
+  border-color: var(--color-accent-cyan);
+  background: var(--status-info-bg);
 }
 
 .stat-card--quantity {
-  border-color: #52c41a;
+  border-color: var(--color-success);
   background: var(--status-success-bg);
 }
 
 .stat-card--overdue {
-  border-color: #ff7875;
-  background: #fff1f0;
+  border-color: var(--color-danger);
+  background: var(--color-bg-base)1f0;
 }
 
 .stat-card--today-warehousing {
-  border-color: #faad14;
+  border-color: var(--color-warning);
   background: var(--status-warning-bg);
 }
 
 .stat-card--total-warehousing {
-  border-color: #722ed1;
-  background: #f9f0ff;
+  border-color: var(--color-accent-purple);
+  background: var(--status-info-bg);
 }
 
 .stat-card--defective {
-  border-color: #fa541c;
-  background: #fff7e6;
+  border-color: var(--color-orange-600);
+  background: var(--color-bg-base)7e6;
 }
 
 .stat-card--payment {
-  border-color: #2f54eb;
-  background: #f0f5ff;
+  border-color: var(--color-primary-dark);
+  background: var(--color-bg-highlight);
 }
 
 /* 旧样式保留以兼容 */
 .stat-card--style {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
 }
 
 .stat-card--finance {
-  border-color: #faad14;
+  border-color: var(--color-warning);
 }
 
 .stat-card--scan {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
 }
 
 .stat-card--warehousing {
-  border-color: #52c41a;
+  border-color: var(--color-success);
 }
 
 .stat-card--unqualified {
-  border-color: #ff7875;
+  border-color: var(--color-danger);
 }
 
 .stat-card--urgent {
-  border-color: #fa541c;
+  border-color: var(--color-orange-600);
 }
 
 .stat-icon {
@@ -303,74 +303,74 @@
 
 /* 新的8个图标样式 */
 .stat-icon--sample {
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--color-primary);
+  background: var(--status-processing-bg);
 }
 
 .stat-icon--production {
-  color: #13c2c2;
-  background: #e6fffb;
+  color: var(--color-accent-cyan);
+  background: var(--status-info-bg);
 }
 
 .stat-icon--quantity {
-  color: #52c41a;
-  background: #d9f7be;
+  color: var(--color-success);
+  background: var(--color-lime-100);
 }
 
 .stat-icon--overdue {
-  color: #ff7875;
+  color: var(--color-danger);
   background: var(--status-error-border);
 }
 
 .stat-icon--today-warehousing {
-  color: #faad14;
-  background: #ffe7ba;
+  color: var(--color-warning);
+  background: var(--color-amber-100);
 }
 
 .stat-icon--total-warehousing {
-  color: #722ed1;
-  background: #efdbff;
+  color: var(--color-accent-purple);
+  background: var(--color-purple-50);
 }
 
 .stat-icon--defective {
-  color: #fa541c;
-  background: #ffd8bf;
+  color: var(--color-orange-600);
+  background: var(--color-orange-200);
 }
 
 .stat-icon--payment {
-  color: #2f54eb;
-  background: #d6e4ff;
+  color: var(--color-primary-dark);
+  background: var(--color-blue-100);
 }
 
 /* 旧样式保留以兼容 */
 .stat-icon--style {
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--color-primary);
+  background: var(--status-processing-bg);
 }
 
 .stat-icon--finance {
-  color: #faad14;
+  color: var(--color-warning);
   background: var(--status-warning-bg);
 }
 
 .stat-icon--scan {
-  color: #722ed1;
-  background: #f9f0ff;
+  color: var(--color-accent-purple);
+  background: var(--status-info-bg);
 }
 
 .stat-icon--warehousing {
-  color: #52c41a;
+  color: var(--color-success);
   background: var(--status-success-bg);
 }
 
 .stat-icon--unqualified {
-  color: #ff7875;
-  background: #fff1f0;
+  color: var(--color-danger);
+  background: var(--color-bg-base)1f0;
 }
 
 .stat-icon--urgent {
-  color: #fa541c;
-  background: #fff7e6;
+  color: var(--color-orange-600);
+  background: var(--color-bg-base)7e6;
 }
 
 .stat-content {
@@ -401,7 +401,7 @@
 
 .dashboard-card {
   background: var(--color-bg-base);
-  border: 1px solid var(--color-border-light, #e8e8e8);
+  border: 1px solid var(--color-border-light, var(--color-border-light));
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.3s var(--ease-smooth);
@@ -495,27 +495,27 @@
 }
 
 .activity-icon--production {
-  color: #13c2c2;
-  background: #e6fffb;
+  color: var(--color-accent-cyan);
+  background: var(--status-info-bg);
 }
 
 .activity-icon--reconciliation {
-  color: #faad14;
+  color: var(--color-warning);
   background: var(--status-warning-bg);
 }
 
 .activity-icon--scan {
-  color: #722ed1;
-  background: #f9f0ff;
+  color: var(--color-accent-purple);
+  background: var(--status-info-bg);
 }
 
 .activity-icon--style {
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--color-primary);
+  background: var(--status-processing-bg);
 }
 
 .activity-icon--material {
-  color: #52c41a;
+  color: var(--color-success);
   background: var(--status-success-bg);
 }
 
@@ -564,31 +564,31 @@
 }
 
 .quick-entry-item--style {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
 }
 
 .quick-entry-item--production {
-  border-color: #13c2c2;
+  border-color: var(--color-accent-cyan);
 }
 
 .quick-entry-item--scan {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
 }
 
 .quick-entry-item--finance {
-  border-color: #faad14;
+  border-color: var(--color-warning);
 }
 
 .quick-entry-item--material {
-  border-color: #52c41a;
+  border-color: var(--color-success);
 }
 
 .quick-entry-item--warehousing {
-  border-color: #13c2c2;
+  border-color: var(--color-accent-cyan);
 }
 
 .quick-entry-item--report {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
 }
 
 .quick-entry-item--factory {
@@ -596,19 +596,19 @@
 }
 
 .quick-entry-item--order {
-  border-color: #2f54eb;
+  border-color: var(--color-primary-dark);
 }
 
 .quick-entry-item--cutting {
-  border-color: #fa8c16;
+  border-color: var(--color-warning);
 }
 
 .quick-entry-item--factory-recon {
-  border-color: #eb2f96;
+  border-color: var(--color-magenta);
 }
 
 .quick-entry-item--shipment {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
 }
 
 .entry-icon {
@@ -625,38 +625,38 @@
 }
 
 .entry-icon--style {
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--color-primary);
+  background: var(--status-processing-bg);
 }
 
 .entry-icon--production {
-  color: #13c2c2;
-  background: #e6fffb;
+  color: var(--color-accent-cyan);
+  background: var(--status-info-bg);
 }
 
 .entry-icon--scan {
-  color: #722ed1;
-  background: #f9f0ff;
+  color: var(--color-accent-purple);
+  background: var(--status-info-bg);
 }
 
 .entry-icon--finance {
-  color: #faad14;
+  color: var(--color-warning);
   background: var(--status-warning-bg);
 }
 
 .entry-icon--material {
-  color: #52c41a;
+  color: var(--color-success);
   background: var(--status-success-bg);
 }
 
 .entry-icon--warehousing {
-  color: #13c2c2;
-  background: #e6fffb;
+  color: var(--color-accent-cyan);
+  background: var(--status-info-bg);
 }
 
 .entry-icon--report {
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--color-primary);
+  background: var(--status-processing-bg);
 }
 
 .entry-icon--factory {
@@ -665,23 +665,23 @@
 }
 
 .entry-icon--order {
-  color: #2f54eb;
-  background: #f0f5ff;
+  color: var(--color-primary-dark);
+  background: var(--color-bg-highlight);
 }
 
 .entry-icon--cutting {
-  color: #fa8c16;
-  background: #fff7e6;
+  color: var(--color-warning);
+  background: var(--color-bg-base)7e6;
 }
 
 .entry-icon--factory-recon {
-  color: #eb2f96;
-  background: #fff0f6;
+  color: var(--color-magenta);
+  background: var(--color-bg-base)0f6;
 }
 
 .entry-icon--shipment {
-  color: #722ed1;
-  background: #f9f0ff;
+  color: var(--color-accent-purple);
+  background: var(--status-info-bg);
 }
 
 .entry-label {
@@ -848,7 +848,7 @@
   background: var(--color-bg-base) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border: 1px solid #e8ecf2 !important;
+  border: 1px solid var(--color-slate-200) !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
 }
 
@@ -858,7 +858,7 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: none;
-  border-left: 3px solid #e8ecf2;
+  border-left: 3px solid var(--color-slate-200);
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
@@ -875,41 +875,41 @@
 
 /* 8个统计卡片色系（白色主题下保持淡底+左色线） */
 :root[data-theme="white"] .stat-card--sample {
-  border-left-color: #1677ff;
-  background: #fafcff;
+  border-left-color: var(--color-primary);
+  background: var(--color-slate-50);
 }
 :root[data-theme="white"] .stat-card--production {
-  border-left-color: #13c2c2;
-  background: #f8fffe;
+  border-left-color: var(--color-accent-cyan);
+  background: var(--color-teal-50);
 }
 :root[data-theme="white"] .stat-card--quantity {
-  border-left-color: #52c41a;
-  background: #fbfff7;
+  border-left-color: var(--color-success);
+  background: var(--color-lime-50);
 }
 :root[data-theme="white"] .stat-card--overdue {
-  border-left-color: #ff7875;
-  background: #fffbfb;
+  border-left-color: var(--color-danger);
+  background: var(--color-bg-base)bfb;
 }
 :root[data-theme="white"] .stat-card--today-warehousing {
-  border-left-color: #faad14;
-  background: #fffef8;
+  border-left-color: var(--color-warning);
+  background: var(--color-bg-base)ef8;
 }
 :root[data-theme="white"] .stat-card--total-warehousing {
-  border-left-color: #722ed1;
-  background: #fcfaff;
+  border-left-color: var(--color-accent-purple);
+  background: var(--color-violet-50);
 }
 :root[data-theme="white"] .stat-card--defective {
-  border-left-color: #fa541c;
-  background: #fffcfa;
+  border-left-color: var(--color-orange-600);
+  background: var(--color-bg-base)cfa;
 }
 :root[data-theme="white"] .stat-card--payment {
-  border-left-color: #2f54eb;
-  background: #fafcff;
+  border-left-color: var(--color-primary-dark);
+  background: var(--color-slate-50);
 }
 
 /* 图标容器：清爽实底 */
 :root[data-theme="white"] .stat-icon {
-  background: #f5f7fa;
+  background: var(--color-slate-100);
   box-shadow: none;
 }
 
@@ -931,19 +931,19 @@
   background: var(--color-bg-base);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid #e8ecf2;
+  border: 1px solid var(--color-slate-200);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 :root[data-theme="white"] .dashboard-card:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-  border-color: #dce1e8;
+  border-color: var(--color-slate-200);
 }
 
 /* 卡片头部 */
 :root[data-theme="white"] .card-header {
-  background: #fafbfc;
-  border-bottom: 1px solid #eef0f4;
+  background: var(--color-slate-50);
+  border-bottom: 1px solid var(--color-slate-200);
 }
 
 :root[data-theme="white"] .card-title {
@@ -954,19 +954,19 @@
 :root[data-theme="white"] .quick-entry-item {
   background: var(--color-bg-base);
   backdrop-filter: none;
-  border: 1px solid #e8ecf2;
+  border: 1px solid var(--color-slate-200);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 :root[data-theme="white"] .quick-entry-item:hover {
-  background: #fafcff;
+  background: var(--color-slate-50);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-  border-color: #dce1e8;
+  border-color: var(--color-slate-200);
 }
 
 /* 活动列表分隔线 */
 :root[data-theme="white"] .dashboard-page .activity-item {
-  border-bottom-color: #f0f2f5;
+  border-bottom-color: var(--color-bg-page);
 }
 
 :root[data-theme="white"] .dashboard-page .activity-item:hover {
@@ -1006,13 +1006,13 @@
 }
 
 .dashboard-error-alert-icon {
-  color: var(--color-warning, #fa8c16);
+  color: var(--color-warning, var(--color-warning));
   font-size: 18px;
 }
 
 .dashboard-error-alert-title {
   font-weight: 600;
-  color: var(--color-error, #d4380d);
+  color: var(--color-error, var(--color-orange-700));
   margin-bottom: 4px;
 }
 

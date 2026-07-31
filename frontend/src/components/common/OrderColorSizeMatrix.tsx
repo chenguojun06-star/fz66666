@@ -135,7 +135,7 @@ export const createOrderColorSizeMatrixInfoItems = ({
   }
 
   const leadLabelStyle: React.CSSProperties = {
-    color: 'var(--neutral-text-light, #98a2b3)',
+    color: 'var(--neutral-text-light, var(--color-slate-400))',
     fontSize: labelStyle?.fontSize || fontSize,
     fontWeight: 600,
     whiteSpace: 'nowrap',
@@ -147,7 +147,7 @@ export const createOrderColorSizeMatrixInfoItems = ({
   const headerCellStyle: React.CSSProperties = {
     textAlign: 'center',
     fontSize,
-    color: 'var(--neutral-text, #262626)',
+    color: 'var(--neutral-text, var(--color-gray-800))',
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
@@ -164,7 +164,7 @@ export const createOrderColorSizeMatrixInfoItems = ({
     fontSize,
     fontWeight: 600,
     whiteSpace: 'nowrap',
-    color: 'var(--neutral-text-light, #8c8c8c)',
+    color: 'var(--neutral-text-light, var(--color-text-muted))',
     ...(valueStyle || {}),
   };
 
@@ -222,11 +222,11 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
         fontSize: 14,
         textAlign: 'center',
       }}>
-        <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
+        <span style={{ color: 'var(--color-slate-400)', fontWeight: 600 }}>码</span>
         {model.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
         {model.rows.map(row => (
           <React.Fragment key={row.label}>
-            <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
+            <span style={{ color: 'var(--color-slate-400)', textAlign: 'left' }}>{row.label}</span>
             {model.sizes.map(s => (
               <span key={`${row.label}-${s}`} style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
                 {row.quantityMap.get(s) || 0}
@@ -234,7 +234,7 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
             ))}
           </React.Fragment>
         ))}
-        <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
+        <span style={{ color: 'var(--color-slate-400)', fontWeight: 600 }}>总</span>
         <span style={{ gridColumn: `2 / ${model.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
           {model.total}件
         </span>
@@ -262,7 +262,7 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
   const leadTrack = typeof leadWidth === 'number' ? `${leadWidth}px` : (String(leadWidth || '').trim() || 'max-content');
   const gridTemplateColumns = `${leadTrack} repeat(${model.sizes.length}, minmax(${columnMinWidth}px, 1fr))`;
   const leadStyle: React.CSSProperties = {
-    color: 'var(--neutral-text-light, #8c8c8c)',
+    color: 'var(--neutral-text-light, var(--color-text-muted))',
     fontSize,
     fontWeight: 600,
     whiteSpace: 'nowrap',
@@ -279,7 +279,7 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
   const totalStyle: React.CSSProperties = {
     alignSelf: 'flex-end',
     fontSize,
-    color: 'var(--neutral-text, #262626)',
+    color: 'var(--neutral-text, var(--color-gray-800))',
     fontWeight: 700,
   };
 

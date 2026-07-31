@@ -14,8 +14,8 @@
   line-height: 1.4;
 }
 .riskCard.riskHigh {
-  background: #fff1f0;
-  border: 1px solid #ffa39e;
+  background: var(--color-bg-base)1f0;
+  border: 1px solid var(--status-error-border);
 }
 .riskCard.riskMedium {
   background: var(--status-warning-bg);
@@ -31,9 +31,9 @@
   min-width: 42px;
   text-align: center;
 }
-.riskProb.riskHigh { color: #cf1322; }
-.riskProb.riskMedium { color: #d48806; }
-.riskProb.riskLow { color: #389e0d; }
+.riskProb.riskHigh { color: var(--color-error); }
+.riskProb.riskMedium { color: var(--color-warning); }
+.riskProb.riskLow { color: var(--color-success); }
 .riskInfo {
   flex: 1;
 }
@@ -49,15 +49,15 @@
 
 .simulationWrapper {
   margin-top: 10px;
-  background: #f0f5ff;
-  border: 1px solid #adc6ff;
+  background: var(--color-bg-highlight);
+  border: 1px solid var(--color-blue-200);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 12px;
 }
 .simulationTitle {
   font-weight: 600;
-  color: #1d39c4;
+  color: var(--color-primary-darker);
   margin-bottom: 6px;
   font-size: 12px;
 }
@@ -70,16 +70,16 @@
 .simulationTable td {
   padding: 4px 6px;
   text-align: left;
-  border-bottom: 1px solid #d6e4ff;
+  border-bottom: 1px solid var(--color-blue-100);
 }
 .simulationTable th {
-  color: #2f54eb;
+  color: var(--color-primary-dark);
   font-weight: 600;
-  background: #e8ecff;
+  background: var(--color-indigo-50);
 }
 .simulationRec {
   margin-top: 6px;
-  color: #531dab;
+  color: var(--color-purple-700);
   font-size: 13px;
   font-style: italic;
 }
@@ -88,10 +88,10 @@
   margin-top: 8px;
   padding: 10px 12px;
   background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
-  border: 1px solid #d3adf7;
+  border: 1px solid var(--status-info-border);
   border-radius: 10px;
   font-size: 12px;
-  color: #531dab;
+  color: var(--color-purple-700);
 }
 .clarificationLabel {
   font-weight: 600;
@@ -121,13 +121,13 @@
   gap: 3px;
 }
 .feedbackBtn:hover {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: var(--color-info);
+  color: var(--color-info);
 }
 .feedbackBtn.feedbackActive {
-  border-color: #1890ff;
+  border-color: var(--color-info);
   background: var(--status-processing-bg);
-  color: #1890ff;
+  color: var(--color-info);
 }
 .feedbackLabel {
   font-size: 13px;

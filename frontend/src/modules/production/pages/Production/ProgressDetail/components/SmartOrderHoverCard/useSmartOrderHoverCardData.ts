@@ -199,10 +199,10 @@ export function useSmartOrderHoverCardData(order: ProductionOrder): SmartOrderHo
   const risk = useMemo(() => {
     if (isCompleted) return null;
     if (daysLeft === null) return null;
-    if (daysLeft < 0) return { text: '已逾期', color: 'var(--color-danger)', bg: '#F6FFED' };
-    if (daysLeft <= 3 && prog < 80) return { text: ' 高风险', color: 'var(--color-danger)', bg: '#F6FFED' };
-    if (daysLeft <= 7 && prog < 50) return { text: '存在风险', color: 'var(--color-warning)', bg: '#FFFBE6' };
-    if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: 'var(--color-warning)', bg: '#FFFBE6' };
+    if (daysLeft < 0) return { text: '已逾期', color: 'var(--color-danger)', bg: 'var(--status-success-bg)' };
+    if (daysLeft <= 3 && prog < 80) return { text: ' 高风险', color: 'var(--color-danger)', bg: 'var(--status-success-bg)' };
+    if (daysLeft <= 7 && prog < 50) return { text: '存在风险', color: 'var(--color-warning)', bg: 'var(--color-bg-base)BE6' };
+    if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: 'var(--color-warning)', bg: 'var(--color-bg-base)BE6' };
     return null;
   }, [isCompleted, daysLeft, prog]);
 

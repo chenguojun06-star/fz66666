@@ -28,7 +28,7 @@ interface OrderRankingStats {
 }
 
 const TOP_COUNT = 50;
-const RANK_COLORS: Record<number, string> = { 0: '#ffd700', 1: '#c0c0c0', 2: '#cd7f32' };
+const RANK_COLORS: Record<number, string> = { 0: 'var(--color-gold)', 1: 'var(--color-silver)', 2: 'var(--color-bronze)' };
 
 interface OrderRankingDashboardProps {
   onOrderClick: (style: StyleInfo) => void;

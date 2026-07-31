@@ -73,7 +73,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       width: 80,
       align: 'right' as const,
       render: (price: number) => (
-        <span style={{ fontSize: 14, color: '#dc2626', fontWeight: 600 }}>
+        <span style={{ fontSize: 14, color: 'var(--color-error)', fontWeight: 600 }}>
           {price ? `¥${Number(price).toFixed(2)}` : '-'}
         </span>
       ),
@@ -85,11 +85,11 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       width: 90,
       render: (status: string) => {
         const sm: Record<string, { color: string; label: string }> = {
-          scanned: { color: '#16a34a', label: '已扫码' },
-          pending: { color: '#f97316', label: '待扫码' },
-          partial: { color: '#eab308', label: '部分扫码' },
+          scanned: { color: 'var(--color-green-600)', label: '已扫码' },
+          pending: { color: 'var(--color-orange-500)', label: '待扫码' },
+          partial: { color: 'var(--color-amber-500)', label: '部分扫码' },
         };
-        const s = sm[status] || { color: '#64748b', label: status || '-' };
+        const s = sm[status] || { color: 'var(--color-slate-500)', label: status || '-' };
         return (
           <span style={{ fontSize: 13, color: s.color, fontWeight: 600 }}>
             {s.label}
@@ -118,10 +118,39 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       width: 90,
       align: 'right' as const,
       render: (v: number) => (
-        <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>
+        <span style={{ fontSize: 13, color: 'var(--color-error)', fontWeight: 600 }}>
           {v ? `¥${Number(v).toFixed(2)}` : '-'}
         </span>
       ),
+    },
+    {
+      title: '结算状态',
+      dataIndex: 'isSettled',
+      key: 'isSettled',
+      width: 90,
+      render: (isSettled: boolean, record: ProcessTrackingRecord) => {
+        const settled = Boolean(isSettled);
+        const style: React.CSSProperties = settled
+          ? {
+              fontSize: 13,
+              color: 'var(--color-bg-base)',
+              backgroundColor: 'var(--color-accent-emerald)',
+              padding: '2px 10px',
+              borderRadius: 10,
+              fontWeight: 600,
+              display: 'inline-block',
+            }
+          : {
+              fontSize: 13,
+              color: 'var(--color-slate-400)',
+              backgroundColor: 'var(--color-slate-100)',
+              padding: '2px 10px',
+              borderRadius: 10,
+              fontWeight: 500,
+              display: 'inline-block',
+            };
+        return <span style={style}>{settled ? '已结算' : '未结算'}</span>;
+      },
     },
   ];
 }

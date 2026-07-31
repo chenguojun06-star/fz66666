@@ -41,7 +41,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: '#f9f0ff', borderRadius: 8, border: 'none' }}>
+              <Card style={{ background: 'var(--status-info-bg)', borderRadius: 8, border: 'none' }}>
                 <Statistic title="关联店铺" value={activeStats.shopCount} suffix="个" styles={{ content: { color: 'var(--color-accent-purple)' } }} />
               </Card>
             </Col>
@@ -53,7 +53,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
             description={
               <Row gutter={24}>
                 <Col span={12}>
-                  <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
+                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-primary)' }}>
                       <InboxOutlined /> 链路一：成品仓（有生产单）
                     </div>
@@ -89,21 +89,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
           <Text strong style={{ display: 'block', marginBottom: 8 }}><BarChartOutlined /> 今日订单状态</Text>
           <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
             <Col span={8}>
-              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid #ffd591' }}>
+              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid var(--status-warning-border)' }}>
                 <Statistic title="待拣货" value={activeStats.pendingPick} suffix="单"
                   styles={{ content: { color: 'var(--color-warning)', fontSize: 20 } }}
                   prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={8}>
-              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid #91caff' }}>
+              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid var(--status-processing-border)' }}>
                 <Statistic title="备货中" value={activeStats.preparing} suffix="单"
                   styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
                   prefix={<SyncOutlined />} />
               </Card>
             </Col>
             <Col span={8}>
-              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid #95de64' }}>
+              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--color-success)' }}>
                 <Statistic title="已出库" value={activeStats.shippedToday} suffix="单"
                   styles={{ content: { color: 'var(--color-success)', fontSize: 20 } }}
                   prefix={<CheckCircleOutlined />} />

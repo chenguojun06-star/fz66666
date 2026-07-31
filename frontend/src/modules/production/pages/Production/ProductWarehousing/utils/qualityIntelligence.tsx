@@ -184,7 +184,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
       {insight.risks.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.risks.map((r, i) => (
-            <div key={`r${i}`} style={{ color: '#d4380d' }}> {r}</div>
+            <div key={`r${i}`} style={{ color: 'var(--color-orange-700)' }}> {r}</div>
           ))}
         </div>
       )}

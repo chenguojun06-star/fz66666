@@ -54,7 +54,7 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
       extra: activeDifficulty?.adjustedSuggestedPrice
         ? `难度调整: ${fmtMoney(activeDifficulty.adjustedSuggestedPrice)}`
         : `历史 ${(profile?.finance?.historicalOrderCount ?? quoteSuggestion?.historicalOrderCount) || 0} 单`,
-      color: '#d48806',
+      color: 'var(--color-warning)',
     },
     {
       key: 'orders',

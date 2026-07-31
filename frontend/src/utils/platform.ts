@@ -15,16 +15,16 @@ export interface PlatformTag {
 
 /** 简写编码 → { 中文名, 颜色 } */
 const SHORT_MAP: Record<string, PlatformTag> = {
-  TB:  { label: '淘宝',   color: '#FF4400' },
-  TM:  { label: '天猫',   color: '#FF0036' },
-  JD:  { label: '京东',   color: '#E1251B' },
-  PDD: { label: '拼多多', color: '#E02E24' },
-  DY:  { label: '抖音',   color: '#000000' },
-  XHS: { label: '小红书', color: '#FF2442' },
-  WC:  { label: '微信小店', color: '#07C160' },
-  SFY: { label: 'Shopify', color: '#5C6AC4' },
-  SY:  { label: '希音',   color: '#FF6B6B' },
-  JST: { label: '聚水潭', color: '#E85D04' },
+  TB:  { label: '淘宝',   color: 'var(--color-orange-500)' },
+  TM:  { label: '天猫',   color: 'var(--color-rose-500)' },
+  JD:  { label: '京东',   color: 'var(--color-red-600)' },
+  PDD: { label: '拼多多', color: 'var(--color-red-600)' },
+  DY:  { label: '抖音',   color: 'var(--color-black)' },
+  XHS: { label: '小红书', color: 'var(--color-red-500)' },
+  WC:  { label: '微信小店', color: 'var(--color-emerald-500)' },
+  SFY: { label: 'Shopify', color: 'var(--color-primary)' },
+  SY:  { label: '希音',   color: 'var(--color-coral)' },
+  JST: { label: '聚水潭', color: 'var(--color-orange-600)' },
 };
 
 /** 全大写编码 → 简写编码 */
@@ -52,9 +52,9 @@ export function normalizePlatformCode(code: string | undefined | null): string {
 
 /** 获取平台标签（中文 + 颜色），兼容两套编码 */
 export function getPlatformTag(code: string | undefined | null): PlatformTag {
-  if (!code) return { label: '未指定', color: '#8c8c8c' };
+  if (!code) return { label: '未指定', color: 'var(--color-text-muted)' };
   const normalized = normalizePlatformCode(code);
-  return SHORT_MAP[normalized] || { label: '未知平台', color: '#8c8c8c' };
+  return SHORT_MAP[normalized] || { label: '未知平台', color: 'var(--color-text-muted)' };
 }
 
 /** 获取平台中文名 */

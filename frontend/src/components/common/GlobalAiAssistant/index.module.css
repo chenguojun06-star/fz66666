@@ -485,7 +485,7 @@
 :root[data-theme="dark"] .chatInput {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
-  color: #e0e0e0;
+  color: var(--color-border-light);
 }
 :root[data-theme="dark"] .chatInput:focus {
   border-color: var(--xiaoyun-primary);

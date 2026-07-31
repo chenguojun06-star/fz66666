@@ -5,18 +5,18 @@ import React, { useState, useEffect, useRef } from 'react';
 ═══════════════════════════════════════════════════ */
 
 export const risk2color = (r: string) =>
-  ({ HIGH: '#e03030', MEDIUM: '#f7a600', LOW: '#39ff14' }[r] ?? '#39ff14');
+  ({ HIGH: 'var(--color-danger)', MEDIUM: 'var(--color-warning-deep)', LOW: 'var(--color-accent-neon)' }[r] ?? 'var(--color-accent-neon)');
 
 export const grade2color = (g: string) =>
-  ({ A: '#39ff14', B: '#00e5ff', C: '#f7a600', D: '#e03030' }[g] ?? '#888');
+  ({ A: 'var(--color-accent-neon)', B: 'var(--color-accent-cyan-bright)', C: 'var(--color-warning-deep)', D: 'var(--color-danger)' }[g] ?? 'var(--color-text-muted)');
 
 /** 严重程度颜色 */
-export const sev2c = (s: string) => ({ critical: '#e03030', warning: '#f7a600', normal: '#39ff14' }[s] ?? '#39ff14');
+export const sev2c = (s: string) => ({ critical: 'var(--color-danger)', warning: 'var(--color-warning-deep)', normal: 'var(--color-accent-neon)' }[s] ?? 'var(--color-accent-neon)');
 
 /** 交期风险强度展示 */
 export const risk2badge = (r: string) => ({
-  overdue: { label: '已逾期', color: '#e03030' },
-  danger:  { label: '高风险', color: '#e03030' },
+  overdue: { label: '已逾期', color: 'var(--color-danger)' },
+  danger:  { label: '高风险', color: 'var(--color-danger)' },
   warning: { label: '预警',   color: 'var(--color-warning-deep)' },
   safe:    { label: '安全',   color: 'var(--color-accent-neon)' },
 }[r] ?? { label: r, color: 'var(--color-text-muted)' });
@@ -52,20 +52,20 @@ export const getAiTip = (prog: number, daysLeft: number | null): string => {
 
 export const fmtD = (d?: string) => (d ? d.slice(5, 10) : '--');
 
-export const medalColor = ['#ffd700', '#c0c0c0', '#cd7f32'];
+export const medalColor = ['var(--color-gold)', 'var(--color-silver)', 'var(--color-bronze)'];
 
 /* ═══════════════════════════════════════════════════
    小组件
 ═══════════════════════════════════════════════════ */
 
 /** 实时绿色闪烁点 */
-export const LiveDot: React.FC<{ color?: string; size?: number }> = ({ color = '#39ff14', size = 8 }) => (
+export const LiveDot: React.FC<{ color?: string; size?: number }> = ({ color = 'var(--color-accent-neon)', size = 8 }) => (
   <span className="live-dot" style={{ '--dot-color': color, '--dot-size': `${size}px` } as React.CSSProperties} />
 );
 
 /** 折线迷你图（平滑贝塞尔曲线版） */
 export const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; height?: number }> = ({
-  pts, color = '#00e5ff', width = 160, height = 44,
+  pts, color = 'var(--color-accent-cyan-bright)', width = 160, height = 44,
 }) => {
   if (!pts || !pts.length) return null;
   const safe = pts.map(v => (typeof v === 'number' && isFinite(v) ? v : 0));

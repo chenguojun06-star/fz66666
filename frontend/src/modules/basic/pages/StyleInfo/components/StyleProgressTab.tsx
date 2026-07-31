@@ -133,7 +133,7 @@ const StageNode: React.FC<{
         }}>
           <div style={{
             width: '100%', height: 2,
-            background: isCompleted ? 'var(--color-success)' : 'var(--color-border, #e8e8e8)',
+            background: isCompleted ? 'var(--color-success)' : 'var(--color-border, var(--color-border-light))',
             borderRadius: 1,
           }} />
         </div>

@@ -2,8 +2,8 @@ import React from 'react';
 import { Tag } from 'antd';
 
 export const FACTORY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; fg: string }> = {
-  INTERNAL: { label: '内部', color: 'blue', bg: '#edf3fb', fg: '#6283a8' },
-  EXTERNAL: { label: '外发', color: 'purple', bg: '#f2edf9', fg: '#8c78b1' },
+  INTERNAL: { label: '内部', color: 'blue', bg: 'var(--color-blue-50)', fg: 'var(--color-slate-500)' },
+  EXTERNAL: { label: '外发', color: 'purple', bg: 'var(--color-violet-50)', fg: 'var(--color-violet-400)' },
 };
 
 export const getFactoryTypeConfig = (factoryType: string | undefined | null) => {

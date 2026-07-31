@@ -315,7 +315,7 @@ export default function SubProcessRemapModal({
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 12, padding: '8px 12px',
-        background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 6,
+        background: 'var(--color-bg-highlight)', border: '1px solid var(--color-blue-200)', borderRadius: 6,
       }}>
         <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>
           开启右侧开关后可自定义子工序，仅影响本订单扫码节点

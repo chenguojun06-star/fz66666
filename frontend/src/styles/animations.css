@@ -323,7 +323,7 @@
   background: linear-gradient(
     90deg,
     var(--color-border-light) 25%,
-    #e6e6e6 37%,
+    var(--color-slate-200) 37%,
     var(--color-border-light) 63%
   );
   background-size: 600px 100%;
@@ -336,9 +336,9 @@
 [data-theme="dark"] .skeleton-row {
   background: linear-gradient(
     90deg,
-    #2a2a2a 25%,
-    #333333 37%,
-    #2a2a2a 63%
+    var(--color-zinc-800) 25%,
+    var(--color-gray-800) 37%,
+    var(--color-zinc-800) 63%
   );
   background-size: 600px 100%;
 }
@@ -443,7 +443,7 @@
   [data-theme="dark"] .skeleton-shimmer,
   [data-theme="dark"] .skeleton-row {
     animation: none;
-    background: #2a2a2a;
+    background: var(--color-zinc-800);
   }
 
   .ant-message-notice-wrapper {

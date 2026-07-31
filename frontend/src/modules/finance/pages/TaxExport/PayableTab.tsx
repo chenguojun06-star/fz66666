@@ -134,8 +134,8 @@ const PayableTab: React.FC = () => {
   return (
     <>
       <style>{`
-        .ap-row-overdue td { background: #FFF1F0 !important; }
-        .ap-row-warning td { background: #FFFBE6 !important; }
+        .ap-row-overdue td { background: var(--color-bg-base)1F0 !important; }
+        .ap-row-warning td { background: var(--color-bg-base)BE6 !important; }
       `}</style>
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={6}><Card><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>

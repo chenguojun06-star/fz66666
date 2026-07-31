@@ -68,7 +68,7 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
 
       {isFabric && (
         <div style={{
-          borderTop: '1px solid var(--neutral-border, #e8e8e8)',
+          borderTop: '1px solid var(--neutral-border, var(--color-border-light))',
           paddingTop: 8,
           marginTop: 4,
         }}>

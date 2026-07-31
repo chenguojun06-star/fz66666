@@ -38,7 +38,7 @@ const AmountDetailModal: React.FC<AmountDetailModalProps> = ({
             <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(target.amount)}</span>
           </Descriptions.Item>
           <Descriptions.Item label="已付金额">
-            <span style={{ color: '#389e0d' }}>{formatMoney(target.paidAmount || 0)}</span>
+            <span style={{ color: 'var(--color-success)' }}>{formatMoney(target.paidAmount || 0)}</span>
           </Descriptions.Item>
           <Descriptions.Item label="描述" span={2}>{target.description || '-'}</Descriptions.Item>
           <Descriptions.Item label="创建时间" span={2}>{formatDateTime(target.createTime)}</Descriptions.Item>

@@ -24,7 +24,7 @@ export const resolveAssetMeta = (
     return { label: '参考图', color: 'var(--color-text-tertiary)' };
   }
   if (String(img.bizType || '').startsWith('color_image::')) {
-    return { label: '颜色图', color: '#2563eb' };
+    return { label: '颜色图', color: 'var(--color-primary-dark)' };
   }
   if (isNewMode && index === currentIndex) {
     return { label: '主图', color: 'var(--color-warning)' };
@@ -55,7 +55,7 @@ export const computeParseStatusColor = (
   autoParseError: string | null
 ): string => {
   if (parsing) return 'var(--color-warning)';
-  if (parseSuccessConfidence !== null) return 'var(--color-success, #16a34a)';
+  if (parseSuccessConfidence !== null) return 'var(--color-success, var(--color-green-600))';
   if (autoParseError) return 'var(--color-warning)';
   return 'var(--color-text-tertiary)';
 };

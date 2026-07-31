@@ -241,7 +241,7 @@ const MaintenanceCenter: React.FC = () => {
                     gap: 12,
                     marginBottom: 12,
                     padding: '10px 12px',
-                    border: '1px solid var(--color-border-light, #e8edf4)',
+                    border: '1px solid var(--color-border-light, var(--color-slate-200))',
                     borderRadius: 6,
                     background: 'var(--color-bg-base, var(--color-bg-base))',
                   }}>

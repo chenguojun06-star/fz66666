@@ -45,7 +45,7 @@ const QuotationSecondarySection: React.FC<Props> = ({ secondaryProcessList }) =>
 
       <div style={{
         display: 'flex', justifyContent: 'flex-end', padding: '6px 10px',
-        border: '1px solid var(--color-border, #e8e8e8)', borderTop: '1px solid var(--color-border, #e8e8e8)',
+        border: '1px solid var(--color-border, var(--color-border-light))', borderTop: '1px solid var(--color-border, var(--color-border-light))',
         background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)',
       }}>
         小计：{formatMoney(secondaryTotal)}

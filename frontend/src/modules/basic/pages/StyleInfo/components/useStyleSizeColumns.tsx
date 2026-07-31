@@ -273,7 +273,7 @@ export function useStyleSizeColumns({
           }).join('；');
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 14, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
               {editableMode ? (
                 <Button onClick={() => openGradingConfig(record)}>
                   配置跳码区

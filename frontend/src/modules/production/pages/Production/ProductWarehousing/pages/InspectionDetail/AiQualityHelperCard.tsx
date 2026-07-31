@@ -15,7 +15,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
   return (
     <Card
      
-      style={{ background: 'var(--color-bg-base)', border: '1px solid #d6e4ff' }}
+      style={{ background: 'var(--color-bg-base)', border: '1px solid var(--color-blue-100)' }}
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <XiaoyunCloudAvatar size={18} active />
@@ -47,7 +47,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
           {aiSuggestion.urgentTip && (
             <div style={{
               padding: '6px 12px', background: 'var(--status-warning-bg)',
-              border: '1px solid #ffd591', borderRadius: 6,
+              border: '1px solid var(--status-warning-border)', borderRadius: 6,
               marginBottom: 10, color: 'var(--color-warning-deep)', fontWeight: 600, fontSize: 14,
             }}>
               {aiSuggestion.urgentTip}

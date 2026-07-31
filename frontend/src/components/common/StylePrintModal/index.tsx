@@ -86,7 +86,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             borderRadius: 8, border: '1px solid var(--status-processing-border)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
           }}>
-            <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>
+            <div style={{ fontWeight: 600, color: 'var(--color-primary-darker)' }}> 打印预览</div>
             <Space>
               <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
               <Button type="primary" onClick={() => void handlePrint()} loading={printLoading}>打印</Button>
@@ -121,15 +121,15 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           >
             <style>{`
               .print-section { margin-bottom: 16px; }
-              .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.75px solid #ccc; }
+              .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.75px solid var(--color-zinc-300); }
               /* 统一打印表格样式 */
               .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
-              .pt th, .pt td { border: 0.5px solid #d0d0d0; padding: 5px 8px; vertical-align: middle; }
+              .pt th, .pt td { border: 0.5px solid var(--color-zinc-300); padding: 5px 8px; vertical-align: middle; }
               .pt th { background: var(--color-bg-subtle); font-weight: 600; text-align: center; white-space: nowrap; }
-              .pt td { color: #333; }
-              .pt .label-cell { background: var(--color-bg-subtle); font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
+              .pt td { color: var(--color-gray-800); }
+              .pt .label-cell { background: var(--color-bg-subtle); font-weight: 500; color: var(--color-gray-800); width: 100px; white-space: nowrap; }
               .pt .total-row td { background: var(--color-bg-subtle); font-weight: 700; }
-              .pt .highlight-cell { font-weight: 700; color: #1d39c4; }
+              .pt .highlight-cell { font-weight: 700; color: var(--color-primary-darker); }
             `}</style>
 
             {/* 基本信息 */}

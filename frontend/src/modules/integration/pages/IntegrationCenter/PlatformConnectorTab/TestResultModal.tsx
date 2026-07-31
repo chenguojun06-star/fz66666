@@ -31,16 +31,16 @@ const TestResultModal: React.FC<TestResultModalProps> = ({ open, testResult, act
               description={testResult.credentialGuide} />
           )}
           {testResult.webhookUrl && (
-            <div style={{ background: '#f0f9ff', border: '1px solid #91caff', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
+            <div style={{ background: 'var(--color-slate-50)', border: '1px solid var(--status-processing-border)', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}><CheckCircleOutlined /> 下一步：配置回调地址</div>
               <div style={{ fontSize: 14, marginBottom: 8 }}>复制下方地址，粘贴到 {activePlatform?.name} 平台的 Webhook 设置中：</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <code style={{ flex: 1, background: '#fff', border: '1px solid #d9d9d9', padding: '8px 12px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
+                <code style={{ flex: 1, background: 'var(--color-bg-base)', border: '1px solid var(--color-border-antd)', padding: '8px 12px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
                   {window.location.origin}{testResult.webhookUrl}
                 </code>
                 <Button type="primary" size="small" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}${testResult.webhookUrl}`); message.success('已复制到剪贴板'); }}>一键复制</Button>
               </div>
-              <div style={{ fontSize: 13, color: '#8c8c8c' }}>配置后，平台订单会自动推送到本系统，无需手动同步</div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>配置后，平台订单会自动推送到本系统，无需手动同步</div>
             </div>
           )}
           {testResult.success && testResult.supportedActions && (

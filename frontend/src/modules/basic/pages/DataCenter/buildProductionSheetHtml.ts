@@ -93,7 +93,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
     if (s === 'PASS')   return '<span style="color:var(--color-success);font-weight:600"> 通过</span>';
     if (s === 'REWORK') return '<span style="color:var(--color-warning);font-weight:600"> 需修改</span>';
     if (s === 'REJECT') return '<span style="color:var(--color-danger);font-weight:600"> 不通过</span>';
-    return '<span style="color:#aaa">未审核</span>';
+    return '<span style="color:var(--color-text-quaternary)">未审核</span>';
   };
   const sampleReviewHtml = style.sampleReviewStatus ? `
     <div class="section">
@@ -116,7 +116,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
   <title>生产制单-${esc(style.styleNo || '')}</title>
   <style>
     @page { margin: 5mm; }
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #111; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: var(--color-black); }
     .page { max-width: 980px; margin: 0 auto; padding: 0; }
     .header { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
     .cover { width: 220px; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
@@ -130,7 +130,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
     .section { margin-top: 18px; }
     .section-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-    th, td { border: 1px solid #d1d5db; padding: 6px 8px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; word-break: break-word; }
+    th, td { border: 1px solid var(--color-border); padding: 6px 8px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; word-break: break-word; }
     th { background: rgba(0,0,0,0.03); text-align: center; }
     .no { width: 60px; text-align: center; }
     .req { white-space: pre-wrap; text-align: left; }

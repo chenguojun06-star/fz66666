@@ -3,8 +3,8 @@ export const STYLE_INFO_LIST_REFRESH_KEY = 'style-info-list:refresh-needed';
 export const getRecordSwitchButtonStyle = (selected: boolean) => {
   return {
     background: 'var(--color-bg-base)',
-    borderColor: selected ? '#cbd5e1' : '#e2e8f0',
-    color: selected ? '#0f172a' : '#475569',
+    borderColor: selected ? 'var(--color-slate-300)' : 'var(--color-slate-200)',
+    color: selected ? 'var(--color-slate-900)' : 'var(--color-slate-600)',
     boxShadow: selected ? '0 2px 8px rgba(15, 23, 42, 0.08)' : 'none',
   };
 };

@@ -103,7 +103,7 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
 
     const stageQuantities: PieSegment[] = [
       { key: 'pending', label: '待下单', color: 'var(--color-text-tertiary)', count: pendingCount },
-      { key: 'production', label: '生产中', color: '#3b82f6', count: productionCount },
+      { key: 'production', label: '生产中', color: 'var(--color-secondary)', count: productionCount },
       { key: 'completed', label: '已完成', color: 'var(--color-accent-emerald)', count: completedCount },
     ];
 

@@ -45,7 +45,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
             <Title level={2} className="login-title">
               云裳智链
             </Title>
-            <p style={{ textAlign: 'center', color: '#5a6678', marginTop: 8, fontSize: 13 }}>
+            <p style={{ textAlign: 'center', color: 'var(--color-slate-600)', marginTop: 8, fontSize: 13 }}>
               {isWorkerInvite
                 ? isFactoryInvite
                   ? '外发工厂工人注册'

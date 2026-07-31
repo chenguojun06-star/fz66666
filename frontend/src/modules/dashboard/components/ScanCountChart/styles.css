@@ -12,7 +12,7 @@
 .scan-count-chart-card .ant-card-head-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-bg-dark);
 }
 
 .scan-count-chart-card .ant-card-body {

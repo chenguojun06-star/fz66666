@@ -28,7 +28,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ imageStyles, activeIdx, setActive
 
   return (
     <>
-      <div className="cp-group-title"><PictureOutlined style={{ color: '#a855f7' }} /> 相似款式（{imageStyles.length}）</div>
+      <div className="cp-group-title"><PictureOutlined style={{ color: 'var(--color-purple-500)' }} /> 相似款式（{imageStyles.length}）</div>
       <div className="cp-grid-wrap">
         {imageStyles.map((it, i) => {
           const s = it.data as ImageStyleData;
@@ -55,7 +55,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ imageStyles, activeIdx, setActive
                     style={{
                       padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
                       background: isHigh ? 'rgba(34,197,94,0.12)' : 'rgba(14,165,233,0.12)',
-                      color: isHigh ? '#15803d' : '#0369a1',
+                      color: isHigh ? 'var(--color-green-700)' : 'var(--color-sky-700)',
                     }}
                   >
                     {Math.round(sim)}%

@@ -82,7 +82,7 @@ const WashLabelPreview: React.FC<Props> = ({
   const iframeStyle: React.CSSProperties = {
     width: previewW,
     height: previewH,
-    border: '1px solid #ddd',
+    border: '1px solid var(--color-zinc-300)',
     borderRadius: 4,
     boxShadow: '2px 2px 8px rgba(0,0,0,0.08)',
     pointerEvents: 'none',
@@ -126,7 +126,7 @@ const WashLabelPreview: React.FC<Props> = ({
           <div style={{
             marginTop: 8,
             fontSize: 14,
-            color: 'var(--color-text-tertiary, #8c8c8c)',
+            color: 'var(--color-text-tertiary, var(--color-text-muted))',
             lineHeight: 1.8,
           }}>
             <div>预览尺寸：{width}×{height}mm × {sections.length}张</div>
@@ -151,7 +151,7 @@ const WashLabelPreview: React.FC<Props> = ({
           <div style={{
             marginLeft: 16,
             fontSize: 14,
-            color: 'var(--color-text-tertiary, #8c8c8c)',
+            color: 'var(--color-text-tertiary, var(--color-text-muted))',
             lineHeight: 1.8,
             alignSelf: 'center',
           }}>

@@ -303,24 +303,24 @@ export const buildPurchaseSheetHtml = (
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${escapeHtml(purchaseNo || orderNo || '采购单')}</title>
         <style>
-          body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif;margin:20px;color:#111}
+          body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif;margin:20px;color:var(--color-black)}
           .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
           .title{font-size:18px;font-weight:700}
           .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;margin-top:10px}
-          .kv{font-size:12px;color:#555}
-          .kv b{display:block;color:#111;margin-top:2px;font-size:13px}
+          .kv{font-size:12px;color:var(--color-zinc-600)}
+          .kv b{display:block;color:var(--color-black);margin-top:2px;font-size:13px}
           .block{margin-top:14px}
           .size-table{border-collapse:collapse;font-size:12px}
-          .size-table th,.size-table td{border:1px solid #d1d5db;padding:6px 8px;white-space:nowrap;vertical-align:middle;text-align:center}
+          .size-table th,.size-table td{border:1px solid var(--color-border);padding:6px 8px;white-space:nowrap;vertical-align:middle;text-align:center}
           .size-table .row-head{background:var(--color-bg-container)}
           .size-table .total-cell{min-width:140px;text-align:center;background:var(--color-bg-container)}
           .section{margin-top:18px}
           .section h3{margin:0 0 8px 0;font-size:14px}
           .data-table{width:100%;border-collapse:collapse;font-size:12px}
-          .data-table th,.data-table td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:middle;text-align:center}
+          .data-table th,.data-table td{border:1px solid var(--color-border);padding:6px 8px;vertical-align:middle;text-align:center}
           .data-table th{background:var(--color-bg-container);text-align:center}
           .data-table .num{text-align:right;white-space:nowrap}
-          .empty{text-align:center;color:#999}
+          .empty{text-align:center;color:var(--color-gray-label)}
           .actions{display:flex;gap:8px;justify-content:flex-end}
           .ant-btn{font-family:inherit}
           .cover-img{width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border);display:block}

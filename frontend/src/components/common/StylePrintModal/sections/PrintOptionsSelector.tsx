@@ -36,7 +36,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
   return (
     <>
       {/* 打印选项 */}
-      <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0f2f5', borderRadius: 12, border: '1px solid var(--color-border)' }}>
+      <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-page)', borderRadius: 12, border: '1px solid var(--color-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
@@ -100,7 +100,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
       </div>
       {/* 标签打印选项 */}
       {labelPrintMode && (
-        <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-base)7E6', borderRadius: 12, border: '1px solid #ffd591' }}>
+        <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-base)7E6', borderRadius: 12, border: '1px solid var(--status-warning-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 600, color: 'var(--color-warning-deep)', whiteSpace: 'nowrap' }}>标签打印：</span>
             <Radio.Group value={labelSize} onChange={e => onLabelSizeChange(e.target.value)}>
@@ -114,7 +114,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
             </Button>
           </div>
           {labelItems.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#8c6d1f' }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-amber-700)' }}>
               检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
               {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
                 ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`

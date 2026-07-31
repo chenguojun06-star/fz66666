@@ -96,13 +96,13 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <Text strong style={{ color: 'var(--color-text-primary, #333)' }}>{item.orderNo}</Text>
+              <Text strong style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{item.orderNo}</Text>
               <Tag color={cfg.color} style={{ color: cfg.color, borderColor: cfg.color, background: `${cfg.color}1A` }}>
                 <span style={{ marginRight: 4 }}>{cfg.icon}</span>
                 {cfg.label}
               </Tag>
-              <Text style={{ color: 'var(--color-text-secondary, #666)' }}>{item.styleName}</Text>
-              <Text style={{ color: 'var(--color-text-tertiary, #999)' }}>客户：{item.customerName}</Text>
+              <Text style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>{item.styleName}</Text>
+              <Text style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>客户：{item.customerName}</Text>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Tooltip title={`风险评分 ${item.riskScore ?? '-'}`}>
@@ -119,13 +119,13 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--color-text-tertiary, #999)' }}>
+          <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
             <span>交期：{item.deliveryDate}</span>
             <span>预计完成：{item.predictedCompletionDate}</span>
           </div>
 
           <div style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--color-text-secondary, #666)', marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))', marginBottom: 4 }}>
               <span>当前生产进度</span>
               <span>{progress.toFixed(1)}%</span>
             </div>
@@ -139,7 +139,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
           </div>
 
           {item.reason ? (
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
               <Text type="secondary">原因：{item.reason}</Text>
             </div>
           ) : null}
@@ -161,7 +161,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
 
     if (error) {
       return (
-        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, #666)' }}>
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
           <ExclamationCircleFilled style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div style={{ marginTop: 8 }}>{error}</div>
           <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
@@ -173,7 +173,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
 
     if (sortedItems.length === 0) {
       return (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, #999)' }}>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
           <CheckCircleFilled style={{ fontSize: 32, color: 'var(--color-success, var(--color-success))' }} />
           <div style={{ marginTop: 8 }}>暂无高风险订单</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>生产进度正常</div>
@@ -198,7 +198,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
         <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
           <span style={{ color: 'var(--color-error, var(--color-danger))' }}>●</span>
           <span style={{ fontWeight: 600 }}>高风险订单 Top {topN}</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #999)', marginLeft: 4 }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))', marginLeft: 4 }}>
             {collapsed ? '点击展开' : '点击收起'}
           </span>
         </Space>
@@ -209,7 +209,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
           icon={<ReloadOutlined />}
           onClick={fetchData}
           loading={loading}
-          style={{ color: 'var(--color-text-secondary, #666)' }}
+          style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}
         >
           刷新
         </Button>
@@ -218,7 +218,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     >
       {!collapsed && (
         <>
-          <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, #666)', fontWeight: 500 }}>
+          <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))', fontWeight: 500 }}>
             按风险等级与评分排序
           </Title>
           {renderBody()}

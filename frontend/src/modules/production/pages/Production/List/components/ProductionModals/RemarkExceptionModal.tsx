@@ -22,7 +22,7 @@ const RemarkExceptionModal: React.FC<RemarkExceptionModalProps> = ({
 }) => {
   return (
     <SmallModal
-      title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
+      title={<><ExclamationCircleOutlined style={{ color: 'var(--color-warning)', marginRight: 8 }} />备注异常</>}
       open={visible}
       onCancel={onCancel}
       onOk={onOk}

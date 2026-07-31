@@ -105,7 +105,7 @@
   width: 12%;
   height: 18%;
   border-radius: 999px;
-  background: #3f5d95;
+  background: var(--color-ocean-light);
   z-index: 2;
   animation: eyeBlink 6.8s ease-in-out infinite;
   overflow: hidden;
@@ -120,7 +120,7 @@
 }
 
 .loading .eye {
-  background: #3f5d95;
+  background: var(--color-ocean-light);
   border-radius: 999px;
   animation: eyeBlink 2.2s ease-in-out infinite;
 }
@@ -148,7 +148,7 @@
   z-index: 2;
   width: 26%;
   height: 13%;
-  border-bottom: 4px solid #597ac0;
+  border-bottom: 4px solid var(--color-blue-400);
   border-radius: 0 0 999px 999px;
   animation: mouthTalk 3.6s ease-in-out infinite;
 }
@@ -157,7 +157,7 @@
   width: 16%;
   height: 10%;
   border: none;
-  border-bottom: 4px solid #597ac0;
+  border-bottom: 4px solid var(--color-blue-400);
   border-radius: 0 0 999px 999px;
   animation: mouthTalk 1.6s ease-in-out infinite;
 }

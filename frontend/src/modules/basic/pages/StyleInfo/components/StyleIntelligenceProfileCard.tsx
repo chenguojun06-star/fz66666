@@ -52,7 +52,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
         marginBottom: 16,
         borderRadius: 12,
         border: '1px solid rgba(24,144,255,0.15)',
-        background: '#f7fbff',
+        background: 'var(--color-slate-50)',
       }}
       styles={{ body: { padding: 0 } }}
     >

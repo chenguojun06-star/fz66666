@@ -44,7 +44,7 @@
 }
 
 .bubbleUser {
-  background: #1890ff;
+  background: var(--color-info);
   color: var(--color-bg-base);
   border-top-right-radius: 2px;
 }
@@ -79,10 +79,10 @@
   align-items: center;
   padding: 7px 10px;
   background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
-  border: 1px solid #ffd591;
+  border: 1px solid var(--status-warning-border);
   border-radius: 10px;
   font-size: 14px;
-  color: #874d00;
+  color: var(--color-amber-700);
   cursor: pointer;
   transition: all 0.2s;
   gap: 6px;
@@ -91,7 +91,7 @@
 .pendingItem:hover {
   transform: translateX(2px);
   box-shadow: 0 1px 4px rgba(250, 173, 20, 0.3);
-  border-color: #ffc53d;
+  border-color: var(--color-amber-300);
 }
 
 .pendingDismissBtn {
@@ -100,7 +100,7 @@
   right: 6px;
   background: none;
   border: none;
-  color: #874d00;
+  color: var(--color-amber-700);
   opacity: 0;
   cursor: pointer;
   font-size: 15px;
@@ -122,7 +122,7 @@
 .pendingMoreBtn {
   text-align: center;
   font-size: 14px;
-  color: #1890ff;
+  color: var(--color-info);
   cursor: pointer;
   padding: 6px 0 2px;
   font-weight: 500;
@@ -130,7 +130,7 @@
 }
 
 .pendingMoreBtn:hover {
-  color: #096dd9;
+  color: var(--color-primary);
   text-decoration: underline;
 }
 
@@ -141,7 +141,7 @@
   border-radius: 16px;
   font-size: 14px;
   line-height: 1.3;
-  color: #1890ff;
+  color: var(--color-info);
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
@@ -164,7 +164,7 @@
 
 .reportDownloadLabel {
   font-size: 14px;
-  color: #389e0d;
+  color: var(--color-success);
   font-weight: 600;
   margin-bottom: 8px;
 }
@@ -185,14 +185,14 @@
   border: 1px solid var(--status-processing-border);
   border-radius: 8px;
   font-size: 15px;
-  color: #1890ff;
+  color: var(--color-info);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .reportDownloadBtn:hover:not(:disabled) {
   background: var(--status-processing-bg);
-  border-color: #1890ff;
+  border-color: var(--color-info);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
 }
@@ -207,7 +207,7 @@
   padding-top: 8px;
   border-top: 1px dashed rgba(24, 144, 255, 0.2);
   font-size: 14px;
-  color: #1890ff;
+  color: var(--color-info);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -238,7 +238,7 @@
 
 .recommendPill {
   font-size: 15px;
-  color: #1890ff;
+  color: var(--color-info);
   background: rgba(24, 144, 255, 0.05);
   border: 1px solid rgba(24, 144, 255, 0.2);
   padding: 6px 12px;
@@ -250,7 +250,7 @@
 
 .recommendPill:hover {
   background: rgba(24, 144, 255, 0.1);
-  border-color: #1890ff;
+  border-color: var(--color-info);
 }
 
 .typingIndicator {
@@ -259,7 +259,7 @@
   padding: 4px 8px;
 }
 .typingText {
-  color: #5c6b8a;
+  color: var(--color-slate-600);
   font-size: 14px;
   line-height: 1.6;
   padding: 2px 0;
@@ -267,7 +267,7 @@
 .typingDot {
   width: 6px;
   height: 6px;
-  background: #bae0ff;
+  background: var(--color-blue-100);
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out both;
 }
@@ -275,7 +275,7 @@
 .typingDot:nth-child(2) { animation-delay: -0.16s; }
 @keyframes typing {
   0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); background: #1890ff; }
+  40% { transform: scale(1); background: var(--color-info); }
 }
 
 .speechBtn {
@@ -288,7 +288,7 @@
   margin-left: 8px;
 }
 .speechBtn:hover {
-  color: #1890ff;
+  color: var(--color-info);
 }
 
 .chartsWrapper {
@@ -320,7 +320,7 @@
 }
 .adviceTitle {
   font-weight: bold;
-  color: #007f8c;
+  color: var(--color-cyan-700);
   margin-bottom: 8px;
   font-size: 14px;
 }
@@ -354,7 +354,7 @@
 .adviceActionBtnPrimary {
   background: rgba(0, 229, 255, 0.08);
   border-color: rgba(0, 229, 255, 0.25);
-  color: #007f8c;
+  color: var(--color-cyan-700);
 }
 .adviceActionBtnPrimary:hover {
   background: rgba(0, 229, 255, 0.15);
@@ -372,10 +372,10 @@
 :root[data-theme="dark"] .aiBubble {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
-  color: #e0e0e0;
+  color: var(--color-border-light);
 }
 :root[data-theme="dark"] .userBubble {
-  background: #6ba3ff;
+  background: var(--color-primary-light);
 }
 :root[data-theme="dark"] .bubbleTime {
   color: rgba(255, 255, 255, 0.3);
@@ -390,14 +390,14 @@
   color: rgba(255, 255, 255, 0.55);
 }
 :root[data-theme="dark"] .suggestionChip:hover {
-  border-color: #6ba3ff;
-  color: #6ba3ff;
+  border-color: var(--color-primary-light);
+  color: var(--color-primary-light);
   background: rgba(107, 163, 255, 0.08);
 }
 :root[data-theme="dark"] .actionChip {
   background: rgba(45, 127, 249, 0.1);
   border-color: rgba(45, 127, 249, 0.25);
-  color: #6ba3ff;
+  color: var(--color-primary-light);
 }
 :root[data-theme="dark"] .actionChip:hover {
   background: rgba(45, 127, 249, 0.18);
@@ -406,7 +406,7 @@
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.08);
 }
-:root[data-theme="dark"] .adviceTitle { color: #e0e0e0; }
+:root[data-theme="dark"] .adviceTitle { color: var(--color-border-light); }
 :root[data-theme="dark"] .adviceSummary { color: rgba(255, 255, 255, 0.55); }
 :root[data-theme="dark"] .reasoningItem { color: rgba(255, 255, 255, 0.45); }
 :root[data-theme="dark"] .adviceActions {

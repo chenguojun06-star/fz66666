@@ -11,7 +11,7 @@
   justify-content: center;
   gap: 8px;
   padding: 32px 0;
-  color: var(--text-secondary, #999);
+  color: var(--text-secondary, var(--color-gray-label));
 }
 
 .bg-task-panel-empty {
@@ -23,13 +23,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  border-bottom: 1px solid var(--border-color, var(--color-border-light));
 }
 
 .bg-task-panel-title {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary, #333);
+  color: var(--text-primary, var(--color-gray-800));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -47,7 +47,7 @@
 
 .bg-task-item {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color-light, #f5f5f5);
+  border-bottom: 1px solid var(--border-color-light, var(--color-bg-subtle));
   transition: background-color 0.2s;
 }
 
@@ -71,7 +71,7 @@
   flex: 1;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary, #333);
+  color: var(--text-primary, var(--color-gray-800));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -95,7 +95,7 @@
 
 .bg-task-item-type {
   font-size: 12px;
-  color: var(--text-tertiary, #bbb);
+  color: var(--text-tertiary, var(--color-text-quaternary));
 }
 
 .bg-task-item-progress {
@@ -106,7 +106,7 @@
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: var(--text-secondary, #999);
+  color: var(--text-secondary, var(--color-gray-label));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -116,7 +116,7 @@
   margin-bottom: 8px;
   padding: 6px 8px;
   font-size: 12px;
-  color: var(--error-color, #ff4d4f);
+  color: var(--error-color, var(--color-danger));
   background-color: var(--error-bg, var(--status-error-bg));
   border-radius: 4px;
   overflow: hidden;
@@ -132,5 +132,5 @@
 
 .bg-task-item-time {
   font-size: 12px;
-  color: var(--text-tertiary, #bbb);
+  color: var(--text-tertiary, var(--color-text-quaternary));
 }

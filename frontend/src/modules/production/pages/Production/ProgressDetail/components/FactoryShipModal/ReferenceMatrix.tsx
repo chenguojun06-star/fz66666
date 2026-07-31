@@ -40,7 +40,7 @@ const ReferenceMatrix: React.FC<ReferenceMatrixProps> = ({ orderRecord, detailSu
       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
         下单与已发明细参考
         <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 8 }}>
-          （格式：下单数 / <span style={{ color: '#096dd9' }}>已发数</span>）
+          （格式：下单数 / <span style={{ color: 'var(--color-primary)' }}>已发数</span>）
         </span>
       </div>
       <div style={{ overflowX: 'auto', marginBottom: 12 }}>
@@ -67,7 +67,7 @@ const ReferenceMatrix: React.FC<ReferenceMatrixProps> = ({ orderRecord, detailSu
                       <td key={sz} style={tdStyle}>
                         {ordered > 0 ? ordered : '-'}
                         {shipped > 0 && (
-                          <span style={{ color: '#096dd9', marginLeft: 3 }}>/{shipped}</span>
+                          <span style={{ color: 'var(--color-primary)', marginLeft: 3 }}>/{shipped}</span>
                         )}
                       </td>
                     );

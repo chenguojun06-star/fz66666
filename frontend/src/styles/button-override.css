@@ -34,8 +34,8 @@
 
 .ant-btn-primary:not(.ant-btn-background-ghost):hover {
   background: rgba(45, 127, 249, 0.06) !important;
-  border-color: var(--color-primary-dark, #1a6ae5) !important;
-  color: var(--color-primary-dark, #1a6ae5) !important;
+  border-color: var(--color-primary-dark, var(--color-primary)) !important;
+  color: var(--color-primary-dark, var(--color-primary)) !important;
   box-shadow: none !important;
 }
 
@@ -67,8 +67,8 @@
 }
 
 .ant-btn-default:active {
-  border-color: var(--color-primary-dark, #1a6ae5) !important;
-  color: var(--color-primary-dark, #1a6ae5) !important;
+  border-color: var(--color-primary-dark, var(--color-primary)) !important;
+  color: var(--color-primary-dark, var(--color-primary)) !important;
 }
 
 /* ========== 危险按钮 - 描边红色 ========== */
@@ -102,7 +102,7 @@
 }
 
 .ant-btn-link:hover {
-  color: var(--color-primary-dark, #1a6ae5) !important;
+  color: var(--color-primary-dark, var(--color-primary)) !important;
 }
 
 /* ========== 幽灵按钮 ========== */

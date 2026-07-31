@@ -2,14 +2,14 @@ import { menuConfig } from '@/routeConfig';
 import type { MenuEntry } from './types';
 
 export const STATUS_COLOR: Record<string, string> = {
-  pending:    '#8b5cf6',
-  production: '#0ea5e9',
-  completed:  '#22c55e',
-  delayed:    '#f59e0b',
+  pending:    'var(--color-violet-500)',
+  production: 'var(--color-sky-500)',
+  completed:  'var(--color-success)',
+  delayed:    'var(--color-warning)',
   scrapped:   'var(--color-text-secondary)',
   cancelled:  'var(--color-text-secondary)',
   canceled:   'var(--color-text-secondary)',
-  paused:     '#f59e0b',
+  paused:     'var(--color-warning)',
   returned:   'var(--color-warning)',
 };
 

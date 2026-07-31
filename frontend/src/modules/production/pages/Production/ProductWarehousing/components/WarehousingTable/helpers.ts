@@ -15,10 +15,10 @@ export async function printWarehousingQr(warehousingNo: string, orderNo?: string
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>入库二维码</title>
     <style>
       body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Heiti SC', 'Songti SC', 'Hiragino Sans GB', serif; }
-      .qr-wrap { text-align: center; border: 1px solid #ddd; padding: 16px; border-radius: 8px; width: 240px; }
+      .qr-wrap { text-align: center; border: 1px solid var(--color-zinc-300); padding: 16px; border-radius: 8px; width: 240px; }
       img { display: block; }
-      .no { font-size: 13px; color: #333; margin-top: 8px; word-break: break-all; }
-      .order { font-size: 13px; color: #888; margin-top: 4px; }
+      .no { font-size: 13px; color: var(--color-gray-800); margin-top: 8px; word-break: break-all; }
+      .order { font-size: 13px; color: var(--color-text-muted); margin-top: 4px; }
       @media print { body { min-height: unset; } }
     </style>
   </head><body><div class="qr-wrap">

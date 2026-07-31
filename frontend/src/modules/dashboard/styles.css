@@ -84,7 +84,7 @@
 
 .activity-time {
   font-size: var(--font-size-sm);
-  color: var(--neutral-text-light, #8c8c8c);
+  color: var(--neutral-text-light, var(--color-text-muted));
 }
 
 .entry-label {

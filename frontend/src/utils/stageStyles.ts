@@ -6,10 +6,10 @@
  */
 
 /** 主色：charcoal-slate，用于节点标识、文字、边框强调 */
-export const STAGE_ACCENT = '#4b5563';
+export const STAGE_ACCENT = 'var(--color-slate-600)';
 
 /** 浅底色：极淡灰，用于 header/card 背景 */
-export const STAGE_ACCENT_LIGHT = '#f7f8f9';
+export const STAGE_ACCENT_LIGHT = 'var(--color-slate-50)';
 
 /** 边框色：浅灰，用于分隔线、边框 */
 export const STAGE_BORDER = 'var(--color-border)';

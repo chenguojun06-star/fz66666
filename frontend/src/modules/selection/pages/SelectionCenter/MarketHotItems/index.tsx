@@ -168,7 +168,7 @@ export default function MarketHotItems({ onAdded }: MarketHotItemsProps) {
               return (
                 <div key={`${section.keyword}-${sectionIndex}`}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <GoogleOutlined style={{ color: '#4285f4' }} />
+                    <GoogleOutlined style={{ color: 'var(--color-blue-500)' }} />
                     <Text type="secondary" style={{ fontSize: 14 }}>
                       「{section.keyword}」共 {filterProductsBySource(section.items || []).length || 0} 件真实商品
                       {section.sourceCount ? <> · 覆盖 {section.sourceCount} 个外部渠道</> : null}

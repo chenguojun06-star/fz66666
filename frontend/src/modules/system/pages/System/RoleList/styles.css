@@ -20,7 +20,7 @@
   font-weight: 600;
   font-size: 14px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
   flex-shrink: 0;
 }
 
@@ -54,12 +54,12 @@
 }
 
 .role-list-item-active {
-  background: #e6f4ff;
-  border: 1px solid #91caff;
+  background: var(--status-processing-bg);
+  border: 1px solid var(--status-processing-border);
 }
 
 .role-list-item-active .role-list-item-name {
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -104,7 +104,7 @@
 .role-perm-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
   padding: 16px 20px 0;
   flex-shrink: 0;
 }
@@ -129,13 +129,13 @@
 
 .role-perm-required-label::before {
   content: '*';
-  color: #ff4d4f;
+  color: var(--color-danger);
   margin-right: 4px;
 }
 
 .role-perm-required-label {
   font-size: 14px;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
   font-weight: 500;
 }
 
@@ -169,9 +169,9 @@
 /* 截图风格权限矩阵 */
 .perm-matrix-container {
   margin: 0 20px 20px;
-  border: 1px solid var(--color-border-light, #e8e8e8);
+  border: 1px solid var(--color-border-light, var(--color-border-light));
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-bg-base);
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -181,13 +181,13 @@
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border-light, #e8e8e8);
-  background: var(--color-bg-base, #fff);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
+  background: var(--color-bg-base, var(--color-bg-base));
 }
 
 .perm-matrix-section {
-  border-bottom: 1px solid var(--color-border-light, #e8e8e8);
-  background: #f7f8fa;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
+  background: var(--color-slate-50);
 }
 
 .perm-matrix-section:last-child {
@@ -198,11 +198,11 @@
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  background: #f0f2f5;
-  border-bottom: 1px solid var(--color-border-light, #e8e8e8);
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   font-weight: 600;
   font-size: 14px;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
 }
 
 .perm-matrix-section-body {
@@ -223,7 +223,7 @@
   top: 12px;
   font-weight: 600;
   font-size: 14px;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
 }
 
 .perm-matrix-item {
@@ -234,11 +234,11 @@
 
 .perm-matrix-item .ant-checkbox-wrapper {
   font-size: 13px;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
 }
 
 .perm-matrix-item .ant-checkbox-wrapper-checked {
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -254,7 +254,7 @@
   display: flex;
   align-items: center;
   padding: 8px 20px;
-  background: var(--color-bg-highlight, #f8f9fa);
+  background: var(--color-bg-highlight, var(--color-slate-50));
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   font-weight: 600;
   font-size: 14px;
@@ -267,7 +267,7 @@
 
 .perm-module-count {
   font-size: 12px;
-  color: var(--color-text-tertiary, #999);
+  color: var(--color-text-tertiary, var(--color-gray-label));
   font-weight: 400;
   margin-left: auto;
 }
@@ -287,7 +287,7 @@
 .perm-group-row .ant-checkbox-wrapper {
   font-weight: 500;
   font-size: 13px;
-  color: var(--color-text-secondary, #666);
+  color: var(--color-text-secondary, var(--color-gray-dark));
   white-space: nowrap;
   flex-shrink: 0;
   min-width: 100px;
@@ -307,5 +307,5 @@
   padding: 2px 6px 2px 0;
   font-size: 13px;
   font-weight: 400;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
 }

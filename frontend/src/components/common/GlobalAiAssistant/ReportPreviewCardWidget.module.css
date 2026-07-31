@@ -15,7 +15,7 @@
 .reportTitle {
   font-size: 14px;
   font-weight: 700;
-  color: #096dd9;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -24,7 +24,7 @@
 
 .reportMeta {
   font-size: 13px;
-  color: #5c5c5c;
+  color: var(--color-slate-600);
   line-height: 1.5;
 }
 
@@ -38,7 +38,7 @@
 .sectionTitle {
   font-size: 12px;
   font-weight: 700;
-  color: #262626;
+  color: var(--color-gray-800);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -138,11 +138,11 @@
 
 .rankBadge1 { background: var(--color-warning); }
 .rankBadge2 { background: var(--color-text-quaternary); }
-.rankBadge3 { background: #d4380d; }
+.rankBadge3 { background: var(--color-orange-700); }
 
 .rankName {
   flex: 1;
-  color: #262626;
+  color: var(--color-gray-800);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,15 +162,15 @@
 
 .riskChip {
   background: var(--status-warning-bg);
-  border: 1px solid #ffd591;
+  border: 1px solid var(--status-warning-border);
   border-radius: 8px;
   padding: 6px;
   text-align: center;
 }
 
 .riskChipDanger {
-  background: #FFF1F0;
-  border-color: #ffa39e;
+  background: var(--color-bg-base)1F0;
+  border-color: var(--status-error-border);
 }
 
 .riskValue {
@@ -207,7 +207,7 @@
 
 .orderNo {
   font-weight: 700;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .orderMeta {

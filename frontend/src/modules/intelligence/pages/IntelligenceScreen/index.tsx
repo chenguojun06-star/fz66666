@@ -18,8 +18,8 @@ function KpiCard({ label, value, unit, color, icon }: {
 }) {
   return (
     <div className="screen-kpi-card">
-      <div className="screen-kpi-icon" style={{ color: color || '#36cfc9' }}>{icon}</div>
-      <div className="screen-kpi-value" style={{ color: color || '#36cfc9' }}>
+      <div className="screen-kpi-icon" style={{ color: color || 'var(--color-cyan-400)' }}>{icon}</div>
+      <div className="screen-kpi-value" style={{ color: color || 'var(--color-cyan-400)' }}>
         {value}<span className="screen-kpi-unit">{unit}</span>
       </div>
       <div className="screen-kpi-label">{label}</div>
@@ -29,9 +29,9 @@ function KpiCard({ label, value, unit, color, icon }: {
 
 function RiskBadge({ level }: { level: string }) {
   const map: Record<string, { color: string; label: string }> = {
-    critical: { color: '#ff7875', label: '高危' },
+    critical: { color: 'var(--color-danger)', label: '高危' },
     high:     { color: 'var(--color-warning)', label: '高风险' },
-    medium:   { color: '#fadb14', label: '关注' },
+    medium:   { color: 'var(--color-amber-400)', label: '关注' },
     low:      { color: 'var(--color-success)', label: '正常' },
   };
   const { color, label } = map[level] || map.low;
@@ -79,7 +79,7 @@ export default function IntelligenceScreen() {
       {/* 顶部标题栏 */}
       <header className="screen-header">
         <div className="screen-header-left">
-          <ThunderboltOutlined style={{ color: '#36cfc9', fontSize: 20 }} />
+          <ThunderboltOutlined style={{ color: 'var(--color-cyan-400)', fontSize: 20 }} />
           <span className="screen-title">智能运营大屏</span>
           <span className="screen-subtitle">实时生产态势 · 30s 自动刷新</span>
         </div>
@@ -89,13 +89,13 @@ export default function IntelligenceScreen() {
             <SyncOutlined
               spin={refreshing || data?.loading}
               onClick={handleRefresh}
-              style={{ fontSize: 18, color: '#36cfc9', cursor: 'pointer', marginLeft: 16 }}
+              style={{ fontSize: 18, color: 'var(--color-cyan-400)', cursor: 'pointer', marginLeft: 16 }}
             />
           </Tooltip>
           <Tooltip title="退出大屏">
             <CloseOutlined
               onClick={() => navigate(-1)}
-              style={{ fontSize: 18, color: '#aaa', cursor: 'pointer', marginLeft: 16 }}
+              style={{ fontSize: 18, color: 'var(--color-text-quaternary)', cursor: 'pointer', marginLeft: 16 }}
             />
           </Tooltip>
         </div>
@@ -111,13 +111,13 @@ export default function IntelligenceScreen() {
           {/* KPI 行 */}
           <section className="screen-kpi-row">
             <KpiCard label="今日扫码" value={todayScan} unit="次"
-              color="#36cfc9" icon={<ThunderboltOutlined />} />
+              color="var(--color-cyan-400)" icon={<ThunderboltOutlined />} />
             <KpiCard label="健康指数" value={healthIdx} unit="/100"
               color={Number(healthIdx) >= 70 ? 'var(--color-success)' : 'var(--color-warning)'} icon={<SafetyOutlined />} />
             <KpiCard label="活跃工人" value={activeWks} unit="人"
-              color="#9254de" icon={<TeamOutlined />} />
+              color="var(--color-accent-purple)" icon={<TeamOutlined />} />
             <KpiCard label="高风险订单" value={riskOrders} unit="单"
-              color={Number(riskOrders) > 0 ? '#ff7875' : 'var(--color-success)'} icon={<AlertOutlined />} />
+              color={Number(riskOrders) > 0 ? 'var(--color-danger)' : 'var(--color-success)'} icon={<AlertOutlined />} />
             <KpiCard label="物料缺口" value={shortage?.items?.length ?? 0} unit="项"
               color={shortage?.items?.length > 0 ? 'var(--color-warning)' : 'var(--color-success)'} icon={<AlertOutlined />} />
           </section>
@@ -132,7 +132,7 @@ export default function IntelligenceScreen() {
                 ranking.ranks.slice(0, 8).map((r: any, i: number) => (
                   <div key={r.factoryName} className="screen-rank-row">
                     <span className="screen-rank-no"
-                      style={{ color: i < 3 ? ['#ffd700','#c0c0c0','#cd7f32'][i] : '#aaa' }}>
+                      style={{ color: i < 3 ? ['var(--color-gold)','var(--color-silver)','var(--color-bronze)'][i] : 'var(--color-text-quaternary)' }}>
                       #{i + 1}
                     </span>
                     <span className="screen-rank-name">{r.factoryName}</span>
@@ -164,7 +164,7 @@ export default function IntelligenceScreen() {
                       style={{
                         width: `${prog}%`,
                         background: prog >= 80 ? 'var(--color-success)'
-                          : prog >= 40 ? '#fadb14' : '#ff7875',
+                          : prog >= 40 ? 'var(--color-amber-400)' : 'var(--color-danger)',
                       }} />
                   </div>
                   <span className="screen-progress-pct">{prog}%</span>
@@ -181,7 +181,7 @@ export default function IntelligenceScreen() {
                 notify.items.slice(0, 6).map((n: any, i: number) => (
                   <div key={i} className="screen-notify-row">
                     <RiskBadge level={n.level || 'low'} />
-                    <span style={{ marginLeft: 8, fontSize: 14, color: '#ddd' }}>{n.message}</span>
+                    <span style={{ marginLeft: 8, fontSize: 14, color: 'var(--color-zinc-300)' }}>{n.message}</span>
                   </div>
                 ))
               ) : (
@@ -194,7 +194,7 @@ export default function IntelligenceScreen() {
                   {shortage.items.slice(0, 5).map((m: any, i: number) => (
                     <div key={i} className="screen-notify-row">
                       <span style={{ color: 'var(--color-warning)', fontSize: 14 }}>缺</span>
-                      <span style={{ marginLeft: 6, fontSize: 14, color: '#ddd' }}>
+                      <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-zinc-300)' }}>
                         {m.materialName} · 缺 {m.shortageQty}{m.unit}
                       </span>
                     </div>

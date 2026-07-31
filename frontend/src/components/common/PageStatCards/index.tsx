@@ -64,12 +64,12 @@ interface PageStatCardsProps {
 
 // ===== 色调映射（与 SmartPredictionStrip 保持一致） =====
 const toneColorMap: Record<HintTone, string> = {
-  orange: '#d46b08',
+  orange: 'var(--color-amber-700)',
   red: 'var(--color-error)',
-  cyan: '#08979c',
-  green: '#389e0d',
+  cyan: 'var(--color-cyan-600)',
+  green: 'var(--color-success)',
   danger: 'var(--color-error)',
-  warning: '#d46b08',
+  warning: 'var(--color-amber-700)',
 };
 
 // ===== 样式常量（改这里，所有页面同步生效） =====

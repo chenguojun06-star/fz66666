@@ -26,10 +26,10 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-info))', fontSize: 20 }} />
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span style={{ display: 'block' }}>供应商总数</span>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary, #000)', marginTop: 2 }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary, var(--color-black))', marginTop: 2 }}>
                 {total}
               </div>
             </div>
@@ -41,7 +41,7 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Avatar size={40} icon={<ShopOutlined />} style={{ backgroundColor: 'var(--color-info, var(--color-info))', fontSize: 20 }} />
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span style={{ display: 'block' }}>面辅料供应商</span>
               </div>
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-info, var(--color-info))', marginTop: 2 }}>
@@ -56,7 +56,7 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-warning, var(--color-warning))', fontSize: 20 }} />
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span style={{ display: 'block' }}>外发工厂</span>
               </div>
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning, var(--color-warning))', marginTop: 2 }}>
@@ -71,7 +71,7 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: 'var(--color-success, var(--color-success))', fontSize: 20 }} />
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span style={{ display: 'block' }}>启用中</span>
               </div>
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, var(--color-success))', marginTop: 2 }}>
@@ -86,7 +86,7 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-success, var(--color-success))', fontSize: 20 }} />
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span style={{ display: 'block' }}>已准入</span>
               </div>
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, var(--color-success))', marginTop: 2 }}>
@@ -101,7 +101,7 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: factoryStats.pendingCount > 0 ? 'var(--color-warning, var(--color-warning))' : 'var(--color-text-quaternary, var(--color-border-antd))', fontSize: 20 }} />
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span style={{ display: 'block' }}>待审核</span>
               </div>
               <div style={{ fontSize: 20, fontWeight: 700, color: factoryStats.pendingCount > 0 ? 'var(--color-warning, var(--color-warning))' : 'var(--color-text-quaternary, var(--color-border-antd))', marginTop: 2 }}>

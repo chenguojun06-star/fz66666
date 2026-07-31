@@ -152,7 +152,7 @@ const DataCenter: React.FC = () => {
         }
       >
         {returnDescRecord?.descriptionReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-base)7e6', border: '1px solid var(--status-warning-border)', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnDescRecord.descriptionReturnComment}（{returnDescRecord.descriptionReturnBy}）
           </div>
         )}
@@ -175,7 +175,7 @@ const DataCenter: React.FC = () => {
         }
       >
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-base)7e6', border: '1px solid var(--status-warning-border)', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}

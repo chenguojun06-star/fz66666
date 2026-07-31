@@ -7,11 +7,11 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       marginTop: 8,
       padding: '6px 10px',
       background: 'var(--color-bg-container, var(--color-bg-container))',
-      border: '1px solid var(--color-border, #e8e8e8)',
+      border: '1px solid var(--color-border, var(--color-border-light))',
       borderRadius: 6,
       fontSize: 14,
       lineHeight: '20px',
-      color: 'var(--color-text-secondary, #888)',
+      color: 'var(--color-text-secondary, var(--color-text-muted))',
     }}
   >
     {stat.matchScore > 0 && (
@@ -20,8 +20,8 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
           推荐指数 {stat.matchScore}分
         </span>
         {stat.matchScore >= 70 && <span style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-success-border)' }}>推荐</span>}
-        {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
-        {stat.capacitySource === 'none' && <span style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
+        {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-warning-border)' }}>配置产能</span>}
+        {stat.capacitySource === 'none' && <span style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-error-border)' }}>无产能数据</span>}
       </div>
     )}
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -36,7 +36,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       {stat.atRiskCount > 0 ? <span style={{ color: 'var(--color-warning)' }}>高风险 <b>{stat.atRiskCount}</b> 单</span> : null}
       {stat.overdueCount > 0 ? <span style={{ color: 'var(--color-danger)' }}>逾期 <b>{stat.overdueCount}</b> 单</span> : null}
     </div>
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
+    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, var(--color-border-light))' }}>
       <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{stat.activeWorkers}</b> 人</span>
       {stat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: 'var(--color-info)' }}>{stat.avgDailyOutput}</b> 件/天{stat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
       {stat.estimatedCompletionDays > 0 ? (

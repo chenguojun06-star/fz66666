@@ -329,7 +329,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
                 <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
                   已选择: {ocrFile.name}
                 </p>
-                <p style={{ margin: '8px 0 0', color: '#8c8c8c', fontSize: 12 }}>
+                <p style={{ margin: '8px 0 0', color: 'var(--color-text-muted)', fontSize: 12 }}>
                   点击"识别"按钮开始AI分析
                 </p>
               </div>

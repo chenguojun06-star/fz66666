@@ -97,27 +97,27 @@ function buildDetailHtml(
 
   const tableRows = rows.map(row => {
     const cells = row.flatMap(cell => `
-      <th style="background:var(--color-bg-container);font-weight:500;width:20%;text-align:left;padding:8px 12px;border:1px solid #d9d9d9;">${cell.label}</th>
-      <td style="padding:8px 12px;border:1px solid #d9d9d9;">${cell.value || '-'}</td>
+      <th style="background:var(--color-bg-container);font-weight:500;width:20%;text-align:left;padding:8px 12px;border:1px solid var(--color-border-antd);">${cell.label}</th>
+      <td style="padding:8px 12px;border:1px solid var(--color-border-antd);">${cell.value || '-'}</td>
     `).join('');
     const emptyCells = row.length < column
-      ? Array.from({ length: (column - row.length) * 2 }).map(() => '<td style="border:1px solid #d9d9d9;"></td>').join('')
+      ? Array.from({ length: (column - row.length) * 2 }).map(() => '<td style="border:1px solid var(--color-border-antd);"></td>').join('')
       : '';
     return `<tr>${cells}${emptyCells}</tr>`;
   }).join('');
 
   return `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f1f1f;padding:20px;">
-      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:12px;">
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--color-gray-800);padding:20px;">
+      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid var(--color-gray-800);padding-bottom:12px;">
         <h2 style="font-size:20px;font-weight:600;margin:0 0 4px 0;">${title}</h2>
-        ${subtitle ? `<p style="font-size:13px;color:#666;margin:0;">${subtitle}</p>` : ''}
+        ${subtitle ? `<p style="font-size:13px;color:var(--color-gray-dark);margin:0;">${subtitle}</p>` : ''}
       </div>
       ${extraHeader ? `<div style="margin-bottom:16px;">${extraHeader}</div>` : ''}
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <tbody>${tableRows}</tbody>
       </table>
       ${footer || `
-        <div style="margin-top:24px;font-size:12px;color:#8c8c8c;display:flex;justify-content:space-between;border-top:1px solid #e8e8e8;padding-top:12px;">
+        <div style="margin-top:24px;font-size:12px;color:var(--color-text-muted);display:flex;justify-content:space-between;border-top:1px solid var(--color-border-light);padding-top:12px;">
           <span>打印时间：${new Date().toLocaleString()}</span>
           <span>第 1 页 / 共 1 页</span>
         </div>
@@ -135,21 +135,21 @@ function buildListHtml(
   footer?: React.ReactNode
 ): string {
   const headerCells = fields.map(f =>
-    `<th style="background:var(--color-bg-container);font-weight:500;text-align:left;padding:8px 10px;border:1px solid #d9d9d9;">${f.label}</th>`
+    `<th style="background:var(--color-bg-container);font-weight:500;text-align:left;padding:8px 10px;border:1px solid var(--color-border-antd);">${f.label}</th>`
   ).join('');
 
   const bodyRows = list.map((record, _ri) => {
     const cells = fields.map(f =>
-      `<td style="padding:6px 10px;border:1px solid #d9d9d9;">${formatValue(getFieldValue(record, f.fieldKey), f.fieldType) || '-'}</td>`
+      `<td style="padding:6px 10px;border:1px solid var(--color-border-antd);">${formatValue(getFieldValue(record, f.fieldKey), f.fieldType) || '-'}</td>`
     ).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
 
   return `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f1f1f;padding:20px;">
-      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:12px;">
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--color-gray-800);padding:20px;">
+      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid var(--color-gray-800);padding-bottom:12px;">
         <h2 style="font-size:20px;font-weight:600;margin:0 0 4px 0;">${title}</h2>
-        ${subtitle ? `<p style="font-size:13px;color:#666;margin:0;">${subtitle}</p>` : ''}
+        ${subtitle ? `<p style="font-size:13px;color:var(--color-gray-dark);margin:0;">${subtitle}</p>` : ''}
       </div>
       ${extraHeader ? `<div style="margin-bottom:16px;">${extraHeader}</div>` : ''}
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -157,7 +157,7 @@ function buildListHtml(
         <tbody>${bodyRows}</tbody>
       </table>
       ${footer || `
-        <div style="margin-top:24px;font-size:12px;color:#8c8c8c;display:flex;justify-content:space-between;border-top:1px solid #e8e8e8;padding-top:12px;">
+        <div style="margin-top:24px;font-size:12px;color:var(--color-text-muted);display:flex;justify-content:space-between;border-top:1px solid var(--color-border-light);padding-top:12px;">
           <span>打印时间：${new Date().toLocaleString()}</span>
           <span>共 ${list.length} 条</span>
         </div>

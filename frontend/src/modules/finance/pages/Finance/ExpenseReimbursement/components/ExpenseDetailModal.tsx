@@ -96,7 +96,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
     >
       <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 120px)' }}>
         {/* 左侧：凭证图片 */}
-        <div style={{ width: '42%', background: '#f7f8fa', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ width: '42%', background: 'var(--color-slate-50)', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {detailDocList.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)' }}>
               <PictureOutlined style={{ fontSize: 48, marginBottom: 12 }} />
@@ -112,7 +112,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
                   style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }}
                 />
               </div>
-              <div style={{ flexShrink: 0, fontSize: 14, color: '#aaa', textAlign: 'center', padding: '6px 0 4px' }}>
+              <div style={{ flexShrink: 0, fontSize: 14, color: 'var(--color-text-quaternary)', textAlign: 'center', padding: '6px 0 4px' }}>
                 第 {selectedDocIndex + 1} 张 / 共 {detailDocList.length} 张
               </div>
               {detailDocList.length > 1 && (
@@ -130,7 +130,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
                         borderRadius: 6,
                         cursor: 'pointer',
                         flexShrink: 0,
-                        border: selectedDocIndex === idx ? '2px solid var(--color-primary)' : '2px solid #e0e0e0',
+                        border: selectedDocIndex === idx ? '2px solid var(--color-primary)' : '2px solid var(--color-border-light)',
                         opacity: selectedDocIndex === idx ? 1 : 0.6,
                         transition: 'all 0.15s'
                       }}

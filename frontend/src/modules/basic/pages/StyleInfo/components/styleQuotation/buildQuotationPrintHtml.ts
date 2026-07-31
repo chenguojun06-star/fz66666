@@ -72,7 +72,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
       </tr>`;
           })
           .join('')
-      : `<tr><td colspan="10" style="text-align:center;color:#999;padding:16px">暂无物料明细</td></tr>`;
+      : `<tr><td colspan="10" style="text-align:center;color:var(--color-gray-label);padding:16px">暂无物料明细</td></tr>`;
 
   // 工序表行
   const processRows =
@@ -87,7 +87,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
       </tr>`;
           })
           .join('')
-      : `<tr><td colspan="3" style="text-align:center;color:#999;padding:16px">暂无工序明细</td></tr>`;
+      : `<tr><td colspan="3" style="text-align:center;color:var(--color-gray-label);padding:16px">暂无工序明细</td></tr>`;
 
   // 二次工艺表行
   const secRows =
@@ -101,7 +101,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
       </tr>`;
           })
           .join('')
-      : `<tr><td colspan="3" style="text-align:center;color:#999;padding:16px">暂无二次工艺明细</td></tr>`;
+      : `<tr><td colspan="3" style="text-align:center;color:var(--color-gray-label);padding:16px">暂无二次工艺明细</td></tr>`;
 
   void processList.reduce(
     (s: number, i: any) => s + (Number(i.price) || 0) * (Number(i.rateMultiplier) || 1),
@@ -125,35 +125,35 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
     @page { margin: 12mm; }
     body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: var(--color-text-primary); padding: 24px; background: var(--color-bg-base); line-height: 1.7; }
     .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; color: var(--color-text-primary); }
-    .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 24px; }
-    .info-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8f9fa; border: 1px solid #e8e8e8; margin-bottom: 24px; font-size: 13px; }
+    .subtitle { text-align: center; font-size: 12px; color: var(--color-gray-label); margin-bottom: 24px; }
+    .info-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--color-slate-50); border: 1px solid var(--color-border-light); margin-bottom: 24px; font-size: 13px; }
     .info-item { display: flex; gap: 6px; }
-    .info-label { color: #666; }
+    .info-label { color: var(--color-gray-dark); }
     .info-value { font-weight: 600; }
     .section { margin-bottom: 24px; page-break-inside: avoid; }
     .section-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--color-info); color: var(--color-text-primary); display: flex; align-items: center; gap: 6px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border: 1px solid #d0d0d0; padding: 7px 10px; vertical-align: middle; }
-    th { background: #f4f6f8; font-weight: 600; color: #262626; text-align: center; }
-    tbody tr:hover { background: #fafcff; }
+    th, td { border: 1px solid var(--color-zinc-300); padding: 7px 10px; vertical-align: middle; }
+    th { background: var(--color-slate-100); font-weight: 600; color: var(--color-gray-800); text-align: center; }
+    tbody tr:hover { background: var(--color-slate-50); }
     /* ---- 汇总区 ---- */
     .summary-section { margin-top: 32px; padding: 20px; background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%); border: 2px solid var(--color-info); border-radius: 8px; page-break-inside: avoid; }
     .summary-title { text-align: center; font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px dashed var(--color-info); color: var(--color-info); letter-spacing: 1px; }
-    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #d0e8ff; }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--color-blue-100); }
     .summary-row:last-child { border-bottom: none; }
-    .summary-row-label { color: #444; font-size: 13px; }
+    .summary-row-label { color: var(--color-zinc-700); font-size: 13px; }
     .summary-row-value { font-weight: 700; font-size: 15px; color: var(--color-text-primary); }
-    .summary-row.highlight { background: #F6FFED; border-radius: 6px; padding: 12px 16px; margin: 4px 0; }
-    .summary-row.highlight .summary-row-value { font-size: 18px; color: #d4380d; }
+    .summary-row.highlight { background: var(--status-success-bg); border-radius: 6px; padding: 12px 16px; margin: 4px 0; }
+    .summary-row.highlight .summary-row-value { font-size: 18px; color: var(--color-orange-700); }
     .summary-row.profit .summary-row-value { color: var(--color-success); }
-    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #999; padding-top: 16px; border-top: 1px solid #eee; }
+    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: var(--color-gray-label); padding-top: 16px; border-top: 1px solid var(--color-zinc-200); }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
     .print-btn { padding: 8px 16px; background: var(--color-info); color: var(--color-bg-base); border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
     @media print {
       .no-print { display: none !important; }
       .print-btn-bar { display: none; }
-      .summary-section { background: #f8f9fa !important; border-color: #999 !important; }
-      .summary-row.highlight { background: #F6FFED !important; }
+      .summary-section { background: var(--color-slate-50) !important; border-color: var(--color-gray-label) !important; }
+      .summary-row.highlight { background: var(--status-success-bg) !important; }
     }
   </style>
 </head>

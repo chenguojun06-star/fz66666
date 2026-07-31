@@ -40,7 +40,7 @@ const ZoneCard: React.FC<Props> = ({
   return (
     <div
       style={{
-        border: '1px solid var(--color-border, #e2e8f0)',
+        border: '1px solid var(--color-border, var(--color-slate-200))',
         borderRadius: 10,
         marginBottom: 12,
         overflow: 'hidden',
@@ -52,8 +52,8 @@ const ZoneCard: React.FC<Props> = ({
         alignItems: 'center',
         gap: 10,
         padding: '10px 14px',
-        background: 'var(--color-bg-page, #f5f7fa)',
-        borderBottom: '1px solid var(--color-border, #e2e8f0)',
+        background: 'var(--color-bg-page, var(--color-slate-100))',
+        borderBottom: '1px solid var(--color-border, var(--color-slate-200))',
       }}>
         <Tag color="blue">区{zoneIndex + 1}</Tag>
         <Input
@@ -83,7 +83,7 @@ const ZoneCard: React.FC<Props> = ({
       {/* 前区 + 后区 两列布局 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
         {/* 前区 */}
-        <div style={{ padding: '12px 14px', borderRight: '1px solid var(--color-border, #e2e8f0)' }}>
+        <div style={{ padding: '12px 14px', borderRight: '1px solid var(--color-border, var(--color-slate-200))' }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
             前区（小码方向 ↓）
           </div>
@@ -98,7 +98,7 @@ const ZoneCard: React.FC<Props> = ({
                     cursor: 'pointer',
                     userSelect: 'none',
                     opacity: checked ? 1 : 0.45,
-                    background: checked ? '#e6f4ff' : undefined,
+                    background: checked ? 'var(--status-processing-bg)' : undefined,
                     borderColor: checked ? 'var(--color-primary)' : undefined,
                     color: checked ? 'var(--color-primary)' : undefined,
                     fontWeight: checked ? 600 : 400,
@@ -167,7 +167,7 @@ const ZoneCard: React.FC<Props> = ({
 
       {/* 自定义跳码列 */}
       {sizeStepColumns.length > 0 && (
-        <div style={{ borderTop: '1px solid var(--color-border, #e2e8f0)', padding: '10px 14px' }}>
+        <div style={{ borderTop: '1px solid var(--color-border, var(--color-slate-200))', padding: '10px 14px' }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
             自定义跳码段
           </div>
@@ -217,7 +217,7 @@ const ZoneCard: React.FC<Props> = ({
       )}
 
       {/* 添加自定义列 */}
-      <div style={{ borderTop: '1px solid var(--color-border, #e2e8f0)', padding: '8px 14px' }}>
+      <div style={{ borderTop: '1px solid var(--color-border, var(--color-slate-200))', padding: '8px 14px' }}>
         <Button
           type="dashed"
           icon={<PlusOutlined />}

@@ -15,7 +15,7 @@
 .overdueSummaryTitle {
   font-size: 13px;
   font-weight: 700;
-  color: #cf1322;
+  color: var(--color-error);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -27,7 +27,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff7875;
+  background: var(--color-danger);
   animation: badgePulse 2s ease-in-out infinite;
 }
 
@@ -39,7 +39,7 @@
 
 .overdueStatChip {
   background: rgba(255, 255, 255, 0.85);
-  border: 1px solid #ffd8d8;
+  border: 1px solid var(--color-red-200);
   border-radius: 8px;
   padding: 4px 8px;
   text-align: center;
@@ -47,19 +47,19 @@
 }
 
 .overdueStatChipHighlight {
-  border-color: #ffa39e;
+  border-color: var(--status-error-border);
   background: rgba(255, 255, 255, 0.95);
 }
 
 .overdueStatValue {
   font-size: 13px;
   font-weight: 700;
-  color: #262626;
+  color: var(--color-gray-800);
   line-height: 1.2;
 }
 
 .overdueStatChipHighlight .overdueStatValue {
-  color: #cf1322;
+  color: var(--color-error);
 }
 
 .overdueStatUnit {
@@ -93,7 +93,7 @@
 .overdueFactoryName {
   font-size: 13px;
   font-weight: 700;
-  color: #262626;
+  color: var(--color-gray-800);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -138,7 +138,7 @@
 .overdueMetricRingValue {
   font-size: 13px;
   font-weight: 700;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .overdueMetricRingUnit {
@@ -166,11 +166,11 @@
 .overdueMetricValue {
   font-size: 13px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .overdueMetricDanger {
-  color: #cf1322;
+  color: var(--color-error);
 }
 
 .overdueOrderList {
@@ -203,7 +203,7 @@
 .overdueOrderNo {
   font-size: 12px;
   font-weight: 600;
-  color: #1890ff;
+  color: var(--color-info);
   text-decoration: none;
 }
 
@@ -225,17 +225,17 @@
 .overdueOrderProgress {
   font-size: 12px;
   font-weight: 600;
-  color: #faad14;
+  color: var(--color-warning);
 }
 
 .overdueOrderDanger {
-  color: #ff7875;
+  color: var(--color-danger);
 }
 
 .overdueOrderDays {
   font-size: 13px;
-  color: #cf1322;
-  background: #fff1f0;
+  color: var(--color-error);
+  background: var(--color-bg-base)1f0;
   border-radius: 4px;
   padding: 1px 6px;
 }

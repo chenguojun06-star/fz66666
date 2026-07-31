@@ -1,6 +1,6 @@
 .urgeOrderCard {
   background: var(--status-warning-bg);
-  border: 1.5px solid #ffd591;
+  border: 1.5px solid var(--status-warning-border);
   border-radius: 12px;
   padding: 12px 14px;
   margin: 8px 0;
@@ -8,22 +8,22 @@
 .urgeCardHeader {
   font-size: 14px;
   font-weight: 700;
-  color: #d46b08;
+  color: var(--color-amber-700);
   margin-bottom: 4px;
 }
 .urgeCardFactory {
   font-weight: 400;
-  color: #874d00;
+  color: var(--color-amber-700);
   font-size: 14px;
 }
 .urgeCardPerson {
   font-size: 14px;
-  color: #613400;
+  color: var(--color-amber-900);
   margin-bottom: 4px;
 }
 .urgeCardDesc {
   font-size: 14px;
-  color: #874d00;
+  color: var(--color-amber-700);
   margin-bottom: 10px;
   line-height: 1.5;
 }
@@ -34,16 +34,16 @@
 }
 .urgeFormLabel {
   font-size: 14px;
-  color: #8c6e00;
+  color: var(--color-amber-800);
   font-weight: 600;
   margin-top: 4px;
 }
 .urgeFormInput {
-  border: 1px solid #ffc069;
+  border: 1px solid var(--color-amber-300);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 14px;
-  background: #F6FFED;
+  background: var(--status-success-bg);
   color: var(--color-text-primary);
   outline: none;
   width: 100%;
@@ -54,11 +54,11 @@
   box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.2);
 }
 .urgeFormTextarea {
-  border: 1px solid #ffc069;
+  border: 1px solid var(--color-amber-300);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 14px;
-  background: #F6FFED;
+  background: var(--status-success-bg);
   color: var(--color-text-primary);
   resize: none;
   outline: none;
@@ -73,8 +73,8 @@
 .urgeCardError {
   font-size: 14px;
   color: var(--color-error);
-  background: #FFF1F0;
-  border: 1px solid #ffa39e;
+  background: var(--color-bg-base)1F0;
+  border: 1px solid var(--status-error-border);
   border-radius: 6px;
   padding: 4px 8px;
 }
@@ -92,10 +92,10 @@
   width: 100%;
 }
 .urgeSubmitBtn:hover:not(:disabled) {
-  background: #d46b08;
+  background: var(--color-amber-700);
 }
 .urgeSubmitBtn:disabled {
-  background: #ffbb6e;
+  background: var(--color-amber-200);
   cursor: not-allowed;
 }
 .urgeCardSaved {
@@ -103,7 +103,7 @@
   border: 1px solid var(--status-success-border);
   border-radius: 10px;
   padding: 10px 14px;
-  color: #389e0d;
+  color: var(--color-success);
   font-size: 14px;
   margin: 6px 0;
 }

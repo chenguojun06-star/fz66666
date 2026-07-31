@@ -48,7 +48,7 @@ const quantityCellStyle: React.CSSProperties = {
 
 const summaryStyle: React.CSSProperties = {
   marginLeft: '4px',
-  color: 'var(--neutral-text-light, #8c8c8c)',
+  color: 'var(--neutral-text-light, var(--color-text-muted))',
   fontSize: 'var(--font-size-sm)',
   flexShrink: 0,
 };

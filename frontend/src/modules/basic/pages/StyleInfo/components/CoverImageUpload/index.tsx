@@ -54,7 +54,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
         marginBottom: 8,
         fontWeight: 600,
         fontSize: 14,
-        color: '#1f2937',
+        color: 'var(--color-bg-dark)',
         paddingLeft: 12,
         borderLeft: '3px solid var(--color-primary)',
         lineHeight: 1.4,

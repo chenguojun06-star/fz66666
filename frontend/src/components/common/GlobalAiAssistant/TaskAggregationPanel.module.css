@@ -19,7 +19,7 @@
 
 .panelHeader {
   height: 90px;
-  background: #1f5fcb;
+  background: var(--color-blue-600);
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -114,7 +114,7 @@
 }
 
 .searchInput::placeholder {
-  color: #a3a3a3;
+  color: var(--color-neutral-400);
 }
 
 .searchInput:focus {
@@ -192,7 +192,7 @@
 .groupLabel {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .groupCount {
@@ -248,7 +248,7 @@
 .taskTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-gray-800);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -288,7 +288,7 @@
 }
 
 .taskRefNo:hover {
-  background: #bae0ff;
+  background: var(--color-blue-100);
   text-decoration: underline;
 }
 
@@ -326,12 +326,12 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: #f0f5ff;
-  border: 1px solid #d6e4ff;
+  background: var(--color-bg-highlight);
+  border: 1px solid var(--color-blue-100);
   border-radius: 4px;
   padding: 1px 7px;
   font-size: 14px;
-  color: #2f54eb;
+  color: var(--color-primary-dark);
   white-space: nowrap;
 }
 
@@ -341,6 +341,6 @@
 }
 
 .taskExtraValue {
-  color: #2f54eb;
+  color: var(--color-primary-dark);
   font-weight: 500;
 }

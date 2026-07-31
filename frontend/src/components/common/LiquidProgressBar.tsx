@@ -29,20 +29,20 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
 
   const getColors = () => {
     if (isFrozen) {
-      return { liquidColor: 'var(--color-text-tertiary)', liquidColor2: '#d1d5db' };
+      return { liquidColor: 'var(--color-text-tertiary)', liquidColor2: 'var(--color-border)' };
     }
     if (color) {
       return { liquidColor: color, liquidColor2: color };
     }
     if (isCompleted) {
-      return { liquidColor: 'var(--color-success)', liquidColor2: '#95de64' };
+      return { liquidColor: 'var(--color-success)', liquidColor2: 'var(--color-success)' };
     }
     if (status === 'danger') {
-      return { liquidColor: 'var(--color-danger)', liquidColor2: '#ff7875' };
+      return { liquidColor: 'var(--color-danger)', liquidColor2: 'var(--color-danger)' };
     } else if (status === 'warning') {
-      return { liquidColor: 'var(--color-warning)', liquidColor2: '#ffc53d' };
+      return { liquidColor: 'var(--color-warning)', liquidColor2: 'var(--color-amber-300)' };
     } else {
-      return { liquidColor: 'var(--color-success)', liquidColor2: '#95de64' };
+      return { liquidColor: 'var(--color-success)', liquidColor2: 'var(--color-success)' };
     }
   };
 

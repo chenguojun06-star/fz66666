@@ -35,7 +35,7 @@ const AlertsSection: React.FC<Props> = ({
     {/* AI 预测完工 */}
     {predictHint && (
       <div style={{
-        padding: '3px 10px', background: '#f0f5ff', borderRadius: 6,
+        padding: '3px 10px', background: 'var(--color-bg-highlight)', borderRadius: 6,
         marginBottom: 8, fontSize: 11, color: 'var(--color-primary)',
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
@@ -76,7 +76,7 @@ const AlertsSection: React.FC<Props> = ({
     {/* 交付SLA + SPC质检统计 */}
     {(order.deliverySlaStatus || (order as any).cpk) && (
       <div style={{
-        padding: '4px 10px', background: '#f0f5ff', borderRadius: 6,
+        padding: '4px 10px', background: 'var(--color-bg-highlight)', borderRadius: 6,
         marginBottom: 8, fontSize: 11, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
       }}>
         {order.deliverySlaStatus && (

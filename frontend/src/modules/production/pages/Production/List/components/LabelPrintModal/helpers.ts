@@ -167,19 +167,19 @@ export async function printUCodeLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: var(--color-bg-base); -webkit-font-smoothing: antialiased; }
+body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: var(--color-black); background: var(--color-bg-base); -webkit-font-smoothing: antialiased; }
 .page { width: ${w}mm; height: ${h}mm; display: flex; align-items: center; justify-content: center; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
-.label { width: calc(${w}mm - 3mm); height: calc(${h}mm - 3mm); border: 0.8pt solid #333; display: flex; flex-direction: row; align-items: stretch; padding: 2mm 3mm; gap: 0; color: #000; }
+.label { width: calc(${w}mm - 3mm); height: calc(${h}mm - 3mm); border: 0.8pt solid var(--color-gray-800); display: flex; flex-direction: row; align-items: stretch; padding: 2mm 3mm; gap: 0; color: var(--color-black); }
 .qr-col { flex: 0 0 ${qrMm + 1}mm; display: flex; align-items: center; justify-content: center; }
 .qr-col img { display: block; object-fit: contain; }
-.divider { width: 0; border-right: 0.4pt solid #bbb; margin: 2mm 2mm; flex-shrink: 0; }
+.divider { width: 0; border-right: 0.4pt solid var(--color-text-quaternary); margin: 2mm 2mm; flex-shrink: 0; }
 .info-col { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; overflow: hidden; padding: 0 0 0 0.5mm; }
-.ucode-row { font-size: ${fs + 0.9}pt; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: 1mm; border-bottom: 0.5pt solid #bbb; margin-bottom: 1.2mm; letter-spacing: 0.2mm; }
+.ucode-row { font-size: ${fs + 0.9}pt; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: 1mm; border-bottom: 0.5pt solid var(--color-text-quaternary); margin-bottom: 1.2mm; letter-spacing: 0.2mm; }
 .info-row { font-size: ${fs}pt; display: flex; align-items: baseline; flex-wrap: nowrap; min-width: 0; margin-bottom: 0.7mm; }
-.lbl { color: #888; white-space: nowrap; min-width: 8mm; }
+.lbl { color: var(--color-text-muted); white-space: nowrap; min-width: 8mm; }
 .val { font-weight: 600; margin-left: 0.5mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; color: var(--color-text-primary); }
-.date-row { color: #999; font-size: ${fs - 0.4}pt; margin-top: 1.5mm; letter-spacing: 0.2mm; }
+.date-row { color: var(--color-gray-label); font-size: ${fs - 0.4}pt; margin-top: 1.5mm; letter-spacing: 0.2mm; }
 </style></head><body>${labelsHtml}</body></html>`;
 
   safePrint(html);

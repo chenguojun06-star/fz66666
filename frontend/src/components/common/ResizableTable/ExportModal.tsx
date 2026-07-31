@@ -45,7 +45,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
           </Checkbox>
         ))}
       </Checkbox.Group>
-      <div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 12 }}>
+      <div style={{ marginTop: 12, color: 'var(--color-text-muted)', fontSize: 12 }}>
         提示：导出当前页数据，共 {recordCount} 条记录
       </div>
     </Modal>

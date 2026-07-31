@@ -20,9 +20,9 @@ export interface MultiImageUploadBoxProps {
 
 const THUMB_BORDER = '1px solid var(--color-border)';
 const OVERLAY_BG = 'var(--color-text-tertiary)';
-const ADD_BORDER = '1px dashed #cbd5e1';
+const ADD_BORDER = '1px dashed var(--color-slate-300)';
 const ADD_BG = 'var(--color-bg-page)';
-const MUTED_COLOR = '#94a3b8';
+const MUTED_COLOR = 'var(--color-slate-400)';
 
 function MultiImageUploadBox({
   value = [],

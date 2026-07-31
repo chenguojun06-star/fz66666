@@ -237,7 +237,7 @@ const MaterialDatabasePage: React.FC = () => {
                 {record.supplierName && <div style={{ marginBottom: 6 }}>供应商：{record.supplierName}</div>}
                 {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}{record.supplierContactPhone ? ` · ${record.supplierContactPhone}` : ''}</div>}
                 {record.description && <div style={{ marginTop: 6, color: 'var(--color-gray-dark)' }}>{record.description}</div>}
-                {record.remark && <div style={{ marginTop: 6, color: '#874d00' }}>备注：{record.remark}</div>}
+                {record.remark && <div style={{ marginTop: 6, color: 'var(--color-amber-700)' }}>备注：{record.remark}</div>}
               </div>
             )}
           />

@@ -66,7 +66,7 @@
 
 .deleteBtn {
   height: 34px; padding: 0 16px; border-radius: 8px; margin-right: auto;
-  border: 1px solid #ffa39e; background: #FFF1F0; color: var(--color-error);
+  border: 1px solid var(--status-error-border); background: var(--color-bg-base)1F0; color: var(--color-error);
   cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 4px;
 }
-.deleteBtn:hover { background: #ffa39e; color: var(--color-bg-base); }
+.deleteBtn:hover { background: var(--status-error-border); color: var(--color-bg-base); }

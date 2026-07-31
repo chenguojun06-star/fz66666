@@ -56,7 +56,7 @@
 
 .cp-search-icon {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
@@ -65,18 +65,18 @@
   border: none;
   outline: none;
   font-size: 15px;
-  color: #111;
+  color: var(--color-black);
   background: transparent;
   min-width: 0;
 }
 
 .cp-input::placeholder {
-  color: #b5b5c3;
+  color: var(--color-slate-400);
 }
 
 .cp-clear {
   border: none;
-  background: #f3f4f6;
+  background: var(--color-bg-stripe);
   border-radius: 4px;
   width: 22px;
   height: 22px;
@@ -89,12 +89,12 @@
   transition: background 0.15s;
 }
 
-.cp-clear:hover { background: #e5e7eb; }
+.cp-clear:hover { background: var(--color-border); }
 
 /* 图片上传按钮 */
 .cp-img-btn {
   border: none;
-  background: #f3f4f6;
+  background: var(--color-bg-stripe);
   border-radius: 6px;
   width: 28px;
   height: 28px;
@@ -108,15 +108,15 @@
 }
 
 .cp-img-btn:hover {
-  background: #ede9fe;
-  color: #a855f7;
+  background: var(--color-purple-200);
+  color: var(--color-purple-500);
 }
 
 kbd.cp-kbd {
   font-size: 12px;
   font-family: inherit;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
+  background: var(--color-bg-stripe);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 2px 5px;
   color: var(--color-text-secondary);
@@ -139,7 +139,7 @@ kbd.cp-kbd {
 
 .cp-quick-label {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   white-space: nowrap;
   flex-shrink: 0;
   font-weight: 500;
@@ -159,7 +159,7 @@ kbd.cp-kbd {
 }
 
 .cp-quick-tag:hover {
-  background: #f0f7ff;
+  background: var(--status-processing-bg);
   border-color: rgba(45, 127, 249, 0.3);
   color: var(--color-primary);
 }
@@ -172,11 +172,11 @@ kbd.cp-kbd {
 
   /* 自定义滚动条 */
   scrollbar-width: thin;
-  scrollbar-color: #e5e7eb transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 .cp-list::-webkit-scrollbar { width: 4px; }
-.cp-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+.cp-list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 
 /* ── 空状态提示 ──────────────────────────────────────────────── */
 .cp-empty-hint {
@@ -215,12 +215,12 @@ kbd.cp-kbd {
   display: flex;
   gap: 16px;
   margin-top: 12px;
-  color: #b5b5c3;
+  color: var(--color-slate-400);
   font-size: 12px;
 }
 
 .cp-hint-tips kbd {
-  background: #f3f4f6;
+  background: var(--color-bg-stripe);
   border: 1px solid var(--color-border);
   border-radius: 3px;
   padding: 0 4px;
@@ -237,7 +237,7 @@ kbd.cp-kbd {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 8px 16px 4px;
@@ -258,7 +258,7 @@ kbd.cp-kbd {
 
 .cp-item:hover,
 .cp-item.active {
-  background: #f0f7ff;
+  background: var(--status-processing-bg);
 }
 
 /* 图标容器 */
@@ -273,11 +273,11 @@ kbd.cp-kbd {
   flex-shrink: 0;
 }
 
-.cp-icon-order  { background: #eff6ff; color: #3b82f6; }
-.cp-icon-style  { background: #fdf4ff; color: #a855f7; overflow: hidden; }
-.cp-icon-worker { background: #f0fdf4; color: #22c55e; }
-.cp-icon-menu   { background: #fefce8; color: #eab308; font-size: 13px; }
-.cp-icon-image  { background: #faf5ff; color: #a855f7; overflow: hidden; }
+.cp-icon-order  { background: var(--color-blue-50); color: var(--color-secondary); }
+.cp-icon-style  { background: var(--color-fuchsia-50); color: var(--color-purple-500); overflow: hidden; }
+.cp-icon-worker { background: var(--color-green-50); color: var(--color-success); }
+.cp-icon-menu   { background: var(--color-yellow-50); color: var(--color-amber-500); font-size: 13px; }
+.cp-icon-image  { background: var(--color-purple-100); color: var(--color-purple-500); overflow: hidden; }
 
 .cp-cover {
   width: 100%;
@@ -298,7 +298,7 @@ kbd.cp-kbd {
 .cp-item-title {
   font-size: 13.5px;
   font-weight: 500;
-  color: #111;
+  color: var(--color-black);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -306,7 +306,7 @@ kbd.cp-kbd {
 
 .cp-item-sub {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -334,8 +334,8 @@ kbd.cp-kbd {
 
 .cp-item-pct {
   font-size: 11.5px;
-  color: #9ca3af;
-  background: #f3f4f6;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-stripe);
   border-radius: 4px;
   padding: 1px 5px;
 }
@@ -344,16 +344,16 @@ kbd.cp-kbd {
 .cp-similarity {
   font-size: 11px;
   font-weight: 600;
-  color: #a855f7;
-  background: #faf5ff;
+  color: var(--color-purple-500);
+  background: var(--color-purple-100);
   border-radius: 4px;
   padding: 2px 6px;
-  border: 1px solid #e9d5ff;
+  border: 1px solid var(--color-purple-200);
 }
 
 .cp-item-arrow {
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--color-border);
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.1s, transform 0.1s;
@@ -387,7 +387,7 @@ kbd.cp-kbd {
 
 .cp-grid-card:hover,
 .cp-grid-card.active {
-  border-color: #a855f7;
+  border-color: var(--color-purple-500);
   box-shadow: 0 4px 14px rgba(168, 85, 247, 0.12);
   transform: translateY(-1px);
 }
@@ -442,7 +442,7 @@ kbd.cp-kbd {
 
 /* ── 拖拽高亮状态 ─────────────────────────────────────────────── */
 .cp-modal--dragging {
-  outline: 2px dashed #a855f7;
+  outline: 2px dashed var(--color-purple-500);
   outline-offset: 2px;
   box-shadow:
     0 0 0 1px rgba(168, 85, 247, .2),
@@ -465,7 +465,7 @@ kbd.cp-kbd {
 
 .cp-drop-inner {
   text-align: center;
-  color: #7c3aed;
+  color: var(--color-violet-600);
 }
 
 .cp-drop-title {
@@ -476,7 +476,7 @@ kbd.cp-kbd {
 
 .cp-drop-tip {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 
 /* 让 modal 作为定位祖先承载 overlay */

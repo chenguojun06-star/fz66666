@@ -146,7 +146,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
           <Input value={val || ''} onChange={e => onFieldChange(key, 'remark', e.target.value)} placeholder="备注" />
         ) : (
           <Tooltip title={record.remark} placement="topLeft">
-            <span style={{ color: record.remark ? 'var(--color-text-primary, #333)' : 'var(--color-text-quaternary, var(--color-text-quaternary))' }}>
+            <span style={{ color: record.remark ? 'var(--color-text-primary, var(--color-gray-800))' : 'var(--color-text-quaternary, var(--color-text-quaternary))' }}>
               {record.remark || '-'}
             </span>
           </Tooltip>
@@ -180,7 +180,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
       />
 
-      <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: 1.8 }}>
+      <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', lineHeight: 1.8 }}>
         <div>自动生成模式：SKU编码按「款号+颜色+尺码」规则自动生成</div>
         <div>手动编辑模式：可自由修改SKU编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
         <div>新增SKU：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>

@@ -1,7 +1,7 @@
 /* 订单汇总内容样式 */
 .orderNo {
   font-weight: 600;
-  color: var(--neutral-text, #1f2937);
+  color: var(--neutral-text, var(--color-bg-dark));
 }
 
 .verifyModal {
@@ -13,19 +13,19 @@
 }
 
 .modalFieldLabel {
-  color: var(--neutral-text-light, #666);
+  color: var(--neutral-text-light, var(--color-gray-dark));
   margin-bottom: 8px;
 }
 
 .modalFieldValue {
   font-size: 13px;
   font-weight: 600;
-  color: var(--neutral-text, #000);
+  color: var(--neutral-text, var(--color-black));
 }
 
 .modalFieldValueSmall {
   font-weight: 500;
-  color: var(--neutral-text, #000);
+  color: var(--neutral-text, var(--color-black));
 }
 
 .modalFieldGrid2 {
@@ -66,12 +66,12 @@
 }
 
 .modalNoteTitle {
-  color: var(--neutral-text-light, #666);
+  color: var(--neutral-text-light, var(--color-gray-dark));
   font-size: 12px;
   margin-bottom: 4px;
 }
 
 .modalNoteText {
   font-size: 13px;
-  color: var(--neutral-text, #000);
+  color: var(--neutral-text, var(--color-black));
 }

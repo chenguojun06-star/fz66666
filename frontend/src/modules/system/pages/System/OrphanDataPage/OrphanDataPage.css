@@ -15,7 +15,7 @@
 .orphan-header h2 {
   margin: 0 0 8px;
   font-size: 13px;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .orphan-desc {
@@ -37,7 +37,7 @@
 .orphan-categories h3 {
   margin: 0 0 12px;
   font-size: 16px;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .orphan-category-grid {
@@ -84,7 +84,7 @@
 .orphan-category-label {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .orphan-category-count {
@@ -109,7 +109,7 @@
 .orphan-detail-header h3 {
   margin: 0;
   font-size: 16px;
-  color: #262626;
+  color: var(--color-gray-800);
 }
 
 .orphan-detail-actions {

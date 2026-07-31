@@ -129,7 +129,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
                 lineHeight: '20px',
               }}
             >
-        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: '#fcfcfd', minHeight: 96 }}>
+        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
             <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>码数与单价</div>
             <Tag color={orchestration.pricingStatus}>{orchestration.pricingMode}</Tag>
@@ -138,7 +138,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
           <div>价差工序：{orchestration.differentialProcesses.length ? orchestration.differentialProcesses.join('、') : '无'}</div>
           <div>缺失码价：{orchestration.missingPriceRecords.length ? orchestration.missingPriceRecords.slice(0, 2).join('；') : '无'}</div>
         </div>
-        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: '#fcfcfd', minHeight: 96 }}>
+        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
             <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面辅料散剪</div>
             <Tag color={orchestration.scatterStatus}>{orchestration.scatterMode}</Tag>
@@ -148,10 +148,10 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
           <div>基准段长：约 {orchestration.benchmarkRollMeters || 0} 米</div>
           <div>免散剪量：约 {orchestration.noScatterQtyThreshold || 0} 件</div>
         </div>
-        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: '#fcfcfd', minHeight: 96 }}>
+        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面料差异</div>
-            <div style={{ color: orchestration.scatterLevel === 'high' ? 'var(--color-error)' : orchestration.scatterLevel === 'medium' ? '#d48806' : 'var(--color-success)' }}>
+            <div style={{ color: orchestration.scatterLevel === 'high' ? 'var(--color-error)' : orchestration.scatterLevel === 'medium' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {scatterDecisionText}
             </div>
           </div>

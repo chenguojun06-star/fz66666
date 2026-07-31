@@ -17,18 +17,18 @@
 .teamStatusTitle {
   font-size: 13px;
   font-weight: 700;
-  color: #237804;
+  color: var(--color-emerald-700);
 }
 
 .teamStatusMeta {
   margin-top: 2px;
   font-size: 13px;
-  color: #4d7c0f;
+  color: var(--color-lime-700);
 }
 
 .teamStatusSummary {
   font-size: 12px;
-  color: #355f1b;
+  color: var(--color-lime-800);
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -38,7 +38,7 @@
   flex-wrap: wrap;
   gap: 6px;
   font-size: 13px;
-  color: #5b8c00;
+  color: var(--color-lime-600);
   margin-bottom: 10px;
 }
 
@@ -73,12 +73,12 @@
 .teamRecipientName {
   font-size: 12px;
   font-weight: 700;
-  color: #135200;
+  color: var(--color-lime-800);
 }
 
 .teamRecipientRole {
   font-size: 13px;
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .teamRecipientStage {
@@ -86,24 +86,24 @@
   gap: 8px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #237804;
+  color: var(--color-emerald-700);
   margin-bottom: 3px;
 }
 
 .teamRecipientNext {
   font-size: 13px;
-  color: #5b8c00;
+  color: var(--color-lime-600);
   line-height: 1.5;
 }
 
 .teamStatusWarning {
   margin-top: 8px;
-  background: #fff1f0;
-  border: 1px solid #ffa39e;
+  background: var(--color-bg-base)1f0;
+  border: 1px solid var(--status-error-border);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 12px;
-  color: #cf1322;
+  color: var(--color-error);
 }
 
 .teamStatusHistory {
@@ -120,7 +120,7 @@
   grid-template-columns: 124px 72px 70px 1fr;
   gap: 6px;
   font-size: 13px;
-  color: #4d7c0f;
+  color: var(--color-lime-700);
   background: rgba(255, 255, 255, 0.68);
   border-radius: 8px;
   padding: 6px 8px;
@@ -128,7 +128,7 @@
 
 .purchaseDocCard {
   background: linear-gradient(180deg, #fff7e6 0%, var(--status-warning-bg) 100%);
-  border: 1px solid #ffd591;
+  border: 1px solid var(--status-warning-border);
   border-radius: 12px;
   padding: 12px;
   margin: 8px 0;
@@ -145,13 +145,13 @@
 .purchaseDocTitle {
   font-size: 13px;
   font-weight: 700;
-  color: #ad4e00;
+  color: var(--color-orange-700);
 }
 
 .purchaseDocMeta {
   margin-top: 2px;
   font-size: 13px;
-  color: #ad6800;
+  color: var(--color-warning-deep);
 }
 
 .purchaseDocActions {
@@ -162,7 +162,7 @@
 
 .purchaseDocSummary {
   font-size: 12px;
-  color: #613400;
+  color: var(--color-amber-900);
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -180,7 +180,7 @@
   border-radius: 999px;
   padding: 3px 8px;
   font-size: 13px;
-  color: #ad6800;
+  color: var(--color-warning-deep);
 }
 
 .purchaseDocItems {
@@ -202,17 +202,17 @@
   gap: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #874d00;
+  color: var(--color-amber-700);
 }
 
 .purchaseDocItemMeta {
   margin-top: 4px;
   font-size: 13px;
-  color: #ad6800;
+  color: var(--color-warning-deep);
 }
 
 .purchaseDocItemTip {
   margin-top: 4px;
   font-size: 13px;
-  color: #d46b08;
+  color: var(--color-amber-700);
 }

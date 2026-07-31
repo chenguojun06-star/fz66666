@@ -147,7 +147,7 @@ const SystemStatusTab: React.FC = () => {
                 sorter: (a: any, b: any) => a.userCount - b.userCount,
                 render: (_: any, r: any) => (
                   <Space size={4}>
-                    <Text strong style={{ color: r.userCount > 0 ? undefined : '#999' }}>{r.userCount}</Text>
+                    <Text strong style={{ color: r.userCount > 0 ? undefined : 'var(--color-gray-label)' }}>{r.userCount}</Text>
                     {(r.pendingUsers ?? 0) > 0 && (
                       <Text type="secondary" style={{ fontSize: 14 }}>
                         （{r.activeUsers ?? 0} 活跃 + {r.pendingUsers} 待审）

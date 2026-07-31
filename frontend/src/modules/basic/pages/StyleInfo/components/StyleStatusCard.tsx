@@ -64,7 +64,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
         marginTop: 12,
         padding: 12,
         borderRadius: 8,
-        background: 'var(--color-bg-container, #fff)',
+        background: 'var(--color-bg-container, var(--color-bg-base))',
         boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 1px 6px rgba(0,0,0,0.04)',
       }}
     >
@@ -72,10 +72,10 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
         style={{
           fontSize: 13,
           fontWeight: 600,
-          color: 'var(--color-text, #1f2937)',
+          color: 'var(--color-text, var(--color-bg-dark))',
           marginBottom: 10,
           paddingLeft: 8,
-          borderLeft: '3px solid var(--color-primary, #1677ff)',
+          borderLeft: '3px solid var(--color-primary, var(--color-primary))',
           lineHeight: 1.4,
         }}
       >
@@ -106,7 +106,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 进度节点 */}
       {progressNode && (
         <StatusRow
-          icon={<NodeIndexOutlined style={{ color: 'var(--color-primary, #1677ff)' }} />}
+          icon={<NodeIndexOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
           label="当前进度"
           value={progressNode}
         />
@@ -120,8 +120,8 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
           gap: 8,
           marginBottom: 10,
           padding: '8px 0',
-          borderTop: '1px solid var(--color-border, #f0f0f0)',
-          borderBottom: '1px solid var(--color-border, #f0f0f0)',
+          borderTop: '1px solid var(--color-border, var(--color-border-light))',
+          borderBottom: '1px solid var(--color-border, var(--color-border-light))',
         }}
       >
         <MetricItem label="样衣数" value={sampleQuantity} />
@@ -136,28 +136,28 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 时间信息 */}
       {createTime && (
         <StatusRow
-          icon={<ClockCircleOutlined style={{ color: 'var(--color-text-secondary, #8c8c8c)' }} />}
+          icon={<ClockCircleOutlined style={{ color: 'var(--color-text-secondary, var(--color-text-muted))' }} />}
           label="创建"
           value={createTime}
         />
       )}
       {updateTime && updateTime !== createTime && (
         <StatusRow
-          icon={<SyncOutlined style={{ color: 'var(--color-text-secondary, #8c8c8c)' }} />}
+          icon={<SyncOutlined style={{ color: 'var(--color-text-secondary, var(--color-text-muted))' }} />}
           label="更新"
           value={updateTime}
         />
       )}
       {sampleCompletedTime && (
         <StatusRow
-          icon={<CheckCircleOutlined style={{ color: 'var(--color-success, #52c41a)' }} />}
+          icon={<CheckCircleOutlined style={{ color: 'var(--color-success, var(--color-success))' }} />}
           label="完工"
           value={sampleCompletedTime}
         />
       )}
       {pushedOrderTime && (
         <StatusRow
-          icon={<CheckCircleOutlined style={{ color: 'var(--color-primary, #1677ff)' }} />}
+          icon={<CheckCircleOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
           label="推单"
           value={pushedOrderTime}
         />
@@ -177,7 +177,7 @@ const StatusRow: React.FC<{ icon: React.ReactNode; label: string; value: string 
       alignItems: 'center',
       gap: 6,
       fontSize: 12,
-      color: 'var(--color-text-secondary, #8c8c8c)',
+      color: 'var(--color-text-secondary, var(--color-text-muted))',
       marginBottom: 4,
       lineHeight: 1.5,
     }}
@@ -186,7 +186,7 @@ const StatusRow: React.FC<{ icon: React.ReactNode; label: string; value: string 
     <span style={{ flexShrink: 0 }}>{label}：</span>
     <span
       style={{
-        color: 'var(--color-text, #1f2937)',
+        color: 'var(--color-text, var(--color-bg-dark))',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -205,13 +205,13 @@ const MetricItem: React.FC<{ label: string; value: number | string }> = ({ label
       style={{
         fontSize: 16,
         fontWeight: 600,
-        color: 'var(--color-text, #1f2937)',
+        color: 'var(--color-text, var(--color-bg-dark))',
         lineHeight: 1.2,
       }}
     >
       {value}
     </div>
-    <div style={{ fontSize: 11, color: 'var(--color-text-secondary, #8c8c8c)', marginTop: 2 }}>
+    <div style={{ fontSize: 11, color: 'var(--color-text-secondary, var(--color-text-muted))', marginTop: 2 }}>
       {label}
     </div>
   </div>

@@ -15,10 +15,10 @@ const BottleneckPanel: React.FC<BottleneckPanelProps> = ({
   return (
     <div className="c-card c-breathe-cyan">
       <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('bottleneck')}>
-        <LiveDot size={7} color="#00e5ff" />
+        <LiveDot size={7} color="var(--color-accent-cyan-bright)" />
         工厂工序卡点
         <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
-        <span style={{ fontSize: 14, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
+        <span style={{ fontSize: 14, color: 'var(--color-blue-400)', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
         <CollapseChevron panelKey="bottleneck" collapsed={!!collapsedPanels['bottleneck']} />
       </div>
       <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['bottleneck'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>

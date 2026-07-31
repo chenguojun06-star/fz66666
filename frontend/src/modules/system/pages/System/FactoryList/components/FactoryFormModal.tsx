@@ -174,7 +174,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                     </div>
                   }
                 >
-                  <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary, #999)', cursor: 'help' }} />
+                  <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', cursor: 'help' }} />
                 </Tooltip>
               </Space>
             }

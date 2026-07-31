@@ -136,7 +136,7 @@ const ProcessOrderInfoGrid: React.FC<{
   onNavigateToPayroll: (processName: string) => void;
 }> = ({ record, totalPrice, cuttingQty, operatorInfo, onNavigateToPayroll }) => (
   <div style={{
-    background: '#f8f9fa',
+    background: 'var(--color-slate-50)',
     padding: '12px',
     borderRadius: '6px',
     marginBottom: '12px',
@@ -150,7 +150,7 @@ const ProcessOrderInfoGrid: React.FC<{
     <InfoItem label="款名" value={record.styleName} />
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>总工价：</span>
-      <span style={{ fontWeight: 700, color: '#dc2626' }}>¥{totalPrice.toFixed(2)}</span>
+      <span style={{ fontWeight: 700, color: 'var(--color-error)' }}>¥{totalPrice.toFixed(2)}</span>
     </div>
     <InfoItem label="订单数量" value={`${record.orderQuantity || 0} 件`} />
     <div>

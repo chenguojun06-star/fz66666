@@ -120,7 +120,7 @@ const printCss = `
   html, body {
     font-family: 'Heiti SC', 'Songti SC', 'Hiragino Sans GB', 'STSong', 'Arial Unicode MS', serif;
     font-size: 12px;
-    color: #000;
+    color: var(--color-black);
     background: white;
   }
   .cutting-sheet-page {
@@ -137,14 +137,14 @@ const printCss = `
     gap: 20px;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 2px solid #000;
+    border-bottom: 2px solid var(--color-black);
   }
   .header-left {
     flex: 0 0 200px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-zinc-300);
     border-radius: 4px;
     overflow: hidden;
     background: var(--color-bg-container);
@@ -161,7 +161,7 @@ const printCss = `
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #999;
+    color: var(--color-gray-label);
     font-size: 12px;
   }
   .header-right {
@@ -173,7 +173,7 @@ const printCss = `
   .company-name {
     font-size: 12px;
     font-weight: 700;
-    color: #000;
+    color: var(--color-black);
     margin-bottom: 8px;
   }
   .info-grid {
@@ -188,11 +188,11 @@ const printCss = `
   }
   .info-label {
     font-weight: 600;
-    color: #333;
+    color: var(--color-gray-800);
     min-width: 60px;
   }
   .info-value {
-    color: #000;
+    color: var(--color-black);
     flex: 1;
   }
   .info-value.highlight {
@@ -205,7 +205,7 @@ const printCss = `
     border: 2px solid var(--color-primary);
     padding: 8px 12px;
     border-radius: 4px;
-    background: #f0f7ff;
+    background: var(--status-processing-bg);
     margin-top: 4px;
   }
   .bed-no-value {
@@ -235,7 +235,7 @@ const printCss = `
   }
   .detail-table th,
   .detail-table td {
-    border: 1px solid #333;
+    border: 1px solid var(--color-gray-800);
     padding: 8px;
     text-align: left;
   }
@@ -264,7 +264,7 @@ const printCss = `
   .signature-line {
     display: inline-block;
     min-width: 120px;
-    border-bottom: 1px solid #000;
+    border-bottom: 1px solid var(--color-black);
     margin-left: 8px;
   }
   .signature-value {

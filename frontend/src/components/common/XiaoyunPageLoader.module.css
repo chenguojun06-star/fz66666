@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--neutral-bg-light, #f8fbff);
+  background: var(--neutral-bg-light, var(--color-slate-50));
 }
 
 .inline {
@@ -27,19 +27,19 @@
 .title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--primary-color, #2f5fa8);
+  color: var(--primary-color, var(--color-blue-800));
   letter-spacing: 0.02em;
 }
 
 .desc {
   font-size: 13px;
-  color: var(--neutral-text-secondary, #6f82a8);
+  color: var(--neutral-text-secondary, var(--color-slate-500));
   text-align: center;
   line-height: 1.7;
 }
 
 :root[data-theme="dark"] .wrap {
-  background: var(--neutral-bg, #1a1d24);
+  background: var(--neutral-bg, var(--color-bg-dark));
 }
 
 :root[data-theme="dark"] .card {

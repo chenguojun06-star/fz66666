@@ -61,7 +61,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
               borderRadius: 8,
               padding: '14px 16px',
               cursor: 'pointer',
-              background: tplModal.type === tpl.type ? '#f0f5ff' : 'var(--color-bg-container)',
+              background: tplModal.type === tpl.type ? 'var(--color-bg-highlight)' : 'var(--color-bg-container)',
               transition: 'border-color .2s, background .2s',
             }}
           >
@@ -112,7 +112,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
       )}
 
       {tplModal.type && (
-        <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '12px 16px', fontSize: 14 }}>
+        <div style={{ background: 'var(--color-slate-50)', borderRadius: 6, padding: '12px 16px', fontSize: 14 }}>
           <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
             创建预览
           </div>

@@ -24,7 +24,7 @@ const EcommerceOrders: React.FC = () => {
                 { title: '平台推单',  content: 'Webhook 自动接收，自动匹配款号',  icon: <ApiOutlined style={{ color: 'var(--color-warning)' }} /> },
                 { title: '待处理',    content: '未匹配到的点「待处理」卡片筛选处理', icon: <ShoppingCartOutlined style={{ color: 'var(--color-danger)' }} /> },
                 { title: '关联/出库', content: '关联排产或现货直发→自动扣库存',   icon: <CarOutlined style={{ color: 'var(--color-accent-cyan)' }} /> },
-                { title: '自动核算',  content: '出库自动生成收入+回传物流+对账',   icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
+                { title: '自动核算',  content: '出库自动生成收入+回传物流+对账',   icon: <RiseOutlined style={{ color: 'var(--color-magenta)' }} /> },
               ]}
             />
           }

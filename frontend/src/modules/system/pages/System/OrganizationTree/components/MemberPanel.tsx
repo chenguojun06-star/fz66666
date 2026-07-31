@@ -177,7 +177,7 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
       <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontWeight: 600, fontSize: 15 }}>
           成员列表
-          <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
+          <span style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
             共 {displayedMembers.length} 人
           </span>
         </div>

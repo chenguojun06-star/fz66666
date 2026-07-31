@@ -52,7 +52,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         <Space size="middle">
           <span style={{ fontWeight: 500, fontSize: 14 }}>SKU模式：</span>
           <Switch checked={isManual} onChange={handleModeToggle} checkedChildren="手动编辑" unCheckedChildren="自动生成" />
-          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
             {isManual ? '可自由编辑SKU编码、颜色、尺码等信息' : 'SKU编码按「款号+颜色+尺码」自动生成'}
           </span>
           <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>SKU前缀：</span>
@@ -113,7 +113,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
               <Button type="link" onClick={() => setSkcEditing(true)}>修改SKC</Button>
             </>
           )}
-          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
             默认跟随款号自动生成，修改后会同步到关联的生产订单
           </span>
         </Space>
@@ -155,7 +155,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         destroyOnHidden
       >
         <Form form={rollbackForm} layout="vertical" onFinish={handleRollbackOk}>
-          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary, #666)' }}>确定退回当前编辑？所有未保存的修改将被丢弃。</p>
+          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>确定退回当前编辑？所有未保存的修改将被丢弃。</p>
           <Form.Item name="remark" label="退回备注（可选）">
             <Input.TextArea autoSize={{ minRows: 2 }} placeholder="请输入退回备注" autoFocus />
           </Form.Item>

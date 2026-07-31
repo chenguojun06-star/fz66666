@@ -23,7 +23,7 @@ const PRINT_STYLES = `
     body {
         font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
         padding: 20px;
-        color: #000;
+        color: var(--color-black);
         line-height: 1.6;
     }
     .slip-container {
@@ -36,11 +36,11 @@ const PRINT_STYLES = `
         font-size: 14px;
     }
     .slip-table th, .slip-table td {
-        border: 1px solid #000;
+        border: 1px solid var(--color-black);
         padding: 10px 12px;
     }
     .slip-table th {
-        background-color: #eaeaea;
+        background-color: var(--color-zinc-200);
         font-weight: bold;
         text-align: center;
     }
@@ -50,7 +50,7 @@ const PRINT_STYLES = `
         font-weight: bold;
         letter-spacing: 4px;
         padding: 16px 12px;
-        background-color: #eaeaea;
+        background-color: var(--color-zinc-200);
     }
     .row-info td {
         font-size: 14px;
@@ -58,7 +58,7 @@ const PRINT_STYLES = `
     }
     .row-info .label {
         font-weight: bold;
-        background-color: #f5f5f5;
+        background-color: var(--color-bg-subtle);
         text-align: right;
         width: 12%;
         white-space: nowrap;
@@ -78,16 +78,16 @@ const PRINT_STYLES = `
         margin: 0;
     }
     .data-table th, .data-table td {
-        border: 1px solid #000;
+        border: 1px solid var(--color-black);
         padding: 8px 6px;
         text-align: center;
     }
     .data-table th {
-        background-color: #eaeaea;
+        background-color: var(--color-zinc-200);
         font-weight: bold;
     }
     .row-data-header th {
-        background-color: #eaeaea;
+        background-color: var(--color-zinc-200);
         padding: 0;
     }
     .row-data-header th > table {
@@ -96,7 +96,7 @@ const PRINT_STYLES = `
     }
     .row-data-header th > table th,
     .row-data-header th > table td {
-        border-left: 1px solid #000;
+        border-left: 1px solid var(--color-black);
         border-top: 0;
         border-bottom: 0;
         border-right: 0;
@@ -105,7 +105,7 @@ const PRINT_STYLES = `
     .row-total td {
         font-size: 15px;
         font-weight: bold;
-        background-color: #f5f5f5;
+        background-color: var(--color-bg-subtle);
         text-align: right;
         padding: 12px;
     }
@@ -125,7 +125,7 @@ const PRINT_STYLES = `
     .row-sign .sign-line {
         display: inline-block;
         min-width: 200px;
-        border-bottom: 1px solid #000;
+        border-bottom: 1px solid var(--color-black);
         margin-left: 8px;
     }
     .row-empty td {
@@ -133,7 +133,7 @@ const PRINT_STYLES = `
         border-left: 0;
         border-right: 0;
         height: 8px;
-        background-color: #fff;
+        background-color: var(--color-bg-base);
     }
     @media print {
         body { -webkit-print-color-adjust: exact; padding: 0; }

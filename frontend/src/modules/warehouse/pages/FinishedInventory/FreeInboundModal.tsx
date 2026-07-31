@@ -212,8 +212,8 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
         <div style="font-size:14px;margin-bottom:8px;">数量: ${warehousingRecord.warehousingQuantity || 0} 件</div>
         <div style="font-size:14px;margin-bottom:8px;">仓库: ${warehousingRecord.warehouse || '-'}</div>
         <div style="font-size:14px;margin-bottom:8px;">单号: ${warehousingRecord.warehousingNo || '-'}</div>
-        <div style="font-size:13px;color:#999;margin-top:12px;">二维码: ${warehousingRecord.qrcode || '-'}</div>
-        <div style="font-size:13px;color:#999;">追踪: ${warehousingRecord.traceId || '-'}</div>
+        <div style="font-size:13px;color:var(--color-gray-label);margin-top:12px;">二维码: ${warehousingRecord.qrcode || '-'}</div>
+        <div style="font-size:13px;color:var(--color-gray-label);">追踪: ${warehousingRecord.traceId || '-'}</div>
       </div>
     </body></html>`;
     safePrint(html, '入库标签');

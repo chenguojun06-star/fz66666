@@ -12,7 +12,7 @@ interface SizeColorMatrixSectionProps {
 const SizeColorMatrixSection: React.FC<SizeColorMatrixSectionProps> = ({ sizeColorMatrix }) => {
   if (!sizeColorMatrix || sizeColorMatrix.sizes.length === 0) return null;
   return (
-    <div className="print-section" style={{ padding: 16, border: '0.5px solid #d0d0d0', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
+    <div className="print-section" style={{ padding: 16, border: '0.5px solid var(--color-zinc-300)', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
       <div style={{ fontWeight: 600, color: 'var(--color-gray-800)', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '0.75px solid var(--color-text-quaternary)' }}>下单明细</div>
       <div style={{ overflowX: 'auto' }}>
         <table className="pt" style={{ breakInside: 'avoid' }}>

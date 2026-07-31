@@ -37,8 +37,8 @@ export const getStatusBg = (status: LocationStatus): string => {
   switch (status) {
     case 'empty': return 'var(--color-bg-container)';
     case 'normal': return 'var(--status-success-bg)';
-    case 'full': return '#FFFBE6';
-    case 'locked': return '#F6FFED';
+    case 'full': return 'var(--color-bg-base)BE6';
+    case 'locked': return 'var(--status-success-bg)';
     default: return 'var(--color-bg-container)';
   }
 };

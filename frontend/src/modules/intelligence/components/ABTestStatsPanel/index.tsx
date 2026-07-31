@@ -59,16 +59,16 @@ const ABTestStatsPanel: React.FC = () => {
             const isBestFeedback = r.scene === bestFeedback;
             return (
               <div key={r.scene} style={{
-                background: '#1a1a2e', borderRadius: 8, padding: '12px 14px',
+                background: 'var(--color-dark-bg-2)', borderRadius: 8, padding: '12px 14px',
                 border: (isBestLatency || isBestFeedback) ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.06)',
               }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: '#e0e0e0' }}>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: 'var(--color-border-light)' }}>
                   {SCENE_LABELS[r.scene] ?? '未知'}
-                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 14, color: '#4ade80' }}></span></Tooltip>}
-                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 14, color: '#facc15' }}></span></Tooltip>}
+                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 14, color: 'var(--color-green-400)' }}></span></Tooltip>}
+                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 14, color: 'var(--color-amber-400)' }}></span></Tooltip>}
                 </div>
                 <Metric label="执行次数" value={r.totalRuns} />
-                <Metric label="成功率" value={`${successRate}%`} color={successRate >= 90 ? '#4ade80' : successRate >= 70 ? '#facc15' : '#f87171'} />
+                <Metric label="成功率" value={`${successRate}%`} color={successRate >= 90 ? 'var(--color-green-400)' : successRate >= 70 ? 'var(--color-amber-400)' : 'var(--color-red-400)'} />
                 <Metric label="平均延迟" value={`${r.avgLatencyMs ?? 0}ms`} />
                 <Metric label="置信度" value={r.avgConfidence ?? '-'} />
                 <Metric label="反馈评分" value={r.feedbackCount > 0 ? `${r.avgFeedback}/5 (${r.feedbackCount})` : '-'} />
@@ -85,7 +85,7 @@ function Metric({ label, value, color }: { label: string; value: React.ReactNode
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, lineHeight: '22px' }}>
       <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
-      <span style={{ color: color ?? '#d4d4d8', fontWeight: 500 }}>{value}</span>
+      <span style={{ color: color ?? 'var(--color-zinc-300)', fontWeight: 500 }}>{value}</span>
     </div>
   );
 }

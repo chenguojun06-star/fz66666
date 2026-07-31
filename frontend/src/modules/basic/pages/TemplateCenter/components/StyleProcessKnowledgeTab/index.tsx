@@ -135,7 +135,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
 
   return (
     <div style={{ padding: '12px 0' }}>
-      <Card style={{ marginBottom: 12, background: 'var(--card-bg, #f8f9fa)' }}>
+      <Card style={{ marginBottom: 12, background: 'var(--card-bg, var(--color-slate-50))' }}>
         <Row gutter={32} align="middle">
           <Col>
             <Statistic title="工序种类" value={stats.totalProcessTypes} suffix="种" />

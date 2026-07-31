@@ -16,10 +16,10 @@ export const heroCardStyle: React.CSSProperties = {
 };
 
 export const heroHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 14 };
-export const brandTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: '#0f172a' };
+export const brandTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: 'var(--color-slate-900)' };
 export const brandSubtitleStyle: React.CSSProperties = { fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 };
 export const statusTagStyle: React.CSSProperties = { marginInlineEnd: 0, padding: '6px 14px', borderRadius: 999, fontWeight: 700 };
-export const orderNoStyle: React.CSSProperties = { fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 };
+export const orderNoStyle: React.CSSProperties = { fontSize: 18, fontWeight: 800, color: 'var(--color-slate-900)', marginBottom: 8 };
 
 export const heroOverviewStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '108px minmax(0, 1fr)', gap: 16, alignItems: 'center', marginBottom: 14 };
 export const heroGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 14 };
@@ -39,17 +39,17 @@ export const summaryPanelStyle: React.CSSProperties = {
 };
 
 export const summaryCaptionStyle: React.CSSProperties = { fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 8 };
-export const currentStageStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: '#0f172a', marginBottom: 8 };
+export const currentStageStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: 'var(--color-slate-900)', marginBottom: 8 };
 export const summaryTextStyle: React.CSSProperties = { fontSize: 13, color: 'var(--color-text-tertiary)', lineHeight: 1.7 };
 
 export const sizeQtyFooterStyle: React.CSSProperties = {
   display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
   marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(226,232,240,0.9)',
-  fontSize: 13, fontWeight: 600, color: '#334155',
+  fontSize: 13, fontWeight: 600, color: 'var(--color-slate-700)',
 };
 
 export const progressSummaryRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10, marginTop: 2, flexWrap: 'wrap' };
-export const progressSummaryTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: '#2563eb' };
+export const progressSummaryTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: 'var(--color-primary-dark)' };
 export const progressSummaryMetaStyle: React.CSSProperties = { fontSize: 13, color: 'var(--color-text-tertiary)' };
 export const metricGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginTop: 18 };
 
@@ -68,7 +68,7 @@ export const panelStyle: React.CSSProperties = {
   border: '1px solid rgba(255,255,255,0.78)',
 };
 
-export const panelTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 800, color: '#0f172a', marginBottom: 16 };
+export const panelTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 800, color: 'var(--color-slate-900)', marginBottom: 16 };
 export const aiHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' };
 export const xiaoYunLinkStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 };
 
@@ -80,7 +80,7 @@ export const xiaoYunBubbleStyle: React.CSSProperties = {
 };
 
 export const aiSupportTextStyle: React.CSSProperties = { marginTop: 6, fontSize: 13, color: 'var(--color-text-tertiary)', lineHeight: 1.5 };
-export const confidenceStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#0f172a', background: 'rgba(241,245,249,0.9)', borderRadius: 999, padding: '8px 12px' };
+export const confidenceStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: 'var(--color-slate-900)', background: 'rgba(241,245,249,0.9)', borderRadius: 999, padding: '8px 12px' };
 export const aiGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 };
 
 export const aiItemStyle: React.CSSProperties = {
@@ -101,7 +101,7 @@ export const remarkCardStyle: React.CSSProperties = {
   border: '1px solid rgba(59,130,246,0.14)',
 };
 
-export const remarkTextStyle: React.CSSProperties = { fontSize: 14, color: '#0f172a', lineHeight: 1.8, whiteSpace: 'pre-wrap' };
+export const remarkTextStyle: React.CSSProperties = { fontSize: 14, color: 'var(--color-slate-900)', lineHeight: 1.8, whiteSpace: 'pre-wrap' };
 export const focusListStyle: React.CSSProperties = { display: 'grid', gap: 10 };
 
 export const focusItemStyle: React.CSSProperties = {
@@ -112,6 +112,6 @@ export const focusItemStyle: React.CSSProperties = {
 
 export const timelineStyle: React.CSSProperties = { display: 'grid', gap: 14 };
 export const timelineItemStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '14px minmax(0, 1fr)', gap: 12, alignItems: 'start' };
-export const timelineDotStyle: React.CSSProperties = { width: 10, height: 10, borderRadius: 999, background: '#2563eb', marginTop: 7, boxShadow: '0 0 0 4px rgba(59,130,246,0.14)' };
+export const timelineDotStyle: React.CSSProperties = { width: 10, height: 10, borderRadius: 999, background: 'var(--color-primary-dark)', marginTop: 7, boxShadow: '0 0 0 4px rgba(59,130,246,0.14)' };
 export const emptyPanelStyle: React.CSSProperties = { fontSize: 13, color: 'var(--color-text-tertiary)', lineHeight: 1.7 };
 export const bottomBrandLineStyle: React.CSSProperties = { display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, padding: '4px 6px 0', fontSize: 12, color: 'var(--color-text-tertiary)' };

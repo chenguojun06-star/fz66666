@@ -12,7 +12,7 @@
 .order-cutting-chart-card .ant-card-head-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-bg-dark);
 }
 
 .order-cutting-chart-card .ant-card-body {

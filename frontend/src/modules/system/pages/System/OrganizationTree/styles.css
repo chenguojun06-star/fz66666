@@ -20,7 +20,7 @@
   font-weight: 600;
   font-size: 14px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -51,12 +51,12 @@
 }
 
 .tree-item-selected {
-  background: #e6f4ff;
-  border: 1px solid #91caff;
+  background: var(--status-processing-bg);
+  border: 1px solid var(--status-processing-border);
 }
 
 .tree-item-selected .tree-node-name {
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -68,7 +68,7 @@
   justify-content: center;
   flex-shrink: 0;
   font-size: 8px;
-  color: var(--color-text-tertiary, #999);
+  color: var(--color-text-tertiary, var(--color-gray-label));
   margin-right: 4px;
 }
 
@@ -122,7 +122,7 @@
 .org-member-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--color-gray-800));
 }
 
 .org-member-toolbar {

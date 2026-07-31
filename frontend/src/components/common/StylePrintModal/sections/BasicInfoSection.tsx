@@ -40,7 +40,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   return (
     <div className="print-section">
       {/* 主体：左列（图片+二维码） + 右列（信息） */}
-      <div style={{ display: 'flex', gap: 20, padding: 16, border: '0.5px solid #d0d0d0', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
+      <div style={{ display: 'flex', gap: 20, padding: 16, border: '0.5px solid var(--color-zinc-300)', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
         {/* 左侧：图片 + 二维码（纵向排列） */}
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 100 }}>
           {resolvedCover ? (

@@ -67,7 +67,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
   }, [isCompleted, record]);
 
   const riskColor = isCompleted ? 'var(--color-success)'
-    : daysLeft === null ? '#888'
+    : daysLeft === null ? 'var(--color-text-muted)'
     : daysLeft <= 0 ? 'var(--color-danger)'
     : daysLeft <= 3 ? 'var(--color-warning)'
     : 'var(--color-success)';
@@ -135,7 +135,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
               </span>
               <span style={{
                 flex: 1,
-                color: s.done ? '#888' : isNext ? 'var(--color-primary)' : '#bbb',
+                color: s.done ? 'var(--color-text-muted)' : isNext ? 'var(--color-primary)' : 'var(--color-text-quaternary)',
                 fontWeight: isNext ? 600 : 400,
               }}>
                 {s.label}

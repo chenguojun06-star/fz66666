@@ -252,7 +252,7 @@ const PartnerManagement: React.FC = () => {
           </span>
         }
         headerContent={
-          <div style={{ color: 'var(--color-text-secondary, #666)', marginTop: 4 }}>
+          <div style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))', marginTop: 4 }}>
             管理外部合作工厂及其成员，支持添加成员、设置工厂老板、注册二维码等操作。
             <span style={{ marginLeft: 12 }}>
               共 <strong>{treeData.length}</strong> 家合作企业 · <strong>{totalExternalMembers}</strong> 名外部人员
@@ -290,7 +290,7 @@ const PartnerManagement: React.FC = () => {
                     <div className="partner-member-header">
                       <div style={{ fontWeight: 600, fontSize: 15 }}>
                         {selectedUnit?.unitName} · 成员列表
-                        <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
+                        <span style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
                           共 {displayedMembers.length} 人
                         </span>
                       </div>

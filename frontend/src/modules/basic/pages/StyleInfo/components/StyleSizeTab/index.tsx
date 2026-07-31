@@ -138,7 +138,7 @@ const StyleSizeTab: React.FC<Props> = ({
 
   return (
     <div>
-      <style>{`.style-size-table .ant-table-tbody>tr>td{vertical-align:top}.style-size-table .ant-table-tbody>tr.style-size-group-start>td{border-top:12px solid #f5f7fa;box-shadow:inset 0 1px 0 rgba(0,0,0,.03)}.style-size-table .ant-table-tbody>tr.style-size-group-upper>td{background:#f7fbff}.style-size-table .ant-table-tbody>tr.style-size-group-lower>td{background:#fffaf2}`}</style>
+      <style>{`.style-size-table .ant-table-tbody>tr>td{vertical-align:top}.style-size-table .ant-table-tbody>tr.style-size-group-start>td{border-top:12px solid var(--color-slate-100);box-shadow:inset 0 1px 0 rgba(0,0,0,.03)}.style-size-table .ant-table-tbody>tr.style-size-group-upper>td{background:var(--color-slate-50)}.style-size-table .ant-table-tbody>tr.style-size-group-lower>td{background:var(--color-bg-base)af2}`}</style>
 
       {!simpleView && !hideStageControl && (
         <StyleStageControlBar

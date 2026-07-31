@@ -21,9 +21,9 @@ interface OverviewChartProps {
 }
 
 const COLORS = {
-  order: { ring: '#3b82f6', text: 'var(--color-text-secondary)' },
+  order: { ring: 'var(--color-secondary)', text: 'var(--color-text-secondary)' },
   production: { ring: 'var(--color-accent-emerald)', text: 'var(--color-text-secondary)' },
-  inbound: { ring: '#8b5cf6', text: 'var(--color-text-secondary)' },
+  inbound: { ring: 'var(--color-violet-500)', text: 'var(--color-text-secondary)' },
 };
 
 const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {

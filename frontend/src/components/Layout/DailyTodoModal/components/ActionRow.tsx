@@ -12,7 +12,7 @@ const ActionRow: React.FC<{
       borderRadius: 8, background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)',
       marginBottom: 8, cursor: 'pointer', transition: 'background 0.15s',
     }}
-    onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = '#f0f5ff')}
+    onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-highlight)')}
     onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-container)')}
   >
     <span style={{ fontSize: 13, color }}>{icon}</span>

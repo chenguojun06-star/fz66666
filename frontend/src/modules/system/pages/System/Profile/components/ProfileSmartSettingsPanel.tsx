@@ -243,7 +243,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
         </Typography.Text>
         <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: smartFlagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
       </div>
-      {!smartFlagsCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+      {!smartFlagsCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
         <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
           <Typography.Text type="secondary" style={{ fontSize: 14 }}>
             开关已升级为按租户持久化保存，同租户成员读取同一套配置。
@@ -303,7 +303,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
           <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: backendActionCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
         </div>
         {!backendActionCollapsed && (
-          <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+          <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
             <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
               <Typography.Text type="secondary" style={{ fontSize: 14 }}>
                 控制智能化功能是否自动执行操作。关闭后系统仅提供建议，需人工确认后执行。
@@ -364,7 +364,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             （决定 AI 更偏交期、利润还是回款）
           </Typography.Text>
         </div>
-        <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+        <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
           <Spin spinning={loadingSmartProfile || savingSmartProfile}>
             <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
               <Typography.Text type="secondary" style={{ fontSize: 14 }}>
@@ -402,7 +402,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             </Form>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ padding: 12, borderRadius: 10, background: 'var(--color-bg-base)', border: '1px solid #eef1f4' }}>
+              <div style={{ padding: 12, borderRadius: 10, background: 'var(--color-bg-base)', border: '1px solid var(--color-slate-100)' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>当前生效</div>
                 <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
                   {smartProfile?.manualConfigured ? '已手工保存，款式智能卡与预警逻辑将优先采用这套偏好。' : '当前直接使用系统学习建议，还没有人工覆盖。'}
@@ -413,7 +413,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                   </Typography.Text>
                 )}
               </div>
-              <div style={{ padding: 12, borderRadius: 10, background: 'var(--color-bg-base)', border: '1px solid #eef1f4' }}>
+              <div style={{ padding: 12, borderRadius: 10, background: 'var(--color-bg-base)', border: '1px solid var(--color-slate-100)' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>系统学习建议</div>
                 <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
                   目标：{smartProfile?.learnedProfile?.primaryGoalLabel || '-'}；交期预警 {smartProfile?.learnedProfile?.deliveryWarningDays ?? '-'} 天；异常阈值 {smartProfile?.learnedProfile?.anomalyWarningCount ?? '-'} 次；利润安全线 {smartProfile?.learnedProfile?.lowMarginThreshold ?? '-'}%

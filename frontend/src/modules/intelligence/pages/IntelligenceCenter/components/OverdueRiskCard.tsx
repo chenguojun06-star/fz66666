@@ -17,10 +17,10 @@ const OverdueRiskCard: React.FC<any> = ({
   return (
   <div className="c-card c-breathe-red">
     <div className="c-kpi-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-      <LiveDot size={8} color={overdueRisk.overdue.length > 0 ? '#e8686a' : '#f7a600'} />
+      <LiveDot size={8} color={overdueRisk.overdue.length > 0 ? 'var(--color-red-400)' : 'var(--color-warning-deep)'} />
       <span style={{ fontWeight: 700 }}>逾期 &amp; 延期风险订单</span>
       {overdueRisk.overdue.length > 0 && (
-        <span style={{ background: '#e8686a', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px', marginLeft: 2 }}>逾期 {overdueRisk.overdue.length} 单</span>
+        <span style={{ background: 'var(--color-red-400)', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px', marginLeft: 2 }}>逾期 {overdueRisk.overdue.length} 单</span>
       )}
       {overdueRisk.highRisk.length > 0 && (
         <span style={{ background: 'var(--color-warning-deep)', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
@@ -38,11 +38,11 @@ const OverdueRiskCard: React.FC<any> = ({
             const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
             return (
               <div key={String(o.id)} className="c-risk-row" style={{ cursor: 'pointer' }} onClick={() => goToOrder(o.orderNo)}>
-                <span className="c-risk-badge" style={{ background: '#e8686a' }}>逾{-d}天</span>
+                <span className="c-risk-badge" style={{ background: 'var(--color-red-400)' }}>逾{-d}天</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
                 <span className="c-risk-prog">{calcOrderProgress(o)}%</span>
-                <span className="c-risk-action" style={{ color: '#e8686a' }}>立即联系</span>
+                <span className="c-risk-action" style={{ color: 'var(--color-red-400)' }}>立即联系</span>
               </div>
             );
           })}
@@ -62,11 +62,11 @@ const OverdueRiskCard: React.FC<any> = ({
             const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
             return (
               <div key={String(o.id)} className="c-risk-row" style={{ cursor: 'pointer' }} onClick={() => goToOrder(o.orderNo)}>
-                <span className="c-risk-badge" style={{ background: '#00b4ff' }}>关注{d}d</span>
+                <span className="c-risk-badge" style={{ background: 'var(--color-cyan-500)' }}>关注{d}d</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
                 <span className="c-risk-prog">{calcOrderProgress(o)}%</span>
-                <span className="c-risk-action" style={{ color: '#00b4ff' }}>持续关注</span>
+                <span className="c-risk-action" style={{ color: 'var(--color-cyan-500)' }}>持续关注</span>
               </div>
             );
           })}

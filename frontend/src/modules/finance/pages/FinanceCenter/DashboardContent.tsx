@@ -49,7 +49,7 @@ const DashboardContent: React.FC = () => {
     <Spin spinning={loading}>
       {smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={loadData} /></Card>}
       {healthData && !healthCollapsed && (
-        <Card style={{ marginBottom: 12, background: 'var(--status-processing-bg)', border: '1px solid #bae7ff' }}
+        <Card style={{ marginBottom: 12, background: 'var(--status-processing-bg)', border: '1px solid var(--color-cyan-100)' }}
           title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 15, color: healthData.score >= 80 ? 'var(--color-success)' : healthData.score >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{healthData.score}</b> 分</span>}
           extra={<Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => setHealthCollapsed(true)}>收起</Button>}>
           <Row gutter={16}>
@@ -86,7 +86,7 @@ const DashboardContent: React.FC = () => {
           <Card title="工厂金额排名 Top 10" style={{ height: '100%' }}>
             {rankData.length > 0 ? rankData.map(r => (
               <div key={r.rank} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--color-border-light)' }}>
-                <span><b style={{ color: r.rank <= 3 ? 'var(--color-info)' : '#999', marginRight: 8 }}>{r.rank}</b>{r.name}</span>
+                <span><b style={{ color: r.rank <= 3 ? 'var(--color-info)' : 'var(--color-gray-label)', marginRight: 8 }}>{r.rank}</b>{r.name}</span>
                 <span style={{ fontWeight: 600 }}>¥{r.value.toLocaleString()}</span>
               </div>
             )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无排名数据" style={{ padding: '20px 0' }} />}

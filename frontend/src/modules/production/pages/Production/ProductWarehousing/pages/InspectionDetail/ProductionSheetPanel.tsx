@@ -48,7 +48,7 @@ const ProductionSheetPanel: React.FC<Props> = ({
         <div style={{
           marginBottom: 12,
           padding: '10px 12px',
-          border: '1px solid var(--neutral-border, #e8e8e8)',
+          border: '1px solid var(--neutral-border, var(--color-border-light))',
           borderRadius: 6,
           background: 'var(--neutral-bg, var(--color-bg-container))',
           fontSize: 14,

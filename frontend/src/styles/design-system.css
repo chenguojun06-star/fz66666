@@ -78,7 +78,228 @@
   --color-bg-dark: #1a1d24;        /* 深色背景 - 暗色面板/侧栏 */
   --color-accent-neon: #39ff14;    /* 霓虹绿 - 情报中心/状态高亮 */
   --color-accent-cyan-bright: #00e5ff; /* 亮青 - 图表/可视化 */
+  --color-accent-neon-purple: #7c4dff; /* 霓虹紫 - AI聊天/通知 */
+  --color-accent-cyan: #00bcd4;     /* 深青 - 渐变/标签 */
   --color-warning-deep: #f7a600;   /* 深黄 - 警告/警示强调 */
+
+  /* Tailwind / Ant Design 高频色映射（2026-08-01 扩展） */
+  /* Slate 系 - 边框/背景/暗色 */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  /* Emerald 系 - 成功/生长 */
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  /* Blue 系 - 主色调变体 */
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-300: #93c5fd;
+  --color-blue-200: #bfdbfe;
+  --color-blue-100: #dbeafe;
+  --color-blue-50: #eff6ff;
+  /* Amber 系 - 警告 */
+  --color-amber-50: #f5f5dc;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  /* Orange 系 - 警示强调 */
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  /* Red 系 - 错误/危险 */
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  /* Purple/Violet 系 - 紫色强调 */
+  --color-purple-100: #faf5ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #a855f7;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7e22ce;
+  /* Cyan/Teal 系 - 青色/科技感 */
+  --color-cyan-100: #cffafe;
+  --color-cyan-200: #a5f3fc;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-cyan-600: #0891b2;
+  --color-cyan-700: #0e7490;
+  --color-cyan-800: #006d75;
+  --color-teal-300: #5eead4;
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-teal-600: #0d9488;
+  --color-teal-700: #0f766e;
+  --color-teal-800: #115e59;
+  /* Sky 系 */
+  --color-sky-500: #0ea5e9;
+  /* Indigo/Violet 系 */
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #7c3aed;
+  --color-fuchsia-500: #d946ef;
+  --color-fuchsia-600: #c026d3;
+  /* Pink 系 - 粉色强调 */
+  --color-pink-200: #fbcfe8;
+  --color-pink-300: #f9a8d4;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
+  /* Green/Lime 系 */
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+  --color-lime-100: #dcedc8;
+  --color-lime-200: #c5e1a5;
+  --color-lime-300: #9ccc65;
+  --color-lime-400: #7cb342;
+  --color-lime-500: #84cc16;
+  --color-lime-600: #65a30d;
+  --color-lime-700: #4d7c0f;
+  --color-lime-800: #365314;
+  /* Gray/Zinc 系 - 中性灰 */
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  /* 深色系（用于暗色主题） */
+  --color-dark-bg: #0f1115;
+  --color-dark-bg-2: #1a1a2e;
+  --color-dark-bg-3: #161625;
+  /* 其他高频色 */
+  --color-gold: #ffd700;
+  --color-silver: #c0c0c0;
+  --color-bronze: #cd7f32;
+  --color-magenta: #eb2f96;
+  --color-coral: #ff6b6b;
+  --color-ocean: #0b2d5c;
+  --color-ocean-light: #2a4060;
+  --color-ocean-lighter: #3a6080;
+
+  /* 2026-08-01 补充：前端替换色CSS变量补全 */
+  /* Sky 系补全 */
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-600: #0284c7;
+  --color-sky-700: #0369a1;
+  /* Indigo 系补全 */
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-900: #312e81;
+  /* Violet/Purple 系补全 */
+  --color-violet-50: #f5f3ff;
+  --color-violet-300: #c4b5fd;
+  --color-violet-400: #a78bfa;
+  --color-violet-700: #6d28d9;
+  --color-purple-50: #faf5ff;
+  --color-purple-800: #6b21a8;
+  --color-purple-900: #581c87;
+  /* Rose 系 */
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+  --color-rose-500: #f43f5e;
+  /* Pink 系补全 */
+  --color-pink-700: #be185d;
+  --color-pink-800: #9d174d;
+  /* Fuchsia 系 */
+  --color-fuchsia-50: #fdf4ff;
+  --color-fuchsia-500: #d946ef;
+  /* 其他色系 */
+  --color-yellow-50: #fefce8;
+  --color-orange-50: #fff7ed;
+  --color-lime-50: #f7fee7;
+  --color-teal-50: #f0fdfa;
+
+  /* 语义化背景/边框色 */
+  --color-primary-bg: #e6f4ff;
+  --color-primary-bg-light: #e6f4ff;
+  --color-primary-light-3: #bae0ff;
+  --color-success-light-3: #b7eb8f;
+  --color-warning-light-3: #ffe58f;
+  --color-success-bg-light: #f6ffed;
+  --color-warning-bg-light: #fffbe6;
+  --color-danger-bg-light: #fff1f0;
+  --color-primary-border: #91caff;
+  --color-success-border: #b7eb8f;
+  --color-warning-border: #ffe58f;
+  --color-danger-border: #ffa39e;
+
+  /* 额外语义色 */
+  --color-text: #1f2937;
+  --color-text-3: #6b7280;
+  --color-bg-gray: #f3f4f6;
+  --color-bg-light: #f9fafb;
+  --color-bg-layout: #f5f7fa;
+  --color-border-secondary: #d1d5db;
+  --color-fill-tertiary: #f3f4f6;
+  --color-fill-quaternary: #f9fafb;
 
   /* 玻璃拟态 */
   --glass-bg: rgba(255, 255, 255, 0.75);

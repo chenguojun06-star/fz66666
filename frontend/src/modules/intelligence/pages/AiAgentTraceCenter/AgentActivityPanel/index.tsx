@@ -19,16 +19,16 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const DEPT_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
-  production: { label: '生产管理部', color: '#4a6cf7', icon: '' },
-  finance: { label: '财务管理部', color: '#ec4899', icon: '' },
-  warehouse: { label: '仓储管理部', color: '#f59e0b', icon: '' },
-  basic: { label: '基础业务部', color: '#14b8a6', icon: '' },
-  intelligence: { label: '智能运营中心', color: '#8b5cf6', icon: '' },
+  production: { label: '生产管理部', color: 'var(--color-primary)', icon: '' },
+  finance: { label: '财务管理部', color: 'var(--color-pink-500)', icon: '' },
+  warehouse: { label: '仓储管理部', color: 'var(--color-warning)', icon: '' },
+  basic: { label: '基础业务部', color: 'var(--color-teal-500)', icon: '' },
+  intelligence: { label: '智能运营中心', color: 'var(--color-violet-500)', icon: '' },
 };
 
 function scoreColor(score: number, type: 'int' | 'lazy'): string {
-  if (type === 'int') return score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444';
-  return score >= 60 ? '#ef4444' : score >= 30 ? '#f59e0b' : '#22c55e';
+  if (type === 'int') return score >= 70 ? 'var(--color-success)' : score >= 40 ? 'var(--color-warning)' : 'var(--color-danger)';
+  return score >= 60 ? 'var(--color-danger)' : score >= 30 ? 'var(--color-warning)' : 'var(--color-success)';
 }
 
 const Workstation: React.FC<{
@@ -172,11 +172,11 @@ const AgentDetailCard: React.FC<{ agent: AgentInfo }> = ({ agent }) => {
       <div className="agent-detail-stats">
         <div className="agent-detail-stat">
           <span className="agent-detail-stat-label">今日任务</span>
-          <span className="agent-detail-stat-value" style={{ color: '#4a6cf7' }}>{a.tasksToday}</span>
+          <span className="agent-detail-stat-value" style={{ color: 'var(--color-primary)' }}>{a.tasksToday}</span>
         </div>
         <div className="agent-detail-stat">
           <span className="agent-detail-stat-label">成功率</span>
-          <span className="agent-detail-stat-value" style={{ color: a.successRate >= 80 ? '#22c55e' : '#f59e0b' }}>{a.successRate}%</span>
+          <span className="agent-detail-stat-value" style={{ color: a.successRate >= 80 ? 'var(--color-success)' : 'var(--color-warning)' }}>{a.successRate}%</span>
         </div>
         <div className="agent-detail-stat">
           <span className="agent-detail-stat-label">聪明度</span>
@@ -204,33 +204,33 @@ const DEFAULT_AGENTS: AgentInfo[] = [
   { id: 'order-manager', name: '订单管家', department: 'production', color: 'var(--color-primary)', description: '管理生产订单全生命周期：创建、编辑、转厂、催单、学习、对比', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'material-buyer', name: '物料采购员', department: 'production', color: 'var(--color-success)', description: '面辅料采购：到货入库、领料、对账、采购单管理、供应商管理', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'quality-inspector', name: '质检巡检员', department: 'production', color: 'var(--color-warning)', description: '成品质检入库、次品返修报废、工资异常检测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'production-scheduler', name: '生产调度员', department: 'production', color: '#ff7a45', description: '生产进度查询、异常上报、裁剪单创建、拆菲转派', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'crew-coordinator', name: '生产协调员', department: 'production', color: '#00838f', description: '自然语言命令解析、批量生产建议、订单只读分析', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'finance-settler', name: '财务结算员', department: 'finance', color: '#eb2f96', description: '财务审批付款、工资结算审批、出货对账、发票管理、税务配置', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'production-scheduler', name: '生产调度员', department: 'production', color: 'var(--color-orange-400)', description: '生产进度查询、异常上报、裁剪单创建、拆菲转派', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'crew-coordinator', name: '生产协调员', department: 'production', color: 'var(--color-cyan-700)', description: '自然语言命令解析、批量生产建议、订单只读分析', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'finance-settler', name: '财务结算员', department: 'finance', color: 'var(--color-magenta)', description: '财务审批付款、工资结算审批、出货对账、发票管理、税务配置', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'warehouse-keeper', name: '仓库管理员', department: 'warehouse', color: 'var(--color-accent-purple)', description: '库存管理：物料库存查询、成品库存、样衣借还、盘点、操作日志', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'inventory-manager', name: '出入库专员', department: 'warehouse', color: 'var(--color-warning)', description: '出入库操作：面辅料收货入库、成品出库、采购到货、领料管理', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'style-designer', name: '样衣开发员', department: 'basic', color: 'var(--color-accent-cyan)', description: '样衣开发与纸样管理：款式建档、模板、难度评估、报价、二次加工', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'data-analyst', name: '数据分析师', department: 'intelligence', color: '#fa541c', description: '深度分析、延期趋势、供应商评分、智能报表、管理看板、系统概览', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'data-analyst', name: '数据分析师', department: 'intelligence', color: 'var(--color-orange-600)', description: '深度分析、延期趋势、供应商评分、智能报表、管理看板、系统概览', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'risk-sentinel', name: '风险哨兵', department: 'intelligence', color: 'var(--color-error)', description: '根因分析、人员延期分析、变更审批、生产异常上报', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'smart-advisor', name: '智能顾问', department: 'intelligence', color: '#2f54eb', description: 'AI对话：知识搜索、多代理协同、Agent例会、团队分派', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'smart-advisor', name: '智能顾问', department: 'intelligence', color: 'var(--color-primary-dark)', description: 'AI对话：知识搜索、多代理协同、Agent例会、团队分派', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
   { id: 'learning-engine', name: '学习引擎', department: 'intelligence', color: 'var(--color-success)', description: '自主学习：规律发现、目标拆解、Critic进化、场景模拟、自我优化', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'system-doctor', name: '系统医生', department: 'intelligence', color: '#9254de', description: '系统诊断与自愈：代码诊断、组织查询、用户管理、字典维护', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'patrol-sentinel', name: '巡逻哨兵', department: 'intelligence', color: '#e65100', description: '自动巡检：逾期扫描、停滞检测、主动诊断、智能备注推送', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'sourcing-specialist', name: '采购专家', department: 'intelligence', color: '#00897b', description: 'BOM成本分析、供应商交付评估、物料缺口识别', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'delivery-specialist', name: '交付专家', department: 'intelligence', color: '#d84315', description: '交付风险评估、订单健康评分、逾期预警', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'compliance-specialist', name: '合规专家', department: 'intelligence', color: '#6a1b9a', description: '质量合格率分析、缺陷追踪、DPP合规检查', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'logistics-specialist', name: '物流专家', department: 'intelligence', color: '#1565c0', description: '库存水位分析、出入库节奏、物流延迟风险', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'evolution-engine', name: '进化引擎', department: 'intelligence', color: '#ad1457', description: 'GitHub技术研究、反馈驱动进化、自我优化提案', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'insight-generator', name: '洞察生成器', department: 'intelligence', color: '#00695c', description: '每日洞察简报、晨报生成、业务趋势分析', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'smart-remark', name: '智能备注员', department: 'intelligence', color: '#5d4037', description: '自动备注：订单备注巡检、智能备注推送、异常标记', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'critic-agent', name: '批评检查官', department: 'intelligence', color: '#4e342e', description: '审查AI输出：数据溯源校验、逻辑一致性检查、遗漏检测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'hyper-advisor', name: '超级顾问', department: 'intelligence', color: '#1a237e', description: '深度推演、风险模拟、知识收割、安全建议', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'forecast-engine', name: '预测引擎', department: 'intelligence', color: '#0d47a1', description: '交付预测：交期建议、销售预测、进度预测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'visual-ai', name: '视觉AI', department: 'intelligence', color: '#311b92', description: '图像分析：图片识别、文件分析、视觉质检', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'voice-command', name: '语音指令', department: 'intelligence', color: '#4a148c', description: '语音交互：语音命令解析、语音转文字、语音操作', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'self-healing', name: '自愈引擎', department: 'intelligence', color: '#b71c1c', description: '数据修复：一致性诊断、自动修复、孤儿数据检测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'intelligence-brain', name: '智能中枢', department: 'intelligence', color: '#1b5e20', description: '大脑快照：健康度聚合、风险脉搏、异常感知、学习闭环', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
-  { id: 'anomaly-detector', name: '异常检测器', department: 'intelligence', color: '#880e4f', description: '异常检测：对账异常、工厂瓶颈、物料短缺、停滞预警', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'system-doctor', name: '系统医生', department: 'intelligence', color: 'var(--color-accent-purple)', description: '系统诊断与自愈：代码诊断、组织查询、用户管理、字典维护', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'patrol-sentinel', name: '巡逻哨兵', department: 'intelligence', color: 'var(--color-orange-700)', description: '自动巡检：逾期扫描、停滞检测、主动诊断、智能备注推送', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'sourcing-specialist', name: '采购专家', department: 'intelligence', color: 'var(--color-teal-700)', description: 'BOM成本分析、供应商交付评估、物料缺口识别', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'delivery-specialist', name: '交付专家', department: 'intelligence', color: 'var(--color-orange-700)', description: '交付风险评估、订单健康评分、逾期预警', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'compliance-specialist', name: '合规专家', department: 'intelligence', color: 'var(--color-purple-800)', description: '质量合格率分析、缺陷追踪、DPP合规检查', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'logistics-specialist', name: '物流专家', department: 'intelligence', color: 'var(--color-blue-800)', description: '库存水位分析、出入库节奏、物流延迟风险', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'evolution-engine', name: '进化引擎', department: 'intelligence', color: 'var(--color-pink-700)', description: 'GitHub技术研究、反馈驱动进化、自我优化提案', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'insight-generator', name: '洞察生成器', department: 'intelligence', color: 'var(--color-teal-800)', description: '每日洞察简报、晨报生成、业务趋势分析', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'smart-remark', name: '智能备注员', department: 'intelligence', color: 'var(--color-amber-900)', description: '自动备注：订单备注巡检、智能备注推送、异常标记', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'critic-agent', name: '批评检查官', department: 'intelligence', color: 'var(--color-amber-900)', description: '审查AI输出：数据溯源校验、逻辑一致性检查、遗漏检测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'hyper-advisor', name: '超级顾问', department: 'intelligence', color: 'var(--color-indigo-900)', description: '深度推演、风险模拟、知识收割、安全建议', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'forecast-engine', name: '预测引擎', department: 'intelligence', color: 'var(--color-blue-900)', description: '交付预测：交期建议、销售预测、进度预测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'visual-ai', name: '视觉AI', department: 'intelligence', color: 'var(--color-indigo-900)', description: '图像分析：图片识别、文件分析、视觉质检', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'voice-command', name: '语音指令', department: 'intelligence', color: 'var(--color-purple-900)', description: '语音交互：语音命令解析、语音转文字、语音操作', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'self-healing', name: '自愈引擎', department: 'intelligence', color: 'var(--color-red-800)', description: '数据修复：一致性诊断、自动修复、孤儿数据检测', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'intelligence-brain', name: '智能中枢', department: 'intelligence', color: 'var(--color-green-800)', description: '大脑快照：健康度聚合、风险脉搏、异常感知、学习闭环', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
+  { id: 'anomaly-detector', name: '异常检测器', department: 'intelligence', color: 'var(--color-pink-800)', description: '异常检测：对账异常、工厂瓶颈、物料短缺、停滞预警', status: 'idle', lastActivity: null, tasksToday: 0, successRate: 100, avgDurationMs: 0, intelligenceScore: 50, lazinessScore: 0, currentTask: null, position: { x: 0, y: 0 } },
 ];
 
 const AgentActivityPanel: React.FC = () => {

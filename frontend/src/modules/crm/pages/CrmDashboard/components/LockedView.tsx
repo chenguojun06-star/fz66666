@@ -49,7 +49,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
         </Col>
       ))}
     </Row>
-    <Card style={{ marginTop: 12, background: '#f8f9fa' }} variant="borderless">
+    <Card style={{ marginTop: 12, background: 'var(--color-slate-50)' }} variant="borderless">
       <Row gutter={24} align="middle">
         <Col span={16}>
           <Text strong>为什么比鼎普便宜5倍？</Text>

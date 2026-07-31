@@ -245,22 +245,22 @@
 }
 
 .style-smart-row__delivery--normal {
-  color: #2563eb;
+  color: var(--color-primary-dark);
   background: rgba(37, 99, 235, 0.1);
 }
 
 .style-smart-row__delivery--success {
-  color: #15803d;
+  color: var(--color-green-700);
   background: rgba(34, 197, 94, 0.14);
 }
 
 .style-smart-row__delivery--warning {
-  color: #d97706;
+  color: var(--color-amber-600);
   background: rgba(245, 158, 11, 0.12);
 }
 
 .style-smart-row__delivery--danger {
-  color: #dc2626;
+  color: var(--color-error);
   background: rgba(239, 68, 68, 0.12);
 }
 
@@ -399,7 +399,7 @@
 }
 
 .style-smart-row__timeline-progress {
-  background: #22c55e;
+  background: var(--color-success);
   box-shadow: none;
 }
 
@@ -522,8 +522,8 @@
   position: absolute;
   width: 12px;
   height: 21px;
-  border-right: 2px solid #22c55e;
-  border-bottom: 2px solid #22c55e;
+  border-right: 2px solid var(--color-success);
+  border-bottom: 2px solid var(--color-success);
   transform: translateY(-1px) rotate(45deg) scale(0.65);
   opacity: 0;
   z-index: 2;
@@ -543,12 +543,12 @@
 }
 
 .style-smart-stage:hover .style-smart-stage__label {
-  color: #2563eb;
+  color: var(--color-primary-dark);
 }
 
 .style-smart-stage--done .style-smart-stage__time,
 .style-smart-stage--done .style-smart-stage__helper {
-  color: #16a34a;
+  color: var(--color-green-600);
 }
 
 .style-smart-stage--done .style-smart-stage__ring {
@@ -580,7 +580,7 @@
 
 .style-smart-stage--active .style-smart-stage__time,
 .style-smart-stage--active .style-smart-stage__helper {
-  color: #2563eb;
+  color: var(--color-primary-dark);
 }
 
 .style-smart-stage--active .style-smart-stage__ring {
@@ -605,12 +605,12 @@
 
 .style-smart-stage--risk .style-smart-stage__time,
 .style-smart-stage--risk .style-smart-stage__helper {
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 .style-smart-stage--risk .style-smart-stage__ring {
   border-color: rgba(252, 165, 165, 0.92);
-  background: #F0FFF0;
+  background: var(--status-success-bg);
 }
 
 .style-smart-stage--risk .style-smart-stage__orbit {
@@ -629,12 +629,12 @@
 }
 
 .style-smart-stage--scrapped .style-smart-stage__label {
-  color: #4b5563;
+  color: var(--color-slate-600);
 }
 
 .style-smart-stage--scrapped .style-smart-stage__ring {
   border-color: rgba(156, 163, 175, 0.92);
-  background: #f3f4f6;
+  background: var(--color-bg-stripe);
 }
 
 .style-smart-stage--scrapped .style-smart-stage__orbit {
@@ -703,7 +703,7 @@
 .style-smart-stage-modal__score span {
   display: block;
   margin-bottom: 8px;
-  color: #2563eb;
+  color: var(--color-primary-dark);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -736,7 +736,7 @@
   margin-top: 16px;
   padding: 12px 14px;
   border-radius: 6px;
-  background: #f0f5ff;
+  background: var(--color-bg-highlight);
   color: var(--color-text-primary);
   font-size: 11px;
   line-height: 1.6;
@@ -843,7 +843,7 @@
 }
 
 .style-smart-stage-modal__process-item--compact strong {
-  color: #2563eb;
+  color: var(--color-primary-dark);
   font-size: 11px;
 }
 
@@ -858,7 +858,7 @@
 }
 
 .style-smart-stage-modal__process-head strong {
-  color: #2563eb;
+  color: var(--color-primary-dark);
   font-size: 11px;
 }
 
@@ -909,7 +909,7 @@
 }
 
 .style-workbench__eyebrow {
-  color: #2563eb;
+  color: var(--color-primary-dark);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -979,7 +979,7 @@
 .style-workbench__chip--active {
   border-color: rgba(37, 99, 235, 0.2);
   background: rgba(37, 99, 235, 0.08);
-  color: #2563eb;
+  color: var(--color-primary-dark);
 }
 
 .style-workbench__body {
@@ -1166,7 +1166,7 @@
   font-size: 13px;
   font-weight: 600;
   padding: 8px 0 6px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--color-gray-800);
   margin-bottom: 0;
   color: var(--color-text-primary);
 }
@@ -1189,7 +1189,7 @@
 
 .wps-table th,
 .wps-table td {
-  border: 1px solid #999;
+  border: 1px solid var(--color-gray-label);
   padding: 6px 10px;
   text-align: left;
   vertical-align: middle;
@@ -1202,7 +1202,7 @@
   font-size: 12px;
   color: var(--color-text-primary);
   text-align: center;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--color-gray-800);
 }
 
 .wps-table td:last-child,
@@ -1222,8 +1222,8 @@
   display: flex;
   justify-content: flex-end;
   padding: 6px 10px;
-  border: 1px solid #999;
-  border-top: 2px solid #333;
+  border: 1px solid var(--color-gray-label);
+  border-top: 2px solid var(--color-gray-800);
   background: var(--color-bg-container);
   font-weight: 600;
   font-size: 11px;
@@ -1235,13 +1235,13 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  border: 1px solid #999;
+  border: 1px solid var(--color-gray-label);
   font-size: 13px;
 }
 
 .wps-cost-grid__item {
   padding: 8px 12px;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--color-zinc-300);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1279,7 +1279,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 10px 0 0;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--color-zinc-300);
   margin-top: 12px;
 }
 

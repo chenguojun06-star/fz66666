@@ -76,7 +76,7 @@ const OrdersTab: React.FC<Props> = ({ onInitReturn }) => {
       <Card style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
         styles={{ body: { padding: '8px 14px' } }}>
         <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>本页实付合计：</span>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#eb2f96' }}>{formatMoney(h.totalRevenue)}</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-magenta)' }}>{formatMoney(h.totalRevenue)}</span>
       </Card>
 
       <Card style={{ marginBottom: 10 }}>

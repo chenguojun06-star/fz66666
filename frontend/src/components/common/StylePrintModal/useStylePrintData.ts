@@ -265,18 +265,18 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
 
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${w}mm;min-height:${h}mm;color:#000!important;background:var(--color-bg-base)!important}
+html,body{width:${w}mm;min-height:${h}mm;color:var(--color-black)!important;background:var(--color-bg-base)!important}
 body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif}
 .page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
 .page:last-child{page-break-after:auto}
-.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
+.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid var(--color-gray-800);display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
 .qr-col{flex:0 0 ${qrMm + 1}mm;display:flex;align-items:center;justify-content:center}
 .qr-col img{display:block;object-fit:contain}
 .info-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;padding:0 0 0 0.5mm}
-.ucode-row{font-size:${fs + 0.9}pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:1mm;border-bottom:0.8pt dashed #9a9a9a;margin-bottom:1.1mm}
+.ucode-row{font-size:${fs + 0.9}pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:1mm;border-bottom:0.8pt dashed var(--color-slate-400);margin-bottom:1.1mm}
 .info-row{font-size:${fs}pt;display:flex;align-items:baseline;flex-wrap:nowrap;min-width:0;margin-bottom:0.65mm}
-.lbl{color:#555!important;white-space:nowrap}.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.date-row{color:#777!important;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
+.lbl{color:var(--color-zinc-600)!important;white-space:nowrap}.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.date-row{color:var(--color-zinc-500)!important;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
 </style></head><body>${labelsHtml}</body></html>`;
 
       safePrint(html, `标签打印-${styleNo}`);

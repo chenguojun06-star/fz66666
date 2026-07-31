@@ -26,7 +26,7 @@
 
 .purchase-detail-value {
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -39,7 +39,7 @@
   gap: 10px;
   margin-top: 12px;
   padding: 12px;
-  background: #f6f7fb;
+  background: var(--color-slate-50);
 }
 
 .purchase-detail-size-line {
@@ -59,14 +59,14 @@
 
 .purchase-detail-size-item {
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   font-weight: 600;
 }
 
 .purchase-detail-size-total-inline {
   margin-left: auto;
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -75,7 +75,7 @@
   font-size: var(--font-size-xl);
   font-weight: 700;
   line-height: 1;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   text-align: center;
 }
 
@@ -112,7 +112,7 @@
 .order-flow-section-title {
   font-size: var(--font-size-base);
   font-weight: 800;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   margin: 0 0 10px;
 }
 
@@ -303,7 +303,7 @@
 }
 
 .order-flow-row-highlight > td {
-  background: #e6f4ff !important;
+  background: var(--status-processing-bg) !important;
 }
 
 .smart-order-focus-row > td {
@@ -482,7 +482,7 @@
 .order-flow-summary-title {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
 }
 
 .order-flow-summary-sub {
@@ -502,7 +502,7 @@
 }
 
 .order-flow-metric {
-  background: #f6f7fb;
+  background: var(--color-slate-50);
   padding: 10px 12px;
   min-width: 120px;
 }
@@ -516,7 +516,7 @@
   margin-top: 2px;
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   line-height: 1.2;
 }
 
@@ -543,7 +543,7 @@
 .order-flow-field-value {
   font-size: var(--font-size-base);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -578,7 +578,7 @@
 .order-flow-h-timeline-title-main {
   font-size: var(--font-size-base);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
 }
 
 .order-flow-h-timeline-title-sub {
@@ -629,7 +629,7 @@
 
 .order-flow-h-stage-name {
   font-weight: 800;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
 }
 
 .order-flow-h-stage-toggle {
@@ -676,7 +676,7 @@
 
 .order-flow-h-event-title {
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -765,19 +765,19 @@
 .purchase-detail-size-total-cell {
   padding: 6px 10px;
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  border: 1px solid #e6e8f0;
+  border: 1px solid var(--color-slate-200);
   background: var(--color-bg-base);
 }
 
 .purchase-detail-size-th {
-  background: #f3f5fb;
-  color: #3a3a3a;
+  background: var(--color-indigo-50);
+  color: var(--color-slate-800);
   font-weight: 700;
 }
 
@@ -787,7 +787,7 @@
 
 .purchase-detail-size-summary {
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -818,7 +818,7 @@
 .purchase-detail-section-title {
   font-size: var(--font-size-base);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--color-gray-800);
   margin: 8px 0;
 }
 
@@ -1015,7 +1015,7 @@
   gap: 8px;
   margin-top: 2px;
   padding: 10px 12px;
-  background: #f6f7fb;
+  background: var(--color-slate-50);
 }
 
 .cutting-entry-size-row {

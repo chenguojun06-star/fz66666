@@ -35,10 +35,10 @@ const WorkerEfficiencyPanel: React.FC<WorkerEfficiencyPanelProps> = ({
                 <td><b style={{ color: 'var(--color-accent-cyan-bright)' }}>{w.overallScore}</b></td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {(() => {
-                    const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }
-                      : w.overallScore >= 70 ? { g: 'B', c: '#00e5ff' }
-                      : w.overallScore >= 55 ? { g: 'C', c: '#f7a600' }
-                      : { g: 'D', c: '#e03030' };
+                    const grd = w.overallScore >= 85 ? { g: 'A', c: 'var(--color-accent-neon)' }
+                      : w.overallScore >= 70 ? { g: 'B', c: 'var(--color-accent-cyan-bright)' }
+                      : w.overallScore >= 55 ? { g: 'C', c: 'var(--color-warning-deep)' }
+                      : { g: 'D', c: 'var(--color-danger)' };
                     return (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 14 }}>{grd.g}</b>

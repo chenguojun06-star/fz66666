@@ -90,7 +90,7 @@ export function calcNodeData(
   const completionTimeDisplay = formatDateTime(completionTime);
   const segmentProgress = Math.min(1, percent / 100);
   const nodePrimaryColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
-  const nodeSecondaryColor = isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));
+  const nodeSecondaryColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-border)' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));
 
   return {
     nodeName,

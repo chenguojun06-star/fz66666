@@ -28,9 +28,9 @@ export function printOutstockRecord(record: OutstockPrintData): void {
       .header h2 { margin: 0; }
       .info-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
       table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-      th, td { border: 1px solid #333; padding: 8px; text-align: center; font-size: 13px; }
+      th, td { border: 1px solid var(--color-gray-800); padding: 8px; text-align: center; font-size: 13px; }
       th { background: var(--color-border-light); }
-      .footer { margin-top: 20px; font-size: 12px; color: #666; }
+      .footer { margin-top: 20px; font-size: 12px; color: var(--color-gray-dark); }
     </style></head><body>
     <div class="header"><h2>出库单</h2><p>单号：${record.outstockNo || '-'}</p></div>
     <div class="info-row"><span>客户：${record.customerName || '-'}</span><span>电话：${record.customerPhone || '-'}</span></div>

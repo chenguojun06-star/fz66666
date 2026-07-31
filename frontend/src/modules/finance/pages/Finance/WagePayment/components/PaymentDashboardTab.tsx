@@ -112,7 +112,7 @@ const PaymentDashboard: React.FC = () => {
         itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' },
       },
     }],
-    color: ['var(--color-success)', 'var(--color-info)', 'var(--color-warning)', '#ff7a45', 'var(--color-danger)'],
+    color: ['var(--color-success)', 'var(--color-info)', 'var(--color-warning)', 'var(--color-orange-400)', 'var(--color-danger)'],
   };
 
   const agingColumns = [

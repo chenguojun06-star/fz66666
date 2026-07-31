@@ -151,7 +151,7 @@ const DailyTodoModal: React.FC = () => {
               marginBottom: 16, border: '1px solid var(--color-border-light)',
             }}>
               <div style={{
-                fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8,
+                fontSize: 14, fontWeight: 600, color: 'var(--color-gray-800)', marginBottom: 8,
                 display: 'flex', alignItems: 'center',
               }}>
                 📈 近7日生产趋势
@@ -218,11 +218,11 @@ const DailyTodoModal: React.FC = () => {
           {/* ── AI 智能建议 ── */}
           {suggestions.length > 0 && (
             <div style={{
-              background: '#f9f0ff', borderRadius: 8, padding: '12px 16px',
-              border: '1px solid #d3adf7', marginBottom: 4,
+              background: 'var(--status-info-bg)', borderRadius: 8, padding: '12px 16px',
+              border: '1px solid var(--status-info-border)', marginBottom: 4,
             }}>
               <div style={{
-                fontSize: 14, fontWeight: 600, color: '#531dab', marginBottom: 6,
+                fontSize: 14, fontWeight: 600, color: 'var(--color-purple-700)', marginBottom: 6,
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
                 <RobotOutlined /> 智能运营建议

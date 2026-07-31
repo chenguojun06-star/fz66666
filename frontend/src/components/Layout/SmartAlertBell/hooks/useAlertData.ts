@@ -270,9 +270,9 @@ export function useAlertData(): UseAlertDataReturn {
     : (brief?.highRiskOrderCount ?? 0) > 0 ? 'mid'
     : 'ok';
 
-  const dotColor = riskLevel === 'high' ? '#ef4444'
-    : riskLevel === 'mid' ? '#f59e0b'
-    : '#22c55e';
+  const dotColor = riskLevel === 'high' ? 'var(--color-danger)'
+    : riskLevel === 'mid' ? 'var(--color-warning)'
+    : 'var(--color-success)';
 
   return {
     open,

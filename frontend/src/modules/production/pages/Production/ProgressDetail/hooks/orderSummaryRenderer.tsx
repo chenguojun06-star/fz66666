@@ -48,11 +48,11 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
       color: foreground,
     });
     const metaLabelStyle: CSSProperties = {
-      color: 'var(--neutral-text-light, #98a2b3)',
+      color: 'var(--neutral-text-light, var(--color-slate-400))',
       whiteSpace: 'nowrap',
     };
     const metaValueStyle: CSSProperties = {
-      color: 'var(--neutral-text, #111827)',
+      color: 'var(--neutral-text, var(--color-slate-900))',
       fontWeight: 600,
       textAlign: 'left',
       whiteSpace: 'nowrap',
@@ -110,8 +110,8 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                             <span style={metaLabelStyle}>跟单员</span>
                             <span style={metaValueStyle}>{merchandiserName}</span>
                             {remark ? (
-                              <Badge dot color="#ef4444" offset={[-2, 2]}>
-                                <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
+                              <Badge dot color="var(--color-danger)" offset={[-2, 2]}>
+                                <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-danger)' }} />
                               </Badge>
                             ) : null}
                           </div>
@@ -180,7 +180,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {aiRisk ? (
                 <Tooltip title={[aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ')}>
-                  <Tag color={aiRisk.riskLevel === 'overdue' ? 'error' : aiRisk.riskLevel === 'danger' ? 'volcano' : aiRisk.riskLevel === 'warning' ? 'warning' : 'success'} style={aiRisk.riskLevel === 'overdue' ? softTagStyle('#f8ecec', '#b17a7a') : aiRisk.riskLevel === 'danger' ? softTagStyle('#f8efea', '#b08773') : aiRisk.riskLevel === 'warning' ? softTagStyle('#f7f1e8', '#a88a66') : softTagStyle('#edf6f0', '#66907b')}>
+                  <Tag color={aiRisk.riskLevel === 'overdue' ? 'error' : aiRisk.riskLevel === 'danger' ? 'volcano' : aiRisk.riskLevel === 'warning' ? 'warning' : 'success'} style={aiRisk.riskLevel === 'overdue' ? softTagStyle('var(--color-rose-50)', 'var(--color-rose-300)') : aiRisk.riskLevel === 'danger' ? softTagStyle('var(--color-orange-50)', 'var(--color-amber-300)') : aiRisk.riskLevel === 'warning' ? softTagStyle('var(--color-amber-50)', 'var(--color-amber-300)') : softTagStyle('var(--color-emerald-50)', 'var(--color-emerald-600)')}>
                     {aiRisk.riskLevel === 'overdue' ? 'AI预测逾期' : aiRisk.riskLevel === 'danger' ? 'AI预测偏慢' : aiRisk.riskLevel === 'warning' ? 'AI需关注' : 'AI按时'}
                   </Tag>
                 </Tooltip>

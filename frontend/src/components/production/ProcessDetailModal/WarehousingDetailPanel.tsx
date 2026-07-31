@@ -41,7 +41,7 @@ const WarehousingDetailPanel: React.FC<WarehousingDetailPanelProps> = ({
 
 const OrderInfoGrid: React.FC<{ record: ProductionOrder }> = ({ record }) => (
   <div style={{
-    background: '#f8f9fa',
+    background: 'var(--color-slate-50)',
     padding: '12px',
     borderRadius: '6px',
     marginBottom: '12px',
@@ -124,7 +124,7 @@ const WarehouseStatsCards: React.FC<{
   }}>
     {[
       { label: '合格入库', value: qualifiedQty, color: 'var(--color-success)', percent: qualifiedRate },
-      { label: '次品数', value: unqualifiedQty, color: '#dc2626' },
+      { label: '次品数', value: unqualifiedQty, color: 'var(--color-error)' },
       { label: '返修数', value: repairQty, color: 'var(--color-warning)' },
       { label: '库存', value: stockQty, color: 'var(--color-primary)' },
     ].map((item) => (

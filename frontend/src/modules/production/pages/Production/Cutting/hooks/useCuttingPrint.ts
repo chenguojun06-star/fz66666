@@ -129,7 +129,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       <div class="print-page">
         <div class="label ${printConfig.orientation === 'vertical' ? 'label--vertical' : ''}">
           <div class="qr">
-            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" onerror="this.outerHTML='<span style=display:flex;align-items:center;justify-content:center;width:'+this.width+'px;height:'+this.height+'px;font-size:12px;color:#999>QR错误</span>'" />
+            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" onerror="this.outerHTML='<span style=display:flex;align-items:center;justify-content:center;width:'+this.width+'px;height:'+this.height+'px;font-size:12px;color:var(--color-gray-label)>QR错误</span>'" />
           </div>
           <div class="text">
             <div>订单：${String(b.productionOrderNo || '').trim() || '-'}</div>
@@ -152,7 +152,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           @page { size: ${pageSize}; margin: 0; }
-          html, body { width: ${labelW}mm; height: ${labelH}mm; color: #000; background: var(--color-bg-base); }
+          html, body { width: ${labelW}mm; height: ${labelH}mm; color: var(--color-black); background: var(--color-bg-base); }
           .print-page {
             width: ${labelW}mm;
             height: ${labelH}mm;
@@ -164,7 +164,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
           .label {
             width: 90%;
             height: 90%;
-            border: 1px solid #000;
+            border: 1px solid var(--color-black);
             padding: 3mm;
             display: flex;
             gap: 3mm;
@@ -179,7 +179,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             flex: 1 1 auto;
             font-size: ${fontSize}pt;
             line-height: 1.5;
-            color: #000;
+            color: var(--color-black);
             display: flex;
             flex-direction: column;
             justify-content: space-around;
@@ -188,7 +188,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
           }
           .label--vertical .text { align-items: center; text-align: center; }
           .text div {
-            color: #000;
+            color: var(--color-black);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;

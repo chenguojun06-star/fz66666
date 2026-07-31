@@ -13,7 +13,7 @@
 .overview-sidebar-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--bi-accent, #3b82f6);
+  color: var(--bi-accent, var(--color-secondary));
   margin-bottom: 6px;
 }
 
@@ -40,7 +40,7 @@
   padding: calc(14px * var(--ov-scale)) calc(10px * var(--ov-scale));
   background: var(--color-bg-base);
   border-radius: calc(8px * var(--ov-scale));
-  border: 1px solid #f0f1f3;
+  border: 1px solid var(--color-slate-100);
   transition: all 0.2s ease;
 }
 
@@ -64,7 +64,7 @@
 .pie-value {
   font-size: calc(14px * var(--ov-scale));
   font-weight: 700;
-  fill: #1f2937;
+  fill: var(--color-bg-dark);
 }
 
 .pie-right {
@@ -78,7 +78,7 @@
   font-weight: 600;
   margin-bottom: calc(6px * var(--ov-scale));
   line-height: 1.4;
-  color: #1f2937;
+  color: var(--color-bg-dark);
 }
 
 .pie-stats {
@@ -96,7 +96,7 @@
 .stat-value {
   font-size: calc(18px * var(--ov-scale));
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-bg-dark);
   line-height: 1.3;
 }
 
@@ -108,7 +108,7 @@
 .overview-trend {
   margin-top: calc(12px * var(--ov-scale));
   padding: calc(12px * var(--ov-scale));
-  border-top: 1px solid #f0f1f3;
+  border-top: 1px solid var(--color-slate-100);
   flex: 1;
   overflow: visible;
   min-height: 0;
@@ -117,7 +117,7 @@
 .overview-trend-header {
   font-size: calc(13px * var(--ov-scale));
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-bg-dark);
   margin-bottom: calc(10px * var(--ov-scale));
   padding-left: calc(4px * var(--ov-scale));
 }
@@ -126,7 +126,7 @@
   background: var(--color-bg-base);
   border-radius: calc(8px * var(--ov-scale));
   padding: calc(10px * var(--ov-scale));
-  border: 1px solid #f0f1f3;
+  border: 1px solid var(--color-slate-100);
   position: relative;
   padding-top: calc(50px * var(--ov-scale));
 }
@@ -169,10 +169,10 @@
 .tooltip-date {
   font-size: calc(12px * var(--ov-scale));
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-bg-dark);
   margin-bottom: calc(8px * var(--ov-scale));
   padding-bottom: calc(6px * var(--ov-scale));
-  border-bottom: 1px solid #f0f1f3;
+  border-bottom: 1px solid var(--color-slate-100);
 }
 
 .tooltip-row {
@@ -191,7 +191,7 @@
 .tooltip-value {
   font-weight: 600;
   margin-left: calc(12px * var(--ov-scale));
-  color: #1f2937;
+  color: var(--color-bg-dark);
 }
 
 .overview-chart-labels {

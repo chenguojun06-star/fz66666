@@ -26,10 +26,10 @@ export const OrderScrollPanel: React.FC<{
         <LiveDot size={7} />
         活跃订单实时滚动
         <span className="c-card-badge cyan-badge">{orders.length} 单进行中</span>
-        <span style={{ fontSize: 14, color: '#4a8aaa', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
+        <span style={{ fontSize: 14, color: 'var(--color-blue-400)', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
         {onToggle && (
           <span
-            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? '#a78bfa' : '#5a7a9a', fontSize: 14, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
+            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? 'var(--color-accent-purple)' : 'var(--color-blue-400)', fontSize: 14, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
             title={collapsed ? '展开面板' : '收起面板'}
           >
             {collapsed ? <DownOutlined /> : <UpOutlined />}

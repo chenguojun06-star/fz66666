@@ -25,14 +25,14 @@ import PaymentAuditPopover from '@/modules/finance/pages/FinanceCenter/PaymentAu
 export const methodIconMap: Record<string, React.ReactNode> = {
   OFFLINE: <WalletOutlined />,
   BANK: <BankOutlined />,
-  WECHAT: <WechatOutlined style={{ color: '#07C160' }} />,
-  ALIPAY: <AlipayCircleOutlined style={{ color: '#1677FF' }} />,
+  WECHAT: <WechatOutlined style={{ color: 'var(--color-emerald-500)' }} />,
+  ALIPAY: <AlipayCircleOutlined style={{ color: 'var(--color-primary)' }} />,
 };
 
 export const accountTypeIconMap: Record<string, React.ReactNode> = {
   BANK: <CreditCardOutlined />,
-  WECHAT: <WechatOutlined style={{ color: '#07C160' }} />,
-  ALIPAY: <AlipayCircleOutlined style={{ color: '#1677FF' }} />,
+  WECHAT: <WechatOutlined style={{ color: 'var(--color-emerald-500)' }} />,
+  ALIPAY: <AlipayCircleOutlined style={{ color: 'var(--color-primary)' }} />,
 };
 
 export const bizTypeIconMap: Record<string, React.ReactNode> = {
@@ -126,7 +126,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'paidAmount',
         width: 120,
         align: 'right',
-        render: (v: number) => <span style={{ color: '#389e0d' }}>{formatMoney(v || 0)}</span>,
+        render: (v: number) => <span style={{ color: 'var(--color-success)' }}>{formatMoney(v || 0)}</span>,
       },
       {
         title: '付款状态',

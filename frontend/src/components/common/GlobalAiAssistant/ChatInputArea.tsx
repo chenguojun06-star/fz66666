@@ -75,7 +75,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          background: '#f9fafb',
+          background: 'var(--color-bg-subtle)',
           borderRadius: 8,
           marginBottom: 8
         }}>

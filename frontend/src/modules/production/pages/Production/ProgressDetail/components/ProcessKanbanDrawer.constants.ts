@@ -4,7 +4,7 @@
 /** 阶段颜色映射（使用 CSS 变量，符合 P0 铁律：禁止硬编码颜色） */
 export const STAGE_COLORS: Record<string, string> = {
   '采购': 'var(--color-info)', '裁剪': 'var(--color-success)', '二次工艺': 'var(--color-accent-purple)',
-  '车缝': 'var(--color-warning)', '尾部': '#eb2f96', '入库': 'var(--color-accent-cyan)',
+  '车缝': 'var(--color-warning)', '尾部': 'var(--color-magenta)', '入库': 'var(--color-accent-cyan)',
 };
 
 /** 缺陷分类列表 */

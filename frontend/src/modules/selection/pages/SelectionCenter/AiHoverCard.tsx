@@ -28,7 +28,7 @@ const AiHoverCard: React.FC<{
       {latestReview?.comment && (
         <div style={{
           marginBottom: 10, padding: '8px 10px',
-          background: latestReview.decision === 'APPROVE' ? 'var(--status-success-bg)' : '#F6FFED',
+          background: latestReview.decision === 'APPROVE' ? 'var(--status-success-bg)' : 'var(--status-success-bg)',
           border: `1px solid ${latestReview.decision === 'APPROVE' ? 'var(--status-success-border)' : 'var(--status-error-border)'}`,
           borderRadius: 6, fontSize: 14,
         }}>

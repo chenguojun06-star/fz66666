@@ -17,7 +17,7 @@ const TemplateViewContent: React.FC<TemplateViewContentProps> = ({ activeRow, vi
 
   if (!viewObj || typeof viewObj !== 'object') {
     return (
-      <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: '#0b1020', color: '#e6edf3', padding: 12 }}>
+      <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: 'var(--color-dark-bg)', color: 'var(--color-slate-200)', padding: 12 }}>
         {viewContent || ''}
       </pre>
     );
@@ -40,7 +40,7 @@ const TemplateViewContent: React.FC<TemplateViewContentProps> = ({ activeRow, vi
   }
 
   return (
-    <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: '#0b1020', color: '#e6edf3', padding: 12 }}>
+    <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: 'var(--color-dark-bg)', color: 'var(--color-slate-200)', padding: 12 }}>
       {viewContent || ''}
     </pre>
   );

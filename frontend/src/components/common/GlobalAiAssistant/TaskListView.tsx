@@ -11,9 +11,9 @@ const STATUS_TABS = [
 ];
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  high: { label: '紧急', color: 'var(--color-error)', bg: '#FFF1F0' },
-  medium: { label: '一般', color: '#d48806', bg: '#FFFBE6' },
-  low: { label: '低', color: '#389e0d', bg: 'var(--status-success-bg)' },
+  high: { label: '紧急', color: 'var(--color-error)', bg: 'var(--color-bg-base)1F0' },
+  medium: { label: '一般', color: 'var(--color-warning)', bg: 'var(--color-bg-base)BE6' },
+  low: { label: '低', color: 'var(--color-success)', bg: 'var(--status-success-bg)' },
 };
 
 const MODULE_LABELS: Record<string, string> = {
@@ -75,9 +75,9 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
   // 获取订单关联状态颜色
   const getOrderLinkStatusColor = (status?: string) => {
     switch (status) {
-      case 'LINKED': return '#389e0d';
+      case 'LINKED': return 'var(--color-success)';
       case 'ORDER_NOT_FOUND': return 'var(--color-error)';
-      default: return '#8c8c8c';
+      default: return 'var(--color-text-muted)';
     }
   };
 

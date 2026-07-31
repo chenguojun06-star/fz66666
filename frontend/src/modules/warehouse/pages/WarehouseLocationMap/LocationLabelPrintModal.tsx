@@ -187,7 +187,7 @@ const LocationLabelPrintModal: React.FC<Props> = ({
             style={{
               width: `${width * 2}px`,
               minHeight: `${height * 2}px`,
-              border: '1px solid #333',
+              border: '1px solid var(--color-gray-800)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -266,13 +266,13 @@ function buildPrintHtml(
       <style>
         @page { size: A4; margin: 5mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: var(--color-bg-base); }
+        body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: var(--color-black); background: var(--color-bg-base); }
         .page { width: 190mm; height: 277mm; display: grid; grid-template-columns: repeat(${layout.cols}, ${width}mm); grid-template-rows: repeat(${layout.rows}, ${height}mm); gap: 0; page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .label { border: 0.5pt solid #333; display: flex; align-items: center; justify-content: center; padding: 1mm; }
+        .label { border: 0.5pt solid var(--color-gray-800); display: flex; align-items: center; justify-content: center; padding: 1mm; }
         .label-content { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
-        .warehouse-name { font-size: ${fontSize - 2}pt; color: #666; margin-bottom: 0.5mm; }
-        .zone-name { font-size: ${fontSize - 1}pt; color: #888; margin-bottom: 0.5mm; }
+        .warehouse-name { font-size: ${fontSize - 2}pt; color: var(--color-gray-dark); margin-bottom: 0.5mm; }
+        .zone-name { font-size: ${fontSize - 1}pt; color: var(--color-text-muted); margin-bottom: 0.5mm; }
         .location-code { font-size: ${fontSize + 2}pt; font-weight: 700; margin-bottom: 1mm; }
         .qr-container { display: flex; align-items: center; justify-content: center; }
         @media print { body { background: var(--color-bg-base); } }

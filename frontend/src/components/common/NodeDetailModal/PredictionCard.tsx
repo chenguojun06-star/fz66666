@@ -19,7 +19,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
   return (
     <div style={{
       background: 'var(--color-bg-base)',
-      border: '1px solid #d6e8ff',
+      border: '1px solid var(--color-blue-100)',
       borderLeft: '4px solid var(--color-primary)',
       borderRadius: 6,
       padding: '8px 12px',
@@ -29,7 +29,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 16 }}></span>
         {predicting ? (
-          <span style={{ color: '#0958d9' }}>预测中…</span>
+          <span style={{ color: 'var(--color-primary-dark)' }}>预测中…</span>
         ) : prediction?.predictedFinishTime ? (
           <div>
             <span style={{ color: 'var(--color-text-primary)' }}>

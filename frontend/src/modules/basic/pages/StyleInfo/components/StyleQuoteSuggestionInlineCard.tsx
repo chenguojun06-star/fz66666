@@ -82,11 +82,11 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           cursor: 'pointer',
         }}
       >
-        <span style={{ color: '#ad6800', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ color: 'var(--color-warning-deep)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <BulbOutlined /> AI报价建议
         </span>
         <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>分析对象：{subjectText}</span>
-        <span style={{ marginLeft: 'auto', color: '#ad6800', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--color-warning-deep)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
           {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
         </span>
       </div>
@@ -130,7 +130,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                     }}
                   >
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{item.label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? '#d48806' : 'var(--color-text-primary)' }}>{item.value}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>{item.value}</div>
                   </div>
                 ))}
               </div>

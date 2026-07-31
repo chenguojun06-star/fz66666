@@ -134,7 +134,7 @@ export const difficultyColor = (level?: string) => {
 
 export const SEVERITY_COLOR: Record<string, string> = {
   CRITICAL: 'var(--color-danger)',
-  HIGH: '#ff7a45',
+  HIGH: 'var(--color-orange-400)',
   MEDIUM: 'var(--color-warning)',
   LOW: 'var(--color-success)',
   NONE: 'var(--color-border-antd)',

@@ -100,7 +100,7 @@ const AppStore: React.FC = () => {
           <div style={{ marginBottom: 12 }}><div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, borderLeft: '3px solid var(--primary-color, var(--color-info))', paddingLeft: 8 }}>应用简介</div><p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>{selectedApp?.appDesc}</p></div>
           {selectedApp && MODULE_CONFIG[selectedApp.appCode] && (
             <div style={{ marginBottom: 12 }}><div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, borderLeft: '3px solid var(--primary-color, var(--color-info))', paddingLeft: 8 }}>开通后自动获得</div>
-              <div style={{ background: '#f6f8fa', borderRadius: 6, padding: 12, fontSize: 14 }}>
+              <div style={{ background: 'var(--color-slate-50)', borderRadius: 6, padding: 12, fontSize: 14 }}>
                 <div style={{ marginBottom: 4 }}><CheckCircleOutlined style={{ color: 'var(--color-success)', marginRight: 4 }} />API密钥对（appKey + appSecret）自动生成</div>
                 <div style={{ marginBottom: 4 }}><CheckCircleOutlined style={{ color: 'var(--color-success)', marginRight: 4 }} />HMAC-SHA256 签名鉴权</div>
                 <div style={{ marginBottom: 4 }}><CheckCircleOutlined style={{ color: 'var(--color-success)', marginRight: 4 }} />内部API端点全部自动匹配就绪</div>
@@ -130,12 +130,12 @@ const AppStore: React.FC = () => {
         {wizardStep === 0 && (<div>
           {wizardData.appKey && wizardData.appSecret ? (<>
             <Alert type="success" showIcon icon={<CheckCircleOutlined />} title="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。" style={{ marginBottom: 16 }} />
-            <div style={{ background: '#f6f8fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+            <div style={{ background: 'var(--color-slate-50)', padding: 16, borderRadius: 8, marginBottom: 16 }}>
               <div style={{ marginBottom: 8 }}><Text type="secondary" style={{ fontSize: 14 }}>AppKey</Text><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Text code style={{ fontSize: 14, fontWeight: 600 }}>{wizardData.appKey}</Text><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appKey || '')} /></div></div>
               <div><Text type="secondary" style={{ fontSize: 14 }}>AppSecret</Text><Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 14, marginBottom: 4 }} title=" 密镂仅显示一次，请立即保存！" /><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Text code style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-error)' }}>{wizardData.appSecret}</Text><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} /></div></div>
             </div></>
           ) : <Alert type="error" showIcon title="API凭证生成失败" description="试用已开通但API凭证创建失败，请前往「API对接管理」手动创建凭证，或联系管理员处理。" style={{ marginBottom: 16 }} />}
-          {wizardData.apiEndpoints && wizardData.apiEndpoints.length > 0 && (<div style={{ marginBottom: 16 }}><div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}> 已自动匹配的API端点：</div><div style={{ background: '#f0f5ff', borderRadius: 6, padding: 12 }}>{wizardData.apiEndpoints.map((ep, idx) => (<div key={idx} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 14, alignItems: 'center' }}><Tag color={ep.method === 'PUSH' ? 'green' : 'blue'} style={{ fontSize: 14, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag><Text code style={{ fontSize: 14 }}>{ep.path}</Text><Text type="secondary" style={{ fontSize: 14 }}>{ep.desc}</Text></div>))}</div></div>)}
+          {wizardData.apiEndpoints && wizardData.apiEndpoints.length > 0 && (<div style={{ marginBottom: 16 }}><div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}> 已自动匹配的API端点：</div><div style={{ background: 'var(--color-bg-highlight)', borderRadius: 6, padding: 12 }}>{wizardData.apiEndpoints.map((ep, idx) => (<div key={idx} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 14, alignItems: 'center' }}><Tag color={ep.method === 'PUSH' ? 'green' : 'blue'} style={{ fontSize: 14, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag><Text code style={{ fontSize: 14 }}>{ep.path}</Text><Text type="secondary" style={{ fontSize: 14 }}>{ep.desc}</Text></div>))}</div></div>)}
           <div style={{ textAlign: 'right', marginTop: 16 }}><Button style={{ marginRight: 8 }} onClick={handleSetupSkip}>稍后配置</Button><Button type="primary" icon={<SettingOutlined />} onClick={() => setWizardStep(1)} disabled={!wizardData.tenantAppId}>{wizardData.tenantAppId ? '下一步：填写您的接口地址' : '凭证未就绪，请稍后在管理页配置'}</Button></div>
         </div>)}
         {wizardStep === 1 && (<div>
@@ -155,7 +155,7 @@ const AppStore: React.FC = () => {
               <Form.Item label={<span>您的API地址<Text type="secondary" style={{ fontSize: 14, marginLeft: 4 }}>用于我们主动调用您的系统</Text></span>} name="externalApiUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://your-system.com/api" prefix={<ApiOutlined />} /></Form.Item>
             </Form>
             <Divider style={{ margin: '16px 0' }} />
-            <div style={{ background: '#f6f8fa', borderRadius: 6, padding: 12, marginBottom: 16, fontSize: 14 }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 不确定填什么？</div><ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li><strong>回调地址</strong>：您系统中接收推送通知的URL</li><li><strong>您的API地址</strong>：我们主动调用您系统的地址</li><li>两个地址都可以稍后再填，不影响试用开通</li></ul></div>
+            <div style={{ background: 'var(--color-slate-50)', borderRadius: 6, padding: 12, marginBottom: 16, fontSize: 14 }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 不确定填什么？</div><ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li><strong>回调地址</strong>：您系统中接收推送通知的URL</li><li><strong>您的API地址</strong>：我们主动调用您系统的地址</li><li>两个地址都可以稍后再填，不影响试用开通</li></ul></div>
           </>)}
           <div style={{ textAlign: 'right' }}><Button style={{ marginRight: 8 }} onClick={() => setWizardStep(0)}>上一步</Button><Button style={{ marginRight: 8 }} onClick={handleSetupSkip}>稍后配置</Button><Button type="primary" loading={setupLoading} onClick={handleSetupComplete}>完成配置</Button></div>
         </div>)}

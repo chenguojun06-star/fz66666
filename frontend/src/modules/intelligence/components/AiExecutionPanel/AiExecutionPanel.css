@@ -1,6 +1,6 @@
 /* =====================================================
    AiExecutionPanel — 对齐驾驶舱科技暗色风格
-   #080f1e 背景 + #00e5ff 青色调
+   var(--color-dark-bg) 背景 + var(--color-accent-cyan-bright) 青色调
    注意：使用后代选择器覆盖 Ant Design 默认样式
    ===================================================== */
 
@@ -47,7 +47,7 @@
 .ai-execution-panel .ant-table {
   background: transparent !important;
   font-size: 14px !important;
-  color: #c8d8ea !important;
+  color: var(--color-blue-200) !important;
 }
 
 .ai-execution-panel .ant-table-thead > tr > th {
@@ -61,7 +61,7 @@
 
 .ai-execution-panel .ant-table-tbody > tr > td {
   background: transparent !important;
-  color: #c8d8ea !important;
+  color: var(--color-blue-200) !important;
   border-bottom: 1px solid rgba(0, 229, 255, 0.06) !important;
   padding: 6px 8px !important;
 }
@@ -104,7 +104,7 @@
 }
 
 .ai-execution-panel .ant-alert-message {
-  color: #f87171 !important;
+  color: var(--color-red-400) !important;
   font-size: 14px;
 }
 
@@ -141,7 +141,7 @@
 
 .ai-execution-panel .command-detail-section ul li {
   margin-bottom: 6px;
-  color: #c8d8ea;
+  color: var(--color-blue-200);
   line-height: 1.6;
   font-size: 14px;
 }
@@ -150,7 +150,7 @@
   margin: 0;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(0, 229, 255, 0.1);
-  color: #7dd3fc;
+  color: var(--color-sky-300);
   padding: 8px;
   border-radius: 4px;
   font-size: 14px;
@@ -178,7 +178,7 @@
   border: 1px solid rgba(251, 146, 60, 0.35);
   border-radius: 3px;
   font-size: 14px;
-  color: #fb923c;
+  color: var(--color-orange-400);
   font-weight: 500;
 }
 
@@ -191,7 +191,7 @@
   background: rgba(74, 222, 128, 0.08);
   border: 1px solid rgba(74, 222, 128, 0.25);
   border-radius: 4px;
-  color: #4ade80;
+  color: var(--color-green-400);
   font-size: 14px;
 
   .icon {
@@ -208,7 +208,7 @@
   background: rgba(248, 113, 113, 0.08);
   border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: 4px;
-  color: #f87171;
+  color: var(--color-red-400);
   font-size: 14px;
 
   .icon {
@@ -226,7 +226,7 @@
 
   .title {
     font-weight: 600;
-    color: #a78bfa;
+    color: var(--color-accent-purple);
     margin-bottom: 8px;
     font-size: 14px;
   }
@@ -242,7 +242,7 @@
       border: 1px solid rgba(167, 139, 250, 0.25);
       border-radius: 2px;
       font-size: 14px;
-    color: #c4b5fd;
+    color: var(--color-purple-200);
     }
   }
 }

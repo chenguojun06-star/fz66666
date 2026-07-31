@@ -167,7 +167,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,
-      render: v => <Badge count={v} showZero color={v > 0 ? 'var(--color-success)' : '#aaa'} />,
+      render: v => <Badge count={v} showZero color={v > 0 ? 'var(--color-success)' : 'var(--color-text-quaternary)'} />,
     },
     {
       title: '成本价 (¥)', dataIndex: 'costPrice', width: 140,

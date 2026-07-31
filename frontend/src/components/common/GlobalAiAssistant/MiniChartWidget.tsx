@@ -23,13 +23,13 @@ export interface ChartSpec {
   indicators?: Array<{ name: string; max: number }>; // radar 图维度定义
 }
 
-const CHART_COLORS = ['var(--color-info)', 'var(--color-success)', 'var(--color-warning)', '#e8686a', 'var(--color-accent-purple)', 'var(--color-accent-cyan)', '#eb2f96'];
+const CHART_COLORS = ['var(--color-info)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-red-400)', 'var(--color-accent-purple)', 'var(--color-accent-cyan)', 'var(--color-magenta)'];
 
 const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
   // ── progress：纯 CSS，无 ECharts，最轻量 ───────────────────────────────
   if (chart.type === 'progress') {
     const pct = Math.min(chart.value ?? 0, 100);
-    const pctColor = pct >= 80 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-warning)' : '#ff7875';
+    const pctColor = pct >= 80 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-warning)' : 'var(--color-danger)';
     return (
       <div className={styles.miniProgressChart}>
         <div className={styles.miniChartTitle}>
@@ -55,7 +55,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     const val = chart.value ?? 0;
     const maxVal = chart.target ?? 100;
     const pctOfMax = maxVal > 0 ? val / maxVal : 0;
-    const gaugeColor = pctOfMax >= 0.8 ? 'var(--color-success)' : pctOfMax >= 0.6 ? 'var(--color-warning)' : '#ff7875';
+    const gaugeColor = pctOfMax >= 0.8 ? 'var(--color-success)' : pctOfMax >= 0.6 ? 'var(--color-warning)' : 'var(--color-danger)';
     option = {
       series: [{
         type: 'gauge',
@@ -102,7 +102,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           position: 'center',
           formatter: () => `{val|${chart.highlight}}\n{subval|${chart.unit ?? ''}}`,
           rich: {
-            val: { fontSize: 18, fontWeight: 'bold', color: '#262626', lineHeight: 24 },
+            val: { fontSize: 18, fontWeight: 'bold', color: 'var(--color-gray-800)', lineHeight: 24 },
             subval: { fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 18 },
           },
         } : { show: false },
@@ -143,7 +143,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         indicator: indicators,
         radius: '55%',
         center: ['50%', (chart.series ?? []).length > 1 ? '58%' : '52%'],
-        splitArea: { areaStyle: { color: ['var(--color-bg-base)', '#f5f7ff'] } },
+        splitArea: { areaStyle: { color: ['var(--color-bg-base)', 'var(--color-indigo-50)'] } },
         axisName: { fontSize: 14, color: 'var(--color-gray-700)' },
       },
       series: [{
@@ -234,7 +234,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         ...(chart.target !== undefined ? [{
           type: 'line', name: '目标线',
           data: new Array((chart.xAxis ?? []).length).fill(chart.target),
-          lineStyle: { type: 'dashed' as const, color: '#ff7875', width: 1.5 },
+          lineStyle: { type: 'dashed' as const, color: 'var(--color-danger)', width: 1.5 },
           symbol: 'none', label: { show: false },
         }] : []),
       ],
@@ -270,7 +270,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
       series: [
         { type: 'bar', name: '辅助', stack: 'total', itemStyle: { color: 'transparent', borderColor: 'transparent' }, data: placeholders },
         { type: 'bar', name: '增加', stack: 'total', itemStyle: { color: 'var(--color-success)', borderRadius: [4, 4, 0, 0] }, data: positives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
-        { type: 'bar', name: '减少', stack: 'total', itemStyle: { color: '#ff7875', borderRadius: [4, 4, 0, 0] }, data: negatives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
+        { type: 'bar', name: '减少', stack: 'total', itemStyle: { color: 'var(--color-danger)', borderRadius: [4, 4, 0, 0] }, data: negatives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
       ],
     };
 
@@ -301,7 +301,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         ...(chart.target !== undefined ? [{
           type: 'line', name: '目标线',
           data: new Array((chart.xAxis ?? []).length).fill(chart.target),
-          lineStyle: { type: 'dashed' as const, color: '#ff7875', width: 1.5 },
+          lineStyle: { type: 'dashed' as const, color: 'var(--color-danger)', width: 1.5 },
           symbol: 'none', label: { show: false },
         }] : []),
       ],

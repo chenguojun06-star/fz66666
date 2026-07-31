@@ -9,7 +9,7 @@ const DecisionCardRow: React.FC<{
 }> = ({ card, onNav }) => {
   const borderColor = LEVEL_BORDER[card.level] || 'var(--color-border-antd)';
   const bgColor = LEVEL_BG[card.level] || 'var(--color-bg-container)';
-  const accentColor = LEVEL_COLOR[card.level] || '#595959';
+  const accentColor = LEVEL_COLOR[card.level] || 'var(--color-gray-700)';
 
   return (
     <div style={{

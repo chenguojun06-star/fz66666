@@ -53,7 +53,7 @@ export function getSummaryPayrollColumns(deps: SummaryColumnDeps): any[] {
             width: 130,
             align: 'right' as const,
             render: (v: unknown) => (
-                <span style={{ color: '#389e0d' }}>{formatMoney(toNumberOrZero(v))}</span>
+                <span style={{ color: 'var(--color-success)' }}>{formatMoney(toNumberOrZero(v))}</span>
             ),
         },
         {

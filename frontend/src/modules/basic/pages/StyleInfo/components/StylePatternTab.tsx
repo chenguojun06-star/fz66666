@@ -117,7 +117,7 @@ const StylePatternTab: React.FC<Props> = ({
                 style={{
                   fontSize: '12px',
                   color: 'var(--color-warning)',
-                  backgroundColor: '#FFFBE6',
+                  backgroundColor: 'var(--color-bg-base)BE6',
                   border: '1px solid var(--status-warning-border)',
                   padding: '2px 8px',
                   borderRadius: '4px',

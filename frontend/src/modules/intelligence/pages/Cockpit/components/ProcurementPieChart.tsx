@@ -8,8 +8,8 @@ import './ProcurementPieChart.css';
 
 const STATUS_STAGES = [
   { key: 'pending', label: '待采购', color: 'var(--color-text-tertiary)' },
-  { key: 'received', label: '已到货', color: '#3b82f6' },
-  { key: 'partial', label: '部分到货', color: '#f59e0b' },
+  { key: 'received', label: '已到货', color: 'var(--color-secondary)' },
+  { key: 'partial', label: '部分到货', color: 'var(--color-warning)' },
   { key: 'completed', label: '已完成', color: 'var(--color-accent-emerald)' },
 ];
 

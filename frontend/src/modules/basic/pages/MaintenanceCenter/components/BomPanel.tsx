@@ -10,7 +10,7 @@ import {
 const { TextArea } = Input;
 
 const directCardStyle = {
-  border: '1px solid #ececec',
+  border: '1px solid var(--color-zinc-200)',
   borderRadius: 10,
   padding: 12,
   background: 'var(--color-bg-base)',
@@ -42,7 +42,7 @@ const processingBannerStyle = {
   marginBottom: 10,
   padding: '8px 10px',
   borderRadius: 8,
-  border: '1px solid #ffd591',
+  border: '1px solid var(--status-warning-border)',
   background: 'var(--status-warning-bg)',
   display: 'grid',
   gap: 4,
@@ -196,7 +196,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
               {directProcessing ? (
                 <div style={processingBannerStyle}>
                   <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
-                  <div style={{ ...directMetaStyle, color: '#ad6800' }}>这份 BOM 已退回，当前还没有重新保存提交，保存后会自动重新锁定。</div>
+                  <div style={{ ...directMetaStyle, color: 'var(--color-warning-deep)' }}>这份 BOM 已退回，当前还没有重新保存提交，保存后会自动重新锁定。</div>
                 </div>
               ) : null}
               <TemplateInlineEditor

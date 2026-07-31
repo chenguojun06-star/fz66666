@@ -40,7 +40,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
   });
   const matrixPopoverContent = <ColorSizeMatrixPopoverContent model={orderMatrix} />;
   const nodeColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : 'var(--color-success)');
-  const nodeColor2 = isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : '#95de64');
+  const nodeColor2 = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-border)' : 'var(--color-success)');
 
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', flex: '1 1 0' }}>

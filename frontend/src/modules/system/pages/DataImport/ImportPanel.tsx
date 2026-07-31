@@ -52,7 +52,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   return (
     <div>
       {/* 说明区域 */}
-      <Card style={{ marginBottom: 16, background: '#f8f9fa' }}>
+      <Card style={{ marginBottom: 16, background: 'var(--color-slate-50)' }}>
         <Paragraph style={{ marginBottom: 8 }}>
           <Text strong>{config.description}</Text>
         </Paragraph>

@@ -152,10 +152,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanCounts,
         lineStyle: {
           width: 2,
-          color: '#3b82f6', // 蓝色
+          color: 'var(--color-secondary)', // 蓝色
         },
         itemStyle: {
-          color: '#3b82f6',
+          color: 'var(--color-secondary)',
         },
         areaStyle: {
           color: {
@@ -178,10 +178,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanQuantities,
         lineStyle: {
           width: 2,
-          color: '#f97316', // 橙色
+          color: 'var(--color-orange-500)', // 橙色
         },
         itemStyle: {
-          color: '#f97316',
+          color: 'var(--color-orange-500)',
         },
         areaStyle: {
           color: {

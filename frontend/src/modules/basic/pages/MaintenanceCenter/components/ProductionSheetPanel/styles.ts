@@ -1,5 +1,5 @@
 export const directCardStyle = {
-  border: '1px solid #ececec',
+  border: '1px solid var(--color-zinc-200)',
   borderRadius: 10,
   padding: 12,
   background: 'var(--color-bg-base)',
@@ -31,7 +31,7 @@ export const processingBannerStyle = {
   marginBottom: 10,
   padding: '8px 10px',
   borderRadius: 8,
-  border: '1px solid #ffd591',
+  border: '1px solid var(--status-warning-border)',
   background: 'var(--status-warning-bg)',
   display: 'grid',
   gap: 4,

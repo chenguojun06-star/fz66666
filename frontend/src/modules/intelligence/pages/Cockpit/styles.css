@@ -1,18 +1,18 @@
 .cockpit-workbench {
-  --bi-bg: #f5f7fa;
+  --bi-bg: var(--color-slate-100);
   --bi-surface: var(--color-bg-base);
   --bi-border: var(--color-border);
-  --bi-border-light: #f0f1f3;
-  --bi-text-primary: #1f2937;
+  --bi-border-light: var(--color-slate-100);
+  --bi-text-primary: var(--color-bg-dark);
   --bi-text-secondary: var(--color-text-secondary);
   --bi-text-muted: var(--color-text-tertiary);
-  --bi-accent: #3b82f6;
-  --bi-accent-light: #eff6ff;
+  --bi-accent: var(--color-secondary);
+  --bi-accent-light: var(--color-blue-50);
   --bi-success: var(--color-accent-emerald);
-  --bi-warning: #f59e0b;
-  --bi-danger: #ef4444;
-  --bi-purple: #8b5cf6;
-  --bi-cyan: #06b6d4;
+  --bi-warning: var(--color-warning);
+  --bi-danger: var(--color-danger);
+  --bi-purple: var(--color-violet-500);
+  --bi-cyan: var(--color-cyan-500);
   --bi-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
   --bi-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
   --bi-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
@@ -210,7 +210,7 @@
 
 .cockpit-widget-close:hover {
   color: var(--bi-danger) !important;
-  background: #fef2f2 !important;
+  background: var(--color-red-100) !important;
 }
 
 .cockpit-widget-body {

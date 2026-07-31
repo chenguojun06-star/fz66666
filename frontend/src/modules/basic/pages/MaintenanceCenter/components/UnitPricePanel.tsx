@@ -134,7 +134,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
         {isProcessing(directRow) ? (
           <div style={processingBannerStyle}>
             <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
-            <div style={{ ...directMetaStyle, color: '#ad6800' }}>这份工序单价模板已退回，保存后会自动重新锁定。</div>
+            <div style={{ ...directMetaStyle, color: 'var(--color-warning-deep)' }}>这份工序单价模板已退回，保存后会自动重新锁定。</div>
           </div>
         ) : null}
         <TemplateInlineEditor

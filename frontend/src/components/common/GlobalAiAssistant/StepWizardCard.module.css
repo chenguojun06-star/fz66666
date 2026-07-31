@@ -1,6 +1,6 @@
 .card {
   background: var(--color-bg-base);
-  border: 1px solid #e8edf5;
+  border: 1px solid var(--color-slate-100);
   border-radius: 14px;
   padding: 16px;
   margin: 8px 0;
@@ -27,7 +27,7 @@
 .title {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-dark-bg-2);
 }
 
 .desc {
@@ -58,13 +58,13 @@
 }
 
 .stepActive {
-  background: #e6f4ff;
+  background: var(--status-processing-bg);
   color: var(--color-primary);
   font-weight: 600;
 }
 
 .stepDone {
-  background: #f0faf0;
+  background: var(--color-emerald-50);
   color: var(--color-success);
 }
 
@@ -120,7 +120,7 @@
 }
 
 .required {
-  color: #ff7875;
+  color: var(--color-danger);
   margin-left: 2px;
 }
 
@@ -147,13 +147,13 @@
 }
 
 .optionBtn:hover {
-  border-color: #91caff;
-  background: #f0f7ff;
+  border-color: var(--status-processing-border);
+  background: var(--status-processing-bg);
 }
 
 .optionSelected {
   border-color: var(--color-primary);
-  background: #e6f4ff;
+  background: var(--status-processing-bg);
   box-shadow: 0 0 0 1px var(--color-primary);
 }
 
@@ -219,7 +219,7 @@
 }
 
 .prevBtn:hover {
-  border-color: #8c8c8c;
+  border-color: var(--color-text-muted);
   color: var(--color-text-primary);
 }
 
@@ -236,7 +236,7 @@
 }
 
 .nextBtn:hover {
-  background: #4096ff;
+  background: var(--color-primary-light);
 }
 
 .nextDisabled {

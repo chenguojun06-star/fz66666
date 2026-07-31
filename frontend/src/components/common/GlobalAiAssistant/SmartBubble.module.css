@@ -61,7 +61,7 @@
 .bubbleGreeting {
   font-size: 15px;
   font-weight: 700;
-  color: #003a8c;
+  color: var(--color-blue-800);
 }
 
 .bubbleCloseBtn {
@@ -86,7 +86,7 @@
   gap: 6px;
   padding: 6px 8px;
   background: linear-gradient(135deg, #FFF1F0 0%, var(--status-error-border) 100%);
-  border: 1px solid #ffa39e;
+  border: 1px solid var(--status-error-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -95,7 +95,7 @@
 .bubbleUrgentItem:hover {
   transform: translateX(2px);
   box-shadow: 0 2px 8px rgba(255, 77, 79, 0.25);
-  border-color: #ff7875;
+  border-color: var(--color-danger);
 }
 
 .bubbleUrgentIcon {
@@ -107,7 +107,7 @@
   flex: 1;
   font-size: 14px;
   font-weight: 600;
-  color: #a8071a;
+  color: var(--color-red-700);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -139,9 +139,9 @@
 
 .bubbleStatHigh {
   font-size: 14px;
-  color: #ff7875;
-  background: #FFF1F0;
-  border: 1px solid #ffa39e;
+  color: var(--color-danger);
+  background: var(--color-bg-base)1F0;
+  border: 1px solid var(--status-error-border);
   border-radius: 8px;
   padding: 1px 6px;
   font-weight: 600;
@@ -156,7 +156,7 @@
 }
 
 .bubbleViewAll:hover {
-  color: #096dd9;
+  color: var(--color-primary);
 }
 
 .bubbleCategoryRow {

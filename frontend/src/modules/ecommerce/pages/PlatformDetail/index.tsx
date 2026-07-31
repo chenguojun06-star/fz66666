@@ -99,7 +99,7 @@ const PlatformDetail: React.FC = () => {
             description={
               <Row gutter={24}>
                 <Col span={12}>
-                  <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
+                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-primary)' }}>📦 链路一：成品仓（有生产单）</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → SKU匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
@@ -124,22 +124,22 @@ const PlatformDetail: React.FC = () => {
           />
           <Row gutter={12} style={{ marginBottom: 16 }}>
             <Col span={6}>
-              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid #ffd591' }}>
+              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid var(--status-warning-border)' }}>
                 <Statistic title="待拣货" value={stats?.pendingPick ?? 0} suffix="单" styles={{ content: { color: 'var(--color-warning)', fontSize: 20 } }} prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid #91caff' }}>
+              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid var(--status-processing-border)' }}>
                 <Statistic title="备货中" value={stats?.preparing ?? 0} suffix="单" styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }} prefix={<SyncOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid #95de64' }}>
+              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--color-success)' }}>
                 <Statistic title="已出库" value={stats?.shippedToday ?? 0} suffix="单" styles={{ content: { color: 'var(--color-success)', fontSize: 20 } }} prefix={<CheckCircleOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: (stats?.noStockWarn ?? 0) > 0 ? '#FFF1F0' : '#f9f0ff', borderRadius: 8, border: (stats?.noStockWarn ?? 0) > 0 ? '1px solid #ffa39e' : '1px solid #d3adf7' }}>
+              <Card style={{ background: (stats?.noStockWarn ?? 0) > 0 ? 'var(--color-bg-base)1F0' : 'var(--status-info-bg)', borderRadius: 8, border: (stats?.noStockWarn ?? 0) > 0 ? '1px solid var(--status-error-border)' : '1px solid var(--status-info-border)' }}>
                 <Statistic title="缺货预警" value={stats?.noStockWarn ?? 0} suffix="单" styles={{ content: { color: (stats?.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)', fontSize: 20 } }} prefix={<WarningOutlined />} />
               </Card>
             </Col>

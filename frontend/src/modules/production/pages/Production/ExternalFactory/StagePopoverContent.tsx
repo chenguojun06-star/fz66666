@@ -25,13 +25,13 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
   const leftQty = Math.max(0, totalQty - doneQty);
 
   let aiLabel = '';
-  let aiColor = '#595959';
+  let aiColor = 'var(--color-gray-700)';
   if (status === 'done' || progress >= 100) {
     aiLabel = '已完成'; aiColor = 'var(--color-success)';
   } else if (status === 'scrapped') {
-    aiLabel = '已报废'; aiColor = '#8c8c8c';
+    aiLabel = '已报废'; aiColor = 'var(--color-text-muted)';
   } else if (status === 'waiting') {
-    aiLabel = '未开始'; aiColor = '#8c8c8c';
+    aiLabel = '未开始'; aiColor = 'var(--color-text-muted)';
   } else {
     const target = expectedShipDate || plannedEndDate;
     const deliveryLeft = target ? dayjs(target).diff(dayjs(), 'day') : null;
@@ -54,7 +54,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
     } else if (scanData.totalScanned > 0) {
       aiLabel = '近7天无扫码'; aiColor = 'var(--color-warning)';
     } else {
-      aiLabel = '暂无扫码数据'; aiColor = '#8c8c8c';
+      aiLabel = '暂无扫码数据'; aiColor = 'var(--color-text-muted)';
     }
   }
 

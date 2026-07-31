@@ -84,7 +84,7 @@ const InlineEditableField: React.FC<{
         padding: '2px 2px',
         transition: 'background 0.2s',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#e6f4ff'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--status-processing-bg)'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
     >
       {value || '-'}

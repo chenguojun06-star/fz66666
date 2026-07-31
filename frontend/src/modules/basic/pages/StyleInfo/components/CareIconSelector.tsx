@@ -27,7 +27,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
           <div style={{
             fontSize: 14,
             fontWeight: 600,
-            color: 'var(--color-text-secondary, #666)',
+            color: 'var(--color-text-secondary, var(--color-gray-dark))',
             marginBottom: 8,
             paddingBottom: 4,
             borderBottom: '1px solid var(--color-border-light, var(--color-border-light))',
@@ -53,7 +53,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
                         ? '1.5px solid var(--color-primary, var(--color-primary))'
                         : '1px solid var(--color-border-light, var(--color-border-light))',
                       background: isSelected
-                        ? 'var(--color-primary-bg, #e6f4ff)'
+                        ? 'var(--color-primary-bg, var(--status-processing-bg))'
                         : 'var(--color-bg-container, var(--color-bg-container))',
                       cursor: disabled ? 'not-allowed' : 'pointer',
                       opacity: disabled ? 0.6 : 1,
@@ -77,7 +77,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
                       fontSize: 12,
                       color: isSelected
                         ? 'var(--color-primary, var(--color-primary))'
-                        : 'var(--color-text-tertiary, #8c8c8c)',
+                        : 'var(--color-text-tertiary, var(--color-text-muted))',
                       textAlign: 'center',
                       lineHeight: 1.3,
                       fontWeight: isSelected ? 600 : 400,

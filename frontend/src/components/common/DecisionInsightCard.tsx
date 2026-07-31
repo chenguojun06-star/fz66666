@@ -27,10 +27,10 @@ export interface DecisionInsight {
 }
 
 const paletteMap: Record<NonNullable<DecisionInsight['level']>, { bg: string; border: string; title: string; dot: string }> = {
-  danger: { bg: '#FFF1F0', border: 'var(--status-error-border)', title: 'var(--color-error)', dot: 'var(--color-danger)' },
-  warning: { bg: 'var(--status-warning-bg)', border: '#ffd591', title: '#d46b08', dot: 'var(--color-warning)' },
-  info: { bg: '#f0f5ff', border: '#adc6ff', title: '#1d39c4', dot: 'var(--color-primary)' },
-  success: { bg: 'var(--status-success-bg)', border: 'var(--status-success-border)', title: '#389e0d', dot: 'var(--color-success)' },
+  danger: { bg: 'var(--color-bg-base)1F0', border: 'var(--status-error-border)', title: 'var(--color-error)', dot: 'var(--color-danger)' },
+  warning: { bg: 'var(--status-warning-bg)', border: 'var(--status-warning-border)', title: 'var(--color-amber-700)', dot: 'var(--color-warning)' },
+  info: { bg: 'var(--color-bg-highlight)', border: 'var(--color-blue-200)', title: 'var(--color-primary-darker)', dot: 'var(--color-primary)' },
+  success: { bg: 'var(--status-success-bg)', border: 'var(--status-success-border)', title: 'var(--color-success)', dot: 'var(--color-success)' },
 };
 
 const DecisionInsightCard: React.FC<{
@@ -54,7 +54,7 @@ const DecisionInsightCard: React.FC<{
    * 单行：圆点 + 文字，无任何标签文字
    * dotColor 随字段语义变化，传达紧急程度
    */
-  const row = (dotColor: string, text?: string, textColor = '#262626') => {
+  const row = (dotColor: string, text?: string, textColor = 'var(--color-gray-800)') => {
     if (!text) return null;
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
@@ -96,15 +96,15 @@ const DecisionInsightCard: React.FC<{
         {/* 卡点 → 最强调色（danger=红/warning=橙/info=蓝/success=绿） */}
         {row(tone.title, insight.painPoint, tone.title)}
         {/* 下一步 → 始终蓝色点（可执行动作） */}
-        {row('var(--color-primary)', insight.execute, '#595959')}
+        {row('var(--color-primary)', insight.execute, 'var(--color-gray-700)')}
         {/* 数据 → 灰色点（中性事实） */}
         {evidence.map((item, i) => (
           <React.Fragment key={`ev-${i}`}>
-            {row('#8c8c8c', item, '#595959')}
+            {row('var(--color-text-muted)', item, 'var(--color-gray-700)')}
           </React.Fragment>
         ))}
         {/* 补充 → 浅灰点（次要信息） */}
-        {row('var(--color-text-quaternary)', insight.note, '#8c8c8c')}
+        {row('var(--color-text-quaternary)', insight.note, 'var(--color-text-muted)')}
       </div>
 
       {/* 操作按钮 */}

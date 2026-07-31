@@ -45,7 +45,7 @@ const TaxExport: React.FC = () => {
       Modal.confirm({
         width: '30vw',
         title: '专业格式 — 付费功能',
-        icon: <LockOutlined style={{ color: '#f59e0b' }} />,
+        icon: <LockOutlined style={{ color: 'var(--color-warning)' }} />,
         content: (
           <div>
             <p style={{ marginBottom: 8 }}>金蝶/用友专用格式需要开通<strong>财税对接模块</strong>（¥499/月）。</p>
@@ -135,7 +135,7 @@ const TaxExport: React.FC = () => {
                   transition: 'all 0.2s', position: 'relative',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <Text strong style={{ color: locked ? '#bbb' : undefined }}>{opt.label}</Text>
+                    <Text strong style={{ color: locked ? 'var(--color-text-quaternary)' : undefined }}>{opt.label}</Text>
                     {opt.free
                       ? <Tag color="green" style={{ fontSize: 14 }}>免费</Tag>
                       : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 14 }}>
