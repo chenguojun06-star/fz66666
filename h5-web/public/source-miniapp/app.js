@@ -366,13 +366,21 @@ App({
 
   /**
    * 全局错误捕获 - 捕获页面脚本错误
+   *
+   * 过滤规则说明（避免噪音上报到后端）：
+   * - __subPageFrameEndTime__ / __appServiceEngine__ / __global：微信SDK内部运行时标记
+   * - WAWorker.js：微信Worker线程内部错误（如 Cannot read properties of null），
+   *   堆栈全在SDK内部，业务代码无法干预，登录态过期后常见
+   * - requestIdleCallback：微信SDK reporter内部错误，非业务代码问题
    */
   onError(msg) {
     try {
       if (typeof msg === 'string' && (
         msg.indexOf('__subPageFrameEndTime__') !== -1 ||
         msg.indexOf('__appServiceEngine__') !== -1 ||
-        msg.indexOf('__global') !== -1
+        msg.indexOf('__global') !== -1 ||
+        msg.indexOf('WAWorker.js') !== -1 ||
+        msg.indexOf('requestIdleCallback') !== -1
       )) {
         return;
       }
