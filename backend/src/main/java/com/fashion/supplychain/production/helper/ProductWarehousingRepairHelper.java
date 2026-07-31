@@ -36,6 +36,9 @@ public class ProductWarehousingRepairHelper {
     @Autowired
     private CuttingBundleService cuttingBundleService;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
     public Map<String, Object> repairStats(Map<String, Object> params) {
         String orderId = params == null ? null : String.valueOf(params.getOrDefault("orderId", ""));
         String cuttingBundleQrCode = params == null ? null
@@ -386,7 +389,56 @@ public class ProductWarehousingRepairHelper {
             item.put("bundleStatus", bundle.getStatus());
             result.add(item);
         }
+
+        // 注入款式图（coverImage）供小程序通知卡片展示
+        injectStyleCover(result, tenantId);
+
         return result;
+    }
+
+    /**
+     * 批量注入款式图（coverImage）到返修任务列表
+     * 按 styleNo 关联查询 StyleInfo.cover，填充到 coverImage/styleImage 字段
+     */
+    private void injectStyleCover(List<Map<String, Object>> taskList, Long tenantId) {
+        if (taskList == null || taskList.isEmpty() || tenantId == null) return;
+        java.util.Set<String> styleNos = new java.util.HashSet<>();
+        for (Map<String, Object> item : taskList) {
+            String sn = TextUtils.safeText(item.get("styleNo"));
+            if (StringUtils.hasText(sn)) styleNos.add(sn);
+        }
+        if (styleNos.isEmpty()) return;
+
+        try {
+            java.util.Map<String, String> styleNoToCover = styleInfoService.lambdaQuery()
+                    .select(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover)
+                    .in(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo, styleNos)
+                    .eq(com.fashion.supplychain.style.entity.StyleInfo::getTenantId, tenantId)
+                    .list()
+                    .stream()
+                    .filter(s -> StringUtils.hasText(s.getStyleNo()) && StringUtils.hasText(s.getCover()))
+                    .collect(java.util.stream.Collectors.toMap(
+                            com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover,
+                            (v1, v2) -> v1));
+
+            if (!styleNoToCover.isEmpty()) {
+                for (Map<String, Object> item : taskList) {
+                    String sn = TextUtils.safeText(item.get("styleNo"));
+                    if (StringUtils.hasText(sn)) {
+                        String cover = styleNoToCover.get(sn);
+                        if (cover != null) {
+                            item.put("coverImage", cover);
+                            item.put("styleImage", cover);
+                            item.put("styleCover", cover);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[RepairTask] 注入款式图失败（不影响主流程）: styleNos={}, err={}", styleNos, e.getMessage());
+        }
     }
 
     private int parseIntOrDefault(Object value, int defaultValue) {

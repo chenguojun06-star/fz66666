@@ -3,6 +3,7 @@
  * 负责加载和归纳延期订单数据
  */
 const api = require('../../utils/api');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
 
 /**
  * 格式化时间为友好显示（本地定义，避免与 bellTaskLoader 循环依赖）
@@ -121,6 +122,8 @@ async function loadOverdueOrders() {
           overdueLevel: overdueInfo.level,
           createdAt: item.createdAt || item.createTime,
           timeText: formatTimeAgo(item.createdAt || item.createTime),
+          // 款式图：后端订单列表通常已带 styleCover/coverImage，经 getAuthedImageUrl 鉴权处理
+          coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
           // 计算完成进度
           completionRate: item.orderQuantity > 0
             ? Math.round((item.completedQuantity / item.orderQuantity) * 100)
