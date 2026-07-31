@@ -107,6 +107,15 @@ async function ensureFreshToken() {
   try {
     var newToken = await refreshTokenRequest();
     if (!newToken) {
+      // 竞态修复：refreshTokenRequest 是网络请求，期间用户可能已重新登录并写入新 token。
+      // 此时旧 refreshToken 必然返回 null，但不应标记 tokenRefreshFailed，
+      // 否则会覆盖 onLoginSuccess() 的重置，导致后续连接被错误跳过。
+      var tokenAfterLogin = getToken();
+      if (tokenAfterLogin && !isTokenExpired()) {
+        if (DEBUG) console.log('[WebSocket] refreshToken 刷新失败但用户已重新登录，使用新 token 继续');
+        tokenRefreshFailed = false;
+        return true;
+      }
       console.error('[WebSocket] token 刷新失败（refreshToken 也已过期），停止重连');
       tokenRefreshFailed = true;
       // 触发跳转登录

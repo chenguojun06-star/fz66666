@@ -46,6 +46,7 @@ public class CuttingTaskOrchestrator {
     private final MaterialPurchaseService materialPurchaseService;
     private final OrderRemarkService orderRemarkService;
     private final CuttingOrderFactory cuttingOrderFactory;
+    private final com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
     @Autowired
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
@@ -528,8 +529,54 @@ public class CuttingTaskOrchestrator {
                 .map(ProductionOrder::getId)
                 .collect(Collectors.toSet());
 
-        return tasks.stream()
+        List<CuttingTask> result = tasks.stream()
                 .filter(task -> validOrderIds.contains(task.getProductionOrderId()))
                 .collect(Collectors.toList());
+
+        // 注入款式图（coverImage/styleCover）供小程序通知卡片展示
+        injectStyleCover(result, tenantId);
+
+        return result;
+    }
+
+    /**
+     * 批量注入款式图（styleCover）到裁剪任务列表
+     * 根据 styleNo 关联查询 StyleInfo.cover，填充到 @TableField(exist=false) styleCover 字段
+     */
+    private void injectStyleCover(List<CuttingTask> taskList, Long tenantId) {
+        if (taskList == null || taskList.isEmpty() || tenantId == null) return;
+        Set<String> styleNos = taskList.stream()
+                .map(CuttingTask::getStyleNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (styleNos.isEmpty()) return;
+
+        try {
+            Map<String, String> styleNoToCover = styleInfoService.lambdaQuery()
+                    .select(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover)
+                    .in(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo, styleNos)
+                    .eq(com.fashion.supplychain.style.entity.StyleInfo::getTenantId, tenantId)
+                    .list()
+                    .stream()
+                    .filter(s -> StringUtils.hasText(s.getStyleNo()) && StringUtils.hasText(s.getCover()))
+                    .collect(Collectors.toMap(
+                            com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover,
+                            (v1, v2) -> v1));
+
+            if (!styleNoToCover.isEmpty()) {
+                taskList.forEach(task -> {
+                    if (StringUtils.hasText(task.getStyleNo())) {
+                        String cover = styleNoToCover.get(task.getStyleNo());
+                        if (cover != null) {
+                            task.setStyleCover(cover);
+                        }
+                    }
+                });
+            }
+        } catch (Exception e) {
+            log.warn("[CuttingTask] 注入款式图失败（不影响主流程）: styleNos={}, err={}", styleNos, e.getMessage());
+        }
     }
 }

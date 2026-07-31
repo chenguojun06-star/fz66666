@@ -147,6 +147,8 @@ async function loadProcurementTasks() {
       purchaseQuantity: item.purchaseQuantity || 0,
       arrivedQuantity: item.arrivedQuantity || 0,
       unit: item.unit || '米',
+      // 保留款式图字段（后端 MaterialPurchaseQueryHelper.getMyTasks 已注入 styleCover）
+      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
       receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
 

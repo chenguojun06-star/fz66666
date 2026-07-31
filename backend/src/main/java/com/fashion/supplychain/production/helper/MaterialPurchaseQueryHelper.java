@@ -31,6 +31,9 @@ public class MaterialPurchaseQueryHelper {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂采购记录
         Map<String, Object> effectiveParams = params != null ? params : new java.util.HashMap<>();
@@ -114,7 +117,7 @@ public class MaterialPurchaseQueryHelper {
         // 返回采购任务：
         // 1. 无订单关联的独立采购任务（orderId 为空）
         // 2. 有订单关联且订单有效的采购任务
-        return myPurchases.stream()
+        List<MaterialPurchase> result = myPurchases.stream()
                 .filter(purchase -> {
                     String orderId = purchase.getOrderId();
                     // 如果没有关联订单，保留（独立采购）
@@ -137,6 +140,52 @@ public class MaterialPurchaseQueryHelper {
                     }
                 })
                 .collect(Collectors.toList());
+
+        // 注入款式图（styleCover）供小程序通知卡片展示
+        injectStyleCover(result, tenantId);
+
+        return result;
+    }
+
+    /**
+     * 批量注入款式图（styleCover）到采购任务列表
+     * 根据 styleNo 关联查询 StyleInfo.cover，填充到 styleCover 字段
+     */
+    private void injectStyleCover(List<MaterialPurchase> purchaseList, Long tenantId) {
+        if (purchaseList == null || purchaseList.isEmpty() || tenantId == null) return;
+        Set<String> styleNos = purchaseList.stream()
+                .map(MaterialPurchase::getStyleNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (styleNos.isEmpty()) return;
+
+        try {
+            Map<String, String> styleNoToCover = styleInfoService.lambdaQuery()
+                    .select(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover)
+                    .in(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo, styleNos)
+                    .eq(com.fashion.supplychain.style.entity.StyleInfo::getTenantId, tenantId)
+                    .list()
+                    .stream()
+                    .filter(s -> StringUtils.hasText(s.getStyleNo()) && StringUtils.hasText(s.getCover()))
+                    .collect(Collectors.toMap(
+                            com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover,
+                            (v1, v2) -> v1));
+
+            if (!styleNoToCover.isEmpty()) {
+                purchaseList.forEach(purchase -> {
+                    if (StringUtils.hasText(purchase.getStyleNo())) {
+                        String cover = styleNoToCover.get(purchase.getStyleNo());
+                        if (cover != null) {
+                            purchase.setStyleCover(cover);
+                        }
+                    }
+                });
+            }
+        } catch (Exception e) {
+            log.warn("[MaterialPurchase] 注入款式图失败（不影响主流程）: styleNos={}, err={}", styleNos, e.getMessage());
+        }
     }
 
     /**
