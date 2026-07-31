@@ -378,5 +378,28 @@
     <text class="detail-empty-text">{{loadError || '订单数据加载失败'}}</text>
     <view class="detail-empty-retry" bindtap="onRetryLoad">点击重试</view>
   </view>
+
+  <!-- ══ 自定义确认弹窗（替代 wx.showModal editable，规避基础库 3.17.0 灰度版 bug） ══ -->
+  <view class="am-mask" wx:if="{{actionModal.visible}}" catchtap="onActionModalCancel">
+    <view class="am-card" catchtap="">
+      <view class="am-title">{{actionModal.title}}</view>
+      <view class="am-desc">{{actionModal.desc}}</view>
+      <textarea
+        wx:if="{{actionModal.placeholder}}"
+        class="am-input"
+        value="{{actionModal.inputVal}}"
+        placeholder="{{actionModal.placeholder}}"
+        placeholder-class="am-input-ph"
+        bindinput="onActionModalInput"
+        maxlength="200"
+        auto-height
+      />
+      <view class="am-btns">
+        <view class="am-btn am-btn-cancel" hover-class="am-btn-hover" hover-stay-time="100" bindtap="onActionModalCancel">取消</view>
+        <view class="am-btn am-btn-confirm" hover-class="am-btn-hover" hover-stay-time="100" style="color: {{actionModal.confirmColor}};" bindtap="onActionModalConfirm">{{actionModal.confirmText}}</view>
+      </view>
+    </view>
+  </view>
+
   <ai-assistant />
 </view>
