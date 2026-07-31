@@ -472,6 +472,13 @@ Page({
 
       } else if (operationType === 'RECEIVE') {
         // 工序级扫码领取（旧的 receivePattern 端点已删除，统一走 submitPatternScan）
+        // 从operationOptions查找到对应工序配置，提取单价/工序名/阶段
+        const options = d.operationOptions || [];
+        const selectedOpt = options.find(function(o) { return o.value === 'RECEIVE'; });
+        const scanUnitPrice = selectedOpt && (selectedOpt.unitPrice != null || selectedOpt.price != null)
+          ? (selectedOpt.unitPrice != null ? selectedOpt.unitPrice : selectedOpt.price) : null;
+        const scanProcessName = selectedOpt && selectedOpt.processName ? selectedOpt.processName : '领取样板';
+        const scanProgressStage = selectedOpt && selectedOpt.progressStage ? selectedOpt.progressStage : '领取';
         const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: 'RECEIVE',
@@ -479,6 +486,9 @@ Page({
           quantity: qty,
           color: d.color,
           remark: remark,
+          unitPrice: scanUnitPrice,
+          processName: scanProcessName,
+          progressStage: scanProgressStage,
         });
         result = {
           success: true,
@@ -487,6 +497,15 @@ Page({
         };
 
       } else {
+        // 从operationOptions查找到当前选中工序的配置，提取单价/工序名/阶段
+        const options = d.operationOptions || [];
+        const selectedOpt = options.find(function(o) { return o.value === operationType; });
+        const scanUnitPrice = selectedOpt && (selectedOpt.unitPrice != null || selectedOpt.price != null)
+          ? (selectedOpt.unitPrice != null ? selectedOpt.unitPrice : selectedOpt.price) : null;
+        const scanProcessName = selectedOpt && selectedOpt.processName
+          ? selectedOpt.processName
+          : (OPERATION_LABELS[operationType] || operationType);
+        const scanProgressStage = selectedOpt && selectedOpt.progressStage ? selectedOpt.progressStage : operationType;
         const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: operationType,
@@ -496,6 +515,9 @@ Page({
           warehouseAreaId: this.data.warehouseAreaId,
           warehouseLocationCode: this.data.warehouseLocationCode,
           remark: remark,
+          unitPrice: scanUnitPrice,
+          processName: scanProcessName,
+          progressStage: scanProgressStage,
         });
         result = {
           success: true,

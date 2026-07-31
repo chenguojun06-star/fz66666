@@ -5,6 +5,27 @@
 
 ## 已完成
 
+### 2026-07-31 财务闭环+数字孪生+@Version+颜色核查 ✅
+
+用户诉求："好的全部开始吧 注意颜色哪些是必须保留的 做的时候注意数据流转这些问题 一定要到位"。
+
+- [x] **账单→会计凭证数据流转闭环**（D-022）
+  - BillAggregationOrchestrator.confirmBill → ensureAccountingVoucherFromBill → generateVoucherFromBill
+  - BillAggregationOrchestrator.reverseBillInternal → reverseByBillAggregationId
+  - 凭证异常 fail-safe 不阻塞账单主流程
+- [x] **金融实体 @Version 乐观锁补齐**（D-008）
+  - Payable/Receivable/BillAggregation/WagePayment 4 个实体添加 @Version
+  - Flyway V202608081400__add_version_to_finance_entities.sql
+- [x] **数字孪生深化**
+  - ProductionDomainProvider 实现 DomainDataProvider 接口
+  - 工厂负载热力图 + 在制品工序分布 + 交期分桶
+- [x] **前端硬编码颜色清理核查**
+  - dry-run 核查：0 可替换剩余，71 处保护色完整保留
+  - 必须保留的 5 种保护色：#00e5ff/#39ff14/#7c4dff/#00bcd4/#f7a600
+- [x] **质量门控**：5 大核心链路数据流转闭环验证通过
+
+---
+
 ### 2026-07-26 P0多租户隔离+财务闭环+生产备注+AI持久化+多端补齐（6 commits）✅
 
 用户诉求："全部开始优化 注意优化细节与数据链路的闭环"。

@@ -325,9 +325,12 @@ Page({
     wx.showModal({
       title: '确认取消',
       content: '确认取消此笔支付？',
+      editable: true,
+      placeholderText: '请输入取消原因（可选）',
       success: function (res) {
         if (!res.confirm) return;
-        api.wagePayment.cancelPayment(id, {}).then(function () {
+        var reason = (res.content || '').trim();
+        api.wagePayment.cancelPayment(id, reason ? { reason: reason } : {}).then(function () {
           toast('已取消');
           that._resetAndLoad();
         }).catch(function (err) { toast('取消失败: ' + (err && err.message ? err.message : String(err))); });
@@ -342,9 +345,12 @@ Page({
     wx.showModal({
       title: '确认',
       content: '确认此笔支付已完成？',
+      editable: true,
+      placeholderText: '请输入备注（可选）',
       success: function (res) {
         if (!res.confirm) return;
-        api.wagePayment.confirmOffline(id, {}).then(function () {
+        var remark = (res.content || '').trim();
+        api.wagePayment.confirmOffline(id, remark ? { remark: remark } : {}).then(function () {
           toast('已确认');
           that._loadStats();
           that._resetAndLoad();

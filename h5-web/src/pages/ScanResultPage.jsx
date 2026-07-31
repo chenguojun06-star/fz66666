@@ -247,7 +247,12 @@ export default function ScanResultPage() {
   const loadWarehouseOptions = async () => {
     try {
       const res = await api.system.getDictList('finished_warehouse_location');
-      const records = Array.isArray(res) ? res : (res?.records || []);
+      // P0 修复（D-024）：与小程序对齐，正确读取 IPage<Dict> 的 records 字段
+      //   res = {code, data: IPage, message}，业务数据在 res.data
+      //   IPage = {records: [...], total, ...}
+      //   兼容三种历史返回：数组（POST /search 旧版）、IPage（GET /list 新版）、{records:[...]}（已剥离Result）
+      const payload = res?.data ?? res;
+      const records = Array.isArray(payload) ? payload : (payload?.records || []);
       if (records.length > 0) setWarehouseOptions(records.filter(i => i.dictLabel).map(i => i.dictLabel));
     } catch (e) { /* ignore */ }
   };

@@ -125,16 +125,38 @@
         <view wx:elif="{{bomList.length > 0}}" class="bom-list">
           <view wx:for="{{bomList}}" wx:key="id" class="bom-item">
             <view class="bom-item__main">
-              <text class="bom-item__name">{{item.materialName || item.partName || '-'}}</text>
+              <view class="bom-item__title-row">
+                <text class="bom-item__name">{{item.materialName || item.partName || '-'}}</text>
+                <text wx:if="{{item.partName}}" class="bom-item__part">{{item.partName}}</text>
+              </view>
               <view class="bom-item__meta">
                 <text wx:if="{{item.materialTypeText}}" class="bom-item__tag">{{item.materialTypeText}}</text>
                 <text wx:if="{{item.color}}" class="bom-item__sub">{{item.color}}</text>
                 <text wx:if="{{item.specification}}" class="bom-item__sub">{{item.specification}}</text>
               </view>
-            </view>
-            <view class="bom-item__right">
-              <text wx:if="{{item.usageAmount}}" class="bom-item__qty">{{item.usageAmount}}{{item.unit || ''}}</text>
-              <text wx:if="{{item.unitPrice}}" class="bom-item__price">¥{{item.unitPrice}}</text>
+              <view class="bom-item__detail">
+                <view class="bom-item__detail-item">
+                  <text class="bom-item__detail-label">单件用量</text>
+                  <text class="bom-item__detail-val">{{item.usageAmount || '-'}}{{item.unit || ''}}</text>
+                </view>
+                <view wx:if="{{item.lossRate !== null && item.lossRate !== undefined}}" class="bom-item__detail-item">
+                  <text class="bom-item__detail-label">损耗率</text>
+                  <text class="bom-item__detail-val">{{item.lossRate}}%</text>
+                </view>
+                <view wx:if="{{item.unitPrice}}" class="bom-item__detail-item">
+                  <text class="bom-item__detail-label">单价</text>
+                  <text class="bom-item__detail-val">¥{{item.unitPrice}}</text>
+                </view>
+                <view wx:if="{{item.totalPrice}}" class="bom-item__detail-item">
+                  <text class="bom-item__detail-label">合计</text>
+                  <text class="bom-item__detail-val bom-item__detail-val--accent">¥{{item.totalPrice}}</text>
+                </view>
+              </view>
+              <view wx:if="{{item.stockStatus}}" class="bom-item__stock">
+                <view class="bom-item__stock-dot bom-item__stock-dot--{{item.stockStatus}}"></view>
+                <text class="bom-item__stock-text">{{item.stockStatusText}}</text>
+                <text wx:if="{{item.availableStock !== null && item.availableStock !== undefined}}" class="bom-item__stock-qty">可用{{item.availableStock}}{{item.unit || ''}}</text>
+              </view>
             </view>
           </view>
         </view>

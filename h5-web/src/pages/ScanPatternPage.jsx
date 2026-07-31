@@ -25,6 +25,7 @@ export default function ScanPatternPage() {
   const patternScanData = useGlobalStore(s => s.patternScanData);
   const clearPatternScanData = useGlobalStore(s => s.clearPatternScanData);
   const [detail, setDetail] = useState({});
+  const [processConfig, setProcessConfig] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -53,7 +54,39 @@ export default function ScanPatternPage() {
       sizesText: sizes.length ? sizes.join('/') : '-',
       remark: '',
     });
-  }, [patternScanData]);
+
+    // 加载工序配置（用于获取单价）
+    if (data.patternId) {
+      api.production.getPatternProcessConfig(data.patternId)
+        .then(res => {
+          const cfg = Array.isArray(res) ? res : (res?.data || []);
+          setProcessConfig(Array.isArray(cfg) ? cfg : []);
+        })
+        .catch(e => console.warn('[ScanPattern] 加载工序配置失败:', e.message));
+    }
+  }, [patternScanData, navigate]);
+
+  // 从工序配置中提取当前操作类型对应的单价/工序名/阶段
+  const resolveProcessMeta = (operationTypeVal) => {
+    const match = processConfig.find(c =>
+      (c.operationType && String(c.operationType).toUpperCase() === String(operationTypeVal).toUpperCase())
+      || (c.processName && String(c.processName).toUpperCase() === String(operationTypeVal).toUpperCase())
+      || (c.value && String(c.value).toUpperCase() === String(operationTypeVal).toUpperCase())
+    );
+    if (match) {
+      const unitPrice = match.unitPrice != null ? match.unitPrice : (match.price != null ? match.price : null);
+      return {
+        unitPrice: unitPrice != null && String(unitPrice) !== '' && !isNaN(Number(unitPrice)) ? Number(unitPrice) : null,
+        processName: match.processName || (OPERATION_LABELS[operationTypeVal] || operationTypeVal),
+        progressStage: match.progressStage || operationTypeVal,
+      };
+    }
+    return {
+      unitPrice: null,
+      processName: OPERATION_LABELS[operationTypeVal] || operationTypeVal,
+      progressStage: operationTypeVal,
+    };
+  };
 
   const submitOp = async () => {
     if (loading) return;
@@ -62,6 +95,7 @@ export default function ScanPatternPage() {
     const operationType = String(d.operationType).toUpperCase();
     const qty = normalizePositiveInt(d.quantity, 0);
     const remarkStr = String(d.remark || '').trim();
+    const meta = resolveProcessMeta(operationType);
 
     if (operationType !== 'REVIEW' && qty <= 0) { toast.error('请输入正确数量'); return; }
     if ((operationType === 'REVIEW' || (operationType === 'WAREHOUSE_IN' && d.requiresReviewBeforeInbound)) && !remarkStr) {
@@ -86,7 +120,8 @@ export default function ScanPatternPage() {
         const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '', '', '', remarkStr);
         result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
       } else if (operationType === 'RECEIVE') {
-        // 工序级扫码领取（旧的 receivePattern 端点已删除，统一走 submitPatternScan）
+        // 工序级扫码领取，传递单价和工序参数
+        const receiveMeta = resolveProcessMeta('RECEIVE');
         const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: 'RECEIVE',
@@ -94,12 +129,18 @@ export default function ScanPatternPage() {
           quantity: qty,
           color: d.color,
           remark: remarkStr,
+          unitPrice: receiveMeta.unitPrice,
+          processName: receiveMeta.processName,
+          progressStage: receiveMeta.progressStage,
         });
         result = scanRes ? { success: true, message: '领取成功', data: scanRes } : { success: false, message: '领取样板失败' };
       } else {
         result = await api.production.submitPatternScan({
           patternId: d.patternId, operationType, operatorRole: 'PLATE_WORKER',
           quantity: qty, warehouseCode: d.warehouseCode, remark: remarkStr,
+          unitPrice: meta.unitPrice,
+          processName: meta.processName,
+          progressStage: meta.progressStage,
         });
       }
       if (result && result.success) {

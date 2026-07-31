@@ -206,8 +206,22 @@ function qualityStatusLabel(v) {
 }
 
 /**
+ * 库存状态映射
+ */
+var STOCK_STATUS_MAP = {
+  sufficient: '库存充足',
+  insufficient: '库存不足',
+  none: '无库存',
+  unchecked: '未检查',
+};
+
+function stockStatusLabel(v) {
+  return mapLabel(v, STOCK_STATUS_MAP);
+}
+
+/**
  * 给 BOM 列表每项补充中文显示字段
- * 添加 materialTypeText / processTypeText / statusText
+ * 添加 materialTypeText / stockStatusText / processTypeText / statusText
  */
 function enrichBomList(list) {
   if (!Array.isArray(list)) return [];
@@ -215,6 +229,9 @@ function enrichBomList(list) {
     var copy = Object.assign({}, item);
     if (item.materialType) {
       copy.materialTypeText = materialTypeLabel(item.materialType);
+    }
+    if (item.stockStatus) {
+      copy.stockStatusText = stockStatusLabel(item.stockStatus);
     }
     if (item.processType) {
       copy.processTypeText = processTypeLabel(item.processType);
@@ -244,5 +261,6 @@ module.exports = {
   reviewStatusLabel: reviewStatusLabel,
   procurementStatusLabel: procurementStatusLabel,
   qualityStatusLabel: qualityStatusLabel,
+  stockStatusLabel: stockStatusLabel,
   enrichBomList: enrichBomList,
 };

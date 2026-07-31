@@ -874,4 +874,151 @@
 - L5 Archival：观察 Qdrant 分级分布，必要时调整 HOT/WARM/COLD 时间阈值
 - SoulAnchor：观察 LLM 重建质量，必要时调整 prompt 模板
 
+## D-051：财务闭环数据流转 + @Version乐观锁补齐 + 数字孪生深化（2026-07-31）
+
+### 上下文
+对比老牌系统排查优化点时发现 3 处数据流转断点/并发风险：
+1. **账单→会计凭证断链**：BillAggregationOrchestrator 在账单确认/反向时未联动 AccountingVoucherOrchestrator，导致账单状态变更后会计凭证未同步生成/冲销，财务数据链路断裂（D-022 财务闭环设计的最后一公里未落地）
+2. **金融实体并发风险**：Payable/Receivable/BillAggregation/WagePayment 4 个金融实体缺少 @Version 乐观锁，部分还款/冲账并发场景下可能丢更新（D-008 原子SQL已覆盖库存数量，但金融实体状态机仍依赖 read-modify-write）
+3. **数字孪生空壳**：ProductionDomainProvider 未实现，FullDigitalTwinBuilder 缺少生产域数据，工厂负载热力图和在制品分布无法提供
+
+### 决策
+
+#### D-051-1 账单→凭证数据流转闭环
+1. `BillAggregationOrchestrator.confirmBill()` 末尾调用 `ensureAccountingVoucherFromBill(bill)`
+2. `ensureAccountingVoucherFromBill()` 调用 `accountingVoucherOrchestrator.generateVoucherFromBill(bill.getId())`
+3. `reverseBillInternal()` 在账单置 CANCELLED 后调用 `accountingVoucherOrchestrator.reverseByBillAggregationId(bill.getId())`
+4. **fail-safe 设计**：凭证生成/冲销失败用 try-catch + log.warn 记录，不阻塞账单主流程（账单状态已变更，凭证可人工补录）
+5. `@Autowired(required = false)` 避免 AccountingVoucherOrchestrator 未启用时启动失败
+
+#### D-051-2 @Version 乐观锁补齐
+1. 4 个金融实体添加 `@Version private Integer version;` 字段
+2. Flyway `V202608081400__add_version_to_finance_entities.sql` 为 4 张表添加 `version INT NOT NULL DEFAULT 0` 列
+3. 与 D-008 协同：库存数量仍用原子SQL（`UPDATE ... SET qty = qty + ?`），金融实体状态机用 @Version 乐观锁
+
+#### D-051-3 数字孪生 ProductionDomainProvider
+1. 实现 `DomainDataProvider` 接口，提供 `buildProduction(tenantId)` 方法
+2. 工厂负载热力图：按 factoryName 分组统计订单数/产能利用率/负载等级（low/medium/high/critical）
+3. 在制品工序分布：基于最近 7 天扫码记录按 processCode 分组
+4. 交期分桶：overdue/3d/7d/30d/30d+ 五档
+5. 异常容错：任一子查询失败返回 null，不影响其他域
+
+### 关键设计权衡
+- **凭证 fail-safe 用 try-catch 而非传播异常**：账单是财务主链路，凭证是会计辅助链路。账单已确认/取消的状态不能因凭证失败而回滚（业务上账单状态变更已通知上下游），凭证可人工补录。这与样衣开发费用推送的 fail-safe 设计相反（样衣费用推送不用 try-catch，让账单异常触发审核事务回滚），原因是样衣费用是审核流程内的强一致场景，而账单确认是独立流程
+- **@Version 与原子SQL 分工**：库存数量是高频并发累加场景，@Version 会导致大量重试，原子SQL 更合适；金融实体状态机是低频切换场景，@Version 乐观锁更直观
+- **ProductionDomainProvider 异常容错返回 null**：数字孪生是辅助决策工具，不能因生产域查询失败导致整个 FullDigitalTwinBuilder 崩溃，null 由调用方跳过
+
+### 验证
+- 代码审查验证：
+  - `confirmBill` line 359 → `ensureAccountingVoucherFromBill` → `generateVoucherFromBill` 链路闭环
+  - `reverseBillInternal` line 528 → `reverseByBillAggregationId` 链路闭环
+  - 4 个实体 @Version 注解全部到位（Payable:79, Receivable:80, BillAggregation:81, WagePayment:106）
+  - Flyway V202608081400 存在
+- 5 大核心链路数据流转闭环验证通过
+- 环境限制无法执行 mvn compile，已通过代码审查确保语法正确性
+
+### 影响
+- 财务数据链路完整闭环：账单状态变更 → 会计凭证自动生成/冲销
+- 金融实体并发保护补齐：部分还款/冲账场景不会丢更新
+- 数字孪生生产域可用：工厂负载热力图、在制品分布、交期分桶可可视化
+- 代码中 "D-022 财务闭环" 注释指本决策的财务闭环设计（非 decisionLog 的 D-022 多视角评审）
+
+### 后续待办
+- 编译验证：环境恢复后执行 `mvn compile` 确认无编译错误
+- 凭证 fail-safe 监控：观察 `[BillAggregation] 会计凭证生成失败` 日志频率，高频时需排查根因
+- @Version 冲突监控：观察 OptimisticLockException 频率，高频时考虑重试机制
+
+## D-052：WhatIfSimulation 全场景 APS/ML 联动 + 颜色清理扩展 + 文件拆薄（2026-07-31）
+
+### 上下文
+对比老牌系统优化时发现 WhatIfSimulation 推演沙盘仅有 CHANGE_FACTORY 场景接入 APS排产联动，其他场景（ADVANCE_DELIVERY/ADD_WORKERS）仍用经验常数估算，推演精度不足。同时前端仍有 1854 个高频硬编码颜色未映射到 CSS 变量。
+
+### 决策
+
+#### D-052-1 WhatIfSimulation 全场景联动
+1. **ADVANCE_DELIVERY + ML**：新增 `enrichAdvanceDeliveryWithMl(stats, accelDays)`，基于 ML 日均产能推算提前天数后的产能缺口比例，三档风险评级（<10% 降险 / 10-30% 微升 / >30% 显著上升）
+2. **ADD_WORKERS + ML**：用 `mlAverageDailyVelocity` 替代 1800.0 经验常数，精确计算增员后新产能 `newVelocity = baseVelocity + baseVelocity * workers / 30 * 0.55`
+3. **CHANGE_FACTORY + APS**（前次完成）：用 APS 真实约束求解结果覆盖启发式估算
+4. **Baseline + ML**（前次完成）：每单调用 ML 预测统计真实逾期数
+
+#### D-052-2 颜色清理扩展
+1. `scripts/replace-colors.mjs` 新增 30+ 高频颜色映射（#000→--color-black, #3b82f6→--color-secondary, #8c8c8c→--color-text-muted 等）
+2. 执行替换：801 处硬编码颜色转为 CSS 变量
+3. 保护色 71 处完整保留（#00e5ff/#39ff14/#7c4dff/#00bcd4/#f7a600）
+
+#### D-052-3 WhatIfSimulationOrchestrator 拆薄
+1. 提取 `intelligence/helper/WhatIfScenarioParserHelper.java`（149 行）
+2. 包含 4 个纯函数解析方法，@Component 注解
+3. Orchestrator 从 840 行降至 719 行
+
+### 关键设计权衡
+- **ADVANCE_DELIVERY 用缺口比例而非绝对天数**：不同订单规模下提前 3 天的影响不同，用 `shortfallRatio = velocity * accelDays / remaining` 标准化后三档评级更合理
+- **ADD_WORKERS 用 baseVelocity/30 作为单人产能**：30 人为基准工厂规模假设，ML 提供的真实日均产能比 1800.0 经验常数更准确
+- **颜色映射扩展而非新建变量**：所有新增映射都指向 design-system.css 已定义的 CSS 变量，确保主题切换（亮/暗）自动生效
+- **拆薄提取纯函数优先**：自然语言解析方法无实例状态依赖，是最安全的拆薄对象
+
+### 验证
+- 后端代码审查：imports 完整、无悬空引用、@Autowired 注入正确
+- 前端类型检查：`npx tsc --noEmit` 通过，0 errors
+- 数据流转：ML 4 条链路 + APS 1 条链路全部闭环，回退逻辑正确
+- 颜色审计：0 可替换剩余，71 保护色完整
+
+### 影响
+- WhatIf 推演精度提升：4 个场景全部基于真实数据（ML预测/APS排产）而非经验常数
+- 前端主题一致性提升：累计 1248 处硬编码色转 CSS 变量，亮/暗主题切换全覆盖
+- 代码可维护性提升：WhatIfSimulationOrchestrator 聚焦核心逻辑，解析逻辑独立可测
+
+### 后续待办
+- 超长文件拆薄：仍有 341 个文件 >300 行（163 Orchestrator + 50 Service + 27 Controller + 46 Helper + 55 Other），优先拆分 Top 10 最大文件
+- 编译验证：环境恢复后执行 `mvn compile` 确认 WhatIfScenarioParserHelper 注入正确
+
+## D-053：Agnes视觉模型升级至2.5 Flash + 样衣扫码单价链路修复（2026-07-31）
+
+### 上下文
+用户通知 Agnes 官方发布 2.5 Flash 版本（对标 Claude Opus 4.7 代码能力且继续免费开放），需评估是否跟随升级。同时样衣扫码单价传递链路有历史遗留问题。
+
+### 决策
+
+#### D-053-1 Agnes视觉模型升级至2.5 Flash
+1. **跟随升级**：确认升级，13处引用全量覆盖，零遗漏
+2. **全量引用点修改**：
+   - application.yml 3处（agnes.model / agnes2.model / ai.model.vision 默认值）
+   - Java @Value 默认值 6处（ModelConsortiumRouter / IntelligenceAiAdvisorController / QdrantService / StyleDifficultyOrchestrator / IntelligenceInferenceOrchestrator 主+备）
+   - Java 硬编码 2处（IntelligenceInferenceOrchestrator VISION_MODEL_N_MODEL 兜底值 / AiCostTrackingOrchestrator 定价表新增条目）
+   - cloudbaserc.json 新增 3个环境变量（AGNES_MODEL / AGNES2_MODEL / AI_MODEL_VISION），运维可直接面板覆盖
+   - 文档注释 2处（CODE_WIKI.md / QdrantService.java Javadoc）
+3. **保留历史兼容**：AiCostTrackingOrchestrator 定价表同时保留 agnes-2.0-flash 和 agnes-2.5-flash 两条（2.0给历史成本数据用）
+
+#### D-053-2 样衣扫码单价链路修复
+1. **小程序端**：miniprogram/pages/scan/pattern/index.js 从 operationOptions 提取 unitPrice / processName / progressStage 三字段透传 submitPatternScan
+2. **H5端**：h5-web/src/pages/ScanPatternPage.jsx 新增 resolveProcessMeta() 方法，工序配置加载后匹配当前工序提取参数
+3. **三端副本同步**：miniprogram / source-miniapp / public/source-miniapp / dist/source-miniapp MD5 一致
+
+### 关键设计权衡
+- **环境变量兜底而非硬编码唯一版本号**：所有模型名均使用 `${ENV:默认值}` 形式，运维云基座设置环境变量可秒级回退至 2.0，无需发版。理由：模型升级虽经兼容性验证但存在不可预见的视觉输出差异，秒级回退是生产安全底线
+- **AiCostTrackingOrchestrator 保留2.0定价条目而非删除**：t_ai_cost_tracking 表中已有 model_name=agnes-2.0-flash 的历史记录，保留定价条目保证成本汇总查询时 calculateCost() 不返回 null，不影响财务报表数据完整性
+- **双模型主备配置 + 通用 VISION_MODEL_N 入口**：除了 agnes/agnes2 专用配置外，VISION_MODEL_1..20 通用配置入口允许运维随时增加第三方视觉模型（如 Doubao Vision）作为第三路故障转移，无需重启服务
+- **样衣扫码后端仍保留兜底查询 lookupStyleProcessPrice**：前端传参是优化（精确匹配当前工序），后端兜底查询是安全网（前端代码Bug或旧小程序版本时仍能从工序配置表查到单价）。双路径防御符合P0事故双路径防御原则
+
+### 验证
+- **兼容性验证PASS**：
+  - API端点无变化（apihub.agnes-ai.com/v1/chat/completions）
+  - 请求格式标准OpenAI兼容（model + messages[].content[] image_url/text双part）
+  - 响应格式标准 choices[0].message.content 解析
+  - 定价不变（2.5 Flash延续免费政策）
+- **全量引用验证PASS**：grep agnes-2.0 仅剩 AiCostTrackingOrchestrator line 24 一处故意保留，其余12处全部升级
+- **部署配置验证PASS**：cloudbaserc.json 新增 3个变量面板可控，秒级回退可用
+- **样衣扫码链路验证PASS**：前端传参 → 后端优先采用 → 兜底查询 → 写入 scanRecord.unitPrice 链路闭环
+
+### 影响
+- 视觉推理能力升级：样衣疵点识别、款式难度评估、Embedding语义向量质量预期提升
+- 无兼容性风险：API完全兼容，零代码级破坏性变更
+- 运维灵活性增强：云基座变量秒级切换模型版本，三配置入口支持多模型故障转移策略
+- 样衣扫码单价数据完整性提升：后端兜底+前端透传双路径保证，工资结算工序单价计算精度提升
+
+### 后续待办
+- 观察 2.5 视觉输出质量差异：比较疵点召回率、款式难度评分分布偏移，如有显著差异需调整阈值
+- 成本表观察：如 Agnes 官方调整 2.5 Flash 定价需及时更新 MODEL_PRICING 表
+- 编译验证：环境恢复后执行 `mvn compile` 确认无编译错误
+
 

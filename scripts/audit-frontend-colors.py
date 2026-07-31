@@ -61,6 +61,45 @@ COLOR_MAP = {
     '#e5e7eb': 'var(--color-border)',
     '#f0f0f0': 'var(--color-border-light)',
     '#d9d9d9': 'var(--color-border-antd)',
+    # 高频硬编码色补充（与 design-system.css 变量值完全一致）
+    '#888888': 'var(--color-text-muted)',
+    '#888': 'var(--color-text-muted)',
+    '#999999': 'var(--color-gray-label)',
+    '#999': 'var(--color-gray-label)',
+    '#666666': 'var(--color-gray-dark)',
+    '#666': 'var(--color-gray-dark)',
+    '#333333': 'var(--color-gray-800)',
+    '#333': 'var(--color-gray-800)',
+    '#595959': 'var(--color-gray-700)',
+    '#1a1d24': 'var(--color-bg-dark)',
+    # 状态背景色
+    '#f6ffed': 'var(--status-success-bg)',
+    '#fffbe6': 'var(--status-warning-bg)',
+    '#fff2f0': 'var(--status-error-bg)',
+    '#e6f7ff': 'var(--status-processing-bg)',
+    '#f9f0ff': 'var(--status-info-bg)',
+    # 状态边框色
+    '#b7eb8f': 'var(--status-success-border)',
+    '#ffe58f': 'var(--status-warning-border)',
+    '#ffccc7': 'var(--status-error-border)',
+    '#91d5ff': 'var(--status-processing-border)',
+    '#d3adf7': 'var(--status-info-border)',
+}
+
+# 必须保留的颜色 — 渐变色内的颜色 / 情报中心动态霓虹色 / SVG/打印纯黑
+# 这些颜色不在批量替换范围内，需要人工处理或保留
+PROTECTED_COLORS = {
+    '#00e5ff',    # 亮青 — 图表/可视化（已在 design-system.css 定义为 --color-accent-cyan-bright）
+    '#39ff14',    # 霓虹绿 — 情报中心/状态高亮（已在 design-system.css 定义为 --color-accent-neon）
+    '#7c4dff',    # 紫色 — 装饰强调（渐变色终点）
+    '#00bcd4',    # 青色 — 渐变色终点
+    '#f7a600',    # 深黄 — KPI警示（已在 design-system.css 定义为 --color-warning-deep）
+}
+
+# 不参与替换的文件（变量定义文件本身 / 第三方库）
+SKIP_FILES = {
+    'design-system.css',   # 变量定义文件本身
+    'global.css',          # 全局样式含变量定义
 }
 
 # 白色和黑色特殊处理（使用场景多，需要上下文判断）
@@ -107,8 +146,43 @@ def is_replaceable(color: str) -> bool:
     return color in COLOR_MAP or color in WHITE_BLACK_MAP
 
 
+def is_in_gradient(content: str, pos: int) -> bool:
+    """判断当前位置是否在 gradient 函数内（保护渐变色不被替换）"""
+    # 向前查找最近的 gradient 关键字
+    before = content[:pos]
+    # 查找最近的 gradient( 或 gradient-color(
+    for kw in ['linear-gradient(', 'radial-gradient(', 'conic-gradient(',
+               'linear-gradient (', 'radial-gradient (', 'conic-gradient (']:
+        idx = before.rfind(kw)
+        if idx != -1:
+            # 检查 gradient( 之后是否有对应的 ) 闭合
+            after_start = idx + len(kw)
+            remaining = content[after_start:]
+            # 找到匹配的右括号
+            depth = 1
+            for i, ch in enumerate(remaining):
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                    if depth == 0:
+                        # 当前位置在 gradient 函数内
+                        if pos < after_start + i:
+                            return True
+                        break
+            else:
+                # 括号未闭合，保守认为在 gradient 内
+                return True
+    return False
+
+
 def replace_colors_in_file(filepath: str, do_replace: bool) -> Tuple[int, int, List[Tuple[str, int]]]:
     """处理单个文件，返回 (总颜色数, 可替换数, 不可替换列表)"""
+    # 跳过变量定义文件本身
+    basename = os.path.basename(filepath)
+    if basename in SKIP_FILES:
+        return 0, 0, []
+
     try:
         with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
             content = f.read()
@@ -121,9 +195,21 @@ def replace_colors_in_file(filepath: str, do_replace: bool) -> Tuple[int, int, L
 
     replaceable = 0
     not_replaceable = []
+    protected_count = 0
 
     for color, line_num in colors:
+        # 保护色跳过（渐变色终点/霓虹色/KPI警示色）
+        if color.lower() in {c.lower() for c in PROTECTED_COLORS}:
+            protected_count += 1
+            continue
         if color in COLOR_MAP:
+            # 检查是否在 gradient 内
+            # 找到颜色在内容中的位置
+            pattern = re.compile(re.escape(color))
+            match = pattern.search(content)
+            if match and is_in_gradient(content, match.start()):
+                protected_count += 1
+                continue
             replaceable += 1
         elif color in WHITE_BLACK_MAP:
             replaceable += 1
@@ -132,13 +218,21 @@ def replace_colors_in_file(filepath: str, do_replace: bool) -> Tuple[int, int, L
 
     if do_replace and replaceable > 0:
         new_content = content
-        # 先替换长色值（6位），再替换短色值（3位），避免 #fff 替换破坏 #ffffxx
-        sorted_colors = sorted(COLOR_MAP.keys(), key=len, reverse=True)
-        for color in sorted_colors:
-            new_content = new_content.replace(color, COLOR_MAP[color])
-        # 白色黑色单独处理
-        for color in WHITE_BLACK_MAP:
-            new_content = new_content.replace(color, WHITE_BLACK_MAP[color])
+        # 按行处理，跳过含 gradient 的行中的颜色替换
+        lines = new_content.split('\n')
+        for i, line in enumerate(lines):
+            if 'gradient(' in line.lower() or 'gradient (' in line.lower():
+                # 渐变色行：只替换不在 gradient() 内的颜色（简单处理：跳过整行）
+                continue
+            # 先替换长色值（6位），再替换短色值（3位）
+            sorted_colors = sorted(COLOR_MAP.keys(), key=len, reverse=True)
+            for color in sorted_colors:
+                line = line.replace(color, COLOR_MAP[color])
+            # 白色黑色单独处理
+            for color in WHITE_BLACK_MAP:
+                line = line.replace(color, WHITE_BLACK_MAP[color])
+            lines[i] = line
+        new_content = '\n'.join(lines)
 
         if new_content != content:
             try:

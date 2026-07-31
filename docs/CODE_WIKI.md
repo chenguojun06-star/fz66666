@@ -408,7 +408,7 @@ Prompt 组装核心，注入 17+ 上下文块：
 
 ### 6.5 AI 模型路由
 
-- **主力模型**：DeepSeek（`deepseek-v4-flash`）+ Agnes 视觉（`agnes-2.0-flash`）
+- **主力模型**：DeepSeek（`deepseek-v4-flash`）+ Agnes 视觉（`agnes-2.5-flash`）
 - **路由策略**：failover / round-robin / concurrent
 - **per-call 模型选择**：economy（glm-4-flash）/ standard（glm-4）/ premium（glm-4-plus）
 - **Token 预算**：30000，超时 180s

@@ -171,11 +171,17 @@ const system = {
   rejectUser: (userId, data) => http.post(`/api/system/user/${userId}/approval-action?action=reject`, data || {}),
   listRoles: () => http.get('/api/system/role/list'),
   getOnlineCount: () => http.get('/api/system/user/online-count'),
-  listOrganizationDepartments: () => http.get('/api/system/organization/departments'),
+  // P0 修复（D-024 2026-07-30）：与小程序对齐，统一走 production-groups 路径
+  //   /departments 返回 departmentOptions()，/production-groups 返回 productionGroupOptions()
+  //   小程序、PC 端均使用 production-groups，H5 原生历史上误用 departments
+  listOrganizationDepartments: () => http.get('/api/system/organization/production-groups'),
   changePassword: (data) => http.post('/api/system/user/me/change-password', data || {}),
   submitFeedback: (data) => http.post('/api/system/feedback/submit', data),
   myFeedbackList: (params) => http.post('/api/system/feedback/my-list', params || {}),
-  getDictList: (type) => http.post('/api/system/dict/search', { type }),
+  // P0 修复（D-024 2026-07-30）：与小程序 + PC 端对齐，统一走 GET /api/system/dict/list?dictType=xxx
+  //   旧版 POST /api/system/dict/search 与小程序不一致，且后端 /search 是兼容遗留接口
+  //   返回 IPage<Dict>，调用方通过 res.records 读取列表
+  getDictList: (type) => http.get('/api/system/dict/list', { params: { dictType: type, page: 1, pageSize: 999 } }),
   getMiniprogramMenuConfig: () => http.get('/api/system/tenant-miniprogram-menu/my-menus'),
   saveMiniprogramMenuConfig: (payload) => http.put('/api/system/tenant-miniprogram-menu', payload),
 };

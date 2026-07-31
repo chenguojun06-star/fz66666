@@ -52,8 +52,8 @@ const wagePayment = {
   initiatePayment: function (data) {
     return ok('/api/finance/wage-payments/initiate-with-callback', 'POST', data || {});
   },
-  confirmOffline: function (id, data) {
-    return ok('/api/finance/wage-payments/' + encodeURIComponent(id) + '/confirm-offline-with-callback', 'POST', data || {});
+  confirmOffline: function (id) {
+    return ok('/api/finance/wage-payments/' + encodeURIComponent(id) + '/confirm-offline-with-callback', 'POST', {});
   },
   confirmReceived: function (id) {
     return ok('/api/finance/wage-payments/' + encodeURIComponent(id) + '/confirm-received', 'POST', {});
