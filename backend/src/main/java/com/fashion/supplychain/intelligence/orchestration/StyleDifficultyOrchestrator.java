@@ -38,7 +38,7 @@ public class StyleDifficultyOrchestrator {
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private StyleImageUrlResolver imageUrlResolver;
 
-    @Value("${ai.agnes.model:agnes-2.0-flash}")
+    @Value("${ai.agnes.model:agnes-2.5-flash}")
     private String agnesVisionModel;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

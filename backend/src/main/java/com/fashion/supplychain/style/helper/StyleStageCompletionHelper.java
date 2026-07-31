@@ -189,6 +189,21 @@ public class StyleStageCompletionHelper {
             throw new IllegalStateException("请先配置BOM物料数据");
         }
 
+        // P0 校验：每条BOM物料必须有单件用量和损耗率，否则大货采购需求计算会出错
+        for (StyleBom bom : bomList) {
+            String name = StringUtils.hasText(bom.getMaterialName()) ? bom.getMaterialName()
+                    : (StringUtils.hasText(bom.getMaterialCode()) ? bom.getMaterialCode() : "未命名物料");
+            if (bom.getUsageAmount() == null || bom.getUsageAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new IllegalStateException("物料[" + name + "]的单件用量未填写，请补全后再完成BOM配置");
+            }
+            if (bom.getLossRate() == null) {
+                throw new IllegalStateException("物料[" + name + "]的损耗率未填写，请补全后再完成BOM配置");
+            }
+            if (!StringUtils.hasText(bom.getUnit())) {
+                throw new IllegalStateException("物料[" + name + "]的单位未填写，请补全后再完成BOM配置");
+            }
+        }
+
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getBomCompletedTime, LocalDateTime.now())

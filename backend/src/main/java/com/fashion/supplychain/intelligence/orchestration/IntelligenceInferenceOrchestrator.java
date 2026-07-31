@@ -66,11 +66,11 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.deepseek.timeout-seconds:90}") private int directTimeoutSeconds;
     @Value("${ai.agnes.api-key:}") private String agnesApiKey;
     @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnesApiUrl;
-    @Value("${ai.agnes.model:agnes-2.0-flash}") private String agnesModel;
+    @Value("${ai.agnes.model:agnes-2.5-flash}") private String agnesModel;
     @Value("${ai.agnes.timeout-seconds:60}") private int agnesTimeoutSeconds;
     @Value("${ai.agnes2.api-key:}") private String agnes2ApiKey;
     @Value("${ai.agnes2.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnes2ApiUrl;
-    @Value("${ai.agnes2.model:agnes-2.0-flash}") private String agnes2Model;
+    @Value("${ai.agnes2.model:agnes-2.5-flash}") private String agnes2Model;
     @Value("${ai.agnes2.timeout-seconds:60}") private int agnes2TimeoutSeconds;
     @Value("${app.public-base-url:}") private String appPublicBaseUrl;
     @Value("${ai.vision-models.strategy:failover}") private String visionModelStrategy;
@@ -125,7 +125,7 @@ public class IntelligenceInferenceOrchestrator {
                 String apiUrl = resolveEnvOrProp("VISION_MODEL_" + i + "_API_URL");
                 apiUrl = apiUrl != null ? apiUrl : "https://apihub.agnes-ai.com/v1/chat/completions";
                 String model = resolveEnvOrProp("VISION_MODEL_" + i + "_MODEL");
-                model = model != null ? model : "agnes-2.0-flash";
+                model = model != null ? model : "agnes-2.5-flash";
                 String timeoutStr = resolveEnvOrProp("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
                 int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 60;
                 visionModels.add(new VisionModelConfig("vision-model-" + i, apiKey, apiUrl, model, timeout));

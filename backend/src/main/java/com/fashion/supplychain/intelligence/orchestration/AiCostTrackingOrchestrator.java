@@ -22,6 +22,7 @@ public class AiCostTrackingOrchestrator {
     private static final Map<String, BigDecimal> MODEL_PRICING = Map.of(
             "deepseek-v4-flash", new BigDecimal("0.00014"),
             "agnes-2.0-flash", new BigDecimal("0.00003"),
+            "agnes-2.5-flash", new BigDecimal("0.00003"),
             "qwen-plus", new BigDecimal("0.00040"),
             "gpt-4o-mini", new BigDecimal("0.00015")
     );

@@ -49,7 +49,7 @@ import org.springframework.context.annotation.Lazy;
  * ai:
  *   agnes:
  *     api-key: ${AGNES_API_KEY:}   # Agnes AI 视觉+Embedding
- *     model: agnes-2.0-flash
+ *     model: agnes-2.5-flash
  *   deepseek:
  *     api-key: sk-xxx
  *     embedding-model: text-embedding-v2
@@ -98,7 +98,7 @@ public class QdrantService {
     @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}")
     private String agnesApiUrl;
 
-    @Value("${ai.agnes.model:agnes-2.0-flash}")
+    @Value("${ai.agnes.model:agnes-2.5-flash}")
     private String agnesModel;
 
     @Autowired

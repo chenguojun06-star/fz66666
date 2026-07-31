@@ -55,6 +55,9 @@ public class BillAggregationOrchestrator {
     @Autowired(required = false)
     private ProductionOrderService productionOrderService;
 
+    @Autowired(required = false)
+    private AccountingVoucherOrchestrator accountingVoucherOrchestrator;
+
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
      * 非工厂账号返回 null（表示不限制）
@@ -353,6 +356,7 @@ public class BillAggregationOrchestrator {
         bill.setConfirmedAt(LocalDateTime.now());
         billAggregationService.updateById(bill);
         ensureSettlementTaskFromBill(bill);
+        ensureAccountingVoucherFromBill(bill);
         log.info("[BillAggregation] 确认账单: billNo={}", bill.getBillNo());
     }
 
@@ -518,6 +522,17 @@ public class BillAggregationOrchestrator {
                 ? bill.getRemark() + "\n" + reverseRemark : reverseRemark);
         billAggregationService.updateById(bill);
 
+        // 1.1 联动冲销会计凭证（D-022 财务闭环：账单反向 → 凭证冲销）
+        if (accountingVoucherOrchestrator != null) {
+            try {
+                accountingVoucherOrchestrator.reverseByBillAggregationId(bill.getId());
+                log.info("[BillAggregation] 反向联动会计凭证冲销: billNo={}", bill.getBillNo());
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 反向联动会计凭证冲销失败（账单已取消，继续处理）: billNo={}, err={}",
+                        bill.getBillNo(), e.getMessage());
+            }
+        }
+
         // 2. 联动 Payable（仅未付款的可直接取消；已付款的保留痕迹）
         if (BillConstants.isPayable(bill.getBillType()) && payableOrchestrator != null) {
             try {
@@ -628,6 +643,31 @@ public class BillAggregationOrchestrator {
             }
         } catch (Exception e) {
             throw new RuntimeException("派生待收付任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 账单确认后自动生成会计凭证（D-022 财务闭环：账单 → 凭证，借贷平衡）
+     * <p>
+     * 数据流转：confirmBill → ensureAccountingVoucherFromBill → generateVoucherFromBill
+     * <ul>
+     *   <li>幂等：generateVoucherFromBill 内部已做幂等（同一 billAggregationId 不重复生成 JOURNAL 凭证）</li>
+     *   <li>fail-safe：科目映射缺失时只记日志不阻塞业务（凭证可在会计模块手动补录）</li>
+     *   <li>事务：generateVoucherFromBill 已有 @Transactional，加入 confirmBill 事务</li>
+     * </ul>
+     * </p>
+     */
+    private void ensureAccountingVoucherFromBill(BillAggregation bill) {
+        if (bill == null || accountingVoucherOrchestrator == null) {
+            return;
+        }
+        try {
+            accountingVoucherOrchestrator.generateVoucherFromBill(bill.getId());
+            log.info("[BillAggregation] 已生成会计凭证: billNo={}", bill.getBillNo());
+        } catch (Exception e) {
+            // 科目映射缺失等配置问题不应阻塞账单确认业务，但需记录日志供财务补录
+            log.warn("[BillAggregation] 会计凭证生成失败（可在会计模块手动补录）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
         }
     }
 

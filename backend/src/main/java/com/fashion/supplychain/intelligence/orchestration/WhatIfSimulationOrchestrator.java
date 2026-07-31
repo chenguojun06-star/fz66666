@@ -50,6 +50,24 @@ public class WhatIfSimulationOrchestrator {
     @Autowired
     private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.VisionAnalysisService> visionAnalysisServiceProvider;
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P2升级】WhatIf ↔ APS排产 ↔ ML交期预测 闭环联动
+    // 数据流转：WhatIf场景 → APS重排产 → 真实工期 → ML预测验证 → 回写WhatIf结果
+    // ══════════════════════════════════════════════════════════════════════════
+    @Autowired(required = false)
+    @Lazy
+    private ApsSchedulingOrchestrator apsSchedulingOrchestrator;
+
+    @Autowired(required = false)
+    @Lazy
+    private MlDeliveryPredictionOrchestrator mlDeliveryPredictionOrchestrator;
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P2拆薄】自然语言场景解析已提取到 WhatIfScenarioParserHelper
+    // ══════════════════════════════════════════════════════════════════════════
+    @Autowired
+    private com.fashion.supplychain.intelligence.helper.WhatIfScenarioParserHelper scenarioParserHelper;
+
     // 复用规范终态定义（包含 archived），保证与 OrderStatusConstants 一致
     private static final Set<String> TERMINAL_STATUSES = OrderStatusConstants.TERMINAL_STATUSES;
 
@@ -67,6 +85,12 @@ public class WhatIfSimulationOrchestrator {
 
         BatchStats stats = buildBatchStats(orders);
 
+        // ══════════════════════════════════════════════════════════════════════════
+        // 【P2升级】ML交期预测丰富基准数据
+        // 数据流转：ML预测每单真实交期 → 更新 BatchStats 的 mlPredictedOverdueCount
+        // ══════════════════════════════════════════════════════════════════════════
+        enrichBaselineWithMlPrediction(stats, orders);
+
         // ── 基准快照
         WhatIfResponse.ScenarioResult baseline = computeBaseline(stats);
 
@@ -82,7 +106,7 @@ public class WhatIfSimulationOrchestrator {
 
         if (Boolean.TRUE.equals(enableNaturalParsing) && req.getNaturalScenario() != null && !req.getNaturalScenario().isBlank()) {
             log.info("[WhatIf] 自然语言场景解析，input={}", req.getNaturalScenario());
-            scenarios = parseNaturalScenario(req.getNaturalScenario());
+            scenarios = scenarioParserHelper.parseNaturalScenario(req.getNaturalScenario());
             log.info("[WhatIf] 解析出{}个场景: {}", scenarios.size(), scenarios);
         }
 
@@ -115,133 +139,6 @@ public class WhatIfSimulationOrchestrator {
         return resp;
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // 【P2升级】自然语言场景解析实现
-    // ══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * 将自然语言描述解析为标准场景列表
-     *
-     * <p>支持的模式：</p>
-     * <ul>
-     *   <li>"停电X天" / "停工X天" → DELAY_START</li>
-     *   <li>"提前X天" / "加速X天" → ADVANCE_DELIVERY</li>
-     *   <li>"增加X人" / "加X个工人" / "加班" → ADD_WORKERS</li>
-     *   <li>"转X工厂" / "换工厂" / "转厂" → CHANGE_FACTORY</li>
-     *   <li>"降价X%" / "降低成本X%" → COST_REDUCE</li>
-     * </ul>
-     *
-     * @param naturalScenario 自然语言描述（支持多场景，用"|"分隔）
-     * @return 标准场景列表
-     */
-    private List<Map<String, Object>> parseNaturalScenario(String naturalScenario) {
-        List<Map<String, Object>> result = new ArrayList<>();
-
-        // 支持多场景分隔符
-        String[] parts = naturalScenario.split("[|，,]");
-
-        for (String part : parts) {
-            part = part.trim();
-            if (part.isEmpty()) continue;
-
-            Map<String, Object> scenario = parseSingleScenario(part);
-            if (scenario != null) {
-                result.add(scenario);
-            } else {
-                log.warn("[WhatIf] 无法解析场景描述: {}", part);
-            }
-        }
-
-        return result;
-    }
-
-    private Map<String, Object> parseSingleScenario(String text) {
-        Map<String, Object> scenario = new HashMap<>();
-        String lower = text.toLowerCase();
-
-        // 停电/停工 → DELAY_START
-        if (lower.contains("停电") || lower.contains("停工") || lower.contains("停产")) {
-            int days = extractNumber(text);
-            if (days <= 0) days = 1;
-            scenario.put("type", "DELAY_START");
-            scenario.put("value", days);
-            scenario.put("description", "因" + text + "延迟开工");
-            return scenario;
-        }
-
-        // 提前/加速/赶工 → ADVANCE_DELIVERY
-        if (lower.contains("提前") || lower.contains("加速") || lower.contains("赶工") || lower.contains("加急")) {
-            int days = extractNumber(text);
-            if (days <= 0) days = 3;
-            scenario.put("type", "ADVANCE_DELIVERY");
-            scenario.put("value", days);
-            scenario.put("description", "因" + text + "提前交货");
-            return scenario;
-        }
-
-        // 增加工人/加班/加人手 → ADD_WORKERS
-        if (lower.contains("增加工人") || lower.contains("加班") || lower.contains("加人手") || lower.contains("加人手") || lower.contains("增援")) {
-            int workers = extractNumber(text);
-            if (workers <= 0) workers = 5;
-            scenario.put("type", "ADD_WORKERS");
-            scenario.put("value", workers);
-            scenario.put("description", "因" + text + "增加工人");
-            return scenario;
-        }
-
-        // 转工厂/换工厂 → CHANGE_FACTORY
-        if (lower.contains("转") && (lower.contains("工厂") || lower.contains("厂")) || lower.contains("换工厂") || lower.contains("转厂")) {
-            String factoryName = extractFactoryName(text);
-            scenario.put("type", "CHANGE_FACTORY");
-            scenario.put("factoryName", factoryName);
-            scenario.put("description", "将订单转至" + factoryName);
-            return scenario;
-        }
-
-        // 降价/降低成本 → COST_REDUCE
-        if (lower.contains("降价") || lower.contains("降低成本") || lower.contains("省成本")) {
-            int pct = extractNumber(text);
-            if (pct <= 0) pct = 10;
-            scenario.put("type", "COST_REDUCE");
-            scenario.put("value", pct);
-            scenario.put("description", "因" + text + "降低成本");
-            return scenario;
-        }
-
-        // 原材料/物料晚到 → DELAY_START
-        if (lower.contains("原材料") && lower.contains("晚") || lower.contains("物料") && lower.contains("迟到") || lower.contains("断料")) {
-            int days = extractNumber(text);
-            if (days <= 0) days = 5;
-            scenario.put("type", "DELAY_START");
-            scenario.put("value", days);
-            scenario.put("description", "因" + text + "延迟开工");
-            return scenario;
-        }
-
-        // 无法解析，返回null
-        return null;
-    }
-
-    private int extractNumber(String text) {
-        // 提取中文/阿拉伯数字
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\d+");
-        java.util.regex.Matcher m = p.matcher(text);
-        if (m.find()) {
-            return Integer.parseInt(m.group());
-        }
-        return 0;
-    }
-
-    private String extractFactoryName(String text) {
-        // 提取工厂名称（A工厂/B工厂/C工厂）
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("[A-Za-z0-9一二三四五六七八九十]+工厂");
-        java.util.regex.Matcher m = p.matcher(text);
-        if (m.find()) {
-            return m.group().replace("工厂", "");
-        }
-        return "其他工厂";
-    }
-
     // ──────────────────────────────────────────────────────────────────
     // 基准计算（现状）
     // ──────────────────────────────────────────────────────────────────
@@ -253,15 +150,21 @@ public class WhatIfSimulationOrchestrator {
         r.setFinishDateDeltaDays(0);
         r.setCostDelta(0.0);
         r.setOverdueRiskDelta(0.0);
+        // 优先使用 ML 预测的逾期数（更准确），无 ML 数据时回退到启发式逾期数
+        int effectiveOverdueCount = stats.getMlPredictedOverdueCount() >= 0
+                ? stats.getMlPredictedOverdueCount() : stats.getOverdueCount();
         int score = clamp(82
-                - stats.getOverdueCount() * 12
+                - effectiveOverdueCount * 12
                 - stats.getAtRiskCount() * 5
                 - (int) Math.round(Math.max(0, 100 - stats.getAverageProgress()) / 8.0), 15, 92);
         r.setScore(score);
+        String mlSuffix = stats.getMlPredictedOverdueCount() >= 0
+                ? String.format("，ML预测逾期%d单（日均产能%.1f件）", stats.getMlPredictedOverdueCount(), stats.getMlAverageDailyVelocity())
+                : "";
         r.setAction("维持现状");
-        r.setRationale(String.format("已选%d单，剩余%.0f件，平均进度%.0f%%，逾期%d单，高风险%d单，平均剩余%.1f天。",
+        r.setRationale(String.format("已选%d单，剩余%.0f件，平均进度%.0f%%，逾期%d单，高风险%d单，平均剩余%.1f天%s。",
                 stats.getOrderCount(), stats.getRemainingQuantity(), stats.getAverageProgress(),
-                stats.getOverdueCount(), stats.getAtRiskCount(), stats.getAverageDaysLeft()));
+                effectiveOverdueCount, stats.getAtRiskCount(), stats.getAverageDaysLeft(), mlSuffix));
         return r;
     }
 
@@ -289,10 +192,36 @@ public class WhatIfSimulationOrchestrator {
                 r.setScore(clamp((baseline.getScore() == null ? 50 : baseline.getScore()) - accelDays * 2, 10, 92));
                 r.setAction("需增加工人加班或调配外包工序");
                 r.setRationale(String.format("按剩余%.0f件测算，提前%d天需要压缩当前节拍，成本会上升。", stats.getRemainingQuantity(), accelDays));
+                // ══════════════════════════════════════════════════════════════════════════
+                // 【P2升级】ML交期预测验证：检查提前后是否会触发新的逾期风险
+                // 数据流转：ML基准预测的日均产能 → 推算提前天数后的可交付量 → 回写风险与建议
+                // ══════════════════════════════════════════════════════════════════════════
+                MlVerificationResult mlVerify = enrichAdvanceDeliveryWithMl(stats, accelDays);
+                if (mlVerify.isAvailable()) {
+                    r.setOverdueRiskDelta(round(mlVerify.getOverdueRiskDelta()));
+                    r.setScore(clamp((baseline.getScore() == null ? 50 : baseline.getScore())
+                            - accelDays * 2 + (mlVerify.getOverdueRiskDelta() < 0 ? 6 : -4), 10, 92));
+                    r.setRationale(r.getRationale() + " | ML预测验证：" + mlVerify.getRationale());
+                    r.setAction(mlVerify.getOverdueRiskDelta() < 0
+                            ? "ML验证当前产能可支撑提前交货，建议执行"
+                            : "ML验证提前后逾期风险上升，建议同时增员或外包");
+                    log.info("[WhatIf] ADVANCE_DELIVERY ML联动: accelDays={}, riskDelta={}",
+                            accelDays, mlVerify.getOverdueRiskDelta());
+                }
                 break;
             }
             case "ADD_WORKERS": {
-                int accelDays = clamp((int) Math.round(stats.getRemainingQuantity() / 1800.0 * Math.min(safeValue, 30) * 0.55), 1, 12);
+                // ══════════════════════════════════════════════════════════════════════════
+                // 【P2升级】ML联动：用 ML 预测的真实日均产能替代 1800.0 经验常数
+                // 数据流转：mlAverageDailyVelocity（来自 enrichBaselineWithMlPrediction）→
+                //   精确计算增员后的工期回收天数
+                // ══════════════════════════════════════════════════════════════════════════
+                double baseVelocity = stats.getMlPredictedOverdueCount() >= 0 && stats.getMlAverageDailyVelocity() > 0
+                        ? stats.getMlAverageDailyVelocity() : 1800.0;
+                // 增员后产能：假设每名工人贡献 baseVelocity/30 的日产能（30人为基准工厂规模）
+                double incrementalVelocity = baseVelocity * Math.min(safeValue, 30) / 30.0 * 0.55;
+                double newVelocity = baseVelocity + incrementalVelocity;
+                int accelDays = clamp((int) Math.round(stats.getRemainingQuantity() / newVelocity * 0.55), 1, 12);
                 double extraCost = round(Math.max(1, Math.ceil(stats.getAverageDaysLeft())) * safeValue * 180.0);
                 r.setScenarioKey("ADD_WORKERS_" + safeValue + "人");
                 r.setDescription("当前工厂增加 " + safeValue + " 名工人");
@@ -301,8 +230,11 @@ public class WhatIfSimulationOrchestrator {
                 r.setOverdueRiskDelta(round(-Math.min(30.0, accelDays * 3.0 + Math.min(10, safeValue))));
                 r.setScore(clamp((baseline.getScore() == null ? 50 : baseline.getScore()) + accelDays * 4 - Math.max(0, safeValue - 12), 25, 94));
                 r.setAction("联系工厂人事安排临时工");
-                r.setRationale(String.format("基于剩余%.0f件与平均剩余%.1f天估算，增员%d人可回收约%d天，但会增加短期人工成本。",
-                        stats.getRemainingQuantity(), stats.getAverageDaysLeft(), safeValue, accelDays));
+                String velocitySource = stats.getMlPredictedOverdueCount() >= 0
+                        ? String.format("ML预测日均产能%.1f件", baseVelocity)
+                        : "经验常数1800件/天";
+                r.setRationale(String.format("基于%s，剩余%.0f件，增员%d人后预计日产能%.1f件，可回收约%d天，但会增加短期人工成本。",
+                        velocitySource, stats.getRemainingQuantity(), safeValue, newVelocity, accelDays));
                 break;
             }
             case "CHANGE_FACTORY": {
@@ -322,6 +254,25 @@ public class WhatIfSimulationOrchestrator {
                 r.setScore(clamp((baseline.getScore() == null ? 50 : baseline.getScore()) + (finishDelta < 0 ? 16 : -10) - Math.max(0, finishDelta), 18, 90));
                 r.setAction(finishDelta < 0 ? "目标工厂负载更优，可作为转厂候选" : "转厂收益不明显，除非当前工厂已失控再考虑");
                 r.setRationale(comparison.getRationale());
+                // ══════════════════════════════════════════════════════════════════════════
+                // 【P2升级】APS排产联动：用真实约束求解结果覆盖启发式估算
+                // 数据流转：WhatIf CHANGE_FACTORY → APS.solveScheduling(目标工厂) → 真实工期 → 回写 finishDelta
+                // ══════════════════════════════════════════════════════════════════════════
+                ApsEnrichment apsResult = enrichChangeFactoryWithAps(stats, targetFactoryName);
+                if (apsResult != null && apsResult.isAvailable()) {
+                    r.setFinishDateDeltaDays(apsResult.getFinishDateDeltaDays());
+                    r.setOverdueRiskDelta(apsResult.getOverdueRiskDelta());
+                    r.setScore(clamp((baseline.getScore() == null ? 50 : baseline.getScore())
+                            + (apsResult.getFinishDateDeltaDays() < 0 ? 16 : -10)
+                            - Math.max(0, apsResult.getFinishDateDeltaDays()), 18, 90));
+                    String apsRationale = apsResult.getRationale();
+                    r.setRationale(comparison.getRationale() + " | APS排产验证：" + apsRationale);
+                    r.setAction(apsResult.getFinishDateDeltaDays() < 0
+                            ? "APS验证目标工厂负载更优，推荐转厂"
+                            : "APS验证转厂收益有限，除非当前工厂已失控再考虑");
+                    log.info("[WhatIf] CHANGE_FACTORY APS联动: factory={}, finishDelta={}, status={}",
+                            targetFactoryName, apsResult.getFinishDateDeltaDays(), apsResult.getStatus());
+                }
                 break;
             }
             case "COST_REDUCE": {
@@ -540,6 +491,190 @@ public class WhatIfSimulationOrchestrator {
         WhatIfResponse r = new WhatIfResponse(); r.setSummary(msg); return r;
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P2升级】ML交期预测丰富基准数据
+    // 数据流转：对每单调用 MlDeliveryPredictionOrchestrator.predict() →
+    //   统计 ML 预测逾期数 + 平均日产能 → 回写 BatchStats
+    // fail-safe：ML 不可用或异常时保留 mlPredictedOverdueCount=-1（computeBaseline 回退到启发式）
+    // ══════════════════════════════════════════════════════════════════════════
+    private void enrichBaselineWithMlPrediction(BatchStats stats, List<ProductionOrder> orders) {
+        if (mlDeliveryPredictionOrchestrator == null || orders == null || orders.isEmpty()) {
+            return;
+        }
+        try {
+            int mlOverdueCount = 0;
+            double totalVelocity = 0;
+            int velocityCount = 0;
+            List<String> delayedIds = new ArrayList<>();
+
+            for (ProductionOrder order : orders) {
+                String orderId = order.getId();
+                if (orderId == null || orderId.isBlank()) continue;
+                try {
+                    com.fashion.supplychain.intelligence.dto.DeliveryPredictionRequest req =
+                            new com.fashion.supplychain.intelligence.dto.DeliveryPredictionRequest();
+                    req.setOrderId(orderId);
+                    com.fashion.supplychain.intelligence.dto.DeliveryPredictionResponse pred =
+                            mlDeliveryPredictionOrchestrator.predict(req);
+                    if (pred != null) {
+                        if (pred.isLikelyDelayed()) {
+                            mlOverdueCount++;
+                            delayedIds.add(orderId);
+                        }
+                        if (pred.getDailyVelocity() > 0) {
+                            totalVelocity += pred.getDailyVelocity();
+                            velocityCount++;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("[WhatIf] ML预测单订单异常: orderId={}, err={}", orderId, e.getMessage());
+                }
+            }
+
+            // 仅在成功预测到至少 1 单时才覆盖启发式数据
+            if (velocityCount > 0) {
+                stats.setMlPredictedOverdueCount(mlOverdueCount);
+                stats.setMlAverageDailyVelocity(round(totalVelocity / velocityCount));
+                stats.setMlPredictedDelayedOrderIds(delayedIds);
+                log.info("[WhatIf] ML预测丰富基准: 预测逾期{}单, 平均日产能{}/天, 预测样本{}单",
+                        mlOverdueCount, stats.getMlAverageDailyVelocity(), velocityCount);
+            }
+        } catch (Exception e) {
+            log.warn("[WhatIf] ML预测丰富基准失败（回退到启发式）: {}", e.getMessage());
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P2升级】APS排产联动验证 CHANGE_FACTORY 场景
+    // 数据流转：构造 ApsSchedulingRequest → ApsSchedulingOrchestrator.solveScheduling() →
+    //   真实排产方案（工期/工厂分配/约束满足） → 计算 finishDateDeltaDays → 回写 ScenarioResult
+    // fail-safe：APS 不可用或求解失败时返回 available=false（simulateScenario 保留启发式结果）
+    // ══════════════════════════════════════════════════════════════════════════
+    private ApsEnrichment enrichChangeFactoryWithAps(BatchStats stats, String targetFactoryName) {
+        ApsEnrichment result = new ApsEnrichment();
+        result.setAvailable(false);
+        if (apsSchedulingOrchestrator == null) {
+            return result;
+        }
+        try {
+            com.fashion.supplychain.intelligence.dto.ApsSchedulingRequest apsReq =
+                    new com.fashion.supplychain.intelligence.dto.ApsSchedulingRequest();
+            // 不指定工厂白名单，让 APS 全局求解后与目标工厂对比
+            apsReq.setAllowPartial(true);
+            apsReq.setSkipHolidays(true);
+
+            com.fashion.supplychain.intelligence.dto.ApsSchedulingResponse apsResp =
+                    apsSchedulingOrchestrator.solveScheduling(apsReq);
+            if (apsResp == null || apsResp.getSolutions() == null || apsResp.getSolutions().isEmpty()) {
+                result.setRationale("APS无可行方案");
+                return result;
+            }
+
+            // 统计目标工厂的平均工期
+            int targetTotalDays = 0;
+            int targetCount = 0;
+            int otherTotalDays = 0;
+            int otherCount = 0;
+            for (com.fashion.supplychain.intelligence.dto.ApsSchedulingResponse.ScheduleSolution sol : apsResp.getSolutions()) {
+                if (targetFactoryName != null && !targetFactoryName.isBlank()
+                        && targetFactoryName.equals(sol.getFactoryName())) {
+                    targetTotalDays += sol.getTotalDays();
+                    targetCount++;
+                } else {
+                    otherTotalDays += sol.getTotalDays();
+                    otherCount++;
+                }
+            }
+
+            if (targetCount == 0) {
+                result.setRationale("APS未将任何订单分配给目标工厂「" + targetFactoryName + "」，可能产能不足");
+                result.setStatus(apsResp.getStatus());
+                return result;
+            }
+
+            int targetAvgDays = targetTotalDays / targetCount;
+            int otherAvgDays = otherCount > 0 ? otherTotalDays / otherCount : targetAvgDays + 2;
+            // 转厂成本：2 天迁移惩罚
+            int finishDelta = clamp(targetAvgDays - otherAvgDays + 2, -12, 10);
+            double riskDelta = round(clampDouble(finishDelta * 2.8, -28, 24));
+
+            result.setAvailable(true);
+            result.setFinishDateDeltaDays(finishDelta);
+            result.setOverdueRiskDelta(riskDelta);
+            result.setStatus(apsResp.getStatus());
+            result.setRationale(String.format("APS求解状态=%s，目标工厂「%s」平均工期%d天（共%d单），其他工厂平均%d天，转厂后净变化%d天",
+                    apsResp.getStatus(), targetFactoryName, targetAvgDays, targetCount, otherAvgDays, finishDelta));
+            return result;
+        } catch (Exception e) {
+            log.warn("[WhatIf] APS联动验证失败（保留启发式结果）: factory={}, err={}", targetFactoryName, e.getMessage());
+            result.setRationale("APS求解异常: " + e.getMessage());
+            return result;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P2升级】ML交期预测验证 ADVANCE_DELIVERY 场景
+    // 数据流转：基于 ML 基准预测的日均产能 → 推算提前 accelDays 后的可交付量 →
+    //   与剩余件数比较 → 判断是否会触发新逾期 → 回写 overdueRiskDelta
+    // fail-safe：ML 数据不可用时返回 available=false（simulateScenario 保留启发式结果）
+    // ══════════════════════════════════════════════════════════════════════════
+    private MlVerificationResult enrichAdvanceDeliveryWithMl(BatchStats stats, int accelDays) {
+        MlVerificationResult result = new MlVerificationResult();
+        result.setAvailable(false);
+        // 仅在 ML 基准预测成功时才联动（mlPredictedOverdueCount >= 0 表示 ML 可用）
+        if (stats.getMlPredictedOverdueCount() < 0 || stats.getMlAverageDailyVelocity() <= 0) {
+            return result;
+        }
+        try {
+            double velocity = stats.getMlAverageDailyVelocity();
+            double remaining = stats.getRemainingQuantity();
+            // 提前 accelDays 天意味着少生产 velocity * accelDays 件
+            double shortfall = velocity * accelDays;
+            // 产能缺口比例 = shortfall / remaining
+            double shortfallRatio = remaining > 0 ? shortfall / remaining : 0;
+            // 风险变化：缺口越大，逾期风险越高
+            // - shortfallRatio < 0.1（缺口<10%）：风险降低（产能充足，提前有益）
+            // - shortfallRatio 0.1~0.3：风险轻微上升
+            // - shortfallRatio > 0.3：风险显著上升
+            double riskDelta;
+            String rationale;
+            if (shortfallRatio < 0.1) {
+                // 产能充足，提前交货有效降低逾期风险
+                riskDelta = clampDouble(-accelDays * 2.5 - 3, -25, -2);
+                rationale = String.format("ML预测日均产能%.1f件，提前%d天缺口%.0f件（占比%.1f%%），产能充足可支撑提前交货",
+                        velocity, accelDays, shortfall, shortfallRatio * 100);
+            } else if (shortfallRatio < 0.3) {
+                // 缺口中等，风险轻微上升
+                riskDelta = clampDouble(accelDays * 1.5 + shortfallRatio * 20, 2, 15);
+                rationale = String.format("ML预测日均产能%.1f件，提前%d天缺口%.0f件（占比%.1f%%），需配合增员避免逾期",
+                        velocity, accelDays, shortfall, shortfallRatio * 100);
+            } else {
+                // 缺口过大，风险显著上升
+                riskDelta = clampDouble(accelDays * 3.0 + shortfallRatio * 35, 8, 30);
+                rationale = String.format("ML预测日均产能%.1f件，提前%d天缺口%.0f件（占比%.1f%%），产能缺口过大，不建议强行提前",
+                        velocity, accelDays, shortfall, shortfallRatio * 100);
+            }
+            result.setAvailable(true);
+            result.setOverdueRiskDelta(riskDelta);
+            result.setRationale(rationale);
+            return result;
+        } catch (Exception e) {
+            log.warn("[WhatIf] ML验证ADVANCE_DELIVERY失败（保留启发式）: {}", e.getMessage());
+            result.setRationale("ML验证异常: " + e.getMessage());
+            return result;
+        }
+    }
+
+    /**
+     * ML验证结果（用于 ADVANCE_DELIVERY 等场景的风险验证）
+     */
+    @Data
+    private static class MlVerificationResult {
+        private boolean available;
+        private double overdueRiskDelta;
+        private String rationale;
+    }
+
     @Data
     private static class BatchStats {
         private int orderCount;
@@ -552,6 +687,25 @@ public class WhatIfSimulationOrchestrator {
         private double averageDaysLeft;
         private List<String> factoryNames = new ArrayList<>();
         private Map<String, Integer> factoryQuantities = new HashMap<>();
+        // ══════════════════════════════════════════════════════════════════════════
+        // 【P2升级】ML交期预测丰富字段
+        // mlPredictedOverdueCount=-1 表示未启用ML预测，>=0 表示ML预测的真实逾期数
+        // ══════════════════════════════════════════════════════════════════════════
+        private int mlPredictedOverdueCount = -1;
+        private double mlAverageDailyVelocity = 0.0;
+        private List<String> mlPredictedDelayedOrderIds = new ArrayList<>();
+    }
+
+    /**
+     * APS排产联动结果（用于 CHANGE_FACTORY 场景验证）
+     */
+    @Data
+    private static class ApsEnrichment {
+        private boolean available;
+        private int finishDateDeltaDays;
+        private double overdueRiskDelta;
+        private String status;
+        private String rationale;
     }
 
     @Data

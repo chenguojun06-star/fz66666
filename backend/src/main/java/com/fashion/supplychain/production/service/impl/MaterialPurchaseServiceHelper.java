@@ -412,8 +412,15 @@ public class MaterialPurchaseServiceHelper {
                 if (qty <= 0) continue;
                 hasMatchedLine = true;
                 BigDecimal fromMap = sizeUsageMapParsed.get(ls);
+                // P0 修复：大货采购需求计算必须使用 usageAmount（单件用量），禁止用 devUsageAmount 兜底
+                // 开发用量(devUsageAmount)仅为样衣阶段预估，大货生产前必须已配置实际单件用量
                 BigDecimal usage = (fromMap != null && fromMap.compareTo(BigDecimal.ZERO) > 0) ? fromMap
                         : (bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
+                if (usage.compareTo(BigDecimal.ZERO) <= 0) {
+                    String bomName = StringUtils.hasText(bom.getMaterialName()) ? bom.getMaterialName() : bom.getMaterialCode();
+                    log.warn("[MaterialPurchase] BOM物料[{}]单件用量为空或0，大货采购需求计算跳过 styleId={}", bomName, bom.getStyleId());
+                    continue;
+                }
                 BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
                 BigDecimal lossMultiplier = BigDecimal.ONE.add(
                         lossRate.divide(new BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP));

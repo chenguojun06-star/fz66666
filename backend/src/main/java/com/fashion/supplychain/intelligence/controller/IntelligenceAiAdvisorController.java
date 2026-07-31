@@ -43,7 +43,7 @@ public class IntelligenceAiAdvisorController {
     @Value("${ai.agnes.api-key:}")
     private String agnesApiKey;
 
-    @Value("${ai.agnes.model:agnes-2.0-flash}")
+    @Value("${ai.agnes.model:agnes-2.5-flash}")
     private String agnesModel;
 
     @Value("${ai.deepseek.api-key:}")
