@@ -827,7 +827,7 @@ Page({
       wx.showLoading({ title: '处理中...', mask: true });
       production.closeOrder({
         id: order.id,
-        sourceModule: 'miniprogram_order_detail',
+        sourceModule: 'myOrders',
         remark: remark,
       }).then(function () {
         wx.hideLoading();
