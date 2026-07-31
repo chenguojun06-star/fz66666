@@ -45,6 +45,12 @@ public class PayrollSettlementItem {
 
     private String scanType;
 
+    /** 关联的扫码记录ID列表（逗号分隔，精确追溯用） */
+    private String scanRecordIds;
+
+    /** 关联的工序跟踪记录ID列表（逗号分隔，精准回滚用） */
+    private String trackingIds;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

@@ -101,4 +101,8 @@ public class WagePayment {
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /** 乐观锁版本号（D-008：金融实体并发保护） */
+    @Version
+    private Integer version;
 }

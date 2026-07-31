@@ -138,8 +138,12 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         /* 与 selectPersonalStats 保持一致：total_amount → scan_cost → unit_price×quantity 兜底 */
                         "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount, 0), NULLIF(sr.scan_cost, 0), sr.unit_price * sr.quantity, 0)), 0) AS totalAmount,",
                         /* P1 修复（工资链路断点5）：返回单价原始值供 PayrollSettlementOrchestrator 直读，避免反推精度损失 */
-                        "  COALESCE(MAX(NULLIF(sr.process_unit_price, 0)), MAX(NULLIF(sr.unit_price, 0)), 0) AS unitPrice",
+                        "  COALESCE(MAX(NULLIF(sr.process_unit_price, 0)), MAX(NULLIF(sr.unit_price, 0)), 0) AS unitPrice,",
+                        /* P1 修复（明细精确追溯）：聚合扫码记录ID和tracking记录ID，供结算明细精确关联 */
+                        "  GROUP_CONCAT(sr.id ORDER BY sr.scan_time ASC SEPARATOR ',') AS scanRecordIds,",
+                        "  GROUP_CONCAT(pt.id ORDER BY sr.scan_time ASC SEPARATOR ',') AS trackingIds",
                         "FROM t_scan_record sr",
+                        "LEFT JOIN t_production_process_tracking pt ON pt.scan_record_id = sr.id AND pt.tenant_id = sr.tenant_id",
                         "WHERE sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
                         "  AND sr.factory_id IS NULL",

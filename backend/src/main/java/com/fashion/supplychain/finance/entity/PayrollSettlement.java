@@ -49,6 +49,9 @@ public class PayrollSettlement {
 
     private String remark;
 
+    /** 本次结算包含的扫码记录ID（逗号分隔），用于取消/反向审核时精确回滚 tracking 结算状态 */
+    private String scanRecordIds;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

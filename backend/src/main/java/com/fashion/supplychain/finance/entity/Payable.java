@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -73,4 +74,8 @@ public class Payable {
     private Long tenantId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /** 乐观锁版本号（D-008：金融实体并发保护） */
+    @Version
+    private Integer version;
 }

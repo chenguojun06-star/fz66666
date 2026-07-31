@@ -364,6 +364,32 @@ public class ScanRecordOrchestrator {
         sr.setDeleteFlag(0);
         sr.setTenantId(ctx == null ? UserContext.tenantId() : ctx.getTenantId());
 
+        // 双写 unitPrice / scanCost / totalAmount（与 PatternProductionOrchestrator 字段对齐）
+        java.math.BigDecimal unitPrice = null;
+        // 优先从 result 中的 scanRecord 获取（ProductionScanExecutor 已解析）
+        Object srObj = result.get("scanRecord");
+        if (srObj instanceof com.fashion.supplychain.production.entity.ScanRecord) {
+            java.math.BigDecimal resolved = ((com.fashion.supplychain.production.entity.ScanRecord) srObj).getUnitPrice();
+            if (resolved != null && resolved.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                unitPrice = resolved;
+            }
+        }
+        // 兜底从 params 获取（前端直传）
+        if (unitPrice == null && params.get("unitPrice") != null) {
+            try {
+                java.math.BigDecimal p = new java.math.BigDecimal(String.valueOf(params.get("unitPrice")));
+                if (p.compareTo(java.math.BigDecimal.ZERO) > 0) unitPrice = p;
+            } catch (NumberFormatException ignore) { }
+        }
+        if (unitPrice != null) {
+            int qty = sr.getQuantity() != null ? sr.getQuantity() : 1;
+            java.math.BigDecimal totalCost = unitPrice.multiply(java.math.BigDecimal.valueOf(qty));
+            sr.setUnitPrice(unitPrice);
+            sr.setProcessUnitPrice(unitPrice);
+            sr.setScanCost(totalCost);
+            sr.setTotalAmount(totalCost);
+        }
+
         patternScanRecordService.save(sr);
         log.info("[PatternScan] 同步写入 t_pattern_scan_record: patternId={}, processName={}, styleNo={}, operator={}",
                 patternId, sr.getProcessName(), sr.getStyleNo(), operatorId);

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -75,4 +76,8 @@ public class BillAggregation {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
     private Integer deleteFlag;
+
+    /** 乐观锁版本号（D-008：金融实体并发保护） */
+    @Version
+    private Integer version;
 }
