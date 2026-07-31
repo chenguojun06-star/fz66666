@@ -5,6 +5,7 @@
 const api = require('../../utils/api');
 const reminderManager = require('../../utils/reminderManager');
 const storage = require('../../utils/storage');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const { loadOverdueOrders, summarizeOverdueOrders } = require('./overdueOrderLoader');
 
 /**
@@ -119,8 +120,9 @@ async function loadCuttingTasks() {
       ...item,
       id: item.id || item.taskId,
       orderNo: item.productionOrderNo || item.orderNo,
-      // 保留款式图字段（后端 CuttingTaskController 未注入，前端用 styleNo 兜底显示占位）
-      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
+      // 保留款式图字段（后端 CuttingTaskOrchestrator.getMyTasks 已注入 styleCover）
+      // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
+      coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
       receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
   } catch (err) {
@@ -148,7 +150,8 @@ async function loadProcurementTasks() {
       arrivedQuantity: item.arrivedQuantity || 0,
       unit: item.unit || '米',
       // 保留款式图字段（后端 MaterialPurchaseQueryHelper.getMyTasks 已注入 styleCover）
-      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
+      // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
+      coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
       receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
 
@@ -182,7 +185,8 @@ async function loadQualityTasks() {
       quantity: item.quantity || 1,
       scanCode: item.scanCode || '',
       // 保留款式图字段（后端 ScanRecordController.my-quality-tasks 已注入 coverImage/styleImage）
-      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
+      // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
+      coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
       receivedTimeText: formatTimeAgo(item.scanTime || item.createdAt),
     }));
   } catch (err) {
@@ -210,8 +214,8 @@ async function loadRepairTasks() {
       size: item.size || '',
       defectQty: Number(item.defectQty) || 0,
       defectCategory: item.defectCategory || '',
-      // 保留款式图字段
-      coverImage: item.coverImage || item.styleImage || item.styleCover || '',
+      // 保留款式图字段，需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
+      coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
     }));
   } catch (err) {
     console.error('[loadRepairTasks] 加载失败:', err);
