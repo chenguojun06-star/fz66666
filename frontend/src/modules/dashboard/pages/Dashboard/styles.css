@@ -225,7 +225,7 @@
 
 .stat-card--overdue {
   border-color: var(--color-danger);
-  background: var(--color-bg-base)1f0;
+  background: var(--status-error-bg);
 }
 
 .stat-card--today-warehousing {
@@ -240,7 +240,7 @@
 
 .stat-card--defective {
   border-color: var(--color-orange-600);
-  background: var(--color-bg-base)7e6;
+  background: var(--color-orange-50);
 }
 
 .stat-card--payment {
@@ -365,12 +365,12 @@
 
 .stat-icon--unqualified {
   color: var(--color-danger);
-  background: var(--color-bg-base)1f0;
+  background: var(--status-error-bg);
 }
 
 .stat-icon--urgent {
   color: var(--color-orange-600);
-  background: var(--color-bg-base)7e6;
+  background: var(--color-orange-50);
 }
 
 .stat-content {
@@ -671,12 +671,12 @@
 
 .entry-icon--cutting {
   color: var(--color-warning);
-  background: var(--color-bg-base)7e6;
+  background: var(--status-warning-bg);
 }
 
 .entry-icon--factory-recon {
   color: var(--color-magenta);
-  background: var(--color-bg-base)0f6;
+  background: var(--status-magenta-bg);
 }
 
 .entry-icon--shipment {
@@ -888,11 +888,11 @@
 }
 :root[data-theme="white"] .stat-card--overdue {
   border-left-color: var(--color-danger);
-  background: var(--color-bg-base)bfb;
+  background: var(--status-error-bg);
 }
 :root[data-theme="white"] .stat-card--today-warehousing {
   border-left-color: var(--color-warning);
-  background: var(--color-bg-base)ef8;
+  background: var(--status-warning-bg);
 }
 :root[data-theme="white"] .stat-card--total-warehousing {
   border-left-color: var(--color-accent-purple);
@@ -900,7 +900,7 @@
 }
 :root[data-theme="white"] .stat-card--defective {
   border-left-color: var(--color-orange-600);
-  background: var(--color-bg-base)cfa;
+  background: var(--color-orange-50);
 }
 :root[data-theme="white"] .stat-card--payment {
   border-left-color: var(--color-primary-dark);

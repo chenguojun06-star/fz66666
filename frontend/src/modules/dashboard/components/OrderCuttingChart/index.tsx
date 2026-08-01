@@ -101,7 +101,7 @@ const OrderCuttingChart: React.FC = () => {
       top: 5,
       textStyle: {
         fontSize: 14,
-        color: 'var(--color-text-secondary)',
+        color: '#6b7280', // ECharts canvas 不支持 CSS 变量，必须用具体值
       },
     },
     grid: {
@@ -117,11 +117,11 @@ const OrderCuttingChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: 'var(--color-border)',
+          color: '#e5e7eb',
         },
       },
       axisLabel: {
-        color: 'var(--color-text-tertiary)',
+        color: '#9ca3af',
         fontSize: 14,
       },
     },
@@ -134,13 +134,13 @@ const OrderCuttingChart: React.FC = () => {
         show: false,
       },
       axisLabel: {
-        color: 'var(--color-text-tertiary)',
+        color: '#9ca3af',
         fontSize: 14,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {
         lineStyle: {
-          color: 'var(--color-border-light)',
+          color: '#f0f0f0',
         },
       },
     },
@@ -152,7 +152,7 @@ const OrderCuttingChart: React.FC = () => {
         data: data.orderQuantities,
         lineStyle: {
           width: 2,
-          color: 'var(--color-indigo-500)', // 紫色
+          color: '#6366f1', // 紫色（与 areaStyle rgba(99,102,241) 一致）
         },
         itemStyle: {
           color: 'var(--color-indigo-500)',
@@ -178,7 +178,7 @@ const OrderCuttingChart: React.FC = () => {
         data: data.cuttingQuantities,
         lineStyle: {
           width: 2,
-          color: 'var(--color-warning)', // 橙色
+          color: '#f59e0b', // 橙色（与 areaStyle rgba(245,158,11) 一致）
         },
         itemStyle: {
           color: 'var(--color-warning)',

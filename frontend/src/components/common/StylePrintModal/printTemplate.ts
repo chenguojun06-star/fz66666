@@ -28,15 +28,23 @@ export function buildPrintHtml({
         <meta charset="UTF-8">
         <title>打印预览 - ${styleNo}</title>
         <style>
-          /* 打印上下文 CSS 变量定义（iframe 不继承主页面变量，必须在此声明） */
+          /* 打印上下文 CSS 变量定义（iframe 是独立文档，不继承主页面变量，必须用具体值） */
           :root {
-            --color-bg-base: var(--color-bg-base);
-            --color-bg-container: var(--color-bg-container);
-            --color-border: var(--color-border-antd);
-            --color-primary: var(--color-info);
-            --color-text-secondary: var(--color-gray-dark);
-            --color-text-tertiary: var(--color-gray-label);
-            --color-text-quaternary: var(--color-text-quaternary)bbb;
+            --color-bg-base: #ffffff;
+            --color-bg-container: #fafafa;
+            --color-bg-subtle: #f5f5f5;
+            --color-border: #d9d9d9;
+            --color-border-light: #f0f0f0;
+            --color-primary: #722ed1;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-text-tertiary: #999999;
+            --color-text-quaternary: #bfbfbf;
+            --color-black: #000000;
+            --color-gray-label: #999999;
+            --color-gray-dark: #666666;
+            --color-gray-800: #333333;
+            --color-zinc-300: #d4d4d8;
           }
 
           @page {

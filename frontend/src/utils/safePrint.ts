@@ -38,23 +38,55 @@ const PRINT_FIX_CSS = `
 <style>
   :root {
     color-scheme: light !important;
-    /* 打印 iframe 是独立文档，不继承父页面 CSS 变量，必须显式定义具体值 */
-    --color-primary: var(--color-primary);
-    --color-text-primary: var(--color-text-primary);
-    --color-text-secondary: var(--color-text-secondary);
-    --color-text-tertiary: var(--color-text-tertiary);
-    --color-text-quaternary: var(--color-text-quaternary);
-    --color-bg-base: var(--color-bg-base);
-    --color-bg-container: var(--color-bg-base);
-    --color-bg-subtle: var(--color-bg-subtle);
-    --color-bg-page: var(--color-bg-base);
-    --color-border: var(--color-border);
-    --color-border-light: var(--color-border-light);
-    --color-border-antd: var(--color-border-antd);
-    --status-success-bg: var(--status-success-bg);
-    --status-processing-bg: var(--status-processing-bg);
-    --status-warning-bg: var(--status-warning-bg);
-    --status-error-bg: var(--status-error-bg);
+    /* 打印 iframe 是独立文档，不继承父页面 CSS 变量，必须用具体值（取自 design-system.css :root） */
+    /* —— 主色调 —— */
+    --color-primary: #2D7FF9;
+    --color-info: #722ed1;          /* Ant Design purple/info */
+    --color-success: #52c41a;       /* Ant Design 默认 success */
+    --color-warning: #faad14;       /* Ant Design 默认 warning */
+    --color-danger: #ff4d4f;        /* Ant Design 默认 error */
+
+    /* —— 文字色 —— */
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #6b7280;
+    --color-text-tertiary: #9ca3af;
+    --color-text-quaternary: #bfbfbf;
+
+    /* —— 背景色 —— */
+    --color-bg-base: #ffffff;
+    --color-bg-container: #fafafa;
+    --color-bg-subtle: #f5f5f5;
+    --color-bg-page: #f8fafc;
+
+    /* —— 边框色 —— */
+    --color-border: #e5e7eb;
+    --color-border-light: #f0f0f0;
+    --color-border-antd: #d9d9d9;
+
+    /* —— 状态标签背景色 —— */
+    --status-success-bg: #f6ffed;
+    --status-processing-bg: #e6f7ff;
+    --status-warning-bg: #fffbe6;
+    --status-error-bg: #fff2f0;
+
+    /* —— 纯黑 / 灰阶（打印模板高频引用） —— */
+    --color-black: #000000;
+    --color-gray-label: #999999;    /* 标签灰 */
+    --color-gray-dark: #666666;     /* 次级文字 */
+    --color-gray-700: #595959;     /* 中深灰 */
+    --color-gray-800: #333333;      /* 深灰 */
+
+    /* —— Tailwind 中性色（打印模板引用） —— */
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-zinc-200: #e4e4e7;
+    --color-zinc-300: #d4d4d8;
+    --color-zinc-600: #52525b;
+    --color-zinc-700: #3f3f46;
+
+    /* —— 其他打印模板引用色 —— */
+    --color-blue-100: #dbeafe;
+    --color-orange-700: #c2410c;
   }
   html, body { background: var(--color-bg-base) !important; color: var(--color-black) !important; }
 

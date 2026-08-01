@@ -121,7 +121,7 @@ const ScanCountChart: React.FC = () => {
         },
       },
       axisLabel: {
-        color: 'var(--color-text-tertiary)',
+        color: '#9ca3af',
         fontSize: 14,
       },
     },
@@ -134,13 +134,13 @@ const ScanCountChart: React.FC = () => {
         show: false,
       },
       axisLabel: {
-        color: 'var(--color-text-tertiary)',
+        color: '#9ca3af',
         fontSize: 14,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {
         lineStyle: {
-          color: 'var(--color-border-light)',
+          color: '#f0f0f0',
         },
       },
     },
@@ -152,7 +152,7 @@ const ScanCountChart: React.FC = () => {
         data: data.scanCounts,
         lineStyle: {
           width: 2,
-          color: 'var(--color-secondary)', // 蓝色
+          color: '#3b82f6', // 蓝色（与 areaStyle rgba(59,130,246) 一致）
         },
         itemStyle: {
           color: 'var(--color-secondary)',
@@ -178,7 +178,7 @@ const ScanCountChart: React.FC = () => {
         data: data.scanQuantities,
         lineStyle: {
           width: 2,
-          color: 'var(--color-orange-500)', // 橙色
+          color: '#f97316', // 橙色（与 areaStyle rgba(249,115,22) 一致）
         },
         itemStyle: {
           color: 'var(--color-orange-500)',

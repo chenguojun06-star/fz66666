@@ -46,6 +46,7 @@
   --status-info: #722ed1;
   --status-info-bg: #f9f0ff;
   --status-info-border: #d3adf7;
+  --status-magenta-bg: #fff0f6;
 
   /* 中性色（文字、背景） */
   --color-text-primary: #1a1a1a;
@@ -456,6 +457,7 @@
     --status-info: #9254de;
     --status-info-bg: rgba(146, 84, 222, 0.15);
     --status-info-border: rgba(146, 84, 222, 0.3);
+    --status-magenta-bg: rgba(235, 47, 150, 0.15);
 
     /* 玻璃拟态 - 深色模式 */
     --glass-bg: rgba(26, 26, 26, 0.75);
