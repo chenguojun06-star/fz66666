@@ -47,6 +47,7 @@ EXEMPT_ENTITY_PATTERNS = [
     r'Tenant\b',
     r'Permission',
     r'Role\b',
+    r'RoleTemplate',  # 角色模板（系统级预设，与 Role 同类）
     r'Menu',
     r'AppStore',
 ]
