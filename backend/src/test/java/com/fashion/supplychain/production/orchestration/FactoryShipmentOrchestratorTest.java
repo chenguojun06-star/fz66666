@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.FactoryShipment;
@@ -27,6 +28,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * FactoryShipmentOrchestrator 单元测试。
+ *
+ * 注意：Orchestrator 内部使用 lambdaQuery().eq(...).one() 替代 getById()
+ *      （P1 多租户隔离），测试需通过 mockLambdaQueryOne() 辅助方法
+ *      mock 完整的链式调用，否则 lambdaQuery() 返回 null 导致 NPE。
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("FactoryShipmentOrchestrator - 工厂出货编排")
@@ -60,6 +68,22 @@ class FactoryShipmentOrchestratorTest {
     @AfterEach
     void tearDown() {
         UserContext.clear();
+    }
+
+    /**
+     * 辅助：mock service.lambdaQuery().eq(...).one() 链式调用返回指定实体。
+     * Orchestrator 用 lambdaQuery 替代 getById 做多租户隔离，必须 mock 整条链。
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private <T> void mockLambdaQueryOne(Object service, Class<T> entityClass, T returnValue) {
+        LambdaQueryChainWrapper wrapper = mock(LambdaQueryChainWrapper.class);
+        when(wrapper.eq(any(), any())).thenReturn(wrapper);
+        when(wrapper.one()).thenReturn(returnValue);
+        if (service instanceof ProductionOrderService) {
+            when(((ProductionOrderService) service).lambdaQuery()).thenReturn(wrapper);
+        } else if (service instanceof FactoryShipmentService) {
+            when(((FactoryShipmentService) service).lambdaQuery()).thenReturn(wrapper);
+        }
     }
 
     private ProductionOrder buildOrder(String orderId, String factoryId) {
@@ -107,7 +131,7 @@ class FactoryShipmentOrchestratorTest {
         @Test
         @DisplayName("订单不存在-返回失败")
         void orderNotFound_returnsFail() {
-            when(productionOrderService.getById("order-001")).thenReturn(null);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, null);
             Result<FactoryShipment> result = orchestrator.ship(buildShipParams("order-001", buildDetails(10)));
             assertEquals(500, result.getCode());
             assertTrue(result.getMessage().contains("订单不存在"));
@@ -125,7 +149,7 @@ class FactoryShipmentOrchestratorTest {
             UserContext.set(ctx);
 
             ProductionOrder order = buildOrder("order-001", "factory-B");
-            when(productionOrderService.getById("order-001")).thenReturn(order);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, order);
 
             Result<FactoryShipment> result = orchestrator.ship(buildShipParams("order-001", buildDetails(10)));
             assertEquals(500, result.getCode());
@@ -136,7 +160,7 @@ class FactoryShipmentOrchestratorTest {
         @DisplayName("发货明细为空-返回失败")
         void emptyDetails_returnsFail() {
             ProductionOrder order = buildOrder("order-001", "factory-A");
-            when(productionOrderService.getById("order-001")).thenReturn(order);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, order);
 
             Result<FactoryShipment> result = orchestrator.ship(buildShipParams("order-001", Collections.emptyList()));
             assertEquals(500, result.getCode());
@@ -147,7 +171,7 @@ class FactoryShipmentOrchestratorTest {
         @DisplayName("发货数量为0-返回失败")
         void zeroQuantity_returnsFail() {
             ProductionOrder order = buildOrder("order-001", "factory-A");
-            when(productionOrderService.getById("order-001")).thenReturn(order);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, order);
 
             Map<String, Object> detail = new HashMap<>();
             detail.put("quantity", 0);
@@ -163,7 +187,7 @@ class FactoryShipmentOrchestratorTest {
         @DisplayName("发货数量超限-返回失败")
         void exceedsCuttingTotal_returnsFail() {
             ProductionOrder order = buildOrder("order-001", "factory-A");
-            when(productionOrderService.getById("order-001")).thenReturn(order);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, order);
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("totalQuantity", 50);
@@ -179,7 +203,7 @@ class FactoryShipmentOrchestratorTest {
         @DisplayName("正常发货-成功")
         void normalShip_success() {
             ProductionOrder order = buildOrder("order-001", "factory-A");
-            when(productionOrderService.getById("order-001")).thenReturn(order);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, order);
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("totalQuantity", 100);
@@ -210,7 +234,7 @@ class FactoryShipmentOrchestratorTest {
             UserContext.set(ctx);
 
             ProductionOrder order = buildOrder("order-001", "factory-A");
-            when(productionOrderService.getById("order-001")).thenReturn(order);
+            mockLambdaQueryOne(productionOrderService, ProductionOrder.class, order);
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("totalQuantity", 100);
@@ -244,7 +268,7 @@ class FactoryShipmentOrchestratorTest {
         @Test
         @DisplayName("发货单不存在-返回失败")
         void shipmentNotFound_returnsFail() {
-            when(factoryShipmentService.getById("fs-001")).thenReturn(null);
+            mockLambdaQueryOne(factoryShipmentService, FactoryShipment.class, null);
             Result<FactoryShipment> result = orchestrator.receive("fs-001", 50, null);
             assertEquals(500, result.getCode());
             assertTrue(result.getMessage().contains("不存在"));
@@ -257,7 +281,7 @@ class FactoryShipmentOrchestratorTest {
             fs.setId("fs-001");
             fs.setReceiveStatus("received");
             fs.setTenantId(1L);
-            when(factoryShipmentService.getById("fs-001")).thenReturn(fs);
+            mockLambdaQueryOne(factoryShipmentService, FactoryShipment.class, fs);
 
             Result<FactoryShipment> result = orchestrator.receive("fs-001", 50, null);
             assertEquals(500, result.getCode());
@@ -272,7 +296,7 @@ class FactoryShipmentOrchestratorTest {
             fs.setReceiveStatus("pending");
             fs.setShipQuantity(30);
             fs.setTenantId(1L);
-            when(factoryShipmentService.getById("fs-001")).thenReturn(fs);
+            mockLambdaQueryOne(factoryShipmentService, FactoryShipment.class, fs);
 
             Result<FactoryShipment> result = orchestrator.receive("fs-001", 50, null);
             assertEquals(500, result.getCode());
@@ -287,7 +311,7 @@ class FactoryShipmentOrchestratorTest {
             fs.setReceiveStatus("pending");
             fs.setShipQuantity(50);
             fs.setTenantId(1L);
-            when(factoryShipmentService.getById("fs-001")).thenReturn(fs);
+            mockLambdaQueryOne(factoryShipmentService, FactoryShipment.class, fs);
             when(factoryShipmentService.updateById(any(FactoryShipment.class))).thenReturn(true);
 
             Result<FactoryShipment> result = orchestrator.receive("fs-001", 50, null);
