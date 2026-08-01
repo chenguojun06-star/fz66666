@@ -115,6 +115,7 @@ export const paths = {
   cockpit: '/cockpit',
   cockpitTrace: '/cockpit/agent-traces',
   intelligenceCenter: '/intelligence/center',
+  intelligencePatrol: '/intelligence/patrol',
   aiAgentTraceCenter: '/intelligence/agent-traces',
   platformDashboard: '/intelligence/platform-dashboard',
   crm: '/crm',
@@ -724,6 +725,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.cockpit]: permissionCodes.intelligenceCenter,
   [paths.cockpitTrace]: permissionCodes.intelligenceCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
+  [paths.intelligencePatrol]: permissionCodes.intelligenceCenter,
   [paths.aiAgentTraceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
   // financeTaxExport: 标准格式免费开放，有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截

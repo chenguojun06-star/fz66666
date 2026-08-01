@@ -53,6 +53,12 @@ public class SysNotice {
     /** 款式图片URL */
     private String styleImage;
 
+    /** 处理状态: none/handled/revoked */
+    private String handlingStatus;
+
+    /** 撤回时间 */
+    private LocalDateTime revokedAt;
+
     /** 发送时间 */
     private LocalDateTime createdAt;
 }

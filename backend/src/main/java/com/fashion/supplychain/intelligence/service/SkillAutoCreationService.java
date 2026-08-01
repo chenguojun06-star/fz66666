@@ -197,14 +197,46 @@ public class SkillAutoCreationService {
     }
 
     private String mergeSteps(String existingJson, String newJson) {
+        if (isBlank(newJson)) return existingJson;
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             @SuppressWarnings("unchecked")
-            java.util.List<Object> existing = mapper.readValue(existingJson, java.util.List.class);
+            java.util.List<Object> existing = isBlank(existingJson)
+                    ? new java.util.ArrayList<>()
+                    : mapper.readValue(existingJson, java.util.List.class);
             @SuppressWarnings("unchecked")
-            java.util.List<Object> merged = new java.util.ArrayList<>(existing);
-            return mapper.writeValueAsString(merged);
+            java.util.List<Object> incoming = mapper.readValue(newJson, java.util.List.class);
+
+            // 修复 P1：原代码遗漏 addAll(incoming)，导致新步骤被丢弃，技能无法通过积累新步骤进化。
+            // 按 step/action 去重后追加新步骤（避免重复）
+            java.util.Set<String> existingKeys = new java.util.HashSet<>();
+            for (Object obj : existing) {
+                if (obj instanceof Map) {
+                    Object step = ((Map<?, ?>) obj).get("step");
+                    Object action = ((Map<?, ?>) obj).get("action");
+                    String key = (step != null ? step.toString() : "")
+                            + "|" + (action != null ? action.toString() : "");
+                    existingKeys.add(key);
+                }
+            }
+            for (Object obj : incoming) {
+                if (obj instanceof Map) {
+                    Object step = ((Map<?, ?>) obj).get("step");
+                    Object action = ((Map<?, ?>) obj).get("action");
+                    String key = (step != null ? step.toString() : "")
+                            + "|" + (action != null ? action.toString() : "");
+                    if (!existingKeys.contains(key)) {
+                        existing.add(obj);
+                        existingKeys.add(key);
+                    }
+                } else {
+                    // 非 Map 类型直接追加（去重困难，保留原行为）
+                    existing.add(obj);
+                }
+            }
+            return mapper.writeValueAsString(existing);
         } catch (Exception e) {
+            log.warn("[SkillAutoCreate] steps 合并失败: {}", e.getMessage());
             return existingJson;
         }
     }

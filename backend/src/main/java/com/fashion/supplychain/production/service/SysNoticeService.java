@@ -29,4 +29,19 @@ public interface SysNoticeService extends IService<SysNotice> {
      * 将指定通知标记为已读（带租户校验）
      */
     boolean markRead(Long id, Long tenantId);
+
+    /**
+     * 标记通知为已处理（区别于已读）
+     */
+    boolean markHandled(Long id, Long tenantId);
+
+    /**
+     * 撤回通知（AI发送的错误通知可撤回）
+     */
+    boolean revoke(Long id, Long tenantId);
+
+    /**
+     * 批量撤回通知（按订单号+通知类型撤回）
+     */
+    int revokeByOrder(Long tenantId, String orderNo, String noticeType);
 }

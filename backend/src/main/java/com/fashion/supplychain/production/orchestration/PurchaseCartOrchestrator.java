@@ -134,9 +134,14 @@ public class PurchaseCartOrchestrator {
         newItem.setFabricComposition(request.getFabricComposition());
         newItem.setFabricWidth(request.getFabricWidth());
         newItem.setFabricWeight(request.getFabricWeight());
+        // 持久化损耗率，贯通到采购单
+        newItem.setLossRate(request.getLossRate());
         newItem.setRemark(request.getRemark());
+        newItem.setStyleId(request.getStyleId());
+        newItem.setStyleNo(request.getStyleNo());
+        newItem.setStyleImageUrl(request.getStyleImageUrl());
         newItem.setDeleteFlag(0);
-        
+
         log.info("插入购物车物料: cartId={}, materialCode={}", cart.getId(), request.getMaterialCode());
         purchaseCartItemMapper.insert(newItem);
         log.info("购物车物料插入成功: id={}", newItem.getId());
@@ -342,6 +347,18 @@ public class PurchaseCartOrchestrator {
                 })
                 .collect(Collectors.toList());
             group.setSourceItems(sourceItems);
+
+            // 多款合并时，显示第一个款的图片，收集所有款号
+            group.setStyleImageUrl(first.getStyleImageUrl());
+            // 损耗率取首项（同组物料相同），贯通到采购单
+            group.setLossRate(first.getLossRate());
+            java.util.Set<String> styleNos = groupItems.stream()
+                .filter(item -> item.getStyleNo() != null && !item.getStyleNo().isEmpty())
+                .map(PurchaseCartItem::getStyleNo)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+            if (!styleNos.isEmpty()) {
+                group.setStyleNo(String.join("、", styleNos));
+            }
             
             purchaseGroups.add(group);
         }
@@ -397,6 +414,10 @@ public class PurchaseCartOrchestrator {
             purchase.setTenantId(tenantId);
             purchase.setArrivedQuantity(0);
             purchase.setDeleteFlag(0);
+            // 损耗率从购物车明细贯通到采购单
+            purchase.setLossRate(group.getLossRate());
+            // 审价工作流：生成采购单时设为待审价，审价通过后进入 pending 状态可领取
+            purchase.setPriceReviewStatus("pending_review");
 
             // 设置必需的字段
             if (!org.springframework.util.StringUtils.hasText(purchase.getUnit())) {

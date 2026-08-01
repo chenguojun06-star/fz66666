@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.job;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.entity.AgentBackgroundTask;
+import com.fashion.supplychain.intelligence.mapper.AgentBackgroundTaskMapper;
 import com.fashion.supplychain.intelligence.orchestration.AgentBackgroundTaskOrchestrator;
 import com.fashion.supplychain.intelligence.service.AgentBackgroundTaskService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
@@ -30,6 +31,9 @@ public class AgentBackgroundTaskJob {
 
     @Autowired
     private AgentBackgroundTaskService taskService;
+
+    @Autowired
+    private AgentBackgroundTaskMapper taskMapper;
 
     @Autowired
     private AgentBackgroundTaskOrchestrator taskOrchestrator;
@@ -208,17 +212,18 @@ public class AgentBackgroundTaskJob {
     private void retryTask(AgentBackgroundTask task, String errorMessage) {
         try {
             int nextRetryCount = task.getRetryCount() + 1;
-            long delaySeconds = (long) Math.pow(2, nextRetryCount) * 30;
 
-            taskService.updateProgress(task.getTaskId(), task.getProgress(),
-                    "执行失败，第" + nextRetryCount + "次重试中... (" + errorMessage + ")");
+            // 将任务状态重置为PENDING，递增retry_count，使其能被下次轮询拉取
+            taskMapper.markAsPendingForRetry(task.getTaskId(), nextRetryCount, errorMessage);
 
-            log.info("[BackgroundTaskJob] 任务重试: taskId={}, retryCount={}, delay={}s",
-                    task.getTaskId(), nextRetryCount, delaySeconds);
+            log.info("[BackgroundTaskJob] 任务重试已入队: taskId={}, retryCount={}, error={}",
+                    task.getTaskId(), nextRetryCount, errorMessage);
 
         } catch (Exception e) {
             log.warn("[BackgroundTaskJob] 重试任务异常: taskId={}, error={}",
                     task.getTaskId(), e.getMessage());
+            // 重试入队失败则直接标记为FAILED
+            taskMapper.markAsFailed(task.getTaskId(), "重试入队失败: " + e.getMessage());
         }
     }
 

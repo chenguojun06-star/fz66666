@@ -94,17 +94,27 @@ public class EvolutionPipeline {
     }
 
     private void runFullCycle() {
-        Long tenantId = detectPrimaryTenant();
-        if (tenantId == null) {
+        List<Long> tenantIds = detectEvolutionTenants();
+        if (tenantIds.isEmpty()) {
             log.warn("[EvolutionPipeline] 无可用租户");
             return;
         }
 
+        for (Long tenantId : tenantIds) {
+            try {
+                runSingleTenantCycle(tenantId);
+            } catch (Exception e) {
+                log.error("[EvolutionPipeline] 租户 {} 进化异常: {}", tenantId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void runSingleTenantCycle(Long tenantId) {
         List<DataSnapshot> snapshots = mineAllData(tenantId);
         logPanorama(snapshots);
 
         ScenarioGenerationResult scenarios = systemDataMiner.generatePracticeScenarios(tenantId);
-        log.info("[EvolutionPipeline] 生成{}个推演场景", scenarios.totalGenerated());
+        log.info("[EvolutionPipeline] 租户{} 生成{}个推演场景", tenantId, scenarios.totalGenerated());
 
         List<String> weakPoints = collectWeakPoints(tenantId);
 
@@ -119,8 +129,8 @@ public class EvolutionPipeline {
         totalCycles.incrementAndGet();
         totalImprovements.addAndGet(deployed);
 
-        log.info("[EvolutionPipeline] 本轮: 提案{} → 通过{} → 上线{} → 弱项{}",
-                proposals.size(), passedProposals.size(), deployed, weakPoints.size());
+        log.info("[EvolutionPipeline] 租户{} 本轮: 提案{} → 通过{} → 上线{} → 弱项{}",
+                tenantId, proposals.size(), passedProposals.size(), deployed, weakPoints.size());
     }
 
     private List<DataSnapshot> mineAllData(Long tenantId) {
@@ -287,32 +297,35 @@ public class EvolutionPipeline {
     }
 
     @SuppressWarnings("unchecked")
-    private Long detectPrimaryTenant() {
+    private List<Long> detectEvolutionTenants() {
+        List<Long> result = new java.util.ArrayList<>();
         try {
             List<Map<String, Object>> tenants = jdbc.queryForList(
                     "SELECT tenant_id FROM t_conversation_reflection "
                             + "WHERE resolved = 0 GROUP BY tenant_id "
-                            + "ORDER BY COUNT(*) DESC LIMIT 1");
-            if (!tenants.isEmpty()) {
-                return toLong(tenants.get(0).get("tenant_id"));
+                            + "ORDER BY COUNT(*) DESC");
+            for (Map<String, Object> row : tenants) {
+                Long tid = toLong(row.get("tenant_id"));
+                if (tid != null && !result.contains(tid)) result.add(tid);
             }
         } catch (Exception e) {
-            log.warn("[EvolutionPipeline] 进化阶段失败: {}", e.getMessage());
+            log.warn("[EvolutionPipeline] 检测进化租户失败: {}", e.getMessage());
         }
 
         try {
             List<Map<String, Object>> tenants = jdbc.queryForList(
                     "SELECT tenant_id FROM t_intelligence_feedback "
                             + "WHERE feedback_result = 'rejected' "
-                            + "GROUP BY tenant_id ORDER BY COUNT(*) DESC LIMIT 1");
-            if (!tenants.isEmpty()) {
-                return toLong(tenants.get(0).get("tenant_id"));
+                            + "GROUP BY tenant_id ORDER BY COUNT(*) DESC");
+            for (Map<String, Object> row : tenants) {
+                Long tid = toLong(row.get("tenant_id"));
+                if (tid != null && !result.contains(tid)) result.add(tid);
             }
         } catch (Exception e) {
-            log.warn("[EvolutionPipeline] 进化阶段失败: {}", e.getMessage());
+            log.warn("[EvolutionPipeline] 检测进化租户失败: {}", e.getMessage());
         }
 
-        return 1L;
+        return result;
     }
 
     public Map<String, Object> getStats() {

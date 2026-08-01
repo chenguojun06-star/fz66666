@@ -7,7 +7,10 @@ public enum RiskType {
     MATERIAL("物料风险", 0.15),
     DELIVERY("交付风险", 0.10),
     FACTORY("工厂风险", 0.10),
-    STAGNANT("停滞风险", 0.05);
+    STAGNANT("停滞风险", 0.05),
+    PAYROLL("工资风险", 0.10),
+    OUTSOURCE("外发风险", 0.10),
+    WAREHOUSE_DIFF("入库差异风险", 0.10);
 
     private final String description;
     private final double defaultWeight;

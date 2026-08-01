@@ -1,11 +1,145 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-31（前端硬编码颜色全量清理完成 + 设计系统CSS变量补全）
+> 最后更新：2026-08-01（智能化模块全链路修复 + UI 规范统一 + 发布前核实）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-01 智能化模块全链路修复 + 采购UI规范统一 ✅
+
+#### 1. 异常自愈 — 8个风险检测器修复/新建
+- **3个AUTO检测器阈值修复**：
+  - StagnantRiskDetector：≥7天 → ≥24小时（ChronoUnit.HOURS）
+  - DelayRiskDetector：仅SLA字符串 → 增加"剩余天数<3 + 进度<50%"组合判定
+  - QualityRiskDetector：仅状态字符串 → 基于ScanRecord统计次品率>15%
+- **5个SUGGESTION检测器修复/新建**：
+  - MaterialRiskDetector：到货率<50% → 安全库存以下
+  - CostRiskDetector：增加工时>标准2倍维度
+  - PayrollRiskDetector（新建）：工资异常>2倍，包装PayrollAnomalyDetectorTool
+  - OutsourceRiskDetector（新建）：外发无响应>48h
+  - WarehouseDiffRiskDetector（新建）：入库差异>10%
+- RiskType枚举新增 PAYROLL/OUTSOURCE/WAREHOUSE_DIFF
+- 3个新检测器加@Component，被ParallelRiskDetector自动发现
+
+#### 2. 智能采购 — 4个问题修复
+- **lossRate持久化**（P1）：新建V202708010001迁移，PurchaseCartItem/MaterialPurchase/AddCartItemRequest/CartPreviewDto加字段，SmartSourcingServiceImpl.buildCartRequest填充，PurchaseCartOrchestrator.confirm写入
+- **quick-edit重算bug**（P0）：MaterialPurchaseController委托Orchestrator，先读unitPrice再重算totalAmount
+- **审价工作流状态机**（P1）：新建V202708010002迁移，MaterialPurchase加5个审价字段，新增POST /{id}/price-review + GET /price-review/list接口，confirm生成时设pending_review
+- **AI巡检Job串联**（P1）：SourcingSpecialistPatrolJob注入SmartSourcingService（@Lazy），发现物料缺口自动调generateSourcingForOrder
+
+#### 3. PC采购页面UI — 10项修复
+- 领取按钮排除completed/cancelled（状态漏洞）
+- 退回按钮去掉 `|| COMPLETED` 分支（逻辑矛盾）
+- 3处实心按钮改镂空（智能采购推荐/保存/编辑面辅料）
+- 筛选器6档→7档对齐（新增"已延期"，"全部到货"→"已完成"）
+- PatrolActionCenter增加5个类型映射 + 一键生成智能采购按钮
+- global.css 10处硬编码rgba→CSS变量（新增--color-primary-rgb/--color-danger-rgb）
+- 详情页操作列宽度220→260
+- 列表页+详情页 maxInline 3→2（与项目其他页面统一）
+
+#### 4. 手机端+H5 — 四端MD5一致
+- 4处实心按钮改镂空（领取采购/一键全部完成/提交领料/确认回料）
+- 按钮高度统一（卡片内32px/底部操作栏40px）
+- H5注释"全部到货"→"已完成"同步
+- 四端同步：miniprogram / h5-web/source-miniapp / h5-web/public/source-miniapp / h5-web/dist/source-miniapp
+
+#### 5. 新建文件清单（5个）
+- backend/src/main/resources/db/migration/V202708010001__add_loss_rate_to_purchase_tables.sql
+- backend/src/main/resources/db/migration/V202708010002__add_price_review_status_to_material_purchase.sql
+- backend/.../intelligence/engine/risk/PayrollRiskDetector.java
+- backend/.../intelligence/engine/risk/OutsourceRiskDetector.java
+- backend/.../intelligence/engine/risk/WarehouseDiffRiskDetector.java
+
+#### 6. 验证结果
+- mvn compile exit 0 ✅
+- npx tsc --noEmit exit 0 ✅
+- 四端MD5一致 ✅
+- @Transactional仅在Orchestrator层 ✅
+- 所有查询带tenantId ✅
+- 未修改已有Flyway迁移 ✅
+
+---
+
+### 2026-08-01 发布前P1优化完成 ✅
+
+#### 1. 测试修复
+- **SelfCritiqueGateTest**：20/20 通过 ✅
+  - 真实失败原因：其他测试文件（ParallelRiskDetectorTest/PatrolClosedLoopOrchestratorTest）编译错误阻塞test-compile，导致.class无法生成
+  - 修复：ParallelRiskDetectorTest 2处构造器签名（QualityRiskDetector/CostRiskDetector 加null参数）；PatrolClosedLoopOrchestratorTest 7处close()调用补齐operatorId/operatorName参数
+  - memory-bank原记录"ObjectProvider依赖注入问题"是误判，已更正
+- **EvolutionOrchestratorTest**：36/36 通过 ✅
+  - 真实状态：测试文件已被简化为仅1个assertTrue(true)，失去覆盖率
+  - 修复：重写为36个测试，覆盖getUnifiedMetrics()全部16个组件
+  - 使用@MockitoSettings(strictness = Strictness.LENIENT)解决strictness问题
+- **合计**：56/56 通过，BUILD SUCCESS
+
+#### 2. 完整编译验证
+- `mvn clean compile -q` exit 0 ✅
+- `mvn test-compile -q` exit 0 ✅
+- `npx tsc --noEmit` exit 0 ✅
+
+#### 3. AI全链路静态冒烟（3场景）
+后端服务未运行（缺MySQL/Redis/Qdrant/AI API环境），改用静态代码链路核实：
+- **场景1 规划引擎（智能采购推荐）**：✅ 链路完整
+  - lossRate 持久化贯通：StyleBom → AddCartItemRequest → PurchaseCartItem → MaterialPurchase
+  - tenantId 每层强制
+- **场景2 结构化输出（异常工单）**：✅ 链路完整
+  - 5个新issueType全部入前端ISSUE_TYPE_LABELS
+  - PatrolActionCenter一键智能采购按钮链路通
+- **场景3 主动风险检测（自动执行）**：✅ 链路完整
+  - 实际10个检测器（原7+新3），全部@Component自动注册
+  - AUTO 4类 + SUGGESTION 6类，Policy全覆盖
+  - 3个新检测器detect逻辑审查通过
+
+#### 4. 发布结论
+**P0阻塞项：无 ✅**
+**P1优化项：全部完成 ✅**
+**可以发布版本**
+
+---
+
+### 2026-08-01 AiCostTrackingOrchestrator 单元测试创建完成 ✅
+
+#### 1. 测试文件位置
+- `backend/src/test/java/com/fashion/supplychain/intelligence/orchestration/AiCostTrackingOrchestratorTest.java`
+
+#### 2. 技术栈
+- JUnit 5 (`@ExtendWith(MockitoExtension.class)`)
+- Mockito (`@InjectMocks` / `@Mock` / `ArgumentCaptor`)
+- AssertJ (`assertThat` fluent assertions)
+
+#### 3. 测试覆盖（11 个测试用例）
+- **calculateCost 私有方法（反射调用，7 个）**：
+  - `agnes-2.5-flash` 正确定价（0.00003 * 1500 / 1000 = 0.000045）
+  - `agnes-2.0-flash` 与 2.5 同价验证
+  - 未知模型使用默认价格（0.00020/Mtoken）
+  - 零 Token 返回零成本
+  - `deepseek-v4-flash` 正确定价（0.00014 * 1000 / 1000 = 0.00014）
+  - 大 Token 数（999999+999999）无溢出
+  - `qwen-plus` 正确定价（0.00040/Mtoken）
+- **getCostSummary 公共方法（3 个）**：
+  - `sumCostSince` 返回 null → 安全返回 0 成本
+  - Mapper 抛异常 → fail-safe 返回空 Map（不抛异常）
+  - USD 转 CNY 汇率 7.2x，保留 2 位小数精度验证
+- **recordAsync 方法（1 个）**：
+  - `ArgumentCaptor` 捕获 `AiCostTracking` 实体，验证 `mapper.insert` 调用 1 次
+  - 全字段断言：tenantId/modelName/scene/tokens/latency/success/cost
+
+#### 4. UserContext 生命周期管理
+- 复用 `WhatIfSimulationOrchestratorTest` 模式：
+  - `@BeforeEach`: `new UserContext()` → `setTenantId(1L)` → `UserContext.set(ctx)`
+  - `@AfterEach`: `UserContext.clear()` 清理，防止污染其他测试
+- 符合 P0 #4 多租户隔离要求
+
+#### 5. 代码规范
+- 测试类包级私有（无 `public` 修饰符），符合 JUnit 5 惯例
+- 每个 `@Test` 配中文 `@DisplayName`，便于报告阅读
+- 私有方法测试：`Class.getDeclaredMethod()` + `setAccessible(true)` 反射调用
+- BigDecimal 比较：统一使用 `isEqualByComparingTo()`，避免 scale 差异导致误判
+
+---
 
 ### 2026-07-31 前端硬编码颜色全量清理完成 ✅
 

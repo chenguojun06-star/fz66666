@@ -1056,6 +1056,36 @@ export const intelligenceApi = {
     await api.post(`/intelligence/patrol/actions/${actionId}/reject`, { remark: remark ?? '' });
   },
 
+  getPendingPatrolActions: async (): Promise<PatrolAction[]> => {
+    const response = await api.get<ApiResult<PatrolAction[]>>('/intelligence/patrol/actions/pending');
+    return response?.data ?? [];
+  },
+
+  getPatrolActionsByStatus: async (status?: string, limit?: number): Promise<PatrolAction[]> => {
+    const response = await api.get<ApiResult<PatrolAction[]>>('/intelligence/patrol/actions/by-status', { params: { status, limit } });
+    return response?.data ?? [];
+  },
+
+  executePatrolAction: async (actionId: number, result?: string): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/execute`, { result: result ?? '' });
+  },
+
+  cancelPatrolAction: async (actionId: number, reason?: string): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/cancel`, { reason: reason ?? '' });
+  },
+
+  closePatrolAction: async (actionId: number): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/close`);
+  },
+
+  failPatrolAction: async (actionId: number, reason?: string): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/fail`, { reason: reason ?? '' });
+  },
+
+  submitPatrolFeedback: async (actionId: number, feedback: string, rating: number): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/feedback`, { feedback, rating: String(rating) });
+  },
+
   // ===== P1升级: AI质量评估 =====
 
   /** 运行Golden Test Dataset回归测试 */

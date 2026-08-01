@@ -942,7 +942,11 @@ public class AiAgentOrchestrator {
 
         com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = componentRegistry.getSkillAutoCreationService();
         ConversationReflectionOrchestrator reflectionOrchestrator = componentRegistry.getReflectionOrchestrator();
-        if (skillAutoCreationService != null && reflectionOrchestrator == null
+        // P0-2修复：移除 reflectionOrchestrator == null 互斥条件
+        // 原条件导致 tryAutoCreateFromTask 永不被调用（ConversationReflectionOrchestrator 是 @Service 永不为 null）
+        // 两者生成不同字段的技能，互补而非互斥：tryAutoCreateFromTask 基于 LLM 生成 metadata/skill_md/references，
+        // tryEvolveSkill 基于反思反馈调整置信度/触发词，可同时执行
+        if (skillAutoCreationService != null
                 && toolRecords != null && toolRecords.size() >= 3) {
             postTurnTasks.add(() -> {
                 try {

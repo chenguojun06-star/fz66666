@@ -172,9 +172,12 @@ public class SkillCrystallizationService {
         Integer useCount = skill.getUseCount();
         if (useCount == null || useCount < PROMOTION_USE_COUNT_THRESHOLD) return false;
 
-        // 幂等：同一租户下同 sop_name 已存在则跳过
+        // 幂等：tenant_id=0（全局公共）下同 sop_name 已存在则跳过
+        // P0-1修复：结晶化技能是"通用工具调用模式"，非租户业务数据，
+        // 与 AiAgentMemoryHelper.persistProceduralPatternAsync 的 tenant_id=0 策略对齐，
+        // 确保 AiAgentMemoryHelper.loadProceduralPatternsFromDb 能读到升级后的 ProceduralMemory
         QueryWrapper<ProceduralMemory> qw = new QueryWrapper<>();
-        qw.eq("tenant_id", tenantId)
+        qw.eq("tenant_id", 0L)
           .eq("sop_name", skill.getSkillName())
           .eq("delete_flag", 0)
           .last("LIMIT 1");
@@ -184,9 +187,9 @@ public class SkillCrystallizationService {
             return false;
         }
 
-        // 构建程序性记忆
+        // 构建程序性记忆（tenant_id=0 表示全局公共，与 persistProceduralPatternAsync 策略一致）
         ProceduralMemory pm = new ProceduralMemory();
-        pm.setTenantId(tenantId);
+        pm.setTenantId(0L);
         pm.setSopName(skill.getSkillName());
         pm.setSopType(ProceduralMemory.SOP_TYPE_CRYSTALLIZED);
         pm.setStepsJson(skill.getStepsJson());

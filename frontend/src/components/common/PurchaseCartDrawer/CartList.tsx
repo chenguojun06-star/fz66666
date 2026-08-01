@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Table, Checkbox, InputNumber, Button, Popconfirm, Empty, Spin, Tag, App, Tooltip } from 'antd';
+import { Table, Checkbox, InputNumber, Button, Popconfirm, Empty, Spin, Tag, App, Tooltip, Image } from 'antd';
 import { EditOutlined, CheckOutlined, CloseOutlined, DeleteOutlined, ScissorOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { PurchaseCartItem, UpdateCartItemRequest } from '@/types/purchaseCart';
@@ -74,6 +74,23 @@ export const CartList: React.FC<CartListProps> = ({
     };
     return [
     {
+      title: '图片',
+      dataIndex: 'styleImageUrl',
+      width: 60,
+      fixed: 'left',
+      render: (url: string, record: any) => {
+        const imgUrl = url || record.styleImageUrl;
+        if (!imgUrl) {
+          return (
+            <div style={{ width: 40, height: 40, background: 'var(--color-bg-base)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--color-text-tertiary)' }}>
+              无图
+            </div>
+          );
+        }
+        return <Image src={imgUrl} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} />;
+      },
+    },
+    {
       title: (
         <Checkbox
           checked={allSelected}
@@ -98,6 +115,11 @@ export const CartList: React.FC<CartListProps> = ({
               {item.materialCode}
               {item.specifications ? ` · ${item.specifications}` : ''}
             </span>
+            {item.styleNo && (
+              <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                款号: {item.styleNo}
+              </span>
+            )}
           </div>
         </Checkbox>
       ),

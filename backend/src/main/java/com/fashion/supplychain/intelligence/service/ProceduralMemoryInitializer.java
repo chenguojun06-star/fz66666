@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Lazy;
@@ -12,6 +13,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * L4 程序性记忆初始化器。
@@ -43,6 +46,14 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
 
     private final ProceduralMemoryMapper proceduralMemoryMapper;
 
+    /**
+     * 修复 P0：注入 ProceduralMemoryService（@Lazy 避免循环依赖），
+     * 用于在初始 SOP 入库后同步索引到 Qdrant，使语义搜索兜底能命中公共 SOP。
+     */
+    @Autowired
+    @Lazy
+    private ProceduralMemoryService proceduralMemoryService;
+
     /** 公共租户ID（参考 MemoryBankEntry：tenant_id=0 表示公共记忆） */
     private static final Long PUBLIC_TENANT_ID = 0L;
 
@@ -57,19 +68,34 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
                 return;
             }
             log.info("[L4-PM-Init] 公共 SOP 为空，开始导入 5 类初始 SOP...");
-            insertScanWorkflowSop();
-            insertWageSettlementSop();
-            insertDeliveryForecastSop();
-            insertSupplierEvalSop();
-            insertQualityCheckSop();
-            log.info("[L4-PM-Init] 5 类初始 SOP 导入完成");
+            List<ProceduralMemory> inserted = new ArrayList<>();
+            insertScanWorkflowSop(inserted);
+            insertWageSettlementSop(inserted);
+            insertDeliveryForecastSop(inserted);
+            insertSupplierEvalSop(inserted);
+            insertQualityCheckSop(inserted);
+            log.info("[L4-PM-Init] 5 类初始 SOP 导入完成，共 {} 条", inserted.size());
+
+            // 修复 P0：批量索引到 Qdrant，使语义搜索兜底可命中公共 SOP。
+            // 失败不阻断启动（Qdrant 不可用时仅日志告警，后续可通过定时任务重试）。
+            int indexed = 0;
+            for (ProceduralMemory sop : inserted) {
+                try {
+                    if (proceduralMemoryService.indexSopToQdrant(sop)) {
+                        indexed++;
+                    }
+                } catch (Exception ex) {
+                    log.warn("[L4-PM-Init] SOP 索引 Qdrant 失败 sopId={}: {}", sop.getId(), ex.getMessage());
+                }
+            }
+            log.info("[L4-PM-Init] Qdrant 索引完成：{}/{} 成功", indexed, inserted.size());
         } catch (Exception e) {
             log.warn("[L4-PM-Init] 初始化失败（不阻断启动）: {}", e.getMessage());
         }
     }
 
     /** SOP 1: 扫码流程（工序/质检/入库） */
-    private void insertScanWorkflowSop() {
+    private void insertScanWorkflowSop(List<ProceduralMemory> inserted) {
         ProceduralMemory sop = new ProceduralMemory();
         sop.setTenantId(PUBLIC_TENANT_ID);
         sop.setSopName("扫码流程（工序/质检/入库）");
@@ -90,10 +116,11 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
             + "]");
         sop.setPostcheck("{\"verify\":[\"t_scan_record 有新记录\",\"生产单进度已更新\",\"工资待结算金额已累加（D-009 双字段校验）\"]}");
         proceduralMemoryMapper.insert(sop);
+        inserted.add(sop);
     }
 
     /** SOP 2: 工资结算 */
-    private void insertWageSettlementSop() {
+    private void insertWageSettlementSop(List<ProceduralMemory> inserted) {
         ProceduralMemory sop = new ProceduralMemory();
         sop.setTenantId(PUBLIC_TENANT_ID);
         sop.setSopName("工资结算流程");
@@ -114,10 +141,11 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
             + "]");
         sop.setPostcheck("{\"verify\":[\"已结算的扫码记录禁止撤回（D-009）\",\"工资单金额与扫码记录汇总一致\",\"外发任务工资未混入\"]}");
         proceduralMemoryMapper.insert(sop);
+        inserted.add(sop);
     }
 
     /** SOP 3: 交期预测 */
-    private void insertDeliveryForecastSop() {
+    private void insertDeliveryForecastSop(List<ProceduralMemory> inserted) {
         ProceduralMemory sop = new ProceduralMemory();
         sop.setTenantId(PUBLIC_TENANT_ID);
         sop.setSopName("交期预测流程");
@@ -138,10 +166,11 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
             + "]");
         sop.setPostcheck("{\"verify\":[\"预测结果标注为预测非确定\",\"建议动作可执行\",\"风险分级与历史延期数据一致\"]}");
         proceduralMemoryMapper.insert(sop);
+        inserted.add(sop);
     }
 
     /** SOP 4: 供应商评估 */
-    private void insertSupplierEvalSop() {
+    private void insertSupplierEvalSop(List<ProceduralMemory> inserted) {
         ProceduralMemory sop = new ProceduralMemory();
         sop.setTenantId(PUBLIC_TENANT_ID);
         sop.setSopName("供应商评估流程");
@@ -162,10 +191,11 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
             + "]");
         sop.setPostcheck("{\"verify\":[\"评分基于事实数据非主观\",\"建议动作与分级匹配\",\"合作年限纳入考量\"]}");
         proceduralMemoryMapper.insert(sop);
+        inserted.add(sop);
     }
 
     /** SOP 5: 质检流程 */
-    private void insertQualityCheckSop() {
+    private void insertQualityCheckSop(List<ProceduralMemory> inserted) {
         ProceduralMemory sop = new ProceduralMemory();
         sop.setTenantId(PUBLIC_TENANT_ID);
         sop.setSopName("质检流程（首件/巡检/末件/入库）");
@@ -186,5 +216,6 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
             + "]");
         sop.setPostcheck("{\"verify\":[\"次品有处理记录\",\"合格率按工序/款号统计\",\"质检记录带 tenant_id\"]}");
         proceduralMemoryMapper.insert(sop);
+        inserted.add(sop);
     }
 }

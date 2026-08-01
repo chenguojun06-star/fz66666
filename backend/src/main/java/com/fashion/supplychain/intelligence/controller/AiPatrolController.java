@@ -76,4 +76,59 @@ public class AiPatrolController {
                 body.getOrDefault("remark", ""));
         return Result.success(null);
     }
+
+    @GetMapping("/actions/pending")
+    public Result<List<AiPatrolAction>> getPendingActions() {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(patrolOrchestrator.listPendingApproval(tenantId));
+    }
+
+    @GetMapping("/actions/by-status")
+    public Result<List<AiPatrolAction>> getActionsByStatus(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "20") int limit) {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(patrolOrchestrator.listByStatus(tenantId, status, limit));
+    }
+
+    @PostMapping("/actions/{id}/execute")
+    public Result<Void> markExecuted(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        patrolOrchestrator.markManualExecuted(id,
+                body.getOrDefault("result", ""),
+                String.valueOf(UserContext.userId()),
+                UserContext.username());
+        return Result.success(null);
+    }
+
+    @PostMapping("/actions/{id}/fail")
+    public Result<Void> markFailed(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        patrolOrchestrator.markFailed(id,
+                body.getOrDefault("reason", ""),
+                String.valueOf(UserContext.userId()),
+                UserContext.username());
+        return Result.success(null);
+    }
+
+    @PostMapping("/actions/{id}/cancel")
+    public Result<Void> cancelAction(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        patrolOrchestrator.cancel(id,
+                body.getOrDefault("reason", ""),
+                String.valueOf(UserContext.userId()));
+        return Result.success(null);
+    }
+
+    @PostMapping("/actions/{id}/feedback")
+    public Result<Void> addFeedback(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Integer rating = body.get("rating") != null ? Integer.parseInt(body.get("rating")) : null;
+        patrolOrchestrator.addFeedback(id, body.getOrDefault("feedback", ""), rating,
+                String.valueOf(UserContext.userId()), UserContext.username());
+        return Result.success(null);
+    }
+
+    @PostMapping("/actions/{id}/close")
+    public Result<Void> closeAction(@PathVariable Long id) {
+        patrolOrchestrator.close(id,
+                String.valueOf(UserContext.userId()), UserContext.username());
+        return Result.success(null);
+    }
 }

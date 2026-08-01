@@ -374,12 +374,12 @@
   font-size: var(--font-size-sm);
 }
 
-/* 确认回料 — 镂空描边按钮 */
+/* 确认回料 — 镂空描边按钮（与 btn-action 同层高度统一 32px） */
 .btn-return-confirm {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  height: 32px;
   padding: 0 12px;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -537,9 +537,9 @@
 
 .footer-bar .btn-primary {
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-white);
-  background: var(--color-primary);
-  border: none;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 
 .footer-bar .btn-disabled {
@@ -734,9 +734,9 @@
 }
 
 .picking-btn-confirm {
-  color: var(--color-text-white);
-  background: var(--color-primary);
-  border: none;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 
 /* ================ 回料确认弹窗（对齐PC端图片上传） ================ */
@@ -935,9 +935,9 @@
 }
 
 .return-confirm-btn-confirm {
-  color: var(--color-text-white);
-  background: var(--color-primary);
-  border: none;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
 }
 
 .return-confirm-btn-confirm.btn-disabled {

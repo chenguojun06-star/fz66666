@@ -125,6 +125,47 @@ public class HighRiskAuditService extends ServiceImpl<HighRiskAuditLogMapper, Hi
         }
     }
 
+    /**
+     * 标记审计记录为已拒绝（用户拒绝高风险工具执行）
+     */
+    public void markRejected(Long auditId, String reason) {
+        if (auditId == null || !isWritable()) return;
+        try {
+            Long tenantId = UserContext.tenantId();
+            LambdaUpdateWrapper<HighRiskAuditLog> w = new LambdaUpdateWrapper<>();
+            w.eq(HighRiskAuditLog::getId, auditId)
+                    .eq(HighRiskAuditLog::getTenantId, tenantId)
+                    .set(HighRiskAuditLog::getStatus, "REJECTED")
+                    .set(HighRiskAuditLog::getDecidedAt, LocalDateTime.now())
+                    .set(HighRiskAuditLog::getErrorMessage, truncate(reason, 490));
+            update(w);
+            onSuccess();
+        } catch (Exception e) {
+            onFailure(e, "markRejected 失败");
+        }
+    }
+
+    /**
+     * 标记审计记录为已过期（Redis TTL 过期后清理DB残留PENDING记录）
+     */
+    @Async
+    public void markExpired(Long auditId) {
+        if (auditId == null || !isWritable()) return;
+        try {
+            Long tenantId = UserContext.tenantId();
+            LambdaUpdateWrapper<HighRiskAuditLog> w = new LambdaUpdateWrapper<>();
+            w.eq(HighRiskAuditLog::getId, auditId)
+                    .eq(HighRiskAuditLog::getTenantId, tenantId)
+                    .eq(HighRiskAuditLog::getStatus, "PENDING")
+                    .set(HighRiskAuditLog::getStatus, "EXPIRED")
+                    .set(HighRiskAuditLog::getDecidedAt, LocalDateTime.now());
+            update(w);
+            onSuccess();
+        } catch (Exception e) {
+            onFailure(e, "markExpired 失败");
+        }
+    }
+
     /** ── 工具方法：取出当前线程绑定的 auditId 并清理 ──────────────────────── */
     public Long popCurrentAuditId() {
         Long id = CURRENT_AUDIT_ID.get();

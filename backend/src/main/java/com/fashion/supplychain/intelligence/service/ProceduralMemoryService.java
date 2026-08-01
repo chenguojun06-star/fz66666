@@ -209,6 +209,9 @@ public class ProceduralMemoryService {
             if (sops != null && !sops.isEmpty()) {
                 ProceduralMemory bestSOP = sops.get(0);
                 log.debug("[ProceduralMemory.matchSOP] L1 命中: {}", bestSOP.getSopName());
+                // 修复 P0：命中后异步记录调用统计，供 SOP 淘汰/升级决策使用。
+                // 公共 SOP（tenant_id=0）也按当前租户累计统计（updateUsageStats 已支持 OR tenant_id=0）。
+                recordUsage(bestSOP.getId(), true);
                 return new MatchedSOP(bestSOP);
             }
         }
@@ -217,6 +220,8 @@ public class ProceduralMemoryService {
         MatchedSOP semanticMatch = searchSopsSemantic(tenantId, userMessage);
         if (semanticMatch != null) {
             log.debug("[ProceduralMemory.matchSOP] L2 语义兜底命中: {}", semanticMatch.getSOP().getSopName());
+            // 修复 P0：语义兜底命中同样记录调用统计。
+            recordUsage(semanticMatch.getSopId(), true);
             return semanticMatch;
         }
 
@@ -257,10 +262,14 @@ public class ProceduralMemoryService {
 
                 try {
                     Long sopId = Long.parseLong(parts[2]);
+                    // 修复 P0：原仅按当前租户 tenantId 过滤，公共 SOP（tenant_id=0）无法被回查，
+                    // 导致 Qdrant 命中后 DB 取不到详情。改为 tenantId OR tenant_id=0，
+                    // 与 searchByKeyword SQL 逻辑保持一致。
                     ProceduralMemory sop = proceduralMemoryMapper.selectOne(
                             new LambdaQueryWrapper<ProceduralMemory>()
                                     .eq(ProceduralMemory::getId, sopId)
-                                    .eq(ProceduralMemory::getTenantId, tenantId)
+                                    .and(w -> w.eq(ProceduralMemory::getTenantId, tenantId)
+                                            .or().eq(ProceduralMemory::getTenantId, 0L))
                                     .eq(ProceduralMemory::getDeleteFlag, 0)
                                     .eq(ProceduralMemory::getEnabled, 1));
                     if (sop != null && sop.getConfidence() != null

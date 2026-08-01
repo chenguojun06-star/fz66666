@@ -67,7 +67,7 @@ public class MaterialCalculationTool extends AbstractAgentTool {
 
         Map<String, Object> wastageRateProp = new HashMap<>();
         wastageRateProp.put("type", "number");
-        wastageRateProp.put("description", "额外损耗率（可选，0~1之间，默认使用BOM中配置的损耗率，若BOM未配置则默认0.05即5%）");
+        wastageRateProp.put("description", "额外损耗率（可选，0~1之间，使用BOM中配置的损耗率，BOM未配置则为0）");
         properties.put("wastageRate", wastageRateProp);
 
         AiTool tool = new AiTool();
@@ -96,7 +96,7 @@ public class MaterialCalculationTool extends AbstractAgentTool {
                             StepWizardBuilder.textField("styleNo", "款号", true, "输入款号，如 D2024001"),
                             StepWizardBuilder.numberField("orderQuantity", "生产数量", true, "输入生产数量", 1))
                     ));
-                try { return OBJECT_MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供款号和生产数量", true, List.of("styleNo", "orderQuantity"), "请补充款号和生产数量", wizard)); } catch (Exception e) { return "{\"error\": \"请提供款号和生产数量\"}"; }
+                try { return OBJECT_MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供款号和生产数量", true, List.of("styleNo", "orderQuantity"), "请补充款号和生产数量", wizard)); } catch (Exception e) { return errorJson("请提供款号和生产数量"); }
             }
 
             TenantAssert.assertTenantContext();
@@ -112,7 +112,7 @@ public class MaterialCalculationTool extends AbstractAgentTool {
                                 .eq("style_no", styleNo)
                                 .eq("delete_flag", 0));
                 if (orderCount == 0) {
-                    return "{\"error\": \"您的工厂没有此款号的生产订单，无权查看BOM成本\"}";
+                    return errorJson("您的工厂没有此款号的生产订单，无权查看BOM成本");
                 }
             }
 
@@ -125,7 +125,7 @@ public class MaterialCalculationTool extends AbstractAgentTool {
             StyleInfo style = styleInfoService.getOne(styleQw, false);
 
             if (style == null) {
-                return "{\"error\": \"未找到款号 " + styleNo + " 的款式信息，请确认款号是否正确\"}";
+                return errorJson("未找到款号 " + styleNo + " 的款式信息，请确认款号是否正确");
             }
 
             // 获取BOM清单
@@ -137,7 +137,6 @@ public class MaterialCalculationTool extends AbstractAgentTool {
 
             // 计算用料与成本
             BigDecimal qty = BigDecimal.valueOf(orderQuantity);
-            BigDecimal defaultWastage = BigDecimal.valueOf(0.05);
             BigDecimal totalMaterialCost = BigDecimal.ZERO;
 
             List<Map<String, Object>> materialDetails = new ArrayList<>();
@@ -148,10 +147,10 @@ public class MaterialCalculationTool extends AbstractAgentTool {
                     continue;
                 }
 
-                // 损耗率：优先用BOM配置值，否则用默认5%
+                // 损耗率：BOM配置了就用，没配置就是0（工厂自行填写）
                 BigDecimal lossRate = (bom.getLossRate() != null && bom.getLossRate().compareTo(BigDecimal.ZERO) > 0)
                         ? bom.getLossRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
-                        : defaultWastage;
+                        : BigDecimal.ZERO;
 
                 // 总用量 = 单件用量 × 数量 × (1 + 损耗率)
                 BigDecimal totalUsage = bom.getUsageAmount()
@@ -204,7 +203,7 @@ public class MaterialCalculationTool extends AbstractAgentTool {
 
         } catch (Exception e) {
             log.error("[MaterialCalculationTool] 计算异常", e);
-            return "{\"error\": \"计算失败: " + e.getMessage() + "\"}";
+            return errorJson("计算失败: " + e.getMessage());
         }
     }
 }

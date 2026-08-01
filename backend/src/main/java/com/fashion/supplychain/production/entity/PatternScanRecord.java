@@ -55,8 +55,14 @@ public class PatternScanRecord {
     /** 工序单价 */
     private java.math.BigDecimal unitPrice;
 
+    /** 工序单价（别名，与 unitPrice 同步） */
+    private java.math.BigDecimal processUnitPrice;
+
     /** 扫码成本 = 单价 × 数量 */
     private java.math.BigDecimal scanCost;
+
+    /** 总金额（与 scanCost 同步） */
+    private java.math.BigDecimal totalAmount;
 
     /**
      * 款号名称

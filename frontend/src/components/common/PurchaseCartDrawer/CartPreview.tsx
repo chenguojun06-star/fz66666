@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Drawer, Button, Table, Empty, Statistic, App } from 'antd';
+import { Drawer, Button, Table, Empty, Statistic, App, Image } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { CartPreview, PurchaseGroup } from '@/types/purchaseCart';
@@ -48,6 +48,22 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
       width: 90,
       fixed: 'left',
       render: (text: string) => <span style={{ fontWeight: 600 }}>{text}</span>,
+    },
+    {
+      title: '图片',
+      dataIndex: 'styleImageUrl',
+      width: 60,
+      render: (url: string, row: any) => {
+        const imgUrl = url || row.styleImageUrl;
+        if (!imgUrl) {
+          return (
+            <div style={{ width: 40, height: 40, background: 'var(--color-bg-base)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--color-text-tertiary)' }}>
+              无图
+            </div>
+          );
+        }
+        return <Image src={imgUrl} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} />;
+      },
     },
     {
       title: '物料名称',

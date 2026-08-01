@@ -6,7 +6,7 @@ const { getUserInfo } = require('../../../utils/storage');
 
 /**
  * 筛选 Tab 定义（与 PC 端 MaterialSearchForm 状态筛选对齐）
- * 全部 / 待采购 / 已采购 / 部分到货 / 全部到货 / 已取消 / 已延期
+ * 全部 / 待采购 / 已采购 / 部分到货 / 已完成 / 已取消 / 已延期
  * pillClass 对应 dashboard 的 filter-pill--* 颜色类
  */
 const STATUS_TABS = [

@@ -7,14 +7,15 @@ import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { Dayjs } from 'dayjs';
 
 /**
- * 状态筛选选项 — 与后端 MaterialPurchaseQueryHelper.computeStatusStats / applyBasicFilters 完全对齐
+ * 状态筛选选项 — 与手机端 STATUS_TABS 7 档完全对齐
  *
  * 【分组规则（前端筛选 = 后端 stats 分组）】
  *   pending            → 待采购（仅 pending）
  *   received           → 已采购（received + warehouse_pending）
  *   partial            → 部分到货（partial + partial_arrival）
- *   completed          → 全部到货（completed + awaiting_confirm）
+ *   completed          → 已完成（completed + awaiting_confirm）
  *   cancelled          → 已取消
+ *   delayed            → 已延期（与手机端对齐）
  *
  * 注：reconciling 是历史虚构状态，后端无此枚举，已移除。
  * 注：procurement/purchasing/material_preparation 是流程中间态，不暴露给用户筛选。
@@ -24,8 +25,9 @@ const MATERIAL_PURCHASE_STATUS_OPTIONS = [
   { label: '待采购', value: MATERIAL_PURCHASE_STATUS.PENDING },
   { label: '已采购', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
   { label: '部分到货', value: MATERIAL_PURCHASE_STATUS.PARTIAL },
-  { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
+  { label: '已完成', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
   { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },
+  { label: '已延期', value: 'delayed' },
 ];
 
 interface MaterialSearchFormProps {

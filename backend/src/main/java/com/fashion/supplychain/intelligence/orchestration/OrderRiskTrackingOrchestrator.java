@@ -92,6 +92,49 @@ public class OrderRiskTrackingOrchestrator {
         }
     }
 
+    /**
+     * 撤销风险标签（AI误标记时人员可清除）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean clearRisk(Long riskId, String cancelReason) {
+        try {
+            OrderRiskTracking tracking = riskTrackingMapper.selectById(riskId);
+            if (tracking == null) return false;
+            tracking.setHandlingStatus("cancelled");
+            tracking.setCancelledAt(LocalDateTime.now());
+            tracking.setCancelledBy(UserContext.username());
+            tracking.setCancelReason(cancelReason);
+            riskTrackingMapper.updateById(tracking);
+            log.info("[订单风险闭环] 风险已撤销: id={}, reason={}", riskId, cancelReason);
+            return true;
+        } catch (Exception e) {
+            log.warn("[订单风险闭环] 撤销风险失败: id={}, error={}", riskId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 重开已处理的风险（误处理后可纠正）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean reopenRisk(Long riskId, String reason) {
+        try {
+            OrderRiskTracking tracking = riskTrackingMapper.selectById(riskId);
+            if (tracking == null) return false;
+            tracking.setHandlingStatus("pending");
+            tracking.setHandlingAction(null);
+            tracking.setHandlingResult(null);
+            tracking.setHandledBy(null);
+            tracking.setHandledAt(null);
+            riskTrackingMapper.updateById(tracking);
+            log.info("[订单风险闭环] 风险已重开: id={}, reason={}", riskId, reason);
+            return true;
+        } catch (Exception e) {
+            log.warn("[订单风险闭环] 重开风险失败: id={}, error={}", riskId, e.getMessage(), e);
+            return false;
+        }
+    }
+
     public Map<String, Object> getRiskStats(int days) {
         Map<String, Object> stats = new LinkedHashMap<>();
         try {

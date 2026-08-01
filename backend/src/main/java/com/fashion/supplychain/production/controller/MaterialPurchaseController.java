@@ -192,7 +192,7 @@ public class MaterialPurchaseController {
 
     /**
      * 快速编辑物料采购（备注、预计出货日期、采购数量）
-     * 采购数量修改后会自动重算 totalAmount
+     * 采购数量修改后会自动重算 totalAmount（P0 修复：原实现未重算）
      */
     @PutMapping("/quick-edit")
     public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
@@ -205,30 +205,54 @@ public class MaterialPurchaseController {
             return Result.fail("仅主管以上可修改采购数量");
         }
 
-        MaterialPurchase purchase = new MaterialPurchase();
-        purchase.setId(id);
-        purchase.setRemark(remark);
-        if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
-            purchase.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
-        }
-        // 支持直接修改采购数量（样衣采购节点内联编辑）
+        java.math.BigDecimal purchaseQuantity = null;
         if (purchaseQtyObj != null) {
             try {
-                java.math.BigDecimal purchaseQty = new java.math.BigDecimal(String.valueOf(purchaseQtyObj).trim());
-                if (purchaseQty.compareTo(java.math.BigDecimal.ZERO) >= 0) {
-                    purchase.setPurchaseQuantity(purchaseQty);
-                    // 重算总金额
-                    if (purchase.getUnitPrice() != null) {
-                        // unitPrice 从数据库现有值获取，这里先设 null 让 update 不覆盖
-                    }
+                purchaseQuantity = new java.math.BigDecimal(String.valueOf(purchaseQtyObj).trim());
+                if (purchaseQuantity.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                    return Result.fail("采购数量不能为负数");
                 }
             } catch (NumberFormatException e) {
                 return Result.fail("采购数量格式错误");
             }
         }
 
-        materialPurchaseOrchestrator.update(purchase);
+        java.time.LocalDate shipDate = null;
+        if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
+            shipDate = java.time.LocalDate.parse(expectedShipDate);
+        }
+
+        // 委托 Orchestrator 处理（含事务边界、unitPrice 读取、totalAmount 重算）
+        materialPurchaseOrchestrator.quickEdit(id, remark, shipDate, purchaseQuantity);
         return Result.success();
+    }
+
+    /**
+     * 审价操作：approve=审价通过，reject=审价拒绝
+     * 审价通过：priceReviewStatus=approved，采购单进入 pending 状态可领取
+     * 审价拒绝：priceReviewStatus=rejected，返回草稿状态（reject 需带 reason）
+     */
+    @PostMapping("/{id}/price-review")
+    public Result<?> priceReview(@PathVariable String id,
+                                 @RequestParam String action,
+                                 @RequestParam(required = false) String reason) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可审价");
+        }
+        try {
+            materialPurchaseOrchestrator.priceReview(id, action, reason);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        }
+        return Result.success();
+    }
+
+    /**
+     * 获取待审价列表（priceReviewStatus=pending_review）
+     */
+    @GetMapping("/price-review/list")
+    public Result<?> listPendingPriceReview() {
+        return Result.success(materialPurchaseOrchestrator.listPendingPriceReview());
     }
 
     /**

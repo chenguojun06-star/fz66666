@@ -26,7 +26,7 @@ import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
-import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PlatformDashboard } from './modules/intelligence';
+import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
 
 const NotFound = React.lazy(() => import('./pages/NotFound'));
@@ -278,6 +278,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.cockpit} element={<RouteErrorBoundary pageName="智能驾驶舱"><Suspense fallback={routeFallback}><CockpitPage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpitTrace} element={<RouteErrorBoundary pageName="执行轨迹"><Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.intelligenceCenter} element={<RouteErrorBoundary pageName="智能中心"><Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.intelligencePatrol} element={<RouteErrorBoundary pageName="巡检工单中心"><Suspense fallback={routeFallback}><PatrolActionCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.aiAgentTraceCenter} element={<Navigate to={paths.cockpitTrace} replace />} />
           <Route path={paths.platformDashboard} element={<RouteErrorBoundary pageName="平台AI面板"><Suspense fallback={routeFallback}><PlatformDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.orderManagementList} element={<RouteErrorBoundary pageName="订单管理"><Suspense fallback={routeFallback}><OrderManagement /></Suspense></RouteErrorBoundary>} />

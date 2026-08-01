@@ -21,6 +21,10 @@ public class CartPreviewDto {
         private BigDecimal unitPrice;
         private BigDecimal totalAmount;
         private List<SourceItemDto> sourceItems;
+        private String styleNo;
+        private String styleImageUrl;
+        /** 损耗率(%)，来源于款号BOM */
+        private BigDecimal lossRate;
     }
     
     @Data

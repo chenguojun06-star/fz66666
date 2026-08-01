@@ -61,7 +61,12 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         const stockNum = record.availableStock;
         const hasStockNum = stockNum != null && stockNum > 0;
         const stockText = hasStockNum ? `${stockNum}${record.unit || ''}` : '';
-        const canPickup = status === 'sufficient' && !!onApplyPickup && hasStockNum;
+        // 领取按钮：库存充足 + 有库存数 + 采购状态非终态（completed/cancelled 不可再领取）
+        const recordStatus = String(record?.status || '').toLowerCase();
+        const canPickup = status === 'sufficient'
+          && !!onApplyPickup
+          && hasStockNum
+          && !['completed', 'cancelled'].includes(recordStatus);
 
         if (canPickup) {
           return (
@@ -213,7 +218,7 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         const canConfirmArrival = ['received', 'partial', 'partial_arrival'].includes(status) && !frozen;
         return (
           <RowActions
-            maxInline={3}
+            maxInline={2}
             actions={[
               {
                 key: 'view',
@@ -245,7 +250,7 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
                 title: '确认物料已回料到仓库',
                 onClick: () => onConfirmReturn(record),
               }] : []),
-              ...(onReturnReset && (Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && isSupervisorOrAbove ? [{
+              ...(onReturnReset && Number(record?.returnConfirmed || 0) === 1 && isSupervisorOrAbove ? [{
                 key: 'return-reset',
                 label: '退回',
                 title: '退回已确认的回料',

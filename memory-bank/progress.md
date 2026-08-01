@@ -1,9 +1,68 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-26（P0多租户+财务闭环+AI持久化+多端补齐 6 commits 推送）
+> 最后更新：2026-08-01（智能化模块全链路修复 + UI规范统一 + 发布前核实）
 
 ## 已完成
+
+### 2026-08-01 智能化模块全链路修复 + 采购UI规范统一 ✅
+
+用户诉求："你看看智能化的为什么做一半没有全部完成 你全部核实清楚 物料采购智能化你核实一下 还有为什么采购页面的操作栏做的乱七八糟的了" → "全部开始"
+
+- [x] **异常自愈8个检测器修复/新建**
+  - 3个AUTO：StagnantRiskDetector(7天→24h) / DelayRiskDetector(加组合判定) / QualityRiskDetector(次品率统计)
+  - 5个SUGGESTION：MaterialRiskDetector(安全库存) / CostRiskDetector(工时维度) / PayrollRiskDetector(新建) / OutsourceRiskDetector(新建) / WarehouseDiffRiskDetector(新建)
+  - RiskType枚举新增3个值，3个新检测器加@Component自动注册
+- [x] **智能采购4个问题修复**
+  - lossRate持久化：V202708010001迁移 + 4个Entity/DTO加字段 + 链路贯通
+  - quick-edit重算bug：委托Orchestrator，先读unitPrice再重算totalAmount
+  - 审价工作流：V202708010002迁移 + 5个字段 + 2个API端点 + confirm设pending_review
+  - AI巡检Job串联：SourcingSpecialistPatrolJob注入SmartSourcingService自动触发
+- [x] **PC采购页面UI 10项修复**
+  - 状态漏洞：领取按钮排除终态 / 退回按钮去掉COMPLETED分支
+  - 实心改镂空：3处（智能采购推荐/保存/编辑面辅料）
+  - 筛选器7档对齐 + PatrolActionCenter类型映射 + 一键智能采购按钮
+  - global.css 10处硬编码→CSS变量 + 操作列宽度220→260 + maxInline 3→2
+- [x] **手机端+H5四端同步**
+  - 4处实心改镂空 + 按钮高度统一 + 注释同步
+  - 四端MD5一致：miniprogram/source-miniapp/public/source-miniapp/dist/source-miniapp
+- [x] **发布前全面核实**
+  - P0阻塞发布项：无
+  - P1建议修复：SelfCritiqueGateTest/EvolutionOrchestratorTest 72测试 + 完整编译 + AI全链路冒烟
+  - 历史遗留23项：21项已完成，2项本次已修复
+- [x] **验证**：mvn compile exit 0 + npx tsc exit 0 + 四端MD5一致
+
+---
+
+### 2026-08-01 AiCostTrackingOrchestrator JUnit 5 单元测试创建 ✅
+
+用户诉求："Create a JUnit 5 unit test at AiCostTrackingOrchestratorTest.java... 11 tests covering calculateCost/getCostSummary/recordAsync"
+
+- [x] **测试文件创建**
+  - 路径：`backend/src/test/java/com/fashion/supplychain/intelligence/orchestration/AiCostTrackingOrchestratorTest.java`
+  - 技术栈：JUnit 5 + Mockito + AssertJ
+  - 结构：`@ExtendWith(MockitoExtension.class)` / `@InjectMocks` / `@Mock AiCostTrackingMapper`
+- [x] **UserContext 生命周期**（复用 WhatIfSimulationOrchestratorTest 模式）
+  - `@BeforeEach`：setTenantId(1L) + setFactoryId("F001")
+  - `@AfterEach`：UserContext.clear() 防污染
+- [x] **calculateCost 私有方法反射测试（7 个）**
+  - `agnes-2.5-flash`：1000+500 tokens → 0.000045
+  - `agnes-2.0-flash` 同价验证（= 2.5）
+  - 未知模型：默认 0.00020 → 1500 tokens = 0.00030
+  - 零 tokens → 0
+  - `deepseek-v4-flash`：500+500 = 0.00014
+  - 大 tokens（999999×2）：BigDecimal 无溢出
+  - `qwen-plus`：800+1200 = 0.00080
+- [x] **getCostSummary 公共方法（3 个）**
+  - sumCostSince 返回 null → estimatedCostUsd = 0（BigDecimal.ZERO）
+  - Mapper 抛 RuntimeException → fail-safe 返回空 Map（非 null）
+  - USD $150.5678 × 7.2 = CNY ¥1084.09，scale=2 精度验证
+- [x] **recordAsync 方法（1 个）**
+  - ArgumentCaptor<AiCostTracking> 捕获 insert 参数
+  - verify times(1) + 全字段断言（tenantId/model/scene/tokens/latency/success/cost）
+- [x] **规范**：所有 BigDecimal 比较统一用 `isEqualByComparingTo()`，避免 scale 差异误判
+
+---
 
 ### 2026-07-31 财务闭环+数字孪生+@Version+颜色核查 ✅
 

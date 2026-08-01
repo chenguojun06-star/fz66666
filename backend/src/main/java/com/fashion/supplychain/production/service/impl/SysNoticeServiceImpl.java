@@ -1,11 +1,13 @@
 package com.fashion.supplychain.production.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.mapper.SysNoticeMapper;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -54,5 +56,36 @@ public class SysNoticeServiceImpl extends ServiceImpl<SysNoticeMapper, SysNotice
                 .eq(SysNotice::getTenantId, tenantId)
                 .set(SysNotice::getIsRead, 1)
                 .update();
+    }
+
+    @Override
+    public boolean markHandled(Long id, Long tenantId) {
+        LambdaUpdateWrapper<SysNotice> w = new LambdaUpdateWrapper<>();
+        w.eq(SysNotice::getId, id)
+                .eq(SysNotice::getTenantId, tenantId)
+                .set(SysNotice::getHandlingStatus, "handled");
+        return update(w);
+    }
+
+    @Override
+    public boolean revoke(Long id, Long tenantId) {
+        LambdaUpdateWrapper<SysNotice> w = new LambdaUpdateWrapper<>();
+        w.eq(SysNotice::getId, id)
+                .eq(SysNotice::getTenantId, tenantId)
+                .set(SysNotice::getHandlingStatus, "revoked")
+                .set(SysNotice::getRevokedAt, LocalDateTime.now());
+        return update(w);
+    }
+
+    @Override
+    public int revokeByOrder(Long tenantId, String orderNo, String noticeType) {
+        LambdaUpdateWrapper<SysNotice> w = new LambdaUpdateWrapper<>();
+        w.eq(SysNotice::getTenantId, tenantId)
+                .eq(SysNotice::getOrderNo, orderNo)
+                .eq(SysNotice::getNoticeType, noticeType)
+                .eq(SysNotice::getHandlingStatus, "none")
+                .set(SysNotice::getHandlingStatus, "revoked")
+                .set(SysNotice::getRevokedAt, LocalDateTime.now());
+        return baseMapper.update(null, w);
     }
 }

@@ -215,6 +215,11 @@ public class MaterialPurchase {
     private String fabricWeight;
 
     /**
+     * 损耗率(%)，来源于款号BOM，贯通采购链路便于追溯与成本核算
+     */
+    private BigDecimal lossRate;
+
+    /**
      * 发票/单据图片URL列表（JSON数组字符串），用于财务留底
      * 示例：["/api/file/tenant-download/1/invoice-xxx.jpg","..."]
      */
@@ -253,4 +258,37 @@ public class MaterialPurchase {
      */
     @TableField("audit_operator_name")
     private String auditOperatorName;
+
+    // ==================== 审价工作流字段 ====================
+
+    /**
+     * 审价状态：pending_review=待审价，approved=审价通过，rejected=审价拒绝
+     * 提交采购单前由审价员审核价格，通过后采购单进入 pending 状态可领取
+     */
+    @TableField("price_review_status")
+    private String priceReviewStatus;
+
+    /**
+     * 审价驳回原因（rejected 时必填）
+     */
+    @TableField("price_review_reason")
+    private String priceReviewReason;
+
+    /**
+     * 审价操作时间
+     */
+    @TableField("price_review_time")
+    private java.time.LocalDateTime priceReviewTime;
+
+    /**
+     * 审价操作人ID
+     */
+    @TableField("price_review_operator_id")
+    private String priceReviewOperatorId;
+
+    /**
+     * 审价操作人姓名
+     */
+    @TableField("price_review_operator_name")
+    private String priceReviewOperatorName;
 }

@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import com.fashion.supplychain.common.UserContext;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -17,47 +18,48 @@ public class IntelligenceScheduledTasks {
     @Autowired private DailyBriefingService dailyBriefingService;
     @Autowired private DeliveryPredictionService deliveryPredictionService;
     @Autowired private RestockSuggestionService restockSuggestionService;
+    @Autowired private ProcessStatsEngine processStatsEngine;
 
-    private static final Long SYSTEM_TENANT_ID = 1L;
     private static final int TOP_N = 20;
 
     @Scheduled(cron = "0 0 8 * * ?")
     public void generateDailyIntelligence() {
         log.info("【定时任务】开始生成每日智能简报 + 刷新交期风险预测 + 刷新补货建议...");
-        try {
-            UserContext systemCtx = new UserContext();
-            systemCtx.setTenantId(SYSTEM_TENANT_ID);
-            systemCtx.setUsername("scheduled-task");
-            systemCtx.setUserId("scheduled-task");
-            UserContext.set(systemCtx);
-
+        List<Long> tenantIds = processStatsEngine.findActiveTenantIds();
+        for (Long tenantId : tenantIds) {
             try {
-                dailyBriefingService.generate(SYSTEM_TENANT_ID);
-                log.info("【定时任务】DailyBriefingService.generate 执行完成");
-            } catch (Exception e) {
-                log.error("【定时任务】dailyBriefingService.generate 执行异常: {}", e.getMessage(), e);
-            }
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("scheduled-task");
+                ctx.setUserId("scheduled-task");
+                UserContext.set(ctx);
 
-            try {
-                deliveryPredictionService.predictRisks(SYSTEM_TENANT_ID, TOP_N);
-                log.info("【定时任务】DeliveryPredictionService.predictRisks 执行完成");
-            } catch (Exception e) {
-                log.error("【定时任务】deliveryPredictionService.predictRisks 执行异常: {}", e.getMessage(), e);
-            }
+                try {
+                    dailyBriefingService.generate(tenantId);
+                } catch (Exception e) {
+                    log.error("【定时任务】dailyBriefingService.generate 执行异常 tenantId={}: {}", tenantId, e.getMessage(), e);
+                }
 
-            try {
-                restockSuggestionService.getSuggestions(SYSTEM_TENANT_ID, TOP_N);
-                log.info("【定时任务】RestockSuggestionService.getSuggestions 执行完成");
-            } catch (Exception e) {
-                log.error("【定时任务】restockSuggestionService.getSuggestions 执行异常: {}", e.getMessage(), e);
-            }
+                try {
+                    deliveryPredictionService.predictRisks(tenantId, TOP_N);
+                } catch (Exception e) {
+                    log.error("【定时任务】deliveryPredictionService.predictRisks 执行异常 tenantId={}: {}", tenantId, e.getMessage(), e);
+                }
 
-            log.info("【定时任务】每日智能任务执行完成");
-        } catch (Exception e) {
-            log.error("【定时任务】generateDailyIntelligence 顶层异常，不影响后续任务: {}", e.getMessage(), e);
-        } finally {
-            UserContext.clear();
+                try {
+                    restockSuggestionService.getSuggestions(tenantId, TOP_N);
+                } catch (Exception e) {
+                    log.error("【定时任务】restockSuggestionService.getSuggestions 执行异常 tenantId={}: {}", tenantId, e.getMessage(), e);
+                }
+
+                log.info("【定时任务】租户 {} 每日智能任务执行完成", tenantId);
+            } catch (Exception e) {
+                log.error("【定时任务】generateDailyIntelligence 租户 {} 异常: {}", tenantId, e.getMessage(), e);
+            } finally {
+                UserContext.clear();
+            }
         }
+        log.info("【定时任务】所有租户每日智能任务执行完成，共 {} 个租户", tenantIds.size());
     }
 
     @Scheduled(cron = "0 0 * * * ?")

@@ -31,6 +31,12 @@ public interface AgentBackgroundTaskMapper extends BaseMapper<AgentBackgroundTas
             "error_message = #{errorMessage}, current_step = '执行失败' WHERE task_id = #{taskId} AND status = 'RUNNING' AND delete_flag = 0")
     int markAsFailed(@Param("taskId") String taskId, @Param("errorMessage") String errorMessage);
 
+    @Update("UPDATE t_agent_background_task SET status = 'PENDING', retry_count = #{retryCount}, " +
+            "error_message = #{errorMessage}, current_step = '等待重试' " +
+            "WHERE task_id = #{taskId} AND status = 'RUNNING' AND delete_flag = 0")
+    int markAsPendingForRetry(@Param("taskId") String taskId, @Param("retryCount") int retryCount,
+                               @Param("errorMessage") String errorMessage);
+
     @Update("UPDATE t_agent_background_task SET progress = #{progress}, current_step = #{currentStep} " +
             "WHERE task_id = #{taskId} AND status = 'RUNNING' AND delete_flag = 0")
     int updateProgress(@Param("taskId") String taskId, @Param("progress") int progress, @Param("currentStep") String currentStep);

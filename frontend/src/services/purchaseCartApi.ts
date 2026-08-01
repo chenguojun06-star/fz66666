@@ -66,6 +66,26 @@ export const purchaseCartApi = {
   clearCart: async (): Promise<void> => {
     await api.delete('/production/purchase-cart');
   },
+
+  // ── 智能采购建议 ──
+
+  /** 为单个订单生成智能采购建议（推送到购物车草稿） */
+  generateSmartSourcing: async (orderNo: string): Promise<Record<string, unknown>> => {
+    const res = await api.post(`/production/smart-sourcing/generate/${encodeURIComponent(orderNo)}`);
+    return unwrapApiData<Record<string, unknown>>(res, '生成智能采购建议失败');
+  },
+
+  /** 批量为多个订单生成智能采购建议 */
+  generateSmartSourcingBatch: async (orderNos: string[]): Promise<Record<string, unknown>> => {
+    const res = await api.post('/production/smart-sourcing/generate-batch', orderNos);
+    return unwrapApiData<Record<string, unknown>>(res, '批量生成智能采购建议失败');
+  },
+
+  /** 查询订单的物料净需求（预览） */
+  getNetDemand: async (orderNo: string): Promise<Record<string, unknown>> => {
+    const res = await api.get(`/production/smart-sourcing/net-demand/${encodeURIComponent(orderNo)}`);
+    return unwrapApiData<Record<string, unknown>>(res, '查询物料净需求失败');
+  },
 };
 
 export default purchaseCartApi;

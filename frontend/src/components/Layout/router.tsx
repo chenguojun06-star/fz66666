@@ -64,6 +64,7 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/cockpit') return '数据看板';
   if (base === '/cockpit/agent-traces') return 'AI执行记录中心';
   if (base === '/intelligence/center') return '智能运营中心';
+  if (base === '/intelligence/patrol') return '巡检工单中心';
   if (base === '/intelligence/agent-traces') return 'AI执行记录中心';
   if (base === '/ecommerce/center') return '平台总览';
   if (base === '/ecommerce/platform' || pathname.startsWith('/ecommerce/platform/')) {

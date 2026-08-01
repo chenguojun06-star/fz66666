@@ -195,7 +195,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} size="small">
                   添加物料
                 </Button>
-                <Button type="primary" loading={saving} onClick={handleSaveAll} size="small">
+                <Button loading={saving} onClick={handleSaveAll} size="small">
                   保存
                 </Button>
                 <Button onClick={handleCancelEdit} size="small">
@@ -204,7 +204,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
               </>
             ) : (
               <>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleStartEdit} size="small">
+                <Button icon={<PlusOutlined />} onClick={handleStartEdit} size="small">
                   编辑面辅料
                 </Button>
                 {bomIncomplete && (

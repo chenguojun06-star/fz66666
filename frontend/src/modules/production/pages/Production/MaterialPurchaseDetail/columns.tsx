@@ -266,7 +266,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
       },
     },
     {
-      title: '操作', key: 'action', width: 220, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 260, fixed: 'right' as const,
       render: (_: unknown, record: MaterialPurchase) => {
         const status = String(record.status || '').toLowerCase();
         const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
@@ -280,7 +280,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
 
         return (
           <RowActions
-            maxInline={3}
+            maxInline={2}
             actions={[
               ...(editing ? [] : [
                 { key: 'edit', label: '编辑', title: '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled },
@@ -290,7 +290,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ...(!isWarehousePending && (isPending || isReceived || isPartial) ? [{ key: 'receive', label: isPending ? '领取并到货' : '追加到货', title: !canProcure ? '请先完善面辅料信息' : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'), onClick: () => openReceive(record), primary: isPending, disabled: !canProcure }] : []),
               ...(isPending ? [{ key: 'inbound', label: '登记到货', title: '直接登记到货数量', onClick: () => openInbound(record) }] : []),
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: '确认物料已回料到仓库', onClick: () => handleReturnConfirm(record) }] : []),
-              ...((isReturnConfirmed || isCompleted) ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),
+              ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回采购', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
               { key: 'quality-issue', label: '品质异常', title: '登记物料品质问题', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
               ...(isReturnConfirmed || isCompleted ? [{ key: 'warehouse-pick', label: '出库领取', title: '从库存出库领取物料', onClick: () => handleWarehousePick(record, Number(record.arrivedQuantity || record.purchaseQuantity || 0)), primary: true }] : []),

@@ -45,17 +45,18 @@ public class StagnantRiskDetector implements RiskDetector {
 
             LocalDateTime lastUpdate = o.getUpdateTime();
             if (lastUpdate == null) continue;
-            long stagnantDays = ChronoUnit.DAYS.between(lastUpdate, LocalDateTime.now());
-            if (stagnantDays >= 7) {
-                String severity = stagnantDays >= 21 ? "CRITICAL"
-                        : stagnantDays >= 14 ? "HIGH" : "MEDIUM";
+            // P0修复：按小时判定，停滞≥24小时即触发（原为≥7天）
+            long stagnantHours = ChronoUnit.HOURS.between(lastUpdate, LocalDateTime.now());
+            if (stagnantHours >= 24) {
+                String severity = stagnantHours >= 72 ? "CRITICAL"
+                        : stagnantHours >= 48 ? "HIGH" : "MEDIUM";
                 RiskItem item = RiskItem.create(RiskType.STAGNANT, severity,
-                        Math.min(100, 50 + stagnantDays * 2.0));
+                        Math.min(100, 50 + stagnantHours * 0.5));
                 item.setOrderId(o.getId());
                 item.setFactoryId(o.getFactoryId());
-                item.setDescription("订单 " + o.getOrderNo() + " 已停滞 " + stagnantDays + " 天无更新");
+                item.setDescription("订单 " + o.getOrderNo() + " 已停滞 " + stagnantHours + " 小时无更新");
                 item.setSuggestedAction("电话催办工厂进度，必要时安排现场跟单");
-                item.getMetadata().put("stagnantDays", stagnantDays);
+                item.getMetadata().put("stagnantHours", stagnantHours);
                 item.getMetadata().put("lastUpdate", lastUpdate.toString());
                 items.add(item);
             }

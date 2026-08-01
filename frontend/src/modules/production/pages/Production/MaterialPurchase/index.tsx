@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Card, Form, message, Tabs } from 'antd';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { Card, Form, message, Tabs, Button, Modal, Input } from 'antd';
+import { RobotOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -8,7 +9,8 @@ import MaterialTable from './components/MaterialTable';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import PurchaseReturnTab from './components/PurchaseReturnTab';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
+import { usePurchaseCartActions, usePurchaseCart } from '@/hooks/usePurchaseCart';
+import { purchaseCartApi } from '@/services/purchaseCartApi';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { buildStatCards } from './statCardsConfig';
@@ -28,6 +30,10 @@ const MaterialPurchase: React.FC = () => {
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [smartSourcingModalOpen, setSmartSourcingModalOpen] = useState(false);
+  const [smartSourcingOrderNo, setSmartSourcingOrderNo] = useState('');
+  const [smartSourcingLoading, setSmartSourcingLoading] = useState(false);
+  const { cartVersion } = usePurchaseCart();
   const {
     contextHolder, modalContextHolder,
     user, isMobile, isSupervisorOrAbove,
@@ -125,9 +131,37 @@ const MaterialPurchase: React.FC = () => {
     setCartDrawerOpen(true);
   }, [batchAddItems]);
 
+  const handleSmartSourcing = useCallback(async () => {
+    const orderNo = smartSourcingOrderNo.trim();
+    if (!orderNo) {
+      message.warning('请输入订单号');
+      return;
+    }
+    setSmartSourcingLoading(true);
+    try {
+      await purchaseCartApi.generateSmartSourcing(orderNo);
+      message.success('智能采购建议已生成，已加入购物车草稿');
+      setSmartSourcingModalOpen(false);
+      setSmartSourcingOrderNo('');
+      setCartDrawerOpen(true);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '智能采购生成失败');
+    } finally {
+      setSmartSourcingLoading(false);
+    }
+  }, [smartSourcingOrderNo]);
+
   const handleRefreshAll = useCallback(async () => {
     await Promise.all([fetchMaterialPurchaseList(), reloadCurrentDetail()]);
   }, [fetchMaterialPurchaseList, reloadCurrentDetail]);
+
+  // 监听购物车 cartVersion 变化（确认采购后自动刷新列表）
+  useEffect(() => {
+    if (cartVersion > 0) {
+      fetchMaterialPurchaseList();
+      reloadCurrentDetail();
+    }
+  }, [cartVersion, fetchMaterialPurchaseList, reloadCurrentDetail]);
 
   const handleSearchReset = useCallback(() => {
     const params = new URLSearchParams(location.search);
@@ -173,27 +207,37 @@ const MaterialPurchase: React.FC = () => {
                       activeKey={activeStatFilter}
                       cards={statCards}
                       extraRight={
-                        <button
-                          type="button"
-                          onClick={() => setShowAllPurchases(v => !v)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            border: '1px solid var(--color-border-antd)',
-                            background: 'var(--color-bg-base)',
-                            color: !showAllPurchases ? 'var(--color-text-secondary)' : 'var(--color-primary)',
-                            borderRadius: 4,
-                            padding: '4px 10px',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            lineHeight: 1.4,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {showAllPurchases ? '只看进行中' : '显示全部'}
-                        </button>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <Button
+                            icon={<RobotOutlined />}
+                            size="small"
+                            style={{ color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+                            onClick={() => setSmartSourcingModalOpen(true)}
+                          >
+                            智能采购推荐
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAllPurchases(v => !v)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              border: '1px solid var(--color-border-antd)',
+                              background: 'var(--color-bg-base)',
+                              color: !showAllPurchases ? 'var(--color-text-secondary)' : 'var(--color-primary)',
+                              borderRadius: 4,
+                              padding: '4px 10px',
+                              fontSize: 12,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              lineHeight: 1.4,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {showAllPurchases ? '只看进行中' : '显示全部'}
+                          </button>
+                        </div>
                       }
                     />
 
@@ -316,6 +360,27 @@ const MaterialPurchase: React.FC = () => {
         setRemarkOpen={setRemarkOpen}
         remarkOrderNo={remarkOrderNo}
       />
+
+      <Modal
+        title="智能采购推荐"
+        open={smartSourcingModalOpen}
+        onCancel={() => setSmartSourcingModalOpen(false)}
+        onOk={handleSmartSourcing}
+        confirmLoading={smartSourcingLoading}
+        okText="生成建议"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          输入订单号，系统将根据BOM和库存自动计算净需求，生成采购建议并加入购物车草稿。
+        </div>
+        <Input
+          placeholder="请输入订单号"
+          value={smartSourcingOrderNo}
+          onChange={(e) => setSmartSourcingOrderNo(e.target.value)}
+          onPressEnter={handleSmartSourcing}
+          allowClear
+        />
+      </Modal>
 
     </>
   );

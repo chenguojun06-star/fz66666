@@ -29,6 +29,25 @@ public class TextToSqlService {
     @Autowired
     private SqlSecurityValidator sqlSecurityValidator;
 
+    /**
+     * 【P0-1 安全说明】当前使用主数据源 JdbcTemplate（root 账号）执行 Text-to-SQL 生成的查询。
+     *
+     * <p>风险：若 SqlSecurityValidator 校验存在漏洞（如未拦截的写操作），root 权限可绕过只读限制。
+     *
+     * <p>当前缓解措施（已实现）：
+     * <ul>
+     *   <li>SqlSecurityValidator 强制白名单：仅允许 SELECT，拦截 INSERT/UPDATE/DELETE/DROP/ALTER
+     *       等所有写操作关键字（P0-1 增强后覆盖 RENAME/LOAD DATA/HANDLER/FLUSH/KILL 等）</li>
+     *   <li>拒绝 UNION / 子查询：避免 tenant_id 注入绕过（P0-2 / P0-3）</li>
+     *   <li>敏感字段黑名单：拦截 password/token/phone/id_card 等 PII 字段</li>
+     *   <li>审计日志：query 方法记录 tenantId/userId/question/generatedSql/validatedSql/rowCount/elapsedMs（P0-4）</li>
+     *   <li>行数限制 + 查询超时：最多 500 行、15 秒超时</li>
+     * </ul>
+     *
+     * <p>建议（未实施，避免影响其他模块）：为 Text-to-SQL 配置专用只读数据源，
+     * 使用 mcp_readonly 账号（仅 SELECT 权限），从数据库账号层面彻底杜绝写操作。
+     * 详见 dev-mcp-design.md 第二章 db-query-mcp 的只读账号设计。
+     */
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -145,6 +164,11 @@ public class TextToSqlService {
 
         long startTime = System.currentTimeMillis();
 
+        // P0-4 审计日志：记录查询发起方信息（tenantId/userId/question）
+        String auditUserId = UserContext.userId();
+        log.info("[TextToSql-Audit] START tenantId={} userId={} question=\"{}\"",
+                tenantId, auditUserId, question);
+
         try {
             String schemaContext = schemaVectorManager.buildSchemaContext(question, MAX_TABLES_FOR_CONTEXT);
 
@@ -153,6 +177,8 @@ public class TextToSqlService {
             String aiResponse = aiAdvisorService.chat(systemPrompt, question);
 
             if (aiResponse == null || aiResponse.isBlank()) {
+                log.info("[TextToSql-Audit] END status=ai_empty tenantId={} userId={} elapsedMs={}",
+                        tenantId, auditUserId, System.currentTimeMillis() - startTime);
                 response.setIntent("text_to_sql_failed");
                 response.setConfidence(0);
                 response.setAnswer("AI生成查询失败，请换一种问法试试。");
@@ -162,6 +188,8 @@ public class TextToSqlService {
             String sql = extractSql(aiResponse);
 
             if (sql == null || sql.isEmpty()) {
+                log.info("[TextToSql-Audit] END status=no_sql tenantId={} userId={} elapsedMs={}",
+                        tenantId, auditUserId, System.currentTimeMillis() - startTime);
                 response.setIntent("text_to_sql_no_sql");
                 response.setConfidence(30);
                 response.setAnswer("抱歉，我暂时无法理解这个问题。请尝试用更具体的方式描述，例如：\n"
@@ -171,8 +199,16 @@ public class TextToSqlService {
                 return response;
             }
 
+            // P0-4 审计日志：记录 LLM 生成的原始 SQL（未校验）
+            log.info("[TextToSql-Audit] GENERATED tenantId={} userId={} generatedSql=\"{}\"",
+                    tenantId, auditUserId, sql);
+
             SqlSecurityValidator.ValidationResult validation = sqlSecurityValidator.validate(sql, tenantId);
             if (!validation.isValid()) {
+                // P0-4 审计日志：记录安全拦截事件（含原始SQL便于追溯）
+                log.warn("[TextToSql-Audit] END status=blocked tenantId={} userId={} reason=\"{}\" generatedSql=\"{}\" elapsedMs={}",
+                        tenantId, auditUserId, validation.getErrorMessage(), sql,
+                        System.currentTimeMillis() - startTime);
                 response.setIntent("text_to_sql_security_blocked");
                 response.setConfidence(0);
                 response.setAnswer("查询被安全拦截：" + validation.getErrorMessage());
@@ -180,7 +216,8 @@ public class TextToSqlService {
             }
 
             String validatedSql = validation.getValidatedSql();
-            log.info("[TextToSql] 执行SQL: {}", validatedSql);
+            log.info("[TextToSql-Audit] VALIDATED tenantId={} userId={} validatedSql=\"{}\"",
+                    tenantId, auditUserId, validatedSql);
 
             List<Map<String, Object>> resultData = executeQueryWithTimeout(
                     validatedSql,
@@ -188,7 +225,9 @@ public class TextToSqlService {
             );
 
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("[TextToSql] 查询完成，耗时={}ms，行数={}", elapsed, resultData.size());
+            // P0-4 审计日志：记录查询执行结果（rowCount/elapsedMs/validatedSql 便于事后追溯）
+            log.info("[TextToSql-Audit] END status=success tenantId={} userId={} rowCount={} elapsedMs={} validatedSql=\"{}\"",
+                    tenantId, auditUserId, resultData.size(), elapsed, validatedSql);
 
             response.setIntent("text_to_sql_success");
             response.setConfidence(85);
@@ -219,7 +258,9 @@ public class TextToSqlService {
             }
 
         } catch (Exception e) {
-            log.error("[TextToSql] 查询失败: {}", e.getMessage(), e);
+            // P0-4 审计日志：记录执行异常（含 tenantId/userId/elapsedMs 便于定位问题）
+            log.error("[TextToSql-Audit] END status=error tenantId={} userId={} elapsedMs={} error=\"{}\"",
+                    tenantId, auditUserId, System.currentTimeMillis() - startTime, e.getMessage(), e);
             response.setIntent("text_to_sql_error");
             response.setConfidence(0);
             response.setAnswer("查询执行失败：" + e.getMessage() + "。请换一种问法试试。");

@@ -54,7 +54,17 @@ public class PurchaseCartItem {
     private String fabricWeight;
     
     private String mergeGroupId;
-    
+
+    /** 损耗率(%)，来源于款号BOM，贯通采购链路便于追溯 */
+    private BigDecimal lossRate;
+
+    /** 款式ID */
+    private String styleId;
+    /** 款号 */
+    private String styleNo;
+    /** 款式图片URL */
+    private String styleImageUrl;
+
     private String remark;
     
     private Integer sortOrder;

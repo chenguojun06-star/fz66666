@@ -39,6 +39,10 @@ public class WhatIfScenarioParserHelper {
     public List<Map<String, Object>> parseNaturalScenario(String naturalScenario) {
         List<Map<String, Object>> result = new ArrayList<>();
 
+        if (naturalScenario == null || naturalScenario.isEmpty()) {
+            return result;
+        }
+
         // 支持多场景分隔符
         String[] parts = naturalScenario.split("[|，,]");
 
@@ -81,8 +85,14 @@ public class WhatIfScenarioParserHelper {
             return scenario;
         }
 
-        // 增加工人/加班/加人手 → ADD_WORKERS
-        if (lower.contains("增加工人") || lower.contains("加班") || lower.contains("加人手") || lower.contains("增援")) {
+        // 增加工人/加班/加人手/加人 → ADD_WORKERS
+        boolean addWorkerMatch = lower.contains("增加工人")
+                || lower.contains("加班")
+                || lower.contains("加人手")
+                || lower.contains("增援")
+                || (lower.contains("加") && (lower.contains("工人") || lower.contains("人")))
+                || (lower.contains("增加") && (lower.contains("工人") || lower.contains("人")));
+        if (addWorkerMatch) {
             int workers = extractNumber(text);
             if (workers <= 0) workers = 5;
             scenario.put("type", "ADD_WORKERS");

@@ -20,7 +20,44 @@ public class SqlSecurityValidator {
             "GRANT", "REVOKE", "COMMIT", "ROLLBACK", "SAVEPOINT",
             "SET ", "SHOW ", "USE ", "INFORMATION_SCHEMA", "mysql.",
             "INTO OUTFILE", "LOAD_FILE", "SLEEP", "BENCHMARK",
-            "--", "/*", "*/", "xp_cmdshell", "1=1", "OR 1"
+            "--", "/*", "*/", "xp_cmdshell", "1=1", "OR 1",
+            // P0-1 增强：补齐 DDL/DCL 写操作关键字，确保所有写操作被拦截
+            "RENAME", "TRUNCATE TABLE", "LOAD DATA", "HANDLER",
+            "LOCK TABLES", "UNLOCK TABLES", "FLUSH", "KILL"
+    );
+
+    /**
+     * P0-2 / P0-3：检测 UNION 与子查询的正则模式。
+     *
+     * <p>背景：injectTenantFilter 只在外层 WHERE 注入一次 tenant_id，
+     * UNION 两侧 SELECT 以及子查询内部的表不会被过滤，存在跨租户数据泄漏风险（P0 铁律 4）。
+     *
+     * <p>简化方案（避免引入 SQL AST 解析）：直接拒绝执行包含 UNION / 子查询的 SQL，
+     * 强制 LLM 生成扁平化单 SELECT 查询。
+     */
+    private static final List<Pattern> UNSUPPORTED_QUERY_PATTERNS = Arrays.asList(
+            // UNION / UNION ALL / INTERSECT / EXCEPT
+            Pattern.compile("\\bUNION\\b"),
+            Pattern.compile("\\bINTERSECT\\b"),
+            Pattern.compile("\\bEXCEPT\\b"),
+            // 子查询：FROM (、JOIN (、IN (SELECT、EXISTS (SELECT、= (SELECT
+            Pattern.compile("\\bFROM\\s*\\("),
+            Pattern.compile("\\bJOIN\\s*\\("),
+            Pattern.compile("\\bIN\\s*\\(\\s*SELECT\\b"),
+            Pattern.compile("\\bEXISTS\\s*\\(\\s*SELECT\\b"),
+            Pattern.compile("=\\s*\\(\\s*SELECT\\b")
+    );
+
+    /** UNSUPPORTED_QUERY_PATTERNS 对应的友好错误提示 */
+    private static final List<String> UNSUPPORTED_QUERY_ERRORS = Arrays.asList(
+            "暂不支持UNION查询，请拆分为多个独立查询",
+            "暂不支持INTERSECT查询，请简化查询",
+            "暂不支持EXCEPT查询，请简化查询",
+            "暂不支持FROM子查询，请简化为单层查询",
+            "暂不支持JOIN子查询，请简化为单层查询",
+            "暂不支持IN子查询，请使用JOIN或具体值列表",
+            "暂不支持EXISTS子查询，请使用JOIN",
+            "暂不支持标量子查询，请简化查询"
     );
 
     private static final List<String> SENSITIVE_COLUMNS = Arrays.asList(
@@ -130,6 +167,18 @@ public class SqlSecurityValidator {
             }
         }
 
+        // P0-2 / P0-3：拒绝 UNION 与子查询
+        // 原因：injectTenantFilter 只在外层 WHERE 注入一次 tenant_id，
+        // UNION 两侧 SELECT 及子查询内部的表不会被过滤，存在跨租户数据泄漏风险（P0 铁律 4）。
+        // 简化方案：直接拒绝执行，强制 LLM 生成扁平化单 SELECT 查询。
+        for (int i = 0; i < UNSUPPORTED_QUERY_PATTERNS.size(); i++) {
+            if (UNSUPPORTED_QUERY_PATTERNS.get(i).matcher(upperSql).find()) {
+                log.warn("[SqlSecurityValidator] 拒绝执行(多租户隔离风险): pattern={}, sql={}",
+                        UNSUPPORTED_QUERY_PATTERNS.get(i).pattern(), trimmed);
+                return new ValidationResult(false, UNSUPPORTED_QUERY_ERRORS.get(i), null);
+            }
+        }
+
         for (int i = 0; i < SENSITIVE_PATTERNS.size(); i++) {
             if (SENSITIVE_PATTERNS.get(i).matcher(upperSql).find()) {
                 return new ValidationResult(false,
@@ -197,11 +246,15 @@ public class SqlSecurityValidator {
         int havingIdx = findKeywordIndex(upper, "HAVING");
         int limitIdx = findKeywordIndex(upper, "LIMIT");
 
+        // 修复 P1：按 SQL 语法顺序（WHERE > GROUP BY > HAVING > ORDER BY > LIMIT）取最早出现的关键字
+        // 原代码优先匹配 LIMIT，导致 WHERE 被插入到 ORDER BY 之后产生语法错误
+        // 例：SELECT ... GROUP BY x ORDER BY y LIMIT 500 → 原：... ORDER BY y WHERE tenant_id=1 LIMIT 500（错误）
+        //                                          修复后：... GROUP BY x WHERE tenant_id=1 ORDER BY y LIMIT 500（正确）
         int insertPos = sql.length();
-        if (limitIdx >= 0) insertPos = limitIdx;
-        else if (orderIdx >= 0) insertPos = orderIdx;
-        else if (groupIdx >= 0) insertPos = groupIdx;
+        if (groupIdx >= 0) insertPos = groupIdx;
         else if (havingIdx >= 0) insertPos = havingIdx;
+        else if (orderIdx >= 0) insertPos = orderIdx;
+        else if (limitIdx >= 0) insertPos = limitIdx;
 
         if (whereIdx >= 0 && whereIdx < insertPos) {
             int whereEnd = whereIdx + "WHERE".length();

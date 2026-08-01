@@ -60,6 +60,23 @@ public class AiPatrolAction {
 
     private String linkedAuditId;
 
+    /** 执行人ID（区别于审批人） */
+    private String executedBy;
+    /** 执行人姓名 */
+    private String executedByName;
+    /** 人员反馈 */
+    private String feedback;
+    /** 反馈评分1-5 */
+    private Integer feedbackRating;
+    /** 撤销原因 */
+    private String cancelReason;
+    /** 撤销人ID */
+    private String cancelledBy;
+    /** 撤销时间 */
+    private LocalDateTime cancelledAt;
+    /** 自愈类型: AUTO/SUGGESTION */
+    private String remediationType;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

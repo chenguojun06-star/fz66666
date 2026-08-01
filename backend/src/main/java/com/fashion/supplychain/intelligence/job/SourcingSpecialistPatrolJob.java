@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.job;
 
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.SmartSourcingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -20,6 +22,10 @@ public class SourcingSpecialistPatrolJob extends AbstractPatrolJob {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    @Lazy
+    private SmartSourcingService smartSourcingService;
 
     @Scheduled(cron = "0 30 */6 * * ?")
     public void patrol() {
@@ -77,8 +83,27 @@ public class SourcingSpecialistPatrolJob extends AbstractPatrolJob {
                         System.currentTimeMillis() - s2, true);
 
                 long s3 = System.currentTimeMillis();
+                // 串联智能采购：发现物料缺口后自动生成采购建议推到购物车
+                // 仅在租户开启巡检自动执行时触发，失败不阻塞巡检主流程
+                int sourcingPushed = 0;
+                if (!lowMaterial.isEmpty() && isPatrolEnabledForTenant(tenantId)) {
+                    AtomicInteger pushed = new AtomicInteger(0);
+                    for (ProductionOrder order : lowMaterial) {
+                        try {
+                            withTenantContext(tenantId, () -> {
+                                smartSourcingService.generateSourcingForOrder(tenantId, order.getOrderNo());
+                            });
+                            pushed.incrementAndGet();
+                        } catch (Exception e) {
+                            log.warn("[SourcingSpecialist] 租户{}订单{}生成智能采购建议失败(不阻断): {}",
+                                    tenantId, order.getOrderNo(), e.getMessage());
+                        }
+                    }
+                    sourcingPushed = pushed.get();
+                }
                 traceOrchestrator.recordPatrolStep(tenantId, commandId, "tool_procurement",
-                        String.format("采购建议：基于%d个物料缺口订单生成采购建议", lowMaterial.size()),
+                        String.format("采购建议：基于%d个物料缺口订单生成采购建议，成功推送%d个",
+                                lowMaterial.size(), sourcingPushed),
                         System.currentTimeMillis() - s3, true);
 
                 finishAndSnapshot(tenantId, commandId, "sourcing-specialist", "采购专家",

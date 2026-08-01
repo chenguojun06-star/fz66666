@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration.agent;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.intelligence.dto.SmartNotification;
 import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -62,8 +63,10 @@ public class ProactivePatrolAgent {
     private void doPatrol() {
         log.info("[ProactivePatrol] 启动供应链全局主动巡检...");
 
+        // 修复 P0：原硬编码 "IN_PRODUCTION" 不存在（系统使用 "in_progress"），
+        // 改为排除终态，覆盖所有活跃状态（pending/in_progress/production/cutting/sewing/...）
         List<ProductionOrder> activeOrders = productionOrderService.lambdaQuery()
-                .in(ProductionOrder::getStatus, "IN_PRODUCTION", "MATERIAL_PREPARATION")
+                .notIn(ProductionOrder::getStatus, OrderStatusConstants.TERMINAL_STATUSES)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .list();
 

@@ -178,6 +178,145 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
+    /**
+     * 快速编辑采购单（备注、预计出货日期、采购数量）
+     * <p>
+     * P0 修复：原 quick-edit 接口修改 purchaseQuantity 后未重算 totalAmount，
+     * 注释说"先设 null 让 update 不覆盖"但实际既没读 unitPrice 也没重算 totalAmount，
+     * 导致采购数量变更后总金额仍为旧值。
+     * <p>
+     * 现统一在 Orchestrator 层处理（事务边界在此层）：
+     * 1. 从数据库读出当前记录的 unitPrice（多租户隔离校验）
+     * 2. 重算 totalAmount = purchaseQuantity × unitPrice
+     * 3. 同时更新 purchaseQuantity 和 totalAmount
+     *
+     * @param id               采购单ID
+     * @param remark           备注（可空）
+     * @param expectedShipDate 预计出货日期（可空）
+     * @param purchaseQuantity 采购数量（可空，非空时重算总金额）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean quickEdit(String id, String remark, LocalDate expectedShipDate,
+                             BigDecimal purchaseQuantity) {
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        // P1 多租户隔离：带 tenantId 查询当前记录，获取 unitPrice
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialPurchase current = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, id.trim())
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
+        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+            throw new NoSuchElementException("采购任务不存在");
+        }
+
+        MaterialPurchase patch = new MaterialPurchase();
+        patch.setId(current.getId());
+        patch.setRemark(remark);
+        patch.setExpectedShipDate(expectedShipDate);
+
+        // 采购数量变更时重算总金额（核心修复）
+        if (purchaseQuantity != null) {
+            patch.setPurchaseQuantity(purchaseQuantity);
+            BigDecimal unitPrice = current.getUnitPrice() != null
+                    ? current.getUnitPrice() : BigDecimal.ZERO;
+            patch.setTotalAmount(purchaseQuantity.multiply(unitPrice));
+        }
+
+        boolean ok = updateAndSync(patch);
+        if (!ok) {
+            throw new IllegalStateException("保存失败");
+        }
+        logAppendHelper.appendUpdate(current.getId(), "快速编辑");
+        return true;
+    }
+
+    // ── 审价工作流（@Transactional 事务边界在 Orchestrator 层）────────
+
+    /**
+     * 审价操作：approve=审价通过，reject=审价拒绝
+     * <p>
+     * 状态机：
+     * - approve: priceReviewStatus=approved，采购单进入 pending 状态可领取
+     * - reject:  priceReviewStatus=rejected，返回草稿状态（需修改后重新提交）
+     * <p>
+     * 仅 pending_review 状态的采购单可审价；多租户隔离校验。
+     *
+     * @param id     采购单ID
+     * @param action approve / reject
+     * @param reason 驳回原因（reject 时必填）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean priceReview(String id, String action, String reason) {
+        if (!StringUtils.hasText(id) || !StringUtils.hasText(action)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        String act = action.trim().toLowerCase();
+        if (!"approve".equals(act) && !"reject".equals(act)) {
+            throw new IllegalArgumentException("审价动作只支持 approve / reject");
+        }
+        if ("reject".equals(act) && !StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("审价拒绝必须填写原因");
+        }
+
+        // P1 多租户隔离：带 tenantId 查询当前记录
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialPurchase current = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, id.trim())
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
+        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+            throw new NoSuchElementException("采购任务不存在");
+        }
+        if (!"pending_review".equals(current.getPriceReviewStatus())) {
+            throw new IllegalStateException("仅待审价的采购单可操作，当前状态: "
+                    + current.getPriceReviewStatus());
+        }
+
+        String userId = com.fashion.supplychain.common.UserContext.userId();
+        String userName = com.fashion.supplychain.common.UserContext.username();
+        LocalDateTime now = LocalDateTime.now();
+
+        MaterialPurchase patch = new MaterialPurchase();
+        patch.setId(current.getId());
+        patch.setPriceReviewTime(now);
+        patch.setPriceReviewOperatorId(userId);
+        patch.setPriceReviewOperatorName(userName);
+
+        if ("approve".equals(act)) {
+            patch.setPriceReviewStatus("approved");
+            patch.setPriceReviewReason(null);
+            log.info("[PriceReview] 采购单 {} 审价通过, operator={}", current.getPurchaseNo(), userName);
+        } else {
+            patch.setPriceReviewStatus("rejected");
+            patch.setPriceReviewReason(reason);
+            log.info("[PriceReview] 采购单 {} 审价拒绝, reason={}, operator={}",
+                    current.getPurchaseNo(), reason, userName);
+        }
+
+        boolean ok = materialPurchaseService.updateById(patch);
+        if (!ok) {
+            throw new IllegalStateException("审价操作失败");
+        }
+        logAppendHelper.appendUpdate(current.getId(), "审价" + ("approve".equals(act) ? "通过" : "拒绝"));
+        return true;
+    }
+
+    /**
+     * 获取待审价列表（priceReviewStatus=pending_review）
+     * 多租户隔离：仅查询当前租户的待审价采购单
+     */
+    public List<MaterialPurchase> listPendingPriceReview() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getPriceReviewStatus, "pending_review")
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .orderByAsc(MaterialPurchase::getCreateTime)
+                .list();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean batch(List<MaterialPurchase> purchases) {
         if (purchases == null || purchases.isEmpty()) {

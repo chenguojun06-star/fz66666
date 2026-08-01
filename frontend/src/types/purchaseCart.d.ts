@@ -37,6 +37,9 @@ export interface PurchaseCartItem {
   fabricWeight?: string;
   mergeGroupId?: string;
   remark?: string;
+  styleId?: string;
+  styleNo?: string;
+  styleImageUrl?: string;
 }
 
 export interface AddCartItemRequest {
@@ -58,6 +61,9 @@ export interface AddCartItemRequest {
   fabricWidth?: string;
   fabricWeight?: string;
   remark?: string;
+  styleId?: string;
+  styleNo?: string;
+  styleImageUrl?: string;
 }
 
 export interface UpdateCartItemRequest {
@@ -112,6 +118,8 @@ export interface PurchaseGroup {
   unitPrice?: number;
   totalAmount?: number;
   sourceItems: SourceItem[];
+  styleNo?: string;
+  styleImageUrl?: string;
 }
 
 export interface PreviewSummary {

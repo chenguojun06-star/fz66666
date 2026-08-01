@@ -35,6 +35,13 @@ public class OrderRiskTracking {
 
     private LocalDateTime handledAt;
 
+    /** 撤销时间 */
+    private LocalDateTime cancelledAt;
+    /** 撤销人 */
+    private String cancelledBy;
+    /** 撤销原因 */
+    private String cancelReason;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

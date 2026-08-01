@@ -57,13 +57,18 @@ public interface ProceduralMemoryMapper extends BaseMapper<ProceduralMemory> {
     /**
      * 更新调用统计
      *
+     * <p>修复 P1：原 SQL `WHERE id = #{id} AND tenant_id = #{tenantId}` 无法命中公共 SOP（tenant_id=0），
+     * 因为调用方传入的是当前租户 ID。改为 `id` 精确定位 + `tenant_id IN (当前租户, 0)` 双重过滤，
+     * 与 searchByKeyword 的 `(tenant_id = #{tenantId} OR tenant_id = 0)` 逻辑保持一致。
+     *
      * @param id SOP ID
-     * @param success 是否成功
+     * @param tenantId 当前租户ID（用于校验归属，公共 SOP 也允许更新）
+     * @param success 是否成功（1=成功，0=失败）
      */
     @Update("UPDATE t_procedural_memory " +
             "SET usage_count = usage_count + 1, " +
             "    success_count = success_count + #{success}, " +
             "    confidence = LEAST(1.00, (success_count + #{success} + 0.70) / (usage_count + 1)) " +
-            "WHERE id = #{id} AND tenant_id = #{tenantId}")
+            "WHERE id = #{id} AND (tenant_id = #{tenantId} OR tenant_id = 0)")
     void updateUsageStats(@Param("id") Long id, @Param("tenantId") Long tenantId, @Param("success") Integer success);
 }

@@ -97,7 +97,9 @@ public class GraphRagService {
 
     private String translateType(String type) {
         if (type == null) return "实体";
-        return switch (type) {
+        // 统一转为大写，兼容 KnowledgeGraphOrchestrator 写入的小写类型
+        String upper = type.toUpperCase();
+        return switch (upper) {
             case "ORDER" -> "订单";
             case "FACTORY" -> "工厂";
             case "PRODUCT" -> "产品";
@@ -105,20 +107,31 @@ public class GraphRagService {
             case "SUPPLIER" -> "供应商";
             case "MATERIAL" -> "材料";
             case "PROCESS" -> "工序";
+            case "STYLE" -> "款式";
+            case "PROCESS_STAGE" -> "工序阶段";
+            case "INSPECTION" -> "质检";
             default -> type;
         };
     }
 
     private String translateRelation(String relation) {
         if (relation == null) return "关联";
-        return switch (relation) {
+        // 统一转为大写，兼容 KnowledgeGraphOrchestrator 写入的小写关系类型
+        String upper = relation.toUpperCase();
+        return switch (upper) {
             case "MANUFACTURED_BY" -> "生产于";
             case "SUPPLIED_BY" -> "供应于";
             case "BELONGS_TO" -> "属于";
+            case "ORDER_BELONGS_TO_FACTORY" -> "归属工厂";
             case "CONTAINS" -> "包含";
             case "ALTERNATIVE" -> "可替代";
             case "COMES_FROM" -> "来源于";
             case "REQUIRES" -> "需要";
+            case "PRODUCES" -> "生产";
+            case "DEPENDS_ON" -> "依赖";
+            case "SUPPLIES" -> "供应";
+            case "DELIVERS" -> "交付";
+            case "INSPECTS" -> "检查";
             default -> relation;
         };
     }

@@ -101,13 +101,13 @@ public class OrderEditTool extends AbstractAgentTool {
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
         if (!aiAgentToolAccessService.hasManagerAccess()) {
-            return MAPPER.writeValueAsString(Map.of("error", "当前角色无权执行该操作"));
+            return errorJson("当前角色无权执行该操作");
         }
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String orderId = (String) args.get("orderId");
         if (orderId == null || orderId.isBlank()) {
-            return MAPPER.writeValueAsString(Map.of("error", "请提供订单ID（orderId）"));
+            return errorJson("请提供订单ID（orderId）");
         }
 
         TenantAssert.assertTenantContext();
@@ -118,13 +118,13 @@ public class OrderEditTool extends AbstractAgentTool {
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .one();
         if (order == null) {
-            return MAPPER.writeValueAsString(Map.of("error", "订单不存在或无权访问"));
+            return errorJson("订单不存在或无权访问");
         }
 
         // 工厂账号只能编辑自己工厂的订单
         String userFactoryId = UserContext.factoryId();
         if (userFactoryId != null && !userFactoryId.equals(order.getFactoryId())) {
-            return MAPPER.writeValueAsString(Map.of("error", "该订单不属于您的工厂，无权编辑"));
+            return errorJson("该订单不属于您的工厂，无权编辑");
         }
 
         List<String> updatedFields = new ArrayList<>();
@@ -167,7 +167,7 @@ public class OrderEditTool extends AbstractAgentTool {
 
         if (args.containsKey("factoryName")) {
             log.warn("[OrderEdit] factoryName修改已禁用，请使用tool_order_factory_transfer走转厂流程");
-            return MAPPER.writeValueAsString(Map.of("success", false, "error", "工厂名称修改请使用转厂工具(tool_order_factory_transfer)，直接修改会导致factoryId与factoryName不一致"));
+            return errorJson("工厂名称修改请使用转厂工具(tool_order_factory_transfer)，直接修改会导致factoryId与factoryName不一致");
         }
 
         if (args.containsKey("company")) {

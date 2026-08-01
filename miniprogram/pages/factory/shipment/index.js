@@ -153,7 +153,8 @@ Page({
       this.setData({ orderLoading: true });
       const params = { page: this.data.orderPage, pageSize: 20 };
       if (this.data.keyword) params.keyword = this.data.keyword;
-      if (this.data.selectedFactoryId != null) params.factoryId = this.data.selectedFactoryId;
+      // 未知工厂(factoryId=0)不传后端(后端无factory_id=0记录)，改由前端筛选 factoryId 为空的订单
+      if (this.data.selectedFactoryId != null && this.data.selectedFactoryId !== 0) params.factoryId = this.data.selectedFactoryId;
       return api.production.listOrders(params).then(function (res) {
         const records = (res && res.records) || [];
         const total = (res && res.total) || 0;
@@ -187,6 +188,13 @@ Page({
   _applyFilter: function () {
     var all = this._allLoadedOrders || [];
     var filter = this.data.activeFilter;
+    var factoryId = this.data.selectedFactoryId;
+    // 未知工厂(factoryId=0)：前端筛选 factoryId 为空的订单（后端不识别 factoryId=0）
+    if (factoryId === 0) {
+      all = all.filter(function (o) {
+        return !o.factoryId && !o.outsourceFactoryId;
+      });
+    }
     var filtered;
     if (filter === 'completed') {
       filtered = all.filter(function (o) { return o.isClosed; });

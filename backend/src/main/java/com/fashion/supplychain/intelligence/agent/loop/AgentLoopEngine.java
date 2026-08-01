@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.loop;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.AgentModeContext;
@@ -26,6 +27,7 @@ import com.fashion.supplychain.intelligence.orchestration.FollowUpSuggestionEngi
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.SelfCritiqueGate;
+import com.fashion.supplychain.intelligence.orchestration.SkillTreeOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunInsightCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunResponseParser;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
@@ -99,6 +101,8 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<SkillCrystallizationService> skillCrystallizationServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ModelSelectionRouter> modelSelectionRouterProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SharedAgentMemoryService> sharedAgentMemoryProvider;
+    // P0-3修复：注入 SkillTreeOrchestrator，使 extractAndStore 不再是孤儿方法
+    @Autowired private org.springframework.beans.factory.ObjectProvider<SkillTreeOrchestrator> skillTreeOrchestratorProvider;
 
     /** P0-3: 工具结果共享记忆开关，默认 true */
     @Value("${xiaoyun.agent.shared-memory.enabled:true}")
@@ -764,6 +768,50 @@ public class AgentLoopEngine {
                         toolCallsLog, content, qualityScore);
             } catch (Exception e) {
                 log.debug("[AsyncPost] 结晶化检测失败（不影响主流程）: {}", e.getMessage());
+            }
+        }
+
+        // P0-3修复：技能树自生长 — 从成功会话提取技能节点沉淀到 t_ai_skill_node
+        // extractAndStore 内部依赖 UserContext.tenantId()（TenantAssert.assertTenantContext），
+        // 当前处于 ForkJoinPool 异步线程，需手动恢复 UserContext
+        // 参考做法：ConversationReflectionOrchestrator#reflectAsync 第69-89行
+        SkillTreeOrchestrator skillTreeOrchestrator = skillTreeOrchestratorProvider.getIfAvailable();
+        if (skillTreeOrchestrator != null && ctx.getTenantId() != null
+                && ctx.getAllExecRecords() != null && !ctx.getAllExecRecords().isEmpty()) {
+            UserContext previous = UserContext.get();
+            try {
+                UserContext asyncCtx = new UserContext();
+                asyncCtx.setTenantId(ctx.getTenantId());
+                if (ctx.getUserId() != null) {
+                    asyncCtx.setUserId(ctx.getUserId());
+                }
+                UserContext.set(asyncCtx);
+                try {
+                    // 提取主工具名（取第一个工具，作为本次会话的代表性工具）
+                    String primaryToolName = ctx.getAllExecRecords().get(0).toolName;
+                    // 构建工具调用链 JSON：["tool_a","tool_b",...]
+                    String toolChainJson = ctx.getAllExecRecords().stream()
+                            .map(r -> "\"" + r.toolName + "\"")
+                            .reduce((a, b) -> a + "," + b)
+                            .map(s -> "[" + s + "]")
+                            .orElse("[]");
+                    // 场景描述：用用户消息前80字符（buildSkillName 会截取前100字符作为技能名）
+                    String scene = ctx.getUserMessage() != null && ctx.getUserMessage().length() > 80
+                            ? ctx.getUserMessage().substring(0, 80)
+                            : ctx.getUserMessage();
+                    // PRM 评分映射：qualityScore 0.0-1.0 → prmScore 0/1/2
+                    //   >= 0.9 → 2（优秀，分数 100）
+                    //   >= 0.75 → 1（平均，分数 50）
+                    //   < 0.75 → 0（失败，extractAndStore 内部跳过）
+                    int prmScore = qualityScore >= 0.9 ? 2 : (qualityScore >= 0.75 ? 1 : 0);
+                    skillTreeOrchestrator.extractAndStore(
+                            ctx.getCommandId(), primaryToolName, toolChainJson, scene, prmScore);
+                } finally {
+                    if (previous != null) UserContext.set(previous);
+                    else UserContext.clear();
+                }
+            } catch (Exception e) {
+                log.debug("[AsyncPost] 技能树提取失败（不影响主流程）: {}", e.getMessage());
             }
         }
 

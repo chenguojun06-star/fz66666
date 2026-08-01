@@ -639,7 +639,16 @@ public class AiPatrolJob {
                             actionTenantId, action.getId());
                     continue;
                 }
+                // P0 修复：执行每个动作前先设置该租户的上下文（markAutoRunning/markFailed/writePlatformMemory/baseRecord 均依赖）
+                // 防止 UserContext.userId() NPE 和 sourceUserId=null 孤儿数据
+                UserContext previous = UserContext.get();
                 try {
+                    UserContext ctx = new UserContext();
+                    ctx.setTenantId(actionTenantId);
+                    ctx.setUsername("system");
+                    ctx.setUserId("system");
+                    UserContext.set(ctx);
+
                     patrolOrchestrator.markAutoRunning(action.getId());
 
                     String result = performAutoAction(action);
@@ -652,8 +661,8 @@ public class AiPatrolJob {
                             "auto_execution",
                             String.format("AI自动执行了[%s]类型动作：%s，结果：%s",
                                 action.getIssueType(), action.getDetectedIssue(), result),
-                            null,
-                            action.getConfidence()
+                                null,
+                                action.getConfidence()
                         );
                     }
 
@@ -661,8 +670,32 @@ public class AiPatrolJob {
                         action.getId(), action.getIssueType(), result);
                     executed++;
                 } catch (Exception e) {
+                    // 修复 P0：原仅记录日志，工单永久卡死在 AUTO_RUNNING 状态。
+                    // 现调用 markFailed 重置状态为 FAILED，使其能被「立即处理」按钮接手或下次巡检重试。
                     log.warn("[AiPatrolJob-AutoExec] actionId={} 执行失败: {}",
-                        action.getId(), e.getMessage());
+                        action.getId(), e.getMessage(), e);
+                    try {
+                        // P0 修复：markFailed 也需在租户上下文中执行（assertStatusTransition 会校验租户）
+                        if (UserContext.tenantId() == null) {
+                            UserContext ctx = new UserContext();
+                            ctx.setTenantId(actionTenantId);
+                            ctx.setUsername("system");
+                            ctx.setUserId("system");
+                            UserContext.set(ctx);
+                        }
+                        patrolOrchestrator.markFailed(action.getId(),
+                                "自动执行失败: " + e.getMessage(), "system", "AI巡检自动执行");
+                    } catch (Exception mfEx) {
+                        log.error("[AiPatrolJob-AutoExec] actionId={} markFailed 失败: {}",
+                                action.getId(), mfEx.getMessage());
+                    }
+                } finally {
+                    // P0 修复：恢复原始上下文，防止跨 action 的租户上下文泄漏
+                    if (previous != null) {
+                        UserContext.set(previous);
+                    } else {
+                        UserContext.clear();
+                    }
                 }
             }
 

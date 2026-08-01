@@ -279,19 +279,15 @@ public class MemoryArchiveService {
     }
 
     /**
-     * 将单条对话记忆归档到 Qdrant（复用 fashion_memory collection，payload 标记 memory_type）。
+     * 将单条对话记忆归档到 Qdrant（写入独立 archival_memory_{tenantId} collection）。
      */
     private void archiveToQdrant(AiConversationMemory mem) {
-        String pointId = "archival_" + mem.getId();
-        String content = buildArchiveContent(mem);
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("memory_type", MEMORY_TYPE_ARCHIVAL);
-        payload.put("original_id", String.valueOf(mem.getId()));
-        payload.put("summary", mem.getMemorySummary() != null ? mem.getMemorySummary() : "");
-        payload.put("create_time", mem.getCreateTime() != null ? mem.getCreateTime().toString() : "");
-        payload.put("user_id", mem.getUserId() != null ? mem.getUserId() : "");
-        payload.put("key_entities", mem.getKeyEntities() != null ? mem.getKeyEntities() : "");
-        qdrantService.upsertVector(pointId, mem.getTenantId(), content, payload);
+        String originalId = String.valueOf(mem.getId());
+        String summary = mem.getMemorySummary() != null ? mem.getMemorySummary() : "";
+        String keyEntities = mem.getKeyEntities() != null ? mem.getKeyEntities() : "";
+        String createTime = mem.getCreateTime() != null ? mem.getCreateTime().toString() : "";
+        qdrantService.upsertArchivalTiered(mem.getTenantId(), originalId, MEMORY_TYPE_ARCHIVAL,
+                summary, keyEntities, createTime, null);
     }
 
     /**
