@@ -29,7 +29,7 @@ const useStyleBomActions = ({
   currentStyleNo,
   data,
   tableEditable,
-  user,
+  user: _user,
   form,
   setLoading,
   setCheckingStock,

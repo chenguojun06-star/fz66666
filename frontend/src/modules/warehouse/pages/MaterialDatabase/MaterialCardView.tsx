@@ -30,7 +30,7 @@ interface MaterialCardViewProps {
 
 const MaterialCardView: React.FC<MaterialCardViewProps> = ({
   cardDataList, cardLoading, cardPage, cardPageSize, cardTotal,
-  cardKeyword, cardMaterialType,
+  cardKeyword, cardMaterialType: _cardMaterialType,
   setCardKeyword, setCardMaterialType, setCardPage, fetchCardList,
   openCardItemsDialog, handleGenerateCardMaterials, openCardEditDialog, openCardCreateDialog, handleCardDelete,
 }) => {

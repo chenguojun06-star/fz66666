@@ -128,7 +128,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       dataIndex: 'isSettled',
       key: 'isSettled',
       width: 90,
-      render: (isSettled: boolean, record: ProcessTrackingRecord) => {
+      render: (isSettled: boolean, _record: ProcessTrackingRecord) => {
         const settled = Boolean(isSettled);
         const style: React.CSSProperties = settled
           ? {

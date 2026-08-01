@@ -9,9 +9,9 @@ interface StyleFeatureSectionProps extends SectionFormContextProps {
 
 const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
   _form,
-  currentStyle,
+  currentStyle: _currentStyle,
   editLocked,
-  isFieldLocked,
+  isFieldLocked: _isFieldLocked,
 }) => {
   return (
     <SectionBox title="款式特征 · AI识别">

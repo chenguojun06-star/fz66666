@@ -122,22 +122,11 @@ const AiAgentTraceCenter: React.FC = () => {
 
   // P0-1: 仅平台超级管理员可访问（含原始工具名/JSON/错误栈等技术细节）
   // 普通用户访问会暴露 tool_xxx 等内部标识，违反 prompt 中"禁止暴露工具名"原则
-  // 注意：Hook 必须在所有 early return 之前调用，所以放在 useState 之后
-  if (!user?.isSuperAdmin) {
-    return (
-      <PageLayout>
-        <Alert
-          type="error"
-          showIcon
-          title="无权限"
-          description="仅平台超级管理员可访问本页面"
-          action={<Button type="primary" onClick={() => navigate(paths.dashboard)}>返回首页</Button>}
-        />
-      </PageLayout>
-    );
-  }
+  // 注意：Hook 必须在所有 early return 之前调用（react-hooks/rules-of-hooks）
+  const isSuperAdmin = Boolean(user?.isSuperAdmin);
 
   const fetchRecent = useCallback(async () => {
+    if (!isSuperAdmin) return; // 非管理员不执行实际请求
     setLoading(true);
     try {
       const resp = await intelligenceApi.getAiAgentRecentTraces({
@@ -153,10 +142,10 @@ const AiAgentTraceCenter: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedExecutorKeyword, failedOnly, status, timeRange, toolName]);
+  }, [debouncedExecutorKeyword, failedOnly, isSuperAdmin, status, timeRange, toolName]);
 
   const openDetail = useCallback(async (commandId?: string) => {
-    if (!commandId) return;
+    if (!commandId || !isSuperAdmin) return;
     setDetailOpen(true);
     setDetailLoading(true);
     try {
@@ -166,18 +155,20 @@ const AiAgentTraceCenter: React.FC = () => {
     } finally {
       setDetailLoading(false);
     }
-  }, [setSearchParams]);
+  }, [isSuperAdmin, setSearchParams]);
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
     void fetchRecent();
-  }, [fetchRecent]);
+  }, [fetchRecent, isSuperAdmin]);
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
     const commandId = searchParams.get('commandId');
     if (commandId) {
       void openDetail(commandId);
     }
-  }, [openDetail, searchParams]);
+  }, [isSuperAdmin, openDetail, searchParams]);
 
   const toolOptions = useMemo(() => Array.from(new Set(rows.map((item) => extractToolName(item.action)).filter(Boolean))).map((item) => ({
     label: item,
@@ -189,6 +180,20 @@ const AiAgentTraceCenter: React.FC = () => {
     const q = debouncedKeyword.trim().toLowerCase();
     return [item.commandId, item.reason, item.resultData, item.createdAt, item.remark, item.targetId, item.executorId].some((value) => String(value || '').toLowerCase().includes(q));
   }), [rows, debouncedKeyword]);
+
+  if (!isSuperAdmin) {
+    return (
+      <PageLayout>
+        <Alert
+          type="error"
+          showIcon
+          title="无权限"
+          description="仅平台超级管理员可访问本页面"
+          action={<Button type="primary" onClick={() => navigate(paths.dashboard)}>返回首页</Button>}
+        />
+      </PageLayout>
+    );
+  }
 
   return (
     <>
