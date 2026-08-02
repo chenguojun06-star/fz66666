@@ -37,52 +37,70 @@ import java.util.concurrent.ThreadLocalRandom;
 public class FlywayRepairConfig {
 
     private static final int MAX_REPAIR_RETRIES = 3;
-    private static final int MAX_STAGGER_DELAY_MS = 15_000;
 
     /**
      * 注意：不注入任何 Spring Bean（避免循环依赖）。
      * FlywayMigrationStrategy 的入参 flyway 由 Flyway 自动装配提供，
      * DataSource 从 flyway.getConfiguration().getDataSource() 获取。
+     *
+     * <p>关键设计：不在启动时 sleep 阻塞 Spring 上下文刷新。
+     * 之前的 Thread.sleep(0~15000ms) 会阻塞主线程，导致 Tomcat 端口虽然创建对象
+     * 但未真正 bind，K8s 探针 connection refused，Pod 被反复重启。</p>
+     *
+     * <p>多实例并发安全性：
+     * <ul>
+     *   <li>migrate 本身用 flyway_schema_history 表锁串行化，不会死锁</li>
+     *   <li>purgeFailedMigrations 是行级 DELETE，不会死锁</li>
+     *   <li>repair 只在 migrate 失败时才执行（异常路径），正常启动无 repair</li>
+     * </ul>
+     * </p>
      */
     @Bean
     public org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy flywayMigrationStrategy() {
         return flyway -> {
-            // 第0步：随机延迟，错开多实例并发窗口
-            int delay = ThreadLocalRandom.current().nextInt(MAX_STAGGER_DELAY_MS);
-            log.info("[FlywayRepair] 随机延迟 {}ms 后启动（避免多实例并发死锁）", delay);
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            // 第1步：用 Flyway 自带的 DataSource 直接删除失败记录（绕过 Flyway 表锁，避免死锁）
             DataSource dataSource = flyway.getConfiguration().getDataSource();
+
+            // 第1步：清理失败记录（行级DELETE，不阻塞，不会死锁）
             purgeFailedMigrations(dataSource);
 
-            // 第2步：repair（更新 checksum，清理残留）
-            retryRepair(flyway);
-
-            // 第3步：migrate
+            // 第2步：直接 migrate（正常情况无需 repair，migrate 靠表锁串行化）
             try {
                 flyway.migrate();
                 log.info("[FlywayRepair] Migrate complete.");
+                return;
             } catch (Exception e) {
-                log.error("[FlywayRepair] Migrate 失败，详情: {}", e.getMessage());
-                Throwable cause = e.getCause();
-                int depth = 0;
-                while (cause != null && depth < 5) {
-                    log.error("[FlywayRepair] 根因[{}]: {}", depth, cause.getMessage());
-                    cause = cause.getCause();
-                    depth++;
-                }
-                log.error("[FlywayRepair] 完整异常栈:", e);
-                // 第4步：migrate 失败后，再次清理失败记录，确保下次启动能恢复
-                log.warn("[FlywayRepair] Migrate 失败，清理失败记录以确保下次启动能恢复...");
-                purgeFailedMigrations(dataSource);
-                // 不抛出异常，让应用继续启动（fail-safe）
+                log.warn("[FlywayRepair] 首次 Migrate 失败（{}），尝试 repair + 重试...", e.getMessage());
+                logRootCauses(e);
             }
+
+            // 第3步：异常路径 — repair（更新 checksum）+ 重试 migrate
+            boolean repaired = retryRepair(flyway);
+            if (repaired) {
+                try {
+                    flyway.migrate();
+                    log.info("[FlywayRepair] Repair 后 Migrate 成功.");
+                    return;
+                } catch (Exception e) {
+                    log.error("[FlywayRepair] Repair 后 Migrate 仍失败: {}", e.getMessage());
+                    logRootCauses(e);
+                }
+            }
+
+            // 第4步：最终兜底 — 清理失败记录，让下次启动能恢复，不抛异常（fail-safe）
+            log.warn("[FlywayRepair] Migrate 最终失败，清理失败记录以确保下次启动能恢复...");
+            purgeFailedMigrations(dataSource);
         };
+    }
+
+    /** 打印异常根因链（最多5层） */
+    private void logRootCauses(Throwable e) {
+        Throwable cause = e.getCause();
+        int depth = 0;
+        while (cause != null && depth < 5) {
+            log.error("[FlywayRepair] 根因[{}]: {}", depth, cause.getMessage());
+            cause = cause.getCause();
+            depth++;
+        }
     }
 
     /**
