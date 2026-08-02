@@ -108,18 +108,20 @@ export function useMaterialPurchase() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail.detailOrder, currentPurchase, list.isOrderFrozenForRecord]);
   const submitLoading = dialog.submitLoading || batchSubmitLoading;
+  const loadDetailByOrderNo = detail.loadDetailByOrderNo;
+  const loadDetailByStyleNo = detail.loadDetailByStyleNo;
   const reloadCurrentDetail = useCallback(async () => {
     const orderNo = String(currentPurchase?.orderNo || '').trim();
     if (orderNo && orderNo !== '-') {
-      await detail.loadDetailByOrderNo(orderNo);
+      await loadDetailByOrderNo(orderNo);
       return;
     }
     const styleNo = String(currentPurchase?.styleNo || '').trim();
     const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
     if (styleNo || purchaseNo) {
-      await detail.loadDetailByStyleNo(styleNo, purchaseNo);
+      await loadDetailByStyleNo(styleNo, purchaseNo);
     }
-  }, [currentPurchase?.orderNo, currentPurchase?.purchaseNo, currentPurchase?.styleNo, detail]);
+  }, [currentPurchase?.orderNo, currentPurchase?.purchaseNo, currentPurchase?.styleNo, loadDetailByOrderNo, loadDetailByStyleNo]);
 
   void setActiveTabKey; // suppress unused-variable warning (consumed via activeTabKey)
 

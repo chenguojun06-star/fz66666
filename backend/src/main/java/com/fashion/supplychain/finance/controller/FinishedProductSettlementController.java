@@ -484,11 +484,21 @@ public class FinishedProductSettlementController {
                 .eq(StringUtils.isNotBlank(parentOrgUnitId), ProductionOrder::getParentOrgUnitId, parentOrgUnitId)
                 .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0));
 
-        // INTERNAL=本厂内部(null factoryType)，EXTERNAL=外发工厂
+        // 内部/外发工厂判断逻辑（2026-08-02 修复）：
+        // 之前 INTERNAL 匹配 NULL/空/INTERNAL 导致外发订单（factoryType 为空）被错误归入内部；
+        // EXTERNAL 精确匹配导致 factoryType 为空的外发订单查不到。
+        // 修复：结合 factoryId 判断 —— factoryId 为空 = 本厂内部；factoryId 不为空 = 外发工厂
         if ("INTERNAL".equals(factoryType)) {
-            orderWrapper.and(w -> w.isNull(ProductionOrder::getFactoryType)
-                    .or().eq(ProductionOrder::getFactoryType, "")
-                    .or().eq(ProductionOrder::getFactoryType, "INTERNAL"));
+            orderWrapper.and(w -> w.eq(ProductionOrder::getFactoryType, "INTERNAL")
+                    .or(w2 -> w2.isNull(ProductionOrder::getFactoryType)
+                            .and(w3 -> w3.isNull(ProductionOrder::getFactoryId)
+                                    .or().eq(ProductionOrder::getFactoryId, ""))));
+        } else if ("EXTERNAL".equals(factoryType)) {
+            orderWrapper.and(w -> w.eq(ProductionOrder::getFactoryType, "EXTERNAL")
+                    .or(w2 -> w2.and(w3 -> w3.isNull(ProductionOrder::getFactoryType)
+                            .or().eq(ProductionOrder::getFactoryType, ""))
+                            .isNotNull(ProductionOrder::getFactoryId)
+                            .ne(ProductionOrder::getFactoryId, "")));
         } else if (StringUtils.isNotBlank(factoryType)) {
             orderWrapper.eq(ProductionOrder::getFactoryType, factoryType);
         }
@@ -541,9 +551,16 @@ public class FinishedProductSettlementController {
         for (FinishedProductSettlement record : records) {
             ProductionOrder order = orderMap.get(record.getOrderId());
             Factory factory = factoryMap.get(record.getFactoryId());
-            record.setFactoryType(StringUtils.isNotBlank(order != null ? order.getFactoryType() : null)
+            // factoryType 回填：优先取订单 factoryType，其次取 Factory 表 factoryType，
+            // 都为空时根据 factoryId 推断（有 factoryId = EXTERNAL，无 = INTERNAL）
+            String resolvedFactoryType = StringUtils.isNotBlank(order != null ? order.getFactoryType() : null)
                     ? order.getFactoryType()
-                    : factory != null ? factory.getFactoryType() : null);
+                    : (factory != null ? factory.getFactoryType() : null);
+            if (!StringUtils.isNotBlank(resolvedFactoryType)) {
+                String fid = order != null ? order.getFactoryId() : null;
+                resolvedFactoryType = StringUtils.isNotBlank(fid) ? "EXTERNAL" : "INTERNAL";
+            }
+            record.setFactoryType(resolvedFactoryType);
             record.setParentOrgUnitId(StringUtils.isNotBlank(order != null ? order.getParentOrgUnitId() : null)
                 ? order.getParentOrgUnitId()
                 : factory != null ? factory.getParentOrgUnitId() : null);

@@ -11,6 +11,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import { usePersistentState } from '@/hooks/usePersistentState';
+import dayjs from 'dayjs';
 
 export const toNumberOrZero = (v: unknown) => {
     const n = typeof v === 'number' ? v : Number(v);
@@ -96,12 +97,14 @@ export function usePayrollData() {
         setSmartError({ title, reason, code, actionText: '刷新重试' });
     }, [showSmartErrorNotice]);
 
-    const fetchInternalOrders = useCallback(async () => {
+    const fetchInternalOrders = useCallback(async (range?: any) => {
         setInternalOrdersLoading(true);
         try {
-            const res = await api.get('/finance/finished-settlement/list', {
-                params: { factoryType: 'INTERNAL', page: 1, pageSize: 200 },
-            });
+            const params: Record<string, any> = { factoryType: 'INTERNAL', page: 1, pageSize: 200 };
+            const dr = range ?? dateRange;
+            if (dr && dr[0]) params.startDate = dayjs(dr[0]).format('YYYY-MM-DD');
+            if (dr && dr[1]) params.endDate = dayjs(dr[1]).format('YYYY-MM-DD');
+            const res = await api.get('/finance/finished-settlement/list', { params });
             const data = unwrapApiData<any>(res, '获取内部工厂订单失败');
             const records = data?.records ?? data ?? [];
             setInternalOrders(Array.isArray(records) ? records : []);
@@ -111,7 +114,7 @@ export function usePayrollData() {
         } finally {
             setInternalOrdersLoading(false);
         }
-    }, [message]);
+    }, [message, dateRange]);
 
     const fetchWorkerEfficiency = useCallback(async () => {
         if (workerEffFetched.current) return;

@@ -217,7 +217,14 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>订单数 {internalOrders.length}</span>
-                                        <Button ghost onClick={fetchInternalOrders} disabled={internalOrdersLoading}>刷新</Button>
+                                        <UnifiedRangePicker
+                                            value={dateRange}
+                                            onChange={(dates) => {
+                                                setDateRange(dates);
+                                                void fetchInternalOrders(dates);
+                                            }}
+                                        />
+                                        <Button ghost onClick={() => fetchInternalOrders()} disabled={internalOrdersLoading}>刷新</Button>
                                     </Space>
                                 </Card>
                                 <ResizableTable
