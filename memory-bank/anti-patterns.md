@@ -281,6 +281,141 @@ cd frontend && npx tsc --noEmit         # ✅ 前端类型检查
 
 ---
 
+## 🚀 启动流程相关（2026-08-02 新增，6 次部署失败血泪教训）
+
+### AP-STARTUP-01: @PostConstruct 里扫表/网络调用/Thread.sleep
+**识别信号**：`@PostConstruct` 方法体里有 `service.list()` / `mapper.selectList()` / HTTP 调用 / `Thread.sleep()` / 循环加密
+**错误做法**：
+```java
+@PostConstruct
+void migratePlaintextSecrets() {
+    List<TenantApp> apps = tenantAppService.list();  // 扫全表！
+    for (TenantApp app : apps) {
+        app.setAppSecret(aesEncryptor.encrypt(app.getAppSecret()));  // 批量加密
+        tenantAppService.updateById(app);  // 写库！
+    }
+}
+```
+**正确做法**：
+- 数据迁移 → 运维脚本一次性执行
+- 定期任务 → `@Scheduled`
+- 异步初始化 → `ApplicationRunner` + `@Async`
+- 健康检查 → actuator health endpoint 或首次调用时探测
+**触发P0铁律**：#28 禁止启动时副作用
+**历史教训**：2026-08-02 b8582636d 的 TenantAppOrchestrator.migratePlaintextSecrets() 每次启动扫全表加密，导致 SQL 字段长度溢出持续报错
+
+---
+
+### AP-STARTUP-02: FlywayRepairConfig 用 Thread.sleep 阻塞启动
+**识别信号**：Flyway 修复逻辑里有 `Thread.sleep(randomDelay)` 避免"多实例并发死锁"
+**错误做法**：
+```java
+@PostConstruct
+void repair() {
+    long delay = ThreadLocalRandom.current().nextLong(0, 15000);
+    Thread.sleep(delay);  // 阻塞 Spring 上下文初始化 0-15 秒
+    flywayRepair();
+}
+```
+**问题**：Spring 上下文刷新被阻塞 → Tomcat 端口未 bind → K8s 探针 `connection refused` → Pod 被判失败重启
+**正确做法**：移除 sleep，migrate 靠 `flyway_schema_history` 表锁天然串行化。如需防并发，用分布式锁或行级锁
+**触发P0铁律**：#28 禁止启动时副作用 / #17 CloudBase 探针配置
+**历史教训**：2026-08-02 e2ac3e792 修复前，FlywayRepairConfig sleep 0-15s 导致探针超时
+
+---
+
+### AP-STARTUP-03: @PostConstruct 做外部 API 网络调用（无超时配置）
+**识别信号**：`@PostConstruct` 里调 `cosClient.listObjects()` / `httpClient.send()` / `restTemplate.exchange()` 且无超时设置
+**错误做法**：
+```java
+@PostConstruct
+void init() {
+    cosClient.listObjects(listRequest);   // 同步 COS API，无超时
+    cosClient.putObject(putRequest);       // 再来一次
+    cosClient.presignedUrl(...);           // 再来一次
+    cosClient.deleteObject(...);           // 再来一次 → 最坏 240 秒阻塞
+}
+```
+**问题**：启动时网络故障 → 阻塞最坏 240 秒 → 探针超时 → 部署失败
+**正确做法**：客户端构造时只初始化 client 对象，网络验证放到首次实际调用或运维监控
+**触发P0铁律**：#28 禁止启动时副作用
+**历史教训**：2026-08-02 0ddee4104 修复前，CosService @PostConstruct 4 次同步 COS 调用，最坏 240s 阻塞
+
+---
+
+### AP-STARTUP-04: 配置项无默认值且依赖环境变量
+**识别信号**：`application-prod.yml` 里 `${VAR_NAME}` 无 `:default` 兜底
+**错误做法**：
+```yaml
+app:
+  security:
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY}  # 无默认值！
+```
+**问题**：环境变量未注入 → Spring 占位符解析失败 → `PlaceholderResolutionException` → 启动失败
+**正确做法**：
+```yaml
+app:
+  security:
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}  # 有默认值
+```
+**触发P0铁律**：#27 大改动启动验证 checklist
+**历史教训**：2026-08-02 7ddf81549 修复前，PII 密钥无默认值导致启动失败
+
+---
+
+### AP-STARTUP-05: 大改动（≥5 文件）未经本地启动验证直接 push
+**识别信号**：单次 commit 改了 10+ 文件，只跑了 `mvn compile` 就 push
+**错误做法**：
+```
+改动 15 个文件 → mvn compile 通过 → git push → CloudBase 部署 → 启动失败 → 12 次重试 → 2 小时救火
+```
+**正确做法**：
+```
+改动 15 个文件 → mvn spring-boot:run 启动验证 → 前端打开看页面 → 启动日志无 ERROR → git push
+```
+**触发P0铁律**：#27 大改动必须通过启动验证 checklist
+**历史教训**：2026-08-02 b8582636d 改了 intelligence 模块全链路，6 个潜在问题集中爆发
+
+---
+
+### AP-STARTUP-06: 部署后不看日志，失败后盲目重试
+**识别信号**：部署后没看 `Started FashionSupplychainApplication` 是否出现，失败后直接再部署
+**错误做法**：
+```
+部署 backend-2002 失败 → 不查日志 → 改一通代码 → 部署 backend-2003 失败 → 再改 → ... 12 次
+```
+**正确做法**：
+```
+部署后立即盯日志 5 分钟 → 没出现 Started → 搜索 ERROR/Caused by → 定位根因 → 修复 → 重新部署
+```
+**触发P0铁律**：#29 部署后必须盯日志 5 分钟
+**历史教训**：2026-08-02 连续 12 次部署失败，如果第一次就盯日志能省 1.5 小时
+
+---
+
+### AP-STARTUP-07: Redis 限流器无熔断器，Redis 故障拖垮全站
+**识别信号**：每个请求经过的 Filter/Interceptor 调 Redis 且无熔断，Redis 连不上时每个请求阻塞 5 秒
+**错误做法**：
+```java
+public void doFilter(...) {
+    Long count = redisTemplate.execute(...);  // Redis 挂了 → 阻塞 5 秒
+    if (count > limit) { ... }
+}
+```
+**问题**：Tomcat 线程池被 5 秒阻塞占满 → 业务请求排队 → 前端 axios 超时 → 全站不可用
+**正确做法**：
+```java
+// 加熔断器：连续失败 3 次后 60 秒内跳过 Redis 调用
+if (circuitBreaker.isOpen()) {
+    return;  // fail-open 放行
+}
+Long count = redisTemplate.execute(...);
+```
+**触发P0铁律**：#28 禁止启动时副作用（间接相关）
+**历史教训**：2026-08-02 b0d146c9d 修复前，GlobalRateLimitFilter 无熔断，Redis 故障导致采购列表超时
+
+---
+
 ## 🛡️ AI 助手常见反模式
 
 ### AP-AI-01: AI 输出代码后用户不问"是否符合P0铁律"
@@ -307,3 +442,7 @@ cd frontend && npx tsc --noEmit         # ✅ 前端类型检查
 - [ ] **前端**：用的是标准组件吗？弹窗尺寸是三级之一吗？
 - [ ] **编译**：mvn compile 过了吗？npx tsc --noEmit 过了吗？
 - [ ] **AI记忆**：完成后让 AI 更新 memory-bank 了吗？
+- [ ] **启动副作用**（2026-08-02 新增）：@PostConstruct 里有扫表/网络/sleep 吗？
+- [ ] **大改动验证**（2026-08-02 新增）：改动 ≥5 文件时跑过 `mvn spring-boot:run` 吗？
+- [ ] **配置默认值**（2026-08-02 新增）：yml 里的 `${VAR}` 都有 `:default` 兜底吗？
+- [ ] **熔断器**（2026-08-02 新增）：Filter/Interceptor 调 Redis 有熔断器吗？
