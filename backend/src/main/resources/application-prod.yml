@@ -99,8 +99,9 @@ app:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:https://*.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com,https://www.webyszl.cn,https://webyszl.cn,https://api.webyszl.cn,https://h5.webyszl.cn}
     allow-credentials: true
   security:
-    # 生产环境必须配置 APP_SECURITY_PII_ENCRYPTION_KEY 专属密钥，未配置时启动失败
-    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY}
+    # 生产环境必须配置 APP_SECURITY_PII_ENCRYPTION_KEY 专属密钥
+    # 带默认值兜底：CloudBase 模板变量未渲染时不阻塞启动，但会打印警告日志
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
 
 # 生产环境健康检查配置（支持 K8s 探针）
 # 【P1-3修复】原仅暴露 health,info，无法采集 Prometheus 指标；show-details:never 无法诊断

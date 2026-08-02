@@ -22,6 +22,10 @@ public class AesEncryptor {
     private final SecretKeySpec secretKey;
 
     public AesEncryptor(@Value("${app.security.pii-encryption-key:defaultKeyChangeMe12345678}") String key) {
+        if ("defaultKeyChangeMe12345678".equals(key)) {
+            log.warn("[AesEncryptor] ⚠️ 使用默认 PII 加密密钥！生产环境请配置环境变量 APP_SECURITY_PII_ENCRYPTION_KEY "
+                    + "为 32 位自定义密钥，否则敏感数据加密不安全。");
+        }
         byte[] keyBytes = padOrTruncateKey(key.getBytes(StandardCharsets.UTF_8), 32);
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
     }
