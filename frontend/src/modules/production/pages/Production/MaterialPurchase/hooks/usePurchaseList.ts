@@ -204,13 +204,19 @@ export function usePurchaseList({
   }, [queryParams.status]);
 
   // 列表加载
+  // 注意：依赖里不放 fetchMaterialPurchaseList，因为它的 useCallback 依赖 message
+  // （来自 antd message.useMessage()），该引用可能每次渲染都变，会导致无限循环。
+  // 只依赖 activeTabKey + queryParams（触发重新 fetch 的数据字段），
+  // fetchMaterialPurchaseList 内部会读到最新的闭包变量。
   useEffect(() => {
     if (activeTabKey === 'purchase') fetchMaterialPurchaseList();
-  }, [activeTabKey, fetchMaterialPurchaseList, queryParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabKey, queryParams]);
 
   useEffect(() => {
     if (activeTabKey === 'purchase') fetchPurchaseStats();
-  }, [activeTabKey, fetchPurchaseStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabKey, queryParams]);
 
   // 实时同步（30s 轮询）
   // 注意：fetchFn / onDataChange 必须用 useCallback 稳定引用，否则 useSync 内部
