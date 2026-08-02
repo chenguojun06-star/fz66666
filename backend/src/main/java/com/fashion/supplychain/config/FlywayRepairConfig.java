@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -45,7 +46,9 @@ public class FlywayRepairConfig {
     private static final int MAX_STAGGER_DELAY_MS = 15_000;
 
     @Bean
-    public FlywayMigrationStrategy flywayMigrationStrategy(JdbcTemplate jdbcTemplate) {
+    public FlywayMigrationStrategy flywayMigrationStrategy(@Lazy JdbcTemplate jdbcTemplate) {
+        // @Lazy 延迟注入 JdbcTemplate，打破启动时的 Bean 循环依赖：
+        // flywayMigrationStrategy → flywayInitializer → sqlSessionTemplate → productionOrderMapper → dataConsistencyChecker → flywayInitializer
         return flyway -> {
             // 第0步：随机延迟，错开多实例并发窗口
             int delay = ThreadLocalRandom.current().nextInt(MAX_STAGGER_DELAY_MS);
