@@ -13,19 +13,18 @@ SET @s = IF(NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHE
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 回填历史数据：从 t_cutting_bundle 汇总已分扎的裁剪任务
+-- 注意：t_cutting_bundle 无 delete_flag 列（实体无 @TableLogic），不需要软删除过滤
 UPDATE t_cutting_task ct
 SET ct.cutting_quantity = (
     SELECT COALESCE(SUM(cb.quantity), 0)
     FROM t_cutting_bundle cb
     WHERE cb.production_order_id = ct.production_order_id
       AND cb.split_status != 'split_parent'
-      AND cb.delete_flag = 0
 ), ct.cutting_bundle_count = (
     SELECT COUNT(*)
     FROM t_cutting_bundle cb
     WHERE cb.production_order_id = ct.production_order_id
       AND cb.split_status != 'split_parent'
-      AND cb.delete_flag = 0
 )
 WHERE ct.status = 'bundled'
   AND ct.cutting_quantity IS NULL;
