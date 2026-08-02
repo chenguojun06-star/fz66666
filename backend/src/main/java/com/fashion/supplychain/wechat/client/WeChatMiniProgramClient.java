@@ -91,7 +91,8 @@ public class WeChatMiniProgramClient {
                 trustStoreFile != null && trustStoreFile.exists(),
                 trustStoreFile != null && trustStoreFile.canRead(),
                 trustStoreFile != null && trustStoreFile.exists() ? trustStoreFile.length() : -1);
-        probeWeChatTls();
+        // 注意：启动时不做 TLS 探测（probeWeChatTls），避免云托管内网到 api.weixin.qq.com 不通时阻塞启动。
+        // TLS 问题会在首次实际调用 code2Session 时暴露。
     }
 
     public Code2SessionResult code2Session(String jsCode) {

@@ -80,48 +80,9 @@ public class CosService {
             COSCredentials credentials = new BasicCOSCredentials(secretId, secretKey);
             ClientConfig clientConfig = new ClientConfig(new Region(region));
             cosClient = new COSClient(credentials, clientConfig);
-            logger.info("[COS] 已启用腾讯云 COS 文件存储: bucket={}, region={}", bucket, region);
-            // 启动时验证 COS 连接（完整权限验证：写入+读取+删除）
-            String testKey = "_health_check_" + System.currentTimeMillis() + ".txt";
-            try {
-                // 1. 验证 list 权限
-                cosClient.listObjects(bucket, "tenants/");
-                logger.info("[COS] ✅ list 权限验证通过");
-
-                // 2. 验证 write 权限（上传小文件）
-                byte[] testData = "COS health check".getBytes();
-                ObjectMetadata testMeta = new ObjectMetadata();
-                testMeta.setContentLength(testData.length);
-                testMeta.setContentType("text/plain");
-                cosClient.putObject(bucket, testKey, new ByteArrayInputStream(testData), testMeta);
-                logger.info("[COS] ✅ write 权限验证通过");
-
-                // 3. 验证 read 权限（生成预签名URL）
-                GeneratePresignedUrlRequest preReq = new GeneratePresignedUrlRequest(bucket, testKey, HttpMethodName.GET);
-                preReq.setExpiration(new Date(System.currentTimeMillis() + 60_000));
-                cosClient.generatePresignedUrl(preReq);
-                logger.info("[COS] ✅ read/presign 权限验证通过");
-
-                // 4. 清理测试文件
-                cosClient.deleteObject(bucket, testKey);
-                logger.info("[COS] ✅ delete 权限验证通过");
-
-                logger.info("[COS] COS 全部权限验证成功 ✅ (list/write/read/delete)");
-            } catch (Exception e) {
-                // 清理可能残留的测试文件
-                try { cosClient.deleteObject(bucket, testKey); } catch (Exception ex) { logger.debug("Non-critical error: {}", ex.getMessage()); }
-                String errMsg = e.getMessage();
-                if (errMsg != null && errMsg.contains("AccessDenied")) {
-                    logger.error("[COS] ⛔⛔⛔ COS 权限验证失败（AccessDenied）！" +
-                            "API密钥没有对 bucket={} 的操作权限。" +
-                            "请到腾讯云控制台 → 访问管理(CAM) → 检查子用户的 COS 策略是否包含 cos:PutObject、cos:GetObject 权限。" +
-                            "错误详情: {}", bucket, errMsg);
-                } else {
-                    logger.error("[COS] ⚠️⚠️⚠️ COS 连接验证失败！bucket={}, region={}, 错误: {}。" +
-                            "文件上传/下载将会失败！请检查 COS_SECRET_ID、COS_SECRET_KEY、COS_BUCKET 环境变量是否正确。",
-                            bucket, region, errMsg);
-                }
-            }
+            logger.info("[COS] 已启用腾讯云 COS 文件存储: bucket={}, region={}（权限验证延迟到首次调用）", bucket, region);
+            // 注意：启动时不做网络验证（list/put/presign/delete），避免 COS 抖动导致启动卡死。
+            // 权限问题会在首次实际调用时暴露，并由调用方处理异常。
         } else {
             // 检测是否在生产环境（容器内无 .run/backend.env 文件）
             boolean isProduction = System.getenv("SPRING_PROFILES_ACTIVE") != null
