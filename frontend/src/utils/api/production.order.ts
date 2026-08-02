@@ -287,10 +287,14 @@ export const useProductionOrderFrozenCache = (
   const allIdsKey = allIds.join(',');
 
   useEffect(() => {
-    if (!enabled || allIds.length === 0) return;
+    if (!enabled || !allIdsKey) return;
+
+    // 从 allIdsKey 解析 ID 列表，避免依赖 allIds 数组引用（引用每次渲染都变，
+    // 会导致 useEffect 反复触发 → 逐个查询订单 → 后端 fillFlowStageFields → 无限刷新）
+    const currentIds = allIdsKey.split(',').filter(Boolean);
 
     const run = async () => {
-      for (const currentId of allIds) {
+      for (const currentId of currentIds) {
         try {
           const { frozen } = await primeProductionOrderFrozenCache(currentId, { ttlMs, rule });
           setIsFrozenById((prev) => ({ ...prev, [currentId]: frozen }));
@@ -301,7 +305,9 @@ export const useProductionOrderFrozenCache = (
     };
 
     run();
-  }, [allIds, allIdsKey, rule, ttlMs, enabled]);
+    // 只依赖 allIdsKey（字符串），不依赖 allIds（数组引用）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allIdsKey, rule, ttlMs, enabled]);
 
   const ensureUnlocked = useCallback(async (
     orderId: string,
