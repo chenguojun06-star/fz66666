@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Component
@@ -51,6 +52,13 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     @Value("${app.rate-limit.default-window-seconds:60}")
     private int defaultWindowSeconds;
+
+    // 熔断器：Redis 连续失败 3 次后，60 秒内直接跳过 Redis 调用
+    // 避免每个请求都等 5 秒 Redis 超时 → Tomcat 线程池耗尽 → 全站请求超时
+    private static final int CIRCUIT_BREAK_THRESHOLD = 3;
+    private static final long CIRCUIT_BREAK_RECOVERY_MS = 60_000L;
+    private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
+    private volatile long circuitBreakUntil = 0L;
 
     private static final List<String> EXCLUDED_PATHS = List.of(
             "/api/auth/login",
@@ -107,11 +115,21 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
         int windowSeconds = matchedRule.windowSeconds;
 
         try {
+            // 熔断检查：如果 Redis 连续失败，在恢复期内直接跳过限流（不执行 Redis 调用）
+            // 避免每个请求都等 5 秒 Redis 超时 → Tomcat 线程池耗尽 → 全站请求超时
+            if (isCircuitBroken()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             DefaultRedisScript<Long> script = new DefaultRedisScript<>(LUA_SCRIPT, Long.class);
             Long current = redisTemplate.execute(script,
                     Collections.singletonList(key),
                     String.valueOf(maxRequests),
                     String.valueOf(windowSeconds));
+
+            // Redis 调用成功，重置熔断器
+            onRedisSuccess();
 
             if (current != null && current > maxRequests) {
                 log.warn("[GlobalRateLimit] 限流触发: key={}, current={}/{}per{}s, uri={}",
@@ -128,10 +146,36 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             // fail-open：Redis 异常时放行请求，避免限流器把整个系统搞死
             // 限流是保护机制，Redis 挂了不能让业务也挂
-            log.warn("[GlobalRateLimit] Redis异常，放行请求(fail-open): key={}, error={}", key, e.getMessage());
+            onRedisFailure();
+            log.warn("[GlobalRateLimit] Redis异常，放行请求(fail-open): key={}, error={}, consecutiveFailures={}",
+                    key, e.getMessage(), consecutiveFailures.get());
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isCircuitBroken() {
+        long now = System.currentTimeMillis();
+        if (now < circuitBreakUntil) {
+            return true; // 熔断中，跳过 Redis 调用
+        }
+        return false;
+    }
+
+    private void onRedisSuccess() {
+        if (consecutiveFailures.get() > 0) {
+            consecutiveFailures.set(0);
+            log.info("[GlobalRateLimit] Redis 恢复，熔断器重置");
+        }
+    }
+
+    private void onRedisFailure() {
+        int failures = consecutiveFailures.incrementAndGet();
+        if (failures >= CIRCUIT_BREAK_THRESHOLD) {
+            circuitBreakUntil = System.currentTimeMillis() + CIRCUIT_BREAK_RECOVERY_MS;
+            log.warn("[GlobalRateLimit] Redis 连续失败 {} 次，触发熔断 {} 秒，期间跳过限流",
+                    failures, CIRCUIT_BREAK_RECOVERY_MS / 1000);
+        }
     }
 
     private String resolveClientId(HttpServletRequest request) {
