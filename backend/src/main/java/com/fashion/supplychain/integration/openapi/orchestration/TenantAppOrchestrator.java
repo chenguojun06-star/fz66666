@@ -69,47 +69,16 @@ public class TenantAppOrchestrator {
     @Autowired
     private AesEncryptor aesEncryptor;
 
-    @jakarta.annotation.PostConstruct
-    void migratePlaintextSecrets() {
-        try {
-            List<TenantApp> apps = tenantAppService.list();
-            int migrated = 0;
-            for (TenantApp app : apps) {
-                boolean changed = false;
-                if (app.getAppSecret() != null && !app.getAppSecret().isEmpty()) {
-                    if (looksLikeEncrypted(app.getAppSecret())) {
-                        if (aesEncryptor.tryDecrypt(app.getAppSecret()) == null) {
-                            app.setAppSecret(aesEncryptor.encrypt(app.getAppSecret()));
-                            changed = true;
-                        }
-                    } else {
-                        app.setAppSecret(aesEncryptor.encrypt(app.getAppSecret()));
-                        changed = true;
-                    }
-                }
-                if (app.getCallbackSecret() != null && !app.getCallbackSecret().isEmpty()) {
-                    if (looksLikeEncrypted(app.getCallbackSecret())) {
-                        if (aesEncryptor.tryDecrypt(app.getCallbackSecret()) == null) {
-                            app.setCallbackSecret(aesEncryptor.encrypt(app.getCallbackSecret()));
-                            changed = true;
-                        }
-                    } else {
-                        app.setCallbackSecret(aesEncryptor.encrypt(app.getCallbackSecret()));
-                        changed = true;
-                    }
-                }
-                if (changed) {
-                    tenantAppService.updateById(app);
-                    migrated++;
-                }
-            }
-            if (migrated > 0) {
-                log.info("[TenantApp] 自动迁移 {} 个应用的明文密钥为AES加密存储", migrated);
-            }
-        } catch (Exception e) {
-            log.error("[TenantApp] 密钥迁移失败: {}", e.getMessage());
-        }
-    }
+    /**
+     * 密钥迁移逻辑已移除。
+     *
+     * 历史问题：原 @PostConstruct 在每次启动时扫全表尝试加密明文密钥，
+     * 但 t_tenant_app.app_secret 字段长度可能不足以存储 AES-GCM 密文（Base64 编码后约 60-80 字符），
+     * 导致 SQLException "The error occurred while setting parameters" 持续报错。
+     *
+     * 密钥加密应在创建/更新应用时完成（见 createApp/rotateSecret 方法），不需要启动时扫表迁移。
+     * 如需手动迁移历史数据，请通过运维脚本一次性处理。
+     */
 
     private boolean looksLikeEncrypted(String value) {
         if (value.length() < 44) return false;
