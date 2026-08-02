@@ -19,7 +19,7 @@ import { PurchaseCartProvider, usePurchaseCartContext } from './context/Purchase
 import { PurchaseCartDrawer } from './components/common/PurchaseCartDrawer';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, ReceivableList as FinanceReceivableList, PayableList, PaymentSchedule } from './modules/finance';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule } from './modules/finance';
 import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
@@ -227,7 +227,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orderFlow} element={<RouteErrorBoundary pageName="订单流程"><Suspense fallback={routeFallback}><OrderFlow /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.materialReconciliation} element={<RouteErrorBoundary pageName="物料对账"><Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="财务中心"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="外发结算"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.expenseReimbursement} element={<RouteErrorBoundary pageName="报销管理"><Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.employeeAdvance} element={<RouteErrorBoundary pageName="员工借支"><Suspense fallback={routeFallback}><EmployeeAdvance /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.expenseManagement} element={<RouteErrorBoundary pageName="费用管理"><Suspense fallback={routeFallback}><ExpenseManagement /></Suspense></RouteErrorBoundary>} />
@@ -237,8 +237,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.financeDashboard} element={<RouteErrorBoundary pageName="财务总览"><Suspense fallback={routeFallback}><FinanceDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crm} element={<RouteErrorBoundary pageName="CRM"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><CrmReceivableList /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.financeReceivables} element={<RouteErrorBoundary pageName="应收账款"><Suspense fallback={routeFallback}><FinanceReceivableList /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.financePayable} element={<RouteErrorBoundary pageName="应付账款"><Suspense fallback={routeFallback}><PayableList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financePaymentSchedule} element={<RouteErrorBoundary pageName="付款计划"><Suspense fallback={routeFallback}><PaymentSchedule /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><Suspense fallback={routeFallback}><SelectionCenter /></Suspense></RouteErrorBoundary>} />
 

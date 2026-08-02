@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { Tabs, Typography } from 'antd';
-import { ShopOutlined, AuditOutlined, DollarOutlined, ScanOutlined, BankOutlined } from '@ant-design/icons';
+import { ShopOutlined, ScanOutlined, BankOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import ExternalScanContent from './ExternalScanContent';
 import FactorySummaryContent from './FactorySummaryContent';
-import PaidUnsettledContent from './PaidUnsettledContent';
-import PaidSettledContent from './PaidSettledContent';
 import styles from './index.module.css';
 
 const { Text } = Typography;
 
-type TabKey = 'settlement' | 'externalScan' | 'factorySummary' | 'unpaid' | 'paid';
+type TabKey = 'settlement' | 'externalScan' | 'factorySummary';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,7 +18,7 @@ const FinanceCenter: React.FC = () => {
   // 从 URL 参数读取初始 Tab，默认 settlement
   const getInitialTab = (): TabKey => {
     const tab = searchParams.get('tab');
-    if (tab === 'settlement' || tab === 'externalScan' || tab === 'factorySummary' || tab === 'unpaid' || tab === 'paid') {
+    if (tab === 'settlement' || tab === 'externalScan' || tab === 'factorySummary') {
       return tab;
     }
     return 'settlement';
@@ -88,33 +86,13 @@ const FinanceCenter: React.FC = () => {
         />
       ),
     },
-    {
-      key: 'unpaid',
-      label: (
-        <span className={styles.tabLabel}>
-          <AuditOutlined />
-          已审未付
-        </span>
-      ),
-      children: <PaidUnsettledContent />,
-    },
-    {
-      key: 'paid',
-      label: (
-        <span className={styles.tabLabel}>
-          <DollarOutlined />
-          已付款
-        </span>
-      ),
-      children: <PaidSettledContent />,
-    },
   ];
 
   return (
     <PageLayout
-      title="财务中心"
+      title="外发结算"
       headerContent={
-        <Text type="secondary">外发结算 · 外部工厂扫码 · 工厂汇总 · 已审未付 · 已付款</Text>
+        <Text type="secondary">外发结算 · 外部工厂扫码 · 工厂汇总</Text>
       }
     >
       <Tabs
