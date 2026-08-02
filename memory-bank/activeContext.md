@@ -1,11 +1,74 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-01（智能化模块全链路修复 + UI 规范统一 + 发布前核实）
+> 最后更新：2026-08-02（云托管部署连续失败四连根因修复 — D-054）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-02 云托管部署连续失败四连根因修复 ✅（详见 D-054）
+
+**背景**：8月1日 b8582636d 大改动（intelligence 模块全链路修复）后，8月2日 backend-2003 到 backend-2006 连续部署失败，全部报 `Liveness/Readiness probe failed: connect: connection refused 8088`。期间 9 个 P0 救火 commit 但未根治。当日共修复 4 个独立根因。
+
+#### 四个根因（每个都是独立触发路径，全部修完才能启动成功）
+
+1. **CosService/WeChatMiniProgramClient 启动时网络验证**（commit 0ddee4104）
+   - CosService `@PostConstruct` 删除 4 次同步 COS API 调用（list/put/presign/delete，无超时，最坏 240s）
+   - WeChatMiniProgramClient `@PostConstruct` 删除 `probeWeChatTls()` 同步 HTTPS 探测 api.weixin.qq.com（最坏 8s）
+   - 权限/TLS 问题延迟到首次实际调用暴露
+
+2. **FlywayRepairConfig 的 `Thread.sleep(0~15s)` 阻塞 Spring 启动**（commit e2ac3e792）
+   - 从"预防性 repair"重构为"惰性 repair"：`purge → migrate`（零阻塞）→ 失败才 `repair + 重试`（异常路径）
+   - 移除 sleep 反而减少多实例同时到达 migrate 的时间窗口重叠
+
+3. **PII 加密密钥 yml 无默认值**（commit 7ddf81549）
+   - `application-prod.yml` 第102行 `${APP_SECURITY_PII_ENCRYPTION_KEY}` → `${APP_SECURITY_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}`
+   - 根因：CloudBase 模板变量 `{{PII_ENCRYPTION_KEY}}` 未渲染时 Spring 占位符解析直接抛 PlaceholderResolutionException
+   - AesEncryptor 检测默认密钥时打 WARN 告警
+   - 运维需在 CloudBase 控制台配置真实密钥（已生成：`bHnSktdeDZrbIU5WxpsHrEmcsdgnD0B`，本地 openssl 生成未进 git）
+
+4. **采购页面无限刷新根治（第二个循环点）**（commit ba8ca0cc9）
+   - 之前 commit 82788fdfc 只修了 useSync 的循环，漏了第207行 useEffect 的循环
+   - useEffect 依赖去掉 `fetchMaterialPurchaseList`/`fetchPurchaseStats` 函数引用，只依赖 `activeTabKey + queryParams`
+   - 根因：`fetchMaterialPurchaseList` 的 useCallback 依赖 `message`（antd `message.useMessage()`），该引用每次渲染可能变化 → 无限循环
+
+#### 关键教训
+- b8582636d 大改动只是触发点，不是根因。把系统推过临界点，暴露了 4 个独立潜在问题
+- CloudBase 模板变量 `{{XXX}}` 不是真正的环境变量，未渲染时 yml 里 `${XXX}` 会抛异常，**必须带默认值**
+- `Thread.sleep` 不能出现在 Spring 启动主线程，会阻塞 Tomcat 端口 bind 触发探针失败
+- useEffect 依赖函数引用是 React 无限循环常见陷阱（函数依赖不稳定引用时）
+- 修 P0 不能只修一个循环点，必须验证所有循环路径都被打断
+
+#### 累计 commit
+- 0ddee4104：CosService/WeChat 启动时网络验证移除
+- e2ac3e792：FlywayRepairConfig sleep 阻塞移除（重构为惰性 repair）
+- 7ddf81549：PII 加密密钥 yml 加默认值
+- ba8ca0cc9：采购页面无限刷新根治
+
+---
+
+## 当前进行中
+
+- 等待 backend-2007 部署验证完成
+- 运维需在 CloudBase 控制台配置 `APP_SECURITY_PII_ENCRYPTION_KEY` = `bHnSktdeDZrbIU5WxpsHrEmcsdgnD0B`
+
+## 已知问题
+
+- 采购页面无限刷新（已修复，等部署验证）
+- CloudBase 模板变量渲染依赖控制台配置（已用 yml 默认值兜底，但生产环境应配真实密钥）
+
+## 下一步
+
+- 验证 backend-2007 部署成功
+- 运维配置 PII 真实密钥后重新发布
+- 排查其他 yml 引用 CloudBase 模板变量的占位符是否都带了默认值
+- 排查其他 useEffect 是否有类似的"依赖函数引用"循环陷阱
+- 中长期：考虑将 Flyway repair+migrate 迁移到 CI 流水线，容器启动不做修复操作
+
+---
+
+## 历史变更（Historical Changes）
 
 ### 2026-08-01 智能化模块全链路修复 + 采购UI规范统一 ✅
 

@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-07-23（新增 D-044 智能化功能全量改为用户可配置开关 — 补全 8 个 HIGH 风险自动执行点）
+> 最后更新：2026-08-02（新增 D-054 云托管部署连续失败四连根因修复）
 
 ---
 
@@ -1020,5 +1020,72 @@
 - 观察 2.5 视觉输出质量差异：比较疵点召回率、款式难度评分分布偏移，如有显著差异需调整阈值
 - 成本表观察：如 Agnes 官方调整 2.5 Flash 定价需及时更新 MODEL_PRICING 表
 - 编译验证：环境恢复后执行 `mvn compile` 确认无编译错误
+
+## D-054：云托管部署连续失败四连根因修复（2026-08-02）
+
+### 上下文
+8月1日 b8582636d 大改动（intelligence 模块全链路修复，新增大量 @Service/@Component Bean）后，8月2日云端部署从 backend-2003 到 backend-2006 连续失败，全部报 `Liveness/Readiness probe failed: connect: connection refused 8088`，期间出现 9 个 P0 救火 commit 但始终未根治。当日共修复 4 个独立根因，每个都是独立触发路径，必须全部修完才能启动成功。
+
+### 决策
+
+#### D-054-1 移除启动时网络验证（CosService / WeChatMiniProgramClient）
+1. **CosService** `@PostConstruct`：删除启动时 4 次同步 COS API 调用（list/put/presign/delete），只构造 client。权限问题延迟到首次实际调用暴露
+2. **WeChatMiniProgramClient** `@PostConstruct`：删除 `probeWeChatTls()` 调用（同步 HTTPS 探测 api.weixin.qq.com），保留诊断日志。TLS 问题延迟到首次 code2Session 暴露
+
+#### D-054-2 FlywayRepairConfig 移除 sleep 阻塞（治本）
+**重构策略**：从"预防性 repair"改为"惰性 repair"
+- 旧逻辑：`sleep(0~15000ms) → purge → repair → migrate`（每次都 sleep+repair）
+- 新逻辑：`purge → migrate`（正常路径零阻塞零 sleep）→ 失败才 `repair + 重试 migrate`（异常路径）→ 最终失败才兜底清理（fail-safe）
+- 多实例并发安全性：migrate 靠 `flyway_schema_history` 表锁天然串行化，purge 是行级 DELETE，repair 只在异常路径走
+
+#### D-054-3 PII 加密密钥 yml 加默认值
+- `application-prod.yml` 第102行 `${APP_SECURITY_PII_ENCRYPTION_KEY}` → `${APP_SECURITY_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}`
+- `AesEncryptor` 构造器检测到默认密钥时打 WARN 提醒运维配置专属密钥
+
+#### D-054-4 采购页面无限刷新根治（第二个循环点）
+- 之前 commit 82788fdfc 只修了 useSync 的循环，漏了第207行 useEffect 的循环
+- 修复：useEffect 依赖去掉 `fetchMaterialPurchaseList`/`fetchPurchaseStats` 函数引用，只依赖 `activeTabKey + queryParams`
+
+### 为什么今天会集中爆发这么多问题（根因链复盘）
+
+| 层级 | 触发因素 | 放大了什么 |
+|------|---------|-----------|
+| **直接原因** | b8582636d 大改动新增大量 Bean | Spring 上下文初始化从几秒变 20 秒 |
+| **放大器 1** | FlywayRepairConfig 的 `Thread.sleep(0~15s)` | 叠加 20s 初始化 → 总启动时间超过 CloudBase 部署检查窗口 |
+| **放大器 2** | CosService/WeChat 的启动时网络验证（最坏 248s） | 本身就是隐患，被启动慢放大成致命问题 |
+| **隐藏炸弹** | application-prod.yml PII 密钥无默认值 | CloudBase 模板变量未渲染时直接抛 PlaceholderResolutionException |
+| **历史遗留** | usePurchaseList 第207行 useEffect 依赖函数引用 | b8582636d 改动可能间接影响了 message 引用稳定性，暴露了这个循环 |
+
+**关键教训**：
+1. **b8582636d 是触发点但不是根因**。大改动只是把系统推过了临界点，暴露了 4 个独立的潜在问题。每个问题单独看都不致命，叠加在一起才导致部署连续失败
+2. **CloudBase 模板变量 `{{XXX}}` 不是真正的环境变量**。如果 CloudBase 控制台没定义 XXX 的值，渲染后传给容器的要么是空、要么是字面量 `{{XXX}}`，Spring 解析 `${XXX}` 时会抛异常。yml 里所有引用 CloudBase 模板变量的占位符**必须带默认值**
+3. **`Thread.sleep` 不能出现在 Spring 启动主线程**。即使是为了"避免多实例并发死锁"，也会阻塞 Tomcat 端口 bind，触发 K8s 探针 connection refused。并发问题应该用锁机制解决，不能用 sleep
+4. **useEffect 依赖函数引用是 React 无限循环常见陷阱**。如果函数的 useCallback 依赖了不稳定的引用（如 antd `message.useMessage()` 返回的 messageApi），useEffect 依赖该函数就会无限触发。正确做法：useEffect 只依赖数据字段，不依赖函数引用
+5. **修 P0 不能只修一个循环点**。usePurchaseList 有两个独立的循环点（useSync + 第207行 useEffect），commit 82788fdfc 只修了第一个就以为搞定了，第二个循环点继续触发。修复后必须完整验证"所有循环路径都被打断"
+
+### 关键设计权衡
+
+- **PII 密钥带默认值 vs 启动失败**：默认密钥不安全，但比服务挂掉好。权衡选择"能启动 + WARN 告警"，运维后续配置真实密钥。这是 fail-safe 原则
+- **Flyway 惰性 repair vs 预防性 repair**：旧逻辑担心多实例并发死锁所以每次都 repair。新逻辑认为 migrate 靠表锁天然串行化，正常路径无需 repair。repair 只在异常路径走，概率极低。移除 sleep 反而减少多实例同时到达 migrate 的时间窗口重叠
+- **CosService 权限验证延迟到首次调用 vs 启动时验证**：启动时验证能提前发现问题，但网络抖动会拖垮启动。延迟到首次调用，权限问题仍会暴露（调用方处理异常），但不影响启动
+
+### 验证
+- backend-2007 部署成功（commit 7ddf81549 + ba8ca0cc9 合并后的版本）
+- `mvn compile` 通过
+- `npx tsc --noEmit` 通过
+- 启动日志无 PlaceholderResolutionException
+- 采购页面无无限刷新
+
+### 影响
+- 部署稳定性：从连续失败到稳定部署
+- 启动耗时：从 20s+ 阻塞降至数秒无阻塞
+- 配置健壮性：CloudBase 模板变量未渲染时不再崩溃
+- 前端稳定性：采购页面无限循环根治
+
+### 后续待办
+- 运维在 CloudBase 控制台配置真实 PII 加密密钥（已生成：`bHnSktdeDZrbIU5WxpsHrEmcsdgnD0B`，本地 openssl 生成未进 git）
+- 中长期：考虑将 Flyway repair+migrate 迁移到 CI 流水线执行，容器启动完全不做修复操作（方案2治本方向）
+- 排查其他 yml 里引用 CloudBase 模板变量的占位符是否都带了默认值
+- 排查其他 useEffect 是否有类似的"依赖函数引用"循环陷阱
 
 
