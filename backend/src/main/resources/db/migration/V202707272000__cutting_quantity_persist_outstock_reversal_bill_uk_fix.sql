@@ -57,15 +57,18 @@ SET @s_idx = IF(@idx=0, 'ALTER TABLE t_product_outstock ADD INDEX idx_po_reversa
 PREPARE stmt FROM @s_idx; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- ============================================================
--- 3. BillAggregation uk_source 修复：删除旧唯一索引，重建含 delete_flag 的唯一索引
+-- 3. BillAggregation uk_source 修复：删除旧唯一索引，重建含 delete_flag 的普通索引
 --    解决：软删除后同来源无法重新创建账单的问题
+--    幂等：分别检查 uk_source（删除）和 idx_source_tenant（新增）是否存在
 -- ============================================================
-SET @idx = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_bill_aggregation' AND INDEX_NAME='uk_source');
-SET @s_drop = IF(@idx>0, 'ALTER TABLE t_bill_aggregation DROP INDEX uk_source', 'SELECT 1');
+SET @has_uk_source = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_bill_aggregation' AND INDEX_NAME='uk_source');
+SET @s_drop = IF(@has_uk_source>0, 'ALTER TABLE t_bill_aggregation DROP INDEX uk_source', 'SELECT 1');
 PREPARE stmt FROM @s_drop; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 重建唯一索引：仅对未删除记录生效（delete_flag=0）
+-- 重建普通索引（非唯一）：仅对未删除记录生效（delete_flag=0）
 -- MySQL 不支持部分索引(partial index)，但可以用 delete_flag=0 作为常规过滤条件
 -- 这里改用普通索引 + 应用层幂等检查（pushBill 已有 .eq(deleteFlag, 0) 查询）
-SET @s_add = IF(@idx>=0, 'ALTER TABLE t_bill_aggregation ADD INDEX idx_source_tenant (source_type, source_id, tenant_id, delete_flag)', 'SELECT 1');
+-- 幂等检查：仅当 idx_source_tenant 不存在时才添加
+SET @has_idx_source_tenant = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_bill_aggregation' AND INDEX_NAME='idx_source_tenant');
+SET @s_add = IF(@has_idx_source_tenant=0, 'ALTER TABLE t_bill_aggregation ADD INDEX idx_source_tenant (source_type, source_id, tenant_id, delete_flag)', 'SELECT 1');
 PREPARE stmt FROM @s_add; EXECUTE stmt; DEALLOCATE PREPARE stmt;
