@@ -213,25 +213,36 @@ export function usePurchaseList({
   }, [activeTabKey, fetchPurchaseStats]);
 
   // 实时同步（30s 轮询）
+  // 注意：fetchFn / onDataChange 必须用 useCallback 稳定引用，否则 useSync 内部
+  // useEffect 依赖变化 → 停止旧任务启动新任务 → 新任务立即执行 → setPurchaseList
+  // → 重渲染 → fetchFn 重建 → 无限循环（P0 修复 2026-08-02）
+  const syncFetchFn = useCallback(async () => {
+    try {
+      const res = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>(
+        '/production/purchase/list', { params: queryParams },
+      );
+      if (res.code !== 200) return null;
+      const raw = Array.isArray(res.data?.records) ? res.data.records : [];
+      const filtered = await filterOutMissingOrders(raw);
+      const removed = raw.length - filtered.length;
+      return { records: filtered, total: Math.max(Number(res.data?.total || 0) - Math.max(removed, 0), 0) };
+    } catch (err) { console.error('[实时同步] 获取物料采购列表失败', err); return null; }
+  }, [queryParams, filterOutMissingOrders]);
+
+  const syncOnDataChange = useCallback((newData: { records: MaterialPurchaseType[]; total: number } | null) => {
+    if (newData) { setPurchaseList(newData.records); setTotal(newData.total); fetchPurchaseStats(); }
+  }, [fetchPurchaseStats]);
+
+  const syncOnError = useCallback((err: Error) => {
+    console.error('[实时同步] 物料采购数据同步错误', err);
+  }, []);
+
   useSync(
     'material-purchase-list',
-    async () => {
-      try {
-        const res = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>(
-          '/production/purchase/list', { params: queryParams },
-        );
-        if (res.code !== 200) return null;
-        const raw = Array.isArray(res.data?.records) ? res.data.records : [];
-        const filtered = await filterOutMissingOrders(raw);
-        const removed = raw.length - filtered.length;
-        return { records: filtered, total: Math.max(Number(res.data?.total || 0) - Math.max(removed, 0), 0) };
-      } catch (err) { console.error('[实时同步] 获取物料采购列表失败', err); return null; }
-    },
-    (newData) => {
-      if (newData) { setPurchaseList(newData.records); setTotal(newData.total); fetchPurchaseStats(); }
-    },
+    syncFetchFn,
+    syncOnDataChange,
     { interval: 30000, enabled: !loading && activeTabKey === 'purchase' && !dialogVisible, pauseOnHidden: true,
-      onError: (err) => console.error('[实时同步] 物料采购数据同步错误', err) },
+      onError: syncOnError },
   );
 
   const handleDeleteOrphan = useCallback(async (record: MaterialPurchaseType) => {
