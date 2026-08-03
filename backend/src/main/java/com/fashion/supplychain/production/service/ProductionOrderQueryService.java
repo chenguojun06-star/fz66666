@@ -620,14 +620,18 @@ public class ProductionOrderQueryService {
                 java.util.Map<String, Object> r = rows.get(0);
                 long activeOrders = toLong(r.get("active_orders"));
                 long activeQty = toLong(r.get("active_quantity"));
+                long completedOrders = toLong(r.get("completed_orders"));
+                long completedQty = toLong(r.get("completed_quantity"));
                 stats.setActiveOrders(activeOrders);
                 stats.setActiveQuantity(activeQty);
-                stats.setCompletedOrders(toLong(r.get("completed_orders")));
-                stats.setCompletedQuantity(toLong(r.get("completed_quantity")));
+                stats.setCompletedOrders(completedOrders);
+                stats.setCompletedQuantity(completedQty);
                 stats.setScrappedOrders(toLong(r.get("scrapped_orders")));
                 stats.setScrappedQuantity(toLong(r.get("scrapped_quantity")));
-                stats.setTotalOrders(activeOrders);
-                stats.setTotalQuantity(activeQty);
+                // 全部订单 = 生产中 + 已完成（与"全部"卡片语义一致：不排除终态）
+                // 当 excludeTerminal=true（"生产中"卡片）时，SQL 已过滤终态，completedOrders=0，totalOrders=activeOrders，不会重复
+                stats.setTotalOrders(activeOrders + completedOrders);
+                stats.setTotalQuantity(activeQty + completedQty);
                 stats.setDelayedOrders(toLong(r.get("delayed_orders")));
                 stats.setDelayedQuantity(toLong(r.get("delayed_quantity")));
                 stats.setTodayOrders(toLong(r.get("today_orders")));
@@ -759,8 +763,9 @@ public class ProductionOrderQueryService {
         stats.setCompletedQuantity(completedQty);
         stats.setScrappedOrders(scrappedOrders.size());
         stats.setScrappedQuantity(scrappedQty);
-        stats.setTotalOrders(activeOrders.size());
-        stats.setTotalQuantity(activeQty);
+        // 全部订单 = 生产中 + 已完成（与 getGlobalStats 语义一致）
+        stats.setTotalOrders(activeOrders.size() + completedOrders.size());
+        stats.setTotalQuantity(activeQty + completedQty);
     }
 
     private void fillDelayedAndTodayStats(com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats, List<ProductionOrder> allOrders) {
