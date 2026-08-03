@@ -4,8 +4,7 @@ import api from '@/utils/api';
 import dayjs, { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router';
 import { paths } from '@/routeConfig';
-
-export type TimeRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
+import type { CashFlowPoint } from '../helpers';
 
 export interface FinanceSummary {
   totalRevenue: number;
@@ -126,34 +125,15 @@ const DEFAULT_DATA: FinanceDashboardData = {
   },
 };
 
-const getDateRanges = (timeRange: TimeRangeType, customRange: [Dayjs, Dayjs] | null) => {
+const getDateRanges = (customRange: [Dayjs, Dayjs] | null) => {
   const today = dayjs();
   let startDate: string, endDate: string;
-  switch (timeRange) {
-    case 'today':
-      startDate = endDate = today.format('YYYY-MM-DD');
-      break;
-    case 'week':
-      startDate = today.startOf('week').format('YYYY-MM-DD');
-      endDate = today.endOf('week').format('YYYY-MM-DD');
-      break;
-    case 'month':
-      startDate = today.startOf('month').format('YYYY-MM-DD');
-      endDate = today.endOf('month').format('YYYY-MM-DD');
-      break;
-    case 'year':
-      startDate = today.startOf('year').format('YYYY-MM-DD');
-      endDate = today.endOf('year').format('YYYY-MM-DD');
-      break;
-    case 'custom':
-      if (customRange) {
-        startDate = customRange[0].format('YYYY-MM-DD');
-        endDate = customRange[1].format('YYYY-MM-DD');
-      } else {
-        startDate = today.startOf('month').format('YYYY-MM-DD');
-        endDate = today.endOf('month').format('YYYY-MM-DD');
-      }
-      break;
+  if (customRange) {
+    startDate = customRange[0].format('YYYY-MM-DD');
+    endDate = customRange[1].format('YYYY-MM-DD');
+  } else {
+    startDate = today.startOf('month').format('YYYY-MM-DD');
+    endDate = today.endOf('month').format('YYYY-MM-DD');
   }
   return { startDate, endDate };
 };
@@ -163,13 +143,14 @@ export const useFinanceBIData = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FinanceDashboardData>(DEFAULT_DATA);
-  const [timeRange, setTimeRange] = useState<TimeRangeType>('month');
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [cashFlowData, setCashFlowData] = useState<CashFlowPoint[]>([]);
+  const [cashFlowLoading, setCashFlowLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const { startDate, endDate } = getDateRanges(timeRange, customRange);
+      const { startDate, endDate } = getDateRanges(customRange);
       const res: any = await api.get('/finance/dashboard/summary', {
         params: { startDate, endDate },
       });
@@ -195,14 +176,41 @@ export const useFinanceBIData = () => {
     } finally {
       setLoading(false);
     }
-  }, [timeRange, customRange, message]);
+  }, [customRange, message]);
+
+  const loadCashFlow = useCallback(async (startDate: string, endDate: string) => {
+    setCashFlowLoading(true);
+    try {
+      const res: any = await api.get('/finance/report/cash-flow', {
+        params: { startDate, endDate },
+      });
+      if (res?.code === 200 && Array.isArray(res.data?.points)) {
+        setCashFlowData(res.data.points.map((p: any) => ({
+          date: p.date,
+          income: Number(p.income ?? 0),
+          expense: Number(p.expense ?? 0),
+        })));
+      } else {
+        setCashFlowData([]);
+      }
+    } catch {
+      setCashFlowData([]);
+    } finally {
+      setCashFlowLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // 现金流随顶部日期范围联动
+  useEffect(() => {
+    const { startDate, endDate } = getDateRanges(customRange);
+    loadCashFlow(startDate, endDate);
+  }, [loadCashFlow, customRange]);
+
   const resetFilters = useCallback(() => {
-    setTimeRange('month');
     setCustomRange(null);
   }, []);
 
@@ -226,12 +234,13 @@ export const useFinanceBIData = () => {
   return {
     loading,
     data,
-    timeRange,
-    setTimeRange,
     customRange,
     setCustomRange,
     resetFilters,
     goToModule,
     refresh: loadData,
+    cashFlowData,
+    cashFlowLoading,
+    loadCashFlow,
   };
 };

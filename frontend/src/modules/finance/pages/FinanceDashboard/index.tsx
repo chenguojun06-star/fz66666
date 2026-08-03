@@ -1,26 +1,27 @@
 import React, { Suspense, lazy } from 'react';
-import { Card, Row, Col, Button, Spin, Space, Table, Empty, Segmented } from 'antd';
+import { Card, Row, Col, Spin, Space, Table, Empty, DatePicker } from 'antd';
+import type { Dayjs } from 'dayjs';
 import { useFinanceDashboardData } from './hooks/useFinanceDashboardData';
 import styles from './index.module.css';
-import { TIME_OPTIONS, CASH_FLOW_DAYS_OPTIONS } from './helpers';
 import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import PieChart from './components/PieChart';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
+const { RangePicker } = DatePicker;
+
 const FinanceDashboard: React.FC = () => {
   const {
     loading,
     data,
-    timeRange,
-    setTimeRange,
+    customRange,
+    setCustomRange,
     goToModule,
     selectedDetail,
     setSelectedDetail,
-    cashFlowDays,
-    setCashFlowDays,
     cashFlowChartOption,
+    cashFlowLoading,
     statCards,
     detailConfig,
   } = useFinanceDashboardData();
@@ -30,12 +31,20 @@ const FinanceDashboard: React.FC = () => {
       {/* 顶部筛选 */}
       <Card className={styles.filterCard}>
         <Space size={12} wrap>
-          <span className={styles.filterLabel}>时间：</span>
-          {TIME_OPTIONS.map(opt => (
-            <Button key={opt.value} type="primary" ghost={timeRange !== opt.value} onClick={() => setTimeRange(opt.value)}>
-              {opt.label}
-            </Button>
-          ))}
+          <span className={styles.filterLabel}>统计区间：</span>
+          <RangePicker
+            value={customRange as [Dayjs, Dayjs] | null}
+            onChange={(dates) => {
+              if (dates && dates[0] && dates[1]) {
+                setCustomRange([dates[0], dates[1]]);
+              } else {
+                setCustomRange(null);
+              }
+            }}
+            allowClear
+            style={{ width: 240 }}
+          />
+          <span className={styles.filterHint}>未选择时默认当月；现金流趋势同步该区间</span>
         </Space>
       </Card>
 
@@ -74,18 +83,12 @@ const FinanceDashboard: React.FC = () => {
           <Card
             title="现金流趋势"
             className={styles.chartCard}
-            extra={
-              <Segmented
-                size="small"
-                value={cashFlowDays}
-                onChange={(v) => setCashFlowDays(v as 7 | 30 | 90)}
-                options={CASH_FLOW_DAYS_OPTIONS}
-              />
-            }
           >
-            <Suspense fallback={<div className={styles.emptyChart}>图表加载中...</div>}>
-              <ReactECharts option={cashFlowChartOption} style={{ height: 300 }} />
-            </Suspense>
+            <Spin spinning={cashFlowLoading}>
+              <Suspense fallback={<div className={styles.emptyChart}>图表加载中...</div>}>
+                <ReactECharts option={cashFlowChartOption} style={{ height: 300 }} />
+              </Suspense>
+            </Spin>
           </Card>
         </Col>
       </Row>
@@ -97,9 +100,9 @@ const FinanceDashboard: React.FC = () => {
             title={detailConfig.title}
             className={styles.tableCard}
             extra={
-              <Button type="link" size="small" onClick={() => goToModule(selectedDetail)}>
+              <a onClick={() => goToModule(selectedDetail)} style={{ fontSize: 12 }}>
                 查看全部
-              </Button>
+              </a>
             }
           >
             <Table

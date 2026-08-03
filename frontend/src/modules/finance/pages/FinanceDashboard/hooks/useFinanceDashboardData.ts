@@ -3,9 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useFinanceBIData } from './useFinanceBIData';
 import { useSync } from '@/utils/syncManager';
 import {
-  type CashFlowDays,
   type StatKey,
-  generateCashFlowMockData,
 } from '../helpers';
 
 export interface StatCardConfig {
@@ -292,9 +290,8 @@ const buildDetailConfig = (
 };
 
 export const useFinanceDashboardData = () => {
-  const { loading, data, timeRange, setTimeRange, goToModule, refresh } = useFinanceBIData();
+  const { loading, data, customRange, setCustomRange, goToModule, refresh, cashFlowData, cashFlowLoading, loadCashFlow } = useFinanceBIData();
   const [selectedDetail, setSelectedDetail] = useState<StatKey>('revenue');
-  const [cashFlowDays, setCashFlowDays] = useState<CashFlowDays>(30);
 
   // 90s 轮询刷新财务看板数据
   useSync(
@@ -325,8 +322,6 @@ export const useFinanceDashboardData = () => {
     };
   }, [refresh]);
 
-  const cashFlowData = useMemo(() => generateCashFlowMockData(cashFlowDays), [cashFlowDays]);
-
   const cashFlowChartOption = useMemo(
     () =>
       buildCashFlowChartOption(
@@ -347,15 +342,14 @@ export const useFinanceDashboardData = () => {
   return {
     loading,
     data,
-    timeRange,
-    setTimeRange,
+    customRange,
+    setCustomRange,
     goToModule,
     refresh,
     selectedDetail,
     setSelectedDetail,
-    cashFlowDays,
-    setCashFlowDays,
     cashFlowChartOption,
+    cashFlowLoading,
     statCards,
     detailConfig,
   };

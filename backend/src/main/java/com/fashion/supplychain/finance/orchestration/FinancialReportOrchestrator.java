@@ -179,7 +179,98 @@ public class FinancialReportOrchestrator {
         report.put("netCashFlow", cashIn.subtract(cashOut));
         report.put("payablePaid", payablePaid);
         report.put("expensePaid", expensePaid);
+        report.put("points", buildCashFlowPoints(tenantId, startDate, endDate));
         return report;
+    }
+
+    /**
+     * 构建按日现金流分点数据（供前端折线图）
+     */
+    private List<Map<String, Object>> buildCashFlowPoints(Long tenantId, LocalDate startDate, LocalDate endDate) {
+        List<ShipmentReconciliation> shipments = Collections.emptyList();
+        try {
+            shipments = shipmentReconciliationService.list(
+                    new LambdaQueryWrapper<ShipmentReconciliation>()
+                            .in(ShipmentReconciliation::getStatus, "verified", "paid")
+                            .eq(ShipmentReconciliation::getTenantId, tenantId)
+                            .ge(ShipmentReconciliation::getCreateTime, startDate.atStartOfDay())
+                            .le(ShipmentReconciliation::getCreateTime, endDate.atTime(LocalTime.MAX))
+                            .last("LIMIT 5000"));
+        } catch (Exception e) {
+            log.warn("[现金流] 查询出货收入失败", e);
+        }
+
+        List<EcSalesRevenue> ecSales = Collections.emptyList();
+        try {
+            ecSales = ecSalesRevenueService.list(
+                    new LambdaQueryWrapper<EcSalesRevenue>()
+                            .eq(EcSalesRevenue::getStatus, "confirmed")
+                            .eq(EcSalesRevenue::getTenantId, tenantId)
+                            .ge(EcSalesRevenue::getCreateTime, startDate.atStartOfDay())
+                            .le(EcSalesRevenue::getCreateTime, endDate.atTime(LocalTime.MAX))
+                            .last("LIMIT 5000"));
+        } catch (Exception e) {
+            log.warn("[现金流] 查询电商收入失败", e);
+        }
+
+        List<Payable> paidPayables = Collections.emptyList();
+        try {
+            paidPayables = payableService.list(
+                    new LambdaQueryWrapper<Payable>()
+                            .eq(Payable::getDeleteFlag, 0)
+                            .eq(Payable::getStatus, "PAID")
+                            .eq(Payable::getTenantId, tenantId)
+                            .ge(Payable::getUpdateTime, startDate.atStartOfDay())
+                            .le(Payable::getUpdateTime, endDate.atTime(LocalTime.MAX))
+                            .last("LIMIT 5000"));
+        } catch (Exception e) {
+            log.warn("[现金流] 查询已付应付失败", e);
+        }
+
+        LinkedHashMap<String, BigDecimal[]> dayBuckets = new LinkedHashMap<>();
+        LocalDate cursor = startDate;
+        while (!cursor.isAfter(endDate)) {
+            dayBuckets.put(cursor.toString(), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            cursor = cursor.plusDays(1);
+        }
+
+        for (ShipmentReconciliation s : shipments) {
+            if (s.getCreateTime() != null) {
+                String day = s.getCreateTime().toLocalDate().toString();
+                BigDecimal[] bucket = dayBuckets.get(day);
+                if (bucket != null && s.getFinalAmount() != null) {
+                    bucket[0] = bucket[0].add(s.getFinalAmount());
+                }
+            }
+        }
+        for (EcSalesRevenue e : ecSales) {
+            if (e.getCreateTime() != null) {
+                String day = e.getCreateTime().toLocalDate().toString();
+                BigDecimal[] bucket = dayBuckets.get(day);
+                if (bucket != null && e.getPayAmount() != null) {
+                    bucket[0] = bucket[0].add(e.getPayAmount());
+                }
+            }
+        }
+        for (Payable p : paidPayables) {
+            if (p.getUpdateTime() != null) {
+                String day = p.getUpdateTime().toLocalDate().toString();
+                BigDecimal[] bucket = dayBuckets.get(day);
+                if (bucket != null && p.getPaidAmount() != null) {
+                    bucket[1] = bucket[1].add(p.getPaidAmount());
+                }
+            }
+        }
+
+        List<Map<String, Object>> points = new ArrayList<>();
+        for (Map.Entry<String, BigDecimal[]> entry : dayBuckets.entrySet()) {
+            Map<String, Object> point = new LinkedHashMap<>();
+            point.put("date", entry.getKey().substring(5));
+            point.put("income", entry.getValue()[0]);
+            point.put("expense", entry.getValue()[1]);
+            points.add(point);
+        }
+        return points;
     }
 
     // ─── 汇总方法 ────────────────────────────────────────────────────────────

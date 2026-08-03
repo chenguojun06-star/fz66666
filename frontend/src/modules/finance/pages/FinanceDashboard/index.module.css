@@ -13,6 +13,11 @@
   color: var(--color-text-secondary);
 }
 
+.filterHint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
 /* 统计卡片 */
 .statRow {
   margin-bottom: 12px;
