@@ -81,10 +81,10 @@ export const purchaseCartApi = {
     return unwrapApiData<Record<string, unknown>>(res, '批量生成智能采购建议失败');
   },
 
-  /** 查询订单的物料净需求（预览） */
-  getNetDemand: async (orderNo: string): Promise<Record<string, unknown>> => {
+  /** 查询订单的物料净需求（预览，含智能推荐：供应商/历史采购价/推荐理由） */
+  getNetDemand: async (orderNo: string): Promise<any[]> => {
     const res = await api.get(`/production/smart-sourcing/net-demand/${encodeURIComponent(orderNo)}`);
-    return unwrapApiData<Record<string, unknown>>(res, '查询物料净需求失败');
+    return unwrapApiData<any[]>(res, '查询物料净需求失败');
   },
 };
 

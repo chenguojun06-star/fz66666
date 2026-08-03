@@ -210,9 +210,9 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
     }
 
     /**
-     * 构建物料净需求明细列表
+     * 构建物料净需求明细列表（含智能推荐：供应商详情、历史采购价、推荐理由）
      *
-     * @return 每个BOM项对应一个Map，含 demand/availableStock/inTransit/netDemand/bomItem
+     * @return 每个BOM项对应一个Map，含需求/库存/在途/净需求/推荐供应商/历史采购价/推荐理由
      */
     private List<Map<String, Object>> buildNetDemandDetails(Long tenantId,
                                                             ProductionOrder order,
@@ -239,6 +239,15 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                     .subtract(inTransit)
                     .max(BigDecimal.ZERO);
 
+            // 智能推荐供应商
+            Factory supplier = recommendSupplier(tenantId, bom);
+
+            // 历史采购价（最近一次）
+            Map<String, Object> lastPurchase = queryLastPurchasePrice(tenantId, bom.getMaterialCode());
+
+            // 推荐理由
+            String reason = buildRecommendReason(demand, availableStock, inTransit, netDemand, bom, supplier, lastPurchase);
+
             Map<String, Object> detail = new LinkedHashMap<>();
             detail.put("materialCode", bom.getMaterialCode());
             detail.put("materialName", bom.getMaterialName());
@@ -255,9 +264,109 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
             detail.put("netDemand", netDemand.setScale(4, RoundingMode.HALF_UP));
             detail.put("needPurchase", netDemand.compareTo(BigDecimal.ZERO) > 0);
             detail.put("bomItem", bom);
+
+            // ── 智能推荐字段 ──
+            detail.put("bomUnitPrice", bom.getUnitPrice());
+            Map<String, Object> supplierInfo = new LinkedHashMap<>();
+            if (supplier != null) {
+                supplierInfo.put("supplierId", supplier.getId());
+                supplierInfo.put("supplierName", supplier.getFactoryName());
+                supplierInfo.put("supplierTier", supplier.getSupplierTier());
+                supplierInfo.put("overallScore", supplier.getOverallScore());
+                supplierInfo.put("qualityScore", supplier.getQualityScore());
+                supplierInfo.put("contactPhone", supplier.getContactPhone());
+                supplierInfo.put("isBomDesignated",
+                        StringUtils.hasText(bom.getSupplierId())
+                                && bom.getSupplierId().equals(String.valueOf(supplier.getId())));
+            }
+            detail.put("recommendedSupplier", supplierInfo);
+            detail.put("lastPurchasePrice", lastPurchase.get("unitPrice"));
+            detail.put("lastPurchaseTime", lastPurchase.get("createTime"));
+            detail.put("lastPurchaseSupplier", lastPurchase.get("supplierName"));
+            detail.put("recommendReason", reason);
+            // 价格对比提示
+            BigDecimal lastPrice = (BigDecimal) lastPurchase.get("unitPrice");
+            String priceAlert = null;
+            if (lastPrice != null && bom.getUnitPrice() != null && lastPrice.compareTo(bom.getUnitPrice()) != 0) {
+                priceAlert = lastPrice.compareTo(bom.getUnitPrice()) > 0
+                        ? "历史采购价高于BOM预估" : "历史采购价低于BOM预估";
+            }
+            detail.put("priceAlert", priceAlert);
+
             details.add(detail);
         }
         return details;
+    }
+
+    /**
+     * 查询物料最近一次采购记录（用于历史采购价参考）
+     */
+    private Map<String, Object> queryLastPurchasePrice(Long tenantId, String materialCode) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(MaterialPurchase::getMaterialCode, materialCode)
+                   .eq(MaterialPurchase::getTenantId, tenantId)
+                   .eq(MaterialPurchase::getDeleteFlag, 0)
+                   .isNotNull(MaterialPurchase::getUnitPrice)
+                   .orderByDesc(MaterialPurchase::getCreateTime)
+                   .last("LIMIT 1");
+            MaterialPurchase purchase = materialPurchaseMapper.selectOne(wrapper);
+            if (purchase != null) {
+                result.put("unitPrice", purchase.getUnitPrice());
+                result.put("createTime", purchase.getCreateTime());
+                result.put("supplierName", purchase.getSupplierName());
+            }
+        } catch (Exception e) {
+            log.warn("[智能采购] 查询历史采购价失败: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 生成智能推荐理由（可解释性：为什么推荐买这个数量、为什么选这个供应商）
+     */
+    private String buildRecommendReason(BigDecimal demand, int availableStock, BigDecimal inTransit,
+                                         BigDecimal netDemand, StyleBom bom, Factory supplier,
+                                         Map<String, Object> lastPurchase) {
+        if (netDemand == null || netDemand.compareTo(BigDecimal.ZERO) <= 0) {
+            return String.format("无需采购：库存%d + 在途%s 可覆盖需求%s",
+                    availableStock,
+                    inTransit.setScale(2, RoundingMode.HALF_UP),
+                    demand.setScale(2, RoundingMode.HALF_UP));
+        }
+
+        StringBuilder reason = new StringBuilder();
+        reason.append(String.format("需采购%s：需求%s - 库存%d - 在途%s = 净缺%s",
+                netDemand.setScale(2, RoundingMode.HALF_UP),
+                demand.setScale(2, RoundingMode.HALF_UP),
+                availableStock,
+                inTransit.setScale(2, RoundingMode.HALF_UP),
+                netDemand.setScale(2, RoundingMode.HALF_UP)));
+
+        if (supplier != null) {
+            Boolean isBomDesignated = StringUtils.hasText(bom.getSupplierId())
+                    && bom.getSupplierId().equals(String.valueOf(supplier.getId()));
+            if (isBomDesignated) {
+                reason.append("；BOM指定供应商");
+            } else if ("S".equals(supplier.getSupplierTier()) || "A".equals(supplier.getSupplierTier())) {
+                reason.append(String.format("；推荐%s级供应商（综合评分%s）",
+                        supplier.getSupplierTier(),
+                        supplier.getOverallScore() != null ? supplier.getOverallScore() : "暂无"));
+            } else {
+                reason.append(String.format("；推荐供应商（综合评分%s）",
+                        supplier.getOverallScore() != null ? supplier.getOverallScore() : "暂无"));
+            }
+        }
+
+        BigDecimal lastPrice = (BigDecimal) lastPurchase.get("unitPrice");
+        if (lastPrice != null && bom.getUnitPrice() != null && lastPrice.compareTo(bom.getUnitPrice()) != 0) {
+            reason.append(String.format("；注意：上次采购价%s ≠ BOM预估%s",
+                    lastPrice.setScale(2, RoundingMode.HALF_UP),
+                    bom.getUnitPrice().setScale(2, RoundingMode.HALF_UP)));
+        }
+
+        return reason.toString();
     }
 
     /**
