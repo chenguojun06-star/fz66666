@@ -71,11 +71,9 @@ export const paths = {
   financeCenter: '/finance/center',
   expenseReimbursement: '/finance/expense-reimbursement',
   employeeAdvance: '/finance/employee-advance',
-  expenseManagement: '/finance/expense-management',
   wagePayment: '/finance/wage-payment',
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
-  orderWasteAnalysis: '/finance/order-waste-analysis',
   financeDashboard: '/finance/dashboard',
   financeReceivables: '/finance/receivables',
   financePayable: '/finance/payable',
@@ -445,7 +443,6 @@ export const permissionCodes = {
   financeCenter: 'MENU_FINISHED_SETTLEMENT',
   expenseReimbursement: 'MENU_EXPENSE_REIMBURSEMENT',
   employeeAdvance: 'MENU_EMPLOYEE_ADVANCE',
-  expenseManagement: 'MENU_EXPENSE_REIMBURSEMENT',
   wagePayment: 'MENU_PAYMENT_APPROVAL',
 
   materialInventory: 'MENU_MATERIAL_INVENTORY',
@@ -478,7 +475,6 @@ export const permissionCodes = {
   intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
-  orderWasteAnalysis: 'MENU_FINANCE_EXPORT',
   financeDashboard: 'MENU_FINISHED_SETTLEMENT',
   crm: 'MENU_CRM',
   crmReceivables: 'MENU_CRM',
@@ -724,8 +720,6 @@ export const routeToPermissionCode: Record<string, string> = {
   // financeTaxExport: 标准格式免费开放，有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
   [paths.financeTaxExport]: permissionCodes.financeTaxExport,       // 财税导出 → MENU_FINANCE_EXPORT
   [paths.ecSalesRevenue]: permissionCodes.financeTaxExport,         // EC销售收入 → MENU_FINANCE_EXPORT
-  [paths.orderWasteAnalysis]: permissionCodes.orderWasteAnalysis,   // 订单损耗分析 → MENU_FINANCE_EXPORT
-  [paths.expenseManagement]: permissionCodes.expenseReimbursement,  // 费用管理 → MENU_EXPENSE_REIMBURSEMENT
   [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
   [paths.financePaymentSchedule]: permissionCodes.materialRecon,      // 付款计划 → 复用物料对账权限
   [paths.crm]: permissionCodes.crm,

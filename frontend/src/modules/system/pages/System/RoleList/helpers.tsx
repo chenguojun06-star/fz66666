@@ -61,7 +61,6 @@ export const MODULE_SECTIONS = [
     { label: '收付款中心', code: permissionCodes.wagePayment },
     { label: '费用管理', code: permissionCodes.expenseReimbursement },
     { label: '财税工具', code: permissionCodes.financeTaxExport },
-    { label: '损耗分析', code: permissionCodes.orderWasteAnalysis },
   ]},
   { title: '系统设置', items: [
     { label: '个人中心', code: 'PUBLIC' },

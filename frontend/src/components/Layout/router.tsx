@@ -80,7 +80,6 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/finance/payable') return '应付账款';
   if (base === '/finance/payment-schedule') return '付款计划';
   if (base === '/finance/employee-advance') return '员工借支';
-  if (base === '/finance/expense-management') return '费用管理';
   if (base === '/finance/tax-export') return '财税导出';
   if (base === '/finance/dashboard') return '财务总览';
   if (base === '/warehouse/product-info') return '成品资料';
