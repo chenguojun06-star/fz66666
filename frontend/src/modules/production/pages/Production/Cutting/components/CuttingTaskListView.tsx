@@ -51,26 +51,35 @@ const CuttingTaskListView: React.FC<CuttingTaskListViewProps> = ({ tasks, taskCo
             key: 'all',
             items: [
               { label: '任务总数', value: tasks.cuttingStats.totalCount, unit: '条', color: 'var(--color-primary)' },
-              { label: '总数量', value: tasks.cuttingStats.totalQuantity, color: 'var(--color-success)' },
+              { label: '总数量', value: tasks.cuttingStats.totalQuantity, unit: '件', color: 'var(--color-success)' },
             ],
             onClick: () => tasks.handleStatClick('all'),
             activeColor: 'var(--color-primary)',
           },
           {
             key: 'pending',
-            items: [{ label: '待领取', value: tasks.cuttingStats.pendingCount, unit: '条', color: 'var(--color-warning)' }],
+            items: [
+              { label: '待领取', value: tasks.cuttingStats.pendingCount, unit: '条', color: 'var(--color-warning)' },
+              { label: '数量', value: (tasks.cuttingStats as any).pendingQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
+            ],
             onClick: () => tasks.handleStatClick('pending'),
             activeColor: 'var(--color-warning)',
           },
           {
             key: 'received',
-            items: [{ label: '已领取', value: tasks.cuttingStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
+            items: [
+              { label: '已领取', value: tasks.cuttingStats.receivedCount, unit: '条', color: 'var(--color-primary)' },
+              { label: '数量', value: (tasks.cuttingStats as any).receivedQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
+            ],
             onClick: () => tasks.handleStatClick('received'),
             activeColor: 'var(--color-primary)',
           },
           {
             key: 'bundled',
-            items: [{ label: '已完成', value: tasks.cuttingStats.bundledCount, unit: '条', color: 'var(--color-success)' }],
+            items: [
+              { label: '已完成', value: tasks.cuttingStats.bundledCount, unit: '条', color: 'var(--color-success)' },
+              { label: '数量', value: (tasks.cuttingStats as any).bundledQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
+            ],
             onClick: () => tasks.handleStatClick('bundled'),
             activeColor: 'var(--color-success)',
           },

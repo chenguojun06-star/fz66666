@@ -813,40 +813,79 @@ public class StyleInfoOrchestrator {
      * - 默认（mode 为空或 "sample"）：所有启用状态款式，用于样衣开发列表页
      * - mode=order：仅已下单款式（pushedToOrder=1），用于下单管理页
      * 多租户隔离：非超级管理员仅查询当前租户数据（P0铁律4）
+     * <p>
+     * mode=order 时额外返回件数字段（关联订单 orderQuantity 之和）：
+     *   - totalQuantity: 所有匹配款式关联订单 orderQuantity 之和
+     *   - developingQuantity: 进行中（未完成）款式关联订单 orderQuantity 之和
+     *   - completedQuantity: 已完成款式关联订单 orderQuantity 之和
+     *   - delayedQuantity: 已延期款式关联订单 orderQuantity 之和
+     * sample 模式统计所有启用款式（不一定有订单），件数字段固定为 0。
      */
     public java.util.Map<String, Object> getStyleStats(String mode) {
         java.util.Map<String, Object> stats = new java.util.HashMap<>();
         boolean orderMode = "order".equalsIgnoreCase(mode);
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
+        Long currentTenantId = UserContext.tenantId();
         long totalStyles = 0L;
         long completedStyles = 0L;
         long delayedStyles = 0L;
+        // 件数（orderQuantity 之和）：仅 order 模式计算
+        long totalQuantity = 0L;
+        long completedQuantity = 0L;
+        long developingQuantity = 0L;
+        long delayedQuantity = 0L;
         try {
-            totalStyles = styleInfoService.lambdaQuery()
+            // 一次性查询所有匹配的启用款式，用于 count + 分类 + 件数汇总
+            List<StyleInfo> matchedStyles = styleInfoService.lambdaQuery()
+                    .select(StyleInfo::getId, StyleInfo::getStyleNo,
+                            StyleInfo::getSampleStatus, StyleInfo::getDeliveryDate)
                     .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                     .eq(StyleInfo::getStatus, "ENABLED")
                     .eq(orderMode, StyleInfo::getPushedToOrder, 1)
-                    .count();
+                    .list();
 
-            completedStyles = styleInfoService.lambdaQuery()
-                    .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
-                    .eq(StyleInfo::getStatus, "ENABLED")
-                    .eq(orderMode, StyleInfo::getPushedToOrder, 1)
-                    .and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED")
-                            .or().eq(StyleInfo::getSampleStatus, "Completed"))
-                    .count();
+            totalStyles = matchedStyles == null ? 0L : matchedStyles.size();
 
-            // P0 修复：原 ne+OR 链恒为真（任何值都至少满足一个 ne），导致已完成款式被误算为延期
-            // 改为 notIn，与 StyleInfoServiceImpl.queryPage 的 onlyInProgress 修复保持一致
-            delayedStyles = styleInfoService.lambdaQuery()
-                    .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
-                    .eq(StyleInfo::getStatus, "ENABLED")
-                    .eq(orderMode, StyleInfo::getPushedToOrder, 1)
-                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
-                            .or().notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed"))
-                    .lt(StyleInfo::getDeliveryDate, LocalDateTime.now())
-                    .count();
+            LocalDateTime now = LocalDateTime.now();
+            List<String> allStyleNos = new java.util.ArrayList<>();
+            List<String> completedStyleNos = new java.util.ArrayList<>();
+            List<String> delayedStyleNos = new java.util.ArrayList<>();
+            if (matchedStyles != null) {
+                for (StyleInfo style : matchedStyles) {
+                    if (style == null) {
+                        continue;
+                    }
+                    String styleNo = style.getStyleNo();
+                    if (!StringUtils.hasText(styleNo)) {
+                        continue;
+                    }
+                    allStyleNos.add(styleNo);
+
+                    String sampleStatus = style.getSampleStatus();
+                    boolean isCompleted = "COMPLETED".equals(sampleStatus)
+                            || "Completed".equals(sampleStatus);
+                    if (isCompleted) {
+                        completedStyleNos.add(styleNo);
+                    } else if (style.getDeliveryDate() != null
+                            && style.getDeliveryDate().isBefore(now)) {
+                        // 与原 SQL 一致：未完成（含 null）+ deliveryDate < now 才算延期
+                        delayedStyleNos.add(styleNo);
+                    }
+                }
+            }
+
+            completedStyles = completedStyleNos.size();
+            delayedStyles = delayedStyleNos.size();
+
+            // 件数仅在 order 模式下计算（sample 模式统计所有启用款式，不一定都有订单）
+            if (orderMode) {
+                totalQuantity = sumOrderQuantity(allStyleNos, currentTenantId);
+                completedQuantity = sumOrderQuantity(completedStyleNos, currentTenantId);
+                delayedQuantity = sumOrderQuantity(delayedStyleNos, currentTenantId);
+                // 进行中件数 = 总件数 - 已完成件数（与 developingStyles 计算方式一致）
+                developingQuantity = Math.max(0L, totalQuantity - completedQuantity);
+            }
         } catch (Exception e) {
             log.warn("[StyleInfo] getStyleStats 查询失败 mode={}, err={}", mode, e.getMessage());
         }
@@ -855,7 +894,42 @@ public class StyleInfoOrchestrator {
         stats.put("developingStyles", inProgressStyles);
         stats.put("completedStyles", completedStyles);
         stats.put("delayedStyles", delayedStyles);
+        // 件数字段：order 模式有值；sample 模式固定为 0
+        stats.put("totalQuantity", totalQuantity);
+        stats.put("developingQuantity", developingQuantity);
+        stats.put("completedQuantity", completedQuantity);
+        stats.put("delayedQuantity", delayedQuantity);
         return stats;
+    }
+
+    /**
+     * 按款号汇总关联订单的 orderQuantity 之和
+     * 通过 style_no 关联 t_production_order 表（与 isProductionReqLocked 一致）
+     * 多租户隔离：非超级管理员仅汇总当前租户订单（P0铁律4）
+     */
+    private long sumOrderQuantity(List<String> styleNos, Long tenantId) {
+        if (styleNos == null || styleNos.isEmpty()) {
+            return 0L;
+        }
+        try {
+            List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                    .select(ProductionOrder::getOrderQuantity)
+                    .in(ProductionOrder::getStyleNo, styleNos)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .list();
+            if (orders == null || orders.isEmpty()) {
+                return 0L;
+            }
+            return orders.stream()
+                    .mapToLong(o -> o.getOrderQuantity() != null
+                            ? o.getOrderQuantity().longValue() : 0L)
+                    .sum();
+        } catch (Exception e) {
+            log.warn("[StyleInfo] sumOrderQuantity 查询失败 styleNos.size={}, err={}",
+                    styleNos.size(), e.getMessage());
+            return 0L;
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -177,6 +177,9 @@ public class CuttingTaskOrchestrator {
                 emptyStats.put("pendingCount", 0L);
                 emptyStats.put("receivedCount", 0L);
                 emptyStats.put("bundledCount", 0L);
+                emptyStats.put("pendingQuantity", 0L);
+                emptyStats.put("receivedQuantity", 0L);
+                emptyStats.put("bundledQuantity", 0L);
                 return emptyStats;
             }
             baseWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
@@ -198,6 +201,9 @@ public class CuttingTaskOrchestrator {
                 emptyStats.put("pendingCount", 0L);
                 emptyStats.put("receivedCount", 0L);
                 emptyStats.put("bundledCount", 0L);
+                emptyStats.put("pendingQuantity", 0L);
+                emptyStats.put("receivedQuantity", 0L);
+                emptyStats.put("bundledQuantity", 0L);
                 return emptyStats;
             }
             baseWrapper.in(CuttingTask::getProductionOrderId, matchedOrderIds);
@@ -211,6 +217,9 @@ public class CuttingTaskOrchestrator {
         stats.put("pendingCount", allTasks.stream().filter(t -> "pending".equals(t.getStatus())).count());
         stats.put("receivedCount", allTasks.stream().filter(t -> "received".equals(t.getStatus())).count());
         stats.put("bundledCount", allTasks.stream().filter(t -> "bundled".equals(t.getStatus())).count());
+        stats.put("pendingQuantity", allTasks.stream().filter(t -> "pending".equals(t.getStatus())).mapToLong(t -> t.getOrderQuantity() != null ? t.getOrderQuantity() : 0).sum());
+        stats.put("receivedQuantity", allTasks.stream().filter(t -> "received".equals(t.getStatus())).mapToLong(t -> t.getOrderQuantity() != null ? t.getOrderQuantity() : 0).sum());
+        stats.put("bundledQuantity", allTasks.stream().filter(t -> "bundled".equals(t.getStatus())).mapToLong(t -> t.getOrderQuantity() != null ? t.getOrderQuantity() : 0).sum());
         return stats;
     }
 

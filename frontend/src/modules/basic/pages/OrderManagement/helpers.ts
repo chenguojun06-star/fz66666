@@ -8,16 +8,24 @@ export type SmartFilterType = 'all' | 'overdue' | 'warning';
 
 export interface OrderStats {
   totalStyles: number;
+  totalQuantity: number;
   developingStyles: number;
+  developingQuantity: number;
   completedStyles: number;
+  completedQuantity: number;
   delayedStyles: number;
+  delayedQuantity: number;
 }
 
 export const initialOrderStats: OrderStats = {
   totalStyles: 0,
+  totalQuantity: 0,
   developingStyles: 0,
+  developingQuantity: 0,
   completedStyles: 0,
+  completedQuantity: 0,
   delayedStyles: 0,
+  delayedQuantity: 0,
 };
 
 /** 构建 tooltip 主题色（暗色/亮色自适应） */

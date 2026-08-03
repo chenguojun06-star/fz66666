@@ -37,6 +37,7 @@ export function useStatCardsConfig({
       key: 'all',
       items: [
         { label: '全部订单', value: orderStats.totalStyles, unit: '个', color: 'var(--color-text-primary)' },
+        { label: '总数量', value: orderStats.totalQuantity, unit: '件', color: 'var(--color-text-primary)' },
       ],
       onClick: () => {
         setActiveStatFilter('all');
@@ -49,6 +50,7 @@ export function useStatCardsConfig({
       key: 'inProgress',
       items: [
         { label: '下单中', value: orderStats.developingStyles, unit: '个', color: 'var(--color-primary)' },
+        { label: '数量', value: orderStats.developingQuantity, unit: '件', color: 'var(--color-success)' },
       ],
       onClick: () => {
         setActiveStatFilter('inProgress');
@@ -61,6 +63,7 @@ export function useStatCardsConfig({
       key: 'completed',
       items: [
         { label: '已完成', value: orderStats.completedStyles, unit: '个', color: 'var(--color-success)' },
+        { label: '数量', value: orderStats.completedQuantity, unit: '件', color: 'var(--color-success)' },
       ],
       onClick: () => {
         setActiveStatFilter('completed');
@@ -73,6 +76,7 @@ export function useStatCardsConfig({
       key: 'delayed',
       items: [
         { label: '已延期', value: orderStats.delayedStyles, unit: '个', color: 'var(--color-danger)' },
+        { label: '数量', value: orderStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
       ],
       onClick: () => {
         setActiveStatFilter('delayed');

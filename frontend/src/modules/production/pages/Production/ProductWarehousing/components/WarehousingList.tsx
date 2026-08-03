@@ -142,25 +142,37 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             cards={[
               {
                 key: 'pendingQc',
-                items: { label: '待质检', value: warehousingStats.pendingQcBundles, unit: '个菲号', color: 'var(--color-warning)' },
+                items: [
+                  { label: '待质检', value: warehousingStats.pendingQcBundles, unit: '个菲号', color: 'var(--color-warning)' },
+                  { label: '数量', value: (warehousingStats as any).pendingQcQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
+                ],
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingQc' ? 'all' : 'pendingQc'),
                 activeColor: 'var(--color-warning)',
               },
               {
                 key: 'pendingPackaging',
-                items: { label: '待包装', value: warehousingStats.pendingPackagingBundles ?? 0, unit: '个菲号', color: 'var(--color-accent-purple)' },
+                items: [
+                  { label: '待包装', value: warehousingStats.pendingPackagingBundles ?? 0, unit: '个菲号', color: 'var(--color-accent-purple)' },
+                  { label: '数量', value: (warehousingStats as any).pendingPackagingQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
+                ],
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingPackaging' ? 'all' : 'pendingPackaging'),
                 activeColor: 'var(--color-accent-purple)',
               },
               {
                 key: 'pendingWarehouse',
-                items: { label: '待入库', value: warehousingStats.pendingWarehouseBundles, unit: '个菲号', color: 'var(--color-primary)' },
+                items: [
+                  { label: '待入库', value: warehousingStats.pendingWarehouseBundles, unit: '个菲号', color: 'var(--color-primary)' },
+                  { label: '数量', value: (warehousingStats as any).pendingWarehouseQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
+                ],
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingWarehouse' ? 'all' : 'pendingWarehouse'),
                 activeColor: 'var(--color-primary)',
               },
               {
                 key: 'unqualified',
-                items: { label: '不合格', value: warehousingStats.unqualifiedCount, unit: '条', color: 'var(--color-danger)' },
+                items: [
+                  { label: '不合格', value: warehousingStats.unqualifiedCount, unit: '条', color: 'var(--color-danger)' },
+                  { label: '数量', value: (warehousingStats as any).unqualifiedQuantity ?? 0, unit: '件', color: 'var(--color-danger)' },
+                ],
                 onClick: () => handleStatusFilterChange(statusFilter === 'unqualified' ? 'all' : 'unqualified'),
                 activeColor: 'var(--color-danger)',
               },
@@ -168,6 +180,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                 key: 'completed',
                 items: [
                   { label: '已完成', value: warehousingStats.totalOrders, unit: '个订单', color: 'var(--color-success)' },
+                  { label: '入库数量', value: (warehousingStats as any).qualifiedQuantity ?? 0, unit: '件', color: 'var(--color-success)' },
                 ],
                 onClick: () => handleStatusFilterChange(statusFilter === 'completed' ? 'all' : 'completed'),
                 activeColor: 'var(--color-success)',

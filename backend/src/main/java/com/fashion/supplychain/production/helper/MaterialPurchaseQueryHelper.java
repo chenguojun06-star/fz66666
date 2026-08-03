@@ -257,15 +257,20 @@ public class MaterialPurchaseQueryHelper {
     }
 
     private Map<String, Object> emptyStats() {
-        return Map.of(
-                "pendingCount", 0,
-                "receivedCount", 0,
-                "partialCount", 0,
-                "completedCount", 0,
-                "cancelledCount", 0,
-                "totalCount", 0,
-                "totalQuantity", 0
-        );
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+        stats.put("pendingCount", 0);
+        stats.put("receivedCount", 0);
+        stats.put("partialCount", 0);
+        stats.put("completedCount", 0);
+        stats.put("cancelledCount", 0);
+        stats.put("totalCount", 0);
+        stats.put("totalQuantity", 0);
+        stats.put("pendingQuantity", 0);
+        stats.put("receivedQuantity", 0);
+        stats.put("partialQuantity", 0);
+        stats.put("completedQuantity", 0);
+        stats.put("cancelledQuantity", 0);
+        return stats;
     }
 
     private void applyStatusStatsFilters(LambdaQueryWrapper<MaterialPurchase> wrapper, Map<String, Object> params) {
@@ -335,6 +340,11 @@ public class MaterialPurchaseQueryHelper {
         int completedCount = 0;
         int cancelledCount = 0;
         int totalQuantity = 0;
+        int pendingQuantity = 0;
+        int receivedQuantity = 0;
+        int partialQuantity = 0;
+        int completedQuantity = 0;
+        int cancelledQuantity = 0;
 
         for (MaterialPurchase p : all) {
             String status = p.getStatus() == null ? "" : p.getStatus().trim().toLowerCase();
@@ -343,19 +353,34 @@ public class MaterialPurchaseQueryHelper {
             // 状态分类必须与 applyBasicFilters 的 status 过滤分组保持一致
             // 任何新增状态必须同时更新此处和 applyBasicFilters，否则会出现"统计数≠列表数"的 P0 bug
             switch (status) {
-                case "pending": pendingCount++; break;
+                case "pending":
+                    pendingCount++;
+                    pendingQuantity += qty;
+                    break;
                 case "received":
                 case "warehouse_pending":       // 待仓库出库 → 归入"已采购"
-                    receivedCount++; break;
+                    receivedCount++;
+                    receivedQuantity += qty;
+                    break;
                 case "partial":
-                case "partial_arrival": partialCount++; break;
+                case "partial_arrival":
+                    partialCount++;
+                    partialQuantity += qty;
+                    break;
                 case "completed":
                 case "awaiting_confirm":        // 待确认完成 → 归入"全部到货"
-                    completedCount++; break;
-                case "cancelled": cancelledCount++; break;
+                    completedCount++;
+                    completedQuantity += qty;
+                    break;
+                case "cancelled":
+                    cancelledCount++;
+                    cancelledQuantity += qty;
+                    break;
                 default:
                     // 未知状态保守计入 pending（向后兼容历史脏数据）
-                    pendingCount++; break;
+                    pendingCount++;
+                    pendingQuantity += qty;
+                    break;
             }
         }
 
@@ -367,6 +392,11 @@ public class MaterialPurchaseQueryHelper {
         result.put("partialCount", partialCount);
         result.put("completedCount", completedCount);
         result.put("cancelledCount", cancelledCount);
+        result.put("pendingQuantity", pendingQuantity);
+        result.put("receivedQuantity", receivedQuantity);
+        result.put("partialQuantity", partialQuantity);
+        result.put("completedQuantity", completedQuantity);
+        result.put("cancelledQuantity", cancelledQuantity);
         return result;
     }
 

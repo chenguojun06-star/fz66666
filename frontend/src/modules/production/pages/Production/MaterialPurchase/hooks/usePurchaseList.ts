@@ -18,13 +18,19 @@ const getPurchaseQueryStorage = () => {
 
 type PurchaseStats = {
   totalCount: number; totalQuantity: number;
-  pendingCount: number; receivedCount: number;
-  partialCount: number; completedCount: number;
+  pendingCount: number; pendingQuantity: number;
+  receivedCount: number; receivedQuantity: number;
+  partialCount: number; partialQuantity: number;
+  completedCount: number; completedQuantity: number;
   cancelledCount: number; overdueCount: number;
 };
 const EMPTY_STATS: PurchaseStats = {
-  totalCount: 0, totalQuantity: 0, pendingCount: 0, receivedCount: 0,
-  partialCount: 0, completedCount: 0, cancelledCount: 0, overdueCount: 0,
+  totalCount: 0, totalQuantity: 0,
+  pendingCount: 0, pendingQuantity: 0,
+  receivedCount: 0, receivedQuantity: 0,
+  partialCount: 0, partialQuantity: 0,
+  completedCount: 0, completedQuantity: 0,
+  cancelledCount: 0, overdueCount: 0,
 };
 
 interface UsePurchaseListOptions {

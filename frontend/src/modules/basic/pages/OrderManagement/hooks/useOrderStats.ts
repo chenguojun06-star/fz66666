@@ -16,9 +16,13 @@ export function useOrderStats() {
       if (res.code === 200 && res.data) {
         setOrderStats({
           totalStyles: Number(res.data.totalStyles || 0),
+          totalQuantity: Number(res.data.totalQuantity || 0),
           developingStyles: Number(res.data.developingStyles || 0),
+          developingQuantity: Number(res.data.developingQuantity || 0),
           completedStyles: Number(res.data.completedStyles || 0),
+          completedQuantity: Number(res.data.completedQuantity || 0),
           delayedStyles: Number(res.data.delayedStyles || 0),
+          delayedQuantity: Number(res.data.delayedQuantity || 0),
         });
       }
     } catch {
