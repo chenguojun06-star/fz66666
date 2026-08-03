@@ -168,7 +168,7 @@ const StyleInfoListPage: React.FC = () => {
                 viewMode={viewMode}
                 setViewMode={setViewMode}
                 setQueryParams={setQueryParams}
-                onRefresh={fetchList}
+                onRefresh={() => fetchList()}
                 onNavigateNew={() => navigate('/style-info/new')}
                 onNavigateFieldConfig={() => navigate('/system/field-config?bizType=style')}
               />
@@ -189,7 +189,7 @@ const StyleInfoListPage: React.FC = () => {
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
-            onRefresh={fetchList}
+            onRefresh={() => fetchList()}
             focusedStyleId={focusedStyleId}
             dateSortAsc={dateSortAsc}
             customFields={customFields}
@@ -206,7 +206,7 @@ const StyleInfoListPage: React.FC = () => {
             onScrap={handleScrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
-            onRefresh={fetchList}
+            onRefresh={() => fetchList()}
             focusedStyleId={focusedStyleId}
             customFields={customFields}
           />
