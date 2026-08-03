@@ -172,7 +172,7 @@ const ProductionList: React.FC = () => {
             cards={statCards.cards}
             hints={statCards.hints}
             onClearHints={statCards.onClearHints}
-            extraRight={statCards.extraRight}
+            extraRight={undefined}
           />
         </>}
         filterLeft={ProductionFilterBar(filterBarProps).filterLeft}

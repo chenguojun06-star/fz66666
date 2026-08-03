@@ -163,6 +163,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   // 统计卡片筛选
   const handleStatClick = (type: 'all' | 'pending' | 'received' | 'bundled') => {
     setActiveStatFilter(type);
+    setShowAllTasks(type === 'all');
     if (type === 'all') {
       setTaskQuery(prev => ({ ...prev, status: '', page: 1 }));
     } else {

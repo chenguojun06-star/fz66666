@@ -216,27 +216,6 @@ const MaterialPurchase: React.FC = () => {
                           >
                             智能采购推荐
                           </Button>
-                          <button
-                            type="button"
-                            onClick={() => setShowAllPurchases(v => !v)}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              border: '1px solid var(--color-border-antd)',
-                              background: 'var(--color-bg-base)',
-                              color: !showAllPurchases ? 'var(--color-text-secondary)' : 'var(--color-primary)',
-                              borderRadius: 4,
-                              padding: '4px 10px',
-                              fontSize: 12,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              lineHeight: 1.4,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {showAllPurchases ? '只看进行中' : '显示全部'}
-                          </button>
                         </div>
                       }
                     />

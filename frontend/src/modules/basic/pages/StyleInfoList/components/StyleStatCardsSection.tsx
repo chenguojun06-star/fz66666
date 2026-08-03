@@ -79,6 +79,7 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
           ],
           onClick: () => {
             setActiveStatFilter('all');
+            setShowAllStyles(true);
             setQueryParams((prev: any) => ({ ...prev, progressNode: '', page: 1 }));
             setSmartFilter('all');
             setFocusStyleIds(new Set());
@@ -97,6 +98,7 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
           ],
           onClick: () => {
             setActiveStatFilter('developing');
+            setShowAllStyles(false);
             setQueryParams((prev: any) => ({ ...prev, progressNode: '', page: 1 }));
             setSmartFilter('all');
             setFocusStyleIds(new Set());
@@ -115,6 +117,7 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
           ],
           onClick: () => {
             setActiveStatFilter('completed');
+            setShowAllStyles(false);
             setQueryParams((prev: any) => ({ ...prev, progressNode: '样衣完成', page: 1 }));
             setSmartFilter('all');
             setFocusStyleIds(new Set());
@@ -133,6 +136,7 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
           ],
           onClick: () => {
             setActiveStatFilter('delayed');
+            setShowAllStyles(false);
             handleSmartFilterClick('overdue', overdueStyles);
           },
           activeColor: 'var(--color-danger)',
@@ -187,29 +191,6 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
               setFocusedStyleId(null);
             }
           : undefined
-      }
-      extraRight={
-        <button
-          type="button"
-          onClick={() => setShowAllStyles((v) => !v)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            border: '1px solid var(--color-border-antd)',
-            background: 'var(--color-bg-base)',
-            color: showAllStyles ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            borderRadius: 4,
-            padding: '4px 10px',
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: 'pointer',
-            lineHeight: 1.4,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {showAllStyles ? '只看进行中' : '显示全部'}
-        </button>
       }
     />
   );

@@ -158,6 +158,7 @@ export function usePurchaseList({
 
   const handleStatClick = (type: 'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue') => {
     setActiveStatFilter(type);
+    setShowAllPurchases(type === 'all');
     setQueryParams(prev => ({ ...prev, status: (type === 'all' || type === 'overdue') ? '' : type, page: 1 }));
   };
 
@@ -219,36 +220,71 @@ export function usePurchaseList({
   }, [activeTabKey, queryParams]);
 
   // 实时同步（30s 轮询）
-  // 注意：fetchFn / onDataChange 必须用 useCallback 稳定引用，否则 useSync 内部
-  // useEffect 依赖变化 → 停止旧任务启动新任务 → 新任务立即执行 → setPurchaseList
-  // → 重渲染 → fetchFn 重建 → 无限循环（P0 修复 2026-08-02）
+  // 关键修复 2026-08-02：
+  // 1) 用 JSON.stringify(queryParams + activeTabKey + dialogVisible) 做 fetchSig，
+  //    只在查询真的变了时让 useSync 重置 lastData，
+  //    防止"查询没变只是闭包引用变 → lastData 清空 → 每次 onDataChange 触发 setState → 重渲染 → 下轮 lastData 又空 → 无限循环刷新"
+  // 2) syncFetchFn 不吞 HTTP / 业务异常：让 error throw 出去，错误闸门 maxErrors 才真正生效。
+  //    （之前 return null → 被当"成功"，即使后端全 500 也永远轮询不停止）
   const syncFetchFn = useCallback(async () => {
-    try {
-      const res = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>(
-        '/production/purchase/list', { params: queryParams },
-      );
-      if (res.code !== 200) return null;
-      const raw = Array.isArray(res.data?.records) ? res.data.records : [];
-      const filtered = await filterOutMissingOrders(raw);
-      const removed = raw.length - filtered.length;
-      return { records: filtered, total: Math.max(Number(res.data?.total || 0) - Math.max(removed, 0), 0) };
-    } catch (err) { console.error('[实时同步] 获取物料采购列表失败', err); return null; }
+    const res = await api.get<{ code: number; message?: string; data: { records: MaterialPurchaseType[]; total: number } }>(
+      '/production/purchase/list', { params: queryParams },
+    );
+    if (res.code !== 200) {
+      throw new Error(res.message || '获取物料采购列表失败');
+    }
+    const raw = Array.isArray(res.data?.records) ? res.data.records : [];
+    const filtered = await filterOutMissingOrders(raw);
+    const removed = raw.length - filtered.length;
+    return { records: filtered, total: Math.max(Number(res.data?.total || 0) - Math.max(removed, 0), 0) };
   }, [queryParams, filterOutMissingOrders]);
 
-  const syncOnDataChange = useCallback((newData: { records: MaterialPurchaseType[]; total: number } | null) => {
-    if (newData) { setPurchaseList(newData.records); setTotal(newData.total); fetchPurchaseStats(); }
+  const syncOnDataChange = useCallback((newData: { records: MaterialPurchaseType[]; total: number } | null, oldData: { records: MaterialPurchaseType[]; total: number } | null) => {
+    if (!newData) return;
+    // ★ 关键修复1：首次同步（oldData===null）不触发 setState，因为初始 useEffect 已经加载过一次。
+    // 如果首次就 setState → 重渲染 → 下面的 syncEnabled 原来写了 !loading → 如果之前的 fetchMaterialPurchaseList
+    // 刚好 setLoading(true) 时这里被 startSync 又立即执行一次，会导致 loading→syncEnabled 抖动，
+    // 停了又启、启了又执行 fetch，造成狂打 API 的"无限刷新"观感。
+    if (oldData === null) return;
+    setPurchaseList(newData.records);
+    setTotal(newData.total);
+    void fetchPurchaseStats();
   }, [fetchPurchaseStats]);
 
   const syncOnError = useCallback((err: Error) => {
-    console.error('[实时同步] 物料采购数据同步错误', err);
-  }, []);
+    if (showSmartErrorNotice) {
+      setSmartError({
+        title: '物料采购实时同步失败（已暂停，刷新页面后重试）',
+        reason: err?.message || '网络异常',
+        code: 'MATERIAL_PURCHASE_SYNC_FAILED',
+      });
+    }
+    console.warn('[实时同步] 物料采购数据同步失败（累计达阈值后会自动停止轮询）：', err);
+  }, [showSmartErrorNotice, setSmartError]);
+
+  // ★ 关键修复2：syncEnabled 不要带 !loading。
+  // 原来的逻辑：初始 fetchMaterialPurchaseList() 把 loading 设 true → syncEnabled=false → stopSync →
+  // fetchMaterialPurchaseList 结束时 loading=false → syncEnabled=true → startSync 又立即跑一次 fetch →
+  // onDataChange 又 setState → 重渲染 → 进入恶性循环（特别是数据本身相等但 ref/obj 不同的情况下）。
+  // 同步任务与手动加载应当相互独立：轮询只是"后台增量同步"，不要被 loading 启停打断。
+  const syncEnabled = activeTabKey === 'purchase' && !dialogVisible;
+  const fetchSig = useMemo(
+    () => JSON.stringify({ activeTabKey, dialogVisible, queryParams }),
+    [activeTabKey, dialogVisible, queryParams],
+  );
 
   useSync(
     'material-purchase-list',
     syncFetchFn,
     syncOnDataChange,
-    { interval: 30000, enabled: !loading && activeTabKey === 'purchase' && !dialogVisible, pauseOnHidden: true,
-      onError: syncOnError },
+    {
+      interval: 30000,
+      enabled: syncEnabled,
+      pauseOnHidden: true,
+      onError: syncOnError,
+      maxErrors: 3,
+      fetchSig,
+    },
   );
 
   const handleDeleteOrphan = useCallback(async (record: MaterialPurchaseType) => {

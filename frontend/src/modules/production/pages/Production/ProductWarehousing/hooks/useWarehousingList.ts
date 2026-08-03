@@ -141,6 +141,7 @@ export const useWarehousingList = (): UseWarehousingListResult => {
   // 切换状态筛选
   const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
     setStatusFilter(newFilter);
+    setShowAllWarehousing(newFilter === 'all');
     setPendingBundles([]);
     if (newFilter === 'pendingQc' || newFilter === 'pendingPackaging' || newFilter === 'pendingWarehouse') {
       // 待处理类：走 pending-bundles API

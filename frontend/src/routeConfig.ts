@@ -572,7 +572,6 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '平台总览', path: paths.ecommerceCenter, icon: React.createElement(ShopOutlined) },
       { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ShoppingCartOutlined) },
-      { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {
@@ -599,12 +598,8 @@ export const menuConfig: MenuSection[] = [
       // ========== 收付款 ==========
       { label: '付款计划', path: paths.financePaymentSchedule, icon: React.createElement(ClockCircleOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
-      // ========== 费用管理 ==========
-      { label: '费用管理', path: paths.expenseManagement, icon: React.createElement(AuditOutlined) },
-      // ========== 财税工具 ==========
+      // ========== 财税工具（统一入口：费用/借支/EC/损耗） ==========
       { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
-      // ========== 成本分析 ==========
-      { label: '损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(BarChartOutlined) },
     ],
   },
   {
@@ -658,8 +653,8 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(ThunderboltOutlined),
     path: paths.intelligenceCenter,
     items: [
-      { label: '智能运营中心', path: paths.intelligenceCenter, icon: React.createElement(ThunderboltOutlined) },
-      { label: '数据看板', path: paths.cockpit, icon: React.createElement(RadarChartOutlined) },
+      { label: 'AI功能中心', path: paths.intelligenceCenter, icon: React.createElement(ThunderboltOutlined) },
+      { label: '智能驾驶舱', path: paths.cockpit, icon: React.createElement(RadarChartOutlined) },
     ],
   },
 ];
