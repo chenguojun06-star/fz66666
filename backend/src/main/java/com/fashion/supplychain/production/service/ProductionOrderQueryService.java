@@ -600,8 +600,14 @@ public class ProductionOrderQueryService {
                     "COALESCE(SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') THEN order_quantity ELSE 0 END), 0) AS active_quantity",
                     "SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders",
                     "COALESCE(SUM(CASE WHEN status = 'completed' THEN order_quantity ELSE 0 END), 0) AS completed_quantity",
+                    "SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_orders",
+                    "COALESCE(SUM(CASE WHEN status = 'cancelled' THEN order_quantity ELSE 0 END), 0) AS cancelled_quantity",
                     "SUM(CASE WHEN status = 'scrapped' THEN 1 ELSE 0 END) AS scrapped_orders",
                     "COALESCE(SUM(CASE WHEN status = 'scrapped' THEN order_quantity ELSE 0 END), 0) AS scrapped_quantity",
+                    "SUM(CASE WHEN status = 'archived' THEN 1 ELSE 0 END) AS archived_orders",
+                    "COALESCE(SUM(CASE WHEN status = 'archived' THEN order_quantity ELSE 0 END), 0) AS archived_quantity",
+                    "SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS closed_orders",
+                    "COALESCE(SUM(CASE WHEN status = 'closed' THEN order_quantity ELSE 0 END), 0) AS closed_quantity",
                     "SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND planned_end_date IS NOT NULL AND planned_end_date < NOW() THEN 1 ELSE 0 END) AS delayed_orders",
                     "COALESCE(SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND planned_end_date IS NOT NULL AND planned_end_date < NOW() THEN order_quantity ELSE 0 END), 0) AS delayed_quantity",
                     "SUM(CASE WHEN create_time >= CURDATE() AND create_time < CURDATE() + INTERVAL 1 DAY THEN 1 ELSE 0 END) AS today_orders",
@@ -622,16 +628,23 @@ public class ProductionOrderQueryService {
                 long activeQty = toLong(r.get("active_quantity"));
                 long completedOrders = toLong(r.get("completed_orders"));
                 long completedQty = toLong(r.get("completed_quantity"));
+                long cancelledOrders = toLong(r.get("cancelled_orders"));
+                long cancelledQty = toLong(r.get("cancelled_quantity"));
+                long scrappedOrders = toLong(r.get("scrapped_orders"));
+                long scrappedQty = toLong(r.get("scrapped_quantity"));
+                long archivedOrders = toLong(r.get("archived_orders"));
+                long archivedQty = toLong(r.get("archived_quantity"));
+                long closedOrders = toLong(r.get("closed_orders"));
+                long closedQty = toLong(r.get("closed_quantity"));
                 stats.setActiveOrders(activeOrders);
                 stats.setActiveQuantity(activeQty);
                 stats.setCompletedOrders(completedOrders);
                 stats.setCompletedQuantity(completedQty);
-                stats.setScrappedOrders(toLong(r.get("scrapped_orders")));
-                stats.setScrappedQuantity(toLong(r.get("scrapped_quantity")));
-                // 全部订单 = 生产中 + 已完成（与"全部"卡片语义一致：不排除终态）
-                // 当 excludeTerminal=true（"生产中"卡片）时，SQL 已过滤终态，completedOrders=0，totalOrders=activeOrders，不会重复
-                stats.setTotalOrders(activeOrders + completedOrders);
-                stats.setTotalQuantity(activeQty + completedQty);
+                stats.setScrappedOrders(scrappedOrders);
+                stats.setScrappedQuantity(scrappedQty);
+                // 全部订单 = 生产中 + 已完成 + 已取消 + 已报废 + 已归档 + 已关闭（包含所有状态）
+                stats.setTotalOrders(activeOrders + completedOrders + cancelledOrders + scrappedOrders + archivedOrders + closedOrders);
+                stats.setTotalQuantity(activeQty + completedQty + cancelledQty + scrappedQty + archivedQty + closedQty);
                 stats.setDelayedOrders(toLong(r.get("delayed_orders")));
                 stats.setDelayedQuantity(toLong(r.get("delayed_quantity")));
                 stats.setTodayOrders(toLong(r.get("today_orders")));
@@ -763,9 +776,10 @@ public class ProductionOrderQueryService {
         stats.setCompletedQuantity(completedQty);
         stats.setScrappedOrders(scrappedOrders.size());
         stats.setScrappedQuantity(scrappedQty);
-        // 全部订单 = 生产中 + 已完成（与 getGlobalStats 语义一致）
-        stats.setTotalOrders(activeOrders.size() + completedOrders.size());
-        stats.setTotalQuantity(activeQty + completedQty);
+        // 全部订单 = allOrders 总数（包含所有状态：生产中+已完成+已取消+已报废+已归档+已关闭）
+        stats.setTotalOrders(allOrders.size());
+        stats.setTotalQuantity(allOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum());
     }
 
     private void fillDelayedAndTodayStats(com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats, List<ProductionOrder> allOrders) {
