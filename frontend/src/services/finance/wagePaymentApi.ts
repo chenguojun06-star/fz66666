@@ -220,9 +220,19 @@ export const wagePaymentApi = {
     api.get(`/finance/wage-payments/${id}`),
 
   // ---- 收付款中心 ----
-  /** 获取待付款单据列表（聚合工厂对账 + 费用报销） */
-  listPendingPayables: (bizType?: string) =>
-    api.post('/finance/wage-payments/pending-payables', bizType ? { bizType } : { bizType: null }),
+  /** 获取待付款单据列表（聚合工厂对账 + 费用报销），支持日期范围筛选 */
+  listPendingPayables: (params?: { bizType?: string; startDate?: string; endDate?: string } | string) => {
+    // 兼容旧签名：仅传 bizType 字符串
+    if (params === undefined || typeof params === 'string') {
+      const bizType = params;
+      return api.post('/finance/wage-payments/pending-payables', bizType ? { bizType } : { bizType: null });
+    }
+    const { bizType, startDate, endDate } = params;
+    const body: Record<string, string | null> = { bizType: bizType ?? null };
+    if (startDate) body.startDate = startDate;
+    if (endDate) body.endDate = endDate;
+    return api.post('/finance/wage-payments/pending-payables', body);
+  },
 
   /** 发起支付并回写上游状态 */
   initiateWithCallback: (request: PaymentInitiateRequest) =>

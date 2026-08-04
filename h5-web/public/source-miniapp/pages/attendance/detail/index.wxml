@@ -1,0 +1,151 @@
+<view class="page">
+  <!-- 月份切换 -->
+  <view class="month-bar">
+    <view class="month-arrow {{canPrev ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">
+      <text class="month-arrow-text">‹</text>
+    </view>
+    <text class="month-title">{{monthLabel}}</text>
+    <view class="month-arrow {{canNext ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">
+      <text class="month-arrow-text">›</text>
+    </view>
+  </view>
+
+  <!-- 月度汇总卡 -->
+  <view class="summary-card">
+    <view class="summary-row">
+      <view class="summary-item">
+        <text class="summary-num">{{summary.workHours}}</text>
+        <text class="summary-unit">h</text>
+        <text class="summary-label">本月工时</text>
+      </view>
+      <view class="summary-divider"></view>
+      <view class="summary-item">
+        <text class="summary-num">{{summary.workDays}}</text>
+        <text class="summary-unit">天</text>
+        <text class="summary-label">出勤天数</text>
+      </view>
+      <view class="summary-divider"></view>
+      <view class="summary-item">
+        <text class="summary-num">{{summary.avgHoursPerDay}}</text>
+        <text class="summary-unit">h</text>
+        <text class="summary-label">日均工时</text>
+      </view>
+      <view class="summary-divider"></view>
+      <view class="summary-item">
+        <text class="summary-num {{summary.absentDays > 0 ? 'summary-num--warn' : ''}}">{{summary.absentDays}}</text>
+        <text class="summary-unit">天</text>
+        <text class="summary-label">缺勤天数</text>
+      </view>
+    </view>
+    <view class="summary-meta">
+      <text class="summary-meta-text">应出勤 {{summary.expectedDays}} 天</text>
+      <text class="summary-meta-dot">·</text>
+      <text class="summary-meta-text">本月累计 {{summary.workHours}} 小时</text>
+    </view>
+  </view>
+
+  <!-- 日历视图 -->
+  <view class="calendar-card" wx:if="{{calendar.length > 0}}">
+    <view class="calendar-week">
+      <text wx:for="{{weekHeader}}" wx:key="*this" class="calendar-week-cell">{{item}}</text>
+    </view>
+    <view class="calendar-body">
+      <block wx:for="{{calendar}}" wx:key="index" wx:for-item="row">
+        <view class="calendar-row">
+          <block wx:for="{{row}}" wx:key="*this" wx:for-item="cell">
+            <view class="calendar-cell {{cell ? '' : 'calendar-cell--empty'}}">
+              <block wx:if="{{cell}}">
+                <view class="cell-day
+                  {{cell.isToday ? 'cell-day--today' : ''}}
+                  {{cell.isFuture ? 'cell-day--future' : ''}}
+                  {{cell.isWeekend ? 'cell-day--weekend' : ''}}">
+                  <text>{{cell.day}}</text>
+                </view>
+                <view wx:if="{{cell.hasRecord}}" class="cell-dot cell-dot--{{cell.status}}"></view>
+                <view wx:elif="{{!cell.isFuture}}" class="cell-dot cell-dot--NO_RECORD"></view>
+              </block>
+            </view>
+          </block>
+        </view>
+      </block>
+    </view>
+
+    <!-- 图例 -->
+    <view class="legend">
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--NORMAL"></view>
+        <text class="legend-text">正常</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--LATE"></view>
+        <text class="legend-text">迟到</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--EARLY_LEAVE"></view>
+        <text class="legend-text">早退</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--MISSING_CLOCK_OUT"></view>
+        <text class="legend-text">漏打</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--ABNORMAL"></view>
+        <text class="legend-text">异常</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--NO_RECORD"></view>
+        <text class="legend-text">缺勤</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 每日明细列表 -->
+  <view class="records-section">
+    <view class="section-title">
+      <text class="section-title-text">每日明细</text>
+      <text class="section-title-meta">共 {{records.length}} 天</text>
+    </view>
+
+    <block wx:if="{{records.length > 0}}">
+      <view wx:for="{{records}}" wx:key="workDate" class="record-card">
+        <view class="record-header">
+          <view class="record-date">
+            <text class="record-date-main">{{item.workDate}}</text>
+            <text class="record-date-sub">{{item.dayOfWeek}}{{item.isToday ? ' · 今天' : ''}}{{item.isWeekend ? ' · 周末' : ''}}</text>
+          </view>
+          <view class="record-status record-status--{{item.status}}">
+            <text>{{item.statusText}}</text>
+          </view>
+        </view>
+        <view class="record-body">
+          <view class="record-time-item">
+            <text class="record-time-label">上班</text>
+            <text class="record-time-value">{{item.clockInTime ? item.clockInTime : '--:--'}}</text>
+          </view>
+          <view class="record-time-arrow">→</view>
+          <view class="record-time-item">
+            <text class="record-time-label">下班</text>
+            <text class="record-time-value">{{item.clockOutTime ? item.clockOutTime : '--:--'}}</text>
+          </view>
+          <view class="record-duration">
+            <text class="record-duration-num">{{item.workHours}}</text>
+            <text class="record-duration-unit">h</text>
+          </view>
+        </view>
+        <view wx:if="{{item.remark}}" class="record-remark">{{item.remark}}</view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-block">
+      <empty-state
+        icon="icon-calendar"
+        iconSize="lg"
+        text="本月暂无打卡记录"
+        hint="去首页完成今日打卡">
+      </empty-state>
+      <view class="empty-action" hover-class="empty-action-hover" hover-stay-time="100" bindtap="onGoClock">
+        <text class="empty-action-text">去打卡</text>
+      </view>
+    </view>
+  </view>
+</view>

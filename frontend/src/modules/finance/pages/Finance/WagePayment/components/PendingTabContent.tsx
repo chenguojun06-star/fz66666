@@ -2,13 +2,24 @@ import React from 'react';
 import { Button, Card, Empty, Space } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { DatePicker, message } from 'antd';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import { BIZ_TYPE_OPTIONS } from '@/services/finance/wagePaymentApi';
 import { exportToExcelFile } from '../helpers';
 
 const { RangePicker } = DatePicker;
+
+// 快捷预设（与 RangePicker 配合，用户也可自定义日期范围）
+const DATE_PRESETS = [
+  { label: '今天', value: [dayjs(), dayjs()] as [Dayjs, Dayjs] },
+  { label: '本周', value: [dayjs().startOf('week'), dayjs().endOf('week')] as [Dayjs, Dayjs] },
+  { label: '本月', value: [dayjs().startOf('month'), dayjs().endOf('month')] as [Dayjs, Dayjs] },
+  { label: '本季度', value: [dayjs().startOf('quarter'), dayjs().endOf('quarter')] as [Dayjs, Dayjs] },
+  { label: '近7天', value: [dayjs().subtract(7, 'day'), dayjs()] as [Dayjs, Dayjs] },
+  { label: '近30天', value: [dayjs().subtract(30, 'day'), dayjs()] as [Dayjs, Dayjs] },
+  { label: '本年', value: [dayjs().startOf('year'), dayjs().endOf('year')] as [Dayjs, Dayjs] },
+];
 
 interface PendingTabContentProps {
   payableColumns: any[];
@@ -17,8 +28,8 @@ interface PendingTabContentProps {
   payables: any[];
   payableBizType: string;
   setPayableBizType: (v: string) => void;
-  payableDateRange: [string, string];
-  setPayableDateRange: (v: [string, string]) => void;
+  payableDateRange: [Dayjs, Dayjs] | null;
+  setPayableDateRange: (v: [Dayjs, Dayjs] | null) => void;
   selectedPayableKeys: React.Key[];
   setSelectedPayableKeys: (keys: React.Key[]) => void;
   batchPaySubmitting: boolean;
@@ -64,15 +75,14 @@ const PendingTabContent: React.FC<PendingTabContentProps> = ({
             <RangePicker
               size="small"
               allowClear
-              value={payableDateRange[0] && payableDateRange[1] ? [dayjs(payableDateRange[0], 'YYYY-MM-DD'), dayjs(payableDateRange[1], 'YYYY-MM-DD')] : null}
+              presets={DATE_PRESETS}
+              value={payableDateRange}
               onChange={(dates) => {
-                if (dates && dates[0] && dates[1]) {
-                  setPayableDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')]);
-                } else {
-                  setPayableDateRange(['', '']);
-                }
+                setPayableDateRange(dates as [Dayjs, Dayjs] | null);
                 setSelectedPayableKeys([]);
               }}
+              placeholder={['开始日期', '结束日期']}
+              style={{ width: 260 }}
             />
             {selectedPayableKeys.length > 0 && (
               <span style={{ color: 'var(--color-primary)' }}>

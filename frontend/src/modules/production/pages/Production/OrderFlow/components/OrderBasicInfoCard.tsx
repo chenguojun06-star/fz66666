@@ -1,6 +1,5 @@
 import React from 'react';
-import { Badge, Button, Card, Col, Row, Switch, Tag, Tooltip } from 'antd';
-import { MessageOutlined } from '@ant-design/icons';
+import { Card, Col, Row, Switch, Tag, Tooltip } from 'antd';
 import OrderImageManager from '@/components/common/OrderImageManager';
 import OrderColorSizeMatrix from '@/components/common/OrderColorSizeMatrix';
 import type { OrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
@@ -32,8 +31,6 @@ interface Props {
   warehousingTotal: number;
   warehousingQualified: number;
   warehousingUnqualified: number;
-  remarkCount: number;
-  onOpenRemark: () => void;
 }
 
 const OrderBasicInfoCard: React.FC<Props> = ({
@@ -42,7 +39,6 @@ const OrderBasicInfoCard: React.FC<Props> = ({
   handleMatrixSave, handleMatrixClearAll, handleMatrixAutoGen, handleSkuAutoToggle,
   handleFieldSave, savingField,
   warehousingTotal, warehousingQualified, warehousingUnqualified,
-  remarkCount, onOpenRemark,
 }) => {
   return (
     <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
@@ -57,16 +53,6 @@ const OrderBasicInfoCard: React.FC<Props> = ({
               基本信息
               {editing && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)', marginLeft: 8 }}>点击字段值可编辑</span>}
             </span>
-            <Badge count={remarkCount} size="small" offset={[4, -4]}>
-              <Button
-                size="small"
-                icon={<MessageOutlined />}
-                onClick={onOpenRemark}
-                style={{ fontSize: 12 }}
-              >
-                备注
-              </Button>
-            </Badge>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
             <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>订单号</span>

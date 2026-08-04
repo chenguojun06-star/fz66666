@@ -274,7 +274,9 @@ public class WagePaymentController {
             return Result.success(java.util.Collections.emptyList());
         }
         String bizType = request != null ? request.getBizType() : null;
-        List<PayableItemDTO> items = wagePaymentOrchestrator.listPendingPayables(bizType);
+        String startDate = request != null ? request.getStartDate() : null;
+        String endDate = request != null ? request.getEndDate() : null;
+        List<PayableItemDTO> items = wagePaymentOrchestrator.listPendingPayables(bizType, startDate, endDate);
         return Result.success(items);
     }
 
@@ -583,6 +585,10 @@ public class WagePaymentController {
     public static class PendingPayableRequest {
         /** 按业务类型筛选: PAYROLL / RECONCILIATION / REIMBURSEMENT / ORDER_SETTLEMENT，null=全部 */
         private String bizType;
+        /** 起始日期（yyyy-MM-dd），按 createTime 过滤 */
+        private String startDate;
+        /** 结束日期（yyyy-MM-dd），按 createTime 过滤 */
+        private String endDate;
     }
 
     @Data

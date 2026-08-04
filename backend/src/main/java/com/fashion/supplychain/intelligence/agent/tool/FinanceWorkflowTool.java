@@ -115,7 +115,7 @@ public class FinanceWorkflowTool extends AbstractAgentTool {
     private String listPendingPayables(Map<String, Object> args) throws Exception {
         String bizType = text(args.get("bizType"));
         int limit = intOf(args.get("limit"), 10);
-        List<WagePaymentOrchestrator.PayableItemDTO> items = wagePaymentOrchestrator.listPendingPayables(bizType);
+        List<WagePaymentOrchestrator.PayableItemDTO> items = wagePaymentOrchestrator.listPendingPayables(bizType, null, null);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("summary", "付款中心待付款共 " + items.size() + " 条");
@@ -333,7 +333,7 @@ public class FinanceWorkflowTool extends AbstractAgentTool {
     }
 
     private WagePaymentOrchestrator.PayableItemDTO findPayable(String bizType, String bizId) {
-        return wagePaymentOrchestrator.listPendingPayables(bizType).stream()
+        return wagePaymentOrchestrator.listPendingPayables(bizType, null, null).stream()
                 .filter(item -> bizId.equals(item.getBizId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("未找到待付款单据"));

@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "empty-state": "/components/empty-state/empty-state"
+  },
+  "navigationBarTitleText": "考勤明细",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

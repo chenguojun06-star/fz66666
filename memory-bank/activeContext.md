@@ -7,6 +7,33 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-04 手机端打卡功能专业化改造 ✅
+
+**背景**：用户反馈手机端打卡日期时间展示不专业，要求明确展示"哪天打了/哪天没打/每天多少小时"，并希望管理更专业。
+
+**完成内容**：
+1. 后端新增月度打卡明细接口 `GET /api/production/attendance/monthly-records`
+   - WorkAttendanceMapper.selectMonthlyRecords（带 tenant_id 多租户隔离）
+   - WorkAttendanceOrchestrator.monthlyRecords（汇总+日历+明细+异常状态判定）
+   - 异常状态：NORMAL/LATE/EARLY_LEAVE/LATE_EARLY_LEAVE/MISSING_CLOCK_OUT/ABNORMAL/NO_RECORD/FUTURE
+2. 手机端新增考勤详情页 `pages/attendance/detail/`
+   - 月度汇总卡（本月工时/出勤天数/日均工时/缺勤天数/应出勤天数）
+   - 日历视图（整月日历，颜色标记每日打卡状态，含图例）
+   - 每日明细列表（日期/上班时间/下班时间/工时/异常状态标签）
+   - 月份切换（最早当月-11，最晚当月）
+3. 首页打卡卡片新增"查看明细"镂空入口，跳转考勤详情页
+4. 三端同步：miniprogram / h5-web/source-miniapp / h5-web/public/source-miniapp
+   - app.json 三端均已注册 pkg-attendance 分包
+   - attendance.js 三端均已添加 monthlyRecords 方法
+   - detail 页 4 文件三端内容一致
+   - home 页三端均已添加 detail-link 入口+样式+onViewAttendance 方法
+
+**多租户隔离审查**：
+- WorkAttendanceMapper 全部 4 条 SQL 带 `tenant_id = #{tenantId}` ✓
+- Orchestrator 全部方法从 `UserContext.get()` 获取 tenantId/userId ✓
+- Controller 不接收前端传入 tenantId ✓
+- ServiceImpl 无 @Transactional，事务在 Orchestrator 层（D-001）✓
+
 ### 2026-08-02 云托管部署连续失败四连根因修复 ✅（详见 D-054）
 
 **背景**：8月1日 b8582636d 大改动（intelligence 模块全链路修复）后，8月2日 backend-2003 到 backend-2006 连续部署失败，全部报 `Liveness/Readiness probe failed: connect: connection refused 8088`。期间 9 个 P0 救火 commit 但未根治。当日共修复 4 个独立根因。

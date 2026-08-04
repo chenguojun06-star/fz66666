@@ -249,6 +249,29 @@ public class PatternProductionController {
     }
 
     /**
+     * 获取样板生产时间线（联表 t_pattern_scan_record 聚合各节点时间，不新增字段）。
+     * <p>
+     * 返回：patternId / styleNo / status / nodes / anomalies
+     * <ul>
+     *   <li>nodes：创建 → 领取 → 制作开始 → 制作完成 → 审核 → 入库 → 出库 → 归还（缺失节点跳过）</li>
+     *   <li>每个节点附 operator 和 durationHours（与上一节点时间差）</li>
+     *   <li>anomalies：节点间隔超阈值的异常提示</li>
+     * </ul>
+     */
+    @GetMapping("/{id}/timeline")
+    public Result<Map<String, Object>> getTimeline(@PathVariable String id) {
+        try {
+            Map<String, Object> timeline = patternProductionOrchestrator.getPatternTimeline(id);
+            return Result.success(timeline);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("获取样板时间线失败: id={}", id, e);
+            throw new BusinessException("获取时间线失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * @deprecated 样衣不再自动创建大货订单。保留端点仅作历史兼容。
      */
     @Deprecated

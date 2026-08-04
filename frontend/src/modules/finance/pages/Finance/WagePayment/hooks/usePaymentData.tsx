@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Modal } from 'antd';
+import type { Dayjs } from 'dayjs';
 import {
   wagePaymentApi,
   type WagePayment,
@@ -33,7 +34,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   const [payables, setPayables] = useState<PayableItem[]>([]);
   const [payablesLoading, setPayablesLoading] = useState(true);
   const [payableBizType, setPayableBizType] = useState<string>('');
-  const [payableDateRange, setPayableDateRange] = useState<[string, string]>(['', '']);
+  const [payableDateRange, setPayableDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   // ---- 批量选择 ----
   const [selectedPayableKeys, setSelectedPayableKeys] = useState<React.Key[]>([]);
@@ -51,7 +52,11 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   const fetchPayables = useCallback(async () => {
     setPayablesLoading(true);
     try {
-      const res: any = await wagePaymentApi.listPendingPayables(payableBizType || undefined);
+      const params: { bizType?: string; startDate?: string; endDate?: string } = {};
+      if (payableBizType) params.bizType = payableBizType;
+      if (payableDateRange?.[0]) params.startDate = payableDateRange[0].format('YYYY-MM-DD');
+      if (payableDateRange?.[1]) params.endDate = payableDateRange[1].format('YYYY-MM-DD');
+      const res: any = await wagePaymentApi.listPendingPayables(params);
       setPayables(res?.data ?? res ?? []);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (err: unknown) {
@@ -61,7 +66,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
     } finally {
       setPayablesLoading(false);
     }
-  }, [payableBizType, msg, reportSmartError, showSmartErrorNotice]);
+  }, [payableBizType, payableDateRange, msg, reportSmartError, showSmartErrorNotice]);
 
   const fetchPayments = useCallback(async (formValues?: Record<string, any>) => {
     setPaymentsLoading(true);
@@ -92,13 +97,8 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   }, [activeTab, fetchPayables, fetchPayments]);
 
   // ---- 统计 ----
-  const filteredPayables = useMemo(() => {
-    if (!payableDateRange[0]) return payables;
-    return payables.filter(p => {
-      const ym = p.yearMonth ?? p.createTime?.substring(0, 7) ?? '';
-      return ym === payableDateRange[0];
-    });
-  }, [payables, payableDateRange]);
+  // 日期范围筛选已由后端完成，前端不再做月份匹配，直接使用 payables
+  const filteredPayables = useMemo(() => payables, [payables]);
 
   const pendingStats = useMemo(() => {
     const total = filteredPayables.length;

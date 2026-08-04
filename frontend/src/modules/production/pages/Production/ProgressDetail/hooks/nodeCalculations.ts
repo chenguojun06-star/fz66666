@@ -21,6 +21,10 @@ export interface NodeCalculationResult {
   nodeSecondaryColor: string;
   operatorDisplay: string;
   completionTimeDisplay: string;
+  /** 节点耗时展示（如 "2天3小时" / "5小时"），无开始或结束时间为空字符串 */
+  durationDisplay: string;
+  /** 耗时是否超阈值（>48小时），用于红色标记 */
+  durationOverThreshold: boolean;
 }
 
 export function calcNodeData(
@@ -92,6 +96,29 @@ export function calcNodeData(
   const nodePrimaryColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
   const nodeSecondaryColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-border)' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));
 
+  // 计算节点耗时（开始-结束差值），无开始或结束时间为空
+  let durationDisplay = '';
+  let durationOverThreshold = false;
+  if (startTime && completionTime) {
+    const start = new Date(startTime).getTime();
+    const end = new Date(completionTime).getTime();
+    if (!isNaN(start) && !isNaN(end) && end >= start) {
+      const diffMs = end - start;
+      const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+      durationOverThreshold = diffHours > 48;
+      if (diffHours >= 24) {
+        const days = Math.floor(diffHours / 24);
+        const hours = diffHours % 24;
+        durationDisplay = hours > 0 ? `${days}天${hours}小时` : `${days}天`;
+      } else if (diffHours > 0) {
+        durationDisplay = `${diffHours}小时`;
+      } else {
+        const diffMin = Math.round(diffMs / (1000 * 60));
+        durationDisplay = diffMin > 0 ? `${diffMin}分钟` : '';
+      }
+    }
+  }
+
   return {
     nodeName,
     nodeType,
@@ -109,6 +136,8 @@ export function calcNodeData(
     nodeSecondaryColor,
     operatorDisplay,
     completionTimeDisplay,
+    durationDisplay,
+    durationOverThreshold,
   };
 }
 

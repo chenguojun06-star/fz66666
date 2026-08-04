@@ -1,0 +1,409 @@
+/* ============ 考勤明细页 ============ */
+.page {
+  padding: var(--page-padding-y) var(--page-padding-x);
+  padding-bottom: calc(var(--spacing-2xl) + env(safe-area-inset-bottom));
+  min-height: 100vh;
+}
+
+/* -- 月份切换 -- */
+.month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.month-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+}
+
+.month-arrow-text {
+  font-size: 22px;
+  color: var(--color-text-secondary);
+  line-height: 1;
+}
+
+.month-arrow-hover {
+  opacity: 0.6;
+}
+
+.month-arrow--disabled {
+  opacity: 0.3;
+}
+
+.month-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-width: 120px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- 月度汇总卡 -- */
+.summary-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.summary-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.summary-num {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.summary-num--warn {
+  color: var(--color-warning);
+}
+
+.summary-unit {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  position: absolute;
+  margin-top: -10px;
+  margin-left: 36px;
+}
+
+.summary-item {
+  position: relative;
+}
+
+.summary-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.summary-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-border);
+}
+
+.summary-meta {
+  margin-top: var(--spacing-md);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.summary-meta-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.summary-meta-dot {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* -- 日历视图 -- */
+.calendar-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md) var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.calendar-week {
+  display: flex;
+  padding: 0 4px;
+  margin-bottom: 6px;
+}
+
+.calendar-week-cell {
+  flex: 1;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.calendar-body {
+  padding: 0 4px;
+}
+
+.calendar-row {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+.calendar-cell {
+  flex: 1;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.calendar-cell--empty {
+  visibility: hidden;
+}
+
+.cell-day {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-day--weekend {
+  color: var(--color-text-tertiary);
+}
+
+.cell-day--future {
+  color: var(--color-text-tertiary);
+}
+
+.cell-day--today {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.cell-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  margin-top: 3px;
+}
+
+/* 日历点颜色：与图例一致（全部使用 CSS 变量） */
+.cell-dot--NORMAL         { background: var(--color-success); }
+.cell-dot--LATE           { background: var(--color-warning); }
+.cell-dot--EARLY_LEAVE    { background: var(--color-warning); }
+.cell-dot--LATE_EARLY_LEAVE { background: var(--color-danger); }
+.cell-dot--MISSING_CLOCK_OUT { background: var(--color-warning); }
+.cell-dot--ABNORMAL       { background: var(--color-danger); }
+.cell-dot--NO_RECORD      { background: var(--color-border); }
+.cell-dot--FUTURE         { background: transparent; }
+
+/* -- 图例 -- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.legend-dot--NORMAL         { background: var(--color-success); }
+.legend-dot--LATE           { background: var(--color-warning); }
+.legend-dot--EARLY_LEAVE    { background: var(--color-warning); }
+.legend-dot--MISSING_CLOCK_OUT { background: var(--color-warning); }
+.legend-dot--ABNORMAL       { background: var(--color-danger); }
+.legend-dot--NO_RECORD      { background: var(--color-border); }
+
+.legend-text {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+/* -- 每日明细列表 -- */
+.records-section {
+  margin-top: var(--spacing-md);
+}
+
+.section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.section-title-text {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.section-title-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.record-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md) var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.record-date {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.record-date-main {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.record-date-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.record-status {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.record-status--NORMAL         { background: var(--color-success-bg); color: var(--color-success); }
+.record-status--LATE           { background: var(--color-warning-bg); color: var(--color-warning); }
+.record-status--EARLY_LEAVE    { background: var(--color-warning-bg); color: var(--color-warning); }
+.record-status--LATE_EARLY_LEAVE { background: var(--color-danger-bg); color: var(--color-danger); }
+.record-status--MISSING_CLOCK_OUT { background: var(--color-warning-bg); color: var(--color-warning); }
+.record-status--ABNORMAL       { background: var(--color-danger-bg); color: var(--color-danger); }
+
+.record-body {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+}
+
+.record-time-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.record-time-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.record-time-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.record-time-arrow {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-md);
+}
+
+.record-duration {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 4px 10px;
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-md);
+}
+
+.record-duration-num {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.record-duration-unit {
+  font-size: 10px;
+  color: var(--color-primary);
+}
+
+.record-remark {
+  margin-top: var(--spacing-xs);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* -- 空状态 -- */
+.empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl) 0;
+}
+
+.empty-action {
+  padding: 8px 24px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-primary);
+  background: transparent;
+}
+
+.empty-action-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.empty-action-hover {
+  opacity: 0.85;
+}

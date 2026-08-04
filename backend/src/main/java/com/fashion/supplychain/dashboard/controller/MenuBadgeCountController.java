@@ -71,6 +71,10 @@ public class MenuBadgeCountController {
                         .eq(MaterialStock::getDeleteFlag, 0)
                         .apply("quantity < safety_stock")));
         counts.put("/warehouse/material", pendingPickupCount + lowStockCount);
+        // 分拆计数：页面内 Tab 角标需要按语义独立展示，不能用合并值
+        // 领取记录 Tab 只关心待出库单数，库存总览 Tab 只关心库存预警数
+        counts.put("/warehouse/material-pickup", pendingPickupCount);
+        counts.put("/warehouse/material-lowstock", lowStockCount);
 
         return Result.success(counts);
     }

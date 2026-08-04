@@ -133,6 +133,9 @@ export function useFactorySummaryData(
       const params: Record<string, string> = {};
       if (values.factoryName?.trim()) params.factoryName = values.factoryName.trim();
       if (values.status?.trim()) params.status = values.status.trim();
+      // 日期范围筛选（按 createTime，后端已支持 startDate/endDate）
+      if (values.dateRange?.[0]) params.startDate = values.dateRange[0].format('YYYY-MM-DD');
+      if (values.dateRange?.[1]) params.endDate = values.dateRange[1].format('YYYY-MM-DD');
 
       const res = await api.get<{ code: number; data: FactorySummaryRow[] }>(
         '/finance/finished-settlement/factory-summary',

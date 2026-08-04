@@ -8,6 +8,7 @@ import { Alert as SecondaryAlert } from 'antd';
 import type { CuttingBundle, CuttingTask } from '@/types/production';
 import api from '@/utils/api';
 import { useRemarks } from '../hooks/useRemarks';
+import { useOrderLinkTimeline } from '../hooks/useOrderLinkTimeline';
 import { CuttingBundlesContent, CuttingSizeItemsContent } from './CuttingTabContent';
 import MaterialTabContent from './MaterialTabContent';
 import WorkflowTabContent from './WorkflowTabContent';
@@ -51,6 +52,12 @@ const FlowStepRenderer: React.FC<Props> = ({
     remarks, remarksLoading, newRemark, setNewRemark, remarkCount,
     recordAction, handleAddRemark, showReasonModal,
   } = useRemarks({ orderNo });
+
+  // 跟随模式：聚合扫码/采购/裁剪链路节点，与备注合并展示
+  const { nodes: linkNodes, loading: linkNodesLoading } = useOrderLinkTimeline({
+    orderId: String(orderId || ''),
+    orderNo,
+  });
 
   const [generating, setGenerating] = useState(false);
 
@@ -205,6 +212,8 @@ const FlowStepRenderer: React.FC<Props> = ({
                 newRemark={newRemark}
                 setNewRemark={setNewRemark}
                 handleAddRemark={handleAddRemark}
+                linkNodes={linkNodes}
+                linkNodesLoading={linkNodesLoading}
               />
             ),
           },

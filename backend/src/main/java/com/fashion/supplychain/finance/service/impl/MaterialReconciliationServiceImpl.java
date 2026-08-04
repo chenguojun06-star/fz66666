@@ -49,6 +49,10 @@ public class MaterialReconciliationServiceImpl
         // P0 防御性双重隔离：显式 tenant_id 过滤（与 stats 接口风格统一，符合 P0 铁律 4）
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
 
+        // 日期范围筛选（按 createTime，reconciliationDate 是字符串不适合范围查询）
+        String startDate = (String) params.get("startDate");
+        String endDate = (String) params.get("endDate");
+
         // sourceType筛选：batch同时匹配batch、stock和manual（均为非订单采购）
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReconciliation> wrapper =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReconciliation>()
@@ -73,6 +77,11 @@ public class MaterialReconciliationServiceImpl
                                 w.in(MaterialReconciliation::getStatus, statusList);
                             }
                         })
+                        // 日期范围（按 createTime）
+                        .ge(StringUtils.hasText(startDate), MaterialReconciliation::getCreateTime,
+                                StringUtils.hasText(startDate) ? java.time.LocalDate.parse(startDate).atStartOfDay() : null)
+                        .le(StringUtils.hasText(endDate), MaterialReconciliation::getCreateTime,
+                                StringUtils.hasText(endDate) ? java.time.LocalDate.parse(endDate).atTime(java.time.LocalTime.MAX) : null)
                         .orderByDesc(MaterialReconciliation::getCreateTime);
         if (StringUtils.hasText(sourceType)) {
             if ("batch".equals(sourceType)) {

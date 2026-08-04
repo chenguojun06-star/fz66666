@@ -102,12 +102,9 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         dataCount={data.length}
         stats={stats}
         selectedRowKeysCount={selectedRowKeys.length}
-        presetValue={presetValue}
         statusTab={statusTab}
         batchApproveLoading={batchApproveLoading}
         exportLoading={exportLoading}
-        onPresetChange={handlePresetChange}
-        onClearPreset={() => setPresetValue('')}
         onStatusTabChange={setStatusTab}
         onSubmitSearch={fetchData}
         onResetSearch={fetchData}

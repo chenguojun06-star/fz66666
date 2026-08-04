@@ -58,6 +58,8 @@ public class PayableOrchestrator {
         String supplierId = (String) params.get("supplierId");
         String status     = (String) params.get("status");
         String keyword    = (String) params.get("keyword");
+        String startDate  = (String) params.get("startDate");
+        String endDate    = (String) params.get("endDate");
 
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -79,9 +81,18 @@ public class PayableOrchestrator {
                 .and(isFactoryAccount && StringUtils.hasText(ctxFactoryId), w -> w
                         .eq(Payable::getCounterpartyId, ctxFactoryId)
                         .or().eq(Payable::getSupplierId, ctxFactoryId))
+                // 日期范围筛选（按到期日 dueDate，更符合付款计划场景）
+                .ge(StringUtils.hasText(startDate), Payable::getDueDate, parseLocalDate(startDate))
+                .le(StringUtils.hasText(endDate), Payable::getDueDate, parseLocalDate(endDate))
                 .orderByDesc(Payable::getCreateTime);
 
         return payableService.page(new Page<>(page, pageSize), qw);
+    }
+
+    /** 安全解析 LocalDate，解析失败返回 null */
+    private LocalDate parseLocalDate(String s) {
+        if (!StringUtils.hasText(s)) return null;
+        try { return LocalDate.parse(s); } catch (Exception e) { return null; }
     }
 
     public Payable getById(String id) {

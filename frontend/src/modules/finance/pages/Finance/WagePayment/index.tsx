@@ -56,7 +56,11 @@ const PaymentCenterPage: React.FC = () => {
     async () => {
       try {
         if (data.activeTab === 'pending') {
-          const res: any = await wagePaymentApi.listPendingPayables(data.payableBizType || undefined);
+          const params: { bizType?: string; startDate?: string; endDate?: string } = {};
+          if (data.payableBizType) params.bizType = data.payableBizType;
+          if (data.payableDateRange?.[0]) params.startDate = data.payableDateRange[0].format('YYYY-MM-DD');
+          if (data.payableDateRange?.[1]) params.endDate = data.payableDateRange[1].format('YYYY-MM-DD');
+          const res: any = await wagePaymentApi.listPendingPayables(params);
           return { records: res?.data ?? res ?? [], tab: 'pending' };
         } else {
           const res: any = await wagePaymentApi.listPayments(data.filterValuesRef.current);

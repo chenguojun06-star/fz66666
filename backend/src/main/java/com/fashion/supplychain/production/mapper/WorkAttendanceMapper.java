@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.WorkAttendance;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -60,4 +61,19 @@ public interface WorkAttendanceMapper extends BaseMapper<WorkAttendance> {
             "LIMIT 1")
     WorkAttendance selectLatestOpen(@Param("tenantId") Long tenantId,
                                     @Param("userId") String userId);
+
+    /**
+     * 查询指定月份的全部打卡明细（按 work_date 升序）
+     * 用于手机端考勤详情页：展示哪天打了/没打、每天多少小时
+     */
+    @Select("SELECT * FROM t_work_attendance " +
+            "WHERE tenant_id = #{tenantId} " +
+            "  AND user_id = #{userId} " +
+            "  AND delete_flag = 0 " +
+            "  AND work_date >= DATE_FORMAT(#{month}, '%Y-%m-01') " +
+            "  AND work_date <  DATE_ADD(DATE_FORMAT(#{month}, '%Y-%m-01'), INTERVAL 1 MONTH) " +
+            "ORDER BY work_date ASC")
+    List<WorkAttendance> selectMonthlyRecords(@Param("tenantId") Long tenantId,
+                                              @Param("userId") String userId,
+                                              @Param("month") LocalDate month);
 }

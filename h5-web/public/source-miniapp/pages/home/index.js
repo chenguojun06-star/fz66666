@@ -420,4 +420,9 @@ Page({
     const isTabPage = ['/pages/home/index', '/pages/defect/index', '/pages/scan/index', '/pages/admin/index'].indexOf(item.route) !== -1;
     safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined).catch(() => {});
   },
+
+  // 跳转考勤明细页
+  onViewAttendance: () => {
+    safeNavigate({ url: '/pages/attendance/detail/index' }).catch(() => {});
+  },
 });

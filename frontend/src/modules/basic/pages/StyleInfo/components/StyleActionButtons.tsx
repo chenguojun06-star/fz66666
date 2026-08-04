@@ -120,7 +120,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           disabled={pushDisabled}
           onClick={onPushToOrder}
           style={pushDisabled ? disabledButtonStyle : primaryButtonStyle}
-         
+
           title={pushToOrderTitle}
         >
           {pushedToOrder ? '已推送' : '推送到下单管理'}

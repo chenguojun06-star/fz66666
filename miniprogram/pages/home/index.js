@@ -403,6 +403,11 @@ Page({
     });
   },
 
+  // 跳转考勤明细页
+  onViewAttendance: function () {
+    safeNavigate({ url: '/pages/attendance/detail/index' }).catch(function () {});
+  },
+
   // ========== 点击事件 ==========
 
   onMenuTap: function (e) {

@@ -78,7 +78,10 @@ export function useMaterialInventoryList() {
         api.get('/dashboard/menu-badge-counts')
           .then((badgeRes: any) => {
             if (badgeRes?.code === 200 && badgeRes.data) {
-              const lowCount = badgeRes.data['/warehouse/material'] || 0;
+              // 使用独立的低库存计数（/warehouse/material 是合并了领料+预警的总和，语义不符）
+              const lowCount = badgeRes.data['/warehouse/material-lowstock']
+                ?? badgeRes.data['/warehouse/material']
+                ?? 0;
               setStats(prev => ({ ...prev, lowStockCount: lowCount }));
             }
           })

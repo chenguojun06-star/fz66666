@@ -174,6 +174,28 @@ export const productionPatternApi = {
     api.get<{ code: number; data: PatternProductionDetail }>(
       `/production/pattern/${encodeURIComponent(String(patternId || '').trim())}`,
     ),
+
+  /**
+   * 获取样衣链路时间线（创建/领取/制作/审核/入库/出库/归还 + 异常列表）。
+   * 后端 PatternProductionOrchestrator.getPatternTimeline 聚合 PatternScanRecord 各节点。
+   * 用于"跟随模式"：合并到备注日志时间线展示，避免新建独立页面。
+   */
+  getTimeline: (patternId: string) =>
+    api.get<{
+      code: number;
+      data: {
+        patternId: string;
+        styleNo?: string;
+        status?: string;
+        nodes: Array<{
+          node: string;
+          time: string;
+          operator?: string;
+          durationHours?: number;
+        }>;
+        anomalies: string[];
+      };
+    }>(`/production/pattern/${encodeURIComponent(String(patternId || '').trim())}/timeline`),
 };
 
 /** 工序→父节点动态映射 API（替代硬编码关键词列表） */

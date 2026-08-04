@@ -7,6 +7,7 @@ import { readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { usePersistentState } from '@/hooks/usePersistentState';
+import type { Dayjs } from 'dayjs';
 
 export const useExpenseListData = () => {
   const { user } = useUser();
@@ -22,6 +23,7 @@ export const useExpenseListData = () => {
   const [keyword, setKeyword] = useState('');
   const debouncedKeyword = useDebouncedValue(keyword, 300);
   const [viewMode, setViewMode] = usePersistentState<'my' | 'all'>('expense-reimbursement-view-mode', 'my');
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [stats, setStats] = useState({ pending: 0, totalAmount: 0, paidAmount: 0 });
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
@@ -41,6 +43,8 @@ export const useExpenseListData = () => {
       if (filterStatus) params.status = filterStatus;
       if (filterType) params.expenseType = filterType;
       if (debouncedKeyword.trim()) params.keyword = debouncedKeyword.trim();
+      if (dateRange?.[0]) params.startDate = dateRange[0].format('YYYY-MM-DD');
+      if (dateRange?.[1]) params.endDate = dateRange[1].format('YYYY-MM-DD');
 
       const res = await expenseReimbursementApi.getList(params);
       if (res.code === 200 && res.data) {
@@ -66,14 +70,14 @@ export const useExpenseListData = () => {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, filterStatus, filterType, debouncedKeyword, viewMode, user?.id, message]);
+  }, [page, pageSize, filterStatus, filterType, debouncedKeyword, viewMode, user?.id, dateRange, message]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
   return {
     list, loading, total, page, pageSize, filterStatus, filterType, keyword,
-    viewMode, stats, smartError, showSmartErrorNotice,
+    viewMode, dateRange, stats, smartError, showSmartErrorNotice,
     setPage, setPageSize, setFilterStatus, setFilterType, setKeyword,
-    setViewMode, fetchList, reportSmartError,
+    setViewMode, setDateRange, fetchList, reportSmartError,
   };
 };

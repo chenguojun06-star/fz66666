@@ -3,14 +3,12 @@ import { Alert, Button, Space, Tag, Tooltip } from 'antd';
 import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import '../../../styles.css';
 import { useOrderFlowData } from './useOrderFlowData';
 import FlowStepRenderer from './components/FlowStepRenderer';
 import OrderBasicInfoCard from './components/OrderBasicInfoCard';
 import { useEditMode } from './hooks/useEditMode';
 import { useSkuMatrixEdit } from './hooks/useSkuMatrixEdit';
-import { useRemarkCount } from './hooks/useRemarkCount';
 
 const OrderFlow: React.FC = () => {
   const {
@@ -33,8 +31,6 @@ const OrderFlow: React.FC = () => {
     skuEditMap, setSkuEditMap, savingMatrix, colorSizeMatrixModel,
     handleMatrixSave, handleMatrixClearAll, handleMatrixAutoGen, handleSkuAutoToggle,
   } = useSkuMatrixEdit({ order, orderLines, editing, fetchFlow });
-
-  const { remarkOpen, setRemarkOpen, remarkCount } = useRemarkCount(orderNoForImage);
 
   return (
     <>
@@ -92,8 +88,6 @@ const OrderFlow: React.FC = () => {
             warehousingTotal={warehousingTotal}
             warehousingQualified={warehousingQualified}
             warehousingUnqualified={warehousingUnqualified}
-            remarkCount={remarkCount}
-            onOpenRemark={() => setRemarkOpen(true)}
           />
 
           <FlowStepRenderer
@@ -112,12 +106,6 @@ const OrderFlow: React.FC = () => {
             onRefresh={fetchFlow}
           />
         </PageLayout>
-        <RemarkTimelineModal
-          open={remarkOpen}
-          onClose={() => setRemarkOpen(false)}
-          targetType="order"
-          targetNo={orderNoForImage}
-        />
     </>
   );
 };

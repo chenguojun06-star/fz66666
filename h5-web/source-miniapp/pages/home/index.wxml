@@ -28,6 +28,10 @@
     <view class="attendance-title-row">
       <text class="attendance-title">考勤打卡</text>
       <text class="attendance-status {{attendanceStatusClass}}">{{attendanceStatusText}}</text>
+      <view class="attendance-detail-link" hover-class="attendance-detail-link-hover" hover-stay-time="100" bindtap="onViewAttendance">
+        <text class="attendance-detail-link-text">查看明细</text>
+        <text class="attendance-detail-link-arrow">›</text>
+      </view>
       <view class="attendance-actions">
         <view class="attendance-btn {{clockInBtnActive ? 'attendance-btn--active' : ''}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockIn">
           <text class="attendance-btn-text">上班</text>

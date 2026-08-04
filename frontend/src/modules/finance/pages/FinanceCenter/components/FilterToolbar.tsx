@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Card, Dropdown, Form, Input, Radio, Space, Tabs } from 'antd';
+import { Button, Card, DatePicker, Dropdown, Form, Input, Space, Tabs } from 'antd';
 import type { FormInstance } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import {
   CheckCircleOutlined,
   DownloadOutlined,
@@ -10,18 +11,26 @@ import {
 } from '@ant-design/icons';
 import type { FactorySummaryStats } from '../useFactorySummaryData';
 
+const { RangePicker } = DatePicker;
+
+// 快捷预设（与 RangePicker 配合，用户也可自定义日期）
+const DATE_PRESETS = [
+  { label: '今天', value: [dayjs(), dayjs()] as [Dayjs, Dayjs] },
+  { label: '本周', value: [dayjs().startOf('week'), dayjs().endOf('week')] as [Dayjs, Dayjs] },
+  { label: '本月', value: [dayjs().startOf('month'), dayjs().endOf('month')] as [Dayjs, Dayjs] },
+  { label: '本季度', value: [dayjs().startOf('quarter'), dayjs().endOf('quarter')] as [Dayjs, Dayjs] },
+  { label: '本年', value: [dayjs().startOf('year'), dayjs().endOf('year')] as [Dayjs, Dayjs] },
+];
+
 interface Props {
   form: FormInstance;
   loading: boolean;
   dataCount: number;
   stats: FactorySummaryStats;
   selectedRowKeysCount: number;
-  presetValue: string;
   statusTab: string;
   batchApproveLoading: boolean;
   exportLoading: boolean;
-  onPresetChange: (e: any) => void;
-  onClearPreset: () => void;
   onStatusTabChange: (key: string) => void;
   onSubmitSearch: () => void;
   onResetSearch: () => void;
@@ -37,12 +46,9 @@ const FilterToolbar: React.FC<Props> = ({
   dataCount,
   stats,
   selectedRowKeysCount,
-  presetValue,
   statusTab,
   batchApproveLoading,
   exportLoading,
-  onPresetChange,
-  onClearPreset,
   onStatusTabChange,
   onSubmitSearch,
   onResetSearch,
@@ -56,6 +62,14 @@ const FilterToolbar: React.FC<Props> = ({
       <Form.Item name="factoryName">
         <Input placeholder="工厂名称" allowClear style={{ width: 160 }} />
       </Form.Item>
+      <Form.Item name="dateRange">
+        <RangePicker
+          allowClear
+          presets={DATE_PRESETS}
+          placeholder={['开始日期', '结束日期']}
+          style={{ width: 260 }}
+        />
+      </Form.Item>
       <Form.Item>
         <Space>
           <Button type="primary" htmlType="submit" loading={loading}>查询</Button>
@@ -67,17 +81,6 @@ const FilterToolbar: React.FC<Props> = ({
 
   return (
     <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
-      <div style={{ marginBottom: 8 }}>
-        <Space size={12} wrap>
-          <Radio.Group value={presetValue} onChange={onPresetChange} optionType="button" buttonStyle="solid" size="small">
-            <Radio.Button value="today">今天</Radio.Button>
-            <Radio.Button value="week">本周</Radio.Button>
-            <Radio.Button value="month">本月</Radio.Button>
-            <Radio.Button value="year">本年</Radio.Button>
-          </Radio.Group>
-          <Button size="small" onClick={onClearPreset}>清除日期</Button>
-        </Space>
-      </div>
       <Tabs
         activeKey={statusTab}
         onChange={onStatusTabChange}

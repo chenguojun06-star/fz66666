@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Card, DatePicker, Empty, Form, Input, Select, Tabs, message } from 'antd';
 import { DownloadOutlined, SearchOutlined } from '@ant-design/icons';
+import dayjs, { type Dayjs } from 'dayjs';
 import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
@@ -11,6 +12,17 @@ import {
 import { exportToExcelFile } from '../helpers';
 
 const { RangePicker } = DatePicker;
+
+// 快捷预设（与 RangePicker 配合，用户也可自定义日期范围）
+const DATE_PRESETS = [
+  { label: '今天', value: [dayjs(), dayjs()] as [Dayjs, Dayjs] },
+  { label: '本周', value: [dayjs().startOf('week'), dayjs().endOf('week')] as [Dayjs, Dayjs] },
+  { label: '本月', value: [dayjs().startOf('month'), dayjs().endOf('month')] as [Dayjs, Dayjs] },
+  { label: '本季度', value: [dayjs().startOf('quarter'), dayjs().endOf('quarter')] as [Dayjs, Dayjs] },
+  { label: '近7天', value: [dayjs().subtract(7, 'day'), dayjs()] as [Dayjs, Dayjs] },
+  { label: '近30天', value: [dayjs().subtract(30, 'day'), dayjs()] as [Dayjs, Dayjs] },
+  { label: '本年', value: [dayjs().startOf('year'), dayjs().endOf('year')] as [Dayjs, Dayjs] },
+];
 
 interface RecordsTabContentProps {
   paymentColumns: any[];
@@ -76,7 +88,12 @@ const RecordsTabContent: React.FC<RecordsTabContentProps> = ({
               </Select>
             </Form.Item>
             <Form.Item name="dateRange">
-              <RangePicker style={{ width: 240 }} />
+              <RangePicker
+                allowClear
+                presets={DATE_PRESETS}
+                placeholder={['开始日期', '结束日期']}
+                style={{ width: 260 }}
+              />
             </Form.Item>
             <Form.Item>
               <Button type="primary" ghost htmlType="submit" icon={<SearchOutlined />}>查询</Button>

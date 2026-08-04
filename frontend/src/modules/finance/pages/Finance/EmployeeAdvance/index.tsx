@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { App, Button, Card, Col, Empty, Form, Input, InputNumber, Row, Select, Space, Statistic, Tabs, Tag } from 'antd';
+import { App, Button, Card, Col, DatePicker, Empty, Form, Input, InputNumber, Row, Select, Space, Statistic, Tabs, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -9,6 +9,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { PlusOutlined, SearchOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs, { type Dayjs } from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import {
@@ -41,6 +42,7 @@ const EmployeeAdvancePage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterRepayment, setFilterRepayment] = useState<string | undefined>(undefined);
   const [keyword, setKeyword] = useState('');
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +70,8 @@ const EmployeeAdvancePage: React.FC = () => {
     try {
       const res = await employeeAdvanceApi.list({
         page, size: pageSize, status: filterStatus, repaymentStatus: filterRepayment, employeeName: keyword,
+        startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+        endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
       });
       if (res.code === 200) {
         setList(res.data?.records || res.data?.list || []);
@@ -81,7 +85,7 @@ const EmployeeAdvancePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filterStatus, filterRepayment, keyword, message, reportSmartError]);
+  }, [page, pageSize, filterStatus, filterRepayment, keyword, dateRange, message, reportSmartError]);
 
   useEffect(() => { void fetchList(); }, [fetchList]);
 
@@ -244,6 +248,15 @@ const EmployeeAdvancePage: React.FC = () => {
             <Input value={keyword} onChange={(e) => setKeyword(e.target.value)}
               onPressEnter={() => { setPage(1); void fetchList(); }}
               placeholder="搜索员工/单号" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} />
+          </Col>
+          <Col>
+            <DatePicker.RangePicker
+              value={dateRange}
+              onChange={(v) => { setDateRange(v as [Dayjs, Dayjs] | null); setPage(1); }}
+              allowClear
+              placeholder={['开始日期', '结束日期']}
+              style={{ width: 240 }}
+            />
           </Col>
           <Col flex="auto" style={{ textAlign: 'right' }}>
             <Space size={8}>

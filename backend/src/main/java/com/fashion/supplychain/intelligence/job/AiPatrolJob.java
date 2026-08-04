@@ -13,9 +13,11 @@ import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestra
 import com.fashion.supplychain.intelligence.orchestration.SmartEscalationOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.TaskOrderMonitorOrchestrator;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.SysNotice;
+import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.system.service.BackendActionFlagService;
@@ -116,6 +118,13 @@ public class AiPatrolJob {
     @Autowired(required = false)
     private ScanRecordService scanRecordService;
 
+    /**
+     * 跨模块读取样衣开发数据（只读，Job 层允许跨模块调用 Service）。
+     * required=false：即使样衣模块未部署，Job 也能正常启动。
+     */
+    @Autowired(required = false)
+    private PatternProductionService patternProductionService;
+
     /** P1-3：巡检自动执行闭环 — 微信通知 + 任务创建 */
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.WxAlertNotifyService wxAlertNotifyService;
@@ -128,7 +137,8 @@ public class AiPatrolJob {
 
     /** P1-3：需要自动创建跟进任务的问题类型（MEDIUM+ 严重级别） */
     private static final Set<String> TASK_TRIGGERING_TYPES = Set.of(
-            "DEADLINE_RISK", "FACTORY_SILENCE", "QUALITY_SPIKE", "CUTTING_BACKLOG", "CORRELATED_RISK"
+            "DEADLINE_RISK", "FACTORY_SILENCE", "QUALITY_SPIKE", "CUTTING_BACKLOG", "CORRELATED_RISK",
+            "SAMPLE_PENDING_TOO_LONG", "SAMPLE_STAGNANT", "SAMPLE_REVIEW_DELAYED", "SAMPLE_OVERDUE"
     );
 
     // ══════════════════════════════════════════════════════════════════
@@ -309,6 +319,162 @@ public class AiPatrolJob {
             }
         } catch (Exception e) {
             log.warn("[AiPatrolJob-Biz] 租户 {} 工厂沉默检测异常: {}", tenantId, e.getMessage());
+        }
+
+        // ── 3. 样衣开发巡检（4 类异常，全部查 t_pattern_production 现有字段）──
+        if (patternProductionService != null) {
+            try {
+                found += scanPatternProductionAnomalies(tenantId, actionEnabled);
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob-Biz] 租户 {} 样衣开发巡检异常: {}", tenantId, e.getMessage());
+            }
+        }
+
+        return found;
+    }
+
+    /**
+     * 样衣开发异常巡检（4 类）：
+     * <ol>
+     *   <li>SAMPLE_PENDING_TOO_LONG：status=PENDING 且 createTime 距今 &gt; 3 天</li>
+     *   <li>SAMPLE_STAGNANT：status=IN_PROGRESS 且 updateTime 距今 &gt; 3 天</li>
+     *   <li>SAMPLE_REVIEW_DELAYED：status=PRODUCTION_COMPLETED + reviewStatus=PENDING 且 completeTime 距今 &gt; 2 天</li>
+     *   <li>SAMPLE_OVERDUE：status NOT IN (COMPLETED,WAREHOUSE_OUT) 且 deliveryTime &lt; now()</li>
+     * </ol>
+     * 全部带 tenant_id 过滤（P0 铁律4），不新增字段/表结构。
+     */
+    private int scanPatternProductionAnomalies(Long tenantId, boolean actionEnabled) {
+        int found = 0;
+        LocalDateTime now = LocalDateTime.now();
+
+        // a) 样衣超期未领取：status=PENDING 且 createTime 距今 > 3 天
+        try {
+            LocalDateTime pendingThreshold = now.minusDays(3);
+            LambdaQueryWrapper<PatternProduction> q = new LambdaQueryWrapper<>();
+            q.eq(PatternProduction::getTenantId, tenantId)
+             .eq(PatternProduction::getDeleteFlag, 0)
+             .eq(PatternProduction::getStatus, "PENDING")
+             .lt(PatternProduction::getCreateTime, pendingThreshold)
+             .select(PatternProduction::getId, PatternProduction::getStyleNo,
+                     PatternProduction::getCreateTime, PatternProduction::getTenantId);
+            List<PatternProduction> list = patternProductionService.list(q);
+            for (PatternProduction p : list) {
+                if (p.getCreateTime() == null) continue;
+                long days = ChronoUnit.DAYS.between(p.getCreateTime(), now);
+                if (days <= 3) continue;
+                String issue = String.format("样衣[%s] 已创建 %d 天仍未领取",
+                        Objects.toString(p.getStyleNo(), "未知"), days);
+                log.warn("[AiPatrolJob-Biz] 样衣超期未领取: tenant={}, {}", tenantId, issue);
+                found++;
+                if (actionEnabled) {
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "SAMPLE_PENDING_TOO_LONG",
+                        "MEDIUM", "pattern", String.valueOf(p.getId()),
+                        "{\"action\":\"urge_receive\",\"patternId\":\"" + p.getId() + "\"}",
+                        BigDecimal.valueOf(0.7), "NEED_APPROVAL"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Biz] 租户 {} 样衣超期未领取检测异常: {}", tenantId, e.getMessage());
+        }
+
+        // b) 样衣制作停滞：status=IN_PROGRESS 且 updateTime 距今 > 3 天
+        try {
+            LocalDateTime stagnantThreshold = now.minusDays(3);
+            LambdaQueryWrapper<PatternProduction> q = new LambdaQueryWrapper<>();
+            q.eq(PatternProduction::getTenantId, tenantId)
+             .eq(PatternProduction::getDeleteFlag, 0)
+             .eq(PatternProduction::getStatus, "IN_PROGRESS")
+             .lt(PatternProduction::getUpdateTime, stagnantThreshold)
+             .select(PatternProduction::getId, PatternProduction::getStyleNo,
+                     PatternProduction::getUpdateTime, PatternProduction::getCreateTime,
+                     PatternProduction::getTenantId);
+            List<PatternProduction> list = patternProductionService.list(q);
+            for (PatternProduction p : list) {
+                LocalDateTime ut = p.getUpdateTime() != null ? p.getUpdateTime() : p.getCreateTime();
+                if (ut == null) continue;
+                long days = ChronoUnit.DAYS.between(ut, now);
+                if (days <= 3) continue;
+                String issue = String.format("样衣[%s] 制作中已停滞 %d 天",
+                        Objects.toString(p.getStyleNo(), "未知"), days);
+                log.warn("[AiPatrolJob-Biz] 样衣制作停滞: tenant={}, {}", tenantId, issue);
+                found++;
+                if (actionEnabled) {
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "SAMPLE_STAGNANT",
+                        "MEDIUM", "pattern", String.valueOf(p.getId()),
+                        "{\"action\":\"check_stagnant\",\"patternId\":\"" + p.getId() + "\"}",
+                        BigDecimal.valueOf(0.7), "NEED_APPROVAL"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Biz] 租户 {} 样衣制作停滞检测异常: {}", tenantId, e.getMessage());
+        }
+
+        // c) 样衣审核拖延：status=PRODUCTION_COMPLETED + reviewStatus=PENDING 且 completeTime 距今 > 2 天
+        try {
+            LocalDateTime reviewThreshold = now.minusDays(2);
+            LambdaQueryWrapper<PatternProduction> q = new LambdaQueryWrapper<>();
+            q.eq(PatternProduction::getTenantId, tenantId)
+             .eq(PatternProduction::getDeleteFlag, 0)
+             .eq(PatternProduction::getStatus, "PRODUCTION_COMPLETED")
+             .eq(PatternProduction::getReviewStatus, "PENDING")
+             .lt(PatternProduction::getCompleteTime, reviewThreshold)
+             .select(PatternProduction::getId, PatternProduction::getStyleNo,
+                     PatternProduction::getCompleteTime, PatternProduction::getTenantId);
+            List<PatternProduction> list = patternProductionService.list(q);
+            for (PatternProduction p : list) {
+                if (p.getCompleteTime() == null) continue;
+                long days = ChronoUnit.DAYS.between(p.getCompleteTime(), now);
+                if (days <= 2) continue;
+                String issue = String.format("样衣[%s] 已完成 %d 天仍未审核",
+                        Objects.toString(p.getStyleNo(), "未知"), days);
+                log.warn("[AiPatrolJob-Biz] 样衣审核拖延: tenant={}, {}", tenantId, issue);
+                found++;
+                if (actionEnabled) {
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "SAMPLE_REVIEW_DELAYED",
+                        "MEDIUM", "pattern", String.valueOf(p.getId()),
+                        "{\"action\":\"urge_review\",\"patternId\":\"" + p.getId() + "\"}",
+                        BigDecimal.valueOf(0.7), "NEED_APPROVAL"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Biz] 租户 {} 样衣审核拖延检测异常: {}", tenantId, e.getMessage());
+        }
+
+        // d) 样衣交板超期：status NOT IN (COMPLETED,WAREHOUSE_OUT) 且 deliveryTime != null 且 deliveryTime < now()
+        try {
+            LambdaQueryWrapper<PatternProduction> q = new LambdaQueryWrapper<>();
+            q.eq(PatternProduction::getTenantId, tenantId)
+             .eq(PatternProduction::getDeleteFlag, 0)
+             .notIn(PatternProduction::getStatus, "COMPLETED", "WAREHOUSE_OUT")
+             .isNotNull(PatternProduction::getDeliveryTime)
+             .lt(PatternProduction::getDeliveryTime, now)
+             .select(PatternProduction::getId, PatternProduction::getStyleNo,
+                     PatternProduction::getDeliveryTime, PatternProduction::getTenantId);
+            List<PatternProduction> list = patternProductionService.list(q);
+            for (PatternProduction p : list) {
+                if (p.getDeliveryTime() == null) continue;
+                long days = ChronoUnit.DAYS.between(p.getDeliveryTime(), now);
+                String issue = String.format("样衣[%s] 已超过交板时间 %d 天",
+                        Objects.toString(p.getStyleNo(), "未知"), days);
+                log.warn("[AiPatrolJob-Biz] 样衣交板超期: tenant={}, {}", tenantId, issue);
+                found++;
+                if (actionEnabled) {
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "SAMPLE_OVERDUE",
+                        "HIGH", "pattern", String.valueOf(p.getId()),
+                        "{\"action\":\"urge_delivery\",\"patternId\":\"" + p.getId() + "\"}",
+                        BigDecimal.valueOf(0.85), "NEED_APPROVAL"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Biz] 租户 {} 样衣交板超期检测异常: {}", tenantId, e.getMessage());
         }
 
         return found;

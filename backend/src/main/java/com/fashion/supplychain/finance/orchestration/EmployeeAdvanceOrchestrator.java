@@ -52,6 +52,8 @@ public class EmployeeAdvanceOrchestrator {
         String employeeName = params != null ? (String) params.get("employeeName") : null;
         String status = params != null ? (String) params.get("status") : null;
         String repaymentStatus = params != null ? (String) params.get("repaymentStatus") : null;
+        String startDate = params != null ? (String) params.get("startDate") : null;
+        String endDate = params != null ? (String) params.get("endDate") : null;
         int page = params != null && params.get("page") != null ? Integer.parseInt(String.valueOf(params.get("page"))) : 1;
         int size = params != null && params.get("size") != null ? Integer.parseInt(String.valueOf(params.get("size"))) : 20;
 
@@ -67,6 +69,13 @@ public class EmployeeAdvanceOrchestrator {
         }
         if (StringUtils.hasText(repaymentStatus)) {
             qw.eq(EmployeeAdvance::getRepaymentStatus, repaymentStatus);
+        }
+        // 日期范围筛选（按 createTime）
+        if (StringUtils.hasText(startDate)) {
+            qw.ge(EmployeeAdvance::getCreateTime, java.time.LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (StringUtils.hasText(endDate)) {
+            qw.le(EmployeeAdvance::getCreateTime, java.time.LocalDate.parse(endDate).atTime(java.time.LocalTime.MAX));
         }
         return employeeAdvanceService.page(new Page<>(page, size), qw);
     }

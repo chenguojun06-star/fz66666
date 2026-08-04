@@ -6,6 +6,9 @@ import {
   SyncOutlined,
   ExperimentOutlined,
   NodeIndexOutlined,
+  UserOutlined,
+  AuditOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import type { StyleInfo } from '@/types/style';
 
@@ -58,6 +61,37 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
   const sampleCompletedTime = fmtTime(style.sampleCompletedTime);
   const pushedOrderTime = fmtTime(style.pushedToOrderTime);
 
+  // P2-1 新增：当前环节操作人 + 预计交板时间 + 审核状态
+  const currentOperator =
+    (style as any).patternAssignee ||
+    (style as any).productionAssignee ||
+    (style as any).bomAssignee ||
+    (style as any).processAssignee ||
+    '';
+  const deliveryDate = fmtTime((style as any).deliveryDate || (style as any).deliveryTime);
+  const sampleReviewStatus = String((style as any).sampleReviewStatus ?? '').trim().toUpperCase();
+  const sampleReviewer = (style as any).sampleReviewer || '';
+  const sampleReviewTime = fmtTime((style as any).sampleReviewTime);
+  const sampleReviewComment = (style as any).sampleReviewComment || '';
+
+  // 审核状态标签配置
+  const reviewTagConfig: Record<string, { color: string; text: string }> = {
+    PASS: { color: 'success', text: '审核通过' },
+    APPROVED: { color: 'success', text: '审核通过' },
+    REJECT: { color: 'error', text: '审核驳回' },
+    REJECTED: { color: 'error', text: '审核驳回' },
+    REWORK: { color: 'warning', text: '需返修' },
+    PENDING: { color: 'default', text: '待审核' },
+  };
+  const reviewConfig = sampleReviewStatus ? reviewTagConfig[sampleReviewStatus] : null;
+
+  // 预计交板超期检测
+  const isDeliveryOverdue = (() => {
+    if (!deliveryDate) return false;
+    const due = new Date(deliveryDate.replace(' ', 'T'));
+    return !isNaN(due.getTime()) && due.getTime() < Date.now();
+  })();
+
   return (
     <div
       style={{
@@ -95,6 +129,12 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
             {generalConfig.text}
           </Tag>
         )}
+        {reviewConfig && (
+          <Tag color={reviewConfig.color} style={{ margin: 0 }}>
+            <AuditOutlined style={{ marginRight: 4 }} />
+            {reviewConfig.text}
+          </Tag>
+        )}
         {pushedToOrder && (
           <Tag color="blue" style={{ margin: 0 }}>
             <CheckCircleOutlined style={{ marginRight: 4 }} />
@@ -109,6 +149,27 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
           icon={<NodeIndexOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
           label="当前进度"
           value={progressNode}
+        />
+      )}
+
+      {/* 当前环节操作人 */}
+      {currentOperator && (
+        <StatusRow
+          icon={<UserOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
+          label="当前操作人"
+          value={currentOperator}
+        />
+      )}
+
+      {/* 预计交板时间（超期红色标记） */}
+      {deliveryDate && (
+        <StatusRow
+          icon={isDeliveryOverdue
+            ? <WarningOutlined style={{ color: 'var(--color-danger, var(--color-error))' }} />
+            : <ClockCircleOutlined style={{ color: 'var(--color-warning, var(--color-warning))' }} />}
+          label="预计交板"
+          value={deliveryDate + (isDeliveryOverdue ? '（已超期）' : '')}
+          valueColor={isDeliveryOverdue ? 'var(--color-danger, var(--color-error))' : undefined}
         />
       )}
 
@@ -155,6 +216,13 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
           value={sampleCompletedTime}
         />
       )}
+      {sampleReviewTime && sampleReviewer && (
+        <StatusRow
+          icon={<AuditOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
+          label="审核"
+          value={`${sampleReviewer} · ${sampleReviewTime}`}
+        />
+      )}
       {pushedOrderTime && (
         <StatusRow
           icon={<CheckCircleOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
@@ -162,14 +230,37 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
           value={pushedOrderTime}
         />
       )}
+      {sampleReviewComment && (
+        <div
+          style={{
+            marginTop: 6,
+            padding: '6px 8px',
+            fontSize: 11,
+            color: 'var(--color-text-secondary, var(--color-text-muted))',
+            background: 'var(--color-bg-1, var(--color-fill-quaternary))',
+            borderRadius: 4,
+            lineHeight: 1.5,
+            maxHeight: 60,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}
+          title={sampleReviewComment}
+        >
+          审核备注：{sampleReviewComment}
+        </div>
+      )}
     </div>
   );
 };
 
-const StatusRow: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
+const StatusRow: React.FC<{ icon: React.ReactNode; label: string; value: string; valueColor?: string }> = ({
   icon,
   label,
   value,
+  valueColor,
 }) => (
   <div
     style={{
@@ -186,7 +277,7 @@ const StatusRow: React.FC<{ icon: React.ReactNode; label: string; value: string 
     <span style={{ flexShrink: 0 }}>{label}：</span>
     <span
       style={{
-        color: 'var(--color-text, var(--color-bg-dark))',
+        color: valueColor || 'var(--color-text, var(--color-bg-dark))',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',

@@ -76,6 +76,24 @@ public class ExpenseReimbursementServiceImpl
             wrapper.eq(ExpenseReimbursement::getTenantId, Long.parseLong(tenantId));
         }
 
+        // 日期范围筛选（按 expenseDate 费用发生日）
+        String startDate = (String) params.get("startDate");
+        String endDate = (String) params.get("endDate");
+        if (StringUtils.hasText(startDate)) {
+            try {
+                wrapper.ge(ExpenseReimbursement::getExpenseDate, LocalDate.parse(startDate));
+            } catch (Exception e) {
+                log.warn("[ExpenseReimbursement] startDate 解析失败: {}", startDate);
+            }
+        }
+        if (StringUtils.hasText(endDate)) {
+            try {
+                wrapper.le(ExpenseReimbursement::getExpenseDate, LocalDate.parse(endDate));
+            } catch (Exception e) {
+                log.warn("[ExpenseReimbursement] endDate 解析失败: {}", endDate);
+            }
+        }
+
         wrapper.orderByDesc(ExpenseReimbursement::getCreateTime);
 
         return this.page(new Page<>(page, size), wrapper);

@@ -47,6 +47,8 @@ export function ProgressNodeItem({
     completionTime,
     startTime,
     nodeName,
+    durationDisplay,
+    durationOverThreshold,
   } = {
     ...nodeData,
     totalQty: Number(record.cuttingQuantity || record.orderQuantity) || 0,
@@ -148,6 +150,17 @@ export function ProgressNodeItem({
               {operatorDisplay && <span>{operatorDisplay}</span>}
               {operatorDisplay && completionTimeDisplay && <span> · </span>}
               {completionTimeDisplay && <span>{completionTimeDisplay}</span>}
+            </div>
+          )}
+          {durationDisplay && (
+            <div style={{
+              fontSize: 10,
+              lineHeight: 1.3,
+              textAlign: 'center',
+              color: durationOverThreshold ? 'var(--color-danger)' : 'var(--color-text-quaternary)',
+              fontWeight: durationOverThreshold ? 600 : 400,
+            }}>
+              耗时 {durationDisplay}{durationOverThreshold ? '（超48h）' : ''}
             </div>
           )}
           <BudgetDaysEditor

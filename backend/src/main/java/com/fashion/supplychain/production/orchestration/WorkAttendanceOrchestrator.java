@@ -7,7 +7,12 @@ import com.fashion.supplychain.production.service.WorkAttendanceService;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -191,7 +196,239 @@ public class WorkAttendanceOrchestrator {
         return resp;
     }
 
+    /**
+     * 月度打卡明细（手机端考勤详情页）
+     * <p>
+     * 返回结构：
+     * {
+     *   month: "2026-08",
+     *   summary: { workHours, workDays, monthMinutes, avgHoursPerDay, absentDays },
+     *   records: [
+     *     {
+     *       workDate, clockInTime, clockOutTime, workMinutes, workHours,
+     *       status: NORMAL/LATE/EARLY_LEAVE/MISSING_CLOCK_OUT/ABNORMAL,
+     *       statusText, dayOfWeek, isToday, isWeekend, isFuture
+     *     }
+     *   ],
+     *   calendar: [
+     *     { date, day, hasRecord, status, isToday, isWeekend, isFuture, isCurrentMonth }
+     *   ]
+     * }
+     * <p>
+     * 异常判定规则：
+     * - LATE：clockInTime 在 09:00 之后（上班打卡时间晚于规定时间）
+     * - EARLY_LEAVE：clockOutTime 在 18:00 之前（下班打卡时间早于规定时间）
+     * - MISSING_CLOCK_OUT：clockOutTime 为空但 clockInTime 不空（漏打下班卡）
+     * - ABNORMAL：workMinutes < 60 或 > 960（少于1小时或超过16小时，数据异常）
+     * - NORMAL：其他正常情况
+     */
+    public Map<String, Object> monthlyRecords(String monthStr) {
+        UserContext ctx = requireUserContext();
+        Long tenantId = ctx.tenantId();
+        String userId = ctx.getUserId();
+
+        LocalDate monthDate = parseMonth(monthStr);
+        // 默认当月
+        if (monthDate == null) monthDate = LocalDate.now();
+
+        List<WorkAttendance> records = workAttendanceService.listMonthlyRecords(tenantId, userId, monthDate);
+        Map<String, Object> stats = workAttendanceService.monthlyStats(tenantId, userId, monthDate);
+
+        YearMonth ym = YearMonth.from(monthDate);
+        LocalDate today = LocalDate.now();
+        LocalDate monthStart = ym.atDay(1);
+        LocalDate monthEnd = ym.atEndOfMonth();
+
+        // 标准上下班时间（用于异常判定）
+        LocalTime standardClockIn = LocalTime.of(9, 0);
+        LocalTime standardClockOut = LocalTime.of(18, 0);
+
+        // 明细列表
+        List<Map<String, Object>> recordList = new ArrayList<>();
+        for (WorkAttendance r : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("workDate", r.getWorkDate() != null ? r.getWorkDate().toString() : null);
+            item.put("clockInTime", formatDateTime(r.getClockInTime()));
+            item.put("clockOutTime", formatDateTime(r.getClockOutTime()));
+            item.put("workMinutes", r.getWorkMinutes() != null ? r.getWorkMinutes() : 0);
+            item.put("workHours", formatHours(r.getWorkMinutes()));
+            item.put("dayOfWeek", r.getWorkDate() != null ? getDayOfWeekChinese(r.getWorkDate()) : "");
+            item.put("isToday", r.getWorkDate() != null && r.getWorkDate().equals(today));
+            item.put("isWeekend", r.getWorkDate() != null && isWeekend(r.getWorkDate()));
+            item.put("isFuture", r.getWorkDate() != null && r.getWorkDate().isAfter(today));
+            item.put("remark", r.getRemark());
+
+            // 异常状态判定
+            String[] statusInfo = detectStatus(r, standardClockIn, standardClockOut);
+            item.put("status", statusInfo[0]);
+            item.put("statusText", statusInfo[1]);
+            recordList.add(item);
+        }
+
+        // 日历视图（包含整月每一天，用于前端渲染"哪天打了/没打"）
+        List<Map<String, Object>> calendar = new ArrayList<>();
+        for (LocalDate d = monthStart; !d.isAfter(monthEnd); d = d.plusDays(1)) {
+            WorkAttendance match = findRecordByDate(records, d);
+            Map<String, Object> day = new LinkedHashMap<>();
+            day.put("date", d.toString());
+            day.put("day", d.getDayOfMonth());
+            day.put("hasRecord", match != null);
+            day.put("isToday", d.equals(today));
+            day.put("isWeekend", isWeekend(d));
+            day.put("isFuture", d.isAfter(today));
+            day.put("isCurrentMonth", true);
+            if (match != null) {
+                String[] statusInfo = detectStatus(match, standardClockIn, standardClockOut);
+                day.put("status", statusInfo[0]);
+                day.put("workMinutes", match.getWorkMinutes() != null ? match.getWorkMinutes() : 0);
+            } else {
+                day.put("status", d.isAfter(today) ? "FUTURE" : "NO_RECORD");
+                day.put("workMinutes", 0);
+            }
+            calendar.add(day);
+        }
+
+        // 汇总
+        Map<String, Object> summary = new LinkedHashMap<>();
+        Object hours = stats == null ? null : stats.get("workHours");
+        Object days = stats == null ? null : stats.get("workDays");
+        Object minutes = stats == null ? null : stats.get("monthMinutes");
+        double workHours = toDouble(hours);
+        int workDays = toInt(days);
+        long monthMinutes = toLong(minutes);
+        // 应出勤天数：当月已过去的非周末天数（不含未来）
+        int expectedDays = countWorkdayUntil(monthStart, today.minusDays(0).isBefore(monthStart) ? monthEnd : today);
+        int absentDays = Math.max(0, expectedDays - workDays);
+        double avgHours = workDays > 0 ? Math.round(workHours / workDays * 10.0) / 10.0 : 0.0;
+        summary.put("workHours", workHours);
+        summary.put("workDays", workDays);
+        summary.put("monthMinutes", monthMinutes);
+        summary.put("avgHoursPerDay", avgHours);
+        summary.put("expectedDays", expectedDays);
+        summary.put("absentDays", absentDays);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("month", ym.toString());
+        resp.put("summary", summary);
+        resp.put("records", recordList);
+        resp.put("calendar", calendar);
+        return resp;
+    }
+
     // ==================== 私有方法 ====================
+
+    private LocalDate parseMonth(String monthStr) {
+        if (!StringUtils.hasText(monthStr)) return null;
+        try {
+            return LocalDate.parse(monthStr + "-01", DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        } catch (Exception e) {
+            try {
+                return LocalDate.parse(monthStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            } catch (Exception ex) {
+                return null;
+            }
+        }
+    }
+
+    private String formatDateTime(LocalDateTime dt) {
+        if (dt == null) return null;
+        return dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    private String formatHours(Integer minutes) {
+        if (minutes == null || minutes <= 0) return "0.0";
+        return String.format("%.1f", minutes / 60.0);
+    }
+
+    private double toDouble(Object o) {
+        if (o == null) return 0.0;
+        if (o instanceof Number) return ((Number) o).doubleValue();
+        try { return Double.parseDouble(String.valueOf(o)); } catch (Exception e) { return 0.0; }
+    }
+
+    private int toInt(Object o) {
+        if (o == null) return 0;
+        if (o instanceof Number) return ((Number) o).intValue();
+        try { return Integer.parseInt(String.valueOf(o)); } catch (Exception e) { return 0; }
+    }
+
+    private long toLong(Object o) {
+        if (o == null) return 0L;
+        if (o instanceof Number) return ((Number) o).longValue();
+        try { return Long.parseLong(String.valueOf(o)); } catch (Exception e) { return 0L; }
+    }
+
+    private String getDayOfWeekChinese(LocalDate date) {
+        switch (date.getDayOfWeek()) {
+            case MONDAY: return "周一";
+            case TUESDAY: return "周二";
+            case WEDNESDAY: return "周三";
+            case THURSDAY: return "周四";
+            case FRIDAY: return "周五";
+            case SATURDAY: return "周六";
+            case SUNDAY: return "周日";
+            default: return "";
+        }
+    }
+
+    private boolean isWeekend(LocalDate date) {
+        java.time.DayOfWeek dow = date.getDayOfWeek();
+        return dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY;
+    }
+
+    /**
+     * 统计从 monthStart 到 endDate（含）之间的工作日（非周末）数量
+     * 若 endDate 早于 monthStart，返回 0
+     */
+    private int countWorkdayUntil(LocalDate monthStart, LocalDate endDate) {
+        if (endDate.isBefore(monthStart)) return 0;
+        int count = 0;
+        for (LocalDate d = monthStart; !d.isAfter(endDate); d = d.plusDays(1)) {
+            if (!isWeekend(d)) count++;
+        }
+        return count;
+    }
+
+    private WorkAttendance findRecordByDate(List<WorkAttendance> records, LocalDate date) {
+        if (records == null) return null;
+        for (WorkAttendance r : records) {
+            if (r.getWorkDate() != null && r.getWorkDate().equals(date)) return r;
+        }
+        return null;
+    }
+
+    /**
+     * 异常状态判定
+     * 返回 [status, statusText]
+     */
+    private String[] detectStatus(WorkAttendance r, LocalTime standardClockIn, LocalTime standardClockOut) {
+        Integer workMinutes = r.getWorkMinutes();
+        LocalDateTime clockIn = r.getClockInTime();
+        LocalDateTime clockOut = r.getClockOutTime();
+
+        // 漏打下班卡
+        if (clockIn != null && clockOut == null) {
+            return new String[]{"MISSING_CLOCK_OUT", "漏打下班卡"};
+        }
+        // 工时异常（<60分钟 或 >960分钟）
+        if (workMinutes != null) {
+            if (workMinutes < 60) return new String[]{"ABNORMAL", "工时异常"};
+            if (workMinutes > 960) return new String[]{"ABNORMAL", "工时异常"};
+        }
+        // 迟到（上班打卡晚于 09:00）
+        if (clockIn != null && clockIn.toLocalTime().isAfter(standardClockIn)) {
+            // 同时早退则合并显示"迟到/早退"
+            if (clockOut != null && clockOut.toLocalTime().isBefore(standardClockOut)) {
+                return new String[]{"LATE_EARLY_LEAVE", "迟到/早退"};
+            }
+            return new String[]{"LATE", "迟到"};
+        }
+        // 早退（下班打卡早于 18:00）
+        if (clockOut != null && clockOut.toLocalTime().isBefore(standardClockOut)) {
+            return new String[]{"EARLY_LEAVE", "早退"};
+        }
+        return new String[]{"NORMAL", "正常"};
+    }
 
     private UserContext requireUserContext() {
         UserContext ctx = UserContext.get();

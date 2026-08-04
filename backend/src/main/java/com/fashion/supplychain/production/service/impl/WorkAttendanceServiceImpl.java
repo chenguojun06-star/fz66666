@@ -5,6 +5,8 @@ import com.fashion.supplychain.production.entity.WorkAttendance;
 import com.fashion.supplychain.production.mapper.WorkAttendanceMapper;
 import com.fashion.supplychain.production.service.WorkAttendanceService;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +32,13 @@ public class WorkAttendanceServiceImpl extends ServiceImpl<WorkAttendanceMapper,
 
     @Override
     public Map<String, Object> monthlyStats(Long tenantId, String userId, LocalDate month) {
-        if (tenantId == null || userId == null || month == null) return java.util.Collections.emptyMap();
+        if (tenantId == null || userId == null || month == null) return Collections.emptyMap();
         return baseMapper.selectMonthlyStats(tenantId, userId, month);
+    }
+
+    @Override
+    public List<WorkAttendance> listMonthlyRecords(Long tenantId, String userId, LocalDate month) {
+        if (tenantId == null || userId == null || month == null) return Collections.emptyList();
+        return baseMapper.selectMonthlyRecords(tenantId, userId, month);
     }
 }

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Col, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Card, Col, DatePicker, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import {
   ClockCircleOutlined, DollarOutlined, ExclamationCircleOutlined, WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs, { type Dayjs } from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import payableApi, { type Payable } from '@/services/finance/payableApi';
@@ -12,6 +13,7 @@ import type { ApiResult } from '@/utils/api';
 import { toMoneyLocale } from '@/utils/format';
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PENDING:  { label: '待付款', color: 'blue' },
@@ -20,99 +22,72 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   OVERDUE:  { label: '已逾期', color: 'red' },
 };
 
-const TIME_FILTER_OPTIONS = [
-  { value: '7', label: '未来7天' },
-  { value: '14', label: '未来14天' },
-  { value: '30', label: '未来30天' },
-  { value: 'all', label: '全部' },
+// 快捷预设（与 RangePicker presets 配合，用户也可自定义日期）
+const DATE_PRESETS = [
+  { label: '未来7天', value: [dayjs(), dayjs().add(7, 'day')] as [Dayjs, Dayjs] },
+  { label: '未来14天', value: [dayjs(), dayjs().add(14, 'day')] as [Dayjs, Dayjs] },
+  { label: '未来30天', value: [dayjs(), dayjs().add(30, 'day')] as [Dayjs, Dayjs] },
+  { label: '本月', value: [dayjs().startOf('month'), dayjs().endOf('month')] as [Dayjs, Dayjs] },
+  { label: '本季度', value: [dayjs().startOf('quarter'), dayjs().endOf('quarter')] as [Dayjs, Dayjs] },
 ];
 
 const PaymentSchedule: React.FC = () => {
   const [records, setRecords] = useState<Payable[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [timeFilter, setTimeFilter] = useState('7');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(
+    () => [dayjs(), dayjs().add(30, 'day')], // 默认未来30天
+  );
 
-  const fetchAllPayables = useCallback(async () => {
+  const fetchPayables = useCallback(async () => {
     setLoading(true);
     try {
-      const allRecords: Payable[] = [];
-      let page = 1;
-      const pageSize = 100;
-      let hasMore = true;
-
-      while (hasMore) {
-        const res: ApiResult = await payableApi.list({
-          page,
-          pageSize,
-        });
-        const data = (res?.data ?? res) as Record<string, unknown> | undefined;
-        const pageRecords = (data?.records as Payable[]) ?? [];
-        allRecords.push(...pageRecords);
-        const total = (data?.total as number) ?? 0;
-        hasMore = page * pageSize < total && pageRecords.length > 0;
-        page++;
-      }
-
-      setRecords(allRecords);
+      const res: ApiResult = await payableApi.list({
+        page,
+        pageSize,
+        startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+        endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
+      });
+      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
+      setRecords((data?.records as Payable[]) ?? []);
+      setTotal((data?.total as number) ?? 0);
     } catch {
       message.error('加载付款计划失败');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, dateRange]);
 
   useEffect(() => {
-    fetchAllPayables();
-  }, [fetchAllPayables]);
+    fetchPayables();
+  }, [fetchPayables]);
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const nowTimestamp = now.getTime();
 
-  const filteredRecords = useMemo(() => {
-    let result = records.filter(r => {
-      if (!r.dueDate) return false;
-      const due = new Date(r.dueDate);
-      due.setHours(0, 0, 0, 0);
-      const remaining = r.amount - (r.paidAmount ?? 0);
-      return remaining > 0 && due.getTime() >= nowTimestamp;
-    });
-
-    if (timeFilter !== 'all') {
-      const days = parseInt(timeFilter, 10);
-      const targetDate = new Date(nowTimestamp);
-      targetDate.setDate(targetDate.getDate() + days);
-      result = result.filter(r => {
-        if (!r.dueDate) return false;
-        const due = new Date(r.dueDate);
-        due.setHours(0, 0, 0, 0);
-        return due <= targetDate;
-      });
-    }
-
-    result.sort((a, b) => {
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
-
-    return result;
-  }, [records, timeFilter, nowTimestamp]);
-
+  // 仅对待付（remaining > 0）的记录做统计
   const stats = useMemo(() => {
-    const totalPending = filteredRecords.reduce((sum, r) => sum + (r.amount - (r.paidAmount ?? 0)), 0);
+    const pendingRecords = records.filter(r => {
+      const remaining = Number(r.amount) - Number(r.paidAmount ?? 0);
+      return remaining > 0;
+    });
+
+    const totalPending = pendingRecords.reduce((sum, r) => sum + (Number(r.amount) - Number(r.paidAmount ?? 0)), 0);
 
     const calcAmountInDays = (days: number) => {
       const targetDate = new Date(nowTimestamp);
       targetDate.setDate(targetDate.getDate() + days);
-      return filteredRecords
+      return pendingRecords
         .filter(r => {
           if (!r.dueDate) return false;
           const due = new Date(r.dueDate);
           due.setHours(0, 0, 0, 0);
           return due <= targetDate;
         })
-        .reduce((sum, r) => sum + (r.amount - (r.paidAmount ?? 0)), 0);
+        .reduce((sum, r) => sum + (Number(r.amount) - Number(r.paidAmount ?? 0)), 0);
     };
 
     return {
@@ -121,7 +96,7 @@ const PaymentSchedule: React.FC = () => {
       in14Days: calcAmountInDays(14),
       in30Days: calcAmountInDays(30),
     };
-  }, [filteredRecords, nowTimestamp]);
+  }, [records, nowTimestamp]);
 
   const getRemainingDays = (dueDate?: string) => {
     if (!dueDate) return null;
@@ -265,18 +240,23 @@ const PaymentSchedule: React.FC = () => {
       <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={12} align="middle" justify="space-between">
           <Col>
-            <Space>
-              <Text type="secondary">时间筛选：</Text>
-              <Select
-                value={timeFilter}
-                onChange={setTimeFilter}
-                style={{ width: 140 }}
-                options={TIME_FILTER_OPTIONS}
+            <Space size={8}>
+              <Text type="secondary">到期日范围：</Text>
+              <RangePicker
+                value={dateRange}
+                onChange={(v) => {
+                  setDateRange(v as [Dayjs, Dayjs] | null);
+                  setPage(1);
+                }}
+                allowClear
+                presets={DATE_PRESETS}
+                placeholder={['开始日期', '结束日期']}
+                style={{ width: 260 }}
               />
             </Space>
           </Col>
           <Col>
-            <Text type="secondary">共 {filteredRecords.length} 笔待付款</Text>
+            <Text type="secondary">共 {total} 笔</Text>
           </Col>
         </Row>
       </Card>
@@ -285,16 +265,19 @@ const PaymentSchedule: React.FC = () => {
         <ResizableTable
           rowKey="id"
           columns={columns}
-          dataSource={filteredRecords}
+          dataSource={records}
           loading={loading}
           stickyHeader
           scroll={{ x: 1200 }}
           pagination={{
-            pageSize: 20,
+            current: page,
+            pageSize,
+            total,
             showSizeChanger: true,
             showTotal: t => `共 ${t} 条`,
+            onChange: (p, s) => { setPage(p); setPageSize(s); },
           }}
-          locale={{ emptyText: '暂无待付款计划' }}
+          locale={{ emptyText: '暂无付款计划' }}
         />
       </Card>
     </div>

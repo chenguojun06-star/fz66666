@@ -1,11 +1,11 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { App, Button, Card, Col, Empty, Form, Image, Input, InputNumber, Row, Select, Space, Spin, Statistic, Tabs, Tag } from 'antd';
+import { App, Button, Card, Col, DatePicker, Empty, Form, Image, Input, InputNumber, Row, Select, Space, Spin, Statistic, Tabs, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { PlusOutlined, SearchOutlined, CloseCircleOutlined, UploadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -45,9 +45,9 @@ const ExpenseReimbursementPage: React.FC = () => {
 
   const {
     list, loading, total, page, pageSize, filterStatus, filterType, keyword,
-    viewMode, stats, smartError, showSmartErrorNotice,
+    viewMode, dateRange, stats, smartError, showSmartErrorNotice,
     setPage, setPageSize, setFilterStatus, setFilterType, setKeyword,
-    setViewMode, fetchList, reportSmartError,
+    setViewMode, setDateRange, fetchList, reportSmartError,
   } = useExpenseListData();
 
   const {
@@ -215,6 +215,15 @@ const ExpenseReimbursementPage: React.FC = () => {
             <Col><Select value={viewMode} onChange={(v) => { setViewMode(v); setPage(1); }} style={{ width: 130 }} options={[{ value: 'my', label: '我的报销' }, { value: 'all', label: '全部报销（审批）' }]} /></Col>
             <Col><Select value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} allowClear placeholder="费用类型" style={{ width: 130 }} options={EXPENSE_TYPES} /></Col>
             <Col><Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onPressEnter={() => { setPage(1); fetchList(); }} placeholder="搜索事由" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} /></Col>
+            <Col>
+              <DatePicker.RangePicker
+                value={dateRange}
+                onChange={(v) => { setDateRange(v as [Dayjs, Dayjs] | null); setPage(1); }}
+                allowClear
+                placeholder={['开始日期', '结束日期']}
+                style={{ width: 240 }}
+              />
+            </Col>
             <Col flex="auto" style={{ textAlign: 'right' }}>
               <Space size={8}>
                 <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={() => openForm()}>新建报销</Button>

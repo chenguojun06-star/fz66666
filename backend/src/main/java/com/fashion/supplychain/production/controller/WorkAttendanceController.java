@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -62,6 +63,23 @@ public class WorkAttendanceController {
     @GetMapping("/monthly-stats")
     public Result<Map<String, Object>> monthlyStats() {
         Map<String, Object> result = workAttendanceOrchestrator.monthlyStats();
+        return Result.success(result);
+    }
+
+    /**
+     * 月度打卡明细（手机端考勤详情页）
+     * <p>
+     * 返回：{ month, summary:{workHours,workDays,monthMinutes,avgHoursPerDay,expectedDays,absentDays},
+     *        records:[{workDate,clockInTime,clockOutTime,workMinutes,workHours,status,statusText,dayOfWeek,isToday,isWeekend,isFuture,remark}],
+     *        calendar:[{date,day,hasRecord,status,isToday,isWeekend,isFuture,isCurrentMonth,workMinutes}] }
+     * <p>
+     * 异常状态：NORMAL/LATE/EARLY_LEAVE/LATE_EARLY_LEAVE/MISSING_CLOCK_OUT/ABNORMAL/NO_RECORD/FUTURE
+     *
+     * @param month 月份（yyyy-MM 或 yyyy-MM-dd），不传默认当月
+     */
+    @GetMapping("/monthly-records")
+    public Result<Map<String, Object>> monthlyRecords(@RequestParam(value = "month", required = false) String month) {
+        Map<String, Object> result = workAttendanceOrchestrator.monthlyRecords(month);
         return Result.success(result);
     }
 }

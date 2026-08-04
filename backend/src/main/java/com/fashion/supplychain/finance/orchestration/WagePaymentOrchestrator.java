@@ -343,8 +343,8 @@ public class WagePaymentOrchestrator {
             .build();
     }
 
-    public List<PayableItemDTO> listPendingPayables(String bizType) {
-        return payableAggregationHelper.listPendingPayables(bizType);
+    public List<PayableItemDTO> listPendingPayables(String bizType, String startDate, String endDate) {
+        return payableAggregationHelper.listPendingPayables(bizType, startDate, endDate);
     }
 
     @Transactional(rollbackFor = Exception.class)

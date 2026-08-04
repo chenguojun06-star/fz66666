@@ -1,5 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { App, Button, Card, Empty, Space, Statistic, Tabs, Tag } from 'antd';
+import { App, Button, Card, DatePicker, Empty, Space, Statistic, Tabs, Tag } from 'antd';
+import type { Dayjs } from 'dayjs';
 import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
@@ -22,9 +23,9 @@ const MaterialReconciliation: React.FC = () => {
   const { user } = useUser();
 
   const {
-    reconciliationList, loading, queryLoading, total, queryParams,
+    reconciliationList, loading, queryLoading, total, queryParams, dateRange,
     smartError, showSmartErrorNotice, financeAudit, auditLoading,
-    setQueryParams, fetchList, fetchFinanceAudit,
+    setQueryParams, setDateRange, fetchList, fetchFinanceAudit,
   } = useMaterialReconData();
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -212,10 +213,19 @@ const MaterialReconciliation: React.FC = () => {
           />
 
           {/* 操作按钮区 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-              {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${stats.total} 条`}
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+            <Space size={8} wrap>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${stats.total} 条`}
+              </span>
+              <DatePicker.RangePicker
+                value={dateRange as [Dayjs, Dayjs] | null}
+                onChange={(v) => { setDateRange(v as [Dayjs, Dayjs] | null); setQueryParams({ ...queryParams, page: 1 }); }}
+                allowClear
+                placeholder={['开始日期', '结束日期']}
+                style={{ width: 240 }}
+              />
+            </Space>
             <Space size={8}>
               <Button
                 type="primary"

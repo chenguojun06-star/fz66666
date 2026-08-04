@@ -24,7 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -956,6 +959,121 @@ public class PatternProductionOrchestrator {
      */
     public List<Map<String, Object>> getPatternProcessConfig(String patternId) {
         return enrichmentHelper.getPatternProcessConfig(patternId);
+    }
+
+    /**
+     * 获取样板生产时间线（联表 t_pattern_scan_record 聚合各节点时间，不新增字段）。
+     * <p>
+     * 节点：创建 → 领取 → 制作开始 → 制作完成 → 审核 → 入库 → 出库 → 归还
+     * <ul>
+     *   <li>每个节点附操作人和与上一节点的时间差（小时）</li>
+     *   <li>anomalies：根据节点间隔阈值识别异常（领取→完成&gt;7天、完成→审核&gt;2天、审核→入库&gt;3天）</li>
+     * </ul>
+     * 多租户隔离：PatternProduction + PatternScanRecord 均带 tenant_id 校验（P0 铁律4）。
+     */
+    public Map<String, Object> getPatternTimeline(String patternId) {
+        if (!StringUtils.hasText(patternId)) {
+            throw new IllegalArgumentException("样板生产ID不能为空");
+        }
+        PatternProduction pattern = getPatternWithTenant(patternId);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("样板生产记录不存在");
+        }
+        Long tenantId = UserContext.tenantId();
+
+        // 查询扫码记录，按 scanTime ASC（P0 铁律4：tenant_id 过滤）
+        List<PatternScanRecord> scans = patternScanRecordService.list(
+                new LambdaQueryWrapper<PatternScanRecord>()
+                        .eq(PatternScanRecord::getPatternProductionId, patternId)
+                        .eq(PatternScanRecord::getTenantId, tenantId)
+                        .eq(PatternScanRecord::getDeleteFlag, 0)
+                        .orderByAsc(PatternScanRecord::getScanTime));
+
+        // 聚合各节点（取每个节点第一条记录的时间/操作人）
+        LocalDateTime receiveTime = null; String receiveOp = null;
+        LocalDateTime prodStartTime = null; String prodStartOp = null;
+        LocalDateTime completeScanTime = null; String completeOp = null;
+        LocalDateTime warehouseInTime = null; String warehouseInOp = null;
+        LocalDateTime warehouseOutTime = null; String warehouseOutOp = null;
+        LocalDateTime warehouseReturnTime = null; String warehouseReturnOp = null;
+        if (scans != null) {
+            for (PatternScanRecord s : scans) {
+                String op = s.getOperationType();
+                if (op == null) continue;
+                switch (op) {
+                    case "RECEIVE":
+                        if (receiveTime == null) { receiveTime = s.getScanTime(); receiveOp = s.getOperatorName(); }
+                        break;
+                    case "PLATE": case "CUTTING": case "SEWING": case "FOLLOW_UP":
+                        if (prodStartTime == null) { prodStartTime = s.getScanTime(); prodStartOp = s.getOperatorName(); }
+                        break;
+                    case "COMPLETE":
+                        if (completeScanTime == null) { completeScanTime = s.getScanTime(); completeOp = s.getOperatorName(); }
+                        break;
+                    case "WAREHOUSE_IN":
+                        if (warehouseInTime == null) { warehouseInTime = s.getScanTime(); warehouseInOp = s.getOperatorName(); }
+                        break;
+                    case "WAREHOUSE_OUT":
+                        if (warehouseOutTime == null) { warehouseOutTime = s.getScanTime(); warehouseOutOp = s.getOperatorName(); }
+                        break;
+                    case "WAREHOUSE_RETURN":
+                        if (warehouseReturnTime == null) { warehouseReturnTime = s.getScanTime(); warehouseReturnOp = s.getOperatorName(); }
+                        break;
+                    default: break;
+                }
+            }
+        }
+        // 审核节点取自 PatternProduction 主记录（不是扫码 operationType）
+        LocalDateTime reviewTime = pattern.getReviewTime();
+        String reviewBy = pattern.getReviewBy();
+
+        // 构建节点列表（按时间顺序，缺失节点跳过）
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        LocalDateTime prevTime = null;
+        prevTime = appendTimelineNode(nodes, "创建", pattern.getCreateTime(), pattern.getCreateBy(), prevTime);
+        prevTime = appendTimelineNode(nodes, "领取", receiveTime, receiveOp, prevTime);
+        prevTime = appendTimelineNode(nodes, "制作开始", prodStartTime, prodStartOp, prevTime);
+        prevTime = appendTimelineNode(nodes, "制作完成", completeScanTime, completeOp, prevTime);
+        prevTime = appendTimelineNode(nodes, "审核", reviewTime, reviewBy, prevTime);
+        prevTime = appendTimelineNode(nodes, "入库", warehouseInTime, warehouseInOp, prevTime);
+        prevTime = appendTimelineNode(nodes, "出库", warehouseOutTime, warehouseOutOp, prevTime);
+        appendTimelineNode(nodes, "归还", warehouseReturnTime, warehouseReturnOp, prevTime);
+
+        // anomalies 检测（阈值：领取→完成>7天、完成→审核>2天、审核→入库>3天）
+        List<String> anomalies = new ArrayList<>();
+        if (receiveTime != null && completeScanTime != null) {
+            long days = ChronoUnit.DAYS.between(receiveTime, completeScanTime);
+            if (days > 7) anomalies.add("制作停滞 " + days + " 天");
+        }
+        if (completeScanTime != null && reviewTime != null) {
+            long days = ChronoUnit.DAYS.between(completeScanTime, reviewTime);
+            if (days > 2) anomalies.add("审核拖延 " + days + " 天");
+        }
+        if (reviewTime != null && warehouseInTime != null) {
+            long days = ChronoUnit.DAYS.between(reviewTime, warehouseInTime);
+            if (days > 3) anomalies.add("入库拖延 " + days + " 天");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("patternId", patternId);
+        result.put("styleNo", pattern.getStyleNo());
+        result.put("status", pattern.getStatus());
+        result.put("nodes", nodes);
+        result.put("anomalies", anomalies);
+        return result;
+    }
+
+    /** 追加时间线节点，返回该节点时间作为下一节点的 prevTime（节点时间为 null 则跳过） */
+    private LocalDateTime appendTimelineNode(List<Map<String, Object>> nodes, String nodeLabel,
+                                              LocalDateTime time, String operator, LocalDateTime prevTime) {
+        if (time == null) return prevTime;
+        Map<String, Object> n = new HashMap<>();
+        n.put("node", nodeLabel);
+        n.put("time", time);
+        n.put("operator", operator);
+        n.put("durationHours", prevTime == null ? 0 : Duration.between(prevTime, time).toHours());
+        nodes.add(n);
+        return time;
     }
 
     /**

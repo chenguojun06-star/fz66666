@@ -14,10 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -31,7 +34,7 @@ public class PayableAggregationHelper {
 
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
 
-    public List<PayableItemDTO> listPendingPayables(String bizType) {
+    public List<PayableItemDTO> listPendingPayables(String bizType, String startDate, String endDate) {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();
         List<PayableItemDTO> items = new ArrayList<>();
@@ -68,12 +71,27 @@ public class PayableAggregationHelper {
             }
         }
 
+        // 日期范围筛选（按 createTime，支持用户自定义日期范围）
+        LocalDate start = parseLocalDate(startDate);
+        LocalDate end = parseLocalDate(endDate);
+        if (start != null) {
+            wrapper.ge(Payable::getCreateTime, start.atStartOfDay());
+        }
+        if (end != null) {
+            wrapper.le(Payable::getCreateTime, end.atTime(java.time.LocalTime.MAX));
+        }
+
         List<Payable> payables = payableService.list(wrapper);
         for (Payable p : payables) {
             items.add(toPayableItemDTO(p));
         }
 
         return items;
+    }
+
+    private LocalDate parseLocalDate(String s) {
+        if (!StringUtils.hasText(s)) return null;
+        try { return LocalDate.parse(s.trim()); } catch (Exception e) { return null; }
     }
 
     private PayableItemDTO toPayableItemDTO(Payable p) {
