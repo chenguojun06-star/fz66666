@@ -306,7 +306,6 @@ export const useProductionOrderFrozenCache = (
 
     run();
     // 只依赖 allIdsKey（字符串），不依赖 allIds（数组引用）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allIdsKey, rule, ttlMs, enabled]);
 
   const ensureUnlocked = useCallback(async (

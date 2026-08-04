@@ -350,7 +350,6 @@ export function useSync<T = unknown>(
       syncManager.stopSync(taskId);
     };
     // ★ 关键修复6：enabled 必须进依赖数组！之前只写 enabledRef 不重启 —— 停掉后永远起不来
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, enabled]);
 
   // 不重启任务，只更新配置（fetchFn/onDataChange 引用变化时）。传入 fetchSig 判断查询是否真变
@@ -368,7 +367,6 @@ export function useSync<T = unknown>(
       fetchSig,
     );
     // 注意：fetchRef/onDataChangeRef 的内容随时更新，这里依赖的是"外部传入的可序列化配置"
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, fetchSig, stableInterval, stablePauseOnHidden, stableMaxErrors, stableOnError]);
 
   // 静默占位，防止 TS 报 unused
