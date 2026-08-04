@@ -58,6 +58,11 @@ const MaterialReconciliation: React.FC = () => {
     return { pendingCount, approvedCount, paidCount, totalAmount, total };
   }, [reconciliationList, total]);
 
+  // 点击统计卡片切换状态筛选（与下方 Tab 联动）
+  const handleStatCardClick = (status: string) => {
+    setQueryParams({ ...queryParams, status, page: 1 });
+  };
+
   // ==================== 状态Tab ====================
   const statusTabs = [
     { key: '', label: '全部' },
@@ -151,7 +156,9 @@ const MaterialReconciliation: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
           <Card
             size="small"
-            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            hoverable
+            onClick={() => handleStatCardClick('pending')}
+            style={{ borderRadius: 6, cursor: 'pointer', background: 'var(--color-fill-tertiary)', border: activeTab === 'pending' ? '2px solid var(--color-warning)' : '1px solid var(--color-border-secondary)' }}
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
@@ -163,7 +170,9 @@ const MaterialReconciliation: React.FC = () => {
           </Card>
           <Card
             size="small"
-            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            hoverable
+            onClick={() => handleStatCardClick('approved')}
+            style={{ borderRadius: 6, cursor: 'pointer', background: 'var(--color-fill-tertiary)', border: activeTab === 'approved' ? '2px solid var(--color-primary)' : '1px solid var(--color-border-secondary)' }}
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
@@ -175,7 +184,9 @@ const MaterialReconciliation: React.FC = () => {
           </Card>
           <Card
             size="small"
-            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            hoverable
+            onClick={() => handleStatCardClick('paid')}
+            style={{ borderRadius: 6, cursor: 'pointer', background: 'var(--color-fill-tertiary)', border: activeTab === 'paid' ? '2px solid var(--color-success)' : '1px solid var(--color-border-secondary)' }}
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
@@ -187,11 +198,12 @@ const MaterialReconciliation: React.FC = () => {
           </Card>
           <Card
             size="small"
-            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            onClick={() => handleStatCardClick('')}
+            style={{ borderRadius: 6, cursor: 'pointer', background: 'var(--color-fill-tertiary)', border: activeTab === '' ? '2px solid var(--color-text-secondary)' : '1px solid var(--color-border-secondary)' }}
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>合计金额</span>}
+              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>合计金额（点击查看全部）</span>}
               value={stats.totalAmount}
               precision={2}
               prefix="¥"
