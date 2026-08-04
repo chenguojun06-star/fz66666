@@ -23,30 +23,42 @@
     </view>
   </view>
 
-  <!-- 考勤打卡（紧凑版） -->
+  <!-- 考勤打卡 -->
   <view class="attendance-card">
-    <view class="attendance-title-row">
-      <text class="attendance-title">考勤打卡</text>
-      <text class="attendance-status {{attendanceStatusClass}}">{{attendanceStatusText}}</text>
+    <!-- 第1行：标题 + 状态 + 查看明细 -->
+    <view class="attendance-top-row">
+      <view class="attendance-title-wrap">
+        <text class="attendance-title">考勤打卡</text>
+        <text class="attendance-status {{attendanceStatusClass}}">{{attendanceStatusText}}</text>
+      </view>
       <view class="attendance-detail-link" hover-class="attendance-detail-link-hover" hover-stay-time="100" bindtap="onViewAttendance">
         <text class="attendance-detail-link-text">查看明细</text>
         <text class="attendance-detail-link-arrow">›</text>
       </view>
-      <view class="attendance-actions">
-        <view class="attendance-btn {{clockInBtnActive ? 'attendance-btn--active' : ''}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockIn">
-          <text class="attendance-btn-text">上班</text>
-        </view>
-        <view class="attendance-btn {{clockOutBtnActive ? 'attendance-btn--active' : ''}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockOut">
-          <text class="attendance-btn-text">下班</text>
-        </view>
+    </view>
+    <!-- 第2行：上下班时间 + 本月汇总 -->
+    <view class="attendance-time-row">
+      <view class="attendance-time-item">
+        <text class="attendance-time-key">上班</text>
+        <text class="attendance-time-val">{{attendanceClockInText}}</text>
+      </view>
+      <view class="attendance-time-item">
+        <text class="attendance-time-key">下班</text>
+        <text class="attendance-time-val">{{attendanceClockOutText}}</text>
+      </view>
+      <view class="attendance-time-item attendance-time-item--month">
+        <text class="attendance-time-key">本月</text>
+        <text class="attendance-time-val">{{monthlyHoursText}}h / {{monthlyDaysText}}天</text>
       </view>
     </view>
-    <view class="attendance-time-row">
-      <text class="attendance-time-label">上班 {{attendanceClockInText}}</text>
-      <text class="attendance-time-divider">·</text>
-      <text class="attendance-time-label">下班 {{attendanceClockOutText}}</text>
-      <text class="attendance-time-divider">·</text>
-      <text class="attendance-time-label">本月 {{monthlyHoursText}}h / {{monthlyDaysText}}天</text>
+    <!-- 第3行：大按钮 -->
+    <view class="attendance-actions">
+      <view class="attendance-btn {{clockInBtnActive ? 'attendance-btn--active' : 'attendance-btn--idle'}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockIn">
+        <text class="attendance-btn-text">上班打卡</text>
+      </view>
+      <view class="attendance-btn {{clockOutBtnActive ? 'attendance-btn--active' : 'attendance-btn--idle'}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockOut">
+        <text class="attendance-btn-text">下班打卡</text>
+      </view>
     </view>
   </view>
 

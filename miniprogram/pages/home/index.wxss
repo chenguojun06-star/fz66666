@@ -219,32 +219,38 @@ page {
   background: var(--color-text-tertiary);
 }
 
-/* ============ 考勤打卡卡片（紧凑版） ============ */
+/* ============ 考勤打卡卡片 ============ */
 .attendance-card {
   margin: 0 var(--page-padding-x) var(--spacing-md);
-  padding: 10px 14px;
+  padding: 14px 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
 }
 
-.attendance-title-row {
+/* 第1行：标题+状态 在左，查看明细在右 */
+.attendance-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.attendance-title-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
 }
 
 .attendance-title {
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
-  flex-shrink: 0;
 }
 
 .attendance-status {
   font-size: 10px;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   font-weight: 500;
   line-height: 1.4;
@@ -265,31 +271,24 @@ page {
   color: var(--color-primary);
 }
 
-.attendance-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-}
-
-/* 查看明细入口（镂空风格） */
+/* 查看明细入口（镂空小按钮） */
 .attendance-detail-link {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-primary);
-  margin-left: 6px;
 }
 
 .attendance-detail-link-text {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-primary);
   font-weight: 500;
 }
 
 .attendance-detail-link-arrow {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-primary);
   line-height: 1;
 }
@@ -298,11 +297,58 @@ page {
   opacity: 0.6;
 }
 
+/* 第2行：时间信息（三栏均分） */
+.attendance-time-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+  padding: 10px 0;
+}
+
+.attendance-time-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.attendance-time-item + .attendance-time-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+}
+
+.attendance-time-key {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.attendance-time-val {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 第3行：大按钮（上班/下班打卡） */
+.attendance-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .attendance-btn {
-  min-width: 56px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: var(--radius-full);
+  flex: 1;
+  height: 42px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -312,38 +358,25 @@ page {
 }
 
 .attendance-btn-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
 }
 
+/* 未激活状态：镂空灰边 */
+.attendance-btn--idle .attendance-btn-text {
+  color: var(--color-text-tertiary);
+}
+
+/* 激活状态：镂空主色边框 + 主色文字（项目铁律：镂空风格） */
 .attendance-btn--active {
   border-color: var(--color-primary);
-  background: var(--color-primary);
+  background: transparent;
 }
 
 .attendance-btn--active .attendance-btn-text {
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 
 .attendance-btn-hover {
-  opacity: 0.85;
-}
-
-.attendance-time-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.attendance-time-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.attendance-time-divider {
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
+  opacity: 0.7;
 }
