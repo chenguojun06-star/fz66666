@@ -46,11 +46,34 @@ public class WorkAttendance {
     /** 当日工时（分钟） */
     private Integer workMinutes;
 
-    /** 来源：manual/auto_scan */
+    /** 来源：manual/auto_scan/admin_adjust */
     private String source;
 
     /** 打卡位置（可选） */
     private String location;
+
+    /**
+     * 打卡状态：
+     * NORMAL/LATE/EARLY_LEAVE/LATE_EARLY_LEAVE/MISSING_CLOCK_OUT/ABNORMAL
+     * LEAVE（休假） / ADJUSTED（管理员调整） / CANCELLED（作废）
+     * NULL = 历史数据（按时间自动判定，向后兼容）
+     */
+    private String status;
+
+    /**
+     * 休假类型：LEGAL_HOLIDAY/SICK/PERSONAL/ANNUAL/MATERNITY/OTHER
+     * 仅 status=LEAVE 时有值
+     */
+    private String leaveType;
+
+    /** 操作人ID（管理员补录/调整时记录，员工自打卡时为空） */
+    private String operatorId;
+
+    /** 操作人姓名 */
+    private String operatorName;
+
+    /** 操作时间（管理员操作时间） */
+    private LocalDateTime operateTime;
 
     /** 备注 */
     private String remark;

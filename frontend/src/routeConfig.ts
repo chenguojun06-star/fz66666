@@ -65,6 +65,7 @@ export const paths = {
   warehousingInspect: '/production/warehousing/inspect/:orderId',
   orderTransfer: '/production/transfer',
   materialPicking: '/production/picking',
+  attendanceAdmin: '/system/attendance',
 
   materialReconciliation: '/finance/material-reconciliation',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
@@ -438,6 +439,7 @@ export const permissionCodes = {
   materialPicking: 'MENU_MATERIAL_PICKING',
   warehousing: 'MENU_WAREHOUSING',
   orderTransfer: 'MENU_ORDER_TRANSFER',
+  attendanceAdmin: 'MENU_USER',
 
   materialRecon: 'MENU_MATERIAL_RECON',
   financeCenter: 'MENU_FINISHED_SETTLEMENT',
@@ -605,6 +607,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '个人中心', path: paths.profile, icon: React.createElement(SettingOutlined) },
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
+      { label: '考勤管理', path: paths.attendanceAdmin, icon: React.createElement(ClockCircleOutlined) },
       { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
       { label: '合作企业管理', path: paths.partnerManagement, icon: React.createElement(TeamOutlined) },
@@ -694,6 +697,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.employeeAdvance]: permissionCodes.employeeAdvance,
   [paths.wagePayment]: permissionCodes.wagePayment,
   [paths.user]: permissionCodes.user,
+  [paths.attendanceAdmin]: permissionCodes.attendanceAdmin,
   [paths.userApproval]: permissionCodes.userApproval,
   [paths.role]: permissionCodes.role,
   [paths.organization]: permissionCodes.organization,

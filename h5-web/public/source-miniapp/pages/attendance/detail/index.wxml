@@ -93,6 +93,14 @@
         <text class="legend-text">异常</text>
       </view>
       <view class="legend-item">
+        <view class="legend-dot legend-dot--LEAVE"></view>
+        <text class="legend-text">休假</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-dot--ADJUSTED"></view>
+        <text class="legend-text">调整</text>
+      </view>
+      <view class="legend-item">
         <view class="legend-dot legend-dot--NO_RECORD"></view>
         <text class="legend-text">缺勤</text>
       </view>
@@ -107,7 +115,7 @@
     </view>
 
     <block wx:if="{{records.length > 0}}">
-      <view wx:for="{{records}}" wx:key="workDate" class="record-card">
+      <view wx:for="{{records}}" wx:key="workDate" class="record-card record-card--{{item.status}}">
         <view class="record-header">
           <view class="record-date">
             <text class="record-date-main">{{item.workDate}}</text>
@@ -117,7 +125,24 @@
             <text>{{item.statusText}}</text>
           </view>
         </view>
-        <view class="record-body">
+
+        <!-- 休假：显示休假类型，不显示上下班时间 -->
+        <view wx:if="{{item.status === 'LEAVE'}}" class="record-body record-body--leave">
+          <view class="record-leave-tag">
+            <text class="record-leave-text">{{item.leaveTypeText || '休假'}}</text>
+          </view>
+          <view wx:if="{{item.remark}}" class="record-leave-remark">{{item.remark}}</view>
+        </view>
+
+        <!-- 已作废：淡化显示 -->
+        <view wx:elif="{{item.status === 'CANCELLED'}}" class="record-body record-body--cancelled">
+          <view class="record-cancelled-tip">
+            <text class="record-cancelled-text">该记录已作废，不计入工时统计</text>
+          </view>
+        </view>
+
+        <!-- 正常/异常/调整：显示上下班时间和工时 -->
+        <view wx:else class="record-body">
           <view class="record-time-item">
             <text class="record-time-label">上班</text>
             <text class="record-time-value">{{item.clockInTime ? item.clockInTime : '--:--'}}</text>
@@ -132,7 +157,12 @@
             <text class="record-duration-unit">h</text>
           </view>
         </view>
-        <view wx:if="{{item.remark}}" class="record-remark">{{item.remark}}</view>
+
+        <!-- 管理员操作来源信息 -->
+        <view wx:if="{{item.operatorName && (item.status === 'ADJUSTED' || item.status === 'LEAVE')}}" class="record-source">
+          <text class="record-source-text">由 {{item.operatorName}} 操作</text>
+        </view>
+        <view wx:if="{{item.remark && item.status !== 'LEAVE' && item.status !== 'CANCELLED'}}" class="record-remark">{{item.remark}}</view>
       </view>
     </block>
 

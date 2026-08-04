@@ -41,4 +41,26 @@ public class WorkAttendanceServiceImpl extends ServiceImpl<WorkAttendanceMapper,
         if (tenantId == null || userId == null || month == null) return Collections.emptyList();
         return baseMapper.selectMonthlyRecords(tenantId, userId, month);
     }
+
+    @Override
+    public List<WorkAttendance> listForAdmin(Long tenantId, LocalDate startDate, LocalDate endDate,
+                                             String userId, String status) {
+        if (tenantId == null || startDate == null || endDate == null) return Collections.emptyList();
+        return baseMapper.selectForAdmin(tenantId, startDate, endDate, userId, status);
+    }
+
+    @Override
+    public Map<String, Object> adminStats(Long tenantId, LocalDate startDate, LocalDate endDate) {
+        if (tenantId == null || startDate == null || endDate == null) return Collections.emptyMap();
+        return baseMapper.selectAdminStats(tenantId, startDate, endDate);
+    }
+
+    @Override
+    public List<WorkAttendance> listByUserAndDateRange(Long tenantId, String userId,
+                                                       LocalDate startDate, LocalDate endDate) {
+        if (tenantId == null || userId == null || startDate == null || endDate == null) {
+            return Collections.emptyList();
+        }
+        return baseMapper.selectByUserAndDateRange(tenantId, userId, startDate, endDate);
+    }
 }

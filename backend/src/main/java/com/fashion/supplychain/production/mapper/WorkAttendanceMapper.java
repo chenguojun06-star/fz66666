@@ -76,4 +76,60 @@ public interface WorkAttendanceMapper extends BaseMapper<WorkAttendance> {
     List<WorkAttendance> selectMonthlyRecords(@Param("tenantId") Long tenantId,
                                               @Param("userId") String userId,
                                               @Param("month") LocalDate month);
+
+    /**
+     * 管理端列表查询：按租户 + 日期范围 + 用户(可选) + 状态(可选) 筛选
+     * 多租户安全（P0 铁律4）：强制 tenant_id
+     */
+    @Select("<script>" +
+            "SELECT * FROM t_work_attendance " +
+            "WHERE tenant_id = #{tenantId} " +
+            "  AND delete_flag = 0 " +
+            "  AND work_date &gt;= #{startDate} " +
+            "  AND work_date &lt;= #{endDate} " +
+            "<if test='userId != null and userId != \"\"'> AND user_id = #{userId} </if>" +
+            "<if test='status != null and status != \"\"'> AND status = #{status} </if>" +
+            "ORDER BY work_date DESC, id DESC" +
+            "</script>")
+    List<WorkAttendance> selectForAdmin(@Param("tenantId") Long tenantId,
+                                        @Param("startDate") LocalDate startDate,
+                                        @Param("endDate") LocalDate endDate,
+                                        @Param("userId") String userId,
+                                        @Param("status") String status);
+
+    /**
+     * 管理端统计：按租户 + 日期范围 统计各状态数量
+     */
+    @Select("SELECT " +
+            "  COUNT(*) AS total, " +
+            "  SUM(CASE WHEN status = 'LEAVE' OR status = 'ADJUSTED' OR status = 'CANCELLED' THEN 0 ELSE 1 END) AS normalCount, " +
+            "  SUM(CASE WHEN status = 'LEAVE' THEN 1 ELSE 0 END) AS leaveCount, " +
+            "  SUM(CASE WHEN status = 'ADJUSTED' THEN 1 ELSE 0 END) AS adjustedCount, " +
+            "  SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelledCount, " +
+            "  COALESCE(SUM(CASE WHEN status = 'CANCELLED' THEN 0 ELSE work_minutes END), 0) AS totalMinutes " +
+            "FROM t_work_attendance " +
+            "WHERE tenant_id = #{tenantId} " +
+            "  AND delete_flag = 0 " +
+            "  AND work_date >= #{startDate} " +
+            "  AND work_date <= #{endDate}")
+    Map<String, Object> selectAdminStats(@Param("tenantId") Long tenantId,
+                                         @Param("startDate") LocalDate startDate,
+                                         @Param("endDate") LocalDate endDate);
+
+    /**
+     * 查询某员工指定日期范围内的所有打卡记录（用于批量休假检查重复）
+     */
+    @Select("<script>" +
+            "SELECT * FROM t_work_attendance " +
+            "WHERE tenant_id = #{tenantId} " +
+            "  AND user_id = #{userId} " +
+            "  AND delete_flag = 0 " +
+            "  AND work_date &gt;= #{startDate} " +
+            "  AND work_date &lt;= #{endDate} " +
+            "ORDER BY work_date ASC" +
+            "</script>")
+    List<WorkAttendance> selectByUserAndDateRange(@Param("tenantId") Long tenantId,
+                                                  @Param("userId") String userId,
+                                                  @Param("startDate") LocalDate startDate,
+                                                  @Param("endDate") LocalDate endDate);
 }

@@ -27,7 +27,7 @@ import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
-import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
+import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin } from './modules/production';
 
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
@@ -250,6 +250,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.warehouseLocationMap} element={<RouteErrorBoundary pageName="库位地图"><Suspense fallback={routeFallback}><WarehouseLocationMap /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.user} element={<RouteErrorBoundary pageName="用户管理"><Suspense fallback={routeFallback}><UserList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.attendanceAdmin} element={<RouteErrorBoundary pageName="考勤管理"><Suspense fallback={routeFallback}><AttendanceAdmin /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dict} element={<RouteErrorBoundary pageName="字典管理"><Suspense fallback={routeFallback}><DictManage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.tutorial} element={<RouteErrorBoundary pageName="教程"><Suspense fallback={routeFallback}><Tutorial /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.userApproval} element={<RouteErrorBoundary pageName="用户审批"><Suspense fallback={routeFallback}><UserApproval /></Suspense></RouteErrorBoundary>} />

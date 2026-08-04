@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.common.util.RoleHelper;
 import com.fashion.supplychain.production.entity.WorkAttendance;
 import com.fashion.supplychain.production.service.WorkAttendanceService;
 import java.time.Duration;
@@ -257,11 +258,21 @@ public class WorkAttendanceOrchestrator {
             item.put("isWeekend", r.getWorkDate() != null && isWeekend(r.getWorkDate()));
             item.put("isFuture", r.getWorkDate() != null && r.getWorkDate().isAfter(today));
             item.put("remark", r.getRemark());
+            item.put("leaveType", r.getLeaveType());
+            item.put("leaveTypeText", translateLeaveType(r.getLeaveType()));
+            item.put("source", r.getSource());
+            item.put("operatorName", r.getOperatorName());
 
-            // 异常状态判定
-            String[] statusInfo = detectStatus(r, standardClockIn, standardClockOut);
-            item.put("status", statusInfo[0]);
-            item.put("statusText", statusInfo[1]);
+            // 显式 status 优先（LEAVE/ADJUSTED/CANCELLED 等管理态）；NULL/历史数据按时间自动判定
+            String explicitStatus = r.getStatus();
+            if (StringUtils.hasText(explicitStatus)) {
+                item.put("status", explicitStatus);
+                item.put("statusText", translateStatus(explicitStatus, r, standardClockIn, standardClockOut));
+            } else {
+                String[] statusInfo = detectStatus(r, standardClockIn, standardClockOut);
+                item.put("status", statusInfo[0]);
+                item.put("statusText", statusInfo[1]);
+            }
             recordList.add(item);
         }
 
@@ -278,8 +289,13 @@ public class WorkAttendanceOrchestrator {
             day.put("isFuture", d.isAfter(today));
             day.put("isCurrentMonth", true);
             if (match != null) {
-                String[] statusInfo = detectStatus(match, standardClockIn, standardClockOut);
-                day.put("status", statusInfo[0]);
+                // 显式 status 优先；NULL 按时间自动判定
+                String matchStatus = match.getStatus();
+                if (!StringUtils.hasText(matchStatus)) {
+                    String[] statusInfo = detectStatus(match, standardClockIn, standardClockOut);
+                    matchStatus = statusInfo[0];
+                }
+                day.put("status", matchStatus);
                 day.put("workMinutes", match.getWorkMinutes() != null ? match.getWorkMinutes() : 0);
             } else {
                 day.put("status", d.isAfter(today) ? "FUTURE" : "NO_RECORD");
@@ -312,6 +328,272 @@ public class WorkAttendanceOrchestrator {
         resp.put("summary", summary);
         resp.put("records", recordList);
         resp.put("calendar", calendar);
+        return resp;
+    }
+
+    // ==================== 管理端方法（管理员补录/修改/作废/批量休假） ====================
+
+    /**
+     * 管理端列表查询
+     */
+    public Map<String, Object> adminList(LocalDate startDate, LocalDate endDate,
+                                         String userId, String status) {
+        UserContext ctx = requireAdminContext();
+        Long tenantId = ctx.tenantId();
+
+        // 默认查询当月
+        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1);
+        if (endDate == null) endDate = LocalDate.now();
+
+        List<WorkAttendance> records = workAttendanceService.listForAdmin(tenantId, startDate, endDate, userId, status);
+        Map<String, Object> stats = workAttendanceService.adminStats(tenantId, startDate, endDate);
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        LocalTime stdIn = LocalTime.of(9, 0);
+        LocalTime stdOut = LocalTime.of(18, 0);
+        for (WorkAttendance r : records) {
+            Map<String, Object> item = buildAdminRecordItem(r, stdIn, stdOut);
+            list.add(item);
+        }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("startDate", startDate.toString());
+        resp.put("endDate", endDate.toString());
+        resp.put("stats", buildAdminStats(stats));
+        resp.put("records", list);
+        resp.put("total", list.size());
+        return resp;
+    }
+
+    /**
+     * 管理员补录打卡（员工漏打卡时管理员代为补录）
+     */
+    @Transactional
+    public Map<String, Object> adminSupplement(String targetUserId, String targetUserName,
+                                               LocalDate workDate,
+                                               LocalDateTime clockInTime, LocalDateTime clockOutTime,
+                                               String remark) {
+        UserContext ctx = requireAdminContext();
+        Long tenantId = ctx.tenantId();
+
+        if (!StringUtils.hasText(targetUserId)) {
+            throw new IllegalArgumentException("请选择员工");
+        }
+        if (workDate == null) {
+            throw new IllegalArgumentException("请选择打卡日期");
+        }
+        if (clockInTime == null && clockOutTime == null) {
+            throw new IllegalArgumentException("上班时间和下班时间至少填一项");
+        }
+        // 不允许补录未来日期
+        if (workDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("不允许补录未来日期");
+        }
+
+        // 检查是否已有记录（含已作废的）
+        WorkAttendance existing = workAttendanceService.findToday(tenantId, targetUserId, workDate);
+        if (existing != null && !"CANCELLED".equals(existing.getStatus())) {
+            throw new IllegalStateException("该员工当天已有打卡记录，请使用「修改」功能");
+        }
+
+        int workMinutes = computeWorkMinutes(clockInTime, clockOutTime);
+
+        if (existing != null) {
+            // 复用作废记录的坑位
+            existing.setClockInTime(clockInTime);
+            existing.setClockOutTime(clockOutTime);
+            existing.setWorkMinutes(workMinutes);
+            existing.setWorkDate(workDate);
+            existing.setUserName(targetUserName);
+            existing.setStatus("ADJUSTED");
+            existing.setSource("admin_adjust");
+            existing.setOperatorId(ctx.getUserId());
+            existing.setOperatorName(ctx.getUsername());
+            existing.setOperateTime(LocalDateTime.now());
+            existing.setRemark(remark);
+            existing.setDeleteFlag(0);
+            workAttendanceService.updateById(existing);
+            log.info("[adminSupplement] 复用作废坑位 tenantId={} targetUser={} workDate={} operator={}",
+                    tenantId, targetUserId, workDate, ctx.getUserId());
+        } else {
+            WorkAttendance record = new WorkAttendance();
+            record.setTenantId(tenantId);
+            record.setUserId(targetUserId);
+            record.setUserName(targetUserName);
+            record.setFactoryId(ctx.factoryId());
+            record.setWorkDate(workDate);
+            record.setClockInTime(clockInTime);
+            record.setClockOutTime(clockOutTime);
+            record.setWorkMinutes(workMinutes);
+            record.setSource("admin_adjust");
+            record.setStatus("ADJUSTED");
+            record.setOperatorId(ctx.getUserId());
+            record.setOperatorName(ctx.getUsername());
+            record.setOperateTime(LocalDateTime.now());
+            record.setRemark(remark);
+            record.setDeleteFlag(0);
+            workAttendanceService.save(record);
+            log.info("[adminSupplement] 新增补录 tenantId={} targetUser={} workDate={} operator={}",
+                    tenantId, targetUserId, workDate, ctx.getUserId());
+        }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", "补录成功");
+        return resp;
+    }
+
+    /**
+     * 管理员修改打卡（调整错误打卡时间）
+     */
+    @Transactional
+    public Map<String, Object> adminAdjust(Long id, LocalDateTime clockInTime, LocalDateTime clockOutTime,
+                                           String remark) {
+        UserContext ctx = requireAdminContext();
+        Long tenantId = ctx.tenantId();
+
+        if (id == null) {
+            throw new IllegalArgumentException("记录ID不能为空");
+        }
+        WorkAttendance record = workAttendanceService.getById(id);
+        if (record == null || !tenantId.equals(record.getTenantId())) {
+            throw new IllegalStateException("记录不存在或无权访问");
+        }
+        if ("CANCELLED".equals(record.getStatus())) {
+            throw new IllegalStateException("已作废的记录不能再修改");
+        }
+        if ("LEAVE".equals(record.getStatus())) {
+            throw new IllegalStateException("休假记录请使用「批量休假」功能修改");
+        }
+
+        if (clockInTime != null) record.setClockInTime(clockInTime);
+        if (clockOutTime != null) record.setClockOutTime(clockOutTime);
+        record.setWorkMinutes(computeWorkMinutes(record.getClockInTime(), record.getClockOutTime()));
+        record.setStatus("ADJUSTED");
+        record.setOperatorId(ctx.getUserId());
+        record.setOperatorName(ctx.getUsername());
+        record.setOperateTime(LocalDateTime.now());
+        if (StringUtils.hasText(remark)) record.setRemark(remark);
+        workAttendanceService.updateById(record);
+
+        log.info("[adminAdjust] id={} tenantId={} operator={} clockIn={} clockOut={}",
+                id, tenantId, ctx.getUserId(), record.getClockInTime(), record.getClockOutTime());
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", "修改成功");
+        return resp;
+    }
+
+    /**
+     * 管理员作废打卡记录（异常打卡、误打卡）
+     * 软删除：delete_flag=1 + status=CANCELLED，保留审计痕迹
+     */
+    @Transactional
+    public Map<String, Object> adminCancel(Long id, String reason) {
+        UserContext ctx = requireAdminContext();
+        Long tenantId = ctx.tenantId();
+
+        if (id == null) {
+            throw new IllegalArgumentException("记录ID不能为空");
+        }
+        WorkAttendance record = workAttendanceService.getById(id);
+        if (record == null || !tenantId.equals(record.getTenantId())) {
+            throw new IllegalStateException("记录不存在或无权访问");
+        }
+        if ("CANCELLED".equals(record.getStatus())) {
+            throw new IllegalStateException("记录已作废");
+        }
+
+        record.setStatus("CANCELLED");
+        record.setOperatorId(ctx.getUserId());
+        record.setOperatorName(ctx.getUsername());
+        record.setOperateTime(LocalDateTime.now());
+        record.setDeleteFlag(1);
+        String prefix = StringUtils.hasText(reason) ? ("[作废原因：" + reason + "] ") : "";
+        record.setRemark(prefix + (StringUtils.hasText(record.getRemark()) ? record.getRemark() : ""));
+        workAttendanceService.updateById(record);
+
+        log.info("[adminCancel] id={} tenantId={} operator={} reason={}",
+                id, tenantId, ctx.getUserId(), reason);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", "作废成功");
+        return resp;
+    }
+
+    /**
+     * 管理员批量标记休假
+     * 给指定员工在日期范围内每天创建一条 status=LEAVE 的记录
+     * 已有非作废记录的日期跳过（避免冲突）
+     */
+    @Transactional
+    public Map<String, Object> adminBatchLeave(String targetUserId, String targetUserName,
+                                               LocalDate startDate, LocalDate endDate,
+                                               String leaveType, String remark) {
+        UserContext ctx = requireAdminContext();
+        Long tenantId = ctx.tenantId();
+
+        if (!StringUtils.hasText(targetUserId)) {
+            throw new IllegalArgumentException("请选择员工");
+        }
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("请选择日期范围");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("结束日期不能早于开始日期");
+        }
+        if (!StringUtils.hasText(leaveType)) {
+            throw new IllegalArgumentException("请选择休假类型");
+        }
+
+        // 限制单次最大 31 天，防止误操作
+        long days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (days > 31) {
+            throw new IllegalArgumentException("单次标记不能超过31天");
+        }
+
+        // 查询已有记录
+        List<WorkAttendance> existing = workAttendanceService.listByUserAndDateRange(
+                tenantId, targetUserId, startDate, endDate);
+        Map<LocalDate, WorkAttendance> existingMap = new LinkedHashMap<>();
+        for (WorkAttendance r : existing) {
+            if (r.getWorkDate() != null && !"CANCELLED".equals(r.getStatus())) {
+                existingMap.put(r.getWorkDate(), r);
+            }
+        }
+
+        int created = 0;
+        int skipped = 0;
+        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+            if (existingMap.containsKey(d)) {
+                skipped++;
+                continue;
+            }
+            WorkAttendance record = new WorkAttendance();
+            record.setTenantId(tenantId);
+            record.setUserId(targetUserId);
+            record.setUserName(targetUserName);
+            record.setFactoryId(ctx.factoryId());
+            record.setWorkDate(d);
+            record.setWorkMinutes(0);
+            record.setSource("admin_adjust");
+            record.setStatus("LEAVE");
+            record.setLeaveType(leaveType);
+            record.setOperatorId(ctx.getUserId());
+            record.setOperatorName(ctx.getUsername());
+            record.setOperateTime(LocalDateTime.now());
+            record.setRemark(remark);
+            record.setDeleteFlag(0);
+            workAttendanceService.save(record);
+            created++;
+        }
+
+        log.info("[adminBatchLeave] tenantId={} targetUser={} range={}~{} leaveType={} created={} skipped={}",
+                tenantId, targetUserId, startDate, endDate, leaveType, created, skipped);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", "标记完成：新增 " + created + " 天" + (skipped > 0 ? "，跳过 " + skipped + " 天（已有记录）" : ""));
+        resp.put("created", created);
+        resp.put("skipped", skipped);
         return resp;
     }
 
@@ -437,6 +719,98 @@ public class WorkAttendanceOrchestrator {
         }
         TenantAssert.assertTenantContext();
         return ctx;
+    }
+
+    /**
+     * 管理员上下文校验（P0 铁律：权限交给后端）
+     * 仅 admin/manager/supervisor/主管/管理员 角色可调用管理端接口
+     */
+    private UserContext requireAdminContext() {
+        UserContext ctx = requireUserContext();
+        if (!RoleHelper.isAdminRole(ctx.getRole()) && !UserContext.isSuperAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException("无权限：仅管理员可操作");
+        }
+        return ctx;
+    }
+
+    /**
+     * 构建管理端列表 item（包含状态文本和异常标记）
+     */
+    private Map<String, Object> buildAdminRecordItem(WorkAttendance r, LocalTime stdIn, LocalTime stdOut) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", r.getId());
+        item.put("userId", r.getUserId());
+        item.put("userName", r.getUserName());
+        item.put("workDate", r.getWorkDate() != null ? r.getWorkDate().toString() : null);
+        item.put("clockInTime", formatDateTime(r.getClockInTime()));
+        item.put("clockOutTime", formatDateTime(r.getClockOutTime()));
+        item.put("workMinutes", r.getWorkMinutes() != null ? r.getWorkMinutes() : 0);
+        item.put("workHours", formatHours(r.getWorkMinutes()));
+        item.put("source", r.getSource());
+        item.put("leaveType", r.getLeaveType());
+        item.put("leaveTypeText", translateLeaveType(r.getLeaveType()));
+        item.put("operatorId", r.getOperatorId());
+        item.put("operatorName", r.getOperatorName());
+        item.put("operateTime", formatDateTime(r.getOperateTime()));
+        item.put("remark", r.getRemark());
+
+        // 显式 status 优先；NULL（历史数据）按时间自动判定
+        String status = r.getStatus();
+        if (!StringUtils.hasText(status)) {
+            if (r.getDeleteFlag() != null && r.getDeleteFlag() == 1) {
+                status = "CANCELLED";
+            } else {
+                String[] detected = detectStatus(r, stdIn, stdOut);
+                status = detected[0];
+            }
+        }
+        item.put("status", status);
+        item.put("statusText", translateStatus(status, r, stdIn, stdOut));
+        return item;
+    }
+
+    /**
+     * 状态文本翻译（包含 LEAVE/ADJUSTED/CANCELLED 管理态）
+     */
+    private String translateStatus(String status, WorkAttendance r, LocalTime stdIn, LocalTime stdOut) {
+        if (status == null) return "未知";
+        switch (status) {
+            case "LEAVE": return translateLeaveType(r.getLeaveType());
+            case "ADJUSTED": return "管理员调整";
+            case "CANCELLED": return "已作废";
+            default:
+                String[] detected = detectStatus(r, stdIn, stdOut);
+                return detected[1];
+        }
+    }
+
+    private String translateLeaveType(String leaveType) {
+        if (leaveType == null) return "休假";
+        switch (leaveType) {
+            case "LEGAL_HOLIDAY": return "法定节假日";
+            case "SICK": return "病假";
+            case "PERSONAL": return "事假";
+            case "ANNUAL": return "年假";
+            case "MATERNITY": return "产假";
+            case "OTHER": return "其他休假";
+            default: return "休假";
+        }
+    }
+
+    /**
+     * 构建管理端统计
+     */
+    private Map<String, Object> buildAdminStats(Map<String, Object> raw) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("total", toInt(raw == null ? null : raw.get("total")));
+        stats.put("normalCount", toInt(raw == null ? null : raw.get("normalCount")));
+        stats.put("leaveCount", toInt(raw == null ? null : raw.get("leaveCount")));
+        stats.put("adjustedCount", toInt(raw == null ? null : raw.get("adjustedCount")));
+        stats.put("cancelledCount", toInt(raw == null ? null : raw.get("cancelledCount")));
+        long minutes = toLong(raw == null ? null : raw.get("totalMinutes"));
+        stats.put("totalMinutes", minutes);
+        stats.put("totalHours", Math.round(minutes / 60.0 * 10.0) / 10.0);
+        return stats;
     }
 
     /**

@@ -212,6 +212,9 @@
 .cell-dot--LATE_EARLY_LEAVE { background: var(--color-danger); }
 .cell-dot--MISSING_CLOCK_OUT { background: var(--color-warning); }
 .cell-dot--ABNORMAL       { background: var(--color-danger); }
+.cell-dot--LEAVE          { background: var(--color-info); }
+.cell-dot--ADJUSTED       { background: var(--color-primary); }
+.cell-dot--CANCELLED      { background: var(--color-text-quaternary); }
 .cell-dot--NO_RECORD      { background: var(--color-border); }
 .cell-dot--FUTURE         { background: transparent; }
 
@@ -243,6 +246,9 @@
 .legend-dot--EARLY_LEAVE    { background: var(--color-warning); }
 .legend-dot--MISSING_CLOCK_OUT { background: var(--color-warning); }
 .legend-dot--ABNORMAL       { background: var(--color-danger); }
+.legend-dot--LEAVE          { background: var(--color-info); }
+.legend-dot--ADJUSTED       { background: var(--color-primary); }
+.legend-dot--CANCELLED      { background: var(--color-text-quaternary); }
 .legend-dot--NO_RECORD      { background: var(--color-border); }
 
 .legend-text {
@@ -320,6 +326,9 @@
 .record-status--LATE_EARLY_LEAVE { background: var(--color-danger-bg); color: var(--color-danger); }
 .record-status--MISSING_CLOCK_OUT { background: var(--color-warning-bg); color: var(--color-warning); }
 .record-status--ABNORMAL       { background: var(--color-danger-bg); color: var(--color-danger); }
+.record-status--LEAVE          { background: var(--color-info-bg); color: var(--color-info); }
+.record-status--ADJUSTED       { background: var(--color-primary-bg); color: var(--color-primary); }
+.record-status--CANCELLED      { background: var(--color-bg-page); color: var(--color-text-quaternary); }
 
 .record-body {
   display: flex;
@@ -406,4 +415,80 @@
 
 .empty-action-hover {
   opacity: 0.85;
+}
+
+/* ============ 休假/作废/管理员调整 专属样式 ============ */
+
+/* 已作废卡片淡化 */
+.record-card--CANCELLED {
+  opacity: 0.55;
+  background: var(--color-bg-page);
+}
+
+/* 休假记录体 */
+.record-body--leave {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-xs);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+}
+
+.record-leave-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  background: var(--color-info-bg);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-info);
+}
+
+.record-leave-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-info);
+  font-weight: 500;
+}
+
+.record-leave-remark {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: 4px 8px;
+  text-align: center;
+}
+
+/* 已作废记录体 */
+.record-body--cancelled {
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+}
+
+.record-cancelled-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+}
+
+.record-cancelled-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-quaternary);
+}
+
+/* 管理员操作来源 */
+.record-source {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.record-source-text {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
 }
