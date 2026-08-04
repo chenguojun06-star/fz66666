@@ -5,6 +5,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
+import 'dayjs/plugin/quarterOfYear'; // 启用 quarter 类型（main.tsx 已 extend）
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import payableApi, { type Payable } from '@/services/finance/payableApi';

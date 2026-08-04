@@ -5,6 +5,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
+import quarterOfYear from 'dayjs/plugin/quarterOfYear';
 
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
@@ -30,6 +31,7 @@ suppressCloudBaseNoise();
 handleChunkLoadError();
 initFrontendErrorReporter();
 dayjs.locale('zh-cn'); // 全局设置 dayjs 中文 locale，让所有 DatePicker 月份/星期显示中文
+dayjs.extend(quarterOfYear); // 启用 quarter 插件，支持 startOf('quarter')/endOf('quarter')
 
 try {
   if (typeof window !== 'undefined') {

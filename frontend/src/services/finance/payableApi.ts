@@ -37,6 +37,10 @@ export interface PayableListReq {
   status?: PayableStatus;
   supplierId?: string;
   keyword?: string;
+  /** 起始日期（YYYY-MM-DD），按到期日过滤 */
+  startDate?: string;
+  /** 结束日期（YYYY-MM-DD），按到期日过滤 */
+  endDate?: string;
 }
 
 // ============================================================

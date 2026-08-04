@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Card, DatePicker, Empty, Form, Input, Select, Tabs, message } from 'antd';
 import { DownloadOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
+import 'dayjs/plugin/quarterOfYear'; // 启用 quarter 类型（main.tsx 已 extend）
 import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import {

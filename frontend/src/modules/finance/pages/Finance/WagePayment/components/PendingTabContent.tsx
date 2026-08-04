@@ -3,6 +3,7 @@ import { Button, Card, Empty, Space } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { DatePicker, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
+import 'dayjs/plugin/quarterOfYear'; // 启用 quarter 类型（main.tsx 已 extend）
 import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import { BIZ_TYPE_OPTIONS } from '@/services/finance/wagePaymentApi';

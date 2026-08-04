@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Card, DatePicker, Dropdown, Form, Input, Space, Tabs } from 'antd';
 import type { FormInstance } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
+import 'dayjs/plugin/quarterOfYear'; // 启用 quarter 类型（main.tsx 已 extend）
 import {
   CheckCircleOutlined,
   DownloadOutlined,
