@@ -19,15 +19,6 @@ export const buildStatCards = (
   handleStatClick: (key: string) => void,
 ): StatCard[] => [
   {
-    key: 'all',
-    items: [
-      { label: '采购总数', value: purchaseStats.totalCount, unit: '条', color: 'var(--color-primary)' },
-      { label: '总数量', value: purchaseStats.totalQuantity, unit: '件', color: 'var(--color-success)' },
-    ],
-    onClick: () => handleStatClick('all'),
-    activeColor: 'var(--color-primary)',
-  },
-  {
     key: 'pending',
     items: [
       { label: '待采购', value: purchaseStats.pendingCount, unit: '条', color: 'var(--color-warning)' },
@@ -65,7 +56,7 @@ export const buildStatCards = (
   },
   {
     key: 'overdue',
-    items: [{ label: '逆期未到', value: overdueCount, unit: '条', color: 'var(--error-color, var(--color-danger))' }],
+    items: [{ label: '逾期未到', value: overdueCount, unit: '条', color: 'var(--error-color, var(--color-danger))' }],
     onClick: () => handleStatClick('overdue'),
     activeColor: 'var(--error-color, var(--color-danger))',
   },

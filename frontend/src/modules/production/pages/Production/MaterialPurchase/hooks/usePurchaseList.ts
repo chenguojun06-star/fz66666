@@ -69,7 +69,7 @@ export function usePurchaseList({
   });
   const [purchaseStats, setPurchaseStats] = useState<PurchaseStats>(EMPTY_STATS);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue'>('all');
-  const [showAllPurchases, setShowAllPurchases] = useState(false);
+  const [showAllPurchases, setShowAllPurchases] = useState(true); // 默认显示全部（含已完成），避免去掉采购总数卡片后默认列表为空
 
   const [queryParams, setQueryParams] = useState<MaterialQueryParams>(() => {
     const base: MaterialQueryParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
