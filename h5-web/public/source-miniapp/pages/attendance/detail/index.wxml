@@ -52,7 +52,7 @@
     <view class="calendar-body">
       <block wx:for="{{calendar}}" wx:key="index" wx:for-item="row">
         <view class="calendar-row">
-          <block wx:for="{{row}}" wx:key="*this" wx:for-item="cell">
+          <block wx:for="{{row}}" wx:key="day" wx:for-item="cell">
             <view class="calendar-cell {{cell ? '' : 'calendar-cell--empty'}}">
               <block wx:if="{{cell}}">
                 <view class="cell-day
