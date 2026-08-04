@@ -41,6 +41,37 @@ export const bizTypeIconMap: Record<string, React.ReactNode> = {
   REIMBURSEMENT: <AccountBookOutlined />,
 };
 
+/**
+ * 智能推断收款方类型标签
+ * 结合 bizType 和 payeeType 两个字段判断，避免历史脏数据导致误显示
+ *
+ * 规则：
+ * - bizType 为 PAYROLL/PAYROLL_SETTLEMENT → 员工（工资结算的收款方一定是员工）
+ * - bizType 为 REIMBURSEMENT → 员工（费用报销的收款方是员工）
+ * - bizType 为 BILL_RECEIVABLE → 客户（应收账款的收款方是客户）
+ * - payeeType 为 WORKER → 员工
+ * - payeeType 为 CUSTOMER → 客户
+ * - payeeType 为 SUPPLIER → 供应商
+ * - 其他 → 工厂
+ */
+export function resolvePayeeTag(bizType?: string, payeeType?: string): { text: string; color: string } {
+  const bt = (bizType || '').trim().toUpperCase();
+  const pt = (payeeType || '').trim().toUpperCase();
+
+  // bizType 优先（业务语义更准确）
+  if (bt === 'PAYROLL' || bt === 'PAYROLL_SETTLEMENT') return { text: '员工', color: 'blue' };
+  if (bt === 'REIMBURSEMENT') return { text: '员工', color: 'blue' };
+  if (bt === 'BILL_RECEIVABLE') return { text: '客户', color: 'purple' };
+
+  // payeeType 兜底
+  if (pt === 'WORKER') return { text: '员工', color: 'blue' };
+  if (pt === 'CUSTOMER') return { text: '客户', color: 'purple' };
+  if (pt === 'SUPPLIER') return { text: '供应商', color: 'orange' };
+
+  // 默认工厂
+  return { text: '工厂', color: 'green' };
+}
+
 // ============================================================
 // Hook 接口
 // ============================================================
@@ -97,12 +128,15 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         title: '收款方',
         key: 'payee',
         width: 160,
-        render: (_: unknown, r: PayableItem) => (
-          <Space size={4}>
-            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 14, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
-            <span style={{ fontWeight: 500 }}>{r.payeeName}</span>
-          </Space>
-        ),
+        render: (_: unknown, r: PayableItem) => {
+          const tag = resolvePayeeTag(r.bizType, r.payeeType);
+          return (
+            <Space size={4}>
+              <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
+              <span style={{ fontWeight: 500 }}>{r.payeeName}</span>
+            </Space>
+          );
+        },
       },
       {
         title: '应付金额',
@@ -224,12 +258,15 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         title: '收款方',
         key: 'payee',
         width: 140,
-        render: (_: unknown, r: WagePayment) => (
-          <Space size={4}>
-            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 14, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
-            <span>{r.payeeName}</span>
-          </Space>
-        ),
+        render: (_: unknown, r: WagePayment) => {
+          const tag = resolvePayeeTag(r.bizType, r.payeeType);
+          return (
+            <Space size={4}>
+              <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
+              <span>{r.payeeName}</span>
+            </Space>
+          );
+        },
       },
       {
         title: '支付方式',

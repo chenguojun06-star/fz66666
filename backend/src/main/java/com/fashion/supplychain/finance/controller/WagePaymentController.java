@@ -379,7 +379,18 @@ public class WagePaymentController {
             }
         }
 
-        String payeeType = "PAYROLL_SETTLEMENT".equals(request.getBizType()) ? "WORKER" : "FACTORY";
+        // 根据业务类型智能推断收款方类型（修复历史数据中工资结算被误标为 FACTORY 的问题）
+        String bizType = request.getBizType();
+        String payeeType;
+        if ("PAYROLL_SETTLEMENT".equals(bizType) || "PAYROLL".equals(bizType) || "REIMBURSEMENT".equals(bizType)) {
+            payeeType = "WORKER";
+        } else if ("BILL_RECEIVABLE".equals(bizType)) {
+            payeeType = "CUSTOMER";
+        } else if ("RECONCILIATION".equals(bizType) || "material_reconciliation".equals(bizType)) {
+            payeeType = "SUPPLIER";
+        } else {
+            payeeType = "FACTORY";
+        }
 
         WagePaymentRequest paymentRequest = WagePaymentRequest.builder()
             .payeeType(payeeType)
