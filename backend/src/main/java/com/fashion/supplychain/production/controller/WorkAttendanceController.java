@@ -80,6 +80,21 @@ public class WorkAttendanceController {
         return Result.success(result);
     }
 
+    /**
+     * 员工自助补卡（仅为自己补过去日期的卡）
+     */
+    @PostMapping("/self-supplement")
+    public Result<Map<String, Object>> selfSupplement(
+            @RequestParam("workDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate workDate,
+            @RequestParam(value = "clockInTime", required = false) String clockInTimeStr,
+            @RequestParam(value = "clockOutTime", required = false) String clockOutTimeStr,
+            @RequestParam(value = "remark", required = false) String remark) {
+        LocalDateTime clockInTime = parseDateTime(clockInTimeStr);
+        LocalDateTime clockOutTime = parseDateTime(clockOutTimeStr);
+        Map<String, Object> result = workAttendanceOrchestrator.selfSupplement(workDate, clockInTime, clockOutTime, remark);
+        return Result.success(result);
+    }
+
     // ==================== 管理端接口（仅管理员） ====================
 
     /**

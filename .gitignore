@@ -5,6 +5,7 @@
 
 # Backend (Maven)
 backend/target/
+backend/temp-runner/
 
 # Python 缓存目录
 __pycache__/

@@ -443,6 +443,84 @@ public class WorkAttendanceOrchestrator {
     }
 
     /**
+     * 员工自助补卡（仅为自己补卡，只能补过去日期）
+     * 与 adminSupplement 区别：权限为普通登录用户，targetUserId 强制为当前用户
+     */
+    @Transactional
+    public Map<String, Object> selfSupplement(LocalDate workDate,
+                                              LocalDateTime clockInTime, LocalDateTime clockOutTime,
+                                              String remark) {
+        UserContext ctx = requireUserContext();
+        Long tenantId = ctx.tenantId();
+        String targetUserId = ctx.getUserId();
+        String targetUserName = ctx.getUsername();
+
+        if (workDate == null) {
+            throw new IllegalArgumentException("请选择打卡日期");
+        }
+        if (clockInTime == null && clockOutTime == null) {
+            throw new IllegalArgumentException("上班时间和下班时间至少填一项");
+        }
+        // 不允许补未来日期
+        if (workDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("不允许补未来日期");
+        }
+        // 不允许补当天（当天应直接打卡）
+        if (workDate.equals(LocalDate.now())) {
+            throw new IllegalArgumentException("当天请直接打卡，无需补卡");
+        }
+
+        WorkAttendance existing = workAttendanceService.findToday(tenantId, targetUserId, workDate);
+        if (existing != null && !"CANCELLED".equals(existing.getStatus())) {
+            throw new IllegalStateException("当天已有打卡记录，请联系管理员修改");
+        }
+
+        int workMinutes = computeWorkMinutes(clockInTime, clockOutTime);
+
+        if (existing != null) {
+            existing.setClockInTime(clockInTime);
+            existing.setClockOutTime(clockOutTime);
+            existing.setWorkMinutes(workMinutes);
+            existing.setWorkDate(workDate);
+            existing.setUserName(targetUserName);
+            existing.setStatus("ADJUSTED");
+            existing.setSource("self_supplement");
+            existing.setOperatorId(ctx.getUserId());
+            existing.setOperatorName(ctx.getUsername());
+            existing.setOperateTime(LocalDateTime.now());
+            existing.setRemark(remark);
+            existing.setDeleteFlag(0);
+            workAttendanceService.updateById(existing);
+            log.info("[selfSupplement] 复用作废坑位 tenantId={} user={} workDate={}",
+                    tenantId, targetUserId, workDate);
+        } else {
+            WorkAttendance record = new WorkAttendance();
+            record.setTenantId(tenantId);
+            record.setUserId(targetUserId);
+            record.setUserName(targetUserName);
+            record.setFactoryId(ctx.factoryId());
+            record.setWorkDate(workDate);
+            record.setClockInTime(clockInTime);
+            record.setClockOutTime(clockOutTime);
+            record.setWorkMinutes(workMinutes);
+            record.setSource("self_supplement");
+            record.setStatus("ADJUSTED");
+            record.setOperatorId(ctx.getUserId());
+            record.setOperatorName(ctx.getUsername());
+            record.setOperateTime(LocalDateTime.now());
+            record.setRemark(remark);
+            record.setDeleteFlag(0);
+            workAttendanceService.save(record);
+            log.info("[selfSupplement] 新增补卡 tenantId={} user={} workDate={}",
+                    tenantId, targetUserId, workDate);
+        }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", "补卡成功");
+        return resp;
+    }
+
+    /**
      * 管理员修改打卡（调整错误打卡时间）
      */
     @Transactional

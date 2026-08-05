@@ -1,5 +1,5 @@
 <view class="page">
-  <!-- 月份切换 -->
+  <!-- 月份切换 + 补卡入口 + 管理员切换 -->
   <view class="month-bar">
     <view class="month-arrow {{canPrev ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">
       <text class="month-arrow-text">‹</text>
@@ -8,173 +8,502 @@
     <view class="month-arrow {{canNext ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">
       <text class="month-arrow-text">›</text>
     </view>
-  </view>
-
-  <!-- 月度汇总卡 -->
-  <view class="summary-card">
-    <view class="summary-row">
-      <view class="summary-item">
-        <text class="summary-num">{{summary.workHours}}</text>
-        <text class="summary-unit">h</text>
-        <text class="summary-label">本月工时</text>
-      </view>
-      <view class="summary-divider"></view>
-      <view class="summary-item">
-        <text class="summary-num">{{summary.workDays}}</text>
-        <text class="summary-unit">天</text>
-        <text class="summary-label">出勤天数</text>
-      </view>
-      <view class="summary-divider"></view>
-      <view class="summary-item">
-        <text class="summary-num">{{summary.avgHoursPerDay}}</text>
-        <text class="summary-unit">h</text>
-        <text class="summary-label">日均工时</text>
-      </view>
-      <view class="summary-divider"></view>
-      <view class="summary-item">
-        <text class="summary-num {{summary.absentDays > 0 ? 'summary-num--warn' : ''}}">{{summary.absentDays}}</text>
-        <text class="summary-unit">天</text>
-        <text class="summary-label">缺勤天数</text>
-      </view>
+    <!-- 普通模式：补卡按钮 -->
+    <view wx:if="{{!adminMode}}" class="supplement-btn" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenSupplement">
+      <text class="supplement-btn-text">补卡</text>
     </view>
-    <view class="summary-meta">
-      <text class="summary-meta-text">应出勤 {{summary.expectedDays}} 天</text>
-      <text class="summary-meta-dot">·</text>
-      <text class="summary-meta-text">本月累计 {{summary.workHours}} 小时</text>
+    <!-- 管理员模式：管理员补卡按钮 -->
+    <view wx:if="{{adminMode}}" class="supplement-btn supplement-btn--admin" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenAdminSupplement">
+      <text class="supplement-btn-text">管理员补卡</text>
+    </view>
+    <!-- 管理员切换按钮 -->
+    <view wx:if="{{isAdmin}}" class="admin-toggle {{adminMode ? 'admin-toggle--active' : ''}}" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onToggleAdminMode">
+      <text class="admin-toggle-text">{{adminMode ? '退出管理' : '管理'}}</text>
     </view>
   </view>
 
-  <!-- 日历视图 -->
-  <view class="calendar-card" wx:if="{{calendar.length > 0}}">
-    <view class="calendar-week">
-      <text wx:for="{{weekHeader}}" wx:key="*this" class="calendar-week-cell">{{item}}</text>
+  <!-- ========== 管理员模式 ========== -->
+  <block wx:if="{{adminMode}}">
+    <!-- 员工选择器 -->
+    <view class="admin-employee-bar">
+      <text class="admin-employee-label">选择员工</text>
+      <picker wx:if="{{employeeList.length > 0}}" mode="selector" range="{{employeeList}}" range-key="userName" value="{{employeePickerIdx}}" bindchange="onPickEmployee">
+        <view class="admin-employee-picker">
+          <text class="admin-employee-name">{{selectedEmployee.userName || '请选择'}}</text>
+          <text class="admin-employee-arrow">›</text>
+        </view>
+      </picker>
+      <view wx:else class="admin-employee-picker admin-employee-picker--empty">
+        <text class="admin-employee-name">暂无员工数据</text>
+      </view>
     </view>
-    <view class="calendar-body">
-      <block wx:for="{{calendar}}" wx:key="index" wx:for-item="row">
-        <view class="calendar-row">
-          <block wx:for="{{row}}" wx:key="day" wx:for-item="cell">
-            <view class="calendar-cell {{cell ? '' : 'calendar-cell--empty'}}">
-              <block wx:if="{{cell}}">
-                <view class="cell-day
-                  {{cell.isToday ? 'cell-day--today' : ''}}
-                  {{cell.isFuture ? 'cell-day--future' : ''}}
-                  {{cell.isWeekend ? 'cell-day--weekend' : ''}}">
-                  <text>{{cell.day}}</text>
-                </view>
-                <view wx:if="{{cell.hasRecord}}" class="cell-dot cell-dot--{{cell.status}}"></view>
-                <view wx:elif="{{!cell.isFuture}}" class="cell-dot cell-dot--NO_RECORD"></view>
-              </block>
+
+    <!-- 管理端统计 -->
+    <view wx:if="{{adminStats}}" class="admin-stats">
+      <view class="admin-stat-item">
+        <text class="admin-stat-num">{{adminStats.totalDays || 0}}</text>
+        <text class="admin-stat-label">总记录</text>
+      </view>
+      <view class="admin-stat-item">
+        <text class="admin-stat-num">{{adminStats.workDays || 0}}</text>
+        <text class="admin-stat-label">出勤</text>
+      </view>
+      <view class="admin-stat-item">
+        <text class="admin-stat-num">{{adminStats.workHours || 0}}</text>
+        <text class="admin-stat-label">工时(h)</text>
+      </view>
+      <view class="admin-stat-item">
+        <text class="admin-stat-num admin-stat-num--warn">{{adminStats.abnormalDays || 0}}</text>
+        <text class="admin-stat-label">异常</text>
+      </view>
+    </view>
+
+    <!-- 管理端记录列表 -->
+    <view class="records-section">
+      <view class="section-title">
+        <text class="section-title-text">{{selectedEmployee.userName || ''}} 的打卡记录</text>
+        <text class="section-title-meta">共 {{records.length}} 条</text>
+      </view>
+
+      <block wx:if="{{records.length > 0}}">
+        <view wx:for="{{records}}" wx:key="id" class="record-card record-card--{{item.status}} record-card--admin">
+          <view class="record-header">
+            <view class="record-date">
+              <text class="record-date-main">{{item.workDate}}</text>
+              <text class="record-date-sub">{{item.dayOfWeek}}</text>
             </view>
-          </block>
+            <view class="record-status record-status--{{item.status}}">
+              <text>{{item.statusText}}</text>
+            </view>
+          </view>
+
+          <view wx:if="{{item.status === 'CANCELLED'}}" class="record-body record-body--cancelled">
+            <view class="record-cancelled-tip">
+              <text class="record-cancelled-text">已作废</text>
+            </view>
+          </view>
+
+          <view wx:else class="record-body">
+            <view class="record-time-item">
+              <text class="record-time-label">上班</text>
+              <text class="record-time-value">{{item.clockInTime ? item.clockInTime : '--:--'}}</text>
+            </view>
+            <view class="record-time-arrow">→</view>
+            <view class="record-time-item">
+              <text class="record-time-label">下班</text>
+              <text class="record-time-value">{{item.clockOutTime ? item.clockOutTime : '--:--'}}</text>
+            </view>
+            <view class="record-duration">
+              <text class="record-duration-num">{{item.workHours}}</text>
+              <text class="record-duration-unit">h</text>
+            </view>
+          </view>
+
+          <view wx:if="{{item.status !== 'CANCELLED'}}" class="record-admin-actions">
+            <view class="admin-action-btn admin-action-btn--adjust" hover-class="admin-action-btn-hover" hover-stay-time="100" bindtap="onOpenAdminAdjust" data-record="{{item}}">
+              <text class="admin-action-btn-text">调整</text>
+            </view>
+            <view class="admin-action-btn admin-action-btn--cancel" hover-class="admin-action-btn-hover" hover-stay-time="100" bindtap="onAdminCancel" data-record="{{item}}">
+              <text class="admin-action-btn-text">作废</text>
+            </view>
+          </view>
         </view>
       </block>
+
+      <view wx:else class="empty-block">
+        <empty-state
+          icon="icon-calendar"
+          iconSize="lg"
+          text="该员工本月暂无打卡记录"
+          hint="点击右上角"管理员补卡"为其补卡">
+        </empty-state>
+      </view>
+    </view>
+  </block>
+
+  <!-- ========== 普通模式 ========== -->
+  <block wx:else>
+    <!-- 月度汇总卡 -->
+    <view class="summary-card">
+      <view class="summary-row">
+        <view class="summary-item">
+          <text class="summary-num">{{summary.workHours}}</text>
+          <text class="summary-unit">h</text>
+          <text class="summary-label">本月工时</text>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-item">
+          <text class="summary-num">{{summary.workDays}}</text>
+          <text class="summary-unit">天</text>
+          <text class="summary-label">出勤天数</text>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-item">
+          <text class="summary-num">{{summary.avgHoursPerDay}}</text>
+          <text class="summary-unit">h</text>
+          <text class="summary-label">日均工时</text>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-item">
+          <text class="summary-num {{summary.absentDays > 0 ? 'summary-num--warn' : ''}}">{{summary.absentDays}}</text>
+          <text class="summary-unit">天</text>
+          <text class="summary-label">缺勤天数</text>
+        </view>
+      </view>
+      <view class="summary-meta">
+        <text class="summary-meta-text">应出勤 {{summary.expectedDays}} 天</text>
+        <text class="summary-meta-dot">·</text>
+        <text class="summary-meta-text">本月累计 {{summary.workHours}} 小时</text>
+      </view>
     </view>
 
-    <!-- 图例 -->
-    <view class="legend">
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--NORMAL"></view>
-        <text class="legend-text">正常</text>
+    <!-- 日历视图 -->
+    <view class="calendar-card" wx:if="{{calendar.length > 0}}">
+      <view class="calendar-week">
+        <text wx:for="{{weekHeader}}" wx:key="*this" class="calendar-week-cell">{{item}}</text>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--LATE"></view>
-        <text class="legend-text">迟到</text>
+      <view class="calendar-body">
+        <block wx:for="{{calendar}}" wx:key="index" wx:for-item="row">
+          <view class="calendar-row">
+            <block wx:for="{{row}}" wx:key="day" wx:for-item="cell">
+              <view
+                class="calendar-cell {{cell ? '' : 'calendar-cell--empty'}} {{cell && !cell.isFuture && !cell.isToday ? 'calendar-cell--clickable' : ''}}"
+                hover-class="{{cell && !cell.isFuture && !cell.isToday ? 'calendar-cell--hover' : ''}}"
+                hover-stay-time="100"
+                bindtap="onCellTap"
+                data-cell="{{cell}}">
+                <block wx:if="{{cell}}">
+                  <view class="cell-day
+                    {{cell.isToday ? 'cell-day--today' : ''}}
+                    {{cell.isFuture ? 'cell-day--future' : ''}}
+                    {{cell.isWeekend ? 'cell-day--weekend' : ''}}">
+                    <text>{{cell.day}}</text>
+                  </view>
+                  <view wx:if="{{cell.hasRecord}}" class="cell-dot cell-dot--{{cell.status}}"></view>
+                  <view wx:elif="{{!cell.isFuture}}" class="cell-dot cell-dot--NO_RECORD"></view>
+                </block>
+              </view>
+            </block>
+          </view>
+        </block>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--EARLY_LEAVE"></view>
-        <text class="legend-text">早退</text>
+
+      <!-- 图例 -->
+      <view class="legend">
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--NORMAL"></view>
+          <text class="legend-text">正常</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--LATE"></view>
+          <text class="legend-text">迟到</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--EARLY_LEAVE"></view>
+          <text class="legend-text">早退</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--MISSING_CLOCK_OUT"></view>
+          <text class="legend-text">漏打</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--ABNORMAL"></view>
+          <text class="legend-text">异常</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--LEAVE"></view>
+          <text class="legend-text">休假</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--ADJUSTED"></view>
+          <text class="legend-text">调整</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot legend-dot--NO_RECORD"></view>
+          <text class="legend-text">缺勤</text>
+        </view>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--MISSING_CLOCK_OUT"></view>
-        <text class="legend-text">漏打</text>
+    </view>
+
+    <!-- 每日明细列表 -->
+    <view class="records-section">
+      <view class="section-title">
+        <text class="section-title-text">每日明细</text>
+        <text class="section-title-meta">共 {{records.length}} 天</text>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--ABNORMAL"></view>
-        <text class="legend-text">异常</text>
+
+      <block wx:if="{{records.length > 0}}">
+        <view wx:for="{{records}}" wx:key="workDate" class="record-card record-card--{{item.status}}">
+          <view class="record-header">
+            <view class="record-date">
+              <text class="record-date-main">{{item.workDate}}</text>
+              <text class="record-date-sub">{{item.dayOfWeek}}{{item.isToday ? ' · 今天' : ''}}{{item.isWeekend ? ' · 周末' : ''}}</text>
+            </view>
+            <view class="record-status record-status--{{item.status}}">
+              <text>{{item.statusText}}</text>
+            </view>
+          </view>
+
+          <!-- 休假：显示休假类型，不显示上下班时间 -->
+          <view wx:if="{{item.status === 'LEAVE'}}" class="record-body record-body--leave">
+            <view class="record-leave-tag">
+              <text class="record-leave-text">{{item.leaveTypeText || '休假'}}</text>
+            </view>
+            <view wx:if="{{item.remark}}" class="record-leave-remark">{{item.remark}}</view>
+          </view>
+
+          <!-- 已作废：淡化显示 -->
+          <view wx:elif="{{item.status === 'CANCELLED'}}" class="record-body record-body--cancelled">
+            <view class="record-cancelled-tip">
+              <text class="record-cancelled-text">该记录已作废，不计入工时统计</text>
+            </view>
+          </view>
+
+          <!-- 正常/异常/调整：显示上下班时间和工时 -->
+          <view wx:else class="record-body">
+            <view class="record-time-item">
+              <text class="record-time-label">上班</text>
+              <text class="record-time-value">{{item.clockInTime ? item.clockInTime : '--:--'}}</text>
+            </view>
+            <view class="record-time-arrow">→</view>
+            <view class="record-time-item">
+              <text class="record-time-label">下班</text>
+              <text class="record-time-value">{{item.clockOutTime ? item.clockOutTime : '--:--'}}</text>
+            </view>
+            <view class="record-duration">
+              <text class="record-duration-num">{{item.workHours}}</text>
+              <text class="record-duration-unit">h</text>
+            </view>
+          </view>
+
+          <!-- 管理员操作来源信息 -->
+          <view wx:if="{{item.operatorName && (item.status === 'ADJUSTED' || item.status === 'LEAVE')}}" class="record-source">
+            <text class="record-source-text">由 {{item.operatorName}} 操作</text>
+          </view>
+          <view wx:if="{{item.remark && item.status !== 'LEAVE' && item.status !== 'CANCELLED'}}" class="record-remark">{{item.remark}}</view>
+        </view>
+      </block>
+
+      <view wx:else class="empty-block">
+        <empty-state
+          icon="icon-calendar"
+          iconSize="lg"
+          text="本月暂无打卡记录"
+          hint="去首页完成今日打卡">
+        </empty-state>
+        <view class="empty-action" hover-class="empty-action-hover" hover-stay-time="100" bindtap="onGoClock">
+          <text class="empty-action-text">去打卡</text>
+        </view>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--LEAVE"></view>
-        <text class="legend-text">休假</text>
+    </view>
+  </block>
+
+  <!-- 补卡弹窗（普通模式） -->
+  <view wx:if="{{supplementOpen}}" class="modal-mask" bindtap="onCloseSupplement">
+    <view class="modal-dialog" catchtap="onStopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">申请补卡</text>
+        <view class="modal-close" bindtap="onCloseSupplement">
+          <text class="modal-close-text">×</text>
+        </view>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--ADJUSTED"></view>
-        <text class="legend-text">调整</text>
+
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="form-label">补卡日期</text>
+          <picker mode="date" value="{{supplementForm.workDate}}" end="{{maxSupplementDate}}" bindchange="onPickDate">
+            <view class="form-picker {{supplementForm.workDate ? '' : 'form-picker--placeholder'}}">
+              <text>{{supplementForm.workDate || '请选择日期（仅限过去日期）'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">上班时间</text>
+          <picker mode="time" value="{{supplementForm.clockInTime}}" bindchange="onPickClockIn">
+            <view class="form-picker {{supplementForm.clockInTime ? '' : 'form-picker--placeholder'}}">
+              <text>{{supplementForm.clockInTime || '不填视为未上班'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">下班时间</text>
+          <picker mode="time" value="{{supplementForm.clockOutTime}}" bindchange="onPickClockOut">
+            <view class="form-picker {{supplementForm.clockOutTime ? '' : 'form-picker--placeholder'}}">
+              <text>{{supplementForm.clockOutTime || '不填视为未下班'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">补卡原因（选填）</text>
+          <textarea
+            class="form-textarea"
+            value="{{supplementForm.remark}}"
+            bindinput="onInputRemark"
+            placeholder="如：忘记打卡/设备故障等"
+            maxlength="100"
+            auto-height></textarea>
+        </view>
+
+        <view class="form-tip">
+          <text class="form-tip-text">注：仅可补过去日期；当天请直接打卡；已有记录的日期请联系管理员修改。</text>
+        </view>
       </view>
-      <view class="legend-item">
-        <view class="legend-dot legend-dot--NO_RECORD"></view>
-        <text class="legend-text">缺勤</text>
+
+      <view class="modal-footer">
+        <view class="modal-btn modal-btn--cancel" hover-class="modal-btn-hover" hover-stay-time="100" bindtap="onCloseSupplement">
+          <text class="modal-btn-text modal-btn-text--cancel">取消</text>
+        </view>
+        <view class="modal-btn modal-btn--ok {{supplementSubmitting ? 'modal-btn--disabled' : ''}}" hover-class="modal-btn-hover" hover-stay-time="100" bindtap="onSubmitSupplement">
+          <text class="modal-btn-text modal-btn-text--ok">{{supplementSubmitting ? '提交中' : '提交补卡'}}</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 每日明细列表 -->
-  <view class="records-section">
-    <view class="section-title">
-      <text class="section-title-text">每日明细</text>
-      <text class="section-title-meta">共 {{records.length}} 天</text>
-    </view>
-
-    <block wx:if="{{records.length > 0}}">
-      <view wx:for="{{records}}" wx:key="workDate" class="record-card record-card--{{item.status}}">
-        <view class="record-header">
-          <view class="record-date">
-            <text class="record-date-main">{{item.workDate}}</text>
-            <text class="record-date-sub">{{item.dayOfWeek}}{{item.isToday ? ' · 今天' : ''}}{{item.isWeekend ? ' · 周末' : ''}}</text>
-          </view>
-          <view class="record-status record-status--{{item.status}}">
-            <text>{{item.statusText}}</text>
-          </view>
+  <!-- 管理员补卡弹窗 -->
+  <view wx:if="{{adminSupplementOpen}}" class="modal-mask" bindtap="onCloseAdminSupplement">
+    <view class="modal-dialog" catchtap="onStopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">管理员补卡</text>
+        <view class="modal-close" bindtap="onCloseAdminSupplement">
+          <text class="modal-close-text">×</text>
         </view>
-
-        <!-- 休假：显示休假类型，不显示上下班时间 -->
-        <view wx:if="{{item.status === 'LEAVE'}}" class="record-body record-body--leave">
-          <view class="record-leave-tag">
-            <text class="record-leave-text">{{item.leaveTypeText || '休假'}}</text>
-          </view>
-          <view wx:if="{{item.remark}}" class="record-leave-remark">{{item.remark}}</view>
-        </view>
-
-        <!-- 已作废：淡化显示 -->
-        <view wx:elif="{{item.status === 'CANCELLED'}}" class="record-body record-body--cancelled">
-          <view class="record-cancelled-tip">
-            <text class="record-cancelled-text">该记录已作废，不计入工时统计</text>
-          </view>
-        </view>
-
-        <!-- 正常/异常/调整：显示上下班时间和工时 -->
-        <view wx:else class="record-body">
-          <view class="record-time-item">
-            <text class="record-time-label">上班</text>
-            <text class="record-time-value">{{item.clockInTime ? item.clockInTime : '--:--'}}</text>
-          </view>
-          <view class="record-time-arrow">→</view>
-          <view class="record-time-item">
-            <text class="record-time-label">下班</text>
-            <text class="record-time-value">{{item.clockOutTime ? item.clockOutTime : '--:--'}}</text>
-          </view>
-          <view class="record-duration">
-            <text class="record-duration-num">{{item.workHours}}</text>
-            <text class="record-duration-unit">h</text>
-          </view>
-        </view>
-
-        <!-- 管理员操作来源信息 -->
-        <view wx:if="{{item.operatorName && (item.status === 'ADJUSTED' || item.status === 'LEAVE')}}" class="record-source">
-          <text class="record-source-text">由 {{item.operatorName}} 操作</text>
-        </view>
-        <view wx:if="{{item.remark && item.status !== 'LEAVE' && item.status !== 'CANCELLED'}}" class="record-remark">{{item.remark}}</view>
       </view>
-    </block>
 
-    <view wx:else class="empty-block">
-      <empty-state
-        icon="icon-calendar"
-        iconSize="lg"
-        text="本月暂无打卡记录"
-        hint="去首页完成今日打卡">
-      </empty-state>
-      <view class="empty-action" hover-class="empty-action-hover" hover-stay-time="100" bindtap="onGoClock">
-        <text class="empty-action-text">去打卡</text>
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="form-label">选择员工</text>
+          <picker mode="selector" range="{{employeeList}}" range-key="userName" bindchange="onAdminSupplementPickEmployee">
+            <view class="form-picker {{adminSupplementForm.targetUserName ? '' : 'form-picker--placeholder'}}">
+              <text>{{adminSupplementForm.targetUserName || '请选择员工'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">补卡日期</text>
+          <picker mode="date" value="{{adminSupplementForm.workDate}}" end="{{todayDate}}" bindchange="onAdminSupplementPickDate">
+            <view class="form-picker {{adminSupplementForm.workDate ? '' : 'form-picker--placeholder'}}">
+              <text>{{adminSupplementForm.workDate || '请选择日期'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">上班时间</text>
+          <picker mode="time" value="{{adminSupplementForm.clockInTime}}" bindchange="onAdminSupplementPickClockIn">
+            <view class="form-picker">
+              <text>{{adminSupplementForm.clockInTime || '不填'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">下班时间</text>
+          <picker mode="time" value="{{adminSupplementForm.clockOutTime}}" bindchange="onAdminSupplementPickClockOut">
+            <view class="form-picker">
+              <text>{{adminSupplementForm.clockOutTime || '不填'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">备注（选填）</text>
+          <textarea
+            class="form-textarea"
+            value="{{adminSupplementForm.remark}}"
+            bindinput="onAdminSupplementInputRemark"
+            placeholder="如：管理员补录/加班等"
+            maxlength="100"
+            auto-height></textarea>
+        </view>
+      </view>
+
+      <view class="modal-footer">
+        <view class="modal-btn modal-btn--cancel" hover-class="modal-btn-hover" hover-stay-time="100" bindtap="onCloseAdminSupplement">
+          <text class="modal-btn-text modal-btn-text--cancel">取消</text>
+        </view>
+        <view class="modal-btn modal-btn--ok {{adminSupplementSubmitting ? 'modal-btn--disabled' : ''}}" hover-class="modal-btn-hover" hover-stay-time="100" bindtap="onSubmitAdminSupplement">
+          <text class="modal-btn-text modal-btn-text--ok">{{adminSupplementSubmitting ? '提交中' : '提交补卡'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 管理员调整弹窗 -->
+  <view wx:if="{{adminAdjustOpen}}" class="modal-mask" bindtap="onCloseAdminAdjust">
+    <view class="modal-dialog" catchtap="onStopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">调整打卡</text>
+        <view class="modal-close" bindtap="onCloseAdminAdjust">
+          <text class="modal-close-text">×</text>
+        </view>
+      </view>
+
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="form-label">员工</text>
+          <view class="form-picker form-picker--readonly">
+            <text>{{adminAdjustForm.userName}}</text>
+          </view>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">日期</text>
+          <view class="form-picker form-picker--readonly">
+            <text>{{adminAdjustForm.workDate}}</text>
+          </view>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">上班时间</text>
+          <picker mode="time" value="{{adminAdjustForm.clockInTime}}" bindchange="onAdminAdjustPickClockIn">
+            <view class="form-picker">
+              <text>{{adminAdjustForm.clockInTime || '不填'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">下班时间</text>
+          <picker mode="time" value="{{adminAdjustForm.clockOutTime}}" bindchange="onAdminAdjustPickClockOut">
+            <view class="form-picker">
+              <text>{{adminAdjustForm.clockOutTime || '不填'}}</text>
+              <text class="form-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">备注（选填）</text>
+          <textarea
+            class="form-textarea"
+            value="{{adminAdjustForm.remark}}"
+            bindinput="onAdminAdjustInputRemark"
+            placeholder="调整原因"
+            maxlength="100"
+            auto-height></textarea>
+        </view>
+      </view>
+
+      <view class="modal-footer">
+        <view class="modal-btn modal-btn--cancel" hover-class="modal-btn-hover" hover-stay-time="100" bindtap="onCloseAdminAdjust">
+          <text class="modal-btn-text modal-btn-text--cancel">取消</text>
+        </view>
+        <view class="modal-btn modal-btn--ok {{adminAdjustSubmitting ? 'modal-btn--disabled' : ''}}" hover-class="modal-btn-hover" hover-stay-time="100" bindtap="onSubmitAdminAdjust">
+          <text class="modal-btn-text modal-btn-text--ok">{{adminAdjustSubmitting ? '提交中' : '保存调整'}}</text>
+        </view>
       </view>
     </view>
   </view>

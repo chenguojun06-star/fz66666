@@ -47,6 +47,78 @@ const attendance = {
       : '/api/production/attendance/monthly-records';
     return ok(url, 'GET', {});
   },
+
+  /**
+   * 员工自助补卡（仅为自己补过去日期）
+   * @param {Object} params - { workDate, clockInTime, clockOutTime, remark }
+   */
+  selfSupplement(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/self-supplement' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
+
+  // ==================== 管理员接口 ====================
+
+  /**
+   * 管理端列表查询
+   * @param {Object} params - { startDate, endDate, userId, status }
+   */
+  adminList(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/admin/list' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'GET', {});
+  },
+
+  /**
+   * 管理员补录打卡（给指定员工补卡）
+   * @param {Object} params - { targetUserId, targetUserName, workDate, clockInTime, clockOutTime, remark }
+   */
+  adminSupplement(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/admin/supplement' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
+
+  /**
+   * 管理员修改打卡记录
+   * @param {Object} params - { id, clockInTime, clockOutTime, remark }
+   */
+  adminAdjust(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/admin/adjust' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
+
+  /**
+   * 管理员作废打卡记录
+   * @param {Object} params - { id, reason }
+   */
+  adminCancel(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/admin/cancel' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
 };
 
 module.exports = attendance;

@@ -85,22 +85,19 @@ page {
 /* -- 今日小贴士 -- */
 .tip-card {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin: 0 var(--page-padding-x) var(--spacing-md);
-  
-  
+  align-items: center;
+  gap: 10px;
+  margin: 0 var(--page-padding-x) var(--spacing-sm);
   background: var(--color-primary-bg);
-
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 6px 12px;
   box-sizing: border-box;
 }
 
 .tip-icon-circle {
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -112,7 +109,7 @@ page {
 
 .tip-icon-text {
   color: var(--color-primary);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   font-weight: 700;
   font-style: italic;
 }
@@ -120,21 +117,26 @@ page {
 .tip-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .tip-title {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-primary);
-  display: block;
+  flex-shrink: 0;
 }
 
 .tip-text {
-  margin-top: 4px;
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
   color: var(--color-text-secondary);
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 /* -- 应用网格 -- */
@@ -221,36 +223,37 @@ page {
 
 /* ============ 考勤打卡卡片 ============ */
 .attendance-card {
-  margin: 0 var(--page-padding-x) var(--spacing-md);
-  padding: 14px 16px;
+  margin: 0 var(--page-padding-x) var(--spacing-sm);
+  padding: 8px 12px;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
 }
 
-/* 第1行：标题+状态 在左，查看明细在右 */
+/* 第1行：标题+状态 + 时间信息 + 查看明细 */
 .attendance-top-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .attendance-title-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .attendance-title {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .attendance-status {
   font-size: 10px;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: var(--radius-full);
   font-weight: 500;
   line-height: 1.4;
@@ -271,24 +274,55 @@ page {
   color: var(--color-primary);
 }
 
+/* 时间信息（行内） */
+.attendance-time-inline {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.attendance-time-key {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.attendance-time-val {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.attendance-time-sep {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin: 0 2px;
+}
+
 /* 查看明细入口（镂空小按钮） */
 .attendance-detail-link {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 10px;
+  gap: 1px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-primary);
+  flex-shrink: 0;
 }
 
 .attendance-detail-link-text {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-primary);
   font-weight: 500;
 }
 
 .attendance-detail-link-arrow {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-primary);
   line-height: 1;
 }
@@ -297,57 +331,15 @@ page {
   opacity: 0.6;
 }
 
-/* 第2行：时间信息（三栏均分） */
-.attendance-time-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-md);
-  padding: 10px 0;
-}
-
-.attendance-time-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  position: relative;
-}
-
-.attendance-time-item + .attendance-time-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 20px;
-  background: var(--color-border);
-}
-
-.attendance-time-key {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-}
-
-.attendance-time-val {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 第3行：大按钮（上班/下班打卡） */
+/* 第2行：打卡按钮 */
 .attendance-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .attendance-btn {
   flex: 1;
-  height: 42px;
+  height: 30px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -358,7 +350,7 @@ page {
 }
 
 .attendance-btn-text {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 

@@ -1,12 +1,16 @@
 const api = require('../../../utils/api');
+const permission = require('../../../utils/permission');
 
 /**
  * 考勤明细页
- * 月度汇总 + 日历视图（哪天打了/没打）+ 每日明细列表 + 异常状态标记
+ * 普通模式：月度汇总 + 日历视图（哪天打了/没打，可点击补卡）+ 每日明细列表
+ * 管理员模式：选员工 + 记录列表 + 补卡/调整/作废
  */
 Page({
   data: {
     loading: true,
+    isAdmin: false,     // 是否是管理员
+    adminMode: false,   // 是否处于管理员模式
     month: '',          // 当前查询月份 yyyy-MM
     monthLabel: '',     // 月份显示文案 2026年8月
     canPrev: true,      // 是否允许上个月（最早到当月-11）
@@ -23,6 +27,43 @@ Page({
     weekHeader: ['一', '二', '三', '四', '五', '六', '日'],
     records: [],        // 每日打卡明细（倒序：最新在前）
     todayDate: '',      // 今日日期 yyyy-MM-dd
+    // 补卡弹窗
+    supplementOpen: false,
+    supplementSubmitting: false,
+    maxSupplementDate: '',   // picker end，今天
+    supplementForm: {
+      workDate: '',
+      clockInTime: '',
+      clockOutTime: '',
+      remark: '',
+    },
+    // ========== 管理员模式 ==========
+    employeeList: [],       // 员工列表
+    employeePickerIdx: 0,   // 选中的员工索引
+    selectedEmployee: null, // 选中的员工 { userId, userName }
+    adminStats: null,       // 管理端统计
+    // 管理员补卡弹窗
+    adminSupplementOpen: false,
+    adminSupplementSubmitting: false,
+    adminSupplementForm: {
+      targetUserId: '',
+      targetUserName: '',
+      workDate: '',
+      clockInTime: '09:00',
+      clockOutTime: '18:00',
+      remark: '',
+    },
+    // 管理员调整弹窗
+    adminAdjustOpen: false,
+    adminAdjustSubmitting: false,
+    adminAdjustForm: {
+      id: null,
+      userName: '',
+      workDate: '',
+      clockInTime: '',
+      clockOutTime: '',
+      remark: '',
+    },
   },
 
   onLoad: function () {
@@ -31,8 +72,23 @@ Page({
     const m = now.getMonth() + 1;
     const month = y + '-' + (m < 10 ? '0' + m : m);
     const todayDate = y + '-' + (m < 10 ? '0' + m : m) + '-' + (now.getDate() < 10 ? '0' + now.getDate() : now.getDate());
-    this.setData({ month: month, todayDate: todayDate });
+    // 补卡日期上限：今天（picker end 不含今天，但微信 picker end 是包含当天，所以用昨天）
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const maxY = yesterday.getFullYear();
+    const maxM = yesterday.getMonth() + 1;
+    const maxD = yesterday.getDate();
+    const maxSupplementDate = maxY + '-' + (maxM < 10 ? '0' + maxM : maxM) + '-' + (maxD < 10 ? '0' + maxD : maxD);
+
+    // 判断是否是管理员
+    const isAdmin = permission.isAdminOrSupervisor();
+
+    this.setData({ month: month, todayDate: todayDate, maxSupplementDate: maxSupplementDate, isAdmin: isAdmin });
     this._loadData();
+
+    // 管理员预加载员工列表
+    if (isAdmin) {
+      this._loadEmployees();
+    }
   },
 
   onShow: function () {
@@ -68,6 +124,403 @@ Page({
   onGoClock: function () {
     this._needReload = true;
     wx.switchTab({ url: '/pages/home/index' });
+  },
+
+  // ========== 补卡相关 ==========
+
+  // 点击日历单元格（过去日期）
+  onCellTap: function (e) {
+    const cell = e.currentTarget.dataset.cell;
+    if (!cell || cell.isFuture || cell.isToday) return;
+    // 已有非作废记录的，提示走管理员修改
+    if (cell.hasRecord && cell.status !== 'CANCELLED') {
+      wx.showModal({
+        title: '该日已有记录',
+        content: '当天已有打卡记录，如需修改请联系管理员在 PC 端考勤管理页处理。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      return;
+    }
+    // 打开补卡弹窗，预填该日期
+    this.setData({
+      supplementOpen: true,
+      supplementForm: {
+        workDate: cell.date,
+        clockInTime: '09:00',
+        clockOutTime: '18:00',
+        remark: '',
+      },
+    });
+  },
+
+  // 顶部"补卡"按钮
+  onOpenSupplement: function () {
+    this.setData({
+      supplementOpen: true,
+      supplementForm: {
+        workDate: '',
+        clockInTime: '09:00',
+        clockOutTime: '18:00',
+        remark: '',
+      },
+    });
+  },
+
+  onCloseSupplement: function () {
+    if (this.data.supplementSubmitting) return;
+    this.setData({ supplementOpen: false });
+  },
+
+  onStopPropagation: function () {
+    // 阻止冒泡到 mask
+  },
+
+  onPickDate: function (e) {
+    this.setData({ 'supplementForm.workDate': e.detail.value });
+  },
+
+  onPickClockIn: function (e) {
+    this.setData({ 'supplementForm.clockInTime': e.detail.value });
+  },
+
+  onPickClockOut: function (e) {
+    this.setData({ 'supplementForm.clockOutTime': e.detail.value });
+  },
+
+  onInputRemark: function (e) {
+    this.setData({ 'supplementForm.remark': e.detail.value });
+  },
+
+  onSubmitSupplement: function () {
+    const self = this;
+    if (self.data.supplementSubmitting) return;
+
+    const form = self.data.supplementForm;
+    if (!form.workDate) {
+      wx.showToast({ title: '请选择补卡日期', icon: 'none' });
+      return;
+    }
+    if (!form.clockInTime && !form.clockOutTime) {
+      wx.showToast({ title: '上下班时间至少填一项', icon: 'none' });
+      return;
+    }
+
+    // 拼接完整时间（yyyy-MM-dd HH:mm）
+    const clockInTime = form.clockInTime ? (form.workDate + ' ' + form.clockInTime) : '';
+    const clockOutTime = form.clockOutTime ? (form.workDate + ' ' + form.clockOutTime) : '';
+
+    self.setData({ supplementSubmitting: true });
+    wx.showLoading({ title: '提交中', mask: true });
+
+    api.attendance.selfSupplement({
+      workDate: form.workDate,
+      clockInTime: clockInTime,
+      clockOutTime: clockOutTime,
+      remark: form.remark,
+    }).then(function () {
+      wx.hideLoading();
+      wx.showToast({ title: '补卡成功', icon: 'success' });
+      self.setData({ supplementOpen: false, supplementSubmitting: false });
+      self._needReload = false;
+      self._loadData();
+    }).catch(function (e) {
+      wx.hideLoading();
+      const errMsg = (e && e.errMsg) || '补卡失败';
+      wx.showModal({
+        title: '补卡失败',
+        content: errMsg,
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      self.setData({ supplementSubmitting: false });
+    });
+  },
+
+  // ========== 管理员模式 ==========
+
+  // 切换管理员/普通模式
+  onToggleAdminMode: function () {
+    const newMode = !this.data.adminMode;
+    this.setData({ adminMode: newMode });
+    if (newMode) {
+      this._loadAdminList();
+    } else {
+      this._loadData();
+    }
+  },
+
+  // 加载员工列表
+  _loadEmployees: function () {
+    const self = this;
+    api.system.listUsers({ pageSize: 200 }).then(function (res) {
+      const list = (res && res.records) || (res && res.list) || (res && Array.isArray(res) ? res : []) || [];
+      // 格式化为 picker 选项
+      const employeeList = list.map(function (u) {
+        return {
+          userId: String(u.id || u.userId || u.idStr || ''),
+          userName: u.realName || u.username || u.name || u.nickname || '未知',
+        };
+      }).filter(function (e) { return e.userId; });
+      self.setData({
+        employeeList: employeeList,
+        selectedEmployee: employeeList.length > 0 ? employeeList[0] : null,
+        employeePickerIdx: 0,
+      });
+    }).catch(function (e) {
+      console.warn('[attendance.detail] _loadEmployees failed:', e && e.errMsg);
+    });
+  },
+
+  // 选择员工
+  onPickEmployee: function (e) {
+    const idx = Number(e.detail.value);
+    const emp = this.data.employeeList[idx];
+    this.setData({ employeePickerIdx: idx, selectedEmployee: emp });
+    this._loadAdminList();
+  },
+
+  // 管理员补卡弹窗 - 选择员工
+  onAdminSupplementPickEmployee: function (e) {
+    const idx = Number(e.detail.value);
+    const emp = this.data.employeeList[idx];
+    if (emp) {
+      this.setData({
+        'adminSupplementForm.targetUserId': emp.userId,
+        'adminSupplementForm.targetUserName': emp.userName,
+      });
+    }
+  },
+
+  // 加载管理员列表数据
+  _loadAdminList: function () {
+    const self = this;
+    if (!self.data.selectedEmployee) {
+      wx.showToast({ title: '请先选择员工', icon: 'none' });
+      return;
+    }
+
+    // 计算当月起止日期
+    const parts = self.data.month.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const startDate = y + '-' + (m < 10 ? '0' + m : m) + '-01';
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = y + '-' + (m < 10 ? '0' + m : m) + '-' + (lastDay < 10 ? '0' + lastDay : lastDay);
+
+    self.setData({ loading: true });
+    api.attendance.adminList({
+      startDate: startDate,
+      endDate: endDate,
+      userId: self.data.selectedEmployee.userId,
+    }).then(function (res) {
+      const records = (res && res.records) || [];
+      // 倒序
+      const sorted = records.slice().sort(function (a, b) {
+        return String(b.workDate || '').localeCompare(String(a.workDate || ''));
+      });
+      self.setData({
+        records: sorted,
+        adminStats: res && res.stats ? res.stats : null,
+        loading: false,
+      });
+    }).catch(function (e) {
+      self.setData({ loading: false });
+      console.warn('[attendance.detail] _loadAdminList failed:', e && e.errMsg);
+      wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
+    });
+  },
+
+  // 打开管理员补卡弹窗
+  onOpenAdminSupplement: function () {
+    const emp = this.data.selectedEmployee || this.data.employeeList[0];
+    if (!emp) {
+      wx.showToast({ title: '请先选择员工', icon: 'none' });
+      return;
+    }
+    this.setData({
+      adminSupplementOpen: true,
+      adminSupplementForm: {
+        targetUserId: emp.userId,
+        targetUserName: emp.userName,
+        workDate: '',
+        clockInTime: '09:00',
+        clockOutTime: '18:00',
+        remark: '',
+      },
+    });
+  },
+
+  onCloseAdminSupplement: function () {
+    if (this.data.adminSupplementSubmitting) return;
+    this.setData({ adminSupplementOpen: false });
+  },
+
+  onAdminSupplementPickDate: function (e) {
+    this.setData({ 'adminSupplementForm.workDate': e.detail.value });
+  },
+  onAdminSupplementPickClockIn: function (e) {
+    this.setData({ 'adminSupplementForm.clockInTime': e.detail.value });
+  },
+  onAdminSupplementPickClockOut: function (e) {
+    this.setData({ 'adminSupplementForm.clockOutTime': e.detail.value });
+  },
+  onAdminSupplementInputRemark: function (e) {
+    this.setData({ 'adminSupplementForm.remark': e.detail.value });
+  },
+
+  // 提交管理员补卡
+  onSubmitAdminSupplement: function () {
+    const self = this;
+    if (self.data.adminSupplementSubmitting) return;
+
+    const form = self.data.adminSupplementForm;
+    if (!form.targetUserId) {
+      wx.showToast({ title: '请选择员工', icon: 'none' });
+      return;
+    }
+    if (!form.workDate) {
+      wx.showToast({ title: '请选择补卡日期', icon: 'none' });
+      return;
+    }
+    if (!form.clockInTime && !form.clockOutTime) {
+      wx.showToast({ title: '上下班时间至少填一项', icon: 'none' });
+      return;
+    }
+
+    const clockInTime = form.clockInTime ? (form.workDate + ' ' + form.clockInTime) : '';
+    const clockOutTime = form.clockOutTime ? (form.workDate + ' ' + form.clockOutTime) : '';
+
+    self.setData({ adminSupplementSubmitting: true });
+    wx.showLoading({ title: '提交中', mask: true });
+
+    api.attendance.adminSupplement({
+      targetUserId: form.targetUserId,
+      targetUserName: form.targetUserName,
+      workDate: form.workDate,
+      clockInTime: clockInTime,
+      clockOutTime: clockOutTime,
+      remark: form.remark,
+    }).then(function () {
+      wx.hideLoading();
+      wx.showToast({ title: '补卡成功', icon: 'success' });
+      self.setData({ adminSupplementOpen: false, adminSupplementSubmitting: false });
+      self._loadAdminList();
+    }).catch(function (e) {
+      wx.hideLoading();
+      const errMsg = (e && e.errMsg) || '补卡失败';
+      wx.showModal({
+        title: '补卡失败',
+        content: errMsg,
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      self.setData({ adminSupplementSubmitting: false });
+    });
+  },
+
+  // 打开管理员调整弹窗
+  onOpenAdminAdjust: function (e) {
+    const record = e.currentTarget.dataset.record;
+    if (!record || !record.id) return;
+
+    // 解析时间为 HH:mm 格式
+    const clockInTime = record.clockInTime ? String(record.clockInTime).substring(11, 16) : '';
+    const clockOutTime = record.clockOutTime ? String(record.clockOutTime).substring(11, 16) : '';
+
+    this.setData({
+      adminAdjustOpen: true,
+      adminAdjustForm: {
+        id: record.id,
+        userName: record.userName || '',
+        workDate: record.workDate || '',
+        clockInTime: clockInTime,
+        clockOutTime: clockOutTime,
+        remark: record.remark || '',
+      },
+    });
+  },
+
+  onCloseAdminAdjust: function () {
+    if (this.data.adminAdjustSubmitting) return;
+    this.setData({ adminAdjustOpen: false });
+  },
+
+  onAdminAdjustPickClockIn: function (e) {
+    this.setData({ 'adminAdjustForm.clockInTime': e.detail.value });
+  },
+  onAdminAdjustPickClockOut: function (e) {
+    this.setData({ 'adminAdjustForm.clockOutTime': e.detail.value });
+  },
+  onAdminAdjustInputRemark: function (e) {
+    this.setData({ 'adminAdjustForm.remark': e.detail.value });
+  },
+
+  // 提交管理员调整
+  onSubmitAdminAdjust: function () {
+    const self = this;
+    if (self.data.adminAdjustSubmitting) return;
+
+    const form = self.data.adminAdjustForm;
+    const clockInTime = form.clockInTime ? (form.workDate + ' ' + form.clockInTime) : '';
+    const clockOutTime = form.clockOutTime ? (form.workDate + ' ' + form.clockOutTime) : '';
+
+    self.setData({ adminAdjustSubmitting: true });
+    wx.showLoading({ title: '提交中', mask: true });
+
+    api.attendance.adminAdjust({
+      id: form.id,
+      clockInTime: clockInTime,
+      clockOutTime: clockOutTime,
+      remark: form.remark,
+    }).then(function () {
+      wx.hideLoading();
+      wx.showToast({ title: '调整成功', icon: 'success' });
+      self.setData({ adminAdjustOpen: false, adminAdjustSubmitting: false });
+      self._loadAdminList();
+    }).catch(function (e) {
+      wx.hideLoading();
+      const errMsg = (e && e.errMsg) || '调整失败';
+      wx.showModal({
+        title: '调整失败',
+        content: errMsg,
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      self.setData({ adminAdjustSubmitting: false });
+    });
+  },
+
+  // 管理员作废
+  onAdminCancel: function (e) {
+    const self = this;
+    const record = e.currentTarget.dataset.record;
+    if (!record || !record.id) return;
+
+    wx.showModal({
+      title: '作废确认',
+      content: '确定作废 ' + (record.userName || '') + ' ' + (record.workDate || '') + ' 的打卡记录吗？作废后该记录不计入工时。',
+      confirmText: '确定作废',
+      confirmColor: '#e64340',
+      success: function (res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中', mask: true });
+        api.attendance.adminCancel({ id: record.id }).then(function () {
+          wx.hideLoading();
+          wx.showToast({ title: '已作废', icon: 'success' });
+          self._loadAdminList();
+        }).catch(function (err) {
+          wx.hideLoading();
+          const errMsg = (err && err.errMsg) || '作废失败';
+          wx.showModal({
+            title: '作废失败',
+            content: errMsg,
+            showCancel: false,
+            confirmText: '知道了',
+          });
+        });
+      },
+    });
   },
 
   // ========== 内部方法 ==========
