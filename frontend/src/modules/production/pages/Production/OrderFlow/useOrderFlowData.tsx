@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import type { CuttingBundle, CuttingTask, ProductionOrder, ProductWarehousing } from '@/types/production';
+import { fetchProductionOrderDetail } from '@/utils/api/production.order';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
@@ -60,11 +61,45 @@ export function useOrderFlowData() {
     setSmartError({ title, reason, code });
   };
 
+  // 当 URL 只带 orderNo 不带 orderId 时（小云 AI 跳转场景），先通过 orderNo 查出 orderId
+  const [resolvedOrderId, setResolvedOrderId] = useState<string>('');
+  useEffect(() => {
+    if (query.orderId) {
+      setResolvedOrderId(query.orderId);
+      return;
+    }
+    if (query.orderNo) {
+      let cancelled = false;
+      setLoading(true);
+      fetchProductionOrderDetail(query.orderNo)
+        .then((detail: any) => {
+          if (cancelled) return;
+          const id = String(detail?.id || '').trim();
+          if (id) {
+            setResolvedOrderId(id);
+          } else {
+            setLoading(false);
+            reportSmartError('订单不存在', `未找到订单号为 ${query.orderNo} 的订单`, 'ORDER_NOT_FOUND');
+          }
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setLoading(false);
+          const errMsg = err instanceof Error ? err.message : '未找到订单';
+          reportSmartError('订单不存在', errMsg, 'ORDER_NOT_FOUND');
+        });
+      return () => { cancelled = true; };
+    }
+    setResolvedOrderId('');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query.orderId, query.orderNo]);
+
   const fetchFlow = async () => {
-    if (!query.orderId) return;
+    const orderId = resolvedOrderId || query.orderId;
+    if (!orderId) return;
     setLoading(true);
     try {
-      const res = await api.get<{ code: number; message: string; data: any }>(`/production/order/flow/${query.orderId}`);
+      const res = await api.get<{ code: number; message: string; data: any }>(`/production/order/flow/${orderId}`);
       if (res.code === 200) {
         const flowData = res.data as OrderFlowResponse;
         setData(flowData || null);
@@ -87,7 +122,7 @@ export function useOrderFlowData() {
   useEffect(() => {
     fetchFlow();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.orderId]);
+  }, [resolvedOrderId, query.orderId]);
 
   const styleId = String(data?.order?.styleId || '').trim();
   const { styleProcessDescriptionMap, secondaryProcessDescriptionMap } = useStyleProcessDescriptions(styleId);
