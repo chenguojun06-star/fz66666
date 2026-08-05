@@ -14,61 +14,69 @@
 --
 -- 多租户安全（P0 铁律4）：本表已含 tenant_id，本次仅加列不影响隔离
 -- 关联：P0 #1 Flyway 强制幂等
+--
+-- 修复说明（2026-08-05）：
+--   原版用 INSERT INTO information_schema.COLUMNS 加列（AP-WF-06 反模式），
+--   information_schema 是只读系统视图，INSERT 永远失败，阻塞后续所有迁移。
+--   改为 IF(condition, 'ALTER TABLE...', 'SELECT 1') + PREPARE/EXECUTE 幂等加列。
 -- ==================================================================
 
 -- 1. status 打卡状态
-INSERT INTO information_schema.COLUMNS (TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT)
-SELECT TABLE_SCHEMA, 't_work_attendance', 'status', 'VARCHAR(16)', 'YES', NULL, '打卡状态：NORMAL/LATE/EARLY_LEAVE/ABNORMAL/LEAVE/ADJUSTED/CANCELLED'
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance'
-  AND NOT EXISTS (
-    SELECT 1 FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance' AND COLUMN_NAME = 'status'
-  );
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME   = 't_work_attendance'
+       AND COLUMN_NAME  = 'status') = 0,
+    'ALTER TABLE `t_work_attendance` ADD COLUMN `status` VARCHAR(16) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 2. leave_type 休假类型
-INSERT INTO information_schema.COLUMNS (TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT)
-SELECT TABLE_SCHEMA, 't_work_attendance', 'leave_type', 'VARCHAR(16)', 'YES', NULL, '休假类型：LEGAL_HOLIDAY/SICK/PERSONAL/ANNUAL/MATERNITY/OTHER'
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance'
-  AND NOT EXISTS (
-    SELECT 1 FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance' AND COLUMN_NAME = 'leave_type'
-  );
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME   = 't_work_attendance'
+       AND COLUMN_NAME  = 'leave_type') = 0,
+    'ALTER TABLE `t_work_attendance` ADD COLUMN `leave_type` VARCHAR(16) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 3. operator_id 操作人ID
-INSERT INTO information_schema.COLUMNS (TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT)
-SELECT TABLE_SCHEMA, 't_work_attendance', 'operator_id', 'VARCHAR(64)', 'YES', NULL, '操作人ID（管理员补录/调整时记录）'
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance'
-  AND NOT EXISTS (
-    SELECT 1 FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance' AND COLUMN_NAME = 'operator_id'
-  );
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME   = 't_work_attendance'
+       AND COLUMN_NAME  = 'operator_id') = 0,
+    'ALTER TABLE `t_work_attendance` ADD COLUMN `operator_id` VARCHAR(64) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 4. operator_name 操作人姓名
-INSERT INTO information_schema.COLUMNS (TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT)
-SELECT TABLE_SCHEMA, 't_work_attendance', 'operator_name', 'VARCHAR(64)', 'YES', NULL, '操作人姓名'
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance'
-  AND NOT EXISTS (
-    SELECT 1 FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance' AND COLUMN_NAME = 'operator_name'
-  );
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME   = 't_work_attendance'
+       AND COLUMN_NAME  = 'operator_name') = 0,
+    'ALTER TABLE `t_work_attendance` ADD COLUMN `operator_name` VARCHAR(64) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 5. operate_time 操作时间
-INSERT INTO information_schema.COLUMNS (TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT)
-SELECT TABLE_SCHEMA, 't_work_attendance', 'operate_time', 'DATETIME', 'YES', NULL, '操作时间（管理员操作时间）'
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance'
-  AND NOT EXISTS (
-    SELECT 1 FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance' AND COLUMN_NAME = 'operate_time'
-  );
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME   = 't_work_attendance'
+       AND COLUMN_NAME  = 'operate_time') = 0,
+    'ALTER TABLE `t_work_attendance` ADD COLUMN `operate_time` DATETIME DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 6. 新增索引：按状态查询（管理端列表筛选）
-SET @s = CONCAT('CREATE INDEX idx_att_status ON t_work_attendance(tenant_id, status) ');
-SELECT COUNT(1) INTO @exists FROM information_schema.STATISTICS
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_work_attendance' AND INDEX_NAME = 'idx_att_status';
-SET @s = IF(@exists = 0, @s, 'SELECT 1');
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME   = 't_work_attendance'
+       AND INDEX_NAME   = 'idx_att_status') = 0,
+    'CREATE INDEX `idx_att_status` ON `t_work_attendance`(`tenant_id`, `status`)',
+    'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
