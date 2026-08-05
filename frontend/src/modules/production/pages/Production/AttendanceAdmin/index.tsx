@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, DatePicker, Form, Input, Select, Space, Tag, Tooltip } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import PageLayout from '@/components/common/PageLayout';
@@ -7,6 +8,7 @@ import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import StandardModal from '@/components/common/StandardModal';
+import { exportTableToExcel } from '@/utils/exportExcel';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -409,6 +411,40 @@ const AttendanceAdminPage: React.FC = () => {
     ];
   }, [stats]);
 
+  // 导出 Excel（基于当前筛选条件下的全部数据）
+  const [exporting, setExporting] = useState(false);
+  const handleExport = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      // 拉取当前筛选条件下的全量数据
+      const res: any = await attendanceApi.adminList({
+        startDate: dateRange[0].format('YYYY-MM-DD'),
+        endDate: dateRange[1].format('YYYY-MM-DD'),
+        userId: userIdFilter,
+        status: statusFilter,
+      });
+      const data: AdminListResp = res?.data;
+      const exportRecords: AttendanceRecord[] = data?.records || [];
+      if (exportRecords.length === 0) {
+        message.warning('当前筛选条件下没有可导出的数据');
+        return;
+      }
+      // 导出列：与界面一致，自动排除操作列
+      await exportTableToExcel(
+        exportRecords,
+        columns,
+        `考勤记录_${dateRange[0].format('YYYY-MM-DD')}_${dateRange[1].format('YYYY-MM-DD')}.xlsx`,
+      );
+      message.success(`已导出 ${exportRecords.length} 条考勤记录`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常';
+      message.error(`导出失败: ${errMsg}`);
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, dateRange, userIdFilter, statusFilter, columns, message]);
+
   return (
     <PageLayout
       title="考勤管理"
@@ -459,6 +495,14 @@ const AttendanceAdminPage: React.FC = () => {
         <Space>
           <Button onClick={() => setSupplementOpen(true)}>补录打卡</Button>
           <Button onClick={() => setBatchLeaveOpen(true)}>批量休假</Button>
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exporting}
+            onClick={handleExport}
+            disabled={records.length === 0}
+          >
+            导出 Excel
+          </Button>
         </Space>
       }
     >
