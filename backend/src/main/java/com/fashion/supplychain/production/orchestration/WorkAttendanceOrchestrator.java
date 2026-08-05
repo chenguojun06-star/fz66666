@@ -2,7 +2,6 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.common.util.RoleHelper;
 import com.fashion.supplychain.production.entity.WorkAttendance;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.WorkAttendanceService;
@@ -927,11 +926,12 @@ public class WorkAttendanceOrchestrator {
 
     /**
      * 管理员上下文校验（P0 铁律：权限交给后端）
-     * 仅 admin/manager/supervisor/主管/管理员 角色可调用管理端接口
+     * 仅 admin/manager/supervisor/主管/管理员 角色或租户主账号可调用管理端接口
+     * 使用 isSupervisorOrAbove 统一判定，与项目其他模块（如财税导出）保持一致
      */
     private UserContext requireAdminContext() {
         UserContext ctx = requireUserContext();
-        if (!RoleHelper.isAdminRole(ctx.getRole()) && !UserContext.isSuperAdmin()) {
+        if (!UserContext.isSupervisorOrAbove()) {
             throw new org.springframework.security.access.AccessDeniedException("无权限：仅管理员可操作");
         }
         return ctx;
