@@ -42,6 +42,10 @@ Page({
     employeePickerIdx: 0,   // 选中的员工索引
     selectedEmployee: null, // 选中的员工 { userId, userName }
     adminStats: null,       // 管理端统计
+    // 员工搜索弹窗
+    employeePickerOpen: false,
+    employeeSearchKey: '',
+    filteredEmployeeList: [],
     // 管理员补卡弹窗
     adminSupplementOpen: false,
     adminSupplementSubmitting: false,
@@ -272,11 +276,46 @@ Page({
     });
   },
 
-  // 选择员工
-  onPickEmployee: function (e) {
-    const idx = Number(e.detail.value);
-    const emp = this.data.employeeList[idx];
-    this.setData({ employeePickerIdx: idx, selectedEmployee: emp });
+  // 打开员工搜索弹窗
+  onOpenEmployeePicker: function () {
+    if (this.data.employeeList.length === 0) {
+      wx.showToast({ title: '暂无员工数据', icon: 'none' });
+      return;
+    }
+    this.setData({
+      employeePickerOpen: true,
+      employeeSearchKey: '',
+      filteredEmployeeList: this.data.employeeList,
+    });
+  },
+
+  // 关闭员工搜索弹窗
+  onCloseEmployeePicker: function () {
+    this.setData({ employeePickerOpen: false });
+  },
+
+  // 搜索输入
+  onInputEmployeeSearch: function (e) {
+    const key = (e.detail.value || '').trim().toLowerCase();
+    const list = this.data.employeeList;
+    const filtered = key ? list.filter(function (emp) {
+      const name = String(emp.userName || '').toLowerCase();
+      const id = String(emp.userId || '').toLowerCase();
+      return name.indexOf(key) >= 0 || id.indexOf(key) >= 0;
+    }) : list;
+    this.setData({ employeeSearchKey: e.detail.value, filteredEmployeeList: filtered });
+  },
+
+  // 从搜索弹窗选择员工
+  onPickEmployeeFromSearch: function (e) {
+    const emp = e.currentTarget.dataset.employee;
+    if (!emp || !emp.userId) return;
+    const idx = this.data.employeeList.findIndex(function (it) { return it.userId === emp.userId; });
+    this.setData({
+      employeePickerIdx: idx >= 0 ? idx : 0,
+      selectedEmployee: emp,
+      employeePickerOpen: false,
+    });
     this._loadAdminList();
   },
 

@@ -571,15 +571,63 @@
   font-style: italic;
 }
 
-/* ============ 月份栏右侧操作按钮组 ============ */
-.month-actions {
-  position: absolute;
-  right: var(--page-padding-x);
-  top: 50%;
-  transform: translateY(-50%);
+/* ============ 第2行：操作工具栏 ============ */
+.toolbar-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: var(--spacing-md);
+  padding: 8px 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.toolbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+.toolbar-actions--normal {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.toolbar-employee {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+}
+
+.toolbar-employee-hover {
+  opacity: 0.7;
+}
+
+.toolbar-employee-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar-employee-arrow {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .supplement-btn {
@@ -806,49 +854,9 @@
   color: var(--color-warning);
 }
 
-/* 员工选择栏 */
+/* 员工选择栏（旧样式已废弃，保留兼容） */
 .admin-employee-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: var(--spacing-md);
-  padding: 10px 14px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-}
-
-.admin-employee-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.admin-employee-picker {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 12px;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-md);
-}
-
-.admin-employee-picker--empty {
-  opacity: 0.5;
-}
-
-.admin-employee-name {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.admin-employee-arrow {
-  font-size: 16px;
-  color: var(--color-text-tertiary);
-  line-height: 1;
+  display: none;
 }
 
 /* 管理端统计 */
@@ -944,4 +952,103 @@
 
 .modal-btn-hover {
   opacity: 0.7;
+}
+
+/* ============ 员工搜索弹窗 ============ */
+.employee-picker-dialog {
+  width: 88%;
+  max-width: 380px;
+  max-height: 70vh;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.employee-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.employee-picker-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.employee-picker-search {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.employee-picker-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.employee-picker-list {
+  flex: 1;
+  max-height: 50vh;
+}
+
+.employee-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.employee-picker-item-hover {
+  background: var(--color-primary-bg);
+}
+
+.employee-picker-item--active {
+  background: var(--color-primary-bg);
+}
+
+.employee-picker-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employee-picker-item-id {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.employee-picker-item-check {
+  font-size: 16px;
+  color: var(--color-primary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.employee-picker-empty {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.employee-picker-empty-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }

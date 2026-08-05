@@ -1,5 +1,5 @@
 <view class="page">
-  <!-- 月份切换 + 补卡入口 + 管理员切换 -->
+  <!-- 第1行：月份切换 -->
   <view class="month-bar">
     <view class="month-arrow {{canPrev ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">
       <text class="month-arrow-text">‹</text>
@@ -8,36 +8,40 @@
     <view class="month-arrow {{canNext ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">
       <text class="month-arrow-text">›</text>
     </view>
-    <!-- 右侧操作按钮组（补卡 + 管理切换） -->
-    <view class="month-actions">
-      <view wx:if="{{!adminMode}}" class="supplement-btn" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenSupplement">
-        <text class="supplement-btn-text">补卡</text>
+  </view>
+
+  <!-- 第2行：操作工具栏（管理员模式 / 普通模式） -->
+  <view class="toolbar-bar">
+    <!-- 管理员模式：员工选择 + 管理按钮 -->
+    <block wx:if="{{adminMode}}">
+      <view class="toolbar-employee" hover-class="toolbar-employee-hover" hover-stay-time="100" bindtap="onOpenEmployeePicker">
+        <text class="toolbar-employee-name">{{selectedEmployee.userName || '请选择员工'}}</text>
+        <text class="toolbar-employee-arrow">⌄</text>
       </view>
-      <view wx:if="{{adminMode}}" class="supplement-btn supplement-btn--admin" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenAdminSupplement">
-        <text class="supplement-btn-text">管理员补卡</text>
+      <view class="toolbar-actions">
+        <view class="supplement-btn supplement-btn--admin" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenAdminSupplement">
+          <text class="supplement-btn-text">管理员补卡</text>
+        </view>
+        <view class="admin-toggle admin-toggle--active" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onToggleAdminMode">
+          <text class="admin-toggle-text">退出管理</text>
+        </view>
       </view>
-      <view wx:if="{{isAdmin}}" class="admin-toggle {{adminMode ? 'admin-toggle--active' : ''}}" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onToggleAdminMode">
-        <text class="admin-toggle-text">{{adminMode ? '退出管理' : '管理'}}</text>
+    </block>
+    <!-- 普通模式：补卡 + 管理切换 -->
+    <block wx:else>
+      <view class="toolbar-actions toolbar-actions--normal">
+        <view class="supplement-btn" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenSupplement">
+          <text class="supplement-btn-text">补卡</text>
+        </view>
+        <view wx:if="{{isAdmin}}" class="admin-toggle" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onToggleAdminMode">
+          <text class="admin-toggle-text">管理</text>
+        </view>
       </view>
-    </view>
+    </block>
   </view>
 
   <!-- ========== 管理员模式 ========== -->
   <block wx:if="{{adminMode}}">
-    <!-- 员工选择器 -->
-    <view class="admin-employee-bar">
-      <text class="admin-employee-label">选择员工</text>
-      <picker wx:if="{{employeeList.length > 0}}" mode="selector" range="{{employeeList}}" range-key="userName" value="{{employeePickerIdx}}" bindchange="onPickEmployee">
-        <view class="admin-employee-picker">
-          <text class="admin-employee-name">{{selectedEmployee.userName || '请选择'}}</text>
-          <text class="admin-employee-arrow">›</text>
-        </view>
-      </picker>
-      <view wx:else class="admin-employee-picker admin-employee-picker--empty">
-        <text class="admin-employee-name">暂无员工数据</text>
-      </view>
-    </view>
-
     <!-- 管理端统计 -->
     <view wx:if="{{adminStats}}" class="admin-stats">
       <view class="admin-stat-item">
@@ -542,6 +546,34 @@
           <text class="modal-btn-text modal-btn-text--ok">{{adminAdjustSubmitting ? '提交中' : '保存调整'}}</text>
         </view>
       </view>
+    </view>
+  </view>
+
+  <!-- ========== 员工搜索弹窗 ========== -->
+  <view wx:if="{{employeePickerOpen}}" class="modal-mask" bindtap="onCloseEmployeePicker">
+    <view class="employee-picker-dialog" catchtap="onStopPropagation">
+      <view class="employee-picker-header">
+        <text class="employee-picker-title">选择员工</text>
+        <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" bindtap="onCloseEmployeePicker">
+          <text class="modal-close-text">×</text>
+        </view>
+      </view>
+      <view class="employee-picker-search">
+        <input class="employee-picker-input" type="text" placeholder="搜索姓名 / 工号" value="{{employeeSearchKey}}" bindinput="onInputEmployeeSearch" confirm-type="search" />
+      </view>
+      <scroll-view scroll-y class="employee-picker-list">
+        <view wx:if="{{filteredEmployeeList.length === 0}}" class="employee-picker-empty">
+          <text class="employee-picker-empty-text">未找到匹配员工</text>
+        </view>
+        <view wx:for="{{filteredEmployeeList}}" wx:key="userId"
+              class="employee-picker-item {{selectedEmployee.userId === item.userId ? 'employee-picker-item--active' : ''}}"
+              hover-class="employee-picker-item-hover" hover-stay-time="100"
+              bindtap="onPickEmployeeFromSearch" data-employee="{{item}}">
+          <text class="employee-picker-item-name">{{item.userName}}</text>
+          <text class="employee-picker-item-id">工号：{{item.userId}}</text>
+          <text wx:if="{{selectedEmployee.userId === item.userId}}" class="employee-picker-item-check">✓</text>
+        </view>
+      </scroll-view>
     </view>
   </view>
 </view>
