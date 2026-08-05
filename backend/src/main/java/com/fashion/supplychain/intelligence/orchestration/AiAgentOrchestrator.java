@@ -849,53 +849,19 @@ public class AiAgentOrchestrator {
         // P2-2: 成本爆炸防御 — 记录工具调用（重复检测 + 熔断失败计数）
         recordToolCallsToCostGuard(toolRecords);
 
-        double selfScore = 80.0;
+        // P0 优化：自我批评评分异步化 — 避免同步等待 LLM 评分拖慢用户感知响应时间
+        // 原实现：calculateCritiqueScore 同步调 LLM 评分（3-10秒），阻塞主流程
+        // 现实现：先用默认分 80 让主流程立即返回，异步计算真实分数后写入记忆和提交评分
+        final double selfScore = 80.0;
+        final SelfCriticService selfCriticService = componentRegistry.getSelfCriticService();
+        final java.util.List<String> finalToolResultsList = toolResultsList;
 
-        // === 自我批评与实时学习（新增）===
-        SelfCriticService selfCriticService = componentRegistry.getSelfCriticService();
-        if (selfCriticService != null) {
-            try {
-                AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
-                metrics.setToolCallCount(toolRecords != null ? toolRecords.size() : 0);
-
-                // 先同步计算评分
-                selfScore = selfCriticService.calculateCritiqueScore(
-                        sessionId, userMessage, assistantResponse,
-                        null, toolResultsList, metrics, usedQuickPath);
-
-                // 再异步触发完整自我批评（异步保存反馈/快照/路由）
-                selfCriticService.critique(
-                        sessionId, userMessage, assistantResponse,
-                        null, toolResultsList, metrics, usedQuickPath);
-            } catch (Exception e) {
-                log.debug("[AiAgent] SelfCritic触发失败（非关键）: {}", e.getMessage());
-            }
-        }
-
-        // P0-4: Langfuse — SelfCritic 评分完成后自动提交 score（conversationId 即 traceId）
-        // 失败不影响主流程，submitScore 内部已有 try-catch 但额外兜底
+        // P0-4: Langfuse — 先用占位分数提交（评分仅用于监控，不影响用户）
         if (langfuseTraceOrchestrator != null && conversationId != null) {
             try {
                 langfuseTraceOrchestrator.submitScore(conversationId, "self_critic", selfScore);
             } catch (Exception le) {
                 log.debug("[AiAgent] Langfuse submitScore 异常（不影响业务）: {}", le.getMessage());
-            }
-        }
-
-        // P0-2: 反思记忆闭环 — 低分回答写入 REFLECTIVE 长期记忆
-        if (reflectiveMemoryWriter != null && tenantId != null) {
-            try {
-                Long userIdLong = null;
-                if (userId != null) {
-                    try { userIdLong = Long.parseLong(userId); } catch (NumberFormatException e) {
-                        log.warn("[AiAgent] 解析用户ID失败: {}", e.getMessage());
-                    }
-                }
-                SelfCritiqueResult critiqueResult = SelfCritiqueResult.of(selfScore);
-                reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,
-                        userMessage, assistantResponse, critiqueResult);
-            } catch (Exception e) {
-                log.debug("[AiAgent] 反思记忆写入触发失败（非关键）: {}", e.getMessage());
             }
         }
 
@@ -913,6 +879,56 @@ public class AiAgentOrchestrator {
         final long turnCount = conversationTurnCounter.incrementAndGet();
 
         List<Runnable> postTurnTasks = new java.util.ArrayList<>();
+
+        // P0 优化：自我批评评分 + 反思记忆 异步执行（原同步阻塞 3-10 秒）
+        if (selfCriticService != null) {
+            postTurnTasks.add(() -> {
+                try {
+                    AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
+                    metrics.setToolCallCount(toolRecords != null ? toolRecords.size() : 0);
+                    // 异步计算真实评分（内部调 LLM，3-10秒）
+                    double realScore = selfCriticService.calculateCritiqueScore(
+                            sessionId, userMessage, assistantResponse,
+                            null, finalToolResultsList, metrics, usedQuickPath);
+                    // 异步触发完整自我批评（保存反馈/快照/路由）
+                    selfCriticService.critique(
+                            sessionId, userMessage, assistantResponse,
+                            null, finalToolResultsList, metrics, usedQuickPath);
+
+                    // 用真实评分写入反思记忆（低分回答写入 REFLECTIVE 长期记忆）
+                    if (reflectiveMemoryWriter != null && tenantId != null) {
+                        Long userIdLong = null;
+                        if (userId != null) {
+                            try { userIdLong = Long.parseLong(userId); } catch (NumberFormatException e) {
+                                log.warn("[AiAgent] 解析用户ID失败: {}", e.getMessage());
+                            }
+                        }
+                        SelfCritiqueResult critiqueResult = SelfCritiqueResult.of(realScore);
+                        reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,
+                                userMessage, assistantResponse, critiqueResult);
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiAgent] SelfCritic异步触发失败（非关键）: {}", e.getMessage());
+                }
+            });
+        } else if (reflectiveMemoryWriter != null && tenantId != null) {
+            // SelfCritic 未启用时，仍用占位分数异步写入反思记忆
+            postTurnTasks.add(() -> {
+                try {
+                    Long userIdLong = null;
+                    if (userId != null) {
+                        try { userIdLong = Long.parseLong(userId); } catch (NumberFormatException e) {
+                            log.warn("[AiAgent] 解析用户ID失败: {}", e.getMessage());
+                        }
+                    }
+                    SelfCritiqueResult critiqueResult = SelfCritiqueResult.of(finalSelfScore);
+                    reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,
+                            userMessage, assistantResponse, critiqueResult);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] 反思记忆异步写入失败（非关键）: {}", e.getMessage());
+                }
+            });
+        }
 
         RealTimeLearningLoop realTimeLearningLoop = componentRegistry.getRealTimeLearningLoop();
         if (realTimeLearningLoop != null) {
