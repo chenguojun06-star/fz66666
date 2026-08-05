@@ -248,9 +248,9 @@
 /* 日历点颜色：与图例一致（全部使用 CSS 变量） */
 .cell-dot--NORMAL         { background: var(--color-success); }
 .cell-dot--LATE           { background: var(--color-warning); }
-.cell-dot--EARLY_LEAVE    { background: var(--color-warning); }
+.cell-dot--EARLY_LEAVE    { background: var(--color-violet); }
 .cell-dot--LATE_EARLY_LEAVE { background: var(--color-danger); }
-.cell-dot--MISSING_CLOCK_OUT { background: var(--color-warning); }
+.cell-dot--MISSING_CLOCK_OUT { background: var(--color-purple); }
 .cell-dot--ABNORMAL       { background: var(--color-danger); }
 .cell-dot--LEAVE          { background: var(--color-info); }
 .cell-dot--ADJUSTED       { background: var(--color-primary); }
@@ -283,8 +283,8 @@
 
 .legend-dot--NORMAL         { background: var(--color-success); }
 .legend-dot--LATE           { background: var(--color-warning); }
-.legend-dot--EARLY_LEAVE    { background: var(--color-warning); }
-.legend-dot--MISSING_CLOCK_OUT { background: var(--color-warning); }
+.legend-dot--EARLY_LEAVE    { background: var(--color-violet); }
+.legend-dot--MISSING_CLOCK_OUT { background: var(--color-purple); }
 .legend-dot--ABNORMAL       { background: var(--color-danger); }
 .legend-dot--LEAVE          { background: var(--color-info); }
 .legend-dot--ADJUSTED       { background: var(--color-primary); }
@@ -362,9 +362,9 @@
 
 .record-status--NORMAL         { background: var(--color-success-bg); color: var(--color-success); }
 .record-status--LATE           { background: var(--color-warning-bg); color: var(--color-warning); }
-.record-status--EARLY_LEAVE    { background: var(--color-warning-bg); color: var(--color-warning); }
+.record-status--EARLY_LEAVE    { background: var(--color-violet-bg); color: var(--color-violet); }
 .record-status--LATE_EARLY_LEAVE { background: var(--color-danger-bg); color: var(--color-danger); }
-.record-status--MISSING_CLOCK_OUT { background: var(--color-warning-bg); color: var(--color-warning); }
+.record-status--MISSING_CLOCK_OUT { background: var(--color-purple-bg); color: var(--color-purple); }
 .record-status--ABNORMAL       { background: var(--color-danger-bg); color: var(--color-danger); }
 .record-status--LEAVE          { background: var(--color-info-bg); color: var(--color-info); }
 .record-status--ADJUSTED       { background: var(--color-primary-bg); color: var(--color-primary); }
