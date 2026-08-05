@@ -15,7 +15,7 @@ interface CuttingBundlesContentProps {
  * 裁剪明细 Tab 内容：当存在 cuttingBundles 时显示。
  *
  * 包含：
- * - 裁剪任务卡片（仅当 cuttingTasks 非空）
+ * - 裁剪任务卡片（仅当 cuttingTasks 多于 1 个时显示，作为汇总视图；单任务时与明细重复，隐藏）
  * - 裁剪明细表格（cuttingBundles）
  */
 export const CuttingBundlesContent: React.FC<CuttingBundlesContentProps> = ({
@@ -23,10 +23,11 @@ export const CuttingBundlesContent: React.FC<CuttingBundlesContentProps> = ({
   cuttingBundles,
 }) => {
   const taskReceiverName = cuttingTasks?.[0]?.receiverName || '';
+  const showTaskCard = (cuttingTasks?.length || 0) > 1;
 
   return (
     <div>
-      {cuttingTasks && cuttingTasks.length > 0 && (
+      {showTaskCard && (
         <Card size="small" title="裁剪任务" style={{ marginBottom: 12 }}>
           <ResizableTable
             storageKey="order-flow-cutting-tasks"
