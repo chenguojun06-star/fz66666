@@ -1,11 +1,29 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-02（云托管部署连续失败四连根因修复 — D-054）
+> 最后更新：2026-08-05（会话级反思机制补齐 — D-055）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-05 会话级反思机制补齐 + 考勤关联生产数据 + AI 性能优化 ✅（详见 D-055）
+
+**本次会话完成的修复（含 5 个 bug）**：
+1. **考勤关联生产数据**：后端新增 `ScanRecordMapper.selectDailyStatsByOperators` 批量查询员工每日产量+金额；PC端新增"当日产量/当日金额"列 + "总产量/总金额"统计卡；手机端详情页追加产量+金额行（三端同步）
+2. **考勤导出 Excel**：PC端 AttendanceAdmin 右上角新增"导出 Excel"按钮
+3. **考勤 403 修复**：`requireAdminContext` 权限判断从 `RoleHelper.isAdminRole + isSuperAdmin` 改为 `isSupervisorOrAbove`，正确识别租户主账号
+4. **考勤 500 修复**：`t_work_attendance` 缺 `status` 等管理端字段，V202608051800 用 `ALTER TABLE` 幂等加列（V202608041800 用 `INSERT INTO information_schema.COLUMNS` 加列不生效）
+5. **小云 AI 跳转修复**：OrderFlow 页面只认 orderId，但小云跳转传 orderNo，新增 `resolvedOrderId` 反查机制
+6. **小云 AI 回答慢优化**：`calculateCritiqueScore` 同步调 LLM 评分（3-10秒）阻塞 SSE，改为异步执行，主流程用占位分 80 立即返回
+
+**反思机制补齐（D-055）**：
+- 在 `agent-workflow.md` 第6步质量门控加"反思三问"（写之前/写之时/写之后）
+- 在 `anti-patterns.md` 新增 6 条反模式（AP-AI-03 / AP-WF-05~08）+ 5 条自查清单
+- 在 `project_rules.md` 新增 P0 #24（反思三问）/ P0 #25（LLM 异步化）/ P0 #26（权限判断统一）
+- 在 `decisionLog.md` 新增 D-055 决策记录
+
+**关键教训**：编译通过 ≠ 运行正确（5 个 bug 中 4 个编译通过但运行报错），写代码前的验证比写代码后的测试更重要。
 
 ### 2026-08-04 手机端打卡功能专业化改造 ✅
 

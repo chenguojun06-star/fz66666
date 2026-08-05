@@ -430,6 +430,82 @@ Long count = redisTemplate.execute(...);
 
 ---
 
+### AP-AI-03: 主流程同步调用 LLM 做评分/审查/记忆写入（2026-08-05 新增）
+**识别信号**：在用户请求的关键路径上看到 `chatModel.call()` / `inferenceOrchestrator.chat()` / `evaluateWithLlm()` 等同步 LLM 调用
+**错误做法**：
+```java
+// triggerPostTurnHooks 里同步调 LLM 评分（3-10秒），SSE emitter.complete() 被阻塞
+selfScore = selfCriticService.calculateCritiqueScore(...);  // 内部 evaluateWithLlm → 同步 LLM 调用
+// 用户看到"回答完了但还在转"3-10 秒
+```
+**正确做法**：LLM 评分/审查/记忆写入一律异步化，主流程用占位值立即返回
+```java
+final double placeholderScore = 80.0;
+postTurnTasks.add(() -> {
+    double realScore = selfCriticService.calculateCritiqueScore(...);  // 异步
+    reflectiveMemoryWriter.writeAsync(..., SelfCritiqueResult.of(realScore));
+});
+```
+**历史教训**：2026-08-05 小云 AI 回答慢 3-10 秒，根因是 calculateCritiqueScore 同步调 LLM 评分阻塞 SSE
+**触发P0铁律**：性能与用户体验
+
+---
+
+## 🔄 工作流反思相关（2026-08-05 新增）
+
+### AP-WF-05: Flyway 加列前未验证列是否存在
+**识别信号**：写 `ALTER TABLE t_xxx ADD COLUMN` 前没跑 `SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='t_xxx' AND COLUMN_NAME='xxx'`
+**错误做法**：凭印象觉得列不存在就直接写 ALTER TABLE，可能撞 "Duplicate column name" 错误
+**正确做法**：
+1. 加列前必须先查 `INFORMATION_SCHEMA.COLUMNS` 确认列不存在
+2. 用 `PREPARE stmt + EXECUTE + DEALLOCATE` 幂等方式（P0 #1 Flyway 强制幂等）
+**历史教训**：2026-08-05 考勤表 status 列缺失导致 500
+**触发P0铁律**：#1 Flyway 强制
+
+---
+
+### AP-WF-06: MySQL 系统视图当表操作
+**识别信号**：看到 `INSERT INTO information_schema.COLUMNS` / `UPDATE information_schema.XXX`
+**错误做法**：
+```sql
+-- 这不生效！information_schema 是只读系统视图，INSERT 不会修改表结构
+INSERT INTO information_schema.COLUMNS (TABLE_NAME, COLUMN_NAME, ...) VALUES (...);
+```
+**正确做法**：用 `ALTER TABLE t_xxx ADD COLUMN xxx TYPE COMMENT 'xxx'` 修改表结构
+**历史教训**：2026-08-05 V202608041800 用 INSERT INTO information_schema.COLUMNS 加列，列实际没加上，导致 500
+**触发P0铁律**：#1 Flyway 强制
+
+---
+
+### AP-WF-07: 权限判断逻辑不统一
+**识别信号**：看到 `RoleHelper.isAdminRole(role) && !UserContext.isSuperAdmin()` 这类组合判断
+**错误做法**：每个模块自己写一套权限判断，租户主账号（tenantOwner=true）role 字段不是标准 admin 字符串时被误拒
+```java
+// 错误：租户主账号 role="tenant_owner" 时不包含 admin/manager/supervisor → 403
+if (!RoleHelper.isAdminRole(ctx.getRole()) && !UserContext.isSuperAdmin()) {
+    throw new AccessDeniedException("无权限");
+}
+```
+**正确做法**：统一用 `UserContext.isSupervisorOrAbove()`，判定链路包含 isTenantOwner
+```java
+if (!UserContext.isSupervisorOrAbove()) {
+    throw new AccessDeniedException("无权限");
+}
+```
+**历史教训**：2026-08-05 考勤管理页对租户主账号返回 403
+**触发P0铁律**：权限判定不得写死
+
+---
+
+### AP-WF-08: 前端跳转参数与接收方期望参数不对齐
+**识别信号**：前端跳转传 `?orderNo=xxx`，但接收方页面 `if (!query.orderId) return;` 直接返回不加载数据
+**错误做法**：跳转方和接收方各写各的，参数名不一致
+**正确做法**：跳转前 grep 接收方的 query 解析代码，确认参数名一致；接收方对缺失关键参数要有降级（如用 orderNo 反查 orderId）
+**历史教训**：2026-08-05 小云 AI 点击订单号跳转显示"缺少订单ID"
+**触发P0铁律**：前后端字段名必须一致
+
+---
+
 ## 📊 反模式自查清单
 
 每次提交代码前，快速过一遍：
@@ -446,3 +522,8 @@ Long count = redisTemplate.execute(...);
 - [ ] **大改动验证**（2026-08-02 新增）：改动 ≥5 文件时跑过 `mvn spring-boot:run` 吗？
 - [ ] **配置默认值**（2026-08-02 新增）：yml 里的 `${VAR}` 都有 `:default` 兜底吗？
 - [ ] **熔断器**（2026-08-02 新增）：Filter/Interceptor 调 Redis 有熔断器吗？
+- [ ] **Flyway 加列验证**（2026-08-05 新增）：加列前查过 INFORMATION_SCHEMA 确认列不存在吗？
+- [ ] **权限判断统一**（2026-08-05 新增）：用的是 `isSupervisorOrAbove()` 而不是自己组合判断吗？
+- [ ] **跳转参数对齐**（2026-08-05 新增）：跳转参数名与接收方期望参数名 grep 对齐过吗？
+- [ ] **LLM 调用异步化**（2026-08-05 新增）：主流程没有同步 LLM 评分/审查/记忆写入吧？
+- [ ] **反思三问**（2026-08-05 新增）：写之前评估影响范围 / 写之时识别 LLM 调用 / 写之后端到端验证？
