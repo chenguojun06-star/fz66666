@@ -59,7 +59,7 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
   overdueStyleCount,
   warningStyleCount,
   delayedHints,
-  showAllStyles,
+  showAllStyles: _showAllStyles,
   setShowAllStyles,
   handleSmartFilterClick,
 }) => {

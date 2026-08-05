@@ -24,6 +24,7 @@ public class RiskItem {
     private String description;
     private String suggestedAction;
     private LocalDateTime detectedAt;
+    @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
 
     public static RiskItem create(RiskType type, String severity, double score) {

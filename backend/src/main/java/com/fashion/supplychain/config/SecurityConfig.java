@@ -90,6 +90,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                             .includeSubDomains(true)
                             .maxAgeInSeconds(31536000))                     // HSTS: 1年
                         .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        // 注：permissionsPolicy 在 Spring Security 6.x 标记为待移除，后续升级时需替换为新 API
                         .permissionsPolicy(permissions -> permissions
                                 .policy("camera=(), microphone=(), geolocation=()"))  // 禁止不需要的浏览器API
                 )

@@ -20,7 +20,9 @@ public class PromptVariant {
     private String content;
     private double weight;
     private String status;
+    @Builder.Default
     private List<Double> scoreHistory = new ArrayList<>();
+    @Builder.Default
     private AtomicInteger exposureCount = new AtomicInteger(0);
     private LocalDateTime createdAt;
     private LocalDateTime lastUsedAt;

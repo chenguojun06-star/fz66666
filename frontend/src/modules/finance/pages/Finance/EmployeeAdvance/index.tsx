@@ -9,7 +9,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { PlusOutlined, SearchOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
+import { type Dayjs } from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import {

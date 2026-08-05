@@ -290,7 +290,7 @@ const buildDetailConfig = (
 };
 
 export const useFinanceDashboardData = () => {
-  const { loading, data, customRange, setCustomRange, goToModule, refresh, cashFlowData, cashFlowLoading, loadCashFlow } = useFinanceBIData();
+  const { loading, data, customRange, setCustomRange, goToModule, refresh, cashFlowData, cashFlowLoading } = useFinanceBIData();
   const [selectedDetail, setSelectedDetail] = useState<StatKey>('revenue');
 
   // 90s 轮询刷新财务看板数据

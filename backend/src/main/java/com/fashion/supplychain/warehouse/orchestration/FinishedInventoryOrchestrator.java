@@ -584,6 +584,7 @@ public class FinishedInventoryOrchestrator {
      * 成品出库：扣减对应SKU库存
      * @deprecated 建议直接注入 {@link FinishedOutstockHelper} 调用
      */
+    @Deprecated
     @Transactional(rollbackFor = Exception.class)
     public void outbound(Map<String, Object> params) {
         finishedOutstockHelper.outbound(params);
@@ -593,6 +594,7 @@ public class FinishedInventoryOrchestrator {
      * QR码扫码出库
      * @deprecated 建议直接注入 {@link FinishedOutstockHelper} 调用
      */
+    @Deprecated
     @Transactional(rollbackFor = Exception.class)
     public void qrcodeOutbound(Map<String, Object> params) {
         finishedOutstockHelper.qrcodeOutbound(params);
@@ -602,6 +604,7 @@ public class FinishedInventoryOrchestrator {
      * 分页查询出库记录
      * @deprecated 建议直接注入 {@link FinishedOutstockHelper} 调用
      */
+    @Deprecated
     public IPage<ProductOutstock> listOutstockRecords(Map<String, Object> params) {
         return finishedOutstockHelper.listOutstockRecords(params);
     }
@@ -610,6 +613,7 @@ public class FinishedInventoryOrchestrator {
      * 确认收款
      * @deprecated 建议直接注入 {@link FinishedOutstockHelper} 调用
      */
+    @Deprecated
     @Transactional(rollbackFor = Exception.class)
     public void confirmPayment(String id, BigDecimal paidAmount) {
         finishedOutstockHelper.confirmPayment(id, paidAmount);
@@ -619,6 +623,7 @@ public class FinishedInventoryOrchestrator {
      * 审批单条出库记录
      * @deprecated 建议直接注入 {@link FinishedOutstockHelper} 调用
      */
+    @Deprecated
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> approveOutstock(String id, String remark) {
         return finishedOutstockHelper.approveOutstock(id, remark);

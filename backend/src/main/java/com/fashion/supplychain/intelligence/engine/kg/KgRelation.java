@@ -21,5 +21,6 @@ public class KgRelation {
     private String targetName;
     private String targetExternalId;
     private Double weight;
+    @Builder.Default
     private Map<String, Object> properties = new HashMap<>();
 }

@@ -76,7 +76,7 @@ const formatDate = (v: string | null | undefined): string => {
 // ==================== 主页面 ====================
 
 const AttendanceAdminPage: React.FC = () => {
-  const { user, isSuperAdmin } = useUser();
+  const { isSuperAdmin } = useUser();
   const { message } = App.useApp();
 
   const [loading, setLoading] = useState(false);
@@ -201,14 +201,14 @@ const AttendanceAdminPage: React.FC = () => {
   };
 
   // 点击统计卡片筛选
-  const handleStatClick = (key: string, status: string) => {
+  const handleStatClick = useCallback((key: string, status: string) => {
     setActiveStatKey(key);
     setStatusFilter(status);
     fetchList({ status });
-  };
+  }, [fetchList]);
 
   // ---- 操作回调 ----
-  const handleAdjust = (record: AttendanceRecord) => {
+  const handleAdjust = useCallback((record: AttendanceRecord) => {
     if (record.status === 'CANCELLED') {
       message.warning('已作废的记录不能再修改');
       return;
@@ -219,16 +219,16 @@ const AttendanceAdminPage: React.FC = () => {
     }
     setAdjustRecord(record);
     setAdjustOpen(true);
-  };
+  }, [message]);
 
-  const handleCancel = (record: AttendanceRecord) => {
+  const handleCancel = useCallback((record: AttendanceRecord) => {
     if (record.status === 'CANCELLED') {
       message.warning('记录已作废');
       return;
     }
     setCancelRecord(record);
     setCancelOpen(true);
-  };
+  }, [message]);
 
   const handleRefresh = () => {
     fetchList();
@@ -354,7 +354,7 @@ const AttendanceAdminPage: React.FC = () => {
         ),
       },
     ],
-    [],
+    [handleAdjust, handleCancel],
   );
 
   // ---- 统计卡片配置 ----
@@ -409,7 +409,7 @@ const AttendanceAdminPage: React.FC = () => {
         },
       },
     ];
-  }, [stats]);
+  }, [stats, handleStatClick]);
 
   // 导出 Excel（基于当前筛选条件下的全部数据）
   const [exporting, setExporting] = useState(false);
