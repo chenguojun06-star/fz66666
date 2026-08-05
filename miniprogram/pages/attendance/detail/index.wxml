@@ -42,6 +42,19 @@
 
   <!-- ========== 管理员模式 ========== -->
   <block wx:if="{{adminMode}}">
+    <!-- 管理员 Tab 切换 -->
+    <view class="admin-tabs">
+      <view class="admin-tab {{adminTab === 'records' ? 'admin-tab--active' : ''}}" data-tab="records" bindtap="onSwitchAdminTab">
+        <text class="admin-tab-text">打卡记录</text>
+      </view>
+      <view class="admin-tab {{adminTab === 'approval' ? 'admin-tab--active' : ''}}" data-tab="approval" bindtap="onSwitchAdminTab">
+        <text class="admin-tab-text">补卡审批</text>
+        <view wx:if="{{pendingApplies.length > 0}}" class="admin-tab-badge">{{pendingApplies.length}}</view>
+      </view>
+    </view>
+
+    <!-- Tab: 打卡记录 -->
+    <block wx:if="{{adminTab === 'records'}}">
     <!-- 管理端统计 -->
     <view wx:if="{{adminStats}}" class="admin-stats">
       <view class="admin-stat-item">
@@ -136,6 +149,58 @@
         </empty-state>
       </view>
     </view>
+    </block>
+    <!-- /Tab: 打卡记录 -->
+
+    <!-- Tab: 补卡审批 -->
+    <block wx:if="{{adminTab === 'approval'}}">
+      <view class="records-section">
+        <view class="section-title">
+          <text class="section-title-text">待审批申请</text>
+          <text class="section-title-meta">共 {{pendingApplies.length}} 条</text>
+        </view>
+        <block wx:if="{{pendingApplies.length > 0}}">
+          <view wx:for="{{pendingApplies}}" wx:key="id" class="apply-card">
+            <view class="apply-header">
+              <view class="apply-user">
+                <text class="apply-user-name">{{item.userName}}</text>
+                <text class="apply-user-id">工号：{{item.userId}}</text>
+              </view>
+              <view class="apply-status apply-status--{{item.status}}">
+                <text>{{item.statusText}}</text>
+              </view>
+            </view>
+            <view class="apply-body">
+              <view class="apply-date">
+                <text class="apply-date-label">补卡日期</text>
+                <text class="apply-date-value">{{item.workDate}}</text>
+              </view>
+              <view class="apply-time">
+                <text class="apply-time-item">{{item.clockInTime ? item.clockInTime : '--:--'}}</text>
+                <text class="apply-time-arrow">→</text>
+                <text class="apply-time-item">{{item.clockOutTime ? item.clockOutTime : '--:--'}}</text>
+              </view>
+              <view wx:if="{{item.reason}}" class="apply-reason">
+                <text class="apply-reason-label">原因：</text>
+                <text class="apply-reason-text">{{item.reason}}</text>
+              </view>
+            </view>
+            <view wx:if="{{item.status === 'PENDING'}}" class="apply-actions">
+              <view class="admin-action-btn admin-action-btn--cancel" hover-class="admin-action-btn-hover" hover-stay-time="100" bindtap="onRejectApply" data-id="{{item.id}}">
+                <text class="admin-action-btn-text">拒绝</text>
+              </view>
+              <view class="admin-action-btn admin-action-btn--adjust" hover-class="admin-action-btn-hover" hover-stay-time="100" bindtap="onApproveApply" data-id="{{item.id}}">
+                <text class="admin-action-btn-text">通过</text>
+              </view>
+            </view>
+          </view>
+        </block>
+        <view wx:else class="empty-block">
+          <empty-state icon="icon-check-circle" iconSize="lg" text="暂无待审批申请"></empty-state>
+        </view>
+      </view>
+    </block>
+    <!-- /Tab: 补卡审批 -->
   </block>
 
   <!-- ========== 普通模式 ========== -->

@@ -119,6 +119,73 @@ const attendance = {
     const url = '/api/production/attendance/admin/cancel' + (parts.length ? '?' + parts.join('&') : '');
     return ok(url, 'POST', {});
   },
+
+  // ==================== 补卡审批接口 ====================
+
+  /**
+   * 员工提交补卡申请
+   * @param {Object} params - { workDate, clockInTime, clockOutTime, reason }
+   */
+  submitApply(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/apply/submit' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
+
+  /**
+   * 员工查看我的申请列表
+   * @param {string} month - 月份 yyyy-MM
+   */
+  myApplies(month) {
+    const url = '/api/production/attendance/apply/my-list?month=' + encodeURIComponent(month);
+    return ok(url, 'GET', {});
+  },
+
+  /**
+   * 管理员待审批列表
+   * @param {Object} params - { startDate, endDate }
+   */
+  pendingList(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/apply/pending-list' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'GET', {});
+  },
+
+  /**
+   * 管理员审批通过
+   * @param {Object} params - { id, approveRemark }
+   */
+  approveApply(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/apply/approve' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
+
+  /**
+   * 管理员审批拒绝
+   * @param {Object} params - { id, approveRemark }
+   */
+  rejectApply(params) {
+    const parts = [];
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    const url = '/api/production/attendance/apply/reject' + (parts.length ? '?' + parts.join('&') : '');
+    return ok(url, 'POST', {});
+  },
 };
 
 module.exports = attendance;

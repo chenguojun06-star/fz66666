@@ -27,7 +27,7 @@ Page({
     weekHeader: ['一', '二', '三', '四', '五', '六', '日'],
     records: [],        // 每日打卡明细（倒序：最新在前）
     todayDate: '',      // 今日日期 yyyy-MM-dd
-    // 补卡弹窗
+    // 补卡弹窗（员工提交申请）
     supplementOpen: false,
     supplementSubmitting: false,
     maxSupplementDate: '',   // picker end，今天
@@ -37,6 +37,11 @@ Page({
       clockOutTime: '',
       remark: '',
     },
+    // 我的补卡申请列表
+    myApplies: [],
+    // 管理员模式 Tab：records=打卡记录，approval=补卡审批
+    adminTab: 'records',
+    pendingApplies: [],       // 待审批列表
     // ========== 管理员模式 ==========
     employeeList: [],       // 员工列表
     employeePickerIdx: 0,   // 选中的员工索引
@@ -136,17 +141,63 @@ Page({
   onCellTap: function (e) {
     const cell = e.currentTarget.dataset.cell;
     if (!cell || cell.isFuture || cell.isToday) return;
-    // 已有非作废记录的，提示走管理员修改
+
+    // 管理员：直接走管理员补卡/调整流程，无需提示联系管理员
+    if (this.data.isAdmin) {
+      // 已有非作废记录 → 打开管理员调整弹窗
+      if (cell.hasRecord && cell.status !== 'CANCELLED') {
+        const record = this._findRecordByDate(cell.date);
+        if (record && record.id) {
+          const clockInTime = record.clockInTime ? String(record.clockInTime).substring(11, 16) : '';
+          const clockOutTime = record.clockOutTime ? String(record.clockOutTime).substring(11, 16) : '';
+          this.setData({
+            adminAdjustOpen: true,
+            adminAdjustForm: {
+              id: record.id,
+              userName: record.userName || '',
+              workDate: record.workDate || '',
+              clockInTime: clockInTime,
+              clockOutTime: clockOutTime,
+              remark: record.remark || '',
+            },
+          });
+          return;
+        }
+      }
+      // 无记录或作废记录 → 打开管理员补卡弹窗，预填该日期
+      // 管理员模式下用选中的员工；普通模式下（看自己考勤）用当前登录用户
+      const emp = this.data.adminMode
+        ? (this.data.selectedEmployee || this.data.employeeList[0])
+        : this._getCurrentUserAsEmployee();
+      if (!emp) {
+        wx.showToast({ title: '请先选择员工', icon: 'none' });
+        return;
+      }
+      this.setData({
+        adminSupplementOpen: true,
+        adminSupplementForm: {
+          targetUserId: emp.userId,
+          targetUserName: emp.userName,
+          workDate: cell.date,
+          clockInTime: '09:00',
+          clockOutTime: '18:00',
+          remark: '',
+        },
+      });
+      return;
+    }
+
+    // 普通员工：已有非作废记录的，提示走管理员修改
     if (cell.hasRecord && cell.status !== 'CANCELLED') {
       wx.showModal({
         title: '该日已有记录',
-        content: '当天已有打卡记录，如需修改请联系管理员在 PC 端考勤管理页处理。',
+        content: '当天已有打卡记录，如需修改请联系管理员处理。',
         showCancel: false,
         confirmText: '知道了',
       });
       return;
     }
-    // 打开补卡弹窗，预填该日期
+    // 打开员工补卡申请弹窗，预填该日期
     this.setData({
       supplementOpen: true,
       supplementForm: {
@@ -156,6 +207,32 @@ Page({
         remark: '',
       },
     });
+  },
+
+  // 按日期查找记录
+  _findRecordByDate: function (date) {
+    if (!date) return null;
+    const list = this.data.records || [];
+    for (let i = 0; i < list.length; i++) {
+      if (String(list[i].workDate || '') === String(date)) {
+        return list[i];
+      }
+    }
+    return null;
+  },
+
+  // 获取当前登录用户作为员工对象（管理员看自己考勤时用）
+  _getCurrentUserAsEmployee: function () {
+    try {
+      const userInfo = wx.getStorageSync('user_info');
+      if (!userInfo) return null;
+      const userId = String(userInfo.id || userInfo.userId || userInfo.idStr || '');
+      if (!userId) return null;
+      const userName = userInfo.realName || userInfo.username || userInfo.name || userInfo.nickname || '我';
+      return { userId: userId, userName: userName };
+    } catch (e) {
+      return null;
+    }
   },
 
   // 顶部"补卡"按钮
@@ -217,22 +294,23 @@ Page({
     self.setData({ supplementSubmitting: true });
     wx.showLoading({ title: '提交中', mask: true });
 
-    api.attendance.selfSupplement({
+    api.attendance.submitApply({
       workDate: form.workDate,
       clockInTime: clockInTime,
       clockOutTime: clockOutTime,
-      remark: form.remark,
+      reason: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: '补卡成功', icon: 'success' });
+      wx.showToast({ title: '申请已提交，待审批', icon: 'success' });
       self.setData({ supplementOpen: false, supplementSubmitting: false });
       self._needReload = false;
       self._loadData();
+      self._loadMyApplies();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || '补卡失败';
+      const errMsg = (e && e.errMsg) || '提交失败';
       wx.showModal({
-        title: '补卡失败',
+        title: '提交失败',
         content: errMsg,
         showCancel: false,
         confirmText: '知道了',
@@ -246,12 +324,105 @@ Page({
   // 切换管理员/普通模式
   onToggleAdminMode: function () {
     const newMode = !this.data.adminMode;
-    this.setData({ adminMode: newMode });
+    this.setData({ adminMode: newMode, adminTab: 'records' });
     if (newMode) {
       this._loadAdminList();
+      this._loadPendingApplies();
     } else {
       this._loadData();
+      this._loadMyApplies();
     }
+  },
+
+  // 切换管理员 Tab（records=打卡记录，approval=补卡审批）
+  onSwitchAdminTab: function (e) {
+    const tab = e.currentTarget.dataset.tab;
+    if (!tab || tab === this.data.adminTab) return;
+    this.setData({ adminTab: tab });
+    if (tab === 'approval') {
+      this._loadPendingApplies();
+    }
+  },
+
+  // 加载待审批列表
+  _loadPendingApplies: function () {
+    const self = this;
+    const parts = self.data.month.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const startDate = y + '-' + (m < 10 ? '0' + m : m) + '-01';
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = y + '-' + (m < 10 ? '0' + m : m) + '-' + (lastDay < 10 ? '0' + lastDay : lastDay);
+    api.attendance.pendingList({ startDate: startDate, endDate: endDate }).then(function (res) {
+      const list = (res && res.records) || (res && Array.isArray(res) ? res : []) || [];
+      self.setData({ pendingApplies: list });
+    }).catch(function (e) {
+      console.warn('[attendance.detail] _loadPendingApplies failed:', e && e.errMsg);
+    });
+  },
+
+  // 管理员审批通过
+  onApproveApply: function (e) {
+    const self = this;
+    const applyId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '审批通过',
+      content: '确认通过此补卡申请？通过后将自动生成打卡记录。',
+      success: function (res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '审批中', mask: true });
+        api.attendance.approveApply({ id: applyId }).then(function () {
+          wx.hideLoading();
+          wx.showToast({ title: '已通过', icon: 'success' });
+          self._loadPendingApplies();
+          self._loadAdminList();
+        }).catch(function (err) {
+          wx.hideLoading();
+          wx.showModal({
+            title: '审批失败',
+            content: (err && err.errMsg) || '操作失败',
+            showCancel: false,
+          });
+        });
+      },
+    });
+  },
+
+  // 管理员审批拒绝
+  onRejectApply: function (e) {
+    const self = this;
+    const applyId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '审批拒绝',
+      content: '确认拒绝此补卡申请？',
+      success: function (res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中', mask: true });
+        api.attendance.rejectApply({ id: applyId }).then(function () {
+          wx.hideLoading();
+          wx.showToast({ title: '已拒绝', icon: 'none' });
+          self._loadPendingApplies();
+        }).catch(function (err) {
+          wx.hideLoading();
+          wx.showModal({
+            title: '操作失败',
+            content: (err && err.errMsg) || '操作失败',
+            showCancel: false,
+          });
+        });
+      },
+    });
+  },
+
+  // 加载我的补卡申请列表
+  _loadMyApplies: function () {
+    const self = this;
+    api.attendance.myApplies(self.data.month).then(function (res) {
+      const list = (res && res.records) || (res && Array.isArray(res) ? res : []) || [];
+      self.setData({ myApplies: list });
+    }).catch(function (e) {
+      console.warn('[attendance.detail] _loadMyApplies failed:', e && e.errMsg);
+    });
   },
 
   // 加载员工列表
