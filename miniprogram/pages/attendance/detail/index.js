@@ -51,6 +51,7 @@ Page({
     employeePickerOpen: false,
     employeeSearchKey: '',
     filteredEmployeeList: [],
+    employeePickerSource: 'top',  // 'top'=顶部员工选择, 'supplement'=补卡弹窗员工选择
     // 管理员补卡弹窗
     adminSupplementOpen: false,
     adminSupplementSubmitting: false,
@@ -447,7 +448,7 @@ Page({
     });
   },
 
-  // 打开员工搜索弹窗
+  // 打开员工搜索弹窗（顶部员工选择）
   onOpenEmployeePicker: function () {
     if (this.data.employeeList.length === 0) {
       wx.showToast({ title: '暂无员工数据', icon: 'none' });
@@ -455,6 +456,21 @@ Page({
     }
     this.setData({
       employeePickerOpen: true,
+      employeePickerSource: 'top',
+      employeeSearchKey: '',
+      filteredEmployeeList: this.data.employeeList,
+    });
+  },
+
+  // 打开员工搜索弹窗（管理员补卡弹窗内员工选择）
+  onOpenSupplementEmployeePicker: function () {
+    if (this.data.employeeList.length === 0) {
+      wx.showToast({ title: '暂无员工数据', icon: 'none' });
+      return;
+    }
+    this.setData({
+      employeePickerOpen: true,
+      employeePickerSource: 'supplement',
       employeeSearchKey: '',
       filteredEmployeeList: this.data.employeeList,
     });
@@ -477,28 +493,28 @@ Page({
     this.setData({ employeeSearchKey: e.detail.value, filteredEmployeeList: filtered });
   },
 
-  // 从搜索弹窗选择员工
+  // 从搜索弹窗选择员工（根据 source 来源回填不同字段）
   onPickEmployeeFromSearch: function (e) {
     const emp = e.currentTarget.dataset.employee;
     if (!emp || !emp.userId) return;
     const idx = this.data.employeeList.findIndex(function (it) { return it.userId === emp.userId; });
-    this.setData({
-      employeePickerIdx: idx >= 0 ? idx : 0,
-      selectedEmployee: emp,
-      employeePickerOpen: false,
-    });
-    this._loadAdminList();
-  },
+    const source = this.data.employeePickerSource;
 
-  // 管理员补卡弹窗 - 选择员工
-  onAdminSupplementPickEmployee: function (e) {
-    const idx = Number(e.detail.value);
-    const emp = this.data.employeeList[idx];
-    if (emp) {
+    if (source === 'supplement') {
+      // 补卡弹窗：回填 targetUserId/targetUserName，不触发列表刷新
       this.setData({
+        employeePickerOpen: false,
         'adminSupplementForm.targetUserId': emp.userId,
         'adminSupplementForm.targetUserName': emp.userName,
       });
+    } else {
+      // 顶部员工选择：回填 selectedEmployee + 刷新打卡记录列表
+      this.setData({
+        employeePickerIdx: idx >= 0 ? idx : 0,
+        selectedEmployee: emp,
+        employeePickerOpen: false,
+      });
+      this._loadAdminList();
     }
   },
 

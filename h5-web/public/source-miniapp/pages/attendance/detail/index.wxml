@@ -485,12 +485,10 @@
       <view class="modal-body">
         <view class="form-item">
           <text class="form-label">选择员工</text>
-          <picker mode="selector" range="{{employeeList}}" range-key="userName" bindchange="onAdminSupplementPickEmployee">
-            <view class="form-picker {{adminSupplementForm.targetUserName ? '' : 'form-picker--placeholder'}}">
-              <text>{{adminSupplementForm.targetUserName || '请选择员工'}}</text>
-              <text class="form-picker-arrow">›</text>
-            </view>
-          </picker>
+          <view class="form-picker {{adminSupplementForm.targetUserName ? '' : 'form-picker--placeholder'}}" hover-class="form-picker-hover" hover-stay-time="100" bindtap="onOpenSupplementEmployeePicker">
+            <text>{{adminSupplementForm.targetUserName || '点击搜索选择员工'}}</text>
+            <text class="form-picker-arrow">⌄</text>
+          </view>
         </view>
 
         <view class="form-item">
@@ -631,12 +629,12 @@
           <text class="employee-picker-empty-text">未找到匹配员工</text>
         </view>
         <view wx:for="{{filteredEmployeeList}}" wx:key="userId"
-              class="employee-picker-item {{selectedEmployee.userId === item.userId ? 'employee-picker-item--active' : ''}}"
+              class="employee-picker-item {{(employeePickerSource === 'top' && selectedEmployee.userId === item.userId) || (employeePickerSource === 'supplement' && adminSupplementForm.targetUserId === item.userId) ? 'employee-picker-item--active' : ''}}"
               hover-class="employee-picker-item-hover" hover-stay-time="100"
               bindtap="onPickEmployeeFromSearch" data-employee="{{item}}">
           <text class="employee-picker-item-name">{{item.userName}}</text>
           <text class="employee-picker-item-id">工号：{{item.userId}}</text>
-          <text wx:if="{{selectedEmployee.userId === item.userId}}" class="employee-picker-item-check">✓</text>
+          <text wx:if="{{(employeePickerSource === 'top' && selectedEmployee.userId === item.userId) || (employeePickerSource === 'supplement' && adminSupplementForm.targetUserId === item.userId)}}" class="employee-picker-item-check">✓</text>
         </view>
       </scroll-view>
     </view>
