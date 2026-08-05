@@ -880,7 +880,9 @@ public class AiAgentOrchestrator {
 
         List<Runnable> postTurnTasks = new java.util.ArrayList<>();
 
-        // P0 优化：自我批评评分 + 反思记忆 异步执行（原同步阻塞 3-10 秒）
+        RealTimeLearningLoop realTimeLearningLoop = componentRegistry.getRealTimeLearningLoop();
+
+        // P0 优化：自我批评评分 + 反思记忆 + 实时学习 异步执行（原同步阻塞 3-10 秒）
         if (selfCriticService != null) {
             postTurnTasks.add(() -> {
                 try {
@@ -907,12 +909,23 @@ public class AiAgentOrchestrator {
                         reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,
                                 userMessage, assistantResponse, critiqueResult);
                     }
+
+                    // 用真实评分触发实时学习闭环（低分检测 + 紧急学习）
+                    if (realTimeLearningLoop != null) {
+                        try {
+                            realTimeLearningLoop.trigger(
+                                    conversationId, userMessage, assistantResponse,
+                                    realScore, tenantId);
+                        } catch (Exception e) {
+                            log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
+                        }
+                    }
                 } catch (Exception e) {
                     log.debug("[AiAgent] SelfCritic异步触发失败（非关键）: {}", e.getMessage());
                 }
             });
         } else if (reflectiveMemoryWriter != null && tenantId != null) {
-            // SelfCritic 未启用时，仍用占位分数异步写入反思记忆
+            // SelfCritic 未启用时，仍用占位分数异步写入反思记忆 + 触发学习
             postTurnTasks.add(() -> {
                 try {
                     Long userIdLong = null;
@@ -924,22 +937,18 @@ public class AiAgentOrchestrator {
                     SelfCritiqueResult critiqueResult = SelfCritiqueResult.of(finalSelfScore);
                     reflectiveMemoryWriter.writeAsync(tenantId, userIdLong, sessionId,
                             userMessage, assistantResponse, critiqueResult);
+
+                    if (realTimeLearningLoop != null) {
+                        try {
+                            realTimeLearningLoop.trigger(
+                                    conversationId, userMessage, assistantResponse,
+                                    finalSelfScore, tenantId);
+                        } catch (Exception e) {
+                            log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
+                        }
+                    }
                 } catch (Exception e) {
                     log.debug("[AiAgent] 反思记忆异步写入失败（非关键）: {}", e.getMessage());
-                }
-            });
-        }
-
-        RealTimeLearningLoop realTimeLearningLoop = componentRegistry.getRealTimeLearningLoop();
-        if (realTimeLearningLoop != null) {
-            final double scoreForLearning = finalSelfScore;
-            postTurnTasks.add(() -> {
-                try {
-                    realTimeLearningLoop.trigger(
-                            conversationId, userMessage, assistantResponse,
-                            scoreForLearning, tenantId);
-                } catch (Exception e) {
-                    log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
                 }
             });
         }
