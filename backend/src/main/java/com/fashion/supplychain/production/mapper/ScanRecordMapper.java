@@ -305,4 +305,42 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 "  AND sr.scan_type = 'production' " +
                 "  AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}")
         java.math.BigDecimal sumLaborCostByOrderId(@Param("orderId") String orderId, @Param("tenantId") Long tenantId);
+
+        /**
+         * 批量查询多员工每日扫码产量与金额（用于考勤页关联展示）
+         * 返回字段：operatorId / workDate / scanQty / scanAmount
+         * 过滤口径与 selectPersonalStats 保持一致：
+         *   - scan_result='success' AND quantity>0 AND factory_id IS NULL AND scan_type!='orchestration'
+         *   - 排除已取消/已删除订单
+         * 时间范围用 scan_time >= startDate AND scan_time < endDate+1day 走索引
+         */
+        @Select({
+                        "<script>",
+                        "SELECT",
+                        "  sr.operator_id AS operatorId,",
+                        "  DATE(sr.scan_time) AS workDate,",
+                        "  COALESCE(SUM(sr.quantity), 0) AS scanQty,",
+                        "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount, 0), NULLIF(sr.scan_cost, 0), sr.unit_price * sr.quantity, 0)), 0) AS scanAmount",
+                        "FROM t_scan_record sr",
+                        "WHERE sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
+                        "  AND sr.scan_result = 'success'",
+                        "  AND sr.quantity &gt; 0",
+                        "  AND sr.factory_id IS NULL",
+                        "  AND sr.scan_type != 'orchestration'",
+                        "  AND sr.scan_time &gt;= #{startTime}",
+                        "  AND sr.scan_time &lt;  #{endTime}",
+                        "  AND sr.operator_id IN",
+                        "  <foreach collection='operatorIds' item='oid' open='(' separator=',' close=')'>#{oid}</foreach>",
+                        "  AND NOT EXISTS (",
+                        "    SELECT 1 FROM t_production_order po",
+                        "    WHERE po.id = sr.order_id AND (po.status = 'cancelled' OR po.delete_flag = 1)",
+                        "  )",
+                        "GROUP BY sr.operator_id, DATE(sr.scan_time)",
+                        "</script>"
+        })
+        List<Map<String, Object>> selectDailyStatsByOperators(
+                        @Param("tenantId") Long tenantId,
+                        @Param("operatorIds") List<String> operatorIds,
+                        @Param("startTime") LocalDateTime startTime,
+                        @Param("endTime") LocalDateTime endTime);
 }

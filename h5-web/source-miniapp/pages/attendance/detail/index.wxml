@@ -99,6 +99,19 @@
             </view>
           </view>
 
+          <!-- 当日产量+金额（仅在有数据时展示） -->
+          <view wx:if="{{item.status !== 'CANCELLED' && (item.scanQty > 0 || item.scanAmount > 0)}}" class="record-production">
+            <view class="record-production-item">
+              <text class="record-production-label">产量</text>
+              <text class="record-production-value">{{item.scanQty}} 件</text>
+            </view>
+            <view class="record-production-separator">|</view>
+            <view class="record-production-item">
+              <text class="record-production-label">金额</text>
+              <text class="record-production-value record-production-value--amount">¥{{item.scanAmount}}</text>
+            </view>
+          </view>
+
           <view wx:if="{{item.status !== 'CANCELLED'}}" class="record-admin-actions">
             <view class="admin-action-btn admin-action-btn--adjust" hover-class="admin-action-btn-hover" hover-stay-time="100" bindtap="onOpenAdminAdjust" data-record="{{item}}">
               <text class="admin-action-btn-text">调整</text>
@@ -154,6 +167,17 @@
         <text class="summary-meta-text">应出勤 {{summary.expectedDays}} 天</text>
         <text class="summary-meta-dot">·</text>
         <text class="summary-meta-text">本月累计 {{summary.workHours}} 小时</text>
+      </view>
+      <view wx:if="{{summary.monthScanQty > 0 || summary.monthScanAmount > 0}}" class="summary-production">
+        <view class="summary-production-item">
+          <text class="summary-production-label">本月产量</text>
+          <text class="summary-production-value">{{summary.monthScanQty}} 件</text>
+        </view>
+        <view class="summary-production-divider"></view>
+        <view class="summary-production-item">
+          <text class="summary-production-label">工序金额</text>
+          <text class="summary-production-value summary-production-value--amount">¥{{summary.monthScanAmount}}</text>
+        </view>
       </view>
     </view>
 
@@ -273,6 +297,19 @@
             <view class="record-duration">
               <text class="record-duration-num">{{item.workHours}}</text>
               <text class="record-duration-unit">h</text>
+            </view>
+          </view>
+
+          <!-- 当日产量+金额（仅在有数据时展示） -->
+          <view wx:if="{{item.scanQty > 0 || item.scanAmount > 0}}" class="record-production">
+            <view class="record-production-item">
+              <text class="record-production-label">产量</text>
+              <text class="record-production-value">{{item.scanQty}} 件</text>
+            </view>
+            <view class="record-production-separator">|</view>
+            <view class="record-production-item">
+              <text class="record-production-label">金额</text>
+              <text class="record-production-value record-production-value--amount">¥{{item.scanAmount}}</text>
             </view>
           </view>
 

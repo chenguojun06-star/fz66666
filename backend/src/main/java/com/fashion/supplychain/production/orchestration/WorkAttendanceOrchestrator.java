@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.util.RoleHelper;
 import com.fashion.supplychain.production.entity.WorkAttendance;
+import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.WorkAttendanceService;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -12,9 +13,12 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -43,6 +47,9 @@ public class WorkAttendanceOrchestrator {
 
     @Autowired
     private WorkAttendanceService workAttendanceService;
+
+    @Autowired
+    private ScanRecordMapper scanRecordMapper;
 
     /**
      * 上班打卡
@@ -244,8 +251,37 @@ public class WorkAttendanceOrchestrator {
         LocalTime standardClockIn = LocalTime.of(9, 0);
         LocalTime standardClockOut = LocalTime.of(18, 0);
 
+        // 批量查询当前员工当月每日扫码产量+金额（避免 N+1）
+        // key = workDate(yyyy-MM-dd)，value = {scanQty, scanAmount}
+        Map<String, Map<String, Object>> dailyScanMap = new HashMap<>();
+        if (StringUtils.hasText(userId)) {
+            List<String> opIds = new ArrayList<>();
+            opIds.add(userId);
+            try {
+                LocalDateTime startTime = monthStart.atStartOfDay();
+                LocalDateTime endTime = monthEnd.plusDays(1).atStartOfDay();
+                List<Map<String, Object>> rows = scanRecordMapper.selectDailyStatsByOperators(
+                        tenantId, opIds, startTime, endTime);
+                if (rows != null) {
+                    for (Map<String, Object> row : rows) {
+                        Object workDateObj = row.get("workDate");
+                        String workDateStr = workDateObj != null ? workDateObj.toString() : null;
+                        if (workDateStr != null && workDateStr.length() >= 10) {
+                            workDateStr = workDateStr.substring(0, 10);
+                            dailyScanMap.put(workDateStr, row);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[monthlyRecords] 查询扫码产量失败 tenantId={} userId={} month={} err={}",
+                        tenantId, userId, ym, e.getMessage());
+            }
+        }
+
         // 明细列表
         List<Map<String, Object>> recordList = new ArrayList<>();
+        long monthScanQty = 0;
+        double monthScanAmount = 0;
         for (WorkAttendance r : records) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("workDate", r.getWorkDate() != null ? r.getWorkDate().toString() : null);
@@ -263,6 +299,14 @@ public class WorkAttendanceOrchestrator {
             item.put("source", r.getSource());
             item.put("operatorName", r.getOperatorName());
 
+            // 关联当日扫码产量+金额
+            String dateKey = r.getWorkDate() != null ? r.getWorkDate().toString() : null;
+            Map<String, Object> scanData = dateKey != null ? dailyScanMap.get(dateKey) : null;
+            long scanQty = scanData != null ? toLong(scanData.get("scanQty")) : 0;
+            double scanAmount = scanData != null ? toDouble(scanData.get("scanAmount")) : 0;
+            item.put("scanQty", scanQty);
+            item.put("scanAmount", Math.round(scanAmount * 100.0) / 100.0);
+
             // 显式 status 优先（LEAVE/ADJUSTED/CANCELLED 等管理态）；NULL/历史数据按时间自动判定
             String explicitStatus = r.getStatus();
             if (StringUtils.hasText(explicitStatus)) {
@@ -272,6 +316,11 @@ public class WorkAttendanceOrchestrator {
                 String[] statusInfo = detectStatus(r, standardClockIn, standardClockOut);
                 item.put("status", statusInfo[0]);
                 item.put("statusText", statusInfo[1]);
+            }
+            // 累加月度产量/金额（仅非作废记录）
+            if (!"CANCELLED".equals(item.get("status"))) {
+                monthScanQty += scanQty;
+                monthScanAmount += scanAmount;
             }
             recordList.add(item);
         }
@@ -322,6 +371,8 @@ public class WorkAttendanceOrchestrator {
         summary.put("avgHoursPerDay", avgHours);
         summary.put("expectedDays", expectedDays);
         summary.put("absentDays", absentDays);
+        summary.put("monthScanQty", monthScanQty);
+        summary.put("monthScanAmount", Math.round(monthScanAmount * 100.0) / 100.0);
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("month", ym.toString());
@@ -335,6 +386,10 @@ public class WorkAttendanceOrchestrator {
 
     /**
      * 管理端列表查询
+     * <p>
+     * 关联展示：考勤 + 当日扫码产量(scanQty) + 当日工序金额(scanAmount)
+     * 工资口径：scanCost/processUnitPrice×quantity（与 selectPersonalStats 一致）
+     * 产量口径：所有 scan_type（除 orchestration）的 quantity 总和
      */
     public Map<String, Object> adminList(LocalDate startDate, LocalDate endDate,
                                          String userId, String status) {
@@ -348,21 +403,92 @@ public class WorkAttendanceOrchestrator {
         List<WorkAttendance> records = workAttendanceService.listForAdmin(tenantId, startDate, endDate, userId, status);
         Map<String, Object> stats = workAttendanceService.adminStats(tenantId, startDate, endDate);
 
+        // 批量查询考勤范围内所有员工的每日扫码产量+金额（避免 N+1）
+        // key = operatorId + "|" + workDate，value = {scanQty, scanAmount}
+        Map<String, Map<String, Object>> dailyScanMap = buildDailyScanMap(tenantId, records, startDate, endDate);
+
         List<Map<String, Object>> list = new ArrayList<>();
         LocalTime stdIn = LocalTime.of(9, 0);
         LocalTime stdOut = LocalTime.of(18, 0);
+        long totalScanQty = 0;
+        double totalScanAmount = 0;
         for (WorkAttendance r : records) {
             Map<String, Object> item = buildAdminRecordItem(r, stdIn, stdOut);
+            // 关联当日产量+金额
+            String key = buildDailyScanKey(r.getUserId(), r.getWorkDate());
+            Map<String, Object> scanData = dailyScanMap.get(key);
+            long scanQty = scanData != null ? toLong(scanData.get("scanQty")) : 0;
+            double scanAmount = scanData != null ? toDouble(scanData.get("scanAmount")) : 0;
+            item.put("scanQty", scanQty);
+            item.put("scanAmount", Math.round(scanAmount * 100.0) / 100.0);
+            // 累加总计（仅非作废记录）
+            if (!"CANCELLED".equals(item.get("status"))) {
+                totalScanQty += scanQty;
+                totalScanAmount += scanAmount;
+            }
             list.add(item);
         }
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("startDate", startDate.toString());
         resp.put("endDate", endDate.toString());
-        resp.put("stats", buildAdminStats(stats));
+        resp.put("stats", buildAdminStats(stats, totalScanQty, totalScanAmount));
         resp.put("records", list);
         resp.put("total", list.size());
         return resp;
+    }
+
+    /**
+     * 批量查询考勤记录范围内所有员工的每日扫码产量+金额
+     * 返回 Map<operatorId|workDate, {scanQty, scanAmount}>
+     * <p>
+     * 性能：单次 SQL 批量查询，避免 N+1
+     * 容错：查询失败返回空 Map，不影响考勤主流程
+     */
+    private Map<String, Map<String, Object>> buildDailyScanMap(Long tenantId, List<WorkAttendance> records,
+                                                                LocalDate startDate, LocalDate endDate) {
+        if (records == null || records.isEmpty()) return new HashMap<>();
+        // 收集去重的 operatorId 列表
+        Set<String> operatorIds = new HashSet<>();
+        for (WorkAttendance r : records) {
+            if (StringUtils.hasText(r.getUserId())) {
+                operatorIds.add(r.getUserId());
+            }
+        }
+        if (operatorIds.isEmpty()) return new HashMap<>();
+
+        try {
+            // scan_time 范围：startDate 00:00 ~ endDate+1day 00:00
+            LocalDateTime startTime = startDate.atStartOfDay();
+            LocalDateTime endTime = endDate.plusDays(1).atStartOfDay();
+            List<Map<String, Object>> rows = scanRecordMapper.selectDailyStatsByOperators(
+                    tenantId, new ArrayList<>(operatorIds), startTime, endTime);
+            Map<String, Map<String, Object>> map = new HashMap<>();
+            if (rows != null) {
+                for (Map<String, Object> row : rows) {
+                    String opId = row.get("operatorId") != null ? String.valueOf(row.get("operatorId")) : null;
+                    Object workDateObj = row.get("workDate");
+                    String workDateStr = workDateObj != null ? workDateObj.toString() : null;
+                    if (opId == null || workDateStr == null) continue;
+                    // workDate 可能是 "yyyy-MM-dd" 或 "yyyy-MM-dd 00:00:00"，统一取前10位
+                    if (workDateStr.length() >= 10) workDateStr = workDateStr.substring(0, 10);
+                    map.put(opId + "|" + workDateStr, row);
+                }
+            }
+            return map;
+        } catch (Exception e) {
+            log.warn("[buildDailyScanMap] 查询扫码产量失败 tenantId={} range={}~{} err={}",
+                    tenantId, startDate, endDate, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * 构建每日扫码关联 key：operatorId + "|" + workDate(yyyy-MM-dd)
+     */
+    private String buildDailyScanKey(String operatorId, LocalDate workDate) {
+        if (operatorId == null || workDate == null) return "";
+        return operatorId + "|" + workDate.toString();
     }
 
     /**
@@ -877,8 +1003,11 @@ public class WorkAttendanceOrchestrator {
 
     /**
      * 构建管理端统计
+     * @param raw 原始考勤统计
+     * @param totalScanQty 总扫码产量（非作废记录）
+     * @param totalScanAmount 总工序金额（非作废记录）
      */
-    private Map<String, Object> buildAdminStats(Map<String, Object> raw) {
+    private Map<String, Object> buildAdminStats(Map<String, Object> raw, long totalScanQty, double totalScanAmount) {
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("total", toInt(raw == null ? null : raw.get("total")));
         stats.put("normalCount", toInt(raw == null ? null : raw.get("normalCount")));
@@ -888,6 +1017,8 @@ public class WorkAttendanceOrchestrator {
         long minutes = toLong(raw == null ? null : raw.get("totalMinutes"));
         stats.put("totalMinutes", minutes);
         stats.put("totalHours", Math.round(minutes / 60.0 * 10.0) / 10.0);
+        stats.put("totalScanQty", totalScanQty);
+        stats.put("totalScanAmount", Math.round(totalScanAmount * 100.0) / 100.0);
         return stats;
     }
 

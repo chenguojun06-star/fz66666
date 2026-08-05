@@ -273,6 +273,26 @@ const AttendanceAdminPage: React.FC = () => {
         },
       },
       {
+        title: '当日产量',
+        dataIndex: 'scanQty',
+        width: 90,
+        align: 'right',
+        render: (v: number, r: AttendanceRecord) => {
+          if (r.status === 'LEAVE' || r.status === 'CANCELLED') return '-';
+          return v && v > 0 ? `${v} 件` : '-';
+        },
+      },
+      {
+        title: '当日金额',
+        dataIndex: 'scanAmount',
+        width: 100,
+        align: 'right',
+        render: (v: number, r: AttendanceRecord) => {
+          if (r.status === 'LEAVE' || r.status === 'CANCELLED') return '-';
+          return v && v > 0 ? `¥${Number(v).toFixed(2)}` : '-';
+        },
+      },
+      {
         title: '状态',
         dataIndex: 'status',
         width: 110,
@@ -373,6 +393,19 @@ const AttendanceAdminPage: React.FC = () => {
         key: 'hours',
         items: { label: '总工时', value: stats.totalHours, unit: 'h', color: 'var(--color-amber-700)' },
       },
+      {
+        key: 'scanQty',
+        items: { label: '总产量', value: stats.totalScanQty ?? 0, unit: '件', color: 'var(--color-blue-600)' },
+      },
+      {
+        key: 'scanAmount',
+        items: {
+          label: '总金额',
+          value: stats.totalScanAmount ?? 0,
+          unit: '元',
+          color: 'var(--color-green-600)',
+        },
+      },
     ];
   }, [stats]);
 
@@ -437,7 +470,7 @@ const AttendanceAdminPage: React.FC = () => {
         stickyHeader
         emptyDescription="暂无考勤记录"
         size="middle"
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1380 }}
         pagination={{
           total,
           showTotal: (t) => `共 ${t} 条`,

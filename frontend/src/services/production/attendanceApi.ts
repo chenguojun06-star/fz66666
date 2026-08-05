@@ -29,6 +29,10 @@ export interface AttendanceRecord {
   operatorName: string | null;
   operateTime: string | null;
   remark: string | null;
+  /** 当日扫码产量（所有 scan_type 总和，排除 orchestration） */
+  scanQty: number;
+  /** 当日工序金额（scanCost/processUnitPrice×quantity 口径） */
+  scanAmount: number;
 }
 
 export interface AttendanceStats {
@@ -39,6 +43,10 @@ export interface AttendanceStats {
   cancelledCount: number;
   totalMinutes: number;
   totalHours: number;
+  /** 总扫码产量（非作废记录） */
+  totalScanQty: number;
+  /** 总工序金额（非作废记录） */
+  totalScanAmount: number;
 }
 
 export interface AdminListResp {

@@ -573,6 +573,8 @@ Page({
         avgHoursPerDay: Number(summary.avgHoursPerDay || 0),
         expectedDays: Number(summary.expectedDays || 0),
         absentDays: Number(summary.absentDays || 0),
+        monthScanQty: Number(summary.monthScanQty || 0),
+        monthScanAmount: Number(summary.monthScanAmount || 0),
       },
       calendar: calendarGrid,
       records: sortedRecords,
