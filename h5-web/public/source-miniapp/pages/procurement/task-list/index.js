@@ -3,6 +3,7 @@ const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
 const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
+const displayHelper = require('../../../utils/displayHelper');
 
 /**
  * 筛选 Tab 定义（与 PC 端 MaterialSearchForm 状态筛选对齐）
@@ -20,27 +21,53 @@ const STATUS_TABS = [
 ];
 
 /**
- * 状态标签配置（与详情页 _getStatusText/_getStatusColor 对齐）
- * 与 design-tokens.wxss 的 tag-* 颜色类对应
- * 注：completed 统一显示「已完成」（对齐用户需求）
+ * displayHelper 颜色常量 → 小程序 tag-* 颜色类映射
+ * （displayHelper 返回 CSS 变量，模板用 tag-* 类）
  */
-const STATUS_CONFIG = {
-  pending: { label: '待采购', tagClass: 'tag-gray' },
-  waiting_procurement: { label: '待采购', tagClass: 'tag-gray' },
-  procuring: { label: '采购中', tagClass: 'tag-blue' },
-  procurement_in_progress: { label: '采购中', tagClass: 'tag-blue' },
-  purchasing: { label: '采购中', tagClass: 'tag-blue' },
-  material_preparation: { label: '备料中', tagClass: 'tag-blue' },
-  received: { label: '已采购', tagClass: 'tag-blue' },
-  partial: { label: '部分到货', tagClass: 'tag-blue' },
-  partial_arrival: { label: '部分到货', tagClass: 'tag-blue' },
-  awaiting_confirm: { label: '待确认完成', tagClass: 'tag-gold' },
-  warehouse_pending: { label: '待仓库出库', tagClass: 'tag-cyan' },
-  completed: { label: '已完成', tagClass: 'tag-green' },
-  procurement_completed: { label: '已完成', tagClass: 'tag-green' },
-  delayed: { label: '已延期', tagClass: 'tag-red' },
-  cancelled: { label: '已取消', tagClass: 'tag-gray' },
+const COLOR_TO_TAG_CLASS = {
+  [displayHelper.STATUS_COLOR_DEFAULT]: 'tag-gray',
+  [displayHelper.STATUS_COLOR_SUCCESS]: 'tag-green',
+  [displayHelper.STATUS_COLOR_PROCESSING]: 'tag-blue',
+  [displayHelper.STATUS_COLOR_WARNING]: 'tag-orange',
+  [displayHelper.STATUS_COLOR_ERROR]: 'tag-red',
+  [displayHelper.STATUS_COLOR_BLUE]: 'tag-blue',
+  [displayHelper.STATUS_COLOR_CYAN]: 'tag-cyan',
+  [displayHelper.STATUS_COLOR_ORANGE]: 'tag-orange',
+  [displayHelper.STATUS_COLOR_VOLCANO]: 'tag-red',
+  [displayHelper.STATUS_COLOR_PURPLE]: 'tag-purple',
+  [displayHelper.STATUS_COLOR_GEEKBLUE]: 'tag-geekblue',
 };
+
+/**
+ * 臆造/历史状态值本地兜底（displayHelper PURCHASE_STATUS_LABEL 未覆盖）
+ * 文案对齐 displayHelper 语义
+ */
+const LOCAL_STATUS_FALLBACK = {
+  procuring: { label: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
+  waiting_procurement: { label: '待采购', color: displayHelper.STATUS_COLOR_WARNING },
+  procurement_in_progress: { label: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
+  material_preparation: { label: '物料准备中', color: displayHelper.STATUS_COLOR_BLUE },
+  procurement_completed: { label: '采购完成', color: displayHelper.STATUS_COLOR_SUCCESS },
+  delayed: { label: '已延期', color: displayHelper.STATUS_COLOR_ERROR },
+};
+
+/**
+ * 统一状态展示：优先 displayHelper，未命中查本地兜底
+ * @param {string} status - 已小写归一的状态值
+ * @returns {{label:string, tagClass:string}|null}
+ */
+function resolveStatusDisplay(status) {
+  if (!status) return null;
+  const result = displayHelper.displayPurchaseStatus(status);
+  if (result.text !== status) {
+    return { label: result.text, tagClass: COLOR_TO_TAG_CLASS[result.color] || 'tag-gray' };
+  }
+  const fb = LOCAL_STATUS_FALLBACK[status];
+  if (fb) {
+    return { label: fb.label, tagClass: COLOR_TO_TAG_CLASS[fb.color] || 'tag-gray' };
+  }
+  return null;
+}
 
 Page({
   data: {
@@ -201,7 +228,7 @@ Page({
   _normalizeItem(item) {
     const rawStatus = String(item.status || '').trim().toLowerCase();
     const displayStatus = this._computeDisplayStatus(item);
-    const statusConfig = STATUS_CONFIG[rawStatus] || STATUS_CONFIG[displayStatus] || STATUS_CONFIG.pending;
+    const statusConfig = resolveStatusDisplay(rawStatus) || resolveStatusDisplay(displayStatus) || { label: '待领取', tagClass: 'tag-orange' };
 
     const styleCoverUrl = getAuthedImageUrl(item.styleCover || '');
 

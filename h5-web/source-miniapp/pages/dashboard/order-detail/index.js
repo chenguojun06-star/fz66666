@@ -33,33 +33,42 @@ function fmt(val, fallback) { return (val != null && val !== '') ? val : (fallba
 function fmtNum(v, fallback) { return (v != null && !isNaN(v)) ? Number(v) : (fallback || 0); }
 /* 平台来源代码 → 中文名（统一使用共享模块，与销售/订单列表页保持一致） */
 const { getPlatformName } = require('../../../utils/platformNames');
-const { formatDate, formatDateTime } = require('../../../utils/displayHelper');
+const {
+  formatDate,
+  formatDateTime,
+  displayStatus,
+  displayPurchaseStatus,
+  STATUS_COLOR_DEFAULT,
+  STATUS_COLOR_SUCCESS,
+  STATUS_COLOR_PROCESSING,
+  STATUS_COLOR_WARNING,
+  STATUS_COLOR_ERROR,
+  STATUS_COLOR_BLUE,
+  STATUS_COLOR_CYAN,
+} = require('../../../utils/displayHelper');
 
-/* 状态文本 + tag 类名 */
-function getStatusInfo(raw) {
-  const s = String(raw || '').toLowerCase();
-  if (s === 'completed' || s === 'closed' || s === 'archived') {
-    return { text: '已完成', cls: 'tag-success' };
-  }
-  if (s === 'cancelled' || s === 'canceled' || s === 'scrapped') {
-    return { text: '已作废', cls: 'tag-default' };
-  }
-  if (s === 'production' || s === 'in_progress' || s === 'active') {
-    return { text: '生产中', cls: 'tag-processing' };
-  }
-  if (s === 'pending' || s === 'pending_start') {
-    return { text: '待开始', cls: 'tag-warning' };
-  }
-  return { text: '未知', cls: 'tag-default' };
+/* displayHelper 返回 {text, color}（color 为 CSS 变量），本页历史渲染用 {text, cls}（tag-* 类名）。
+ * 统一用 colorToCls 把 color 转回 cls，保持模板兼容。 */
+function colorToCls(color) {
+  if (color === STATUS_COLOR_SUCCESS) return 'tag-success';
+  if (color === STATUS_COLOR_WARNING) return 'tag-warning';
+  if (color === STATUS_COLOR_PROCESSING) return 'tag-processing';
+  if (color === STATUS_COLOR_ERROR) return 'tag-error';
+  if (color === STATUS_COLOR_BLUE) return 'tag-processing';
+  if (color === STATUS_COLOR_CYAN) return 'tag-processing';
+  return 'tag-default';
 }
 
-/* 工序阶段状态 */
+/* 状态文本 + tag 类名（统一走 displayHelper.displayStatus，与 PC 端 / 列表页语义一致） */
+function getStatusInfo(raw) {
+  const result = displayStatus(raw);
+  return { text: result.text, cls: colorToCls(result.color) };
+}
+
+/* 工序阶段状态（统一走 displayHelper.displayStatus） */
 function getStageStatus(row) {
-  const st = String(row && row.status || '').toLowerCase();
-  if (st === 'completed') return { text: '已完成', cls: 'stage-done' };
-  if (st === 'in_progress' || st === 'processing') return { text: '进行中', cls: 'stage-doing' };
-  if (st === 'not_started') return { text: '未开始', cls: 'stage-pending' };
-  return { text: '未开始', cls: 'stage-pending' };
+  const result = displayStatus(row && row.status);
+  return { text: result.text, cls: colorToCls(result.color) };
 }
 
 /* 扫码记录类型文本 */
@@ -351,13 +360,13 @@ Page({
         }
       }
 
-      // 状态（getStatusInfo 已经统一识别中英文各种状态）
+      // 状态（getStatusInfo 走 displayHelper.displayStatus，cancelled/scrapped 保留语义区分）
       const statusInfo = getStatusInfo(order.status);
 
-      // 是否可操作：只要 statusInfo 识别为"已完成"或"已作废"，就不可操作
-      // 双重保险：同时检查原始 status 枚举值
-      const statusText = statusInfo.text;
-      const isTerminal = statusText === '已完成' || statusText === '已作废';
+      // 是否可操作：用原始 status 枚举判断终态（displayHelper 把 cancelled→"已取消"、scrapped→"已报废"、
+      // closed→"已关单"、archived→"已归档"，旧的 statusText 文本判断已失效，改为按 raw status 判断）
+      const rawOrderStatus = String(order.status || '').toLowerCase();
+      const isTerminal = ['completed', 'closed', 'archived', 'cancelled', 'canceled', 'scrapped'].indexOf(rawOrderStatus) !== -1;
       const isEditable = !isTerminal;
 
       // 工序阶段（防御非数组返回）
@@ -393,15 +402,13 @@ Page({
       // 物料采购（防御非数组返回）+ 领取状态
       const rawMaterials = Array.isArray(ctx.materialPurchases) ? ctx.materialPurchases : (ctx.materialPurchases && Array.isArray(ctx.materialPurchases.records)) ? ctx.materialPurchases.records : [];
       const materialPurchases = rawMaterials.map(function (mp) {
-        const statusMap = {
-          'pending': { text: '待领取', cls: 'tag-warning' },
-          'received': { text: '已领取', cls: 'tag-processing' },
-          'arrived': { text: '已到货', cls: 'tag-success' },
-          'partially_arrived': { text: '部分到货', cls: 'tag-processing' },
-          'completed': { text: '已完成', cls: 'tag-default' },
-        };
         const rawStatus = String(mp.status || '').toLowerCase();
-        const st = statusMap[rawStatus] || { text: '未知', cls: 'tag-default' };
+        // 统一走 displayHelper.displayPurchaseStatus；'arrived' 不在采购映射表，保留本地兜底
+        let st = displayPurchaseStatus(rawStatus);
+        if (rawStatus === 'arrived') {
+          st = { text: '已到货', color: STATUS_COLOR_SUCCESS };
+        }
+        const stCls = colorToCls(st.color);
         const isClaimable = (rawStatus === 'pending' || rawStatus === '');
         return {
           id: mp.id || mp.purchaseId || mp.materialPurchaseId,
@@ -411,7 +418,7 @@ Page({
           arrivedQuantity: fmtNum(mp.arrivedQuantity),
           unit: fmt(mp.unit, '件'),
           status: st.text,
-          statusCls: st.cls,
+          statusCls: stCls,
           expectedArrivalDate: formatDate(mp.expectedArrivalDate || mp.planDate),
           receiverName: fmt(mp.receiverName || mp.purchaserName, ''),
           isClaimable: isClaimable,
@@ -455,15 +462,17 @@ Page({
         cuttingBundleList = cuttingBundles.slice(0, 10).map(function (b) {
           const rawStatus = String(b.status || '').toLowerCase();
           const isClaimable = (rawStatus === 'pending' || rawStatus === 'not_started' || rawStatus === '');
-          const statusMap = {
-            'pending': { text: '待领取', cls: 'tag-warning' },
-            'not_started': { text: '待领取', cls: 'tag-warning' },
-            'received': { text: '已领取', cls: 'tag-processing' },
-            'in_progress': { text: '裁剪中', cls: 'tag-processing' },
-            'completed': { text: '已完成', cls: 'tag-success' },
-            'done': { text: '已完成', cls: 'tag-success' },
-          };
-          const st = statusMap[rawStatus] || { text: '待领取', cls: 'tag-default' };
+          // 统一走 displayHelper.displayPurchaseStatus；not_started/done/in_progress 是裁剪特有，
+          // displayHelper 没有这俩/仨 key，保留本地兜底
+          let st = displayPurchaseStatus(rawStatus);
+          if (rawStatus === 'not_started') {
+            st = { text: '待领取', color: STATUS_COLOR_WARNING };
+          } else if (rawStatus === 'done') {
+            st = { text: '已完成', color: STATUS_COLOR_SUCCESS };
+          } else if (rawStatus === 'in_progress') {
+            st = { text: '裁剪中', color: STATUS_COLOR_PROCESSING };
+          }
+          const stCls = colorToCls(st.color);
           var rawBundleNo = b.bundleNo || b.bundleLabel || b.bundle_no || '-';
           // 菲号显示：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
           var orderNo = self.data.order && self.data.order.orderNo ? self.data.order.orderNo : '';
@@ -479,7 +488,7 @@ Page({
             size: fmt(b.size, ''),
             quantity: fmtNum(b.quantity),
             status: st.text,
-            statusCls: st.cls,
+            statusCls: stCls,
             receiverName: fmt(b.receiverName || b.operatorName, ''),
             isClaimable: isClaimable,
           };

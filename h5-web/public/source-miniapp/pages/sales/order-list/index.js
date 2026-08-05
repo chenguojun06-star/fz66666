@@ -15,6 +15,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { PLATFORM_NAMES } = require('../../../utils/platformNames');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
+const displayHelper = require('../../../utils/displayHelper');
 
 const PLATFORM_TABS = [
   { key: '',   label: '全部' },
@@ -41,13 +42,15 @@ var STATUS_TABS = [
   { key: '5', label: '已退款' },
 ];
 
-var STATUS_MAP = {
-  0: { text: '待付款', cls: 'order-tag--warning' },
-  1: { text: '待发货', cls: 'order-tag--warning' },
-  2: { text: '已发货', cls: 'order-tag--info' },
-  3: { text: '已完成', cls: 'order-tag--success' },
-  4: { text: '已取消', cls: 'order-tag--default' },
-  5: { text: '已退款', cls: 'order-tag--warning' },
+// wxml 依赖 order-tag--* CSS 类名，displayHelper 仅提供 CSS 变量颜色值，
+// 故 cls 保留本地映射；文案统一走 displayHelper.displaySalesOrderStatusText
+var STATUS_CLS_MAP = {
+  0: 'order-tag--warning',
+  1: 'order-tag--warning',
+  2: 'order-tag--info',
+  3: 'order-tag--success',
+  4: 'order-tag--default',
+  5: 'order-tag--warning',
 };
 
 function fmtTime(val) {
@@ -189,7 +192,11 @@ Page({
         // status 后端为 Integer
         var statusNum = Number(r.status);
         if (isNaN(statusNum)) statusNum = -1;
-        var st = STATUS_MAP[statusNum] || { text: '未知', cls: 'order-tag--default' };
+        // displayHelper.findStatus 用 `key || ''` 处理空值，数字 0 会被误判为空，故传 String(statusNum)
+        var stText = (statusNum >= 0 && statusNum <= 5)
+          ? displayHelper.displaySalesOrderStatusText(String(statusNum))
+          : '未知';
+        var st = { text: stText, cls: STATUS_CLS_MAP[statusNum] || 'order-tag--default' };
         // 商品信息
         var productName = r.productName || r.itemName || '';
         var quantity = r.quantity != null ? r.quantity : '';

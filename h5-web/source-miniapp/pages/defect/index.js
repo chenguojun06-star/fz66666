@@ -4,6 +4,7 @@ const { getUserInfo } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const qualityHelper = require('../../utils/quality-helper');
+const displayHelper = require('../../utils/displayHelper');
 
 const getQualityCategory = qualityHelper.getQualityCategory;
 const CATEGORY_TEXT = qualityHelper.CATEGORY_TEXT;
@@ -389,10 +390,11 @@ Page({
   _calcDeliveryDisplay: function (endDate, status, actualEndDate, productionProgress) {
     if (!endDate) return { text: '', cls: '' };
     var s = String(status || '').trim().toLowerCase();
-    if (s === 'scrapped') return { text: '已报废', cls: 'delivery-muted' };
-    if (s === 'closed' || s === 'archived') return { text: '已关单', cls: 'delivery-muted' };
-    if (s === 'completed') return { text: '已完成', cls: 'delivery-success' };
-    if (s === 'cancelled' || s === 'canceled') return { text: '已取消', cls: 'delivery-muted' };
+    // 状态值判断（业务逻辑）保留；文案走 displayHelper.displayStatusText
+    if (s === 'scrapped') return { text: displayHelper.displayStatusText(s), cls: 'delivery-muted' };
+    if (s === 'closed' || s === 'archived') return { text: displayHelper.displayStatusText(s), cls: 'delivery-muted' };
+    if (s === 'completed') return { text: displayHelper.displayStatusText(s), cls: 'delivery-success' };
+    if (s === 'cancelled' || s === 'canceled') return { text: displayHelper.displayStatusText(s), cls: 'delivery-muted' };
     if (actualEndDate) return { text: '已关单', cls: 'delivery-muted' };
     var p = Number(productionProgress);
     if (!isNaN(p) && p >= 100) return { text: '已完成', cls: 'delivery-success' };

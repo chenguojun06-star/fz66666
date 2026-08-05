@@ -129,7 +129,7 @@ const QUALITY_STATUS_COLOR = {
 
 const PURCHASE_STATUS_LABEL = {
   draft: '草稿',
-  pending: '待采购',
+  pending: '待领取',
   purchasing: '采购中',
   partial: '部分到货',
   partial_arrival: '部分到货',
@@ -138,6 +138,8 @@ const PURCHASE_STATUS_LABEL = {
   cancelled: '已取消',
   confirmed: '已确认',
   awaiting_confirm: '待确认',
+  shipped: '已发货',
+  warehouse_pending: '待入库',
 };
 
 const PURCHASE_STATUS_COLOR = {
@@ -151,6 +153,98 @@ const PURCHASE_STATUS_COLOR = {
   cancelled: STATUS_COLOR_DEFAULT,
   confirmed: STATUS_COLOR_BLUE,
   awaiting_confirm: STATUS_COLOR_BLUE,
+  shipped: STATUS_COLOR_PROCESSING,
+  warehouse_pending: STATUS_COLOR_WARNING,
+};
+
+/* ============== 财务付款状态映射 ============== */
+
+const PAYMENT_STATUS_LABEL = {
+  pending: '待付款',
+  processing: '付款中',
+  success: '已付款',
+  failed: '付款失败',
+  cancelled: '已取消',
+  refunded: '已退款',
+};
+
+const PAYMENT_STATUS_COLOR = {
+  pending: STATUS_COLOR_WARNING,
+  processing: STATUS_COLOR_PROCESSING,
+  success: STATUS_COLOR_SUCCESS,
+  failed: STATUS_COLOR_ERROR,
+  cancelled: STATUS_COLOR_DEFAULT,
+  refunded: STATUS_COLOR_DEFAULT,
+};
+
+/* ============== 预付款状态映射 ============== */
+
+const ADVANCE_STATUS_LABEL = {
+  pending: '待审批',
+  approved: '已批准',
+  rejected: '已拒绝',
+};
+
+const ADVANCE_STATUS_COLOR = {
+  pending: STATUS_COLOR_WARNING,
+  approved: STATUS_COLOR_SUCCESS,
+  rejected: STATUS_COLOR_ERROR,
+};
+
+const ADVANCE_DEDUCT_LABEL = {
+  unrepaid: '未抵扣',
+  partial: '部分抵扣',
+  repaid: '已抵扣',
+};
+
+const ADVANCE_DEDUCT_COLOR = {
+  unrepaid: STATUS_COLOR_WARNING,
+  partial: STATUS_COLOR_PROCESSING,
+  repaid: STATUS_COLOR_SUCCESS,
+};
+
+/* ============== 销售订单状态映射（数字状态） ============== */
+
+const SALES_ORDER_STATUS_LABEL = {
+  0: '待付款',
+  1: '待发货',
+  2: '已发货',
+  3: '已完成',
+  4: '已取消',
+  5: '已退款',
+};
+
+const SALES_ORDER_STATUS_COLOR = {
+  0: STATUS_COLOR_WARNING,
+  1: STATUS_COLOR_WARNING,
+  2: STATUS_COLOR_PROCESSING,
+  3: STATUS_COLOR_SUCCESS,
+  4: STATUS_COLOR_DEFAULT,
+  5: STATUS_COLOR_DEFAULT,
+};
+
+/* ============== 考勤状态映射 ============== */
+
+const ATTENDANCE_STATUS_LABEL = {
+  normal: '正常',
+  late: '迟到',
+  early_leave: '早退',
+  absent: '缺勤',
+  leave: '请假',
+  overtime: '加班',
+  adjusted: '已调整',
+  cancelled: '已作废',
+};
+
+const ATTENDANCE_STATUS_COLOR = {
+  normal: STATUS_COLOR_SUCCESS,
+  late: STATUS_COLOR_WARNING,
+  early_leave: STATUS_COLOR_WARNING,
+  absent: STATUS_COLOR_ERROR,
+  leave: STATUS_COLOR_DEFAULT,
+  overtime: STATUS_COLOR_PROCESSING,
+  adjusted: STATUS_COLOR_BLUE,
+  cancelled: STATUS_COLOR_DEFAULT,
 };
 
 /* ============== 退货状态映射 ============== */
@@ -583,6 +677,36 @@ function displayReturnStatus(status) {
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
 
+function displayPaymentStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displayAdvanceStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, ADVANCE_STATUS_LABEL, ADVANCE_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displayAdvanceDeductStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, ADVANCE_DEDUCT_LABEL, ADVANCE_DEDUCT_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displaySalesOrderStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displayAttendanceStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, ATTENDANCE_STATUS_LABEL, ATTENDANCE_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
 function displayDefectCategory(category) {
   if (isEmpty(category)) return EMPTY_TEXT;
   const k = String(category).trim().toLowerCase();
@@ -628,6 +752,21 @@ module.exports = {
   displayReturnStatus,
   displayReturnStatusText: (s) => displayReturnStatus(s).text,
   displayReturnStatusColor: (s) => displayReturnStatus(s).color,
+  displayPaymentStatus,
+  displayPaymentStatusText: (s) => displayPaymentStatus(s).text,
+  displayPaymentStatusColor: (s) => displayPaymentStatus(s).color,
+  displayAdvanceStatus,
+  displayAdvanceStatusText: (s) => displayAdvanceStatus(s).text,
+  displayAdvanceStatusColor: (s) => displayAdvanceStatus(s).color,
+  displayAdvanceDeductStatus,
+  displayAdvanceDeductStatusText: (s) => displayAdvanceDeductStatus(s).text,
+  displayAdvanceDeductStatusColor: (s) => displayAdvanceDeductStatus(s).color,
+  displaySalesOrderStatus,
+  displaySalesOrderStatusText: (s) => displaySalesOrderStatus(s).text,
+  displaySalesOrderStatusColor: (s) => displaySalesOrderStatus(s).color,
+  displayAttendanceStatus,
+  displayAttendanceStatusText: (s) => displayAttendanceStatus(s).text,
+  displayAttendanceStatusColor: (s) => displayAttendanceStatus(s).color,
   displayDefectCategory,
   // 款式/季节/来源/工序/拆菲
   displayCategory,
@@ -644,6 +783,16 @@ module.exports = {
   QUALITY_STATUS_COLOR,
   PURCHASE_STATUS_LABEL,
   PURCHASE_STATUS_COLOR,
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_COLOR,
+  ADVANCE_STATUS_LABEL,
+  ADVANCE_STATUS_COLOR,
+  ADVANCE_DEDUCT_LABEL,
+  ADVANCE_DEDUCT_COLOR,
+  SALES_ORDER_STATUS_LABEL,
+  SALES_ORDER_STATUS_COLOR,
+  ATTENDANCE_STATUS_LABEL,
+  ATTENDANCE_STATUS_COLOR,
   RETURN_STATUS_LABEL,
   RETURN_STATUS_COLOR,
   DEFECT_CATEGORY_LABEL,

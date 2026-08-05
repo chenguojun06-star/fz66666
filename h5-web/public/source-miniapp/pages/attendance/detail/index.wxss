@@ -571,16 +571,23 @@
   font-style: italic;
 }
 
-/* ============ 补卡按钮 + 日历单元格可点击 ============ */
-.supplement-btn {
+/* ============ 月份栏右侧操作按钮组 ============ */
+.month-actions {
   position: absolute;
   right: var(--page-padding-x);
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.supplement-btn {
   padding: 6px 14px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-primary);
   background: transparent;
+  white-space: nowrap;
 }
 
 .supplement-btn-text {
@@ -769,14 +776,11 @@
 
 /* 管理员切换按钮 */
 .admin-toggle {
-  position: absolute;
-  right: var(--page-padding-x);
-  top: 50%;
-  transform: translateY(-50%);
   padding: 6px 14px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-warning);
   background: transparent;
+  white-space: nowrap;
 }
 
 .admin-toggle--active {

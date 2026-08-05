@@ -71,6 +71,47 @@
 
 .order-list-wrap { padding: 0; }
 
+/* ── 裁剪管理卡片本地覆盖：两段式紧凑布局（头部 + 详情行），去掉 footer ── */
+.cutting-task-card {
+  padding: 10px;
+}
+.cutting-card-header {
+  gap: 10px;
+  align-items: stretch;
+}
+.cutting-card-media {
+  width: 52px;
+  height: 52px;
+}
+.cutting-card-title-area {
+  gap: 2px;
+  padding-top: 0;
+  flex: 1;
+}
+.cutting-card-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.cutting-card-header-right .tag {
+  align-self: flex-end;
+}
+.btn-detail-inline {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cutting-card-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  gap: 6px 12px;
+}
+
 
 /* ── 订单信息区 ── */
 .info-card-body {

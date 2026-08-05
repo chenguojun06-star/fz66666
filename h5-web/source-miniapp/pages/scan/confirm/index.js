@@ -6,8 +6,38 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
-const { normalizeProcessName } = require('../../../utils/displayHelper');
+const { normalizeProcessName, displayPurchaseStatusText, displayStatusText } = require('../../../utils/displayHelper');
 const { calcDeliveryInfo } = require('../../../utils/deliveryHelper');
+
+// 裁剪任务状态：displayPurchaseStatus 共享映射 + 本地兜底
+const LOCAL_CUTTING_STATUS_FALLBACK = {
+  not_started: '待领取',
+  in_progress: '已领取',
+  bundled: '已分扎',
+  done: '已完成',
+};
+
+function getCuttingTaskStatusLabel(status) {
+  if (!status) return '待领取';
+  var key = String(status).trim().toLowerCase();
+  if (LOCAL_CUTTING_STATUS_FALLBACK[key]) return LOCAL_CUTTING_STATUS_FALLBACK[key];
+  var label = displayPurchaseStatusText(key);
+  return (label && label !== key) ? label : (status || '待领取');
+}
+
+// 二次工艺状态：displayStatus 共享映射 + 本地兜底
+const LOCAL_PROCESS_STATUS_FALLBACK = {
+  pending: '待处理',
+  processing: '进行中',
+};
+
+function getSecondaryProcessStatusLabel(status) {
+  if (!status) return '';
+  var key = String(status).trim().toLowerCase();
+  if (LOCAL_PROCESS_STATUS_FALLBACK[key]) return LOCAL_PROCESS_STATUS_FALLBACK[key];
+  var label = displayStatusText(key);
+  return (label && label !== key) ? label : (status || '');
+}
 
 Page({
   data: {
@@ -82,12 +112,7 @@ Page({
     let cuttingTask = null;
     if (isCutting && raw.cuttingTask) {
       cuttingTask = raw.cuttingTask;
-      const statusMap = {
-        pending: '待领取', not_started: '待领取',
-        received: '已领取', in_progress: '已领取',
-        bundled: '已完成', completed: '已完成', done: '已完成',
-      };
-      cuttingTask.statusText = statusMap[cuttingTask.status] || cuttingTask.status || '待领取';
+      cuttingTask.statusText = getCuttingTaskStatusLabel(cuttingTask.status);
     }
 
     let btnText = '确认扫码';
@@ -105,15 +130,11 @@ Page({
       dyeing: '染色', ironing: '整烫', pleating: '压褶',
       beading: '钉珠', other: '其他',
     };
-    const STATUS_MAP = {
-      pending: '待处理', processing: '进行中',
-      completed: '已完成', cancelled: '已取消',
-    };
     const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
     const secondaryProcesses = rawProcesses.map(function(item) {
       return Object.assign({}, item, {
         processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
-        statusCN: STATUS_MAP[item.status] || item.status || '',
+        statusCN: getSecondaryProcessStatusLabel(item.status),
       });
     });
 

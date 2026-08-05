@@ -8,17 +8,17 @@
     <view class="month-arrow {{canNext ? '' : 'month-arrow--disabled'}}" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">
       <text class="month-arrow-text">›</text>
     </view>
-    <!-- 普通模式：补卡按钮 -->
-    <view wx:if="{{!adminMode}}" class="supplement-btn" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenSupplement">
-      <text class="supplement-btn-text">补卡</text>
-    </view>
-    <!-- 管理员模式：管理员补卡按钮 -->
-    <view wx:if="{{adminMode}}" class="supplement-btn supplement-btn--admin" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenAdminSupplement">
-      <text class="supplement-btn-text">管理员补卡</text>
-    </view>
-    <!-- 管理员切换按钮 -->
-    <view wx:if="{{isAdmin}}" class="admin-toggle {{adminMode ? 'admin-toggle--active' : ''}}" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onToggleAdminMode">
-      <text class="admin-toggle-text">{{adminMode ? '退出管理' : '管理'}}</text>
+    <!-- 右侧操作按钮组（补卡 + 管理切换） -->
+    <view class="month-actions">
+      <view wx:if="{{!adminMode}}" class="supplement-btn" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenSupplement">
+        <text class="supplement-btn-text">补卡</text>
+      </view>
+      <view wx:if="{{adminMode}}" class="supplement-btn supplement-btn--admin" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onOpenAdminSupplement">
+        <text class="supplement-btn-text">管理员补卡</text>
+      </view>
+      <view wx:if="{{isAdmin}}" class="admin-toggle {{adminMode ? 'admin-toggle--active' : ''}}" hover-class="supplement-btn-hover" hover-stay-time="100" bindtap="onToggleAdminMode">
+        <text class="admin-toggle-text">{{adminMode ? '退出管理' : '管理'}}</text>
+      </view>
     </view>
   </view>
 
@@ -128,7 +128,7 @@
           icon="icon-calendar"
           iconSize="lg"
           text="该员工本月暂无打卡记录"
-          hint="点击右上角"管理员补卡"为其补卡">
+          hint="点击右上角「管理员补卡」为其补卡">
         </empty-state>
       </view>
     </view>

@@ -3,7 +3,7 @@ const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
-const { enrichBomList, processTypeLabel, processStatusLabel } = require('../../../shared/enumLabels');
+const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -48,6 +48,13 @@ const SEASON_MAP = {
   WINTER: '冬季',
   SPRING_SUMMER: '春夏',
   AUTUMN_WINTER: '秋冬',
+};
+
+// 本地兜底：PATTERN_STATUS_MAP 未覆盖的样衣状态
+const LOCAL_PATTERN_STATUS_FALLBACK = {
+  REWORK: '返工中',
+  CANCELLED: '已取消',
+  CLOSED: '已关单',
 };
 
 function clampPercent(value) {
@@ -450,19 +457,9 @@ Page({
   },
 
   getStatusLabel(status) {
-    const map = {
-      'PENDING': '待领取',
-      'IN_PROGRESS': '开发中',
-      'PRODUCTION_COMPLETED': '生产完成',
-      'COMPLETED': '已完成',
-      'WAREHOUSE_IN': '已入库',
-      'WAREHOUSE_OUT': '已出库',
-      'REWORK': '返工中',
-      'CANCELLED': '已取消',
-      'SCRAPPED': '已报废',
-      'CLOSED': '已关单',
-    };
-    return map[status] || '';
+    if (!status) return '';
+    var upper = String(status).trim().toUpperCase();
+    return PATTERN_STATUS_MAP[upper] || LOCAL_PATTERN_STATUS_FALLBACK[upper] || '';
   },
 
   getStatusColorVar(status) {

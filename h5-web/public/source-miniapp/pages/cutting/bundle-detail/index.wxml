@@ -44,13 +44,13 @@
         <view
           wx:for="{{filteredOrderList}}"
           wx:key="id"
-          class="task-card"
+          class="task-card cutting-task-card"
           bindtap="onSelectOrder"
           data-order="{{item}}"
         >
-          <!-- 头部：款式图 + 订单号 + 状态标签 -->
-          <view class="card-header">
-            <view class="card-media" catchtap="onPreviewSelImage" data-url="{{item.styleCoverUrl}}">
+          <!-- 头部：款式图 + 订单号 + 状态标签 + 查看详情 -->
+          <view class="card-header cutting-card-header">
+            <view class="card-media cutting-card-media" catchtap="onPreviewSelImage" data-url="{{item.styleCoverUrl}}">
               <image
                 wx:if="{{item.styleCoverUrl}}"
                 class="media-img"
@@ -62,19 +62,18 @@
                 <text class="cover-abbr">{{item.styleNo ? item.styleNo.substring(0,2) : '--'}}</text>
               </view>
             </view>
-            <view class="card-title-area">
+            <view class="card-title-area cutting-card-title-area">
               <text class="material-name">{{item.orderNo}}</text>
               <text class="material-code" wx:if="{{item.styleNo}}">款号 {{item.styleNo}}</text>
             </view>
-            <text class="tag tag-{{item.statusClass || 'blue'}}">{{item.statusText || '生产中'}}</text>
+            <view class="card-header-right cutting-card-header-right">
+              <text class="tag tag-{{item.statusClass || 'blue'}}">{{item.statusText || '生产中'}}</text>
+              <view class="btn-detail-inline">查看详情 ›</view>
+            </view>
           </view>
 
           <!-- 详情行 -->
-          <view class="card-body">
-            <view class="info-row info-row-full">
-              <text class="info-label">款号</text>
-              <text class="info-value">{{item.styleNo || '-'}}</text>
-            </view>
+          <view class="card-body cutting-card-body">
             <view class="info-row">
               <text class="info-label">数量</text>
               <text class="info-value">{{item.orderQuantity || 0}}件</text>
@@ -83,11 +82,6 @@
               <text class="info-label">交期</text>
               <text class="info-value">{{item.expectedShipDate || item.deliveryDate || '-'}}</text>
             </view>
-          </view>
-
-          <!-- 操作按钮 -->
-          <view class="card-footer">
-            <view class="btn-detail">查看详情</view>
           </view>
         </view>
 

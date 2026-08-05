@@ -10,20 +10,21 @@
     bind:clear="onSearchClear"
     bind:scan="onScan"
   >
-    <view slot="filter" class="stat-tags">
-      <block wx:for="{{statusTabs}}" wx:key="key">
-        <view wx:if="{{item.isSmart}}" class="stat-divider"></view>
-        <view
-          class="stat-tag {{activeFilter === item.key ? 'active' : ''}} stat-tag--{{item.color}}"
-          data-key="{{item.key}}"
-          bindtap="onFilterTap"
-        >
-          <view wx:if="{{item.isSmart}}" class="stat-tag__warn"></view>
-          <text class="stat-tag__label">{{item.label}}</text>
-          <text class="stat-tag__count">{{item.count}}</text>
-        </view>
-      </block>
-    </view>
+    <scroll-view slot="filter" scroll-x class="stat-tags-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="stat-tags">
+        <block wx:for="{{statusTabs}}" wx:key="key">
+          <view
+            class="stat-tag {{activeFilter === item.key ? 'active' : ''}} stat-tag--{{item.color}}"
+            data-key="{{item.key}}"
+            bindtap="onFilterTap"
+          >
+            <view wx:if="{{item.isSmart}}" class="stat-tag__warn"></view>
+            <text class="stat-tag__label">{{item.label}}</text>
+            <text class="stat-tag__count">{{item.count}}</text>
+          </view>
+        </block>
+      </view>
+    </scroll-view>
   </sticky-search-bar>
 
   <!-- 加载中 -->

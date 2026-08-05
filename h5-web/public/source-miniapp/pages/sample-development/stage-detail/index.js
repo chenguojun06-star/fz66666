@@ -9,7 +9,8 @@ const { style: styleApi } = require('../../../utils/api-modules/style-warehouse'
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
-const { displayCategory, displaySeason } = require('../../../utils/displayHelper');
+const { displayCategory, displaySeason, displayStatusText } = require('../../../utils/displayHelper');
+const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const { STAGE_NAMES, getStageName } = require('../../../utils/sampleHelper');
 
 // 样衣扫码操作类型中文映射（与PC端一致）
@@ -41,18 +42,36 @@ const PROCESS_TYPE_MAP = {
   beading: '钉珠', other: '其他',
 };
 
-const STATUS_MAP = {
-  pending: { label: '待处理', color: 'default' },
-  processing: { label: '处理中', color: 'processing' },
-  completed: { label: '已完成', color: 'success' },
-  cancelled: { label: '已取消', color: 'error' },
+// 二次工艺状态：displayStatus 共享映射 + 本地兜底（语义不同/未覆盖的值）
+const LOCAL_PROCESS_STATUS_FALLBACK = {
+  pending: '待处理',
+  processing: '处理中',
 };
 
-// 纸样状态映射
-const PATTERN_STATUS_LABELS = {
-  PENDING: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成',
-  RETURNED: '已退回', LOCKED: '已锁定', UNLOCKED: '未锁定', NOT_STARTED: '未开始',
+function getProcessStatusLabel(status) {
+  if (!status) return '';
+  var key = String(status).trim().toLowerCase();
+  if (LOCAL_PROCESS_STATUS_FALLBACK[key]) return LOCAL_PROCESS_STATUS_FALLBACK[key];
+  var label = displayStatusText(key);
+  return (label && label !== key) ? label : (status || '');
+}
+
+// 纸样状态（PatternRevision）：PATTERN_STATUS_MAP 共享映射 + 本地兜底
+// 注：PATTERN_STATUS_MAP 为 PatternProduction 状态，PatternRevision 部分状态语义不同，需本地兜底
+const LOCAL_PATTERN_REVISION_FALLBACK = {
+  PENDING: '未开始',
+  IN_PROGRESS: '进行中',
+  RETURNED: '已退回',
+  LOCKED: '已锁定',
+  UNLOCKED: '未锁定',
+  NOT_STARTED: '未开始',
 };
+
+function getPatternRevisionLabel(status) {
+  if (!status) return '其他';
+  var upper = String(status).trim().toUpperCase();
+  return LOCAL_PATTERN_REVISION_FALLBACK[upper] || PATTERN_STATUS_MAP[upper] || '其他';
+}
 
 /* ========== 公共辅助：鉴权 + 上传/下载（消除 token/baseUrl 重复） ========== */
 
@@ -606,7 +625,7 @@ Page({
       const res = await styleApi.getPatternRevision(this.data.styleId);
       const patternData = res ? Object.assign({}, res) : null;
       if (patternData && patternData.status) {
-        patternData.statusText = PATTERN_STATUS_LABELS[String(patternData.status).toUpperCase()] || '其他';
+        patternData.statusText = getPatternRevisionLabel(patternData.status);
       }
       this.setData({ patternData });
     } catch (e) {
@@ -1054,8 +1073,7 @@ Page({
         const rawType = s.type || s.processType || '';
         s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] || '未知') : '';
         const statusKey = String(s.status || '').toLowerCase();
-        const statusInfo = STATUS_MAP[statusKey];
-        s._statusText = statusInfo ? statusInfo.label : (s.status || '');
+        s._statusText = getProcessStatusLabel(statusKey);
         s.status = statusKey || s.status;
         const qty = Number(s.quantity || 0);
         const price = Number(s.unitPrice || s.price || 0);

@@ -10,26 +10,33 @@
 /* ========== 搜索栏 + 扫码按钮：已迁移到通用组件 sticky-search-bar ========== */
 /* ========== 下方仅保留筛选器（stat-tags）相关样式 ========== */
 
-/* ----- 状态统计标签 ----- */
+/* ----- 状态统计标签（横向滚动，单行不换行） ----- */
+.stat-tags-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .stat-tags {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   padding-bottom: 4px;
+  white-space: nowrap;
 }
 
 .stat-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 10px;
+  gap: 2px;
+  height: 22px;
+  padding: 0 6px;
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-xxs);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
+  flex-shrink: 0;
   transition: transform 0.18s ease, background-color 0.18s ease;
 }
 
@@ -38,13 +45,13 @@
 }
 
 .stat-tag__label {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-xxs);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 
 .stat-tag__count {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-xxs);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;

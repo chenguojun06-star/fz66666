@@ -3,12 +3,68 @@ const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const displayHelper = require('../../../utils/displayHelper');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
   liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
   accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
 };
+
+/**
+ * displayHelper 颜色常量 → 原 _getStatusColor 返回的颜色名映射
+ * （displayHelper 返回 CSS 变量，模板用 green/orange/blue 等颜色名）
+ */
+const COLOR_TO_NAME = {
+  [displayHelper.STATUS_COLOR_DEFAULT]: 'default',
+  [displayHelper.STATUS_COLOR_SUCCESS]: 'green',
+  [displayHelper.STATUS_COLOR_PROCESSING]: 'blue',
+  [displayHelper.STATUS_COLOR_WARNING]: 'orange',
+  [displayHelper.STATUS_COLOR_ERROR]: 'red',
+  [displayHelper.STATUS_COLOR_BLUE]: 'blue',
+  [displayHelper.STATUS_COLOR_CYAN]: 'cyan',
+  [displayHelper.STATUS_COLOR_ORANGE]: 'orange',
+  [displayHelper.STATUS_COLOR_VOLCANO]: 'red',
+  [displayHelper.STATUS_COLOR_PURPLE]: 'purple',
+  [displayHelper.STATUS_COLOR_GEEKBLUE]: 'blue',
+};
+
+/**
+ * 臆造/历史状态值本地兜底（displayHelper PURCHASE_STATUS_LABEL 未覆盖）
+ * 文案对齐 displayHelper 语义
+ */
+const LOCAL_PURCHASE_FALLBACK = {
+  procuring: { text: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
+  waiting_procurement: { text: '待采购', color: displayHelper.STATUS_COLOR_WARNING },
+  procurement_in_progress: { text: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
+  material_preparation: { text: '物料准备中', color: displayHelper.STATUS_COLOR_BLUE },
+  procurement_completed: { text: '采购完成', color: displayHelper.STATUS_COLOR_SUCCESS },
+  partial_arrived: { text: '部分到货', color: displayHelper.STATUS_COLOR_CYAN },
+  canceled: { text: '已取消', color: displayHelper.STATUS_COLOR_DEFAULT },
+};
+
+/**
+ * 统一采购状态文案：优先 displayHelper，未命中查本地兜底
+ */
+function resolvePurchaseText(status) {
+  if (!status) return '';
+  const text = displayHelper.displayPurchaseStatusText(status);
+  if (text !== status) return text;
+  const fb = LOCAL_PURCHASE_FALLBACK[status];
+  return fb ? fb.text : text;
+}
+
+/**
+ * 统一采购状态颜色名：优先 displayHelper，未命中查本地兜底
+ */
+function resolvePurchaseColor(status) {
+  if (!status) return 'default';
+  const result = displayHelper.displayPurchaseStatus(status);
+  if (result.text !== status) return COLOR_TO_NAME[result.color] || 'default';
+  const fb = LOCAL_PURCHASE_FALLBACK[status];
+  if (fb) return COLOR_TO_NAME[fb.color] || 'default';
+  return COLOR_TO_NAME[result.color] || 'default';
+}
 
 Page({
   data: {
@@ -113,8 +169,8 @@ Page({
         return {
           ...item,
           materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
-          statusText: this._getStatusText(status),
-          statusColor: this._getStatusColor(status),
+          statusText: resolvePurchaseText(status),
+          statusColor: resolvePurchaseColor(status),
           isActionable,
           needsReceive,
           isComplete,
@@ -155,8 +211,8 @@ Page({
       if (allCompleted) { overallStatus = 'completed'; overallStatusColor = 'green'; }
       else if (allReceived) { overallStatus = 'received'; overallStatusColor = 'green'; }
       else if (hasPending) { overallStatus = 'pending'; overallStatusColor = 'orange'; }
-      // overallStatus='procuring' 不在 _getStatusText map 中，单独处理
-      const overallStatusText = overallStatus === 'procuring' ? '采购中' : this._getStatusText(overallStatus);
+      // overallStatus='procuring' 由 resolvePurchaseText 本地兜底处理
+      const overallStatusText = resolvePurchaseText(overallStatus);
 
       this.setData({
         orderId, materialPurchases, loading: false,
@@ -528,41 +584,6 @@ Page({
 
   _normalizeStatus(rawStatus) {
     return String(rawStatus || '').trim().toLowerCase();
-  },
-
-  _getStatusText(status) {
-    // 对齐 PC 端 MATERIAL_PURCHASE_STATUS_MAP (src/constants/statusMaps.ts)
-    const map = {
-      pending: '待采购', received: '已到货', partial: '部分到货',
-      partial_arrival: '部分到货', partial_arrived: '部分到货',
-      awaiting_confirm: '待确认', completed: '已完成', cancelled: '已取消',
-      canceled: '已取消', warehouse_pending: '待仓库出库',
-      waiting_procurement: '待采购', procurement_in_progress: '采购中',
-      purchasing: '采购中', material_preparation: '备料中',
-      procurement_completed: '已完成',
-    };
-    return map[status] || '待采购';
-  },
-
-  _getStatusColor(status) {
-    // 对齐 PC 端 Tag color 映射（success/warning/processing/default）
-    // 小程序用 green/orange/blue/gold/red/cyan 近似映射
-    const map = {
-      pending: 'orange',          // warning
-      received: 'green',          // success（PC: 已到货=success）
-      partial: 'orange',          // warning
-      partial_arrival: 'orange',  // warning
-      partial_arrived: 'orange',  // warning
-      awaiting_confirm: 'blue',   // processing
-      completed: 'green',         // success
-      cancelled: 'default',       // default（灰色）
-      canceled: 'default',
-      warehouse_pending: 'blue',  // processing
-      waiting_procurement: 'orange',
-      procurement_in_progress: 'blue',
-      procurement_completed: 'green',
-    };
-    return map[status] || 'orange';
   },
 
   _isActionableForUser(item, receiverId, receiverName) {

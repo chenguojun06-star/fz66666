@@ -3,6 +3,7 @@ const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
+const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 
 // 6 个父阶段定义（与 PC 端 SAMPLE_PARENT_STAGES 对齐）
 const PARENT_STAGES = [
@@ -258,17 +259,17 @@ function buildSubProcessRows(stage, order) {
   });
 }
 
-const STATUS_LABELS = {
-  PENDING: '待领取',
-  IN_PROGRESS: '开发中',
-  PRODUCTION_COMPLETED: '生产完成',
-  COMPLETED: '已完成',
-  WAREHOUSE_IN: '已入库',
-  WAREHOUSE_OUT: '已出库',
+// 样衣状态标签：优先使用共享映射 enumLabels.PATTERN_STATUS_MAP，本地兜底未覆盖的状态
+const LOCAL_STATUS_FALLBACK = {
   REWORK: '返工中',
-  SCRAPPED: '已报废',
   CLOSED: '已关单',
 };
+
+function getPatternStatusLabel(status) {
+  if (!status) return '-';
+  var upper = String(status).trim().toUpperCase();
+  return PATTERN_STATUS_MAP[upper] || LOCAL_STATUS_FALLBACK[upper] || status;
+}
 
 const CATEGORY_MAP = {
   WOMAN: '女装',
@@ -550,7 +551,7 @@ Page({
           item._styleNo = item.styleNo || si.styleNo || '';
           item._styleName = item.styleName || si.styleName || '';
           item._cover = getAuthedImageUrl(item.coverImage || si.cover || '');
-          item._statusLabel = STATUS_LABELS[item.status] || item.status || '-';
+          item._statusLabel = getPatternStatusLabel(item.status);
           item._statusColor = that.getStatusColorClass(item.status);
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);

@@ -4,14 +4,36 @@ const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
+const displayHelper = require('../../../utils/displayHelper');
 
-const STATUS_MAP = {
-  pending: { text: '待收货', cls: 'tag-orange' },
-  received: { text: '已收货', cls: 'tag-green' },
+/**
+ * displayHelper 颜色常量 → 小程序 tag-* 颜色类映射
+ * （displayHelper 返回 CSS 变量，模板用 tag-* 类）
+ */
+const COLOR_TO_TAG_CLASS = {
+  [displayHelper.STATUS_COLOR_DEFAULT]: 'tag-gray',
+  [displayHelper.STATUS_COLOR_SUCCESS]: 'tag-green',
+  [displayHelper.STATUS_COLOR_PROCESSING]: 'tag-blue',
+  [displayHelper.STATUS_COLOR_WARNING]: 'tag-orange',
+  [displayHelper.STATUS_COLOR_ERROR]: 'tag-red',
+  [displayHelper.STATUS_COLOR_BLUE]: 'tag-blue',
+  [displayHelper.STATUS_COLOR_CYAN]: 'tag-cyan',
+  [displayHelper.STATUS_COLOR_ORANGE]: 'tag-orange',
+  [displayHelper.STATUS_COLOR_VOLCANO]: 'tag-red',
+  [displayHelper.STATUS_COLOR_PURPLE]: 'tag-purple',
+  [displayHelper.STATUS_COLOR_GEEKBLUE]: 'tag-geekblue',
 };
 
-function receiveStatusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
-function receiveStatusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
+function receiveStatusText(s) {
+  if (!s) return '';
+  return displayHelper.displayPurchaseStatusText(s);
+}
+
+function receiveStatusCls(s) {
+  if (!s) return 'tag-gray';
+  const color = displayHelper.displayPurchaseStatusColor(s);
+  return COLOR_TO_TAG_CLASS[color] || 'tag-gray';
+}
 
 function enrichForDashboard(order) {
   const completed = Number(order.completedQuantity) || 0;

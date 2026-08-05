@@ -48,7 +48,7 @@
       bind:confirm="onKeywordSearch"
       bind:scan="onScan"
     >
-      <view slot="filter">
+      <view slot="filter" class="filter-row">
         <!-- 筛选 pill（生产中 / 已完成） -->
         <view class="filter-pills">
           <view class="filter-pill {{activeFilter==='production'?'filter-pill--active':''}}" data-filter="production" bindtap="onFilterTap">

@@ -5,6 +5,7 @@ const { eventBus, Events } = require('../../utils/eventBus');
 const { getUserInfo } = require('../../utils/storage');
 const qualityHelper = require('../../utils/quality-helper');
 const { calcDeliveryInfo } = require('../../utils/deliveryHelper');
+const { QUALITY_STATUS_LABEL } = require('../../utils/displayHelper');
 
 const getQualityCategory = qualityHelper.getQualityCategory;
 const DEFECT_CATEGORY_MAP = qualityHelper.DEFECT_CATEGORY_MAP;
@@ -28,15 +29,37 @@ const DEFECT_REMARK_OPTIONS = [
   { value: '报废', label: '报废' },
 ];
 
+// 质检状态 CSS 类映射（displayHelper 提供 text，cls 本地维护与 PC 端对齐）
+const QUALITY_STATUS_CLS = {
+  qualified: 'status-success',
+  unqualified: 'status-error',
+  repaired: 'status-warning',
+  pending: 'status-info',
+  checking: 'status-processing',
+};
+
+// 本地兜底：displayHelper.QUALITY_STATUS_LABEL 未覆盖的质检状态文案
+const LOCAL_QUALITY_STATUS_FALLBACK = {
+  // displayHelper 已覆盖全部已知质检状态（qualified/unqualified/repaired/pending/checking），暂无需兜底
+};
+
 /**
  * 质检状态映射（与 PC 端 getQualityStatusConfig 对齐）
+ * text 优先取 displayHelper.QUALITY_STATUS_LABEL，本地兜底未覆盖值
+ * cls 本地维护（displayHelper 用 color 变量，小程序用 CSS 类名）
  */
-const QUALITY_STATUS_MAP = {
-  qualified: { text: '合格', cls: 'status-success' },
-  unqualified: { text: '不合格', cls: 'status-error' },
-  repaired: { text: '返修完成', cls: 'status-warning' },
-  pending: { text: '待检', cls: 'status-info' },
-};
+const QUALITY_STATUS_MAP = (function () {
+  var map = {};
+  Object.keys(QUALITY_STATUS_LABEL).forEach(function (key) {
+    map[key] = { text: QUALITY_STATUS_LABEL[key], cls: QUALITY_STATUS_CLS[key] || 'status-info' };
+  });
+  Object.keys(LOCAL_QUALITY_STATUS_FALLBACK).forEach(function (key) {
+    if (!map[key]) {
+      map[key] = { text: LOCAL_QUALITY_STATUS_FALLBACK[key], cls: QUALITY_STATUS_CLS[key] || 'status-info' };
+    }
+  });
+  return map;
+})();
 
 const MATERIAL_TYPE_MAP = {
   fabric: '面料',

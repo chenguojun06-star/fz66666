@@ -2,6 +2,21 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const { hasFeaturePermission } = require('../../../utils/permission');
+const displayHelper = require('../../../utils/displayHelper');
+
+// 退货状态文案兜底：RETURNED/APPROVED/REFUNDED 是退货业务专属状态，
+// 不在 displayHelper.RETURN_STATUS_LABEL 中，本地保留兜底文案
+const RETURN_STATUS_FALLBACK = {
+  RETURNED: '已退货',
+  APPROVED: '已批准',
+  REFUNDED: '已退款',
+};
+
+function returnStatusLabel(status) {
+  if (RETURN_STATUS_FALLBACK[status]) return RETURN_STATUS_FALLBACK[status];
+  var fromHelper = displayHelper.displayReturnStatusText(status);
+  return fromHelper || status || '-';
+}
 
 Page({
   data: {
@@ -14,17 +29,17 @@ Page({
     ],
     statusTabs: [
       { key: 'all', label: '全部', cls: 'all' },
-      { key: 'PENDING', label: '待审核', cls: 'pending' },
-      { key: 'APPROVED', label: '审核通过', cls: 'approved' },
-      { key: 'RETURNED', label: '已退货', cls: 'returned' },
-      { key: 'REJECTED', label: '已拒绝', cls: 'rejected' },
+      { key: 'PENDING', label: returnStatusLabel('PENDING'), cls: 'pending' },
+      { key: 'APPROVED', label: returnStatusLabel('APPROVED'), cls: 'approved' },
+      { key: 'RETURNED', label: returnStatusLabel('RETURNED'), cls: 'returned' },
+      { key: 'REJECTED', label: returnStatusLabel('REJECTED'), cls: 'rejected' },
     ],
     statusTabsSales: [
       { key: 'all', label: '全部', cls: 'all' },
-      { key: 'PENDING', label: '待审核', cls: 'pending' },
-      { key: 'APPROVED', label: '审核通过', cls: 'approved' },
-      { key: 'REFUNDED', label: '已退款', cls: 'refunded' },
-      { key: 'REJECTED', label: '已拒绝', cls: 'rejected' },
+      { key: 'PENDING', label: returnStatusLabel('PENDING'), cls: 'pending' },
+      { key: 'APPROVED', label: returnStatusLabel('APPROVED'), cls: 'approved' },
+      { key: 'REFUNDED', label: returnStatusLabel('REFUNDED'), cls: 'refunded' },
+      { key: 'REJECTED', label: returnStatusLabel('REJECTED'), cls: 'rejected' },
     ],
     statusCounts: {
       all: 0,
@@ -175,14 +190,7 @@ Page({
   },
 
   _statusLabel(status, _type) {
-    const map = {
-      PENDING: '待审核',
-      APPROVED: '审核通过',
-      RETURNED: '已退货',
-      REFUNDED: '已退款',
-      REJECTED: '已拒绝',
-    };
-    return map[status] || status || '-';
+    return returnStatusLabel(status);
   },
 
   _statusColor(status) {

@@ -24,17 +24,18 @@ Page({
     orderList: [],
     filteredOrderList: [],
     orderSearchKeyword: '',
-    /* 状态筛选 Tab（与 dashboard/procurement 一致的 filter-pill 风格）
-     * 订单状态维度：全部 / 裁剪中 / 车缝中 / 质检中 / 已完成 / 已取消
-     * 与 displayHelper.ORDER_STATUS_LABEL 的状态值对齐
+    /* 状态筛选 Tab（裁剪业务维度）：全部 / 待裁剪 / 裁剪中 / 已完成
+     * 与后端 OrderStatusConstants 对齐，按订单 status 精确判断裁剪阶段：
+     * - 待裁剪：未到裁剪工序（not_started/pending/production/in_progress/procurement/paused）
+     * - 裁剪中：正在裁剪工序（cutting）
+     * - 已完成：已过裁剪工序（sewing/ironing/secondary_process/packaging/quality_check/warehousing/completed）
+     *   终态（cancelled/scrapped/closed/archived/deleted/returned）被后端 excludeTerminal 排除
      */
     orderStatusTabs: [
       { key: '', label: '全部', pillClass: '' },
+      { key: 'pending_cutting', label: '待裁剪', pillClass: '' },
       { key: 'cutting', label: '裁剪中', pillClass: 'filter-pill--prod' },
-      { key: 'sewing', label: '车缝中', pillClass: 'filter-pill--prod' },
-      { key: 'quality_check', label: '质检中', pillClass: 'filter-pill--prod' },
-      { key: 'completed', label: '已完成', pillClass: 'filter-pill--done' },
-      { key: 'cancelled', label: '已取消', pillClass: '' },
+      { key: 'done_cutting', label: '已完成', pillClass: 'filter-pill--done' },
     ],
     activeOrderStatus: '',
 
@@ -227,13 +228,15 @@ Page({
     this._applyOrderFilter();
   },
 
-  /** 订单列表筛选：状态 + 关键词（与 procurement/task-list._applyFilter 一致） */
+  /** 订单列表筛选：裁剪业务维度（全部 / 待裁剪 / 裁剪中 / 已完成） + 关键词
+   *  与后端 OrderStatusConstants 对齐，按订单 status 精确判断裁剪阶段
+   */
   _applyOrderFilter() {
     const { orderList, activeOrderStatus, orderSearchKeyword } = this.data;
     let filtered = orderList;
 
     if (activeOrderStatus) {
-      filtered = filtered.filter(o => String(o.status || '').trim().toLowerCase() === activeOrderStatus);
+      filtered = filtered.filter(o => this._matchCuttingStage(o, activeOrderStatus));
     }
 
     if (orderSearchKeyword && orderSearchKeyword.trim()) {
@@ -247,16 +250,29 @@ Page({
 
     // 各 tab 计数
     const orderStatusTabs = this.data.orderStatusTabs.map(tab => {
-      let count = 0;
-      if (!tab.key) {
-        count = orderList.length;
-      } else {
-        count = orderList.filter(o => String(o.status || '').trim().toLowerCase() === tab.key).length;
-      }
+      const count = !tab.key
+        ? orderList.length
+        : orderList.filter(o => this._matchCuttingStage(o, tab.key)).length;
       return { ...tab, count };
     });
 
     this.setData({ filteredOrderList: filtered, orderStatusTabs });
+  },
+
+  /** 判断订单是否属于指定裁剪阶段（与后端 OrderStatusConstants 状态值对齐） */
+  _matchCuttingStage(order, stageKey) {
+    const s = String(order.status || '').trim().toLowerCase();
+    if (!s) return false;
+    // 待裁剪：未到裁剪工序
+    const pendingStatuses = ['not_started', 'pending', 'production', 'in_progress', 'procurement', 'paused'];
+    // 裁剪中：正在裁剪
+    const cuttingStatuses = ['cutting'];
+    // 已完成：已过裁剪工序（后端 excludeTerminal 已排除 cancelled/scrapped/closed 等终态）
+    const doneStatuses = ['sewing', 'ironing', 'secondary_process', 'packaging', 'quality_check', 'warehousing', 'completed'];
+    if (stageKey === 'pending_cutting') return pendingStatuses.includes(s);
+    if (stageKey === 'cutting') return cuttingStatuses.includes(s);
+    if (stageKey === 'done_cutting') return doneStatuses.includes(s);
+    return false;
   },
 
   /** 选择订单，进入明细视图 */

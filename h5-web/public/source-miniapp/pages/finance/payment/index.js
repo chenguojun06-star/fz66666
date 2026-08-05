@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
+const displayHelper = require('../../../utils/displayHelper');
 
 var PAYMENT_METHOD_MAP = {
   OFFLINE: '线下付款',
@@ -27,19 +28,21 @@ var BIZ_TYPE_MAP = {
   PAYROLL: { text: '工资', cls: 'tag-blue' },
 };
 
-var PAYMENT_STATUS_MAP = {
-  pending: { text: '待处理', cls: 'tag-orange' },
-  processing: { text: '处理中', cls: 'tag-orange' },
-  success: { text: '已确认', cls: 'tag-green' },
-  failed: { text: '失败', cls: 'tag-red' },
-  cancelled: { text: '已取消', cls: 'tag-gray' },
-  refunded: { text: '已退回', cls: 'tag-orange' },
+// wxml 模板依赖 tag-* CSS 类名（如 tag-orange），displayHelper 仅提供 CSS 变量颜色值，
+// 故 cls 保留本地映射；文案统一走 displayHelper.displayPaymentStatusText
+var PAYMENT_STATUS_CLS = {
+  pending: 'tag-orange',
+  processing: 'tag-orange',
+  success: 'tag-green',
+  failed: 'tag-red',
+  cancelled: 'tag-gray',
+  refunded: 'tag-orange',
 };
 
 function bizTypeText(s) { return (BIZ_TYPE_MAP[s] || {}).text || s || ''; }
 function bizTypeCls(s) { return (BIZ_TYPE_MAP[s] || {}).cls || 'tag-gray'; }
-function paymentStatusText(s) { return (PAYMENT_STATUS_MAP[s] || {}).text || s || ''; }
-function paymentStatusCls(s) { return (PAYMENT_STATUS_MAP[s] || {}).cls || 'tag-gray'; }
+function paymentStatusText(s) { if (!s) return ''; return displayHelper.displayPaymentStatusText(s); }
+function paymentStatusCls(s) { return PAYMENT_STATUS_CLS[s] || 'tag-gray'; }
 
 Page({
   data: {

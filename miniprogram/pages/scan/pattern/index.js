@@ -7,6 +7,7 @@ const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const SKUProcessor = require('../processors/SKUProcessor');
+const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 
 // ---- 常量（样板操作类型定义） ----
 const OPERATION_LABELS = {
@@ -27,13 +28,16 @@ const OPERATION_LABELS = {
 };
 const WAREHOUSE_OPERATIONS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN']);
 
-const STATUS_LABELS = {
-  PENDING: '待处理',
-  IN_PROGRESS: '进行中',
-  COMPLETED: '已完成',
+// 样衣状态标签：优先使用共享映射 enumLabels.PATTERN_STATUS_MAP，本地兜底未覆盖的状态
+const LOCAL_STATUS_FALLBACK = {
   RELEASED: '已发放',
-  RECEIVED: '已领取',
 };
+
+function getPatternStatusLabel(status) {
+  if (!status) return '-';
+  var upper = String(status).trim().toUpperCase();
+  return PATTERN_STATUS_MAP[upper] || LOCAL_STATUS_FALLBACK[upper] || status;
+}
 
 const SOURCE_LABELS = {
   SELF_DEVELOPED: '自主开发',
@@ -109,7 +113,7 @@ Page({
         maxQuantity: normalizePositiveInt(data.quantity, 1),
         warehouseCode: '',
         status: status,
-        statusLabel: STATUS_LABELS[status] || data.statusLabel || status || '-',
+        statusLabel: getPatternStatusLabel(status) || data.statusLabel || status || '-',
         statusType: status.toLowerCase().replace('_', ''),
         sizes: sizes,
         sizesText: sizes.length ? sizes.join('/') : '-',

@@ -1,23 +1,29 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
+const displayHelper = require('../../../utils/displayHelper');
 
-const STATUS_MAP = {
-  pending: { text: '待审批', cls: 'tag-orange' },
-  approved: { text: '已审批', cls: 'tag-green' },
-  rejected: { text: '已驳回', cls: 'tag-red' },
+// wxml 通过 STATUS_MAP[statusFilter].text / DEDUCT_MAP[repayFilter].text 显示筛选器选中项文案，
+// 故保留 {text, cls} 结构；文案走 displayHelper，cls（tag-* 类名）保留本地映射以兼容 wxml
+var STATUS_CLS_MAP = { pending: 'tag-orange', approved: 'tag-green', rejected: 'tag-red' };
+var DEDUCT_CLS_MAP = { unrepaid: 'tag-red', partial: 'tag-orange', repaid: 'tag-green' };
+
+var STATUS_MAP = {
+  pending: { text: displayHelper.ADVANCE_STATUS_LABEL.pending, cls: STATUS_CLS_MAP.pending },
+  approved: { text: displayHelper.ADVANCE_STATUS_LABEL.approved, cls: STATUS_CLS_MAP.approved },
+  rejected: { text: displayHelper.ADVANCE_STATUS_LABEL.rejected, cls: STATUS_CLS_MAP.rejected },
 };
 
-const DEDUCT_MAP = {
-  unrepaid: { text: '未扣款', cls: 'tag-red' },
-  partial:  { text: '部分扣款', cls: 'tag-orange' },
-  repaid:   { text: '已扣完', cls: 'tag-green' },
+var DEDUCT_MAP = {
+  unrepaid: { text: displayHelper.ADVANCE_DEDUCT_LABEL.unrepaid, cls: DEDUCT_CLS_MAP.unrepaid },
+  partial:  { text: displayHelper.ADVANCE_DEDUCT_LABEL.partial, cls: DEDUCT_CLS_MAP.partial },
+  repaid:   { text: displayHelper.ADVANCE_DEDUCT_LABEL.repaid, cls: DEDUCT_CLS_MAP.repaid },
 };
 
-function statusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
-function statusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
-function deductText(s) { return (DEDUCT_MAP[s] || {}).text || s || ''; }
-function deductCls(s) { return (DEDUCT_MAP[s] || {}).cls || 'tag-gray'; }
+function statusText(s) { if (!s) return ''; return displayHelper.displayAdvanceStatusText(s); }
+function statusCls(s) { return STATUS_CLS_MAP[s] || 'tag-gray'; }
+function deductText(s) { if (!s) return ''; return displayHelper.displayAdvanceDeductStatusText(s); }
+function deductCls(s) { return DEDUCT_CLS_MAP[s] || 'tag-gray'; }
 
 Page({
   data: {
@@ -38,29 +44,29 @@ Page({
     DEDUCT_MAP: DEDUCT_MAP,
     STATUS_OPTIONS: [
       { value: '', label: '全部状态' },
-      { value: 'pending', label: '待审批' },
-      { value: 'approved', label: '已审批' },
-      { value: 'rejected', label: '已驳回' },
+      { value: 'pending', label: displayHelper.ADVANCE_STATUS_LABEL.pending },
+      { value: 'approved', label: displayHelper.ADVANCE_STATUS_LABEL.approved },
+      { value: 'rejected', label: displayHelper.ADVANCE_STATUS_LABEL.rejected },
     ],
     REPAY_OPTIONS: [
       { value: '', label: '全部扣款' },
-      { value: 'unrepaid', label: '未扣款' },
-      { value: 'partial', label: '部分扣款' },
-      { value: 'repaid', label: '已扣完' },
+      { value: 'unrepaid', label: displayHelper.ADVANCE_DEDUCT_LABEL.unrepaid },
+      { value: 'partial', label: displayHelper.ADVANCE_DEDUCT_LABEL.partial },
+      { value: 'repaid', label: displayHelper.ADVANCE_DEDUCT_LABEL.repaid },
     ],
   },
 
   _STATUS_OPTIONS: [
     { value: '', label: '全部状态' },
-    { value: 'pending', label: '待审批' },
-    { value: 'approved', label: '已审批' },
-    { value: 'rejected', label: '已驳回' },
+    { value: 'pending', label: displayHelper.ADVANCE_STATUS_LABEL.pending },
+    { value: 'approved', label: displayHelper.ADVANCE_STATUS_LABEL.approved },
+    { value: 'rejected', label: displayHelper.ADVANCE_STATUS_LABEL.rejected },
   ],
   _REPAY_OPTIONS: [
     { value: '', label: '全部扣款' },
-    { value: 'unrepaid', label: '未扣款' },
-    { value: 'partial', label: '部分扣款' },
-    { value: 'repaid', label: '已扣完' },
+    { value: 'unrepaid', label: displayHelper.ADVANCE_DEDUCT_LABEL.unrepaid },
+    { value: 'partial', label: displayHelper.ADVANCE_DEDUCT_LABEL.partial },
+    { value: 'repaid', label: displayHelper.ADVANCE_DEDUCT_LABEL.repaid },
   ],
 
   onLoad: function () {
