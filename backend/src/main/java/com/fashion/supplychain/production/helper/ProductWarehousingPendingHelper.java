@@ -419,6 +419,8 @@ public class ProductWarehousingPendingHelper {
         orderInfo.put("styleCover", order.getStyleCover());
         orderInfo.put("urgencyLevel", order.getUrgencyLevel());
         orderInfo.put("procurementConfirmRemark", order.getProcurementConfirmRemark());
+        // 订单状态：供前端判断是否显示返修/报废等操作按钮（订单终态时按钮禁用）
+        orderInfo.put("status", order.getStatus());
         return orderInfo;
     }
 

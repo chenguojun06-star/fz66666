@@ -290,11 +290,14 @@
   margin-left: 8rpx;
 }
 
-/* ── 裁货元信息 ── */
+/* ── 裁货元信息（分行展示，避免窄屏挤压混乱） ──
+ * 原：三项横向 flex 排列，窄屏一行摆不下导致换行错乱
+ * 改：垂直堆叠，每行一项（标签固定宽度 + 值跟随），清晰易读
+ */
 .cut-meta-row {
   display: flex;
-  align-items: center;
-  gap: 32rpx;
+  flex-direction: column;
+  gap: 16rpx;
   margin-bottom: 8rpx;
   padding-top: 20rpx;
   border-top: 1rpx solid var(--color-border);
@@ -303,18 +306,27 @@
 .cut-meta-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 16rpx;
+  flex-shrink: 0;
+  min-height: 40rpx;
 }
 
 .cut-meta-label {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  width: 120rpx;
 }
 
 .cut-meta-value {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cut-meta-value.primary {

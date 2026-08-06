@@ -5,6 +5,7 @@ import api, { type ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { useDebouncedValue } from '@/hooks/usePerformance';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { EcOrder } from './types';
 
 export interface UsePlatformDetailDataReturn {
@@ -24,6 +25,7 @@ export interface UsePlatformDetailDataReturn {
   keyword: string;
   expressOrderTarget: EcOrder | null;
   expressModalOpen: boolean;
+  imageMap: ReturnType<typeof useStyleCoverImages>['imageMap'];
   configForm: ReturnType<typeof Form.useForm>[0];
   testResult: { success: boolean; message: string } | null;
   setActiveTab: React.Dispatch<React.SetStateAction<string>>;
@@ -45,6 +47,7 @@ export interface UsePlatformDetailDataReturn {
 
 export function usePlatformDetailData(platformCode: string | undefined): UsePlatformDetailDataReturn {
   const { loading, testing, syncing, saveConfig, getStatus, getShopStats, testConnection, syncNow } = usePlatformConnector();
+  const { imageMap, fetchBySkuCodes } = useStyleCoverImages();
 
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [configured, setConfigured] = useState(false);
@@ -98,11 +101,14 @@ export function usePlatformDetailData(platformCode: string | undefined): UsePlat
       if (debouncedKeyword) params.keyword = debouncedKeyword;
       const res = await api.post<ApiResult>('/ecommerce/orders/list', params);
       const d = (res?.data ?? {}) as Record<string, unknown>;
-      setOrders((d.records as EcOrder[]) ?? []);
+      const records = (d.records as EcOrder[]) ?? [];
+      setOrders(records);
       setOrderTotal((d.total as number) ?? 0);
+      // 异步加载款号封面图
+      fetchBySkuCodes(records.map(r => r.skuCode));
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
     finally { setOrderLoading(false); }
-  }, [platformCode, configured, orderPage, orderPageSize, filterStatus, debouncedKeyword]);
+  }, [platformCode, configured, orderPage, orderPageSize, filterStatus, debouncedKeyword, fetchBySkuCodes]);
 
   useEffect(() => { loadPlatformData(); }, [loadPlatformData]);
   useEffect(() => { if (configured) loadOrders(); }, [loadOrders, configured]);
@@ -149,6 +155,7 @@ export function usePlatformDetailData(platformCode: string | undefined): UsePlat
     orders, orderTotal, orderLoading, orderPage, orderPageSize,
     filterStatus, keyword,
     expressOrderTarget, expressModalOpen,
+    imageMap,
     configForm, testResult,
     setActiveTab, setShowGuide, setFilterStatus, setKeyword,
     setOrderPage, setOrderPageSize,

@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import { Button, Space, Tag, Tooltip, Statistic, Card, Row, Col, Modal, message } from 'antd';
 import { DollarOutlined, ThunderboltOutlined, RobotOutlined, CheckCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 import { useRequest } from '@/hooks/useRequest';
+import api, { type ApiResult } from '@/utils/api';
+import { extractApiData } from './utils';
 
 interface PriceSuggestion {
   skuId: number;
@@ -33,12 +34,12 @@ const SmartPriceTab: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
 
   const { data: suggestions, loading: suggestionsLoading, run: fetchSuggestions, refresh } = useRequest<PriceSuggestion[]>(
-    () => axios.get('/api/ecommerce/price/suggestions').then(res => res.data?.data || []),
+    async () => extractApiData(await api.get<ApiResult<PriceSuggestion[]>>('/ecommerce/price/suggestions'), []),
     { manual: false }
   );
 
   const { data: stats, run: fetchStats } = useRequest<PriceStats>(
-    () => axios.get('/api/ecommerce/price/stats').then(res => res.data?.data || {}),
+    async () => extractApiData(await api.get<ApiResult<PriceStats>>('/ecommerce/price/stats'), {} as PriceStats),
     { manual: false }
   );
 
@@ -49,9 +50,8 @@ const SmartPriceTab: React.FC = () => {
   const handleGenerateSuggestions = useCallback(async () => {
     setGenerating(true);
     try {
-      const res = await axios.post('/api/ecommerce/price/generate');
-      const msg = res.data?.message || 'AI定价建议已生成';
-      message.success(msg);
+      const res = await api.post<ApiResult<unknown>>('/ecommerce/price/generate');
+      message.success(res?.message || 'AI定价建议已生成');
       await fetchSuggestions();
       await fetchStats();
     } catch {
@@ -64,9 +64,8 @@ const SmartPriceTab: React.FC = () => {
   const handleApplyPrice = useCallback(async (record: PriceSuggestion) => {
     setSyncing(true);
     try {
-      const res = await axios.post(`/api/ecommerce/price/${record.skuId}/sync`);
-      const msg = res.data?.message || '定价已同步到平台';
-      message.success(msg);
+      const res = await api.post<ApiResult<unknown>>(`/ecommerce/price/${record.skuId}/sync`);
+      message.success(res?.message || '定价已同步到平台');
       await fetchSuggestions();
       await fetchStats();
     } catch {
@@ -86,9 +85,8 @@ const SmartPriceTab: React.FC = () => {
   const handleBatchApply = useCallback(async () => {
     setBatchApplying(true);
     try {
-      const res = await axios.post('/api/ecommerce/price/batch-sync');
-      const msg = res.data?.message || '批量同步完成';
-      message.success(msg);
+      const res = await api.post<ApiResult<unknown>>('/ecommerce/price/batch-sync');
+      message.success(res?.message || '批量同步完成');
       await fetchSuggestions();
       await fetchStats();
     } catch {

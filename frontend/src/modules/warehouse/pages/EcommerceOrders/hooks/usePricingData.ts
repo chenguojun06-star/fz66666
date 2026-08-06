@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ApiResult } from '@/utils/api';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { Sku } from '../types';
 
 export interface EditRow {
@@ -18,6 +19,7 @@ export function usePricingData() {
   const [styleNo, setStyleNo] = useState('');
   const [editRow, setEditRow] = useState<EditRow | null>(null);
   const [saving, setSaving] = useState(false);
+  const { imageMap, fetchByStyleNos } = useStyleCoverImages();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -26,11 +28,14 @@ export function usePricingData() {
       if (styleNo) params.styleNo = styleNo;
       const res = await api.get<ApiResult>('/style/sku/list', { params });
       const d = (res?.data ?? {}) as Record<string, unknown>;
-      setData(((d.records as Sku[]) ?? []));
+      const records = (d.records as Sku[]) ?? [];
+      setData(records);
       setTotal((d.total as number) ?? 0);
+      // 异步加载款号封面图
+      fetchByStyleNos(records.map(r => r.styleNo));
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载SKU失败'); }
     finally { setLoading(false); }
-  }, [page, styleNo]);
+  }, [page, styleNo, fetchByStyleNos]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -55,5 +60,6 @@ export function usePricingData() {
     editRow, setEditRow,
     saving, handleSave,
     fetchData,
+    imageMap,
   };
 }

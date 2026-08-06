@@ -126,8 +126,8 @@
         </view>
       </view>
 
-      <!-- 操作按钮（返修/报废等） -->
-      <view class="card-actions" wx:if="{{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair' || item.repairStatus === 'repairing' || item.repairStatus === 'repair_done'}}" catchtap="">
+      <!-- 操作按钮（返修/报废等）— 订单终态时不显示 -->
+      <view class="card-actions" wx:if="{{!item.orderTerminal && (item.repairStatus === 'pending' || item.repairStatus === 'pending_repair' || item.repairStatus === 'repairing' || item.repairStatus === 'repair_done')}}" catchtap="">
         <view wx:if="{{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair'}}" class="action-row">
           <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onStartRepair">开始返修</view>
           <view class="action-btn action-btn-danger" data-index="{{index}}" catchtap="onScrap">报废</view>
@@ -137,6 +137,12 @@
         </view>
         <view wx:elif="{{item.repairStatus === 'repair_done'}}" class="action-row">
           <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onGoQuality">去复检</view>
+        </view>
+      </view>
+      <!-- 订单已关单/已完成时显示提示 -->
+      <view class="card-actions" wx:elif="{{item.orderTerminal}}" catchtap="">
+        <view class="action-row">
+          <view class="action-btn action-btn-disabled">订单已关闭</view>
         </view>
       </view>
     </view>

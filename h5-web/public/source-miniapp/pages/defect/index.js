@@ -304,6 +304,11 @@ Page({
     item.qualityCategoryText = CATEGORY_TEXT[item.qualityCategory] || '待检';
     item.qualityTagClass = CATEGORY_TAG_CLASS[item.qualityCategory] || 'tag-default';
 
+    // 订单终态判断：已关单/已完成/已取消/已报废/已归档 → 不再显示返修按钮
+    var _orderStatus = String(item.orderStatus || '').trim().toLowerCase();
+    item.orderTerminal = (_orderStatus === 'closed' || _orderStatus === 'completed'
+      || _orderStatus === 'cancelled' || _orderStatus === 'scrapped' || _orderStatus === 'archived');
+
     if (item.coverImage || item.styleImage) {
       item.displayCover = getAuthedImageUrl(item.coverImage || item.styleImage);
     } else {

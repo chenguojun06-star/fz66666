@@ -7,6 +7,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getPlatformTag } from '@/utils/platform';
+import StyleImageCell from '@/components/common/StyleImageCell';
+import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import { STATUS_MAP, WH_MAP } from './helpers';
 import type { EcOrder, Sku } from './types';
 import type { EditRow } from './hooks/usePricingData';
@@ -148,6 +150,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
 export interface PricingColumnsArgs {
   editRow: EditRow | null;
   saving: boolean;
+  imageMap: StyleImageMap;
   onEdit: (r: Sku) => void;
   onCancelEdit: () => void;
   onSave: (r: Sku) => void;
@@ -156,8 +159,12 @@ export interface PricingColumnsArgs {
 }
 
 export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> {
-  const { editRow, saving, onEdit, onCancelEdit, onSave, onCostChange, onSalesChange } = args;
+  const { editRow, saving, imageMap, onEdit, onCancelEdit, onSave, onCostChange, onSalesChange } = args;
   return [
+    {
+      title: '款式图', width: 68, align: 'center' as const,
+      render: (_: unknown, r: Sku) => <StyleImageCell styleNo={r.styleNo} imageMap={imageMap} />,
+    },
     { title: '款式号', dataIndex: 'styleNo', width: 130, render: v => <Text strong>{v}</Text> },
     { title: '颜色',   dataIndex: 'color',   width: 80 },
     { title: '尺码',   dataIndex: 'size',    width: 70 },

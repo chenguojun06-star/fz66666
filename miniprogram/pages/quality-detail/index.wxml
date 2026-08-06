@@ -321,10 +321,14 @@
             </view>
             <view class="qc-card-header-right">
               <text class="quality-status {{item.qualityStatusCls}}">{{item.qualityStatusText}}</text>
-              <button wx:if="{{item.canWarehouse}}" class="btn btn-primary-outline btn-sm {{whExpandIndex === index ? 'btn-primary-solid' : ''}}" data-index="{{index}}" bindtap="onOpenWhSheet">{{whExpandIndex === index ? '收起' : '入库'}}</button>
-              <button wx:if="{{item.canMarkRepaired}}" class="btn btn-warning-outline btn-sm" data-index="{{index}}" bindtap="onStartRepair">开始返修</button>
-              <button wx:if="{{item.repairStatus === 'repairing'}}" class="btn btn-success-outline btn-sm" data-index="{{index}}" bindtap="onCompleteRepair">完成返修</button>
-              <button wx:if="{{item.qualityCategory === 'unqualified' && !item.canMarkRepaired && item.repairStatus !== 'scrapped' && item.repairStatus !== 'repair_done'}}" class="btn btn-danger-outline btn-sm" data-index="{{index}}" bindtap="onScrap">报废</button>
+              <!-- 订单终态（已关单/已完成/已取消/已报废/已归档）时不显示操作按钮 -->
+              <block wx:if="{{!order.orderTerminal}}">
+                <button wx:if="{{item.canWarehouse}}" class="btn btn-primary-outline btn-sm {{whExpandIndex === index ? 'btn-primary-solid' : ''}}" data-index="{{index}}" bindtap="onOpenWhSheet">{{whExpandIndex === index ? '收起' : '入库'}}</button>
+                <button wx:if="{{item.canMarkRepaired}}" class="btn btn-warning-outline btn-sm" data-index="{{index}}" bindtap="onStartRepair">开始返修</button>
+                <button wx:if="{{item.repairStatus === 'repairing'}}" class="btn btn-success-outline btn-sm" data-index="{{index}}" bindtap="onCompleteRepair">完成返修</button>
+                <button wx:if="{{item.qualityCategory === 'unqualified' && !item.canMarkRepaired && item.repairStatus !== 'scrapped' && item.repairStatus !== 'repair_done'}}" class="btn btn-danger-outline btn-sm" data-index="{{index}}" bindtap="onScrap">报废</button>
+              </block>
+              <text wx:else class="tag tag-default">订单已关闭</text>
             </view>
           </view>
           <view class="qc-card-body">

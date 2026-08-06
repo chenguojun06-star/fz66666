@@ -4,18 +4,23 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,6 +43,9 @@ public class ProductWarehousingRepairHelper {
 
     @Autowired
     private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     public Map<String, Object> repairStats(Map<String, Object> params) {
         String orderId = params == null ? null : String.valueOf(params.getOrDefault("orderId", ""));
@@ -309,6 +317,34 @@ public class ProductWarehousingRepairHelper {
 
         if (qualityScans == null || qualityScans.isEmpty()) return Collections.emptyList();
 
+        // 过滤掉订单已处于终态（已关单/已完成/已取消/已报废/已归档）的记录
+        // 修复：订单关单后次品记录仍在，但不应再显示返修按钮
+        Set<String> orderIds = new HashSet<>();
+        for (Map<String, Object> qs : qualityScans) {
+            String oid = TextUtils.safeText(qs.get("order_id"));
+            if (StringUtils.hasText(oid)) orderIds.add(oid);
+        }
+        Map<String, String> orderStatusMap = new HashMap<>();
+        if (!orderIds.isEmpty()) {
+            List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getStatus)
+                .in(ProductionOrder::getId, orderIds)
+                .list();
+            if (orders != null) {
+                for (ProductionOrder o : orders) {
+                    orderStatusMap.put(String.valueOf(o.getId()),
+                        o.getStatus() == null ? "" : o.getStatus().trim().toLowerCase());
+                }
+            }
+        }
+        // 移除终态订单的质检记录
+        qualityScans.removeIf(qs -> {
+            String oid = TextUtils.safeText(qs.get("order_id"));
+            String st = orderStatusMap.getOrDefault(oid, "");
+            return OrderStatusConstants.isTerminal(st);
+        });
+        if (qualityScans.isEmpty()) return Collections.emptyList();
+
         Map<String, Map<String, Object>> qsMap = new HashMap<>();
         for (Map<String, Object> qs : qualityScans) {
             String bid = TextUtils.safeText(qs.get("cutting_bundle_id"));
@@ -352,6 +388,9 @@ public class ProductWarehousingRepairHelper {
             item.put("styleName", qs != null ? TextUtils.safeText(qs.get("style_name")) : "");
             item.put("orderId", bundle.getProductionOrderId());
             item.put("orderNo", bundle.getProductionOrderNo());
+            // 返回订单状态，前端用于判断是否显示返修按钮（兜底防御）
+            String orderStatus = orderStatusMap.getOrDefault(String.valueOf(bundle.getProductionOrderId()), "");
+            item.put("orderStatus", orderStatus);
             int defectQty = qs != null
                     ? parseIntOrDefault(qs.get("unqualified_quantity"), 0)
                     : (bundle.getQuantity() == null ? 0 : bundle.getQuantity());
@@ -502,6 +541,7 @@ public class ProductWarehousingRepairHelper {
 
     /**
      * AI次品处理：标记返修完成 → 进入待质检
+     * 完成后通知该订单的跟单员 + 质检操作人
      */
     // D-001 修复：移除 Helper 层 @Transactional（调用方 ProductWarehousingOrchestrator.completeBundleRepair 已有事务保护）
     public void completeBundleRepair(String bundleId) {
@@ -517,6 +557,79 @@ public class ProductWarehousingRepairHelper {
         bundle.setStatus("repaired_waiting_qc");
         cuttingBundleService.updateById(bundle);
         updateRepairStatus(bundleId, "repair_done", null);
+
+        // 通知该订单的跟单员 + 质检操作人（fail-safe，失败不影响主流程）
+        notifyRepairComplete(bundle);
+    }
+
+    /**
+     * 返修完成通知：通知该订单跟单员 + 质检操作人
+     * 通知失败降级为 log.warn，不抛异常。
+     */
+    private void notifyRepairComplete(CuttingBundle bundle) {
+        try {
+            if (bundle == null || bundle.getProductionOrderId() == null) return;
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) return;
+
+            // 查询订单，获取跟单员
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
+                        ProductionOrder::getMerchandiser, ProductionOrder::getFactoryContactPerson)
+                .eq(ProductionOrder::getId, bundle.getProductionOrderId())
+                .one();
+            if (order == null) return;
+
+            String orderNo = order.getOrderNo() == null
+                ? (bundle.getProductionOrderNo() == null ? "" : String.valueOf(bundle.getProductionOrderNo()))
+                : String.valueOf(order.getOrderNo());
+            String bundleNo = bundle.getBundleNo() == null ? "" : String.valueOf(bundle.getBundleNo());
+            String title = "返修完成待复检";
+            String content = "订单 " + orderNo + " 菲号 " + bundleNo + " 已完成返修，请安排复检。";
+
+            // 通知跟单员
+            if (StringUtils.hasText(order.getMerchandiser())) {
+                sendRepairNotice(tenantId, order.getMerchandiser(), orderNo, title, content);
+            }
+            // 通知工厂联系人（如与跟单员不同）
+            if (StringUtils.hasText(order.getFactoryContactPerson())
+                && !order.getFactoryContactPerson().equals(order.getMerchandiser())) {
+                sendRepairNotice(tenantId, order.getFactoryContactPerson(), orderNo, title, content);
+            }
+        } catch (Exception e) {
+            log.warn("[RepairNotify] 返修完成通知失败(降级): bundleId={}, error={}",
+                bundle == null ? null : bundle.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 发送返修站内信通知
+     */
+    private void sendRepairNotice(Long tenantId, String toName, String orderNo,
+                                   String title, String content) {
+        try {
+            com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
+            notice.setTenantId(tenantId);
+            notice.setToName(toName);
+            notice.setFromName("返修系统");
+            notice.setOrderNo(orderNo);
+            notice.setTitle(title);
+            notice.setContent(content);
+            notice.setNoticeType("REPAIR_DONE");
+            notice.setIsRead(0);
+            notice.setHandlingStatus("none");
+            notice.setCreatedAt(LocalDateTime.now());
+            // 通过 Spring 上下文获取 SysNoticeService（避免循环依赖）
+            com.fashion.supplychain.production.service.SysNoticeService noticeService =
+                com.fashion.supplychain.common.SpringContextHolder.getBean(
+                    com.fashion.supplychain.production.service.SysNoticeService.class);
+            if (noticeService != null) {
+                noticeService.save(notice);
+                log.info("[RepairNotify] 通知已发送: tenant={}, to={}, order={}", tenantId, toName, orderNo);
+            }
+        } catch (Exception e) {
+            log.warn("[RepairNotify] 站内信发送失败(降级): to={}, order={}, error={}", toName, orderNo, e.getMessage());
+        }
     }
 
     /**

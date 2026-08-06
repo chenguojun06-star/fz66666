@@ -20,6 +20,7 @@ const PricingTab: React.FC = () => {
     () => buildPricingColumns({
       editRow: h.editRow,
       saving: h.saving,
+      imageMap: h.imageMap,
       onEdit: (r: Sku) => h.setEditRow({ id: r.id, costPrice: r.costPrice, salesPrice: r.salesPrice }),
       onCancelEdit: () => h.setEditRow(null),
       onSave: h.handleSave,
@@ -27,7 +28,7 @@ const PricingTab: React.FC = () => {
       onSalesChange: handleSalesChange,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [h.editRow, h.saving],
+    [h.editRow, h.saving, h.imageMap],
   );
 
   return (

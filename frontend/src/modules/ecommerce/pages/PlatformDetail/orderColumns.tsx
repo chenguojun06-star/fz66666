@@ -4,6 +4,8 @@ import {
   CheckCircleOutlined, EyeOutlined, LinkOutlined, CarOutlined, SendOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import StyleImageCell from '@/components/common/StyleImageCell';
+import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import { STATUS_MAP, WH_MAP } from './helpers';
 import type { EcOrder } from './types';
 
@@ -17,8 +19,12 @@ export interface OrderColumnsHandlers {
   setExpressModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function buildOrderColumns(handlers: OrderColumnsHandlers): ColumnsType<EcOrder> {
-  const { setDetail, setLinkTarget, setOutboundTarget, setExpressOrderTarget, setExpressModalOpen } = handlers;
+export interface OrderColumnsArgs extends OrderColumnsHandlers {
+  imageMap: StyleImageMap;
+}
+
+export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> {
+  const { imageMap, setDetail, setLinkTarget, setOutboundTarget, setExpressOrderTarget, setExpressModalOpen } = args;
   return [
     {
       title: '订单号', dataIndex: 'platformOrderNo', width: 160,
@@ -34,6 +40,13 @@ export function buildOrderColumns(handlers: OrderColumnsHandlers): ColumnsType<E
       render: (_: unknown, r: EcOrder) => {
         const styleNo = (r.skuCode || '').split('-')[0];
         return styleNo ? <Text strong style={{ fontFamily: 'monospace' }}>{styleNo}</Text> : <Text type="secondary">-</Text>;
+      },
+    },
+    {
+      title: '款式图', width: 68, align: 'center' as const,
+      render: (_: unknown, r: EcOrder) => {
+        const styleNo = (r.skuCode || '').split('-')[0];
+        return <StyleImageCell styleNo={styleNo} imageMap={imageMap} />;
       },
     },
     {

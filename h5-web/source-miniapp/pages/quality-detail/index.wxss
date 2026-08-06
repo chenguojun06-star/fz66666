@@ -441,6 +441,7 @@
 }
 .tag-info { background: rgba(22, 93, 255, 0.1); color: #165DFF; }
 .tag-current { background: rgba(255, 159, 0, 0.12); color: #FF9F00; }
+.tag-default { background: var(--color-bg-muted); color: var(--color-text-tertiary); }
 
 /* ========== 页面内质检表单（单选，原弹窗样式改为 .qc-form-*） ========== */
 .qc-form {

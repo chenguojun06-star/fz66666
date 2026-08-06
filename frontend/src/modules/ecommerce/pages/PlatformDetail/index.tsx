@@ -32,6 +32,7 @@ const PlatformDetail: React.FC = () => {
     orders, orderTotal, orderLoading, orderPage, orderPageSize,
     filterStatus,
     expressOrderTarget, expressModalOpen,
+    imageMap,
     configForm, testResult,
     setActiveTab, setShowGuide, setFilterStatus, setKeyword,
     setOrderPage, setOrderPageSize,
@@ -51,6 +52,7 @@ const PlatformDetail: React.FC = () => {
   const guide = CREDENTIAL_GUIDES[platform.code] || CREDENTIAL_GUIDES.DEFAULT;
 
   const orderColumns = buildOrderColumns({
+    imageMap,
     setDetail, setLinkTarget, setOutboundTarget,
     setExpressOrderTarget, setExpressModalOpen,
   });

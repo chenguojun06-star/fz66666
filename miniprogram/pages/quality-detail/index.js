@@ -226,6 +226,11 @@ Page({
         order.remainDaysText = delivery.remainDaysText;
         order.remainDaysClass = delivery.remainDaysClass;
 
+        // 订单终态判断：已关单/已完成/已取消/已报废/已归档 → 不再显示返修/报废按钮
+        var _orderStatus = String(order.status || '').trim().toLowerCase();
+        order.orderTerminal = (_orderStatus === 'closed' || _orderStatus === 'completed'
+          || _orderStatus === 'cancelled' || _orderStatus === 'scrapped' || _orderStatus === 'archived');
+
         var styleCover = '';
         if (style && style.cover) {
           styleCover = getAuthedImageUrl(style.cover);
