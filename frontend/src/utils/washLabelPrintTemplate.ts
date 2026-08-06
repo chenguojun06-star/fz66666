@@ -33,7 +33,21 @@ function buildLabelCss(w: number, h: number, iconSize: number): string {
   const bottomSafe = 12;
   const iconGap = w <= 30 ? 0.6 : 1;
 
+  // iframe srcDoc 是独立文档上下文，不继承父页面 CSS 变量
+  // 必须在此显式定义 :root 变量，否则 SVG 的 stroke/fill 和文字 color 会失效
+  const rootVars = `:root{
+--color-black:#000000;
+--color-bg-base:#ffffff;
+--color-text-quaternary:#bfbfbf;
+--color-zinc-200:#e4e4e7;
+--color-zinc-300:#d4d4d8;
+--color-zinc-500:#71717a;
+--color-zinc-600:#52525b;
+--color-zinc-700:#3f3f46;
+}`;
+
   return `@page{size:${w}mm ${h}mm;margin:0}
+${rootVars}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
 body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:var(--color-black);background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
