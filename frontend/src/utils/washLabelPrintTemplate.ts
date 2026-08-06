@@ -34,42 +34,30 @@ function buildLabelCss(w: number, h: number, iconSize: number): string {
   const iconGap = w <= 30 ? 0.6 : 1;
 
   // iframe srcDoc 是独立文档上下文，不继承父页面 CSS 变量
-  // 必须在此显式定义 :root 变量，否则 SVG 的 stroke/fill 和文字 color 会失效
-  const rootVars = `:root{
---color-black:#000000;
---color-bg-base:#ffffff;
---color-text-quaternary:#bfbfbf;
---color-zinc-200:#e4e4e7;
---color-zinc-300:#d4d4d8;
---color-zinc-500:#71717a;
---color-zinc-600:#52525b;
---color-zinc-700:#3f3f46;
-}`;
-
+  // 直接用硬编码颜色，避免 var(--color-*) 在 iframe 中失效
   return `@page{size:${w}mm ${h}mm;margin:0}
-${rootVars}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:var(--color-black);background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
-.dash-sep{border:none;border-top:0.8pt dashed var(--color-zinc-600);width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}
+.dash-sep{border:none;border-top:0.8pt dashed #52525b;width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}
 .content-block{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center;padding-top:2mm}
 .comp-mats{font-size:${w <= 30 ? fs + 1.5 : fs + 0.5}pt;line-height:1.6;font-weight:600;text-align:center}
-.section-sep{width:40%;height:0;border-top:0.3pt solid var(--color-text-quaternary);margin:1.5mm auto}
-.care-wash{font-size:${fs}pt;color:var(--color-zinc-700);line-height:1.6;text-align:center}
+.section-sep{width:40%;height:0;border-top:0.3pt solid #bfbfbf;margin:1.5mm auto}
+.care-wash{font-size:${fs}pt;color:#3f3f46;line-height:1.6;text-align:center}
 .bottom-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:100%;margin-top:auto}
 .icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin:0.5mm auto 0}
 .icon-cell{width:${iconSize}mm;height:${iconSize}mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .icons svg{width:100%;height:100%}
 .footer{margin-top:1.5mm;font-size:${w <= 30 ? fs - 0.2 : fs}pt;font-weight:700;letter-spacing:0.8mm;line-height:1.3;text-align:center;white-space:nowrap}
-.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:var(--color-zinc-500);text-align:center;letter-spacing:0.2mm}`;
+.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:#71717a;text-align:center;letter-spacing:0.2mm}`;
 }
 
 function buildLabelContentHtml(data: WashLabelPrintData, iconSize: number): string {
   const compositionHtml = data.compositionText.trim()
     ? `<div class="comp-mats">${data.compositionText.replace(/\n/g, '<br/>')}</div>`
-    : '<div class="comp-mats" style="color:var(--color-text-quaternary)">（成分未填写）</div>';
+    : '<div class="comp-mats" style="color:#bfbfbf">（成分未填写）</div>';
 
   const washHtml = data.washInstructionsText.trim()
     ? `<div class="section-sep"></div><div class="care-wash">${data.washInstructionsText.replace(/\n/g, '<br/>')}</div>`
