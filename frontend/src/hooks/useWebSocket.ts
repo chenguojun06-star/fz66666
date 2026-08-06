@@ -96,10 +96,10 @@ export function useWebSocket(options: UseWebSocketOptions) {
         // send 失败说明连接已断开，停止心跳等 onclose 触发重连
         stopHeartbeat();
       }
-      // 检测后端是否存活：超过 2 个心跳周期未收到 pong，主动关闭触发重连
+      // 检测后端是否存活：超过 3 个心跳周期未收到 pong，主动关闭触发重连
       // 避免"半开连接"——前端能 send 成功但后端已断开，onclose 不会触发
-      if (Date.now() - lastPongAtRef.current > heartbeatInterval * 2 + 5000) {
-        console.warn('[WS] 心跳超时，后端无响应，主动重连');
+      // 放宽到 3 个周期（约 75s）避免网络抖动误判；静默重连不刷日志
+      if (Date.now() - lastPongAtRef.current > heartbeatInterval * 3) {
         stopHeartbeat();
         try { ws.close(); } catch { /* ignore */ }
       }
@@ -147,7 +147,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.debug('[WS] 连接建立');
       setConnected(true);
       reconnectAttemptsRef.current = 0;
       // 连接建立后立即启动心跳，防止中间网关 idle timeout 切断空闲连接（1006 根因）
@@ -202,13 +201,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
       // 主动关闭时不重连（React StrictMode 卸载或组件销毁）
       if (manualCloseRef.current) return;
 
-      console.debug('[WS] 连接关闭:', event.code);
-
+      // 静默重连：WebSocket 在 CloudBase 网关下会因 idle timeout 频繁断连，
+      // 这是正常行为，重连机制会自动恢复，不需要刷控制台日志
       if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
         // 指数退避：5s -> 10s -> 20s -> 30s（上限30s）
         const delay = Math.min(reconnectInterval * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
-        console.debug(`[WS] ${delay / 1000}s 后重连（第${reconnectAttemptsRef.current}次）`);
         reconnectTimerRef.current = setTimeout(connect, delay);
       }
     };
