@@ -17,6 +17,13 @@ public interface WorkAttendanceService extends IService<WorkAttendance> {
     WorkAttendance findToday(Long tenantId, String userId, LocalDate workDate);
 
     /**
+     * 查询今日打卡记录（包含已作废 delete_flag=1）——仅用于补录时复用作废坑位
+     * 解决唯一索引 uk_tenant_user_date(tenant_id, user_id, work_date) 不区分 delete_flag 的问题：
+     * 作废后再新建会触发 DuplicateKeyException，必须通过 update 复用作废的坑位。
+     */
+    WorkAttendance findTodayIncludingCancelled(Long tenantId, String userId, LocalDate workDate);
+
+    /**
      * 查询最近一条未下班打卡记录（跨天补卡兜底用）
      */
     WorkAttendance findLatestOpen(Long tenantId, String userId);

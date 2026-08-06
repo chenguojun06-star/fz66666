@@ -28,6 +28,21 @@ public interface WorkAttendanceMapper extends BaseMapper<WorkAttendance> {
                               @Param("workDate") LocalDate workDate);
 
     /**
+     * 查询今日打卡记录（包含已作废 delete_flag=1）——仅用于补录时复用作废坑位
+     * 因为唯一索引 uk_tenant_user_date(tenant_id, user_id, work_date) 不区分 delete_flag，
+     * 作废一条记录后新建会触发 DuplicateKeyException，必须通过 update 复用作废的坑位。
+     */
+    @Select("SELECT * FROM t_work_attendance " +
+            "WHERE tenant_id = #{tenantId} " +
+            "  AND user_id = #{userId} " +
+            "  AND work_date = #{workDate} " +
+            "ORDER BY delete_flag ASC " +
+            "LIMIT 1")
+    WorkAttendance selectTodayIncludingCancelled(@Param("tenantId") Long tenantId,
+                                                 @Param("userId") String userId,
+                                                 @Param("workDate") LocalDate workDate);
+
+    /**
      * 月度工时统计
      * - workHours: 本月工时（小时，保留1位小数）
      * - workDays:  本月出勤天数

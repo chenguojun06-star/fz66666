@@ -30,9 +30,10 @@ const _FinishedInventory: React.FC = () => {
   const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData);
 
   // 30秒轮询自动刷新成品库存
+  // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
   useSync(
     'warehouse-finished-inventory-poll',
-    async () => { await loadData(); },
+    async () => { await loadData(); return true; },
     () => {},
     { interval: 30000, pauseOnHidden: true }
   );

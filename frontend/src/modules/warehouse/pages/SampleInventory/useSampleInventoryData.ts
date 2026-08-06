@@ -93,9 +93,10 @@ export const useSampleInventoryData = () => {
   }, [loadData]);
 
   // 30秒轮询自动刷新样衣库存
+  // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
   useSync(
     'warehouse-sample-inventory-poll',
-    async () => { await loadData(); },
+    async () => { await loadData(); return true; },
     () => {},
     { interval: 30000, pauseOnHidden: true }
   );

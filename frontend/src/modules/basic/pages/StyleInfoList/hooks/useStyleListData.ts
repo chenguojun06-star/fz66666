@@ -152,11 +152,12 @@ export const useStyleListData = ({
   }, [fetchList, loadDevelopmentStats, statsRangeType]);
 
   // 90s 轮询兜底（页面可见时才轮询，避免后台浪费资源）
+  // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
   useSync(
     'style-info-list-poll',
     async () => {
       await fetchList();
-      return null;
+      return true;
     },
     () => {},
     { interval: 90000, pauseOnHidden: true }

@@ -40,6 +40,10 @@ public class OrderProgressWebSocketServer {
         try {
             Long tenantId = Long.parseLong(tenantIdStr.trim());
             tenantSessions.computeIfAbsent(tenantId, k -> new CopyOnWriteArraySet<>()).add(session);
+            // 设置 idle timeout 为 0（永不超时），由前端心跳维持连接存活
+            // 默认 Tomcat idle timeout 可能为 60s，中间网关（CloudBase）也有 idle timeout，
+            // 前端每 25s 发送 ping 保持连接活跃，这里设 0 避免后端主动断开
+            session.setMaxIdleTimeout(0);
             log.info("[WS] 连接建立: tenantId={}, sessionId={}, 当前连接数={}",
                     tenantId, session.getId(), tenantSessions.get(tenantId).size());
         } catch (NumberFormatException e) {
@@ -80,7 +84,17 @@ public class OrderProgressWebSocketServer {
     }
 
     @OnMessage
-    public void onMessage(String message, @PathParam("tenantId") String tenantIdStr) {
+    public void onMessage(String message, Session session, @PathParam("tenantId") String tenantIdStr) {
+        // 心跳处理：前端每 25s 发送 {"type":"ping"}，回复 {"type":"pong"} 维持连接
+        // 收到任何消息都会重置 Tomcat 的 idle 计时器，所以 ping 本身就能防止后端主动断开
+        if ("{\"type\":\"ping\"}".equals(message) || "ping".equalsIgnoreCase(message)) {
+            try {
+                session.getBasicRemote().sendText("{\"type\":\"pong\",\"timestamp\":" + System.currentTimeMillis() + "}");
+            } catch (IOException e) {
+                log.warn("[WS] 回复 pong 失败: sessionId={}, error={}", session.getId(), e.getMessage());
+            }
+            return;
+        }
         log.debug("[WS] 收到消息: tenantId={}, message={}", tenantIdStr, message);
     }
 

@@ -53,9 +53,10 @@ const _MaterialInventory: React.FC = () => {
   } = inventoryData;
 
   // 30秒轮询自动刷新物料库存
+  // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
   useSync(
     'warehouse-material-inventory-poll',
-    async () => { await fetchData(); },
+    async () => { await fetchData(); return true; },
     () => {},
     { interval: 30000, pauseOnHidden: true }
   );

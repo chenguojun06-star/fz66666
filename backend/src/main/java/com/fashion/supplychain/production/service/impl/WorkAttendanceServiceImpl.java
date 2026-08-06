@@ -25,6 +25,12 @@ public class WorkAttendanceServiceImpl extends ServiceImpl<WorkAttendanceMapper,
     }
 
     @Override
+    public WorkAttendance findTodayIncludingCancelled(Long tenantId, String userId, LocalDate workDate) {
+        if (tenantId == null || userId == null || workDate == null) return null;
+        return baseMapper.selectTodayIncludingCancelled(tenantId, userId, workDate);
+    }
+
+    @Override
     public WorkAttendance findLatestOpen(Long tenantId, String userId) {
         if (tenantId == null || userId == null) return null;
         return baseMapper.selectLatestOpen(tenantId, userId);

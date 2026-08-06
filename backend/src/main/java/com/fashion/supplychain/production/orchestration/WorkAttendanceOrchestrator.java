@@ -63,9 +63,13 @@ public class WorkAttendanceOrchestrator {
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
-        WorkAttendance today_record = workAttendanceService.findToday(tenantId, userId, today);
-        if (today_record != null && today_record.getClockInTime() != null) {
-            // 已上班打过卡，返回当前状态
+        // 必须包含作废记录（delete_flag=1）——管理员作废后 delete_flag=1 但唯一索引仍占坑
+        // 若用 findToday（过滤 delete_flag=0）会走新建分支，触发 uk_tenant_user_date 冲突
+        WorkAttendance today_record = workAttendanceService.findTodayIncludingCancelled(tenantId, userId, today);
+        boolean isCancelledSlot = today_record != null
+                && ("CANCELLED".equals(today_record.getStatus()) || today_record.getDeleteFlag() != null && today_record.getDeleteFlag() == 1);
+        if (today_record != null && today_record.getClockInTime() != null && !isCancelledSlot) {
+            // 已上班打过卡（且非作废坑位），返回当前状态
             Map<String, Object> resp = buildStatusResp(today_record, "今日已上班打卡");
             return resp;
         }
@@ -86,18 +90,40 @@ public class WorkAttendanceOrchestrator {
             } catch (DuplicateKeyException dke) {
                 // 并发兜底：两个并发 clockIn 都走到 save，唯一键 uk_tenant_user_date 让其中一个失败
                 // 捕获后重新查询返回当前状态，避免向用户报 500
-                WorkAttendance existing = workAttendanceService.findToday(tenantId, userId, today);
+                // 同样必须包含作废坑位（管理员刚作废/或另一个并发复用作废坑位同时 save）
+                WorkAttendance existing = workAttendanceService.findTodayIncludingCancelled(tenantId, userId, today);
                 if (existing != null && existing.getClockInTime() != null) {
                     log.warn("[clockIn] 并发兜底命中：tenantId={} userId={} clockInTime={}",
                             tenantId, userId, existing.getClockInTime());
                     return buildStatusResp(existing, "今日已上班打卡");
                 }
+                // 如果是作废坑位触发，直接复用作废的记录并 update
+                if (existing != null) {
+                    existing.setClockInTime(now);
+                    existing.setUserName(userName);
+                    existing.setFactoryId(factoryId);
+                    existing.setDeleteFlag(0);
+                    existing.setStatus("NORMAL");
+                    existing.setSource("manual");
+                    existing.setWorkMinutes(0);
+                    workAttendanceService.updateById(existing);
+                    return buildStatusResp(existing, "上班打卡成功");
+                }
                 throw dke;
             }
         } else {
+            // 两种场景：1）正常坑位但 clockInTime 为空（数据异常兜底）
+            //         2）作废坑位（isCancelledSlot=true），复用作废的坑位，恢复为正常打卡状态
             today_record.setClockInTime(now);
             today_record.setUserName(userName);
             today_record.setFactoryId(factoryId);
+            today_record.setDeleteFlag(0);
+            if (isCancelledSlot) {
+                today_record.setStatus("NORMAL");
+                today_record.setSource("manual");
+                today_record.setClockOutTime(null); // 作废的老下班卡清空，避免干扰工时计算
+                today_record.setWorkMinutes(0);
+            }
             workAttendanceService.updateById(today_record);
         }
 
@@ -118,7 +144,11 @@ public class WorkAttendanceOrchestrator {
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
-        WorkAttendance today_record = workAttendanceService.findToday(tenantId, userId, today);
+        // 必须包含作废记录（delete_flag=1）——管理员作废后 delete_flag=1 但唯一索引仍占坑
+        // 用 findToday（过滤 delete_flag=0）会让 save 新建分支触发 uk_tenant_user_date 冲突
+        WorkAttendance today_record = workAttendanceService.findTodayIncludingCancelled(tenantId, userId, today);
+        boolean isCancelledSlot = today_record != null
+                && ("CANCELLED".equals(today_record.getStatus()) || today_record.getDeleteFlag() != null && today_record.getDeleteFlag() == 1);
 
         // 跨天补卡兜底：今日无记录时，查最近一条「未下班打卡」记录（可能是昨晚的上班卡）
         // 场景：用户 day1 23:55 上班打卡，day2 00:30 下班打卡
@@ -148,17 +178,55 @@ public class WorkAttendanceOrchestrator {
             today_record.setSource("manual");
             today_record.setDeleteFlag(0);
             today_record.setWorkMinutes(0);
-            workAttendanceService.save(today_record);
+            try {
+                workAttendanceService.save(today_record);
+            } catch (org.springframework.dao.DuplicateKeyException dke) {
+                // 并发/作废兜底：另一线程同时 clockOut 或管理员刚作废今天的卡，唯一索引冲突
+                WorkAttendance dupExisting = workAttendanceService.findTodayIncludingCancelled(tenantId, userId, today);
+                if (dupExisting != null) {
+                    boolean dupCancelled = "CANCELLED".equals(dupExisting.getStatus())
+                            || (dupExisting.getDeleteFlag() != null && dupExisting.getDeleteFlag() == 1);
+                    dupExisting.setClockOutTime(now);
+                    // 如果作废坑位连 clockInTime 都没有，补成跟 clockOutTime 一样（漏打上班卡逻辑）
+                    if (dupExisting.getClockInTime() == null || dupCancelled) {
+                        dupExisting.setClockInTime(now);
+                    }
+                    dupExisting.setWorkMinutes(computeWorkMinutes(dupExisting.getClockInTime(), now));
+                    dupExisting.setUserName(userName);
+                    dupExisting.setFactoryId(factoryId);
+                    dupExisting.setDeleteFlag(0);
+                    if (dupCancelled) {
+                        dupExisting.setStatus("NORMAL");
+                        dupExisting.setSource("manual");
+                    }
+                    workAttendanceService.updateById(dupExisting);
+                    log.info("[clockOut] 并发复用（作废）坑位 tenantId={} userId={} clockOutTime={}",
+                            tenantId, userId, now);
+                    return buildStatusResp(dupExisting, dupExisting.getClockInTime() != null
+                            && !now.equals(dupExisting.getClockInTime()) ? "下班打卡成功"
+                            : "已补打上下班卡（漏打上班卡）");
+                }
+                throw dke;
+            }
             log.info("[clockOut] tenantId={} userId={} 补打上下班卡 clockInTime=clockOutTime={}",
                     tenantId, userId, now);
             return buildStatusResp(today_record, "已补打上下班卡（漏打上班卡）");
         }
 
         // 已有上班打卡记录，更新下班时间 + 重算工时
+        // 如果是作废坑位，需要恢复 delete_flag=0 和 status=NORMAL，确保数据不留在作废状态
         today_record.setClockOutTime(now);
-        today_record.setWorkMinutes(computeWorkMinutes(today_record.getClockInTime(), now));
+        today_record.setWorkMinutes(computeWorkMinutes(today_record.getClockInTime() == null ? now : today_record.getClockInTime(), now));
         today_record.setUserName(userName);
         today_record.setFactoryId(factoryId);
+        today_record.setDeleteFlag(0);
+        if (isCancelledSlot) {
+            today_record.setStatus("NORMAL");
+            today_record.setSource("manual");
+            if (today_record.getClockInTime() == null) {
+                today_record.setClockInTime(now);
+            }
+        }
         workAttendanceService.updateById(today_record);
         log.info("[clockOut] tenantId={} userId={} clockOutTime={} workMinutes={}",
                 tenantId, userId, now, today_record.getWorkMinutes());
@@ -515,8 +583,9 @@ public class WorkAttendanceOrchestrator {
             throw new IllegalArgumentException("不允许补录未来日期");
         }
 
-        // 检查是否已有记录（含已作废的）
-        WorkAttendance existing = workAttendanceService.findToday(tenantId, targetUserId, workDate);
+        // 检查是否已有记录（含已作废的）——作废后 delete_flag=1，唯一索引仍占坑，必须通过 update 复用
+        // 不能用 findToday（过滤 delete_flag=0），否则作废后补录会走新建分支，触发 uk_tenant_user_date 冲突
+        WorkAttendance existing = workAttendanceService.findTodayIncludingCancelled(tenantId, targetUserId, workDate);
         if (existing != null && !"CANCELLED".equals(existing.getStatus())) {
             throw new IllegalStateException("该员工当天已有打卡记录，请使用「修改」功能");
         }
@@ -557,7 +626,35 @@ public class WorkAttendanceOrchestrator {
             record.setOperateTime(LocalDateTime.now());
             record.setRemark(remark);
             record.setDeleteFlag(0);
-            workAttendanceService.save(record);
+            try {
+                workAttendanceService.save(record);
+            } catch (org.springframework.dao.DuplicateKeyException dke) {
+                // 并发兜底：另一线程同时补录同一天同一员工，已创建则复用
+                WorkAttendance dupExisting = workAttendanceService.findTodayIncludingCancelled(tenantId, targetUserId, workDate);
+                if (dupExisting != null) {
+                    if ("CANCELLED".equals(dupExisting.getStatus())) {
+                        // 刚好另一线程把作废的改回正常？走 update
+                        dupExisting.setClockInTime(clockInTime);
+                        dupExisting.setClockOutTime(clockOutTime);
+                        dupExisting.setWorkMinutes(workMinutes);
+                        dupExisting.setUserName(targetUserName);
+                        dupExisting.setStatus("ADJUSTED");
+                        dupExisting.setSource("admin_adjust");
+                        dupExisting.setOperatorId(ctx.getUserId());
+                        dupExisting.setOperatorName(ctx.getUsername());
+                        dupExisting.setOperateTime(LocalDateTime.now());
+                        dupExisting.setRemark(remark);
+                        dupExisting.setDeleteFlag(0);
+                        workAttendanceService.updateById(dupExisting);
+                        log.info("[adminSupplement] 并发复用坑位 tenantId={} targetUser={} workDate={} operator={}",
+                                tenantId, targetUserId, workDate, ctx.getUserId());
+                    } else {
+                        throw new IllegalStateException("该员工当天已有打卡记录，请使用「修改」功能");
+                    }
+                } else {
+                    throw dke;
+                }
+            }
             log.info("[adminSupplement] 新增补录 tenantId={} targetUser={} workDate={} operator={}",
                     tenantId, targetUserId, workDate, ctx.getUserId());
         }
@@ -595,7 +692,9 @@ public class WorkAttendanceOrchestrator {
             throw new IllegalArgumentException("当天请直接打卡，无需补卡");
         }
 
-        WorkAttendance existing = workAttendanceService.findToday(tenantId, targetUserId, workDate);
+        // 员工自助补卡也必须包含作废记录——管理员作废后用户不能再自助补卡？
+        // 实际上管理员作废=删除，用户可以再补。但唯一索引占坑，必须复用作废的坑位。
+        WorkAttendance existing = workAttendanceService.findTodayIncludingCancelled(tenantId, targetUserId, workDate);
         if (existing != null && !"CANCELLED".equals(existing.getStatus())) {
             throw new IllegalStateException("当天已有打卡记录，请联系管理员修改");
         }
@@ -635,7 +734,34 @@ public class WorkAttendanceOrchestrator {
             record.setOperateTime(LocalDateTime.now());
             record.setRemark(remark);
             record.setDeleteFlag(0);
-            workAttendanceService.save(record);
+            try {
+                workAttendanceService.save(record);
+            } catch (org.springframework.dao.DuplicateKeyException dke) {
+                // 并发兜底：管理员同时补录/员工并发提交补卡
+                WorkAttendance dupExisting = workAttendanceService.findTodayIncludingCancelled(tenantId, targetUserId, workDate);
+                if (dupExisting != null) {
+                    if ("CANCELLED".equals(dupExisting.getStatus())) {
+                        dupExisting.setClockInTime(clockInTime);
+                        dupExisting.setClockOutTime(clockOutTime);
+                        dupExisting.setWorkMinutes(workMinutes);
+                        dupExisting.setUserName(targetUserName);
+                        dupExisting.setStatus("ADJUSTED");
+                        dupExisting.setSource("self_supplement");
+                        dupExisting.setOperatorId(ctx.getUserId());
+                        dupExisting.setOperatorName(ctx.getUsername());
+                        dupExisting.setOperateTime(LocalDateTime.now());
+                        dupExisting.setRemark(remark);
+                        dupExisting.setDeleteFlag(0);
+                        workAttendanceService.updateById(dupExisting);
+                        log.info("[selfSupplement] 并发复用坑位 tenantId={} user={} workDate={}",
+                                tenantId, targetUserId, workDate);
+                    } else {
+                        throw new IllegalStateException("当天已有打卡记录，请联系管理员修改");
+                    }
+                } else {
+                    throw dke;
+                }
+            }
             log.info("[selfSupplement] 新增补卡 tenantId={} user={} workDate={}",
                     tenantId, targetUserId, workDate);
         }
