@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import { Button, Space, Tag, Tooltip, Statistic, Card, Row, Col, Input, Select, Modal, message } from 'antd';
 import { CreditCardOutlined, ClockCircleOutlined, CheckCircleOutlined, ThunderboltOutlined, RobotOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 import { useRequest } from '@/hooks/useRequest';
+import api from '@/utils/api';
 
 interface RefundRequest {
   id: number;
@@ -40,12 +40,12 @@ const SmartRefundTab: React.FC = () => {
   const [rejecting, setRejecting] = useState(false);
 
   const { data: refunds, loading: refundsLoading, run: fetchRefunds, refresh } = useRequest<RefundRequest[]>(
-    () => axios.get('/api/ecommerce/refund/list').then(res => res.data?.data || []),
+    () => api.get('/ecommerce/refund/list').then(res => (res as any)?.data || []),
     { manual: false }
   );
 
   const { data: stats, run: fetchStats } = useRequest<RefundStats>(
-    () => axios.get('/api/ecommerce/refund/stats').then(res => res.data?.data || {}),
+    () => api.get('/ecommerce/refund/stats').then(res => (res as any)?.data || {}),
     { manual: false }
   );
 
@@ -56,8 +56,8 @@ const SmartRefundTab: React.FC = () => {
   const handleAutoProcess = useCallback(async () => {
     setAutoProcessing(true);
     try {
-      const res = await axios.post('/api/ecommerce/refund/auto-process');
-      const msg = res.data?.message || '自动退款处理完成';
+      const res = await api.post('/ecommerce/refund/auto-process');
+      const msg = (res as any)?.message || '自动退款处理完成';
       message.success(msg);
       await fetchRefunds();
       await fetchStats();
@@ -77,8 +77,8 @@ const SmartRefundTab: React.FC = () => {
     if (!currentRecord) return;
     setApproving(true);
     try {
-      const res = await axios.post(`/api/ecommerce/refund/${currentRecord.orderNo}/approve`);
-      const msg = res.data?.message || '退款已执行';
+      const res = await api.post(`/ecommerce/refund/${currentRecord.orderNo}/approve`);
+      const msg = (res as any)?.message || '退款已执行';
       message.success(msg);
       setModalOpen(false);
       setCurrentRecord(null);
@@ -94,8 +94,8 @@ const SmartRefundTab: React.FC = () => {
   const handleReject = useCallback(async (record: RefundRequest) => {
     setRejecting(true);
     try {
-      const res = await axios.post(`/api/ecommerce/refund/${record.orderNo}/reject`);
-      const msg = res.data?.message || '已拒绝退款';
+      const res = await api.post(`/ecommerce/refund/${record.orderNo}/reject`);
+      const msg = (res as any)?.message || '已拒绝退款';
       message.success(msg);
       await fetchRefunds();
       await fetchStats();

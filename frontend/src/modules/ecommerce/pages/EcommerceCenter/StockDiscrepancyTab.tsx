@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import { Button, Space, Tag, Statistic, Card, Row, Col, Input, Select, Modal, message } from 'antd';
 import { StockOutlined, WarningOutlined, ReloadOutlined, SearchOutlined, ThunderboltOutlined, RobotOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 import { useRequest } from '@/hooks/useRequest';
+import api from '@/utils/api';
 
 interface StockDiscrepancy {
   skuId: number;
@@ -35,12 +35,12 @@ const StockDiscrepancyTab: React.FC = () => {
   const [resolving, setResolving] = useState(false);
 
   const { data: discrepancies, loading: discrepanciesLoading, run: fetchDiscrepancies, refresh } = useRequest<StockDiscrepancy[]>(
-    () => axios.get('/api/ecommerce/stock/discrepancies').then(res => res.data?.data || []),
+    () => api.get('/ecommerce/stock/discrepancies').then(res => (res as any)?.data || []),
     { manual: false }
   );
 
   const { data: stats, run: fetchStats } = useRequest<DiscrepancyStats>(
-    () => axios.get('/api/ecommerce/stock/discrepancy-stats').then(res => res.data?.data || {}),
+    () => api.get('/ecommerce/stock/discrepancy-stats').then(res => (res as any)?.data || {}),
     { manual: false }
   );
 
@@ -51,8 +51,8 @@ const StockDiscrepancyTab: React.FC = () => {
   const handleScanDiscrepancies = useCallback(async () => {
     setScanning(true);
     try {
-      const res = await axios.post('/api/ecommerce/stock/scan');
-      const msg = res.data?.message || '库存差异扫描完成';
+      const res = await api.post('/ecommerce/stock/scan');
+      const msg = (res as any)?.message || '库存差异扫描完成';
       message.success(msg);
       await fetchDiscrepancies();
       await fetchStats();
@@ -72,8 +72,8 @@ const StockDiscrepancyTab: React.FC = () => {
     if (!currentRecord) return;
     setResolving(true);
     try {
-      const res = await axios.post(`/api/ecommerce/stock/${currentRecord.skuId}/resolve?resolution=${method}`);
-      const msg = res.data?.message || '库存差异已处理';
+      const res = await api.post(`/ecommerce/stock/${currentRecord.skuId}/resolve?resolution=${method}`);
+      const msg = (res as any)?.message || '库存差异已处理';
       message.success(msg);
       setModalOpen(false);
       setCurrentRecord(null);
