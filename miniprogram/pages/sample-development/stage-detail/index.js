@@ -297,7 +297,7 @@ Page({
     var that = this;
     var snapshot = this.data.patternSnapshot || styleInfo.snapshot || {};
     var stageConfig = [
-      { key: 'procurement', name: '采购' },
+      { key: 'procurement', name: '物料采购' },
       { key: 'cutting', name: '裁剪' },
       { key: 'secondary', name: '二次工艺' },
       { key: 'sewing', name: '车缝' },
@@ -859,23 +859,24 @@ Page({
   },
 
   /**
-   * 按阶段分组（同步PC端父子结构，STAGE_ORDER: 采购/裁剪/二次工艺/车缝/尾部/入库）
+   * 按阶段分组（同步PC端父子结构，STAGE_ORDER: 裁剪/二次工艺/车缝/尾部）
+   * 行业标准：采购/入库不属于生产工序，工序详情中不显示采购/入库子工序
    * @param {Array} processStages - 平铺的子工序列表
    * @returns {Array} 分组后的工序列表 [{stageName, processes, totalCount, completedCount}]
    */
   _groupProcessesByStage(processStages) {
     if (!processStages || processStages.length === 0) return [];
-    // 与 PC 端 STAGE_ORDER 一致
-    var STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+    // 与 PC 端 STAGE_ORDER 一致（4个生产工序，不含采购/入库）
+    var STAGE_ORDER = ['裁剪', '二次工艺', '车缝', '尾部'];
     // progressStage → 中文阶段名映射（覆盖后端可能返回的英文/中文变体）
     var STAGE_MAP = {
-      '采购': '采购', 'procurement': '采购', '备料': '采购',
       '裁剪': '裁剪', 'cutting': '裁剪',
       '二次工艺': '二次工艺', 'secondary': '二次工艺',
       '车缝': '车缝', 'sewing': '车缝', '缝制': '车缝', 'carSewing': '车缝',
       '尾部': '尾部', 'tail': '尾部', '后整': '尾部', 'tailProcess': '尾部',
-      '入库': '入库', 'warehousing': '入库',
     };
+    // 采购/入库阶段映射（用于过滤，不显示在工序列表中）
+    var NON_GATE_STAGES = { '采购': true, 'procurement': true, '备料': true, '入库': true, 'warehousing': true };
 
     function resolveStageName(progressStage) {
       var ps = String(progressStage || '').trim();
@@ -891,11 +892,15 @@ Page({
       return ps;
     }
 
-    // 分组
+    // 分组（过滤掉采购/入库子工序）
     var groupMap = {};
     var customOrder = [];
     processStages.forEach(function (p) {
-      var stageName = resolveStageName(p.progressStage);
+      var rawStage = String(p.progressStage || '').trim();
+      // 采购/入库是非门禁阶段，不在工序详情中显示
+      if (NON_GATE_STAGES[rawStage]) return;
+      var stageName = resolveStageName(rawStage);
+      if (NON_GATE_STAGES[stageName]) return;
       if (!groupMap[stageName]) {
         groupMap[stageName] = [];
         customOrder.push(stageName);
@@ -941,7 +946,7 @@ Page({
     if (stageKey === 'process' || !stageKey) return groups;
     // stageKey → 中文阶段名
     var STAGE_KEY_MAP = {
-      procurement: '采购',
+      procurement: '物料采购',
       cutting: '裁剪',
       secondary: '二次工艺',
       sewing: '车缝',
