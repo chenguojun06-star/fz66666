@@ -70,7 +70,10 @@ Page({
   data: {
     orderId: '',
     orderNo: '',
+    patternProductionId: '',
+    sourceType: '',
     styleNo: '',
+    isSampleMode: false,
     loading: false,
     submitting: false,
     materialPurchases: [],
@@ -92,13 +95,22 @@ Page({
 
   onLoad(options) {
     this.orderNo = decodeURIComponent(options.orderNo || '');
+    this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
+    this.sourceType = decodeURIComponent(options.sourceType || '');
     const styleNo = decodeURIComponent(options.styleNo || '');
-    this.setData({ orderNo: this.orderNo, styleNo });
-    if (this.orderNo) this._loadDetail();
+    const isSampleMode = this.sourceType === 'sample' || !!this.patternProductionId;
+    this.setData({
+      orderNo: this.orderNo,
+      patternProductionId: this.patternProductionId,
+      sourceType: this.sourceType,
+      styleNo,
+      isSampleMode,
+    });
+    if (this.orderNo || this.patternProductionId) this._loadDetail();
   },
 
   onShow() {
-    if (this.orderNo) this._loadDetail();
+    if (this.orderNo || this.patternProductionId) this._loadDetail();
     this._bindEvents();
   },
 
@@ -113,7 +125,7 @@ Page({
   _bindEvents() {
     this._onDataChanged = (data) => {
       if (data && (data.type === 'procurement' || data.type === 'purchase')) {
-        if (this.orderNo) this._loadDetail();
+        if (this.orderNo || this.patternProductionId) this._loadDetail();
       }
     };
     eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
@@ -130,7 +142,10 @@ Page({
   async _loadDetail() {
     this.setData({ loading: true });
     try {
-      const res = await api.production.getMaterialPurchases({ orderNo: this.orderNo });
+      const params = this.orderNo
+        ? { orderNo: this.orderNo }
+        : { patternProductionId: this.patternProductionId };
+      const res = await api.production.getMaterialPurchases(params);
       const list = this._normalizeToArray(res);
       const userInfo = getUserInfo() || {};
       const receiverId = String(userInfo.id || userInfo.userId || '').trim();
@@ -188,7 +203,8 @@ Page({
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
       // 对齐 PC 端 footer "确认完成"按钮条件：
       // 有 awaiting_confirm 状态记录 且 无 returnConfirmed=1 锁定（不校验到货率）
-      const canConfirmProcurement = hasAwaitingConfirm && !hasReturnConfirmed;
+      // 样衣场景无订单流转，禁用"一键全部完成"（采购完成不触发流转裁剪）
+      const canConfirmProcurement = !this.data.isSampleMode && hasAwaitingConfirm && !hasReturnConfirmed;
 
       // 头部状态：基于物料实际状态计算（不依赖到货率，对齐用户诉求"已完成的任务要显示已完成"）
       // 优先级：全部 completed → 已完成；含 cancelled 且其他都完成 → 已完成（取消的物料不阻断）
@@ -384,6 +400,8 @@ Page({
   },
 
   async onConfirmProcurement() {
+    // 样衣场景无订单流转，按钮已隐藏，此处防御性返回
+    if (this.data.isSampleMode) return;
     if (this.data.hasReturnConfirmed) {
       toast.warning('已有物料完成回料确认，无需再次确认');
       return;

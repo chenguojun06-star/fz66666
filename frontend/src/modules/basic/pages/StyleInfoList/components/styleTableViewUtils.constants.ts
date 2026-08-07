@@ -28,19 +28,17 @@ export const SEASON_MAP: Record<string, string> = {
 
 export const STAGE_MIN_SLOT_WIDTH = 128;
 
+// 行业标准：生产工序只含4个阶段（裁剪/二次工艺/车缝/尾部）
+// 采购/入库不属于生产工序，进度由采购单状态/仓库收货驱动
 export const SAMPLE_PARENT_STAGES = [
-  { key: 'procurement', label: '采购' },
   { key: 'cutting', label: '裁剪' },
   { key: 'secondary', label: '二次工艺' },
   { key: 'sewing', label: '车缝' },
   { key: 'tail', label: '尾部' },
-  { key: 'warehousing', label: '入库' },
 ];
 export const SAMPLE_PROGRESS_NODE_ALIASES: Record<string, string[]> = {
-  procurement: ['procurement', '采购'],
   cutting: ['cutting', '裁剪', '下板'],
   secondary: ['secondary', '二次工艺'],
   sewing: ['sewing', '车缝', '缝制'],
   tail: ['tail', '尾部', '后整'],
-  warehousing: ['warehousing', '入库'],
 };

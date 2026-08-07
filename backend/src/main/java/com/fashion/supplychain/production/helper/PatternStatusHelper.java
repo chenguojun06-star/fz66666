@@ -394,15 +394,13 @@ public class PatternStatusHelper {
 
         try {
             Map<String, Object> nodes = objectMapper.readValue(progressNodes, new TypeReference<Map<String, Object>>() {});
-            // 固定6阶段，与前端 SAMPLE_PARENT_STAGES 对齐
-            // 每个阶段支持中英文别名，取第一个非空值
+            // 行业标准：生产进度只算4个核心生产工序（裁剪/二次工艺/车缝/尾部）
+            // 采购/入库是数据驱动（看采购单状态/仓库收货），不参与生产进度计算
             String[][] stageAliases = {
-                {"procurement", "采购"},
                 {"cutting", "裁剪"},
                 {"secondary", "二次工艺"},
                 {"sewing", "车缝", "缝制", "生产"},
-                {"tail", "尾部", "后整"},
-                {"warehousing", "入库"}
+                {"tail", "尾部", "后整"}
             };
             int sum = 0;
             for (String[] aliases : stageAliases) {
@@ -422,8 +420,8 @@ public class PatternStatusHelper {
                 }
                 sum += value;
             }
-            // 分母固定为6，与前端 Math.round(totalPercent / 6) 一致
-            int avg = Math.round((float) sum / 6);
+            // 分母为4（只算生产工序：裁剪/二次工艺/车缝/尾部），与前端对齐
+            int avg = Math.round((float) sum / 4);
             return Math.max("IN_PROGRESS".equals(status) ? 5 : 0, avg);
         } catch (Exception e) {
             log.warn("Failed to parse pattern progress nodes: patternId={}", pattern.getId(), e);

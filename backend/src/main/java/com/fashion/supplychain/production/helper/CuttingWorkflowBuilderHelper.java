@@ -20,7 +20,9 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class CuttingWorkflowBuilderHelper {
 
-    private static final List<String> STAGE_ORDER = List.of("采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
+    // 行业标准：生产工序只含4个阶段（裁剪/二次工艺/车缝/尾部）
+    // 采购/入库不属于生产工序，进度由采购单状态/仓库收货驱动
+    private static final List<String> STAGE_ORDER = List.of("裁剪", "二次工艺", "车缝", "尾部");
 
     private final TemplateLibraryService templateLibraryService;
     private final ProcessParentMappingService processParentMappingService;

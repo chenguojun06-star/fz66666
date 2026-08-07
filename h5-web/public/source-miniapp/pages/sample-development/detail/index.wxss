@@ -1279,6 +1279,24 @@
   font-size: 12px;
   color: var(--color-text-tertiary, #999);
 }
+.tab-card__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 镂空按钮：管理采购（样衣采购闭环入口） */
+.tab-card__proc-btn {
+  padding: 4px 12px;
+  border: 1rpx solid var(--color-primary, #1677ff);
+  color: var(--color-primary, #1677ff);
+  background: transparent;
+  border-radius: 8rpx;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.tab-card__proc-btn-hover {
+  opacity: 0.7;
+}
 
 /* 基础资料行 */
 .info-row {

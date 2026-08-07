@@ -119,7 +119,16 @@
       <view wx:if="{{activeTab === 'bom'}}" class="tab-card">
         <view class="tab-card__header">
           <text class="tab-card__title">BOM 物料</text>
-          <text class="tab-card__count">{{bomList.length}}项</text>
+          <view class="tab-card__header-right">
+            <text class="tab-card__count">{{bomList.length}}项</text>
+            <view
+              wx:if="{{patternId}}"
+              class="tab-card__proc-btn"
+              bindtap="onGoProcurement"
+              hover-class="tab-card__proc-btn-hover"
+              hover-stay-time="100"
+            >管理采购</view>
+          </view>
         </view>
         <view wx:if="{{bomLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
         <view wx:elif="{{bomList.length > 0}}" class="bom-list">

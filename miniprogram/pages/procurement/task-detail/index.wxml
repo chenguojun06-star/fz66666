@@ -21,7 +21,7 @@
             <view class="media-placeholder line-icon icon-package"></view>
           </view>
           <view class="header-title">
-            <text class="order-no">{{orderNo}}</text>
+            <text class="order-no">{{isSampleMode ? '样衣采购' : orderNo}}</text>
             <text class="style-no" wx:if="{{styleNo}}">款号 {{styleNo}}</text>
           </view>
           <text class="tag tag-{{overallStatusColor}}">{{overallStatusText}}</text>
@@ -216,6 +216,7 @@
       bindtap="onSubmit"
     >提交到货</view>
     <view
+      wx:if="{{!isSampleMode}}"
       class="btn-primary {{(!canConfirmProcurement || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
       hover-class="{{(canConfirmProcurement && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}"
       bindtap="onConfirmProcurement"

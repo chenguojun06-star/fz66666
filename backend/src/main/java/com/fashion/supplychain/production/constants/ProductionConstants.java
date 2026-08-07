@@ -8,6 +8,16 @@ public final class ProductionConstants {
 
     private ProductionConstants() {}
 
+    /**
+     * 固定生产节点（含采购/入库，仅用于解析旧数据兼容）
+     *
+     * 行业标准：采购/入库不属于生产工序——
+     *   采购是供应链模块（看采购单状态），入库是仓储模块（看仓库收货）。
+     *   这两个阶段是"数据驱动"，不是"门禁驱动"（不靠生产扫码卡）。
+     *
+     * 保留6节点仅用于解析历史订单的 progressWorkflowJson，
+     * 新数据不再生成采购/入库节点（见 CuttingWorkflowBuilderHelper.STAGE_ORDER）。
+     */
     public static final List<String> FIXED_PRODUCTION_NODES = Collections.unmodifiableList(
             Arrays.asList("采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"));
 
@@ -22,8 +32,7 @@ public final class ProductionConstants {
      *   采购是供应链模块（看采购单状态），入库是仓储模块（看仓库收货）。
      *   这两个阶段是"数据驱动"，不是"门禁驱动"（不靠生产扫码卡）。
      *
-     * 6个固定节点保留（FIXED_PRODUCTION_NODES）用于进度展示，
-     * 但门禁校验（validateParentStagePrerequisite）只校验核心生产工序。
+     * 工序配置、进度展示、门禁校验只使用这4个核心生产工序。
      */
     public static final List<String> PRODUCTION_CORE_NODES = Collections.unmodifiableList(
             Arrays.asList("裁剪", "二次工艺", "车缝", "尾部"));

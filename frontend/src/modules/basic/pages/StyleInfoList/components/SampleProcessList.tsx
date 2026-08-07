@@ -10,9 +10,8 @@ import StageTabs from './components/StageTabs';
 import AssigneeModal from './components/AssigneeModal';
 import PurchaseDrawer from './components/PurchaseDrawer';
 
-// 行业标准：采购/入库是"数据驱动"（看采购单状态/仓库收货），不是"门禁驱动"（不靠生产扫码卡）
-// 与 StageTabs.NON_GATE_STAGE_KEYS / 后端 ProductionConstants.NON_GATE_STAGES 对齐
-const NON_GATE_STAGE_KEYS = new Set(['procurement', 'warehousing']);
+// 行业标准：采购/入库不属于生产工序，已从工序列表中移除
+// 生产工序只含4个阶段：裁剪 → 二次工艺 → 车缝 → 尾部
 
 interface SampleProcessListProps {
   stages: ProcessStageProgress[];
@@ -93,11 +92,9 @@ export default function SampleProcessList({
     [activeTab, currentStage, actioningKey, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo],
   );
 
-  // 行业标准：生产进度只算生产工序（裁剪/二次工艺/车缝/尾部），不包含采购/入库
-  // 采购完成看采购单状态（到货率/确认完成），入库完成看仓库收货（成品入库记录）
-  const productionStages = stages.filter(s => !NON_GATE_STAGE_KEYS.has(s.key));
-  const completedCount = productionStages.filter(s => s.percent >= 100).length;
-  const totalProduction = productionStages.length;
+  // 生产工序进度计算（采购/入库已从工序列表移除，stages 只含4个生产工序）
+  const completedCount = stages.filter(s => s.percent >= 100).length;
+  const totalProduction = stages.length;
 
   const handleSaveField = (field: 'styleNo' | 'color' | 'size', value: string) => {
     setSavingField(field);
@@ -162,27 +159,13 @@ export default function SampleProcessList({
         />
       ) : null}
 
-      {/* 整体有工序配置，但当前切换到的阶段未配置子工序：
-          采购和入库是"数据驱动"阶段（看采购单状态/仓库收货），不是生产工序，不需要配置子工序；
-          裁剪/二次工艺/车缝/尾部是生产工序，未配置子工序时提示去配置 */}
+      {/* 当前阶段未配置子工序时提示去配置 */}
       {currentStageEmpty ? (
         <Alert
-          type={currentStage?.key === 'procurement' || currentStage?.key === 'warehousing' ? 'success' : 'info'}
+          type="info"
           showIcon
-          message={
-            currentStage?.key === 'procurement'
-              ? '采购阶段无需配置子工序'
-              : currentStage?.key === 'warehousing'
-              ? '入库阶段无需配置子工序'
-              : `「${currentStage?.label || '当前阶段'}」尚未配置子工序`
-          }
-          description={
-            currentStage?.key === 'procurement'
-              ? '采购完成看采购单状态（到货率/确认完成），不是生产扫码工序。请在「采购管理」中操作采购单。'
-              : currentStage?.key === 'warehousing'
-              ? '入库完成看仓库收货（成品入库记录），不是生产扫码工序。请在「成品仓库」中操作入库。'
-              : '该阶段未配置具体子工序，如需展示明细请在「款式工序配置」中为该阶段添加子工序。若该阶段无需子工序，可忽略此提示。'
-          }
+          message={`「${currentStage?.label || '当前阶段'}」尚未配置子工序`}
+          description="该阶段未配置具体子工序，如需展示明细请在「款式工序配置」中为该阶段添加子工序。若该阶段无需子工序，可忽略此提示。"
           style={{ marginBottom: 12 }}
         />
       ) : null}

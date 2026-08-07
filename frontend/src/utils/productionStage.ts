@@ -1,6 +1,9 @@
-export const STAGE_ORDER: string[] = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+// 行业标准：采购/入库不属于生产工序配置（采购是供应链模块，入库是仓储模块）
+// 工序配置只含4个生产工序阶段：裁剪 → 二次工艺 → 车缝 → 尾部
+// 采购进度看采购单状态（到货率），入库进度看仓库收货（成品入库记录）
+export const STAGE_ORDER: string[] = ['裁剪', '二次工艺', '车缝', '尾部'];
 
-export const CUTTING_STAGE_ORDER: string[] = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+export const CUTTING_STAGE_ORDER: string[] = ['裁剪', '二次工艺', '车缝', '尾部'];
 
 export interface StageSpanInfo {
   rowSpan: number;

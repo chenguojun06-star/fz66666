@@ -788,6 +788,20 @@ Page({
     }
   },
 
+  /** 跳转采购管理（样衣采购闭环：patternProductionId 查询，sourceType=sample） */
+  onGoProcurement() {
+    const { patternId, styleInfo } = this.data;
+    if (!patternId) return;
+    const styleNo = (styleInfo && styleInfo.styleNo) || '';
+    wx.navigateTo({
+      url: '/pages/procurement/task-detail/index?patternProductionId=' +
+        encodeURIComponent(patternId) +
+        '&styleNo=' + encodeURIComponent(styleNo) +
+        '&sourceType=sample',
+      fail: () => wx.showToast({ title: '跳转失败', icon: 'none' }),
+    });
+  },
+
   // === 工序项点击展开：显示该工序的实际扫码记录 ===
   onProcessItemTap(e) {
     const idx = Number(e.currentTarget.dataset.idx);

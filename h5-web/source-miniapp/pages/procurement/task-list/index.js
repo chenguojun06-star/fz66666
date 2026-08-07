@@ -176,12 +176,16 @@ Page({
   },
 
   onViewDetail(e) {
-    const { orderNo, styleNo } = e.currentTarget.dataset;
-    if (!orderNo) return;
+    const { orderNo, styleNo, patternProductionId, sourceType } = e.currentTarget.dataset;
+    // 优先用 orderNo（大货），其次用 patternProductionId（样衣采购）
+    if (!orderNo && !patternProductionId) return;
+    const params = orderNo
+      ? 'orderNo=' + encodeURIComponent(orderNo)
+      : 'patternProductionId=' + encodeURIComponent(patternProductionId);
     safeNavigate({
-      url: '/pages/procurement/task-detail/index?orderNo=' +
-        encodeURIComponent(orderNo) + '&styleNo=' +
-        encodeURIComponent(styleNo || ''),
+      url: '/pages/procurement/task-detail/index?' + params +
+        '&styleNo=' + encodeURIComponent(styleNo || '') +
+        '&sourceType=' + encodeURIComponent(sourceType || ''),
     }).catch(() => {});
   },
 

@@ -4,6 +4,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { productionOrderApi } from '@/services/production/productionApi';
+import { STAGE_ORDER } from '@/utils/productionStage'; // 行业标准：工序只含4个生产工序（裁剪/二次工艺/车缝/尾部）
 
 type WorkflowRow = {
   _key: string;
@@ -218,7 +219,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       width: 120,
       render: (v: string, row: WorkflowRow) => (
         <Select value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'progressStage', val || '')}
-          options={['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'].map(s => ({ value: s, label: s }))}
+          options={STAGE_ORDER.map(s => ({ value: s, label: s }))}
         />
       ),
     },
