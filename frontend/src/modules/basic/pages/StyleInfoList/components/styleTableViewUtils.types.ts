@@ -4,7 +4,7 @@ import { StyleInfo } from '@/types/style';
 
 export type StageStatus = 'done' | 'active' | 'waiting' | 'risk' | 'scrapped';
 export type DeliveryTone = 'normal' | 'warning' | 'danger' | 'success' | 'scrapped';
-export type StageActionKey = 'detail' | 'pattern' | 'sizePrice' | 'secondary';
+export type StageActionKey = 'detail' | 'pattern' | 'sizePrice' | 'secondary' | 'procurement';
 
 export type StyleRecord = StyleInfo & Record<string, unknown>;
 

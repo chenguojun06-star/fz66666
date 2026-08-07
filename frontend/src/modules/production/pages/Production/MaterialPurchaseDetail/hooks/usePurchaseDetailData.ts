@@ -27,7 +27,8 @@ export interface PurchaseDetailDataState {
 
 export function usePurchaseDetailData(
   styleNoParam: string,
-  orderNoParam: string
+  orderNoParam: string,
+  sampleMode?: boolean,
 ): PurchaseDetailDataState {
   const { message } = App.useApp();
 
@@ -76,20 +77,28 @@ export function usePurchaseDetailData(
     setLoading(true);
     let orderRecord: ProductionOrder | null = null;
     try {
-      try {
-        const orderRes = await api.get<ApiResult<PageResult<ProductionOrder>>>('/production/order/list', {
-          params: { styleNo: styleNoParam, page: 1, pageSize: 1 },
-        });
-        const orders = orderRes?.data?.records || [];
-        orderRecord = orders.length > 0 ? orders[0] : null;
-        setOrder(orderRecord);
-      } catch {
+      // 样衣采购场景：跳过订单查询，避免无谓的 HTTP 请求与"订单不存在"警告
+      if (!sampleMode) {
+        try {
+          const orderRes = await api.get<ApiResult<PageResult<ProductionOrder>>>('/production/order/list', {
+            params: { styleNo: styleNoParam, page: 1, pageSize: 1 },
+          });
+          const orders = orderRes?.data?.records || [];
+          orderRecord = orders.length > 0 ? orders[0] : null;
+          setOrder(orderRecord);
+        } catch {
+          setOrder(null);
+        }
+      } else {
         setOrder(null);
       }
 
-      const params: PurchaseListParams = orderNoParam
-        ? { orderNo: orderNoParam, page: 1, pageSize: 1000 }
-        : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
+      // 样衣场景直接按 sourceType='sample' + styleNo 过滤，避免拉到订单采购数据
+      const params: PurchaseListParams = sampleMode
+        ? { styleNo: styleNoParam, sourceType: 'sample' as any, page: 1, pageSize: 1000 }
+        : orderNoParam
+          ? { orderNo: orderNoParam, page: 1, pageSize: 1000 }
+          : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
       const purchaseRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', { params });
       const result = purchaseRes;
       let records: MaterialPurchase[] = [];
@@ -99,7 +108,7 @@ export function usePurchaseDetailData(
         records = result?.data?.records || result?.records || [];
       }
 
-      if (records.length === 0 && orderRecord?.id) {
+      if (!sampleMode && records.length === 0 && orderRecord?.id) {
         try {
           const previewRes = await api.get<ApiResult<MaterialPurchase[]>>(
             '/production/purchase/demand/preview',
@@ -111,7 +120,7 @@ export function usePurchaseDetailData(
         } catch { /* 预览不可用则用空列表 */ }
       }
 
-      if (records.length === 0 && orderNoParam && orderRecord) {
+      if (!sampleMode && records.length === 0 && orderNoParam && orderRecord) {
         const styleNo = String(orderRecord?.styleNo || '').trim();
         if (styleNo) {
           try {
@@ -134,7 +143,7 @@ export function usePurchaseDetailData(
     } finally {
       setLoading(false);
     }
-  }, [styleNoParam, orderNoParam, message]);
+  }, [styleNoParam, orderNoParam, sampleMode, message]);
 
   useEffect(() => {
     loadData();

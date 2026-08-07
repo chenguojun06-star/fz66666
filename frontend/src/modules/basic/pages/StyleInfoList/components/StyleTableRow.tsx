@@ -26,6 +26,7 @@ interface StyleTableRowCallbacks {
   setSelectedStage: (updater: (prev: SelectedStage | null) => SelectedStage | null) => void;
   setDevelopmentDrawerRecord: (record: StyleInfo | null) => void;
   setDevelopmentDrawerSection: (section: WorkbenchSection) => void;
+  setProcurementDrawerRecord: (record: StyleInfo | null) => void;
 }
 
 interface StyleTableRowProps {
@@ -145,6 +146,10 @@ const StyleTableRow: React.FC<StyleTableRowProps> = ({
                   type="button"
                   className={`style-smart-stage style-smart-stage--${stage.status}`}
                   onClick={() => {
+                    if (stage.key === 'procurement') {
+                      callbacks.setProcurementDrawerRecord(record);
+                      return;
+                    }
                     if (stage.key === 'development' || stage.key === 'pattern' || stage.key === 'sizePrice' || stage.key === 'secondary') {
                       const sectionMap: Record<string, WorkbenchSection> = {
                         development: 'bom',

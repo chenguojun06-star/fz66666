@@ -14,6 +14,8 @@ export interface PurchaseDetailEditParams {
   isMultiColor: boolean;
   colorList: string[];
   loadData: () => Promise<void>;
+  /** 样衣采购场景：新增行时默认 sourceType='sample'，不填 orderNo */
+  sampleMode?: boolean;
 }
 
 export interface PurchaseDetailEditState {
@@ -36,7 +38,7 @@ export interface PurchaseDetailEditState {
 }
 
 export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): PurchaseDetailEditState {
-  const { styleNoParam, orderNoParam, order, purchaseList, isMultiColor, colorList, loadData } = params;
+  const { styleNoParam, orderNoParam, order, purchaseList, isMultiColor, colorList, loadData, sampleMode } = params;
   const { modal, message } = App.useApp();
 
   const [editing, setEditing] = useState(false);
@@ -52,8 +54,9 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
         id: `tmp_${Date.now()}_${color}`,
         purchaseNo: '',
         supplierId: '',
-        orderNo: orderNoParam || order?.orderNo || '',
+        orderNo: sampleMode ? '' : (orderNoParam || order?.orderNo || ''),
         styleNo: styleNoParam,
+        sourceType: sampleMode ? 'sample' : 'order',
         materialType: 'fabricA',
         materialCode: '',
         materialName: '',
@@ -75,7 +78,7 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
       setEditableData([...purchaseList]);
     }
     setEditing(true);
-  }, [purchaseList, isMultiColor, colorList, orderNoParam, order?.orderNo, styleNoParam]);
+  }, [purchaseList, isMultiColor, colorList, orderNoParam, order?.orderNo, styleNoParam, sampleMode]);
 
   const handleCancelEdit = useCallback(() => {
     setEditing(false);
@@ -87,8 +90,9 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
       id: `tmp_${Date.now()}`,
       purchaseNo: '',
       supplierId: '',
-      orderNo: orderNoParam || order?.orderNo || '',
+      orderNo: sampleMode ? '' : (orderNoParam || order?.orderNo || ''),
       styleNo: styleNoParam,
+      sourceType: sampleMode ? 'sample' : 'order',
       materialType: 'fabricA',
       materialCode: '',
       materialName: '',
@@ -106,7 +110,7 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
       status: MATERIAL_PURCHASE_STATUS.PENDING,
     } as MaterialPurchase;
     setEditableData((prev) => [...prev, newRow]);
-  }, [orderNoParam, order?.orderNo, styleNoParam]);
+  }, [orderNoParam, order?.orderNo, styleNoParam, sampleMode]);
 
   const handleUpdateRow = useCallback((rowId: string, field: keyof MaterialPurchase, value: unknown) => {
     setEditableData((prev) =>
@@ -182,8 +186,8 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
           ...rest,
           totalAmount,
           status: r.status || MATERIAL_PURCHASE_STATUS.PENDING,
-          sourceType: r.sourceType || 'order',
-          orderNo: r.orderNo || orderNoParam || order?.orderNo || '',
+          sourceType: sampleMode ? (r.sourceType || 'sample') : (r.sourceType || 'order'),
+          orderNo: sampleMode ? (r.orderNo || '') : (r.orderNo || orderNoParam || order?.orderNo || ''),
           styleNo: r.styleNo || styleNoParam,
           ...(isTemp ? {} : { id }),
         };
@@ -215,7 +219,7 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
     } finally {
       setSaving(false);
     }
-  }, [editableData, purchaseList, orderNoParam, order?.orderNo, styleNoParam, isMultiColor, loadData, message]);
+  }, [editableData, purchaseList, orderNoParam, order?.orderNo, styleNoParam, isMultiColor, loadData, message, sampleMode]);
 
   const handleOpenMaterialModal = useCallback((rowId: string) => {
     setMaterialTargetRowId(rowId);

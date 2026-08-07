@@ -68,6 +68,7 @@ export default function useStyleTableViewData(params: UseStyleTableViewDataParam
   const [selectedStage, setSelectedStage] = useState<SelectedStage | null>(null);
   const [developmentDrawerRecord, setDevelopmentDrawerRecord] = useState<StyleInfo | null>(null);
   const [developmentDrawerSection, setDevelopmentDrawerSection] = useState<WorkbenchSection>('bom');
+  const [procurementDrawerRecord, setProcurementDrawerRecord] = useState<StyleInfo | null>(null);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
   const [remarkTarget, setRemarkTarget] = useState<RemarkTarget>({ open: false, styleNo: '' });
@@ -115,6 +116,7 @@ export default function useStyleTableViewData(params: UseStyleTableViewDataParam
     selectedStage,
     developmentDrawerRecord,
     developmentDrawerSection,
+    procurementDrawerRecord,
     copyModalOpen,
     copySource,
     remarkTarget,
@@ -127,6 +129,7 @@ export default function useStyleTableViewData(params: UseStyleTableViewDataParam
     setSelectedStage,
     setDevelopmentDrawerRecord,
     setDevelopmentDrawerSection,
+    setProcurementDrawerRecord,
     setCopyModalOpen,
     setCopySource,
     setRemarkTarget,

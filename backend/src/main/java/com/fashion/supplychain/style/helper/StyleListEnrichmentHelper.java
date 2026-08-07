@@ -56,6 +56,77 @@ public class StyleListEnrichmentHelper {
     @Autowired
     private com.fashion.supplychain.style.service.ProductSkuService productSkuService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
+
+    /**
+     * 填充采购进度字段（procurementProgress）。
+     * 行业标准：采购属于供应链模块（数据驱动），独立于生产工序配置。
+     * 进度计算：completed/total * 100，仅统计未取消的采购单。
+     * 关联方式：按 style_id 优先匹配，style_no 兜底。
+     */
+    public void fillProcurementProgressFields(List<StyleInfo> records) {
+        if (records == null || records.isEmpty()) return;
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
+
+        StyleKeyCollection keys = collectStyleKeys(records);
+        if (keys.styleIds.isEmpty() && keys.styleNos.isEmpty()) return;
+
+        Map<String, Integer> totalByStyleKey = new HashMap<>();
+        Map<String, Integer> completedByStyleKey = new HashMap<>();
+
+        QueryWrapper<com.fashion.supplychain.production.entity.MaterialPurchase> qw = new QueryWrapper<>();
+        qw.select("style_id as styleId", "style_no as styleNo", "status")
+                .eq(tenantScopedRead, "tenant_id", readableTenantId)
+                .and(w -> buildStyleIdOrNoCondition(w, keys))
+                .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
+                .ne("status", "cancelled");
+        try {
+            List<com.fashion.supplychain.production.entity.MaterialPurchase> purchases = materialPurchaseService.list(qw);
+            for (com.fashion.supplychain.production.entity.MaterialPurchase p : purchases) {
+                if (p == null) continue;
+                String sid = StringUtils.hasText(p.getStyleId()) ? p.getStyleId().trim() : null;
+                String sno = StringUtils.hasText(p.getStyleNo()) ? p.getStyleNo().trim() : null;
+                if (StringUtils.hasText(sid)) {
+                    totalByStyleKey.merge(sid, 1, Integer::sum);
+                    if ("completed".equalsIgnoreCase(String.valueOf(p.getStatus()))) {
+                        completedByStyleKey.merge(sid, 1, Integer::sum);
+                    }
+                }
+                if (StringUtils.hasText(sno)) {
+                    totalByStyleKey.merge(sno, 1, Integer::sum);
+                    if ("completed".equalsIgnoreCase(String.valueOf(p.getStatus()))) {
+                        completedByStyleKey.merge(sno, 1, Integer::sum);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("fillProcurementProgressFields 查询采购进度异常: {}", e.getMessage());
+            return;
+        }
+
+        for (StyleInfo s : records) {
+            if (s == null) continue;
+            String idKey = s.getId() == null ? null : String.valueOf(s.getId());
+            int total = 0;
+            int completed = 0;
+            if (StringUtils.hasText(idKey)) {
+                total = totalByStyleKey.getOrDefault(idKey, 0);
+                completed = completedByStyleKey.getOrDefault(idKey, 0);
+            }
+            if (total == 0) {
+                String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
+                if (StringUtils.hasText(sno)) {
+                    total = totalByStyleKey.getOrDefault(sno, 0);
+                    completed = completedByStyleKey.getOrDefault(sno, 0);
+                }
+            }
+            int progress = total > 0 ? (int) Math.round((completed * 100.0) / total) : 0;
+            s.setProcurementProgress(progress);
+        }
+    }
+
     public void fillOrderCountFields(List<StyleInfo> records) {
         if (records == null || records.isEmpty()) return;
         Long readableTenantId = resolveReadableTenantId();

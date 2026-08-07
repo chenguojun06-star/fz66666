@@ -120,6 +120,32 @@ export const buildSecondaryStage: StageBuilder = (record) => {
   };
 };
 
+export const buildProcurementStage: StageBuilder = (record) => {
+  const procurementProgress = clampPercent(Number(record.procurementProgress || 0));
+  const done = procurementProgress >= 100;
+  const started = procurementProgress > 0;
+
+  return {
+    key: 'procurement',
+    label: '采购',
+    helper: done
+      ? '采购已完成'
+      : started
+        ? `进度 ${procurementProgress}%`
+        : '未开始采购',
+    startTimeLabel: '',
+    timeLabel: done ? '已完成' : started ? '采购中' : '',
+    status: done ? 'done' : started ? 'active' : 'waiting',
+    progress: done ? 100 : procurementProgress,
+    actionKey: 'procurement',
+    actionLabel: '采购管理',
+    details: buildStageDetails(
+      done ? '采购已完成' : started ? '采购进行中' : '尚未开始采购',
+      started ? `当前进度：${procurementProgress}%` : '点击进入采购管理操作'
+    ),
+  };
+};
+
 export const buildSampleStage: StageBuilder = (record) => {
   const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
@@ -212,6 +238,7 @@ export const STAGE_BUILDERS: StageBuilder[] = [
   buildPatternStage,
   buildSizePriceStage,
   buildSecondaryStage,
+  buildProcurementStage,
   buildSampleStage,
   buildConfirmStage,
 ];
@@ -227,5 +254,9 @@ export const resolveStageActionPath = (record: StyleInfo, stage: SmartStage) => 
   if (stage.actionKey === 'pattern') return `/style-info/${record.id}?tab=7&section=files`;
   if (stage.actionKey === 'sizePrice') return `/style-info/${record.id}?tab=10`;
   if (stage.actionKey === 'secondary') return `/style-info/${record.id}?tab=9`;
+  if (stage.actionKey === 'procurement') {
+    const styleNo = String(record.styleNo || '').trim();
+    return styleNo ? `/production/material/${encodeURIComponent(styleNo)}` : `/style-info/${record.id}`;
+  }
   return `/style-info/${record.id}`;
 };

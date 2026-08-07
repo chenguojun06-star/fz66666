@@ -7,6 +7,7 @@ import useStyleTableViewData from './useStyleTableViewData';
 import StyleTableRow from './StyleTableRow';
 import StyleStageDrawer from './StyleStageDrawer';
 import StyleDevDrawer from './StyleDevDrawer';
+import StyleProcurementDrawer from './StyleProcurementDrawer';
 import StyleProgressEditorModal from './StyleProgressEditorModal';
 import StyleReviewModal from './StyleReviewModal';
 import StyleTableMiscModals from './StyleTableMiscModals';
@@ -104,6 +105,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 setSelectedStage: ctx.setSelectedStage,
                 setDevelopmentDrawerRecord: ctx.setDevelopmentDrawerRecord,
                 setDevelopmentDrawerSection: ctx.setDevelopmentDrawerSection,
+                setProcurementDrawerRecord: ctx.setProcurementDrawerRecord,
               }}
             />
           ))
@@ -139,6 +141,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         record={ctx.developmentDrawerRecord}
         section={ctx.developmentDrawerSection}
         onClose={() => ctx.setDevelopmentDrawerRecord(null)}
+        onSync={onRefresh}
+      />
+
+      <StyleProcurementDrawer
+        open={Boolean(ctx.procurementDrawerRecord)}
+        record={ctx.procurementDrawerRecord}
+        onClose={() => ctx.setProcurementDrawerRecord(null)}
         onSync={onRefresh}
       />
 

@@ -18,9 +18,11 @@ export interface MaterialPurchaseDetailProps {
   orderNo?: string;
   embedded?: boolean;
   onClose?: () => void;
+  /** 样衣采购场景：无生产订单，跳过订单查询与警告，标题改为"采购管理" */
+  sampleMode?: boolean;
 }
 
-const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose }) => {
+const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose, sampleMode }) => {
   const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
   const orderNo = propOrderNo ?? searchParams.get('orderNo') ?? '';
@@ -51,7 +53,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     handleOpenMaterialModal, handleUseMaterial, handleCreateMaterial,
     colorList, isMultiColor, canProcure, bomIncomplete, missingColors,
     loadData,
-  } = usePurchaseDetailPage(styleNo, orderNo);
+  } = usePurchaseDetailPage(styleNo, orderNo, sampleMode);
 
   const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
@@ -102,7 +104,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <Space>
           <Button onClick={() => embedded && onClose ? onClose() : navigate(-1)}>返回</Button>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>订单物料采购明细</h2>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>{sampleMode ? '采购管理' : '订单物料采购明细'}</h2>
         </Space>
       </div>
 
@@ -110,9 +112,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
       ) : !order ? (
         <Card style={{ marginBottom: 16 }}>
-          <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon />
+          {!sampleMode && (
+            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon />
+          )}
           {purchaseList.length > 0 && (
-            <div style={{ marginTop: 12, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+            <div style={{ marginTop: sampleMode ? 0 : 12, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+              <div><strong>款号：</strong>{styleNo || '-'}</div>
               <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
               <div style={{ marginTop: 4 }}><strong>物料到货率：</strong><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
             </div>

@@ -62,6 +62,11 @@ export interface StyleInfo extends Record<string, unknown> {
   scrapQuantity?: number;
   totalWarehousedQuantity?: number;
   stockQuantity?: number;
+  /**
+   * 采购进度（0-100，基于 t_material_purchase 表 status 聚合：completed/total*100）
+   * 行业标准：采购是供应链模块（数据驱动），不属于生产工序配置
+   */
+  procurementProgress?: number;
   pushedToOrder?: number | boolean;
   pushedToOrderTime?: string;
 

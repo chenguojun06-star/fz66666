@@ -189,6 +189,7 @@ public class StyleInfoOrchestrator {
         styleListEnrichmentHelper.fillScrapFields(records);
         styleListEnrichmentHelper.fillWarehousedFields(records);
         styleListEnrichmentHelper.fillStockFields(records);
+        styleListEnrichmentHelper.fillProcurementProgressFields(records);
 
         return page;
     }

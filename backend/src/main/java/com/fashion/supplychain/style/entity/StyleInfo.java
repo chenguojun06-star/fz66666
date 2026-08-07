@@ -432,6 +432,13 @@ public class StyleInfo {
     private Integer stockQuantity;
 
     /**
+     * 采购进度（0-100，基于 MaterialPurchase 表状态聚合：completed/total*100）
+     * 行业标准：采购是供应链模块（数据驱动），不属于生产工序配置
+     */
+    @TableField(exist = false)
+    private Integer procurementProgress;
+
+    /**
      * 码数颜色配置（JSON格式）
      * 存储样板的尺码、颜色、数量配置信息
      */
