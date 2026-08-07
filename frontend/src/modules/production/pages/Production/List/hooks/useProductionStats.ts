@@ -41,12 +41,13 @@ export function useProductionStats(queryParams: ProductionQueryParams) {
   const fetchGlobalStats = async (params?: ProductionQueryParams) => {
     try {
       // 只传递筛选参数，不传分页参数
+      // ⚠️ 不传 excludeTerminal：统计接口应返回所有状态订单的真实数量，
+      //    否则后端WHERE会过滤掉终态订单，导致 totalOrders=activeOrders、completedOrders=0
       const filterParams = params
         ? {
             keyword: params.keyword,
             factoryName: params.factoryName,
             status: params.status,
-          excludeTerminal: params.excludeTerminal,
             urgencyLevel: params.urgencyLevel,
             plateType: params.plateType,
             orderNo: params.orderNo,
