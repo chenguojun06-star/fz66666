@@ -4,12 +4,12 @@ import { usePurchaseDetailData } from './usePurchaseDetailData';
 import { usePurchaseDetailEdit } from './usePurchaseDetailEdit';
 import { usePurchaseDetailActions } from './usePurchaseDetailActions';
 
-export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string, sampleMode?: boolean) {
+export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string, sampleMode?: boolean, styleIdParam?: string | number) {
   // form 字段保留与原文件一致：未使用但作为返回值暴露
   const [form] = Form.useForm();
   const { user } = useUser();
 
-  const dataState = usePurchaseDetailData(styleNoParam, orderNoParam, sampleMode);
+  const dataState = usePurchaseDetailData(styleNoParam, orderNoParam, sampleMode, styleIdParam);
 
   const editState = usePurchaseDetailEdit({
     styleNoParam,

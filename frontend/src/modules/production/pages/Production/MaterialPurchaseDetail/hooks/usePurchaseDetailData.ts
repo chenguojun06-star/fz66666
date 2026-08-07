@@ -29,6 +29,7 @@ export function usePurchaseDetailData(
   styleNoParam: string,
   orderNoParam: string,
   sampleMode?: boolean,
+  styleIdParam?: string | number,
 ): PurchaseDetailDataState {
   const { message } = App.useApp();
 
@@ -62,15 +63,23 @@ export function usePurchaseDetailData(
     return Math.round((totalArrived / totalRequired) * 100);
   }, [purchaseList]);
 
+  // 样衣场景下 supplierName 不必填（样衣采购可无供应商），大货场景全部必填
+  const requiredFields = useMemo(() => {
+    if (sampleMode) {
+      return REQUIRED_FIELDS.filter((f) => f !== 'supplierName');
+    }
+    return REQUIRED_FIELDS;
+  }, [sampleMode]);
+
   const bomIncomplete = useMemo(() => {
     if (purchaseList.length === 0) return true;
     return purchaseList.some((item) => {
-      return REQUIRED_FIELDS.some((field) => {
+      return requiredFields.some((field) => {
         const val = item[field];
         return val === undefined || val === null || String(val).trim() === '';
       });
     });
-  }, [purchaseList]);
+  }, [purchaseList, requiredFields]);
 
   const loadData = useCallback(async () => {
     if (!styleNoParam) return;
@@ -91,6 +100,16 @@ export function usePurchaseDetailData(
         }
       } else {
         setOrder(null);
+      }
+
+      // 样衣场景：自动从BOM同步物料到采购表（静默，不需用户手动触发）
+      // 首次打开：从BOM自动生成采购记录；后续打开：已有记录则跳过，BOM新增物料时增量补充
+      if (sampleMode && styleIdParam) {
+        try {
+          await api.post('/style/bom/generate-purchase', { styleId: styleIdParam, force: false });
+        } catch {
+          // 已有采购记录时会报错"已生成过"，这是正常情况，静默忽略，继续查询已有记录
+        }
       }
 
       // 样衣场景直接按 sourceType='sample' + styleNo 过滤，避免拉到订单采购数据
@@ -143,7 +162,7 @@ export function usePurchaseDetailData(
     } finally {
       setLoading(false);
     }
-  }, [styleNoParam, orderNoParam, sampleMode, message]);
+  }, [styleNoParam, orderNoParam, sampleMode, styleIdParam, message]);
 
   useEffect(() => {
     loadData();
