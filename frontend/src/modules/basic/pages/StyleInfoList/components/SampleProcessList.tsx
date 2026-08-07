@@ -10,6 +10,10 @@ import StageTabs from './components/StageTabs';
 import AssigneeModal from './components/AssigneeModal';
 import PurchaseDrawer from './components/PurchaseDrawer';
 
+// 行业标准：采购/入库是"数据驱动"（看采购单状态/仓库收货），不是"门禁驱动"（不靠生产扫码卡）
+// 与 StageTabs.NON_GATE_STAGE_KEYS / 后端 ProductionConstants.NON_GATE_STAGES 对齐
+const NON_GATE_STAGE_KEYS = new Set(['procurement', 'warehousing']);
+
 interface SampleProcessListProps {
   stages: ProcessStageProgress[];
   loading: boolean;
@@ -89,7 +93,11 @@ export default function SampleProcessList({
     [activeTab, currentStage, actioningKey, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo],
   );
 
-  const completedCount = stages.filter(s => s.percent >= 100).length;
+  // 行业标准：生产进度只算生产工序（裁剪/二次工艺/车缝/尾部），不包含采购/入库
+  // 采购完成看采购单状态（到货率/确认完成），入库完成看仓库收货（成品入库记录）
+  const productionStages = stages.filter(s => !NON_GATE_STAGE_KEYS.has(s.key));
+  const completedCount = productionStages.filter(s => s.percent >= 100).length;
+  const totalProduction = productionStages.length;
 
   const handleSaveField = (field: 'styleNo' | 'color' | 'size', value: string) => {
     setSavingField(field);
@@ -105,7 +113,7 @@ export default function SampleProcessList({
         marginBottom: 8,
       }}>
         <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-          工序列表 <strong style={{ color: 'var(--color-text-primary)' }}>{completedCount}/{stages.length}</strong> 完成
+          工序列表 <strong style={{ color: 'var(--color-text-primary)' }}>{completedCount}/{totalProduction}</strong> 完成
         </span>
         {patternProductionId ? (
           <Button

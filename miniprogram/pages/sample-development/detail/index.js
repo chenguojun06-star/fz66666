@@ -395,7 +395,12 @@ Page({
     const completed = snapshot._isFullyCompleted;
     const received = snapshot._isReceived;
 
-    let totalPercent = 0;
+    // 行业标准：生产进度只算生产工序（裁剪/二次工艺/车缝/尾部），不包含采购/入库
+    // 采购完成看采购单状态（到货率/确认完成），入库完成看仓库收货（成品入库记录）
+    // 与 stageDetection.js NON_GATE_STAGES 对齐
+    const NON_GATE_STAGE_KEYS = { procurement: true, warehousing: true };
+    let totalPercent = 0; // 只累加生产工序的进度
+    let productionCount = 0; // 生产工序数量
     const canOperate = received && !snapshot._isScrapped && !completed;
     const stages = SAMPLE_PARENT_STAGES.map(function (s, idx) {
       let percent;
@@ -408,7 +413,11 @@ Page({
       } else {
         percent = 0;
       }
-      totalPercent += percent;
+      // 只累加生产工序的进度（采购/入库不参与核心生产进度计算）
+      if (!NON_GATE_STAGE_KEYS[s.key]) {
+        totalPercent += percent;
+        productionCount++;
+      }
       const status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
       // 未领取时所有阶段都可点击（触发领取），已领取时仅未完成的可点击
       const clickable = !snapshot._isScrapped && !completed && status !== 'completed';
@@ -424,8 +433,10 @@ Page({
       };
     });
 
-    const completedCount = stages.filter(function (s) { return s.status === 'completed'; }).length;
-    const totalCount = stages.length;
+    // 完成数和总数只算生产工序（采购/入库不参与）
+    const productionStages = stages.filter(function (s) { return !NON_GATE_STAGE_KEYS[s.key]; });
+    const completedCount = productionStages.filter(function (s) { return s.status === 'completed'; }).length;
+    const totalCount = productionCount;
     const progressPercent = totalCount > 0 ? Math.round(totalPercent / totalCount) : 0;
 
     this.setData({
