@@ -125,6 +125,16 @@ public class ProductionScanStageSupport {
                     order.getOrderNo(), targetParent);
             return;
         }
+
+        // 行业做法：采购和入库是"数据驱动"（看采购单状态/仓库收货），不是"门禁驱动"（不靠生产扫码卡）
+        // 采购完成看 procurement_manually_completed=1（由 CuttingBundleServiceImpl.assertMaterialReady 校验）
+        // 入库是最后一步，不会作为前置门禁，但此处防御性跳过
+        if (ProductionConstants.NON_GATE_STAGES.contains(prevParent)) {
+            log.info("前置阶段[{}]是非门禁阶段（数据驱动），跳过门禁: orderNo={}, targetParent={}",
+                    prevParent, order.getOrderNo(), targetParent);
+            return;
+        }
+
         Map<String, Set<String>> requiredByParent = resolveRequiredProcessesByParent(order);
         Set<String> required = requiredByParent.getOrDefault(prevParent, new LinkedHashSet<>());
 
@@ -140,16 +150,11 @@ public class ProductionScanStageSupport {
                 order.getOrderNo(), bundle != null ? bundle.getBundleNo() : "无菲号", completedProcesses);
 
         if (required.isEmpty()) {
-            boolean prevStageHasAnyScan = hasAnyScanInStage(completedProcesses, prevParent);
-            if (!prevStageHasAnyScan) {
-                log.warn("模板未配置{}必做子工序，但{}阶段无任何扫码记录，拦截: orderNo={}, targetParent={}",
-                        prevParent, prevParent, order.getOrderNo(), targetParent);
-                throw new IllegalStateException(String.format(
-                        "温馨提示：%s阶段尚未开始，暂不能进入%s",
-                        prevParent, targetParent
-                ));
-            }
-            log.debug("模板未配置{}必做子工序，但{}阶段已有扫码记录，放行: orderNo={}", prevParent, prevParent, order.getOrderNo());
+            // 未配置子工序 = 该阶段不需要做，自动跳过门禁，不要求扫码
+            // 之前的逻辑是"没配置子工序也要扫码一次才放行"，导致样衣/无采购等场景被卡死
+            // 行业做法：未配置 = 不需要做 = 跳过，而不是"未配置也要证明做过"
+            log.info("模板未配置{}必做子工序，自动跳过门禁放行: orderNo={}, targetParent={}",
+                    prevParent, order.getOrderNo(), targetParent);
             return;
         }
 
@@ -383,6 +388,19 @@ public class ProductionScanStageSupport {
                 log.debug("订单未开启二次工艺(hasSecondaryProcess={})，清空二次工艺必做子工序: orderNo={}, cleared={}",
                         order.getHasSecondaryProcess(), order.getOrderNo(), secondary);
                 secondary.clear();
+            }
+        }
+
+        // 行业做法：采购和入库不是生产工序，清空其子工序
+        // 采购完成看采购单状态（procurement_manually_completed=1）
+        // 入库完成看仓库收货（completedQuantity 累加）
+        // 这些阶段不应该作为门禁要求工人扫码
+        for (String nonGateStage : ProductionConstants.NON_GATE_STAGES) {
+            Set<String> procs = result.get(nonGateStage);
+            if (procs != null && !procs.isEmpty()) {
+                log.debug("非门禁阶段[{}]清空子工序（数据驱动，不靠扫码）: orderNo={}, cleared={}",
+                        nonGateStage, order.getOrderNo(), procs);
+                procs.clear();
             }
         }
         return result;

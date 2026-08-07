@@ -141,9 +141,14 @@ const DEFAULT_SCAN_TYPE = 'production';
 
 const FIXED_PRODUCTION_NODES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
 
+// 非门禁阶段：采购和入库是"数据驱动"（看采购单状态/仓库收货），不是"门禁驱动"（不靠生产扫码卡）
+// 与后端 ProductionConstants.NON_GATE_STAGES 对齐
+const NON_GATE_STAGES = new Set(['采购', '入库']);
+
 /**
  * 获取指定工序的前置父工序列表
  * 与后端 ProductionScanStageSupport.validateParentStagePrerequisite 对齐
+ * 采购和入库不参与门禁（数据驱动，不是生产工序）
  * @param {string} processName - 工序名（已规范化）
  * @returns {string[]} 前置工序列表
  */
@@ -151,7 +156,10 @@ function getParentStages(processName) {
   const canonical = canonicalStageKey(processName);
   const idx = FIXED_PRODUCTION_NODES.indexOf(canonical);
   if (idx <= 0) return []; // 采购或未知工序无前置
-  return FIXED_PRODUCTION_NODES.slice(0, idx);
+  // 过滤掉非门禁阶段（采购、入库）
+  return FIXED_PRODUCTION_NODES.slice(0, idx).filter(function(s) {
+    return !NON_GATE_STAGES.has(s);
+  });
 }
 
 /**

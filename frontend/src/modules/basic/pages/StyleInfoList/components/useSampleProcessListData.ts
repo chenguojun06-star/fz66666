@@ -39,6 +39,9 @@ export interface UseSampleProcessListDataResult {
   hasScanRecords: boolean;
   currentStage: ProcessStageProgress | undefined;
   subTableData: SubProcessRow[];
+  // 整体有工序配置，但当前切换到的阶段未配置子工序（subProcesses 为空）
+  // 此时不应显示冷冰冰的"暂无数据"，而是给出阶段级友好提示
+  currentStageEmpty: boolean;
   handleManualComplete: (row: SubProcessRow) => Promise<void>;
   handleUndo: (row: SubProcessRow) => Promise<void>;
   handleAssign: (row: SubProcessRow) => void;
@@ -82,6 +85,11 @@ export default function useSampleProcessListData(
   }, [stages]);
 
   const currentStage = useMemo(() => stages.find(s => s.key === activeTab) || stages[0], [stages, activeTab]);
+
+  // 整体有工序配置（!needsConfig）但当前阶段没有子工序：
+  // 例如款号配置了裁剪/车缝等子工序，但"采购"阶段未配置任何子工序，
+  // 切换到该阶段时表格会显示"暂无数据"，这里给出阶段级友好提示
+  const currentStageEmpty = !needsConfig && !!currentStage && currentStage.subProcesses.length === 0;
 
   const subTableData = useMemo<SubProcessRow[]>(() => {
     if (!currentStage) return [];
@@ -265,6 +273,7 @@ export default function useSampleProcessListData(
     hasScanRecords,
     currentStage,
     subTableData,
+    currentStageEmpty,
     handleManualComplete,
     handleUndo,
     handleAssign,

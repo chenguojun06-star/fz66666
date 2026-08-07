@@ -125,6 +125,14 @@ export function useWebSocket(options: UseWebSocketOptions) {
     if (isTokenExpired(token)) {
       console.warn('[WS] token已过期，停止WebSocket重连');
       reconnectAttemptsRef.current = maxReconnectAttempts; // 触发上限停止
+      // 主动触发登出跳转：token 过期后用户做的任何操作都会 401 失败（如推送资料、扫码等），
+      // 与其让用户点击后才发现，不如直接引导到登录页重新登录
+      // App.tsx 监听 app:auth:logout 事件并跳转 /login
+      try {
+        window.dispatchEvent(new CustomEvent('app:auth:logout'));
+      } catch {
+        // ignore
+      }
       return;
     }
 
