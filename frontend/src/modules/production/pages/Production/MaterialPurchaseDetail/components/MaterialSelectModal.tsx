@@ -100,7 +100,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({ open, onClose
                       render: (value: unknown) => {
                         const raw = String(value || '').trim();
                         if (!raw) return null;
-                        const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
+                        const url = getFullAuthedFileUrl(raw);
                         return <Image src={url} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }} preview={{ src: url }} />;
                       },
                     },
@@ -166,9 +166,9 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({ open, onClose
                   </Form.Item>
                   <Form.Item name="materialType" label="物料类型" initialValue="accessory">
                     <Select options={[
-                      { value: 'fabric', label: 'fabric' },
-                      { value: 'lining', label: 'lining' },
-                      { value: 'accessory', label: 'accessory' },
+                      { value: 'fabric', label: '面料' },
+                      { value: 'lining', label: '里料' },
+                      { value: 'accessory', label: '辅料' },
                     ]} />
                   </Form.Item>
                   <Form.Item name="color" label="颜色">

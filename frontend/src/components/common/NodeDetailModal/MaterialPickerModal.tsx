@@ -95,7 +95,7 @@ const MaterialPickerModal: React.FC<MaterialPickerModalProps> = ({ open, onClose
             render: (value: unknown) => {
               const raw = String(value || '').trim();
               if (!raw) return null;
-              const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
+              const url = getFullAuthedFileUrl(raw);
               return (
                 <Image
                   src={url}

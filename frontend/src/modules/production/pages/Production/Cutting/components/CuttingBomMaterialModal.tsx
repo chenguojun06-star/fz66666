@@ -104,7 +104,7 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
                     render: (value: unknown) => {
                       const raw = String(value || '').trim();
                       if (!raw) return null;
-                      const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
+                      const url = getFullAuthedFileUrl(raw);
                       return (
                         <Image
                           src={url}
@@ -221,9 +221,9 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
                 <Form.Item name="materialType" label="物料类型" initialValue="accessory">
                   <Select
                     options={[
-                      { value: 'fabric', label: 'fabric' },
-                      { value: 'lining', label: 'lining' },
-                      { value: 'accessory', label: 'accessory' },
+                      { value: 'fabric', label: '面料' },
+                      { value: 'lining', label: '里料' },
+                      { value: 'accessory', label: '辅料' },
                     ]}
                   />
                 </Form.Item>

@@ -41,6 +41,7 @@ const StyleProcurementDrawer: React.FC<StyleProcurementDrawerProps> = ({
       {record && styleNo && (
         <MaterialPurchaseDetail
           styleNo={styleNo}
+          styleId={record.id}
           embedded
           sampleMode
           onClose={handleClose}

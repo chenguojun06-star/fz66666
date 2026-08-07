@@ -103,7 +103,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                     render: (value: unknown) => {
                       const raw = String(value || '').trim();
                       if (!raw) return null;
-                      const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
+                      const url = getFullAuthedFileUrl(raw);
                       return (
                         <Image
                           src={url}
@@ -245,9 +245,9 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                   <Select
                     id="materialType"
                     options={[
-                      { value: 'fabric', label: 'fabric' },
-                      { value: 'lining', label: 'lining' },
-                      { value: 'accessory', label: 'accessory' },
+                      { value: 'fabric', label: '面料' },
+                      { value: 'lining', label: '里料' },
+                      { value: 'accessory', label: '辅料' },
                     ]}
                     onChange={(value) => {
                       // 选物料类型时联动填充前缀字母到编码（统一规则：面料M/里料L/辅料F）

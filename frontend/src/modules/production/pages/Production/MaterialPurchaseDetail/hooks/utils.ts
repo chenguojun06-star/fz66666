@@ -3,6 +3,7 @@ import type { MessageInstance } from 'antd/es/message/interface';
 import type { MaterialPurchase } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { UserInfo } from '@/utils/AuthContext.types';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export const getOperatorName = (user: UserInfo | null): string =>
   String(user?.name || user?.username || '').trim();
@@ -65,7 +66,7 @@ export const exportPurchaseListCSV = (
   const rows = purchaseList.map((item) => {
     const amount = Number(item.purchaseQuantity || 0) * Number(item.unitPrice || 0);
     return [
-      item.materialType || '',
+      getMaterialTypeLabel(item.materialType),
       item.materialName || '',
       item.materialCode || '',
       item.color || '',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Spin, Alert, Row, Col, Dropdown } from 'antd';
-import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Card, Tag, Space, Spin, Alert, Row, Col, Dropdown, App } from 'antd';
+import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
@@ -12,6 +12,9 @@ import type { MaterialPurchase } from '@/types/production';
 import { buildEditColumns, buildViewColumns } from './columns';
 import MaterialSelectModal from './components/MaterialSelectModal';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
+import api from '@/utils/api';
+import { confirmAction } from '@/utils/confirm';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export interface MaterialPurchaseDetailProps {
   styleNo?: string;
@@ -20,9 +23,11 @@ export interface MaterialPurchaseDetailProps {
   onClose?: () => void;
   /** 样衣采购场景：无生产订单，跳过订单查询与警告，标题改为"采购管理" */
   sampleMode?: boolean;
+  /** 样衣款式ID，用于从BOM生成采购单 */
+  styleId?: string | number;
 }
 
-const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose, sampleMode }) => {
+const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose, sampleMode, styleId: propStyleId }) => {
   const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
   const orderNo = propOrderNo ?? searchParams.get('orderNo') ?? '';
@@ -59,6 +64,8 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
   const [batchReturnLoading, setBatchReturnLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [generatingFromBom, setGeneratingFromBom] = useState(false);
+  const { message } = App.useApp();
 
   const onBatchPurchase = async () => {
     setBatchPurchaseLoading(true);
@@ -76,6 +83,56 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     setExportLoading(true);
     try { await handleExport(); }
     finally { setExportLoading(false); }
+  };
+
+  // 从BOM生成采购单：调用 /style/bom/generate-purchase 接口
+  // 把样衣详情的BOM物料需求同步到采购管理，实现数据互通
+  const effectiveStyleId = propStyleId ?? headerStyleId;
+  const handleGenerateFromBom = async () => {
+    const sid = Number(effectiveStyleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID，无法从BOM生成采购单');
+      return;
+    }
+
+    const doGenerate = async (force: boolean) => {
+      setGeneratingFromBom(true);
+      try {
+        const result = await api.post<{ code: number; message: string; data: number }>('/style/bom/generate-purchase', {
+          styleId: sid,
+          force,
+        });
+        if (result.code === 200) {
+          const count = Number(result.data) || 0;
+          message.success(`成功从BOM生成 ${count} 条物料采购记录`);
+          await loadData();
+          return;
+        }
+
+        const errorMessage = String(result.message || '生成失败');
+        if (errorMessage.includes('已生成过') && !force) {
+          confirmAction(
+            '已存在样衣采购记录',
+            '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）',
+            () => doGenerate(true),
+            { okText: '重新生成', danger: true },
+          );
+          return;
+        }
+
+        message.error(errorMessage);
+      } catch (error: unknown) {
+        message.error(`生成失败：${error instanceof Error ? error.message : '请求失败'}`);
+      } finally {
+        setGeneratingFromBom(false);
+      }
+    };
+
+    confirmAction(
+      '确认从BOM生成采购单',
+      `将根据样衣BOM物料需求生成物料采购记录，实现BOM与采购数据互通，是否继续？`,
+      () => doGenerate(false),
+    );
   };
 
   const displayData = editing ? editableData : purchaseList;
@@ -184,7 +241,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
                   const w = window.open('', '_blank');
                   if (!w) return;
-                  const rows = purchaseList.map((p) => `<tr><td>${p.materialType || ''}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
+                  const rows = purchaseList.map((p) => `<tr><td>${getMaterialTypeLabel(p.materialType)}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
                   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--color-zinc-300);padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
                   w.document.close();
                   w.print();
@@ -225,18 +282,33 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         {displayData.length === 0 && !editing ? (
           <div style={{ textAlign: 'center', padding: '48px 16px' }}>
             <Alert
-              type="info"
+              type={sampleMode && effectiveStyleId ? 'warning' : 'info'}
               showIcon
-              title="该订单尚未创建面辅料信息"
-              description={isMultiColor
-                ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
-                : `请为订单创建面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
+              title={sampleMode && effectiveStyleId ? '该款式尚未生成采购单' : '该订单尚未创建面辅料信息'}
+              description={sampleMode && effectiveStyleId
+                ? '该样衣已配置BOM物料需求，但尚未同步到采购管理。可一键从BOM生成采购单，实现数据互通；或手动创建面辅料信息。'
+                : isMultiColor
+                  ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
+                  : `请为订单创建面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
               }
               style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
               action={
-                <Button type="primary" size="small" onClick={handleStartEdit}>
-                  创建面辅料
-                </Button>
+                <Space direction="vertical" size={8}>
+                  {sampleMode && effectiveStyleId && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<ThunderboltOutlined />}
+                      loading={generatingFromBom}
+                      onClick={handleGenerateFromBom}
+                    >
+                      从BOM生成采购单
+                    </Button>
+                  )}
+                  <Button size="small" onClick={handleStartEdit}>
+                    手动创建面辅料
+                  </Button>
+                </Space>
               }
             />
           </div>

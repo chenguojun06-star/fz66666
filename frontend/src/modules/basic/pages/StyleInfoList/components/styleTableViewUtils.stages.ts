@@ -127,14 +127,14 @@ export const buildProcurementStage: StageBuilder = (record) => {
 
   return {
     key: 'procurement',
-    label: '采购',
+    label: '物料采购',
     helper: done
       ? '采购已完成'
       : started
         ? `进度 ${procurementProgress}%`
         : '未开始采购',
-    startTimeLabel: '',
-    timeLabel: done ? '已完成' : started ? '采购中' : '',
+    startTimeLabel: '待采购',
+    timeLabel: done ? '已完成' : started ? '采购中' : '待采购',
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : procurementProgress,
     actionKey: 'procurement',
