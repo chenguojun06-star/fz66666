@@ -183,7 +183,11 @@ export const buildSampleStage: StageBuilder = (record) => {
         ? formatNodeTime(record.sampleStartTime)
         : '',
     status: done ? 'done' : started ? 'active' : 'waiting',
-    progress: done ? 100 : (started && sampleProgress > 0 ? sampleProgress : started ? 36 : 0),
+    // 进度直接使用后端 sampleProgress 字段：
+    // 后端 PatternStatusHelper.calculatePatternProgressPercent 根据工序配置动态计算
+    // （4 个核心生产工序裁剪/二次工艺/车缝/尾部各占 25%，按实际配置数量加权）。
+    // 不再写死 fallback 数字，避免与实际工序配置不符。
+    progress: done ? 100 : sampleProgress,
     actionKey: 'detail',
     actionLabel: '查看详情',
     details: buildStageDetails(
