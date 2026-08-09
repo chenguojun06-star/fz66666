@@ -70,6 +70,8 @@ export interface StyleBasicInfoFormProps {
   skuMode?: 'AUTO' | 'MANUAL';
   useSkuPrefix?: boolean | number;
   onRefresh?: () => void;
+  /** 在右侧表单底部渲染额外内容（如 Tab 区域），使左侧图片资产在 Tab 切换时保持固定 */
+  renderBelowForm?: () => React.ReactNode;
 }
 
 /** 颜色/尺码矩阵行类型，便于子组件复用 */

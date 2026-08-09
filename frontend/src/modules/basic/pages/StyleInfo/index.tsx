@@ -249,22 +249,23 @@ const StyleInfoDetailPage: React.FC = () => {
               skuMode={(currentStyle as any)?.skuMode}
               useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
               onRefresh={handleRefresh}
+              renderBelowForm={() => (
+                <StyleInfoTabs
+                  activeKey={bomAreaTabKey}
+                  onChange={setBomAreaTabKey}
+                  currentStyle={currentStyle}
+                  styleIdParam={styleIdParam}
+                  sizeColorConfig={colorSize.sizeColorConfig}
+                  matrixSizes={colorSize.matrixSizes}
+                  totalMatrixQty={colorSize.totalMatrixQty}
+                  production={production}
+                  onRefresh={handleRefresh}
+                  onCartAdded={() => setCartDrawerOpen(true)}
+                />
+              )}
             />
           </Form>
         </Card>
-
-        <StyleInfoTabs
-          activeKey={bomAreaTabKey}
-          onChange={setBomAreaTabKey}
-          currentStyle={currentStyle}
-          styleIdParam={styleIdParam}
-          sizeColorConfig={colorSize.sizeColorConfig}
-          matrixSizes={colorSize.matrixSizes}
-          totalMatrixQty={colorSize.totalMatrixQty}
-          production={production}
-          onRefresh={handleRefresh}
-          onCartAdded={() => setCartDrawerOpen(true)}
-        />
       </PageLayout>
 
       <PushToOrderModal

@@ -103,6 +103,9 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
           borderRadius: '10px 10px 0 0',
           border: '1px solid var(--color-border)',
           margin: 0,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}
         items={[
           { key: 'bom', label: <span><StageDot completed={isStageCompleted('bom')} inProgress={isStageInProgress('bom')} />BOM清单</span>, children: (

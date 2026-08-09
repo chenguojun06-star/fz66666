@@ -52,7 +52,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   skuMode,
   useSkuPrefix,
   onRefresh,
-}) => {
+  renderBelowForm,
+}: StyleBasicInfoFormProps) => {
   const { skuRefreshTrigger, handleStyleParseResult } = useStyleBasicInfoForm({
     _form,
     styleId,
@@ -77,7 +78,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   };
 
   return (
-    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(220px, 20vw, 280px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
+    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(160px, 14vw, 200px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
       {/* 左侧：封面图上传 + 款式状态卡片（sticky 跟随滚动，避免下方空白） */}
       <div style={{ minWidth: 0, position: 'sticky', top: 16, alignSelf: 'flex-start' }}>
         <CoverImageUpload
@@ -158,6 +159,9 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           customFields={customFields}
           editLocked={editLocked}
         />
+
+        {/* Tab 区域（BOM/纸样/生产/二次工艺/工序/报价/附件/洗水唛） */}
+        {renderBelowForm ? <div style={{ marginTop: 16 }}>{renderBelowForm()}</div> : null}
       </div>
     </Row>
   );
