@@ -237,7 +237,8 @@ export default function useSampleProcessProgress(
           }
         }
       }
-      const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      // 没有子工序的阶段视为"跳过"（percent=100），不计入未完成
+      const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
       return {
         key: stage.key,
         label: stage.label,

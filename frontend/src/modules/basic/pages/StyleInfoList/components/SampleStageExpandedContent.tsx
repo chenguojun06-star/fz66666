@@ -125,7 +125,11 @@ export default function SampleStageExpandedContent({
 
   const overallPercent = useMemo(() => {
     if (!stages.length) return 0;
-    return Math.round(stages.reduce((sum, s) => sum + s.percent, 0) / stages.length);
+    // 只统计有子工序的阶段，没子工序的阶段（如"二次工艺"无配置）视为跳过不计入分母
+    const effectiveStages = stages.filter(s => s.totalCount > 0);
+    if (effectiveStages.length === 0) return 100;
+    const totalPercent = effectiveStages.reduce((sum, s) => sum + s.percent, 0);
+    return Math.round(totalPercent / effectiveStages.length);
   }, [stages]);
 
   const overallColor = overallPercent >= 100 ? 'var(--color-success)' : 'var(--color-primary)';

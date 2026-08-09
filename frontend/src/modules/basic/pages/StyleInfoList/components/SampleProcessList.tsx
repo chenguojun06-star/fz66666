@@ -93,8 +93,10 @@ export default function SampleProcessList({
   );
 
   // 生产工序进度计算（采购/入库已从工序列表移除，stages 只含4个生产工序）
-  const completedCount = stages.filter(s => s.percent >= 100).length;
-  const totalProduction = stages.length;
+  // 没有子工序的阶段（如"二次工艺"未配置子工序）不计入完成统计
+  const effectiveStages = stages.filter(s => s.totalCount > 0);
+  const completedCount = effectiveStages.filter(s => s.percent >= 100).length;
+  const totalProduction = effectiveStages.length;
 
   const handleSaveField = (field: 'styleNo' | 'color' | 'size', value: string) => {
     setSavingField(field);
