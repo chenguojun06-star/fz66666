@@ -114,7 +114,7 @@ const TransferToOutstockModal: React.FC<TransferToOutstockModalProps> = ({
           <Input placeholder="请输入快递单号" />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea rows={2} placeholder="请输入备注" />
+          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="请输入备注" />
         </Form.Item>
       </Form>
     </ResizableModal>

@@ -180,7 +180,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           name="remark"
           label="借出原因/备注"
         >
-          <Input.TextArea rows={2} />
+          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} />
         </Form.Item>
         {(stock?.warehouseAreaName || stock?.location) && (
           <div style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>

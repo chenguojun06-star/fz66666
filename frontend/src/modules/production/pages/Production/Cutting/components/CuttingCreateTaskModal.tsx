@@ -208,7 +208,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             value={createTask.createRemarks}
             onChange={(e) => createTask.setCreateRemarks(e.target.value)}
             placeholder="输入订单备注（下单后可在订单备注时间线查看）"
-            rows={2}
+            autoSize={{ minRows: 3, maxRows: 8 }}
             maxLength={500}
             showCount
             style={{ marginTop: 4 }}

@@ -52,7 +52,7 @@ const TimeRemarkSection: React.FC<SectionFormContextProps> = ({
         </Col>
         <Col xs={24}>
           <Form.Item name="remark" label="备注" style={{ marginBottom: 0 }}>
-            <Input.TextArea id="remark" rows={2} placeholder="请输入备注（面料/版型/特殊工艺说明等）" disabled={isFieldLocked(currentStyle?.remark)} />
+            <Input.TextArea id="remark" autoSize={{ minRows: 3, maxRows: 8 }} placeholder="请输入备注（面料/版型/特殊工艺说明等）" disabled={isFieldLocked(currentStyle?.remark)} />
           </Form.Item>
         </Col>
       </Row>

@@ -52,7 +52,7 @@ const RemarkTimelineContent: React.FC<RemarkTimelineContentProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 400 }}>
       {canAddRemark && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <Input.TextArea value={content} onChange={(e) => setContent(e.target.value)} rows={2} placeholder="添加备注…" style={{ flex: 1 }} />
+          <Input.TextArea value={content} onChange={(e) => setContent(e.target.value)} autoSize={{ minRows: 3, maxRows: 8 }} placeholder="添加备注…" style={{ flex: 1 }} />
           <Button type="primary" onClick={handleAdd} loading={submitting} disabled={!content.trim()}>提交</Button>
         </div>
       )}

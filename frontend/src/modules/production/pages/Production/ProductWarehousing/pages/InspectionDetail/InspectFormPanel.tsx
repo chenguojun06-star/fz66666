@@ -260,7 +260,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                     </Form.Item>
 
                     <Form.Item name="repairRemark" label="返修备注">
-                      <Input.TextArea rows={2} placeholder="返修说明" />
+                      <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="返修说明" />
                     </Form.Item>
                   </>
                 )}
@@ -268,7 +268,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                 {/* 返修质检合格时也显示备注字段（后端需要 repairRemark） */}
                 {unqQty === 0 && isSingleSelectedBundleBlocked && (
                   <Form.Item name="repairRemark" label="返修备注" initialValue="返修检验合格">
-                    <Input.TextArea rows={2} placeholder="返修检验说明" />
+                    <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="返修检验说明" />
                   </Form.Item>
                 )}
 

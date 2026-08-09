@@ -336,7 +336,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             label="备注"
             name="remark"
           >
-            <Input.TextArea rows={2} placeholder="可选备注" />
+            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="可选备注" />
           </Form.Item>
         </Form>
       </ResizableModal>

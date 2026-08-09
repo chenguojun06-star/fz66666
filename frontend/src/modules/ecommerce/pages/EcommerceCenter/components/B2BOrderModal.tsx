@@ -40,8 +40,8 @@ const B2BOrderModal: React.FC<B2BOrderModalProps> = ({ open, profiles, onClose, 
         </Form.Item>
         <Form.Item label="收货人" name="receiverName"><Input /></Form.Item>
         <Form.Item label="收货电话" name="receiverPhone"><Input /></Form.Item>
-        <Form.Item label="收货地址" name="receiverAddress"><Input.TextArea rows={2} /></Form.Item>
-        <Form.Item label="备注" name="buyerRemark"><Input.TextArea rows={2} /></Form.Item>
+        <Form.Item label="收货地址" name="receiverAddress"><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item>
+        <Form.Item label="备注" name="buyerRemark"><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item>
       </Form>
     </ResizableModal>
   );

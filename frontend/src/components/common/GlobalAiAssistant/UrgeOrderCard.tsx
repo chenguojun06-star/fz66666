@@ -62,7 +62,7 @@ const UrgeOrderCard: React.FC<{ card: ActionCard; onSaved: () => void }> = ({ ca
           className={styles.urgeFormTextarea}
           placeholder="例如：面料延误 / 预计下周一交货..."
           value={remarks}
-          rows={2}
+          rows={3}
           onChange={e => setRemarks(e.target.value)}
         />
         {error && <div className={styles.urgeCardError}>{error}</div>}

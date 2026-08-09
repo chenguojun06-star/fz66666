@@ -251,10 +251,10 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
             <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="¥" />
           </Form.Item>
           <Form.Item label="退货原因" name="returnReason">
-            <Input.TextArea rows={2} placeholder="请输入退货原因" />
+            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="请输入退货原因" />
           </Form.Item>
           <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={1} placeholder="备注（可选）" />
+            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="备注（可选）" />
           </Form.Item>
         </Form>
       </ResizableModal>

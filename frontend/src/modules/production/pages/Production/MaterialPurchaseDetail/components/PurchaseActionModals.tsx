@@ -81,7 +81,7 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
         <Input placeholder="请输入库位（如 A区-01）" />
       </Form.Item>
       <Form.Item name="remark" label="备注">
-        <Input.TextArea rows={2} placeholder="可选备注" />
+        <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="可选备注" />
       </Form.Item>
     </Form>
   </ResizableModal>

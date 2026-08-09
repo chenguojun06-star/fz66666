@@ -316,7 +316,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
           placeholder="转借备注（选填）"
           value={transferForm.remark}
           onChange={e => setTransferForm({ ...transferForm, remark: e.target.value })}
-          rows={2}
+          autoSize={{ minRows: 3, maxRows: 8 }}
         />
       </Modal>
     </>

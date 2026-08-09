@@ -40,7 +40,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, record, levels, onClo
         </Form.Item>
         <Form.Item label="联系人" name="contactPerson"><Input /></Form.Item>
         <Form.Item label="联系电话" name="contactPhone"><Input /></Form.Item>
-        <Form.Item label="地址" name="address"><Input.TextArea rows={2} /></Form.Item>
+        <Form.Item label="地址" name="address"><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item>
         <Form.Item label="结算周期" name="settlementCycle" rules={[{ required: true }]}>
           <Select options={SETTLEMENT_CYCLE_OPTIONS} />
         </Form.Item>
@@ -50,7 +50,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, record, levels, onClo
         <Form.Item label="状态" name="status">
           <Select options={DISTRIBUTOR_STATUS_OPTIONS} />
         </Form.Item>
-        <Form.Item label="备注" name="remark"><Input.TextArea rows={2} /></Form.Item>
+        <Form.Item label="备注" name="remark"><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item>
       </Form>
     </ResizableModal>
   );

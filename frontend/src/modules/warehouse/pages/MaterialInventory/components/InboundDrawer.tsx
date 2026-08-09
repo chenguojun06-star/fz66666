@@ -229,7 +229,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
         </Form.Item>
 
         <Form.Item label="备注" name="remark">
-          <Input.TextArea rows={2} placeholder="请输入备注信息" />
+          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="请输入备注信息" />
         </Form.Item>
       </Form>
     </Drawer>
