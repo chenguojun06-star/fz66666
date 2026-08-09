@@ -55,17 +55,44 @@ public class MaterialPickingController {
      */
     @PostMapping("/pending")
     public Result<String> createPending(@RequestBody PickingRequest request) {
-        // 强制设置 status=pending，前端可能未传此字段
-        request.getPicking().setStatus(MaterialConstants.STATUS_PENDING);
-        // BOM领取默认为样衣用料（开发场景），前端未传时兜底
-        if (request.getPicking().getUsageType() == null || request.getPicking().getUsageType().isEmpty()) {
-            request.getPicking().setUsageType("SAMPLE");
+        if (request == null || request.getPicking() == null) {
+            throw new IllegalArgumentException("领料请求不能为空");
         }
-        if (request.getPicking().getPickupType() == null || request.getPicking().getPickupType().isEmpty()) {
-            request.getPicking().setPickupType("INTERNAL");
+        MaterialPicking picking = request.getPicking();
+        // P0 修复（数据完整性）：禁止将空字符串作为 orderId/orderNo/styleNo 保存，
+        // 否则领料单无归属失联，仓库端无法定位归属订单/样衣任务。
+        // 统一把空字符串标准化为 null，避免后续查询条件 != '' 时遗漏。
+        if (!StringUtils.hasText(picking.getOrderId())) {
+            picking.setOrderId(null);
+        }
+        if (!StringUtils.hasText(picking.getOrderNo())) {
+            picking.setOrderNo(null);
+        }
+        if (!StringUtils.hasText(picking.getStyleNo())) {
+            picking.setStyleNo(null);
+        }
+        if (!StringUtils.hasText(picking.getPatternProductionId())) {
+            picking.setPatternProductionId(null);
+        }
+        // 校验：至少要有一个归属锚点（orderId / patternProductionId / styleNo）
+        // 防止完全无归属的"幽灵领料单"产生。仓库和财务侧查询都依赖这些关联字段。
+        boolean hasAnchor = StringUtils.hasText(picking.getOrderId())
+                || StringUtils.hasText(picking.getPatternProductionId())
+                || StringUtils.hasText(picking.getStyleNo());
+        if (!hasAnchor) {
+            throw new IllegalArgumentException("领料单缺少归属关联（订单号/样衣任务ID/款号），请返回重试");
+        }
+        // 强制设置 status=pending，前端可能未传此字段
+        picking.setStatus(MaterialConstants.STATUS_PENDING);
+        // BOM领取默认为样衣用料（开发场景），前端未传时兜底
+        if (picking.getUsageType() == null || picking.getUsageType().isEmpty()) {
+            picking.setUsageType("SAMPLE");
+        }
+        if (picking.getPickupType() == null || picking.getPickupType().isEmpty()) {
+            picking.setPickupType("INTERNAL");
         }
         String pickingId = materialPickingService.savePendingPicking(
-                request.getPicking(), request.getItems());
+                picking, request.getItems());
         // 通知仓库人员（失败不影响领料单创建）
         try {
             Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();

@@ -684,6 +684,10 @@ public class ProductionOrderQueryService {
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
         String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
         String includeSample = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeSample"));
+        String customerId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerId"));
+        String customerName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerName"));
+        // P0 修复（安全/数据一致性）：补齐 buildQueryWrapper 已有的 myOrdersOnly 参数
+        String myOrdersOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "myOrdersOnly"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
         // P0铁律4：所有统计查询必须带 tenantId 过滤，防止跨租户数据汇总
@@ -702,6 +706,8 @@ public class ProductionOrderQueryService {
             .eq(StringUtils.hasText(plateType), "plate_type", plateType)
             .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
             .eq(StringUtils.hasText(factoryType), "factory_type", factoryType)
+            .eq(StringUtils.hasText(customerId), "customer_id", customerId)
+            .like(StringUtils.hasText(customerName), "customer_name", customerName)
             .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
 
         // P1 修复（数据一致性）：与 buildQueryWrapper 行为对齐
@@ -731,6 +737,26 @@ public class ProductionOrderQueryService {
         } else if (org.springframework.util.StringUtils.hasText(factoryId)) {
             wrapper.eq("factory_id", factoryId);
         }
+
+        // P0 修复（安全+数据一致性）：与 buildQueryWrapper 对齐
+        // 1) myOrdersOnly 过滤：非租户所有者/超级管理员时限制为当前用户扫码过的订单
+        //    旧逻辑 stats 未应用此过滤，导致"我的订单"筛选下列表与统计数字严重不一致
+        if ("true".equalsIgnoreCase(myOrdersOnly)
+                && !com.fashion.supplychain.common.UserContext.isTenantOwner()
+                && !com.fashion.supplychain.common.UserContext.isSuperAdmin()) {
+            String currentUserId = com.fashion.supplychain.common.UserContext.userId();
+            if (org.springframework.util.StringUtils.hasText(currentUserId)) {
+                wrapper.apply(
+                    "EXISTS (SELECT 1 FROM t_scan_record sr WHERE sr.order_id = id AND sr.operator_id = {0} AND sr.scan_result = 'success')",
+                    currentUserId
+                );
+            }
+        }
+
+        // P0 修复（安全越权）：补齐数据权限过滤，与 buildQueryWrapper 对齐
+        //    旧逻辑 stats 直接跳过 dataScope，team 范围用户能看到其他团队的汇总数据
+        applyDataPermissionFilter(wrapper);
+
         return wrapper;
     }
 

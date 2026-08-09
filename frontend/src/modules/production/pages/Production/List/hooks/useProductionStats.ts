@@ -52,6 +52,16 @@ export function useProductionStats(queryParams: ProductionQueryParams) {
             plateType: params.plateType,
             orderNo: params.orderNo,
             styleNo: params.styleNo,
+            // P0 修复（数据一致性）：补齐与列表接口对齐的筛选参数透传，
+            // 防止统计接口与列表接口因过滤维度不同导致数字不一致。
+            includeScrapped: params.includeScrapped,
+            delayedOnly: params.delayedOnly,
+            todayOnly: params.todayOnly,
+            factoryId: params.factoryId,
+            factoryType: params.factoryType,
+            merchandiser: params.merchandiser,
+            customerId: params.customerId,
+            customerName: params.customerName,
           }
         : {};
 
@@ -61,15 +71,19 @@ export function useProductionStats(queryParams: ProductionQueryParams) {
 
       if (isApiSuccess(response)) {
         const data = (response.data || {}) as Record<string, unknown>;
+        // P0 修复（静默数据掩盖）：移除 activeOrders <-> totalOrders 双向 fallback。
+        // 旧代码形成循环掩盖：A 缺用 B 填、B 缺用 A 填，导致"全部订单=生产中"
+        // 这类后端数据缺陷长期被掩盖，用户无法感知。修复后缺省明确为 0，
+        // 任一统计字段为 0 时立即暴露异常，便于运维/用户快速发现后端 SQL 问题。
         setGlobalStats({
-          activeOrders: Number(data.activeOrders ?? data.totalOrders ?? 0),
-          activeQuantity: Number(data.activeQuantity ?? data.totalQuantity ?? 0),
+          activeOrders: Number(data.activeOrders ?? 0),
+          activeQuantity: Number(data.activeQuantity ?? 0),
           completedOrders: Number(data.completedOrders ?? 0),
           completedQuantity: Number(data.completedQuantity ?? 0),
           scrappedOrders: Number(data.scrappedOrders ?? 0),
           scrappedQuantity: Number(data.scrappedQuantity ?? 0),
-          totalOrders: Number(data.totalOrders ?? data.activeOrders ?? 0),
-          totalQuantity: Number(data.totalQuantity ?? data.activeQuantity ?? 0),
+          totalOrders: Number(data.totalOrders ?? 0),
+          totalQuantity: Number(data.totalQuantity ?? 0),
           delayedOrders: Number(data.delayedOrders ?? 0),
           delayedQuantity: Number(data.delayedQuantity ?? 0),
           todayOrders: Number(data.todayOrders ?? 0),

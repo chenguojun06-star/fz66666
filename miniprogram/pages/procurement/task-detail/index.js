@@ -670,7 +670,7 @@ Page({
   },
 
   async onConfirmPicking() {
-    const { pickingItems, orderId, orderNo, styleNo } = this.data;
+    const { pickingItems, orderId, orderNo, styleNo, isSampleMode, patternProductionId } = this.data;
     const userInfo = getUserInfo() || {};
     const pickerId = String(userInfo.id || userInfo.userId || '').trim();
     const pickerName = String(userInfo.name || userInfo.username || '').trim();
@@ -700,16 +700,41 @@ Page({
       }
     }
 
+    // P0 修复（数据完整性）：样衣领料时使用 patternProductionId 关联采购，
+    // 不能将空字符串 orderId/styleNo 写入 t_material_picking，否则领料单无归属失联，
+    // 仓库端列表通过 orderNo/styleNo 筛选无法找到，库存锁定数据悬空无法释放。
+    let pickingOrderId = orderId;
+    let pickingOrderNo = orderNo;
+    let pickingStyleNo = styleNo;
+    let pickingUsageType = 'PRODUCTION';
+    if (isSampleMode) {
+      // 样衣领料：优先使用 patternProductionId（样衣任务的唯一归属ID）作为 orderId，
+      // 让仓库端能按此字段检索。同时标记 usageType=SAMPLE 明确样衣领料。
+      if (!pickingOrderId && patternProductionId) {
+        pickingOrderId = patternProductionId;
+      }
+      pickingUsageType = 'SAMPLE';
+      // 样衣场景至少要有一个归属字段：patternProductionId 或 styleNo
+      const hasAnyAnchor = (pickingOrderId && String(pickingOrderId).trim())
+        || (pickingStyleNo && String(pickingStyleNo).trim());
+      if (!hasAnyAnchor) {
+        wx.hideLoading ? null : null;
+        toast.error('样衣领料缺少任务关联信息，请返回上一页重试');
+        return;
+      }
+    }
+
     wx.showLoading({ title: '提交领料...', mask: true });
     try {
       await api.production.createPickingPending({
         picking: {
-          orderId: orderId || '',
-          orderNo: orderNo || '',
-          styleNo: styleNo || '',
+          orderId: pickingOrderId || undefined,
+          orderNo: pickingOrderNo || undefined,
+          styleNo: pickingStyleNo || undefined,
+          patternProductionId: isSampleMode ? (patternProductionId || undefined) : undefined,
           pickerId,
           pickerName,
-          usageType: 'PRODUCTION',
+          usageType: pickingUsageType,
           pickupType: 'INTERNAL',
         },
         items,

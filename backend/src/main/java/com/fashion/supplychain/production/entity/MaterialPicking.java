@@ -25,6 +25,8 @@ public class MaterialPicking {
     private LocalDateTime pickTime;
     private String status;
     private String purchaseId;
+    // 样衣领料关联的样衣任务ID（手机端样衣采购闭环使用）
+    private String patternProductionId;
     private String auditStatus;
     private String auditorId;
     private String auditorName;
