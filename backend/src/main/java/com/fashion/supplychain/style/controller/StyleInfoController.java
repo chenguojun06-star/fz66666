@@ -159,7 +159,10 @@ public class StyleInfoController {
         switch (stage.toLowerCase()) {
             case "pattern":
                 switch (action.toLowerCase()) {
-                    case "start": return Result.success(styleInfoOrchestrator.startPattern(id));
+                    case "start": {
+                        String assignee = body != null ? String.valueOf(body.getOrDefault("assignee", "")).trim() : "";
+                        return Result.success(styleInfoOrchestrator.startPattern(id, assignee));
+                    }
                     case "complete": return Result.success(styleInfoOrchestrator.completePattern(id));
                     case "reset": return Result.success(styleInfoOrchestrator.resetPattern(id, body));
                     default: return Result.fail("不支持的操作: " + action);

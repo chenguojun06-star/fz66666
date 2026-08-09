@@ -106,6 +106,7 @@ const StylePatternTab: React.FC<Props> = ({
         completedTime={patternCompletedTime}
         readOnly={readOnly}
         onRefresh={onRefresh}
+        allowAssigneeSelect
         onBeforeComplete={async () => {
           return true;
         }}

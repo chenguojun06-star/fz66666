@@ -491,9 +491,13 @@ public class StyleInfoOrchestrator {
         return styleStageHelper.resetProductionStage(id, body);
     }
 
-    public boolean startPattern(Long id) {
+    public boolean startPattern(Long id, String assignee) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.startPattern(id);
+        return styleStageHelper.startPattern(id, assignee);
+    }
+
+    public boolean startPattern(Long id) {
+        return startPattern(id, null);
     }
 
     public boolean completePattern(Long id) {

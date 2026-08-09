@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { App, Button, Space, Tag } from 'antd';
+import { App, Button, Space, Tag, Input } from 'antd';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import api from '@/utils/api';
@@ -32,6 +32,8 @@ interface Props {
   onBeforeComplete?: () => boolean | Promise<boolean>;
   /** 额外显示的信息节点 */
   extraInfo?: React.ReactNode;
+  /** 是否允许选择纸样师（仅纸样开发阶段使用） */
+  allowAssigneeSelect?: boolean;
 }
 
 /**
@@ -57,6 +59,7 @@ const StyleStageControlBar: React.FC<Props> = ({
   onBeforeStart,
   onBeforeComplete,
   extraInfo,
+  allowAssigneeSelect = false,
 }) => {
   const { message } = App.useApp();
   const { user } = useUser();
@@ -64,6 +67,8 @@ const StyleStageControlBar: React.FC<Props> = ({
   const [resolvedStyleNo, setResolvedStyleNo] = React.useState('');
   const [rejectModalOpen, setRejectModalOpen] = React.useState(false);
   const [rejectLoading, setRejectLoading] = React.useState(false);
+  // 纸样师选择（默认当前登录用户名）
+  const [selectedAssignee, setSelectedAssignee] = React.useState('');
 
   const styleIdKey = useMemo(() => String(styleId ?? '').trim(), [styleId]);
 
@@ -140,9 +145,14 @@ const StyleStageControlBar: React.FC<Props> = ({
     setSaving(true);
     try {
       const url = `/style/info/${styleId}/stage-action?stage=${apiPath}&action=${action}`;
-      const body = reason ? { reason } : undefined;
+      const body: Record<string, unknown> = {};
+      if (reason) body.reason = reason;
+      // 纸样师选择：开始时传选中的 assignee
+      if (action === 'start' && allowAssigneeSelect && selectedAssignee.trim()) {
+        body.assignee = selectedAssignee.trim();
+      }
 
-      const res = await api.post(url, body);
+      const res = await api.post(url, Object.keys(body).length > 0 ? body : undefined);
       const result = res as any;
 
       if (result.code === 200) {
@@ -257,15 +267,25 @@ const StyleStageControlBar: React.FC<Props> = ({
           // 未完成状态：显示开始/完成按钮
           <>
             {!startTime && (
-              <Button
-                type="primary"
-               
-                loading={saving}
-                disabled={saving || readOnly}
-                onClick={handleStart}
-              >
-                开始{stageName}
-              </Button>
+              <>
+                {allowAssigneeSelect && (
+                  <Input
+                    placeholder="纸样师（默认当前用户）"
+                    value={selectedAssignee}
+                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                    style={{ width: 160 }}
+                    allowClear
+                  />
+                )}
+                <Button
+                  type="primary"
+                  loading={saving}
+                  disabled={saving || readOnly}
+                  onClick={handleStart}
+                >
+                  开始{stageName}
+                </Button>
+              </>
             )}
             {startTime && !completedTime && (
               <Button

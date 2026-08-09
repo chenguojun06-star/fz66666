@@ -1,11 +1,13 @@
 import React from 'react';
 import { Col, Form, Input, InputNumber, Row } from 'antd';
 import CustomerSelect from '@/components/common/CustomerSelect';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { SectionFormContextProps } from './types';
 import SectionBox from './SectionBox';
 
 /**
- * 区2：客户跟进信息（客户 / 跟单员 / 设计师 / 打板价 / 吊牌价 / 销售价）
+ * 区2：客户跟进信息（客户 / 跟单员 / 设计师 / 板类 / 打板价 / 吊牌价 / 销售价）
+ * 板类从原"版次与版型信息"合并至此，减少分区数量
  */
 const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
   _form,
@@ -45,6 +47,11 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
         <Col xs={24} md={8}>
           <Form.Item name="sampleNo" label="设计师" style={{ marginBottom: 8 }}>
             <Input id="sampleNo" placeholder="请输入设计师" disabled={editLocked} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={8}>
+          <Form.Item name="plateType" label="板类" style={{ marginBottom: 8 }}>
+            <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)} style={{ width: '100%' }} id="plateType" />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>

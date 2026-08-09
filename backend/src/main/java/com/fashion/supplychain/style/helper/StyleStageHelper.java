@@ -218,7 +218,7 @@ public class StyleStageHelper {
         return true;
     }
 
-    public boolean startPattern(Long id) {
+    public boolean startPattern(Long id, String assignee) {
         StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
@@ -229,34 +229,41 @@ public class StyleStageHelper {
         }
 
         String currentUser = UserContext.username();
+        // 如果前端指定了纸样师则使用指定值，否则默认当前操作人
+        String patternAssignee = StringUtils.hasText(assignee) ? assignee : currentUser;
         LocalDateTime now = LocalDateTime.now();
 
         var updateChain = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "IN_PROGRESS")
-                .set(StyleInfo::getPatternAssignee, currentUser)
+                .set(StyleInfo::getPatternAssignee, patternAssignee)
                 .set(StyleInfo::getPatternStartTime, now)
                 .set(StyleInfo::getPatternCompletedTime, null)
-                .set(StyleInfo::getSizeAssignee, currentUser)
+                .set(StyleInfo::getSizeAssignee, patternAssignee)
                 .set(StyleInfo::getSizeStartTime, now)
-                .set(StyleInfo::getProductionAssignee, currentUser)
+                .set(StyleInfo::getProductionAssignee, patternAssignee)
                 .set(StyleInfo::getProductionStartTime, now)
                 .set(StyleInfo::getUpdateTime, now);
 
-        if (!StringUtils.hasText(current.getSampleSupplier())) {
-            updateChain.set(StyleInfo::getSampleSupplier, currentUser);
-            log.info("Synced pattern developer to style info: styleId={}, patternDeveloper={}", id, currentUser);
+        // 同步纸样师到基础信息 sampleSupplier 字段（原基础信息板型区已移除，此处保证数据不丢）
+        if (!StringUtils.hasText(current.getSampleSupplier()) || !current.getSampleSupplier().equals(patternAssignee)) {
+            updateChain.set(StyleInfo::getSampleSupplier, patternAssignee);
+            log.info("Synced pattern developer to style info: styleId={}, patternDeveloper={}", id, patternAssignee);
         }
 
         boolean ok = updateChain.update();
         if (ok) {
             styleOperationAppendHelper.appendStart(id, "纸样开发");
-            log.info("纸样开始，已同步更新尺寸表和生产制单开始时间: styleId={}", id);
+            log.info("纸样开始，已同步更新尺寸表和生产制单开始时间: styleId={}, assignee={}", id, patternAssignee);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
         return true;
+    }
+
+    public boolean startPattern(Long id) {
+        return startPattern(id, null);
     }
 
     public boolean completePattern(Long id) {
