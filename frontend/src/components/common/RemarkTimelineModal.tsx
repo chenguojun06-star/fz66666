@@ -194,6 +194,12 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       size="large"
       styles={{ wrapper: { width: '55vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       destroyOnHidden
+      // 渲染到 document.body，避免被外层 Drawer（如 StyleStageDrawer）的堆叠上下文困住
+      getContainer={() => document.body}
+      // 提高层级，确保覆盖在外层 Drawer 之上（外层 Drawer 默认 1000）
+      zIndex={1050}
+      // 遮罩层 z-index 必须低于 Drawer 内容但高于外层 Drawer
+      maskStyle={{ zIndex: 1049 }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
         {/* 样衣异常提示（跟随模式：异常信息直接展示在备注日志顶部） */}

@@ -23,8 +23,9 @@ const StyleReviewModal: React.FC<StyleReviewModalProps> = ({ confirm }) => {
       destroyOnHidden={false}
       // 渲染到 document.body，避免被 StyleStageDrawer 遮挡
       getContainer={() => document.body}
-      zIndex={1050}
-      maskStyle={{ zIndex: 1049 }}
+      // 高于 StyleStageDrawer（默认 1000）、PurchaseDrawer/RemarkTimelineModal（1050）
+      zIndex={1100}
+      maskStyle={{ zIndex: 1099 }}
     >
       <Form form={confirm.reviewForm} layout="vertical">
         <Form.Item

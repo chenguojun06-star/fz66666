@@ -25,6 +25,10 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
       confirmLoading={loading}
       okText="确认指派"
       cancelText="取消"
+      // 渲染到 document.body，避免被外层 StyleStageDrawer 的堆叠上下文困住
+      getContainer={() => document.body}
+      // 高于 StyleStageDrawer（默认 1000）和 PurchaseDrawer/RemarkTimelineModal（1050）
+      zIndex={1100}
     >
       <Form form={form} layout="vertical">
         <Form.Item name="assignee" label="指派人员" rules={[{ required: true, message: '请输入指派人员' }]}>

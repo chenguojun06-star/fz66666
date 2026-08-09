@@ -36,6 +36,9 @@ interface StyleInfoTabsProps {
 
 const tabContentStyle: React.CSSProperties = {
   padding: 12,
+  // 给 tab 内容区一个最小高度，避免 tab 切换时 loading → 数据渲染导致高度突变，
+  // 配合 tabBarStyle 的 sticky 防止 tabs bar "跳跃"。
+  minHeight: '60vh',
   background: 'var(--color-bg-base)',
   border: '1px solid var(--color-border)',
   borderTop: 'none',
@@ -97,6 +100,11 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
         activeKey={activeKey}
         onChange={onChange}
         size="small"
+        // 禁用切换动画，避免 antd Tabs animated + sticky 在内容高度突变时双重抖动
+        animated={false}
+        // 保留已切换过的 tab 内容 DOM（配合 minHeight），切回时立即显示已有内容，避免重新加载导致高度突变跳跃
+        // 注：antd v6 已将 destroyInactiveTabPane 重命名为 destroyOnHidden
+        destroyOnHidden={false}
         tabBarStyle={{
           background: 'var(--color-bg-base)',
           padding: '0 12px',

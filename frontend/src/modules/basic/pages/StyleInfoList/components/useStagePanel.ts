@@ -128,11 +128,15 @@ export default function useStagePanel({
       }
 
       if (sampleStageCompleted || selectedStage.record.sampleCompletedTime) {
+        // sample 阶段的"修改审核结论"按钮：
+        // 样衣生产完成即可点击；仅在审核通过且已入库（completedTime 存在）时禁用，避免重复审核。
+        // 注意：不能再用 stage.status === 'done'，因为 buildSampleStage 已将 PRODUCTION_COMPLETED 算作 done。
+        const reviewPassed = String(selectedStage.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS';
         actions.push({
           key: 'review',
           label: selectedStage.record.sampleReviewStatus ? '修改审核结论' : '记录审核结论',
           type: selectedStage.record.sampleReviewStatus ? 'default' : 'primary',
-          disabled: selectedStage.stage.status === 'done',
+          disabled: reviewPassed && Boolean(selectedStage.record.completedTime),
           onClick: confirmHook.handleOpenReviewModal,
         });
       }

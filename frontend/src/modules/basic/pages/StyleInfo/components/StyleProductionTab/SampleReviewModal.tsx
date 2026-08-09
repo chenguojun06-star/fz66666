@@ -29,9 +29,10 @@ const SampleReviewModal: React.FC<Props> = ({
       cancelText="取消"
       // 渲染到 document.body 避免被同行 Drawer 容器遮挡
       getContainer={() => document.body}
-      zIndex={1050}
+      // 高于 StyleStageDrawer（默认 1000）、PurchaseDrawer/RemarkTimelineModal（1050）
+      zIndex={1100}
       // 提高 mask 层级，确保覆盖在 Drawer 之上
-      maskStyle={{ zIndex: 1049 }}
+      maskStyle={{ zIndex: 1099 }}
     >
       <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
         <Form.Item

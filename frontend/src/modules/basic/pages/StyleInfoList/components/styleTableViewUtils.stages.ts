@@ -150,11 +150,17 @@ export const buildSampleStage: StageBuilder = (record) => {
   const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
   const started = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
-  // 样衣生产 done 的唯一判定：sampleStatus=COMPLETED 或 sampleCompletedTime 存在
-  // PRODUCTION_COMPLETED 仅代表样板制作完成，样衣开发流程仍在进行（还有审核/入库等环节）
-  const done = sampleStatus === 'COMPLETED' || Boolean(record.sampleCompletedTime);
+  // 样衣生产 done 判定：
+  // - sampleStatus=COMPLETED：样衣整个流程完成（含审核入库）
+  // - sampleStatus=PRODUCTION_COMPLETED：样板制作完成（工序列表全部完成，进入审核阶段）
+  // - sampleCompletedTime 存在：后端已记录完成时间
+  // 注："样衣生产"节点表示生产环节结束，PRODUCTION_COMPLETED 即应判定为 done；
+  //     "审核/入库"节点是独立阶段，由 buildConfirmStage 单独判定。
+  const done = sampleStatus === 'COMPLETED'
+    || sampleStatus === 'PRODUCTION_COMPLETED'
+    || Boolean(record.sampleCompletedTime);
   // 样板制作完成（PRODUCTION_COMPLETED）单独标记，用于 helper 文案区分
-  const productionDone = sampleStatus === 'PRODUCTION_COMPLETED';
+  const productionDone = sampleStatus === 'PRODUCTION_COMPLETED' && !record.sampleCompletedTime;
 
   return {
     key: 'sample',
