@@ -27,6 +27,11 @@ const SampleReviewModal: React.FC<Props> = ({
       confirmLoading={saving}
       okText="保存结论"
       cancelText="取消"
+      // 渲染到 document.body 避免被同行 Drawer 容器遮挡
+      getContainer={() => document.body}
+      zIndex={1050}
+      // 提高 mask 层级，确保覆盖在 Drawer 之上
+      maskStyle={{ zIndex: 1049 }}
     >
       <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
         <Form.Item
