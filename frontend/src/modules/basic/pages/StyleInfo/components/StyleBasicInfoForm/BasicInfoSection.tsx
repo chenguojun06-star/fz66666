@@ -25,7 +25,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
 
   return (
-    <SectionBox title="基础信息 · 款号 / SKC / 款名" usePrimaryHighlight>
+    <SectionBox title="基础信息" usePrimaryHighlight>
       <Row gutter={[16, 8]}>
         <Col xs={24} md={8}>
           <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]} style={{ marginBottom: 8 }}>

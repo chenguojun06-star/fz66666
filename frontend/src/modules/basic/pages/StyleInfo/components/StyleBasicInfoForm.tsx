@@ -98,6 +98,9 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
       {/* 右侧：表单字段（按业务流程自上而下分区） */}
       <div style={{ minWidth: 0 }}>
+        {/* Tab 区域（BOM/纸样/生产/二次工艺/工序/报价/附件/洗水唛）— 移到顶部与基础信息对齐 */}
+        {renderBelowForm ? <div style={{ marginBottom: 16 }}>{renderBelowForm()}</div> : null}
+
         {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道） */}
         <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} />
 
@@ -155,9 +158,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           customFields={customFields}
           editLocked={editLocked}
         />
-
-        {/* Tab 区域（BOM/纸样/生产/二次工艺/工序/报价/附件/洗水唛） */}
-        {renderBelowForm ? <div style={{ marginTop: 16 }}>{renderBelowForm()}</div> : null}
       </div>
     </Row>
   );

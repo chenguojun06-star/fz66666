@@ -16,7 +16,7 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
   isFieldLocked,
 }) => {
   return (
-    <SectionBox title="客户跟进信息">
+    <SectionBox title="客户信息">
       <Row gutter={[16, 8]}>
         <Col xs={24} md={8}>
           <Form.Item name="customerId" noStyle hidden>

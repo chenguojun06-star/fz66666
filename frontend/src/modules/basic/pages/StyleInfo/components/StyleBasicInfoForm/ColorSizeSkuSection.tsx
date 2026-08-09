@@ -77,7 +77,7 @@ const ColorSizeSkuSection: React.FC<ColorSizeSkuSectionProps> = ({
   skuRefreshTrigger,
 }) => {
   return (
-    <SectionBox title="颜色 / 尺码 / SKU 配置" boxStyle={SECTION_BOX_STYLE_COMPACT}>
+    <SectionBox title="颜色码数" boxStyle={SECTION_BOX_STYLE_COMPACT}>
       <StyleColorSizeTable
         size1={size1}
         setSize1={setSize1}

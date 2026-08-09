@@ -45,7 +45,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
   }, [currentStyle?.extJson]);
 
   return (
-    <SectionBox title="款式特征 · AI识别">
+    <SectionBox title="款式特征">
       <Row gutter={[16, 8]}>
         <Col xs={24} md={8}>
           <Form.Item
