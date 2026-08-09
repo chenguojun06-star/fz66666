@@ -238,6 +238,15 @@ export const useStyleListData = ({
     });
   }, [data]);
 
+  // 已完成款式：progressNode='样衣完成' 或 sampleStatus='COMPLETED'
+  const completedStyles = useMemo(() => {
+    return data.filter((item) => {
+      const progressNode = String(item.progressNode || '').trim();
+      const sampleStatus = String(item.sampleStatus || '').trim().toUpperCase();
+      return progressNode === '样衣完成' || sampleStatus === 'COMPLETED';
+    });
+  }, [data]);
+
   const overdueStyles = useMemo(() => {
     return activeStyles.filter((item) => {
       if (!item.deliveryDate) return false;
@@ -262,12 +271,25 @@ export const useStyleListData = ({
   }, [warningStyles]);
 
   const displayData = useMemo(() => {
-    let base = smartFilter === 'overdue' ? overdueStyles
-             : smartFilter === 'warning' ? warningStyles
-             : showAllStyles ? data
-             : activeStyles;
+    // 优先级：focusStyleIds（延期环节跳转）> smartFilter（已延期/临近交期提示）> activeStatFilter（4个统计卡片）
+    let base: StyleInfo[];
     if (focusStyleIds.size > 0) {
-      base = base.filter(s => focusStyleIds.has(String(s.id)));
+      // 延期环节跳转：在全部数据中按 ID 筛选
+      base = data.filter(s => focusStyleIds.has(String(s.id)));
+    } else if (smartFilter === 'overdue') {
+      base = overdueStyles;
+    } else if (smartFilter === 'warning') {
+      base = warningStyles;
+    } else if (activeStatFilter === 'all') {
+      base = showAllStyles ? data : activeStyles;
+    } else if (activeStatFilter === 'developing') {
+      base = activeStyles;
+    } else if (activeStatFilter === 'completed') {
+      base = completedStyles;
+    } else if (activeStatFilter === 'delayed') {
+      base = overdueStyles;
+    } else {
+      base = activeStyles;
     }
     if (base.length > 1) {
       base = [...base].sort((a, b) => {
@@ -280,9 +302,9 @@ export const useStyleListData = ({
       });
     }
     return base;
-  }, [smartFilter, data, activeStyles, overdueStyles, warningStyles, dateSortAsc, focusStyleIds, showAllStyles]);
+  }, [smartFilter, activeStatFilter, data, activeStyles, completedStyles, overdueStyles, warningStyles, dateSortAsc, focusStyleIds, showAllStyles]);
 
-  const displayTotal = smartFilter !== 'all' || !showAllStyles ? displayData.length : total;
+  const displayTotal = (focusStyleIds.size > 0 || smartFilter !== 'all' || activeStatFilter !== 'all' || !showAllStyles) ? displayData.length : total;
 
   return {
     // 状态
@@ -301,6 +323,7 @@ export const useStyleListData = ({
     setActiveStatFilter,
     // 派生数据
     activeStyles,
+    completedStyles,
     overdueStyles,
     warningStyles,
     overdueStyleCount,

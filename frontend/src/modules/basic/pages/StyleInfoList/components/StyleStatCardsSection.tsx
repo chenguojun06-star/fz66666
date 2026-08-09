@@ -118,7 +118,7 @@ const StyleStatCardsSection: React.FC<StyleStatCardsSectionProps> = ({
           onClick: () => {
             setActiveStatFilter('completed');
             setShowAllStyles(false);
-            setQueryParams((prev: any) => ({ ...prev, progressNode: '样衣完成', page: 1 }));
+            setQueryParams((prev: any) => ({ ...prev, progressNode: '', page: 1 }));
             setSmartFilter('all');
             setFocusStyleIds(new Set());
           },
