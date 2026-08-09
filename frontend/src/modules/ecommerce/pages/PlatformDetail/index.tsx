@@ -1,8 +1,9 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Tabs, Card, Row, Col, Statistic, Tag, Button, Space, Spin, Typography, Alert, Descriptions, Input, Select, Form, Steps, Divider, Empty,
+  Tabs, Card, Row, Col, Statistic, Tag, Button, Space, Typography, Alert, Descriptions, Input, Select, Form, Steps, Divider, Empty,
 } from 'antd';
+import SkeletonLoader from '@/components/common/SkeletonLoader';
 import {
   ArrowLeftOutlined, ShoppingCartOutlined, InboxOutlined, ShopOutlined,
   SettingOutlined, ThunderboltOutlined, SyncOutlined, CheckCircleOutlined,
@@ -141,7 +142,7 @@ const PlatformDetail: React.FC = () => {
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: (stats?.noStockWarn ?? 0) > 0 ? 'var(--color-bg-base)1F0' : 'var(--status-info-bg)', borderRadius: 8, border: (stats?.noStockWarn ?? 0) > 0 ? '1px solid var(--status-error-border)' : '1px solid var(--status-info-border)' }}>
+              <Card style={{ background: (stats?.noStockWarn ?? 0) > 0 ? 'var(--status-error-bg)' : 'var(--status-info-bg)', borderRadius: 8, border: (stats?.noStockWarn ?? 0) > 0 ? '1px solid var(--status-error-border)' : '1px solid var(--status-info-border)' }}>
                 <Statistic title="缺货预警" value={stats?.noStockWarn ?? 0} suffix="单" styles={{ content: { color: (stats?.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)', fontSize: 20 } }} prefix={<WarningOutlined />} />
               </Card>
             </Col>
@@ -228,7 +229,7 @@ const PlatformDetail: React.FC = () => {
   ];
 
   return (
-    <Spin spinning={loading}>
+    <SkeletonLoader type="card" rows={4} loading={loading}>
       <div style={{ padding: '0 8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, marginTop: 16 }}>
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.ecommerceCenter)} style={{ marginRight: 8 }} />
@@ -298,7 +299,7 @@ const PlatformDetail: React.FC = () => {
           />
         </div>
       </div>
-    </Spin>
+    </SkeletonLoader>
   );
 };
 

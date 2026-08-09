@@ -1,11 +1,40 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-05（会话级反思机制补齐 — D-055）
+> 最后更新：2026-08-09（架构守护假测试修复 + CI凭据安全 + CLAUDE.md同步）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-09 CodeBuddy 环境安全防护体系（详见 D-057）
+
+用户要求"确保每一次的代码迭代与推送数据库不会炸前后端不会出现问题"，创建脚本化防护体系替代 Trae MCP：
+
+- [x] `scripts/safe-query.sh` — 只读查询封装（替代 db-query-mcp）：拒绝写操作 + 强制 LIMIT 500 + 多租户检测
+- [x] `scripts/safe-push.sh` — 推送前全量检查（替代 test-runner-mcp）：编译 + 类型 + Flyway 4项 + 多租户 + 敏感文件
+- [x] `scripts/hooks/pre-push` + `scripts/install-hooks.sh` — git hook 自动触发（已安装 `core.hooksPath=scripts/hooks`）
+- [x] `scripts/predeploy-check.sh` — 部署前检查（替代 change-impact-mcp）：prod.yml 安全 + 环境变量 + Dockerfile
+- [x] 测试全部通过：safe-push 6项 PASS、写操作拒绝退出码3、LIMIT超限退出码4
+
+**防护链路**：改代码 → safe-push.sh → git push → pre-push hook → CI → 部署 → predeploy-check.sh
+
+**我的开发纪律**：查数据只用 safe-query.sh；写数据走后端代码；push 前跑 safe-push.sh；改代码前读对应 fashion-* SKILL.md + antiPatterns.md
+
+### 2026-08-09 质量防线真实化修复（3处 P1，详见 D-056）
+
+用户诉求："你先全面了解一下这个项目 看看有什么需要优化的" → 全系统扫描 → 逐条核实 → "如果缺少是没有用的就做了修复优化，颜色硬编码不要动"
+
+- [x] **ArchUnit 假测试修复**（`ArchitectureConstraintTest.java`）
+  - `controllerShouldNotCallServiceImplDirectly`：原 `rule.allowEmptyShould(true)` 返回值被丢弃、无 `.check()`，是永远绿灯的 no-op → 补 `.check(importedClasses)` 恢复架构守护
+  - `orchestratorNamingMustEndWithOrchestrator`：同样 no-op → 补 `.check()` + 排除 intelligence 模块 + 多后缀允许（Orchestrator/Helper/Service/Generator/Query/Advisor/Engine），与 `ArchitectureRulesTest` 对齐
+- [x] **CI 硬编码凭据移除**（`ci.yml:320-321`）
+  - 原 `SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME || 'lilb' }}` + `SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD || '123456' }}` → 明文弱口令写在公开仓库
+  - 改为无 fallback + 运行前校验非空，缺失则 `::error::` 报错退出
+- [x] **CLAUDE.md 版本号同步**
+  - Spring Boot 3.3.6 → 3.4.5、MyBatis-Plus 3.5.7 → 3.5.12、编排器 235 → 330
+
+**未动**：颜色硬编码（用户明确"有些颜色是必须要的不要动这些"，D-052-2 记录的 71 处保护色完整保留）
 
 ### 2026-08-05 会话级反思机制补齐 + 考勤关联生产数据 + AI 性能优化 ✅（详见 D-055）
 

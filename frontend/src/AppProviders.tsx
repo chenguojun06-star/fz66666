@@ -2,6 +2,7 @@
 // 从 main.tsx 拆分：主题 tokens / AntdStaticLoader / AppWrapper
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntApp, ConfigProvider, theme } from 'antd';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
@@ -13,6 +14,21 @@ import { type AppLanguage } from './i18n/languagePreference';
 import { useAppLanguage } from './i18n/useAppLanguage';
 import XiaoyunSpinIndicator from './components/common/XiaoyunSpinIndicator';
 import { applyTheme, fallbackTheme, themeStorageKey } from './main.helpers';
+
+// React Query 全局客户端
+// staleTime 30s：列表返回上一页时使用缓存数据，避免白屏闪现
+// gcTime 5min：离开页面后缓存保留 5 分钟，再返回仍可秒开
+// retry 1：接口失败自动重试 1 次
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // 深色主题 token 配置（雾黑色调）
 const darkThemeTokens = {
@@ -353,11 +369,13 @@ const AppWrapper: React.FC = () => {
     >
       <AntApp>
         <AntdStaticLoader />
-        <AppProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </AppProvider>
+        <QueryClientProvider client={queryClient}>
+          <AppProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </AppProvider>
+        </QueryClientProvider>
       </AntApp>
     </ConfigProvider>
   );

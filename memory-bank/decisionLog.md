@@ -1,7 +1,106 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-05（新增 D-055 会话级反思机制补齐 — 反思三问 + 反模式沉淀）
+> 最后更新：2026-08-09（新增 D-056 质量防线真实化 — ArchUnit假测试修复 + CI凭据安全）
+
+---
+
+## D-057：CodeBuddy 环境安全防护体系 — 替代 Trae MCP 的脚本化方案（2026-08-09）
+
+### 上下文
+项目原有 6 个自研 MCP（db-query-mcp / flyway-mcp / test-runner-mcp / memory-bank-mcp / change-impact-mcp / anti-pattern-mcp）是 Trae IDE 体系配置，CodeBuddy 环境无法加载。用户要求"确保每一次的代码迭代与推送数据库不会炸前后端不会出现问题"，需要一套不依赖 MCP 的等价防护方案。
+
+### 决策
+用 **git hook + 校验脚本 + 开发纪律** 替代 MCP 的自动防护，创建 4 个脚本 + 1 个 git hook：
+
+| 脚本 | 替代的 MCP | 防护点 |
+|------|-----------|--------|
+| `scripts/safe-query.sh` | db-query-mcp | 只读账号 + 拒绝写操作 + 强制 LIMIT 500 + 多租户检测 |
+| `scripts/safe-push.sh` | test-runner-mcp + CI | 后端编译 + 前端类型 + Flyway 4 项校验 + 多租户审计 + 敏感文件检查 |
+| `scripts/hooks/pre-push` | — | git push 前自动触发 safe-push.sh |
+| `scripts/install-hooks.sh` | — | 一键安装 git hooks（`git config core.hooksPath scripts/hooks`） |
+| `scripts/predeploy-check.sh` | change-impact-mcp | 部署前模拟 CI + prod.yml 安全扫描 + 环境变量检查 |
+
+### 安全规则复刻（safe-query.sh 复刻 db-query-mcp）
+1. **只读账号**：优先 `mcp_readonly`（仅 SELECT 权限），fallback `root` 时警告
+2. **拒绝写操作**：INSERT/UPDATE/DELETE/DROP/ALTER/CREATE/TRUNCATE/GRANT/REVOKE/RENAME/LOAD → 退出码 3
+3. **强制 LIMIT**：无 LIMIT 自动补 100，超过 500 拒绝 → 退出码 4
+4. **多租户检测**：业务表查询无 tenant_id 警告；含非默认租户字面量拒绝 → 退出码 5
+5. **安全检测先于账号检查**：即使没配密码，写操作也会被拒绝
+
+### 防护链路
+```
+改代码 → safe-push.sh（本地全量检查）→ git push → pre-push hook（自动触发 safe-push --quick）
+     → CI（GitHub Actions）→ 部署 → predeploy-check.sh（部署前检查）
+```
+
+### 理由
+- MCP 是进程级防护（工具自动注入），脚本 + hook 是流程级防护（强制执行点）
+- git pre-push hook 是最可靠的本地防护点：无法绕过 `git push`，紧急情况用 `--no-verify`
+- 只读账号是数据库层面的硬兜底：即使脚本检测全失效，数据库也拒绝写
+- 项目已有的 5 个 Python 校验脚本（audit-tenant-id / check-flyway-sql / check-entity-flyway / check-flyway-column-deps / check-flyway-versions）质量很高，直接复用
+
+### 安装方式
+```bash
+./scripts/install-hooks.sh   # 一次性安装 git hooks
+# 之后每次 git push 自动触发检查
+# 手动检查：./scripts/safe-push.sh
+# 查询数据：./scripts/safe-query.sh "SELECT ... WHERE tenant_id=1 LIMIT 10"
+# 部署前：./scripts/predeploy-check.sh
+```
+
+### 测试结果（2026-08-09）
+- safe-push.sh --quick：6 项检查全部 PASS（Flyway 版本号/SQL/Entity/列依赖/多租户/敏感文件）
+- safe-query.sh 写操作拒绝：UPDATE/DROP 均退出码 3 ✅
+- safe-query.sh LIMIT 超限拒绝：LIMIT 999 退出码 4 ✅
+- safe-query.sh 无 LIMIT 自动补充：补 LIMIT 100 ✅
+- predeploy-check.sh：CORS/密码/Dockerfile 全部 PASS ✅
+
+### 未覆盖项（需开发纪律补充）
+- change-impact-mcp 的影响面分析：改代码前手动 `read_file memory-bank/changeImpact.md`
+- anti-pattern-mcp 的反模式检测：改代码前手动 `read_file memory-bank/antiPatterns.md`
+- memory-bank-mcp 的记忆读写：直接用 `read_file`/`replace_in_file` 操作 memory-bank/ 目录
+- fashion-* skill 规则：改对应模块前 `read_file .agents/skills/fashion-*/SKILL.md`
+
+---
+
+## D-056：质量防线真实化 — ArchUnit假测试修复 + CI凭据安全 + CLAUDE.md同步（2026-08-09）
+
+### 上下文
+用户要求"全面了解项目看看有什么需要优化的"。全系统扫描后发现3个P1级质量问题，经逐条核实（对照 decisionLog/progress/.gitignore 等全程记录）确认属实：
+1. `ArchitectureConstraintTest` 有2个 `@Test` 方法是 no-op：`rule.allowEmptyShould(true)` 的返回值被丢弃，从未调用 `.check()`，JUnit 5 只要方法正常返回就判通过 → 架构守护形同虚设
+2. `ci.yml` 冒烟测试凭据 `SMOKE_USERNAME || 'lilb'` / `SMOKE_PASSWORD || '123456'` 明文写在公开仓库，secrets 未配置时会用弱口令打生产 `https://api.webyszl.cn`
+3. `CLAUDE.md` 技术栈版本号（Spring Boot 3.3.6 / MyBatis-Plus 3.5.7 / 235编排器）与实际（3.4.5 / 3.5.12 / 330）严重脱节
+
+### 核实过程（避免误判）
+- **测试源码 gitignore**：初判"CI后端测试一个都没跑"是防线失效 → 核实 `.gitignore:28-30` + `CLAUDE.md:36` + `D-001` 后确认这是**有意的 P0 策略**（测试代码永久本地保留不提交），非漏洞。真实问题缩小为"CI test步骤与gitignore策略不一致"，降级为P2。
+- **Controller @Transactional**：初判"P0铁律被突破" → 核实 `D-013` 确认是**已知临时方案**（ProductionOrderController 4个方法），"后续迭代下沉到Orchestrator后移除"。
+- **Service @Transactional**：`D-001` 有特例（REQUIRES_NEW / AI工具入口），冻结基线 34→18 在改善中。
+- **死代码报告**（`reports/code-quality-audit-20260407.md`）：抽样核实发现严重误报（useModal 34引用被说DEAD、GlobalAiAssistant 170引用被说DEAD），grep basename 方法漏匹配 import 语句，48个"死文件"大部分不可信。
+- **prod.yml 安全**：核实 CORS 全 HTTPS、密钥全走环境变量、PII默认值是 `D-054-3` 的 fail-safe 决策，安全配置无问题。
+
+### 决策
+1. **ArchUnit 假测试修复**：
+   - `controllerShouldNotCallServiceImplDirectly`：`rule.allowEmptyShould(true)` → `rule.allowEmptyShould(true).check(importedClasses)`
+   - `orchestratorNamingMustEndWithOrchestrator`：补 `.check()` + 排除 intelligence 模块（`resideOutsideOfPackage("..intelligence..")`）+ 多后缀允许（Orchestrator/Helper/Service/Generator/Query/Advisor/Engine），与 `ArchitectureRulesTest.orchestratorsShouldHaveCorrectNaming` 对齐
+2. **CI 凭据安全**：删除 `|| 'lilb'` 和 `|| '123456'` fallback，改为运行前校验 `$SMOKE_USERNAME` / `$SMOKE_PASSWORD` 非空，缺失则 `::error::` 报错退出
+3. **CLAUDE.md 同步**：Spring Boot 3.3.6→3.4.5、MyBatis-Plus 3.5.7→3.5.12、编排器 235→330；模块表加说明"数量为历史记录值，以代码为准"
+
+### 理由
+- `allowEmptyShould(true)` 返回新配置的 ArchRule，但 ArchRule 是不可变的，原变量不变；返回值被丢弃 = 配置了但从未执行。JUnit 5 只要 @Test 方法正常返回就判通过，no-op 测试比没有测试更危险（制造虚假安全感）
+- 明文弱口令 `lilb/123456` 在公开仓库 = 凭据泄漏，即使有 secrets fallback 也应删除（secrets 未配置时不应有默认口令）
+- CLAUDE.md 是 AI 协作事实源，错误版本号会被持续放大（AI 按错误信息给建议）
+
+### 未动项及原因
+- **颜色硬编码**（101处）：用户明确"有些颜色是必须要的不要动这些"，D-052-2 记录的 71 处保护色（#00e5ff/#39ff14/#7c4dff/#00bcd4/#f7a600）完整保留
+- **CI grep 恒假**（`ci.yml:63`）：逻辑确实坏（`grep -q | grep -v` 永远空输入），但核实 prod.yml 实际无 http://，恰好无漏检，优先级低
+- **ArchitectureRulesTest AND 条件**（`..service..` AND `..impl..`）：逻辑确实漏掉 `service/` 包下的类，但改成正确的会让严格 check 失败（18个违规），需配套冻结基线，超出小修复范围
+- **异常吞噬**（595处 log.debug / 356处静默返回空）：迭代推进，不急
+
+### 教训
+1. **核实比扫描更重要**：初轮扫描把"测试源码gitignore"和"已知技术债"说成防线失效，对照 decisionLog 后大面积修正。以后分析质量问题必须先读项目全程记录，不能只看代码
+2. **死代码报告方法有缺陷不能直接采信**：grep basename 漏匹配 import，48个"死文件"大部分误报。以后引用死代码结论前必须抽样核实引用计数
+3. **no-op 测试的隐蔽性**：`rule.allowEmptyShould(true)` 看起来像在配置规则，实际返回值被丢弃等于什么都没做。写 ArchUnit 测试必须确认 `.check()` 被调用
 
 ---
 

@@ -317,13 +317,18 @@ jobs:
       continue-on-error: true
       env:
         SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL || 'https://api.webyszl.cn' }}
-        SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME || 'lilb' }}
-        SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD || '123456' }}
+        SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
+        SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         SMOKE_TENANT_ID: ${{ secrets.SMOKE_TENANT_ID || '' }}
         SMOKE_FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
         SMOKE_MAX_RETRIES: '12'
         SMOKE_TIMEOUT: '30'
-      run: python3 scripts/postdeploy-smoke-test.py
+      run: |
+        if [ -z "$SMOKE_USERNAME" ] || [ -z "$SMOKE_PASSWORD" ]; then
+          echo "::error::SMOKE_USERNAME 或 SMOKE_PASSWORD 未配置，请到 Settings > Secrets and variables > Actions 配置生产环境冒烟测试账号"
+          exit 1
+        fi
+        python3 scripts/postdeploy-smoke-test.py
 
   create-release-tag:
     name: 创建发布标签

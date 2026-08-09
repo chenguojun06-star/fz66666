@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Tech Stack
 
-- **Backend**: Spring Boot 3.3.6 + Java 21 + MyBatis-Plus 3.5.7 + Flyway + Redis + MySQL 8.0
+- **Backend**: Spring Boot 3.4.5 + Java 21 + MyBatis-Plus 3.5.12 + Flyway + Redis + MySQL 8.0
 - **Frontend**: React 18 + TypeScript + Vite 7 + Ant Design 6 + Zustand
 - **Mini Program**: 微信原生小程序
 - **AI**: 小云AI智能体（Azure OpenAI + MCP Tools + DAG编排）
@@ -29,7 +29,7 @@ Already used in 10+ AI jobs and production consistency jobs. Lock key prefix: `f
 Controller → Orchestrator → Service → Mapper
 ```
 
-- **Orchestrator layer is mandatory** for cross-service/跨表 logic. 105 business orchestrators + 130 AI orchestrators.
+- **Orchestrator layer is mandatory** for cross-service/跨表 logic. 330 orchestrators (business + AI, across 14 domain modules).
 - **Services must NOT call each other** — all cross-service orchestration goes through Orchestrator.
 - **Controllers must NOT call multiple services** — delegate to Orchestrator.
 - **@Transactional only in Orchestrator layer** — never in Service or Controller.
@@ -54,6 +54,8 @@ Controller → Orchestrator → Service → Mapper
 | wechat | 2 | H5/小程序授权 |
 | datacenter | 1 | 数据同步、质量管理 |
 | search | 1 | 全局搜索 |
+
+> 各模块编排器数量为 CLAUDE.md 历史记录值，实际总数 330 个会随迭代变化，以代码为准。
 
 ## Frontend Module Structure (10 modules)
 

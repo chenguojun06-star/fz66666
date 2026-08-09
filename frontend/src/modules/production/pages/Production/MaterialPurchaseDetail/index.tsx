@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Spin, Alert, Row, Col, Dropdown } from 'antd';
+import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown } from 'antd';
 import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
@@ -112,7 +113,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
+        <SkeletonLoader type="table" rows={6} />
       ) : !order ? (
         <Card style={{ marginBottom: 16 }}>
           {!sampleMode && (

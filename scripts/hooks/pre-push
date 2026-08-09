@@ -1,0 +1,47 @@
+#!/bin/bash
+# pre-push — git hook，push 前自动触发 safe-push.sh
+#
+# 安装方式（二选一）：
+#   方式1（推荐）: git config core.hooksPath scripts/hooks
+#   方式2: cp scripts/hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#
+# 绕过方式（紧急情况）: git push --no-verify
+#
+# 本 hook 读取 git 推送信息但只做本地校验，不修改推送内容
+#
+set -uo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+SAFE_PUSH="$ROOT_DIR/scripts/safe-push.sh"
+
+# 读取并丢弃 stdin（git pre-push 协议要求）
+while read -r _ _ _ _; do :; done
+
+if [[ ! -x "$SAFE_PUSH" ]]; then
+  echo "[pre-push] safe-push.sh 不存在或不可执行，跳过检查"
+  echo "[pre-push] 请确认 scripts/safe-push.sh 存在且有执行权限"
+  exit 0
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  pre-push hook 触发 — 执行 safe-push.sh"
+echo "  紧急绕过: git push --no-verify"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# --quick 模式：跳过编译和类型检查（CI 会跑完整的）
+# 如需完整检查，设置环境变量 SAFE_PUSH_FULL=1
+if [[ "${SAFE_PUSH_FULL:-0}" == "1" ]]; then
+  "$SAFE_PUSH"
+else
+  "$SAFE_PUSH" --quick
+fi
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo ""
+  echo "❌ pre-push 检查未通过，推送已阻止"
+  echo "   修复问题后重新 push，或紧急情况: git push --no-verify"
+  exit 1
+fi
+
+exit 0
