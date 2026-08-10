@@ -117,13 +117,30 @@ public class MemoryArchiveService {
             try {
                 LocalDateTime cutoff = LocalDateTime.now().minusMonths(ARCHIVE_MONTHS);
                 // 分批查询 + 归档，直到没有更多记录
+                boolean degraded = false;
                 while (true) {
-                    List<AiConversationMemory> batch = conversationMemoryMapper.selectList(
-                            new LambdaQueryWrapper<AiConversationMemory>()
-                                    .lt(AiConversationMemory::getCreateTime, cutoff)
-                                    .eq(AiConversationMemory::getDeleteFlag, 0)
-                                    .orderByAsc(AiConversationMemory::getCreateTime)
-                                    .last("LIMIT " + ARCHIVE_BATCH_SIZE));
+                    List<AiConversationMemory> batch;
+                    try {
+                        // 优先使用 MyBatis-Plus selectList（SELECT *，含全部字段）
+                        batch = conversationMemoryMapper.selectList(
+                                new LambdaQueryWrapper<AiConversationMemory>()
+                                        .lt(AiConversationMemory::getCreateTime, cutoff)
+                                        .eq(AiConversationMemory::getDeleteFlag, 0)
+                                        .orderByAsc(AiConversationMemory::getCreateTime)
+                                        .last("LIMIT " + ARCHIVE_BATCH_SIZE));
+                    } catch (Exception selectError) {
+                        // 降级：云端数据库可能因 Flyway 迁移未完整执行导致 user_message/
+                        // ai_response/feedback_score/feedback_reason 字段缺失，
+                        // MyBatis-Plus selectList（SELECT *）会触发 Unknown column 错误。
+                        // 降级到只查询归档必需字段（显式列名，不依赖新增字段）。
+                        if (!degraded) {
+                            log.warn("[L5-Archive] selectList 失败，降级到必需字段查询。根因: {}",
+                                    selectError.getMessage());
+                            degraded = true;
+                        }
+                        batch = conversationMemoryMapper.findArchivableBatchDegraded(
+                                cutoff, ARCHIVE_BATCH_SIZE);
+                    }
                     if (batch == null || batch.isEmpty()) break;
 
                     try {
@@ -134,9 +151,17 @@ public class MemoryArchiveService {
                         log.warn("[L5-Archive] 批次归档失败（不影响其他批）: {}", e.getMessage());
                     }
                 }
-                log.info("[L5-Archive] 归档完成，成功 {} 条，失败 {} 条", totalArchived, totalFailed);
+                log.info("[L5-Archive] 归档完成，成功 {} 条，失败 {} 条{}",
+                        totalArchived, totalFailed,
+                        degraded ? "（降级模式）" : "");
             } catch (Exception e) {
+                // 记录完整堆栈（含 Cause），便于排查根因
                 log.error("[L5-Archive] 归档任务异常: {}", e.getMessage(), e);
+                Throwable cause = e.getCause();
+                while (cause != null) {
+                    log.error("[L5-Archive]   Caused by: {}", cause.getMessage());
+                    cause = cause.getCause();
+                }
             }
         } finally {
             distributedLockService.unlock("job:memory-archive", lockValue);
