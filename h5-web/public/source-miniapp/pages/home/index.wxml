@@ -57,22 +57,30 @@
     </view>
   </view>
 
-  <!-- 应用网格 -->
+  <!-- 应用网格（按4大分类分组） -->
   <view class="menu-section">
-    <view class="menu-grid">
-      <view 
-        class="menu-item" 
-        wx:for="{{menuItems}}" 
-        wx:key="id" 
-        bindtap="onMenuTap" 
-        data-index="{{index}}"
-        hover-class="menu-item-hover" 
-        hover-stay-time="100"
-      >
-        <view class="menu-icon-circle {{item.circleClass}}">
-          <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+    <view class="menu-group" wx:for="{{menuGroups}}" wx:key="group">
+      <view class="menu-group-title">
+        <text>{{item.group}}</text>
+        <text class="menu-group-count">{{item.items.length}}个</text>
+      </view>
+      <view class="menu-grid">
+        <view
+          class="menu-item"
+          wx:for="{{item.items}}"
+          wx:for-item="app"
+          wx:key="id"
+          bindtap="onMenuTap"
+          data-route="{{app.route}}"
+          data-id="{{app.id}}"
+          hover-class="menu-item-hover"
+          hover-stay-time="100"
+        >
+          <view class="menu-icon-circle {{app.circleClass}}">
+            <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
+          </view>
+          <text class="menu-name">{{app.name}}</text>
         </view>
-        <text class="menu-name">{{item.name}}</text>
       </view>
     </view>
   </view>

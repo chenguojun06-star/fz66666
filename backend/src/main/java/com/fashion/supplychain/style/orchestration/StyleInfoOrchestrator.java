@@ -210,7 +210,7 @@ public class StyleInfoOrchestrator {
                         && !styleInfo.getTenantId().equals(readableTenantId)) {
                     throw new NoSuchElementException("款号不存在");
                 }
-                return styleInfo;
+                return enrichDetail(styleInfo);
             }
         }
 
@@ -226,6 +226,24 @@ public class StyleInfoOrchestrator {
         StyleInfo styleInfo = styleInfoService.getDetailById(matched.getId());
         if (styleInfo == null) {
             throw new NoSuchElementException("款号不存在");
+        }
+        return enrichDetail(styleInfo);
+    }
+
+    /**
+     * 详情页字段补充：与列表接口保持一致，填充采购进度和时间等聚合字段。
+     * 解决样衣详情页 stages 视图"物料采购 已完成"但未显示时间的问题。
+     */
+    private StyleInfo enrichDetail(StyleInfo styleInfo) {
+        if (styleInfo == null) return null;
+        try {
+            java.util.List<StyleInfo> wrapper = new java.util.ArrayList<>();
+            wrapper.add(styleInfo);
+            styleListEnrichmentHelper.fillProcurementProgressFields(wrapper);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(StyleInfoOrchestrator.class)
+                .warn("enrichDetail 填充采购进度字段异常: styleId={}, msg={}",
+                    styleInfo.getId(), e.getMessage());
         }
         return styleInfo;
     }

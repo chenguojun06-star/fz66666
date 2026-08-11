@@ -139,13 +139,35 @@ page {
   overflow: hidden;
 }
 
-/* -- 应用网格 -- */
+/* -- 应用网格（按4大分类分组） -- */
 .menu-section {
   margin: 0 var(--page-padding-x) var(--spacing-md);
   padding: 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-sm);
+}
+
+.menu-group + .menu-group {
+  margin-top: 16px;
+}
+
+.menu-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.menu-group-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: 400;
 }
 
 .menu-grid {
@@ -219,6 +241,10 @@ page {
 
 .menu-icon-circle--gray {
   background: var(--color-text-tertiary);
+}
+
+.menu-icon-circle--teal {
+  background: var(--icon-color-teal, #14b8a6);
 }
 
 /* ============ 考勤打卡卡片 ============ */

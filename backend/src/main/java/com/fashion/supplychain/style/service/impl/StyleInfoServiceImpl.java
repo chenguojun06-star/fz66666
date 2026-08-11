@@ -211,6 +211,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         } else if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
             style.setProgressNode("样衣完成");
             style.setCompletedTime(style.getSampleCompletedTime());
+        } else if ("PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            // 与列表接口 StyleListEnrichmentHelper 保持一致
+            style.setProgressNode("样衣生产完成");
+            style.setCompletedTime(null);
         } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
             style.setProgressNode("样衣制作中");
             style.setCompletedTime(null);

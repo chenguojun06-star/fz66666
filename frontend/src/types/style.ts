@@ -67,6 +67,16 @@ export interface StyleInfo extends Record<string, unknown> {
    * 行业标准：采购是供应链模块（数据驱动），不属于生产工序配置
    */
   procurementProgress?: number;
+  /**
+   * 采购开始时间：取该款式下最早一笔采购单的创建时间（MIN(create_time)）
+   * 用于样衣详情页/列表页 stages 视图"物料采购"节点开始时间显示
+   */
+  procurementStartTime?: string;
+  /**
+   * 采购完成时间：取该款式下最晚一笔采购单的到货时间（MAX(received_time)）
+   * 仅当 procurementProgress=100（全部采购单已完成）时后端填充
+   */
+  procurementCompletedTime?: string;
   pushedToOrder?: number | boolean;
   pushedToOrderTime?: string;
 

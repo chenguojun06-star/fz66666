@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 吸顶区：搜索 + 扫码 + 筛选器（与 dashboard 一致的通用组件） -->
   <sticky-search-bar
-    placeholder="搜索物料/订单号"
+    placeholder="搜索款号/订单号"
     value="{{keyword}}"
     show-scan="{{true}}"
     show-filter="{{true}}"
@@ -37,14 +37,14 @@
     <text class="empty-hint">当有物料需要采购时，任务将出现在这里</text>
   </view>
 
-  <!-- 任务列表（物料级别卡片） -->
+  <!-- 任务列表（按款聚合卡片：一个款一张卡片） -->
   <block wx:else>
     <view
       wx:for="{{filteredItems}}"
-      wx:key="id"
+      wx:key="groupKey"
       class="task-card"
     >
-      <!-- 头部：款式图 + 物料信息 + 状态标签 -->
+      <!-- 头部：款式图 + 款号信息 + 状态标签 -->
       <view class="card-header">
         <view class="card-media">
           <image
@@ -57,29 +57,34 @@
           <view wx:else class="media-placeholder line-icon icon-package"></view>
         </view>
         <view class="card-title-area">
-          <text class="material-name">{{item.materialName || '未知物料'}}</text>
-          <text class="material-code" wx:if="{{item.materialCode}}">{{item.materialCode}}</text>
+          <text class="style-no">{{item.styleNo || '未知款号'}}</text>
+          <text class="style-name" wx:if="{{item.styleName}}">{{item.styleName}}</text>
+          <text class="order-no" wx:if="{{item.orderNo}}">订单号：{{item.orderNo}}</text>
         </view>
         <text class="tag {{item.statusTagClass}}">{{item.statusLabel}}</text>
       </view>
 
-      <!-- 详情行：2 列网格，来源号跨两列 -->
+      <!-- 详情行：2 列网格 -->
       <view class="card-body">
-        <view class="info-row info-row-full">
-          <text class="info-label">{{item.sourceLabel}}</text>
-          <text class="info-value">{{item.sourceNoText || '-'}}</text>
+        <view class="info-row">
+          <text class="info-label">物料数量</text>
+          <text class="info-value">{{item.materialCount}}项</text>
         </view>
         <view class="info-row">
-          <text class="info-label">数量</text>
+          <text class="info-label">采购总量</text>
           <text class="info-value">{{item.quantityText}}</text>
         </view>
-        <view class="info-row">
-          <text class="info-label">供应商</text>
-          <text class="info-value">{{item.supplierText}}</text>
+        <view class="info-row" wx:if="{{item.arrivalText}}">
+          <text class="info-label">到货情况</text>
+          <text class="info-value">{{item.arrivalText}}</text>
         </view>
         <view class="info-row">
           <text class="info-label">{{item.dateLabel}}</text>
           <text class="info-value">{{item.dateText || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">供应商</text>
+          <text class="info-value">{{item.supplierText}}</text>
         </view>
         <view class="info-row">
           <text class="info-label">采购员</text>
@@ -92,16 +97,15 @@
         <view
           wx:if="{{item.isPending}}"
           class="btn-claim"
-          data-id="{{item.id}}"
+          data-group-key="{{item.groupKey}}"
           bindtap="onClaimPurchase"
           hover-class="btn-claim-hover"
           hover-stay-time="100"
         >
-          <text>领取采购</text>
+          <text>{{item.pendingCount > 1 ? '一键领取(' + item.pendingCount + '项)' : '领取采购'}}</text>
           <view class="line-icon icon-arrow-right-sm claim-arrow"></view>
         </view>
         <view
-          wx:else
           class="btn-detail"
           data-order-no="{{item.orderNo}}"
           data-style-no="{{item.styleNo}}"

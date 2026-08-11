@@ -75,9 +75,14 @@ public class StyleListEnrichmentHelper {
 
         Map<String, Integer> totalByStyleKey = new HashMap<>();
         Map<String, Integer> completedByStyleKey = new HashMap<>();
+        // 采购开始时间（最早一笔采购单的创建时间）
+        Map<String, LocalDateTime> startTimeByStyleKey = new HashMap<>();
+        // 采购完成时间（最晚一笔到货时间，仅全部完成时有效）
+        Map<String, LocalDateTime> completedTimeByStyleKey = new HashMap<>();
 
         QueryWrapper<com.fashion.supplychain.production.entity.MaterialPurchase> qw = new QueryWrapper<>();
-        qw.select("style_id as styleId", "style_no as styleNo", "status")
+        qw.select("style_id as styleId", "style_no as styleNo", "status",
+                        "create_time as createTime", "received_time as receivedTime")
                 .eq(tenantScopedRead, "tenant_id", readableTenantId)
                 .and(w -> buildStyleIdOrNoCondition(w, keys))
                 .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
@@ -88,16 +93,34 @@ public class StyleListEnrichmentHelper {
                 if (p == null) continue;
                 String sid = StringUtils.hasText(p.getStyleId()) ? p.getStyleId().trim() : null;
                 String sno = StringUtils.hasText(p.getStyleNo()) ? p.getStyleNo().trim() : null;
+                boolean isCompleted = "completed".equalsIgnoreCase(String.valueOf(p.getStatus()));
+                LocalDateTime pCreateTime = p.getCreateTime();
+                LocalDateTime pReceivedTime = p.getReceivedTime();
+
                 if (StringUtils.hasText(sid)) {
                     totalByStyleKey.merge(sid, 1, Integer::sum);
-                    if ("completed".equalsIgnoreCase(String.valueOf(p.getStatus()))) {
+                    if (isCompleted) {
                         completedByStyleKey.merge(sid, 1, Integer::sum);
+                    }
+                    // 采购开始时间 = 最早一笔的 create_time
+                    if (pCreateTime != null) {
+                        startTimeByStyleKey.merge(sid, pCreateTime, (a, b) -> a.isBefore(b) ? a : b);
+                    }
+                    // 采购完成时间 = 最晚一笔的 received_time（仅 completed 状态的到货时间）
+                    if (isCompleted && pReceivedTime != null) {
+                        completedTimeByStyleKey.merge(sid, pReceivedTime, (a, b) -> a.isAfter(b) ? a : b);
                     }
                 }
                 if (StringUtils.hasText(sno)) {
                     totalByStyleKey.merge(sno, 1, Integer::sum);
-                    if ("completed".equalsIgnoreCase(String.valueOf(p.getStatus()))) {
+                    if (isCompleted) {
                         completedByStyleKey.merge(sno, 1, Integer::sum);
+                    }
+                    if (pCreateTime != null) {
+                        startTimeByStyleKey.merge(sno, pCreateTime, (a, b) -> a.isBefore(b) ? a : b);
+                    }
+                    if (isCompleted && pReceivedTime != null) {
+                        completedTimeByStyleKey.merge(sno, pReceivedTime, (a, b) -> a.isAfter(b) ? a : b);
                     }
                 }
             }
@@ -111,19 +134,28 @@ public class StyleListEnrichmentHelper {
             String idKey = s.getId() == null ? null : String.valueOf(s.getId());
             int total = 0;
             int completed = 0;
+            LocalDateTime startTime = null;
+            LocalDateTime completedTime = null;
             if (StringUtils.hasText(idKey)) {
                 total = totalByStyleKey.getOrDefault(idKey, 0);
                 completed = completedByStyleKey.getOrDefault(idKey, 0);
+                startTime = startTimeByStyleKey.get(idKey);
+                completedTime = completedTimeByStyleKey.get(idKey);
             }
             if (total == 0) {
                 String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
                 if (StringUtils.hasText(sno)) {
                     total = totalByStyleKey.getOrDefault(sno, 0);
                     completed = completedByStyleKey.getOrDefault(sno, 0);
+                    startTime = startTimeByStyleKey.get(sno);
+                    completedTime = completedTimeByStyleKey.get(sno);
                 }
             }
             int progress = total > 0 ? (int) Math.round((completed * 100.0) / total) : 0;
             s.setProcurementProgress(progress);
+            s.setProcurementStartTime(startTime);
+            // 仅当全部采购单都完成时，completedTime 才有意义
+            s.setProcurementCompletedTime(progress >= 100 ? completedTime : null);
         }
     }
 
@@ -461,8 +493,13 @@ public class StyleListEnrichmentHelper {
             // 只有 sampleStatus=COMPLETED 才是样衣开发流程真正完成（由 StyleStageHelper.completeSample 显式设置）
             style.setProgressNode("样衣完成");
             style.setCompletedTime(style.getSampleCompletedTime());
-        } else if ("PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus) || "IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
-            // PRODUCTION_COMPLETED 仅代表样板制作完成，样衣开发流程仍在进行（还有BOM/工序/二次工艺等环节）
+        } else if ("PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            // PRODUCTION_COMPLETED：样衣生产已完成（工序全部完成），但还未走完审核入库流程
+            // 与 IN_PROGRESS 区分，避免用户误以为还在生产中
+            style.setProgressNode("样衣生产完成");
+            style.setCompletedTime(null);
+        } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
+            // IN_PROGRESS：样衣正在生产中
             style.setProgressNode("样衣制作中");
             style.setCompletedTime(null);
         } else if ("COMPLETED".equalsIgnoreCase(patternStatus)) {

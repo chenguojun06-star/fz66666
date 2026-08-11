@@ -120,24 +120,30 @@ public class MemoryArchiveService {
                 boolean degraded = false;
                 while (true) {
                     List<AiConversationMemory> batch;
-                    try {
-                        // 优先使用 MyBatis-Plus selectList（SELECT *，含全部字段）
-                        batch = conversationMemoryMapper.selectList(
-                                new LambdaQueryWrapper<AiConversationMemory>()
-                                        .lt(AiConversationMemory::getCreateTime, cutoff)
-                                        .eq(AiConversationMemory::getDeleteFlag, 0)
-                                        .orderByAsc(AiConversationMemory::getCreateTime)
-                                        .last("LIMIT " + ARCHIVE_BATCH_SIZE));
-                    } catch (Exception selectError) {
-                        // 降级：云端数据库可能因 Flyway 迁移未完整执行导致 user_message/
-                        // ai_response/feedback_score/feedback_reason 字段缺失，
-                        // MyBatis-Plus selectList（SELECT *）会触发 Unknown column 错误。
-                        // 降级到只查询归档必需字段（显式列名，不依赖新增字段）。
-                        if (!degraded) {
-                            log.warn("[L5-Archive] selectList 失败，降级到必需字段查询。根因: {}",
+                    if (!degraded) {
+                        try {
+                            // 优先使用 MyBatis-Plus selectList（SELECT *，含全部字段）
+                            batch = conversationMemoryMapper.selectList(
+                                    new LambdaQueryWrapper<AiConversationMemory>()
+                                            .lt(AiConversationMemory::getCreateTime, cutoff)
+                                            .eq(AiConversationMemory::getDeleteFlag, 0)
+                                            .orderByAsc(AiConversationMemory::getCreateTime)
+                                            .last("LIMIT " + ARCHIVE_BATCH_SIZE));
+                        } catch (Exception selectError) {
+                            // 降级：云端数据库可能因 Flyway 迁移未完整执行导致 user_message/
+                            // ai_response/feedback_score/feedback_reason 字段缺失，
+                            // MyBatis-Plus selectList（SELECT *）会触发 Unknown column 错误。
+                            // 降级到只查询归档必需字段（显式列名，不依赖新增字段）。
+                            // ★关键修复：设置 degraded=true 后，后续批次直接走降级查询，
+                            // 不再重复尝试 selectList 抛异常（避免N批→N次异常的性能灾难）。
+                            log.warn("[L5-Archive] selectList 失败，降级到必需字段查询（后续批次直接降级，不再重试selectList）。根因: {}",
                                     selectError.getMessage());
                             degraded = true;
+                            batch = conversationMemoryMapper.findArchivableBatchDegraded(
+                                    cutoff, ARCHIVE_BATCH_SIZE);
                         }
+                    } else {
+                        // 已进入降级模式，后续批次直接使用降级查询（避免重复抛异常）
                         batch = conversationMemoryMapper.findArchivableBatchDegraded(
                                 cutoff, ARCHIVE_BATCH_SIZE);
                     }

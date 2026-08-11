@@ -439,6 +439,20 @@ public class StyleInfo {
     private Integer procurementProgress;
 
     /**
+     * 采购开始时间：取该款式下最早一笔采购单的创建时间（MIN(create_time)）
+     * 用于样衣详情页 stages 视图物料采购节点显示开始日期
+     */
+    @TableField(exist = false)
+    private LocalDateTime procurementStartTime;
+
+    /**
+     * 采购完成时间：取该款式下最晚一笔采购单的到货时间（MAX(received_time)）
+     * 仅当 procurementProgress=100（全部采购单已完成）时填充
+     */
+    @TableField(exist = false)
+    private LocalDateTime procurementCompletedTime;
+
+    /**
      * 码数颜色配置（JSON格式）
      * 存储样板的尺码、颜色、数量配置信息
      */

@@ -124,6 +124,10 @@ export const buildProcurementStage: StageBuilder = (record) => {
   const procurementProgress = clampPercent(Number(record.procurementProgress || 0));
   const done = procurementProgress >= 100;
   const started = procurementProgress > 0;
+  // 采购开始时间 = 最早一笔采购单的 create_time（后端 fillProcurementProgressFields 填充）
+  const startTime = record.procurementStartTime;
+  // 采购完成时间 = 最晚一笔采购单的 received_time（仅全部完成时填充）
+  const completedTime = done ? record.procurementCompletedTime : undefined;
 
   return {
     key: 'procurement',
@@ -133,8 +137,12 @@ export const buildProcurementStage: StageBuilder = (record) => {
       : started
         ? `进度 ${procurementProgress}%`
         : '未开始采购',
-    startTimeLabel: '待采购',
-    timeLabel: done ? '已完成' : started ? '采购中' : '待采购',
+    startTimeLabel: started ? formatNodeTime(startTime) : '待采购',
+    timeLabel: done
+      ? (completedTime ? formatNodeTime(completedTime) : '已完成')
+      : started
+        ? '采购中'
+        : '待采购',
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : procurementProgress,
     actionKey: 'procurement',

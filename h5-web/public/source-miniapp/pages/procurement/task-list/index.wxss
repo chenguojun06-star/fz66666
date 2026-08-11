@@ -21,3 +21,32 @@
   justify-content: center;
   font-size: 32px;
 }
+
+/* =====================================================
+ * 按款聚合卡片 — 款式级别展示
+ * 复用全局 .card-title-area / .info-row / .info-label / .info-value
+ * 以下为款式级别独有样式
+ * ===================================================== */
+
+.style-no {
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-name {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-no {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}

@@ -45,17 +45,42 @@ const DAILY_TIPS = [
   '发货前请核对颜色尺码数量，避免发错货造成退货。',
 ];
 
-// 默认应用（用户没有收藏时显示）
-const DEFAULT_APPS = [
-  { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/index' },
-  { id: 'quality', name: '扫码工序', iconClass: 'icon-menu-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
-  { id: 'production', name: '质检管理', iconClass: 'icon-menu-quality-notice', circleClass: 'menu-icon-circle--orange', route: '/pages/defect/index' },
-  { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--purple', route: '/pages/payroll/payroll' },
-  { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
-  { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/sample-development/index/index' },
-  { id: 'materialScan', name: '物料入库', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
+// 全部应用配置（与 more-apps/index.js 的 ALL_APPS 保持一致）
+// 主页按4大分类分组显示全部应用，与"编辑app"页面分组逻辑对齐，
+// 避免用户收藏多了之后一维平铺看着混乱。
+const ALL_APPS = [
+  { group: '生产模块', items: [
+    { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/index' },
+    { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--green', route: '/pages/order/create/index' },
+    { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/sample-development/index/index' },
+    { id: 'cuttingDetail', name: '裁剪管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/cutting/bundle-detail/index' },
+    { id: 'bundleSplit', name: '菲号管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--red', route: '/pages/work/bundle-split/index' },
+    { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
+  ]},
+  { group: '供应链', items: [
+    { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
+    { id: 'materialScan', name: '物料入库', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
+    { id: 'locationScan', name: '库位扫码', iconClass: 'icon-menu-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
+    { id: 'factoryShipment', name: '外发管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--orange', route: '/pages/factory/shipment/index' },
+    { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
+    { id: 'finishedInventory', name: '成品仓储', iconClass: 'icon-menu-stock-check', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inventory/index' },
+    { id: 'sampleStock', name: '样衣仓库', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/warehouse/sample/scan-action/index' },
+  ]},
+  { group: '财务销售', items: [
+    { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/payroll/payroll' },
+    { id: 'financePayment', name: '财务付款', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' },
+    { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--lightblue', route: '/pages/advance/list/index' },
+    { id: 'salesOverview', name: '销售概览', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--violet', route: '/pages/sales/overview/index' },
+  ]},
+  { group: '其他', items: [
+    { id: 'smartOps', name: '智能运营', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
+    { id: 'returnList', name: '退货管理', iconClass: 'icon-menu-return', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' },
+    { id: 'userApproval', name: '用户审批', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--gray', route: '/pages/admin/user-approval/index' },
+    { id: 'feedback', name: '意见反馈', iconClass: 'icon-menu-feedback', circleClass: 'menu-icon-circle--blue', route: '/pages/admin/misc/feedback/index' },
+  ]},
 ];
 
+// "更多应用"入口：保留作为管理收藏/搜索/权限配置的入口
 const MORE_APPS_ENTRY = {
   id: 'moreApps',
   name: '更多应用',
@@ -77,7 +102,8 @@ Page({
     userName: '',
     orgName: '',
     avatarImgUrl: '',
-    menuItems: [],
+    // 按分类分组的应用列表（与"编辑app"页面分组逻辑对齐）
+    menuGroups: [],
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
     // 考勤打卡
@@ -94,7 +120,7 @@ Page({
   onLoad: function () {
     this.setData({
       greeting: getGreeting(),
-      menuItems: this._buildMenuItems(null),
+      menuGroups: this._buildMenuGroups(null),
     });
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
@@ -150,15 +176,27 @@ Page({
       }
       try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
       const menuFlags = results[1] || {};
-      that.setData({ menuItems: that._buildMenuItems(favorites, menuFlags) });
+      that._lastMenuFlags = menuFlags;
+      that.setData({ menuGroups: that._buildMenuGroups(favorites, menuFlags) });
     }).catch(function () {
       let favorites = [];
       try { favorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
-      that.setData({ menuItems: that._buildMenuItems(favorites, {}) });
+      that.setData({ menuGroups: that._buildMenuGroups(favorites, {}) });
     });
   },
 
-  _buildMenuItems: function (favorites, menuFlags) {
+  /**
+   * 构建"按分类分组"的收藏应用列表。
+   * - 仅显示用户收藏的应用，但按 ALL_APPS 的4大分类分组归类
+   * - 按菜单权限过滤不可见的应用
+   * - 空分组（该分类下无任何收藏）会被剔除，避免显示空标题
+   * - 没有收藏时退回 DEFAULT_APPS（也按分类归类）
+   * - 末尾固定追加"管理"分组，含"更多应用"入口（进入 more-apps 页面编辑收藏）
+   *
+   * @param favorites 用户收藏应用一维数组 [{id,name,iconClass,circleClass,route,badge?}]
+   * @param menuFlags 菜单权限开关对象
+   */
+  _buildMenuGroups: function (favorites, menuFlags) {
     const flags = menuFlags || {};
     function isVisible(appId) {
       const menuKey = APP_ID_TO_MENU_KEY[appId];
@@ -168,9 +206,10 @@ Page({
       return true;
     }
 
-    var items = [];
+    // 没有收藏（或全部被权限过滤）时退回默认应用
+    // 默认应用从 ALL_APPS 自动提取（每个分组取第一项），避免维护两份列表
+    let items = [];
     if (favorites && favorites.length > 0) {
-      // 用户有收藏：显示收藏的应用（过滤不可见）
       items = favorites.filter(function (f) { return isVisible(f.id); }).map(function (f) {
         return {
           id: f.id,
@@ -183,14 +222,32 @@ Page({
       });
     }
     if (items.length === 0) {
-      // 没有收藏或全部被过滤：显示默认应用
-      items = DEFAULT_APPS.filter(function (a) { return isVisible(a.id); }).map(function (a) {
+      const fallback = ALL_APPS.map(function (g) { return g.items[0]; }).filter(Boolean);
+      items = fallback.filter(function (a) { return isVisible(a.id); }).map(function (a) {
         return Object.assign({}, a);
       });
     }
-    // 末尾固定加"更多应用"入口
-    items.push(Object.assign({}, MORE_APPS_ENTRY));
-    return items;
+
+    // 把一维收藏列表按 ALL_APPS 的4大分类归组
+    const itemMap = {};
+    items.forEach(function (it) { itemMap[it.id] = it; });
+
+    const groups = ALL_APPS.map(function (group) {
+      return {
+        group: group.group,
+        items: group.items
+          .filter(function (a) { return itemMap[a.id]; })
+          .map(function (a) { return itemMap[a.id]; }),
+      };
+    }).filter(function (g) { return g.items.length > 0; });
+
+    // 末尾固定追加"管理"分组（更多应用入口，用于进入 more-apps 编辑收藏）
+    groups.push({
+      group: '管理',
+      items: [Object.assign({}, MORE_APPS_ENTRY)],
+    });
+
+    return groups;
   },
 
   // ========== 事件 ==========
@@ -203,7 +260,10 @@ Page({
     this._onOrderProgress = function () { that._refreshHomeData(); };
     this._onWarehouseIn = function () { that._refreshHomeData(); };
     this._onRefreshAll = function () { that._loadFavorites(); that._refreshHomeData(); };
-    this._onFavoritesChanged = function (favorites) { that.setData({ menuItems: that._buildMenuItems(favorites) }); };
+    // 用户在 more-apps 页面增删收藏后，主页同步刷新分组显示
+    this._onFavoritesChanged = function (favorites) {
+      that.setData({ menuGroups: that._buildMenuGroups(favorites, that._lastMenuFlags || {}) });
+    };
     eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
     eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
     eventBus.on(Events.WAREHOUSE_IN, this._onWarehouseIn);
@@ -411,18 +471,14 @@ Page({
   // ========== 点击事件 ==========
 
   onMenuTap: function (e) {
-    const idx = e.currentTarget.dataset.index;
-    const item = this.data.menuItems[idx];
-    if (!item) return;
-
-    if (item.tab) {
-      wx.setStorageSync('work_active_tab', item.tab);
-    }
-    if (item.id === 'quality') {
+    const route = e.currentTarget.dataset.route;
+    if (!route) return;
+    const id = e.currentTarget.dataset.id;
+    const isTabPage = ['/pages/home/index', '/pages/defect/index', '/pages/scan/index', '/pages/admin/index'].indexOf(route) !== -1;
+    // 质检扫码入口默认偏好
+    if (id === 'quality') {
       wx.setStorageSync('scan_pref_process', '质检');
     }
-
-    const isTabPage = ['/pages/home/index', '/pages/defect/index', '/pages/scan/index', '/pages/admin/index'].indexOf(item.route) !== -1;
-    safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined).catch(() => {});
+    safeNavigate({ url: route }, isTabPage ? 'switchTab' : undefined).catch(() => {});
   },
 });

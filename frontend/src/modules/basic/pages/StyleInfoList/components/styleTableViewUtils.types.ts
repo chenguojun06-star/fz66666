@@ -34,6 +34,8 @@ export interface PatternProductionSnapshot {
   reviewStatus: string;
   reviewTime: string;
   procurementProgress: number;
+  procurementStartTime?: string;
+  procurementCompletedTime?: string;
   progressNodes: Record<string, number>;
   productionOrderId?: string;
   color?: string;

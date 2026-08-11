@@ -24,19 +24,27 @@ function handleCuttingTask(task) {
 }
 
 /**
- * 处理采购任务 - 跳转采购任务页
+ * 处理采购任务 - 跳转采购详情页
+ * 支持大货订单（orderNo）和样衣采购（patternProductionId）
  * @param {Object} task - 任务对象
  * @returns {void}
  */
 function handleProcurementTask(task) {
   const orderNo = task.orderNo || '';
   const styleNo = task.styleNo || '';
+  const patternProductionId = task.patternProductionId || '';
+  const sourceType = task.sourceType || (patternProductionId ? 'sample' : '');
 
+  // 优先用 orderNo（大货），其次用 patternProductionId（样衣采购）
   if (orderNo) {
-    const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`;
+    const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}&sourceType=${encodeURIComponent(sourceType)}`;
+    safeNavigate({ url }, 'navigateTo').catch(() => {});
+  } else if (patternProductionId) {
+    const url = `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(patternProductionId)}&styleNo=${encodeURIComponent(styleNo)}&sourceType=${encodeURIComponent(sourceType)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
+    // 没有订单号也没有样衣ID，跳到采购任务列表
+    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
   }
 }
 
@@ -215,9 +223,9 @@ function handleReminderTask(task) {
   const orderNo = task.orderNo || '';
   const type = task.type || '';
 
-  // 采购提醒 → 跳转工作台（采购任务列表页已移除）
+  // 采购提醒 → 直达采购详情页（支持大货和样衣）
   if (type === '采购') {
-    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
+    handleProcurementTask(task);
     return;
   }
 

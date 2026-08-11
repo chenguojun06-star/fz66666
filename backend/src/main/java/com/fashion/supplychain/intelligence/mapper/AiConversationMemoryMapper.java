@@ -31,7 +31,13 @@ public interface AiConversationMemoryMapper extends BaseMapper<AiConversationMem
      * MyBatis-Plus 的 selectList 会执行 SELECT * 触发 "Unknown column" 错误。
      * 此方法用显式列名避免依赖新增字段，确保归档任务在 schema 不完整时也能正常运行。
      *
-     * <p>多租户隔离（P0 铁律 4）：查询条件包含 tenant_id（如非 null）。
+     * <p>全局查询说明（★与原 selectList 行为一致）：
+     * 此查询由系统级定时任务 {@code MemoryArchiveService.archiveOldMemories} 调用，
+     * 需要处理<strong>所有租户</strong>的过期数据，因此 WHERE 条件不含 tenant_id。
+     * 下游处理时，{@code archiveToQdrant(mem)} 使用记录自带的 {@code tenant_id} 字段
+     * 写入租户独立的 Qdrant collection（{@code archival_memory_{tenantId}}），
+     * 软删除也仅使用主键 {@code id} 作为条件，确保不会跨租户误操作。
+     * 业务查询（非定时任务）严禁使用此方法，应使用带 tenant_id 过滤的接口。
      */
     @Select("SELECT id, tenant_id, user_id, memory_summary, key_entities, "
             + "importance_score, source_message_count, create_time, expire_time, delete_flag "

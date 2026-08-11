@@ -69,13 +69,27 @@ function resolveStatusDisplay(status) {
   return null;
 }
 
+/**
+ * 状态优先级（数字越大优先级越高，聚合时取最高优先级作为整体状态）
+ * 取"最差"状态作为款式整体状态，让用户一眼看到需要处理的款式
+ */
+const STATUS_PRIORITY = {
+  cancelled: 7,
+  delayed: 6,
+  pending: 5,
+  partial: 4,
+  received: 3,
+  procuring: 2,
+  completed: 1,
+};
+
 Page({
   data: {
     loading: false,
     activeFilter: '',
     keyword: '',
     statusTabs: STATUS_TABS,
-    items: [],
+    items: [],         // 按款聚合后的卡片列表
     filteredItems: [],
   },
 
@@ -119,7 +133,8 @@ Page({
     try {
       const res = await api.production.myProcurementTasks();
       const rawList = this._normalizeList(res);
-      const items = rawList.map(item => this._normalizeItem(item));
+      // 按款聚合：一个款一张卡片
+      const items = this._groupByStyle(rawList);
       this.setData({ items, loading: false });
       this._applyFilter();
     } catch (err) {
@@ -156,9 +171,9 @@ Page({
     if (keyword && keyword.trim()) {
       const kw = keyword.trim().toLowerCase();
       filtered = filtered.filter(item =>
-        (item.materialName && item.materialName.toLowerCase().includes(kw)) ||
+        (item.styleNo && item.styleNo.toLowerCase().includes(kw)) ||
         (item.orderNo && item.orderNo.toLowerCase().includes(kw)) ||
-        (item.materialCode && item.materialCode.toLowerCase().includes(kw))
+        (item.styleName && item.styleName.toLowerCase().includes(kw))
       );
     }
 
@@ -189,10 +204,42 @@ Page({
     }).catch(() => {});
   },
 
+  /**
+   * 一键领取：领取该款式下所有待采购物料
+   * 如果款式只有一个待领取物料，直接领取；多个则跳详情页批量领取
+   */
   async onClaimPurchase(e) {
-    const { id } = e.currentTarget.dataset;
-    if (!id) return;
+    const { groupKey } = e.currentTarget.dataset;
+    const item = this.data.items.find(it => it.groupKey === groupKey);
+    if (!item) return;
 
+    // 找出所有待领取的物料
+    const pendingItems = (item.items || []).filter(it => it.displayStatus === 'pending');
+    if (pendingItems.length === 0) {
+      toast.error('没有待领取的物料');
+      return;
+    }
+
+    // 单条物料直接领取
+    if (pendingItems.length === 1) {
+      await this._claimOne(pendingItems[0]);
+      return;
+    }
+
+    // 多条物料跳详情页批量领取
+    this.onViewDetail({
+      currentTarget: {
+        dataset: {
+          orderNo: item.orderNo,
+          styleNo: item.styleNo,
+          patternProductionId: item.patternProductionId,
+          sourceType: item.sourceType,
+        },
+      },
+    });
+  },
+
+  async _claimOne(purchaseItem) {
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
@@ -205,7 +252,7 @@ Page({
     wx.showLoading({ title: '领取中...', mask: true });
     try {
       await api.production.receivePurchase({
-        purchaseId: id,
+        purchaseId: purchaseItem.id,
         receiverId,
         receiverName,
       });
@@ -226,6 +273,132 @@ Page({
   },
 
   /**
+   * 按款聚合：把物料级别记录按 orderNo 或 patternProductionId 聚合成款式级别卡片
+   * - 大货订单：按 orderNo 聚合
+   * - 样衣采购：按 patternProductionId 聚合
+   * - 一个款多张采购单 → 一张卡片
+   */
+  _groupByStyle(rawList) {
+    const groupMap = {};
+    const order = [];
+
+    rawList.forEach(raw => {
+      const item = this._normalizeItem(raw);
+      // 聚合键：优先 patternProductionId（样衣），其次 orderNo
+      const groupKey = item.patternProductionId
+        ? 'sample::' + item.patternProductionId
+        : 'order::' + (item.orderNo || item.styleNo || 'unknown');
+
+      if (!groupMap[groupKey]) {
+        groupMap[groupKey] = {
+          groupKey,
+          orderNo: item.orderNo || '',
+          patternProductionId: item.patternProductionId || '',
+          sourceType: item.sourceType || '',
+          styleNo: item.styleNo || '',
+          styleName: item.styleName || '',
+          styleCoverUrl: item.styleCoverUrl || '',
+          items: [],
+        };
+        order.push(groupKey);
+      }
+
+      groupMap[groupKey].items.push(item);
+    });
+
+    return order.map(key => this._buildGroupCard(groupMap[key]));
+  },
+
+  /**
+   * 构建款式级别卡片
+   */
+  _buildGroupCard(group) {
+    const items = group.items;
+
+    // 计算整体状态（取最差状态）
+    const displayStatus = this._computeGroupStatus(items);
+    const statusConfig = resolveStatusDisplay(displayStatus) || { label: '待处理', tagClass: 'tag-gray' };
+
+    // 物料数量
+    const materialCount = items.length;
+
+    // 总数量
+    const totalQuantity = items.reduce((sum, it) => sum + (Number(it.purchaseQuantity) || 0), 0);
+    const totalArrived = items.reduce((sum, it) => sum + (Number(it.arrivedQuantity) || 0), 0);
+
+    // 到货日期：取最早的预计到货日期 / 最近的实际到货日期
+    const expectedDates = items
+      .map(it => it.expectedArrivalDate)
+      .filter(Boolean)
+      .sort();
+    const actualDates = items
+      .map(it => it.actualArrivalDate)
+      .filter(Boolean)
+      .sort();
+
+    const isArrived = displayStatus === 'completed' || displayStatus === 'partial';
+    const expectedDateText = expectedDates.length ? this._formatDate(expectedDates[0]) : '';
+    const actualDateText = actualDates.length ? this._formatDate(actualDates[actualDates.length - 1]) : '';
+
+    // 主要供应商（取第一个有供应商名的）
+    const supplierItem = items.find(it => it.supplierName);
+    const supplierText = supplierItem ? supplierItem.supplierName : '-';
+
+    // 采购员（取第一个有采购员的）
+    const buyerItem = items.find(it => it.receiverName);
+    const buyerText = buyerItem ? buyerItem.receiverName : '-';
+
+    // 是否有待领取物料（用于显示"一键领取"按钮）
+    const pendingItems = items.filter(it => it.displayStatus === 'pending');
+
+    return {
+      groupKey: group.groupKey,
+      orderNo: group.orderNo,
+      patternProductionId: group.patternProductionId,
+      sourceType: group.sourceType,
+      styleNo: group.styleNo,
+      styleName: group.styleName,
+      styleCoverUrl: group.styleCoverUrl,
+      displayStatus,
+      statusLabel: statusConfig.label,
+      statusTagClass: statusConfig.tagClass,
+      materialCount,
+      quantityText: this._formatQuantity(totalQuantity, items[0] && items[0].unit),
+      arrivalText: totalArrived > 0 ? totalArrived + '/' + totalQuantity : '',
+      isArrived,
+      dateLabel: isArrived ? '到货日期' : '预计到货',
+      dateText: isArrived ? actualDateText : expectedDateText,
+      supplierText,
+      buyerText,
+      isPending: pendingItems.length > 0,
+      pendingCount: pendingItems.length,
+      items,
+    };
+  },
+
+  /**
+   * 计算款式整体状态（取最差状态）
+   * 优先级：cancelled > delayed > pending > partial > received > procuring > completed
+   */
+  _computeGroupStatus(items) {
+    if (!items || items.length === 0) return 'pending';
+
+    let maxPriority = 0;
+    let maxStatus = 'pending';
+
+    items.forEach(item => {
+      const status = this._computeDisplayStatus(item);
+      const priority = STATUS_PRIORITY[status] || 0;
+      if (priority > maxPriority) {
+        maxPriority = priority;
+        maxStatus = status;
+      }
+    });
+
+    return maxStatus;
+  },
+
+  /**
    * 将后端物料采购记录规范化为前端展示对象
    * 设计稿：物料级别卡片，每条记录一张卡片
    */
@@ -236,11 +409,6 @@ Page({
 
     const styleCoverUrl = getAuthedImageUrl(item.styleCover || '');
 
-    const expectedDateText = this._formatDate(item.expectedArrivalDate);
-    const actualDateText = this._formatDate(item.actualArrivalDate);
-
-    const isArrived = displayStatus === 'arrived';
-
     return {
       ...item,
       id: item.id || item.purchaseId || '',
@@ -248,14 +416,8 @@ Page({
       statusLabel: statusConfig.label,
       statusTagClass: statusConfig.tagClass,
       styleCoverUrl,
-      expectedDateText,
-      actualDateText,
-      dateLabel: isArrived ? '到货日期' : '预计到货',
-      dateText: isArrived ? actualDateText : expectedDateText,
-      isPending: displayStatus === 'pending',
-      quantityText: this._formatQuantity(item.purchaseQuantity, item.unit),
-      supplierText: item.supplierName || '-',
-      buyerText: item.receiverName || '-',
+      expectedDateText: this._formatDate(item.expectedArrivalDate),
+      actualDateText: this._formatDate(item.actualArrivalDate),
     };
   },
 

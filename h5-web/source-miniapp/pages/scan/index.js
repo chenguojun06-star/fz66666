@@ -42,7 +42,7 @@
  */
 
 // ==================== 导入模块 ====================
-const { safeNavigate } = require('../../utils/uiHelper');
+const { safeNavigate, toast } = require('../../utils/uiHelper');
 
 // 导入 Mixins (生命周期 + 核心业务 + 数据配置)
 const scanLifecycleMixin = require('./mixins/scanLifecycleMixin');
@@ -148,15 +148,33 @@ Page({
   },
 
   /**
-   * 处理采购任务（已迁移到独立分包 pkg-procurement）
+   * 处理采购任务（已迁移到独立页面 pages/procurement/task-detail）
    * WXML: scan-history.wxml bindtap="onHandleProcurement"
+   *
+   * 修复：原路径 /pkg-procurement/pages/task/index 不存在导致静默失败
+   * 现在从扫码历史分组中提取 orderNo/styleNo，直接跳转到采购详情页
    */
   onHandleProcurement(e) {
     const groupId = e.currentTarget.dataset.groupId;
     const recordIdx = e.currentTarget.dataset.recordIdx;
-    const app = getApp();
-    app.globalData.procurementScanData = { groupId, recordIdx };
-    safeNavigate({ url: '/pkg-procurement/pages/task/index' }).catch(() => {});
+    const groupedHistory = (this.data.my && this.data.my.groupedHistory) || [];
+    const group = groupedHistory.find((g) => g.id === groupId);
+    if (!group) {
+      toast.error('记录不存在');
+      return;
+    }
+    const orderNo = group.orderNo || '';
+    const styleNo = group.styleNo || '';
+    if (!orderNo || orderNo === '未知订单') {
+      toast.error('订单号缺失，无法跳转');
+      return;
+    }
+    const params =
+      'orderNo=' + encodeURIComponent(orderNo) +
+      '&styleNo=' + encodeURIComponent(styleNo);
+    safeNavigate({
+      url: '/pages/procurement/task-detail/index?' + params,
+    }).catch(() => {});
   },
 
   // ==================== 快捷导航（历史记录 / 当月记录） ====================
