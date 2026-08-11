@@ -132,31 +132,98 @@ async function loadCuttingTasks() {
 }
 
 /**
- * 加载采购任务（已领取待完成）
- * @returns {Promise<Array>} 采购任务列表
+ * 加载采购任务（已领取待完成）— 按款聚合
+ * 一个款（按 orderNo 或 patternProductionId）只显示一条
+ * 点击后跳转到详情页查看具体物料
+ * @returns {Promise<Array>} 采购任务列表（款式级别）
  */
 async function loadProcurementTasks() {
   try {
     const res = await api.production.myProcurementTasks();
     const list = Array.isArray(res) ? res : res?.records || [];
 
+    // 1. 物料级别规范化
     const mapped = list.map(item => ({
       ...item,
       id: item.id || item.purchaseId,
       orderNo: item.orderNo || item.productionOrderNo || '',
       styleNo: item.styleNo || '',
       materialName: item.materialName || '未知物料',
-      purchaseQuantity: item.purchaseQuantity || 0,
-      arrivedQuantity: item.arrivedQuantity || 0,
+      purchaseQuantity: Number(item.purchaseQuantity) || 0,
+      arrivedQuantity: Number(item.arrivedQuantity) || 0,
       unit: item.unit || '米',
-      // 保留款式图字段（后端 MaterialPurchaseQueryHelper.getMyTasks 已注入 styleCover）
-      // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
+      patternProductionId: item.patternProductionId || '',
+      sourceType: item.sourceType || '',
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
-      receivedTimeText: formatTimeAgo(item.receivedTime),
+      receivedTime: item.receivedTime,
     }));
 
+    // 2. 按款聚合：大货按 orderNo，样衣按 patternProductionId
+    const groupMap = {};
+    const order = [];
+    mapped.forEach(item => {
+      const groupKey = item.patternProductionId
+        ? 'sample::' + item.patternProductionId
+        : 'order::' + (item.orderNo || item.styleNo || 'unknown');
 
-    return mapped;
+      if (!groupMap[groupKey]) {
+        groupMap[groupKey] = {
+          id: groupKey,  // dismiss 用 groupKey
+          groupKey,
+          orderNo: item.orderNo || '',
+          styleNo: item.styleNo || '',
+          styleName: item.styleName || '',
+          patternProductionId: item.patternProductionId || '',
+          sourceType: item.sourceType || (item.patternProductionId ? 'sample' : ''),
+          coverImage: item.coverImage || '',
+          items: [],
+          _latestReceivedTime: null,
+        };
+        order.push(groupKey);
+      }
+      groupMap[groupKey].items.push(item);
+      // 取最新的领取时间
+      if (item.receivedTime) {
+        const t = new Date(item.receivedTime).getTime();
+        if (!isNaN(t) && (!groupMap[groupKey]._latestReceivedTime || t > groupMap[groupKey]._latestReceivedTime)) {
+          groupMap[groupKey]._latestReceivedTime = t;
+        }
+      }
+    });
+
+    // 3. 构建款式级别卡片
+    return order.map(key => {
+      const g = groupMap[key];
+      const items = g.items;
+      const materialCount = items.length;
+      const totalQuantity = items.reduce((s, it) => s + it.purchaseQuantity, 0);
+      const totalArrived = items.reduce((s, it) => s + it.arrivedQuantity, 0);
+      const unit = items[0] && items[0].unit ? items[0].unit : '';
+      const receivedTimeText = g._latestReceivedTime ? formatTimeAgo(new Date(g._latestReceivedTime).toISOString()) : '';
+
+      return {
+        id: g.id,
+        groupKey: g.groupKey,
+        orderNo: g.orderNo,
+        styleNo: g.styleNo,
+        styleName: g.styleName,
+        patternProductionId: g.patternProductionId,
+        sourceType: g.sourceType,
+        coverImage: g.coverImage,
+        // 展示用字段
+        materialCount,
+        purchaseQuantity: totalQuantity,
+        arrivedQuantity: totalArrived,
+        unit,
+        // 用于 wxml 兼容：显示款号或物料数量
+        materialName: materialCount > 1
+          ? materialCount + '项物料'
+          : (items[0].materialName || '待采购物料'),
+        receivedTimeText,
+        quantityText: unit ? totalQuantity + unit : String(totalQuantity),
+        arrivalText: totalArrived > 0 ? totalArrived + '/' + totalQuantity : '',
+      };
+    });
   } catch (err) {
     console.error('[loadProcurementTasks] 加载失败:', err);
     return [];

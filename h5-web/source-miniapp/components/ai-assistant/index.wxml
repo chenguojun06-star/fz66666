@@ -376,12 +376,14 @@
             <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
-                <text class="task-order-no">{{item.orderNo || item.purchaseNo}}</text>
+                <text class="task-order-no">{{item.styleNo || item.orderNo || item.purchaseNo}}</text>
                 <text class="task-style-tag purchase-tag">待处理</text>
               </view>
-              <text class="task-name">{{item.materialName || '待采购物料'}}</text>
+              <text class="task-name">{{item.materialName}}</text>
               <view class="task-chips">
-                <view class="task-chip">{{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
+                <view class="task-chip" wx:if="{{item.materialCount > 1}}">{{item.materialCount}}项物料</view>
+                <view class="task-chip">{{item.quantityText}}</view>
+                <view class="task-chip" wx:if="{{item.arrivalText}}">到货 {{item.arrivalText}}</view>
                 <view class="task-chip time-chip" wx:if="{{item.receivedTimeText}}">{{item.receivedTimeText}}</view>
               </view>
             </view>
