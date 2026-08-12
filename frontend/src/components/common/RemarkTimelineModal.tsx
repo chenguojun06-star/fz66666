@@ -194,13 +194,16 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       size="large"
       styles={{ wrapper: { width: '55vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       destroyOnHidden
-      // 在父容器内渲染，避免 getContainer 导致的堆叠上下文陷阱
-      // （父容器有 transform/filter 时，renderToBody 的 fixed 定位会错乱）
-      // 提高层级，确保覆盖在外层 Drawer 之上（外层 Drawer 默认 1000）
+      // 关闭遮罩层，与同级 Drawer（StyleStageDrawer/StyleDevDrawer/PurchaseDrawer 等）保持一致。
+      // 历史踩坑：
+      //   1) mask 默认开启时，antd v6 自动给 mask 加 `xxx-mask-blur` 类触发 backdrop-filter: blur(4px)，
+      //      即便把 background 改成 transparent，下层内容依然被模糊化（"整页模糊看不清"）。
+      //   2) mask 元素即便视觉透明，依然占据整屏并拦截点击事件，导致同时打开的 StyleReviewModal
+      //      （写样衣评语的弹窗）中 TextArea 无法输入。
+      // 解决方案：直接 mask={false} 不渲染 mask，依赖右上角"X"按钮关闭。
+      // 提高层级，确保覆盖在外层 Drawer 之上（外层 Drawer 默认 1000）。
       zIndex={1100}
-      // 遮罩层 z-index 必须低于 Drawer 内容但高于外层 Drawer
-      // 使用透明遮罩，避免与外层 Drawer 的 mask 叠加导致页面变暗
-      maskStyle={{ zIndex: 1099, background: 'transparent' }}
+      mask={false}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
         {/* 样衣异常提示（跟随模式：异常信息直接展示在备注日志顶部） */}
