@@ -35,14 +35,14 @@ public class StyleOperationAppendHelper {
         if (styleId == null) {
             return;
         }
-        styleLogHelper.saveStyleLog(styleId, "PRODUCTION_REQUIREMENTS_SAVE", null);
+        styleLogHelper.saveStyleLog(styleId, "保存生产需求", null);
     }
 
     public void appendRollbackProductionRequirements(Long styleId, String reason) {
         if (styleId == null) {
             return;
         }
-        styleLogHelper.saveMaintenanceLog(styleId, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
+        styleLogHelper.saveMaintenanceLog(styleId, "回退生产需求", reason);
     }
 
     public void appendCreate(Long styleId) {

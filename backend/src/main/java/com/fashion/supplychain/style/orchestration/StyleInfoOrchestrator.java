@@ -649,7 +649,7 @@ public class StyleInfoOrchestrator {
             }
         }
 
-        styleLogHelper.saveMaintenanceLog(id, "STYLE_SCRAPPED", remark);
+        styleLogHelper.saveMaintenanceLog(id, "款式报废", remark);
         styleOperationAppendHelper.appendScrap(id, remark);
         log.info("开发样已报废留档: styleId={}, styleNo={}, reason={}", id, style.getStyleNo(), remark);
         return true;
