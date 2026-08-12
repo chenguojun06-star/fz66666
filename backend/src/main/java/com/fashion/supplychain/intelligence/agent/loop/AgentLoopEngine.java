@@ -22,9 +22,7 @@ import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.CompensatingTransactionManager;
-import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.FollowUpSuggestionEngine;
-import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.SelfCritiqueGate;
 import com.fashion.supplychain.intelligence.orchestration.SkillTreeOrchestrator;
@@ -39,11 +37,9 @@ import com.fashion.supplychain.intelligence.service.SemanticCacheService;
 import com.fashion.supplychain.intelligence.service.SelfConsistencyVerifier;
 import com.fashion.supplychain.intelligence.service.ConversationMemoryService;
 import com.fashion.supplychain.intelligence.service.ContextEngineeringService;
-import com.fashion.supplychain.intelligence.service.StructuredResponseService;
 import com.fashion.supplychain.intelligence.service.MemoryHierarchyService;
 import com.fashion.supplychain.intelligence.service.ProactiveRiskDetectionService;
 import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
-import com.fashion.supplychain.intelligence.service.PromptEvolutionService;
 import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,18 +74,14 @@ public class AgentLoopEngine {
     @Autowired private EntityFactChecker entityFactChecker;
     @Autowired private GroundedGenerationGuard groundedGenerationGuard;
     @Autowired private ProcessRewardOrchestrator processRewardOrchestrator;
-    @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
-    @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
     @Autowired private SelfConsistencyVerifier selfConsistencyVerifier;
     @Autowired private CompensatingTransactionManager compensatingTxManager;
     @Autowired private XiaoyunResponseParser xiaoyunResponseParser;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentPlanningEngine> planningEngineProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ContextEngineeringService> contextEngineeringServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<StructuredResponseService> structuredResponseServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<MemoryHierarchyService> memoryHierarchyServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveRiskDetectionService> riskDetectionServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveInsightService> proactiveInsightServiceProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<PromptEvolutionService> promptEvolutionServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<SelfCritiqueGate> selfCritiqueGateProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentSkillRegistry> skillRegistryProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentCheckpointManager> checkpointManagerProvider;
@@ -158,7 +150,6 @@ public class AgentLoopEngine {
                 }
             }
 
-            HandoffEngine handoffEngine = handoffEngineProvider.getIfAvailable();
             HandoffEngine.HandoffResult handoffResult = tryHandoffIfNeeded(ctx, cb);
             if (handoffResult != null && handoffResult.isDelegated()) {
                 return handleFinalAnswer(ctx, handoffResult.getSubAgentResult(), cb);
