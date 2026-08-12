@@ -64,11 +64,6 @@ public class SemanticCacheService {
     private int minResponseLength;
 
     private static final String CACHE_PREFIX = "semantic:llm:";
-    /** Qdrant 中语义缓存的专用集合 */
-    private static final String SEMANTIC_CACHE_COLLECTION = "semantic_cache";
-    /** @deprecated 请使用 minResponseLength 配置项 */
-    @Deprecated
-    private static final int MIN_RESPONSE_LENGTH = 50;
 
     // ── 命中率监控计数器（线程安全） ──
     private final java.util.concurrent.atomic.AtomicLong totalLookups = new java.util.concurrent.atomic.AtomicLong(0);

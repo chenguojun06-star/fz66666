@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,8 +36,6 @@ import java.util.regex.Pattern;
 @Service
 @Lazy
 public class ToolParameterAutoFixService {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     // 日期格式正则
     private static final Pattern DATE_NO_SEP = Pattern.compile("^\\d{8}$"); // 20260101
@@ -129,8 +126,10 @@ public class ToolParameterAutoFixService {
             }
 
             // 3. 类型修复（根据 schema）
-            if (expectedProperties != null && expectedProperties.get(key) instanceof Map propDef) {
-                Object fixedVal = fixValue(val, propDef, key);
+            if (expectedProperties != null && expectedProperties.get(key) instanceof Map<?, ?> propDef) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> propDefMap = (Map<String, Object>) propDef;
+                Object fixedVal = fixValue(val, propDefMap, key);
                 if (fixedVal != val) {
                     fixed.put(key, fixedVal);
                     fixLogs.add("值修复: " + key + " [" + val.getClass().getSimpleName() + " → " + fixedVal.getClass().getSimpleName() + "]");
