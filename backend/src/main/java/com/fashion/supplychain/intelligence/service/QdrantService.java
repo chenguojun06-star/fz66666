@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.security.MessageDigest;
-import java.util.stream.Collectors;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,11 +118,9 @@ public class QdrantService {
 
     private static class EmbeddingCacheEntry {
         final float[] vector;
-        final String provider;
         final long createdAt;
-        EmbeddingCacheEntry(float[] vector, String provider) {
+        EmbeddingCacheEntry(float[] vector) {
             this.vector = vector;
-            this.provider = provider;
             this.createdAt = System.currentTimeMillis();
         }
         boolean isExpired() { return System.currentTimeMillis() - createdAt > EMBEDDING_CACHE_TTL_MS; }
@@ -680,7 +677,7 @@ public class QdrantService {
             try {
                 float[] vector = tryAgnesEmbedding(text);
                 if (vector != null) {
-                    embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector, PROVIDER_AGNES));
+                    embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
                     evictCacheIfNeeded();
                     return vector;
                 }
@@ -691,7 +688,7 @@ public class QdrantService {
         if (PROVIDER_DEEPSEEK.equals(activeProvider)) {
             try {
                 float[] vector = callEmbeddingApi(text);
-                embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector, PROVIDER_DEEPSEEK));
+                embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
                 evictCacheIfNeeded();
                 return vector;
             } catch (Exception e) {
@@ -1197,7 +1194,7 @@ public class QdrantService {
             ArrayNode points = body.putArray("points");
             ObjectNode point = points.addObject();
             point.put("id", pointId);
-            point.put("vector", toJsonArray(vector));
+            point.set("vector", toJsonArray(vector));
 
             ObjectNode payload = point.putObject("payload");
             payload.put("tenant_id", tenantId); // P0 铁律 4：payload 必含 tenant_id
@@ -1257,7 +1254,7 @@ public class QdrantService {
             if (vector == null) return List.of();
 
             ObjectNode body = objectMapper.createObjectNode();
-            body.put("vector", toJsonArray(vector));
+            body.set("vector", toJsonArray(vector));
             body.put("limit", topK);
             body.put("with_payload", true);
 
@@ -1327,7 +1324,7 @@ public class QdrantService {
             if (vector == null) return List.of();
 
             ObjectNode body = objectMapper.createObjectNode();
-            body.put("vector", toJsonArray(vector));
+            body.set("vector", toJsonArray(vector));
             body.put("limit", topK);
             body.put("with_payload", true);
 
