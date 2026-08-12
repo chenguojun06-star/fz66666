@@ -75,11 +75,65 @@ public class OrderManagementOrchestrator {
      * @param targetTypes 推送目标类型列表
      * @return 推送结果
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createFromStyle(Long styleId, List<String> targetTypes) {
         if (styleId == null) {
             throw new IllegalArgumentException("缺少styleId");
         }
+
+        // ====== 阶段1：核心推送逻辑（独立事务） ======
+        // 只做款式状态更新，不掺杂任何可能抛异常的同步逻辑，确保推送主流程稳定提交
+        StyleInfo style = persistPushState(styleId, targetTypes);
+
+        // ====== 阶段2：非事务同步（推送成功后再做，失败不影响主流程） ======
+        // 背景：flowPatternToDataCenter 带有 @Transactional，如果在主事务内调用，
+        // 子事务抛异常会把主事务标记为 rollback-only，导致推送也被回滚（幽灵 ERROR）。
+        // 改为推送事务提交后再执行同步，彻底隔离。
+        java.util.List<String> syncWarnings = new java.util.ArrayList<>();
+        if (targetTypes != null && !targetTypes.isEmpty()) {
+            try {
+                syncToTemplateLibrary(style, targetTypes, syncWarnings);
+            } catch (Exception e) {
+                syncWarnings.add("单价维护同步异常: " + e.getMessage());
+                log.warn("推送到下单管理时同步单价维护异常（不影响推送）: styleId={}, error={}",
+                        styleId, e.getMessage());
+            }
+            try {
+                syncToDataCenter(style, styleId, targetTypes, syncWarnings);
+            } catch (Exception e) {
+                syncWarnings.add("资料中心同步异常: " + e.getMessage());
+                log.warn("推送到下单管理时同步资料中心异常（不影响推送）: styleId={}, error={}",
+                        styleId, e.getMessage());
+            }
+        }
+
+        // 返回成功数据
+        Map<String, Object> data = new HashMap<>();
+        data.put("styleId", styleId);
+        data.put("styleNo", style.getStyleNo());
+        data.put("status", "ready_for_order");
+        data.put("message", "已推送到下单管理，请在下单管理页面创建订单");
+        // 同步警告（资料中心/模板库同步失败时透传给前端，但不影响推送主流程）
+        if (!syncWarnings.isEmpty()) {
+            data.put("syncWarnings", syncWarnings);
+        }
+        // 返回客户信息（用于下单时带入）
+        if (style.getCustomerId() != null) {
+            data.put("salesChannel", style.getSalesChannel());
+            data.put("customerId", style.getCustomerId());
+            data.put("customerName", style.getCustomerName());
+            data.put("customerContact", style.getCustomerContact());
+            data.put("customerPhone", style.getCustomerPhone());
+            data.put("customerAddress", style.getCustomerAddress());
+        }
+        return data;
+    }
+
+    /**
+     * 核心推送逻辑：更新款式状态为"可下单"，标记已推送。
+     * 独立事务，与后续同步逻辑隔离，确保推送本身一定能成功提交。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StyleInfo persistPushState(Long styleId, List<String> targetTypes) {
         // P0铁律4：getById 增补 tenantId 过滤，防止跨租户访问款式
         Long currentTenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
         StyleInfo style = styleInfoService.lambdaQuery()
@@ -119,32 +173,10 @@ public class OrderManagementOrchestrator {
             style.setOrderType(currentUser.trim());
         }
         styleInfoService.updateById(style);
-
-        // 根据勾选的目标进行同步
-        if (targetTypes != null && !targetTypes.isEmpty()) {
-            syncToTemplateLibrary(style, targetTypes);
-            syncToDataCenter(style, styleId, targetTypes);
-        }
-
-        // 返回成功数据
-        Map<String, Object> data = new HashMap<>();
-        data.put("styleId", styleId);
-        data.put("styleNo", style.getStyleNo());
-        data.put("status", "ready_for_order");
-        data.put("message", "已推送到下单管理，请在下单管理页面创建订单");
-        // 返回客户信息（用于下单时带入）
-        if (style.getCustomerId() != null) {
-            data.put("salesChannel", style.getSalesChannel());
-            data.put("customerId", style.getCustomerId());
-            data.put("customerName", style.getCustomerName());
-            data.put("customerContact", style.getCustomerContact());
-            data.put("customerPhone", style.getCustomerPhone());
-            data.put("customerAddress", style.getCustomerAddress());
-        }
-        return data;
+        return style;
     }
 
-    private void syncToTemplateLibrary(StyleInfo style, List<String> targetTypes) {
+    private void syncToTemplateLibrary(StyleInfo style, List<String> targetTypes, java.util.List<String> warnings) {
         try {
             if (StringUtils.hasText(style.getStyleNo())) {
                 List<String> templateTypes = new ArrayList<>();
@@ -174,17 +206,21 @@ public class OrderManagementOrchestrator {
                 }
             }
         } catch (Exception e) {
+            String msg = "单价维护同步失败: " + e.getMessage();
+            warnings.add(msg);
             log.warn("推送到下单管理时同步单价维护失败，但不影响推送操作: styleId={}, error={}",
                     style.getId(), e.getMessage());
         }
     }
 
-    private void syncToDataCenter(StyleInfo style, Long styleId, List<String> targetTypes) {
+    private void syncToDataCenter(StyleInfo style, Long styleId, List<String> targetTypes, java.util.List<String> warnings) {
         try {
             if (targetTypes.contains("pattern")) {
                 styleAttachmentOrchestrator.flowPatternToDataCenter(String.valueOf(styleId));
             }
         } catch (Exception e) {
+            String msg = "资料中心同步失败: " + e.getMessage();
+            warnings.add(msg);
             log.warn("推送到下单管理时同步资料中心失败，但不影响推送操作: styleId={}, error={}",
                     styleId, e.getMessage());
         }

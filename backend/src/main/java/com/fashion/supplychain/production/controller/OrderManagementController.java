@@ -30,6 +30,11 @@ public class OrderManagementController {
    * 从样衣开发推送到下单管理
    * ⚠️ 重要修复：这个API只是更新款式状态为"可下单"，不会直接创建大货订单！
    * 用户需要在"下单管理"页面手动填写订单详情后才能创建订单。
+   *
+   * 日志分级说明（修复误导性 ERROR）：
+   *  - 推送主流程成功、资料中心/模板库同步失败 → WARN，返回 success 并带同步状态标记
+   *  - 推送主流程失败（款式不存在/已推送/状态非法）→ 按原逻辑 fail
+   *  - 其他未知异常 → ERROR
    */
   @PostMapping("/create-from-style")
   public Result<?> createFromStyle(@RequestBody Map<String, Object> payload) {
@@ -49,11 +54,19 @@ public class OrderManagementController {
     try {
       List<String> targetTypes = parseTargetTypes(payload == null ? null : payload.get("targetTypes"));
       Map<String, Object> data = orderManagementOrchestrator.createFromStyle(styleId, targetTypes);
+      // 推送主流程成功；若存在同步警告，降级为 WARN 日志，并把警告信息透传给前端（不报错）
+      Object syncWarnings = data == null ? null : data.get("syncWarnings");
+      if (syncWarnings instanceof java.util.List && !((java.util.List<?>) syncWarnings).isEmpty()) {
+        log.warn("推送到下单管理成功，但部分资料同步失败（不影响推送）: styleId={}, warnings={}", styleId, syncWarnings);
+      }
       return Result.success(data);
     } catch (IllegalArgumentException | IllegalStateException e) {
+      // 业务校验失败（款号不存在/已推送/参数错误等）
+      log.warn("推送到下单管理被拒绝: styleId={}, reason={}", styleId, e.getMessage());
       return Result.fail(e.getMessage());
     } catch (Exception e) {
-      log.error("推送到下单管理失败: styleId={}", styleId, e);
+      // 仅真正的未知异常才记 ERROR
+      log.error("推送到下单管理未知异常: styleId={}", styleId, e);
       return Result.fail("推送失败：" + e.getMessage());
     }
   }
