@@ -23,8 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -342,6 +340,7 @@ public class OrderManagementOrchestrator {
 
     private void mergeInProductionData(AvailabilityContext ctx, String styleId) {
         Map<String, Object> inProdData = getStyleInProductionQuantities(styleId);
+        @SuppressWarnings("unchecked")
         Map<String, Map<String, Integer>> inProdMatrix = (Map<String, Map<String, Integer>>) inProdData.getOrDefault("matrix", new HashMap<>());
         for (Map.Entry<String, Map<String, Integer>> colorEntry : inProdMatrix.entrySet()) {
             String color = normalizeKey(colorEntry.getKey());
