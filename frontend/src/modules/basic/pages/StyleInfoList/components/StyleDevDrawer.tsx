@@ -21,6 +21,7 @@ const StyleDevDrawer: React.FC<StyleDevDrawerProps> = ({
       title={record ? `${record.styleNo} · 开发工作台` : ''}
       onClose={onClose}
       size="large"
+      mask={false}
       styles={{ wrapper: { width: '85%' }, body: { padding: 0 } }}
       destroyOnHidden
     >

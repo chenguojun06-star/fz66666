@@ -35,6 +35,7 @@ const StyleProcurementDrawer: React.FC<StyleProcurementDrawerProps> = ({
       title={record ? `${record.styleNo} · 采购管理` : '采购管理'}
       onClose={handleClose}
       size="large"
+      mask={false}
       styles={{ wrapper: { width: '85%' }, body: { padding: 0 } }}
       destroyOnHidden
     >

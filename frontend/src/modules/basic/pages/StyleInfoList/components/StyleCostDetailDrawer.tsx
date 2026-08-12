@@ -206,6 +206,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
 
   return (
     <Drawer
+      mask={false}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <DollarOutlined style={{ color: 'var(--primary-color)' }} />

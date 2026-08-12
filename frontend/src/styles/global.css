@@ -7,6 +7,15 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 修复：全局透明化所有 Drawer/Modal 的遮罩层
+   问题：Antd Drawer 默认 mask 是半透明黑色 rgba(0,0,0,0.45)，
+   当多个 Drawer 嵌套打开时，多层 mask 叠加导致页面变暗，内容被遮挡。
+   解决：把 mask 背景改为透明，保留点击关闭功能，但不再视觉遮挡。 */
+.ant-drawer-mask,
+.ant-modal-mask {
+  background: transparent !important;
+}
+
 /* 强制锁定根元素字体大小，防止浏览器自动缩放或rem计算异常 */
 html {
   font-size: 13px;
