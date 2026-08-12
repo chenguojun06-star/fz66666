@@ -702,8 +702,17 @@ public class QdrantService {
     }
 
     private String resolveActiveProvider() {
-        if (agnesApiKey != null && !agnesApiKey.isEmpty()) return PROVIDER_AGNES;
-        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) return PROVIDER_DEEPSEEK;
+        if (agnesApiKey != null && !agnesApiKey.isEmpty()) {
+            log.debug("[Qdrant] Embedding provider=AGNES (key长度={})", agnesApiKey.length());
+            return PROVIDER_AGNES;
+        }
+        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+            log.debug("[Qdrant] Embedding provider=DEEPSEEK (key长度={})", deepseekApiKey.length());
+            return PROVIDER_DEEPSEEK;
+        }
+        log.warn("[Qdrant] Embedding provider=PSEUDO (agnesApiKey={}, deepseekApiKey={})",
+                agnesApiKey == null ? "null" : (agnesApiKey.isEmpty() ? "empty" : "set"),
+                deepseekApiKey == null ? "null" : (deepseekApiKey.isEmpty() ? "empty" : "set"));
         return "pseudo";
     }
 
@@ -882,9 +891,11 @@ public class QdrantService {
         }
 
         // ========== 第 3 级：伪向量兜底 ==========
-        log.error("[Qdrant] ⚠ 所有 Embedding 方案不可用，降级为伪向量（搜索质量极低）！" +
-                "建议：1)在微信云【环境变量】配置 AGNES_API_KEY 以启用视觉分析；" +
-                "2)或配置 DEEPSEEK_API_KEY 启用文本 Embedding");
+        log.warn("[Qdrant] Embedding 降级为伪向量（搜索质量降低但不影响功能）" +
+                "当前配置: hasAgnesKey={} hasDeepSeekKey={}。" +
+                "如需高质量向量搜索：1)确认 Agnes /embeddings 端点可用；" +
+                "2)或配置支持 Embedding 的 API（如智谱GLM/通义千问）",
+                hasAgnesKey, hasDeepSeekKey);
         return pseudoEmbedding(imageUrl);
     }
 
