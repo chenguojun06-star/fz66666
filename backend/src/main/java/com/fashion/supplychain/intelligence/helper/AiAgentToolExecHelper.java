@@ -341,6 +341,14 @@ public class AiAgentToolExecHelper {
 
         AgentTool tool = visibleToolMap.get(toolName);
 
+        // ── 模糊匹配兜底：LLM 返回的工具名可能有轻微偏差（如 tool_query_order vs queryOrderInfo） ──
+        if (tool == null && toolName != null && !toolName.isBlank()) {
+            tool = fuzzyMatchTool(visibleToolMap, toolName);
+            if (tool != null) {
+                log.info("[AiAgent] 工具模糊匹配命中: requested='{}' → actual='{}'", toolName, tool.getClass().getSimpleName());
+            }
+        }
+
         // ── P0优化：只读工具跨会话缓存（ToolResultCacheService） ──
         // 在执行前先查缓存，命中则跳过执行
         if (tool != null && toolResultCacheService != null) {
@@ -524,5 +532,69 @@ public class AiAgentToolExecHelper {
                     + "\"operationLabel\":\"" + label + "\","
                     + "\"message\":\"" + label + "需要确认。请简洁展示操作摘要（1-2句话），用户确认后用相同参数再次调用即可。\"}";
         }
+    }
+
+    // ==================== 工具模糊匹配 ====================
+
+    /**
+     * 模糊匹配工具名。
+     * 策略（按优先级）：
+     * 1. 忽略大小写匹配
+     * 2. 去除下划线/连字符后匹配（tool_query_order → toolqueryorder）
+     * 3. 包含关系匹配（queryOrderInfo 包含 queryOrder）
+     * 4. Levenshtein 距离 ≤2 的最接近工具名
+     */
+    private AgentTool fuzzyMatchTool(Map<String, AgentTool> toolMap, String requestedName) {
+        if (toolMap == null || toolMap.isEmpty() || requestedName == null) return null;
+        String reqLower = requestedName.toLowerCase();
+        String reqNormalized = reqLower.replaceAll("[-_]", "");
+
+        // 策略1: 忽略大小写
+        for (Map.Entry<String, AgentTool> entry : toolMap.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(requestedName)) return entry.getValue();
+        }
+
+        // 策略2: 去除下划线/连字符后匹配
+        for (Map.Entry<String, AgentTool> entry : toolMap.entrySet()) {
+            String keyNormalized = entry.getKey().toLowerCase().replaceAll("[-_]", "");
+            if (keyNormalized.equals(reqNormalized)) return entry.getValue();
+        }
+
+        // 策略3: 包含关系（请求名包含工具名，或工具名包含请求名）
+        for (Map.Entry<String, AgentTool> entry : toolMap.entrySet()) {
+            String keyLower = entry.getKey().toLowerCase();
+            if (keyLower.length() > 4 && (keyLower.contains(reqLower) || reqLower.contains(keyLower))) {
+                return entry.getValue();
+            }
+        }
+
+        // 策略4: Levenshtein 距离 ≤2
+        AgentTool bestMatch = null;
+        int minDistance = Integer.MAX_VALUE;
+        for (Map.Entry<String, AgentTool> entry : toolMap.entrySet()) {
+            int dist = levenshteinDistance(reqLower, entry.getKey().toLowerCase());
+            if (dist < minDistance) {
+                minDistance = dist;
+                bestMatch = entry.getValue();
+            }
+        }
+        return minDistance <= 2 ? bestMatch : null;
+    }
+
+    /**
+     * Levenshtein 距离算法（编辑距离）。
+     */
+    private int levenshteinDistance(String a, String b) {
+        if (a == null || b == null) return Integer.MAX_VALUE;
+        int[][] dp = new int[a.length() + 1][b.length() + 1];
+        for (int i = 0; i <= a.length(); i++) dp[i][0] = i;
+        for (int j = 0; j <= b.length(); j++) dp[0][j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1), dp[i - 1][j - 1] + cost);
+            }
+        }
+        return dp[a.length()][b.length()];
     }
 }

@@ -1,7 +1,5 @@
 package com.fashion.supplychain.intelligence.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.agent.tool.AgentToolDef;
 import lombok.extern.slf4j.Slf4j;
@@ -44,9 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Lazy
 public class ToolResultCacheService {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String KEY_PREFIX = "ai:tool-cache:";
-    private static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
 
     @Autowired(required = false)
     private StringRedisTemplate redis;
@@ -139,7 +135,9 @@ public class ToolResultCacheService {
         }
 
         String cacheKey = buildCacheKey(toolName, argsJson);
-        Duration ttl = Duration.ofMinutes(ttlMinutes);
+        // 升级E：TTL 分级 — 根据工具类型动态选择缓存时间
+        int effectiveTtl = resolveTtlByToolType(toolName);
+        Duration ttl = Duration.ofMinutes(effectiveTtl);
 
         try {
             // L1: 本地缓存
@@ -148,7 +146,7 @@ public class ToolResultCacheService {
 
             // L2: Redis 缓存（异步，不阻塞主流程）
             redis.opsForValue().set(KEY_PREFIX + cacheKey, result, ttl);
-            log.debug("[ToolCache] 已缓存: tool={}, ttl={}min", toolName, ttlMinutes);
+            log.debug("[ToolCache] 已缓存: tool={}, ttl={}min", toolName, effectiveTtl);
         } catch (Exception e) {
             log.warn("[ToolCache] Redis保存异常，静默降级: {}", e.getMessage());
         }
@@ -168,6 +166,34 @@ public class ToolResultCacheService {
         }
         // 没有注解的默认为只读（保守策略）
         return true;
+    }
+
+    /**
+     * 升级E：根据工具类型动态选择 TTL。
+     * - 基础数据查询（款式/物料/BOM）：30分钟（数据稳定）
+     * - 业务查询（订单/库存/进度）：5分钟（数据会变化）
+     * - 实时查询（扫码/今日产量）：1分钟（数据实时性要求高）
+     * - 默认：ttlMinutes 配置值
+     */
+    private int resolveTtlByToolType(String toolName) {
+        if (toolName == null) return ttlMinutes;
+        String lower = toolName.toLowerCase();
+        // 基础数据查询（稳定数据，长缓存）
+        if (lower.contains("style") || lower.contains("material") || lower.contains("bom")
+                || lower.contains("process") || lower.contains("template") || lower.contains("customer")) {
+            return Math.max(ttlMinutes, 30);
+        }
+        // 实时查询（数据变化快，短缓存）
+        if (lower.contains("scan") || lower.contains("today") || lower.contains("realtime")
+                || lower.contains("current") || lower.contains("payroll")) {
+            return Math.min(ttlMinutes, 1);
+        }
+        // 业务查询（中等频率变化）
+        if (lower.contains("order") || lower.contains("inventory") || lower.contains("stock")
+                || lower.contains("progress") || lower.contains("production") || lower.contains("shipment")) {
+            return Math.min(ttlMinutes, 5);
+        }
+        return ttlMinutes;
     }
 
     /**

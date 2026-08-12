@@ -85,7 +85,23 @@ public class AgentLoopContextBuilder {
         List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
         // P0升级: token感知压缩 — 当历史对话超过token预算60%时自动触发三级压缩
         messages.addAll(memoryHelper.compactConversationHistory(history, tokenBudget));
-        messages.add(AiMessage.user(userMessage));
+
+        // 升级D：上下文窗口优化 — 从历史对话中提取实体，注入 system prompt
+        StringBuilder contextEnhancements = new StringBuilder();
+        for (AiMessage msg : history) {
+            if (msg.getRole() != null && msg.getRole().contains("user") && msg.getContent() != null) {
+                // 从历史用户消息中提取款号/订单号
+                extractHistoryEntities(msg.getContent(), contextEnhancements);
+            }
+        }
+        if (contextEnhancements.length() > 0) {
+            messages.add(AiMessage.system("【上下文实体记忆】\n" + contextEnhancements.toString()
+                    + "\n当用户说'那个款''它的进度'时，请使用上述实体。"));
+        }
+
+        // 升级B：指代消解 — 将"那个款""那个订单"替换为实际实体
+        String resolvedMessage = resolveCoreferenceFromHistory(userMessage, history);
+        messages.add(AiMessage.user(resolvedMessage));
 
         int maxIterations = promptHelper.estimateMaxIterations(userMessage);
         if (isMultiDomain) {
@@ -123,5 +139,62 @@ public class AgentLoopContextBuilder {
 
     public boolean isModelEnabled() {
         return inferenceOrchestrator.isAnyModelEnabled();
+    }
+
+    // ==================== 升级B+D：上下文实体记忆 + 指代消解 ====================
+
+    private static final java.util.regex.Pattern STYLE_NO_PATTERN =
+            java.util.regex.Pattern.compile("\\b([A-Z]{2,3}\\d{2,}[A-Z0-9]*)\\b");
+    private static final java.util.regex.Pattern ORDER_NO_PATTERN =
+            java.util.regex.Pattern.compile("\\b([a-f0-9]{32}|\\d{8,})\\b");
+
+    /**
+     * 从历史用户消息中提取款号/订单号实体。
+     */
+    private void extractHistoryEntities(String message, StringBuilder sb) {
+        if (message == null || message.isBlank()) return;
+        java.util.regex.Matcher styleMatcher = STYLE_NO_PATTERN.matcher(message);
+        if (styleMatcher.find()) {
+            sb.append("- 用户最近提到的款号: ").append(styleMatcher.group(1)).append("\n");
+        }
+        java.util.regex.Matcher orderMatcher = ORDER_NO_PATTERN.matcher(message);
+        if (orderMatcher.find()) {
+            sb.append("- 用户最近提到的订单号: ").append(orderMatcher.group(1)).append("\n");
+        }
+    }
+
+    /**
+     * 指代消解：将"那个款""那个订单"替换为历史对话中最近提到的实体。
+     */
+    private String resolveCoreferenceFromHistory(String userMessage, List<AiMessage> history) {
+        if (userMessage == null || history == null || history.isEmpty()) return userMessage;
+        // 从最近的用户消息中找款号和订单号
+        String lastStyleNo = null;
+        String lastOrderNo = null;
+        for (int i = history.size() - 1; i >= 0; i--) {
+            AiMessage msg = history.get(i);
+            if (msg.getRole() != null && msg.getRole().contains("user") && msg.getContent() != null) {
+                if (lastStyleNo == null) {
+                    java.util.regex.Matcher m = STYLE_NO_PATTERN.matcher(msg.getContent());
+                    if (m.find()) lastStyleNo = m.group(1);
+                }
+                if (lastOrderNo == null) {
+                    java.util.regex.Matcher m = ORDER_NO_PATTERN.matcher(msg.getContent());
+                    if (m.find()) lastOrderNo = m.group(1);
+                }
+                if (lastStyleNo != null && lastOrderNo != null) break;
+            }
+        }
+        String resolved = userMessage;
+        if (lastStyleNo != null) {
+            resolved = resolved.replaceAll("(?i)那个款|这个款|该款", lastStyleNo);
+        }
+        if (lastOrderNo != null) {
+            resolved = resolved.replaceAll("(?i)那个订单|这个订单|该订单", lastOrderNo);
+        }
+        if (!resolved.equals(userMessage)) {
+            log.info("[ContextBuilder] 指代消解: '{}' → '{}'", userMessage, resolved);
+        }
+        return resolved;
     }
 }

@@ -702,6 +702,22 @@ public class AgentLoopEngine {
                 if (gateResult.isHardFail()) {
                     log.warn("[AsyncPost] SelfCritiqueGate HARD_FAIL score={}", gateResult.getScore());
                     content = gateResult.getContent();
+                    // 升级C：低分重试 — 把 issues 反馈给 LLM，给一次重新回答的机会
+                    if (ctx.getCurrentIteration() < ctx.getMaxIterations() - 1
+                            && gateResult.getIssues() != null && !gateResult.getIssues().isEmpty()) {
+                        String retryContent = retryWithQualityFeedback(ctx, content, gateResult.getIssues());
+                        if (retryContent != null && !retryContent.isBlank()) {
+                            // 重试后再检查一次
+                            SelfCritiqueGate.GateResult retryResult = selfCritiqueGate.check(ctx, retryContent);
+                            if (retryResult.getScore() > gateResult.getScore()) {
+                                log.info("[AsyncPost] 低分重试成功 score: {} → {}", gateResult.getScore(), retryResult.getScore());
+                                content = retryContent;
+                                qualityScore = Math.max(0.0, Math.min(1.0, retryResult.getScore() / 100.0));
+                            } else {
+                                log.info("[AsyncPost] 低分重试未改善 score: {} → {}", gateResult.getScore(), retryResult.getScore());
+                            }
+                        }
+                    }
                 } else if (!gateResult.isPassed()) {
                     log.info("[AsyncPost] SelfCritiqueGate SOFT_FAIL score={}", gateResult.getScore());
                     content = gateResult.getContent();
@@ -918,6 +934,31 @@ public class AgentLoopEngine {
                 }
                 return toolName;
         }
+    }
+
+    /**
+     * 升级C：低分重试 — 把质量问题反馈给 LLM，给一次重新回答的机会。
+     * 只在质量门控 HARD_FAIL 且还有迭代次数时触发。
+     */
+    private String retryWithQualityFeedback(AgentLoopContext ctx, String originalContent, List<String> issues) {
+        try {
+            String feedbackPrompt = "你之前的回答存在以下质量问题，请修正后重新回答：\n"
+                    + String.join("\n", issues)
+                    + "\n\n请基于已有的工具执行结果重新组织回答，确保数据准确、逻辑清晰。";
+            // 用 inferenceGateway 调用 LLM 重试
+            com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result = inferenceGateway.chat(
+                    ctx.getCommandId(),
+                    "你是服装供应链AI助手。请根据质量反馈修正回答。",
+                    feedbackPrompt + "\n\n用户原始问题: " + ctx.getUserMessage()
+                    + "\n\n你之前的回答: " + originalContent
+                    + "\n\n工具执行记录: " + ctx.getToolEvidence());
+            if (result != null && result.isSuccess() && result.getContent() != null) {
+                return result.getContent();
+            }
+        } catch (Exception e) {
+            log.warn("[RetryWithFeedback] 重试失败: {}", e.getMessage());
+        }
+        return null;
     }
 
     private String runDataTruthGuards(AgentLoopContext ctx, String content) {

@@ -53,6 +53,14 @@ public class AgentLoopContext {
     @Builder.Default
     private final List<AiAgentToolExecHelper.ToolExecRecord> allExecRecords = new ArrayList<>();
 
+    /**
+     * 上下文实体记忆（升级B）。
+     * 记住用户最近提到的款号/订单号/工厂名/员工名等实体，
+     * 当用户说"那个款呢""它的进度"时，能自动补全上下文。
+     */
+    @Builder.Default
+    private final Map<String, String> contextEntities = new ConcurrentHashMap<>();
+
     private final int maxIterations;
     private final long tokenBudget;
 
@@ -178,5 +186,59 @@ public class AgentLoopContext {
 
     public boolean isDeadlineExceeded() {
         return deadlineMs > 0 && System.currentTimeMillis() > deadlineMs;
+    }
+
+    // ==================== 上下文实体记忆（升级B） ====================
+
+    /**
+     * 从用户消息中提取实体并存入上下文记忆。
+     * 支持：款号(BR26xxx)、订单号、工厂名、员工名等。
+     */
+    public void extractAndStoreEntities(String message) {
+        if (message == null || message.isBlank()) return;
+        // 款号模式：2-3个大写字母+数字+字母混合（如 BR26C1S0574B）
+        java.util.regex.Matcher styleMatcher = java.util.regex.Pattern.compile(
+                "\\b([A-Z]{2,3}\\d{2,}[A-Z0-9]*)\\b").matcher(message);
+        if (styleMatcher.find()) {
+            contextEntities.put("lastStyleNo", styleMatcher.group(1));
+        }
+        // 订单号模式：32位hex 或 纯数字8位以上
+        java.util.regex.Matcher orderMatcher = java.util.regex.Pattern.compile(
+                "\\b([a-f0-9]{32}|\\d{8,})\\b").matcher(message);
+        if (orderMatcher.find()) {
+            contextEntities.put("lastOrderNo", orderMatcher.group(1));
+        }
+    }
+
+    /**
+     * 获取上下文实体描述（注入 system prompt）。
+     * 当用户说"那个款""它的进度"时，提示 LLM 用记忆中的实体。
+     */
+    public String getContextEntityHint() {
+        if (contextEntities.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("\n【上下文实体记忆】\n");
+        String lastStyle = contextEntities.get("lastStyleNo");
+        if (lastStyle != null) sb.append("- 用户最近提到的款号: ").append(lastStyle).append("\n");
+        String lastOrder = contextEntities.get("lastOrderNo");
+        if (lastOrder != null) sb.append("- 用户最近提到的订单号: ").append(lastOrder).append("\n");
+        sb.append("当用户说'那个款''它的进度''那个订单'时，请使用上述实体。\n");
+        return sb.toString();
+    }
+
+    /**
+     * 指代消解：将用户消息中的"那个款""那个订单"替换为实际实体。
+     */
+    public String resolveCoreference(String message) {
+        if (message == null || contextEntities.isEmpty()) return message;
+        String resolved = message;
+        String lastStyle = contextEntities.get("lastStyleNo");
+        String lastOrder = contextEntities.get("lastOrderNo");
+        if (lastStyle != null) {
+            resolved = resolved.replaceAll("(?i)那个款|这个款|它(?!的)|该款", lastStyle);
+        }
+        if (lastOrder != null) {
+            resolved = resolved.replaceAll("(?i)那个订单|这个订单|该订单", lastOrder);
+        }
+        return resolved;
     }
 }
