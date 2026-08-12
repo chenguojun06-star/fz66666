@@ -63,6 +63,9 @@ public class IntelligenceAdminController {
     private com.fashion.supplychain.intelligence.gateway.AiInferenceRouter aiInferenceRouter;
 
     @Autowired
+    private com.fashion.supplychain.intelligence.health.AiComponentHealthIndicator aiComponentHealthIndicator;
+
+    @Autowired
     private AgentCheckpointService checkpointService;
 
     @Autowired
@@ -76,6 +79,20 @@ public class IntelligenceAdminController {
     @GetMapping("/inference-gateway/status")
     public Result<Map<String, Object>> getInferenceGatewayStatus() {
         return Result.success(aiInferenceRouter.getRoutingStatus());
+    }
+
+    /**
+     * AI 组件健康状态（红绿灯）。
+     * 返回 DeepSeek/Qdrant/Agnes/LiteLLM/Langfuse 各组件的连通性状态，
+     * 供前端 AI 驾驶舱展示红绿灯。
+     */
+    @GetMapping("/ai-health")
+    public Result<Map<String, Object>> getAiHealth() {
+        org.springframework.boot.actuate.health.Health health = aiComponentHealthIndicator.health();
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("status", health.getStatus().getCode());
+        result.put("components", health.getDetails());
+        return Result.success(result);
     }
 
     // ── 孤儿数据 ──

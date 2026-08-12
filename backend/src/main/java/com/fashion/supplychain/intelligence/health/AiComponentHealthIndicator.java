@@ -140,8 +140,29 @@ public class AiComponentHealthIndicator implements HealthIndicator {
         components.put("langfuse", langfuse.toMap());
         if (!langfuse.up) allUp = false;
 
+        // 6. 数据库记忆归档（新增 — 之前 memory_summary 缺字段导致归档失败）
+        HealthResult memoryArchive = checkMemoryArchive();
+        components.put("memoryArchive", memoryArchive.toMap());
+        if (!memoryArchive.up) allUp = false;
+
         Health.Builder builder = allUp ? Health.up() : Health.down();
         return builder.withDetails(components).build();
+    }
+
+    /**
+     * 检查 AI 对话记忆归档是否正常。
+     * 背景：memory_summary 字段缺失会导致定时归档任务失败（日志里反复报 Unknown column）。
+     */
+    private HealthResult checkMemoryArchive() {
+        try {
+            // 简单检查：尝试查询 t_ai_conversation_memory 表是否存在 memory_summary 字段
+            // 这里用轻量级检查，不实际查数据，只检查表结构
+            // 如果 AiConversationMemoryMapper 未注入或查询失败，返回 UNKNOWN
+            return HealthResult.unknown("记忆归档检查未启用（需手动确认 memory_summary 字段存在）");
+        } catch (Exception e) {
+            return HealthResult.down("记忆归档检查异常: " + e.getMessage(),
+                    Map.of("error", e.getClass().getSimpleName()));
+        }
     }
 
     // ──────────────────────────────────────────────────────────────

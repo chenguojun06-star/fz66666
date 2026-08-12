@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Tooltip } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Button, Tooltip, Popover, Tag, Space } from 'antd';
 import { ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import { TimeDimensionProvider } from './contexts/TimeDimensionContext';
 import { StyleLinkProvider } from './contexts/StyleLinkContext';
@@ -13,6 +13,7 @@ import ProcurementPieChart from './components/ProcurementPieChart';
 import WarehousePieChart from './components/WarehousePieChart';
 import SidebarModuleCard from './components/SidebarModuleCard';
 import WidgetContainer from './components/WidgetContainer';
+import AiHealthIndicator from './components/AiHealthIndicator';
 import { useCockpitWidgets } from './hooks/useCockpitWidgets';
 import { MODULE_TITLES, WidgetKey, WidgetPosition } from './helpers';
 import './styles.css';
@@ -78,6 +79,7 @@ const CockpitPage: React.FC = () => {
                 <div className="cockpit-stage-desc">实时监控 · 拖入模块后可自由拖动位置、调整大小</div>
               </div>
               <div className="cockpit-stage-actions">
+                <AiHealthIndicator />
                 <TimeDimensionSelector />
                 <Tooltip title="刷新数据">
                   <Button icon={<SyncOutlined spin={refreshing} />} onClick={handleRefresh} className="cockpit-reset-btn" />
