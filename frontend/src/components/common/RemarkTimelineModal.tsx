@@ -199,7 +199,8 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       // 提高层级，确保覆盖在外层 Drawer 之上（外层 Drawer 默认 1000）
       zIndex={1100}
       // 遮罩层 z-index 必须低于 Drawer 内容但高于外层 Drawer
-      maskStyle={{ zIndex: 1099 }}
+      // 使用透明遮罩，避免与外层 Drawer 的 mask 叠加导致页面变暗
+      maskStyle={{ zIndex: 1099, background: 'transparent' }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
         {/* 样衣异常提示（跟随模式：异常信息直接展示在备注日志顶部） */}

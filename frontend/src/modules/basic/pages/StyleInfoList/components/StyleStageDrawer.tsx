@@ -57,6 +57,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
         </Button>
       }
       destroyOnHidden
+      mask={false}
     >
       {selectedStage && panel.selectedStageTag ? (
         <div className="style-smart-stage-modal">
