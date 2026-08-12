@@ -44,7 +44,7 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-  const [bomAreaTabKey, setBomAreaTabKey] = useState('bom');
+  const [bomAreaTabKey, setBomAreaTabKey] = useState('basic');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const basicInfoFormRef = useRef<StyleBasicInfoFormRef | null>(null);
 
@@ -249,7 +249,7 @@ const StyleInfoDetailPage: React.FC = () => {
               skuMode={(currentStyle as any)?.skuMode}
               useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
               onRefresh={handleRefresh}
-              renderBelowForm={() => (
+              renderBelowForm={(basicInfoTabContent?: React.ReactNode) => (
                 <StyleInfoTabs
                   activeKey={bomAreaTabKey}
                   onChange={setBomAreaTabKey}
@@ -261,6 +261,7 @@ const StyleInfoDetailPage: React.FC = () => {
                   production={production}
                   onRefresh={handleRefresh}
                   onCartAdded={() => setCartDrawerOpen(true)}
+                  basicInfoContent={basicInfoTabContent}
                 />
               )}
             />

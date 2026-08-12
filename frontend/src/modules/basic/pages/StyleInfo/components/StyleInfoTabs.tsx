@@ -32,6 +32,8 @@ interface StyleInfoTabsProps {
   };
   onRefresh: () => void;
   onCartAdded: () => void;
+  /** 基础信息 Tab 内容（由 StyleBasicInfoForm 注入，排在所有 Tab 最前面） */
+  basicInfoContent?: React.ReactNode;
 }
 
 const tabContentStyle: React.CSSProperties = {
@@ -77,6 +79,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
   production,
   onRefresh,
   onCartAdded,
+  basicInfoContent,
 }) => {
   const styleId = currentStyle?.id ?? '';
   const styleNo = currentStyle?.styleNo ?? '';
@@ -116,6 +119,16 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
           zIndex: 10,
         }}
         items={[
+          // 基础信息 Tab（排在所有开发流程 Tab 最前面）
+          ...(basicInfoContent ? [{
+            key: 'basic',
+            label: <span><StageDot completed={false} inProgress={!isStageCompleted('bom')} />基础信息</span>,
+            children: (
+              <div style={tabContentStyle}>
+                {basicInfoContent}
+              </div>
+            ),
+          }] : []),
           { key: 'bom', label: <span><StageDot completed={isStageCompleted('bom')} inProgress={isStageInProgress('bom')} />BOM清单</span>, children: (
             <div style={tabContentStyle}>
               <StyleBomTab

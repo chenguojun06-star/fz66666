@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row } from 'antd';
+import { Row, Tabs } from 'antd';
 import CoverImageUpload from './CoverImageUpload';
 import StyleStatusCard from './StyleStatusCard';
 import type { StyleBasicInfoFormProps } from './StyleBasicInfoForm/types';
@@ -18,11 +18,11 @@ export type { StyleBasicInfoFormRef } from './StyleBasicInfoForm/types';
  * 款式基础信息表单组件
  * 包含：款号信息、客户信息、版次信息、时间信息、颜色码数配置
  *
- * 拆分说明（原 644 行 → 主文件仅负责组合）：
- *  - 业务逻辑：useStyleBasicInfoForm.ts（同步 effect + 智能识别填充 + ref 暴露）
- *  - 常量：StyleBasicInfoForm/constants.ts
- *  - 类型：StyleBasicInfoForm/types.ts
- *  - 子区块：StyleBasicInfoForm/*Section.tsx + SectionBox.tsx
+ * 布局说明：
+ *  - 左侧 sticky：封面图 + 状态卡片
+ *  - 右侧：统一 Tab 系统（基础信息 / BOM清单 / 纸样开发 / ...）
+ *  - 基础信息作为第一个 Tab，排在 BOM 清单前面
+ *  - 下层 Tab 内容由 renderBelowForm 提供（StyleInfoTabs）
  */
 const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   _form,
@@ -76,6 +76,69 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     isFieldLocked,
   };
 
+  // 基础信息 Tab 内容：所有表单分区合并在一个 Tab 里
+  const basicInfoTabContent = (
+    <>
+      {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道） */}
+      <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} />
+
+      {/* 区2：客户跟进信息（含板类，原版次与版型信息已合并） */}
+      <CustomerInfoSection {...sectionFormContext} />
+
+      {/* 区3：款式特征 · AI识别（面料/袖型/领型/版型/图案/工艺风格） */}
+      <StyleFeatureSection {...sectionFormContext} isNewPage={isNewPage} />
+
+      {/* 区4：时间与备注 */}
+      <TimeRemarkSection {...sectionFormContext} />
+
+      {/* 区5：颜色 / 尺码 / SKU 配置 */}
+      <ColorSizeSkuSection
+        size1={size1} setSize1={setSize1}
+        size2={size2} setSize2={setSize2}
+        size3={size3} setSize3={setSize3}
+        size4={size4} setSize4={setSize4}
+        size5={size5} setSize5={setSize5}
+        color1={color1} setColor1={setColor1}
+        color2={color2} setColor2={setColor2}
+        color3={color3} setColor3={setColor3}
+        color4={color4} setColor4={setColor4}
+        color5={color5} setColor5={setColor5}
+        qty1={qty1} setQty1={setQty1}
+        qty2={qty2} setQty2={setQty2}
+        qty3={qty3} setQty3={setQty3}
+        qty4={qty4} setQty4={setQty4}
+        qty5={qty5} setQty5={setQty5}
+        sizeOptions={sizeOptions}
+        setSizeOptions={setSizeOptions}
+        colorOptions={colorOptions}
+        setColorOptions={setColorOptions}
+        matrixRows={sizeColorMatrixRows}
+        setMatrixRows={setSizeColorMatrixRows}
+        onImageSync={onColorImageSync}
+        onImageClear={onColorImageClear}
+        commonSizes={commonSizes}
+        setCommonSizes={setCommonSizes}
+        commonColors={commonColors}
+        setCommonColors={setCommonColors}
+        editLocked={editLocked}
+        isFieldLocked={isFieldLocked}
+        styleId={styleId}
+        styleNo={styleNo}
+        skc={skc}
+        skuMode={skuMode}
+        useSkuPrefix={useSkuPrefix}
+        onRefresh={onRefresh}
+        skuRefreshTrigger={skuRefreshTrigger}
+      />
+
+      {/* 区6：扩展字段 */}
+      <ExtFieldsSectionBlock
+        customFields={customFields}
+        editLocked={editLocked}
+      />
+    </>
+  );
+
   return (
     <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(160px, 14vw, 200px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
       {/* 左侧：封面图上传 + 款式状态卡片（sticky 跟随滚动，避免下方空白） */}
@@ -96,68 +159,15 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} /> : null}
       </div>
 
-      {/* 右侧：表单字段（按业务流程自上而下分区） */}
+      {/* 右侧：统一 Tab 系统（基础信息排在最前，BOM清单等后续 Tab 由 renderBelowForm 提供） */}
       <div style={{ minWidth: 0 }}>
-        {/* Tab 区域（BOM/纸样/生产/二次工艺/工序/报价/附件/洗水唛）— 移到顶部与基础信息对齐 */}
-        {renderBelowForm ? <div style={{ marginBottom: 16 }}>{renderBelowForm()}</div> : null}
-
-        {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道） */}
-        <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} />
-
-        {/* 区2：客户跟进信息（含板类，原版次与版型信息已合并） */}
-        <CustomerInfoSection {...sectionFormContext} />
-
-        {/* 区3：款式特征 · AI识别（面料/袖型/领型/版型/图案/工艺风格） */}
-        <StyleFeatureSection {...sectionFormContext} isNewPage={isNewPage} />
-
-        {/* 区5：时间与备注 */}
-        <TimeRemarkSection {...sectionFormContext} />
-
-        {/* 区5：颜色 / 尺码 / SKU 配置 */}
-        <ColorSizeSkuSection
-          size1={size1} setSize1={setSize1}
-          size2={size2} setSize2={setSize2}
-          size3={size3} setSize3={setSize3}
-          size4={size4} setSize4={setSize4}
-          size5={size5} setSize5={setSize5}
-          color1={color1} setColor1={setColor1}
-          color2={color2} setColor2={setColor2}
-          color3={color3} setColor3={setColor3}
-          color4={color4} setColor4={setColor4}
-          color5={color5} setColor5={setColor5}
-          qty1={qty1} setQty1={setQty1}
-          qty2={qty2} setQty2={setQty2}
-          qty3={qty3} setQty3={setQty3}
-          qty4={qty4} setQty4={setQty4}
-          qty5={qty5} setQty5={setQty5}
-          sizeOptions={sizeOptions}
-          setSizeOptions={setSizeOptions}
-          colorOptions={colorOptions}
-          setColorOptions={setColorOptions}
-          matrixRows={sizeColorMatrixRows}
-          setMatrixRows={setSizeColorMatrixRows}
-          onImageSync={onColorImageSync}
-          onImageClear={onColorImageClear}
-          commonSizes={commonSizes}
-          setCommonSizes={setCommonSizes}
-          commonColors={commonColors}
-          setCommonColors={setCommonColors}
-          editLocked={editLocked}
-          isFieldLocked={isFieldLocked}
-          styleId={styleId}
-          styleNo={styleNo}
-          skc={skc}
-          skuMode={skuMode}
-          useSkuPrefix={useSkuPrefix}
-          onRefresh={onRefresh}
-          skuRefreshTrigger={skuRefreshTrigger}
-        />
-
-        {/* 区6：扩展字段 */}
-        <ExtFieldsSectionBlock
-          customFields={customFields}
-          editLocked={editLocked}
-        />
+        {renderBelowForm ? (
+          // 有下层 Tab（StyleInfoTabs）→ 把基础信息内容传给 StyleInfoTabs，作为第一个 Tab
+          renderBelowForm(basicInfoTabContent)
+        ) : (
+          // 无下层 Tab（如新建页面）→ 直接平铺基础信息
+          basicInfoTabContent
+        )}
       </div>
     </Row>
   );
