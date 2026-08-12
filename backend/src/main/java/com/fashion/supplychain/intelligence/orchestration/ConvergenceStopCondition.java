@@ -26,6 +26,9 @@ public class ConvergenceStopCondition {
 
     private final Deque<Double> scoreHistory = new ArrayDeque<>(MAX_HISTORY);
 
+    /** 创建时间戳，用于按时间淘汰 */
+    private final long createdAt = System.currentTimeMillis();
+
     /**
      * 记录一轮评分。
      *
@@ -95,5 +98,12 @@ public class ConvergenceStopCondition {
     public double getLatestScore() {
         Double last = scoreHistory.peekLast();
         return last == null ? 0.0 : last;
+    }
+
+    /**
+     * 获取创建时间戳（用于按时间淘汰）。
+     */
+    public long getCreatedAt() {
+        return createdAt;
     }
 }

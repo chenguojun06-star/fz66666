@@ -47,11 +47,17 @@ public class SelfCritiqueGate {
     @Value("${xiaoyun.self-critic-gate.enabled:${XIAOYUN_SELF_CRITIC_GATE_ENABLED:true}}")
     private boolean enabled;
 
-    private static final double PASS_THRESHOLD = 75.0;
-    private static final double SOFT_FAIL_THRESHOLD = 60.0;
+    @Value("${xiaoyun.self-critic-gate.pass-threshold:75.0}")
+    private double passThreshold;
+
+    @Value("${xiaoyun.self-critic-gate.soft-fail-threshold:60.0}")
+    private double softFailThreshold;
 
     /** 收敛停止条件 Map 清理阈值（超过则清理） */
     private static final int CONVERGENCE_MAP_CLEAN_THRESHOLD = 200;
+
+    /** 收敛记录最大存活时间（毫秒），超过则被清理 */
+    private static final long CONVERGENCE_RECORD_TTL_MS = 10 * 60 * 1000L; // 10 分钟
 
     @Autowired private SelfCriticService selfCriticService;
     @Autowired private DataTruthGuard dataTruthGuard;
@@ -63,20 +69,27 @@ public class SelfCritiqueGate {
 
     /**
      * 门控检查。
+     *
+     * <p>升级要点（2026-08-12）：
+     * <ul>
+     *   <li>阈值配置化（passThreshold / softFailThreshold 从 @Value 读取）</li>
+     *   <li>门控关闭/跳过/异常时不再伪造 80 分，改为返回 -1 表示"未评分"</li>
+     *   <li>收敛Map 按时间淘汰，避免长期累积</li>
+     * </ul>
      */
     public GateResult check(AgentLoopContext ctx, String content) {
-        if (!enabled) return GateResult.pass(content, 80.0);
+        if (!enabled) return GateResult.pass(content, -1.0);
 
         if (XiaoyunPatterns.shouldSkipCritic(ctx.getUserMessage(),
                 ctx.getAllExecRecords().size(), content.length())) {
-            return GateResult.pass(content, 80.0);
+            return GateResult.pass(content, -1.0);
         }
 
         try {
             return doCheck(ctx, content);
         } catch (Exception e) {
             log.warn("[SelfCritiqueGate] 检查异常，保守放行: {}", e.getMessage());
-            return GateResult.pass(content, 80.0);
+            return GateResult.pass(content, -1.0);
         }
     }
 
@@ -145,17 +158,17 @@ public class SelfCritiqueGate {
                                       MultiPerspectiveCritic.MultiPerspectiveResult multiResult,
                                       AdversarialJudgePipeline.AdversarialJudgeResult judgeResult,
                                       List<String> issues) {
-        if (score >= PASS_THRESHOLD && overallPassed) {
-            log.info("[SelfCritiqueGate] PASS score={} trustScore={}", score, trustScore);
+        if (score >= passThreshold && overallPassed) {
+            log.info("[SelfCritiqueGate] PASS score={} trustScore={} threshold={}", score, trustScore, passThreshold);
             return GateResult.pass(content, score, multiResult, judgeResult, issues);
         }
-        if (score >= SOFT_FAIL_THRESHOLD) {
+        if (score >= softFailThreshold) {
             String disclaimer = buildDisclaimer(score, trustScore, validation, issues);
-            log.info("[SelfCritiqueGate] SOFT_FAIL score={} trustScore={}", score, trustScore);
+            log.info("[SelfCritiqueGate] SOFT_FAIL score={} trustScore={} threshold={}", score, trustScore, softFailThreshold);
             return GateResult.softFail(content + disclaimer, score, disclaimer, multiResult, judgeResult, issues);
         }
         String fallback = buildFallbackResponse(ctx, score, trustScore, validation);
-        log.warn("[SelfCritiqueGate] HARD_FAIL score={} trustScore={}", score, trustScore);
+        log.warn("[SelfCritiqueGate] HARD_FAIL score={} trustScore={} threshold={}", score, trustScore, softFailThreshold);
         return GateResult.hardFail(fallback, score, multiResult, judgeResult, issues);
     }
 
@@ -179,10 +192,25 @@ public class SelfCritiqueGate {
     }
 
     private void cleanupConvergenceMap() {
-        // 简单清理：清空所有记录（commandId 是一次性的，旧记录无意义）
-        int size = convergenceMap.size();
-        convergenceMap.clear();
-        log.info("[SelfCritiqueGate] 清理收敛停止 Map，释放 {} 条记录", size);
+        // 按时间淘汰：清理超过 TTL 的旧记录，保留活跃记录
+        long now = System.currentTimeMillis();
+        int removed = 0;
+        var it = convergenceMap.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            if (now - entry.getValue().getCreatedAt() > CONVERGENCE_RECORD_TTL_MS) {
+                it.remove();
+                removed++;
+            }
+        }
+        // 如果清理后仍然过大，强制清空（极端情况）
+        if (convergenceMap.size() > CONVERGENCE_MAP_CLEAN_THRESHOLD) {
+            int size = convergenceMap.size();
+            convergenceMap.clear();
+            log.info("[SelfCritiqueGate] 强制清理收敛停止 Map，释放 {} 条记录", size);
+        } else if (removed > 0) {
+            log.info("[SelfCritiqueGate] 按时间淘汰 {} 条过期收敛记录", removed);
+        }
     }
 
     private String buildDisclaimer(double score, int trustScore,

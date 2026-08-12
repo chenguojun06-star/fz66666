@@ -65,7 +65,24 @@ public class ToolParameterAutoFixService {
             Map.entry("update_time", "updateTime"),
             Map.entry("department_id", "departmentId"),
             Map.entry("team_id", "teamId"),
-            Map.entry("worker_id", "workerId")
+            Map.entry("worker_id", "workerId"),
+            // 服装行业专用字段（新增）
+            Map.entry("skc_code", "skc"),
+            Map.entry("sku_code", "skuCode"),
+            Map.entry("color_name", "colorName"),
+            Map.entry("size_name", "sizeName"),
+            Map.entry("process_id", "processId"),
+            Map.entry("process_name", "processName"),
+            Map.entry("unit_price", "unitPrice"),
+            Map.entry("process_unit_price", "processUnitPrice"),
+            Map.entry("payroll_id", "payrollId"),
+            Map.entry("defect_id", "defectId"),
+            Map.entry("shipment_id", "shipmentId"),
+            Map.entry("bom_id", "bomId"),
+            Map.entry("pattern_id", "patternId"),
+            Map.entry("attachment_id", "attachmentId"),
+            Map.entry("customer_id", "customerId"),
+            Map.entry("customer_name", "customerName")
     );
 
     @Value("${xiaoyun.tool-autofix.enabled:true}")
@@ -224,30 +241,84 @@ public class ToolParameterAutoFixService {
 
     /**
      * 修复日期格式。
+     * 支持：20260101、2026/01/01、2026-01-01、中文日期、相对日期（今天/昨天/上周）
      */
     private String fixDateFormat(String val) {
         if (val == null || val.isBlank()) return null;
+        String trimmed = val.trim();
 
         try {
             // 20260101 → 2026-01-01
-            if (DATE_NO_SEP.matcher(val).matches()) {
-                String fixed = val.substring(0, 4) + "-" + val.substring(4, 6) + "-" + val.substring(6, 8);
-                LocalDate.parse(fixed); // 验证有效性
+            if (DATE_NO_SEP.matcher(trimmed).matches()) {
+                String fixed = trimmed.substring(0, 4) + "-" + trimmed.substring(4, 6) + "-" + trimmed.substring(6, 8);
+                LocalDate.parse(fixed);
                 return fixed;
             }
             // 2026/01/01 → 2026-01-01
-            if (DATE_SLASH_SEP.matcher(val).matches()) {
-                String fixed = val.replace("/", "-");
-                LocalDate.parse(fixed); // 验证有效性
+            if (DATE_SLASH_SEP.matcher(trimmed).matches()) {
+                String fixed = trimmed.replace("/", "-");
+                LocalDate.parse(fixed);
                 return fixed;
             }
             // 已经是标准格式，验证有效性
-            if (DATE_DASH_SEP.matcher(val).matches()) {
-                LocalDate.parse(val);
-                return val;
+            if (DATE_DASH_SEP.matcher(trimmed).matches()) {
+                LocalDate.parse(trimmed);
+                return trimmed;
             }
+            // 中文日期解析（新增）
+            String chineseDate = parseChineseDate(trimmed);
+            if (chineseDate != null) return chineseDate;
         } catch (DateTimeParseException e) {
             log.debug("[AutoFix] 日期格式无效: {}", val);
+        }
+
+        return null;
+    }
+
+    /**
+     * 解析中文日期和相对日期。
+     * 支持：今天/昨天/明天/前天/后天/上周/本周/上月/本月/N天前/N天后
+     */
+    private String parseChineseDate(String val) {
+        if (val == null) return null;
+        String lower = val.toLowerCase().trim();
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        // 相对日期
+        if (lower.contains("今天") || lower.equals("today")) return today.format(fmt);
+        if (lower.contains("昨天") || lower.equals("yesterday")) return today.minusDays(1).format(fmt);
+        if (lower.contains("明天") || lower.equals("tomorrow")) return today.plusDays(1).format(fmt);
+        if (lower.contains("前天")) return today.minusDays(2).format(fmt);
+        if (lower.contains("后天")) return today.plusDays(2).format(fmt);
+        if (lower.contains("上周")) return today.minusWeeks(1).format(fmt);
+        if (lower.contains("下周")) return today.plusWeeks(1).format(fmt);
+        if (lower.contains("本月") || lower.equals("this month")) return today.withDayOfMonth(1).format(fmt);
+        if (lower.contains("上月")) return today.minusMonths(1).withDayOfMonth(1).format(fmt);
+        if (lower.contains("下月")) return today.plusMonths(1).withDayOfMonth(1).format(fmt);
+
+        // N天前/N天后
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*天前").matcher(val);
+        if (m.find()) {
+            int days = Integer.parseInt(m.group(1));
+            return today.minusDays(days).format(fmt);
+        }
+        m = java.util.regex.Pattern.compile("(\\d+)\\s*天后").matcher(val);
+        if (m.find()) {
+            int days = Integer.parseInt(m.group(1));
+            return today.plusDays(days).format(fmt);
+        }
+
+        // 中文日期：2026年1月1日 / 1月1日
+        m = java.util.regex.Pattern.compile("(\\d{4})年(\\d{1,2})月(\\d{1,2})日").matcher(val);
+        if (m.find()) {
+            return String.format("%s-%02d-%02d", m.group(1),
+                    Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+        }
+        m = java.util.regex.Pattern.compile("(\\d{1,2})月(\\d{1,2})日").matcher(val);
+        if (m.find()) {
+            return String.format("%d-%02d-%02d", today.getYear(),
+                    Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)));
         }
 
         return null;

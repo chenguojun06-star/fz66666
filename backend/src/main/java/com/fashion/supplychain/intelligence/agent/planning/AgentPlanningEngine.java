@@ -34,7 +34,15 @@ public class AgentPlanningEngine {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final String PLANNING_SYSTEM_PROMPT = """
-你是一个供应链AI的规划引擎。你需要分析用户的问题，判断其复杂度，并决定是否需要制定执行计划。
+你是一个服装供应链AI的规划引擎。你需要分析用户的问题，判断其复杂度，并决定是否需要制定执行计划。
+
+## 服装供应链领域知识（规划时必须参照）：
+- 生产流程：样衣开发→下单→采购→裁剪→缝制→后整→质检→发货
+- 款式(SKC)=颜色+尺码组合，BOM=面料+辅料+包材清单
+- 工序单价单位：元/件，工资=件数×工序单价
+- 产能=工人数×工时×工序效率，交期风险=剩余天数 vs 剩余产能
+- 次品率=次品数/总数，超标(>3%)需质检预警
+- 缺料会导致生产停滞，需提前预警
 
 ## 复杂度评分标准（0-100）：
 - 0-20: 闲聊/问候/简单确认 - 不需要规划
@@ -48,6 +56,13 @@ public class AgentPlanningEngine {
 - 分析/评估/判断 → 先查数据，再分析
 - 决策/执行/操作 → 先分析，再确认，再执行
 - 对比/排名 → 查询多维度数据后综合
+
+## 服装行业特殊规则：
+- 涉及转厂/变更工厂 → 必须评估对新工厂产能的影响
+- 涉及修改工序单价 → 必须评估对工资计算的影响
+- 涉及取消订单 → 必须评估已采购面辅料的损失
+- 涉及交期问题 → 必须查询剩余产能+在制订单数
+- 涉及次品问题 → 必须查询质检记录+返修记录
 
 ## 输出格式（严格的JSON）：
 {
@@ -76,6 +91,7 @@ public class AgentPlanningEngine {
 4. 每一步的 rationale 必须合理
 5. 高风险操作（删除/关闭/结算/转账/变更工厂）必须标注风险
 6. 查询步骤永远在执行步骤之前
+7. 涉及多个生产环节的查询，按流程顺序排列步骤
 """;
 
     public PlanResult analyzeAndPlan(String userMessage, List<Map<String, Object>> availableTools,
@@ -146,21 +162,44 @@ public class AgentPlanningEngine {
         long questionCount = lower.chars().filter(c -> c == '?' || c == '？').count();
         score += Math.min(questionCount * 5, 15);
 
+        // 复杂分析类动词
         java.util.regex.Pattern complexPattern = java.util.regex.Pattern.compile(
                 "(分析|评估|对比|排名|为什么|怎么回事|怎么办|怎么处理|帮.*决定|建议|规划|优化)");
         if (complexPattern.matcher(userMessage).find()) score += 20;
 
+        // 多实体查询
         java.util.regex.Pattern multiEntityPattern = java.util.regex.Pattern.compile(
                 "(所有|全部|哪些|各个|每个|所有.*工厂|所有.*订单|整个)");
         if (multiEntityPattern.matcher(userMessage).find()) score += 15;
 
+        // 风险关键词
         java.util.regex.Pattern riskPattern = java.util.regex.Pattern.compile(
                 "(逾期|风险|异常|损失|赔|罚款|紧急|危机)");
         if (riskPattern.matcher(userMessage).find()) score += 15;
 
+        // 操作类动词
         java.util.regex.Pattern actionPattern = java.util.regex.Pattern.compile(
                 "(转厂|关闭|结算|审批|删除|修改|变更|执行|操作)");
         if (actionPattern.matcher(userMessage).find()) score += 15;
+
+        // 服装行业专业复杂度关键词（新增）
+        java.util.regex.Pattern garmentComplexPattern = java.util.regex.Pattern.compile(
+                "(排线|排产|产能|负荷|工序|工艺单|BOM|纸样|放码|排料|用量|损耗|" +
+                "次品|疵点|返修|质检|验收|入库|出库|发货|对账|" +
+                "成本|报价|利润|工资|计件|" +
+                "面辅料|染整|印花|绣花|后整理)");
+        if (garmentComplexPattern.matcher(userMessage).find()) score += 10;
+
+        // 跨部门/跨环节查询（需要多工具协作）
+        java.util.regex.Pattern crossDeptPattern = java.util.regex.Pattern.compile(
+                "(样衣.*下单|下单.*采购|采购.*生产|生产.*质检|质检.*发货|" +
+                "进度.*成本|成本.*利润|订单.*工资)");
+        if (crossDeptPattern.matcher(userMessage).find()) score += 15;
+
+        // 交期/工期相关（高风险）
+        java.util.regex.Pattern deliveryPattern = java.util.regex.Pattern.compile(
+                "(交期|交货|工期|周期|天数|还剩|来得及|赶不赶|延期|延误)");
+        if (deliveryPattern.matcher(userMessage).find()) score += 10;
 
         return Math.min(score, 100);
     }

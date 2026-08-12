@@ -45,6 +45,18 @@ public class SemanticCacheService {
     @Value("${xiaoyun.semantic-cache.ttl-minutes:${XIAOYUN_SEMANTIC_CACHE_TTL:120}}")
     private int cacheTtlMinutes;
 
+    /** 简单查询（问候/帮助）TTL，分钟 */
+    @Value("${xiaoyun.semantic-cache.ttl-simple-minutes:30}")
+    private int simpleCacheTtlMinutes;
+
+    /** 事实查询（订单/库存/进度）TTL，分钟 */
+    @Value("${xiaoyun.semantic-cache.ttl-fact-minutes:60}")
+    private int factCacheTtlMinutes;
+
+    /** 知识查询（工艺/面料/流程解释）TTL，分钟 */
+    @Value("${xiaoyun.semantic-cache.ttl-knowledge-minutes:720}")
+    private int knowledgeCacheTtlMinutes;
+
     @Value("${xiaoyun.semantic-cache.similarity-threshold:${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.80}}")
     private float similarityThreshold;
 
@@ -127,7 +139,8 @@ public class SemanticCacheService {
 
             // 1. 精确缓存：Redis 存储 query_hash -> response（用规范化query）
             String exactKey = buildExactKey(tenantId, normalizedQuery);
-            storeExact(exactKey, response);
+            int ttl = resolveTtlMinutes(query, response);
+            storeExact(exactKey, response, ttl);
 
             // 2. 语义索引：Qdrant 存储 query_vector -> response（通过 payload，用原始query）
             storeSemantic(tenantId, query, response);
@@ -265,10 +278,10 @@ public class SemanticCacheService {
         }
     }
 
-    private void storeExact(String key, String response) {
+    private void storeExact(String key, String response, int ttlMinutes) {
         if (redisService == null) return;
         try {
-            redisService.set(key, response, cacheTtlMinutes, TimeUnit.MINUTES);
+            redisService.set(key, response, ttlMinutes, TimeUnit.MINUTES);
         } catch (Exception e) {
             log.debug("[SemanticCache] Redis精确存储失败: {}", e.getMessage());
         }
@@ -345,14 +358,75 @@ public class SemanticCacheService {
      * 规范化查询字符串，提高精确缓存命中率
      * - 去除首尾空白
      * - 合并多个空白字符为单个空格
-     * - 统一中英文标点（可选）
      * - 转小写
+     * - 服装术语归一化（同义词统一，提高命中率）
      */
     private String normalizeQuery(String query) {
         if (query == null) return null;
         String normalized = query.trim()
                 .replaceAll("\\s+", " ")
                 .toLowerCase();
-        return normalized;
+        return normalizeFashionTerms(normalized);
+    }
+
+    /**
+     * 服装行业术语归一化。
+     * 将用户常用的口语/同义词统一为标准形式，提高语义缓存精确命中率。
+     */
+    private String normalizeFashionTerms(String query) {
+        if (query == null) return null;
+        String result = query;
+        // 颜色归一化
+        result = result.replace("粉红", "粉色");
+        result = result.replace("玫红", "玫瑰红");
+        result = result.replace("卡其色", "卡其");
+        result = result.replace("藏青色", "藏青");
+        // 尺码归一化
+        result = result.replace("加大码", "xl");
+        result = result.replace("加小码", "xs");
+        result = result.replace("均码", "onesize");
+        // 生产环节归一化
+        result = result.replace("打样", "打版");
+        result = result.replace("做大货", "生产");
+        result = result.replace("做大货单", "生产");
+        result = result.replace("出货", "发货");
+        result = result.replace("出貨", "发货");
+        // 工艺归一化
+        result = result.replace("印花", "印花工艺");
+        result = result.replace("绣花", "绣花工艺");
+        result = result.replace("提花", "提花工艺");
+        // 部门/角色
+        result = result.replace("厂长", "工厂负责人");
+        result = result.replace("老板", "管理员");
+        // 常见口语
+        result = result.replace("多少了", "进度");
+        result = result.replace("怎么样了", "进度");
+        result = result.replace("啥情况", "状态");
+        result = result.replace("好了没", "完成状态");
+        return result;
+    }
+
+    /**
+     * 根据查询类型动态选择 TTL。
+     * 简单问候 → 短 TTL；事实查询 → 中 TTL；知识查询 → 长 TTL。
+     */
+    private int resolveTtlMinutes(String query, String response) {
+        if (query == null) return cacheTtlMinutes;
+        String q = query.toLowerCase();
+        // 知识类查询（工艺/面料/流程解释）→ 长 TTL，答案稳定
+        if (q.contains("什么是") || q.contains("怎么") || q.contains("如何") || q.contains("工艺")
+                || q.contains("面料") || q.contains("流程") || q.contains("区别")) {
+            return knowledgeCacheTtlMinutes;
+        }
+        // 事实类查询（订单/库存/进度/工资）→ 中 TTL，数据会变化
+        if (q.contains("订单") || q.contains("库存") || q.contains("进度") || q.contains("工资")
+                || q.contains("数量") || q.contains("状态") || q.contains("多少")) {
+            return factCacheTtlMinutes;
+        }
+        // 简单查询（问候/帮助）→ 短 TTL
+        if (q.length() < 15 || q.contains("你好") || q.contains("帮助") || q.contains("功能")) {
+            return simpleCacheTtlMinutes;
+        }
+        return cacheTtlMinutes;
     }
 }
