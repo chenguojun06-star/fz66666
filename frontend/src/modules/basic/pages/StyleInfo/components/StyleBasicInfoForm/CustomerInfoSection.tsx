@@ -1,8 +1,9 @@
 import React from 'react';
-import { Col, Form, Input, InputNumber, Row } from 'antd';
+import { Col, Form, Input, InputNumber, Row, Select } from 'antd';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { SectionFormContextProps } from './types';
+import { SALES_CHANNEL_OPTIONS } from './constants';
 import SectionBox from './SectionBox';
 
 /**
@@ -45,8 +46,15 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
-          <Form.Item name="sampleNo" label="设计师" style={{ marginBottom: 8 }}>
-            <Input id="sampleNo" placeholder="请输入设计师" disabled={editLocked} />
+          <Form.Item name="salesChannel" label="销售渠道" style={{ marginBottom: 8 }}>
+            <Select
+              id="salesChannel"
+              placeholder="选择销售渠道"
+              disabled={editLocked}
+              allowClear
+              style={{ width: '100%' }}
+              options={SALES_CHANNEL_OPTIONS}
+            />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>

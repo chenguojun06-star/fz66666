@@ -4,7 +4,6 @@ import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import type { SectionFormContextProps } from './types';
-import { SALES_CHANNEL_OPTIONS } from './constants';
 import SectionBox from './SectionBox';
 
 interface BasicInfoSectionProps extends SectionFormContextProps {
@@ -77,15 +76,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
-          <Form.Item name="salesChannel" label="销售渠道" style={{ marginBottom: 8 }}>
-            <Select
-              id="salesChannel"
-              placeholder="选择销售渠道"
-              disabled={editLocked}
-              allowClear
-              style={{ width: '100%' }}
-              options={SALES_CHANNEL_OPTIONS}
-            />
+          <Form.Item name="sampleNo" label="设计师" style={{ marginBottom: 8 }}>
+            <Input id="sampleNo" placeholder="请输入设计师" disabled={editLocked} />
           </Form.Item>
         </Col>
       </Row>
