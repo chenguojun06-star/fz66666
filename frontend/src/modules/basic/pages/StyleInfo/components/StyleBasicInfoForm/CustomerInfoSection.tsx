@@ -1,45 +1,29 @@
 import React from 'react';
 import { Col, Form, Input, InputNumber, Row, Select } from 'antd';
-import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { SectionFormContextProps } from './types';
 import { SALES_CHANNEL_OPTIONS } from './constants';
 import SectionBox from './SectionBox';
 
 /**
- * 区2：客户跟进信息（客户 / 跟单员 / 设计师 / 板类 / 打板价 / 吊牌价 / 销售价）
+ * 区2：客户跟进信息（跟单员 / 销售渠道 / 板类 / 打板价 / 吊牌价 / 销售价）
+ * 客户字段已迁移至 BasicInfoSection，本区保留跟进与定价信息。
  * 板类从原"版次与版型信息"合并至此，减少分区数量
+ *
+ * 注：customerId 仍保留 hidden Input，避免后端保存时丢失已选客户ID
+ * （customer 文本字段已在 BasicInfoSection 维护，customerId 需要随表单一起提交）
  */
 const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
-  _form,
   currentStyle,
   editLocked,
   isFieldLocked,
 }) => {
   return (
     <SectionBox title="客户信息">
+      <Form.Item name="customerId" noStyle hidden>
+        <Input id="customerId" />
+      </Form.Item>
       <Row gutter={[16, 8]}>
-        <Col xs={24} md={8}>
-          <Form.Item name="customerId" noStyle hidden>
-            <Input id="customerId" />
-          </Form.Item>
-          <Form.Item name="customer" label="客户" style={{ marginBottom: 8 }}>
-            <CustomerSelect
-              id="customer"
-              placeholder="搜索或输入客户名称"
-              disabled={isFieldLocked(currentStyle?.customer)}
-              onChange={(_value, option) => {
-                // customerId 已改为 String 类型以匹配 Customer.id（UUID）
-                const cid = option?.customerId;
-                if (cid) {
-                  _form.setFieldsValue({ customerId: String(cid) });
-                } else {
-                  _form.setFieldsValue({ customerId: undefined });
-                }
-              }}
-            />
-          </Form.Item>
-        </Col>
         <Col xs={24} md={8}>
           <Form.Item name="orderType" label="跟单员" style={{ marginBottom: 8 }}>
             <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />

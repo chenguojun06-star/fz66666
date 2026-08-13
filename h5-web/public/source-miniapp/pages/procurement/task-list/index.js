@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
@@ -155,9 +155,48 @@ Page({
     this._applyFilter();
   },
 
-  /** 扫码按钮：调用通用 quickScan 跳到扫码页 */
+  /**
+   * 扫码按钮：当前页直接扫码 → 匹配款式 → 打开详情
+   * 不再跳转到统一扫码页
+   */
   onScanTap() {
-    quickScan();
+    scanInPage((parsed, raw) => {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success || !parsed.data) {
+        toast.error('无法识别：' + (raw || ''));
+        return;
+      }
+      const { orderNo, styleNo } = parsed.data;
+      // 在当前列表中匹配
+      const matched = this.data.items.find(item =>
+        (orderNo && item.orderNo === orderNo) ||
+        (styleNo && item.styleNo === styleNo)
+      );
+      if (matched) {
+        // 找到匹配 → 打开详情
+        this.onViewDetail({
+          currentTarget: {
+            dataset: {
+              orderNo: matched.orderNo,
+              styleNo: matched.styleNo,
+              patternProductionId: matched.patternProductionId,
+              sourceType: matched.sourceType,
+            },
+          },
+        });
+      } else {
+        // 没找到 → 用扫到的 orderNo 直接打开详情页（让详情页查后端）
+        if (orderNo) {
+          this.onViewDetail({
+            currentTarget: {
+              dataset: { orderNo, styleNo: styleNo || '' },
+            },
+          });
+        } else {
+          toast.error('未匹配到采购任务');
+        }
+      }
+    });
   },
 
   _applyFilter() {
@@ -287,7 +326,7 @@ Page({
       // 聚合键：优先 patternProductionId（样衣），其次 orderNo
       const groupKey = item.patternProductionId
         ? 'sample::' + item.patternProductionId
-        : 'order::' + (item.orderNo || item.styleNo || 'unknown');
+        : 'order::' + (item.orderNo || item.id || 'unknown');
 
       if (!groupMap[groupKey]) {
         groupMap[groupKey] = {
@@ -349,7 +388,9 @@ Page({
     const buyerText = buyerItem ? buyerItem.receiverName : '-';
 
     // 是否有待领取物料（用于显示"一键领取"按钮）
-    const pendingItems = items.filter(it => it.displayStatus === 'pending');
+    // 仅在非终态（非已取消/已完成）时显示
+    const isTerminal = displayStatus === 'cancelled' || displayStatus === 'completed';
+    const pendingItems = isTerminal ? [] : items.filter(it => it.displayStatus === 'pending');
 
     return {
       groupKey: group.groupKey,

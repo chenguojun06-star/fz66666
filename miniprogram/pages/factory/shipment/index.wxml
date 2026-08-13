@@ -88,7 +88,8 @@
 
     <!-- 订单列表 -->
     <view class="order-list" wx:if="{{orders.length > 0}}">
-      <view class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
+      <view id="order-card-{{index}}"
+            class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
             wx:for="{{orders}}" wx:key="id">
 
         <!-- 主行：封面图 + 基本信息 -->

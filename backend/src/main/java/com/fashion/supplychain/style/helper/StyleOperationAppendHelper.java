@@ -1,7 +1,6 @@
 package com.fashion.supplychain.style.helper;
 
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,9 +12,6 @@ public class StyleOperationAppendHelper {
 
     @Autowired
     private StyleLogHelper styleLogHelper;
-
-    @Autowired
-    private StyleInfoService styleInfoService;
 
     public void appendOperation(Long styleId, String action, String detail) {
         if (styleId == null) {

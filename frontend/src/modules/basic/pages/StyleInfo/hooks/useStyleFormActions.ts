@@ -146,8 +146,7 @@ export const useStyleFormActions = ({
         delete payload.pushedToOrder;
         delete payload.pushedToOrderTime;
         delete payload.description;
-        delete payload.remark;
-        delete payload.customer;
+        // remark 与 customer 已迁移至 BasicInfoSection 维护，保留提交
         res = await api.put('/style/info', normalizePayload(payload));
       } else {
         let styleNo = normalizedValues.styleNo?.trim() || '';

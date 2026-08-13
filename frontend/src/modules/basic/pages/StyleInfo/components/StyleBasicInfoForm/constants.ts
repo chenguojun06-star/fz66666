@@ -12,6 +12,15 @@ export const SALES_CHANNEL_OPTIONS = [
   { label: '其他', value: '其他' },
 ];
 
+/**
+ * 商品类型单选项（成品 / 半成品）
+ * 后端字段 productType：FINISHED=成品，SEMI_FINISHED=半成品
+ */
+export const PRODUCT_TYPE_OPTIONS = [
+  { label: '成品', value: 'FINISHED' },
+  { label: '半成品', value: 'SEMI_FINISHED' },
+];
+
 /** 品类 -> 默认尺码推荐（智能识别后填充） */
 export const DEFAULT_SIZE_MAP: Record<string, string[]> = {
   'T恤': ['S', 'M', 'L', 'XL', 'XXL'],

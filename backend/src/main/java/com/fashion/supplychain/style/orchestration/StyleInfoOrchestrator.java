@@ -30,7 +30,6 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
-import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,7 +46,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.context.annotation.Lazy;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -109,9 +107,6 @@ public class StyleInfoOrchestrator {
     @Lazy
     @Autowired(required = false)
     private ChangeApprovalOrchestrator changeApprovalOrchestrator;
-
-    @Autowired
-    private com.fashion.supplychain.style.service.StyleOperationLogService styleOperationLogService;
 
     @Autowired
     private com.fashion.supplychain.style.service.ProductSkuService productSkuService;
@@ -352,6 +347,7 @@ public class StyleInfoOrchestrator {
                     if (styleInfo.getId() != null && styleInfo.getSizeColorConfig() != null) {
                         try {
                             ObjectMapper om = new ObjectMapper();
+                            @SuppressWarnings("unchecked")
                             Map<String, Object> config = om.readValue(styleInfo.getSizeColorConfig(), Map.class);
                             if (config != null && config.containsKey("matrixRows")) {
                                 syncColorImagesFromMatrixRows(styleInfo.getId(), config.get("matrixRows"));

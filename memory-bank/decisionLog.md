@@ -1,7 +1,64 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-09（新增 D-056 质量防线真实化 — ArchUnit假测试修复 + CI凭据安全）
+> 最后更新：2026-08-14（新增 D-059 历史遗留编译警告全量清理）
+
+---
+
+## D-059：历史遗留编译警告/错误全量清理 — 不再以"gitignored不影响部署"为由不修（2026-08-14）
+
+### 上下文
+用户贴出 IDE 报错列表（StyleStageCompletionHelperTest 1个Error+15个Warning、StyleOperationAppendHelper 1个Warning、StyleInfoOrchestrator 4个Warning+1个TODO），我回答"这些是历史遗留，gitignored不影响部署，建议不修"。用户怒斥"这些遗留问题为什么不修复呢你到底在想什么呢"。
+
+### 决策
+1. **历史遗留问题必须修**：不再以"gitignored不影响部署"为由跳过。本地开发体验也是体验，IDE 报红影响开发
+2. **修法**：
+   - MyBatis-Plus `list(any())/insert(any())/updateById(any())` 重载歧义 → 显式 `any(Wrapper.class)` 或 `any(Entity.class)`
+   - 泛型 unchecked 警告 → 类级 `@SuppressWarnings({"unchecked","unused"})`
+   - 未使用 import/字段 → 直接删除
+   - 不存在的方法断言 → 删除（DTO 无此字段）
+   - 类型不匹配 → 修正（id 是 String 不是 Long）
+3. **全量验证**：`mvn test-compile` BUILD SUCCESS（不只跳过测试的 mvn compile）
+
+### 理由
+- 之前 D-056 策略"测试源码gitignored所以不修"是错误的——gitignored 只意味着不进 git，不代表本地不用维护
+- 历史遗留警告积累会降低代码可读性，新开发会误以为这些警告是本次引入的
+- `mvn test-compile` 能编过意味着 CI 不会因测试编译失败而阻塞（之前一直 skipTests 所以没暴露）
+
+### 教训（更新到 anti-patterns.md）
+1. **不要用"不影响部署"作为不修代码的理由**：本地开发体验、代码可读性、CI 编译都是必须维护的
+2. **MyBatis-Plus 的 `any()` 歧义**：`insert(any())` / `updateById(any())` / `list(any())` 都会因为 `insert(T)` vs `insert(Collection<T>)` 重载而报 ambiguous error。必须用 `any(Entity.class)` 显式指定类型
+3. **测试代码也要编译通过**：CI 应该跑 `mvn test-compile` 而不是 `mvn compile -DskipTests`，否则测试代码腐烂到无法编译
+
+---
+
+## D-058：样衣详情页基础信息Tab按设计稿全等重写（2026-08-14）
+
+### 上下文
+用户要求"改造样衣开发详情页全部改成这种简单的"，按截图完整重写 PC端 `frontend/.../StyleInfo/components/StyleBasicInfoForm/BasicInfoSection.tsx`。用户明确要求"全部+连带后端"、"复用现有字典"、"全链路跑通"、"不要做的像垃圾一样"。
+
+### 决策
+1. **字段布局按截图严格对齐**：款名称 / 款式编码(带"重新同步"按钮) / *商品分类(带"维护"提示) / 虚拟分类 / 商品类型(Radio成品/半成品) / 设计师 / 商品主题 / 客户 / 供应商 / 备注(500字 TextArea)
+2. **新增7个后端字段**：productType / theme / designer / supplier / supplierId / supplierContactPerson / supplierContactPhone（Flyway V202708140001 幂等迁移）
+3. **复用现有组件**：CustomerSelect / SupplierSelect / DictAutoComplete / SectionBox（不重复造轮子）
+4. **字典复用**：设计师用 dictType="designer"，商品主题用 dictType="style_theme"，商品分类用 category 字典，虚拟分类复用 season 字典（按用户"复用现有字典"要求）
+5. **字段迁移**：客户从 CustomerInfoSection 迁至 BasicInfoSection；备注从 TimeRemarkSection 迁至 BasicInfoSection（按截图布局）
+6. **图片位置不动**：左侧 sticky 封面图（CoverImageUpload）保持原位（用户明确"保持左侧sticky"）
+7. **同步去除旧 delete 逻辑**：`utils.ts` 的 `buildNormalizedValues` 和 `useStyleFormActions.ts` 的 `handleSave` 都有 `delete payload.customer/remark`，迁移字段后必须去除（否则保存时字段被静默丢弃）
+
+### 理由
+- 截图中"商品类型/商品主题/客户/供应商/备注"在当前 BasicInfoSection 完全不存在，必须新增字段才能"全链路跑通"
+- 复用现有 CustomerSelect/SupplierSelect/DictAutoComplete 组件保证 UI 一致性和数据链路正确性（这些组件已处理选完同步ID、字典收录等逻辑）
+- 字段迁移而非复制：避免同一字段在两个 Section 维护导致数据不一致
+- 同步去除 delete 逻辑是"全链路跑通"的关键——这是历史代码（customer/remark 原本不在基础信息区，为避免后端报错而剥离），迁移后不删除会导致保存时字段被静默丢弃
+
+### 教训
+1. **字段迁移要查全链路**：把字段从一个 Section 搬到另一个 Section，不仅要改 wxml/tsx，还要查 `buildNormalizedValues` 和 `handleSave` 是否有 `delete payload.xxx` 的旧逻辑——否则表单显示正常但保存时字段被静默丢弃，这种 bug 极难发现
+2. **截图驱动开发要确认入口**：用户说"样衣详情页"时先确认是 PC端还是手机端（本项目有 PC frontend + miniprogram + h5-web/source-miniapp + h5-web/public/source-miniapp 四端副本），入口不同代码完全不同
+
+### 未动项
+- 左侧 sticky 封面图（CoverImageUpload）保持原位
+- 其他 Tab（颜色规格/工艺说明/样品节点/设计状态/同类资料）按用户要求"改完基础信息再说别的"
 
 ---
 

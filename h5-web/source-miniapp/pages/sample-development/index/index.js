@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
@@ -815,8 +815,33 @@ Page({
     });
   },
 
+  /**
+   * 扫码按钮：当前页直接扫码 → 匹配样衣 → 打开详情
+   * 不再跳转到统一扫码页
+   */
   onScan: function () {
-    quickScan();
+    scanInPage((parsed, raw) => {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success || !parsed.data) {
+        toast.error('无法识别：' + (raw || ''));
+        return;
+      }
+      const { styleNo, orderNo } = parsed.data;
+      // 在当前列表中匹配
+      const list = this.data.list || [];
+      const matched = list.find(item =>
+        (styleNo && (item.styleNo === styleNo || item._styleNo === styleNo)) ||
+        (orderNo && item.orderNo === orderNo)
+      );
+      if (matched) {
+        // 找到匹配 → 打开详情
+        this.onCardTap({
+          currentTarget: { dataset: { item: matched } },
+        });
+      } else {
+        toast.error('未匹配到样衣');
+      }
+    });
   },
 
   onPreviewImage: function (e) {

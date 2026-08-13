@@ -1,9 +1,51 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-09（质量防线真实化修复 — 架构守护假测试 + CI凭据 + CLAUDE.md同步）
+> 最后更新：2026-08-14（历史遗留编译警告/错误全量清理 — mvn test-compile BUILD SUCCESS）
 
 ## 已完成
+
+### 2026-08-14 历史遗留编译警告/错误全量清理 ✅
+
+用户质疑"这些遗留问题为什么不修复呢"——之前以"gitignored 不影响部署"为由不修是错误的。本次清理5个文件20+处历史遗留警告/错误：
+
+- [x] 主代码 `StyleOperationAppendHelper.java` — 删除未使用 styleInfoService 字段 + import
+- [x] 主代码 `StyleInfoOrchestrator.java` — 删除3处未使用 import/字段 + 1处 @SuppressWarnings
+- [x] 测试 `StyleStageCompletionHelperTest.java` — 修复1个 Error(ambiguous) + 15个 Warning(unchecked)
+- [x] 测试 `ProductionOrderQueryServiceStatsBoundaryTest.java` — 补 ArgumentCaptor import + 删3行不存在字段断言
+- [x] 测试 `SmartSourcingServiceImplTest.java` — setId(1L) 改 setId("1")（id 是 String）
+- [x] 测试 `SharedAgentMemoryServiceTest.java` — 3处 any() → any(SharedAgentMemory.class) 解决重载歧义
+- [x] 验证：`mvn test-compile` BUILD SUCCESS（0 ERROR）
+- [x] 决策记录：D-059
+
+**教训**：之前以"gitignored 不影响部署"为由不修历史遗留问题是错误的。本地开发体验也是体验，遗留问题就该修。
+
+---
+
+### 2026-08-14 PC端样衣详情页-基础信息Tab按设计稿全等重写 ✅
+
+用户诉求："改造样衣开发详情页全部改成这种简单的"，"全部+连带后端"，"复用现有字典"，"全链路跑通"，"先改基本信息这些tab页"。
+
+按截图完整重写 PC端 `frontend/.../StyleInfo/components/StyleBasicInfoForm/BasicInfoSection.tsx`，并打通后端 entity + Flyway + 前端类型 + 表单提交全链路：
+
+- [x] **后端**（2文件）
+  - `StyleInfo.java` 新增7字段：productType/theme/designer/supplier/supplierId/supplierContactPerson/supplierContactPhone
+  - `V202708140001__add_basic_info_ext_columns_to_style_info.sql` 幂等 ALTER + supplier_id 索引
+- [x] **前端**（6文件）
+  - `types/style.ts` — StyleInfo 类型补7字段
+  - `constants.ts` — 新增 PRODUCT_TYPE_OPTIONS（成品/半成品）
+  - `BasicInfoSection.tsx` — 按截图完全重写（款名称/款式编码/商品分类/虚拟分类/商品类型/设计师/商品主题/客户/供应商/备注）
+  - `CustomerInfoSection.tsx` — 去除 customer（迁至基础信息），保留 customerId hidden
+  - `TimeRemarkSection.tsx` — 去除 remark（迁至基础信息），改名"时间信息"
+  - `hooks/utils.ts` + `hooks/useStyleFormActions.ts` — 去除 `delete payload.customer/remark` 旧逻辑（否则保存时字段被剥离）
+- [x] **验证**：后端 mvn compile exit 0 + 前端 npx tsc --noEmit 0 errors + 所有修改文件 lint 0 errors
+- [x] **决策记录**：D-058
+
+**踩坑**：`utils.ts` 和 `useStyleFormActions.ts` 都有 `delete payload.customer/remark`，这是历史代码（这两个字段原本不在基础信息区）。迁移字段后必须同步去除这些 delete，否则保存时字段被静默丢弃——这是"全链路跑通"的关键。
+
+**未动**：左侧 sticky 封面图保持原位；其他 Tab（颜色规格/工艺说明/样品节点/设计状态/同类资料）按用户要求"改完基础信息再说别的"
+
+---
 
 ### 2026-08-09 CodeBuddy 环境安全防护体系 ✅
 
@@ -923,10 +965,12 @@
 
 ## 当前任务
 
-- 无进行中任务
+- [ ] PC端样衣详情页其他 Tab 改造（颜色规格/工艺说明/样品节点/设计状态/同类资料）— 等用户下一步指令
 
 ## 待办
 
+- [ ] PC端样衣详情页其他 Tab 按截图改造（颜色规格/工艺说明/样品节点/设计状态/同类资料）
+- [ ] 手机端/H5 端样衣详情页是否需要同步改造（待用户确认）
 - [ ] 小云AI全链路测试（规划引擎+结构化输出+主动风险检测实际效果验证）
 - [x] P1性能：MaterialPurchase统计查询DATE()函数索引失效（291d42b55）
 - [x] P1性能：订单列表查询添加缓存（已接入OrderListCacheHelper）

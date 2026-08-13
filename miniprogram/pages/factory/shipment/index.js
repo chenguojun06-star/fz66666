@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
@@ -272,8 +272,45 @@ Page({
 
   onKeywordInput: function (e) { this.setData({ keyword: e.detail.value }); },
   onKeywordSearch: function () { this._resetAndLoad(); },
+  /**
+   * 扫码按钮：当前页直接扫码 → 匹配订单 → 展开卡片
+   * 不再跳转到统一扫码页
+   */
   onScan: function () {
-    quickScan();
+    scanInPage((parsed, raw) => {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success || !parsed.data) {
+        toast.error('无法识别：' + (raw || ''));
+        return;
+      }
+      const { orderNo, styleNo } = parsed.data;
+      // 在当前订单列表中匹配
+      const orders = this.data.orders || [];
+      const matchedIdx = orders.findIndex(o =>
+        (orderNo && o.orderNo === orderNo) ||
+        (styleNo && o.styleNo === styleNo)
+      );
+      if (matchedIdx >= 0) {
+        // 展开该订单卡片并滚动定位
+        const expandPath = 'orders[' + matchedIdx + '].expanded';
+        this.setData({ [expandPath]: true });
+        wx.showToast({ title: '已定位到订单', icon: 'success' });
+        // 滚动到该卡片（用 id 选择器）
+        const query = wx.createSelectorQuery();
+        query.select('#order-card-' + matchedIdx).boundingClientRect();
+        query.selectViewport().scrollOffset();
+        query.exec((res) => {
+          if (res[0] && res[1]) {
+            wx.pageScrollTo({
+              scrollTop: res[0].top + res[1].scrollTop - 80,
+              duration: 300,
+            });
+          }
+        });
+      } else {
+        toast.error('未匹配到出货订单');
+      }
+    });
   },
 
   onCardToggle: function (e) {

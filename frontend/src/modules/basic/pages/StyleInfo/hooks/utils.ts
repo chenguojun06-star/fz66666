@@ -228,8 +228,7 @@ const buildNormalizedValues = ({
   delete normalizedValues.completedTime;
   delete normalizedValues.pushedToOrder;
   delete normalizedValues.pushedToOrderTime;
-  delete normalizedValues.remark;
-  delete normalizedValues.customer;
+  // remark 与 customer 已迁移至 BasicInfoSection 维护，保留提交
 
   const dd = normalizedValues.deliveryDate;
   if (dd) {

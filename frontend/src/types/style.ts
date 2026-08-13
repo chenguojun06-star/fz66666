@@ -109,6 +109,22 @@ export interface StyleInfo extends Record<string, unknown> {
   patternRevReturnComment?: string;
   patternRevReturnBy?: string;
   patternRevReturnTime?: string;
+
+  // 基础信息扩展字段（按样衣详情页-基础信息 Tab 重构）
+  /** 商品类型：FINISHED=成品，SEMI_FINISHED=半成品 */
+  productType?: 'FINISHED' | 'SEMI_FINISHED' | string;
+  /** 商品主题（字典 dict_type='style_theme'） */
+  theme?: string;
+  /** 设计师（独立字段，原 sampleNo 保留向后兼容） */
+  designer?: string;
+  /** 供应商名称 */
+  supplier?: string;
+  /** 供应商ID（关联 t_factory.id） */
+  supplierId?: string;
+  /** 供应商联系人 */
+  supplierContactPerson?: string;
+  /** 供应商联系电话 */
+  supplierContactPhone?: string;
 }
 
 export interface StyleBom extends Record<string, unknown> {

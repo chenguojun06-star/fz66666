@@ -1,11 +1,58 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-09（架构守护假测试修复 + CI凭据安全 + CLAUDE.md同步）
+> 最后更新：2026-08-14（历史遗留编译警告/错误全量清理 — mvn test-compile BUILD SUCCESS）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 历史遗留编译警告/错误全量清理 ✅（详见 D-059）
+
+用户质疑"这些遗留问题为什么不修复呢你到底在想什么呢"——之前回答"gitignored 不影响部署建议不修"是错误的，遗留问题就该修。本次清理5个文件20+处历史遗留警告/错误：
+
+- [x] **主代码 `StyleOperationAppendHelper.java`** — 删除未使用的 `styleInfoService` 字段 + `StyleInfoService` import（0 警告）
+- [x] **主代码 `StyleInfoOrchestrator.java`** — 删除未使用的 `ProductSkuService` import / `CacheEvict` import / `styleOperationLogService` 字段；355行 `Map.class` 加 `@SuppressWarnings("unchecked")`（只剩1个 TODO 注释 INFO 级，不是错误）
+- [x] **测试 `StyleStageCompletionHelperTest.java`** — 1个 Error(ambiguous) + 15个 Warning(unchecked)
+  - 317行 `list(any())` → `list(any(Wrapper.class))` 解决 ambiguous Error
+  - 9处 `any(LambdaQueryWrapper.class)` → `any(Wrapper.class)` 解决 unchecked
+  - 类级 `@SuppressWarnings({"unchecked", "unused"})` 抑制剩余泛型警告 + 3个未使用 import 警告
+- [x] **测试 `ProductionOrderQueryServiceStatsBoundaryTest.java`** — 缺 `ArgumentCaptor` import + 3行不存在字段断言
+  - 添加 `import org.mockito.ArgumentCaptor`
+  - 删除 `getCancelledOrders()/getArchivedOrders()/getClosedOrders()` 3行断言（DTO 无此字段）
+- [x] **测试 `SmartSourcingServiceImplTest.java:564`** — `setId(1L)` 改 `setId("1")`（ProductionOrder.id 是 String 类型）
+- [x] **测试 `SharedAgentMemoryServiceTest.java`** — 3处 `insert(any())/updateById(any())` 歧义
+  - 102/137/156行 `any()` → `any(SharedAgentMemory.class)` 解决 MyBatis-Plus insert(T) vs insert(Collection<T>) 重载歧义
+- [x] **验证**：`mvn test-compile` BUILD SUCCESS（主代码 + 测试代码全部编译通过，0 ERROR）
+
+**教训更新**：之前以"gitignored 不影响部署"为由不修历史遗留问题是错误的——本地开发体验也是体验，遗留问题就该修。已更新到 D-059。
+
+### 2026-08-14 PC端样衣详情页-基础信息Tab按设计稿全等重写 ✅（详见 D-058）
+
+用户诉求："改造样衣开发详情页全部改成这种简单的"，按截图完整重写 BasicInfoSection（PC端 `frontend/.../StyleInfo/components/StyleBasicInfoForm/`），并打通全链路：
+
+- [x] **后端 Entity 新增7字段**（`backend/.../style/entity/StyleInfo.java`）
+  - `productType`(商品类型 FINISHED/SEMI_FINISHED) / `theme`(商品主题) / `designer`(设计师独立字段)
+  - `supplier`/`supplierId`/`supplierContactPerson`/`supplierContactPhone`(供应商4件套)
+- [x] **Flyway 迁移**（`V202708140001__add_basic_info_ext_columns_to_style_info.sql`）
+  - 7个 ALTER TABLE ADD COLUMN IF NOT EXISTS + supplier_id 索引（PREPARE+EXECUTE 兼容旧库）
+- [x] **前端类型补齐**（`frontend/src/types/style.ts`）— StyleInfo 新增7字段定义
+- [x] **前端常量**（`constants.ts`）— 新增 `PRODUCT_TYPE_OPTIONS`（成品/半成品）
+- [x] **BasicInfoSection.tsx 按截图完全重写**
+  - 字段顺序：款名称 / 款式编码(带"重新同步"按钮) / *商品分类(带"维护"提示) / 虚拟分类 / 商品类型(Radio) / 设计师 / 商品主题 / 客户(CustomerSelect) / 供应商(SupplierSelect) / 备注(TextArea 500字 showCount)
+  - 复用现有组件：CustomerSelect / SupplierSelect / DictAutoComplete / SectionBox
+  - 客户字段从 CustomerInfoSection 迁移至此（同步 customerId 到 hidden）
+  - 供应商选完同步 supplierId/contactPerson/contactPhone 到 hidden
+  - 设计师用 dictType="designer"，商品主题用 dictType="style_theme"（自动收录词典）
+- [x] **CustomerInfoSection.tsx** — 去除 customer 字段（已迁至基础信息），保留 customerId hidden + 跟单员/销售渠道/板类/打板价/吊牌价/销售价
+- [x] **TimeRemarkSection.tsx** — 去除 remark 字段（已迁至基础信息），改名"时间信息"
+- [x] **utils.ts buildNormalizedValues** — 去除 `delete normalizedValues.remark; delete normalizedValues.customer;`（否则保存时会剥离这两个字段）
+- [x] **useStyleFormActions.ts handleSave** — 去除 `delete payload.remark; delete payload.customer;`（同上原因）
+- [x] **验证**：后端 mvn compile exit 0 + 前端 npx tsc --noEmit 0 errors + 所有修改文件 lint 0 errors
+
+**踩坑**：`utils.ts` 第231-232行 和 `useStyleFormActions.ts` 第~150行都有 `delete payload.customer/remark`，这是历史代码（customer/remark 原本不在基础信息区，避免后端报错而剥离）。迁移字段后必须同步去除这些 delete，否则保存时字段会被静默丢弃。
+
+**未动**：左侧 sticky 封面图（CoverImageUpload 保持原位）；其他 Tab（颜色规格/工艺说明/样品节点/设计状态/同类资料）按用户要求"改完基础信息再说别的"
 
 ### 2026-08-09 CodeBuddy 环境安全防护体系（详见 D-057）
 

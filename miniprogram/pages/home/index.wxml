@@ -57,7 +57,7 @@
     </view>
   </view>
 
-  <!-- 应用网格（按4大分类分组） -->
+  <!-- 应用网格（按6大分类分组：开发/生产/仓库/财务/个人/其他） -->
   <view class="menu-section">
     <view class="menu-group" wx:for="{{menuGroups}}" wx:key="group">
       <view class="menu-group-title">

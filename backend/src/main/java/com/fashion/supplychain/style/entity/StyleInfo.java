@@ -660,4 +660,50 @@ public class StyleInfo {
      */
     @TableField("ext_json")
     private String extJson;
+
+    // ==================== 基础信息扩展字段（按样衣详情页-基础信息 Tab 重构新增） ====================
+
+    /**
+     * 商品类型：FINISHED=成品，SEMI_FINISHED=半成品
+     * 对应前端"商品类型"单选按钮
+     */
+    @TableField("product_type")
+    private String productType;
+
+    /**
+     * 商品主题（对应前端"商品主题"输入框，复用字典 dict_type='style_theme'）
+     */
+    @TableField("theme")
+    private String theme;
+
+    /**
+     * 设计师（独立字段，原 sampleNo 字段保留向后兼容但前端表单改用 designer）
+     */
+    @TableField("designer")
+    private String designer;
+
+    /**
+     * 供应商名称（冗余存储，用于展示和打印）
+     * 对应前端"供应商"SupplierSelect 的 value
+     */
+    @TableField("supplier")
+    private String supplier;
+
+    /**
+     * 供应商ID（关联 t_factory.id）
+     */
+    @TableField("supplier_id")
+    private String supplierId;
+
+    /**
+     * 供应商联系人
+     */
+    @TableField("supplier_contact_person")
+    private String supplierContactPerson;
+
+    /**
+     * 供应商联系电话
+     */
+    @TableField("supplier_contact_phone")
+    private String supplierContactPhone;
 }

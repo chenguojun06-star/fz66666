@@ -343,4 +343,69 @@ function quickScan() {
   });
 }
 
-module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate, quickScan };
+/**
+ * 页面内扫码：调起微信扫码 → QRCodeParser 解析 → 回调返回解析结果
+ * 用于业务列表页"当前页扫码+操作"，不再跳转到统一扫码页。
+ *
+ * @param {function} onResult - 回调函数，签名 (parsed, rawCode) => void
+ *   - parsed: QRCodeParser.parse() 返回的对象 { success, message, data: {orderNo, styleNo, ...} }
+ *   - rawCode: 原始扫码内容（备用）
+ *   - 用户取消或扫码失败时回调 null
+ * @returns {void}
+ *
+ * 使用示例：
+ *   const { scanInPage, toast } = require('../../../utils/uiHelper');
+ *   onScan() {
+ *     scanInPage((parsed, raw) => {
+ *       if (!parsed) return;  // 用户取消
+ *       if (!parsed.success) { toast.error('无法识别：' + raw); return; }
+ *       const { orderNo, styleNo } = parsed.data;
+ *       this._handleScanMatch(orderNo, styleNo);
+ *     });
+ *   }
+ */
+function scanInPage(onResult) {
+  if (typeof onResult !== 'function') {
+    console.warn('[scanInPage] onResult must be a function');
+    return;
+  }
+  wx.scanCode({
+    onlyFromCamera: false,
+    scanType: ['qrCode', 'barCode'],
+    success(res) {
+      const code = (res.result || '').trim();
+      if (!code) {
+        onResult({ success: false, message: '未识别到内容', raw: '', data: null }, '');
+        return;
+      }
+      try {
+        // 懒加载 QRCodeParser，避免循环依赖（QRCodeParser 导出的是实例，不是类）
+        const parser = require('../pages/scan/services/QRCodeParser');
+        // 兼容两种导出方式：实例直接用，类需要 new
+        const parserInstance = parser && typeof parser.parse === 'function'
+          ? parser
+          : (parser && typeof parser === 'function' ? new parser() : null);
+        if (!parserInstance || typeof parserInstance.parse !== 'function') {
+          throw new Error('QRCodeParser.parse is not a function');
+        }
+        const parsed = parserInstance.parse(code);
+        parsed.raw = code;
+        onResult(parsed, code);
+      } catch (e) {
+        console.error('[scanInPage] parse error', e);
+        onResult({
+          success: false,
+          message: '解析失败',
+          raw: code,
+          data: { scanCode: code, orderNo: '', styleNo: '' },
+        }, code);
+      }
+    },
+    fail() {
+      // 用户取消扫码，静默处理
+      onResult(null);
+    },
+  });
+}
+
+module.exports = { toast, toastAndRedirect, confirm, prompt, safeNavigate, quickScan, scanInPage };

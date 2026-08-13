@@ -164,7 +164,7 @@ async function loadProcurementTasks() {
     mapped.forEach(item => {
       const groupKey = item.patternProductionId
         ? 'sample::' + item.patternProductionId
-        : 'order::' + (item.orderNo || item.styleNo || 'unknown');
+        : 'order::' + (item.orderNo || item.id || 'unknown');
 
       if (!groupMap[groupKey]) {
         groupMap[groupKey] = {

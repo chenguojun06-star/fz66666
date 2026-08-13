@@ -165,15 +165,33 @@ Page({
     }
     const orderNo = group.orderNo || '';
     const styleNo = group.styleNo || '';
-    if (!orderNo || orderNo === '未知订单') {
+    // 支持大货(orderNo)和样衣(patternProductionId)两种路径
+    const hasOrderNo = orderNo && orderNo !== '未知订单';
+    // 从分组内的扫码记录中查找 patternProductionId（样衣采购场景）
+    let patternProductionId = group.patternProductionId || '';
+    if (!patternProductionId && group.items) {
+      for (let i = 0; i < group.items.length; i++) {
+        const item = group.items[i];
+        if (item.patternProductionId) {
+          patternProductionId = item.patternProductionId;
+          break;
+        }
+      }
+    }
+    if (!hasOrderNo && !patternProductionId) {
       toast.error('订单号缺失，无法跳转');
       return;
     }
-    const params =
-      'orderNo=' + encodeURIComponent(orderNo) +
-      '&styleNo=' + encodeURIComponent(styleNo);
+    const params = [];
+    if (hasOrderNo) {
+      params.push('orderNo=' + encodeURIComponent(orderNo));
+    }
+    if (patternProductionId) {
+      params.push('patternProductionId=' + encodeURIComponent(patternProductionId));
+    }
+    params.push('styleNo=' + encodeURIComponent(styleNo));
     safeNavigate({
-      url: '/pages/procurement/task-detail/index?' + params,
+      url: '/pages/procurement/task-detail/index?' + params.join('&'),
     }).catch(() => {});
   },
 

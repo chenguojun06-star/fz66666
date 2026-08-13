@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { toast, safeNavigate, quickScan } = require('../../utils/uiHelper');
+const { toast, safeNavigate, scanInPage } = require('../../utils/uiHelper');
 const { getUserInfo } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
@@ -127,8 +127,33 @@ Page({
     this.loadQualityList(true);
   },
 
+  /**
+   * 扫码按钮：当前页直接扫码 → 匹配瑕疵记录 → 打开详情
+   * 不再跳转到统一扫码页
+   */
   onScan: function () {
-    quickScan();
+    scanInPage((parsed, raw) => {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success || !parsed.data) {
+        toast.error('无法识别：' + (raw || ''));
+        return;
+      }
+      const { orderNo, styleNo } = parsed.data;
+      // 在当前列表中匹配
+      const list = this.data.list || [];
+      const matchedIdx = list.findIndex(item =>
+        (orderNo && (item.orderNo === orderNo || item.productionOrderNo === orderNo)) ||
+        (styleNo && item.styleNo === styleNo)
+      );
+      if (matchedIdx >= 0) {
+        // 找到匹配 → 打开详情
+        this.onViewDetail({
+          currentTarget: { dataset: { index: matchedIdx } },
+        });
+      } else {
+        toast.error('未匹配到瑕疵记录');
+      }
+    });
   },
 
   onViewDetail: function (e) {
