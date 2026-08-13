@@ -20,10 +20,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +80,12 @@ public class IntelligenceInferenceOrchestrator {
     private List<VisionModelConfig> visionModels = new ArrayList<>();
     private AtomicInteger roundRobinIndex = new AtomicInteger(0);
     private ExecutorService visionExecutor;
+
+    // ===== 401 熔断器：某模型连续 401 后熔断，避免鉴权失败刷屏 =====
+    private static final int AUTH_FAIL_THRESHOLD = 3;
+    private static final long AUTH_CIRCUIT_RESET_MS = 30 * 60 * 1000L; // 30 分钟
+    private final ConcurrentHashMap<String, AtomicInteger> authFailCount = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AtomicLong> authCircuitOpenSince = new ConcurrentHashMap<>();
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.qwen.api-key:}") private String qwenApiKey;
@@ -322,6 +330,11 @@ public class IntelligenceInferenceOrchestrator {
     private String chatWithVisionFailover(String imageUrl, String textPrompt) {
         for (int i = 0; i < visionModels.size(); i++) {
             VisionModelConfig model = visionModels.get(i);
+            // 401 熔断检查：熔断期内直接跳过，不发请求不刷日志
+            if (isAuthCircuitOpen(model.name)) {
+                log.debug("[Vision] 模型 {} 处于 401 熔断期，跳过", model.name);
+                continue;
+            }
             try {
                 log.info("[Vision] 尝试视觉模型: {} ({}/{})", model.name, i + 1, visionModels.size());
                 String result = invokeVisionModel(model, imageUrl, textPrompt);
@@ -416,8 +429,23 @@ public class IntelligenceInferenceOrchestrator {
             try {
                 HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 int code = response.statusCode();
-                // 成功 或 4xx（不重试：鉴权/参数错，重试也是同样错）
+                // 401 鉴权失败：累计计数，达到阈值后熔断，停止刷屏
+                if (code == 401) {
+                    int fails = recordAuthFailure(model.name);
+                    if (fails >= AUTH_FAIL_THRESHOLD) {
+                        log.error("[Vision] 模型 {} 连续 {} 次 401 鉴权失败，已熔断 {} 分钟。请检查 API Key 配置（AGNES_API_KEY/AGNES2_API_KEY）",
+                                model.name, fails, AUTH_CIRCUIT_RESET_MS / 60000);
+                    } else {
+                        log.warn("[Vision] 模型 {} 401 鉴权失败（{}/{}），请检查 API Key", model.name, fails, AUTH_FAIL_THRESHOLD);
+                    }
+                    return null;
+                }
+                // 成功 或其他 4xx（不重试：鉴权/参数错，重试也是同样错）
                 if (code < 500) {
+                    if (code >= 200 && code < 300) {
+                        // 调用成功，重置熔断计数
+                        resetAuthFailure(model.name);
+                    }
                     if (attempt == 2 && code >= 200 && code < 300) {
                         log.info("[Vision] {} 第2次重试成功", model.name);
                     }
@@ -441,6 +469,39 @@ public class IntelligenceInferenceOrchestrator {
         }
         if (lastException != null) throw lastException;
         return null;
+    }
+
+    /** 检查某模型是否处于 401 熔断期 */
+    private boolean isAuthCircuitOpen(String modelName) {
+        AtomicInteger count = authFailCount.get(modelName);
+        if (count == null || count.get() < AUTH_FAIL_THRESHOLD) return false;
+        AtomicLong since = authCircuitOpenSince.get(modelName);
+        if (since == null) return false;
+        long elapsed = System.currentTimeMillis() - since.get();
+        if (elapsed >= AUTH_CIRCUIT_RESET_MS) {
+            // 熔断超时，半开：重置计数，允许下一次尝试
+            count.set(0);
+            authCircuitOpenSince.remove(modelName);
+            return false;
+        }
+        return true;
+    }
+
+    /** 记录 401 失败，返回当前连续失败次数 */
+    private int recordAuthFailure(String modelName) {
+        AtomicInteger count = authFailCount.computeIfAbsent(modelName, k -> new AtomicInteger(0));
+        int fails = count.incrementAndGet();
+        if (fails >= AUTH_FAIL_THRESHOLD) {
+            authCircuitOpenSince.computeIfAbsent(modelName, k -> new AtomicLong(System.currentTimeMillis()));
+        }
+        return fails;
+    }
+
+    /** 调用成功后重置熔断计数 */
+    private void resetAuthFailure(String modelName) {
+        AtomicInteger count = authFailCount.get(modelName);
+        if (count != null && count.get() > 0) count.set(0);
+        authCircuitOpenSince.remove(modelName);
     }
 
     private String buildVisionPayload(String modelName, String imageUrl, String textPrompt) throws Exception {

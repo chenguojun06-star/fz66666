@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.security.MessageDigest;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -88,6 +89,10 @@ public class QdrantService {
     @Value("${intelligence.qdrant.timeout-seconds:10}")
     private int qdrantTimeoutSeconds;
 
+    /** Qdrant 连接失败静默：首次 ERROR，之后 5 分钟内同操作降级为 DEBUG，避免刷屏 */
+    private static final long CONN_FAIL_SILENCE_MS = 5 * 60 * 1000L;
+    private final ConcurrentHashMap<String, AtomicLong> connFailFirstLogAt = new ConcurrentHashMap<>();
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -135,6 +140,23 @@ public class QdrantService {
             return sb.toString();
         } catch (Exception e) {
             return String.valueOf(text.hashCode());
+        }
+    }
+
+    /**
+     * Qdrant 连接失败静默日志：首次失败记 WARN，之后 5 分钟内同操作降级为 DEBUG。
+     * 避免连接不通时每个请求都刷一条 WARN 日志。
+     */
+    private void logQdrantConnFail(String operation, String detail) {
+        long now = System.currentTimeMillis();
+        AtomicLong firstAt = connFailFirstLogAt.computeIfAbsent(operation, k -> new AtomicLong(0));
+        long first = firstAt.get();
+        if (first == 0 || now - first >= CONN_FAIL_SILENCE_MS) {
+            // 首次或静默窗口已过，记一次 WARN 并重置计时
+            firstAt.set(now);
+            log.warn("[Qdrant] {} 失败: {}（此后5分钟内同类错误将静默）", operation, detail);
+        } else {
+            log.debug("[Qdrant] {} 失败（静默中）: {}", operation, detail);
         }
     }
 
@@ -227,7 +249,7 @@ public class QdrantService {
                     HttpMethod.PUT, entity, String.class);
             return resp.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
-            log.warn("[Qdrant] upsert失败 pointId={}: {}", pointId, e.getMessage());
+            logQdrantConnFail("upsert", "pointId=" + pointId + " " + e.getMessage());
             return false;
         }
     }
@@ -977,7 +999,7 @@ public class QdrantService {
                     jsonEntity(body.toString()), String.class);
             return resp.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
-            log.warn("[Qdrant] style_images upsert失败 styleId={}: {}", styleId, e.getMessage());
+            logQdrantConnFail("style_images upsert", "styleId=" + styleId + " " + e.getMessage());
             return false;
         }
     }
@@ -1023,7 +1045,7 @@ public class QdrantService {
                 }
             }
         } catch (Exception e) {
-            log.warn("[Qdrant] style_images search失败: {}", e.getMessage());
+            logQdrantConnFail("style_images search", e.getMessage());
         }
         return results;
     }
@@ -1049,7 +1071,7 @@ public class QdrantService {
             log.info("[Qdrant] 集合 {} 已自动创建", STYLE_IMAGE_COLLECTION);
             styleImageCollectionVerified.set(true);
         } catch (Exception ex) {
-            log.warn("[Qdrant] style_images集合创建失败: {}", ex.getMessage());
+            logQdrantConnFail("style_images集合创建", ex.getMessage());
         }
     }
 
