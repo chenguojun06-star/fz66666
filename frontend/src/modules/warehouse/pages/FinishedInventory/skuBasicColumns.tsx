@@ -26,7 +26,7 @@ export function getSkuBasicColumns(): ColumnsType<SKUDetail> {
       ),
     },
     {
-      title: 'SKU编码',
+      title: '商品编码',
       dataIndex: 'sku',
       key: 'sku',
       width: 180,

@@ -37,8 +37,8 @@ const PolicyModal: React.FC<PolicyModalProps> = ({ open, record, levels, onClose
         <Form.Item label="适用等级（空=全部）" name="distributorLevel">
           <Select allowClear options={levels.map(l => ({ label: l.levelName, value: l.levelCode }))} />
         </Form.Item>
-        <Form.Item label="适用SKU（空=全部）" name="skuCode">
-          <Input placeholder="SKU编码" />
+        <Form.Item label="适用商品编码（空=全部）" name="skuCode">
+          <Input placeholder="商品编码" />
         </Form.Item>
         <Form.Item label="供货价" name="supplyPrice">
           <InputNumber min={0} precision={2} style={{ width: '100%' }} />

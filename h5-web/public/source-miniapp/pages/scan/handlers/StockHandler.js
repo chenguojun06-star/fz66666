@@ -28,7 +28,7 @@ async function handleStockQuery(page, codeStr, qrParser) {
 
     wx.showModal({
       title: '库存查询',
-      content: `SKU: ${skuCode}\r\n当前库存: ${stock}`,
+      content: `商品编码: ${skuCode}\r\n当前库存: ${stock}`,
       confirmText: '调整库存',
       cancelText: '关闭',
       success: (res) => {

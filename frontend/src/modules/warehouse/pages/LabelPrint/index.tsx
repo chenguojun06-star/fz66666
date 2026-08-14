@@ -44,7 +44,7 @@ const LabelPrint: React.FC = () => {
           <Card title="打印种类" size="small" style={{ marginBottom: 12 }}>
             <Radio.Group value={printType} onChange={e => setPrintType(e.target.value)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <Radio value="hangtag">吊牌 <Tooltip title="产品合格证吊牌，含品牌名/款号/颜色尺码/成分/质量等级/执行标准/安全类别/检验员"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
-              <Radio value="barcode">条码 <Tooltip title="贴在包装上的小标签，含二维码和SKU编码"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
+              <Radio value="barcode">条码 <Tooltip title="贴在包装上的小标签，含二维码和商品编码"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
               <Radio value="washlabel">洗水唛 <Tooltip title="缝在衣服内侧的标签，含面料成分和洗护说明"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
             </Radio.Group>
           </Card>

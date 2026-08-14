@@ -55,8 +55,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
             {isManual ? '可自由编辑商品编码、颜色、尺码等信息' : '商品编码按「款号+颜色+尺码」自动生成'}
           </span>
-          <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>SKU字面前缀：</span>
-          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加SKU" unCheckedChildren="不加" />
+          <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>商品编码字面前缀：</span>
+          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加商品编码" unCheckedChildren="不加" />
         </Space>
 
         <Space>

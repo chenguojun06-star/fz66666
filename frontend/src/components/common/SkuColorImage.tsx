@@ -12,8 +12,8 @@ interface SkuColorImageProps {
 }
 
 /**
- * 通用SKU颜色图片组件
- * 根据款号+颜色显示对应的SKU图片
+ * 通用商品编码颜色图片组件
+ * 根据款号+颜色显示对应的商品编码图片
  */
 const SkuColorImage: React.FC<SkuColorImageProps> = ({
   styleNo,

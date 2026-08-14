@@ -1495,3 +1495,50 @@ D-058 重写了样衣详情页基础信息Tab（新字段：商品分类/虚拟�
 - 引入"变更后自动验证"：用 test-runner-mcp 在写完后强制跑端到端冒烟测试
 
 
+
+---
+
+## D-068 全站 SKU→商品编码术语统一（PC 61文件）+ 图片预览双层叠加 Bug 修复（2026-08-14）
+
+### 背景
+用户在样衣详情"颜色图片管理"点图片 → 弹出全屏巨图+Modal 叠加，无法正常操作。排查发现 `StyleSkuColorImages.tsx` 同时启用了 antd Image 内置全屏 preview 和自制 600px Modal（onClick 双触发）。顺藤摸瓜发现上轮"PC 零残留"结论错误：search_content 的 glob 参数组合（path+`**/*.tsx`）漏检了 `frontend/src/modules/**` 下 120+ 处 SKU 文案。
+
+### 决策
+1. 预览修复：`preview={false}` 关闭 antd 内置预览，保留自制 Modal 并加 `maxHeight: 65vh + objectFit: contain`（尺寸可控可关闭，符合用户预期"不要变得非常大"）
+2. 术语统一扩大到 PC 全站：warehouse/production/ecommerce/system/basic 全部模块，列头/标签/提示/开关文案中"SKU编码/SKU明细/个SKU/SKU字面前缀"等一律→"商品编码"；纯 ASCII 标识符（skuCode/dataIndex/rowKey/'SKU-'拼接逻辑/t_product_sku 表名）零改动
+3. 独立 'SKU'/'SKU' 表头（无中文相邻）单独手补 7 处（InlineEditableField/ColorSizeMatrixEditor/SkuTable/FreeInboundModal/OrderDetailDrawer/distributorColumns/StyleImageCell）
+
+### 踩坑（重要！）
+- **macOS perl -pi 双重编码陷阱**：`perl -CSD -pi -e` 的 D 标志对 in-place 写出层不生效 → 中文被双重 UTF-8 编码（mojibake，cat -ev 可见 M-CM-% 特征）。批量改中文文件**必须用 python3 显式 `encoding='utf-8'`** 或 ruby，禁用 perl -pi
+- **批量后必须验证**：`git diff --numstat | awk '$1!=$2'` 检查增删行对称 + 抽查 diff 中文显示 + `tsc --noEmit`
+- **search_content 带 glob 时会漏检**：`glob="**/*.tsx"` 与 path 组合在 modules 子目录漏匹配 → 全局核查时不带 glob 或用 ignore_globs 反向过滤
+
+### 验证
+- tsc --noEmit 通过（exit 0）
+- 增删行完全对称（62 文件无行结构破坏）
+- 中文语境 SKU 残留复查：仅剩代码标识符与 'SKU-' 业务拼接逻辑（必须保留）
+
+---
+
+## D-069 生产要求(description)被BOM操作日志污染 — 根因修复（2026-08-14）
+
+### 现象
+用户在样衣详情"生产要求"里看到莫名文字：`[2026-08-14 23:21:51] 李老板 BOM同步物料库：同步数量：0项` 等日志行。打印制单同样带出。
+
+### 根因
+`t_style_info.description` 一字段两用：既是"生产要求"业务字段（生产Tab TextArea、制单打印、手机端接口），又被 `StyleBomLogAppendHelper.appendStyleOperation` 经 `OperationLogAppendUtil.appendOperation` 当作操作日志容器，每次 BOM同步物料库/库存检查/生成采购任务 都把 `[时间] 用户 动作：详情` 插到 description 头部，永久累积。
+
+### 修复（4文件）
+1. **backend `StyleBomLogAppendHelper`**：款式级日志改走 `StyleLogHelper.saveStyleLog` → 写 `t_style_operation_log`（项目已有款式日志体系+API `/api/style/operation-log/list`），删除对 description 的写入；类注释加 D-069 铁律说明
+2. **backend 新增 `V202708143000__clean_style_info_description_operation_logs.sql`**：REGEXP_REPLACE 清洗存量日志行（仅匹配行首完整时间戳格式，人工文本不受影响；WHERE 双重保险）
+3. **frontend 新增 `OperationLogSection.tsx`**：生产Tab 底部"操作记录"面板（消费 t_style_operation_log，带 bizType 标签/时间/操作人/动作，最多30条+刷新），补偿日志迁走后的查看入口
+4. **frontend `StyleProductionTab/index.tsx`**：挂载 OperationLogSection
+
+### 验证
+- mvn compile ✓ / tsc --noEmit ✓ / lints ✓
+- 待本地启动后端：Flyway 自动执行 V202708143000 清洗，需抽查 description 干净、操作记录面板有历史日志
+- 风险：REGEXP_REPLACE 正则未在本地实库验证（无 mysql 客户端），WHERE 条件保证 worst case 是零行更新、不会误删
+
+### 遗留（P2 备查）
+- `AbstractOperationLogAppendHelper` 其他子类仍往各自实体 remark（BOM行备注/物料备注）append 日志，语义尚可接受；若后续用户投诉同样迁移到日志表
+- OperationLogAppendUtil.appendToRemark 建议加 @Deprecated 注解引导迁移（本次未动，避免扩大影响面）

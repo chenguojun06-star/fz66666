@@ -84,6 +84,8 @@ public class MaterialWarehouseOperationOrchestrator {
                         .eq(MaterialStock::getMaterialCode, materialCode)
                         .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
+                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
+                        .orderByAsc(MaterialStock::getCreateTime)
                         .last("LIMIT 1"));
         if (stock == null) {
             Boolean autoCreate = params.get("autoCreateStock") != null
@@ -223,6 +225,8 @@ public class MaterialWarehouseOperationOrchestrator {
                         .eq(MaterialStock::getMaterialCode, materialCode)
                         .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
+                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
+                        .orderByAsc(MaterialStock::getCreateTime)
                         .last("LIMIT 1"));
         if (stock == null) {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
@@ -357,6 +361,8 @@ public class MaterialWarehouseOperationOrchestrator {
                         .eq(MaterialStock::getMaterialCode, materialCode)
                         .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
+                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
+                        .orderByAsc(MaterialStock::getCreateTime)
                         .last("LIMIT 1"));
         if (stock == null) {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
@@ -445,6 +451,8 @@ public class MaterialWarehouseOperationOrchestrator {
                         .eq(MaterialStock::getMaterialCode, materialCode)
                         .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
+                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
+                        .orderByAsc(MaterialStock::getCreateTime)
                         .last("LIMIT 1"));
     }
 
@@ -467,6 +475,8 @@ public class MaterialWarehouseOperationOrchestrator {
                         .eq(MaterialStock::getMaterialCode, materialCode)
                         .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
+                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
+                        .orderByAsc(MaterialStock::getCreateTime)
                         .last("LIMIT 1"));
         if (stock == null) {
             Map<String, Object> r = new LinkedHashMap<>();

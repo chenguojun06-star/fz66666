@@ -310,7 +310,7 @@
     <!-- BOM 物料清单 -->
     <view class="section-card" wx:if="{{hasBomList}}">
       <view class="section-hd">
-        <text class="section-title">BOM 物料清单</text>
+        <text class="section-title">物料清单</text>
         <text class="section-count">{{bomList.length}}项</text>
       </view>
       <view class="bom-group" wx:for="{{bomList}}" wx:key="index">

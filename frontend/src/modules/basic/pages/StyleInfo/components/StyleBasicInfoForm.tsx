@@ -91,7 +91,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
       {/* 区4：时间与备注 */}
       <TimeRemarkSection {...sectionFormContext} />
 
-      {/* 区5：颜色 / 尺码 / SKU 配置 */}
+      {/* 区5：颜色 / 尺码 / 商品编码 配置 */}
       <ColorSizeSkuSection
         size1={size1} setSize1={setSize1}
         size2={size2} setSize2={setSize2}

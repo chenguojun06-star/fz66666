@@ -31,7 +31,7 @@ export interface ColumnContext {
 
 export function buildAlertCols(ctx: ColumnContext): ColumnsType<StockAlert> {
   return [
-    { title: 'SKU编码', dataIndex: 'skuCode', width: 130 },
+    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
     { title: '预警类型', dataIndex: 'alertType', width: 100, render: (v: string) => <Tag color="red">{v}</Tag> },
     { title: '当前库存', dataIndex: 'currentStock', width: 90 },
     { title: '安全库存', dataIndex: 'safeStock', width: 90 },
@@ -47,7 +47,7 @@ export function buildAlertCols(ctx: ColumnContext): ColumnsType<StockAlert> {
 
 export function buildSuggestionCols(ctx: ColumnContext): ColumnsType<PurchaseSuggestion> {
   return [
-    { title: 'SKU编码', dataIndex: 'skuCode', width: 130 },
+    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
     {
       title: '建议类型', dataIndex: 'suggestionType', width: 100,
       render: (v?: string) => {
@@ -88,7 +88,7 @@ export function buildSuggestionCols(ctx: ColumnContext): ColumnsType<PurchaseSug
 
 export function buildStockCols(ctx: ColumnContext): ColumnsType<UniversalStock> {
   return [
-    { title: 'SKU编码', dataIndex: 'skuId', width: 100 },
+    { title: '商品编码', dataIndex: 'skuId', width: 100 },
     { title: '仓库', dataIndex: 'warehouse', width: 100 },
     { title: '总入库', dataIndex: 'totalWarehoused', width: 80 },
     { title: '总出库', dataIndex: 'totalOutstock', width: 80 },
@@ -105,7 +105,7 @@ export function buildStockCols(ctx: ColumnContext): ColumnsType<UniversalStock> 
 export function buildAllocCols(ctx: ColumnContext): ColumnsType<WarehouseAllocation> {
   return [
     { title: '订单号', dataIndex: 'orderNo', width: 140 },
-    { title: 'SKU编码', dataIndex: 'skuCode', width: 130 },
+    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
     { title: '仓库', dataIndex: 'warehouse', width: 100 },
     { title: '分配数量', dataIndex: 'allocatedQuantity', width: 90 },
     {
@@ -153,7 +153,7 @@ export function buildMergeCols(ctx: ColumnContext): ColumnsType<MergeGroup> {
 export function buildGiftRuleCols(ctx: ColumnContext): ColumnsType<GiftRule> {
   return [
     { title: '规则名称', dataIndex: 'ruleName', width: 140 },
-    { title: '赠品SKU', dataIndex: 'giftSkuCode', width: 130 },
+    { title: '赠品商品编码', dataIndex: 'giftSkuCode', width: 130 },
     { title: '赠品数量', dataIndex: 'giftQuantity', width: 80 },
     {
       title: '触发类型', dataIndex: 'triggerType', width: 120,

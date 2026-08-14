@@ -463,7 +463,7 @@ Page({
 
     // 开发阶段快捷入口数据（从 snapshot 或 styleInfo 推导状态）
     var devStageConfig = [
-      { key: 'bom', name: 'BOM', iconClass: 'icon-bom' },
+      { key: 'bom', name: '物料清单', iconClass: 'icon-bom' },
       { key: 'pattern', name: '纸样', iconClass: 'icon-pattern' },
       { key: 'size', name: '尺码', iconClass: 'icon-size' },
       { key: 'process', name: '工序', iconClass: 'icon-process' },

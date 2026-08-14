@@ -40,7 +40,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   }, [open]);
 
   const handleScanQuery = async () => {
-    if (!scanCode.trim()) { message.warning('请输入或扫描SKU编码'); return; }
+    if (!scanCode.trim()) { message.warning('请输入或扫描商品编码'); return; }
     setQuerying(true);
     try {
       const res = await finishedWarehouseApi.scanQuery(scanCode.trim());
@@ -54,7 +54,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
         setStyleNo(data.suggestedStyleNo || '');
         setColor(data.suggestedColor || '');
         setSize(data.suggestedSize || '');
-        message.info('SKU不存在，入库时将自动创建款号和SKU');
+        message.info('商品编码不存在，入库时将自动创建款号和商品编码');
       }
     } catch (e: any) { message.error(e.message || '查询失败'); setScanResult(null); }
     finally { setQuerying(false); }
@@ -63,7 +63,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); handleScanQuery(); } };
 
   const handleConfirm = async () => {
-    if (!scanCode.trim()) { message.warning('请输入或扫描SKU编码'); return; }
+    if (!scanCode.trim()) { message.warning('请输入或扫描商品编码'); return; }
     if (quantity <= 0) { message.warning('数量必须大于0'); return; }
     setLoading(true);
     try {
@@ -105,9 +105,9 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
           </Col>
         </Row>
         <div>
-          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>扫码/输入SKU编码</div>
+          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>扫码/输入商品编码</div>
           <Space.Compact style={{ width: '100%' }}>
-            <Input ref={inputRef} value={scanCode} onChange={e => setScanCode(e.target.value)} onKeyDown={handleKeyDown} placeholder="扫描枪扫码或手动输入SKU编码" prefix={<ScanOutlined />} size="large" allowClear />
+            <Input ref={inputRef} value={scanCode} onChange={e => setScanCode(e.target.value)} onKeyDown={handleKeyDown} placeholder="扫描枪扫码或手动输入商品编码" prefix={<ScanOutlined />} size="large" allowClear />
             <Button type="primary" size="large" icon={<SearchOutlined />} loading={querying} onClick={handleScanQuery}>查询</Button>
           </Space.Compact>
         </div>
@@ -125,7 +125,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
         )}
         {scanResult && !scanResult.found && (
           <Card style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
-            <div style={{ marginBottom: 8, color: 'var(--color-warning)', fontWeight: 600 }}> SKU不存在，入库时将自动创建</div>
+            <div style={{ marginBottom: 8, color: 'var(--color-warning)', fontWeight: 600 }}> 商品编码不存在，入库时将自动创建</div>
             <Row gutter={12}>
               <Col span={8}>
                 <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>款号</div>

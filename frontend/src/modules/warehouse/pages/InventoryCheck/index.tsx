@@ -69,7 +69,7 @@ const InventoryCheck: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}><Card><Statistic title="物料库存品种" value={summary.materialStockCount ?? '-'} /></Card></Col>
-        <Col span={6}><Card><Statistic title="成品库存SKU" value={summary.skuStockCount ?? '-'} /></Card></Col>
+        <Col span={6}><Card><Statistic title="成品库存商品编码" value={summary.skuStockCount ?? '-'} /></Card></Col>
         <Col span={6}><Card><Statistic title="样衣库存" value={summary.sampleStockCount ?? '-'} /></Card></Col>
         <Col span={6}><Card><Statistic title="待处理盘点" value={summary.pendingChecks ?? 0} styles={{ content: { color: summary.pendingChecks > 0 ? 'var(--color-warning)' : undefined } }} /></Card></Col>
       </Row>

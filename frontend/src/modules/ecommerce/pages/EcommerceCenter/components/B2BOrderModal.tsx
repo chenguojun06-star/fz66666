@@ -31,8 +31,8 @@ const B2BOrderModal: React.FC<B2BOrderModalProps> = ({ open, profiles, onClose, 
             .filter(p => p.status === 'ACTIVE')
             .map(p => ({ label: `${p.distributorName}（${p.distributorNo}）`, value: p.id }))} />
         </Form.Item>
-        <Form.Item label="SKU编码" name="skuCode" rules={[{ required: true, message: '请输入SKU编码' }]}>
-          <Input placeholder="SKU编码" />
+        <Form.Item label="商品编码" name="skuCode" rules={[{ required: true, message: '请输入商品编码' }]}>
+          <Input placeholder="商品编码" />
         </Form.Item>
         <Form.Item label="商品名称" name="productName"><Input /></Form.Item>
         <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>

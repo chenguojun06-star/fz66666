@@ -71,7 +71,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         <StyleCoverThumb 
           src={cover || null} 
           styleNo={record.styleNo} 
-          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          color={record.color} // 传入颜色，优先显示商品编码颜色图片
           size={40} 
         />
       ),

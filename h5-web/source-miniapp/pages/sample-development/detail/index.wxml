@@ -118,7 +118,7 @@
       <!-- BOM 物料 -->
       <view wx:if="{{activeTab === 'bom'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">BOM 物料</text>
+          <text class="tab-card__title">物料清单</text>
           <view class="tab-card__header-right">
             <text class="tab-card__count">{{bomList.length}}项</text>
             <view
@@ -169,7 +169,7 @@
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无 BOM 物料，请在 PC 端配置</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无物料清单，请在 PC 端配置</text></view>
       </view>
 
       <!-- 纸样（附件中 bizType=pattern） -->

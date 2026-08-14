@@ -25,7 +25,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
             <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>颜色</th>
             <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>尺码</th>
             <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 13, width: 56, borderBottom: '1px solid var(--color-border)' }}>数量</th>
-            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>SKU</th>
+            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>商品编码</th>
           </tr>
         </thead>
         <tbody>
@@ -45,7 +45,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
                     size="small"
                     value={skuVal}
                     onChange={e => setSkuEditMap(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder="输入SKU"
+                    placeholder="输入商品编码"
                     style={{ fontSize: 13 }}
                   />
                 </td>
@@ -63,7 +63,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
       </table>
       <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <Space size={4}>
-          <Tooltip title={'按【款号+颜色+尺码+顺序】自动生成 SKU（不加前缀），生成后可在输入框微调'}>
+          <Tooltip title={'按【款号+颜色+尺码+顺序】自动生成 商品编码（不加前缀），生成后可在输入框微调'}>
             <Button
               size="small"
               type="link"
@@ -73,7 +73,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
               一键生成
             </Button>
           </Tooltip>
-          <Tooltip title="清空所有 SKU 输入框（不影响颜色尺码）">
+          <Tooltip title="清空所有 商品编码 输入框（不影响颜色尺码）">
             <Button
               size="small"
               type="link"
@@ -91,7 +91,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
           onClick={onSave}
           icon={<SaveOutlined />}
         >
-          保存SKU
+          保存商品编码
         </Button>
       </div>
     </div>

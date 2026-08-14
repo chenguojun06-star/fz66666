@@ -710,6 +710,10 @@ public class MaterialPurchasePickingHelper {
                     stock = stockMap.get(item.getMaterialStockId());
                     if (stock != null) {
                         materialStockService.decreaseStockAndUnlock(item.getMaterialStockId(), item.getQuantity());
+                    } else {
+                        // D-070: 库存记录已不存在时必须失败回滚，禁止"只写出库日志不扣库存"造成账实不符
+                        throw new IllegalStateException("领料明细关联的库存记录不存在，无法出库: itemId="
+                                + item.getId() + ", stockId=" + item.getMaterialStockId());
                     }
                 } else {
                     materialStockService.decreaseStock(

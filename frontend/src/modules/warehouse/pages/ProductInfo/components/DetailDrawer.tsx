@@ -93,7 +93,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
           </Descriptions>
 
-          <Divider style={{ fontSize: 14, marginTop: 20 }}>SKU 规格明细</Divider>
+          <Divider style={{ fontSize: 14, marginTop: 20 }}>商品编码 规格明细</Divider>
           {skuLoading ? (
             <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载中...</div>
           ) : skuList.length > 0 ? (
@@ -108,7 +108,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             />
           ) : (
             <div style={{ textAlign: 'center', padding: 16, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
-              暂无SKU数据，请在样衣开发页面配置颜色尺码后同步
+              暂无商品编码数据，请在样衣开发页面配置颜色尺码后同步
             </div>
           )}
 

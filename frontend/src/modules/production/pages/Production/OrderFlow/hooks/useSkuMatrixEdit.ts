@@ -28,7 +28,7 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
     });
   }, [orderLines, order]);
 
-  // 初始化/重置SKU编辑映射
+  // 初始化/重置商品编码编辑映射
   useEffect(() => {
     if (editing) {
       const map: Record<string, string> = {};
@@ -45,11 +45,11 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
     const orderId = (order as any)?.id;
     if (!orderId) { message.error('订单ID不存在'); return; }
 
-    // 唯一性校验：同一订单内 SKU 不能重复
+    // 唯一性校验：同一订单内 商品编码 不能重复
     const skuValues = Object.values(skuEditMap).map(s => (s || '').trim()).filter(Boolean);
     const dupes = skuValues.filter((v, i, arr) => arr.indexOf(v) !== i);
     if (dupes.length > 0) {
-      message.error(`SKU 重复：${Array.from(new Set(dupes)).join('、')}，请保证唯一性`);
+      message.error(`商品编码 重复：${Array.from(new Set(dupes)).join('、')}，请保证唯一性`);
       return;
     }
 
@@ -64,7 +64,7 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
         id: orderId,
         field: 'orderLines',
         value: JSON.stringify(updatedLines),
-        operationRemark: `修改颜色尺码明细（SKU）`,
+        operationRemark: `修改颜色尺码明细（商品编码）`,
       });
       if (res?.code === 200) {
         message.success('颜色尺码明细已更新');
@@ -79,14 +79,14 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
     }
   }, [order, orderLines, skuEditMap, message, fetchFlow]);
 
-  // 用户主动清空所有 SKU
+  // 用户主动清空所有 商品编码
   const handleMatrixClearAll = useCallback(() => {
     const map: Record<string, string> = {};
     orderLines.forEach(l => { map[`${l.color || ''}|${l.size || ''}`] = ''; });
     setSkuEditMap(map);
   }, [orderLines]);
 
-  // 用户主动按统一规则生成 SKU（款号 + 颜色 + 尺码 + 顺序号；不加 SKU- 前缀）
+  // 用户主动按统一规则生成 商品编码（款号 + 颜色 + 尺码 + 顺序号；不加 商品编码- 前缀）
   const handleMatrixAutoGen = useCallback(() => {
     const styleNo = String((order as any)?.styleNo || '').trim() || 'STYLE';
     const map: Record<string, string> = {};
@@ -99,10 +99,10 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
       map[key] = generated;
     });
     setSkuEditMap(map);
-    message.success('已按 "款号+颜色+尺码+顺序" 规则生成 SKU（未加前缀），请按需调整');
+    message.success('已按 "款号+颜色+尺码+顺序" 规则生成 商品编码（未加前缀），请按需调整');
   }, [order, orderLines, message]);
 
-  // 切换"自动生成 SKU"全局开关（保存到订单）
+  // 切换"自动生成 商品编码"全局开关（保存到订单）
   const handleSkuAutoToggle = useCallback(async (checked: boolean) => {
     const orderId = (order as any)?.id;
     if (!orderId) return;
@@ -111,10 +111,10 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
         id: orderId,
         field: 'skuAutoGenerate',
         value: checked ? 'true' : 'false',
-        operationRemark: checked ? '开启自动生成 SKU' : '关闭自动生成 SKU',
+        operationRemark: checked ? '开启自动生成 商品编码' : '关闭自动生成 商品编码',
       });
       if (res?.code === 200) {
-        message.success(checked ? '已开启自动生成 SKU' : '已关闭自动生成 SKU');
+        message.success(checked ? '已开启自动生成 商品编码' : '已关闭自动生成 商品编码');
         fetchFlow();
       } else {
         message.error(res?.message || '切换失败');

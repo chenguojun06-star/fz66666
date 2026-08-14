@@ -83,7 +83,7 @@
   <block wx:if="{{isProcurement}}">
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
       <view class="warn-icon"><view class="icon-warning-orange"></view></view>
-      <text class="warn-text">未找到采购单，当前为BOM物料参考信息</text>
+      <text class="warn-text">未找到采购单，当前为物料参考信息</text>
     </view>
 
     <view wx:if="{{materialPurchases.length > 0}}" class="section-card">
@@ -169,7 +169,7 @@
 
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
       <view class="warn-icon"><view class="icon-warning-orange"></view></view>
-      <text class="warn-text">未匹配到BOM工价，当前使用默认工价</text>
+      <text class="warn-text">未匹配到物料工价，当前使用默认工价</text>
     </view>
 
     <view class="section-card">

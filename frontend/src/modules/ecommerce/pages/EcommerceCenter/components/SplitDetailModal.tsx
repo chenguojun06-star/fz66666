@@ -21,7 +21,7 @@ const SplitDetailModal: React.FC<SplitDetailModalProps> = ({ open, splits, onClo
     <ResizableTable<SplitDetailRow> dataSource={splits} rowKey="orderNo" size="small" pagination={false}
       columns={[
         { title: '拆单号', dataIndex: 'orderNo' },
-        { title: 'SKU编码', dataIndex: 'skuCode' },
+        { title: '商品编码', dataIndex: 'skuCode' },
         { title: '仓库', dataIndex: 'warehouse' },
         { title: '数量', dataIndex: 'qty' },
         { title: '原因', dataIndex: 'reason' },

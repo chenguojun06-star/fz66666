@@ -103,7 +103,7 @@ const StockDiscrepancyTab: React.FC = () => {
   }, [discrepancies, searchSku, selectedType]);
 
   const columns: ColumnsType<StockDiscrepancy> = [
-    { title: 'SKU编码', dataIndex: 'skuCode', width: 160 },
+    { title: '商品编码', dataIndex: 'skuCode', width: 160 },
     {
       title: '本地库存', dataIndex: 'localStock', width: 100, align: 'right' as const,
       render: (v: number) => <span style={{ fontWeight: 500 }}>{v}</span>,
@@ -231,7 +231,7 @@ const StockDiscrepancyTab: React.FC = () => {
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
         <Input
-          placeholder="搜索SKU编码"
+          placeholder="搜索商品编码"
           prefix={<SearchOutlined />}
           value={searchSku}
           onChange={(e) => setSearchSku(e.target.value)}

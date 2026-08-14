@@ -95,7 +95,7 @@ export const buildSkuColumns = () => [
   },
   { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => <span style={{ fontWeight: 500 }}>{v ? String(v) : '-'}</span> },
   { title: '尺码', dataIndex: 'size', key: 'size', width: 70, render: (v: unknown) => <span>{v ? String(v) : '-'}</span> },
-  { title: 'SKU编码', dataIndex: 'skuCode', key: 'skuCode', width: 180, ellipsis: true },
+  { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 180, ellipsis: true },
   { title: '条形码', dataIndex: 'barcode', key: 'barcode', width: 130, ellipsis: true, render: (v: unknown) => String(v ?? '-') },
   {
     title: '成本价', dataIndex: 'costPrice', key: 'costPrice', width: 80, align: 'right' as const,

@@ -10,7 +10,7 @@ export const FIELD_LABELS: Record<EditableField, string> = {
   skc: 'SKC',
   color: '颜色',
   size: '尺码',
-  sku: 'SKU',
+  sku: '商品编码',
 };
 
 interface InlineEditableFieldProps {

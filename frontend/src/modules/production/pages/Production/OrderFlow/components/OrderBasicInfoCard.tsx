@@ -84,7 +84,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>
               <span>颜色 / 尺码 / SKU</span>
-              <Tooltip title="开启后，裁剪/样衣创建时系统自动生成 SKU- 前缀；关闭后只走颜色尺码，由你掌控 SKU">
+              <Tooltip title="开启后，裁剪/样衣创建时系统自动生成 商品编码- 前缀；关闭后只走颜色尺码，由你掌控 商品编码">
                 <Switch
                   size="small"
                   checked={Boolean((order as any)?.skuAutoGenerate)}

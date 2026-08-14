@@ -1028,7 +1028,10 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 ## 待办
 
 - [ ] PC端样衣详情页其他 Tab 按截图改造（颜色规格/工艺说明/样品节点/设计状态/同类资料）
-- [ ] 手机端/H5 端样衣详情页是否需要同步改造（待用户确认）
+- [x] 手机端/H5 端是否需同步 D-058~D-067 近期更新（2026-08-14 全量核实：全部向后兼容，mobile 零改动；领料锚点 mobile 早已兼容；H5 两份副本 diff 一致）
+- [x] 全端术语统一 SKU→商品编码 / BOM→物料清单（2026-08-14：小程序13文件17处 + 两份H5副本同步；PC 扩大范围 62 文件 120+ 处——纠正上轮 glob 漏检导致的"PC零残留"误判，tsc 通过，详见 D-068）
+- [x] 样衣详情颜色图片预览 Bug（双预览层叠加）修复（2026-08-14：StyleSkuColorImages 关闭 antd 内置 preview，Modal 限高 65vh）
+- [x] 生产要求(description)被BOM操作日志污染根因修复（2026-08-14 D-069：日志迁 t_style_operation_log + Flyway V202708143000 清洗 + 生产Tab操作记录面板；待本地启动验证 Flyway 效果）
 - [ ] 小云AI全链路测试（规划引擎+结构化输出+主动风险检测实际效果验证）
 - [x] 打印/列表/字典全系统同步 D-058 新字段结构（D-062：打印BasicInfoSection重对齐+设计师改读designer+6处旧标签同步，tsc 0 errors）
 - [x] 样衣列表统计8vs6修复+进度球可见即刷（D-063：统计Tab下推后端onlyInProgress/onlyCompleted/onlyDelayed+fetchList合并语义+45s轮询，前后端编译通过）

@@ -61,9 +61,9 @@ export interface ScanRecord extends Record<string, unknown> {
   confirmTime?: string;
   /** 扫码模式:ORDER/BUNDLE/SKU */
   scanMode?: string;
-  /** SKU已完成数 */
+  /** 商品编码已完成数 */
   skuCompletedCount?: number;
-  /** SKU总数 */
+  /** 商品编码总数 */
   skuTotalCount?: number;
   /** 工序单价 */
   processUnitPrice?: number;

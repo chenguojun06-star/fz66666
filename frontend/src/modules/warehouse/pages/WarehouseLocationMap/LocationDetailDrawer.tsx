@@ -93,7 +93,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">颜色</div>
                   <div className="wlm-detail-th">尺码</div>
-                  <div className="wlm-detail-th">SKU编码</div>
+                  <div className="wlm-detail-th">商品编码</div>
                   <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
                   <div className="wlm-detail-th" style={{ textAlign: 'right' }}>单价</div>
                 </div>

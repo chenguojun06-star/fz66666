@@ -242,7 +242,7 @@ const DataCenter: React.FC = () => {
                       styleId={detailRecord.id} 
                       styleNo={detailRecord.styleNo} 
                       src={detailRecord.cover} 
-                      color={detailRecord.color} // 传入颜色，优先显示SKU颜色图片
+                      color={detailRecord.color} // 传入颜色，优先显示商品编码颜色图片
                       size="fill" 
                     />
                   ) : (

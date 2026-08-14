@@ -40,7 +40,7 @@ export function useTaskColumns({
           src={record.styleCover || null}
           styleId={record.styleId}
           styleNo={record.styleNo}
-          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          color={record.color} // 传入颜色，优先显示商品编码颜色图片
           size={48}
           borderRadius={6}
         />
@@ -280,7 +280,7 @@ export function useBundleColumns(activeTask: CuttingTask | null) {
           src={activeTask?.styleCover || null} 
           styleId={activeTask?.styleId} 
           styleNo={record.styleNo || activeTask?.styleNo} 
-          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          color={record.color} // 传入颜色，优先显示商品编码颜色图片
           size={24} 
           borderRadius={4} 
         />

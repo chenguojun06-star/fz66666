@@ -27,7 +27,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
                 styleId={record.styleId} 
                 styleNo={record.styleNo} 
                 src={record.styleCover || null} 
-                color={record.color} // 传入颜色，优先显示SKU颜色图片
+                color={record.color} // 传入颜色，优先显示商品编码颜色图片
                 size={40} 
                 borderRadius={6} 
               />

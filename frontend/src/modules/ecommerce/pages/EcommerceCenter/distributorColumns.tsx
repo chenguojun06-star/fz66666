@@ -82,7 +82,7 @@ export function buildPolicyCols(ctx: DistributorColumnContext): ColumnsType<Dist
       const it = v ? PolicyTypeMap[v] : null; return it ? <Tag color={it.color}>{it.label}</Tag> : '-';
     }},
     { title: '适用等级', dataIndex: 'distributorLevel', width: 100, render: (v?: string) => v ?? '全部' },
-    { title: '适用SKU', dataIndex: 'skuCode', width: 120, render: (v?: string) => v ?? '全部' },
+    { title: '适用商品编码', dataIndex: 'skuCode', width: 120, render: (v?: string) => v ?? '全部' },
     { title: '供货价', dataIndex: 'supplyPrice', width: 100, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },
     { title: '最低零售价', dataIndex: 'minRetailPrice', width: 110, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },
     { title: '操作', width: 150, render: (_: unknown, r: DistributorPricePolicy) => (
@@ -97,7 +97,7 @@ export function buildPolicyCols(ctx: DistributorColumnContext): ColumnsType<Dist
 export function buildB2bCols(ctx: DistributorColumnContext): ColumnsType<B2BOrder> {
   return [
     { title: '订单号', dataIndex: 'orderNo', width: 180 },
-    { title: 'SKU', dataIndex: 'skuCode', width: 130 },
+    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
     { title: '商品名称', dataIndex: 'productName', width: 160, ellipsis: true },
     { title: '数量', dataIndex: 'quantity', width: 70, align: 'right' as const },
     { title: '单价', dataIndex: 'unitPrice', width: 90, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },

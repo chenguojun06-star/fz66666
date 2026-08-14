@@ -38,7 +38,7 @@ const EcommerceOrders: React.FC = () => {
             },
             {
               key: 'pricing',
-              label: <><EditOutlined /> SKU 定价</>,
+              label: <><EditOutlined /> 商品编码 定价</>,
               children: <PricingTab />,
             },
             {

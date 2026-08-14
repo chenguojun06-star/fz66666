@@ -48,7 +48,7 @@ export function getOutstockRecordColumns(handlers: {
       ),
     },
     {
-      title: 'SKU编码',
+      title: '商品编码',
       dataIndex: 'skuCode',
       width: 150,
       render: (text) => text || '-',

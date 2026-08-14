@@ -126,8 +126,8 @@ const _FinishedInventory: React.FC = () => {
                     </Col>
                   </Row>
                 </Card>
-                <div style={{ marginBottom: 8, fontWeight: 600 }}>SKU明细</div>
-                <ResizableTable columns={skuColumns} dataSource={skuDetails} rowKey="sku" pagination={false} emptyDescription="暂无SKU数据" />
+                <div style={{ marginBottom: 8, fontWeight: 600 }}>商品编码明细</div>
+                <ResizableTable columns={skuColumns} dataSource={skuDetails} rowKey="sku" pagination={false} emptyDescription="暂无商品编码数据" />
                 <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
                   <span>出库总量: {skuTotalOutbound} 件</span>
                   <span>出库金额: {formatMoney(skuTotalAmount)}</span>

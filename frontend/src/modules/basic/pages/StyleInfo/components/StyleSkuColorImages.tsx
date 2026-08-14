@@ -28,15 +28,15 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
   const [selectedColors, setSelectedColors] = useState<Set<string>>(new Set());
   const [uploadingColor, setUploadingColor] = useState<string | null>(null);
 
-  // 获取该款所有颜色和SKU信息
+  // 获取该款所有颜色和商品编码信息
   const fetchColorImages = useCallback(async () => {
     if (!styleId) return;
     setLoading(true);
     try {
-      // 获取SKU列表
+      // 获取商品编码列表
       const res = await api.post<{ code: number; data: any[] }>('/style/sku/search', { styleId: Number(styleId) });
       if (res.code === 200 && res.data) {
-        // 按颜色分组统计SKU数量
+        // 按颜色分组统计商品编码数量
         const colorMap = new Map<string, number>();
         for (const sku of res.data) {
           if (sku.color) {
@@ -270,8 +270,9 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                         <Image
                           src={getFullAuthedFileUrl(item.imageUrl)}
                           alt={item.color}
-                          style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
-                          preview={{ mask: <span>点击预览</span> }}
+                          style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'pointer' }}
+                          preview={false}
+                          title="点击预览"
                           onClick={() => {
                             setPreviewImage(getFullAuthedFileUrl(item.imageUrl!));
                             setPreviewVisible(true);
@@ -315,7 +316,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                     title={item.color}
                     description={
                       <Space>
-                        <Tag>{item.skuCount} SKU</Tag>
+                        <Tag>{item.skuCount} 个商品编码</Tag>
                         {item.imageUrl ? (
                           <Tag color="green">已配图</Tag>
                         ) : (
@@ -339,7 +340,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
         width={600}
         centered
       >
-        <img alt="预览" style={{ width: '100%' }} src={previewImage} />
+        <img alt="预览" style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', display: 'block', margin: '0 auto' }} src={previewImage} />
       </Modal>
     </div>
   );

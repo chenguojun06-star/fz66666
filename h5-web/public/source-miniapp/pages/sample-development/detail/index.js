@@ -166,7 +166,7 @@ Page({
     // 资料标签
     activeTab: 'bom',       // bom/pattern/size/process/secondary/remark/attachment
     tabs: [
-      { key: 'bom',        name: 'BOM物料' },
+      { key: 'bom',        name: '物料清单' },
       { key: 'pattern',    name: '纸样' },
       { key: 'size',       name: '尺寸表' },
       { key: 'process',    name: '工序' },

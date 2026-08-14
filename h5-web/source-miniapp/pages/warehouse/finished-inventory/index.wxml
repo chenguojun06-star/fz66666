@@ -17,7 +17,7 @@
 
   <!-- 搜索 + 筛选器（sticky 吸顶，统一通用组件） -->
   <sticky-search-bar
-    placeholder="搜索订单号/款号/SKU"
+    placeholder="搜索订单号/款号/商品编码"
     value="{{searchText}}"
     show-scan="{{false}}"
     show-filter="{{true}}"

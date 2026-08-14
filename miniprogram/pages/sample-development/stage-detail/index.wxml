@@ -126,11 +126,11 @@
     <!-- ══ ③ BOM 清单（bom / procurement 阶段） ══ -->
     <block wx:if="{{stageKey === 'bom' || stageKey === 'procurement'}}">
       <view class="section-label">
-        <text class="sl-text">BOM配置</text>
+        <text class="sl-text">物料清单</text>
         <text class="sl-count" wx:if="{{bomSummary.totalCount}}">{{bomSummary.totalCount}}种</text>
       </view>
       <view wx:if="{{bomList.length === 0}}" class="empty-state">
-        <text class="empty-text">暂无BOM数据</text>
+        <text class="empty-text">暂无物料数据</text>
       </view>
       <block wx:else>
         <!-- BOM 汇总 -->

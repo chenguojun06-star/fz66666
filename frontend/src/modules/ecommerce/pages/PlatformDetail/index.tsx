@@ -105,7 +105,7 @@ const PlatformDetail: React.FC = () => {
                   <Card style={{ borderRadius: 6, border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-primary)' }}>📦 链路一：成品仓（有生产单）</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
-                      订单 → SKU匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
+                      订单 → 商品编码匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
                     <div style={{ marginTop: 6 }}><Tag color="blue">备货中 {stats?.preparing ?? 0}</Tag></div>
                   </Card>

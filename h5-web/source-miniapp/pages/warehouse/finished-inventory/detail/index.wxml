@@ -45,7 +45,7 @@
     <!-- Tab 切换 -->
     <view class="tab-bar">
       <view class="tab-item {{activeTab === 'sku' ? 'tab-item--active' : ''}}" bindtap="onSwitchTab" data-tab="sku">
-        <text class="tab-text">SKU明细</text>
+        <text class="tab-text">商品编码明细</text>
       </view>
       <view class="tab-item {{activeTab === 'inbound' ? 'tab-item--active' : ''}}" bindtap="onSwitchTab" data-tab="inbound">
         <text class="tab-text">入库记录</text>
@@ -56,7 +56,7 @@
     <!-- SKU 明细 Tab -->
     <view wx:if="{{activeTab === 'sku'}}" class="section-card">
       <view class="card-header">
-        <text class="card-title">SKU 明细</text>
+        <text class="card-title">商品编码明细</text>
         <text class="card-count">{{skuList.length}}个</text>
       </view>
 

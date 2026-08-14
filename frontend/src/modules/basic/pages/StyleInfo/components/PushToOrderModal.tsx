@@ -54,7 +54,7 @@ const PushToOrderModal: React.FC<PushToOrderModalProps> = ({
               <Checkbox value="process">工序单价</Checkbox>
               <Checkbox value="production">生产制单</Checkbox>
               <Checkbox value="secondary">二次工艺</Checkbox>
-              <Checkbox value="sku">SKU管理</Checkbox>
+              <Checkbox value="sku">商品编码管理</Checkbox>
             </div>
           </Checkbox.Group>
         </Form.Item>

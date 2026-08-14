@@ -169,7 +169,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
     { title: '颜色',   dataIndex: 'color',   width: 80 },
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
-      title: 'SKU编码', dataIndex: 'skuCode', width: 190,
+      title: '商品编码', dataIndex: 'skuCode', width: 190,
       render: v => <Text style={{ fontSize: 14, color: 'var(--color-success)' }}>{v}</Text>,
     },
     {

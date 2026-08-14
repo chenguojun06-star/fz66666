@@ -33,7 +33,7 @@ export function usePricingData() {
       setTotal((d.total as number) ?? 0);
       // 异步加载款号封面图
       fetchByStyleNos(records.map(r => r.styleNo));
-    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载SKU失败'); }
+    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载商品编码失败'); }
     finally { setLoading(false); }
   }, [page, styleNo, fetchByStyleNos]);
 

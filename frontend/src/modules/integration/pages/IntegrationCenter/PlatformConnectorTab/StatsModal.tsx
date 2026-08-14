@@ -58,7 +58,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
                       <InboxOutlined /> 链路一：成品仓（有生产单）
                     </div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
-                      订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
+                      订单 → 商品编码匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
                       → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
                     <div style={{ marginTop: 6 }}>

@@ -175,7 +175,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
   const columns = [
     {
-      title: 'SKU码',
+      title: '商品编码',
       dataIndex: 'skuCode',
       key: 'skuCode',
       ellipsis: true,
@@ -300,13 +300,13 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       </Space.Compact>
 
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>
-        二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存及库位，再填写本次要出库的数量。
+        二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 商品编码、颜色、码数、当前库存及库位，再填写本次要出库的数量。
       </Typography.Text>
 
       {items.length > 0 && (
         <div style={{ background: 'var(--color-bg-stripe)', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            出库将自动从各 SKU 当前存储的库位扣减，无需手动选择仓库
+            出库将自动从各 商品编码 当前存储的库位扣减，无需手动选择仓库
           </Typography.Text>
         </div>
       )}

@@ -36,7 +36,7 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
           <Divider style={{ margin: '12px 0' }}>商品 &amp; 金额</Divider>
           <Descriptions column={2} bordered>
             <Descriptions.Item label="商品名" span={2}>{detail.productName || '-'}</Descriptions.Item>
-            <Descriptions.Item label="SKU">{detail.skuCode || '-'}</Descriptions.Item>
+            <Descriptions.Item label="商品编码">{detail.skuCode || '-'}</Descriptions.Item>
             <Descriptions.Item label="数量">{detail.quantity} 件</Descriptions.Item>
             <Descriptions.Item label="商品单价">¥{detail.unitPrice ?? '-'}</Descriptions.Item>
             <Descriptions.Item label="订单总额">¥{detail.totalAmount ?? '-'}</Descriptions.Item>

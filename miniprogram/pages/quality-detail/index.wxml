@@ -439,7 +439,7 @@
     <view class="detail-card {{bomCollapsed ? 'bom-card--collapsed' : ''}}" wx:if="{{bom.length > 0}}">
       <view class="card-title-row" bindtap="onToggleBom">
         <view class="card-title-with-tag">
-          <text class="card-title">BOM 物料</text>
+          <text class="card-title">物料清单</text>
           <text class="card-badge">{{bom.length}}</text>
         </view>
         <text class="card-collapse-icon">{{bomCollapsed ? '展开' : '收起'}}</text>

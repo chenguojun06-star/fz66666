@@ -12,7 +12,7 @@ import { parseCareIconCodes, DEFAULT_CARE_ICON_CODES } from '@/utils/careIcons';
 import type { ProductionOrder } from '@/types/production';
 import type { LabelStyleInfo, SkuRow } from './types';
 
-/** 加载订单的 SKU 行（优先接口，降级到订单明细分组，再降级到单行兜底） */
+/** 加载订单的 商品编码 行（优先接口，降级到订单明细分组，再降级到单行兜底） */
 export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
   try {
     const res = await api.get(

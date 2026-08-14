@@ -64,7 +64,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
     if (outboundType === 'sales' && !outboundCustomerName.trim()) { message.warning('销售出库请填写客户名称'); return; }
     if (outboundType === 'scrap' && !outboundReason.trim()) { message.warning('请填写报废原因'); return; }
     const selectedItems = skuDetails.filter(item => (item.outboundQty || 0) > 0);
-    if (selectedItems.length === 0) { message.warning('请至少输入一个SKU的出库数量'); return; }
+    if (selectedItems.length === 0) { message.warning('请至少输入一个商品编码的出库数量'); return; }
     const invalidItems = selectedItems.filter(item => (item.outboundQty || 0) > item.availableQty);
     if (invalidItems.length > 0) { message.error(`${invalidItems[0].sku} 的出库数量超过可用库存`); return; }
     outboundSubmittingRef.current = true;
@@ -78,7 +78,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
         }
         return result;
       });
-      if (outboundItems.length === 0) { message.warning('请至少填写一个SKU的出库数量'); return; }
+      if (outboundItems.length === 0) { message.warning('请至少填写一个商品编码的出库数量'); return; }
       await api.post('/warehouse/finished-inventory/outbound', {
         outboundType,
         ...(outboundReason.trim() ? { outboundReason: outboundReason.trim() } : {}),
@@ -96,7 +96,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
         ...(outboundCustomerPhone ? { customerPhone: outboundCustomerPhone } : {}),
         ...(outboundShippingAddress ? { shippingAddress: outboundShippingAddress } : {}),
       });
-      message.success(`出库成功，共 ${outboundItems.length} 个SKU已出库`);
+      message.success(`出库成功，共 ${outboundItems.length} 个商品编码已出库`);
       try {
         window.dispatchEvent(new Event('data:changed'));
       } catch (_e) {

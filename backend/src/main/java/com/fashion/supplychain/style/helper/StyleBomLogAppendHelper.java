@@ -1,11 +1,8 @@
 package com.fashion.supplychain.style.helper;
 
 import com.fashion.supplychain.common.AbstractOperationLogAppendHelper;
-import com.fashion.supplychain.common.OperationLogAppendUtil;
 import com.fashion.supplychain.style.entity.StyleBom;
-import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleBomService;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +12,9 @@ import java.util.function.Function;
 /**
  * 款式BOM操作日志追加
  * P0铁律#6: 操作日志必须记录关键业务操作
+ *
+ * 注意：款式级操作（同步物料库/生成采购任务/库存检查）必须写入 t_style_operation_log（经 StyleLogHelper），
+ * 严禁 append 到 t_style_info.description —— 该字段是"生产要求"业务字段，曾被日志污染（D-069）。
  */
 @Component
 public class StyleBomLogAppendHelper extends AbstractOperationLogAppendHelper<StyleBom, String> {
@@ -23,7 +23,7 @@ public class StyleBomLogAppendHelper extends AbstractOperationLogAppendHelper<St
     private StyleBomService styleBomService;
 
     @Autowired
-    private StyleInfoService styleInfoService;
+    private StyleLogHelper styleLogHelper;
 
     @Override
     protected StyleBomService getService() {
@@ -49,15 +49,8 @@ public class StyleBomLogAppendHelper extends AbstractOperationLogAppendHelper<St
         if (styleId == null) {
             return;
         }
-        OperationLogAppendUtil.appendOperation(
-            styleId,
-            styleInfoService,
-            StyleInfo::getDescription,
-            StyleInfo::setDescription,
-            action,
-            detail,
-            "款式"
-        );
+        // D-069: 写入样式操作日志表，禁止污染生产要求(description)字段
+        styleLogHelper.saveStyleLog(styleId, action, detail);
     }
 
     public void appendSave(String bomId, int itemCount) {

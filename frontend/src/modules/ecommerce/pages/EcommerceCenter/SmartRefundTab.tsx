@@ -126,7 +126,7 @@ const SmartRefundTab: React.FC = () => {
     { title: '订单号', dataIndex: 'orderNo', width: 140 },
     { title: '平台订单号', dataIndex: 'platformOrderNo', width: 160 },
     { title: '平台', dataIndex: 'platform', width: 80, render: (v) => v ? <Tag color="blue">{v}</Tag> : '-' },
-    { title: 'SKU编码', dataIndex: 'skuCode', width: 130 },
+    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
     { title: '数量', dataIndex: 'quantity', width: 70, align: 'center' as const },
     {
       title: '退款金额', dataIndex: 'payAmount', width: 100, align: 'right' as const,

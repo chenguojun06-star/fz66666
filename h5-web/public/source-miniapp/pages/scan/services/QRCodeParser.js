@@ -215,7 +215,7 @@ class QRCodeParser {
 
     return {
       success: true,
-      message: isSku ? '解析成功 (SKU)' : '解析成功 (菲号)',
+      message: isSku ? '解析成功 (商品编码)' : '解析成功 (菲号)',
       data: {
         scanCode: raw,
         quantity: bundleResult.quantity,

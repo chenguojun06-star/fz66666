@@ -109,7 +109,7 @@ export function useDistributorTabData(): UseDistributorTabDataReturn {
       message.success(`B2B 订单创建成功：${res?.data?.orderNo ?? ''}`);
       st.fetchB2BOrders();
     } catch {
-      message.error('创建失败，请检查 SKU 价格政策是否已配置');
+      message.error('创建失败，请检查 商品编码 价格政策是否已配置');
     }
   }, [st, message]);
 

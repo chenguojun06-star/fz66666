@@ -49,6 +49,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<MaterialStock>()
                 .eq(MaterialStock::getDeleteFlag, 0)
+                // D-070: 补齐租户隔离（铁律7：跨租户所有查询必须带tenant_id）
+                .eq(MaterialStock::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
                 .like(StringUtils.hasText(materialCode), MaterialStock::getMaterialCode, materialCode)
                 .like(StringUtils.hasText(materialName), MaterialStock::getMaterialName, materialName)
                 .eq(StringUtils.hasText(materialType), MaterialStock::getMaterialType, materialType)

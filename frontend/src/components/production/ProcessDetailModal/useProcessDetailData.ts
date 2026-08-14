@@ -185,7 +185,7 @@ export const useProcessDetailData = (
         );
       } catch (e) {
         if (cancelled) return;
-        console.error('[useProcessDetailData] 加载入库SKU失败:', e);
+        console.error('[useProcessDetailData] 加载入库商品编码失败:', e);
         setWarehousingSkuRows([]);
       }
     })();

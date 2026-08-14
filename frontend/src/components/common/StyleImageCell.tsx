@@ -17,7 +17,7 @@ import { extractStyleNoFromSkuCode, type StyleImageMap } from '@/hooks/useStyleC
 export interface StyleImageCellProps {
   /** 款号（优先使用） */
   styleNo?: string;
-  /** SKU 编码（如果没传 styleNo，则从 skuCode 拆分） */
+  /** 商品编码（如果没传 styleNo，则从 skuCode 拆分） */
   skuCode?: string;
   /** 款号 → cover URL 映射 */
   imageMap: StyleImageMap;

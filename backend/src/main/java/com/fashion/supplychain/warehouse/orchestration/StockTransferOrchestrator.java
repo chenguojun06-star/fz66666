@@ -194,51 +194,88 @@ public class StockTransferOrchestrator {
     }
 
     private void moveMaterialStock(StockTransfer transfer, int qty) {
+        MaterialStock stock = findMaterialStock(transfer, transfer.getFromLocationCode());
+        if (stock == null) {
+            stock = findMaterialStock(transfer, null);
+        }
+        if (stock == null) {
+            throw new IllegalStateException(
+                    "未找到物料库存，无法调拨: materialCode=" + transfer.getMaterialCode());
+        }
+        if (stock.getQuantity() != null && stock.getQuantity() < qty) {
+            throw new IllegalStateException(
+                    "调出库位库存不足: materialCode=" + transfer.getMaterialCode()
+                            + ", 当前库存=" + stock.getQuantity() + ", 调拨数量=" + qty);
+        }
+        MaterialStock target = findMaterialStock(transfer, transfer.getToLocationCode());
+        if (target == null) {
+            target = createTargetStock(stock, transfer);
+        }
+        // D-070: 修复调拨零和BUG——此前对同一行先扣后加导致库存净变化为0
+        materialStockService.decreaseStockById(stock.getId(), qty);
+        materialStockService.updateStockQuantity(target.getId(), qty);
+        log.info("[调拨] 物料库存变动完成: materialCode={}, qty={}, {} -> {}, 源stockId={}, 目标stockId={}",
+                transfer.getMaterialCode(), qty, transfer.getFromLocationCode(),
+                transfer.getToLocationCode(), stock.getId(), target.getId());
+    }
+
+    /** 按物料编码+颜色+尺码+库位查找库存记录（库位为空时忽略库位条件） */
+    private MaterialStock findMaterialStock(StockTransfer transfer, String location) {
         LambdaQueryWrapper<MaterialStock> qw = new LambdaQueryWrapper<>();
         qw.eq(MaterialStock::getMaterialCode, transfer.getMaterialCode())
           .eq(MaterialStock::getTenantId, transfer.getTenantId())
           .eq(MaterialStock::getDeleteFlag, 0);
+        if (StringUtils.isNotBlank(location)) {
+            qw.eq(MaterialStock::getLocation, location);
+        }
         if (StringUtils.isNotBlank(transfer.getColor())) {
             qw.eq(MaterialStock::getColor, transfer.getColor());
         }
         if (StringUtils.isNotBlank(transfer.getSize())) {
             qw.eq(MaterialStock::getSize, transfer.getSize());
         }
-        MaterialStock stock = materialStockService.getOne(qw, false);
-        if (stock == null) {
-            log.warn("[调拨] 未找到物料库存: materialCode={}", transfer.getMaterialCode());
-            return;
-        }
-        if (stock.getQuantity() != null && stock.getQuantity() < qty) {
-            throw new IllegalStateException(
-                    "调出库位库存不足: materialCode=" + transfer.getMaterialCode()
-                    + ", 当前库存=" + stock.getQuantity() + ", 调拨数量=" + qty);
-        }
-        materialStockService.updateStockQuantity(stock.getId(), -qty);
-        materialStockService.updateStockQuantity(stock.getId(), qty);
-        log.info("[调拨] 物料库存变动完成: materialCode={}, qty={}, 新库位={}",
-                transfer.getMaterialCode(), qty, transfer.getToLocationCode());
+        qw.orderByAsc(MaterialStock::getCreateTime);
+        return materialStockService.getOne(qw, false);
+    }
+
+    /** 目标库位无库存记录时，复制源库存信息新建一条零库存记录 */
+    private MaterialStock createTargetStock(MaterialStock source, StockTransfer transfer) {
+        MaterialStock target = new MaterialStock();
+        target.setMaterialId(source.getMaterialId());
+        target.setMaterialCode(source.getMaterialCode());
+        target.setMaterialName(source.getMaterialName());
+        target.setMaterialType(source.getMaterialType());
+        target.setSpecifications(source.getSpecifications());
+        target.setColor(source.getColor());
+        target.setSize(source.getSize());
+        target.setUnit(source.getUnit());
+        target.setUnitPrice(source.getUnitPrice());
+        target.setSupplierId(source.getSupplierId());
+        target.setSupplierName(source.getSupplierName());
+        target.setWarehouseAreaId(source.getWarehouseAreaId());
+        target.setWarehouseAreaName(source.getWarehouseAreaName());
+        target.setLocation(transfer.getToLocationCode());
+        target.setQuantity(0);
+        target.setLockedQuantity(0);
+        target.setTotalValue(java.math.BigDecimal.ZERO);
+        target.setSafetyStock(source.getSafetyStock());
+        target.setTenantId(transfer.getTenantId());
+        target.setDeleteFlag(0);
+        materialStockService.save(target);
+        log.info("[调拨] 目标库位无库存记录，已新建: materialCode={}, location={}, stockId={}",
+                target.getMaterialCode(), target.getLocation(), target.getId());
+        return target;
     }
 
     private void moveProductSkuStock(StockTransfer transfer, int qty) {
+        // D-070: 成品SKU无分库位库存维度，一减一加等于净零。调拨仅记录单据与轨迹，不再错误地双写总库存
         if (StringUtils.isBlank(transfer.getStyleNo())) {
             log.warn("[调拨] 成品调拨缺少款号，跳过: transferNo={}", transfer.getTransferNo());
             return;
         }
-        String skuCode = transfer.getStyleNo();
-        if (StringUtils.isNotBlank(transfer.getColor())) {
-            skuCode += "-" + transfer.getColor();
-        }
-        if (StringUtils.isNotBlank(transfer.getSize())) {
-            skuCode += "-" + transfer.getSize();
-        }
-        try {
-            productSkuService.decreaseStockBySkuCode(skuCode, qty);
-        } catch (Exception e) {
-            throw new IllegalStateException("调出库存不足或SKU不存在: skuCode=" + skuCode + ", " + e.getMessage());
-        }
-        productSkuService.updateStock(skuCode, qty);
-        log.info("[调拨] 成品SKU库存变动完成: skuCode={}, qty={}", skuCode, qty);
+        log.info("[调拨] 成品SKU调拨完成（总库存不变，仅库位轨迹记录）: styleNo={}, color={}, size={}, qty={}, {} -> {}",
+                transfer.getStyleNo(), transfer.getColor(), transfer.getSize(), qty,
+                transfer.getFromLocationCode(), transfer.getToLocationCode());
     }
 
     private String generateTransferNo() {

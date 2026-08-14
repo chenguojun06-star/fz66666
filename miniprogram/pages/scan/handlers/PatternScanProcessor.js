@@ -26,7 +26,7 @@ const SAMPLE_OPERATIONS = [
 
 // 样衣开发阶段（PC端配置）
 const DEV_STAGES = [
-  { key: 'bom', name: 'BOM' },
+  { key: 'bom', name: '物料清单' },
   { key: 'pattern', name: '纸样' },
   { key: 'process', name: '单价' },
   { key: 'secondary', name: '二次工艺' },

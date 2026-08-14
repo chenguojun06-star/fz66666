@@ -103,7 +103,7 @@ export function buildColumns({
       render: (_: unknown, record: ProductionOrder) => {
         const lineCount = getOrderLines(record).length;
         if (lineCount > 1) {
-          return <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{`按SKU生成 ${lineCount} 条`}</span>;
+          return <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{`按商品编码生成 ${lineCount} 条`}</span>;
         }
         return (
           <Input

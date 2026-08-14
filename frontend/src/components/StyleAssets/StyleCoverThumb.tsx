@@ -52,7 +52,7 @@ const StyleCoverThumb: React.FC<{
   borderRadius?: number;
   fit?: 'cover' | 'contain';
   onClick?: (e: React.MouseEvent) => void;
-  color?: string; // 新增：颜色参数，传入后优先显示SKU颜色图片
+  color?: string; // 新增：颜色参数，传入后优先显示商品编码颜色图片
 }> = ({ styleId, styleNo, src, size = 40, borderRadius = 6, fit = 'cover', onClick, color }) => {
   const isFill = size === 'fill';
   const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 40;
@@ -110,7 +110,7 @@ const StyleCoverThumb: React.FC<{
       try {
         let imageUrl: string | null = null;
         
-        // 优先获取SKU颜色图片（如果有color参数）
+        // 优先获取商品编码颜色图片（如果有color参数）
         // color参数可能是逗号分隔的多颜色值（如"白色,蓝色,黑色"），只取第一个颜色查询
         if (color && styleNo) {
           try {
@@ -126,7 +126,7 @@ const StyleCoverThumb: React.FC<{
           }
         }
         
-        // 如果没有SKU颜色图片，获取款号封面图
+        // 如果没有商品编码颜色图片，获取款号封面图
         if (!imageUrl) {
           const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
           if (res.code === 200) {

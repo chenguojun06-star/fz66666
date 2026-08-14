@@ -33,8 +33,8 @@ const GiftRuleModal: React.FC<GiftRuleModalProps> = ({ open, record, onClose, on
         <Form.Item label="规则名称" name="ruleName" rules={[{ required: true, message: '请输入规则名称' }]}>
           <Input placeholder="如：满99送袜子" />
         </Form.Item>
-        <Form.Item label="赠品SKU编码" name="giftSkuCode" rules={[{ required: true, message: '请输入赠品SKU编码' }]}>
-          <Input placeholder="赠品SKU编码" />
+        <Form.Item label="赠品商品编码" name="giftSkuCode" rules={[{ required: true, message: '请输入赠品商品编码' }]}>
+          <Input placeholder="赠品商品编码" />
         </Form.Item>
         <Form.Item label="赠品数量" name="giftQuantity" rules={[{ required: true, message: '请输入赠品数量' }]}>
           <InputNumber min={1} precision={0} style={{ width: '100%' }} />

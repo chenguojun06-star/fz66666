@@ -51,7 +51,7 @@ interface UseStyleBasicInfoFormParams {
  *  2. applyStyleParseResult：智能识别结果填充逻辑
  *  3. handleStyleParseResult：透传给父组件的包装函数
  *  4. useImperativeHandle：通过 forwardedRef 暴露 applyStyleParseResult
- *  5. skuRefreshTrigger：触发 SKU 表刷新的内部信号
+ *  5. skuRefreshTrigger：触发 商品编码 表刷新的内部信号
  */
 export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
   const {
@@ -78,7 +78,7 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
   const isInitialMountRef = useRef(true);
   const [skuRefreshTrigger, setSkuRefreshTrigger] = useState(0);
 
-  // 颜色/尺码/数量变化时自动保存并同步生成 SKU（不调 onRefresh，避免表单重置打断编辑）
+  // 颜色/尺码/数量变化时自动保存并同步生成 商品编码（不调 onRefresh，避免表单重置打断编辑）
   useEffect(() => {
     if (!styleId) return;
     const colorsKey = colorOptions.join(',');
@@ -109,7 +109,7 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
             };
           }),
         });
-        // 只刷新 SKU 表，不刷新整个款式数据（避免表单重置）
+        // 只刷新 商品编码 表，不刷新整个款式数据（避免表单重置）
         setSkuRefreshTrigger((prev) => prev + 1);
       } catch (e: any) {
         message.error(e?.message || '颜色尺码同步失败');

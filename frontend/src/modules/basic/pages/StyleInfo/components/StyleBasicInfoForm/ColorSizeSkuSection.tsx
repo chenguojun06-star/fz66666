@@ -50,7 +50,7 @@ interface ColorSizeSkuSectionProps {
   setCommonColors: (v: string[]) => void;
   editLocked: boolean;
   isFieldLocked: (fieldValue: any) => boolean;
-  // SKU 表相关
+  // 商品编码 表相关
   styleId?: string;
   styleNo?: string;
   skc?: string;
@@ -61,8 +61,8 @@ interface ColorSizeSkuSectionProps {
 }
 
 /**
- * 区5：颜色 / 尺码 / SKU 配置（融合一个模块）
- * 包含 StyleColorSizeTable 与根据其自动生成的 SKU 明细表。
+ * 区5：颜色 / 尺码 / 商品编码 配置（融合一个模块）
+ * 包含 StyleColorSizeTable 与根据其自动生成的 商品编码 明细表。
  */
 const ColorSizeSkuSection: React.FC<ColorSizeSkuSectionProps> = ({
   size1, setSize1, size2, setSize2, size3, setSize3, size4, setSize4, size5, setSize5,
@@ -126,7 +126,7 @@ const ColorSizeSkuSection: React.FC<ColorSizeSkuSectionProps> = ({
         hideInternalTitle
       />
 
-      {/* 根据颜色/尺码自动生成的 SKU 明细表 */}
+      {/* 根据颜色/尺码自动生成的 商品编码 明细表 */}
       {styleId && (
         <StyleSkuTab
           styleId={styleId}

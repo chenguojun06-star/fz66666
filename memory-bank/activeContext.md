@@ -1,11 +1,53 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（schema drift 全量修复 D-067）
+> 最后更新：2026-08-14（生产要求被BOM日志污染根因修复 D-069：日志迁 t_style_operation_log + Flyway清洗 + 前端操作记录面板）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 生产要求字段被 BOM 操作日志污染 — 根因修复 ✅（详见 D-069）
+
+用户怒斥"生产要求里进了莫名其妙文字" → 根因 `t_style_info.description` 一字段两用：既是生产要求，又被 `StyleBomLogAppendHelper` 当日志容器，每次 BOM同步/库存检查/生成采购都往头部插 `[时间] 李老板 动作：详情`：
+
+- [x] **后端**：款式级 BOM 日志改走 `StyleLogHelper.saveStyleLog` → `t_style_operation_log`，不再碰 description（mvn compile ✓）
+- [x] **Flyway V202708143000**：REGEXP_REPLACE 清洗存量日志行（仅匹配行首完整时间戳格式）
+- [x] **前端**：生产Tab 新增"操作记录"面板（`OperationLogSection.tsx`，消费 `/api/style/operation-log/list`，bizType 标签+时间+操作人+动作），补偿日志迁走后的查看入口（tsc ✓）
+- [ ] **待验证**：本地启动后端让 Flyway 自动清洗，抽查生产要求干净 + 操作记录面板显示历史日志
+
+### 2026-08-14 样衣详情颜色图片预览 Bug 修复 + PC 全站 SKU 术语统一（62文件）✅（详见 D-068）
+
+用户反馈"点图片变得非常大还不知道怎么弄" → 根因 `StyleSkuColorImages.tsx` antd Image 内置全屏 preview 与自制 Modal 双触发叠加：
+
+- [x] **预览修复**：`preview={false}` 关闭 antd 内置层，保留自制 Modal（600px 居中、图片 maxHeight 65vh + contain、遮罩/X 可关、title 提示"点击预览"）
+- [x] **纠正上轮错误结论**："PC 零残留"系 search_content glob 漏检（`**/*.tsx` 与 path 组合漏掉 modules 子目录），实际 warehouse/production/ecommerce/system 还有 120+ 处
+- [x] **PC 全站批量统一**：python3 显式 UTF-8 脚本替换中文语境 SKU 文案（61文件），另手补 7 处独立 'SKU' 表头；纯 ASCII 标识符零改动；tsc --noEmit 通过
+- [x] **踩坑沉淀 D-068**：macOS `perl -CSD -pi` 双重编码陷阱（已回滚重做），后续批量改中文一律 python3
+- [ ] 待浏览器实际点验颜色图片预览交互
+
+### 2026-08-14 手机端全端术语统一（SKU→商品编码 / BOM→物料清单）✅
+
+用户拍板"全部统一一下" → 小程序 13 文件 17 处用户可见文案统一，与 PC（D-061/D-062）对齐：
+
+- [x] **SKU→商品编码（5处）**：成品库存搜索占位符"搜索订单号/款号/SKU"、详情页Tab/卡片标题"SKU明细"、扫码解析toast"解析成功 (SKU)"、库存弹窗"SKU: xxx"
+- [x] **BOM→物料清单（12处）**：样衣详情Tab"BOM物料"、质检详情"BOM 物料"、订单详情"BOM 物料清单"、阶段页"BOM配置"/"暂无BOM数据"/空态"暂无 BOM 物料"、扫码确认2条warn提示、开发阶段chips（detail/stage-detail/PatternScanProcessor 三处 name:'BOM'）、home提示"BOM 清单"
+- [x] **代码标识符不动**：sku-*/bom-* CSS类、skuCode字段、data-sku属性、注释均保留（仅改用户可见文案）
+- [x] **复查零残留**：wxml 文本节点与 js 字符串中 SKU/BOM 用户可见文案清零
+- [x] **H5 副本同步**：13 文件已 cp 至 `h5-web/source-miniapp` + `h5-web/public/source-miniapp` 并 diff 校验一致；h5-web/src 独立应用零匹配无需改
+- [ ] 待微信开发者工具预览验收文案效果
+
+### 2026-08-14 手机端是否需同步 PC/后端近期更新 — 全量核实完毕 ✅（无需强制同步）
+
+用户问"手机端需要同步这些更新吗" → 逐项核对 D-058~D-067 与 miniprogram 代码：
+
+- [x] **D-058/D-062（样衣详情新字段 designer/supplier/productType/theme + 标签改商品分类/虚拟分类）**：mobile 详情页根本不读取/不显示这些新字段，且 mobile 无任何用户可见"品类/季节"标签（列表 meta 行只拼值，wxml 中仅注释）；列表 category/season 读真实 entity 字段 → 不受影响
+- [x] **D-065/D-067（领料三锚点校验 + patternProductionId 列）**：mobile `procurement/task-detail/index.js:726-737` 早已带全锚点（patternProductionId 本就是手机端先加的字段）→ 已兼容；schema drift 是 additive 补列，mobile 走 API 不受影响
+- [x] **D-063（样衣列表统计8vs6）**：mobile 样衣开发列表走 `api.production.listPatterns`（pattern-production 接口），不走 `/style/info/list` stats → 不受影响
+- [x] **D-060/D-059（Flyway/编译警告）、D-064（PC TextArea CSS）、D-066（PC 工作台组件）**：均为后端/PC 专属 → 无关
+- [x] **D-061（SKU→商品编码/BOM清单→物料清单）**：mobile 无订单管理页；成品库存"SKU明细"、看板"BOM 物料清单"属其他模块且文案已含"物料清单" → P2 可选统一，不强制
+- [x] **H5 四端副本同步状态抽查**：`h5-web/source-miniapp` 与 `h5-web/public/source-miniapp` 对比 miniprogram 关键文件（procurement/task-detail、sample-development/index）diff 一致 ✓
+- 结论：**手机端零改动**。后续若要在手机端样衣详情显示设计师/供应商，读 designer/supplier 新字段即可（sampleNo 仅旧数据兜底）
 
 ### 2026-08-14 仓库端领料列表500 — schema drift 全量清零 ✅（详见 D-067）
 

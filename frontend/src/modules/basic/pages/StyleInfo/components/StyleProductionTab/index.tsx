@@ -4,6 +4,7 @@ import type { StyleProductionTabProps } from './types';
 import { useStyleProductionTabData } from './useStyleProductionTabData';
 import SampleReviewSection from './SampleReviewSection';
 import ProductionRequirementsSection from './ProductionRequirementsSection';
+import OperationLogSection from './OperationLogSection';
 import SampleReviewModal from './SampleReviewModal';
 import OcrModal from './OcrModal';
 
@@ -99,6 +100,9 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
         onOpenOcr={handleOcrOpen}
         onTextChange={handleTextChange}
       />
+
+      {/* 款式操作记录（BOM同步/库存检查/生成采购等，来源 t_style_operation_log） */}
+      <OperationLogSection styleId={styleId} styleNo={styleNo} />
 
       {/* 样衣审核 Modal */}
       <SampleReviewModal

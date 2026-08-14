@@ -55,7 +55,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
 
   const handleAddSku = async () => {
     if (!skuInput.trim()) {
-      message.warning('请输入SKU编码');
+      message.warning('请输入商品编码');
       return;
     }
     setQuerying(true);
@@ -89,9 +89,9 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
             color: data.suggestedColor,
             size: data.suggestedSize,
           });
-          message.info('SKU不存在，可开启自动创建后添加');
+          message.info('商品编码不存在，可开启自动创建后添加');
         } else {
-          message.warning('SKU不存在');
+          message.warning('商品编码不存在');
         }
       }
     } catch (e: any) {
@@ -145,7 +145,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const handleSubmit = async () => {
     if (loadingRef.current) return;
     if (items.length === 0) {
-      message.warning('请添加入库SKU');
+      message.warning('请添加入库商品编码');
       return;
     }
     const values = form.getFieldsValue();
@@ -190,7 +190,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           warehouseLocation: values.warehouseLocation || '默认仓',
           sourceType: values.sourceType || 'free_inbound',
         });
-        message.success(`入库成功，共${items.length}个SKU`);
+        message.success(`入库成功，共${items.length}个商品编码`);
       }
       setItems([]);
       onSuccess();
@@ -232,7 +232,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const selectedArea = areas.find((a) => a.id === selectedAreaId);
 
   const columns = [
-    { title: 'SKU', dataIndex: 'skuCode', key: 'skuCode', width: 160 },
+    { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 160 },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 100 },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 80 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 60 },
@@ -279,9 +279,9 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
     >
       <Space vertical style={{ width: '100%' }} size={16}>
         <div>
-          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>添加SKU</div>
+          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>添加商品编码</div>
           <Space.Compact style={{ width: '100%' }}>
-            <Input value={skuInput} onChange={e => setSkuInput(e.target.value)} placeholder="输入SKU编码（款号-颜色-尺码），回车添加" onPressEnter={handleAddSku} size="large" allowClear />
+            <Input value={skuInput} onChange={e => setSkuInput(e.target.value)} placeholder="输入商品编码（款号-颜色-尺码），回车添加" onPressEnter={handleAddSku} size="large" allowClear />
             <Button type="primary" size="large" icon={<PlusOutlined />} loading={querying} onClick={handleAddSku}>添加</Button>
           </Space.Compact>
         </div>
@@ -290,12 +290,12 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           <Alert
             type="warning"
             showIcon
-            title="SKU不存在"
+            title="商品编码不存在"
             description={
               <div style={{ marginTop: 8 }}>
                 <div style={{ marginBottom: 8 }}>
                   <Switch checked={autoCreate} onChange={setAutoCreate} />
-                  <span style={{ marginLeft: 8 }}>自动创建款号和SKU后入库</span>
+                  <span style={{ marginLeft: 8 }}>自动创建款号和商品编码后入库</span>
                 </div>
                 {autoCreate && (
                   <Row gutter={8}>
@@ -313,9 +313,9 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
 
         {items.length > 0 && (
           <>
-            <ResizableTable columns={columns} dataSource={items} rowKey="key" pagination={false} emptyDescription="暂无SKU数据" size="small" />
+            <ResizableTable columns={columns} dataSource={items} rowKey="key" pagination={false} emptyDescription="暂无商品编码数据" size="small" />
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-bg-highlight)', borderRadius: 6 }}>
-              <span>共 <b>{items.length}</b> 个SKU</span>
+              <span>共 <b>{items.length}</b> 个商品编码</span>
               <span>合计 <b>{items.reduce((s, i) => s + i.quantity, 0)}</b> 件</span>
               <span>总金额 <b>{formatMoney(items.reduce((s, i) => s + (i.quantity * (i.unitPrice || 0)), 0))}</b></span>
             </div>

@@ -42,7 +42,7 @@ export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImages
             });
           }
         } catch {
-          // SKU 接口失败时降级到 attachment
+          // 商品编码 接口失败时降级到 attachment
         }
       }
       try {
@@ -59,7 +59,7 @@ export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImages
           }
         });
       } catch {
-        // 出错时保留已获取的 SKU 数据
+        // 出错时保留已获取的 商品编码 数据
       }
       if (mounted && Object.keys(nextMap).length > 0) {
         setColorImageMap((prev) => ({ ...prev, ...nextMap }));
@@ -124,7 +124,7 @@ export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImages
               [normalizedColor]: uploadedUrl,
             });
           } catch (e) {
-            console.error('同步SKU颜色图片失败:', e);
+            console.error('同步商品编码颜色图片失败:', e);
           }
         }
       }
@@ -168,7 +168,7 @@ export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImages
             [normalizedColor]: '',
           });
         } catch (e) {
-          console.error('同步清除SKU颜色图片失败:', e);
+          console.error('同步清除商品编码颜色图片失败:', e);
         }
       }
       if (String(currentStyle?.cover || '') === String(colorImageMap[color] || '')) {
