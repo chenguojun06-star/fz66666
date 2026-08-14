@@ -1,11 +1,21 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-14（订单管理操作列修复 + SKU→商品编码 + BOM→物料清单 — 已推送 78a2b5a55）
+> 最后更新：2026-08-14（备注框压一行根因修复 D-064）
 
 ## 已完成
 
-### 2026-08-14 订单管理操作列修复 + 详情页术语统一 ✅
+### 2026-08-14 备注/全站TextArea被压成一行的根因修复 ✅
+
+用户反馈样衣详情页备注框只有一行、说明文字跑到框外。根因：global.css 全局统一高度规则 `.ant-input { height:32px !important }` 命中 `textarea.ant-input`，覆盖 autoSize 内联高度。
+
+- [x] global.css 6处 `.ant-input` → `input.ant-input`（主规则/search/affix/compact×2/table-cell 30px）
+- [x] BasicInfoSection.tsx 删除与 showCount 重复的 extra"最多500字"，marginBottom 恢复 8
+- [x] 验证：剩余 `.ant-input` 规则均无 height 覆盖；lint 0 错误
+- [x] 决策记录：D-064
+- [ ] 待用户刷新页面确认备注框 3~6 行高度 + 计数显示在框右下角
+
+### 2026-08-14 订单管理操作列修复 + 详情页术语统一 ✅（已推送 78a2b5a55）
 
 - [x] 操作列 fixed:'right' + width 96（根因：scroll.x=3500 多列下被推出可视区）
 - [x] 智能视图卡片操作按钮 hover 显示 → 常显
@@ -988,6 +998,8 @@
 - [ ] PC端样衣详情页其他 Tab 按截图改造（颜色规格/工艺说明/样品节点/设计状态/同类资料）
 - [ ] 手机端/H5 端样衣详情页是否需要同步改造（待用户确认）
 - [ ] 小云AI全链路测试（规划引擎+结构化输出+主动风险检测实际效果验证）
+- [x] 打印/列表/字典全系统同步 D-058 新字段结构（D-062：打印BasicInfoSection重对齐+设计师改读designer+6处旧标签同步，tsc 0 errors）
+- [x] 样衣列表统计8vs6修复+进度球可见即刷（D-063：统计Tab下推后端onlyInProgress/onlyCompleted/onlyDelayed+fetchList合并语义+45s轮询，前后端编译通过）
 - [x] P1性能：MaterialPurchase统计查询DATE()函数索引失效（291d42b55）
 - [x] P1性能：订单列表查询添加缓存（已接入OrderListCacheHelper）
 - [ ] P2：@Version与手写原子SQL混用风险统一

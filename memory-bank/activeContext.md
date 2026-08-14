@@ -1,11 +1,50 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（IDE诊断清零：3测试类unchecked+未用import/变量+TODO — 10b71ab8f 已推送Orchestrator）
+> 最后更新：2026-08-14（备注框压一行根因修复 D-064）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 备注框压成一行+说明文字跑出框外 根因修复 ✅（详见 D-064）
+
+用户反馈：样衣详情页基础信息Tab备注 TextArea 永远只有一行高、`0/500`计数和"最多500字"说明显示在框外。
+
+- [x] **根因**：`global.css` 全站统一高度规则 `.ant-input { height:32px !important }` 同时命中 `textarea.ant-input`，`!important` 覆盖 antd autoSize 内联高度 → 全站所有 TextArea 被压成一行
+- [x] **修复**：global.css 6处 `.ant-input` → `input.ant-input`（主规则/search/affix-wrapper/compact×2/table-cell 30px），单行 input 高度统一不变，textarea 交还 autoSize 控制
+- [x] `BasicInfoSection.tsx` 删除与 showCount 重复的 extra"最多500字"（渲染在框外），marginBottom 恢复 8
+- [x] 验证：global.css 剩余 3 处 `.ant-input` 均无 height 覆盖；BasicInfoSection lint 0 错误
+- [ ] 待用户刷新页面确认备注框 3~6 行 + 计数回到框右下角
+
+### 2026-08-14 样衣开发列表"顶部8条vs列表6条"+进度球延迟刷新修复 ✅（详见 D-063）
+
+用户反馈：顶部统计卡"开发中8/已延期5"与列表"共6条"不一致；生产端操作后进度球要等一轮轮询才更新。
+
+- [x] **根因1（口径撕裂）**：顶部统计卡读 `/style/info/stats`（全表），列表=服务端分页当前页数据+前端 activeStyles 二次过滤 → 分页截断差2条（那2个开发中且逾期的款在第2页）
+- [x] **修复**：统计Tab过滤下推后端（developing→`onlyInProgress`+`excludeScrapped`；completed→`onlyCompleted`；delayed→新增`onlyDelayed`=未完成+交期已过+启用），列表 total 即该Tab全量数
+  - 后端 `StyleInfoServiceImpl.buildQueryWrapper` 加 onlyDelayed；excludeScrapped 改 parseBooleanParam（修 axios 字符串"true"解析失效隐患）
+  - 前端 `useStyleList.ts` 初始 queryParams 带默认Tab(developing)过滤 + fetchList 改合并语义（防搜索/操作调用丢Tab过滤）
+  - `useStyleListData.ts` statFilterParams useMemo + Tab切换 setQueryParams 下推（跳过首跑防双请求）；displayTotal 去掉 activeStatFilter 前端分支
+- [x] **根因2（刷新时机）**：focus/visibilitychange 仅当 localStorage 有 STYLE_INFO_LIST_REFRESH_KEY（只有样衣入库页设置）才刷新；生产端操作页面不派发事件 → 切回只能等 90s 轮询
+- [x] **修复**：页面重新可见 + 距上次刷新>10s → 直接 fetchList（去掉 key 门槛）；轮询 90s→45s；handleProgressChange 补 loadStyleStats（顶部统计数字同步刷新）
+- [x] 验证：前端 tsc 0 errors + 后端 mvn compile 通过 + parseBooleanParam 兼容内部 Boolean.TRUE 调用方（OrderPendingCollector/PendingTaskOrchestrator）
+- ⚠️ 遗留：smartFilter/focusStyleIds/showAllStyles 仍为前端当前页过滤（displayTotal 受分页截断，属已知展示限制，规模小）
+
+### 2026-08-14 打印组件与全系统展示同步 D-058 新字段结构 ✅（详见 D-062）
+
+用户反馈：样衣打印预览仍显示旧字段结构（品类/季节/跟单员读orderType/设计师读sampleNo），D-058 改版的新字段（商品类型/商品主题/设计师独立字段/供应商）在打印中全部缺失，要求全系统排查同步。
+
+- [x] **打印 BasicInfoSection 重对齐**（`StylePrintModal/sections/BasicInfoSection.tsx`）：
+  - 款号信息块：品类→商品分类、季节→虚拟分类，新增 商品类型(productType)/设计师(designer,兜底sampleNo)/商品主题(theme)/供应商(supplier)；客户从客户信息块迁入（对齐详情页区1）
+  - 客户信息块：跟单员/销售渠道(迁入)/板类/打板价/吊牌价/销售价（对齐详情页区2，移除客户/设计师）
+  - 版次信息块：非样衣模式设计师改读 designer||sampleNo
+  - 备注块：更新过期注释（remark 已持久化，D-058 已删 delete 逻辑）
+- [x] **helpers.ts** 新增 `translateProductType`（FINISHED=成品/SEMI_FINISHED=半成品）
+- [x] **OrderManagementModals.tsx**：打印 extraInfo 设计师改读 `designer||sampleNo`
+- [x] **全系统旧标签同步**（品类→商品分类、季节→虚拟分类，纯文案）：StyleTableView.helpers / StyleCardView / OrderListContent / MaintenanceCenter / Production useColumnSettings / DictManage DICT_TYPES
+- [x] 数据链路核实：`/style/info/list` 返回 MyBatis-Plus 全字段，后端实体+前端 types/style.ts 均有新字段，打印无需改接口
+- [x] 验证：lint 0 诊断 + `npx tsc --noEmit` 相关文件 0 errors
 
 ### 2026-08-14 IDE诊断二次清零 ✅
 

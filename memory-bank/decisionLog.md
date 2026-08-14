@@ -1,7 +1,34 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-14（新增 D-059 历史遗留编译警告全量清理）
+> 最后更新：2026-08-14（新增 D-064 全局CSS误伤TextArea根因修复）
+
+---
+
+## D-064：全局统一高度CSS误伤TextArea — 备注框压成一行+说明文字跑出框外的根因修复（2026-08-14）
+
+### 现象（用户反馈，情绪强烈）
+样衣详情页基础信息Tab备注字段：①输入框永远只显示一行（`autoSize={{ minRows: 3 }}` 失效）；②占位说明/字数计数文字"跑到框外面"。
+
+### 根因
+`global.css` 的"全站控件统一高度"规则：
+```css
+.ant-input, ... { height: var(--control-height, 32px) !important; }
+```
+`.ant-input` 选择器**同样命中 `textarea.ant-input`**（antd TextArea 的原生 textarea 也带此类）。`!important` 覆盖 rc-textarea autoSize 计算出的内联高度 → 全站所有 TextArea 被强制压成 32px 一行；计数/说明文字（showCount 的 `0/500` 与 extra"最多500字"）渲染在框外下方，视觉上"文字跑出去了"。
+
+### 修复
+1. **global.css 6处选择器收窄**：`.ant-input` → `input.ant-input`（统一高度主规则/search/affix-wrapper/compact×2/table-cell 内 30px 那条）。单行 input 保持统一高度，textarea 完全脱离该规则、autoSize 正常生效
+2. **BasicInfoSection.tsx**：删除与 showCount 重复的 extra"最多500字"（渲染在框外，是"文字跑出去"观感来源之一），Form.Item marginBottom 恢复 8
+3. 验证：global.css 剩余 3 处 `.ant-input` 均无 height 覆盖（text-rendering/placeholder颜色/圆角），BasicInfoSection lint 0 错误
+
+### 教训（通用规则）
+1. **给 antd 全局样式用元素类选择器（`.ant-input`）做尺寸约束时，必须想到它同时命中 `input` 和 `textarea`**——多行文本域的高度永远交给 `autoSize`/`rows`，不要用 `!important` 高度统一
+2. "输入框只有一行+文字跑外面"这种组合症状，第一反应就是全局 CSS 覆盖了组件内联样式，而不是组件 props 写错
+3. 全站性 CSS 规则改动后要 grep 一遍所有变体（search/affix/compact/table-cell 等作用域副本），一处不改就留一个坑
+
+### 影响面
+全站所有 `Input.TextArea`（此前均被压成一行）恢复多行高度——这是修复而非回归。
 
 ---
 
@@ -82,6 +109,58 @@ DROP PROCEDURE IF EXISTS _add_style_basic_info_ext_columns;
 1. **不要用"不影响部署"作为不修代码的理由**：本地开发体验、代码可读性、CI 编译都是必须维护的
 2. **MyBatis-Plus 的 `any()` 歧义**：`insert(any())` / `updateById(any())` / `list(any())` 都会因为 `insert(T)` vs `insert(Collection<T>)` 重载而报 ambiguous error。必须用 `any(Entity.class)` 显式指定类型
 3. **测试代码也要编译通过**：CI 应该跑 `mvn test-compile` 而不是 `mvn compile -DskipTests`，否则测试代码腐烂到无法编译
+
+---
+
+## D-063：样衣列表统计口径下推后端 + 可见即刷（2026-08-14）
+
+### 上下文
+用户怒斥两个老问题：①顶部统计卡"开发中8个/已延期5个"但列表只显示6条；②生产端每个环节操作后，进度球不即时更新，要"等一轮回的数据查询"（90s轮询）才进进度球。
+
+### 根因
+1. **统计与列表数据源口径撕裂**：统计卡=后端`/style/info/stats`全表count；列表=服务端分页（当前页20条）+前端`activeStyles`二次过滤。差的2个款是"开发中且逾期"、落在第2页被分页截断 → 8vs6、5vs3同时差2，完全吻合。
+2. **刷新链路有门槛无兜底**：`focus/visibilitychange`仅当localStorage存在`STYLE_INFO_LIST_REFRESH_KEY`才刷新（全系统只有样衣入库页设置）；生产端扫码/领取页面不派发`data:changed`；90s轮询是唯一兜底 → 用户体感"等一轮才更新"。
+
+### 决策
+1. **统计Tab过滤下推后端**：列表接口新增消费`onlyInProgress/onlyCompleted/onlyDelayed(+excludeScrapped)`（仅 completed/inprogress 原本就有但前端从未传）；delayed口径=未完成+delivery_date<now+ENABLED，与stats完全一致；分页total即该Tab总数
+2. **fetchList参数改合并语义**：`{...queryParams, ...params}`，防止搜索/操作后调用覆盖丢Tab过滤
+3. **可见即刷**：页面重新可见+距上次>10s节流→直接fetchList，废除localStorage key单一门槛；轮询90s→45s
+4. **excludeScrapped解析修复**：`Boolean.TRUE.equals`改`parseBooleanParam`（axios序列化"true"字符串原逻辑恒false，静默失效）
+
+### 教训（第3次同类事故）
+1. **"服务端分页+客户端过滤"是统计口径撕裂的温床**：任何Tab/统计过滤必须下推到查询层，前端只做展示兜底
+2. **布尔参数解析统一走 parseBooleanParam**：axios GET 的 boolean 永远是字符串，`Boolean.TRUE.equals(String)` 恒 false 且无报错
+3. **刷新触发设计要回答"用户从哪回来"**：跨Tab/跨窗口/跨端操作后回页面，visibilitychange+节流直刷是最小可信方案；localStorage标记只适合"特定页面单向通知"
+
+### 未动项
+- smartFilter（智能提示已延期/临近交期）与 focusStyleIds（延期环节跳转）仍为前端当前页过滤，数据规模小，保持现状
+- 生产端扫码页面不补派发 data:changed（可见即刷已覆盖；逐页补事件改动面大，留待需要时做）
+
+---
+
+## D-062：打印组件与全系统展示同步 D-058 新字段结构（2026-08-14）
+
+### 上下文
+D-058 重写了样衣详情页基础信息Tab（新字段：商品分类/虚拟分类/商品类型/设计师独立字段/商品主题/客户迁区1/供应商/备注），但打印弹窗（StylePrintModal）仍用旧结构：设计师读 `sampleNo`（错误映射）、无新字段、标签仍是品类/季节。用户要求"全系统的同步问题"一次排查到位。
+
+### 决策
+1. **打印 BasicInfoSection 按 D-058 详情页三区结构重对齐**：款号信息块=区1（含新字段+客户迁入）、客户信息块=区2（跟单员/销售渠道/板类/三价）、版次信息块=区3（纸样师/车板师）
+2. **设计师全链路改读 designer 字段，sampleNo 仅作旧数据兜底**（打印/下单管理打印入口两处）
+3. **旧标签全系统同步**：品类→商品分类、季节→虚拟分类（6处：列表表格/卡片/订单列表/维护中心/生产列设置/字典管理）
+4. **板类只在客户信息块打印一次**（避免两块重复，详情页区2/区3虽都有但打印从简）
+
+### 理由
+- 打印是纸面交付物，与屏幕显示不一致直接导致用户对系统数据准确性失去信任（用户原话"每次都要我去查看这些"）
+- 标签文案统一是低成本高收益的同步（纯 label，无逻辑变更）
+- 后端实体/接口已有新字段（D-058+V202708140001），打印只需改前端映射，无需动接口
+
+### 教训
+1. **详情页字段改版必须同步排查所有展示出口**：打印弹窗/列表页/卡片视图/字典管理/其他模块引用同一字段时的 label 与取值映射（本次 8 个文件受影响）
+2. **打印组件的字段映射注释声称"与详情页对齐"但实际映射错误**（设计师→sampleNo），注释不可信，要以详情页当前代码为准逐字段核对
+
+### 未动项
+- 面料成分/款式特征/是否套里（打印款号信息块附属行，详情页在 BOM/款式特征区维护，保持现状）
+- 板类在版次信息块不重复打印（去重决策见上）
 
 ---
 
