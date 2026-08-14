@@ -46,6 +46,7 @@ const StageContent: React.FC<StageContentProps> = ({
       <div className="style-workbench__editor">
         <StyleBomTab
           styleId={record.id!}
+          styleNo={detail.styleNo}
           sizeColorConfig={sizeColorConfig}
           readOnly={Boolean((detail as any).bomCompletedTime)}
           bomAssignee={(detail as any).bomAssignee}
@@ -62,6 +63,7 @@ const StageContent: React.FC<StageContentProps> = ({
       <div className="style-workbench__editor">
         <StylePatternTab
           styleId={record.id!}
+          styleNo={detail.styleNo}
           sizeColorConfig={sizeColorConfig as any}
           patternStatus={(detail as any).patternStatus}
           patternStartTime={(detail as any).patternStartTime}
@@ -150,6 +152,7 @@ const StageContent: React.FC<StageContentProps> = ({
       <div className="style-workbench__editor">
         <StyleQuotationTab
           styleId={record.id!}
+          styleNo={detail.styleNo}
           totalQty={Number((detail as any).quantity || 0)}
           onSaved={onSectionRefresh}
         />

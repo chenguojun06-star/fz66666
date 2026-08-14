@@ -1,7 +1,31 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-14（新增 D-065 样衣BOM领取400修复）
+> 最后更新：2026-08-14（新增 D-066 同类漏传全量审计）
+
+---
+
+## D-066：D-065同类隐患全量审计 — 工作台3处漏传styleNo（2026-08-14）
+
+### 背景
+D-065 修复后，用 code-explorer 子代理对全前端做系统性审计：20 个带业务锚点 props 的组件 × 42 处调用方逐一核对，找出所有"调用方漏传锚点"同类隐患。
+
+### 审计结果
+唯一残留风险集中在一个文件：`StyleDevelopmentWorkbench/StageContent.tsx`（款式开发工作台）：
+1. `:47` StyleBomTab 漏传 styleNo（**高危**：工作台物料清单领取会被前置拦截，同 D-065 症状）
+2. `:63` StylePatternTab 漏传 styleNo（**高危**：工作台纸样开发领取同样被拦）
+3. `:151` StyleQuotationTab 漏传 styleNo（**中危**：报价 Tab 款号标题+打印报价单按钮整体不渲染）
+
+同文件 process/secondary/production 三个 Tab 都传了 `styleNo={detail.styleNo}`，纯漏写。其余 17 个组件（MaterialPickupModal 4处、StylePrintModal 6处、RemarkTimelineModal 8处、CuttingSheetPrintModal、NodeDetailModal、PurchaseDrawer、SyncProcessPriceModal 等）全部核对无隐患。
+
+### 修复
+StageContent.tsx 三处补传 `styleNo={detail.styleNo}`。tsc 0 errors + lint 0 诊断。
+
+### 方法论沉淀（以后新增锚点必传字段时照此执行）
+公共组件新增业务锚点 props 后的核对清单：
+1. grep 组件名找全部调用方（含跨模块 import）
+2. 逐个调用处比对锚点 props 是否传齐
+3. 对"部分传了部分没传"的文件重点看同文件对照组（同文件其他调用传了 = 纯漏写）
 
 ---
 

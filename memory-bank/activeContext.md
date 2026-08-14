@@ -1,11 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（样衣BOM领取400修复 D-065）
+> 最后更新：2026-08-14（同类漏传全量审计 D-066）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 D-065同类隐患全量审计+工作台3处修复 ✅（详见 D-066）
+
+用户质问"还有多少同类问题"→ code-explorer 全前端审计：20组件×42调用方逐一核对锚点props。
+
+- [x] **发现3处同类漏传**（全部在 `StyleDevelopmentWorkbench/StageContent.tsx` 款式开发工作台）：BOM Tab(:47)/纸样Tab(:63) 漏传 styleNo → 工作台领取同样会被拦；报价Tab(:151) 漏传 → 打印报价单按钮消失
+- [x] **已修复**：三处补传 `styleNo={detail.styleNo}`，tsc+lint 全过
+- [x] **其余17个组件核对无隐患**：MaterialPickupModal(4处)/StylePrintModal(6处)/RemarkTimelineModal(8处)/CuttingSheetPrintModal/NodeDetailModal/PurchaseDrawer/SyncProcessPriceModal/MaterialPurchaseDetail 等全量过
+- [x] 生产端 PickingForm 直接领料 payload 确认传齐
+- [ ] 待推送后用户在工作台重试验收
 
 ### 2026-08-14 样衣开发BOM申请领取 400 修复 ✅（详见 D-065）
 
