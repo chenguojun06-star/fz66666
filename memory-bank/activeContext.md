@@ -1,11 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（订单管理操作列修复 + SKU改名商品编码 + BOM清单改名物料清单 — 已推送 78a2b5a55）
+> 最后更新：2026-08-14（IDE诊断清零：3测试类unchecked+未用import/变量+TODO — 10b71ab8f 已推送Orchestrator）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 IDE诊断二次清零 ✅
+
+用户再贴一批诊断（全为 Warning/Info 非 Error）：3个测试类 unchecked 警告 + 未用 import/变量 + 1个 TODO 标记。
+
+- [x] SharedAgentMemoryServiceTest：删 ReflectionTestUtils import，类级 @SuppressWarnings("unchecked")
+- [x] SmartSourcingServiceImplTest：删 LocalDateTime import、删残留 bom2 死代码、类级抑制+移除2处方法级冗余抑制
+- [x] ProductionOrderQueryServiceStatsBoundaryTest：raw QueryWrapper 参数化（补 ProductionOrder import）、类级抑制
+- [x] StyleInfoOrchestrator：TODO 转=普通注释（信息保留，IDE任务面板不再显示），已推送 10b71ab8f
+- [x] lint 复核 4 文件全部 0 诊断
+- [!] **重要发现**：`.gitignore:30 backend/src/test/` 导致 3 个测试文件修复只在本地生效，无法推送（项目测试代码从未入库，云端无后端CI回归）。已向用户提出是否移除该 gitignore 规则，**待用户决策**
 
 ### 2026-08-14 订单管理操作列偏移修复 + 详情页术语统一 ✅（详见 D-061）
 
