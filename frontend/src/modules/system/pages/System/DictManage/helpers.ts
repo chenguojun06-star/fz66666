@@ -30,8 +30,8 @@ export const dedupeDictItems = (items: DictItem[]): DictItem[] => {
 
 // 字典类型定义（服装行业完整分类）
 export const DICT_TYPES = [
-  { value: 'category', label: '品类', description: '服装品类：女装、男装、童装、运动装等' },
-  { value: 'season', label: '季节', description: '季节类型：春季、夏季、秋季、冬季' },
+  { value: 'category', label: '商品分类', description: '商品分类：女装、男装、童装、运动装等' },
+  { value: 'season', label: '虚拟分类', description: '虚拟分类（季节字段复用）：春季、夏季、秋季、冬季等' },
   { value: 'color', label: '颜色', description: '常用颜色：黑色、白色、灰色等' },
   { value: 'size', label: '尺码', description: '常用尺码：XS、S、M、L、XL、XXL等' },
   { value: 'style_type', label: '款式类型', description: '服装款式：T恤、衬衫、裤子、裙子、外套等' },

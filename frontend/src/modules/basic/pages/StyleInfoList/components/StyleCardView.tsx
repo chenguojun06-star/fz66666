@@ -125,7 +125,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             return Number(record.sampleQuantity) || Number((record as any).quantity) || 0;
           },
         }),
-        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => toCategoryCn(val) }],
+        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '商品分类', key: 'category', render: (val) => toCategoryCn(val) }],
         [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '状态', key: 'latestPatternStatus', render: (_val, record) => isStageDoneRow(record as StyleInfo) ? '已入库' : '待入库' }],
         // 自定义字段（来自字段配置 isSystem=0）
         ...(customFields.length > 0

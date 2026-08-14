@@ -91,8 +91,8 @@ export const buildRowData = (data: StyleInfo[], options: BuildRowDataOptions): S
     const rowState = isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone;
     const metaItems = [
       { label: '来源', value: sourceMeta.label },
-      { label: '品类', value: toCategoryCn(record.category, categoryOptions) },
-      { label: '季节', value: toSeasonCn(record.season) },
+      { label: '商品分类', value: toCategoryCn(record.category, categoryOptions) },
+      { label: '虚拟分类', value: toSeasonCn(record.season) },
       { label: '颜色', value: resolveDisplayColor(record as StyleRecord) || '-' },
       { label: '码数', value: resolveDisplaySize(record as StyleRecord) || '-' },
       { label: '数量', value: `${resolveDisplayQuantity(record as StyleRecord) || '0'} 件` },

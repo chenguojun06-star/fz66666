@@ -272,13 +272,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
-        {/* 备注（从 TimeRemarkSection 迁移至此，最多500字） */}
+        {/* 备注（从 TimeRemarkSection 迁移至此，最多500字，showCount 显示计数） */}
         <Col xs={24}>
           <Form.Item
             name="remark"
             label="备注"
-            style={{ marginBottom: 0 }}
-            extra={<span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>最多500字</span>}
+            style={{ marginBottom: 8 }}
           >
             <Input.TextArea
               id="remark"

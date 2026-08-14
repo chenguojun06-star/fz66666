@@ -18,6 +18,14 @@ export const PLATE_TYPE_MAP: Record<string, string> = {
 /** 板类码值翻译为中文 */
 export const translatePlateType = (v?: string | null) => (v ? (PLATE_TYPE_MAP[v] ?? '未知') : '-');
 
+/** 商品类型翻译：FINISHED=成品，SEMI_FINISHED=半成品（与 StyleBasicInfoForm/constants.ts PRODUCT_TYPE_OPTIONS 对齐） */
+export const translateProductType = (v?: string | null): string => {
+  const raw = String(v ?? '').trim();
+  if (!raw) return '-';
+  const map: Record<string, string> = { FINISHED: '成品', SEMI_FINISHED: '半成品', 成品: '成品', 半成品: '半成品' };
+  return map[raw.toUpperCase()] || raw;
+};
+
 /** 模式 → 中文标题（用于按钮/标签等） */
 export const getModeTitle = (mode: StylePrintModalProps['mode']): string => {
   switch (mode) {

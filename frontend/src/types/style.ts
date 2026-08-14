@@ -277,6 +277,10 @@ export interface StyleQueryParams {
   keyword?: string;
   onlyCompleted?: boolean | number;
   onlyInProgress?: boolean | number;
+  /** 已延期 Tab：未完成 + 交期已过（口径对齐 /style/info/stats） */
+  onlyDelayed?: boolean | number;
+  /** 排除报废款（status=ENABLED） */
+  excludeScrapped?: boolean | number;
   pushedToOrderOnly?: boolean | number;
   progressNode?: string;
   page: number;

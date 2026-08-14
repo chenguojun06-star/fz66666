@@ -64,8 +64,13 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
         boolean onlyCompleted = parseBooleanParam(params, "onlyCompleted");
         boolean onlyInProgress = parseBooleanParam(params, "onlyInProgress");
+        // onlyDelayed：已延期 Tab 过滤（与 /style/info/stats 的 delayedStyles 口径一致：
+        // 未完成（含 NULL）+ deliveryDate < now；excludeScrapped 随请求一同传入）
+        boolean onlyDelayed = parseBooleanParam(params, "onlyDelayed");
         boolean pushedToOrderOnly = parseBooleanParam(params, "pushedToOrderOnly");
-        boolean excludeScrapped = Boolean.TRUE.equals(params.get("excludeScrapped"));
+        // 统一用 parseBooleanParam：axios GET 会把 boolean 序列化为字符串 "true"/"false"，
+        // Boolean.TRUE.equals("true") 恒为 false 会导致过滤静默失效
+        boolean excludeScrapped = parseBooleanParam(params, "excludeScrapped");
 
         LambdaQueryWrapper<StyleInfo> wrapper = new LambdaQueryWrapper<StyleInfo>()
                 .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
@@ -86,6 +91,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 // 修复 P1 bug：原 ne+OR 链导致条件恒为真（任何值都至少满足一个 ne），已完成记录也会被计入
                 .and(onlyInProgress, w -> w.isNull(StyleInfo::getSampleStatus)
                         .or().notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed"))
+                // onlyDelayed：未完成 + 交期已过（口径对齐 getStyleStats 的 delayedStyles）
+                .and(onlyDelayed, w -> w.isNull(StyleInfo::getSampleStatus)
+                        .or().notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed"))
+                .lt(onlyDelayed, StyleInfo::getDeliveryDate, java.time.LocalDateTime.now())
                 .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1);
 
         applyStatusFilter(wrapper, excludeScrapped);

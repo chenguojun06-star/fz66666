@@ -54,7 +54,8 @@ const OrderManagementModals: React.FC<OrderManagementModalsProps> = ({
         mode="order"
         extraInfo={{
           '交板日期': printingRecord?.deliveryDate,
-          '设计师': printingRecord?.sampleNo,
+          // 设计师：D-058 起为独立字段 designer，旧数据兜底 sampleNo
+          '设计师': printingRecord?.designer || printingRecord?.sampleNo,
         }}
       />
 

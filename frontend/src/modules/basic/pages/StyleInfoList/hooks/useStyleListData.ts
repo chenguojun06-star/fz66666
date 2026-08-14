@@ -28,6 +28,7 @@ export const useStyleListData = ({
   data,
   total,
   queryParams,
+  setQueryParams,
   fetchList,
   statsRangeType,
   loadDevelopmentStats,
@@ -113,19 +114,63 @@ export const useStyleListData = ({
     fetchList();
   }, [fetchList, queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName, queryParams.progressNode]);
 
-  // 监听刷新信号 + 进度变更事件
+  // 统计 Tab 过滤参数（口径对齐 /style/info/stats）：
+  // developing=未完成且启用 / completed=sampleStatus=COMPLETED / delayed=未完成+交期已过
+  const statFilterParams = useMemo(() => {
+    switch (activeStatFilter) {
+      case 'developing':
+        return { onlyInProgress: true, onlyCompleted: false, onlyDelayed: false, excludeScrapped: true };
+      case 'completed':
+        return { onlyInProgress: false, onlyCompleted: true, onlyDelayed: false };
+      case 'delayed':
+        return { onlyInProgress: false, onlyCompleted: false, onlyDelayed: true, excludeScrapped: true };
+      default:
+        return { onlyInProgress: false, onlyCompleted: false, onlyDelayed: false };
+    }
+  }, [activeStatFilter]);
+
+  // Tab 切换 → 下推后端过滤（服务端分页内过滤），保证列表条数与顶部统计卡一致。
+  // 首跑跳过：useStyleList 初始 queryParams 已带 developing 过滤，避免挂载双请求。
+  // setQueryParams → queryParams 变化 → fetchList 引用更新 → 上方初始化 effect 自动重新加载。
+  const statFilterInitRef = useRef(true);
+  useEffect(() => {
+    if (statFilterInitRef.current) {
+      statFilterInitRef.current = false;
+      return;
+    }
+    setQueryParams(prev => ({ ...prev, page: 1, ...statFilterParams }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStatFilter]);
+
+  // 监听刷新信号 + 进度变更事件 + 页面重新可见自动刷新
   useEffect(() => {
     const refreshIfNeeded = () => {
       if (!localStorage.getItem(STYLE_INFO_LIST_REFRESH_KEY)) return;
       localStorage.removeItem(STYLE_INFO_LIST_REFRESH_KEY);
       fetchList();
       loadDevelopmentStats(statsRangeType);
+      loadStyleStats();
+    };
+
+    // 页面重新可见（focus / 从其他 Tab 切回）：不再依赖 localStorage 标记，
+    // 距上次自动刷新 >10s 即直接拉取，解决"生产端操作后切回要等 90s 轮询进度球才更新"
+    const lastAutoRefreshRef = { current: Date.now() };
+    const handleVisibleRefresh = () => {
+      if (localStorage.getItem(STYLE_INFO_LIST_REFRESH_KEY)) {
+        refreshIfNeeded();
+        lastAutoRefreshRef.current = Date.now();
+        return;
+      }
+      if (Date.now() - lastAutoRefreshRef.current > 10000) {
+        lastAutoRefreshRef.current = Date.now();
+        fetchList();
+      }
     };
 
     refreshIfNeeded();
-    const handleFocus = () => refreshIfNeeded();
+    const handleFocus = () => handleVisibleRefresh();
     const handleVisibilityChange = () => {
-      if (!document.hidden) refreshIfNeeded();
+      if (!document.hidden) handleVisibleRefresh();
     };
 
     // 监听订单进度变更事件，实时刷新款式列表（500ms 防抖）
@@ -135,6 +180,7 @@ export const useStyleListData = ({
       debounceTimer = setTimeout(() => {
         fetchList();
         loadDevelopmentStats(statsRangeType);
+        loadStyleStats();
       }, 500);
     };
 
@@ -149,9 +195,9 @@ export const useStyleListData = ({
       window.removeEventListener('order:progress:changed', handleProgressChange);
       window.removeEventListener('data:changed', handleProgressChange);
     };
-  }, [fetchList, loadDevelopmentStats, statsRangeType]);
+  }, [fetchList, loadDevelopmentStats, loadStyleStats, statsRangeType]);
 
-  // 90s 轮询兜底（页面可见时才轮询，避免后台浪费资源）
+  // 45s 轮询兜底（页面可见时才轮询，避免后台浪费资源）
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
   useSync(
     'style-info-list-poll',
@@ -160,7 +206,7 @@ export const useStyleListData = ({
       return true;
     },
     () => {},
-    { interval: 90000, pauseOnHidden: true }
+    { interval: 45000, pauseOnHidden: true }
   );
 
   const stockStateLoadedRef = useRef('');
@@ -304,7 +350,9 @@ export const useStyleListData = ({
     return base;
   }, [smartFilter, activeStatFilter, data, activeStyles, completedStyles, overdueStyles, warningStyles, dateSortAsc, focusStyleIds, showAllStyles]);
 
-  const displayTotal = (focusStyleIds.size > 0 || smartFilter !== 'all' || activeStatFilter !== 'all' || !showAllStyles) ? displayData.length : total;
+  // 统计 Tab 过滤已下推后端（onlyInProgress/onlyCompleted/onlyDelayed），total 即该 Tab 全量总数；
+  // 仅 focus/smartFilter/showAllStyles 等纯前端过滤时才用当前页 length（受分页截断，属已知展示限制）
+  const displayTotal = (focusStyleIds.size > 0 || smartFilter !== 'all' || !showAllStyles) ? displayData.length : total;
 
   return {
     // 状态

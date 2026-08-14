@@ -133,10 +133,10 @@ const OrderListContent: React.FC<Props> = ({
               }),
               [
                 { label: '来源', key: 'developmentSourceType', render: (_v: any, record: any) => getStyleSourceText(record as StyleInfo) },
-                { label: '品类', key: 'category', render: (val: any) => toCategoryCn(val) },
+                { label: '商品分类', key: 'category', render: (val: any) => toCategoryCn(val) },
               ],
               [
-                { label: '季节', key: 'season', render: (val: any) => toSeasonCn(val) },
+                { label: '虚拟分类', key: 'season', render: (val: any) => toSeasonCn(val) },
                 { label: '面料', key: 'fabricComposition', render: (val: any) => val || '-' },
               ],
               [

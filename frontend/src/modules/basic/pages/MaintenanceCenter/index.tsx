@@ -190,7 +190,7 @@ const MaintenanceCenter: React.FC = () => {
 
   const cardFields = useMemo(() => [
     [
-      { label: '品类', key: '_displayCategory' },
+      { label: '商品分类', key: '_displayCategory' },
       { label: '工序', key: '_processingCount', render: (val: number) => val > 0 ? <Tag color="warning">{val} 项待处理</Tag> : <Tag color="success">已完成</Tag> },
     ],
     [

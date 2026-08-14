@@ -11,7 +11,7 @@ import { toCategoryCn } from '@/utils/styleCategory';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { parseWashLabelParts } from '@/utils/washLabel';
 import { toSeasonCn, PrintOptions, PrintData } from '../types';
-import { translatePlateType } from '../helpers';
+import { translatePlateType, translateProductType } from '../helpers';
 
 /**
  * 解析 extJson 为对象。与 StyleFeatureSection.tsx 中保持一致。
@@ -105,30 +105,36 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             // 所有字段合并到一个数组，渲染成一张连续表格
             const allFields: { label: string; value: React.ReactNode }[] = [];
 
-            // 款式信息（与样衣详情页 BasicInfoSection 对齐：款号/SKC/款名/品类/季节/销售渠道）
+            // 款式信息（与样衣详情页 BasicInfoSection 区1 对齐（D-058 新版结构）：
+            //   款号/SKC/款名/商品分类/虚拟分类/商品类型/设计师/商品主题/客户/供应商）
             if (options.styleInfoBlock) {
               allFields.push({ label: '款号', value: styleNo || empty });
               allFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
               allFields.push({ label: '款名', value: styleName || empty });
-              allFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
+              allFields.push({ label: '商品分类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
               if (mode === 'sample') {
-                allFields.push({ label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
-                // 销售渠道：与样衣详情页 BasicInfoSection 一致，归属款号信息区
-                allFields.push({ label: '销售渠道', value: (data.productionSheet as any)?.salesChannel || empty });
+                allFields.push({ label: '虚拟分类', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
+                allFields.push({ label: '商品类型', value: translateProductType((data.productionSheet as any)?.productType) });
+                // 设计师：D-058 起为独立字段 designer，旧数据兜底读 sampleNo
+                allFields.push({ label: '设计师', value: (data.productionSheet as any)?.designer || (data.productionSheet as any)?.sampleNo || empty });
+                allFields.push({ label: '商品主题', value: (data.productionSheet as any)?.theme || empty });
+                // 客户：D-058 起从"客户信息"区块迁移至基础信息区，与详情页 BasicInfoSection 一致
+                allFields.push({ label: '客户', value: (data.productionSheet as any)?.customerName || (data.productionSheet as any)?.customer || empty });
+                allFields.push({ label: '供应商', value: (data.productionSheet as any)?.supplier || empty });
                 if ((data.productionSheet as any)?.uCode) {
                   allFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
                 }
               }
             }
 
-            // 客户信息（与样衣详情页 CustomerInfoSection 对齐：
-            //   客户 / 跟单员 / 设计师 / 板类 / 打板价 / 吊牌价 / 销售价）
+            // 客户信息（与样衣详情页 CustomerInfoSection 区2 对齐（D-058 新版结构）：
+            //   跟单员 / 销售渠道 / 板类 / 打板价 / 吊牌价 / 销售价。
+            //   客户已迁至"款号信息"区块；设计师已迁至"款号信息"区块并改读 designer 字段）
             if (options.customerInfoBlock && mode === 'sample') {
               const prodSheet = data.productionSheet as any;
-              allFields.push({ label: '客户', value: prodSheet?.customerName || prodSheet?.customer || empty });
               allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
-              allFields.push({ label: '设计师', value: prodSheet?.sampleNo || empty });
-              // 板类：从原"版次信息"区块移到"客户信息"区块，与详情页 CustomerInfoSection 一致
+              // 销售渠道：D-058 起归属客户信息区，与详情页 CustomerInfoSection 一致
+              allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
               allFields.push({ label: '板类', value: translatePlateType(prodSheet?.plateType) });
               allFields.push({ label: '打板价', value: formatPrice(prodSheet?.price) });
               allFields.push({ label: '吊牌价', value: formatPrice(prodSheet?.tagPrice) });
@@ -144,7 +150,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
             }
 
-            // 版次信息（样衣模式：仅保留纸样师/车板师；板类已移到客户信息区块，与详情页 CustomerInfoSection 一致）
+            // 版次信息（样衣模式：纸样师/车板师；板类在"客户信息"区块显示避免重复，
+            //   非样衣模式设计师改读 designer 字段（D-058），旧数据兜底 sampleNo）
             if (options.patternInfoBlock) {
               if (mode === 'sample') {
                 allFields.push({ label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty });
@@ -152,7 +159,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               } else {
                 const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
                 allFields.push({ label: '加工厂', value: factoryName });
-                allFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
+                allFields.push({ label: '设计师', value: (data.productionSheet as any)?.designer || (data.productionSheet as any)?.sampleNo || empty });
                 allFields.push({ label: '板类', value: translatePlateType((data.productionSheet as any)?.plateType) });
               }
             }
@@ -204,9 +211,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               allFields.push({ label: '是否套里', value: hasLining ? '是' : '否' });
             }
             if (options.remarkBlock) {
-              // 备注链路说明：样衣详情页 TimeRemarkSection 的 remark 字段保存时被删除（见 utils.ts:231），
-              // 实际未持久化到后端 StyleInfo 表（后端只有 description 字段，被生产制单占用）。
-              // 此处保留读取 description 作为兼容兜底，等后端补齐 remark 字段后改为读 remark。
+              // 备注链路说明：D-058 起 remark 已在 BasicInfoSection 维护并随表单提交持久化
+              // （utils.ts 已移除 delete remark 旧逻辑）。description 兜底兼容迁移前的历史数据。
               allFields.push({ label: '备注', value: (data.productionSheet as any)?.remark || (data.productionSheet as any)?.description || empty });
             }
 

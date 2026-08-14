@@ -118,17 +118,20 @@ body {
      ≤1366px → 28px（小屏）
      1367-1920px → 32px（标准屏）
      ≥1921px → 32px（大屏）
+   注意：统一高度只作用于单行 input（input.ant-input），
+   不作用于 textarea（Input.TextArea 的高度由 autoSize/rows 控制，
+   否则多行文本域会被压成一行，占位/计数文字溢出框外）
    ============================================ */
 
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-select-selector,
 .ant-picker,
-.ant-input,
+input.ant-input,
 .ant-select .ant-select-selector,
 .ant-cascader .ant-select-selector,
 .ant-auto-complete .ant-select-selector,
-.ant-auto-complete .ant-input,
+.ant-auto-complete input.ant-input,
 .ant-input-search {
   height: var(--control-height, 32px) !important;
   border-radius: var(--radius-sm, 4px) !important;
@@ -140,7 +143,7 @@ body {
   line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
-.ant-input-search .ant-input {
+.ant-input-search input.ant-input {
   height: var(--control-height, 32px) !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
@@ -152,20 +155,20 @@ body {
   align-items: center !important;
 }
 
-.ant-input-affix-wrapper .ant-input {
+.ant-input-affix-wrapper input.ant-input {
   height: var(--control-height, 32px) !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
-.ant-space-compact .ant-input,
+.ant-space-compact input.ant-input,
 .ant-space-compact .ant-select-selector,
 .ant-space-compact .ant-picker,
-.ant-space-compact .ant-auto-complete .ant-input,
+.ant-space-compact .ant-auto-complete input.ant-input,
 .ant-space-compact .ant-btn,
 .ant-space-compact .ant-input-search,
-.ant-space-compact .ant-input-search .ant-input {
+.ant-space-compact .ant-input-search input.ant-input {
   height: var(--control-height, 32px) !important;
 }
 
@@ -182,7 +185,7 @@ body {
   height: 40px !important;
 }
 
-.dashboard-page .ant-input,
+.dashboard-page input.ant-input,
 .dashboard-page .ant-input-affix-wrapper,
 .dashboard-page .ant-input-number,
 .dashboard-page .ant-select-selector,
@@ -191,7 +194,7 @@ body {
   border-radius: 6px !important;
 }
 
-.login-page .ant-input,
+.login-page input.ant-input,
 .login-page .ant-input-affix-wrapper,
 .login-page .ant-input-number,
 .login-page .ant-select-selector,
@@ -1542,7 +1545,7 @@ body {
   display: none !important;
 }
 
-.ant-table-cell .ant-input {
+.ant-table-cell input.ant-input {
   height: 30px !important;
   padding: 0 10px !important;
   border-radius: 2px !important;
