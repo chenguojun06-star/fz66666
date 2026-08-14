@@ -50,7 +50,7 @@ const PushToOrderModal: React.FC<PushToOrderModalProps> = ({
             >
               <Checkbox value="pattern">纸样开发</Checkbox>
               <Checkbox value="size">尺寸表</Checkbox>
-              <Checkbox value="bom">BOM清单</Checkbox>
+              <Checkbox value="bom">物料清单</Checkbox>
               <Checkbox value="process">工序单价</Checkbox>
               <Checkbox value="production">生产制单</Checkbox>
               <Checkbox value="secondary">二次工艺</Checkbox>

@@ -231,14 +231,9 @@
   font-size: 12px;
 }
 
-/* ─── 操作按钮区：悬停卡片时才显示 ─── */
+/* ─── 操作按钮区：常显（原 hover 显示导致用户找不到按钮） ─── */
 .ef-card-actions {
   margin-top: 8px;
-  opacity: 0;
-  transition: opacity 0.18s;
-}
-.ef-compact .style-smart-row:hover .ef-card-actions {
-  opacity: 1;
 }
 .ef-card-row-actions {
   justify-content: flex-end;

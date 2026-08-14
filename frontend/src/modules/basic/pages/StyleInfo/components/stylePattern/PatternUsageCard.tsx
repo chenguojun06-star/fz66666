@@ -109,7 +109,7 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
       ) : (
         <Spin spinning={bomLoading}>
           {bomList.length === 0 && !bomLoading ? (
-            <Text type="secondary">BOM清单中暂无面料/里料，请先在BOM清单中添加面辅料</Text>
+            <Text type="secondary">物料清单中暂无面料/里料，请先在物料清单中添加面辅料</Text>
           ) : (
             <ResizableTable<PatternMaterialRow>
               storageKey="style-pattern-usage-table"

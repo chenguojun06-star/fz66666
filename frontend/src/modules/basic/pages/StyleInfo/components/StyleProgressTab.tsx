@@ -30,7 +30,7 @@ interface ProdStage {
 }
 
 const DEV_STAGES_CONFIG = [
-  { key: 'bom', name: 'BOM清单', startField: 'bomStartTime', completeField: 'bomCompletedTime', assigneeField: 'bomAssignee' },
+  { key: 'bom', name: '物料清单', startField: 'bomStartTime', completeField: 'bomCompletedTime', assigneeField: 'bomAssignee' },
   { key: 'pattern', name: '纸样开发', startField: 'patternStartTime', completeField: 'patternCompletedTime', assigneeField: 'patternAssignee' },
   { key: 'process', name: '工序单价', startField: 'processStartTime', completeField: 'processCompletedTime', assigneeField: 'processAssignee' },
   { key: 'secondary', name: '二次工艺', startField: 'secondaryStartTime', completeField: 'secondaryCompletedTime', assigneeField: 'secondaryAssignee' },

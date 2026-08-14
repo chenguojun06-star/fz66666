@@ -31,7 +31,8 @@ export function buildActionColumns({
     {
       title: '操作',
       key: 'action',
-      width: 60,
+      width: 96,
+      fixed: 'right' as const,
       onCell: () => ({ className: 'prod-act-cell' }),
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatusOrStock(record);

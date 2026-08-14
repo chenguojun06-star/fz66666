@@ -213,7 +213,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
       </Space>
 
       <ResizableModal
-        title="AI识别BOM清单"
+        title="AI识别物料清单"
         open={ocrModalOpen}
         onCancel={() => { setOcrModalOpen(false); setOcrFile(null); }}
         onOk={handleOcrRecognize}

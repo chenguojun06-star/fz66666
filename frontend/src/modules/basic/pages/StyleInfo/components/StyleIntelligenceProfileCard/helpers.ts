@@ -5,7 +5,7 @@ import { formatMoney } from '@/utils/format';
 import type { StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 
 export const STAGE_MAP = [
-  { key: 'bom', label: 'BOM', done: (style: StyleInfo) => Boolean((style as any)?.bomCompletedTime) },
+  { key: 'bom', label: '物料', done: (style: StyleInfo) => Boolean((style as any)?.bomCompletedTime) },
   { key: 'pattern', label: '纸样', done: (style: StyleInfo) => String(style.patternStatus || '').trim().toUpperCase() === 'COMPLETED' },
   { key: 'size', label: '尺寸', done: (style: StyleInfo) => Boolean((style as any)?.sizeCompletedTime) },
   { key: 'production', label: '制单', done: (style: StyleInfo) => Boolean((style as any)?.productionCompletedTime) },

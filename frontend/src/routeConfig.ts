@@ -206,7 +206,7 @@ const pageMetaMap: Record<string, PageMeta> = {
     suggestions: [
       '✂️ 分析这款样衣工序',
       '💰 报价建议',
-      '📋 BOM清单检查',
+      '📋 物料清单检查',
       '🏭 推荐工厂',
       '📊 开发进度如何',
     ],

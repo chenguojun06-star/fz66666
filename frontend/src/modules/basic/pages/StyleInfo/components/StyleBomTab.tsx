@@ -105,7 +105,7 @@ const StyleBomTab: React.FC<Props> = ({
     <div>
       {/* 统一状态控制栏 */}
       <StyleStageControlBar
-        stageName="BOM清单"
+        stageName="物料清单"
         styleId={styleId}
         apiPath="bom"
         status={bomCompletedTime ? 'COMPLETED' : bomStartTime ? 'IN_PROGRESS' : 'NOT_STARTED'}

@@ -50,13 +50,13 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Space size="middle">
-          <span style={{ fontWeight: 500, fontSize: 14 }}>SKU模式：</span>
+          <span style={{ fontWeight: 500, fontSize: 14 }}>编码模式：</span>
           <Switch checked={isManual} onChange={handleModeToggle} checkedChildren="手动编辑" unCheckedChildren="自动生成" />
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
-            {isManual ? '可自由编辑SKU编码、颜色、尺码等信息' : 'SKU编码按「款号+颜色+尺码」自动生成'}
+            {isManual ? '可自由编辑商品编码、颜色、尺码等信息' : '商品编码按「款号+颜色+尺码」自动生成'}
           </span>
-          <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>SKU前缀：</span>
-          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加SKU" unCheckedChildren="不加SKU" />
+          <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>SKU字面前缀：</span>
+          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加SKU" unCheckedChildren="不加" />
         </Space>
 
         <Space>
@@ -68,7 +68,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           {isManual && isEditing && (
             <>
               <Dropdown menu={{ items: addMenuItems }} trigger={['hover']}>
-                <Button icon={<PlusOutlined />}>新增SKU</Button>
+                <Button icon={<PlusOutlined />}>新增编码</Button>
               </Dropdown>
               <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
                 保存
@@ -78,7 +78,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
               </Button>
             </>
           )}
-          <Tooltip title="管理SKU颜色图片，支持批量上传到多个颜色">
+          <Tooltip title="管理颜色图片，支持批量上传到多个颜色">
             <Button
               icon={<PictureOutlined />}
               onClick={() => setColorImageMode(true)}
@@ -87,7 +87,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
               颜色图片
             </Button>
           </Tooltip>
-          <Tooltip title="将当前SKU信息同步到关联的大货订单">
+          <Tooltip title="将当前商品编码信息同步到关联的大货订单">
             <Button icon={<CloudUploadOutlined />} onClick={handleSyncToProduction} loading={syncing}>
               同步到大货
             </Button>
@@ -122,8 +122,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
       {colorImageMode ? (
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>SKU颜色图片管理</span>
-            <Button onClick={() => setColorImageMode(false)}>返回SKU列表</Button>
+            <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>颜色图片管理</span>
+            <Button onClick={() => setColorImageMode(false)}>返回列表</Button>
           </div>
           <StyleSkuColorImages
             styleId={styleId}

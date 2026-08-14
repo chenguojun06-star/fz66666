@@ -52,7 +52,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       },
     },
     {
-      title: 'SKU编码', dataIndex: 'skuCode', key: 'skuCode', width: 220,
+      title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 220,
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit && isManual ? (
@@ -158,7 +158,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       render: (_: any, record: ProductSku) => {
         const key = getRowKey(record);
         return (
-          <Popconfirm title="确定删除此SKU？" onConfirm={() => onDeleteRow(key)}>
+          <Popconfirm title="确定删除此商品编码？" onConfirm={() => onDeleteRow(key)}>
             <Button type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         );
@@ -173,7 +173,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         columns={columns}
         rowKey={(record) => String(getRowKey(record))}
         loading={loading}
-        emptyDescription="暂无SKU数据"
+        emptyDescription="暂无商品编码数据"
         pagination={false}
         scroll={{ y: 400 }}
         showIndex
@@ -181,9 +181,9 @@ const SkuTable: React.FC<SkuTableProps> = ({
       />
 
       <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', lineHeight: 1.8 }}>
-        <div>自动生成模式：SKU编码按「款号+颜色+尺码」规则自动生成</div>
-        <div>手动编辑模式：可自由修改SKU编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
-        <div>新增SKU：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
+        <div>自动生成模式：商品编码按「款号+颜色+尺码」规则自动生成</div>
+        <div>手动编辑模式：可自由修改商品编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
+        <div>新增编码：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
       </div>
     </>
   );

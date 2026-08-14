@@ -52,7 +52,7 @@ export const useStyleSkuTabData = ({
         setSkcEditing(false);
       }
     } catch {
-      messageRef.current.error('获取SKU列表失败');
+      messageRef.current.error('获取商品编码列表失败');
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export const useStyleSkuTabData = ({
   const handleModeToggle = async (checked: boolean) => {
     const newMode = checked ? 'MANUAL' : 'AUTO';
     if (newMode === 'AUTO') {
-      confirmAction('确认切换为自动生成模式？', '切换后，所有手动编辑的SKU编码将被重置为自动生成的编码，此操作不可撤销。', () => doToggleMode(newMode), { okText: '确认切换' });
+      confirmAction('确认切换为自动生成模式？', '切换后，所有手动编辑的商品编码将被重置为自动生成的编码，此操作不可撤销。', () => doToggleMode(newMode), { okText: '确认切换' });
     } else {
       doToggleMode(newMode);
     }
@@ -172,7 +172,7 @@ export const useStyleSkuTabData = ({
     try {
       const res = await api.post(`/style/sku/sync-to-production/${styleId}`);
       if (res.code === 200) {
-        messageRef.current.success('SKU已同步到大货订单');
+        messageRef.current.success('商品编码已同步到大货订单');
         fetchSkus();
       } else {
         messageRef.current.error(res.message || '同步失败');
