@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-14（新增 D-064 全局CSS误伤TextArea根因修复）
+> 最后更新：2026-08-14（新增 D-065 样衣BOM领取400修复）
+
+---
+
+## D-065：样衣开发BOM领取400 — 前端漏传styleNo归属锚点（2026-08-14）
+
+### 现象
+样衣详情「物料清单」Tab 申请领取 → `POST /api/production/picking/pending` 400："领料单缺少归属关联（订单号/样衣任务ID/款号）"。用户怒斥"开发样要关联什么订单号"。
+
+### 根因
+后端 `/picking/pending` 有防幽灵单校验（orderId/patternProductionId/styleNo 至少其一，P0级合理校验，**不是后端的错**）。`MaterialPickupModal` 弹窗组件本身支持 `styleNo` prop，但 **`StyleBomTab.tsx`（BOM领取入口）只传了 styleId 没传 styleNo** → 空串被后端标准化为 null → 三锚点全空 → 400。对比：纸样 Tab（StylePatternTab）、生产 Tab 都正确传了 styleNo，唯独 BOM Tab 漏了。
+
+### 修复（3文件）
+1. `StyleInfoTabs.tsx` — `<StyleBomTab>` 补传 `styleNo={styleNo}`（来源 `currentStyle?.styleNo`，款式详情必有款号）
+2. `StyleBomTab.tsx` — Props 加 `styleNo?: string` 透传给 MaterialPickupModal
+3. `MaterialPickupModal/index.tsx` — 提交前前置拦截：styleNo/orderNo/orderId 全空时直接提示"缺少归属款号/订单号"，不再等 400
+
+### 教训（通用规则）
+**通用弹窗组件新增必传业务字段（如归属锚点）后，必须 grep 全部调用方逐一核对**——本次 MaterialPickupModal 有3个调用方，新增 styleNo 参数时只改了2个，漏了 BOM Tab。改公共组件 props 是"扇出"操作，调用方清单必须全量过一遍。
 
 ---
 

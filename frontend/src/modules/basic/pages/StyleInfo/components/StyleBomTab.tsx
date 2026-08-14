@@ -11,6 +11,8 @@ import type { StyleBom } from '@/types/style';
 
 interface Props {
   styleId: string | number;
+  /** 款号：领料单归属锚点（后端 /picking/pending 校验必传，缺失会 400） */
+  styleNo?: string;
   readOnly?: boolean;
   bomAssignee?: string;
   bomStartTime?: string;
@@ -26,6 +28,7 @@ interface Props {
 
 const StyleBomTab: React.FC<Props> = ({
   styleId,
+  styleNo,
   readOnly,
   bomAssignee,
   bomStartTime,
@@ -216,6 +219,7 @@ const StyleBomTab: React.FC<Props> = ({
         record={pickupRecord}
         usageType="SAMPLE"
         styleId={styleId}
+        styleNo={styleNo}
         onCancel={() => setPickupRecord(null)}
       />
     </div>

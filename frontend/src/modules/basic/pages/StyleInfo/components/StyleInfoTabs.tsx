@@ -133,6 +133,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
             <div style={tabContentStyle}>
               <StyleBomTab
                 styleId={styleId}
+                styleNo={styleNo}
                 sizeColorConfig={sizeColorConfig}
                 readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
                 bomAssignee={(currentStyle as any)?.bomAssignee}

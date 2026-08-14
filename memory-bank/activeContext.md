@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（备注框压一行根因修复 D-064）
+> 最后更新：2026-08-14（样衣BOM领取400修复 D-065）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 样衣开发BOM申请领取 400 修复 ✅（详见 D-065）
+
+用户反馈：物料清单Tab领取面辅料 → `/picking/pending` 400"领料单缺少归属关联（订单号/样衣任务ID/款号）"。
+
+- [x] **根因**：`StyleBomTab.tsx` 调用 `MaterialPickupModal` 漏传 `styleNo`（纸样/生产Tab都传了，唯独BOM Tab漏）→ 后端三锚点全空 → 400。后端防幽灵单校验本身是对的
+- [x] **修复**：StyleInfoTabs 补传 styleNo → StyleBomTab Props 透传 → MaterialPickupModal 增加提交前前置拦截（三锚点全空直接提示）
+- [x] 验证：tsc 0 errors + lint 0 诊断
+- [ ] 待用户在物料清单Tab重试领取确认走通
 
 ### 2026-08-14 备注框压成一行+说明文字跑出框外 根因修复 ✅（详见 D-064）
 

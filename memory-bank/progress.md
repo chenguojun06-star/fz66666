@@ -1,9 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-14（备注框压一行根因修复 D-064）
+> 最后更新：2026-08-14（样衣BOM领取400修复 D-065）
 
 ## 已完成
+
+### 2026-08-14 样衣开发BOM申请领取 400 修复 ✅
+
+用户反馈：样衣详情物料清单Tab领取面辅料 → `/picking/pending` 400"领料单缺少归属关联"。根因：`StyleBomTab.tsx` 调用 `MaterialPickupModal` 时漏传 `styleNo`（纸样/生产Tab都传了，唯独BOM Tab漏）。
+
+- [x] `StyleInfoTabs.tsx` 给 `<StyleBomTab>` 补传 styleNo
+- [x] `StyleBomTab.tsx` Props 增加 styleNo 透传
+- [x] `MaterialPickupModal` 提交前前置拦截（三锚点全空直接提示，不再等400）
+- [x] 验证：tsc 0 errors + lint 0 诊断
+- [x] 决策记录：D-065
+- [ ] 待用户在物料清单Tab重试领取确认走通
 
 ### 2026-08-14 备注/全站TextArea被压成一行的根因修复 ✅
 

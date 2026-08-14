@@ -91,6 +91,12 @@ const MaterialPickupModal: React.FC<MaterialPickupModalProps> = ({
         message.warning(`领取数量不能超过可用库存 ${maxQty}${record.unit || ''}`);
         return;
       }
+      // 前置拦截：后端 /picking/pending 要求至少一个归属锚点（orderId/styleNo），
+      // 缺失时直接提示，避免提交后才收到 400
+      if (!styleNo && !orderNo && !orderId) {
+        message.error('缺少归属款号/订单号，无法领取，请刷新页面后重试');
+        return;
+      }
 
       setLoading(true);
       await api.post('/production/picking/pending', {
