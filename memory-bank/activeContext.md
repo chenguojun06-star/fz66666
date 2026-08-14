@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（同类漏传全量审计 D-066）
+> 最后更新：2026-08-14（schema drift 全量修复 D-067）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 仓库端领料列表500 — schema drift 全量清零 ✅（详见 D-067）
+
+D-065 修复后领取成功，但仓库端 /picking/list 500。根因：43192e735 给 MaterialPicking 加 patternProductionId **没写迁移**，云端 t_material_picking 缺列（insert 非空策略能过 → 领取成功；select 全列必炸 → 列表500）。
+
+- [x] Python 全库扫描 244 实体 vs 迁移列差集（工具沉淀在 D-067）
+- [x] V202708142000：根因列 + 11 张核心业务表同类 drift 30+ 列（含 express_order/unit_price_audit_log 租户隔离 tenant_id）
+- [x] 表存在+列不存在双判断幂等；mvn compile 0 错误
+- [ ] 待云端部署后用户验证仓库端「待出库领料」列表恢复
 
 ### 2026-08-14 D-065同类隐患全量审计+工作台3处修复 ✅（详见 D-066）
 

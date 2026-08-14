@@ -1,7 +1,30 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-14（新增 D-066 同类漏传全量审计）
+> 最后更新：2026-08-14（新增 D-067 schema drift 全量修复）
+
+---
+
+## D-067：仓库端领料列表500 — entity加字段未写迁移（schema drift 全量清零）（2026-08-14）
+
+### 现象
+D-065 修复后领取成功，但仓库端「待出库领料」GET /production/picking/list 500。用户怒斥"测试一次一个问题"。
+
+### 根因
+提交 43192e735（手机端样衣采购闭环）给 `MaterialPicking` entity 加了 `patternProductionId` 字段，**没写配套 Flyway 迁移**。云端 `t_material_picking` 缺 `pattern_production_id` 列：
+- POST /picking/pending 领取**能成功**（MyBatis-Plus insert 只带非空字段，该字段 null 不进 INSERT）
+- GET /picking/list **必炸**（SELECT 全列 → Unknown column → 500）
+这是 D-060（t_style_info 缺7列）同款病：**本地验证过 ≠ 云端能跑，本地表手动加过列掩盖了迁移缺失**。
+
+### 修复（全量而非单点）
+写 Python 脚本全库扫描 244 张 entity 表 vs 全部迁移的列差集（/tmp/schema_drift_scan.py 一次性工具）：
+1. **根因列**：t_material_picking.pattern_production_id
+2. **同类 drift 一并清零**（11张核心业务表30+列）：material_pickup_record(cost_owner/cost_settled)、material_inbound+expense_reimbursement(供应商三件套)、product_warehousing(9列扫码链路)、production_process_tracking(结算5列)、color_card(7)/color_card_item(2)、order_transfer(3)、express_order/unit_price_audit_log(tenant_id 租户隔离P0+索引)、ec_purchase_suggestion(sales30d)
+3. 迁移：V202708142000（存储过程+information_schema，**表存在+列不存在双判断**，表不存在静默跳过不炸部署）
+4. 甄别误报：AI/agent/workflow 表的"缺列"实为 DbTableDefinitions.java 运行时建表已含，不补
+
+### 教训（升级为铁律候选）
+**entity 加字段 = 必须同提交写迁移**（P0铁律2的补强：不只 ALTER 场景，新增 @TableField 也算）。全量扫描应作为发布前固定动作：`python3 schema_drift_scan.py`，凡"部分缺列"（非全表缺基础列的噪音）必须清零才能发版。
 
 ---
 
