@@ -5,6 +5,19 @@
 
 ---
 
+## D-061：术语统一决策 — SKU→商品编码、BOM清单→物料清单；订单管理操作列 fixed:right（2026-08-14）
+
+### 术语改名（仅用户可见文案，字段名/接口/DB 不动）
+- **SKU → 商品编码**：用户要求。涉及 StyleSkuTab 3文件15+处。注意两点：①"SKU前缀"开关改名"SKU字面前缀"——它控制生成的编码是否带"SKU"三个字母（`SKU${styleNo}`），语义必须保留；②SKC（款-色编码）保留不改，是另一个概念。
+- **BOM清单 → 物料清单**：涉及10处（Tab/进度/推送订单/AI识别弹窗/教程/路由快捷语/智能档案卡 label 'BOM'→'物料'）。字段 bomList、apiPath "bom"、key 'bom' 全部不动。
+
+### 订单管理操作列偏移根因与修复
+- **根因**：列表视图操作列 `width:60` 无 `fixed:'right'`，表格 `scroll.x=3500`，用户在列设置开启多列后操作列被横向滚动推出可视区（"按钮偏移到界面外"）。且 60px 装不下 RowActions maxInline=1 渲染的"打印+更多"2个按钮。
+- **修复**：`actionColumns.tsx` 加 `fixed:'right' as const` + width 96；智能视图 `.ef-card-actions` 的 `opacity:0`（hover 才显示）删除，改常显。
+- **教训**：宽表格（scroll.x 大）的操作列必须 fixed:'right'，这是通用规则，其他列表页如出现同样问题照此修。
+
+---
+
 ## D-060：P0事故复盘 — Flyway 误用 MariaDB 语法导致生产全量500，规则记忆≠规则执行（2026-08-14）
 
 ### 事故
