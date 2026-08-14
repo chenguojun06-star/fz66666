@@ -5,6 +5,46 @@
 
 ---
 
+## D-060：P0事故复盘 — Flyway 误用 MariaDB 语法导致生产全量500，规则记忆≠规则执行（2026-08-14）
+
+### 事故
+推送 `4c1218157`（D-058 基础信息Tab重写）后，生产环境大量500：`/api/style/info/list`、`/api/style/info/{id}`、`/api/production/order/detail`、`/api/production/purchase/list`、`/api/dashboard/delayed-stage-breakdown`。
+
+### 根因链
+`V202708140001__add_basic_info_ext_columns_to_style_info.sql` 使用 `ADD COLUMN IF NOT EXISTS`（MariaDB 10.5+ 专有语法，**MySQL 8.0 不支持**）→ 云端 Flyway 迁移失败 → `t_style_info` 缺 product_type/theme/designer/supplier/supplier_id/supplier_contact_person/supplier_contact_phone 7列 → `StyleInfo.java` entity 有字段但 DB 无列 → MyBatis-Plus SELECT 生成含不存在列的 SQL → Unknown column 500 → 所有涉及 style 查询的接口（含 purchase/list 的 enrichment、dashboard）全量500。
+
+**最讽刺的一点**：脚本注释里写着"MySQL 8.0 支持"——这是错的。而且 project_rules.md P0#8、anti-patterns.md（AP-WF-05）、V20260615001 范本注释全都明确记载了这条规则。**读了规则不等于执行了规则**。
+
+### 修复（commit `11afc0b19`）
+重写为存储过程幂等模式（与 V20260615001 同构）：
+```sql
+DROP PROCEDURE IF EXISTS _add_style_basic_info_ext_columns;
+DELIMITER //
+CREATE PROCEDURE _add_style_basic_info_ext_columns()
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_style_info'
+                   AND COLUMN_NAME='product_type') THEN
+        ALTER TABLE t_style_info ADD COLUMN product_type VARCHAR(32) ...;
+    END IF;
+    -- ×7 列 + 1 索引
+END //
+DELIMITER ;
+CALL _add_style_basic_info_ext_columns();
+DROP PROCEDURE IF EXISTS _add_style_basic_info_ext_columns;
+```
+
+### 为何重写已推送脚本是安全的
+该脚本在云端**从未成功执行**（success=0）。`FlywayRepairConfig.purgeFailedMigrations` 启动时会 DELETE 失败记录，下次 migrate 用新内容重新执行。P0#5"禁止修改已执行的 Flyway 脚本"针对的是**成功执行过**的脚本（有 checksum 记录），失败脚本重写是标准止血手段。
+
+### 教训（新增到自查清单）
+1. **写 Flyway 必须当场 grep 范本**：`grep -l "CREATE PROCEDURE" backend/src/main/resources/db/migration/*.sql | head -1` 抄最近成功脚本的结构，不凭记忆写
+2. **禁止在 SQL 注释里凭印象写兼容性声明**（"MySQL 8.0 支持 IF NOT EXISTS"是错的）
+3. **规则记忆 ≠ 规则执行**：anti-patterns.md 读了、记忆里存了，但写代码那一刻没有触发检查。对策：写任何 `.sql` 迁移前强制重读 AP-WF-05 + AP-DB-01
+4. **推送前跑 safe-push.sh 的 Flyway 4项检查**（本次 pre-push hook 是否拦截待查——`ADD COLUMN IF NOT EXISTS` 应加入静态黑名单扫描）
+
+---
+
 ## D-059：历史遗留编译警告/错误全量清理 — 不再以"gitignored不影响部署"为由不修（2026-08-14）
 
 ### 上下文

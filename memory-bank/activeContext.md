@@ -1,11 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（历史遗留编译警告/错误全量清理 — mvn test-compile BUILD SUCCESS）
+> 最后更新：2026-08-14（P0事故止血：Flyway V202708140001 MySQL 8.0 语法错误导致生产全量500 — 已重写推送 11afc0b19）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-14 P0生产事故止血：Flyway语法错误导致500 ✅（详见 D-060）
+
+用户推送后发现生产环境大量500（`/api/style/info/list`、`/api/style/info/131`、`/api/production/order/detail`、`/api/production/purchase/list`、`/api/dashboard/delayed-stage-breakdown`）。
+
+- [x] **根因**：`V202708140001` 误用 `ADD COLUMN IF NOT EXISTS`（MariaDB 专有语法，MySQL 8.0 不支持）→ 云端 Flyway 执行失败 → `t_style_info` 缺7列 → entity 有字段 DB 无列 → Unknown column → 所有涉及 style 查询的接口全量500
+- [x] **违反铁律**：project_rules.md P0#8"MySQL 8.0 不支持 IF NOT EXISTS"；讽刺的是 D-058 里 anti-patterns.md 读过了但写 Flyway 时没应用——规则记忆 ≠ 规则执行
+- [x] **修复**（commit `11afc0b19` 已推送，微信云自动部署）：参照 `V20260615001` 成熟模式重写为 `DROP PROCEDURE + DELIMITER // + CREATE PROCEDURE + information_schema.COLUMNS 检查 + ALTER TABLE` 幂等模式
+- [x] **重写安全性**：该脚本从未成功执行（`FlywayRepairConfig.purgeFailedMigrations` 会清理 success=0 记录），无 checksum 冲突
+- [x] **验证**：mvn compile exit 0；脚本与 66 个已成功执行的存储过程模式脚本同构（本地无 MySQL/Docker，静态验证）
+- [ ] **待用户确认**：云端部署后 500 是否消除、`t_style_info` 7列是否已加
 
 ### 2026-08-14 历史遗留编译警告/错误全量清理 ✅（详见 D-059）
 
