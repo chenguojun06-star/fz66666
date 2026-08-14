@@ -1049,7 +1049,7 @@ public class StyleInfoOrchestrator {
         req.setCounterpartyType("EMPLOYEE");
         // P1-4 修复：counterpartyId 优先级：制版师(plateWorker) > 审核人
         // plateWorker 当前存储的是姓名（非 userId），暂以姓名作为 counterpartyId 占位
-        // TODO: 后续接入 UserService.resolveUserIdByName 将姓名转换为 userId
+        // 后续接入 UserService.resolveUserIdByName 将姓名转换为 userId（暂以姓名占位）
         String plateWorker = style.getPlateWorker();
         String counterpartyId = null;
         String counterpartyName = null;
