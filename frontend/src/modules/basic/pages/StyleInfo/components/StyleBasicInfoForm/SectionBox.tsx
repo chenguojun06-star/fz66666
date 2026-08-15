@@ -23,7 +23,7 @@ const SectionBox: React.FC<SectionBoxProps> = ({
   return (
     <div
       style={{
-        marginBottom: 20,
+        marginBottom: 16,
         padding: 16,
         background: 'var(--color-bg-base)',
         border: '1px solid var(--color-border)',

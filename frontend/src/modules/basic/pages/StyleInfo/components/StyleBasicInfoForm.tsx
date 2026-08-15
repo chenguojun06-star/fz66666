@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row, Tabs } from 'antd';
+import { Col, Row } from 'antd';
 import CoverImageUpload from './CoverImageUpload';
 import StyleStatusCard from './StyleStatusCard';
 import type { StyleBasicInfoFormProps } from './StyleBasicInfoForm/types';
@@ -7,7 +7,6 @@ import { useStyleBasicInfoForm } from './StyleBasicInfoForm/useStyleBasicInfoFor
 import BasicInfoSection from './StyleBasicInfoForm/BasicInfoSection';
 import CustomerInfoSection from './StyleBasicInfoForm/CustomerInfoSection';
 import StyleFeatureSection from './StyleBasicInfoForm/StyleFeatureSection';
-import TimeRemarkSection from './StyleBasicInfoForm/TimeRemarkSection';
 import ColorSizeSkuSection from './StyleBasicInfoForm/ColorSizeSkuSection';
 import ExtFieldsSectionBlock from './StyleBasicInfoForm/ExtFieldsSectionBlock';
 
@@ -79,19 +78,20 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   // 基础信息 Tab 内容：所有表单分区合并在一个 Tab 里
   const basicInfoTabContent = (
     <>
-      {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道） */}
+      {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道，含时间信息） */}
       <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} />
 
-      {/* 区2：客户跟进信息（含板类，原版次与版型信息已合并） */}
-      <CustomerInfoSection {...sectionFormContext} />
+      {/* 区2+区3：客户跟进信息 | 款式特征 左右并排，压缩纵向高度（窄屏自动堆叠） */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24} xl={12}>
+          <CustomerInfoSection {...sectionFormContext} />
+        </Col>
+        <Col xs={24} xl={12}>
+          <StyleFeatureSection {...sectionFormContext} isNewPage={isNewPage} />
+        </Col>
+      </Row>
 
-      {/* 区3：款式特征 · AI识别（面料/袖型/领型/版型/图案/工艺风格） */}
-      <StyleFeatureSection {...sectionFormContext} isNewPage={isNewPage} />
-
-      {/* 区4：时间与备注 */}
-      <TimeRemarkSection {...sectionFormContext} />
-
-      {/* 区5：颜色 / 尺码 / 商品编码 配置 */}
+      {/* 区4：颜色 / 尺码 / 商品编码 配置 */}
       <ColorSizeSkuSection
         size1={size1} setSize1={setSize1}
         size2={size2} setSize2={setSize2}
@@ -131,7 +131,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         skuRefreshTrigger={skuRefreshTrigger}
       />
 
-      {/* 区6：扩展字段 */}
+      {/* 区5：扩展字段 */}
       <ExtFieldsSectionBlock
         customFields={customFields}
         editLocked={editLocked}

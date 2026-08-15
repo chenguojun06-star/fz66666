@@ -3,6 +3,7 @@ import { Col, Form, Input, Radio, Row, Select, Tooltip } from 'antd';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import type { SectionFormContextProps } from './types';
@@ -28,11 +29,12 @@ const FieldMaintainHint: React.FC = () => (
 /**
  * 区1：基础信息
  * 按样衣详情页-基础信息 Tab 设计稿完全重写
- * 字段顺序：款名称 / 款式编码 / 商品分类(必填) / 虚拟分类 / 商品类型 / 设计师 / 商品主题 / 客户 / 供应商 / 备注
+ * 字段顺序：款名称 / 款式编码 / 商品分类(必填) / 虚拟分类 / 商品类型 / 设计师 / 商品主题 / 客户 / 供应商 / 备注 / 创建时间 / 完成时间 / 交板日期
  *
  * 注意：
  *  - 客户字段从原 CustomerInfoSection 迁移至此，使用 CustomerSelect 组件（同步 customerId）
  *  - 备注字段从原 TimeRemarkSection 迁移至此，最多500字
+ *  - 时间信息（创建/完成/交板日期）从原独立时间区块合并至此，减少分区数量
  *  - 设计师独立使用 designer 字段，与原 sampleNo 解耦（sampleNo 仍保留向后兼容）
  *  - 商品类型 / 商品主题 / 供应商 为本次新增字段
  */
@@ -286,6 +288,44 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               showCount
               placeholder="请输入备注（面料/版型/特殊工艺说明等）"
               disabled={isFieldLocked(currentStyle?.remark)}
+            />
+          </Form.Item>
+        </Col>
+
+        {/* 时间信息（从 TimeRemarkSection 迁移至此：创建/完成为系统字段，交板日期必填） */}
+        <Col xs={24} md={8}>
+          <Form.Item name="createTime" label="创建时间" style={{ marginBottom: 8 }}>
+            <UnifiedDatePicker
+              id="createTime"
+              disabled
+              allowClear={false}
+              placeholder="系统自动生成"
+              format="YYYY-MM-DD"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={8}>
+          <Form.Item name="completedTime" label="完成时间" style={{ marginBottom: 8 }}>
+            <UnifiedDatePicker
+              id="completedTime"
+              disabled
+              allowClear={false}
+              placeholder="全部环节入库完成后自动生成"
+              format="YYYY-MM-DD"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={8}>
+          <Form.Item name="deliveryDate" label="交板日期" rules={[{ required: true, message: '请选择交板日期' }]} style={{ marginBottom: 8 }}>
+            <UnifiedDatePicker
+              id="deliveryDate"
+              disabled={isFieldLocked(currentStyle?.deliveryDate)}
+              allowClear
+              placeholder="请选择交板日期"
+              format="YYYY-MM-DD"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>

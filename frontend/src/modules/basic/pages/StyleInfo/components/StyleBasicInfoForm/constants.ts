@@ -40,14 +40,14 @@ export const FALLBACK_SIZES = ['S', 'M', 'L', 'XL'];
 
 /** 区块容器内联样式（与原实现保持一致） */
 export const SECTION_BOX_STYLE: CSSProperties = {
-  marginBottom: 20,
+  marginBottom: 16,
   padding: 16,
   background: 'var(--color-bg-base)',
   border: '1px solid var(--color-border)',
   borderRadius: 8,
 };
 
-/** 区块容器内联样式（紧凑版，用于最后两个区块，原 marginBottom: 4） */
+/** 区块容器内联样式（紧凑版，用于最后两个区块） */
 export const SECTION_BOX_STYLE_COMPACT: CSSProperties = {
   ...SECTION_BOX_STYLE,
   marginBottom: 4,

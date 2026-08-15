@@ -24,12 +24,12 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
         <Input id="customerId" />
       </Form.Item>
       <Row gutter={[16, 8]}>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item name="orderType" label="跟单员" style={{ marginBottom: 8 }}>
             <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item name="salesChannel" label="销售渠道" style={{ marginBottom: 8 }}>
             <Select
               id="salesChannel"
@@ -41,22 +41,22 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item name="plateType" label="板类" style={{ marginBottom: 8 }}>
             <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)} style={{ width: '100%' }} id="plateType" />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item name="price" label="打板价" style={{ marginBottom: 8 }}>
             <InputNumber id="price" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item name="tagPrice" label="吊牌价" style={{ marginBottom: 8 }}>
             <InputNumber id="tagPrice" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item name="salesPrice" label="销售价" style={{ marginBottom: 8 }}>
             <InputNumber id="salesPrice" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
           </Form.Item>

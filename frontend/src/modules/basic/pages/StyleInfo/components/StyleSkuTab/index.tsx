@@ -56,7 +56,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             {isManual ? '可自由编辑商品编码、颜色、尺码等信息' : '商品编码按「款号+颜色+尺码」自动生成'}
           </span>
           <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>商品编码字面前缀：</span>
-          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加商品编码" unCheckedChildren="不加" />
+          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加前缀" unCheckedChildren="不加" />
         </Space>
 
         <Space>
@@ -98,8 +98,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         </Space>
       </div>
 
-      <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-container, var(--color-bg-container))', borderRadius: 6, border: '1px solid var(--color-border-light, var(--color-border-light))' }}>
-        <Space size="middle" align="center">
+      <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-container, var(--color-bg-container))', borderRadius: 6, border: '1px solid var(--color-border-light, var(--color-border-light))' }}>
+        <Space size="middle" align="center" wrap>
           <span style={{ fontWeight: 500, fontSize: 14 }}>SKC编号：</span>
           {skcEditing ? (
             <>
@@ -110,10 +110,12 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           ) : (
             <>
               <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 500 }}>{skcValue || initialSkc || '-'}</span>
-              <Button type="link" onClick={() => setSkcEditing(true)}>修改SKC</Button>
+              <Tooltip title="SKC = 款式+颜色的编号，用于关联生产订单；如需修改下方表格中的商品编码，请将编码模式切换为「手动编辑」">
+                <Button type="link" onClick={() => setSkcEditing(true)}>修改SKC编号</Button>
+              </Tooltip>
             </>
           )}
-          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
             默认跟随款号自动生成，修改后会同步到关联的生产订单
           </span>
         </Space>

@@ -29,7 +29,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
 }) => {
   const columns = [
     {
-      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 80, fixed: 'left' as const,
+      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 56, fixed: 'left' as const,
       render: (_: string, record: ProductSku) => {
         if (record.skuColorImage) {
           const fullUrl = getFullAuthedFileUrl(record.skuColorImage);
@@ -37,16 +37,16 @@ const SkuTable: React.FC<SkuTableProps> = ({
             <Image
               src={fullUrl}
               alt="款式图片"
-              width={44}
-              height={44}
+              width={32}
+              height={32}
               style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
               preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
             />
           );
         }
         return (
-          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: 'var(--color-text-quaternary)' }}>
-            <PictureOutlined />
+          <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: 'var(--color-text-quaternary)' }}>
+            <PictureOutlined style={{ fontSize: 14 }} />
           </div>
         );
       },
@@ -180,8 +180,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
       />
 
-      <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', lineHeight: 1.8 }}>
-        <div>自动生成模式：商品编码按「款号+颜色+尺码」规则自动生成</div>
+      <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-quaternary)', lineHeight: 1.8 }}>
         <div>手动编辑模式：可自由修改商品编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
         <div>新增编码：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
       </div>

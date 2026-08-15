@@ -47,7 +47,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
   return (
     <SectionBox title="款式特征">
       <Row gutter={[16, 8]}>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name={['extJson', 'fabric']}
             label="面料"
@@ -61,7 +61,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name={['extJson', 'sleeveType']}
             label="袖型"
@@ -75,7 +75,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name={['extJson', 'neckline']}
             label="领型"
@@ -89,7 +89,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name={['extJson', 'version']}
             label="版型"
@@ -103,7 +103,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name={['extJson', 'pattern']}
             label="图案"
@@ -117,7 +117,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name={['extJson', 'craftStyle']}
             label="工艺风格"
