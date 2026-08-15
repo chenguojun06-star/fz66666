@@ -347,6 +347,14 @@ public class MaterialPurchaseOrchestratorHelper {
     /* ========== 需求批量计算 ========== */
 
     public List<String> resolveTargetOrderIds(ProductionOrder seed, boolean overwrite) {
+        return resolveTargetOrderIds(seed, overwrite, false);
+    }
+
+    /**
+     * shortageOnly=true 时为增量补货：不剔除"已存在采购记录"的订单
+     * （物料级去重由 filterAndApplyShortage 负责），否则核心场景恒返回空列表。
+     */
+    public List<String> resolveTargetOrderIds(ProductionOrder seed, boolean overwrite, boolean shortageOnly) {
         List<ProductionOrder> matchedOrders = resolveSameDaySameStyleOrders(seed);
         List<String> out = new ArrayList<>();
 
@@ -379,7 +387,7 @@ public class MaterialPurchaseOrchestratorHelper {
             if (o == null || !StringUtils.hasText(o.getId())) continue;
             String oid = o.getId().trim();
             if (!StringUtils.hasText(oid)) continue;
-            if (!overwrite && existingOrderIds.contains(oid)) continue;
+            if (!overwrite && !shortageOnly && existingOrderIds.contains(oid)) continue;
             out.add(oid);
         }
         return out;

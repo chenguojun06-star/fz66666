@@ -133,7 +133,7 @@ if is_listening 8088; then
   BACKEND_PID=""
 else
   if [[ "$MYSQL_READY" -eq 1 ]]; then
-    (cd "$ROOT_DIR/backend" && mvn -DskipTests spring-boot:run) >"$BACKEND_LOG" 2>&1 &
+    (cd "$ROOT_DIR/backend" && mvn -Dmaven.test.skip=true spring-boot:run) >"$BACKEND_LOG" 2>&1 &
     BACKEND_PID=$!
   else
     echo "- 跳过后端启动（MySQL 未就绪）"

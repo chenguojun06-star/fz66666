@@ -558,7 +558,7 @@ public class MaterialPurchaseOrchestrator {
             LinkedHashMap<LocalDate, List<String>> orderIdsByDate = new LinkedHashMap<>();
             for (String id : validOrderIds) {
                 // TODO: existsActivePurchaseForOrder 改为批量 IN 查询（P1）
-                if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(id)) continue;
+                if (!overwriteFlag && !shortageOnly && materialPurchaseService.existsActivePurchaseForOrder(id)) continue;
                 ProductionOrder o = orderMap.get(id);
                 if (o == null) continue;
                 LocalDate day = (o.getCreateTime() != null) ? o.getCreateTime().toLocalDate() : LocalDate.now();
@@ -582,7 +582,7 @@ public class MaterialPurchaseOrchestrator {
         if (!overwriteFlag && !shortageOnly && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
             throw new IllegalStateException("该订单已生成采购需求");
         }
-        List<String> targetOrderIds = helper.resolveTargetOrderIds(seed, overwriteFlag);
+        List<String> targetOrderIds = helper.resolveTargetOrderIds(seed, overwriteFlag, shortageOnly);
         return helper.generateBatchDemand(targetOrderIds, overwriteFlag, shortageOnly);
     }
 
