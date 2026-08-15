@@ -63,7 +63,7 @@ const ValidationRules = {
     minLength: 1,
     maxLength: 50,
     pattern: /^[^-]+$/,
-    message: '颜色名称不能包含 "-"（会导致扫码 SKU 解析错误）',
+    message: '颜色名称不能包含 "-"（会导致扫码商品编码解析错误）',
   },
   size: {
     name: '尺码',
@@ -71,7 +71,7 @@ const ValidationRules = {
     minLength: 1,
     maxLength: 20,
     pattern: /^[^-]+$/,
-    message: '尺码不能包含 "-"（会导致扫码 SKU 解析错误）',
+    message: '尺码不能包含 "-"（会导致扫码商品编码解析错误）',
   },
   styleName: {
     name: '款号名称',

@@ -533,6 +533,9 @@ public class MaterialPurchaseOrchestrator {
         Object overwriteRaw = params == null ? null : params.get("overwrite");
         boolean overwriteFlag = overwriteRaw instanceof Boolean b ? b
                 : "true".equalsIgnoreCase(String.valueOf(overwriteRaw));
+        Object shortageRaw = params == null ? null : params.get("shortageOnly");
+        boolean shortageOnly = shortageRaw instanceof Boolean sb ? sb
+                : "true".equalsIgnoreCase(String.valueOf(shortageRaw));
 
         String oid = null;
         if (orderId != null) {
@@ -563,7 +566,7 @@ public class MaterialPurchaseOrchestrator {
             }
             List<Object> allGenerated = new ArrayList<>();
             for (List<String> dateGroup : orderIdsByDate.values()) {
-                allGenerated.addAll(helper.generateBatchDemand(dateGroup, overwriteFlag));
+                allGenerated.addAll(helper.generateBatchDemand(dateGroup, overwriteFlag, shortageOnly));
             }
             return allGenerated;
         }
@@ -575,11 +578,12 @@ public class MaterialPurchaseOrchestrator {
         if (seed == null) {
             throw new NoSuchElementException("生产订单不存在");
         }
-        if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
+        // shortageOnly 为增量补货：订单已有采购时不报错，仅在物料维度过滤缺料
+        if (!overwriteFlag && !shortageOnly && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
             throw new IllegalStateException("该订单已生成采购需求");
         }
         List<String> targetOrderIds = helper.resolveTargetOrderIds(seed, overwriteFlag);
-        return helper.generateBatchDemand(targetOrderIds, overwriteFlag);
+        return helper.generateBatchDemand(targetOrderIds, overwriteFlag, shortageOnly);
     }
 
     // ── Business ────────────────────────────────────────────

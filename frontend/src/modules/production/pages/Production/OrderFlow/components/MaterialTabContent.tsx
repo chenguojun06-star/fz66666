@@ -3,7 +3,6 @@ import { Alert, Button, Space } from 'antd';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
-import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { displayAmount } from '@/utils/display';
 import { getBomColumns } from '../helpers/bomColumns';
@@ -20,8 +19,8 @@ interface MaterialTabContentProps {
   showReasonModal: (title: string, actionLabel: string, onConfirm: (reason: string) => void) => void;
   /** 记录操作到订单操作记录 */
   recordAction: (action: string, reason: string) => Promise<void>;
-  /** 从物料清单生成采购（全部物料） */
-  handleGenerateFromBom: (reason: string) => Promise<void>;
+  /** 从物料清单生成采购（全部物料）；shortageOnly=true 时仅按净需求生成缺料部分 */
+  handleGenerateFromBom: (reason: string, shortageOnly?: boolean) => Promise<void>;
 }
 
 /**
@@ -48,7 +47,6 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
 }) => {
   const navigate = useNavigate();
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
 
   const openPurchasePreview = () => setPreviewOpen(true);
 
@@ -162,9 +160,8 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           generating={generating}
           onClose={() => setPreviewOpen(false)}
           onGenerateAll={(reason) => { void handleGenerateFromBom(reason); }}
-          onPushedToCart={() => setCartOpen(true)}
+          onGenerateShortage={(reason) => { void handleGenerateFromBom(reason, true); }}
         />
-        <PurchaseCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       </>
     );
   }
@@ -201,9 +198,8 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           generating={generating}
           onClose={() => setPreviewOpen(false)}
           onGenerateAll={(reason) => { void handleGenerateFromBom(reason); }}
-          onPushedToCart={() => setCartOpen(true)}
+          onGenerateShortage={(reason) => { void handleGenerateFromBom(reason, true); }}
         />
-        <PurchaseCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       </>
     );
   }

@@ -61,17 +61,22 @@ const FlowStepRenderer: React.FC<Props> = ({
 
   const [generating, setGenerating] = useState(false);
 
-  const handleGenerateFromBom = async (reason: string) => {
+  const handleGenerateFromBom = async (reason: string, shortageOnly = false) => {
     if (!orderId) {
       message.error('缺少订单ID');
       return;
     }
     setGenerating(true);
     try {
-      const res = await api.post('/production/material/demand/generate', { orderId });
+      const res = await api.post('/production/material/demand/generate', { orderId, shortageOnly });
       if (res?.code === 200 || res?.data) {
-        await recordAction('从物料清单生成采购', reason);
-        message.success('已从物料清单生成采购数据');
+        const generated = Array.isArray(res?.data) ? res.data.length : 0;
+        await recordAction(shortageOnly ? '仅缺料生成采购' : '从物料清单生成采购', reason);
+        if (shortageOnly && generated === 0) {
+          message.info('没有需要补购的缺料（库存与在途已覆盖全部物料）');
+        } else {
+          message.success(shortageOnly ? `已按净需求生成 ${generated} 项缺料采购` : '已从物料清单生成采购数据');
+        }
         onRefresh?.();
       } else {
         message.error(res?.message || '生成失败');

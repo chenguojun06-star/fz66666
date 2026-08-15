@@ -1649,3 +1649,23 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 
 ### 验证
 - type-check ✓ / eslint 0错误（2警告既有）✓ / vite build ✓ 9.6s
+
+## D-075 收尾三件：小程序术语清理 + STAGE_ORDER测试修复 + 仅缺料直接生成（2026-08-16）
+
+### 1. 小程序/H5 术语清理
+- miniprogram + h5-web/public/source-miniapp（镜像）各2处：validationRules "扫码 SKU 解析错误"→"扫码商品编码解析错误"
+- 核实：其余 SKU/BOM 全在代码注释/类名/QR码数据格式（`SKU-`前缀是编码值不能改）；WXML 可见文本无残留；yizhlian-mini-program 无残留
+
+### 2. STAGE_ORDER 7个既有测试失败修复
+- 根因判定：**代码对、测试过时**。`utils/productionStage.ts` 头注释明确"采购/入库分属供应链/仓储模块，工序配置只含4阶段"，`STAGE_ORDER=['裁剪','二次工艺','车缝','尾部']` 是有意决策；测试仍按旧"规则17:6大固定节点"断言
+- 修复：4个测试文件（businessRules/businessRulesExtended/productionCore/rule32ProcessDisplay）改为4节点断言，注明"规则17修订"
+- 注意：SmartOrderHoverCard 里有另一个同名 STAGE_ORDER（6节点完整链路展示用途），语义不同，勿合并
+
+### 3. 仅缺料直接生成采购（D-074 遗留）
+- 后端：`generateDemand` 加 `shortageOnly` 参数 → `generateBatchDemand(orderIds, overwrite, shortageOnly)`；`filterAndApplyShortage`：净需求=采购数量−可用库存(Σqty−locked)−在途(Σ采购−已到)，≤0跳过、>0按净需求生成并重算totalAmount；该订单已有同物料活跃采购跳过（防重复补货）；shortageOnly 时不再抛"该订单已生成采购需求"（增量补货语义）
+- 前端：SmartPurchasePreviewModal 主按钮改「仅缺料生成采购（N项）」直接生成，去掉购物车中转（购物车入口保留在采购管理页）；生成0项时提示"库存与在途已覆盖"
+- **踩坑**：python str.replace 无 count 时替换全部匹配——buildBatchPreview 与 generateBatchDemand 的循环体锚点相同，误插过滤行导致编译错。锚点必须含区分性上下文或限定 count=1
+
+### 验证
+- 前端：type-check ✓ / lint ✓ / build ✓ / **vitest 443/443 全过**（含原7个失败）
+- 后端：mvn compile BUILD SUCCESS ✓

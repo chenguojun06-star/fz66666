@@ -412,6 +412,16 @@ public class MaterialPurchaseOrchestratorHelper {
     }
 
     public List<MaterialPurchase> generateBatchDemand(List<String> orderIds, boolean overwrite) {
+        return generateBatchDemand(orderIds, overwrite, false);
+    }
+
+    /**
+     * 批量生成采购需求。
+     * shortageOnly=true 时只生成缺料部分：口径与智能采购推荐一致
+     * （净需求 = 采购数量 − 可用库存 − 在途），净需求 ≤ 0 跳过，
+     * 缺料的采购数量按净需求生成；该订单已有同物料活跃采购的也跳过（防重复补货）。
+     */
+    public List<MaterialPurchase> generateBatchDemand(List<String> orderIds, boolean overwrite, boolean shortageOnly) {
         List<MaterialPurchase> out = new ArrayList<>();
         if (orderIds == null || orderIds.isEmpty()) return out;
 
@@ -433,6 +443,7 @@ public class MaterialPurchaseOrchestratorHelper {
             if (items == null || items.isEmpty()) continue;
             for (MaterialPurchase p : items) {
                 if (p == null) continue;
+                if (shortageOnly && !filterAndApplyShortage(p, oid)) continue;
                 String key = mergeKey(p);
                 String shared = purchaseNoByKey.get(key);
                 if (!StringUtils.hasText(shared)) {
@@ -446,6 +457,63 @@ public class MaterialPurchaseOrchestratorHelper {
             }
         }
         return out;
+    }
+
+    /**
+     * 仅缺料过滤：净需求 = 采购数量 − 可用库存 − 在途（活跃采购未到货部分）。
+     * 通过过滤时把采购数量改写为净需求，并同步重算 totalAmount。
+     */
+    private boolean filterAndApplyShortage(MaterialPurchase p, String orderId) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String materialCode = p.getMaterialCode();
+        if (!StringUtils.hasText(materialCode)) {
+            return true; // 无法定位物料时不过滤，保持全量行为
+        }
+        BigDecimal qty = p.getPurchaseQuantity() != null ? p.getPurchaseQuantity() : BigDecimal.ZERO;
+
+        // 该订单已有同物料活跃采购（未完成/未取消）→ 已覆盖或在途，跳过
+        long activeCount = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getOrderId, orderId)
+                .eq(MaterialPurchase::getMaterialCode, materialCode)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .notIn(MaterialPurchase::getStatus, "completed", "cancelled")
+                .count();
+        if (activeCount > 0) return false;
+
+        // 可用库存 = Σ(quantity − lockedQuantity)，口径同 SmartSourcingServiceImpl
+        List<MaterialStock> stocks = materialStockService.lambdaQuery()
+                .eq(MaterialStock::getMaterialCode, materialCode)
+                .eq(MaterialStock::getTenantId, tenantId)
+                .eq(MaterialStock::getDeleteFlag, 0)
+                .list();
+        BigDecimal available = stocks.stream()
+                .map(st -> BigDecimal.valueOf(
+                        (st.getQuantity() != null ? st.getQuantity() : 0)
+                                - (st.getLockedQuantity() != null ? st.getLockedQuantity() : 0)))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .max(BigDecimal.ZERO);
+
+        // 在途 = Σ(purchaseQuantity − arrivedQuantity)，活跃采购
+        BigDecimal inTransit = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getMaterialCode, materialCode)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .notIn(MaterialPurchase::getStatus, "completed", "cancelled")
+                .list().stream()
+                .map(x -> {
+                    BigDecimal purchased = x.getPurchaseQuantity() != null ? x.getPurchaseQuantity() : BigDecimal.ZERO;
+                    int arrived = x.getArrivedQuantity() != null ? x.getArrivedQuantity() : 0;
+                    return purchased.subtract(BigDecimal.valueOf(arrived)).max(BigDecimal.ZERO);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal net = qty.subtract(available).subtract(inTransit).max(BigDecimal.ZERO);
+        if (net.compareTo(BigDecimal.ZERO) <= 0) return false;
+        p.setPurchaseQuantity(net);
+        if (p.getUnitPrice() != null && p.getTotalAmount() != null) {
+            p.setTotalAmount(net.multiply(p.getUnitPrice()));
+        }
+        return true;
     }
 
     public List<ProductionOrder> resolveSameDaySameStyleOrders(ProductionOrder seed) {

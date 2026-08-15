@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Table, Tag, Input, Alert, Button, App } from 'antd';
-import { ShoppingCartOutlined } from '@ant-design/icons';
+import { Modal, Table, Tag, Input, Alert, Button } from 'antd';
 import { purchaseCartApi } from '@/services/purchaseCartApi';
 
 interface SmartPurchasePreviewModalProps {
@@ -10,8 +9,8 @@ interface SmartPurchasePreviewModalProps {
   onClose: () => void;
   /** 生成全部物料采购（原「从物料清单生成采购」链路） */
   onGenerateAll: (reason: string) => void;
-  /** 仅缺料加入采购车成功后回调（父级打开购物车） */
-  onPushedToCart: () => void;
+  /** 仅缺料生成采购（净需求口径，直接生成采购任务） */
+  onGenerateShortage: (reason: string) => void;
 }
 
 /**
@@ -19,8 +18,8 @@ interface SmartPurchasePreviewModalProps {
  *
  * 点击「生成采购」先展示净需求分析（用量×订单数量×(1+损耗) − 可用库存 − 在途），
  * 让用户一眼看清哪些缺、哪些库存足够，再选择：
+ *   - 仅缺料生成采购（主按钮，按净需求直接生成采购任务，库存足够的不买）
  *   - 生成采购单（全部物料，走原链路）
- *   - 仅缺料加入采购车（可与其它订单/款式合并下单，购物车里最终确认）
  * 原因输入改为选填（默认"从物料清单生成采购"），不再强制手写。
  */
 const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
@@ -29,14 +28,12 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
   generating,
   onClose,
   onGenerateAll,
-  onPushedToCart,
+  onGenerateShortage,
 }) => {
-  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<any[]>([]);
   const [analyzeError, setAnalyzeError] = useState('');
   const [reason, setReason] = useState('');
-  const [pushing, setPushing] = useState(false);
 
   const loadNetDemand = useCallback(async () => {
     if (!orderNo) return;
@@ -63,19 +60,9 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
   const needRows = rows.filter((r) => r.needPurchase);
   const enoughCount = rows.length - needRows.length;
 
-  const handlePushShortage = async () => {
-    if (!orderNo) return;
-    setPushing(true);
-    try {
-      await purchaseCartApi.generateSmartSourcing(orderNo);
-      message.success(`已将 ${needRows.length} 项缺料加入采购车，请在采购车中确认下单`);
-      onPushedToCart();
-      onClose();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '加入采购车失败');
-    } finally {
-      setPushing(false);
-    }
+  const handleGenerateShortage = () => {
+    onGenerateShortage(reason.trim() || '仅缺料生成采购');
+    onClose();
   };
 
   const handleGenerateAll = () => {
@@ -99,23 +86,20 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
           </span>
           <span>
             <Button onClick={onClose}>取消</Button>
-            {rows.length > 0 && needRows.length > 0 && (
-              <Button
-                icon={<ShoppingCartOutlined />}
-                style={{ marginLeft: 8 }}
-                loading={pushing}
-                onClick={handlePushShortage}
-              >
-                仅缺料加入采购车（{needRows.length}项）
-              </Button>
-            )}
+            <Button
+              style={{ marginLeft: 8 }}
+              onClick={handleGenerateAll}
+            >
+              生成全部{rows.length > 0 ? `（${rows.length}项）` : ''}
+            </Button>
             <Button
               type="primary"
               style={{ marginLeft: 8 }}
               loading={generating}
-              onClick={handleGenerateAll}
+              disabled={rows.length > 0 && needRows.length === 0}
+              onClick={handleGenerateShortage}
             >
-              生成采购单{rows.length > 0 ? `（全部 ${rows.length}项）` : ''}
+              仅缺料生成采购{needRows.length > 0 ? `（${needRows.length}项）` : ''}
             </Button>
           </span>
         </div>
@@ -130,7 +114,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
           type="info"
           showIcon
           style={{ marginBottom: 12 }}
-          message={`有 ${enoughCount} 项物料库存足够：若选择「生成采购单（全部）」会一并采购；建议改用「仅缺料加入采购车」，库存足够的物料到仓库领料即可。`}
+          message={`有 ${enoughCount} 项物料库存足够：点「仅缺料生成采购」时这些不会生成；库存足够的物料到仓库领料即可。`}
         />
       )}
 
