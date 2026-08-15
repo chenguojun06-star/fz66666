@@ -1,6 +1,7 @@
 package com.fashion.supplychain.integration.ecommerce.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.integration.ecommerce.entity.DistributorLevel;
 import com.fashion.supplychain.integration.ecommerce.entity.DistributorPricePolicy;
 import com.fashion.supplychain.integration.ecommerce.entity.DistributorProfile;
@@ -8,6 +9,8 @@ import com.fashion.supplychain.integration.ecommerce.orchestration.DistributorOr
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,6 +26,16 @@ import java.util.List;
 public class DistributorController {
 
     private final DistributorOrchestrator distributorOrchestrator;
+
+    /**
+     * 写操作要求主管及以上角色：分销商档案/等级/价格政策直接影响 B2B 报价，
+     * 工人/工厂协作账号不得增删改（读接口保持登录即可）。
+     */
+    private void requireSupervisor() {
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("无权限操作分销商管理，需要主管及以上角色");
+        }
+    }
 
     // ==================== 分销商档案 ====================
 
@@ -41,6 +54,7 @@ public class DistributorController {
 
     @PostMapping("/profiles")
     public Result<DistributorProfile> createProfile(@RequestBody DistributorProfile profile) {
+        requireSupervisor();
         try {
             return Result.success(distributorOrchestrator.createProfile(profile));
         } catch (IllegalArgumentException e) {
@@ -50,6 +64,7 @@ public class DistributorController {
 
     @PutMapping("/profiles/{id}")
     public Result<DistributorProfile> updateProfile(@PathVariable Long id, @RequestBody DistributorProfile profile) {
+        requireSupervisor();
         try {
             profile.setId(id);
             return Result.success(distributorOrchestrator.updateProfile(profile));
@@ -60,6 +75,7 @@ public class DistributorController {
 
     @DeleteMapping("/profiles/{id}")
     public Result<Void> deleteProfile(@PathVariable Long id) {
+        requireSupervisor();
         try {
             distributorOrchestrator.deleteProfile(id);
             return Result.success(null);
@@ -70,6 +86,7 @@ public class DistributorController {
 
     @PostMapping("/profiles/{id}/status")
     public Result<Void> changeStatus(@PathVariable Long id, @RequestParam String status) {
+        requireSupervisor();
         try {
             distributorOrchestrator.changeStatus(id, status);
             return Result.success(null);
@@ -87,6 +104,7 @@ public class DistributorController {
 
     @PostMapping("/levels")
     public Result<DistributorLevel> createLevel(@RequestBody DistributorLevel level) {
+        requireSupervisor();
         try {
             return Result.success(distributorOrchestrator.createLevel(level));
         } catch (IllegalArgumentException e) {
@@ -96,6 +114,7 @@ public class DistributorController {
 
     @PutMapping("/levels/{id}")
     public Result<DistributorLevel> updateLevel(@PathVariable Long id, @RequestBody DistributorLevel level) {
+        requireSupervisor();
         try {
             level.setId(id);
             return Result.success(distributorOrchestrator.updateLevel(level));
@@ -106,6 +125,7 @@ public class DistributorController {
 
     @DeleteMapping("/levels/{id}")
     public Result<Void> deleteLevel(@PathVariable Long id) {
+        requireSupervisor();
         try {
             distributorOrchestrator.deleteLevel(id);
             return Result.success(null);
@@ -126,6 +146,7 @@ public class DistributorController {
 
     @PostMapping("/policies")
     public Result<DistributorPricePolicy> createPolicy(@RequestBody DistributorPricePolicy policy) {
+        requireSupervisor();
         try {
             return Result.success(distributorOrchestrator.createPolicy(policy));
         } catch (IllegalArgumentException e) {
@@ -135,6 +156,7 @@ public class DistributorController {
 
     @PutMapping("/policies/{id}")
     public Result<DistributorPricePolicy> updatePolicy(@PathVariable Long id, @RequestBody DistributorPricePolicy policy) {
+        requireSupervisor();
         try {
             policy.setId(id);
             return Result.success(distributorOrchestrator.updatePolicy(policy));
@@ -145,6 +167,7 @@ public class DistributorController {
 
     @DeleteMapping("/policies/{id}")
     public Result<Void> deletePolicy(@PathVariable Long id) {
+        requireSupervisor();
         try {
             distributorOrchestrator.deletePolicy(id);
             return Result.success(null);

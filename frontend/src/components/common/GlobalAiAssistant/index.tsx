@@ -96,12 +96,28 @@ const GlobalAiAssistant: React.FC = () => {
   const { mood: _mood, hasFetchedMood: _hasFetchedMood, setHasFetchedMood } = useMoodGreeting(user, setMessages);
   const { showEmojiPicker, setShowEmojiPicker, emojiTab, setEmojiTab, emojiPanelRef, handleEmojiSelect } = useEmojiPicker(setInputValue, inputRef as React.RefObject<HTMLInputElement>);
 
-  const { subscribe } = useWebSocket({
+  const { subscribe, connected: wsConnected } = useWebSocket({
     userId: user?.id,
     tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
     token: localStorage.getItem('authToken') ?? '',
   });
+
+  // ── WS 断连兜底轮询 ──
+  // 公网网关会掐空闲连接，断连窗口内的扫码进度推送会静默丢失且无补偿，
+  // 页面看起来"很久不更新"。断连期间降级为 30s 轮询派发 data:changed，
+  // 让监听该事件的订单/样衣/看板页面定期自刷；连接恢复后立即停止并刷一次。
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    if (wsConnected) {
+      window.dispatchEvent(new Event('data:changed'));
+      return;
+    }
+    const timer = window.setInterval(() => {
+      window.dispatchEvent(new Event('data:changed'));
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [wsConnected, isAuthenticated]);
 
   // ── 监听后端推送的 AI 智能决策卡片 + ⌘K 搜索无结果 ──
   useAdviceListener({ setMessages, setIsOpen, setInputValue, subscribe });

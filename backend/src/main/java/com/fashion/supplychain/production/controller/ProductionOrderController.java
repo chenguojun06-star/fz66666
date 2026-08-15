@@ -57,11 +57,47 @@ public class ProductionOrderController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
+     * 工厂协作账号（factoryId 非空）价格后端脱敏：前端隐藏只是展示层，接口/导出必须兜底。
+     * 覆盖 list 的三种返回形态：单实体 / enriched Map / IPage 分页。
+     */
+    private static final String[] PRICE_FIELDS = {
+            "factoryUnitPrice", "orderUnitPrice", "quotationUnitPrice",
+            "scatterCuttingUnitPrice", "materialCost", "totalCost"
+    };
+
+    private void maskOrderPricesForFactoryAccount(Object data) {
+        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (factoryId == null || factoryId.isBlank()) {
+            return; // 内部账号不脱敏
+        }
+        if (data == null) return;
+        if (data instanceof ProductionOrder order) {
+            order.setFactoryUnitPrice(null);
+            order.setOrderUnitPrice(null);
+            order.setQuotationUnitPrice(null);
+            order.setScatterCuttingUnitPrice(null);
+            order.setMaterialCost(null);
+            order.setTotalCost(null);
+        } else if (data instanceof java.util.Map<?, ?> map) {
+            for (String field : PRICE_FIELDS) {
+                map.remove(field);
+            }
+        } else if (data instanceof com.baomidou.mybatisplus.core.metadata.IPage<?> page) {
+            page.getRecords().forEach(this::maskOrderPricesForFactoryAccount);
+        }
+    }
+
+    /**
      * 导出生产订单列表为Excel
      */
     @GetMapping("/export-excel")
     @Operation(summary = "导出生产订单Excel", description = "导出生产订单列表为Excel文件，支持按条件筛选")
     public ResponseEntity<byte[]> exportExcel(@Parameter(description = "查询参数") @RequestParam Map<String, Object> params) {
+        // 工厂协作账号禁止导出：Excel 含全部加工单价/成本，前端隐藏不构成防护
+        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (factoryId != null && !factoryId.isBlank()) {
+            throw new org.springframework.security.access.AccessDeniedException("工厂账号无权导出订单价格数据");
+        }
         byte[] data = exportOrchestrator.exportProductionOrders(params);
         String fileName = "生产订单导出_" + System.currentTimeMillis() + ".xlsx";
         String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
@@ -91,6 +127,7 @@ public class ProductionOrderController {
         if (params.containsKey("id") && params.get("id") != null) {
             String id = params.get("id").toString();
             ProductionOrder detail = productionOrderOrchestrator.getDetailById(id);
+            maskOrderPricesForFactoryAccount(detail);
             return Result.success(detail);
         }
 
@@ -143,6 +180,7 @@ public class ProductionOrderController {
                         pageResult.put("size", 1L);
                         pageResult.put("current", 1L);
                         pageResult.put("pages", 1L);
+                        maskOrderPricesForFactoryAccount(enriched);
                         return Result.success(pageResult);
                     }
                 } catch (java.util.NoSuchElementException e) {
@@ -155,6 +193,7 @@ public class ProductionOrderController {
         }
 
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
+        maskOrderPricesForFactoryAccount(page);
         return Result.success(page);
     }
 
@@ -170,6 +209,7 @@ public class ProductionOrderController {
         }
         params.remove("filters");
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
+        maskOrderPricesForFactoryAccount(page);
         return Result.success(page);
     }
 

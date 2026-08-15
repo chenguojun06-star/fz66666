@@ -1694,3 +1694,20 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 ### 方法论
 - 并发审计用多agent时注意平台并发限制（本次6个全挂，改2个/批成功）
 - 审计prompt必须给"输出格式+严重度定义+只要代码证据"，产出质量高（每个问题带文件:行号）
+
+## D-077 P0 全清零：财务4+供应商1+权限2+色卡1+进度兜底（2026-08-16）
+
+### 修复明细（D-076 审计的 10 个 P0 全部闭环）
+1. **财务-调价污染**：ProcessPriceAdjustmentOrchestrator 排除条件 ne('settled') 恒真（真实态是 payroll_settled/payroll_approved）→ notIn 三值排除，已结算扫码记录不再被改写
+2. **财务-扣款幂等键**：账单 sourceId 从"明细ID(每次重保存都是新值)"改为稳定键 reconciliationId_type；新增 BillAggregationOrchestrator.cancelBySourceType（按类型整清，跳过已结清），推送前整类型取消——重保存不再叠加红冲账单
+3. **财务-打款超额**：PayrollSettlementMapper.atomicAddPaidAmount 的 remaining/payment_status 公式补扣 deduction/advance + GREATEST 0，与扣款口径一致
+4. **财务-部分到货全额**：MaterialReconciliationOrchestrator.resolvePrices 金额一律按"单价×对账数量(封顶到货量)"重算；无单价时按采购数量（非到货量）反推，避免单价虚高
+5. **供应商-漏对账**：MaterialReconciliationSyncOrchestrator 删除 purchaseId 一维短路（保留 purchaseId+materialCode+inboundNo 三维去重），第2批起入库正常生成对账
+6. **权限-分销商**：DistributorController 10 个写接口全部加 requireSupervisor（UserContext.isSupervisorOrAbove，AccessDeniedException）
+7. **权限-工厂价格脱敏**：ProductionOrderController list 三种返回形态（实体/enriched Map/IPage）maskOrderPricesForFactoryAccount 抹 6 个价格字段；export-excel 工厂账号直接 403
+8. **色卡路由**：routeConfig paths/权限映射(复用 MENU_MATERIAL_DATABASE)/菜单"色卡本" + warehouse export ColorCard + App.tsx Route——整页从不可达变可达
+9. **进度兜底**：GlobalAiAssistant WS connected=false 时 30s 轮询派发 data:changed（订单/样衣/看板自刷），恢复连接立即停止并补刷一次——解决公网隧道断连"进度很久不动"
+
+### 验证
+- 后端 mvn compile ✓ 已重启（8088 API 200）；前端 type-check/lint/build ✓
+- 待办：27 P1（下单推送校验/到货双入口/付款回写链/角色名子串提权等）+ 24 P2

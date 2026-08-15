@@ -586,8 +586,10 @@ public class ShipmentReconciliationOrchestrator {
         }
         boolean isExternalFactory = recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0;
         try {
-            // 先删除该对账单已推送的扣款账单（幂等性）
-            billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION_DEDUCTION", reconciliationId);
+            // 先取消该类型已推送的扣款账单（幂等性）。
+            // 注意不能按 reconciliationId 单条取消：账单 sourceId 是明细级稳定键（reconciliationId_type），
+            // 且租户内该类型账单全部来源于本对账模块，按类型整清才能避免重保存叠加。
+            billAggregationOrchestrator.cancelBySourceType("SHIPMENT_RECONCILIATION_DEDUCTION");
 
             // 推送每笔扣款作为独立账单
             for (DeductionItem item : items) {
@@ -601,7 +603,8 @@ public class ShipmentReconciliationOrchestrator {
 
                 BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
                 req.setSourceType("SHIPMENT_RECONCILIATION_DEDUCTION");
-                req.setSourceId(item.getId() != null ? item.getId().toString() : reconciliationId + "_" + System.nanoTime());
+                // 幂等键必须稳定：用 reconciliationId+扣款类型（明细ID每次重保存都是新值，会导致幂等失效）
+                req.setSourceId(reconciliationId + "_" + item.getDeductionType());
                 req.setSourceNo(recon.getReconciliationNo() + "-" + item.getDeductionType());
                 req.setCounterpartyId(recon.getCustomerId());
                 req.setCounterpartyName(recon.getCustomerName());

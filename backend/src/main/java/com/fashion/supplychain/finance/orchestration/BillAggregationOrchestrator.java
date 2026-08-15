@@ -411,6 +411,31 @@ public class BillAggregationOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 按来源类型批量取消账单（跳过已结清），用于"先删后插重建"类幂等场景：
+     * 明细每次重保存都会生成新 ID，按单条 sourceId 无法取消旧账单，必须整类型清理。
+     */
+    public void cancelBySourceType(String sourceType) {
+        Long tenantId = TenantAssert.requireTenantId();
+        List<BillAggregation> existing = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .ne(BillAggregation::getStatus, BillConstants.STATUS_CANCELLED)
+                .list();
+        for (BillAggregation bill : existing) {
+            if (BillConstants.STATUS_SETTLED.equals(bill.getStatus())) {
+                log.warn("[BillAggregation] 已结清账单不可取消: billNo={}, source={}:{}",
+                        bill.getBillNo(), sourceType, bill.getSourceId());
+                continue;
+            }
+            bill.setStatus(BillConstants.STATUS_CANCELLED);
+            bill.setRemark("上游单据操作自动取消(按类型): sourceType=" + sourceType);
+            billAggregationService.updateById(bill);
+            log.info("[BillAggregation] 联动取消账单(按类型): billNo={}", bill.getBillNo());
+        }
+    }
+
     public void cancelBySource(String sourceType, String sourceId) {
         Long tenantId = TenantAssert.requireTenantId();
         BillAggregation existing = billAggregationService.lambdaQuery()

@@ -170,8 +170,9 @@ public class ProcessPriceAdjustmentOrchestrator {
                 .eq(ScanRecord::getProcessName, processName)
                 .eq(ScanRecord::getTenantId, tenantId)
                 .ne(ScanRecord::getScanType, "orchestration")
+                // 已结算状态以工资链路实际写入的值为准：payroll_approved/payroll_settled（旧值 settled 一并排除）
                 .and(w -> w.isNull(ScanRecord::getSettlementStatus)
-                        .or().ne(ScanRecord::getSettlementStatus, "settled"))
+                        .or().notIn(ScanRecord::getSettlementStatus, "settled", "payroll_settled", "payroll_approved"))
                 .list();
 
         int scanUpdated = 0;

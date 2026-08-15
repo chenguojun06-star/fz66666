@@ -534,17 +534,18 @@ public class MaterialReconciliationOrchestrator {
     private BigDecimal[] resolvePrices(MaterialPurchase purchase, int qty) {
         BigDecimal unitPrice = purchase.getUnitPrice();
         BigDecimal totalAmount = purchase.getTotalAmount();
+        int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            if (qty > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
-                totalAmount = totalAmount.setScale(2, RoundingMode.HALF_UP);
-                unitPrice = totalAmount.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP);
+            // 无单价：按采购数量（而非到货量）从采购总额反推真实单价，避免部分到货时单价虚高
+            if (pq > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+                unitPrice = totalAmount.divide(BigDecimal.valueOf(pq), 2, RoundingMode.HALF_UP);
             } else {
                 unitPrice = BigDecimal.ZERO;
             }
         }
-        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
-        }
+        // 金额一律按「单价 × 对账数量」重算：对账数量是封顶到货量，
+        // 直接沿用采购全额会造成部分到货时应付虚增
+        totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
         return new BigDecimal[]{unitPrice, totalAmount};
     }
 
