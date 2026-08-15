@@ -22,6 +22,8 @@ const MaterialPurchase: React.FC = () => {
   const navigate = useNavigate();
   const [activeMainTab, setActiveMainTab] = useState('purchase');
   const [orderPickerOpen, setOrderPickerOpen] = useState(false);
+  // 订单选择器用途：add=新增采购跳详情；smart=智能采购推荐带回订单号并自动分析
+  const [orderPickerContext, setOrderPickerContext] = useState<'add' | 'smart'>('add');
   const [warehousePickModalOpen, setWarehousePickModalOpen] = useState(false);
   const [warehousePickTarget, setWarehousePickTarget] = useState<MaterialPurchaseType | null>(null);
   const [warehousePickQty, setWarehousePickQty] = useState(0);
@@ -101,11 +103,21 @@ const MaterialPurchase: React.FC = () => {
   const handlePickOrder = useCallback((order: any) => {
     const styleNo = String(order.styleNo || '').trim();
     const orderNo = String(order.orderNo || '').trim();
-    if (styleNo) {
+    if (orderPickerContext === 'smart') {
+      if (orderNo) {
+        setSmartSourcingOrderNo(orderNo);
+        // 选中后自动分析，少点一次按钮
+        setNetDemandLoading(true);
+        purchaseCartApi.getNetDemand(orderNo)
+          .then((data) => setNetDemandData(data || []))
+          .catch(() => { message.error('分析需求失败'); setNetDemandData([]); })
+          .finally(() => setNetDemandLoading(false));
+      }
+    } else if (styleNo) {
       openDetailPage(styleNo, orderNo);
     }
     setOrderPickerOpen(false);
-  }, [openDetailPage]);
+  }, [orderPickerContext, openDetailPage]);
 
   const handleQualityIssue = useCallback((record: MaterialPurchaseType) => {
     setQualityIssuePurchase(record);
@@ -261,7 +273,7 @@ const MaterialPurchase: React.FC = () => {
                       onSearch={fetchMaterialPurchaseList}
                       onReset={handleSearchReset}
                       onExport={handleExport}
-                      onAdd={() => setOrderPickerOpen(true)}
+                      onAdd={() => { setOrderPickerContext('add'); setOrderPickerOpen(true); }}
                       loading={loading}
                       hasData={purchaseList && purchaseList.length > 0}
                     />
@@ -414,16 +426,21 @@ const MaterialPurchase: React.FC = () => {
           ) : null
         }
       >
-        {/* 步骤1：输入订单号 */}
+        {/* 步骤1：选择/输入订单号 */}
         <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
           <Input
-            placeholder="请输入生产订单号"
+            placeholder="选择或输入生产订单号"
             value={smartSourcingOrderNo}
             onChange={(e) => setSmartSourcingOrderNo(e.target.value)}
             onPressEnter={handleAnalyzeNetDemand}
             allowClear
             prefix={<SearchOutlined />}
           />
+          <Button
+            onClick={() => { setOrderPickerContext('smart'); setOrderPickerOpen(true); }}
+          >
+            选择订单
+          </Button>
           <Button
             type="primary"
             onClick={handleAnalyzeNetDemand}

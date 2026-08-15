@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Button, Space } from 'antd';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
+import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { displayAmount } from '@/utils/display';
 import { getBomColumns } from '../helpers/bomColumns';
+import SmartPurchasePreviewModal from './SmartPurchasePreviewModal';
 
 interface MaterialTabContentProps {
   orderId: string;
@@ -13,11 +16,11 @@ interface MaterialTabContentProps {
   bomList: any[];
   materialPurchases: any[];
   generating: boolean;
-  /** 弹出原因输入弹窗 */
+  /** 弹出原因输入弹窗（保留给其它环节使用） */
   showReasonModal: (title: string, actionLabel: string, onConfirm: (reason: string) => void) => void;
   /** 记录操作到订单操作记录 */
   recordAction: (action: string, reason: string) => Promise<void>;
-  /** 从 BOM 生成采购 */
+  /** 从物料清单生成采购（全部物料） */
   handleGenerateFromBom: (reason: string) => Promise<void>;
 }
 
@@ -25,9 +28,12 @@ interface MaterialTabContentProps {
  * 面辅料 Tab 内容。
  *
  * 优先级：
- * 1. materialPurchases 非空 → 显示采购明细 + 「从BOM生成」「录入采购」按钮
- * 2. bomList 非空 → 显示 BOM 物料 + 「从BOM生成采购」按钮
+ * 1. materialPurchases 非空 → 显示采购明细 + 「生成采购」「录入采购」按钮
+ * 2. bomList 非空 → 显示物料清单 + 「生成采购」按钮
  * 3. 都为空 → Alert 提示
+ *
+ * 「生成采购」先弹出缺料分析（净需求 = 用量×订单数量×(1+损耗) − 可用库存 − 在途），
+ * 用户看清缺什么再选择「生成全部」或「仅缺料加入采购车」，原因改为选填。
  */
 const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   orderId,
@@ -36,10 +42,24 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   bomList,
   materialPurchases,
   generating,
-  showReasonModal,
+  showReasonModal: _showReasonModal,
   recordAction,
   handleGenerateFromBom,
 }) => {
+  const navigate = useNavigate();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  const openPurchasePreview = () => setPreviewOpen(true);
+
+  const goToPurchaseEntry = () => {
+    void recordAction('录入采购', '订单流程快捷入口');
+    const url = orderId
+      ? `/production/material-purchase?orderId=${orderId}&orderNo=${encodeURIComponent(orderNo)}`
+      : '/production/material-purchase';
+    navigate(url);
+  };
+
   if (materialPurchases.length > 0) {
     return (
       <>
@@ -49,23 +69,15 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
               <Button
                 icon={<ThunderboltOutlined />}
                 loading={generating}
-                onClick={() => showReasonModal('从物料清单生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
+                onClick={openPurchasePreview}
               >
-                从BOM生成
+                生成采购
               </Button>
             )}
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => {
-                showReasonModal('录入物料采购', '录入采购', (reason) => {
-                  recordAction('录入采购', reason);
-                  const url = orderId
-                    ? `/production/material-purchase?orderId=${orderId}&orderNo=${encodeURIComponent(orderNo)}`
-                    : '/production/material-purchase';
-                  window.open(url, '_blank');
-                });
-              }}
+              onClick={goToPurchaseEntry}
             >
               录入采购
             </Button>
@@ -143,6 +155,16 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           bordered
           scroll={{ x: 'max-content' }}
         />
+
+        <SmartPurchasePreviewModal
+          open={previewOpen}
+          orderNo={orderNo}
+          generating={generating}
+          onClose={() => setPreviewOpen(false)}
+          onGenerateAll={(reason) => { void handleGenerateFromBom(reason); }}
+          onPushedToCart={() => setCartOpen(true)}
+        />
+        <PurchaseCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       </>
     );
   }
@@ -155,9 +177,9 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
             type="primary"
             icon={<ThunderboltOutlined />}
             loading={generating}
-            onClick={() => showReasonModal('从物料清单生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
+            onClick={openPurchasePreview}
           >
-            从BOM生成采购
+            生成采购
           </Button>
         </div>
         <ResizableTable
@@ -172,6 +194,16 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           bordered
           scroll={{ x: 'max-content' }}
         />
+
+        <SmartPurchasePreviewModal
+          open={previewOpen}
+          orderNo={orderNo}
+          generating={generating}
+          onClose={() => setPreviewOpen(false)}
+          onGenerateAll={(reason) => { void handleGenerateFromBom(reason); }}
+          onPushedToCart={() => setCartOpen(true)}
+        />
+        <PurchaseCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       </>
     );
   }

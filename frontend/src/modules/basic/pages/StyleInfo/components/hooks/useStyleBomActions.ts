@@ -91,7 +91,7 @@ const useStyleBomActions = ({
       }
     };
 
-    confirmAction('确认生成采购单', `将根据当前BOM配置（${data.length}个物料）及款式颜色数量生成物料采购记录，是否继续？`, () => doGenerate(false));
+    confirmAction('确认生成采购单', `将根据当前物料清单（${data.length}个物料）及款式颜色数量生成采购记录。\n\n提示：建议先「检查库存」——库存充足的物料可在表格内直接领取，无需采购。`, () => doGenerate(false));
   }, [data, message, setLoading, styleId]);
 
   const handleCheckStock = useCallback(async () => {

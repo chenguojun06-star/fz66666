@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Dropdown, Select, Space, Spin, Upload, message } from 'antd';
+import { Button, Dropdown, Select, Space, Spin, Tooltip, Upload, message } from 'antd';
 import { DownOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
@@ -152,14 +152,16 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         >
           生成采购单
         </Button>
-        <Button
-          icon={<ShoppingCartOutlined />}
-          onClick={onAddToPurchaseCart}
-          disabled={locked || !dataLength || loading}
-          loading={loading}
-        >
-          加入采购车
-        </Button>
+        <Tooltip title="放入采购车草稿，可与其它款式合并下单后统一确认；单款式采购直接点「生成采购单」更快">
+          <Button
+            icon={<ShoppingCartOutlined />}
+            onClick={onAddToPurchaseCart}
+            disabled={locked || !dataLength || loading}
+            loading={loading}
+          >
+            加入采购车
+          </Button>
+        </Tooltip>
         <Button
           type={tableEditable ? 'primary' : 'default'}
           onClick={onToggleEdit}

@@ -97,7 +97,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
             }}
             options={[
               { label: '采购类型', value: '' },
-              { label: '订单', value: 'order' },
+              { label: '大货订单', value: 'order' },
               { label: '样衣', value: 'sample' },
               { label: '批量采购', value: 'batch' },
             ]}
