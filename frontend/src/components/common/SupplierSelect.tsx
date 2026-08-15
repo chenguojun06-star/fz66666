@@ -119,13 +119,14 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     });
   };
 
-  const handleChange = async (changedValue: string) => {
+  const handleChange = (changedValue: string) => {
     if (!changedValue?.trim()) {
       onChange?.(changedValue, undefined);
       return;
     }
-
-    // 检查是否是已有供应商
+    // 输入过程只做已有供应商匹配回填；不匹配时仅携带名称（后端保存兜底）。
+    // 禁止在 onChange 里创建：AutoComplete 每个键入中间态都会触发，
+    // 会创建"杭/杭州/杭州纺…"等一堆垃圾供应商
     const existing = suppliers.find(s => s.factoryName === changedValue.trim());
     if (existing) {
       onChange?.(changedValue, {
@@ -135,13 +136,19 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         supplierContactPerson: existing.contactPerson,
         supplierContactPhone: existing.contactPhone
       });
-      return;
+    } else {
+      onChange?.(changedValue, undefined);
     }
+  };
 
-    // 新供应商名称，自动创建
+  // 失焦时才真正创建新供应商（明确的完成输入信号）
+  const handleBlur = async () => {
+    const name = String(value ?? '').trim();
+    if (!name) return;
+    if (suppliers.some(s => s.factoryName === name)) return;
     try {
       const response = await factoryApi.create({
-        factoryName: changedValue.trim(),
+        factoryName: name,
         supplierType: 'MATERIAL',
         factoryType: 'EXTERNAL',
         status: 'active'
@@ -149,20 +156,17 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       if (response?.data?.id) {
         const newFactory = response.data;
         setSuppliers(prev => [...prev, newFactory]);
-        onChange?.(changedValue, {
+        onChange?.(name, {
           id: newFactory.id,
           factory: newFactory,
           supplierId: newFactory.id,
           supplierContactPerson: newFactory.contactPerson,
           supplierContactPhone: newFactory.contactPhone
         });
-      } else {
-        onChange?.(changedValue, undefined);
       }
     } catch (error) {
-      console.error('自动创建供应商失败:', error);
-      // 创建失败时仍然允许保存（后端会兜底同步）
-      onChange?.(changedValue, undefined);
+      // 创建失败（无权限/网络）不打扰输入，名称仍会随表单保存
+      console.warn('自动创建供应商失败（将在保存时兜底）:', error);
     }
   };
 
@@ -173,6 +177,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       value={value}
       options={options}
       onSelect={handleSelect}
+      onBlur={handleBlur}
       onChange={handleChange}
       placeholder={placeholder}
       disabled={disabled}

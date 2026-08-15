@@ -147,6 +147,17 @@ public class OrderManagementOrchestrator {
             throw new IllegalStateException("该款已推送到下单管理，无需重复推送");
         }
 
+        // 样衣未完成禁止推送：下单管理列表按 sampleStatus=COMPLETED 过滤、建单接口同样校验，
+        // 未完成就推送会出现"已推送但列表不可见、建单被拒"的半卡死态（与前端按钮条件对齐）
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(style.getSampleStatus() == null ? "" : style.getSampleStatus()))) {
+            throw new IllegalStateException("样衣尚未完成开发，请先在样衣详情标记「开发完成」后再推送");
+        }
+        // 已报废/停用款式禁止推送（报废与推送状态机互不感知会产生可见不可用条目）
+        String styleStatus = style.getStatus() == null ? "" : style.getStatus().trim().toUpperCase();
+        if ("SCRAPPED".equals(styleStatus)) {
+            throw new IllegalStateException("该款已报废，无法推送到下单管理");
+        }
+
         // 检查是否有工序单价配置
         List<StyleProcess> processList = styleProcessService.listByStyleId(styleId);
         if (processList == null || processList.isEmpty()) {

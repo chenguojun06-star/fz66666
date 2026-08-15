@@ -186,12 +186,22 @@ public class WagePaymentCallbackHelper {
                 .eq(PayrollSettlement::getTenantId, tenantId)
                 .one();
         if (ps != null && "approved".equals(ps.getStatus())) {
+            // 付清口径与 PayrollSettlementMapper.atomicAddPaidAmount 一致：剩余 = 总额-已付-扣款-预支
+            java.math.BigDecimal total = ps.getTotalAmount() != null ? ps.getTotalAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal paid = ps.getPaidAmount() != null ? ps.getPaidAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal deduction = ps.getDeductionAmount() != null ? ps.getDeductionAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal advance = ps.getAdvanceAmount() != null ? ps.getAdvanceAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal remaining = total.subtract(paid).subtract(deduction).subtract(advance)
+                    .max(java.math.BigDecimal.ZERO);
             PayrollSettlement psPatch = new PayrollSettlement();
             psPatch.setId(ps.getId());
+            // 剩余部分视为本次由付款中心付清：同步累计已付并清零剩余，防止 recordPayment 路径二次打款
+            psPatch.setPaidAmount(paid.add(remaining));
+            psPatch.setRemainingAmount(java.math.BigDecimal.ZERO);
             psPatch.setStatus("paid");
             psPatch.setUpdateTime(LocalDateTime.now());
             payrollSettlementService.updateById(psPatch);
-            log.info("[付款中心] 回写工资结算为paid: id={}", bizId);
+            log.info("[付款中心] 回写工资结算为paid: id={}, 付清剩余={}", bizId, remaining);
         }
     }
 
@@ -396,10 +406,14 @@ public class WagePaymentCallbackHelper {
                     newStatus = settled.compareTo(billAmt) >= 0 ? "SETTLED" : "SETTLING";
                 }
                 bill.setStatus(newStatus);
-                bill.setSettledAmount(billAmt);
-                bill.setSettledAt(LocalDateTime.now());
-                bill.setSettledById(UserContext.userId());
-                bill.setSettledByName(UserContext.username());
+                if ("SETTLED".equals(newStatus)) {
+                    // 仅结清时置全额：SETTLING（部分付款）保留原 settledAmount，
+                    // 避免付 1 元就把 1 万账单的已结金额虚增为全额
+                    bill.setSettledAmount(billAmt);
+                    bill.setSettledAt(LocalDateTime.now());
+                    bill.setSettledById(UserContext.userId());
+                    bill.setSettledByName(UserContext.username());
+                }
                 bill.setUpdateTime(LocalDateTime.now());
                 billAggregationService.updateById(bill);
                 log.info("[付款中心] 联动账单汇总: billNo={}, ->{}", bill.getBillNo(), newStatus);

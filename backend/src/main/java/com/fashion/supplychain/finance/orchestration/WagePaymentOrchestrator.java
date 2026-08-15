@@ -370,6 +370,10 @@ public class WagePaymentOrchestrator {
                 if (payable.getSourceType() != null && payable.getSourceId() != null) {
                     upstreamBizType = mapSourceTypeToBizType(payable.getSourceType());
                     upstreamBizId = payable.getSourceId();
+                } else {
+                    // 合并应付不携带单一 source：应付结清时按合并分组特征反查组内账单，
+                    // 逐张回写上游业务单（未结清不回写，避免部分付款误标上游已付）
+                    callbackMergedPayableBillsIfSettled(payable);
                 }
             }
             if (upstreamBizType != null && upstreamBizId != null) {
@@ -401,6 +405,48 @@ public class WagePaymentOrchestrator {
         }
 
         return payment;
+    }
+
+    /**
+     * 合并应付结清后的上游回写：按 findMergedPayable 的同构分组特征
+     * （billType + billCategory + counterpartyId + settlementMonth，空值按 isNull 匹配）
+     * 反查组内非取消账单，逐张回写上游业务单状态。
+     */
+    private void callbackMergedPayableBillsIfSettled(Payable payable) {
+        try {
+            boolean settled = payable.getPaidAmount() != null && payable.getAmount() != null
+                    && payable.getPaidAmount().compareTo(payable.getAmount()) >= 0;
+            if (!settled) {
+                return;
+            }
+            Long tenantId = UserContext.tenantId();
+            var wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BillAggregation>()
+                    .eq(BillAggregation::getTenantId, tenantId)
+                    .eq(BillAggregation::getDeleteFlag, 0)
+                    .ne(BillAggregation::getStatus, "CANCELLED")
+                    .eq(BillAggregation::getBillType, payable.getBillType())
+                    .eq(BillAggregation::getBillCategory, payable.getBillCategory());
+            if (org.springframework.util.StringUtils.hasText(payable.getCounterpartyId())) {
+                wrapper.eq(BillAggregation::getCounterpartyId, payable.getCounterpartyId());
+            } else {
+                wrapper.isNull(BillAggregation::getCounterpartyId);
+            }
+            if (org.springframework.util.StringUtils.hasText(payable.getSettlementMonth())) {
+                wrapper.eq(BillAggregation::getSettlementMonth, payable.getSettlementMonth());
+            } else {
+                wrapper.isNull(BillAggregation::getSettlementMonth);
+            }
+            java.util.List<BillAggregation> bills = billAggregationService.list(wrapper);
+            for (BillAggregation bill : bills) {
+                if (org.springframework.util.StringUtils.hasText(bill.getSourceType())
+                        && org.springframework.util.StringUtils.hasText(bill.getSourceId())) {
+                    callbackHelper.callbackPaidUpstream(mapSourceTypeToBizType(bill.getSourceType()), bill.getSourceId());
+                }
+            }
+            log.info("[付款中心] 合并应付结清回写: payableNo={}, 组内账单 {} 张", payable.getPayableNo(), bills.size());
+        } catch (Exception e) {
+            log.warn("[付款中心] 合并应付结清回写失败(不阻断): payableNo={}", payable.getPayableNo(), e);
+        }
     }
 
     private Payable resolvePayableFromRequest(WagePaymentRequest request) {

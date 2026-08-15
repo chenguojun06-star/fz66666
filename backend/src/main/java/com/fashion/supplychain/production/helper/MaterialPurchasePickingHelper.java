@@ -289,7 +289,19 @@ public class MaterialPurchasePickingHelper {
         deficitPurchase.setCreateTime(LocalDateTime.now());
         deficitPurchase.setUpdateTime(LocalDateTime.now());
         deficitPurchase.setDeleteFlag(0);
-        materialPurchaseService.save(deficitPurchase);
+        // 补齐统一保存所需字段：purchaseNo/sourceType/价格——缺失会导致
+        // rollbackStockIfNeeded 误判非订单驱动而错误扣减库存
+        if (!StringUtils.hasText(deficitPurchase.getPurchaseNo())) {
+            deficitPurchase.setPurchaseNo("MP-DEF-" + System.currentTimeMillis());
+        }
+        if (!StringUtils.hasText(deficitPurchase.getSourceType())) {
+            deficitPurchase.setSourceType(original.getSourceType() != null ? original.getSourceType() : "order");
+        }
+        if (original.getUnitPrice() != null) {
+            deficitPurchase.setUnitPrice(original.getUnitPrice());
+            deficitPurchase.setTotalAmount(original.getUnitPrice().multiply(BigDecimal.valueOf(deficitQty)));
+        }
+        materialPurchaseService.savePurchaseAndUpdateOrder(deficitPurchase);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -887,10 +899,11 @@ public class MaterialPurchasePickingHelper {
                 .set(MaterialPurchase::getReceivedTime, null)
                 .set(MaterialPurchase::getReceiverId, null)
                 .set(MaterialPurchase::getReceiverName, null)
-                .set(MaterialPurchase::getArrivedQuantity, 0)
                 .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
                 .update();
-        log.info("✅ 采购任务已批量恢复: orderNo={}, materialCodes={}", orderNo, materialCodes);
+        // 注意：不清零 arrivedQuantity —— 到货量是入库侧的事实记录，
+        // 撤销领料出库不应破坏真实到货数据（旧逻辑按 orderNo+materialCode 批量清零，
+        // 会误伤 smartReceiveAll 产生的同物料补采单）
     }
 
     // ──────────────────────────────────────────────────────────────

@@ -288,15 +288,25 @@ public class PayableOrchestrator {
     }
 
     private Payable findMergedPayable(BillAggregation bill, Long tenantId) {
+        // 注意：counterpartyId/settlementMonth 可能为空（如工资账单按订单聚合、无对手人），
+        // eq(null) 会生成 "= NULL" 永假导致合并不生效、每笔新建应付——空值改用 isNull 匹配
         LambdaQueryWrapper<Payable> wrapper = new LambdaQueryWrapper<Payable>()
                 .eq(Payable::getTenantId, tenantId)
                 .eq(Payable::getDeleteFlag, 0)
                 .in(Payable::getStatus, "PENDING", "PARTIAL")
                 .eq(Payable::getBillType, bill.getBillType())
-                .eq(Payable::getBillCategory, bill.getBillCategory())
-                .eq(Payable::getCounterpartyId, bill.getCounterpartyId())
-                .eq(Payable::getSettlementMonth, bill.getSettlementMonth())
-                .last("LIMIT 1");
+                .eq(Payable::getBillCategory, bill.getBillCategory());
+        if (StringUtils.hasText(bill.getCounterpartyId())) {
+            wrapper.eq(Payable::getCounterpartyId, bill.getCounterpartyId());
+        } else {
+            wrapper.isNull(Payable::getCounterpartyId);
+        }
+        if (StringUtils.hasText(bill.getSettlementMonth())) {
+            wrapper.eq(Payable::getSettlementMonth, bill.getSettlementMonth());
+        } else {
+            wrapper.isNull(Payable::getSettlementMonth);
+        }
+        wrapper.last("LIMIT 1");
         return payableService.getOne(wrapper);
     }
 

@@ -1711,3 +1711,24 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 ### 验证
 - 后端 mvn compile ✓ 已重启（8088 API 200）；前端 type-check/lint/build ✓
 - 待办：27 P1（下单推送校验/到货双入口/付款回写链/角色名子串提权等）+ 24 P2
+
+## D-078 P1 第一批 9 项：付款回写链/出库撤销/推送校验/补采单/租户/供应商输入（2026-08-16）
+
+### 修复（D-076 清单中资金与库存相关的 P1）
+1. **付款回写-合并应付**：WagePaymentOrchestrator 新增 callbackMergedPayableBillsIfSettled——应付结清时按合并分组特征（billType+billCategory+counterpartyId+settlementMonth，空值 isNull 匹配）反查组内非取消账单逐张回写上游；未结清不回写（防部分付款误标）
+2. **付款回写-合并失效**：PayableOrchestrator.findMergedPayable 的 eq(null)=NULL 永假 → 空值改 isNull，工资账单（无对手人）按 type+category+month 合并生效
+3. **付款回写-二次打款**：markPayrollSettlementPaid 补 paidAmount 累计（付清口径同 atomicAddPaidAmount：总额-已付-扣款-预支）+ remaining=0
+4. **付款回写-账单虚增**：syncBillAggregationOnPaid 仅 SETTLED 时置全额/时间戳，SETTLING 保留原 settledAmount
+5. **撤销出库误清零**：restoreRelatedPurchaseStatus 不再 set arrivedQuantity=0（到货是入库事实，撤销领料不应破坏；旧逻辑误伤同物料补采单）
+6. **推送半卡死**：persistPushState 加 sampleStatus=COMPLETED + 非SCRAPPED 校验（与前端按钮、列表过滤、建单校验三处对齐）
+7. **补采单字段**：createDeficitPurchase 补 purchaseNo/sourceType/单价总额并改走 savePurchaseAndUpdateOrder（防 rollbackStockIfNeeded 误判扣库存）
+8. **入库静默丢库存**：MaterialStockServiceImpl.findExistingStock 补 tenantId（跨租户命中时 UPDATE 0 行无异常）
+9. **供应商逐键创建**：SupplierSelect 创建从 onChange（每个键入中间态）移到 onBlur（失焦=完成输入），输入中只做匹配回填
+
+### 踩坑
+- 项目 checkstyle 对 `.and(w -> w.isNull(X))` 独立语句报 parse 错（链式内却正常）——直接用 `.isNull(X)`（默认 AND 连接）等价且过检
+- python str.replace 括号笔误（getSettlementMonth 漏 ()）导致无声不替换——关键替换必须 assert
+
+### 验证
+- 后端 mvn compile ✓ 已重启（API 200）；前端 type-check/lint/build ✓
+- 剩余：P1 18 项（仓库扫码色码维度/到货双入口/角色子串提权/数据范围等）+ P2 24 项

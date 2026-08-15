@@ -161,12 +161,18 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         String mId = p.getMaterialId();
         String color = p.getColor() == null ? "" : p.getColor().trim();
         String size = p.getSize() == null ? "" : p.getSize().trim();
+        // 必须带 tenantId：updateStockOnInbound 的 WHERE 含 tenant_id，
+        // 跨租户命中时 UPDATE 影响 0 行且无异常——入库落库但库存静默未增加
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        java.util.function.Consumer<LambdaQueryWrapper<MaterialStock>> tenantScope =
+                q -> { if (tenantId != null) q.eq(MaterialStock::getTenantId, tenantId); };
 
         LambdaQueryWrapper<MaterialStock> query = new LambdaQueryWrapper<MaterialStock>()
                 .eq(MaterialStock::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(mId), MaterialStock::getMaterialId, mId)
                 .eq(MaterialStock::getColor, color)
                 .eq(MaterialStock::getSize, size);
+        tenantScope.accept(query);
 
         if (!StringUtils.hasText(mId) && StringUtils.hasText(p.getMaterialCode())) {
             query = new LambdaQueryWrapper<MaterialStock>()
@@ -174,6 +180,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                     .eq(MaterialStock::getMaterialCode, p.getMaterialCode())
                     .eq(MaterialStock::getColor, color)
                     .eq(MaterialStock::getSize, size);
+            tenantScope.accept(query);
         }
 
         return this.getOne(query);
