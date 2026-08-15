@@ -1747,3 +1747,23 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 ### 验证
 - mvn compile ✓ 后端已重启
 - 剩余：P1 11 项（工人订单数据范围/推送弹窗选项/外发结算回货链等）+ P2 24 项
+
+## D-080 P1 第三批 6 项：推送备注/自调用事务/无效推送选项/外发死代码/退回守卫/工序校验（2026-08-16）
+
+### 修复
+1. **推送备注落库**：OrderManagementController 解析 body.remark → createFromStyle(styleId, targetTypes, remark) → StyleLogHelper.saveLog(styleId, "PUSH_ORDER", "推送下单管理", remark) 写 t_style_operation_log；SampleWorkflowTool.pushToOrderManagement 同步新签名传 remark
+2. **@Transactional 自调用失效**：OrderManagementOrchestrator 注入 `@Autowired @Lazy OrderManagementOrchestrator self`，persistPushState 改经 self 代理调用（this 直调绕过事务代理）
+3. **推送弹窗无效选项**：PushToOrderModal 删除后端不处理的 production/secondary/sku 3 个选项（网格 3→2 列）；useStylePushOrder 默认勾选收敛为 bom/pattern/size/process
+4. **OrderReconciliationHelper 死代码清理**：删除 createShipmentReconciliationOnClose 等无调用方方法（-248 行）+ Helper 层违规 @Transactional（D-001），仅保留 isOwnFactory；sumShippedByOrderId/sumQualifiedByOrderId 核实已用 orderId+租户校验
+5. **样衣退回在途订单守卫**：StyleStageHelper 退回前查该款进行中生产订单（styleId+tenantId+deleteFlag=0+非终态 notIn(completed/cancelled/scrapped/archived/closed)），有在途单抛异常禁止退回（防新旧订单资料快照脱钩；校验异常 warn 放行不阻塞）
+6. **工序完成强校验**：StyleStageCompletionHelper 完成工序配置前必须存在至少一道工序行（无工序一路走到下单被"单价必须大于0"拦住被迫返工，现前端/推送/下单三处校验对齐）
+
+### 核实无需改动
+- 工人/跟单订单数据范围：ProductionOrderQueryService.applyDataPermissionFilter 已用 DataPermissionHelper 按角色过滤
+- 反向账单与合并应付联动：BillAggregationOrchestrator.reverseBillInternal 已处理应付作废/凭证冲销/已结清检查
+
+### 验证
+- mvn compile ✓ npx tsc --noEmit 0 errors ✓ createFromStyle 3参版调用点全对齐（Controller+SampleWorkflowTool，TemplateLibrary 同名不同签名不受影响）
+- safe-push 6 项全过（多租户审计 0 违规）；commit 429a425ea 已推送，云托管自动构建触发
+- 后端运行实例为 02:43 旧版，需重启加载第三批（用户自行处理）
+- 剩余：P1 3 项 + P2 24 项（清单 D-076）
