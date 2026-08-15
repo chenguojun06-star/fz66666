@@ -49,7 +49,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
               <Button
                 icon={<ThunderboltOutlined />}
                 loading={generating}
-                onClick={() => showReasonModal('从BOM生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
+                onClick={() => showReasonModal('从物料清单生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
               >
                 从BOM生成
               </Button>
@@ -155,7 +155,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
             type="primary"
             icon={<ThunderboltOutlined />}
             loading={generating}
-            onClick={() => showReasonModal('从BOM生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
+            onClick={() => showReasonModal('从物料清单生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
           >
             从BOM生成采购
           </Button>
@@ -167,7 +167,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           rowKey={(r: any) => r.id || `bom-${Math.random()}`}
           columns={getBomColumns(isFactoryUser)}
           showIndex
-          emptyDescription="暂无BOM物料"
+          emptyDescription="暂无物料"
           pagination={false}
           bordered
           scroll={{ x: 'max-content' }}
@@ -179,7 +179,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   return (
     <Alert
       title="暂无面辅料信息"
-      description="此订单尚未录入采购物料，也关联的款号未录入BOM物料清单"
+      description="此订单尚未录入采购物料，关联的款号也未录入物料清单"
       type="info"
       showIcon
     />

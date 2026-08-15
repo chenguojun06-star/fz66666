@@ -41,7 +41,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
               style={{ flex: 1, margin: 0 }} />
             <span style={{ fontSize: 12, color: 'var(--color-gray-700)', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: 'var(--color-accent-purple)' }}>{activeDifficulty.pricingMultiplier}</b></span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>物料清单 {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
           {activeDifficulty.imageInsight && (() => {
             const insight = activeDifficulty.imageInsight as string;
             const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');

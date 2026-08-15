@@ -97,7 +97,7 @@ export const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggest
 
   if (doneCount < totalCount) {
     if (doneCount === 0) {
-      insights.push({ category: 'progress', text: `${totalCount} 个开发节点均未启动，建议从 BOM 和纸样开始推进。` });
+      insights.push({ category: 'progress', text: `${totalCount} 个开发节点均未启动，建议从物料清单和纸样开始推进。` });
     } else if (doneCount < 4) {
       insights.push({ category: 'progress', text: `已完成 ${doneCount}/${totalCount}，待推进：${pendingStages.slice(0, 3).join('、')}。` });
     } else {

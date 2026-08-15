@@ -165,7 +165,7 @@ export const formatTemplateKey = (raw: unknown) => {
 
 export const typeLabel = (t: string) => {
   const v = String(t || '').trim().toLowerCase();
-  if (v === 'bom') return 'BOM';
+  if (v === 'bom') return '物料清单';
   if (v === 'size') return '尺寸';
   if (v === 'process' || v === 'process_price') return '工序进度单价';
   return v ? '未知' : '-';

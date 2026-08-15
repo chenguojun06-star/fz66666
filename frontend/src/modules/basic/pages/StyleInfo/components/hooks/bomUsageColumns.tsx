@@ -117,7 +117,7 @@ export const buildUsageColumns = (ctx: BomColumnsContext) => {
       title: (
         <Space size={4}>
           换算
-          <Tooltip title="每公斤对应的米数，BOM单位为公斤时参与换算，辅料不换算">
+          <Tooltip title="每公斤对应的米数，物料单位为公斤时参与换算，辅料不换算">
             <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
           </Tooltip>
         </Space>

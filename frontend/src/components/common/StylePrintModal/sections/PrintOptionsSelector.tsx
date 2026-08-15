@@ -61,7 +61,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
             >
               <Checkbox value="basicInfo">基本信息</Checkbox>
               <Checkbox value="sizeTable">尺寸表</Checkbox>
-              <Checkbox value="bomTable">BOM表</Checkbox>
+              <Checkbox value="bomTable">物料清单</Checkbox>
               <Checkbox value="processTable">工序表</Checkbox>
               <Checkbox value="productionSheet">生产制单</Checkbox>
               <Checkbox value="sampleReview">样衣审核</Checkbox>

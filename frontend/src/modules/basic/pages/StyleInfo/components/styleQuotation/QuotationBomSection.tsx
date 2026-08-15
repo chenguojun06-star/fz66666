@@ -41,7 +41,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         marginBottom: 12,
         color: 'var(--color-text-primary, var(--color-text-primary))',
       }}>
-        物料明细（BOM）
+        物料明细
         <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
           共 {bomList.length} 项
         </span>

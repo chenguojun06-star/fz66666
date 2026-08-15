@@ -233,7 +233,7 @@ export const analyzeOrderOrchestration = ({
   const scatterMode = scatterLevel === 'high' ? '建议散剪' : scatterLevel === 'medium' ? '临界观察' : '可不散剪';
   const scatterStatus = scatterLevel === 'high' ? 'error' : scatterLevel === 'medium' ? 'warning' : 'success';
   const scatterSummary = sizeSensitiveFabricRows.length === 0
-    ? '当前面料 BOM 未维护码数配比，先按常规整裁估算。'
+    ? '当前面料清单未维护码数配比，先按常规整裁估算。'
     : scatterLevel === 'high'
       ? `按当前下单量，主面料约 ${primaryRequiredMeters} 米，低于${fabricProfile.family}常规成卷基准，建议按散剪预案核价。`
       : scatterLevel === 'medium'

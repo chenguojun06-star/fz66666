@@ -231,9 +231,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             <Alert
               type="info"
               showIcon
-              title={sampleMode ? '该款式暂无BOM物料' : '该订单尚未创建面辅料信息'}
+              title={sampleMode ? '该款式暂无物料清单' : '该订单尚未创建面辅料信息'}
               description={sampleMode
-                ? '请先在样衣详情页配置BOM物料需求，配置后打开采购管理将自动同步物料数据。'
+                ? '请先在样衣详情页配置物料清单，配置后打开采购管理将自动同步物料数据。'
                 : isMultiColor
                   ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
                   : `请为订单创建面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`

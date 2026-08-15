@@ -72,11 +72,11 @@ const useBomCompletionHandlers = ({
 
   const onBeforeComplete = useCallback(async () => {
     if (!data || data.length === 0) {
-      message.error('请先配置BOM物料');
+      message.error('请先配置物料清单');
       return false;
     }
     if (tableEditable) {
-      message.error('请先点击"保存全部"保存单价数据，再完成BOM配置');
+      message.error('请先点击"保存全部"保存单价数据，再完成物料清单配置');
       return false;
     }
     const hasZeroPrices = data.some(item => !Number(item.unitPrice));
@@ -85,7 +85,7 @@ const useBomCompletionHandlers = ({
         Modal.confirm({
           width: '30vw',
           title: '部分单价为0',
-          content: '存在单价为0的BOM物料，确认仍然完成BOM配置？',
+          content: '存在单价为0的物料，确认仍然完成物料清单配置？',
           okText: '确认完成',
           cancelText: '返回填写',
           onOk: () => resolve(true),

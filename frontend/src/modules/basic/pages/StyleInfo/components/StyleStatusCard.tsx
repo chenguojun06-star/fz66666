@@ -62,12 +62,26 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
   const pushedOrderTime = fmtTime(style.pushedToOrderTime);
 
   // P2-1 新增：当前环节操作人 + 预计交板时间 + 审核状态
-  const currentOperator =
-    (style as any).patternAssignee ||
-    (style as any).productionAssignee ||
-    (style as any).bomAssignee ||
-    (style as any).processAssignee ||
-    '';
+  // 当前操作人 = 最近启动环节的负责人（按各环节 startTime 判断，与开发进度实际对齐；
+  // 无时间信息时退回固定优先级，并补上原链缺失的二次工艺环节）
+  const assigneeStages = [
+    { assignee: (style as any).bomAssignee, startTime: (style as any).bomStartTime },
+    { assignee: (style as any).patternAssignee, startTime: (style as any).patternStartTime },
+    { assignee: (style as any).productionAssignee, startTime: (style as any).productionStartTime },
+    { assignee: (style as any).secondaryAssignee, startTime: (style as any).secondaryStartTime },
+    { assignee: (style as any).processAssignee, startTime: (style as any).processStartTime },
+  ];
+  const timedStages = assigneeStages
+    .filter((s) => s.assignee && s.startTime)
+    .sort((a, b) => String(b.startTime).localeCompare(String(a.startTime)));
+  const currentOperator = timedStages.length
+    ? timedStages[0].assignee
+    : ((style as any).patternAssignee ||
+       (style as any).productionAssignee ||
+       (style as any).bomAssignee ||
+       (style as any).secondaryAssignee ||
+       (style as any).processAssignee ||
+       '');
   // 交板日期只展示日期部分，避免拖出 "00:00" 时间尾巴（表单侧同为纯日期）
   const deliveryDateRaw = (style as any).deliveryDate || (style as any).deliveryTime;
   const deliveryDate = deliveryDateRaw ? String(deliveryDateRaw).slice(0, 10) : null;

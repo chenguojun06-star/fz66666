@@ -22,7 +22,7 @@ const { Text, Title } = Typography;
 /** 核心系统模块（所有租户默认开通） */
 const CORE_MODULES: Array<{ code: string; name: string; icon: React.ReactNode; desc: string }> = [
   { code: 'PRODUCTION',   name: '生产管理', icon: <ShopOutlined />, desc: '生产订单、裁剪分菲、工序扫码、进度跟踪' },
-  { code: 'STYLE',        name: '款式管理', icon: <SkinOutlined />, desc: '款式档案、BOM物料清单、样衣制作' },
+  { code: 'STYLE',        name: '款式管理', icon: <SkinOutlined />, desc: '款式档案、物料清单、样衣制作' },
   { code: 'MATERIAL',     name: '物料管理', icon: <InboxOutlined />, desc: '面辅料采购、库存管理、出入库记录' },
   { code: 'WAREHOUSE',    name: '成品管理', icon: <HomeOutlined />, desc: '成品入库、发货管理、库存盘点' },
   { code: 'FINANCE',      name: '财务管理', icon: <MoneyCollectOutlined />, desc: '工资结算、对账单、财务报表' },

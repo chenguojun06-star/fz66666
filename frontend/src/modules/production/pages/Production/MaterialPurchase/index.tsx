@@ -440,9 +440,9 @@ const MaterialPurchase: React.FC = () => {
             message="智能采购推荐说明"
             description={
               <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-                <p style={{ margin: '0 0 4px' }}><strong>功能说明：</strong>输入生产订单号，系统自动分析该订单的 BOM 物料清单，计算每个物料的净需求。</p>
-                <p style={{ margin: '0 0 4px' }}><strong>计算公式：</strong>净需求 = BOM 用量 × 订单数量 × (1 + 损耗率) - 可用库存 - 在途采购</p>
-                <p style={{ margin: '0 0 4px' }}><strong>智能推荐：</strong>仅净需求 &gt; 0 的物料（库存不够的）才会推送购物车，并自动推荐供应商（优先 BOM 指定 → S/A 级供应商 → 任意活跃供应商）。</p>
+                <p style={{ margin: '0 0 4px' }}><strong>功能说明：</strong>输入生产订单号，系统自动分析该订单的物料清单，计算每个物料的净需求。</p>
+                <p style={{ margin: '0 0 4px' }}><strong>计算公式：</strong>净需求 = 物料用量 × 订单数量 × (1 + 损耗率) - 可用库存 - 在途采购</p>
+                <p style={{ margin: '0 0 4px' }}><strong>智能推荐：</strong>仅净需求 &gt; 0 的物料（库存不够的）才会推送购物车，并自动推荐供应商（优先物料清单指定 → S/A 级供应商 → 任意活跃供应商）。</p>
                 <p style={{ margin: 0 }}><strong>操作流程：</strong>输入订单号 → 点「分析需求」查看明细 → 确认后点「推送缺料到购物车」。</p>
               </div>
             }
@@ -485,7 +485,7 @@ const MaterialPurchase: React.FC = () => {
                 ),
               },
               {
-                title: 'BOM用量',
+                title: '物料用量',
                 dataIndex: 'bomUsageAmount',
                 width: 100,
                 render: (v: any, r: any) => (
@@ -546,7 +546,7 @@ const MaterialPurchase: React.FC = () => {
                     <div>
                       <div style={{ fontWeight: 500 }}>
                         {supplier.supplierName}
-                        {supplier.isBomDesignated && <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>BOM指定</Tag>}
+                        {supplier.isBomDesignated && <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>物料清单指定</Tag>}
                       </div>
                       <div style={{ fontSize: 11 }}>
                         {supplier.supplierTier && <Tag color={tierColor} style={{ fontSize: 10 }}>{supplier.supplierTier}级</Tag>}
@@ -562,7 +562,7 @@ const MaterialPurchase: React.FC = () => {
                 render: (_: any, r: any) => (
                   <div style={{ fontSize: 12 }}>
                     <div>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>BOM预估：</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>物料清单预估：</span>
                       {r.bomUnitPrice ? `¥${r.bomUnitPrice}` : '-'}
                     </div>
                     <div>

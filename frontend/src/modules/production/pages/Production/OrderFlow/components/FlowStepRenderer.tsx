@@ -70,8 +70,8 @@ const FlowStepRenderer: React.FC<Props> = ({
     try {
       const res = await api.post('/production/material/demand/generate', { orderId });
       if (res?.code === 200 || res?.data) {
-        await recordAction('从BOM生成采购', reason);
-        message.success('已从BOM生成采购数据');
+        await recordAction('从物料清单生成采购', reason);
+        message.success('已从物料清单生成采购数据');
         onRefresh?.();
       } else {
         message.error(res?.message || '生成失败');

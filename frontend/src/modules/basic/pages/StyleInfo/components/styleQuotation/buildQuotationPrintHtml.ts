@@ -172,7 +172,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
 
   ${bomList.length > 0 ? `
   <div class="section">
-    <div class="section-title">📦 物料明细（BOM）</div>
+    <div class="section-title">📦 物料明细</div>
     <table>
       <thead>
         <tr>

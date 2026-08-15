@@ -1,5 +1,5 @@
 import React from 'react';
-import { Switch, Button, Input, Space, Tooltip, Dropdown, Form } from 'antd';
+import { Modal, Switch, Button, Input, Space, Tooltip, Dropdown, Form } from 'antd';
 import { SyncOutlined, PlusOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined, PictureOutlined } from '@ant-design/icons';
 import SmallModal from '@/components/common/SmallModal';
 import StyleSkuColorImages from '../StyleSkuColorImages';
@@ -82,7 +82,6 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <Button
               icon={<PictureOutlined />}
               onClick={() => setColorImageMode(true)}
-              type={colorImageMode ? 'primary' : 'default'}
             >
               颜色图片
             </Button>
@@ -121,32 +120,35 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         </Space>
       </div>
 
-      {colorImageMode ? (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>颜色图片管理</span>
-            <Button onClick={() => setColorImageMode(false)}>返回列表</Button>
-          </div>
-          <StyleSkuColorImages
-            styleId={styleId}
-            styleNo={styleNo}
-            onSaved={() => {
-              fetchSkus();
-              onRefresh?.();
-            }}
-          />
-        </div>
-      ) : (
-        <SkuTable
-          skus={skus}
-          loading={loading}
-          canEdit={canEdit}
-          isManual={isManual}
-          getCellValue={getCellValue}
-          onFieldChange={handleFieldChange}
-          onDeleteRow={handleDeleteRow}
+      {/* 颜色图片管理用弹窗承载（不再整块替换表格），表格常驻、操作上下文不丢失 */}
+      <Modal
+        open={colorImageMode}
+        title="颜色图片管理"
+        footer={null}
+        width={960}
+        onCancel={() => setColorImageMode(false)}
+        styles={{ body: { maxHeight: '72vh', overflowY: 'auto', paddingTop: 8 } }}
+      >
+        <StyleSkuColorImages
+          styleId={styleId}
+          styleNo={styleNo}
+          hideHeader
+          onSaved={() => {
+            fetchSkus();
+            onRefresh?.();
+          }}
         />
-      )}
+      </Modal>
+
+      <SkuTable
+        skus={skus}
+        loading={loading}
+        canEdit={canEdit}
+        isManual={isManual}
+        getCellValue={getCellValue}
+        onFieldChange={handleFieldChange}
+        onDeleteRow={handleDeleteRow}
+      />
       <SmallModal
         open={rollbackOpen}
         title="退回编辑"

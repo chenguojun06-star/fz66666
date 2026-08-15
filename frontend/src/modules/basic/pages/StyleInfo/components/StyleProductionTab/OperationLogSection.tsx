@@ -52,7 +52,7 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          （BOM同步物料库、库存检查、生成采购任务等款式级操作日志）
+          （物料清单同步、库存检查、生成采购任务等款式级操作日志）
         </Typography.Text>
         <a style={{ marginLeft: 'auto', fontSize: 12 }} onClick={load}>刷新</a>
       </div>

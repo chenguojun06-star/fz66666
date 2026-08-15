@@ -14,7 +14,7 @@ interface StageConfig {
 const STAGES: StageConfig[] = [
   { key: 'pattern', label: '纸样', color: 'var(--color-secondary)' },
   { key: 'sample', label: '样衣', color: 'var(--color-accent-emerald)' },
-  { key: 'bom', label: 'BOM', color: 'var(--color-warning)' },
+  { key: 'bom', label: '物料', color: 'var(--color-warning)' },
   { key: 'process', label: '工序', color: 'var(--color-violet-500)' },
   { key: 'size', label: '码数', color: 'var(--color-pink-500)' },
 ];

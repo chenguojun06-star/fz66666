@@ -193,7 +193,7 @@ export function usePurchaseDialog({
     } catch (e) {
       const errMsg = (e as Error)?.message || '';
       if (!overwrite && errMsg.includes('已生成')) {
-        confirmAction('采购单已存在', '该订单已有采购需求记录，是否按当前BOM数据重新生成？（旧数据将被替换）', () => handleSavePreview(true), { okText: '重新生成', danger: true });
+        confirmAction('采购单已存在', '该订单已有采购需求记录，是否按当前物料清单数据重新生成？（旧数据将被替换）', () => handleSavePreview(true), { okText: '重新生成', danger: true });
       } else {
         message.error(errMsg || '生成失败');
       }

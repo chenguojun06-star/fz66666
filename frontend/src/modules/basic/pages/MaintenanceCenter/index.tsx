@@ -67,7 +67,7 @@ const MaintenanceCenter: React.FC = () => {
   type PanelType = 'pattern' | 'sheet' | 'size' | 'bom' | 'price' | null;
   const [panelType, setPanelType] = useState<PanelType>(null);
   const [activeStyleNo, setActiveStyleNo] = useState('');
-  const panelTitleMap: Record<string, string> = { pattern: '纸样维护', sheet: '制单维护', size: '尺寸表维护', bom: 'BOM维护', price: '工序单价维护' };
+  const panelTitleMap: Record<string, string> = { pattern: '纸样维护', sheet: '制单维护', size: '尺寸表维护', bom: '物料清单维护', price: '工序单价维护' };
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -147,7 +147,7 @@ const MaintenanceCenter: React.FC = () => {
       { key: 'pattern', label: '纸样维护', processing: patternProcessing },
       { key: 'sheet', label: '制单维护', processing: sheetProcessing },
       { key: 'size', label: '尺寸表维护', processing: isTemplateProcessing(latestSizeTpl) },
-      { key: 'bom', label: 'BOM维护', processing: isTemplateProcessing(latestBomTpl) },
+      { key: 'bom', label: '物料清单维护', processing: isTemplateProcessing(latestBomTpl) },
       { key: 'price', label: '工序单价', processing: isTemplateProcessing(latestPriceTpl) },
     ];
   }, [bomMap, priceMap, sizeMap]);

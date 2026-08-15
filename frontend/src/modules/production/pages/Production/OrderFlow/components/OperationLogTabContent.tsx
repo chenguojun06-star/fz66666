@@ -24,7 +24,7 @@ interface OperationLogTabContentProps {
   linkNodesLoading?: boolean;
 }
 
-const SYSTEM_ACTIONS = ['开始编辑', '完成编辑', '取消编辑', '从BOM生成采购', '录入采购'];
+const SYSTEM_ACTIONS = ['开始编辑', '完成编辑', '取消编辑', '从BOM生成采购', '从物料清单生成采购', '录入采购'];
 
 /** 链路节点类型 → 图标 + 类型标签颜色 */
 const LINK_TYPE_META: Record<

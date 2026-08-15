@@ -133,9 +133,14 @@ const SkuTable: React.FC<SkuTableProps> = ({
       render: (_: number, record: ProductSku) => record.stockQuantity ?? 0,
     },
     {
-      title: '状态', key: 'status', width: 80,
+      title: (
+        <Tooltip title="编码状态指商品编码的生成方式；价格、条码、备注等字段不受编码模式限制，随时可修改">
+          编码状态
+        </Tooltip>
+      ),
+      key: 'status', width: 90,
       render: (_: any, record: ProductSku) =>
-        record.manuallyEdited === 1 ? <Tag color="orange">已编辑</Tag> : <Tag color="blue">自动</Tag>,
+        record.manuallyEdited === 1 ? <Tag color="orange">手动修改</Tag> : <Tag color="blue">自动生成</Tag>,
     },
     {
       title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true,

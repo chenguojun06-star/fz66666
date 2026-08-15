@@ -169,7 +169,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                     <div style={{ color: 'var(--color-error)', padding: '8px 0' }}>{procurement.error}</div>
                   ) : procurement.items.length === 0 ? (
                     <div style={{ color: 'var(--color-text-tertiary)', padding: '16px', textAlign: 'center', background: 'var(--color-bg-light)', borderRadius: 6 }}>
-                      暂无采购物料，请先在BOM中配置物料并生成采购单
+                      暂无采购物料，请先在物料清单中配置物料并生成采购单
                     </div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>

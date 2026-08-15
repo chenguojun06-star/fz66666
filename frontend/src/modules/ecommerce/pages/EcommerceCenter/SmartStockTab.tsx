@@ -58,7 +58,7 @@ const SmartStockTab: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
               <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
-              AI 补货顾问根据租户类型与款式 BOM 自动判断走采购还是生产，置信度低于 70% 时请仔细核对
+              AI 补货顾问根据租户类型与款式物料清单自动判断走采购还是生产，置信度低于 70% 时请仔细核对
             </span>
             <Space>
               <Button icon={<ThunderboltOutlined />} loading={aiScanning} onClick={handleAiScan}>AI 扫描生成建议</Button>

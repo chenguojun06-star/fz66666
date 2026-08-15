@@ -28,7 +28,7 @@ export const tutorialsBasicSample: Tutorial[] = [
           ],
         },
         {
-          title: '配置BOM物料清单',
+          title: '配置物料清单',
           description: '添加该款式所需的面料、辅料、配件，设置每件用量和单价。',
           tips: [
             '物料需要在「物料资料库」中预先创建',
@@ -49,7 +49,7 @@ export const tutorialsBasicSample: Tutorial[] = [
       faqs: [
         {
           question: '款式创建后可以修改吗？',
-          answer: ' 可以修改，但需注意：\n\n• 基本信息（款号、名称）随时可改\n• BOM物料变更会影响已创建的采购单\n• 工序流程变更会影响进行中的订单\n• 建议重大变更时创建新版本款号',
+          answer: ' 可以修改，但需注意：\n\n• 基本信息（款号、名称）随时可改\n• 物料清单变更会影响已创建的采购单\n• 工序流程变更会影响进行中的订单\n• 建议重大变更时创建新版本款号',
         },
         {
           question: '放码纸样文件支持哪些格式？',
@@ -124,7 +124,7 @@ export const tutorialsBasicSample: Tutorial[] = [
         },
         {
           title: '查看款式详情',
-          description: '点击款式查看完整信息：图片、BOM、工序、历史订单等。',
+          description: '点击款式查看完整信息：图片、物料清单、工序、历史订单等。',
           tips: [
             '所有附件可一键下载',
             '可查看款式销售数据',
@@ -135,7 +135,7 @@ export const tutorialsBasicSample: Tutorial[] = [
           description: '将历史款式复制为新款式，快速创建相似款。',
           tips: [
             '修改款号避免重复',
-            '根据需要调整BOM和工序',
+            '根据需要调整物料清单和工序',
           ],
         },
       ],
@@ -174,7 +174,7 @@ export const tutorialsBasicSample: Tutorial[] = [
         },
         {
           title: '自动成本核算',
-          description: '系统根据BOM用量和单价自动计算款式成本。',
+          description: '系统根据物料用量和单价自动计算款式成本。',
           tips: [
             '成本 = 物料成本 + 人工成本',
             '用于报价参考',

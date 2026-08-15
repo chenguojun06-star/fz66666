@@ -84,14 +84,14 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
         params: { page: 1, pageSize: 100, templateType: 'bom', sourceStyleNo: styleNo || '' },
       });
       if (res.code !== 200) {
-        message.error(res.message || '获取BOM模板失败');
+        message.error(res.message || '获取物料清单模板失败');
         return;
       }
       const records = normalizeTemplateRecords(res.data, styleNo);
       const sortedRecords = [...records].sort((a, b) => String(b.updateTime || '').localeCompare(String(a.updateTime || '')));
       setData(sortedRecords);
     } catch (error: unknown) {
-      message.error(getErrorMessage(error, '获取BOM模板失败'));
+      message.error(getErrorMessage(error, '获取物料清单模板失败'));
     } finally {
       setLoading(false);
     }
@@ -118,12 +118,12 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
           templateTypes: ['bom'],
         });
         if (res.code !== 200) {
-          message.error(res.message || '自动生成BOM模板失败');
+          message.error(res.message || '自动生成物料清单模板失败');
           return;
         }
         await fetchList();
       } catch (error: unknown) {
-        message.error(getErrorMessage(error, '自动生成BOM模板失败'));
+        message.error(getErrorMessage(error, '自动生成物料清单模板失败'));
       } finally {
         setHydratingTemplate(false);
       }
@@ -159,9 +159,9 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
         {loading ? (
           <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>
         ) : hydratingTemplate ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>正在根据当前款号生成 BOM 模板...</div>
+          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>正在根据当前款号生成物料清单模板...</div>
         ) : !directRow ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>未找到该款号的 BOM 模板</div>
+          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>未找到该款号的物料清单模板</div>
         ) : Number(directRow.locked) === 1 ? (
           <div style={directStackStyle}>
             <div style={directCardStyle}>
@@ -196,7 +196,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
               {directProcessing ? (
                 <div style={processingBannerStyle}>
                   <div style={{ ...directTitleStyle, color: 'var(--color-warning-deep)' }}>处理中</div>
-                  <div style={{ ...directMetaStyle, color: 'var(--color-warning-deep)' }}>这份 BOM 已退回，当前还没有重新保存提交，保存后会自动重新锁定。</div>
+                  <div style={{ ...directMetaStyle, color: 'var(--color-warning-deep)' }}>这份物料清单已退回，当前还没有重新保存提交，保存后会自动重新锁定。</div>
                 </div>
               ) : null}
               <TemplateInlineEditor

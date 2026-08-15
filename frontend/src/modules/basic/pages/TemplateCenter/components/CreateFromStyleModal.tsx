@@ -56,7 +56,7 @@ const CreateFromStyleModal: React.FC<CreateFromStyleModalProps> = ({
           <Select
             mode="multiple"
             options={[
-              { value: 'bom', label: 'BOM' },
+              { value: 'bom', label: '物料清单' },
               { value: 'size', label: '尺寸' },
               { value: 'process', label: '工序进度单价' },
             ]}

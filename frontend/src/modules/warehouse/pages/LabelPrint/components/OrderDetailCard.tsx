@@ -174,7 +174,7 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
           <Divider style={{ margin: '10px 0' }} />
           <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>
             当前打印: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{ptLabel}</span>
-            {' | '}SKU: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{selectedOrder.styleNo}-{selectedColor}-{selectedSize}</span>
+            {' | '}商品编码: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{selectedOrder.styleNo}-{selectedColor}-{selectedSize}</span>
             {selectedOrder.price ? ` | ${formatMoney(selectedOrder.price)}` : ''}
           </div>
         </Col>

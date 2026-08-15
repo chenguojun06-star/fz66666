@@ -194,7 +194,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       { title: '物料名称', dataIndex: 'materialName', width: 140, ellipsis: true },
       { title: '颜色', dataIndex: 'color', width: 80 },
       { title: '规格', dataIndex: 'specification', width: 100, ellipsis: true },
-      { title: 'BOM用量', dataIndex: 'usageAmount', width: 90, align: 'center' as const, render: (v: number, r: any) => `${v || '-'} ${r.unit || ''}` },
+      { title: '物料用量', dataIndex: 'usageAmount', width: 90, align: 'center' as const, render: (v: number, r: any) => `${v || '-'} ${r.unit || ''}` },
       { title: '订单需求', dataIndex: 'requiredQuantity', width: 100, align: 'center' as const, render: (v: number, r: any) => <Typography.Text strong>{v || 0} {r.unit || ''}</Typography.Text> },
       { title: '库存余量', dataIndex: 'totalAvailableQty', width: 100, align: 'center' as const, render: (v: number, r: any) => <Typography.Text type={v < (r.requiredQuantity || 0) ? 'danger' : 'success'}>{v || 0} {r.unit || ''}</Typography.Text> },
       { title: '库存选择', width: 260, render: (r: any) => {

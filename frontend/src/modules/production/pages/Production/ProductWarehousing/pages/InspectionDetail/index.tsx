@@ -89,7 +89,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
     },
     {
       key: 'bom',
-      label: 'BOM物料',
+      label: '物料清单',
       children: (
         <ResizableTable
           storageKey="inspection-bom-table"

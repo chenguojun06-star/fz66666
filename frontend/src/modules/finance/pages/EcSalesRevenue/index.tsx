@@ -130,7 +130,7 @@ const EcSalesRevenue: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '商品名 / SKU',
+      title: '商品名 / 商品编码',
       key: 'product',
       width: 180,
       ellipsis: true,

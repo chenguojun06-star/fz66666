@@ -16,9 +16,11 @@ interface StyleSkuColorImagesProps {
   styleId: string;
   styleNo: string;
   onSaved?: () => void;
+  /** 外层已提供标题（如 Modal）时隐藏内部标题行，仅保留统计标签与操作 */
+  hideHeader?: boolean;
 }
 
-const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styleNo, onSaved }) => {
+const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styleNo, onSaved, hideHeader }) => {
   const { message: antMessage } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -200,7 +202,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       {/* 头部操作栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Space>
-          <span style={{ fontWeight: 600 }}>颜色图片管理</span>
+          {!hideHeader && <span style={{ fontWeight: 600 }}>颜色图片管理</span>}
           <Tag color="blue">{stats.withImage} 已配图</Tag>
           <Tag color="orange">{stats.withoutImage} 待配图</Tag>
           <Tag>{stats.total} 个颜色</Tag>

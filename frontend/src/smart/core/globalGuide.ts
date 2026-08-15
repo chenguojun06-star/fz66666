@@ -27,7 +27,7 @@ export const resolveSmartGlobalGuide = (pathname: string): SmartGlobalGuide | nu
     return {
       stage: '开发模块',
       nextStep: '按阶段完成纸样、尺码、工序、报价后提交生产',
-      hints: withDefaultHint('建议先完成基础信息与颜色码数，再进入BOM/工序'),
+      hints: withDefaultHint('建议先完成基础信息与颜色码数，再进入物料清单/工序'),
     };
   }
 
