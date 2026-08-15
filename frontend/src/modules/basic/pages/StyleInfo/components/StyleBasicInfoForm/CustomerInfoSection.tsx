@@ -6,8 +6,8 @@ import { SALES_CHANNEL_OPTIONS } from './constants';
 import SectionBox from './SectionBox';
 
 /**
- * 区2：客户跟进信息（跟单员 / 销售渠道 / 板类 / 打板价 / 吊牌价 / 销售价）
- * 客户字段已迁移至 BasicInfoSection，本区保留跟进与定价信息。
+ * 区2：客户与定价（跟单员 / 销售渠道 / 板类 / 打板价 / 吊牌价 / 销售价）
+ * 客户字段已迁移至 BasicInfoSection，本区保留跟进与定价信息，区名与内容对齐。
  * 板类从原"版次与版型信息"合并至此，减少分区数量
  *
  * 注：customerId 仍保留 hidden Input，避免后端保存时丢失已选客户ID
@@ -19,7 +19,7 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
   isFieldLocked,
 }) => {
   return (
-    <SectionBox title="客户信息">
+    <SectionBox title="客户与定价">
       <Form.Item name="customerId" noStyle hidden>
         <Input id="customerId" />
       </Form.Item>

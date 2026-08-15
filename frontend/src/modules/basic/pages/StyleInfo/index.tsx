@@ -155,6 +155,24 @@ const StyleInfoDetailPage: React.FC = () => {
     }
   };
 
+  // 顶部 extra 与底部 sticky 保存条共用同一按钮组
+  const actionButtons = (
+    <StyleActionButtons
+      saving={saving}
+      completingSample={completingSample}
+      pushingToOrder={pushingToOrder}
+      editLocked={editLocked}
+      isNewPage={isNewPage}
+      sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
+      hasProcessData={Boolean((currentStyle as any)?.processCompletedTime)}
+      pushedToOrder={Boolean((currentStyle as any)?.pushedToOrder)}
+      onSave={handleSave}
+      onCompleteSample={handleCompleteSample}
+      onPushToOrder={pushOrder.handlePushToOrder}
+      onUnlock={handleUnlock}
+    />
+  );
+
   return (
     <>
       <PageLayout>
@@ -170,22 +188,7 @@ const StyleInfoDetailPage: React.FC = () => {
           }
           style={{ marginBottom: 16, borderRadius: 10 }}
           bodyStyle={{ padding: 20 }}
-          extra={
-            <StyleActionButtons
-              saving={saving}
-              completingSample={completingSample}
-              pushingToOrder={pushingToOrder}
-              editLocked={editLocked}
-              isNewPage={isNewPage}
-              sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
-              hasProcessData={Boolean((currentStyle as any)?.processCompletedTime)}
-              pushedToOrder={Boolean((currentStyle as any)?.pushedToOrder)}
-              onSave={handleSave}
-              onCompleteSample={handleCompleteSample}
-              onPushToOrder={pushOrder.handlePushToOrder}
-              onUnlock={handleUnlock}
-            />
-          }
+          extra={actionButtons}
         >
           <Form layout="horizontal" form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
             <StyleBasicInfoForm
@@ -266,6 +269,24 @@ const StyleInfoDetailPage: React.FC = () => {
               )}
             />
           </Form>
+          {/* 底部 sticky 保存条：长表单编辑到底部后无需滚回顶部保存。
+              bottom/margin 负值抵消 Card body 底部 padding(20px)，使操作条贴住卡片底边 */}
+          <div
+            style={{
+              position: 'sticky',
+              bottom: -20,
+              zIndex: 6,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              padding: '10px 20px',
+              margin: '4px -20px -20px',
+              background: 'var(--color-bg-base)',
+              borderTop: '1px solid var(--color-border-light)',
+              borderRadius: '0 0 10px 10px',
+            }}
+          >
+            {actionButtons}
+          </div>
         </Card>
       </PageLayout>
 

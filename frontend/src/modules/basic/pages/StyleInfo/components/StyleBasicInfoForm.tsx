@@ -81,7 +81,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
       {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道，含时间信息） */}
       <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} />
 
-      {/* 区2+区3：客户跟进信息 | 款式特征 左右并排，压缩纵向高度（窄屏自动堆叠） */}
+      {/* 区2+区3：客户与定价 | 款式特征 左右并排，压缩纵向高度（窄屏自动堆叠） */}
       <Row gutter={[12, 12]}>
         <Col xs={24} xl={12}>
           <CustomerInfoSection {...sectionFormContext} />
@@ -140,7 +140,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   );
 
   return (
-    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(160px, 14vw, 200px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
+    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(220px, 17vw, 280px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
       {/* 左侧：封面图上传 + 款式状态卡片（sticky 跟随滚动，避免下方空白） */}
       <div style={{ minWidth: 0, position: 'sticky', top: 16, alignSelf: 'flex-start' }}>
         <CoverImageUpload

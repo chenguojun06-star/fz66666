@@ -68,7 +68,9 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
     (style as any).bomAssignee ||
     (style as any).processAssignee ||
     '';
-  const deliveryDate = fmtTime((style as any).deliveryDate || (style as any).deliveryTime);
+  // 交板日期只展示日期部分，避免拖出 "00:00" 时间尾巴（表单侧同为纯日期）
+  const deliveryDateRaw = (style as any).deliveryDate || (style as any).deliveryTime;
+  const deliveryDate = deliveryDateRaw ? String(deliveryDateRaw).slice(0, 10) : null;
   const sampleReviewStatus = String((style as any).sampleReviewStatus ?? '').trim().toUpperCase();
   const sampleReviewer = (style as any).sampleReviewer || '';
   const sampleReviewTime = fmtTime((style as any).sampleReviewTime);

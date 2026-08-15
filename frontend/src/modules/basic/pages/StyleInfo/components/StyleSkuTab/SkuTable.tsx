@@ -154,7 +154,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       },
     },
     ...(canEdit && isManual ? [{
-      title: '操作', key: 'action', width: 60,
+      title: '操作', key: 'action', width: 60, fixed: 'right' as const,
       render: (_: any, record: ProductSku) => {
         const key = getRowKey(record);
         return (
@@ -175,14 +175,14 @@ const SkuTable: React.FC<SkuTableProps> = ({
         loading={loading}
         emptyDescription="暂无商品编码数据"
         pagination={false}
-        scroll={{ y: 400 }}
+        scroll={{ x: 'max-content', y: 400 }}
         showIndex
         rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
       />
 
       <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-quaternary)', lineHeight: 1.8 }}>
         <div>手动编辑模式：可自由修改商品编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
-        <div>新增编码：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
+        <div>新增编码：鼠标悬停可选择「按款号生成」（自动填充款号前缀）或「手动输入」（手动输入完整编码）</div>
       </div>
     </>
   );

@@ -249,7 +249,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
         ) : (
           <Row gutter={[16, 16]}>
             {colorImages.map(item => (
-              <Col key={item.color} span={6}>
+              <Col key={item.color} xs={24} sm={12} md={8} lg={6}>
                 <Card
                   size="small"
                   hoverable
