@@ -1542,3 +1542,54 @@ D-058 重写了样衣详情页基础信息Tab（新字段：商品分类/虚拟�
 ### 遗留（P2 备查）
 - `AbstractOperationLogAppendHelper` 其他子类仍往各自实体 remark（BOM行备注/物料备注）append 日志，语义尚可接受；若后续用户投诉同样迁移到日志表
 - OperationLogAppendUtil.appendToRemark 建议加 @Deprecated 注解引导迁移（本次未动，避免扩大影响面）
+
+---
+
+## D-070 物料出入库库存不减扣 + 库存总值错乱 — 5处缺陷全链路修复（2026-08-15）
+
+### 现象
+用户怒斥"物料出入库每一个地方都没有数据减扣的 数量都不变"。铁证：PKG005 显示可用库存 50 个但库存总值 ¥14.70（=49×0.30，与 50×0.30=15.00 不符）——数量与总值脱钩，说明存在"扣了总值没扣数量"/"加了数量没算总值"的错位路径。
+
+### 根因（5处，按严重度）
+1. **P0 调拨零和**：`StockTransferOrchestrator.moveMaterialStock` 对**同一 stockId** 先 `updateStockQuantity(-qty)` 再 `updateStockQuantity(+qty)`，净变化=0——调拨单显示"完成"但库存纹丝不动。成品 `moveProductSkuStock` 的 `decreaseStockBySkuCode`+`updateStock`（加法）同样净零
+2. **P0 金额错算**：`MaterialStockMapper` 4 条 UPDATE 的 `total_value` 表达式在 **MySQL UPDATE SET 从左到右求值**语义下（与标准 SQL 不同！后面的赋值能看到前面已更新的值），`quantity` 已是新值又 ±delta 一次 → 总值永远算错
+3. **P1 静默漏扣**：`MaterialPurchasePickingHelper.deductStockForOutboundItems` 中 `stockMap.get(materialStockId)==null`（记录被逻辑删除）时**跳过扣减但照写出库日志** → "有出库记录无扣减"
+4. **P1 租户串显**：`MaterialStockServiceImpl.queryPage` 无 tenant_id 过滤（违反铁律7）
+5. **P2 随机命中**：`MaterialWarehouseOperationOrchestrator` 5 处 `LIMIT 1` 无排序，同编码多条库存记录时出入库随机命中不同行（用户对 A 行操作、扣的是 B 行）
+
+### 修复（5文件+1脚本，commit cb7b56800）
+1. `StockTransferOrchestrator`：物料调拨按 location 区分源/目标 stock（`findMaterialStock` 支持 location 条件+回退），目标无记录 `createTargetStock` 复制源行新建（quantity/locked=0,totalValue=ZERO）；成品调拨改为仅记录轨迹不动总库存
+2. `MaterialStockMapper`：扣减类 SQL `total_value = ROUND(GREATEST(0,quantity)×price)`（利用左到右语义直接用新值）；`updateStockOnInbound` SET 重排：加权单价（旧quantity）→ quantity → total_value（新值×新单价）
+3. `MaterialPurchasePickingHelper`：库存记录缺失抛 IllegalStateException 回滚
+4. `MaterialStockServiceImpl.queryPage`：补 `eq(tenantId)`
+5. `MaterialWarehouseOperationOrchestrator`：5 处加 `orderByAsc(createTime)`
+6. **Flyway V202708151000**：全量重算 `total_value=ROUND(quantity×unit_price,2)`（`<=>` NULL安全比较，**MySQL 8.0 无 IS DISTINCT FROM，踩坑记牢**）
+
+### 方法论沉淀
+- **MySQL UPDATE SET 从左到右求值**：表达式里引用的列，读到的是同一语句中前面已赋的新值。写"联动更新"SQL 时要么调整 SET 顺序（需要旧值的放前面），要么表达式直接用新值——绝不能照抄"旧值±delta"的伪代码
+- **排查库存类 Bug 的黄金证据**：数量×单价 vs 总值 不一致 → 必有"只更新一列"的错位路径；再用出入库时间戳交叉验证操作链
+- **核查出入库完整性的检查清单**：①扣减调用是否存在 ②SQL 是否原子+rows校验 ③WHERE 是否含 tenant_id/锁定检查 ④多记录定位是否确定（LIMIT 1 必须带排序）⑤日志写入与扣减是否同事务且互为充要
+
+### 验证
+- mvn compile ✓ / lints ✓ / 已推送 origin/main（cb7b56800）
+- 待本地启动：Flyway V202708151000 重算后 PKG005 总值应=15.00；实际调拨一次验证"源减目标加"
+
+## D-071 样衣详情布局压缩 + "修改SKC"歧义消解（2026-08-16）
+
+### 背景（用户三连问）
+1. 样衣详情布局如何更好用
+2. 商品编码表格图片太大
+3. "为什么还是显示修改SKU不是修改商品编码"
+
+### 关键澄清（避免后续误判）
+- **代码里从未存在过"修改SKU"按钮**——按钮一直是"修改SKC"。SKC=款+颜色维度编号（如 SKC202608131407，关联生产订单），与商品编码（款+颜色+尺码）是两个概念，该按钮不应改成"修改商品编码"
+- 用户看到"SKU字面前缀"等旧文案 → 用户访问的是 **cb7b56800 之前的旧构建**（该 commit 才完成"SKU字面前缀→商品编码字面前缀"第二轮改名）。结论：**改名类改动必须同步重建前端，否则用户端永远是旧文案**
+
+### 改动（9文件，净-18行）
+1. **SkuTable 图片缩小**：44×44→32×32、列宽80→56、占位图标同步；底部3行说明删1行（与顶部编码模式说明重复）字号14→12
+2. **SKC按钮消歧**："修改SKC"→"修改SKC编号"+Tooltip（说明SKC含义及商品编码需切换手动编辑修改）；SKC块 padding 12→8、说明字号14→12；Switch 文案"加商品编码/不加"→"加前缀/不加"
+3. **布局压缩**：客户信息|款式特征 左右并排（Row+Col xl=12，内部 md=8→sm=12 两列适配半宽）；时间信息3字段并入基础信息区尾部（删除独立 TimeRemarkSection.tsx）；区块间距 20→16。区块数 6→4
+
+### 验证
+- type-check ✓ / vite build ✓（9.9s）/ 新文案已确认进入构建产物
+

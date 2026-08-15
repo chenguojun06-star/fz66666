@@ -1,11 +1,33 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-14（生产要求被BOM日志污染根因修复 D-069：日志迁 t_style_operation_log + Flyway清洗 + 前端操作记录面板）
+> 最后更新：2026-08-16（样衣详情布局压缩+SKC按钮消歧+商品编码表图片缩小 D-071）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 样衣详情布局压缩 + "修改SKC"歧义消解 ✅（详见 D-071）
+
+用户三问（布局如何更好用/商品编码表图片太大/为何显示"修改SKU"）：
+- [x] **关键澄清**：代码从无"修改SKU"按钮，一直是"修改SKC"（SKC=款+颜色编号≠商品编码）；用户看到"SKU字面前缀"旧文案系旧构建，cb7b56800 已改名但未重建发布
+- [x] SkuTable 图片 44→32、列宽 80→56、底部说明删重复行
+- [x] SKC 按钮→"修改SKC编号"+Tooltip 说明与商品编码的区别；Switch"加商品编码"→"加前缀"
+- [x] 客户信息|款式特征左右并排；时间信息并入基础信息区（删独立 TimeRemarkSection）；区块间距 20→16；区块数 6→4
+- [x] type-check ✓ / lint ✓ / build ✓ / vitest 436 通过（7 失败为 STAGE_ORDER 既有问题，stash 基线复现无关）
+
+### 2026-08-15 物料出入库库存不减 + 金额错乱 — 全链路核实并修复 5 处缺陷 ✅（详见 D-070）
+
+用户怒斥"这些物料出入库每一个地方都没有数据减扣 数量都不变" → 全链路核查发现 5 处缺陷（铁证：PKG005 显示 quantity=50/total_value=14.70=49×0.30，数量与总值脱钩）：
+
+- [x] **P0 调拨零和**：`StockTransferOrchestrator.moveMaterialStock` 对同一 stockId 先 `updateStockQuantity(-qty)` 再 `updateStockQuantity(+qty)` 净变化=0，调拨单"完成"但库存纹丝不动 → 改为源/目标库位分别定位扣加（`findMaterialStock` 带 location），目标库位无记录时 `createTargetStock` 复制源行新建零库存记录；成品调拨（SKU 无分库位维度）一减一加同为净零 → 改为仅记录单据不动总库存
+- [x] **P0 金额错算**：`MaterialStockMapper` 4 条 SQL（decreaseStockWithCheck/decreaseStockAndUnlock/updateStockQuantity/updateStockOnInbound）的 `total_value` 表达式在 MySQL `UPDATE SET` 从左到右求值语义下，quantity 已是新值又 ±delta 一次 → 重写表达式（扣减类直接 `ROUND(GREATEST(0,quantity)×price)` 用新值），`updateStockOnInbound` 调整 SET 顺序（加权单价用旧 quantity 先算 → quantity → total_value 用新值×新单价）
+- [x] **P1 静默漏扣**：`MaterialPurchasePickingHelper.deductStockForOutboundItems` 中 stockMap.get()==null（库存记录被逻辑删除）时跳过扣减但照写出库日志 → 改为抛异常回滚，杜绝"有出库记录无扣减"
+- [x] **P1 租户隔离**：`MaterialStockServiceImpl.queryPage` 无 tenant_id 过滤（违反铁律7）→ 补齐 `eq(tenantId)`
+- [x] **P2 稳定排序**：`MaterialWarehouseOperationOrchestrator` 5 处 `LIMIT 1` 无排序，同编码多记录时出入库随机命中不同行 → 加 `orderByAsc(createTime)`
+- [x] **Flyway V202708151000**：全量重算 `total_value = ROUND(quantity×unit_price,2)`（用 `<=>` NULL安全比较，MySQL 8.0 无 IS DISTINCT FROM）
+- [x] mvn compile ✓ / lints ✓ / 已提交推送 cb7b56800
+- [ ] **待验证**：本地启动后端让 Flyway 执行重算，核对 PKG005 总值=15.00；实际做一次调拨验证源减目标加
 
 ### 2026-08-14 生产要求字段被 BOM 操作日志污染 — 根因修复 ✅（详见 D-069）
 
