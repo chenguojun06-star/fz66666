@@ -163,7 +163,9 @@ public class SampleWorkflowTool extends AbstractAgentTool {
     private String pushToOrderManagement(Map<String, Object> args) throws Exception {
         StyleInfo style = findStyle(args);
         List<String> targetTypes = parseTargetTypes(args.get("targetTypes"));
-        Map<String, Object> result = orderManagementOrchestrator.createFromStyle(style.getId(), targetTypes);
+        String remark = text(args.get("remark"));
+        Map<String, Object> result = orderManagementOrchestrator.createFromStyle(style.getId(), targetTypes,
+                remark != null && !remark.isBlank() ? remark.trim() : null);
         return ok("已推送到下单管理", Map.of("style", toStyleDto(style), "result", result));
     }
 

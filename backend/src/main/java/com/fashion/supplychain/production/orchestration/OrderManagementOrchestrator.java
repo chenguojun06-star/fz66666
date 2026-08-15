@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.helper.StyleLogHelper;
 import com.fashion.supplychain.style.orchestration.StyleAttachmentOrchestrator;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -19,6 +20,7 @@ import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -65,6 +67,17 @@ public class OrderManagementOrchestrator {
     @Autowired(required = false)
     private EcommerceOrderService ecommerceOrderService;
 
+    @Autowired
+    private StyleLogHelper styleLogHelper;
+
+    /**
+     * 自注入代理：createFromStyle → persistPushState 必须经代理调用，
+     * this. 直调会绕过 @Transactional 切面（P1 自调用失效修复）
+     */
+    @Autowired
+    @Lazy
+    private OrderManagementOrchestrator self;
+
     /**
      * 从样衣开发推送到下单管理
      * 只更新款式状态为"可下单"，不会直接创建大货订单
@@ -73,14 +86,21 @@ public class OrderManagementOrchestrator {
      * @param targetTypes 推送目标类型列表
      * @return 推送结果
      */
-    public Map<String, Object> createFromStyle(Long styleId, List<String> targetTypes) {
+    public Map<String, Object> createFromStyle(Long styleId, List<String> targetTypes, String remark) {
         if (styleId == null) {
             throw new IllegalArgumentException("缺少styleId");
         }
 
         // ====== 阶段1：核心推送逻辑（独立事务） ======
         // 只做款式状态更新，不掺杂任何可能抛异常的同步逻辑，确保推送主流程稳定提交
-        StyleInfo style = persistPushState(styleId, targetTypes);
+        // 经 self 代理调用使 @Transactional 生效（this. 直调绕过切面）
+        StyleInfo style = self.persistPushState(styleId, targetTypes);
+
+        // ====== 阶段1.5：推送备注落库 ======
+        // 前端弹窗的备注原先传了但被直接丢弃；写入款式操作日志（备注时间线可见，不阻塞主流程）
+        if (StringUtils.hasText(remark)) {
+            styleLogHelper.saveLog(styleId, "PUSH_ORDER", "推送下单管理", remark.trim());
+        }
 
         // ====== 阶段2：非事务同步（推送成功后再做，失败不影响主流程） ======
         // 背景：flowPatternToDataCenter 带有 @Transactional，如果在主事务内调用，
@@ -164,16 +184,15 @@ public class OrderManagementOrchestrator {
             log.warn("样衣无工序单价数据，但仍允许推送: styleId={}", styleId);
         }
 
-        // 更新款式状态为"可下单"（样衣完成）
+        // 单次 update 原子写入全部推送字段：原先两次 updateById 分开提交，
+        // 第二次失败会产生 progressNode=样衣完成但 pushedToOrder=0 的不一致中间态
         String currentProgressNode = style.getProgressNode();
         if (!"样衣完成".equals(currentProgressNode)) {
             style.setProgressNode("样衣完成");
-            styleInfoService.updateById(style);
             log.info("更新款式状态为可下单: styleId={}, styleNo={}, 原状态={}",
                     styleId, style.getStyleNo(), currentProgressNode);
         }
 
-        // 标记已推送，并记录推送人
         String currentUser = UserContext.username();
         style.setPushedToOrder(1);
         style.setPushedToOrderTime(LocalDateTime.now());

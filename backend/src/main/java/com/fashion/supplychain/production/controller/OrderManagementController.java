@@ -53,7 +53,9 @@ public class OrderManagementController {
 
     try {
       List<String> targetTypes = parseTargetTypes(payload == null ? null : payload.get("targetTypes"));
-      Map<String, Object> data = orderManagementOrchestrator.createFromStyle(styleId, targetTypes);
+      Object remarkRaw = payload == null ? null : payload.get("remark");
+      String remark = remarkRaw == null ? null : String.valueOf(remarkRaw).trim();
+      Map<String, Object> data = orderManagementOrchestrator.createFromStyle(styleId, targetTypes, remark);
       // 推送主流程成功；若存在同步警告，降级为 WARN 日志，并把警告信息透传给前端（不报错）
       Object syncWarnings = data == null ? null : data.get("syncWarnings");
       if (syncWarnings instanceof java.util.List && !((java.util.List<?>) syncWarnings).isEmpty()) {

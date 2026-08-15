@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,9 @@ import org.springframework.util.StringUtils;
 @Component
 @Slf4j
 public class StyleStageHelper {
+
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -452,6 +456,29 @@ public class StyleStageHelper {
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("退回原因不能为空");
         }
+
+        // 该款已有进行中的生产订单时禁止退回：退回重改工序/物料清单后再推送下单，
+        // 新旧订单资料快照脱钩（报废环节已有同类守卫）
+        try {
+            Long tid = com.fashion.supplychain.common.UserContext.tenantId();
+            String styleIdStr = String.valueOf(id);
+            long activeOrders = productionOrderService.count(
+                    new LambdaQueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>()
+                            .eq(com.fashion.supplychain.production.entity.ProductionOrder::getStyleId, styleIdStr)
+                            .eq(com.fashion.supplychain.production.entity.ProductionOrder::getTenantId, tid)
+                            .eq(com.fashion.supplychain.production.entity.ProductionOrder::getDeleteFlag, 0)
+                            .notIn(com.fashion.supplychain.production.entity.ProductionOrder::getStatus,
+                                    "completed", "cancelled", "scrapped", "archived", "closed"));
+            if (activeOrders > 0) {
+                throw new IllegalStateException("该款存在 " + activeOrders + " 个进行中的生产订单，请先处理完订单再退回样衣");
+            }
+        } catch (IllegalStateException rethrow) {
+            throw rethrow;
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(StyleStageHelper.class)
+                    .warn("样衣退回前的在途订单校验失败: styleId={}, error={}", id, e.getMessage());
+        }
+
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getSampleStatus, null)

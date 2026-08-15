@@ -44,7 +44,7 @@ const PushToOrderModal: React.FC<PushToOrderModalProps> = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                 gap: 8,
               }}
             >
@@ -52,9 +52,6 @@ const PushToOrderModal: React.FC<PushToOrderModalProps> = ({
               <Checkbox value="size">尺寸表</Checkbox>
               <Checkbox value="bom">物料清单</Checkbox>
               <Checkbox value="process">工序单价</Checkbox>
-              <Checkbox value="production">生产制单</Checkbox>
-              <Checkbox value="secondary">二次工艺</Checkbox>
-              <Checkbox value="sku">商品编码管理</Checkbox>
             </div>
           </Checkbox.Group>
         </Form.Item>

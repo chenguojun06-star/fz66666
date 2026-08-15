@@ -18,10 +18,6 @@ export function useStylePushOrder({ handlePushToOrderDirect, reportSmartError, s
     'pattern',
     'size',
     'process',
-    'production',
-    'secondary',
-    'sizePrice',
-    'sku',
   ]);
 
   const handlePushToOrder = () => {

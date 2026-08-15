@@ -38,6 +38,9 @@ public class StyleStageCompletionHelper {
     private StyleInfoService styleInfoService;
 
     @Autowired
+    private com.fashion.supplychain.style.service.StyleProcessService styleProcessService;
+
+    @Autowired
     private StyleBomService styleBomService;
 
     @Autowired
@@ -280,6 +283,13 @@ public class StyleStageCompletionHelper {
         if (current.getProcessCompletedTime() != null) {
             log.info("工序配置已完成，跳过重复操作: styleId={}", id);
             return true;
+        }
+
+        // 完成前必须存在工序行：无工序数据可一路走到下单页被"单价必须大于0"拦住，
+        // 用户被迫退回返工（前端按钮、推送、下单三处校验就此对齐）
+        if (styleProcessService == null || styleProcessService.listByStyleId(id) == null
+                || styleProcessService.listByStyleId(id).isEmpty()) {
+            throw new IllegalStateException("请先配置至少一道工序（含单价）再完成工序配置");
         }
 
         boolean ok = styleInfoService.lambdaUpdate()
