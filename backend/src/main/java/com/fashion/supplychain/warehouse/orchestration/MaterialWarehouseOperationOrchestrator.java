@@ -79,14 +79,10 @@ public class MaterialWarehouseOperationOrchestrator {
             throw new IllegalArgumentException("不支持的入库来源类型: " + sourceType);
         }
 
-        MaterialStock stock = materialStockService.getOne(
-                new LambdaQueryWrapper<MaterialStock>()
-                        .eq(MaterialStock::getMaterialCode, materialCode)
-                        .eq(MaterialStock::getTenantId, tenantId)
-                        .eq(MaterialStock::getDeleteFlag, 0)
-                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
-                        .orderByAsc(MaterialStock::getCreateTime)
-                        .last("LIMIT 1"));
+        MaterialStock stock = findStockByCodeColorSize(materialCode,
+                params.get("color") == null ? null : String.valueOf(params.get("color")),
+                params.get("size") == null ? null : String.valueOf(params.get("size")),
+                tenantId);
         if (stock == null) {
             Boolean autoCreate = params.get("autoCreateStock") != null
                     && Boolean.parseBoolean(String.valueOf(params.get("autoCreateStock")));
@@ -220,14 +216,7 @@ public class MaterialWarehouseOperationOrchestrator {
             throw new IllegalArgumentException("原入库记录数量为0，无需冲销");
         }
 
-        MaterialStock stock = materialStockService.getOne(
-                new LambdaQueryWrapper<MaterialStock>()
-                        .eq(MaterialStock::getMaterialCode, materialCode)
-                        .eq(MaterialStock::getTenantId, tenantId)
-                        .eq(MaterialStock::getDeleteFlag, 0)
-                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
-                        .orderByAsc(MaterialStock::getCreateTime)
-                        .last("LIMIT 1"));
+        MaterialStock stock = findStockByCodeColorSize(materialCode, original.getColor(), original.getSize(), tenantId);
         if (stock == null) {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
         }
@@ -356,14 +345,10 @@ public class MaterialWarehouseOperationOrchestrator {
             throw new IllegalArgumentException("不支持的出库类型: " + outstockType);
         }
 
-        MaterialStock stock = materialStockService.getOne(
-                new LambdaQueryWrapper<MaterialStock>()
-                        .eq(MaterialStock::getMaterialCode, materialCode)
-                        .eq(MaterialStock::getTenantId, tenantId)
-                        .eq(MaterialStock::getDeleteFlag, 0)
-                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
-                        .orderByAsc(MaterialStock::getCreateTime)
-                        .last("LIMIT 1"));
+        MaterialStock stock = findStockByCodeColorSize(materialCode,
+                params.get("color") == null ? null : String.valueOf(params.get("color")),
+                params.get("size") == null ? null : String.valueOf(params.get("size")),
+                tenantId);
         if (stock == null) {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
         }
@@ -446,14 +431,7 @@ public class MaterialWarehouseOperationOrchestrator {
             params.put("size", size);
         }
         freeInbound(params);
-        return materialStockService.getOne(
-                new LambdaQueryWrapper<MaterialStock>()
-                        .eq(MaterialStock::getMaterialCode, materialCode)
-                        .eq(MaterialStock::getTenantId, tenantId)
-                        .eq(MaterialStock::getDeleteFlag, 0)
-                        // D-070: 同编码多记录时固定取最早一条，避免出入库随机命中不同行
-                        .orderByAsc(MaterialStock::getCreateTime)
-                        .last("LIMIT 1"));
+        return findStockByCodeColorSize(materialCode, color, size, tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -568,6 +546,26 @@ public class MaterialWarehouseOperationOrchestrator {
         } catch (Exception e) {
             log.warn("[StockChangeLog] 物料库存变动日志保存失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 按编码+颜色+尺码定位库存行（空值按空串精确匹配，与领料侧 findExistingStock 口径一致）。
+     * 旧逻辑只按 materialCode 取最早一条，同物料多色码分行时会把数量记到任意色码行上，
+     * 随后按色码领料查不到——"串色"导致领料卡住。
+     */
+    private MaterialStock findStockByCodeColorSize(String materialCode, String color, String size, Long tenantId) {
+        String c = color == null ? "" : color.trim();
+        String sz = size == null ? "" : size.trim();
+        return materialStockService.getOne(
+                new LambdaQueryWrapper<MaterialStock>()
+                        .eq(MaterialStock::getMaterialCode, materialCode)
+                        .eq(MaterialStock::getTenantId, tenantId)
+                        .eq(MaterialStock::getDeleteFlag, 0)
+                        .eq(MaterialStock::getColor, c)
+                        .eq(MaterialStock::getSize, sz)
+                        // D-070: 同维度多记录时固定取最早一条，避免出入库随机命中不同行
+                        .orderByAsc(MaterialStock::getCreateTime)
+                        .last("LIMIT 1"));
     }
 
     private MaterialStock autoCreateMaterialStock(String materialCode, Map<String, Object> params, Long tenantId) {

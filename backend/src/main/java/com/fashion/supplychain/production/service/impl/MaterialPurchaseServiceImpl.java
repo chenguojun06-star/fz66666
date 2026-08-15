@@ -429,7 +429,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     private void syncStockOnArrivedChange(MaterialPurchase mp, int delta) {
-        if (delta == 0 || isOrderDrivenPurchase(mp)) {
+        // 到货增量必须同步入库存（与手工到货 /material/inbound/confirm-arrival 口径一致）。
+        // 旧逻辑对 order/sample 类型跳过，导致同一采购单走不同到货入口时库存/入库单/对账三本账不一致。
+        // delta 为差值增量，与 confirm-arrival 混用不会重复入库。
+        if (delta == 0) {
             return;
         }
         try {

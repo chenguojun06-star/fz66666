@@ -693,6 +693,16 @@ public class ProductionOrderOrchestrator {
             throw new IllegalArgumentException("订单不存在");
         }
 
+        // 工厂账号范围校验：quick-edit 会改 remarks/交期/工序单价等敏感数据，
+        // 外发工厂协作账号只能改本厂订单（防止跨工厂越权写入）
+        String ctxFactoryId = UserContext.factoryId();
+        if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
+            String orderFactoryId = order.getFactoryId() == null ? "" : order.getFactoryId().trim();
+            if (!ctxFactoryId.trim().equals(orderFactoryId)) {
+                throw new IllegalStateException("无权修改其他工厂的订单");
+            }
+        }
+
         Object clientVersion = payload.get("version");
         if (clientVersion != null) {
             int expected = Integer.parseInt(String.valueOf(clientVersion));

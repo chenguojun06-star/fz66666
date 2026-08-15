@@ -1732,3 +1732,18 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 ### 验证
 - 后端 mvn compile ✓ 已重启（API 200）；前端 type-check/lint/build ✓
 - 剩余：P1 18 项（仓库扫码色码维度/到货双入口/角色子串提权/数据范围等）+ P2 24 项
+
+## D-079 P1 第二批 7 项：仓库色码/到货口径/角色白名单/删除防护/越权（2026-08-16）
+
+### 修复
+1. **仓库扫码串色**：MaterialWarehouseOperationOrchestrator 新增 findStockByCodeColorSize（编码+颜色+尺码+空串精确匹配，与领料侧口径一致）；freeInbound/freeOutbound/scanInbound/reverse 全部接入（scanQuery 查询接口保持原样）
+2. **到货双入口统一**：syncStockOnArrivedChange 删除 isOrderDrivenPurchase 跳过——update-arrived-quantity 的到货增量同步入库存，与手工到货 confirm-arrival 口径一致（delta 差值不会重复入库）
+3. **角色判定白名单**：UserContext.isTopAdmin 从 contains("admin")/contains("管理员") 改为精确集合（admin/administrator/tenant_owner/owner/管理员/租户管理员/超级管理员/老板+roleId=1）；isSupervisorOrAbove 删除 contains("管理")，改精确+后缀（endsWith 主管/管理员/组长/厂长）——"库存管理/面料管理"等岗位名不再被误判为管理员（提权），"仓库管理员"仍正确识别
+4. **供应商删除防护**：FactoryOrchestrator.delete 增加在途采购检查（supplierId+未完成状态），有在途单禁止删（防 supplierId 悬空+门户失效）
+5. **物料删除防护**：MaterialDatabaseOrchestrator.delete 加三层引用检查——款式物料清单引用/未完成采购/有库存数量，命中即拒（提示改停用）
+6. **quick-edit 工厂范围**：工厂账号只能改本厂订单（factoryId 匹配校验），防跨工厂越权写交期/工序单价
+7. **邀请码跨租户**：invite/generate 忽略 body.tenantId 覆盖，强制当前登录租户——任意用户无法再为其他租户签发邀请码
+
+### 验证
+- mvn compile ✓ 后端已重启
+- 剩余：P1 11 项（工人订单数据范围/推送弹窗选项/外发结算回货链等）+ P2 24 项

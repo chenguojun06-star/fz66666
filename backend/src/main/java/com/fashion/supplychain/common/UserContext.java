@@ -99,8 +99,11 @@ public class UserContext {
         if ("1".equals(r)) {
             return true;
         }
+        // 白名单精确/后缀匹配：contains("admin")/contains("管理员") 会把
+        // "库存管理员"等任意含"管理"字样的普通岗位误判为顶级管理员（越权）
         String lower = r.toLowerCase();
-        return lower.contains("admin") || r.contains("管理员");
+        return lower.equals("admin") || lower.equals("administrator") || lower.equals("tenant_owner") || lower.equals("owner")
+                || r.equals("管理员") || r.equals("租户管理员") || r.equals("超级管理员") || r.equals("老板");
     }
 
     /**
@@ -123,9 +126,12 @@ public class UserContext {
         if ("1".equals(r)) {
             return true;
         }
+        // 白名单匹配：删除 contains("管理")——"库存管理/面料管理"等岗位名包含"管理"
+        // 两字但不是主管；endsWith("管理员") 仍可正确识别"仓库管理员"等真实管理员角色
         String lower = r.toLowerCase();
-        return lower.contains("admin") || lower.contains("manager") || lower.contains("supervisor")
-                || r.contains("主管") || r.contains("管理员") || r.contains("管理") || r.contains("组长");
+        return lower.equals("admin") || lower.equals("manager") || lower.equals("supervisor") || lower.equals("leader")
+                || r.equals("主管") || r.equals("管理") || r.equals("组长")
+                || r.endsWith("主管") || r.endsWith("管理员") || r.endsWith("组长") || r.endsWith("厂长");
     }
 
     /**

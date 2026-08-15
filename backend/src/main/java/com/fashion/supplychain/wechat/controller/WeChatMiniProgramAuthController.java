@@ -72,15 +72,12 @@ public class WeChatMiniProgramAuthController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/invite/generate")
     public Result<?> generateInvite(@RequestBody(required = false) Map<String, Object> body) {
+        // 邀请码只能为当前登录租户生成：body.tenantId 允许覆盖会令任意登录用户
+        // 为其他租户签发邀请码（配合公开的 invite/info 形成跨租户引导），一律忽略
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         String tenantName = null;
-        if (body != null) {
-            if (body.get("tenantId") != null) {
-                try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException e) { log.warn("Invalid tenantId format in bind-login: {}", body.get("tenantId")); }
-            }
-            if (body.get("tenantName") != null) {
-                tenantName = body.get("tenantName").toString();
-            }
+        if (body != null && body.get("tenantName") != null) {
+            tenantName = body.get("tenantName").toString();
         }
         if (tenantId == null) {
             return Result.fail("无法确定租户ID，请确保已登录");

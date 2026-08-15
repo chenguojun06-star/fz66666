@@ -3,6 +3,10 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.style.entity.StyleBom;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.helper.MaterialDatabaseLogAppendHelper;
 import java.time.LocalDateTime;
@@ -17,6 +21,15 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @Service
 public class MaterialDatabaseOrchestrator {
+
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleBomService styleBomService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
@@ -177,6 +190,36 @@ public class MaterialDatabaseOrchestrator {
             log.warn("[MATERIAL-DB-DELETE] id={} already deleted, idempotent success", id);
             return true;
         }
+
+        // 引用防护：被款式物料清单 / 在途采购 / 有库存的物料禁止删除，
+        // 否则 BOM 与采购单引用悬空、库存行变孤儿数据
+        String code = current.getMaterialCode();
+        if (StringUtils.hasText(code)) {
+            Long tid = tenantId;
+            long bomRefs = styleBomService.count(new LambdaQueryWrapper<StyleBom>()
+                    .eq(StyleBom::getMaterialCode, code)
+                    .eq(StyleBom::getTenantId, tid));
+            if (bomRefs > 0) {
+                throw new IllegalStateException("该物料被 " + bomRefs + " 个款式物料清单引用，无法删除（可改为停用）");
+            }
+            long activePurchases = materialPurchaseService.count(new LambdaQueryWrapper<MaterialPurchase>()
+                    .eq(MaterialPurchase::getMaterialCode, code)
+                    .eq(MaterialPurchase::getTenantId, tid)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .notIn(MaterialPurchase::getStatus, "completed", "cancelled"));
+            if (activePurchases > 0) {
+                throw new IllegalStateException("该物料存在 " + activePurchases + " 个未完成采购单，请先处理完在途采购再删除");
+            }
+            long stockRows = materialStockService.count(new LambdaQueryWrapper<MaterialStock>()
+                    .eq(MaterialStock::getMaterialCode, code)
+                    .eq(MaterialStock::getTenantId, tid)
+                    .eq(MaterialStock::getDeleteFlag, 0)
+                    .apply("quantity > 0"));
+            if (stockRows > 0) {
+                throw new IllegalStateException("该物料仍有库存数量，请先清库存再删除（或改为停用）");
+            }
+        }
+
         boolean ok = materialDatabaseService.removeById(current.getId());
         if (!ok) {
             throw new IllegalStateException("删除失败");

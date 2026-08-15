@@ -44,6 +44,9 @@ public class FactoryOrchestrator {
     private ProductionOrderService productionOrderService;
 
     @Autowired
+    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
     private SupplierUserService supplierUserService;
 
     @Autowired
@@ -210,6 +213,28 @@ public class FactoryOrchestrator {
         if (activeOrders > 0) {
             throw new IllegalStateException(
                     "该工厂存在 " + activeOrders + " 个未完成的生产订单，请在订单结算完成后再删除");
+        }
+
+        // 存在未完成的物料采购单（该供应商在途）时禁止删除：
+        // 删除后采购单 supplierId 悬空、供应商门户登录直接失效
+        try {
+            long activePurchases = materialPurchaseService.count(
+                    new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPurchase>()
+                            .eq(com.fashion.supplychain.production.entity.MaterialPurchase::getSupplierId, id)
+                            .eq(com.fashion.supplychain.production.entity.MaterialPurchase::getTenantId,
+                                    com.fashion.supplychain.common.UserContext.tenantId())
+                            .eq(com.fashion.supplychain.production.entity.MaterialPurchase::getDeleteFlag, 0)
+                            .notIn(com.fashion.supplychain.production.entity.MaterialPurchase::getStatus, "completed", "cancelled"));
+            if (activePurchases > 0) {
+                throw new IllegalStateException(
+                        "该供应商存在 " + activePurchases + " 个未完成的物料采购单，请先处理完在途采购再删除");
+            }
+        } catch (IllegalStateException rethrow) {
+            throw rethrow;
+        } catch (Exception e) {
+            // 采购校验失败不阻断删除（历史数据异常时以日志暴露），核心防护是上面的订单校验
+            org.slf4j.LoggerFactory.getLogger(FactoryOrchestrator.class)
+                    .warn("供应商删除前的在途采购校验失败: factoryId={}, error={}", id, e.getMessage());
         }
 
         boolean ok = factoryService.removeById(id);
