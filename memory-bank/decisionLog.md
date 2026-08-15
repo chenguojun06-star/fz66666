@@ -1669,3 +1669,28 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 ### 验证
 - 前端：type-check ✓ / lint ✓ / build ✓ / **vitest 443/443 全过**（含原7个失败）
 - 后端：mvn compile BUILD SUCCESS ✓
+
+## D-076 全系统六链路审计（发布后）— 4+9+27 问题清单（2026-08-16）
+
+### 发布
+- MySQL 在 Docker 容器 fashion-mysql-simple（3308）；dev-public.sh 原用 -DskipTests 仍编译坏测试源码 → 改 -Dmaven.test.skip=true
+- **当场修复3个**：shortageOnly P0（resolveTargetOrderIds 剔除已有采购订单致恒空，加 shortageOnly 重载豁免）；Flyway V202707280003 1553错（FK挡索引，先删FK重建再恢复）；均已推送（1db10802d / 0229ee9a9）
+
+### 进度实时性结论（用户核心痛点）
+机制本身实时闭环：扫码→ScanExecutorSupport.recomputeProgressSync（4个执行器全覆盖）→ WS按租户广播 → GlobalAiAssistant(挂全局Layout)维持长连接 → 派发 order:progress:changed → 订单管理/样衣列表/详情/Dashboard 监听+500ms防抖刷新。
+**"等很久"根因**：公网隧道下 WS 断连（cloudflared idle timeout）+指数退避重连（5s→30s），断连窗口推送丢失且无轮询兜底、无消息序号回放。**建议修复：WS断连时30s轮询兜底 + 消息带序号**。
+
+### 审计问题汇总（详细清单见各域，按用户可见现象归类）
+**P0 共9个**：
+- 权限3：MENU_*权限点后端零校验（前端菜单权限可API绕过）；工厂账号价格后端不脱敏可导出；分销商接口无权限注解
+- 财务4：调价追溯改写已结算扫码金额（ne('settled') vs 实际'payroll_settled'恒真）；扣款账单幂等键错位重复推送；工资打款remaining公式与扣款不一致可超额；部分到货按采购全额入对账
+- 采购1（已修）：shortageOnly恒返回空
+- 发布1（已修）：Flyway 1553
+
+**P1 共20个**（要点）：推送不校验样衣完成状态造成半卡死；@Transactional自调用失效；退回不查在途订单；到货双入口库存口径相反；撤销出库清零同单其他采购到货量；入库findExistingStock无tenantId可静默丢库存；仓库扫码忽略color/size维度；付款回写链多处失效（合并应付无sourceType、工资账单无counterpartyId、paidAmount不更新）；外部订单多次入库只首次生成对账单；对账直接paid绕过应付派生；角色名子串匹配提权；自建admin角色满足租户主URL守卫；订单quick-edit无工厂范围校验；工人全量可见订单等
+
+**P2 共27个**（要点）：推送备注被丢弃；7个同步目标3个无效+1个隐藏；报废不清理pushedToOrder；PUT不校验推送锁定；小程序无样衣完成/推送入口；totalAmount三处口径互斥；到货率不含仓库领料完成；仓库入库不更新加权单价等
+
+### 方法论
+- 并发审计用多agent时注意平台并发限制（本次6个全挂，改2个/批成功）
+- 审计prompt必须给"输出格式+严重度定义+只要代码证据"，产出质量高（每个问题带文件:行号）
