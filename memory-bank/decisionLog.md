@@ -1593,3 +1593,20 @@ D-058 重写了样衣详情页基础信息Tab（新字段：商品分类/虚拟�
 ### 验证
 - type-check ✓ / vite build ✓（9.9s）/ 新文案已确认进入构建产物
 
+
+## D-072 样衣详情第二轮优化 — sticky保存条/操作列固定/响应式/左栏加宽/文案（2026-08-16）
+
+### 背景
+D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 3 处需业务决策暂缓：颜色图片三入口收敛、自动模式下价格可编辑与状态标签矛盾、状态卡操作人 fallback 链与进度环节对齐）。
+
+### 改动（7文件）
+1. **底部 sticky 保存条**：`index.tsx` 把 StyleActionButtons 抽成 `actionButtons` 变量，顶部 extra 与底部 sticky 条复用同一实例；`bottom:-20 + margin负值` 抵消 Card body padding 贴住卡片底边。滚动容器是 `.page-layout-body`（overflow:auto），sticky 生效
+2. **SKU 表操作列 fixed:'right' + scroll x:'max-content'**：横向滚动时删除按钮不被滚出视野（与 D-066 订单管理一致）
+3. **颜色图片卡片 span=6 → xs24/sm12/md8/lg6**：窄屏不再压成薄片
+4. **左栏 clamp(160px,14vw,200px) → clamp(220px,17vw,280px)**：封面图/AI识别区不再挤在 200px 小条（子组件全为 width:100% 自适应，加宽安全）
+5. 区名「客户信息」→「客户与定价」（区名与内容对齐；打印组件无用户可见标题不受影响）
+6. 菜单「快速生成/自编辑」→「按款号生成/手动输入」+ 底部说明同步
+7. 状态卡预计交板 `slice(0,10)` 去掉 "00:00" 尾巴（超期判断用纯日期 new Date 有效，行为不变）
+
+### 验证
+- type-check ✓ / eslint(StyleInfo全目录) ✓ / vite build ✓ 9.2s
