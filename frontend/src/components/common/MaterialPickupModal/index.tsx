@@ -121,7 +121,7 @@ const MaterialPickupModal: React.FC<MaterialPickupModalProps> = ({
           unit: record.unit ?? '',
         }],
       });
-      message.success('领取成功，将在「面辅料出入库 → 待出库领料」中显示');
+      message.success(factoryType === 'EXTERNAL' ? '外发领用已提交，待仓库确认出库' : '领取成功，库存已扣减并生成出库记录');
       onSuccess?.();
       onCancel();
     } catch (error: unknown) {

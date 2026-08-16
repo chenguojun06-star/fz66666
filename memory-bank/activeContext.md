@@ -1,11 +1,59 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-097：Qdrant DOWN 拖垮 health→503 致部署失败，双层修复）
+> 最后更新：2026-08-16（D-100：色卡本重复入口下线 + 供应商色卡供应商名不显示三连修复）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 色卡本重复入口下线 + 供应商色卡"供应商: -"根因修复 ✅（D-100，P0）
+
+用户炸点：①物料管理又冒出独立「色卡本」菜单，与物料新增里的供应商色卡重复 ②编辑供应商色卡选供应商后名字不显示、卡片显示"供应商: -"。
+
+**三连 bug 根因（MaterialColorCardDialog.tsx，一处代码三个坑）**：
+- [x] **supplierName 未注册表单字段** → `validateFields()` 不返回未注册字段 → 保存 payload 丢 supplierName → 后端存 null → 卡片"供应商: -"、编辑回显空（联系人却显示"小刘 · 13144401544"是因为联系人是注册字段存上了）
+- [x] **option 字段名错误**：onChange 读 `option?.contactPerson/contactPhone`，但 SupplierSelect 的 option 上是 `supplierContactPerson/supplierContactPhone` → 选中供应商后联系人/电话被 setFieldsValue(undefined) 清空
+- [x] **supplierId 塞名字**：`option?.supplierId || value` 手动输入时把供应商名写进 supplierId 字段（脏数据）
+- [x] 修复：按 SupplierSelect 标准用法，`name="supplierName"` 直接注册 + onChange 只填 supplierId/supplierContactPerson/supplierContactPhone（正确字段名）
+
+**色卡本重复入口下线（两套色卡系统并存债务）**：
+- [x] 旧体系：`/color-card/*`（ColorCardController/Orchestrator/2Mapper/2Entity + t_color_card 表）+ 前端 `pages/ColorCard`（11 文件）+ 菜单「色卡本」；新体系：`/material-color-card/*` + MaterialDatabase"供应商色卡"视图（t_material_color_card 表）
+- [x] 后端删除旧 6 文件（零外部引用已核验）；t_color_card 表保留不动（历史数据不删）
+- [x] 前端删除 pages/ColorCard 11 文件 + 菜单项 + 权限映射；`/warehouse/color-card` 路由重定向到 `/warehouse/material-database`（收藏夹不 404）
+- [x] **数据打通**：新增 `GET /material-color-card/by-material/{materialId}`（item.material_id 反查，物料列表"查看色卡"入口从旧表迁移到新表）；MaterialColorItemsModal 适配新字段（cardName/cardCode/color/materialName）
+- [x] 验证：前端 tsc --noEmit 0 错误；后端 mvn compile 通过；旧 `/color-card` API 前端调用 0 残留、旧类引用 0 残留
+- [ ] **存量数据**：旧色卡（supplierName=null）需用户编辑补选一次供应商保存；旧表 t_color_card 历史数据已无页面入口（数据仍在库，如需查看再议）
+- [ ] 部署后端到端验证：物料列表"查看色卡"弹窗显示新表数据 + 编辑色卡选供应商→保存→卡片供应商名显示
+
+### 2026-08-16 内部领料"领取即出库"（P0：无限领取/库存死数据/通知挂着）✅（D-099）
+
+用户实测：面辅料反复领取库存不变、通知一直挂、待出库单要人工确认。排查结论（仓库扣减 SQL 本身正确）：
+- [x] **根因**：生产页"领料"（MaterialPickupModal → `/production/picking/pending`）只建 PENDING 待出库单+sendPickupNotification 通知仓库，**不扣库存、无库存检查** → 无限建单、库存数字不动、待出库单/通知永远挂着等人确认
+- [x] **修复**（后端 2 文件，编译通过）：`MaterialPurchaseOrchestrator.createPickingAndOutbound()`（@Transactional：savePendingPicking + confirmPickingOutbound 同事务）；`MaterialPickingController.createPending` 分流——INTERNAL 走领取即出库（扣库存+出库日志+记录操作人+采购单联动，库存不足整体回滚报错），EXTERNAL 保留两步流+通知（外发厂 audit 含账单/应收联动不能绕）
+- [x] **前端**：MaterialPickupModal 成功文案按 INTERNAL/EXTERNAL 区分（"库存已扣减并生成出库记录" / "待仓库确认出库"）；领料单列表已有 pickerName 列（谁领取已显示）
+- [x] 仓库页"领"（StockPickModal → manual-outbound）链路核验：锁+decreaseStockWithCheck+出库日志+pickup record，本身正确
+- [ ] **存量数据待用户处理**：已挂着的 INTERNAL 待出库单（不自动清，账实问题）——真领了的在「面辅料出入库→待出库领料」点确认出库，没领的需人工清理；旧通知点已读
+- [ ] 未本地启动验证（涉及生产领料链路，部署后需端到端：领料→库存立即减→出库日志有记录→无新通知）
+
+### 2026-08-16 打印弹窗修复：勾选互踩 bug + 分组错位 + QR 对齐顶部右上角 ✅（D-098 补充）
+
+用户反馈"勾选乱七八糟、勾选对应信息不一样、QR 要对齐顶部文字右上角"，3 处修复（tsc 0 错误）：
+- [x] **勾选互踩 bug（根因）**：`PrintOptionsSelector.tsx` 主 Checkbox.Group 的 value 混入全部 11 个选项 key，onChange 返回的 values 只含主组 6 项 → 勾/取消任一主项时 5 个子区块全部被重置 false。修复：value 只过滤 6 个主项，onChange 用 `...options` 保留子区块状态
+- [x] **分组名不符实重排**（`StylePrintModal/sections/BasicInfoSection.tsx`）：款号信息=款号/SKC/款名/分类/季节/类型/设计师/主题/U码；客户信息=客户/供应商/跟单员/销售渠道（原来没有客户！）；版次信息=板类/纸样师/车板师/打板价/吊牌价/销售价；时间信息不变；备注信息=面料成分/款式特征/是否套里/备注（原挂款号信息）
+- [x] **QR 对齐顶部**：新增打印头部行（标题"样衣资料单/下单资料单/生产制单"+款号·款名 在左，QR 移至同行右上角对齐），QR 原在字段表格上方独立占行
+
+### 2026-08-16 款式基础信息表单治理 + 商品编码排序/拖拽 ✅（D-098）
+
+用户反馈四项问题，全部修复（14 文件，tsc/read-lints 0 错误）：
+- [x] **设计师改内部人员选择**：`BasicInfoSection.tsx` 弃用字典维护（DictAutoComplete+DictMaintainHint），改为内部人员 Select（可搜索）：超管拉 `/system/user/list?excludeFactoryUsers=true&pageSize=500`，租户管理员走 `window.tenantService.listSubAccounts()`（模式参照考勤页）
+- [x] **款名称改自由输入**：纯 Input（maxLength 100），去掉字典维护入口
+- [x] **未解锁编辑禁止维护**：主表单 5 处维护入口（商品分类/季节分类/商品主题/客户/供应商 Hint + 商品类型 enableQuickManage）全部包 `{!editLocked && ...}`；未解锁时不显示任何维护入口
+- [x] **"虚拟分类"→"季节分类"全局改名**：5 文件 6 处（主表单/打印弹窗/订单列表/款式列表列头/字典管理），仅改文案不动 season 字段
+- [x] **SKU 码数从小到大排序**：`StyleSkuTab/helpers.ts` 新增 `getSizeSortValue`（字母码 XXXS<XXS<XS<S<M<L<XL<XXL、数字码按首数字×10、定制/均码靠后）+ `sortSkusForDisplay`（色内优先 sortOrder，未定义按语义序）
+- [x] **SKU 行拖拽排序**：`SkuTable.tsx` 首列拖拽把手（HolderOutlined，仅编辑态），HTML5 原生行拖拽（mousedown 把手激活 draggable，避免干扰文本选择）；`handleReorder` 重排后全量重写 sortOrder(1..n) 并置 hasChanges
+- [x] **后端 sort_order 全链路**：新建 `V202708161300__add_product_sku_sort_order.sql`（information_schema 条件加列）；`ProductSku.java` +sortOrder；`DbColumnDefinitions` +列；`listByStyleId` 排序改 color,sort_order,id；`batchUpdateSkus` 更新/新增分支持久化 sortOrder（handleSave 本就全量提交，前端保存时固化展示顺序为 sortOrder）
+- [x] 验证：tsc --noEmit 0 错误；"虚拟分类"文案全局 0 残留；**未做本地启动验证（改动≥5 文件，待部署后端到端验证：新建款→填款名称/选设计师/季节分类→SKU 排序→拖拽→保存→刷新确认顺序保持）**
 
 ### 2026-08-16 部署失败根因修复：Qdrant 不可达 → health 503 → HEALTHCHECK 误判 ✅（D-097，P0）
 
@@ -13,7 +61,7 @@
 - [x] 根因链：**Qdrant 不可达 → AiComponentHealthIndicator"任一 DOWN→整体 DOWN" → 主 health 503 → Docker HEALTHCHECK curl -f 失败 → TCP 兜底 `echo > /dev/tcp/...` 在默认 /bin/sh(dash) 下不支持从未生效 → 容器 unhealthy → CloudBase 判部署失败回滚旧版**（回滚实例无 V202708161200，故日志显示 No migration necessary——并非 Flyway 问题）
 - [x] 修复 3 文件：①AiComponentHealthIndicator 任一 DOWN→返回 `DEGRADED`（不再 down）②application.yml 加 `status.http-mapping.DEGRADED:200` + `order: DOWN,OUT_OF_SERVICE,DEGRADED,UP,UNKNOWN` ③backend/Dockerfile HEALTHCHECK 主探测改 `/actuator/health/readiness` + TCP 兜底显式 `/bin/bash -c`
 - [x] 验证：read-lints 0 错误；线上 readiness 200 佐证探测语义正确
-- [ ] **待部署**：重新部署生产（顺带让 V202708161100/D-095 + V202708161200/D-096 迁移真正执行——当前线上仍为旧代码）
+- [x] **已推送**：commit `95a6d8779` 已 push origin main（safe-push 6 项全过）→ 微信云自动拉取部署；待部署完成后确认 health 200/DEGRADED + V202708161100/V202708161200 迁移执行
 - [ ] **待决策**：Qdrant 服务已不可达（日志"Qdrant不可用，跳过向量化"），恢复服务或清空 QDRANT_URL（修复后不影响部署，仅影响向量检索功能）
 
 ### 2026-08-16 全库 collation 统一 290 张表 100% utf8mb4_0900_ai_ci ✅（D-096）

@@ -253,7 +253,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<ProductSku>()
                 .eq(ProductSku::getStyleId, styleId)
-                .orderByAsc(ProductSku::getColor, ProductSku::getSize);
+                .orderByAsc(ProductSku::getColor, ProductSku::getSortOrder, ProductSku::getId);
         if (tenantId != null) {
             wrapper.eq(ProductSku::getTenantId, tenantId);
         }
@@ -327,6 +327,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     existing.setStockQuantity(skuUpdate.getStockQuantity());
                     existing.setRemark(skuUpdate.getRemark());
                     existing.setSkuColorImage(skuUpdate.getSkuColorImage());
+                    existing.setSortOrder(skuUpdate.getSortOrder() != null ? skuUpdate.getSortOrder() : 0);
                     existing.setManuallyEdited(1);
                     toUpdate.add(existing);
                 }
@@ -352,6 +353,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 skuUpdate.setStockQuantity(skuUpdate.getStockQuantity() != null ? skuUpdate.getStockQuantity() : 0);
                 skuUpdate.setManuallyEdited(1);
                 skuUpdate.setSkuMode(style.getSkuMode());
+                skuUpdate.setSortOrder(skuUpdate.getSortOrder() != null ? skuUpdate.getSortOrder() : 0);
                 skuUpdate.setTenantId(tenantId);
                 toInsert.add(skuUpdate);
                 existingCodeSet.add(skuUpdate.getSkuCode());

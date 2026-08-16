@@ -102,6 +102,28 @@ public class MaterialColorCardOrchestrator {
         return result;
     }
 
+    /** 按物料ID反查色卡详情（物料由色卡生成时回写了 materialId 关联） */
+    public CardWithItems getCardDetailByMaterialId(String materialId) {
+        if (!StringUtils.hasText(materialId)) throw new IllegalArgumentException("materialId不能为空");
+        Long tenantId = UserContext.tenantId();
+        List<MaterialColorCardItem> matches = itemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialColorCardItem>()
+                        .eq(MaterialColorCardItem::getMaterialId, materialId.trim())
+                        .eq(MaterialColorCardItem::getTenantId, tenantId)
+                        .and(w -> w.isNull(MaterialColorCardItem::getDeleteFlag).or().eq(MaterialColorCardItem::getDeleteFlag, 0))
+                        .orderByDesc(MaterialColorCardItem::getUpdateTime)
+                        .last("LIMIT 1"));
+        if (matches == null || matches.isEmpty()) {
+            throw new NoSuchElementException("该物料未关联色卡");
+        }
+        MaterialColorCard card = getCardById(matches.get(0).getMaterialColorCardId());
+        List<MaterialColorCardItem> items = itemMapper.selectByCardId(card.getId(), card.getTenantId());
+        CardWithItems result = new CardWithItems();
+        result.setCard(card);
+        result.setItems(items);
+        return result;
+    }
+
     /** 创建色卡 */
     @Transactional(rollbackFor = Exception.class)
     public String saveCard(MaterialColorCard card) {

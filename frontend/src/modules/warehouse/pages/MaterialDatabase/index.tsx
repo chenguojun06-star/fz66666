@@ -102,7 +102,7 @@ const MaterialDatabasePage: React.FC = () => {
     if (!record?.id) return;
     setColorItemsLoading(true);
     try {
-      const res = await api.get<any>(`/color-card/by-material/${record.id}`);
+      const res = await api.get<any>(`/material-color-card/by-material/${record.id}`);
       const result = res as any;
       if (result.code === 200) {
         setColorItemsData(result.data);

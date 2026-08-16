@@ -5,6 +5,36 @@
 
 ---
 
+## D-099：内部领料"领取即出库"——/pending 只建单不扣库存是事故源（2026-08-16）
+
+**背景**：用户实测面辅料"无限领取、库存永远不变、通知一直挂着"。排查发现仓库扣减链路（manualOutbound/decreaseStockWithCheck/confirmPickingOutbound）SQL 全部正确，真正的事故源是**生产页领料（MaterialPickupModal → /production/picking/pending）**：只建 PENDING 待出库单+发仓库通知，不检查库存、不扣库存。
+
+**决策**：
+1. INTERNAL 领料改为"领取即出库"：`createPickingAndOutbound`（@Transactional）= savePendingPicking + confirmPickingOutbound 同事务，库存不足整体回滚报错——封死无限领取
+2. EXTERNAL 保留两步流+通知：audit() 里有外发厂账单推送/应收联动，直接 APPROVED 会绕过财务联动，不能合并
+3. INTERNAL 不再 sendPickupNotification（自己领自己出库，无仓库确认环节）
+4. 存量挂着的 INTERNAL 待出库单**不自动清理**（账实问题，自动确认=凭空扣账，需用户逐张处理）
+5. 领料单"谁领取/谁操作"：列表已有 pickerName 列，出库日志 operatorName=确认出库人（现在=领取人本人），无需签字流程
+
+**教训**：两步流（申请→确认）设计给"生产端申请、仓库端确认"的分角色场景，但小团队一人多角时中间态就是灾难——每个中间态都是一条会挂着的"通知"。扣库存类操作宁可同步做（失败立即可见），不要异步等确认。
+
+## D-098：设计师=内部人员选择、款名称自由输入、维护入口跟随编辑锁、SKU 排序/拖拽（2026-08-16）
+
+**背景**：用户对基础信息表单四项不满：①设计师是内部人员为何要字典维护；②款名称就是起名字不该带维护；③未解锁编辑就能点"维护"入口（越权感）；④"虚拟分类"名称反直觉；另 SKU 表码数未按从小到大排序、无拖拽。
+
+**决策**：
+1. 设计师改内部人员 Select（showSearch）：超管 `/system/user/list?excludeFactoryUsers=true`，租户管理员 `tenantService.listSubAccounts()`（复用考勤页模式，值仍存 name 字符串，兼容旧数据/打印）
+2. 款名称纯 Input，弃字典；**教训：名称类字段（人名/款式名）≠ 枚举字典，不该进 DictAutoComplete**
+3. 主表单全部维护入口（5 处 Hint + 商品类型齿轮）包 `{!editLocked && ...}`——只读态零维护入口；本次仅改 BasicInfoSection，全局治理（其他页面 DictAutoComplete）留待后续
+4. "虚拟分类"→"季节分类"纯文案改名（5 文件），season 字段/API 不动
+5. SKU 排序：`getSizeSortValue` 语义序（字母码区间 -30~50，数字码×10，定制/FREE=8000，未知=9000）；展示序=色内 sortOrder 优先、未定义按语义序；保存时固化展示顺序为 sortOrder(1..n)
+6. 拖拽用 HTML5 原生 DnD（把手 mousedown 激活 draggable），**不用 dnd-kit**：ResizableTable 内嵌列拖拽 DndContext，嵌套冲突+PointerSensor 会抢事件；原生 DnD 与 PointerSensor 天然互斥（draggable 后浏览器接管、pointermove 停发）
+7. 后端 sort_order 走 Flyway V202708161300 + DbColumnDefinitions 双轨（本地/云端）；listByStyleId 排序 color,sort_order,id
+
+**踩坑**：
+- search_content 返回的相对路径不可靠（StylePrintModal 实际在 components/common/ 而非 modules/basic/pages/ 下；DictManage 在 system/pages/System/ 下），替换前必须用 ls/grep 验证真实路径
+- SkuTable 行内 Input 与 draggable 冲突：整行 draggable 会拦截文本选择，必须把手激活式（mousedown→setState→dragstart 时 draggable 已 true）
+
 ## D-097：可选组件故障不得拖垮整体健康检查——DEGRADED 语义 + 探针分层（2026-08-16）
 
 **背景**：backend-2114 部署失败。应用启动正常（103.6s）却在 17:19:00（=300s start-period + 3×30s retries 时刻）被优雅停机，反复回滚；线上 `/actuator/health` 503 而 `/actuator/health/readiness` 200。
@@ -2180,3 +2210,28 @@ D-076 摘要可枚举的 14 项 P1 已全部闭环（D-078/079/080/081）；审�
 
 ### 教训
 - 跨环境报错（部署400）先做"原样回传实验"：GET→PUT 回环 200 即证明代码链路无 bug，避免在本地盲改
+
+## D-100 2026-08-16 色卡本重复入口下线 + 供应商色卡供应商名三连修复（P0）
+
+### 背景
+用户炸点：①物料管理菜单又出现独立「色卡本」，与「物料新增」里的供应商色卡功能重复 ②编辑供应商色卡选供应商后名字不显示，卡片显示"供应商: -"但联系人"小刘 · 13144401544"有值。
+
+### 供应商名不显示根因（MaterialColorCardDialog.tsx 一处代码三个坑）
+1. **supplierName 未注册为 Form.Item name**：antd validateFields() 只返回注册字段 → 保存 payload 丢 supplierName → 后端存 null → 卡片"供应商: -" + 编辑回显空。联系人字段注册了所以有值——现象完全吻合
+2. **option 字段名错误**：onChange 读 `option?.contactPerson/contactPhone`，SupplierSelect 的 option 实际暴露 `supplierContactPerson/supplierContactPhone` → 选中供应商后联系人/电话被清空
+3. **supplierId 塞名字**：`option?.supplierId || value` 手动输入场景把供应商名写进 ID 字段
+
+修复=按 SupplierSelect 标准用法：name="supplierName" 直接注册（显示/回显/保存全通），onChange 只填隐藏字段（正确字段名）。
+
+### 色卡本重复=两套色卡系统并存
+- 旧：/color-card/*（6 后端文件 + t_color_card 表）+ pages/ColorCard（11 前端文件）+「色卡本」菜单
+- 新：/material-color-card/* + MaterialDatabase"供应商色卡"视图（t_material_color_card 表）
+- 处置：**旧代码全删（后端 6 文件+前端 11 文件+菜单+权限映射），路由重定向防 404；表保留不删**（历史数据）；物料列表"查看色卡"原查旧表 → 新增 by-material 接口迁到新表（原来用户在供应商色卡视图改的数据，物料列表"查看色卡"永远看不到——两表不通）
+
+### 验证
+tsc --noEmit 0 错误；mvn compile 通过；旧 /color-card API 前端调用 0 残留；旧 ColorCard 类引用 0 残留
+
+### 教训
+- antd Form 里"显示正常但保存丢字段"优先查该字段是否注册了 name（validateFields 只返回注册字段，setFieldsValue 未注册字段不报错——静默丢失）
+- 功能重构上线后旧入口必须同步下线，否则双入口双数据源（本项目已两次踩：旧色卡本、色卡本物料 tag 查旧表）
+

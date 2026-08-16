@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { App, Col, Form, Input, Row, Select, Tooltip } from 'antd';
+import api from '@/utils/api';
+import { useUser } from '@/utils/AuthContext';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -132,7 +134,7 @@ const SupplierMaintainHint: React.FC = () => {
 /**
  * 区1：基础信息
  * 按样衣详情页-基础信息 Tab 设计稿完全重写
- * 字段顺序：款名称 / 款式编码 / 商品分类(必填) / 虚拟分类 / 商品类型 / 设计师 / 商品主题 / 客户 / 供应商 / 备注 / 创建时间 / 完成时间 / 交板日期
+ * 字段顺序：款名称 / 款式编码 / 商品分类(必填) / 季节分类 / 商品类型 / 设计师 / 商品主题 / 客户 / 供应商 / 备注 / 创建时间 / 完成时间 / 交板日期
  *
  * 注意：
  *  - 客户字段从原 CustomerInfoSection 迁移至此，使用 CustomerSelect 组件（同步 customerId）
@@ -151,6 +153,37 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 }) => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
+  const { isSuperAdmin } = useUser();
+
+  // 设计师 = 内部人员（超管拉全量用户，租户管理员拉子账号），可搜索选择
+  const [staffOptions, setStaffOptions] = useState<{ label: string; value: string }[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    const loadStaff = async () => {
+      try {
+        let names: string[] = [];
+        if (isSuperAdmin) {
+          const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 500, excludeFactoryUsers: true } });
+          if (res.code === 200 && Array.isArray(res.data?.list)) {
+            names = res.data.list.map((u: any) => u.name || u.username).filter(Boolean);
+          }
+        } else {
+          const svc = (window as any).tenantService;
+          if (svc?.listSubAccounts) {
+            const subs = await svc.listSubAccounts();
+            names = (subs || []).map((x: any) => x.name || x.username).filter(Boolean);
+          }
+        }
+        if (mounted) {
+          setStaffOptions([...new Set(names)].map(n => ({ label: n, value: n })));
+        }
+      } catch {
+        // 人员列表加载失败时静默降级为可输入
+      }
+    };
+    loadStaff();
+    return () => { mounted = false; };
+  }, [isSuperAdmin]);
 
   return (
     <SectionBox title="基础信息" usePrimaryHighlight>
@@ -163,25 +196,20 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         {/* 右栏：基础信息表单字段 */}
         <div style={{ flex: 1, minWidth: 320 }}>
           <Row gutter={[16, 8]}>
-        {/* 款名称（必填，全宽） */}
+        {/* 款名称（必填，自由命名） */}
         <Col xs={24} md={12}>
           <Form.Item
             name="styleName"
-            label={
-              <span>
-                款名称
-                <DictMaintainHint dictType="style_name" fieldName="款名称" />
-              </span>
-            }
+            label="款名称"
             rules={[{ required: true, message: '请输入款名称' }]}
             style={{ marginBottom: 8 }}
           >
-            <DictAutoComplete
-              dictType="style_name"
-              placeholder="请输入或选择款名称"
-              disabled={editLocked}
-              style={{ width: '100%' }}
+            <Input
               id="styleName"
+              placeholder="请输入款名称"
+              disabled={editLocked}
+              maxLength={100}
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>
@@ -225,7 +253,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 <span style={{ color: 'var(--color-danger)' }}>*</span> 商品分类
-                <DictMaintainHint dictType="category" fieldName="商品分类" />
+                {!editLocked && <DictMaintainHint dictType="category" fieldName="商品分类" />}
               </span>
             }
             rules={[{ required: true, message: '请选择商品分类' }]}
@@ -244,21 +272,21 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
-        {/* 虚拟分类（季节字段复用） */}
+        {/* 季节分类（原"虚拟分类"更名，season 字段复用） */}
         <Col xs={24} md={12}>
           <Form.Item
             name="season"
             label={
               <span>
-                虚拟分类
-                <DictMaintainHint dictType="season" fieldName="虚拟分类" />
+                季节分类
+                {!editLocked && <DictMaintainHint dictType="season" fieldName="季节分类" />}
               </span>
             }
             style={{ marginBottom: 8 }}
           >
             <Select
               id="season"
-              placeholder="请选择虚拟分类"
+              placeholder="请选择季节分类"
               disabled={isFieldLocked(currentStyle?.season)}
               style={{ width: '100%' }}
               allowClear
@@ -282,28 +310,27 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               fallbackOptions={['成品', '半成品']}
               placeholder="请选择或输入商品类型..."
               disabled={editLocked}
+              enableQuickManage={!editLocked}
             />
           </Form.Item>
         </Col>
 
-        {/* 设计师 */}
+        {/* 设计师（内部人员，可搜索选择） */}
         <Col xs={24} md={12}>
           <Form.Item
             name="designer"
-            label={
-              <span>
-                设计师
-                <DictMaintainHint dictType="designer" fieldName="设计师" />
-              </span>
-            }
+            label="设计师"
             style={{ marginBottom: 8 }}
           >
-            <DictAutoComplete
-              dictType="designer"
-              placeholder="请输入或选择设计师"
+            <Select
+              id="designer"
+              placeholder="搜索或选择设计师"
               disabled={editLocked}
               style={{ width: '100%' }}
-              id="designer"
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              options={staffOptions}
             />
           </Form.Item>
         </Col>
@@ -315,7 +342,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 商品主题
-                <DictMaintainHint dictType="style_theme" fieldName="商品主题" />
+                {!editLocked && <DictMaintainHint dictType="style_theme" fieldName="商品主题" />}
               </span>
             }
             style={{ marginBottom: 8 }}
@@ -340,7 +367,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 客户
-                <CustomerMaintainHint />
+                {!editLocked && <CustomerMaintainHint />}
               </span>
             }
             style={{ marginBottom: 8 }}
@@ -377,7 +404,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 供应商
-                <SupplierMaintainHint />
+                {!editLocked && <SupplierMaintainHint />}
               </span>
             }
             style={{ marginBottom: 8 }}

@@ -155,7 +155,7 @@ const OrderListContent: React.FC<Props> = ({
                 { label: '商品分类', key: 'category', render: (val: any) => toCategoryCn(val) },
               ],
               [
-                { label: '虚拟分类', key: 'season', render: (val: any) => toSeasonCn(val) },
+                { label: '季节分类', key: 'season', render: (val: any) => toSeasonCn(val) },
                 { label: '面料', key: 'fabricComposition', render: (val: any) => val || '-' },
               ],
               [

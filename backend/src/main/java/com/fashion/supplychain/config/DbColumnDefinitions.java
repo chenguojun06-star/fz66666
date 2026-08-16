@@ -1097,6 +1097,7 @@ public final class DbColumnDefinitions {
         add("t_product_sku", "sku_mode", "VARCHAR(20) DEFAULT NULL");
         add("t_product_sku", "manually_edited", "TINYINT DEFAULT 0");
         add("t_product_sku", "remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_product_sku", "sort_order", "INT DEFAULT 0");
         add("t_production_process_tracking", "quality_status", "VARCHAR(20) DEFAULT NULL");
         add("t_production_process_tracking", "defect_quantity", "INT DEFAULT 0");
         add("t_production_process_tracking", "defect_category", "VARCHAR(50) DEFAULT NULL");

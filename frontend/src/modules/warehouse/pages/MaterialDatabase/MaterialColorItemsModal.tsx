@@ -2,19 +2,19 @@ import React from 'react';
 import { Card, Col, Row } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 
-// ===== 色卡本颜色详情弹窗（从 index.tsx 抽取） =====
+// ===== 供应商色卡颜色详情弹窗（物料列表"查看色卡"入口，数据来自 t_material_color_card） =====
 interface ColorItemEntry {
   id?: string | number;
-  colorNo?: string;
-  colorName?: string;
+  materialName?: string;
+  color?: string;
   unitPrice?: number | null;
   remark?: string;
 }
 
 interface ColorItemsData {
   card?: {
-    colorCardName?: string;
-    colorCardCode?: string;
+    cardName?: string;
+    cardCode?: string;
   };
   items?: ColorItemEntry[];
 }
@@ -32,9 +32,9 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
   return (
     <ResizableModal
       title={
-        data?.card?.colorCardName
-          ? `色卡本 "${data.card.colorCardName}" - 颜色详情`
-          : '色卡本颜色详情'
+        data?.card?.cardName
+          ? `供应商色卡 "${data.card.cardName}" - 颜色详情`
+          : '供应商色卡颜色详情'
       }
       open={open}
       onCancel={onCancel}
@@ -45,15 +45,15 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
       {!loading && data?.card && (
         <>
           <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
-            色卡本编号：{data.card.colorCardCode || '-'} · 共 {Array.isArray(data.items) ? data.items.length : 0} 种颜色
+            色卡编号：{data.card.cardCode || '-'} · 共 {Array.isArray(data.items) ? data.items.length : 0} 种颜色
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {Array.isArray(data.items) && data.items.map((item: ColorItemEntry, idx: number) => (
               <Card key={item.id || idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
                 <Row gutter={12} align="middle">
                   <Col xs={24} sm={2} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>#{idx + 1}</Col>
-                  <Col xs={24} sm={5}>颜色编号：{item.colorNo || '-'}</Col>
-                  <Col xs={24} sm={5}>颜色名称：{item.colorName || '-'}</Col>
+                  <Col xs={24} sm={5}>颜色：{item.color || '-'}</Col>
+                  <Col xs={24} sm={5}>物料：{item.materialName || '-'}</Col>
                   <Col xs={24} sm={6}>
                     {item.unitPrice != null && item.unitPrice !== undefined ? `单价：${item.unitPrice} 元` : '-'}
                   </Col>

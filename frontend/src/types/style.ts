@@ -326,6 +326,8 @@ export interface ProductSku {
   skuMode?: 'AUTO' | 'MANUAL';
   manuallyEdited?: number;
   remark?: string;
+  /** 自定义排序（0=未自定义，按尺码语义从小到大排序；>0 时按用户拖拽顺序） */
+  sortOrder?: number;
   createTime?: string;
   updateTime?: string;
   tenantId?: number;

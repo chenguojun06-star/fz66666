@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Popover, Image, Button } from 'antd';
-import { DeleteOutlined, BarcodeOutlined, PictureOutlined } from '@ant-design/icons';
+import { DeleteOutlined, BarcodeOutlined, PictureOutlined, HolderOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatMoney } from '@/utils/format';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -18,6 +18,8 @@ interface SkuTableProps {
   getCellValue: (sku: ProductSku, field: string) => any;
   onFieldChange: (rowKey: number | string, field: string, value: any) => void;
   onDeleteRow: (rowKey: number | string) => void;
+  /** 拖拽排序：把 from 行移动到 to 行位置（编辑态可用） */
+  onReorder?: (fromKey: number | string, toKey: number | string) => void;
 }
 
 const SkuTable: React.FC<SkuTableProps> = ({
@@ -29,8 +31,41 @@ const SkuTable: React.FC<SkuTableProps> = ({
   getCellValue,
   onFieldChange,
   onDeleteRow,
+  onReorder,
 }) => {
+  // HTML5 原生行拖拽：按住把手 mousedown 后才置 draggable，避免干扰输入框内文本选择
+  const [dragArmed, setDragArmed] = useState<number | string | null>(null);
+  const dragFromKeyRef = useRef<number | string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLTableRowElement>, record: ProductSku) => {
+    const key = getRowKey(record);
+    dragFromKeyRef.current = key;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(key)); } catch { /* ignore */ }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTableRowElement>, record: ProductSku) => {
+    e.preventDefault();
+    const from = dragFromKeyRef.current;
+    const to = getRowKey(record);
+    dragFromKeyRef.current = null;
+    setDragArmed(null);
+    if (from != null && from !== to) onReorder?.(from, to);
+  };
+
   const columns = [
+    // 拖拽排序把手（仅编辑态 + 支持回调时显示）
+    ...(canEdit && onReorder ? [{
+      title: '', key: 'dragHandle', width: 36, fixed: 'left' as const,
+      render: (_: any, record: ProductSku) => (
+        <HolderOutlined
+          title="拖动调整顺序"
+          style={{ cursor: 'grab', color: 'var(--color-text-quaternary)', fontSize: 13 }}
+          onMouseDown={() => setDragArmed(getRowKey(record))}
+          onMouseUp={() => setDragArmed(null)}
+        />
+      ),
+    }] : []),
     {
       title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 56, fixed: 'left' as const,
       render: (_: string, record: ProductSku) => {
@@ -204,6 +239,13 @@ const SkuTable: React.FC<SkuTableProps> = ({
         scroll={{ x: 'max-content', y: 400 }}
         showIndex
         rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
+        onRow={canEdit && onReorder ? (record) => ({
+          draggable: dragArmed != null,
+          onDragStart: (e: React.DragEvent<HTMLTableRowElement>) => handleDragStart(e, record),
+          onDragOver: (e: React.DragEvent<HTMLTableRowElement>) => { if (dragFromKeyRef.current != null) e.preventDefault(); },
+          onDrop: (e: React.DragEvent<HTMLTableRowElement>) => handleDrop(e, record),
+          onDragEnd: () => { dragFromKeyRef.current = null; setDragArmed(null); },
+        }) : undefined}
       />
 
       <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-quaternary)', lineHeight: 1.8 }}>

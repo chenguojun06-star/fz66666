@@ -41,20 +41,19 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
             <Checkbox.Group
-              value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
+              value={(['basicInfo', 'sizeTable', 'bomTable', 'processTable', 'productionSheet', 'sampleReview'] as const)
+                .filter(k => options[k])}
               onChange={(values) => {
+                // 只重置 6 个主项，保留子区块（styleInfoBlock 等）勾选状态，
+                // 修复：动任一主勾选导致子区块被全部清空的 bug
                 onOptionsChange({
+                  ...options,
                   basicInfo: values.includes('basicInfo'),
                   sizeTable: values.includes('sizeTable'),
                   bomTable: values.includes('bomTable'),
                   processTable: values.includes('processTable'),
                   productionSheet: values.includes('productionSheet'),
                   sampleReview: values.includes('sampleReview'),
-                  styleInfoBlock: values.includes('styleInfoBlock'),
-                  customerInfoBlock: values.includes('customerInfoBlock'),
-                  patternInfoBlock: values.includes('patternInfoBlock'),
-                  timeInfoBlock: values.includes('timeInfoBlock'),
-                  remarkBlock: values.includes('remarkBlock'),
                 });
               }}
               style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}

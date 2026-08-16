@@ -3,7 +3,7 @@ import { App, Form } from 'antd';
 import api from '@/utils/api';
 import type { ProductSku } from '@/types/style';
 import type { SkuMode, EditingData, StyleSkuTabProps } from './types';
-import { nextTempId, getRowKey, buildAddMenuItems } from './helpers';
+import { nextTempId, getRowKey, buildAddMenuItems, sortSkusForDisplay } from './helpers';
 import { confirmAction } from '@/utils/confirm';
 import type { MenuProps } from 'antd';
 
@@ -44,7 +44,7 @@ export const useStyleSkuTabData = ({
     try {
       const res = await api.post<{ code: number; data: ProductSku[] }>('/style/sku/search', { styleId });
       if (res.code === 200 && res.data) {
-        setSkus(res.data);
+        setSkus(sortSkusForDisplay(res.data));
         setEditingData({});
         setDeletedIds([]);
         setHasChanges(false);
@@ -110,6 +110,20 @@ export const useStyleSkuTabData = ({
     setHasChanges(true);
   };
 
+  /** 拖拽排序：把 from 行移动到 to 行位置，全量重写 sortOrder 并标记待保存 */
+  const handleReorder = (fromKey: number | string, toKey: number | string) => {
+    setSkus(prev => {
+      const fromIdx = prev.findIndex(s => getRowKey(s) === fromKey);
+      const toIdx = prev.findIndex(s => getRowKey(s) === toKey);
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next.map((s, idx) => ({ ...s, sortOrder: idx + 1 }));
+    });
+    setHasChanges(true);
+  };
+
   const handleSaveSkc = async () => {
     if (!skcValue || !skcValue.trim()) {
       messageRef.current.error('SKC不能为空');
@@ -139,10 +153,12 @@ export const useStyleSkuTabData = ({
     }
     setSaving(true);
     try {
-      const updatedSkus = skus.map(sku => {
+      const updatedSkus = skus.map((sku, idx) => {
         const key = sku.id ?? (sku as any)._tempKey;
         const merged = { ...sku, ...(editingData[key] || {}) };
         const { _tempKey, ...rest } = merged as any;
+        // 保存时把当前展示顺序固化为 sort_order（1..n），支持拖拽自定义顺序
+        rest.sortOrder = idx + 1;
         return rest;
       });
       const res = await api.put(`/style/sku/batch/${styleId}`, {
@@ -271,6 +287,8 @@ export const useStyleSkuTabData = ({
     canEdit,
     canEditAttrs,
     addMenuItems,
+    // 拖拽排序
+    handleReorder,
     // setters
     setSkcValue,
     setSkcEditing,

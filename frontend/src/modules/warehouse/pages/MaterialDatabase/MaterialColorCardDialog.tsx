@@ -86,23 +86,22 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
         </Row>
 
         <Form.Item name="supplierId" hidden><Input /></Form.Item>
-        <Form.Item label="供应商" required>
-          <Form.Item noStyle shouldUpdate={(prev: any, curr: any) => prev.supplierId !== curr.supplierId}>
-            {({ getFieldValue }) => (
-              <SupplierSelect
-                placeholder="请选择供应商"
-                value={getFieldValue('supplierName')}
-                onChange={(value, option) => {
-                  cardForm.setFieldsValue({
-                    supplierId: (option as any)?.supplierId || value,
-                    supplierName: value,
-                    supplierContactPerson: (option as any)?.contactPerson,
-                    supplierContactPhone: (option as any)?.contactPhone,
-                  });
-                }}
-              />
-            )}
-          </Form.Item>
+        <Form.Item
+          name="supplierName"
+          label="供应商"
+          required
+          rules={[{ required: true, message: '请选择或输入供应商' }]}
+        >
+          <SupplierSelect
+            placeholder="请选择供应商"
+            onChange={(_value, option) => {
+              cardForm.setFieldsValue({
+                supplierId: (option as any)?.supplierId,
+                supplierContactPerson: (option as any)?.supplierContactPerson,
+                supplierContactPhone: (option as any)?.supplierContactPhone,
+              });
+            }}
+          />
         </Form.Item>
 
         <Row gutter={12}>

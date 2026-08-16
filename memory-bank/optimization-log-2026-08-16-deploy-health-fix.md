@@ -32,6 +32,7 @@ backend-2114 部署失败。用户日志显示应用 **17:12:52 正常启动（1
 
 ## 遗留
 
-- [ ] commit + push 后重新部署生产
+- [x] commit `95a6d8779` + push origin main（2026-08-16 17:49，safe-pass 6 项全过）→ 微信云自动拉取部署
+- [ ] 部署完成后端到端确认：health 返回 200/DEGRADED + V202708161100/V202708161200 迁移执行
 - [ ] Qdrant 恢复或清空 `QDRANT_URL`（修复后不影响部署，仅影响向量检索）
 - [ ] D-096 迁移随本次重新部署一并上线（74 表 CONVERT，t_ai_job_run_log 49 万行预计数秒）

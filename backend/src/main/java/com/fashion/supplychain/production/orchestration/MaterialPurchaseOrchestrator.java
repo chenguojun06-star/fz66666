@@ -18,9 +18,12 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.entity.MaterialPicking;
+import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.helper.MaterialPurchasePickingHelper;
 import com.fashion.supplychain.production.helper.MaterialPurchaseQueryHelper;
 import com.fashion.supplychain.production.helper.MaterialPurchaseStatusHelper;
@@ -47,6 +50,9 @@ public class MaterialPurchaseOrchestrator {
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private MaterialPickingService materialPickingService;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -707,6 +713,18 @@ public class MaterialPurchaseOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void confirmPickingOutbound(String pickingId) {
         pickingHelper.confirmPickingOutbound(pickingId);
+    }
+
+    /**
+     * D-099：内部领料"领取即出库"——创建领料单并同事务立即确认出库。
+     * 修复：原 /pending 只建单不扣库存 → 可无限领取、库存数字不变、待出库单/通知一直挂着。
+     * EXTERNAL 领用不走此方法（保留审核流程，audit 含外发厂账单/应收联动）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public String createPickingAndOutbound(MaterialPicking picking, List<MaterialPickingItem> items) {
+        String pickingId = materialPickingService.savePendingPicking(picking, items);
+        pickingHelper.confirmPickingOutbound(pickingId);
+        return pickingId;
     }
 
     @Transactional(rollbackFor = Exception.class)

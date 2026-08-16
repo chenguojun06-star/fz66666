@@ -43,6 +43,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     handleCancelEdit,
     handleRollbackOk,
     handleFieldChange,
+    handleReorder,
     getCellValue,
     onRefresh,
   } = useStyleSkuTabData(props);
@@ -153,6 +154,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         getCellValue={getCellValue}
         onFieldChange={handleFieldChange}
         onDeleteRow={handleDeleteRow}
+        onReorder={handleReorder}
       />
       <SmallModal
         open={rollbackOpen}

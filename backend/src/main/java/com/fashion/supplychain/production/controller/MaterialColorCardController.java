@@ -48,6 +48,12 @@ public class MaterialColorCardController {
         return Result.success(orchestrator.getCardDetail(id));
     }
 
+    /** 按物料ID反查色卡详情（物料列表"查看色卡"入口） */
+    @GetMapping("/by-material/{materialId}")
+    public Result<MaterialColorCardOrchestrator.CardWithItems> getDetailByMaterialId(@PathVariable String materialId) {
+        return Result.success(orchestrator.getCardDetailByMaterialId(materialId));
+    }
+
     @PostMapping
     public Result<String> create(@RequestBody MaterialColorCard card) {
         return Result.success(orchestrator.saveCard(card));

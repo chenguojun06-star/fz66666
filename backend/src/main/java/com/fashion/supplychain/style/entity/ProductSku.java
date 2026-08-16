@@ -107,6 +107,11 @@ public class ProductSku {
     private String remark;
 
     /**
+     * 自定义排序（0=未自定义，前端按尺码语义从小到大排序；>0 时按用户拖拽顺序）
+     */
+    private Integer sortOrder;
+
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

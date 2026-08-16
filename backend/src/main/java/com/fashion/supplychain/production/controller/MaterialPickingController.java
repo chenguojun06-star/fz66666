@@ -50,8 +50,10 @@ public class MaterialPickingController {
     }
 
     /**
-     * BOM 申请领取：创建待出库领料单（两步流第一步）
-     * status=pending，不立即扣减库存，等待仓库在「面辅料出入库」页确认出库
+     * BOM 申请领取（D-099 重构）：
+     * - INTERNAL 内部领料：领取即出库——同事务创建+确认出库（扣库存+写出库日志+记录操作人），
+     *   不再产生待出库单和仓库通知（修复：无限领取/库存不扣减/通知挂着不消失）
+     * - EXTERNAL 外发厂领用：保持两步流（pending + 通知 + 仓库确认），audit 含外发厂账单/应收联动
      */
     @PostMapping("/pending")
     public Result<String> createPending(@RequestBody PickingRequest request) {
@@ -82,7 +84,7 @@ public class MaterialPickingController {
         if (!hasAnchor) {
             throw new IllegalArgumentException("领料单缺少归属关联（订单号/样衣任务ID/款号），请返回重试");
         }
-        // 强制设置 status=pending，前端可能未传此字段
+        // 强制设置 status=pending，前端可能未传此字段（INTERNAL 由 createPickingAndOutbound 同事务转 completed）
         picking.setStatus(MaterialConstants.STATUS_PENDING);
         // BOM领取默认为样衣用料（开发场景），前端未传时兜底
         if (picking.getUsageType() == null || picking.getUsageType().isEmpty()) {
@@ -91,9 +93,17 @@ public class MaterialPickingController {
         if (picking.getPickupType() == null || picking.getPickupType().isEmpty()) {
             picking.setPickupType("INTERNAL");
         }
+        boolean external = "EXTERNAL".equalsIgnoreCase(picking.getPickupType());
+        if (!external) {
+            // D-099：内部领料领取即出库（同事务：建单+扣库存+出库日志+采购单联动），
+            // 库存不足会整体回滚并报错，杜绝"只建单不扣库存"
+            String pickingId = materialPurchaseOrchestrator.createPickingAndOutbound(
+                    picking, request.getItems());
+            return Result.success(pickingId);
+        }
         String pickingId = materialPickingService.savePendingPicking(
                 picking, request.getItems());
-        // 通知仓库人员（失败不影响领料单创建）
+        // 通知仓库人员（失败不影响领料单创建）——仅 EXTERNAL 外发领用需要仓库确认
         try {
             Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
             sysNoticeOrchestrator.sendPickupNotification(tenantId, request.getPicking(), request.getItems());

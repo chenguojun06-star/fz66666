@@ -457,7 +457,6 @@ export const permissionCodes = {
   labelPrint: 'MENU_LABEL_PRINT',
   productInfo: 'MENU_PRODUCT_INFO',
   warehouseLocationMap: 'MENU_WAREHOUSE_LOCATION_MAP',
-  colorCard: 'MENU_MATERIAL_DATABASE',
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
@@ -533,7 +532,6 @@ export const menuConfig: MenuSection[] = [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
       { label: '物料出入库', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '物料新增', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
-      { label: '色卡本', path: paths.colorCard, icon: React.createElement(DatabaseOutlined) },
     ],
   },
   {

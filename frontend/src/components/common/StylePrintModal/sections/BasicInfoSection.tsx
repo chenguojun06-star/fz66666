@@ -62,9 +62,28 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
   return (
     <div className="print-section">
-      {/* 主体：左列（图片+二维码） + 右列（信息） */}
+      {/* 打印头部：顶部文字信息（款号+款名）左对齐，二维码对齐右上角 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, breakInside: 'avoid' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-gray-900)', lineHeight: '24px' }}>
+          {mode === 'sample' ? '样衣资料单' : mode === 'order' ? '下单资料单' : '生产制单'}
+          <span style={{ marginLeft: 12, fontSize: 13, fontWeight: 500, color: 'var(--color-gray-600)' }}>
+            {styleNo}{styleName ? ` · ${styleName}` : ''}
+          </span>
+        </div>
+        {/* 二维码：与顶部文字信息同行，右上角对齐 */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <span style={{ fontSize: 9, color: 'var(--color-gray-label)', lineHeight: '11px', display: 'inline-block', width: 11, textAlign: 'center' }}>扫码查看</span>
+          <div style={{ width: 48, height: 48, padding: 2, border: '1px solid var(--color-border-antd)', borderRadius: 4, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
+            {qrPngDataUrl
+              ? <img src={qrPngDataUrl} alt="QR" style={{ width: 42, height: 42, display: 'block' }} />
+              : <QRCode value={qrValue} size={42} />}
+            {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
+          </div>
+        </div>
+      </div>
+      {/* 主体：左列（图片） + 右列（信息表格） */}
       <div style={{ display: 'flex', gap: 20, padding: 16, border: '0.5px solid var(--color-zinc-300)', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
-        {/* 左侧：主图（D-085 放大；二维码已移至右列顶部右上角） */}
+        {/* 左侧：主图（D-085 放大；二维码已移至打印头部右上角） */}
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'flex-start', width: 128 }}>
           {resolvedCover ? (
             <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
@@ -76,16 +95,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
         {/* 右侧：字段信息 */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* 二维码：右上角小尺寸（D-085，可扫码即可） */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 9, color: 'var(--color-gray-label)', lineHeight: '11px', display: 'inline-block', width: 11, textAlign: 'center' }}>扫码查看</span>
-            <div style={{ width: 48, height: 48, padding: 2, border: '1px solid var(--color-border-antd)', borderRadius: 4, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
-              {qrPngDataUrl
-                ? <img src={qrPngDataUrl} alt="QR" style={{ width: 42, height: 42, display: 'block' }} />
-                : <QRCode value={qrValue} size={42} />}
-              {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
-            </div>
-          </div>
           {(() => {
             const empty = '';
             // 面料成分：优先读 fabricComposition（单字符串），
@@ -107,40 +116,33 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             // 所有字段合并到一个数组，渲染成一张连续表格
             const allFields: { label: string; value: React.ReactNode }[] = [];
 
-            // 款式信息（与样衣详情页 BasicInfoSection 区1 对齐（D-058 新版结构）：
-            //   款号/SKC/款名/商品分类/虚拟分类/商品类型/设计师/商品主题/客户/供应商）
+            // 款号信息：款号/SKC/款名/商品分类/季节分类/商品类型/设计师/商品主题/U码
+            // （客户/供应商移至"客户信息"区块，勾选名称与内容对齐 D-098）
             if (options.styleInfoBlock) {
               allFields.push({ label: '款号', value: styleNo || empty });
               allFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
               allFields.push({ label: '款名', value: styleName || empty });
               allFields.push({ label: '商品分类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
               if (mode === 'sample') {
-                allFields.push({ label: '虚拟分类', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
+                allFields.push({ label: '季节分类', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
                 allFields.push({ label: '商品类型', value: translateProductType((data.productionSheet as any)?.productType) });
                 // 设计师：D-058 起为独立字段 designer，旧数据兜底读 sampleNo
                 allFields.push({ label: '设计师', value: (data.productionSheet as any)?.designer || (data.productionSheet as any)?.sampleNo || empty });
                 allFields.push({ label: '商品主题', value: (data.productionSheet as any)?.theme || empty });
-                // 客户：D-058 起从"客户信息"区块迁移至基础信息区，与详情页 BasicInfoSection 一致
-                allFields.push({ label: '客户', value: (data.productionSheet as any)?.customerName || (data.productionSheet as any)?.customer || empty });
-                allFields.push({ label: '供应商', value: (data.productionSheet as any)?.supplier || empty });
                 if ((data.productionSheet as any)?.uCode) {
                   allFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
                 }
               }
             }
 
-            // 客户信息（与样衣详情页 CustomerInfoSection 区2 对齐（D-058 新版结构）：
-            //   跟单员 / 销售渠道 / 板类 / 打板价 / 吊牌价 / 销售价。
-            //   客户已迁至"款号信息"区块；设计师已迁至"款号信息"区块并改读 designer 字段）
+            // 客户信息：客户/供应商/跟单员/销售渠道（名称与内容一致 D-098；
+            //   板类/价格移至"版次信息"区块）
             if (options.customerInfoBlock && mode === 'sample') {
               const prodSheet = data.productionSheet as any;
+              allFields.push({ label: '客户', value: prodSheet?.customerName || prodSheet?.customer || empty });
+              allFields.push({ label: '供应商', value: prodSheet?.supplier || empty });
               allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
-              // 销售渠道：D-058 起归属客户信息区，与详情页 CustomerInfoSection 一致
               allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
-              allFields.push({ label: '板类', value: translatePlateType(prodSheet?.plateType) });
-              allFields.push({ label: '打板价', value: formatPrice(prodSheet?.price) });
-              allFields.push({ label: '吊牌价', value: formatPrice(prodSheet?.tagPrice) });
-              allFields.push({ label: '销售价', value: formatPrice(prodSheet?.salesPrice) });
             }
 
             // 下单信息（大货模式）
@@ -152,12 +154,17 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
             }
 
-            // 版次信息（样衣模式：纸样师/车板师；板类在"客户信息"区块显示避免重复，
+            // 版次信息（样衣模式：板类/纸样师/车板师/打板价/吊牌价/销售价——打板整套信息 D-098；
             //   非样衣模式设计师改读 designer 字段（D-058），旧数据兜底 sampleNo）
             if (options.patternInfoBlock) {
               if (mode === 'sample') {
-                allFields.push({ label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty });
-                allFields.push({ label: '车板师', value: (data.productionSheet as any)?.plateWorker || empty });
+                const prodSheet = data.productionSheet as any;
+                allFields.push({ label: '板类', value: translatePlateType(prodSheet?.plateType) });
+                allFields.push({ label: '纸样师', value: prodSheet?.sampleSupplier || empty });
+                allFields.push({ label: '车板师', value: prodSheet?.plateWorker || empty });
+                allFields.push({ label: '打板价', value: formatPrice(prodSheet?.price) });
+                allFields.push({ label: '吊牌价', value: formatPrice(prodSheet?.tagPrice) });
+                allFields.push({ label: '销售价', value: formatPrice(prodSheet?.salesPrice) });
               } else {
                 const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
                 allFields.push({ label: '加工厂', value: factoryName });
@@ -179,8 +186,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               }
             }
 
-            // 面料成分 + 款式特征（AI识别）+ 是否套里 + 备注
-            if (options.styleInfoBlock) {
+            // 备注信息：面料成分 + 款式特征（AI识别）+ 是否套里 + 备注（D-098 归组：
+            //   面料/工艺类辅助信息从"款号信息"移入，勾选名称与内容对齐）
+            if (options.remarkBlock) {
               allFields.push({ label: '面料成分', value: fabricVal || empty });
               // 款式特征（AI识别）：与样衣详情页 StyleFeatureSection 一致，从 extJson 解析
               // 仅在样衣模式下显示，避免大货模式信息过载
@@ -211,8 +219,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 getMaterialTypeCategory((m as any)?.materialType) === 'lining'
               );
               allFields.push({ label: '是否套里', value: hasLining ? '是' : '否' });
-            }
-            if (options.remarkBlock) {
               // 备注链路说明：D-058 起 remark 已在 BasicInfoSection 维护并随表单提交持久化
               // （utils.ts 已移除 delete remark 旧逻辑）。description 兜底兼容迁移前的历史数据。
               allFields.push({ label: '备注', value: (data.productionSheet as any)?.remark || (data.productionSheet as any)?.description || empty });
