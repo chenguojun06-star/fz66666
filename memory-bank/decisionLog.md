@@ -1768,6 +1768,25 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 - 后端运行实例为 02:43 旧版，需重启加载第三批（用户自行处理）
 - 剩余：P1 3 项 + P2 24 项（清单 D-076）
 
+## D-082 P2 批次收尾：totalAmount口径/到货率含领料/入库加权单价 + 小程序推送入口（2026-08-16）
+
+### 修复（D-076 可枚举 P2 全部闭环）
+1. **P2-4 totalAmount 三处口径互斥**：到货登记 `applyArrivedQuantityUpdate` 唯一例外按 `arrivedQuantity×unitPrice` 覆写 → 统一为 `purchaseQuantity×unitPrice`（与建单/quickEdit/购物车/BOM推送/补采单/合并采购及前端 usePurchaseDialog/PurchaseModal 全部对齐）。部分到货后总金额不再缩水、快速编辑后又跳回
+2. **P2-5 到货率不含仓库领料完成**：`usedQuantity` 原是死字段（实体注释称出库自动累加，实际无代码写入）。三处修复：
+   - confirmPickingOutbound → updatePurchaseAfterOutbound 累加 pickedTotalQty 到 usedQuantity
+   - computeArrivalStats 到货率口径改 `eff = min(pq, max(arrived, used))` —— 仓库路径（自由入库+领料出库）不再到货率恒 0 卡采购阶段（≥50% 才能确认采购完成的闸门解除）
+   - cancelPicking 撤销时按 picking.purchaseId 精确回退 usedQuantity（不按 orderNo+materialCode，防误伤补采单）并重算到货率
+3. **P2-6 仓库入库不更新加权单价**：freeInbound 原走 `updateStockQuantity`（只加数量不动单价），采购入库却走 `updateStockOnInbound`（加权）→ 两条路径库存成本口径分裂。MaterialStockService 新增 `updateStockOnInbound(stockId, delta, location, unitPrice, supplierName)` 委托同一加权 SQL；batchInbound/scanInbound 收敛于 freeInbound 一处修复全覆盖。盘点/移库/撤销回补保留纯数量调整原行为
+4. **小程序样衣完成/推送入口**（P1 尾单，前批后端已入库）：详情页「完成样衣」「推送到下单管理」镂空按钮 + pushToOrderManagement API，三端副本 MD5 一致
+
+### 踩坑（重要）
+- **工作区被旧内容覆盖**：P2-4/P2-5 的编辑在前一会话已随 741d824f4 提交，但工作区文件仍是旧版（疑似编辑器缓冲区回写）；本会话重新应用相同编辑后 git diff 恰好归零。教训：跨会话续作时先 `git status` + `git show HEAD:file` 比对，避免在已提交内容上重复劳动或误判
+
+### 验证
+- mvn compile 零错误；小程序四端副本 MD5 一致（3×4 文件 unique=1）
+- safe-push 6 项自动通过，commit 1f592468b（小程序）+ 39c13dff1（P2-6）已推送，云托管自动构建触发
+- D-076 审计：P0×10 全清（D-077）、P1 可枚举 14 项全清（D-078~081）、P2 可枚举项全清（本批）；其余明细因上下文压缩丢失，如需彻底收尾建议对新代码重跑六链路审计
+
 ## D-081 P1 第四批：自建 admin 角色撞名提权全链路封堵（2026-08-16）
 
 ### 漏洞链（D-076 点名的"自建admin角色满足租户主URL守卫"）
