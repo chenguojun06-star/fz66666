@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.executor.OrderProgressWebSocketServer;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -46,6 +48,9 @@ public class ProductionOrderProgressRecomputeService {
 
     @Autowired
     private ProductWarehousingService productWarehousingService;
+
+    @Autowired(required = false)
+    private OrderProgressWebSocketServer orderProgressWebSocketServer;
 
     @Async
     public void recomputeProgressAsync(String orderId) {
@@ -318,6 +323,11 @@ public class ProductionOrderProgressRecomputeService {
 
     private ProductionOrder persistProgressUpdate(String oid, int lastDoneQty, int newProgress, String newStatus) {
         LocalDateTime now = LocalDateTime.now();
+        ProductionOrder before = productionOrderMapper.selectById(oid);
+        if (before == null) return null;
+        Integer prevProgress = before.getProductionProgress();
+        String prevStatus = before.getStatus();
+        Integer prevDoneQty = before.getCompletedQuantity();
         int maxRetries = 3;
         int updated = 0;
         for (int attempt = 0; attempt < maxRetries; attempt++) {
@@ -332,7 +342,26 @@ public class ProductionOrderProgressRecomputeService {
             log.warn("乐观锁冲突，重试进度更新: orderId={}, attempt={}/{}", oid, attempt + 1, maxRetries);
         }
         if (updated <= 0) { log.error("进度更新失败（乐观锁冲突耗尽重试次数）: orderId={}", oid); return null; }
-        return productionOrderMapper.selectById(oid);
+        ProductionOrder updatedOrder = productionOrderMapper.selectById(oid);
+        broadcastProgressIfChanged(updatedOrder, prevProgress, prevStatus, prevDoneQty);
+        return updatedOrder;
+    }
+
+    /**
+     * 进度/状态/完成数发生变化时向全租户广播，各端(订单管理/工序跟进/看板)进度球实时刷新。
+     * 无变化不推送，避免定时一致性任务批量重算时造成推送风暴；扫码链路原有推送幂等，前端已有防抖。
+     */
+    private void broadcastProgressIfChanged(ProductionOrder updatedOrder, Integer prevProgress, String prevStatus, Integer prevDoneQty) {
+        if (updatedOrder == null || orderProgressWebSocketServer == null) return;
+        boolean changed = !Objects.equals(prevProgress, updatedOrder.getProductionProgress())
+                || !Objects.equals(prevStatus, updatedOrder.getStatus())
+                || !Objects.equals(prevDoneQty, updatedOrder.getCompletedQuantity());
+        if (!changed) return;
+        try {
+            orderProgressWebSocketServer.broadcastOrderProgressFromOrder(updatedOrder);
+        } catch (Exception e) {
+            log.warn("广播订单进度变化失败: orderId={}", updatedOrder.getId(), e);
+        }
     }
 
     private void ensureBaseStageRecordsIfAbsent(ProductionOrder order) {

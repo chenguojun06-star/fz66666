@@ -59,7 +59,8 @@ export const useOrderSync = ({
     return null;
   }, [setActiveOrder, activeOrderRef, orderSyncingRef]);
 
-  useSync('progress-detail-order', fetchFn, () => {}, { interval: 300000, pauseOnHidden: true });
+  // 兜底轮询 1 分钟（主链路为 WebSocket order:progress:changed 实时推送；此前 5 分钟轮询导致进度球长时间不更新）
+  useSync('progress-detail-order', fetchFn, () => {}, { interval: 60000, pauseOnHidden: true });
 
   useEffect(() => {
     const handleProgressChanged = (event?: Event) => {
