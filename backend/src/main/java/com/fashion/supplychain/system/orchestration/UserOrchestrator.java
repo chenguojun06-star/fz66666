@@ -101,10 +101,10 @@ public class UserOrchestrator {
     }
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId) {
-        return list(page, pageSize, username, name, roleName, status, factoryId, null, null, false);
+        return list(page, pageSize, username, name, roleName, status, factoryId, null, null, null, false);
     }
 
-    public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId, String employmentStatus, String orgUnitId, Boolean excludeFactoryUsers) {
+    public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId, String employmentStatus, String orgUnitId, String employeeNo, Boolean excludeFactoryUsers) {
         Long tenantId = UserContext.tenantId();
         String currentUserFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(currentUserFactoryId)) {
@@ -121,6 +121,7 @@ public class UserOrchestrator {
             if (StringUtils.hasText(factoryId)) query.eq("factory_id", factoryId);
             if (StringUtils.hasText(employmentStatus)) query.eq("employment_status", employmentStatus);
             if (StringUtils.hasText(orgUnitId)) query.eq("org_unit_id", orgUnitId);
+            if (StringUtils.hasText(employeeNo)) query.like("employee_no", employeeNo);
             if (Boolean.TRUE.equals(excludeFactoryUsers) && !StringUtils.hasText(factoryId)) {
                 query.and(w -> w.isNull("factory_id").or().eq("factory_id", ""));
             }

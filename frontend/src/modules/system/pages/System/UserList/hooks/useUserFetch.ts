@@ -45,6 +45,7 @@ export function useUserFetch({ user, isSuperAdmin, userModalVisible, message, na
           orgUnitId: queryParams.orgUnitId || undefined,
           employmentStatus: queryParams.employmentStatus || undefined,
           roleId: queryParams.roleId || undefined,
+          employeeNo: queryParams.employeeNo || undefined,
           excludeFactoryUsers: true,
         });
         const result = response as any;
@@ -64,6 +65,7 @@ export function useUserFetch({ user, isSuperAdmin, userModalVisible, message, na
             roleName: queryParams.roleName, status: queryParams.status,
             employmentStatus: queryParams.employmentStatus || undefined,
             orgUnitId: queryParams.orgUnitId || undefined,
+            employeeNo: queryParams.employeeNo || undefined,
             excludeFactoryUsers: true,
           },
         });
@@ -108,6 +110,7 @@ export function useUserFetch({ user, isSuperAdmin, userModalVisible, message, na
             orgUnitId: queryParams.orgUnitId || undefined,
             employmentStatus: queryParams.employmentStatus || undefined,
             roleId: queryParams.roleId || undefined,
+            employeeNo: queryParams.employeeNo || undefined,
             excludeFactoryUsers: true,
           });
           if (response.code === 200) {
@@ -122,6 +125,7 @@ export function useUserFetch({ user, isSuperAdmin, userModalVisible, message, na
             roleName: queryParams.roleName, status: queryParams.status,
             employmentStatus: queryParams.employmentStatus || undefined,
             orgUnitId: queryParams.orgUnitId || undefined,
+            employeeNo: queryParams.employeeNo || undefined,
             excludeFactoryUsers: true,
           },
         });

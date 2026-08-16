@@ -1261,3 +1261,11 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 
 - [x] 二次工艺筛选去混入尾部子工序 — `riskBadgeRenderers.tsx` 使用 `isSecondaryProcessSubNode` 过滤
 - [x] 菲号显示带订单号信息 — `useProcessTrackingColumns.tsx` 接收 `orderNo`，纯数字 bundleNo 拼接订单号
+
+### 2026-08-16 系统设置三页布局优化（人员/岗位/组织架构，对齐 _SPEC 设计稿）
+
+- [x] 人员管理：StatsBar 4 KPI 卡片 + 工号 employeeNo 全链路（Flyway V202708161400 + 前后端）+ 手机号脱敏 PhoneCell + 行内操作对齐
+- [x] 岗位管理：左侧岗位卡片补"N 人 · N 权限点"指标 + 右侧双栏（菜单权限矩阵/数据权限 4 级）+ 底部关联人员内嵌预览
+- [x] 组织架构：KPI 改部门/团队/总人数/平均团队 + 右侧子部门卡片网格（点击下钻）
+- [x] 验证：tsc 0 错误 + mvn compile EXIT=0（24 文件 +761/-257）
+- [ ] 部署后验证：Flyway employee_no 加列 + 三页布局端到端

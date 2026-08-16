@@ -132,9 +132,7 @@ const UserList: React.FC = () => {
                 total={total}
                 userStats={userStats}
                 pendingUserCount={pendingUserCount}
-                canManageUsers={canManageUsers}
-                onGenerateInvite={handleGenerateInvite}
-                onAddUser={() => openDialog()}
+                onGoApproval={() => navigate('/system/user-approval')}
               />
             </>
           }

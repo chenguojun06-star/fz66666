@@ -35,6 +35,9 @@ interface MemberPanelProps {
   handleShowQRCode: (node: OrganizationUnit) => void;
   handleGenerateInvite: () => void;
   openUserDialog: (u?: User) => void;
+  // 子部门卡片网格
+  childUnits: OrganizationUnit[];
+  onSelectUnit: (id: string) => void;
   // 列定义需要的 handlers
   columnHandlers: {
     openUserDialog: (u?: User) => void;
@@ -56,6 +59,7 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
   selectedRowKeys, setSelectedRowKeys,
   managerLoading, managerSelectOptions, loadAssignableUsers, handleSetManager,
   handleOpenAssign, handleShowQRCode, handleGenerateInvite, openUserDialog,
+  childUnits, onSelectUnit,
   columnHandlers,
 }) => {
   const { modal } = App.useApp();
@@ -173,6 +177,33 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
           </Col>
         </Row>
       </Card>
+
+      {/* 子部门卡片网格 */}
+      {childUnits.length > 0 && (
+        <div className="org-subunits">
+          <div className="org-subunits-header">子部门（{childUnits.length}）</div>
+          <div className="org-subunits-grid">
+            {childUnits.map(child => {
+              const cid = String(child.id);
+              const childCount = unitMemberCount.countMap[cid] ?? 0;
+              const managerName = (child as any).managerUserName || '';
+              return (
+                <div key={cid} className="org-subunit-card" onClick={() => onSelectUnit(cid)}>
+                  <div className="org-subunit-name">
+                    {child.nodeType === 'FACTORY' || child.ownerType === 'EXTERNAL'
+                      ? <BankOutlined style={{ marginRight: 4 }} />
+                      : <ApartmentOutlined style={{ marginRight: 4 }} />}
+                    {child.unitName}
+                  </div>
+                  <div className="org-subunit-meta">
+                    {childCount} 人{managerName ? ` · ${managerName}` : ''}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontWeight: 600, fontSize: 15 }}>

@@ -37,6 +37,16 @@ export function useRoleListData() {
   const [permKeywordInput, setPermKeywordInput] = useState('');
   const permKeyword = useDebouncedValue(permKeywordInput, 200);
   const [editingRoleName, setEditingRoleName] = useState('');
+  const [editingDataScope, setEditingDataScope] = useState<string>('all');
+
+  // 岗位指标：每个岗位的关联人数 / 权限点数
+  const [roleMemberCountMap, setRoleMemberCountMap] = useState<Record<string, number>>({});
+  const [rolePermCountMap, setRolePermCountMap] = useState<Record<string, number>>({});
+  const [totalRoleMembers, setTotalRoleMembers] = useState(0);
+
+  // 当前岗位关联人员（内嵌预览，前 5 条）
+  const [roleMembersPreview, setRoleMembersPreview] = useState<any[]>([]);
+  const [roleMembersPreviewLoading, setRoleMembersPreviewLoading] = useState(false);
 
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [employeeList, setEmployeeList] = useState<any[]>([]);
@@ -68,6 +78,64 @@ export function useRoleListData() {
   }, [appMessage, showSmartErrorNotice]);
 
   useEffect(() => { fetchRoles(); }, [fetchRoles]);
+
+  /** 拉取岗位关联人数统计（一次用户列表，按 roleId 聚合） */
+  const fetchRoleMemberCounts = useCallback(async () => {
+    try {
+      const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 9999 } });
+      const result = res as any;
+      const records = result?.code === 200 ? (result.data?.records || []) : [];
+      const countMap: Record<string, number> = {};
+      let total = 0;
+      records.forEach((u: any) => {
+        const rid = String(u?.roleId ?? '').trim();
+        if (!rid) return;
+        countMap[rid] = (countMap[rid] || 0) + 1;
+        total += 1;
+      });
+      setRoleMemberCountMap(countMap);
+      setTotalRoleMembers(total);
+    } catch { setRoleMemberCountMap({}); setTotalRoleMembers(0); }
+  }, []);
+
+  /** 拉取每个岗位的权限点数（并行，失败静默） */
+  const fetchRolePermCounts = useCallback(async (list: RoleRecord[]) => {
+    const ids = list.map(r => String(r.id ?? '').trim()).filter(Boolean);
+    if (!ids.length) { setRolePermCountMap({}); return; }
+    const results = await Promise.allSettled(
+      ids.map(rid => requestWithPathFallback('get', `/system/role/${rid}/permission-ids`, `/auth/role/${rid}/permission-ids`)),
+    );
+    const countMap: Record<string, number> = {};
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') {
+        const res = r.value as any;
+        if (res?.code === 200 && Array.isArray(res.data)) countMap[ids[i]] = res.data.length;
+      }
+    });
+    setRolePermCountMap(countMap);
+  }, []);
+
+  // 角色列表变化后刷新统计指标
+  useEffect(() => {
+    if (roleList.length > 0) {
+      fetchRoleMemberCounts();
+      fetchRolePermCounts(roleList);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleList]);
+
+  /** 拉取当前岗位关联人员预览（前 5 条） */
+  const fetchRoleMembersPreview = useCallback(async (roleId: string) => {
+    const rid = String(roleId || '').trim();
+    if (!rid) { setRoleMembersPreview([]); return; }
+    setRoleMembersPreviewLoading(true);
+    try {
+      const res = await api.get('/system/user/list', { params: { roleId: rid, page: 1, pageSize: 5 } });
+      const result = res as any;
+      setRoleMembersPreview(result?.code === 200 ? (result.data?.records || []) : []);
+    } catch { setRoleMembersPreview([]); }
+    finally { setRoleMembersPreviewLoading(false); }
+  }, []);
 
   const checkNewTenant = async () => {
     try {
@@ -109,8 +177,11 @@ export function useRoleListData() {
   const handleRoleSelect = useCallback((role: RoleRecord | null) => {
     setSelectedRole(role);
     setEditingRoleName(role?.roleName || '');
+    setEditingDataScope(String(role?.dataScope || 'all'));
+    setRoleMembersPreview([]);
     if (roleIdDebounceTimer.current) clearTimeout(roleIdDebounceTimer.current);
     if (role?.id) {
+      fetchRoleMembersPreview(String(role.id));
       roleIdDebounceTimer.current = setTimeout(() => {
         setDebouncedRoleId(String(role.id));
       }, 150);
@@ -118,6 +189,7 @@ export function useRoleListData() {
       setDebouncedRoleId(null);
       setPermTree([]); setCheckedPermIds(new Set());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -136,23 +208,28 @@ export function useRoleListData() {
     remarkModal.openRemarkModal('确认保存', '确认保存', undefined, async (remark) => {
       setPermSaving(true);
       try {
-        const nameChanged = editingRoleName.trim() !== '' && editingRoleName.trim() !== selectedRole.roleName;
-        if (nameChanged) {
-          const rolePayload = { ...selectedRole, roleName: editingRoleName.trim(), operationRemark: remark };
+        const nextName = editingRoleName.trim();
+        const nextScope = editingDataScope;
+        const nameChanged = nextName !== '' && nextName !== selectedRole.roleName;
+        const scopeChanged = nextScope !== String(selectedRole.dataScope || 'all');
+        if (nameChanged || scopeChanged) {
+          const rolePayload = { ...selectedRole, roleName: nameChanged ? nextName : selectedRole.roleName, dataScope: nextScope as Role['dataScope'], operationRemark: remark };
           const roleRes = await requestWithPathFallback('put', '/system/role', '/auth/role', rolePayload);
           const roleResult = roleRes as { code?: number; message?: unknown };
           if (roleResult.code !== 200) {
-            appMessage.error(String(roleResult.message || '保存职位名称失败'));
+            appMessage.error(String(roleResult.message || '保存职位配置失败'));
             return;
           }
-          setSelectedRole(prev => prev ? { ...prev, roleName: editingRoleName.trim() } : prev);
-          setRoleList(prev => prev.map(r => r.id === selectedRole.id ? { ...r, roleName: editingRoleName.trim() } : r));
+          const nextScopeTyped = nextScope as Role['dataScope'];
+          setSelectedRole(prev => prev ? { ...prev, roleName: nameChanged ? nextName : prev.roleName, dataScope: nextScopeTyped } : prev);
+          setRoleList(prev => prev.map(r => String(r.id) === String(selectedRole.id) ? { ...r, roleName: nameChanged ? nextName : r.roleName, dataScope: nextScopeTyped } : r));
         }
         const ids = Array.from(checkedPermIds.values());
         const res = await requestWithPathFallback('put', `/system/role/${selectedRole.id}/permission-ids`, `/auth/role/${selectedRole.id}/permission-ids`, { permissionIds: ids, remark });
         const result = res as { code?: number; message?: unknown };
         if (result.code === 200) {
           appMessage.success('保存成功');
+          setRolePermCountMap(prev => ({ ...prev, [String(selectedRole.id)]: ids.length }));
         } else appMessage.error(String(result.message || '保存权限失败'));
       } catch { appMessage.error('保存失败'); } finally { setPermSaving(false); }
     });
@@ -297,6 +374,13 @@ export function useRoleListData() {
     permKeyword,
     editingRoleName,
     setEditingRoleName,
+    editingDataScope,
+    setEditingDataScope,
+    roleMemberCountMap,
+    rolePermCountMap,
+    totalRoleMembers,
+    roleMembersPreview,
+    roleMembersPreviewLoading,
     employeeModalOpen,
     setEmployeeModalOpen,
     employeeList,

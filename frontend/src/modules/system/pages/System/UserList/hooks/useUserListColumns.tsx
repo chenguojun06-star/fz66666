@@ -5,6 +5,7 @@ import RowActions from '@/components/common/RowActions';
 import { Role, User as UserType } from '@/types/system';
 import { formatDate } from '@/utils/datetime';
 import { requestWithPathFallback } from '@/utils/api';
+import PhoneCell from '../components/PhoneCell';
 
 /** 用户归属类型 */
 type UserAffiliation = 'internal' | 'external_factory' | 'supplier' | 'other';
@@ -135,6 +136,15 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
 
   const columns = [
     {
+      title: '工号',
+      dataIndex: 'employeeNo',
+      key: 'employeeNo',
+      width: 100,
+      render: (v: string) => v ? (
+        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, color: 'var(--color-text-secondary, #595959)' }}>{v}</span>
+      ) : <span style={{ color: 'var(--color-text-quaternary, #bfbfbf)' }}>-</span>,
+    },
+    {
       title: '姓名',
       dataIndex: 'name',
       key: 'name',
@@ -149,7 +159,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       render: (v: string) => v || '-',
     },
     {
-      title: '职位',
+      title: '岗位',
       dataIndex: 'position',
       key: 'position',
       width: 140,
@@ -227,38 +237,18 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       },
     },
     {
-      title: '归属',
-      key: 'affiliation',
-      width: 110,
-      render: (_: any, r: UserType) => {
-        const affiliation = getUserAffiliation(String(r.roleName || ''), String(r.roleCode || ''));
-        return (
-          <Tag color={affiliation.color}>
-            {affiliation.icon} {affiliation.label}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: '性别',
-      dataIndex: 'gender',
-      key: 'gender',
-      width: 80,
-      render: (v: string) => getGenderText(v),
-    },
-    {
-      title: '手机号码',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 130,
-      render: (v: string) => v || '-',
-    },
-    {
       title: '入职日期',
       dataIndex: 'hireDate',
       key: 'hireDate',
-      width: 120,
+      width: 110,
       render: (v: string) => v ? formatDate(v) : '-',
+    },
+    {
+      title: '联系方式',
+      dataIndex: 'phone',
+      key: 'phone',
+      width: 150,
+      render: (v: string) => <PhoneCell phone={v} />,
     },
     {
       title: '在职状态',
@@ -304,12 +294,11 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
 
         return (
           <RowActions
-            maxInline={2}
             actions={[
               {
                 key: 'edit',
-                label: '修改',
-                title: '修改',
+                label: '编辑',
+                title: '编辑',
                 onClick: () => openDialog(record),
                 primary: true,
               },

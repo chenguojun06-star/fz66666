@@ -154,8 +154,9 @@ public class TenantController {
         String orgUnitId = params != null ? (String) params.get("orgUnitId") : null;
         String employmentStatus = params != null ? (String) params.get("employmentStatus") : null;
         String roleId = params != null && params.get("roleId") != null ? String.valueOf(params.get("roleId")) : null;
+        String employeeNo = params != null ? (String) params.get("employeeNo") : null;
         Boolean excludeFactoryUsers = params != null && params.get("excludeFactoryUsers") != null ? Boolean.valueOf(params.get("excludeFactoryUsers").toString()) : false;
-        return Result.success(tenantOrchestrator.listSubAccounts(page, pageSize, name, roleName, orgUnitId, employmentStatus, roleId, excludeFactoryUsers));
+        return Result.success(tenantOrchestrator.listSubAccounts(page, pageSize, name, roleName, orgUnitId, employmentStatus, roleId, employeeNo, excludeFactoryUsers));
     }
 
     /**

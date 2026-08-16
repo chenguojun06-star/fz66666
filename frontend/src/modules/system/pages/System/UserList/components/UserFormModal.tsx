@@ -99,6 +99,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
         <Row gutter={16} className="mt-sm">
           <Col span={8}>
+            <Form.Item name="employeeNo" label="工号">
+              <Input placeholder="如：EMP001（选填）" maxLength={50} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
             <Form.Item name="phone" label="手机号" rules={formRules.phone}>
               <Input placeholder="请输入手机号" />
             </Form.Item>
@@ -108,6 +113,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
               <DatePicker style={{ width: '100%' }} placeholder="请选择入职日期" />
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16} className="mt-sm">
           <Col span={8}>
             <Form.Item name="employmentStatus" label="在职状态">
               <Select placeholder="请选择在职状态" allowClear>
@@ -120,9 +128,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
               </Select>
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16} className="mt-sm">
           <Col span={8}>
             <Form.Item name="permissionRange" label="数据权限" rules={formRules.permissionRange}>
               <Select placeholder="请选择数据权限范围">
@@ -140,6 +145,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
               </Select>
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16} className="mt-sm">
           <Col span={8}>
             <Form.Item name="email" label="邮箱" rules={formRules.email}>
               <Input placeholder="请输入邮箱" />

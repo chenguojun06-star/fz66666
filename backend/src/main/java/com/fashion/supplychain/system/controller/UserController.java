@@ -54,6 +54,7 @@ public class UserController {
             @RequestParam(required = false) String factoryId,
             @RequestParam(required = false) String employmentStatus,
             @RequestParam(required = false) String orgUnitId,
+            @RequestParam(required = false) String employeeNo,
             @RequestParam(required = false, defaultValue = "false") Boolean excludeFactoryUsers) {
         // 用户列表含手机号/角色/组织等 PII：仅主管及以上可拉取（原先任意登录用户可枚举全租户通讯录）
         if (!com.fashion.supplychain.common.UserContext.isSupervisorOrAbove()) {
@@ -67,7 +68,7 @@ public class UserController {
             }
             factoryId = ctxFactoryId;
         }
-        Page<User> userPage = userOrchestrator.list((long) page, (long) pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, excludeFactoryUsers);
+        Page<User> userPage = userOrchestrator.list((long) page, (long) pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, employeeNo, excludeFactoryUsers);
         return Result.success(userPage);
     }
 

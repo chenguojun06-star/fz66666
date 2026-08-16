@@ -32,6 +32,8 @@ export interface User extends Record<string, unknown> {
   employmentStatus?: string;
   /** 职位（如"缝纫一组组长"、"车间主任"），区别于角色 */
   position?: string;
+  /** 工号（租户内员工编号） */
+  employeeNo?: string;
 }
 
 export interface Role {
@@ -44,7 +46,8 @@ export interface Role {
   createTime?: string;
   updateTime?: string;
   permissions?: Permission[];
-  dataScope?: 'all' | 'brand' | 'department' | 'custom';
+  /** 数据权限范围：all-全部数据, department-本部门数据, team-本团队数据, own/self-仅本人数据（brand/custom 为历史模板值） */
+  dataScope?: 'all' | 'department' | 'team' | 'own' | 'self' | 'brand' | 'custom';
   dataScopeBrands?: string[];
   dataScopeDepartments?: string[];
 }
@@ -151,6 +154,7 @@ export interface UserQueryParams {
   orgUnitId?: string;
   employmentStatus?: string;
   roleId?: string;
+  employeeNo?: string;
   page: number;
   pageSize: number;
 }

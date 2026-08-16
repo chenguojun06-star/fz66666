@@ -73,6 +73,9 @@ public class User {
 
     private String email;
 
+    /** 工号（租户内员工编号，用于人员管理展示与筛选） */
+    private String employeeNo;
+
     @TableField(exist = false)
     private String operationRemark;
 

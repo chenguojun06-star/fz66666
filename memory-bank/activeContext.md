@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-103 警告根治：-Xlint 固化 + 44 文件清零 99→0）
+> 最后更新：2026-08-16（系统设置三页布局优化：人员/岗位/组织架构对齐 _SPEC 设计稿）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 系统设置三页布局优化（人员/岗位/组织架构，对齐 PC端全景优化分析 _SPEC）✅
+
+- [x] **人员管理 UserList**：StatsBar 重构为 4 KPI 卡片（员工总数/在职/离职归档/待审批，待审批>0 可点击跳审批）；新增**工号 employeeNo 全链路**（Flyway V202708161400 + User entity + UserOrchestrator/TenantSubAccountHelper 查询 + 前端类型/表单/筛选/列）；手机号脱敏 PhoneCell（默认打码+眼睛切换）；行内操作对齐（编辑 primary+更多收纳）
+- [x] **岗位管理 RoleList**：左侧岗位卡片化补指标（N 人 · N 权限点，选中态高亮+悬浮编辑/删除）；右侧权限区改双栏（左菜单权限矩阵/右数据权限 4 级 Radio：全部/部门/团队/仅本人）；底部内嵌关联人员预览表（前 5 条+查看全部）；保存时岗位名称与数据权限随权限点一并提交（requestWithPathFallback 双路径）
+- [x] **组织架构 OrganizationTree**：KPI 改 4 卡（部门数/团队数/总人数/平均团队 人/队）；右侧成员面板顶部补**子部门卡片网格**（图标+名称+N 人·负责人，点击下钻）
+- [x] 风格沿用现有 design token（CSS 变量、镂空按钮、pastel 淡底、阴影替代边框），RoleList/styles.css 补 role-card/role-perm-dual/org-subunits 等样式
+- [x] 验证：前端 tsc 0 错误 + 后端 mvn compile EXIT=0（24 文件 +761/-257，含新 Flyway V202708161400 与 PhoneCell.tsx）
+- [ ] 部署后验证：Flyway 自动执行 employee_no 加列；人员/岗位/组织架构三页布局与指标显示；岗位保存（名称+数据权限+权限点）端到端
 
 ### 2026-08-16 样衣详情维护弹窗统一为通用 QuickManageModal ✅（已推送 b693c422c，5 文件 +385/-300）
 

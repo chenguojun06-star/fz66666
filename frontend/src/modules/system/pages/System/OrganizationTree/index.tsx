@@ -275,6 +275,8 @@ const OrganizationTreePage: React.FC = () => {
                 isFactoryAccount={isFactoryAccount}
                 canManageUsers={canManageUsers}
                 unitMemberCount={unitMemberCount}
+                childUnits={selectedUnit?.children ?? []}
+                onSelectUnit={setSelectedUnitId}
                 displayedMembers={displayedMembers}
                 memberSearch={memberSearch}
                 setMemberSearch={setMemberSearch}

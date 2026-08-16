@@ -40,6 +40,13 @@ const RoleList: React.FC = () => {
     setPermKeywordInput,
     editingRoleName,
     setEditingRoleName,
+    editingDataScope,
+    setEditingDataScope,
+    roleMemberCountMap,
+    rolePermCountMap,
+    totalRoleMembers,
+    roleMembersPreview,
+    roleMembersPreviewLoading,
     employeeModalOpen,
     setEmployeeModalOpen,
     employeeList,
@@ -109,6 +116,9 @@ const RoleList: React.FC = () => {
           <RoleListPanel
             roleList={roleList}
             selectedRoleId={selectedRole?.id}
+            memberCountMap={roleMemberCountMap}
+            permCountMap={rolePermCountMap}
+            totalMembers={totalRoleMembers}
             onSelect={handleRoleSelect}
             onEdit={(role: Role) => openDialog(role)}
             onDelete={handleDelete}
@@ -124,9 +134,14 @@ const RoleList: React.FC = () => {
               checkedPermIds={checkedPermIds}
               permKeywordInput={permKeywordInput}
               editingRoleName={editingRoleName}
+              editingDataScope={editingDataScope}
               permSaving={permSaving}
+              memberCount={roleMemberCountMap[String(selectedRole?.id ?? '')] ?? 0}
+              membersPreview={roleMembersPreview}
+              membersPreviewLoading={roleMembersPreviewLoading}
               onPermKeywordChange={setPermKeywordInput}
               onEditingRoleNameChange={setEditingRoleName}
+              onEditingDataScopeChange={setEditingDataScope}
               onToggleIds={toggleIds}
               onSavePerms={savePerms}
               onOpenEmployeeList={handleOpenEmployeeList}
