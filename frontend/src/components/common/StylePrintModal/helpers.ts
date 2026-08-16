@@ -4,7 +4,12 @@
  */
 import type { StylePrintModalProps } from './types';
 
-/** 板类翻译：数据库存码值，打印显示中文 */
+/**
+ * 板类翻译：兼容两种存储形态
+ * - 旧编码值（FIRST/REORDER 等）→ 映射为中文
+ * - 字典标签值（plate_type 字典的 dictLabel，如"首版"）→ 原样显示
+ * 未知值一律回退显示原值，禁止显示"未知"（详情页字典驱动的值打印页无法穷举）
+ */
 export const PLATE_TYPE_MAP: Record<string, string> = {
   FIRST: '首单',
   REORDER: '翻单',
@@ -15,8 +20,11 @@ export const PLATE_TYPE_MAP: Record<string, string> = {
   复板: '翻单',
 };
 
-/** 板类码值翻译为中文 */
-export const translatePlateType = (v?: string | null) => (v ? (PLATE_TYPE_MAP[v] ?? '未知') : '-');
+/** 板类码值翻译为中文；未匹配时回退原值（字典存的就是可读标签） */
+export const translatePlateType = (v?: string | null) => {
+  if (!v) return '-';
+  return PLATE_TYPE_MAP[v] ?? v;
+};
 
 /** 商品类型翻译：FINISHED=成品，SEMI_FINISHED=半成品（与 StyleBasicInfoForm/constants.ts PRODUCT_TYPE_OPTIONS 对齐） */
 export const translateProductType = (v?: string | null): string => {
