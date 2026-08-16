@@ -12,7 +12,7 @@ export const MODULE_SECTIONS = [
     { path: '/style-info', label: '样衣开发' },
     { path: '/basic/maintenance-center', label: '资料单价' },
     { path: '/warehouse/sample', label: '样衣库存' },
-    { path: '/order-management', label: '下单管理' },
+    { path: '/order-management', label: '商品下单' },
   ]},
   { key: 'procurement', title: '物料管理', paths: [
     { path: '/production/material', label: '物料采购' },

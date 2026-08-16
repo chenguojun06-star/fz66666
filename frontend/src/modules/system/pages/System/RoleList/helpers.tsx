@@ -19,7 +19,7 @@ export const MODULE_SECTIONS = [
     { label: '样衣开发', code: permissionCodes.styleInfo },
     { label: '资料单价', code: permissionCodes.dataCenter },
     { label: '样衣库存', code: permissionCodes.sampleInventory },
-    { label: '下单管理', code: permissionCodes.orderManagement },
+    { label: '商品下单', code: permissionCodes.orderManagement },
   ]},
   { title: '物料管理', items: [
     { label: '物料采购', code: permissionCodes.materialPurchase },

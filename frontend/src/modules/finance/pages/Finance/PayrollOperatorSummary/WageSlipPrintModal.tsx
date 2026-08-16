@@ -1,142 +1,284 @@
 import React, { useRef, useState } from 'react';
-import { Button, Radio, Checkbox } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import { Modal, Button, Radio, Checkbox, Divider, message } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { safePrint } from '@/utils/safePrint';
-import { formatMoney } from '@/utils/format';
 import { useUser } from '@/utils/AuthContext';
+
+interface WageDetail {
+    key?: string;
+    orderNo?: string;
+    styleNo?: string;
+    processName?: string;
+    endTime?: string;
+    quantity?: number | string;
+    unitPrice?: number | string;
+    totalAmount?: number | string;
+}
+
+interface WageSlipData {
+    operatorName: string;
+    totalAmount: number;
+    totalQuantity: number;
+    details: WageDetail[];
+}
 
 interface WageSlipPrintModalProps {
     visible: boolean;
     onClose: () => void;
-    workerData: {
-        operatorName: string;
-        totalAmount: number;
-        totalQuantity: number;
-        details: any[];
-    }[];
+    workerData: WageSlipData[];
     dateRange: [string, string];
 }
 
+/** 人民币金额大写转换 */
+const CN_DIGITS = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+
+function sectionToChinese(section: number): string {
+    const units = ['', '拾', '佰', '仟'];
+    let str = '';
+    let zeroPending = false;
+    for (let i = 3; i >= 0; i--) {
+        const d = Math.floor(section / Math.pow(10, i)) % 10;
+        if (d === 0) {
+            if (str) zeroPending = true;
+        } else {
+            if (zeroPending && str) str += '零';
+            str += CN_DIGITS[d] + units[i];
+            zeroPending = false;
+        }
+    }
+    return str;
+}
+
+function toChineseAmount(amount: number): string {
+    if (!isFinite(amount)) return '';
+    const cents = Math.round(Math.abs(amount) * 100);
+    if (cents === 0) return '零元整';
+    let intPart = Math.floor(cents / 100);
+    const jiao = Math.floor((cents % 100) / 10);
+    const fen = cents % 10;
+    const bigUnits = ['', '万', '亿', '万亿'];
+    const sections: string[] = [];
+    let si = 0;
+    while (intPart > 0) {
+        const sec = intPart % 10000;
+        if (sec > 0) {
+            let s = sectionToChinese(sec) + bigUnits[si];
+            if (sections.length > 0 && sections[0] !== '零' && sec < 1000) s += '零';
+            sections.unshift(s);
+        } else if (sections.length > 0 && !sections[0].startsWith('零')) {
+            sections.unshift('零');
+        }
+        intPart = Math.floor(intPart / 10000);
+        si++;
+    }
+    let result = sections.join('') + '元';
+    if (jiao === 0 && fen === 0) {
+        result += '整';
+    } else {
+        if (jiao > 0) result += CN_DIGITS[jiao] + '角';
+        else if (fen > 0) result += '零';
+        if (fen > 0) result += CN_DIGITS[fen] + '分';
+    }
+    return result;
+}
+
+const formatMoney = (n: number | string | undefined): string => {
+    const v = Number(n);
+    if (!isFinite(v)) return '-';
+    return v.toFixed(2);
+};
+
+const formatQty = (n: number | string | undefined): string => {
+    const v = Number(n);
+    if (!isFinite(v)) return '-';
+    return String(Math.round(v * 100) / 100);
+};
+
+const formatDate = (dateStr?: string): string => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+/** 简版：按订单号+款号聚合 */
+interface GroupedRow {
+    orderNo: string;
+    styleNo: string;
+    qty: number;
+    amount: number;
+}
+
+function groupDetails(details: WageDetail[]): GroupedRow[] {
+    const map = new Map<string, GroupedRow>();
+    details.forEach(d => {
+        const orderNo = d.orderNo || '-';
+        const styleNo = d.styleNo || '-';
+        const k = `${orderNo}||${styleNo}`;
+        const qty = Number(d.quantity) || 0;
+        const amount = Number(d.totalAmount) || 0;
+        const exist = map.get(k);
+        if (exist) {
+            exist.qty += qty;
+            exist.amount += amount;
+        } else {
+            map.set(k, { orderNo, styleNo, qty, amount });
+        }
+    });
+    return Array.from(map.values());
+}
+
 const PRINT_STYLES = `
-    body {
-        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-        padding: 20px;
-        color: var(--color-black);
-        line-height: 1.6;
+    .wage-slip-print-area {
+        background: #fff;
     }
-    .slip-container {
-        margin-bottom: 40px;
-        page-break-inside: avoid;
+    .wage-slip {
+        background: #fff;
+        border: 1.5px solid #333;
+        margin: 0 auto 24px auto;
+        page-break-after: always;
+        break-after: page;
     }
-    .slip-table {
+    .wage-slip:last-child {
+        page-break-after: auto;
+        break-after: auto;
+        margin-bottom: 0;
+    }
+    .wage-slip table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 14px;
+        table-layout: fixed;
     }
-    .slip-table th, .slip-table td {
-        border: 1px solid var(--color-black);
-        padding: 10px 12px;
+    /* P0 铁律：打印组件 font-family 必须以 serif 结尾 */
+    .wage-slip, .wage-slip table, .wage-slip td, .wage-slip th {
+        font-family: "Songti SC", "STSong", "SimSun", "Microsoft YaHei", serif;
+        color: #111;
     }
-    .slip-table th {
-        background-color: var(--color-zinc-200);
-        font-weight: bold;
+    .wage-slip .slip-title {
         text-align: center;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        padding: 12px 0 10px 0;
+        border-bottom: 1.5px solid #333;
     }
-    .row-title th {
+    .wage-slip .slip-subtitle {
         text-align: center;
-        font-size: 22px;
-        font-weight: bold;
-        letter-spacing: 4px;
-        padding: 16px 12px;
-        background-color: var(--color-zinc-200);
+        font-size: 12px;
+        color: #444;
+        padding: 4px 0;
+        border-bottom: 1px solid #999;
     }
-    .row-info td {
-        font-size: 14px;
-        padding: 10px 12px;
+    .wage-slip .slip-info td {
+        border: none;
+        border-bottom: 1px solid #333;
+        font-size: 12px;
+        padding: 7px 10px;
+        background: #f7f7f7;
     }
-    .row-info .label {
-        font-weight: bold;
-        background-color: var(--color-bg-subtle);
-        text-align: right;
-        width: 12%;
+    .wage-slip .slip-info .info-label {
+        color: #555;
+        margin-right: 4px;
+    }
+    .wage-slip .slip-info .info-value {
+        font-weight: 600;
+    }
+    .wage-slip th.col-head {
+        border: 1px solid #666;
+        background: #eee;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 4px;
         white-space: nowrap;
     }
-    .row-info .value {
-        text-align: left;
-        width: 25%;
+    .wage-slip td.cell {
+        border: 1px solid #666;
+        font-size: 12px;
+        padding: 5px 8px;
+        word-break: break-all;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .row-info .value-mid {
-        text-align: left;
-        width: 21%;
+    .wage-slip td.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-        margin: 0;
-    }
-    .data-table th, .data-table td {
-        border: 1px solid var(--color-black);
-        padding: 8px 6px;
+    .wage-slip td.center {
         text-align: center;
     }
-    .data-table th {
-        background-color: var(--color-zinc-200);
-        font-weight: bold;
+    .wage-slip tr.odd td.cell {
+        background: #fbfbfb;
     }
-    .row-data-header th {
-        background-color: var(--color-zinc-200);
-        padding: 0;
+    .wage-slip .slip-total td {
+        border: 1px solid #666;
+        border-top: 1.5px solid #333;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 8px 10px;
+        background: #f2f2f2;
     }
-    .row-data-header th > table {
-        border: none;
-        margin: 0;
-    }
-    .row-data-header th > table th,
-    .row-data-header th > table td {
-        border-left: 1px solid var(--color-black);
-        border-top: 0;
-        border-bottom: 0;
-        border-right: 0;
-    }
-    .row-data-header th > table th:first-child { border-left: 0; }
-    .row-total td {
-        font-size: 15px;
-        font-weight: bold;
-        background-color: var(--color-bg-subtle);
-        text-align: right;
-        padding: 12px;
-    }
-    .row-total .label {
-        text-align: right;
-        width: 50%;
-    }
-    .row-total .value {
-        text-align: left;
-        width: 50%;
-    }
-    .row-sign td {
-        padding: 40px 12px 12px;
+    .wage-slip .slip-total .amount {
+        color: #c0392b;
         font-size: 14px;
-        text-align: left;
     }
-    .row-sign .sign-line {
+    .wage-slip .slip-cn td {
+        border: 1px solid #666;
+        border-top: none;
+        font-size: 11px;
+        color: #333;
+        padding: 4px 10px;
+        background: #fafafa;
+    }
+    .wage-slip .slip-sign td {
+        border: 1px solid #666;
+        border-top: 1.5px solid #333;
+        font-size: 12px;
+        padding: 14px 10px 16px 10px;
+        color: #111;
+    }
+    .wage-slip .slip-sign .sign-line {
         display: inline-block;
-        min-width: 200px;
-        border-bottom: 1px solid var(--color-black);
-        margin-left: 8px;
+        min-width: 90px;
+        border-bottom: 1px solid #333;
+        margin: 0 6px;
     }
-    .row-empty td {
-        padding: 0;
-        border-left: 0;
-        border-right: 0;
-        height: 8px;
-        background-color: var(--color-bg-base);
+    .print-toolbar {
+        padding: 12px 16px;
+        background: var(--color-bg-container, #fafafa);
+        border: 1px solid var(--color-border-secondary, #f0f0f0);
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+    .print-toolbar .toolbar-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .print-toolbar .toolbar-label {
+        color: var(--color-text-secondary, #666);
+        font-size: 13px;
+    }
+    .print-toolbar .toolbar-tip {
+        font-size: 12px;
+        color: var(--color-text-tertiary, #999);
+        margin-top: 6px;
+    }
+    .wage-slip-preview {
+        background: #fff;
+        padding: 16px;
+        border: 1px solid var(--color-border-secondary, #f0f0f0);
+        border-radius: 8px;
+        min-height: 200px;
+        max-height: 60vh;
+        overflow: auto;
     }
     @media print {
-        body { -webkit-print-color-adjust: exact; padding: 0; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; }
         @page { margin: 10mm; }
     }
 `;
@@ -154,194 +296,272 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
     const { user } = useUser();
 
     React.useEffect(() => {
-        if (visible && workerData.length > 0) {
+        if (visible) {
             setSelectedWorkerNames(workerData.map(w => w.operatorName));
         }
     }, [visible, workerData]);
 
+    if (!visible) return null;
+
+    const allWorkerNames = workerData.map(w => w.operatorName);
+    const allSelected = selectedWorkerNames.length === allWorkerNames.length && allWorkerNames.length > 0;
+
+    const companyName = user?.nickname
+        ? `${user.nickname}`
+        : '东方制衣厂';
+
+    const periodText = (dateRange && dateRange[0] && dateRange[0] !== '-' && dateRange[1] && dateRange[1] !== '-')
+        ? `${dateRange[0]} 至 ${dateRange[1]}`
+        : '全部记录';
+
+    const printTimeText = (() => {
+        const now = new Date();
+        const p = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
+    })();
+
     const handlePrint = async () => {
-        if (!printRef.current) return;
+        if (selectedWorkerNames.length === 0) {
+            message.warning('请至少选择一位员工');
+            return;
+        }
         setPrintLoading(true);
         try {
-        const printContent = printRef.current.innerHTML;
-        const htmlContent = `
-            <html>
-                <head>
-                    <title>工资条打印</title>
-                    <style>${PRINT_STYLES}</style>
-                </head>
-                <body>
-                    ${printContent}
-                </body>
-            </html>
-        `;
-        safePrint(htmlContent);
-        } finally { setPrintLoading(false); }
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (!printWindow) {
+                message.error('无法打开打印窗口，请允许弹出窗口');
+                return;
+            }
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>员工计件工资条</title>
+                        <style>${PRINT_STYLES}</style>
+                    </head>
+                    <body>
+                        ${(printRef.current?.innerHTML) || ''}
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+            }, 300);
+        } finally {
+            setPrintLoading(false);
+        }
     };
 
-    const handleWorkerCheck = (name: string, checked: boolean) => {
-        setSelectedWorkerNames(prev =>
-            checked ? [...prev, name] : prev.filter(n => n !== name)
+    /** 明细版工资条（单表结构） */
+    const renderDetailSlip = (worker: WageSlipData) => {
+        const rows = worker.details || [];
+        return (
+            <div className="wage-slip" key={`detail-${worker.operatorName}`}>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td className="slip-title" colSpan={8}>{companyName} · 员工计件工资条</td>
+                        </tr>
+                        <tr className="slip-info">
+                            <td colSpan={3}>
+                                <span className="info-label">姓&nbsp;名：</span>
+                                <span className="info-value">{worker.operatorName}</span>
+                            </td>
+                            <td colSpan={3}>
+                                <span className="info-label">结算周期：</span>
+                                <span className="info-value">{periodText}</span>
+                            </td>
+                            <td colSpan={2}>
+                                <span className="info-label">打印时间：</span>
+                                <span className="info-value">{printTimeText}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th className="col-head" style={{ width: '5%' }}>序号</th>
+                            <th className="col-head" style={{ width: '20%' }}>订单号</th>
+                            <th className="col-head" style={{ width: '13%' }}>款号</th>
+                            <th className="col-head" style={{ width: '14%' }}>工序</th>
+                            <th className="col-head" style={{ width: '12%' }}>完成日期</th>
+                            <th className="col-head" style={{ width: '9%' }}>数量</th>
+                            <th className="col-head" style={{ width: '12%' }}>单价(元)</th>
+                            <th className="col-head" style={{ width: '15%' }}>金额(元)</th>
+                        </tr>
+                        {rows.length === 0 ? (
+                            <tr><td className="cell center" colSpan={8} style={{ padding: '16px 0', color: '#999' }}>暂无计件记录</td></tr>
+                        ) : rows.map((d, idx) => (
+                            <tr key={d.key || idx} className={idx % 2 === 0 ? 'odd' : ''}>
+                                <td className="cell center">{idx + 1}</td>
+                                <td className="cell">{d.orderNo || '-'}</td>
+                                <td className="cell">{d.styleNo || '-'}</td>
+                                <td className="cell">{d.processName || '-'}</td>
+                                <td className="cell center">{formatDate(d.endTime)}</td>
+                                <td className="cell num">{formatQty(d.quantity)}</td>
+                                <td className="cell num">{formatMoney(d.unitPrice)}</td>
+                                <td className="cell num">{formatMoney(d.totalAmount)}</td>
+                            </tr>
+                        ))}
+                        <tr className="slip-total">
+                            <td colSpan={5}>
+                                合计件数：<span className="amount">{formatQty(worker.totalQuantity)}</span> 件
+                                <span style={{ marginLeft: 16 }}>共 <span className="amount">{rows.length}</span> 条计件记录</span>
+                            </td>
+                            <td colSpan={3}>
+                                应发总计：<span className="amount">¥{formatMoney(worker.totalAmount)}</span>
+                            </td>
+                        </tr>
+                        <tr className="slip-cn">
+                            <td colSpan={8}>人民币大写：{toChineseAmount(worker.totalAmount)}</td>
+                        </tr>
+                        <tr className="slip-sign">
+                            <td colSpan={4}>核算人：<span className="sign-line">&nbsp;</span></td>
+                            <td colSpan={4}>员工签字：<span className="sign-line">&nbsp;</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         );
     };
 
-    const handleSelectAll = (checked: boolean) => {
-        setSelectedWorkerNames(checked ? workerData.map(w => w.operatorName) : []);
+    /** 简版工资条：按订单号+款号汇总 */
+    const renderSimpleSlip = (worker: WageSlipData) => {
+        const grouped = groupDetails(worker.details || []);
+        return (
+            <div className="wage-slip" key={`simple-${worker.operatorName}`}>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td className="slip-title" colSpan={5}>{companyName} · 员工计件工资条（汇总）</td>
+                        </tr>
+                        <tr className="slip-info">
+                            <td colSpan={2}>
+                                <span className="info-label">姓&nbsp;名：</span>
+                                <span className="info-value">{worker.operatorName}</span>
+                            </td>
+                            <td colSpan={2}>
+                                <span className="info-label">结算周期：</span>
+                                <span className="info-value">{periodText}</span>
+                            </td>
+                            <td>
+                                <span className="info-label">打印：</span>
+                                <span className="info-value">{printTimeText}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th className="col-head" style={{ width: '6%' }}>序号</th>
+                            <th className="col-head" style={{ width: '34%' }}>订单号</th>
+                            <th className="col-head" style={{ width: '24%' }}>款号</th>
+                            <th className="col-head" style={{ width: '16%' }}>完成件数</th>
+                            <th className="col-head" style={{ width: '20%' }}>金额(元)</th>
+                        </tr>
+                        {grouped.length === 0 ? (
+                            <tr><td className="cell center" colSpan={5} style={{ padding: '16px 0', color: '#999' }}>暂无计件记录</td></tr>
+                        ) : grouped.map((g, idx) => (
+                            <tr key={`${g.orderNo}-${g.styleNo}-${idx}`} className={idx % 2 === 0 ? 'odd' : ''}>
+                                <td className="cell center">{idx + 1}</td>
+                                <td className="cell">{g.orderNo}</td>
+                                <td className="cell">{g.styleNo}</td>
+                                <td className="cell num">{formatQty(g.qty)}</td>
+                                <td className="cell num">{formatMoney(g.amount)}</td>
+                            </tr>
+                        ))}
+                        <tr className="slip-total">
+                            <td colSpan={3}>合计件数：<span className="amount">{formatQty(worker.totalQuantity)}</span> 件</td>
+                            <td colSpan={2}>应发总计：<span className="amount">¥{formatMoney(worker.totalAmount)}</span></td>
+                        </tr>
+                        <tr className="slip-cn">
+                            <td colSpan={5}>人民币大写：{toChineseAmount(worker.totalAmount)}</td>
+                        </tr>
+                        <tr className="slip-sign">
+                            <td colSpan={5}>
+                                <span style={{ marginRight: 24 }}>核算人：<span className="sign-line">&nbsp;</span></span>
+                                员工签字：<span className="sign-line">&nbsp;</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        );
     };
 
     const selectedWorkers = workerData.filter(w => selectedWorkerNames.includes(w.operatorName));
 
-    const renderDetailTable = (details: any[]) => (
-        <table className="data-table">
-            <thead>
-                <tr>
-                    <th>序号</th>
-                    <th>订单号</th>
-                    <th>款号</th>
-                    <th>工序</th>
-                    <th>完成时间</th>
-                    <th>数量</th>
-                    <th>单价(元)</th>
-                    <th>金额(元)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {details.map((detail, idx) => (
-                    <tr key={idx}>
-                        <td>{idx + 1}</td>
-                        <td>{detail.orderNo || '-'}</td>
-                        <td>{detail.styleNo || '-'}</td>
-                        <td>{detail.processName || '-'}</td>
-                        <td>{detail.endTime ? dayjs(detail.endTime).format('MM-DD') : '-'}</td>
-                        <td>{detail.quantity || 0}</td>
-                        <td>{detail.unitPrice ? Number(detail.unitPrice).toFixed(2) : '0.00'}</td>
-                        <td>{detail.totalAmount ? Number(detail.totalAmount).toFixed(2) : '0.00'}</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    );
-
-    const renderSimpleTable = (details: any[]) => {
-        const uniqueOrderNos = new Set(details.map(d => d.orderNo).filter(Boolean));
-        const uniqueStyleNos = new Set(details.map(d => d.styleNo).filter(Boolean));
-        const totalQty = details.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
-        const totalAmt = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
-        return (
-            <table className="data-table">
-                <thead>
-                    <tr>
-                        <th>序号总数</th>
-                        <th>订单号数</th>
-                        <th>款式总数</th>
-                        <th>总数量</th>
-                        <th>总金额(元)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{details.length}</td>
-                        <td>{uniqueOrderNos.size}</td>
-                        <td>{uniqueStyleNos.size}</td>
-                        <td>{totalQty}</td>
-                        <td>{totalAmt.toFixed(2)}</td>
-                    </tr>
-                </tbody>
-            </table>
-        );
-    };
-
     return (
-        <ResizableModal
-            title="打印工资条"
+        <Modal
+            title="打印员工计件工资条"
             open={visible}
             onCancel={onClose}
-            width="85vw"
+            width={1000}
+            destroyOnClose
             footer={[
-                <Button key="cancel" onClick={onClose}>取消</Button>,
-                <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => void handlePrint()} loading={printLoading} disabled={selectedWorkerNames.length === 0}>
-                    打印 ({selectedWorkerNames.length} 人)
-                </Button>
+                <Button key="cancel" onClick={onClose}>关 闭</Button>,
+                <Button key="print" type="primary" icon={<PrinterOutlined />} loading={printLoading} onClick={handlePrint}>
+                    打 印
+                </Button>,
             ]}
         >
-            <div style={{ marginBottom: 16 }}>
-                <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <span style={{ fontWeight: 500 }}>打印版本：</span>
-                    <Radio.Group value={printVersion} onChange={e => setPrintVersion(e.target.value)}>
-                        <Radio.Button value="simple">简版</Radio.Button>
-                        <Radio.Button value="detail">明细版</Radio.Button>
-                    </Radio.Group>
-                    <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
-                        {printVersion === 'simple' ? '仅含订单号、订单数量、总价格' : '含完整工序结算明细'}
-                    </span>
-                </div>
-                {workerData.length > 1 && (
-                    <div style={{ marginBottom: 8 }}>
+            <style>{PRINT_STYLES}</style>
+
+            {/* 打印设置工具栏 */}
+            <div className="print-toolbar">
+                <div className="toolbar-row">
+                    <span className="toolbar-label">打印版本：</span>
+                    <Radio.Group
+                        size="small"
+                        optionType="button"
+                        buttonStyle="solid"
+                        value={printVersion}
+                        onChange={e => setPrintVersion(e.target.value)}
+                        options={[
+                            { label: '简版（订单汇总）', value: 'simple' },
+                            { label: '明细版（工序明细）', value: 'detail' },
+                        ]}
+                    />
+                    <Divider type="vertical" />
+                    <span className="toolbar-label">打印人员（{selectedWorkerNames.length}/{allWorkerNames.length} 人）：</span>
+                    {allWorkerNames.length > 1 && (
                         <Checkbox
-                            checked={selectedWorkerNames.length === workerData.length}
-                            indeterminate={selectedWorkerNames.length > 0 && selectedWorkerNames.length < workerData.length}
-                            onChange={e => handleSelectAll(e.target.checked)}
+                            checked={allSelected}
+                            indeterminate={selectedWorkerNames.length > 0 && !allSelected}
+                            onChange={e => setSelectedWorkerNames(e.target.checked ? [...allWorkerNames] : [])}
                         >
-                            全选 ({workerData.length} 人)
+                            全选
                         </Checkbox>
-                    </div>
-                )}
-                {workerData.length > 1 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                        {workerData.map(worker => (
-                            <Checkbox
-                                key={worker.operatorName}
-                                checked={selectedWorkerNames.includes(worker.operatorName)}
-                                onChange={e => handleWorkerCheck(worker.operatorName, e.target.checked)}
-                            >
-                                {worker.operatorName}
-                            </Checkbox>
-                        ))}
-                    </div>
-                )}
+                    )}
+                    {allWorkerNames.map(name => (
+                        <Checkbox
+                            key={name}
+                            checked={selectedWorkerNames.includes(name)}
+                            onChange={e => {
+                                setSelectedWorkerNames(prev =>
+                                    e.target.checked ? [...prev, name] : prev.filter(n => n !== name)
+                                );
+                            }}
+                        >
+                            {name}
+                        </Checkbox>
+                    ))}
+                </div>
+                <div className="toolbar-tip">
+                    {printVersion === 'simple'
+                        ? '简版：按「订单号 + 款号」汇总计件数量与金额，一单一行，适合快速核对与张贴公示'
+                        : '明细版：列出每一笔计件记录（订单、款号、工序、数量、单价、金额），适合与员工逐条对账'}
+                </div>
             </div>
-            <div ref={printRef} style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: 10 }}>
-                {selectedWorkers.map((worker) => (
-                    <div key={worker.operatorName} className="slip-container">
-                        <table className="slip-table">
-                            <tbody>
-                                <tr className="row-title">
-                                    <th colSpan={6}>
-                                        {user?.tenantName ? `${user.tenantName} - ` : ''}员工计件工资条{printVersion === 'simple' ? '（简版）' : ''}
-                                    </th>
-                                </tr>
-                                <tr className="row-info">
-                                    <td className="label">姓名</td>
-                                    <td className="value">{worker.operatorName}</td>
-                                    <td className="label">结算周期</td>
-                                    <td className="value-mid">{dateRange[0]} 至 {dateRange[1]}</td>
-                                    <td className="label">打印时间</td>
-                                    <td className="value-mid">{dayjs().format('YYYY-MM-DD HH:mm')}</td>
-                                </tr>
-                                <tr className="row-data-header">
-                                    <th colSpan={6}>
-                                        {printVersion === 'detail' ? renderDetailTable(worker.details) : renderSimpleTable(worker.details)}
-                                    </th>
-                                </tr>
-                                <tr className="row-total">
-                                    <td className="label">合计总件数</td>
-                                    <td className="value">{worker.totalQuantity} 件</td>
-                                    <td className="label">应发总计</td>
-                                    <td className="value" colSpan={3}>{formatMoney(worker.totalAmount)}</td>
-                                </tr>
-                                <tr className="row-sign">
-                                    <td colSpan={3}>核算人：<span className="sign-line">&nbsp;</span></td>
-                                    <td colSpan={3}>员工签字：<span className="sign-line">&nbsp;</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                ))}
-                {selectedWorkers.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>请先选择需要打印的人员</div>
-                )}
+
+            {/* 打印预览（所见即所得） */}
+            <div className="wage-slip-preview">
+                <div ref={printRef} className="wage-slip-print-area">
+                    {selectedWorkers.length === 0 ? (
+                        <div style={{ textAlign: 'center', color: '#999', padding: '48px 0' }}>请选择需要打印的员工</div>
+                    ) : (
+                        selectedWorkers.map(worker =>
+                            printVersion === 'simple' ? renderSimpleSlip(worker) : renderDetailSlip(worker)
+                        )
+                    )}
+                </div>
             </div>
-        </ResizableModal>
+        </Modal>
     );
 };
 

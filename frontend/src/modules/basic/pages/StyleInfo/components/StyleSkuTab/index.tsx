@@ -27,7 +27,6 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     isManual,
     canEdit,
     canEditAttrs,
-    hasChanges,
     addMenuItems,
     setSkcValue,
     setSkcEditing,
@@ -55,29 +54,26 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           <span style={{ fontWeight: 500, fontSize: 14 }}>编码模式：</span>
           <Switch checked={isManual} onChange={handleModeToggle} checkedChildren="手动编辑" unCheckedChildren="自动生成" />
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))' }}>
-            {isManual ? '可自由编辑商品编码、颜色、尺码等信息' : '商品编码按「款号+颜色+尺码」自动生成'}
+            {isManual ? '编码由您手动维护：点「编辑」后可改编码/颜色/尺码' : '商品编码按「款号+颜色+尺码」自动生成'}
           </span>
           <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>商品编码字面前缀：</span>
           <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加前缀" unCheckedChildren="不加" />
         </Space>
 
         <Space>
-          {isManual && !isEditing && (
+          {/* 统一编辑入口：任何模式都必须先点「编辑」才能修改表格内容 */}
+          {!isEditing && (
             <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)}>
               编辑
             </Button>
           )}
-          {/* 自动生成模式下填写了备注/69码/价格等属性 → 出现保存按钮，无需切手动编辑 */}
-          {!isManual && hasChanges && (
-            <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
-              保存修改
-            </Button>
-          )}
-          {isManual && isEditing && (
+          {isEditing && (
             <>
-              <Dropdown menu={{ items: addMenuItems }} trigger={['hover']}>
-                <Button icon={<PlusOutlined />}>新增编码</Button>
-              </Dropdown>
+              {isManual && (
+                <Dropdown menu={{ items: addMenuItems }} trigger={['hover']}>
+                  <Button icon={<PlusOutlined />}>新增编码</Button>
+                </Dropdown>
+              )}
               <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
                 保存
               </Button>
@@ -117,7 +113,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           ) : (
             <>
               <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 500 }}>{skcValue || initialSkc || '-'}</span>
-              <Tooltip title="SKC = 款式+颜色的编号，用于关联生产订单；如需修改下方表格中的商品编码，请将编码模式切换为「手动编辑」">
+              <Tooltip title="SKC = 款式+颜色的编号，用于关联生产订单；如需修改下方表格中的商品编码，请先将编码模式切换为「手动编辑」，再点击右上角「编辑」">
                 <Button type="link" onClick={() => setSkcEditing(true)}>修改SKC编号</Button>
               </Tooltip>
             </>

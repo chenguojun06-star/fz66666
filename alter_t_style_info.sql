@@ -62,3 +62,7 @@ SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- End of script
+
+-- 2026-08-16 商品类型值标准化（与 Flyway V202708161000 一致，生产手工执行用）
+UPDATE t_style_info SET product_type = '成品' WHERE product_type = 'FINISHED';
+UPDATE t_style_info SET product_type = '半成品' WHERE product_type = 'SEMI_FINISHED';

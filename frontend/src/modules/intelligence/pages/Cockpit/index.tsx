@@ -95,7 +95,7 @@ const CockpitPage: React.FC = () => {
               {!hasPlacedWidgets && (
                 <div className="cockpit-stage-empty">
                   <div className="cockpit-stage-empty-title">把左侧模块拖进来</div>
-                  <div className="cockpit-stage-empty-desc">支持业务概览、下单管理、样衣开发、大货生产、物料采购、成品仓库等多个模块，可自由摆放</div>
+                  <div className="cockpit-stage-empty-desc">支持业务概览、商品下单、样衣开发、大货生产、物料采购、成品仓库等多个模块，可自由摆放</div>
                 </div>
               )}
 

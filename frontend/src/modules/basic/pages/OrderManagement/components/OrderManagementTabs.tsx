@@ -44,7 +44,7 @@ const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
     <Tabs defaultActiveKey="list" items={[
       {
         key: 'list',
-        label: '下单管理',
+        label: '商品下单',
         children: (
           <>
             <OrderRankingDashboard onOrderClick={openCreate} />

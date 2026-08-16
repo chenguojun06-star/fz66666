@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/utils/api';
+import { subscribeDataUpdated } from '@/utils/dataEvents';
 
 export interface DictOption {
   label: string;
@@ -31,7 +32,7 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
     };
   }, []);
 
-  useEffect(() => {
+  const load = () => {
     if (!dictType) return;
     const requestId = ++requestIdRef.current;
     setLoading(true);
@@ -65,6 +66,14 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
           setLoading(false);
         }
       });
+  };
+
+  useEffect(() => {
+    load();
+    // 词条被本页快捷维护（DictQuickManageModal）后自动重拉
+    const unsubscribe = subscribeDataUpdated(`dict:${dictType}`, load);
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dictType]);
 
   return { options, loading, error };

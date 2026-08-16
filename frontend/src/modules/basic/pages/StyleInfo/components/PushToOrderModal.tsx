@@ -24,7 +24,7 @@ const PushToOrderModal: React.FC<PushToOrderModalProps> = ({
 }) => {
   return (
     <ResizableModal
-      title="推送到下单管理"
+      title="推送到商品下单"
       open={open}
       onOk={onOk}
       onCancel={() => {

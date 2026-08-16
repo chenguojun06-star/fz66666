@@ -242,8 +242,8 @@ export const useStyleSkuTabData = ({
 
   const isManual = skuMode === 'MANUAL';
   const canEdit = isEditing && isManual;
-  // 属性级编辑（备注/69码/价格）：自动生成模式下也允许直接填写，无需切手动编辑
-  const canEditAttrs = true;
+  // 属性级编辑（备注/69码/价格）：点击「编辑」进入编辑态即可填写，无需切手动模式；未点编辑时全部只读
+  const canEditAttrs = isEditing;
 
   return {
     // state

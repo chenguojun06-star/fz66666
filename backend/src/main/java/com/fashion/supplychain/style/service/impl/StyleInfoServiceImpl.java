@@ -97,7 +97,16 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 .lt(onlyDelayed, StyleInfo::getDeliveryDate, java.time.LocalDateTime.now())
                 .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1);
 
-        applyStatusFilter(wrapper, excludeScrapped);
+        // statusFilter（可选）：
+        //   DISABLED → 只查已停用款式（下单管理"已停用"筛选）
+        //   ALL      → 不加状态过滤（下单管理"全部"筛选，含启用/停用/报废）
+        //   不传      → 默认口径（启用 + 报废，excludeScrapped 决定是否含报废）
+        String statusFilter = params.get("statusFilter") == null ? "" : String.valueOf(params.get("statusFilter")).trim().toUpperCase();
+        if (STYLE_STATUS_DISABLED.equals(statusFilter)) {
+            wrapper.eq(StyleInfo::getStatus, STYLE_STATUS_DISABLED);
+        } else if (!"ALL".equals(statusFilter)) {
+            applyStatusFilter(wrapper, excludeScrapped);
+        }
         applyExcludePushedToOrder(wrapper, params);
         applyProgressNodeFilter(wrapper, progressNode);
 
@@ -409,5 +418,38 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         style.setUpdateTime(java.time.LocalDateTime.now());
         // 直接用 MyBatis-Plus updateById，只更新这一行，不走 saveOrUpdateStyle
         this.updateById(style);
+    }
+
+    /**
+     * 款式停用/启用：停用后不可下单（getValidatedForOrderCreate 会拦截非 ENABLED 款式）
+     * 仅允许 ENABLED <-> DISABLED 切换；已报废（SCRAPPED）款式不可启停
+     */
+    @Override
+    public void updateStyleStatus(Long id, String status) {
+        String normalized = status == null ? "" : status.trim().toUpperCase();
+        if (!STYLE_STATUS_ENABLED.equals(normalized) && !STYLE_STATUS_DISABLED.equals(normalized)) {
+            throw new IllegalArgumentException("非法的款式状态: " + status + "（仅支持 ENABLED / DISABLED）");
+        }
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
+        StyleInfo style = this.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
+                .one();
+        if (style == null) {
+            throw new NoSuchElementException("款式不存在或无权访问: " + id);
+        }
+        String current = style.getStatus() == null ? "" : style.getStatus().trim().toUpperCase();
+        if (STYLE_STATUS_SCRAPPED.equals(current)) {
+            throw new IllegalStateException("已报废款式不支持停用/启用操作");
+        }
+        if (normalized.equals(current)) {
+            return; // 幂等：状态未变化直接成功
+        }
+        StyleInfo patch = new StyleInfo();
+        patch.setId(id);
+        patch.setStatus(normalized);
+        patch.setUpdateTime(java.time.LocalDateTime.now());
+        this.updateById(patch);
     }
 }

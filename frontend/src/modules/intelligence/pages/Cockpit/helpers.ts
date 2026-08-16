@@ -52,7 +52,7 @@ export const loadWidgetState = (): WidgetState => {
 // 模块标题映射
 export const MODULE_TITLES: Record<WidgetKey, string> = {
   overview: '业务概览',
-  order: '下单管理',
+  order: '商品下单',
   sample: '样衣开发',
   production: '大货生产',
   procurement: '物料采购',

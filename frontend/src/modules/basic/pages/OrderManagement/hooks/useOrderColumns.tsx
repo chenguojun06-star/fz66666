@@ -14,9 +14,11 @@ interface UseOrderColumnsParams {
   setPrintingRecord: (r: StyleInfo) => void;
   setRemarkStyleNo: (v: string) => void;
   setRemarkModalOpen: (v: boolean) => void;
+  /** 款式停用/启用（带确认弹窗） */
+  handleToggleStatus: (record: StyleInfo) => void;
 }
 
-export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen }: UseOrderColumnsParams) {
+export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus }: UseOrderColumnsParams) {
   const { extColumns } = useExtColumns<StyleInfo>({ bizType: 'style', platform: 'pc' });
 
   const baseColumns = useMemo(() => [
@@ -69,6 +71,17 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       render: (_: unknown, record: StyleInfo) => {
         const source = getStyleSourceMeta(record);
         return <Tag color={source.color}>{source.label}</Tag>;
+      },
+    },
+    {
+      title: '状态',
+      key: 'statusTag',
+      width: 80,
+      render: (_: unknown, record: StyleInfo) => {
+        const s = String((record as Record<string, unknown>)?.status || 'ENABLED').toUpperCase();
+        if (s === 'DISABLED') return <Tag color="red">已停用</Tag>;
+        if (s === 'SCRAPPED') return <Tag color="orange">已报废</Tag>;
+        return <Tag color="success">启用中</Tag>;
       },
     },
     {
@@ -145,6 +158,14 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
               },
             },
             {
+              key: 'toggleStatus',
+              label: String((record as Record<string, unknown>)?.status || 'ENABLED').toUpperCase() === 'DISABLED' ? '启用' : '停用',
+              title: String((record as Record<string, unknown>)?.status || 'ENABLED').toUpperCase() === 'DISABLED'
+                ? '重新启用该款式（启用后可下单）'
+                : '停用该款式（停用后无法下单）',
+              onClick: () => handleToggleStatus(record),
+            },
+            {
               key: 'create',
               label: '下单',
               title: '下单',
@@ -155,7 +176,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
         />
       )
     }
-  ], [openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen]);
+  ], [openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus]);
 
   const columns = useMemo(() => {
     const actionColIndex = baseColumns.findIndex(c => c.key === 'action');

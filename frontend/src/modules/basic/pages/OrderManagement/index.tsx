@@ -5,6 +5,7 @@ import PageLayout from '@/components/common/PageLayout';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { readPageSize } from '@/utils/pageSizeStore';
+import api from '@/utils/api';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
@@ -231,7 +232,38 @@ const OrderManagement: React.FC = () => {
     customFields: orderCustomFields,
   });
 
-  const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen });
+  // ===== 款式停用/启用 =====
+  const handleToggleStatus = (record: StyleInfo) => {
+    const currentStatus = String((record as Record<string, unknown>)?.status || 'ENABLED').toUpperCase();
+    const isDisabled = currentStatus === 'DISABLED';
+    const nextStatus = isDisabled ? 'ENABLED' : 'DISABLED';
+    modal.confirm({
+      title: isDisabled ? `启用款式 ${record.styleNo}？` : `停用款式 ${record.styleNo}？`,
+      content: isDisabled
+        ? '启用后该款式恢复可正常下单。'
+        : '停用后该款式将无法下单（已有订单不受影响），列表默认不再显示，可在状态筛选"已停用"中查看。',
+      okText: isDisabled ? '启用' : '停用',
+      okButtonProps: isDisabled ? undefined : { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await api.put(`/style/info/${(record as Record<string, unknown>).id}/status`, null, {
+            params: { status: nextStatus },
+          });
+          if (res.code === 200) {
+            message.success(res.message || (isDisabled ? '已启用' : '已停用'));
+            fetchStyles();
+          } else {
+            message.error(res.message || '操作失败');
+          }
+        } catch (e) {
+          message.error(e instanceof Error ? e.message : '操作失败');
+        }
+      },
+    });
+  };
+
+  const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus });
 
   // ===== 统计卡片配置 =====
   const { cards, hints, onClearHints } = useStatCardsConfig({
@@ -250,7 +282,7 @@ const OrderManagement: React.FC = () => {
   return (
     <>
       <PageLayout
-        title="下单管理"
+        title="商品下单"
         headerContent={
           <OrderManagementHeader
             showSmartErrorNotice={showSmartErrorNotice}

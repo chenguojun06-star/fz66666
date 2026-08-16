@@ -403,6 +403,14 @@ public class StyleInfoOrchestrator {
         }
     }
 
+    /**
+     * 款式停用/启用（委托 StyleInfoService，带租户校验与状态校验）
+     * status 仅支持 ENABLED / DISABLED；已报废款式不可启停
+     */
+    public void updateStyleStatus(Long id, String status) {
+        styleInfoService.updateStyleStatus(id, status);
+    }
+
     private void syncColorImagesFromMatrixRows(Long styleId, Object matrixRowsObj) {
         if (styleId == null || matrixRowsObj == null) {
             return;

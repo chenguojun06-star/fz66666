@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Space } from 'antd';
+import { Button, Card, Select, Space } from 'antd';
 import { AppstoreOutlined, SettingOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -43,18 +43,37 @@ const OrderListContent: React.FC<Props> = ({
       <Card className="filter-card mb-sm">
         <StandardToolbar
           left={(
-            <StandardSearchBar
-              searchValue={String(queryParams.keyword || '')}
-              onSearchChange={(value) =>
-                setQueryParams((prev) => ({
-                  ...prev, page: 1, keyword: value,
-                  styleNo: undefined, styleName: undefined, category: undefined,
-                }))
-              }
-              searchPlaceholder="搜索款号/款名/品类"
-              showDate={false}
-              showStatus={false}
-            />
+            <Space size={8}>
+              <StandardSearchBar
+                searchValue={String(queryParams.keyword || '')}
+                onSearchChange={(value) =>
+                  setQueryParams((prev) => ({
+                    ...prev, page: 1, keyword: value,
+                    styleNo: undefined, styleName: undefined, category: undefined,
+                  }))
+                }
+                searchPlaceholder="搜索款号/款名/品类"
+                showDate={false}
+                showStatus={false}
+              />
+              {/* 款式状态筛选：启用中（默认）/ 已停用 / 全部 */}
+              <Select
+                value={queryParams.statusFilter ?? 'DEFAULT'}
+                onChange={(v) =>
+                  setQueryParams((prev) => ({
+                    ...prev,
+                    page: 1,
+                    statusFilter: v === 'DEFAULT' ? undefined : (v as 'DISABLED' | 'ALL'),
+                  }))
+                }
+                style={{ width: 104 }}
+                options={[
+                  { value: 'DEFAULT', label: '启用中' },
+                  { value: 'DISABLED', label: '已停用' },
+                  { value: 'ALL', label: '全部' },
+                ]}
+              />
+            </Space>
           )}
           right={(
             <Space size={12}>

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AutoComplete, AutoCompleteProps, Spin } from 'antd';
+import { AutoComplete, AutoCompleteProps, Spin, Tooltip } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import { useAutoCollectDict } from '@/hooks/useAutoCollectDict';
 import api from '@/utils/api';
+import { subscribeDataUpdated } from '@/utils/dataEvents';
+import DictQuickManageModal from './DictQuickManageModal';
 
 interface DictAutoCompleteProps extends Omit<AutoCompleteProps, 'options'> {
   dictType: string; // 词典类型
@@ -9,6 +12,12 @@ interface DictAutoCompleteProps extends Omit<AutoCompleteProps, 'options'> {
   maxSuggestions?: number; // 最大建议数量，默认 50
   id?: string; // 表单元素 ID，用于 label 的 for 属性
   className?: string; // 自定义样式类
+  /** 输入框内是否显示"维护"齿轮图标（弹窗增/删/改词条），默认 true */
+  enableQuickManage?: boolean;
+  /** 维护弹窗标题，默认取 placeholder，再退化为 dictType */
+  quickManageTitle?: string;
+  /** 内置兜底选项：字典接口无数据时使用（如商品类型 FINISHED/SEMI_FINISHED） */
+  fallbackOptions?: string[];
 }
 
 interface DictOption {
@@ -36,12 +45,16 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
   onFocus,
   id,
   className,
+  enableQuickManage = true,
+  quickManageTitle,
+  fallbackOptions,
   ...restProps
 }) => {
   const [allItems, setAllItems] = useState<DictOption[]>([]);
   const [options, setOptions] = useState<{ value: string; label?: React.ReactNode }[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const loadedRef = useRef(false);
 
   // 自动收录功能
@@ -67,18 +80,25 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
         .filter((item: any) => item.dictLabel)
         .sort((a: any, b: any) => (a.sort || 0) - (b.sort || 0))
         .map((item: any) => ({ value: item.dictLabel, label: item.dictLabel, sort: item.sort }));
-      setAllItems(items);
+      // 字典接口无数据时用内置兜底选项（保证基础选项始终可选）
+      setAllItems(items.length > 0 ? items : (fallbackOptions || []).map((v) => ({ value: v, label: v })));
       loadedRef.current = true;
     } catch {
-      setAllItems([]);
+      setAllItems((fallbackOptions || []).map((v) => ({ value: v, label: v })));
     } finally {
       setLoading(false);
     }
-  }, [dictType, maxSuggestions]);
+  }, [dictType, fallbackOptions]);
 
   useEffect(() => {
     loadAllItems();
   }, [loadAllItems]);
+
+  // 字典词条在本页被快捷维护（DictQuickManageModal 增删改名）后即时刷新
+  useEffect(() => subscribeDataUpdated(`dict:${dictType}`, () => {
+    loadedRef.current = false;
+    loadAllItems();
+  }), [dictType, loadAllItems]);
 
   // 构建 AutoComplete 的 options
   // 注意：options 的 label 只能是纯字符串，不能是 JSX 元素。
@@ -123,24 +143,54 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
     onChange?.(val, { value: val, label: val });
   };
 
+  // "维护"齿轮：仅启用且未禁用时显示；外部显式传入的 suffix 优先
+  const { suffix: externalSuffix, disabled, placeholder, ...passProps } = restProps;
+  const manageTitle =
+    quickManageTitle ?? (typeof placeholder === 'string' && placeholder ? placeholder : dictType);
+  const manageSuffix =
+    enableQuickManage && !disabled && !externalSuffix ? (
+      <Tooltip title={`维护${manageTitle}选项（新增 / 删除 / 改名）`}>
+        <SettingOutlined
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+            setManageOpen(true);
+          }}
+          style={{ color: 'rgba(0, 0, 0, 0.45)', cursor: 'pointer' }}
+        />
+      </Tooltip>
+    ) : undefined;
+
   return (
-    <AutoComplete
-      id={id}
-      className={className}
-      value={value}
-      open={open}
-      onOpenChange={setOpen}
-      options={open ? options : []}
-      onChange={onChange}
-      onSearch={handleSearch}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onSelect={handleSelect}
-      placeholder={restProps.placeholder || `请选择或输入...`}
-      filterOption={false}
-      notFoundContent={loading ? <Spin /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
-      {...restProps}
-    />
+    <>
+      <AutoComplete
+        id={id}
+        className={className}
+        value={value}
+        open={open}
+        onOpenChange={setOpen}
+        options={open ? options : []}
+        onChange={onChange}
+        onSearch={handleSearch}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onSelect={handleSelect}
+        placeholder={placeholder || `请选择或输入...`}
+        filterOption={false}
+        notFoundContent={loading ? <Spin /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
+        suffix={manageSuffix ?? externalSuffix}
+        {...passProps}
+      />
+      {manageSuffix ? (
+        <DictQuickManageModal
+          open={manageOpen}
+          dictType={dictType}
+          title={manageTitle}
+          onClose={() => setManageOpen(false)}
+        />
+      ) : null}
+    </>
   );
 };
 

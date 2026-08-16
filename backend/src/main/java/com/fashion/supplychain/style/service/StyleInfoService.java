@@ -39,4 +39,10 @@ public interface StyleInfoService extends IService<StyleInfo> {
      */
     void updateSizeColorConfigOnly(Long styleId, String sizeColorConfig);
 
+    /**
+     * 款式停用/启用（status: ENABLED | DISABLED）
+     * 停用后不可下单；已报废款式不支持启停
+     */
+    void updateStyleStatus(Long id, String status);
+
 }

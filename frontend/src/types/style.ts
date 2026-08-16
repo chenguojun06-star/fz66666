@@ -281,6 +281,8 @@ export interface StyleQueryParams {
   onlyDelayed?: boolean | number;
   /** 排除报废款（status=ENABLED） */
   excludeScrapped?: boolean | number;
+  /** 款式状态筛选（下单管理）：DISABLED=只看已停用；ALL=全部（含启用/停用/报废）；不传=默认（启用+报废） */
+  statusFilter?: 'DISABLED' | 'ALL';
   pushedToOrderOnly?: boolean | number;
   progressNode?: string;
   page: number;

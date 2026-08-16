@@ -3,6 +3,7 @@ import { AutoComplete, Spin } from 'antd';
 import type { AutoCompleteProps } from 'antd';
 import { customerApi, type Customer } from '@/services/crm/customerApi';
 import { useDebouncedValue } from '@/hooks/usePerformance';
+import { subscribeDataUpdated } from '@/utils/dataEvents';
 
 interface CustomerSelectProps extends Omit<AutoCompleteProps, 'options' | 'onChange'> {
   value?: string;
@@ -56,7 +57,10 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
 
     fetchCustomers();
 
-    return () => { mounted = false; };
+    // 客户主数据在本页被快捷维护（新建客户）后自动重拉
+    const unsubscribe = subscribeDataUpdated('customer', fetchCustomers);
+
+    return () => { mounted = false; unsubscribe(); };
   }, [debouncedSearch]);
 
   useEffect(() => {

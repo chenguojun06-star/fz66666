@@ -89,7 +89,7 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/production/transfer') return '订单转移';
   if (base === '/production/order-flow') return '订单流程';
   if (base === '/basic/maintenance-center') return '资料单价';
-  if (base === '/order-management') return '下单管理';
+  if (base === '/order-management') return '商品下单';
   if (base === '/system/organization') return '组织架构';
   if (base === '/system/partner-management') return '合作企业管理';
   if (base === '/system/orphan-data') return '孤立数据';

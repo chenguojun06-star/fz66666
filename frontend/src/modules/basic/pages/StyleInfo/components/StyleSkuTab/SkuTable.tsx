@@ -142,7 +142,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
     },
     {
       title: (
-        <Tooltip title="编码状态指商品编码的生成方式；价格、条码、备注等字段不受编码模式限制，随时可修改">
+        <Tooltip title="编码状态指商品编码的生成方式；价格、条码、备注等字段不受编码模式限制，点击右上角「编辑」后即可修改">
           编码状态
         </Tooltip>
       ),
@@ -152,7 +152,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
     },
     {
       title: (
-        <Tooltip title="备注就在本表格内直接填写：点击单元格输入文字，修改后点击右上角「保存修改」即可，两种编码模式下都可操作">
+        <Tooltip title="点击右上角「编辑」后在表格内直接填写，完成后点「保存」即可，两种编码模式下都可操作">
           备注
         </Tooltip>
       ),
@@ -199,8 +199,14 @@ const SkuTable: React.FC<SkuTableProps> = ({
       />
 
       <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-quaternary)', lineHeight: 1.8 }}>
-        <div>手动编辑模式：可自由修改商品编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
-        <div>新增编码：鼠标悬停可选择「按款号生成」（自动填充款号前缀）或「手动输入」（手动输入完整编码）</div>
+        {isManual ? (
+          <>
+            <div>手动编辑模式：点击右上角「编辑」后，可修改商品编码、颜色、尺码及价格/条码/备注，保存后系统不会覆盖您的修改</div>
+            {canEdit && <div>新增编码：鼠标悬停「新增编码」可选择「按款号生成」（自动填充款号前缀）或「手动输入」（手动输入完整编码）</div>}
+          </>
+        ) : (
+          <div>自动生成模式：商品编码按「款号+颜色+尺码」自动生成、不可修改；点击右上角「编辑」可填写条码、价格、备注</div>
+        )}
       </div>
     </>
   );

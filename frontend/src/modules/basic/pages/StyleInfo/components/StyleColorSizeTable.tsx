@@ -3,7 +3,7 @@ import { App, Button, InputNumber, Space, Tag, Tooltip } from 'antd';
 import { ArrowDownOutlined, ArrowUpOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
-import { sortBySize } from '@/utils/sizeOrder';
+import { getSizeWeight, sortBySize } from '@/utils/sizeOrder';
 
 interface StyleColorSizeTableProps {
   // 码数状态
@@ -86,6 +86,11 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
   const [quickColorDraft, setQuickColorDraft] = useState('');
   const [quickSizeDraft, setQuickSizeDraft] = useState('');
+  // Tag 拖动排序状态（码数/颜色，拖动后同步重排矩阵列/行）
+  const [dragSizeIndex, setDragSizeIndex] = useState<number | null>(null);
+  const [dragOverSizeIndex, setDragOverSizeIndex] = useState<number | null>(null);
+  const [dragColorIndex, setDragColorIndex] = useState<number | null>(null);
+  const [dragOverColorIndex, setDragOverColorIndex] = useState<number | null>(null);
 
   const selectedSizes = useMemo(
     () => sizeOptions.map((item) => String(item || '').trim()).filter(Boolean),
@@ -159,7 +164,17 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
       setQuickSizeDraft('');
       return;
     }
-    setSizeOptions([...selectedSizes, value]);
+    // 新增码数自动按标准尺码顺序（小→大）插入正确位置：
+    // 落在第一个"更大"的码之前，不打乱用户已拖动/微调过的其他码相对顺序
+    const weight = getSizeWeight(value);
+    const insertAt = selectedSizes.findIndex((item) => getSizeWeight(item) > weight);
+    const next = [...selectedSizes];
+    if (insertAt >= 0) {
+      next.splice(insertAt, 0, value);
+    } else {
+      next.push(value);
+    }
+    setSizeOptions(next);
     setQuickSizeDraft('');
   };
 
@@ -212,6 +227,40 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     message.success('已按码数从小到大排序（未识别的码如 D 码排在最后），保存后商品编码将按此顺序生成');
   };
 
+  // ===== 码数 Tag 拖动排序（拖动后同步重排矩阵数量列） =====
+  const handleSizeDrop = (targetIndex: number) => {
+    if (dragSizeIndex !== null && !editLocked && dragSizeIndex !== targetIndex) {
+      const next = [...selectedSizes];
+      const [moved] = next.splice(dragSizeIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      applySizeOrder(next);
+    }
+    setDragSizeIndex(null);
+    setDragOverSizeIndex(null);
+  };
+
+  // ===== 颜色顺序调整（同步重排矩阵行，避免行数据错位） =====
+  const applyColorOrder = (nextColors: string[]) => {
+    setMatrixRows((prevRows: { color: string; quantities: number[]; imageUrl?: string }[]) =>
+      nextColors
+        .map((color) => prevRows.find((row) => row.color === color))
+        .filter((row): row is { color: string; quantities: number[]; imageUrl?: string } => Boolean(row))
+    );
+    setColorOptions(nextColors);
+  };
+
+  // ===== 颜色 Tag 拖动排序 =====
+  const handleColorDrop = (targetIndex: number) => {
+    if (dragColorIndex !== null && !editLocked && dragColorIndex !== targetIndex) {
+      const next = [...selectedColors];
+      const [moved] = next.splice(dragColorIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      applyColorOrder(next);
+    }
+    setDragColorIndex(null);
+    setDragOverColorIndex(null);
+  };
+
 
   const removeColor = (color: string) => {
     if (editLocked || isFieldLocked(color)) return;
@@ -252,7 +301,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
         <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
           <div style={{ paddingTop: 8, color: 'var(--color-text-secondary)' }}>颜色</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {selectedColors.map((color) => (
+            {selectedColors.map((color, colorIndex) => (
               <Tag
                 key={color}
                 closable={!editLocked && !isFieldLocked(color)}
@@ -260,7 +309,30 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   e.preventDefault();
                   removeColor(color);
                 }}
-                style={selectedTagStyle}
+                draggable={!editLocked}
+                onDragStart={() => setDragColorIndex(colorIndex)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverColorIndex(colorIndex);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleColorDrop(colorIndex);
+                }}
+                onDragEnd={() => {
+                  setDragColorIndex(null);
+                  setDragOverColorIndex(null);
+                }}
+                style={{
+                  ...selectedTagStyle,
+                  cursor: !editLocked ? 'move' : undefined,
+                  opacity: dragColorIndex === colorIndex ? 0.4 : 1,
+                  outline:
+                    dragOverColorIndex === colorIndex && dragColorIndex !== null && dragColorIndex !== colorIndex
+                      ? '2px dashed var(--color-primary)'
+                      : undefined,
+                  outlineOffset: 1,
+                }}
               >
                 {color}
               </Tag>
@@ -301,7 +373,33 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   e.preventDefault();
                   removeSize(size);
                 }}
-                style={{ ...selectedTagStyle, display: 'inline-flex', alignItems: 'center', gap: 2 }}
+                draggable={!editLocked}
+                onDragStart={() => setDragSizeIndex(sizeIndex)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverSizeIndex(sizeIndex);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleSizeDrop(sizeIndex);
+                }}
+                onDragEnd={() => {
+                  setDragSizeIndex(null);
+                  setDragOverSizeIndex(null);
+                }}
+                style={{
+                  ...selectedTagStyle,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  cursor: !editLocked ? 'move' : undefined,
+                  opacity: dragSizeIndex === sizeIndex ? 0.4 : 1,
+                  outline:
+                    dragOverSizeIndex === sizeIndex && dragSizeIndex !== null && dragSizeIndex !== sizeIndex
+                      ? '2px dashed var(--color-primary)'
+                      : undefined,
+                  outlineOffset: 1,
+                }}
               >
                 {!editLocked && (
                   <span style={{ display: 'inline-flex', gap: 1, marginRight: 2 }}>
@@ -346,6 +444,11 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   按码数排序
                 </Button>
               </Tooltip>
+            )}
+            {!editLocked && selectedSizes.length > 0 && (
+              <span style={{ fontSize: 12, color: 'var(--color-text-quaternary)', userSelect: 'none' }}>
+                新增自动按小→大排位，可拖动标签调整顺序
+              </span>
             )}
             {!editLocked ? (
               <Space.Compact>

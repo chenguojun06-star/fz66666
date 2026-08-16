@@ -1,14 +1,18 @@
-import React from 'react';
-import { Col, Form, Input, Radio, Row, Select, Tooltip } from 'antd';
+import React, { useState } from 'react';
+import { App, Col, Form, Input, Row, Select, Tooltip } from 'antd';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import DictQuickManageModal from '@/components/common/DictQuickManageModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
+import CustomerFormModal from '@/modules/crm/pages/CrmDashboard/components/CustomerFormModal';
+import factoryApi from '@/services/system/factoryApi';
+import { notifyDataUpdated } from '@/utils/dataEvents';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import type { SectionFormContextProps } from './types';
 import SectionBox from './SectionBox';
-import { PRODUCT_TYPE_OPTIONS } from './constants';
 
 interface BasicInfoSectionProps extends SectionFormContextProps {
   isNewPage: boolean;
@@ -16,17 +20,114 @@ interface BasicInfoSectionProps extends SectionFormContextProps {
   coverSlot?: React.ReactNode;
 }
 
-/**
- * 字段维护按钮：截图中的"维护"占位按钮，鼠标 hover 显示"前往字典管理"提示。
- * 当前为视觉占位，不绑定点击事件（避免与字典管理页跳转逻辑耦合）。
- */
-const FieldMaintainHint: React.FC = () => (
-  <Tooltip title="前往系统管理-字典管理维护选项">
-    <span style={{ marginLeft: 6, color: 'var(--color-primary)', fontSize: 12, cursor: 'pointer', userSelect: 'none' }}>
+/** 字段维护链接：点击直接弹窗维护，无需跳转字典管理/基础资料页 */
+const MaintainLink: React.FC<{ tooltip: string; onClick: () => void }> = ({ tooltip, onClick }) => (
+  <Tooltip title={tooltip}>
+    <a
+      onClick={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
+      style={{ marginLeft: 6, color: 'var(--color-primary)', fontSize: 12, cursor: 'pointer', userSelect: 'none' }}
+    >
       维护
-    </span>
+    </a>
   </Tooltip>
 );
+
+/** 字典字段维护：点击弹出快捷维护弹窗（增/删/改名词条），变更即时同步当前下拉 */
+const DictMaintainHint: React.FC<{ dictType: string; fieldName: string }> = ({ dictType, fieldName }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <MaintainLink tooltip={`点击弹窗维护${fieldName}选项`} onClick={() => setOpen(true)} />
+      <DictQuickManageModal open={open} dictType={dictType} title={fieldName} onClose={() => setOpen(false)} />
+    </>
+  );
+};
+
+/** 客户字段维护：复用 CRM 客户表单弹窗就地新建，成功后同页客户下拉即时刷新 */
+const CustomerMaintainHint: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <MaintainLink tooltip="点击弹窗新增客户" onClick={() => setOpen(true)} />
+      <CustomerFormModal
+        open={open}
+        editData={null}
+        onClose={() => setOpen(false)}
+        onSuccess={() => notifyDataUpdated('customer')}
+      />
+    </>
+  );
+};
+
+/** 供应商快捷新增弹窗（名称+联系人+电话，物料供应商） */
+const SupplierQuickAddModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const { message } = App.useApp();
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleOk = async () => {
+    const values = await form.validateFields();
+    setSubmitting(true);
+    try {
+      await factoryApi.create({
+        factoryName: values.factoryName.trim(),
+        contactPerson: values.contactPerson?.trim() || undefined,
+        contactPhone: values.contactPhone?.trim() || undefined,
+        supplierType: 'MATERIAL',
+        factoryType: 'EXTERNAL',
+        status: 'active',
+      });
+      message.success(`供应商"${values.factoryName}"已创建`);
+      notifyDataUpdated('supplier');
+      form.resetFields();
+      onClose();
+    } catch {
+      message.error('创建供应商失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ResizableModal
+      title="新增供应商"
+      open={open}
+      onOk={handleOk}
+      onCancel={() => {
+        form.resetFields();
+        onClose();
+      }}
+      confirmLoading={submitting}
+      width={420}
+    >
+      <Form form={form} layout="vertical">
+        <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
+          <Input placeholder="请输入供应商名称" maxLength={100} />
+        </Form.Item>
+        <Form.Item name="contactPerson" label="联系人">
+          <Input placeholder="请输入联系人（选填）" maxLength={50} />
+        </Form.Item>
+        <Form.Item name="contactPhone" label="联系电话">
+          <Input placeholder="请输入联系电话（选填）" maxLength={30} />
+        </Form.Item>
+      </Form>
+    </ResizableModal>
+  );
+};
+
+/** 供应商字段维护：就地新建供应商，成功后同页供应商下拉即时刷新 */
+const SupplierMaintainHint: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <MaintainLink tooltip="点击弹窗新增供应商" onClick={() => setOpen(true)} />
+      <SupplierQuickAddModal open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+};
 
 /**
  * 区1：基础信息
@@ -66,7 +167,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={12}>
           <Form.Item
             name="styleName"
-            label="款名称"
+            label={
+              <span>
+                款名称
+                <DictMaintainHint dictType="style_name" fieldName="款名称" />
+              </span>
+            }
             rules={[{ required: true, message: '请输入款名称' }]}
             style={{ marginBottom: 8 }}
           >
@@ -119,7 +225,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 <span style={{ color: 'var(--color-danger)' }}>*</span> 商品分类
-                <FieldMaintainHint />
+                <DictMaintainHint dictType="category" fieldName="商品分类" />
               </span>
             }
             rules={[{ required: true, message: '请选择商品分类' }]}
@@ -145,7 +251,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 虚拟分类
-                <FieldMaintainHint />
+                <DictMaintainHint dictType="season" fieldName="虚拟分类" />
               </span>
             }
             style={{ marginBottom: 8 }}
@@ -163,18 +269,18 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
-        {/* 商品类型（成品/半成品 单选） */}
+        {/* 商品类型（默认成品/半成品，支持字典维护扩展自定义类型） */}
         <Col xs={24} md={12}>
           <Form.Item
             name="productType"
             label="商品类型"
             style={{ marginBottom: 8 }}
           >
-            <Radio.Group
-              id="productType"
-              options={PRODUCT_TYPE_OPTIONS}
-              optionType="button"
-              buttonStyle="solid"
+            <DictAutoComplete
+              dictType="product_type"
+              quickManageTitle="商品类型"
+              fallbackOptions={['成品', '半成品']}
+              placeholder="请选择或输入商品类型..."
               disabled={editLocked}
             />
           </Form.Item>
@@ -184,7 +290,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={12}>
           <Form.Item
             name="designer"
-            label="设计师"
+            label={
+              <span>
+                设计师
+                <DictMaintainHint dictType="designer" fieldName="设计师" />
+              </span>
+            }
             style={{ marginBottom: 8 }}
           >
             <DictAutoComplete
@@ -204,7 +315,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 商品主题
-                <FieldMaintainHint />
+                <DictMaintainHint dictType="style_theme" fieldName="商品主题" />
               </span>
             }
             style={{ marginBottom: 8 }}
@@ -226,7 +337,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
           <Form.Item
             name="customer"
-            label="客户"
+            label={
+              <span>
+                客户
+                <CustomerMaintainHint />
+              </span>
+            }
             style={{ marginBottom: 8 }}
           >
             <CustomerSelect
@@ -258,7 +374,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
           <Form.Item
             name="supplier"
-            label="供应商"
+            label={
+              <span>
+                供应商
+                <SupplierMaintainHint />
+              </span>
+            }
             style={{ marginBottom: 8 }}
           >
             <SupplierSelect

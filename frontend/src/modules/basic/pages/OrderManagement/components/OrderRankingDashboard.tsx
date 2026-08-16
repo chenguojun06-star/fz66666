@@ -78,9 +78,13 @@ const RankingItem = memo(({ item, idx, onOrderClick }: {
 const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderClick }) => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<OrderRankingStats | null>(null);
+  // 是否已完成首次加载：首次显示 loading 骨架屏，后续 60s 轮询静默刷新（避免页面"一闪一闪"）
+  const loadedOnceRef = React.useRef(false);
 
   const fetchData = async () => {
-    setLoading(true);
+    if (!loadedOnceRef.current) {
+      setLoading(true);
+    }
     try {
       const res = await api.get<{ code: number; data: { records: StyleInfo[] } }>('/style/info/list', {
         params: { page: 1, pageSize: 100, onlyCompleted: true }
@@ -136,6 +140,7 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
         }
 
         setStats({ totalOrders, todayOrders, weekOrders, topStyles });
+        loadedOnceRef.current = true;
       }
     } finally {
       setLoading(false);

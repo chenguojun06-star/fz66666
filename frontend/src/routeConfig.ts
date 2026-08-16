@@ -522,7 +522,7 @@ export const menuConfig: MenuSection[] = [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
       { label: '资料单价', path: paths.maintenanceCenter, icon: React.createElement(DatabaseOutlined) },
       { label: '样衣库存', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
-      { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
+      { label: '商品下单', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
   },
   {

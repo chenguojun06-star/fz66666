@@ -123,7 +123,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
 
           title={pushToOrderTitle}
         >
-          {pushedToOrder ? '已推送' : '推送到下单管理'}
+          {pushedToOrder ? '已推送' : '推送到商品下单'}
         </Button>
       )}
 

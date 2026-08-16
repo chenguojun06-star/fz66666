@@ -137,7 +137,7 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
     <div className="order-pie-wrapper">
       <PieChartCard
         mode={mode}
-        title="下单管理"
+        title="商品下单"
         total={stats.total}
         inProgress={stats.productionCount}
         completed={stats.completedCount}

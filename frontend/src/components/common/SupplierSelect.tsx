@@ -3,6 +3,7 @@ import { AutoComplete, Spin } from 'antd';
 import type { AutoCompleteProps } from 'antd';
 import factoryApi from '../../services/system/factoryApi';
 import type { Factory } from '@/types/system';
+import { subscribeDataUpdated } from '@/utils/dataEvents';
 
 interface SupplierSelectProps extends Omit<AutoCompleteProps, 'options' | 'onChange'> {
   value?: string;
@@ -84,8 +85,12 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 
     fetchSuppliers();
 
+    // 供应商主数据在本页被快捷维护后自动重拉
+    const unsubscribe = subscribeDataUpdated('supplier', fetchSuppliers);
+
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, []);
 

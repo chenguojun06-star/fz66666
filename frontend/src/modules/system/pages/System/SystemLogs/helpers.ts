@@ -20,7 +20,7 @@ export const loginStatusOptions = [
 /** 操作日志-模块筛选选项 */
 export const moduleOptions = [
   { value: '样衣开发', label: '样衣开发' },
-  { value: '下单管理', label: '下单管理' },
+  { value: '下单管理', label: '商品下单' },
   { value: '大货生产', label: '大货生产' },
   { value: '物料采购', label: '物料采购' },
   { value: '成品管理', label: '成品管理' },

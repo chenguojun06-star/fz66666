@@ -259,12 +259,25 @@ public class StyleInfoController {
 
     /**
          * 报废开发样，保留记录不删除
-     */
+    */
     @PostMapping("/{id}/scrap")
     @PreAuthorize("isAuthenticated()")
     public Result<?> scrap(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         String reason = body != null && body.get("reason") != null ? String.valueOf(body.get("reason")) : null;
         return Result.success(styleInfoOrchestrator.scrap(id, reason));
+    }
+
+    /**
+     * 款式停用/启用
+     * 调用方式：PUT /api/style/info/{id}/status?status=DISABLED|ENABLED
+     * 停用后该款式无法下单（getValidatedForOrderCreate 拦截），下单管理可按状态筛选查看
+     */
+    @PutMapping("/{id}/status")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Void> updateStyleStatus(@PathVariable Long id, @RequestParam String status) {
+        styleInfoOrchestrator.updateStyleStatus(id, status);
+        String normalized = status == null ? "" : status.trim().toUpperCase();
+        return Result.success("DISABLED".equals(normalized) ? "已停用，该款式将无法下单" : "已启用，可正常下单", null);
     }
 
     /**
