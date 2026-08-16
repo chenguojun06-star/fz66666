@@ -276,6 +276,41 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* P2：样衣完成 / 推送到下单管理 操作行（镂空风格，与领取按钮一致） */
+.sample-action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--spacing-sm);
+}
+.sample-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--color-success, #2e9e6b);
+  white-space: nowrap;
+}
+.sample-action-btn:active {
+  background: var(--color-success-bg, #e9f9ee);
+}
+.sample-action-btn__text {
+  font-size: var(--font-size-xs);
+  color: var(--color-success, #2e9e6b);
+  font-weight: var(--font-weight-medium);
+}
+.sample-action-btn--primary {
+  border-color: var(--color-primary);
+}
+.sample-action-btn--primary:active {
+  background: var(--color-primary-bg);
+}
+.sample-action-btn__text--primary {
+  color: var(--color-primary);
+}
+
 /* ========== 2. 开发进度 ========== */
 /* 三列统计 */
 .stats-row {

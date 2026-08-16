@@ -24,6 +24,16 @@ const style = {
     return ok(`/api/style/info/${encodeURIComponent(id)}/stage-action?stage=${encodeURIComponent(stage)}&action=${encodeURIComponent(action)}`, 'POST', payload);
   },
 
+  // 推送到下单管理（样衣完成后，同步 BOM/纸样/尺寸表/工序单价 到下单管理）
+  pushToOrderManagement(styleId, targetTypes, remark) {
+    const id = String(styleId || '').trim();
+    return ok('/api/order-management/create-from-style', 'POST', {
+      styleId: id,
+      targetTypes: targetTypes || ['bom', 'pattern', 'size', 'process'],
+      remark: remark || '',
+    });
+  },
+
   // 样衣审核（提交审核结论）
   saveSampleReview(styleId, payload) {
     const id = String(styleId || '').trim();

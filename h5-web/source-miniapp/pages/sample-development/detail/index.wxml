@@ -52,6 +52,15 @@
           <text class="receive-btn__text">领取样衣</text>
         </view>
       </view>
+      <!-- P2：样衣完成 / 推送到下单管理（与 PC 端对齐的操作入口） -->
+      <view wx:if="{{styleInfo._canCompleteSample || styleInfo._canPushToOrder}}" class="sample-action-row">
+        <view wx:if="{{styleInfo._canCompleteSample}}" class="sample-action-btn" bindtap="onCompleteSampleTap">
+          <text class="sample-action-btn__text">完成样衣</text>
+        </view>
+        <view wx:if="{{styleInfo._canPushToOrder}}" class="sample-action-btn sample-action-btn--primary" bindtap="onPushToOrderTap">
+          <text class="sample-action-btn__text sample-action-btn__text--primary">推送到下单管理</text>
+        </view>
+      </view>
       <!-- 三列统计 -->
       <view class="stats-row">
         <view class="stats-item">

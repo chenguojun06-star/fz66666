@@ -464,7 +464,55 @@ Page({
     var patternStatus = info._patternStatus || '';
     info._daysLeftText = this.calcDaysLeft(info.deliveryTime || info.deliveryDate, patternStatus);
     info._overdue = this.isOverdue(info.deliveryTime || info.deliveryDate, patternStatus);
+    // P2：小程序补样衣完成/推送下单入口（此前仅 PC 端可操作）
+    var sampleStatus = String(info.sampleStatus || '').trim().toUpperCase();
+    info._canCompleteSample = sampleStatus === 'IN_PROGRESS';
+    info._canPushToOrder = sampleStatus === 'COMPLETED' && Number(info.pushedToOrder) !== 1;
     this.setData({ styleInfo: info });
+  },
+
+  /** 完成样衣阶段（stage=sample action=complete） */
+  onCompleteSampleTap() {
+    const styleId = this.data.styleId;
+    if (!styleId) return;
+    wx.showModal({
+      title: '完成样衣',
+      content: '确认该款样衣已制作完成？完成后可推送到下单管理。',
+      confirmColor: 'var(--color-primary)',
+      success: (res) => {
+        if (!res.confirm) return;
+        style.stageAction(styleId, 'sample', 'complete')
+          .then(() => {
+            wx.showToast({ title: '样衣已完成', icon: 'success' });
+            this.loadStyleDetail();
+          })
+          .catch((err) => {
+            wx.showToast({ title: (err && err.errMsg) || '操作失败', icon: 'none' });
+          });
+      },
+    });
+  },
+
+  /** 推送到下单管理（同步 BOM/纸样/尺寸表/工序单价） */
+  onPushToOrderTap() {
+    const styleId = this.data.styleId;
+    if (!styleId) return;
+    wx.showModal({
+      title: '推送到下单管理',
+      content: '将同步物料清单、纸样、尺寸表、工序单价到下单管理，确认推送？',
+      confirmColor: 'var(--color-primary)',
+      success: (res) => {
+        if (!res.confirm) return;
+        style.pushToOrderManagement(styleId, null, '小程序端推送')
+          .then(() => {
+            wx.showToast({ title: '推送成功', icon: 'success' });
+            this.loadStyleDetail();
+          })
+          .catch((err) => {
+            wx.showToast({ title: (err && err.errMsg) || '推送失败', icon: 'none' });
+          });
+      },
+    });
   },
 
   getStatusLabel(status) {
