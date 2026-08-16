@@ -16,6 +16,13 @@
 - [x] 验证：前端 tsc 0 错误 + 后端 mvn compile EXIT=0（24 文件 +761/-257，含新 Flyway V202708161400 与 PhoneCell.tsx）
 - [ ] 部署后验证：Flyway 自动执行 employee_no 加列；人员/岗位/组织架构三页布局与指标显示；岗位保存（名称+数据权限+权限点）端到端
 
+### 2026-08-16 线上组织架构页崩溃 + 权限矩阵同码重复根治 ✅
+
+- [x] **P0 崩溃**（`t.isValid is not a function` 整页崩）：后端 hireDate 返回字符串，`setFieldsValue` 直接回填 DatePicker——antd 6（@rc-component/picker）要求 value 必须 dayjs 实例。修复两处：OrganizationTree/useUserActions.tsx + UserList/useUserFormOps.ts（回填 `dayjs(hireDate)`，提交统一 `format('YYYY-MM-DD')` 对齐后端 LocalDate）。**全站排查**其余 30+ 处 DatePicker 回填均已正确 dayjs 包装，仅这两处中招
+- [x] **权限矩阵同码重复清理**（用户点名的"外发工厂"遗留）：MODULE_SECTIONS 13 处重复权限码项（外发工厂=工序跟进、工资结算/外发结算=财务总览、应付/付款计划=物料对账、电商订单/库存盘点=成品出入库、应收账款=客户档案、组织架构/合作企业=供应商管理、字段配置/打印模板=字典管理、数据看板=智能运营中心）→ 每个 MENU_* 码只留一项，被合并菜单括号注明。消除勾选联动 + 权限点计数虚高
+- [x] **外部工厂节点泄漏**：组织架构页部门下拉与统计卡片改用 internalDepartments（过滤 ownerType=EXTERNAL），与左侧树 filterExternalNodes 对齐
+- [x] 验证：tsc 0 错误；权限码联动逻辑（buildPermCodeMap/togglePermIds）无需改动，去重后自然正确
+
 ### 2026-08-16 样衣详情维护弹窗统一为通用 QuickManageModal ✅（已推送 b693c422c，5 文件 +385/-300）
 
 - [x] 新建 `frontend/src/components/common/QuickManageModal.tsx`：颜色图片管理同款风格（统计标签+说明条+小表格+行内编辑/删除+顶部快捷添加+操作即时保存），支持 dict/customer/supplier 三模式，操作后广播 `dict:{type}`/`customer`/`supplier` 事件即时刷新同页下拉

@@ -12,6 +12,8 @@ import { Role } from '@/types/system';
 import { permissionCodes } from '@/routeConfig';
 
 // ===== 权限模块配置（用于权限矩阵渲染） =====
+// 规则：每个权限码（MENU_*）只出现一次。多个菜单共享同一权限码时合并为一项并在标签中注明，
+// 避免同码多项造成的勾选联动、重复计数（历史遗留：外发工厂/工资结算/应付账款等 13 处重复项已清理）。
 export const MODULE_SECTIONS = [
   { title: '仪表盘', items: [{ label: '仪表盘', code: permissionCodes.dashboard }] },
   { title: '选品中心', items: [{ label: '选品中心', code: permissionCodes.selection }] },
@@ -29,61 +31,46 @@ export const MODULE_SECTIONS = [
   { title: '生产管理', items: [
     { label: '生产订单', code: permissionCodes.productionList },
     { label: '裁剪管理', code: permissionCodes.cutting },
-    { label: '工序跟进', code: permissionCodes.progress },
-    { label: '外发工厂', code: permissionCodes.progress },
+    { label: '工序跟进（含外发工厂）', code: permissionCodes.progress },
     { label: '质检入库', code: permissionCodes.warehousing },
   ]},
-  { title: '供应商管理', items: [{ label: '供应商管理', code: permissionCodes.factory }] },
+  // 供应商管理/组织架构/合作企业共用 MENU_FACTORY 权限码，合并为一项
+  { title: '供应商管理', items: [{ label: '供应商管理（含组织架构/合作企业）', code: permissionCodes.factory }] },
   { title: '成品管理', items: [
-    { label: '成品出入库', code: permissionCodes.finishedInventory },
+    { label: '成品出入库（含电商订单/库存盘点）', code: permissionCodes.finishedInventory },
     { label: '成品资料', code: permissionCodes.productInfo },
     { label: '标签打印', code: permissionCodes.labelPrint },
-    { label: '库存盘点', code: permissionCodes.inventoryCheck },
     { label: '库位地图', code: permissionCodes.warehouseLocationMap },
   ]},
   { title: '电商运营', items: [
     { label: '平台总览', code: permissionCodes.ecommerceCenter },
-    { label: '电商订单', code: permissionCodes.ecommerceOrders },
-    { label: 'EC销售收入', code: permissionCodes.financeTaxExport },
   ]},
   { title: 'CRM客户管理', items: [
-    { label: '客户档案', code: permissionCodes.crm },
-    { label: '应收账款', code: permissionCodes.crmReceivables },
+    { label: '客户档案（含应收账款）', code: permissionCodes.crm },
   ]},
   { title: '财务管理', items: [
-    { label: '财务总览', code: permissionCodes.financeDashboard },
-    { label: '工资结算', code: permissionCodes.financeCenter },
-    { label: '外发结算', code: permissionCodes.financeCenter },
-    { label: '物料对账', code: permissionCodes.materialRecon },
-    { label: '应收账款', code: permissionCodes.crmReceivables },
-    { label: '应付账款', code: permissionCodes.materialRecon },
-    { label: '付款计划', code: permissionCodes.materialRecon },
+    { label: '财务总览（含工资/外发结算）', code: permissionCodes.financeDashboard },
+    { label: '物料对账（含应付/付款计划）', code: permissionCodes.materialRecon },
     { label: '收付款中心', code: permissionCodes.wagePayment },
     { label: '费用管理', code: permissionCodes.expenseReimbursement },
-    { label: '财税工具', code: permissionCodes.financeTaxExport },
+    { label: '财税工具（含EC销售收入）', code: permissionCodes.financeTaxExport },
   ]},
   { title: '系统设置', items: [
     { label: '个人中心', code: 'PUBLIC' },
     { label: '人员管理', code: permissionCodes.user },
     { label: '岗位管理', code: permissionCodes.role },
-    { label: '组织架构', code: permissionCodes.organization },
-    { label: '合作企业管理', code: permissionCodes.partnerManagement },
   ]},
   { title: '工具', items: [
     { label: '数据导入', code: permissionCodes.dataImport },
-    { label: '字典管理', code: permissionCodes.dict },
-    { label: '字段配置', code: permissionCodes.dict },
-    { label: '打印模板', code: permissionCodes.printTemplate },
+    { label: '字典管理（含字段配置/打印模板）', code: permissionCodes.dict },
     { label: '系统日志', code: permissionCodes.systemLogs },
     { label: '系统教学', code: permissionCodes.tutorial },
-    { label: '孤立数据', code: permissionCodes.systemIssues },
   ]},
   { title: '应用商店', items: [{ label: '应用商店', code: permissionCodes.appStore }] },
   { title: '客户管理', items: [{ label: '客户管理', code: permissionCodes.customerManagement }] },
   { title: 'API对接管理', items: [{ label: 'API对接管理', code: permissionCodes.tenantManagement }] },
   { title: '智能运营中心', items: [
-    { label: '智能运营中心', code: permissionCodes.intelligenceCenter },
-    { label: '数据看板', code: permissionCodes.intelligenceCenter },
+    { label: '智能运营中心（含数据看板）', code: permissionCodes.intelligenceCenter },
   ]},
 ];
 

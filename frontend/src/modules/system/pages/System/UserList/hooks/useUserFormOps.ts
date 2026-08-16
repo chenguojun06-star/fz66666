@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Form } from 'antd';
+import dayjs from 'dayjs';
 import { Role, User as UserType } from '@/types/system';
 import api from '@/utils/api';
 import tenantService from '@/services/tenantService';
@@ -41,7 +42,12 @@ export function useUserFormOps({
   useEffect(() => {
     if (!userModal.visible) { form.resetFields(); return; }
     if (userModal.data) {
-      const next = { ...userModal.data, roleId: String((userModal.data as any).roleId ?? '') };
+      // hireDate 后端返回字符串，DatePicker 必须接收 dayjs 实例（否则 t.isValid is not a function 整页崩溃）
+      const next = {
+        ...userModal.data,
+        roleId: String((userModal.data as any).roleId ?? ''),
+        hireDate: (userModal.data as any).hireDate ? dayjs((userModal.data as any).hireDate) : undefined,
+      };
       const t1 = setTimeout(() => { form.setFieldsValue(next); }, 50);
       return () => clearTimeout(t1);
     }
@@ -138,6 +144,8 @@ export function useUserFormOps({
     if (submitLoadingRef.current) return;
     try {
       const values: any = await form.validateFields();
+      // DatePicker 提交值为 dayjs 实例，统一格式化为后端 LocalDate 可解析的 YYYY-MM-DD
+      if (values.hireDate) values.hireDate = dayjs(values.hireDate).format('YYYY-MM-DD');
       const submit = async (remark?: string) => {
         submitLoadingRef.current = true;
         setSubmitLoading(true);

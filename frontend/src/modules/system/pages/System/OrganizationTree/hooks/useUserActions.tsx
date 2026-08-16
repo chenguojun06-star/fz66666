@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { App, Form } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import type { User } from '@/types/system';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
@@ -56,7 +57,8 @@ export function useUserActions(
         status: u.status,
         roleId: String((u as any).roleId || ''),
         employmentStatus: (u as any).employmentStatus,
-        hireDate: (u as any).hireDate,
+        // 后端返回字符串日期，antd DatePicker 必须接收 dayjs 实例（否则 t.isValid is not a function 整页崩溃）
+        hireDate: (u as any).hireDate ? dayjs((u as any).hireDate) : undefined,
         permissionRange: (u as any).permissionRange,
       });
     } else {
@@ -78,7 +80,12 @@ export function useUserActions(
     try {
       const values = await userForm.validateFields();
       setUserSubmitLoading(true);
-      const payload = { ...values, id: editingUser?.id };
+      // DatePicker 提交值为 dayjs 实例，统一格式化为后端 LocalDate 可解析的 YYYY-MM-DD
+      const payload = {
+        ...values,
+        id: editingUser?.id,
+        hireDate: values.hireDate ? dayjs(values.hireDate as Dayjs).format('YYYY-MM-DD') : null,
+      };
       const res: any = editingUser
         ? await api.put('/system/user', payload)
         : await api.post('/system/user', payload);

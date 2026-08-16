@@ -126,14 +126,20 @@ const OrganizationTreePage: React.FC = () => {
     });
   };
 
+  // 部门下拉选项：过滤外部工厂节点（ownerType=EXTERNAL 属外发协同，不进入内部人员归属）
+  const internalDepartments = useMemo(
+    () => departments.filter((d) => (d as any).ownerType !== 'EXTERNAL'),
+    [departments],
+  );
+
   const departmentOptions = useMemo(() => {
-    return departments
+    return internalDepartments
       .map((item) => ({
         value: String(item.id ?? '').trim(),
         label: String(item.unitName ?? '未命名'),
       }))
       .filter((item) => item.value);
-  }, [departments]);
+  }, [internalDepartments]);
 
   const managerSelectOptions = useMemo(() => {
     return assignableUsers.map(u => ({
@@ -240,9 +246,9 @@ const OrganizationTreePage: React.FC = () => {
           ) : undefined
         }
       >
-        {/* 顶部统计卡片 */}
+        {/* 顶部统计卡片（统计同样排除外部工厂节点） */}
         {treeData.length > 0 && (
-          <StatsCards departments={departments} totalMembers={totalMembers} />
+          <StatsCards departments={internalDepartments} totalMembers={totalMembers} />
         )}
         <Spin spinning={loading}>
           {visibleTreeData.length === 0 && !loading ? (
