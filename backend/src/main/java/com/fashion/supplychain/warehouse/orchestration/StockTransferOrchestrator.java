@@ -7,9 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialStockService;
-import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.warehouse.entity.StockTransfer;
-import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
 import com.fashion.supplychain.warehouse.helper.StockTransferLogAppendHelper;
 import com.fashion.supplychain.warehouse.service.StockTransferService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +27,6 @@ public class StockTransferOrchestrator {
 
     private final StockTransferService transferService;
     private final MaterialStockService materialStockService;
-    private final ProductSkuService productSkuService;
     private final StockTransferLogAppendHelper logAppendHelper;
 
     public Result<Page<StockTransfer>> list(int page, int pageSize, String status,

@@ -1,7 +1,6 @@
 package com.fashion.supplychain.warehouse.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialInbound;
@@ -36,7 +35,6 @@ public class MaterialWarehouseOperationOrchestrator {
     private final MaterialOutboundLogMapper materialOutboundLogMapper;
     private final StockChangeLogService stockChangeLogService;
     private final WarehouseAreaService warehouseAreaService;
-    private final ObjectMapper objectMapper;
 
     private static final Set<String> VALID_SOURCE_TYPES = Set.of(
             "external_purchase", "free_inbound", "transfer_in", "return_in", "other_in", "scan_inbound");
@@ -153,6 +151,7 @@ public class MaterialWarehouseOperationOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @SuppressWarnings("unchecked") // items 元素已做 instanceof Map 前置校验，强转安全
     public List<MaterialInbound> batchInbound(Map<String, Object> body) {
         TenantAssert.assertTenantContext();
 

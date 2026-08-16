@@ -166,18 +166,6 @@ public class MaterialPurchasePickingHelper {
         return result;
     }
 
-    private List<MaterialStock> queryStockByMaterial(MaterialPurchase purchase) {
-        LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
-        stockWrapper.eq(MaterialStock::getMaterialCode, purchase.getMaterialCode());
-        if (StringUtils.hasText(purchase.getColor())) {
-            stockWrapper.eq(MaterialStock::getColor, purchase.getColor());
-        }
-        if (StringUtils.hasText(purchase.getSize())) {
-            stockWrapper.eq(MaterialStock::getSize, purchase.getSize());
-        }
-        return materialStockService.list(stockWrapper);
-    }
-
     private java.util.Map<String, List<MaterialStock>> batchQueryStockByPurchases(List<MaterialPurchase> purchases) {
         java.util.Set<String> materialCodes = purchases.stream()
                 .map(MaterialPurchase::getMaterialCode)
