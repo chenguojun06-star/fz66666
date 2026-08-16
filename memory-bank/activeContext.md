@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-16 样衣详情维护弹窗统一为通用 QuickManageModal ✅（已推送 b693c422c，5 文件 +385/-300）
+
+- [x] 新建 `frontend/src/components/common/QuickManageModal.tsx`：颜色图片管理同款风格（统计标签+说明条+小表格+行内编辑/删除+顶部快捷添加+操作即时保存），支持 dict/customer/supplier 三模式，操作后广播 `dict:{type}`/`customer`/`supplier` 事件即时刷新同页下拉
+- [x] 供应商维护补齐**地址**字段（名称/联系人/电话/地址，Factory.address 后端已有），客户维护弃用 CRM 长表单 CustomerFormModal
+- [x] BasicInfoSection 三个维护链接 + DictAutoComplete 齿轮入口全部切换新弹窗；删除旧 DictQuickManageModal
+- [x] 验证：tsc 0 错误 + safe-push --frontend 通过；已推送触发云构建
+- [ ] 部署后验证：样衣详情→各字段"维护"弹窗为统一表格风格，供应商可填地址
+
 ### 2026-08-16 批量采购弹窗"信息缺失+数量只读"双链路根治 ✅（D-104，已推送 72f674109，9 文件 +408/-83）
 
 - [x] 根因①信息缺失：弹窗 desc 只填了 `item.color`（空→"· -"），编码/规格/单价/供应商全没展示
