@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { App, Col, Form, Input, Row, Select, Tooltip } from 'antd';
+import { Col, Form, Input, Row, Select, Tooltip } from 'antd';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
-import DictQuickManageModal from '@/components/common/DictQuickManageModal';
-import ResizableModal from '@/components/common/ResizableModal';
+import QuickManageModal from '@/components/common/QuickManageModal';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import CustomerFormModal from '@/modules/crm/pages/CrmDashboard/components/CustomerFormModal';
-import factoryApi from '@/services/system/factoryApi';
-import { notifyDataUpdated } from '@/utils/dataEvents';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import type { SectionFormContextProps } from './types';
@@ -37,96 +33,35 @@ const MaintainLink: React.FC<{ tooltip: string; onClick: () => void }> = ({ tool
   </Tooltip>
 );
 
-/** 字典字段维护：点击弹出快捷维护弹窗（增/删/改名词条），变更即时同步当前下拉 */
+/** 字典字段维护：点击弹出通用维护弹窗（列表+行内增删改），变更即时同步当前下拉 */
 const DictMaintainHint: React.FC<{ dictType: string; fieldName: string }> = ({ dictType, fieldName }) => {
   const [open, setOpen] = useState(false);
   return (
     <>
       <MaintainLink tooltip={`点击弹窗维护${fieldName}选项`} onClick={() => setOpen(true)} />
-      <DictQuickManageModal open={open} dictType={dictType} title={fieldName} onClose={() => setOpen(false)} />
+      <QuickManageModal open={open} mode="dict" dictType={dictType} title={fieldName} onClose={() => setOpen(false)} />
     </>
   );
 };
 
-/** 客户字段维护：复用 CRM 客户表单弹窗就地新建，成功后同页客户下拉即时刷新 */
+/** 客户字段维护：通用维护弹窗就地增删改客户，成功后同页客户下拉即时刷新 */
 const CustomerMaintainHint: React.FC = () => {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <MaintainLink tooltip="点击弹窗新增客户" onClick={() => setOpen(true)} />
-      <CustomerFormModal
-        open={open}
-        editData={null}
-        onClose={() => setOpen(false)}
-        onSuccess={() => notifyDataUpdated('customer')}
-      />
+      <MaintainLink tooltip="点击弹窗维护客户" onClick={() => setOpen(true)} />
+      <QuickManageModal open={open} mode="customer" title="客户" onClose={() => setOpen(false)} />
     </>
   );
 };
 
-/** 供应商快捷新增弹窗（名称+联系人+电话，物料供应商） */
-const SupplierQuickAddModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleOk = async () => {
-    const values = await form.validateFields();
-    setSubmitting(true);
-    try {
-      await factoryApi.create({
-        factoryName: values.factoryName.trim(),
-        contactPerson: values.contactPerson?.trim() || undefined,
-        contactPhone: values.contactPhone?.trim() || undefined,
-        supplierType: 'MATERIAL',
-        factoryType: 'EXTERNAL',
-        status: 'active',
-      });
-      message.success(`供应商"${values.factoryName}"已创建`);
-      notifyDataUpdated('supplier');
-      form.resetFields();
-      onClose();
-    } catch {
-      message.error('创建供应商失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <ResizableModal
-      title="新增供应商"
-      open={open}
-      onOk={handleOk}
-      onCancel={() => {
-        form.resetFields();
-        onClose();
-      }}
-      confirmLoading={submitting}
-      width={420}
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
-          <Input placeholder="请输入供应商名称" maxLength={100} />
-        </Form.Item>
-        <Form.Item name="contactPerson" label="联系人">
-          <Input placeholder="请输入联系人（选填）" maxLength={50} />
-        </Form.Item>
-        <Form.Item name="contactPhone" label="联系电话">
-          <Input placeholder="请输入联系电话（选填）" maxLength={30} />
-        </Form.Item>
-      </Form>
-    </ResizableModal>
-  );
-};
-
-/** 供应商字段维护：就地新建供应商，成功后同页供应商下拉即时刷新 */
+/** 供应商字段维护：通用维护弹窗就地增删改供应商（含地址），成功后同页供应商下拉即时刷新 */
 const SupplierMaintainHint: React.FC = () => {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <MaintainLink tooltip="点击弹窗新增供应商" onClick={() => setOpen(true)} />
-      <SupplierQuickAddModal open={open} onClose={() => setOpen(false)} />
+      <MaintainLink tooltip="点击弹窗维护供应商" onClick={() => setOpen(true)} />
+      <QuickManageModal open={open} mode="supplier" title="供应商" onClose={() => setOpen(false)} />
     </>
   );
 };

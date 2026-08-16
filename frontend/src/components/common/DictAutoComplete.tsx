@@ -4,7 +4,7 @@ import { SettingOutlined } from '@ant-design/icons';
 import { useAutoCollectDict } from '@/hooks/useAutoCollectDict';
 import api from '@/utils/api';
 import { subscribeDataUpdated } from '@/utils/dataEvents';
-import DictQuickManageModal from './DictQuickManageModal';
+import DictQuickManageModal from './QuickManageModal';
 
 interface DictAutoCompleteProps extends Omit<AutoCompleteProps, 'options'> {
   dictType: string; // 词典类型
@@ -185,6 +185,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       {manageSuffix ? (
         <DictQuickManageModal
           open={manageOpen}
+          mode="dict"
           dictType={dictType}
           title={manageTitle}
           onClose={() => setManageOpen(false)}

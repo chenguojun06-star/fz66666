@@ -70,7 +70,7 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
 
   useEffect(() => {
     load();
-    // 词条被本页快捷维护（DictQuickManageModal）后自动重拉
+    // 词条被本页快捷维护（QuickManageModal）后自动重拉
     const unsubscribe = subscribeDataUpdated(`dict:${dictType}`, load);
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
