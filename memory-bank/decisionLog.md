@@ -1,7 +1,28 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-14（新增 D-067 schema drift 全量修复）
+> 最后更新：2026-08-16（新增 D-083 基础属性库复用 t_dict 存储）
+
+---
+
+## D-083：样衣详情"基础属性库"—颜色/码数成套组合复用 t_dict 存储（2026-08-16）
+
+### 需求
+样衣详情页颜色码数区块旁加「基础属性库」按钮：弹窗内用户自维护"一套颜色/一套码数"组合（如女装标准码 XS~XL），点击一键填入表单，避免逐个手敲。
+
+### 决策
+**复用系统字典 t_dict 存储，不建新表不走 Orchestrator**：
+- dictType=`color_group`/`size_group`，dictLabel=组合名，dictValue=JSON数组（如 `["XS","S","M","L"]`），dictCode 前端生成 `{TYPE}_GROUP_{timestamp}`
+- 前端3文件闭环：SectionBox 加可选 `extra` 插槽（标题右侧按钮）；ColorSizeSkuSection 接线 onApply(覆盖/追加)；新增 AttributeGroupLibraryModal（Tabs 颜色/码数组合 + CRUD + 使用/追加）
+- 后端 DictController CRUD + 租户隔离现成可用，**零后端改动、零 Flyway 迁移**
+
+### 关键细节（踩坑预防）
+1. **字典 GET 有 30s 前端缓存**（utils/api/core.ts 拦截器）：POST/PUT/DELETE 后必须 `clearApiCache('/system/dict/list')` 再重新拉取，否则列表显示旧数据
+2. `clearApiCache` 主入口未导出，按项目惯例从 `@/utils/api/core` 直接导入
+3. 组合名校验与后端 `DictOrchestrator.isValidDictLabel` 对齐（≤50字符，中文/字母/数字/`-_/()（）#. `）；dictValue 无校验故可存 JSON
+4. 应用走 setColorOptions/setSizeOptions（replace 或 append 去重），矩阵由 StyleColorSizeTable 的 useEffect 自动重建
+5. editLocked 时允许维护库（全局字典操作）但禁止应用到表单
+6. antd v6：Modal 用 `destroyOnHidden`（非 destroyOnClose）；App.useApp() 取 message/modal
 
 ---
 

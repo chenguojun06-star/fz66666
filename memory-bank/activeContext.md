@@ -1,11 +1,26 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-082：P2批次收尾，D-076 可枚举 P0/P1/P2 全闭环，已推送 1f592468b + 39c13dff1）
+> 最后更新：2026-08-16（D-083：样衣详情"基础属性库"—颜色/码数成套组合一键填入）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 样衣详情页"基础属性库"（颜色/码数成套组合）✅（详见 D-083）
+
+- [x] 颜色码数区块标题右侧新增「基础属性库」按钮，弹窗内维护成套颜色/码数组合
+- [x] 组合存储复用 t_dict（dictType=color_group/size_group，dictValue=JSON数组），**零后端改动、零迁移**
+- [x] 支持新增/编辑/删除/「使用」(覆盖)/「追加」(去重叠加)；成员录入带 color/size 字典联想
+- [x] 关键细节：字典 GET 有 30s 前端缓存，写入后必须 clearApiCache('/system/dict/list') 再刷新
+- [x] editLocked 时可维护库但应用被拦截提示；tsc ✓ eslint ✓（3文件：SectionBox加extra/ColorSizeSkuSection接线/新AttributeGroupLibraryModal）
+
+### 2026-08-16 仓库/生产模块 5 处 IDE 警告清理 ✅（延续 D-059 遗留治理）
+
+- [x] MaterialPurchasePickingHelper：删私有死方法 queryStockByMaterial（已被 batchQueryStockByPurchases 替代）
+- [x] MaterialWarehouseOperationOrchestrator：删未用字段 objectMapper+import；batchInbound 加 @SuppressWarnings("unchecked")（instanceof 已保护，强转安全）
+- [x] StockTransferOrchestrator：删未用 import WarehouseLocation、未用字段 productSkuService+import（D-070 后 moveProductSkuStock 只记日志）
+- [x] mvn compile ✓ lints 清零；纯死代码清理无行为变更，不涉 P0 链路
 
 ### 2026-08-16 P1 全部清零（第四批4项+3条误报澄清）✅（详见 D-081）
 
