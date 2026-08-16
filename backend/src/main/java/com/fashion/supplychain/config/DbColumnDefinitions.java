@@ -269,6 +269,15 @@ public final class DbColumnDefinitions {
         add("t_production_process_tracking", "unit_price", "DECIMAL(15,2) DEFAULT NULL COMMENT '工序单价'");
         add("t_production_process_tracking", "process_code", "VARCHAR(50) DEFAULT NULL COMMENT '工序编号'");
         add("t_production_process_tracking", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        // D-095(P0)：早期动态建表无此列且 CREATE IF NOT EXISTS 跳过补列，
+        // 导致 selectPayrollAggregation 的 LEFT JOIN 报 Unknown column，关单自动工资单必失败
+        add("t_production_process_tracking", "scan_record_id", "VARCHAR(64) DEFAULT NULL COMMENT '关联扫码记录ID'");
+        add("t_production_process_tracking", "process_name", "VARCHAR(100) DEFAULT NULL COMMENT '工序名称'");
+        add("t_production_process_tracking", "settlement_amount", "DECIMAL(12,2) DEFAULT NULL COMMENT '结算金额'");
+        add("t_production_process_tracking", "is_settled", "TINYINT(1) DEFAULT 0 COMMENT '是否已结算'");
+        add("t_production_process_tracking", "settled_at", "DATETIME DEFAULT NULL COMMENT '结算时间'");
+        add("t_production_process_tracking", "settled_batch_no", "VARCHAR(64) DEFAULT NULL COMMENT '结算批次号'");
+        add("t_production_process_tracking", "settled_by", "VARCHAR(64) DEFAULT NULL COMMENT '结算人'");
         add("t_cutting_bundle", "root_bundle_id", "VARCHAR(64) DEFAULT NULL COMMENT '根菲号ID'");
         add("t_cutting_bundle", "parent_bundle_id", "VARCHAR(64) DEFAULT NULL COMMENT '父菲号ID'");
         add("t_cutting_bundle", "source_bundle_id", "VARCHAR(64) DEFAULT NULL COMMENT '来源菲号ID'");
