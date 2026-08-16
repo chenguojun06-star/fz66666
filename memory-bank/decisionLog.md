@@ -1,7 +1,33 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-095 工资单JOIN报错根因修复：collation统一+缺列补偿）
+> 最后更新：2026-08-16（新增 D-096 全库 collation 统一 + 分裂源头根治）
+
+---
+
+## D-096：全库 collation 统一为 utf8mb4_0900_ai_ci——74 张少数派表 CONVERT + 分裂源头根治（2026-08-16）
+
+### 背景
+- D-095 事故（工资单 JOIN 报 1267）暴露全库 290 张表 4 种 collation 并存：0900_ai_ci 216（主流）/ unicode_ci 49 / general_ci 14 / bin 11
+- 用户指令：全部清偿该遗留债务
+
+### 风险评估（迁移前逐项完成，全部通过）
+1. **JOIN 引用扫描**：36 张有数据的少数派表在 Java 代码中**零跨表 JOIN 引用**（grep JOIN 表名逐一确认）→ CONVERT 不破坏现有查询
+2. **唯一键撞键预检**：18 个非主键唯一索引 + 4 张 varchar 主键表（bin 派）按 `GROUP BY ... COLLATE utf8mb4_0900_ai_ci HAVING COUNT(*)>1` 逐一模拟预检 = **0 冲突**
+3. **列级分离检查**：全库无"列 collation ≠ 表默认"的隐藏分离列
+4. **bin→0900 语义变化**（区分大小写→不区分）：涉及表均为 AI 辅助表（无大小写敏感唯一约束），查询变宽松不报错，可安全转
+
+### 决策与实施
+1. 迁移 `V202708161200__unify_collation_utf8mb4_0900_ai_ci.sql`：74 张表逐表幂等 CONVERT（INFORMATION_SCHEMA 判断 + PREPARE，已 0900 或表不存在自动跳过）
+2. **分裂源头根治**：
+   - `init.sql` 建库语句 `COLLATE utf8mb4_unicode_ci → utf8mb4_0900_ai_ci`（unicode_ci 49 张表的出生地，新环境不再分裂）
+   - 迁移尾部 `ALTER DATABASE ... COLLATE utf8mb4_0900_ai_ci`（老环境改库默认，未显式指定 collation 的后续建表继承 0900）
+   - `DbTableDefinitions` 74 个建表语句已显式 `CHARSET=utf8mb4`（MySQL 8 默认 collation 即 0900）✓ 无需改动
+3. 本地验证：迁移真跑 12.8s（含 49 万行 t_ai_job_run_log）✓ 幂等复跑零报错 ✓ 全库 290 张 100% 0900 ✓ 工资事故 SQL 回归通过 ✓ 数据完整性抽查（53 万行大表/唯一索引表）完好 ✓
+
+### 教训
+- collation 分裂的根因是**建库脚本写了非默认 collation**（unicode_ci），而后续 8 年 MySQL 默认是 0900 → 所有建表三源头（init.sql/Flyway/动态建表）各自继承不同默认，越走越散
+- 防复发三件套：建库语句写死 0900 + ALTER DATABASE 对齐库默认 + 动态建表显式 CHARSET（MySQL8 下 utf8mb4 默认即 0900）
 
 ---
 

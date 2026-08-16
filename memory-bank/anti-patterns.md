@@ -287,6 +287,7 @@ cd frontend && npx tsc --noEmit         # ✅ 前端类型检查
 **识别信号**：SQL 报 `ERROR 1267 Illegal mix of collations`；MyBatis 层只显示 `The error occurred while setting parameters`（该摘要涵盖 Unknown column/Table doesn't exist/1267，**极易误判为参数问题**）
 **正确做法**：任何新增跨表字符串列 JOIN，先查 `information_schema.TABLES.TABLE_COLLATION` 两表是否同派；本库主流=`utf8mb4_0900_ai_ci`（215 张），unicode_ci/general_ci/bin 为历史少数派
 **历史教训**：2026-08-16 关单自动工资单每次必炸，真凶就是 tracking(unicode_ci) JOIN scan_record(0900)。全库 290 张表 4 种 collation 并存，跨派 JOIN 都会炸
+**✅ 已清偿（D-096）**：全库 290 张已 100% 统一 utf8mb4_0900_ai_ci；源头已根治（init.sql 建库 0900 + ALTER DATABASE 库默认对齐 + 动态建表显式 CHARSET）。新表仍需遵守：建表语句显式 `CHARSET=utf8mb4`（勿写其他 collation），新库初始化用新 init.sql
 
 ### AP-SCHEMA-03: 动态建表模板加新列但 DbColumnDefinitions 补列清单不同步
 **识别信号**：`DbTableDefinitions.TABLE_FIXES` 建表语句加了列，但 `DbColumnDefinitions` 没有对应 add() 条目

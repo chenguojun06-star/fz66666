@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-16 全库 collation 统一 290 张表 100% utf8mb4_0900_ai_ci ✅（D-096）
+
+- [x] 盘点：290 表 4 派并存（0900 216 / unicode_ci 49 / general_ci 14 / bin 11）
+- [x] 风险评估全过：36 张有数据表零 JOIN 引用、18 唯一索引+4 varchar 主键 0900 撞键预检 0 冲突、无列级分离
+- [x] 迁移 `V202708161200`：74 张逐表幂等 CONVERT + ALTER DATABASE 库默认对齐；**源头根治**：init.sql 建库 collation 改 0900（unicode_ci 派出生地）
+- [x] 本地验证：12.8s 真跑 + 幂等复跑 + 290/290 统一 + 工资 SQL 回归 + 53 万行大表完好
+- [ ] **待部署**：生产重新部署时 Flyway 自动执行（t_ai_job_run_log 49 万行 CONVERT 数秒，留意启动窗口）
+
 ### 2026-08-16 关单自动工资单 JOIN 报错根因修复 ✅（D-095，P0）
 
 - [x] 生产每次关单报 `selectPayrollAggregation ... setting parameters` 失败，本地复现抓到真凶：**ERROR 1267 collation 冲突**（tracking=unicode_ci 少数派 vs scan_record 及全部业务表=0900_ai_ci 主流派）+ 动态建表缺 `scan_record_id` 列
