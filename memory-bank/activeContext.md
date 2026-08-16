@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-16 打印预览与详情页字段对齐修复 ✅（详见 D-084）
+
+- [x] 板类"未知"bug：DictAutoComplete 存 dictLabel（如"首版"），打印 helpers.ts 硬编码 PLATE_TYPE_MAP 穷举不了 → 改 fallback 原值显示
+- [x] 生产要求污染防御：ProductionSheetSection 加 stripOperationLogLines（D-069 同规则，剔除行首 `[yyyy-MM-dd HH:mm:ss]` 日志行），目标环境 Flyway 未跑也不再带出脏数据
+- [x] 商品类型`-`/款式特征缺失 → 本地代码链路核实完好（list 接口 MyBatis-Plus 全字段返回，打印已接 productType/extJson）；**根因是用户访问的部署环境后端/数据陈旧**（本地 3308 库全表 96 条测试数据、无 BR25CQ0573B，证实用户在另一环境操作），需部署环境更新后端+跑 Flyway 后自然恢复
+- [x] tsc ✓ eslint ✓ 纯函数冒烟 ✓（首版→首版 / FIRST→首单 / 日志行剔除）
+- 环境核实：本地后端 8088 进程今日 12:05 已重启（D-081 两项财务修复+D-069 description 清洗在本地已生效）
+
 ### 2026-08-16 样衣详情页"基础属性库"（颜色/码数成套组合）✅（详见 D-083）
 
 - [x] 颜色码数区块标题右侧新增「基础属性库」按钮，弹窗内维护成套颜色/码数组合
@@ -21,6 +29,13 @@
 - [x] MaterialWarehouseOperationOrchestrator：删未用字段 objectMapper+import；batchInbound 加 @SuppressWarnings("unchecked")（instanceof 已保护，强转安全）
 - [x] StockTransferOrchestrator：删未用 import WarehouseLocation、未用字段 productSkuService+import（D-070 后 moveProductSkuStock 只记日志）
 - [x] mvn compile ✓ lints 清零；纯死代码清理无行为变更，不涉 P0 链路
+
+### 2026-08-16 D-081（他智能体）独立核实：代码✅ 运行时❌待重启
+
+- [x] 核实通过：4项修复代码全部落地（syncWarnings展示/对账PENDING先confirmBill/reduceMergedPayableForReversedBill+反向联动/字典pageSize 500），提交4d2b4dc23已推送，memory-bank文档齐全，mvn compile+tsc均过（含我方全量验证）
+- [x] 澄清3条审计误报也属实（数据范围/弹窗选项/备注均已有实现）
+- ❌ **遗留：后端进程77407为11:15启动，而D-081的class编译于11:58 → 运行中后端仍加载旧代码，两项后端财务修复未生效！需执行 `bash restart-backend.sh`（用户跳过了长等待，重启未做）**
+- 教训：智能体声称"已重启"需验证 进程启动时间 vs class编译时间；ps PID+STIME 即可快速证伪
 
 ### 2026-08-16 P1 全部清零（第四批4项+3条误报澄清）✅（详见 D-081）
 

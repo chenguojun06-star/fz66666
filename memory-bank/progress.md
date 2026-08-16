@@ -1096,6 +1096,7 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 - [x] P2：RESTful迁移第二批（cutting-task/by-style-no等）
 - [ ] 前端硬编码颜色值批量替换（~555处中性色）
 - [ ] Service层@Transactional违规治理（剩余62处，需逐个分析调用链）
+- [x] 打印预览与详情页字段对齐（D-084 2026-08-16：板类 translatePlateType 回退原值修"未知"+生产要求打印防御清洗日志行；商品类型/款式特征链路核实完好属部署环境陈旧，详见 decisionLog）
 
 ### 2026-06-20 测试闭环（已完成）
 

@@ -1863,3 +1863,27 @@ D-076 摘要可枚举的 14 项 P1 已全部闭环（D-078/079/080/081）；审�
 ### 验证
 - mvn compile ✓ 后端已重启；前端 type-check/lint/build ✓
 - **P1 全部清零**（27项：22修复+1误报角色名+3误报本轮澄清+数据范围1误报）；剩 P2 24 项
+
+## D-084 打印预览与详情页字段对齐：板类fallback/生产要求防御清洗 + 部署环境陈旧定性（2026-08-16）
+
+### 现象（用户打印 BR25CQ0573B 与详情页对比）
+①商品类型打印`-` ②板类打印"未知" vs 详情"首版" ③款式特征打印缺失 ④生产要求打印仍带BOM操作日志
+
+### 根因（三真一环境）
+1. **板类"未知"=前端确定bug**：详情页板类是字典驱动（DictAutoComplete dictType=plate_type），**存 dictLabel 中文标签**（如"首版"）；打印 helpers.ts 硬编码 PLATE_TYPE_MAP 只穷举了 FIRST/REORDER/首单/翻单/首板/首翻单/复板，字典新值必然 miss → '未知'
+2. **生产要求污染=目标环境 Flyway 未跑**：D-069 的 V202708143000 清洗脚本需后端重启执行；部署环境后端陈旧则 description 存量日志仍在
+3. **商品类型`-`/款式特征缺失=环境问题非代码问题**：打印组件 D-062 起已接 productType（translateProductType）与 extJson 六特征字段；list 接口 MyBatis-Plus selectPage 全字段返回（extJson/product_type 均真实列）——链路核实完好
+4. **环境定性证据**：本地 docker mysql(3308) 全表仅 96 条测试数据（PRICETEST/APITEST/GATE-* 等 6-7 月造数），无 BR25CQ0573B → 用户操作的是部署环境，其前端/后端/DB 任一陈旧都会造成①③④
+
+### 修复（2文件）
+- helpers.ts：translatePlateType 未命中 map 时**回退原值**（字典存的就是可读标签，穷举 map 只做旧编码兼容）；禁止显示"未知"
+- ProductionSheetSection.tsx：新增 stripOperationLogLines 防御清洗（与 D-069 SQL 同规则：`^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]` 行剔除），双保险
+
+### 验证
+- tsc ✓ eslint ✓ 纯函数冒烟 ✓（translatePlateType('首版')→'首版' / ('FIRST')→'首单' / (undefined)→'-'；污染文本清洗只留业务行）
+- 本地后端 8088 今日 12:05 已重启：D-081 财务修复+D-069 清洗在本地环境已生效（进程启动时间=class编译时间）
+
+### 教训
+- 打印/导出类组件的字典字段**禁止硬编码穷举映射**——字典值用户可自维护，永远穷举不完，fallback 原值即正确显示
+- 用户报告"页面A与页面B显示不一致"时，先确认两者**实际连的环境**（本地/部署），本案本地库无该数据是定性关键转折
+
