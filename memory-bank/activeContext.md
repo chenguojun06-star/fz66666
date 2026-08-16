@@ -1,11 +1,36 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-083：样衣详情"基础属性库"—颜色/码数成套组合一键填入）
+> 最后更新：2026-08-16（D-087：5173 旧 dev server HMR 失效致用户看到旧布局）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 "图片资产没移上去"诊断：旧 dev server HMR 失效（环境问题，代码早已完成）✅（详见 D-087）
+
+- [x] 用户反馈图片资产仍在左侧 → 核实 D-086 改动完好存在于工作区（tsc 0错误 ✓），但**均未提交**（HEAD 仍是旧左侧 sticky 布局）
+- [x] 根因：**5173 被凌晨 01:25 启动的旧 Vite 进程（PID 9428）占用且 HMR 失效**，用户访问 5173 看到旧代码；本地无 dist，非构建产物问题
+- [x] 处理：另起 dev server 于 **5174**（新代码，已验证 ready）；用户拒绝了杀 5173 旧进程的操作，**当前双端口并存：5173=旧 / 5174=新**
+- [ ] 待办：用户重启 5173（杀 PID 9428 后 `npm run dev:host`）或直接改用 5174；确认新布局无误后提交 D-086 工作区改动
+- [x] 用户贴的 console"错误"（content.js unload violation / Images loaded lazily）为浏览器插件+Edge 懒加载提示，非应用错误
+
+### 2026-08-16 详情页图片资产条重构 + 颜色图片行式管理 + 尺码排序 + 预览增强 ✅（详见 D-086）
+
+- [x] **布局重构**：图片资产从左侧大竖栏（220-280px sticky）移到基础信息上方紧凑横条（主图96px+缩略图40px横排+操作按钮行）；状态卡改单行摘要条（时间信息收 Popover）；"主图"徽标只显示一次（原主图+缩略图双徽标）
+- [x] **颜色图片管理重写**：一行一颜色 Table（色块+SKU数|48px小图|状态|行内上传/更换/移除），上传即时保存；勾选多行可批量应用；废弃自定义预览Modal改antd单层预览
+- [x] **尺码排序体系**：新 utils/sizeOrder.ts（XXS<S<M<L<XL<XXL<数字码<未知码垫底，D码属未知码）；码数Tag加↑↓前移后移按钮+"按码数排序"一键按钮；**调序同步重排矩阵数量列**（applySizeOrder 按名映射防错位）
+- [x] **预览增强**：全局CSS加深遮罩rgba(0,0,0,0.82)+工具栏白字18px黑底（原太淡看不清）；缩略图preview={false}点击只切主图，大图预览入口唯一（主图）
+- [x] **SKU属性级编辑**：canEditAttrs（自动模式=true），备注/69码/三价格直接可编辑；自动模式有修改时顶部出"保存修改"按钮；69码/备注列头加说明Tooltip
+- [x] **当前操作人**：动态字段（最近启动工序的负责人），UI加Tooltip说明
+- [x] tsc 0错误 + vite build 16.4s ✓ + dev:5175 HTTP 200 ✓；AttributeGroupLibraryModal 全系统引用一致性核验 ✓（唯一引用 ColorSizeSkuSection 已指向 common）
+
+### 2026-08-16 属性库通用化 + 打印二维码/图片调整 + PUT 400 定性 ✅（详见 D-085）
+
+- [x] **PUT /style/info 400 定性**：本地实测决定性实验（GET id=142 → 原样回传 PUT 200；模拟新前端全字段 payload（含 productType/theme/designer/supplier/supplierId/联系人/customerId/remark + deliveryDate "yyyy-MM-dd HH:mm:ss"）PUT 200）→ **本地代码无 bug，400 是部署环境 www.webyszl.cn 旧后端专属**（与 D-084 同根因：环境陈旧）。JacksonConfig 全局兼容三种日期格式+未知字段默认忽略，近期实体变更均纯新增无类型翻转。**解决：部署环境更新后端 jar + 跑 Flyway**
+- [x] **属性库通用化**：AttributeGroupLibraryModal 从 StyleBasicInfoForm 迁至 `components/common/`，props 泛化（groups 可配置任意成套属性组，默认颜色+码数；title 可定制；onApply(groupKey,values,mode)）。旧业务内文件已删除，ColorSizeSkuSection 改引 common。全系统适配点清单见 D-085（BOM物料/裁剪BOM/物料采购明细/采购单编辑等 8 处 dictType=color/size 录入点可按需接入）
+- [x] **打印调整（D-085）**：二维码从左列移至右列顶部右上角、80→42px+logo10（可扫码即可，附竖排"扫码查看"微字）；主图 90→120（列宽 100→128）；BOM 表格图片 40→64（列宽 90→110）。所有打印入口（列表/详情/生产）复用 common/StylePrintModal 一处生效
+- [x] eslint ✓（4 改动文件 0 错误）；依赖导出核验 ✓（DictAutoComplete/clearApiCache）
 
 ### 2026-08-16 打印预览与详情页字段对齐修复 ✅（详见 D-084）
 

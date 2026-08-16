@@ -1,7 +1,52 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-083 基础属性库复用 t_dict 存储）
+> 最后更新：2026-08-16（新增 D-087 旧 dev server HMR 失效诊断）
+
+---
+
+## D-087：用户"看不到改动"根因——5173 旧 Vite 进程 HMR 失效（2026-08-16）
+
+### 现象
+用户反馈"图片资产放到基础信息上方还没做，仍在左侧占地方"，并贴出浏览器 console 信息（content.js unload violation 等）。
+
+### 诊断过程
+1. 读 `StyleBasicInfoForm.tsx` 工作区代码 → 已是新布局（顶部横条+状态条+Tabs），注释与 D-086 一致；`CoverImageUpload`/`StyleStatusCard` 也已重写为横排紧凑式
+2. `git show HEAD:...StyleBasicInfoForm.tsx` → HEAD 仍是旧版"左侧 sticky：封面图+状态卡片" → **改动只在工作区、未提交**
+3. 组件全系统仅 `StyleInfo/index.tsx` 一处引用，无四端副本问题
+4. `tsc --noEmit` → 0 错误，代码本身完好
+5. `lsof` + `ps` → **5173 被凌晨 01:25 启动的旧 Vite（PID 9428）占用**；本地无 dist，排除构建产物问题
+
+### 结论（踩坑预防）
+- **用户看到旧 UI ≠ 代码没改**。以后遇到"改了没生效"优先查：① dev server 启动时间 vs 文件修改时间（`ps -o lstart -p <pid>`）② 是否多实例占端口（vite 会自动跳 5174/5175 造成"看起来连的还是旧的"）③ 访问的到底是哪个端口/哪个环境（对照 D-084/D-085：www.webyszl.cn 部署环境后端陈旧同款陷阱）
+- console 里 `content.js` 报错是浏览器插件（非应用代码）；`[Intervention] Images loaded lazily` 是 Edge 懒加载提示，均非错误
+- 用户拒绝了杀旧进程操作 → 当前 **5173=旧代码（PID 9428）/ 5174=新代码**，需用户自行重启 5173 或改用 5174 验证；验证通过后提交 D-086 工作区改动
+
+## D-086：款式详情页信息架构重构 + 颜色图片行式管理 + 尺码排序体系 + 图片预览增强（2026-08-16）
+
+### 需求（用户一口气提的8类问题）
+1. 图片资产竖栏太占地方 → 移到基础信息上方做紧凑横条，主图变小
+2. 颜色图片管理大卡片网格 → 改"一行一颜色"，应用时针对单色
+3. 码数要从小到大自动排列（D码垫底）+ 上下移动按钮手动调序
+4. 图片预览的放大/缩小/关闭按钮颜色太淡看不清
+5. 预览可重复打开（重复预览感）
+6. SKU表"备注"不知在哪操作（自动模式下输入框禁用）
+7. "商品条码(69码)"是什么、为何空白
+8. "当前操作人"是否动态
+
+### 决策
+1. **布局重构（StyleBasicInfoForm）**：废弃 `grid 220px+1fr` 左竖栏，改垂直三段：图片资产紧凑条（CoverImageUpload 重写：主图96px+缩略图40px横排+上传/智能识别/搜相似/刷新按钮行）→ 状态摘要条（StyleStatusCard 重写：单行 Tag+进度+操作人+交板+4统计数字，时间信息收进 Popover）→ Tabs。**"主图"徽标只在主图显示一次**（原先主图+缩略图双徽标造成"主图主图"重复观感）
+2. **颜色图片管理（StyleSkuColorImages 重写）**：antd Table 行式（颜色色块+SKU数 | 48px小图 | 状态 | 行内上传/更换/移除），上传后**即时保存**（saveImages 支持传 map override 绕过 setState 异步）；保留 rowSelection 勾选多行批量应用；废弃自定义预览 Modal 改 antd 单层 Image preview（消除双层预览）
+3. **尺码排序（新 utils/sizeOrder.ts 全系统统一）**：`getSizeWeight` 权重 ladder（XXS<XSS<S<M<L<XL<XXL/2XL<XXXL/3XL<4XL...<数字码26/28升序<未知码9000垫底），D码属未知码自动垫底；StyleColorSizeTable 每个码数 Tag 加 ↑↓ 前移/后移按钮 + "按码数排序"一键按钮；**调序时同步重排矩阵 quantities 列**（applySizeOrder 按尺码名映射旧列值，防止数量错位——直接 setSizeOptions 会因 useEffect 按索引重建矩阵导致错位）
+4. **预览增强（design-system.css 全局）**：`.ant-image-preview-mask` 加深至 rgba(0,0,0,0.82)，operations 工具栏白字+黑底+18px+opacity:1（原先图标淡看不清），左右切换按钮 44px 白底黑字；缩略图 `preview={false}` 点击只切换主图，**大图预览入口唯一**（仅主图可开），消除"预览里还能再点出预览"
+5. **SKU属性级编辑（useStyleSkuTabData/SkuTable）**：新增 `canEditAttrs`（自动模式也=true），备注/69码/三价格列从 canEdit 改用 canEditAttrs；**自动模式下 hasChanges 时顶部出现"保存修改"按钮**（复用 handleSave 全量 PUT，不需要切手动模式）；69码/备注列头加 Tooltip 说明（69码=EAN-13前缀690~699零售扫码用、选填；备注=表格内直接填+点保存修改）
+6. **当前操作人定性**：动态字段，自动取"最近一次已启动工序"的负责人（bom/pattern/production/secondary/process 按 startTime 最新），UI 加 Tooltip 说明动态语义
+
+### 关键细节（踩坑预防）
+1. useCoverImageUpload 新增 `handleUploadFiles`（新建模式 append pendingFiles / 编辑模式逐张 POST /style/attachment/upload + fetchImages 刷新），并导出 fetchImages
+2. antd v6 Image preview 浮层内图片本身不可再点击打开（rc-image 单层），双层感来自"缩略图也开预览"+"遮罩太浅透出底图"，按上述入口唯一+遮罩加深处理
+3. 控制台 `Permissions policy violation: unload`（content.js）是浏览器扩展注入脚本的告警、`Images loaded lazily` 是浏览器干预、`Forced reflow 48ms` 是性能提示，**均非应用错误**，不需修
+4. tsc 通过 + vite build 16.4s 成功 + dev server 5175 页面 200 验证
 
 ---
 
@@ -1887,3 +1932,34 @@ D-076 摘要可枚举的 14 项 P1 已全部闭环（D-078/079/080/081）；审�
 - 打印/导出类组件的字典字段**禁止硬编码穷举映射**——字典值用户可自维护，永远穷举不完，fallback 原值即正确显示
 - 用户报告"页面A与页面B显示不一致"时，先确认两者**实际连的环境**（本地/部署），本案本地库无该数据是定性关键转折
 
+
+
+## D-085 2026-08-16 属性库通用化 + 打印视觉调整 + PUT /style/info 400 定性（三合一）
+
+### 背景
+用户三项诉求：①"基础属性库"做成通用组件供全系统属性编辑处复用 ②PUT /api/style/info 400（部署环境 www.webyszl.cn 连续5次）③打印二维码移右上角做小、表格图片做大
+
+### PUT 400 定性（决定性实验）
+1. 本地后端（最新代码）curl 实验：admin 登录 → GET /style/info/142 → **原样回传 PUT 200**
+2. 模拟新前端完整 payload（含 4c1218157 全部新字段 + deliveryDate "yyyy-MM-dd HH:mm:ss" + quantities:null）→ **PUT 200**
+3. 静态排查：实体无 @Valid/@NotNull；JacksonConfig（30c56e3d3）全局兼容 ISO/日期/日期时间三种格式；8月实体3次变更均纯新增字段无类型翻转；无 primitive 字段；新旧 payload 字段类型全兼容
+4. 部署环境探针：空 body PUT → 401（网关正常，token 拦截层 OK）→ 400 来自应用层
+5. **结论：本地代码无 bug；400 = 部署环境旧后端专属（D-084 同根因：环境陈旧）。解决 = 更新部署后端 + 跑 Flyway**。精确定位法：F12 → Network → 红色 PUT → Response body
+
+### 属性库通用化（1迁1删1改）
+- `components/common/AttributeGroupLibraryModal.tsx`（新）：groups: AttributeGroupDef[] 可配置任意成套属性组（key/itemDictType/groupDictType默认`${item}_group`/tabLabel/itemLabel），默认颜色+码数与原行为完全兼容；title 可定制
+- 旧 `StyleBasicInfoForm/AttributeGroupLibraryModal.tsx` 删除；ColorSizeSkuSection 改引 common（onApply 签名不变）
+- **全系统可接入点排查（dictType=color/size 直接使用者 8 处）**：样衣详情 ColorSizeSkuSection（已接入）/ StyleColorSizeTable / StyleBomMaterialModal / cuttingBomColumns / CuttingBomMaterialModal / MaterialSelectModal / MaterialPurchaseDetail columns / EditablePurchaseTable。其中"成套组合录入"高价值场景：StyleColorSizeTable（矩阵录入）、裁剪BOM、采购明细；单值选择场景（BOM物料弹窗等）不适合成套组合，无需接入
+- 数据层零改动：仍复用 t_dict（xxx_group），新属性组自动获得存储能力
+
+### 打印视觉调整（StylePrintModal/sections，全部打印入口共享）
+- BasicInfoSection：QR 从左列（80px+logo20+文字）→ 右列顶部右上角（42px+logo10+竖排微字"扫码查看"），主图 90→120
+- BomTableSection：图片列 40→64、列宽 90→110
+- SizeTableSection 尺寸表图（120/220）已足够，未动；标签打印（26mm 标签）为独立场景未动
+
+### 验证
+- eslint 4 文件 0 错误；DictAutoComplete/clearApiCache 导出核验 ✓；vite dev 5173 热更新生效
+- 打印为视觉改动，待用户在打印预览中确认（QR 可扫性 42px+logo10 留了纠错余量）
+
+### 教训
+- 跨环境报错（部署400）先做"原样回传实验"：GET→PUT 回环 200 即证明代码链路无 bug，避免在本地盲改
