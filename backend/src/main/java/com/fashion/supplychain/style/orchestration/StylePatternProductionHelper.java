@@ -8,7 +8,6 @@ import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

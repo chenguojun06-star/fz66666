@@ -12,7 +12,6 @@ import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartItemMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
 import com.fashion.supplychain.production.service.PurchaseCartService;
-import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.helper.PurchaseCartLogAppendHelper;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +32,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class PurchaseCartOrchestrator {
     
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     
     @Autowired
     private PurchaseCartService purchaseCartService;
@@ -568,7 +567,7 @@ public class PurchaseCartOrchestrator {
     
     private String buildSourcesJson(List<CartPreviewDto.SourceItemDto> sources) {
         try {
-            return objectMapper.writeValueAsString(sources);
+            return OBJECT_MAPPER.writeValueAsString(sources);
         } catch (Exception e) {
             log.error("序列化来源信息失败", e);
             return "[]";

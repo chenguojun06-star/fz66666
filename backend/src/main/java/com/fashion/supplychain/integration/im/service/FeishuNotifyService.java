@@ -1,6 +1,5 @@
 package com.fashion.supplychain.integration.im.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.mapper.TenantMapper;
 import lombok.extern.slf4j.Slf4j;

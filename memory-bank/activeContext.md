@@ -1,11 +1,33 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-101：进度球实时刷新——重算服务统一广播 WebSocket）
+> 最后更新：2026-08-16（D-101 进度球实时刷新 + 四文件 IDE 警告清理）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 CI"构建失败"虚惊 + 线上发版报错定性 ✅
+
+- [x] **CI 大量 [WARN] 不是构建失败**：checkstyle.xml 全规则 severity=warning，maven-checkstyle-plugin 的 violationSeverity 默认=error → warning 违规不计入 violation，failOnViolation=true 不触发。本地 `mvn validate` EXIT=0 验证通过（checkstyle 绑定 validate 阶段，几百条存量风格警告：圈复杂度/方法过长/ReturnCount，属技术债不阻断）
+- [x] **线上 `Failed to fetch dynamically imported module` 是发版瞬间正常自愈**：19:21-19:27 正在 CI 部署，浏览器旧页面 token 过期登出 → 跳转时懒加载旧 hash chunk（index-idLw3Ud3.js）已被新版本替换 → 404 → RouteErrorBoundary 自动刷新 → 加载新版恢复（Navigated to /dashboard）。项目已有兜底，非 bug
+- [x] **全量清理 151 条 import 类 checkstyle 警告**：CI 日志被截断只显示十几个，本地 `mvn validate` 实际 151 条（UnusedImports/RedundantImport 遍布 intelligence/agent/system/style/production 等模块）。用 checkstyle 输出驱动 sed 批量删除（按文件分组行号倒序删，每行先校验确为 import 语句，零 SKIP），另手动处理 PurchaseCartOrchestrator 的 objectMapper→OBJECT_MAPPER（ConstantName）。验证：`mvn validate` import 类警告归零、`mvn compile` EXIT=0 零误删
+
+### 2026-08-16 四文件 IDE 警告清理（D-099/D-100 死代码残留）✅ 未提交
+
+用户看到 IDE 报的 6 类警告，全部为重构残留/无害警告（非编译错误）：
+
+- [x] `MaterialPickingController`：删 2 冗余 import（UserContext/TenantAssert，代码用全限定名）+ 2 未用字段（materialStockService/materialPurchaseService，D-099 残留）+ 2 死方法（syncAuditToPickupRecords/resolveFactoryType）+ materialPickupRecordMapper 字段（仅死方法引用）+ materialPickupOrchestrator 字段（孤儿字段：唯一使用者是死方法 syncAuditToPickupRecords，删方法后暴露；audit 接口用的是 materialPickingOrchestrator 不是它）；productionOrderService 仍有用保留
+- [x] `MaterialColorCardOrchestrator`：删重复 import（MaterialColorCardRecognitionResult 第 9/28 行重复）+ cosService 字段及 CosService import（D-100 残留）
+- [x] `MaterialPurchaseOrchestrator` 375 行：StringUtils.trimWhitespace（Spring 6.0 弃用）→ id.trim()
+- [x] `ProductSkuServiceImpl` 406/440 行：2 处 unchecked cast → 局部变量声明加 @SuppressWarnings("unchecked")（instanceof 已前置校验，运行时安全）
+- [x] 验证：mvn compile 通过、4 文件 lint 清零；TODO existsActivePurchaseForOrder 批量 IN（P1）保留未动
+- [ ] 待用户确认后提交
+
+**D-101 小程序同步确认（用户问"小程序都同步了吗"）**：
+- 后端 `persistProgressUpdate` 统一广播对小程序**自动生效**：miniprogram WS（`/ws/order-progress/{tenantId}`）订阅 `progress:update` → EventBus `ORDER_PROGRESS_CHANGED`，dashboard/order-detail/home 三页均已订阅，pages/order/ 仅有创建页（无列表页不涉及）
+- h5-web/source-miniapp 副本与 miniprogram 一致（websocket.js diff 相同，git 同步机制正常）
+- PC 轮询 5min→1min 是 frontend/ 独有改动（useOrderSync），小程序无需对应改动（本来就 WS 优先）
 
 ### 2026-08-16 进度球 10 多分钟不更新根因修复 ✅（D-101，P0，已推送 ccb9c63a0）
 

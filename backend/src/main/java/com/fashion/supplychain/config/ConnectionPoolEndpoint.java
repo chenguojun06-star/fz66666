@@ -8,7 +8,6 @@ import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
 

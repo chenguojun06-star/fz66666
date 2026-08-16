@@ -1,7 +1,6 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -11,7 +10,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 工厂产能预警 Helper（无状态）

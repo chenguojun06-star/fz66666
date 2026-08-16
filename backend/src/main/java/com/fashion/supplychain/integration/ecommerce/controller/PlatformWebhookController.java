@@ -1,6 +1,5 @@
 package com.fashion.supplychain.integration.ecommerce.controller;
 
-import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.PlatformDataMapperService;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;

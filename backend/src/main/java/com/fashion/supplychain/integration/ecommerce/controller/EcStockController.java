@@ -1,6 +1,5 @@
 package com.fashion.supplychain.integration.ecommerce.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.ecommerce.entity.*;

@@ -1,9 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.MaterialConstants;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -34,12 +32,6 @@ public class MaterialPickingController {
 
     @Autowired
     private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
-
-    @Autowired
-    private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
-
-    @Autowired
-    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
 
     @Autowired
     private com.fashion.supplychain.production.orchestration.MaterialPickingOrchestrator materialPickingOrchestrator;
@@ -239,12 +231,6 @@ public class MaterialPickingController {
         return Result.success(null);
     }
 
-    @Autowired
-    private com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator materialPickupOrchestrator;
-
-    @Autowired
-    private com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper materialPickupRecordMapper;
-
     @PostMapping("/{id}/audit")
     public Result<Void> audit(@PathVariable String id, @RequestBody java.util.Map<String, Object> body) {
         try {
@@ -278,43 +264,6 @@ public class MaterialPickingController {
         result.put("failCount", failCount);
         result.put("errors", errors);
         return Result.success(result);
-    }
-
-    private void syncAuditToPickupRecords(String pickingId, String remark) {
-        try {
-            java.util.List<com.fashion.supplychain.warehouse.entity.MaterialPickupRecord> pickupRecords =
-                    materialPickupRecordMapper.selectList(
-                            new LambdaQueryWrapper<com.fashion.supplychain.warehouse.entity.MaterialPickupRecord>()
-                                    .eq(com.fashion.supplychain.warehouse.entity.MaterialPickupRecord::getSourceRecordId, pickingId)
-                                    .eq(com.fashion.supplychain.warehouse.entity.MaterialPickupRecord::getDeleteFlag, 0));
-            for (com.fashion.supplychain.warehouse.entity.MaterialPickupRecord pr : pickupRecords) {
-                if ("PENDING".equals(pr.getAuditStatus())) {
-                    try {
-                        java.util.Map<String, Object> auditBody = new java.util.LinkedHashMap<>();
-                        auditBody.put("action", "approve");
-                        auditBody.put("remark", remark);
-                        materialPickupOrchestrator.audit(pr.getId(), auditBody);
-                    } catch (Exception e) {
-                        log.warn("[Picking] 审核关联领取记录失败: prId={}, error={}", pr.getId(), e.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("[Picking] 审核时同步领取记录失败: pickingId={}, error={}", pickingId, e.getMessage());
-        }
-    }
-
-    private String resolveFactoryType(MaterialPicking picking) {
-        if (StringUtils.hasText(picking.getFactoryType())) return picking.getFactoryType();
-        if (StringUtils.hasText(picking.getOrderId())) {
-            try {
-                ProductionOrder order = productionOrderService.getById(picking.getOrderId().trim());
-                if (order != null && StringUtils.hasText(order.getFactoryType())) return order.getFactoryType();
-            } catch (Exception e) {
-                log.warn("[Picking] 解析工厂类型失败: orderId={}", picking.getOrderId(), e);
-            }
-        }
-        return "INTERNAL";
     }
 
     @Data

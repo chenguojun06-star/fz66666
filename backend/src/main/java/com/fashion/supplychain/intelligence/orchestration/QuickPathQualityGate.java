@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
-import java.util.List;
 
 /**
  * 快速通道质量门 —— 为快速通道回答增加质量审查，防止"傻白甜"回答。

@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.job;
 
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.QuickAnswerOrchestrator;
 import com.fashion.supplychain.intelligence.service.QuickAnswerCacheService;
 import lombok.extern.slf4j.Slf4j;

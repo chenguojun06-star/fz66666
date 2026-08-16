@@ -1,17 +1,9 @@
 package com.fashion.supplychain.common.aop;
 
-import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fashion.supplychain.production.service.CuttingTaskService;
-import com.fashion.supplychain.production.service.MaterialPickingService;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.ArrayList;

@@ -3,7 +3,6 @@ package com.fashion.supplychain.production.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 /**
  * 物料色卡识别结果 DTO

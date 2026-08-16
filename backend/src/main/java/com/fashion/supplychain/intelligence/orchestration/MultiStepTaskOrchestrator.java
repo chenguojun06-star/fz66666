@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;

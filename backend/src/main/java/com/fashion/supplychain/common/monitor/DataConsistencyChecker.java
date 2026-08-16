@@ -1,13 +1,10 @@
 package com.fashion.supplychain.common.monitor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.mapper.*;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
-import com.fashion.supplychain.system.entity.Factory;
-import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.mapper.FactoryMapper;
 import com.fashion.supplychain.system.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;

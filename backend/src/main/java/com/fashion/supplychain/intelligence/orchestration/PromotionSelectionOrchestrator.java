@@ -4,7 +4,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
-import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.Data;

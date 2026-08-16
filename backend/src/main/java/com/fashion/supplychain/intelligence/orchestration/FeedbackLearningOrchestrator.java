@@ -7,7 +7,6 @@ import com.fashion.supplychain.intelligence.entity.IntelligencePredictionLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
 import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
-import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.Duration;
 import java.time.LocalDateTime;

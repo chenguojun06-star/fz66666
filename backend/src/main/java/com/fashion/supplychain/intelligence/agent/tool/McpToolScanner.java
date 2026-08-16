@@ -1,8 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fashion.supplychain.intelligence.entity.AgentCard;
 import com.fashion.supplychain.intelligence.orchestration.AgentCardService;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
 import jakarta.annotation.PostConstruct;
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 

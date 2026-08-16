@@ -3,7 +3,6 @@ package com.fashion.supplychain.intelligence.service;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.SkillTemplateMapper;
-import com.fashion.supplychain.intelligence.orchestration.SkillEvolutionOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;

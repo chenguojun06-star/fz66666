@@ -7,7 +7,6 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcPurchaseSuggestion
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
 import com.fashion.supplychain.integration.ecommerce.service.EcStockAlertService;
 import com.fashion.supplychain.integration.ecommerce.service.EcPurchaseSuggestionService;
-import com.fashion.supplychain.intelligence.agent.tool.AgentToolDef;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

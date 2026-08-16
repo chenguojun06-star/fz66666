@@ -7,7 +7,6 @@ import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.LoginLogService;
-import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.UserService;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;

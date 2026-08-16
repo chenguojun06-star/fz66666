@@ -2,11 +2,9 @@ package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
-import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import org.slf4j.Logger;

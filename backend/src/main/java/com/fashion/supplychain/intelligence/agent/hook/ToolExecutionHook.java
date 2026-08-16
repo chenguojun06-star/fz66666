@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.agent.hook;
 
-import org.springframework.context.annotation.Lazy;
 
 /**
  * AI Agent 工具执行钩子接口。

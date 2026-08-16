@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.fashion.supplychain.integration.entity.ExpressOrder;
 
 import java.util.List;
-import java.util.Map;
 
 public interface ExpressOrderService extends IService<ExpressOrder> {
 

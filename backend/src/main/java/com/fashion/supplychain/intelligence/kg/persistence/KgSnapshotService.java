@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.kg.persistence;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.intelligence.entity.KgSnapshotEntity;
 import com.fashion.supplychain.intelligence.engine.kg.KgRelation;
 import com.fashion.supplychain.intelligence.engine.kg.RelationExtractorRegistry;

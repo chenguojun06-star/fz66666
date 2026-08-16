@@ -6,7 +6,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.EmployeeAdvance;
-import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.service.EmployeeAdvanceService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import java.math.BigDecimal;

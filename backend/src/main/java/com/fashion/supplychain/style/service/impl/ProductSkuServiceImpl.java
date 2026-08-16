@@ -403,6 +403,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
 
             colors = ((List<?>) colorsObj).stream().map(String::valueOf).collect(java.util.stream.Collectors.toList());
             sizes = ((List<?>) sizesObj).stream().map(String::valueOf).collect(java.util.stream.Collectors.toList());
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> matrixRows = (List<Map<String, Object>>) matrixRowsObj;
 
             // 构建 colorIndex 映射
@@ -437,6 +438,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 Map<String, Object> row = matrixRows.get(rowIdx);
                 Object qtyObj = row.get("quantities");
                 if (qtyObj instanceof List) {
+                    @SuppressWarnings("unchecked")
                     List<Object> quantities = (List<Object>) qtyObj;
                     if (colIdx < quantities.size()) {
                         Integer newQty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;

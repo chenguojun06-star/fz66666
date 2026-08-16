@@ -7,7 +7,6 @@ import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.agent.context.ContextCompressor;
-import com.fashion.supplychain.intelligence.service.GraphRagService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

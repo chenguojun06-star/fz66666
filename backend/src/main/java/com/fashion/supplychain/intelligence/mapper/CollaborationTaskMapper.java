@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.mapper;
 
-import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.intelligence.entity.CollaborationTask;
 import java.util.List;

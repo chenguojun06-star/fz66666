@@ -11,7 +11,6 @@ import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.helper.StyleOperationAppendHelper;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;

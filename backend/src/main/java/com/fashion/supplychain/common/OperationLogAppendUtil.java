@@ -1,6 +1,5 @@
 package com.fashion.supplychain.common;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import java.io.Serializable;
 import java.time.LocalDateTime;

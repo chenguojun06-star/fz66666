@@ -372,7 +372,7 @@ public class MaterialPurchaseOrchestrator {
         Integer arrivedQuantity = helper.coerceInt(params == null ? null : params.get("arrivedQuantity"));
         String remark = params == null ? null
                 : (params.get("remark") == null ? null : String.valueOf(params.get("remark")));
-        String key = id == null ? null : StringUtils.trimWhitespace(id);
+        String key = id == null ? null : id.trim();
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }

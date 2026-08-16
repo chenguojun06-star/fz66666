@@ -3,7 +3,6 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.production.dto.MaterialColorCardRecognitionResult;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-import com.fashion.supplychain.production.dto.MaterialColorCardRecognitionResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,9 +53,6 @@ public class MaterialColorCardOrchestrator {
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
-
-    @Autowired
-    private CosService cosService;
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;

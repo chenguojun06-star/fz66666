@@ -4,7 +4,6 @@ import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.loop.AgentLoopContext;
 import com.fashion.supplychain.intelligence.agent.loop.AgentLoopCallback;
-import com.fashion.supplychain.intelligence.agent.planning.AgentPlan;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;

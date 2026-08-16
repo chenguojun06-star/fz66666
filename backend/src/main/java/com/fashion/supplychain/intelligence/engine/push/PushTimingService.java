@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Lazy;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service

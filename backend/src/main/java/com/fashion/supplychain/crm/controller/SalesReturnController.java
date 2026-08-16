@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.crm.dto.ApproveSalesReturnRequest;
 import com.fashion.supplychain.crm.dto.CreateSalesReturnRequest;
 import com.fashion.supplychain.crm.entity.SalesReturn;
-import com.fashion.supplychain.crm.entity.SalesReturnItem;
 import com.fashion.supplychain.crm.orchestration.SalesReturnOrchestrator;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**

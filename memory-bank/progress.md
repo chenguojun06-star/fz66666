@@ -1,9 +1,19 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-16（D-101：进度球实时刷新——重算统一广播 WebSocket）
+> 最后更新：2026-08-16（D-101 进度球实时刷新 + 四文件 IDE 警告清理）
 
 ## 已完成
+
+### 2026-08-16 四文件 IDE 警告清理 ✅（D-099/D-100 死代码残留，未提交）
+
+- [x] MaterialPickingController：删 2 冗余 import + 3 未用字段 + 2 死方法（D-099 残留）
+- [x] MaterialColorCardOrchestrator：删重复 import + cosService 字段（D-100 残留）
+- [x] MaterialPurchaseOrchestrator：trimWhitespace 弃用 → id.trim()
+- [x] ProductSkuServiceImpl：2 处 unchecked cast 加 @SuppressWarnings
+- [x] mvn compile 通过、lint 清零；待提交
+- [x] D-101 小程序同步确认：后端统一广播对小程序自动生效（WS→ORDER_PROGRESS_CHANGED 三页已订阅）；h5-web 副本一致；PC 轮询改动为 frontend 独有
+- [x] 全量清理 151 条 import 类 checkstyle 警告（脚本批量删除+防御校验，validate 归零、编译通过零误删）+ PurchaseCartOrchestrator objectMapper→OBJECT_MAPPER
 
 ### 2026-08-16 进度球 10 多分钟不更新修复 ✅（D-101，P0，ccb9c63a0）
 
