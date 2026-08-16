@@ -1,7 +1,37 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-094 工资条打印标准化重构）
+> 最后更新：2026-08-16（新增 D-095 工资单JOIN报错根因修复：collation统一+缺列补偿）
+
+---
+
+## D-095：关单自动工资单报错根因修复——全库 collation 分裂 + 动态建表缺列（2026-08-16，P0）
+
+### 背景
+- 生产报错（每次关单必炸）：`[计件薪资] 订单 xxx 自动生成工资单失败`，MyBatis 摘要 `The error occurred while setting parameters ... ScanRecordMapper.selectPayrollAggregation`
+- 日志被截断看不到 Cause，MyBatis 该摘要涵盖**参数绑定+执行阶段**错误（含 Unknown column / Table doesn't exist / 1267 collation）
+
+### 排查过程（证据链）
+1. SQL 依赖列清单核对 → `t_production_process_tracking` 全项目无 Flyway/init.sql 建表语句，靠 `DbTableDefinitions` 启动动态建（`CREATE TABLE IF NOT EXISTS`）
+2. 动态建表模板含 `scan_record_id`，但 `DbColumnDefinitions` 补列清单**漏了该列** → 早期环境表缺列且永不自愈（疑似根因之一）
+3. **本地真跑迁移 SQL 抓到真凶**：回填 UPDATE 报 `ERROR 1267 Illegal mix of collations`；随后用工资 SQL 原样 JOIN 在本地（列齐全库）**100% 复现同错** → 真凶是 collation：
+   - `t_production_process_tracking` = utf8mb4_unicode_ci（init.sql 派，全库仅 50 张）
+   - `t_scan_record` 及 tracking 的**全部**业务关联表 = utf8mb4_0900_ai_ci（主流 215 张）
+   - 全库还有 general_ci 14 张、bin 11 张，共 4 种 collation 并存
+
+### 决策
+1. `V202708161100__fix_tracking_scan_record_id.sql`：①CONVERT tracking 对齐主流 0900_ai_ci（全库唯一 JOIN 伙伴即本 SQL，其余关联表全 0900，零风险）②幂等补齐工资 SQL 依赖列 ③按 租户+订单+菲号+工序 四键回填 scan_record_id ④补 JOIN 索引
+2. `DbColumnDefinitions.java` 同步补 7 列条目做双保险（防个别环境 Flyway 基线异常）
+3. 本地验证：迁移幂等重跑 ✓、collation 统一 ✓、**工资 JOIN 原样复跑通过** ✓、回填语法正确（本地测试数据无四键匹配属预期）
+
+### 遗留（待办）
+- ⚠️ 全库 290 张表 4 种 collation 并存是系统性债务：unicode_ci 50 张 + general_ci 14 张 + bin 11 张将来任何跨派 JOIN 都会 1267。需要专门任务统一（CONVERT 有锁表风险，需逐表评估）
+- ⚠️ schema 三轨制（init.sql / Flyway / Java 动态修复器）漂移是 V202608120001 hotfix 与本次事故的共同根因，新增表/列必须三处同步或收敛到 Flyway 单轨
+
+### 教训
+- MyBatis "setting parameters" 不一定是参数问题，**执行期 Unknown column / collation 1267 也报这个摘要**——必须拿到完整 Cause 或本地复现
+- 跨表 JOIN 上线前应在本地用**生产同构数据+真实 SQL** 预跑，而非只看列名存在
+- 动态建表模板演化后，`IF NOT EXISTS` 对已存在旧表不生效——新增列必须同步进 `DbColumnDefinitions` 补列清单
 
 ---
 

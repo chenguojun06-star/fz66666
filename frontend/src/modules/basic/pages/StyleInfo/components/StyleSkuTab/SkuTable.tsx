@@ -137,8 +137,16 @@ const SkuTable: React.FC<SkuTableProps> = ({
       },
     },
     {
-      title: '库存', dataIndex: 'stockQuantity', key: 'stockQuantity', width: 80,
-      render: (_: number, record: ProductSku) => record.stockQuantity ?? 0,
+      title: (
+        <Tooltip title="成品仓实物库存：仅在「生产入库 / 成品仓出入库」时增减，开发阶段无业务含义，显示 - 表示尚无成品入仓">
+          成品库存
+        </Tooltip>
+      ),
+      dataIndex: 'stockQuantity', key: 'stockQuantity', width: 90,
+      render: (_: number, record: ProductSku) => {
+        const qty = record.stockQuantity ?? 0;
+        return qty > 0 ? qty : '-';
+      },
     },
     {
       title: (

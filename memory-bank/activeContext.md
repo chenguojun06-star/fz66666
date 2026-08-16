@@ -7,6 +7,20 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-16 关单自动工资单 JOIN 报错根因修复 ✅（D-095，P0）
+
+- [x] 生产每次关单报 `selectPayrollAggregation ... setting parameters` 失败，本地复现抓到真凶：**ERROR 1267 collation 冲突**（tracking=unicode_ci 少数派 vs scan_record 及全部业务表=0900_ai_ci 主流派）+ 动态建表缺 `scan_record_id` 列
+- [x] 新增迁移 `V202708161100__fix_tracking_scan_record_id.sql`：CONVERT 统一 collation + 幂等补列 + 四键回填 + JOIN 索引；`DbColumnDefinitions` 补 7 列双保险
+- [x] 本地端到端验证：迁移幂等重跑 ✓、工资 SQL 原样 JOIN 跑通 ✓
+- [ ] **待部署**：推送后重新部署生产，观察关单自动工资单是否恢复；全库 4 种 collation（290 张表）系统性统一为遗留债务
+
+### 2026-08-16 SKU Tab「库存」列语义修复 ✅
+
+- [x] 用户炸点：开发阶段款式 SKU Tab 出现"库存 15/5/12/8"，语义误导（被理解为样衣库存）
+- [x] 排查结论：该列为 `t_product_sku.stock_quantity`（**成品仓实物记账**），仅成品入库 +N / 成品出库 -N / 出库冲销恢复 时写入；开发阶段不产生，数字为历史成品入库测试残留（PRICETEST003 测试款）
+- [x] 修复 SkuTable.tsx：列名「库存」→「成品库存」+ Tooltip 说明来源（"仅生产入库/成品仓出入库时增减，开发阶段无业务含义"），0 显示 -
+- [x] 验证：tsc + eslint 通过
+
 ### 2026-08-16 员工计件工资条打印标准化重构 ✅（D-094）
 
 - [x] 用户炸点：工资条打印布局乱七八糟——嵌套表格（表套表）结构、结算周期空值显示"- 至 -"、简版做成一行奇怪统计数字（序号总数/订单号数）且与应发总计对不上（4788 vs 4204）、合计行挤右侧
