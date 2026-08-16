@@ -1,9 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-16（D-087：5173 旧进程 HMR 失效诊断；D-086 改动待用户在 5174 验证后提交）
+> 最后更新：2026-08-16（D-089：图片资产并入基础信息左栏+401兜底，tsc/eslint 通过待验证）
 
 ## 已完成
+
+### 2026-08-16 图片资产并入基础信息区 + 展示URL附token ✅（D-089）
+
+- [x] CoverImageUpload 嵌入式竖排（主图180px）→ BasicInfoSection coverSlot 左栏合并；顶部独立图片条移除
+- [x] displayImages 展示 URL 统一附 token（getFullAuthedFileUrl）兜底 tenant-download 401
+- [ ] 待办：用户 5174 验证；**www.webyszl.cn 需重新部署前后端**（旧构建无 401 兜底+旧后端无白名单）
+
+### 2026-08-16 生产制单 Tab 移除无关操作日志 ✅（D-088）
+
+- [x] 移除 StyleProductionTab 的 OperationLogSection 引用（日志表无 production 类型，全量款式日志与本 Tab 无关）；组件文件保留待挪 BOM Tab
+- [ ] 待办：用户浏览器验证；如需 BOM 日志展示，将 OperationLogSection 挪至 BOM Tab 并加 bizType 过滤
 
 ### 2026-08-16 "图片资产没移上去"环境诊断 ✅（D-087）
 

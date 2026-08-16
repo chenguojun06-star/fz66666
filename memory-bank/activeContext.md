@@ -1,11 +1,28 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-087：5173 旧 dev server HMR 失效致用户看到旧布局）
+> 最后更新：2026-08-16（D-089：图片资产并入基础信息左栏+展示URL附token兜底401）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 图片资产合并进"基础信息"区 + 401 兜底 ✅（D-089）
+
+- [x] 用户反馈：主图太小（96px）、图片信息应直接并入基础信息区块
+- [x] 布局重构（6 文件）：CoverImageUpload 横条→嵌入式竖排（主图 180px/缩略图 48px/去独立边框标题）；BasicInfoSection 新增 coverSlot 插槽，SectionBox 内 flex 左右布局（左 188px 图片栏，右表单 minWidth 320 窄屏堆叠）；StyleBasicInfoForm 顶部独立图片条移除
+- [x] 401 兜底：useCoverImageUpload 的 displayImages（服务器图片+coverUrl 兜底）统一 `getFullAuthedFileUrl` 附 token——兼容 tenant-download 需认证的环境；本地新后端白名单放行不受影响
+- [x] tsc + eslint 全部通过；5174 HMR 已生效待用户验证
+- [!] 用户看到的 401 来自 **www.webyszl.cn 部署环境旧构建/旧后端**（D-084/D-085 同源问题），需重新部署才能根治
+
+### 2026-08-16 生产制单 Tab 移除款式级操作日志区块 ✅（D-088）
+
+- [x] 用户反馈生产制单 Tab 混入无关操作信息（BOM配置开始/完成、修改基础信息、BOM库存检查等）
+- [x] 根因：OperationLogSection 拉取 `/style/operation-log/list` 全量日志放生产制单 Tab；而日志表仅 style/pattern/sample/maintenance 四类，**无 production 类型**，该区块与本 Tab 毫无关联
+- [x] 修复：StyleProductionTab/index.tsx 移除 import 与 JSX 引用；**OperationLogSection.tsx 文件保留**（用户拒绝删除，后续可挪 BOM Tab 复用）
+- [x] tsc 验证通过；待用户浏览器验证
+
+
 
 ### 2026-08-16 "图片资产没移上去"诊断：旧 dev server HMR 失效（环境问题，代码早已完成）✅（详见 D-087）
 

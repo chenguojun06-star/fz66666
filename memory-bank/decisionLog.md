@@ -1,9 +1,38 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-087 旧 dev server HMR 失效诊断）
+> 最后更新：2026-08-16（新增 D-089 图片资产并入基础信息左栏+展示URL附token）
 
 ---
+
+## D-089：图片资产并入"基础信息"区左栏 + 展示 URL 附 token 兜底 401（2026-08-16）
+
+### 现象
+用户反馈：①主图 96px 太小"做的烂"；②图片信息应直接合并进基础信息区，不要独立区块；③部署环境 www.webyszl.cn 图片 401。
+
+### 决策与实现
+1. **布局合并**（替代 D-086 的"顶部横条"方案）：
+   - `CoverImageUpload`：横条 → 嵌入式竖排（主图 96→**180px**、缩略图 40→**48px**、去独立边框与"图片资产/共N张"标题），PreviewImage/ThumbnailList 尺寸参数化（size/thumbSize props）
+   - `BasicInfoSection`：新增 `coverSlot?: ReactNode` 插槽，SectionBox 内 flex 左右布局（左栏 188px 图片资产，右栏表单 minWidth 320，窄屏自动堆叠）
+   - `StyleBasicInfoForm`：顶部独立图片条移除，coverNode 传入 BasicInfoSection；页面顶部只剩款式状态摘要条
+2. **401 兜底**：`useCoverImageUpload` 的 `displayImages`（服务器 images + coverUrl 兜底）统一 `getFullAuthedFileUrl` 附 token，`<img>` 直连不再裸奔。本地新后端白名单（SecurityConstants `/api/file/tenant-download/**`）放行不受影响；需认证的旧后端也能通过
+3. 部署环境 401 根因是 www.webyszl.cn 跑旧构建+旧后端（D-084/D-085 同源），**重新部署前后端才根治**，本地代码已双保险
+
+### 踩坑
+- `displayImages` 附 token 后，"主图"角标判断逻辑（displayImages[0].fileUrl === currentImage.fileUrl）两侧同源仍成立，无需改；但**任何拿 displayImages.fileUrl 与后端原始 cover 字段直接字符串比较的新代码都会失配**，须先 getFullAuthedFileUrl 归一
+
+## D-088：生产制单 Tab 不展示款式级操作日志（2026-08-16）
+
+### 现象
+用户强烈反馈生产制单 Tab 混入无关操作信息：`[2026-08-14 21:38:25] 李老板 BOM库存检查…`、"开始/完成任务：BOM配置"、"修改款式：更新字段：基础信息" 等。
+
+### 根因
+`StyleProductionTab/index.tsx` 引入 `OperationLogSection`，该组件拉取 `/style/operation-log/list` **全量**款式级日志（接口本身支持 bizType 过滤但前端未用）。而 `t_style_operation_log` 仅 style/pattern/sample/maintenance 四类（`StyleLogHelper`），**无 production 类型日志**，生产制单阶段操作走 stage-action 不写此表——该区块内容与本 Tab 完全无关，属于 D-069 落地时放错位置。
+
+### 决策
+1. 移除 `StyleProductionTab/index.tsx` 中 OperationLogSection 的 import 与 JSX 引用
+2. **组件文件保留**（用户明确拒绝删除）：`OperationLogSection.tsx` 留作后续挪至 BOM Tab（BOM 同步/库存检查/采购日志与 BOM 语境匹配）或独立日志页复用；挪用时注意改用后端 `bizType` 过滤参数，不要全量拉取
+3. 后端不改（接口和日志表设计无问题，纯前端展示位置错误）
 
 ## D-087：用户"看不到改动"根因——5173 旧 Vite 进程 HMR 失效（2026-08-16）
 
