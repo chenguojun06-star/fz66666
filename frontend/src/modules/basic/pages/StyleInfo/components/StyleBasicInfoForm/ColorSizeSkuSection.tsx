@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+import { App, Button } from 'antd';
 import StyleColorSizeTable from '../StyleColorSizeTable';
 import StyleSkuTab from '../StyleSkuTab';
 import { SECTION_BOX_STYLE_COMPACT } from './constants';
 import SectionBox from './SectionBox';
+import AttributeGroupLibraryModal from './AttributeGroupLibraryModal';
 
 interface ColorSizeSkuSectionProps {
   // 颜色/尺码/数量 props
@@ -76,8 +78,44 @@ const ColorSizeSkuSection: React.FC<ColorSizeSkuSectionProps> = ({
   styleId, styleNo, skc, skuMode, useSkuPrefix, onRefresh,
   skuRefreshTrigger,
 }) => {
+  const { message } = App.useApp();
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+
+  /** 基础属性库应用：replace 覆盖 / append 追加去重 */
+  const handleApplyAttrGroup = useCallback(
+    (groupType: 'color' | 'size', values: string[], mode: 'replace' | 'append') => {
+      if (editLocked) {
+        message.warning('当前为锁定状态，不能修改颜色码数');
+        return;
+      }
+      const merge = (current: string[]) => {
+        const base = mode === 'replace' ? [] : current.map((v) => String(v || '').trim()).filter(Boolean);
+        return Array.from(new Set([...base, ...values]));
+      };
+      if (groupType === 'color') {
+        setColorOptions(merge(colorOptions || []));
+      } else {
+        setSizeOptions(merge(sizeOptions || []));
+      }
+    },
+    [editLocked, colorOptions, sizeOptions, setColorOptions, setSizeOptions, message]
+  );
+
   return (
-    <SectionBox title="颜色码数" boxStyle={SECTION_BOX_STYLE_COMPACT}>
+    <SectionBox
+      title="颜色码数"
+      boxStyle={SECTION_BOX_STYLE_COMPACT}
+      extra={
+        <Button size="small" onClick={() => setAttrLibOpen(true)}>
+          基础属性库
+        </Button>
+      }
+    >
+      <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={handleApplyAttrGroup}
+      />
       <StyleColorSizeTable
         size1={size1}
         setSize1={setSize1}

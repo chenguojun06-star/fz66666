@@ -7,6 +7,8 @@ interface SectionBoxProps {
   usePrimaryHighlight?: boolean;
   /** 容器内联样式（默认使用 SECTION_BOX_STYLE） */
   boxStyle?: CSSProperties;
+  /** 标题右侧附加内容（如操作按钮） */
+  extra?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -18,6 +20,7 @@ const SectionBox: React.FC<SectionBoxProps> = ({
   title,
   usePrimaryHighlight = false,
   boxStyle,
+  extra,
   children,
 }) => {
   return (
@@ -41,9 +44,14 @@ const SectionBox: React.FC<SectionBoxProps> = ({
           lineHeight: 1.4,
           position: 'relative',
           borderLeft: `3px solid ${usePrimaryHighlight ? 'var(--color-primary)' : 'var(--color-slate-300)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
         }}
       >
-        {title}
+        <span style={{ minWidth: 0 }}>{title}</span>
+        {extra ? <span style={{ marginLeft: 'auto', fontWeight: 400 }}>{extra}</span> : null}
       </div>
       {children}
     </div>
