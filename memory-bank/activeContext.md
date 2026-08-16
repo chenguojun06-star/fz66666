@@ -1,11 +1,68 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-089：图片资产并入基础信息左栏+展示URL附token兜底401）
+> 最后更新：2026-08-16（D-094：员工计件工资条打印标准化重构）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 员工计件工资条打印标准化重构 ✅（D-094）
+
+- [x] 用户炸点：工资条打印布局乱七八糟——嵌套表格（表套表）结构、结算周期空值显示"- 至 -"、简版做成一行奇怪统计数字（序号总数/订单号数）且与应发总计对不上（4788 vs 4204）、合计行挤右侧
+- [x] 重构 WageSlipPrintModal.tsx（整体重写）：
+  - **单表扁平结构**：标题行(居中大字)→信息行(姓名/结算周期/打印时间,浅灰底)→表头→明细行(斑马纹)→合计行(加粗+红色金额)→人民币大写行→签字行(核算人/员工签字留线)，所有列边框天然对齐
+  - **简版重做**：从"5个统计数字"改为**按订单号+款号聚合表格**（订单/款号/件数/金额），贴合提示语"仅含订单号、订单数量、总价格"
+  - **人民币大写**：新增 toChineseAmount 函数（分→元角分，含万位补零规则）
+  - **结算周期空值**：显示"全部记录"（原来显示"- 至 -"）
+  - **完成日期**：MM-DD → YYYY-MM-DD
+  - **合计数字统一用后端 totalQuantity/totalAmount**（简版不再自算合计，消除两个不一致数字）
+  - **预览工具栏**：版本切换(按钮组+用途说明)+人员勾选(全选/单选)+已选人数提示，一行收纳
+  - **修复存量 bug**：`import { useUser } from '@/hooks/useUser'` 模块不存在 → 改为 `@/utils/AuthContext`（正确路径）
+  - **P0 铁律修正**：打印样式 font-family 由 `sans-serif 结尾` 改为 `"Songti SC","STSong","SimSun",...serif` 结尾
+- [x] 验证：tsc 0 错误 ✓ eslint 0 错误 ✓（修复4处全角空格 no-irregular-whitespace）
+- [ ] 待办：用户在工资结算页验证：明细版/简版排版、多人打印分页、打印窗口样式一致
+
+### 2026-08-16 SKC商品编码Tab统一编辑入口 ✅（D-093）
+
+- [x] 用户炸点：未点「编辑」按钮，表格里 69码/成本价/吊牌价/销售价/备注却全是输入框可直接改；底部提示文字永远显示"手动编辑模式：可自由修改商品编码…"（不管当前什么模式），加上编码模式开关停在"手动编辑"，让人彻底迷惑"什么能改什么不能改"
+- [x] 根因：D-086 引入 `canEditAttrs = true`（属性字段任何时候可编辑）+ 底部提示硬编码无条件渲染，两套编辑规则（编码字段要"手动+点编辑"、属性字段随时改）叠加导致交互混乱
+- [x] 修复（3 文件，StyleSkuTab 目录）：
+  - useStyleSkuTabData.ts：`canEditAttrs` 从 `true` 改为 `isEditing`（未点编辑一律只读）
+  - index.tsx：「编辑」按钮从"手动模式专属"改为**任何模式都显示**；删除自动模式独立的「保存修改」按钮（统一编辑态「保存/退回」）；模式说明文字/SKC Tooltip 精确化
+  - SkuTable.tsx：底部提示按模式动态渲染（手动=点编辑后可改编码/颜色/尺码+属性；自动=编码不可改、点编辑可填条码/价格/备注）；「新增编码」提示仅手动编辑态显示；编码状态/备注列头 Tooltip 同步更新
+- [x] 新交互规则：**不点「编辑」= 全字段只读**；点「编辑」后：手动模式可改编码/颜色/尺码+属性，自动模式仅可改条码/价格/备注
+- [x] 验证：tsc 0 错误 ✓ vite build 39.45s ✓（警告均为存量）
+- [ ] 待办：用户在 5174 验证：①未点编辑时表格无任何输入框 ②点编辑后手动模式全可改/自动模式仅属性可改 ③提示文字随模式切换变化
+
+### 2026-08-16 保存400诊断 + 商品下单改名 + 款式停用启用 + 商品类型字典化 + 闪烁修复 ✅（D-092）
+
+- [x] **保存 400 诊断**：用户在 www.webyszl.cn（部署环境）保存样衣报 400。本地全链路核查（sizeColorConfig/extJson 均 stringify、日期格式化、Controller 无 @Valid、Jackson 默认忽略未知字段）无 400 源 → **根因：部署环境跑旧构建+旧后端**（D-089 同源问题），需重新部署前后端（新 Flyway V202708161000 会自动执行）
+- [x] **下单管理→商品下单**改名：13 处用户可见点（菜单 routeConfig/面包屑 router/页面标题/Tab/租户模块/角色权限/驾驶舱/推送文案）；操作日志筛选项 label 改但 **value 保留"下单管理"**（兼容历史日志数据）
+- [x] **款式停用/启用闭环**：后端新增 `PUT /style/info/{id}/status?status=ENABLED|DISABLED`（Controller→Orchestrator→Service，租户校验+SCRAPPED 不可启停+幂等）；下单管理加状态列（启用中/已停用/已报废 Tag）+操作列启停按钮（确认弹窗）+状态筛选下拉（启用中/已停用/全部，走新 `statusFilter` 参数）；**停用后下单被 getValidatedForOrderCreate 拦截**（存量校验复用）
+- [x] **商品类型字典化**：BasicInfoSection Radio 硬编码→DictAutoComplete（dictType='product_type'，fallback 成品/半成品，带维护齿轮）；**值中文化**：新增 Flyway `V202708161000__normalize_product_type_values.sql`（FINISHED→成品、SEMI_FINISHED→半成品），alter_t_style_info.sql 追加同款 UPDATE；打印 translateProductType 已兼容中文（全链路无后端逻辑依赖英文枚举，已核实）
+- [x] DictAutoComplete 新增 `fallbackOptions?: string[]`（字典无数据时的兜底选项）
+- [x] **闪烁修复**：OrderRankingDashboard 60s 轮询每次 setLoading(true) 导致骨架屏"一闪一闪"→改为首次 loading、后续静默刷新（loadedOnceRef）
+- [x] 验证：后端 mvn compile ✓ 前端 tsc ✓ eslint 0 错误（6 个存量 warning 非本次引入）
+- [ ] 待办：重新部署 www.webyszl.cn（前端新构建+后端新包）后验证：①样衣保存不再 400 ②商品下单页款式停用/启用/筛选 ③商品类型字典维护 ④闪烁消失
+
+### 2026-08-16 全输入框字典维护 + 码数自动排序/拖动 ✅（D-091）
+
+- [x] 用户需求（重提）：①所有字典输入框都要能就地"维护"词汇；②商品编码码数按小到大自动排序 + 可拖动排列
+- [x] `DictAutoComplete` 组件级内置维护入口：suffix 齿轮图标（SettingOutlined）+ 内嵌 DictQuickManageModal，**全系统约 40 处使用点一次性全部生效**，无需逐处挂 MaintainLink；新增 props `enableQuickManage`(默认true)/`quickManageTitle`；disabled 或外部传 suffix 时不显示
+- [x] `StyleColorSizeTable` 码数新增**自动插入**正确位置：addSize 用 getSizeWeight 找"第一个更大码"插入其前（不打乱用户已手动拖过的相对顺序；未识别码如 D 垫底）
+- [x] `StyleColorSizeTable` 码数/颜色 Tag **拖动排序**（原生 HTML5 DnD 无新依赖）：draggable + onDragOver 高亮虚线 + drop 后 applySizeOrder/applyColorOrder（矩阵列/行同步重排防错位）；码数行加灰字提示"新增自动按小→大排位，可拖动标签调整顺序"
+- [x] 验证：tsc 0 错误 ✓ eslint 0 错误 ✓（2 文件）
+- [ ] 待办：用户 5174 验证：任意页字典输入框齿轮→弹窗增删改→下拉即时刷新；码数新增自动归位；拖动 Tag 后矩阵数量跟着走
+
+### 2026-08-16 字段旁"维护"弹窗化（字典/客户/供应商就地维护，无需跳转）✅（D-090）
+
+- [x] 用户需求：款名称/分类/设计师/主题/客户/供应商等字段旁的"维护"点击直接弹窗处理词汇，不跳字典管理页
+- [x] 新建 `utils/dataEvents.ts`（window CustomEvent 轻量广播：`dict:${dictType}`/`customer`/`supplier`）
+- [x] 新建 `components/common/DictQuickManageModal.tsx`：词条列表+新增+删除+双击改名，CUD 后广播事件
+- [x] 订阅刷新：DictAutoComplete（loadedRef 置 false 重拉）、useDictOptions（load 抽出+订阅）、CustomerSelect、SupplierSelect
+- [x] BasicInfoSection：FieldMaintainHint 占位替换为 DictMaintainHint/CustomerMaintainHint/SupplierMaintainHint；7 个字段全挂（款名称 style_name/商品分类 category/虚拟分类 season/设计师 designer/商品主题 style_theme/客户/供应商）；客户复用 CRM CustomerFormModal（props: open/editData/onClose/onSuccess），供应商内联快捷新建（名称+联系人+电话 → factoryApi.create MATERIAL/EXTERNAL/active）
+- [x] tsc + eslint 全通过（8 文件）；5174 HMR 待用户验证
 
 ### 2026-08-16 图片资产合并进"基础信息"区 + 401 兜底 ✅（D-089）
 

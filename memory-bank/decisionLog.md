@@ -1,9 +1,120 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-089 图片资产并入基础信息左栏+展示URL附token）
+> 最后更新：2026-08-16（新增 D-094 工资条打印标准化重构）
 
 ---
+
+## D-094：员工计件工资条打印标准化重构——单表结构+简版订单汇总+人民币大写（2026-08-16）
+
+### 背景
+用户强烈反馈工资条"乱七八糟不像个东西"。旧实现问题：①嵌套表格（slip-table 里嵌 data-table）模拟区域导致边框错乱；②结算周期空值渲染"- 至 -"；③简版是一行"序号总数/订单号数/款式总数/总数量/总金额"统计数字，叫法怪且与明细合计对不上（简版自算 4788/6527.27 vs 后端 4204/4850.49）；④合计行右对齐挤成一坨；⑤font-family 以 sans-serif 结尾违反 P0 打印铁律；⑥存量错误 import '@/hooks/useUser'（模块不存在）。
+
+### 决策
+1. **打印类单据一律单表扁平结构**：标题/信息/表头/明细/合计/大写/签字全部是同一张 table 的行（colspan 组织），禁止表套表
+2. **合计口径以后端 totalQuantity/totalAmount 为准**，前端不自算合计行，避免同一单据出现两个不一致的数
+3. **简版=按订单号+款号聚合的明细压缩视图**，不展示独立合计（应发总计即合计）
+4. 金额必须带**人民币大写行**（toChineseAmount：分→元角分，万段补零，零角零分→整）
+5. 空日期区间显示"全部记录"，禁止"- 至 -"
+6. 打印 font-family：`"Songti SC","STSong","SimSun","Microsoft YaHei",serif`（serif 结尾铁律）
+7. 获取当前用户用 `@/utils/AuthContext` 的 useUser（hooks/useUser 不存在）
+
+### 踩坑
+- 旧文件 `import { useUser } from '@/hooks/useUser'` 是**不存在的模块**，tsc 曾报 TS2307 但一直没人修（vite build 不查类型所以能构建过）——**发现 TS2307 必须立刻修**，不能只看 vite build 过了就当没事
+- JSX 里全角空格（　）触发 eslint no-irregular-whitespace，用 `&nbsp;` 或 span margin 代替
+
+## D-093：SKC商品编码Tab统一编辑入口——未点「编辑」一律只读（2026-08-16）
+
+### 背景
+用户强烈反馈："为什么商品编码没有点击编辑就可以直接编辑？什么逻辑！"——表格中 69码/成本价/吊牌价/销售价/备注全是常驻输入框（D-086 的 canEditAttrs=true），底部提示还永远写着"手动编辑模式：可自由修改商品编码…"（硬编码无条件渲染），用户完全无法判断什么能改、什么时候能改。
+
+### 决策
+1. **推翻 D-086 的 canEditAttrs=true**：改为 `canEditAttrs = isEditing`——与编码字段规则对齐，未点「编辑」全部只读
+2. **编辑按钮对所有模式可见**：原"编辑"按钮仅手动模式显示（isManual && !isEditing），现改为 !isEditing 即显示；自动模式原有独立「保存修改」按钮（!isManual && hasChanges）删除，统一为编辑态「保存/退回」
+3. **模式开关语义收窄**：只决定"编码生成规则 + 编辑态下编码/颜色/尺码是否可改"，不再暗示可编辑性
+4. **底部提示动态化**：按 isManual 渲染不同文案，"新增编码"提示仅在手动编辑态显示
+
+### 编辑权限矩阵（改后）
+| 状态 | 编码/颜色/尺码 | 条码/价格/备注 |
+|---|---|---|
+| 未点编辑（任何模式） | 只读 | 只读 |
+| 自动模式+编辑 | 只读 | 可编辑 |
+| 手动模式+编辑 | 可编辑 | 可编辑 |
+
+### 理由
+- 双规则叠加（编码字段一套、属性字段一套）认知负担大，用户已实际产生误改风险担忧
+- "点编辑才能改"符合主流 CRUD 直觉，防止误触
+- 属性编辑保留在自动模式可用（点编辑即可），不损失 D-086 的能力，只是加了明确入口
+
+### 踩坑
+- 提示文字永远渲染"手动编辑模式…"是误导放大器——**状态相关的提示文案必须跟状态绑定渲染**，不能硬编码
+
+## D-092：保存400诊断 + 商品下单改名 + 款式停用启用 + 商品类型字典化 + 轮询闪烁修复（2026-08-16）
+
+### 1. 样衣保存 400（部署环境 www.webyszl.cn）
+- 现象：PUT /api/style/info 400 连续多次
+- 排查：本地全链路核查（useStyleFormActions payload：sizeColorConfig/extJson 均 JSON.stringify ✓、normalizePayload 日期格式化+空串转null ✓；Controller 无 @Valid；后端无 FAIL_ON_UNKNOWN 配置=默认忽略未知字段）→ **本地无 400 源**
+- 结论：**部署环境跑旧构建+旧后端**（D-089 同源）。修复=重新部署前后端，无需改代码
+- 教训：用户报错先问环境（www.webyszl.cn=部署/localhost=本地），部署环境报错优先怀疑版本落后
+
+### 2. 下单管理→商品下单（13 处）
+- 改：菜单/面包屑/页面标题/Tab/租户模块配置/角色权限 label/驾驶舱模块名/推送文案
+- **不改**：操作日志筛选项 value（历史日志 module 存"下单管理"，value 改了旧日志筛不到）；只改 label 显示
+- 后端 SystemOperationLogAspect 的 module 判定也未动（避免新旧日志 value 分裂）
+
+### 3. 款式停用/启用（完整闭环）
+- 后端：`PUT /style/info/{id}/status?status=ENABLED|DISABLED`，Controller→Orchestrator(委托)→Service（P0铁律：Controller 不直调 Service）
+- Service 校验：状态仅 ENABLED/DISABLED；lambdaQuery 带租户条件查询（P0铁律）；SCRAPPED 不可启停；幂等（同状态直接成功）；patch 只更新 status+updateTime
+- 列表筛选：buildQueryWrapper 新增 `statusFilter` 参数（DISABLED=只看停用/ALL=全部/不传=默认启用+报废），**不传时行为与旧版完全一致**，其他调用方零影响
+- 下单拦截：复用存量 getValidatedForOrderCreate（非 ENABLED 报"款号已禁用"），停用即闭环
+- 前端：状态列 Tag + 操作列启停（modal.confirm，停用 danger）+ 搜索栏 Select（启用中[默认]/已停用/全部）
+
+### 4. 商品类型字典化
+- 旧：BasicInfoSection Radio 硬编码 PRODUCT_TYPE_OPTIONS（FINISHED/SEMI_FINISHED）
+- 新：DictAutoComplete dictType='product_type' + 维护齿轮 + fallbackOptions=['成品','半成品']（DictAutoComplete 新增 fallbackOptions prop：字典接口无数据时的兜底）
+- **值中文化**：核实前后端无逻辑依赖英文枚举（后端仅存储；前端打印 translateProductType 兼容中文）后，Flyway V202708161000 迁移存量值（FINISHED→成品/SEMI_FINISHED→半成品），alter_t_style_info.sql 追加同款（生产手工）
+- constants 的 PRODUCT_TYPE_OPTIONS 保留（StylePrintModal 翻译还在用）
+
+### 5. 轮询闪烁
+- 根因：OrderRankingDashboard 每 60s fetchData 都 setLoading(true) → Card loading 骨架屏周期性闪现（用户看到的"一闪一闪"）
+- 修复：loadedOnceRef 标记首次，后续轮询静默刷新（不闪 loading）；数据更新仍在（setStats）
+- 遗留观察：其他 30s/60s 轮询组件（useBoardStatsRefresh/useProgressTracking 等）如有同样闪烁按此模式修
+
+### 踩坑
+- Controller 里没有 styleInfoService 注入（只有 orchestrator+productSkuService），差点直调 Service 违反 P0 铁律——写代码前先读依赖注入区
+- antd AutoComplete 输入框显示的始终是 value（非 label），想让用户看到"成品"就得存中文值——所以走数据迁移而不是 label/value 分离
+
+## D-091：字典输入框组件级内置"维护"+码数自动排序/拖动（2026-08-16）
+
+### 现象
+用户两次重提：①"所有输入框只要有需要补词汇的都要做成这样，点击维护直接做"——D-090 只挂了 BasicInfoSection 7 字段，全系统约 40 处 DictAutoComplete 无维护入口；②"商品编码码数按照小到大自动排序，还可以拖动排列"——D-086 只有 ↑↓ 按钮和一键排序，无自动插入、无拖动。
+
+### 决策与实现（2 文件）
+1. **`DictAutoComplete` 组件级内置维护**（替代逐处挂 MaintainLink 的方案）：从 restProps 解构 suffix/disabled/placeholder，suffix 渲染 SettingOutlined 齿轮（Tooltip"维护XX选项（新增/删除/改名）"），点击关闭下拉并打开内嵌 DictQuickManageModal；**40 处使用点零改动全部生效**。新 props：`enableQuickManage`(默认true)、`quickManageTitle`(默认取 placeholder 字符串再退 dictType)。规则：disabled 或外部显式传 suffix 时不显示齿轮
+2. **码数新增自动插入**：addSize 按 `getSizeWeight(value)` 找第一个 weight 更大的码插入其前，否则 push 尾部。选"插入到正确位置"而非"全量重排"：不打乱用户已拖动过的自定义相对顺序（如 D 码手动提前的场景）
+3. **Tag 拖动**（码数+颜色，原生 HTML5 DnD 无新依赖）：draggable={!editLocked} + onDragStart/onDragOver(preventDefault+高亮 2px dashed primary)/onDrop/onDragEnd；码数走 applySizeOrder（矩阵数量列同步），颜色新增 applyColorOrder（先按新色序 filter/map 重排 matrixRows 行再 setColorOptions，防行错位——115 行 useEffect 按 index 匹配数量，顺序变了必须先重排 rows）
+4. 码数行加灰字常驻提示："新增自动按小→大排位，可拖动标签调整顺序"（用户多次重提，光 Tooltip 不够显性）
+
+### 踩坑
+- matrixRows 同步 useEffect（StyleColorSizeTable 115-143）按 **index** 取 quantities，任何改 selectedSizes/selectedColors 顺序的操作必须先手动重排 matrixRows（列/行）再 set options，否则数量错位——applySizeOrder 已有，本次补了 applyColorOrder
+- DictAutoComplete 解构 restProps 后 placeholder 从 restProps.placeholder 改为局部变量，注意 {...passProps} 展开（suffix 单独控制，放展开后覆盖）
+
+## D-090：字段旁"维护"弹窗化——字典/客户/供应商就地维护（2026-08-16）
+
+### 现象
+用户需求：基础信息区字段的"维护"点击应直接弹窗维护词汇（增删改），不要跳转系统管理-字典管理页。
+
+### 决策与实现（8 文件）
+1. **`utils/dataEvents.ts`**：window CustomEvent 轻量广播 `notifyDataUpdated(kind)`/`subscribeDataUpdated(kind, cb)`，kind 约定 `dict:${dictType}` / `customer` / `supplier`。不用全局状态库，跨组件下拉即时刷新的通用机制
+2. **`components/common/DictQuickManageModal.tsx`**：字典词条快捷维护弹窗（列表按 sort 排 + Input.Search 新增 + Popconfirm 删除 + 双击行内改名）；POST /system/dict（dictCode=label 后端大写化、sort=尾部+1）；任何 CUD 后 `notifyDataUpdated('dict:'+dictType)`
+3. **订阅方**：`DictAutoComplete`（loadedRef=false+loadAllItems）、`useDictOptions`（load 抽出、effect 内订阅+cleanup）、`CustomerSelect`（订阅后 fetchCustomers）、`SupplierSelect`（订阅后 fetchSuppliers）
+4. **BasicInfoSection**：占位 FieldMaintainHint → MaintainLink + DictMaintainHint（自带 Modal 实例，label 内渲染弹窗无副作用）/CustomerMaintainHint（复用 CRM CustomerFormModal，props 是 open/**editData/onClose**/onSuccess，不是 onCancel！）/SupplierMaintainHint（内联 SupplierQuickAddModal：名称+联系人+电话 → factoryApi.create {supplierType:'MATERIAL', factoryType:'EXTERNAL', status:'active'}）
+5. 挂载字段 7 个：款名称(style_name)/商品分类(category)/虚拟分类(season)/设计师(designer)/商品主题(style_theme)/客户/供应商
+
+### 踩坑
+- `api.get('/system/dict/list')` 响应结构是 axios 风格 `res.data.records`（不是 res.rows），新组件按 `res?.data?.records || res?.data || res?.records` 兜底
+- CustomerFormModal 的 props 命名是 `onClose`+必传 `editData`（可 null），与常见 onCancel 命名不同
+- 设计器(dictCode 语义)注意：useDictOptions 的 value=dictCode 而 DictAutoComplete 的 value=dictLabel，同一字典两种语义并存——改名词条会使 DictAutoComplete 已存值与新 label 失配（字典级已知语义，不做自动迁移）
 
 ## D-089：图片资产并入"基础信息"区左栏 + 展示 URL 附 token 兜底 401（2026-08-16）
 

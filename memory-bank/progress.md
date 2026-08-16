@@ -1,9 +1,44 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-16（D-089：图片资产并入基础信息左栏+401兜底，tsc/eslint 通过待验证）
+> 最后更新：2026-08-16（D-094：工资条打印标准化重构，tsc/eslint 通过）
 
 ## 已完成
+
+### 2026-08-16 员工计件工资条打印标准化重构 ✅（D-094）
+
+- [x] WageSlipPrintModal.tsx 整体重写：单表扁平结构（标题/信息/表头/明细/合计/大写/签字行）
+- [x] 简版改为按订单号+款号聚合表格；合计统一用后端数字；结算周期空值显示"全部记录"
+- [x] 新增人民币大写 toChineseAmount；完成日期 YYYY-MM-DD；修复存量错误 import（@/utils/AuthContext）
+- [x] 验证：tsc 0 错误 ✓ eslint 0 错误 ✓
+- [ ] 待办：用户在工资结算页验证明细版/简版排版与多人打印分页
+
+### 2026-08-16 SKC商品编码Tab统一编辑入口 ✅（D-093）
+
+- [x] canEditAttrs: true → isEditing（未点编辑全只读）；编辑按钮全模式可见；删除自动模式独立「保存修改」按钮
+- [x] 底部提示按模式动态渲染；列头 Tooltip/模式说明/SKC Tooltip 同步更新（3 文件：useStyleSkuTabData.ts / index.tsx / SkuTable.tsx）
+- [x] 验证：tsc 0 错误 ✓ vite build 39.45s ✓
+- [ ] 待办：用户 5174 验证编辑入口与提示文案（未点编辑无输入框/点编辑后按模式放开/提示随模式变化）
+
+### 2026-08-16 保存400诊断 + 商品下单改名 + 款式停用启用 + 商品类型字典化 + 闪烁修复 ✅（D-092）
+
+- [x] 400 诊断：本地链路无 400 源，根因=部署环境旧构建（需重新部署，见 activeContext 待办）
+- [x] 下单管理→商品下单改名 13 处（日志筛选 value 保留兼容历史）
+- [x] 款式停用/启用：后端 PUT /style/info/{id}/status + statusFilter 筛选 + 前端状态列/启停/筛选下拉 + 下单拦截闭环
+- [x] 商品类型字典化：DictAutoComplete + fallbackOptions + Flyway V202708161000 值中文化迁移
+- [x] OrderRankingDashboard 60s 轮询防闪（静默刷新）
+- [ ] 待办：重新部署 www.webyszl.cn 后端+前端（Flyway 自动跑 V202708161000），验证 4 项：保存不 400/停用启用筛选/商品类型维护/闪烁消失
+
+### 2026-08-16 全输入框字典维护 + 码数自动排序/拖动 ✅（D-091）
+
+- [x] DictAutoComplete 内置 suffix 维护齿轮+DictQuickManageModal，全系统约 40 处字典输入框一次全生效（enableQuickManage 默认 true）
+- [x] StyleColorSizeTable：addSize 按 getSizeWeight 自动插入正确位置（小→大，不打乱已拖过的顺序）；码数/颜色 Tag 原生拖动排序（矩阵列/行同步重排）
+- [ ] 待办：用户 5174 验证齿轮维护+码数自动归位+拖动；验证通过后与 D-086~D-090 一起提交
+
+### 2026-08-16 字段旁"维护"弹窗化 ✅（D-090）
+
+- [x] DictQuickManageModal（字典词条增删改名）+ dataEvents 广播 + 4 组件订阅刷新 + BasicInfoSection 7 字段挂载（含客户/供应商就地新建）
+- [ ] 待办：用户 5174 验证各字段"维护"弹窗与下拉即时刷新
 
 ### 2026-08-16 图片资产并入基础信息区 + 展示URL附token ✅（D-089）
 
