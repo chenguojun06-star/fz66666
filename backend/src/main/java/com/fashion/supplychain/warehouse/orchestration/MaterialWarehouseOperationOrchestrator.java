@@ -94,7 +94,9 @@ public class MaterialWarehouseOperationOrchestrator {
         }
 
         int beforeQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
-        materialStockService.updateStockQuantity(stock.getId(), quantity);
+        // P2-6（D-076）：仓库入库统一走加权单价 SQL（原 updateStockQuantity 只累加数量不动单价，
+        // 采购入库与仓库入库两条路径库存成本口径不一致）。unitPrice 为空时仅累加数量，行为不变。
+        materialStockService.updateStockOnInbound(stock.getId(), quantity, warehouseLocation, unitPrice, supplierName);
         int afterQty = beforeQty + quantity;
 
         BigDecimal effectivePrice = unitPrice != null ? unitPrice : stock.getUnitPrice();

@@ -69,4 +69,11 @@ public interface MaterialStockService extends IService<MaterialStock> {
     void decreaseStockAndUnlock(String stockId, int quantity);
 
     void updateStockQuantity(String stockId, int delta);
+
+    /**
+     * 入库并更新加权单价（仓库自由入库/扫码入库路径）
+     * unitPrice 非空且 > 0 时按加权平均更新库存单价，否则仅累加数量
+     */
+    void updateStockOnInbound(String stockId, int delta, String location,
+            java.math.BigDecimal unitPrice, String supplierName);
 }

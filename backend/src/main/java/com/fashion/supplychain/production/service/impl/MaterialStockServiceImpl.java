@@ -519,4 +519,20 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
         log.info("Updated stock quantity: id={}, delta={}", stockId, delta);
     }
+
+    @Override
+    public void updateStockOnInbound(String stockId, int delta, String location,
+            java.math.BigDecimal unitPrice, String supplierName) {
+        if (delta == 0 || !StringUtils.hasText(stockId)) {
+            return;
+        }
+        // P2-6（D-076）：仓库入库与采购入库统一走加权单价 SQL，库存单价不再滞后于入库价
+        int rows = baseMapper.updateStockOnInbound(stockId, delta, location, unitPrice, supplierName,
+                com.fashion.supplychain.common.UserContext.tenantId());
+        if (rows == 0) {
+            throw new IllegalStateException("库存更新失败: stockId=" + stockId);
+        }
+        log.info("Updated stock on inbound: id={}, delta={}, location={}, unitPrice={}, supplier={}",
+                stockId, delta, location, unitPrice, supplierName);
+    }
 }
