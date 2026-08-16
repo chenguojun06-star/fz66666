@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, InputNumber, Space, Tag } from 'antd';
+import { App, Button, InputNumber, Space, Tag, Tooltip } from 'antd';
+import { ArrowDownOutlined, ArrowUpOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
+import { sortBySize } from '@/utils/sizeOrder';
 
 interface StyleColorSizeTableProps {
   // 码数状态
@@ -178,6 +180,39 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     setSizeOptions(selectedSizes.filter((item) => item !== size));
   };
 
+  // ===== 尺码顺序调整（同步重排矩阵数量列，避免错位） =====
+  const applySizeOrder = (nextSizes: string[]) => {
+    setMatrixRows((prevRows: { color: string; quantities: number[]; imageUrl?: string }[]) =>
+      prevRows.map((row) => ({
+        ...row,
+        quantities: nextSizes.map((size) => {
+          const oldIndex = selectedSizes.indexOf(size);
+          return oldIndex >= 0 ? Number(row.quantities?.[oldIndex] || 0) : 0;
+        }),
+      }))
+    );
+    setSizeOptions(nextSizes);
+  };
+
+  // 单个码数前移/后移（↑↓按钮）
+  const moveSize = (index: number, dir: -1 | 1) => {
+    if (editLocked) return;
+    const target = index + dir;
+    if (target < 0 || target >= selectedSizes.length) return;
+    const next = [...selectedSizes];
+    [next[index], next[target]] = [next[target], next[index]];
+    applySizeOrder(next);
+  };
+
+  // 一键按码数从小到大排序（未识别码如 D 码排最后）
+  const sortSizesByOrder = () => {
+    if (editLocked) return;
+    const next = sortBySize(selectedSizes, (s) => s);
+    applySizeOrder(next);
+    message.success('已按码数从小到大排序（未识别的码如 D 码排在最后），保存后商品编码将按此顺序生成');
+  };
+
+
   const removeColor = (color: string) => {
     if (editLocked || isFieldLocked(color)) return;
     setColorOptions(selectedColors.filter((item) => item !== color));
@@ -257,8 +292,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
         <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
           <div style={{ paddingTop: 8, color: 'var(--color-text-secondary)' }}>码数</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {selectedSizes.map((size) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            {selectedSizes.map((size, sizeIndex) => (
               <Tag
                 key={size}
                 closable={!editLocked && !isFieldLocked(size)}
@@ -266,11 +301,52 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   e.preventDefault();
                   removeSize(size);
                 }}
-                style={selectedTagStyle}
+                style={{ ...selectedTagStyle, display: 'inline-flex', alignItems: 'center', gap: 2 }}
               >
+                {!editLocked && (
+                  <span style={{ display: 'inline-flex', gap: 1, marginRight: 2 }}>
+                    <Tooltip title="前移（小码方向）">
+                      <ArrowUpOutlined
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveSize(sizeIndex, -1);
+                        }}
+                        style={{
+                          fontSize: 10,
+                          color: sizeIndex === 0 ? 'var(--color-text-quaternary)' : 'var(--color-text-tertiary)',
+                          cursor: sizeIndex === 0 ? 'not-allowed' : 'pointer',
+                          pointerEvents: sizeIndex === 0 ? 'none' : 'auto',
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="后移（大码方向）">
+                      <ArrowDownOutlined
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveSize(sizeIndex, 1);
+                        }}
+                        style={{
+                          fontSize: 10,
+                          color: sizeIndex === selectedSizes.length - 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-tertiary)',
+                          cursor: sizeIndex === selectedSizes.length - 1 ? 'not-allowed' : 'pointer',
+                          pointerEvents: sizeIndex === selectedSizes.length - 1 ? 'none' : 'auto',
+                        }}
+                      />
+                    </Tooltip>
+                  </span>
+                )}
                 {size}
               </Tag>
             ))}
+            {selectedSizes.length > 1 && !editLocked && (
+              <Tooltip title="按标准尺码从小到大自动排序：XXS→XS→S→M→L→XL→XXL→数字码升序；未识别的码（如 D 码）排在最后">
+                <Button size="small" icon={<SortAscendingOutlined />} onClick={sortSizesByOrder}>
+                  按码数排序
+                </Button>
+              </Tooltip>
+            )}
             {!editLocked ? (
               <Space.Compact>
                 <DictAutoComplete

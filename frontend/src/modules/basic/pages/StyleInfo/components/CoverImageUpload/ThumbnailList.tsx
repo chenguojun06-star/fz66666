@@ -1,149 +1,101 @@
-import React from 'react';
-import { DeleteOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { StarFilled, DeleteOutlined } from '@ant-design/icons';
+import { Image, Tooltip } from 'antd';
 import type { DisplayImage } from './types';
-import { resolveAssetMeta } from './helpers';
 
-interface ThumbnailListProps {
-  displayImages: DisplayImage[];
+export interface ThumbnailListProps {
+  images: DisplayImage[];
   currentIndex: number;
+  setCurrentIndex: (index: number) => void;
   hoverIndex: number | null;
-  setHoverIndex: (v: number | null) => void;
-  setCurrentIndex: (v: number) => void;
-  isNewMode: boolean;
-  enabled: boolean;
-  coverUrl?: string | null;
-  onSetCover: (index: number) => void;
-  onDelete: (attachmentId: string | number, localIndex?: number) => void;
+  setHoverIndex: (index: number) => void;
+  handleSetCover: (index: number) => void;
+  handleDelete: (attachmentId: string | number, localIndex?: number) => void;
+  enabled?: boolean;
+  isNewMode?: boolean;
 }
 
 /**
- * 缩略图列表子组件
- * hover 时显示设为主图 / 删除按钮
+ * 紧凑横排缩略图（40px 方块）
+ * - 点击仅切换主图，不直接打开大图预览（预览入口唯一：主图点击）
+ * - 不再显示资产类型徽标（避免"主图主图"重复，徽标只在主图上显示一次）
+ * - 悬停显示：设为主图 / 删除
  */
 const ThumbnailList: React.FC<ThumbnailListProps> = ({
-  displayImages,
+  images,
   currentIndex,
+  setCurrentIndex,
   hoverIndex,
   setHoverIndex,
-  setCurrentIndex,
-  isNewMode,
-  enabled,
-  coverUrl,
-  onSetCover,
-  onDelete,
+  handleSetCover,
+  handleDelete,
+  enabled = true,
+  isNewMode = false,
 }) => {
-  if (displayImages.length === 0) return null;
-
+  if (images.length === 0) return null;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, width: '100%', maxWidth: 400, marginBottom: 6 }}>
-      {displayImages.map((img, idx) => {
-        const hover = hoverIndex === idx;
-        const canOperate = isNewMode || enabled;
-        const isCoverFallback = !!(img as { isCoverFallback?: boolean })?.isCoverFallback;
-        const assetMeta = resolveAssetMeta(img, idx, coverUrl, isNewMode, currentIndex);
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 6,
+        alignItems: 'center',
+        minWidth: 0,
+        flex: 1,
+      }}
+    >
+      {images.map((img, index) => {
+        const isCurrent = index === currentIndex;
         return (
           <div
-            key={idx}
-            onMouseEnter={() => setHoverIndex(idx)}
-            onMouseLeave={() => setHoverIndex(null)}
-            style={{
-              width: '100%',
-              aspectRatio: '1 / 1',
-              border: currentIndex === idx ? '2px solid var(--color-warning)' : '1px solid var(--color-border-antd)',
-              borderRadius: 6,
-              overflow: 'hidden',
-              position: 'relative',
-              cursor: (isNewMode || enabled) ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--color-border-light)',
-            }}
+            key={img.id ?? img.fileUrl ?? index}
+            style={{ position: 'relative', width: 40, height: 40 }}
+            onMouseEnter={() => setHoverIndex(index)}
+            onMouseLeave={() => setHoverIndex(-1)}
           >
-            <img
-              src={getFullAuthedFileUrl(img.fileUrl)}
-              alt={assetMeta.label}
+            <Image
               loading="lazy"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              onClick={() => setCurrentIndex(idx)}
+              src={img.fileUrl}
+              alt={`缩略图${index + 1}`}
+              width={40}
+              height={40}
+              preview={false}
+              onClick={() => setCurrentIndex(index)}
+              style={{
+                objectFit: 'cover',
+                borderRadius: 6,
+                cursor: 'pointer',
+                padding: 0,
+                border: isCurrent ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                opacity: isCurrent ? 1 : 0.75,
+              }}
             />
-            {/* Hover显示操作按钮（兜底参考图不可编辑） */}
-            {hover && canOperate && !isCoverFallback && (
+            {hoverIndex === index && (
               <div
                 style={{
                   position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'var(--color-overlay)',
+                  inset: 0,
+                  borderRadius: 6,
+                  background: 'rgba(0,0,0,0.45)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
-                  borderRadius: 6,
+                  gap: 8,
                 }}
               >
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSetCover(idx);
-                  }}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    background: currentIndex === idx ? 'var(--color-warning)' : 'var(--color-bg-base)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  title="设置为主图"
-                >
-                  {currentIndex === idx ? (
-                    <StarFilled style={{ color: 'var(--neutral-white)', fontSize: 12 }} />
-                  ) : (
-                    <StarOutlined style={{ color: 'var(--color-warning)', fontSize: 12 }} />
-                  )}
-                </div>
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(img.id, img.localIndex);
-                  }}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    background: 'var(--color-bg-base)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  title="删除图片"
-                >
-                  <DeleteOutlined style={{ color: 'var(--color-danger)', fontSize: 12 }} />
-                </div>
+                <Tooltip title="设为主图">
+                  <StarFilled
+                    style={{ color: '#faad14', fontSize: 14, cursor: enabled ? 'pointer' : 'not-allowed' }}
+                    onClick={() => enabled && handleSetCover(index)}
+                  />
+                </Tooltip>
+                <Tooltip title={isNewMode ? '移除' : '删除'}>
+                  <DeleteOutlined
+                    style={{ color: '#ff7875', fontSize: 14, cursor: 'pointer' }}
+                    onClick={() => handleDelete(img.id ?? '', index)}
+                  />
+                </Tooltip>
               </div>
             )}
-            {/* 主图/参考图小标记 */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 2,
-                right: 2,
-                background: assetMeta.color,
-                color: 'var(--neutral-white)',
-                fontSize: 9,
-                padding: '1px 4px',
-                borderRadius: 2,
-              }}
-            >
-              {assetMeta.label}
-            </div>
           </div>
         );
       })}

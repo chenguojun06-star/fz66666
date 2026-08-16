@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { App, Card, Row, Col, Image, Upload, Button, Modal, Space, Empty, Tag, Checkbox, Spin, Tooltip } from 'antd';
-import { UploadOutlined, DeleteOutlined, SaveOutlined, PictureOutlined, SyncOutlined } from '@ant-design/icons';
+import { App, Image, Upload, Button, Table, Tag, Empty, Spin, Tooltip, Space } from 'antd';
+import { UploadOutlined, DeleteOutlined, PictureOutlined, SyncOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { confirmAction } from '@/utils/confirm';
@@ -9,7 +9,6 @@ interface ColorImage {
   color: string;
   imageUrl: string | null;
   skuCount: number;
-  checked?: boolean;
 }
 
 interface StyleSkuColorImagesProps {
@@ -20,14 +19,19 @@ interface StyleSkuColorImagesProps {
   hideHeader?: boolean;
 }
 
+/**
+ * 颜色图片管理（一行一颜色）
+ * - 表格布局：每行 = 颜色 + 小图（48px）+ 状态 + 行内操作（上传/更换、移除）
+ * - 行内上传仅应用到该行颜色；勾选多行可批量应用同一张图片
+ * - 上传/移除后即时保存，无需手动点保存
+ * - 预览使用 antd 单层预览（工具栏放大/缩小/关闭全局已增强可见性）
+ */
 const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styleNo, onSaved, hideHeader }) => {
   const { message: antMessage } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [colorImages, setColorImages] = useState<ColorImage[]>([]);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
-  const [selectedColors, setSelectedColors] = useState<Set<string>>(new Set());
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [uploadingColor, setUploadingColor] = useState<string | null>(null);
 
   // 获取该款所有颜色和商品编码信息
@@ -35,21 +39,17 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     if (!styleId) return;
     setLoading(true);
     try {
-      // 获取商品编码列表
       const res = await api.post<{ code: number; data: any[] }>('/style/sku/search', { styleId: Number(styleId) });
       if (res.code === 200 && res.data) {
-        // 按颜色分组统计商品编码数量
         const colorMap = new Map<string, number>();
         for (const sku of res.data) {
           if (sku.color) {
             colorMap.set(sku.color, (colorMap.get(sku.color) || 0) + 1);
           }
         }
-        // 获取已保存的颜色图片
         const imgRes = await api.get<{ code: number; data: Record<string, string> }>(`/style/sku/color-images/${styleNo}`);
         const savedImages = imgRes.code === 200 ? imgRes.data : {};
 
-        // 合并数据
         const colors: ColorImage[] = [];
         for (const [color, count] of colorMap) {
           colors.push({
@@ -58,7 +58,6 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
             skuCount: count,
           });
         }
-        // 按颜色排序
         colors.sort((a, b) => a.color.localeCompare(b.color, 'zh-CN'));
         setColorImages(colors);
       }
@@ -71,7 +70,33 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
 
   useEffect(() => { fetchColorImages(); }, [fetchColorImages]);
 
-  // 上传图片
+  // 保存（可传入覆盖 map，用于上传后即时保存新状态）
+  const saveImages = useCallback(async (imageMapOverride?: Record<string, string>) => {
+    if (colorImages.length === 0 && !imageMapOverride) return false;
+    setSaving(true);
+    try {
+      const imageMap: Record<string, string> = imageMapOverride ?? {};
+      if (!imageMapOverride) {
+        for (const c of colorImages) {
+          if (c.imageUrl) imageMap[c.color] = c.imageUrl;
+        }
+      }
+      const res = await api.put(`/style/sku/color-images/${styleId}`, imageMap);
+      if (res.code === 200) {
+        onSaved?.();
+        return true;
+      }
+      antMessage.error(res.message || '保存失败');
+      return false;
+    } catch (err) {
+      antMessage.error('保存失败');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [colorImages, styleId, antMessage, onSaved]);
+
+  // 行内上传（仅应用到该行颜色，上传后即时保存）
   const handleUpload = useCallback(async (file: File, color: string) => {
     setUploadingColor(color);
     const formData = new FormData();
@@ -82,10 +107,17 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       const res = await api.post<{ code: number; data: string; message?: string }>('/upload', formData);
       if (res.code === 200) {
         const imageUrl = res.data;
-        setColorImages(prev => prev.map(c =>
-          c.color === color ? { ...c, imageUrl } : c
-        ));
-        antMessage.success(`${color} 图片上传成功`);
+        const nextMap: Record<string, string> = {};
+        setColorImages(prev => {
+          const next = prev.map(c => (c.color === color ? { ...c, imageUrl } : c));
+          for (const c of next) {
+            if (c.imageUrl) nextMap[c.color] = c.imageUrl;
+          }
+          return next;
+        });
+        antMessage.success(`已为「${color}」应用图片`);
+        // 即时保存（等待 state 构建完成）
+        setTimeout(() => { saveImages(nextMap); }, 0);
       } else {
         antMessage.error(res.message || '上传失败');
       }
@@ -94,40 +126,14 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     } finally {
       setUploadingColor(null);
     }
-  }, [antMessage]);
+  }, [antMessage, saveImages]);
 
-  // 保存所有图片
-  const saveImages = useCallback(async () => {
-    if (colorImages.length === 0) return;
-    setSaving(true);
-    try {
-      const imageMap: Record<string, string> = {};
-      for (const c of colorImages) {
-        if (c.imageUrl) {
-          imageMap[c.color] = c.imageUrl;
-        }
-      }
-      const res = await api.put(`/style/sku/color-images/${styleId}`, imageMap);
-      if (res.code === 200) {
-        antMessage.success('保存成功');
-        onSaved?.();
-      } else {
-        antMessage.error(res.message || '保存失败');
-      }
-    } catch (err) {
-      antMessage.error('保存失败');
-    } finally {
-      setSaving(false);
-    }
-  }, [colorImages, styleId, antMessage, onSaved]);
-
-  // 批量上传（同图片批量应用）
+  // 批量上传：同一张图片应用到勾选的多个颜色
   const handleBatchUpload = useCallback(async (file: File) => {
-    if (selectedColors.size === 0) {
-      antMessage.warning('请先选择要应用图片的颜色');
+    if (selectedRowKeys.length === 0) {
+      antMessage.warning('请先勾选要应用图片的颜色行');
       return false;
     }
-
     setSaving(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -137,12 +143,17 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       const res = await api.post<{ code: number; data: string; message?: string }>('/upload', formData);
       if (res.code === 200) {
         const imageUrl = res.data;
-        setColorImages(prev => prev.map(c =>
-          selectedColors.has(c.color) ? { ...c, imageUrl } : c
-        ));
-        antMessage.success(`已应用到 ${selectedColors.size} 个颜色`);
-        // 自动保存
-        await saveImages();
+        const nextMap: Record<string, string> = {};
+        const keySet = new Set(selectedRowKeys.map(String));
+        setColorImages(prev => {
+          const next = prev.map(c => (keySet.has(c.color) ? { ...c, imageUrl } : c));
+          for (const c of next) {
+            if (c.imageUrl) nextMap[c.color] = c.imageUrl;
+          }
+          return next;
+        });
+        antMessage.success(`已应用到 ${selectedRowKeys.length} 个颜色`);
+        setTimeout(() => { saveImages(nextMap); }, 0);
       } else {
         antMessage.error(res.message || '上传失败');
       }
@@ -151,199 +162,187 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     } finally {
       setSaving(false);
     }
-    return false; // 阻止默认上传
-  }, [selectedColors, antMessage, saveImages]);
+    return false;
+  }, [selectedRowKeys, antMessage, saveImages]);
 
-  // 删除单个颜色图片
+  // 移除单个颜色图片（即时保存）
   const handleDelete = useCallback((color: string) => {
     confirmAction(
-      `确认删除 ${color} 的图片？`,
-      '删除后需要重新上传',
+      `确认移除「${color}」的图片？`,
+      '移除后该颜色将显示为待配图',
       async () => {
-        setColorImages(prev => prev.map(c =>
-          c.color === color ? { ...c, imageUrl: null } : c
-        ));
+        const nextMap: Record<string, string> = {};
+        setColorImages(prev => {
+          const next = prev.map(c => (c.color === color ? { ...c, imageUrl: null } : c));
+          for (const c of next) {
+            if (c.imageUrl) nextMap[c.color] = c.imageUrl;
+          }
+          return next;
+        });
+        antMessage.success(`已移除「${color}」的图片`);
+        setTimeout(() => { saveImages(nextMap); }, 0);
+        await Promise.resolve();
       }
     );
-  }, []);
-
-  // 全选/取消全选
-  const toggleSelectAll = useCallback(() => {
-    if (selectedColors.size === colorImages.length) {
-      setSelectedColors(new Set());
-    } else {
-      setSelectedColors(new Set(colorImages.map(c => c.color)));
-    }
-  }, [colorImages, selectedColors.size]);
-
-  // 切换单个选中
-  const toggleColor = useCallback((color: string) => {
-    setSelectedColors(prev => {
-      const next = new Set(prev);
-      if (next.has(color)) {
-        next.delete(color);
-      } else {
-        next.add(color);
-      }
-      return next;
-    });
-  }, []);
+  }, [antMessage, saveImages]);
 
   // 统计
   const stats = useMemo(() => {
     const total = colorImages.length;
     const withImage = colorImages.filter(c => c.imageUrl).length;
-    const withoutImage = total - withImage;
-    return { total, withImage, withoutImage };
+    return { total, withImage, withoutImage: total - withImage };
   }, [colorImages]);
+
+  const columns = [
+    {
+      title: '颜色',
+      dataIndex: 'color',
+      key: 'color',
+      width: 180,
+      render: (color: string, record: ColorImage) => (
+        <Space size={8}>
+          <span
+            style={{
+              display: 'inline-block',
+              width: 14,
+              height: 14,
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent-purple, #9254de) 100%)',
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ fontWeight: 500 }}>{color}</span>
+          <Tag style={{ margin: 0 }}>{record.skuCount} 个编码</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: '图片',
+      dataIndex: 'imageUrl',
+      key: 'imageUrl',
+      width: 120,
+      render: (imageUrl: string | null) =>
+        imageUrl ? (
+          <Image
+            src={getFullAuthedFileUrl(imageUrl)}
+            alt="颜色图"
+            width={48}
+            height={48}
+            style={{ objectFit: 'cover', borderRadius: 6 }}
+            preview={{ src: getFullAuthedFileUrl(imageUrl) }}
+          />
+        ) : (
+          <Tooltip title="未上传，点击右侧「上传」按钮为该颜色配图">
+            <span
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 6,
+                border: '1px dashed var(--color-border)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--color-text-quaternary)',
+              }}
+            >
+              <PictureOutlined />
+            </span>
+          </Tooltip>
+        ),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 90,
+      render: (_: unknown, record: ColorImage) =>
+        record.imageUrl ? <Tag color="green" style={{ margin: 0 }}>已配图</Tag> : <Tag color="orange" style={{ margin: 0 }}>待配图</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 160,
+      render: (_: unknown, record: ColorImage) => (
+        <Space size={4}>
+          <Upload
+            accept="image/*"
+            showUploadList={false}
+            beforeUpload={(file) => {
+              handleUpload(file, record.color);
+              return false;
+            }}
+            disabled={uploadingColor === record.color}
+          >
+            <Tooltip title={record.imageUrl ? '更换该颜色的图片' : '为该颜色上传图片'}>
+              <Button size="small" icon={<UploadOutlined />} loading={uploadingColor === record.color}>
+                {record.imageUrl ? '更换' : '上传'}
+              </Button>
+            </Tooltip>
+          </Upload>
+          {record.imageUrl && (
+            <Tooltip title="移除该颜色的图片">
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.color)} />
+            </Tooltip>
+          )}
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <div style={{ padding: '8px 0' }}>
       {/* 头部操作栏 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <Space size={6} wrap>
           {!hideHeader && <span style={{ fontWeight: 600 }}>颜色图片管理</span>}
           <Tag color="blue">{stats.withImage} 已配图</Tag>
           <Tag color="orange">{stats.withoutImage} 待配图</Tag>
           <Tag>{stats.total} 个颜色</Tag>
         </Space>
-        <Space>
-          <Checkbox
-            checked={selectedColors.size === stats.total && stats.total > 0}
-            indeterminate={selectedColors.size > 0 && selectedColors.size < stats.total}
-            onChange={toggleSelectAll}
-          >
-            全选 ({selectedColors.size})
-          </Checkbox>
+        <Space size={6}>
           <Upload
             accept="image/*"
             showUploadList={false}
             beforeUpload={handleBatchUpload}
-            disabled={selectedColors.size === 0 || saving}
+            disabled={selectedRowKeys.length === 0 || saving}
           >
-            <Button icon={<UploadOutlined />} disabled={selectedColors.size === 0}>
-              批量应用图片到选中 ({selectedColors.size})
-            </Button>
+            <Tooltip title="先勾选左侧颜色行，可将同一张图片批量应用到这些颜色">
+              <Button icon={<UploadOutlined />} disabled={selectedRowKeys.length === 0}>
+                批量应用图片到勾选 ({selectedRowKeys.length})
+              </Button>
+            </Tooltip>
           </Upload>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={saveImages}
-            loading={saving}
-          >
-            保存全部
-          </Button>
           <Button icon={<SyncOutlined />} onClick={fetchColorImages} loading={loading}>
             刷新
           </Button>
         </Space>
       </div>
 
-      {/* 说明：仅保留核心操作提示 */}
-      <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--color-bg-subtle)', borderRadius: 4, fontSize: 12, color: 'var(--color-gray-dark)' }}>
-        勾选颜色后可批量应用同一张图片，也可以点击单个颜色上传专属图片。
+      {/* 说明 */}
+      <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+        一行对应一个颜色：点击行内「上传/更换」为该颜色单独配图；勾选多行后可批量应用同一张图片。操作后自动保存。
+        点击图片可放大预览（支持放大/缩小/旋转/关闭）。
       </div>
 
-      {/* 颜色图片网格 */}
+      {/* 颜色图片表格（一行一颜色） */}
       <Spin spinning={loading}>
         {colorImages.length === 0 ? (
           <Empty description="该款暂无颜色配置，请在尺码颜色中配置" />
         ) : (
-          <Row gutter={[16, 16]}>
-            {colorImages.map(item => (
-              <Col key={item.color} xs={24} sm={12} md={8} lg={6}>
-                <Card
-                  size="small"
-                  hoverable
-                  style={{
-                    border: selectedColors.has(item.color) ? '2px solid var(--color-info)' : '1px solid var(--color-border-light)',
-                    position: 'relative',
-                  }}
-                  cover={
-                    <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-container)', position: 'relative' }}>
-                      <Checkbox
-                        checked={selectedColors.has(item.color)}
-                        onChange={() => toggleColor(item.color)}
-                        style={{ position: 'absolute', top: 8, left: 8 }}
-                      />
-                      {uploadingColor === item.color ? (
-                        <Spin tip="上传中..." />
-                      ) : item.imageUrl ? (
-                        <Image
-                          src={getFullAuthedFileUrl(item.imageUrl)}
-                          alt={item.color}
-                          style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'pointer' }}
-                          preview={false}
-                          title="点击预览"
-                          onClick={() => {
-                            setPreviewImage(getFullAuthedFileUrl(item.imageUrl!));
-                            setPreviewVisible(true);
-                          }}
-                        />
-                      ) : (
-                        <div style={{ textAlign: 'center', color: 'var(--color-text-quaternary)' }}>
-                          <PictureOutlined style={{ fontSize: 48 }} />
-                          <div style={{ marginTop: 8 }}>未上传</div>
-                        </div>
-                      )}
-                    </div>
-                  }
-                  actions={[
-                    <Tooltip title="上传/更换图片" key="upload">
-                      <Upload
-                        accept="image/*"
-                        showUploadList={false}
-                        beforeUpload={(file) => {
-                          handleUpload(file, item.color);
-                          return false;
-                        }}
-                        disabled={uploadingColor === item.color}
-                      >
-                          <Button type="text" icon={<UploadOutlined />} loading={uploadingColor === item.color}>
-                          </Button>
-                      </Upload>
-                    </Tooltip>,
-                    <Tooltip title="删除图片" key="delete">
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleDelete(item.color)}
-                        disabled={!item.imageUrl}
-                      />
-                    </Tooltip>,
-                  ]}
-                >
-                  <Card.Meta
-                    title={item.color}
-                    description={
-                      <Space>
-                        <Tag>{item.skuCount} 个商品编码</Tag>
-                        {item.imageUrl ? (
-                          <Tag color="green">已配图</Tag>
-                        ) : (
-                          <Tag color="red">待配图</Tag>
-                        )}
-                      </Space>
-                    }
-                  />
-                </Card>
-              </Col>
-            ))}
-          </Row>
+          <Table
+            size="small"
+            rowKey="color"
+            columns={columns}
+            dataSource={colorImages}
+            pagination={colorImages.length > 8 ? { pageSize: 8, showSizeChanger: false } : false}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys),
+            }}
+            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无颜色" /> }}
+          />
         )}
       </Spin>
-
-      {/* 大图预览 */}
-      <Modal
-        open={previewVisible}
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-        width={600}
-        centered
-      >
-        <img alt="预览" style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', display: 'block', margin: '0 auto' }} src={previewImage} />
-      </Modal>
     </div>
   );
 };

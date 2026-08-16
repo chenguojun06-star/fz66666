@@ -36,14 +36,14 @@ const BomTableSection: React.FC<BomTableSectionProps> = ({ bom, showPrice }) => 
         ...(showPrice ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
           render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
         { title: '备注', dataIndex: 'remark', key: 'remark' },
-        { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
+        { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 110,
           render: (v: string) => {
             const imgs: string[] = (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })();
             if (!imgs.length) return null;
             return (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {imgs.map((url: string) => (
-                  <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid var(--color-border-light)' }} preview={{ cover: <span>预览</span> }} />
+                  <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 3, border: '1px solid var(--color-border-light)' }} preview={{ cover: <span>预览</span> }} />
                 ))}
               </div>
             );

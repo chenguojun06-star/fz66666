@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag } from 'antd';
+import { Popover, Tag, Tooltip } from 'antd';
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -9,17 +9,19 @@ import {
   UserOutlined,
   AuditOutlined,
   WarningOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { StyleInfo } from '@/types/style';
 
 /**
- * 样衣详情页左侧状态卡片
- * <p>
- * 用途：填充图片下方空白区域，展示样衣关键状态信息（开发进度/时间/推单状态/入库数量）
- * 设计：纯展示卡片，无交互，符合项目 ERP 风格（CSS变量+阴影+无边框）
+ * 款式状态摘要条（紧凑横向布局，置于图片资产条与基础信息之间）
+ * 一行展示：状态徽章 | 当前进度 | 当前操作人（动态） | 预计交板 | 样衣/入库/订单/库存
+ * 次要信息（创建/更新/完工/审核/推单时间）收纳进"详情"Popover
  */
 interface StyleStatusCardProps {
   style: StyleInfo | null | undefined;
+  /** 紧凑模式（当前唯一使用方式）：单行摘要条 */
+  compact?: boolean;
 }
 
 const StatusTagConfig: Record<string, { color: string; text: string }> = {
@@ -49,7 +51,6 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
   const sampleQuantity = style.sampleQuantity ?? 0;
   const orderCount = style.orderCount ?? 0;
 
-  // 时间格式化：取 YYYY-MM-DD HH:mm
   const fmtTime = (t?: string) => {
     if (!t) return null;
     const sliced = t.length >= 16 ? t.slice(0, 16) : t;
@@ -61,9 +62,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
   const sampleCompletedTime = fmtTime(style.sampleCompletedTime);
   const pushedOrderTime = fmtTime(style.pushedToOrderTime);
 
-  // P2-1 新增：当前环节操作人 + 预计交板时间 + 审核状态
-  // 当前操作人 = 最近启动环节的负责人（按各环节 startTime 判断，与开发进度实际对齐；
-  // 无时间信息时退回固定优先级，并补上原链缺失的二次工艺环节）
+  // 当前操作人 = 最近启动环节的负责人（动态：随工序启动时间自动更新）
   const assigneeStages = [
     { assignee: (style as any).bomAssignee, startTime: (style as any).bomStartTime },
     { assignee: (style as any).patternAssignee, startTime: (style as any).patternStartTime },
@@ -82,15 +81,12 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
        (style as any).secondaryAssignee ||
        (style as any).processAssignee ||
        '');
-  // 交板日期只展示日期部分，避免拖出 "00:00" 时间尾巴（表单侧同为纯日期）
   const deliveryDateRaw = (style as any).deliveryDate || (style as any).deliveryTime;
   const deliveryDate = deliveryDateRaw ? String(deliveryDateRaw).slice(0, 10) : null;
   const sampleReviewStatus = String((style as any).sampleReviewStatus ?? '').trim().toUpperCase();
   const sampleReviewer = (style as any).sampleReviewer || '';
   const sampleReviewTime = fmtTime((style as any).sampleReviewTime);
-  const sampleReviewComment = (style as any).sampleReviewComment || '';
 
-  // 审核状态标签配置
   const reviewTagConfig: Record<string, { color: string; text: string }> = {
     PASS: { color: 'success', text: '审核通过' },
     APPROVED: { color: 'success', text: '审核通过' },
@@ -101,39 +97,41 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
   };
   const reviewConfig = sampleReviewStatus ? reviewTagConfig[sampleReviewStatus] : null;
 
-  // 预计交板超期检测
   const isDeliveryOverdue = (() => {
     if (!deliveryDate) return false;
     const due = new Date(deliveryDate.replace(' ', 'T'));
     return !isNaN(due.getTime()) && due.getTime() < Date.now();
   })();
 
+  // 详情 Popover 内容（次要时间信息收纳）
+  const detailContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
+      {createTime && <DetailRow label="创建" value={createTime} />}
+      {updateTime && updateTime !== createTime && <DetailRow label="更新" value={updateTime} />}
+      {sampleCompletedTime && <DetailRow label="完工" value={sampleCompletedTime} />}
+      {sampleReviewTime && sampleReviewer && <DetailRow label="审核" value={`${sampleReviewer} · ${sampleReviewTime}`} />}
+      {pushedOrderTime && <DetailRow label="推单" value={pushedOrderTime} />}
+    </div>
+  );
+  const hasDetail = Boolean(createTime || updateTime || sampleCompletedTime || (sampleReviewTime && sampleReviewer) || pushedOrderTime);
+
   return (
     <div
       style={{
-        marginTop: 12,
-        padding: 12,
-        borderRadius: 8,
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '6px 16px',
+        padding: '8px 12px',
+        borderRadius: 10,
+        border: '1px solid var(--color-border)',
         background: 'var(--color-bg-container, var(--color-bg-base))',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 1px 6px rgba(0,0,0,0.04)',
+        fontSize: 12,
+        minWidth: 0,
       }}
     >
-      <div
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: 'var(--color-text, var(--color-bg-dark))',
-          marginBottom: 10,
-          paddingLeft: 8,
-          borderLeft: '3px solid var(--color-primary, var(--color-primary))',
-          lineHeight: 1.4,
-        }}
-      >
-        款式状态
-      </div>
-
-      {/* 状态徽章行 */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+      {/* 状态徽章 */}
+      <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
         {sampleConfig && (
           <Tag color={sampleConfig.color} style={{ margin: 0 }}>
             <ExperimentOutlined style={{ marginRight: 4 }} />
@@ -157,171 +155,110 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
             已推单
           </Tag>
         )}
-      </div>
+      </span>
 
-      {/* 进度节点 */}
+      {/* 当前进度 */}
       {progressNode && (
-        <StatusRow
-          icon={<NodeIndexOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
+        <SummaryItem
+          icon={<NodeIndexOutlined style={{ color: 'var(--color-primary)' }} />}
           label="当前进度"
           value={progressNode}
         />
       )}
 
-      {/* 当前环节操作人 */}
+      {/* 当前操作人（动态字段：随最近启动工序自动更新） */}
       {currentOperator && (
-        <StatusRow
-          icon={<UserOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
-          label="当前操作人"
-          value={currentOperator}
-        />
+        <Tooltip title="当前操作人为动态字段：自动取「最近一次已启动工序」的负责人，工序变化后会自动更新，无需手动维护">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <SummaryItem
+              icon={<UserOutlined style={{ color: 'var(--color-primary)' }} />}
+              label="当前操作人"
+              value={currentOperator}
+            />
+            <InfoCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 11 }} />
+          </span>
+        </Tooltip>
       )}
 
-      {/* 预计交板时间（超期红色标记） */}
+      {/* 预计交板（超期红色） */}
       {deliveryDate && (
-        <StatusRow
+        <SummaryItem
           icon={isDeliveryOverdue
             ? <WarningOutlined style={{ color: 'var(--color-danger, var(--color-error))' }} />
-            : <ClockCircleOutlined style={{ color: 'var(--color-warning, var(--color-warning))' }} />}
+            : <ClockCircleOutlined style={{ color: 'var(--color-warning)' }} />}
           label="预计交板"
           value={deliveryDate + (isDeliveryOverdue ? '（已超期）' : '')}
           valueColor={isDeliveryOverdue ? 'var(--color-danger, var(--color-error))' : undefined}
         />
       )}
 
-      {/* 关键数量 */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 8,
-          marginBottom: 10,
-          padding: '8px 0',
-          borderTop: '1px solid var(--color-border, var(--color-border-light))',
-          borderBottom: '1px solid var(--color-border, var(--color-border-light))',
-        }}
-      >
-        <MetricItem label="样衣数" value={sampleQuantity} />
-        <MetricItem label="入库数" value={totalWarehousedQuantity} />
-        <MetricItem label="订单数" value={orderCount} />
-        <MetricItem
-          label="库存"
-          value={style.stockQuantity ?? 0}
-        />
-      </div>
+      {/* 关键数量（横向紧凑） */}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+        <MetricInline label="样衣数" value={sampleQuantity} />
+        <MetricInline label="入库数" value={totalWarehousedQuantity} />
+        <MetricInline label="订单数" value={orderCount} />
+        <MetricInline label="库存" value={style.stockQuantity ?? 0} />
+      </span>
 
-      {/* 时间信息 */}
-      {createTime && (
-        <StatusRow
-          icon={<ClockCircleOutlined style={{ color: 'var(--color-text-secondary, var(--color-text-muted))' }} />}
-          label="创建"
-          value={createTime}
-        />
-      )}
-      {updateTime && updateTime !== createTime && (
-        <StatusRow
-          icon={<SyncOutlined style={{ color: 'var(--color-text-secondary, var(--color-text-muted))' }} />}
-          label="更新"
-          value={updateTime}
-        />
-      )}
-      {sampleCompletedTime && (
-        <StatusRow
-          icon={<CheckCircleOutlined style={{ color: 'var(--color-success, var(--color-success))' }} />}
-          label="完工"
-          value={sampleCompletedTime}
-        />
-      )}
-      {sampleReviewTime && sampleReviewer && (
-        <StatusRow
-          icon={<AuditOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
-          label="审核"
-          value={`${sampleReviewer} · ${sampleReviewTime}`}
-        />
-      )}
-      {pushedOrderTime && (
-        <StatusRow
-          icon={<CheckCircleOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />}
-          label="推单"
-          value={pushedOrderTime}
-        />
-      )}
-      {sampleReviewComment && (
-        <div
-          style={{
-            marginTop: 6,
-            padding: '6px 8px',
-            fontSize: 11,
-            color: 'var(--color-text-secondary, var(--color-text-muted))',
-            background: 'var(--color-bg-1, var(--color-fill-quaternary))',
-            borderRadius: 4,
-            lineHeight: 1.5,
-            maxHeight: 60,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-          }}
-          title={sampleReviewComment}
-        >
-          审核备注：{sampleReviewComment}
-        </div>
+      {/* 详情收纳 */}
+      {hasDetail && (
+        <Popover content={detailContent} title="时间信息" placement="bottomRight">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>
+            <SyncOutlined />
+            <span>{updateTime || createTime || ''}</span>
+            <InfoCircleOutlined style={{ fontSize: 11 }} />
+          </span>
+        </Popover>
       )}
     </div>
   );
 };
 
-const StatusRow: React.FC<{ icon: React.ReactNode; label: string; value: string; valueColor?: string }> = ({
+const SummaryItem: React.FC<{ icon: React.ReactNode; label: string; value: string; valueColor?: string }> = ({
   icon,
   label,
   value,
   valueColor,
 }) => (
-  <div
+  <span
     style={{
-      display: 'flex',
+      display: 'inline-flex',
       alignItems: 'center',
-      gap: 6,
-      fontSize: 12,
-      color: 'var(--color-text-secondary, var(--color-text-muted))',
-      marginBottom: 4,
-      lineHeight: 1.5,
+      gap: 4,
+      color: 'var(--color-text-secondary)',
+      maxWidth: 260,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
     }}
+    title={`${label}：${value}`}
   >
     <span style={{ display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
     <span style={{ flexShrink: 0 }}>{label}：</span>
     <span
       style={{
-        color: valueColor || 'var(--color-text, var(--color-bg-dark))',
+        color: valueColor || 'var(--color-text)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
         minWidth: 0,
       }}
-      title={value}
     >
       {value}
     </span>
+  </span>
+);
+
+const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+    <span style={{ flexShrink: 0 }}>{label}：</span>
+    <span style={{ color: 'var(--color-text)' }}>{value}</span>
   </div>
 );
 
-const MetricItem: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
-  <div style={{ textAlign: 'center' }}>
-    <div
-      style={{
-        fontSize: 16,
-        fontWeight: 600,
-        color: 'var(--color-text, var(--color-bg-dark))',
-        lineHeight: 1.2,
-      }}
-    >
-      {value}
-    </div>
-    <div style={{ fontSize: 11, color: 'var(--color-text-secondary, var(--color-text-muted))', marginTop: 2 }}>
-      {label}
-    </div>
-  </div>
+const MetricInline: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
+  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
+    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>{value}</span>
+    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{label}</span>
+  </span>
 );
 
 export default StyleStatusCard;

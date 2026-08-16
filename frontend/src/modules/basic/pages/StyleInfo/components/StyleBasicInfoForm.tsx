@@ -18,8 +18,8 @@ export type { StyleBasicInfoFormRef } from './StyleBasicInfoForm/types';
  * 包含：款号信息、客户信息、版次信息、时间信息、颜色码数配置
  *
  * 布局说明：
- *  - 左侧 sticky：封面图 + 状态卡片
- *  - 右侧：统一 Tab 系统（基础信息 / BOM清单 / 纸样开发 / ...）
+ *  - 顶部：图片资产紧凑条 + 款式状态摘要条（横向，不占左侧大竖栏）
+ *  - 下方：统一 Tab 系统（基础信息 / BOM清单 / 纸样开发 / ...）
  *  - 基础信息作为第一个 Tab，排在 BOM 清单前面
  *  - 下层 Tab 内容由 renderBelowForm 提供（StyleInfoTabs）
  */
@@ -140,26 +140,25 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   );
 
   return (
-    <Row gutter={16} className="square-inputs" style={{ display: 'grid', gridTemplateColumns: 'clamp(220px, 17vw, 280px) minmax(0, 1fr)', gap: 24, alignItems: 'flex-start' }}>
-      {/* 左侧：封面图上传 + 款式状态卡片（sticky 跟随滚动，避免下方空白） */}
-      <div style={{ minWidth: 0, position: 'sticky', top: 16, alignSelf: 'flex-start' }}>
-        <CoverImageUpload
-          styleId={currentStyle?.id}
-          styleNo={currentStyle?.styleNo || _form.getFieldValue('styleNo')}
-          enabled={isNewPage || (Boolean(currentStyle?.id) && !editLocked)}
-          isNewMode={isNewPage}
-          pendingFiles={pendingImages}
-          onPendingFilesChange={onPendingImagesChange}
-          coverUrl={currentStyle?.cover}
-          refreshTrigger={coverRefreshToken}
-          onCoverChange={onCoverChange}
-          onStyleParseResult={handleStyleParseResult}
-        />
-        {/* 仅在已存在款式时显示状态卡片，新建页面不显示 */}
-        {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} /> : null}
-      </div>
+    <div className="square-inputs" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      {/* 顶部：图片资产紧凑条（置于基础信息上方，主图+缩略图横排，不再占用左侧大竖栏） */}
+      <CoverImageUpload
+        styleId={currentStyle?.id}
+        styleNo={currentStyle?.styleNo || _form.getFieldValue('styleNo')}
+        enabled={isNewPage || (Boolean(currentStyle?.id) && !editLocked)}
+        isNewMode={isNewPage}
+        pendingFiles={pendingImages}
+        onPendingFilesChange={onPendingImagesChange}
+        coverUrl={currentStyle?.cover}
+        refreshTrigger={coverRefreshToken}
+        onCoverChange={onCoverChange}
+        onStyleParseResult={handleStyleParseResult}
+      />
 
-      {/* 右侧：统一 Tab 系统（基础信息排在最前，BOM清单等后续 Tab 由 renderBelowForm 提供） */}
+      {/* 款式状态摘要条（紧凑模式，仅在已存在款式时显示） */}
+      {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} compact /> : null}
+
+      {/* 下方：统一 Tab 系统（基础信息排在最前，BOM清单等后续 Tab 由 renderBelowForm 提供） */}
       <div style={{ minWidth: 0 }}>
         {renderBelowForm ? (
           // 有下层 Tab（StyleInfoTabs）→ 把基础信息内容传给 StyleInfoTabs，作为第一个 Tab
@@ -169,7 +168,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           basicInfoTabContent
         )}
       </div>
-    </Row>
+    </div>
   );
 };
 

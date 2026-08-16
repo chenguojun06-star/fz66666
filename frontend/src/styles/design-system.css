@@ -1195,3 +1195,39 @@ html.dark-mode {
 .purchase-cart-table .ant-table-tbody > tr.row-selected .ant-table-cell-fix-right {
   background: var(--color-bg-highlight) !important;
 }
+
+/* ========== 图片预览全局增强：工具栏按钮清晰可见（放大/缩小/旋转/关闭） ========== */
+.ant-image-preview-wrap {
+  z-index: 1200;
+}
+.ant-image-preview-mask {
+  background-color: rgba(0, 0, 0, 0.82) !important;
+}
+.ant-image-preview-operations {
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(6px);
+  border-radius: 0 0 0 12px;
+  padding: 8px 16px;
+}
+.ant-image-preview-operations .ant-image-preview-operations-btn,
+.ant-image-preview-operations .anticon {
+  color: #ffffff !important;
+  font-size: 18px !important;
+  opacity: 1 !important;
+}
+.ant-image-preview-operations .ant-image-preview-operations-btn:hover,
+.ant-image-preview-operations .ant-image-preview-operations-btn:focus {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+.ant-image-preview-switch-prev,
+.ant-image-preview-switch-next {
+  color: #ffffff !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  width: 44px !important;
+  height: 44px !important;
+  font-size: 18px !important;
+}
+.ant-image-preview-switch-prev:hover,
+.ant-image-preview-switch-next:hover {
+  background: rgba(0, 0, 0, 0.75) !important;
+}

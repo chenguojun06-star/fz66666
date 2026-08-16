@@ -64,26 +64,28 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
     <div className="print-section">
       {/* 主体：左列（图片+二维码） + 右列（信息） */}
       <div style={{ display: 'flex', gap: 20, padding: 16, border: '0.5px solid var(--color-zinc-300)', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
-        {/* 左侧：图片 + 二维码（纵向排列） */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 100 }}>
+        {/* 左侧：主图（D-085 放大；二维码已移至右列顶部右上角） */}
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'flex-start', width: 128 }}>
           {resolvedCover ? (
             <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-              style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border-antd)' }} preview={{ cover: <span>预览</span> }} />
+              style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border-antd)' }} preview={{ cover: <span>预览</span> }} />
           ) : (
-            <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed var(--color-text-quaternary)', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
+            <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed var(--color-text-quaternary)', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
           )}
-          {/* 二维码 */}
-          <div style={{ width: 90, height: 90, padding: 4, border: '1px solid var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            {qrPngDataUrl
-              ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
-              : <QRCode value={qrValue} size={80} />}
-            {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 20, height: 20, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--color-gray-label)', textAlign: 'center' }}>扫码查看详情</div>
         </div>
 
         {/* 右侧：字段信息 */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* 二维码：右上角小尺寸（D-085，可扫码即可） */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 9, color: 'var(--color-gray-label)', lineHeight: '11px', display: 'inline-block', width: 11, textAlign: 'center' }}>扫码查看</span>
+            <div style={{ width: 48, height: 48, padding: 2, border: '1px solid var(--color-border-antd)', borderRadius: 4, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
+              {qrPngDataUrl
+                ? <img src={qrPngDataUrl} alt="QR" style={{ width: 42, height: 42, display: 'block' }} />
+                : <QRCode value={qrValue} size={42} />}
+              {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
+            </div>
+          </div>
           {(() => {
             const empty = '';
             // 面料成分：优先读 fabricComposition（单字符串），

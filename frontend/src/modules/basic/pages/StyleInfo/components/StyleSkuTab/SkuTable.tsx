@@ -12,6 +12,8 @@ interface SkuTableProps {
   skus: ProductSku[];
   loading: boolean;
   canEdit: boolean;
+  /** 属性级编辑（备注/69码/价格）：自动生成模式下也允许直接填写 */
+  canEditAttrs?: boolean;
   isManual: boolean;
   getCellValue: (sku: ProductSku, field: string) => any;
   onFieldChange: (rowKey: number | string, field: string, value: any) => void;
@@ -22,6 +24,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
   skus,
   loading,
   canEdit,
+  canEditAttrs = true,
   isManual,
   getCellValue,
   onFieldChange,
@@ -79,14 +82,19 @@ const SkuTable: React.FC<SkuTableProps> = ({
       },
     },
     {
-      title: '商品条码(69码)', dataIndex: 'barcode', key: 'barcode', width: 200,
+      title: (
+        <Tooltip title="中国零售商品条码（EAN-13，前缀690~699），用于商场/超市/电商扫码收银。系统不强制填写：为空不影响内部管理；如需上线下架零售渠道，可在此录入或由条码打印软件生成">
+          商品条码(69码)
+        </Tooltip>
+      ),
+      dataIndex: 'barcode', key: 'barcode', width: 200,
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         const barcodeVal = getCellValue(record, 'barcode') || record.barcode || '';
         return (
           <Space size={4}>
-            {canEdit ? (
-              <Input value={barcodeVal} onChange={e => onFieldChange(key, 'barcode', e.target.value)} placeholder="商品条码" style={{ width: 130 }} />
+            {canEditAttrs ? (
+              <Input value={barcodeVal} onChange={e => onFieldChange(key, 'barcode', e.target.value)} placeholder="选填，用于零售扫码" style={{ width: 130 }} />
             ) : <span>{barcodeVal || '-'}</span>}
             {barcodeVal && (
               <Popover
@@ -105,7 +113,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       title: '成本价', dataIndex: 'costPrice', key: 'costPrice', width: 110,
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
-        return canEdit ? (
+        return canEditAttrs ? (
           <InputNumber value={getCellValue(record, 'costPrice')} onChange={v => onFieldChange(key, 'costPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
         ) : record.costPrice != null ? formatMoney(record.costPrice) : '-';
       },
@@ -114,7 +122,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       title: '吊牌价', dataIndex: 'tagPrice', key: 'tagPrice', width: 110,
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
-        return canEdit ? (
+        return canEditAttrs ? (
           <InputNumber value={getCellValue(record, 'tagPrice')} onChange={v => onFieldChange(key, 'tagPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
         ) : record.tagPrice != null ? formatMoney(record.tagPrice) : '-';
       },
@@ -123,7 +131,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       title: '销售价', dataIndex: 'salesPrice', key: 'salesPrice', width: 110,
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
-        return canEdit ? (
+        return canEditAttrs ? (
           <InputNumber value={getCellValue(record, 'salesPrice')} onChange={v => onFieldChange(key, 'salesPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
         ) : record.salesPrice != null ? formatMoney(record.salesPrice) : '-';
       },
@@ -143,12 +151,17 @@ const SkuTable: React.FC<SkuTableProps> = ({
         record.manuallyEdited === 1 ? <Tag color="orange">手动修改</Tag> : <Tag color="blue">自动生成</Tag>,
     },
     {
-      title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true,
+      title: (
+        <Tooltip title="备注就在本表格内直接填写：点击单元格输入文字，修改后点击右上角「保存修改」即可，两种编码模式下都可操作">
+          备注
+        </Tooltip>
+      ),
+      dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true,
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         const val = getCellValue(record, 'remark');
-        return canEdit ? (
-          <Input value={val || ''} onChange={e => onFieldChange(key, 'remark', e.target.value)} placeholder="备注" />
+        return canEditAttrs ? (
+          <Input value={val || ''} onChange={e => onFieldChange(key, 'remark', e.target.value)} placeholder="点击填写备注" />
         ) : (
           <Tooltip title={record.remark} placement="topLeft">
             <span style={{ color: record.remark ? 'var(--color-text-primary, var(--color-gray-800))' : 'var(--color-text-quaternary, var(--color-text-quaternary))' }}>

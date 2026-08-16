@@ -1,123 +1,155 @@
-import React from 'react';
+import { LeftOutlined, RightOutlined, ZoomInOutlined } from '@ant-design/icons';
 import { Image } from 'antd';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import type { CSSProperties } from 'react';
 import type { DisplayImage } from './types';
 
-interface PreviewImageProps {
-  currentImage: DisplayImage | undefined;
-  coverUrl?: string | null;
-  isNewMode: boolean;
-  styleId?: string | number;
-  enabled: boolean;
-  displayImages: DisplayImage[];
+export interface PreviewImageProps {
+  record?: DisplayImage;
+  assetMeta: { label: string; color: string };
   currentIndex: number;
+  setCurrentIndex: (index: number) => void;
+  total: number;
   previewHovered: boolean;
   setPreviewHovered: (v: boolean) => void;
-  setCurrentIndex: (v: number) => void;
-  currentAssetMetaLabel: string;
 }
 
 /**
- * 大图预览子组件
- * 保持干净，只在左上角显示资产类型徽标；多图时 hover 显示左右切换
+ * 紧凑主图（96px 方图）
+ * - 全组件唯一的"点击打开大图预览"入口（antd 单层预览）
+ * - 左右切换查看其他图片；角标显示资产类型（唯一的"主图"徽标位置）
  */
 const PreviewImage: React.FC<PreviewImageProps> = ({
-  currentImage,
-  coverUrl,
-  isNewMode,
-  styleId,
-  enabled,
-  displayImages,
+  record,
+  assetMeta,
   currentIndex,
+  setCurrentIndex,
+  total,
   previewHovered,
   setPreviewHovered,
-  setCurrentIndex,
-  currentAssetMetaLabel,
 }) => {
+  if (!record) {
+    return (
+      <div
+        style={{
+          width: 96,
+          height: 96,
+          border: '1px dashed var(--color-border)',
+          borderRadius: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--color-text-quaternary)',
+          fontSize: 12,
+          gap: 4,
+          flexShrink: 0,
+        }}
+      >
+        暂无图片
+      </div>
+    );
+  }
+
+  const fullUrl = record.fileUrl;
+
+  const arrowStyle = (side: 'left' | 'right'): CSSProperties => ({
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    [side]: 2,
+    width: 20,
+    height: 20,
+    borderRadius: '50%',
+    background: 'rgba(0,0,0,0.55)',
+    color: '#fff',
+    display: total > 1 ? 'flex' : 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 10,
+    cursor: 'pointer',
+    zIndex: 3,
+    border: 'none',
+    transition: 'background 0.2s',
+  });
+
   return (
     <div
-      style={{
-        width: '100%',
-        aspectRatio: '1 / 1',
-        border: '1px solid var(--color-border)',
-        borderRadius: 8,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-        overflow: 'hidden',
-        background: 'var(--color-bg-container)',
-        cursor: 'default',
-        position: 'relative',
-      }}
-      onMouseEnter={() => displayImages.length > 1 && setPreviewHovered(true)}
+      style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}
+      onMouseEnter={() => setPreviewHovered(true)}
       onMouseLeave={() => setPreviewHovered(false)}
     >
-      {currentImage ? (
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-          <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="主图" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          {/* 左上角：资产类型徽标（唯一一个常驻徽标） */}
-          <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 10px', borderRadius: 999, background: 'var(--color-primary)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600, pointerEvents: 'none' }}>
-            {currentAssetMetaLabel}
-          </div>
-        </div>
-      ) : coverUrl ? (
-        <Image loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-      ) : (
-        <div style={{ textAlign: 'center', padding: '24px 16px', width: '100%' }}>
-          {isNewMode ? (
-            <>
-              <div style={{ color: 'var(--color-primary)', fontSize: 13, fontWeight: 600 }}>上传设计稿或款式照片</div>
-              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginTop: 4 }}>
-                支持拖拽上传，可自动识别填充
-              </div>
-            </>
-          ) : !styleId ? (
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>请先保存基础信息后再上传图片</div>
-          ) : enabled ? (
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>上传设计稿或款式照片</span>
-          ) : (
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>样衣已完成，如需修改请联系管理员</div>
-          )}
+      <Image
+        loading="lazy"
+        src={record.fileUrl}
+        alt="主图"
+        width={96}
+        height={96}
+        style={{ objectFit: 'cover', borderRadius: 8, cursor: 'zoom-in' }}
+        preview={{ src: fullUrl || record.fileUrl }}
+      />
+      {/* 资产类型角标（唯一徽标，避免缩略图上重复显示） */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 4,
+          top: 4,
+          padding: '0 6px',
+          fontSize: 10,
+          lineHeight: '16px',
+          borderRadius: 4,
+          background: assetMeta.color,
+          color: '#fff',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
+      >
+        {assetMeta.label}
+      </div>
+      {/* 悬停查看提示 */}
+      {previewHovered && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 4,
+            bottom: 4,
+            width: 20,
+            height: 20,
+            borderRadius: 4,
+            background: 'rgba(0,0,0,0.55)',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 11,
+            pointerEvents: 'none',
+            zIndex: 2,
+          }}
+        >
+          <ZoomInOutlined />
         </div>
       )}
-      {displayImages.length > 1 && previewHovered && (
-        <>
-          <div
-            onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex <= 0 ? displayImages.length - 1 : currentIndex - 1); }}
-            style={{
-              position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-              width: 32, height: 56, background: 'var(--color-overlay)',
-              borderRadius: '0 8px 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', transition: 'background 0.15s',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay-strong)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay)'; }}
-          >
-            <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 14 }} />
-          </div>
-          <div
-            onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex >= displayImages.length - 1 ? 0 : currentIndex + 1); }}
-            style={{
-              position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-              width: 32, height: 56, background: 'var(--color-overlay)',
-              borderRadius: '8px 0 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', transition: 'background 0.15s',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay-strong)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-overlay)'; }}
-          >
-            <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 14 }} />
-          </div>
-          {/* P2: 底部圆点指示器 — 移动端/触屏友好，不依赖 hover */}
-          <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, pointerEvents: 'none' }}>
-            {displayImages.map((_, idx) => (
-              <span key={idx} style={{ width: 6, height: 6, borderRadius: '50%', background: idx === currentIndex ? 'var(--color-primary)' : 'var(--color-overlay)', opacity: 0.9 }} />
-            ))}
-          </div>
-        </>
-      )}
+      <button
+        type="button"
+        aria-label="上一张"
+        style={arrowStyle('left') as CSSProperties}
+        onClick={(e) => {
+          e.stopPropagation();
+          setCurrentIndex((currentIndex - 1 + total) % total);
+        }}
+      >
+        <LeftOutlined />
+      </button>
+      <button
+        type="button"
+        aria-label="下一张"
+        style={arrowStyle('right') as CSSProperties}
+        onClick={(e) => {
+          e.stopPropagation();
+          setCurrentIndex((currentIndex + 1) % total);
+        }}
+      >
+        <RightOutlined />
+      </button>
     </div>
   );
 };

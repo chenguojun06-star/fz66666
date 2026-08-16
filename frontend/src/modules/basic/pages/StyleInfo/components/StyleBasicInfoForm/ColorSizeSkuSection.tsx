@@ -4,7 +4,7 @@ import StyleColorSizeTable from '../StyleColorSizeTable';
 import StyleSkuTab from '../StyleSkuTab';
 import { SECTION_BOX_STYLE_COMPACT } from './constants';
 import SectionBox from './SectionBox';
-import AttributeGroupLibraryModal from './AttributeGroupLibraryModal';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 
 interface ColorSizeSkuSectionProps {
   // 颜色/尺码/数量 props

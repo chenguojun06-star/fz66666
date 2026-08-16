@@ -26,6 +26,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     colorImageMode,
     isManual,
     canEdit,
+    canEditAttrs,
+    hasChanges,
     addMenuItems,
     setSkcValue,
     setSkcEditing,
@@ -63,6 +65,12 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           {isManual && !isEditing && (
             <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)}>
               编辑
+            </Button>
+          )}
+          {/* 自动生成模式下填写了备注/69码/价格等属性 → 出现保存按钮，无需切手动编辑 */}
+          {!isManual && hasChanges && (
+            <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
+              保存修改
             </Button>
           )}
           {isManual && isEditing && (
@@ -144,6 +152,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         skus={skus}
         loading={loading}
         canEdit={canEdit}
+        canEditAttrs={canEditAttrs}
         isManual={isManual}
         getCellValue={getCellValue}
         onFieldChange={handleFieldChange}

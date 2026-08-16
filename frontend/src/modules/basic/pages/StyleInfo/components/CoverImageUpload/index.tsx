@@ -1,27 +1,19 @@
-import React from 'react';
-import { Button } from 'antd';
-import { BulbOutlined, SearchOutlined } from '@ant-design/icons';
-import type { CoverImageUploadProps } from './types';
+import { ReloadOutlined, SearchOutlined, ThunderboltOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Space, Tooltip, Upload } from 'antd';
+import App from 'antd/es/app';
+import { useMemo } from 'react';
 import { useCoverImageUpload } from './useCoverImageUpload';
-import { resolveAssetMeta, computeParseStatusText, computeParseStatusColor } from './helpers';
 import PreviewImage from './PreviewImage';
 import ThumbnailList from './ThumbnailList';
 import SearchResultCard from './SearchResultCard';
+import type { CoverImageUploadProps } from './types';
 
 /**
- * 封面图片上传组件
- * 支持新建时本地预览和编辑时直接上传
- *
- * 业务逻辑见 useCoverImageUpload；UI 区块见 PreviewImage / ThumbnailList / SearchResultCard
+ * 紧凑图片资产条（横排，置于基础信息上方）
+ * 主图96px + 缩略图横排40px + 上传/智能识别/搜相似/刷新操作
  */
 const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
-  const {
-    styleId,
-    isNewMode = false,
-    enabled,
-    coverUrl,
-  } = props;
-
+  const { message } = App.useApp();
   const {
     currentIndex,
     setCurrentIndex,
@@ -34,86 +26,115 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
     searchExpanded,
     setSearchExpanded,
     parsing,
-    autoParseError,
-    parseSuccessConfidence,
     displayImages,
     currentImage,
     runStyleSearchByImage,
     handleDelete,
     handleSetCover,
     handleParseClick,
+    handleUploadFiles,
+    uploading,
+    fetchImages,
   } = useCoverImageUpload(props);
+  const { enabled, isNewMode = false } = props;
 
-  const currentAssetMeta = resolveAssetMeta(currentImage, currentIndex, coverUrl, isNewMode, currentIndex);
-  const parseStatusText = computeParseStatusText(parsing, parseSuccessConfidence, autoParseError);
-  const parseStatusColor = computeParseStatusColor(parsing, parseSuccessConfidence, autoParseError);
+  // 主图角标：仅主图显示一次资产类型（缩略图不再重复显示）
+  const assetMeta = useMemo(() => {
+    const coverFileUrl = displayImages[0]?.fileUrl;
+    if (!isNewMode && coverFileUrl && currentImage?.fileUrl === coverFileUrl) {
+      return { label: '主图', color: 'var(--color-primary)' };
+    }
+    return { label: '图片', color: 'rgba(0,0,0,0.55)' };
+  }, [displayImages, currentImage, isNewMode]);
 
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{
-        marginBottom: 8,
-        fontWeight: 600,
-        fontSize: 14,
-        color: 'var(--color-bg-dark)',
-        paddingLeft: 12,
-        borderLeft: '3px solid var(--color-primary)',
-        lineHeight: 1.4,
-      }}>图片资产</div>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 14,
+        padding: '10px 12px',
+        border: '1px solid var(--color-border)',
+        borderRadius: 10,
+        background: 'var(--color-bg-secondary, transparent)',
+        flexWrap: 'wrap',
+        minWidth: 0,
+      }}
+    >
+      {/* 标题 + 统计 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0, paddingTop: 2 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>图片资产</span>
+        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>共 {displayImages.length} 张</span>
+      </div>
 
-      {/* 大图预览：保持干净，只在左上角显示资产类型徽标 */}
+      {/* 主图（唯一大图预览入口） */}
       <PreviewImage
-        currentImage={currentImage}
-        coverUrl={coverUrl}
-        isNewMode={isNewMode}
-        styleId={styleId}
-        enabled={enabled}
-        displayImages={displayImages}
+        record={currentImage}
+        assetMeta={assetMeta}
         currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+        total={displayImages.length}
         previewHovered={previewHovered}
         setPreviewHovered={setPreviewHovered}
-        setCurrentIndex={setCurrentIndex}
-        currentAssetMetaLabel={currentAssetMeta.label}
       />
 
-      {/* 操作按钮：直接放图片下方，能点到就行 */}
-      {currentImage && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, fontSize: 12 }}>
-          <Button type="link" size="small" loading={parsing} icon={!parsing ? <BulbOutlined /> : undefined} onClick={handleParseClick} style={{ padding: 0, height: 'auto' }}>智能识别</Button>
-          <Button type="link" size="small" loading={searching} icon={!searching ? <SearchOutlined /> : undefined} onClick={runStyleSearchByImage} style={{ padding: 0, height: 'auto' }}>搜相似</Button>
-          {parseStatusText && (
-            <span style={{ color: parseStatusColor }}>{parseStatusText}</span>
+      {/* 缩略图横排 + 上传按钮 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 200 }}>
+        <ThumbnailList
+          images={displayImages}
+          currentIndex={currentIndex}
+          setCurrentIndex={setCurrentIndex}
+          hoverIndex={hoverIndex}
+          setHoverIndex={setHoverIndex}
+          handleSetCover={handleSetCover}
+          handleDelete={handleDelete}
+          enabled={enabled}
+          isNewMode={isNewMode}
+        />
+        <Space size={4} wrap>
+          <Upload
+            accept="image/*"
+            multiple
+            showUploadList={false}
+            beforeUpload={(file) => {
+              handleUploadFiles([file]);
+              return false;
+            }}
+          >
+            <Button size="small" icon={<UploadOutlined />} loading={uploading} type="primary" ghost>
+              上传图片
+            </Button>
+          </Upload>
+          <Tooltip title="AI 智能识别当前主图填充款式信息">
+            <Button size="small" icon={<ThunderboltOutlined />} onClick={handleParseClick} loading={parsing} disabled={!currentImage}>
+              智能识别
+            </Button>
+          </Tooltip>
+          <Tooltip title="以图搜款，查找相似款式">
+            <Button
+              size="small"
+              icon={<SearchOutlined />}
+              onClick={runStyleSearchByImage}
+              loading={searching}
+              disabled={!currentImage}
+            >
+              搜相似
+            </Button>
+          </Tooltip>
+          {!isNewMode && (
+            <Tooltip title="刷新图片列表">
+              <Button size="small" icon={<ReloadOutlined />} onClick={() => fetchImages()} />
+            </Tooltip>
           )}
-        </div>
-      )}
+        </Space>
+      </div>
 
-      {/* 缩略图列表：hover 时显示设为主图/删除 */}
-      <ThumbnailList
-        displayImages={displayImages}
-        currentIndex={currentIndex}
-        hoverIndex={hoverIndex}
-        setHoverIndex={setHoverIndex}
-        setCurrentIndex={setCurrentIndex}
-        isNewMode={isNewMode}
-        enabled={enabled}
-        coverUrl={coverUrl}
-        onSetCover={handleSetCover}
-        onDelete={handleDelete}
-      />
-
-      {displayImages.length > 0 && (
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>
-          共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''}
-        </div>
-      )}
-
-      {/* 以图搜款结果：可折叠卡片 */}
+      {/* 以图搜款结果（折叠） */}
       <SearchResultCard
         searchResult={searchResult}
         searchExpanded={searchExpanded}
         setSearchExpanded={setSearchExpanded}
       />
-
-      {/* 自动识别错误提示已合并到上方状态卡片，不再重复显示 */}
     </div>
   );
 };

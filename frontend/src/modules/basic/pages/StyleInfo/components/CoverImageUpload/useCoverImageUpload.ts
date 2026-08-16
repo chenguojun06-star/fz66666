@@ -371,6 +371,41 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     }
   };
 
+  // 上传图片（新建模式加入待上传列表；编辑模式直接上传到附件库）
+  const [uploading, setUploading] = useState(false);
+  const handleUploadFiles = useCallback(async (files: File[]) => {
+    const valid = files.filter((f) => f.type.startsWith('image/'));
+    if (valid.length === 0) return;
+    if (isNewMode) {
+      onPendingFilesChange?.([...pendingFiles, ...valid]);
+      message.success(`已添加 ${valid.length} 张图片，保存后生效`);
+      return;
+    }
+    if (!styleId) {
+      message.warning('请先保存基础信息后再上传图片');
+      return;
+    }
+    setUploading(true);
+    try {
+      for (const file of valid) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('styleId', String(styleId));
+        if (styleNo) formData.append('styleNo', styleNo);
+        const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
+        if (!isApiSuccess(uploadRes) || !uploadRes?.data?.fileUrl) {
+          throw new Error(`图片 ${file.name} 上传失败`);
+        }
+      }
+      message.success(`成功上传 ${valid.length} 张图片`);
+      await fetchImages();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '上传失败，请重试');
+    } finally {
+      setUploading(false);
+    }
+  }, [isNewMode, pendingFiles, onPendingFilesChange, styleId, styleNo, fetchImages, message]);
+
   return {
     currentIndex,
     setCurrentIndex,
@@ -391,5 +426,8 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     handleDelete,
     handleSetCover,
     handleParseClick,
+    handleUploadFiles,
+    uploading,
+    fetchImages,
   };
 };
