@@ -247,7 +247,13 @@ export const useStyleFormActions = ({
       );
 
       if (res.code === 200) {
-        message.success('推送成功！请前往"下单管理"页面创建订单');
+        // 同步警告透传展示：部分资料同步失败不影响推送主流程，但不提示会让用户下单时才发现资料缺失
+        const warnings: string[] = Array.isArray(res.data?.syncWarnings) ? res.data.syncWarnings : [];
+        if (warnings.length > 0) {
+          message.warning(`推送成功，但 ${warnings.length} 项资料同步失败：${warnings.join('；')}`);
+        } else {
+          message.success('推送成功！请前往"下单管理"页面创建订单');
+        }
         fetchDetail(String(currentStyle.id));
         return true;
       } else {

@@ -246,6 +246,37 @@ public class PayableOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 反向账单时扣减合并应付：按 findMergedPayable 同构分组特征定位合并应付，
+     * 未付款部分直接减去该账单金额（应付由 N 张账单合并而来，单张反向不能整单取消）。
+     */
+    public void reduceMergedPayableForReversedBill(BillAggregation bill, String reverseRemark) {
+        try {
+            Long tenantId = TenantAssert.requireTenantId();
+            Payable merged = findMergedPayable(bill, tenantId);
+            if (merged == null) return;
+            BigDecimal paid = merged.getPaidAmount() != null ? merged.getPaidAmount() : BigDecimal.ZERO;
+            BigDecimal amount = merged.getAmount() != null ? merged.getAmount() : BigDecimal.ZERO;
+            BigDecimal billAmt = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
+            // 已付部分优先冲抵：新应付 = max(amount - billAmt, paid)，避免扣成"已付>应付"
+            BigDecimal newAmount = amount.subtract(billAmt).max(paid);
+            if (newAmount.compareTo(amount) == 0) return;
+            merged.setAmount(newAmount);
+            int newCount = (merged.getBillCount() != null && merged.getBillCount() > 1) ? merged.getBillCount() - 1 : 0;
+            merged.setBillCount(newCount);
+            merged.setDescription((merged.getDescription() != null ? merged.getDescription() + " | " : "") + reverseRemark);
+            if (paid.compareTo(newAmount) >= 0) {
+                merged.setStatus("PAID");
+            }
+            merged.setUpdateTime(LocalDateTime.now());
+            payableService.updateById(merged);
+            log.info("[PayableOrchestrator] 反向账单扣减合并应付: payableNo={}, -{}, newTotal={}",
+                    merged.getPayableNo(), billAmt, newAmount);
+        } catch (Exception e) {
+            log.warn("[PayableOrchestrator] 反向账单扣减合并应付失败(不阻断): billNo={}", bill.getBillNo(), e);
+        }
+    }
+
     public Payable findOrCreateMergedPayable(BillAggregation bill) {
         if (bill == null || !StringUtils.hasText(bill.getId())) {
             throw new RuntimeException("账单不存在，无法派生应付任务");

@@ -582,6 +582,13 @@ public class BillAggregationOrchestrator {
                 log.error("[BillAggregation] 反向联动 Payable 失败（账单已取消，继续处理）: billNo={}, err={}",
                         bill.getBillNo(), e.getMessage());
             }
+            // 合并应付不携带 billAggregationId，findByBillAggregationId 找不到时
+            // 必须按合并分组特征扣减金额，否则该笔金额继续挂在应付里被重复付款
+            try {
+                payableOrchestrator.reduceMergedPayableForReversedBill(bill, reverseRemark);
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 反向扣减合并应付失败(继续): billNo={}", bill.getBillNo(), e);
+            }
         }
 
         // 3. 联动 Receivable（仅未收款的可直接取消；已收款的保留痕迹）

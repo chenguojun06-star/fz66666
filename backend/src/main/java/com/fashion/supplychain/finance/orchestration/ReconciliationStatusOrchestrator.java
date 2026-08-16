@@ -373,6 +373,19 @@ public class ReconciliationStatusOrchestrator {
             bill.setSettledAmount(settled);
 
             String currentStatus = bill.getStatus();
+            // PENDING=未确认=应付任务未派生：直接跳到 SETTLING/SETTLED 会绕过
+            // confirmBill→ensureSettlementTaskFromBill（Payable 唯一派生点），财务漏付无追踪。
+            // 先补确认（生成应付任务），再继续置结算状态。
+            if ("PENDING".equals(currentStatus) && billAggregationOrchestrator != null) {
+                try {
+                    billAggregationOrchestrator.confirmBill(bill.getId());
+                    bill = billAggregationService.lambdaQuery()
+                            .eq(BillAggregation::getId, bill.getId())
+                            .one();
+                } catch (Exception confirmEx) {
+                    log.warn("对账 paid 前补确认账单失败(继续置结算态): billId={}", bill.getId(), confirmEx);
+                }
+            }
             if ("PENDING".equals(currentStatus)) {
                 bill.setStatus("CONFIRMED");
             }

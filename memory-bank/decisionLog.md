@@ -1824,3 +1824,21 @@ D-076 摘要可枚举的 14 项 P1 已全部闭环（D-078/079/080/081）；审�
 ### 验证
 - mvn compile ✓ 后端已重启
 - P1 剩余约 5 项（数据范围own/推送弹窗无效选项/外发结算回货链/反向账单联动应付/对账直接paid派生）+ P2 24 项
+
+## D-081 P1 第四批：对账派生/合并应付反向联动 + 三条审计误报澄清（2026-08-16）
+
+### 修复
+1. **对账直接标记已付补派生应付**：syncBillAsSettledBySource 遇 PENDING 账单先调 confirmBill（派生应付任务）再置结算态——原逻辑绕过 Payable 唯一派生点，财务漏付无追踪
+2. **反向账单联动合并应付**：PayableOrchestrator 新增 reduceMergedPayableForReversedBill（按 findMergedPayable 同构分组特征定位，新应付=max(原额-账单额, 已付)，billCount-1，付清自动 PAID）；reverseBillInternal 的 findByBillAggregationId 找不到时调用——原逻辑驳回/取消后合并应付金额继续虚挂被重复付款
+3. **syncWarnings 前端展示**：推送成功但有资料同步失败时 warning 提示具体项（原先只说"推送成功"，用户下单时才发现资料缺失）
+4. **DictAutoComplete 截断**：拉取量与展示量解耦（pageSize 500），颜色/尺码词条超 50 后老词条不再从下拉消失
+
+### 审计误报澄清（D-076 清单再次核减 3 条）
+- "订单列表无数据范围过滤"：ProductionOrderQueryService.applyDataPermissionFilter 已实现 all/team/own 完整过滤（agent 只看了前215行）
+- "推送弹窗7选项3无效+隐藏sizePrice"：现行版本已是4选项且全部有效（旧版本问题已被此前重构修复）
+- "推送备注被丢弃"：Controller 已接收 remark 传入 createFromStyle
+→ 教训：审计 agent 报告基于代码快照，修复前必须逐条现场复核
+
+### 验证
+- mvn compile ✓ 后端已重启；前端 type-check/lint/build ✓
+- **P1 全部清零**（27项：22修复+1误报角色名+3误报本轮澄清+数据范围1误报）；剩 P2 24 项

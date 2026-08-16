@@ -57,8 +57,10 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
     if (loadedRef.current) return;
     setLoading(true);
     try {
+      // 拉取量与展示量(maxSuggestions,默认50)解耦：词条超过50后老词条在下拉中
+      // 永远消失无法选用——这里拉全量(上限500)，前端过滤后按 maxSuggestions 展示
       const response = await api.get('/system/dict/list', {
-        params: { dictType, page: 1, pageSize: maxSuggestions }
+        params: { dictType, page: 1, pageSize: 500 }
       });
       const records: any[] = response.data?.records || response.data || [];
       const items: DictOption[] = records
