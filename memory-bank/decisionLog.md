@@ -1767,3 +1767,24 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 - safe-push 6 项全过（多租户审计 0 违规）；commit 429a425ea 已推送，云托管自动构建触发
 - 后端运行实例为 02:43 旧版，需重启加载第三批（用户自行处理）
 - 剩余：P1 3 项 + P2 24 项（清单 D-076）
+
+## D-081 P1 第四批：自建 admin 角色撞名提权全链路封堵（2026-08-16）
+
+### 漏洞链（D-076 点名的"自建admin角色满足租户主URL守卫"）
+1. RoleOrchestrator.add/applyTemplate 无保留名校验 → 租户可自建名为"管理员/admin"的角色
+2. UserContext.role() 只存角色名；isTopAdmin() 白名单按名精确匹配 → 撞名角色被判顶级管理员
+3. 更严重：AuthTokenService/UserLoginHelper/WeChatMiniProgramAuthOrchestrator 三处 isAdminRole 用 contains("管理") —— "库存管理"等正常岗位也被强制 permRange=all（数据范围越权），D-079 只修了 UserContext，这三处漏网
+
+### 修复
+1. UserContext 新增 public static isTopAdminRoleName()（精确白名单），isTopAdmin() 复用
+2. 三处 isAdminRole/isAdminRoleName 统一委托该白名单（登录 PC/小程序 + JWT 解析兜底）
+3. WeChat getRoleCode 的 admin 分支同步精确匹配（"仓库管理员"不再推断为 admin）
+4. RoleOrchestrator.add/update/applyTemplate 加保留名/代码守卫（根源：撞名角色建不出来）；TenantRoleInitHelper 系统克隆不经 orchestrator，租户初始化不受影响
+
+### 验证
+- mvn compile 零错误；DB 核查 t_role 存量撞名 suspicious=0（8 个 full_admin 为系统合法克隆）
+- 行为变化确认：绑工厂的"仓库管理员"类用户默认数据范围从 all→own（DB permissionRange 非空时优先，仅空值默认推断变化）——最小权限方向，可接受
+- commit caefc1872 已推送
+
+### P1 清单状态说明（重要）
+D-076 摘要可枚举的 14 项 P1 已全部闭环（D-078/079/080/081）；审计原始明细因会话上下文压缩丢失，"共20项"中约 6 项明细文本无法还原。后续如需精确收尾，建议对新代码重跑一次审计或直接转入 P2 批次（P2 24 项清单同样以 D-076 摘要为准）
