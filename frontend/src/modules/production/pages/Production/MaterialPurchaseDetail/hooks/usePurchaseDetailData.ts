@@ -102,29 +102,39 @@ export function usePurchaseDetailData(
         setOrder(null);
       }
 
-      // 样衣场景：自动从BOM同步物料到采购表（静默，不需用户手动触发）
-      // 首次打开：从BOM自动生成采购记录；后续打开：已有记录则跳过，BOM新增物料时增量补充
-      if (sampleMode && styleIdParam) {
-        try {
-          await api.post('/style/bom/generate-purchase', { styleId: styleIdParam, force: false });
-        } catch {
-          // 已有采购记录时会报错"已生成过"，这是正常情况，静默忽略，继续查询已有记录
-        }
-      }
-
       // 样衣场景直接按 sourceType='sample' + styleNo 过滤，避免拉到订单采购数据
       const params: PurchaseListParams = sampleMode
         ? { styleNo: styleNoParam, sourceType: 'sample' as any, page: 1, pageSize: 1000 }
         : orderNoParam
           ? { orderNo: orderNoParam, page: 1, pageSize: 1000 }
           : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
-      const purchaseRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', { params });
-      const result = purchaseRes;
+
+      const fetchRecords = async (): Promise<MaterialPurchase[]> => {
+        const purchaseRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', { params });
+        const result = purchaseRes;
+        if (result?.code === 200) {
+          return result?.data?.records || [];
+        }
+        return result?.data?.records || result?.records || [];
+      };
+
       let records: MaterialPurchase[] = [];
-      if (result?.code === 200) {
-        records = result?.data?.records || [];
+
+      // 样衣场景：自动从BOM同步物料到采购表（静默，不需用户手动触发）
+      // D-104 优化：先查已有记录，为空才调 generate-purchase 生成后重查，
+      // 避免每次打开页面都触发一次"已生成过"的 400 业务拦截
+      if (sampleMode && styleIdParam) {
+        records = await fetchRecords();
+        if (records.length === 0) {
+          try {
+            await api.post('/style/bom/generate-purchase', { styleId: styleIdParam, force: false });
+            records = await fetchRecords();
+          } catch {
+            // 生成失败（如"尚未配置BOM"）时保持空列表，不打断页面
+          }
+        }
       } else {
-        records = result?.data?.records || result?.records || [];
+        records = await fetchRecords();
       }
 
       if (!sampleMode && records.length === 0 && orderRecord?.id) {

@@ -7,7 +7,17 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-16 警告根治：-Xlint 固化 + 全量清零 ✅（D-103，未提交，代码 44 文件 +147/-299）
+### 2026-08-16 批量采购弹窗"信息缺失+数量只读"双链路根治 ✅（D-104，未提交）
+
+- [x] 根因①信息缺失：弹窗 desc 只填了 `item.color`（空→"· -"），编码/规格/单价/供应商全没展示
+- [x] 根因②数量只读：后端 `/production/purchase/receive` 完全忽略 quantity（前端一直在传、被静默丢弃）
+- [x] 新建 BatchPurchaseModal（信息全列+采购数量 InputNumber 可编辑+合计金额），MaterialPurchaseDetail 批量采购换用（样衣抽屉+大货订单详情共用一弹窗）
+- [x] MaterialPurchase 主页"确认采购全部"样衣/大货两分支：信息补全+外采数量可编辑（出库数量受库存约束只读）
+- [x] 后端 receive 支持可选 quantity（先更新 purchase_quantity 再领取，tenantId 条件，事务原子）
+- [x] 验证：前端 tsc 0 错误 + 后端 mvn compile EXIT=0；④智能领取/⑤生成采购预览信息已全、数量口径有业务含义未动
+- [ ] 部署后端到端验证：样衣采购管理→批量采购→弹窗显示编码/规格/单价/供应商→改数量→确认→列表数量更新
+
+### 2026-08-16 警告根治：-Xlint 固化 + 全量清零 ✅（D-103，已推送 85ee789d6，含 D-102 共 48 文件 +194/-309）
 
 - [x] pom.xml 固化 `-Xlint:all`（排 unchecked/serial 等）→ 编译期即暴露警告，防默默积累
 - [x] 清零两轮暴露的 99+26 条 javac 存量：deprecation 替换 14、static 类名限定 30、lossy 显式截断 10、raw 参数化 13、varargs 压制 2、try 压制 2、死代码 5 处

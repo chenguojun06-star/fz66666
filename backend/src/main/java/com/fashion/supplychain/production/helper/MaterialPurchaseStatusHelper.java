@@ -79,6 +79,21 @@ public class MaterialPurchaseStatusHelper {
             throw new NoSuchElementException("采购任务不存在");
         }
 
+        // D-104：支持弹窗内编辑采购数量（可选 quantity，>0 且与原值不同时先更新再领取）
+        java.math.BigDecimal editedQty = parseEditedQuantity(body);
+        if (editedQty != null
+                && (purchase.getPurchaseQuantity() == null || editedQty.compareTo(purchase.getPurchaseQuantity()) != 0)) {
+            boolean updatedQty = materialPurchaseService.update(
+                    new LambdaUpdateWrapper<MaterialPurchase>()
+                            .set(MaterialPurchase::getPurchaseQuantity, editedQty)
+                            .eq(MaterialPurchase::getId, purchaseId)
+                            .eq(MaterialPurchase::getTenantId, UserContext.tenantId()));
+            if (!updatedQty) {
+                throw new IllegalStateException("采购数量更新失败");
+            }
+            purchase.setPurchaseQuantity(editedQty);
+        }
+
         String rid = helper.safe(receiverIdValue);
         String rname = helper.safe(receiverNameValue);
         validateReceivePermission(purchase, rid, rname);
@@ -740,5 +755,18 @@ public class MaterialPurchaseStatusHelper {
                 .eq(MaterialPurchase::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
                 .eq(MaterialPurchase::getDeleteFlag, 0)
                 .one();
+    }
+
+    /** D-104：解析弹窗编辑后的采购数量（可选，非法/非正值返回 null 表示不修改） */
+    private java.math.BigDecimal parseEditedQuantity(Map<String, Object> body) {
+        if (body == null || body.get("quantity") == null) {
+            return null;
+        }
+        try {
+            java.math.BigDecimal qty = new java.math.BigDecimal(String.valueOf(body.get("quantity")));
+            return qty.compareTo(java.math.BigDecimal.ZERO) > 0 ? qty : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

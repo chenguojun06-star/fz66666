@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-096 全库 collation 统一 + 分裂源头根治）
+> 最后更新：2026-08-16（新增 D-104 批量采购弹窗信息补全+数量可编辑）
+
+---
+
+## D-104：批量采购弹窗"信息缺失+数量只读"双链路根治（2026-08-16）
+
+**背景**：用户炸点——样衣采购管理（H00011111111）批量采购确认弹窗只显示"物料名 · -"（desc 只填了 color，空则"-"），物料编码/规格/单价/供应商全无，且数量纯文本不可编辑。核实双链路 5 个批量采购类弹窗：①MaterialPurchaseDetail 批量采购（样衣抽屉+大货订单详情**共用**，用户截图）、②③MaterialPurchase 主页"确认采购全部"样衣/大货分支，三处同病；④智能领取批量采购、⑤生成采购预览信息已全且数量口径（净需求/待采购）有业务含义，不动。
+
+**决策**：
+1. 新建 `BatchPurchaseModal`（ResizableModal+ResizableTable）：列=类型/名称+编码/规格颜色/单价/供应商/需求数量/**采购数量(InputNumber 可编辑)**+合计金额，①换用
+2. ②③ Modal.confirm 内补信息（编码|规格|颜色|单价|供应商）+ InputNumber（非受控+闭包对象承接编辑值）；出库项数量受库存约束保持只读
+3. **后端关键补洞**：`/production/purchase/receive` 原本完全忽略前端传的 quantity（历史 postReceive 就在传、被静默丢弃）——MaterialPurchaseStatusHelper.receive 新增可选 quantity 解析（parseEditedQuantity，>0 且≠原值先更新 purchase_quantity 再领取，带 tenantId 条件，Orchestrator 已有 @Transactional 保证原子）
+
+**理由**：弹窗信息缺失根因是 desc 字段只填了 color；数量只读根因是后端接口不收 quantity，前端传了也白传——双端必须一起改。
+
+**教训**：前端调用传了参数 ≠ 后端消费了参数，改交互前先核实后端接口签名。
 
 ---
 

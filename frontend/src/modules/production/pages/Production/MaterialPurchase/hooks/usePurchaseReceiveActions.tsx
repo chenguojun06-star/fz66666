@@ -3,7 +3,7 @@
  * 从 usePurchaseActions 拆分而来，保持 API 路径/参数签名/返回值结构不变
  * NOTE: .tsx 扩展名因 receivePurchaseTask / handleReceiveAll 中包含 JSX (Modal.confirm content)
  */
-import { Modal } from 'antd';
+import { Modal, InputNumber } from 'antd';
 import { ShopOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
@@ -209,6 +209,8 @@ export function usePurchaseReceiveActions({
       if (!pending.length) { message.info('没有待采购的任务'); return; }
       const receiverName = String(user?.name || user?.username || '').trim() || window.prompt('请输入采购人姓名') || '';
       if (!receiverName.trim()) { message.error('未填写采购人'); return; }
+      // D-104：弹窗内外采数量可编辑（id -> 编辑后数量），出库数量受库存约束不可编辑
+      const sampleEditedQty: Record<string, number> = {};
       const doSampleReceiveAll = async () => {
         setSubmitLoading(true);
         try {
@@ -226,7 +228,9 @@ export function usePurchaseReceiveActions({
             const matched = previewMaterials.find((m: any) => String(m.purchaseId) === String(p.id));
             const stock = matched ? Number(matched.availableStock ?? 0) : 0;
             if (stock > 0) {
-              const pickQty = Math.min(stock, Number(p.purchaseQuantity || 0));
+              const editedPick = Number(sampleEditedQty[String(p.id)]);
+              const targetQty = Number.isFinite(editedPick) && editedPick > 0 ? editedPick : Number(p.purchaseQuantity || 0);
+              const pickQty = Math.min(stock, targetQty);
               try {
                 const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
                   purchaseId: p.id, pickQty, receiverId: user?.id, receiverName,
@@ -235,9 +239,11 @@ export function usePurchaseReceiveActions({
                 else message.warning(`${p.materialName || p.materialCode} 出库失败: ${res.message || '未知'}`);
               } catch (e: unknown) { message.warning(`${p.materialName || p.materialCode} 出库失败: ${e instanceof Error ? e.message : '未知错误'}`); }
             } else {
+              const edited = Number(sampleEditedQty[String(p.id)]);
+              const qty = Number.isFinite(edited) && edited > 0 ? edited : Number(p.purchaseQuantity || 0);
               try {
                 const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
-                  purchaseId: p.id, receiverId: user?.id, receiverName,
+                  purchaseId: p.id, quantity: qty, receiverId: user?.id, receiverName,
                 });
                 if (res.code === 200) purCount++;
                 else message.warning(`${p.materialName || p.materialCode} 采购失败: ${res.message || '未知'}`);
@@ -256,16 +262,34 @@ export function usePurchaseReceiveActions({
         finally { setSubmitLoading(false); }
       };
       Modal.confirm({
-        width: '30vw',
+        width: '46vw',
         title: '确认采购全部',
         content: (
           <div>
-            <p>即将采购以下 <strong>{pending.length}</strong> 项物料：</p>
-            <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, fontSize: 14 }}>
+            <p>即将采购以下 <strong>{pending.length}</strong> 项物料（有库存自动出库，无库存按外采登记，数量可调整）：</p>
+            <div style={{ maxHeight: 260, overflow: 'auto', marginTop: 8, fontSize: 13 }}>
               {pending.map((p, i) => (
-                <div key={i} style={{ padding: '4px 0', borderBottom: i < pending.length - 1 ? '1px solid var(--color-border-light)' : 'none', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{p.materialName || p.materialCode} {p.color ? `(${p.color})` : ''}</span>
-                  <span style={{ color: 'var(--color-primary)' }}>{formatMaterialQuantity(p.purchaseQuantity)}{p.unit || ''}</span>
+                <div key={i} style={{ padding: '6px 0', borderBottom: i < pending.length - 1 ? '1px solid var(--color-border-light)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <span style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500 }}>{p.materialName || p.materialCode}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                      {[p.materialCode, p.specifications, p.color].filter(Boolean).join(' | ') || '-'}
+                      {p.unitPrice != null ? ` | ¥${Number(p.unitPrice).toFixed(2)}` : ''}
+                      {p.supplierName ? ` | ${p.supplierName}` : ''}
+                    </div>
+                  </span>
+                  <InputNumber
+                    id={`sample-receive-qty-${String(p.id)}`}
+                    name={`sampleReceiveQty_${String(p.id)}`}
+                    aria-label={`${p.materialName || p.materialCode} 采购数量`}
+                    size="small"
+                    style={{ width: 130 }}
+                    min={0}
+                    precision={2}
+                    addonAfter={p.unit || undefined}
+                    defaultValue={Number(p.purchaseQuantity) || 0}
+                    onChange={(v) => { sampleEditedQty[String(p.id)] = Number(v) || 0; }}
+                  />
                 </div>
               ))}
             </div>
@@ -290,24 +314,49 @@ export function usePurchaseReceiveActions({
     const withStock = previewPending.filter((m) => Number(m.availableStock ?? 0) > 0);
     const noStock = previewPending.filter((m) => Number(m.availableStock ?? 0) <= 0);
     const receiverName = String(user?.name || user?.username || '').trim();
+    // D-104：外采数量可编辑（purchaseId -> 编辑后数量）；出库数量受库存约束不可编辑
+    const orderEditedQty: Record<string, number> = {};
     Modal.confirm({
-      width: '30vw',
+      width: '46vw',
       title: '确认采购全部',
       content: (
         <div>
           <p>确认批量采购以下物料：</p>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
-            有库存出库 <strong>{withStock.length}</strong> 项 + 无库存外采 <strong>{noStock.length}</strong> 项
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            有库存出库 <strong>{withStock.length}</strong> 项（按库存自动出库）+ 无库存外采 <strong>{noStock.length}</strong> 项（数量可调整）
           </p>
-          <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, fontSize: 14 }}>
-            {[...withStock, ...noStock].map((m, i) => (
-              <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{m.materialName || m.materialCode} {m.color ? `(${m.color})` : ''}</span>
-                <span style={{ color: Number(m.availableStock ?? 0) > 0 ? 'var(--color-success)' : 'var(--color-primary)' }}>
-                  {Number(m.availableStock ?? 0) > 0 ? `出库 ${m.canPickQty}` : `采购 ${m.purchaseQuantity}`}{m.unit || ''}
-                </span>
-              </div>
-            ))}
+          <div style={{ maxHeight: 260, overflow: 'auto', marginTop: 8, fontSize: 13 }}>
+            {[...withStock, ...noStock].map((m, i) => {
+              const hasStock = Number(m.availableStock ?? 0) > 0;
+              return (
+                <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <span style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500 }}>{m.materialName || m.materialCode}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                      {[m.materialCode, m.specifications, m.color].filter(Boolean).join(' | ') || '-'}
+                    </div>
+                  </span>
+                  {hasStock ? (
+                    <span style={{ color: 'var(--color-success)', whiteSpace: 'nowrap' }}>
+                      出库 {m.canPickQty}{m.unit || ''}
+                    </span>
+                  ) : (
+                    <InputNumber
+                      id={`order-receive-qty-${String(m.purchaseId)}`}
+                      name={`orderReceiveQty_${String(m.purchaseId)}`}
+                      aria-label={`${m.materialName || m.materialCode} 采购数量`}
+                      size="small"
+                      style={{ width: 130 }}
+                      min={0}
+                      precision={2}
+                      addonAfter={m.unit || undefined}
+                      defaultValue={Number(m.purchaseQuantity) || 0}
+                      onChange={(v) => { orderEditedQty[String(m.purchaseId)] = Number(v) || 0; }}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       ),
@@ -325,8 +374,10 @@ export function usePurchaseReceiveActions({
             } catch (e: unknown) { message.warning(`${m.materialName || m.materialCode} 出库失败: ${e instanceof Error ? e.message : '未知错误'}`); }
           }
           for (const m of noStock) {
+            const edited = Number(orderEditedQty[String(m.purchaseId)]);
+            const qty = Number.isFinite(edited) && edited > 0 ? edited : Number(m.purchaseQuantity || 0);
             try {
-              await api.post('/production/purchase/receive', { purchaseId: m.purchaseId, receiverId: user?.id, receiverName });
+              await api.post('/production/purchase/receive', { purchaseId: m.purchaseId, quantity: qty, receiverId: user?.id, receiverName });
               purCount++;
             } catch (e: unknown) { message.warning(`${m.materialName || m.materialCode} 采购失败: ${e instanceof Error ? e.message : '未知错误'}`); }
           }

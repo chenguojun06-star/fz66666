@@ -1,11 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-16（D-103 警告根治：-Xlint 固化 + 44 文件清零 99→0）
+> 最后更新：2026-08-16（D-104 批量采购弹窗信息补全+数量可编辑）
 
 ## 已完成
 
-### 2026-08-16 警告根治：-Xlint 固化 + 全量清零 ✅（D-103，未提交）
+### 2026-08-16 批量采购弹窗"信息缺失+数量只读"双链路根治 ✅（D-104，未提交）
+
+- [x] 新建 BatchPurchaseModal（物料编码/规格/单价/供应商全列 + 采购数量 InputNumber 可编辑 + 合计金额）
+- [x] MaterialPurchaseDetail 批量采购换用新弹窗（样衣抽屉+大货订单详情共用）
+- [x] MaterialPurchase 主页样衣/大货两个"确认采购全部"Modal.confirm 信息补全+数量可编辑
+- [x] 后端 receive 接口支持可选 quantity（编辑数量先更新再领取，D-104）
+- [x] 双端编译验证：tsc 0 错误 + mvn compile EXIT=0
+- [ ] 部署后端到端验证：样衣采购管理→批量采购→弹窗显示编码/规格/单价/供应商→改数量→确认→列表数量更新
+
+### 2026-08-16 警告根治：-Xlint 固化 + 全量清零 ✅（D-103+D-102，已推送 85ee789d6）
 
 - [x] pom.xml 固化 -Xlint:all（排除 unchecked/serial/this-escape/processing/classfile）
 - [x] 清零 99+26 条 javac 存量警告（deprecation/static/lossy/raw/varargs/try/死代码，44 文件）

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown } from 'antd';
+import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App } from 'antd';
 import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
@@ -12,7 +12,9 @@ import { usePurchaseDetailPage } from './hooks/usePurchaseDetailPage';
 import type { MaterialPurchase } from '@/types/production';
 import { buildEditColumns, buildViewColumns } from './columns';
 import MaterialSelectModal from './components/MaterialSelectModal';
+import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPurchaseModal';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
+import { filterPendingPurchases } from './hooks/utils';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export interface MaterialPurchaseDetailProps {
@@ -33,6 +35,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const styleNo = propStyleNo ?? styleNoParam ?? '';
   const navigate = useNavigate();
   const { isMobile } = useViewport();
+  const { message } = App.useApp();
 
   const {
     loading, order, purchaseList, materialArrivalRate,
@@ -61,13 +64,44 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
+  const [batchPurchaseOpen, setBatchPurchaseOpen] = useState(false);
+  const [batchPurchaseItems, setBatchPurchaseItems] = useState<BatchPurchaseItem[]>([]);
   const [batchReturnLoading, setBatchReturnLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
-  const onBatchPurchase = async () => {
+  /** 批量采购入口（D-104）：校验后打开可编辑确认弹窗（物料编码/规格/单价/供应商全展示，数量可调） */
+  const onBatchPurchase = () => {
+    if (!canProcure) {
+      return;
+    }
+    const pending = filterPendingPurchases(purchaseList);
+    if (!pending.length) {
+      message.info('没有待采购的项目');
+      return;
+    }
+    setBatchPurchaseItems(pending.map((p) => ({
+      id: String(p.id),
+      materialType: p.materialType,
+      materialName: p.materialName || p.materialCode,
+      materialCode: p.materialCode || '',
+      specifications: p.specifications,
+      color: p.color,
+      unit: p.unit,
+      unitPrice: p.unitPrice != null ? Number(p.unitPrice) : undefined,
+      supplierName: p.supplierName,
+      requiredQty: Number(p.purchaseQuantity) || 0,
+    })));
+    setBatchPurchaseOpen(true);
+  };
+
+  const onBatchPurchaseConfirm = async (editedQty: Record<string, number>) => {
     setBatchPurchaseLoading(true);
-    try { await handleBatchReceive(); }
-    finally { setBatchPurchaseLoading(false); }
+    try {
+      await handleBatchReceive(purchaseList.filter((p) => editedQty[String(p.id)] !== undefined), editedQty);
+      setBatchPurchaseOpen(false);
+    } finally {
+      setBatchPurchaseLoading(false);
+    }
   };
 
   const onBatchReturnConfirm = async () => {
@@ -311,6 +345,14 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           setDocRecognizeOpen(false);
           await loadData();
         }}
+      />
+
+      <BatchPurchaseModal
+        open={batchPurchaseOpen}
+        items={batchPurchaseItems}
+        submitting={batchPurchaseLoading}
+        onCancel={() => setBatchPurchaseOpen(false)}
+        onConfirm={onBatchPurchaseConfirm}
       />
     </div>
   );

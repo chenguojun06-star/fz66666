@@ -56,7 +56,7 @@ export interface PurchaseDetailActionsState {
   handleReturnConfirm: (record: MaterialPurchase) => void;
   doReturnConfirm: () => Promise<void>;
   handleCancelReceive: (record: MaterialPurchase) => void;
-  handleBatchReceive: () => Promise<void>;
+  handleBatchReceive: (pending: MaterialPurchase[], editedQty?: Record<string, number>) => Promise<void>;
   handleBatchReturnConfirm: () => Promise<void>;
   handleConfirmComplete: () => Promise<void>;
   handleReturnReset: (record: MaterialPurchase) => void;
@@ -65,11 +65,11 @@ export interface PurchaseDetailActionsState {
 }
 
 export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): PurchaseDetailActionsState {
-  const { purchaseList, canProcure, styleNoParam, loadData } = params;
+  const { purchaseList, styleNoParam, loadData } = params;
   const { user } = useUser();
   const { modal, message } = App.useApp();
 
-  const receiveModal = useReceiveModal({ canProcure, loadData });
+  const receiveModal = useReceiveModal({ canProcure: params.canProcure, loadData });
   const returnConfirmModal = useReturnConfirmModal({ loadData });
   const inboundModal = useInboundModal({ loadData });
 
@@ -103,43 +103,35 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
     });
   };
 
-  const handleBatchReceive = async () => {
-    if (!canProcure) {
-      message.warning('请先完善面辅料信息再批量采购');
-      return;
-    }
-    const pending = filterPendingPurchases(purchaseList);
-    if (!pending.length) {
-      message.info('没有待采购的项目');
-      return;
-    }
+  /**
+   * 批量采购提交（D-104：确认弹窗升级为 BatchPurchaseModal，数量可编辑后传入）。
+   * @param pending 待采购列表（filterPendingPurchases 过滤结果）
+   * @param editedQty 每项编辑后的采购数量（id -> quantity），缺省回退 purchaseQuantity
+   */
+  const handleBatchReceive = async (
+    pending: MaterialPurchase[],
+    editedQty: Record<string, number> = {},
+  ) => {
     const receiverName = getOperatorName(user);
-    const contentEl = buildBatchModalContent(pending, '确认批量采购以下', (item) => ({
-      name: item.materialName || item.materialCode,
-      desc: item.color || '-',
-      qtyText: `采购 ${item.purchaseQuantity}${item.unit || ''}`,
-    }));
-    modal.confirm({
-      title: '批量采购',
-      content: contentEl,
-      okText: '确认批量采购',
-      cancelText: '取消',
-      width: '40vw',
-      onOk: async () => {
-        for (const item of pending) {
-          try {
-            await postReceive({
-              purchaseId: item.id,
-              quantity: item.purchaseQuantity,
-              receiverId: user?.id || '',
-              receiverName,
-            });
-          } catch { /* continue */ }
-        }
-        message.success('批量采购完成');
-        await loadData();
-      },
-    });
+    let successCount = 0;
+    for (const item of pending) {
+      const qty = Number(editedQty[String(item.id)]);
+      try {
+        await postReceive({
+          purchaseId: item.id,
+          quantity: Number.isFinite(qty) && qty > 0 ? qty : item.purchaseQuantity,
+          receiverId: user?.id || '',
+          receiverName,
+        });
+        successCount++;
+      } catch { /* continue */ }
+    }
+    if (successCount > 0) {
+      message.success(`批量采购完成（${successCount}/${pending.length} 项）`);
+    } else {
+      message.error('批量采购全部失败');
+    }
+    await loadData();
   };
 
   const handleBatchReturnConfirm = async () => {
