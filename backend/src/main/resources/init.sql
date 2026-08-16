@@ -2,9 +2,11 @@
 -- 创建时间：2026-01-05
 
 -- 创建数据库
+-- D-096：库默认 collation 统一 utf8mb4_0900_ai_ci（与主流 290 表/MySQL8 utf8mb4 默认一致），
+-- 历史上这里写 utf8mb4_unicode_ci 是全库 collation 分裂的源头
 CREATE DATABASE IF NOT EXISTS fashion_supplychain
 CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
+COLLATE utf8mb4_0900_ai_ci;
 
 USE fashion_supplychain;
 
