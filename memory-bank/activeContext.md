@@ -1,11 +1,26 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-100：色卡本重复入口下线 + 供应商色卡供应商名不显示三连修复）
+> 最后更新：2026-08-16（D-101：进度球实时刷新——重算服务统一广播 WebSocket）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 进度球 10 多分钟不更新根因修复 ✅（D-101，P0，已推送 ccb9c63a0）
+
+用户炸点：订单管理/工序跟进的进度球（含父子订单卡）数据不实时，要等"轮回查询"10 多分钟才更新。
+
+**根因（更新链路断层）**：
+- 后端 15+ 写路径（成品入库/回退/采购同步/ORDER_ADVANCE 手动推进/裁剪扎号/清理）重算 DB 进度都**即时**，但 **WebSocket 广播只在扫码链路**（ScanExecutorSupport.recomputeProgressSync）→ 非扫码操作其他端收不到推送
+- 前端兜底轮询：工序跟进页 useOrderSync **5 分钟**且 pauseOnHidden（切页暂停）→ 体感 10 多分钟
+- 30 分钟一致性 Job（ProductionDataConsistencyJob，:15/:45）成了实际兜底 → 平均等待 15 分钟
+
+**修复（一处改动覆盖全部路径）**：
+- [x] `ProductionOrderProgressRecomputeService.persistProgressUpdate` 更新成功后，进度/状态/完成数**有变化才**广播（`broadcastProgressIfChanged`，注入 `OrderProgressWebSocketServer` required=false）——所有调 recompute 的路径自动获得推送；无变化不推（防 Job 批量重算风暴）；扫码链路原有推送幂等（前端 500ms 防抖）
+- [x] 前端 `useOrderSync` 兜底轮询 300000→60000ms（主链路 WS，副链路 1 分钟）
+- [x] 已验证：Java LS 零错误；推送 ccb9c63a0（safe-push 过）
+- [ ] 部署后端到端验证：订单管理/工序跟进两页开着 → 另一端做入库/手动推进 → 进度球秒级刷新
 
 ### 2026-08-16 色卡本重复入口下线 + 供应商色卡"供应商: -"根因修复 ✅（D-100，P0）
 

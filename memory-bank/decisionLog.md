@@ -2235,3 +2235,27 @@ tsc --noEmit 0 错误；mvn compile 通过；旧 /color-card API 前端调用 0 
 - antd Form 里"显示正常但保存丢字段"优先查该字段是否注册了 name（validateFields 只返回注册字段，setFieldsValue 未注册字段不报错——静默丢失）
 - 功能重构上线后旧入口必须同步下线，否则双入口双数据源（本项目已两次踩：旧色卡本、色卡本物料 tag 查旧表）
 
+
+## D-101 2026-08-16 进度球实时刷新：重算服务统一广播 WebSocket（P0）
+
+### 背景
+用户反馈订单管理/工序跟进的进度球（父子订单卡）不实时更新，要等"轮回查询"10 多分钟。
+
+### 根因（更新链路断层，不是没有实时机制而是覆盖不全）
+- 前端已有完整实时链路：useWebSocket 收 progress 推送 → dispatch `order:progress:changed` → 订单管理/工序跟进页监听立即刷新（500ms 防抖）+ 切回页面静默刷新
+- 后端重算覆盖全：15+ 写路径即时调 recomputeProgressFromRecords 更新 DB
+- **断层**：WebSocket 广播只在扫码链路（ScanExecutorSupport.recomputeProgressSync）。非扫码操作（成品入库、回退、采购同步、ORDER_ADVANCE 手动推进、裁剪扎号、清理）更新了 DB 但不广播 → 打开着的页面收不到，只能等工序跟进页 5 分钟轮询（pauseOnHidden 切页暂停）或 30 分钟一致性 Job → 体感 10 多分钟
+
+### 修复（收敛到统一出口，一处改动覆盖全部路径）
+`ProductionOrderProgressRecomputeService.persistProgressUpdate` 成功后调 `broadcastProgressIfChanged`：
+- 注入 OrderProgressWebSocketServer（required=false）
+- **有变化才推**（对比更新前后 productionProgress/status/completedQuantity）——30 分钟 Job 批量重算无变化订单不推，防风暴
+- 扫码链路 ScanExecutorSupport 原有推送保留（幂等，前端防抖）
+- 前端 useOrderSync 兜底轮询 300000→60000ms
+
+### 教训
+- "实时推送"做了基建（WS+事件+防抖+重算）≠ 全链路实时：写路径有多少条，广播出口就必须收敛到多少条共用的那个点上（recompute 持久化出口），而不是每个 Controller 自己记得推
+- 用户感知"等 N 分钟"先算三个数：轮询间隔 × 页面隐藏暂停 × 定时任务周期，基本能对上体感时间
+
+### 验证
+Java LS 零错误；推送 ccb9c63a0（safe-push 过）；部署后需双端端到端验证秒级刷新
