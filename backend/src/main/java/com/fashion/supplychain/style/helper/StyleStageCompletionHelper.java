@@ -1,13 +1,8 @@
 package com.fashion.supplychain.style.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.production.entity.PatternProduction;
-import com.fashion.supplychain.production.service.PatternProductionService;
-import com.fashion.supplychain.stock.entity.SampleStock;
-import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -44,12 +39,6 @@ public class StyleStageCompletionHelper {
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
-
-    @Autowired
-    private PatternProductionService patternProductionService;
-
-    @Autowired
-    private SampleStockMapper sampleStockMapper;
 
     @Autowired
     private StyleOperationAppendHelper styleOperationAppendHelper;
@@ -613,88 +602,6 @@ public class StyleStageCompletionHelper {
         } catch (Exception e) {
             log.warn("自动回填环节开始时间失败: styleId={}, stage={}, error={}", styleId, stage, e.getMessage());
         }
-    }
-
-    private void ensureStyleFullyCompletedBeforeMaintenance(StyleInfo current) {
-        if (!isStyleFullyCompleted(current)) {
-            throw new IllegalStateException("只有款式全部完成后，再次修改才算维护");
-        }
-    }
-
-    private boolean isStyleFullyCompleted(StyleInfo current) {
-        if (current == null) {
-            return false;
-        }
-
-        boolean developmentCompleted = current.getBomCompletedTime() != null
-                && current.getSizeCompletedTime() != null
-                && current.getProcessCompletedTime() != null
-                && current.getProductionCompletedTime() != null;
-        boolean patternCompleted = current.getPatternCompletedTime() != null || isCompleted(current.getPatternStatus());
-        boolean sampleCompleted = current.getSampleCompletedTime() != null || isCompleted(current.getSampleStatus());
-
-        boolean hasSizePriceStage = current.getSizePriceStartTime() != null
-                || current.getSizePriceCompletedTime() != null
-                || StringUtils.hasText(current.getSizePriceAssignee());
-        boolean sizePriceCompleted = !hasSizePriceStage || current.getSizePriceCompletedTime() != null;
-
-        boolean hasSecondaryStage = current.getSecondaryStartTime() != null
-                || current.getSecondaryCompletedTime() != null
-                || StringUtils.hasText(current.getSecondaryAssignee())
-                || String.valueOf(current.getProgressNode() == null ? "" : current.getProgressNode()).contains("二次工艺");
-        boolean secondaryCompleted = !hasSecondaryStage || current.getSecondaryCompletedTime() != null;
-
-        boolean reviewPassed = isPassedReview(current.getSampleReviewStatus());
-        boolean inboundCompleted = isInboundCompleted(current);
-
-        return developmentCompleted
-                && patternCompleted
-                && sizePriceCompleted
-                && secondaryCompleted
-                && sampleCompleted
-                && reviewPassed
-                && inboundCompleted;
-    }
-
-    private boolean isPassedReview(String reviewStatus) {
-        String normalized = String.valueOf(reviewStatus == null ? "" : reviewStatus).trim().toUpperCase();
-        return "PASS".equals(normalized) || "APPROVED".equals(normalized);
-    }
-
-    private boolean isInboundCompleted(StyleInfo current) {
-        if (current == null || current.getId() == null) {
-            return false;
-        }
-
-        String styleId = String.valueOf(current.getId());
-        String color = current.getColor();
-        PatternProduction latestPattern = patternProductionService.lambdaQuery()
-                .eq(PatternProduction::getStyleId, styleId)
-                .eq(StringUtils.hasText(color), PatternProduction::getColor, color)
-                .eq(PatternProduction::getDeleteFlag, 0)
-                .orderByDesc(PatternProduction::getUpdateTime)
-                .orderByDesc(PatternProduction::getCreateTime)
-                .last("limit 1")
-                .one();
-        if (latestPattern != null && "COMPLETED".equalsIgnoreCase(String.valueOf(latestPattern.getStatus()).trim())) {
-            return true;
-        }
-
-        QueryWrapper<SampleStock> stockQuery = new QueryWrapper<SampleStock>()
-                .eq("sample_type", "development")
-                .eq("delete_flag", 0)
-                .and(wrapper -> wrapper.eq("style_id", styleId)
-                        .or()
-                        .eq(StringUtils.hasText(current.getStyleNo()), "style_no", current.getStyleNo()));
-        if (StringUtils.hasText(color)) {
-            stockQuery.eq("color", color);
-        }
-        return sampleStockMapper.selectCount(stockQuery) > 0;
-    }
-
-    private boolean isCompleted(String status) {
-        String s = String.valueOf(status == null ? "" : status).trim();
-        return "COMPLETED".equalsIgnoreCase(s);
     }
 
     private StyleInfo getStyleWithTenantCheck(Long id) {

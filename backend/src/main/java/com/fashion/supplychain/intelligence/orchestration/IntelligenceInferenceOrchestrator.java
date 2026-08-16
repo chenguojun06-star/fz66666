@@ -395,7 +395,7 @@ public class IntelligenceInferenceOrchestrator {
         }
 
         // 等待第一个成功的结果
-        CompletableFuture<String> anySuccess = CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
+        CompletableFuture<String> anySuccess = CompletableFuture.anyOf(futures.toArray(new CompletableFuture<?>[0]))
                 .thenApply(obj -> (String) obj);
 
         try {

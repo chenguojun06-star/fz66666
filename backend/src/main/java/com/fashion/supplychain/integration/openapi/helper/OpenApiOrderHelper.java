@@ -102,7 +102,7 @@ public class OpenApiOrderHelper {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("action", action);
             result.put("source", externalApiUrl);
-            result.put("httpStatus", response.getStatusCodeValue());
+            result.put("httpStatus", response.getStatusCode().value());
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 try {
@@ -114,7 +114,7 @@ public class OpenApiOrderHelper {
                 result.put("success", true);
             } else {
                 result.put("success", false);
-                result.put("error", "第三方系统返回非成功状态: " + response.getStatusCodeValue());
+                result.put("error", "第三方系统返回非成功状态: " + response.getStatusCode().value());
             }
             return result;
 

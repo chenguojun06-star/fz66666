@@ -9,6 +9,7 @@ import com.fashion.supplychain.system.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -244,7 +245,6 @@ public class ImAiWebhookController {
         String openId = event.openId;
         String content = event.content;
         String chatId = event.chatId;
-        String msgId = event.messageId;
 
         try {
             // 1. 解析用户
@@ -313,10 +313,10 @@ public class ImAiWebhookController {
             }
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = rt.exchange(
+            ResponseEntity<Map<String, Object>> response = rt.exchange(
                     "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type="
                             + (chatId != null && !chatId.isBlank() ? "chat_id" : "open_id"),
-                    HttpMethod.POST, request, Map.class);
+                    HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {});
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Object code = response.getBody().get("code");
@@ -351,9 +351,9 @@ public class ImAiWebhookController {
             body.put("app_secret", feishuAppSecret);
 
             HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = rt.exchange(
+            ResponseEntity<Map<String, Object>> response = rt.exchange(
                     "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
-                    HttpMethod.POST, request, Map.class);
+                    HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {});
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Object code = response.getBody().get("code");
@@ -370,6 +370,7 @@ public class ImAiWebhookController {
 
     // ==================== 飞书事件解析 ====================
 
+    @SuppressWarnings("unchecked") // 飞书事件 JSON 结构动态，Map 强转不可避免
     private FeishuMessageEvent parseFeishuEvent(String body) {
         try {
             // v2.0 schema
@@ -398,7 +399,6 @@ public class ImAiWebhookController {
                 if (content.isBlank()) return null;
 
                 String chatId = (String) message.get("chat_id");
-                String msgId = (String) message.get("message_id");
 
                 Map<String, Object> sender = (Map<String, Object>) event.get("sender");
                 Map<String, Object> senderId = sender != null ? (Map<String, Object>) sender.get("sender_id") : null;
@@ -408,7 +408,6 @@ public class ImAiWebhookController {
                 e.openId = openId;
                 e.content = content;
                 e.chatId = chatId;
-                e.messageId = msgId;
                 return e;
             }
 
@@ -444,7 +443,6 @@ public class ImAiWebhookController {
         String openId;
         String content;
         String chatId;
-        String messageId;
     }
 
     // ==================== 通用工具 ====================

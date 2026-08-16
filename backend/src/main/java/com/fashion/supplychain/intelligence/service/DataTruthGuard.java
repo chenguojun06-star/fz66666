@@ -3,7 +3,6 @@ package com.fashion.supplychain.intelligence.service;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
@@ -30,7 +29,6 @@ public class DataTruthGuard {
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%?");
     private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2})");
-    private static final Pattern TEMPORAL_WORDS = Pattern.compile("(昨天|今天|明天|上周|本周|下周|上个月|本月|下个月|目前|当前|现在|已经|还没|尚未)");
 
     private static final Set<String> FABRICATED_INDICATORS = Set.of(
             "模拟数据", "虚拟数据", "演示数据", "示例数据", "参考值如下",
@@ -56,9 +54,6 @@ public class DataTruthGuard {
     private static final Set<String> ABSOLUTE_WORDS = Set.of(
             "绝对", "肯定", "一定", "完全", "100%", "百分百", "全部", "所有"
     );
-
-    @Autowired(required = false)
-    private QdrantService qdrantService;
 
     // ──────────────────────────────────────────────────────────────
     // 结果类
@@ -592,13 +587,13 @@ public class DataTruthGuard {
         int score = 100;
 
         // L1权重: 30%
-        score -= (100 - truth.getTrustLevel()) * 0.30;
+        score -= (int) ((100 - truth.getTrustLevel()) * 0.30);
 
         // L2权重: 25%
-        score -= (1 - numeric.getMatchRate()) * 25;
+        score -= (int) ((1 - numeric.getMatchRate()) * 25);
 
         // L3权重: 25%
-        score -= (1 - semantic.getSemanticSimilarity()) * 25;
+        score -= (int) ((1 - semantic.getSemanticSimilarity()) * 25);
 
         // L4权重: 20%
         score -= logicIssues.size() * 10;

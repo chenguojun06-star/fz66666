@@ -637,9 +637,7 @@ public class WarehouseScanExecutor {
      * U编码入库扫码（无菲号模式）
      * 委托给 {@link UCodeWarehouseScanExecutor} 处理
      *
-     * @deprecated 建议直接注入 {@link UCodeWarehouseScanExecutor} 调用
      */
-    @Deprecated
     public Map<String, Object> executeUCode(Map<String, Object> params, String requestId,
             String operatorId, String operatorName, ProductionOrder order) {
         return uCodeWarehouseScanExecutor.execute(params, requestId, operatorId, operatorName, order);

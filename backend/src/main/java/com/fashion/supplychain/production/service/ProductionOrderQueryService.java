@@ -287,7 +287,7 @@ public class ProductionOrderQueryService {
         
         // 等待所有异步任务完成
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get();
         } catch (Exception e) {
             log.warn("[OrderQuery] 并行填充部分任务失败: {}", e.getMessage());
         }
@@ -388,7 +388,7 @@ public class ProductionOrderQueryService {
         futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> fillProgressWorkflowFromStyleProcess(productionOrders)), enrichExecutor));
         futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillProgressNodeUnitPrices(productionOrders)), enrichExecutor));
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get();
         } catch (Exception e) {
             log.warn("[OrderDetail] 并行填充部分任务失败: {}", e.getMessage());
         }

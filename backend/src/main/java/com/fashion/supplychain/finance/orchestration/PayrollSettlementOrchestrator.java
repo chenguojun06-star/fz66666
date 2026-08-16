@@ -583,10 +583,7 @@ public class PayrollSettlementOrchestrator {
         deduction.setDescription(description);
         deduction.setSourceType("PAYROLL_SETTLEMENT");
         deduction.setSourceId(settlementId.trim());
-        com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
-        if (ctx != null) {
-            deduction.setTenantId(ctx.tenantId());
-        }
+        deduction.setTenantId(com.fashion.supplychain.common.UserContext.tenantId());
         deductionItemMapper.insert(deduction);
 
         int rows = payrollSettlementService.atomicAddDeductionAmount(settlementId.trim(), deductionAmount, currentDeduction, tenantId);

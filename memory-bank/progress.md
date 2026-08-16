@@ -1,9 +1,23 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-16（D-101 进度球实时刷新 + 四文件 IDE 警告清理）
+> 最后更新：2026-08-16（D-103 警告根治：-Xlint 固化 + 44 文件清零 99→0）
 
 ## 已完成
+
+### 2026-08-16 警告根治：-Xlint 固化 + 全量清零 ✅（D-103，未提交）
+
+- [x] pom.xml 固化 -Xlint:all（排除 unchecked/serial/this-escape/processing/classfile）
+- [x] 清零 99+26 条 javac 存量警告（deprecation/static/lossy/raw/varargs/try/死代码，44 文件）
+- [x] 三重验证：javac 警告 0 + mvn compile EXIT=0 + Java LS 诊断 0
+- [x] 详见 decisionLog D-103
+
+### 2026-08-16 六文件 IDE 警告批量清理 ✅（D-102，未提交）
+
+- [x] 5 处未使用 @Autowired 字段删除（FinanceOrchestration/ProcessTracking/PurchaseCart/CuttingTask/Serial）
+- [x] StyleStageCompletionHelper 死代码链整链删除（4 方法+2 字段+5 import）
+- [x] selectBatchIds→selectByIds；Jackson List.class→TypeReference
+- [x] mvn compile EXIT=0、6 文件 LS 诊断清零
 
 ### 2026-08-16 四文件 IDE 警告清理 ✅（D-099/D-100 死代码残留，未提交）
 

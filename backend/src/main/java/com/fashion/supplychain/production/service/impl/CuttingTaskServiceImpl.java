@@ -14,7 +14,6 @@ import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.helper.CuttingTaskQueryHelper;
 import com.fashion.supplychain.production.helper.CuttingBundleCompletionHelper;
 import java.time.LocalDateTime;
@@ -32,7 +31,6 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
     @Autowired private CuttingBundleMapper cuttingBundleMapper;
     @Autowired private ScanRecordMapper scanRecordMapper;
-    @Autowired private ProductionOrderService productionOrderService;
     @Autowired private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
     @Autowired private CuttingTaskQueryHelper queryHelper;
     @Autowired private CuttingBundleCompletionHelper completionHelper;

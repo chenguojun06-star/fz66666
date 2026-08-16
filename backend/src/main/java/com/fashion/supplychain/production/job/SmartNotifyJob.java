@@ -72,7 +72,7 @@ public class SmartNotifyJob {
                     sysNoticeService.lambdaUpdate()
                             .le(SysNotice::getCreatedAt, cutoff)
                             .remove();
-                    totalDeleted += deleted;
+                    totalDeleted += (int) deleted;
                 }
             } catch (Exception e) {
                 log.warn("[SmartNotify] 租户 {} 旧通知清理失败: {}", tenantId, e.getMessage());

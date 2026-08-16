@@ -472,7 +472,7 @@ public class PromptContextProvider {
         for (int i = 0; i < filtered.size(); i++) {
             var sp = filtered.get(i);
             String content = sp.getPayload() != null
-                    ? (String) sp.getPayload().getOrDefault("content", "") : "";
+                    ? sp.getPayload().getOrDefault("content", "") : "";
             if (content.length() > 500) content = content.substring(0, 500) + "…";
             result.append(String.format("  %d. [相似度%.2f] %s\n",
                     i + 1, sp.getScore(), content.isBlank() ? "（无内容）" : content));

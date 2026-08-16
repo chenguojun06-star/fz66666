@@ -2,7 +2,6 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +21,6 @@ public class SerialOrchestrator {
 
     @Autowired
     private StyleInfoService styleInfoService;
-
-    @Autowired
-    private ProductionOrderService productionOrderService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

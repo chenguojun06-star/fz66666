@@ -44,13 +44,8 @@ public class NlQueryLearningTracker {
                 String query = (String) row.get("user_query");
                 String intent = (String) row.get("detected_intent");
                 Double conf = row.get("confidence") != null ? ((Number) row.get("confidence")).doubleValue() : 0;
-                LocalDateTime createdAt = row.get("created_at") != null
-                        ? (row.get("created_at") instanceof java.sql.Timestamp
-                            ? ((java.sql.Timestamp) row.get("created_at")).toLocalDateTime()
-                            : LocalDateTime.parse(row.get("created_at").toString()))
-                        : LocalDateTime.now();
 
-                queryHistory.addLast(new QueryRecord(query, intent, (int) Math.round(conf), createdAt));
+                queryHistory.addLast(new QueryRecord((int) Math.round(conf)));
                 if (intent != null) {
                     intentHits.computeIfAbsent(intent, k -> new AtomicInteger(0)).incrementAndGet();
                 }
@@ -71,7 +66,7 @@ public class NlQueryLearningTracker {
 
     public void recordQuery(Long tenantId, String question, String intent, int confidence,
                             String handlerType, Integer responseTimeMs) {
-        queryHistory.addLast(new QueryRecord(question, intent, confidence, LocalDateTime.now()));
+        queryHistory.addLast(new QueryRecord(confidence));
         while (queryHistory.size() > MAX_HISTORY) queryHistory.pollFirst();
 
         intentHits.computeIfAbsent(intent, k -> new AtomicInteger(0)).incrementAndGet();
@@ -165,7 +160,7 @@ public class NlQueryLearningTracker {
         while (it.hasNext() && count < 5) { recentMisses.add(it.next()); count++; }
         stats.put("recentLowConfidence", recentMisses);
 
-        double avgConf = queryHistory.stream().mapToInt(r -> r.confidence).average().orElse(0);
+        double avgConf = queryHistory.stream().mapToInt(QueryRecord::confidence).average().orElse(0);
         stats.put("avgConfidence", Math.round(avgConf * 10) / 10.0);
 
         return stats;
@@ -194,8 +189,8 @@ public class NlQueryLearningTracker {
             Long learningCount = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM t_nl_query_learning" +
                     (tenantId != null ? " WHERE tenant_id = ?" : ""),
-                    tenantId != null ? new Object[]{tenantId} : new Object[]{},
-                    Long.class);
+                    Long.class,
+                    tenantId != null ? new Object[]{tenantId} : new Object[]{});
             stats.put("dbLearningCount", learningCount);
         } catch (Exception e) {
             log.warn("[NlQuery学习] DB统计查询失败: {}", e.getMessage());
@@ -209,17 +204,5 @@ public class NlQueryLearningTracker {
                 .map(Map.Entry::getKey).orElse("summary");
     }
 
-    private static class QueryRecord {
-        final String question;
-        final String intent;
-        final int confidence;
-        final LocalDateTime createdAt;
-
-        QueryRecord(String q, String i, int c, LocalDateTime t) {
-            this.question = q;
-            this.intent = i;
-            this.confidence = c;
-            this.createdAt = t;
-        }
-    }
+    private record QueryRecord(int confidence) {}
 }

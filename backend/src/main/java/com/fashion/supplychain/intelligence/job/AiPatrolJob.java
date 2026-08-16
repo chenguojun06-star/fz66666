@@ -587,7 +587,7 @@ public class AiPatrolJob {
               .ne("scan_type", "orchestration")
               .ge("scan_time", since)
               .groupBy("process_name");
-            List<Map<String, Object>> qualityStats = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(qw);
+            List<Map<String, Object>> qualityStats = scanRecordService.listMaps(qw);
 
             for (Map<String, Object> row : qualityStats) {
                 Number total = (Number) row.getOrDefault("total", 0);
@@ -635,7 +635,7 @@ public class AiPatrolJob {
                     .eq("scan_type", "production")
                     .ge("scan_time", since)
                     .last("LIMIT 1");
-                List<Map<String, Object>> sewScans = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(sewQ);
+                List<Map<String, Object>> sewScans = scanRecordService.listMaps(sewQ);
 
                 QueryWrapper<ScanRecord> cutQ = new QueryWrapper<>();
                 cutQ.eq("tenant_id", tenantId)
@@ -643,7 +643,7 @@ public class AiPatrolJob {
                     .eq("scan_type", "cutting")
                     .lt("scan_time", since)
                     .last("LIMIT 1");
-                List<Map<String, Object>> cutScans = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(cutQ);
+                List<Map<String, Object>> cutScans = scanRecordService.listMaps(cutQ);
 
                 if (!cutScans.isEmpty() && sewScans.isEmpty()) {
                     String issue = String.format(
@@ -1123,46 +1123,6 @@ public class AiPatrolJob {
         }
 
         return issuesFound;
-    }
-
-    /**
-     * P1: REFLECTIVE 记忆生成。
-     * <ul>
-     *   <li>高采纳率场景 (&gt;80%) → 写正向 REFLECTIVE 记忆，强化该场景的决策能力</li>
-     *   <li>低采纳率场景 (&lt;20%) → 写负向 REFLECTIVE 记忆，提醒 AI 对该场景更谨慎</li>
-     * </ul>
-     * 写入 ai_long_memory.layer = 'REFLECTIVE'，subject_type = 'platform_scene'
-     */
-    private void generateReflectiveMemories(LocalDateTime since) {
-        List<Long> tenantIds = processStatsEngine != null
-                ? processStatsEngine.findActiveTenantIds()
-                : null;
-        if (tenantIds == null || tenantIds.isEmpty()) return;
-
-        int totalWritten = 0;
-        for (Long tenantId : tenantIds) {
-            if (tenantId == null) continue;
-            UserContext previous = UserContext.get();
-            try {
-                UserContext ctx = new UserContext();
-                ctx.setTenantId(tenantId);
-                ctx.setUsername("system");
-                ctx.setUserId("system");
-                UserContext.set(ctx);
-                totalWritten += generateReflectiveMemoriesForTenant(tenantId, since);
-            } catch (Exception e) {
-                log.warn("[AiPatrolJob] 租户 {} REFLECTIVE 记忆生成异常: {}", tenantId, e.getMessage());
-            } finally {
-                if (previous != null) {
-                    UserContext.set(previous);
-                } else {
-                    UserContext.clear();
-                }
-            }
-        }
-        if (totalWritten > 0) {
-            log.info("[AiPatrolJob] REFLECTIVE 记忆生成完成，新增 {} 条", totalWritten);
-        }
     }
 
     private int generateReflectiveMemoriesForTenant(Long tenantId, LocalDateTime since) {

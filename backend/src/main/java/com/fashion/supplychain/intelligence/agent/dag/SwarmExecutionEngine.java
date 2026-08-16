@@ -99,7 +99,7 @@ public class SwarmExecutionEngine {
         }
 
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(120, TimeUnit.SECONDS);
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("[Swarm:Mesh] 执行异常: {}", e.getMessage());
         }
@@ -211,7 +211,7 @@ public class SwarmExecutionEngine {
         }
 
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(120, TimeUnit.SECONDS);
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("[Swarm:Star] 外围执行异常: {}", e.getMessage());
         }

@@ -436,10 +436,10 @@ public class ProductionCleanupOrchestrator {
 
     private int deleteScanRecords(String oid, List<String> bundleIds) {
         int scanDeleted = 0;
-        scanDeleted += scanRecordService.count(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
+        scanDeleted += (int) scanRecordService.count(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
         scanRecordService.remove(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
         if (!bundleIds.isEmpty()) {
-            scanDeleted += scanRecordService
+            scanDeleted += (int) scanRecordService
                     .count(new LambdaQueryWrapper<ScanRecord>().in(ScanRecord::getCuttingBundleId, bundleIds));
             scanRecordService
                     .remove(new LambdaQueryWrapper<ScanRecord>().in(ScanRecord::getCuttingBundleId, bundleIds));

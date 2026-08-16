@@ -30,7 +30,7 @@ public class AttendanceSupplementApplyOrchestrator {
     public Map<String, Object> submitApply(LocalDate workDate, LocalDateTime clockInTime,
                                            LocalDateTime clockOutTime, String reason) {
         UserContext ctx = requireUserContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
         String userId = ctx.getUserId();
         if (workDate == null) throw new IllegalArgumentException("请选择补卡日期");
         if (clockInTime == null && clockOutTime == null) {
@@ -43,7 +43,7 @@ public class AttendanceSupplementApplyOrchestrator {
         }
         AttendanceSupplementApply apply = new AttendanceSupplementApply();
         apply.setTenantId(tenantId); apply.setUserId(userId); apply.setUserName(ctx.getUsername());
-        apply.setFactoryId(ctx.factoryId()); apply.setWorkDate(workDate);
+        apply.setFactoryId(UserContext.factoryId()); apply.setWorkDate(workDate);
         apply.setClockInTime(clockInTime); apply.setClockOutTime(clockOutTime);
         apply.setReason(reason); apply.setStatus("PENDING"); apply.setDeleteFlag(0);
         applyService.save(apply);
@@ -56,7 +56,7 @@ public class AttendanceSupplementApplyOrchestrator {
     /** 员工查看我的申请列表 */
     public Map<String, Object> myApplies(String month) {
         UserContext ctx = requireUserContext();
-        List<AttendanceSupplementApply> list = applyService.listMyApplies(ctx.tenantId(), ctx.getUserId(), month);
+        List<AttendanceSupplementApply> list = applyService.listMyApplies(UserContext.tenantId(), ctx.getUserId(), month);
         return listResp(list);
     }
     /** 管理员待审批列表 */
@@ -64,14 +64,14 @@ public class AttendanceSupplementApplyOrchestrator {
         UserContext ctx = requireAdminContext();
         if (startDate == null) startDate = LocalDate.now().minusDays(30);
         if (endDate == null) endDate = LocalDate.now();
-        List<AttendanceSupplementApply> list = applyService.listPending(ctx.tenantId(), startDate, endDate);
+        List<AttendanceSupplementApply> list = applyService.listPending(UserContext.tenantId(), startDate, endDate);
         return listResp(list);
     }
     /** 管理员审批通过（事务边界 D-001）：更新申请 + 创建打卡记录 + 关联 attendance_id 三步原子 */
     @Transactional
     public Map<String, Object> approve(Long applyId, String approveRemark) {
         UserContext ctx = requireAdminContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
         AttendanceSupplementApply apply = requirePendingApply(tenantId, applyId);
         apply.setStatus("APPROVED"); apply.setApproverId(ctx.getUserId()); apply.setApproverName(ctx.getUsername());
         apply.setApproveTime(LocalDateTime.now()); apply.setApproveRemark(approveRemark);
@@ -98,11 +98,11 @@ public class AttendanceSupplementApplyOrchestrator {
     /** 管理员审批拒绝 */
     public Map<String, Object> reject(Long applyId, String approveRemark) {
         UserContext ctx = requireAdminContext();
-        AttendanceSupplementApply apply = requirePendingApply(ctx.tenantId(), applyId);
+        AttendanceSupplementApply apply = requirePendingApply(UserContext.tenantId(), applyId);
         apply.setStatus("REJECTED"); apply.setApproverId(ctx.getUserId()); apply.setApproverName(ctx.getUsername());
         apply.setApproveTime(LocalDateTime.now()); apply.setApproveRemark(approveRemark);
         applyService.updateById(apply);
-        log.info("[reject] applyId={} tenantId={} approver={}", applyId, ctx.tenantId(), ctx.getUserId());
+        log.info("[reject] applyId={} tenantId={} approver={}", applyId, UserContext.tenantId(), ctx.getUserId());
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("message", "已拒绝补卡申请");
         return resp;
@@ -130,7 +130,7 @@ public class AttendanceSupplementApplyOrchestrator {
     }
     private UserContext requireUserContext() {
         UserContext ctx = UserContext.get();
-        if (ctx == null || !StringUtils.hasText(ctx.getUserId()) || ctx.tenantId() == null) {
+        if (ctx == null || !StringUtils.hasText(ctx.getUserId()) || UserContext.tenantId() == null) {
             throw new org.springframework.security.access.AccessDeniedException("未登录");
         }
         TenantAssert.assertTenantContext();

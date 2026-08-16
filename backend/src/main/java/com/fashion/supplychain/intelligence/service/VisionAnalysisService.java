@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -321,7 +322,7 @@ public class VisionAnalysisService {
             int jsonEnd = raw.lastIndexOf('}');
             if (jsonStart >= 0 && jsonEnd > jsonStart) {
                 String jsonStr = raw.substring(jsonStart, jsonEnd + 1);
-                Map<String, Object> jsonMap = MAPPER.readValue(jsonStr, Map.class);
+                Map<String, Object> jsonMap = MAPPER.readValue(jsonStr, new TypeReference<Map<String, Object>>() {});
 
                 result.setSeverity(extractString(jsonMap, "severity", "NONE"));
                 result.setConfidence(extractInt(jsonMap, "confidence", 0));
@@ -644,7 +645,7 @@ public class VisionAnalysisService {
             // 优先解析 JSON
             String jsonFragment = extractJsonFragment(raw);
             if (jsonFragment != null) {
-                Map<String, Object> map = MAPPER.readValue(jsonFragment, Map.class);
+                Map<String, Object> map = MAPPER.readValue(jsonFragment, new TypeReference<Map<String, Object>>() {});
                 parseSizeChartFromMap(map, r);
             } else {
                 // 无 JSON → 降级为关键词文本提取
@@ -819,7 +820,7 @@ public class VisionAnalysisService {
             // 尝试从 raw 中提取 JSON 片段
             String json = extractJsonFragment(raw);
             if (json != null) {
-                Map<String, Object> map = MAPPER.readValue(json, Map.class);
+                Map<String, Object> map = MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
                 r.setAmount(extractAmount(map, "amount", "amountWithTax", "total", "价税合计"));
                 r.setInvoiceDate(extractStringField(map, "date", "invoiceDate", "开票日期", "date"));
                 r.setInvoiceNo(extractStringField(map, "invoiceNo", "invoiceNumber", "发票号", "no"));
@@ -1078,7 +1079,7 @@ public class VisionAnalysisService {
 
             String jsonFragment = extractJsonFragment(raw);
             if (jsonFragment != null) {
-                Map<String, Object> map = MAPPER.readValue(jsonFragment, Map.class);
+                Map<String, Object> map = MAPPER.readValue(jsonFragment, new TypeReference<Map<String, Object>>() {});
                 parseBomFromMap(map, r);
             } else {
                 parseBomFromText(raw, r);

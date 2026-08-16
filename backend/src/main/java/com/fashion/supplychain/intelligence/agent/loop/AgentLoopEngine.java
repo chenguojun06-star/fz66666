@@ -104,6 +104,7 @@ public class AgentLoopEngine {
     @Autowired(required = false)
     private LangfuseSpanHelper langfuseSpanHelper;
 
+    @SuppressWarnings("try") // SpanScope 仅用 close 副作用标记 span 边界，try-with-resources 为刻意用法
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
@@ -241,6 +242,7 @@ public class AgentLoopEngine {
         return null;
     }
 
+    @SuppressWarnings("try") // 同上：SpanScope 以 close 副作用界定 span 边界
     private String runSingleTurn(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
         // 推送进度事件：让前端知道当前执行到哪一步
         if (cb instanceof StreamingAgentLoopCallback streamCb) {

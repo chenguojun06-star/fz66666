@@ -12,7 +12,6 @@ import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartItemMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
 import com.fashion.supplychain.production.service.PurchaseCartService;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.helper.PurchaseCartLogAppendHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -45,9 +44,6 @@ public class PurchaseCartOrchestrator {
     
     @Autowired
     private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
-    
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
     
     @Autowired
     private MaterialPurchaseMapper materialPurchaseMapper;
@@ -219,7 +215,7 @@ public class PurchaseCartOrchestrator {
             throw new BusinessException("合并至少需要2个物料");
         }
         
-        List<PurchaseCartItem> items = purchaseCartItemMapper.selectBatchIds(request.getItemIds());
+        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByIds(request.getItemIds());
         if (items.isEmpty()) {
             throw new BusinessException("要合并的物料不存在");
         }

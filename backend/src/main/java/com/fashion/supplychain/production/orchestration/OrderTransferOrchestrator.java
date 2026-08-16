@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
@@ -536,7 +537,7 @@ public class OrderTransferOrchestrator {
         }
         Map<String, Object> priceMap;
         try {
-            priceMap = OBJECT_MAPPER.readValue(transfer.getProcessPriceOverrides(), Map.class);
+            priceMap = OBJECT_MAPPER.readValue(transfer.getProcessPriceOverrides(), new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.warn("[转单] 解析 processPriceOverrides 失败: {}", transfer.getProcessPriceOverrides(), e);
             return;

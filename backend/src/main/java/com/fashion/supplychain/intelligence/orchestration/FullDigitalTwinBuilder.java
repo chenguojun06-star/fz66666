@@ -224,7 +224,7 @@ public class FullDigitalTwinBuilder {
 
         // 等待所有域完成（8秒超时）
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
                     .get(8, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             log.warn("[DigitalTwin] 部分域数据拉取超时（8s），使用已返回结果");

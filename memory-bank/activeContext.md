@@ -1,11 +1,28 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-101 进度球实时刷新 + 四文件 IDE 警告清理）
+> 最后更新：2026-08-16（D-103 警告根治：-Xlint 固化 + 44 文件清零 99→0）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 警告根治：-Xlint 固化 + 全量清零 ✅（D-103，未提交，代码 44 文件 +147/-299）
+
+- [x] pom.xml 固化 `-Xlint:all`（排 unchecked/serial 等）→ 编译期即暴露警告，防默默积累
+- [x] 清零两轮暴露的 99+26 条 javac 存量：deprecation 替换 14、static 类名限定 30、lossy 显式截断 10、raw 参数化 13、varargs 压制 2、try 压制 2、死代码 5 处
+- [x] 关键发现：@SafeVarargs 压不住 -Xlint:all 的 varargs 警告（key 是 varargs 非 unchecked）；壳方法 @deprecated 标记违反 D-001 事务分层已清除
+- [x] 验证：javac 警告 0 + 编译 EXIT=0 + IDE 诊断 0（三重清零）
+- [x] 复验时揪出最后 1 条 text-block 警告（AgentContextFileLoaderService 文本块内 10+ 行尾随空格，javac 本就剥离、零语义变化）→ sed 批量清除后彻底归零
+- [ ] 部署后验证 Permissions-Policy 响应头（SecurityConfig 换用 6.4 新 API permissionsPolicyHeader）
+
+### 2026-08-16 六文件 IDE 警告批量清理 ✅（D-102，未提交）
+
+- [x] 清理 5 处未使用 @Autowired 字段（重构遗留，均 grep 确认仅 import+声明）：ProductionOrderFinanceOrchestrationService.shipmentReconciliationService、ProductionProcessTrackingOrchestrator/CuttingTaskServiceImpl/SerialOrchestrator.productionOrderService、PurchaseCartOrchestrator.materialPurchaseService
+- [x] 删除 StyleStageCompletionHelper 死代码链：ensureStyleFullyCompletedBeforeMaintenance→isStyleFullyCompleted→isPassedReview/isInboundCompleted/isCompleted（链内闭环、外部零引用）+ patternProductionService/sampleStockMapper 字段及 5 个 import
+- [x] PurchaseCartOrchestrator:222 selectBatchIds→selectByIds（MP 3.5.12）
+- [x] ProductionProcessTrackingOrchestrator:608 Jackson List.class→TypeReference<List<String>>（消 unchecked）
+- [x] 验证：mvn compile EXIT=0 + 6 文件 Java LS 诊断清零
 
 ### 2026-08-16 CI"构建失败"虚惊 + 线上发版报错定性 ✅
 

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.helper;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public final class StepWizardBuilder {
 
@@ -19,17 +20,19 @@ public final class StepWizardBuilder {
     }
 
     @SafeVarargs
+    @SuppressWarnings("varargs") // 该警告 lint key 为 varargs（非 unchecked），@SafeVarargs 不覆盖方法体内的数组使用点
     public static List<Map<String, Object>> steps(Map<String, Object>... steps) {
-        return Arrays.asList(steps);
+        return Arrays.stream(steps).collect(Collectors.toList());
     }
 
     @SafeVarargs
+    @SuppressWarnings("varargs") // 同上
     public static Map<String, Object> step(String stepKey, String title, String desc, Map<String, Object>... fields) {
         Map<String, Object> s = new LinkedHashMap<>();
         s.put("stepKey", stepKey);
         s.put("title", title);
         s.put("desc", desc);
-        s.put("fields", Arrays.asList(fields));
+        s.put("fields", Arrays.stream(fields).collect(Collectors.toList()));
         return s;
     }
 

@@ -60,7 +60,7 @@ public class ProducesRelationExtractor implements RelationExtractor {
                 .collect(Collectors.toSet());
         Map<String, StyleInfo> styleMap = styleIds.isEmpty()
                 ? Collections.emptyMap()
-                : styleInfoMapper.selectBatchIds(styleIds).stream()
+                : styleInfoMapper.selectByIds(styleIds).stream()
                         .collect(Collectors.toMap(s -> String.valueOf(s.getId()), Function.identity(), (a, b) -> a));
 
         Set<String> seen = new HashSet<>();

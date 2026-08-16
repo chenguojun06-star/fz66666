@@ -7,7 +7,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -45,9 +44,6 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ProductWarehousingService productWarehousingService;
-
-    @Autowired
-    private ShipmentReconciliationService shipmentReconciliationService;
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;

@@ -41,7 +41,7 @@ public class ContainsRelationExtractor implements RelationExtractor {
                 .filter(java.util.Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
-        Map<Long, StyleInfo> styleMap = styleInfoMapper.selectBatchIds(styleIds).stream()
+        Map<Long, StyleInfo> styleMap = styleInfoMapper.selectByIds(styleIds).stream()
                 .collect(Collectors.toMap(StyleInfo::getId, s -> s));
 
         List<KgRelation> results = new ArrayList<>();

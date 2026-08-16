@@ -15,8 +15,7 @@ import java.util.Map;
 /**
  * 选品批次 Controller — 批次管理与状态流转。
  *
- * @deprecated {@code POST /save} 端点已废弃，请使用 {@code POST /} 替代。
- * 计划于 2026-Q3 移除该旧端点。
+ * 注：{@code POST /save} 端点已废弃，请使用 {@code POST /} 替代（计划 2026-Q4 移除旧端点）。
  */
 @RestController
 @RequestMapping("/api/selection/batch")

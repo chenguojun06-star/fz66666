@@ -159,7 +159,7 @@ public class AgentPlanningEngine {
         if (userMessage.length() > 200) score += 10;
 
         long questionCount = lower.chars().filter(c -> c == '?' || c == '？').count();
-        score += Math.min(questionCount * 5, 15);
+        score += (int) Math.min(questionCount * 5, 15);
 
         // 复杂分析类动词
         java.util.regex.Pattern complexPattern = java.util.regex.Pattern.compile(

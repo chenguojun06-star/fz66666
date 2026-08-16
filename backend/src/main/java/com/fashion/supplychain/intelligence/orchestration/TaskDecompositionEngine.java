@@ -141,7 +141,7 @@ public class TaskDecompositionEngine {
         long questionCount = userMessage.chars()
                 .filter(c -> c == '?' || c == '？')
                 .count();
-        score += Math.min(questionCount * 5, 15);
+        score += (int) Math.min(questionCount * 5, 15);
 
         // 复杂关键词
         String lower = userMessage.toLowerCase();

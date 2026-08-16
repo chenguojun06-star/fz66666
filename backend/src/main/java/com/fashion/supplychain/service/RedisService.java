@@ -101,7 +101,7 @@ public class RedisService {
             List<byte[]> rawKeys = redisTemplate.execute((RedisCallback<List<byte[]>>) connection -> {
                 List<byte[]> found = new ArrayList<>();
                 ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
-                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                try (Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
                     while (cursor.hasNext()) {
                         found.add(cursor.next());
                     }

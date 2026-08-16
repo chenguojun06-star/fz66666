@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -97,7 +97,7 @@ public class AppStoreOrchestrator {
             String apiUrl = "https://sctapi.ftqq.com/" + key + ".send";
             String body = "title=" + URLEncoder.encode(title, StandardCharsets.UTF_8)
                     + "&desp=" + URLEncoder.encode(content, StandardCharsets.UTF_8);
-            HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
+            HttpURLConnection conn = (HttpURLConnection) URI.create(apiUrl).toURL().openConnection();
             try {
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -919,8 +919,9 @@ public class AppStoreOrchestrator {
         sql.append(" ORDER BY create_time DESC");
 
         List<AppOrder> orders = jdbcTemplate.query(
-            sql.toString(), args.toArray(),
-            new org.springframework.jdbc.core.BeanPropertyRowMapper<>(AppOrder.class)
+            sql.toString(),
+            new org.springframework.jdbc.core.BeanPropertyRowMapper<>(AppOrder.class),
+            args.toArray()
         );
         log.info("[AdminOrderList] 超管查询全量订单：共 {} 条，状态过滤={}",
                 orders.size(), statusFilter.isEmpty() ? "全部" : statusFilter);

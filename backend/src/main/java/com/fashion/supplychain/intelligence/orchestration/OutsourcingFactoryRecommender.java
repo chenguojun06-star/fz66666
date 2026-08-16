@@ -197,10 +197,10 @@ public class OutsourcingFactoryRecommender {
         int score = 0;
 
         // 准时交货率 (30分)
-        score += Math.min(data.getOnTimeRate() * 0.3, 30);
+        score += (int) Math.min(data.getOnTimeRate() * 0.3, 30);
 
         // 质量合格率 (30分)
-        score += Math.min(data.getQualityRate() * 0.3, 30);
+        score += (int) Math.min(data.getQualityRate() * 0.3, 30);
 
         // 成本水平 (20分) - 成本越低分数越高
         score += Math.max(0, 20 - data.getCostLevel() * 4);
@@ -208,7 +208,7 @@ public class OutsourcingFactoryRecommender {
         // 交付周期 (20分) - 周期越短分数越高
         score += Math.max(0, 20 - data.getDeliveryLeadTime() * 3);
 
-        return Math.min((int) score, 100);
+        return Math.min(score, 100);
     }
 
     /**

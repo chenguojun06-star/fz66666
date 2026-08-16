@@ -2259,3 +2259,43 @@ tsc --noEmit 0 错误；mvn compile 通过；旧 /color-card API 前端调用 0 
 
 ### 验证
 Java LS 零错误；推送 ccb9c63a0（safe-push 过）；部署后需双端端到端验证秒级刷新
+
+## D-102 2026-08-16 IDE 警告反复出现的根因说明与六文件批量清理（P2 卫生）
+
+### 背景
+用户再次询问"为什么每次都这么多警告"。根因：IDE Java LS 全量扫描，**存量警告**（重构遗留的未使用字段、死代码、deprecated API、泛型原始类型转换）不清就一直显示，并非每次新产生。
+
+### 决策
+1. 未使用的 `@Autowired` 字段直接删（import+字段）；删除前 grep 全文件确认仅 import+声明 2 处引用
+2. 死代码链整链删除：`ensureStyleFullyCompletedBeforeMaintenance → isStyleFullyCompleted → isPassedReview/isInboundCompleted/isCompleted`（链内互相调用闭环、外部零引用）+ 专属字段 patternProductionService/sampleStockMapper 及 import
+3. `selectBatchIds`→`selectByIds`（MyBatis-Plus 3.5.12，语义相同）
+4. `readValue(json, List.class)`→`TypeReference<List<String>>`（类型安全，无需 @SuppressWarnings）
+5. 纯编译期改动（删死代码/等价替换）用 `mvn compile` 验证即可，不启动应用
+
+### 教训
+- 重构把逻辑委托给 Helper/Orchestrator 后，原注入字段无人清理是警告累积主因；重构完成时顺手删旧依赖
+- IDE Warning≠Error，不影响编译运行，但长期不清会掩盖真问题
+
+### 验证
+`mvn compile` 通过；6 个文件 Java LS 诊断全部清零
+
+## D-103 2026-08-16 警告根治：-Xlint 固化 + 全量清零 99→0（P2 卫生，44 文件）
+
+### 背景
+D-102 后用户要求"根治"。发现根因：IDE 警告只有打开文件才可见，编译/CI 无任何警告检查，警告会默默积累。
+
+### 决策
+1. **pom 固化 `-Xlint:all`（排除 unchecked/serial/this-escape/processing/classfile）**：编译期即暴露 rawtypes/deprecation/lossy/static 等，与 IDE 同源；新警告随 `mvn compile` 即时可见，不再默默积累。unchecked 排除原因：JSON 场景 Map 强转不可避免，IDE 亦不报，保留 rawtypes 抓 raw 声明即可
+2. **清光两轮全量编译暴露的 99+26 条存量**：deprecation API 等价替换 14 处（selectByIds×3、getStatusCode().value()、trim()、keyCommands().scan、setMinEvictableIdleDuration、permissionsPolicyHeader、URI.create().toURL()、query 参数序、queryForObject 新签名）；static 方法改类名限定 30 处（UserContext.tenantId/factoryId/userId）；lossy 复合赋值显式 (int) 截断 10 处；raw 类型参数化 13 处（CompletableFuture<?>[0]×8、ResponseEntity/Map→ParameterizedTypeReference×4、Map body×2）；@SuppressWarnings("try")×2 方法（SpanScope close 副作用模式）；死代码删除（AiPatrolJob.generateReflectiveMemories、SecurityConfig.resolveClientIp、DataTruthGuard.qdrantService/TEMPORAL_WORDS、FeishuMessageEvent.messageId、QueryRecord 瘦身为单字段 record）
+
+### 关键发现（踩坑）
+- **@SafeVarargs 压不住 -Xlint:all 的 varargs 堆污染警告**：其 lint key 是 `varargs` 而非 `unchecked`，需 `@SuppressWarnings("varargs")`（已用最小实验验证）
+- **FinishedInventoryOrchestrator/WarehouseScanExecutor 的 "@deprecated 建议直调 Helper" 标记违反 D-001**（事务必须在 Orchestrator 层，Controller/AI 工具调壳方法才保有事务边界）→ 清除误导标记保留壳方法，而非迁移调用方
+- **-Xlint:all 首次启用会分两轮暴露存量**（第二轮全量重编才报出 WorkAttendance 等 22 条 static 警告），验收需连续两次编译为 0
+
+### 遗留风险
+- SecurityConfig `permissionsPolicyHeader` 为 Spring Security 6.4 新 API，与旧 API 共用 PermissionsPolicyConfig 行为等价；**部署后验证 Permissions-Policy 响应头正常**
+- SelectionBatchController `/save` 旧端点计划 2026-Q4 移除（原 Q3 已过）
+
+### 验证
+javac -Xlint 警告 0；mvn compile EXIT=0；Java LS 全目录诊断 0。三重清零

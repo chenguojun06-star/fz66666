@@ -274,7 +274,7 @@ public class ProductWarehousingOrchestrator {
 
     private String resolveBatchOrderId(Map<String, Object> body) {
         String orderId = body == null ? null : (String) body.get("orderId");
-        String oid = orderId == null ? null : StringUtils.trimWhitespace(orderId);
+        String oid = orderId == null ? null : orderId.trim();
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("订单ID不能为空");
         }

@@ -12,7 +12,6 @@ import com.fashion.supplychain.production.helper.TrackingPriceSyncHelper;
 import com.fashion.supplychain.production.helper.TrackingRecordInitHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.service.OrderRemarkService;
@@ -57,9 +56,6 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
-
-    @Autowired
-    private ProductionOrderService productionOrderService;
 
     @Autowired
     private ProductWarehousingRepairHelper repairHelper;
@@ -606,7 +602,8 @@ public class ProductionProcessTrackingOrchestrator {
                     if (defectProblemsJson != null && !defectProblemsJson.isEmpty()) {
                         try {
                             java.util.List<String> problems = new com.fasterxml.jackson.databind.ObjectMapper()
-                                    .readValue(defectProblemsJson, java.util.List.class);
+                                    .readValue(defectProblemsJson,
+                                            new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {});
                             problemsStr = String.join("、", problems);
                         } catch (Exception e) {
                             log.warn("[ProcessTracking] 解析缺陷问题JSON失败: {}", e.getMessage());

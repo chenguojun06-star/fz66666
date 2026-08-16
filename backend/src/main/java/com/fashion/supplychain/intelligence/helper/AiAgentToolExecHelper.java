@@ -239,7 +239,7 @@ public class AiAgentToolExecHelper {
         java.util.Set<CompletableFuture<ToolExecRecord>> remaining = new java.util.HashSet<>(futures);
         while (!remaining.isEmpty()) {
             try {
-                CompletableFuture.anyOf(remaining.toArray(new CompletableFuture[0])).join();
+                CompletableFuture.anyOf(remaining.toArray(new CompletableFuture<?>[0])).join();
             } catch (Exception e) {
                 log.warn("[AiAgent] 等待并发工具完成失败: {}", e.getMessage());
             }

@@ -56,10 +56,10 @@ public class WorkAttendanceOrchestrator {
     @Transactional
     public Map<String, Object> clockIn() {
         UserContext ctx = requireUserContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
         String userId = ctx.getUserId();
         String userName = ctx.getUsername();
-        String factoryId = ctx.factoryId();
+        String factoryId = UserContext.factoryId();
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
@@ -137,10 +137,10 @@ public class WorkAttendanceOrchestrator {
     @Transactional
     public Map<String, Object> clockOut() {
         UserContext ctx = requireUserContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
         String userId = ctx.getUserId();
         String userName = ctx.getUsername();
-        String factoryId = ctx.factoryId();
+        String factoryId = UserContext.factoryId();
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
@@ -239,7 +239,7 @@ public class WorkAttendanceOrchestrator {
      */
     public Map<String, Object> todayStatus() {
         UserContext ctx = requireUserContext();
-        WorkAttendance today = workAttendanceService.findToday(ctx.tenantId(), ctx.getUserId(), LocalDate.now());
+        WorkAttendance today = workAttendanceService.findToday(UserContext.tenantId(), ctx.getUserId(), LocalDate.now());
         String message;
         if (today == null) {
             message = "今日未打卡";
@@ -260,7 +260,7 @@ public class WorkAttendanceOrchestrator {
     public Map<String, Object> monthlyStats() {
         UserContext ctx = requireUserContext();
         Map<String, Object> agg = workAttendanceService.monthlyStats(
-                ctx.tenantId(), ctx.getUserId(), LocalDate.now());
+                UserContext.tenantId(), ctx.getUserId(), LocalDate.now());
         Map<String, Object> resp = new LinkedHashMap<>();
         Object hours = agg == null ? null : agg.get("workHours");
         Object days = agg == null ? null : agg.get("workDays");
@@ -299,7 +299,7 @@ public class WorkAttendanceOrchestrator {
      */
     public Map<String, Object> monthlyRecords(String monthStr) {
         UserContext ctx = requireUserContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
         String userId = ctx.getUserId();
 
         LocalDate monthDate = parseMonth(monthStr);
@@ -461,7 +461,7 @@ public class WorkAttendanceOrchestrator {
     public Map<String, Object> adminList(LocalDate startDate, LocalDate endDate,
                                          String userId, String status) {
         UserContext ctx = requireAdminContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
 
         // 默认查询当月
         if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1);
@@ -567,7 +567,7 @@ public class WorkAttendanceOrchestrator {
                                                LocalDateTime clockInTime, LocalDateTime clockOutTime,
                                                String remark) {
         UserContext ctx = requireAdminContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
 
         if (!StringUtils.hasText(targetUserId)) {
             throw new IllegalArgumentException("请选择员工");
@@ -614,7 +614,7 @@ public class WorkAttendanceOrchestrator {
             record.setTenantId(tenantId);
             record.setUserId(targetUserId);
             record.setUserName(targetUserName);
-            record.setFactoryId(ctx.factoryId());
+            record.setFactoryId(UserContext.factoryId());
             record.setWorkDate(workDate);
             record.setClockInTime(clockInTime);
             record.setClockOutTime(clockOutTime);
@@ -673,7 +673,7 @@ public class WorkAttendanceOrchestrator {
                                               LocalDateTime clockInTime, LocalDateTime clockOutTime,
                                               String remark) {
         UserContext ctx = requireUserContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
         String targetUserId = ctx.getUserId();
         String targetUserName = ctx.getUsername();
 
@@ -722,7 +722,7 @@ public class WorkAttendanceOrchestrator {
             record.setTenantId(tenantId);
             record.setUserId(targetUserId);
             record.setUserName(targetUserName);
-            record.setFactoryId(ctx.factoryId());
+            record.setFactoryId(UserContext.factoryId());
             record.setWorkDate(workDate);
             record.setClockInTime(clockInTime);
             record.setClockOutTime(clockOutTime);
@@ -778,7 +778,7 @@ public class WorkAttendanceOrchestrator {
     public Map<String, Object> adminAdjust(Long id, LocalDateTime clockInTime, LocalDateTime clockOutTime,
                                            String remark) {
         UserContext ctx = requireAdminContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
 
         if (id == null) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -819,7 +819,7 @@ public class WorkAttendanceOrchestrator {
     @Transactional
     public Map<String, Object> adminCancel(Long id, String reason) {
         UserContext ctx = requireAdminContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
 
         if (id == null) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -859,7 +859,7 @@ public class WorkAttendanceOrchestrator {
                                                LocalDate startDate, LocalDate endDate,
                                                String leaveType, String remark) {
         UserContext ctx = requireAdminContext();
-        Long tenantId = ctx.tenantId();
+        Long tenantId = UserContext.tenantId();
 
         if (!StringUtils.hasText(targetUserId)) {
             throw new IllegalArgumentException("请选择员工");
@@ -901,7 +901,7 @@ public class WorkAttendanceOrchestrator {
             record.setTenantId(tenantId);
             record.setUserId(targetUserId);
             record.setUserName(targetUserName);
-            record.setFactoryId(ctx.factoryId());
+            record.setFactoryId(UserContext.factoryId());
             record.setWorkDate(d);
             record.setWorkMinutes(0);
             record.setSource("admin_adjust");
@@ -1043,7 +1043,7 @@ public class WorkAttendanceOrchestrator {
 
     private UserContext requireUserContext() {
         UserContext ctx = UserContext.get();
-        if (ctx == null || !StringUtils.hasText(ctx.getUserId()) || ctx.tenantId() == null) {
+        if (ctx == null || !StringUtils.hasText(ctx.getUserId()) || UserContext.tenantId() == null) {
             throw new org.springframework.security.access.AccessDeniedException("未登录");
         }
         TenantAssert.assertTenantContext();

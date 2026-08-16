@@ -88,7 +88,7 @@ public class DagExecutionEngine {
             }
 
             try {
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(120, TimeUnit.SECONDS);
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 log.error("[DAG] 图 {} 层执行超时", graphId);
                 break;
@@ -157,7 +157,7 @@ public class DagExecutionEngine {
             }
 
             try {
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(120, TimeUnit.SECONDS);
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("[DAG] 流式执行层异常: {}", e.getMessage());
                 break;

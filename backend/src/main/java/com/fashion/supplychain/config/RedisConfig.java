@@ -73,7 +73,7 @@ public class RedisConfig implements CachingConfigurer {
         poolConfig.setTestOnBorrow(true);
         poolConfig.setTestWhileIdle(true);
         poolConfig.setTimeBetweenEvictionRuns(Duration.ofMinutes(3));
-        poolConfig.setMinEvictableIdleTime(Duration.ofMinutes(10));
+        poolConfig.setMinEvictableIdleDuration(Duration.ofMinutes(10));
 
         LettucePoolingClientConfiguration clientConfig = LettucePoolingClientConfiguration.builder()
                 .commandTimeout(Duration.ofMillis(cmdTimeoutMs))
