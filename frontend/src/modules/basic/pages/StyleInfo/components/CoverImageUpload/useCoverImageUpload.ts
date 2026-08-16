@@ -47,11 +47,12 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
 
   // 新建模式使用本地预览，否则使用服务器图片
   // 服务器无附件时：若有 coverUrl（来自选品中心下板），合成一条虚拟条目作为细节图1兜底展示
+  // 展示 URL 附 token：兼容 tenant-download 需认证的环境（避免 <img> 直连 401）
   const displayImages: DisplayImage[] = useMemo(() => isNewMode
     ? localPreviewUrls.map((url, i) => ({ fileUrl: url, id: `local-${i}`, isLocal: true, localIndex: i }))
     : images.length > 0
-      ? images
-      : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []), [isNewMode, localPreviewUrls, images, coverUrl]);
+      ? images.map((img) => (img.fileUrl && !img.fileUrl.startsWith('blob:') ? { ...img, fileUrl: getFullAuthedFileUrl(img.fileUrl) } : img))
+      : (coverUrl ? [{ fileUrl: getFullAuthedFileUrl(coverUrl), id: 'cover-fallback', isCoverFallback: true as const }] : []), [isNewMode, localPreviewUrls, images, coverUrl]);
   const currentImage = displayImages[currentIndex];
 
   // 生成本地预览URL

@@ -11,10 +11,12 @@ export interface PreviewImageProps {
   total: number;
   previewHovered: boolean;
   setPreviewHovered: (v: boolean) => void;
+  /** 主图边长（px），默认 96（紧凑条），嵌入基础信息时传 180 */
+  size?: number;
 }
 
 /**
- * 紧凑主图（96px 方图）
+ * 主图（方图，尺寸可配）
  * - 全组件唯一的"点击打开大图预览"入口（antd 单层预览）
  * - 左右切换查看其他图片；角标显示资产类型（唯一的"主图"徽标位置）
  */
@@ -26,13 +28,14 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
   total,
   previewHovered,
   setPreviewHovered,
+  size = 96,
 }) => {
   if (!record) {
     return (
       <div
         style={{
-          width: 96,
-          height: 96,
+          width: size,
+          height: size,
           border: '1px dashed var(--color-border)',
           borderRadius: 8,
           display: 'flex',
@@ -74,7 +77,7 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
 
   return (
     <div
-      style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}
+      style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}
       onMouseEnter={() => setPreviewHovered(true)}
       onMouseLeave={() => setPreviewHovered(false)}
     >
@@ -82,8 +85,8 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
         loading="lazy"
         src={record.fileUrl}
         alt="主图"
-        width={96}
-        height={96}
+        width={size}
+        height={size}
         style={{ objectFit: 'cover', borderRadius: 8, cursor: 'zoom-in' }}
         preview={{ src: fullUrl || record.fileUrl }}
       />

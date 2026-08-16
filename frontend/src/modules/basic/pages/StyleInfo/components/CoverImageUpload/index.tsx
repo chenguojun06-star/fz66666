@@ -1,6 +1,5 @@
 import { ReloadOutlined, SearchOutlined, ThunderboltOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Space, Tooltip, Upload } from 'antd';
-import App from 'antd/es/app';
 import { useMemo } from 'react';
 import { useCoverImageUpload } from './useCoverImageUpload';
 import PreviewImage from './PreviewImage';
@@ -9,11 +8,11 @@ import SearchResultCard from './SearchResultCard';
 import type { CoverImageUploadProps } from './types';
 
 /**
- * 紧凑图片资产条（横排，置于基础信息上方）
- * 主图96px + 缩略图横排40px + 上传/智能识别/搜相似/刷新操作
+ * 图片资产（嵌入式，合并进"基础信息"区左侧栏）
+ * 主图 180px + 缩略图横排 48px + 上传/智能识别/搜相似/刷新操作
+ * 无独立边框与标题，视觉上属于基础信息区的一部分
  */
 const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
-  const { message } = App.useApp();
   const {
     currentIndex,
     setCurrentIndex,
@@ -51,22 +50,13 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
     <div
       style={{
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: 14,
-        padding: '10px 12px',
-        border: '1px solid var(--color-border)',
-        borderRadius: 10,
-        background: 'var(--color-bg-secondary, transparent)',
-        flexWrap: 'wrap',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: 8,
         minWidth: 0,
+        width: '100%',
       }}
     >
-      {/* 标题 + 统计 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0, paddingTop: 2 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>图片资产</span>
-        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>共 {displayImages.length} 张</span>
-      </div>
-
       {/* 主图（唯一大图预览入口） */}
       <PreviewImage
         record={currentImage}
@@ -76,58 +66,60 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
         total={displayImages.length}
         previewHovered={previewHovered}
         setPreviewHovered={setPreviewHovered}
+        size={180}
       />
 
-      {/* 缩略图横排 + 上传按钮 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 200 }}>
-        <ThumbnailList
-          images={displayImages}
-          currentIndex={currentIndex}
-          setCurrentIndex={setCurrentIndex}
-          hoverIndex={hoverIndex}
-          setHoverIndex={setHoverIndex}
-          handleSetCover={handleSetCover}
-          handleDelete={handleDelete}
-          enabled={enabled}
-          isNewMode={isNewMode}
-        />
-        <Space size={4} wrap>
-          <Upload
-            accept="image/*"
-            multiple
-            showUploadList={false}
-            beforeUpload={(file) => {
-              handleUploadFiles([file]);
-              return false;
-            }}
+      {/* 缩略图横排 */}
+      <ThumbnailList
+        images={displayImages}
+        currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+        hoverIndex={hoverIndex}
+        setHoverIndex={setHoverIndex}
+        handleSetCover={handleSetCover}
+        handleDelete={handleDelete}
+        enabled={enabled}
+        isNewMode={isNewMode}
+        thumbSize={48}
+      />
+
+      {/* 操作按钮行 */}
+      <Space size={4} wrap>
+        <Upload
+          accept="image/*"
+          multiple
+          showUploadList={false}
+          beforeUpload={(file) => {
+            handleUploadFiles([file]);
+            return false;
+          }}
+        >
+          <Button size="small" icon={<UploadOutlined />} loading={uploading} type="primary" ghost>
+            上传图片
+          </Button>
+        </Upload>
+        <Tooltip title="AI 智能识别当前主图填充款式信息">
+          <Button size="small" icon={<ThunderboltOutlined />} onClick={handleParseClick} loading={parsing} disabled={!currentImage}>
+            智能识别
+          </Button>
+        </Tooltip>
+        <Tooltip title="以图搜款，查找相似款式">
+          <Button
+            size="small"
+            icon={<SearchOutlined />}
+            onClick={runStyleSearchByImage}
+            loading={searching}
+            disabled={!currentImage}
           >
-            <Button size="small" icon={<UploadOutlined />} loading={uploading} type="primary" ghost>
-              上传图片
-            </Button>
-          </Upload>
-          <Tooltip title="AI 智能识别当前主图填充款式信息">
-            <Button size="small" icon={<ThunderboltOutlined />} onClick={handleParseClick} loading={parsing} disabled={!currentImage}>
-              智能识别
-            </Button>
+            搜相似
+          </Button>
+        </Tooltip>
+        {!isNewMode && (
+          <Tooltip title="刷新图片列表">
+            <Button size="small" icon={<ReloadOutlined />} onClick={() => fetchImages()} />
           </Tooltip>
-          <Tooltip title="以图搜款，查找相似款式">
-            <Button
-              size="small"
-              icon={<SearchOutlined />}
-              onClick={runStyleSearchByImage}
-              loading={searching}
-              disabled={!currentImage}
-            >
-              搜相似
-            </Button>
-          </Tooltip>
-          {!isNewMode && (
-            <Tooltip title="刷新图片列表">
-              <Button size="small" icon={<ReloadOutlined />} onClick={() => fetchImages()} />
-            </Tooltip>
-          )}
-        </Space>
-      </div>
+        )}
+      </Space>
 
       {/* 以图搜款结果（折叠） */}
       <SearchResultCard

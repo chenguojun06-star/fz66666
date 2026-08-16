@@ -12,6 +12,8 @@ import { PRODUCT_TYPE_OPTIONS } from './constants';
 
 interface BasicInfoSectionProps extends SectionFormContextProps {
   isNewPage: boolean;
+  /** 图片资产左栏（主图+缩略图+操作），合并进基础信息区展示 */
+  coverSlot?: React.ReactNode;
 }
 
 /**
@@ -44,13 +46,22 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   editLocked,
   isFieldLocked,
   isNewPage,
+  coverSlot,
 }) => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
 
   return (
     <SectionBox title="基础信息" usePrimaryHighlight>
-      <Row gutter={[16, 8]}>
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        {/* 左栏：图片资产（主图180px+缩略图+操作，与基础信息合并为一个区块） */}
+        {coverSlot ? (
+          <div style={{ width: 188, flexShrink: 0, minWidth: 0 }}>{coverSlot}</div>
+        ) : null}
+
+        {/* 右栏：基础信息表单字段 */}
+        <div style={{ flex: 1, minWidth: 320 }}>
+          <Row gutter={[16, 8]}>
         {/* 款名称（必填，全宽） */}
         <Col xs={24} md={12}>
           <Form.Item
@@ -330,6 +341,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
       </Row>
+        </div>
+      </div>
     </SectionBox>
   );
 };

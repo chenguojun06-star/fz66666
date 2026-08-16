@@ -18,7 +18,8 @@ export type { StyleBasicInfoFormRef } from './StyleBasicInfoForm/types';
  * 包含：款号信息、客户信息、版次信息、时间信息、颜色码数配置
  *
  * 布局说明：
- *  - 顶部：图片资产紧凑条 + 款式状态摘要条（横向，不占左侧大竖栏）
+ *  - 顶部：款式状态摘要条（横向单行）
+ *  - 基础信息区左栏为图片资产（主图180px+缩略图+操作），与表单字段合并为一个区块
  *  - 下方：统一 Tab 系统（基础信息 / BOM清单 / 纸样开发 / ...）
  *  - 基础信息作为第一个 Tab，排在 BOM 清单前面
  *  - 下层 Tab 内容由 renderBelowForm 提供（StyleInfoTabs）
@@ -75,11 +76,27 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     isFieldLocked,
   };
 
+  // 图片资产：合并进基础信息区左栏（主图180px+缩略图+上传/识别/搜相似）
+  const coverNode = (
+    <CoverImageUpload
+      styleId={currentStyle?.id}
+      styleNo={currentStyle?.styleNo || _form.getFieldValue('styleNo')}
+      enabled={isNewPage || (Boolean(currentStyle?.id) && !editLocked)}
+      isNewMode={isNewPage}
+      pendingFiles={pendingImages}
+      onPendingFilesChange={onPendingImagesChange}
+      coverUrl={currentStyle?.cover}
+      refreshTrigger={coverRefreshToken}
+      onCoverChange={onCoverChange}
+      onStyleParseResult={handleStyleParseResult}
+    />
+  );
+
   // 基础信息 Tab 内容：所有表单分区合并在一个 Tab 里
   const basicInfoTabContent = (
     <>
-      {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道，含时间信息） */}
-      <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} />
+      {/* 区1：基础信息（左栏图片资产 + 右侧表单：款号/SKC/款名/品类/季节/销售渠道，含时间信息） */}
+      <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} coverSlot={coverNode} />
 
       {/* 区2+区3：客户与定价 | 款式特征 左右并排，压缩纵向高度（窄屏自动堆叠） */}
       <Row gutter={[12, 12]}>
@@ -141,20 +158,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
   return (
     <div className="square-inputs" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-      {/* 顶部：图片资产紧凑条（置于基础信息上方，主图+缩略图横排，不再占用左侧大竖栏） */}
-      <CoverImageUpload
-        styleId={currentStyle?.id}
-        styleNo={currentStyle?.styleNo || _form.getFieldValue('styleNo')}
-        enabled={isNewPage || (Boolean(currentStyle?.id) && !editLocked)}
-        isNewMode={isNewPage}
-        pendingFiles={pendingImages}
-        onPendingFilesChange={onPendingImagesChange}
-        coverUrl={currentStyle?.cover}
-        refreshTrigger={coverRefreshToken}
-        onCoverChange={onCoverChange}
-        onStyleParseResult={handleStyleParseResult}
-      />
-
       {/* 款式状态摘要条（紧凑模式，仅在已存在款式时显示） */}
       {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} compact /> : null}
 

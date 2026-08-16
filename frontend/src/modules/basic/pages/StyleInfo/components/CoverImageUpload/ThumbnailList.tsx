@@ -12,10 +12,12 @@ export interface ThumbnailListProps {
   handleDelete: (attachmentId: string | number, localIndex?: number) => void;
   enabled?: boolean;
   isNewMode?: boolean;
+  /** 缩略图边长（px），默认 40 */
+  thumbSize?: number;
 }
 
 /**
- * 紧凑横排缩略图（40px 方块）
+ * 横排缩略图（方块，尺寸可配）
  * - 点击仅切换主图，不直接打开大图预览（预览入口唯一：主图点击）
  * - 不再显示资产类型徽标（避免"主图主图"重复，徽标只在主图上显示一次）
  * - 悬停显示：设为主图 / 删除
@@ -30,6 +32,7 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
   handleDelete,
   enabled = true,
   isNewMode = false,
+  thumbSize = 40,
 }) => {
   if (images.length === 0) return null;
   return (
@@ -48,7 +51,7 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
         return (
           <div
             key={img.id ?? img.fileUrl ?? index}
-            style={{ position: 'relative', width: 40, height: 40 }}
+            style={{ position: 'relative', width: thumbSize, height: thumbSize }}
             onMouseEnter={() => setHoverIndex(index)}
             onMouseLeave={() => setHoverIndex(-1)}
           >
@@ -56,8 +59,8 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
               loading="lazy"
               src={img.fileUrl}
               alt={`缩略图${index + 1}`}
-              width={40}
-              height={40}
+              width={thumbSize}
+              height={thumbSize}
               preview={false}
               onClick={() => setCurrentIndex(index)}
               style={{
