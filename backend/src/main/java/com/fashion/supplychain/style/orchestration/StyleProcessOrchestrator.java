@@ -24,6 +24,25 @@ public class StyleProcessOrchestrator {
     @Autowired
     private com.fashion.supplychain.style.helper.StyleStageCompletionHelper styleStageCompletionHelper;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
+    /**
+     * P2 推送锁定：已推送下单的款式，工序单价快照已同步到订单，款式侧改动不再生效（静默漂移）。
+     */
+    private void assertStyleNotPushedToOrder(Long styleId) {
+        if (styleId == null) {
+            return;
+        }
+        com.fashion.supplychain.style.entity.StyleInfo styleInfo = styleInfoService.getById(styleId);
+        if (styleInfo != null) {
+            TenantAssert.assertBelongsToCurrentTenant(styleInfo.getTenantId(), "款式");
+            if (styleInfo.getPushedToOrder() != null && styleInfo.getPushedToOrder() == 1) {
+                throw new IllegalStateException("该款式已推送下单，工序单价已同步至订单；如需调整请先报废关联订单或联系管理员");
+            }
+        }
+    }
+
     public List<StyleProcess> listByStyleId(Long styleId) {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -37,6 +56,7 @@ public class StyleProcessOrchestrator {
             throw new IllegalArgumentException("styleId不能为空");
         }
         TenantAssert.assertTenantContext();
+        assertStyleNotPushedToOrder(styleProcess.getStyleId());
         if (styleProcess.getCreateTime() == null) {
             styleProcess.setCreateTime(LocalDateTime.now());
         }
@@ -69,6 +89,7 @@ public class StyleProcessOrchestrator {
             throw new NoSuchElementException("记录不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "工序");
+        assertStyleNotPushedToOrder(current.getStyleId());
         styleProcess.setStyleId(current.getStyleId());
         styleProcess.setUpdateTime(LocalDateTime.now());
         boolean ok = styleProcessService.updateById(styleProcess);
@@ -93,6 +114,7 @@ public class StyleProcessOrchestrator {
             throw new NoSuchElementException("记录不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "工序");
+        assertStyleNotPushedToOrder(current.getStyleId());
         boolean ok = styleProcessService.removeById(id);
         if (!ok) {
             if (styleProcessService.getById(id) == null) {

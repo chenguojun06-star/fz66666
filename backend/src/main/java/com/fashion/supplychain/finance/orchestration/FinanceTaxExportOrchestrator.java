@@ -459,7 +459,7 @@ public class FinanceTaxExportOrchestrator {
 
         List<PayrollOperatorProcessSummaryDTO> detailList =
                 payrollAggregationOrchestrator.aggregatePayrollByOperatorAndProcess(
-                        null, null, null, startTime, endTime, true);
+                        null, null, null, null, startTime, endTime, true);
 
         return "KINGDEE".equalsIgnoreCase(format)
                 ? buildPayrollDetailKingdee(detailList)

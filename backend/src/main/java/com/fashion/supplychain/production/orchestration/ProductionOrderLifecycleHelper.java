@@ -41,6 +41,8 @@ public class ProductionOrderLifecycleHelper {
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
     @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+    @Autowired
     private CuttingTaskService cuttingTaskService;
     @Autowired
     private com.fashion.supplychain.production.service.CuttingBundleService cuttingBundleService;
@@ -195,6 +197,14 @@ public class ProductionOrderLifecycleHelper {
         boolean ok = productionOrderService.updateById(existed);
         if (!ok) { throw new IllegalStateException("报废失败"); }
 
+        // P2 修复：报废后重置款式推单标记，否则款式永久卡在"已下单"无法重新推单。
+        // 仅当该款式不存在其他未报废订单时才重置（一款可多次下单）。
+        try {
+            resetStylePushFlagIfNoActiveOrders(existed);
+        } catch (Exception e) {
+            log.warn("报废后重置款式推单标记失败: orderId={}, styleId={}", oid, existed.getStyleId(), e);
+        }
+
         try { scanRecordDomainService.insertOrderOperationRecord(existed, "报废", r, LocalDateTime.now()); }
         catch (Exception e) { log.warn("Failed to log order scrap: orderId={}", oid, e); }
 
@@ -207,6 +217,42 @@ public class ProductionOrderLifecycleHelper {
         } catch (Exception e) { log.warn("报废订单AI数据异步清理失败: orderId={}", oid, e); }
 
         return true;
+    }
+
+    /**
+     * P2：报废后重置款式推单标记（pushedToOrder=0），让款式可重新推单。
+     * 仅当该款式没有其他未报废订单时才重置；跨租户安全（style.tenantId 与订单租户一致才更新）。
+     */
+    private void resetStylePushFlagIfNoActiveOrders(ProductionOrder order) {
+        String styleId = StringUtils.hasText(order.getStyleId()) ? order.getStyleId().trim() : null;
+        if (!StringUtils.hasText(styleId) || order.getTenantId() == null) {
+            return;
+        }
+        com.fashion.supplychain.style.entity.StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(com.fashion.supplychain.style.entity.StyleInfo::getId, styleId)
+                .eq(com.fashion.supplychain.style.entity.StyleInfo::getTenantId, order.getTenantId())
+                .last("LIMIT 1")
+                .one();
+        if (style == null || style.getPushedToOrder() == null || style.getPushedToOrder() != 1) {
+            return;
+        }
+        long otherActive = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getTenantId, order.getTenantId())
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ne(ProductionOrder::getStatus, "scrapped")
+                .count();
+        if (otherActive > 0) {
+            log.info("scrapOrder: 款式{}仍有{}条未报废订单，保留推单标记", styleId, otherActive);
+            return;
+        }
+        styleInfoService.lambdaUpdate()
+                .eq(com.fashion.supplychain.style.entity.StyleInfo::getId, styleId)
+                .eq(com.fashion.supplychain.style.entity.StyleInfo::getTenantId, order.getTenantId())
+                .set(com.fashion.supplychain.style.entity.StyleInfo::getPushedToOrder, 0)
+                .set(com.fashion.supplychain.style.entity.StyleInfo::getPushedToOrderTime, null)
+                .update();
+        log.info("scrapOrder: 订单{}报废，已重置款式{}推单标记", order.getId(), styleId);
     }
 
     // D-001: @Transactional 已由调用方 ProductionOrderOrchestrator.closeOrder 声明，Helper 层不再重复

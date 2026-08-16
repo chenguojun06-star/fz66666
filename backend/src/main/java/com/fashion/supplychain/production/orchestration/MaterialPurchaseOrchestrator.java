@@ -799,9 +799,11 @@ public class MaterialPurchaseOrchestrator {
             }
         }
 
+        Integer stockDelta = null;
         if (shipQuantity != null) {
             int currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
             purchase.setArrivedQuantity(currentArrived + shipQuantity);
+            stockDelta = shipQuantity;
             changed = true;
         }
 
@@ -823,8 +825,13 @@ public class MaterialPurchaseOrchestrator {
         if (changed) {
             purchase.setUpdateTime(LocalDateTime.now());
             materialPurchaseService.updateById(purchase);
-            log.info("[供应商门户] 发货更新: purchaseId={}, supplierId={}, status={}",
-                    purchaseId, supplierId, purchase.getStatus());
+            // P1 到货口径统一：供应商门户发货数量同样计入到货，必须同步库存，
+            // 否则同一采购单走不同入口时库存/到货两本账不一致（与 confirm-arrival / 手工到货口径对齐）
+            if (stockDelta != null && stockDelta > 0) {
+                materialStockService.increaseStock(purchase, stockDelta);
+            }
+            log.info("[供应商门户] 发货更新: purchaseId={}, supplierId={}, status={}, stockDelta={}",
+                    purchaseId, supplierId, purchase.getStatus(), stockDelta);
         }
     }
 

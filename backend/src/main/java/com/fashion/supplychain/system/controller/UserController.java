@@ -55,6 +55,11 @@ public class UserController {
             @RequestParam(required = false) String employmentStatus,
             @RequestParam(required = false) String orgUnitId,
             @RequestParam(required = false, defaultValue = "false") Boolean excludeFactoryUsers) {
+        // 用户列表含手机号/角色/组织等 PII：仅主管及以上可拉取（原先任意登录用户可枚举全租户通讯录）
+        if (!com.fashion.supplychain.common.UserContext.isSupervisorOrAbove()) {
+            throw new org.springframework.security.access.AccessDeniedException("无权限查看人员列表");
+        }
+
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             if (ctxFactoryId == null) {

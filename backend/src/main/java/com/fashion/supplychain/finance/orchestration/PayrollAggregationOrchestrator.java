@@ -50,6 +50,7 @@ public class PayrollAggregationOrchestrator {
             String orderNo,
             String operatorName,
             String processName,
+            String scanType,
             LocalDateTime startTime,
             LocalDateTime endTime,
             boolean includeSettled) {
@@ -79,6 +80,18 @@ public class PayrollAggregationOrchestrator {
 
         if (processName != null && !processName.trim().isEmpty()) {
             qw.eq("process_name", processName.trim());
+        }
+
+        // 工序类型筛选（production/cutting/pattern），不传则统计全部三类
+        if (scanType != null && !scanType.trim().isEmpty()) {
+            qw.eq("scan_type", scanType.trim());
+        }
+
+        // "仅看未结算"开关：排除已进入工资结算的扫码记录
+        // （结算链路写入的状态：payroll_approved/payroll_settled，旧值 settled）
+        if (!includeSettled) {
+            qw.and(w -> w.isNull("settlement_status")
+                    .or().notIn("settlement_status", "settled", "payroll_settled", "payroll_approved"));
         }
 
         if (startTime != null) {

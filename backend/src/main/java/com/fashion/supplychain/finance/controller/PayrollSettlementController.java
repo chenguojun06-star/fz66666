@@ -70,6 +70,8 @@ public class PayrollSettlementController {
         String startTimeStr = startTimeObj != null ? String.valueOf(startTimeObj).trim() : null;
         Object endTimeObj = params.get("endTime");
         String endTimeStr = endTimeObj != null ? String.valueOf(endTimeObj).trim() : null;
+        Object scanTypeObj = params.get("scanType");
+        String scanType = scanTypeObj != null ? String.valueOf(scanTypeObj).trim() : null;
         Object includeSettledObj = params.getOrDefault("includeSettled", true);
         Boolean includeSettled;
         if (includeSettledObj instanceof Boolean) {
@@ -108,6 +110,7 @@ public class PayrollSettlementController {
                         orderNo,
                         operatorName,
                         processName,
+                        scanType,
                         startTime,
                         endTime,
                         includeSettled != null && includeSettled

@@ -320,7 +320,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 }
 
                 int clampedArrived = Math.min(Math.max(0, aq), pq);
-                int eff = computeEffectiveArrivedQuantity(pq, aq);
+                // P2-5（D-076）：到货率需含仓库领料完成 —— 仓库路径（自由入库+领料出库）
+                // 下 arrivedQuantity 不更新，usedQuantity 才是实物事实；取 max 后封顶采购量
+                int uq = p.getUsedQuantity() == null ? 0 : p.getUsedQuantity().intValue();
+                int eff = computeEffectiveArrivedQuantity(pq, Math.max(aq, uq));
 
                 plannedQty += pq;
                 arrivedQty += clampedArrived;
@@ -409,8 +412,12 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             }
         }
 
+        // 口径统一（D-076 P2）：totalAmount = purchaseQuantity × unitPrice，
+        // 与建单/快速编辑/购物车/BOM推送/补采单全部写入点一致。
+        // 旧逻辑按到货量覆写，导致部分到货后总金额缩水、快速编辑数量后又跳回，三处口径互斥。
         if (mp.getUnitPrice() != null) {
-            mp.setTotalAmount(mp.getUnitPrice().multiply(BigDecimal.valueOf(newArrived)));
+            BigDecimal qty = mp.getPurchaseQuantity() != null ? mp.getPurchaseQuantity() : BigDecimal.ZERO;
+            mp.setTotalAmount(mp.getUnitPrice().multiply(qty));
         }
 
         String currentStatus = mp.getStatus() == null ? "" : mp.getStatus().trim();

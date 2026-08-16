@@ -206,7 +206,12 @@ public class SupplierScorecardOrchestrator {
                 f.setSupplierTierUpdatedAt(LocalDateTime.now());
                 f.setOnTimeDeliveryRate(BigDecimal.valueOf(s.getOnTimeRate()).setScale(2, RoundingMode.HALF_UP));
                 f.setQualityScore(BigDecimal.valueOf(s.getQualityScore()).setScale(2, RoundingMode.HALF_UP));
-                f.setCompletionRate(BigDecimal.valueOf(s.getOverallScore() > 0 ? s.getOverallScore() * 100 / s.getOnTimeRate() : 0).setScale(2, RoundingMode.HALF_UP));
+                // 完成率 = 已完成订单数 / 总订单数（原公式 overallScore*100/onTimeRate 与完成率无关，
+                // 且 onTimeRate=0 时产生 Infinity 导致 NumberFormatException，整条评分持久化被 catch 吞掉）
+                int total = s.getTotalOrders();
+                int completed = s.getCompletedOrders();
+                double completionRate = total > 0 ? completed * 100.0 / total : 0;
+                f.setCompletionRate(BigDecimal.valueOf(completionRate).setScale(2, RoundingMode.HALF_UP));
                 f.setOverallScore(BigDecimal.valueOf(s.getOverallScore()).setScale(2, RoundingMode.HALF_UP));
                 f.setTotalOrders(s.getTotalOrders());
                 f.setCompletedOrders(s.getCompletedOrders());

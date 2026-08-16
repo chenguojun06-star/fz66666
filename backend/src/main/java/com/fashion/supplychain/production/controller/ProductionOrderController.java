@@ -349,6 +349,18 @@ public class ProductionOrderController {
     }
 
     /**
+     * 工厂账号范围校验（P1：quick-edit/update-basic-info 原先只校验租户，
+     * 工厂账号可改任意工厂订单）。非工厂账号直接放行。
+     */
+    private boolean isOutsideFactoryScope(ProductionOrder order) {
+        if (!com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return false;
+        }
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        return ctxFactoryId == null || !ctxFactoryId.equals(order.getFactoryId());
+    }
+
+    /**
      * 快速编辑订单（备注、预计出货日期、工序数据等）
      */
     @PutMapping("/quick-edit")
@@ -364,6 +376,9 @@ public class ProductionOrderController {
             return Result.notFound("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
+        if (isOutsideFactoryScope(order)) {
+            return Result.fail("无权操作：订单不属于当前工厂");
+        }
 
         try {
             boolean success = productionOrderOrchestrator.quickEdit(payload);
@@ -386,6 +401,9 @@ public class ProductionOrderController {
             return Result.notFound("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
+        if (isOutsideFactoryScope(order)) {
+            return Result.fail("无权操作：订单不属于当前工厂");
+        }
 
         try {
             int syncedCount = productionOrderOrchestrator.updateBasicInfo(payload);

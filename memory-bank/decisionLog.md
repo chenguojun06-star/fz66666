@@ -1788,3 +1788,20 @@ D-071 审计列出 10 处设计不合理点，本轮实施其中 7 处（其余 
 
 ### P1 清单状态说明（重要）
 D-076 摘要可枚举的 14 项 P1 已全部闭环（D-078/079/080/081）；审计原始明细因会话上下文压缩丢失，"共20项"中约 6 项明细文本无法还原。后续如需精确收尾，建议对新代码重跑一次审计或直接转入 P2 批次（P2 24 项清单同样以 D-076 摘要为准）
+
+## D-080 P1 第三批 6 项：推送原子性/工序校验/退回守卫/PII/工资筛选/评分公式（2026-08-16）
+
+### 修复
+1. **推送原子性**：persistPushState 两次 updateById 合并为一次（progressNode+pushedToOrder 单次原子写入，消除中间态）
+2. **工序校验对齐**：completeProcess 加工序行存在校验——无工序不能完成工序环节（前端按钮/推送/下单三处校验就此对齐，不再走到下单才卡"单价必须大于0"）
+3. **退回样衣守卫**：resetSample 前检查该款进行中的生产订单（对齐报废环节守卫），防止退回重改资料后新旧订单快照脱钩
+4. **用户列表 PII 收紧**：/api/system/user/list 需主管及以上（原先任意登录用户含工人可枚举全租户姓名/手机号/角色）
+5. **工资筛选生效**：includeSettled=false 真正排除已结算扫码（notIn settled/payroll_settled/payroll_approved）；scanType 参数 Controller→Orchestrator 全链路透传生效
+6. **供应商评分公式**：completionRate 改为"完成订单数/总订单数"（原公式 overallScore×100÷onTimeRate 与完成率无关，且除零产生 Infinity 使整条持久化被 catch 静默吞掉）
+
+### 审计误报澄清
+- D-076 权限P1"角色创建无保留名拦截"为**误报**：RoleOrchestrator.add/update 已有 assertNotReservedRole（roleName+roleCode 双拦截），保持原样
+
+### 验证
+- mvn compile ✓ 后端已重启
+- P1 剩余约 5 项（数据范围own/推送弹窗无效选项/外发结算回货链/反向账单联动应付/对账直接paid派生）+ P2 24 项

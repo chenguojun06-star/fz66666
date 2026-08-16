@@ -674,7 +674,7 @@ public class MaterialPurchasePickingHelper {
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
 
-        MaterialPurchase purchase = updatePurchaseAfterOutbound(picking);
+        MaterialPurchase purchase = updatePurchaseAfterOutbound(picking, pickedTotalQty);
 
         syncPickupRecordAfterOutbound(picking, purchase, items, pickedTotalQty);
 
@@ -737,7 +737,7 @@ public class MaterialPurchasePickingHelper {
         return pickedTotalQty;
     }
 
-    private MaterialPurchase updatePurchaseAfterOutbound(MaterialPicking picking) {
+    private MaterialPurchase updatePurchaseAfterOutbound(MaterialPicking picking, int pickedTotalQty) {
         MaterialPurchase purchase = null;
         String associatedPurchaseId = picking.getPurchaseId();
         if (!StringUtils.hasText(associatedPurchaseId)) {
@@ -755,6 +755,14 @@ public class MaterialPurchasePickingHelper {
                 purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
                 purchase.setReceivedTime(LocalDateTime.now());
                 purchase.setUpdateTime(LocalDateTime.now());
+                // P2-5（D-076）：仓库确认出库 = 物料已实物领出，累加 usedQuantity。
+                // 到货率口径 eff = min(pq, max(arrived, used))，仓库路径（自由入库+领料出库）
+                // 不再导致到货率恒 0、订单卡在采购阶段。不动 arrivedQuantity（入库侧事实）。
+                if (pickedTotalQty > 0) {
+                    java.math.BigDecimal used = purchase.getUsedQuantity() != null
+                            ? purchase.getUsedQuantity() : java.math.BigDecimal.ZERO;
+                    purchase.setUsedQuantity(used.add(java.math.BigDecimal.valueOf(pickedTotalQty)));
+                }
                 materialPurchaseService.updateById(purchase);
                 try {
                     if (StringUtils.hasText(purchase.getOrderId())) {
@@ -817,6 +825,11 @@ public class MaterialPurchasePickingHelper {
         }
 
         restoreRelatedPurchaseStatus(picking.getOrderNo(), items);
+
+        // P2-5（D-076）：撤销已完成的出库单时回退 usedQuantity（出库确认时曾累加）
+        if (wasCompleted) {
+            rollbackUsedQuantityAfterCancel(picking, items);
+        }
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("pickingId", pickingId);
@@ -904,6 +917,51 @@ public class MaterialPurchasePickingHelper {
         // 注意：不清零 arrivedQuantity —— 到货量是入库侧的事实记录，
         // 撤销领料出库不应破坏真实到货数据（旧逻辑按 orderNo+materialCode 批量清零，
         // 会误伤 smartReceiveAll 产生的同物料补采单）
+    }
+
+    /**
+     * P2-5（D-076）：撤销出库单时回退出库确认时累加的 usedQuantity。
+     * 按 picking.purchaseId 精确定位（不按 orderNo+materialCode，防误伤同物料补采单），
+     * 下限 0，失败不阻断主流程。
+     */
+    private void rollbackUsedQuantityAfterCancel(MaterialPicking picking, List<MaterialPickingItem> items) {
+        try {
+            String purchaseId = picking.getPurchaseId();
+            if (!StringUtils.hasText(purchaseId) && StringUtils.hasText(picking.getRemark())
+                    && picking.getRemark().contains("purchaseId=")) {
+                purchaseId = picking.getRemark().substring(
+                        picking.getRemark().indexOf("purchaseId=") + "purchaseId=".length()).trim();
+            }
+            if (!StringUtils.hasText(purchaseId)) return;
+            int pickedQty = items.stream()
+                    .map(MaterialPickingItem::getQuantity)
+                    .filter(q -> q != null && q > 0)
+                    .mapToInt(Integer::intValue)
+                    .sum();
+            if (pickedQty <= 0) return;
+            MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                    .eq(MaterialPurchase::getId, purchaseId)
+                    .eq(MaterialPurchase::getTenantId, UserContext.tenantId())
+                    .one();
+            if (purchase == null) return;
+            java.math.BigDecimal used = purchase.getUsedQuantity() != null
+                    ? purchase.getUsedQuantity() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal next = used.subtract(java.math.BigDecimal.valueOf(pickedQty)).max(java.math.BigDecimal.ZERO);
+            if (next.compareTo(used) != 0) {
+                materialPurchaseService.lambdaUpdate()
+                        .eq(MaterialPurchase::getId, purchaseId)
+                        .set(MaterialPurchase::getUsedQuantity, next)
+                        .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
+                        .update();
+                if (StringUtils.hasText(purchase.getOrderId())) {
+                    helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
+                }
+                log.info("[cancelPicking] 已回退领料量: purchaseId={}, used {} -> {}", purchaseId, used, next);
+            }
+        } catch (Exception e) {
+            log.warn("[cancelPicking] 回退 usedQuantity 失败（不阻塞主流程）: pickingId={}, err={}",
+                    picking.getId(), e.getMessage());
+        }
     }
 
     // ──────────────────────────────────────────────────────────────

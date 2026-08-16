@@ -65,11 +65,29 @@ public class StyleBomOrchestrator {
                 .list();
     }
 
+    /**
+     * P2 推送锁定：已推送下单的款式，BOM 快照已同步到订单，款式侧改动不再生效（静默漂移）。
+     * 统一拦截写操作，提示到订单侧维护。
+     */
+    private void assertStyleNotPushedToOrder(Long styleId) {
+        if (styleId == null) {
+            return;
+        }
+        StyleInfo styleInfo = styleInfoService.getById(styleId);
+        if (styleInfo != null) {
+            TenantAssert.assertBelongsToCurrentTenant(styleInfo.getTenantId(), "款式");
+            if (styleInfo.getPushedToOrder() != null && styleInfo.getPushedToOrder() == 1) {
+                throw new IllegalStateException("该款式已推送下单，BOM已同步至订单；如需调整请先报废关联订单或联系管理员");
+            }
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean save(StyleBom styleBom) {
         if (styleBom == null || styleBom.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
+        assertStyleNotPushedToOrder(styleBom.getStyleId());
         normalizeAndCalc(styleBom);
         if (styleBom.getCreateTime() == null) {
             styleBom.setCreateTime(LocalDateTime.now());
@@ -120,6 +138,7 @@ public class StyleBomOrchestrator {
             throw new NoSuchElementException("记录不存在");
         }
         com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "BOM记录");
+        assertStyleNotPushedToOrder(current.getStyleId());
         if (styleBom.getStyleId() == null) {
             styleBom.setStyleId(current.getStyleId());
         }
@@ -156,6 +175,7 @@ public class StyleBomOrchestrator {
         StyleBom current = styleBomService.getById(id);
         if (current != null) {
             com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "BOM记录");
+            assertStyleNotPushedToOrder(current.getStyleId());
         }
         Long styleId = current != null ? current.getStyleId() : null;
 
@@ -209,6 +229,7 @@ public class StyleBomOrchestrator {
         TenantAssert.assertTenantContext();
 
         Long styleId = bomList.get(0).getStyleId();
+        assertStyleNotPushedToOrder(styleId);
         log.info("开始保存BOM并检查库存: 款号ID={}, 生产数量={}, BOM条数={}",
                 styleId, productionQty, bomList.size());
 
