@@ -297,8 +297,8 @@ public class UserLoginHelper {
     }
 
     private static boolean isAdminRole(String roleName) {
-        if (!StringUtils.hasText(roleName)) return false;
-        String r = roleName.trim().toLowerCase();
-        return "1".equals(roleName.trim()) || r.contains("admin") || r.contains("管理员") || r.contains("管理");
+        // 统一走 UserContext 精确白名单：contains("管理") 会把"库存管理"岗位、
+        // 自建同名角色误判为管理员并强制 permRange=all（越权）
+        return com.fashion.supplychain.common.UserContext.isTopAdminRoleName(roleName);
     }
 }

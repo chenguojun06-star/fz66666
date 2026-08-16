@@ -88,19 +88,25 @@ public class UserContext {
         if (isTenantOwner()) {
             return true;
         }
-        String role = role();
-        if (role == null) {
+        return isTopAdminRoleName(role());
+    }
+
+    /**
+     * 顶级管理员角色名精确白名单（登录/JWT解析/小程序统一复用，禁止 contains 模糊匹配）：
+     * contains("admin")/contains("管理") 会把"库存管理"等普通岗位、以及自建的同名角色
+     * 误判为顶级管理员（越权 + 数据范围被强制提为 all）
+     */
+    public static boolean isTopAdminRoleName(String roleName) {
+        if (roleName == null) {
             return false;
         }
-        String r = role.trim();
+        String r = roleName.trim();
         if (r.isEmpty()) {
             return false;
         }
         if ("1".equals(r)) {
             return true;
         }
-        // 白名单精确/后缀匹配：contains("admin")/contains("管理员") 会把
-        // "库存管理员"等任意含"管理"字样的普通岗位误判为顶级管理员（越权）
         String lower = r.toLowerCase();
         return lower.equals("admin") || lower.equals("administrator") || lower.equals("tenant_owner") || lower.equals("owner")
                 || r.equals("管理员") || r.equals("租户管理员") || r.equals("超级管理员") || r.equals("老板");

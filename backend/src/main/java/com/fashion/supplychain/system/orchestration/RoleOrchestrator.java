@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
@@ -75,10 +76,29 @@ public class RoleOrchestrator {
         return role;
     }
 
+    /**
+     * 保留角色名/代码守卫：自建/改名角色撞上系统管理员名称会被
+     * UserContext.isTopAdmin 精确白名单识别为顶级管理员（越权），从创建入口拦截
+     */
+    private static final Set<String> RESERVED_ROLE_CODES = Set.of("admin", "full_admin");
+    private static final Set<String> RESERVED_ROLE_NAMES = Set.of(
+            "管理员", "系统管理员", "超级管理员", "租户管理员", "老板", "全能管理",
+            "admin", "administrator", "owner", "tenant_owner");
+
+    private void assertNotReservedRole(String roleName, String roleCode) {
+        if (StringUtils.hasText(roleName) && RESERVED_ROLE_NAMES.contains(roleName.trim())) {
+            throw new IllegalArgumentException("角色名称【" + roleName.trim() + "】与系统内置管理员角色冲突，请更换名称");
+        }
+        if (StringUtils.hasText(roleCode) && RESERVED_ROLE_CODES.contains(roleCode.trim().toLowerCase())) {
+            throw new IllegalArgumentException("角色代码【" + roleCode.trim() + "】为系统保留，请更换");
+        }
+    }
+
     public boolean add(Role role) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
+        assertNotReservedRole(role == null ? null : role.getRoleName(), role == null ? null : role.getRoleCode());
         boolean success = roleService.save(role);
         if (!success) {
             throw new IllegalStateException("新增失败");
@@ -96,6 +116,8 @@ public class RoleOrchestrator {
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
+        // 改名同样禁止撞保留名（只校验本次提交的名称/代码，不拦历史数据）
+        assertNotReservedRole(role == null ? null : role.getRoleName(), role == null ? null : role.getRoleCode());
         String roleName = role != null ? role.getRoleName() : null;
         boolean success = roleService.updateById(role);
         if (!success) {
@@ -181,6 +203,8 @@ public class RoleOrchestrator {
         if (template == null || template.getDeleteFlag() == 1) {
             throw new NoSuchElementException("模板不存在");
         }
+        // 自定义角色名禁止撞系统管理员保留名（防自建"管理员"角色被判定为顶级管理员）
+        assertNotReservedRole(StringUtils.hasText(roleName) ? roleName : template.getTemplateName(), null);
 
         // 2. 创建角色
         Role role = new Role();

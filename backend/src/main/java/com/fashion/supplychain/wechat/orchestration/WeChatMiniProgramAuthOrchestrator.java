@@ -226,8 +226,8 @@ public class WeChatMiniProgramAuthOrchestrator {
             // 注意：用原始 roleName 做中文匹配（toLowerCase 对中文无影响，但保留以兼容英文）
             String raw = roleName.trim();
             String name = raw.toLowerCase();
-            // 管理员
-            if (name.contains("管理员") || name.contains("admin")) {
+            // 管理员（精确白名单：contains 会把"仓库管理员"及自建同名角色判为 admin）
+            if (com.fashion.supplychain.common.UserContext.isTopAdminRoleName(raw)) {
                 return "admin";
             }
             // 全能管理/综合管理/全栈/全权 → 按主管级对待（拥有跨岗位操作权限）
@@ -444,12 +444,10 @@ public class WeChatMiniProgramAuthOrchestrator {
     /**
      * 判断角色名称是否属于管理员角色
      * 用于在生成JWT时确定默认数据权限范围
+     * 统一走 UserContext 精确白名单：contains("管理") 会把"库存管理"岗位、
+     * 自建同名角色误判为管理员并强制 permRange=all（越权）
      */
     private static boolean isAdminRole(String roleName) {
-        if (!StringUtils.hasText(roleName)) {
-            return false;
-        }
-        String r = roleName.trim().toLowerCase();
-        return "1".equals(roleName.trim()) || r.contains("admin") || r.contains("管理员") || r.contains("管理");
+        return com.fashion.supplychain.common.UserContext.isTopAdminRoleName(roleName);
     }
 }
