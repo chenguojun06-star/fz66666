@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（D-094：员工计件工资条打印标准化重构）
+> 最后更新：2026-08-16（D-097：Qdrant DOWN 拖垮 health→503 致部署失败，双层修复）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-16 部署失败根因修复：Qdrant 不可达 → health 503 → HEALTHCHECK 误判 ✅（D-097，P0）
+
+- [x] 现象：backend-2114 部署失败。日志显示应用 17:12:52 正常启动（103.6s），但 17:19:00 被优雅停机（=start-period 300s 到期 + 3×30s 探测失败时刻，误差 18s）；线上 `/actuator/health` 实测 503 DOWN 而 `/actuator/health/readiness` 200
+- [x] 根因链：**Qdrant 不可达 → AiComponentHealthIndicator"任一 DOWN→整体 DOWN" → 主 health 503 → Docker HEALTHCHECK curl -f 失败 → TCP 兜底 `echo > /dev/tcp/...` 在默认 /bin/sh(dash) 下不支持从未生效 → 容器 unhealthy → CloudBase 判部署失败回滚旧版**（回滚实例无 V202708161200，故日志显示 No migration necessary——并非 Flyway 问题）
+- [x] 修复 3 文件：①AiComponentHealthIndicator 任一 DOWN→返回 `DEGRADED`（不再 down）②application.yml 加 `status.http-mapping.DEGRADED:200` + `order: DOWN,OUT_OF_SERVICE,DEGRADED,UP,UNKNOWN` ③backend/Dockerfile HEALTHCHECK 主探测改 `/actuator/health/readiness` + TCP 兜底显式 `/bin/bash -c`
+- [x] 验证：read-lints 0 错误；线上 readiness 200 佐证探测语义正确
+- [ ] **待部署**：重新部署生产（顺带让 V202708161100/D-095 + V202708161200/D-096 迁移真正执行——当前线上仍为旧代码）
+- [ ] **待决策**：Qdrant 服务已不可达（日志"Qdrant不可用，跳过向量化"），恢复服务或清空 QDRANT_URL（修复后不影响部署，仅影响向量检索功能）
 
 ### 2026-08-16 全库 collation 统一 290 张表 100% utf8mb4_0900_ai_ci ✅（D-096）
 

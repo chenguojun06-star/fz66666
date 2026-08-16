@@ -39,7 +39,11 @@ import java.util.Map;
  *   <li>每次健康检查总耗时 ≤ 10s（单组件超时 2s），避免拖慢 /actuator/health</li>
  *   <li>任一组件 DOWN 不影响其他组件检查（独立 try-catch）</li>
  *   <li>组件未配置时返回 UNKNOWN（不视为 DOWN，避免误告警）</li>
- *   <li>所有组件均 UP 时整体 UP；任一 DOWN 时整体 DOWN（运维可及时发现）</li>
+ *   <li>所有组件均 UP 时整体 UP；任一 DOWN 时整体返回 DEGRADED（而非 DOWN）：
+ *       AI 组件均为可选增强能力，其故障不应拖垮 /actuator/health 整体状态，
+ *       否则 Docker HEALTHCHECK / CloudBase 部署健康检查会误判容器不健康导致部署失败（2026-08-16 事故）。
+ *       DEGRADED 通过 management.endpoint.health.status.http-mapping.DEGRADED=200 映射为 HTTP 200，
+ *       运维仍可通过 components.ai.details 查看具体降级组件。</li>
  *   <li>支持通过 yml 关闭：management.health.ai.enabled=false</li>
  * </ol>
  *
@@ -145,7 +149,8 @@ public class AiComponentHealthIndicator implements HealthIndicator {
         components.put("memoryArchive", memoryArchive.toMap());
         if (!memoryArchive.up) allUp = false;
 
-        Health.Builder builder = allUp ? Health.up() : Health.down();
+        // 全部 UP → UP；任一 DOWN → DEGRADED（AI 为可选增强组件，不拖垮整体 health，见类注释）
+        Health.Builder builder = allUp ? Health.up() : Health.status("DEGRADED");
         return builder.withDetails(components).build();
     }
 

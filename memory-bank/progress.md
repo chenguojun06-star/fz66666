@@ -1,9 +1,18 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-16（D-094：工资条打印标准化重构，tsc/eslint 通过）
+> 最后更新：2026-08-16（D-097：部署失败根因修复——Qdrant 拖垮 health + HEALTHCHECK dash 兜底失效）
 
 ## 已完成
+
+### 2026-08-16 部署失败根因修复（Qdrant→health 503→HEALTHCHECK 误判）✅（D-097，P0）
+
+- [x] 诊断：线上实测 /actuator/health=503 DOWN、/actuator/health/readiness=200；结合日志时间线（17:11:12 启动+300s start-period+3×30s≈17:19:00 被停）锁定 HEALTHCHECK 误判
+- [x] AiComponentHealthIndicator：任一 AI 组件 DOWN → 整体返回 DEGRADED（AI 为可选增强，不拖垮主 health）
+- [x] application.yml：http-mapping DEGRADED→200 + status.order
+- [x] backend/Dockerfile：HEALTHCHECK 改探 readiness 组；TCP 兜底显式 /bin/bash（原 dash 下 /dev/tcp 从未生效）
+- [ ] 待办：重新部署生产，验证部署成功 + V202708161100/V202708161200 迁移执行 + 关单工资单恢复
+- [ ] 待办：决策 Qdrant 恢复或下线（清空 QDRANT_URL）
 
 ### 2026-08-16 员工计件工资条打印标准化重构 ✅（D-094）
 

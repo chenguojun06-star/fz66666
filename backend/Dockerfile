@@ -41,11 +41,13 @@ COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 8088
 
-# ⚠️ CloudBase 探针：用 TCP 探测端口（比 HTTP 快且不依赖 Actuator）
+# ⚠️ CloudBase 探针：主探测 readiness 组（只反映应用存活，不被 Qdrant 等 AI 可选组件 DEGRADED 拖垮）
+# 【2026-08-16 部署失败修复】原 /actuator/health 因 Qdrant DOWN 返回 503；TCP 兜底 echo > /dev/tcp 在
+# 默认 /bin/sh(dash) 下不支持，从未生效 → 容器被误判 unhealthy → 部署失败回滚。现改用 readiness + bash 显式兜底。
 # start-period=300s：给 Spring Boot 5 分钟启动时间，期间探针失败不计入重启计数
 HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \
-  CMD curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:8088/actuator/health 2>/dev/null || \
-      (echo "actuator not ready, checking TCP port" && (echo > /dev/tcp/127.0.0.1/8088) 2>/dev/null || exit 1)
+  CMD curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:8088/actuator/health/readiness 2>/dev/null || \
+      (echo "readiness not ok, fallback TCP" && /bin/bash -c 'echo > /dev/tcp/127.0.0.1/8088' 2>/dev/null || exit 1)
 
 ENV SPRING_PROFILES_ACTIVE=prod
 ENTRYPOINT ["./docker-entrypoint.sh"]

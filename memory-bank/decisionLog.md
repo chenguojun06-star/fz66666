@@ -5,6 +5,27 @@
 
 ---
 
+## D-097：可选组件故障不得拖垮整体健康检查——DEGRADED 语义 + 探针分层（2026-08-16）
+
+**背景**：backend-2114 部署失败。应用启动正常（103.6s）却在 17:19:00（=300s start-period + 3×30s retries 时刻）被优雅停机，反复回滚；线上 `/actuator/health` 503 而 `/actuator/health/readiness` 200。
+
+**根因链（三层叠加）**：
+1. Qdrant 服务不可达（外部依赖挂了）
+2. `AiComponentHealthIndicator` 设计为"任一组件 DOWN→Health.down()"→ 主 health 整体 503——AI 组件实为可选增强能力，该语义过严
+3. Dockerfile HEALTHCHECK：curl -f 遇 503 必失败；兜底 `echo > /dev/tcp/...` 依赖 bash 特性，但 HEALTHCHECK shell form 走 `/bin/sh`（Ubuntu=**dash**），`/dev/tcp` **从未生效过**——此前全靠主 health 200 掩盖
+
+**决策**：
+1. AI 组件任一 DOWN → 返回自定义 `Status("DEGRADED")`（不再 down）；全部 UP→UP；未配置→UNKNOWN 不变
+2. `management.endpoint.health.status.http-mapping.DEGRADED: 200` + `order: DOWN,OUT_OF_SERVICE,DEGRADED,UP,UNKNOWN`——降级可见但 HTTP 200
+3. Dockerfile HEALTHCHECK 主探测改 `/actuator/health/readiness`（只反映应用存活，语义正确且不受可选组件影响）；TCP 兜底显式 `/bin/bash -c 'echo > /dev/tcp/...'`
+
+**教训（AP 候选）**：
+- shell 兼容性：容器内 HEALTHCHECK/entrypoint 的 shell 特性（/dev/tcp、[[ ]] 等）必须显式声明 bash，dash/sh 下静默失效
+- 健康语义分层：探活（readiness/liveness）≠ 依赖健康（外部组件状态）；可选依赖 DOWN 应降级而非判死
+- 部署失败排查三板斧：①线上 health vs readiness 对比 ②启动时间 vs start-period+retries 探测时间线对齐 ③Flyway "No migration necessary" 反推运行的是否为回滚旧镜像
+
+**验证**：read-lints 0 错误；readiness 端点线上 200 佐证。待重新部署端到端确认。
+
 ## D-096：全库 collation 统一为 utf8mb4_0900_ai_ci——74 张少数派表 CONVERT + 分裂源头根治（2026-08-16）
 
 ### 背景

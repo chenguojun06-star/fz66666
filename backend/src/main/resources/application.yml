@@ -161,6 +161,15 @@ management:
         enabled: true
       show-details: when-authorized
       show-components: when-authorized
+      status:
+        # 【2026-08-16 部署失败修复】AI 等可选组件降级(DEGRADED)时主 health 返回 200，
+        # 避免 Docker HEALTHCHECK/CloudBase 部署检查误判容器不健康（Qdrant 不可达曾导致整体 DOWN→503→部署失败回滚）
+        http-mapping:
+          DOWN: 503
+          OUT_OF_SERVICE: 503
+          DEGRADED: 200
+        # 聚合优先级：DOWN 最严重；DEGRADED 高于 UP（有组件降级时整体显示 DEGRADED 但 HTTP 仍 200）
+        order: DOWN,OUT_OF_SERVICE,DEGRADED,UP,UNKNOWN
     metrics:
       enabled: true
   prometheus:
