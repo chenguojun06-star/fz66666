@@ -7,6 +7,22 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-17 诊断三类线上日志错误 + 聚水潭API熔断防护 ✅（已推送 0521dfb89，3 文件 +75）
+
+- [x] **① TenantIntelligenceProfileMapper.insert 失败**（13:25，backend-2119 旧实例）：保存"智能经营画像"写库失败，MyBatis 参数绑定错误；旧实例已下线，新实例（2123/2124）未复现 → 观察项，复现需抓完整 SQL 错误
+- [x] **② 聚水潭 400 "plain HTTP sent to HTTPS port"**（每几分钟刷屏）：定时任务（jstOrderSyncJob 15min + retryJob 30s + stockSyncJob 5min，多实例叠加）调用 openapi.jushuitan.com，对端阿里云 ALB 回明文 HTTP 错误；代码 URL 是正确 https（无 http 历史），属云托管出网链路/代理问题；**修复**：新增 JstApiGuard 进程级熔断（连续 3 次失败熔断 30 分钟，成功即复位，verifyConnection 手动测试前 reset 拿真实结果），JushuitanSyncService + JushuitanPlatformAdapter 两调用点共用，pullProduct 补 null 防御
+- [x] **③ agnes 视觉模型 401**：AGNES_API_KEY 无效/未配置，系统已自动熔断 30 分钟（防护正常）→ 需在云基座面板配置正确 Key
+- [x] 验证：mvn compile EXIT=0；已推送触发云构建
+- [ ] 聚水潭若正式启用需云托管侧排查出网代理（TLS 被剥成明文）；未启用可在平台连接页删掉 JST 配置彻底静默
+- [ ] 部署后观察：JST 错误应降为每 30 分钟最多 1 条熔断 ERROR
+
+### 2026-08-17 修复：样衣详情保存数量 400 根治（size 列宽溢出）✅（已推送 a53294653，2 文件 +53）
+
+- [x] 根因：前端 buildSizeString 把选中码数 join('/') 拼接（59 字符）写入 t_style_info.size VARCHAR(20) 列，MySQL 严格模式 DataIntegrityViolationException → 400 "保存失败"（详见 decisionLog D-107）
+- [x] 修复：Flyway V202708172000 幂等扩列 size→VARCHAR(500)、color→VARCHAR(200)；alter_t_style_info.sql 同步追加生产手工段
+- [x] 校验：check-flyway-sql.py 新文件 0 警告 + 570 版本号唯一 + safe-push 6 项全过
+- [ ] 部署后验证：云构建完成后到样衣详情页选多个码数保存数量，确认不再 400
+
 ### 2026-08-17 修复：SKU自动生成把矩阵计划数量错写成成品库存 ✅（已推送 e4e57d58d，1 文件 +4/-3）
 
 - [x] 根因：`ProductSkuServiceImpl.generateSkusFromConfig → createOrUpdateSku` 把颜色码数矩阵数量（计划做件数）直接写入 `stockQuantity`（成品库存）→ 样衣未生产未入库即显示库存 1；且 existing 分支会用矩阵改动**覆盖真实库存**
