@@ -124,7 +124,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
           if (res.code === 200) {
             newData.attachments = (res.data || []).filter((item: any) => {
               const bizType = String(item.bizType || '');
-              return bizType.startsWith('pattern') || bizType === 'size_table' || bizType === 'production_sheet';
+              return bizType.startsWith('pattern') || bizType === 'size_table' || bizType === 'production_sheet' || bizType === 'workorder';
             });
           }
         }).catch((err) => { console.warn('[StylePrint] 附件列表加载失败:', err?.message || err); }));

@@ -122,15 +122,16 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
   return (
     <SectionBox title="基础信息" usePrimaryHighlight>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        {/* 左栏：图片资产（主图180px+缩略图+操作，与基础信息合并为一个区块） */}
-        {coverSlot ? (
-          <div style={{ width: 188, flexShrink: 0, minWidth: 0 }}>{coverSlot}</div>
-        ) : null}
+      {/* 图片资产：置于表单最上方通栏（款名上方），一排方形卡片+➕上传（最多9张，拖拽/粘贴） */}
+      {coverSlot ? (
+        <div style={{ paddingBottom: 10, marginBottom: 12, borderBottom: '1px dashed rgba(0,0,0,0.06)' }}>
+          {coverSlot}
+        </div>
+      ) : null}
 
-        {/* 右栏：基础信息表单字段 */}
-        <div style={{ flex: 1, minWidth: 320 }}>
-          <Row gutter={[16, 8]}>
+      {/* 表单字段 */}
+      <div style={{ minWidth: 0 }}>
+        <Row gutter={[16, 8]}>
         {/* 款名称（必填，自由命名） */}
         <Col xs={24} md={12}>
           <Form.Item
@@ -424,7 +425,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
       </Row>
-        </div>
       </div>
     </SectionBox>
   );

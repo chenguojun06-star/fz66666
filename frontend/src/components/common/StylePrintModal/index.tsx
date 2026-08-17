@@ -167,7 +167,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
             {/* 生产制单（生产要求） */}
             {options.productionSheet && (
-              <ProductionSheetSection productionSheet={data.productionSheet} />
+              <ProductionSheetSection productionSheet={data.productionSheet} attachments={data.attachments} />
             )}
 
             {/* 尺寸表 */}

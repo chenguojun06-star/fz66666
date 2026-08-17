@@ -86,6 +86,18 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
       }).join('<br>')
     : '';
 
+  // 制单图片（工艺制单上传的 bizType=workorder 图片，与详情页一致）
+  const sheetImageList: string[] = (Array.isArray(payload?.sheetImages) ? payload.sheetImages : [])
+    .map((u: any) => resolveUrl(u))
+    .filter(Boolean);
+  const sheetImagesHtml = sheetImageList.length ? `
+    <div class="section">
+      <div class="section-title">制单图片</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${sheetImageList.map((u) => `<img src="${esc(u)}" style="width:150px;height:150px;object-fit:cover;border:1px solid rgba(0,0,0,0.08);border-radius:6px" onerror="this.style.display='none'" />`).join('')}
+      </div>
+    </div>` : '';
+
   const categoryText = toCategoryCn(style.category);
   const seasonText = toSeasonCn(style.season);
 
@@ -169,6 +181,8 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
       <div class="section-title">生产要求</div>
       <div style="line-height:1.8;padding:8px 10px;border:1px solid var(--color-border-antd);border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:var(--color-text-quaternary)">暂无生产要求</span>'}</div>
     </div>
+
+    ${sheetImagesHtml}
 
     ${sampleReviewHtml}
 

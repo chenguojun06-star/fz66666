@@ -32,6 +32,11 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
 
   const {
     allRequirements,
+    sheetImages,
+    sheetImageMax,
+    sheetUploading,
+    uploadSheetFiles,
+    removeSheetImage,
     reviewModalVisible,
     reviewSaving,
     reviewForm,
@@ -93,6 +98,11 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
         productionReqLocked={productionReqLocked}
         productionReqSaving={productionReqSaving}
         allRequirements={allRequirements}
+        sheetImages={sheetImages}
+        sheetImageMax={sheetImageMax}
+        sheetUploading={sheetUploading}
+        onUploadSheetFiles={uploadSheetFiles}
+        onRemoveSheetImage={removeSheetImage}
         onProductionReqSave={onProductionReqSave}
         onDownloadWorkorder={downloadWorkorder}
         onPrintWorkorder={printWorkorder}
