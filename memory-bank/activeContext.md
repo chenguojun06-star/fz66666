@@ -7,6 +7,13 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-17 样衣详情图片体系三合一改造 ✅（已推送 82483f01e，9 文件 +513/-117）
+
+- [x] **基础信息图片区改版**：移至款名上方通栏（BasicInfoSection coverSlot），一排方形卡片+➕上传卡（最多9张），支持点击选择/拖拽/粘贴上传，hover 设为主图/预览/删除；去掉原左上角按钮与下方小图行；新建模式本地图片自动触发视觉AI识别（修复"基础信息不识别"问题）
+- [x] **工艺制单图片直传**：StyleProductionTab 新增制单图片区（bizType=workorder 附件，即时上传/删除，最多9张），三种上传方式：点击➕/拖拽到图片区/在文本框直接粘贴截图（textarea onPaste 拦截图片文件）；后端复用 /style/attachment/upload+list（已支持 bizType 参数，无需后端改动）
+- [x] **打印一致性核实并补齐**：①「打印/下载制单」按钮（buildProductionSheetHtml）注入 sheetImages 渲染"制单图片"区块；②通用打印弹窗（StylePrintModal→ProductionSheetSection）从附件过滤 workorder 图片同步渲染，useStylePrintData 附件 filter 纳入 workorder——两条打印路径与详情页显示同源一致
+- [x] 踩坑：后端 StyleAttachment.fileType 大多数路径存 contentType（"image/png"），但存在存纯扩展名（"png"）的路径，前端判断需同时兼容 `includes('image')` 与扩展名正则
+
 ### 2026-08-17 QuickManageModal 改为左右宽屏布局（用户多次强调的统一形态）✅（已推送 ea51ede4d，1 文件 +312/-256）
 
 - [x] 用户要求：样衣详情所有维护弹窗统一为**左侧目录 + 右侧编辑区**的宽屏形态（此前 b693c422c 版本是表格+行内编辑，不符合预期）

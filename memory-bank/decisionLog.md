@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-17（新增 D-105 组织架构页工厂节点彻底剔除）
+> 最后更新：2026-08-17（新增 D-107 样衣保存400根因：size列宽溢出）
+
+---
+
+## D-107：样衣详情保存数量 400 根治 — t_style_info.size VARCHAR(20) 列宽溢出（2026-08-17）
+
+**背景**：用户炸点——样衣详情页保存数量 100% 失败，PUT /api/style/info 连续 7 次 400 "保存失败"，无任何线索。
+
+**根因**：前端 `buildSizeString` 将所有选中码数 `join('/')` 拼接后写入 `t_style_info.size` 列，但该列定义是 **VARCHAR(20)**。典型多码串如 `XS(155/72A)/S(160/76)/M(165/80)/L(170/84)/XL(175/88)/D(定制码)` 长达 59 字符，MySQL 严格模式触发 DataIntegrityViolationException，被 `StyleInfoOrchestrator` catch-all 包装成 `IllegalStateException("保存失败: ...")` → GlobalExceptionHandler 映射 400。**用户选中 2 个以上长码数即必现**（二分法实测 >20 字符即失败）。
+
+**决策**：
+1. Flyway `V202708172000__expand_style_info_size_color_columns.sql`：`size` VARCHAR(20)→**VARCHAR(500)**（容纳 10+ 全码拼接）；`color` 防御性 VARCHAR(20)→**VARCHAR(200)**（同源拼接风险）
+2. 幂等实现：MODIFY 前查 `INFORMATION_SCHEMA.COLUMNS ... CHARACTER_MAXIMUM_LENGTH >= 500`，达标即跳过；SET @s 内 COMMENT 双单引号转义（Flyway 静默失败陷阱）
+3. `alter_t_style_info.sql` 同步追加生产手工执行段（与迁移逻辑一致）
+4. Orchestrator 异常日志无需新增——L312-321 已有 `DataIntegrityViolationException` 专项捕获（duplicate→"款号已存在"）+ `log.error("数据完整性约束失败")`，本次靠它定位
+
+**教训**：**400 "保存失败" 类无线索报错，优先查数据库列宽与前端拼接串长度**。DataIntegrityViolationException 的根因消息在后端日志里（log.error 已记录），前端只显示笼统文案；排查时直接看后端日志的 "数据完整性约束失败" 关键字即可秒定位。
+
+**影响**：仅 2 个 SQL 文件，推送后 Flyway 随部署自动扩列，无需手工干预（生产已配自动迁移）；提交 a53294653。
 
 ---
 
