@@ -66,3 +66,21 @@ PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- 2026-08-16 商品类型值标准化（与 Flyway V202708161000 一致，生产手工执行用）
 UPDATE t_style_info SET product_type = '成品' WHERE product_type = 'FINISHED';
 UPDATE t_style_info SET product_type = '半成品' WHERE product_type = 'SEMI_FINISHED';
+
+-- 2026-08-17 size/color 扩列（与 Flyway V202708172000 一致，生产手工执行用）
+-- 根因：size VARCHAR(20) 装不下多码数拼接串（59 字符），样衣保存 400 "保存失败"
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_style_info'
+       AND COLUMN_NAME='size' AND CHARACTER_MAXIMUM_LENGTH >= 500) = 0,
+    'ALTER TABLE `t_style_info` MODIFY COLUMN `size` VARCHAR(500) DEFAULT NULL COMMENT ''尺码（多码数斜杠拼接）''',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @s = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_style_info'
+       AND COLUMN_NAME='color' AND CHARACTER_MAXIMUM_LENGTH >= 200) = 0,
+    'ALTER TABLE `t_style_info` MODIFY COLUMN `color` VARCHAR(200) DEFAULT NULL COMMENT ''颜色（首个颜色值）''',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
