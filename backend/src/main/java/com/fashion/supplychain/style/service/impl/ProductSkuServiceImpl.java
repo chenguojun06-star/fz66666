@@ -631,7 +631,8 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             sku.setColor(color);
             sku.setSize(size);
             sku.setStatus("ENABLED");
-            sku.setStockQuantity(quantity != null ? quantity : 0);
+            // 矩阵数量是计划数量而非实物库存，成品库存只由入库/出库维护（初始恒为0）
+            sku.setStockQuantity(0);
             sku.setCostPrice(style.getPrice());
             sku.setTagPrice(style.getTagPrice());
             sku.setSalesPrice(style.getSalesPrice());
@@ -642,15 +643,15 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 sku.setSkuColorImage(inheritedColorImage);
             }
             this.save(sku);
-            log.info("Created new SKU: {} with quantity={}, costPrice={}, tagPrice={}, salesPrice={}", skuCode, quantity, style.getPrice(), style.getTagPrice(), style.getSalesPrice());
+            log.info("Created new SKU: {} with costPrice={}, tagPrice={}, salesPrice={}", skuCode, style.getPrice(), style.getTagPrice(), style.getSalesPrice());
         } else {
             existing.setStyleNo(style.getStyleNo());
             if (!Integer.valueOf(1).equals(existing.getManuallyEdited())) {
                 existing.setSkuCode(skuCode);
-                existing.setStockQuantity(quantity != null ? quantity : 0);
                 existing.setCostPrice(style.getPrice());
                 existing.setTagPrice(style.getTagPrice());
                 existing.setSalesPrice(style.getSalesPrice());
+                // 不覆盖 stockQuantity：矩阵计划数量与成品实物库存无关，改矩阵不得冲掉真实库存
             }
             this.updateById(existing);
         }
