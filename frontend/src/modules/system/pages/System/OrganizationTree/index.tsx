@@ -14,7 +14,7 @@ import { useMemberActions } from './hooks/useMemberActions';
 import { useUserActions } from './hooks/useUserActions';
 import { useTemplateAndQr } from './hooks/useTemplateAndQr';
 import { useManagerActions } from './hooks/useManagerActions';
-import { findUnit, getDescendantIds } from './helpers';
+import { findUnit, getDescendantIds, isFactoryOrExternal } from './helpers';
 import StatsCards from './components/StatsCards';
 import TreePanel from './components/TreePanel';
 import MemberPanel from './components/MemberPanel';
@@ -34,7 +34,7 @@ const OrganizationTreePage: React.FC = () => {
 
   const {
     loading, treeData, visibleTreeData, departments, membersMap, setMembersMap,
-    assignableUsers, loadData, loadAssignableUsers, totalMembers, unitNameMap, isFactoryAccount,
+    assignableUsers, loadData, loadAssignableUsers, unitNameMap, isFactoryAccount,
   } = useOrganizationTreeData();
 
   const {
@@ -126,9 +126,9 @@ const OrganizationTreePage: React.FC = () => {
     });
   };
 
-  // 部门下拉选项：过滤外部工厂节点（ownerType=EXTERNAL 属外发协同，不进入内部人员归属）
+  // 部门下拉选项：剔除供应商管理同步的工厂节点（nodeType=FACTORY）与外部标签部门
   const internalDepartments = useMemo(
-    () => departments.filter((d) => (d as any).ownerType !== 'EXTERNAL'),
+    () => departments.filter((d) => !isFactoryOrExternal(d)),
     [departments],
   );
 
@@ -148,10 +148,11 @@ const OrganizationTreePage: React.FC = () => {
     }));
   }, [assignableUsers]);
 
-  const selectedUnit = useMemo(() => findUnit(treeData, selectedUnitId), [treeData, selectedUnitId]);
+  // 选中节点从过滤后的可见树中查找：其子部门卡片、"包括下级成员"下钻均不含已隐藏的工厂节点
+  const selectedUnit = useMemo(() => findUnit(visibleTreeData, selectedUnitId), [visibleTreeData, selectedUnitId]);
   const isExternalSelected = selectedUnit?.ownerType === 'EXTERNAL';
 
-  // ===== 每个部门的人数计算（递归）=====
+  // ===== 每个部门的人数计算（递归，基于可见树：工厂节点成员不进入内部统计）=====
   const unitMemberCount = useMemo(() => {
     const countMap: Record<string, number> = {};
     const subUnitsMap: Record<string, number> = {};
@@ -174,9 +175,15 @@ const OrganizationTreePage: React.FC = () => {
       });
       return total;
     };
-    calculateCount(treeData);
+    calculateCount(visibleTreeData);
     return { countMap, subUnitsMap };
-  }, [treeData, membersMap]);
+  }, [visibleTreeData, membersMap]);
+
+  // KPI 总人数与可见树口径一致（隐藏的工厂节点成员不计入）
+  const visibleTotalMembers = useMemo(
+    () => visibleTreeData.reduce((sum, n) => sum + (unitMemberCount.countMap[String(n.id)] ?? 0), 0),
+    [visibleTreeData, unitMemberCount],
+  );
 
   const displayedMembers = useMemo(() => {
     if (!selectedUnitId || !selectedUnit) return [];
@@ -246,9 +253,9 @@ const OrganizationTreePage: React.FC = () => {
           ) : undefined
         }
       >
-        {/* 顶部统计卡片（统计同样排除外部工厂节点） */}
+        {/* 顶部统计卡片（与可见树同口径：不含工厂同步节点） */}
         {treeData.length > 0 && (
-          <StatsCards departments={internalDepartments} totalMembers={totalMembers} />
+          <StatsCards departments={internalDepartments} totalMembers={visibleTotalMembers} />
         )}
         <Spin spinning={loading}>
           {visibleTreeData.length === 0 && !loading ? (

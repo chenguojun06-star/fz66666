@@ -18,10 +18,15 @@ function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): Orga
   });
 }
 
-function filterExternalNodes(nodes: OrganizationUnit[]): OrganizationUnit[] {
+/**
+ * 供应商管理每创建一个工厂（自有/外协）都会经 syncFactoryNode 在组织树同步一个
+ * nodeType=FACTORY 节点（ownerType=OWN/OUTSOURCE/EXTERNAL）。内部组织架构页
+ * 只管理内部部门，须将全部 FACTORY 节点连同外部标签部门一起剔除。
+ */
+function filterInternalNodes(nodes: OrganizationUnit[]): OrganizationUnit[] {
   return nodes.flatMap(node => {
-    if (node.ownerType === 'EXTERNAL') return [];
-    const filteredChildren = filterExternalNodes(node.children ?? []);
+    if (node.nodeType === 'FACTORY' || node.ownerType === 'EXTERNAL') return [];
+    const filteredChildren = filterInternalNodes(node.children ?? []);
     return [{ ...node, children: filteredChildren }];
   });
 }
@@ -77,11 +82,15 @@ export function useOrganizationTreeData() {
     return Object.values(membersMap).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
   }, [membersMap]);
 
-  /** 工厂账号只能看到自己工厂相关的组织节点 */
+  /**
+   * 工厂账号：仅保留本工厂子树（含其工厂节点），靠 factoryId 隔离，无需再剔外部节点；
+   * 租户管理视角：仅显示内部部门，剔除全部 FACTORY 同步节点与外部标签部门。
+   */
   const visibleTreeData = useMemo(() => {
-    const withoutExternal = filterExternalNodes(treeData);
-    if (!isFactoryAccount || !currentUserFactoryId) return withoutExternal;
-    return filterTreeByFactory(withoutExternal, currentUserFactoryId);
+    if (isFactoryAccount && currentUserFactoryId) {
+      return filterTreeByFactory(treeData, currentUserFactoryId);
+    }
+    return filterInternalNodes(treeData);
   }, [isFactoryAccount, currentUserFactoryId, treeData]);
 
   // 部门 ID → 名称 快查表
