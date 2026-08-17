@@ -7,6 +7,13 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-17 修复：SKU自动生成把矩阵计划数量错写成成品库存 ✅（已推送 e4e57d58d，1 文件 +4/-3）
+
+- [x] 根因：`ProductSkuServiceImpl.generateSkusFromConfig → createOrUpdateSku` 把颜色码数矩阵数量（计划做件数）直接写入 `stockQuantity`（成品库存）→ 样衣未生产未入库即显示库存 1；且 existing 分支会用矩阵改动**覆盖真实库存**
+- [x] 修复：新建 SKU 库存恒为 0（与成品仓 FinishedWarehouseOperationOrchestrator / UCodeWarehouseScanExecutor 初始化语义一致）；existing 分支不再触碰 stockQuantity；库存只由入库/出库（updateStock 原子 delta）+ `POST /maintenance/recalculate-sku-stock` 修正接口维护
+- [x] 验证：mvn compile EXIT=0；已推送触发云构建
+- [ ] 部署后清存量脏数据：超管调一次 `POST /api/maintenance/recalculate-sku-stock`（按入库记录 qualifiedQuantity 重算，无入库记录的 SKU 库存归 0 显示"-"），并复核该款 XS 行库存显示"-"
+
 ### 2026-08-17 合作企业管理菜单重组 + 客户管理中文映射 ✅（D-106）
 
 - [x] **用户炸点**：① 合作企业管理菜单不见了；② 客户管理状态/客户等级显示英文（ACTIVE/NORMAL）
