@@ -7,7 +7,15 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-18 QuickManageModal 高度根因修复 + 搜索占位符按类型匹配 ✅（已推送 13e80036d；工艺制单图片区交互重做 5119c1a1f）
+### 2026-08-18 工艺制单改所见即所得编辑器（纠正上一版误解）✅（已推送 00a2d44d5，8 文件 +250/-309）
+
+- [x] **需求澄清**：用户要的是"填写生产制单内容的地方里面可以粘贴图片"——图片内嵌在内容中，不是文本框上方的独立图片卡片区（上一版 5119c1a1f 做错了，本版推翻）
+- [x] **实现**：生产要求改为 contentEditable 编辑器；Ctrl+V 粘贴截图/拖拽图片 → 上传附件库(bizType=workorder) → execCommand('insertHTML') 内嵌光标处；纯文本粘贴走 insertText 防富文本样式；上限9张编辑器内数 img 校验；选中图片 Delete 删除
+- [x] **数据形态**：description 存轻量 HTML（<img src=附件URL>+<br>）；老纯文本回显自动 \n→<br>（utils/sheetRichText.ts：isSheetRichHtml/plainTextToSheetHtml/sanitizeSheetRichHtml 白名单过滤仅 img/br）；后端无 HTML 清洗可原样入库
+- [x] **打印同源**：buildProductionSheetHtml 与 StylePrintModal/ProductionSheetSection 均按富文本白名单渲染内嵌图；打印弹窗附件过滤恢复原样（workorder 不再单独注入）
+- [x] 同日：各码实际用量表移除库存/领取列（a118abb99，纸样师傅录用量区不该有领取入口，领取在BOM表）
+
+### 2026-08-18 QuickManageModal 高度根因修复 + 搜索占位符按类型匹配 ✅（已推送 13e80036d）
 
 - [x] **弹窗过高根因**：ResizableModal 默认 initialHeight=视口×82%，QuickManageModal 未传导致内容再少也近全屏高——传 initialHeight=400/minHeight=300，内容区 minHeight 460→240 自适应
 - [x] **搜索占位符乱写**：不再统一"搜索名称/联系人/电话/地址"，按 mode 区分（dict=搜索选项名称 / customer=公司名称·联系人·电话 / supplier=供应商名称·联系人·电话）
