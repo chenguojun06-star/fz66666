@@ -2,6 +2,7 @@ package com.fashion.supplychain.integration.ecommerce.service;
 
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
+import com.fashion.supplychain.integration.util.JstApiGuard;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,8 @@ public class JushuitanSyncService {
      * 验证聚水潭连接凭证
      */
     public Map<String, Object> verifyConnection(EcPlatformConfig config) {
+        // 手动测试连接前复位熔断，确保拿到真实结果（不受定时任务失败熔断影响）
+        JstApiGuard.reset();
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             // 尝试调用店铺查询接口验证凭证
@@ -225,6 +228,11 @@ public class JushuitanSyncService {
      * 调用聚水潭 OpenAPI（包级可见，供 EcSyncJob 等同包组件复用）
      */
     Map<String, Object> callJstApi(EcPlatformConfig config, String path, Map<String, Object> params) {
+        // 熔断打开期间跳过定时调用，避免对持续故障的对端反复轰炸
+        if (JstApiGuard.isOpen()) {
+            log.debug("[聚水潭API] 熔断中，跳过调用 path={}", path);
+            return null;
+        }
         try {
             String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
             String bodyJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(params);
@@ -239,8 +247,10 @@ public class JushuitanSyncService {
             String url = JST_API_BASE + path;
             @SuppressWarnings("unchecked")
             Map<String, Object> response = httpClient.postJson(url, params, Map.class, headers);
+            JstApiGuard.recordSuccess();
             return response;
         } catch (Exception e) {
+            JstApiGuard.recordFailure();
             log.error("[聚水潭API] 调用失败 path={}: {}", path, e.getMessage());
             return null;
         }

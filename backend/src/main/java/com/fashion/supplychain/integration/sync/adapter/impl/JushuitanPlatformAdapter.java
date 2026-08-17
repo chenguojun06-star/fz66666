@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
 import com.fashion.supplychain.integration.sync.dto.*;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
+import com.fashion.supplychain.integration.util.JstApiGuard;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -224,6 +225,12 @@ public class JushuitanPlatformAdapter implements EcPlatformAdapter {
             Map<String, Object> params = new LinkedHashMap<>();
             params.put("i_id", platformItemId);
             Map<String, Object> resp = callJstApi(ctx, JST_PRODUCT_QUERY, params);
+            if (resp == null) {
+                return EcProductPullResult.builder()
+                        .success(false)
+                        .errorMessage("聚水潭API无响应（熔断中或调用失败）")
+                        .build();
+            }
             return EcProductPullResult.builder()
                     .success(true)
                     .productData(resp)
@@ -286,6 +293,11 @@ public class JushuitanPlatformAdapter implements EcPlatformAdapter {
      * 调用聚水潭 OpenAPI（HMAC-SHA256 签名）
      */
     private Map<String, Object> callJstApi(EcSyncContext ctx, String path, Map<String, Object> params) {
+        // 熔断打开期间跳过定时调用，避免对持续故障的对端反复轰炸
+        if (JstApiGuard.isOpen()) {
+            log.debug("[聚水潭API] 熔断中，跳过调用 path={}", path);
+            return null;
+        }
         try {
             String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
             String bodyJson = MAPPER.writeValueAsString(params);
@@ -300,8 +312,10 @@ public class JushuitanPlatformAdapter implements EcPlatformAdapter {
             String url = JST_API_BASE + path;
             @SuppressWarnings("unchecked")
             Map<String, Object> response = httpClient.postJson(url, params, Map.class, headers);
+            JstApiGuard.recordSuccess();
             return response;
         } catch (Exception e) {
+            JstApiGuard.recordFailure();
             log.error("[聚水潭API] 调用失败 path={}: {}", path, e.getMessage());
             throw new RuntimeException("聚水潭API调用失败: " + path, e);
         }
