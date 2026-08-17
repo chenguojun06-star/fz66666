@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-16（系统设置三页布局优化：人员/岗位/组织架构对齐 _SPEC 设计稿）
+> 最后更新：2026-08-17（D-105 组织架构页工厂节点彻底剔除：本厂/外协工厂不再出现在内部组织管理）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-17 组织架构页"本厂/外协工厂"节点彻底剔除 ✅（D-105）
+
+- [x] **用户炸点**：内部组织管理仍显示"本厂"节点（部门类型:外协工厂、状态:未启用），成员列表出现"666/未知部门"。此问题存在已久
+- [x] **根因**：上轮修复（2026-08-16）只过滤 `ownerType=EXTERNAL`，但供应商管理每建一个工厂都会经 `syncFactoryNode` 在组织树同步 `nodeType=FACTORY` 节点（本厂=OWN/外协=OUTSOURCE），这些节点 ownerType 不是 EXTERNAL，全部穿透过滤器
+- [x] **修复**（仅前端 2 文件）：`useOrganizationTreeData.ts` 新增 `filterInternalNodes` 递归剔除 `nodeType='FACTORY'` + `ownerType='EXTERNAL'`，替换原 `filterExternalNodes`；工厂账号仍走 `filterTreeByFactory` 保留本厂子树（靠 factoryId 隔离）
+- [x] **口径对齐**（index.tsx）：部门下拉/`selectedUnit` 查找/`unitMemberCount` 递归统计/KPI 总人数全部改用 `visibleTreeData`/`internalDepartments`，隐藏工厂节点的成员（如 666）不再污染统计
+- [x] 验证：tsc 0 错误；后端零改动（tree() 接口不动，工厂账号视图依赖 FACTORY 节点）
+- [ ] 部署后验证：租户账号组织架构树不再出现"本厂"及外协工厂节点；KPI 人数不含工厂同步节点成员；工厂账号登录仍能看到自己工厂子树
 
 ### 2026-08-16 系统设置三页布局优化（人员/岗位/组织架构，对齐 PC端全景优化分析 _SPEC）✅
 

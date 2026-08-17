@@ -1,7 +1,27 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-16（新增 D-104 批量采购弹窗信息补全+数量可编辑）
+> 最后更新：2026-08-17（新增 D-105 组织架构页工厂节点彻底剔除）
+
+---
+
+## D-105：组织架构页工厂节点彻底剔除 — 过滤维度从 ownerType 升级为 nodeType（2026-08-17）
+
+**背景**：用户长期炸点——内部组织管理页仍显示"本厂"节点（部门类型:外协工厂、状态:未启用），点开成员列表出现"666/未知部门/车间工人"。2026-08-16 曾修过一轮（部门下拉/统计卡片过滤 ownerType=EXTERNAL），但只治了"外部标签部门"，没治"工厂同步节点"。
+
+**根因**：供应商管理每创建一个工厂（自有/外协）都会经 `OrganizationUnitBindingHelper.syncFactoryNode` 在组织树同步一个 `nodeType=FACTORY` 节点，其 ownerType 为 OWN/OUTSOURCE（不是 EXTERNAL）。上一轮过滤器只看 `ownerType==='EXTERNAL'`，全部 FACTORY 节点穿透。**过滤维度选错：内部组织页的边界是"节点性质"（DEPARTMENT vs FACTORY），不是"内外标签"（ownerType）**。
+
+**决策**：
+1. 前端 `useOrganizationTreeData.ts`：`filterExternalNodes` → `filterInternalNodes`，递归剔除 `nodeType==='FACTORY' || ownerType==='EXTERNAL'` 两类节点
+2. 双视角保留：工厂账号仍走 `filterTreeByFactory`（保留本工厂子树含工厂节点，靠 factoryId 隔离）；租户账号走 `filterInternalNodes`（纯内部部门）
+3. 口径联动：index.tsx 的部门下拉（internalDepartments）、selectedUnit 查找、unitMemberCount 递归统计、KPI visibleTotalMembers 全部改用过滤后可见树，杜绝"树里看不见、统计里还计数"的口径分裂
+4. 后端 `tree()` 不动：工厂账号视图与外部树 externalTree() 均依赖 FACTORY 节点数据，过滤放展示层
+
+**理由**：FACTORY 节点是供应商管理→组织树的同步镜像（单一数据源在 Factory 表），组织架构页只是不该"看见"它，而非数据错误；在后端删除会破坏工厂账号视图与邀请码/成员绑定链路。
+
+**教训**：修过滤类 bug 先画出**完整数据写入链路**（syncFactoryNode 的所有 nodeType/ownerType 组合），再选过滤维度；只按单一字段过滤前先反问"还有哪些路径会写这个字段的其他取值"。
+
+**影响**：仅前端 2 文件（useOrganizationTreeData.ts / index.tsx），tsc 0 错误；工厂账号视图回归靠 filterTreeByFactory 天然覆盖。
 
 ---
 
