@@ -7,6 +7,26 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-17 合作企业管理菜单重组 + 客户管理中文映射 ✅（D-106）
+
+- [x] **用户炸点**：① 合作企业管理菜单不见了；② 客户管理状态/客户等级显示英文（ACTIVE/NORMAL）
+- [x] **菜单消失根因**：`/system/partner-management` 不在 `tenantModuleConfig.ALL_MODULE_PATHS` 白名单，租户 `enabled_modules` 非空时该菜单被 `isTenantModuleEnabled` 过滤掉
+- [x] **菜单重组**（routeConfig.ts）：供应商管理改为分组菜单（key=supplierManagement），含「供应商管理/合作企业管理」两个子菜单；系统设置中原合作企业管理项删除；权限码沿用 MENU_FACTORY 兼容
+- [x] **白名单同步**（tenantModuleConfig.ts）：BASIC_PRESET_MODULES + MODULE_SECTIONS 供应商管理分组均加入 `/system/partner-management`
+- [x] **历史租户兜底**（Flyway V202708171000）：已启用供应商管理且未含合作企业管理的租户，JSON_ARRAY_APPEND 自动追加（幂等 NOT JSON_CONTAINS）
+- [x] **英文泄漏修复**：SchemaTable 新增 `valueMaps` 属性（select 值→中文标签，optionsJson 兜底）；SchemaDescriptions 同根因修复（解析 optionsJson 渲染 Tag）；CustomerTable 传 customerLevel（VIP→核心客户/NORMAL→普通客户）+ status（ACTIVE→合作中/INACTIVE→已停合作）映射
+- [x] 说明：「本厂」内外标签=内部 是正确语义（ownerType 区分自有工厂 vs 外部合作工厂，本厂是租户自有产线），无需改
+- [x] 验证：tsc 0 错误；超管版 TenantListTab 检查确认已有中文映射无需修改
+- [ ] 部署后验证：供应商管理分组菜单含合作企业管理子菜单；客户管理显示"合作中/普通客户"中文标签
+
+### 2026-08-17 智能经营偏好保存 409 修复 ✅
+
+- [x] **用户炸点**：调整智能经营偏好保存报 409（数据已存在，请勿重复提交），无法保存
+- [x] **根因**：`t_tenant_intelligence_profile` 唯一索引 `uk_tip_tenant_id(tenant_id)` 不含 delete_flag，而 Entity 带 `@TableLogic`。点「重置」= 逻辑删除（行仍占唯一键）→ 再保存时 `getOne(delete_flag=0)` 查不到 → 走 INSERT → 撞唯一键 → GlobalExceptionHandler 将 DuplicateKeyException 映射为 409
+- [x] **修复**（后端 2 文件）：`TenantIntelligenceProfileMapper` 新增 `selectAnyByTenantId`（原生SQL不过滤delete_flag）+ `reviveByTenantId`（复活已删行）；`TenantIntelligenceProfileOrchestrator.saveCurrentTenantProfile` 保存前调 `reviveDeletedConfigIfAny` 自愈脏数据
+- [x] 验证：mvn compile 通过；场景覆盖（脏数据自愈/重置后再保存/首次保存/正常更新）
+- [ ] 部署后验证：用户点保存偏好成功；后端日志出现"复活被重置逻辑删除的画像配置"
+
 ### 2026-08-17 组织架构页"本厂/外协工厂"节点彻底剔除 ✅（D-105）
 
 - [x] **用户炸点**：内部组织管理仍显示"本厂"节点（部门类型:外协工厂、状态:未启用），成员列表出现"666/未知部门"。此问题存在已久

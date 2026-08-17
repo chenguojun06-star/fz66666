@@ -550,7 +550,10 @@ export const menuConfig: MenuSection[] = [
     title: '供应商管理',
     key: 'supplierManagement',
     icon: React.createElement(TeamOutlined),
-    path: paths.productionPartners,
+    items: [
+      { label: '供应商管理', path: paths.productionPartners, icon: React.createElement(TeamOutlined) },
+      { label: '合作企业管理', path: paths.partnerManagement, icon: React.createElement(TeamOutlined) },
+    ],
   },
   {
     title: '成品管理',
@@ -611,7 +614,6 @@ export const menuConfig: MenuSection[] = [
       { label: '考勤管理', path: paths.attendanceAdmin, icon: React.createElement(ClockCircleOutlined) },
       { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
-      { label: '合作企业管理', path: paths.partnerManagement, icon: React.createElement(TeamOutlined) },
     ],
   },
   {

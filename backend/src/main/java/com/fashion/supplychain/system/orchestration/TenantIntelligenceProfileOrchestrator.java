@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.dto.TenantIntelligenceProfileSaveRequest;
 import com.fashion.supplychain.system.entity.TenantIntelligenceProfile;
+import com.fashion.supplychain.system.mapper.TenantIntelligenceProfileMapper;
 import com.fashion.supplychain.system.service.TenantIntelligenceProfileService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -22,6 +23,9 @@ public class TenantIntelligenceProfileOrchestrator {
     @Autowired
     private TenantIntelligenceProfileService tenantIntelligenceProfileService;
 
+    @Autowired
+    private TenantIntelligenceProfileMapper tenantIntelligenceProfileMapper;
+
     @Transactional(rollbackFor = Exception.class)
     public void saveCurrentTenantProfile(TenantIntelligenceProfileSaveRequest request) {
         TenantAssert.assertTenantContext();
@@ -29,6 +33,7 @@ public class TenantIntelligenceProfileOrchestrator {
         validateRequest(request);
 
         Long tenantId = TenantAssert.requireTenantId();
+        reviveDeletedConfigIfAny(tenantId);
         TenantIntelligenceProfile entity = loadCurrentTenantConfig(tenantId);
         LocalDateTime now = LocalDateTime.now();
         if (entity == null) {
@@ -62,6 +67,20 @@ public class TenantIntelligenceProfileOrchestrator {
         return tenantIntelligenceProfileService.getOne(new LambdaQueryWrapper<TenantIntelligenceProfile>()
                 .eq(TenantIntelligenceProfile::getTenantId, tenantId)
                 .last("LIMIT 1"), false);
+    }
+
+    /**
+     * 重置走逻辑删除后行仍占用 uk_tip_tenant_id 唯一索引，
+     * 直接插入会撞键报409；保存前复活已删行实现自愈。
+     */
+    private void reviveDeletedConfigIfAny(Long tenantId) {
+        if (tenantIntelligenceProfileMapper.selectAnyByTenantId(tenantId) == null) {
+            return;
+        }
+        int revived = tenantIntelligenceProfileMapper.reviveByTenantId(tenantId);
+        if (revived > 0) {
+            log.info("[TenantIntelligenceProfile] 复活被重置逻辑删除的画像配置 tenantId={}", tenantId);
+        }
     }
 
     private void validateRequest(TenantIntelligenceProfileSaveRequest request) {

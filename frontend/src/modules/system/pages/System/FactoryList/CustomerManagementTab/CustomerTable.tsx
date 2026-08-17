@@ -7,7 +7,7 @@ import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import type { Customer } from '@/services/crm/customerApi';
 import { formatDateTime } from '@/utils/datetime';
 import { savePageSize } from '@/utils/pageSizeStore';
-import { getCustomerLevelTag, getCustomerStatusTag, type CustomerQueryParams } from './customerHelpers';
+import { CUSTOMER_LEVEL_OPTIONS, CUSTOMER_STATUS_OPTIONS, getCustomerLevelTag, getCustomerStatusTag, type CustomerQueryParams } from './customerHelpers';
 
 interface CustomerTableProps {
   fieldConfigs: FieldConfigItem[];
@@ -26,6 +26,11 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
   fieldConfigs, fieldConfigLoading, customers, total, loading,
   queryParams, setQueryParams, onView, onEdit, onDelete,
 }) => {
+  /** select 字段中文映射（SchemaTable 字段配置路径使用，避免表格显示 NORMAL/ACTIVE 等原始值） */
+  const selectValueMaps = useMemo(() => ({
+    customerLevel: Object.fromEntries(CUSTOMER_LEVEL_OPTIONS.map(o => [o.value, o.label])),
+    status: Object.fromEntries(CUSTOMER_STATUS_OPTIONS.map(o => [o.value, o.label])),
+  }), []);
   const actionColumn = useMemo(() => ({
     title: '操作',
     key: 'actions',
@@ -89,6 +94,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
           pageKey="customer-list"
           bizType="customer"
           fields={fieldConfigs}
+          valueMaps={selectValueMaps}
           customColumns={[actionColumn]}
           defaultHidden={['contactEmail', 'address', 'industry', 'source', 'remark']}
           dataSource={customers}

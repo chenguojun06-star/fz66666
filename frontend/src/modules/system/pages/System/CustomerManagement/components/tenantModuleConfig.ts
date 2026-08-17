@@ -1,7 +1,7 @@
 export const BASIC_PRESET_MODULES = [
   '/dashboard', '/basic/template-center',
   '/finance/payroll-operator-summary', '/finance/wage-payment', '/finance/expense-reimbursement',
-  '/system/profile', '/system/user', '/system/role', '/production/partners',
+  '/system/profile', '/system/user', '/system/role', '/production/partners', '/system/partner-management',
   '/system/dict', '/system/logs', '/system/tutorial', '/system/data-import',
 ];
 
@@ -30,6 +30,7 @@ export const MODULE_SECTIONS = [
   ]},
   { key: 'supplierManagement', title: '供应商管理', paths: [
     { path: '/production/partners', label: '供应商管理' },
+    { path: '/system/partner-management', label: '合作企业管理' },
   ]},
   { key: 'warehouse', title: '成品管理', paths: [
     { path: '/warehouse/finished', label: '成品出入库' },

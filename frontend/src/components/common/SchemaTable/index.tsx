@@ -37,6 +37,8 @@ type SchemaTableProps<T extends object> = {
   settingsPosition?: 'outside' | 'toolbar' | 'none';
   /** 从数据行中读取指定字段值的解析函数（支持 extJson） */
   getFieldValue?: (record: T, fieldKey: string) => unknown;
+  /** select 字段的值→中文标签映射（fieldKey → { value → label }），优先于 optionsJson */
+  valueMaps?: Record<string, Record<string, string>>;
   dataSource: T[];
   rowKey: string | ((record: T) => string);
 } & Omit<React.ComponentProps<typeof ResizableTable<T>>, 'columns' | 'dataSource' | 'rowKey'>;
@@ -60,13 +62,41 @@ function defaultGetFieldValue<T extends object>(record: T, fieldKey: string): un
   return undefined;
 }
 
+/** 解析 optionsJson（与 SchemaForm.parseOptions 同格式：[{label, value}] 或字符串数组） */
+function parseOptionsJson(json?: string | null): Record<string, string> {
+  if (!json) return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) return {};
+    const map: Record<string, string> = {};
+    parsed.forEach((item: unknown) => {
+      if (typeof item === 'string') {
+        map[item] = item;
+      } else if (item && typeof item === 'object') {
+        const opt = item as { label?: unknown; value?: unknown };
+        const label = opt.label ?? opt.value;
+        const val = opt.value ?? opt.label;
+        if (label != null && val != null) map[String(val)] = String(label);
+      }
+    });
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 /** 按字段类型渲染单元格值 */
-function renderCellValue(value: unknown, fieldType?: string): React.ReactNode {
+function renderCellValue(
+  value: unknown,
+  fieldType?: string,
+  valueMap?: Record<string, string>,
+): React.ReactNode {
   if (value === undefined || value === null || value === '') return '-';
   switch (fieldType) {
     case 'select': {
       const str = String(value);
-      return <Tag>{str}</Tag>;
+      const label = valueMap?.[str];
+      return <Tag>{label ?? str}</Tag>;
     }
     case 'date':
     case 'datetime':
@@ -94,6 +124,7 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
     enableColumnSettings = true,
     settingsPosition = 'outside',
     getFieldValue = defaultGetFieldValue,
+    valueMaps,
     dataSource,
     rowKey,
     ...rest
@@ -132,6 +163,23 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
     defaultVisible,
   });
 
+  /** select 字段值→标签映射：valueMaps 优先，optionsJson 兜底（都无则显示原始值） */
+  const selectLabelMaps = useMemo(() => {
+    const merged: Record<string, Record<string, string>> = {};
+    fields.forEach((f) => {
+      if (f.fieldType === 'select') {
+        const fromOptions = parseOptionsJson(f.optionsJson);
+        if (Object.keys(fromOptions).length > 0) merged[f.fieldKey] = fromOptions;
+      }
+    });
+    if (valueMaps) {
+      Object.entries(valueMaps).forEach(([key, map]) => {
+        merged[key] = { ...merged[key], ...map };
+      });
+    }
+    return merged;
+  }, [fields, valueMaps]);
+
   const finalColumns = useMemo(() => {
     const cols: any[] = [];
     orderedVisibleColumns.forEach(colOpt => {
@@ -144,7 +192,7 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
         ellipsis: true,
         render: (_: unknown, record: T) => {
           const val = getFieldValue(record, colOpt.key);
-          return renderCellValue(val, fieldConfig.fieldType);
+          return renderCellValue(val, fieldConfig.fieldType, selectLabelMaps[colOpt.key]);
         },
       });
     });
@@ -153,7 +201,7 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
       if (visibleColumns[key] !== false) cols.push(c);
     });
     return cols;
-  }, [orderedVisibleColumns, fields, customColumns, visibleColumns, getFieldValue]);
+  }, [orderedVisibleColumns, fields, customColumns, visibleColumns, getFieldValue, selectLabelMaps]);
 
   const settingsTrigger = (
     <Tooltip title="选择要显示的列">

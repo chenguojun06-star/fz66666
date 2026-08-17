@@ -59,14 +59,37 @@ function getFieldValue(record: Record<string, unknown>, fieldKey: string): unkno
 function renderValue(
   value: unknown,
   fieldType?: string,
-  _optionsJson?: string | null
+  optionsJson?: string | null
 ): React.ReactNode {
   if (value === undefined || value === null || value === '') return '-';
+
+  // select/multiselect 选项映射（optionsJson 为 [{label, value}] 或字符串数组），避免直接显示英文原始值
+  const optionLabelMap: Record<string, string> = (() => {
+    if (!optionsJson) return {};
+    try {
+      const parsed = JSON.parse(optionsJson);
+      if (!Array.isArray(parsed)) return {};
+      const map: Record<string, string> = {};
+      parsed.forEach((item: unknown) => {
+        if (typeof item === 'string') {
+          map[item] = item;
+        } else if (item && typeof item === 'object') {
+          const opt = item as { label?: unknown; value?: unknown };
+          const label = opt.label ?? opt.value;
+          const val = opt.value ?? opt.label;
+          if (label != null && val != null) map[String(val)] = String(label);
+        }
+      });
+      return map;
+    } catch {
+      return {};
+    }
+  })();
 
   switch (fieldType) {
     case 'select': {
       const str = String(value);
-      return <Tag>{str}</Tag>;
+      return <Tag>{optionLabelMap[str] ?? str}</Tag>;
     }
     case 'multiselect': {
       const arr = Array.isArray(value) ? value : String(value).split(',').filter(Boolean);
@@ -74,7 +97,7 @@ function renderValue(
       return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {arr.map((v: string | number, i: number) => (
-            <Tag key={i}>{String(v)}</Tag>
+            <Tag key={i}>{optionLabelMap[String(v)] ?? String(v)}</Tag>
           ))}
         </div>
       );
