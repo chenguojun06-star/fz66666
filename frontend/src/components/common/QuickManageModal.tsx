@@ -37,10 +37,10 @@ interface EditDraft {
 
 const emptyDraft: EditDraft = { name: '', contact: '', phone: '', address: '' };
 
-const MODE_META: Record<QuickManageMode, { defaultTitle: string; nameLabel: string; unit: string; hasContact: boolean }> = {
-  dict: { defaultTitle: '选项', nameLabel: '选项名称', unit: '个选项', hasContact: false },
-  customer: { defaultTitle: '客户', nameLabel: '公司名称', unit: '个客户', hasContact: true },
-  supplier: { defaultTitle: '供应商', nameLabel: '供应商名称', unit: '个供应商', hasContact: true },
+const MODE_META: Record<QuickManageMode, { defaultTitle: string; nameLabel: string; unit: string; hasContact: boolean; searchPlaceholder: string }> = {
+  dict: { defaultTitle: '选项', nameLabel: '选项名称', unit: '个选项', hasContact: false, searchPlaceholder: '搜索选项名称' },
+  customer: { defaultTitle: '客户', nameLabel: '公司名称', unit: '个客户', hasContact: true, searchPlaceholder: '搜索公司名称/联系人/电话' },
+  supplier: { defaultTitle: '供应商', nameLabel: '供应商名称', unit: '个供应商', hasContact: true, searchPlaceholder: '搜索供应商名称/联系人/电话' },
 };
 
 /** 右侧编辑表单字段布局（label宽 + 控件） */
@@ -264,9 +264,11 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
       onCancel={onClose}
       footer={null}
       width={960}
+      minHeight={300}
+      initialHeight={400}
       styles={{ body: { paddingTop: 12 } }}
     >
-      <div style={{ display: 'flex', gap: 16, minHeight: 460 }}>
+      <div style={{ display: 'flex', gap: 16, minHeight: 240, maxHeight: 420 }}>
         {/* ===== 左侧：目录 ===== */}
         <div
           style={{
@@ -276,7 +278,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
         >
           <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>
             <Input.Search
-              placeholder="搜索名称/联系人/电话/地址"
+              placeholder={meta.searchPlaceholder}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               allowClear
@@ -300,9 +302,9 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             共 <Tag color="blue" style={{ marginInlineEnd: 0 }}>{rows.length}</Tag> {meta.unit}，点击左侧条目在右侧编辑
           </div>
           <Spin spinning={loading}>
-            <div style={{ maxHeight: 420, overflowY: 'auto', marginLeft: -4 }}>
+            <div style={{ flex: 1, minHeight: 120, overflowY: 'auto', marginLeft: -4 }}>
               {filtered.length === 0 && !loading ? (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" style={{ marginTop: 40 }} />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" style={{ marginTop: 24 }} />
               ) : (
                 filtered.map((row) => {
                   const active = !creating && row.id === selectedId;
@@ -416,7 +418,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={`点击左侧条目进行编辑，或点「新增${meta.defaultTitle}」创建`}
-              style={{ marginTop: 120 }}
+              style={{ marginTop: 60 }}
             />
           )}
         </div>
