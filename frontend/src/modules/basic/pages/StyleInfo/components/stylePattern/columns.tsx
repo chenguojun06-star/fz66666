@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react';
-import { Button, InputNumber, Typography, Tag, Space, Tooltip } from 'antd';
+import { Button, InputNumber, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { confirmDelete } from '@/utils/confirm';
 import { resolvePatternUnit, type PatternMaterialRow } from './helpers';
-import { getStockStatusConfig } from '../hooks/bomColumnsHelpers';
-import type { StyleBom } from '@/types/style';
 
 const { Text } = Typography;
 
@@ -19,10 +17,9 @@ export interface UseUsageColumnsParams {
   childReadOnly: boolean;
   setExtraSizes: React.Dispatch<React.SetStateAction<string[]>>;
   setUsageEdits: React.Dispatch<React.SetStateAction<Record<string | number, Record<string, number | null>>>>;
-  onApplyPickup?: (record: StyleBom) => void;
 }
 
-// 各码用量配比表格列
+// 各码用量配比表格列（纸样师傅录用量；库存/领取属物料清单表，不在此提供）
 export const useUsageColumns = ({
   allSizes,
   extraSizes,
@@ -33,7 +30,6 @@ export const useUsageColumns = ({
   childReadOnly,
   setExtraSizes,
   setUsageEdits,
-  onApplyPickup,
 }: UseUsageColumnsParams): TableColumnsType<PatternMaterialRow> => {
   return useMemo(() => {
     const cols: TableColumnsType<PatternMaterialRow> = [
@@ -60,47 +56,6 @@ export const useUsageColumns = ({
         key: 'specification',
         width: 120,
         render: (_: unknown, record: PatternMaterialRow) => record.bom.specification || record.bom.fabricWeight || '—',
-      },
-      {
-        title: '库存/领取',
-        key: 'stockPickup',
-        width: 130,
-        render: (_: unknown, record: PatternMaterialRow) => {
-          const bom = record.bom;
-          const status = bom.stockStatus;
-          if (!status) {
-            return <Tag color="default">未检查</Tag>;
-          }
-          const config = getStockStatusConfig(status);
-          const stockNum = bom.availableStock;
-          const hasStockNum = stockNum != null && stockNum > 0;
-          const stockText = hasStockNum ? `${stockNum}${bom.unit || ''}` : '';
-          const canPickup = status === 'sufficient' && !!onApplyPickup && hasStockNum;
-
-          if (canPickup) {
-            return (
-              <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-                <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
-                <Tooltip title="点击领取">
-                  <Button
-                    type="link"
-                    size="small"
-                    style={{ padding: 0, height: 'auto', fontSize: '13px', fontWeight: 500 }}
-                    onClick={() => onApplyPickup!(bom)}
-                  >
-                    {stockText} · 领取
-                  </Button>
-                </Tooltip>
-              </Space>
-            );
-          }
-          return (
-            <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-              <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
-              {stockText && <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{stockText}</span>}
-            </Space>
-          );
-        },
       },
       {
         title: (
@@ -196,5 +151,5 @@ export const useUsageColumns = ({
       });
     }
     return cols;
-  }, [allSizes, extraSizes, usageEdits, lossEdits, handleUsageChange, handleLossChange, childReadOnly, setExtraSizes, setUsageEdits, onApplyPickup]);
+  }, [allSizes, extraSizes, usageEdits, lossEdits, handleUsageChange, handleLossChange, childReadOnly, setExtraSizes, setUsageEdits]);
 };

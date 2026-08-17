@@ -6,8 +6,6 @@ import PatternUsageCard from './stylePattern/PatternUsageCard';
 import { useUsageColumns } from './stylePattern/columns';
 import type { SizeColorConfigInput } from './stylePattern/helpers';
 import useStylePatternTabData from './hooks/useStylePatternTabData';
-import MaterialPickupModal, { type MaterialPickupRecord } from '@/components/common/MaterialPickupModal';
-import type { StyleBom } from '@/types/style';
 
 interface Props {
   styleId: string | number;
@@ -40,7 +38,6 @@ const StylePatternTab: React.FC<Props> = ({
   sizeCompletedTime,
   linkedSizes,
 }) => {
-  const [pickupRecord, setPickupRecord] = React.useState<MaterialPickupRecord | null>(null);
   const {
     setPatternFiles,
     patternCheckResult,
@@ -65,20 +62,7 @@ const StylePatternTab: React.FC<Props> = ({
     handleSaveUsage,
   } = useStylePatternTabData({ styleId, patternStatus, readOnly, sizeColorConfig });
 
-  // 纸样开发领取面辅料：打开可编辑数量的弹窗
-  const handleApplyPickup = React.useCallback((record: StyleBom) => {
-    setPickupRecord({
-      materialId: record.materialId,
-      materialCode: record.materialCode,
-      materialName: record.materialName,
-      color: record.color,
-      size: '',
-      unit: record.unit,
-      defaultQuantity: record.devUsageAmount ?? record.usageAmount,
-      availableStock: record.availableStock,
-      stockStatus: record.stockStatus,
-    });
-  }, []);
+  // 纸样开发领取面辅料：已移除——各码用量表是纸样师傅录用量的地方，领取物料在物料清单（BOM）表操作
 
   const usageColumns = useUsageColumns({
     allSizes,
@@ -90,7 +74,6 @@ const StylePatternTab: React.FC<Props> = ({
     childReadOnly,
     setExtraSizes,
     setUsageEdits,
-    onApplyPickup: handleApplyPickup,
   });
 
   return (
@@ -174,16 +157,6 @@ const StylePatternTab: React.FC<Props> = ({
         onAddSizes={handleAddSizes}
         onSaveUsage={handleSaveUsage}
         setSizeOptions={setSizeOptions}
-      />
-
-      {/* 纸样开发领取面辅料弹窗 */}
-      <MaterialPickupModal
-        open={pickupRecord !== null}
-        record={pickupRecord}
-        usageType="PATTERN"
-        styleId={styleId}
-        styleNo={styleNo}
-        onCancel={() => setPickupRecord(null)}
       />
     </div>
   );
