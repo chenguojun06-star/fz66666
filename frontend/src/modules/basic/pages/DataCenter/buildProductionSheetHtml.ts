@@ -2,6 +2,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { sortSizeNames } from '@/utils/api';
 import { buildPrintHeader } from '@/utils/safePrint';
+import { sanitizeSheetRichHtml } from '@/utils/sheetRichText';
 
 /**
  * 生成生产制单打印 HTML
@@ -76,27 +77,22 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
   const coverUrl = resolveUrl(style.cover || coverFromAttachments || '');
 
   const rawReqText = String(style.description ?? '');
-  const productionReqHtml = rawReqText
-    ? rawReqText.split('\n').map(line => {
-        const escaped = esc(line);
-        if (line.trim() && !/^\s*\d/.test(line)) {
-          return `<strong style="font-weight:700">${escaped}</strong>`;
-        }
-        return escaped;
-      }).join('<br>')
-    : '';
-
-  // 制单图片（工艺制单上传的 bizType=workorder 图片，与详情页一致）
-  const sheetImageList: string[] = (Array.isArray(payload?.sheetImages) ? payload.sheetImages : [])
-    .map((u: any) => resolveUrl(u))
-    .filter(Boolean);
-  const sheetImagesHtml = sheetImageList.length ? `
-    <div class="section">
-      <div class="section-title">制单图片</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${sheetImageList.map((u) => `<img src="${esc(u)}" style="width:150px;height:150px;object-fit:cover;border:1px solid rgba(0,0,0,0.08);border-radius:6px" onerror="this.style.display='none'" />`).join('')}
-      </div>
-    </div>` : '';
+  // 生产要求：新数据为轻量 HTML（图片内嵌其中），按富文本白名单渲染；老数据纯文本按行加粗
+  const isRich = /<img\b/i.test(rawReqText) || /<br\s*\/?>/i.test(rawReqText);
+  const productionReqHtml = isRich
+    ? sanitizeSheetRichHtml(rawReqText, {
+        imgStyle: 'max-width:100%;width:260px;object-fit:contain;border:1px solid rgba(0,0,0,0.08);border-radius:6px;display:block;margin:6px 0',
+        resolveUrl: resolveUrl,
+      })
+    : rawReqText
+      ? rawReqText.split('\n').map(line => {
+          const escaped = esc(line);
+          if (line.trim() && !/^\s*\d/.test(line)) {
+            return `<strong style="font-weight:700">${escaped}</strong>`;
+          }
+          return escaped;
+        }).join('<br>')
+      : '';
 
   const categoryText = toCategoryCn(style.category);
   const seasonText = toSeasonCn(style.season);
@@ -181,8 +177,6 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
       <div class="section-title">生产要求</div>
       <div style="line-height:1.8;padding:8px 10px;border:1px solid var(--color-border-antd);border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:var(--color-text-quaternary)">暂无生产要求</span>'}</div>
     </div>
-
-    ${sheetImagesHtml}
 
     ${sampleReviewHtml}
 

@@ -1,62 +1,100 @@
-import React, { useRef, useState } from 'react';
-import { Button, Image, Input, Space, Spin, Tooltip } from 'antd';
-import { DeleteOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import React, { useEffect, useRef } from 'react';
+import { Button, Space } from 'antd';
+import { plainTextToSheetHtml } from '@/utils/sheetRichText';
+import { message as warnMessage } from '@/utils/antdStatic';
 
 interface Props {
   productionReqLocked: boolean;
   productionReqSaving: boolean;
+  /** 生产要求内容（老数据纯文本 / 新数据轻量 HTML，含内嵌制单图片） */
   allRequirements: string;
-  /** 制单图片 URL 列表（bizType=workorder，与打印同源） */
-  sheetImages: string[];
   sheetImageMax: number;
   sheetUploading: boolean;
-  onUploadSheetFiles: (files: File[]) => void;
-  onRemoveSheetImage: (url: string) => void;
+  /** 上传一张图片到附件库（bizType=workorder），返回 URL */
+  onUploadSheetImage: (file: File) => Promise<string>;
   onProductionReqSave: () => void;
   onDownloadWorkorder: () => void;
   onPrintWorkorder: () => void;
   onOpenOcr: () => void;
-  onTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  /** 编辑器内容变化（轻量 HTML） */
+  onContentChange: (html: string) => void;
 }
-
-const CARD = 96;
 
 const ProductionRequirementsSection: React.FC<Props> = ({
   productionReqLocked,
   productionReqSaving,
   allRequirements,
-  sheetImages,
   sheetImageMax,
   sheetUploading,
-  onUploadSheetFiles,
-  onRemoveSheetImage,
+  onUploadSheetImage,
   onProductionReqSave,
   onDownloadWorkorder,
   onPrintWorkorder,
   onOpenOcr,
-  onTextChange,
+  onContentChange,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewIndex, setPreviewIndex] = useState(0);
-
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  // 上次上报给外部的 HTML；外部新值 != 上次上报时才回写编辑器（避免打断光标）
+  const lastReportedRef = useRef<string>('');
   const canEdit = !productionReqLocked;
-  const previewSrcs = sheetImages.map((u) => getFullAuthedFileUrl(u));
 
-  const pickFiles = (files: FileList | null) => {
-    const imgs = Array.from(files || []).filter((f) => f.type.startsWith('image/'));
-    if (imgs.length > 0) onUploadSheetFiles(imgs);
+  // 外部值 → 编辑器（初始加载 / OCR 追加 / 切换款式）
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const nextHtml = plainTextToSheetHtml(allRequirements);
+    if (nextHtml !== lastReportedRef.current || el.innerHTML !== nextHtml) {
+      if (el.innerHTML !== nextHtml) el.innerHTML = nextHtml;
+      lastReportedRef.current = nextHtml;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRequirements]);
+
+  const countImages = () => editorRef.current?.querySelectorAll('img').length ?? 0;
+
+  const insertHtmlAtCaret = (html: string) => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    document.execCommand('insertHTML', false, html);
+  };
+
+  /** 粘贴：图片文件 → 上传后插入光标处；其余一律按纯文本插入（防带样式标签） */
+  const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (!canEdit) return;
+    const files = Array.from(e.clipboardData?.files || []).filter((f) => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      e.preventDefault();
+      const cur = countImages();
+      if (cur + files.length > sheetImageMax) {
+        warnMessage.warning(`图片最多 ${sheetImageMax} 张（当前 ${cur} 张）`);
+        return;
+      }
+      for (const file of files) {
+        try {
+          const url = await onUploadSheetImage(file);
+          insertHtmlAtCaret(`<img src="${url}" style="max-width:100%;width:240px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;display:block;margin:6px 0" /><br>`);
+        } catch (err) {
+          warnMessage.warning(err instanceof Error ? err.message : '图片上传失败');
+        }
+      }
+      lastReportedRef.current = editorRef.current?.innerHTML ?? '';
+      onContentChange(lastReportedRef.current);
+      return;
+    }
+    // 纯文本粘贴（去掉富文本样式）
+    e.preventDefault();
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (text) document.execCommand('insertText', false, text);
   };
 
   return (
     <div style={{
-      border: '1px solid var(--color-border, var(--color-border))',
+      border: '1px solid var(--color-border, rgba(0,0,0,0.1))',
       borderRadius: 6,
       padding: '16px',
       marginBottom: 16,
-      background: 'var(--color-bg-card, var(--color-bg-base))',
+      background: 'var(--color-bg-card, #fff)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -67,143 +105,67 @@ const ProductionRequirementsSection: React.FC<Props> = ({
             paddingLeft: 10,
             borderLeft: '3px solid var(--color-primary)',
           }}>生产要求</span>
+          {sheetUploading && <span style={{ fontSize: 12, color: 'var(--color-primary)' }}>图片上传中…</span>}
         </div>
         <Space size={8} wrap>
           {!productionReqLocked && (
-            <Button
-              type="primary"
-              loading={productionReqSaving}
-              onClick={onProductionReqSave}
-            >
+            <Button type="primary" loading={productionReqSaving} onClick={onProductionReqSave}>
               保存生产要求
             </Button>
           )}
-          <Button onClick={onDownloadWorkorder}>
-            下载制单
-          </Button>
-          <Button onClick={onPrintWorkorder}>
-            打印制单
-          </Button>
-          {!productionReqLocked && (
-            <Button onClick={onOpenOcr}>
-              AI识别工艺单
-            </Button>
-          )}
+          <Button onClick={onDownloadWorkorder}>下载制单</Button>
+          <Button onClick={onPrintWorkorder}>打印制单</Button>
+          {!productionReqLocked && <Button onClick={onOpenOcr}>AI识别工艺单</Button>}
         </Space>
       </div>
 
-      {/* 制单图片：一排方形大图 + ➕上传卡，图片下方操作按钮，整行与下方文本框左对齐 */}
-      <div
-        style={{
-          display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-start',
-          marginBottom: 6,
-          outline: dragOver ? '2px dashed var(--color-primary)' : 'none',
-          outlineOffset: 4,
-        }}
-        onDragOver={(e) => { if (canEdit) { e.preventDefault(); setDragOver(true); } }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          if (!canEdit) return;
-          e.preventDefault();
-          setDragOver(false);
-          pickFiles(e.dataTransfer.files);
-        }}
-      >
-        {previewSrcs.length > 0 && (
-          <Image.PreviewGroup
-            preview={{ open: previewOpen, onOpenChange: setPreviewOpen, current: previewIndex }}
-            items={previewSrcs}
-          >
-            <Image src={previewSrcs[0]} style={{ display: 'none' }} preview={false} />
-          </Image.PreviewGroup>
-        )}
-        {sheetImages.map((url, idx) => (
-          <div key={url} style={{ width: CARD }}>
-            <div style={{
-              width: CARD, height: CARD, borderRadius: 6, overflow: 'hidden',
-              border: '1px solid var(--color-border-light, rgba(0,0,0,0.1))',
-              background: 'var(--color-bg-base, #fff)',
-            }}>
-              <img src={getFullAuthedFileUrl(url)} alt={`制单图${idx + 1}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            </div>
-            {/* 操作按钮：固定在图片下方，不藏 hover */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 4, height: 22 }}>
-              <Tooltip title="查看大图">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, color: 'var(--color-primary, #1677ff)', cursor: 'pointer' }} onClick={() => { setPreviewIndex(idx); setPreviewOpen(true); }}>
-                  <EyeOutlined /> 预览
-                </span>
-              </Tooltip>
-              {canEdit && (
-                <Tooltip title="删除这张图">
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 12, color: 'var(--color-danger, #ff4d4f)', cursor: 'pointer' }} onClick={() => onRemoveSheetImage(url)}>
-                    <DeleteOutlined /> 删除
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-          </div>
-        ))}
-        {/* ➕ 上传卡：点击选择文件 */}
-        {canEdit && sheetImages.length < sheetImageMax && (
-          <div style={{ width: CARD }}>
-            <div
-              style={{
-                width: CARD, height: CARD, borderRadius: 6, cursor: 'pointer',
-                border: '1px dashed rgba(0,0,0,0.3)', background: 'rgba(0,0,0,0.02)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-                color: 'rgba(0,0,0,0.45)',
-              }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {sheetUploading ? <Spin size="small" /> : <PlusOutlined style={{ fontSize: 24 }} />}
-              <span style={{ fontSize: 12 }}>上传图片</span>
-            </div>
-            <div style={{ textAlign: 'center', marginTop: 4, height: 22, lineHeight: '22px', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
-              {sheetImages.length}/{sheetImageMax}
-            </div>
-          </div>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: 'none' }}
-          onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }}
-        />
-      </div>
       {canEdit && (
         <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, rgba(0,0,0,0.45))', marginBottom: 8 }}>
-          上传方式：点击「+ 上传图片」选择文件，或直接把图片拖进本区域，或在下方文本框里 Ctrl+V 粘贴截图；图片会随「打印制单 / 下载制单」一并输出
+          在下方内容里直接 Ctrl+V 粘贴截图即可插入图片（最多 {sheetImageMax} 张），图片随文字一起保存并按顺序打印；选中图片按 Delete 可删除
         </div>
       )}
 
-      <Input.TextArea
-        id="productionRequirements"
-        value={allRequirements}
-        onChange={onTextChange}
-        disabled={productionReqLocked}
-        placeholder="请输入生产要求，每行填写一条内容&#10;例如：&#10;1. 面料预缩水处理&#10;2. 缝制线迹密度12针/3cm&#10;3. 领型对称偏差≤0.3cm"
-        autoSize={{ minRows: 12 }}
-        onPaste={(e) => {
-          if (!canEdit) return;
-          const files = Array.from(e.clipboardData?.files || []).filter((f) => f.type.startsWith('image/'));
-          if (files.length > 0) {
+      {/* 所见即所得编辑器：图片内嵌在文字内容中 */}
+      <div
+        ref={editorRef}
+        contentEditable={canEdit}
+        suppressContentEditableWarning
+        onPaste={(e) => { void handlePaste(e); }}
+        onInput={() => {
+          const html = editorRef.current?.innerHTML ?? '';
+          lastReportedRef.current = html;
+          onContentChange(html);
+        }}
+        onDrop={(e) => {
+          // 拖拽图片文件同样上传后插入
+          const files = Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/'));
+          if (files.length > 0 && canEdit) {
             e.preventDefault();
-            onUploadSheetFiles(files);
+            const evt = {
+              clipboardData: { files },
+              preventDefault: () => {},
+            } as unknown as React.ClipboardEvent<HTMLDivElement>;
+            void handlePaste(evt);
           }
         }}
         style={{
+          minHeight: 320,
+          maxHeight: 560,
+          overflowY: 'auto',
+          padding: '14px 16px',
+          borderRadius: 6,
+          border: '1px solid rgba(0,0,0,0.15)',
+          background: '#fff',
           fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace",
           fontSize: 14,
           lineHeight: '2',
-          padding: '14px 16px',
-          borderRadius: 6,
-          minHeight: 320,
+          outline: 'none',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
         }}
       />
     </div>
   );
-};
+}
 
 export default ProductionRequirementsSection;

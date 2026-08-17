@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Form } from 'antd';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
@@ -39,83 +39,29 @@ export function useStyleProductionTabData(props: StyleProductionTabProps) {
   const [ocrText, setOcrText] = useState('');
   const [ocrError, setOcrError] = useState('');
 
-  // ---- 工艺制单图片（附件库 bizType=workorder，即时上传/删除） ----
-  const [sheetImages, setSheetImages] = useState<string[]>([]);
-  const [sheetImageMap, setSheetImageMap] = useState<Map<string, string>>(new Map());
+  // ---- 工艺制单图片（编辑器内嵌式：粘贴/拖拽上传到附件库 bizType=workorder，URL 内嵌 description） ----
   const [sheetUploading, setSheetUploading] = useState(false);
 
-  const loadSheetImages = useCallback(async () => {
-    if (!styleId) return;
-    try {
-      const res = await api.get<{ code: number; data: any[] }>(`/style/attachment/list?styleId=${styleId}&bizType=${SHEET_IMAGE_BIZ}`);
-      if (res.code === 200) {
-        const imgs = (res.data || []).filter((f: any) => {
-          const ft = String(f.fileType || '').toLowerCase();
-          return ft.includes('image') || /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(ft) || /^(png|jpe?g|gif|webp|bmp|svg)$/.test(ft);
-        });
-        const map = new Map<string, string>();
-        imgs.forEach((f: any) => map.set(String(f.fileUrl), String(f.id)));
-        setSheetImageMap(map);
-        setSheetImages(imgs.map((f: any) => String(f.fileUrl)));
-      }
-    } catch {
-      // 制单图片加载失败不阻塞文本区
-    }
-  }, [styleId]);
-
-  useEffect(() => { void loadSheetImages(); }, [loadSheetImages]);
-
-  /** 上传一张制单图片（即时保存到附件库） */
+  /** 上传一张制单图片到附件库，返回 URL（数量上限由编辑器粘贴处校验） */
   const uploadSheetImage = useCallback(async (file: File): Promise<string> => {
     if (!styleId) throw new Error('请先保存基础信息');
-    if (sheetImages.length >= SHEET_IMAGE_MAX) throw new Error(`最多 ${SHEET_IMAGE_MAX} 张`);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('styleId', String(styleId));
-    formData.append('bizType', SHEET_IMAGE_BIZ);
-    const res = await api.post<{ code: number; data: { fileUrl?: string } | string; message?: string }>(
-      '/style/attachment/upload', formData, { timeout: 60000 }
-    );
-    if (res.code !== 200) throw new Error(res.message || '上传失败');
-    const url = typeof res.data === 'string' ? res.data : res.data?.fileUrl;
-    if (!url) throw new Error('上传失败');
-    await loadSheetImages();
-    return url;
-  }, [styleId, sheetImages.length, loadSheetImages]);
-
-  /** 删除一张制单图片（按 url 映射到附件 id） */
-  const removeSheetImage = useCallback(async (url: string) => {
-    const id = sheetImageMap.get(url);
-    if (!id) { await loadSheetImages(); return; }
-    try {
-      await api.delete(`/style/attachment/${id}`);
-    } finally {
-      await loadSheetImages();
-    }
-  }, [sheetImageMap, loadSheetImages]);
-
-  /** 批量上传制单图片（逐张上传，任一失败提示并继续刷新列表） */
-  const uploadSheetFiles = useCallback(async (files: File[]) => {
-    if (!styleId) { message.warning('请先保存基础信息'); return; }
-    if (files.length === 0) return;
     setSheetUploading(true);
-    let failed = 0;
-    let lastErr = '';
     try {
-      for (const file of files) {
-        try {
-          await uploadSheetImage(file);
-        } catch (e) {
-          failed += 1;
-          lastErr = e instanceof Error ? e.message : '上传失败';
-        }
-      }
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('styleId', String(styleId));
+      formData.append('bizType', SHEET_IMAGE_BIZ);
+      const res = await api.post<{ code: number; data: { fileUrl?: string } | string; message?: string }>(
+        '/style/attachment/upload', formData, { timeout: 60000 }
+      );
+      if (res.code !== 200) throw new Error(res.message || '上传失败');
+      const url = typeof res.data === 'string' ? res.data : res.data?.fileUrl;
+      if (!url) throw new Error('上传失败');
+      return url;
     } finally {
       setSheetUploading(false);
-      await loadSheetImages();
     }
-    if (failed > 0) message.error(`有 ${failed} 张上传失败${lastErr ? `：${lastErr}` : ''}`);
-  }, [styleId, uploadSheetImage, loadSheetImages]);
+  }, [styleId]);
 
   // 直接读取原文，不做任何合并 / 过滤 / trim
   const allRequirements = String(productionReqRows[0] ?? '');
@@ -168,7 +114,6 @@ export function useStyleProductionTabData(props: StyleProductionTabProps) {
     // 制单图片注入 payload（打印/下载同源，与详情页一致）
     const next = {
       ...(payload || {}),
-      sheetImages,
       style: {
         ...((payload || {})?.style || {}),
         ...(productionReqEditable ? { description: String(productionReqRows[0] ?? '') } : {}),
@@ -242,9 +187,9 @@ export function useStyleProductionTabData(props: StyleProductionTabProps) {
     setOcrText('');
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // 整段文本存 index 0，不拆行、不限行数、不修改任何内容
-    onProductionReqChange(0, e.target.value);
+  const handleContentChange = (html: string) => {
+    // 编辑器内容（含内嵌图片的轻量 HTML）整段存 index 0
+    onProductionReqChange(0, html);
   };
 
   const closeOcrModal = () => setOcrModalOpen(false);
@@ -267,12 +212,10 @@ export function useStyleProductionTabData(props: StyleProductionTabProps) {
   return {
     // 数据
     allRequirements,
-    // 工艺制单图片
-    sheetImages,
+    // 工艺制单图片（编辑器内嵌式）
     sheetImageMax: SHEET_IMAGE_MAX,
     sheetUploading,
-    uploadSheetFiles,
-    removeSheetImage,
+    uploadSheetImage,
     // 样衣审核
     reviewModalVisible,
     reviewSaving,
@@ -297,7 +240,7 @@ export function useStyleProductionTabData(props: StyleProductionTabProps) {
     closeOcrModal,
     handleOcrFileSelect,
     handleOcrFileRemove,
-    // textarea
-    handleTextChange,
+    // 编辑器
+    handleContentChange,
   };
 }

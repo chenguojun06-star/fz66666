@@ -32,11 +32,9 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
 
   const {
     allRequirements,
-    sheetImages,
     sheetImageMax,
     sheetUploading,
-    uploadSheetFiles,
-    removeSheetImage,
+    uploadSheetImage,
     reviewModalVisible,
     reviewSaving,
     reviewForm,
@@ -58,7 +56,7 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
     closeOcrModal,
     handleOcrFileSelect,
     handleOcrFileRemove,
-    handleTextChange,
+    handleContentChange,
   } = useStyleProductionTabData(props);
 
   return (
@@ -98,16 +96,14 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
         productionReqLocked={productionReqLocked}
         productionReqSaving={productionReqSaving}
         allRequirements={allRequirements}
-        sheetImages={sheetImages}
         sheetImageMax={sheetImageMax}
         sheetUploading={sheetUploading}
-        onUploadSheetFiles={uploadSheetFiles}
-        onRemoveSheetImage={removeSheetImage}
+        onUploadSheetImage={uploadSheetImage}
         onProductionReqSave={onProductionReqSave}
         onDownloadWorkorder={downloadWorkorder}
         onPrintWorkorder={printWorkorder}
         onOpenOcr={handleOcrOpen}
-        onTextChange={handleTextChange}
+        onContentChange={handleContentChange}
       />
 
       {/* 样衣审核 Modal */}
