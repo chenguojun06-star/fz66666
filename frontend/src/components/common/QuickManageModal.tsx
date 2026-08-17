@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Empty, Input, Popconfirm, Space, Spin, Table, Tag, Tooltip } from 'antd';
-import { PlusOutlined, QuestionCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { App, Button, Empty, Input, Popconfirm, Spin, Tag, Tooltip } from 'antd';
+import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined, SaveOutlined, SyncOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import factoryApi from '@/services/system/factoryApi';
 import { customerApi } from '@/services/crm/customerApi';
@@ -35,144 +35,201 @@ interface EditDraft {
   address?: string;
 }
 
-const MODE_META: Record<QuickManageMode, { defaultTitle: string; unit: string; width: number; hasContact: boolean }> = {
-  dict: { defaultTitle: '选项维护', unit: '个选项', width: 480, hasContact: false },
-  customer: { defaultTitle: '客户维护', unit: '个客户', width: 820, hasContact: true },
-  supplier: { defaultTitle: '供应商维护', unit: '个供应商', width: 820, hasContact: true },
+const emptyDraft: EditDraft = { name: '', contact: '', phone: '', address: '' };
+
+const MODE_META: Record<QuickManageMode, { defaultTitle: string; nameLabel: string; unit: string; hasContact: boolean }> = {
+  dict: { defaultTitle: '选项', nameLabel: '选项名称', unit: '个选项', hasContact: false },
+  customer: { defaultTitle: '客户', nameLabel: '公司名称', unit: '个客户', hasContact: true },
+  supplier: { defaultTitle: '供应商', nameLabel: '供应商名称', unit: '个供应商', hasContact: true },
 };
 
+/** 右侧编辑表单字段布局（label宽 + 控件） */
+const FIELD_LABEL_STYLE: React.CSSProperties = {
+  width: 76, flexShrink: 0, fontSize: 13, color: 'var(--color-text-secondary, #595959)', paddingTop: 5,
+};
+const FIELD_ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 8, marginBottom: 12, alignItems: 'flex-start' };
+
 /**
- * 通用快捷维护弹窗（颜色图片管理同款风格）
- * - 表格布局：一行一条记录 + 行内编辑/删除，顶部快捷添加
- * - 每次操作即时保存并广播数据事件（dict:{type} / customer / supplier），当前表单下拉即时刷新
+ * 通用维护弹窗（左右宽屏布局：左侧目录 + 右侧编辑区）
+ * - 左侧：搜索框 + 目录列表（点击选中）+ 新增入口
+ * - 右侧：选中项的编辑表单（名称/联系人/电话/地址），保存/删除即时生效
+ * - 每次操作广播数据事件（dict:{type} / customer / supplier），当前表单下拉即时刷新
  * - 支持：字典词条 / CRM客户 / 物料供应商（含地址）
  */
 const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, title }) => {
   const { message } = App.useApp();
   const meta = MODE_META[mode];
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<ManageRow[]>([]);
-  const [addName, setAddName] = useState('');
-  const [addContact, setAddContact] = useState('');
-  const [addPhone, setAddPhone] = useState('');
-  const [addAddress, setAddAddress] = useState('');
   const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<EditDraft>({ name: '' });
+  const [rows, setRows] = useState<ManageRow[]>([]);
+  const [keyword, setKeyword] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<EditDraft>(emptyDraft);
 
   const notifyChanged = useCallback(() => {
     notifyDataUpdated(mode === 'dict' ? `dict:${dictType}` : mode);
   }, [mode, dictType]);
 
-  const loadList = useCallback(async () => {
-    if (mode === 'dict' && !dictType) return;
+  const loadList = useCallback(async (): Promise<ManageRow[]> => {
+    if (mode === 'dict' && !dictType) return [];
     setLoading(true);
+    let result: ManageRow[] = [];
     try {
       if (mode === 'dict') {
         const res: any = await api.get('/system/dict/list', { params: { dictType, page: 1, pageSize: 500 } });
         const list: any[] = res?.data?.records || res?.data || [];
-        setRows(
-          [...list]
-            .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-            .map((r) => ({ id: String(r.id), name: r.dictLabel ?? '' }))
-        );
+        result = [...list]
+          .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+          .map((r) => ({ id: String(r.id), name: r.dictLabel ?? '' }));
       } else if (mode === 'customer') {
         const res = await customerApi.list({ page: 1, pageSize: 500 });
         const list = res?.data?.records || [];
-        setRows(
-          list.map((c) => ({
-            id: String(c.id),
-            name: c.companyName,
-            contact: c.contactPerson,
-            phone: c.contactPhone,
-            address: c.address,
-          }))
-        );
+        result = list.map((c) => ({
+          id: String(c.id),
+          name: c.companyName,
+          contact: c.contactPerson,
+          phone: c.contactPhone,
+          address: c.address,
+        }));
       } else {
         const res = await factoryApi.list({ pageSize: 1000, supplierType: 'MATERIAL', status: 'active' });
         const list = res?.data?.records || [];
-        setRows(
-          list.map((f) => ({
-            id: String(f.id),
-            name: f.factoryName,
-            contact: f.contactPerson,
-            phone: f.contactPhone,
-            address: f.address,
-          }))
-        );
+        result = list.map((f) => ({
+          id: String(f.id),
+          name: f.factoryName,
+          contact: f.contactPerson,
+          phone: f.contactPhone,
+          address: f.address,
+        }));
       }
+      setRows(result);
     } catch {
       message.error('加载列表失败');
     } finally {
       setLoading(false);
     }
+    return result;
   }, [mode, dictType, message]);
 
   useEffect(() => {
     if (open) {
-      setAddName(''); setAddContact(''); setAddPhone(''); setAddAddress('');
-      setEditingId(null);
+      setKeyword(''); setSelectedId(null); setCreating(false); setDraft(emptyDraft);
       loadList();
     }
   }, [open, loadList]);
 
-  const handleAdd = async () => {
-    const name = addName.trim();
-    if (!name) return;
-    if (rows.some((r) => r.name === name)) {
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return rows;
+    return rows.filter((r) =>
+      [r.name, r.contact, r.phone, r.address].some((v) => v && v.toLowerCase().includes(kw))
+    );
+  }, [rows, keyword]);
+
+  const selectedRow = rows.find((r) => r.id === selectedId) || null;
+
+  const selectRow = (row: ManageRow) => {
+    setCreating(false);
+    setSelectedId(row.id);
+    setDraft({ name: row.name, contact: row.contact, phone: row.phone, address: row.address });
+  };
+
+  const startCreate = () => {
+    setSelectedId(null);
+    setCreating(true);
+    setDraft(emptyDraft);
+  };
+
+  /** 保存：creating 走创建，否则走更新 */
+  const handleSave = async () => {
+    const name = draft.name.trim();
+    if (!name) {
+      message.warning(`请填写${meta.nameLabel}`);
+      return;
+    }
+    if (rows.some((r) => r.id !== selectedId && r.name === name)) {
       message.warning(`"${name}" 已存在`);
       return;
     }
     setSaving(true);
     try {
-      if (mode === 'dict') {
-        await api.post('/system/dict', {
-          dictType,
-          dictCode: name,
-          dictLabel: name,
-          sort: rows.length + 1,
-        });
-      } else if (mode === 'customer') {
-        await customerApi.create({
-          companyName: name,
-          contactPerson: addContact.trim() || undefined,
-          contactPhone: addPhone.trim() || undefined,
-          address: addAddress.trim() || undefined,
-          status: 'ACTIVE',
-          customerLevel: 'NORMAL',
-        } as any);
-      } else {
-        await factoryApi.create({
-          factoryName: name,
-          contactPerson: addContact.trim() || undefined,
-          contactPhone: addPhone.trim() || undefined,
-          address: addAddress.trim() || undefined,
-          supplierType: 'MATERIAL',
-          factoryType: 'EXTERNAL',
-          status: 'active',
-        } as any);
+      if (creating) {
+        if (mode === 'dict') {
+          await api.post('/system/dict', { dictType, dictCode: name, dictLabel: name, sort: rows.length + 1 });
+        } else if (mode === 'customer') {
+          await customerApi.create({
+            companyName: name,
+            contactPerson: draft.contact?.trim() || undefined,
+            contactPhone: draft.phone?.trim() || undefined,
+            address: draft.address?.trim() || undefined,
+            status: 'ACTIVE',
+            customerLevel: 'NORMAL',
+          } as any);
+        } else {
+          await factoryApi.create({
+            factoryName: name,
+            contactPerson: draft.contact?.trim() || undefined,
+            contactPhone: draft.phone?.trim() || undefined,
+            address: draft.address?.trim() || undefined,
+            supplierType: 'MATERIAL',
+            factoryType: 'EXTERNAL',
+            status: 'active',
+          } as any);
+        }
+        message.success(`已添加"${name}"`);
+        setCreating(false);
+        const newList = await loadList();
+        // 自动选中新加的条目（按名称匹配），右侧直接进入编辑态
+        const created = newList.find((r) => r.name === name);
+        if (created) {
+          setSelectedId(created.id);
+          setDraft({ name: created.name, contact: created.contact, phone: created.phone, address: created.address });
+        }
+      } else if (selectedRow) {
+        if (mode === 'dict') {
+          await api.put(`/system/dict/${selectedRow.id}`, {
+            id: Number(selectedRow.id), dictType, dictLabel: name, dictCode: name,
+          });
+        } else if (mode === 'customer') {
+          await customerApi.update(selectedRow.id, {
+            companyName: name,
+            contactPerson: draft.contact?.trim() || undefined,
+            contactPhone: draft.phone?.trim() || undefined,
+            address: draft.address?.trim() || undefined,
+          });
+        } else {
+          await factoryApi.update(selectedRow.id, {
+            factoryName: name,
+            contactPerson: draft.contact?.trim() || undefined,
+            contactPhone: draft.phone?.trim() || undefined,
+            address: draft.address?.trim() || undefined,
+          } as any);
+        }
+        message.success('已保存');
+        await loadList();
       }
-      message.success(`已添加"${name}"`);
-      setAddName(''); setAddContact(''); setAddPhone(''); setAddAddress('');
-      await loadList();
       notifyChanged();
     } catch {
-      message.error('添加失败');
+      message.error(creating ? '添加失败' : '保存失败');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (row: ManageRow) => {
+  const handleDelete = async () => {
+    if (!selectedRow) return;
     try {
       if (mode === 'dict') {
-        await api.delete(`/system/dict/${row.id}`);
+        await api.delete(`/system/dict/${selectedRow.id}`);
       } else if (mode === 'customer') {
-        await customerApi.delete(row.id);
+        await customerApi.delete(selectedRow.id);
       } else {
-        await factoryApi.delete(row.id);
+        await factoryApi.delete(selectedRow.id);
       }
-      message.success(`已删除"${row.name}"`);
+      message.success(`已删除"${selectedRow.name}"`);
+      setSelectedId(null);
+      setDraft(emptyDraft);
       await loadList();
       notifyChanged();
     } catch {
@@ -180,130 +237,25 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
     }
   };
 
-  const startEdit = (row: ManageRow) => {
-    setEditingId(row.id);
-    setDraft({ name: row.name, contact: row.contact, phone: row.phone, address: row.address });
-  };
-
-  const saveEdit = async (row: ManageRow) => {
-    const name = draft.name.trim();
-    if (!name) return;
-    if (rows.some((r) => r.id !== row.id && r.name === name)) {
-      message.warning(`"${name}" 已存在`);
-      return;
-    }
-    try {
-      if (mode === 'dict') {
-        await api.put(`/system/dict/${row.id}`, { id: Number(row.id), dictType, dictLabel: name, dictCode: name });
-      } else if (mode === 'customer') {
-        await customerApi.update(row.id, {
-          companyName: name,
-          contactPerson: draft.contact?.trim() || undefined,
-          contactPhone: draft.phone?.trim() || undefined,
-          address: draft.address?.trim() || undefined,
-        });
-      } else {
-        await factoryApi.update(row.id, {
-          factoryName: name,
-          contactPerson: draft.contact?.trim() || undefined,
-          contactPhone: draft.phone?.trim() || undefined,
-          address: draft.address?.trim() || undefined,
-        } as any);
-      }
-      message.success('已保存');
-      setEditingId(null);
-      await loadList();
-      notifyChanged();
-    } catch {
-      message.error('保存失败');
-    }
-  };
-
-  const cellInput = (field: keyof EditDraft, placeholder: string, width?: number) => (
-    <Input
-      size="small"
-      value={draft[field]}
-      onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
-      onPressEnter={() => editingId && saveEdit(rows.find((r) => r.id === editingId)!)}
-      placeholder={placeholder}
-      style={{ width: width ?? '100%' }}
-    />
-  );
-
-  const columns = useMemo(() => {
-    const cols: any[] = [
-      {
-        title: mode === 'dict' ? '选项名' : mode === 'customer' ? '公司名称' : '供应商名称',
-        dataIndex: 'name',
-        key: 'name',
-        width: meta.hasContact ? 170 : undefined,
-        render: (v: string, record: ManageRow) =>
-          editingId === record.id ? cellInput('name', '名称') : <span style={{ fontWeight: 500 }}>{v}</span>,
-      },
-    ];
-    if (meta.hasContact) {
-      cols.push(
-        {
-          title: '联系人',
-          dataIndex: 'contact',
-          key: 'contact',
-          width: 100,
-          render: (v: string, record: ManageRow) =>
-            editingId === record.id ? cellInput('contact', '联系人') : v || '-',
-        },
-        {
-          title: '联系电话',
-          dataIndex: 'phone',
-          key: 'phone',
-          width: 130,
-          render: (v: string, record: ManageRow) =>
-            editingId === record.id ? cellInput('phone', '联系电话') : v || '-',
-        },
-        {
-          title: '地址',
-          dataIndex: 'address',
-          key: 'address',
-          ellipsis: true,
-          render: (v: string, record: ManageRow) =>
-            editingId === record.id ? cellInput('address', '地址') : v || '-',
-        }
-      );
-    }
-    cols.push({
-      title: '操作',
-      key: 'action',
-      width: meta.hasContact ? 150 : 120,
-      render: (_: unknown, record: ManageRow) =>
-        editingId === record.id ? (
-          <Space size={4}>
-            <Button type="link" size="small" onClick={() => saveEdit(record)}>保存</Button>
-            <Button type="link" size="small" onClick={() => setEditingId(null)}>取消</Button>
-          </Space>
-        ) : (
-          <Space size={0}>
-            <Button type="link" size="small" onClick={() => startEdit(record)}>编辑</Button>
-            <Popconfirm
-              title={`删除"${record.name}"？`}
-              description={mode === 'dict' ? '删除后已使用该值的记录不会自动更新' : '删除后不可恢复，请谨慎操作'}
-              icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
-              okText="删除"
-              okButtonProps={{ danger: true }}
-              cancelText="取消"
-              onConfirm={() => handleDelete(record)}
-            >
-              <Button type="link" size="small" danger>删除</Button>
-            </Popconfirm>
-          </Space>
-        ),
-    });
-    return cols;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, editingId, draft, rows, meta.hasContact]);
-
-  const hint =
-    mode === 'dict'
-      ? '输入新选项回车即可添加；点「编辑」可改名。变更即时生效并同步到当前表单下拉选项。'
-      : '填写信息点击添加即可新建；点「编辑」可修改联系人/电话/地址。变更即时生效并同步到当前表单下拉选项。';
+  const fieldInput = (field: keyof EditDraft, placeholder: string, maxLength = 100, textarea = false) =>
+    textarea ? (
+      <Input.TextArea
+        value={draft[field]}
+        onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        autoSize={{ minRows: 2, maxRows: 4 }}
+      />
+    ) : (
+      <Input
+        value={draft[field]}
+        onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
+        onPressEnter={handleSave}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        allowClear
+      />
+    );
 
   return (
     <ResizableModal
@@ -311,60 +263,164 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
       open={open}
       onCancel={onClose}
       footer={null}
-      width={meta.width}
+      width={960}
       styles={{ body: { paddingTop: 12 } }}
     >
-      {/* 头部：统计 + 刷新 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <Space size={6} wrap>
-          <Tag color="blue">{rows.length} {meta.unit}</Tag>
-        </Space>
-        <Button size="small" icon={<SyncOutlined />} onClick={loadList} loading={loading}>刷新</Button>
-      </div>
-
-      {/* 快捷添加 */}
-      {meta.hasContact ? (
-        <Space.Compact style={{ width: '100%', marginBottom: 12 }} block>
-          <Input placeholder="名称（必填）" value={addName} onChange={(e) => setAddName(e.target.value)} onPressEnter={handleAdd} maxLength={100} style={{ width: '28%' }} />
-          <Input placeholder="联系人" value={addContact} onChange={(e) => setAddContact(e.target.value)} maxLength={50} style={{ width: '16%' }} />
-          <Input placeholder="联系电话" value={addPhone} onChange={(e) => setAddPhone(e.target.value)} maxLength={30} style={{ width: '20%' }} />
-          <Input placeholder="地址" value={addAddress} onChange={(e) => setAddAddress(e.target.value)} maxLength={200} style={{ width: '26%' }} />
-          <Tooltip title="添加后立即生效">
-            <Button type="primary" icon={<PlusOutlined />} loading={saving} onClick={handleAdd} style={{ width: '10%' }}>添加</Button>
-          </Tooltip>
-        </Space.Compact>
-      ) : (
-        <Input.Search
-          placeholder="输入新选项，回车或点添加"
-          value={addName}
-          onChange={(e) => setAddName(e.target.value)}
-          onSearch={handleAdd}
-          enterButton={<Button type="primary" icon={<PlusOutlined />} loading={saving}>添加</Button>}
-          style={{ marginBottom: 12 }}
-          allowClear
-        />
-      )}
-
-      {/* 说明条 */}
-      <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-        {hint}
-      </div>
-
-      {/* 列表表格 */}
-      <Spin spinning={loading}>
-        {rows.length === 0 && !loading ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`暂无数据，在上方直接添加`} />
-        ) : (
-          <Table
+      <div style={{ display: 'flex', gap: 16, minHeight: 460 }}>
+        {/* ===== 左侧：目录 ===== */}
+        <div
+          style={{
+            width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column',
+            borderRight: '1px solid #f0f0f0', paddingRight: 12,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>
+            <Input.Search
+              placeholder="搜索名称/联系人/电话/地址"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              allowClear
+              size="small"
+              style={{ flex: 1 }}
+            />
+            <Tooltip title="刷新列表">
+              <Button size="small" icon={<SyncOutlined />} onClick={loadList} loading={loading} />
+            </Tooltip>
+          </div>
+          <Button
             size="small"
-            rowKey="id"
-            columns={columns}
-            dataSource={rows}
-            pagination={rows.length > 8 ? { pageSize: 8, showSizeChanger: false } : false}
-            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
-          />
-        )}
-      </Spin>
+            icon={<PlusOutlined />}
+            onClick={startCreate}
+            block
+            style={{ marginBottom: 10 }}
+          >
+            新增{meta.defaultTitle}
+          </Button>
+          <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+            共 <Tag color="blue" style={{ marginInlineEnd: 0 }}>{rows.length}</Tag> {meta.unit}，点击左侧条目在右侧编辑
+          </div>
+          <Spin spinning={loading}>
+            <div style={{ maxHeight: 420, overflowY: 'auto', marginLeft: -4 }}>
+              {filtered.length === 0 && !loading ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" style={{ marginTop: 40 }} />
+              ) : (
+                filtered.map((row) => {
+                  const active = !creating && row.id === selectedId;
+                  return (
+                    <div
+                      key={row.id}
+                      onClick={() => selectRow(row)}
+                      style={{
+                        padding: '8px 10px', borderRadius: 6, marginBottom: 4, cursor: 'pointer',
+                        background: active ? '#e8f2ff' : 'transparent',
+                        boxShadow: active ? 'inset 0 0 0 1px #bcd9ff' : 'none',
+                      }}
+                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#f5f6f8'; }}
+                      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {row.name}
+                      </div>
+                      {meta.hasContact && (
+                        <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {[row.contact, row.phone].filter(Boolean).join(' · ') || '—'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Spin>
+        </div>
+
+        {/* ===== 右侧：编辑区 ===== */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          {creating ? (
+            <>
+              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16 }}>新增{meta.defaultTitle}</div>
+              <div style={FIELD_ROW_STYLE}>
+                <span style={FIELD_LABEL_STYLE}>{meta.nameLabel}</span>
+                {fieldInput('name', `请输入${meta.nameLabel}`, 100)}
+              </div>
+              {meta.hasContact && (
+                <>
+                  <div style={FIELD_ROW_STYLE}>
+                    <span style={FIELD_LABEL_STYLE}>联系人</span>
+                    {fieldInput('contact', '请输入联系人（选填）', 50)}
+                  </div>
+                  <div style={FIELD_ROW_STYLE}>
+                    <span style={FIELD_LABEL_STYLE}>联系电话</span>
+                    {fieldInput('phone', '请输入联系电话（选填）', 30)}
+                  </div>
+                  <div style={FIELD_ROW_STYLE}>
+                    <span style={FIELD_LABEL_STYLE}>地址</span>
+                    {fieldInput('address', '请输入地址（选填）', 200, true)}
+                  </div>
+                </>
+              )}
+              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                <Button icon={<SaveOutlined />} loading={saving} onClick={handleSave}>添加并生效</Button>
+                <Button onClick={() => { setCreating(false); setDraft(emptyDraft); }}>取消</Button>
+              </div>
+              <div style={{ marginTop: 16, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                添加后立即生效，并同步到当前表单的下拉选项。
+              </div>
+            </>
+          ) : selectedRow ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <span style={{ fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  编辑：{selectedRow.name}
+                </span>
+                <Popconfirm
+                  title={`删除"${selectedRow.name}"？`}
+                  description={mode === 'dict' ? '删除后已使用该值的记录不会自动更新' : '删除后不可恢复，请谨慎操作'}
+                  icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
+                  okText="删除"
+                  okButtonProps={{ danger: true }}
+                  cancelText="取消"
+                  onConfirm={handleDelete}
+                >
+                  <Button danger icon={<DeleteOutlined />}>删除</Button>
+                </Popconfirm>
+              </div>
+              <div style={FIELD_ROW_STYLE}>
+                <span style={FIELD_LABEL_STYLE}>{meta.nameLabel}</span>
+                {fieldInput('name', `请输入${meta.nameLabel}`, 100)}
+              </div>
+              {meta.hasContact && (
+                <>
+                  <div style={FIELD_ROW_STYLE}>
+                    <span style={FIELD_LABEL_STYLE}>联系人</span>
+                    {fieldInput('contact', '请输入联系人', 50)}
+                  </div>
+                  <div style={FIELD_ROW_STYLE}>
+                    <span style={FIELD_LABEL_STYLE}>联系电话</span>
+                    {fieldInput('phone', '请输入联系电话', 30)}
+                  </div>
+                  <div style={FIELD_ROW_STYLE}>
+                    <span style={FIELD_LABEL_STYLE}>地址</span>
+                    {fieldInput('address', '请输入地址', 200, true)}
+                  </div>
+                </>
+              )}
+              <div style={{ marginTop: 8 }}>
+                <Button icon={<SaveOutlined />} loading={saving} onClick={handleSave}>保存</Button>
+              </div>
+              <div style={{ marginTop: 16, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                左侧点击其他条目可切换；保存即时生效，并同步到当前表单的下拉选项。
+              </div>
+            </>
+          ) : (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={`点击左侧条目进行编辑，或点「新增${meta.defaultTitle}」创建`}
+              style={{ marginTop: 120 }}
+            />
+          )}
+        </div>
+      </div>
     </ResizableModal>
   );
 };
