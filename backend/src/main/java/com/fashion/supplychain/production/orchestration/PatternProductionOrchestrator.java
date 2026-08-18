@@ -1370,8 +1370,19 @@ public class PatternProductionOrchestrator {
 
     /**
      * 指派样板生产给指定人员
+     * D-P2-7：扩展接收 quantity（多色多码场景下让用户在弹窗里确认/调整数量）
      */
     public void assignPattern(String patternId, String assignee) {
+        assignPattern(patternId, assignee, null);
+    }
+
+    /**
+     * 指派样板生产给指定人员（带数量）
+     * @param patternId 样板生产ID
+     * @param assignee 指派人员姓名
+     * @param quantity 指派数量（可选，null 或 <=0 表示不修改原数量）
+     */
+    public void assignPattern(String patternId, String assignee, Integer quantity) {
         if (!StringUtils.hasText(patternId)) {
             throw new IllegalArgumentException("样板生产ID不能为空");
         }
@@ -1387,6 +1398,14 @@ public class PatternProductionOrchestrator {
         pattern.setUpdateBy(UserContext.username());
         pattern.setUpdateTime(LocalDateTime.now());
 
+        // D-P2-7：若传入有效数量，更新 PatternProduction.quantity
+        // 多色多码场景下，工人需要明确"我负责多少件"
+        if (quantity != null && quantity > 0) {
+            Integer oldQty = pattern.getQuantity();
+            pattern.setQuantity(quantity);
+            log.info("[样衣指派] 数量更新: patternId={} oldQty={} newQty={}", patternId, oldQty, quantity);
+        }
+
         if ("PENDING".equals(currentStatus)) {
             pattern.setStatus("IN_PROGRESS");
             pattern.setReceiveTime(LocalDateTime.now());
@@ -1395,8 +1414,9 @@ public class PatternProductionOrchestrator {
 
         patternProductionService.updateById(pattern);
 
-        log.info("[样衣指派] patternId={} assignee={} oldStatus={} newStatus={}",
-                patternId, assignee, currentStatus, pattern.getStatus());
+        log.info("[样衣指派] patternId={} assignee={} color={} size={} qty={} oldStatus={} newStatus={}",
+                patternId, assignee, pattern.getColor(), pattern.getSize(), pattern.getQuantity(),
+                currentStatus, pattern.getStatus());
     }
 
     /**

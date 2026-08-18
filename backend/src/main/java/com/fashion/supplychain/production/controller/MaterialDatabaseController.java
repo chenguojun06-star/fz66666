@@ -53,6 +53,15 @@ public class MaterialDatabaseController {
         return Result.success(materialDatabaseOrchestrator.getById(id));
     }
 
+    /**
+     * D-P2-6：查询主面料关联的辅料列表
+     * 用于 BOM 选主面料时自动带出辅料，避免漏采购
+     */
+    @GetMapping("/{id}/companions")
+    public Result<java.util.List<MaterialDatabase>> getCompanions(@PathVariable String id) {
+        return Result.success(materialDatabaseOrchestrator.getCompanions(id));
+    }
+
     @PostMapping
     public Result<Boolean> save(@RequestBody MaterialDatabase material) {
         return Result.success(materialDatabaseOrchestrator.save(material));

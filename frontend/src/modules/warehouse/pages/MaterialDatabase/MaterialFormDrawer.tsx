@@ -1,10 +1,11 @@
-import React from 'react';
-import { Button, Col, Drawer, Form, Input, InputNumber, Row, Select } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Button, Col, Drawer, Form, Input, InputNumber, Row, Select, Spin } from 'antd';
 import type { FormInstance } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import MaterialColorCardRecognizer from '@/components/common/MaterialColorCardRecognizer';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import api from '@/utils/api';
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { MaterialDatabase } from '@/types/production';
 import { MATERIAL_TYPE_OPTIONS } from './types';
@@ -32,6 +33,32 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
   uploadImage, fetchMaterialCode, closeDialog, handleSubmit, submitLoading,
   toLocalDateTimeInputValue, isMobile,
 }) => {
+  // D-P2-6：拉取辅料列表用于"关联辅料"多选配置（仅在主面料类型时显示）
+  const [accessoryOptions, setAccessoryOptions] = useState<Array<{ id: string; materialCode?: string; materialName: string; supplierName?: string }>>([]);
+  const [accessoryLoading, setAccessoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    setAccessoryLoading(true);
+    (async () => {
+      try {
+        const res = await api.get<{ code: number; data?: { records?: Array<{ id: string; materialCode?: string; materialName: string; supplierName?: string }> } }>(
+          '/material/database/list',
+          { params: { materialType: 'accessory', page: 1, pageSize: 200 } },
+        );
+        if (cancelled) return;
+        const records = Array.isArray(res?.data?.records) ? res.data.records : [];
+        setAccessoryOptions(records);
+      } catch {
+        if (!cancelled) setAccessoryOptions([]);
+      } finally {
+        if (!cancelled) setAccessoryLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [visible]);
+
   return (
     <Drawer
       title={currentMaterial?.id ? '编辑物料信息' : (currentMaterial ? '复制物料信息' : '新增物料信息')}
@@ -146,6 +173,66 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
                 <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                   <Form.Item name="fabricComposition" label="成分"><Input placeholder="如：100%棉" /></Form.Item>
                 </Col>
+              </Row>
+            );
+          }}
+        </Form.Item>
+        {/* D-P2-6：关联辅料配置——仅在主面料（fabric）类型时显示，
+            配置后 BOM 选该主面料时自动带出关联辅料，避免漏采购 */}
+        <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
+          {({ getFieldValue }) => {
+            const materialType = getFieldValue('materialType');
+            const mt = String(materialType || '').toLowerCase();
+            if (mt !== 'fabric') return null;
+            // 后端 companionMaterialIds 是 JSON 字符串，前端表单字段直接存数组，
+            // 提交时由 useMaterialDatabaseActions.handleSubmit 序列化为 JSON 字符串
+            const rawCompanion = getFieldValue('companionMaterialIds');
+            const companionArr: string[] = (() => {
+              if (Array.isArray(rawCompanion)) return rawCompanion as string[];
+              if (typeof rawCompanion === 'string' && rawCompanion.trim().startsWith('[')) {
+                try { return JSON.parse(rawCompanion); } catch { return []; }
+              }
+              return [];
+            })();
+            return (
+              <Row gutter={[12, 8]}>
+                <Col xs={24}><div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginTop: 4, marginBottom: 8, color: 'var(--primary-color)' }}>关联辅料（BOM 自动带入）</div></Col>
+                <Col xs={24}>
+                  <Form.Item
+                    name="companionMaterialIds"
+                    label="关联辅料"
+                    tooltip="配置主面料关联的辅料（如拉链、纽扣等），样衣BOM 选该主面料时会自动带出辅料行，避免漏采购"
+                    // 用 normalize 在接收后端值时把 JSON 字符串解析成数组
+                    normalize={(value: unknown) => {
+                      if (Array.isArray(value)) return value;
+                      if (typeof value === 'string' && value.trim().startsWith('[')) {
+                        try { return JSON.parse(value); } catch { return []; }
+                      }
+                      return [];
+                    }}
+                  >
+                    <Select
+                      mode="multiple"
+                      showSearch
+                      placeholder="搜索并选择关联辅料（如拉链、纽扣）"
+                      optionFilterProp="label"
+                      notFoundContent={accessoryLoading ? <Spin size="small" /> : '暂无辅料，请先在物料资料中添加辅料'}
+                      options={accessoryOptions.map(a => ({
+                        value: a.id,
+                        label: `${a.materialName}${a.materialCode ? `（${a.materialCode}）` : ''}${a.supplierName ? ` · ${a.supplierName}` : ''}`,
+                      }))}
+                      style={{ width: '100%' }}
+                      allowClear
+                    />
+                  </Form.Item>
+                </Col>
+                {companionArr.length > 0 && (
+                  <Col xs={24}>
+                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                      已配置 {companionArr.length} 个关联辅料：BOM 选该主面料时会自动追加这些辅料行
+                    </span>
+                  </Col>
+                )}
               </Row>
             );
           }}

@@ -57,6 +57,70 @@ public class MaterialDatabaseOrchestrator {
         return db;
     }
 
+    /**
+     * D-P2-6：查询主面料关联的辅料列表
+     * 用于 BOM 选主面料时自动带出辅料，避免漏采购
+     * @param mainMaterialId 主面料ID
+     * @return 关联辅料列表（按 deleteFlag=0 + tenantId 过滤）
+     */
+    public java.util.List<MaterialDatabase> getCompanions(String mainMaterialId) {
+        if (!StringUtils.hasText(mainMaterialId)) {
+            throw new IllegalArgumentException("主面料ID不能为空");
+        }
+        MaterialDatabase main = getById(mainMaterialId);
+        String idsJson = main.getCompanionMaterialIds();
+        if (!StringUtils.hasText(idsJson)) {
+            return java.util.Collections.emptyList();
+        }
+        // 解析 JSON 数组 ["uuid1","uuid2"]
+        java.util.List<String> ids = parseCompanionIds(idsJson);
+        if (ids.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        // 一次性查所有关联辅料（按 tenant_id + delete_flag 过滤）
+        java.util.List<MaterialDatabase> companions = materialDatabaseService.lambdaQuery()
+                .in(MaterialDatabase::getId, ids)
+                .eq(MaterialDatabase::getTenantId, tenantId)
+                .and(w -> w.isNull(MaterialDatabase::getDeleteFlag).or().eq(MaterialDatabase::getDeleteFlag, 0))
+                .list();
+        // 按原 JSON 顺序返回（保持用户配置的顺序）
+        java.util.Map<String, MaterialDatabase> byId = new java.util.HashMap<>();
+        for (MaterialDatabase m : companions) {
+            byId.put(m.getId(), m);
+        }
+        java.util.List<MaterialDatabase> ordered = new java.util.ArrayList<>();
+        for (String id : ids) {
+            MaterialDatabase m = byId.get(id);
+            if (m != null) ordered.add(m);
+        }
+        return ordered;
+    }
+
+    /**
+     * 解析 companionMaterialIds JSON 数组字符串
+     * 兼容 ["uuid1","uuid2"] 和 ["uuid1", "uuid2"]（带空格）
+     */
+    private java.util.List<String> parseCompanionIds(String idsJson) {
+        if (!StringUtils.hasText(idsJson)) return java.util.Collections.emptyList();
+        String trimmed = idsJson.trim();
+        if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+            log.warn("[companion] companionMaterialIds 不是合法JSON数组: {}", idsJson);
+            return java.util.Collections.emptyList();
+        }
+        String inner = trimmed.substring(1, trimmed.length() - 1).trim();
+        if (inner.isEmpty()) return java.util.Collections.emptyList();
+        java.util.List<String> result = new java.util.ArrayList<>();
+        // 用逗号分隔，去引号和空格
+        for (String part : inner.split(",")) {
+            String s = part.trim().replaceAll("^\"|\"$", "").replaceAll("^'|'$", "").trim();
+            if (!s.isEmpty() && !"null".equals(s)) {
+                result.add(s);
+            }
+        }
+        return result;
+    }
+
     public boolean save(MaterialDatabase material) {
         if (material == null) {
             throw new IllegalArgumentException("参数为空");

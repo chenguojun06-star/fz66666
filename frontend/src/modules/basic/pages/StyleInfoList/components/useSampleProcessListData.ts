@@ -207,12 +207,15 @@ export default function useSampleProcessListData(
       const values = await assignForm.validateFields();
       setAssignLoading(true);
       const { default: api } = await import('@/utils/api');
+      // D-P2-7：把 quantity 一起提交，让后端更新 PatternProduction.quantity
+      // 工人在弹窗里明确"我负责多少件"，避免多色多码时不知数量
       await api.put(`/production/pattern/${patternProductionId}/assignee`, {
         assignee: values.assignee,
+        quantity: values.quantity,
         processName: assigningRow.name,
         processCode: assigningRow.processCode,
       });
-      message.success(`已将「${assigningRow.name}」指派给 ${values.assignee}`);
+      message.success(`已将「${assigningRow.name}」指派给 ${values.assignee}（${values.quantity}件）`);
       setAssignModalOpen(false);
       if (onRefresh) await onRefresh();
     } catch (e: any) {

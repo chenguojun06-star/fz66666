@@ -93,6 +93,15 @@ export function useMaterialDatabaseActions(deps: {
       const status = String(values?.status || 'pending').trim();
       const { createTime: _createTime, completedTime: _completedTime, ...rest } = values as any;
       const payload: Record<string, unknown> = { ...rest, materialType: getBaseMaterialType(values?.materialType || 'accessory'), status: status === 'completed' ? 'completed' : 'pending', image: String(values?.image || '').trim() || undefined };
+      // D-P2-6：companionMaterialIds 在前端表单中存数组，提交时序列化为 JSON 字符串与后端 VARCHAR 字段对齐
+      const companionRaw = (values as any)?.companionMaterialIds;
+      if (Array.isArray(companionRaw)) {
+        payload.companionMaterialIds = JSON.stringify(companionRaw);
+      } else if (typeof companionRaw === 'string' && companionRaw.trim()) {
+        payload.companionMaterialIds = companionRaw;
+      } else {
+        payload.companionMaterialIds = null;
+      }
       const isCopy = !currentMaterial?.id;
       const mode = isCopy ? 'create' : 'edit';
       if (mode === 'create') { unwrapApiData<boolean>(await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload), '新增失败'); return '新增成功'; }

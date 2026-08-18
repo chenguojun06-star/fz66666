@@ -123,6 +123,73 @@ const useBomMaterialFill = ({
       } catch {
         message.error('库存检查失败，请稍后重试');
       }
+
+      // D-P2-6：拉链辅料自动带入——选了主面料后调 companions 接口，
+      // 自动追加关联辅料为 BOM 新行，避免漏采购
+      // 仅当 materialType 是主面料（fabric）且 materialId 存在时触发
+      const matType = String(m.materialType || '').toLowerCase();
+      const matId = String((m as any).id || '').trim();
+      if (matType.startsWith('fabric') && matId) {
+        try {
+          const compRes = await api.get<{ code: number; data?: Array<Record<string, unknown>> }>(
+            `/material/database/${matId}/companions`,
+          );
+          const companions = Array.isArray(compRes?.data) ? compRes.data : [];
+          if (companions.length > 0) {
+            // 给每个辅料追加 BOM 新行（使用 tmp_ 前缀临时ID，保存时由后端分配正式ID）
+            const newRows: StyleBom[] = [];
+            const newFormValues: Record<string, StyleBom> = {};
+            companions.forEach((c, idx) => {
+              const newId = `tmp_companion_${Date.now()}_${idx}`;
+              const newRow: StyleBom = {
+                id: newId,
+                styleId: (merged as any).styleId,
+                materialType: 'accessoryA',
+                groupName: '',
+                materialCode: String(c.materialCode || '').trim(),
+                materialName: String(c.materialName || '').trim(),
+                fabricComposition: String(c.fabricComposition || '').trim(),
+                fabricWeight: String(c.fabricWeight || '').trim(),
+                color: String(c.color || '').trim(),
+                specification: String(c.specifications ?? c.specification ?? '').trim(),
+                sizeSpecMap: buildSizeSpecMap(String(c.specifications ?? c.specification ?? ''), (c as any).sizeSpecMap as string | undefined),
+                unit: String(c.unit || '').trim(),
+                patternUnit: String(c.unit || '').trim(),
+                conversionRate: Number(c.conversionRate ?? 1) || 1,
+                supplier: String(c.supplierName || '').trim(),
+                unitPrice: Number(c.unitPrice) || 0,
+                usageAmount: 0,
+                lossRate: 0,
+                totalPrice: 0,
+                imageUrls: c.image ? JSON.stringify([String(c.image).trim()]) : undefined,
+              } as StyleBom;
+              newRows.push(newRow);
+              newFormValues[String(newId)] = { ...newRow };
+            });
+
+            if (newRows.length > 0) {
+              // 先同步当前 form 值到 data，再追加辅料行（避免覆盖用户正在编辑的字段）
+              const allValues = form.getFieldsValue() || {};
+              setData(prev => sortBomRowsHelper([
+                ...(Array.isArray(prev) ? prev : []).map(item => {
+                  const key = String(item.id);
+                  return { ...item, ...(allValues[key] || {}) };
+                }),
+                ...newRows,
+              ]));
+              form.setFieldsValue({
+                ...allValues,
+                ...newFormValues,
+              });
+              const names = companions.map(c => String(c.materialName || '').trim()).filter(Boolean).join('、');
+              message.success(`已自动带入 ${newRows.length} 条关联辅料${names ? `（${names}）` : ''}，请填写用量后保存`);
+            }
+          }
+        } catch (err: any) {
+          // 辅料带入失败不阻塞主流程
+          console.warn('[companion] 自动带入辅料失败:', err?.message || err);
+        }
+      }
     },
     [buildSizeSpecMap, form, message, setData]
   );

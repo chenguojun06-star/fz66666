@@ -640,6 +640,8 @@ public class PatternProductionController {
 
     /**
      * 指派样板生产给指定人员
+     * D-P2-7：扩展接收 quantity（多色多码场景下让用户在弹窗里确认/调整数量）
+     * color/size 已在 PatternProduction 表里，弹窗只读展示，不在此接口修改
      */
     @PutMapping("/{patternId}/assignee")
     public Result<String> assignPattern(
@@ -650,7 +652,16 @@ public class PatternProductionController {
             if (!StringUtils.hasText(assignee)) {
                 return Result.fail("指派人员不能为空");
             }
-            patternProductionOrchestrator.assignPattern(patternId, assignee);
+            // 数量可选：用户在弹窗里可微调（如原样板 10 件，本次只指派 5 件给该工人）
+            Integer quantity = null;
+            Object qtyRaw = request.get("quantity");
+            if (qtyRaw != null) {
+                try {
+                    quantity = Integer.valueOf(String.valueOf(qtyRaw).trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            patternProductionOrchestrator.assignPattern(patternId, assignee, quantity);
             return Result.success("指派成功");
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new BusinessException(e.getMessage(), e);

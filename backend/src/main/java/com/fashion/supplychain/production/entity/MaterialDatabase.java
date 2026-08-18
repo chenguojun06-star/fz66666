@@ -86,4 +86,11 @@ public class MaterialDatabase {
     private Integer isColorCard;
 
     private String sourceColorCardId;
+
+    /**
+     * 关联辅料ID数组JSON（如 ["uuid1","uuid2"]）
+     * D-P2-6：用于 BOM 选主面料时自动带出辅料，避免漏采购
+     * 前端调 GET /api/material/database/{id}/companions 拉取关联辅料列表
+     */
+    private String companionMaterialIds;
 }
