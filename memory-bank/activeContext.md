@@ -7,6 +7,16 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-19 样衣BOM/尺寸表/指派/二维码 5 处 P0+P1 修复 ✅（npx tsc 通过，未推送）
+
+- [x] **P0-1 尺寸表保存丢数据**（useStyleSizeSave.ts）：原 saveAll 先 `Promise.all(DELETE)` 后 `Promise.all(PUT/POST)`，PUT 失败时删除已生效 → 数据丢失。改为先 PUT/POST 全成功后再 DELETE，用 `Promise.allSettled` 收集部分失败，任一失败保留旧数据不删除
+- [x] **P0-2 指派弹窗搜不到工人**（AssigneeModal.tsx）：原实现只有 `<Input>` 让用户手输姓名，根本无搜索功能。改为 `<Select showSearch>`，弹窗打开时拉取 `GET /factory-worker/list?status=active`（已按 tenant_id+factory_id 过滤），客户端按 workerName/workerNo/phone 模糊过滤。提交时仍发 `assignee=workerName`（后端 PatternProductionController 不动）
+- [x] **P1-3 二维码太小打印扫不到**（BasicInfoSection.tsx）：D-085 把二维码从 80→42px+logo10，实际打印扫不到。改回 size 42→80，容器 48→88，logo 10→14
+- [x] **P1-4 BOM 图片 401**（fileUrl.ts）：数据库 imageUrls 字段只存了纯 uuid（如 `430348a1-xxx.png`）没存 `/api/common/download/` 前缀，`<img src="uuid.png">` 被当相对路径 → 后端 401。getAuthedFileUrl 对纯文件名（不含 /）自动补全 `/api/common/download/{uuid}.ext` 前缀再拼 token
+- [x] **P1-5 BOM POST/PUT 400 提示不清晰**（useStyleBomMutations.ts）：原 save/saveAll 的 catch 只处理 errorFields（表单校验），HTTP 400/500 时 axios reject 被吞掉无提示。catch 增加 axios 错误分支，显示 `e.response.data.message` 后端真实错误（如"该款式已推送下单，BOM已同步至订单..."）
+- [ ] **P2-6 拉链辅料自动带入**：新功能，需用户确认需求（录入主面料后自动带出对应拉链？还是从物料库匹配？）
+- [ ] **P2-7 多色多码数量拆分**：新功能，需用户确认需求（工序列表按色/码拆分显示数量？还是扫码时按色码拆分？涉及 PatternProduction 数据模型改造）
+
 ### 2026-08-18 工艺制单改所见即所得编辑器（纠正上一版误解）✅（已推送 00a2d44d5，8 文件 +250/-309）
 
 - [x] **需求澄清**：用户要的是"填写生产制单内容的地方里面可以粘贴图片"——图片内嵌在内容中，不是文本框上方的独立图片卡片区（上一版 5119c1a1f 做错了，本版推翻）

@@ -112,6 +112,27 @@ body {
 }
 
 /* ============================================
+   TextArea 统一规范（所有多行备注/说明输入框）
+   - 文字不偏移：统一内边距 6px 10px + 行高 1.6
+     （必须作用于内层 textarea 元素；若通过组件 style 传入，
+      showCount 场景会被应用到外层 wrapper，导致文字偏移）
+   - 右下角支持拖拽调整大小：resize: vertical
+     （rc-textarea 在 autoSize 时会 inline 设置 resize:none，
+      用 !important 覆盖；用户拖拽后 rc-textarea 会保留用户高度）
+   ============================================ */
+textarea.ant-input {
+  padding: 6px 10px !important;
+  line-height: 1.6 !important;
+  resize: vertical !important;
+}
+
+/* showCount 计数器保持 antd 默认位置（框外下方），
+   避免与右下角拖拽手柄重叠；仅淡化颜色 */
+span.ant-input-data-count {
+  opacity: 0.6;
+}
+
+/* ============================================
    全局控件高度 — 行业标准 ERP 规范
    所有控件统一高度：输入框/选择器/按钮/搜索框
    由媒体查询驱动：

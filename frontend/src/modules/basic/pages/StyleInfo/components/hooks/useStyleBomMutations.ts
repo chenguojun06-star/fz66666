@@ -160,7 +160,12 @@ const useStyleBomMutations = ({
     } catch (errInfo: unknown) {
       if (typeof errInfo === 'object' && errInfo !== null && 'errorFields' in errInfo) {
         showValidationError(errInfo);
+        return;
       }
+      // D-FIX：处理 axios reject（HTTP 400/500），把后端真实错误提示给用户
+      const axErr = errInfo as any;
+      const backendMsg = axErr?.response?.data?.message || axErr?.message || '保存失败';
+      message.error(backendMsg);
     }
   }, [buildRequiredPaths, data, fetchBom, form, locked, message, persistItem, setEditingKey, showValidationError]);
 
@@ -234,7 +239,12 @@ const useStyleBomMutations = ({
     } catch (errInfo: unknown) {
       if (typeof errInfo === 'object' && errInfo !== null && 'errorFields' in errInfo) {
         showValidationError(errInfo);
+        return;
       }
+      // D-FIX：处理 axios reject（HTTP 400/500），把后端真实错误提示给用户
+      const axErr = errInfo as any;
+      const backendMsg = axErr?.response?.data?.message || axErr?.message || '保存失败';
+      message.error(backendMsg);
     } finally {
       setLoading(false);
     }

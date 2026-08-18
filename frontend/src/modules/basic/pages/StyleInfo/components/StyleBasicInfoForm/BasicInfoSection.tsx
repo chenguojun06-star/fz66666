@@ -122,9 +122,10 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
   return (
     <SectionBox title="基础信息" usePrimaryHighlight>
-      {/* 图片资产：置于表单最上方通栏（款名上方），一排方形卡片+➕上传（最多9张，拖拽/粘贴） */}
+      {/* 图片资产：置于表单最上方通栏（款名上方），一排方形卡片+➕上传（最多9张，拖拽/粘贴）。
+          padding 与下方 Row gutter(16) 对齐（左右各8），保证图片卡与表单字段/文字上下整齐对齐 */}
       {coverSlot ? (
-        <div style={{ paddingBottom: 10, marginBottom: 12, borderBottom: '1px dashed rgba(0,0,0,0.06)' }}>
+        <div style={{ padding: '0 8px 10px', marginBottom: 12, borderBottom: '1px dashed rgba(0,0,0,0.06)' }}>
           {coverSlot}
         </div>
       ) : null}

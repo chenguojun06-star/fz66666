@@ -52,8 +52,18 @@ export function invalidateFileUrlTokenCache(): void {
  */
 export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
   if (!fileUrl) return '';
-  const url = fileUrl.trim();
+  let url = fileUrl.trim();
   if (!url) return '';
+
+  // D-FIX：纯文件名（如 430348a1-dbcd-4aaf-...-af99bfb4ae81.png）自动补全为合法下载路径
+  // 避免数据库只存了 uuid 没存 /api/common/download/ 前缀时，
+  // <img src="uuid.png"> 被当作相对路径 → 浏览器请求 /uuid.png → 后端 401/404
+  const isPureFilename = !url.includes('/')
+    && !url.startsWith('http://') && !url.startsWith('https://')
+    && !url.startsWith('blob:') && !url.startsWith('data:');
+  if (isPureFilename) {
+    url = `/api/common/download/${url}`;
+  }
 
   const token = getCachedToken();
   if (!token) return url;

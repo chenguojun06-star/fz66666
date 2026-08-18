@@ -278,7 +278,6 @@ const StyleWashLabelTab: React.FC<Props> = ({
             value={washInstructions}
             onChange={e => setWashInstructions(e.target.value)}
             placeholder="如：30°C水洗，不可漂白，低温熨烫，悬挂晾干"
-            style={{ resize: 'none' }}
             disabled={!isEditing}
           />
           <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>

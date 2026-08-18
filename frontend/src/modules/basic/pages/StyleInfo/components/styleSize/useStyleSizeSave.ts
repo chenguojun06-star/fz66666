@@ -89,14 +89,8 @@ export function useStyleSizeSave({
 
     setSaving(true);
     try {
-      const combinedIds = combinedSizeIdsRef.current || [];
-      const deleteTasks = Array.from(new Set([
-        ...deletedIds.map((x) => String(x)),
-        ...combinedIds.map((x) => String(x)),
-        ...obsoleteOriginalIds,
-      ].filter(Boolean))).map((id) => api.delete(`/style/size/${id}`));
-      if (deleteTasks.length) await Promise.all(deleteTasks);
-
+      // ★ D-FIX：先保存（PUT/POST）成功后再删除旧记录，避免"先删后存"导致 PUT 失败时数据丢失
+      // 用 Promise.allSettled 收集部分失败，任一失败则跳过删除保留旧数据
       const tasks: Array<Promise<any>> = [];
       normalizedRows.forEach((r) => {
         sizeColumns.forEach((sn) => {
@@ -114,9 +108,33 @@ export function useStyleSizeSave({
       });
 
       if (tasks.length) {
-        const results = await Promise.all(tasks);
-        const bad = results.find((r: Record<string, unknown>) => (r as any)?.code !== 200);
-        if (bad) { message.error((bad as any)?.message || '保存失败'); return; }
+        const results = await Promise.allSettled(tasks);
+        // HTTP 400/500 → axios reject → status='rejected'
+        const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+        // 后端返回 200 但 code != 200（业务失败） → status='fulfilled' 但 value.code != 200
+        const bizFailed = results
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .filter((r) => r.value?.code !== 200);
+
+        if (rejected.length > 0 || bizFailed.length > 0) {
+          const firstErr = rejected.length > 0
+            ? ((rejected[0] as PromiseRejectedResult).reason as any)
+            : (bizFailed[0].value as any);
+          const errMsg = firstErr?.response?.data?.message || firstErr?.message || '保存失败';
+          message.error(`${errMsg}（${rejected.length + bizFailed.length}/${tasks.length} 单元格保存失败，已保留旧数据，请修正后重试）`);
+          return; // ★ 不删除旧数据，避免丢数据
+        }
+      }
+
+      // ★ 保存全部成功后，再执行删除（旧 size 已不在新 sizeColumns 中的记录）
+      const combinedIds = combinedSizeIdsRef.current || [];
+      const deleteIds = Array.from(new Set([
+        ...deletedIds.map((x) => String(x)),
+        ...combinedIds.map((x) => String(x)),
+        ...obsoleteOriginalIds,
+      ].filter(Boolean)));
+      if (deleteIds.length) {
+        await Promise.allSettled(deleteIds.map((id) => api.delete(`/style/size/${id}`)));
       }
 
       message.success('保存成功');

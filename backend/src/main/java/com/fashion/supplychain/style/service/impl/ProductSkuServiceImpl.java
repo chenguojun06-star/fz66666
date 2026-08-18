@@ -153,6 +153,22 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     createOrUpdateSku(style, color, size, qty);
                 }
             }
+
+            // 清理孤儿 SKU：颜色/尺码已从配置中删除的，同步删除对应 SKU
+            // （否则颜色图片管理、SKU 列表仍显示已删除的颜色）
+            java.util.Set<String> colorSet = new java.util.HashSet<>(colors);
+            java.util.Set<String> sizeSet = new java.util.HashSet<>(sizes);
+            List<ProductSku> existingSkus = this.list(new LambdaQueryWrapper<ProductSku>()
+                    .eq(ProductSku::getStyleId, styleId));
+            List<Long> staleIds = existingSkus.stream()
+                    .filter(s -> (StringUtils.hasText(s.getColor()) && !colorSet.contains(s.getColor().trim()))
+                            || (StringUtils.hasText(s.getSize()) && !sizeSet.contains(s.getSize().trim())))
+                    .map(ProductSku::getId)
+                    .collect(java.util.stream.Collectors.toList());
+            if (!staleIds.isEmpty()) {
+                this.removeByIds(staleIds);
+                log.info("Removed {} stale SKUs (colors/sizes removed from config) for styleId={}", staleIds.size(), styleId);
+            }
         } catch (Exception e) {
             log.error("Failed to generate SKUs for style: " + styleId, e);
         }

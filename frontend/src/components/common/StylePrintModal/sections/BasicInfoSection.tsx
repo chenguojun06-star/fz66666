@@ -73,11 +73,11 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         {/* 二维码：与顶部文字信息同行，右上角对齐 */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <span style={{ fontSize: 9, color: 'var(--color-gray-label)', lineHeight: '11px', display: 'inline-block', width: 11, textAlign: 'center' }}>扫码查看</span>
-          <div style={{ width: 48, height: 48, padding: 2, border: '1px solid var(--color-border-antd)', borderRadius: 4, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
+          <div style={{ width: 88, height: 88, padding: 2, border: '1px solid var(--color-border-antd)', borderRadius: 4, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
             {qrPngDataUrl
-              ? <img src={qrPngDataUrl} alt="QR" style={{ width: 42, height: 42, display: 'block' }} />
-              : <QRCode value={qrValue} size={42} />}
-            {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
+              ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+              : <QRCode value={qrValue} size={80} />}
+            {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
           </div>
         </div>
       </div>
