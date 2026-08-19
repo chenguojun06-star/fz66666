@@ -125,13 +125,21 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   // --- callbacks ---
 
   const loadSampleSnapshot = useCallback(async (record: StyleInfo) => {
-    const response: any = await api.get('/production/pattern/list', {
-      params: { page: 1, pageSize: 20, keyword: record.styleNo },
-    });
-    const records = Array.isArray(response?.data?.records) ? response.data.records : [];
-    const matched = records.find((item: Record<string, unknown>) => String(item.styleId || '') === String(record.id || ''))
-      || records.find((item: Record<string, unknown>) => String(item.styleNo || '') === String(record.styleNo || ''));
-    return matched ? normalizePatternProductionSnapshot(matched) : null;
+    // ✅ 改用精确查询接口 /production/pattern/by-style/{styleId}
+    // 旧实现用 /list 传 pageSize 参数名错误（后端是 size 默认 10）+ 模糊查 keyword，
+    // 当租户样衣记录超过 10 条时，目标 styleNo 不在前 10 条最新里 → 返回 null
+    // → "当前还没有同步到样衣生产快照数据"。新实现按 styleId 精确查单条。
+    const styleId = String(record.id || '').trim();
+    if (!styleId) return null;
+    try {
+      const response: any = await api.get(`/production/pattern/by-style/${encodeURIComponent(styleId)}`);
+      // 后端 Result<Map>：success(null) 表示无记录；success(map) 表示有
+      const data = response?.data;
+      if (!data || typeof data !== 'object') return null;
+      return normalizePatternProductionSnapshot(data as Record<string, unknown>);
+    } catch {
+      return null;
+    }
   }, []);
 
   const reloadSampleStage = useCallback(async () => {

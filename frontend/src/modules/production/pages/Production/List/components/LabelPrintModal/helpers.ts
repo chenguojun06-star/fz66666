@@ -70,7 +70,10 @@ export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
   }];
 }
 
-/** 打印洗水唛：根据选中行生成多页 HTML 并调用 safePrint */
+/** 打印洗水唛：根据选中行生成多页 HTML 并调用 safePrint
+ *  ★ 修复（用户需求）：顶部加码数+款号配置，多码数打印时每页显示自己的码数+款号，便于分码识别。
+ *  旧实现所有 SKU 共享同一份 printData（仅按 printCount 复制），导致多码数无法区分。
+ */
 export async function printWashLabels(
   selected: SkuRow[],
   _order: ProductionOrder,
@@ -84,19 +87,22 @@ export async function printWashLabels(
   const careIconCodes = codes.length > 0 ? codes : [...DEFAULT_CARE_ICON_CODES];
   const manufacturingText = 'MADE IN CHINA';
   const dateText = getDefaultDateText();
+  // 顶部款号：从订单上取（LabelStyleInfo 不带 styleNo 字段）
+  const styleNo = (_order.styleNo || '').trim();
 
-  const printData: WashLabelPrintData = {
-    width: w,
-    height: h,
-    compositionText,
-    washInstructionsText,
-    careIconCodes,
-    manufacturingText,
-    dateText,
-  };
-
-  const pages = selected.flatMap(row =>
-    Array.from({ length: Math.max(1, row.printCount) }, () => printData)
+  const pages: WashLabelPrintData[] = selected.flatMap(row =>
+    Array.from({ length: Math.max(1, row.printCount) }, () => ({
+      width: w,
+      height: h,
+      compositionText,
+      washInstructionsText,
+      careIconCodes,
+      manufacturingText,
+      dateText,
+      // 顶部码数：每行 SKU 自己的码数；顶部款号：款式款号
+      sizeText: (row.size || '').trim(),
+      styleNo,
+    }))
   );
 
   const html = buildWashLabelMultiPageHtml(pages);

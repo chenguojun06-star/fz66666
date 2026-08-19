@@ -54,8 +54,13 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
       } else {
         message.error(res.message || '领取失败');
       }
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '领取失败');
+    } catch (e: any) {
+      // 透出后端真实错误：axios HTTP 400 时 e.response.data.message 才是后端的 IllegalArgumentException 文案
+      const backendMsg = e?.response?.data?.message;
+      const displayMsg = backendMsg || e?.message || '领取失败';
+      message.error(displayMsg);
+      // eslint-disable-next-line no-console
+      console.warn('[warehouse-pick] 失败:', e?.response?.status, backendMsg || e?.message);
     } finally {
       setSubmitting(false);
     }

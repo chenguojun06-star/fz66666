@@ -212,8 +212,14 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
       } else {
         message.error(res.message || '出库领取失败');
       }
-    } catch {
-      message.error('出库领取失败');
+    } catch (e: any) {
+      // 透出后端真实错误：axios HTTP 400 时 e.response.data.message 才是后端的 IllegalArgumentException 文案
+      // （如"仓库库存不足，可用库存: 0，需领取: 2"、"请勿重复提交"等），否则用户只看到通用"出库领取失败"无法定位
+      const backendMsg = e?.response?.data?.message;
+      const displayMsg = backendMsg || e?.message || '出库领取失败';
+      message.error(displayMsg);
+      // eslint-disable-next-line no-console
+      console.warn('[warehouse-pick] 失败:', e?.response?.status, backendMsg || e?.message);
     }
   };
 

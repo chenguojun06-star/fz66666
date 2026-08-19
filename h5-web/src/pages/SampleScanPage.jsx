@@ -39,6 +39,12 @@ function parseSampleCode(code) {
     if (json.styleNo && json.color && json.size) {
       return { type: 'sample', styleNo: json.styleNo, color: json.color, size: json.size, raw: trimmed };
     }
+    // 兜底：旧版二维码格式 type='style'（仅含 styleNo/styleName/orderId/orderNo，无 color/size/patternId）
+    // 修复方案是用户重新打印新款二维码（type='pattern'）后扫描即可跳转样衣生产详情。
+    // 老二维码扫描时给出明确指引，避免用户看到"缺少款号/颜色/尺码"以为系统坏掉。
+    if (json.type === 'style' && json.styleNo) {
+      return { type: 'style_only', styleNo: json.styleNo, styleName: json.styleName, raw: trimmed };
+    }
     if (json.styleNo) {
       return { type: 'sample_partial', styleNo: json.styleNo, raw: trimmed };
     }
@@ -193,8 +199,21 @@ export default function SampleScanPage() {
         toast.error(err.message || '查询失败');
       }
     } else {
-      setLastResult({ success: false, message: '样衣编码缺少款号/颜色/尺码信息' });
-      toast.error('样衣编码缺少款号/颜色/尺码信息');
+      // 旧版二维码（type='style'）：款号 ${styleNo} 已识别，但缺少 patternId/color/size，无法跳转生产详情。
+      // 给出明确指引：让用户在 PC 端重新打印新款二维码（type='pattern'）后再扫码。
+      if (parsed.type === 'style_only') {
+        const styleName = parsed.styleName ? `（${parsed.styleName}）` : '';
+        setLastResult({
+          success: false,
+          message: `识别到款号 ${parsed.styleNo}${styleName}，但二维码为旧版格式`,
+          styleNo: parsed.styleNo,
+          needsReprint: true,
+        });
+        toast.error(`该二维码为旧版格式，请到 PC 端「样衣资料单」重新打印新款二维码后再扫`);
+      } else {
+        setLastResult({ success: false, message: '样衣编码缺少款号/颜色/尺码信息' });
+        toast.error('样衣编码缺少款号/颜色/尺码信息');
+      }
     }
     setLoading(false);
   }, [loading, isRecentDuplicate, setPatternScanData, navigate, loadTodayHistory]);

@@ -19,7 +19,14 @@ public final class SecurityConfigHelper {
 
         authz.requestMatchers(SecurityConstants.SWAGGER_ENDPOINTS).authenticated();
 
-        authz.requestMatchers(SecurityConstants.FILE_DOWNLOAD_ENDPOINTS).authenticated();
+        // 文件下载改为 permitAll：
+        // 原因——<img src> / <a download> 不走 axios，前端 401 拦截器（refresh-token）无法触发，
+        //       token 一过期所有图片立刻 401，用户刷新页面也救不回来。
+        // 安全等价性——① 文件名是 UUID（128-bit 不可猜测）② tenantId 在 URL 路径里
+        //              ③ 文件物理隔离在 tenants/{tenantId}/ 子目录
+        //              ④ TenantFileController 内仍按 URL tenantId 检索文件，跨租户文件不可达
+        //              所以放行后安全等价于已认证。
+        authz.requestMatchers(SecurityConstants.FILE_DOWNLOAD_ENDPOINTS).permitAll();
 
         authz.requestMatchers(SecurityConstants.USER_SELF_ENDPOINTS).authenticated();
 

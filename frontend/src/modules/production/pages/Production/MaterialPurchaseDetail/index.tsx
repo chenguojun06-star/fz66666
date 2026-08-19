@@ -127,7 +127,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   });
 
   const viewColumns = buildViewColumns({
-    colWidth, editing, canProcure,
+    colWidth, editing, canProcure, sampleMode,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,

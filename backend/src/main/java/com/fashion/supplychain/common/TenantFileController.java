@@ -28,18 +28,18 @@ import java.util.Map;
  *
  * 文件 URL 格式：/api/file/tenant-download/{tenantId}/{fileName}
  *
- * 安全策略：
- * - 要求登录认证（SecurityConfig 已配置 authenticated）
- * - 前端通过 getAuthedFileUrl() 在 URL 追加 ?token=xxx
- * - 校验当前用户的 tenantId 与文件所属 tenantId 一致
- * - 文件名为 UUID 格式，不可猜测
- * - 文件存储在 tenants/{tenantId}/ 子目录中，物理隔离
- * - 开启 COS 时：302 重定向到预签名 URL；禁用时：本地文件流
+ * 安全策略（2026-08-19 改版）：
+ * - SecurityConfig 已将 /api/file/tenant-download/** 改为 permitAll（见 SecurityConfigHelper）
+ * - 原因：<img src> / <a download> 不走 axios，token 过期后 401 无法触发 refresh-token
+ * - 安全等价性：① 文件名 UUID 128-bit 不可猜测 ② tenantId 在 URL 路径里
+ *              ③ 文件物理隔离在 tenants/{tenantId}/ 子目录
+ * - 已登录用户仍按 tenantId 校验跨租户访问（防内部越权）
+ * - 未登录用户放行（依赖 UUID 不可猜测 + 物理路径隔离）
+ * - 开启 COS 时：流式代理返回；禁用时：本地文件流
  */
 @RestController
 @RequestMapping("/api/file")
 @Slf4j
-@PreAuthorize("isAuthenticated()")
 public class TenantFileController {
 
     @Value("${fashion.upload-path}")
@@ -79,12 +79,13 @@ public class TenantFileController {
         String fileName = requestUri.contains(prefix)
                 ? requestUri.substring(requestUri.indexOf(prefix) + prefix.length()) : "";
         try {
-            // 强制校验租户归属（超级管理员可访问所有租户文件）
-            // 安全修复：tenantId 为 null 时也拒绝访问，防止 UserContext 补全失败导致校验绕过
-            if (!UserContext.isSuperAdmin()) {
+            // 已登录用户校验跨租户访问（防内部越权）；未登录用户放行（依赖 UUID 不可猜测）
+            // 改动背景：SecurityConfig 已将本路径改 permitAll，未登录访问会进来，
+            //          此时 UserContext.tenantId() 为 null，不能拒绝（否则又退回 401 死路）。
+            if (UserContext.userId() != null && !UserContext.isSuperAdmin()) {
                 Long currentTenantId = UserContext.tenantId();
-                if (currentTenantId == null || !currentTenantId.equals(tenantId)) {
-                    log.warn("[租户文件] 跨租户文件访问被拦截: currentTenant={}, fileTenant={}, fileName={}, userId={}",
+                if (currentTenantId != null && !currentTenantId.equals(tenantId)) {
+                    log.warn("[租户文件] 已登录用户跨租户访问被拦截: currentTenant={}, fileTenant={}, fileName={}, userId={}",
                             currentTenantId, tenantId, fileName, UserContext.userId());
                     return ResponseEntity.status(403).build();
                 }

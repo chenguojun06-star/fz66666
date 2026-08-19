@@ -100,14 +100,22 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
     if (!visible || !styleId) return;
     setLabelPrintMode(false);
     setAutoPatternId(null);
-    // 样衣模式下自动查询样衣生产记录ID（用于二维码）
-    if (mode === 'sample' && !propPatternId && styleNo) {
-      api.get('/production/pattern/list', { params: { page: 1, pageSize: 20, keyword: styleNo } })
+    // 样衣模式下自动查询样衣生产记录ID（用于二维码扫码识别）
+    // ★ 修复（与 useSampleStage.ts 同根因）：
+    //   旧实现用 /production/pattern/list + pageSize: 20 + keyword 模糊查，
+    //   当租户 pattern 记录 > 20 条时目标记录不在前 20 条最新里 → 匹配失败
+    //   → 退化为生成 type:'style' 二维码（仅含 styleNo）
+    //   → 手机端 SampleScanPage.parseSampleCode 不识别 type:'style'，报"无法识别"
+    //   → 用户看到"扫码提示没有样衣"。
+    // 新实现按 styleId 精确查单条 pattern 记录，命中率 100%。
+    if (mode === 'sample' && !propPatternId && styleId) {
+      const styleIdStr = String(styleId);
+      api.get(`/production/pattern/by-style/${encodeURIComponent(styleIdStr)}`)
         .then(res => {
-          const records = Array.isArray(res?.data?.records) ? res.data.records : [];
-          const matched = records.find((item: any) => String(item.styleId || '') === String(styleId || ''))
-            || records.find((item: any) => String(item.styleNo || '') === String(styleNo || ''));
-          if (matched?.id) setAutoPatternId(String(matched.id));
+          const data = res?.data;
+          if (data && typeof data === 'object' && (data as any).id) {
+            setAutoPatternId(String((data as any).id));
+          }
         })
         .catch((err) => { console.warn('[StylePrint] 款式花型匹配失败:', err?.message || err); });
     }

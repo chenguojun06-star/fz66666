@@ -8,6 +8,10 @@ export interface WashLabelPrintData {
   careIconCodes: string[];
   manufacturingText: string;
   dateText: string;
+  /** 顶部码数行（如 "S" / "M" / "L" / "XL"），用户可编辑 */
+  sizeText?: string;
+  /** 顶部款号行（如 "BR26C1S0574B"） */
+  styleNo?: string;
 }
 
 function buildCareIconsHtml(codes: string[], _iconSize: number): string {
@@ -42,6 +46,10 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
 .dash-sep{border:none;border-top:0.8pt dashed #52525b;width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}
+/* 顶部码数+款号区：码数粗体居中，款号灰色细字居中 */
+.top-meta{flex:0 0 auto;width:100%;text-align:center;line-height:1.2;padding-bottom:1mm;border-bottom:0.4pt solid #d4d4d8}
+.top-meta .size-line{font-size:${w <= 30 ? fs + 2 : fs + 1.5}pt;font-weight:700;letter-spacing:0.4mm}
+.top-meta .style-line{font-size:${fs}pt;color:#52525b;letter-spacing:0.3mm;margin-top:0.6mm}
 .content-block{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center;padding-top:2mm}
 .comp-mats{font-size:${w <= 30 ? fs + 1.5 : fs + 0.5}pt;line-height:1.6;font-weight:600;text-align:center}
 .section-sep{width:40%;height:0;border-top:0.3pt solid #bfbfbf;margin:1.5mm auto}
@@ -55,6 +63,14 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
 }
 
 function buildLabelContentHtml(data: WashLabelPrintData, iconSize: number): string {
+  // 顶部码数+款号：用户要求"最顶部 一行码数 一行款号"，多码数打印时每页独立显示该码数
+  const topMetaHtml = (data.sizeText?.trim() || data.styleNo?.trim())
+    ? `<div class="top-meta">
+${data.sizeText?.trim() ? `  <div class="size-line">${escapeHtml(data.sizeText.trim())}</div>` : ''}
+${data.styleNo?.trim() ? `  <div class="style-line">${escapeHtml(data.styleNo.trim())}</div>` : ''}
+</div>`
+    : '';
+
   const compositionHtml = data.compositionText.trim()
     ? `<div class="comp-mats">${data.compositionText.replace(/\n/g, '<br/>')}</div>`
     : '<div class="comp-mats" style="color:#bfbfbf">（成分未填写）</div>';
@@ -69,7 +85,7 @@ function buildLabelContentHtml(data: WashLabelPrintData, iconSize: number): stri
   const mfgHtml = data.manufacturingText.trim() ? `<div class="footer">${data.manufacturingText}</div>` : '';
   const dateHtml = data.dateText.trim() ? `<div class="date">${data.dateText}</div>` : '';
 
-  return `<div class="dash-sep"></div>
+  return `${topMetaHtml}<div class="dash-sep"></div>
     <div class="content-block">
       ${compositionHtml}
       ${washHtml}
@@ -79,6 +95,13 @@ function buildLabelContentHtml(data: WashLabelPrintData, iconSize: number): stri
       ${mfgHtml}
       ${dateHtml}
     </div>`;
+}
+
+/** HTML 转义：防止码数/款号中特殊字符破坏 HTML 结构 */
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch] as string));
 }
 
 function calcIconSize(w: number): number {

@@ -370,8 +370,27 @@ public class GlobalExceptionHandler {
                 }
 
                 logger.error("系统异常: {} {}", method, uri, e);
+                // 返回 sanitized 根因消息——前端能看到具体哪里出错（如字段长度超限/空约束/SQL错误）
+                // 否则用户只看到"服务器开小差了"，无法定位根因，也无法反馈给开发
+                String rootCause = sanitizeClientMessage(e.getMessage());
+                String userHint = "服务器开小差了";
+                // 友好提示：常见根因给出可操作建议
+                String lowerCause = rootCause == null ? "" : rootCause.toLowerCase();
+                if (lowerCause.contains("data integrity") || lowerCause.contains("dataintegrity")
+                                || lowerCause.contains("cannot be null") || lowerCause.contains("null value")
+                                || lowerCause.contains("column") && lowerCause.contains("null")) {
+                        userHint = "数据校验失败";
+                } else if (lowerCause.contains("data too long") || lowerCause.contains("datatoolong")) {
+                        userHint = "字段长度超限";
+                } else if (lowerCause.contains("duplicate") || lowerCause.contains("unique")) {
+                        userHint = "数据重复";
+                } else if (lowerCause.contains("foreign key") || lowerCause.contains("foreignkey")) {
+                        userHint = "关联数据不存在";
+                } else if (e instanceof NullPointerException) {
+                        userHint = "缺少必要字段";
+                }
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "服务器开小差了，请稍后重试，如问题持续请联系管理员"));
+                                .body(Result.fail(500, userHint + "（" + rootCause + "）"));
         }
 
         private String sanitizeClientMessage(String message) {

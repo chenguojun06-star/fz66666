@@ -171,16 +171,42 @@ input.ant-input,
   line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
-.ant-input-affix-wrapper {
+/* 仅作用于单行 input 的 affix-wrapper（前缀/后缀图标包装层），
+   使 Prefix/Suffix 与 input 垂直居中。
+   ★ 排除 textarea-affix-wrapper：Input.TextArea + showCount 也用 affix-wrapper，
+     若一并 inline-flex 会把 "0/500" 计数器和 textarea 横排，
+     计数器跑到框外 → 用户看到"备注栏与文字不在一个框里"。*/
+.ant-input-affix-wrapper:not(.ant-input-textarea-affix-wrapper) {
   display: inline-flex !important;
   align-items: center !important;
 }
 
-.ant-input-affix-wrapper input.ant-input {
+.ant-input-affix-wrapper:not(.ant-input-textarea-affix-wrapper) input.ant-input {
   height: var(--control-height, 32px) !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   line-height: calc(var(--control-height, 32px) - 2px) !important;
+}
+
+/* textarea-affix-wrapper：保持 block 布局 + relative 定位，
+   让 showCount 计数器 absolute 在框内右下角，与 textarea 同框 */
+.ant-input-textarea-affix-wrapper {
+  display: block !important;
+  position: relative !important;
+}
+
+.ant-input-textarea-affix-wrapper > textarea.ant-input {
+  display: block;
+  width: 100% !important;
+}
+
+/* 计数器：absolute 在框内右下角（antd 默认位置），淡化颜色 */
+.ant-input-textarea-affix-wrapper span.ant-input-data-count {
+  position: absolute !important;
+  right: 8px !important;
+  bottom: 2px !important;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .ant-space-compact input.ant-input,
@@ -2188,6 +2214,24 @@ input.ant-input,
   height: auto !important;
   object-fit: initial !important;
   max-width: 100%;
+}
+
+/* ── 16b. 详情/卡片场景图片 — 全景显示（不裁剪、长方形左右留白） ──
+   用户反馈："全系统所有图片都要显示全景图 长方形的左右就留白 不要显示一半"
+   现状：许多详情页 .ant-image 容器固定宽高（如 200x200），但图片是长方形比例，
+         旧规则 object-fit: cover 会裁掉上下/左右，用户看到"显示一半"。
+   修复：详情/卡片场景（非表格）的 .ant-image-img 用 contain，
+         图片按比例完整显示，超出区域留白，永不裁剪。
+   不影响：表格图片（规则 16 已单独处理）、Avatar（用 .ant-avatar img 不同 class）、Icon。 */
+.ant-image-img {
+  object-fit: contain !important;
+}
+/* 排除表格场景（表格已用规则 16 的 initial）和 Avatar（Avatar 需 cover 填满圆形） */
+.ant-table-tbody img.ant-image-img {
+  object-fit: initial !important;
+}
+.ant-avatar .ant-image-img {
+  object-fit: cover !important;
 }
 
 /* ── 17. Spin 加载居中显示 ── */
