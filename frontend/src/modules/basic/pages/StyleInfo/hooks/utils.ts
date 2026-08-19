@@ -204,7 +204,11 @@ const extractFirstColor = (sizeColorConfig: SizeColorConfigLike): string | undef
 
 const buildSizeString = (sizes: string[]): string | undefined => {
   const selected = normalizeStringList(sizes);
-  return selected.length ? selected.join('/') : undefined;
+  // 用 "," 拼接而非 "/"：码数内部常含 "/"（如 "L(170/84)"），
+  // 若用 "/" 拼接存储，下单页 splitOptions 切分时会把码数内部的 "/" 当分隔符切掉，
+  // 导致 6 个码数被切成 11+ 碎片（用户看到的"开发码 16"根因）。
+  // splitOptions 已兼容旧 "/" 拼接数据（按括号外 "/" 智能切），新数据用 "," 更标准。
+  return selected.length ? selected.join(',') : undefined;
 };
 
 interface BuildNormalizedValuesOptions {
