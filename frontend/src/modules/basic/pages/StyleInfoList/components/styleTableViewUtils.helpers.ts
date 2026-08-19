@@ -263,6 +263,7 @@ export const normalizePatternProductionSnapshot = (item: Record<string, unknown>
     quantity: item.quantity != null ? Number(item.quantity) : undefined,
     colors,
     sizeColorConfig,
+    size: item.size ? String(item.size) : undefined,
   };
 };
 

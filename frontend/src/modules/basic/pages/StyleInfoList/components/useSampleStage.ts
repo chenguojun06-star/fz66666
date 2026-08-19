@@ -17,11 +17,16 @@ interface UseSampleStageParams {
 }
 
 export default function useSampleStage({ selectedStage, message, onRefresh }: UseSampleStageParams) {
-  const [sampleSnapshot, setSampleSnapshot] = useState<PatternProductionSnapshot | null>(null);
+  // ★ 多色多码：一个款式可能有 N 条色码记录（每个 颜色×码数 一条独立生产任务）
+  // list 存全部，activeIndex 指向当前选中的色码，sampleSnapshot 为派生值
+  const [sampleSnapshotList, setSampleSnapshotList] = useState<PatternProductionSnapshot[]>([]);
+  const [activeSampleIndex, setActiveSampleIndex] = useState(0);
   const [sampleSnapshotLoading, setSampleSnapshotLoading] = useState(false);
   const [sampleActionLoading, setSampleActionLoading] = useState(false);
   const [progressEditorOpen, setProgressEditorOpen] = useState(false);
   const [progressDraft, setProgressDraft] = useState<Record<string, number>>({});
+
+  const sampleSnapshot = sampleSnapshotList[activeSampleIndex] ?? null;
 
   const selectedStageRecordScrapped = useMemo(
     () => (selectedStage ? isScrappedStyle(selectedStage.record) : false),
@@ -124,21 +129,19 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
 
   // --- callbacks ---
 
-  const loadSampleSnapshot = useCallback(async (record: StyleInfo) => {
-    // ✅ 改用精确查询接口 /production/pattern/by-style/{styleId}
-    // 旧实现用 /list 传 pageSize 参数名错误（后端是 size 默认 10）+ 模糊查 keyword，
-    // 当租户样衣记录超过 10 条时，目标 styleNo 不在前 10 条最新里 → 返回 null
-    // → "当前还没有同步到样衣生产快照数据"。新实现按 styleId 精确查单条。
+  const loadSampleSnapshotList = useCallback(async (record: StyleInfo) => {
+    // ✅ 精确查询接口 /production/pattern/by-style/{styleId}，后端返回该款式全部色码记录列表
+    // （多色多码：每个 颜色×码数 = 1 条独立 PatternProduction）
     const styleId = String(record.id || '').trim();
-    if (!styleId) return null;
+    if (!styleId) return [] as PatternProductionSnapshot[];
     try {
       const response: any = await api.get(`/production/pattern/by-style/${encodeURIComponent(styleId)}`);
-      // 后端 Result<Map>：success(null) 表示无记录；success(map) 表示有
       const data = response?.data;
-      if (!data || typeof data !== 'object') return null;
-      return normalizePatternProductionSnapshot(data as Record<string, unknown>);
+      // 后端 Result<List<Map>>：兼容历史单对象返回（存量部署未升级时）
+      const list = Array.isArray(data) ? data : data && typeof data === 'object' ? [data] : [];
+      return list.map((item: Record<string, unknown>) => normalizePatternProductionSnapshot(item));
     } catch {
-      return null;
+      return [] as PatternProductionSnapshot[];
     }
   }, []);
 
@@ -146,13 +149,14 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     if (!selectedStage || selectedStage.stage.key !== 'sample') return;
     setSampleSnapshotLoading(true);
     try {
-      const snapshot = await loadSampleSnapshot(selectedStage.record);
-      setSampleSnapshot(snapshot);
+      const list = await loadSampleSnapshotList(selectedStage.record);
+      setSampleSnapshotList(list);
+      setActiveSampleIndex((prev) => Math.min(prev, Math.max(0, list.length - 1)));
       await onRefresh();
     } finally {
       setSampleSnapshotLoading(false);
     }
-  }, [loadSampleSnapshot, onRefresh, selectedStage]);
+  }, [loadSampleSnapshotList, onRefresh, selectedStage]);
 
   useEffect(() => {
     if (selectedStage && selectedStage.stage.key === 'sample') {
@@ -188,22 +192,26 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   useEffect(() => {
     let active = true;
     if (!selectedStage || selectedStage.stage.key !== 'sample') {
-      setSampleSnapshot(null);
+      setSampleSnapshotList([]);
+      setActiveSampleIndex(0);
       setSampleSnapshotLoading(false);
       setProgressEditorOpen(false);
       return () => { active = false; };
     }
     setSampleSnapshotLoading(true);
-    setSampleSnapshot(null);
-    void loadSampleSnapshot(selectedStage.record).then((snapshot) => {
-      if (active) setSampleSnapshot(snapshot);
+    setSampleSnapshotList([]);
+    void loadSampleSnapshotList(selectedStage.record).then((list) => {
+      if (active) {
+        setSampleSnapshotList(list);
+        setActiveSampleIndex(0);
+      }
     }).catch(() => {
-      if (active) setSampleSnapshot(null);
+      if (active) setSampleSnapshotList([]);
     }).finally(() => {
       if (active) setSampleSnapshotLoading(false);
     });
     return () => { active = false; };
-  }, [loadSampleSnapshot, selectedStage]);
+  }, [loadSampleSnapshotList, selectedStage]);
 
   useEffect(() => {
     if (!progressEditorOpen || !sampleSnapshot) return;
@@ -219,6 +227,9 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
 
   return {
     sampleSnapshot,
+    sampleSnapshotList,
+    activeSampleIndex,
+    setActiveSampleIndex,
     sampleSnapshotLoading,
     sampleActionLoading,
     progressEditorOpen,

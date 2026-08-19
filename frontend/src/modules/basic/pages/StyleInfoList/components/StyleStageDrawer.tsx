@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Drawer, Progress, QRCode, Skeleton, Tag } from 'antd';
+import { Button, Drawer, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
 import SampleProcessList from './SampleProcessList';
 import SampleScanRecordsTable from './SampleScanRecordsTable';
 import PatternRemarkPreview from './PatternRemarkPreview';
@@ -222,6 +222,26 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                 <Skeleton active paragraph={{ rows: 4 }} />
               ) : sample.sampleSnapshot ? (
                 <>
+                  {sample.sampleSnapshotList.length > 1 ? (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'var(--color-text-primary)' }}>
+                        色码任务
+                        <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
+                          共 {sample.sampleSnapshotList.length} 条色码生产任务 · 每条独立进度 / 独立二维码 / 独立扫码记录
+                        </span>
+                      </div>
+                      <Select
+                        size="small"
+                        style={{ minWidth: 300 }}
+                        value={sample.activeSampleIndex}
+                        onChange={sample.setActiveSampleIndex}
+                        options={sample.sampleSnapshotList.map((snap, idx) => ({
+                          value: idx,
+                          label: `${snap.color || '未配色'} · ${snap.size || '未配码'}${snap.quantity != null ? `（${snap.quantity} 件）` : ''}`,
+                        }))}
+                      />
+                    </div>
+                  ) : null}
                   <div className="style-smart-stage-modal__facts">
                     <div className="style-smart-stage-modal__fact">
                       <span>领取人</span>
@@ -241,14 +261,14 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                     <div className="style-smart-stage-modal__fact">
                       <span>颜色</span>
                       <strong>
-                        {sample.sampleSnapshot?.colors && sample.sampleSnapshot.colors.length > 0
-                          ? sample.sampleSnapshot.colors.map((c, i) => (
-                              <Tag key={i} color="blue" style={{ marginRight: 4 }}>{c}</Tag>
-                            ))
-                          : sample.sampleSnapshot?.color
-                            ? <Tag color="blue">{sample.sampleSnapshot.color}</Tag>
-                            : '-'}
+                        {sample.sampleSnapshot?.color
+                          ? <Tag color="blue">{sample.sampleSnapshot.color}</Tag>
+                          : '-'}
                       </strong>
+                    </div>
+                    <div className="style-smart-stage-modal__fact">
+                      <span>码数</span>
+                      <strong>{sample.sampleSnapshot?.size || '-'}</strong>
                     </div>
                     <div className="style-smart-stage-modal__fact">
                       <span>数量</span>

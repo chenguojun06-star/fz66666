@@ -108,7 +108,7 @@ Page({
       detail: {
         patternId: data.patternId,
         styleNo: data.styleNo,
-        color: data.color,
+        color: data.color || patternDetail.color || '-',
         quantity: normalizePositiveInt(data.quantity, 1),
         maxQuantity: normalizePositiveInt(data.quantity, 1),
         warehouseCode: '',
@@ -116,7 +116,8 @@ Page({
         statusLabel: getPatternStatusLabel(status) || data.statusLabel || status || '-',
         statusType: status.toLowerCase().replace('_', ''),
         sizes: sizes,
-        sizesText: sizes.length ? sizes.join('/') : '-',
+        // 多色多码：优先显示本条色码记录自己的码数，无则退化到全码列表
+        sizesText: patternDetail.size || (sizes.length ? sizes.join('、') : '-'),
         operationType: operationType,
         operationLabel: operationLabel,
         operationOptions: rawOptions,

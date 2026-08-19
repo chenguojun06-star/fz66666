@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { App } from 'antd';
 import api from '@/utils/api';
+import { splitStyleOptions } from '@/utils/styleOptions';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 import { normalizeMaterialQuantity } from '../../MaterialPurchase/utils';
 import type { ApiResult, PageResult, MaterialPurchaseListResponse, PurchaseListParams } from './types';
@@ -40,7 +41,8 @@ export function usePurchaseDetailData(
   const colorList = useMemo(() => {
     const raw = order?.color || '';
     if (!raw) return [];
-    return raw.split(/[/,，、]/).map((s: string) => s.trim()).filter(Boolean);
+    // 统一使用智能切分：避免把含 "/" 的颜色名（如"黑/白拼色"）或码数切碎
+    return splitStyleOptions(raw);
   }, [order?.color]);
 
   const isMultiColor = colorList.length > 1;

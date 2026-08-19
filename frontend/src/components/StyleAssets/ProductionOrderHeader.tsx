@@ -196,7 +196,7 @@ const ProductionOrderHeader: React.FC<{
                   ? createOrderColorSizeMatrixInfoItems({
                       items: matrixItems,
                       fallbackColor: resolvedColor,
-                      fallbackSize: computedSizeItems.map((item) => String(item?.size || '').trim()).filter(Boolean).join('/'),
+                      fallbackSize: computedSizeItems.map((item) => String(item?.size || '').trim()).filter(Boolean).join(','),
                       fallbackQuantity: computedTotal,
                       totalLabel: '总下单数',
                       columnMinWidth: matrixColumnMinWidth,

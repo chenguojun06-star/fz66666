@@ -44,14 +44,15 @@ export default function ScanPatternPage() {
     const sizes = patternDetail.sizes || [];
 
     setDetail({
-      patternId: data.patternId, styleNo: data.styleNo, color: data.color,
+      patternId: data.patternId, styleNo: data.styleNo, color: data.color || patternDetail.color || '-',
       quantity: normalizePositiveInt(data.quantity, 1), warehouseCode: '',
       operationType, operationLabel: OPERATION_LABELS[operationType] || '操作',
       requiresWarehouseInput, reviewApproved,
       coverImage: getAuthedImageUrl(patternDetail.coverImage || patternDetail.styleImage || ''),
       styleName: patternDetail.styleName || data.styleName || '',
       designer: data.designer || patternDetail.designer || '-',
-      sizesText: sizes.length ? sizes.join('/') : '-',
+      // 多色多码：优先显示本条色码记录自己的码数，无则退化到全码列表
+      sizesText: patternDetail.size || (sizes.length ? sizes.join('、') : '-'),
       remark: '',
     });
 

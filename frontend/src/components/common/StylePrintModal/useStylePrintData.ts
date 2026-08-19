@@ -71,6 +71,8 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
   const [labelPrinting, setLabelPrinting] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [autoPatternId, setAutoPatternId] = useState<string | null>(null);
+  // 多色多码：该款式全部色码生产记录（每个 颜色×码数 一条），标签打印按颜色匹配独立二维码
+  const [patternRecords, setPatternRecords] = useState<Array<{ id: string; color?: string; size?: string }>>([]);
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string>('');
   const [orderCreatorName, setOrderCreatorName] = useState<string>('');
   // 注：tenantLogo 当前未被 JSX 直接读取，保留以维持原组件行为
@@ -113,8 +115,18 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
       api.get(`/production/pattern/by-style/${encodeURIComponent(styleIdStr)}`)
         .then(res => {
           const data = res?.data;
-          if (data && typeof data === 'object' && (data as any).id) {
-            setAutoPatternId(String((data as any).id));
+          // 后端返回该款式全部色码记录列表（多色多码：每色码一条独立生产任务）
+          const list = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);
+          const records = list
+            .filter((item: any) => item?.id)
+            .map((item: any) => ({
+              id: String(item.id),
+              color: item.color ? String(item.color) : undefined,
+              size: item.size ? String(item.size) : undefined,
+            }));
+          setPatternRecords(records);
+          if (records.length > 0) {
+            setAutoPatternId(records[0].id);
           }
         })
         .catch((err) => { console.warn('[StylePrint] 款式花型匹配失败:', err?.message || err); });
@@ -241,8 +253,12 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
           Array.from({ length: batch }, (_, j) => {
             const itemIdx = Math.floor((i + j) / copies);
             const item = items[itemIdx];
-            const itemQrValue = isPatternPrint && resolvedPatternId
-              ? JSON.stringify({ type: 'pattern', id: resolvedPatternId })
+            // 多色多码：优先按颜色匹配该色码独立的 patternId，扫哪个标签就是哪个色码任务
+            const matchedPatternId = patternRecords.find(
+              (rec) => rec.color && item.color && rec.color.trim() === String(item.color).trim(),
+            )?.id;
+            const itemQrValue = isPatternPrint && (matchedPatternId || resolvedPatternId)
+              ? JSON.stringify({ type: 'pattern', id: matchedPatternId || resolvedPatternId })
               : JSON.stringify({ type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '', color: item.color, size: item.size });
             return QRCodeLib.toDataURL(itemQrValue, { width: qrPx, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
           }),
@@ -291,7 +307,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
       message.success(`已发送 ${totalLabels} 张标签到打印机`);
     } catch { message.error('标签打印失败，请重试'); }
     finally { setLabelPrinting(false); }
-  }, [labelItems, isPatternPrint, resolvedPatternId, orderId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
+  }, [labelItems, isPatternPrint, resolvedPatternId, patternRecords, orderId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
 
   return {
     // 状态

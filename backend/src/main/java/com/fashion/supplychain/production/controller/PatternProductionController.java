@@ -109,10 +109,11 @@ public class PatternProductionController {
     }
 
     /**
-     * 根据款式ID获取纸样生产记录
+     * 根据款式ID获取纸样生产记录（多色多码：返回该款式全部色码记录列表）
+     * 兼容：只有 1 条记录时也返回数组，由前端适配
      */
     @GetMapping("/by-style/{styleId}")
-    public Result<Map<String, Object>> getByStyleId(@PathVariable String styleId) {
+    public Result<List<Map<String, Object>>> getByStyleId(@PathVariable String styleId) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
@@ -120,13 +121,14 @@ public class PatternProductionController {
         wrapper.eq(PatternProduction::getTenantId, tenantId)
                 .eq(PatternProduction::getStyleId, styleId)
                 .eq(PatternProduction::getDeleteFlag, 0)
-                .orderByDesc(PatternProduction::getCreateTime)
-                .last("LIMIT 1");
-        PatternProduction record = patternProductionService.getOne(wrapper);
-        if (record == null) {
-            return Result.success(null);
+                .orderByAsc(PatternProduction::getCreateTime);
+        List<PatternProduction> records = patternProductionService.list(wrapper);
+        if (records == null || records.isEmpty()) {
+            return Result.success(java.util.List.of());
         }
-        return Result.success(patternEnrichmentHelper.enrichRecord(record));
+        return Result.success(records.stream()
+                .map(patternEnrichmentHelper::enrichRecord)
+                .collect(java.util.stream.Collectors.toList()));
     }
 
     /**
