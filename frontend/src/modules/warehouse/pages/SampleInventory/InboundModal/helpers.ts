@@ -1,4 +1,5 @@
 import type { InboundPlanRow, SizeColorMatrixRow, StyleSnapshot } from './types';
+import { splitStyleOptions } from '@/utils/styleOptions';
 
 export const normalizeText = (value: unknown) => String(value || '').trim();
 
@@ -14,10 +15,7 @@ export const uniqueValues = (values: unknown[]) => {
 };
 
 export const splitCandidateValues = (value: unknown) => uniqueValues(
-  normalizeText(value)
-    .split(/[/,，\s]+/)
-    .map((item) => item.trim())
-    .filter(Boolean)
+  splitStyleOptions(typeof value === 'string' ? value : normalizeText(value))
 );
 
 export const parseSizeColorConfig = (raw: unknown) => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { OrderInfoGridItem } from '@/components/common/OrderInfoGrid';
 import type { CardSizeQuantityItem } from '@/utils/cardSizeQuantity';
+import { splitStyleOptions } from '@/utils/styleOptions';
 
 interface OrderColorSizeMatrixProps {
   items: CardSizeQuantityItem[];
@@ -54,10 +55,7 @@ const rowBaseStyle: React.CSSProperties = {
   minWidth: 0,
 };
 
-const splitFallbackSizes = (value?: string) => String(value || '')
-  .split(/[/,，、\s]+/)
-  .map((item) => item.trim())
-  .filter(Boolean);
+const splitFallbackSizes = (value?: string) => splitStyleOptions(value);
 
 const createSizeOrder = (items: CardSizeQuantityItem[], fallbackSizes: string[]) => {
   const ordered: string[] = [];

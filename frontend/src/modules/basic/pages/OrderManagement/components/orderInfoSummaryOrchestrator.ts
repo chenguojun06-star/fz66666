@@ -1,4 +1,5 @@
 import { sortSizeNames } from '@/utils/api';
+import { splitStyleOptions } from '@/utils/styleOptions';
 import type { OrderLine } from '../types';
 
 const toText = (value: unknown) => {
@@ -102,10 +103,7 @@ export const buildStyleSampleColorSummary = ({
   }
 
   if (!rowMap.size) {
-    const fallbackSizes = String(fallbackSizeText || '')
-      .split(/[/,，、\s]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const fallbackSizes = splitStyleOptions(fallbackSizeText);
     if (fallbackSizes.length === 1 && Number(sampleQuantity || 0) > 0) {
       sizeSet.add(fallbackSizes[0]);
       rowMap.set(toText(fallbackColorText), {

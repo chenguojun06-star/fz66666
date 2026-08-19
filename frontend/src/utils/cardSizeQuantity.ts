@@ -1,6 +1,7 @@
 import type { StyleInfo } from '@/types/style';
 import type { ProductionOrder } from '@/types/production';
 import { parseProductionOrderLines } from '@/utils/api';
+import { splitStyleOptions } from '@/utils/styleOptions';
 
 export interface CardSizeQuantityItem {
   color?: string;
@@ -66,10 +67,7 @@ export const getStyleCardSizeQuantityItems = (record: Partial<StyleInfo>) => {
   const topLevelItems = buildStyleTopLevelItems(record);
   if (topLevelItems.length > 0) return topLevelItems;
 
-  const fallbackSizes = toNonEmptyText(record.size)
-    .split(/[/,，\s]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const fallbackSizes = splitStyleOptions(record.size);
   const fallbackQuantity = toPositiveNumber(record.sampleQuantity);
   const fallbackColor = toNonEmptyText(record.color);
 
