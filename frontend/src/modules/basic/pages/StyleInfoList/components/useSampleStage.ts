@@ -22,6 +22,8 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   const [sampleSnapshotList, setSampleSnapshotList] = useState<PatternProductionSnapshot[]>([]);
   const [activeSampleIndex, setActiveSampleIndex] = useState(0);
   const [sampleSnapshotLoading, setSampleSnapshotLoading] = useState(false);
+  // by-style 接口 404 = 云端后端未部署最新代码（端点 2026-08-19 新增），与"确实无数据"区分
+  const [sampleStageBackendStale, setSampleStageBackendStale] = useState(false);
   const [sampleActionLoading, setSampleActionLoading] = useState(false);
   const [progressEditorOpen, setProgressEditorOpen] = useState(false);
   const [progressDraft, setProgressDraft] = useState<Record<string, number>>({});
@@ -133,15 +135,20 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     // ✅ 精确查询接口 /production/pattern/by-style/{styleId}，后端返回该款式全部色码记录列表
     // （多色多码：每个 颜色×码数 = 1 条独立 PatternProduction）
     const styleId = String(record.id || '').trim();
-    if (!styleId) return [] as PatternProductionSnapshot[];
+    if (!styleId) return { list: [] as PatternProductionSnapshot[], stale: false };
     try {
       const response: any = await api.get(`/production/pattern/by-style/${encodeURIComponent(styleId)}`);
       const data = response?.data;
       // 后端 Result<List<Map>>：兼容历史单对象返回（存量部署未升级时）
       const list = Array.isArray(data) ? data : data && typeof data === 'object' ? [data] : [];
-      return list.map((item: Record<string, unknown>) => normalizePatternProductionSnapshot(item));
-    } catch {
-      return [] as PatternProductionSnapshot[];
+      return {
+        list: list.map((item: Record<string, unknown>) => normalizePatternProductionSnapshot(item)),
+        stale: false,
+      };
+    } catch (err: any) {
+      // 404 = 后端跑的还是旧版本（by-style 端点不存在），提示部署而不是误导"无数据"
+      const stale = err?.response?.status === 404;
+      return { list: [] as PatternProductionSnapshot[], stale };
     }
   }, []);
 
@@ -149,8 +156,9 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     if (!selectedStage || selectedStage.stage.key !== 'sample') return;
     setSampleSnapshotLoading(true);
     try {
-      const list = await loadSampleSnapshotList(selectedStage.record);
+      const { list, stale } = await loadSampleSnapshotList(selectedStage.record);
       setSampleSnapshotList(list);
+      setSampleStageBackendStale(stale);
       setActiveSampleIndex((prev) => Math.min(prev, Math.max(0, list.length - 1)));
       await onRefresh();
     } finally {
@@ -161,6 +169,11 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   useEffect(() => {
     if (selectedStage && selectedStage.stage.key === 'sample') {
       void reloadSampleStage();
+    } else {
+      setSampleSnapshotList([]);
+      setActiveSampleIndex(0);
+      setSampleStageBackendStale(false);
+      setProgressEditorOpen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStage?.record?.styleNo, selectedStage?.stage?.key]);
@@ -190,30 +203,6 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   // --- effects ---
 
   useEffect(() => {
-    let active = true;
-    if (!selectedStage || selectedStage.stage.key !== 'sample') {
-      setSampleSnapshotList([]);
-      setActiveSampleIndex(0);
-      setSampleSnapshotLoading(false);
-      setProgressEditorOpen(false);
-      return () => { active = false; };
-    }
-    setSampleSnapshotLoading(true);
-    setSampleSnapshotList([]);
-    void loadSampleSnapshotList(selectedStage.record).then((list) => {
-      if (active) {
-        setSampleSnapshotList(list);
-        setActiveSampleIndex(0);
-      }
-    }).catch(() => {
-      if (active) setSampleSnapshotList([]);
-    }).finally(() => {
-      if (active) setSampleSnapshotLoading(false);
-    });
-    return () => { active = false; };
-  }, [loadSampleSnapshotList, selectedStage]);
-
-  useEffect(() => {
     if (!progressEditorOpen || !sampleSnapshot) return;
     setProgressDraft({
       procurement: sampleSnapshot.procurementProgress,
@@ -231,6 +220,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     activeSampleIndex,
     setActiveSampleIndex,
     sampleSnapshotLoading,
+    sampleStageBackendStale,
     sampleActionLoading,
     progressEditorOpen,
     setProgressEditorOpen,

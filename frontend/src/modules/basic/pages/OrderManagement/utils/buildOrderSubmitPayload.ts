@@ -1,5 +1,18 @@
+import dayjs from 'dayjs';
 import type { StyleInfo } from '@/types/style';
 import type { OrderLine, ProgressNode } from '../types';
+
+/**
+ * 安全格式化时间字段：
+ * 表单值可能是 dayjs 对象（正常选择）也可能是字符串（编辑回填/持久化恢复/异常路径），
+ * 直接调用 .format() 会在字符串上报 "plannedStartDate.format is not a function"。
+ * 统一 dayjs() 包装 + 空值兜底 null。
+ */
+const safeFormatDateTime = (value: unknown): string | null => {
+  if (!value) return null;
+  const d = dayjs(value as any);
+  return d.isValid() ? d.format('YYYY-MM-DDTHH:mm:ss') : null;
+};
 
 interface BuildOrderSubmitPayloadArgs {
   values: Record<string, any>;
@@ -113,9 +126,9 @@ export const buildOrderSubmitPayload = ({
     factoryUnitPrice: resolvedOrderUnitPrice,
     quotationUnitPrice: quotationUnitPrice > 0 ? quotationUnitPrice : null,
     pricingMode: values.pricingMode || 'PROCESS',
-    plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-    plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-    expectedShipDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+    plannedStartDate: safeFormatDateTime(values.plannedStartDate),
+    plannedEndDate: safeFormatDateTime(values.plannedEndDate),
+    expectedShipDate: safeFormatDateTime(values.plannedEndDate),
     progressWorkflowJson: buildProgressWorkflowJson(progressNodes),
     extJson,
   };

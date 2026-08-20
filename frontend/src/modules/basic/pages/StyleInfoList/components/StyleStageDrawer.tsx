@@ -323,6 +323,12 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                     />
                   </div>
                 </>
+              ) : sample.sampleStageBackendStale ? (
+                <div className="style-smart-stage-modal__empty">
+                  后端版本过旧，缺少样衣生产查询接口（/production/pattern/by-style）。
+                  <br />
+                  请重新部署最新后端后重试——多色多码拆分与快照查询均在最新版本中。
+                </div>
               ) : (
                 <div className="style-smart-stage-modal__empty">当前还没有同步到样衣生产快照数据</div>
               )}

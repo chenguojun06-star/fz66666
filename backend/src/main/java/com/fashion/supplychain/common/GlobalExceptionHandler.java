@@ -321,15 +321,17 @@ public class GlobalExceptionHandler {
 
         /**
          * 处理DB访问异常（BadSqlGrammarException/DuplicateKeyException已单独处理，此处捕获其余DataAccessException）。
-         * 将错误信息暴露出来便于诊断列缺失/连接异常等问题。
+         * 透出诊断性根因（保留表名/列名）：云端最常见的故障是 Flyway 迁移未执行导致缺列
+         * （如 Unknown column 'companion_material_ids'），固定文案"数据访问失败"让用户无法定位。
          */
         @ExceptionHandler(DataAccessException.class)
         public ResponseEntity<Result<?>> handleDataAccess(DataAccessException e, HttpServletRequest request) {
                 String method = request == null ? "" : request.getMethod();
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.error("DB访问异常: {} {} - {}", method, uri, e.getMessage(), e);
+                String rootCause = sanitizeDiagnosticMessage(e.getMostSpecificCause().getMessage());
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "数据访问失败，请稍后重试，如问题持续请联系管理员"));
+                                .body(Result.fail(500, "数据访问失败（" + rootCause + "）"));
         }
 
         @ExceptionHandler(IOException.class)
@@ -402,6 +404,21 @@ public class GlobalExceptionHandler {
                                 .replaceAll("(?i)SELECT\\s+.+?\\s+FROM", "SQL=***")
                                 .replaceAll("(?i)INSERT\\s+.+?\\s+INTO", "SQL=***")
                                 .replaceAll("(?i)UPDATE\\s+.+?\\s+SET", "SQL=***");
+                if (sanitized.length() > 200) {
+                        sanitized = sanitized.substring(0, 200) + "...";
+                }
+                return sanitized;
+        }
+
+        /**
+         * 诊断性脱敏：保留表名/列名（用于定位缺列/迁移未执行），只脱敏密码与连接串。
+         * 数据库表列结构不属于敏感信息，过度脱敏（列名→***）会让云端缺列问题无法排障。
+         */
+        private String sanitizeDiagnosticMessage(String message) {
+                if (message == null) return "数据库操作失败";
+                String sanitized = message
+                                .replaceAll("(?i)(password|secret|token|key|credential)\\s*[:=]\\s*\\S+", "$1=***")
+                                .replaceAll("(?i)(jdbc|mysql|redis)://\\S+", "$1://***");
                 if (sanitized.length() > 200) {
                         sanitized = sanitized.substring(0, 200) + "...";
                 }
