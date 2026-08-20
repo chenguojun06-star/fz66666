@@ -314,7 +314,9 @@ jobs:
     - name: 等待服务启动（120s，Spring Boot启动需70s+）
       run: sleep 120
     - name: 运行部署后冒烟测试
-      continue-on-error: true
+      # ★ 2026-08-20 去掉 continue-on-error：
+      # 旧配置冒烟失败也显示绿勾 → 云端带病运行没人管 → 用户当测试员
+      # 冒烟失败必须红，阻止打标签 + 触发通知告警
       env:
         SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL || 'https://api.webyszl.cn' }}
         SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
@@ -333,7 +335,9 @@ jobs:
   create-release-tag:
     name: 创建发布标签
     runs-on: ubuntu-latest
-    needs: [deploy]
+    # ★ 2026-08-20 加 postdeploy-smoke-test：
+    # 冒烟失败的版本不允许打发布标签（旧逻辑部署成功就打标签，掩盖带病版本）
+    needs: [deploy, postdeploy-smoke-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -367,10 +371,36 @@ jobs:
     if: always()
 
     steps:
-    - name: 发送通知
+    - name: 检查整体结果
       run: |
-        echo "CI/CD Pipeline 完成"
-        echo "后端测试: ${{ needs.backend-test.result }}"
-        echo "前端构建: ${{ needs.frontend-build.result }}"
-        echo "部署结果: ${{ needs.deploy.result }}"
-        echo "冒烟测试: ${{ needs.postdeploy-smoke-test.result }}"
+        BACKEND="${{ needs.backend-test.result }}"
+        FRONTEND="${{ needs.frontend-build.result }}"
+        DEPLOY="${{ needs.deploy.result }}"
+        SMOKE="${{ needs.postdeploy-smoke-test.result }}"
+
+        echo "后端测试: $BACKEND"
+        echo "前端构建: $FRONTEND"
+        echo "部署结果: $DEPLOY"
+        echo "冒烟测试: $SMOKE"
+
+        # ★ 2026-08-20 事故教训：CI 红了没人看 → 云端跑旧代码 → 用户当测试员
+        # 任何环节失败都让整个 workflow 显示红叉，强迫推送者确认
+        FAILED=0
+        for R in "$BACKEND" "$FRONTEND" "$DEPLOY" "$SMOKE"; do
+          if [[ "$R" == "failure" || "$R" == "cancelled" ]]; then
+            FAILED=1
+          fi
+        done
+
+        if [[ "$FAILED" == "1" ]]; then
+          echo ""
+          echo "╔══════════════════════════════════════════════╗"
+          echo "║  ❌ 流水线存在失败环节 — 云端可能不是最新代码  ║"
+          echo "╠══════════════════════════════════════════════╣"
+          echo "║  后端编译失败     → deploy 被跳过 → 旧代码    ║"
+          echo "║  冒烟测试失败     → 云端带病运行，立即排查     ║"
+          echo "║  请到 Actions 页面查看失败详情并修复后重推     ║"
+          echo "╚══════════════════════════════════════════════╝"
+          exit 1
+        fi
+        echo "✅ 流水线全绿，云端已是最新版本"

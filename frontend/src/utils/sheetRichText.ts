@@ -48,7 +48,6 @@ export const sanitizeSheetRichHtml = (
   const re = /<img\b[^>]*>|<br\s*\/?>|<[^>]+>/gi;
   let last = 0;
   let m: RegExpExecArray | null;
-  // eslint-disable-next-line no-cond-assign
   while ((m = re.exec(s))) {
     parts.push(escText(s.slice(last, m.index)).replace(/\r\n|\r|\n/g, '<br>'));
     const tag = m[0].toLowerCase();

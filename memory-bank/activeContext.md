@@ -1,11 +1,30 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-17（D-105 组织架构页工厂节点彻底剔除：本厂/外协工厂不再出现在内部组织管理）
+> 最后更新：2026-08-20（冒烟测试端点路径全面修正：30/30 全通过，CI 冒烟门控闭环）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-20 反复事故根治：CI/CD 质量门控 + 冒烟测试端点修正 ✅（30/30 全通过，未推送）
+
+- [x] **事故根因链闭环**：代码已推送但 CI 编译失败 → deploy job 被 needs 静默跳过 → 云端跑旧代码 → 新端点 404/新列缺失 500 → 用户当测试员。三层防护全部落地：
+- [x] **① pre-push hook 智能全量模式**（scripts/hooks/pre-push）：旧逻辑默认 --quick 跳过编译/tsc。新逻辑按待推送代码类型自动选范围：含 .java → --backend；含 .ts/.tsx → --frontend；混合 → 全量；纯文档 → --quick。坏代码不再进仓库
+- [x] **② 冒烟测试版本滞后检测**（scripts/postdeploy-smoke-test.py 2.5 节）：新端点 404=云端旧代码、新列缺失=500，直接定位"deploy job 被跳过"根因。probe 端点永久保留防旧版回滚
+- [x] **③ CI 红灯强制**（.github/workflows/ci.yml）：冒烟去掉 continue-on-error、create-release-tag 加 needs: postdeploy-smoke-test（冒烟失败不许打标签）、通知 job 汇总四环节状态任一失败 exit 1
+- [x] **④ 冒烟端点路径全面修正（本轮核心）**：原脚本 6 个端点 404/405，从未对齐后端 Controller 实际映射（写了不存在的端点，404 被误判为"服务异常"）：
+  - 色卡 `/api/color-card/list` → `/api/material-color-card/list`（MaterialColorCardController）
+  - 工序单价 `/api/production/process/template/list` → `/api/production/process-price/processes?orderNo={真实单号}`（必填 orderNo，脚本先取订单列表第一条）
+  - 物料 `/api/production/material/list` → `/api/production/material/stock/list`（MaterialStockController）
+  - 工资支付 GET `/api/finance/wage/payment/list` → POST `/api/finance/wage-payments/list`（body={}）
+  - 计件单价 `/api/finance/wage/piece-rate/list` → `/api/finance/wage-payments/dashboard-stats?startDate=&endDate=`（必填日期，脚本动态生成当月区间）
+  - 质检 `/api/production/quality/check/list` → `/api/production/warehousing/pending-repair-tasks`
+  - 订单详情 GET `/api/production/order/{id}`（405）→ `/api/production/order/detail/{id}`
+  - stages 检查从 detail 响应（无此字段，永远 FAIL）移到 `/api/production/order/flow/{id}`（真实 stages 位置，校验 processName/status）
+  - 无 patternProductionId 时从 FAIL 改为 PASS-skip（大货订单无样衣记录是正常业务）
+- [x] **验证**：生产环境实跑 30/30 全通过（基础 23 + 版本探测 2 + 扩展 7，含 WebSocket 握手、多租户 tenantId 一致性、订单进度 0-100 合法性）
+- [x] **教训（写入防重蹈）**：冒烟测试写端点必须从后端 Controller @RequestMapping 核对，不能凭记忆/猜路径。不存在的端点 404 会淹没真实版本滞后 404，让版本检测失效
 
 ### 2026-08-19 样衣BOM/尺寸表/指派/二维码 5 处 P0+P1 修复 ✅（npx tsc 通过，未推送）
 

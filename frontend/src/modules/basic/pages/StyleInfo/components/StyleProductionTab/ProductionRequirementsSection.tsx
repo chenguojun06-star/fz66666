@@ -47,7 +47,6 @@ const ProductionRequirementsSection: React.FC<Props> = ({
       if (el.innerHTML !== nextHtml) el.innerHTML = nextHtml;
       lastReportedRef.current = nextHtml;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allRequirements]);
 
   const countImages = () => editorRef.current?.querySelectorAll('img').length ?? 0;

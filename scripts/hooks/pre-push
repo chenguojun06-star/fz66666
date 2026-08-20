@@ -7,7 +7,17 @@
 #
 # 绕过方式（紧急情况）: git push --no-verify
 #
-# 本 hook 读取 git 推送信息但只做本地校验，不修改推送内容
+# ★ 智能全量模式（2026-08-20 改造，P0 事故根因修复）：
+#   旧逻辑默认 --quick 跳过编译/tsc → 坏代码进仓库 → CI 编译失败 →
+#   deploy job 被静默跳过 → 云端跑旧代码 → 用户看到 404/500。
+#   新逻辑按待推送代码类型自动选择检查范围：
+#     - 含 .java  → 跑后端编译（safe-push --backend，含 Flyway/租户审计）
+#     - 含 .ts/.tsx → 跑前端 tsc（safe-push --frontend）
+#     - 同时含    → 全量 safe-push
+#     - 纯文档/脚本 → --quick（脚本类检查本来就全跑）
+#   环境变量：
+#     SAFE_PUSH_FULL=1  强制全量
+#     SAFE_PUSH_QUICK=1 强制快速（仅紧急情况）
 #
 set -uo pipefail
 
@@ -24,23 +34,51 @@ if [[ ! -x "$SAFE_PUSH" ]]; then
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  pre-push hook 触发 — 执行 safe-push.sh"
+echo "  pre-push hook 触发 — 执行 safe-push.sh（智能模式）"
 echo "  紧急绕过: git push --no-verify"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# --quick 模式：跳过编译和类型检查（CI 会跑完整的）
-# 如需完整检查，设置环境变量 SAFE_PUSH_FULL=1
-if [[ "${SAFE_PUSH_FULL:-0}" == "1" ]]; then
-  "$SAFE_PUSH"
+# ---- 检测待推送 commit 涉及的代码类型 ----
+UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/HEAD")
+PUSHED_FILES=$(git log --name-only --pretty=format: "$UPSTREAM"..HEAD 2>/dev/null | sort -u | grep -v '^$' || true)
+
+HAS_JAVA=$(echo "$PUSHED_FILES" | grep -c '\.java$' || true)
+HAS_TS=$(echo "$PUSHED_FILES" | grep -cE '\.(ts|tsx)$' || true)
+HAS_SQL=$(echo "$PUSHED_FILES" | grep -c '\.sql$' || true)
+
+echo "[pre-push] 待推送变更: $(echo "$PUSHED_FILES" | grep -c '' || echo 0) 个文件 (java=$HAS_JAVA ts=$HAS_TS sql=$HAS_SQL)"
+
+# ---- 选择检查范围 ----
+if [[ "${SAFE_PUSH_QUICK:-0}" == "1" ]]; then
+  ARGS="--quick"
+  echo "[pre-push] ⚡ SAFE_PUSH_QUICK=1，快速模式（紧急情况，风险自负）"
+elif [[ "${SAFE_PUSH_FULL:-0}" == "1" ]]; then
+  ARGS=""
+  echo "[pre-push] 🔍 SAFE_PUSH_FULL=1，强制全量模式"
+elif [[ "$HAS_JAVA" -gt 0 && "$HAS_TS" -gt 0 ]]; then
+  ARGS=""
+  echo "[pre-push] 🔍 检测到 Java + TS 变更 → 全量检查（编译+tsc）"
+elif [[ "$HAS_JAVA" -gt 0 ]]; then
+  ARGS="--backend"
+  echo "[pre-push] 🔍 检测到 Java 变更 → 后端全量检查（含编译）"
+elif [[ "$HAS_TS" -gt 0 ]]; then
+  ARGS="--frontend"
+  echo "[pre-push] 🔍 检测到 TS 变更 → 前端全量检查（含 tsc）"
 else
-  "$SAFE_PUSH" --quick
+  ARGS="--quick"
+  echo "[pre-push] ⚡ 无代码变更（文档/脚本/SQL）→ 快速模式（脚本检查仍全跑）"
 fi
+
+"$SAFE_PUSH" $ARGS
 EXIT_CODE=$?
 
 if [[ $EXIT_CODE -ne 0 ]]; then
   echo ""
   echo "❌ pre-push 检查未通过，推送已阻止"
   echo "   修复问题后重新 push，或紧急情况: git push --no-verify"
+  echo ""
+  echo "⚠️  重要：如果用 --no-verify 强推，CI 编译失败会导致部署被跳过，"
+  echo "   云端继续跑旧代码（2026-08-20 事故根因），请务必确认 CI 绿色。"
   exit 1
 fi
 

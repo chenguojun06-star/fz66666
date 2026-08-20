@@ -218,7 +218,6 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
       const backendMsg = e?.response?.data?.message;
       const displayMsg = backendMsg || e?.message || '出库领取失败';
       message.error(displayMsg);
-      // eslint-disable-next-line no-console
       console.warn('[warehouse-pick] 失败:', e?.response?.status, backendMsg || e?.message);
     }
   };

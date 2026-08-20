@@ -1,7 +1,32 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-17（新增 D-107 样衣保存400根因：size列宽溢出）
+> 最后更新：2026-08-20（新增 D-108 CI/CD 三层质量门控 + 冒烟端点对齐 Controller）
+
+---
+
+## D-108：CI/CD 三层质量门控闭环 — 冒烟测试端点必须对齐 Controller 实际映射（2026-08-20）
+
+**背景**：用户连续遭遇"反复出问题"：订单创建 `plannedStartDate.format` 报错、500"数据访问失败"无根因、新端点 404 被误报"无快照数据"。深层根因链：代码已推送但 CI 编译失败 → deploy job 被 needs 静默跳过 → 云端继续跑旧代码 → 用户当测试员。且冒烟测试脚本本身有 6 个端点路径从未存在（404/405），把"版本滞后检测"变成了狼来了——真实 404 与脚本 bug 404 混在一起没人信。
+
+**决策**：
+1. **pre-push hook 智能全量模式**：按待推送文件类型自动选检查范围（.java→backend 编译、.ts/.tsx→frontend tsc、混合→全量、纯文档→quick），坏代码 push 前拦截
+2. **冒烟测试版本滞后检测**：新端点 probe 404=云端旧代码、缺列 500=Flyway 未执行，提示词直接指向"deploy job 被跳过"；probe 端点永久保留防回滚
+3. **CI 红灯强制**：冒烟去 continue-on-error、release tag 依赖冒烟成功、通知 job 任一环节失败 exit 1 全 workflow 显红
+4. **端点修正铁律**：冒烟端点一律从后端 Controller `@RequestMapping`/`@GetMapping` 核对，必填参数（orderNo/startDate）脚本动态准备，禁止凭记忆写路径
+
+**关键端点修正对照**（错误→正确）：
+- `/api/color-card/list` → `/api/material-color-card/list`
+- `/api/production/process/template/list` → `/api/production/process-price/processes?orderNo=xxx`
+- `/api/production/material/list` → `/api/production/material/stock/list`
+- GET `/api/finance/wage/payment/list` → POST `/api/finance/wage-payments/list`
+- `/api/finance/wage/piece-rate/list` → `/api/finance/wage-payments/dashboard-stats?startDate&endDate`
+- `/api/production/quality/check/list` → `/api/production/warehousing/pending-repair-tasks`
+- GET `/api/production/order/{id}`（405）→ `/api/production/order/detail/{id}`；stages 在 `/flow/{id}`（校验 processName/status，无 progress 键）
+
+**理由**：本地修复单个 bug 只治标；三层门控（push 前/部署后/发版前）+ 真实端点才治"用户当测试员"的本。验证：生产环境实跑 30/30 全通过。
+
+**后果**：以后每次发版新增关键端点，须同步加到 `version_probe_endpoints`（永久保留）；写冒烟端点前必须 Grep Controller 确认。
 
 ---
 

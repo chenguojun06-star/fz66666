@@ -59,7 +59,6 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
       const backendMsg = e?.response?.data?.message;
       const displayMsg = backendMsg || e?.message || '领取失败';
       message.error(displayMsg);
-      // eslint-disable-next-line no-console
       console.warn('[warehouse-pick] 失败:', e?.response?.status, backendMsg || e?.message);
     } finally {
       setSubmitting(false);

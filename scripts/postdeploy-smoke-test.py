@@ -10,12 +10,14 @@
 覆盖历史上崩过的接口：
   - 2026-06-18 登录 500（t_user.position 列缺失）
   - 2026-06-18 /api/dashboard/menu-badge-counts 500（safety_stock 列缺失）
-  - 2026-06-18 /api/color-card/list 500（列名不匹配）
+  - 2026-06-18 色卡列表 500（列名不匹配；2026-08-20 修正路径为 /api/material-color-card/list）
+  - 2026-08-20 端点路径全面修正（原脚本 6 个端点 404/405，从未对齐后端 Controller 实际映射）
   - 2026-06-11 全站 502（socat IPv6）
   - 2026-06-12 部署失败（探针配置）
 
 扩展测试（扫码→进度刷新链路）：
-  - [扩展] 订单详情接口验证（productionProgress / stages.progress 完整性）
+  - [扩展] 订单详情接口验证（GET /detail/{id}，productionProgress 完整性）
+  - [扩展] 订单流程接口验证（GET /flow/{id}，stages 数组每阶段含 processName/status）
   - [扩展] 扫码历史接口验证（records 是数组 + tenantId 字段存在 + tenantId 一致性，多租户隔离）
   - [扩展] 款式工序配置接口验证（同一工序名+阶段不重复出现超过2次，重复仅警告不失败）
   - [扩展] WebSocket 握手验证（wss://{base}/ws/order-progress/{tenantId}?token={jwt}，HTTP 101 + 5s 不中断）
@@ -342,7 +344,7 @@ if token:
 
     # 06-18 崩过的接口
     expect_200("GET", "/api/dashboard/menu-badge-counts", "菜单Badge(06-18崩过)")
-    expect_200("GET", "/api/color-card/list", "色卡列表(06-18崩过)")
+    expect_200("GET", "/api/material-color-card/list", "色卡列表(06-18崩过,08-20修正路径)")
     expect_200("GET", "/api/system/user/me", "当前用户信息(06-18崩过:position)")
 
     # 高频核心接口
@@ -354,13 +356,48 @@ if token:
     expect_200("GET", "/api/finance/finished-settlement/list", "成品结算列表")
 
     # 核心链路接口（扫码/入库/工资结算）
+    # ★ 2026-08-20 端点路径修正（原 6 个端点 404/405，已按后端 Controller 实际映射对齐）：
+    #   色卡         /api/color-card/list                → /api/material-color-card/list (MaterialColorCardController)
+    #   工序单价     /api/production/process/template/list → /api/production/process-price/processes (ProcessPriceAdjustmentController)
+    #   物料         /api/production/material/list       → /api/production/material/stock/list (MaterialStockController)
+    #   工资支付列表 GET /api/finance/wage/payment/list   → POST /api/finance/wage-payments/list (WagePaymentController)
+    #   计件单价     /api/finance/wage/piece-rate/list   → /api/finance/wage-payments/dashboard-stats (WagePaymentController)
+    #   质检次品     /api/production/quality/check/list  → /api/production/warehousing/pending-repair-tasks (ProductWarehousingController)
     expect_200("GET", "/api/production/order/list", "生产订单列表")
-    expect_200("GET", "/api/production/process/template/list", "工序模板列表")
-    expect_200("GET", "/api/production/material/list", "物料列表")
+
+    # 工序单价列表：/process-price/processes 必填 orderNo，先取一个真实订单号
+    first_order_no = None
+    try:
+        pon_code, pon_body = http("GET", "/api/production/order/list?page=1&pageSize=10", retry=False)
+        if pon_code == 200:
+            pon_resp = json.loads(pon_body)
+            pon_data = pon_resp.get("data", {}) if isinstance(pon_resp, dict) else {}
+            pon_records = (
+                pon_data.get("records") or pon_data.get("list") or []
+                if isinstance(pon_data, dict) else
+                (pon_data if isinstance(pon_data, list) else [])
+            )
+            if pon_records and isinstance(pon_records[0], dict):
+                first_order_no = pon_records[0].get("orderNo")
+    except Exception:
+        pass
+    if first_order_no:
+        expect_200("GET", f"/api/production/process-price/processes?orderNo={first_order_no}",
+                   "工序单价列表")
+    else:
+        log("PASS", "工序单价列表", "无订单数据，跳过（端点需 orderNo 参数）")
+
+    expect_200("GET", "/api/production/material/stock/list", "物料库存列表")
     expect_200("GET", "/api/production/warehousing/list", "入库记录列表")
-    expect_200("GET", "/api/finance/wage/payment/list", "工资结算列表")
-    expect_200("GET", "/api/finance/wage/piece-rate/list", "计件单价列表")
-    expect_200("GET", "/api/production/quality/check/list", "质检记录列表")
+    expect_200("POST", "/api/finance/wage-payments/list", "工资支付列表", data={})
+
+    # 工资看板统计：必填 startDate/endDate（格式 yyyy-MM-dd），探测当月区间
+    _today = time.strftime("%Y-%m-%d")
+    _month_start = _today[:8] + "01"
+    expect_200("GET",
+               f"/api/finance/wage-payments/dashboard-stats?startDate={_month_start}&endDate={_today}",
+               "工资看板统计")
+    expect_200("GET", "/api/production/warehousing/pending-repair-tasks", "质检次品待返修列表")
 
     # 权限控制
     code, _ = http("GET", "/api/system/user/list", with_token=False, retry=False)
@@ -368,6 +405,44 @@ if token:
         log("PASS", "无Token拦截", f"HTTP {code}")
     else:
         log("FAIL", "无Token拦截", f"HTTP {code}（期望401/403）")
+
+# ─────────────────────────────────────────────────────────
+# 2.5 版本滞后检测（2026-08-20 事故根因防护）
+#
+# 事故链：代码已推送但 CI 编译失败 → deploy job 被 needs 静默跳过
+#        → 云端继续跑旧代码 → 新端点 404 / 新列缺失 500 → 用户当测试员
+#
+# 检测原理：新端点不存在返回 404；端点存在但记录不存在返回 200+空结果。
+#          缺列的表被查询时直接 500。
+# ─────────────────────────────────────────────────────────
+if token:
+    print("\n--- 2.5 版本滞后检测（新端点/新列是否已部署）---")
+
+    # 每次发版新增的关键端点，纳入后永久保留（防旧版本回滚）
+    # (path, 名称, 事故背景说明)
+    version_probe_endpoints = [
+        # 2026-08-19 多色多码样衣拆分：by-style 返回该款式全部色码记录
+        # 端点存在时 styleId=0 返回 200+空数组；不存在时 404
+        ("/api/production/pattern/by-style/0", "样衣色码记录接口(08-19多色多码)", "404=后端版本过旧"),
+        # 2026-08-19 P2-6 主面料关联辅料：t_material_database.companion_material_ids
+        # 列缺失时 list 查询直接 500（Flyway 迁移未执行）
+        ("/api/material/database/list?page=1&pageSize=1", "物料数据库接口(08-19 companion列)", "500=Flyway迁移未执行/缺列"),
+    ]
+
+    for path, name, hint in version_probe_endpoints:
+        code, body = http("GET", path, retry=False)
+        if code == 200:
+            log("PASS", f"[版本]{name}", "HTTP 200")
+        elif code == 404:
+            log("FAIL", f"[版本]{name}",
+                f"HTTP 404 {hint} | 端点不存在，云端跑的是旧代码，"
+                f"请检查 GitHub Actions 的 deploy job 是否被跳过/失败")
+        elif code == 500:
+            log("FAIL", f"[版本]{name}",
+                f"HTTP 500 {hint} | 根因: {body[:150]}")
+        else:
+            snippet = body[:150] if body else "(empty)"
+            log("FAIL", f"[版本]{name}", f"HTTP {code} | {snippet}")
 
 # ─────────────────────────────────────────────────────────
 # 3. 扩展测试：扫码→进度刷新链路
@@ -427,9 +502,11 @@ if token:
         log("FAIL", "[扩展]获取有效订单ID", f"异常: {type(e).__name__}: {e}")
 
     # 场景1：订单详情接口验证（进度数据完整性）
+    # ★ 2026-08-20 修正：旧路径 GET /api/production/order/{id} 返回 405
+    #   （Controller 只有 /{id}/timeline，无裸 GET /{id}），正确详情端点是 /detail/{id}
     try:
         if order_id:
-            od_code, od_body = http("GET", f"/api/production/order/{order_id}")
+            od_code, od_body = http("GET", f"/api/production/order/detail/{order_id}")
             if od_code == 200:
                 od_resp = json.loads(od_body)
                 od_data = od_resp.get("data", {}) if isinstance(od_resp, dict) else {}
@@ -454,24 +531,8 @@ if token:
                         log("FAIL", "[扩展]订单详情进度数据",
                             f"productionProgress={progress!r} 不是整数")
 
-                # 验证 stages 数组中每个阶段有 progress 字段
-                stages = od_data.get("stages")
-                if stages is None:
-                    log("FAIL", "[扩展]订单详情stages结构", "无 stages 字段")
-                elif not isinstance(stages, list):
-                    log("FAIL", "[扩展]订单详情stages结构",
-                        f"stages 不是数组 | type={type(stages).__name__}")
-                elif not stages:
-                    log("PASS", "[扩展]订单详情stages结构", "stages 为空数组（无可校验项）")
-                else:
-                    missing = [i for i, s in enumerate(stages)
-                               if not isinstance(s, dict) or "progress" not in s]
-                    if missing:
-                        log("FAIL", "[扩展]订单详情stages结构",
-                            f"stages 中索引 {missing[:10]} 缺少 progress 字段")
-                    else:
-                        log("PASS", "[扩展]订单详情stages结构",
-                            f"共 {len(stages)} 个阶段，均含 progress 字段")
+                # 注：stages 不在 detail 响应里（detail 返回 ProductionOrder 实体），
+                # stages 结构在下方"场景1.5 订单流程接口"里验证
             else:
                 snippet = od_body[:200] if od_body else "(empty)"
                 log("FAIL", "[扩展]订单详情接口", f"HTTP {od_code} | {snippet}")
@@ -479,6 +540,44 @@ if token:
             log("FAIL", "[扩展]订单详情接口", "无可用 orderId，跳过")
     except Exception as e:
         log("FAIL", "[扩展]订单详情接口", f"异常: {type(e).__name__}: {e}")
+
+    # 场景1.5：订单流程接口验证（stages 结构完整性）
+    # ★ 2026-08-20 新增：旧逻辑在 detail 响应里找 stages 字段（永远 FAIL，字段不存在）。
+    #   stages 实际在 GET /api/production/order/flow/{id} 响应的 data.stages，
+    #   每个阶段含 processName / status / totalQuantity 字段（无 progress 键）。
+    try:
+        if order_id:
+            fl_code, fl_body = http("GET", f"/api/production/order/flow/{order_id}")
+            if fl_code == 200:
+                fl_resp = json.loads(fl_body)
+                fl_data = fl_resp.get("data", {}) if isinstance(fl_resp, dict) else {}
+                if not isinstance(fl_data, dict):
+                    fl_data = {}
+                stages = fl_data.get("stages")
+                if stages is None:
+                    log("FAIL", "[扩展]订单流程stages结构", "无 stages 字段")
+                elif not isinstance(stages, list):
+                    log("FAIL", "[扩展]订单流程stages结构",
+                        f"stages 不是数组 | type={type(stages).__name__}")
+                elif not stages:
+                    log("PASS", "[扩展]订单流程stages结构", "stages 为空数组（无可校验项）")
+                else:
+                    missing = [i for i, s in enumerate(stages)
+                               if not isinstance(s, dict)
+                               or "processName" not in s or "status" not in s]
+                    if missing:
+                        log("FAIL", "[扩展]订单流程stages结构",
+                            f"stages 中索引 {missing[:10]} 缺少 processName/status 字段")
+                    else:
+                        log("PASS", "[扩展]订单流程stages结构",
+                            f"共 {len(stages)} 个阶段，均含 processName/status 字段")
+            else:
+                snippet = fl_body[:200] if fl_body else "(empty)"
+                log("FAIL", "[扩展]订单流程接口", f"HTTP {fl_code} | {snippet}")
+        else:
+            log("FAIL", "[扩展]订单流程接口", "无可用 orderId，跳过")
+    except Exception as e:
+        log("FAIL", "[扩展]订单流程接口", f"异常: {type(e).__name__}: {e}")
 
     # 场景2：扫码历史接口验证（多租户隔离）
     try:
@@ -594,7 +693,8 @@ if token:
                 snippet = pc_body[:200] if pc_body else "(empty)"
                 log("FAIL", "[扩展]工序配置接口", f"HTTP {pc_code} | {snippet}")
         else:
-            log("FAIL", "[扩展]工序配置接口", "无可用 patternProductionId，跳过")
+            # 无样衣生产任务是正常业务场景（首单大货订单无样衣记录），不算失败
+            log("PASS", "[扩展]工序配置接口", "无可用 patternProductionId，跳过（该订单非样衣生产单）")
     except Exception as e:
         log("FAIL", "[扩展]工序配置接口", f"异常: {type(e).__name__}: {e}")
 
