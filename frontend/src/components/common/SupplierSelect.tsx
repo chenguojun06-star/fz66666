@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AutoComplete, Spin } from 'antd';
+import { App, AutoComplete, Button, Form, Input, Popover, Spin } from 'antd';
 import type { AutoCompleteProps } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import factoryApi from '../../services/system/factoryApi';
 import type { Factory } from '@/types/system';
 import { subscribeDataUpdated } from '@/utils/dataEvents';
@@ -61,6 +62,10 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 }) => {
   const [suppliers, setSuppliers] = useState<Factory[]>([]);
   const [loading, setLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm] = Form.useForm();
+  const { message } = App.useApp();
 
   // 加载供应商列表
   useEffect(() => {
@@ -175,33 +180,125 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     }
   };
 
+  // 显式新建供应商：弹出迷你表单（名称/联系人/电话），创建成功后自动选中
+  const handleCreateSubmit = async () => {
+    try {
+      const values = await createForm.validateFields();
+      const name = String(values.factoryName || '').trim();
+      if (suppliers.some(s => s.factoryName === name)) {
+        message.warning('该供应商已存在，已自动选中');
+        const existing = suppliers.find(s => s.factoryName === name)!;
+        setCreateOpen(false);
+        createForm.resetFields();
+        onChange?.(name, {
+          id: existing.id,
+          factory: existing,
+          supplierId: existing.id,
+          supplierContactPerson: existing.contactPerson,
+          supplierContactPhone: existing.contactPhone
+        });
+        return;
+      }
+      setCreating(true);
+      const response = await factoryApi.create({
+        factoryName: name,
+        contactPerson: String(values.contactPerson || '').trim() || undefined,
+        contactPhone: String(values.contactPhone || '').trim() || undefined,
+        supplierType: 'MATERIAL',
+        factoryType: 'EXTERNAL',
+        status: 'active'
+      });
+      const newFactory = response?.data;
+      if (!newFactory?.id) {
+        message.error(response?.message || '创建供应商失败');
+        return;
+      }
+      setSuppliers(prev => [...prev, newFactory]);
+      setCreateOpen(false);
+      createForm.resetFields();
+      message.success(`供应商「${name}」创建成功`);
+      onChange?.(name, {
+        id: newFactory.id,
+        factory: newFactory,
+        supplierId: newFactory.id,
+        supplierContactPerson: newFactory.contactPerson,
+        supplierContactPhone: newFactory.contactPhone
+      });
+    } catch (error) {
+      // validateFields 抛出时为表单校验错误，静默；其余提示
+      if ((error as { errorFields?: unknown })?.errorFields) return;
+      message.error('创建供应商失败，请稍后重试');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const createPopoverContent = (
+    <Form form={createForm} layout="vertical" size="small" style={{ width: 260 }} onFinish={handleCreateSubmit}>
+      <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
+        <Input placeholder="请输入供应商名称" maxLength={100} autoFocus />
+      </Form.Item>
+      <Form.Item name="contactPerson" label="联系人">
+        <Input placeholder="请输入联系人（可选）" maxLength={50} />
+      </Form.Item>
+      <Form.Item name="contactPhone" label="联系电话">
+        <Input placeholder="请输入联系电话（可选）" maxLength={20} />
+      </Form.Item>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <Button size="small" onClick={() => setCreateOpen(false)}>取消</Button>
+        <Button size="small" type="primary" htmlType="submit" loading={creating}>创建并选用</Button>
+      </div>
+    </Form>
+  );
+
   return (
-    <AutoComplete
-      id={id}
-      className={className}
-      value={value}
-      options={options}
-      onSelect={handleSelect}
-      onBlur={handleBlur}
-      onChange={handleChange}
-      placeholder={placeholder}
-      disabled={disabled}
-      style={style}
-      notFoundContent={loading ? <Spin /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
-      filterOption={(inputValue, option) => {
-        const searchText = inputValue.toLowerCase();
-        const factoryName = (option?.factory?.factoryName || '').toLowerCase();
-        const factoryCode = (option?.factory?.factoryCode || '').toLowerCase();
-        const contactPerson = (option?.factory?.contactPerson || '').toLowerCase();
-        return (
-          factoryName.includes(searchText) ||
-          factoryCode.includes(searchText) ||
-          contactPerson.includes(searchText)
-        );
-      }}
-      allowClear
-      {...restProps}
-    />
+    <span className="supplier-select-wrapper" style={{ display: 'inline-flex', width: '100%', ...style }}>
+      <AutoComplete
+        id={id}
+        className={className}
+        value={value}
+        options={options}
+        onSelect={handleSelect}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        style={{ flex: 1, minWidth: 0 }}
+        notFoundContent={loading ? <Spin /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
+        filterOption={(inputValue, option) => {
+          const searchText = inputValue.toLowerCase();
+          const factoryName = (option?.factory?.factoryName || '').toLowerCase();
+          const factoryCode = (option?.factory?.factoryCode || '').toLowerCase();
+          const contactPerson = (option?.factory?.contactPerson || '').toLowerCase();
+          return (
+            factoryName.includes(searchText) ||
+            factoryCode.includes(searchText) ||
+            contactPerson.includes(searchText)
+          );
+        }}
+        allowClear
+        {...restProps}
+      />
+      <Popover
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (!open) createForm.resetFields();
+          setCreateOpen(open);
+        }}
+        trigger="click"
+        placement="bottomRight"
+        content={createPopoverContent}
+        title="新建供应商"
+      >
+        <Button
+          size="small"
+          icon={<PlusOutlined />}
+          disabled={disabled}
+          title="新建供应商"
+          style={{ marginLeft: 4, flexShrink: 0 }}
+        />
+      </Popover>
+    </span>
   );
 };
 

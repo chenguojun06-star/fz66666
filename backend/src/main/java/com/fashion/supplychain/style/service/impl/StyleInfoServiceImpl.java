@@ -72,6 +72,17 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         // Boolean.TRUE.equals("true") 恒为 false 会导致过滤静默失效
         boolean excludeScrapped = parseBooleanParam(params, "excludeScrapped");
 
+        // 进度节点筛选"开发样报废"本身即 status=SCRAPPED 的状态过滤；
+        // 若叠加 excludeScrapped（status=ENABLED）或 onlyInProgress/onlyCompleted/onlyDelayed，
+        // 会形成矛盾条件（如 status=ENABLED AND status=SCRAPPED）导致报废款式永远筛选不到
+        boolean scrappedNodeFilter = "开发样报废".equals(StringUtils.hasText(progressNode) ? progressNode.trim() : "");
+        if (scrappedNodeFilter) {
+            onlyCompleted = false;
+            onlyInProgress = false;
+            onlyDelayed = false;
+            excludeScrapped = false;
+        }
+
         LambdaQueryWrapper<StyleInfo> wrapper = new LambdaQueryWrapper<StyleInfo>()
                 .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                 .eq(StringUtils.hasText(styleNoExact), StyleInfo::getStyleNo, styleNoExact)

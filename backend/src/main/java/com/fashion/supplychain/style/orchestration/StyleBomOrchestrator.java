@@ -403,6 +403,10 @@ public class StyleBomOrchestrator {
     }
 
     private void normalizeAndCalc(StyleBom styleBom) {
+        // 列宽防御：size/color 列为 VARCHAR(500)（V202708201800 扩列），
+        // 超长时提前给出明确提示，避免 DataIntegrityViolationException 500（"Data too long for column"）
+        assertFieldLength(styleBom.getSize(), 500, "尺码/规格");
+        assertFieldLength(styleBom.getColor(), 500, "颜色");
         // 部位字段兜底：未指定部位时默认"整件"
         // 与前端 calcTotalPrice 逻辑对齐：使用 effectiveUsage（有纸样数据时用 usageAmount，否则用 devUsageAmount 兜底）
         if (!StringUtils.hasText(styleBom.getPartCode())) {
@@ -417,6 +421,13 @@ public class StyleBomOrchestrator {
         usageAmount = usageAmount.setScale(4, RoundingMode.HALF_UP);
         BigDecimal qty = usageAmount.multiply(BigDecimal.ONE.add(lossRate.movePointLeft(2)));
         styleBom.setTotalPrice(qty.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private void assertFieldLength(String value, int maxLength, String fieldLabel) {
+        if (value != null && value.length() > maxLength) {
+            throw new IllegalArgumentException(
+                    fieldLabel + "过长（" + value.length() + " 字符，上限 " + maxLength + "），请减少拼接的码数/颜色数量");
+        }
     }
 
     /**

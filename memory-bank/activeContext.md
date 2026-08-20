@@ -1,11 +1,23 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-20（PUT 400 闭环：详情页报废横幅+内联取消报废；生产已实证 unscrap 全链路可用，款式92已恢复）
+> 最后更新：2026-08-20（BOM 500 扩列修复 + 报废筛选三层修复 + 面辅料图片上传 + 供应商新建，待推送部署）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-20 (深夜) ★ BOM 保存 500 根因闭环 + 报废筛选/面辅料图片/供应商新建四合一修复 ✅（mvn compile + tsc 通过，待推送）
+
+- [x] **★ BOM POST /api/style/bom 500 根因（Data truncation）**：前端新建 BOM 行初始化 `size = activeSizes.join('/')`（多码数拼接如 `XS(155/72A)/S(160/76)/M(165/80)/L(170/84)/XL(175/88)/D(定制码)` = 59 字符），超过 `t_style_bom.size VARCHAR(20)` 列宽 → DataIntegrityViolationException → 500。color VARCHAR(20) 同源风险
+  - 修复①：新迁移 `V202708201800__expand_style_bom_size_color_columns.sql`（size/color 扩到 VARCHAR(500)，INFORMATION_SCHEMA 幂等检查，与 V202708172000 t_style_info 同类问题同模式）
+  - 修复②：`StyleBomOrchestrator.normalizeAndCalc` 加 `assertFieldLength` 防御——超长提前抛 IllegalArgumentException（400 带明确提示），不再 500
+  - 验证：本地 DB 已 ALTER 实测插入 65 字符 size + 34 字符 color 成功（旧列宽必报 Data too long）；mvn compile 通过
+- [x] **报废款式筛选不到（三层过滤冲突）**：① 后端 excludeScrapped(status=ENABLED) 与进度节点"开发样报废"(status=SCRAPPED) 形成矛盾 WHERE → 永远空集 ② 前端统计 Tab 过滤参数残留 ③ displayData 的 activeStyles 客户端二次过滤又删掉报废款
+  - 修复：StyleInfoServiceImpl 选"开发样报废"节点时清空 onlyCompleted/onlyInProgress/onlyDelayed/excludeScrapped；StyleFilterPanel 选进度节点时重置统计 Tab 参数；useStyleListData 有进度节点时跳过 activeStyles 过滤（信任后端）
+- [x] **面辅料"新建并使用"无图片上传**：StyleBomMaterialModal 新建 Tab 集成 ImageUploadBox（参考 MaterialFormDrawer），useStyleBomMaterials payload 加 image 字段
+- [x] **供应商只能筛不能建**：SupplierSelect 加「新建供应商」Popover 表单（名称/联系人/电话），调 factoryApi.create（POST /system/factory，后端 FactoryController 已有）；保留失焦自动创建；重名自动选中
+- [x] 清理 23 个 tmp-diag*.mjs 临时诊断脚本
 
 ### 2026-08-20 (晚) ★ PUT /style/info 400 三天拉锯闭环：详情页报废横幅 + 内联取消报废 ✅（tsc 0 错误，生产实证）
 

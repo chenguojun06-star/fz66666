@@ -96,6 +96,7 @@ const useStyleBomMaterials = ({
         unitPrice: Number(values.unitPrice) || 0,
         remark: String(values.remark || '').trim(),
         styleNo: String(currentStyleNo || '').trim(),
+        image: String(values.image || '').trim() || undefined,
       };
       const res = await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload);
       const result = res as Record<string, unknown>;

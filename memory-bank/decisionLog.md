@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-20（新增 D-109 字典缓存 evict 缺失 + extJson 嵌套字段断链双教训）
+> 最后更新：2026-08-20（新增 D-110 拼接字段列宽系统性风险：VARCHAR(20) 二连爆）
+
+---
+
+## D-110：拼接字段列宽系统性风险 — t_style_bom size/color VARCHAR(20) 二连爆（2026-08-20）
+
+**背景**：保存物料清单 POST /api/style/bom 持续 500。前一日 t_style_info.size 已因同类问题炸过（V202708172000），次日 t_style_bom.size/color 再次同根因复发。前端新建 BOM 行 `size = activeSizes.join('/')` 多码数拼接 59+ 字符，超 VARCHAR(20) 列宽 → Data truncation → 500。
+
+**根因**：早期建表按"单值"设计列宽（size 装一个码数），后期业务演进为"拼接串"（多码数/多颜色 join('/')），列宽从未跟进。同一根因在不同表反复爆发。
+
+**决策**：
+1. `V202708201800` 将 t_style_bom size/color 扩到 VARCHAR(500)（INFORMATION_SCHEMA 幂等检查模式，与 V202708172000 一致）
+2. `StyleBomOrchestrator.normalizeAndCalc` 加 `assertFieldLength` 防御——超长抛 IllegalArgumentException（400 带字段名+长度提示），不再裸 500
+
+**理由（防重蹈）**：凡是被前端 join('/') 拼接写入的字段（size/color/规格类），列宽必须按拼接串上限设计（≥500）而非单值。同类高危字段应主动排查：`SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME IN ('size','color') AND CHARACTER_MAXIMUM_LENGTH<=50;` 命中即预防性扩列。防御层（assertFieldLength）让"万一超长"从 500 变成可读的 400。
 
 ---
 

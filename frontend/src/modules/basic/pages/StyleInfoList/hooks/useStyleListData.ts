@@ -317,7 +317,10 @@ export const useStyleListData = ({
   }, [warningStyles]);
 
   const displayData = useMemo(() => {
-    // 优先级：focusStyleIds（延期环节跳转）> smartFilter（已延期/临近交期提示）> activeStatFilter（4个统计卡片）
+    // 优先级：focusStyleIds（延期环节跳转）> smartFilter（已延期/临近交期提示）> 进度节点筛选（已下推后端）> activeStatFilter（4个统计卡片）
+    // 进度节点（如"开发样报废"）已由后端过滤，前端不再叠加 activeStyles 客户端过滤，
+    // 否则报废款式即使后端正确返回也会被前端二次过滤掉
+    const progressNodeFilter = String(queryParams.progressNode || '').trim();
     let base: StyleInfo[];
     if (focusStyleIds.size > 0) {
       // 延期环节跳转：在全部数据中按 ID 筛选
@@ -326,6 +329,8 @@ export const useStyleListData = ({
       base = overdueStyles;
     } else if (smartFilter === 'warning') {
       base = warningStyles;
+    } else if (progressNodeFilter) {
+      base = data;
     } else if (activeStatFilter === 'all') {
       base = showAllStyles ? data : activeStyles;
     } else if (activeStatFilter === 'developing') {
@@ -348,11 +353,13 @@ export const useStyleListData = ({
       });
     }
     return base;
-  }, [smartFilter, activeStatFilter, data, activeStyles, completedStyles, overdueStyles, warningStyles, dateSortAsc, focusStyleIds, showAllStyles]);
+  }, [smartFilter, activeStatFilter, data, activeStyles, completedStyles, overdueStyles, warningStyles, dateSortAsc, focusStyleIds, showAllStyles, queryParams.progressNode]);
 
   // 统计 Tab 过滤已下推后端（onlyInProgress/onlyCompleted/onlyDelayed），total 即该 Tab 全量总数；
   // 仅 focus/smartFilter/showAllStyles 等纯前端过滤时才用当前页 length（受分页截断，属已知展示限制）
-  const displayTotal = (focusStyleIds.size > 0 || smartFilter !== 'all' || !showAllStyles) ? displayData.length : total;
+  // 进度节点筛选同样已下推后端，total 即节点筛选后的全量总数
+  const progressNodeFilterActive = !!String(queryParams.progressNode || '').trim();
+  const displayTotal = (focusStyleIds.size > 0 || smartFilter !== 'all' || (!showAllStyles && !progressNodeFilterActive)) ? displayData.length : total;
 
   return {
     // 状态

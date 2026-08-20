@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Form, Image, Input, InputNumber, Select, Tabs, Drawer } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -207,6 +208,9 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
           children: (
             <Form form={materialCreateForm} layout="vertical" onFinish={onCreateMaterial}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                <Form.Item name="image" label="物料图片">
+                  <ImageUploadBox size={104} label="物料图片" enableDrop />
+                </Form.Item>
                 <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
                   <Input id="materialCode" />
                 </Form.Item>

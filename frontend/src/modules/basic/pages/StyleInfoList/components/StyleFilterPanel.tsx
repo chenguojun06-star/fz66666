@@ -89,7 +89,18 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
           <Select
             value={queryParams.progressNode || ''}
             onChange={(value) => {
-              onQueryChange({ ...queryParams, progressNode: value || undefined });
+              // 进度节点与统计 Tab 过滤（onlyInProgress/onlyCompleted/onlyDelayed）互斥：
+              // 如"样衣完成"节点叠加 onlyInProgress=true 会形成矛盾条件查不到数据；
+              // "开发样报废"还需放开 excludeScrapped，否则后端 status=ENABLED AND status=SCRAPPED 永远为空
+              const node = value || undefined;
+              onQueryChange({
+                ...queryParams,
+                progressNode: node,
+                onlyInProgress: false,
+                onlyCompleted: false,
+                onlyDelayed: false,
+                ...(node === '开发样报废' ? { excludeScrapped: false } : {}),
+              });
               onSearch(); // 选择后自动刷新
             }}
             options={progressNodeOptions}
