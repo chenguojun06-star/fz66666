@@ -297,6 +297,10 @@ public class StylePatternProductionHelper {
 
         List<PatternProduction> records = patternProductionService.list(wrapper);
         if (records == null || records.isEmpty()) {
+            // 款式存在但无样衣生产记录（历史创建失败/旧版本遗漏，如 CI 停摆期间创建的款式）
+            // → 补建记录（createPatternProductionRecord 自带幂等检查）
+            log.info("款式无样衣生产记录，保存时补建: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo());
+            createPatternProductionRecord(styleInfo);
             return;
         }
 
