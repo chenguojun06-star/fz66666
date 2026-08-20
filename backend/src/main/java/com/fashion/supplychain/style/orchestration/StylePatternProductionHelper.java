@@ -179,8 +179,11 @@ public class StylePatternProductionHelper {
             return;
         }
 
+        // 幂等检查只数未删除记录：软删记录（deleteFlag=1，sync 的 legacy 清理产物）
+        // 不算"已存在"，否则补建永远被跳过（与 by-style 查询可见性条件一致）
         long existingCount = patternProductionService.lambdaQuery()
                 .eq(PatternProduction::getStyleId, String.valueOf(styleInfo.getId()))
+                .eq(PatternProduction::getDeleteFlag, 0)
                 .count();
 
         if (existingCount > 0) {
