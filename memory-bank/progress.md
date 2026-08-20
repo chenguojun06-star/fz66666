@@ -1,9 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-17（D-105 组织架构页工厂节点彻底剔除）
+> 最后更新：2026-08-20（样衣详情基础信息 6 项老大难 UI/功能修复，待部署）
 
 ## 已完成
+
+### 2026-08-20 样衣详情基础信息 6 项老大难 UI/功能修复 ✅（tsc 0 错误 + mvn compile 通过，待部署）
+
+- [x] 新建 StaffSelect 通用选人组件：设计师/跟单员可选租户用户（超管走 /system/user/list，租户走 listSubAccounts，失败兜底当前登录人）
+- [x] 商品主题→商品品牌更名（表单/打印/类型注释三处，dictType 保持 style_theme 兼容）
+- [x] 后端 DictOrchestrator create/update/delete/autoCollect 加 @CacheEvict("dict")，根治"维护显示成功但看不到新词条"
+- [x] 备注输入框支持拖拽（去 autoSize + resize:vertical）
+- [x] 颜色/码数标签蓝色文字（var(--color-primary) + 淡蓝底）
+- [x] 全系统图片完整显示（global.css 规则 16c：img object-fit contain !important，豁免头像/.img-cover）
+- [x] 款式特征 AI 识别断链双修复（collectExtValues 合并表单 extJson 嵌套值 + useStyleDetail 以对象形式 setFieldsValue）
+- [ ] 部署后端到端验证：跟单员/设计师下拉选人、品牌维护后立即可见、备注拖拽、AI 识别特征保存后刷新不丢、图片完整显示
 
 ### 2026-08-17 组织架构页"本厂/外协工厂"节点彻底剔除 ✅（D-105）
 

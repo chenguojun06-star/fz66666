@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { App, Card, Form } from 'antd';
+import { Alert, App, Button, Card, Form } from 'antd';
+import api from '@/utils/api';
 import PageLayout from '@/components/common/PageLayout';
 import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { useStyleDetail } from './hooks/useStyleDetail';
@@ -28,6 +29,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const isNewPath = location.pathname.endsWith('/new');
   const styleIdParam = isNewPath ? 'new' : (params.id as string | undefined);
   const { message: _message } = App.useApp();
+  const [unscrapLoading, setUnscrapLoading] = useState(false);
 
   const {
     loading: _loading,
@@ -155,6 +157,27 @@ const StyleInfoDetailPage: React.FC = () => {
     }
   };
 
+  // 详情页内联取消报废：报废款式禁止编辑保存（后端 400 拦截），
+  // 用户想重做单子时在详情页直接恢复，不必去列表页找入口
+  const handleUnscrap = async () => {
+    if (!currentStyle?.id) return;
+    setUnscrapLoading(true);
+    try {
+      const res = await api.post(`/style/info/${currentStyle.id}/unscrap`);
+      if (res.code === 200) {
+        _message.success('已恢复为启用状态，现在可以编辑和下单');
+        handleRefresh();
+      } else {
+        _message.error(res.message || '取消报废失败');
+      }
+    } catch (error: unknown) {
+      _message.error(error instanceof Error ? error.message : '取消报废失败');
+    } finally {
+      setUnscrapLoading(false);
+    }
+  };
+  const isScrapped = currentStyle?.status === 'SCRAPPED';
+
   // 顶部 extra 与底部 sticky 保存条共用同一按钮组
   const actionButtons = (
     <StyleActionButtons
@@ -180,6 +203,20 @@ const StyleInfoDetailPage: React.FC = () => {
           <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={handleRefresh} />
           </Card>
+        ) : null}
+        {isScrapped && currentStyle?.id ? (
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginBottom: 12, borderRadius: 10 }}
+            message="该款式已报废，无法编辑保存"
+            description="报废款式受保护，所有保存操作会被拦截。如需重新做单，请先取消报废恢复款式。"
+            action={
+              <Button danger ghost loading={unscrapLoading} onClick={handleUnscrap}>
+                取消报废
+              </Button>
+            }
+          />
         ) : null}
         <StyleIntelligenceProfileCard style={currentStyle} />
         <Card

@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-20（新增 D-108 CI/CD 三层质量门控 + 冒烟端点对齐 Controller）
+> 最后更新：2026-08-20（新增 D-109 字典缓存 evict 缺失 + extJson 嵌套字段断链双教训）
+
+---
+
+## D-109：字典"维护成功却看不到"根因 — @Cacheable 无配套 @CacheEvict（2026-08-20）
+
+**背景**：用户反馈商品品牌（原商品主题）在维护弹窗显示"更新成功"，但下拉列表永远看不到新词条，反复数天。前端刷新链路（QuickManageModal→notifyDataUpdated→DictAutoComplete 重拉）排查是通的，断点在后端。
+
+**根因**：`DictServiceImpl.queryPage` 有 `@Cacheable("dict")`，但写操作走 `DictOrchestrator` → MyBatis-Plus 原生 `save/updateById/removeById`，**没有 @CacheEvict** → 写库成功但缓存永远旧值，前端重拉命中旧缓存。
+
+**决策**：`DictOrchestrator` 的 create/update/delete/autoCollect 全部加 `@CacheEvict(value="dict", allEntries=true)`。allEntries=true 因字典缓存 key 含租户与参数组合，逐 key 清除不可行，字典量小全清代价可忽略。
+
+**理由**：这是 Spring Cache 最经典的坑——@Cacheable 加了读缓存，写操作却直接穿透到 MyBatis-Plus 原生方法，缓存与库永远不一致。凡是"保存成功但列表不更新"类问题，第一时间查写操作是否带 @CacheEvict。
+
+**后果**：全系统排查其他 @Cacheable 用法（如有），写路径必须配套 evict；同日本轮还修复 extJson 嵌套字段断链（collectExtValues 忽略表单 extJson 嵌套值 + useStyleDetail setFieldsValue 传 JSON 字符串导致嵌套 name 取不到），教训：嵌套表单字段（name={['extJson','fabric']}）加载时必须以对象形式 setFieldsValue，保存时必须显式合并表单嵌套值。
 
 ---
 

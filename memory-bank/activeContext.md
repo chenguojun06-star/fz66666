@@ -1,11 +1,48 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-20（冒烟测试端点路径全面修正：30/30 全通过，CI 冒烟门控闭环）
+> 最后更新：2026-08-20（PUT 400 闭环：详情页报废横幅+内联取消报废；生产已实证 unscrap 全链路可用，款式92已恢复）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-20 (晚) ★ PUT /style/info 400 三天拉锯闭环：详情页报废横幅 + 内联取消报废 ✅（tsc 0 错误，生产实证）
+
+- [x] **生产部署实证（回答"推送了吗"）**：① 本地无未推送提交（8fa863558 已于 15:40 推送）② 生产 unscrap 探针 401=端点存在（后端新版）③ 生产 chunk index-DUdPS4j1.js 含「取消报废」×7（前端新版）④ vendor-axios-C0Zqfgkc.js 就是当前生产 vendor 包（排除浏览器缓存旧代码）
+- [x] **400 真身**：真实响应 `{"code":400,"message":"该开发样已报废，无法继续流转"}`——不是 bug，是报废款式防误操作拦截。用户"重新做单"的款式 92 (H00022222-1，04-26 报废) 和 90 (HYY2026011111111，04-09 报废) 都是 SCRAPPED 状态，PUT 必然 400
+- [x] **UX 缺口（用户被卡三天的真凶）**：取消报废按钮只在列表页 RowActions「更多」菜单里；用户在**详情页**编辑报废款式 → 页面无报废横幅、无取消报废入口 → 只能反复撞 400 报错
+- [x] **修复**：`StyleInfo/index.tsx` 详情页顶部加 Alert 报废横幅（type=error）+ 内联「取消报废」镂空按钮，恢复后自动刷新详情。用户不必再去列表页找入口
+- [x] **生产数据已解卡**：实测 POST /style/info/92/unscrap → 200，status SCRAPPED→ENABLED，随后 PUT /style/info → 200。款式 92 已恢复可编辑，用户当前阻塞已解除
+- [x] **教训**：保护性拦截（后端 400）必须配套页面内恢复入口，否则拦截变死路。任何"状态导致操作被拒"的场景，拒绝提示旁必须给出「如何解除」的一键路径
+
+### 2026-08-20 (晚) 样衣详情基础信息 6 项老大难 UI/功能修复 ✅（tsc 0 错误 + mvn compile 通过，待部署）
+
+- [x] **跟单员/设计师不能选人**：新建 `StaffSelect` 通用组件（超管→/system/user/list 全量用户；租户→tenantService.listSubAccounts 子账号；接口失败兜底当前登录人；当前值不在选项时补入避免显示裸值）。`CustomerInfoSection` 跟单员由裸 Input 换成 StaffSelect；`BasicInfoSection` 设计师由旧的 `window.tenantService` 不可靠实现换成 StaffSelect（顺带修复该文件缺 useState/useEffect/api/useUser import 的编译炸弹）
+- [x] **商品主题→商品品牌**：BasicInfoSection 表单 label、StylePrintModal 打印、types/style.ts 注释三处同步更名；dictType 保持 `style_theme` 兼容历史数据
+- [x] **★ 维护显示成功却看不到新词条（根因：后端缓存无 evict）**：`DictServiceImpl.queryPage` 有 `@Cacheable("dict")`，但 create/update/delete 走 MyBatis-Plus 原生 save/updateById/removeById **没有 @CacheEvict** → 维护成功写库后，前端重新拉列表命中旧缓存。修复：`DictOrchestrator` 的 create/update/delete/autoCollect 全部加 `@CacheEvict(value="dict", allEntries=true)`（字典量小全清代价可忽略）。前端 QuickManageModal→notifyDataUpdated→DictAutoComplete 刷新链路本身是通的，之前断在后端缓存
+- [x] **备注输入框拉不动**：根因是 `autoSize={{minRows:3,maxRows:6}}`——rc-textarea 在 autoSize 模式每次输入重算高度 inline 锁死（且 maxRows 封顶），拖拽后一打字弹回。改为 `rows={3}` + `style={{resize:'vertical'}}`，配合 global.css 既有 `textarea.ant-input { resize: vertical !important }` 即可自由拖拽
+- [x] **颜色/码数标签看不清**：StyleColorSizeTable 的 selectedTagStyle 由灰色 tertiary 改为蓝色 `var(--color-primary)` + 淡蓝底 #e8f2ff + fontWeight 500
+- [x] **★ 全系统图片显示一半（根因：inline objectFit:'cover' 压不住）**：既有规则 16b 只覆盖 antd Image（.ant-image-img），但 CoverImageUpload/StyleCoverGallery/ImageUploadBox 等用**原生 img + inline objectFit:'cover'**，inline 优先级高于 CSS。global.css 新增规则 16c：`img { object-fit: contain !important }`（豁免 .ant-avatar img 和 img.img-cover）强制全覆盖，长方形图完整显示两侧留白
+- [x] **★ 款式特征与 AI 识别断链（双 bug）**：① 保存侧——`collectExtValues` 只收集 customFields 顶层字段+旧 baseValues.extJson，**完全忽略表单 extJson 嵌套值**（AI 填充的 fabric/sleeveType 等保存即丢）→ 修复：合并 formExtJson 且优先级最高 ② 加载侧——`useStyleDetail` setFieldsValue 直接透传后端 extJson **JSON 字符串**，而 StyleFeatureSection 用嵌套 name={['extJson','fabric']} 取对象属性 → 字符串取不到 → 刷新后特征永远为空 → 修复：`extJson: flattenExtJson(...)` 以对象形式设置
+
+### 2026-08-20 (下午) ★★ 部署假成功真相大白：CI 绿勾 ≠ 部署成功，08-20 全部提交从未上云（已推送 8fa863558 防护）
+
+- [x] **★ 推翻上午结论**：上午记录"流水线全绿、部署成功、冒烟 30/30"是**误判**。真相：`cloudbase-action@v2` 内部 `tcb framework deploy` 报 `CloudBaseError: Env *** Not Exists In Your Account`（CLOUDBASE_ENV_ID 指向的环境在该账号不存在，secret 自 2026-02-22 配置后从未更新）但 **action 吞掉错误退出码 → deploy job 绿勾**。至少 08-17 起每次"部署"都是假的
+- [x] **证据链**：① 08-17 的"成功"run 日志同样含 Env Not Exists ② 生产 unscrap 端点 404（今天新代码从未上云）③ 生产前端 index-CnkBD8c_.js ≠ CI 构建产物 hash ④ 08-19 版本探针 200（生产停在 08-19 手动部署的版本——那次部署不走 CI）
+- [x] **用户受害路径**：取消报废功能（40c4349ff）+ 样衣补建两修复（8acc0142e/f16dcfb1a）全部滞留仓库 → 用户重做单子仍被 PUT 400 卡死 → "修了几天还报错，垃圾系统"
+- [x] **防护落地（8fa863558）**：① 冒烟测试加 unscrap 版本探针（GET 探 POST 端点：新版 405 / 旧版 404）② 新增 2.6 前端 bundle 一致性硬校验：CI 传本次构建 index-[hash].js，拉生产首页对比，不一致=部署未生效 → 冒烟 FAIL → 整条流水线红 ③ ci.yml 冒烟 job 下载 frontend-dist 提取主入口 hash。已对生产实测：双探针均准确抓到旧版本
+- [x] **待解决（P0）**：CI 的 CloudBase 部署通道本身仍是坏的（envId 无效），现在会红但不会自动好。恢复路径二选一：① 用户在微信云托管控制台手动部署（08-19 即此通道）② 用户提供正确环境 ID 更新 CLOUDBASE_ENV_ID secret。生产真实部署通道未知（08-19 那次非 CI 触发），需用户确认
+- [x] **教训（D-108 续篇）**：**"CI 绿"与"部署成功"是两回事，唯一可信的是生产侧实证**（端点存在性 + bundle hash 对比）。任何依赖第三方 action 退出码的部署环节都必须在生产侧做硬验证
+
+### 2026-08-20 样衣生产数据为空"反复修不好"根因闭环 ✅（已推送 f16dcfb1a，部署+实测验证）
+
+- [x] **★ 根因链（软删死循环）**：147 (BR24XQ0098E) 曾有样衣记录 → syncPatternProductionInfo legacy 清理将其**软删**（deleteFlag=1，无进度时）→ 第一轮补建修复（8acc0142e）上线后，`createPatternProductionRecord` 幂等检查**只按 styleId 计数、未过滤 deleteFlag** → 数到软删记录 → 误判"已存在"跳过补建 → PUT 永远 200 但 by-style（deleteFlag=0）永远空。**两处可见性条件不一致 = 补建永远失效**
+- [x] **修复（f16dcfb1a）**：幂等检查加 `.eq(PatternProduction::getDeleteFlag, 0)`，与 by-style 查询条件对齐。软删记录不再阻断补建
+- [x] **实测验证**：PUT 147 后 by-style 返回 1 条完整记录（草绿色/XS(155/72A)/数量1/PENDING + 5条工序配置带单价 裁剪0.81/整件12.67/剪线0.5/包装0.61/整烫0.5 + 6码数）；重复 PUT 记录数仍为1（幂等 ✅）
+- [x] **140 (BR26C1S0574B) 澄清**：码数已修（size=M，用户看到"-"是旧缓存）；该款 **t_style_process 0 条、从未配置过子工序**（操作日志无工序配置记录）→ 前端"请先在款式工序配置中添加子工序"是正确引导，需用户手动配置
+- [x] **下单 500 复测**：用 147 实测下单返回 400 业务校验（"款号资料未完成，无法下单"），**500 已不复现**；用户残留 500 = 浏览器旧 bundle（vendor-axios-C0Zqfgkc.js），强制刷新即可
+- [x] **教训（防重蹈）**：写幂等检查前必须核对"存在性判断"与"业务可见性查询"的过滤条件是否一致（本例：count 不过滤软删 vs 列表过滤软删）。软删标记会让两类查询看到不同的世界，任何"查无数据→自动补建"逻辑都要先对齐可见性条件
 
 ### 2026-08-20 反复事故根治：CI/CD 质量门控 + 冒烟测试端点修正 ✅（已推送，流水线全绿，部署成功）
 
@@ -29,6 +66,7 @@
   - 无 patternProductionId 时从 FAIL 改为 PASS-skip（大货订单无样衣记录是正常业务）
 - [x] **验证**：生产环境实跑 30/30 全通过（基础 23 + 版本探测 2 + 扩展 7，含 WebSocket 握手、多租户 tenantId 一致性、订单进度 0-100 合法性）
 - [x] **教训（写入防重蹈）**：冒烟测试写端点必须从后端 Controller @RequestMapping 核对，不能凭记忆/猜路径。不存在的端点 404 会淹没真实版本滞后 404，让版本检测失效
+- [x] **★ 用户残留 500 最终定位（08-20 下午复测）**：用户仍报下单 500，控制台显示旧 bundle `index-CM439_tK.js`，而线上 HTML（no-cache）已引用新 bundle `index-638MIRqU.js` → **用户浏览器标签页从昨天起未刷新，内存中仍是旧前端代码**。复测证据：① 版本探针 by-style/companion 列均 200（后端最新+缺列自愈）② 下单接口 10 场景实测（空日期/外发工厂/extJson/内部部门/Invalid Date 脏数据/仅日期/ISO带Z/空字符串等）9 个 200 成功、1 个脏数据被 400 正确拦截 → **后端下单链路已完全正常，用户只需刷新页面**。教训：SPA 长期开着的标签页不会自动换 bundle，向用户交付修复时必须附"强制刷新"指引
 
 ### 2026-08-19 样衣BOM/尺寸表/指派/二维码 5 处 P0+P1 修复 ✅（npx tsc 通过，未推送）
 
