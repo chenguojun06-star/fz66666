@@ -311,6 +311,24 @@ jobs:
     steps:
     - name: 检出代码
       uses: actions/checkout@v6
+    - name: 下载前端构建产物（用于部署一致性对比）
+      uses: actions/download-artifact@v5
+      with:
+        name: frontend-dist
+        path: frontend-dist-artifact
+    - name: 提取本次构建主入口文件名
+      # ★ 2026-08-20 部署假成功事故：cloudbase-action 吞掉
+      # "Env Not Exists" 错误 → deploy 绿勾但生产没更新。
+      # 冒烟测试用本次构建的 index-[hash].js 与生产首页对比，
+      # 不一致即部署未生效，强制 CI 变红。
+      run: |
+        EXPECT_INDEX_JS=$(grep -oE 'index-[A-Za-z0-9_-]+\.js' frontend-dist-artifact/index.html | head -1)
+        if [ -z "$EXPECT_INDEX_JS" ]; then
+          echo "::error::无法从 frontend-dist/index.html 提取主入口文件名"
+          exit 1
+        fi
+        echo "本次构建主入口: $EXPECT_INDEX_JS"
+        echo "SMOKE_EXPECT_INDEX_JS=$EXPECT_INDEX_JS" >> $GITHUB_ENV
     - name: 等待服务启动（120s，Spring Boot启动需70s+）
       run: sleep 120
     - name: 运行部署后冒烟测试
@@ -323,6 +341,7 @@ jobs:
         SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         SMOKE_TENANT_ID: ${{ secrets.SMOKE_TENANT_ID || '' }}
         SMOKE_FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        SMOKE_FRONTEND_URL: ${{ secrets.SMOKE_FRONTEND_URL || 'https://www.webyszl.cn' }}
         SMOKE_MAX_RETRIES: '12'
         SMOKE_TIMEOUT: '30'
       run: |
