@@ -149,6 +149,7 @@ export interface BuildActionButtonsCallbacks {
   navigate: (path: string) => void;
   onPrint: (record: StyleInfo) => void;
   onScrap: (id: string) => void;
+  onUnscrap: (id: string) => void;
   onMaintenance: (record: StyleInfo) => void;
   setRemarkTarget: (target: { open: boolean; styleNo: string; defaultRole?: string }) => void;
   setCopySource: (record: StyleInfo | null) => void;
@@ -167,6 +168,7 @@ export const buildActionButtons = (
   if (isScrappedRow(record)) {
     return [
       { key: 'detail', label: '详情', type: 'primary', onClick: () => callbacks.navigate(`/style-info/${record.id}`) },
+      { key: 'unscrap', label: '取消报废', type: 'default', onClick: () => callbacks.onUnscrap(String(record.id!)) },
       { key: 'print', label: '打印', type: 'default', onClick: () => callbacks.onPrint(record) },
       { key: 'remark', label: '备注', type: 'default', onClick: () => callbacks.setRemarkTarget({ open: true, styleNo: (record as Record<string, unknown>).styleNo as string || '' }) },
     ];

@@ -19,6 +19,7 @@ import type {
 interface StyleTableRowCallbacks {
   onPrint: (record: StyleInfo) => void;
   onScrap: (id: string) => void;
+  onUnscrap: (id: string) => void;
   onMaintenance: (record: StyleInfo) => void;
   setRemarkTarget: (target: RemarkTarget) => void;
   setCopySource: (record: StyleInfo | null) => void;
@@ -56,6 +57,7 @@ const StyleTableRow: React.FC<StyleTableRowProps> = ({
     navigate,
     onPrint: callbacks.onPrint,
     onScrap: callbacks.onScrap,
+    onUnscrap: callbacks.onUnscrap,
     onMaintenance: callbacks.onMaintenance,
     setRemarkTarget: callbacks.setRemarkTarget,
     setCopySource: callbacks.setCopySource,

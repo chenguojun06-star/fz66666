@@ -52,6 +52,7 @@ const StyleInfoListPage: React.FC = () => {
     cancelScrap,
     pendingScrapId,
     scrapLoading,
+    handleUnscrap,
     handleToggleTop: _handleToggleTop,
     handlePrint: _handlePrint,
   } = useStyleActions(fetchList);
@@ -186,6 +187,7 @@ const StyleInfoListPage: React.FC = () => {
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
             onScrap={handleScrap}
+            onUnscrap={handleUnscrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
@@ -204,6 +206,7 @@ const StyleInfoListPage: React.FC = () => {
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
             onScrap={handleScrap}
+            onUnscrap={handleUnscrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
             onRefresh={() => fetchList()}

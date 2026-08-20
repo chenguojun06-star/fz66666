@@ -93,6 +93,10 @@ public class StyleOperationAppendHelper {
         appendOperation(styleId, "报废款式", remark);
     }
 
+    public void appendUnscrap(Long styleId) {
+        appendOperation(styleId, "取消报废", "款式由报废恢复为启用状态");
+    }
+
     public void appendPushToOrder(Long styleId, String pushedBy) {
         appendOperation(styleId, "推送到下单管理", "推送人：" + pushedBy);
     }

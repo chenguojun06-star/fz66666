@@ -21,6 +21,7 @@ interface StyleTableViewProps {
   currentPage: number;
   onPageChange: (page: number, pageSize: number) => void;
   onScrap: (id: string) => void;
+  onUnscrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
   categoryOptions: { label: string; value: string }[];
@@ -56,6 +57,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   currentPage,
   onPageChange,
   onScrap,
+  onUnscrap,
   onPrint,
   onMaintenance,
   categoryOptions,
@@ -98,6 +100,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               callbacks={{
                 onPrint,
                 onScrap,
+                onUnscrap,
                 onMaintenance,
                 setRemarkTarget: ctx.setRemarkTarget,
                 setCopySource: ctx.setCopySource,

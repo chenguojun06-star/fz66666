@@ -55,6 +55,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class StyleInfoOrchestrator {
 
     private static final String STYLE_STATUS_SCRAPPED = "SCRAPPED";
+    private static final String STYLE_STATUS_ENABLED = "ENABLED";
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -367,9 +368,15 @@ public class StyleInfoOrchestrator {
             if (msg != null && msg.toLowerCase().contains("duplicate")) {
                 throw new IllegalArgumentException("款号已存在");
             }
-            throw new IllegalStateException("保存失败");
+            log.error("保存款号资料违反数据库约束: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo(), e);
+            throw new IllegalStateException("保存失败: " + msg);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            // 业务校验异常（如"该开发样已报废，无法继续流转"）原样透出，
+            // 之前被吞成统一"保存失败"，用户连续重试也无法知道真实原因（P0 根因透出原则）
+            throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("保存失败");
+            log.error("保存款号资料失败: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo(), e);
+            throw new IllegalStateException("保存失败: " + e.getMessage());
         } finally {
             evictCurrentTenantCache();
         }
@@ -655,7 +662,60 @@ public class StyleInfoOrchestrator {
 
         styleLogHelper.saveMaintenanceLog(id, "款式报废", remark);
         styleOperationAppendHelper.appendScrap(id, remark);
-        log.info("开发样已报废留档: styleId={}, styleNo={}, reason={}", id, style.getStyleNo(), remark);
+        log.info("开发样已报废留档: styleId={}, styleNo={}, reason={}", id, style.getStyleNo(), reason);
+        return true;
+    }
+
+    /**
+     * 取消报废：恢复已报废的开发样为启用状态，允许继续编辑/下单。
+     * 场景：用户误报废或报废后想重做该单子——之前款式一旦报废就永久锁定，
+     * 编辑保存全部返回 400，没有任何恢复入口（P0 死路）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean unscrap(Long id) {
+        Long tenantId = UserContext.tenantId();
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
+        if (style == null) {
+            throw new NoSuchElementException("款式不存在");
+        }
+        if (!STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+            throw new IllegalStateException("该款式未报废，无需恢复");
+        }
+
+        // 条件更新带 status=SCRAPPED：并发场景下只有一方能恢复成功
+        boolean result = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED)
+                .set(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!result) {
+            throw new IllegalStateException("恢复失败，款式状态可能已变更，请刷新后重试");
+        }
+
+        // 恢复报废时被置为 SCRAPPED 的样衣生产记录（只还原当前仍为 SCRAPPED 的，
+        // 不碰因其他流转产生的状态）
+        if (patternProductionService != null) {
+            try {
+                patternProductionService.lambdaUpdate()
+                        .eq(PatternProduction::getStyleId, String.valueOf(id))
+                        .eq(PatternProduction::getTenantId, tenantId)
+                        .eq(PatternProduction::getDeleteFlag, 0)
+                        .eq(PatternProduction::getStatus, "SCRAPPED")
+                        .set(PatternProduction::getStatus, "PENDING")
+                        .update();
+            } catch (Exception e) {
+                log.warn("同步样板生产恢复状态失败: styleId={}", id, e);
+            }
+        }
+
+        styleLogHelper.saveMaintenanceLog(id, "取消报废", "款式由报废恢复为启用状态");
+        styleOperationAppendHelper.appendUnscrap(id);
+        log.info("开发样取消报废: styleId={}, styleNo={}", id, style.getStyleNo());
         return true;
     }
 

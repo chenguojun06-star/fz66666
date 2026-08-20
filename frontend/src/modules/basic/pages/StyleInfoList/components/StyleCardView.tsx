@@ -29,6 +29,7 @@ interface StyleCardViewProps {
   currentPage: number;
   onPageChange: (page: number, pageSize: number) => void;
   onScrap: (id: string) => void;
+  onUnscrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
   onRefresh: () => void;
@@ -51,6 +52,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   currentPage,
   onPageChange,
   onScrap,
+  onUnscrap,
   onPrint,
   onMaintenance,
   onRefresh,
@@ -210,6 +212,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         if (isScrappedRow(r)) {
           return [
             { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
+            { key: 'unscrap', label: '取消报废', onClick: () => onUnscrap(String(r.id!)) },
             { key: 'print', label: '打印', onClick: () => onPrint(r) },
             { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) },
           ];

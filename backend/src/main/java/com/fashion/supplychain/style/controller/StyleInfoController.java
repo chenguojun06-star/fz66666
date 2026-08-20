@@ -268,6 +268,15 @@ public class StyleInfoController {
     }
 
     /**
+     * 取消报废：恢复已报废的开发样为启用状态（误报废/报废后想重做单子的恢复入口）
+     */
+    @PostMapping("/{id}/unscrap")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> unscrap(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.unscrap(id));
+    }
+
+    /**
      * 款式停用/启用
      * 调用方式：PUT /api/style/info/{id}/status?status=DISABLED|ENABLED
      * 停用后该款式无法下单（getValidatedForOrderCreate 拦截），下单管理可按状态筛选查看
