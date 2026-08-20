@@ -17,14 +17,14 @@ import re
 import sys
 import argparse
 from collections import Counter
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 MIGRATION_DIR = "backend/src/main/resources/db/migration"
 
 VERSION_PATTERN = re.compile(r'^V(\d+(?:\.\d+)*)__')
 
 
-def extract_version(filename: str) -> str | None:
+def extract_version(filename: str) -> Optional[str]:
     m = VERSION_PATTERN.match(filename)
     return m.group(1) if m else None
 
