@@ -113,7 +113,7 @@ export interface StyleInfo extends Record<string, unknown> {
   // 基础信息扩展字段（按样衣详情页-基础信息 Tab 重构）
   /** 商品类型：FINISHED=成品，SEMI_FINISHED=半成品 */
   productType?: 'FINISHED' | 'SEMI_FINISHED' | string;
-  /** 商品主题（字典 dict_type='style_theme'） */
+  /** 商品品牌（字典 dict_type='style_theme'，原"商品主题"更名） */
   theme?: string;
   /** 设计师（独立字段，原 sampleNo 保留向后兼容） */
   designer?: string;

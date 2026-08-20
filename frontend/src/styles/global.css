@@ -2234,6 +2234,20 @@ input.ant-input,
   object-fit: cover !important;
 }
 
+/* ── 16c. 全站原生 <img> 兜底 — 完整显示（覆盖 inline objectFit:'cover'） ──
+   规则 16b 只覆盖 antd Image（.ant-image-img），但封面组件（CoverImageUpload /
+   StyleCoverGallery / ImageUploadBox 等）用原生 <img> + inline objectFit:'cover'，
+   inline 样式普通规则压不住，导致详情页图片仍被裁剪"显示一半"。
+   用 !important 强制 contain：长方形图片完整显示、两侧留白，永不裁剪。
+   豁免：头像（必须 cover 填满圆形/方形头像框）、明确标记 .img-cover 的装饰图。 */
+img {
+  object-fit: contain !important;
+}
+.ant-avatar img,
+img.img-cover {
+  object-fit: cover !important;
+}
+
 /* ── 17. Spin 加载居中显示 ── */
 .ant-spin-nested-loading > div > .ant-spin {
   display: flex !important;

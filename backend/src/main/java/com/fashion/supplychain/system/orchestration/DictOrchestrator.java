@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -47,7 +48,13 @@ public class DictOrchestrator {
         return dictService.list(wrapper);
     }
 
+    /**
+     * 字典写操作必须清 queryPage 的 "dict" 缓存（DictServiceImpl 原生 save/updateById/removeById
+     * 不带 @CacheEvict，曾导致"维护显示成功但列表/下拉拿旧缓存看不到新词条"）。
+     * allEntries=true：字典缓存 key 含租户与参数组合，逐 key 清除不可行，字典量小全清代价可忽略。
+     */
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "dict", allEntries = true)
     public Dict create(Dict dict) {
         normalizeDict(dict);
         validateRequiredFields(dict);
@@ -61,6 +68,7 @@ public class DictOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "dict", allEntries = true)
     public Dict update(Long id, Dict dict) {
         dict.setId(id);
         normalizeDict(dict);
@@ -72,6 +80,7 @@ public class DictOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "dict", allEntries = true)
     public void delete(Long id) {
         dictService.removeById(id);
     }
@@ -82,6 +91,7 @@ public class DictOrchestrator {
      * @param label 标签（同时作为值）
      */
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "dict", allEntries = true)
     public void autoCollect(String dictType, String label) {
         if (!StringUtils.hasText(dictType) || !StringUtils.hasText(label)) {
             return;

@@ -105,13 +105,15 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     () => matrixRows.reduce((sum, row) => sum + row.quantities.reduce((subtotal, qty) => subtotal + Number(qty || 0), 0), 0),
     [matrixRows]
   );
+  // 已选颜色/码数标签：蓝色文字（浅灰看不清），淡蓝底
   const selectedTagStyle: React.CSSProperties = {
     margin: 0,
     paddingInline: 8,
     borderRadius: 999,
-    color: 'var(--color-text-tertiary)',
-    background: 'var(--color-bg-subtle)',
+    color: 'var(--color-primary, #2563eb)',
+    background: '#e8f2ff',
     borderColor: 'var(--color-border-antd)',
+    fontWeight: 500,
   };
 
   const prevColorsRef = useRef<string[]>(selectedColors);

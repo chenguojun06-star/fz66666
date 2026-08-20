@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Col, Form, Input, Row, Select, Tooltip } from 'antd';
-import api from '@/utils/api';
-import { useUser } from '@/utils/AuthContext';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import StaffSelect from '@/components/common/StaffSelect';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import QuickManageModal from '@/components/common/QuickManageModal';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
@@ -88,37 +87,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 }) => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
-  const { isSuperAdmin } = useUser();
-
-  // 设计师 = 内部人员（超管拉全量用户，租户管理员拉子账号），可搜索选择
-  const [staffOptions, setStaffOptions] = useState<{ label: string; value: string }[]>([]);
-  useEffect(() => {
-    let mounted = true;
-    const loadStaff = async () => {
-      try {
-        let names: string[] = [];
-        if (isSuperAdmin) {
-          const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 500, excludeFactoryUsers: true } });
-          if (res.code === 200 && Array.isArray(res.data?.list)) {
-            names = res.data.list.map((u: any) => u.name || u.username).filter(Boolean);
-          }
-        } else {
-          const svc = (window as any).tenantService;
-          if (svc?.listSubAccounts) {
-            const subs = await svc.listSubAccounts();
-            names = (subs || []).map((x: any) => x.name || x.username).filter(Boolean);
-          }
-        }
-        if (mounted) {
-          setStaffOptions([...new Set(names)].map(n => ({ label: n, value: n })));
-        }
-      } catch {
-        // 人员列表加载失败时静默降级为可输入
-      }
-    };
-    loadStaff();
-    return () => { mounted = false; };
-  }, [isSuperAdmin]);
 
   return (
     <SectionBox title="基础信息" usePrimaryHighlight>
@@ -259,34 +227,29 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label="设计师"
             style={{ marginBottom: 8 }}
           >
-            <Select
+            <StaffSelect
               id="designer"
               placeholder="搜索或选择设计师"
               disabled={editLocked}
-              style={{ width: '100%' }}
-              showSearch
-              allowClear
-              optionFilterProp="label"
-              options={staffOptions}
             />
           </Form.Item>
         </Col>
 
-        {/* 商品主题 */}
+        {/* 商品品牌（原"商品主题"更名，dictType 保持 style_theme 兼容历史数据） */}
         <Col xs={24} md={12}>
           <Form.Item
             name="theme"
             label={
               <span>
-                商品主题
-                {!editLocked && <DictMaintainHint dictType="style_theme" fieldName="商品主题" />}
+                商品品牌
+                {!editLocked && <DictMaintainHint dictType="style_theme" fieldName="商品品牌" />}
               </span>
             }
             style={{ marginBottom: 8 }}
           >
             <DictAutoComplete
               dictType="style_theme"
-              placeholder="请输入或选择商品主题"
+              placeholder="请输入或选择商品品牌"
               disabled={editLocked}
               style={{ width: '100%' }}
               id="theme"
@@ -370,7 +333,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
-        {/* 备注（从 TimeRemarkSection 迁移至此，最多500字，showCount 显示计数） */}
+        {/* 备注（从 TimeRemarkSection 迁移至此，最多500字，showCount 显示计数）
+            不用 autoSize（autoSize 会锁死高度导致拖拽失效），用固定 minRows + resize:vertical 让用户自由拉大缩小 */}
         <Col xs={24}>
           <Form.Item
             name="remark"
@@ -379,11 +343,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           >
             <Input.TextArea
               id="remark"
-              autoSize={{ minRows: 3, maxRows: 6 }}
+              rows={3}
               maxLength={500}
               showCount
               placeholder="请输入备注（面料/版型/特殊工艺说明等）"
               disabled={isFieldLocked(currentStyle?.remark)}
+              style={{ resize: 'vertical' }}
             />
           </Form.Item>
         </Col>

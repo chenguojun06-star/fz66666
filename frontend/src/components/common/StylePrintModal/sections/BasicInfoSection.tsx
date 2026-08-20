@@ -128,7 +128,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 allFields.push({ label: '商品类型', value: translateProductType((data.productionSheet as any)?.productType) });
                 // 设计师：D-058 起为独立字段 designer，旧数据兜底读 sampleNo
                 allFields.push({ label: '设计师', value: (data.productionSheet as any)?.designer || (data.productionSheet as any)?.sampleNo || empty });
-                allFields.push({ label: '商品主题', value: (data.productionSheet as any)?.theme || empty });
+                allFields.push({ label: '商品品牌', value: (data.productionSheet as any)?.theme || empty });
                 if ((data.productionSheet as any)?.uCode) {
                   allFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
                 }

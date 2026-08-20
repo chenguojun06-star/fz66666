@@ -122,6 +122,9 @@ export const useStyleDetail = (styleId?: string) => {
 
     form.setFieldsValue({
       ...nextValues,
+      // extJson 必须以对象形式设置：款式特征区用嵌套 name={['extJson','fabric']} 读取，
+      // 若直接透传后端的 JSON 字符串，嵌套字段取值为 undefined，刷新后特征字段永远为空
+      extJson: flattenExtJson(currentStyle.extJson),
       ...flattenExtJson(currentStyle.extJson),
     });
   }, [currentStyle, form, isEditorOpen]);

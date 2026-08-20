@@ -1,6 +1,7 @@
 import React from 'react';
 import { Col, Form, Input, InputNumber, Row, Select } from 'antd';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import StaffSelect from '@/components/common/StaffSelect';
 import type { SectionFormContextProps } from './types';
 import { SALES_CHANNEL_OPTIONS } from './constants';
 import SectionBox from './SectionBox';
@@ -26,7 +27,7 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
       <Row gutter={[16, 8]}>
         <Col xs={24} sm={12}>
           <Form.Item name="orderType" label="跟单员" style={{ marginBottom: 8 }}>
-            <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
+            <StaffSelect id="orderType" placeholder="搜索或选择跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>

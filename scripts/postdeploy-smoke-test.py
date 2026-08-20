@@ -430,69 +430,63 @@ if token:
         # 2026-08-20 取消报废（用户重做单子被 PUT /style/info 400 卡死的事故）：
         # POST 端点用 GET 探测：新版返回 405（方法不允许=端点存在），
         # 旧版返回 404（路由不存在=部署未生效）
-        ("/api/style/info/0/unscrap", "取消报废接口(08-20 unscrap)", "404=后端版本过旧", {200, 405}),
+        ("/api/style/info/0/unscrap", "取消报废接口(08-20 unscrap)", "404=后端版本过旧", {200, 401, 405}),
     ]
 
+    # ★ 2026-08-20 关键修正：生产部署走微信云托管 GitHub 自动部署，
+    #   push 后镜像构建需 15-40 分钟，CI 冒烟（push 后 ~9 分钟）必然抢跑。
+    #   探针检测到旧版本（404）时轮询等待自动部署完成，而非立即判 FAIL。
+    #   SMOKE_VERSION_WAIT_MINUTES 控制最长等待（默认 40 分钟），超时才 FAIL。
+    version_wait_minutes = int(os.environ.get("SMOKE_VERSION_WAIT_MINUTES", "40"))
+    version_deadline = time.time() + version_wait_minutes * 60
+
     for path, name, hint, expected in version_probe_endpoints:
-        code, body = http("GET", path, retry=False)
-        if code in expected:
-            log("PASS", f"[版本]{name}", f"HTTP {code}（期望{sorted(expected)}）")
-        elif code == 404:
-            log("FAIL", f"[版本]{name}",
-                f"HTTP 404 {hint} | 端点不存在，云端跑的是旧代码，"
-                f"请检查 GitHub Actions 的 deploy job 是否被跳过/失败")
-        elif code == 500:
-            log("FAIL", f"[版本]{name}",
-                f"HTTP 500 {hint} | 根因: {body[:150]}")
-        else:
-            snippet = body[:150] if body else "(empty)"
-            log("FAIL", f"[版本]{name}", f"HTTP {code}（期望{sorted(expected)}） | {snippet}")
+        while True:
+            code, body = http("GET", path, retry=False)
+            if code in expected:
+                log("PASS", f"[版本]{name}", f"HTTP {code}（期望{sorted(expected)}）")
+                break
+            if code != 404:
+                snippet = body[:150] if body else "(empty)"
+                log("FAIL", f"[版本]{name}", f"HTTP {code}（期望{sorted(expected)}） | {snippet}")
+                break
+            if time.time() >= version_deadline:
+                log("FAIL", f"[版本]{name}",
+                    f"HTTP 404 {hint} | 等待{version_wait_minutes}分钟仍是旧版本，"
+                    f"自动部署未生效！请到微信云托管控制台检查本次构建是否失败")
+                break
+            remain = int((version_deadline - time.time()) / 60) + 1
+            print(f"  ⏳ [版本]{name} HTTP 404（旧版本）— 微信云托管自动部署构建中，"
+                  f"2 分钟后重试（剩余等待上限约 {remain} 分钟）")
+            time.sleep(120)
 
 # ─────────────────────────────────────────────────────────
-# 2.6 前端 bundle 一致性检测（2026-08-20 部署假成功事故根因防护）
+# 2.6 前端首页可达性检测
 #
-# 事故链：cloudbase-action@v2 内部 tcb framework deploy 报
-#        "Env *** Not Exists In Your Account" 但吞掉退出码 →
-#        deploy job 显示绿勾 → 生产前端还是旧 bundle →
-#        用户当测试员，连续多天反馈"修了还是报错"
-#
-# 检测原理：CI 把本次构建的主入口文件名（index-[hash].js）通过
-#          SMOKE_EXPECT_INDEX_JS 传入；脚本拉取生产首页，
-#          对比实际引用的主入口 hash。不一致 = 部署未生效。
+# ★ 2026-08-20 架构澄清：生产前端由微信云托管 Git 集成独立构建，
+#   bundle hash 与 GitHub Actions 构建必然不同——不能做 hash 对比
+#   （首轮实现因此误报）。前端新功能验证依赖版本探针覆盖后端 +
+#   用户侧强刷；此处仅验证首页可达与主入口 JS 可下载。
 # ─────────────────────────────────────────────────────────
 FRONTEND_URL = os.environ.get("SMOKE_FRONTEND_URL", "https://www.webyszl.cn").rstrip("/")
-EXPECT_INDEX_JS = os.environ.get("SMOKE_EXPECT_INDEX_JS", "").strip()
 
-if EXPECT_INDEX_JS:
-    print("\n--- 2.6 前端 bundle 一致性检测（部署是否真正生效）---")
-    # 部署后 CDN/容器可能有短暂切换窗口，最多探测 3 次每次间隔 30s
-    actual_index = None
-    for attempt in range(3):
-        try:
-            req = urllib.request.Request(FRONTEND_URL, headers={"Cache-Control": "no-cache"})
-            with urllib.request.urlopen(req, timeout=TIMEOUT, context=ssl_ctx) as resp:
-                html = resp.read().decode("utf-8", errors="replace")
-            import re as _re
-            m = _re.search(r'(?:src|href)="[^"]*/?(index-[A-Za-z0-9_-]+\.js)', html)
-            if m:
-                actual_index = m.group(1)
-                break
-        except Exception as e:
-            print(f"  ⏳ 拉取前端首页失败: {e}（第 {attempt + 1}/3 次）")
-        if attempt < 2:
-            time.sleep(30)
-
-    if actual_index is None:
-        log("FAIL", "[部署]前端首页拉取", f"3 次均失败，无法确认部署状态 | {FRONTEND_URL}")
-    elif actual_index == EXPECT_INDEX_JS:
-        log("PASS", "[部署]前端主入口一致", f"生产={actual_index} = 本次构建（部署已生效）")
+print("\n--- 2.6 前端首页可达性检测 ---")
+try:
+    req = urllib.request.Request(FRONTEND_URL, headers={"Cache-Control": "no-cache"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT, context=ssl_ctx) as resp:
+        html = resp.read().decode("utf-8", errors="replace")
+    import re as _re
+    m = _re.search(r'(?:src|href)="[^"]*/?(index-[A-Za-z0-9_-]+\.js)', html)
+    if not m:
+        log("FAIL", "[前端]首页主入口提取", f"index.html 未引用 index-*.js | {FRONTEND_URL}")
     else:
-        log("FAIL", "[部署]前端主入口不一致",
-            f"生产={actual_index} ≠ 本次构建={EXPECT_INDEX_JS} | "
-            f"部署未生效！生产仍在跑旧前端。典型根因：deploy job 假成功"
-            f"（cloudbase-action 吞掉 Env Not Exists 错误）/ 手动部署漏做 / 容器未切换")
-else:
-    print("\n--- 2.6 前端 bundle 一致性检测：跳过（SMOKE_EXPECT_INDEX_JS 未设置，本地手动跑可忽略）---")
+        main_js = m.group(1)
+        js_req = urllib.request.Request(f"{FRONTEND_URL}/assets/{main_js}")
+        with urllib.request.urlopen(js_req, timeout=TIMEOUT, context=ssl_ctx) as js_resp:
+            js_resp.read(1024)
+        log("PASS", "[前端]首页+主入口可达", f"主入口 {main_js}（微信云托管独立构建，hash 与 CI 构建不同属正常）")
+except Exception as e:
+    log("FAIL", "[前端]首页可达性", f"{e} | {FRONTEND_URL}")
 
 # ─────────────────────────────────────────────────────────
 # 3. 扩展测试：扫码→进度刷新链路

@@ -84,9 +84,17 @@ export function collectExtValues(
       ext[key] = allValues[key];
     }
   });
-  // 合并已有 extJson 中的其他字段
+  // 表单中的 extJson 嵌套字段（款式特征 fabric/sleeveType/neckline/version/pattern/craftStyle 等）
+  // 是用户/AI 识别最新编辑的值，优先级最高；baseValues.extJson（加载时的旧值）仅兜底
+  // 表单未注册的历史字段。曾因缺失此合并导致"AI 识别填充款式特征后保存即丢失"。
+  const formExtJson = flattenExtJson(allValues.extJson as string | Record<string, unknown> | undefined);
   const existing = flattenExtJson(baseValues.extJson as string | undefined);
-  const merged = { ...existing, ...ext };
+  const merged: Record<string, unknown> = { ...existing, ...ext };
+  Object.keys(formExtJson).forEach((k) => {
+    if (formExtJson[k] !== undefined) {
+      merged[k] = formExtJson[k];
+    }
+  });
   return JSON.stringify(merged);
 }
 
