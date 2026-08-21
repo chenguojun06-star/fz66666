@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Col, Form, Input, Row, Select, Tooltip } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import StaffSelect from '@/components/common/StaffSelect';
@@ -17,39 +18,26 @@ interface BasicInfoSectionProps extends SectionFormContextProps {
   coverSlot?: React.ReactNode;
 }
 
-/** 字段维护链接：点击直接弹窗维护，无需跳转字典管理/基础资料页 */
-const MaintainLink: React.FC<{ tooltip: string; onClick: () => void }> = ({ tooltip, onClick }) => (
-  <Tooltip title={tooltip}>
-    <a
-      onClick={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      style={{ marginLeft: 6, color: 'var(--color-primary)', fontSize: 12, cursor: 'pointer', userSelect: 'none' }}
-    >
-      维护
-    </a>
-  </Tooltip>
-);
-
-/** 字典字段维护：点击弹出通用维护弹窗（列表+行内增删改），变更即时同步当前下拉 */
-const DictMaintainHint: React.FC<{ dictType: string; fieldName: string }> = ({ dictType, fieldName }) => {
+/** 字段维护齿轮（统一入口，与 DictAutoComplete/SupplierSelect/CustomerSelect 内嵌齿轮同一形态）：
+ *  用于 Select 类字段的输入框 suffix，点击弹通用维护弹窗，变更即时同步当前下拉 */
+const MaintainGear: React.FC<{ dictType: string; fieldName: string; disabled?: boolean }> = ({
+  dictType, fieldName, disabled,
+}) => {
   const [open, setOpen] = useState(false);
+  if (disabled) return null;
   return (
     <>
-      <MaintainLink tooltip={`点击弹窗维护${fieldName}选项`} onClick={() => setOpen(true)} />
+      <Tooltip title={`维护${fieldName}选项（新增 / 删除 / 改名）`}>
+        <SettingOutlined
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(true);
+          }}
+          style={{ color: 'rgba(0, 0, 0, 0.45)', cursor: 'pointer' }}
+        />
+      </Tooltip>
       <QuickManageModal open={open} mode="dict" dictType={dictType} title={fieldName} onClose={() => setOpen(false)} />
-    </>
-  );
-};
-
-/** 客户字段维护：通用维护弹窗就地增删改客户，成功后同页客户下拉即时刷新 */
-const CustomerMaintainHint: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <MaintainLink tooltip="点击弹窗维护客户" onClick={() => setOpen(true)} />
-      <QuickManageModal open={open} mode="customer" title="客户" onClose={() => setOpen(false)} />
     </>
   );
 };
@@ -147,7 +135,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             label={
               <span>
                 <span style={{ color: 'var(--color-danger)' }}>*</span> 商品分类
-                {!editLocked && <DictMaintainHint dictType="category" fieldName="商品分类" />}
               </span>
             }
             rules={[{ required: true, message: '请选择商品分类' }]}
@@ -162,6 +149,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               showSearch
               optionFilterProp="label"
               options={categoryOptions}
+              suffix={<MaintainGear dictType="category" fieldName="商品分类" disabled={editLocked} />}
             />
           </Form.Item>
         </Col>
@@ -170,12 +158,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={12}>
           <Form.Item
             name="season"
-            label={
-              <span>
-                季节分类
-                {!editLocked && <DictMaintainHint dictType="season" fieldName="季节分类" />}
-              </span>
-            }
+            label="季节分类"
             style={{ marginBottom: 8 }}
           >
             <Select
@@ -187,6 +170,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               showSearch
               optionFilterProp="label"
               options={seasonOptions}
+              suffix={<MaintainGear dictType="season" fieldName="季节分类" disabled={editLocked} />}
             />
           </Form.Item>
         </Col>
@@ -228,20 +212,17 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={12}>
           <Form.Item
             name="theme"
-            label={
-              <span>
-                商品品牌
-                {!editLocked && <DictMaintainHint dictType="style_theme" fieldName="商品品牌" />}
-              </span>
-            }
+            label="商品品牌"
             style={{ marginBottom: 8 }}
           >
             <DictAutoComplete
               dictType="style_theme"
+              quickManageTitle="商品品牌"
               placeholder="请输入或选择商品品牌"
               disabled={editLocked}
               style={{ width: '100%' }}
               id="theme"
+              enableQuickManage={!editLocked}
             />
           </Form.Item>
         </Col>
@@ -253,18 +234,14 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
           <Form.Item
             name="customer"
-            label={
-              <span>
-                客户
-                {!editLocked && <CustomerMaintainHint />}
-              </span>
-            }
+            label="客户"
             style={{ marginBottom: 8 }}
           >
             <CustomerSelect
               id="customer"
               placeholder="搜索或输入客户名称"
               disabled={isFieldLocked(currentStyle?.customer)}
+              enableQuickManage={!isFieldLocked(currentStyle?.customer)}
               onChange={(_value, option) => {
                 const cid = option?.customerId;
                 if (cid) {

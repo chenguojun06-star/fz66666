@@ -29,7 +29,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
       title: '图片', dataIndex: 'image', key: 'image', width: 80,
       render: (image: string) => {
         if (!image) return null;
-        return <SmartImage src={image} alt="物料图片" width={40} height={40} style={{ objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />;
+        return <SmartImage src={image} alt="物料图片" width={40} height={40} style={{ objectFit: 'contain' }} preview={{ cover: <span>预览</span> }} />;
       }
     },
     {

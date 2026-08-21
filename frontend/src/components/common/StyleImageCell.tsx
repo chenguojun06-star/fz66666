@@ -48,7 +48,7 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
         src={getFullAuthedFileUrl(imgUrl)}
         width={size}
         height={size}
-        style={{ objectFit: 'cover', borderRadius: 4 }}
+        style={{ objectFit: 'contain', borderRadius: 4 }}
         preview={preview ? { cover: <EyeOutlined style={{ fontSize: 12 }} /> } : false}
       />
     );

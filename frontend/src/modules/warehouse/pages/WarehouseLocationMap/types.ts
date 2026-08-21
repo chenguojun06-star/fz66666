@@ -41,6 +41,19 @@ export interface LocationSkuItem {
   stockQuantity: number;
   salesPrice?: number;
   costPrice?: number;
+  // 物料仓字段
+  materialCode?: string;
+  materialName?: string;
+  materialType?: string;
+  specifications?: string;
+  unit?: string;
+  lockedQuantity?: number;
+  location?: string;
+  // 样衣仓字段
+  styleName?: string;
+  sampleType?: string;
+  loanedQuantity?: number;
+  imageUrl?: string;
 }
 
 // 出库物品项（含出库临时状态）

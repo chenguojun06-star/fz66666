@@ -228,7 +228,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
             alt="颜色图"
             width={48}
             height={48}
-            style={{ objectFit: 'cover', borderRadius: 6 }}
+            style={{ objectFit: 'contain', borderRadius: 6 }}
             preview={{ src: getFullAuthedFileUrl(imageUrl) }}
           />
         ) : (

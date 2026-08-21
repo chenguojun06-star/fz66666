@@ -19,7 +19,7 @@ type UseMaterialReconColumnsParams = {
 
 const MaterialThumb: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => (
   <div style={{ width: 48, minHeight: 28, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
-    {imageUrl ? <SmartImage src={imageUrl} alt="物料" width={48} height={48} style={{ objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} /> : <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', height: '48px', display: 'flex', alignItems: 'center' }}>无图</span>}
+    {imageUrl ? <SmartImage src={imageUrl} alt="物料" width={48} height={48} style={{ objectFit: 'contain' }} preview={{ cover: <span>预览</span> }} /> : <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', height: '48px', display: 'flex', alignItems: 'center' }}>无图</span>}
   </div>
 );
 

@@ -77,7 +77,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
               alt="款式图片"
               width={32}
               height={32}
-              style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+              style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer' }}
               preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
             />
           );

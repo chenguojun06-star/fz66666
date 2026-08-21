@@ -38,6 +38,9 @@ public class PatternStockHelper {
     private StyleInfoService styleInfoService;
 
     @Autowired
+    private com.fashion.supplychain.warehouse.service.WarehouseAreaService warehouseAreaService;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     // D-001 修复：移除 Helper 层 @Transactional（调用方 PatternProductionOrchestrator.submitScan 已有事务保护）
@@ -199,7 +202,32 @@ public class PatternStockHelper {
             int qtyVal = (qtyObj instanceof Number) ? ((Number) qtyObj).intValue() : 1;
             stock.setQuantity(qtyVal);
             stock.setLoanedQuantity(0);
-            stock.setLocation(scanRecord == null ? null : scanRecord.getWarehouseCode());
+            // 库位/库区联动：优先取扫码时选择的库位编码，回退仓位编码；库区ID+名称一并写入，
+            // 保证仓库地图样衣仓的库位统计（t_sample_stock.location）有真实数据
+            String inboundLocation = null;
+            String inboundAreaId = null;
+            if (scanRecord != null) {
+                if (StringUtils.hasText(scanRecord.getWarehouseLocationCode())) {
+                    inboundLocation = scanRecord.getWarehouseLocationCode().trim();
+                } else if (StringUtils.hasText(scanRecord.getWarehouseCode())) {
+                    inboundLocation = scanRecord.getWarehouseCode().trim();
+                }
+                if (StringUtils.hasText(scanRecord.getWarehouseAreaId())) {
+                    inboundAreaId = scanRecord.getWarehouseAreaId().trim();
+                }
+            }
+            stock.setLocation(inboundLocation);
+            stock.setWarehouseAreaId(inboundAreaId);
+            if (inboundAreaId != null) {
+                try {
+                    com.fashion.supplychain.warehouse.entity.WarehouseArea area = warehouseAreaService.getById(inboundAreaId);
+                    if (area != null) {
+                        stock.setWarehouseAreaName(area.getAreaName());
+                    }
+                } catch (Exception ex) {
+                    log.warn("[样衣入库] 解析库区名称失败 areaId={}: {}", inboundAreaId, ex.getMessage());
+                }
+            }
             stock.setRemark("扫码自动入库");
             stock.setCreateTime(LocalDateTime.now());
             stock.setUpdateTime(LocalDateTime.now());

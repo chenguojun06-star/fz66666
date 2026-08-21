@@ -58,14 +58,16 @@ const LocationDetailDrawer: React.FC<Props> = ({
           </Row>
 
           <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-            <Button
-              type="primary"
-              icon={<ImportOutlined />}
-              onClick={onOpenInbound}
-            >
-              入库
-            </Button>
-            {selectedLocation.usedCapacity > 0 && (
+            {selectedLocation.warehouseType === 'MATERIAL' && (
+              <Button
+                type="primary"
+                icon={<ImportOutlined />}
+                onClick={onOpenInbound}
+              >
+                物料入库
+              </Button>
+            )}
+            {selectedLocation.warehouseType === 'FINISHED' && selectedLocation.usedCapacity > 0 && (
               <Button
                 type="default"
                 icon={<ExportOutlined />}
@@ -87,6 +89,52 @@ const LocationDetailDrawer: React.FC<Props> = ({
           <Spin spinning={locationItemsLoading}>
             {locationItems.length === 0 && !locationItemsLoading ? (
               <Empty description="该库位暂无库存" />
+            ) : selectedLocation.warehouseType === 'MATERIAL' ? (
+              <div className="wlm-detail-table" style={{ marginTop: 16 }}>
+                <div className="wlm-detail-table-header">
+                  <div className="wlm-detail-th">物料编码</div>
+                  <div className="wlm-detail-th">物料名称</div>
+                  <div className="wlm-detail-th">类型</div>
+                  <div className="wlm-detail-th">规格</div>
+                  <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
+                </div>
+                {locationItems.map((sku, idx) => (
+                  <div key={idx} className="wlm-detail-tr">
+                    <div className="wlm-detail-td">{sku.materialCode || '-'}</div>
+                    <div className="wlm-detail-td">{sku.materialName || '-'}</div>
+                    <div className="wlm-detail-td">{sku.materialType || '-'}</div>
+                    <div className="wlm-detail-td">{sku.specifications || '-'}</div>
+                    <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
+                      {sku.stockQuantity ?? 0}{sku.unit ? ` ${sku.unit}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : selectedLocation.warehouseType === 'SAMPLE' ? (
+              <div className="wlm-detail-table" style={{ marginTop: 16 }}>
+                <div className="wlm-detail-table-header">
+                  <div className="wlm-detail-th">款号</div>
+                  <div className="wlm-detail-th">款式名称</div>
+                  <div className="wlm-detail-th">颜色</div>
+                  <div className="wlm-detail-th">尺码</div>
+                  <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
+                </div>
+                {locationItems.map((sku, idx) => (
+                  <div key={idx} className="wlm-detail-tr">
+                    <div className="wlm-detail-td">{sku.styleNo || '-'}</div>
+                    <div className="wlm-detail-td">{sku.styleName || '-'}</div>
+                    <div className="wlm-detail-td">
+                      <Tag color="blue">{sku.color || '-'}</Tag>
+                    </div>
+                    <div className="wlm-detail-td">
+                      <Tag>{sku.size || '-'}</Tag>
+                    </div>
+                    <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
+                      {sku.stockQuantity ?? 0}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="wlm-detail-table" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">

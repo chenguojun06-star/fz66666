@@ -101,7 +101,7 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
         width={size}
         height={size}
         style={{
-          objectFit: 'cover',
+          objectFit: 'contain',
           borderRadius: 4,
           display: 'block',
         }}
@@ -120,7 +120,7 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
       style={{
         width: size,
         height: size,
-        objectFit: 'cover',
+        objectFit: 'contain',
         borderRadius: 4,
         display: 'block',
       }}

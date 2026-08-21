@@ -85,7 +85,7 @@ export const buildSkuColumns = () => [
             alt=""
             width={36}
             height={36}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
+            style={{ objectFit: 'contain', borderRadius: 4 }}
             preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
           />
         );

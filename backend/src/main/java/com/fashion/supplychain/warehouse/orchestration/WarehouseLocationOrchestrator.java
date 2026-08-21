@@ -6,8 +6,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.stock.entity.SampleStock;
+import com.fashion.supplychain.stock.service.SampleStockService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.system.entity.OperationLog;
@@ -36,6 +40,8 @@ public class WarehouseLocationOrchestrator {
     private final WarehouseAreaService warehouseAreaService;
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final MaterialStockService materialStockService;
+    private final SampleStockService sampleStockService;
     private final OperationLogService operationLogService;
     private final WarehouseLocationLogAppendHelper logAppendHelper;
 
@@ -101,47 +107,34 @@ public class WarehouseLocationOrchestrator {
             return Result.success(list);
         }
 
-        // 优化：一次性查询所有库位的库存数据，避免 N+1 查询问题
-        Set<String> warehouseIdentifiers = new HashSet<>();
+        // 按仓类型分组统计：FINISHED→成品入库表 / MATERIAL→物料库存表 / SAMPLE→样衣库存表
+        Map<String, Set<String>> identifiersByType = new LinkedHashMap<>();
         for (WarehouseLocation loc : list) {
+            Set<String> ids = identifiersByType.computeIfAbsent(
+                    loc.getWarehouseType() == null ? "" : loc.getWarehouseType(), k -> new HashSet<>());
             if (StringUtils.isNotBlank(loc.getLocationCode())) {
-                warehouseIdentifiers.add(loc.getLocationCode());
+                ids.add(loc.getLocationCode());
             }
             if (StringUtils.isNotBlank(loc.getLocationName())) {
-                warehouseIdentifiers.add(loc.getLocationName());
+                ids.add(loc.getLocationName());
             }
         }
 
-        // 查询所有相关的入库记录，按 warehouse 字段分组统计数量
-        List<ProductWarehousing> allRecords;
-        if (warehouseIdentifiers.isEmpty()) {
-            allRecords = java.util.Collections.emptyList();
-        } else {
-            allRecords = productWarehousingMapper.selectList(
-                new LambdaQueryWrapper<ProductWarehousing>()
-                        .eq(ProductWarehousing::getTenantId, tenantId)
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                        .in(ProductWarehousing::getWarehouse, warehouseIdentifiers)
-        );
-        }
-
-        // 构建统计 map：warehouse -> count
-        Map<String, Integer> warehouseCountMap = new HashMap<>();
-        for (ProductWarehousing record : allRecords) {
-            String warehouse = record.getWarehouse();
-            if (StringUtils.isNotBlank(warehouse)) {
-                warehouseCountMap.put(warehouse, warehouseCountMap.getOrDefault(warehouse, 0) + 1);
-            }
+        Map<String, Map<String, Integer>> countMapByType = new HashMap<>();
+        for (Map.Entry<String, Set<String>> entry : identifiersByType.entrySet()) {
+            countMapByType.put(entry.getKey(), countStocksByIdentifiers(entry.getKey(), entry.getValue(), tenantId));
         }
 
         // 更新每个库位的 usedCapacity
         for (WarehouseLocation loc : list) {
+            Map<String, Integer> countMap = countMapByType.getOrDefault(
+                    loc.getWarehouseType() == null ? "" : loc.getWarehouseType(), Collections.emptyMap());
             int actualCount = 0;
             if (StringUtils.isNotBlank(loc.getLocationCode())) {
-                actualCount += warehouseCountMap.getOrDefault(loc.getLocationCode(), 0);
+                actualCount += countMap.getOrDefault(loc.getLocationCode(), 0);
             }
             if (StringUtils.isNotBlank(loc.getLocationName())) {
-                actualCount += warehouseCountMap.getOrDefault(loc.getLocationName(), 0);
+                actualCount += countMap.getOrDefault(loc.getLocationName(), 0);
             }
             if (loc.getUsedCapacity() == null || loc.getUsedCapacity() != actualCount) {
                 loc.setUsedCapacity(actualCount);
@@ -149,6 +142,52 @@ public class WarehouseLocationOrchestrator {
         }
 
         return Result.success(list);
+    }
+
+    /**
+     * 按仓库类型统计各库位标识（库位编码/名称）的实际库存记录数（联动真实库存表）。
+     * FINISHED → t_product_warehousing.warehouse
+     * MATERIAL → t_material_stock.location（出库扣减/入库新增后实时变化）
+     * SAMPLE   → t_sample_stock.location
+     */
+    private Map<String, Integer> countStocksByIdentifiers(String warehouseType, Set<String> identifiers, Long tenantId) {
+        if (identifiers == null || identifiers.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, Integer> countMap = new HashMap<>();
+        if ("MATERIAL".equals(warehouseType)) {
+            List<MaterialStock> stocks = materialStockService.list(new LambdaQueryWrapper<MaterialStock>()
+                    .eq(MaterialStock::getTenantId, tenantId)
+                    .eq(MaterialStock::getDeleteFlag, 0)
+                    .in(MaterialStock::getLocation, identifiers));
+            for (MaterialStock s : stocks) {
+                if (StringUtils.isNotBlank(s.getLocation())) {
+                    countMap.merge(s.getLocation(), 1, Integer::sum);
+                }
+            }
+        } else if ("SAMPLE".equals(warehouseType)) {
+            List<SampleStock> stocks = sampleStockService.list(new LambdaQueryWrapper<SampleStock>()
+                    .eq(SampleStock::getTenantId, tenantId)
+                    .eq(SampleStock::getDeleteFlag, 0)
+                    .in(SampleStock::getLocation, identifiers));
+            for (SampleStock s : stocks) {
+                if (StringUtils.isNotBlank(s.getLocation())) {
+                    countMap.merge(s.getLocation(), 1, Integer::sum);
+                }
+            }
+        } else {
+            List<ProductWarehousing> records = productWarehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getTenantId, tenantId)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .in(ProductWarehousing::getWarehouse, identifiers));
+            for (ProductWarehousing record : records) {
+                if (StringUtils.isNotBlank(record.getWarehouse())) {
+                    countMap.merge(record.getWarehouse(), 1, Integer::sum);
+                }
+            }
+        }
+        return countMap;
     }
 
     public Result<WarehouseLocation> create(WarehouseLocation location) {
@@ -226,17 +265,15 @@ public class WarehouseLocationOrchestrator {
             return Result.fail("库位正在使用中，请先转移库存后再删除");
         }
 
-        // 实时校验：查询实际入库记录，防止 usedCapacity 冗余字段不同步
+        // 实时校验：按仓类型查询真实库存记录，防止 usedCapacity 冗余字段不同步
         String locationCode = existing.getLocationCode();
         String locationName = existing.getLocationName();
-        Long actualCount = productWarehousingMapper.selectCount(
-                new LambdaQueryWrapper<ProductWarehousing>()
-                        .eq(ProductWarehousing::getTenantId, tenantId)
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                        .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
-                                .or()
-                                .eq(ProductWarehousing::getWarehouse, locationName))
-        );
+        int actualCountInt = countStocksByIdentifiers(
+                existing.getWarehouseType(),
+                new HashSet<>(Arrays.asList(locationCode, locationName)),
+                tenantId)
+                .values().stream().mapToInt(Integer::intValue).sum();
+        Long actualCount = (long) actualCountInt;
         if (actualCount != null && actualCount > 0) {
             // 同步修正 usedCapacity
             existing.setUsedCapacity(actualCount.intValue());
@@ -378,16 +415,55 @@ public class WarehouseLocationOrchestrator {
         result.put("capacity", location.getCapacity());
         result.put("usedCapacity", location.getUsedCapacity());
 
-        long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getTenantId, tenantId)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
-                        .or().eq(ProductWarehousing::getWarehouse, location.getLocationName())));
+        long actualCount = countStocksByIdentifiers(
+                location.getWarehouseType(),
+                new HashSet<>(Arrays.asList(locationCode, location.getLocationName())),
+                tenantId)
+                .values().stream().mapToInt(Integer::intValue).sum();
         result.put("actualUsedCapacity", actualCount);
 
         List<Map<String, Object>> items = new ArrayList<>();
+        Set<String> identifiers = new HashSet<>(Arrays.asList(locationCode, location.getLocationName()));
 
-        if ("FINISHED".equals(location.getWarehouseType())) {
+        if ("MATERIAL".equals(location.getWarehouseType())) {
+            // 物料仓：从物料库存表（t_material_stock）按库位聚合实时库存
+            List<MaterialStock> stocks = materialStockService.list(new LambdaQueryWrapper<MaterialStock>()
+                    .eq(MaterialStock::getTenantId, tenantId)
+                    .eq(MaterialStock::getDeleteFlag, 0)
+                    .in(MaterialStock::getLocation, identifiers));
+            for (MaterialStock s : stocks) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("materialCode", s.getMaterialCode());
+                item.put("materialName", s.getMaterialName());
+                item.put("materialType", s.getMaterialType());
+                item.put("color", s.getColor());
+                item.put("specifications", s.getSpecifications());
+                item.put("unit", s.getUnit());
+                item.put("stockQuantity", s.getQuantity());
+                item.put("lockedQuantity", s.getLockedQuantity());
+                item.put("location", s.getLocation());
+                items.add(item);
+            }
+        } else if ("SAMPLE".equals(location.getWarehouseType())) {
+            // 样衣仓：从样衣库存表（t_sample_stock）按库位聚合实时库存
+            List<SampleStock> stocks = sampleStockService.list(new LambdaQueryWrapper<SampleStock>()
+                    .eq(SampleStock::getTenantId, tenantId)
+                    .eq(SampleStock::getDeleteFlag, 0)
+                    .in(SampleStock::getLocation, identifiers));
+            for (SampleStock s : stocks) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("styleNo", s.getStyleNo());
+                item.put("styleName", s.getStyleName());
+                item.put("sampleType", s.getSampleType());
+                item.put("color", s.getColor());
+                item.put("size", s.getSize());
+                item.put("stockQuantity", s.getQuantity());
+                item.put("loanedQuantity", s.getLoanedQuantity());
+                item.put("imageUrl", s.getImageUrl());
+                item.put("location", s.getLocation());
+                items.add(item);
+            }
+        } else if ("FINISHED".equals(location.getWarehouseType())) {
             List<ProductWarehousing> records = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getTenantId, tenantId)
@@ -477,7 +553,7 @@ public class WarehouseLocationOrchestrator {
                             WarehouseLocation::getLocationName, WarehouseLocation::getZoneName,
                             WarehouseLocation::getUsedCapacity));
 
-            // 优化：一次性查询所有库位的库存数据，避免 N+1 查询问题
+            // 按仓类型统计真实库存：成品→入库表 / 物料→物料库存表 / 样衣→样衣库存表
             Set<String> warehouseIdentifiers = new HashSet<>();
             for (WarehouseLocation loc : allLocs) {
                 if (StringUtils.isNotBlank(loc.getLocationCode())) {
@@ -488,27 +564,7 @@ public class WarehouseLocationOrchestrator {
                 }
             }
 
-            // 查询所有相关的入库记录，按 warehouse 字段分组统计
-            List<ProductWarehousing> allRecords;
-            if (warehouseIdentifiers.isEmpty()) {
-                allRecords = java.util.Collections.emptyList();
-            } else {
-                allRecords = productWarehousingMapper.selectList(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .eq(ProductWarehousing::getTenantId, tenantId)
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .in(ProductWarehousing::getWarehouse, warehouseIdentifiers)
-            );
-            }
-
-            // 构建统计 map：warehouse -> count
-            Map<String, Integer> warehouseCountMap = new HashMap<>();
-            for (ProductWarehousing record : allRecords) {
-                String warehouse = record.getWarehouse();
-                if (StringUtils.isNotBlank(warehouse)) {
-                    warehouseCountMap.put(warehouse, warehouseCountMap.getOrDefault(warehouse, 0) + 1);
-                }
-            }
+            Map<String, Integer> warehouseCountMap = countStocksByIdentifiers(type, warehouseIdentifiers, tenantId);
 
             // 计算已使用的库位数
             long usedLocations = 0;
@@ -567,10 +623,9 @@ public class WarehouseLocationOrchestrator {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null || StringUtils.isBlank(locationCode)) return 0;
 
-        long count = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getTenantId, tenantId)
-                .eq(ProductWarehousing::getWarehouse, locationCode)
-                .eq(ProductWarehousing::getDeleteFlag, 0));
+        long count = countStocksByIdentifiers(warehouseType,
+                        new HashSet<>(List.of(locationCode)), tenantId)
+                .getOrDefault(locationCode, 0);
 
         WarehouseLocation loc = locationService.getOne(new LambdaQueryWrapper<WarehouseLocation>()
                 .eq(WarehouseLocation::getTenantId, tenantId)
@@ -622,22 +677,34 @@ public class WarehouseLocationOrchestrator {
             return Result.fail("目标库位已停用，无法转入");
         }
 
-        long count = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getTenantId, tenantId)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .and(w -> w.eq(ProductWarehousing::getWarehouse, fromLocationCode)
-                        .or().eq(ProductWarehousing::getWarehouse, fromLoc.getLocationName())));
+        Set<String> fromIdentifiers = new HashSet<>(Arrays.asList(fromLocationCode, fromLoc.getLocationName()));
+        Map<String, Integer> fromCountMap = countStocksByIdentifiers(warehouseType, fromIdentifiers, tenantId);
+        long count = fromCountMap.values().stream().mapToInt(Integer::intValue).sum();
 
         if (count == 0) {
             return Result.fail("源库位没有库存，无法转移");
         }
 
-        productWarehousingMapper.update(null, new LambdaUpdateWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getTenantId, tenantId)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .and(w -> w.eq(ProductWarehousing::getWarehouse, fromLocationCode)
-                        .or().eq(ProductWarehousing::getWarehouse, fromLoc.getLocationName()))
-                .set(ProductWarehousing::getWarehouse, toLocationCode));
+        if ("MATERIAL".equals(warehouseType)) {
+            materialStockService.update(new LambdaUpdateWrapper<MaterialStock>()
+                    .eq(MaterialStock::getTenantId, tenantId)
+                    .eq(MaterialStock::getDeleteFlag, 0)
+                    .in(MaterialStock::getLocation, fromIdentifiers)
+                    .set(MaterialStock::getLocation, toLocationCode));
+        } else if ("SAMPLE".equals(warehouseType)) {
+            sampleStockService.update(new LambdaUpdateWrapper<SampleStock>()
+                    .eq(SampleStock::getTenantId, tenantId)
+                    .eq(SampleStock::getDeleteFlag, 0)
+                    .in(SampleStock::getLocation, fromIdentifiers)
+                    .set(SampleStock::getLocation, toLocationCode));
+        } else {
+            productWarehousingMapper.update(null, new LambdaUpdateWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getTenantId, tenantId)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .and(w -> w.eq(ProductWarehousing::getWarehouse, fromLocationCode)
+                            .or().eq(ProductWarehousing::getWarehouse, fromLoc.getLocationName()))
+                    .set(ProductWarehousing::getWarehouse, toLocationCode));
+        }
 
         recalculateUsedCapacity(fromLocationCode, warehouseType);
         recalculateUsedCapacity(toLocationCode, warehouseType);
