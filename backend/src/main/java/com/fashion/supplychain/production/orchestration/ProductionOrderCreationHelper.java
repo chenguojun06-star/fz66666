@@ -63,6 +63,10 @@ public class ProductionOrderCreationHelper {
         if (productionOrder == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        // 列宽防御（V202708202000 全库扩列后上限 500）：多码/多色拼接串超长时提前给出明确 400，
+        // 避免 "Data too long for column 'size'" 直接 500（D-110 同类问题第三次复发后根治）
+        assertFieldLength(productionOrder.getSize(), 500, "尺码");
+        assertFieldLength(productionOrder.getColor(), 500, "颜色");
         boolean isCreate = productionOrder != null && !StringUtils.hasText(productionOrder.getId());
         ProductionOrder existed = null;
         String remarkForLog = null;
@@ -328,5 +332,12 @@ public class ProductionOrderCreationHelper {
         result.put("styleName", style.getStyleName());
 
         return result;
+    }
+
+    private void assertFieldLength(String value, int maxLength, String fieldLabel) {
+        if (value != null && value.length() > maxLength) {
+            throw new IllegalArgumentException(
+                    fieldLabel + "过长（" + value.length() + " 字符，上限 " + maxLength + "），请减少所选码数/颜色数量");
+        }
     }
 }

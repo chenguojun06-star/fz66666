@@ -207,17 +207,14 @@ public class DictOrchestrator {
     }
 
     private void validateDuplicate(Dict dict, Long currentId) {
-        Long tenantId = UserContext.tenantId();
-
+        // 注意：t_dict 唯一索引 uk_dict_type_code(dict_type, dict_code) / uk_dict_type_label(dict_type, dict_label)
+        // 均为全局唯一（不含 tenant_id）。查重必须与索引对齐做全局查重；
+        // 此前按租户过滤查重，其他租户已有同码/同标签时校验放行 → insert 撞唯一键 → 409"数据已存在，请勿重复提交"。
         LambdaQueryWrapper<Dict> codeQuery = new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, dict.getDictType())
                 .eq(Dict::getDictCode, dict.getDictCode());
         if (currentId != null) {
             codeQuery.ne(Dict::getId, currentId);
-        }
-        if (tenantId != null) {
-            codeQuery.and(w -> w.eq(Dict::getTenantId, tenantId)
-                    .or().isNull(Dict::getTenantId));
         }
         if (dictService.count(codeQuery) > 0) {
             throw new IllegalArgumentException("同类型下字典编码已存在: " + dict.getDictCode());
@@ -228,10 +225,6 @@ public class DictOrchestrator {
                 .eq(Dict::getDictLabel, dict.getDictLabel());
         if (currentId != null) {
             labelQuery.ne(Dict::getId, currentId);
-        }
-        if (tenantId != null) {
-            labelQuery.and(w -> w.eq(Dict::getTenantId, tenantId)
-                    .or().isNull(Dict::getTenantId));
         }
         if (dictService.count(labelQuery) > 0) {
             throw new IllegalArgumentException("同类型下字典标签已存在: " + dict.getDictLabel());
