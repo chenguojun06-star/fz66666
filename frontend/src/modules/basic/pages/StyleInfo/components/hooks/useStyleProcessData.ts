@@ -7,9 +7,14 @@ import type { SizePrice, StyleProcessWithSizePrice } from '../styleProcessTabUti
 type UseStyleProcessDataParams = {
   styleId: number | string;
   onDataLoaded?: (data: StyleProcessWithSizePrice[]) => void;
+  // 款式详情 sizeColorConfig：开发码为码数列唯一真实来源，存在即优先
+  sizeColorConfig?: {
+    sizes?: string[];
+    commonSizes?: string[];
+  };
 };
 
-export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDataParams) => {
+export const useStyleProcessData = ({ styleId, onDataLoaded, sizeColorConfig }: UseStyleProcessDataParams) => {
   const { message } = App.useApp();
   const [data, setData] = useState<StyleProcessWithSizePrice[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,18 +52,30 @@ export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDa
         let sizePriceData: SizePrice[] = [];
         if (sizePriceResult.code === 200 && sizePriceResult.data) sizePriceData = sizePriceResult.data as SizePrice[];
         let sizeList: string[] = [];
-        if (sizeTableResult.code === 200 && sizeTableResult.data) {
-          const sizeSet = new Set<string>();
-          sizeTableResult.data.forEach((item: any) => {
-            const sizeName = String(item.sizeName || '').trim();
-            if (sizeName) { const parts = sizeName.split(/[,，\s]+/).map((s: string) => s.trim()).filter(Boolean); parts.forEach((s: string) => sizeSet.add(s)); }
-          });
-          if (sizeSet.size > 0) sizeList = sortSizeNames(Array.from(sizeSet));
-        }
-        if (sizeList.length === 0 && sizePriceData.length > 0) {
-          const savedSizes = new Set<string>();
-          sizePriceData.forEach((sp: SizePrice) => { if (sp.size) savedSizes.add(sp.size.trim()); });
-          if (savedSizes.size > 0) sizeList = sortSizeNames(Array.from(savedSizes));
+        // 优先级：款式开发码（sizeColorConfig.sizes，与款式详情/各码实际用量同源）
+        // > 尺寸表码数 > 已保存码价。此前无第一优先级，款式配了 XS(155/72A) 等国标开发码时
+        // 工序单价仍显示尺寸表/模板带来的 S/M/L/XL/XXL 通用码，两处不同步。
+        const configSizes = (sizeColorConfig?.sizes ?? sizeColorConfig?.commonSizes ?? [])
+          .map((s) => String(s || '').trim())
+          .filter(Boolean);
+        const savedSizeSet = new Set<string>();
+        sizePriceData.forEach((sp: SizePrice) => { if (sp.size) savedSizeSet.add(sp.size.trim()); });
+        if (configSizes.length > 0) {
+          // 已保存码价中的额外码合并追加，避免用户手动添加并保存过的码数丢失
+          const extraSaved = Array.from(savedSizeSet).filter((s) => !configSizes.includes(s));
+          sizeList = sortSizeNames([...configSizes, ...extraSaved]);
+        } else {
+          if (sizeTableResult.code === 200 && sizeTableResult.data) {
+            const sizeSet = new Set<string>();
+            sizeTableResult.data.forEach((item: any) => {
+              const sizeName = String(item.sizeName || '').trim();
+              if (sizeName) { const parts = sizeName.split(/[,，\s]+/).map((s: string) => s.trim()).filter(Boolean); parts.forEach((s: string) => sizeSet.add(s)); }
+            });
+            if (sizeSet.size > 0) sizeList = sortSizeNames(Array.from(sizeSet));
+          }
+          if (sizeList.length === 0 && savedSizeSet.size > 0) {
+            sizeList = sortSizeNames(Array.from(savedSizeSet));
+          }
         }
         setSizes(sizeList);
         const mergedData: StyleProcessWithSizePrice[] = processData.map((proc) => {
@@ -72,7 +89,9 @@ export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDa
         onDataLoaded?.(sortedData);
       }
     } catch { message.error('获取工序表失败'); } finally { setLoading(false); }
-  }, [styleId, message, onDataLoaded]);
+    // sizeColorConfig 用 join key 依赖，避免父组件对象引用不稳定导致重复请求
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [styleId, message, onDataLoaded, sizeColorConfig?.sizes?.join(',')]);
 
   const fetchProcessTemplates = async (sourceStyleNo?: string) => {
     const sn = String(sourceStyleNo ?? '').trim();

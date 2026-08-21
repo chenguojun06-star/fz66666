@@ -261,8 +261,8 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                     <div className="style-smart-stage-modal__fact">
                       <span>颜色</span>
                       <strong>
-                        {sample.sampleSnapshot?.color
-                          ? <Tag color="blue">{sample.sampleSnapshot.color}</Tag>
+                        {(sample.sampleSnapshot?.color || sample.sampleSnapshot?.colors?.[0])
+                          ? <Tag color="blue">{sample.sampleSnapshot?.color || sample.sampleSnapshot?.colors?.[0]}</Tag>
                           : '-'}
                       </strong>
                     </div>
@@ -312,7 +312,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       orderId={sampleProcessProgress.orderId}
                       orderNo={sampleProcessProgress.orderNo}
                       styleNo={selectedStage?.record?.styleNo}
-                      color={sample.sampleSnapshot?.color}
+                      color={sample.sampleSnapshot?.color || sample.sampleSnapshot?.colors?.[0] || ''}
                       quantity={sample.sampleSnapshot?.quantity}
                       size={sample.sampleSnapshot?.size || sample.sampleSnapshot?.sizeColorConfig}
                       receiver={sample.sampleReceiverLabel !== '-' ? sample.sampleReceiverLabel : ''}

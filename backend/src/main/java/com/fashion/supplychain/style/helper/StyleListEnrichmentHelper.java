@@ -86,7 +86,13 @@ public class StyleListEnrichmentHelper {
                 .eq(tenantScopedRead, "tenant_id", readableTenantId)
                 .and(w -> buildStyleIdOrNoCondition(w, keys))
                 .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
-                .ne("status", "cancelled");
+                .ne("status", "cancelled")
+                // 样衣开发「物料采购」节点只统计样衣采购（source_type='sample'）：
+                // 大货下单自动生成的 order 采购单不得污染样衣开发进度（大货/样衣数据隔离）。
+                // 历史数据 source_type 可能为 NULL，按 pattern_production_id 非空兜底识别样衣采购，
+                // 口径与 MaterialPurchaseOrchestrator.saveAndSync 的推断逻辑一致。
+                .and(w -> w.eq("source_type", "sample")
+                        .or(nested -> nested.isNull("source_type").isNotNull("pattern_production_id")));
         try {
             List<com.fashion.supplychain.production.entity.MaterialPurchase> purchases = materialPurchaseService.list(qw);
             for (com.fashion.supplychain.production.entity.MaterialPurchase p : purchases) {

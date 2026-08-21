@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
+import StyleQuotePopover from '@/modules/basic/pages/OrderManagement/StyleQuotePopover';
 import { STAGE_COLORS, parseSizeDisplay, type SubProcessRow } from './SampleProcessList.helpers';
 
 // 列定义：从 SampleProcessList.tsx 拆分而来
@@ -65,6 +66,33 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       key: 'size',
       width: 60,
       render: (val: string) => <span style={{ fontSize: 12 }}>{parseSizeDisplay(val)}</span>,
+    },
+    {
+      title: 'SKU',
+      key: 'sku',
+      width: 110,
+      render: (_: unknown, record: SubProcessRow) => {
+        const colorText = record.color || '-';
+        const sizeText = parseSizeDisplay(record.size);
+        const skuText = `${colorText}/${sizeText}`;
+        return (
+          <StyleQuotePopover styleNo={record.styleNo}>
+            <span
+              style={{
+                fontSize: 12,
+                cursor: 'pointer',
+                color: 'var(--color-primary)',
+                textDecoration: 'underline dotted',
+                textDecorationColor: 'var(--color-border-antd)',
+                textUnderlineOffset: 3,
+              }}
+              title="悬停查看报价参考"
+            >
+              {skuText}
+            </span>
+          </StyleQuotePopover>
+        );
+      },
     },
     {
       title: '数量',

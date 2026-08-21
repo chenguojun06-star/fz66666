@@ -115,6 +115,33 @@ public class CuttingBundleOrchestrator {
         }
     }
 
+    /**
+     * 按订单ID查询全部裁剪菲号（订单链路时间线 / 水洗标打印等场景）。
+     * 返回数组（不分页），排除已拆分的父菲号防止数量重复计算（与列表页口径一致）。
+     * P1 多租户隔离：强制 tenantId 过滤；工厂账号叠加 factoryId 隔离。
+     */
+    public List<CuttingBundle> listByOrderId(String orderId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        String oid = orderId == null ? null : orderId.trim();
+        if (!StringUtils.hasText(oid)) {
+            return List.of();
+        }
+        LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<CuttingBundle>()
+                .eq(CuttingBundle::getTenantId, tenantId)
+                .eq(CuttingBundle::getProductionOrderId, oid)
+                // null-safe：历史数据 split_status 可能为 NULL，需包含；仅排除拆分父菲号
+                .and(w -> w.isNull(CuttingBundle::getSplitStatus)
+                        .or().ne(CuttingBundle::getSplitStatus, "split_parent"))
+                .orderByAsc(CuttingBundle::getBundleNo);
+        // 工厂账号隔离：只能查看本工厂的菲号
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            wrapper.eq(CuttingBundle::getFactoryId, ctxFactoryId);
+        }
+        return cuttingBundleService.list(wrapper);
+    }
+
     public Map<String, Object> summary(String orderNo, String orderId) {
         // P1 多租户隔离：summary 委托时增补 tenantId 上下文校验
         TenantAssert.assertTenantContext();

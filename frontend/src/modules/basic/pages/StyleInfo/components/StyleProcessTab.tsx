@@ -14,7 +14,7 @@ import { useStyleProcessAi } from './hooks/useStyleProcessAi';
 const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   styleId, readOnly, hidePrice = false,
   progressNode: _progressNode, processAssignee, processStartTime, processCompletedTime,
-  onRefresh, onDataLoaded,
+  onRefresh, onDataLoaded, sizeColorConfig,
 }) => {
   const { message } = App.useApp();
   const [editMode, setEditMode] = useState(false);
@@ -27,7 +27,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     return () => { editHintTimersRef.current.forEach(t => clearTimeout(t)); };
   }, []);
 
-  const { data, setData, loading, sizes, setSizes, sizeOptions: _sizeOptions, setSizeOptions: _setSizeOptions, fetchSizeDictOptions: _fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading } = useStyleProcessData({ styleId, onDataLoaded });
+  const { data, setData, loading, sizes, setSizes, sizeOptions: _sizeOptions, setSizeOptions: _setSizeOptions, fetchSizeDictOptions: _fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading } = useStyleProcessData({ styleId, onDataLoaded, sizeColorConfig });
 
   const fetchPriceHintRef = useRef<(id: string | number, processName: string, standardTime?: number) => void>(() => {});
 

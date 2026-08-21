@@ -54,17 +54,6 @@ const CustomerMaintainHint: React.FC = () => {
   );
 };
 
-/** 供应商字段维护：通用维护弹窗就地增删改供应商（含地址），成功后同页供应商下拉即时刷新 */
-const SupplierMaintainHint: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <MaintainLink tooltip="点击弹窗维护供应商" onClick={() => setOpen(true)} />
-      <QuickManageModal open={open} mode="supplier" title="供应商" onClose={() => setOpen(false)} />
-    </>
-  );
-};
-
 /**
  * 区1：基础信息
  * 按样衣详情页-基础信息 Tab 设计稿完全重写
@@ -301,12 +290,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
           <Form.Item
             name="supplier"
-            label={
-              <span>
-                供应商
-                {!editLocked && <SupplierMaintainHint />}
-              </span>
-            }
+            label="供应商"
             style={{ marginBottom: 8 }}
           >
             <SupplierSelect

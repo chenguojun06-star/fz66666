@@ -181,7 +181,7 @@ export default function SampleProcessList({
           size="small"
           loading={loading}
           pagination={false}
-          scroll={{ x: 720 }}
+          scroll={{ x: 830 }}
           style={{ fontSize: 13 }}
         />
       ) : null}

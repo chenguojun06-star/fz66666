@@ -215,6 +215,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
               <StyleProcessTab
                 styleId={styleId}
                 styleNo={styleNo}
+                sizeColorConfig={sizeColorConfig}
                 readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
                 processAssignee={(currentStyle as any)?.processAssignee}
                 processStartTime={(currentStyle as any)?.processStartTime}

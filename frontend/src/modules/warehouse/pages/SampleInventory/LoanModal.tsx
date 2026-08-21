@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Form, Input, InputNumber, DatePicker, Select, Radio, Typography } from 'antd';
+import { Form, Input, InputNumber, DatePicker, Select, Radio, Typography, AutoComplete } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
@@ -10,6 +10,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
 import { factoryApi } from '@/services/system/factoryApi';
+import { customerApi } from '@/services/crm/customerApi';
 
 interface LoanModalProps {
   visible: boolean;
@@ -18,14 +19,38 @@ interface LoanModalProps {
   onSuccess: () => void;
 }
 
+/** 当前登录人（操作人自动记录，不需要手输） */
+function getCurrentUserName(): string {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    return userInfo.name || userInfo.username || '';
+  } catch {
+    return '';
+  }
+}
+
+interface WorkerOption {
+  id: string;
+  workerNo?: string;
+  workerName: string;
+  phone?: string;
+  status?: string;
+}
+
 const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const [factoryOptions, setFactoryOptions] = useState<{ label: string; value: string }[]>([]);
+  const [workerOptions, setWorkerOptions] = useState<{ label: string; value: string }[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<{ label: string; value: string }[]>([]);
+  const [workersFetching, setWorkersFetching] = useState(false);
 
   const lendToType = Form.useWatch('lendToType', form);
+
+  // 操作人 = 当前登录人，自动记录（后端 UserContext 兜底一致）
+  const currentUserName = useMemo(() => getCurrentUserName(), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -48,6 +73,28 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           value: f.id,
         })));
       }).catch((err) => { console.error('工厂列表加载失败:', err); });
+
+      // 借入人（个人）：可搜索的工人下拉，替代手输（"选不到人"问题）
+      setWorkersFetching(true);
+      api.get<{ data?: WorkerOption[] }>('/factory-worker/list', { params: { status: 'active' } })
+        .then(res => {
+          const list = Array.isArray(res?.data) ? res.data : [];
+          setWorkerOptions(list.map((w) => ({
+            value: w.workerName,
+            label: `${w.workerName}${w.workerNo ? `（${w.workerNo}）` : ''}${w.phone ? ` · ${w.phone}` : ''}`,
+          })));
+        })
+        .catch((err) => { console.error('工人列表加载失败:', err); })
+        .finally(() => setWorkersFetching(false));
+
+      // 借入人（客户）：客户下拉
+      customerApi.list({ page: 1, pageSize: 500, status: 'ACTIVE' }).then(res => {
+        const records = res?.data?.records || [];
+        setCustomerOptions(records.map((c: any) => ({
+          value: c.contactPerson || c.companyName,
+          label: `${c.companyName}${c.contactPerson ? `（${c.contactPerson}）` : ''}`,
+        })));
+      }).catch((err) => { console.error('客户列表加载失败:', err); });
     }
   }, [visible]);
 
@@ -58,7 +105,9 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
 
       const payload: Record<string, any> = {
         sampleStockId: stock?.id,
-        borrower: values.borrower,
+        // 操作人自动取当前登录人（后端 UserContext 兜底一致）
+        borrower: currentUserName || undefined,
+        borrowerId: localStorage.getItem('userId') || undefined,
         quantity: values.quantity,
         expectedReturnDate: values.expectedReturnDate ? formatDateTimeSecond(values.expectedReturnDate) : undefined,
         remark: values.remark,
@@ -116,12 +165,9 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       ) : null}
 
       <Form form={form} layout="vertical" onFinish={handleOk}>
-        <Form.Item
-          name="borrower"
-          label="操作人（借出人）"
-          rules={[{ required: true, message: '请输入借出人' }]}
-        >
-          <Input placeholder="谁操作的借出" />
+        {/* 操作人自动记录当前登录人，只读展示（不需要手输/选择） */}
+        <Form.Item label="操作人（借出人）">
+          <Input value={currentUserName || '当前登录人'} disabled />
         </Form.Item>
 
         <Form.Item name="lendToType" label="借给谁" rules={[{ required: true, message: '请选择借入类型' }]}>
@@ -151,13 +197,39 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
               <Input placeholder="工厂对接人姓名（选填）" />
             </Form.Item>
           </>
+        ) : lendToType === 'customer' ? (
+          <Form.Item
+            name="lendTo"
+            label="借入客户"
+            rules={[{ required: true, message: '请选择借入客户' }]}
+          >
+            <Select
+              placeholder="选择客户（可搜索）"
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              options={customerOptions}
+              notFoundContent="暂无客户，请在合作企业-客户管理中添加"
+            />
+          </Form.Item>
         ) : (
           <Form.Item
             name="lendTo"
             label="借入人"
-            rules={[{ required: true, message: '请输入借入人姓名' }]}
+            rules={[{ required: true, message: '请选择或输入借入人' }]}
           >
-            <Input placeholder="借给谁" />
+            <AutoComplete
+              placeholder="选择借入人（可搜索），或直接输入姓名"
+              allowClear
+              filterOption={(input, option) => {
+                const kw = (input || '').trim().toLowerCase();
+                if (!kw) return true;
+                return String(option?.value ?? '').toLowerCase().includes(kw)
+                  || String(option?.label ?? '').toLowerCase().includes(kw);
+              }}
+              options={workerOptions}
+              notFoundContent={workersFetching ? '加载中...' : '输入姓名或从列表选择'}
+            />
           </Form.Item>
         )}
 

@@ -62,6 +62,15 @@ public class CuttingBundleController {
         return Result.success(cuttingBundleOrchestrator.summary(orderNo, orderId));
     }
 
+    /**
+     * 按订单ID查询全部裁剪菲号（数组，不分页）。
+     * 供订单链路时间线、水洗标打印等场景使用；多租户/工厂隔离在 Orchestrator 内处理。
+     */
+    @GetMapping("/bundles/{orderId}")
+    public Result<?> listByOrderId(@PathVariable String orderId) {
+        return Result.success(cuttingBundleOrchestrator.listByOrderId(orderId));
+    }
+
     @PostMapping("/generate")
     public Result<?> generate(@RequestBody Map<String, Object> body) {
         return Result.success(cuttingBundleOrchestrator.generate(body));

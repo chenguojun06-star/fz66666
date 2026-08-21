@@ -128,6 +128,10 @@ public class PatternEnrichmentHelper {
         String customer = null;
         String developmentSourceType = null;
         String styleNo = null;
+        // ★ 颜色兜底候选：历史 PatternProduction.color 可能为空（创建时款式未配色）
+        // 展示层用款式主色 / 色码矩阵第一色补全，避免前端显示"-"
+        String fallbackStyleColor = null;
+        String firstMatrixColor = null;
 
         if (StringUtils.hasText(styleIdStr)) {
             try {
@@ -135,6 +139,8 @@ public class PatternEnrichmentHelper {
                 StyleInfo styleInfo = styleInfoService.getById(styleId);
                 if (styleInfo != null) {
                     coverImage = styleInfo.getCover();
+                    fallbackStyleColor = StringUtils.hasText(styleInfo.getColor())
+                            ? styleInfo.getColor().trim() : null;
                     designer = styleInfo.getSampleNo();
                     patternDeveloper = styleInfo.getSampleSupplier();
                     plateWorker = styleInfo.getPlateWorker();
@@ -215,6 +221,19 @@ public class PatternEnrichmentHelper {
                                 matrixData.put("sizes", sizesObj);
                                 matrixData.put("matrixRows", matrixRowsObj);
                                 map.put("sizeColorMatrix", matrixData);
+                                // 矩阵仅 1 个颜色时可作为记录颜色兜底（多色时无法判断归属，不用）
+                                Set<String> matrixColors = new LinkedHashSet<>();
+                                for (Object rowObj : (List<?>) matrixRowsObj) {
+                                    if (rowObj instanceof Map<?, ?> row && row.get("color") != null) {
+                                        String c = String.valueOf(row.get("color")).trim();
+                                        if (!c.isEmpty()) {
+                                            matrixColors.add(c);
+                                        }
+                                    }
+                                }
+                                if (matrixColors.size() == 1) {
+                                    firstMatrixColor = matrixColors.iterator().next();
+                                }
                             }
                             // Pass raw sizeColorConfig for JS fallback parsing
                             map.put("sizeColorConfig", sizeColorConfig);
@@ -245,6 +264,18 @@ public class PatternEnrichmentHelper {
         map.put("category", category);
         map.put("customer", customer);
         map.put("developmentSourceType", developmentSourceType);
+
+        // ★ 颜色兜底：记录 color 为空（或占位"-"）时用款式主色 / 唯一矩阵色补全
+        // 仅影响展示，不回写数据库；下次款式保存时 syncPatternProductionInfo 会真正修复
+        Object recordColorObj = map.get("color");
+        String recordColor = recordColorObj == null ? "" : String.valueOf(recordColorObj).trim();
+        if (recordColor.isEmpty() || "-".equals(recordColor)) {
+            if (fallbackStyleColor != null) {
+                map.put("color", fallbackStyleColor);
+            } else if (firstMatrixColor != null) {
+                map.put("color", firstMatrixColor);
+            }
+        }
     }
 
     /**
@@ -395,7 +426,13 @@ public class PatternEnrichmentHelper {
                 Long styleId = Long.parseLong(styleIdStr);
                 LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
                 purchaseWrapper.eq(MaterialPurchase::getStyleId, styleId)
-                        .eq(MaterialPurchase::getDeleteFlag, 0);
+                        .eq(MaterialPurchase::getDeleteFlag, 0)
+                        // 样衣开发采购进度只统计样衣采购（source_type='sample'）：
+                        // 大货下单自动生成的 order 采购单不得混入（大货/样衣数据隔离）。
+                        // 历史 NULL 数据按 pattern_production_id 非空兜底，口径与 saveAndSync 一致。
+                        .and(w -> w.eq(MaterialPurchase::getSourceType, "sample")
+                                .or(nested -> nested.isNull(MaterialPurchase::getSourceType)
+                                        .isNotNull(MaterialPurchase::getPatternProductionId)));
                 List<MaterialPurchase> purchases = materialPurchaseService.list(purchaseWrapper);
 
                 if (purchases != null && !purchases.isEmpty()) {

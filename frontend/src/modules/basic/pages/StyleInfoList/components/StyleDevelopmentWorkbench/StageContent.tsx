@@ -65,6 +65,7 @@ const StageContent: React.FC<StageContentProps> = ({
           styleId={record.id!}
           styleNo={detail.styleNo}
           sizeColorConfig={sizeColorConfig as any}
+          linkedSizes={sizeColorConfig.sizes}
           patternStatus={(detail as any).patternStatus}
           patternStartTime={(detail as any).patternStartTime}
           patternCompletedTime={(detail as any).patternCompletedTime}
@@ -82,6 +83,7 @@ const StageContent: React.FC<StageContentProps> = ({
         <StyleProcessTab
           styleId={record.id!}
           styleNo={detail.styleNo}
+          sizeColorConfig={sizeColorConfig}
           readOnly={Boolean((detail as any).processCompletedTime)}
           progressNode={String((detail as any).progressNode || '')}
           processAssignee={(detail as any).processAssignee}

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { App, AutoComplete, Button, Form, Input, Popover, Spin } from 'antd';
+import { AutoComplete, Spin, Tooltip } from 'antd';
 import type { AutoCompleteProps } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { SettingOutlined } from '@ant-design/icons';
 import factoryApi from '../../services/system/factoryApi';
 import type { Factory } from '@/types/system';
 import { subscribeDataUpdated } from '@/utils/dataEvents';
+import QuickManageModal from './QuickManageModal';
 
 interface SupplierSelectProps extends Omit<AutoCompleteProps, 'options' | 'onChange'> {
   value?: string;
@@ -20,6 +21,8 @@ interface SupplierSelectProps extends Omit<AutoCompleteProps, 'options' | 'onCha
   style?: React.CSSProperties;
   id?: string;
   className?: string;
+  /** 输入框内是否显示"维护"齿轮图标（统一弹窗维护：名称/联系人/电话/地址），默认 true */
+  enableQuickManage?: boolean;
 }
 
 /**
@@ -28,8 +31,10 @@ interface SupplierSelectProps extends Omit<AutoCompleteProps, 'options' | 'onCha
  * 功能：
  * 1. 下拉选择已有供应商（从工厂管理系统加载）
  * 2. 支持搜索过滤
- * 3. 支持手动输入新供应商名称
+ * 3. 支持手动输入新供应商名称（失焦时自动创建）
  * 4. 自动关联 supplierId
+ * 5. 输入框内嵌"维护"齿轮图标，弹通用维护弹窗（左右分栏，含地址字段），
+ *    与 DictAutoComplete 的齿轮做法完全一致，新增/编辑/删除即时同步下拉
  *
  * 使用示例：
  * ```tsx
@@ -58,14 +63,12 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   style,
   id,
   className,
+  enableQuickManage = true,
   ...restProps
 }) => {
   const [suppliers, setSuppliers] = useState<Factory[]>([]);
   const [loading, setLoading] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createForm] = Form.useForm();
-  const { message } = App.useApp();
+  const [manageOpen, setManageOpen] = useState(false);
 
   // 加载供应商列表
   useEffect(() => {
@@ -90,7 +93,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
 
     fetchSuppliers();
 
-    // 供应商主数据在本页被快捷维护后自动重拉
+    // 供应商主数据在本页被快捷维护（齿轮弹窗增删改）后自动重拉
     const unsubscribe = subscribeDataUpdated('supplier', fetchSuppliers);
 
     return () => {
@@ -151,7 +154,8 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     }
   };
 
-  // 失焦时才真正创建新供应商（明确的完成输入信号）
+  // 失焦时才真正创建新供应商（明确的完成输入信号）。
+  // 详细信息（联系人/电话/地址）可稍后通过齿轮维护弹窗补全。
   const handleBlur = async () => {
     const name = String(value ?? '').trim();
     if (!name) return;
@@ -180,79 +184,25 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     }
   };
 
-  // 显式新建供应商：弹出迷你表单（名称/联系人/电话），创建成功后自动选中
-  const handleCreateSubmit = async () => {
-    try {
-      const values = await createForm.validateFields();
-      const name = String(values.factoryName || '').trim();
-      if (suppliers.some(s => s.factoryName === name)) {
-        message.warning('该供应商已存在，已自动选中');
-        const existing = suppliers.find(s => s.factoryName === name)!;
-        setCreateOpen(false);
-        createForm.resetFields();
-        onChange?.(name, {
-          id: existing.id,
-          factory: existing,
-          supplierId: existing.id,
-          supplierContactPerson: existing.contactPerson,
-          supplierContactPhone: existing.contactPhone
-        });
-        return;
-      }
-      setCreating(true);
-      const response = await factoryApi.create({
-        factoryName: name,
-        contactPerson: String(values.contactPerson || '').trim() || undefined,
-        contactPhone: String(values.contactPhone || '').trim() || undefined,
-        supplierType: 'MATERIAL',
-        factoryType: 'EXTERNAL',
-        status: 'active'
-      });
-      const newFactory = response?.data;
-      if (!newFactory?.id) {
-        message.error(response?.message || '创建供应商失败');
-        return;
-      }
-      setSuppliers(prev => [...prev, newFactory]);
-      setCreateOpen(false);
-      createForm.resetFields();
-      message.success(`供应商「${name}」创建成功`);
-      onChange?.(name, {
-        id: newFactory.id,
-        factory: newFactory,
-        supplierId: newFactory.id,
-        supplierContactPerson: newFactory.contactPerson,
-        supplierContactPhone: newFactory.contactPhone
-      });
-    } catch (error) {
-      // validateFields 抛出时为表单校验错误，静默；其余提示
-      if ((error as { errorFields?: unknown })?.errorFields) return;
-      message.error('创建供应商失败，请稍后重试');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const createPopoverContent = (
-    <Form form={createForm} layout="vertical" size="small" style={{ width: 260 }} onFinish={handleCreateSubmit}>
-      <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
-        <Input placeholder="请输入供应商名称" maxLength={100} autoFocus />
-      </Form.Item>
-      <Form.Item name="contactPerson" label="联系人">
-        <Input placeholder="请输入联系人（可选）" maxLength={50} />
-      </Form.Item>
-      <Form.Item name="contactPhone" label="联系电话">
-        <Input placeholder="请输入联系电话（可选）" maxLength={20} />
-      </Form.Item>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <Button size="small" onClick={() => setCreateOpen(false)}>取消</Button>
-        <Button size="small" type="primary" htmlType="submit" loading={creating}>创建并选用</Button>
-      </div>
-    </Form>
-  );
+  // "维护"齿轮：仅启用且未禁用时显示；外部显式传入的 suffix 优先。
+  // 做法与 DictAutoComplete 完全一致：输入框内嵌齿轮 → 通用维护弹窗（含地址）
+  const { suffix: externalSuffix, ...passProps } = restProps;
+  const manageSuffix =
+    enableQuickManage && !disabled && !externalSuffix ? (
+      <Tooltip title="维护供应商（新增 / 编辑 / 地址等信息）">
+        <SettingOutlined
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setManageOpen(true);
+          }}
+          style={{ color: 'rgba(0, 0, 0, 0.45)', cursor: 'pointer' }}
+        />
+      </Tooltip>
+    ) : undefined;
 
   return (
-    <span className="supplier-select-wrapper" style={{ display: 'inline-flex', width: '100%', ...style }}>
+    <>
       <AutoComplete
         id={id}
         className={className}
@@ -263,7 +213,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}
-        style={{ flex: 1, minWidth: 0 }}
+        style={{ width: '100%', ...style }}
         notFoundContent={loading ? <Spin /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
         filterOption={(inputValue, option) => {
           const searchText = inputValue.toLowerCase();
@@ -277,28 +227,18 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
           );
         }}
         allowClear
-        {...restProps}
+        suffix={manageSuffix ?? externalSuffix}
+        {...passProps}
       />
-      <Popover
-        open={createOpen}
-        onOpenChange={(open) => {
-          if (!open) createForm.resetFields();
-          setCreateOpen(open);
-        }}
-        trigger="click"
-        placement="bottomRight"
-        content={createPopoverContent}
-        title="新建供应商"
-      >
-        <Button
-          size="small"
-          icon={<PlusOutlined />}
-          disabled={disabled}
-          title="新建供应商"
-          style={{ marginLeft: 4, flexShrink: 0 }}
+      {manageSuffix ? (
+        <QuickManageModal
+          open={manageOpen}
+          mode="supplier"
+          title="供应商"
+          onClose={() => setManageOpen(false)}
         />
-      </Popover>
-    </span>
+      ) : null}
+    </>
   );
 };
 

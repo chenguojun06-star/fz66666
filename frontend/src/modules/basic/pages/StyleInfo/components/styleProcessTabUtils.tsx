@@ -31,6 +31,12 @@ export interface StyleProcessTabProps {
   processCompletedTime?: string;
   onRefresh?: () => void; // 刷新父组件的回调
   onDataLoaded?: (data: any[]) => void; // 数据加载完成后通知父组件
+  // 款式开发码/开发色配置（来自款式详情 sizeColorConfig）。
+  // 工序单价码数列必须与款式详情开发码同步（此前从尺寸表/码价兜底导致显示 S/M/L/XL/XXL 通用码）
+  sizeColorConfig?: {
+    sizes?: string[];
+    commonSizes?: string[];
+  };
 }
 
 // 多码单价数据接口
