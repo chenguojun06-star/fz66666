@@ -74,6 +74,12 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
         await finishedWarehouseApi.scanOutbound({ scanCode: scanCode.trim(), quantity, outstockType, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, remark });
         message.success('成品扫码出库成功');
       }
+      // 广播库存变动：仓库地图/物料库存/成品库存等页面实时刷新，无需手动刷新
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       onSuccess();
     } catch (e: any) { message.error(e.message || '操作失败'); }
     finally { setLoading(false); }

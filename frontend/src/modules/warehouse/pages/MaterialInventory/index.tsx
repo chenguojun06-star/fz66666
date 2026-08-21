@@ -61,6 +61,13 @@ const _MaterialInventory: React.FC = () => {
     { interval: 30000, pauseOnHidden: true }
   );
 
+  // 跨页面实时联动：其它模块（仓库地图/扫码/领料等）发生库存变动广播 data:changed 后立即刷新
+  React.useEffect(() => {
+    const handleDataChanged = () => { void fetchData(); };
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => window.removeEventListener('data:changed', handleDataChanged);
+  }, [fetchData]);
+
   const canSeePrice = canViewPrice(user);
 
   const pickupData = useMaterialPickupData();

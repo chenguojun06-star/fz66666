@@ -63,6 +63,12 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
         inboundModal.close();
         inboundForm.resetFields();
         void fetchData();
+        // 广播库存变动：仓库地图/物料库存等页面实时刷新，无需手动刷新
+        try {
+          window.dispatchEvent(new Event('data:changed'));
+        } catch (_e) {
+          // 事件派发失败不影响业务
+        }
         const mat = inboundModal.data;
         rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: values.quantity, unit: '件' });
         rollModal.open({

@@ -67,7 +67,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       ),
     }] : []),
     {
-      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 56, fixed: 'left' as const,
+      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 44, fixed: 'left' as const,
       render: (_: string, record: ProductSku) => {
         if (record.skuColorImage) {
           const fullUrl = getFullAuthedFileUrl(record.skuColorImage);
@@ -75,16 +75,16 @@ const SkuTable: React.FC<SkuTableProps> = ({
             <Image
               src={fullUrl}
               alt="款式图片"
-              width={32}
-              height={32}
+              width={24}
+              height={24}
               style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer' }}
               preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
             />
           );
         }
         return (
-          <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: 'var(--color-text-quaternary)' }}>
-            <PictureOutlined style={{ fontSize: 14 }} />
+          <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: 'var(--color-text-quaternary)' }}>
+            <PictureOutlined style={{ fontSize: 12 }} />
           </div>
         );
       },

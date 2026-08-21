@@ -176,6 +176,12 @@ export function useOutboundActions({
         message.success(`成功出库 ${totalQty} ${outboundModal.data?.unit || '件'}`);
         if (outboundModal.data) { openPrintModal(buildManualOutboundPrintPayload(outboundModal.data, values, outboundNo)); }
         outboundModal.close(); setBatchDetails([]); setSelectedBatchNos([]); outboundForm.resetFields(); void fetchData();
+        // 广播库存变动：仓库地图/物料库存等页面实时刷新，无需手动刷新
+        try {
+          window.dispatchEvent(new Event('data:changed'));
+        } catch (_e) {
+          // 事件派发失败不影响业务
+        }
       } else { message.error((res as any)?.message || (res as any)?.data?.message || '出库失败'); }
     } catch (error: unknown) {
       const errMsg = typeof error === 'object' && error !== null && 'response' in error

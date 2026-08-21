@@ -104,6 +104,18 @@ public class StyleBomController {
         }
     }
 
+    @GetMapping("/purchase-status/{styleId}")
+    public Result<Map<String, Object>> getPurchaseStatus(@PathVariable Long styleId) {
+        try {
+            return Result.success(styleBomOrchestrator.getPurchaseStatus(styleId));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Failed to get purchase status: styleId={}", styleId, e);
+            return Result.fail("查询失败：" + e.getMessage());
+        }
+    }
+
     @PostMapping("/check-stock/{styleId}")
     public Result<List<StyleBom>> checkBomStock(
             @PathVariable Long styleId,

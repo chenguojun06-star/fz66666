@@ -95,6 +95,9 @@ export interface UseStyleBomTabDataResult {
   // actions
   handleGeneratePurchase: () => Promise<void> | void;
   handleCheckStock: () => Promise<void> | void;
+  // 样衣采购生成状态（已生成→按钮变"重新生成"，防止重复生成）
+  purchaseStatus: import('./useStyleBomActions').SamplePurchaseStatus;
+  fetchPurchaseStatus: () => Promise<void>;
   buildPickupRecord: (record: StyleBom) => import('@/components/common/MaterialPickupModal').MaterialPickupRecord;
   handleDelete: (id: string | number) => Promise<void>;
   handleAddToPurchaseCart: () => Promise<void> | void;
@@ -263,6 +266,8 @@ export const useStyleBomTabData = ({
     buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
+    purchaseStatus,
+    fetchPurchaseStatus,
   } = useStyleBomActions({
     locked,
     styleId,
@@ -364,6 +369,8 @@ export const useStyleBomTabData = ({
     handleAddToPurchaseCart,
     handleAddCartWithCallback,
     handleBomRecognized,
+    purchaseStatus,
+    fetchPurchaseStatus,
     columns,
     onBeforeComplete,
   };

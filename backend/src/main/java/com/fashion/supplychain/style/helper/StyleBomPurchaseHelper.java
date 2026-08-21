@@ -47,6 +47,38 @@ public class StyleBomPurchaseHelper {
         return generatePurchase(styleId, false);
     }
 
+    /**
+     * 查询款式的样衣采购生成状态（前端按钮态联动：已生成→显示"重新生成"）。
+     */
+    public java.util.Map<String, Object> getPurchaseStatus(Long styleId) {
+        if (styleId == null || styleId <= 0) {
+            throw new IllegalArgumentException("款式ID不能为空");
+        }
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(MaterialPurchase::getStyleId, String.valueOf(styleId))
+                .eq(MaterialPurchase::getSourceType, "sample")
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .orderByDesc(MaterialPurchase::getCreateTime);
+        List<MaterialPurchase> records = materialPurchaseService.list(wrapper);
+
+        int pendingCount = 0;
+        String latestTime = null;
+        for (MaterialPurchase mp : records) {
+            String status = mp.getStatus() == null ? "" : mp.getStatus().trim().toLowerCase();
+            if (MaterialConstants.STATUS_PENDING.equals(status)) pendingCount++;
+            if (latestTime == null && mp.getCreateTime() != null) {
+                latestTime = mp.getCreateTime().toString();
+            }
+        }
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("generated", !records.isEmpty());
+        result.put("count", records.size());
+        result.put("pendingCount", pendingCount);
+        result.put("latestTime", latestTime);
+        return result;
+    }
+
     // D-001 修复：移除 Helper 层 @Transactional（调用方 StyleBomOrchestrator.generatePurchase 已有事务保护）
     public int generatePurchase(Long styleId, boolean force) {
         if (styleId == null || styleId <= 0) {

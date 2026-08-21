@@ -459,4 +459,8 @@ public class StyleBomOrchestrator {
     public int generatePurchase(Long styleId, boolean force) {
         return purchaseHelper.generatePurchase(styleId, force);
     }
+
+    public java.util.Map<String, Object> getPurchaseStatus(Long styleId) {
+        return purchaseHelper.getPurchaseStatus(styleId);
+    }
 }

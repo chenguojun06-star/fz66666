@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Button, Dropdown, Select, Space, Spin, Tooltip, Upload, message } from 'antd';
-import { DownOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Select, Space, Spin, Tag, Tooltip, Upload, message } from 'antd';
+import { DownOutlined, ReloadOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
 import ResizableModal from '@/components/common/ResizableModal';
+import type { SamplePurchaseStatus } from '../hooks/useStyleBomActions';
 
 interface AiBomRecognizedItem {
   id: string;
@@ -40,6 +41,7 @@ interface StyleBomToolbarProps {
   onCancelEdit: () => void;
   onAddRows: (count: number) => void;
   styleId: string | number;
+  purchaseStatus?: SamplePurchaseStatus;
   onBomRecognized: (items: AiBomRecognizedItem[]) => void;
 }
 
@@ -72,6 +74,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   onCancelEdit,
   onAddRows,
   styleId,
+  purchaseStatus,
   onBomRecognized,
 }) => {
   const hasEditingRow = Boolean(editingKey);
@@ -144,14 +147,30 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         <Button onClick={onCheckStock} disabled={!dataLength || loading} loading={checkingStock}>
           检查库存
         </Button>
-        <Button
-          type="primary"
-          onClick={onGeneratePurchase}
-          disabled={locked || !dataLength || loading}
-          loading={loading}
-        >
-          生成采购单
-        </Button>
+        {purchaseStatus?.generated ? (
+          <Space size={4}>
+            <Tooltip title={`该款式已生成过样衣采购（共 ${purchaseStatus.count} 条，待采购 ${purchaseStatus.pendingCount} 条）。点击将删除旧的【待采购】记录并重新生成，已领取/已完成的不受影响`}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={onGeneratePurchase}
+                disabled={locked || !dataLength || loading}
+                loading={loading}
+              >
+                重新生成采购单
+              </Button>
+            </Tooltip>
+            <Tag color="success" style={{ marginInlineEnd: 0 }}>已生成采购 {purchaseStatus.count} 条</Tag>
+          </Space>
+        ) : (
+          <Button
+            type="primary"
+            onClick={onGeneratePurchase}
+            disabled={locked || !dataLength || loading}
+            loading={loading}
+          >
+            生成采购单
+          </Button>
+        )}
         <Tooltip title="放入采购车草稿，可与其它款式合并下单后统一确认；单款式采购直接点「生成采购单」更快">
           <Button
             icon={<ShoppingCartOutlined />}

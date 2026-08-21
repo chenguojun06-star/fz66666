@@ -94,6 +94,7 @@ const StyleBomTab: React.FC<Props> = ({
     handleCheckStock,
     handleAddCartWithCallback,
     handleBomRecognized,
+    purchaseStatus,
     columns,
     onBeforeComplete,
   } = useStyleBomTabData({
@@ -131,6 +132,7 @@ const StyleBomTab: React.FC<Props> = ({
         bomTemplateId={bomTemplateId}
         bomTemplates={bomTemplates}
         styleId={styleId}
+        purchaseStatus={purchaseStatus}
         onBomRecognized={handleBomRecognized}
         onBomTemplateIdChange={setBomTemplateId}
         onTemplateOpenChange={(open) => {

@@ -101,6 +101,13 @@ export const useSampleInventoryData = () => {
     { interval: 30000, pauseOnHidden: true }
   );
 
+  // 跨页面实时联动：其它模块（仓库地图/扫码入库/生产入库等）发生库存变动广播 data:changed 后立即刷新
+  useEffect(() => {
+    const handleDataChanged = () => { void loadData(); };
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => window.removeEventListener('data:changed', handleDataChanged);
+  }, [loadData]);
+
   const searchParamsStr = searchParams.toString();
 
   useEffect(() => {

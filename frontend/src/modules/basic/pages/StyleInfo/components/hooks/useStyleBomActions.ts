@@ -1,11 +1,18 @@
 import { App } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 import { confirmAction } from '@/utils/confirm';
 import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
 import type { MaterialPickupRecord } from '@/components/common/MaterialPickupModal';
+
+export interface SamplePurchaseStatus {
+  generated: boolean;
+  count: number;
+  pendingCount: number;
+  latestTime?: string | null;
+}
 
 interface UseStyleBomActionsOptions {
   locked: boolean;
@@ -41,6 +48,31 @@ const useStyleBomActions = ({
   const { message } = App.useApp();
   const { batchAddItems } = usePurchaseCartActions();
 
+  // 样衣采购生成状态：已生成→按钮变"重新生成"，防止用户误以为可无限生成
+  const [purchaseStatus, setPurchaseStatus] = useState<SamplePurchaseStatus>({ generated: false, count: 0, pendingCount: 0 });
+
+  const fetchPurchaseStatus = useCallback(async () => {
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) return;
+    try {
+      const res = await api.get<{ code: number; data: SamplePurchaseStatus }>(`/style/bom/purchase-status/${sid}`);
+      if (res.code === 200 && res.data) {
+        setPurchaseStatus({
+          generated: Boolean(res.data.generated),
+          count: Number(res.data.count) || 0,
+          pendingCount: Number(res.data.pendingCount) || 0,
+          latestTime: res.data.latestTime ?? null,
+        });
+      }
+    } catch {
+      // 状态查询失败不阻塞页面，仅按钮保持默认态
+    }
+  }, [styleId]);
+
+  useEffect(() => {
+    void fetchPurchaseStatus();
+  }, [fetchPurchaseStatus]);
+
   const debugValue = useCallback((value: unknown) => {
     if (value === undefined) return 'undefined';
     if (value === null) return 'null';
@@ -74,6 +106,13 @@ const useStyleBomActions = ({
         if (result.code === 200) {
           const count = Number(result.data) || 0;
           message.success(`成功生成 ${count} 条物料采购记录`);
+          // 立即联动：按钮状态更新 + 通知采购列表等页面实时刷新（无需手动刷新）
+          void fetchPurchaseStatus();
+          try {
+            window.dispatchEvent(new Event('data:changed'));
+          } catch {
+            // 事件派发失败不影响业务
+          }
           return;
         }
 
@@ -91,8 +130,13 @@ const useStyleBomActions = ({
       }
     };
 
+    if (purchaseStatus.generated) {
+      confirmAction('重新生成采购单', `该款式已生成过 ${purchaseStatus.count} 条样衣采购记录（待采购 ${purchaseStatus.pendingCount} 条）。\n\n重新生成将删除旧的【待采购】记录后重建；已领取/已完成的记录不会被删除。`, () => doGenerate(true), { okText: '重新生成', danger: true });
+      return;
+    }
+
     confirmAction('确认生成采购单', `将根据当前物料清单（${data.length}个物料）及款式颜色数量生成采购记录。\n\n提示：建议先「检查库存」——库存充足的物料可在表格内直接领取，无需采购。`, () => doGenerate(false));
-  }, [data, message, setLoading, styleId]);
+  }, [data, message, setLoading, styleId, purchaseStatus, fetchPurchaseStatus]);
 
   const handleCheckStock = useCallback(async () => {
     const sid = Number(styleId);
@@ -241,6 +285,8 @@ const useStyleBomActions = ({
     buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
+    purchaseStatus,
+    fetchPurchaseStatus,
   };
 };
 

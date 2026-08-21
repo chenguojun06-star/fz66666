@@ -55,6 +55,12 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
         usageType: values.usageType || 'BULK',
       });
       message.success('领取成功，库存已更新');
+      // 广播库存变动：仓库地图/物料库存等页面实时刷新，无需手动刷新
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       onPicked();
       onClose();
     } catch (err: any) {

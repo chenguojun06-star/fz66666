@@ -112,6 +112,12 @@ export function usePendingPickings({ user, fetchData, openPrintModal }: PendingP
       openPrintModal(buildPickingPrintPayload(record));
       void fetchPendingPickings();
       void fetchData();
+      // 广播库存变动：仓库地图/物料库存等页面实时刷新，无需手动刷新
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
     } catch (e: unknown) {
       const respMsg = typeof e === 'object' && e !== null && 'response' in e
         ? String((e as Record<string, any>).response?.data?.message || '') : '';

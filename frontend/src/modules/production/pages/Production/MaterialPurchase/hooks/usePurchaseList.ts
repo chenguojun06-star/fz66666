@@ -220,6 +220,19 @@ export function usePurchaseList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTabKey, queryParams]);
 
+  // 跨页面实时联动：其它页面（如款式BOM生成样衣采购）操作后广播 data:changed，
+  // 采购列表立即重新拉取，用户无需手动刷新。
+  useEffect(() => {
+    if (activeTabKey !== 'purchase') return;
+    const handleDataChanged = () => {
+      void fetchMaterialPurchaseList();
+      void fetchPurchaseStats();
+    };
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => window.removeEventListener('data:changed', handleDataChanged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabKey, queryParams]);
+
   useEffect(() => {
     if (activeTabKey === 'purchase') fetchPurchaseStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps

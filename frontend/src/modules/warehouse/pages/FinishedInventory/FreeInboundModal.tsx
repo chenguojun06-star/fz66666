@@ -193,6 +193,12 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
         message.success(`入库成功，共${items.length}个商品编码`);
       }
       setItems([]);
+      // 广播库存变动：仓库地图/成品库存等页面实时刷新，无需手动刷新
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       onSuccess();
     } catch (e: any) {
       if (e.message) message.error(e.message);

@@ -220,14 +220,14 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       title: '图片',
       dataIndex: 'imageUrl',
       key: 'imageUrl',
-      width: 120,
+      width: 96,
       render: (imageUrl: string | null) =>
         imageUrl ? (
           <Image
             src={getFullAuthedFileUrl(imageUrl)}
             alt="颜色图"
-            width={48}
-            height={48}
+            width={32}
+            height={32}
             style={{ objectFit: 'contain', borderRadius: 6 }}
             preview={{ src: getFullAuthedFileUrl(imageUrl) }}
           />
@@ -235,8 +235,8 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
           <Tooltip title="未上传，点击右侧「上传」按钮为该颜色配图">
             <span
               style={{
-                width: 48,
-                height: 48,
+                width: 32,
+                height: 32,
                 borderRadius: 6,
                 border: '1px dashed var(--color-border)',
                 display: 'inline-flex',
@@ -245,7 +245,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                 color: 'var(--color-text-quaternary)',
               }}
             >
-              <PictureOutlined />
+              <PictureOutlined style={{ fontSize: 14 }} />
             </span>
           </Tooltip>
         ),

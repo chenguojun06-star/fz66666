@@ -38,6 +38,13 @@ const _FinishedInventory: React.FC = () => {
     { interval: 30000, pauseOnHidden: true }
   );
 
+  // 跨页面实时联动：其它模块（仓库地图/扫码入库等）发生库存变动广播 data:changed 后立即刷新
+  React.useEffect(() => {
+    const handleDataChanged = () => { void loadData(); };
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => window.removeEventListener('data:changed', handleDataChanged);
+  }, [loadData]);
+
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
   const skuColumns = getSkuColumns({ handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange });
   const totalAvailableQty = dataSource.reduce((sum, item) => sum + (item.availableQty || 0), 0);

@@ -94,6 +94,27 @@ export const useWarehouseFetch = () => {
     }
   }, [selectedAreaId, loadLocations]);
 
+  // 全局数据联动：任何页面发生出入库/库存变动（广播 data:changed）后，
+  // 仓库地图的库位数字、概览统计、当前打开的库位明细立即刷新，无需手动刷新。
+  useEffect(() => {
+    const handleDataChanged = () => {
+      void loadOverview();
+      if (selectedAreaId) void loadLocations(selectedAreaId);
+      if (selectedLocation) {
+        setLocationItemsLoading(true);
+        warehouseLocationMapApi.getLocationItems(selectedLocation.locationCode, selectedLocation.warehouseType)
+          .then((res: any) => {
+            setLocationItems(res?.data?.data?.items || res?.data?.items || []);
+          })
+          .catch(() => { /* silent */ })
+          .finally(() => setLocationItemsLoading(false));
+      }
+    };
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => window.removeEventListener('data:changed', handleDataChanged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadOverview, loadLocations, selectedAreaId, selectedLocation]);
+
   // ===== 派生数据 =====
   const selectedArea = useMemo(
     () => areas.find(a => a.id === selectedAreaId),

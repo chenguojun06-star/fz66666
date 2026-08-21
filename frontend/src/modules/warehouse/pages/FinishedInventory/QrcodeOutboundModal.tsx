@@ -154,6 +154,12 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       });
       message.success(`出库成功，共 ${items.length} 项`);
       setItems([]);
+      // 广播库存变动：仓库地图/成品库存等页面实时刷新，无需手动刷新
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       onSuccess?.();
       onClose();
     } catch (err: unknown) {

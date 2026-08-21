@@ -1,11 +1,29 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-20（BOM 500 扩列修复 + 报废筛选三层修复 + 面辅料图片上传 + 供应商新建，待推送部署）
+> 最后更新：2026-08-22（data:changed 全链路实时刷新 + 样衣采购防重复生成，待推送部署）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★ 全链路实时刷新 data:changed 广播全覆盖 + 样衣采购防重复生成 ✅（tsc 0 errors + mvn compile 通过，待推送）
+
+- [x] **用户核心诉求**：任何出入库/采购操作后，相关页面数据必须立即变化，不允许"要手动刷新才看到"；样衣采购生成按钮不能一直显示可无限点
+- [x] **样衣采购防重复（前后端）**：① 后端 StyleBomPurchaseHelper 新增 getPurchaseStatus（查 sourceType=sample 采购记录数/待采购数/最近时间）→ StyleBomOrchestrator 委托 → StyleBomController 新端点 GET /style/bom/purchase-status/{styleId} ② 前端 useStyleBomActions 新增 purchaseStatus 状态 + fetchPurchaseStatus；StyleBomToolbar 已生成→按钮变"重新生成采购单"+绿色 Tag 显示数量+Tooltip 说明（旧的【待采购】会被删，已领取/完成不受影响）；UseStyleBomTabDataResult 接口补 purchaseStatus/fetchPurchaseStatus 字段（修 TS2353/TS2339）
+- [x] **data:changed 广播派发点补齐 9 处（本次新增）**：成品库 FinishedScanOperationModal（扫码出入库）/QrcodeOutboundModal（扫码出库）/FreeInboundModal（无采购单入库）；物料库 useInboundFlow（手动入库）/useOutboundActions（手动出库）/usePendingPickings（待出库确认）/StockPickModal（直接领料）；加上既有 SampleInventory×4（入库/借出/转移/报废）、MaterialScanOperationModal、useMaterialPickupData、useFinishedInventoryActions、useCloseOrder、useWarehousingModals、useStyleBomActions → 共 15+ 派发点全覆盖
+- [x] **监听方补齐 1 处**：样衣库存 useSampleInventoryData 新增 data:changed 监听（此前只有派发无监听，其它模块的入库不会联动刷新样衣库存列表）。监听方现有：仓库地图 useWarehouseFetch（概览+库位+打开中的库位明细三层刷新）/物料库存/成品库存/样衣库存/采购列表 usePurchaseList（仅 purchase tab 激活时）
+- [x] **仓库选择联动核查结论（无需改码）**：仓库地图 loadLocations(areaId) 按所选仓区加载库位；areaOverview = overview[selectedArea.warehouseType] 概览按仓类型取数；handleLocationClick 按库位 warehouseType 查明细——物料仓/样衣仓/成品仓数据各自查对应库存表（e351e2e7c 已修复），用户选哪个仓就看哪个仓的数据
+- [x] 编译验证：前端 npx tsc --noEmit 0 errors；后端 mvn compile 通过（test-runner-mcp 本会话不可用，按降级规则用原生命令）
+
+### 2026-08-21 (深夜) ★ 仓库地图按仓类型联动真实库存 + 样衣入库库位写入 + 图片contain + 采购同步核实 ✅（e351e2e7c 已推送，CI部署中）
+
+- [x] **仓库地图库位/库区数字固定值根因**：WarehouseLocationOrchestrator 的 listByType/queryLocationItems/getWarehouseOverview/transfer 全部只查成品入库表 t_product_warehousing，物料仓/样衣仓的库存变化永远不会反映到库位统计 → 改为 countStocksByIdentifiers 按仓类型分别查 t_material_stock.location / t_sample_stock.location / t_product_warehousing.warehouse
+- [x] **样衣扫码入库库位 41/44 条 NULL 根因**：PatternStockHelper 未写 location/warehouseAreaId → 修复为优先取 scanRecord.warehouseLocationCode，回退 warehouseCode，库区ID+名称一并写入 t_sample_stock。历史 41 条 NULL 无原始库位信息不可回填，部署后新入库数据正确
+- [x] **物料出库数字"写死"核实结论**：出库链路完整无 bug——freeOutbound/scanOutbound/领料 MaterialPickingServiceImpl/转移 StockTransferOrchestrator/MaterialRollOrchestrator 全部调用 decreaseStockById 扣 t_material_stock.quantity 并写 stock_change_log(OUTSTOCK)+t_material_outbound_log；本地库无 OUTSTOCK 记录仅因本地未做出库操作，用户看到的固定值是生产环境旧代码（未部署本轮修复）
+- [x] **样衣采购同步核实结论**：后端 applySourceTypeFilter 不传 sourceType 不过滤；前端 usePurchaseList 默认不传 sourceType；isOrderFrozenForRecord 特判 sourceType==='sample' 跳过订单冻结 → 样衣 BOM 生成的采购（sourceType=sample，库里 4 条）在全部采购列表可见
+- [x] **图片 contain 核实结论**：global.css 规则 16b(.ant-image-img)/16c(原生 img) 已用 contain !important 全局压制 44 处 inline objectFit:'cover'，无 backgroundImage 绕过；本轮补改 SkuColorImage/StyleImageCell/LocationDetailDrawer 等主显示点
+- [x] 码数字段：V202708202000 全库扩列已在前次提交 e3fc342c7；清理 2 个 tmp-check 临时脚本
 
 ### 2026-08-20 (深夜) ★ BOM 保存 500 根因闭环 + 报废筛选/面辅料图片/供应商新建四合一修复 ✅（mvn compile + tsc 通过，待推送）
 
