@@ -137,7 +137,9 @@ def check_content(fname: str, content: str, existing_file: bool = False) -> List
         upper = line.upper().strip()
         if 'SET @' not in upper:
             continue
-        if re.search(r"''\w+''", line):
+        # 限定 ASCII 标识符字面量（历史事故模式 ''abc''）：Python \w 默认含 Unicode，
+        # 会把纯中文 COMMENT ''尺码'' 误判拦截（V202708201800 中文 COMMENT 生产验证安全）
+        if re.search(r"''[A-Za-z0-9_]+''", line):
             msg = (f"L{i}: 动态SQL内含字符串字面量 ''xxx'' → Flyway会截断SQL，"
                    f"改用 DEFAULT NULL/0 + 独立UPDATE回填")
             results.append((msg, is_old))
