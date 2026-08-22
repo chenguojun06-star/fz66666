@@ -530,7 +530,7 @@ public class PatternProductionOrchestrator {
         stockHelper.syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
         statusHelper.syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
 
-        return buildSubmitScanResult(scanRecord, patternId, pattern, operationType, operatorName, warehouseCode);
+        return buildSubmitScanResult(scanRecord, patternId, pattern, operationType, operatorName, warehouseCode, effectiveUnitPrice);
     }
 
     private void assertSubmitScanParams(String patternId, String operationType) {
@@ -687,7 +687,8 @@ public class PatternProductionOrchestrator {
     }
 
     private Map<String, Object> buildSubmitScanResult(PatternScanRecord scanRecord, String patternId,
-            PatternProduction pattern, String operationType, String operatorName, String warehouseCode) {
+            PatternProduction pattern, String operationType, String operatorName, String warehouseCode,
+            BigDecimal effectiveUnitPrice) {
         Map<String, Object> result = new HashMap<>();
         result.put("recordId", scanRecord.getId());
         result.put("patternId", patternId);
@@ -700,6 +701,13 @@ public class PatternProductionOrchestrator {
         result.put("scanTime", scanRecord.getScanTime());
         result.put("newStatus", pattern.getStatus());
         result.put("newStatusLabel", StatusTranslator.translateStatus(pattern.getStatus()));
+        result.put("unitPrice", effectiveUnitPrice);
+        // 工序单价缺失提示：款式未配置该工序单价时工资按 0 记录，扫码当场提醒用户去补配
+        if (effectiveUnitPrice == null || effectiveUnitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            result.put("unitPriceMissing", true);
+            result.put("unitPriceMissingTip", "该款式未配置【" + patternOperationLabel(operationType)
+                    + "】工序单价，本次工资按 0 记录。请到 款式资料→工序配置 中补充工序单价。");
+        }
         return result;
     }
 

@@ -568,7 +568,10 @@ public class WarehouseLocationOrchestrator {
                     item.put("styleNo", matchedSku.getStyleNo());
                     item.put("color", matchedSku.getColor());
                     item.put("size", matchedSku.getSize());
-                    item.put("stockQuantity", matchedSku.getStockQuantity());
+                    // 库位明细必须显示该库位的剩余量（remainingQty），不能用 SKU 全局库存——
+                    // 同一 SKU 分多个库位存放时全局库存会重复显示，且与出库后实际不符
+                    item.put("stockQuantity", remainingQty);
+                    item.put("skuTotalQuantity", matchedSku.getStockQuantity());
                     item.put("salesPrice", matchedSku.getSalesPrice());
                 } else {
                     item.put("skuCode", recs.get(0).getSkuCode());
