@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { formatMoney } from '@/utils/format';
-import { buildWashLabelPrintHtml, buildWashLabelMultiPageHtml, getDefaultDateText, compositionFromSections, washTextFromInstructions, type WashLabelPrintData } from '@/utils/washLabelPrintTemplate';
+import { buildWashLabelPrintHtml, buildWashLabelMultiPageHtml, compositionFromSections, washTextFromInstructions, type WashLabelPrintData } from '@/utils/washLabelPrintTemplate';
 import { getEffectiveCareIconCodes } from '@/utils/careIcons';
 import type { OrderInfo } from './types';
 import type { HangSettings, BarSettings, WashSettings } from './constants';
@@ -155,12 +155,9 @@ export const buildWashlabelHtml = async (
   const washInstructionsText = wash.showWashInstructions
     ? washTextFromInstructions(order.washInstructions, order.fabricCompositionParts)
     : '';
-  const manufacturingText = wash.showManufacturing
-    ? (wash.manufacturingText || 'MADE IN CHINA')
-    : '';
-  const dateText = wash.showDate
-    ? (wash.dateText || getDefaultDateText())
-    : '';
+  // 只显示用户输入的内容：无 MADE IN CHINA / 自动日期兜底
+  const manufacturingText = wash.showManufacturing ? (wash.manufacturingText || '') : '';
+  const dateText = wash.showDate ? (wash.dateText || '') : '';
 
   const printData: WashLabelPrintData = {
     width: wash.w,
@@ -170,6 +167,11 @@ export const buildWashlabelHtml = async (
     careIconCodes: careCodes,
     manufacturingText,
     dateText,
+    // 码数/款号区：只显示用户输入内容；款号默认预填订单款号
+    sizeText: wash.showSize ? (wash.sizeText || '').trim() : '',
+    styleNo: wash.showStyleNo ? (wash.styleNoText || '').trim() || (order.styleNo || '').trim() : '',
+    // 距剪口偏移：内容从剪口下方此处开始打印
+    topOffsetMm: wash.topOffsetMm,
   };
   if (count <= 1) return buildWashLabelPrintHtml(printData);
   return buildWashLabelMultiPageHtml(Array.from({ length: count }, () => printData));

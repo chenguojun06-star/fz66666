@@ -1,5 +1,14 @@
 import { CARE_ICONS } from './careIcons';
 
+/**
+ * 洗水唛打印数据
+ *
+ * 渲染原则（用户需求）：
+ *  - 只显示用户输入的内容：任何字段为空/空数组 → 该分区完全不渲染，无占位提示
+ *  - 全部分区标准字体、无加粗、统一字号
+ *  - 分区顺序（从上到下）：码数 → 款号 → 面料成份 → 洗涤图标 → 洗涤文字 → 制造区域
+ *  - 距剪口下方 topOffsetMm（默认 30mm）处开始打印
+ */
 export interface WashLabelPrintData {
   width: number;
   height: number;
@@ -8,10 +17,12 @@ export interface WashLabelPrintData {
   careIconCodes: string[];
   manufacturingText: string;
   dateText: string;
-  /** 顶部码数行（如 "S" / "M" / "L" / "XL"），用户可编辑 */
+  /** 顶部码数行（如 "S" / "M" / "L" / "XL"），用户可编辑；空则不显示 */
   sizeText?: string;
-  /** 顶部款号行（如 "BR26C1S0574B"） */
+  /** 顶部款号行（如 "BR26C1S0574B"）；空则不显示 */
   styleNo?: string;
+  /** 距剪口偏移（mm），内容从此处开始打印；默认 0（兼容旧调用） */
+  topOffsetMm?: number;
 }
 
 function buildCareIconsHtml(codes: string[], _iconSize: number): string {
@@ -32,10 +43,12 @@ function buildCareIconsHtml(codes: string[], _iconSize: number): string {
   return cells ? `<div class="icons">${cells}</div>` : '';
 }
 
-function buildLabelCss(w: number, h: number, iconSize: number): string {
+function buildLabelCss(w: number, h: number, iconSize: number, topOffsetMm: number): string {
+  // 统一标准字号：全部分区同一字号、无加粗（用户要求字体图标一致）
   const fs = w >= 48 ? 6.5 : 5.5;
-  const bottomSafe = 12;
+  const bottomSafe = 2;
   const iconGap = w <= 30 ? 0.6 : 1;
+  const topPad = Math.max(0, topOffsetMm || 0);
 
   // iframe srcDoc 是独立文档上下文，不继承父页面 CSS 变量
   // 直接用硬编码颜色，避免 var(--color-*) 在 iframe 中失效
@@ -43,55 +56,49 @@ function buildLabelCss(w: number, h: number, iconSize: number): string {
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
 body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
-.label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
+.label-page{position:relative;width:${w}mm;height:${h}mm;padding:${topPad}mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
-.dash-sep{border:none;border-top:0.8pt dashed #52525b;width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}
-/* 顶部码数+款号区：码数粗体居中，款号灰色细字居中 */
-.top-meta{flex:0 0 auto;width:100%;text-align:center;line-height:1.2;padding-bottom:1mm;border-bottom:0.4pt solid #d4d4d8}
-.top-meta .size-line{font-size:${w <= 30 ? fs + 2 : fs + 1.5}pt;font-weight:700;letter-spacing:0.4mm}
-.top-meta .style-line{font-size:${fs}pt;color:#52525b;letter-spacing:0.3mm;margin-top:0.6mm}
-.content-block{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center;padding-top:2mm}
-.comp-mats{font-size:${w <= 30 ? fs + 1.5 : fs + 0.5}pt;line-height:1.6;font-weight:600;text-align:center}
-.section-sep{width:40%;height:0;border-top:0.3pt solid #bfbfbf;margin:1.5mm auto}
-.care-wash{font-size:${fs}pt;color:#3f3f46;line-height:1.6;text-align:center}
-.bottom-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:100%;margin-top:auto}
-.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin:0.5mm auto 0}
+/* 内容区：从上到下依次排列 码数→款号→成份→图标→洗涤文字→制造，全部标准字体无加粗 */
+.content-block{flex:1 1 0;overflow:hidden;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;padding-top:1.5mm}
+.size-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;text-align:center;line-height:1.3}
+.style-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;text-align:center;line-height:1.3;margin-top:1mm}
+.comp-mats{font-size:${fs}pt;font-weight:400;line-height:1.5;text-align:center;margin-top:1.5mm}
+.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin-top:1.5mm}
 .icon-cell{width:${iconSize}mm;height:${iconSize}mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .icons svg{width:100%;height:100%}
-.footer{margin-top:1.5mm;font-size:${w <= 30 ? fs - 0.2 : fs}pt;font-weight:700;letter-spacing:0.8mm;line-height:1.3;text-align:center;white-space:nowrap}
-.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:#71717a;text-align:center;letter-spacing:0.2mm}`;
+.care-wash{font-size:${fs}pt;font-weight:400;line-height:1.5;text-align:center;margin-top:1mm}
+.footer{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;line-height:1.3;text-align:center;margin-top:1.5mm}
+.date{margin-top:1mm;font-size:${fs}pt;font-weight:400;color:#71717a;text-align:center;letter-spacing:0.2mm}`;
 }
 
 function buildLabelContentHtml(data: WashLabelPrintData, iconSize: number): string {
-  // 顶部码数+款号：用户要求"最顶部 一行码数 一行款号"，多码数打印时每页独立显示该码数
-  const topMetaHtml = (data.sizeText?.trim() || data.styleNo?.trim())
-    ? `<div class="top-meta">
-${data.sizeText?.trim() ? `  <div class="size-line">${escapeHtml(data.sizeText.trim())}</div>` : ''}
-${data.styleNo?.trim() ? `  <div class="style-line">${escapeHtml(data.styleNo.trim())}</div>` : ''}
-</div>`
+  // 只显示用户输入的内容：空值分区完全不渲染（无占位符、无默认文案）
+  const sizeHtml = data.sizeText?.trim()
+    ? `<div class="size-line">${escapeHtml(data.sizeText.trim())}</div>`
     : '';
-
-  const compositionHtml = data.compositionText.trim()
+  const styleHtml = data.styleNo?.trim()
+    ? `<div class="style-line">${escapeHtml(data.styleNo.trim())}</div>`
+    : '';
+  const compositionHtml = data.compositionText?.trim()
     ? `<div class="comp-mats">${data.compositionText.replace(/\n/g, '<br/>')}</div>`
-    : '<div class="comp-mats" style="color:#bfbfbf">（成分未填写）</div>';
-
-  const washHtml = data.washInstructionsText.trim()
-    ? `<div class="section-sep"></div><div class="care-wash">${data.washInstructionsText.replace(/\n/g, '<br/>')}</div>`
     : '';
+  // 洗涤方法区：上面一排图标，下面一排文字（用户要求图标在上文字在下）
+  const careIconsHtml = buildCareIconsHtml(data.careIconCodes || [], iconSize);
+  const washHtml = data.washInstructionsText?.trim()
+    ? `<div class="care-wash">${data.washInstructionsText.replace(/\n/g, '<br/>')}</div>`
+    : '';
+  const mfgHtml = data.manufacturingText?.trim()
+    ? `<div class="footer">${escapeHtml(data.manufacturingText.trim())}</div>`
+    : '';
+  const dateHtml = data.dateText?.trim() ? `<div class="date">${escapeHtml(data.dateText.trim())}</div>` : '';
 
-  const careIconsHtml = buildCareIconsHtml(data.careIconCodes, iconSize);
-  const careSectionHtml = careIconsHtml ? careIconsHtml : '';
-
-  const mfgHtml = data.manufacturingText.trim() ? `<div class="footer">${data.manufacturingText}</div>` : '';
-  const dateHtml = data.dateText.trim() ? `<div class="date">${data.dateText}</div>` : '';
-
-  return `${topMetaHtml}<div class="dash-sep"></div>
-    <div class="content-block">
+  // 只渲染用户输入的分区：不添加任何分隔线/默认文案等额外元素
+  return `<div class="content-block">
+      ${sizeHtml}
+      ${styleHtml}
       ${compositionHtml}
+      ${careIconsHtml}
       ${washHtml}
-    </div>
-    <div class="bottom-block">
-      ${careSectionHtml}
       ${mfgHtml}
       ${dateHtml}
     </div>`;
@@ -116,7 +123,7 @@ export function buildWashLabelPrintHtml(data: WashLabelPrintData): string {
   const labelHtml = buildLabelContentHtml(data, iconSize);
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-${buildLabelCss(w, h, iconSize)}
+${buildLabelCss(w, h, iconSize, data.topOffsetMm ?? 0)}
 </style></head><body><div class="label-page">
 ${labelHtml}
 </div></body></html>`;
@@ -129,6 +136,7 @@ export function buildWashLabelMultiPageHtml(items: WashLabelPrintData[]): string
   const w = items[0].width;
   const h = items[0].height;
   const iconSize = calcIconSize(w);
+  const topOffset = items[0].topOffsetMm ?? 0;
 
   const pagesHtml = items.map(data => {
     const content = buildLabelContentHtml(data, iconSize);
@@ -138,15 +146,10 @@ ${content}
   }).join('\n');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-${buildLabelCss(w, h, iconSize)}
+${buildLabelCss(w, h, iconSize, topOffset)}
 </style></head><body>
 ${pagesHtml}
 </body></html>`;
-}
-
-export function getDefaultDateText(): string {
-  const now = new Date();
-  return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 }
 
 export function compositionFromSections(

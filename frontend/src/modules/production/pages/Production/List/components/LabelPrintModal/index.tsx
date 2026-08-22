@@ -10,8 +10,8 @@ export type { LabelStyleInfo } from './types';
 export default function LabelPrintModal({ open, onClose, order, styleInfo }: LabelPrintModalProps) {
   const {
     washW, setWashW, washH, setWashH,
-    uCodeSize, setUCodeSize, suitPart, setSuitPart,
-    compositionText, washInstructionsText, careIconCodes, defaultDateText,
+    uCodeSize, setUCodeSize,
+    sections, setSections,
     handleWashPrint, handleUCodePrint,
   } = useLabelPrintData({ open, order, styleInfo });
 
@@ -34,11 +34,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
                 open={open} order={order} styleInfo={styleInfo}
                 washW={washW} setWashW={setWashW}
                 washH={washH} setWashH={setWashH}
-                suitPart={suitPart} setSuitPart={setSuitPart}
-                compositionText={compositionText}
-                washInstructionsText={washInstructionsText}
-                careIconCodes={careIconCodes}
-                defaultDateText={defaultDateText}
+                sections={sections} setSections={setSections}
                 onClose={onClose}
                 onPrint={handleWashPrint}
               />

@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Row, Col, Image, Divider, Space, Button, Collapse, Input, InputNumber, Typography } from 'antd';
 import { EditOutlined, SaveOutlined } from '@ant-design/icons';
 import { formatMoney } from '@/utils/format';
-import { compositionFromSections, washTextFromInstructions, getDefaultDateText } from '@/utils/washLabelPrintTemplate';
+import { compositionFromSections, washTextFromInstructions } from '@/utils/washLabelPrintTemplate';
 import { getEffectiveCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
 import type { OrderInfo } from '../types';
 
@@ -19,6 +19,10 @@ interface OrderDetailCardProps {
   ptLabel: string;
   setSelectedOrder: React.Dispatch<React.SetStateAction<OrderInfo | null>>;
   onSaveStyleInfo: () => void;
+  /** 洗水唛打印设置中的制造区域内容（用户输入，空=不打印） */
+  washManufacturingText?: string;
+  /** 洗水唛打印设置中的日期内容（用户输入，空=不打印） */
+  washDateText?: string;
 }
 
 const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
@@ -32,6 +36,8 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
   ptLabel,
   setSelectedOrder,
   onSaveStyleInfo,
+  washManufacturingText,
+  washDateText,
 }) => {
   const effectiveCareCodes = getEffectiveCareIconCodes(
     selectedOrder.careIconCodes,
@@ -164,8 +170,14 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
                 </div>
                 <div>
                   <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>④ 生产制造</div>
-                  <Text style={{ fontSize: 14 }}>MADE IN CHINA</Text>
-                  <Text style={{ fontSize: 14, color: 'var(--color-text-muted)', marginLeft: 12 }}>{getDefaultDateText()}</Text>
+                  {washManufacturingText?.trim() ? (
+                    <Text style={{ fontSize: 14 }}>{washManufacturingText.trim()}</Text>
+                  ) : (
+                    <Text style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>未设定</Text>
+                  )}
+                  {washDateText?.trim() ? (
+                    <Text style={{ fontSize: 14, color: 'var(--color-text-muted)', marginLeft: 12 }}>{washDateText.trim()}</Text>
+                  ) : null}
                 </div>
               </div>
             ),

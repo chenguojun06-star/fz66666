@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '@/utils/api';
 import type { ApiResult } from '@/utils/api';
-import { compositionFromSections, washTextFromInstructions, getDefaultDateText } from '@/utils/washLabelPrintTemplate';
+import { compositionFromSections, washTextFromInstructions } from '@/utils/washLabelPrintTemplate';
 import { parseCareIconCodes, DEFAULT_CARE_ICON_CODES } from '@/utils/careIcons';
 import type { ProductionOrder } from '@/types/production';
 import type { LabelStyleInfo, SkuRow } from './types';
 import { printWashLabels, printUCodeLabels } from './helpers';
+import {
+  buildDefaultSections,
+  type WashLabelSectionState,
+} from '@/components/common/WashLabelSectionConfigPanel';
 
 export type UCodeSize = '40x70' | '50x100';
 
@@ -25,10 +29,9 @@ export interface UseLabelPrintDataReturn {
   setUCodeSize: (v: UCodeSize) => void;
   suitPart: string;
   setSuitPart: (v: string) => void;
-  compositionText: string;
-  washInstructionsText: string;
-  careIconCodes: string[];
-  defaultDateText: string;
+  /** 洗水唛分区配置（开关+内容），打印时按此渲染，只显示用户输入的内容 */
+  sections: WashLabelSectionState;
+  setSections: (v: WashLabelSectionState) => void;
   handleWashPrint: (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) => Promise<void>;
   handleUCodePrint: (selected: SkuRow[], ord: ProductionOrder) => Promise<void>;
 }
@@ -55,7 +58,18 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
     return codes.length > 0 ? codes : [...DEFAULT_CARE_ICON_CODES];
   }, [styleInfo?.careIconCodes]);
 
-  const defaultDateText = useMemo(() => getDefaultDateText(), []);
+  // 分区默认值：从款式数据预填（款号取订单款号），用户可在面板自由改/关
+  // 弹窗每次打开时按当前款式重置，避免上一单数据残留
+  const [sections, setSections] = useState<WashLabelSectionState>(() => buildDefaultSections({}));
+  useEffect(() => {
+    if (!open) return;
+    setSections(buildDefaultSections({
+      styleNoText: (order?.styleNo || '').trim(),
+      compositionText,
+      washText: washInstructionsText,
+      careIconCodes,
+    }));
+  }, [open, order?.styleNo, compositionText, washInstructionsText, careIconCodes]);
 
   useEffect(() => {
     if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }
@@ -72,8 +86,8 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
 
   const handleWashPrint = useCallback(
     (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) =>
-      printWashLabels(selected, ord, si, washW, washH),
-    [washW, washH],
+      printWashLabels(selected, ord, si, washW, washH, sections),
+    [washW, washH, sections],
   );
 
   const handleUCodePrint = useCallback(
@@ -94,10 +108,8 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
     setUCodeSize,
     suitPart,
     setSuitPart,
-    compositionText,
-    washInstructionsText,
-    careIconCodes,
-    defaultDateText,
+    sections,
+    setSections,
     handleWashPrint,
     handleUCodePrint,
   };

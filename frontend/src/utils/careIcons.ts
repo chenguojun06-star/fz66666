@@ -38,7 +38,7 @@ function circSvg(inner: string): string {
 
 const X = '<line x1="5" y1="5" x2="15" y2="15" stroke="#000" stroke-width="1.5"/><line x1="15" y1="5" x2="5" y2="15" stroke="#000" stroke-width="1.5"/>';
 const numTxt = (n: string) =>
-  `<text x="10" y="14" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="bold">${n}</text>`;
+  `<text x="10" y="14" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="normal">${n}</text>`;
 
 export interface CareIconDef {
   code: string;

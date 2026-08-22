@@ -9,10 +9,19 @@ export const defaultBar = { w: 40, h: 20, codeSz: 7, textSz: 5.5, showName: true
 export const defaultWash = {
   w: 30, h: 80,
   titleSz: 7, textSz: 5, careSz: 4,
-  manufacturingText: 'MADE IN CHINA',
+  /** 距剪口偏移（mm）：内容从剪口下方此处开始打印 */
+  topOffsetMm: 30,
+  /** 码数区（只显示用户输入内容，空=不显示） */
+  showSize: false,
+  sizeText: '',
+  /** 款号区（只显示用户输入内容，空=不显示） */
+  showStyleNo: true,
+  styleNoText: '',
+  /** 制造区域：只显示用户输入内容，无默认文案 */
+  manufacturingText: '',
   dateText: '',
-  showManufacturing: true,
-  showDate: true,
+  showManufacturing: false,
+  showDate: false,
   showCareIcons: true,
   showComposition: true,
   showWashInstructions: true

@@ -190,21 +190,38 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
 
             {printType === 'washlabel' && (<>
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>制造地</div>
-                <Input size="small" value={wash.manufacturingText} placeholder="MADE IN CHINA"
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>距剪口偏移（内容从此处开始打印）</div>
+                <InputNumber size="small" min={0} max={Math.max(0, wash.h - 10)} value={wash.topOffsetMm}
+                  onChange={v => setWash(w => ({ ...w, topOffsetMm: v ?? 0 }))} suffix="mm" style={{ width: '100%' }} />
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>码数（只打印你输入的内容）</div>
+                <Input size="small" value={wash.sizeText} placeholder="如 S / M / L，留空不显示"
+                  onChange={e => setWash(w => ({ ...w, sizeText: e.target.value }))} maxLength={30} />
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>款号（留空=使用订单款号）</div>
+                <Input size="small" value={wash.styleNoText} placeholder="留空自动使用订单款号"
+                  onChange={e => setWash(w => ({ ...w, styleNoText: e.target.value }))} maxLength={50} />
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>制造区域（只打印你输入的内容）</div>
+                <Input size="small" value={wash.manufacturingText} placeholder="如 MADE IN CHINA，留空不显示"
                   onChange={e => setWash(w => ({ ...w, manufacturingText: e.target.value }))} maxLength={30} />
               </div>
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>日期（留空=自动使用今天）</div>
-                <Input size="small" value={wash.dateText} placeholder="如：20260605"
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>日期（只打印你输入的内容）</div>
+                <Input size="small" value={wash.dateText} placeholder="如：20260605，留空不显示"
                   onChange={e => setWash(w => ({ ...w, dateText: e.target.value }))} maxLength={20} />
               </div>
               <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
               <Space orientation="vertical" style={{ width: '100%' }} size={2}>
+                {toggleRow('码数', 'showSize', wash.showSize, setWash)}
+                {toggleRow('款号', 'showStyleNo', wash.showStyleNo, setWash)}
                 {toggleRow('面料成分', 'showComposition', wash.showComposition, setWash)}
-                {toggleRow('洗涤说明', 'showWashInstructions', wash.showWashInstructions, setWash)}
-                {toggleRow('护理图标', 'showCareIcons', wash.showCareIcons, setWash)}
-                {toggleRow('制造地', 'showManufacturing', wash.showManufacturing, setWash)}
+                {toggleRow('洗涤图标', 'showCareIcons', wash.showCareIcons, setWash)}
+                {toggleRow('洗涤文字', 'showWashInstructions', wash.showWashInstructions, setWash)}
+                {toggleRow('制造区域', 'showManufacturing', wash.showManufacturing, setWash)}
                 {toggleRow('日期', 'showDate', wash.showDate, setWash)}
               </Space>
             </>)}

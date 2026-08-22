@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Alert, Button, Divider, InputNumber, Radio, Space, Tag, Typography } from 'antd';
+import { Button, Divider, InputNumber, Radio, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { safePrint } from '@/utils/safePrint';
-import { CARE_ICONS, parseCareIconCodes } from '@/utils/careIcons';
 import {
   buildWashLabelMultiPageHtml,
-  getDefaultDateText,
   compositionFromSections,
   washTextFromInstructions,
-  type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';
+import { parseCareIconCodes } from '@/utils/careIcons';
+import WashLabelSectionConfigPanel, {
+  buildDefaultSections,
+  type WashLabelSectionState,
+} from '@/components/common/WashLabelSectionConfigPanel';
 
 export interface WashLabelItem {
   orderNo: string;
@@ -22,11 +24,6 @@ export interface WashLabelItem {
   fabricCompositionParts?: string;
   washInstructions?: string;
   uCode?: string;
-  washTempCode?: string;
-  bleachCode?: string;
-  tumbleDryCode?: string;
-  ironCode?: string;
-  dryCleanCode?: string;
   careIconCodes?: string;
 }
 
@@ -51,6 +48,7 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
   const [uCodeSize, setUCodeSize] = useState<UCodeSize>('40x70');
   const [labelType, setLabelType] = useState<LabelType>('wash');
   const [printLoading, setPrintLoading] = useState(false);
+  const [sections, setSections] = useState<WashLabelSectionState>(() => buildDefaultSections({ topOffsetMm: 30 }));
 
   const first = items[0];
   const compositionText = first
@@ -59,7 +57,20 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
   const washInstructionsText = first
     ? washTextFromInstructions(first.washInstructions, first.fabricCompositionParts)
     : '';
-  const resolvedCareIconCodes = first ? parseCareIconCodes(first.careIconCodes) : [];
+  const careIconCodeList = first ? parseCareIconCodes(first.careIconCodes) : [];
+
+  // 以第一单的款式数据预填分区（批量同款场景），用户可自由改/关
+  React.useEffect(() => {
+    if (!open) return;
+    setSections(buildDefaultSections({
+      styleNoText: (first?.styleNo || '').trim(),
+      compositionText,
+      washText: washInstructionsText,
+      careIconCodes: careIconCodeList,
+      topOffsetMm: 30,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, first?.orderNo, compositionText, washInstructionsText, careIconCodeList.length]);
 
   const handlePrint = async () => {
     if (!items.length) return;
@@ -67,14 +78,18 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
     try {
 
     if (labelType === 'wash') {
-      const printDataList: WashLabelPrintData[] = items.map(() => ({
+      // 只打印用户输入的分区内容：关闭或清空的分区传空值（模板不渲染）
+      const printDataList = items.map(() => ({
         width: washW,
         height: washH,
-        compositionText: compositionFromSections(first.fabricCompositionParts, first.fabricComposition),
-        washInstructionsText: washTextFromInstructions(first.washInstructions, first.fabricCompositionParts),
-        careIconCodes: parseCareIconCodes(first.careIconCodes),
-        manufacturingText: 'MADE IN CHINA',
-        dateText: getDefaultDateText(),
+        sizeText: sections.showSize ? sections.sizeText : '',
+        styleNo: sections.showStyleNo ? sections.styleNoText : '',
+        compositionText: sections.showComposition ? sections.compositionText : '',
+        washInstructionsText: sections.showWash ? sections.washText : '',
+        careIconCodes: sections.showWash ? sections.careIconCodes : [],
+        manufacturingText: sections.showManufacturing ? sections.manufacturingText : '',
+        dateText: '',
+        topOffsetMm: sections.topOffsetMm,
       }));
       const html = buildWashLabelMultiPageHtml(printDataList);
       safePrint(html);
@@ -89,7 +104,7 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
           catch { /* ignore */ }
         })
       );
-      const dateStr = getDefaultDateText();
+      const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`;
       const fs = w >= 48 ? 6.5 : 5.5;
       const qrSize = Math.min(w - 8, 32);
       const pages = items.map(item => {
@@ -131,16 +146,12 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
     } finally { setPrintLoading(false); }
   };
 
-  const missingDataCount = labelType === 'wash'
-    ? items.filter(it => !it.fabricComposition && !it.fabricCompositionParts).length
-    : items.filter(it => !it.uCode).length;
-
   return (
     <ResizableModal
       open={open}
       title={<Space><PrinterOutlined />批量打印（{items.length} 件）</Space>}
       onCancel={onClose}
-      width="40vw"
+      width="52vw"
       footer={
         <Space>
           <Button onClick={onClose}>取消</Button>
@@ -165,16 +176,6 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
           </Radio.Group>
         </div>
 
-        {missingDataCount > 0 && (
-          <Alert
-            type="warning"
-            showIcon
-            title={labelType === 'wash'
-              ? `${missingDataCount} 个订单的款式未填写面料成分，打印时将显示"成分未填写"`
-              : `${missingDataCount} 个订单未填写 U 码，QR 码将留空`}
-          />
-        )}
-
         {labelType === 'wash' && (
           <>
             <div>
@@ -187,45 +188,13 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
               </Space>
             </div>
 
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>① 面料成分</div>
-              <Typography.Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
-                {compositionText || '（未填写）'}
-              </Typography.Text>
-            </div>
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>② 洗涤说明</div>
-              <Typography.Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
-                {washInstructionsText || '（未填写）'}
-              </Typography.Text>
-            </div>
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>③ 护理图标</div>
-              {resolvedCareIconCodes.length > 0 ? (
-                <Space wrap size={4}>
-                  {resolvedCareIconCodes.map(code => {
-                    const icon = CARE_ICONS[code];
-                    return (
-                      <div key={code} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 2,
-                        padding: '1px 5px', borderRadius: 3,
-                        border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-base)',
-                      }}>
-                        <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 16, height: 16, flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
-                      </div>
-                    );
-                  })}
-                </Space>
-              ) : (
-                <Typography.Text type="secondary" style={{ fontSize: 14 }}>（未选择）</Typography.Text>
-              )}
-            </div>
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>④ 生产制造</div>
-              <Typography.Text style={{ fontSize: 14 }}>MADE IN CHINA</Typography.Text>
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>日期自动生成：{getDefaultDateText()}</div>
-            </div>
+            {/* 分区配置：码数/款号/面料成份/洗涤方法（图标上文字下）/制造区域 + 距剪口偏移 + 实时预览 */}
+            <WashLabelSectionConfigPanel
+              value={sections}
+              onChange={setSections}
+              width={washW}
+              height={washH}
+            />
           </>
         )}
 

@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { buildWashLabelSections, parseWashNotePerPart } from '@/utils/washLabel';
 import {
   buildWashLabelPrintHtml,
-  getDefaultDateText,
   washTextFromInstructions,
   type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';
@@ -20,6 +19,8 @@ interface Props {
   manufacturingText?: string;
   width?: number;
   height?: number;
+  /** 距剪口偏移（mm），与打印保持一致，默认 30 */
+  topOffsetMm?: number;
 }
 
 const WashLabelPreview: React.FC<Props> = ({
@@ -27,9 +28,10 @@ const WashLabelPreview: React.FC<Props> = ({
   fabricComposition,
   washInstructions,
   careIconCodes = [],
-  manufacturingText = 'MADE IN CHINA',
+  manufacturingText = '',
   width = 30,
   height = 80,
+  topOffsetMm = 30,
 }) => {
   const sections = useMemo(
     () => buildWashLabelSections(fabricCompositionParts, fabricComposition),
@@ -57,8 +59,10 @@ const WashLabelPreview: React.FC<Props> = ({
           compositionText: section.items.join('\n'),
           washInstructionsText: perPartWashNotes[section.key] || washText,
           careIconCodes,
+          // 预览与打印一致：只显示用户输入内容，制造区留空不显示、无自动日期
           manufacturingText: manufacturingText,
-          dateText: getDefaultDateText(),
+          dateText: '',
+          topOffsetMm,
         };
         return buildWashLabelPrintHtml(data);
       });
@@ -70,11 +74,13 @@ const WashLabelPreview: React.FC<Props> = ({
       compositionText: singleSection.items.join('\n'),
       washInstructionsText: perPartWashNotes[singleSection.key] || washText,
       careIconCodes,
+      // 预览与打印一致：只显示用户输入内容，制造区留空不显示、无自动日期
       manufacturingText: manufacturingText,
-      dateText: getDefaultDateText(),
+      dateText: '',
+      topOffsetMm,
     };
     return [buildWashLabelPrintHtml(data)];
-  }, [sections, perPartWashNotes, washText, careIconCodes, manufacturingText, width, height, isMultiPart]);
+  }, [sections, perPartWashNotes, washText, careIconCodes, manufacturingText, width, height, topOffsetMm, isMultiPart]);
 
   const previewW = Math.ceil(width * MM_TO_PX * ZOOM);
   const previewH = Math.ceil(height * MM_TO_PX * ZOOM);

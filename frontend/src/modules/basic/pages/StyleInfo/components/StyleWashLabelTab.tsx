@@ -16,7 +16,6 @@ import { safePrint } from '@/utils/safePrint';
 import {
   buildWashLabelPrintHtml,
   buildWashLabelMultiPageHtml,
-  getDefaultDateText,
   washTextFromInstructions,
   type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';
@@ -63,7 +62,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const [washInstructions, setWashInstructions] = useState(initialWash || '');
   const [uCode, setUCode] = useState(initialUCode || '');
   const [selectedIconCodes, setSelectedIconCodes] = useState<string[]>([]);
-  const [manufacturingText, setManufacturingText] = useState('MADE IN CHINA');
+  const [manufacturingText, setManufacturingText] = useState('');
 
   const [previewW, setPreviewW] = useState(30);
   const [previewH, setPreviewH] = useState(80);
@@ -158,8 +157,11 @@ const StyleWashLabelTab: React.FC<Props> = ({
       compositionText: section.items.join('\n'),
       washInstructionsText: washNote,
       careIconCodes: selectedIconCodes,
+      // 只打印用户输入的内容：制造区留空不显示，无自动日期兜底
       manufacturingText: manufacturingText,
-      dateText: getDefaultDateText(),
+      dateText: '',
+      // 距剪口偏移：内容从剪口下方 30mm 处开始（与预览一致）
+      topOffsetMm: 30,
     });
 
     const washText = washTextFromInstructions(washInstructions, compositionParts);
@@ -320,7 +322,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             disabled={!isEditing}
           />
           <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
-            产地信息，默认 MADE IN CHINA，可按需修改；日期自动生成（{getDefaultDateText()}）
+            只打印你输入的内容，留空则不显示该分区
           </div>
         </div>
 

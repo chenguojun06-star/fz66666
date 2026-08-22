@@ -96,6 +96,8 @@ const LabelPrint: React.FC = () => {
                 ptLabel={ptLabel}
                 setSelectedOrder={setSelectedOrder}
                 onSaveStyleInfo={handleSaveStyleInfo}
+                washManufacturingText={wash.manufacturingText}
+                washDateText={wash.dateText}
               />
             ) : orders.length > 0 ? (
               <Card>

@@ -2,15 +2,12 @@ import QRCode from 'qrcode';
 import api, { parseProductionOrderLines } from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
 import {
-  compositionFromSections,
-  washTextFromInstructions,
   buildWashLabelMultiPageHtml,
-  getDefaultDateText,
   type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';
-import { parseCareIconCodes, DEFAULT_CARE_ICON_CODES } from '@/utils/careIcons';
 import type { ProductionOrder } from '@/types/production';
 import type { LabelStyleInfo, SkuRow } from './types';
+import type { WashLabelSectionState } from '@/components/common/WashLabelSectionConfigPanel';
 
 /** 加载订单的 商品编码 行（优先接口，降级到订单明细分组，再降级到单行兜底） */
 export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
@@ -70,38 +67,32 @@ export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
   }];
 }
 
-/** 打印洗水唛：根据选中行生成多页 HTML 并调用 safePrint
- *  ★ 修复（用户需求）：顶部加码数+款号配置，多码数打印时每页显示自己的码数+款号，便于分码识别。
- *  旧实现所有 SKU 共享同一份 printData（仅按 printCount 复制），导致多码数无法区分。
+/** 打印洗水唛：根据选中行 + 分区配置生成多页 HTML 并调用 safePrint
+ *  ★ 分区配置（用户需求）：每个分区由用户决定是否显示，只打印用户输入的内容，
+ *    内容从距剪口下方 topOffsetMm 处开始；码数区开启时每页显示该 SKU 行自己的码数。
  */
 export async function printWashLabels(
   selected: SkuRow[],
   _order: ProductionOrder,
-  styleInfo: LabelStyleInfo | null,
+  _styleInfo: LabelStyleInfo | null,
   w: number,
   h: number,
+  sections: WashLabelSectionState,
 ): Promise<void> {
-  const compositionText = compositionFromSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
-  const washInstructionsText = washTextFromInstructions(styleInfo?.washInstructions, styleInfo?.fabricCompositionParts);
-  const codes = parseCareIconCodes(styleInfo?.careIconCodes);
-  const careIconCodes = codes.length > 0 ? codes : [...DEFAULT_CARE_ICON_CODES];
-  const manufacturingText = 'MADE IN CHINA';
-  const dateText = getDefaultDateText();
-  // 顶部款号：从订单上取（LabelStyleInfo 不带 styleNo 字段）
-  const styleNo = (_order.styleNo || '').trim();
-
   const pages: WashLabelPrintData[] = selected.flatMap(row =>
     Array.from({ length: Math.max(1, row.printCount) }, () => ({
       width: w,
       height: h,
-      compositionText,
-      washInstructionsText,
-      careIconCodes,
-      manufacturingText,
-      dateText,
-      // 顶部码数：每行 SKU 自己的码数；顶部款号：款式款号
-      sizeText: (row.size || '').trim(),
-      styleNo,
+      // 只显示用户输入的内容：关闭或清空的分区传空值（模板不渲染）
+      compositionText: sections.showComposition ? sections.compositionText : '',
+      washInstructionsText: sections.showWash ? sections.washText : '',
+      careIconCodes: sections.showWash ? sections.careIconCodes : [],
+      manufacturingText: sections.showManufacturing ? sections.manufacturingText : '',
+      dateText: '',
+      // 码数区开启时优先取用户输入；批量多码场景每页显示该 SKU 行自己的码数
+      sizeText: sections.showSize ? (sections.sizeText.trim() || (row.size || '').trim()) : '',
+      styleNo: sections.showStyleNo ? sections.styleNoText : '',
+      topOffsetMm: sections.topOffsetMm,
     }))
   );
 
