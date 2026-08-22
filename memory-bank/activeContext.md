@@ -7,7 +7,7 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-22 ★★★ 洗水唛打印防截断重做：文字全部被截断+图标2行（30×80mm 偏移32mm 用户强烈反馈）✅（tsc 0 errors + ESLint 0 errors，待推送）
+### 2026-08-22 ★★★ 洗水唛打印防截断重做：文字全部被截断+图标2行（30×80mm 偏移32mm 用户强烈反馈）✅已推送（705abf3fc，safe-push 10/10 通过）
 
 - [x] **用户反馈**：30×80mm 偏移32mm 时"所有输入文字全部被截断看不到"、图标一排5个却显示2行；要求：文字必须完整可见、图标一排（小一点可以）、加全局字体调整功能
 - [x] **根因1（文字截断）**：字号固定不随内容量适配——30mm 宽 7.5pt 字号下，用户的长洗涤文字（~55字）+成份2行+码数/款号/制造+图标 总高≈55mm > 可用高度46mm（80-32偏移-2安全），overflow 被打印页裁掉
@@ -17,16 +17,16 @@
 - [x] **新增 fontScale 全局字体缩放（0.5~1.6，默认1）**：模板 fitFontSize 基准=理想字号×fontScale（调大仍受"装得下"钳制不会截断）；配置面板 WashLabelSectionConfigPanel 加滑块+显示自动适配后实际字号（estimateAdaptedFontSize）+"已到最小字号建议精简文字或调小偏移"提示
 - [x] **10 处入口全透传 fontScale**：配置面板 / 仓库 printTemplates+constants+PrintSettingsPanel / 生产 WashCareLabelModal+WashLabelBatchPrintModal / 生产列表 LabelPrintModal helpers / 款式资料 StyleWashLabelTab（新增滑块）+WashLabelPreview
 - [x] 验证：npx tsc --noEmit 0 errors；npx eslint 10 个修改文件 0 errors
-- [ ] **待办：推送部署后，线上验证 30×80mm 偏移32mm 场景文字完整、图标一排、滑块生效**
+- [ ] **待办：部署后线上验证 30×80mm 偏移32mm 场景文字完整、图标一排、滑块生效**
 
-### 2026-08-22 ★★ 质检入库数据链路修复：入库节点未同步到 t_scan_record（订单PO20260505001 用户反馈）✅（mvn compile 通过，待推送）
+### 2026-08-22 ★★ 质检入库数据链路修复：入库节点未同步到 t_scan_record（订单PO20260505001 用户反馈）✅已推送（b7b43d966，safe-push 10/10 通过）
 
 - [x] **用户反馈（注意理解准确）**：订单时间轴"入库"节点显示 `-- ~ --`、工序跟踪"入库"行永远"待扫码"——用户明确说的是**入库节点数据没有同步**，不是要取消质检侧滑弹窗功能（上一轮会话理解偏了）
 - [x] **根因**：成品仓"质检入库"（ProductWarehousingOrchestrator.save/batchSave）只写 t_product_warehousing，不写 t_scan_record、不更新工序跟踪——而订单时间轴视图 v_production_order_flow_stage_snapshot 的入库时间取自 t_scan_record(scan_type='warehouse' AND scan_result='success' AND process_code<>'warehouse_rollback')，生产端扫码入库（WarehouseScanExecutor）会写、质检入库不写 → 链路断裂
 - [x] **新数据修复**：新建 ProductWarehousingScanSyncHelper，save/batchSave 事务内调用 syncWarehouseScan——补写 warehouse 扫码记录（scanMode=manual 标识质检入库）+ updateProcessTracking 更新工序跟踪"入库"行（未命中时 appendProcessTracking 后重试，与 WarehouseScanExecutor 行为对齐）；菲号级幂等（已有成功入库扫码记录跳过）、DuplicateKeyException 兜底、全程 try-catch 不阻断入库主流程（saveScanRecord 无 @Transactional，catch 不会标记主事务 rollback-only）
 - [x] **历史数据回填**：POST /api/product-warehousing/backfill-scan-records（body: orderId，兼容 PO 订单号）——listBackfillCandidates 按菲号聚合有效质检入库（SUM 合格数+最近操作人/时间），幂等回填；scanTime 取原入库 create_time（时间轴显示真实历史时间而非回填时间）；Controller @PreAuthorize("isAuthenticated()")
 - [x] 验证：mvn compile 通过；视图定义核对字段完全匹配（scan_type/process_code/scan_result）；本地库无云端订单，部署后需调回填接口修 PO20260505001
-- [ ] **待办：推送后部署，线上调用回填接口修复 PO20260505001，验证时间轴"入库"节点显示时间+工序跟踪"已扫"**
+- [ ] **待办：部署后线上调用回填接口修复 PO20260505001，验证时间轴"入库"节点显示时间+工序跟踪"已扫"**
 
 ### 2026-08-22 ★ 洗水唛字体图标自适应修复：字太小看不清+图标被截断 ✅已推送（8c4309372）
 
