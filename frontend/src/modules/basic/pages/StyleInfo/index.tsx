@@ -130,11 +130,17 @@ const StyleInfoDetailPage: React.FC = () => {
   useEffect(() => {
     if (!styleIdParam || isNewPage) return;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    // 编辑中（解锁态编辑已有款式）：绝不自动刷新。
+    // 此前守卫条件写反（锁定时跳过、编辑中反而刷新），导致：
+    // 全局 data:changed 事件触发 fetchDetail → editLocked 被重置为 true（没点保存自动锁住）、
+    // matrixSizes/matrixColors 被后端旧数据覆盖（减号删码数又弹回来）、
+    // 未保存的颜色图片丢失、表单值被旧数据回填。
+    const isEditing = () => !editLockedRef.current && Boolean(currentStyleIdRef.current);
     const handleChange = () => {
-      if (editLockedRef.current && Boolean(currentStyleIdRef.current)) return;
+      if (isEditing()) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        if (editLockedRef.current && Boolean(currentStyleIdRef.current)) return;
+        if (isEditing()) return;
         void fetchDetailRef.current(styleIdParam);
       }, 500);
     };
