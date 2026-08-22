@@ -1,16 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Modal, Switch, Button, Input, Space, Tooltip, Dropdown, Form, Select, InputNumber,
-  Alert, Badge, App,
+  Modal, Switch, Button, Input, Space, Tooltip, Dropdown, Form, Alert, Badge, App,
 } from 'antd';
-import type { MenuProps } from 'antd';
 import {
   SyncOutlined, PlusOutlined, SaveOutlined, CloudUploadOutlined,
-  EditOutlined, RollbackOutlined, PictureOutlined, SettingOutlined,
-  UndoOutlined, BarcodeOutlined, CheckCircleFilled,
+  EditOutlined, RollbackOutlined, PictureOutlined,
+  UndoOutlined, CheckCircleFilled,
 } from '@ant-design/icons';
 import SmallModal from '@/components/common/SmallModal';
-import CircleIconButton from '@/components/common/CircleIconButton';
 import StyleSkuColorImages from '../StyleSkuColorImages';
 import type { StyleSkuTabProps } from './types';
 import { useStyleSkuTabData } from './useStyleSkuTabData';
@@ -62,13 +59,10 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
 
   // 批量选中的行 keys
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  // 批量填充字段的 UI 状态（和图片对齐：成本价/基本售价/吊牌价/供应商/单位/采购周期 多字段并排）
+  // 批量填充字段的 UI 状态（仅真实后端字段：成本价/基本售价/吊牌价）
   const [batchCostPrice, setBatchCostPrice] = useState<string | number | null>(null);
   const [batchBasePrice, setBatchBasePrice] = useState<string | number | null>(null);
   const [batchTagPrice, setBatchTagPrice] = useState<string | number | null>(null);
-  const [batchSupplier, setBatchSupplier] = useState<string | undefined>(undefined);
-  const [batchUnit, setBatchUnit] = useState<string>('');
-  const [batchPurchaseCycle, setBatchPurchaseCycle] = useState<string>('');
 
   // 成本价为空的 SKU 数（用于橙色警示条）
   const emptyCostCount = useMemo(() => {
@@ -88,7 +82,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     }).length;
   }, [skus, getCellValue]);
 
-  // 批量填充确认：只写入有后端字段的「成本价/基本售价/吊牌价」；预留字段如实提示不入库
+  // 批量填充确认：写入有后端字段的「成本价/基本售价/吊牌价」
   const handleBatchFillConfirm = () => {
     if (!canEditAttrs) return;
     const targets: Array<{ record: ProductSku; key: React.Key }> = selectedRowKeys.length > 0
@@ -106,8 +100,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     const hasCost = batchCostPrice != null && batchCostPrice !== '';
     const hasBase = batchBasePrice != null && batchBasePrice !== '';
     const hasTag = batchTagPrice != null && batchTagPrice !== '';
-    const hasReserved = !!(batchSupplier || batchUnit || batchPurchaseCycle);
-    if (!hasCost && !hasBase && !hasTag && !hasReserved) {
+    if (!hasCost && !hasBase && !hasTag) {
       message.warning('请先在上方至少填写一个要批量填充的字段');
       return;
     }
@@ -124,9 +117,6 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     if (labels.length) {
       message.success(`已对 ${targets.length} 个 SKU 批量填充：${labels.join('、')}（点「保存」后生效）`);
     }
-    if (hasReserved) {
-      message.warning('供应商/单位/采购周期为预留字段（SKU 暂无对应后端字段），本次未保存');
-    }
   };
 
   // 重置批量填充输入
@@ -134,60 +124,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
     setBatchCostPrice(null);
     setBatchBasePrice(null);
     setBatchTagPrice(null);
-    setBatchSupplier(undefined);
-    setBatchUnit('');
-    setBatchPurchaseCycle('');
   };
-
-  // 「生成商品编码」下拉菜单（当前手动模式下显示，匹配图片右上角三个下拉按钮风格）
-  const batchOpsMenu: MenuProps['items'] = [
-    {
-      key: 'gen',
-      label: (
-        <span onClick={(e) => {
-          e.stopPropagation();
-          message.info('「自动生成」模式下商品编码由系统按款号-颜色-尺码自动生成，请先切到自动模式');
-        }}>重新生成全部编码</span>
-      ),
-      icon: <BarcodeOutlined />,
-    },
-    {
-      key: 'trim',
-      label: (
-        <span onClick={(e) => {
-          e.stopPropagation();
-          if (!canEditAttrs) return;
-          let count = 0;
-          skus.forEach((s) => {
-            (['skuCode', 'color', 'size', 'barcode', 'remark'] as const).forEach((f) => {
-              const v = getCellValue(s, f);
-              if (typeof v === 'string' && v !== v.trim()) {
-                handleFieldChange(getRowKey(s), f, v.trim());
-                count += 1;
-              }
-            });
-          });
-          message.success(count ? `已清理 ${count} 个字段首尾空格` : '无空格需要清理');
-        }}>清理编码/颜色/尺码首尾空格</span>
-      ),
-    },
-  ];
-
-  // 更多批量填充下拉（按比例调价：暂未开放，如实提示）
-  const moreFillMenu: MenuProps['items'] = [
-    {
-      key: 'tag',
-      label: '按比例批量调整吊牌价（成本×N倍）',
-      disabled: !canEditAttrs,
-      onClick: () => message.info('按比例调价功能开发中，可先直接填写金额批量填充'),
-    },
-    {
-      key: 'sales',
-      label: '按比例批量调整销售价（吊牌×N折）',
-      disabled: !canEditAttrs,
-      onClick: () => message.info('按比例调价功能开发中，可先直接填写金额批量填充'),
-    },
-  ];
 
   // 批量启用/禁用：真实写入 status 草稿（保存后生效），仅作用于勾选行
   const handleBatchToggleStatus = (key: string) => {
@@ -337,7 +274,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         </Space>
       </div>
 
-      {/* ─── 第三层：批量填充工具栏（灰色底，严格对应图片顶部多字段并排布局） ─── */}
+      {/* ─── 第三层：批量填充工具栏（仅真实字段：成本价/基本售价/吊牌价） ─── */}
       <div id="batch-fill-toolbar" style={{
         marginBottom: 12,
         padding: '10px 14px',
@@ -349,7 +286,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         gap: 12,
         flexWrap: 'wrap',
       }}>
-        {/* 左：批量填充区 — 多字段并排：填充：成本价 基本售价 吊牌价 供应商 单位 采购周期 确认填充 更多 重置 */}
+        {/* 左：批量填充区 — 仅真实后端字段 */}
         <Space size={8} wrap align="center">
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)' }}>填充：</span>
           <Input
@@ -379,60 +316,14 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             prefix={<span style={{ color: 'var(--color-text-quaternary)' }}>¥</span>}
             disabled={!canEditAttrs}
           />
-          <Tooltip title="预留字段：SKU 暂无供应商字段，填写不会保存">
-            <Select
-              size="small"
-              style={{ width: 104 }}
-              placeholder="供应商"
-              allowClear
-              value={batchSupplier}
-              onChange={(v) => setBatchSupplier(v)}
-              disabled={!canEditAttrs}
-              options={[
-                { value: 'local', label: '本仓' },
-                { value: 'outsourcing', label: '外发' },
-              ]}
-            />
-          </Tooltip>
-          <Tooltip title="预留字段：SKU 暂无单位字段，填写不会保存">
-            <Input
-              size="small"
-              placeholder="单位"
-              value={batchUnit}
-              onChange={(e) => setBatchUnit(e.target.value)}
-              style={{ width: 80 }}
-              disabled={!canEditAttrs}
-            />
-          </Tooltip>
-          <Tooltip title="预留字段：SKU 暂无采购周期字段，填写不会保存">
-            <Input
-              size="small"
-              placeholder="采购周期"
-              value={batchPurchaseCycle}
-              onChange={(e) => setBatchPurchaseCycle(e.target.value)}
-              style={{ width: 100 }}
-              disabled={!canEditAttrs}
-            />
-          </Tooltip>
           <Button type="primary" size="small" onClick={handleBatchFillConfirm} disabled={!canEditAttrs}>
             确认填充{selectedRowKeys.length ? `（选中${selectedRowKeys.length}行）` : '（全部）'}
           </Button>
-          <Dropdown menu={{ items: moreFillMenu }} trigger={['hover']}>
-            <Button size="small">更多批量填充</Button>
-          </Dropdown>
           <Button size="small" icon={<UndoOutlined />} onClick={resetBatchFill}>重置</Button>
         </Space>
 
-        {/* 右：生成编码 · 批量改状态 · 批量按数量 · 齿轮（对应图片右上角三个下拉+齿轮） */}
+        {/* 右：批量启用/禁用（真实写入 status，保存后生效） */}
         <Space size={4} wrap align="center">
-          <Dropdown menu={{ items: batchOpsMenu }} trigger={['hover']}>
-            <Button size="small">
-              <Space size={2}>
-                <BarcodeOutlined />
-                <span>生成商品编码</span>
-              </Space>
-            </Button>
-          </Dropdown>
           <Dropdown
             menu={{
               items: [
@@ -443,23 +334,10 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             }}
             trigger={['hover']}
           >
-            <Button size="small">批量修改商品状态</Button>
+            <Button size="small" disabled={!canEditAttrs || !selectedRowKeys.length}>
+              批量启用/禁用{selectedRowKeys.length ? `（${selectedRowKeys.length}行）` : ''}
+            </Button>
           </Dropdown>
-          <Dropdown
-            menu={{
-              items: [
-                { key: 'perSize', label: '按尺码数量批量填生产数' },
-                { key: 'perColor', label: '按颜色数量批量填生产数' },
-              ],
-              onClick: () => message.info('功能开发中：按数量批量填充'),
-            }}
-            trigger={['hover']}
-          >
-            <Button size="small">按数量批量填充</Button>
-          </Dropdown>
-          <Tooltip title="列设置">
-            <Button type="text" size="small" icon={<SettingOutlined />} />
-          </Tooltip>
         </Space>
       </div>
 
@@ -475,7 +353,6 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         onDeleteRow={handleDeleteRow}
         onReorder={handleReorder}
         onSelectedRowKeysChange={(keys) => setSelectedRowKeys(keys)}
-        onOpenColorImages={() => setColorImageMode(true)}
       />
 
       {/* ─── 第五层：底部警示条（橙色Alert，对应图片底部「有 X 个SKU的成本价为空」） ─── */}

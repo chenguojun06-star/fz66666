@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Popover, Image, Button } from 'antd';
 import type { TableRowSelection } from 'antd/es/table/interface';
-import { BarcodeOutlined, PictureOutlined, HolderOutlined, InfoCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { BarcodeOutlined, PictureOutlined, HolderOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatMoney } from '@/utils/format';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -23,8 +23,6 @@ interface SkuTableProps {
   onReorder?: (fromKey: number | string, toKey: number | string) => void;
   /** 批量选中变化回调 */
   onSelectedRowKeysChange?: (keys: React.Key[]) => void;
-  /** 打开颜色图片管理弹窗（维护颜色级备注/成分/图片） */
-  onOpenColorImages?: () => void;
 }
 
 /** 带红色必填星号的列标题（统一格式：*字段名 + Tooltip 解释） */
@@ -48,7 +46,6 @@ const SkuTable: React.FC<SkuTableProps> = ({
   onDeleteRow,
   onReorder,
   onSelectedRowKeysChange,
-  onOpenColorImages,
 }) => {
   // HTML5 原生行拖拽：按住把手 mousedown 后才置 draggable，避免干扰输入框内文本选择
   const [dragArmed, setDragArmed] = useState<number | string | null>(null);
@@ -183,23 +180,25 @@ const SkuTable: React.FC<SkuTableProps> = ({
         );
       },
     },
-    // ⑥ 商品名称（派生展示：从 styleNo/款信息 + 颜色组合显示，对应图片中「黑色云绉纱蕾丝铅笔裙」）
+    // ⑥ 成本价（必填红星：保存后会反向同步到款式基础资料价格，为空有覆盖风险）
     {
-      title: '商品名称', key: 'productName', width: 210,
-      render: (_: any, record: ProductSku) => {
-        const derived = [record.styleNo, record.color].filter(Boolean).join(' · ');
-        const remark = (record.skuColorRemark || '').trim();
-        return (
-          <Tooltip title={remark || derived} placement="topLeft">
-            <span style={{
-              color: 'var(--color-text-primary)',
-              fontWeight: 500,
-              fontSize: 13,
-            }}>
-              {remark || derived || <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>}
-            </span>
-          </Tooltip>
-        );
+      title: <RequiredTitle label="成本价" tip="必填。保存后同步到款式基础资料价格，为空保存会有覆盖风险" />,
+      dataIndex: 'costPrice', key: 'costPrice', width: 108,
+      render: (_: number, record: ProductSku) => {
+        const key = getRowKey(record);
+        const val = getCellValue(record, 'costPrice');
+        return canEditAttrs ? (
+          <InputNumber
+            value={val}
+            onChange={(v) => onFieldChange(key, 'costPrice', v)}
+            min={0}
+            precision={2}
+            prefix="¥"
+            controls={false}
+            size="small"
+            style={{ width: '100%' }}
+          />
+        ) : val != null ? formatMoney(val) : '-';
       },
     },
     // ⑦ 基本售价（原「销售价」，对齐图片标题「基本售价」）
@@ -279,68 +278,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         );
       },
     },
-    // ⑩ 单位（只读：SKU 无独立单位字段，服装默认「件」）
-    {
-      title: (
-        <Tooltip title="SKU 暂无独立单位字段，服装默认按「件」管理">单位</Tooltip>
-      ),
-      key: 'unit', width: 64, align: 'center' as const,
-      render: () => <span style={{ color: 'var(--color-text-secondary)' }}>件</span>,
-    },
-    // ⑩ 供应商（只读：SKU 无供应商字段，跟随款式/采购供应商，展示默认「本仓」）
-    {
-      title: (
-        <Tooltip title="SKU 暂无独立供应商字段，裁剪物料默认本仓裁剪；外发场景走生产订单工序外发">供应商</Tooltip>
-      ),
-      key: 'supplier', width: 96,
-      render: () => <Tag color="green" style={{ margin: 0 }}>本仓</Tag>,
-    },
-    // ⑪ 备注①（铅笔图标入口：打开「颜色图片管理」弹窗维护颜色级备注/成分/图片）
-    {
-      title: (
-        <Tooltip title="点击铅笔打开「颜色图片管理」，维护该颜色的备注、成分、图片">
-          <Space size={2}>
-            备注
-            <InfoCircleOutlined style={{ fontSize: 12, color: 'var(--color-info)' }} />
-          </Space>
-        </Tooltip>
-      ),
-      key: 'remark1', width: 56, align: 'center' as const,
-      render: (_: any, record: ProductSku) => {
-        const content = (record.skuColorRemark || '').trim();
-        return (
-          <Tooltip title={content ? `当前备注：${content}（点击修改）` : '点击维护颜色级备注/成分'}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: 'var(--color-primary, #2563eb)' }} />}
-              style={{ padding: '0 4px' }}
-              onClick={onOpenColorImages}
-            />
-          </Tooltip>
-        );
-      },
-    },
-    // ⑫ 成分（只读展示：颜色级备注在「颜色图片管理」弹窗维护，此处不做行内假编辑）
-    {
-      title: (
-        <Tooltip title="成分取自颜色级备注，点击「备注①」铅笔或顶部「颜色图片」按钮维护">
-          成分
-        </Tooltip>
-      ),
-      key: 'composition', width: 170, ellipsis: true,
-      render: (_: any, record: ProductSku) => {
-        const content = (record.skuColorRemark || '').trim();
-        return (
-          <Tooltip title={content} placement="topLeft">
-            <span style={{ color: content ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
-              {content || '-'}
-            </span>
-          </Tooltip>
-        );
-      },
-    },
-    // ⑬ 备注（最常规的SKU级备注，图片第二备注列）
+    // ⑩ 备注（SKU级备注，真实字段 remark；颜色级备注/成分/图片在顶部「颜色图片」弹窗维护）
     {
       title: '备注',
       dataIndex: 'remark', key: 'remark', width: 120, ellipsis: true,
@@ -363,15 +301,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         );
       },
     },
-    // ⑭ 里料（只读：SKU 无里料字段，成分/面料信息在颜色级备注维护）
-    {
-      title: (
-        <Tooltip title="里料信息请在颜色级备注（备注①铅笔）中维护">里料</Tooltip>
-      ),
-      key: 'lining', width: 72,
-      render: () => <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>,
-    },
-    // ⑮ 是否启用（状态类，读草稿值：批量启用/禁用后实时反映；绿色Tag「启用」/灰色Tag「禁用」）
+    // ⑪ 是否启用（状态类，读草稿值：批量启用/禁用后实时反映；绿色Tag「启用」/灰色Tag「禁用」）
     {
       title: '是否启用',
       key: 'enabledStatus', width: 88,
@@ -381,7 +311,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         return <Tag color="green">启用</Tag>;
       },
     },
-    // ⑯ 操作（固定最右，使用文字「作废」蓝色链接，匹配图片样式）
+    // ⑫ 操作（固定最右，使用文字「作废」蓝色链接，匹配图片样式）
     ...(canEdit && isManual ? [{
       title: '操作', key: 'action', width: 64, fixed: 'right' as const,
       render: (_: any, record: ProductSku) => {
