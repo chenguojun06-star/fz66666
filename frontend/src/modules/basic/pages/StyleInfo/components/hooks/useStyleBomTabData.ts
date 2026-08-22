@@ -79,6 +79,7 @@ export interface UseStyleBomTabDataResult {
   setMaterialKeyword: (keyword: string) => void;
   setBomTemplateId: (id: string | undefined) => void;
   // data fetchers
+  fetchBom: () => Promise<StyleBom[]>;
   fetchBomTemplates: (sourceStyleNo?: string) => Promise<void>;
   fetchMaterials: (page: number, keyword?: string, pageSizeOverride?: number) => Promise<void>;
   // material handlers
@@ -352,6 +353,7 @@ export const useStyleBomTabData = ({
     setMaterialTab,
     setMaterialKeyword,
     setBomTemplateId,
+    fetchBom,
     fetchBomTemplates,
     fetchMaterials,
     handleMaterialPageChange,

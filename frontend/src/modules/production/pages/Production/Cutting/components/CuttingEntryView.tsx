@@ -120,6 +120,27 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
               </div>
             ) : null}
 
+            {/* 面辅料信息：位于生成菲号上方，创建任务时自动从款式BOM带入 */}
+            <CuttingBomPanel
+              bomList={bom.bomList}
+              bomLoading={bom.bomLoading}
+              bomEditing={bom.bomEditing}
+              bomSaving={bom.bomSaving}
+              canEdit={bom.canEdit}
+              isBundled={bom.isBundled}
+              materialModalOpen={bom.materialModalOpen}
+              onSetEditing={bom.setBomEditing}
+              onAddRow={bom.handleAddRow}
+              onRemoveRow={bom.handleRemoveRow}
+              onUpdateRow={bom.handleUpdateRow}
+              onSave={bom.handleSave}
+              onDelete={bom.handleDelete}
+              onOpenMaterialModal={bom.handleOpenMaterialModal}
+              onUseMaterial={bom.handleUseMaterial}
+              onCreateMaterial={bom.handleCreateMaterial}
+              onSetMaterialModalOpen={bom.setMaterialModalOpen}
+            />
+
             <div style={{ marginBottom: 12 }}>
               <Segmented
                 options={[
@@ -170,26 +191,6 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
                 }}
               />
             )}
-
-            <CuttingBomPanel
-              bomList={bom.bomList}
-              bomLoading={bom.bomLoading}
-              bomEditing={bom.bomEditing}
-              bomSaving={bom.bomSaving}
-              canEdit={bom.canEdit}
-              isBundled={bom.isBundled}
-              materialModalOpen={bom.materialModalOpen}
-              onSetEditing={bom.setBomEditing}
-              onAddRow={bom.handleAddRow}
-              onRemoveRow={bom.handleRemoveRow}
-              onUpdateRow={bom.handleUpdateRow}
-              onSave={bom.handleSave}
-              onDelete={bom.handleDelete}
-              onOpenMaterialModal={bom.handleOpenMaterialModal}
-              onUseMaterial={bom.handleUseMaterial}
-              onCreateMaterial={bom.handleCreateMaterial}
-              onSetMaterialModalOpen={bom.setMaterialModalOpen}
-            />
           </div>
 
           <div className="cutting-entry-footer">

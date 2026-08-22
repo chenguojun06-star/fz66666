@@ -13,10 +13,12 @@ import com.fashion.supplychain.style.helper.StyleBomLogAppendHelper;
 import java.math.RoundingMode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,10 +61,73 @@ public class StyleBomOrchestrator {
             throw new IllegalArgumentException("styleId不能为空");
         }
         Long tenantId = UserContext.tenantId();
-        return styleBomService.lambdaQuery()
+        List<StyleBom> list = styleBomService.lambdaQuery()
                 .eq(StyleBom::getStyleId, styleId)
                 .eq(StyleBom::getTenantId, tenantId)
                 .list();
+        // D-108 库存实时刷新：DB 中的 stock_status/available_stock 是「检查库存」时的快照，
+        // 领取/入库/出库后不会变（历史bug：库存永远显示58米）。列表返回前按 t_material_stock
+        // 实时重算，快照仅作查询失败时的兜底展示。
+        refreshStockSnapshotRealtime(list);
+        return list;
+    }
+
+    /**
+     * D-108 按物料库存表实时重算 BOM 行的 availableStock/stockStatus/requiredPurchase。
+     * 匹配口径与 findStock 一致：materialCode + tenantId（必填），color/size 有值才过滤，取可用量最大的一行。
+     * 单次批量 SQL 查询所有 materialCode，避免 N+1。productionQty=1 与「检查库存」前端默认口径一致。
+     */
+    private void refreshStockSnapshotRealtime(List<StyleBom> bomList) {
+        if (bomList == null || bomList.isEmpty()) {
+            return;
+        }
+        try {
+            Set<String> materialCodes = bomList.stream()
+                    .map(StyleBom::getMaterialCode)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toSet());
+            if (materialCodes.isEmpty()) {
+                return;
+            }
+            Long tenantId = UserContext.tenantId();
+            Map<String, List<MaterialStock>> stocksByCode = materialStockService.list(
+                    new LambdaQueryWrapper<MaterialStock>()
+                            .eq(MaterialStock::getTenantId, tenantId)
+                            .in(MaterialStock::getMaterialCode, materialCodes))
+                    .stream()
+                    .collect(Collectors.groupingBy(MaterialStock::getMaterialCode));
+
+            for (StyleBom bom : bomList) {
+                if (!StringUtils.hasText(bom.getMaterialCode())) {
+                    continue;
+                }
+                int availableQty = stocksByCode.getOrDefault(bom.getMaterialCode(), Collections.emptyList())
+                        .stream()
+                        .filter(s -> !StringUtils.hasText(bom.getColor())
+                                || java.util.Objects.equals(s.getColor(), bom.getColor()))
+                        .filter(s -> !StringUtils.hasText(bom.getSize())
+                                || java.util.Objects.equals(s.getSize(), bom.getSize()))
+                        .mapToInt(s -> Math.max(0,
+                                (s.getQuantity() != null ? s.getQuantity() : 0)
+                                        - (s.getLockedQuantity() != null ? s.getLockedQuantity() : 0)))
+                        .max()
+                        .orElse(0);
+                int requiredQty = calculateRequirement(bom, 1);
+                bom.setAvailableStock(availableQty);
+                if (availableQty >= requiredQty) {
+                    bom.setStockStatus("sufficient");
+                    bom.setRequiredPurchase(0);
+                } else if (availableQty > 0) {
+                    bom.setStockStatus("insufficient");
+                    bom.setRequiredPurchase(requiredQty - availableQty);
+                } else {
+                    bom.setStockStatus("none");
+                    bom.setRequiredPurchase(requiredQty);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("BOM库存实时刷新失败（回退DB快照展示）: {}", e.getMessage());
+        }
     }
 
     /**
@@ -287,6 +352,8 @@ public class StyleBomOrchestrator {
                 .eq(StyleBom::getStyleId, styleId)
                 .eq(StyleBom::getTenantId, tenantId)
                 .list();
+        // D-108 汇总口径与列表一致：实时刷新库存，避免汇总与表格显示不一致
+        refreshStockSnapshotRealtime(bomList);
 
         if (bomList.isEmpty()) {
             Map<String, Object> emptySummary = new HashMap<>();

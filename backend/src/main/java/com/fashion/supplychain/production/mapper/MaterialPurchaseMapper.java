@@ -132,4 +132,28 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "update_time = NOW() " +
             "WHERE id = #{id} AND tenant_id = #{tenantId} AND delete_flag = 0")
     int atomicAddArrivedQuantity(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
+
+    /**
+     * 批量按物料编码汇总在途采购数量（在途 = 未完成状态剩余量：采购量 - 已到货量）
+     * <p>智能采购概览专用：将 N×M 次在途查询压缩为 1 次 SQL
+     * <p>未完成状态：pending/partial/partial_arrival/awaiting_confirm/warehouse_pending
+     * <p>注意：按 material_code 聚合（与库存/StyleBom 对齐，StyleBom无material_id UUID）
+     * <p>返回列：materialCode(String), inTransit(BigDecimal)
+     *
+     * @param tenantId      租户（必带，P0铁律4）
+     * @param materialCodes 物料编码列表（BOM.material_code）
+     */
+    @Select("<script>" +
+            "SELECT material_code AS materialCode, " +
+            "       COALESCE(SUM(COALESCE(purchase_quantity, 0) - COALESCE(arrived_quantity, 0)), 0) AS inTransit " +
+            "FROM t_material_purchase " +
+            "WHERE tenant_id = #{tenantId} AND delete_flag = 0 " +
+            "  AND status IN ('pending','partial','partial_arrival','awaiting_confirm','warehouse_pending') " +
+            "  AND material_code IN " +
+            "  <foreach collection='materialCodes' item='mc' open='(' separator=',' close=')'>#{mc}</foreach> " +
+            "GROUP BY material_code" +
+            "</script>")
+    List<Map<String, Object>> queryInTransitByMaterials(
+            @Param("tenantId") Long tenantId,
+            @Param("materialCodes") List<String> materialCodes);
 }

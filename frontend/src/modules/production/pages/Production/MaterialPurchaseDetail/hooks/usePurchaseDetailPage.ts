@@ -47,6 +47,8 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     headerStyleId: dataState.headerStyleId,
     headerStyleCover: dataState.headerStyleCover,
     headerColor: dataState.headerColor,
+    sampleBomLocked: dataState.sampleBomLocked,
+    sampleBomCompletedTime: dataState.sampleBomCompletedTime,
 
     // 表单实例
     form,

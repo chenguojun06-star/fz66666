@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App } from 'antd';
-import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
+import PurchaseDocListModal from '../MaterialPurchase/components/PurchaseDocListModal';
 import { useViewport } from '@/utils/useViewport';
 import { usePurchaseDetailPage } from './hooks/usePurchaseDetailPage';
 import type { MaterialPurchase } from '@/types/production';
 import { buildEditColumns, buildViewColumns } from './columns';
 import MaterialSelectModal from './components/MaterialSelectModal';
 import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPurchaseModal';
+import SizeUsageSummaryPanel from './components/SizeUsageSummaryPanel';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
 import { filterPendingPurchases } from './hooks/utils';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -59,10 +61,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     materialModalOpen, setMaterialModalOpen,
     handleOpenMaterialModal, handleUseMaterial, handleCreateMaterial,
     colorList, isMultiColor, canProcure, bomIncomplete, missingColors,
+    sampleBomLocked, sampleBomCompletedTime,
     loadData,
   } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
 
   const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
+  const [docListOpen, setDocListOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
   const [batchPurchaseOpen, setBatchPurchaseOpen] = useState(false);
   const [batchPurchaseItems, setBatchPurchaseItems] = useState<BatchPurchaseItem[]>([]);
@@ -128,6 +132,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   const viewColumns = buildViewColumns({
     colWidth, editing, canProcure, sampleMode,
+    locked: sampleBomLocked,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,
@@ -185,6 +190,20 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         </Card>
       )}
 
+      {sampleMode && sampleBomLocked ? (
+        <Alert
+          type="success"
+          showIcon
+          title={
+            <span>
+              物料清单已完成{sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。
+            </span>
+          }
+          description="如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。"
+          style={{ marginBottom: 16 }}
+        />
+      ) : null}
+
       {missingColors.length > 0 && (
         <Alert
           type="warning"
@@ -201,6 +220,10 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         />
       )}
 
+      {!sampleMode && order?.id ? (
+        <SizeUsageSummaryPanel orderId={order.id} purchaseList={purchaseList} />
+      ) : null}
+
       <Card
         title={`面辅料信息（共 ${displayData.length} 项）`}
         loading={loading}
@@ -210,6 +233,11 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             <Button icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)} size="small">
               上传采购单
             </Button>
+            {orderNo ? (
+              <Button icon={<FileImageOutlined />} onClick={() => setDocListOpen(true)} size="small">
+                采购单据
+              </Button>
+            ) : null}
             <Button onClick={onBatchPurchase} disabled={!canProcure} loading={batchPurchaseLoading} title={!canProcure ? '请先完善面辅料信息再批量采购' : ''} size="small">
               批量采购
             </Button>
@@ -247,14 +275,22 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
               </>
             ) : (
               <>
-                <Button icon={<PlusOutlined />} onClick={handleStartEdit} size="small">
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={handleStartEdit}
+                  size="small"
+                  disabled={sampleBomLocked}
+                  title={sampleBomLocked ? '物料清单已完成，请先在样衣详情-物料清单退回' : undefined}
+                >
                   编辑面辅料
                 </Button>
-                {bomIncomplete && (
+                {sampleBomLocked ? (
+                  <Tag color="success">物料清单已完成 · 已锁定</Tag>
+                ) : bomIncomplete ? (
                   <Tag icon={<ExclamationCircleOutlined />} color="warning">
                     {isMultiColor ? '多颜色订单需完善面辅料信息后才可采购' : '请完善面辅料信息'}
                   </Tag>
-                )}
+                ) : null}
               </>
             )}
           </Space>
@@ -345,6 +381,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           setDocRecognizeOpen(false);
           await loadData();
         }}
+      />
+
+      <PurchaseDocListModal
+        open={docListOpen}
+        orderNo={orderNo || undefined}
+        onCancel={() => setDocListOpen(false)}
       />
 
       <BatchPurchaseModal

@@ -64,14 +64,15 @@ public class MaterialPurchaseDocOrchestrator {
     public Map<String, Object> recognizeDoc(MultipartFile file, String orderNo) {
         Long tenantId = UserContext.tenantId();
 
-        // 1. 上传文件到 COS
-        String imageUrl = uploadFileToCos(tenantId, file);
-        if (imageUrl == null) {
+        // 1. 上传文件到 COS（返回持久化对象键，DB 存键而非临时签名URL）
+        String cosKey = uploadFileToCos(tenantId, file);
+        if (cosKey == null) {
             Map<String, Object> err = new HashMap<>();
             err.put("error", "文件上传失败，请检查网络和文件格式");
             err.put("items", new ArrayList<>());
             return err;
         }
+        String imageUrl = presignQuietly(tenantId, cosKey);
 
         // 2. 调用 AI 视觉识别（优先 Agnes Vision 真正看图，降级时用文本模式）
         String aiRaw;
@@ -109,12 +110,12 @@ public class MaterialPurchaseDocOrchestrator {
                 .filter(m -> Boolean.TRUE.equals(m.get("matched"))).count();
         Map<String, Object> result = new HashMap<>();
 
-        // 5. 持久化到 t_purchase_order_doc（单据永久保存在详情页）
+        // 5. 持久化到 t_purchase_order_doc（存 COS 对象键，查看时刷新签名URL，图片永久可访问）
         try {
             PurchaseOrderDoc doc = new PurchaseOrderDoc();
             doc.setTenantId(tenantId);
             doc.setOrderNo(orderNo != null ? orderNo : "");
-            doc.setImageUrl(imageUrl);
+            doc.setImageUrl(cosKey);
             doc.setRawText(aiRaw != null && aiRaw.length() > 2000
                     ? aiRaw.substring(0, 2000) : aiRaw);
             doc.setMatchCount((int) matchCount);
@@ -145,7 +146,7 @@ public class MaterialPurchaseDocOrchestrator {
         long matchCount = matchedItems.stream().filter(m -> Boolean.TRUE.equals(m.get("matched"))).count();
         Map<String, Object> result = new HashMap<>();
         result.put("docId", doc.getId());
-        result.put("imageUrl", doc.getImageUrl());
+        result.put("imageUrl", resolveDocImageUrl(UserContext.tenantId(), doc.getImageUrl()));
         result.put("orderNo", resolvedOrderNo);
         result.put("items", matchedItems);
         result.put("matchCount", matchCount);
@@ -211,12 +212,41 @@ public class MaterialPurchaseDocOrchestrator {
                     ? original.substring(original.lastIndexOf('.')) : ".jpg";
             String filename = "purchase-docs/" + UUID.randomUUID() + ext;
             cosService.upload(tenantId, filename, file);
-            // 有效期 60 分钟，足够 AI 分析使用
-            return cosService.getPresignedUrl(tenantId, filename);
+            return filename;
         } catch (Exception e) {
             log.error("[PurchaseDocRecognize] COS upload failed", e);
             return null;
         }
+    }
+
+    /** 生成预签名URL，失败时降级返回对象键（本地开发模式返回本地文件URL） */
+    private String presignQuietly(Long tenantId, String filename) {
+        try {
+            return cosService.getPresignedUrl(tenantId, filename);
+        } catch (Exception e) {
+            log.warn("[PurchaseDocRecognize] presign failed, fallback to key: {}", e.getMessage());
+            return filename;
+        }
+    }
+
+    /**
+     * 将 DB 中存储的单据图片标识解析为可访问 URL。
+     * 新数据存 COS 对象键（purchase-docs/xxx.jpg）→ 生成新鲜签名URL；
+     * 历史数据存完整签名URL（已过期）→ 提取对象键后重新签名。
+     */
+    public String resolveDocImageUrl(Long tenantId, String stored) {
+        if (stored == null || stored.isBlank()) return stored;
+        String key = stored;
+        if (key.startsWith("http")) {
+            int idx = key.indexOf("purchase-docs/");
+            int q = key.indexOf('?');
+            if (idx >= 0 && (q < 0 || idx < q)) {
+                key = key.substring(idx, q < 0 ? key.length() : q);
+            } else {
+                return stored;
+            }
+        }
+        return presignQuietly(tenantId, key);
     }
 
     // ─────────────────────────────────────────────────────────────────

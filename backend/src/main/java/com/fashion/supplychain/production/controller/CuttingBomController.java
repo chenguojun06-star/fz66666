@@ -23,6 +23,18 @@ public class CuttingBomController {
         return Result.success(list);
     }
 
+    /**
+     * 存量裁剪任务：从款式 BOM 初始化面辅料信息（任务无 BOM 数据时生效）
+     */
+    @PostMapping("/init-from-style")
+    public Result<?> initFromStyle(@RequestBody Map<String, Object> body) {
+        String cuttingTaskId = body.get("cuttingTaskId") != null ? String.valueOf(body.get("cuttingTaskId")).trim() : null;
+        if (cuttingTaskId == null || cuttingTaskId.isEmpty()) {
+            return Result.fail("裁剪任务ID不能为空");
+        }
+        return Result.success(cuttingBomOrchestrator.initFromStyle(cuttingTaskId));
+    }
+
     @PostMapping("/search")
     public Result<?> search(@RequestBody Map<String, Object> params) {
         String styleNo = params.get("styleNo") != null ? String.valueOf(params.get("styleNo")) : null;

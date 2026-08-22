@@ -24,6 +24,9 @@ export interface PurchaseDetailDataState {
   headerStyleId?: number | string;
   headerStyleCover: string | null;
   headerColor: string;
+  /** 样衣采购场景：BOM 阶段已完成，编辑/删除需先在样衣详情退回 */
+  sampleBomLocked: boolean;
+  sampleBomCompletedTime: string;
 }
 
 export function usePurchaseDetailData(
@@ -37,6 +40,7 @@ export function usePurchaseDetailData(
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<ProductionOrder | null>(null);
   const [purchaseList, setPurchaseList] = useState<MaterialPurchase[]>([]);
+  const [sampleBomCompletedTime, setSampleBomCompletedTime] = useState('');
 
   const colorList = useMemo(() => {
     const raw = order?.color || '';
@@ -151,20 +155,23 @@ export function usePurchaseDetailData(
         } catch { /* 预览不可用则用空列表 */ }
       }
 
-      if (!sampleMode && records.length === 0 && orderNoParam && orderRecord) {
-        const styleNo = String(orderRecord?.styleNo || '').trim();
-        if (styleNo) {
-          try {
-            const styleRes = await api.get<MaterialPurchaseListResponse>('/production/purchase/list', {
-              params: { styleNo, sourceType: 'sample', page: 1, pageSize: 1000 },
-            });
-            if (styleRes?.code === 200) {
-              const styleRecords = styleRes?.data?.records || [];
-              if (styleRecords.length > 0) {
-                records = styleRecords;
-              }
-            }
-          } catch { /* 降级 */ }
+      // 注意：不再降级拉取样衣采购（sourceType=sample）作为订单采购数据展示。
+      // 样衣采购数量按样衣件数计算（如1件=1米），与大货订单需求（如6件=6米）口径不同，
+      // 混用会导致"面料6米/辅料1米"这类数据不吻合（D-106）。
+
+      // 样衣采购场景：查询款式BOM阶段状态，已完成则锁定编辑（需在样衣详情退回后编辑）
+      if (sampleMode && styleIdParam) {
+        try {
+          const styleRes = await api.get<{ code: number; data: { bomCompletedTime?: string } }>(
+            `/style/info/${encodeURIComponent(String(styleIdParam))}`,
+          );
+          if (styleRes?.code === 200) {
+            setSampleBomCompletedTime(String((styleRes.data as any)?.bomCompletedTime || ''));
+          } else {
+            setSampleBomCompletedTime('');
+          }
+        } catch {
+          setSampleBomCompletedTime('');
         }
       }
 
@@ -181,6 +188,12 @@ export function usePurchaseDetailData(
   }, [loadData]);
 
   const canProcure = !bomIncomplete;
+
+  /** 样衣BOM已完成 → 采购数据锁定，编辑/删除需先退回 */
+  const sampleBomLocked = useMemo(
+    () => !!sampleMode && !!sampleBomCompletedTime,
+    [sampleMode, sampleBomCompletedTime],
+  );
 
   const headerOrderNo = order?.orderNo || orderNoParam || '';
   const headerStyleNo = order?.styleNo || styleNoParam || '';
@@ -206,5 +219,7 @@ export function usePurchaseDetailData(
     headerStyleId,
     headerStyleCover,
     headerColor,
+    sampleBomLocked,
+    sampleBomCompletedTime,
   };
 }

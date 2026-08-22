@@ -90,6 +90,12 @@ public class MaterialPurchaseOrchestrator {
     @Autowired
     private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.impl.MaterialPurchaseServiceHelper serviceHelper;
+
     // ── Query ───────────────────────────────────────────────
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
@@ -149,11 +155,38 @@ public class MaterialPurchaseOrchestrator {
 
     // ── Write ───────────────────────────────────────────────
 
+    /**
+     * D-107 样衣采购锁定：sourceType=sample 且款式BOM已完成（bomCompletedTime 非空）时，
+     * 禁止编辑/删除/新增采购物料，需先在样衣详情-物料清单退回。
+     * 前端已按 bomCompletedTime 锁定按钮，此处为后端双路径防御（防绕过UI直调API）。
+     */
+    private void assertSamplePurchaseEditable(MaterialPurchase purchase) {
+        if (purchase == null) return;
+        boolean isSample = "sample".equalsIgnoreCase(
+                purchase.getSourceType() == null ? "" : purchase.getSourceType().trim());
+        if (!isSample || !StringUtils.hasText(purchase.getStyleId())) return;
+        try {
+            com.fashion.supplychain.style.entity.StyleInfo style = styleInfoService.getById(
+                    purchase.getStyleId().trim());
+            if (style != null && style.getBomCompletedTime() != null) {
+                throw new IllegalStateException(
+                        "样衣物料清单已完成，采购数据已锁定。请先到样衣详情 → 物料清单点击「退回」后再编辑");
+            }
+        } catch (IllegalStateException rethrow) {
+            throw rethrow;
+        } catch (Exception e) {
+            // 查询失败不阻断主流程（仅防御性校验）
+            log.warn("样衣采购锁定校验查询失败（不阻断）: styleId={}, error={}",
+                    purchase.getStyleId(), e.getMessage());
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean save(MaterialPurchase materialPurchase) {
         if (materialPurchase == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        assertSamplePurchaseEditable(materialPurchase);
         boolean ok = saveAndSync(materialPurchase);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -176,6 +209,8 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
+        // D-107：以数据库记录的 sourceType/styleId 为准做锁定校验（防前端伪造参数绕过）
+        assertSamplePurchaseEditable(current);
         boolean ok = updateAndSync(materialPurchase);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -327,6 +362,29 @@ public class MaterialPurchaseOrchestrator {
     public boolean batch(List<MaterialPurchase> purchases) {
         if (purchases == null || purchases.isEmpty()) {
             throw new IllegalArgumentException("采购明细不能为空");
+        }
+        // D-107 样衣采购锁定：BOM已完成的样衣采购数据禁止批量保存（编辑保存走此接口）
+        // 已有记录按 DB 中的 sourceType/styleId 校验；新行按传入值校验
+        Long lockTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        List<String> existIds = purchases.stream()
+                .map(MaterialPurchase::getId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!existIds.isEmpty()) {
+            List<MaterialPurchase> currents = materialPurchaseService.lambdaQuery()
+                    .in(MaterialPurchase::getId, existIds)
+                    .eq(MaterialPurchase::getTenantId, lockTenantId)
+                    .list();
+            for (MaterialPurchase current : currents) {
+                assertSamplePurchaseEditable(current);
+            }
+        }
+        for (MaterialPurchase p : purchases) {
+            if (!StringUtils.hasText(p.getId())) {
+                assertSamplePurchaseEditable(p);
+            }
         }
         // P1 多租户隔离：物料资料库查询时增补 tenantId 过滤
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
@@ -531,6 +589,17 @@ public class MaterialPurchaseOrchestrator {
         }
     }
 
+    /**
+     * 码数用量明细+汇总（联动采购数据）
+     * 展示各物料的码数单件用量、需求总量、已采购量与差额
+     */
+    public Object sizeUsageDetail(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("orderId不能为空");
+        }
+        return serviceHelper.buildSizeUsageDetail(orderId.trim(), materialPurchaseService);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public Object generateDemand(Map<String, Object> params) {
         String orderId = params == null ? null
@@ -613,6 +682,8 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
+        // D-107：样衣BOM已完成的采购数据锁定，删除同样需先退回
+        assertSamplePurchaseEditable(current);
         logAppendHelper.appendCancel(key, "删除采购单");
         boolean ok = materialPurchaseService.deleteById(key);
         if (!ok) {

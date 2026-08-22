@@ -80,6 +80,7 @@ const StyleBomTab: React.FC<Props> = ({
     setMaterialTab,
     setMaterialKeyword,
     setBomTemplateId,
+    fetchBom,
     fetchBomTemplates,
     fetchMaterials,
     handleMaterialPageChange,
@@ -223,6 +224,10 @@ const StyleBomTab: React.FC<Props> = ({
         styleId={styleId}
         styleNo={styleNo}
         onCancel={() => setPickupRecord(null)}
+        onSuccess={() => {
+          // D-108 领取后实时刷新库存显示（后端列表已改为按 t_material_stock 实时重算）
+          void fetchBom();
+        }}
       />
     </div>
   );

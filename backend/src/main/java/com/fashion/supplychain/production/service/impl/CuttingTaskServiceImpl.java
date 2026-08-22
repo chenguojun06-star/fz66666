@@ -14,9 +14,14 @@ import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.CuttingBomService;
+import com.fashion.supplychain.production.entity.CuttingBom;
 import com.fashion.supplychain.production.helper.CuttingTaskQueryHelper;
 import com.fashion.supplychain.production.helper.CuttingBundleCompletionHelper;
+import com.fashion.supplychain.style.entity.StyleBom;
+import com.fashion.supplychain.style.service.StyleBomService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +39,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     @Autowired private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
     @Autowired private CuttingTaskQueryHelper queryHelper;
     @Autowired private CuttingBundleCompletionHelper completionHelper;
+    @Autowired private CuttingBomService cuttingBomService;
+    @Autowired private StyleBomService styleBomService;
 
     @Override
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
@@ -71,7 +78,75 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         this.save(task);
         log.info("创建裁剪任务: orderNo={}, color={}, size={}, quantity={}",
                 order.getOrderNo(), order.getColor(), order.getSize(), order.getOrderQuantity());
+        initBomFromStyle(task);
         return task;
+    }
+
+    /**
+     * 创建裁剪任务后，从款式 BOM 自动初始化面辅料信息（t_cutting_bom），
+     * 避免裁剪明细页"面辅料信息"面板为空、需要手动逐行录入。
+     * 仅在裁剪 BOM 无数据时执行，不覆盖用户已维护的数据。
+     */
+    private void initBomFromStyle(CuttingTask task) {
+        try {
+            String styleIdRaw = task.getStyleId();
+            if (!StringUtils.hasText(styleIdRaw)) return;
+            Long styleId;
+            try {
+                styleId = Long.valueOf(styleIdRaw.trim());
+            } catch (NumberFormatException e) {
+                return;
+            }
+            List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
+            if (bomList == null || bomList.isEmpty()) return;
+
+            List<CuttingBom> existing = cuttingBomService.listByCuttingTaskId(task.getId());
+            if (existing != null && !existing.isEmpty()) return;
+
+            List<CuttingBom> rows = new ArrayList<>();
+            LocalDateTime now = LocalDateTime.now();
+            for (StyleBom bom : bomList) {
+                if (bom == null) continue;
+                CuttingBom cb = new CuttingBom();
+                cb.setCuttingTaskId(task.getId());
+                cb.setProductionOrderNo(task.getProductionOrderNo());
+                cb.setStyleNo(task.getStyleNo());
+                cb.setMaterialCode(bom.getMaterialCode());
+                cb.setMaterialName(bom.getMaterialName());
+                cb.setMaterialType(bom.getMaterialType());
+                cb.setPartCode(bom.getPartCode());
+                cb.setPartName(bom.getPartName());
+                cb.setSubPartName(bom.getSubPartName());
+                cb.setFabricComposition(bom.getFabricComposition());
+                cb.setFabricWeight(bom.getFabricWeight());
+                cb.setColor(bom.getColor());
+                cb.setSize(bom.getSize());
+                cb.setSpecification(bom.getSpecification());
+                cb.setUnit(bom.getUnit());
+                cb.setUsageAmount(bom.getUsageAmount());
+                cb.setLossRate(bom.getLossRate());
+                cb.setUnitPrice(bom.getUnitPrice());
+                cb.setSupplierId(bom.getSupplierId());
+                cb.setSupplierName(bom.getSupplier());
+                cb.setSupplierContactPerson(bom.getSupplierContactPerson());
+                cb.setSupplierContactPhone(bom.getSupplierContactPhone());
+                cb.setImageUrls(bom.getImageUrls());
+                cb.setRemark(bom.getRemark());
+                cb.setCreateTime(now);
+                cb.setUpdateTime(now);
+                cb.setDeleteFlag(0);
+                rows.add(cb);
+            }
+            if (!rows.isEmpty()) {
+                cuttingBomService.saveBatch(rows);
+                log.info("裁剪任务BOM已从款式BOM初始化: taskId={}, orderNo={}, 条数={}",
+                        task.getId(), task.getProductionOrderNo(), rows.size());
+            }
+        } catch (Exception e) {
+            // 初始化失败不影响裁剪任务创建主流程（用户仍可手动添加面辅料）
+            log.warn("裁剪任务BOM初始化失败（不阻断）: taskId={}, error={}",
+                    task == null ? null : task.getId(), e.getMessage());
+        }
     }
 
     @Override

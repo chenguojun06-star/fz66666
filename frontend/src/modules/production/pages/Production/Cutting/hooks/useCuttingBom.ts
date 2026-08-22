@@ -59,11 +59,26 @@ export function useCuttingBom({ message, activeTask, isEntryPage }: UseCuttingBo
         params: { cuttingTaskId: activeTask.id },
       });
       if (seq !== reqSeq.current) return;
+      let rows: CuttingBomRow[] = [];
       if (res.code === 200) {
-        setBomList(res.data || []);
-      } else {
-        setBomList([]);
+        rows = res.data || [];
       }
+      // 裁剪BOM为空时，自动从款式BOM初始化（存量任务联动，不覆盖已有数据）
+      if (rows.length === 0) {
+        try {
+          const initRes = await api.post<{ code: number; data: CuttingBomRow[] }>(
+            '/production/cutting-bom/init-from-style',
+            { cuttingTaskId: activeTask.id },
+          );
+          if (seq !== reqSeq.current) return;
+          if (initRes?.code === 200 && Array.isArray(initRes.data)) {
+            rows = initRes.data;
+          }
+        } catch {
+          // 初始化失败（如款式未配置BOM）保持空列表
+        }
+      }
+      setBomList(rows);
     } catch {
       if (seq === reqSeq.current) setBomList([]);
     } finally {

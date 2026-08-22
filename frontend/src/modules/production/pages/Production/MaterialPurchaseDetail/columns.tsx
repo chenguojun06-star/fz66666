@@ -213,6 +213,8 @@ export interface ViewColumnsDeps {
   canProcure: boolean;
   /** 样衣采购场景：true 时隐藏"出库领取"按钮（样衣不经过仓库库存，按钮误点必返回 400 库存不足） */
   sampleMode?: boolean;
+  /** 样衣BOM已完成：锁定编辑/删除（需在样衣详情-物料清单退回后操作） */
+  locked?: boolean;
   handleStartEdit: () => void;
   handleDelete: (record: MaterialPurchase) => void;
   openReceive: (record: MaterialPurchase) => void;
@@ -227,7 +229,7 @@ export interface ViewColumnsDeps {
 
 export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPurchase> {
   const {
-    colWidth, editing, canProcure, sampleMode,
+    colWidth, editing, canProcure, sampleMode, locked,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,
@@ -285,9 +287,9 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
             maxInline={2}
             actions={[
               ...(editing ? [] : [
-                { key: 'edit', label: '编辑', title: '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled },
+                { key: 'edit', label: '编辑', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled || locked },
               ]),
-              { key: 'delete', label: '删除', title: '删除此物料行', onClick: () => handleDelete(record), danger: true, disabled: isCancelled },
+              { key: 'delete', label: '删除', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '删除此物料行', onClick: () => handleDelete(record), danger: true, disabled: isCancelled || locked },
               ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', title: '等待仓库出库', disabled: true }] : []),
               ...(!isWarehousePending && (isPending || isReceived || isPartial) ? [{ key: 'receive', label: isPending ? '领取并到货' : '追加到货', title: !canProcure ? '请先完善面辅料信息' : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'), onClick: () => openReceive(record), primary: isPending, disabled: !canProcure }] : []),
               ...(isPending ? [{ key: 'inbound', label: '登记到货', title: '直接登记到货数量', onClick: () => openInbound(record) }] : []),

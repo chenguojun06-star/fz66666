@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Card, Form, message, Tabs, Button, Drawer, Table, Tag, Tooltip, Space, Alert, Input, Statistic } from 'antd';
-import { RobotOutlined, SearchOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Card, Form, message, Tabs, Button, Table, Tag, Tooltip, Space, Alert, Statistic } from 'antd';
+import { RobotOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -8,6 +8,7 @@ import MaterialSearchForm from './components/MaterialSearchForm';
 import MaterialTable from './components/MaterialTable';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import PurchaseReturnTab from './components/PurchaseReturnTab';
+import SmartSourcingDrawer from './components/SmartSourcingDrawer';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { usePurchaseCartActions, usePurchaseCart } from '@/hooks/usePurchaseCart';
 import { purchaseCartApi } from '@/services/purchaseCartApi';
@@ -33,10 +34,9 @@ const MaterialPurchase: React.FC = () => {
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [smartSourcingDrawerOpen, setSmartSourcingDrawerOpen] = useState(false);
-  const [smartSourcingOrderNo, setSmartSourcingOrderNo] = useState('');
-  const [netDemandLoading, setNetDemandLoading] = useState(false);
-  const [netDemandData, setNetDemandData] = useState<any[]>([]);
-  const [pushToCartLoading, setPushToCartLoading] = useState(false);
+  // V2 新组件：由 SmartSourcingDrawer 组件内部管理订单号/分析结果等状态
+  //   同时保留 handlePickOrder 里选择单订单时可直接打开"单订单分析"Tab并自动聚焦
+  const [smartDefaultOrderNo, setSmartDefaultOrderNo] = useState('');
   const { cartVersion } = usePurchaseCart();
   const {
     contextHolder, modalContextHolder,
@@ -105,13 +105,9 @@ const MaterialPurchase: React.FC = () => {
     const orderNo = String(order.orderNo || '').trim();
     if (orderPickerContext === 'smart') {
       if (orderNo) {
-        setSmartSourcingOrderNo(orderNo);
-        // 选中后自动分析，少点一次按钮
-        setNetDemandLoading(true);
-        purchaseCartApi.getNetDemand(orderNo)
-          .then((data) => setNetDemandData(data || []))
-          .catch(() => { message.error('分析需求失败'); setNetDemandData([]); })
-          .finally(() => setNetDemandLoading(false));
+        // V2 升级：从外部选单后，将 Drawer 打开并自动切到"单订单分析"Tab并预填订单号
+        setSmartDefaultOrderNo(orderNo);
+        setSmartSourcingDrawerOpen(true);
       }
     } else if (styleNo) {
       openDetailPage(styleNo, orderNo);
@@ -145,57 +141,13 @@ const MaterialPurchase: React.FC = () => {
     setCartDrawerOpen(true);
   }, [batchAddItems]);
 
-  // 分析需求（预览，不写入购物车）
-  const handleAnalyzeNetDemand = useCallback(async () => {
-    const orderNo = smartSourcingOrderNo.trim();
-    if (!orderNo) {
-      message.warning('请输入订单号');
-      return;
-    }
-    setNetDemandLoading(true);
-    try {
-      const data = await purchaseCartApi.getNetDemand(orderNo);
-      setNetDemandData(data || []);
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '分析需求失败');
-      setNetDemandData([]);
-    } finally {
-      setNetDemandLoading(false);
-    }
-  }, [smartSourcingOrderNo]);
+  // （已将原有单订单分析迁移到 SmartSourcingDrawer 组件内部 V1 Tab）
+  //   handleAnalyzeNetDemand / handlePushToCart 仅保留引用兼容性
+  //   旧 Drawer 状态全部删除，避免与新组件重复维护
 
-  // 确认推送到购物车
-  const handlePushToCart = useCallback(async () => {
-    const orderNo = smartSourcingOrderNo.trim();
-    if (!orderNo) {
-      message.warning('订单号不能为空');
-      return;
-    }
-    const needPurchaseCount = netDemandData.filter(d => d.needPurchase).length;
-    if (needPurchaseCount === 0) {
-      message.info('所有物料库存充足，无需采购');
-      return;
-    }
-    setPushToCartLoading(true);
-    try {
-      await purchaseCartApi.generateSmartSourcing(orderNo);
-      message.success(`已将 ${needPurchaseCount} 项缺料加入购物车草稿`);
-      setSmartSourcingDrawerOpen(false);
-      setSmartSourcingOrderNo('');
-      setNetDemandData([]);
-      setCartDrawerOpen(true);
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '推送购物车失败');
-    } finally {
-      setPushToCartLoading(false);
-    }
-  }, [smartSourcingOrderNo, netDemandData]);
-
-  // 关闭 Drawer 时清空状态
+  // 关闭 Drawer 时清空默认预填订单号（不强制，下次可带）
   const handleCloseSmartSourcing = useCallback(() => {
     setSmartSourcingDrawerOpen(false);
-    setSmartSourcingOrderNo('');
-    setNetDemandData([]);
   }, []);
 
   const handleRefreshAll = useCallback(async () => {
@@ -387,227 +339,14 @@ const MaterialPurchase: React.FC = () => {
         remarkOrderNo={remarkOrderNo}
       />
 
-      <Drawer
-        title="智能采购推荐"
+      {/* V2 智能采购推荐 Drawer：Tab1 待采购订单列表 + Tab2 单订单分析（兼容旧操作） */}
+      <SmartSourcingDrawer
         open={smartSourcingDrawerOpen}
         onClose={handleCloseSmartSourcing}
-        width={Math.min(1200, typeof window !== 'undefined' ? window.innerWidth - 48 : 1000)}
-        destroyOnClose
-        extra={
-          netDemandData.length > 0 ? (
-            <Space>
-              <Statistic
-                title="需采购"
-                value={netDemandData.filter(d => d.needPurchase).length}
-                valueStyle={{ color: 'var(--color-error)', fontSize: 18 }}
-              />
-              <Statistic
-                title="库存充足"
-                value={netDemandData.filter(d => !d.needPurchase).length}
-                valueStyle={{ color: 'var(--color-success)', fontSize: 18 }}
-              />
-            </Space>
-          ) : null
-        }
-        footer={
-          netDemandData.length > 0 ? (
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button onClick={handleCloseSmartSourcing}>取消</Button>
-              <Button
-                type="primary"
-                icon={<ShoppingCartOutlined />}
-                loading={pushToCartLoading}
-                onClick={handlePushToCart}
-                disabled={netDemandData.filter(d => d.needPurchase).length === 0}
-              >
-                确认推送缺料到购物车
-              </Button>
-            </Space>
-          ) : null
-        }
-      >
-        {/* 步骤1：选择/输入订单号 */}
-        <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
-          <Input
-            placeholder="选择或输入生产订单号"
-            value={smartSourcingOrderNo}
-            onChange={(e) => setSmartSourcingOrderNo(e.target.value)}
-            onPressEnter={handleAnalyzeNetDemand}
-            allowClear
-            prefix={<SearchOutlined />}
-          />
-          <Button
-            onClick={() => { setOrderPickerContext('smart'); setOrderPickerOpen(true); }}
-          >
-            选择订单
-          </Button>
-          <Button
-            type="primary"
-            onClick={handleAnalyzeNetDemand}
-            loading={netDemandLoading}
-          >
-            分析需求
-          </Button>
-        </Space.Compact>
-
-        {netDemandData.length === 0 && !netDemandLoading && (
-          <Alert
-            type="info"
-            showIcon
-            message="智能采购推荐说明"
-            description={
-              <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-                <p style={{ margin: '0 0 4px' }}><strong>功能说明：</strong>输入生产订单号，系统自动分析该订单的物料清单，计算每个物料的净需求。</p>
-                <p style={{ margin: '0 0 4px' }}><strong>计算公式：</strong>净需求 = 物料用量 × 订单数量 × (1 + 损耗率) - 可用库存 - 在途采购</p>
-                <p style={{ margin: '0 0 4px' }}><strong>智能推荐：</strong>仅净需求 &gt; 0 的物料（库存不够的）才会推送购物车，并自动推荐供应商（优先物料清单指定 → S/A 级供应商 → 任意活跃供应商）。</p>
-                <p style={{ margin: 0 }}><strong>操作流程：</strong>输入订单号 → 点「分析需求」查看明细 → 确认后点「推送缺料到购物车」。</p>
-              </div>
-            }
-          />
-        )}
-
-        {netDemandData.length > 0 && (
-          <Table
-            size="small"
-            dataSource={netDemandData}
-            rowKey="materialCode"
-            pagination={false}
-            scroll={{ x: 1400 }}
-            rowClassName={(record) => record.needPurchase ? '' : 'smart-sourcing-no-need'}
-            columns={[
-              {
-                title: '状态',
-                dataIndex: 'needPurchase',
-                width: 80,
-                fixed: 'left',
-                render: (need: boolean) =>
-                  need
-                    ? <Tag color="red">需采购</Tag>
-                    : <Tag color="green">充足</Tag>,
-              },
-              {
-                title: '物料信息',
-                dataIndex: 'materialCode',
-                width: 200,
-                fixed: 'left',
-                render: (_: string, r: any) => (
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{r.materialName || '-'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                      {r.materialCode}
-                      {r.specification ? ` | ${r.specification}` : ''}
-                      {r.color ? ` | ${r.color}` : ''}
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                title: '物料用量',
-                dataIndex: 'bomUsageAmount',
-                width: 100,
-                render: (v: any, r: any) => (
-                  <span>{v} {r.unit || ''}</span>
-                ),
-              },
-              {
-                title: '损耗率',
-                dataIndex: 'lossRate',
-                width: 70,
-                render: (v: any) => v ? `${v}%` : '-',
-              },
-              {
-                title: '总需求',
-                dataIndex: 'demand',
-                width: 100,
-                render: (v: any, r: any) => (
-                  <span style={{ fontWeight: 500 }}>{v} {r.unit || ''}</span>
-                ),
-              },
-              {
-                title: '可用库存',
-                dataIndex: 'availableStock',
-                width: 80,
-                render: (v: number) => (
-                  <span style={{ color: v > 0 ? 'var(--color-success)' : 'var(--color-text-quaternary)' }}>
-                    {v}
-                  </span>
-                ),
-              },
-              {
-                title: '在途',
-                dataIndex: 'inTransit',
-                width: 80,
-                render: (v: any) => v || 0,
-              },
-              {
-                title: '净需求',
-                dataIndex: 'netDemand',
-                width: 100,
-                render: (v: any, r: any) => (
-                  <span style={{
-                    color: r.needPurchase ? 'var(--color-error)' : 'var(--color-text-quaternary)',
-                    fontWeight: r.needPurchase ? 600 : 400,
-                  }}>
-                    {v} {r.unit || ''}
-                  </span>
-                ),
-              },
-              {
-                title: '推荐供应商',
-                dataIndex: 'recommendedSupplier',
-                width: 160,
-                render: (supplier: any) => {
-                  if (!supplier || !supplier.supplierName) return <span style={{ color: 'var(--color-text-quaternary)' }}>暂无</span>;
-                  const tierColor = supplier.supplierTier === 'S' ? 'gold' : supplier.supplierTier === 'A' ? 'green' : 'default';
-                  return (
-                    <div>
-                      <div style={{ fontWeight: 500 }}>
-                        {supplier.supplierName}
-                        {supplier.isBomDesignated && <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>物料清单指定</Tag>}
-                      </div>
-                      <div style={{ fontSize: 11 }}>
-                        {supplier.supplierTier && <Tag color={tierColor} style={{ fontSize: 10 }}>{supplier.supplierTier}级</Tag>}
-                        {supplier.overallScore && <span style={{ color: 'var(--color-text-secondary)' }}>评分 {supplier.overallScore}</span>}
-                      </div>
-                    </div>
-                  );
-                },
-              },
-              {
-                title: '价格参考',
-                width: 140,
-                render: (_: any, r: any) => (
-                  <div style={{ fontSize: 12 }}>
-                    <div>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>物料清单预估：</span>
-                      {r.bomUnitPrice ? `¥${r.bomUnitPrice}` : '-'}
-                    </div>
-                    <div>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>上次采购：</span>
-                      {r.lastPurchasePrice ? `¥${r.lastPurchasePrice}` : '-'}
-                      {r.lastPurchaseSupplier ? ` (${r.lastPurchaseSupplier})` : ''}
-                    </div>
-                    {r.priceAlert && (
-                      <Tag color="orange" style={{ fontSize: 10, marginTop: 2 }}>{r.priceAlert}</Tag>
-                    )}
-                  </div>
-                ),
-              },
-              {
-                title: '推荐理由',
-                dataIndex: 'recommendReason',
-                width: 200,
-                ellipsis: { showTitle: false },
-                render: (reason: string) => (
-                  <Tooltip title={reason} placement="topLeft">
-                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{reason}</span>
-                  </Tooltip>
-                ),
-              },
-            ]}
-          />
-        )}
-      </Drawer>
+        defaultOrderNo={smartDefaultOrderNo}
+        onOpenOrderPicker={() => { setOrderPickerContext('smart'); setOrderPickerOpen(true); }}
+        onPushedToCart={() => setCartDrawerOpen(true)}
+      />
 
     </>
   );

@@ -326,6 +326,173 @@ public class MaterialPurchaseServiceHelper {
         return result;
     }
 
+    /**
+     * 构建订单的码数用量明细+汇总（联动采购数据）
+     *
+     * 返回结构：
+     * - orderNo / totalQuantity：订单基础信息
+     * - sizeQuantities: 码数→下单数量汇总（跨颜色累加，保留原始码名）
+     * - colorQuantities: 颜色→下单数量汇总
+     * - items: BOM 物料明细列表，每项含：
+     *   - sizeUsages: 各码单件用量（原始码名）
+     *   - requiredQty: 需求总量（Σ单件用量×码数量×(1+损耗率)，颜色/码匹配订单行）
+     *   - purchasedQty: 该物料订单已采购总量（按物料编码/名称匹配）
+     *   - diffQty: 差额（已采购-需求），负数=采购不足
+     */
+    public Map<String, Object> buildSizeUsageDetail(String orderId, MaterialPurchaseService purchaseService) {
+        Map<String, Object> empty = new LinkedHashMap<>();
+        empty.put("items", List.of());
+        empty.put("sizeQuantities", Map.of());
+        empty.put("colorQuantities", Map.of());
+
+        ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
+        if (productionOrderService == null || purchaseService == null) {
+            return empty;
+        }
+        ProductionOrder order = productionOrderService.getDetailById(orderId);
+        if (order == null) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+        Long styleId = tryParseLong(order.getStyleId());
+        if (styleId == null) {
+            return empty;
+        }
+
+        List<StyleBom> bomList;
+        try {
+            bomList = styleBomService.listByStyleId(styleId);
+        } catch (Exception e) {
+            log.warn("查询BOM列表失败: styleId={}, error={}", styleId, e.getMessage());
+            return empty;
+        }
+        if (bomList == null || bomList.isEmpty()) {
+            return empty;
+        }
+
+        List<OrderLine> lines = parseOrderLines(order);
+
+        // 订单码数/颜色数量汇总（保留原始码名展示）
+        Map<String, Integer> sizeQuantities = new LinkedHashMap<>();
+        Map<String, Integer> colorQuantities = new LinkedHashMap<>();
+        int totalQuantity = 0;
+        for (OrderLine l : lines) {
+            if (l == null || l.quantity == null || l.quantity <= 0) continue;
+            totalQuantity += l.quantity;
+            String sizeKey = l.size == null ? "" : l.size.trim();
+            if (StringUtils.hasText(sizeKey)) {
+                sizeQuantities.merge(sizeKey, l.quantity, Integer::sum);
+            }
+            String colorKey = l.color == null ? "" : l.color.trim();
+            if (StringUtils.hasText(colorKey)) {
+                colorQuantities.merge(colorKey, l.quantity, Integer::sum);
+            }
+        }
+
+        // 订单已有采购记录（全部来源，含手动新增）
+        List<MaterialPurchase> purchases = List.of();
+        try {
+            purchases = purchaseService.lambdaQuery()
+                    .eq(MaterialPurchase::getOrderNo, order.getOrderNo())
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .list();
+        } catch (Exception e) {
+            log.warn("查询订单采购记录失败: orderNo={}, error={}", order.getOrderNo(), e.getMessage());
+        }
+
+        Set<String> orderColorSet = extractColorSet(lines);
+        Set<String> orderSizeSet = extractSizeSet(lines);
+        boolean orderHasMultipleColors = orderColorSet.size() > 1;
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (StyleBom bom : bomList) {
+            if (bom == null) continue;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("materialCode", bom.getMaterialCode());
+            item.put("materialName", bom.getMaterialName());
+            item.put("materialType", bom.getMaterialType());
+            item.put("unit", bom.getUnit());
+            item.put("lossRate", bom.getLossRate());
+            item.put("usageAmount", bom.getUsageAmount());
+            item.put("sizeUsages", parseSizeUsageMapRaw(bom.getSizeUsageMap()));
+
+            // 需求总量：颜色/码数匹配订单行（与采购需求生成口径一致）
+            String bomColorRaw = bom.getColor() == null ? "" : bom.getColor().trim();
+            String bomSizeRaw = bom.getSize() == null ? "" : bom.getSize().trim();
+            Set<String> bomColorSet = MaterialPurchaseHelper.splitOptions(bomColorRaw).isEmpty()
+                    ? null : new HashSet<>(MaterialPurchaseHelper.splitOptions(bomColorRaw));
+            Set<String> bomSizeSet = MaterialPurchaseHelper.splitOptions(bomSizeRaw).isEmpty()
+                    ? null : new HashSet<>(MaterialPurchaseHelper.splitOptions(bomSizeRaw));
+            Set<String> matchColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
+            Set<String> effectiveSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
+            Map<String, BigDecimal> sizeUsageMapParsed = parseSizeUsageMap(bom.getSizeUsageMap());
+
+            BigDecimal required;
+            if (!orderHasMultipleColors) {
+                required = computeBomRequiredQuantity(bom, lines, matchColorSet, effectiveSizeSet, sizeUsageMapParsed);
+            } else {
+                // 多颜色订单：按各颜色分别计算后累加（与 aggregateBomToPurchases 口径一致）
+                Set<String> targetColors = matchColorSet != null ? matchColorSet : orderColorSet;
+                BigDecimal sum = BigDecimal.ZERO;
+                for (String orderColor : targetColors) {
+                    Set<String> singleColorSet = new HashSet<>();
+                    singleColorSet.add(orderColor);
+                    sum = sum.add(computeBomRequiredQuantity(bom, lines, singleColorSet, effectiveSizeSet, sizeUsageMapParsed));
+                }
+                required = sum;
+            }
+            item.put("requiredQty", required);
+
+            // 已采购量：按物料编码（优先）或物料名称匹配
+            String codeKey = MaterialPurchaseHelper.normalizeMatchKey(bom.getMaterialCode());
+            String nameKey = MaterialPurchaseHelper.normalizeMatchKey(bom.getMaterialName());
+            BigDecimal purchased = BigDecimal.ZERO;
+            for (MaterialPurchase p : purchases) {
+                if (p == null) continue;
+                String pCode = MaterialPurchaseHelper.normalizeMatchKey(p.getMaterialCode());
+                String pName = MaterialPurchaseHelper.normalizeMatchKey(p.getMaterialName());
+                boolean codeMatch = StringUtils.hasText(codeKey) && codeKey.equals(pCode);
+                boolean nameMatch = !codeMatch && StringUtils.hasText(nameKey) && nameKey.equals(pName);
+                if (codeMatch || nameMatch) {
+                    purchased = purchased.add(p.getPurchaseQuantity() == null ? BigDecimal.ZERO : p.getPurchaseQuantity());
+                }
+            }
+            item.put("purchasedQty", purchased);
+            item.put("diffQty", purchased.subtract(required));
+            items.add(item);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("orderNo", order.getOrderNo());
+        result.put("styleNo", order.getStyleNo());
+        result.put("totalQuantity", totalQuantity);
+        result.put("sizeQuantities", sizeQuantities);
+        result.put("colorQuantities", colorQuantities);
+        result.put("items", items);
+        return result;
+    }
+
+    /**
+     * 解析 BOM 各码用量 JSON，保留原始码名（仅 trim），用于前端展示。
+     */
+    private Map<String, BigDecimal> parseSizeUsageMapRaw(String json) {
+        if (!StringUtils.hasText(json)) {
+            return Collections.emptyMap();
+        }
+        try {
+            TypeReference<Map<String, BigDecimal>> typeRef = new TypeReference<>() {};
+            Map<String, BigDecimal> raw = objectMapper.readValue(json, typeRef);
+            Map<String, BigDecimal> result = new LinkedHashMap<>(raw.size());
+            for (Map.Entry<String, BigDecimal> entry : raw.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    result.put(entry.getKey().trim(), entry.getValue());
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            return Collections.emptyMap();
+        }
+    }
+
     private Set<String> extractColorSet(List<OrderLine> lines) {
         Set<String> set = new HashSet<>();
         for (OrderLine l : lines) {

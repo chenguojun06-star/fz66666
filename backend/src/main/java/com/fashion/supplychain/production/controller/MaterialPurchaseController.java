@@ -37,11 +37,16 @@ public class MaterialPurchaseController {
 
     /**
      * 查询指定订单的历史单据列表（按上传时间倒序）
+     * 图片URL实时刷新签名，确保历史单据图片永久可查看
      */
     @GetMapping("/docs")
     public Result<java.util.List<PurchaseOrderDoc>> listDocs(@RequestParam String orderNo) {
         Long tenantId = UserContext.tenantId();
-        return Result.success(purchaseOrderDocService.listByOrderNo(tenantId, orderNo));
+        List<PurchaseOrderDoc> docs = purchaseOrderDocService.listByOrderNo(tenantId, orderNo);
+        for (PurchaseOrderDoc doc : docs) {
+            doc.setImageUrl(purchaseDocOrchestrator.resolveDocImageUrl(tenantId, doc.getImageUrl()));
+        }
+        return Result.success(docs);
     }
 
     /**
@@ -121,6 +126,15 @@ public class MaterialPurchaseController {
     @GetMapping("/demand/preview")
     public Result<?> previewDemand(@RequestParam String orderId) {
         return Result.success(materialPurchaseOrchestrator.previewDemand(orderId));
+    }
+
+    /**
+     * 码数用量明细+汇总（联动采购数据）
+     * 返回各物料的码数单件用量、需求总量、已采购量与差额，用于订单物料采购明细页展示
+     */
+    @GetMapping("/size-usage-detail")
+    public Result<?> sizeUsageDetail(@RequestParam String orderId) {
+        return Result.success(materialPurchaseOrchestrator.sizeUsageDetail(orderId));
     }
 
     @PostMapping("/demand/generate")
