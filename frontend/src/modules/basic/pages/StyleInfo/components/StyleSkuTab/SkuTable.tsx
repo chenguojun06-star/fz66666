@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Popover, Image, Button } from 'antd';
-import { DeleteOutlined, BarcodeOutlined, PictureOutlined, HolderOutlined } from '@ant-design/icons';
+import type { TableRowSelection } from 'antd/es/table/interface';
+import { BarcodeOutlined, PictureOutlined, HolderOutlined, InfoCircleOutlined, EditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatMoney } from '@/utils/format';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -20,7 +21,21 @@ interface SkuTableProps {
   onDeleteRow: (rowKey: number | string) => void;
   /** 拖拽排序：把 from 行移动到 to 行位置（编辑态可用） */
   onReorder?: (fromKey: number | string, toKey: number | string) => void;
+  /** 批量选中变化回调 */
+  onSelectedRowKeysChange?: (keys: React.Key[]) => void;
+  /** 打开颜色图片管理弹窗（维护颜色级备注/成分/图片） */
+  onOpenColorImages?: () => void;
 }
+
+/** 带红色必填星号的列标题（统一格式：*字段名 + Tooltip 解释） */
+const RequiredTitle: React.FC<{ label: string; tip?: string }> = ({ label, tip }) => (
+  <Tooltip title={tip}>
+    <span>
+      <span style={{ color: 'var(--color-error, #ff4d4f)', marginRight: 2 }}>*</span>
+      {label}
+    </span>
+  </Tooltip>
+);
 
 const SkuTable: React.FC<SkuTableProps> = ({
   skus,
@@ -32,6 +47,8 @@ const SkuTable: React.FC<SkuTableProps> = ({
   onFieldChange,
   onDeleteRow,
   onReorder,
+  onSelectedRowKeysChange,
+  onOpenColorImages,
 }) => {
   // HTML5 原生行拖拽：按住把手 mousedown 后才置 draggable，避免干扰输入框内文本选择
   const [dragArmed, setDragArmed] = useState<number | string | null>(null);
@@ -53,8 +70,14 @@ const SkuTable: React.FC<SkuTableProps> = ({
     if (from != null && from !== to) onReorder?.(from, to);
   };
 
+  const rowSelection: TableRowSelection<ProductSku> = useMemo(() => ({
+    type: 'checkbox',
+    columnWidth: 44,
+    onChange: (keys) => onSelectedRowKeysChange?.(keys),
+  }), [onSelectedRowKeysChange]);
+
   const columns = [
-    // 拖拽排序把手（仅编辑态 + 支持回调时显示）
+    // ① 拖拽排序把手（仅编辑态 + 支持回调时显示）
     ...(canEdit && onReorder ? [{
       title: '', key: 'dragHandle', width: 36, fixed: 'left' as const,
       render: (_: any, record: ProductSku) => (
@@ -66,70 +89,182 @@ const SkuTable: React.FC<SkuTableProps> = ({
         />
       ),
     }] : []),
+    // ② 颜色（身份识别，靠最左最醒目）
     {
-      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 44, fixed: 'left' as const,
+      title: '颜色', dataIndex: 'color', key: 'color', width: 90, fixed: 'left' as const,
+      render: (_: string, record: ProductSku) => {
+        const key = getRowKey(record);
+        const val = getCellValue(record, 'color');
+        return canEdit && isManual ? (
+          <Input
+            value={val}
+            onChange={(e) => onFieldChange(key, 'color', e.target.value)}
+            placeholder="颜色"
+            size="small"
+          />
+        ) : (
+          <Tag color="geekblue" style={{ margin: 0, borderRadius: 4 }}>{record.color || '-'}</Tag>
+        );
+      },
+    },
+    // ③ 规格（原「尺码」，对齐图片标题：规格 XS/S/M/L/XL/D(定制码)）
+    {
+      title: '规格', dataIndex: 'size', key: 'size', width: 100, fixed: 'left' as const,
+      render: (_: string, record: ProductSku) => {
+        const key = getRowKey(record);
+        const val = getCellValue(record, 'size');
+        return canEdit && isManual ? (
+          <Input
+            value={val}
+            onChange={(e) => onFieldChange(key, 'size', e.target.value)}
+            placeholder="尺码/规格"
+            size="small"
+          />
+        ) : (
+          <Tag color="purple" style={{ margin: 0, borderRadius: 4 }}>{record.size || '-'}</Tag>
+        );
+      },
+    },
+    // ④ 商品编码（核心，紧靠颜色+规格，方便「颜色+规格 → 编码」对照）
+    {
+      title: <span style={{ fontWeight: 600 }}>商品编码</span>,
+      dataIndex: 'skuCode', key: 'skuCode', width: 200,
+      render: (_: string, record: ProductSku) => {
+        const key = getRowKey(record);
+        const val = getCellValue(record, 'skuCode');
+        return canEdit && isManual ? (
+          <Input
+            value={val}
+            onChange={(e) => onFieldChange(key, 'skuCode', e.target.value)}
+            placeholder="款号-颜色-尺码"
+            size="small"
+          />
+        ) : (
+          <span style={{
+            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: 0.2,
+            padding: '2px 6px',
+            background: 'var(--color-bg-subtle, #f5f7fa)',
+            borderRadius: 4,
+          }}>
+            {record.skuCode || '-'}
+          </span>
+        );
+      },
+    },
+    // ⑤ 图片（辅助视觉确认，靠在编码后）
+    {
+      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 56,
       render: (_: string, record: ProductSku) => {
         if (record.skuColorImage) {
           const fullUrl = getFullAuthedFileUrl(record.skuColorImage);
           return (
             <Image
               src={fullUrl}
-              alt="款式图片"
-              width={24}
-              height={24}
-              style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer' }}
+              alt="SKU图片"
+              width={32}
+              height={32}
+              style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer', background: 'var(--color-bg-subtle)' }}
               preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
             />
           );
         }
         return (
-          <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: 'var(--color-text-quaternary)' }}>
-            <PictureOutlined style={{ fontSize: 12 }} />
+          <div style={{
+            width: 32, height: 32,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--color-bg-subtle)',
+            borderRadius: 4, color: 'var(--color-text-quaternary)',
+          }}>
+            <PictureOutlined style={{ fontSize: 14 }} />
           </div>
         );
       },
     },
+    // ⑥ 商品名称（派生展示：从 styleNo/款信息 + 颜色组合显示，对应图片中「黑色云绉纱蕾丝铅笔裙」）
     {
-      title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 220,
-      render: (_: string, record: ProductSku) => {
-        const key = getRowKey(record);
-        return canEdit && isManual ? (
-          <Input value={getCellValue(record, 'skuCode')} onChange={e => onFieldChange(key, 'skuCode', e.target.value)} placeholder="款号-颜色-尺码" />
-        ) : <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{record.skuCode}</span>;
+      title: '商品名称', key: 'productName', width: 210,
+      render: (_: any, record: ProductSku) => {
+        const derived = [record.styleNo, record.color].filter(Boolean).join(' · ');
+        const remark = (record.skuColorRemark || '').trim();
+        return (
+          <Tooltip title={remark || derived} placement="topLeft">
+            <span style={{
+              color: 'var(--color-text-primary)',
+              fontWeight: 500,
+              fontSize: 13,
+            }}>
+              {remark || derived || <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>}
+            </span>
+          </Tooltip>
+        );
       },
     },
+    // ⑦ 基本售价（原「销售价」，对齐图片标题「基本售价」）
     {
-      title: '颜色', dataIndex: 'color', key: 'color', width: 120,
-      render: (_: string, record: ProductSku) => {
+      title: '基本售价',
+      dataIndex: 'salesPrice', key: 'salesPrice', width: 108,
+      render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
-        return canEdit && isManual ? (
-          <Input value={getCellValue(record, 'color')} onChange={e => onFieldChange(key, 'color', e.target.value)} placeholder="颜色" />
-        ) : record.color;
+        const val = getCellValue(record, 'salesPrice');
+        return canEditAttrs ? (
+          <InputNumber
+            value={val}
+            onChange={(v) => onFieldChange(key, 'salesPrice', v)}
+            min={0}
+            precision={2}
+            prefix="¥"
+            controls={false}
+            size="small"
+            style={{ width: '100%' }}
+          />
+        ) : val != null ? formatMoney(val) : '-';
       },
     },
+    // ⑧ 吊牌价（必填红星，图片*吊牌价）
     {
-      title: '尺码', dataIndex: 'size', key: 'size', width: 100,
-      render: (_: string, record: ProductSku) => {
+      title: <RequiredTitle label="吊牌价" tip="必填。吊牌印刷价，用于对外展示" />,
+      dataIndex: 'tagPrice', key: 'tagPrice', width: 108,
+      render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
-        return canEdit && isManual ? (
-          <Input value={getCellValue(record, 'size')} onChange={e => onFieldChange(key, 'size', e.target.value)} placeholder="尺码" />
-        ) : record.size;
+        const val = getCellValue(record, 'tagPrice');
+        return canEditAttrs ? (
+          <InputNumber
+            value={val}
+            onChange={(v) => onFieldChange(key, 'tagPrice', v)}
+            min={0}
+            precision={2}
+            prefix="¥"
+            controls={false}
+            size="small"
+            style={{ width: '100%' }}
+          />
+        ) : val != null ? formatMoney(val) : '-';
       },
     },
+    // ⑨ 商品条码（69码：有完整保存链路，保留行内编辑 + 条码预览）
     {
       title: (
-        <Tooltip title="中国零售商品条码（EAN-13，前缀690~699），用于商场/超市/电商扫码收银。系统不强制填写：为空不影响内部管理；如需上线下架零售渠道，可在此录入或由条码打印软件生成">
-          商品条码(69码)
+        <Tooltip title="中国零售商品条码（EAN-13，前缀690~699），用于商场/超市/电商扫码收银。选填，为空不影响内部管理">
+          商品条码
         </Tooltip>
       ),
-      dataIndex: 'barcode', key: 'barcode', width: 200,
+      dataIndex: 'barcode', key: 'barcode', width: 170,
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         const barcodeVal = getCellValue(record, 'barcode') || record.barcode || '';
         return (
           <Space size={4}>
             {canEditAttrs ? (
-              <Input value={barcodeVal} onChange={e => onFieldChange(key, 'barcode', e.target.value)} placeholder="选填，用于零售扫码" style={{ width: 130 }} />
+              <Input
+                value={barcodeVal}
+                onChange={(e) => onFieldChange(key, 'barcode', e.target.value)}
+                placeholder="选填，EAN-13"
+                size="small"
+                style={{ width: 122 }}
+              />
             ) : <span>{barcodeVal || '-'}</span>}
             {barcodeVal && (
               <Popover
@@ -144,83 +279,123 @@ const SkuTable: React.FC<SkuTableProps> = ({
         );
       },
     },
-    {
-      title: '成本价', dataIndex: 'costPrice', key: 'costPrice', width: 110,
-      render: (_: number, record: ProductSku) => {
-        const key = getRowKey(record);
-        return canEditAttrs ? (
-          <InputNumber value={getCellValue(record, 'costPrice')} onChange={v => onFieldChange(key, 'costPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
-        ) : record.costPrice != null ? formatMoney(record.costPrice) : '-';
-      },
-    },
-    {
-      title: '吊牌价', dataIndex: 'tagPrice', key: 'tagPrice', width: 110,
-      render: (_: number, record: ProductSku) => {
-        const key = getRowKey(record);
-        return canEditAttrs ? (
-          <InputNumber value={getCellValue(record, 'tagPrice')} onChange={v => onFieldChange(key, 'tagPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
-        ) : record.tagPrice != null ? formatMoney(record.tagPrice) : '-';
-      },
-    },
-    {
-      title: '销售价', dataIndex: 'salesPrice', key: 'salesPrice', width: 110,
-      render: (_: number, record: ProductSku) => {
-        const key = getRowKey(record);
-        return canEditAttrs ? (
-          <InputNumber value={getCellValue(record, 'salesPrice')} onChange={v => onFieldChange(key, 'salesPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
-        ) : record.salesPrice != null ? formatMoney(record.salesPrice) : '-';
-      },
-    },
+    // ⑩ 单位（只读：SKU 无独立单位字段，服装默认「件」）
     {
       title: (
-        <Tooltip title="成品仓实物库存：仅在「生产入库 / 成品仓出入库」时增减，开发阶段无业务含义，显示 - 表示尚无成品入仓">
-          成品库存
+        <Tooltip title="SKU 暂无独立单位字段，服装默认按「件」管理">单位</Tooltip>
+      ),
+      key: 'unit', width: 64, align: 'center' as const,
+      render: () => <span style={{ color: 'var(--color-text-secondary)' }}>件</span>,
+    },
+    // ⑩ 供应商（只读：SKU 无供应商字段，跟随款式/采购供应商，展示默认「本仓」）
+    {
+      title: (
+        <Tooltip title="SKU 暂无独立供应商字段，裁剪物料默认本仓裁剪；外发场景走生产订单工序外发">供应商</Tooltip>
+      ),
+      key: 'supplier', width: 96,
+      render: () => <Tag color="green" style={{ margin: 0 }}>本仓</Tag>,
+    },
+    // ⑪ 备注①（铅笔图标入口：打开「颜色图片管理」弹窗维护颜色级备注/成分/图片）
+    {
+      title: (
+        <Tooltip title="点击铅笔打开「颜色图片管理」，维护该颜色的备注、成分、图片">
+          <Space size={2}>
+            备注
+            <InfoCircleOutlined style={{ fontSize: 12, color: 'var(--color-info)' }} />
+          </Space>
         </Tooltip>
       ),
-      dataIndex: 'stockQuantity', key: 'stockQuantity', width: 90,
-      render: (_: number, record: ProductSku) => {
-        const qty = record.stockQuantity ?? 0;
-        return qty > 0 ? qty : '-';
+      key: 'remark1', width: 56, align: 'center' as const,
+      render: (_: any, record: ProductSku) => {
+        const content = (record.skuColorRemark || '').trim();
+        return (
+          <Tooltip title={content ? `当前备注：${content}（点击修改）` : '点击维护颜色级备注/成分'}>
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined style={{ color: 'var(--color-primary, #2563eb)' }} />}
+              style={{ padding: '0 4px' }}
+              onClick={onOpenColorImages}
+            />
+          </Tooltip>
+        );
       },
     },
+    // ⑫ 成分（只读展示：颜色级备注在「颜色图片管理」弹窗维护，此处不做行内假编辑）
     {
       title: (
-        <Tooltip title="编码状态指商品编码的生成方式；价格、条码、备注等字段不受编码模式限制，点击右上角「编辑」后即可修改">
-          编码状态
+        <Tooltip title="成分取自颜色级备注，点击「备注①」铅笔或顶部「颜色图片」按钮维护">
+          成分
         </Tooltip>
       ),
-      key: 'status', width: 90,
-      render: (_: any, record: ProductSku) =>
-        record.manuallyEdited === 1 ? <Tag color="orange">手动修改</Tag> : <Tag color="blue">自动生成</Tag>,
+      key: 'composition', width: 170, ellipsis: true,
+      render: (_: any, record: ProductSku) => {
+        const content = (record.skuColorRemark || '').trim();
+        return (
+          <Tooltip title={content} placement="topLeft">
+            <span style={{ color: content ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
+              {content || '-'}
+            </span>
+          </Tooltip>
+        );
+      },
     },
+    // ⑬ 备注（最常规的SKU级备注，图片第二备注列）
     {
-      title: (
-        <Tooltip title="点击右上角「编辑」后在表格内直接填写，完成后点「保存」即可，两种编码模式下都可操作">
-          备注
-        </Tooltip>
-      ),
-      dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true,
+      title: '备注',
+      dataIndex: 'remark', key: 'remark', width: 120, ellipsis: true,
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         const val = getCellValue(record, 'remark');
         return canEditAttrs ? (
-          <Input value={val || ''} onChange={e => onFieldChange(key, 'remark', e.target.value)} placeholder="点击填写备注" />
+          <Input
+            value={val || ''}
+            onChange={(e) => onFieldChange(key, 'remark', e.target.value)}
+            placeholder="备注"
+            size="small"
+          />
         ) : (
           <Tooltip title={record.remark} placement="topLeft">
-            <span style={{ color: record.remark ? 'var(--color-text-primary, var(--color-gray-800))' : 'var(--color-text-quaternary, var(--color-text-quaternary))' }}>
+            <span style={{ color: record.remark ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
               {record.remark || '-'}
             </span>
           </Tooltip>
         );
       },
     },
+    // ⑭ 里料（只读：SKU 无里料字段，成分/面料信息在颜色级备注维护）
+    {
+      title: (
+        <Tooltip title="里料信息请在颜色级备注（备注①铅笔）中维护">里料</Tooltip>
+      ),
+      key: 'lining', width: 72,
+      render: () => <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>,
+    },
+    // ⑮ 是否启用（状态类，读草稿值：批量启用/禁用后实时反映；绿色Tag「启用」/灰色Tag「禁用」）
+    {
+      title: '是否启用',
+      key: 'enabledStatus', width: 88,
+      render: (_: any, record: ProductSku) => {
+        const s = String(getCellValue(record, 'status') ?? '').toLowerCase();
+        if (s === 'disabled' || s === '0') return <Tag color="default">禁用</Tag>;
+        return <Tag color="green">启用</Tag>;
+      },
+    },
+    // ⑯ 操作（固定最右，使用文字「作废」蓝色链接，匹配图片样式）
     ...(canEdit && isManual ? [{
-      title: '操作', key: 'action', width: 60, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 64, fixed: 'right' as const,
       render: (_: any, record: ProductSku) => {
         const key = getRowKey(record);
         return (
-          <Popconfirm title="确定删除此商品编码？" onConfirm={() => onDeleteRow(key)}>
-            <Button type="text" danger icon={<DeleteOutlined />} />
+          <Popconfirm
+            title="确定作废此商品编码？"
+            description="作废后需重新录入颜色/尺码/价格等数据"
+            okText="作废"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => onDeleteRow(key)}
+          >
+            <a style={{ color: 'var(--color-primary, #2563eb)' }}>作废</a>
           </Popconfirm>
         );
       },
@@ -236,9 +411,16 @@ const SkuTable: React.FC<SkuTableProps> = ({
         loading={loading}
         emptyDescription="暂无商品编码数据"
         pagination={false}
-        scroll={{ x: 'max-content', y: 400 }}
+        scroll={{ x: 'max-content', y: 440 }}
         showIndex
-        rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
+        rowSelection={rowSelection}
+        rowClassName={(record, index) => {
+          const cost = getCellValue(record, 'costPrice');
+          const costEmpty = cost == null || Number(cost) === 0;
+          const base = index % 2 === 1 ? 'ant-table-row-striped' : '';
+          // 成本价为空的行，背景加一层极淡的红，让用户一眼看到缺必填
+          return costEmpty ? `${base} sku-row-empty-required` : base;
+        }}
         onRow={canEdit && onReorder ? (record) => ({
           draggable: dragArmed != null,
           onDragStart: (e: React.DragEvent<HTMLTableRowElement>) => handleDragStart(e, record),
@@ -247,17 +429,6 @@ const SkuTable: React.FC<SkuTableProps> = ({
           onDragEnd: () => { dragFromKeyRef.current = null; setDragArmed(null); },
         }) : undefined}
       />
-
-      <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-quaternary)', lineHeight: 1.8 }}>
-        {isManual ? (
-          <>
-            <div>手动编辑模式：点击右上角「编辑」后，可修改商品编码、颜色、尺码及价格/条码/备注，保存后系统不会覆盖您的修改</div>
-            {canEdit && <div>新增编码：鼠标悬停「新增编码」可选择「按款号生成」（自动填充款号前缀）或「手动输入」（手动输入完整编码）</div>}
-          </>
-        ) : (
-          <div>自动生成模式：商品编码按「款号+颜色+尺码」自动生成、不可修改；点击右上角「编辑」可填写条码、价格、备注</div>
-        )}
-      </div>
     </>
   );
 };

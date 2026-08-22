@@ -1,11 +1,50 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（data:changed 全链路实时刷新 + 样衣采购防重复生成，待推送部署）
+> 最后更新：2026-08-22（D-108 BOM库存实时刷新：修复库存永远显示58米的假数据问题，mvn+tsc 通过，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★ D-108 BOM 库存实时刷新（修复"库存永远显示58米"假数据）✅（mvn compile + tsc 0 errors，待推送）
+
+- [x] **根因**：t_style_bom 的 stock_status/available_stock 是「检查库存」时写入的 DB 快照，领取（D-099 内部领取同事务扣减 t_material_stock.quantity）后从不刷新 → BOM 表格库存数永远不变，等同假数据。采购列表（MaterialPurchaseOrchestratorHelper）本来就是实时查询没问题，只有 BOM 列表是死的
+- [x] **后端**：StyleBomOrchestrator.listByStyleId 返回前调用新增 refreshStockSnapshotRealtime——单次批量 SQL（IN materialCodes + tenantId）查 t_material_stock，按 findStock 同口径（code+color/size 有值才过滤，取可用量最大行）实时重算 availableStock/stockStatus/requiredPurchase（productionQty=1 与检查库存前端默认一致）；仅内存刷新不落库；getBomStockSummary 同步刷新保持口径一致；查询失败降级回 DB 快照
+- [x] **前端**：StyleBomTab 的 MaterialPickupModal 补 onSuccess → fetchBom()（领取后立即刷新库存显示）；useStyleBomTabData 暴露 fetchBom（接口类型 + return + 解构）
+- [x] 编译验证：mvn compile 通过 + npx tsc --noEmit 0 errors
+
+### 2026-08-22 ★★ 物料采购明细五合一：码数用量明细+汇总表 / 裁剪BOM上移 / 样衣采购锁定 / 采购单据存档 ✅（mvn compile + tsc 0 errors，待推送）
+
+- [x] **码数用量明细+汇总表（联动采购数据）**：后端 MaterialPurchaseServiceHelper.buildSizeUsageDetail（各物料码数单件用量/需求总量/已采购量/差额，多颜色按色分别累加与采购口径一致）→ Orchestrator sizeUsageDetail → GET /production/purchase/size-usage-detail?orderId=；前端新组件 SizeUsageSummaryPanel.tsx（动态码数列，订单码数∪BOM码数；需求=Σ单件用量×(1+损耗)×件数，已采购按编码/名称匹配）；仅大货模式渲染（!sampleMode && order?.id）
+- [x] **大货订单采购数据不吻合根因（面料6米/辅料1米）**：usePurchaseDetailData 曾降级拉 sourceType=sample 样衣采购数据兜底展示（样衣口径1件=1米，大货6件=6米）→ 删除该降级逻辑（D-106）；computeBomRequiredQuantity 强制 usageAmount 计算禁止 devUsageAmount 兜底
+- [x] **裁剪明细面辅料不显示 + 模块上移**：CuttingEntryView 的 CuttingBomPanel 从生成菲号下方移到上方；CuttingTaskServiceImpl 新增 initBomFromStyle（创建任务时从款式BOM复制，已存在则跳过，失败不阻断）；useCuttingBom 自动初始化
+- [x] **样衣采购管理锁定（完成后需退回才能编辑）**：前端 sampleBomLocked（查 /style/info/{id} 的 bomCompletedTime）→ 顶部 Alert「物料清单已完成·采购数据已锁定」+ 编辑面辅料按钮 disabled + 行内编辑/删除 disabled 带 tooltip；后端双路径防御 MaterialPurchaseOrchestrator.assertSamplePurchaseEditable（sourceType=sample 且 bomCompletedTime 非空 → 抛异常），覆盖 save/update/delete/batch 四入口（update/delete 以 DB 记录为准防伪造参数；batch 已有行按 DB 查询校验、新行按传入值校验）
+- [x] **采购单据存档模块（上传图片统一存放查看）**：① 修复 DB 存 60 分钟预签名 URL 过期问题——recognizeDoc 改存 COS 对象键（purchase-docs/uuid.ext），listDocs/replaySavedDoc 查询时 resolveDocImageUrl 实时刷新签名（历史过期 URL 自动提取 purchase-docs/ 路径重新签名）② 前端新组件 PurchaseDocListModal.tsx（网格展示历史单据图、上传人/时间/识别匹配数 Tag，Image.PreviewGroup 大图预览）③ MaterialPurchaseDetail 头部新增「采购单据」按钮（有 orderNo 时显示）
+- [x] 编译修复：sizeUsageDetail 误调 MaterialPurchaseOrchestratorHelper（方法实际在 MaterialPurchaseServiceHelper）→ Orchestrator 注入 serviceHelper 改正调用
+- [x] 编译验证：mvn compile 通过 + npx tsc --noEmit 0 errors（本会话 shell PATH 损坏需先 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"）
+
+### 2026-08-22 ★★ 全系统加/删操作按钮统一 CircleIconButton（蓝色圆形+ / 红色圆形-）✅（tsc 0 errors，待推送）
+
+- [x] **用户核心诉求**：所有弹窗/页面的添加、删除操作按钮全部统一为 + 号（蓝色圆形）和 - 号（红色圆形）图标按钮；Tag 标签删除统一红色圆形-号；参照用户提供的图片样式执行
+- [x] **新通用组件 CircleIconButton.tsx**（frontend/src/components/common/）：`type='add'`（蓝底白+号）/`type='remove'`（红底白-号），支持 size/loading/disabled/stopPropagation；导出 `TagMinusCloseIcon`（Tag 内嵌红色-号关闭图标，用法 `<Tag closable closeIcon={<TagMinusCloseIcon />}>`）
+- [x] **P0 样衣详情颜色/码数（StyleColorSizeTable.tsx）**：颜色/码数 Tag 删除改 TagMinusCloseIcon；"新增颜色/码数"文字按钮改输入框旁蓝色圆形+号（size 22）
+- [x] **P0 属性组库（AttributeGroupLibraryModal.tsx）**：组合卡片删除改红色圆形-号；成员（颜色/码数）添加改蓝色圆形+号；成员 Tag 删除改 TagMinusCloseIcon
+- [x] **P0 字典/客户/供应商维护（QuickManageModal.tsx）**：左侧列表"新增"改蓝色圆形+号；右侧编辑区"删除"改红色圆形-号（保留 Popconfirm）
+- [x] **P1 裁剪下单明细（OrderLinesCard.tsx）**：新增一行/颜色/码数添加/行删除全改 +/- 圆形按钮；颜色码数 Tag 关闭改 TagMinusCloseIcon
+- [x] **P2 其余 10+ 文件统一**：ItemsManageModal（物料卡颜色添加）、ShipDetailTable（出货明细行）、SyncProcessPriceModal + useProcessPriceColumns（尺码添加）、ProcessInlineTable（尺码 Tag+添加）、StyleSizeToolbar（新增分组）、FreeInboundModal（无采购单入库 SKU 添加/删除）、QrcodeOutboundModal（扫码出库添加/移除）、CuttingFreeBundlePanel（自由菲号添加行/删除行）、CuttingWorkflowEditorModal（工序行新增/删除，"新增工序行"虚线块改 +号+提示文字）
+- [x] **修复隐患**：① QrcodeOutboundModal 使用了 CircleIconButton 但缺 import（会编译失败）→ 补导入并清理未用的 DeleteOutlined/PlusOutlined ② CircleIconButton 原为普通 React.FC 不接收 ref——被 Tooltip/Popconfirm/Dropdown 包裹时（如 AttributeGroupLibraryModal"删除组合"外层显式 Tooltip）antd 注入的 ref 落空 → 弹层定位失效 + dev 警告；改为 React.forwardRef<HTMLButtonElement>（ref 挂内部 Button，rc-trigger cloneElement 会 composeRef 合并，内外层均能拿到 DOM），所有包裹场景一次性根治
+- [x] **逻辑自查通过项**：Tag closable 受控场景（StyleColorSizeTable/AttributeGroupLibraryModal 的 onClose 有 e.preventDefault() 防 antd 自动隐藏；OrderLinesCard 无 preventDefault 但 state 移除后重渲染即消失）；Popconfirm 包 disabled 按钮时点击不弹确认（符合预期）；表头内删除按钮（useProcessPriceColumns）带 stopPropagation 防触发表头排序/拖拽；Input suffix 内 18px 添加按钮与 onPressEnter 双入口均可添加
+- [x] 编译验证：npx tsc --noEmit 0 errors（test-runner-mcp 本会话不可用，按 P0 #23 降级规则用原生命令；注意本会话 shell PATH 损坏需先 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"）
+- [x] 遗留说明：SyncProcessPriceModal 两个相邻+号功能不同（添加工序/添加尺码），保留"添加工序"文字按钮区分功能，仅尺码添加改图标
+
+### 2026-08-22 ★ 订单详情布局规整 + 工序跟踪筛选精确匹配 + 订单管理入库弹窗只读 ✅（1a576d345 已推送，CI部署中）
+
+- [x] **订单详情顶部布局重构（OrderBasicInfoCard.tsx）**：弃用松散 grid，改四栏分区（订单图片 | 基本信息 | 颜色/尺码/商品编码 | 生产统计+计划时间），每区带 SectionTitle 小标题 + Descriptions bordered（label 定宽 88 右对齐），对齐样衣详情页规整风格；解决"订单号/款号/款名/加工厂/状态/统计挤成一片"问题
+- [x] **订单图片计数矛盾（OrderImageManager/index.tsx）**："(0/5)共2张" 双口径混显 → 统一"共 X 张（含封面）（含款式图 Y 张）"，上传区文案改"订单图还可上传 N 张（封面/款式图自动带出，不占额度）"
+- [x] **工序跟踪筛选混串（processTrackingFilter.ts）**：点"剪线"子节点显示整烫/质检全混进来 → 新增 stripProcessSeqPrefix（"03 剪线"→"剪线"归一化）+ isSpecificProcessName（判断筛选名是具体工序而非节点名）；matchesFilter 中具体工序筛选优先于 processList 分支，只精确匹配该工序记录
+- [x] **订单管理入库弹窗只读化（InspectionDetail + InspectDrawer）**：入库已独立至成品仓模块 → InspectionDetailProps 新增 readOnly；readOnly 下隐藏入库按钮（InspectionHeader onWarehouse 改可选）/质检操作卡（InspectFormPanel）/入库操作抽屉（WarehousingActionPanel）/批量不合格弹窗，tab 顺序入库进度优先、默认 tab=orderLines，顶部 Alert 引导"操作请往 成品仓→质检入库"；InspectDrawer 传 readOnly + 标题改"入库进度 / 质检记录（只读）"；列表入库单元格 tooltip 改"点击查看入库进度 / 质检记录"。App 路由页与 WarehousingList 入口不受影响（保持可操作）
+- [x] 编译验证：tsc --noEmit 0 errors（修 f3 遗留 TS2339：ProcessListItem 无 label/title，用类型断言兼容）；safe-push hook 全过；9 文件 +245/-156
 
 ### 2026-08-22 ★★ 全链路实时刷新 data:changed 广播全覆盖 + 样衣采购防重复生成 ✅（tsc 0 errors + mvn compile 通过，待推送）
 

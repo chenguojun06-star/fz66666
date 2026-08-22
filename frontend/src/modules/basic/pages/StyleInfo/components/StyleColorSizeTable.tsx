@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, InputNumber, Space, Tag, Tooltip } from 'antd';
+import { App, Button, InputNumber, Tag, Tooltip } from 'antd';
 import { ArrowDownOutlined, ArrowUpOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { getSizeWeight, sortBySize } from '@/utils/sizeOrder';
 
@@ -307,6 +308,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               <Tag
                 key={color}
                 closable={!editLocked && !isFieldLocked(color)}
+                closeIcon={<TagMinusCloseIcon />}
                 onClose={(e) => {
                   e.preventDefault();
                   removeColor(color);
@@ -340,10 +342,10 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </Tag>
             ))}
             {!editLocked ? (
-              <Space.Compact>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <DictAutoComplete
                   dictType="color"
-                 
+
                   value={quickColorDraft}
                   onChange={(value) => setQuickColorDraft(String(value || ''))}
                   onSelect={(value) => setQuickColorDraft(String(value || ''))}
@@ -356,10 +358,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   style={{ width: 96 }}
                   placeholder="新增颜色"
                 />
-                <Button onClick={() => addColor(quickColorDraft)}>
-                  确定
-                </Button>
-              </Space.Compact>
+                <CircleIconButton type="add" size={22} title="添加颜色" onClick={() => addColor(quickColorDraft)} />
+              </div>
             ) : null}
           </div>
         </div>
@@ -371,6 +371,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               <Tag
                 key={size}
                 closable={!editLocked && !isFieldLocked(size)}
+                closeIcon={<TagMinusCloseIcon />}
                 onClose={(e) => {
                   e.preventDefault();
                   removeSize(size);
@@ -453,10 +454,10 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </span>
             )}
             {!editLocked ? (
-              <Space.Compact>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <DictAutoComplete
                   dictType="size"
-                 
+
                   value={quickSizeDraft}
                   onChange={(value) => setQuickSizeDraft(String(value || ''))}
                   onSelect={(value) => setQuickSizeDraft(String(value || ''))}
@@ -469,10 +470,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   style={{ width: 96 }}
                   placeholder="新增码数"
                 />
-                <Button onClick={() => addSize(quickSizeDraft)}>
-                  确定
-                </Button>
-              </Space.Compact>
+                <CircleIconButton type="add" size={22} title="添加码数" onClick={() => addSize(quickSizeDraft)} />
+              </div>
             ) : null}
           </div>
         </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Checkbox, Dropdown, Input, Tag } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import { STAGE_ORDER } from '@/utils/productionStage';
 import { useProcessInlineTableData } from './useProcessInlineTableData';
 import { buildProcessColumns } from './columns';
@@ -77,7 +78,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>尺码</span>
             {templateSizes.map((size) => (
-              <Tag key={size} closable={!readOnly} onClose={() => onRemoveSize(size)} style={{ marginInlineEnd: 0 }}>
+              <Tag key={size} closable={!readOnly} closeIcon={<TagMinusCloseIcon />} onClose={() => onRemoveSize(size)} style={{ marginInlineEnd: 0 }}>
                 {size}
               </Tag>
             ))}
@@ -90,7 +91,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                   onPressEnter={onAddSize}
                   style={{ width: compact ? 96 : 120 }}
                 />
-                <Button type="primary" onClick={onAddSize}>添加</Button>
+                <CircleIconButton type="add" size={22} title="添加尺码" onClick={onAddSize} />
               </>
             )}
           </div>

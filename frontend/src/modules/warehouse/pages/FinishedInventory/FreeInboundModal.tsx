@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import CircleIconButton from '@/components/common/CircleIconButton';
+import { InboxOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
 import { safePrint } from '@/utils/safePrint';
@@ -260,7 +261,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
     {
       title: '', key: 'action', width: 40,
       render: (_: unknown, record: InboundItem) => (
-        <Button type="text" danger size="small" icon={<DeleteOutlined />}
+        <CircleIconButton type="remove" size={22} title="移除此项"
           onClick={() => setItems(prev => prev.filter(i => i.key !== record.key))} />
       ),
     },
@@ -286,10 +287,10 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       <Space vertical style={{ width: '100%' }} size={16}>
         <div>
           <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>添加商品编码</div>
-          <Space.Compact style={{ width: '100%' }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', width: '100%' }}>
             <Input value={skuInput} onChange={e => setSkuInput(e.target.value)} placeholder="输入商品编码（款号-颜色-尺码），回车添加" onPressEnter={handleAddSku} size="large" allowClear />
-            <Button type="primary" size="large" icon={<PlusOutlined />} loading={querying} onClick={handleAddSku}>添加</Button>
-          </Space.Compact>
+            <CircleIconButton type="add" size={32} title="添加" loading={querying} onClick={handleAddSku} />
+          </div>
         </div>
 
         {showCreateFields && (

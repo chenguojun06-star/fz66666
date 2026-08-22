@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { App, Button, InputNumber, Popconfirm, Select, Spin, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { productionOrderApi } from '@/services/production/productionApi';
 import { STAGE_ORDER } from '@/utils/productionStage'; // 行业标准：工序只含4个生产工序（裁剪/二次工艺/车缝/尾部）
@@ -267,7 +267,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       width: 50,
       render: (_: any, row: WorkflowRow) => (
         <Popconfirm title="删除此工序行？" description="删除后需重新录入工价、工时等数据" onConfirm={() => setRows(prev => prev.filter(r => r._key !== row._key))} okText="删除" cancelText="取消" okButtonProps={{ danger: true }}>
-          <Button type="text" danger icon={<DeleteOutlined />} disabled={rows.length <= 1} />
+          <CircleIconButton type="remove" size={22} title="删除此行" disabled={rows.length <= 1} />
         </Popconfirm>
       ),
     },
@@ -291,10 +291,9 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       }
     >
       <Spin spinning={loading}>
-        <div style={{ marginBottom: 12 }}>
-          <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} block>
-            新增工序行
-          </Button>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CircleIconButton type="add" size={24} title="新增工序行" onClick={handleAddRow} />
+          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>点击 + 号新增工序行</span>
         </div>
         <ResizableTable<WorkflowRow>
           storageKey="cutting-workflow-table"

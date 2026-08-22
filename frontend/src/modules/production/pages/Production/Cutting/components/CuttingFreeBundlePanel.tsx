@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AutoComplete, Button, Dropdown, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import CircleIconButton from '@/components/common/CircleIconButton';
 
 const { Text } = Typography;
 
@@ -132,9 +132,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
           trigger={['hover']}
           disabled={disabled}
         >
-          <Button icon={<PlusOutlined />} disabled={disabled}>
-            添加行
-          </Button>
+          <CircleIconButton type="add" size={24} title="添加行" disabled={disabled} />
         </Dropdown>
       </div>
 
@@ -215,13 +213,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     </td>
                     <td style={{ padding: '6px 12px', textAlign: 'center' }}>
                       <Popconfirm title="确定删除此行吗？" onConfirm={() => deleteRow(row.key)} okText="确定" cancelText="取消">
-                        <Button
-                          type="text"
-                          danger
-
-                          icon={<DeleteOutlined />}
-                          disabled={disabled}
-                        />
+                        <CircleIconButton type="remove" size={22} title="删除此行" disabled={disabled} />
                       </Popconfirm>
                     </td>
                   </tr>

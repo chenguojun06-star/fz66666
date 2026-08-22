@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Select, Space, Typography } from 'antd';
-import { DeleteOutlined, PlusOutlined, ScanOutlined } from '@ant-design/icons';
+import { ScanOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import api, { type ApiResult } from '@/utils/api';
 import CustomerInfoSection from './CustomerInfoSection';
 
@@ -244,10 +245,10 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       key: 'action',
       width: 70,
       render: (_: unknown, record: QrcodeItem) => (
-        <Button
-          type="link"
-          danger
-          icon={<DeleteOutlined />}
+        <CircleIconButton
+          type="remove"
+          size={22}
+          title="移除此项"
           onClick={() => handleRemove(record.key)}
         />
       ),
@@ -281,7 +282,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       }
       destroyOnHidden
     >
-      <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center', width: '100%', marginBottom: 12 }}>
         <input
           ref={inputRef}
           value={inputVal}
@@ -293,17 +294,14 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
             height: 32,
             padding: '4px 11px',
             border: '1px solid var(--color-border-antd)',
-            borderRight: 'none',
-            borderRadius: '6px 0 0 6px',
+            borderRadius: 6,
             outline: 'none',
             fontSize: 14,
           }}
           autoFocus
         />
-        <Button icon={<PlusOutlined />} loading={adding} onClick={() => void handleAdd()} style={{ borderRadius: '0 6px 6px 0' }}>
-          添加
-        </Button>
-      </Space.Compact>
+        <CircleIconButton type="add" size={32} title="添加" loading={adding} onClick={() => void handleAdd()} />
+      </div>
 
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>
         二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 商品编码、颜色、码数、当前库存及库位，再填写本次要出库的数量。

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Empty, Input, Modal, Space, Spin, Tabs, Tag } from 'antd';
+import { App, Button, Empty, Input, Modal, Space, Spin, Tabs, Tag, Tooltip } from 'antd';
+import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import api from '@/utils/api';
 import { clearApiCache } from '@/utils/api/core';
 
@@ -309,12 +311,12 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
             <Button size="small" onClick={() => handleApply(group, 'append')}>
               追加
             </Button>
-            <Button size="small" onClick={() => openEditor(group)}>
-              编辑
-            </Button>
-            <Button size="small" danger onClick={() => handleDelete(group)}>
-              删除
-            </Button>
+            <Tooltip title="编辑组合">
+              <Button size="small" icon={<EditOutlined />} onClick={() => openEditor(group)} />
+            </Tooltip>
+            <Tooltip title="删除组合">
+              <CircleIconButton type="remove" size={22} onClick={() => handleDelete(group)} />
+            </Tooltip>
           </Space>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -349,7 +351,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
           <span style={{ fontWeight: 600 }}>
             {activeType.itemLabel}成员（{editor.values.length} 个，按添加顺序应用）
           </span>
-          <Space.Compact>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <DictAutoComplete
               dictType={activeType.itemDictType}
               autoCollect={false}
@@ -365,11 +367,11 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
               style={{ flex: 1, minWidth: 200 }}
               placeholder={`输入或选择${activeType.itemLabel}后回车`}
             />
-            <Button onClick={addItem}>添加</Button>
-          </Space.Compact>
+            <CircleIconButton type="add" size={24} title={`添加${activeType.itemLabel}`} onClick={addItem} />
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
             {editor.values.map((value) => (
-              <Tag key={value} closable onClose={(e) => { e.preventDefault(); removeItem(value); }} style={{ margin: 0 }}>
+              <Tag key={value} closable closeIcon={<TagMinusCloseIcon />} onClose={(e) => { e.preventDefault(); removeItem(value); }} style={{ margin: 0 }}>
                 {value}
               </Tag>
             ))}
@@ -423,14 +425,14 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
         <div style={{ display: 'grid', gap: 10, maxHeight: 420, overflowY: 'auto', padding: '4px 2px' }}>
           {currentGroups.length ? (
             <>
-              <Button type="dashed" block onClick={() => openEditor()}>
-                + 新增{activeType.tabLabel}
+              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => openEditor()}>
+                新增{activeType.tabLabel}
               </Button>
               {currentGroups.map(renderGroupCard)}
             </>
           ) : (
             <Empty description={`暂无${activeType.tabLabel}`}>
-              <Button type="primary" onClick={() => openEditor()}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>
                 新增{activeType.tabLabel}
               </Button>
             </Empty>

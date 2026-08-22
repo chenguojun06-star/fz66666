@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Empty, Input, Popconfirm, Spin, Tag, Tooltip } from 'antd';
-import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined, SaveOutlined, SyncOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, SaveOutlined, SyncOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import factoryApi from '@/services/system/factoryApi';
 import { customerApi } from '@/services/crm/customerApi';
 import { notifyDataUpdated } from '@/utils/dataEvents';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import ResizableModal from './ResizableModal';
 
 export type QuickManageMode = 'dict' | 'customer' | 'supplier';
@@ -288,16 +289,8 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             <Tooltip title="刷新列表">
               <Button size="small" icon={<SyncOutlined />} onClick={loadList} loading={loading} />
             </Tooltip>
+            <CircleIconButton size={24} type="add" title={`新增${meta.defaultTitle}`} onClick={startCreate} />
           </div>
-          <Button
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={startCreate}
-            block
-            style={{ marginBottom: 10 }}
-          >
-            新增{meta.defaultTitle}
-          </Button>
           <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
             共 <Tag color="blue" style={{ marginInlineEnd: 0 }}>{rows.length}</Tag> {meta.unit}，点击左侧条目在右侧编辑
           </div>
@@ -384,7 +377,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                   cancelText="取消"
                   onConfirm={handleDelete}
                 >
-                  <Button danger icon={<DeleteOutlined />}>删除</Button>
+                  <CircleIconButton size={24} type="remove" title="删除此项" />
                 </Popconfirm>
               </div>
               <div style={FIELD_ROW_STYLE}>
@@ -417,7 +410,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
           ) : (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={`点击左侧条目进行编辑，或点「新增${meta.defaultTitle}」创建`}
+              description={`点击左侧条目进行编辑，或点左上方 + 号新增${meta.defaultTitle}`}
               style={{ marginTop: 60 }}
             />
           )}

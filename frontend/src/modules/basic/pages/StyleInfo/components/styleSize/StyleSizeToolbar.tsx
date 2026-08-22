@@ -6,6 +6,7 @@ import api from '@/utils/api';
 import logger from '@/utils/logger';
 import { TemplateLibrary } from '@/types/style';
 import ResizableModal from '@/components/common/ResizableModal';
+import CircleIconButton from '@/components/common/CircleIconButton';
 
 interface Props {
   editMode: boolean;
@@ -208,7 +209,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
           trigger="click"
           placement="bottom"
           content={
-            <Space.Compact style={{ width: 220 }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', width: 220 }}>
               <Input
                 placeholder="如：上装区 / 下装区"
                 value={newGroupName}
@@ -216,8 +217,8 @@ const StyleSizeToolbar: React.FC<Props> = ({
                 onPressEnter={confirmAddGroup}
                 style={{ width: 160 }}
               />
-              <Button type="primary" onClick={confirmAddGroup}>确定</Button>
-            </Space.Compact>
+              <CircleIconButton type="add" size={22} title="添加分组" onClick={confirmAddGroup} />
+            </div>
           }
         >
           <Button disabled={loading || saving || isReadonly}>新增分组</Button>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { AutoComplete, InputNumber, Button, Tooltip } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { AutoComplete, InputNumber, Tooltip } from 'antd';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import { thStyle, tdEditStyle } from './styles';
 import type { ShipDetailItem } from '@/services/production/factoryShipmentApi';
 import type { ProductionOrder } from '@/types/production';
@@ -117,10 +117,10 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
                       })}
                       <td style={{ ...tdEditStyle, fontWeight: 600, textAlign: 'center' }}>{colorSubtotal}</td>
                       <td style={tdEditStyle}>
-                        <Button
-                          type="text"
-                          icon={<DeleteOutlined />}
-                          danger
+                        <CircleIconButton
+                          type="remove"
+                          size={22}
+                          title="删除此颜色行"
                           onClick={() => {
                             const indices = shipDetails
                               .map((d, i) => d.color === (colorKey === '__blank__' ? '' : colorKey) ? i : -1)
@@ -157,29 +157,29 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
                 onChange={v => updateRow(idx, 'quantity', v ?? 0)}
                 style={{ width: 100 }}
               />
-              <Button type="text" icon={<DeleteOutlined />} danger onClick={() => removeRow(idx)} />
+              <CircleIconButton type="remove" size={22} title="删除此行" onClick={() => removeRow(idx)} />
             </div>
           ))}
         </div>
       )}
-      <Button
-        type="dashed"
-        icon={<PlusOutlined />}
-        style={{ marginTop: 8 }}
-        onClick={() => {
-          if (hasShipSizes) {
-            const newColor = '';
-            onShipDetailsChange([
-              ...shipDetails,
-              ...allSizes.map(sz => ({ color: newColor, sizeName: sz, quantity: 0 })),
-            ]);
-          } else {
-            addRow();
-          }
-        }}
-      >
-        添加颜色行
-      </Button>
+      <div style={{ marginTop: 8 }}>
+        <CircleIconButton
+          type="add"
+          size={24}
+          title="添加颜色行"
+          onClick={() => {
+            if (hasShipSizes) {
+              const newColor = '';
+              onShipDetailsChange([
+                ...shipDetails,
+                ...allSizes.map(sz => ({ color: newColor, sizeName: sz, quantity: 0 })),
+              ]);
+            } else {
+              addRow();
+            }
+          }}
+        />
+      </div>
     </>
   );
 };

@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { Button, Input, Popover, Space, Spin, Tooltip, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import {
   CloudSyncOutlined,
   DeleteOutlined,
@@ -98,16 +99,16 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
               open={addSizePopoverOpen}
               onOpenChange={setAddSizePopoverOpen}
               content={
-                <div style={{ display: 'flex', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                   <Input
-                   
+
                     placeholder="尺码名"
                     value={newSizeName}
                     onChange={(e) => setNewSizeName(e.target.value)}
                     onPressEnter={handleAddSize}
                     style={{ width: 80 }}
                   />
-                  <Button type="primary" onClick={handleAddSize}>添加</Button>
+                  <CircleIconButton type="add" size={22} title="添加尺码" onClick={handleAddSize} />
                 </div>
               }
               trigger="click"

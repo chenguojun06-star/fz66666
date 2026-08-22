@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Card, Input, InputNumber, Popconfirm, Space, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import type { CuttingCreateTaskState } from '../hooks';
 import { useMatrixInput } from './useMatrixInput';
 
@@ -15,7 +15,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
     <Card style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 50 }}>下单明细</span>
-        <Button type="dashed" onClick={createTask.addCreateOrderLine}>新增一行</Button>
+        <CircleIconButton type="add" size={24} title="新增一行" onClick={createTask.addCreateOrderLine} />
       </div>
 
       {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
@@ -26,18 +26,19 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
             key={c}
             closable
             color="blue"
+            closeIcon={<TagMinusCloseIcon />}
             style={{ fontSize: 14, margin: 0 }}
             onClose={() => matrix.removeMatrixColor(c)}
           >{c}</Tag>
         ))}
         <Input
 
-          style={{ width: 88 }}
+          style={{ width: 104 }}
           placeholder="输入颜色"
           value={matrix.colorInput}
           onChange={(e) => matrix.setColorInput(e.target.value)}
           onPressEnter={matrix.addMatrixColor}
-          suffix={<PlusOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={matrix.addMatrixColor} />}
+          suffix={<CircleIconButton type="add" size={18} title="添加颜色" onClick={matrix.addMatrixColor} />}
         />
         <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', flexShrink: 0, marginLeft: 8 }}>码数</span>
         {matrix.matrixSizes.map((s) => (
@@ -45,18 +46,19 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
             key={s}
             closable
             color="blue"
+            closeIcon={<TagMinusCloseIcon />}
             style={{ fontSize: 14, margin: 0 }}
             onClose={() => matrix.removeMatrixSize(s)}
           >{s}</Tag>
         ))}
         <Input
 
-          style={{ width: 88 }}
+          style={{ width: 104 }}
           placeholder="输入码数"
           value={matrix.sizeInput}
           onChange={(e) => matrix.setSizeInput(e.target.value)}
           onPressEnter={matrix.addMatrixSize}
-          suffix={<PlusOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={matrix.addMatrixSize} />}
+          suffix={<CircleIconButton type="add" size={18} title="添加码数" onClick={matrix.addMatrixSize} />}
         />
         {matrix.matrixColors.length > 0 && matrix.matrixSizes.length > 0 && (
           <Button type="primary" onClick={matrix.handleMatrixImport} style={{ marginLeft: 4 }}>
@@ -92,13 +94,12 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
               onChange={(value) => createTask.updateCreateOrderLine(index, 'quantity', typeof value === 'number' ? value : null)}
             />
             <Popconfirm title="确定删除此行吗？" onConfirm={() => createTask.removeCreateOrderLine(index)} okText="确定" cancelText="取消">
-              <Button
-
-                danger
+              <CircleIconButton
+                type="remove"
+                size={24}
+                title="删除此行"
                 disabled={createTask.createOrderLines.length <= 1}
-              >
-                删除
-              </Button>
+              />
             </Popconfirm>
           </Space>
         ))}

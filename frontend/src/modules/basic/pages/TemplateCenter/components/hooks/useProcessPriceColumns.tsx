@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { InputNumber, Modal, Select } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { toNumberSafe } from '@/utils/api';
 
@@ -155,10 +155,12 @@ export default function useProcessPriceColumns(
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <span>{size}码</span>
           {editable && (
-            <DeleteOutlined
-              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 14 }}
-              onClick={(event) => {
-                event.stopPropagation();
+            <CircleIconButton
+              type="remove"
+              size={16}
+              title={`删除"${size}"码`}
+              stopPropagation
+              onClick={() => {
                 Modal.confirm({
                   width: '30vw',
                   title: `确定删除"${size}"码？`,

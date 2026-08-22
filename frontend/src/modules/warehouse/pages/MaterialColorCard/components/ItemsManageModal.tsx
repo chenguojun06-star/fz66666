@@ -2,11 +2,12 @@ import React from 'react';
 import {
   Button, Space, Tag, Input, InputNumber, Modal,
 } from 'antd';
-import { AppstoreAddOutlined, PlusOutlined } from '@ant-design/icons';
+import { AppstoreAddOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import CircleIconButton from '@/components/common/CircleIconButton';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
 import type { MaterialColorCard, MaterialColorCardItem } from '../types';
@@ -156,7 +157,7 @@ const ItemsManageModal: React.FC<Props> = ({
     >
       <div>
         <Space style={{ marginBottom: 12 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={onAddEmptyItem}>+ 添加颜色</Button>
+          <CircleIconButton type="add" size={24} title="添加颜色" onClick={onAddEmptyItem} />
           <span style={{ color: 'var(--color-text-tertiary)' }}>共 {currentItems.length} 条</span>
           <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>规格/成分/幅宽继承自母卡</span>
         </Space>
@@ -167,7 +168,7 @@ const ItemsManageModal: React.FC<Props> = ({
           size="small"
           scroll={{ x: 1080 }}
           pagination={false}
-          emptyDescription="暂无颜色条目，点击「+ 添加颜色」开始录入"
+          emptyDescription="暂无颜色条目，点击左上方 + 号新增颜色"
         />
       </div>
     </ResizableModal>
