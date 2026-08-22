@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, InputNumber, Tag, Tooltip } from 'antd';
 import { ArrowDownOutlined, ArrowUpOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
+import { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { getSizeWeight, sortBySize } from '@/utils/sizeOrder';
 
@@ -342,24 +342,25 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </Tag>
             ))}
             {!editLocked ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <DictAutoComplete
-                  dictType="color"
+              <DictAutoComplete
+                dictType="color"
 
-                  value={quickColorDraft}
-                  onChange={(value) => setQuickColorDraft(String(value || ''))}
-                  onSelect={(value) => setQuickColorDraft(String(value || ''))}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      addColor(quickColorDraft);
-                    }
-                  }}
-                  style={{ width: 96 }}
-                  placeholder="新增颜色"
-                />
-                <CircleIconButton type="add" size={22} title="添加颜色" onClick={() => addColor(quickColorDraft)} />
-              </div>
+                value={quickColorDraft}
+                onChange={(value) => setQuickColorDraft(String(value || ''))}
+                onSelect={(value) => {
+                  // 从下拉选中即新增（免按钮；手动输入则回车新增）
+                  const v = String(value || '').trim();
+                  if (v) addColor(v);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addColor(quickColorDraft);
+                  }
+                }}
+                style={{ width: 96 }}
+                placeholder="选或输入后回车新增"
+              />
             ) : null}
           </div>
         </div>
@@ -454,24 +455,25 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </span>
             )}
             {!editLocked ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <DictAutoComplete
-                  dictType="size"
+              <DictAutoComplete
+                dictType="size"
 
-                  value={quickSizeDraft}
-                  onChange={(value) => setQuickSizeDraft(String(value || ''))}
-                  onSelect={(value) => setQuickSizeDraft(String(value || ''))}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      addSize(quickSizeDraft);
-                    }
-                  }}
-                  style={{ width: 96 }}
-                  placeholder="新增码数"
-                />
-                <CircleIconButton type="add" size={22} title="添加码数" onClick={() => addSize(quickSizeDraft)} />
-              </div>
+                value={quickSizeDraft}
+                onChange={(value) => setQuickSizeDraft(String(value || ''))}
+                onSelect={(value) => {
+                  // 从下拉选中即新增（免按钮；手动输入则回车新增）
+                  const v = String(value || '').trim();
+                  if (v) addSize(v);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addSize(quickSizeDraft);
+                  }
+                }}
+                style={{ width: 96 }}
+                placeholder="选或输入后回车新增"
+              />
             ) : null}
           </div>
         </div>

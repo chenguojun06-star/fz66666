@@ -144,7 +144,11 @@ span.ant-input-data-count {
    否则多行文本域会被压成一行，占位/计数文字溢出框外）
    ============================================ */
 
-.ant-input-affix-wrapper,
+/* ★ 排除 textarea-affix-wrapper：Input.TextArea + showCount 在 antd v6 也用
+     .ant-input-affix-wrapper 类。若一并压成 32px 固定高，多行 textarea（rows=3 ≈ 70px）
+     会溢出框外，视觉上盖住下一行字段（创建/完成时间、交板日期），且拖拽拉伸时
+     外框不变高、看起来"拉不动"。 */
+.ant-input-affix-wrapper:not(.ant-input-textarea-affix-wrapper),
 .ant-input-number,
 .ant-select-selector,
 .ant-picker,

@@ -80,7 +80,7 @@ const CircleIconButton = React.forwardRef<HTMLButtonElement, CircleIconButtonPro
 });
 CircleIconButton.displayName = 'CircleIconButton';
 
-interface TagMinusCloseIconProps {
+interface TagMinusCloseIconProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** 直径 px，默认 14 */
   size?: number;
 }
@@ -88,10 +88,17 @@ interface TagMinusCloseIconProps {
 /**
  * Tag 内嵌红色-号删除图标（与 CircleIconButton remove 同风格）
  * 用法：<Tag closable closeIcon={<TagMinusCloseIcon />}>...</Tag>
+ *
+ * ★ 必须透传 antd v6 注入的 props（onClick / className / style 等）：
+ *   antd v6 Tag 通过 replaceElement(cloneElement) 把关闭点击处理器直接注入
+ *   closeIcon 元素本身（不再包一层 .ant-tag-close-icon span）。若此处不透传，
+ *   点击处理器会被静默丢弃 → 删除按钮点了没反应（P0级交互bug）。
  */
-export const TagMinusCloseIcon: React.FC<TagMinusCloseIconProps> = ({ size = 14 }) => (
+export const TagMinusCloseIcon: React.FC<TagMinusCloseIconProps> = ({ size = 14, style, ...restProps }) => (
   <span
+    {...restProps}
     style={{
+      ...style,
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
