@@ -7,7 +7,7 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-22 ★★★ 四问题批量修复（用户强烈反馈"优化好久没处理好"）✅（mvn compile + tsc + eslint 全通过，待推送）
+### 2026-08-22 ★★★ 四问题批量修复（用户强烈反馈"优化好久没处理好"）✅已推送（981ac6c43 + cfc09cc48 + 25724ce05，safe-push 10/10 通过）
 
 - [x] **问题1 库位详情表布局挤成一团**：根因=三种表（物料5列/样衣5列/成品6列）共用同一个6列grid模板（80px 60px 60px 1fr 80px 80px），5列表套6列模板错位+60px列宽显示不全。修复=WarehouseLocationMap.css 三表独立grid模板（--material/--sample/--finished修饰类，fr比例分配）+LocationDetailDrawer.tsx 加title悬浮提示完整内容
 - [x] **问题2 库位数据同步核实**：代码层面核实——样衣仓→t_sample_stock实时查✅物料仓→t_material_stock实时查✅（与实际库存直接同步）；**发现真bug：成品仓库位明细SKU匹配时显示ProductSku.stockQuantity（全局库存）而非库位剩余remainingQty**，同一SKU多库位存放会重复计数且与出库不符。已修复WarehouseLocationOrchestrator.java L571：stockQuantity=remainingQty，新增skuTotalQuantity字段
