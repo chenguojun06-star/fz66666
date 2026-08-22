@@ -30,17 +30,19 @@ export interface WashLabelPrintData {
   styleNo?: string;
   /** 距剪口偏移（mm），内容从此处开始打印；默认 0（兼容旧调用） */
   topOffsetMm?: number;
-  /** 全局字体缩放（0.5~1.6，默认 1）：手动微调整体字号；自动适配保证不截断 */
+  /** 全局字体缩放（0.5~1.6，默认 1）：用户自由调整字号，直接生效 */
   fontScale?: number;
+  /** 行距/上下间距缩放（0.7~1.8，默认 1）：用户自由调整行与行之间、各分区上下之间的距离 */
+  lineHeightScale?: number;
 }
 
 const PT_TO_MM = 0.3528;
-/** 行高系数：正文（成份/洗涤文字） */
-const LH_BODY = 1.5;
+/** 行高系数：正文（成份/洗涤文字）——压缩到1.32，把省下的高度让给字号，字更大 */
+const LH_BODY = 1.32;
 /** 行高系数：码数/款号/制造（紧凑行） */
-const LH_TIGHT = 1.3;
-/** 字号下限（pt）：再小就打印看不清了，宁可内容挤也不允许小于此值 */
-const MIN_FONT_PT = 4;
+const LH_TIGHT = 1.2;
+/** 字号下限（pt）：保证可读性，一律不小于此值，绝不压到看不清 */
+const MIN_FONT_PT = 5.5;
 /** 图标绝对下限（mm）：仅防止 0 尺寸，"一排装得下"永远优先于图标大小 */
 const MIN_ICON_MM = 0.5;
 
@@ -103,46 +105,52 @@ function estimateLineCount(text: string, fsPt: number, availWidthMm: number): nu
   return total;
 }
 
-/** 各分区之间的垂直间距合计（mm），与 CSS 中 margin-top 对应 */
-const GAP_SIZE_TO_STYLE = 1;      // 码数 → 款号
-const GAP_STYLE_TO_COMP = 1.5;    // 款号 → 成份
-const GAP_COMP_TO_ICONS = 1.5;    // 成份 → 图标
-const GAP_ICONS_TO_WASH = 1;      // 图标 → 洗涤文字
-const GAP_WASH_TO_MFG = 1.5;      // 洗涤文字 → 制造
-const CONTENT_PAD_TOP = 1.5;      // content-block padding-top
+/**
+ * 各分区之间的垂直间距合计（mm），与 CSS 中 margin-top 对应。
+ * 统一为轻量间距：每分区之间留 0.7~0.8mm 明确空隙（不挤、清晰），
+ * 把省下的垂直空间让给字号。成份与下面的图标之间留 0.7mm（用户明确要求）。
+ */
+const GAP_SIZE_TO_STYLE = 0.8;    // 码数 → 款号
+const GAP_STYLE_TO_COMP = 0.8;    // 款号 → 成份
+const GAP_COMP_TO_ICONS = 0.7;    // 成份 → 图标（用户要求 ~0.7 间隔）
+const GAP_ICONS_TO_WASH = 0.8;    // 图标 → 洗涤文字
+const GAP_WASH_TO_MFG = 0.8;      // 洗涤文字 → 制造
+const CONTENT_PAD_TOP = 1;        // content-block padding-top
 
 /**
- * 估算当前字号下全部内容的高度（mm）。留 5% 安全余量（字体渲染差异、letter-spacing），
- * 宁可字号略小也不允许截断。
+ * 估算当前字号下全部内容的高度（mm）。留 5% 安全余量（字体渲染差异、letter-spacing）。
+ * lhScale：行距缩放，控制行与行之间、各分区的上下距离（用户自由调整）。
  */
 function estimateContentHeightMm(
-  data: WashLabelPrintData, fsPt: number, iconRowH: number, availWidthMm: number,
+  data: WashLabelPrintData, fsPt: number, iconRowH: number, availWidthMm: number, lhScale: number,
 ): number {
-  let h = CONTENT_PAD_TOP;
+  const lhT = LH_TIGHT * lhScale;
+  const lhB = LH_BODY * lhScale;
+  let h = CONTENT_PAD_TOP * lhScale;
   if (data.sizeText?.trim()) {
-    h += estimateLineCount(data.sizeText, fsPt, availWidthMm) * fsPt * LH_TIGHT * PT_TO_MM;
+    h += estimateLineCount(data.sizeText, fsPt, availWidthMm) * fsPt * lhT * PT_TO_MM;
   }
   if (data.styleNo?.trim()) {
-    h += GAP_SIZE_TO_STYLE;
-    h += estimateLineCount(data.styleNo, fsPt, availWidthMm) * fsPt * LH_TIGHT * PT_TO_MM;
+    h += GAP_SIZE_TO_STYLE * lhScale;
+    h += estimateLineCount(data.styleNo, fsPt, availWidthMm) * fsPt * lhT * PT_TO_MM;
   }
   if (data.compositionText?.trim()) {
-    h += GAP_STYLE_TO_COMP;
-    h += estimateLineCount(data.compositionText, fsPt, availWidthMm) * fsPt * LH_BODY * PT_TO_MM;
+    h += GAP_STYLE_TO_COMP * lhScale;
+    h += estimateLineCount(data.compositionText, fsPt, availWidthMm) * fsPt * lhB * PT_TO_MM;
   }
   if ((data.careIconCodes || []).length > 0) {
-    h += GAP_COMP_TO_ICONS + iconRowH;
+    h += GAP_COMP_TO_ICONS * lhScale + iconRowH;
   }
   if (data.washInstructionsText?.trim()) {
-    h += GAP_ICONS_TO_WASH;
-    h += estimateLineCount(data.washInstructionsText, fsPt, availWidthMm) * fsPt * LH_BODY * PT_TO_MM;
+    h += GAP_ICONS_TO_WASH * lhScale;
+    h += estimateLineCount(data.washInstructionsText, fsPt, availWidthMm) * fsPt * lhB * PT_TO_MM;
   }
   if (data.manufacturingText?.trim()) {
-    h += GAP_WASH_TO_MFG;
-    h += estimateLineCount(data.manufacturingText, fsPt, availWidthMm) * fsPt * LH_TIGHT * PT_TO_MM;
+    h += GAP_WASH_TO_MFG * lhScale;
+    h += estimateLineCount(data.manufacturingText, fsPt, availWidthMm) * fsPt * lhT * PT_TO_MM;
   }
   if (data.dateText?.trim()) {
-    h += 1 + estimateLineCount(data.dateText, fsPt, availWidthMm) * fsPt * LH_TIGHT * PT_TO_MM;
+    h += 1 * lhScale + estimateLineCount(data.dateText, fsPt, availWidthMm) * fsPt * lhT * PT_TO_MM;
   }
   return h * 1.05;
 }
@@ -166,10 +174,17 @@ function calcIconRowHeight(w: number, iconCount: number, fontScale: number): num
 }
 
 /**
+ * 字号跟随 fontScale 的下限系数：最多只做轻微防溢出收缩（缩到理想的 90%），
+ * 保证"字号滑块"真实生效——用户拖多大，字就多大；不像以前被无底线压小导致拖动无效。
+ * 行距(lineHeightScale)由用户独立控制，不参与字号收缩。
+ */
+const FONT_SHRINK_FLOOR = 0.9;
+
+/**
  * 计算最终字号（pt）：
- * 1. 基础字号 = 理想字号 × fontScale（用户手动缩放）
- * 2. 自动适配：从基础字号开始逐步缩小（每次 -0.5pt，下限 MIN_FONT_PT），
- *    直到估算内容高度 ≤ 可用高度——保证所有文字完整可见，永不截断
+ * 1. 基础字号 = 理想字号 × fontScale（用户手动缩放，直接生效）
+ * 2. 防溢出微调：仅当内容偏高时从基础字号轻微缩小（下限 = 理想字号×FONT_SHRINK_FLOOR），
+ *    保证字号基本跟随用户设置，同时避免内容被裁。
  * 多页批量打印时取所有页中最保守（最小）的适配字号，保证每一页都放得下。
  */
 function fitFontSize(items: WashLabelPrintData[]): number {
@@ -177,27 +192,43 @@ function fitFontSize(items: WashLabelPrintData[]): number {
   const w = first.width;
   const h = first.height;
   const fontScale = first.fontScale ?? 1;
-  const availH = h - Math.max(0, first.topOffsetMm ?? 0) - 2; // 扣除顶部偏移与底部安全距离
+  const lineHeightScale = first.lineHeightScale ?? 1;
+  const availH = h - Math.max(0, first.topOffsetMm ?? 0) - 1.5; // 扣除顶部偏移与底部安全距离
   const availW = w - H_PAD;
   const maxIconCount = Math.max(0, ...items.map(it => (it.careIconCodes || []).length));
   const iconRowH = calcIconRowHeight(w, maxIconCount, fontScale);
 
-  let fs = idealFontSize(w) * (fontScale || 1);
-  while (fs > MIN_FONT_PT) {
-    const worst = Math.max(...items.map(it => estimateContentHeightMm(it, fs, iconRowH, availW)));
+  const base = Math.round(idealFontSize(w) * fontScale * 10) / 10;
+  const floor = Math.max(MIN_FONT_PT, Math.round(idealFontSize(w) * FONT_SHRINK_FLOOR * 10) / 10);
+  let fs = base;
+  while (fs > floor) {
+    const worst = Math.max(...items.map(it => estimateContentHeightMm(it, fs, iconRowH, availW, lineHeightScale)));
     if (worst <= availH) break;
     fs = Math.round((fs - 0.5) * 10) / 10;
   }
-  return Math.max(fs, MIN_FONT_PT);
+  return Math.max(fs, floor);
 }
 
-function buildLabelCss(w: number, h: number, iconSize: number, topOffsetMm: number, fs: number, iconCount: number): string {
-  const bottomSafe = 2;
+function buildLabelCss(
+  w: number, h: number, iconSize: number, topOffsetMm: number, fs: number, iconCount: number, lhScale: number,
+): string {
+  const bottomSafe = 1.5;
   const iconGap = iconGapFor(w, iconCount);
   const topPad = Math.max(0, topOffsetMm || 0);
+  // 行间垂直距离 = 基础值 × 行距缩放（用户自由调整）
+  const lh = lhScale || 1;
+  const lhT = (LH_TIGHT * lh).toFixed(2);
+  const lhB = (LH_BODY * lh).toFixed(2);
+  const gSS = (GAP_SIZE_TO_STYLE * lh).toFixed(2);
+  const gSC = (GAP_STYLE_TO_COMP * lh).toFixed(2);
+  const gCI = (GAP_COMP_TO_ICONS * lh).toFixed(2);
+  const gIW = (GAP_ICONS_TO_WASH * lh).toFixed(2);
+  const gWM = (GAP_WASH_TO_MFG * lh).toFixed(2);
+  const padTop = (CONTENT_PAD_TOP * lh).toFixed(2);
 
   // iframe srcDoc 是独立文档上下文，不继承父页面 CSS 变量
   // 直接用硬编码颜色，避免 var(--color-*) 在 iframe 中失效
+  // 间距与模板计算常量保持一致(GAP_*)，行高与 LH_* 保持一致——避免估算与渲染不一致
   return `@page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
@@ -205,17 +236,17 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:${topPad}mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
 /* 内容区：从上到下依次排列 码数→款号→成份→图标→洗涤文字→制造，全部标准字体无加粗 */
-.content-block{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;padding-top:1.5mm}
-.size-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;text-align:center;line-height:1.3}
-.style-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;text-align:center;line-height:1.3;margin-top:1mm}
-.comp-mats{font-size:${fs}pt;font-weight:400;line-height:1.5;text-align:center;margin-top:1.5mm}
-/* 图标强制一排：数量多时按可用宽度自动缩小，绝不换行 */
-.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin-top:1.5mm}
+.content-block{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;padding-top:${padTop}mm}
+.size-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.2mm;text-align:center;line-height:${lhT}}
+.style-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.2mm;text-align:center;line-height:${lhT};margin-top:${gSS}mm}
+.comp-mats{font-size:${fs}pt;font-weight:400;line-height:${lhB};text-align:center;margin-top:${gSC}mm}
+/* 图标强制一排：数量多时按可用宽度自动缩小，绝不换行；与成份之间留 0.7mm 空隙 */
+.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin-top:${gCI}mm}
 .icon-cell{width:${iconSize}mm;height:${iconSize}mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:0;min-height:0}
 .icons svg{width:100%;height:100%;display:block}
-.care-wash{font-size:${fs}pt;font-weight:400;line-height:1.5;text-align:center;margin-top:1mm}
-.footer{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;line-height:1.3;text-align:center;margin-top:1.5mm}
-.date{margin-top:1mm;font-size:${fs}pt;font-weight:400;color:#71717a;text-align:center;letter-spacing:0.2mm}`;
+.care-wash{font-size:${fs}pt;font-weight:400;line-height:${lhB};text-align:center;margin-top:${gIW}mm}
+.footer{font-size:${fs}pt;font-weight:400;letter-spacing:0.2mm;line-height:${lhT};text-align:center;margin-top:${gWM}mm}
+.date{margin-top:${gIW}mm;font-size:${fs}pt;font-weight:400;color:#71717a;text-align:center;letter-spacing:0.2mm}`;
 }
 
 function buildLabelContentHtml(data: WashLabelPrintData, _iconSize: number): string {
@@ -266,14 +297,14 @@ export function estimateAdaptedFontSize(data: WashLabelPrintData): number {
 export function buildWashLabelPrintHtml(data: WashLabelPrintData): string {
   const { width: w, height: h } = data;
   const fontScale = data.fontScale ?? 1;
+  const lineHeightScale = data.lineHeightScale ?? 1;
   const iconCount = (data.careIconCodes || []).length;
   const iconSize = calcIconRowHeight(w, iconCount, fontScale);
-  // 字号自动适配：保证内容完整可见，fontScale 仅作为缩放基准（调大仍受"装得下"钳制）
   const fs = fitFontSize([data]);
   const labelHtml = buildLabelContentHtml(data, iconSize);
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-${buildLabelCss(w, h, iconSize, data.topOffsetMm ?? 0, fs, iconCount)}
+${buildLabelCss(w, h, iconSize, data.topOffsetMm ?? 0, fs, iconCount, lineHeightScale)}
 </style></head><body><div class="label-page">
 ${labelHtml}
 </div></body></html>`;
@@ -286,6 +317,7 @@ export function buildWashLabelMultiPageHtml(items: WashLabelPrintData[]): string
   const w = items[0].width;
   const h = items[0].height;
   const fontScale = items[0].fontScale ?? 1;
+  const lineHeightScale = items[0].lineHeightScale ?? 1;
   const topOffset = items[0].topOffsetMm ?? 0;
   const maxIconCount = Math.max(0, ...items.map(it => (it.careIconCodes || []).length));
   const iconSize = calcIconRowHeight(w, maxIconCount, fontScale);
@@ -300,7 +332,7 @@ ${content}
   }).join('\n');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-${buildLabelCss(w, h, iconSize, topOffset, fs, maxIconCount)}
+${buildLabelCss(w, h, iconSize, topOffset, fs, maxIconCount, lineHeightScale)}
 </style></head><body>
 ${pagesHtml}
 </body></html>`;

@@ -25,8 +25,10 @@ export interface WashLabelSectionState {
   manufacturingText: string;
   /** 距剪口偏移（mm），内容从此处开始打印 */
   topOffsetMm: number;
-  /** 全局字体缩放（0.5~1.6，默认 1）：手动微调所有分区字号；装不下时自动适配仍保证不截断 */
+  /** 全局字体缩放（0.5~1.6，默认 1）：用户自由调整所有分区字号，拖动直接生效 */
   fontScale: number;
+  /** 行距/上下间距缩放（0.7~1.8，默认 1）：用户自由调整行与行之间、各分区上下之间的距离 */
+  lineHeightScale: number;
 }
 
 /** 从款式/订单数据构建默认分区状态（用户可在面板中自由修改） */
@@ -39,6 +41,7 @@ export function buildDefaultSections(defaults: {
   manufacturingText?: string;
   topOffsetMm?: number;
   fontScale?: number;
+  lineHeightScale?: number;
 }): WashLabelSectionState {
   return {
     showSize: Boolean(defaults.sizeText?.trim()),
@@ -54,6 +57,7 @@ export function buildDefaultSections(defaults: {
     manufacturingText: defaults.manufacturingText ?? '',
     topOffsetMm: defaults.topOffsetMm ?? 30,
     fontScale: defaults.fontScale ?? 1,
+    lineHeightScale: defaults.lineHeightScale ?? 1,
   };
 }
 
@@ -91,13 +95,16 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
       dateText: '',
       topOffsetMm: value.topOffsetMm,
       fontScale: value.fontScale,
+      lineHeightScale: value.lineHeightScale,
     };
   }, [value, width, height, previewSizeText]);
 
   const previewHtml = useMemo(() => buildWashLabelPrintHtml(previewData), [previewData]);
-  /** 自动适配后的实际字号：内容越多/标签越小 → 字号自动越小（保证全部可见不截断） */
+  /** 最终打印字号：字号滑块直接生效，内容稍多时仅做轻微防溢出微调 */
   const adaptedFs = useMemo(() => estimateAdaptedFontSize(previewData), [previewData]);
-  const isMinSize = adaptedFs <= 4.01;
+  /** 用户期望字号（= 理想字号×字号缩放），用于判断是否被防溢出轻微调小了 */
+  const expectedFs = Math.round(Math.min(Math.max(width * 0.25, 7), 13) * (value.fontScale ?? 1) * 10) / 10;
+  const isShrunk = adaptedFs < expectedFs - 0.01;
 
   /** 图标点击：已选则取消，未选则追加 */
   const toggleIcon = (code: string) => {
@@ -130,7 +137,7 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
           <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>内容从剪口下方此处开始打印</span>
         </div>
 
-        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>字体大小</span>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Slider
@@ -143,8 +150,24 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
             </span>
           </div>
         </div>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', width: 76, flexShrink: 0 }}>行距/上下间距</span>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Slider
+              min={0.7} max={1.8} step={0.05} value={value.lineHeightScale}
+              onChange={v => patch({ lineHeightScale: v })} style={{ flex: 1, margin: 0 }}
+              tooltip={{ formatter: (v) => `${Math.round((v ?? 1) * 100)}%` }}
+            />
+            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: 52, flexShrink: 0 }}>
+              {Math.round(value.lineHeightScale * 100)}%
+            </span>
+          </div>
+        </div>
         <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-          当前打印字号 {adaptedFs}pt（内容过多时自动缩小以保证全部显示{isMinSize ? '，已到最小字号，建议精简文字或调小偏移' : '，可拖动上方滑块微调'}）
+          当前打印字号 <span style={{ color: 'var(--color-text-secondary)' }}>{adaptedFs}pt</span>
+          {isShrunk
+            ? '（内容稍多已轻微调小以保证完整显示，可调小偏移或行距，或精简文字）'
+            : '（字号与行距可随时拖动上方滑块调整）'}
         </div>
 
         <div style={{ marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -282,7 +305,7 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
           }}
         />
         <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
-          {width}×{height}mm · 偏移{value.topOffsetMm}mm · 字号{adaptedFs}pt
+          {width}×{height}mm · 偏移{value.topOffsetMm}mm · 字号{adaptedFs}pt · 行距{Math.round(value.lineHeightScale * 100)}%
         </div>
       </div>
     </div>

@@ -91,6 +91,7 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
         dateText: '',
         topOffsetMm: sections.topOffsetMm,
         fontScale: sections.fontScale,
+        lineHeightScale: sections.lineHeightScale,
       }));
       const html = buildWashLabelMultiPageHtml(printDataList);
       safePrint(html);

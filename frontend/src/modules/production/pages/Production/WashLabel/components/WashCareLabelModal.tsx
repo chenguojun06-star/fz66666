@@ -105,6 +105,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
       dateText: '',
       topOffsetMm: sections.topOffsetMm,
       fontScale: sections.fontScale,
+      lineHeightScale: sections.lineHeightScale,
     });
     safePrint(html);
     setPrinting(false);

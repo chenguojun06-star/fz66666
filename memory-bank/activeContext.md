@@ -1,11 +1,31 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（洗水唛打印防截断重做：字号自动适配+图标强制一排+fontScale 手动缩放）
+> 最后更新：2026-08-22（四问题批量修复：库位表布局/成品库位库存bug/样衣生产节点/小程序下拉刷新）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★★ 四问题批量修复（用户强烈反馈"优化好久没处理好"）✅（mvn compile + tsc + eslint 全通过，待推送）
+
+- [x] **问题1 库位详情表布局挤成一团**：根因=三种表（物料5列/样衣5列/成品6列）共用同一个6列grid模板（80px 60px 60px 1fr 80px 80px），5列表套6列模板错位+60px列宽显示不全。修复=WarehouseLocationMap.css 三表独立grid模板（--material/--sample/--finished修饰类，fr比例分配）+LocationDetailDrawer.tsx 加title悬浮提示完整内容
+- [x] **问题2 库位数据同步核实**：代码层面核实——样衣仓→t_sample_stock实时查✅物料仓→t_material_stock实时查✅（与实际库存直接同步）；**发现真bug：成品仓库位明细SKU匹配时显示ProductSku.stockQuantity（全局库存）而非库位剩余remainingQty**，同一SKU多库位存放会重复计数且与出库不符。已修复WarehouseLocationOrchestrator.java L571：stockQuantity=remainingQty，新增skuTotalQuantity字段
+- [x] **问题3 质检↔工序跟踪互通核实**：结论=数据实际是互通的（用户工资列表有"05质检"记录证明quality_inspect已写t_scan_record）；"06入库待扫码"是正确状态（质检合格≠入库，用户质检记录显示"待入库10/已入库0"还没执行入库）；用户筛了"入库"所以看不到质检行。上次修复的入库同步代码已推送，执行入库后自动变已扫
+- [x] **问题4 样衣工资单价0.00+生产节点"未知"**：核实=单价链路修复（11处断点，b7fbc434d）7/19已上线仍为0 → 根因是**款式StyleProcess工序表没配样衣工序单价**（lookupStyleProcessPrice查不到按设计返回0）；"未知"根因=SCAN_TYPE_LABEL缺pattern映射。修复：①ScanTypeBadge.tsx加pattern:'样衣'②PatternProductionOrchestrator.buildSubmitScanResult新增unitPriceMissing提示——扫码当场提示"该款式未配置XX工序单价，工资按0记录，请到款式资料→工序配置补充"
+- [x] **问题5 小程序扫码页下拉刷新失效**：根因=pages/scan/index.json缺"enablePullDownRefresh":true（onPullDownRefresh实现在scanLifecycleMixin但从未被触发）。已加配置。核实其他页面：admin/dashboard/defect/home/quality-detail/smart-ops均有配置+实现✅，login/privacy/register/more-apps不需要
+- [ ] **待办：推送部署后验证**——①库位详情表三表布局均匀+悬浮提示②成品库位数量=库位剩余量③样衣工资"生产节点"显示"样衣"④小程序扫码页下拉刷新恢复⑤新样衣扫码若未配工序单价有明确提示⑥用户需在款式资料→工序配置给样衣工序（车板/样衣操作等）配单价，否则工资仍为0（设计如此，人工补录）
+- [ ] **用户操作指引**：PO20260505001 质检合格后需点"入库"操作，工序跟踪06入库才会变已扫
+
+### 2026-08-22 ★★★ 洗水唛增可调"行距/上下间距"(lineHeightScale) + 字号拖动真正生效 ✅（tsc 0 errors + ESLint 0 errors，待推送）
+
+- [x] **用户反馈**：仍是 30×80mm 偏移32mm，"字号还是很小/像垃圾、布局都挤在一起"——明确要的是**自由调节"上下离开的距离"(行距) 与字体大小**，不要我无脑自动压缩
+- [x] **根因**：旧 fitFontSize 为防截断从理想字号一路压到 4pt，把用户手动拖大的字号也压回去→"拖了没用"；且行高/间距/边距浪费太多垂直空间
+- [x] **新参数 lineHeightScale（0.7~1.8，默认1）**：独立控制行与行之间、各分区上下距离（LH_BODY/LH_TIGHT/GAP_*/padding 全部乘它），CSS 与估算保持完全一致
+- [x] **字号拖动真正生效**：fitFontSize 缩小下限改为"理想字号×0.9"（FONT_SHRINK_FLOOR），不再无底线压到4pt；用户拖 fontScale→字号跟随（MIN_FONT_PT 抬高为5.5pt）
+- [x] **10 处入口全透传 lineHeightScale**：模板 fitFontSize/buildLabelCss/两个build；配置面板 WashLabelSectionConfigPanel 加"行距/上下间距"滑块+预览信息行显示行距%、实际字号提示改为"内容稍多已轻微调小或可自由调整"；仓库 printTemplates+constants+PrintSettingsPanel；生产 WashCareLabelModal+WashLabelBatchPrintModal+List helpers；款式资料 StyleWashLabelTab(新增行距滑块)+WashLabelPreview
+- [x] 验证：npx tsc --noEmit 0 errors；npx eslint 10 个文件 0 errors
+- [ ] **待办：推送后，线上验证拖"行距"上下正式拉开、拖"字号"字号真正变大**
 
 ### 2026-08-22 ★★★ 洗水唛打印防截断重做：文字全部被截断+图标2行（30×80mm 偏移32mm 用户强烈反馈）✅已推送（705abf3fc，safe-push 10/10 通过）
 

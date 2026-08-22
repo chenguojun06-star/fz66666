@@ -172,8 +172,9 @@ export const buildWashlabelHtml = async (
     styleNo: wash.showStyleNo ? (wash.styleNoText || '').trim() || (order.styleNo || '').trim() : '',
     // 距剪口偏移：内容从剪口下方此处开始打印
     topOffsetMm: wash.topOffsetMm,
-    // 全局字体缩放
+    // 全局字体缩放 + 行距
     fontScale: wash.fontScale,
+    lineHeightScale: wash.lineHeightScale,
   };
   if (count <= 1) return buildWashLabelPrintHtml(printData);
   return buildWashLabelMultiPageHtml(Array.from({ length: count }, () => printData));
