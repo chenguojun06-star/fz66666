@@ -10,7 +10,6 @@ import com.fashion.supplychain.production.dto.AddCartItemRequest;
 import com.fashion.supplychain.production.dto.BatchAddItemResultDto;
 import com.fashion.supplychain.production.dto.smart.*;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
-import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
@@ -137,7 +136,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         result.put("styleNo", order.getStyleNo());
         result.put("styleName", order.getStyleName());
         result.put("orderQuantity", order.getOrderQuantity());
-        result.put("totalBomItems", bomList.size());
+        // 口径统一：只计有物料编码的有效BOM行（=缺料+充足），与概览 bomItemsCount 一致
+        result.put("totalBomItems", details.size());
         result.put("netDemandItems", details.size() - skippedNoDemand);
         result.put("skippedNoDemand", skippedNoDemand);
         result.put("pushedToCart", cartRequests.size());
@@ -154,6 +154,18 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         if (orderNos == null || orderNos.isEmpty()) {
             throw new BusinessException("订单号列表不能为空");
         }
+        // 去重（重复推送同一单无意义且浪费计算）
+        List<String> uniqueOrderNos = orderNos.stream()
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (uniqueOrderNos.isEmpty()) {
+            throw new BusinessException("订单号列表不能为空");
+        }
+        // 性能硬保护：与概览批量计算同限（≤20单），防止一次推送拖垮数据库
+        if (uniqueOrderNos.size() > 20) {
+            throw new BusinessException("单次最多推送20个订单，当前" + uniqueOrderNos.size() + "个，请分批处理");
+        }
 
         int totalPushed = 0;
         int totalSkipped = 0;
@@ -161,7 +173,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         List<Map<String, Object>> orderResults = new ArrayList<>();
         List<String> failedOrders = new ArrayList<>();
 
-        for (String orderNo : orderNos) {
+        for (String orderNo : uniqueOrderNos) {
             try {
                 Map<String, Object> singleResult = generateSourcingForOrder(tenantId, orderNo);
                 orderResults.add(singleResult);
@@ -175,8 +187,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("totalOrders", orderNos.size());
-        result.put("successOrders", orderNos.size() - failedOrders.size());
+        result.put("totalOrders", uniqueOrderNos.size());
+        result.put("successOrders", uniqueOrderNos.size() - failedOrders.size());
         result.put("failedOrders", failedOrders);
         result.put("totalBomItems", totalBomItems);
         result.put("totalPushedToCart", totalPushed);
@@ -238,8 +250,35 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         return styleBomMapper.selectList(wrapper);
     }
 
+    /** 需求/净需求统一小数位（V1明细与V2概览共用同一份计算，杜绝两路数字跳变） */
+    private static final int DEMAND_SCALE = 4;
+
+    /**
+     * 统一需求公式：用量 × 订单数量 × (1 + 损耗率%)，损耗除法 scale=4
+     * <p>V1明细（buildNetDemandDetails）与V2概览（computeOrderOverviews）必须共用本方法，
+     * 任何一边单独改公式都会导致"概览缺料数 ≠ 明细缺料数"的数据不一致
+     */
+    private static BigDecimal calcDemand(StyleBom bom, Integer orderQty) {
+        BigDecimal usage = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+        BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
+        return usage.multiply(BigDecimal.valueOf(orderQty != null ? orderQty : 0))
+                .multiply(BigDecimal.ONE.add(
+                        lossRate.divide(BigDecimal.valueOf(100), DEMAND_SCALE, RoundingMode.HALF_UP)));
+    }
+
+    /** 统一净需求公式：max(总需求 - 可用库存 - 在途, 0) */
+    private static BigDecimal calcNetDemand(BigDecimal demand, int availableStock, BigDecimal inTransit) {
+        return demand.subtract(BigDecimal.valueOf(availableStock))
+                .subtract(inTransit != null ? inTransit : BigDecimal.ZERO)
+                .max(BigDecimal.ZERO);
+    }
+
     /**
      * 构建物料净需求明细列表（含智能推荐：供应商详情、历史采购价、推荐理由）
+     *
+     * <p>性能：批量预查询（库存/在途/历史价各1次SQL + 供应商≤3次SQL），消除逐物料 N×M 次查询
+     * <p>口径：库存/在途与V2概览共用同一批SQL（queryAvailableStockByMaterials /
+     * queryInTransitByMaterials），需求/净需求共用 calcDemand/calcNetDemand —— 明细与概览数字严格一致
      *
      * @return 每个BOM项对应一个Map，含需求/库存/在途/净需求/推荐供应商/历史采购价/推荐理由
      */
@@ -248,31 +287,53 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                                                             List<StyleBom> bomList) {
         Integer orderQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
         List<Map<String, Object>> details = new ArrayList<>();
+        List<StyleBom> validBoms = bomList.stream()
+                .filter(b -> StringUtils.hasText(b.getMaterialCode()))
+                .collect(Collectors.toList());
+        if (validBoms.isEmpty()) {
+            return details;
+        }
 
-        for (StyleBom bom : bomList) {
-            if (!StringUtils.hasText(bom.getMaterialCode())) {
-                continue;
-            }
+        List<String> materialCodes = validBoms.stream()
+                .map(StyleBom::getMaterialCode)
+                .distinct()
+                .collect(Collectors.toList());
 
+        // ===== 批量预查询（与V2概览同源，保证数字一致） =====
+        Map<String, Integer> stockByCode = batchQueryAvailableStock(tenantId, materialCodes);
+        Map<String, BigDecimal> inTransitByCode = batchQueryInTransit(tenantId, materialCodes);
+        Map<String, MaterialPurchase> lastPurchaseByCode = batchQueryLastPurchase(tenantId, materialCodes);
+        // 供应商：BOM指定批量查 + S/A级兜底（全体共享1次） + 任意活跃兜底（≤3次SQL）
+        Map<String, Factory> designatedById = batchQueryDesignatedFactories(tenantId, validBoms);
+        Factory tierRecommended = queryFactoryByTier(tenantId, Arrays.asList("S", "A"));
+        Factory anyActiveFallback = tierRecommended != null ? tierRecommended : queryFactoryByTier(tenantId, null);
+
+        for (StyleBom bom : validBoms) {
+            String materialCode = bom.getMaterialCode();
             BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
             BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
-            BigDecimal demand = usageAmount
-                    .multiply(BigDecimal.valueOf(orderQty))
-                    .multiply(BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)));
+            BigDecimal demand = calcDemand(bom, orderQty);
 
-            int availableStock = queryAvailableStock(tenantId, bom.getMaterialCode());
-            BigDecimal inTransit = queryInTransitQuantity(tenantId, bom.getMaterialCode());
+            int availableStock = stockByCode.getOrDefault(materialCode, 0);
+            BigDecimal inTransit = inTransitByCode.getOrDefault(materialCode, BigDecimal.ZERO);
+            // 统一 scale=4：needPurchase 标志、购物车推送、前端显示三处判定同一个值，
+            // 消除"needPurchase=true 但净需求显示0"这类边界不一致
+            BigDecimal netDemand = calcNetDemand(demand, availableStock, inTransit)
+                    .setScale(DEMAND_SCALE, RoundingMode.HALF_UP);
 
-            BigDecimal netDemand = demand
-                    .subtract(BigDecimal.valueOf(availableStock))
-                    .subtract(inTransit)
-                    .max(BigDecimal.ZERO);
-
-            // 智能推荐供应商
-            Factory supplier = recommendSupplier(tenantId, bom);
+            // 供应商推荐：BOM指定 → S/A级 → 任意活跃（与原 recommendSupplier 口径一致）
+            Factory supplier = designatedById.get(bom.getSupplierId());
+            if (supplier == null) supplier = tierRecommended;
+            if (supplier == null) supplier = anyActiveFallback;
 
             // 历史采购价（最近一次）
-            Map<String, Object> lastPurchase = queryLastPurchasePrice(tenantId, bom.getMaterialCode());
+            Map<String, Object> lastPurchase = new LinkedHashMap<>();
+            MaterialPurchase lastPurchaseRow = lastPurchaseByCode.get(materialCode);
+            if (lastPurchaseRow != null) {
+                lastPurchase.put("unitPrice", lastPurchaseRow.getUnitPrice());
+                lastPurchase.put("createTime", lastPurchaseRow.getCreateTime());
+                lastPurchase.put("supplierName", lastPurchaseRow.getSupplierName());
+            }
 
             // 推荐理由
             String reason = buildRecommendReason(demand, availableStock, inTransit, netDemand, bom, supplier, lastPurchase);
@@ -287,10 +348,10 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
             detail.put("bomUsageAmount", usageAmount);
             detail.put("orderQuantity", orderQty);
             detail.put("lossRate", lossRate);
-            detail.put("demand", demand.setScale(4, RoundingMode.HALF_UP));
+            detail.put("demand", demand.setScale(DEMAND_SCALE, RoundingMode.HALF_UP));
             detail.put("availableStock", availableStock);
-            detail.put("inTransit", inTransit.setScale(4, RoundingMode.HALF_UP));
-            detail.put("netDemand", netDemand.setScale(4, RoundingMode.HALF_UP));
+            detail.put("inTransit", inTransit.setScale(DEMAND_SCALE, RoundingMode.HALF_UP));
+            detail.put("netDemand", netDemand);
             detail.put("needPurchase", netDemand.compareTo(BigDecimal.ZERO) > 0);
             detail.put("bomItem", bom);
 
@@ -328,28 +389,18 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
     }
 
     /**
-     * 查询物料最近一次采购记录（用于历史采购价参考）
+     * 批量查询物料最近一次采购记录（历史采购价参考，1次SQL窗口函数）
      */
-    private Map<String, Object> queryLastPurchasePrice(Long tenantId, String materialCode) {
-        Map<String, Object> result = new LinkedHashMap<>();
+    private Map<String, MaterialPurchase> batchQueryLastPurchase(Long tenantId, List<String> materialCodes) {
         try {
-            LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(MaterialPurchase::getMaterialCode, materialCode)
-                   .eq(MaterialPurchase::getTenantId, tenantId)
-                   .eq(MaterialPurchase::getDeleteFlag, 0)
-                   .isNotNull(MaterialPurchase::getUnitPrice)
-                   .orderByDesc(MaterialPurchase::getCreateTime)
-                   .last("LIMIT 1");
-            MaterialPurchase purchase = materialPurchaseMapper.selectOne(wrapper);
-            if (purchase != null) {
-                result.put("unitPrice", purchase.getUnitPrice());
-                result.put("createTime", purchase.getCreateTime());
-                result.put("supplierName", purchase.getSupplierName());
-            }
+            List<MaterialPurchase> rows = materialPurchaseMapper.queryLastPurchaseByMaterials(tenantId, materialCodes);
+            return rows.stream()
+                    .filter(p -> StringUtils.hasText(p.getMaterialCode()))
+                    .collect(Collectors.toMap(MaterialPurchase::getMaterialCode, p -> p, (a, b) -> a));
         } catch (Exception e) {
-            log.warn("[智能采购] 查询历史采购价失败: {}", e.getMessage());
+            log.warn("[智能采购] 批量查询历史采购价失败，忽略: {}", e.getMessage());
+            return Collections.emptyMap();
         }
-        return result;
     }
 
     /**
@@ -399,63 +450,76 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
     }
 
     /**
-     * 查询物料可用库存（quantity - lockedQuantity 之和）
+     * 批量查询物料可用库存（quantity - lockedQuantity 聚合，1次SQL）
+     * <p>与V2概览（computeOrderOverviews）共用同一SQL，口径严格一致
      */
-    private int queryAvailableStock(Long tenantId, String materialCode) {
-        LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MaterialStock::getMaterialCode, materialCode)
-               .eq(MaterialStock::getTenantId, tenantId)
-               .eq(MaterialStock::getDeleteFlag, 0);
-        List<MaterialStock> stocks = materialStockMapper.selectList(wrapper);
-        return stocks.stream()
-                .mapToInt(s -> (s.getQuantity() != null ? s.getQuantity() : 0)
-                        - (s.getLockedQuantity() != null ? s.getLockedQuantity() : 0))
-                .sum();
-    }
-
-    /**
-     * 查询在途采购数量（purchaseQuantity - arrivedQuantity，排除已完成/已取消）
-     */
-    private BigDecimal queryInTransitQuantity(Long tenantId, String materialCode) {
-        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MaterialPurchase::getMaterialCode, materialCode)
-               .eq(MaterialPurchase::getTenantId, tenantId)
-               .eq(MaterialPurchase::getDeleteFlag, 0)
-               .notIn(MaterialPurchase::getStatus, "completed", "cancelled");
-        List<MaterialPurchase> purchases = materialPurchaseMapper.selectList(wrapper);
-        return purchases.stream()
-                .map(p -> {
-                    BigDecimal purchased = p.getPurchaseQuantity() != null
-                            ? p.getPurchaseQuantity() : BigDecimal.ZERO;
-                    int arrived = p.getArrivedQuantity() != null ? p.getArrivedQuantity() : 0;
-                    return purchased.subtract(BigDecimal.valueOf(arrived)).max(BigDecimal.ZERO);
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    /**
-     * 推荐供应商：优先BOM指定，其次S/A级，再次任意活跃面辅料供应商
-     */
-    private Factory recommendSupplier(Long tenantId, StyleBom bom) {
-        // 1. 优先使用BOM指定的供应商
-        if (StringUtils.hasText(bom.getSupplierId())) {
-            Factory factory = factoryMapper.selectById(bom.getSupplierId());
-            if (factory != null
-                    && factory.getTenantId() != null
-                    && factory.getTenantId().equals(tenantId)
-                    && !"inactive".equals(factory.getStatus())) {
-                return factory;
+    private Map<String, Integer> batchQueryAvailableStock(Long tenantId, List<String> materialCodes) {
+        Map<String, Integer> stockByCode = new HashMap<>();
+        try {
+            List<Map<String, Object>> rows = materialStockMapper.queryAvailableStockByMaterials(
+                    tenantId, materialCodes);
+            for (Map<String, Object> r : rows) {
+                Object mc = r.get("materialCode");
+                Object qty = r.get("availableStock");
+                if (mc != null && qty != null) {
+                    stockByCode.put(String.valueOf(mc), ((Number) qty).intValue());
+                }
             }
+        } catch (Exception ex) {
+            log.warn("[SmartSourcing] 批量库存查询失败，按0处理: {}", ex.getMessage());
         }
+        return stockByCode;
+    }
 
-        // 2. 查询S/A级面辅料供应商（按综合评分降序）
-        Factory recommended = queryFactoryByTier(tenantId, Arrays.asList("S", "A"));
-        if (recommended != null) {
-            return recommended;
+    /**
+     * 批量查询在途采购数量（白名单状态 + per-row max(0)，1次SQL）
+     * <p>与V2概览共用 queryInTransitByMaterials：在途口径 = 白名单状态
+     * (pending/received/partial/partial_arrival/awaiting_confirm/warehouse_pending)
+     * 的剩余量（采购量-已到货量，逐行截断负数）
+     */
+    private Map<String, BigDecimal> batchQueryInTransit(Long tenantId, List<String> materialCodes) {
+        Map<String, BigDecimal> inTransitByCode = new HashMap<>();
+        try {
+            List<Map<String, Object>> rows = materialPurchaseMapper.queryInTransitByMaterials(
+                    tenantId, materialCodes);
+            for (Map<String, Object> r : rows) {
+                Object mc = r.get("materialCode");
+                Object qty = r.get("inTransit");
+                if (mc != null && qty != null) {
+                    inTransitByCode.put(String.valueOf(mc), new BigDecimal(qty.toString()));
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[SmartSourcing] 批量在途查询失败，按0处理: {}", ex.getMessage());
         }
+        return inTransitByCode;
+    }
 
-        // 3. 兜底：任意活跃面辅料供应商（按综合评分降序）
-        return queryFactoryByTier(tenantId, null);
+    /**
+     * 批量查询BOM指定供应商（1次SQL，含租户校验+活跃过滤）
+     * <p>selectBatchIds 不带租户条件，必须逐条校验 tenantId（P0铁律4：多租户隔离）
+     */
+    private Map<String, Factory> batchQueryDesignatedFactories(Long tenantId, List<StyleBom> boms) {
+        Set<String> supplierIds = boms.stream()
+                .map(StyleBom::getSupplierId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (supplierIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, Factory> result = new HashMap<>();
+        try {
+            List<Factory> factories = factoryMapper.selectBatchIds(supplierIds);
+            for (Factory f : factories) {
+                if (f.getTenantId() != null && f.getTenantId().equals(tenantId)
+                        && !"inactive".equals(f.getStatus())) {
+                    result.put(f.getId(), f);
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[SmartSourcing] BOM指定供应商批量查询失败: {}", ex.getMessage());
+        }
+        return result;
     }
 
     private Factory queryFactoryByTier(Long tenantId, List<String> tiers) {
@@ -473,17 +537,11 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
     }
 
     /**
-     * 推送购物车专用：不做供应商推荐（省每行一次 DB 查询），
-     * supplier=null 时 buildCartRequest 自动回退 BOM 指定供应商
+     * 推送购物车专用：净需求/供应商直接取明细（detail）里已算好的结果，
+     * 与前端页面展示完全一致，不二次计算
      */
     private AddCartItemRequest buildCartRequest(ProductionOrder order, StyleInfo style,
                                                 StyleBom bom, Map<String, Object> detail) {
-        return buildCartRequest(order, style, bom, detail, null);
-    }
-
-    private AddCartItemRequest buildCartRequest(ProductionOrder order, StyleInfo style,
-                                                StyleBom bom, Map<String, Object> detail,
-                                                Factory supplier) {
         AddCartItemRequest req = new AddCartItemRequest();
         req.setMaterialCode(bom.getMaterialCode());
         req.setMaterialName(bom.getMaterialName());
@@ -494,9 +552,16 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         req.setQuantity(netDemand.setScale(2, RoundingMode.HALF_UP));
         req.setUnitPrice(bom.getUnitPrice());
 
-        if (supplier != null) {
-            req.setSupplierId(supplier.getId());
-            req.setSupplierName(supplier.getFactoryName());
+        // 供应商取明细里已算好的推荐结果（与页面展示一致，避免二次推荐出现不同结果）
+        @SuppressWarnings("unchecked")
+        Map<String, Object> supplierInfo = (Map<String, Object>) detail.get("recommendedSupplier");
+        Object supplierId = supplierInfo != null ? supplierInfo.get("supplierId") : null;
+        if (supplierId != null) {
+            req.setSupplierId(String.valueOf(supplierId));
+            Object supplierName = supplierInfo.get("supplierName");
+            if (supplierName != null) {
+                req.setSupplierName(String.valueOf(supplierName));
+            }
         } else if (StringUtils.hasText(bom.getSupplierId())) {
             req.setSupplierId(bom.getSupplierId());
         }
@@ -547,6 +612,17 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         if (tenantId == null) throw new BusinessException("租户ID不能为空");
         // 后端硬 clamp，避免前端传过大造成查询压力
         if (filter == null) filter = SmartSourcingFilter.builder().build();
+        // ⚠️ Jackson反序列化走setter不走@Builder.Default：null时必须显式补默认值，
+        // 否则"排除终态/到位率<80/近60天"默认筛选全部失效（前端漏传=全量订单）
+        // 注：excludeStatuses 传空数组=用户显式要求不过滤，只有null才补默认
+        if (filter.getExcludeStatuses() == null) {
+            filter.setExcludeStatuses(Arrays.asList("completed", "scrapped", "cancelled", "closed", "archived"));
+        }
+        if (filter.getArrivalRateLessThan() == null) filter.setArrivalRateLessThan(80);
+        if (filter.getCreatedWithinDays() == null) filter.setCreatedWithinDays(60);
+        if (filter.getOnlyUrgent() == null) filter.setOnlyUrgent(false);
+        if (!StringUtils.hasText(filter.getSortBy())) filter.setSortBy("createTime");
+        if (!StringUtils.hasText(filter.getSortDir())) filter.setSortDir("desc");
         int pageSize = Math.min(Math.max(1, filter.getPageSize() == null ? 20 : filter.getPageSize()), 50);
         int page = Math.max(1, filter.getPage() == null ? 1 : filter.getPage());
         filter.setPage(page);
@@ -629,7 +705,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 .styleName(o.getStyleName())
                 .coverImage(o.getStyleCover() != null ? o.getStyleCover() : o.getCoverImage())
                 .orderQuantity(o.getOrderQuantity())
-                .materialArrivalRate(o.getMaterialArrivalRate() == null ? 0 : o.getMaterialArrivalRate())
+                // null透传：未维护到位率的订单前端显示"未维护"，不能强转0（0%会误导为全部缺料）
+                .materialArrivalRate(o.getMaterialArrivalRate())
                 .status(o.getStatus())
                 .createTime(o.getCreateTime())
                 .plannedEndDate(o.getPlannedEndDate())
@@ -856,51 +933,60 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         }
 
         // Step 5~8：概览汇总（BOM指定供应商/历史价等概览层暂不加，详情页走原接口）
+        // ⚠️ 需求/净需求必须走 calcDemand/calcNetDemand（scale=4），与V1明细共用同一公式，
+        // 原实现除法scale=6且面料缺料数用stream二次计算，明细与概览数字会出现跳变
         Map<String, OrderOverviewDto> result = new LinkedHashMap<>();
         for (String orderNo : orderNos) {
             ProductionOrder o = orderMap.get(orderNo);
             if (o == null) continue;
             List<StyleBom> boms = bomByStyle.getOrDefault(o.getStyleNo(), Collections.emptyList());
-            int bomCount = boms.size();
+            // 有效BOM行（有物料编码），= shortage + sufficient，与V1明细/buildOverviewFromDetail口径一致
+            int validBomCount = 0;
             int shortage = 0;
             int sufficient = 0;
+            int fabricShort = 0;
             BigDecimal shortageAmt = BigDecimal.ZERO;
             BigDecimal totalBomAmt = BigDecimal.ZERO;
             List<String> criticalMaterials = new ArrayList<>();
             List<SourcingHint> hints = new ArrayList<>();
 
-            int orderQty = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
+            Integer orderQty = o.getOrderQuantity();
 
             for (StyleBom bom : boms) {
                 if (!StringUtils.hasText(bom.getMaterialCode())) {
                     // BOM 行无编码的跳过（与 buildNetDemandDetails 逻辑保持一致）
                     continue;
                 }
-                BigDecimal usage = bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount();
-                BigDecimal lossRate = bom.getLossRate() == null ? BigDecimal.ZERO : bom.getLossRate();
-                BigDecimal factor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
-                BigDecimal demand = usage.multiply(new BigDecimal(orderQty)).multiply(factor);
+                validBomCount++;
+                BigDecimal demand = calcDemand(bom, orderQty);
                 BigDecimal unitPrice = bom.getUnitPrice() == null ? BigDecimal.ZERO : bom.getUnitPrice();
 
                 String mc = bom.getMaterialCode();
                 int stock = stockByCode.getOrDefault(mc, 0);
                 BigDecimal inTransit = inTransitByCode.getOrDefault(mc, BigDecimal.ZERO);
-                BigDecimal netDemand = demand.subtract(new BigDecimal(stock)).subtract(inTransit);
-                if (netDemand.compareTo(BigDecimal.ZERO) < 0) netDemand = BigDecimal.ZERO;
+                BigDecimal netDemand = calcNetDemand(demand, stock, inTransit)
+                        .setScale(DEMAND_SCALE, RoundingMode.HALF_UP);
 
                 // BOM 行总金额（参考对比）
-                BigDecimal bomLineAmt = usage.multiply(new BigDecimal(orderQty)).multiply(unitPrice);
+                BigDecimal usage = bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount();
+                BigDecimal bomLineAmt = usage
+                        .multiply(BigDecimal.valueOf(orderQty != null ? orderQty : 0))
+                        .multiply(unitPrice);
                 totalBomAmt = totalBomAmt.add(bomLineAmt);
 
                 if (netDemand.compareTo(BigDecimal.ZERO) > 0) {
                     shortage++;
                     shortageAmt = shortageAmt.add(netDemand.multiply(unitPrice));
-                    // 关键缺料：优先"面料/主面料"大类（materialType），TOP3
+                    // 面料判定：类型含"面料/主面料" 或 名称含"面料"
                     String mtype = bom.getMaterialType();
-                    boolean isFabric = mtype != null && (mtype.contains("面料") || mtype.contains("主面料"));
-                    boolean isImportant = isFabric ||
-                            (bom.getMaterialName() != null &&
-                                    (bom.getMaterialName().contains("面料") || bom.getMaterialName().contains("布")));
+                    boolean isFabric = (mtype != null && (mtype.contains("面料") || mtype.contains("主面料")))
+                            || (bom.getMaterialName() != null && bom.getMaterialName().contains("面料"));
+                    if (isFabric) {
+                        fabricShort++;
+                    }
+                    // 关键缺料TOP3：面料大类 + 名称含"布"
+                    boolean isImportant = isFabric
+                            || (bom.getMaterialName() != null && bom.getMaterialName().contains("布"));
                     if (isImportant && criticalMaterials.size() < 3) {
                         criticalMaterials.add(bom.getMaterialName());
                     }
@@ -911,31 +997,13 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
 
             // 关键路径一句话
             String criticalPath;
-            if (bomCount == 0) {
+            if (validBomCount == 0) {
                 criticalPath = "该订单无BOM，请先维护物料清单";
                 hints.add(SourcingHint.builder().type("warn").message("该款未维护BOM，无法计算净需求").build());
             } else if (shortage == 0) {
                 criticalPath = "物料全部充足（" + sufficient + "种）";
                 hints.add(SourcingHint.builder().type("success").message("库存+在途≥需求，无需采购").build());
             } else {
-                int finalOrderQty = orderQty;
-                Map<String, Integer> stockByCodeFinal = stockByCode;
-                Map<String, BigDecimal> inTransitByCodeFinal = inTransitByCode;
-                int fabricShort = (int) boms.stream().filter(b -> {
-                    if (!StringUtils.hasText(b.getMaterialCode())) return false;
-                    BigDecimal d = (b.getUsageAmount() == null ? BigDecimal.ZERO : b.getUsageAmount())
-                            .multiply(new BigDecimal(finalOrderQty))
-                            .multiply(BigDecimal.ONE.add((b.getLossRate() == null ? BigDecimal.ZERO : b.getLossRate())
-                                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)));
-                    String mc = b.getMaterialCode();
-                    int stk = stockByCodeFinal.getOrDefault(mc, 0);
-                    BigDecimal it = inTransitByCodeFinal.getOrDefault(mc, BigDecimal.ZERO);
-                    BigDecimal net = d.subtract(new BigDecimal(stk)).subtract(it);
-                    if (net.compareTo(BigDecimal.ZERO) <= 0) return false;
-                    String mt = b.getMaterialType();
-                    return (mt != null && (mt.contains("面料") || mt.contains("主面料"))) ||
-                            (b.getMaterialName() != null && b.getMaterialName().contains("面料"));
-                }).count();
                 int accShort = shortage - fabricShort;
                 if (fabricShort > 0) {
                     criticalPath = String.format("面料缺%d种，辅料缺%d种（无法开裁）", fabricShort, accShort);
@@ -946,14 +1014,14 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 }
             }
 
-            if (bomCount > 0 && shortage > 0) {
+            if (validBomCount > 0 && shortage > 0) {
                 String hint = String.format("预计采购金额约 ¥%,.2f（按 BOM 单价预估）", shortageAmt);
                 hints.add(SourcingHint.builder().type("info").message(hint).build());
             }
 
             result.put(orderNo, OrderOverviewDto.builder()
                     .orderNo(orderNo)
-                    .bomItemsCount(bomCount)
+                    .bomItemsCount(validBomCount)
                     .shortageCount(shortage)
                     .sufficientCount(sufficient)
                     .shortageAmount(shortageAmt.setScale(2, RoundingMode.HALF_UP))

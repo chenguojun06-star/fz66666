@@ -140,6 +140,8 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
      * pending/received/partial/partial_arrival/awaiting_confirm/warehouse_pending
      * <p>⚠️ received(已领取) 必须算在途：采购员已领单但货未到，漏算会导致重复采购
      * <p>注意：按 material_code 聚合（与库存/StyleBom 对齐，StyleBom无material_id UUID）
+     * <p>口径：单张采购单剩余量 = max(采购量-已到货量, 0)（GREATEST逐行截断，
+     * 与V1明细 queryInTransitQuantity 的 per-row max(0) 一致，防止超收货行倒扣其他单）
      * <p>返回列：materialCode(String), inTransit(BigDecimal)
      *
      * @param tenantId      租户（必带，P0铁律4）
@@ -147,7 +149,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
      */
     @Select("<script>" +
             "SELECT material_code AS materialCode, " +
-            "       COALESCE(SUM(COALESCE(purchase_quantity, 0) - COALESCE(arrived_quantity, 0)), 0) AS inTransit " +
+            "       COALESCE(SUM(GREATEST(COALESCE(purchase_quantity, 0) - COALESCE(arrived_quantity, 0), 0)), 0) AS inTransit " +
             "FROM t_material_purchase " +
             "WHERE tenant_id = #{tenantId} AND delete_flag = 0 " +
             "  AND status IN ('pending','received','partial','partial_arrival','awaiting_confirm','warehouse_pending') " +

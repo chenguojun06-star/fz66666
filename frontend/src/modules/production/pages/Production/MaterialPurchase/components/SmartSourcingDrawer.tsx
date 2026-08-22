@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Button, Card, Drawer, Tabs, Table, Tag, Tooltip, Space, Alert, Input,
   InputNumber, Select, Checkbox, Statistic, Empty, Spin, Divider, message, Form,
@@ -120,8 +120,8 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
   // ── 勾选 & 展开 ──
   const [selectedOrderNos, setSelectedOrderNos] = useState<string[]>([]);
   const [expandedOrderNos, setExpandedOrderNos] = useState<React.Key[]>([]);
-  // 概览算完后是否已自动勾选过缺料单（仅首轮自动，用户手动改过就不再覆盖）
-  const [autoSelectedOnce, setAutoSelectedOnce] = useState(false);
+  // 概览算完后是否已自动勾选过缺料单（仅首轮自动，用户手动改过就不再覆盖；不参与渲染用ref）
+  const autoSelectedRef = useRef(false);
 
   // ── 批量概览 Map（orderNo → overview），以及响应级汇总 ──
   const [overviewMap, setOverviewMap] = useState<Record<string, OrderOverviewDto>>({});
@@ -135,33 +135,54 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
   // ── 批量推送 ──
   const [batchPushLoading, setBatchPushLoading] = useState(false);
 
+  // ── 竞态保护：快速翻页/连续查询时只认最后一次请求的响应 ──
+  const listReqSeqRef = useRef(0);
+
   // ────────────────── 批量概览 ──────────────────
   const fetchOverview = useCallback(async (orderNos: string[], forceRefresh = false) => {
     if (!orderNos.length) return;
     setOverviewLoading(true);
     try {
-      // 后端硬限制≤20单，超出直接抛 BusinessException，这里前端先截断防御
-      const batch = orderNos.slice(0, 20);
-      const resp = await purchaseCartApi.buildOrdersOverview(batch, forceRefresh);
-      setOverviewMap((prev) => ({ ...prev, ...(resp.overviews || {}) }));
-      setFailedMap((prev) => ({ ...prev, ...(resp.failed || {}) }));
-      // 首轮：自动勾选"有缺料"的订单，用户打开即可一键推送
-      if (!autoSelectedOnce) {
-        const shortageNos = batch.filter((on) => (resp.overviews?.[on]?.shortageCount ?? 0) > 0);
-        if (shortageNos.length > 0) {
-          setSelectedOrderNos(shortageNos);
+      // 后端硬限制≤20单/批：pageSize=50 时分多批"顺序"请求（不并发），既全量计算又不打挂数据库
+      for (let i = 0; i < orderNos.length; i += 20) {
+        const batch = orderNos.slice(i, i + 20);
+        try {
+          const resp = await purchaseCartApi.buildOrdersOverview(batch, forceRefresh);
+          // 先清本批旧记录再合并：修复"重试成功后仍显示计算失败"的残留问题
+          setOverviewMap((prev) => {
+            const next = { ...prev };
+            for (const on of batch) delete next[on];
+            return { ...next, ...(resp.overviews || {}) };
+          });
+          setFailedMap((prev) => {
+            const next = { ...prev };
+            for (const on of batch) delete next[on];
+            return { ...next, ...(resp.failed || {}) };
+          });
+          // 首轮：自动勾选"有缺料"的订单，用户打开即可一键推送；之后翻页不再覆盖手动选择
+          if (!autoSelectedRef.current) {
+            const shortageNos = batch.filter((on) => (resp.overviews?.[on]?.shortageCount ?? 0) > 0);
+            if (shortageNos.length > 0) {
+              setSelectedOrderNos(shortageNos);
+            }
+            autoSelectedRef.current = true;
+          }
+        } catch (e) {
+          message.error(e instanceof Error ? e.message : '批量计算订单缺料失败');
         }
-        setAutoSelectedOnce(true);
       }
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '批量计算订单缺料失败');
     } finally {
       setOverviewLoading(false);
     }
-  }, [autoSelectedOnce]);
+  }, []);
 
-  // ────────────────── 取列表 ──────────────────
-  const fetchOrderList = useCallback(async () => {
+  // ────────────────── 统一加载入口 ──────────────────
+  // 显式传目标页码/页大小：修复三类状态bug——
+  // ① 重置后闭包里 page 是旧值（分页器显示第1页但请求旧页码）
+  // ② page≠1 时点"查询"仅 setPage(1) 无 effect 触发刷新，列表不动
+  // ③ 快速翻页旧响应晚到覆盖新响应（竞态）
+  const loadOrders = useCallback(async (targetPage: number, targetPageSize: number) => {
+    const seq = ++listReqSeqRef.current;
     setListLoading(true);
     try {
       const values = await filterForm.validateFields().catch(() => ({} as Record<string, unknown>));
@@ -176,85 +197,61 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         onlyUrgent: values.onlyUrgent ?? false,
         sortBy: values.sortBy,
         sortDir: values.sortDir,
-        page,
-        pageSize,
+        page: targetPage,
+        pageSize: targetPageSize,
       };
       const pageResult = await purchaseCartApi.listSourcingOrders(filter);
+      if (seq !== listReqSeqRef.current) return; // 已有更新的请求，丢弃本次旧响应
       setOrderList(pageResult.list || []);
       setTotal(pageResult.total || 0);
-      // 当前页订单（≤20）自动算概览；翻页/筛选变化时清掉旧勾选
+      // 当前页订单自动算概览
       const toCalc = (pageResult.list || []).map((o) => o.orderNo).filter(Boolean);
       if (toCalc.length > 0) {
         fetchOverview(toCalc);
       }
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '加载待采购订单失败');
+      if (seq === listReqSeqRef.current) {
+        message.error(e instanceof Error ? e.message : '加载待采购订单失败');
+      }
     } finally {
-      setListLoading(false);
+      if (seq === listReqSeqRef.current) {
+        setListLoading(false);
+      }
     }
-  }, [filterForm, page, pageSize, fetchOverview]);
+  }, [filterForm, fetchOverview]);
 
   useEffect(() => {
-    if (page === 1 && !listLoading) {
-      // 首次挂载由 Drawer open 触发（destroyOnClose 下 Tab 挂载即加载）
-      fetchOrderList();
-    }
+    // 首次挂载由 Drawer open 触发（destroyOnClose 下 Tab 挂载即加载）
+    loadOrders(1, 20);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ────────────────── 筛选变化重新查询 ──────────────────
   const handleSearch = useCallback(() => {
     setSelectedOrderNos([]);
-    setAutoSelectedOnce(false);
+    autoSelectedRef.current = false;
     setPage(1);
-    // page 可能本来就是1（effect不触发），手动拉一次
-    if (page === 1) fetchOrderList();
-  }, [page, fetchOrderList]);
+    // 无论当前在第几页都显式从第1页查询（原实现 page≠1 时点查询不刷新）
+    loadOrders(1, pageSize);
+  }, [pageSize, loadOrders]);
 
   const handleReset = useCallback(() => {
     filterForm.resetFields();
     setSelectedOrderNos([]);
-    setAutoSelectedOnce(false);
+    autoSelectedRef.current = false;
+    // 全新查询：清掉旧概览与失败标记（原实现闭包 page 旧值，重置后仍请求旧页码）
+    setOverviewMap({});
+    setFailedMap({});
     setPage(1);
-    fetchOrderList();
-  }, [filterForm, page, fetchOrderList]);
+    loadOrders(1, pageSize);
+  }, [filterForm, pageSize, loadOrders]);
 
-  // 翻页
+  // 翻页：统一走 loadOrders，消除原先的闭包旧值与重复请求代码
   const handlePageChange = useCallback((p: number, ps: number) => {
     setPage(p);
     setPageSize(ps);
-    // page 状态更新后需要重新拉列表（fetchOrderList 闭包里 page 是旧值，直接延迟拉）
-    setTimeout(() => {
-      // 由 useEffect [page] 不存在，所以这里手动拉；等一帧让 setState 生效
-    }, 0);
-    // 直接在这里手动请求下一页
-    (async () => {
-      setListLoading(true);
-      try {
-        const values = await filterForm.validateFields().catch(() => ({} as Record<string, unknown>));
-        const filter: SmartSourcingFilter = {
-          arrivalRateLessThan: values.arrivalRateLessThan ?? undefined,
-          createdWithinDays: values.createdWithinDays ?? undefined,
-          statuses: (values.statuses as string[] | undefined)?.length
-            ? (values.statuses as string[])
-            : undefined,
-          searchKeyword: (values.searchKeyword as string | undefined)?.trim() || undefined,
-          onlyUrgent: values.onlyUrgent ?? false,
-          sortBy: values.sortBy,
-          sortDir: values.sortDir,
-          page: p,
-          pageSize: ps,
-        };
-        const pageResult = await purchaseCartApi.listSourcingOrders(filter);
-        setOrderList(pageResult.list || []);
-        setTotal(pageResult.total || 0);
-        const toCalc = (pageResult.list || []).map((o) => o.orderNo).filter(Boolean);
-        if (toCalc.length > 0) fetchOverview(toCalc);
-      } finally {
-        setListLoading(false);
-      }
-    })();
-  }, [filterForm, fetchOverview]);
+    loadOrders(p, ps);
+  }, [loadOrders]);
 
   // ────────────────── 详情（单个订单，懒加载） ──────────────────
   const fetchDetail = useCallback(async (orderNo: string) => {

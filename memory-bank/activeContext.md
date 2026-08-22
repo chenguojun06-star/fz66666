@@ -1,11 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（D-109 仓库全链路审计+成品仓库位出库扣减修复，mvn 通过，待推送）
+> 最后更新：2026-08-22（智能采购推荐V2 数据闭环全修复，mvn + tsc 通过，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★ 智能采购推荐V2 数据闭环全修复（4断点+1放大漏洞+前端状态bug）✅（mvn compile + tsc 0 errors，待推送）
+
+- [x] **4个闭环断点修复**：
+  - ① listOrders 默认筛选失效（SmartSourcingFilter @Builder.Default 不走 Jackson 反序列化）→ Service 层显式补 excludeStatuses/arrivalRateLessThan 默认值，待采购列表不再显示终态订单
+  - ② 在途口径不一致（V1明细/V2概览对 received 状态处理不同导致数字不匹配）→ 统一白名单（pending/received/partial/partial_arrival/awaiting_confirm/warehouse_pending）+ GREATEST 保证单张采购单剩余量非负
+  - ③ 缓存key冲突（V1/V2 计算口径不同写同一 key 导致缺料数跳变）→ 统一 calcDemand/calcNetDemand 公式（DEMAND_SCALE=4，HALF_UP）
+  - ④ 购物车 addItem 同物料数量累加导致重复推送翻倍 → 新增 replaceItemsBySource 幂等推送（先删同 sourceType+sourceId 旧草稿再写入）
+- [x] **性能优化**：buildNetDemandDetails 从 N×M 次查询批量化为 ≤8 次批量 SQL（库存/在途/历史采购价/供应商全 IN 查询）；generate-batch 补 20 单硬上限
+- [x] **前端状态bug修复**（SmartSourcingDrawer.tsx）：翻页/查询/重置统一走 loadOrders(targetPage, targetPageSize)（修复闭包旧 page + page≠1 时查询不刷新）；listReqSeqRef 竞态保护（快速翻页旧响应不再覆盖新响应）；failedMap 分批清理（重试成功后不再残留"计算失败"）
+- [x] 编译验证：mvn compile 通过 + npx tsc --noEmit 0 errors
 
 ### 2026-08-22 ★★ D-109 仓库数据全链路审计 + 成品仓库位出库扣减修复 ✅（mvn compile 通过，待推送）
 
