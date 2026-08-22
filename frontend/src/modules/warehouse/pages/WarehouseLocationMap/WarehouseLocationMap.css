@@ -338,9 +338,28 @@
   overflow: hidden;
 }
 
+/* 三种库位明细表按列数各用独立 grid 模板，避免共用错位/挤压 */
+/* 物料表 5 列：编码/名称/类型/规格/数量 */
+.wlm-detail-table--material .wlm-detail-table-header,
+.wlm-detail-table--material .wlm-detail-tr {
+  grid-template-columns: 1.1fr 1.6fr 0.9fr 1.4fr 90px;
+}
+
+/* 样衣表 5 列：款号/款式名称/颜色/尺码/数量 */
+.wlm-detail-table--sample .wlm-detail-table-header,
+.wlm-detail-table--sample .wlm-detail-tr {
+  grid-template-columns: 1.2fr 1.6fr 0.8fr 1.2fr 80px;
+}
+
+/* 成品表 6 列：款号/颜色/尺码/商品编码/数量/单价 */
+.wlm-detail-table--finished .wlm-detail-table-header,
+.wlm-detail-table--finished .wlm-detail-tr {
+  grid-template-columns: 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
+}
+
 .wlm-detail-table-header {
   display: grid;
-  grid-template-columns: 80px 60px 60px 1fr 80px 80px;
+  grid-template-columns: 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
   gap: 8px;
   padding: 10px 12px;
   background: var(--color-bg-container);
@@ -358,7 +377,7 @@
 
 .wlm-detail-tr {
   display: grid;
-  grid-template-columns: 80px 60px 60px 1fr 80px 80px;
+  grid-template-columns: 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
   gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--color-border-light);

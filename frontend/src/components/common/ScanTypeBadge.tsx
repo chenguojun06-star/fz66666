@@ -12,6 +12,7 @@ export const SCAN_TYPE_LABEL: Record<string, string> = {
   warehousing: '入库',
   sewing: '车缝',
   carSewing: '车缝',
+  pattern: '样衣',
 };
 
 export const SCAN_TYPE_COLOR: Record<string, string> = {
@@ -25,6 +26,7 @@ export const SCAN_TYPE_COLOR: Record<string, string> = {
   warehousing: 'green',
   sewing: 'blue',
   carSewing: 'blue',
+  pattern: 'magenta',
 };
 
 export const SCAN_TYPE_OPTIONS = [

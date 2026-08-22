@@ -90,7 +90,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
             {locationItems.length === 0 && !locationItemsLoading ? (
               <Empty description="该库位暂无库存" />
             ) : selectedLocation.warehouseType === 'MATERIAL' ? (
-              <div className="wlm-detail-table" style={{ marginTop: 16 }}>
+              <div className="wlm-detail-table wlm-detail-table--material" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">
                   <div className="wlm-detail-th">物料编码</div>
                   <div className="wlm-detail-th">物料名称</div>
@@ -100,10 +100,10 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
-                    <div className="wlm-detail-td">{sku.materialCode || '-'}</div>
-                    <div className="wlm-detail-td">{sku.materialName || '-'}</div>
-                    <div className="wlm-detail-td">{sku.materialType || '-'}</div>
-                    <div className="wlm-detail-td">{sku.specifications || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.materialCode || '-'}>{sku.materialCode || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.materialName || '-'}>{sku.materialName || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.materialType || '-'}>{sku.materialType || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.specifications || '-'}>{sku.specifications || '-'}</div>
                     <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
                       {sku.stockQuantity ?? 0}{sku.unit ? ` ${sku.unit}` : ''}
                     </div>
@@ -111,7 +111,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 ))}
               </div>
             ) : selectedLocation.warehouseType === 'SAMPLE' ? (
-              <div className="wlm-detail-table" style={{ marginTop: 16 }}>
+              <div className="wlm-detail-table wlm-detail-table--sample" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">款式名称</div>
@@ -121,12 +121,12 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
-                    <div className="wlm-detail-td">{sku.styleNo || '-'}</div>
-                    <div className="wlm-detail-td">{sku.styleName || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.styleNo || '-'}>{sku.styleNo || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.styleName || '-'}>{sku.styleName || '-'}</div>
                     <div className="wlm-detail-td">
                       <Tag color="blue">{sku.color || '-'}</Tag>
                     </div>
-                    <div className="wlm-detail-td">
+                    <div className="wlm-detail-td" title={sku.size || '-'}>
                       <Tag>{sku.size || '-'}</Tag>
                     </div>
                     <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
@@ -136,7 +136,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 ))}
               </div>
             ) : (
-              <div className="wlm-detail-table" style={{ marginTop: 16 }}>
+              <div className="wlm-detail-table wlm-detail-table--finished" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">颜色</div>
@@ -147,14 +147,14 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
-                    <div className="wlm-detail-td">{sku.styleNo || '-'}</div>
+                    <div className="wlm-detail-td" title={sku.styleNo || '-'}>{sku.styleNo || '-'}</div>
                     <div className="wlm-detail-td">
                       <Tag color="blue">{sku.color || '-'}</Tag>
                     </div>
-                    <div className="wlm-detail-td">
+                    <div className="wlm-detail-td" title={sku.size || '-'}>
                       <Tag>{sku.size || '-'}</Tag>
                     </div>
-                    <div className="wlm-detail-td" style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                    <div className="wlm-detail-td" title={sku.skuCode} style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                       {sku.skuCode}
                     </div>
                     <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
