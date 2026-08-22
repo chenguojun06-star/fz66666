@@ -10,7 +10,8 @@ interface InspectionHeaderProps {
   qcStatsCount: number;
   pendingWarehouse: number;
   onBack: () => void;
-  onWarehouse: () => void;
+  /** 不传则不显示入库操作按钮（只读模式） */
+  onWarehouse?: () => void;
 }
 
 const InspectionHeader: React.FC<InspectionHeaderProps> = ({
@@ -34,14 +35,16 @@ const InspectionHeader: React.FC<InspectionHeaderProps> = ({
       <Tag color="green">{order.styleName}</Tag>
       {qcStatsCount > 0 && <Tag color="cyan">已质检 {qcStatsCount} 次</Tag>}
       <div style={{ flex: 1 }} />
-      <Button
-        type="primary"
-        icon={<InboxOutlined />}
-        disabled={pendingWarehouse === 0}
-        onClick={onWarehouse}
-      >
-        入库{pendingWarehouse > 0 ? `（${pendingWarehouse}条待入库）` : ''}
-      </Button>
+      {onWarehouse && (
+        <Button
+          type="primary"
+          icon={<InboxOutlined />}
+          disabled={pendingWarehouse === 0}
+          onClick={onWarehouse}
+        >
+          入库{pendingWarehouse > 0 ? `（${pendingWarehouse}条待入库）` : ''}
+        </Button>
+      )}
     </div>
   );
 };

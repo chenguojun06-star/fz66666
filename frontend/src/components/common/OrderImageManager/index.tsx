@@ -163,12 +163,12 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontWeight: 500 }}>
-          订单图片 ({images.length}/5)
-          {totalCount > 0 && (
-            <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
-              共{totalCount}张
-            </span>
-          )}
+          订单图片
+          <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
+            共 {totalCount} 张
+            {coverUrl ? '（含封面）' : ''}
+            {styleImages.length > 0 ? `（含款式图 ${styleImages.length} 张）` : ''}
+          </span>
         </span>
         {editable && (
           <Button size="small" icon={<HistoryOutlined />} onClick={handleViewHistory}>
@@ -288,6 +288,9 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
               maxSizeMB={5}
               accept="image/jpeg,image/png"
             />
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--color-text-quaternary)' }}>
+              订单图还可上传 {5 - images.length} 张（封面/款式图自动带出，不占额度）
+            </div>
           </div>
         )}
       </Spin>

@@ -24,4 +24,6 @@ export interface InspectionDetailProps {
   defaultTab?: string;
   embedded?: boolean;
   onClose?: () => void;
+  /** 只读模式：仅展示入库进度/质检记录，隐藏质检与入库操作（入库已独立至成品仓模块） */
+  readOnly?: boolean;
 }

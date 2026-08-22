@@ -52,6 +52,9 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
     autoInitDone,
   } = useInspectionDetail(props);
 
+  // 只读模式：入库已独立至成品仓模块，此处仅展示入库进度/质检记录
+  const readOnly = props.readOnly === true;
+
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
       <Spin size="large" spinning tip="加载中..."><div /></Spin>
@@ -70,6 +73,11 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
   const urgencyKey = String((order as any)?.urgencyLevel || '').trim().toLowerCase();
 
   const tabItems = [
+    ...(readOnly ? [{
+      key: 'orderLines',
+      label: '入库进度',
+      children: <OrderLinesTable rows={orderLineWarehousingRows} loading={orderDetailLoading} />,
+    }] : []),
     {
       key: 'records',
       label: '质检记录',
@@ -82,11 +90,11 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
         />
       ),
     },
-    {
+    ...(!readOnly ? [{
       key: 'orderLines',
       label: '入库进度',
       children: <OrderLinesTable rows={orderLineWarehousingRows} loading={orderDetailLoading} />,
-    },
+    }] : []),
     {
       key: 'bom',
       label: '物料清单',
@@ -139,7 +147,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
         qcStatsCount={qcStats.count}
         pendingWarehouse={qcStats.pendingWarehouse}
         onBack={handleBack}
-        onWarehouse={() => setShowWarehousingModal(true)}
+        {...(readOnly ? {} : { onWarehouse: () => setShowWarehousingModal(true) })}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, minHeight: 'calc(100vh - 200px)' }}>
@@ -153,6 +161,14 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', maxWidth: '100%' }}>
+          {readOnly && (
+            <Alert
+              type="info"
+              showIcon
+              title="入库操作已移至「成品仓 - 质检入库」模块"
+              description="此处为订单视角的只读视图，仅展示入库进度与质检记录。质检扫码、次品处理与入库操作请前往 成品仓 → 质检入库 进行。"
+            />
+          )}
           <Card style={{ overflow: 'hidden' }}>
             <Tabs
               activeKey={activeTab}
@@ -162,47 +178,53 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
             />
           </Card>
 
-          <Card title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}>
-            {formHook.batchSelectRows.length > 0 && formHook.batchSelectableQrs.length === 0 && qcStats.pendingWarehouse === 0 && qcStats.count > 0 ? (
-              <Alert type="success" showIcon
-                title="该订单所有菲号已完成质检入库，无需再操作"
-                description="如需返修重检，请在质检记录中标记返修后重新操作" />
-            ) : (
-              <InspectFormPanel
-                formHook={formHook}
-                handleMarkRepaired={handleMarkRepaired}
-                markingRepairBundleId={markingRepairBundleId}
-                onOpenBatchUnqualified={() => setBatchUnqualifiedModalOpen(true)}
-                autoInitDone={autoInitDone}
-              />
-            )}
-          </Card>
+          {!readOnly && (
+            <Card title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}>
+              {formHook.batchSelectRows.length > 0 && formHook.batchSelectableQrs.length === 0 && qcStats.pendingWarehouse === 0 && qcStats.count > 0 ? (
+                <Alert type="success" showIcon
+                  title="该订单所有菲号已完成质检入库，无需再操作"
+                  description="如需返修重检，请在质检记录中标记返修后重新操作" />
+              ) : (
+                <InspectFormPanel
+                  formHook={formHook}
+                  handleMarkRepaired={handleMarkRepaired}
+                  markingRepairBundleId={markingRepairBundleId}
+                  onOpenBatchUnqualified={() => setBatchUnqualifiedModalOpen(true)}
+                  autoInitDone={autoInitDone}
+                />
+              )}
+            </Card>
+          )}
         </div>
       </div>
 
-      <Drawer
-        title="入库操作"
-        open={showWarehousingModal}
-        onClose={() => setShowWarehousingModal(false)}
-        size="large"
-        styles={{ wrapper: { width: '80%' }, body: { padding: 16 } }}
-      >
-        <WarehousingActionPanel
-          qcRecords={qcRecords}
-          warehousingLoading={warehousingLoading}
-          onSubmit={handleWarehouseSubmit}
-        />
-      </Drawer>
+      {!readOnly && (
+        <>
+          <Drawer
+            title="入库操作"
+            open={showWarehousingModal}
+            onClose={() => setShowWarehousingModal(false)}
+            size="large"
+            styles={{ wrapper: { width: '80%' }, body: { padding: 16 } }}
+          >
+            <WarehousingActionPanel
+              qcRecords={qcRecords}
+              warehousingLoading={warehousingLoading}
+              onSubmit={handleWarehouseSubmit}
+            />
+          </Drawer>
 
-      <BatchUnqualifiedModal
-        open={batchUnqualifiedModalOpen}
-        totalQty={batchSelectedSummary?.totalQty || 0}
-        submitLoading={submitLoading}
-        unqualifiedImageUrls={unqualifiedImageUrls}
-        onCancel={() => setBatchUnqualifiedModalOpen(false)}
-        onOk={handleBatchUnqualifiedSubmit}
-        onImageUrlsChange={setUnqualifiedImageUrls}
-      />
+          <BatchUnqualifiedModal
+            open={batchUnqualifiedModalOpen}
+            totalQty={batchSelectedSummary?.totalQty || 0}
+            submitLoading={submitLoading}
+            unqualifiedImageUrls={unqualifiedImageUrls}
+            onCancel={() => setBatchUnqualifiedModalOpen(false)}
+            onOk={handleBatchUnqualifiedSubmit}
+            onImageUrlsChange={setUnqualifiedImageUrls}
+          />
+        </>
+      )}
     </>
   );
 };

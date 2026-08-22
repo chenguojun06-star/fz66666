@@ -16,7 +16,8 @@ export function useInspectionDetail(props: InspectionDetailProps) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const orderId = propOrderId || paramOrderId || '';
-  const defaultTab = propDefaultTab || searchParams.get('tab') || 'records';
+  // 只读模式默认展示入库进度（订单视角关注入库情况）；操作模式默认质检记录
+  const defaultTab = propDefaultTab || searchParams.get('tab') || (props.readOnly ? 'orderLines' : 'records');
   const highlightWhNo = searchParams.get('warehousingNo') || '';
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<QualityBriefingData | null>(null);

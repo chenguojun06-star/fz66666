@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Col, Row, Switch, Tag, Tooltip } from 'antd';
+import { Card, Col, Row, Switch, Tag, Tooltip, Descriptions } from 'antd';
 import OrderImageManager from '@/components/common/OrderImageManager';
 import OrderColorSizeMatrix from '@/components/common/OrderColorSizeMatrix';
 import type { OrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
@@ -33,6 +33,27 @@ interface Props {
   warehousingUnqualified: number;
 }
 
+// 区域小标题（与样衣详情页一致的规整风格）
+const SectionTitle: React.FC<{ text: string; extra?: React.ReactNode }> = ({ text, extra }) => (
+  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 8, letterSpacing: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <span>{text}</span>
+    {extra}
+  </div>
+);
+
+// Descriptions 统一样式：label 定宽右对齐，value 左对齐，行距紧凑
+const descLabelStyle: React.CSSProperties = {
+  width: 88,
+  flexShrink: 0,
+  color: 'var(--color-text-tertiary)',
+  fontSize: 13,
+};
+
+const descContentStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: 'var(--color-text)',
+};
+
 const OrderBasicInfoCard: React.FC<Props> = ({
   loading, order, orderNoForImage, coverUrl, editing, orderLines,
   colorSizeMatrixModel, skuEditMap, setSkuEditMap, savingMatrix,
@@ -43,47 +64,59 @@ const OrderBasicInfoCard: React.FC<Props> = ({
   return (
     <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
       <Row gutter={0} align="top" wrap={false}>
-        <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center', width: 340 }}>
+        {/* 左：订单图片 */}
+        <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, width: 340 }}>
           <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl}
             styleId={(order as any)?.styleId} styleNo={(order as any)?.styleNo} />
         </Col>
-        <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-quaternary)', marginBottom: 8, letterSpacing: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>
-              基本信息
-              {editing && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)', marginLeft: 8 }}>点击字段值可编辑</span>}
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>订单号</span>
-            <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>
-              {(order as any)?.orderNo || '-'}
-              {(order as any)?.ecPlatform && (() => {
-                const t = getPlatformTag((order as any).ecPlatform);
-                return <Tag color={t.color} style={{ marginLeft: 8 }}>{t.label}</Tag>;
-              })()}
-            </span>
 
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款号</span>
-            <InlineEditableField
-              label="款号" value={(order as any)?.styleNo || ''} editable={editing}
-              fieldKey="styleNo" onSave={handleFieldSave} saving={savingField === 'styleNo'}
-            />
+        {/* 中：基本信息 + 颜色尺码 */}
+        <Col flex="1" style={{ minWidth: 260, padding: '0 20px', borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
+          <SectionTitle
+            text="基本信息"
+            extra={editing ? <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)' }}>点击字段值可编辑</span> : undefined}
+          />
+          <Descriptions column={1} size="small" bordered
+            labelStyle={descLabelStyle} contentStyle={descContentStyle}
+          >
+            <Descriptions.Item label="订单号">
+              <span style={{ fontWeight: 600 }}>
+                {(order as any)?.orderNo || '-'}
+                {(order as any)?.ecPlatform && (() => {
+                  const t = getPlatformTag((order as any).ecPlatform);
+                  return <Tag color={t.color} style={{ marginLeft: 8 }}>{t.label}</Tag>;
+                })()}
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label="款号">
+              <InlineEditableField
+                label="款号" value={(order as any)?.styleNo || ''} editable={editing}
+                fieldKey="styleNo" onSave={handleFieldSave} saving={savingField === 'styleNo'}
+              />
+            </Descriptions.Item>
+            <Descriptions.Item label="SKC">
+              <InlineEditableField
+                label="SKC" value={(order as any)?.skc || ''} editable={editing}
+                fieldKey="skc" onSave={handleFieldSave} saving={savingField === 'skc'}
+              />
+            </Descriptions.Item>
+            <Descriptions.Item label="款名">
+              <InlineEditableField
+                label="款名" value={(order as any)?.styleName || ''} editable={editing}
+                fieldKey="styleName" onSave={handleFieldSave} saving={savingField === 'styleName'}
+              />
+            </Descriptions.Item>
+            <Descriptions.Item label="加工厂">{String((order as any)?.factoryName || '-').trim()}</Descriptions.Item>
+            <Descriptions.Item label="状态">{orderStatusTag((order as any)?.status)}</Descriptions.Item>
+            <Descriptions.Item label="当前环节">{String((order as any)?.currentProcessName || '-').trim()}</Descriptions.Item>
+          </Descriptions>
+        </Col>
 
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>SKC</span>
-            <InlineEditableField
-              label="SKC" value={(order as any)?.skc || ''} editable={editing}
-              fieldKey="skc" onSave={handleFieldSave} saving={savingField === 'skc'}
-            />
-
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款名</span>
-            <InlineEditableField
-              label="款名" value={(order as any)?.styleName || ''} editable={editing}
-              fieldKey="styleName" onSave={handleFieldSave} saving={savingField === 'styleName'}
-            />
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>
-              <span>颜色 / 尺码 / 商品编码</span>
+        {/* 中右：颜色尺码矩阵（独立成块，不再挤在基本信息流里） */}
+        <Col flex="1" style={{ minWidth: 240, padding: '0 20px', borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
+          <SectionTitle
+            text="颜色 / 尺码 / 商品编码"
+            extra={
               <Tooltip title="开启后，裁剪/样衣创建时系统自动生成 商品编码- 前缀；关闭后只走颜色尺码，由你掌控 商品编码">
                 <Switch
                   size="small"
@@ -93,67 +126,65 @@ const OrderBasicInfoCard: React.FC<Props> = ({
                   unCheckedChildren="手动"
                 />
               </Tooltip>
-            </div>
-            <div>
-              {colorSizeMatrixModel.hasData ? (
-                editing ? (
-                  <ColorSizeMatrixEditor
-                    orderLines={orderLines}
-                    skuEditMap={skuEditMap}
-                    setSkuEditMap={setSkuEditMap}
-                    savingMatrix={savingMatrix}
-                    onSave={handleMatrixSave}
-                    onClearAll={handleMatrixClearAll}
-                    onAutoGen={handleMatrixAutoGen}
-                  />
-                ) : (
-                  <OrderColorSizeMatrix
-                    items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity }))}
-                    totalLabel="总"
-                    totalSuffix="件"
-                    fontSize={13}
-                    columnMinWidth={24}
-                  />
-                )
-              ) : (
-                <span style={{ fontSize: 14, lineHeight: '22px', color: 'var(--color-text-quaternary)' }}>-</span>
-              )}
-            </div>
-
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>加工厂</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{String((order as any)?.factoryName || '-').trim()}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>状态</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{orderStatusTag((order as any)?.status)}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>当前环节</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{String((order as any)?.currentProcessName || '-').trim()}</span>
-          </div>
+            }
+          />
+          {colorSizeMatrixModel.hasData ? (
+            editing ? (
+              <ColorSizeMatrixEditor
+                orderLines={orderLines}
+                skuEditMap={skuEditMap}
+                setSkuEditMap={setSkuEditMap}
+                savingMatrix={savingMatrix}
+                onSave={handleMatrixSave}
+                onClearAll={handleMatrixClearAll}
+                onAutoGen={handleMatrixAutoGen}
+              />
+            ) : (
+              <OrderColorSizeMatrix
+                items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity }))}
+                totalLabel="总"
+                totalSuffix="件"
+                fontSize={13}
+                columnMinWidth={24}
+              />
+            )
+          ) : (
+            <span style={{ fontSize: 13, color: 'var(--color-text-quaternary)' }}>-</span>
+          )}
         </Col>
-        <Col flex="1" style={{ minWidth: 200, paddingLeft: 20, borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-quaternary)', marginBottom: 8, letterSpacing: 1 }}>生产统计</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>下单数</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{toNumberSafe((order as any)?.orderQuantity)}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>已完成</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{toNumberSafe((order as any)?.completedQuantity)}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>生产进度</span>
-            <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>扎数</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{toNumberSafe((order as any)?.cuttingBundleCount)}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>入库数</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{warehousingTotal}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>合格/不合格</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{`${warehousingQualified} / ${warehousingUnqualified}`}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>计划开始</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-'}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>计划交期</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-'}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>下单时间</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-'}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>实际完成</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-'}</span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>更新时间</span>
-            <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-'}</span>
-          </div>
+
+        {/* 右：生产统计 */}
+        <Col flex="1" style={{ minWidth: 260, paddingLeft: 20, borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
+          <SectionTitle text="生产统计" />
+          <Descriptions column={1} size="small" bordered
+            labelStyle={descLabelStyle} contentStyle={descContentStyle}
+          >
+            <Descriptions.Item label="下单数">
+              <span style={{ fontWeight: 600 }}>{toNumberSafe((order as any)?.orderQuantity)}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="已完成">{toNumberSafe((order as any)?.completedQuantity)}</Descriptions.Item>
+            <Descriptions.Item label="生产进度">
+              <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="扎数">{toNumberSafe((order as any)?.cuttingBundleCount)}</Descriptions.Item>
+            <Descriptions.Item label="入库数">
+              <span style={{ fontWeight: 600 }}>{warehousingTotal}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="合格/不合格">{`${warehousingQualified} / ${warehousingUnqualified}`}</Descriptions.Item>
+          </Descriptions>
+
+          <div style={{ height: 14 }} />
+
+          <SectionTitle text="计划与时间" />
+          <Descriptions column={1} size="small" bordered
+            labelStyle={descLabelStyle} contentStyle={descContentStyle}
+          >
+            <Descriptions.Item label="计划开始">{(order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="计划交期">{(order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="下单时间">{(order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="实际完成">{(order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="更新时间">{(order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-'}</Descriptions.Item>
+          </Descriptions>
         </Col>
       </Row>
     </Card>

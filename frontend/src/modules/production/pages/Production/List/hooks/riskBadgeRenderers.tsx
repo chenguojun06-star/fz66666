@@ -206,7 +206,7 @@ export function renderWarehousingCell(record: ProductionOrder, navigate: (path: 
   const inner = (
     <div
       style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
-      title={frozen ? '订单已关单/报废/完成' : '点击质检入库'}
+      title={frozen ? '订单已关单/报废/完成' : '点击查看入库进度 / 质检记录'}
     >
       {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>

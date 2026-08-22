@@ -11,16 +11,17 @@ interface InspectDrawerProps {
 const InspectDrawer: React.FC<InspectDrawerProps> = ({ visible, orderId, onClose }) => {
   return (
     <Drawer
-      title="质检入库"
+      title="入库进度 / 质检记录（只读）"
       open={visible}
       onClose={onClose}
       size="large"
-      styles={{ wrapper: { width: '90%' }, body: { padding: 0 } }}
+      styles={{ wrapper: { width: '90%' }, body: { padding: 16 } }}
     >
       {visible && (
         <InspectionDetail
           orderId={orderId}
           embedded
+          readOnly
           onClose={onClose}
         />
       )}

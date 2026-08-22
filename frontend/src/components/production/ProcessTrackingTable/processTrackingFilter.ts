@@ -158,12 +158,38 @@ const TYPE_TO_CODE_PREFIX: Record<string, string[]> = {
   tailProcess: ['ironing', 'pressing', 'quality', 'packaging', 'thread'],
 };
 
+/** 去掉工序名开头的序号前缀（如 "03 剪线" → "剪线"），用于工序名归一化比较 */
+const stripProcessSeqPrefix = (s: string): string => String(s || '').trim().replace(/^\d+[\s.\-、:：]* */, '').trim();
+
+/**
+ * 判断筛选名是否是 processList 中的具体工序（如"剪线"），
+ * 区别于节点级名称（如"尾部"/"后道"）。
+ */
+const isSpecificProcessName = (target: string, processList?: ProcessListItem[]): boolean => {
+  const t = String(target || '').trim();
+  if (!t || !processList || processList.length === 0) return false;
+  return processList.some(p => {
+    const candidates = [p?.name, p?.processName, (p as { label?: string; title?: string })?.label, (p as { label?: string; title?: string })?.title]
+      .map(v => String(v || '').trim())
+      .filter(Boolean);
+    return candidates.some(v => v === t || stripProcessSeqPrefix(v) === stripProcessSeqPrefix(t));
+  });
+};
+
 export const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeName?: string, processList?: ProcessListItem[]): boolean => {
   const code = (record.processCode || '').toLowerCase();
   const rawName = record.processName || '';
   const name = rawName === '质检入库' ? '入库' : rawName;
   const progressStage = (record.progressStage || '').trim();
   const resolvedKey = resolveStageKey(filterType);
+
+  // ★ 具体工序筛选优先：点击"剪线"这类具体工序子节点时，只显示该工序的记录，
+  // 不应把同节点下其它工序（整烫/质检）的记录混进来。
+  if (nodeName && isSpecificProcessName(nodeName, processList)) {
+    const target = stripProcessSeqPrefix(nodeName);
+    const recName = stripProcessSeqPrefix(name);
+    return recName === target || recName.includes(target) || target.includes(recName);
+  }
 
   if (processList && processList.length > 0) {
     const plCodes = processList
