@@ -136,7 +136,9 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
     /**
      * 批量按物料编码汇总在途采购数量（在途 = 未完成状态剩余量：采购量 - 已到货量）
      * <p>智能采购概览专用：将 N×M 次在途查询压缩为 1 次 SQL
-     * <p>未完成状态：pending/partial/partial_arrival/awaiting_confirm/warehouse_pending
+     * <p>在途状态白名单 = 全部状态 - 终态(completed/cancelled)：
+     * pending/received/partial/partial_arrival/awaiting_confirm/warehouse_pending
+     * <p>⚠️ received(已领取) 必须算在途：采购员已领单但货未到，漏算会导致重复采购
      * <p>注意：按 material_code 聚合（与库存/StyleBom 对齐，StyleBom无material_id UUID）
      * <p>返回列：materialCode(String), inTransit(BigDecimal)
      *
@@ -148,12 +150,38 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "       COALESCE(SUM(COALESCE(purchase_quantity, 0) - COALESCE(arrived_quantity, 0)), 0) AS inTransit " +
             "FROM t_material_purchase " +
             "WHERE tenant_id = #{tenantId} AND delete_flag = 0 " +
-            "  AND status IN ('pending','partial','partial_arrival','awaiting_confirm','warehouse_pending') " +
+            "  AND status IN ('pending','received','partial','partial_arrival','awaiting_confirm','warehouse_pending') " +
             "  AND material_code IN " +
             "  <foreach collection='materialCodes' item='mc' open='(' separator=',' close=')'>#{mc}</foreach> " +
             "GROUP BY material_code" +
             "</script>")
     List<Map<String, Object>> queryInTransitByMaterials(
+            @Param("tenantId") Long tenantId,
+            @Param("materialCodes") List<String> materialCodes);
+
+    /**
+     * 批量查询每个物料最近一次采购记录（历史采购价参考）
+     * <p>智能采购专用：将 M 次 LIMIT 1 查询压缩为 1 次 SQL（MySQL 8 窗口函数）
+     * <p>返回完整 MaterialPurchase 行（仅取 materialCode/unitPrice/createTime/supplierName 足够，
+     * 这里直接返回实体行，调用方按 material_code 分组取第一条）
+     *
+     * @param tenantId      租户（必带，P0铁律4）
+     * @param materialCodes 物料编码列表（BOM.material_code）
+     */
+    @Select("<script>" +
+            "SELECT id, tenant_id, material_code, material_name, supplier_name, unit_price, " +
+            "       purchase_quantity, create_time FROM (" +
+            "  SELECT id, tenant_id, material_code, material_name, supplier_name, unit_price, " +
+            "         purchase_quantity, create_time, " +
+            "         ROW_NUMBER() OVER (PARTITION BY material_code ORDER BY create_time DESC) AS rn " +
+            "  FROM t_material_purchase " +
+            "  WHERE tenant_id = #{tenantId} AND delete_flag = 0 " +
+            "    AND unit_price IS NOT NULL " +
+            "    AND material_code IN " +
+            "    <foreach collection='materialCodes' item='mc' open='(' separator=',' close=')'>#{mc}</foreach>" +
+            ") ranked WHERE rn = 1" +
+            "</script>")
+    List<MaterialPurchase> queryLastPurchaseByMaterials(
             @Param("tenantId") Long tenantId,
             @Param("materialCodes") List<String> materialCodes);
 }

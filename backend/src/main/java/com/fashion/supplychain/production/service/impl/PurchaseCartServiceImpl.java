@@ -90,6 +90,13 @@ public class PurchaseCartServiceImpl extends ServiceImpl<PurchaseCartMapper, Pur
                 .mergeSuggestions(allSuggestions)
                 .build();
     }
+
+    @Override
+    public BatchAddItemResultDto replaceItemsBySource(Long tenantId, String userId,
+                                                       String sourceType, String sourceId,
+                                                       List<AddCartItemRequest> requests) {
+        return purchaseCartOrchestrator.replaceItemsBySource(tenantId, userId, sourceType, sourceId, requests);
+    }
     
     @Override
     public void updateItem(Long tenantId, String itemId, UpdateCartItemRequest request) {

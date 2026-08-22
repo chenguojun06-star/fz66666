@@ -1,11 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（D-108 BOM库存实时刷新：修复库存永远显示58米的假数据问题，mvn+tsc 通过，待推送）
+> 最后更新：2026-08-22（D-109 仓库全链路审计+成品仓库位出库扣减修复，mvn 通过，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★ D-109 仓库数据全链路审计 + 成品仓库位出库扣减修复 ✅（mvn compile 通过，待推送）
+
+- [x] **三仓出入库链路审计结论（全部实时联动库存表）**：
+  - 物料仓：freeInbound→updateStockOnInbound 增库存+写库位+StockChangeLog日志；freeOutbound→decreaseStockById 扣减+出库日志；扫码出入库复用同链路；调拨/盘点/待出库确认/BOM领料（D-099同事务扣减）全覆盖 ✅
+  - 成品仓：freeInbound→productSkuService.updateStock 原子增 t_product_sku.stock_quantity+写库位；出库→decreaseStockBySkuCode 原子扣减；扫码/批量/无采购单入库同链路 ✅
+  - 样衣仓：WAREHOUSE_IN→创建 SampleStock+写库位库区；OUT=借出制（loanedQuantity）不扣 quantity（样衣物理还在库）；RETURN 归还减借出 ✅
+- [x] **发现的唯一缺陷（已修复）**：成品仓库位统计 countStocksByIdentifiers FINISHED 分支只统计 t_product_warehousing 入库记录数，出库（t_product_outstock）后库位永远显示已使用、永不释放 → 改为流水法：库位剩余=Σ该库位SKU累计入库−Σ该库位SKU累计出库，剩余>0 的 SKU 种数为占用量；排除冲销记录（reversalStatus=REVERSED 原记录 + warehousingType=reversal 正数冲销记录，NULL 三值逻辑用 isNull OR ne 组合）
+- [x] **库位明细成品分支**：同步排除冲销 + 新增 remainingQty（库位维度剩余量）；未匹配 SKU 时 stockQuantity 也改用 remainingQty（原来是累计入库量）
+- [x] **机制确认**：listByType 每次查询实时统计回写 usedCapacity（前端库位网格/统计卡/删除拦截以此为准）；incrementUsedCapacity ±1 仅为即时近似值会被实时统计覆盖；前端仓库地图已监听 data:changed 事件实时刷新
+- [x] 编译验证：mvn compile 通过（前端无改动）
 
 ### 2026-08-22 ★★ D-108 BOM 库存实时刷新（修复"库存永远显示58米"假数据）✅（mvn compile + tsc 0 errors，待推送）
 

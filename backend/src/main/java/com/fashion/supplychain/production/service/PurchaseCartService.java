@@ -14,6 +14,14 @@ public interface PurchaseCartService extends IService<PurchaseCart> {
     AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request);
     
     BatchAddItemResultDto batchAddItems(Long tenantId, String userId, List<AddCartItemRequest> requests);
+
+    /**
+     * 幂等替换同来源（sourceType+sourceId）草稿：先删旧再写入 requests
+     * <p>智能采购推送专用：重复推送不叠加数量，净需求归零时清掉旧草稿
+     */
+    BatchAddItemResultDto replaceItemsBySource(Long tenantId, String userId,
+                                               String sourceType, String sourceId,
+                                               List<AddCartItemRequest> requests);
     
     void updateItem(Long tenantId, String itemId, UpdateCartItemRequest request);
     

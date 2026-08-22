@@ -123,15 +123,14 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 continue;
             }
             StyleBom bom = (StyleBom) detail.get("bomItem");
-            Factory supplier = recommendSupplier(tenantId, bom);
-            cartRequests.add(buildCartRequest(order, style, bom, detail, supplier));
+            cartRequests.add(buildCartRequest(order, style, bom, detail));
         }
 
         String cartUserId = resolveCartUserId();
-        BatchAddItemResultDto batchResult = null;
-        if (!cartRequests.isEmpty()) {
-            batchResult = purchaseCartService.batchAddItems(tenantId, cartUserId, cartRequests);
-        }
+        // 幂等替换：先删同订单旧草稿再写入最新净需求（重复推送不叠加数量）；
+        // 净需求全部归零时也会清掉旧草稿，保证购物车与最新计算始终一致
+        BatchAddItemResultDto batchResult = purchaseCartService.replaceItemsBySource(
+                tenantId, cartUserId, "order", order.getId(), cartRequests);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("orderNo", orderNo);
@@ -143,9 +142,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         result.put("skippedNoDemand", skippedNoDemand);
         result.put("pushedToCart", cartRequests.size());
         result.put("cartUserId", cartUserId);
-        if (batchResult != null) {
-            result.put("batchResult", batchResult);
-        }
+        result.put("batchResult", batchResult);
         return result;
     }
 
@@ -473,6 +470,15 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         wrapper.orderByDesc(Factory::getOverallScore)
                .last("LIMIT 1");
         return factoryMapper.selectOne(wrapper);
+    }
+
+    /**
+     * 推送购物车专用：不做供应商推荐（省每行一次 DB 查询），
+     * supplier=null 时 buildCartRequest 自动回退 BOM 指定供应商
+     */
+    private AddCartItemRequest buildCartRequest(ProductionOrder order, StyleInfo style,
+                                                StyleBom bom, Map<String, Object> detail) {
+        return buildCartRequest(order, style, bom, detail, null);
     }
 
     private AddCartItemRequest buildCartRequest(ProductionOrder order, StyleInfo style,

@@ -67,6 +67,13 @@ public class PurchaseCartOrchestrator {
                .eq(request.getSupplierId() != null, 
                    PurchaseCartItem::getSupplierId, request.getSupplierId())
                .eq(PurchaseCartItem::getDeleteFlag, 0);
+        // 幂等替换配套：带来源的请求只与同来源（sourceType+sourceId）草稿自动合并，
+        // 不同订单/样衣的同一物料保持独立行，防止跨来源数量混在一起后被 replaceBySource 误删；
+        // 下单合并由 preview 按物料+规格+供应商分组完成，不受影响
+        boolean hasSource = StringUtils.hasText(request.getSourceType())
+                || StringUtils.hasText(request.getSourceId());
+        exactWrapper.eq(hasSource, PurchaseCartItem::getSourceType, request.getSourceType())
+               .eq(hasSource, PurchaseCartItem::getSourceId, request.getSourceId());
         
         List<PurchaseCartItem> exactMatchItems = purchaseCartItemMapper.selectList(exactWrapper);
         
@@ -147,6 +154,63 @@ public class PurchaseCartOrchestrator {
         logAppendHelper.appendAddItem(cart.getId(), request.getMaterialName() != null ? request.getMaterialName() : request.getMaterialCode());
         
         return result;
+    }
+
+    /**
+     * 智能采购幂等推送：先删除同来源（sourceType+sourceId）旧草稿，再写入最新净需求
+     * <p>修复：重复推送同一订单时 addItem 数量累加导致采购量翻倍（推送2次=买2倍）
+     * <p>语义：「推送本单」= 用最新计算的净需求整体替换该订单在购物车中的草稿；
+     * 库存到位后净需求为0时重新推送，会清掉旧草稿（数据闭环）
+     * <p>安全边界：只删本来源草稿（addItem 已保证同来源才合并）；已下单项在 confirm
+     * 时已物理删除，不受影响；整个操作在一个事务内
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public BatchAddItemResultDto replaceItemsBySource(Long tenantId, String userId,
+                                                      String sourceType, String sourceId,
+                                                      List<AddCartItemRequest> requests) {
+        PurchaseCart cart = purchaseCartService.getOrCreateCart(tenantId, userId);
+
+        // 1) 删除该来源的旧草稿（无旧草稿时跳过）
+        LambdaQueryWrapper<PurchaseCartItem> oldWrapper = new LambdaQueryWrapper<>();
+        oldWrapper.eq(PurchaseCartItem::getCartId, cart.getId())
+               .eq(PurchaseCartItem::getTenantId, tenantId)
+               .eq(PurchaseCartItem::getSourceType, sourceType)
+               .eq(PurchaseCartItem::getSourceId, sourceId)
+               .eq(PurchaseCartItem::getDeleteFlag, 0);
+        List<PurchaseCartItem> oldItems = purchaseCartItemMapper.selectList(oldWrapper);
+        if (!oldItems.isEmpty()) {
+            purchaseCartItemMapper.delete(oldWrapper);
+            log.info("[SmartSourcing] 幂等替换：删除来源旧草稿{}项 (sourceType={}, sourceId={})",
+                    oldItems.size(), sourceType, sourceId);
+        }
+
+        // 2) 写入最新净需求（同类内调用addItem，共用本事务）
+        List<AddCartItemRequest> safeRequests = requests != null ? requests : Collections.emptyList();
+        int successCount = 0;
+        int mergedCount = 0;
+        List<MergeSuggestionDto> allSuggestions = new ArrayList<>();
+        for (AddCartItemRequest request : safeRequests) {
+            AddItemResultDto result = addItem(tenantId, userId, request);
+            if (result != null) {
+                successCount++;
+                if (result.getMergeSuggestion() != null) {
+                    mergedCount++;
+                    allSuggestions.add(result.getMergeSuggestion());
+                }
+            }
+        }
+
+        // 3) 只删不加（净需求归零）时重算合计； addItem 内部已逐次重算，此处兜底
+        if (safeRequests.isEmpty() && !oldItems.isEmpty()) {
+            recalculateCartTotal(cart.getId());
+        }
+
+        return BatchAddItemResultDto.builder()
+                .totalCount(safeRequests.size())
+                .successCount(successCount)
+                .mergedCount(mergedCount)
+                .mergeSuggestions(allSuggestions)
+                .build();
     }
     
     @Transactional(rollbackFor = Exception.class)

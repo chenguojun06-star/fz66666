@@ -8,7 +8,9 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.stock.entity.SampleStock;
 import com.fashion.supplychain.stock.service.SampleStockService;
@@ -40,6 +42,7 @@ public class WarehouseLocationOrchestrator {
     private final WarehouseAreaService warehouseAreaService;
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final ProductOutstockMapper productOutstockMapper;
     private final MaterialStockService materialStockService;
     private final SampleStockService sampleStockService;
     private final OperationLogService operationLogService;
@@ -176,14 +179,54 @@ public class WarehouseLocationOrchestrator {
                 }
             }
         } else {
-            List<ProductWarehousing> records = productWarehousingMapper.selectList(
+            // D-109 成品仓流水法统计：库位剩余 = Σ该库位SKU累计入库 - Σ该库位SKU累计出库，
+            // 剩余>0 的 SKU 种数计为库位占用量。修复原实现只统计入库记录数、
+            // 出库后库位永远显示已使用的问题。
+            // 排除冲销：原记录标记 REVERSED 不计；冲销记录（warehousingType=reversal，正数量）不计。
+            // 注意 NULL 三值逻辑：ne 对 NULL 行不命中，须用 isNull OR ne 组合。
+            List<ProductWarehousing> inRecords = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getTenantId, tenantId)
                             .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .in(ProductWarehousing::getWarehouse, identifiers));
-            for (ProductWarehousing record : records) {
-                if (StringUtils.isNotBlank(record.getWarehouse())) {
-                    countMap.merge(record.getWarehouse(), 1, Integer::sum);
+                            .in(ProductWarehousing::getWarehouse, identifiers)
+                            .and(w -> w.isNull(ProductWarehousing::getWarehousingType)
+                                    .or().ne(ProductWarehousing::getWarehousingType, "reversal"))
+                            .and(w -> w.isNull(ProductWarehousing::getReversalStatus)
+                                    .or().ne(ProductWarehousing::getReversalStatus, "REVERSED")));
+            Map<String, Integer> inQtyBySku = new HashMap<>();
+            Map<String, String> skuFirstLocation = new HashMap<>();
+            for (ProductWarehousing r : inRecords) {
+                String key = StringUtils.isNotBlank(r.getSkuCode()) ? r.getSkuCode() : r.getStyleNo();
+                if (StringUtils.isBlank(key) || StringUtils.isBlank(r.getWarehouse())) {
+                    continue;
+                }
+                int qty = r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0;
+                inQtyBySku.merge(key, qty, Integer::sum);
+                skuFirstLocation.putIfAbsent(key, r.getWarehouse());
+            }
+
+            List<ProductOutstock> outRecords = productOutstockMapper.selectList(
+                    new LambdaQueryWrapper<ProductOutstock>()
+                            .eq(ProductOutstock::getTenantId, tenantId)
+                            .eq(ProductOutstock::getDeleteFlag, 0)
+                            .in(ProductOutstock::getWarehouse, identifiers));
+            Map<String, Integer> outQtyBySku = new HashMap<>();
+            for (ProductOutstock r : outRecords) {
+                String key = StringUtils.isNotBlank(r.getSkuCode()) ? r.getSkuCode() : r.getStyleNo();
+                if (StringUtils.isBlank(key)) {
+                    continue;
+                }
+                int qty = r.getOutstockQuantity() != null ? r.getOutstockQuantity() : 0;
+                outQtyBySku.merge(key, qty, Integer::sum);
+            }
+
+            for (Map.Entry<String, Integer> entry : inQtyBySku.entrySet()) {
+                int remaining = entry.getValue() - outQtyBySku.getOrDefault(entry.getKey(), 0);
+                if (remaining > 0) {
+                    String loc = skuFirstLocation.get(entry.getKey());
+                    if (StringUtils.isNotBlank(loc)) {
+                        countMap.merge(loc, 1, Integer::sum);
+                    }
                 }
             }
         }
@@ -464,12 +507,32 @@ public class WarehouseLocationOrchestrator {
                 items.add(item);
             }
         } else if ("FINISHED".equals(location.getWarehouseType())) {
+            // D-109 成品仓明细：排除冲销记录（REVERSED 原记录 + reversal 冲销记录），
+            // 增加库位维度剩余量 remainingQty = 该库位SKU累计入库 - 该库位SKU累计出库
             List<ProductWarehousing> records = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getTenantId, tenantId)
                             .eq(ProductWarehousing::getDeleteFlag, 0)
                             .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
-                                    .or().eq(ProductWarehousing::getWarehouse, location.getLocationName())));
+                                    .or().eq(ProductWarehousing::getWarehouse, location.getLocationName()))
+                            .and(w -> w.isNull(ProductWarehousing::getWarehousingType)
+                                    .or().ne(ProductWarehousing::getWarehousingType, "reversal"))
+                            .and(w -> w.isNull(ProductWarehousing::getReversalStatus)
+                                    .or().ne(ProductWarehousing::getReversalStatus, "REVERSED")));
+
+            Set<String> finishedIdentifiers = new HashSet<>(Arrays.asList(locationCode, location.getLocationName()));
+            Map<String, Integer> outQtyBySku = new HashMap<>();
+            List<ProductOutstock> outRecords = productOutstockMapper.selectList(
+                    new LambdaQueryWrapper<ProductOutstock>()
+                            .eq(ProductOutstock::getTenantId, tenantId)
+                            .eq(ProductOutstock::getDeleteFlag, 0)
+                            .in(ProductOutstock::getWarehouse, finishedIdentifiers));
+            for (ProductOutstock r : outRecords) {
+                String key = StringUtils.isNotBlank(r.getSkuCode()) ? r.getSkuCode() : r.getStyleNo();
+                if (StringUtils.isBlank(key)) continue;
+                int qty = r.getOutstockQuantity() != null ? r.getOutstockQuantity() : 0;
+                outQtyBySku.merge(key, qty, Integer::sum);
+            }
 
             Map<String, List<ProductWarehousing>> byKey = new LinkedHashMap<>();
             for (ProductWarehousing r : records) {
@@ -482,6 +545,7 @@ public class WarehouseLocationOrchestrator {
                 String key = entry.getKey();
                 List<ProductWarehousing> recs = entry.getValue();
                 int totalQty = recs.stream().mapToInt(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0).sum();
+                int remainingQty = totalQty - outQtyBySku.getOrDefault(key, 0);
 
                 ProductSku matchedSku = null;
                 if (StringUtils.isNotBlank(recs.get(0).getSkuCode())) {
@@ -511,11 +575,12 @@ public class WarehouseLocationOrchestrator {
                     item.put("styleNo", recs.get(0).getStyleNo());
                     item.put("color", null);
                     item.put("size", null);
-                    item.put("stockQuantity", totalQty);
+                    item.put("stockQuantity", remainingQty);
                     item.put("salesPrice", null);
                 }
                 item.put("warehousedCount", recs.size());
                 item.put("warehousedQty", totalQty);
+                item.put("remainingQty", remainingQty);
                 items.add(item);
             }
         }
