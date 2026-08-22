@@ -6,7 +6,8 @@ import type { TextAreaProps } from 'antd/es/input/TextArea';
  * 统一备注输入框组件
  *
  * 规范：
- * - autoSize 自动扩展（minRows=3, maxRows=8），输入多了不会出现滚动条
+ * - 默认固定 rows=3，右下角可拖拽调整高度（autoSize 会锁死高度导致拖拽失效）
+ * - 如需自动扩展可显式传入 autoSize
  * - 默认 placeholder "请输入备注"
  * - 默认 maxLength=500 + showCount
  *
@@ -18,7 +19,8 @@ const RemarkInput: React.FC<TextAreaProps> = ({
   placeholder = '请输入备注',
   maxLength = 500,
   showCount = true,
-  autoSize = { minRows: 3, maxRows: 8 },
+  autoSize,
+  rows,
   ...rest
 }) => {
   return (
@@ -27,6 +29,7 @@ const RemarkInput: React.FC<TextAreaProps> = ({
       maxLength={maxLength}
       showCount={showCount}
       autoSize={autoSize}
+      rows={rows ?? 3}
       {...rest}
     />
   );

@@ -8,6 +8,7 @@ import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import type { MaterialPurchase } from '@/types/production';
 import { InlinePurchasePanelProps, normalizeStatus } from './InlinePurchasePanel.helpers';
+import { isPurchaseRowComplete } from './utils';
 import { buildDisplayColumns, buildEditColumns } from './InlinePurchasePanel.columns';
 import MaterialPickerModal from './MaterialPickerModal';
 import useInlinePurchaseData from './useInlinePurchaseData';
@@ -48,7 +49,6 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     orderColorSet,
     missingColors,
     bomIncomplete,
-    canProcure,
     sections,
     displayData,
     navigate,
@@ -96,7 +96,6 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
       handleWarehousePick,
       handleQualityIssue,
       stockMap,
-      bomIncomplete,
     }),
     [
       handleReceive,
@@ -107,7 +106,6 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
       handleWarehousePick,
       handleQualityIssue,
       stockMap,
-      bomIncomplete,
     ]
   );
 
@@ -156,14 +154,23 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                 <Button
                   type="primary"
                   size="small"
-                  disabled={actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || !canProcure}
+                  disabled={actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING && isPurchaseRowComplete(p))}
                   loading={actionLoading}
                   onClick={handleReceiveAll}
                 >
                   采购全部
                 </Button>
                 {bomIncomplete && (
-                  <Tag color="warning" style={{ marginLeft: 4 }}>请先编辑物料信息</Tag>
+                  <Tag color="warning" style={{ marginLeft: 4 }}>
+                    {(() => {
+                      const noSupplier = purchases.filter(p => isPurchaseRowComplete(p) && !String(p.supplierName || '').trim());
+                      const criticalMissing = purchases.filter(p => !isPurchaseRowComplete(p));
+                      if (criticalMissing.length > 0) {
+                        return `${criticalMissing.length} 项缺物料编码/名称/单位，无法采购`;
+                      }
+                      return noSupplier.length > 0 ? `${noSupplier.length} 项未填供应商，可采购建议补全` : '请先编辑物料信息';
+                    })()}
+                  </Tag>
                 )}
                 <Button
                   size="small"
@@ -336,7 +343,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             label="备注"
             name="remark"
           >
-            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="可选备注" />
+            <Input.TextArea rows={3} placeholder="可选备注" />
           </Form.Item>
         </Form>
       </ResizableModal>

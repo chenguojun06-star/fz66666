@@ -89,7 +89,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
           <Input.TextArea
             id="reason"
             placeholder={placeholder}
-            autoSize={{ minRows: 3 }}
+            rows={3}
             autoFocus
           />
         </Form.Item>

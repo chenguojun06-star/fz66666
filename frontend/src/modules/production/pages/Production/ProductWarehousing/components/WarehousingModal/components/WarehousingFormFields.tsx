@@ -313,7 +313,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
                 style={{ marginBottom: 0 }}
                 rules={isSingleSelectedBundleBlocked ? [{ required: true, message: '请输入返修备注' }] : undefined}
               >
-                <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="请输入返修备注" />
+                <Input.TextArea rows={3} placeholder="请输入返修备注" />
               </Form.Item>
             </div>
           </div>

@@ -219,7 +219,7 @@ const InvoiceTab: React.FC = () => {
           <ModalFieldRow label="开票日期"><Form.Item name="issueDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="销方名称"><Form.Item name="sellerName" noStyle><Input placeholder="本公司抬头" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="销方税号"><Form.Item name="sellerTaxNo" noStyle><Input /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="备注"><Form.Item name="remark" noStyle><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="备注"><Form.Item name="remark" noStyle><Input.TextArea rows={3} /></Form.Item></ModalFieldRow>
         </Form>
       </ResizableModal>
     </>

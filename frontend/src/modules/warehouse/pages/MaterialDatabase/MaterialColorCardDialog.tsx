@@ -113,7 +113,7 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
           </Col>
         </Row>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea placeholder="备注信息" autoSize={{ minRows: 2, maxRows: 4 }} />
+          <Input.TextArea placeholder="备注信息" rows={2} />
         </Form.Item>
       </Form>
     </ResizableModal>

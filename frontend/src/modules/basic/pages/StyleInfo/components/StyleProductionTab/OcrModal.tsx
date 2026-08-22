@@ -123,7 +123,7 @@ const OcrModal: React.FC<Props> = ({
           <Input.TextArea
             value={text}
             readOnly
-            autoSize={{ minRows: 12 }}
+            rows={12}
             style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 14, borderRadius: 6 }}
           />
           <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>

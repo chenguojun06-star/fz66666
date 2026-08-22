@@ -5,7 +5,7 @@ import { splitStyleOptions } from '@/utils/styleOptions';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 import { normalizeMaterialQuantity } from '../../MaterialPurchase/utils';
 import type { ApiResult, PageResult, MaterialPurchaseListResponse, PurchaseListParams } from './types';
-import { REQUIRED_FIELDS } from './types';
+import { REQUIRED_FIELDS, isPurchaseRowComplete } from './types';
 
 export interface PurchaseDetailDataState {
   loading: boolean;
@@ -187,7 +187,9 @@ export function usePurchaseDetailData(
     loadData();
   }, [loadData]);
 
-  const canProcure = !bomIncomplete;
+  // 修复：整单禁采改为"存在至少一行本体信息完整即可采购"。
+  // 旧逻辑 = !bomIncomplete（任一行缺供应商即全单禁采，一行有缺惩罚全部）
+  const canProcure = purchaseList.length > 0 && purchaseList.some((p) => isPurchaseRowComplete(p));
 
   /** 样衣BOM已完成 → 采购数据锁定，编辑/删除需先退回 */
   const sampleBomLocked = useMemo(

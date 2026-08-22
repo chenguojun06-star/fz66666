@@ -132,7 +132,7 @@ const InventoryCheck: React.FC = () => {
             <Input placeholder="不填则盘点所有仓位" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="盘点备注" />
+            <Input.TextArea rows={3} placeholder="盘点备注" />
           </Form.Item>
         </Form>
       </ResizableModal>

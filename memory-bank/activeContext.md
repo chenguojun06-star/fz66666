@@ -7,7 +7,16 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-22 ★★★ P0事故：智能采购 /orders 线上500（Lambda引用exist=false字段）✅已修复待推送
+### 2026-08-22 ★★ 订单详情页四项修复：页面改名/开发端商品编码同步/去SKU前缀/备注框可拖拽 ✅（mvn compile + tsc 0 errors，待推送）
+
+- [x] **页面改名**：OrderFlow/index.tsx 标题"订单全流程记录"→"订单详情页"
+- [x] **商品编码从开发端同步（核心）**：ProductionOrderOrchestrator.getDetailByOrderNo 新增 loadDevSkuMap()——按 styleId（降级 styleNo）批量查 t_product_sku（带 tenant_id 隔离），构建 color|size→skuCode 映射；生成 skuNo 时优先用开发端 skuCode，取不到才用 buildSkuNo 兜底。注入 ProductSkuService
+- [x] **去掉 SKU- 强制前缀**：production.order.ts 的 parseProductionOrderLines 原逻辑 lineSku 不以"SKU"开头就强加 `SKU-` 前缀、无值时还拼 `SKU-订单号-款号-颜色-尺码`——全部删除，改为直接透传后端 skuNo（配合上一条后端改动，商品编码显示开发端真实编码）
+- [x] **商品编码输入框变大**：ColorSizeMatrixEditor.tsx Input 加 width:'100%'，商品编码列 th 加 minWidth:200，外层容器 overflowX:'auto'；表格在窄容器下不再挤压输入框
+- [x] **所有备注输入框可拖拽拉大缩小（77处）**：根因——antd TextArea 的 autoSize 在每次输入时重算高度覆盖用户拖拽的高度（rc-textarea 行为），全局 CSS 的 resize:vertical!important 只能显示手柄、留不住拖拽结果。修复：全项目 77 处 TextArea 的 autoSize={{minRows:N,...}} 批量替换为 rows={N}（38+28 个文件，含 RemarkInput 组件默认值改造，API 兼容保留显式传参能力），配合全局 CSS resize:vertical 实现原生拖拽持久生效
+
+
+### 2026-08-22 ★★★ P0事故：智能采购 /orders 线上500（Lambda引用exist=false字段）✅已修复已上线已验证
 
 - [x] **事故现象**：用户打开智能采购面板，POST /api/production/smart-sourcing/orders 连续500
 - [x] **根因（用测试账号登录线上拿到的真实错误）**：`can not find lambda cache for this property [styleCover] of entity [ProductionOrder]`——listOrders 的 `qw.select(ProductionOrder::getStyleCover)` 引用了 `@TableField(exist=false)` 的内存字段（styleCover/coverImage 不是 t_production_order 的列），MyBatis-Plus 解析 Lambda 直接抛异常。编译期不检查、本地服务是旧版无此接口，从未真实调用过 → 上线即炸（D-055 反思三问第③问的典型反面教材）
@@ -18,6 +27,8 @@
 - [x] **连带发现3（部署机制）**：微信云托管配置了 Git push 自动部署（独立于 GitHub Actions）——CI 失败不拦截部署，代码照样上线。**这解释了为什么 bug 直接打到线上**，也意味着修复推送后自动生效
 - [x] **连带发现4（本地38个孤儿测试）**：orchestration 目录下 38 个 git 未跟踪的过时测试（引用已不存在的类/旧方法签名），导致本地 mvn test 编译必挂（CI 不受影响）。已临时移到 /tmp/orphan_tests/，后续需清理或修复
 - [x] 验证：mvn compile + 全量 ESLint 0 errors + 回归测试通过
+- [x] **上线（2026-08-22 13:15 推送 f08efb3ce，CI 首次转绿 6m30s）**：safe-push 10/10 通过 → git push → 微信云托管自动部署
+- [x] **线上实测验证（lilb 账号直打 api.webyszl.cn）**：POST /orders（空筛选/带筛选）200、POST /orders-overview 200（0.45s）、GET /orders-detail 200（0.42s），订单数据+封面图正常返回，500 彻底消除
 
 
 

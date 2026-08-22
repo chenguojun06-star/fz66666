@@ -225,7 +225,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
         </Row>
         <div>
           <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>备注</div>
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} value={remark} onChange={e => setRemark(e.target.value)} placeholder="选填" />
+          <Input.TextArea rows={3} value={remark} onChange={e => setRemark(e.target.value)} placeholder="选填" />
         </div>
       </Space>
     </Drawer>

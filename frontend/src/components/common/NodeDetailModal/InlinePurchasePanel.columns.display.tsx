@@ -12,6 +12,7 @@ import {
 } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import type { MaterialPurchase } from '@/types/production';
 import { normalizeStatus } from './InlinePurchasePanel.helpers';
+import { getPurchaseMissingFields } from './utils';
 import type { DisplayColumnHandlers } from './InlinePurchasePanel.columns.shared';
 
 export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsType<MaterialPurchase> => {
@@ -24,7 +25,6 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
     handleWarehousePick,
     handleQualityIssue,
     stockMap,
-    bomIncomplete,
   } = handlers;
   return [
     {
@@ -203,6 +203,8 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
         const stock = stockMap[String(record.id)];
         const hasStock = stock != null && stock > 0;
         const isWarehousePending = status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING;
+        // 行级完整性：只禁用本体信息缺失的行（供应商缺失不禁用）
+        const rowMissing = getPurchaseMissingFields(record);
         return (
           <Space size={4}>
             {isWarehousePending ? (
@@ -211,7 +213,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
               <Button
                 type="link"
                 size="small"
-                disabled={status !== MATERIAL_PURCHASE_STATUS.PENDING || (bomIncomplete && !hasStock)}
+                disabled={status !== MATERIAL_PURCHASE_STATUS.PENDING || (rowMissing.length > 0 && !hasStock)}
                 onClick={() => {
                   if (hasStock) {
                     const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
@@ -230,7 +232,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
                   }
                 }}
               >
-                {hasStock ? '出库领取' : (bomIncomplete ? '采购（信息不全）' : '采购')}
+                {hasStock ? '出库领取' : (rowMissing.length > 0 ? `采购（缺${rowMissing.join('、')}）` : '采购')}
               </Button>
             )}
             {/* 到货入库按钮：将物料入库到仓库库存 */}

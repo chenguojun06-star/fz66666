@@ -52,7 +52,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
       <div style={directCardStyle}>
         <ProductionSummary record={directRow} />
         <div style={directFieldLabelStyle}>生产要求 / 制单描述</div>
-        <Input.TextArea value={String((directRow as any).description || '')} autoSize={{ minRows: 10 }} readOnly />
+        <Input.TextArea value={String((directRow as any).description || '')} rows={10} readOnly />
         <div style={{ ...directMetaStyle, marginTop: 10 }}>当前账号仅可查看制单内容，不能直接编辑或退回。</div>
       </div>
     );
@@ -72,7 +72,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
           <Form form={returnDescForm} layout="vertical">
             <div style={directFieldLabelStyle}>退回原因</div>
             <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 8 }}>
-              <TextArea autoSize={{ minRows: 2 }} placeholder="请说明制单退回原因" />
+              <TextArea rows={2} placeholder="请说明制单退回原因" />
             </Form.Item>
           </Form>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -82,7 +82,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
         <div style={directCardStyle}>
           <ProductionSummary record={directRow} />
           <div style={directFieldLabelStyle}>生产要求 / 制单描述</div>
-          <Input.TextArea value={String((directRow as any).description || '')} autoSize={{ minRows: 10 }} readOnly />
+          <Input.TextArea value={String((directRow as any).description || '')} rows={10} readOnly />
         </div>
       </div>
     );
@@ -99,7 +99,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
       <Form form={editForm} layout="vertical">
         <div style={directFieldLabelStyle}>生产要求 / 制单描述</div>
         <Form.Item name="description" style={{ marginBottom: 0 }}>
-          <TextArea autoSize={{ minRows: 10 }} placeholder={'请输入生产要求和制单描述信息\n示例：\n1. 面料：主面料用32支全棉平纹\n2. 颜色：藏蓝色（潘通色号19-4024）\n3. 缝制要求：1/4″四线包缝'} />
+          <TextArea rows={10} placeholder={'请输入生产要求和制单描述信息\n示例：\n1. 面料：主面料用32支全棉平纹\n2. 颜色：藏蓝色（潘通色号19-4024）\n3. 缝制要求：1/4″四线包缝'} />
         </Form.Item>
       </Form>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>

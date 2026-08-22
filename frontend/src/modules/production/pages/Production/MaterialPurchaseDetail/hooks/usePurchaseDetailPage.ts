@@ -24,7 +24,6 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
 
   const actionsState = usePurchaseDetailActions({
     purchaseList: dataState.purchaseList,
-    canProcure: dataState.canProcure,
     styleNoParam,
     loadData: dataState.loadData,
   });

@@ -117,7 +117,7 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
         </div>
 
         <Form.Item name="remark" label="备注">
-          <TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="其他备注信息" />
+          <TextArea rows={3} placeholder="其他备注信息" />
         </Form.Item>
 
         {/* 查看模式显示额外信息 */}

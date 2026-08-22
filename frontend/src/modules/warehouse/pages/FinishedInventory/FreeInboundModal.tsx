@@ -379,7 +379,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
         )}
 
         <Form.Item name="remark" label="备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="选填" />
+          <Input.TextArea rows={3} placeholder="选填" />
         </Form.Item>
       </Space>
     </Drawer>

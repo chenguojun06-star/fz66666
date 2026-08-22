@@ -298,6 +298,6 @@ interface RemarkSectionProps {}
 
 export const RemarkSection: React.FC<RemarkSectionProps> = () => (
   <Form.Item name="remark" label="备注" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
-    <Input.TextArea id="remark" autoSize={{ minRows: 4 }} />
+    <Input.TextArea id="remark" rows={4} />
   </Form.Item>
 );

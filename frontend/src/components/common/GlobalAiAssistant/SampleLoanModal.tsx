@@ -226,7 +226,7 @@ const SampleLoanModal: React.FC<SampleLoanModalProps> = ({ visible, prefillData,
         </Form.Item>
 
         <Form.Item name="remark" label="借出原因/备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} />
+          <Input.TextArea rows={3} />
         </Form.Item>
       </Form>
     </ResizableModal>

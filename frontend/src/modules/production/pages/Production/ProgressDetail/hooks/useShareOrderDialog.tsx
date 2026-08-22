@@ -119,7 +119,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
           <Input.TextArea
             id="shareOrderUrl"
             value={shareModal.shareUrl}
-            autoSize={{ minRows: 2 }}
+            rows={2}
             readOnly
             style={{ fontSize: 14, background: 'var(--color-bg-subtle)', cursor: 'text' }}
           />

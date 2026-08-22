@@ -252,12 +252,42 @@ export function computeMissingColors(
 export function checkBomIncomplete(purchases: MaterialPurchase[]): boolean {
   if (purchases.length === 0) return true;
   const REQUIRED = ['materialType', 'materialCode', 'materialName', 'unit', 'supplierName'] as (keyof MaterialPurchase)[];
-  return purchases.some((item) =>
-    REQUIRED.some((field) => {
-      const val = item[field];
+  return purchases.some((item) => hasAnyEmptyField(item, REQUIRED));
+}
+
+/**
+ * 采购硬阻断字段（供应商缺失不阻断采购，仅作补全提示）
+ * 修复：此前任一行缺供应商会禁用整单所有物料的采购/批量采购按钮（过度惩罚）
+ */
+const PURCHASE_CRITICAL_FIELDS: (keyof MaterialPurchase)[] = ['materialType', 'materialCode', 'materialName', 'unit'];
+const PURCHASE_FIELD_LABELS: Record<string, string> = {
+  materialType: '物料类型',
+  materialCode: '物料编码',
+  materialName: '物料名称',
+  unit: '单位',
+  supplierName: '供应商',
+};
+
+/** 返回单条采购记录缺失的硬阻断字段中文名（用于行级禁用与提示） */
+export function getPurchaseMissingFields(record: MaterialPurchase): string[] {
+  return PURCHASE_CRITICAL_FIELDS
+    .filter(field => {
+      const val = record[field];
       return val === undefined || val === null || String(val).trim() === '';
     })
-  );
+    .map(field => PURCHASE_FIELD_LABELS[field] || String(field));
+}
+
+/** 单条采购记录是否具备采购操作所需的本体信息（不含供应商） */
+export function isPurchaseRowComplete(record: MaterialPurchase): boolean {
+  return getPurchaseMissingFields(record).length === 0;
+}
+
+function hasAnyEmptyField(item: MaterialPurchase, fields: (keyof MaterialPurchase)[]): boolean {
+  return fields.some((field) => {
+    const val = item[field];
+    return val === undefined || val === null || String(val).trim() === '';
+  });
 }
 
 export interface MaterialSection {

@@ -157,7 +157,7 @@ export default function SelectionCenter() {
             <Col span={12}><Form.Item name="costEstimate" label="成本估算 (¥)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
             <Col span={12}><Form.Item name="targetPrice" label="目标报价 (¥)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
           </Row>
-          <Form.Item name="remark" label="备注"><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item>
+          <Form.Item name="remark" label="备注"><Input.TextArea rows={3} /></Form.Item>
         </Form>
       </ResizableModal>
 

@@ -77,7 +77,7 @@ const EditFieldModal: React.FC<EditFieldModalProps> = ({
         )}
 
         <Form.Item name="remark" label="备注说明">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="可选，字段用途说明" />
+          <Input.TextArea rows={3} placeholder="可选，字段用途说明" />
         </Form.Item>
       </Form>
     </ResizableModal>

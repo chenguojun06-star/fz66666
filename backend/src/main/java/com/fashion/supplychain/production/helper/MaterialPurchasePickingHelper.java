@@ -321,7 +321,7 @@ public class MaterialPurchasePickingHelper {
         picking.setPickTime(LocalDateTime.now());
         picking.setStatus("pending");  // 仓库待确认出库
         picking.setPurchaseId(purchase.getId() != null ? purchase.getId() : "");
-        picking.setRemark("WAREHOUSE_PICK|purchaseId=" + (purchase.getId() != null ? purchase.getId() : ""));
+        picking.setRemark("采购到货出库｜采购单：" + (purchase.getId() != null ? purchase.getId() : ""));
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
         picking.setDeleteFlag(0);
@@ -601,7 +601,7 @@ public class MaterialPurchasePickingHelper {
         picking.setPickTime(LocalDateTime.now());
         picking.setStatus("pending");
         picking.setPurchaseId(purchase.getId());
-        picking.setRemark("WAREHOUSE_PICK|purchaseId=" + purchase.getId());
+        picking.setRemark("采购到货出库｜采购单：" + purchase.getId());
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
         picking.setDeleteFlag(0);

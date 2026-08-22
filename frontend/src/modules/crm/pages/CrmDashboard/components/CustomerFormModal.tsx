@@ -108,7 +108,7 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
           </Col>
         </Row>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="其他备注信息" />
+          <Input.TextArea rows={3} placeholder="其他备注信息" />
         </Form.Item>
       </Form>
     </ResizableModal>

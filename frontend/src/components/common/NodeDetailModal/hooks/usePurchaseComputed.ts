@@ -6,6 +6,7 @@ import {
   computeMissingColors,
   checkBomIncomplete,
   buildMaterialSections,
+  isPurchaseRowComplete,
 } from '../utils';
 import type { OrderLine, MaterialSection } from '../utils';
 
@@ -50,7 +51,9 @@ export const usePurchaseComputed = (params: UsePurchaseComputedParams): UsePurch
 
   const bomIncomplete = useMemo(() => checkBomIncomplete(purchases), [purchases]);
 
-  const canProcure = !bomIncomplete;
+  // D-修复：canProcure 改为"存在至少一行本体信息完整的记录"。
+  // 旧逻辑 = !bomIncomplete（任一行缺供应商即全单禁采，一行有缺惩罚全部）
+  const canProcure = purchases.length > 0 && purchases.some(p => isPurchaseRowComplete(p));
 
   const sections = useMemo(() => buildMaterialSections(purchases), [purchases]);
 

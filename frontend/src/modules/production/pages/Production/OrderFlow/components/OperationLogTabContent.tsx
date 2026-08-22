@@ -111,7 +111,7 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
           value={newRemark}
           onChange={(e) => setNewRemark(e.target.value)}
           placeholder="添加备注..."
-          autoSize={{ minRows: 3, maxRows: 8 }}
+          rows={3}
           maxLength={500}
           showCount
           style={{ flex: 1 }}

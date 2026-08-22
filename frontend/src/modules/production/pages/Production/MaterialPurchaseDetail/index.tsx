@@ -17,6 +17,7 @@ import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPu
 import SizeUsageSummaryPanel from './components/SizeUsageSummaryPanel';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
 import { filterPendingPurchases } from './hooks/utils';
+import { isPurchaseRowComplete } from './hooks/types';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export interface MaterialPurchaseDetailProps {
@@ -60,7 +61,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     handleUpdateRow, handleRemoveRow, handleSaveAll,
     materialModalOpen, setMaterialModalOpen,
     handleOpenMaterialModal, handleUseMaterial, handleCreateMaterial,
-    colorList, isMultiColor, canProcure, bomIncomplete, missingColors,
+    colorList, isMultiColor, bomIncomplete, missingColors,
     sampleBomLocked, sampleBomCompletedTime,
     loadData,
   } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
@@ -75,13 +76,16 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   /** 批量采购入口（D-104）：校验后打开可编辑确认弹窗（物料编码/规格/单价/供应商全展示，数量可调） */
   const onBatchPurchase = () => {
-    if (!canProcure) {
+    // 修复：只批量领取本体信息完整的行（缺编码/名称/单位的行跳过并提示，不再一票否决整单）
+    const allPending = filterPendingPurchases(purchaseList);
+    const pending = allPending.filter((p) => isPurchaseRowComplete(p));
+    const skipped = allPending.length - pending.length;
+    if (!pending.length) {
+      message.warning(allPending.length > 0 ? '待采购物料均缺少物料编码/名称/单位，请先编辑补全' : '没有待采购的项目');
       return;
     }
-    const pending = filterPendingPurchases(purchaseList);
-    if (!pending.length) {
-      message.info('没有待采购的项目');
-      return;
+    if (skipped > 0) {
+      message.info(`已跳过 ${skipped} 项信息不全物料（缺编码/名称/单位）`);
     }
     setBatchPurchaseItems(pending.map((p) => ({
       id: String(p.id),
@@ -122,6 +126,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   const displayData = editing ? editableData : purchaseList;
 
+  /** 批量采购可用：存在至少一行"待采购且本体信息完整"的物料（缺编码/名称/单位的行自动跳过） */
+  const batchPurchaseDisabled = !filterPendingPurchases(purchaseList).some((p) => isPurchaseRowComplete(p));
+
   const viewColumnsMobile = isMobile;
   const colWidth = viewColumnsMobile ? 80 : undefined;
 
@@ -131,7 +138,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   });
 
   const viewColumns = buildViewColumns({
-    colWidth, editing, canProcure, sampleMode,
+    colWidth, editing, sampleMode,
     locked: sampleBomLocked,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
@@ -238,7 +245,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 采购单据
               </Button>
             ) : null}
-            <Button onClick={onBatchPurchase} disabled={!canProcure} loading={batchPurchaseLoading} title={!canProcure ? '请先完善面辅料信息再批量采购' : ''} size="small">
+            <Button onClick={onBatchPurchase} disabled={batchPurchaseDisabled} loading={batchPurchaseLoading} title={batchPurchaseDisabled ? '没有可批量采购的物料（均缺编码/名称/单位或无待采购项）' : ''} size="small">
               批量采购
             </Button>
             <Button onClick={onBatchReturnConfirm} loading={batchReturnLoading} size="small">
@@ -288,7 +295,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   <Tag color="success">物料清单已完成 · 已锁定</Tag>
                 ) : bomIncomplete ? (
                   <Tag icon={<ExclamationCircleOutlined />} color="warning">
-                    {isMultiColor ? '多颜色订单需完善面辅料信息后才可采购' : '请完善面辅料信息'}
+                    {isMultiColor ? '部分物料信息不全（缺供应商可采购，缺编码/名称/单位需补全）' : '部分物料信息不全：缺供应商仍可采购，缺编码/名称/单位的行需补全'}
                   </Tag>
                 ) : null}
               </>

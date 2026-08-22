@@ -245,7 +245,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
         onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
         placeholder={placeholder}
         maxLength={maxLength}
-        autoSize={{ minRows: 2, maxRows: 4 }}
+        rows={2}
       />
     ) : (
       <Input

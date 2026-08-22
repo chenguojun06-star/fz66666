@@ -150,7 +150,7 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
           </Col>
           <Col span={16}>
             <Form.Item name="remark" label="备注">
-              <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} />
+              <Input.TextArea rows={3} />
             </Form.Item>
           </Col>
         </Row>

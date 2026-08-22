@@ -74,7 +74,7 @@ const BatchQcForm: React.FC<BatchQcFormProps> = ({
           </Form.Item>
         </div>
         <Form.Item name="qualityRemark" label="备注" extra="备注将同步到订单备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="可选，记录质检情况" />
+          <Input.TextArea rows={3} placeholder="可选，记录质检情况" />
         </Form.Item>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
           <Button onClick={onBack}>取消</Button>

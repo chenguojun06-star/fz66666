@@ -234,7 +234,7 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
           </Select>
         </Form.Item>
         <Form.Item label="退货原因（整体）" name="returnReason">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="填写退货整体原因（可选）" />
+          <Input.TextArea rows={3} placeholder="填写退货整体原因（可选）" />
         </Form.Item>
       </Form>
       <ResizableTable

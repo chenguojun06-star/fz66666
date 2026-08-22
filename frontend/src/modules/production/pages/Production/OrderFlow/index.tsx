@@ -35,7 +35,7 @@ const OrderFlow: React.FC = () => {
   return (
     <>
         <PageLayout
-          title="订单全流程记录"
+          title="订单详情页"
           titleExtra={
             <Space wrap>
               {query.orderNo ? <Tag>订单号：{query.orderNo}</Tag> : null}

@@ -68,7 +68,7 @@ const InboundDrawer: React.FC<Props> = ({
             <Input placeholder="供应商（选填）" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="备注（选填）" />
+            <Input.TextArea rows={3} placeholder="备注（选填）" />
           </Form.Item>
         </Form>
       </div>

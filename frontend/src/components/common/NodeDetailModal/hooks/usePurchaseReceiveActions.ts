@@ -4,6 +4,7 @@ import type { MessageInstance } from 'antd/es/message/interface';
 import api from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { normalizeStatus } from '../InlinePurchasePanel.helpers';
+import { isPurchaseRowComplete } from '../utils';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialPurchase } from '@/types/production';
 
@@ -122,9 +123,12 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
 
   const handleReceiveAll = useCallback(async () => {
     if (actionLoading) return; // 防重入
-    const pendingItems = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
+    const allPending = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
+    // 只领取本体信息完整的行；信息不全的行跳过并提示（不再一票否决整单）
+    const pendingItems = allPending.filter(p => isPurchaseRowComplete(p));
+    const skippedCount = allPending.length - pendingItems.length;
     if (pendingItems.length === 0) {
-      message.info('没有待采购的物料');
+      message.warning('待采购物料均缺少物料编码/名称/单位，请先「编辑物料」补全后再采购');
       return;
     }
     const receiverId = String(user?.id || '').trim();
@@ -142,7 +146,11 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
         receiverName,
       });
       if (res?.code === 200) {
-        message.success(`已批量领取 ${pendingItems.length} 项物料`);
+        message.success(
+          skippedCount > 0
+            ? `已批量领取 ${pendingItems.length} 项物料，跳过 ${skippedCount} 项信息不全物料（缺编码/名称/单位）`
+            : `已批量领取 ${pendingItems.length} 项物料`
+        );
         loadData();
       } else {
         message.error(res?.message || '批量领取失败');

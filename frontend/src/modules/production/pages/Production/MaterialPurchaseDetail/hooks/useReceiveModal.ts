@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Form, App } from 'antd';
 import type { MaterialPurchase } from '@/types/production';
 import { useUser } from '@/utils/AuthContext';
-import { postReceive } from './types';
+import { postReceive, isPurchaseRowComplete, getPurchaseMissingFields } from './types';
 import { getOperatorName, handleFormSubmitError } from './utils';
 
 export interface UseReceiveModalReturn {
@@ -16,12 +16,11 @@ export interface UseReceiveModalReturn {
 }
 
 interface UseReceiveModalParams {
-  canProcure: boolean;
   loadData: () => Promise<void>;
 }
 
 export function useReceiveModal(params: UseReceiveModalParams): UseReceiveModalReturn {
-  const { canProcure, loadData } = params;
+  const { loadData } = params;
   const { user } = useUser();
   const { message } = App.useApp();
 
@@ -31,15 +30,17 @@ export function useReceiveModal(params: UseReceiveModalParams): UseReceiveModalR
   const [receiveForm] = Form.useForm();
 
   const openReceive = useCallback((record: MaterialPurchase) => {
-    if (!canProcure) {
-      message.warning('请先完善面辅料信息再领取采购');
+    // 修复：行级判断替代整单拦截（旧行为：任一行缺供应商 → 全单无法领取）
+    if (!isPurchaseRowComplete(record)) {
+      const missing = getPurchaseMissingFields(record);
+      message.warning(`该物料缺少：${missing.join('、')}，请先编辑补全`);
       return;
     }
     setReceiveRecord(record);
     receiveForm.resetFields();
     receiveForm.setFieldsValue({ quantity: record.purchaseQuantity });
     setReceiveVisible(true);
-  }, [canProcure, message, receiveForm]);
+  }, [message, receiveForm]);
 
   const handleReceive = useCallback(async () => {
     if (!receiveRecord) return;

@@ -227,7 +227,7 @@ const PayModal: React.FC<PayModalProps> = ({
           )}
 
           <Form.Item label="备注" name="remark">
-            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="支付备注" />
+            <Input.TextArea rows={3} placeholder="支付备注" />
           </Form.Item>
         </Form>
       </div>

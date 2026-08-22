@@ -37,13 +37,17 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
                 {dayjs(prediction.predictedFinishTime).format('MM-DD')}
               </b>
             </span>
-            {(prediction.confidence != null) && (
-              <span style={{ color: 'var(--color-text-secondary)', marginLeft: 4 }}>
-                置信 <b style={{ color: prediction.confidence >= 70 ? 'var(--color-success)' : prediction.confidence >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-                  {prediction.confidence}%
-                </b>
-              </span>
-            )}
+            {(prediction.confidence != null) && (() => {
+              // 后端置信度为0-1小数（0.52=52%），兼容已乘100的旧值
+              const conf = prediction.confidence <= 1 ? prediction.confidence * 100 : prediction.confidence;
+              return (
+                <span style={{ color: 'var(--color-text-secondary)', marginLeft: 4 }}>
+                  置信 <b style={{ color: conf >= 70 ? 'var(--color-success)' : conf >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
+                    {Math.round(conf)}%
+                  </b>
+                </span>
+              );
+            })()}
             {prediction.reasons && prediction.reasons.length > 0 && (
               <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginLeft: 4 }}>
                 · {prediction.reasons[0]}

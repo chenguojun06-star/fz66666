@@ -148,7 +148,7 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
 
         <Form.Item name="receiverId" hidden><Input /></Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="选填" />
+          <Input.TextArea rows={3} placeholder="选填" />
         </Form.Item>
       </Form>
     </StandardModal>

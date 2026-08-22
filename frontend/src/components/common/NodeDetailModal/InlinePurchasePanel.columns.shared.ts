@@ -17,7 +17,6 @@ export interface DisplayColumnHandlers {
   handleWarehousePick: (record: MaterialPurchase, pickQty: number) => void;
   handleQualityIssue: (record: MaterialPurchase) => void;
   stockMap: Record<string, number>;
-  bomIncomplete: boolean;
 }
 
 export const rid = (r: MaterialPurchase) => String(r.id || '');

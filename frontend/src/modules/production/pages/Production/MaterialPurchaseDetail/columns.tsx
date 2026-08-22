@@ -13,6 +13,7 @@ import { formatMaterialQuantityWithUnit, getStatusConfig } from '../MaterialPurc
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { MaterialPurchase } from '@/types/production';
 import { MATERIAL_TYPE_OPTIONS } from './helpers';
+import { getPurchaseMissingFields } from './hooks/types';
 
 const { Option } = Select;
 
@@ -210,7 +211,6 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
 export interface ViewColumnsDeps {
   colWidth: number | undefined;
   editing: boolean;
-  canProcure: boolean;
   /** 样衣采购场景：true 时隐藏"出库领取"按钮（样衣不经过仓库库存，按钮误点必返回 400 库存不足） */
   sampleMode?: boolean;
   /** 样衣BOM已完成：锁定编辑/删除（需在样衣详情-物料清单退回后操作） */
@@ -229,7 +229,7 @@ export interface ViewColumnsDeps {
 
 export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPurchase> {
   const {
-    colWidth, editing, canProcure, sampleMode, locked,
+    colWidth, editing, sampleMode, locked,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,
@@ -291,7 +291,11 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ]),
               { key: 'delete', label: '删除', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '删除此物料行', onClick: () => handleDelete(record), danger: true, disabled: isCancelled || locked },
               ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', title: '等待仓库出库', disabled: true }] : []),
-              ...(!isWarehousePending && (isPending || isReceived || isPartial) ? [{ key: 'receive', label: isPending ? '领取并到货' : '追加到货', title: !canProcure ? '请先完善面辅料信息' : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'), onClick: () => openReceive(record), primary: isPending, disabled: !canProcure }] : []),
+              ...(!isWarehousePending && (isPending || isReceived || isPartial) ? (() => {
+                const rowMissing = getPurchaseMissingFields(record);
+                const rowDisabled = rowMissing.length > 0;
+                return [{ key: 'receive', label: isPending ? (rowDisabled ? `领取（缺${rowMissing.join('、')}）` : '领取并到货') : '追加到货', title: rowDisabled ? `该行缺少：${rowMissing.join('、')}，请先编辑补全` : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'), onClick: () => openReceive(record), primary: isPending, disabled: rowDisabled }];
+              })() : []),
               ...(isPending ? [{ key: 'inbound', label: '登记到货', title: '直接登记到货数量', onClick: () => openInbound(record) }] : []),
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: '确认物料已回料到仓库', onClick: () => handleReturnConfirm(record) }] : []),
               ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),

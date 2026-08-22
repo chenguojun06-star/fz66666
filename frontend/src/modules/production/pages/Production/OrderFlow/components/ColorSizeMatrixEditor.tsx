@@ -18,14 +18,14 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
   onSave, onClearAll, onAutoGen,
 }) => {
   return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+    <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>
             <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>颜色</th>
             <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>尺码</th>
             <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 13, width: 56, borderBottom: '1px solid var(--color-border)' }}>数量</th>
-            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>商品编码</th>
+            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, minWidth: 200, borderBottom: '1px solid var(--color-border)' }}>商品编码</th>
           </tr>
         </thead>
         <tbody>
@@ -46,7 +46,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
                     value={skuVal}
                     onChange={e => setSkuEditMap(prev => ({ ...prev, [key]: e.target.value }))}
                     placeholder="输入商品编码"
-                    style={{ fontSize: 13 }}
+                    style={{ fontSize: 13, width: '100%' }}
                   />
                 </td>
               </tr>

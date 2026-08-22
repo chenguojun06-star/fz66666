@@ -56,7 +56,7 @@ const ProofUploadModal: React.FC<ProofUploadModalProps> = ({
             uploadFn={async (file) => { return await uploadProofImage(file); }}
           />
           <Form.Item label="备注" name="remark">
-            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="选填" />
+            <Input.TextArea rows={3} placeholder="选填" />
           </Form.Item>
         </Form>
       </div>

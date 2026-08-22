@@ -24,7 +24,6 @@ import {
 
 export interface PurchaseDetailActionsParams {
   purchaseList: MaterialPurchase[];
-  canProcure: boolean;
   styleNoParam: string;
   loadData: () => Promise<void>;
 }
@@ -69,7 +68,7 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
   const { user } = useUser();
   const { modal, message } = App.useApp();
 
-  const receiveModal = useReceiveModal({ canProcure: params.canProcure, loadData });
+  const receiveModal = useReceiveModal({ loadData });
   const returnConfirmModal = useReturnConfirmModal({ loadData });
   const inboundModal = useInboundModal({ loadData });
 

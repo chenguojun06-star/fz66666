@@ -272,7 +272,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
         <Form.Item name="styleId" hidden><Input /></Form.Item>
         <Form.Item name="styleNo" label="款号"><Input readOnly /></Form.Item>
         <Form.Item name="pickerName" label="领料人"><Input readOnly /></Form.Item>
-        <Form.Item name="remark" label="备注"><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="请输入备注" /></Form.Item>
+        <Form.Item name="remark" label="备注"><Input.TextArea rows={3} placeholder="请输入备注" /></Form.Item>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Typography.Text strong>领料明细</Typography.Text>

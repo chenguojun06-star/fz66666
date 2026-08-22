@@ -201,7 +201,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                 label="异常说明"
                 rules={[{ required: true, message: '请填写异常说明' }, { min: 4, message: '请至少写 4 个字' }]}
               >
-                <Input.TextArea autoSize={{ minRows: 3 }} placeholder="例如：布面抽丝 8 米，建议退货补货" />
+                <Input.TextArea rows={3} placeholder="例如：布面抽丝 8 米，建议退货补货" />
               </Form.Item>
               <Space>
                 <Button type="primary" loading={submitting} onClick={() => void handleCreate()}>
@@ -301,7 +301,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
             label="处理结果"
             rules={[{ required: true, message: '请填写处理结果' }, { min: 4, message: '请至少写 4 个字' }]}
           >
-            <Input.TextArea autoSize={{ minRows: 3 }} placeholder="例如：供应商确认补货 8 米，本批次先退回处理" />
+            <Input.TextArea rows={3} placeholder="例如：供应商确认补货 8 米，本批次先退回处理" />
           </Form.Item>
         </Form>
       </ResizableModal>

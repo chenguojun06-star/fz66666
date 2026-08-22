@@ -135,7 +135,7 @@ const DataCenter: React.FC = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item name="description" label="生产要求" rules={[{ required: false }]}>
-            <Input.TextArea autoSize={{ minRows: 3 }} placeholder="请输入生产要求，每行填写一条内容" />
+            <Input.TextArea rows={3} placeholder="请输入生产要求，每行填写一条内容" />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -216,7 +216,7 @@ const DataCenter: React.FC = () => {
           </Form.Item>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             <Form.Item name="expectedCompleteDate" label="预计完成日期"><DatePicker style={{ width: '100%' }} /></Form.Item>
-            <Form.Item name="remark" label="备注" style={{ gridColumn: 'span 3' }}><Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="其他说明" /></Form.Item>
+            <Form.Item name="remark" label="备注" style={{ gridColumn: 'span 3' }}><Input.TextArea rows={3} placeholder="其他说明" /></Form.Item>
           </div>
           <Form.Item name="patternFile" label="纸样文件" getValueFromEvent={(file: File | null) => file ? [{ uid: '-1', name: file.name, originFileObj: file }] : []}>
             <PatternFilePicker />

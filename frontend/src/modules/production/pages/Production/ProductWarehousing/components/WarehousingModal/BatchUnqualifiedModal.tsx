@@ -99,7 +99,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
           />
         </Form.Item>
         <Form.Item name="repairRemark" label="返修备注（可选）">
-          <Input.TextArea autoSize={{ minRows: 2 }} placeholder="返修说明" />
+          <Input.TextArea rows={2} placeholder="返修说明" />
         </Form.Item>
       </Form>
     </StandardModal>

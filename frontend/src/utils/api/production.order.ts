@@ -22,15 +22,7 @@ export const parseProductionOrderLines = (
     const size = String(row?.size ?? row?.sizeName ?? row?.spec ?? row?.尺码 ?? row?.['尺码'] ?? '').trim();
     const quantity = toNumberSafe(row?.quantity ?? row?.qty ?? row?.count ?? row?.num ?? row?.数量 ?? row?.['数量']);
     const lineSku = String(row?.skuNo ?? row?.skuKey ?? row?.sku ?? row?.sku_code ?? row?.skuCode ?? '').trim();
-    const orderNo = String((order as any)?.orderNo ?? row?.orderNo ?? '').trim();
-    const styleNo = String((order as any)?.styleNo ?? row?.styleNo ?? '').trim();
-    const normalizedLineSku = lineSku
-      ? (lineSku.toUpperCase().startsWith('SKU') ? lineSku : `SKU-${lineSku}`)
-      : '';
-    const composedSku = orderNo && styleNo && color && size
-      ? `SKU-${orderNo}-${styleNo}-${color}-${size}`
-      : '';
-    const skuNo = normalizedLineSku || composedSku;
+    const skuNo = lineSku;
     const warehousedQuantity = toNumberSafe(
       row?.warehousedQuantity ?? row?.warehousingQualifiedQuantity ?? row?.warehousingQuantity ?? row?.qualifiedQuantity ?? row?.入库数量 ?? row?.['入库数量']
     );

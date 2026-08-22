@@ -34,7 +34,7 @@ const RemarkExceptionModal: React.FC<RemarkExceptionModalProps> = ({
         id="productionRemark"
         value={remarkText}
         onChange={(e) => setRemarkText(e.target.value)}
-        autoSize={{ minRows: 3 }}
+        rows={3}
         placeholder="请输入异常备注..."
         autoFocus
         style={{ marginTop: 8 }}

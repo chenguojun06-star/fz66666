@@ -457,7 +457,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             确定退回当前编辑？所有未保存的修改将被丢弃。
           </p>
           <Form.Item name="remark" label="退回备注（可选）">
-            <Input.TextArea autoSize={{ minRows: 2 }} placeholder="请输入退回备注" autoFocus />
+            <Input.TextArea rows={2} placeholder="请输入退回备注" autoFocus />
           </Form.Item>
         </Form>
       </SmallModal>

@@ -298,7 +298,7 @@ const OutboundDrawer: React.FC<Props> = ({
                 </Form.Item>
                 <Form.Item label="备注" style={{ marginBottom: 0 }}>
                   <Input.TextArea
-                    autoSize={{ minRows: 3, maxRows: 8 }}
+                    rows={3}
                     placeholder="出库备注（选填）"
                     value={outboundRemark}
                     onChange={(e) => onRemarkChange(e.target.value)}

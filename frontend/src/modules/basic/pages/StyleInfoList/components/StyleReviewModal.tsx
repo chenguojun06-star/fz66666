@@ -39,7 +39,7 @@ const StyleReviewModal: React.FC<StyleReviewModalProps> = ({ confirm }) => {
           name="reviewComment"
           label="审核意见"
         >
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="可填写审核意见或返修要求" />
+          <Input.TextArea rows={3} placeholder="可填写审核意见或返修要求" />
         </Form.Item>
         <Form.Item name="reviewImages" label="审核图片">
           <MultiImageUploadBox

@@ -179,7 +179,7 @@ const MaterialPickupModal: React.FC<MaterialPickupModalProps> = ({
           />
         </Form.Item>
         <Form.Item name="remark" label="备注（可选）">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="如有特殊说明请填写" />
+          <Input.TextArea rows={3} placeholder="如有特殊说明请填写" />
         </Form.Item>
       </Form>
     </Modal>

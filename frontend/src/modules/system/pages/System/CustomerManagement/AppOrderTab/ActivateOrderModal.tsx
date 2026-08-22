@@ -75,7 +75,7 @@ const ActivateOrderModal: React.FC<ActivateOrderModalProps> = ({
             <Text>备注（可选）：</Text>
             <Input.TextArea
               id="activateRemark"
-              autoSize={{ minRows: 3, maxRows: 8 }}
+              rows={3}
               placeholder="如：已收到转账 / 线下签约确认"
               value={remark}
               onChange={(e) => onRemarkChange(e.target.value)}

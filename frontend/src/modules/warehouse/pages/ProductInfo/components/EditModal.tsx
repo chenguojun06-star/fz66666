@@ -174,12 +174,12 @@ const EditModal: React.FC<EditModalProps> = ({
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="washInstructions" label="洗涤说明">
-                <Input.TextArea placeholder="请输入洗涤说明" autoSize={{ minRows: 2 }} />
+                <Input.TextArea placeholder="请输入洗涤说明" rows={2} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="description" label="描述">
-                <Input.TextArea placeholder="请输入描述" autoSize={{ minRows: 2 }} />
+                <Input.TextArea placeholder="请输入描述" rows={2} />
               </Form.Item>
             </Col>
           </Row>

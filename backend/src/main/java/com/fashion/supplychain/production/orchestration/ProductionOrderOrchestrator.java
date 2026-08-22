@@ -102,6 +102,9 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private com.fashion.supplychain.production.helper.FactoryCapacityWarningHelper factoryCapacityWarningHelper;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.ProductSkuService productSkuService;
+
     // ---------- updateBasicInfo 相关常量 ----------
 
     private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of(
@@ -311,6 +314,8 @@ public class ProductionOrderOrchestrator {
                     String styleNo = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : "";
                     String orderNoFinal = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo().trim() : "";
                     boolean autoGenerate = Boolean.TRUE.equals(order.getSkuAutoGenerate());
+                    // 开发端 SKU 映射：color|size → skuCode（优先使用开发端商品编码）
+                    Map<String, String> devSkuMap = loadDevSkuMap(order);
                     for (Map<String, Object> item : items) {
                         if (item == null || item.isEmpty()) {
                             continue;
@@ -324,7 +329,11 @@ public class ProductionOrderOrchestrator {
                         String existingSkuNo = item.get("skuNo") != null ? String.valueOf(item.get("skuNo")).trim() : null;
                         if (autoGenerate || !StringUtils.hasText(existingSkuNo)) {
                             // 只有当开启自动生成或者用户还没有填写时才自动生成
-                            String skuNo = helper.buildSkuNo(orderNoFinal, styleNo, color, size);
+                            // 优先取开发端（商品管理）已维护的 skuCode，取不到再按规则生成兜底
+                            String devSku = devSkuMap.get(color + "|" + size);
+                            String skuNo = StringUtils.hasText(devSku)
+                                    ? devSku
+                                    : helper.buildSkuNo(orderNoFinal, styleNo, color, size);
                             item.put("skuNo", skuNo);
                             item.put("skuKey", skuNo);
                         } else {
@@ -340,6 +349,47 @@ public class ProductionOrderOrchestrator {
         }
 
         return order;
+    }
+
+    /**
+     * 加载开发端（商品管理 t_product_sku）SKU 映射：color|size → skuCode。
+     * 带 tenant_id 隔离（P0铁律4）；失败不阻断主流程，仅降级为按规则生成。
+     */
+    private Map<String, String> loadDevSkuMap(ProductionOrder order) {
+        Map<String, String> map = new java.util.HashMap<>();
+        try {
+            List<com.fashion.supplychain.style.entity.ProductSku> skus = null;
+            Long styleIdLong = null;
+            if (StringUtils.hasText(order.getStyleId())) {
+                try {
+                    styleIdLong = Long.parseLong(order.getStyleId().trim());
+                } catch (NumberFormatException ignore) {
+                    styleIdLong = null;
+                }
+            }
+            if (styleIdLong != null) {
+                skus = productSkuService.listByStyleId(styleIdLong);
+            } else if (StringUtils.hasText(order.getStyleNo())) {
+                skus = productSkuService.lambdaQuery()
+                        .eq(com.fashion.supplychain.style.entity.ProductSku::getStyleNo, order.getStyleNo().trim())
+                        .list();
+            }
+            if (skus != null) {
+                for (com.fashion.supplychain.style.entity.ProductSku sku : skus) {
+                    if (sku == null || !StringUtils.hasText(sku.getSkuCode())) {
+                        continue;
+                    }
+                    String c = sku.getColor() == null ? "" : sku.getColor().trim();
+                    String s = sku.getSize() == null ? "" : sku.getSize().trim();
+                    if (!c.isEmpty() && !s.isEmpty()) {
+                        map.putIfAbsent(c + "|" + s, sku.getSkuCode().trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[OrderOrchestrator] 加载开发端SKU失败，降级为规则生成: {}", e.getMessage());
+        }
+        return map;
     }
 
     // ======================= 创建/编辑 → CreationHelper =======================

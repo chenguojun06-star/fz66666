@@ -676,7 +676,7 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="补录原因（可选）" maxLength={200} showCount />
+          <Input.TextArea rows={3} placeholder="补录原因（可选）" maxLength={200} showCount />
         </Form.Item>
         <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
           提示：上班时间和下班时间至少填一项。不允许补录未来日期。
@@ -768,7 +768,7 @@ const AdjustModal: React.FC<AdjustModalProps> = ({ open, record, onCancel, onSuc
           />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="修改原因（可选）" maxLength={200} showCount />
+          <Input.TextArea rows={3} placeholder="修改原因（可选）" maxLength={200} showCount />
         </Form.Item>
       </Form>
     </StandardModal>
@@ -928,7 +928,7 @@ const BatchLeaveModal: React.FC<BatchLeaveModalProps> = ({ open, userOptions, on
           <Select placeholder="选择休假类型" options={LEAVE_TYPE_OPTIONS} />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="休假说明（可选）" maxLength={200} showCount />
+          <Input.TextArea rows={3} placeholder="休假说明（可选）" maxLength={200} showCount />
         </Form.Item>
         <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
           提示：单次最多标记 31 天。已有打卡记录的日期会自动跳过。
