@@ -107,6 +107,19 @@ public class ProductWarehousingController {
     }
 
     /**
+     * 回填订单历史质检入库的扫码记录 + 工序跟踪"入库"行（幂等，可重复调用）
+     * 修复旧数据：质检入库未同步 t_scan_record 导致订单时间轴"入库"节点为空、
+     * 工序跟踪"入库"行永远"待扫码"。参数支持订单ID或订单号（PO开头）
+     */
+    @PostMapping("/backfill-scan-records")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> backfillScanRecords(@RequestBody Map<String, Object> body) {
+        Object v = body == null ? null : body.get("orderId");
+        String orderId = v == null ? "" : String.valueOf(v).trim();
+        return Result.success(productWarehousingOrchestrator.backfillScanRecords(orderId));
+    }
+
+    /**
      * 统一的报修统计端点（支持单个和批量）
      *
      * @param params 查询参数（GET方式，用于单个查询）

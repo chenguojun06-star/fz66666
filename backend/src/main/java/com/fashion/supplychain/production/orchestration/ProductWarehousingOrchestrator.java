@@ -17,6 +17,7 @@ import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingLogAppendHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingScanSyncHelper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
@@ -76,6 +77,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductWarehousingLogAppendHelper logAppendHelper;
+
+    @Autowired
+    private ProductWarehousingScanSyncHelper scanSyncHelper;
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
@@ -188,6 +192,9 @@ public class ProductWarehousingOrchestrator {
 
         postActionHelper.triggerPostSaveActions(orderId, productWarehousing);
 
+        // 同步入库扫码记录 + 工序跟踪"入库"行（订单时间轴/工序跟踪数据链路，失败不阻断主流程）
+        scanSyncHelper.syncWarehouseScan(productWarehousing);
+
         logAppendHelper.appendSingleWarehousing(orderId,
                 productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0,
                 productWarehousing.getUnqualifiedQuantity() != null ? productWarehousing.getUnqualifiedQuantity() : 0);
@@ -268,8 +275,60 @@ public class ProductWarehousingOrchestrator {
 
         executeBatchSaveWarehousing(list);
 
+        // 同步入库扫码记录 + 工序跟踪"入库"行（订单时间轴/工序跟踪数据链路，失败不阻断主流程）
+        list.forEach(scanSyncHelper::syncWarehouseScan);
+
         postActionHelper.triggerPostBatchSaveActions(oid, list.size());
         return true;
+    }
+
+    /**
+     * 回填订单历史质检入库的扫码记录 + 工序跟踪"入库"行（幂等，可重复调用）
+     * 修复 2026-08-22 前质检入库未同步 t_scan_record 导致订单时间轴"入库"节点为空、
+     * 工序跟踪"入库"行永远"待扫码"的历史数据
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> backfillScanRecords(String orderId) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+        // 兼容订单号（PO 开头）：先按 ID 查，查不到再按订单号解析
+        String oid = orderId.trim();
+        ProductionOrder backfillOrder = productionOrderService.getById(oid);
+        if (backfillOrder == null || !StringUtils.hasText(backfillOrder.getId())) {
+            backfillOrder = productionOrderService.getByOrderNo(oid);
+            if (backfillOrder == null || !StringUtils.hasText(backfillOrder.getId())) {
+                throw new IllegalArgumentException("订单不存在: " + oid);
+            }
+        }
+        oid = backfillOrder.getId();
+
+        List<ProductWarehousing> candidates = scanSyncHelper.listBackfillCandidates(oid);
+        int synced = 0;
+        int skipped = 0;
+        for (ProductWarehousing w : candidates) {
+            long before = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, oid)
+                    .eq(ScanRecord::getCuttingBundleId, w.getCuttingBundleId())
+                    .eq(ScanRecord::getScanType, "warehouse")
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (before > 0) {
+                skipped++;
+                continue;
+            }
+            scanSyncHelper.syncWarehouseScan(w);
+            synced++;
+        }
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("orderId", oid);
+        result.put("bundleTotal", candidates.size());
+        result.put("synced", synced);
+        result.put("skipped", skipped);
+        log.info("[质检入库回填] orderId={}, 菲号数={}, 回填={}, 已存在跳过={}",
+                oid, candidates.size(), synced, skipped);
+        return result;
     }
 
     private String resolveBatchOrderId(Map<String, Object> body) {
