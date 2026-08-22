@@ -43,9 +43,19 @@ function buildCareIconsHtml(codes: string[], _iconSize: number): string {
   return cells ? `<div class="icons">${cells}</div>` : '';
 }
 
+/** 字号随标签宽度自适应：30mm→7.5pt、40mm→10pt、50mm→12.5pt，上限13pt（保证小标签也能看清） */
+function calcFontSize(w: number): number {
+  return Math.round(Math.min(Math.max(w * 0.25, 7), 13) * 10) / 10;
+}
+
+/** 图标大小随标签宽度自适应：30mm→7mm、40mm→8.8mm、50mm→11mm，上限13mm（与字号同步缩放） */
+function calcIconSize(w: number): number {
+  return Math.round(Math.min(Math.max(w * 0.22, 7), 13) * 10) / 10;
+}
+
 function buildLabelCss(w: number, h: number, iconSize: number, topOffsetMm: number): string {
-  // 统一标准字号：全部分区同一字号、无加粗（用户要求字体图标一致）
-  const fs = w >= 48 ? 6.5 : 5.5;
+  // 统一标准字号：全部分区同一字号、无加粗（用户要求字体图标一致），随标签宽度自适应
+  const fs = calcFontSize(w);
   const bottomSafe = 2;
   const iconGap = w <= 30 ? 0.6 : 1;
   const topPad = Math.max(0, topOffsetMm || 0);
@@ -63,7 +73,7 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
 .size-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;text-align:center;line-height:1.3}
 .style-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.3mm;text-align:center;line-height:1.3;margin-top:1mm}
 .comp-mats{font-size:${fs}pt;font-weight:400;line-height:1.5;text-align:center;margin-top:1.5mm}
-.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin-top:1.5mm}
+.icons{display:flex;flex-direction:row;gap:${iconGap}mm;row-gap:1.2mm;align-items:center;justify-content:center;flex-wrap:wrap;width:100%;margin-top:1.5mm}
 .icon-cell{width:${iconSize}mm;height:${iconSize}mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .icons svg{width:100%;height:100%}
 .care-wash{font-size:${fs}pt;font-weight:400;line-height:1.5;text-align:center;margin-top:1mm}
@@ -109,12 +119,6 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (ch) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[ch] as string));
-}
-
-function calcIconSize(w: number): number {
-  if (w <= 30) return 5;
-  if (w <= 40) return 5;
-  return 6;
 }
 
 export function buildWashLabelPrintHtml(data: WashLabelPrintData): string {
