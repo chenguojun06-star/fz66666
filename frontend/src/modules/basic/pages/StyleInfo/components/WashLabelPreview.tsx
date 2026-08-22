@@ -21,6 +21,8 @@ interface Props {
   height?: number;
   /** 距剪口偏移（mm），与打印保持一致，默认 30 */
   topOffsetMm?: number;
+  /** 全局字体缩放（0.5~1.6，默认 1），与打印保持一致 */
+  fontScale?: number;
 }
 
 const WashLabelPreview: React.FC<Props> = ({
@@ -32,6 +34,7 @@ const WashLabelPreview: React.FC<Props> = ({
   width = 30,
   height = 80,
   topOffsetMm = 30,
+  fontScale = 1,
 }) => {
   const sections = useMemo(
     () => buildWashLabelSections(fabricCompositionParts, fabricComposition),
@@ -63,6 +66,7 @@ const WashLabelPreview: React.FC<Props> = ({
           manufacturingText: manufacturingText,
           dateText: '',
           topOffsetMm,
+          fontScale,
         };
         return buildWashLabelPrintHtml(data);
       });
@@ -78,9 +82,10 @@ const WashLabelPreview: React.FC<Props> = ({
       manufacturingText: manufacturingText,
       dateText: '',
       topOffsetMm,
+      fontScale,
     };
     return [buildWashLabelPrintHtml(data)];
-  }, [sections, perPartWashNotes, washText, careIconCodes, manufacturingText, width, height, topOffsetMm, isMultiPart]);
+  }, [sections, perPartWashNotes, washText, careIconCodes, manufacturingText, width, height, topOffsetMm, fontScale, isMultiPart]);
 
   const previewW = Math.ceil(width * MM_TO_PX * ZOOM);
   const previewH = Math.ceil(height * MM_TO_PX * ZOOM);

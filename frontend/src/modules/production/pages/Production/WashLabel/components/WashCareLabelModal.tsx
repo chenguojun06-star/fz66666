@@ -104,6 +104,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
       manufacturingText: sections.showManufacturing ? sections.manufacturingText : '',
       dateText: '',
       topOffsetMm: sections.topOffsetMm,
+      fontScale: sections.fontScale,
     });
     safePrint(html);
     setPrinting(false);

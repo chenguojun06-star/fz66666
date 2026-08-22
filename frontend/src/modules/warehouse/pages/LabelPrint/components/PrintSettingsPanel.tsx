@@ -195,6 +195,11 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
                   onChange={v => setWash(w => ({ ...w, topOffsetMm: v ?? 0 }))} suffix="mm" style={{ width: '100%' }} />
               </div>
               <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>字体大小: {Math.round((wash.fontScale ?? 1) * 100)}%（内容过多自动缩小，保证全部显示）</div>
+                <Slider min={0.5} max={1.6} step={0.05} value={wash.fontScale ?? 1}
+                  onChange={v => setWash(w => ({ ...w, fontScale: v }))} />
+              </div>
+              <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>码数（只打印你输入的内容）</div>
                 <Input size="small" value={wash.sizeText} placeholder="如 S / M / L，留空不显示"
                   onChange={e => setWash(w => ({ ...w, sizeText: e.target.value }))} maxLength={30} />

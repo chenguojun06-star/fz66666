@@ -11,6 +11,8 @@ export const defaultWash = {
   titleSz: 7, textSz: 5, careSz: 4,
   /** 距剪口偏移（mm）：内容从剪口下方此处开始打印 */
   topOffsetMm: 30,
+  /** 全局字体缩放（0.5~1.6）：所有分区字号统一微调；内容装不下时自动缩小保证不截断 */
+  fontScale: 1,
   /** 码数区（只显示用户输入内容，空=不显示） */
   showSize: false,
   sizeText: '',

@@ -93,6 +93,7 @@ export async function printWashLabels(
       sizeText: sections.showSize ? (sections.sizeText.trim() || (row.size || '').trim()) : '',
       styleNo: sections.showStyleNo ? sections.styleNoText : '',
       topOffsetMm: sections.topOffsetMm,
+      fontScale: sections.fontScale,
     }))
   );
 

@@ -1,11 +1,59 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（P0事故：智能采购订单列表线上500根因修复——Lambda引用exist=false字段）
+> 最后更新：2026-08-22（洗水唛打印防截断重做：字号自动适配+图标强制一排+fontScale 手动缩放）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★★ 洗水唛打印防截断重做：文字全部被截断+图标2行（30×80mm 偏移32mm 用户强烈反馈）✅（tsc 0 errors + ESLint 0 errors，待推送）
+
+- [x] **用户反馈**：30×80mm 偏移32mm 时"所有输入文字全部被截断看不到"、图标一排5个却显示2行；要求：文字必须完整可见、图标一排（小一点可以）、加全局字体调整功能
+- [x] **根因1（文字截断）**：字号固定不随内容量适配——30mm 宽 7.5pt 字号下，用户的长洗涤文字（~55字）+成份2行+码数/款号/制造+图标 总高≈55mm > 可用高度46mm（80-32偏移-2安全），overflow 被打印页裁掉
+- [x] **修复1（字号自动适配 fitFontSize）**：逐字宽估算（中英文混合 CJK=1em/宽英文=0.75em/普通=0.55em）行数×行高算内容总高（留5%安全余量），从理想字号×fontScale 起每次-0.5pt 试探（下限4pt）直到装得下——**字号随内容量自动缩小，永不截断**；多页批量取所有页最保守字号
+- [x] **根因2（图标2行）**：`flex-wrap:wrap` 窄标签换行
+- [x] **修复2（图标强制一排）**：`flex-wrap:nowrap` + calcIconRowHeight 按可用宽度均分（图标多时自动变小+间距动态收紧：>8个 gap 0.3mm），**"一排装得下"最高优先级**——修复过程中发现并消除 MIN_ICON_MM=2.8mm 下限导致图标极多时横向溢出被裁的缺陷（下限降为 0.5mm 仅防 0 尺寸）
+- [x] **新增 fontScale 全局字体缩放（0.5~1.6，默认1）**：模板 fitFontSize 基准=理想字号×fontScale（调大仍受"装得下"钳制不会截断）；配置面板 WashLabelSectionConfigPanel 加滑块+显示自动适配后实际字号（estimateAdaptedFontSize）+"已到最小字号建议精简文字或调小偏移"提示
+- [x] **10 处入口全透传 fontScale**：配置面板 / 仓库 printTemplates+constants+PrintSettingsPanel / 生产 WashCareLabelModal+WashLabelBatchPrintModal / 生产列表 LabelPrintModal helpers / 款式资料 StyleWashLabelTab（新增滑块）+WashLabelPreview
+- [x] 验证：npx tsc --noEmit 0 errors；npx eslint 10 个修改文件 0 errors
+- [ ] **待办：推送部署后，线上验证 30×80mm 偏移32mm 场景文字完整、图标一排、滑块生效**
+
+### 2026-08-22 ★★ 质检入库数据链路修复：入库节点未同步到 t_scan_record（订单PO20260505001 用户反馈）✅（mvn compile 通过，待推送）
+
+- [x] **用户反馈（注意理解准确）**：订单时间轴"入库"节点显示 `-- ~ --`、工序跟踪"入库"行永远"待扫码"——用户明确说的是**入库节点数据没有同步**，不是要取消质检侧滑弹窗功能（上一轮会话理解偏了）
+- [x] **根因**：成品仓"质检入库"（ProductWarehousingOrchestrator.save/batchSave）只写 t_product_warehousing，不写 t_scan_record、不更新工序跟踪——而订单时间轴视图 v_production_order_flow_stage_snapshot 的入库时间取自 t_scan_record(scan_type='warehouse' AND scan_result='success' AND process_code<>'warehouse_rollback')，生产端扫码入库（WarehouseScanExecutor）会写、质检入库不写 → 链路断裂
+- [x] **新数据修复**：新建 ProductWarehousingScanSyncHelper，save/batchSave 事务内调用 syncWarehouseScan——补写 warehouse 扫码记录（scanMode=manual 标识质检入库）+ updateProcessTracking 更新工序跟踪"入库"行（未命中时 appendProcessTracking 后重试，与 WarehouseScanExecutor 行为对齐）；菲号级幂等（已有成功入库扫码记录跳过）、DuplicateKeyException 兜底、全程 try-catch 不阻断入库主流程（saveScanRecord 无 @Transactional，catch 不会标记主事务 rollback-only）
+- [x] **历史数据回填**：POST /api/product-warehousing/backfill-scan-records（body: orderId，兼容 PO 订单号）——listBackfillCandidates 按菲号聚合有效质检入库（SUM 合格数+最近操作人/时间），幂等回填；scanTime 取原入库 create_time（时间轴显示真实历史时间而非回填时间）；Controller @PreAuthorize("isAuthenticated()")
+- [x] 验证：mvn compile 通过；视图定义核对字段完全匹配（scan_type/process_code/scan_result）；本地库无云端订单，部署后需调回填接口修 PO20260505001
+- [ ] **待办：推送后部署，线上调用回填接口修复 PO20260505001，验证时间轴"入库"节点显示时间+工序跟踪"已扫"**
+
+### 2026-08-22 ★ 洗水唛字体图标自适应修复：字太小看不清+图标被截断 ✅已推送（8c4309372）
+
+- [x] **根因**：字号公式固定 `w>=48?6.5:5.5`pt 过小；图标固定 5mm 且 `.icons{flex-wrap:nowrap}` 一行放不下被 overflow:hidden 截断
+- [x] **字号自适应**：clamp(w×0.25, 7, 13)pt——30mm→7.5pt、40mm→10pt、50mm→12.5pt、上限13pt，小标签也能看清
+- [x] **图标自适应**：clamp(w×0.22, 7, 13)mm 与字号同步缩放——30mm→7mm、50mm→11mm
+- [x] **防截断**：图标容器 flex-wrap:wrap + row-gap:1.2mm，一行放不下自动换两行
+- [x] 五入口（配置面板预览/仓库/款式预览/款式打印/标签管理/批量/生产列表）共用模板一处生效；tsc 0 errors + ESLint 0 errors + vitest 18/18
+
+### 2026-08-22 ★ 样衣开发基础信息交互三连修：备注框拉伸/码数删除无反应/去多余加号 ✅已推送（6965bc13c，safe-push 10/10 通过）
+
+- [x] **码数/颜色删除无反应根因**：antd v6 Tag 组件通过 replaceElement 把 onClick/className 注入 closeIcon，但 `TagMinusCloseIcon` 组件未透传 props 导致点击事件丢失。修复：重构组件透传 `...restProps`（CircleIconButton.tsx）
+- [x] **备注框"拉不动"+时间字段被盖根因**：global.css 统一控件高度规则 `.ant-input-affix-wrapper { height:32px !important }` 误伤 TextArea+showCount 的外框（antd v6 的 textarea-affix-wrapper 也用该类名），外框压成 32px 后 textarea（rows=3≈70px）溢出盖住下方创建/完成时间、交板日期。修复：选择器加 `:not(.ant-input-textarea-affix-wrapper)` 排除，并为 textarea-affix-wrapper 单独留自适应规则
+- [x] **删除颜色/码数边上的加号按钮**：DictAutoComplete 改为"下拉选中即新增 + 回车新增"，placeholder 提示"选或输入后回车新增"，CircleIconButton 加号冗余已移除（StyleColorSizeTable.tsx）
+- [x] 浏览器实测：备注框拖拽高度 70→120px 正常、时间字段无重叠、删除点击后标签 2→1、加号已消失
+- [x] 上线：6965bc13c（3 文件 +53/-40），部署后需强刷页面
+
+### 2026-08-22 ★★ 洗水唛分区定制：码数/款号/成份/洗涤方法/制造区全用户自定 ✅已推送（0553029e7，safe-push 10/10 通过）
+
+- [x] **分区结构（从上到下）**：距剪口下3cm（topOffsetMm 默认30，可调）→ 码数 → 款号 → 面料成份 → 洗涤方法（上排图标/下排文字）→ 制造区域；每个分区独立开关，空内容不渲染
+- [x] **新增共享组件** `frontend/src/components/common/WashLabelSectionConfigPanel/`：分区开关+内容输入+图标点选+距剪口偏移+iframe 实时预览（srcDoc 独立文档，硬编码颜色不用 CSS 变量）
+- [x] **只显示用户输入内容**：移除 MADE IN CHINA 默认值（StyleWashLabelTab/WashLabelPreview/printTemplates）、自动日期兜底（删除 getDefaultDateText 导出）、dash-sep 分隔虚线——"用户输入什么就显示什么，不要加任何东西"
+- [x] **字体统一**：全部分区 font-weight:400 标准字体、统一字号（宽≥48mm 用 6.5pt 否则 5.5pt）、careIcons 图标数字 font-weight:normal
+- [x] **五个打印入口统一**：生产列表 LabelPrintModal、标签管理 WashCareLabelModal、批量打印 WashLabelBatchPrintModal、仓库 LabelPrint、款式资料 StyleWashLabelTab——共用 washLabelPrintTemplate.ts
+- [x] **仓库打印设置增强**：PrintSettingsPanel 新增码数/款号/制造区域/日期输入框+距剪口偏移；constants.ts defaultWash 扩展分区字段；OrderDetailCard "④生产制造"从硬编码改为显示实际配置值（未设定=未设定）
+- [x] 验证：tsc 0 errors + ESLint 0 errors + vitest 16/16 通过（测试文件在 .gitignore 中仅本地运行）
+- [x] 上线：0553029e7（16 文件 +546/-370），部署后需强刷页面
 
 ### 2026-08-22 ★★ 订单详情页四项修复：页面改名/开发端商品编码同步/去SKU前缀/备注框可拖拽 ✅（mvn compile + tsc 0 errors，待推送）
 

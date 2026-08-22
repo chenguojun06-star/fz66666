@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Input, InputNumber, Space } from 'antd';
+import { App, Button, Input, InputNumber, Slider, Space } from 'antd';
 import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import CompositionPartsEditor from './CompositionPartsEditor';
@@ -66,6 +66,8 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
   const [previewW, setPreviewW] = useState(30);
   const [previewH, setPreviewH] = useState(80);
+  /** 全局字体缩放（0.5~1.6）：内容过多时模板仍会自动缩小保证完整显示 */
+  const [fontScale, setFontScale] = useState(1);
 
   useEffect(() => {
     setCompositionParts(initialParts);
@@ -162,6 +164,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
       dateText: '',
       // 距剪口偏移：内容从剪口下方 30mm 处开始（与预览一致）
       topOffsetMm: 30,
+      fontScale,
     });
 
     const washText = washTextFromInstructions(washInstructions, compositionParts);
@@ -180,7 +183,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
     safePrint(html);
     } finally { setPrintLoading(false); }
-  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH]);
+  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale]);
 
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
@@ -333,7 +336,17 @@ const StyleWashLabelTab: React.FC<Props> = ({
           padding: '12px 0',
           borderTop: '1px solid var(--color-border-light, var(--color-border-light))',
         }}>
-          <Space>
+          <Space size={16}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              字体大小
+              <Slider
+                min={0.5} max={1.6} step={0.05} value={fontScale}
+                onChange={v => setFontScale(v)}
+                style={{ width: 120, margin: 0 }}
+                tooltip={{ formatter: (v) => `${Math.round((v ?? 1) * 100)}%` }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)', width: 40 }}>{Math.round(fontScale * 100)}%</span>
+            </span>
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>预览纸张宽</span>
             <InputNumber
               min={20} max={200} value={previewW}
@@ -376,6 +389,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           manufacturingText={manufacturingText}
           width={previewW}
           height={previewH}
+          fontScale={fontScale}
         />
       </div>
     </div>
