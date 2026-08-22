@@ -1,11 +1,25 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（智能采购推荐V2 数据闭环全修复，mvn + tsc 通过，待推送）
+> 最后更新：2026-08-22（P0事故：智能采购订单列表线上500根因修复——Lambda引用exist=false字段）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-22 ★★★ P0事故：智能采购 /orders 线上500（Lambda引用exist=false字段）✅已修复待推送
+
+- [x] **事故现象**：用户打开智能采购面板，POST /api/production/smart-sourcing/orders 连续500
+- [x] **根因（用测试账号登录线上拿到的真实错误）**：`can not find lambda cache for this property [styleCover] of entity [ProductionOrder]`——listOrders 的 `qw.select(ProductionOrder::getStyleCover)` 引用了 `@TableField(exist=false)` 的内存字段（styleCover/coverImage 不是 t_production_order 的列），MyBatis-Plus 解析 Lambda 直接抛异常。编译期不检查、本地服务是旧版无此接口，从未真实调用过 → 上线即炸（D-055 反思三问第③问的典型反面教材）
+- [x] **修复**：select 移除 exist=false 字段；封面图改从 t_style_info 批量查 cover（当前页款号1次SQL，StyleInfo.cover 是真实列）
+- [x] **回归测试**：新增 SmartSourcingListOrdersRegressionTest（@SpringBootTest + H2 真实查询链路，修复前必炸修复后通过，防同类回归）
+- [x] **连带发现1（CI连挂7次无人发现）**：useWarehouseFetch.ts:115 无用 eslint-disable directive error → GitHub Actions ESLint job 失败 → 从 2a6499f83 起 7 个提交 CI 全挂（含智能寻源V2/D-109/数据闭环修复）。已删除该行，全量 ESLint 0 errors
+- [x] **连带发现2（safe-push 盲区）**：本地 safe-push.sh 只跑 tsc 不跑 ESLint，CI 却跑 → 本地全过、CI 连挂。已在 safe-push.sh 补 ESLint 检查（与 CI 同口径）
+- [x] **连带发现3（部署机制）**：微信云托管配置了 Git push 自动部署（独立于 GitHub Actions）——CI 失败不拦截部署，代码照样上线。**这解释了为什么 bug 直接打到线上**，也意味着修复推送后自动生效
+- [x] **连带发现4（本地38个孤儿测试）**：orchestration 目录下 38 个 git 未跟踪的过时测试（引用已不存在的类/旧方法签名），导致本地 mvn test 编译必挂（CI 不受影响）。已临时移到 /tmp/orphan_tests/，后续需清理或修复
+- [x] 验证：mvn compile + 全量 ESLint 0 errors + 回归测试通过
+
+
 
 ### 2026-08-22 ★★ 智能采购推荐V2 数据闭环全修复（4断点+1放大漏洞+前端状态bug）✅（mvn compile + tsc 0 errors，待推送）
 

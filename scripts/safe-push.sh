@@ -165,6 +165,12 @@ if [[ "$MODE" == "all" || "$MODE" == "frontend" ]]; then
     else
       skip "前端类型检查（tsconfig.json 不存在）"
     fi
+    # ESLint 必须与 CI 口径一致（2026-08-22 教训：本地只查tsc导致CI连挂4次无人发现，
+    # "Unused eslint-disable directive" 本地不拦、线上拦）
+    if [[ -f frontend/package.json ]]; then
+      run_check "前端 ESLint（与CI同口径，0 error 才过）" bash -c \
+        'cd frontend && npx eslint src --ext .ts,.tsx 2>&1 | grep -E "error" ; EXIT=${PIPESTATUS[0]}; if [ $EXIT -ne 0 ]; then echo "ESLint存在error，CI会挂"; exit 1; fi; echo "ESLint 0 errors"'
+    fi
   else
     skip "前端类型检查（--quick 模式）"
   fi

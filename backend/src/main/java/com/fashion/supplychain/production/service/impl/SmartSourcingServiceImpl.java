@@ -691,19 +691,42 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         qw.orderByDesc(ProductionOrder::getId);
 
         // 只选列表需要的列，减少 IO
+        // ⚠️ styleCover/coverImage 是 @TableField(exist=false) 的内存字段（非数据库列），
+        // 禁止出现在 Lambda select 里（MyBatis-Plus 解析 exist=false 字段直接抛
+        // "can not find lambda cache" → 500，2026-08-22 线上事故根因）
         qw.select(ProductionOrder::getOrderNo, ProductionOrder::getStyleNo,
-                ProductionOrder::getStyleName, ProductionOrder::getStyleCover,
+                ProductionOrder::getStyleName,
                 ProductionOrder::getOrderQuantity, ProductionOrder::getMaterialArrivalRate,
                 ProductionOrder::getStatus, ProductionOrder::getCreateTime,
                 ProductionOrder::getPlannedEndDate, ProductionOrder::getUrgencyLevel,
                 ProductionOrder::getMerchandiser);
 
         IPage<ProductionOrder> ipage = productionOrderMapper.selectPage(new Page<>(page, pageSize), qw);
+
+        // 封面图：订单表无 cover 列，从 t_style_info 批量取（当前页款号1次SQL）
+        Map<String, String> coverByStyleNo = new HashMap<>();
+        Set<String> pageStyleNos = ipage.getRecords().stream()
+                .map(ProductionOrder::getStyleNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (!pageStyleNos.isEmpty()) {
+            LambdaQueryWrapper<StyleInfo> cw = new LambdaQueryWrapper<>();
+            cw.eq(StyleInfo::getTenantId, tenantId)
+                    .eq(StyleInfo::getDeleteFlag, 0)
+                    .in(StyleInfo::getStyleNo, pageStyleNos)
+                    .select(StyleInfo::getStyleNo, StyleInfo::getCover);
+            for (StyleInfo s : styleInfoMapper.selectList(cw)) {
+                if (s.getCover() != null) {
+                    coverByStyleNo.put(s.getStyleNo(), s.getCover());
+                }
+            }
+        }
+
         List<OrderBasicDto> list = ipage.getRecords().stream().map(o -> OrderBasicDto.builder()
                 .orderNo(o.getOrderNo())
                 .styleNo(o.getStyleNo())
                 .styleName(o.getStyleName())
-                .coverImage(o.getStyleCover() != null ? o.getStyleCover() : o.getCoverImage())
+                .coverImage(coverByStyleNo.get(o.getStyleNo()))
                 .orderQuantity(o.getOrderQuantity())
                 // null透传：未维护到位率的订单前端显示"未维护"，不能强转0（0%会误导为全部缺料）
                 .materialArrivalRate(o.getMaterialArrivalRate())

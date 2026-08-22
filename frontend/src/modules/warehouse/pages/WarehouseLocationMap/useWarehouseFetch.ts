@@ -112,7 +112,6 @@ export const useWarehouseFetch = () => {
     };
     window.addEventListener('data:changed', handleDataChanged);
     return () => window.removeEventListener('data:changed', handleDataChanged);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadOverview, loadLocations, selectedAreaId, selectedLocation]);
 
   // ===== 派生数据 =====
