@@ -2,6 +2,7 @@ import React from 'react';
 import { Popover } from 'antd';
 import { buildOrderColorSizeMatrixModel, ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { displayDate } from '@/utils/display';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { ProductionOrder } from '@/types/production';
@@ -15,6 +16,16 @@ interface OrderStartNodeProps {
 }
 
 export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }: OrderStartNodeProps) {
+  const styleNoText = String(record.styleNo || '').trim();
+  const styleNameText = String((record as Record<string, unknown>).styleName || '').trim();
+  const styleFullText = styleNameText ? `${styleNoText} · ${styleNameText}` : styleNoText;
+  const skcText = String((record as Record<string, unknown>).skc || '').trim();
+  const factoryText = String(record.factoryName || '').trim();
+  const factoryType = String(record.factoryType || '').trim();
+  const expectedShipRaw = (record as Record<string, unknown>).expectedShipDate;
+  const expectedShipText = expectedShipRaw ? displayDate(String(expectedShipRaw), 'datetime') : '';
+  const hasExtraInfo = Boolean(styleFullText || skcText || factoryText || expectedShipText);
+
   const orderLines = parseProductionOrderLines(record);
   let matrixItems = orderLines.map(item => ({
     color: String(item.color || '').trim(),
@@ -38,19 +49,66 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
     fallbackSize: String(record.size || '').trim(),
     fallbackQuantity: totalQty,
   });
-  const matrixPopoverContent = <ColorSizeMatrixPopoverContent model={orderMatrix} />;
   const nodeColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : 'var(--color-success)');
   const nodeColor2 = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-border)' : 'var(--color-success)');
+
+  // 悬浮内容：订单次要信息（款号/SKC/加工厂/预计交期）+ 颜色码数矩阵
+  const infoRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 14,
+    lineHeight: 1.5,
+    color: 'var(--color-text-primary)',
+    whiteSpace: 'nowrap',
+  };
+  const infoLabelStyle: React.CSSProperties = {
+    color: 'var(--color-slate-400)',
+    flexShrink: 0,
+  };
+  const popoverContent = (
+    <div style={{ minWidth: 100 }}>
+      {hasExtraInfo && (
+        <div style={{ marginBottom: 8 }}>
+          {styleFullText ? (
+            <div style={infoRowStyle}>
+              <span style={infoLabelStyle}>款号</span>
+              <span style={{ fontWeight: 600 }}>{styleFullText}</span>
+            </div>
+          ) : null}
+          {skcText ? (
+            <div style={infoRowStyle}>
+              <span style={infoLabelStyle}>SKC</span>
+              <span>{skcText}</span>
+            </div>
+          ) : null}
+          {factoryText ? (
+            <div style={infoRowStyle}>
+              <span style={infoLabelStyle}>加工厂</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{factoryText}{factoryType ? <FactoryTypeTag factoryType={factoryType} softStyle /> : null}</span>
+            </div>
+          ) : null}
+          {expectedShipText ? (
+            <div style={infoRowStyle}>
+              <span style={infoLabelStyle}>预计交期</span>
+              <span>{expectedShipText}</span>
+            </div>
+          ) : null}
+        </div>
+      )}
+      <ColorSizeMatrixPopoverContent model={orderMatrix} />
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', flex: '1 1 0' }}>
       <Popover
-        content={matrixPopoverContent}
+        content={popoverContent}
         trigger="hover"
         placement="top"
         mouseEnterDelay={0.1}
         overlayStyle={{ maxWidth: 320 }}
-        open={orderMatrix.hasData ? undefined : false}
+        open={hasExtraInfo || orderMatrix.hasData ? undefined : false}
       >
         <div style={{
           display: 'flex',
@@ -60,7 +118,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
           flex: '0 0 auto',
           justifyContent: 'center',
           position: 'relative',
-          cursor: orderMatrix.hasData ? 'pointer' : 'default',
+          cursor: hasExtraInfo || orderMatrix.hasData ? 'pointer' : 'default',
         }}>
           <LiquidProgressLottie progress={100} size={68} nodeName="下单"
             paused={frozen} color1={nodeColor} color2={nodeColor2} />

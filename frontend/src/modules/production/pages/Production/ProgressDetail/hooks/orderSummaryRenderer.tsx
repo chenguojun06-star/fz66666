@@ -8,8 +8,6 @@ import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCar
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import { displayOrderStatus, displayDate } from '@/utils/display';
-import FactoryTypeTag from '@/components/common/FactoryTypeTag';
-import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { ProductionOrder } from '@/types/production';
 import { getOrderShipTime } from '../utils';
@@ -31,12 +29,9 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
     const quantity = Number(record.orderQuantity || 0);
     const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
     const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
-    const factoryName = String(record.factoryName || '').trim() || '-';
     const merchandiserName = String((record as Record<string, unknown>).merchandiser || '').trim();
     const customerName = String((record as Record<string, unknown>).company || '').trim();
     const remark = String((record as Record<string, unknown>).remarks || '').trim();
-    const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
-    const expectedShipDate = displayDate(expectedShipDateRaw, 'datetime');
     const softTagBaseStyle: CSSProperties = {
       margin: 0,
       fontSize: 12,
@@ -87,45 +82,6 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
               column={1}
               items={[
                 {
-                  label: '生产方',
-                  labelStyle: metaLabelStyle,
-                  value: (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <SupplierNameTooltip
-                        name={factoryName}
-                        contactPerson={(record as Record<string, unknown>).factoryContactPerson}
-                        contactPhone={(record as Record<string, unknown>).factoryContactPhone}
-                        label="工厂"
-                        style={metaValueStyle}
-                      />
-                      {record.factoryType ? <FactoryTypeTag factoryType={record.factoryType} softStyle /> : null}
-                      {merchandiserName ? (
-                          <div
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openRemarkModal(String(record.orderNo || ''), record.merchandiser);
-                            }}
-                          >
-                            <span style={metaLabelStyle}>跟单员</span>
-                            <span style={metaValueStyle}>{merchandiserName}</span>
-                            {remark ? (
-                              <Badge dot color="var(--color-danger)" offset={[-2, 2]}>
-                                <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-danger)' }} />
-                              </Badge>
-                            ) : null}
-                          </div>
-                      ) : null}
-                      {customerName ? (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <span style={metaLabelStyle}>客户</span>
-                          <span style={metaValueStyle}>{customerName}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  ),
-                },
-                {
                   label: '订单号',
                   value: (
                     <Popover
@@ -141,18 +97,33 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                   labelStyle: metaLabelStyle,
                   valueStyle: metaValueStyle,
                 },
-                {
-                  label: '款号',
-                  value: String(record.styleNo || '').trim() || '-',
+                ...(merchandiserName ? [{
+                  label: '跟单员',
+                  value: (
+                    <div
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openRemarkModal(String(record.orderNo || ''), record.merchandiser);
+                      }}
+                    >
+                      <span style={metaValueStyle}>{merchandiserName}</span>
+                      {remark ? (
+                        <Badge dot color="var(--color-danger)" offset={[-2, 2]}>
+                          <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-danger)' }} />
+                        </Badge>
+                      ) : null}
+                    </div>
+                  ),
                   labelStyle: metaLabelStyle,
                   valueStyle: metaValueStyle,
-                },
-                {
-                  label: 'SKC',
-                  value: String((record as any).skc || '').trim() || '-',
+                }] : []),
+                ...(customerName ? [{
+                  label: '客户',
+                  value: customerName,
                   labelStyle: metaLabelStyle,
                   valueStyle: metaValueStyle,
-                },
+                }] : []),
                 {
                   label: '总数',
                   value: `${quantity}件`,
@@ -168,12 +139,6 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                     </span>
                   ),
                   labelStyle: { ...metaLabelStyle, fontWeight: 500 },
-                },
-                {
-                  label: '预计交期',
-                  value: expectedShipDate,
-                  labelStyle: { ...metaLabelStyle, fontWeight: 500 },
-                  valueStyle: metaValueStyle,
                 },
               ]}
             />

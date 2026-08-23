@@ -142,16 +142,8 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                 </Popover>
               </div>
               <div className="ef-field-row">
-                <span className="ef-field-label">款号</span>
-                <span className="ef-field-value">{record.styleNo}{record.styleName && ` · ${record.styleName}`}</span>
-              </div>
-              <div className="ef-field-row">
                 <span className="ef-field-label">跟单员</span>
                 <span className="ef-field-value">{record.merchandiser || '-'}</span>
-              </div>
-              <div className="ef-field-row">
-                <span className="ef-field-label">加工厂</span>
-                <span className="ef-field-value">{record.factoryName || '-'}{factoryTag}</span>
               </div>
               <div className="ef-field-row">
                 <span className="ef-field-label">客户</span>
@@ -188,13 +180,26 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               position: 'relative',
             }}>
               <Popover
-                content={<ColorSizeMatrixPopoverContent model={sizeMatrix} />}
+                content={(
+                  <div style={{ minWidth: 100 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, lineHeight: 1.5, whiteSpace: 'nowrap' }}>
+                        <span style={{ color: 'var(--color-slate-400)', flexShrink: 0 }}>款号</span>
+                        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{record.styleNo}{record.styleName ? ` · ${record.styleName}` : ''}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, lineHeight: 1.5, whiteSpace: 'nowrap' }}>
+                        <span style={{ color: 'var(--color-slate-400)', flexShrink: 0 }}>加工厂</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--color-text-primary)' }}>{record.factoryName || '-'}{factoryTag}</span>
+                      </div>
+                    </div>
+                    <ColorSizeMatrixPopoverContent model={sizeMatrix} />
+                  </div>
+                )}
                 trigger="hover" placement="top" mouseEnterDelay={0.1}
                 overlayStyle={{ maxWidth: 320, zIndex: 1100 }}
-                open={sizeMatrix.hasData ? undefined : false}
                 getPopupContainer={() => document.body}
               >
-                <div className="style-smart-stage style-smart-stage--done" style={{ cursor: sizeMatrix.hasData ? 'pointer' : 'default' }}>
+                <div className="style-smart-stage style-smart-stage--done" style={{ cursor: 'pointer' }}>
                   <div className="style-smart-stage__node">
                     <span className="style-smart-stage__ring" />
                     <span className="style-smart-stage__orbit" />
