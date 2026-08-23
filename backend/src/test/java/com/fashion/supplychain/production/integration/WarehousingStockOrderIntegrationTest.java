@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingLogAppendHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingScanSyncHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPostActionHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
@@ -55,6 +56,7 @@ class WarehousingStockOrderIntegrationTest {
     @Mock private OrderRemarkHelper orderRemarkHelper;
     @Mock private ProductWarehousingPendingHelper pendingHelper;
     @Mock private ProductWarehousingLogAppendHelper logAppendHelper;
+    @Mock private ProductWarehousingScanSyncHelper scanSyncHelper;
 
     @InjectMocks private ProductWarehousingOrchestrator orchestrator;
 
