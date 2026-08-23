@@ -38,13 +38,13 @@ export const DEFAULT_SIZE_MAP: Record<string, string[]> = {
 /** 兜底尺码（无品类匹配时使用） */
 export const FALLBACK_SIZES = ['S', 'M', 'L', 'XL'];
 
-/** 区块容器内联样式（与原实现保持一致） */
+/** 区块容器内联样式（对齐下方模块：无边框、无左右内边距，内容与 tab 容器左边缘对齐） */
 export const SECTION_BOX_STYLE: CSSProperties = {
   marginBottom: 16,
-  padding: 16,
-  background: 'var(--color-bg-base)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 8,
+  padding: 0,
+  background: 'transparent',
+  border: 'none',
+  borderRadius: 0,
 };
 
 /** 区块容器内联样式（紧凑版，用于最后两个区块） */

@@ -1112,6 +1112,49 @@
   }
 }
 
+/* ── 基础信息 Tab：表单标签在上、输入框在下 ──
+   让输入框左边缘与下方颜色码数表格对齐，消除左侧标签列留白，上下信息工整对齐 */
+.style-basic-info-tab .ant-form-item {
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+
+.style-basic-info-tab .ant-form-item-label {
+  flex: none !important;
+  width: auto !important;
+  max-width: 100% !important;
+  text-align: left;
+  padding-bottom: 2px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow: visible;
+}
+
+.style-basic-info-tab .ant-form-item-label > label {
+  height: auto;
+}
+
+.style-basic-info-tab .ant-form-item-control {
+  flex: 1 1 auto;
+  max-width: 100% !important;
+  min-height: auto;
+}
+
+.style-basic-info-tab .ant-form-item-control-input,
+.style-basic-info-tab .ant-form-item-control-input-content {
+  min-height: auto;
+}
+
+.style-basic-info-tab .ant-form-item .ant-input,
+.style-basic-info-tab .ant-form-item .ant-input-affix-wrapper,
+.style-basic-info-tab .ant-form-item .ant-select,
+.style-basic-info-tab .ant-form-item .ant-select-selector,
+.style-basic-info-tab .ant-form-item .ant-input-number,
+.style-basic-info-tab .ant-form-item .ant-picker {
+  width: 100%;
+}
+
 @media (max-width: 1400px) {
   .style-smart-row__layout {
     grid-template-columns: minmax(138px, 168px) minmax(0, 1fr);

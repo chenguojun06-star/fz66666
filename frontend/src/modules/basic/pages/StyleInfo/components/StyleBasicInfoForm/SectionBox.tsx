@@ -27,10 +27,10 @@ const SectionBox: React.FC<SectionBoxProps> = ({
     <div
       style={{
         marginBottom: 16,
-        padding: 16,
-        background: 'var(--color-bg-base)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 8,
+        padding: 0,
+        background: 'transparent',
+        border: 'none',
+        borderRadius: 0,
         ...(boxStyle || {}),
       }}
     >

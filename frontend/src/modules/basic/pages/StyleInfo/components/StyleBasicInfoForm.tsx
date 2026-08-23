@@ -93,8 +93,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   );
 
   // 基础信息 Tab 内容：所有表单分区合并在一个 Tab 里
+  // 容器加 .style-basic-info-tab 作用域：表单标签在上、输入框在下，
+  // 输入框左边缘与下方颜色码数表格对齐，消除左侧标签留白，上下工整
   const basicInfoTabContent = (
-    <>
+    <div className="style-basic-info-tab">
       {/* 区1：基础信息（左栏图片资产 + 右侧表单：款号/SKC/款名/品类/季节/销售渠道，含时间信息） */}
       <BasicInfoSection {...sectionFormContext} isNewPage={isNewPage} coverSlot={coverNode} />
 
@@ -153,7 +155,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         customFields={customFields}
         editLocked={editLocked}
       />
-    </>
+    </div>
   );
 
   return (
