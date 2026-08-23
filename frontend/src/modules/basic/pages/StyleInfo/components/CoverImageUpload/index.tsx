@@ -1,8 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { App, Image, Spin, Tooltip } from 'antd';
 import {
-  DeleteOutlined, EyeOutlined, PictureOutlined, PlusOutlined,
-  SearchOutlined, StarFilled, StarOutlined, ThunderboltOutlined,
+  DeleteOutlined, EyeOutlined, LeftOutlined, PictureOutlined, PlusOutlined,
+  RightOutlined, SearchOutlined, StarFilled, StarOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useCoverImageUpload } from './useCoverImageUpload';
 import SearchResultCard from './SearchResultCard';
@@ -115,7 +115,43 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
       {/* 受控预览（点眼睛开大图） */}
       {previewSrcs.length > 0 && (
         <Image.PreviewGroup
-          preview={{ open: previewOpen, onOpenChange: setPreviewOpen, current: previewIndex }}
+          preview={{
+            open: previewOpen,
+            onOpenChange: setPreviewOpen,
+            current: previewIndex,
+            // 自定义底部工具栏：左右切换上一张/下一张 + 默认缩放/旋转等操作按钮
+            actionsRender: (originalNode, info) => (
+              <div className="style-image-preview-toolbar">
+                <span
+                  className="style-image-preview-nav"
+                  title="上一张"
+                  onClick={() => {
+                    if (info.total <= 1) {
+                      message.info('当前仅一张图片');
+                      return;
+                    }
+                    info.actions.onActive(-1);
+                  }}
+                >
+                  <LeftOutlined />
+                </span>
+                {originalNode}
+                <span
+                  className="style-image-preview-nav"
+                  title="下一张"
+                  onClick={() => {
+                    if (info.total <= 1) {
+                      message.info('当前仅一张图片');
+                      return;
+                    }
+                    info.actions.onActive(1);
+                  }}
+                >
+                  <RightOutlined />
+                </span>
+              </div>
+            ),
+          }}
           items={previewSrcs}
         >
           <Image src={previewSrcs[0]} style={{ display: 'none' }} preview={false} />

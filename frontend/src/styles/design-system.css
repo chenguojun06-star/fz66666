@@ -1196,38 +1196,101 @@ html.dark-mode {
   background: var(--color-bg-highlight) !important;
 }
 
-/* ========== 图片预览全局增强：工具栏按钮清晰可见（放大/缩小/旋转/关闭） ========== */
+/* ========== 图片预览全局增强（antd v6）：关闭/操作/切换按钮清晰可见 ========== */
 .ant-image-preview-wrap {
   z-index: 1200;
 }
 .ant-image-preview-mask {
   background-color: rgba(0, 0, 0, 0.82) !important;
 }
-.ant-image-preview-operations {
-  background: rgba(0, 0, 0, 0.65) !important;
-  backdrop-filter: blur(6px);
-  border-radius: 0 0 0 12px;
-  padding: 8px 16px;
+/* 右上角关闭按钮 */
+.ant-image-preview-close {
+  color: #ffffff !important;
+  background-color: rgba(0, 0, 0, 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
-.ant-image-preview-operations .ant-image-preview-operations-btn,
-.ant-image-preview-operations .anticon {
+.ant-image-preview-close:hover {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+/* 底部操作栏（缩放/旋转/翻转） */
+.ant-image-preview-footer {
+  bottom: 40px !important;
+}
+.ant-image-preview-actions {
+  background-color: rgba(0, 0, 0, 0.55) !important;
+  padding: 6px 18px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.ant-image-preview-actions-action,
+.ant-image-preview-actions .anticon {
   color: #ffffff !important;
   font-size: 18px !important;
   opacity: 1 !important;
 }
-.ant-image-preview-operations .ant-image-preview-operations-btn:hover,
-.ant-image-preview-operations .ant-image-preview-operations-btn:focus {
-  background: rgba(255, 255, 255, 0.22) !important;
+.ant-image-preview-actions-action:not(.ant-image-preview-actions-action-disabled):hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50%;
 }
+.ant-image-preview-actions-action-disabled {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+/* 进度指示（当前/总数） */
+.ant-image-preview-progress {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 2px 12px;
+  border-radius: 999px;
+}
+/* 左右切换箭头（图片左右两侧，多图时显示） */
 .ant-image-preview-switch-prev,
 .ant-image-preview-switch-next {
   color: #ffffff !important;
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.55) !important;
   width: 44px !important;
   height: 44px !important;
   font-size: 18px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .ant-image-preview-switch-prev:hover,
 .ant-image-preview-switch-next:hover {
   background: rgba(0, 0, 0, 0.75) !important;
+}
+.ant-image-preview-switch-disabled {
+  color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+}
+/* 图片预览自定义工具栏（底部：左右切换 + 操作按钮） */
+.style-image-preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.style-image-preview-toolbar .ant-image-preview-actions {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 4px !important;
+}
+.style-image-preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: background 0.2s;
+}
+.style-image-preview-nav:hover {
+  background: rgba(255, 255, 255, 0.28);
 }

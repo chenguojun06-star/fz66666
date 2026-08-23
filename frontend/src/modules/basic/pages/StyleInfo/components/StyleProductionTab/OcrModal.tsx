@@ -41,7 +41,7 @@ const OcrModal: React.FC<Props> = ({
       // 渲染到 document.body 避免被同行 Drawer 容器遮挡
       getContainer={() => document.body}
       zIndex={1050}
-      maskStyle={{ zIndex: 1049 }}
+      styles={{ mask: { zIndex: 1049 } }}
     >
       <input
         ref={fileInputRef as React.RefObject<HTMLInputElement>}

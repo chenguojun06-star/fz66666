@@ -39,7 +39,6 @@ const PurchaseDrawer: React.FC<PurchaseDrawerProps> = ({
       getContainer={() => document.body}
       // 提高层级，确保覆盖在 StyleStageDrawer 之上（默认 1000）
       zIndex={1050}
-      maskStyle={{ zIndex: 1049 }}
     >
       {sourceType === 'sample' && patternProductionId ? (
         <InlinePurchasePanel patternId={patternProductionId} sourceType="sample" styleNo={styleNo} color={color} quantity={quantity} />
