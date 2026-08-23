@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react';
-import { Alert, Button, Table } from 'antd';
-import { CloseOutlined, EditOutlined } from '@ant-design/icons';
+import { Alert, Table } from 'antd';
 import type { ProcessStageProgress } from './useSampleProcessProgress';
 import { parseSizeDisplay, type SubProcessRow } from './SampleProcessList.helpers';
 import { buildColumns } from './SampleProcessList.columns';
 import useSampleProcessListData from './useSampleProcessListData';
-import EditBasicInfoBar from './components/EditBasicInfoBar';
 import StageTabs from './components/StageTabs';
 import AssigneeModal from './components/AssigneeModal';
 import PurchaseDrawer from './components/PurchaseDrawer';
@@ -63,10 +61,6 @@ export default function SampleProcessList({
     assigningRow,
     assignForm,
     assignLoading,
-    editing,
-    setEditing,
-    savingField,
-    setSavingField,
     currentStage,
     subTableData,
     currentStageEmpty,
@@ -75,8 +69,6 @@ export default function SampleProcessList({
     handleAssign,
     handleAssignSubmit,
     handlePurchaseClick,
-    handleFieldSave,
-    handleStartEdit,
   } = data;
 
   const columns = useMemo<ReturnType<typeof buildColumns>>(
@@ -98,11 +90,6 @@ export default function SampleProcessList({
   const completedCount = effectiveStages.filter(s => s.percent >= 100).length;
   const totalProduction = effectiveStages.length;
 
-  const handleSaveField = (field: 'styleNo' | 'color' | 'size', value: string) => {
-    setSavingField(field);
-    handleFieldSave(value);
-  };
-
   return (
     <div>
       <div style={{
@@ -114,40 +101,20 @@ export default function SampleProcessList({
         <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
           工序列表 <strong style={{ color: 'var(--color-text-primary)' }}>{completedCount}/{totalProduction}</strong> 完成
         </span>
-        {patternProductionId ? (
-          <Button
-            size="small"
-            icon={editing ? <CloseOutlined /> : <EditOutlined />}
-            onClick={() => editing ? setEditing(false) : handleStartEdit()}
-            type={editing ? 'default' : 'link'}
-          >
-            {editing ? '取消编辑' : '编辑基本信息'}
-          </Button>
-        ) : null}
       </div>
 
-      {editing ? (
-        <EditBasicInfoBar
-          styleNo={styleNo}
-          color={color}
-          size={size}
-          savingField={savingField}
-          onSaveField={handleSaveField}
-        />
-      ) : (
-        <div style={{
-          display: 'flex',
-          gap: 24,
-          marginBottom: 8,
-          padding: '4px 0',
-          fontSize: 13,
-          color: 'var(--color-text-secondary)',
-        }}>
-          <span>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{styleNo || '-'}</strong></span>
-          <span>颜色: <strong style={{ color: 'var(--color-text-primary)' }}>{color || '-'}</strong></span>
-          <span>尺码: <strong style={{ color: 'var(--color-text-primary)' }}>{parseSizeDisplay(size)}</strong></span>
-        </div>
-      )}
+      <div style={{
+        display: 'flex',
+        gap: 24,
+        marginBottom: 8,
+        padding: '4px 0',
+        fontSize: 13,
+        color: 'var(--color-text-secondary)',
+      }}>
+        <span>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{styleNo || '-'}</strong></span>
+        <span>颜色: <strong style={{ color: 'var(--color-text-primary)' }}>{color || '-'}</strong></span>
+        <span>尺码: <strong style={{ color: 'var(--color-text-primary)' }}>{parseSizeDisplay(size)}</strong></span>
+      </div>
 
       <StageTabs stages={stages} activeTab={activeTab} onTabChange={setActiveTab} />
 

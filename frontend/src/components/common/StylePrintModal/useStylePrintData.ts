@@ -196,7 +196,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
   // ───── 副作用：异步生成主二维码 PNG dataURL ─────
   useEffect(() => {
     let cancelled = false;
-    QRCodeLib.toDataURL(qrValue, { width: 480, margin: 0, errorCorrectionLevel: 'M' })
+    QRCodeLib.toDataURL(qrValue, { width: 640, margin: 2, errorCorrectionLevel: 'H' })
       .then(url => { if (!cancelled) setQrPngDataUrl(url); })
       .catch(() => { if (!cancelled) setQrPngDataUrl(''); });
     return () => { cancelled = true; };
