@@ -54,6 +54,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
 
   // 只读模式：入库已独立至成品仓模块，此处仅展示入库进度/质检记录
   const readOnly = props.readOnly === true;
+  const embedded = props.embedded === true;
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
@@ -150,7 +151,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
         {...(readOnly ? {} : { onWarehouse: () => setShowWarehousingModal(true) })}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, minHeight: 'calc(100vh - 200px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, minHeight: embedded ? 'auto' : 'calc(100vh - 200px)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <StyleInfoCard order={order} style={style} />
           <AiQualityHelperCard
