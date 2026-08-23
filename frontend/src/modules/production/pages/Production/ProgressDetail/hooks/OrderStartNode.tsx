@@ -2,7 +2,6 @@ import React from 'react';
 import { Popover } from 'antd';
 import { buildOrderColorSizeMatrixModel, ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
-import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { displayDate } from '@/utils/display';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { ProductionOrder } from '@/types/production';
@@ -20,11 +19,9 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
   const styleNameText = String((record as Record<string, unknown>).styleName || '').trim();
   const styleFullText = styleNameText ? `${styleNoText} · ${styleNameText}` : styleNoText;
   const skcText = String((record as Record<string, unknown>).skc || '').trim();
-  const factoryText = String(record.factoryName || '').trim();
-  const factoryType = String(record.factoryType || '').trim();
   const expectedShipRaw = (record as Record<string, unknown>).expectedShipDate;
   const expectedShipText = expectedShipRaw ? displayDate(String(expectedShipRaw), 'datetime') : '';
-  const hasExtraInfo = Boolean(styleFullText || skcText || factoryText || expectedShipText);
+  const hasExtraInfo = Boolean(styleFullText || skcText || expectedShipText);
 
   const orderLines = parseProductionOrderLines(record);
   let matrixItems = orderLines.map(item => ({
@@ -52,7 +49,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
   const nodeColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : 'var(--color-success)');
   const nodeColor2 = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-border)' : 'var(--color-success)');
 
-  // 悬浮内容：订单次要信息（款号/SKC/加工厂/预计交期）+ 颜色码数矩阵
+  // 悬浮内容：订单次要信息（款号/SKC/预计交期）+ 颜色码数矩阵
   const infoRowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -67,7 +64,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
     flexShrink: 0,
   };
   const popoverContent = (
-    <div style={{ minWidth: 100 }}>
+    <div style={{ minWidth: 160 }}>
       {hasExtraInfo && (
         <div style={{ marginBottom: 8 }}>
           {styleFullText ? (
@@ -80,12 +77,6 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
             <div style={infoRowStyle}>
               <span style={infoLabelStyle}>SKC</span>
               <span>{skcText}</span>
-            </div>
-          ) : null}
-          {factoryText ? (
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>加工厂</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{factoryText}{factoryType ? <FactoryTypeTag factoryType={factoryType} softStyle /> : null}</span>
             </div>
           ) : null}
           {expectedShipText ? (
@@ -107,7 +98,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
         trigger="hover"
         placement="top"
         mouseEnterDelay={0.1}
-        overlayStyle={{ maxWidth: 320 }}
+        overlayStyle={{ minWidth: 180, maxWidth: 560 }}
         open={hasExtraInfo || orderMatrix.hasData ? undefined : false}
       >
         <div style={{

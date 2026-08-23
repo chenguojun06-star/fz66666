@@ -9,6 +9,8 @@ import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import { displayOrderStatus, displayDate } from '@/utils/display';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { ProductionOrder } from '@/types/production';
 import { getOrderShipTime } from '../utils';
 import { calcHealthScore } from './cellRendererHelpers';
@@ -31,6 +33,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
     const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
     const merchandiserName = String((record as Record<string, unknown>).merchandiser || '').trim();
     const customerName = String((record as Record<string, unknown>).company || '').trim();
+    const factoryName = String(record.factoryName || '').trim();
     const remark = String((record as Record<string, unknown>).remarks || '').trim();
     const softTagBaseStyle: CSSProperties = {
       margin: 0,
@@ -78,7 +81,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
             <OrderInfoGrid
-              fontSize={12}
+              fontSize={13}
               column={1}
               items={[
                 {
@@ -97,6 +100,23 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                   labelStyle: metaLabelStyle,
                   valueStyle: metaValueStyle,
                 },
+                ...(factoryName ? [{
+                  label: '加工厂',
+                  value: (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <SupplierNameTooltip
+                        name={factoryName}
+                        contactPerson={(record as Record<string, unknown>).factoryContactPerson}
+                        contactPhone={(record as Record<string, unknown>).factoryContactPhone}
+                        label="工厂"
+                        style={metaValueStyle}
+                      />
+                      {record.factoryType ? <FactoryTypeTag factoryType={record.factoryType} softStyle /> : null}
+                    </span>
+                  ),
+                  labelStyle: metaLabelStyle,
+                  valueStyle: metaValueStyle,
+                }] : []),
                 ...(merchandiserName ? [{
                   label: '跟单员',
                   value: (

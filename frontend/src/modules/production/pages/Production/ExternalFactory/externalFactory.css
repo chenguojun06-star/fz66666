@@ -118,13 +118,13 @@
 .ef-field-label {
   color: var(--color-text-tertiary);
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
 .ef-field-value {
   color: var(--color-text-primary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
   overflow: hidden;
