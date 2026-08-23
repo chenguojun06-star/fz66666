@@ -235,7 +235,10 @@
 .ef-card-actions {
   margin-top: 8px;
 }
-.ef-card-row-actions {
+/* 解除 global.css .row-actions.ant-space 的 72px 定宽（为表格图标按钮设计）：
+   智能视图/外发工厂是文字按钮（打印标签+更多 ≈114px），定宽导致文字右侧截断 */
+.ef-card-actions .row-actions.ant-space {
+  width: auto;
   justify-content: flex-end;
 }
 
