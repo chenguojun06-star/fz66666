@@ -73,7 +73,7 @@ public class ProductWarehousingPendingHelper {
         }
 
         BundleScanAggregation agg = aggregateBundleScans(allBundleScans);
-        Set<String> packagingDoneBundleIds = findPackagingDoneBundles(agg.bundleProcessCodes);
+        Set<String> packagingDoneBundleIds = agg.bundlePackagingDone.keySet();
         List<String> targetBundleIds = filterBundlesByStatus(status, agg.bundleScanTypes,
                 agg.bundleQualityConfirmed, agg.bundleDefectiveConfirmed,
                 agg.bundleWarehouseDone, packagingDoneBundleIds);
@@ -93,13 +93,14 @@ public class ProductWarehousingPendingHelper {
             ProductionOrder order = productionOrderService.getById(oid);
             if (order != null) {
                 String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
-                if (OrderStatusConstants.isTerminal(orderStatus)) {
+                if (OrderStatusConstants.isTerminal(orderStatus)
+                        || (order.getDeleteFlag() != null && order.getDeleteFlag() == 1)) {
                     return buildEmptyReadiness();
                 }
             }
             List<ScanRecord> scans = queryOrderBundleScans(oid);
             BundleScanAggregation agg = aggregateBundleScans(scans);
-            Set<String> packagingDoneBundleIds = findPackagingDoneBundles(agg.bundleProcessCodes);
+            Set<String> packagingDoneBundleIds = agg.bundlePackagingDone.keySet();
             ReadinessSets readiness = resolveReadinessSets(agg, packagingDoneBundleIds);
             Map<String, String> bundleIdToQrCode = resolveQrCodes(readiness);
             List<String> qcReadyQrs = new ArrayList<>();
@@ -170,7 +171,14 @@ public class ProductWarehousingPendingHelper {
         Map<String, Boolean> bundleQualityConfirmed = new HashMap<>();
         Map<String, Boolean> bundleDefectiveConfirmed = new HashMap<>();
         Map<String, Boolean> bundleWarehouseDone = new HashMap<>();
+        Map<String, Boolean> bundlePackagingDone = new HashMap<>();
     }
+
+    /**
+     * 包装完成判定关键字（与 ScanRecordMapper.selectBundlePendingStats 的 has_packaging 口径一致）
+     */
+    private static final Set<String> PACKAGING_PROCESS_KEYWORDS = Set.of(
+            "包装", "打包", "入袋", "后整", "装箱", "封箱", "贴标", "packing");
 
     private BundleScanAggregation aggregateBundleScans(List<ScanRecord> allBundleScans) {
         BundleScanAggregation agg = new BundleScanAggregation();
@@ -198,24 +206,20 @@ public class ProductWarehousingPendingHelper {
             if ("warehouse".equals(scanType) && !"warehouse_rollback".equals(processCodeLower)) {
                 agg.bundleWarehouseDone.put(bundleId, true);
             }
+            // 包装判定与统计 SQL has_packaging 对齐：仅 production 扫码，processCode 或 processName 命中关键字
+            if ("production".equals(scanType) && isPackagingProcess(scan)) {
+                agg.bundlePackagingDone.put(bundleId, true);
+            }
         }
         return agg;
     }
 
-    private Set<String> findPackagingDoneBundles(Map<String, Set<String>> bundleProcessCodes) {
-        Set<String> packagingDoneBundleIds = new HashSet<>();
-        for (Map.Entry<String, Set<String>> entry : bundleProcessCodes.entrySet()) {
-            for (String pc : entry.getValue()) {
-                String processCode = pc == null ? "" : pc.trim().toLowerCase();
-                if (processCode.contains("packaging") || "包装".equals(pc) || "打包".equals(pc)
-                        || "入袋".equals(pc) || "后整".equals(pc) || "装箱".equals(pc)
-                        || "封箱".equals(pc) || "贴标".equals(pc) || "packing".equals(processCode)) {
-                    packagingDoneBundleIds.add(entry.getKey());
-                    break;
-                }
-            }
-        }
-        return packagingDoneBundleIds;
+    private boolean isPackagingProcess(ScanRecord scan) {
+        String processCode = scan.getProcessCode() == null ? "" : scan.getProcessCode().trim();
+        if (processCode.toLowerCase().contains("packaging")) return true;
+        if (PACKAGING_PROCESS_KEYWORDS.contains(processCode)) return true;
+        String processName = scan.getProcessName() == null ? "" : scan.getProcessName().trim();
+        return PACKAGING_PROCESS_KEYWORDS.contains(processName);
     }
 
     private List<String> filterBundlesByStatus(String status, Map<String, Set<String>> bundleScanTypes,
@@ -263,7 +267,10 @@ public class ProductWarehousingPendingHelper {
             ProductionOrder order = orderMap.get(orderId);
             if (order != null) {
                 String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
+                // 与统计 SQL（selectBundlePendingStats 的 NOT EXISTS）口径对齐：
+                // 终态或已删除订单的菲号不再出现在待处理列表，否则表格与统计卡片数据不一致
                 if (OrderStatusConstants.isTerminal(orderStatus)) continue;
+                if (order.getDeleteFlag() != null && order.getDeleteFlag() == 1) continue;
             }
             Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("bundleId", bundleId);

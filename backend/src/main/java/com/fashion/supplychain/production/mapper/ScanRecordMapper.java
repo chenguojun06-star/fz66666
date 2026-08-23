@@ -234,7 +234,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "    MAX(CASE WHEN scan_type = 'production' THEN 1 ELSE 0 END) AS has_production,",
                         "    MAX(CASE WHEN scan_type = 'quality' THEN 1 ELSE 0 END) AS has_quality,",
                         "    MAX(CASE WHEN scan_type = 'quality' AND process_code = 'quality_receive' AND confirm_time IS NOT NULL THEN 1 ELSE 0 END) AS has_quality_confirmed,",
-                        "    MAX(CASE WHEN scan_type = 'quality' AND process_code = 'quality_receive' AND confirm_time IS NOT NULL AND remark LIKE 'unqualified%' THEN 1 ELSE 0 END) AS has_defective_quality,",
+                        "    MAX(CASE WHEN scan_type = 'quality' AND process_code = 'quality_receive' AND confirm_time IS NOT NULL AND LOWER(IFNULL(remark,'')) LIKE 'unqualified%' THEN 1 ELSE 0 END) AS has_defective_quality,",
                         "    MAX(CASE WHEN scan_type = 'warehouse' AND (process_code IS NULL OR process_code <> 'warehouse_rollback') THEN 1 ELSE 0 END) AS has_warehouse,",
                         "    MAX(CASE WHEN scan_type = 'production' AND (",
                         "      LOWER(IFNULL(process_code,'')) LIKE '%packaging%'",
@@ -242,14 +242,22 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "      OR process_name IN ('包装','打包','入袋','后整','装箱','封箱','贴标','packing')",
                         "    ) THEN 1 ELSE 0 END) AS has_packaging,",
                         "    MAX(quantity) AS max_qty",
-                        "  FROM t_scan_record",
-                        "  WHERE cutting_bundle_id IS NOT NULL",
-                        "    AND cutting_bundle_id != ''",
-                        "    AND scan_result = 'success'",
-                        "    AND scan_type != 'orchestration'",
+                        "  FROM t_scan_record sr",
+                        "  WHERE sr.cutting_bundle_id IS NOT NULL",
+                        "    AND sr.cutting_bundle_id != ''",
+                        "    AND sr.scan_result = 'success'",
+                        "    AND sr.scan_type != 'orchestration'",
                         // fix: jdbcType=BIGINT 告知 JDBC tenantId=null 时的类型，避免参数绑定失败
-                        "    AND tenant_id = #{tenantId,jdbcType=BIGINT}",
-                        "  GROUP BY cutting_bundle_id, tenant_id",
+                        "    AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
+                        // 与 ProductWarehousingPendingHelper.buildPendingBundleResult 口径对齐：
+                        // 排除终态（completed/cancelled/scrapped/archived/closed）及已删除订单的扫码记录，
+                        // 否则统计卡片有数而 pending-bundles 列表为空（订单已完结不再显示待处理任务）
+                        "    AND NOT EXISTS (",
+                        "      SELECT 1 FROM t_production_order po",
+                        "      WHERE po.id = sr.order_id",
+                        "        AND (po.status IN ('completed','cancelled','scrapped','archived','closed') OR po.delete_flag = 1)",
+                        "    )",
+                        "  GROUP BY sr.cutting_bundle_id, sr.tenant_id",
                         ") t"
         })
         Map<String, Object> selectBundlePendingStats(@Param("tenantId") Long tenantId);

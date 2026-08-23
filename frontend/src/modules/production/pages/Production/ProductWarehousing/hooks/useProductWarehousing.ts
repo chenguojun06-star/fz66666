@@ -127,10 +127,13 @@ export const useProductWarehousing = () => {
   // Derived State
   const sortedWarehousingList = useMemo(() => {
     let list = [...warehousingList];
-    if (!showAllWarehousing) {
+    // 终态过滤仅在默认"全部"视图（未点击任何统计卡片）下生效，
+    // 用户明确选择"不合格/已完成"等筛选时不过滤，避免表格与统计卡片/总数不一致
+    //（不合格记录的订单多为已完工状态，之前被误过滤导致"共 N 条"但表格为空）
+    if (!showAllWarehousing && statusFilter === 'all') {
       list = list.filter((r: any) => {
         const s = String(r.status || r.qualityStatus || '').trim().toLowerCase();
-        return !['completed', 'warehoused', 'cancelled', 'scrapped'].includes(s);
+        return !['completed', 'warehoused', 'cancelled', 'scrapped', 'archived', 'closed'].includes(s);
       });
     }
     return list.sort((a: any, b: any) => {
@@ -143,7 +146,7 @@ export const useProductWarehousing = () => {
       const bTime = new Date(String(b.createTime || b.warehousingTime || 0)).getTime();
       return bTime - aTime;
     });
-  }, [warehousingList, showAllWarehousing]);
+  }, [warehousingList, showAllWarehousing, statusFilter]);
 
   return {
     // State
