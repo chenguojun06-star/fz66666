@@ -6,7 +6,7 @@ import factoryApi from '@/services/system/factoryApi';
 import { customerApi } from '@/services/crm/customerApi';
 import { notifyDataUpdated } from '@/utils/dataEvents';
 import CircleIconButton from '@/components/common/CircleIconButton';
-import ResizableModal from './ResizableModal';
+import StandardModal from './StandardModal';
 
 export type QuickManageMode = 'dict' | 'customer' | 'supplier';
 
@@ -259,22 +259,21 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
     );
 
   return (
-    <ResizableModal
+    <StandardModal
       title={`维护${title ?? meta.defaultTitle}`}
       open={open}
       onCancel={onClose}
       footer={null}
-      width={960}
+      size="md"
       minHeight={300}
-      initialHeight={400}
       styles={{ body: { paddingTop: 12 } }}
     >
-      <div style={{ display: 'flex', gap: 16, minHeight: 240, maxHeight: 420 }}>
+      <div style={{ display: 'flex', gap: 16, height: '54vh', minHeight: 260 }}>
         {/* ===== 左侧：目录 ===== */}
         <div
           style={{
             width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column',
-            borderRight: '1px solid #f0f0f0', paddingRight: 12,
+            borderRight: '1px solid var(--color-border-light)', paddingRight: 12,
           }}
         >
           <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>
@@ -307,10 +306,10 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                       onClick={() => selectRow(row)}
                       style={{
                         padding: '8px 10px', borderRadius: 6, marginBottom: 4, cursor: 'pointer',
-                        background: active ? '#e8f2ff' : 'transparent',
-                        boxShadow: active ? 'inset 0 0 0 1px #bcd9ff' : 'none',
+                        background: active ? 'var(--color-primary-bg)' : 'transparent',
+                        boxShadow: active ? 'inset 0 0 0 1px var(--color-primary-border)' : 'none',
                       }}
-                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#f5f6f8'; }}
+                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
                       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                     >
                       <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -416,7 +415,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
           )}
         </div>
       </div>
-    </ResizableModal>
+    </StandardModal>
   );
 };
 
