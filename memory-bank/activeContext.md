@@ -7,6 +7,13 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-22 ★★★★ 订单管理质检弹窗恢复完整质检操作 ✅已推送（b5e1ca7a0）
+
+- [x] **用户强烈反馈**："我不是要你把订单管理质检弹窗正常做到可以质检吗？为什么还是提示只读信息"——之前把订单管理质检弹窗改成 readOnly 只读（提示去成品仓模块操作），用户要的是**在订单管理弹窗里直接质检**
+- [x] **修复**：InspectDrawer.tsx 去掉 readOnly 传参（embedded 保留），标题"入库进度/质检记录（只读）"→"质检入库"；InspectionDetail embedded 模式 minHeight 改 auto 避免 Drawer 内双滚动条
+- [x] 质检操作全量恢复：菲号勾选列表、批量合格质检、批量不合格（次品类别/处理方式/图片）、标记返修、入库 Drawer——功能代码一直在 InspectionDetail 里，只是被 readOnly 隐藏
+- [x] **教训（重要）**：之前违反了记忆规则"质检侧滑弹窗功能不得因入库数据同步需求而修改或取消"——入库数据同步需求导致的 readOnly 改造属于过度设计，用户要的是原地增强不是功能搬家
+
 ### 2026-08-22 ★★★ 四问题批量修复（用户强烈反馈"优化好久没处理好"）✅已推送（981ac6c43 + cfc09cc48 + 25724ce05，safe-push 10/10 通过）
 
 - [x] **问题1 库位详情表布局挤成一团**：根因=三种表（物料5列/样衣5列/成品6列）共用同一个6列grid模板（80px 60px 60px 1fr 80px 80px），5列表套6列模板错位+60px列宽显示不全。修复=WarehouseLocationMap.css 三表独立grid模板（--material/--sample/--finished修饰类，fr比例分配）+LocationDetailDrawer.tsx 加title悬浮提示完整内容
