@@ -1,13 +1,65 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-23（采购确认完成400修复+采购工序预测不适用+样衣编辑入口/打印二维码已提交）
+> 最后更新：2026-08-23（质检入库统计与表格口径不一致修复：终态订单排除对齐 + 前端终态误过滤）
 
 ---
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-23 ★★★ 采购「确认完成」400连环报错 + 采购工序预测不适用 ✅已验证编译（待推送）
+### 2026-08-23 ★ 质检入库"统计有数但表格空"双根因修复 ✅本地已验证待部署
+
+- [x] **Bug 1（后端口径不一致）**：统计 SQL `ScanRecordMapper.selectBundlePendingStats` 不排除终态/已删除订单 → 统计卡片显示待质检8菲号/待包装1菲号；而 pending-bundles Java 端 `buildPendingBundleResult` 排除终态订单 → 列表空。本地库验证：57订单中50个终态，待处理菲号几乎全属 closed/completed 订单
+- [x] **Fix 1**：selectBundlePendingStats 加 `NOT EXISTS (po.status IN ('completed','cancelled','scrapped','archived','closed') OR po.delete_flag=1)`；remark 判定加 LOWER
+- [x] **Bug 2（前端终态误过滤）**：`useProductWarehousing.ts` sortedWarehousingList 在 showAllWarehousing=false 时过滤 status∈终态的记录；后端 fillOrderFields 会把**订单状态**填入 w.status，不合格记录订单多为 completed → 全被滤掉 → "共3条"但表格空
+- [x] **Fix 2**：前端终态过滤仅默认全部视图（statusFilter==='all' && !showAllWarehousing）生效；补齐 archived/closed；修排序笔误 aStatus→bStatus
+- [x] **Fix 3（Java/SQL 反向对齐）**：packaging 判定统一（仅 production 扫码 + processName 参与关键字匹配，原 Java 只看 processCode 且不分 scan_type）；buildPendingBundleResult/getBundleReadiness 补 delete_flag=1 排除（ProductionOrder.deleteFlag 无 @TableLogic，listByIds 查得出已删订单）
+- [x] 验证：mvn compile 0 错误 + tsc 0 错误 + 本地库实跑修复后 SQL（0/0/0 与 Java 口径一致）
+- [x] **教训**：统计接口与列表接口必须同口径（终态+删除订单排除双向都要对齐）；前端二次过滤 status 字段是订单状态非质检状态，语义易混
+
+### 2026-08-23 ★ 智能视图/外发工厂操作按钮文字截断（打印标签/更多半截）✅已推送（2b897cd86）
+
+- [x] **根因**：global.css L1426 `.row-actions.ant-space { width: 72px }` 为表格**图标按钮**（28px×2+gap）设计；智能视图操作区是**文字按钮**（打印标签68px+更多42px+gap≈114px），Space 被钳制 72px → 按钮向右溢出被卡片裁边截断。线上 DOM 实测确认（space width=72px，按钮溢出右边界）
+- [x] **涉及页面**：订单管理智能视图（radar-chart 第三个按钮，ProductionSmartView→ExternalFactorySmartView→SmartOrderRow）+ 外发工厂页（同组件）。注意订单管理智能视图不传 setPrintModalVisible，首个行内按钮是「打印标签」
+- [x] **修复**：externalFactory.css 新增 `.ef-card-actions .row-actions.ant-space { width:auto; justify-content:flex-end }`（0,3,0 优先级压过 0,2,0 定宽）
+- [x] **踩坑记录**：旧规则 `.ef-card-row-actions { justify-content:flex-end }`（0,1,0）从来就没生效过——被 `.row-actions.ant-space`（0,2,0）的 justify-content:center 压制
+- [x] **验证流程**：浏览器切智能视图（第三个雷达图标，前两个是列表/卡片）→ browser_evaluate 实测 getBoundingClientRect；首次浏览器代理点错按钮（appstore=卡片视图）导致找不到 .style-smart-row，智能视图是 radar-chart
+- [ ] 待线上部署后复验（CI ~7min）：space width 应为 auto(~114px)，打印标签/更多完整显示
+
+### 2026-08-23 ★ 用户反馈"tag还在图片下+加工厂没出来"核实结论：部署时间差，代码已全部上线 ✅
+
+- [x] **核实方法**：浏览器 DOM 坐标验证（browser_evaluate getBoundingClientRect）+ CI run 详情 + 逐版本部署时间线
+- [x] **DOM 证据**（线上实测）：tags(生产中/首单/风险16) x=428 与订单号/加工厂/交期同列，y=440 紧跟交期(y=412)下方；加工厂行存在(x=428,y=316,含"内部"FactoryTypeTag)——即 ddc8b760f 新布局已生效
+- [x] **根因**：部署时间差。v1(bc57fbb81) 12:29上线（tags在图片下+无加工厂行）→ 用户在此窗口看到旧版发来抱怨；v2(d39deb474) 12:50、v3(ddc8b760f) 12:57 相继部署完成。用户看到的是 v1
+- [x] **视觉复验**：截图确认 tags 与信息字段左对齐、无溢出、与图片正常间距
+- [x] **教训（防误判）**：用户"还在XX"类反馈先查部署时间线+浏览器缓存（Ctrl+Shift+R），勿急于改代码；浏览器子代理的视觉判断"tags在图片下方"不可靠（y=440贴近图片底边448造成视觉误判），必须用 DOM 坐标验证
+
+### 2026-08-23 ★ tag 标签统一到信息区下方 ✅已推送（ddc8b760f）
+
+- [x] **工序跟进（orderSummaryRenderer）**：状态/急单/首单/翻单/健康分数/停滞天数 tags 从左侧图片底下移到右侧信息区（OrderInfoGrid）下面，与 AI 风险标签合并同一行
+- [x] **外发工厂/订单管理（SmartOrderRow）**：核实 tags 本就在信息字段（ef-info-fields）后面（identity 内），DOM 无需改动；git 历史确认从未在图片下方渲染过 tags（externalFactory.css 的 ef-cover-tags/ef-cover-below 是死代码遗留）
+- [x] 页面结构备忘：订单管理(/production) 默认 list 视图，可切 smart(=ExternalFactorySmartView→SmartOrderRow)/card(ProductionCardView)；外发工厂只有 SmartView；工序跟进用 orderSummaryRenderer+OrderStartNode
+- [x] 验证：tsc 0 错误 + eslint 0 错误 + safe-push 全过
+
+### 2026-08-23 ★ 订单行信息瘦身v2（用户反馈迭代）✅已推送（d39deb474）
+
+- [x] **加工厂移回信息区**（用户：加工厂要直观看到，不能藏悬浮卡）：SmartOrderRow 头部恢复加工厂行（含 factoryTag）；orderSummaryRenderer 恢复加工厂行（含 SupplierNameTooltip 联系人悬浮 + FactoryTypeTag）
+- [x] **悬浮卡去掉加工厂行**：SmartOrderRow/OrderStartNode 悬浮卡只剩款号·款名(/SKC/预计交期-工序跟进) + 颜色码数矩阵
+- [x] **悬浮卡加大**：overlayStyle minWidth 180 / maxWidth 560（原 maxWidth 320），码数多不再堆积
+- [x] **信息区字体+1号**：externalFactory.css ef-field-label/value 11→12px；orderSummaryRenderer OrderInfoGrid fontSize 12→13
+- [x] 验证：tsc 0 错误 + eslint 0 错误 + safe-push 全过
+
+### 2026-08-23 ★★★ 订单行信息瘦身：次要信息移入「下单」节点 hover 悬浮卡 ✅已推送（bc57fbb81，safe-push 10/10）
+
+- [x] **用户需求**（经两轮澄清）：订单行信息密度太高——头部只保留主要信息（订单号/跟单员/客户/总数/交期 + tag 标签），次要信息**加到下单节点鼠标停留的悬浮卡里**（不是平铺在节点上方，第一版做错已撤销）
+- [x] **涉及三页**：订单管理(/production)+外发工厂(/production/external-factory) 共用 SmartOrderRow；工序跟进(/production/progress-detail) 用 OrderStartNode + orderSummaryRenderer
+- [x] **SmartOrderRow**：头部删「款号」「加工厂」两行；下单节点 Popover content 顶部加款号·款名/加工厂（含 FactoryTypeTag），下方保留颜色码数矩阵；悬浮不再因无矩阵数据禁用
+- [x] **orderSummaryRenderer**：删「生产方」（含 SupplierNameTooltip 联系人悬浮/FactoryTypeTag/跟单员备注红点整行重构——跟单员/客户保留为独立行，跟单员备注红点保留）「款号」「SKC」「预计交期」行
+- [x] **OrderStartNode**：下单节点悬浮卡加款号·款名/SKC/加工厂（含类型tag）/预计交期，与颜色码数矩阵同卡；open 条件改为 hasExtraInfo || hasData
+- [x] 验证：tsc 0 错误 + eslint 0 错误 ✅
+- [ ] 待线上验证：三页头部只剩主要信息，hover 下单节点可见次要信息+颜色码数
+
+### 2026-08-23 ★★★ 采购「确认完成」400连环报错 + 采购工序预测不适用 ✅已推送
 
 - [x] **用户反馈**：PO20260820120047 采购节点，面料确认完成一项后，其他物料点「确认完成」报 400/502（1×502 + 7×400）
 - [x] **根因链**：①前端 handleConfirmComplete 循环逐项调用**一断全断**（catch 中断循环，后面的物料永远没机会）②首调 502（网关超时）但后端可能已完成更新→前端列表未刷新（loadData 未执行）→重试时首个物料已完成→线上旧后端代码抛 IllegalStateException("该采购单已完成，无需重复确认")→GlobalExceptionHandler 映射 400→每次 400 都立即中断循环
