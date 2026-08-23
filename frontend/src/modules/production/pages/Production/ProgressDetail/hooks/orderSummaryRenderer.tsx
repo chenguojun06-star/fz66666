@@ -66,18 +66,6 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                 fit="contain"
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
-              <Tag color={status.color} style={{ margin: 0, fontSize: 12 }}>{status.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12 }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12 }}>翻单</Tag>}
-              {(() => {
-                const { score, level } = calcHealthScore(record);
-                if (level === 'good') return null;
-                return <Tag color={level === 'warn' ? 'orange' : 'red'} style={{ margin: 0, fontSize: 12 }}>{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
-              })()}
-              {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 12 }}>停滞 {stagnantDays} 天</Tag> : null}
-            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
             <OrderInfoGrid
@@ -162,7 +150,17 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                 },
               ]}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Tag color={status.color} style={{ margin: 0, fontSize: 12 }}>{status.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12 }}>翻单</Tag>}
+              {(() => {
+                const { score, level } = calcHealthScore(record);
+                if (level === 'good') return null;
+                return <Tag color={level === 'warn' ? 'orange' : 'red'} style={{ margin: 0, fontSize: 12 }}>{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
+              })()}
+              {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 12 }}>停滞 {stagnantDays} 天</Tag> : null}
               {aiRisk ? (
                 <Tooltip title={[aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ')}>
                   <Tag color={aiRisk.riskLevel === 'overdue' ? 'error' : aiRisk.riskLevel === 'danger' ? 'volcano' : aiRisk.riskLevel === 'warning' ? 'warning' : 'success'} style={aiRisk.riskLevel === 'overdue' ? softTagStyle('var(--color-rose-50)', 'var(--color-rose-300)') : aiRisk.riskLevel === 'danger' ? softTagStyle('var(--color-orange-50)', 'var(--color-amber-300)') : aiRisk.riskLevel === 'warning' ? softTagStyle('var(--color-amber-50)', 'var(--color-amber-300)') : softTagStyle('var(--color-emerald-50)', 'var(--color-emerald-600)')}>
