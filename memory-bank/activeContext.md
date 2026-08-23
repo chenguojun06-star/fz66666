@@ -1,11 +1,25 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-22（四问题批量修复：库位表布局/成品库位库存bug/样衣生产节点/小程序下拉刷新）
+> 最后更新：2026-08-23（采购确认完成400修复+采购工序预测不适用+样衣编辑入口/打印二维码已提交）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-23 ★★★ 采购「确认完成」400连环报错 + 采购工序预测不适用 ✅已验证编译（待推送）
+
+- [x] **用户反馈**：PO20260820120047 采购节点，面料确认完成一项后，其他物料点「确认完成」报 400/502（1×502 + 7×400）
+- [x] **根因链**：①前端 handleConfirmComplete 循环逐项调用**一断全断**（catch 中断循环，后面的物料永远没机会）②首调 502（网关超时）但后端可能已完成更新→前端列表未刷新（loadData 未执行）→重试时首个物料已完成→线上旧后端代码抛 IllegalStateException("该采购单已完成，无需重复确认")→GlobalExceptionHandler 映射 400→每次 400 都立即中断循环
+- [x] **修复1（前端）**：usePurchaseReturnActions.handleConfirmComplete 改逐项容错——单项失败不中断循环，统计 successCount/failMessages，汇总提示（成功N项/失败N项+首条错误明细），无论成败都 loadData() 刷新
+- [x] **修复2（后端，上一会话已改未提交）**：MaterialPurchaseStatusHelper.confirmComplete 幂等——已完成状态直接返回成功（alreadyCompleted:true），不再抛异常；网关超时重试/重复点击不再 400
+- [x] **预测问题核实**：用户问"预计完工：08-23置信 30%（剩余22件×8分钟/件）这条预测是否可执行？"——结论：**技术上可执行但对采购工序无参考价值**。采购完成取决于供应商交期（天级）而非按件工时（22件×8分钟≈3小时 vs 实际1-3天），且采购无扫码记录驱动，P3 兜底必然触发。与项目规则一致："采购和入库作为独立流程不纳入"生产工序
+- [x] **修复3（后端）**：ProgressPredictOrchestrator.predictFinish 新增 isProcurementStage（stageName 含"采购"）→ 提前返回，不返回 predictedFinishTime，reasons 说明"采购工序按供应商交期跟踪，不适用按件工时预测"
+- [x] **修复4（前端）**：usePredictionFeedback 仅在 res.data.predictedFinishTime 存在时 setPrediction，避免采购节点渲染空预测卡片
+- [x] 验证：后端 mvn compile ✅ + 前端 npx tsc --noEmit 0 errors ✅
+- [ ] **待办：推送部署后线上验证**——①采购节点逐项确认完成，单项失败不阻断其他项②重复点击已完成项返回成功③采购节点不再显示"×件×8分钟"误导预测
+
+
 
 ### 2026-08-22 ★★★ QuickManageModal 统一 StandardModal md 档 ✅已推送（3645e7499）
 

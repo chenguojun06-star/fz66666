@@ -158,14 +158,32 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
       return;
     }
     setConfirmCompleteLoading(true);
+    let successCount = 0;
+    const failMessages: string[] = [];
     try {
+      // 逐项容错：单项失败不中断后续物料（避免一断全断），后端已对"已完成"做幂等返回成功
       for (const record of awaiting) {
-        await api.post('/production/purchase/confirm-complete', { purchaseId: record.id });
+        const label = record.materialName || record.materialCode || String(record.id || '');
+        try {
+          const res = await api.post<{ code: number; message?: string }>('/production/purchase/confirm-complete', { purchaseId: record.id });
+          if (res?.code === 200) {
+            successCount++;
+          } else {
+            failMessages.push(`${label}: ${res?.message || '确认失败'}`);
+          }
+        } catch (e) {
+          failMessages.push(`${label}: ${(e as Error)?.message || '确认失败'}`);
+        }
       }
-      message.success(`已确认完成 ${awaiting.length} 项`);
-      loadData();
-    } catch (e) {
-      message.error((e as Error)?.message || '确认完成失败');
+      if (failMessages.length === 0) {
+        message.success(`已确认完成 ${successCount} 项`);
+      } else if (successCount === 0) {
+        message.error(`确认完成失败：${failMessages[0]}${failMessages.length > 1 ? ` 等 ${failMessages.length} 项` : ''}`);
+      } else {
+        message.warning(`已确认 ${successCount} 项，失败 ${failMessages.length} 项：${failMessages[0]}${failMessages.length > 1 ? ' 等' : ''}`);
+      }
+      // 无论成败都刷新，让已完成项实时反映到列表
+      await loadData();
     } finally {
       setConfirmCompleteLoading(false);
     }

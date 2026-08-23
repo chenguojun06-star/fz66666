@@ -45,7 +45,8 @@ export function usePredictionFeedback(params: UsePredictionFeedbackParams): {
     setPredicting(true);
     intelligenceApi.predictFinishTime({ orderId, stageName: nodeName })
       .then((res: any) => {
-        if (!cancelled && res.code === 200 && res.data) {
+        // 后端对不适用按件预测的工序（如采购）不返回 predictedFinishTime，此时不渲染预测卡片
+        if (!cancelled && res.code === 200 && res.data?.predictedFinishTime) {
           setPrediction(res.data);
         }
       })

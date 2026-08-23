@@ -66,6 +66,16 @@ public class ProgressPredictOrchestrator {
         String normalizedStage = ProcessStatsEngine.normalizeStage(stageName);
         Long tenantId = resolveTenantId();
 
+        // ── 1.5 采购类工序不适用按件工时预测 ─────────────────────────────
+        // 采购完成时间取决于供应商交期（天级），且无扫码记录驱动，
+        // P3 兜底（剩余件数 × 8 分钟/件）会得出"3小时完成采购"的误导性结论
+        if (isProcurementStage(stageName)) {
+            response.getReasons().add("采购工序按供应商交期跟踪，不适用按件工时预测");
+            response.getSuggestions().add("可在「面辅料采购」节点查看各物料的期望到货时间");
+            log.debug("[预测跳过] 租户 {} 工序「{}」为采购类工序，不适用按件预测", tenantId, stageName);
+            return response;
+        }
+
         // ── 2. 动态读取真实件数（与进度球 boardStats 同源）────────────────
         Quantities qty = fetchQuantities(orderId, stageName, normalizedStage, tenantId);
         int totalQty = qty.totalQty;
@@ -109,6 +119,11 @@ public class ProgressPredictOrchestrator {
     private String generatePredictionId() {
         return "PRED-" + UUID.randomUUID().toString()
                 .replace("-", "").substring(0, 16).toUpperCase();
+    }
+
+    /** 采购类工序判断（如「采购」「面辅料采购」），不适用按件工时预测 */
+    private boolean isProcurementStage(String stageName) {
+        return StringUtils.hasText(stageName) && stageName.contains("采购");
     }
 
     private Long resolveTenantId() {

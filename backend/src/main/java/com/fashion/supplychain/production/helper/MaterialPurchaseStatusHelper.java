@@ -628,6 +628,7 @@ public class MaterialPurchaseStatusHelper {
     /**
      * 确认采购完成
      * 将待确认完成(awaiting_confirm)状态的采购任务标记为已完成(completed)
+     * 幂等语义：已是 completed 的直接返回成功（重复点击/网关超时重试不报错）
      * @param body { purchaseId }
      */
     public Map<String, Object> confirmComplete(Map<String, Object> body) {
@@ -644,7 +645,14 @@ public class MaterialPurchaseStatusHelper {
 
         String currentStatus = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
         if (MaterialConstants.STATUS_COMPLETED.equals(currentStatus)) {
-            throw new IllegalStateException("该采购单已完成，无需重复确认");
+            // 幂等：已完成的直接返回成功，避免网关超时重试/重复点击报错
+            Map<String, Object> skipped = new java.util.LinkedHashMap<>();
+            skipped.put("purchaseId", purchaseId);
+            skipped.put("purchaseNo", purchase.getPurchaseNo());
+            skipped.put("materialName", purchase.getMaterialName());
+            skipped.put("status", MaterialConstants.STATUS_COMPLETED);
+            skipped.put("alreadyCompleted", true);
+            return skipped;
         }
         if (MaterialConstants.STATUS_CANCELLED.equals(currentStatus)) {
             throw new IllegalStateException("该采购单已取消，无法确认完成");
