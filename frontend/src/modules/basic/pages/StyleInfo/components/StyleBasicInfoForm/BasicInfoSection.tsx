@@ -132,11 +132,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={12}>
           <Form.Item
             name="category"
-            label={
-              <span>
-                <span style={{ color: 'var(--color-danger)' }}>*</span> 商品分类
-              </span>
-            }
+            label="商品分类"
             rules={[{ required: true, message: '请选择商品分类' }]}
             style={{ marginBottom: 8 }}
           >
