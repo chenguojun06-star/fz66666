@@ -7,6 +7,15 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-22 ★★★ QuickManageModal 统一 StandardModal md 档 ✅已推送（3645e7499）
+
+- [x] **用户核实提问**："我们用的是不是通用弹窗？我们有小号的宽屏弹窗，你全部统一是不是用的这个"——核实结果：QuickManageModal 原来用的是 ResizableModal+固定宽960，**没有**用 StandardModal 尺寸档位体系
+- [x] **用户决策**：改用 StandardModal **md 档**（70vw 自适应，min 720），与库存盘点/领料/批量不合格/字典表单等 9 个弹窗统一体系
+- [x] 改造：ResizableModal width=960 → StandardModal size="md"；内容区高度 54vh 跟随档位（原 maxHeight 420 固定值大屏浪费）；左侧目录 300px 保持
+- [x] 顺手修正：选中态/悬浮态/分隔线 4 处硬编码色全部换 CSS 变量（primary-bg/primary-border/bg-subtle/border-light），适配暗色主题
+- [x] **规格规则更新**：维护弹窗宽度标准由"固定 960px"改为"StandardModal md 档（70vw，min 720）"——后续新维护弹窗一律 StandardModal md 档 + 左目录300px + 右编辑区
+- [x] 验证：tsc 0 错误 + eslint 0 错误
+
 ### 2026-08-22 ★★★★ 订单管理质检弹窗恢复完整质检操作 ✅已推送（b5e1ca7a0）
 
 - [x] **用户强烈反馈**："我不是要你把订单管理质检弹窗正常做到可以质检吗？为什么还是提示只读信息"——之前把订单管理质检弹窗改成 readOnly 只读（提示去成品仓模块操作），用户要的是**在订单管理弹窗里直接质检**
