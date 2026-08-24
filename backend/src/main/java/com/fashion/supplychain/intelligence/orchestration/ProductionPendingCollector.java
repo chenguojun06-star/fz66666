@@ -44,7 +44,10 @@ public class ProductionPendingCollector {
         dto.setDescription(safe(t.getStyleNo()) + " " + t.getOrderQuantity() + "件待裁剪");
         dto.setOrderNo(t.getProductionOrderNo());
         dto.setStyleNo(t.getStyleNo());
-        dto.setDeepLinkPath("/production/cutting");
+        // D-114：深链直达裁剪任务详情
+        dto.setDeepLinkPath(StringUtils.hasText(t.getProductionOrderNo())
+                ? "/production/cutting/task/" + PendingTaskOrchestrator.pathSegment(t.getProductionOrderNo())
+                : "/production/cutting");
         dto.setPriority("medium");
         dto.setCreatedAt(t.getReceivedTime());
         dto.setQuantity(t.getOrderQuantity());
@@ -73,7 +76,10 @@ public class ProductionPendingCollector {
             dto.setDescription(safe(r.getProcessName()) + " " + r.getQuantity() + "件");
             dto.setOrderNo(r.getOrderNo());
             dto.setStyleNo(r.getStyleNo());
-            dto.setDeepLinkPath("/production/warehousing");
+            // D-114：深链直达质检详情页
+            dto.setDeepLinkPath(StringUtils.hasText(r.getOrderId())
+                    ? "/production/warehousing/inspect/" + PendingTaskOrchestrator.pathSegment(r.getOrderId())
+                    : "/production/order-flow");
             dto.setPriority("medium");
             dto.setCreatedAt(r.getScanTime());
             dto.setTaskStatus("pending");
@@ -136,7 +142,10 @@ public class ProductionPendingCollector {
             dto.setDescription(safe(p.getMaterialName()) + " 已到" + arrived + "/" + purchased);
             dto.setOrderNo(p.getOrderNo());
             dto.setStyleNo(p.getStyleNo());
-            dto.setDeepLinkPath("/production/material");
+            // D-114：深链直达该款采购明细页
+            dto.setDeepLinkPath(StringUtils.hasText(p.getStyleNo())
+                    ? "/production/material/" + PendingTaskOrchestrator.pathSegment(p.getStyleNo())
+                    : "/production/material");
             dto.setPriority("medium");
             dto.setCreatedAt(p.getCreateTime());
             dto.setTaskStatus("pending");

@@ -66,7 +66,8 @@ public class OrderPendingCollector {
             dto.setDescription("逾期" + days + "天，进度" + prog + "%");
             dto.setOrderNo(o.getOrderNo());
             dto.setStyleNo(o.getStyleNo());
-            dto.setDeepLinkPath("/production");
+            // D-114：深链直达订单流程页（原只跳 /production 根路由）
+            dto.setDeepLinkPath("/production/order-flow");
             dto.setPriority("high");
             dto.setCreatedAt(o.getPlannedEndDate());
             dto.setTaskStatus("pending");
@@ -104,7 +105,8 @@ public class OrderPendingCollector {
             dto.setTitle("异常待处理 " + ProductionPendingCollector.safe(r.getOrderNo()));
             dto.setDescription(ProductionPendingCollector.safe(r.getExceptionType()) + " " + ProductionPendingCollector.safe(r.getDescription()));
             dto.setOrderNo(r.getOrderNo());
-            dto.setDeepLinkPath("/production");
+            // D-114：深链直达订单流程页（原只跳 /production 根路由）
+            dto.setDeepLinkPath("/production/order-flow");
             dto.setPriority("high");
             dto.setCreatedAt(r.getCreateTime());
             dto.setTaskStatus("pending");
@@ -151,7 +153,8 @@ public class OrderPendingCollector {
             String node = s.getProgressNode() != null ? s.getProgressNode() : "进行中";
             dto.setDescription(ProductionPendingCollector.safe(s.getStyleName()) + " " + node);
             dto.setStyleNo(s.getStyleNo());
-            dto.setDeepLinkPath("/style-info");
+            // D-114：深链直达样衣详情页（/style-info/:id）
+            dto.setDeepLinkPath("/style-info/" + s.getId());
             dto.setPriority("medium");
             dto.setTaskStatus("pending");
             dto.setAssigneeRole("样衣开发");

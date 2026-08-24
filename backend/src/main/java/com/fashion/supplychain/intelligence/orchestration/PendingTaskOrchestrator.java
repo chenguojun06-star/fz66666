@@ -151,7 +151,10 @@ public class PendingTaskOrchestrator {
             dto.setDescription(safe(t.getStyleNo()) + " " + t.getOrderQuantity() + "件待裁剪");
             dto.setOrderNo(t.getProductionOrderNo());
             dto.setStyleNo(t.getStyleNo());
-            dto.setDeepLinkPath("/production/cutting");
+            // D-114：深链直达裁剪任务详情（原跳 /production/cutting 列表页，用户还得自己搜订单）
+            dto.setDeepLinkPath(StringUtils.hasText(t.getProductionOrderNo())
+                    ? "/production/cutting/task/" + pathSegment(t.getProductionOrderNo())
+                    : "/production/cutting");
             dto.setPriority("medium");
             dto.setCreatedAt(t.getReceivedTime());
             dto.setQuantity(t.getOrderQuantity());
@@ -180,7 +183,10 @@ public class PendingTaskOrchestrator {
             dto.setDescription(safe(r.getProcessName()) + " " + r.getQuantity() + "件");
             dto.setOrderNo(r.getOrderNo());
             dto.setStyleNo(r.getStyleNo());
-            dto.setDeepLinkPath("/production/warehousing");
+            // D-114：深链直达质检详情页（inspect/:orderId）
+            dto.setDeepLinkPath(StringUtils.hasText(r.getOrderId())
+                    ? "/production/warehousing/inspect/" + pathSegment(r.getOrderId())
+                    : "/production/order-flow");
             dto.setPriority("medium");
             dto.setCreatedAt(r.getScanTime());
             dto.setTaskStatus("pending");
@@ -251,7 +257,10 @@ public class PendingTaskOrchestrator {
             dto.setDescription(safe(p.getMaterialName()) + " 已到" + arrived + "/" + purchased);
             dto.setOrderNo(p.getOrderNo());
             dto.setStyleNo(p.getStyleNo());
-            dto.setDeepLinkPath("/production/material");
+            // D-114：深链直达该款的采购明细页（/production/material/:styleNo）
+            dto.setDeepLinkPath(StringUtils.hasText(p.getStyleNo())
+                    ? "/production/material/" + pathSegment(p.getStyleNo())
+                    : "/production/material");
             dto.setPriority("medium");
             dto.setCreatedAt(p.getCreateTime());
             dto.setTaskStatus("pending");
@@ -293,7 +302,8 @@ public class PendingTaskOrchestrator {
             dto.setDescription("逾期" + days + "天，进度" + prog + "%");
             dto.setOrderNo(o.getOrderNo());
             dto.setStyleNo(o.getStyleNo());
-            dto.setDeepLinkPath("/production");
+            // D-114：深链直达订单流程页（order-flow 消费 orderNo 参数，原只跳 /production 根路由）
+            dto.setDeepLinkPath("/production/order-flow");
             dto.setPriority("high");
             dto.setCreatedAt(o.getPlannedEndDate());
             dto.setTaskStatus("pending");
@@ -337,7 +347,8 @@ public class PendingTaskOrchestrator {
             dto.setTitle("异常待处理 " + safe(r.getOrderNo()));
             dto.setDescription(safe(r.getExceptionType()) + " " + safe(r.getDescription()));
             dto.setOrderNo(r.getOrderNo());
-            dto.setDeepLinkPath("/production");
+            // D-114：深链直达订单流程页（原只跳 /production 根路由）
+            dto.setDeepLinkPath("/production/order-flow");
             dto.setPriority("high");
             dto.setCreatedAt(r.getCreateTime());
             dto.setTaskStatus("pending");
@@ -397,7 +408,8 @@ public class PendingTaskOrchestrator {
             dto.setDescription(safe(s.getStyleName()) + " " + node);
             dto.setOrderNo("");
             dto.setStyleNo(s.getStyleNo());
-            dto.setDeepLinkPath("/style-info");
+            // D-114：深链直达样衣详情页（/style-info/:id）
+            dto.setDeepLinkPath("/style-info/" + s.getId());
             dto.setPriority("medium");
             dto.setCreatedAt(null);
             dto.setTaskStatus("pending");
@@ -541,6 +553,21 @@ public class PendingTaskOrchestrator {
             sb.append(hasQuery ? "&" : "?").append("styleNo=").append(dto.getStyleNo());
         }
         return sb.toString();
+    }
+
+    /**
+     * 深链路径段编码（D-114）：订单号/款号拼入路径参数时做 URL 编码，
+     * 避免含特殊字符（空格/斜杠/中文）时路由匹配失败。
+     */
+    static String pathSegment(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        try {
+            return java.net.URLEncoder.encode(value.trim(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return value.trim();
+        }
     }
 
     private void collectSafely(String source, Supplier<List<PendingTaskDTO>> supplier,
