@@ -1,9 +1,29 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-24（新增 D-113 样衣列表页扫码三级匹配 + 打印成分列/长文本换行 + 工序列商品编码）
+> 最后更新：2026-08-24（新增 D-114 小云任务deepLink直达详情页）
 
 ---
+
+## D-114：小云任务点击直达详情页——deepLink 精确化（2026-08-24）
+
+**背景**：用户抱怨"小云PC端点击任务不跳转到任务详情页,还在界面到处找这个任务"。审计发现点击链路本身有 navigate,根因是后端 PendingTaskOrchestrator 给的 deepLinkPath 全是**模块列表页**（/production/cutting、/production/material、/style-info）,订单逾期/异常报告甚至只落 /production 根路由,且落地页不消费 orderNo/styleNo 参数——点完还得自己搜。
+
+### 决策
+不加独立任务详情页（系统待办是规则驱动实时聚合、无持久化任务表,独立详情页无处落数据）,而是把深链改为**业务对象精确路由**（路由已全部存在,零前端改动）：
+- 裁剪任务 → /production/cutting/task/:orderNo
+- 质检待处理 → /production/warehousing/inspect/:orderId（ScanRecord.orderId）
+- 采购待收货 → /production/material/:styleNo
+- 样衣开发 → /style-info/:id
+- 订单逾期/异常报告 → /production/order-flow（该页已消费 orderNo 参数）
+- 返修/财务三类无独立详情路由,保持列表页+query 定位参数
+- 新增 pathSegment() URL 编码路径段,三个 Collector（PendingTask/Production/Order）同步修改
+
+### 理由
+前端 onSafeNavigate 白名单是前缀匹配无需扩;TaskAggregationPanel 拼 URL 已处理双问号;个人任务（协作任务）点击弹编辑框属合理交互暂不动。
+
+### 验证
+mvn compile EXIT=0。遗留：落地页消费 query 参数自动定位（如生产订单列表读 orderNo 自动过滤）列入后续优化。
 
 ## D-113：样衣列表页扫码"未匹配到样衣" + 打印三项优化 + 工序列商品编码（2026-08-24）
 

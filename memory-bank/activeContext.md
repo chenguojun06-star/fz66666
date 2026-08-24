@@ -1,11 +1,18 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-24（D-113 样衣列表页扫码三级匹配 + 打印成分列/换行 + 工序列商品编码）
+> 最后更新：2026-08-24（D-114 小云任务deepLink直达详情页）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-24 ★ D-114 小云任务点击直达详情 ✅mvn compile 通过待部署
+
+- [x] 根因：deepLink 全是列表页（逾期/异常只落 /production 根路由），落地页不消费 orderNo → 点完还要找
+- [x] 修复：7 类任务深链改精确路由（cutting/task/:orderNo、warehousing/inspect/:orderId、material/:styleNo、style-info/:id、order-flow?orderNo），pathSegment URL 编码，三个 Collector 同步
+- [x] 决策：不加独立任务详情页（系统待办无持久化表），用业务对象精确路由
+- [ ] 待线上验证：小云待办面板点击各类任务直达对应详情/流程页
 
 ### 2026-08-24 ★ D-113 列表页扫码修复 + 打印三项优化 ✅本地验证待部署
 
