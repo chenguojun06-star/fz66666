@@ -114,17 +114,22 @@ export default function useSampleProcessProgress(
         if (scanRes.status === 'fulfilled') {
           const scanData = (scanRes.value as any)?.data;
           const records = Array.isArray(scanData?.records) ? scanData.records : Array.isArray(scanData) ? scanData : [];
+          // D-115：行级记录（processName=已配置子工序名）只点亮自身，不做阶段兜底——
+          // 否则点一行"手动完成"整个阶段所有行都被标完成
+          const configuredNames = new Set(nodes.map((n) => n.name).filter(Boolean));
           for (const r of records) {
-            if (r.processName && r.success !== false) scannedNames.add(r.processName);
+            const recName = String(r.processName || '').trim();
+            const isRowLevel = !!recName && configuredNames.has(recName);
+            if (recName && r.success !== false) scannedNames.add(recName);
             if (r.operationType && r.success !== false) {
               scannedNames.add(r.operationType);
               const normalized = normalizeOperationType(r.operationType);
               if (normalized) {
                 scannedNames.add(normalized);
-                scannedStages.add(normalized);
+                if (!isRowLevel) scannedStages.add(normalized);
               }
             }
-            if (r.progressStage) scannedStages.add(r.progressStage);
+            if (!isRowLevel && r.progressStage) scannedStages.add(r.progressStage);
           }
         }
       }
@@ -154,15 +159,21 @@ export default function useSampleProcessProgress(
         if (patternScanRes.status === 'fulfilled') {
           const scanData = (patternScanRes.value as any)?.data;
           const records = Array.isArray(scanData) ? scanData : Array.isArray(scanData?.data) ? scanData.data : [];
+          // D-115：行级记录（processName=已配置子工序名）只点亮自身，不做阶段兜底
+          const configuredNames = new Set(nodes.map((n) => n.name).filter(Boolean));
           for (const r of records) {
-            if (r.processName) scannedNames.add(r.processName);
-            if (r.operationType) scannedNames.add(r.operationType);
-            const normalized = normalizeOperationType(r.operationType);
-            if (normalized) {
-              scannedNames.add(normalized);
-              scannedStages.add(normalized);
+            const recName = String(r.processName || '').trim();
+            const isRowLevel = !!recName && configuredNames.has(recName);
+            if (recName) scannedNames.add(recName);
+            if (r.operationType) {
+              scannedNames.add(r.operationType);
+              const normalized = normalizeOperationType(r.operationType);
+              if (normalized) {
+                scannedNames.add(normalized);
+                if (!isRowLevel) scannedStages.add(normalized);
+              }
             }
-            if (r.progressStage) scannedStages.add(r.progressStage);
+            if (!isRowLevel && r.progressStage) scannedStages.add(r.progressStage);
           }
         }
 

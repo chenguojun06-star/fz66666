@@ -1,9 +1,26 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-24（新增 D-114 小云任务deepLink直达详情页）
+> 最后更新：2026-08-25（新增 D-115 样衣工序状态联动三连修）
 
 ---
+
+## D-115：样衣工序"操作了但状态不变/按钮还能点"三连修（2026-08-25）
+
+**背景**：用户反馈样衣生产里"全部都操作了状态不变化、按钮还是可操作状态"。审计定位到 SampleProcessList 组件簇三个叠加病根。
+
+### 修复（frontend/src/modules/basic/pages/StyleInfoList/components/）
+
+1. **行状态取错数据源（核心）**：`useSampleProcessListData.subTableData` 每行 status 原取阶段总进度（percent<100 时已完成的行仍显示"待领取/手动完成"）→ 改为取行自身 `sub.completed`（percent>=100 兜底 trackingStats 口径），行只有 完成/待领取 两态
+2. **手动完成提交行级标识**：原只提交阶段枚举 operationType（如 CUTTING），进度匹配靠 progressStage 阶段兜底把整个阶段所有行点亮 → 提交带 `processName: row.name`；同时 `useSampleProcessProgress` 两条记录循环（大货/样衣分支）增加 `configuredNames` 门控：**行级记录（processName=已配置子工序名）只点亮自身，不做阶段兜底**；旧数据（processName='样衣操作'等阶段级记录）保持原阶段兜底行为，完全向后兼容
+3. **撤回删错记录**：原 `find` 第一条 `operationType===opType || processName===row.name`——点任意行撤回删的都是同一条阶段记录 → 改为优先按 processName 精确匹配取最新一条，仅旧阶段级记录退回 operationType 匹配（也取最新）
+4. **指派后抽屉不刷新**：`StyleStageDrawer` 的 SampleProcessList onRefresh 原链只刷工序列表+外层列表，不重拉 PatternProduction 快照 → 统一 `refreshDrawerData`：刷进度 + `sample.reloadSampleStage()`（领取人/状态/领取时间）+ scanRefreshTick 联动扫码记录表 + 显式外层 onRefresh 双保险；SampleScanRecordsTable 加 `refreshSignal` prop（原仅 patternId 变化才重拉）
+
+### 刻意不改
+- `onCompleteProcess`（手动完成后向关联大货订单写扫码）保留：属数据口径问题（processCode 传阶段 key）而非状态刷新问题，单独评估，避免本次改动面扩大
+
+### 验证
+tsc --noEmit 0 errors；eslint 4 文件 0 错误 0 警告；无相关单测文件；向后兼容性靠 configuredNames 门控保证
 
 ## D-114：小云任务点击直达详情页——deepLink 精确化（2026-08-24）
 

@@ -96,11 +96,11 @@ export default function useSampleProcessListData(
     if (needsConfig) return [];
     // 该阶段未配置子工序时返回空数组，不生成占位假工序（历史bug：切换tab会出现一行假工序，刷新消失）
     if (currentStage.subProcesses.length === 0) return [];
-    const isDone = currentStage.percent >= 100;
-    const isActive = currentStage.percent > 0 && currentStage.percent < 100;
     return currentStage.subProcesses.map((sub) => {
-      const subDone = isDone;
-      const subActive = isActive;
+      // D-115：行状态取自身完成标记（原取阶段总进度——阶段未到100%时，已完成的行仍显示
+      // "待领取/手动完成"，正是"操作了但状态不变、按钮还能点"的根因）。
+      // percent>=100 作为兜底（trackingStats 口径完成的行 completed 标记可能缺）
+      const subDone = sub.completed === true || currentStage.percent >= 100;
       let subQty = '-';
       if (currentStage.key === 'procurement') {
         subQty = '1种面料';
@@ -115,10 +115,10 @@ export default function useSampleProcessListData(
         color,
         size,
         quantity: subQty,
-        receiver: subDone ? receiver : subActive ? receiver : '-',
-        time: subDone ? (receiveTime || '-') : subActive ? (receiveTime || '-') : '-',
-        status: subDone ? 'completed' as const : subActive ? 'in_progress' as const : 'pending' as const,
-        percent: currentStage.percent,
+        receiver: subDone ? receiver : '-',
+        time: subDone ? (receiveTime || '-') : '-',
+        status: subDone ? 'completed' as const : 'pending' as const,
+        percent: subDone ? 100 : 0,
         unitPrice: sub.unitPrice,
       };
     });
@@ -139,9 +139,12 @@ export default function useSampleProcessListData(
         setActioningKey(row.key);
         try {
           const { default: api } = await import('@/utils/api');
+          // D-115：带 processName=row.name 行级标识——扫码记录按具体子工序名落库，
+          // 进度匹配只点亮该行（原只提交阶段枚举，整个阶段所有行被一起标完成）
           await api.post('/production/pattern/scan', {
             patternId: patternProductionId,
             operationType: opType,
+            processName: row.name,
             operatorRole: 'PLATE_WORKER',
             remark: 'PC手动完成',
             manual: true,
@@ -175,9 +178,11 @@ export default function useSampleProcessListData(
           const opType = OPERATION_TYPE_MAP[currentStage?.key || ''] || '';
           const scanRes: any = await api.get(`/production/pattern/${patternProductionId}/scan-records`);
           const records = Array.isArray(scanRes?.data) ? scanRes.data : Array.isArray(scanRes) ? scanRes : [];
-          const matched = records.find((r: any) =>
-            r.operationType === opType || r.processName === row.name
-          );
+          // D-115：优先按行级 processName 精确匹配（取最新一条），仅旧数据（阶段级记录）才退回 operationType 匹配。
+          // 原逻辑 find 第一条阶段记录——点任意行的撤回删的都是同一条记录
+          const byName = records.filter((r: any) => r.processName === row.name);
+          const byType = opType ? records.filter((r: any) => r.operationType === opType) : [];
+          const matched = byName.length > 0 ? byName[byName.length - 1] : (byType.length > 0 ? byType[byType.length - 1] : undefined);
           if (matched?.id) {
             await api.delete(`/production/pattern/${patternProductionId}/scan-records/${matched.id}`);
             message.success('撤回成功');

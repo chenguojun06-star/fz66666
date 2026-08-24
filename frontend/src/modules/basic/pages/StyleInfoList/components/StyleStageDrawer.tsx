@@ -44,6 +44,17 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
     setExpandedParentStage(null);
   };
 
+  // D-115：手动完成/撤回/指派后联动刷新扫码记录表（原仅 patternId 变化才重拉，新记录不出现/被撤记录仍显示）
+  const [scanRefreshTick, setScanRefreshTick] = React.useState(0);
+  const refreshDrawerData = () => {
+    sampleProcessProgress.refresh();
+    // 重拉样衣生产快照（领取人/状态/领取时间）
+    void sample.reloadSampleStage();
+    setScanRefreshTick((t) => t + 1);
+    // 外层列表刷新（reloadSampleStage 内部也会触发，这里显式调用双保险）
+    onRefresh();
+  };
+
   return (
     <Drawer
       open={Boolean(selectedStage)}
@@ -128,6 +139,8 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                   <SampleScanRecordsTable
                     patternId={sample.sampleSnapshot.id}
                     stageKey={selectedStage.stage.key}
+                    refreshSignal={scanRefreshTick}
+                    onRefresh={refreshDrawerData}
                   />
                 </div>
               ) : null}
@@ -319,7 +332,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       receiveTime={sample.sampleReceiveTimeLabel !== '待启动' ? sample.sampleReceiveTimeLabel : ''}
                       patternProductionId={sample.sampleSnapshot?.id}
                       onCompleteProcess={sampleProcessProgress.completeProcess}
-                      onRefresh={() => { sampleProcessProgress.refresh(); onRefresh(); }}
+                      onRefresh={refreshDrawerData}
                     />
                   </div>
                 </>

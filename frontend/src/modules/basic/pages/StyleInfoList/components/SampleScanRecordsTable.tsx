@@ -7,6 +7,8 @@ interface SampleScanRecordsTableProps {
   patternId: string;
   stageKey?: string;
   onRefresh?: () => void;
+  /** 变化时强制重拉扫码记录（D-115：同抽屉内手动完成/撤回后联动刷新） */
+  refreshSignal?: number;
 }
 
 const OPERATION_TYPE_LABELS: Record<string, string> = {
@@ -31,7 +33,7 @@ function getOperationLabel(op: string | undefined): string {
   return OPERATION_TYPE_LABELS[op.toUpperCase()] ?? '未知';
 }
 
-const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ patternId, stageKey, onRefresh }) => {
+const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ patternId, stageKey, onRefresh, refreshSignal }) => {
   const { message } = App.useApp();
   const { scanRecordsLoading, loadScanRecords, getFilteredRecords, undoScanRecord } = useSampleScanRecords();
   const [undoingIds, setUndoingIds] = useState<Set<string>>(new Set());
@@ -40,7 +42,7 @@ const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ pattern
     if (patternId) {
       void loadScanRecords(patternId);
     }
-  }, [patternId, loadScanRecords]);
+  }, [patternId, loadScanRecords, refreshSignal]);
 
   const filteredRecords = useMemo(() => getFilteredRecords(stageKey), [getFilteredRecords, stageKey]);
 
