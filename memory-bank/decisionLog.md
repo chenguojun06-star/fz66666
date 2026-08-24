@@ -1,9 +1,29 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-20（新增 D-110 拼接字段列宽系统性风险：VARCHAR(20) 二连爆）
+> 最后更新：2026-08-24（新增 D-111 尺码语义去重 + 物料停用闭环 + 出库客户关联）
 
 ---
+
+## D-111：尺码语义去重 + 物料停用闭环 + 出库客户关联（2026-08-24，用户四连需求）
+
+**背景**：用户实测反馈四个问题——①纸样开发尺寸表出现 S(160/76) 与 S(160/76A) 重复列（要求"有重复的自动取重"）；②物料出入库无库存面料只能删不能停；③操作列"打印出库单"是纯预览废弃按钮；④库位出库抽屉客户/电话/地址纯手填未关联客户管理。
+
+### 决策与实现
+
+1. **尺码语义去重（前后端同规则）**：新增 `getSizeDedupeKey` 归一化键——取「字母前缀|数字序列|中文段」，忽略型体后缀(A/B/C)与分隔符，S(160/76)、S(160/76A)、S 160/76a 同键。前端 `normalizeSizeList` 改为按键保留先出现者（linkedSizeColumns 开发码先合并故优先保留开发码写法），覆盖 5 处入口：fetch 合并 / 开发码联动 / 新增尺码校验+下拉过滤+自由输入 / AI识别合并 / 各码实际用量 extraSizes。保存链路天然闭环：`obsoleteOriginalIds` 会删除不在当前列头的旧记录，去重后下次保存即清理 DB 脏行，无需迁移。
+2. **后端模板 merge 防重（根因）**：`TemplateStyleOrchestrator.applySizeTemplate` merge 分支原来逐行盲 append；改为加载目标款式已有尺寸行，「部位::尺码语义键」命中即跳过（Java 版 sizeDedupeKey 与前端同规则）；overwrite 模式仍全清后写入但批内也去重。
+3. **物料停用复用主数据**：不给 t_material_stock 加字段——t_material_database 已有 disabled 列与 PUT /material/database/{id}/disable|enable 接口（物料资料库页在用）。MaterialStock 实体加 @TableField(exist=false) 的 disabled/materialDatabaseId 两个透出字段，queryPage 按 disabledStatus 参数先查主数据停用编码集再 in/notIn 过滤（分页正确性），enrichConversionRate 批量带出。前端操作列加停用/启用（modal.confirm 确认），名称旁"已停用"Tag，工具栏加启用状态筛选。
+4. **删废弃打印按钮**：handlePrintOutbound 是假单号 PREVIEW-时间戳的纯前端预览（备注自述"请先执行正式出库后再打印正式单据"），而手动出库确认/领料确认流程本就自动弹 MaterialOutboundPrintModal 正式打印 → 整链删除（columns/index/useOutboundActions 三处）。
+5. **出库客户关联 CRM**：WarehouseLocationMap 的 OutboundDrawer 客户/领取人 Input 换 CustomerSelect（AutoComplete 封装，选中自动带 contactPhone/address，自带快捷维护客户齿轮），手输兼容保留；提交参数与后端 t_product_outstock 字段零改动。
+
+### 理由
+- 去重选"保留先出现者"而非"统一改成某一种写法"：开发码（SKU/各码实际用量同源）在前合并自然胜出，两表列头随之对齐
+- 停用挂主数据而非库存表：主数据才是"这个物料还用不用"的归属地，且零迁移零新接口
+- 不新增 customerId 列到 outstock 表：客户名/电话/地址已落库可追溯，避免为本次需求引入 Flyway 变更
+
+### 验证
+npx tsc --noEmit 0 errors（16 文件）；eslint 11 个改动文件 0 errors；mvn compile EXIT=0
 
 ## D-110：拼接字段列宽系统性风险 — t_style_bom size/color VARCHAR(20) 二连爆（2026-08-20）
 

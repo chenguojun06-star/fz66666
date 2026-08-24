@@ -1,11 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-23（质检入库统计与表格口径不一致修复：终态订单排除对齐 + 前端终态误过滤）
+> 最后更新：2026-08-24（D-111 尺码语义去重+物料停用闭环+删废弃打印按钮+出库客户关联CRM）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-24 ★★★ D-111 四连修复：尺码去重/物料停用/废弃按钮/客户关联 ✅本地验证待部署
+
+- [x] **尺码语义去重**：`styleSize/shared.ts` 新增 getSizeDedupeKey/hasSameSizeKey，normalizeSizeList 按键保留先出现者；覆盖 fetch合并/开发码联动/新增尺码校验/下拉过滤/自由输入/AI识别/各码实际用量 7 处入口。保存时 obsoleteOriginalIds 自动清 DB 脏行（无需迁移）。后端 `TemplateStyleOrchestrator.applySizeTemplate` merge 分支按「部位::尺码语义键」跳过已存在行（重复列根因：模板通用码 S(160/76) 与开发码 S(160/76A) 字符串不等且原逻辑零查重）
+- [x] **物料出入库停用/启用**：复用 t_material_database.disabled + PUT /material/database/{id}/disable|enable；MaterialStock 加 exist=false 的 disabled/materialDatabaseId 透出字段，queryPage 支持 disabledStatus 过滤（先查主数据停用编码集再 in/notIn 保分页正确）；前端操作列 停用/启用（confirm 弹窗）+ 名称旁已停用 Tag + 工具栏启用状态筛选
+- [x] **删废弃"打印出库单"按钮**：handlePrintOutbound 纯预览假单号（正式出库确认/领料确认本就自动弹打印）→ columns/index/useOutboundActions 三处整链删除
+- [x] **出库客户关联 CRM**：WarehouseLocationMap OutboundDrawer 客户/领取人换 CustomerSelect（选中自动带电话/地址+快捷维护客户齿轮，手输兼容）；提交参数与 t_product_outstock 零改动
+- [x] 小程序术语扫描收尾：用户可见文案无 SKU 残留（命中全为注释/console/字段名），D-073 口径关闭
+- [x] 验证：tsc 0 errors + eslint（11 文件）0 errors + mvn compile EXIT=0
+- [ ] 待线上验证：①BR24XQ0098E 纸样开发尺寸表不再有 S 双列②物料出入库可停用/启用+筛选③操作列无打印出库单④出库抽屉选客户自动带电话地址
 
 ### 2026-08-23 ★ 质检入库"统计有数但表格空"双根因修复 ✅本地已验证待部署
 
