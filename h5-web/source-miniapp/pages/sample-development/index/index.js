@@ -817,30 +817,72 @@ Page({
 
   /**
    * 扫码按钮：当前页直接扫码 → 匹配样衣 → 打开详情
-   * 不再跳转到统一扫码页
+   * 匹配优先级：
+   *   ① 样板生产二维码（打印资料单 QR：{"type":"pattern","id":...}）→ 直接打开该样衣详情
+   *   ② 当前列表匹配（快路径）
+   *   ③ 后端按款号查询（列表翻页/筛选后本地不命中的兜底）
    */
   onScan: function () {
+    var that = this;
     scanInPage((parsed, raw) => {
       if (!parsed) return; // 用户取消
       if (!parsed.success || !parsed.data) {
         toast.error('无法识别：' + (raw || ''));
         return;
       }
-      const { styleNo, orderNo } = parsed.data;
-      // 在当前列表中匹配
-      const list = this.data.list || [];
+      const d = parsed.data;
+
+      // ① 样板生产二维码：直接跳该样衣生产详情（详情页支持 id=patternId）
+      if (d.qrType === 'pattern' && d.patternId) {
+        safeNavigate({
+          url: '/pages/sample-development/detail/index?id=' + encodeURIComponent(d.patternId),
+        }).catch(function () {});
+        return;
+      }
+
+      const styleNo = d.styleNo || '';
+      const orderNo = d.orderNo || '';
+
+      // ② 在当前列表中匹配（快路径）
+      const list = that.data.list || [];
       const matched = list.find(item =>
         (styleNo && (item.styleNo === styleNo || item._styleNo === styleNo)) ||
         (orderNo && item.orderNo === orderNo)
       );
       if (matched) {
         // 找到匹配 → 打开详情
-        this.onCardTap({
+        that.onCardTap({
           currentTarget: { dataset: { item: matched } },
         });
-      } else {
-        toast.error('未匹配到样衣');
+        return;
       }
+
+      // ③ 本地未命中（翻页/筛选/未加载）→ 后端按款号查样衣生产记录
+      if (!styleNo) {
+        toast.error('未匹配到样衣');
+        return;
+      }
+      wx.showLoading({ title: '查找样衣...' });
+      api.production.listPatterns({ page: 1, size: 20, keyword: styleNo })
+        .then(function (res) {
+          wx.hideLoading();
+          const data = res;
+          const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
+          const hit = records.find(function (item) {
+            return (item.styleNo || (item.styleInfo || {}).styleNo) === styleNo;
+          }) || records[0];
+          if (!hit) {
+            toast.error('未找到款号 ' + styleNo + ' 对应的样衣');
+            return;
+          }
+          that.onCardTap({
+            currentTarget: { dataset: { item: hit } },
+          });
+        })
+        .catch(function () {
+          wx.hideLoading();
+          toast.error('查询样衣失败，请重试');
+        });
     });
   },
 

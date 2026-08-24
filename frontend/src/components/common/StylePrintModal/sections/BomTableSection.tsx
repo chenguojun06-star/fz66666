@@ -30,6 +30,8 @@ const BomTableSection: React.FC<BomTableSectionProps> = ({ bom, showPrice }) => 
           render: (v: unknown) => getMaterialTypeLabel(v) },
         { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
         { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
+        { title: '成分', dataIndex: 'fabricComposition', key: 'fabricComposition', width: 150,
+          render: (v: unknown) => (v ? String(v) : '-') },
         { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100 },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 60 },
         { title: '用量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const },

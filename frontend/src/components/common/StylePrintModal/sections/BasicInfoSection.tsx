@@ -244,7 +244,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                       {row.map((f, fi) => (
                         <React.Fragment key={fi}>
                           <td className="label-cell" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.label}</td>
-                          <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.value}</td>
+                          {/* 值单元格允许自动换行：备注/面料成分等长文本不再被省略号截断 */}
+                          <td style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>{f.value}</td>
                         </React.Fragment>
                       ))}
                       {row.length === 1 && (
