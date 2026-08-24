@@ -285,6 +285,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
         return (
           <RowActions
             maxInline={2}
+            revealOnHover
             actions={[
               ...(editing ? [] : [
                 { key: 'edit', label: '编辑', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled || locked },
@@ -300,7 +301,8 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: '确认物料已回料到仓库', onClick: () => handleReturnConfirm(record) }] : []),
               ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回采购', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
-              { key: 'quality-issue', label: '品质异常', title: '登记物料品质问题', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
+              // D-117：已取消的采购不可再登记品质异常（终态行按钮置灰）
+              { key: 'quality-issue', label: '品质异常', title: isCancelled ? '该采购已取消，不可登记品质异常' : '登记物料品质问题', disabled: isCancelled, onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
               // 样衣采购场景不显示"出库领取"按钮：样衣采购不走仓库库存（直接到货登记→回料确认→完成），
               // 旧逻辑按 isReturnConfirmed||isCompleted 显示按钮会让用户误点 → 后端 calcAvailableStock=0 → 400 仓库库存不足。
               ...(!sampleMode && (isReturnConfirmed || isCompleted) ? [{ key: 'warehouse-pick', label: '出库领取', title: '从库存出库领取物料', onClick: () => handleWarehousePick(record, Number(record.arrivedQuantity || record.purchaseQuantity || 0)), primary: true }] : []),

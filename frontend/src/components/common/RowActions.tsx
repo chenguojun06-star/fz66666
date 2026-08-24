@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Dropdown, Space } from 'antd';
 import type { MenuProps } from 'antd';
+import './RowActions.css';
 
 /**
  * 行操作项类型定义
@@ -91,7 +92,12 @@ const RowActions: React.FC<{
   size?: 'small' | 'middle' | 'large';
   /** 自定义类名 */
   className?: string;
-}> = ({ actions, maxInline, size = 'small', className }) => {
+  /**
+   * 悬停显现模式（D-117）：次要按钮（含"更多"）默认隐藏，鼠标悬停所在行/键盘聚焦时才显现，
+   * 主按钮（primary）常驻。用于解决操作列按钮过多、视觉嘈杂的高频表格。
+   */
+  revealOnHover?: boolean;
+}> = ({ actions, maxInline, size = 'small', className, revealOnHover }) => {
   // 过滤无效操作项
   const list = (Array.isArray(actions) ? actions : []).filter((x) => x && String(x.key || '').trim());
   if (!list.length) return null;
@@ -151,7 +157,11 @@ const RowActions: React.FC<{
     return Boolean(it.disabled);
   });
 
-  const rootClassName = ['row-actions', className].filter(Boolean).join(' ');
+  const rootClassName = [
+    'row-actions',
+    revealOnHover ? 'row-actions--reveal' : '',
+    className,
+  ].filter(Boolean).join(' ');
 
   return (
     <Space size={4} className={rootClassName}>

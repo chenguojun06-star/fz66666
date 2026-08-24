@@ -290,54 +290,70 @@ export function useMaterialInventoryColumns({
     {
       title: '操作',
       width: 180,
-      render: (_, record) => (
-        <RowActions
-          actions={[
-            {
-              key: 'instruction',
-              label: '采购指令',
-              onClick: () => openInstructionFromRecord(record)
-            },
-            {
-              key: 'inbound',
-              label: '入库',
-              primary: true,
-              onClick: () => handleInbound(record)
-            },
-            {
-              key: 'rollLabel',
-              label: '料卷标签',
-              onClick: () => {
-                rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
-                requestAnimationFrame(() => {
-                  rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
-                });
+      render: (_, record) => {
+        // D-117：已停用物料禁止库存变动类操作，仅保留 启用/详情
+        const isDisabledMaterial = record.disabled === 1;
+        const disabledHint = '物料已停用，请先启用';
+        return (
+          <RowActions
+            revealOnHover
+            actions={[
+              {
+                key: 'instruction',
+                label: '采购指令',
+                disabled: isDisabledMaterial,
+                title: isDisabledMaterial ? disabledHint : undefined,
+                onClick: () => openInstructionFromRecord(record)
+              },
+              {
+                key: 'inbound',
+                label: '入库',
+                primary: true,
+                disabled: isDisabledMaterial,
+                title: isDisabledMaterial ? disabledHint : undefined,
+                onClick: () => handleInbound(record)
+              },
+              {
+                key: 'rollLabel',
+                label: '料卷标签',
+                disabled: isDisabledMaterial,
+                title: isDisabledMaterial ? disabledHint : undefined,
+                onClick: () => {
+                  rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
+                  requestAnimationFrame(() => {
+                    rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
+                  });
+                }
+              },
+              {
+                key: 'outbound',
+                label: '出库',
+                disabled: isDisabledMaterial,
+                title: isDisabledMaterial ? disabledHint : undefined,
+                onClick: () => handleOutbound(record)
+              },
+              {
+                key: 'toggleDisabled',
+                label: record.disabled === 1 ? '启用' : '停用',
+                danger: record.disabled !== 1,
+                onClick: () => handleToggleDisabled(record)
+              },
+              {
+                key: 'detail',
+                label: '详情',
+                onClick: () => handleViewDetail(record)
+              },
+              {
+                key: 'safetyStock',
+                label: '安全库存',
+                disabled: isDisabledMaterial,
+                title: isDisabledMaterial ? disabledHint : undefined,
+                onClick: () => handleEditSafetyStock(record)
               }
-            },
-            {
-              key: 'outbound',
-              label: '出库',
-              onClick: () => handleOutbound(record)
-            },
-            {
-              key: 'toggleDisabled',
-              label: record.disabled === 1 ? '启用' : '停用',
-              danger: record.disabled !== 1,
-              onClick: () => handleToggleDisabled(record)
-            },
-            {
-              key: 'detail',
-              label: '详情',
-              onClick: () => handleViewDetail(record)
-            },
-            {
-              key: 'safetyStock',
-              label: '安全库存',
-              onClick: () => handleEditSafetyStock(record)
-            }
-          ]}
-        />
-      ),
+            ]}
+          />
+        );
+      },
     },
   ];
 }

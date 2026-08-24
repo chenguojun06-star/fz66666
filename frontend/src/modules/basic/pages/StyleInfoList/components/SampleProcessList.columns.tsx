@@ -175,7 +175,7 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
             onClick: () => onUndo(record),
           });
         }
-        return <RowActions actions={actions} />;
+        return <RowActions actions={actions} revealOnHover />;
       },
     },
   ];

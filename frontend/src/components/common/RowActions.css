@@ -1,0 +1,20 @@
+/**
+ * RowActions 悬停显现模式（D-117）
+ *
+ * 解决"操作列密密麻麻全是彩色按钮"：开启 revealOnHover 的表格，
+ * 次要按钮（含"更多"）默认隐藏，鼠标悬停所在行或键盘聚焦时才显现；
+ * 主按钮（primary）常驻可见，保证核心动作一眼可点。
+ */
+
+/* 默认：非主按钮隐藏（visibility 而非 opacity，移除不可见按钮的误点击热区） */
+.row-actions--reveal .row-actions__btn:not(.row-actions__btn--primary) {
+  visibility: hidden;
+}
+
+/* 行悬停 / 行内聚焦 / 组件聚焦时全部显现（声明在隐藏规则之后，同优先级后者胜出） */
+.ant-table-row:hover .row-actions--reveal .row-actions__btn,
+.ant-table-row:focus-within .row-actions--reveal .row-actions__btn,
+.row-actions--reveal:focus-within .row-actions__btn:not(.row-actions__btn--primary),
+.row-actions--reveal:hover .row-actions__btn {
+  visibility: visible;
+}
