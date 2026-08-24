@@ -27,5 +27,7 @@ export interface MaterialInventory {
   fabricWeight?: string;      // 克重（仅面料）
   fabricComposition?: string; // 成分（仅面料）
   size?: string;              // 尺码（兼容筛选/展示）
+  disabled?: number;          // 物料主数据停用状态：1=已停用（后端联查 t_material_database）
+  materialDatabaseId?: string; // 物料主数据ID（停用/启用操作目标）
   updateTime?: string;
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api, { type ApiResult } from '@/utils/api';
 import type { StyleAttachment, StyleBom } from '@/types/style';
 import { parseNumberMap, resolvePatternUnit, type PatternMaterialRow, type SizeColorConfigInput } from '../stylePattern/helpers';
+import { hasSameSizeKey } from '../styleSize/shared';
 
 export interface UseStylePatternTabDataOptions {
   styleId: string | number;
@@ -141,7 +142,7 @@ const useStylePatternTabData = ({
   }, [sizeColorConfig]);
 
   const allSizes = useMemo<string[]>(
-    () => [...activeSizes, ...extraSizes.filter(s => !activeSizes.includes(s))],
+    () => [...activeSizes, ...extraSizes.filter(s => !hasSameSizeKey(activeSizes, s))],
     [activeSizes, extraSizes],
   );
 
@@ -156,7 +157,7 @@ const useStylePatternTabData = ({
       const m = parseNumberMap(b.patternSizeUsageMap || b.sizeUsageMap);
       Object.keys(m).forEach(k => savedKeys.add(k));
     }
-    const restored = [...savedKeys].filter(s => !activeSizes.includes(s));
+    const restored = [...savedKeys].filter(s => !hasSameSizeKey(activeSizes, s));
     setExtraSizes(restored);
     extraSizesRestoredForRef.current = styleId;
   }, [bomList, activeSizes, styleId]);
@@ -174,7 +175,7 @@ const useStylePatternTabData = ({
 
   const handleAddSizes = useCallback((values: string[]) => {
     if (!values.length) return;
-    setExtraSizes(prev => [...prev, ...values.filter(v => !prev.includes(v) && !activeSizes.includes(v))]);
+    setExtraSizes(prev => [...prev, ...values.filter(v => !hasSameSizeKey(prev, v) && !hasSameSizeKey(activeSizes, v))]);
   }, [activeSizes]);
 
   const fetchSizeDictOptions = useCallback(async () => {

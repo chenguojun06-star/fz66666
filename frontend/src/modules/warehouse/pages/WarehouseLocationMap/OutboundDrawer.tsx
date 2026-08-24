@@ -1,6 +1,8 @@
 // 出库抽屉 - 按款号分组的库存出库表单
 import React from 'react';
 import { Drawer, Button, Empty, Select, Row, Col, Form, Input, InputNumber, Checkbox, Tag } from 'antd';
+import CustomerSelect from '@/components/common/CustomerSelect';
+import type { Customer } from '@/services/crm/customerApi';
 import { OUTSTOCK_TYPE_OPTIONS } from './types';
 import type { LocationItem, OutboundItem } from './types';
 
@@ -43,6 +45,18 @@ const OutboundDrawer: React.FC<Props> = ({
   outboundRemark,
   onRemarkChange,
 }) => {
+  // 选中客户管理中的客户后自动带出联系电话/收货地址；手动输入则原样保留
+  const handleCustomerSelect = (value: string, option?: { customerId: string; customer: Customer }) => {
+    if (option?.customer) {
+      const c = option.customer;
+      onCustomerNameChange(c.companyName || '');
+      if (c.contactPhone) onCustomerPhoneChange(c.contactPhone);
+      if (c.address) onShippingAddressChange(c.address);
+    } else {
+      onCustomerNameChange(value);
+    }
+  };
+
   // 全选/取消全选
   const handleToggleAll = () => {
     const allSelected = outboundItems.every(item => item.selected);
@@ -272,10 +286,11 @@ const OutboundDrawer: React.FC<Props> = ({
                 <Row gutter={12}>
                   <Col span={12}>
                     <Form.Item label="客户/领取人" style={{ marginBottom: 12 }}>
-                      <Input
-                        placeholder="输入客户名称或领取人姓名"
+                      <CustomerSelect
                         value={outboundCustomerName}
-                        onChange={(e) => onCustomerNameChange(e.target.value)}
+                        onChange={handleCustomerSelect}
+                        placeholder="搜索选择客户，或直接输入名称"
+                        style={{ width: '100%' }}
                       />
                     </Form.Item>
                   </Col>

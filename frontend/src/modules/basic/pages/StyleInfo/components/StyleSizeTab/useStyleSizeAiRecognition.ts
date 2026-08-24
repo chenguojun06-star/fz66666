@@ -1,6 +1,5 @@
 import React from 'react';
-import { sortSizeNames } from '@/utils/api';
-import { MatrixRow, normalizeRowSorts } from '../styleSize/shared';
+import { MatrixRow, normalizeRowSorts, normalizeSizeList, hasSameSizeKey } from '../styleSize/shared';
 
 interface UseStyleSizeAiRecognitionOptions {
   sizeColumns: string[];
@@ -32,9 +31,8 @@ export const useStyleSizeAiRecognition = ({
         return;
       }
 
-      const existingSizeSet = new Set(sizeColumns);
-      const newSizes = recognizedSizes.filter((s: string) => !existingSizeSet.has(s));
-      const allSizes = sortSizeNames([...sizeColumns, ...newSizes]);
+      const newSizes = recognizedSizes.filter((s: string) => !hasSameSizeKey(sizeColumns, s));
+      const allSizes = normalizeSizeList([...sizeColumns, ...newSizes]);
 
       const partMap = new Map<string, {
         measureMethod: string;

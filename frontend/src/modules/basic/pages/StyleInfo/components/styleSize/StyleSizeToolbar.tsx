@@ -7,6 +7,7 @@ import logger from '@/utils/logger';
 import { TemplateLibrary } from '@/types/style';
 import ResizableModal from '@/components/common/ResizableModal';
 import CircleIconButton from '@/components/common/CircleIconButton';
+import { hasSameSizeKey } from './shared';
 
 interface Props {
   editMode: boolean;
@@ -230,7 +231,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
           placeholder="新增尺码(多选)"
           style={{ minWidth: 160 }}
           disabled={loading || saving || isReadonly}
-          options={sizeOptions.filter((opt) => !sizeColumns.includes(opt.value))}
+          options={sizeOptions.filter((opt) => !hasSameSizeKey(sizeColumns, opt.value))}
           value={[]}
           onChange={(values) => {
             if (!values.length) return;
@@ -243,7 +244,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
             const trimmed = value && value.trim();
             if (sizeSearchTimerRef.current) clearTimeout(sizeSearchTimerRef.current);
             sizeSearchTimerRef.current = setTimeout(() => {
-              if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed) && !sizeColumns.includes(trimmed)) {
+              if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed) && !hasSameSizeKey(sizeColumns, trimmed)) {
                 setSizeOptions((prev) => [...prev, { value: trimmed, label: trimmed }]);
               }
             }, 300);
@@ -258,8 +259,8 @@ const StyleSizeToolbar: React.FC<Props> = ({
                   onPressEnter={(e) => {
                     const input = e.target as HTMLInputElement;
                     const val = input.value.trim();
-                    if (val && !sizeColumns.includes(val) && !sizeOptions.some((opt) => opt.value === val)) {
-                      mergeSizeColumns(sortSizeNames([val]).filter((s) => !sizeColumns.includes(s)));
+                    if (val && !hasSameSizeKey(sizeColumns, val) && !sizeOptions.some((opt) => opt.value === val)) {
+                      mergeSizeColumns(sortSizeNames([val]));
                       input.value = '';
                     }
                   }}

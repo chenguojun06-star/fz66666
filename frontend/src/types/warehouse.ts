@@ -34,6 +34,8 @@ export interface MaterialStockRecord {
 export interface MaterialStockListParams extends PageParams {
   materialCode?: string;
   materialType?: string;
+  /** 启用状态筛选：enabled=启用中 / disabled=已停用（按物料主数据） */
+  disabledStatus?: string;
   startDate?: string;
   endDate?: string;
 }

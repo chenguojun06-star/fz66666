@@ -46,6 +46,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         String color = (String) params.getOrDefault("color", "");
         String size = (String) params.getOrDefault("size", "");
         boolean lowStock = "true".equals(params.get("lowStock"));
+        // disabledStatus: enabled=仅启用中 / disabled=仅已停用（按物料主数据 t_material_database.disabled）
+        String disabledStatus = (String) params.getOrDefault("disabledStatus", "");
 
         LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<MaterialStock>()
                 .eq(MaterialStock::getDeleteFlag, 0)
@@ -56,6 +58,27 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                 .eq(StringUtils.hasText(materialType), MaterialStock::getMaterialType, materialType)
                 .eq(StringUtils.hasText(color), MaterialStock::getColor, color)
                 .eq(StringUtils.hasText(size), MaterialStock::getSize, size);
+
+        if ("enabled".equals(disabledStatus) || "disabled".equals(disabledStatus)) {
+            List<String> disabledCodes = materialDatabaseService.list(
+                    new LambdaQueryWrapper<MaterialDatabase>()
+                            .eq(MaterialDatabase::getDisabled, 1)
+                            .eq(MaterialDatabase::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                            .select(MaterialDatabase::getMaterialCode))
+                    .stream()
+                    .map(MaterialDatabase::getMaterialCode)
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if ("disabled".equals(disabledStatus)) {
+                if (disabledCodes.isEmpty()) {
+                    return new Page<>(page, pageSize);
+                }
+                wrapper.in(MaterialStock::getMaterialCode, disabledCodes);
+            } else if (!disabledCodes.isEmpty()) {
+                wrapper.notIn(MaterialStock::getMaterialCode, disabledCodes);
+            }
+        }
 
         if (lowStock) {
             wrapper.apply("quantity < safety_stock");
@@ -290,7 +313,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
                 new LambdaQueryWrapper<MaterialDatabase>()
                         .in(MaterialDatabase::getMaterialCode, codes)
-                        .select(MaterialDatabase::getMaterialCode, MaterialDatabase::getConversionRate,
+                        .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode, MaterialDatabase::getDisabled,
+                                MaterialDatabase::getConversionRate,
                                 MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
                                 MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
                                 MaterialDatabase::getUnitPrice, MaterialDatabase::getColor))
@@ -306,6 +330,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             }
             MaterialDatabase db = dbMap.get(record.getMaterialCode());
             if (db == null) continue;
+            record.setMaterialDatabaseId(db.getId());
+            record.setDisabled(db.getDisabled() != null ? db.getDisabled() : 0);
             if (record.getConversionRate() == null && db.getConversionRate() != null) {
                 record.setConversionRate(db.getConversionRate());
             }

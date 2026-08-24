@@ -1,5 +1,5 @@
 import React from 'react';
-import { Space, Image } from 'antd';
+import { Space, Image, Tag } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
@@ -20,7 +20,7 @@ interface UseMaterialInventoryColumnsProps {
   rollForm: FormInstance;
   rollModal: { open: (data: { inboundId: string; materialCode: string; materialName: string }) => void };
   handleOutbound: (record: MaterialInventory) => void;
-  handlePrintOutbound: (record: MaterialInventory) => void;
+  handleToggleDisabled: (record: MaterialInventory) => void;
   handleViewDetail: (record: MaterialInventory) => void;
   handleEditSafetyStock: (record: MaterialInventory) => void;
   onPickStock?: (record: MaterialInventory) => void;
@@ -58,7 +58,7 @@ export function useMaterialInventoryColumns({
   rollForm,
   rollModal,
   handleOutbound,
-  handlePrintOutbound,
+  handleToggleDisabled,
   handleViewDetail,
   handleEditSafetyStock,
   onPickStock,
@@ -98,6 +98,7 @@ export function useMaterialInventoryColumns({
           <div style={{ display: 'flex', fontSize: 14, lineHeight: '22px', height: '22px' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>名称：</span>
             <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialName || '-'}</span>
+            {record.disabled === 1 && <Tag style={{ marginLeft: 6 }} color="default">已停用</Tag>}
           </div>
           <div style={{ display: 'flex', fontSize: 14, lineHeight: '22px', height: '22px', alignItems: 'center' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>分类：</span>
@@ -319,9 +320,10 @@ export function useMaterialInventoryColumns({
               onClick: () => handleOutbound(record)
             },
             {
-              key: 'print',
-              label: '打印出库单',
-              onClick: () => handlePrintOutbound(record)
+              key: 'toggleDisabled',
+              label: record.disabled === 1 ? '启用' : '停用',
+              danger: record.disabled !== 1,
+              onClick: () => handleToggleDisabled(record)
             },
             {
               key: 'detail',

@@ -193,29 +193,11 @@ export function useOutboundActions({
     }
   };
 
-  const handlePrintOutbound = (record: MaterialInventory) => {
-    openPrintModal({
-      outboundNo: `PREVIEW-${dayjs().format('YYYYMMDDHHmmss')}`,
-      outboundTime: formatDateTimeSecond(new Date()),
-      materialCode: record.materialCode, materialName: record.materialName,
-      materialType: record.materialType, specification: record.specification,
-      color: record.color, unit: record.unit,
-      supplierName: record.supplierName, fabricWidth: record.fabricWidth,
-      fabricWeight: record.fabricWeight, fabricComposition: record.fabricComposition,
-      receiverName: '', issuerName: user?.name || user?.username || '系统',
-      warehouseLocation: record.warehouseLocation,
-      remark: '请先执行正式出库后再打印正式单据',
-      items: [{ quantity: record.availableQty, unit: record.unit, materialName: record.materialName,
-        specification: record.specification, warehouseLocation: record.warehouseLocation,
-        color: record.color, unitPrice: record.unitPrice }],
-    });
-  };
-
   return {
     outboundModal, batchDetails, setBatchDetails,
     selectedBatchNos, setSelectedBatchNos,
     outboundSubmitting,
     handleOutbound, handleBatchQtyChange, handleBatchSelect,
-    handleAutoAllocateByFifo, handleClearBatches, handleOutboundConfirm, handlePrintOutbound,
+    handleAutoAllocateByFifo, handleClearBatches, handleOutboundConfirm,
   };
 }

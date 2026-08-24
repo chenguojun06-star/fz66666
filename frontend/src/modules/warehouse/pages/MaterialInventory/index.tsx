@@ -41,6 +41,7 @@ const _MaterialInventory: React.FC = () => {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,
     stats, pagination: _pagination, user,
     searchText, setSearchText, selectedType, setSelectedType, dateRange, setDateRange,
+    disabledStatus, setDisabledStatus,
     detailModal: _detailModal, inboundModal: _inboundModal, outboundModal: _outboundModal, rollModal, rollForm, printModal: _printModal,
     alertLoading, alertList, alertOptions: _alertOptions,
     fetchData,
@@ -49,7 +50,7 @@ const _MaterialInventory: React.FC = () => {
     handleEditSafetyStock,
     handleViewDetail, handleInbound,
     handleOutbound,
-    handlePrintOutbound,
+    handleToggleDisabled,
   } = inventoryData;
 
   // 30秒轮询自动刷新物料库存
@@ -92,7 +93,7 @@ const _MaterialInventory: React.FC = () => {
     rollForm,
     rollModal,
     handleOutbound,
-    handlePrintOutbound,
+    handleToggleDisabled,
     handleViewDetail,
     handleEditSafetyStock,
     onPickStock: (record) => { setPickTarget(record); setPickModalOpen(true); },
@@ -215,22 +216,34 @@ const _MaterialInventory: React.FC = () => {
 
                   <StandardToolbar
                     left={(
-                      <StandardSearchBar
-                        searchValue={searchText}
-                        onSearchChange={setSearchText}
-                        searchPlaceholder="搜索物料编号/名称"
-                        statusValue={selectedType}
-                        onStatusChange={setSelectedType}
-                        showDate={true}
-                        dateValue={dateRange}
-                        onDateChange={setDateRange}
-                        statusOptions={[
-                          { label: '全部', value: '' },
-                          { label: '面料', value: 'fabric' },
-                          { label: '辅料', value: 'accessory' },
-                          { label: '里料', value: 'lining' },
-                        ]}
-                      />
+                      <Space size={12} wrap>
+                        <StandardSearchBar
+                          searchValue={searchText}
+                          onSearchChange={setSearchText}
+                          searchPlaceholder="搜索物料编号/名称"
+                          statusValue={selectedType}
+                          onStatusChange={setSelectedType}
+                          showDate={true}
+                          dateValue={dateRange}
+                          onDateChange={setDateRange}
+                          statusOptions={[
+                            { label: '全部', value: '' },
+                            { label: '面料', value: 'fabric' },
+                            { label: '辅料', value: 'accessory' },
+                            { label: '里料', value: 'lining' },
+                          ]}
+                        />
+                        <Select
+                          value={disabledStatus || ''}
+                          onChange={(v) => setDisabledStatus(v || '')}
+                          style={{ width: 110 }}
+                          options={[
+                            { label: '全部状态', value: '' },
+                            { label: '启用中', value: 'enabled' },
+                            { label: '已停用', value: 'disabled' },
+                          ]}
+                        />
+                      </Space>
                     )}
                     right={(
                       <>

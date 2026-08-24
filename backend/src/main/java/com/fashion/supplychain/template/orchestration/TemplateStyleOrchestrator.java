@@ -375,13 +375,74 @@ public class TemplateStyleOrchestrator {
                     .remove();
         }
 
+        // 追加导入时按「部位+尺码语义键」跳过已存在行：模板通用码 S(160/76) 与款式开发码
+        // S(160/76A) 语义相同，不查重会重复成列（与前端 getSizeDedupeKey 同规则）
+        Set<String> existingKeys = new HashSet<>();
+        if (!overwrite) {
+            List<StyleSize> existing = styleSizeService.lambdaQuery()
+                    .eq(StyleSize::getStyleId, targetStyleId)
+                    .list();
+            for (StyleSize item : existing) {
+                existingKeys.add(sizeRowKey(item.getPartName(), item.getSizeName()));
+            }
+        }
+
+        int skipped = 0;
         for (StyleSize size : sizes) {
+            String rowKey = sizeRowKey(size.getPartName(), size.getSizeName());
+            if (!existingKeys.add(rowKey)) {
+                skipped++;
+                continue;
+            }
             size.setId(null);
             size.setStyleId(targetStyleId);
             styleSizeService.save(size);
         }
 
+        if (skipped > 0 && log.isInfoEnabled()) {
+            log.info("尺寸模板追加导入去重：跳过 {} 行已存在尺码（targetStyleId={}）", skipped, targetStyleId);
+        }
+
         return true;
+    }
+
+    /** 尺码语义归一化键：忽略型体后缀（国标 A/B/C）与分隔符，S(160/76A) 与 S(160/76) 同键 */
+    private String sizeDedupeKey(String name) {
+        if (name == null) {
+            return "";
+        }
+        String raw = name.trim().toUpperCase().replaceAll("\\s+", "");
+        if (raw.isEmpty()) {
+            return "";
+        }
+        java.util.regex.Matcher letterMatcher = java.util.regex.Pattern.compile("^[A-Z]+").matcher(raw);
+        String letters = letterMatcher.find() ? letterMatcher.group() : "";
+        StringBuilder digits = new StringBuilder();
+        java.util.regex.Matcher digitMatcher = java.util.regex.Pattern.compile("\\d+").matcher(raw);
+        while (digitMatcher.find()) {
+            if (digits.length() > 0) {
+                digits.append('-');
+            }
+            digits.append(digitMatcher.group());
+        }
+        java.util.regex.Matcher chineseMatcher = java.util.regex.Pattern.compile("[\\u4e00-\\u9fa5]+").matcher(raw);
+        String chinese = chineseMatcher.find() ? chineseMatcher.group() : "";
+
+        List<String> segments = new ArrayList<>();
+        if (!letters.isEmpty()) {
+            segments.add(letters);
+        }
+        if (digits.length() > 0) {
+            segments.add(digits.toString());
+        }
+        if (!chinese.isEmpty()) {
+            segments.add(chinese);
+        }
+        return String.join("|", segments);
+    }
+
+    private String sizeRowKey(String partName, String sizeName) {
+        return String.valueOf(partName == null ? "" : partName.trim()) + "::" + sizeDedupeKey(sizeName);
     }
 
     private List<StyleSize> parseSizeContent(String content) throws Exception {

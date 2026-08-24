@@ -7,6 +7,8 @@ import {
   resolveGroupName,
   normalizeRowSorts,
   normalizeGradingZones,
+  getSizeDedupeKey,
+  hasSameSizeKey,
 } from './shared';
 
 interface Params {
@@ -91,12 +93,13 @@ export function useStyleSizeStructure({
   const parseSizeInput = (raw: string): string[] | null => {
     const parts = raw.split(/[\n,，、;；]+/g).map((x) => String(x || '').trim()).filter(Boolean);
     if (!parts.length) { message.error('请输入尺码'); return null; }
-    const seen = new Set<string>();
+    const seenKeys = new Set<string>();
     const next: string[] = [];
     for (const p of parts) {
-      if (sizeColumns.includes(p)) { message.error(`尺码已存在：${p}`); return null; }
-      if (seen.has(p)) continue;
-      seen.add(p);
+      if (hasSameSizeKey(sizeColumns, p)) { message.error(`尺码已存在（含近似码）：${p}`); return null; }
+      const key = getSizeDedupeKey(p);
+      if (key && seenKeys.has(key)) continue;
+      if (key) seenKeys.add(key);
       next.push(p);
     }
     if (!next.length) { message.error('请输入尺码'); return null; }

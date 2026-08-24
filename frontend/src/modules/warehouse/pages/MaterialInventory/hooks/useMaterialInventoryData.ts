@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useModal } from '@/hooks';
+import api from '@/utils/api';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
-import { message } from '@/utils/antdStatic';
+import { message, modal } from '@/utils/antdStatic';
 import type { MaterialInventory } from '../types';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import { useMaterialInventoryList } from './useMaterialInventoryList';
@@ -77,6 +78,37 @@ export function useMaterialInventoryData() {
 
   const handleViewDetail = (record: MaterialInventory) => detailModal.open(record);
 
+  // ── 物料停用/启用（操作物料主数据 t_material_database.disabled） ──────────
+  const handleToggleDisabled = (record: MaterialInventory) => {
+    const dbId = record.materialDatabaseId;
+    if (!dbId) { message.error('该库存未关联物料主数据，无法停用'); return; }
+    const disabling = record.disabled === 1;
+    modal.confirm({
+      title: disabling ? '启用该物料？' : '停用该物料？',
+      content: disabling
+        ? `启用后「${record.materialName || record.materialCode}」将恢复参与采购/BOM选择`
+        : `停用后「${record.materialName || record.materialCode}」将不再出现在新增采购/BOM选择中，已有库存不受影响`,
+      okText: disabling ? '启用' : '停用',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await api.put(`/material/database/${dbId}/${disabling ? 'enable' : 'disable'}`);
+          if ((res as any)?.code === 200) {
+            message.success(disabling ? '已启用' : '已停用');
+            void listHook.fetchData();
+            window.dispatchEvent(new Event('data:changed'));
+          } else {
+            message.error((res as any)?.message || '操作失败');
+          }
+        } catch (e: unknown) {
+          const errMsg = typeof e === 'object' && e !== null && 'response' in (e as object)
+            ? String(((e as Record<string, any>).response?.data as any)?.message || '') : '';
+          message.error(errMsg || '操作失败');
+        }
+      },
+    });
+  };
+
   // ── 待出库领料单 ──────────────────────────────────────────
   const pendingHook = usePendingPickings({ user, fetchData, openPrintModal });
 
@@ -115,5 +147,6 @@ export function useMaterialInventoryData() {
     handleEditSafetyStock,
     handleSafetyStockSave,
     handleViewDetail,
+    handleToggleDisabled,
   };
 }

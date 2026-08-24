@@ -82,16 +82,38 @@ export const splitSizeNames = (name: string) => {
   return parts;
 };
 
+/**
+ * 尺码语义归一化键：忽略型体后缀（如国标 A/B/C）与分隔符，
+ * 使 S(160/76)、S(160/76A)、S 160/76a 归并为同一码，用于去重判断。
+ */
+export const getSizeDedupeKey = (name: string) => {
+  const raw = String(name || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!raw) return '';
+  const letters = raw.match(/^[A-Z]+/)?.[0] || '';
+  const digits = (raw.match(/\d+/g) || []).join('-');
+  const chinese = raw.match(/[\u4e00-\u9fa5]+/)?.[0] || '';
+  return [letters, digits, chinese].filter(Boolean).join('|');
+};
+
+export const hasSameSizeKey = (list: string[], name: string) => {
+  const key = getSizeDedupeKey(name);
+  return !!key && list.some((item) => getSizeDedupeKey(item) === key);
+};
+
 export const normalizeSizeList = (sizes: string[] = []) => {
-  return sortSizeNames(
-    Array.from(
-      new Set(
-        sizes
-          .map((item) => String(item || '').trim())
-          .filter(Boolean),
-      ),
-    ),
-  );
+  const seenKeys = new Set<string>();
+  const unique: string[] = [];
+  sizes
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .forEach((item) => {
+      const key = getSizeDedupeKey(item);
+      // 保留先出现者：开发码先于模板码合并时优先保留开发码写法
+      if (key && seenKeys.has(key)) return;
+      if (key) seenKeys.add(key);
+      unique.push(item);
+    });
+  return sortSizeNames(unique);
 };
 
 const inferGroupNameFromPart = (partName: string): string => {

@@ -133,6 +133,18 @@ public class MaterialStock {
     private String lastOutboundBy;
 
     /**
+     * 物料主数据停用状态（列表展示用，来自 t_material_database，非持久化字段）：1=已停用
+     */
+    @TableField(exist = false)
+    private Integer disabled;
+
+    /**
+     * 物料主数据ID（停用/启用操作目标，非持久化字段）
+     */
+    @TableField(exist = false)
+    private String materialDatabaseId;
+
+    /**
      * 安全库存 (默认100)
      */
     private Integer safetyStock;

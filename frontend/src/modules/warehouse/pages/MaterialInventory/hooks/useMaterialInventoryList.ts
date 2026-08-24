@@ -20,6 +20,8 @@ export function useMaterialInventoryList() {
   const pagination = useTablePagination(20, 'material-inventory-main');
   const [searchText, setSearchText] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
+  // 启用状态筛选：''=全部 / enabled=启用中 / disabled=已停用
+  const [disabledStatus, setDisabledStatus] = useState<string>('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [stats, setStats] = useState({
     totalValue: 0, totalQty: 0, lowStockCount: 0, materialTypes: 0, todayInCount: 0, todayOutCount: 0,
@@ -41,6 +43,7 @@ export function useMaterialInventoryList() {
         page: currentPage, pageSize: currentPageSize,
         materialCode: searchText,
         materialType: selectedType || undefined,
+        disabledStatus: disabledStatus || undefined,
         startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
         endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
       });
@@ -94,7 +97,7 @@ export function useMaterialInventoryList() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, currentPageSize, searchText, selectedType, dateRange, reportSmartError, showSmartErrorNotice, setPaginationTotal]);
+  }, [currentPage, currentPageSize, searchText, selectedType, disabledStatus, dateRange, reportSmartError, showSmartErrorNotice, setPaginationTotal]);
 
   useEffect(() => {
     if (pagination.pagination.pageSize < 20) pagination.setPageSize(20);
@@ -107,6 +110,7 @@ export function useMaterialInventoryList() {
     stats, pagination, user,
     searchText, setSearchText,
     selectedType, setSelectedType,
+    disabledStatus, setDisabledStatus,
     dateRange, setDateRange,
     fetchData,
   };
