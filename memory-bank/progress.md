@@ -1,9 +1,18 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-24（D-111 尺码语义去重+物料停用闭环+删废弃打印按钮+出库客户关联CRM）
+> 最后更新：2026-08-24（D-112 样衣扫码领取根治 + AI提示英文根治）
 
 ## 已完成
+
+### 2026-08-24 D-112 样衣扫码领取根治 + 扫码AI英文根治 ✅（mvn compile+单测全过，待部署）
+
+- [x] 样衣扫码委派 submitScan 规范链路：领取写 t_scan_record 计件+置 IN_PROGRESS+回填领取人；多色多码分支补齐被丢弃的 sourceBizType 等字段
+- [x] 详情页「领取样衣」按钮从无 receive case 的 workflow-action 改走 submitPatternScan(RECEIVE)
+- [x] handleReceive 防他人重复领取守卫（"已由XX领取"），本人幂等
+- [x] 扫码AI提示英文三层防御：prompt中文约束 + chineseRatio 生成侧校验降级 + 读取侧过滤存量脏数据
+- [x] 发现并记录：backend/src/test/ 整目录被 .gitignore，仅12文件跟踪；本地坏测试文件与 CI 无关
+- [ ] 部署后验证：样衣扫码领取状态流转+AI提示全中文（见 activeContext 2026-08-24）
 
 ### 2026-08-24 D-111 四连修复 ✅（tsc/eslint/mvn compile 全过，待部署）
 

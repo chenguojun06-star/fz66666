@@ -1,9 +1,45 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-24（新增 D-111 尺码语义去重 + 物料停用闭环 + 出库客户关联）
+> 最后更新：2026-08-24（新增 D-112 样衣扫码领取半截工程根治 + AI英文文案中文校验兜底）
 
 ---
+
+## D-112：样衣扫码"领取不到"根因（假成功stub+字段丢弃）+ 扫码AI提示英文根治（2026-08-24）
+
+**背景**：用户反馈①大货扫码的 AI 提示全是英文代码文案；②样衣扫码领取工序一直领不到。
+
+### 根因一：样衣扫码是"假成功"半截工程（三处叠加）
+
+1. `ProductionScanExecutor.execute` 对 sourceBizType=SAMPLE 直接返回 `success=true` 的 stub——不写 t_scan_record（计件）、不更新 PatternProduction 状态/领取人/领取时间，注释自述"跳过大货校验直接记录"但什么都没记
+2. 唯一补偿双写 `savePatternScanRecordFromProductionScan` 把 operationType 写成 `uppercase(progressStage)`——RECEIVE 选项 progressStage='采购' → operationType="采购"，所有按 `operationType==='RECEIVE'` / `status IN_PROGRESS` 判断的页面永远显示"待领取"
+3. **最隐蔽**：多色多码分支 `SKUProcessor.generateScanRequests` 只透传固定字段，`sourceBizType:'SAMPLE'` 等 options 参数被整体丢弃——这类提交到大货接口后被当菲号扫码处理，必然失败
+4. 附带：详情页「领取样衣」按钮调 workflow-action 'receive'，后端 switch 根本没有该 case，必报"不支持的操作"
+
+### 修复（委派规范链路，不新造轮子）
+
+- **ScanRecordOrchestrator.executeProductionScan 顶部拦截**：SAMPLE/patternProductionId 整体委派 `PatternProductionOrchestrator.submitScan`（其内含 t_pattern_scan_record 规范落库 + syncToScanRecord 计件镜像 + 状态流转 RECEIVE→IN_PROGRESS+receiver+receiveTime + 库存同步 + unitPrice 按款式工序配置服务端解析）；删除失真的补偿双写方法
+- **operationType 映射**：优先前端显式传；缺失时 processName 含"领取"→RECEIVE，再退化 uppercase(progressStage)（动态工序走 applyOperationStatus default 分支 handleDynamicOperation，兼容）
+- **ProductionScanExecutor stub 改为显式抛 BusinessException**——绕过编排层直调执行器绝不假成功
+- **handleReceive 防重守卫**：已 IN_PROGRESS 且 receiver 非空时，他人重复领取抛"该样衣已由「XX」领取"，本人幂等成功，receiver 缺失则补齐
+- **前端 pattern/index.js**：多色多码 forEach 补齐 sourceBizType/patternId/operationType/orderId/processName/remark；单数量分支补 operationType/patternId。**详情页 _doReceivePattern 改走 submitPatternScan(RECEIVE)** 与扫码页同链路
+
+### 根因二：AI 提示英文——LLM 输出无语言约束且原样持久化
+
+`StyleDifficultyOrchestrator.mergeAiResult` 直接采信 LLM JSON 的 imageInsight 并写入 t_style_info.image_insight；deepseek-v4-flash/agnes-2.5-flash 对中文指令遵循不稳，输出英文即整段入库长期展示；QualityAiSuggestionOrchestrator 同理且 24h 缓存放大。
+
+**修复（三层防御）**：
+1. prompt 硬约束：两编排类 system/vision prompt 追加"必须使用简体中文"
+2. 生成侧校验：TextUtils 新增 `chineseRatio/isUsableChineseText`（阈值0.25）；imageInsight/visionRaw/keyFactors/质检 checkpoints/urgentTip 全部过检，不合格弃用改中文兜底文案或降级规则引擎，**英文永不入库**
+3. 读取侧守卫：assess() CACHED 路径 + WorkerHintComposer.composeInto 对存量脏数据同样过滤——存量英文不再下发，无需数据迁移
+
+### 关键发现（踩坑）
+
+- **backend/src/test/ 整个目录在 .gitignore（第30行），仅 12 个测试文件被历史性 git add -f 跟踪**；本地 mvn test 被 untracked 遗留文件 SmartSourcingListOrdersRegressionTest（引用已删除的 TestRedisConfig）卡 testCompile，与 CI 无关（CI 只见 12 个跟踪文件）。本地跑测试需临时移开该文件
+- generateScanRequests 类"options 不透传"陷阱：共享工具函数只复制白名单字段，新增上下文字段必须在调用方补齐
+
+### 验证
+node --check 小程序改动文件通过；mvn compile EXIT=0；临时移开坏文件后 ProductionOrderCreationHelperTest/FactoryShipmentOrchestratorTest/WarehouseAreaOrchestratorTest 全过 EXIT=0；h5-web 两份副本已同步
 
 ## D-111：尺码语义去重 + 物料停用闭环 + 出库客户关联（2026-08-24，用户四连需求）
 

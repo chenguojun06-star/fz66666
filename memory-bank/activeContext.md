@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-24（D-111 尺码语义去重+物料停用闭环+删废弃打印按钮+出库客户关联CRM）
+> 最后更新：2026-08-24（D-112 样衣扫码领取根治 + 扫码AI提示英文根治）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-24 ★★★ D-112 样衣扫码"领取不到"根治 + AI提示英文根治 ✅本地验证待部署
+
+- [x] **根因（三处叠加）**：①ProductionScanExecutor 对 SAMPLE 返回假 success stub 不落任何权威数据②补偿双写 operationType 失真成 uppercase(progressStage)（"采购"≠RECEIVE）③多色多码分支 generateScanRequests 丢弃 sourceBizType 等上下文→被当大货菲号扫码。附带：详情页「领取样衣」调的 workflow-action 'receive' 后端无此 case
+- [x] **修复**：ScanRecordOrchestrator 顶部拦截 SAMPLE→整体委派 PatternProductionOrchestrator.submitScan 规范链路（落库+计件镜像+状态流转+领取人+库存）；stub 改显式抛错；handleReceive 防他人重复领取；前端补传 operationType/patternId/sourceBizType；详情页改走 submitPatternScan
+- [x] **AI英文文案三层防御**：prompt 中文硬约束 + TextUtils.chineseRatio/isUsableChineseText(0.25) 生成侧校验（imageInsight/visionRaw/keyFactors/checkpoints/urgentTip，不合格弃用降级）+ 读取侧过滤存量脏数据（assess CACHED 路径+WorkerHintComposer）——英文永不入库，存量不下发
+- [x] **踩坑记录**：backend/src/test/ 整目录被 .gitignore，仅12文件被跟踪；本地 mvn test 被 untracked 遗留坏文件卡编译（与CI无关）
+- [x] 验证：node --check 通过 + mvn compile EXIT=0 + 相关单测全过 EXIT=0 + h5-web 两副本同步
+- [ ] 待线上验证：①扫样衣码选「领取样衣」后详情页状态变生产中+显示领取人②他人重复扫码报"已由XX领取"③扫码结果页AI洞察为中文④质检页质检要点为中文
 
 ### 2026-08-24 ★★★ D-111 四连修复：尺码去重/物料停用/废弃按钮/客户关联 ✅本地验证待部署
 
