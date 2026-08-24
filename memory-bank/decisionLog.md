@@ -1,9 +1,27 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-24（新增 D-112 样衣扫码领取半截工程根治 + AI英文文案中文校验兜底）
+> 最后更新：2026-08-24（新增 D-113 样衣列表页扫码三级匹配 + 打印成分列/长文本换行 + 工序列商品编码）
 
 ---
+
+## D-113：样衣列表页扫码"未匹配到样衣" + 打印三项优化 + 工序列商品编码（2026-08-24）
+
+**背景**：用户在样衣开发跟进页扫码报"未匹配到样衣"；另反馈打印资料单缺成分列、长文字被截断、样衣生产工序列"SKU"列名与内容不完整。
+
+### 根因与修复
+
+1. **列表页扫码只做本地匹配**：`onScan` 仅在当前已加载列表里按 styleNo/orderNo 匹配；而打印资料单的 QR 内容是 `{"type":"pattern","id":"..."}`（无 styleNo/orderNo）→ 必然"未匹配到样衣"。修复为三级匹配：①pattern QR 直接跳详情（详情页支持 id=patternId 并自动反查 styleId）②本地列表快路径 ③后端 `listPatterns({keyword:styleNo})` 兜底（翻页/筛选后本地不命中）。JSONCodeParser 本就支持 id/patternId 键，无需改解析器
+2. **打印 BOM 缺成分列**：BomTableSection 加「成分」列（dataIndex fabricComposition，StyleBom 实体本有此字段，/style/bom/list 原样返回）
+3. **打印长文本截断**：BasicInfoSection 值单元格原为 `nowrap+ellipsis`（备注/面料成分被省略号截断）→ 改 `wordBreak:break-word` 自动换行；标签单元格保持不换行。生产制单区本就是 pre-wrap 无此问题
+4. **工序列 SKU 列**：SampleProcessList columns `title:'SKU'` 且值只有 颜色/码数 → 改「商品编码」，值改完整格式 `款号-颜色-尺码`（与商品编码管理 SkuTable 的 skuCode 格式一致），宽度 110→150
+
+### 核实结论（无需改动）
+
+打印「基本信息区块」多选功能接线完整：PrintOptionsSelector 写 options → BasicInfoSection 按 styleInfoBlock/customerInfoBlock/patternInfoBlock/timeInfoBlock/remarkBlock 渲染，勾选实时作用于预览与打印（handlePrint 打印实时 DOM）。默认全选、备注默认不勾。用户看到"全部字段"是默认状态所致
+
+### 验证
+node --check 通过；tsc --noEmit 0 errors；eslint 3 个改动文件 0 errors；h5-web 两副本已同步
 
 ## D-112：样衣扫码"领取不到"根因（假成功stub+字段丢弃）+ 扫码AI提示英文根治（2026-08-24）
 
