@@ -137,6 +137,16 @@ public class PatternStatusHelper {
             pattern.setReceiveTime(now);
             return true;
         }
+        // 已在制作中：领取人缺失时补齐；他人重复领取显式报错（与大货"已被XX领取"语义一致），
+        // 本人重复扫码幂等成功（补写一条领取记录但不改状态）
+        if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {
+            pattern.setReceiver(operatorName);
+            pattern.setReceiveTime(now);
+            return true;
+        }
+        if (StringUtils.hasText(operatorName) && !operatorName.equals(pattern.getReceiver())) {
+            throw new IllegalStateException("该样衣已由「" + pattern.getReceiver() + "」领取，无需重复领取");
+        }
         return false;
     }
 

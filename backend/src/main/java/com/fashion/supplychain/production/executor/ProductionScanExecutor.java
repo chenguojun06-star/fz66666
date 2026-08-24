@@ -63,15 +63,12 @@ public class ProductionScanExecutor {
         boolean isSampleScan = "SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId);
 
         if (isSampleScan) {
-            // 样衣扫码：一个二维码走完所有工序，跳过大货特有的菲号/门禁/库存校验
-            log.info("样衣扫码（跳过大货校验），直接记录: patternProductionId={}, scanType={}, processName={}, hasOrder={}",
-                    patternProductionId, scanType, params.get("processName"), ctx.order != null);
-            Map<String, Object> sampleResult = new HashMap<>();
-            sampleResult.put("success", true);
-            sampleResult.put("scanType", scanType);
-            sampleResult.put("patternProductionId", patternProductionId);
-            sampleResult.put("message", "样衣扫码成功");
-            return sampleResult;
+            // D-112：样衣扫码已在 ScanRecordOrchestrator 层整体委派 PatternProductionOrchestrator.submitScan
+            // （原 stub 在此返回假 success 但不写任何权威数据，导致样衣永远"领取不到"）。
+            // 走到这里说明绕过编排层直调执行器，显式拒绝，绝不假成功。
+            log.warn("样衣扫码绕过编排层直调执行器，拒绝处理: patternProductionId={}, scanType={}",
+                    patternProductionId, scanType);
+            throw new BusinessException("样衣扫码请求缺少样板生产上下文，请退出后重新扫码");
         }
 
         executorSupport.validateBundleNotBlocked(ctx.bundle, "生产");

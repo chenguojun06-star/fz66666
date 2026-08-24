@@ -116,4 +116,30 @@ public class TextUtils {
     public static boolean isNotEmpty(String str) {
         return StringUtils.hasText(str);
     }
+
+    /**
+     * 计算字符串中的简体中文字符占比（0.0~1.0）。
+     * 用于校验 LLM 输出文案是否为中文——第三方 flash 级模型对中文指令遵循不稳，
+     * 英文输出一旦原样持久化会长期展示给用户（D-112 教训）。
+     *
+     * @param input 输入字符串
+     * @return 中文字符数 / 总字符数；空白输入返回 0
+     */
+    public static double chineseRatio(String input) {
+        if (!StringUtils.hasText(input)) {
+            return 0d;
+        }
+        String text = input.trim();
+        long chineseCount = text.chars().filter(c -> c >= 0x4E00 && c <= 0x9FFF).count();
+        return (double) chineseCount / text.length();
+    }
+
+    /**
+     * 判断 LLM 生成的用户可见文案是否可视为合格中文输出。
+     * 阈值 0.25：正常中文句子远高于此值，纯英文/代码文本接近 0；
+     * 容忍少量英文术语、款号、数字混杂。
+     */
+    public static boolean isUsableChineseText(String input) {
+        return StringUtils.hasText(input) && chineseRatio(input) >= 0.25d;
+    }
 }

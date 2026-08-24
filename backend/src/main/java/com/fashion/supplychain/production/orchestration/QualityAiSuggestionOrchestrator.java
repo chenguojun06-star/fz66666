@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.production.dto.QualityAiSuggestionResponse;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -333,7 +334,8 @@ public class QualityAiSuggestionOrchestrator {
                "   - 出口欧盟：REACH镍释放≤0.5μg/cm²、AZO偶氮≤30mg/kg\n" +
                "   - 内销：GB 18401 pH 4.0-7.5、色牢度≥3-4级\n" +
                "7. 每条标注重要级别：🔴关键(必查) 🟡注意(抽查)\n" +
-               "8. 历史次品率高时，第一条指明重点排查方向\n\n" +
+               "8. 历史次品率高时，第一条指明重点排查方向\n" +
+               "9. 所有输出（checkpoints/urgentTip/specialRisks）必须使用简体中文，禁止英文\n\n" +
                "输出纯JSON：{\"checkpoints\":[\"🔴 xxx\",\"🟡 xxx\",...],\"urgentTip\":\"急单提示或null\",\"specialRisks\":\"一句话风险\"}";
     }
 
@@ -427,7 +429,8 @@ public class QualityAiSuggestionOrchestrator {
             if (node.has("checkpoints") && node.get("checkpoints").isArray()) {
                 for (JsonNode cp : node.get("checkpoints")) {
                     String text = cp.asText().trim();
-                    if (!text.isEmpty()) checkpoints.add(text);
+                    // D-112：LLM 输出必须过中文占比校验，英文条目直接丢弃（宁缺毋滥，空则走规则引擎）
+                    if (!text.isEmpty() && TextUtils.isUsableChineseText(text)) checkpoints.add(text);
                 }
             }
             if (checkpoints.isEmpty()) return null;
@@ -437,7 +440,7 @@ public class QualityAiSuggestionOrchestrator {
             String urgentTip = null;
             if (node.has("urgentTip") && !node.get("urgentTip").isNull()) {
                 urgentTip = node.get("urgentTip").asText().trim();
-                if (urgentTip.isEmpty()) urgentTip = null;
+                if (urgentTip.isEmpty() || !TextUtils.isUsableChineseText(urgentTip)) urgentTip = null;
             }
             urgentTip = resolveUrgentTip(order, urgentTip);
 

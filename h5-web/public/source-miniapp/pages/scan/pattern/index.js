@@ -584,6 +584,15 @@ Page({
 
         // 添加仓库信息到每个请求
         requests.forEach(function(req) {
+          // generateScanRequests 只透传固定字段，样衣上下文必须在此补齐，
+          // 否则后端按大货菲号扫码处理（D-112：此前 sourceBizType 被丢弃导致领取不到）
+          req.sourceBizType = 'SAMPLE';
+          req.patternId = d.patternId || '';
+          req.operationType = operationType;
+          req.operatorRole = 'PLATE_WORKER';
+          req.orderId = d.orderId || '';
+          req.processName = processName;
+          req.remark = remark || '';
           req.scanType = scanType;
           req.bundleNo = d.bundleNo || '01';
           if (d.warehouseCode) req.warehouse = d.warehouseCode;
@@ -622,6 +631,8 @@ Page({
           orderNo: d.orderNo || '',
           orderId: d.orderId || '',
           bundleNo: d.bundleNo || '01',
+          patternId: d.patternId || '',
+          operationType: operationType,
           processName: processName,
           progressStage: progressStage,
           scanType: scanType,

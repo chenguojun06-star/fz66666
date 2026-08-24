@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.DifficultyAssessment;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.QdrantService;
@@ -58,10 +59,11 @@ public class StyleDifficultyOrchestrator {
             cached.setKeyFactors(List.of());
             cached.setImageAnalyzed(true);
             cached.setAssessmentSource("CACHED");
-            if (style.getImageInsight() != null && !style.getImageInsight().isBlank()) {
+            // D-112：存量库里可能有历史英文洞察，读取时同样过中文校验，不合格不下发
+            if (TextUtils.isUsableChineseText(style.getImageInsight())) {
                 cached.setImageInsight(style.getImageInsight());
             }
-            if (style.getVisionRaw() != null && !style.getVisionRaw().isBlank()) {
+            if (TextUtils.isUsableChineseText(style.getVisionRaw())) {
                 cached.setVisionRaw(style.getVisionRaw());
             }
             return cached;
@@ -145,7 +147,8 @@ public class StyleDifficultyOrchestrator {
         String systemPrompt = "你是拥有20年经验的专业服装版师和工艺师。" +
                 "请根据AI视觉分析结果为核心依据进行难度评估。" +
                 "视觉分析发现的工艺特征优先级最高——如果视觉分析识别出翻领、里布、口袋、肩部结构等特征，" +
-                "评分必须体现这些工艺的实际制作难度，不受结构化预评分影响。严格返回 JSON，不加任何解释文字。";
+                "评分必须体现这些工艺的实际制作难度，不受结构化预评分影响。严格返回 JSON，不加任何解释文字。" +
+                "JSON 中所有中文取值字段（difficultyLabel 除外，keyFactors/imageInsight 等）必须使用简体中文，禁止输出英文。";
         String raw = aiAdvisorService.chat(systemPrompt, userMessage);
         if (raw == null || raw.isBlank()) return base;
         String json = extractJson(raw);
@@ -173,7 +176,7 @@ public class StyleDifficultyOrchestrator {
                     "对每个难点标注「难」「中」「易」。\n" +
                     "重要：西装/大衣/外套类即使看起来简约，其领型对合、里布挂面、肩部结构、口袋嵌线等工艺本身就有较高制作难度，不要误判为简单。\n" +
                     "严格 200 字以内，只讲工艺，不讲颜色/风格/搭配。\n" +
-                    "仅当确实是无结构的基础内衣/背心/纯色T恤时才写「简单基础款，无特殊难度因素」。";
+                    "仅当确实是无结构的基础内衣/背心/纯色T恤时才写「简单基础款，无特殊难度因素」。必须使用简体中文回答。";
             String raw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
             if (raw != null && !raw.isBlank()) {
                 String desc = raw.length() > 400 ? raw.substring(0, 400) : raw;
@@ -249,9 +252,17 @@ public class StyleDifficultyOrchestrator {
         String aiLevel = String.valueOf(parsed.getOrDefault("difficultyLevel", base.getDifficultyLevel()));
         Object scoreObj = parsed.get("difficultyScore");
         int aiScore = scoreObj instanceof Number ? Math.max(1, Math.min(10, ((Number) scoreObj).intValue())) : base.getDifficultyScore();
+        // D-112：LLM 输出必须过中文占比校验——第三方 flash 模型可能整段输出英文，
+        // 英文 imageInsight 一旦持久化会长期展示给工人，宁可用中文兜底文案也不落英文
         String imageInsight = String.valueOf(parsed.getOrDefault("imageInsight", ""));
+        if (!TextUtils.isUsableChineseText(imageInsight)) {
+            log.warn("[StyleDifficulty] AI imageInsight 非中文或为空（ratio={}），改用中文兜底文案", TextUtils.chineseRatio(imageInsight));
+            imageInsight = "";
+        }
         if (visionFailed) {
             imageInsight = buildVisionFallbackMessage(rawCoverUrl, base);
+        } else if (imageInsight.isBlank()) {
+            imageInsight = "AI已分析款式图片并给出难度评分（本次洞察文本异常，已省略）";
         }
         Object multiplierObj = parsed.get("pricingMultiplier");
         BigDecimal aiMultiplier = multiplierObj instanceof Number
@@ -262,7 +273,9 @@ public class StyleDifficultyOrchestrator {
         List<String> aiFactors = asStringList(parsed.get("keyFactors"));
         List<String> mergedFactors = new ArrayList<>(base.getKeyFactors());
         if (aiFactors != null) {
-            for (String f : aiFactors) { if (!mergedFactors.contains(f)) mergedFactors.add(f); }
+            for (String f : aiFactors) {
+                if (TextUtils.isUsableChineseText(f) && !mergedFactors.contains(f)) mergedFactors.add(f);
+            }
         }
         base.setDifficultyScore(aiScore);
         base.setDifficultyLevel(aiLevel);
@@ -271,7 +284,7 @@ public class StyleDifficultyOrchestrator {
         base.setKeyFactors(mergedFactors.stream().limit(6).collect(Collectors.toList()));
         base.setImageAnalyzed(true);
         base.setImageInsight(imageInsight.length() > 120 ? imageInsight.substring(0, 120) : imageInsight);
-        if (!visionFailed) {
+        if (!visionFailed && TextUtils.isUsableChineseText(visionDescription)) {
             base.setVisionRaw(visionDescription.length() > 400 ? visionDescription.substring(0, 400) : visionDescription);
             persistImageInsight(style, base.getImageInsight());
         }

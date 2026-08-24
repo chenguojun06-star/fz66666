@@ -64,6 +64,7 @@ public class ScanRecordOrchestrator {
     @Autowired private QualityScanExecutor qualityScanExecutor;
     @Autowired private WarehouseScanExecutor warehouseScanExecutor;
     @Autowired private ProductionScanExecutor productionScanExecutor;
+    @Autowired private PatternProductionOrchestrator patternProductionOrchestrator;
     @Autowired private QrCodeSigner qrCodeSigner;
     @Autowired private SmartNotificationOrchestrator smartNotificationOrchestrator;
     @Autowired private ScanRecordEnrichHelper scanRecordEnrichHelper;
@@ -303,96 +304,67 @@ public class ScanRecordOrchestrator {
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
         String scanCode = TextUtils.safeText(params.get("scanCode"));
+
+        // ★ 样衣工序扫码（sourceBizType=SAMPLE / patternProductionId）整体委派样板生产规范链路。
+        // 原实现是"假成功 stub"：不写 t_scan_record、不更新领取人/状态，旁路补写的记录 operationType 还失真，
+        // 导致样衣扫码领取后详情页/工序页永远显示"待领取"。submitScan 内含：t_pattern_scan_record 规范落库
+        // + t_scan_record 计件镜像 + 状态流转（RECEIVE→IN_PROGRESS+receiver+receiveTime）+ 库存同步。
+        String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
+        String patternProductionId = TextUtils.safeText(params.get("patternProductionId"));
+        if ("SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId)) {
+            return submitSamplePatternScan(params);
+        }
+
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && hasText(scanCode)) order = resolveOrder(null, scanCode);
         validateOrderBelonging(order, ctx);
         final ProductionOrder resolvedOrder = order;
-        Map<String, Object> result = productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
+        return productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
                 quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")), autoProcess,
                 (unused) -> resolveColor(params, null, resolvedOrder), (unused) -> resolveSize(params, null, resolvedOrder));
-
-        // 工序扫码（sourceBizType=SAMPLE）同时写入 t_pattern_scan_record，供个人扫码历史查询
-        String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
-        if ("SAMPLE".equalsIgnoreCase(sourceBizType)) {
-            try {
-                savePatternScanRecordFromProductionScan(params, result, operatorId, operatorName, ctx);
-            } catch (Exception e) {
-                log.warn("[PatternScan] 双写 t_pattern_scan_record 失败: {}", e.getMessage(), e);
-            }
-        }
-
-        return result;
     }
 
     /**
-     * 工序扫码时同步写入 t_pattern_scan_record（供个人扫码历史 my-history 查询）
-     * 与 PatternProductionOrchestrator.createPatternScanRecord() 字段对齐
+     * 样衣工序扫码：统一走 PatternProductionOrchestrator.submitScan 规范链路。
+     * operationType 优先取前端显式传入；缺失时按工序名推断（领取类→RECEIVE），再退化为大写阶段名。
      */
-    private void savePatternScanRecordFromProductionScan(Map<String, Object> params, Map<String, Object> result,
-            String operatorId, String operatorName, UserContext ctx) {
-        String patternId = TextUtils.safeText(params.get("scanCode")); // scanCode 就是 patternId
-        if (!hasText(patternId)) return;
+    private Map<String, Object> submitSamplePatternScan(Map<String, Object> params) {
+        String patternId = TextUtils.safeText(params.get("patternProductionId"));
+        if (!hasText(patternId)) {
+            patternId = TextUtils.safeText(params.get("scanCode")); // 小程序样衣扫码 scanCode 即 patternId
+        }
+        if (!hasText(patternId)) {
+            throw new IllegalArgumentException("样衣扫码缺少样板生产单ID（patternId），请重新扫码");
+        }
+        String processName = TextUtils.safeText(params.get("processName"));
+        String progressStage = TextUtils.safeText(params.get("progressStage"));
 
-        PatternScanRecord sr = new PatternScanRecord();
-        sr.setPatternProductionId(patternId);
-        sr.setStyleId(params.get("styleId") == null ? null : String.valueOf(params.get("styleId")));
-        sr.setStyleNo(params.get("styleNo") == null ? null : String.valueOf(params.get("styleNo")));
-        sr.setStyleName(params.get("styleName") == null ? null : String.valueOf(params.get("styleName")));
-        sr.setColor(params.get("color") == null ? null : String.valueOf(params.get("color")));
-        sr.setSize(params.get("size") == null ? null : String.valueOf(params.get("size")));
-        Object qtyObj = params.get("quantity");
-        if (qtyObj != null) {
-            try {
-                sr.setQuantity(Integer.parseInt(String.valueOf(qtyObj).trim()));
-            } catch (NumberFormatException ignore) {
-                sr.setQuantity(null);
-            }
-        }
-        sr.setOperationType(String.valueOf(params.get("progressStage") != null ? params.get("progressStage") : "").toUpperCase());
-        sr.setProcessName(TextUtils.safeText(params.get("processName")));
-        sr.setProgressStage(TextUtils.safeText(params.get("progressStage")));
-        sr.setProcessCode(TextUtils.safeText(params.get("processCode")));
-        sr.setOperatorId(operatorId);
-        sr.setOperatorName(operatorName);
-        sr.setOperatorRole(params.get("operatorRole") == null ? "PLATE_WORKER" : String.valueOf(params.get("operatorRole")));
-        sr.setRemark(TextUtils.safeText(params.get("remark")));
-        sr.setWarehouseCode(params.get("warehouse") == null ? null : String.valueOf(params.get("warehouse")));
-        sr.setWarehouseAreaId(params.get("warehouseAreaId") == null ? null : String.valueOf(params.get("warehouseAreaId")));
-        sr.setWarehouseLocationCode(params.get("warehouseLocationCode") == null ? null : String.valueOf(params.get("warehouseLocationCode")));
-        sr.setScanTime(java.time.LocalDateTime.now());
-        sr.setCreateTime(java.time.LocalDateTime.now());
-        sr.setDeleteFlag(0);
-        sr.setTenantId(ctx == null ? UserContext.tenantId() : ctx.getTenantId());
-
-        // 双写 unitPrice / scanCost / totalAmount（与 PatternProductionOrchestrator 字段对齐）
-        java.math.BigDecimal unitPrice = null;
-        // 优先从 result 中的 scanRecord 获取（ProductionScanExecutor 已解析）
-        Object srObj = result.get("scanRecord");
-        if (srObj instanceof com.fashion.supplychain.production.entity.ScanRecord) {
-            java.math.BigDecimal resolved = ((com.fashion.supplychain.production.entity.ScanRecord) srObj).getUnitPrice();
-            if (resolved != null && resolved.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                unitPrice = resolved;
-            }
-        }
-        // 兜底从 params 获取（前端直传）
-        if (unitPrice == null && params.get("unitPrice") != null) {
-            try {
-                java.math.BigDecimal p = new java.math.BigDecimal(String.valueOf(params.get("unitPrice")));
-                if (p.compareTo(java.math.BigDecimal.ZERO) > 0) unitPrice = p;
-            } catch (NumberFormatException ignore) { }
-        }
-        if (unitPrice != null) {
-            int qty = sr.getQuantity() != null ? sr.getQuantity() : 1;
-            java.math.BigDecimal totalCost = unitPrice.multiply(java.math.BigDecimal.valueOf(qty));
-            sr.setUnitPrice(unitPrice);
-            sr.setProcessUnitPrice(unitPrice);
-            sr.setScanCost(totalCost);
-            sr.setTotalAmount(totalCost);
+        String operationType = TextUtils.safeText(params.get("operationType"));
+        if (!hasText(operationType)) {
+            operationType = (hasText(processName) && processName.contains("领取")) ? "RECEIVE"
+                    : progressStage.toUpperCase();
         }
 
-        patternScanRecordService.save(sr);
-        log.info("[PatternScan] 同步写入 t_pattern_scan_record: patternId={}, processName={}, styleNo={}, operator={}",
-                patternId, sr.getProcessName(), sr.getStyleNo(), operatorId);
+        int qty = NumberUtils.toInt(params.get("quantity"));
+        String operatorRole = TextUtils.safeText(params.get("operatorRole"));
+
+        Map<String, Object> result = patternProductionOrchestrator.submitScan(
+                patternId,
+                operationType,
+                hasText(operatorRole) ? operatorRole : "PLATE_WORKER",
+                TextUtils.safeText(params.get("remark")),
+                qty > 0 ? qty : null,
+                params.get("color") == null ? null : String.valueOf(params.get("color")),
+                params.get("size") == null ? null : String.valueOf(params.get("size")),
+                params.get("warehouse") == null ? null : String.valueOf(params.get("warehouse")),
+                params.get("warehouseAreaId") == null ? null : String.valueOf(params.get("warehouseAreaId")),
+                params.get("warehouseLocationCode") == null ? null : String.valueOf(params.get("warehouseLocationCode")),
+                null, // unitPrice 由 submitScan 内 lookupStyleProcessPrice 按款式工序配置解析
+                processName,
+                progressStage);
+        log.info("[PatternScan] 样衣扫码已委派规范链路: patternId={}, operationType={}, processName={}",
+                patternId, operationType, processName);
+        return result;
     }
 
     private ProductionOrder resolveOrder(String orderId, String orderNo) {

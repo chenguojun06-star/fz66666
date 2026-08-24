@@ -1195,13 +1195,22 @@ Page({
   async _doReceivePattern(patternId) {
     wx.showLoading({ title: '处理中...' });
     try {
-      await production.patternWorkflowAction(patternId, 'receive', {});
+      // D-112：后端 workflow-action 无 receive 分支（必然报"不支持的操作"），改走扫码领取规范接口，
+      // 与扫码页 RECEIVE 同链路：写领取记录 + 置 IN_PROGRESS + 回填领取人
+      await production.submitPatternScan({
+        patternId: patternId,
+        operationType: 'RECEIVE',
+        operatorRole: 'PLATE_WORKER',
+        quantity: 1,
+        processName: '领取样衣',
+        progressStage: '采购',
+      });
       wx.hideLoading();
       wx.showToast({ title: '样衣已领取', icon: 'success' });
       this.loadStyleDetail();
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({ title: '领取失败', icon: 'none' });
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || '领取失败', icon: 'none' });
     }
   },
 

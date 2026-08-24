@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.helper;
 
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -134,8 +135,13 @@ public final class WorkerHintComposer {
         if (si.getDifficultyScore() != null) info.put("difficultyScore", si.getDifficultyScore());
         safePutText(info, "difficultyLevel", si.getDifficultyLevel());
         safePutText(info, "difficultyLabel", si.getDifficultyLabel());
-        safePutText(info, "imageInsight", si.getImageInsight());
-        safePutText(info, "visionRaw", si.getVisionRaw());
+        // D-112：AI 洞察是 LLM 生成文案，历史数据可能整段英文——非中文内容不下发到工人端
+        if (TextUtils.isUsableChineseText(si.getImageInsight())) {
+            safePutText(info, "imageInsight", si.getImageInsight());
+        }
+        if (TextUtils.isUsableChineseText(si.getVisionRaw())) {
+            safePutText(info, "visionRaw", si.getVisionRaw());
+        }
         safePutText(info, "fabricComposition", si.getFabricComposition());
         safePutText(info, "fabricCompositionParts", si.getFabricCompositionParts());
         safePutText(info, "description", si.getDescription());
