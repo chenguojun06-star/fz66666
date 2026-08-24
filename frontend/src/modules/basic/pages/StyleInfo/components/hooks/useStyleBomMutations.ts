@@ -198,7 +198,7 @@ const useStyleBomMutations = ({
         return;
       }
 
-      message.success(mode === 'append' ? '已追加导入BOM模板' : '已覆盖导入BOM模板');
+      message.success(mode === 'append' ? '已追加导入物料清单模板' : '已覆盖导入物料清单模板');
       setBomTemplateId(undefined);
       const next = await fetchBom();
       if (Array.isArray(next) && next.length) {

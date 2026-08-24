@@ -203,7 +203,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
 
         <Select
           allowClear
-          placeholder="导入BOM模板"
+          placeholder="导入物料清单模板"
           value={bomTemplateId}
           style={{ width: 240 }}
           options={templateOptions}

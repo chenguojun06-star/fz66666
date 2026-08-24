@@ -94,7 +94,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           .filter(Boolean)
       : skus.map((s) => ({ record: s, key: getRowKey(s) }));
     if (!targets.length) {
-      message.warning('没有可填充的 SKU');
+      message.warning('没有可填充的商品信息');
       return;
     }
     const hasCost = batchCostPrice != null && batchCostPrice !== '';
@@ -141,7 +141,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
       const record = skus.find((s) => String(getRowKey(s)) === String(k));
       if (record) handleFieldChange(getRowKey(record), 'status', statusVal);
     });
-    message.success(`已${key === 'enable' ? '启用' : '禁用'} ${selectedRowKeys.length} 个 SKU（点「保存」后生效）`);
+    message.success(`已${key === 'enable' ? '启用' : '禁用'} ${selectedRowKeys.length} 个商品（点「保存」后生效）`);
   };
 
   return (

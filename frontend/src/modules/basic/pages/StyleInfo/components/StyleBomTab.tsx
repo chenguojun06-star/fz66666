@@ -192,7 +192,7 @@ const StyleBomTab: React.FC<Props> = ({
       <Form form={form} component={false}>
         {data.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
-            暂无BOM数据，请点击"添加物料"开始配置
+            暂无物料清单数据，请点击"添加物料"开始配置
           </div>
         ) : (
           <ResizableTable
@@ -213,7 +213,7 @@ const StyleBomTab: React.FC<Props> = ({
             showIndex
             storageKey={`style-bom-v2-${String(styleId)}`}
             showExport={true}
-            exportFilename="款式BOM.xlsx"
+            exportFilename="款式物料清单.xlsx"
           />
         )}
       </Form>

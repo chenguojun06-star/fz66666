@@ -298,7 +298,7 @@ export function buildCuttingBomColumns({
                           label: '删除',
                           title: '删除',
                           danger: true as const,
-                          onClick: () => confirmDelete('该BOM记录', async () => onDelete(record.id!), { content: '删除后不可恢复，确认删除该BOM记录？' }),
+                          onClick: () => confirmDelete('该物料清单记录', async () => onDelete(record.id!), { content: '删除后不可恢复，确认删除该物料清单记录？' }),
                         },
                       ]
                     : [

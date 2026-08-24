@@ -208,7 +208,7 @@ const SizeUsageSummaryPanel: React.FC<Props> = ({ orderId, purchaseList }) => {
       {items.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="该款式未配置BOM用量，无法计算码数需求明细"
+          description="该款式未配置物料清单用量，无法计算码数需求明细"
           style={{ padding: '16px 0' }}
         />
       ) : (

@@ -74,7 +74,7 @@ const useStyleBomMaterials = ({
 
   const handleUseMaterial = useCallback(async (record: Record<string, unknown>) => {
     if (!materialTargetRowId) {
-      message.error('请选择目标BOM行');
+      message.error('请选择目标物料清单行');
       return;
     }
     await fillRowFromMaterial(materialTargetRowId, record);

@@ -95,7 +95,7 @@ export const buildStatusActionColumns = (ctx: BomColumnsContext) => {
         if (locked) {
           return (
             <Space>
-              <Tag color="default">已完成</Tag>
+              <Tag color="success">已完成</Tag>
               <span style={{ color: 'var(--neutral-text-lighter)' }}>—</span>
             </Space>
           );

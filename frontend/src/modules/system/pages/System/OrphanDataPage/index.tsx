@@ -100,7 +100,7 @@ const OrphanDataPage: React.FC = () => {
     { title: '订单状态', dataIndex: 'orderStatus', key: 'orderStatus', width: 100,
       render: (v: string) => {
         const map: Record<string, { color: string; label: string }> = {
-          completed: { color: 'green', label: '已完成' },
+          completed: { color: 'success', label: '已完成' },
           cancelled: { color: 'red', label: '已取消' },
           scrapped: { color: 'volcano', label: '已报废' },
           closed: { color: 'default', label: '已关单' },

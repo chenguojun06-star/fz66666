@@ -196,12 +196,12 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             })();
             return (
               <Row gutter={[12, 8]}>
-                <Col xs={24}><div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginTop: 4, marginBottom: 8, color: 'var(--primary-color)' }}>关联辅料（BOM 自动带入）</div></Col>
+                <Col xs={24}><div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginTop: 4, marginBottom: 8, color: 'var(--primary-color)' }}>关联辅料（物料清单自动带入）</div></Col>
                 <Col xs={24}>
                   <Form.Item
                     name="companionMaterialIds"
                     label="关联辅料"
-                    tooltip="配置主面料关联的辅料（如拉链、纽扣等），样衣BOM 选该主面料时会自动带出辅料行，避免漏采购"
+                    tooltip="配置主面料关联的辅料（如拉链、纽扣等），样衣物料清单选该主面料时会自动带出辅料行，避免漏采购"
                     // 用 normalize 在接收后端值时把 JSON 字符串解析成数组
                     normalize={(value: unknown) => {
                       if (Array.isArray(value)) return value;
@@ -229,7 +229,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
                 {companionArr.length > 0 && (
                   <Col xs={24}>
                     <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
-                      已配置 {companionArr.length} 个关联辅料：BOM 选该主面料时会自动追加这些辅料行
+                      已配置 {companionArr.length} 个关联辅料：物料清单选该主面料时会自动追加这些辅料行
                     </span>
                   </Col>
                 )}

@@ -521,7 +521,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
     if (!detail || detail.length === 0) {
       return (
         <div style={{ padding: 8 }}>
-          <Empty description="暂无BOM明细（该款可能未维护物料清单）" />
+          <Empty description="暂无物料清单明细（该款可能未维护）" />
         </div>
       );
     }
@@ -958,7 +958,7 @@ const netDemandColumns: ColumnsType<NetDemandDetail> = [
       <div style={{ fontSize: 12, lineHeight: 1.6 }}>
         {r.bomUnitPrice != null && (
           <div>
-            <span style={{ color: 'var(--color-text-secondary)' }}>BOM预估：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>物料清单预估：</span>
             <strong>¥{r.bomUnitPrice}</strong>
           </div>
         )}

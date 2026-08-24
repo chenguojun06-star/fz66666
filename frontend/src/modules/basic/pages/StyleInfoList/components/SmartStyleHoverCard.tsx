@@ -19,7 +19,7 @@ interface Props {
 }
 
 const STAGES = [
-  { key: 'bom',        label: 'BOM物料',   field: 'bomCompletedTime' },
+  { key: 'bom',        label: '物料清单',   field: 'bomCompletedTime' },
   { key: 'pattern',    label: '纸样开发',  field: 'patternCompletedTime' },
   { key: 'size',       label: '尺码/价格', field: 'sizeCompletedTime' },
   { key: 'process',    label: '工序配置',  field: 'processCompletedTime' },

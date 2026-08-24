@@ -17,7 +17,7 @@ import {
 
 export const buildDevelopmentStage: StageBuilder = (record) => {
   const checkpoints = [
-    { label: 'BOM', done: Boolean(record.bomCompletedTime), time: record.bomCompletedTime },
+    { label: '物料清单', done: Boolean(record.bomCompletedTime), time: record.bomCompletedTime },
     { label: '尺寸', done: Boolean(record.sizeCompletedTime), time: record.sizeCompletedTime },
     { label: '工序', done: Boolean(record.processCompletedTime), time: record.processCompletedTime },
     { label: '制单', done: Boolean(record.productionCompletedTime), time: record.productionCompletedTime },

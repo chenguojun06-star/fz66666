@@ -15,7 +15,7 @@ type UseSmartReceiveColumnsParams = {
 };
 
 const renderStatusTag = (status: string, item: MaterialItem) => {
-  if (status === 'completed' || status === 'received') return <Tag color="green">已完成</Tag>;
+  if (status === 'completed' || status === 'received') return <Tag color="success">已完成</Tag>;
   if (status === 'partial') return <Tag color="orange">部分到货</Tag>;
   if (status === 'cancelled') return <Tag color="default">已取消</Tag>;
   if (status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING) return <Tag color="blue">待仓库出库</Tag>;

@@ -268,7 +268,7 @@ const StockDiscrepancyTab: React.FC = () => {
         {currentRecord && (
           <div>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8 }}>SKU: {currentRecord.skuCode}</div>
+              <div style={{ fontWeight: 500, marginBottom: 8 }}>商品编码：{currentRecord.skuCode}</div>
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div>

@@ -86,7 +86,7 @@ const useStyleBomActions = ({
 
   const handleGeneratePurchase = useCallback(async () => {
     if (!data.length) {
-      message.error('请先配置BOM物料');
+      message.error('请先配置物料清单');
       return;
     }
 
@@ -148,7 +148,7 @@ const useStyleBomActions = ({
     const tempRows = data.filter((item) => isTempId(item.id));
     const savedRows = data.filter((item) => !isTempId(item.id));
     if (savedRows.length === 0) {
-      message.warning('暂无已保存的BOM数据，请先保存后再检查库存');
+      message.warning('暂无已保存的物料清单数据，请先保存后再检查库存');
       return;
     }
 
@@ -232,7 +232,7 @@ const useStyleBomActions = ({
 
   const handleAddToPurchaseCart = useCallback(async () => {
     if (!data.length) {
-      message.error('请先配置BOM物料');
+      message.error('请先配置物料清单');
       return;
     }
 

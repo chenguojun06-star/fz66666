@@ -44,7 +44,7 @@ const useStyleBomData = ({
         form.resetFields();
       }
     } catch {
-      message.error('获取BOM失败');
+      message.error('获取物料清单失败');
     } finally {
       setLoading(false);
     }

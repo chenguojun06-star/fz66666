@@ -160,7 +160,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
           return (
             <Image
               src={fullUrl}
-              alt="SKU图片"
+              alt="商品图片"
               width={32}
               height={32}
               style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer', background: 'var(--color-bg-subtle)' }}

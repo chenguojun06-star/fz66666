@@ -287,7 +287,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <Button onClick={onClose}>取消</Button>
-                <Button type="primary" htmlType="submit">创建并填入BOM</Button>
+                <Button type="primary" htmlType="submit">创建并填入物料清单</Button>
               </div>
             </Form>
           ),

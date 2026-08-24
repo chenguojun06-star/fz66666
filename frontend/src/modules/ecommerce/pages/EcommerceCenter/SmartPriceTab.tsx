@@ -106,7 +106,7 @@ const SmartPriceTab: React.FC = () => {
   }, [suggestions]);
 
   const columns: ColumnsType<PriceSuggestion> = [
-    { title: 'SKU ID', dataIndex: 'skuId', width: 100 },
+    { title: '商品编码', dataIndex: 'skuId', width: 100 },
     {
       title: '当前价格', dataIndex: 'oldPrice', width: 110, align: 'right' as const,
       render: (v: number) => <span style={{ fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span>,
@@ -245,7 +245,7 @@ const SmartPriceTab: React.FC = () => {
         {currentRecord && (
           <div>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8 }}>SKU ID: {currentRecord.skuId}</div>
+              <div style={{ fontWeight: 500, marginBottom: 8 }}>商品编码：{currentRecord.skuId}</div>
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div>
