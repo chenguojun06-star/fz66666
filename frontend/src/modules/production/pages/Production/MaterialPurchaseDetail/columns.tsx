@@ -282,14 +282,20 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
         const isReturnConfirmed = Number((record as any)?.returnConfirmed || 0) === 1;
         const isWarehousePending = status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING || status === 'warehouse_pending';
 
+        // D-124：编辑/删除按行锁定——本行已回料确认则本行禁改删（其他未确认行不受影响）；BOM完成锁仍为整表
+        const rowEditLocked = !!locked || isReturnConfirmed;
+        const rowEditLockTitle = isReturnConfirmed
+          ? '已回料确认，如需调整请先在操作中退回'
+          : (locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '');
+
         return (
           <RowActions
             maxInline={2}
             actions={[
               ...(editing ? [] : [
-                { key: 'edit', label: '编辑', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled || locked },
+                { key: 'edit', label: '编辑', title: rowEditLockTitle || '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled || rowEditLocked },
               ]),
-              { key: 'delete', label: '删除', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '删除此物料行', onClick: () => handleDelete(record), danger: true, disabled: isCancelled || locked },
+              { key: 'delete', label: '删除', title: rowEditLockTitle || '删除此物料行', onClick: () => handleDelete(record), danger: true, disabled: isCancelled || rowEditLocked },
               ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', title: '等待仓库出库', disabled: true }] : []),
               ...(!isWarehousePending && (isPending || isReceived || isPartial) ? (() => {
                 const rowMissing = getPurchaseMissingFields(record);

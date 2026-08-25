@@ -152,6 +152,13 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   const columns = editing ? editColumns : viewColumns;
 
+  // D-124：任一行已回料确认 → 整表编辑面辅料锁定（与大货 Drawer hasReturnConfirmed 同规则）
+  const hasReturnConfirmedRow = purchaseList.some((p) => Number((p as any)?.returnConfirmed || 0) === 1);
+  const toolbarEditLocked = sampleBomLocked || hasReturnConfirmedRow;
+  const toolbarEditLockTitle = sampleBomLocked
+    ? '物料清单已完成，请先在样衣详情-物料清单退回'
+    : (hasReturnConfirmedRow ? '已有物料回料确认，如需调整请先在操作中退回' : undefined);
+
   return (
     <div style={{ padding: embedded ? 0 : (isMobile ? 12 : 24) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
@@ -312,13 +319,15 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   icon={<PlusOutlined />}
                   onClick={handleStartEdit}
                   size="small"
-                  disabled={sampleBomLocked}
-                  title={sampleBomLocked ? '物料清单已完成，请先在样衣详情-物料清单退回' : undefined}
+                  disabled={toolbarEditLocked}
+                  title={toolbarEditLockTitle}
                 >
                   编辑面辅料
                 </Button>
                 {sampleBomLocked ? (
                   <Tag color="success">物料清单已完成 · 已锁定</Tag>
+                ) : hasReturnConfirmedRow ? (
+                  <Tag color="success">已回料确认 · 编辑已锁定</Tag>
                 ) : bomIncomplete ? (
                   <Tag icon={<ExclamationCircleOutlined />} color="warning">
                     {isMultiColor ? '部分物料信息不全（缺供应商可采购，缺编码/名称/单位需补全）' : '部分物料信息不全：缺供应商仍可采购，缺编码/名称/单位的行需补全'}
