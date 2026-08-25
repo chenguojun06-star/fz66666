@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { Button, Input, Popover, Space, Spin, Tooltip, Image } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import {
   CloudSyncOutlined,
@@ -212,14 +212,11 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
   );
 
   return (
-    <ResizableModal
+    <SideDrawer
       title="工序单价配置"
       open={open}
-      onCancel={handleCancel}
+      onClose={handleCancel}
       width="85vw"
-      style={{ top: 20 }}
-      footer={null}
-      destroyOnHidden
     >
       {renderStyleSelector()}
       {renderToolbar()}
@@ -234,7 +231,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         scroll={{ x: 'max-content', y: 'calc(100vh - 380px)' }}
         pagination={false}
       />
-    </ResizableModal>
+    </SideDrawer>
   );
 });
 

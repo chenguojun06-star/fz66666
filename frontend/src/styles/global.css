@@ -869,7 +869,7 @@ input.ant-input,
 }
 
 .page-title {
-  font-size: 15px;
+  font-size: var(--font-size-title, 16px);
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
@@ -879,16 +879,37 @@ input.ant-input,
 .page-card.ant-card {
   border: 1px solid var(--neutral-medium);
   box-shadow: none;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.page-card.ant-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
-  border-color: var(--neutral-dark);
+  /* D-137 视觉：页面级卡片保持稳重，不做悬浮抬升（那是可交互卡片的事） */
+  transition: border-color 0.2s ease;
 }
 
 .page-card > .ant-card-body {
   padding: 12px;
+}
+
+/* ── D-137 视觉整洁规范：表格统一规格 ─────────────────────────────
+   表头：subtle 底 + 600 字重 + 13px；单元格 13px；分页固定上间距。
+   全部走 token，暗色主题自动适配。 */
+.resizable-table .ant-table-thead > tr > th {
+  background: var(--color-bg-subtle);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.resizable-table .ant-table-tbody > tr > td {
+  font-size: 13px;
+}
+
+.resizable-table .ant-pagination {
+  margin: 12px 0 0;
+}
+
+/* 抽屉/弹窗内嵌表格略收紧，避免大弹窗内表格过于稀疏 */
+.ant-drawer .resizable-table .ant-table-tbody > tr > td,
+.ant-modal .resizable-table .ant-table-tbody > tr > td {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 /* 筛选卡片 - 透明背景 */
