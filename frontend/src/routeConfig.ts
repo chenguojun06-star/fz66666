@@ -154,7 +154,7 @@ const pageMetaMap: Record<string, PageMeta> = {
     ],
   },
   '/production/list': {
-    label: '生产订单列表',
+    label: '生产订单',
     suggestions: [
       '🔍 查找逾期订单',
       '📋 批量导出今日订单',
@@ -284,7 +284,7 @@ const pageMetaMap: Record<string, PageMeta> = {
     ],
   },
   [paths.materialInventory]: {
-    label: '物料库',
+    label: '物料出入库',
     suggestions: [
       '🧵 面料库存情况',
       '📦 辅料库存预警',
@@ -323,7 +323,7 @@ const pageMetaMap: Record<string, PageMeta> = {
     ],
   },
   [paths.user]: { label: '用户管理' },
-  [paths.role]: { label: '角色权限' },
+  [paths.role]: { label: '岗位与权限' },
   [paths.tenantManagement]: { label: '租户管理' },
   [paths.printTemplate]: { label: '打印模板管理' },
   '/system/log': { label: '系统日志' },
@@ -519,7 +519,7 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AppstoreOutlined),
     items: [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
-      { label: '资料单价', path: paths.maintenanceCenter, icon: React.createElement(DatabaseOutlined) },
+      { label: '面料价格库', path: paths.maintenanceCenter, icon: React.createElement(DatabaseOutlined) },
       { label: '样衣库存', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
       { label: '商品下单', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
@@ -531,7 +531,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
       { label: '物料出入库', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
-      { label: '物料新增', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
+      { label: '物料资料', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
     ],
   },
   {
@@ -547,7 +547,7 @@ export const menuConfig: MenuSection[] = [
     ],
   },
   {
-    title: '供应商管理',
+    title: '合作伙伴',
     key: 'supplierManagement',
     icon: React.createElement(TeamOutlined),
     items: [
@@ -612,7 +612,7 @@ export const menuConfig: MenuSection[] = [
       { label: '个人中心', path: paths.profile, icon: React.createElement(SettingOutlined) },
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '考勤管理', path: paths.attendanceAdmin, icon: React.createElement(ClockCircleOutlined) },
-      { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
+      { label: '岗位与权限', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
     ],
   },
@@ -627,7 +627,7 @@ export const menuConfig: MenuSection[] = [
       { label: '打印模板', path: paths.printTemplate, icon: React.createElement(PrinterOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
-      { label: '孤立数据', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
+      { label: '异常数据清理', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
     ],
   },
   {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App } from 'antd';
-import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined } from '@ant-design/icons';
+import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined, DownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
@@ -245,13 +245,30 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 采购单据
               </Button>
             ) : null}
-            <Button onClick={onBatchPurchase} disabled={batchPurchaseDisabled} loading={batchPurchaseLoading} title={batchPurchaseDisabled ? '没有可批量采购的物料（均缺编码/名称/单位或无待采购项）' : ''} size="small">
-              批量采购
-            </Button>
-            <Button onClick={onBatchReturnConfirm} loading={batchReturnLoading} size="small">
-              批量回料确认
-            </Button>
-            <Button onClick={handleConfirmComplete} loading={confirmCompleteSubmitting} size="small">确认回料完成</Button>
+            {/* D-118：三个批量动作集成到一个悬停下拉（原三按钮并排占宽且视觉嘈杂）；antd Dropdown 默认 hover 触发 */}
+            <Dropdown
+              trigger={['hover']}
+              menu={{
+                items: [
+                  {
+                    key: 'batch-purchase',
+                    label: batchPurchaseLoading ? '批量采购（处理中…）' : (batchPurchaseDisabled ? '批量采购（无可采购项）' : '批量采购'),
+                    disabled: batchPurchaseDisabled || batchPurchaseLoading,
+                    onClick: onBatchPurchase,
+                  },
+                  {
+                    key: 'batch-return', label: batchReturnLoading ? '批量回料确认（处理中…）' : '批量回料确认',
+                    disabled: batchReturnLoading,
+                    onClick: onBatchReturnConfirm,
+                  },
+                  { key: 'confirm-complete', label: confirmCompleteSubmitting ? '确认回料完成（处理中…）' : '确认回料完成', disabled: confirmCompleteSubmitting, onClick: handleConfirmComplete },
+                ],
+              }}
+            >
+              <Button size="small">
+                批量操作 <DownOutlined />
+              </Button>
+            </Dropdown>
             <Dropdown menu={{
               items: [
                 { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
