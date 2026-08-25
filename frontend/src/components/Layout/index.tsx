@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { App, Avatar, Button, Dropdown, Tag } from 'antd';
+import { App, Avatar, Button, Dropdown, Tag, Image } from 'antd';
 import { CloseOutlined, DownOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useUser, useAuthState } from '../../utils/AuthContext';
 import { paths } from '../../routeConfig';
@@ -284,7 +284,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   />
                 </div>
               ) : null}
-              {children}
+              {/* D-138：全局图片预览分组——系统内所有 antd Image 点击预览都带 ‹ › 左右切换，
+                  本页有几张图就能切几张；StyleCoverThumb 等自带本地分组的组件就近覆盖不受影响 */}
+              <Image.PreviewGroup>
+                {children}
+              </Image.PreviewGroup>
             </div>
           </main>
         </div>

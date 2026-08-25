@@ -141,7 +141,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
               />
             ) : (
               <OrderColorSizeMatrix
-                items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity }))}
+                items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity, skuNo: (l as any).skuNo }))}
                 totalLabel="总"
                 totalSuffix="件"
                 fontSize={13}

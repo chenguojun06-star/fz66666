@@ -1,9 +1,31 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-137 续2：模板中心编辑模板抽屉化）
+> 最后更新：2026-08-25（新增 D-138 订单详情四连修+单滚动条）
 
 ---
+
+## D-138：订单详情四连修 + 全局单滚动条（2026-08-25，用户截图反馈）
+
+### F-1 单滚动条（双滚动条根因）
+- 病根：`.layout` 用 `min-height:100vh`——内容一高整个layout撑开，body 滚出外层滚动条，与页内滚动条并存
+- 修复：`.layout { height:100vh; overflow:hidden }`，页面内容统一在 `.layout-content` 内滚动，全站只剩一根滚动条
+
+### O-1 面辅料tab"没联动采购"澄清 + 展示补全
+- 澄清：面辅料tab本就读实时采购表（arrivedQuantity 实时）——显示"已到货0却已完成"是因为这单走**仓库领料出库路径**（实物出库记 usedQuantity，不走到货登记）
+- 补展示：加**已出库列**（usedQuantity）；状态列接全系统统一 MATERIAL_PURCHASE_STATUS_MAP 中文化（completed→已完成 Tag）
+
+### O-2 颜色/尺码/商品编码矩阵套样衣开发布局
+- 病灶：订单详情只读矩阵没有尺码表头行——"棕色 1 1 1 1 1 1"不知道哪列是哪个码；且调用侧把 skuNo 丢掉了
+- 修复：OrderColorSizeMatrix 加尺码表头行（颜色+各码数，600字重）+ 商品编码行（每颜色一行，格内对应尺码 skuNo，有值才渲染）；CardSizeQuantityItem 加 skuNo 字段；调用侧透传
+- 该组件生产订单头部(StyleAssets)同步受益
+
+### O-3 全系统图片预览左右切换
+- 病灶：D-125 只做了 StyleCoverThumb 自带本地分组，其余散落的 antd Image 预览没有 ‹ › 切换
+- 修复：Layout 内容区包 **Image.PreviewGroup**——全系统所有 antd Image 点击预览都带左右切换（就近分组组件自动覆盖，不冲突）
+
+### 验证
+tsc 0 errors；vite build 成功；HMR 生效待浏览器确认
 
 ## D-137 续2：模板中心编辑模板 → SideDrawer（2026-08-25，继续抽屉化机械替换）
 

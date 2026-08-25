@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Alert, Button, Space } from 'antd';
+import { Alert, Button, Space, Tag } from 'antd';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { displayAmount } from '@/utils/display';
+import { MATERIAL_PURCHASE_STATUS_MAP } from '@/constants/statusMaps';
 import { getBomColumns } from '../helpers/bomColumns';
 import SmartPurchasePreviewModal from './SmartPurchasePreviewModal';
 
@@ -133,6 +134,21 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
                 return <span style={{ color }}>{val.toFixed(2)} {record.unit || ''}</span>;
               },
             },
+            {
+              // D-138：仓库领料出库路径不走到货登记，实物出库量记在 usedQuantity——
+              // 没有这一列时"已到货 0 却已完成"会让用户以为采购数据没联动
+              title: '已出库',
+              dataIndex: 'usedQuantity',
+              key: 'usedQuantity',
+              width: 120,
+              align: 'right' as const,
+              render: (v: any, record: any) => {
+                const val = Number(v || 0);
+                return val > 0
+                  ? <span style={{ color: 'var(--color-info)' }}>{val.toFixed(2)} {record.unit || ''}</span>
+                  : <span style={{ color: 'var(--color-text-quaternary)' }}>0.00 {record.unit || ''}</span>;
+              },
+            },
             ...(!isFactoryUser ? [
               { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? displayAmount(Number(v)) : '-' },
               {
@@ -147,7 +163,17 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
               },
             ] : []),
             { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 120, ellipsis: true, render: (v: any) => v || '-' },
-            { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => v || '-' },
+            {
+              title: '状态',
+              dataIndex: 'status',
+              key: 'status',
+              width: 100,
+              // D-138：状态中文化（复用全系统统一的采购状态映射）
+              render: (v: any) => {
+                const item = MATERIAL_PURCHASE_STATUS_MAP[String(v || '').toLowerCase()];
+                return item ? <Tag color={item.color} style={{ margin: 0 }}>{item.text}</Tag> : (v || '-');
+              },
+            },
           ]}
           pagination={false}
           bordered

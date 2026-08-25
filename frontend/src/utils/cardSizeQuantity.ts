@@ -7,6 +7,8 @@ export interface CardSizeQuantityItem {
   color?: string;
   size: string;
   quantity: number;
+  /** D-138 商品编码（可选）：订单/样衣行带入后，矩阵只读视图会展示商品编码行 */
+  skuNo?: string;
 }
 
 const toNonEmptyText = (value: unknown) => String(value || '').trim();

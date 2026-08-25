@@ -19,6 +19,8 @@ interface OrderColorSizeMatrixProps {
 export interface OrderColorSizeMatrixModelRow {
   label: string;
   quantityMap: Map<string, number>;
+  /** D-138 商品编码：color|size → skuNo（有值时只读矩阵展示商品编码行） */
+  skuMap: Map<string, string>;
 }
 
 export interface OrderColorSizeMatrixModel {
@@ -26,6 +28,8 @@ export interface OrderColorSizeMatrixModel {
   rows: OrderColorSizeMatrixModelRow[];
   total: number;
   hasData: boolean;
+  /** 是否存在任一商品编码（决定矩阵是否渲染商品编码行） */
+  hasSku: boolean;
 }
 
 export interface OrderColorSizeMatrixInfoItemsOptions {
@@ -84,26 +88,30 @@ export const buildOrderColorSizeMatrixModel = ({
       : []);
 
   if (normalizedItems.length === 0) {
-    return { sizes: [], rows: [], total: 0, hasData: false };
+    return { sizes: [], rows: [], total: 0, hasData: false, hasSku: false };
   }
 
   const sizes = createSizeOrder(normalizedItems, fallbackSizes);
   if (sizes.length === 0) {
-    return { sizes: [], rows: [], total: 0, hasData: false };
+    return { sizes: [], rows: [], total: 0, hasData: false, hasSku: false };
   }
 
   const rows: OrderColorSizeMatrixModelRow[] = [];
-  const rowMap = new Map<string, Map<string, number>>();
+  const rowMap = new Map<string, OrderColorSizeMatrixModelRow>();
   normalizedItems.forEach((item) => {
     const color = String(item.color || '').trim() || normalizedFallbackColor || '未设色';
     if (!rowMap.has(color)) {
-      const quantityMap = new Map<string, number>();
-      rowMap.set(color, quantityMap);
-      rows.push({ label: color, quantityMap });
+      const row: OrderColorSizeMatrixModelRow = { label: color, quantityMap: new Map<string, number>(), skuMap: new Map<string, string>() };
+      rowMap.set(color, row);
+      rows.push(row);
     }
-    const quantityMap = rowMap.get(color)!;
+    const row = rowMap.get(color)!;
     const size = String(item.size || '').trim();
-    quantityMap.set(size, (quantityMap.get(size) || 0) + (Number(item.quantity) || 0));
+    row.quantityMap.set(size, (row.quantityMap.get(size) || 0) + (Number(item.quantity) || 0));
+    const skuNo = String((item as CardSizeQuantityItem).skuNo || '').trim();
+    if (skuNo) {
+      row.skuMap.set(size, skuNo);
+    }
   });
 
   return {
@@ -111,6 +119,7 @@ export const buildOrderColorSizeMatrixModel = ({
     rows,
     total: normalizedItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
     hasData: true,
+    hasSku: rows.some((row) => row.skuMap.size > 0),
   };
 };
 
@@ -283,6 +292,24 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
 
   return (
     <div style={wrapStyle}>
+      {/* D-138 尺码表头行：与样衣开发布局对齐——先看列是哪个码，再看数量 */}
+      <div style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
+        <span style={{ ...leadStyle, color: 'var(--neutral-text-light, var(--color-text-muted))' }}>颜色</span>
+        {model.sizes.map((size) => (
+          <span
+            key={`head-${size}`}
+            style={{
+              textAlign: 'center',
+              fontSize,
+              fontWeight: 600,
+              color: 'var(--color-text-primary)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {size}
+          </span>
+        ))}
+      </div>
       {model.rows.map((row) => (
         <div key={row.label} style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
           <span style={leadStyle}>{row.label}</span>
@@ -291,6 +318,31 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
             return (
               <span key={`${row.label}-${size}`} style={qtyCellStyle}>
                 {qty > 0 ? qty : ''}
+              </span>
+            );
+          })}
+        </div>
+      ))}
+      {/* D-138 商品编码行：样衣开发同款——每颜色一行，格内展示对应尺码的商品编码 */}
+      {model.hasSku && model.rows.map((row) => (
+        <div key={`sku-${row.label}`} style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
+          <span style={{ ...leadStyle, fontSize: Math.max(10, fontSize - 1), color: 'var(--color-text-tertiary)' }}>商品编码</span>
+          {model.sizes.map((size) => {
+            const sku = row.skuMap.get(size) || '';
+            return (
+              <span
+                key={`sku-${row.label}-${size}`}
+                title={sku}
+                style={{
+                  textAlign: 'center',
+                  fontSize: Math.max(10, fontSize - 1),
+                  color: 'var(--color-text-tertiary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {sku}
               </span>
             );
           })}
