@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
@@ -169,10 +169,12 @@ export const computeOrderLines = (
   styleQuotationTotalPrice: number,
 ): OrderLine[] => {
   const lines = parseProductionOrderLines(order || null) as OrderLine[];
-  const unitPrice =
-    Number(order?.factoryUnitPrice) ||
-    styleQuotationTotalPrice ||
-    0;
+  // D-139 单价口径：优先订单锁定单价 factoryUnitPrice（下单时填写）；
+  // 为空时兜底款式报价——但必须在列上标出来，否则用户以为是自己下单填的价格
+  const lockedUnitPrice = Number((order as any)?.factoryUnitPrice) || 0;
+  const unitPrice = lockedUnitPrice || styleQuotationTotalPrice || 0;
+  const priceSource: 'order' | 'quotation' | 'none' =
+    lockedUnitPrice > 0 ? 'order' : (styleQuotationTotalPrice > 0 ? 'quotation' : 'none');
 
   return lines.map(line => {
     const matchedBundles = cuttingBundles.filter(b =>
@@ -191,11 +193,11 @@ export const computeOrderLines = (
     const warehousingQuantity = matchedWarehousings.reduce((sum, w) =>
       sum + (w.warehousingQuantity || 0), 0);
 
-    const totalPrice = unitPrice > 0 ? unitPrice : 0;
-
     return {
       ...line,
-      totalPrice,
+      // D-139 修正：旧字段名 totalPrice 实际装的是单价，字段名与语义不符，改名 unitPrice
+      unitPrice,
+      priceSource,
       qualityQuantity,
       defectiveQuantity,
       warehousingQuantity,
@@ -208,10 +210,36 @@ export const buildOrderLineColumns = (): ColumnsType<OrderLine> => [
   { title: '颜色', dataIndex: 'color', key: 'color', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
   { title: '尺码', dataIndex: 'size', key: 'size', width: 100, render: (v: unknown) => String(v || '').trim() || '-' },
   { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
-  { title: '单价', dataIndex: 'totalPrice', key: 'totalPrice', width: 110, align: 'right', render: (v: unknown) => {
-    const val = toNumberSafe(v);
-    return val > 0 ? formatMoney(val) : '-';
-  }},
+  {
+    title: '单价',
+    dataIndex: 'unitPrice',
+    key: 'unitPrice',
+    width: 110,
+    align: 'right',
+    render: (v: unknown, record: any) => {
+      const val = toNumberSafe(v);
+      if (val <= 0) return '-';
+      // D-139：兜底自款式报价时明确标注，避免用户以为是自己下单填的价格
+      if ((record as any).priceSource === 'quotation') {
+        return React.createElement(
+          Tooltip,
+          { title: '订单未填锁定单价，当前显示款式报价单价。请编辑订单补填锁定单价。' },
+          React.createElement('span', null, formatMoney(val), ' ※'),
+        );
+      }
+      return formatMoney(val);
+    },
+  },
+  {
+    title: '小计',
+    key: 'lineAmount',
+    width: 110,
+    align: 'right',
+    render: (_: unknown, record: any) => {
+      const val = toNumberSafe(record.unitPrice) * toNumberSafe(record.quantity);
+      return val > 0 ? formatMoney(val) : '-';
+    },
+  },
   { title: '质检数', dataIndex: 'qualityQuantity', key: 'qualityQuantity', width: 90, align: 'right', render: (v: unknown) => {
     const val = toNumberSafe(v);
     return val > 0 ? React.createElement('span', { style: { color: 'var(--primary-color)' } }, val) : '-';
