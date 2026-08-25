@@ -22,7 +22,10 @@ export interface DetailConfig {
 const buildCashFlowChartOption = (
   dates: string[],
   incomes: number[],
-  expenses: number[],
+  wages: number[],
+  materials: number[],
+  expenseFees: number[],
+  advances: number[],
 ) => ({
   tooltip: {
     trigger: 'axis',
@@ -53,10 +56,10 @@ const buildCashFlowChartOption = (
     },
   },
   legend: {
-    data: ['收入', '支出'],
+    data: ['营收', '工资', '物料', '费用', '借支'],
     top: 5,
     textStyle: {
-      fontSize: 14,
+      fontSize: 13,
       color: 'var(--color-text-secondary)',
     },
   },
@@ -69,7 +72,7 @@ const buildCashFlowChartOption = (
   },
   xAxis: {
     type: 'category',
-    boundaryGap: false,
+    boundaryGap: true,
     data: dates,
     axisLine: {
       lineStyle: {
@@ -105,7 +108,7 @@ const buildCashFlowChartOption = (
   },
   series: [
     {
-      name: '收入',
+      name: '营收',
       type: 'line',
       smooth: true,
       data: incomes,
@@ -119,10 +122,7 @@ const buildCashFlowChartOption = (
       areaStyle: {
         color: {
           type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
+          x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
             { offset: 0, color: 'rgba(82, 196, 26, 0.25)' },
             { offset: 1, color: 'rgba(82, 196, 26, 0.02)' },
@@ -131,30 +131,33 @@ const buildCashFlowChartOption = (
       },
     },
     {
-      name: '支出',
-      type: 'line',
-      smooth: true,
-      data: expenses,
-      lineStyle: {
-        width: 2,
-        color: 'var(--color-error)',
-      },
-      itemStyle: {
-        color: 'var(--color-error)',
-      },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(255, 77, 79, 0.25)' },
-            { offset: 1, color: 'rgba(255, 77, 79, 0.02)' },
-          ],
-        },
-      },
+      name: '工资',
+      type: 'bar',
+      stack: '支出',
+      barMaxWidth: 18,
+      data: wages,
+      itemStyle: { color: 'var(--color-primary, #2D7FF9)' },
+    },
+    {
+      name: '物料',
+      type: 'bar',
+      stack: '支出',
+      data: materials,
+      itemStyle: { color: 'var(--color-orange-300, #f6c344)' },
+    },
+    {
+      name: '费用',
+      type: 'bar',
+      stack: '支出',
+      data: expenseFees,
+      itemStyle: { color: 'var(--color-danger, #f5222d)' },
+    },
+    {
+      name: '借支',
+      type: 'bar',
+      stack: '支出',
+      data: advances,
+      itemStyle: { color: 'var(--color-success, #52c41a)' },
     },
   ],
 });
@@ -327,7 +330,10 @@ export const useFinanceDashboardData = () => {
       buildCashFlowChartOption(
         cashFlowData.map(d => d.date),
         cashFlowData.map(d => d.income),
+        cashFlowData.map(d => d.wage),
+        cashFlowData.map(d => d.material),
         cashFlowData.map(d => d.expense),
+        cashFlowData.map(d => d.advance),
       ),
     [cashFlowData],
   );

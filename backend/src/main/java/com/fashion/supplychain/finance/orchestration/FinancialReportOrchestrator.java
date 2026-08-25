@@ -41,6 +41,15 @@ public class FinancialReportOrchestrator {
     private InvoiceService invoiceService;
     @Autowired
     private ScanRecordService scanRecordService;
+    /** F-2 每日资金趋势：工资实付（与顶部统计卡同口径） */
+    @Autowired
+    private WagePaymentService wagePaymentService;
+    /** F-2 每日资金趋势：员工借支（借出发生日） */
+    @Autowired
+    private EmployeeAdvanceService employeeAdvanceService;
+    /** F-2 每日资金趋势：物料采购发生（面辅料采购线） */
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
 
     /** 财务报表仅限管理层查看，工厂账户禁止访问 */
     private void assertNotFactoryAccount() {
@@ -184,14 +193,20 @@ public class FinancialReportOrchestrator {
     }
 
     /**
-     * 构建按日现金流分点数据（供前端折线图）
+     * 构建按日资金分点数据（供前端图表）。
+     * F-2 口径＝业务发生日，与顶部统计卡对齐：
+     * - 营收：出货对账单创建（排除取消/驳回）+ 电商销售（全部状态，创建日）
+     * - 工资：t_wage_payment 实付（status=success，paymentTime）
+     * - 物料：t_material_reconciliation 已审/已付（approvedAt）
+     * - 费用：t_expense_reimbursement 已审/已付（approvalTime）
+     * - 借支：t_employee_advance 借出（createTime）
      */
     private List<Map<String, Object>> buildCashFlowPoints(Long tenantId, LocalDate startDate, LocalDate endDate) {
         List<ShipmentReconciliation> shipments = Collections.emptyList();
         try {
             shipments = shipmentReconciliationService.list(
                     new LambdaQueryWrapper<ShipmentReconciliation>()
-                            .in(ShipmentReconciliation::getStatus, "verified", "paid")
+                            .notIn(ShipmentReconciliation::getStatus, "cancelled", "rejected")
                             .eq(ShipmentReconciliation::getTenantId, tenantId)
                             .ge(ShipmentReconciliation::getCreateTime, startDate.atStartOfDay())
                             .le(ShipmentReconciliation::getCreateTime, endDate.atTime(LocalTime.MAX))
@@ -204,7 +219,6 @@ public class FinancialReportOrchestrator {
         try {
             ecSales = ecSalesRevenueService.list(
                     new LambdaQueryWrapper<EcSalesRevenue>()
-                            .eq(EcSalesRevenue::getStatus, "confirmed")
                             .eq(EcSalesRevenue::getTenantId, tenantId)
                             .ge(EcSalesRevenue::getCreateTime, startDate.atStartOfDay())
                             .le(EcSalesRevenue::getCreateTime, endDate.atTime(LocalTime.MAX))
@@ -213,64 +227,128 @@ public class FinancialReportOrchestrator {
             log.warn("[现金流] 查询电商收入失败", e);
         }
 
-        List<Payable> paidPayables = Collections.emptyList();
+        List<WagePayment> wagePayments = Collections.emptyList();
         try {
-            paidPayables = payableService.list(
-                    new LambdaQueryWrapper<Payable>()
-                            .eq(Payable::getDeleteFlag, 0)
-                            .eq(Payable::getStatus, "PAID")
-                            .eq(Payable::getTenantId, tenantId)
-                            .ge(Payable::getUpdateTime, startDate.atStartOfDay())
-                            .le(Payable::getUpdateTime, endDate.atTime(LocalTime.MAX))
+            wagePayments = wagePaymentService.list(
+                    new LambdaQueryWrapper<WagePayment>()
+                            .eq(WagePayment::getTenantId, tenantId)
+                            .eq(WagePayment::getStatus, "success")
+                            .ge(WagePayment::getPaymentTime, startDate.atStartOfDay())
+                            .le(WagePayment::getPaymentTime, endDate.atTime(LocalTime.MAX))
                             .last("LIMIT 5000"));
         } catch (Exception e) {
-            log.warn("[现金流] 查询已付应付失败", e);
+            log.warn("[现金流] 查询工资实付失败", e);
+        }
+
+        List<MaterialReconciliation> materialRecons = Collections.emptyList();
+        try {
+            materialRecons = materialReconciliationService.list(
+                    new LambdaQueryWrapper<MaterialReconciliation>()
+                            .eq(MaterialReconciliation::getTenantId, tenantId)
+                            .eq(MaterialReconciliation::getDeleteFlag, 0)
+                            .in(MaterialReconciliation::getStatus, Arrays.asList("approved", "paid"))
+                            .ge(MaterialReconciliation::getApprovedAt, startDate.atStartOfDay())
+                            .le(MaterialReconciliation::getApprovedAt, endDate.atTime(LocalTime.MAX))
+                            .last("LIMIT 5000"));
+        } catch (Exception e) {
+            log.warn("[现金流] 查询物料成本失败", e);
+        }
+
+        List<ExpenseReimbursement> expenseList = Collections.emptyList();
+        try {
+            expenseList = expenseReimbursementService.list(
+                    new LambdaQueryWrapper<ExpenseReimbursement>()
+                            .eq(ExpenseReimbursement::getTenantId, tenantId)
+                            .eq(ExpenseReimbursement::getDeleteFlag, 0)
+                            .in(ExpenseReimbursement::getStatus, Arrays.asList("approved", "paid"))
+                            .ge(ExpenseReimbursement::getApprovalTime, startDate.atStartOfDay())
+                            .le(ExpenseReimbursement::getApprovalTime, endDate.atTime(LocalTime.MAX))
+                            .last("LIMIT 5000"));
+        } catch (Exception e) {
+            log.warn("[现金流] 查询费用支出失败", e);
+        }
+
+        List<EmployeeAdvance> advances = Collections.emptyList();
+        try {
+            advances = employeeAdvanceService.list(
+                    new LambdaQueryWrapper<EmployeeAdvance>()
+                            .eq(EmployeeAdvance::getTenantId, tenantId)
+                            .eq(EmployeeAdvance::getDeleteFlag, 0)
+                            .ge(EmployeeAdvance::getCreateTime, startDate.atStartOfDay())
+                            .le(EmployeeAdvance::getCreateTime, endDate.atTime(LocalTime.MAX))
+                            .last("LIMIT 5000"));
+        } catch (Exception e) {
+            log.warn("[现金流] 查询员工借支失败", e);
         }
 
         LinkedHashMap<String, BigDecimal[]> dayBuckets = new LinkedHashMap<>();
         LocalDate cursor = startDate;
         while (!cursor.isAfter(endDate)) {
-            dayBuckets.put(cursor.toString(), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            // F-2: [收入, 工资, 物料, 费用, 借支]
+            dayBuckets.put(cursor.toString(), new BigDecimal[]{
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO});
             cursor = cursor.plusDays(1);
         }
 
+        // 营收（业务发生口径）：出货对账单创建即计（排除取消/驳回）+ 电商销售全部状态
         for (ShipmentReconciliation s : shipments) {
-            if (s.getCreateTime() != null) {
-                String day = s.getCreateTime().toLocalDate().toString();
-                BigDecimal[] bucket = dayBuckets.get(day);
-                if (bucket != null && s.getFinalAmount() != null) {
-                    bucket[0] = bucket[0].add(s.getFinalAmount());
-                }
+            if (s.getCreateTime() != null && s.getFinalAmount() != null) {
+                addToDayBucket(dayBuckets, s.getCreateTime().toLocalDate().toString(), 0, s.getFinalAmount());
             }
         }
         for (EcSalesRevenue e : ecSales) {
-            if (e.getCreateTime() != null) {
-                String day = e.getCreateTime().toLocalDate().toString();
-                BigDecimal[] bucket = dayBuckets.get(day);
-                if (bucket != null && e.getPayAmount() != null) {
-                    bucket[0] = bucket[0].add(e.getPayAmount());
-                }
+            if (e.getCreateTime() != null && e.getPayAmount() != null) {
+                addToDayBucket(dayBuckets, e.getCreateTime().toLocalDate().toString(), 0, e.getPayAmount());
             }
         }
-        for (Payable p : paidPayables) {
-            if (p.getUpdateTime() != null) {
-                String day = p.getUpdateTime().toLocalDate().toString();
-                BigDecimal[] bucket = dayBuckets.get(day);
-                if (bucket != null && p.getPaidAmount() != null) {
-                    bucket[1] = bucket[1].add(p.getPaidAmount());
-                }
+        // 工资支出：实付（与顶部统计卡同口径）
+        for (WagePayment w : wagePayments) {
+            if (w.getPaymentTime() != null && w.getAmount() != null) {
+                addToDayBucket(dayBuckets, w.getPaymentTime().toLocalDate().toString(), 1, w.getAmount());
+            }
+        }
+        // 物料成本：物料对账已审/已付（与顶部统计卡同口径）
+        for (MaterialReconciliation m : materialRecons) {
+            if (m.getApprovedAt() != null && m.getFinalAmount() != null) {
+                addToDayBucket(dayBuckets, m.getApprovedAt().toLocalDate().toString(), 2, m.getFinalAmount());
+            }
+        }
+        // 费用支出：报销已审/已付（与顶部统计卡同口径）
+        for (ExpenseReimbursement er : expenseList) {
+            if (er.getApprovalTime() != null && er.getAmount() != null) {
+                addToDayBucket(dayBuckets, er.getApprovalTime().toLocalDate().toString(), 3, er.getAmount());
+            }
+        }
+        // 员工借支：借出发生日
+        for (EmployeeAdvance a : advances) {
+            if (a.getCreateTime() != null && a.getAmount() != null) {
+                addToDayBucket(dayBuckets, a.getCreateTime().toLocalDate().toString(), 4, a.getAmount());
             }
         }
 
         List<Map<String, Object>> points = new ArrayList<>();
         for (Map.Entry<String, BigDecimal[]> entry : dayBuckets.entrySet()) {
+            BigDecimal[] b = entry.getValue();
+            BigDecimal expenseTotal = b[1].add(b[2]).add(b[3]).add(b[4]);
             Map<String, Object> point = new LinkedHashMap<>();
             point.put("date", entry.getKey().substring(5));
-            point.put("income", entry.getValue()[0]);
-            point.put("expense", entry.getValue()[1]);
+            point.put("income", b[0]);
+            point.put("wage", b[1]);
+            point.put("material", b[2]);
+            point.put("expense", b[3]);
+            point.put("advance", b[4]);
+            point.put("expenseTotal", expenseTotal);
             points.add(point);
         }
         return points;
+    }
+
+    /** F-2：把金额累加到指定日期的指定类目桶（日期越界忽略） */
+    private void addToDayBucket(LinkedHashMap<String, BigDecimal[]> dayBuckets, String day, int idx, BigDecimal amount) {
+        BigDecimal[] bucket = dayBuckets.get(day);
+        if (bucket != null && amount != null) {
+            bucket[idx] = bucket[idx].add(amount);
+        }
     }
 
     // ─── 汇总方法 ────────────────────────────────────────────────────────────

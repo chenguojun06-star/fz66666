@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { App, Button, Card, DatePicker, Empty, Space, Statistic, Tabs, Tag } from 'antd';
+import { App, Button, Card, DatePicker, Empty, Space, Statistic, Tag } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
@@ -63,14 +63,7 @@ const MaterialReconciliation: React.FC = () => {
     setQueryParams({ ...queryParams, status, page: 1 });
   };
 
-  // ==================== 状态Tab ====================
-  const statusTabs = [
-    { key: '', label: '全部' },
-    { key: 'pending', label: '待审批', color: 'var(--color-warning)' },
-    { key: 'approved', label: '已审批', color: 'var(--color-info)' },
-    { key: 'paid', label: '已付款', color: 'var(--color-success)' },
-    { key: 'rejected', label: '已驳回', color: 'var(--color-danger)' },
-  ];
+  // ==================== 状态筛选（统计卡即筛选，D-140 删冗余Tab） ====================
   const activeTab = queryParams.status || '';
 
   useSync(
@@ -153,7 +146,7 @@ const MaterialReconciliation: React.FC = () => {
         )}
 
         {/* ===== 统计卡片 ===== */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
           <Card
             size="small"
             hoverable
@@ -214,18 +207,10 @@ const MaterialReconciliation: React.FC = () => {
         </div>
 
         {/* ===== 筛选区 ===== */}
-        <Card className="filter-card mb-sm" styles={{ body: { padding: '12px 16px' } }}>
-          {/* 状态Tab */}
-          <Tabs
-            activeKey={activeTab}
-            onChange={(key) => setQueryParams({ ...queryParams, status: key, page: 1 })}
-            items={statusTabs}
-            size="small"
-            style={{ marginBottom: 0 }}
-          />
-
+        {/* D-140：状态Tab与统计卡功能完全重复（统计卡即可点击筛选），删除冗余Tab压缩页头 */}
+        <Card className="filter-card mb-sm" styles={{ body: { padding: '8px 12px' } }}>
           {/* 操作按钮区 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <Space size={8} wrap>
               <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
                 {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${stats.total} 条`}
