@@ -16,7 +16,7 @@ import MaterialSelectModal from './components/MaterialSelectModal';
 import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPurchaseModal';
 import SizeUsageSummaryPanel from './components/SizeUsageSummaryPanel';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
-import { filterPendingPurchases } from './hooks/utils';
+import { filterPendingPurchases, filterReturnablePurchases, filterAwaitingConfirmPurchases } from './hooks/utils';
 import { isPurchaseRowComplete } from './hooks/types';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
@@ -128,6 +128,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   /** 批量采购可用：存在至少一行"待采购且本体信息完整"的物料（缺编码/名称/单位的行自动跳过） */
   const batchPurchaseDisabled = !filterPendingPurchases(purchaseList).some((p) => isPurchaseRowComplete(p));
+  // D-122：批量动作与单条操作条件联动——无符合行时按钮置灰（与行级 disabled 同一判定源）
+  const hasReturnable = filterReturnablePurchases(purchaseList).length > 0;
+  const hasAwaitingConfirm = filterAwaitingConfirmPurchases(purchaseList).length > 0;
 
   const viewColumnsMobile = isMobile;
   const colWidth = viewColumnsMobile ? 80 : undefined;
@@ -257,11 +260,17 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                     onClick: onBatchPurchase,
                   },
                   {
-                    key: 'batch-return', label: batchReturnLoading ? '批量回料确认（处理中…）' : '批量回料确认',
-                    disabled: batchReturnLoading,
+                    key: 'batch-return',
+                    label: batchReturnLoading ? '批量回料确认（处理中…）' : (hasReturnable ? '批量回料确认' : '批量回料确认（无可确认项）'),
+                    disabled: batchReturnLoading || !hasReturnable,
                     onClick: onBatchReturnConfirm,
                   },
-                  { key: 'confirm-complete', label: confirmCompleteSubmitting ? '确认回料完成（处理中…）' : '确认回料完成', disabled: confirmCompleteSubmitting, onClick: handleConfirmComplete },
+                  {
+                    key: 'confirm-complete',
+                    label: confirmCompleteSubmitting ? '确认回料完成（处理中…）' : (hasAwaitingConfirm ? '确认回料完成' : '确认回料完成（无待完成项）'),
+                    disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
+                    onClick: handleConfirmComplete,
+                  },
                 ],
               }}
             >

@@ -293,11 +293,14 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', title: '等待仓库出库', disabled: true }] : []),
               ...(!isWarehousePending && (isPending || isReceived || isPartial) ? (() => {
                 const rowMissing = getPurchaseMissingFields(record);
-                const rowDisabled = rowMissing.length > 0;
-                return [{ key: 'receive', label: isPending ? (rowDisabled ? `领取（缺${rowMissing.join('、')}）` : '领取并到货') : '追加到货', title: rowDisabled ? `该行缺少：${rowMissing.join('、')}，请先编辑补全` : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'), onClick: () => openReceive(record), primary: isPending, disabled: rowDisabled }];
+                // D-122：已回料确认行禁止再登记到货（与列表页/大货 Drawer 联动）
+                const rowDisabled = rowMissing.length > 0 || isReturnConfirmed;
+                const rowTitle = isReturnConfirmed ? '已回料确认，如需重做请先退回' : (rowMissing.length > 0 ? `该行缺少：${rowMissing.join('、')}，请先编辑补全` : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'));
+                return [{ key: 'receive', label: isPending ? (rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取并到货') : '追加到货', title: rowTitle, onClick: () => openReceive(record), primary: isPending, disabled: rowDisabled }];
               })() : []),
               ...(isPending ? [{ key: 'inbound', label: '登记到货', title: '直接登记到货数量', onClick: () => openInbound(record) }] : []),
-              ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: '确认物料已回料到仓库', onClick: () => handleReturnConfirm(record) }] : []),
+              // D-122：已回料确认的行置灰（与批量操作/列表页/大货 Drawer 同一判定），如需重做先点「退回」
+              ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: isReturnConfirmed ? '已回料确认，如需重做请先退回' : '确认物料已回料到仓库', disabled: isReturnConfirmed, onClick: () => handleReturnConfirm(record) }] : []),
               ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回采购', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
               // D-117：已取消的采购不可再登记品质异常（终态行按钮置灰）
