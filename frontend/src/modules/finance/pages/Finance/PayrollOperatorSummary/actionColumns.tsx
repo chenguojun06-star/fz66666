@@ -5,7 +5,7 @@ import { isOrderFrozenByStatus } from '@/utils/api/production';
 import type { SummaryColumnDeps, DetailColumnDeps } from './columnUtils';
 
 export function getSummaryActionColumns(deps: SummaryColumnDeps): any[] {
-    const { handleFinalPush, handleRejectOperator, handleRecordPayment, handleAddDeduction } = deps;
+    const { handleFinalPush } = deps;
 
     return [
         {
@@ -15,7 +15,8 @@ export function getSummaryActionColumns(deps: SummaryColumnDeps): any[] {
             fixed: 'right' as const,
             render: (_: unknown, record: Record<string, unknown>) => {
                 const approved = Boolean(record.approvalTime);
-                const fullyPaid = String(record.paymentStatus || '') === 'fully_paid';
+                // D-131：只保留「终审推送」——走后端统一入口（生成结算单→审核→确认账单派生应付款）。
+                // 移除「记录打款/添加扣款」（汇总行无结算单ID，点击必失败）与「驳回」（纯前端假动作，从未落库）。
                 const actions: RowAction[] = [
                     {
                         key: 'approve',
@@ -23,25 +24,6 @@ export function getSummaryActionColumns(deps: SummaryColumnDeps): any[] {
                         disabled: approved,
                         primary: !approved,
                         onClick: () => handleFinalPush(String(record.operatorName))
-                    },
-                    {
-                        key: 'payment',
-                        label: '记录打款',
-                        disabled: !approved || fullyPaid,
-                        onClick: () => handleRecordPayment(record),
-                    },
-                    {
-                        key: 'deduction',
-                        label: '添加扣款',
-                        disabled: !approved || fullyPaid,
-                        onClick: () => handleAddDeduction(record),
-                    },
-                    {
-                        key: 'reject',
-                        label: '驳回',
-                        danger: true,
-                        disabled: approved,
-                        onClick: () => handleRejectOperator(String(record.operatorName))
                     },
                 ];
 

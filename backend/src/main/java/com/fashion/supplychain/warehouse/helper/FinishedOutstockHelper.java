@@ -41,6 +41,23 @@ public class FinishedOutstockHelper {
     private static final Set<String> VALID_OUTSTOCK_TYPES = Set.of(
             "shipment", "free_outbound", "sample_out", "damage_out", "transfer_out", "other_out", "scan_outbound");
 
+    /**
+     * D-130 出库类型词汇表统一：前端旧值（sales/free/transfer/scrap）映射到后端规范值。
+     * 规范值原样通过；空值默认销售出货 shipment。
+     */
+    private static String normalizeOutstockType(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "shipment";
+        }
+        switch (raw) {
+            case "sales": return "shipment";
+            case "free": return "free_outbound";
+            case "transfer": return "transfer_out";
+            case "scrap": return "damage_out";
+            default: return raw;
+        }
+    }
+
     private final ProductSkuService productSkuService;
     private final ProductOutstockService productOutstockService;
     private final StyleInfoService styleInfoService;
@@ -96,7 +113,12 @@ public class FinishedOutstockHelper {
         String customerPhone = trimToNull(params.get("customerPhone"));
         String shippingAddress = trimToNull(params.get("shippingAddress"));
         String outstockType = trimToNull(params.get("outstockType"));
-        String finalOutstockType = StringUtils.hasText(outstockType) ? outstockType : "shipment";
+        // D-130：兼容前端旧键名 outboundType（PC出库弹窗/二维码出库均发该键，此前后端读不到→一律默认 shipment，
+        // 报废/调拨出库被错误记成销售出库）
+        if (outstockType == null) {
+            outstockType = trimToNull(params.get("outboundType"));
+        }
+        String finalOutstockType = normalizeOutstockType(outstockType);
         if (!VALID_OUTSTOCK_TYPES.contains(finalOutstockType)) {
             throw new IllegalArgumentException("无效的出库类型: " + finalOutstockType);
         }

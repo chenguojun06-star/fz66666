@@ -58,6 +58,9 @@ public class PayrollSettlementOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.service.BillAggregationService billAggregationService;
+
     @Autowired
     private PayrollSettlementQueryHelper queryHelper;
 
@@ -218,6 +221,61 @@ public class PayrollSettlementOrchestrator {
                     () -> doGenerate(q));
         }
         return doGenerate(q);
+    }
+
+    /**
+     * D-131：工资页「终审推送」统一入口——按人生成结算单 → 审核 → 确认账单派生应付款。
+     * <p>
+     * 替代旧前端直推 create-payable(bizId=operatorId) 的旁路：旧旁路的 bizId 与结算单ID错位，
+     * 付款成功后结算单状态永不回写；且扫码未绑定结算单，订单关单再生成时会重复计酬。
+     * 新链路复用主链路（generate 绑定扫码 → approve 推账单 → confirmBill 派生应付），
+     * 付款中心付款后由 WagePaymentCallbackHelper 按结算单ID精确回写。
+     * </p>
+     *
+     * @return 生成的工资结算单（含 id/totalAmount，前端据以提示）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public PayrollSettlement finalizeForOperator(String operatorId, String operatorName) {
+        TenantAssert.assertTenantContext();
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new org.springframework.security.access.AccessDeniedException("仅主管及以上可终审工资");
+        }
+        if (!StringUtils.hasText(operatorId) && !StringUtils.hasText(operatorName)) {
+            throw new IllegalArgumentException("缺少人员标识，无法终审");
+        }
+        PayrollSettlementQuery q = new PayrollSettlementQuery();
+        q.setOperatorId(StringUtils.hasText(operatorId) ? operatorId.trim() : null);
+        q.setOperatorName(StringUtils.hasText(operatorName) ? operatorName.trim() : null);
+        // 只结算未结算扫码：与关单自动生成互斥，杜绝同一批扫码两条通道重复计酬
+        q.setIncludeSettled(false);
+
+        Long tenantId = UserContext.tenantId();
+        String lockKey = "payroll:generate:" + tenantId + ":operator:" + (q.getOperatorId() != null ? q.getOperatorId() : q.getOperatorName());
+        PayrollSettlement settlement = distributedLockService != null
+                ? distributedLockService.executeWithLock(lockKey, 30, java.util.concurrent.TimeUnit.SECONDS, () -> doGenerate(q))
+                : doGenerate(q);
+
+        // 审核通过（绑定扫码置 payroll_approved 并推送 PAYABLE/PAYROLL 账单）
+        approve(settlement.getId(), "工资页终审推送");
+
+        // 确认账单 → 派生应付款，收付款中心立即可见可付（方案A：CONFIRM 阶段派生）
+        if (billAggregationService != null && billAggregationOrchestrator != null) {
+            com.fashion.supplychain.finance.entity.BillAggregation bill = billAggregationService.lambdaQuery()
+                    .eq(com.fashion.supplychain.finance.entity.BillAggregation::getSourceType, "PAYROLL_SETTLEMENT")
+                    .eq(com.fashion.supplychain.finance.entity.BillAggregation::getSourceId, settlement.getId())
+                    .eq(com.fashion.supplychain.finance.entity.BillAggregation::getTenantId, tenantId)
+                    .eq(com.fashion.supplychain.finance.entity.BillAggregation::getDeleteFlag, 0)
+                    .last("LIMIT 1")
+                    .one();
+            if (bill != null) {
+                billAggregationOrchestrator.confirmBill(bill.getId());
+            } else {
+                log.warn("[PayrollFinalize] 未找到终审推送的账单，请到账单管理手动确认: settlementId={}", settlement.getId());
+            }
+        }
+        log.info("[PayrollFinalize] 工资终审推送完成: operator={}/{}, settlementId={}, totalAmount={}",
+                operatorName, operatorId, settlement.getId(), settlement.getTotalAmount());
+        return settlement;
     }
 
     private PayrollSettlement doGenerate(PayrollSettlementQuery q) {

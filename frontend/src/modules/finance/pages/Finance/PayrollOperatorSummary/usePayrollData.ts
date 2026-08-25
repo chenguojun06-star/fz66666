@@ -53,7 +53,7 @@ export function usePayrollData() {
     const [keyword, setKeyword] = useState('');
     const debouncedKeyword = useDebouncedValue(keyword, 200);
     const [scanType, setScanType] = useState<string | undefined>(undefined);
-    const [includeSettled, setIncludeSettled] = useState(true);
+    const [includeSettled, setIncludeSettled] = useState(false); // D-131 默认不含已结算：避免终审推送金额与已生成结算单重复计酬
     const [dateRange, setDateRange] = useState<any>(null);
     const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
 

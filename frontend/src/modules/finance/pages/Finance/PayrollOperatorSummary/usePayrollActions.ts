@@ -129,36 +129,24 @@ export function usePayrollActions(deps: PayrollActionDeps) {
         void doBatchApprove();
     };
 
-    const handleRejectOperator = (operName: string) => {
-        const approvalIdsOfOperator = rows
-            .filter(r => String((r as any)?.operatorName || '') === operName)
-            .map(r => getDetailApprovalId(r))
-            .filter(Boolean);
-        setAuditedDetailKeys(prev => {
-            const next = new Set(prev);
-            approvalIdsOfOperator.forEach(k => next.delete(k));
-            return next;
-        });
-        setRows(prev => prev.map(row => {
-            if (String((row as any)?.operatorName || '') === operName) {
-                return { ...row, approvalStatus: 'pending' } as PayrollOperatorProcessSummaryRow;
-            }
-            return row;
-        }));
-        message.success(`「${operName}」的明细已驳回，请回「工序明细」重新审核`);
+    // D-131：终审推送走后端统一入口（生成结算单→审核→确认账单派生应付款），
+    // 替代旧 create-payable(bizId=operatorId) 旁路——旧旁路付款后状态永不回写且扫码未绑定会重复计酬
+    const finalizeOperator = async (operatorName: string, operatorId?: string) => {
+        const res = await api.post<{ code: number; message: string; data?: { id?: string; totalAmount?: number; settlementNo?: string } }>(
+            '/finance/payroll-settlement/finalize-for-operator',
+            { operatorId: operatorId || undefined, operatorName },
+        );
+        if (res.code !== 200) {
+            throw new Error(res.message || '终审失败');
+        }
+        return res.data;
     };
 
     const handleFinalPush = async (operatorName: string) => {
         const summary = summaryRows.find((r: any) => r.operatorName === operatorName);
         if (!summary) { message.error('未找到该人员汇总数据'); return; }
         try {
-            await api.post('/finance/wage-payment/create-payable', {
-                bizType: 'PAYROLL_SETTLEMENT',
-                bizId: summary.operatorId || operatorName,
-                payeeName: operatorName,
-                amount: toNumberOrZero(summary.totalAmount),
-                description: `工资结算：${summary.recordCount}次扫码，共${toNumberOrZero(summary.totalQuantity)}件`,
-            });
+            const settlement = await finalizeOperator(operatorName, summary.operatorId);
             const now = formatDateTimeSecond(new Date());
             setRows(prev => prev.map(row => {
                 if ((row as Record<string, unknown>).operatorName === operatorName) {
@@ -166,7 +154,8 @@ export function usePayrollActions(deps: PayrollActionDeps) {
                 }
                 return row;
             }));
-            message.success(`已终审并推送 ${operatorName} 的工资到收付款中心`);
+            const amount = toNumberOrZero(settlement?.totalAmount);
+            message.success(`已终审 ${operatorName} 的工资（结算单金额 ¥${amount.toFixed(2)}），已推送到收付款中心`);
         } catch (error: unknown) {
             console.error('终审推送失败:', error);
             message.error(error instanceof Error ? error.message : '终审失败，请稍后重试');
@@ -175,31 +164,31 @@ export function usePayrollActions(deps: PayrollActionDeps) {
 
     const handleBatchFinalPush = async () => {
         if (selectedRowKeys.length === 0) { message.warning('请选择要终审推送的人员'); return; }
-        try {
-            for (const key of selectedRowKeys) {
-                const summary = summaryRows.find((r: any) => r.operatorName === key);
-                if (!summary) continue;
-                await api.post('/finance/wage-payment/create-payable', {
-                    bizType: 'PAYROLL_SETTLEMENT',
-                    bizId: summary.operatorId || String(key),
-                    payeeName: String(key),
-                    amount: toNumberOrZero(summary.totalAmount),
-                    description: `工资结算：${summary.recordCount}次扫码，共${toNumberOrZero(summary.totalQuantity)}件`,
-                });
+        let successCount = 0;
+        const succeededNames: string[] = [];
+        for (const key of selectedRowKeys) {
+            const summary = summaryRows.find((r: any) => r.operatorName === String(key));
+            const operatorId = summary?.operatorId ? String(summary.operatorId) : undefined;
+            try {
+                await finalizeOperator(String(key), operatorId);
+                successCount++;
+                succeededNames.push(String(key));
+            } catch (error: unknown) {
+                console.error(`终审推送失败(${key}):`, error);
+                message.error(`${key}: ${error instanceof Error ? error.message : '终审失败'}`);
             }
+        }
+        if (successCount > 0) {
             const now = formatDateTimeSecond(new Date());
             setRows(prev => prev.map(row => {
-                if (selectedRowKeys.includes((row as Record<string, unknown>).operatorName as string)) {
+                if (succeededNames.includes((row as Record<string, unknown>).operatorName as string)) {
                     return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
                 }
                 return row;
             }));
-            message.success(`已批量终审并推送 ${selectedRowKeys.length} 人到收付款中心`);
-            setSelectedRowKeys([]);
-        } catch (error: unknown) {
-            console.error('批量终审失败:', error);
-            message.error(error instanceof Error ? error.message : '批量终审失败，请稍后重试');
+            message.success(`已批量终审并推送 ${successCount} 人到收付款中心`);
         }
+        if (successCount === selectedRowKeys.length) setSelectedRowKeys([]);
     };
 
     const exportToExcelFn = async () => {
@@ -290,7 +279,7 @@ export function usePayrollActions(deps: PayrollActionDeps) {
 
     return {
         handleAuditDetail, handleBatchAuditDetails,
-        handleRejectOperator, handleFinalPush, handleBatchFinalPush,
+        handleFinalPush, handleBatchFinalPush,
         exportToExcelFn, handleKingdeeExport,
         handlePrintWageSlips, getPrintData,
     };

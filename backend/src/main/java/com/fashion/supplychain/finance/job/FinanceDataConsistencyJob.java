@@ -9,7 +9,6 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
-import com.fashion.supplychain.production.helper.ExternalFactoryDefectDeductionHelper;
 import com.fashion.supplychain.production.helper.ExternalFactoryMaterialDeductionHelper;
 import com.fashion.supplychain.production.orchestration.ShipmentReconciliationOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -51,9 +50,6 @@ public class FinanceDataConsistencyJob {
 
     @Autowired
     private ExternalFactoryMaterialDeductionHelper materialDeductionHelper;
-
-    @Autowired
-    private ExternalFactoryDefectDeductionHelper defectDeductionHelper;
 
     @Autowired
     private ShipmentReconciliationOrchestrator shipmentReconciliationOrchestrator;

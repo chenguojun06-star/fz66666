@@ -83,6 +83,9 @@ public class ReconciliationStatusOrchestrator {
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
 
@@ -199,8 +202,18 @@ public class ReconciliationStatusOrchestrator {
                             sr.getReconciliationNo());
                 } else if (sr.getIsOwnFactory() != null && sr.getIsOwnFactory() == 0) {
                     // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY
+                    // D-128：交易对手=订单的外发工厂（此前误写客户）
+                    String counterpartyId = sr.getCustomerId();
+                    String counterpartyName = sr.getCustomerName();
+                    com.fashion.supplychain.production.entity.ProductionOrder factoryOrder =
+                            StringUtils.hasText(sr.getOrderId())
+                                    ? productionOrderService.getById(sr.getOrderId()) : null;
+                    if (factoryOrder != null && StringUtils.hasText(factoryOrder.getFactoryId())) {
+                        counterpartyId = factoryOrder.getFactoryId();
+                        counterpartyName = factoryOrder.getFactoryName();
+                    }
                     pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
-                            "PAYABLE", "EXTERNAL_FACTORY", "FACTORY", sr.getCustomerId(), sr.getCustomerName(),
+                            "PAYABLE", "EXTERNAL_FACTORY", "FACTORY", counterpartyId, counterpartyName,
                             sr.getOrderId(), sr.getOrderNo(), sr.getFinalAmount(), sr.getTotalAmount(), now);
                 } else {
                     // 销售出货对账 → RECEIVABLE+PRODUCT（原逻辑）

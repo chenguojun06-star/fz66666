@@ -178,7 +178,10 @@ public class MaterialPurchaseReturnHelper {
         patch.setId(existed.getId());
         patch.setReturnConfirmed(1);
         patch.setReturnQuantity(returnQuantity);
-        patch.setTotalAmount(unitPrice.multiply(returnQuantity));
+        // 口径统一（D-129）：totalAmount 始终 = 采购数 × 单价，回料确认只更新回料数量，不再按回料数改写总额
+        BigDecimal purchaseQtyForAmount = existed.getPurchaseQuantity() == null
+                ? BigDecimal.ZERO : existed.getPurchaseQuantity();
+        patch.setTotalAmount(unitPrice.multiply(purchaseQtyForAmount));
         patch.setStatus(returnQuantity.compareTo(BigDecimal.ZERO) > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status);
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
         patch.setReturnConfirmerName(StringUtils.hasText(confirmerName) ? confirmerName.trim() : who);

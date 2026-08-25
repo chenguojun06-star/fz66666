@@ -136,7 +136,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         int arrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
-        materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrived)));
+        // 口径统一（D-129）：totalAmount = 采购数 × 单价（与编辑/购物车/BOM推送一致）。
+        // 旧逻辑用已到量计算，新建采购单 arrived=0 → 落库即 0 元。
+        BigDecimal purchaseQtyForAmount = materialPurchase.getPurchaseQuantity() == null
+                ? BigDecimal.ZERO : materialPurchase.getPurchaseQuantity();
+        materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(purchaseQtyForAmount));
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
@@ -191,7 +195,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setUnitPrice(BigDecimal.ZERO);
         }
         int arrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
-        materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrived)));
+        // 口径统一（D-129）：totalAmount = 采购数 × 单价（与编辑/购物车/BOM推送一致）。
+        // 旧逻辑用已到量计算，新建采购单 arrived=0 → 落库即 0 元。
+        BigDecimal purchaseQtyForAmount = materialPurchase.getPurchaseQuantity() == null
+                ? BigDecimal.ZERO : materialPurchase.getPurchaseQuantity();
+        materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(purchaseQtyForAmount));
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {

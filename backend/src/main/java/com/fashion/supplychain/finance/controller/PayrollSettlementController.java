@@ -4,6 +4,7 @@ import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestra
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.finance.entity.WagePayment;
+import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.common.Result;
@@ -197,6 +198,28 @@ public class PayrollSettlementController {
         String remark = remarkObj != null ? String.valueOf(remarkObj).trim() : null;
         payrollSettlementOrchestrator.approve(id, remark);
         return Result.success(null);
+    }
+
+    /**
+     * D-131 工资页「终审推送」统一入口：按人生成结算单→审核→确认账单派生应付款。
+     * 替代旧前端直推 create-payable(bizId=operatorId) 的旁路（bizId 错位导致付款后状态永不回写、
+     * 扫码未绑定结算单导致关单重复计酬）。
+     *
+     * @param body operatorId / operatorName 二选一
+     */
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
+    @PostMapping("/finalize-for-operator")
+    public Result<PayrollSettlement> finalizeForOperator(@RequestBody Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可终审工资");
+        }
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.fail("工厂账号无权终审工资");
+        }
+        String operatorId = body.get("operatorId") != null ? String.valueOf(body.get("operatorId")).trim() : null;
+        String operatorName = body.get("operatorName") != null ? String.valueOf(body.get("operatorName")).trim() : null;
+        PayrollSettlement settlement = payrollSettlementOrchestrator.finalizeForOperator(operatorId, operatorName);
+        return Result.success(settlement);
     }
 
     /**

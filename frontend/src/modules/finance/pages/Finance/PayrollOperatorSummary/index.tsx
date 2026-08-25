@@ -15,9 +15,6 @@ import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { SCAN_TYPE_OPTIONS } from '@/components/common/ScanTypeBadge';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import { internalOrderColumns } from './internalOrderColumns';
-import { usePaymentAndDeduction } from './usePaymentAndDeduction';
-import PaymentModal from './PaymentModal';
-import DeductionModal from './DeductionModal';
 import StatisticsCards from './StatisticsCards';
 
 const PayrollOperatorSummary: React.FC = () => {
@@ -39,16 +36,6 @@ const PayrollOperatorSummary: React.FC = () => {
 
     const { message } = App.useApp();
 
-    const {
-        paymentModalVisible, setPaymentModalVisible,
-        deductionModalVisible, setDeductionModalVisible,
-        activeRecord,
-        paymentForm, deductionForm,
-        paymentLoading, deductionLoading,
-        handleRecordPayment, handleAddDeduction,
-        submitPayment, submitDeduction,
-    } = usePaymentAndDeduction({ fetchData, message });
-
     const { sortField: summarySortField, sortOrder: summarySortOrder, handleSort: handleSummarySort } = usePersistentSort<string, 'asc' | 'desc'>({
         storageKey: 'payroll-operator-summary',
         defaultField: 'operatorName',
@@ -56,7 +43,7 @@ const PayrollOperatorSummary: React.FC = () => {
     });
 
     const {
-        handleAuditDetail, handleBatchAuditDetails, handleRejectOperator,
+        handleAuditDetail, handleBatchAuditDetails,
         handleFinalPush, handleBatchFinalPush,
         exportToExcelFn,
         handlePrintWageSlips, getPrintData,
@@ -68,12 +55,13 @@ const PayrollOperatorSummary: React.FC = () => {
         setPrintModalVisible, message,
     });
 
+    // D-131：移除「记录打款/添加扣款/驳回」（汇总行无结算单ID点击必失败/纯前端假动作），
+    // 打款在收付款中心进行，扣款待结算单列表落地后在单据级操作
     const summaryColumns = useMemo(() => getSummaryColumns({
         sortField: summarySortField, sortOrder: summarySortOrder, handleSort: handleSummarySort,
-        toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush,
-        handleRecordPayment, handleAddDeduction,
+        toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleFinalPush,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [summarySortField, summarySortOrder, handleSummarySort, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush, handleRecordPayment, handleAddDeduction]);
+    }), [summarySortField, summarySortOrder, handleSummarySort, toMoneyText, summaryRows, totalAmount, handleFinalPush]);
 
     const columns = useMemo(() => getDetailColumns({
         detailSortField, detailSortOrder, handleDetailSort,
@@ -247,24 +235,6 @@ const PayrollOperatorSummary: React.FC = () => {
                 onClose={() => setPrintModalVisible(false)}
                 workerData={getPrintData()}
                 dateRange={dateRange?.[0] && dateRange?.[1] ? [dayjs(dateRange[0]).format('YYYY-MM-DD'), dayjs(dateRange[1]).format('YYYY-MM-DD')] : ['-', '-']} />
-
-            <PaymentModal
-                visible={paymentModalVisible}
-                record={activeRecord}
-                form={paymentForm}
-                loading={paymentLoading}
-                onClose={() => setPaymentModalVisible(false)}
-                onOk={submitPayment}
-            />
-
-            <DeductionModal
-                visible={deductionModalVisible}
-                record={activeRecord}
-                form={deductionForm}
-                loading={deductionLoading}
-                onClose={() => setDeductionModalVisible(false)}
-                onOk={submitDeduction}
-            />
         </>
     );
 };

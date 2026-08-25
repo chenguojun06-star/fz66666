@@ -411,9 +411,16 @@ public class ShipmentReconciliationOrchestrator {
 
             if (recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0) {
                 // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY+FACTORY
+                // D-128：交易对手=订单的外发工厂（此前误写客户，导致应付挂错对象）
                 req.setBillType("PAYABLE");
                 req.setBillCategory("EXTERNAL_FACTORY");
                 req.setCounterpartyType("FACTORY");
+                ProductionOrder factoryOrder = StringUtils.hasText(recon.getOrderId())
+                        ? productionOrderService.getById(recon.getOrderId()) : null;
+                if (factoryOrder != null && StringUtils.hasText(factoryOrder.getFactoryId())) {
+                    req.setCounterpartyId(factoryOrder.getFactoryId());
+                    req.setCounterpartyName(factoryOrder.getFactoryName());
+                }
             } else {
                 // 销售出货 → RECEIVABLE+SHIPMENT+CUSTOMER（原逻辑）
                 req.setBillType("RECEIVABLE");

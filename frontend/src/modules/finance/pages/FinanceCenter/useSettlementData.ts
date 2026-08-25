@@ -78,7 +78,7 @@ export const statusMap: Record<string, { text: string; color: string }> = {
 };
 
 export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange: (s: Set<string>) => void) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [searchOrderNo, setSearchOrderNo] = useState('');
   const [searchStyleNo, setSearchStyleNo] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
@@ -161,7 +161,35 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     loadData(params);
   };
 
-  const handleAuditOrder = async (record: FinishedSettlementRow) => {
+  /** D-127：次品扣款改为人工手动添加（系统不自动扣），审核时仅提醒不阻断 */
+  const warnIfDefect = (record: FinishedSettlementRow, onContinue: () => void) => {
+    const defectQty = record.defectQuantity ?? 0;
+    if (defectQty <= 0) {
+      onContinue();
+      return;
+    }
+    modal.confirm({
+      title: `订单 ${record.orderNo} 存在次品 ${defectQty} 件`,
+      content: '系统不会自动扣款。如需对次品扣款，请先点「扣款」手动添加扣款明细，再进行审核；不扣款可直接继续审核。',
+      okText: '继续审核',
+      cancelText: '先去添加扣款',
+      onOk: onContinue,
+    });
+  };
+
+  const doAuditOrder = async (record: FinishedSettlementRow) => {
+    try {
+      // 调用后端审批接口，将审批结果持久化到 t_finished_settlement_approval
+      await api.post('/finance/finished-settlement/approve', { id: record.orderId });
+      onAuditNosChange(new Set([...auditedOrderNos, record.orderNo]));
+      message.success(`订单 ${record.orderNo} 已审核，可在「工厂订单汇总」进行终审推送`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '审核失败，请重试';
+      message.error(errMsg);
+    }
+  };
+
+  const handleAuditOrder = (record: FinishedSettlementRow) => {
     if (record.factoryType === 'INTERNAL') {
       message.warning('内部工厂订单请在「工资结算」中审核');
       return;
@@ -174,15 +202,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       message.warning('该订单无入库数量，无法审核');
       return;
     }
-    try {
-      // 调用后端审批接口，将审批结果持久化到 t_finished_settlement_approval
-      await api.post('/finance/finished-settlement/approve', { id: record.orderId });
-      onAuditNosChange(new Set([...auditedOrderNos, record.orderNo]));
-      message.success(`订单 ${record.orderNo} 已审核，可在「工厂订单汇总」进行终审推送`);
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : '审核失败，请重试';
-      message.error(errMsg);
-    }
+    warnIfDefect(record, () => void doAuditOrder(record));
   };
 
   const handleBatchAudit = async () => {
@@ -196,6 +216,20 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     if (eligible.length === 0) {
       message.warning('选中订单中没有可审核的（外部工厂·已关单·有入库数量且未审核）');
       return;
+    }
+    const defectOrders = eligible.filter(r => (r.defectQuantity ?? 0) > 0);
+    if (defectOrders.length > 0) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        modal.confirm({
+          title: `选中订单中有 ${defectOrders.length} 个存在次品`,
+          content: '系统不会自动扣款。如需扣款请取消后逐单在「扣款」中手动添加；不扣款可直接继续批量审核。',
+          okText: '继续批量审核',
+          cancelText: '取消',
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+      if (!confirmed) return;
     }
     // 逐条调用后端审批接口并收集成功结果
     const results = await Promise.allSettled(

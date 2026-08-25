@@ -1,9 +1,42 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-126 供应商准入闭环补全：审核入口+统计口径+历史回填）
+> 最后更新：2026-08-25（新增 D-127~D-131 财务链路P0修复包）
 
 ---
+
+## D-127~D-131：财务四链路 P0 修复包（2026-08-25，四探索代理审查后用户拍板）
+
+**背景**：财务四链路审查发现"每条链都有双轨通道+金额无单一事实源"。用户两项关键决策：**① 外发加工费一律按下单时的订单锁定单价（factory_unit_price）；② 次品扣款不做自动（易生争议），审核时提醒、用户手动添加。**
+
+### D-127 次品扣款改手动+审核提醒
+- 自动扣款实为死代码：唯一触发点传零成本（ProductWarehousingPostActionHelper:218 传 0,0，helper 遇 ≤0 直接 return），从未生效
+- 拆除：删调用点+helper 只留关单归集孤儿扣款（attachOrphanDeductionsToReconciliation，对账编排器仍在用）+清 FinanceDataConsistencyJob 死注入
+- 提醒：成品结算单条/批量审核时，若 defectQuantity>0 弹确认框"系统不会自动扣款，可先手动添加扣款明细再审核"（不阻断）；手动扣款入口=成品结算页「扣款」（写 shipment-reconciliation/deduction-items）
+
+### D-128 外发结算统一订单锁定单价
+- 视图 v_finished_product_settlement 取价改为 `COALESCE(NULLIF(factory_unit_price,0), 款式报价, 款式档案价)`（V202608250002）——此前按款式**售价**（含利润报价）算应付，付工厂付多了
+- 列表接口 applyLockedOrderPrice 读时覆算保留（双保险）；工厂汇总/确认终审直接读视图，视图修正后自动跟随
+- 外发应付账单交易对手改订单工厂（此前误写客户）：ShipmentReconciliationOrchestrator.pushBill + ReconciliationStatusOrchestrator approve 分支，从关联生产订单解析 factoryId/Name
+
+### D-129 采购金额口径统一为 采购数×单价
+- totalAmount 此前 4 种口径互相覆盖：建单/编辑按"已到量×单价"（新单落库即 0 元）、到货登记按采购数（D-076 已修）、回料确认按回料数
+- 修 savePurchaseAndUpdateOrder / updatePurchaseAndUpdateOrder / buildReturnPatch 三处 → 统一 `purchaseQuantity × unitPrice`
+
+### D-130 出库类型词汇表对齐
+- 前端发 `outboundType`（sales/free/transfer/scrap），后端读 `outstockType`（白名单 shipment/free_outbound/...）——**键名都对不上**，报废/调拨出库被静默记成销售出库
+- 后端单点修复（FinishedOutstockHelper.outbound）：兼容 outboundType 键 + normalizeOutstockType 旧值映射（sales→shipment/free→free_outbound/transfer→transfer_out/scrap→damage_out）；PC出库/二维码出库两入口都汇聚此方法，一次修复全覆盖
+
+### D-131 工资终审推送统一走结算单主链路
+- 旧旁路三宗罪：create-payable bizId=operatorId 与回写按结算单ID查**错位**（付款后状态永不更新）；扫码未绑定结算单（关单再生成**重复计酬**）；页面"记录打款/添加扣款"按钮引用不存在的行ID（**点击必失败**）、"驳回"纯前端假动作
+- 新链路：新增 `POST /finance/payroll-settlement/finalize-for-operator`（generate 按人+includeSettled=false 绑定扫码 → approve 推 PAYROLL 账单 → confirmBill 派生应付款）——付款中心付款后 WagePaymentCallbackHelper 按结算单ID精确回写，链路全通（已核实 initiatePaymentWithCallback 会用 payable.sourceType/SourceId 回写上游）
+- 前端：终审推送改调新接口；删 记录打款/添加扣款/驳回 三按钮及 PaymentModal/DeductionModal/usePaymentAndDeduction 死文件；includeSettled 默认 false（页面口径=结算口径）
+
+### 理由
+双轨与口径不一是"财务复杂、数字对不上"的根因。本包全部朝"单一事实源"收敛：外发=订单锁定单价、采购=采购数×单价、工资=结算单唯一载体、次品扣款=人工决定。
+
+### 验证
+tsc 0 errors；mvn compile 通过；check-flyway-sql 通过；待后端重启后验证 V202608250001/2 迁移与终审推送全链路
 
 ## D-126：供应商准入闭环补全——审核入口+统计口径+历史回填（2026-08-25，用户问"为什么有待审核逻辑，没搞懂"）
 

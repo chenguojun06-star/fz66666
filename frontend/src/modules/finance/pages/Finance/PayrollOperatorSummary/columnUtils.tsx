@@ -59,9 +59,6 @@ export interface SummaryColumnDeps {
     summaryRows: any[];
     totalAmount: number;
     handleFinalPush: (operatorName: string) => void;
-    handleRejectOperator: (operatorName: string) => void;
-    handleRecordPayment: (record: Record<string, unknown>) => void;
-    handleAddDeduction: (record: Record<string, unknown>) => void;
 }
 
 export interface DetailColumnDeps {
