@@ -1,6 +1,9 @@
 import React from 'react';
+import { Image } from 'antd';
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { message } from '@/utils/antdStatic';
 
 type IdLike = string | number;
 const EMPTY_COVER_OVERRIDE = '__EMPTY_STYLE_COVER__';
@@ -68,6 +71,9 @@ const StyleCoverThumb: React.FC<{
   const [loading, setLoading] = React.useState(false);
   const [srcFailed, setSrcFailed] = React.useState(false);
   const [fallbackFailed, setFallbackFailed] = React.useState(false);
+  // D-125：点击缩略图打开页内多图预览（左右切换），替代原 window.open 新窗口看原图
+  const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [previewSrcs, setPreviewSrcs] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     setUrl((prev) => prev === preferredUrl ? prev : preferredUrl);
@@ -149,6 +155,25 @@ const StyleCoverThumb: React.FC<{
     return () => { mounted = false; };
   }, [fallbackFailed, preferredUrl, srcFailed, styleId, styleNo, color]);
 
+  /** 打开页内预览：当前图在前，款式附件图片（款式图/颜色图等）跟进，多图可左右切换 */
+  const openPreview = React.useCallback(async () => {
+    const current = url ? getFullAuthedFileUrl(url) : null;
+    if (!current) return;
+    const srcs: string[] = [current];
+    try {
+      const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
+      if (res.code === 200) {
+        const images = (res.data || [])
+          .filter((f: any) => String(f.fileType || '').includes('image') && f.fileUrl)
+          .map((f: any) => getFullAuthedFileUrl(f.fileUrl))
+          .filter((u: string) => u && !srcs.includes(u));
+        srcs.push(...images.slice(0, 20));
+      }
+    } catch { /* 附件获取失败时至少预览当前图 */ }
+    setPreviewSrcs(srcs);
+    setPreviewOpen(true);
+  }, [url, styleId, styleNo]);
+
   return (
     <div
       style={{
@@ -168,10 +193,7 @@ const StyleCoverThumb: React.FC<{
           onClick(e);
           return;
         }
-        const validUrl = getFullAuthedFileUrl(url);
-        if (validUrl) {
-          window.open(validUrl, '_blank');
-        }
+        void openPreview();
       }}
     >
       {loading ? (
@@ -199,6 +221,50 @@ const StyleCoverThumb: React.FC<{
         />
       ) : (
         <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+      )}
+      {/* D-125：页内多图预览——底部工具栏带 ‹ › 左右切换（样式复用 design-system.css 的 style-image-preview-*） */}
+      {previewSrcs.length > 0 && (
+        <Image.PreviewGroup
+          preview={{
+            open: previewOpen,
+            onOpenChange: setPreviewOpen,
+            current: 0,
+            actionsRender: (originalNode, info) => (
+              <div className="style-image-preview-toolbar">
+                <span
+                  className="style-image-preview-nav"
+                  title="上一张"
+                  onClick={() => {
+                    if (info.total <= 1) {
+                      message.info('当前仅一张图片');
+                      return;
+                    }
+                    info.actions.onActive(-1);
+                  }}
+                >
+                  <LeftOutlined />
+                </span>
+                {originalNode}
+                <span
+                  className="style-image-preview-nav"
+                  title="下一张"
+                  onClick={() => {
+                    if (info.total <= 1) {
+                      message.info('当前仅一张图片');
+                      return;
+                    }
+                    info.actions.onActive(1);
+                  }}
+                >
+                  <RightOutlined />
+                </span>
+              </div>
+            ),
+          }}
+          items={previewSrcs}
+        >
+          <Image src={previewSrcs[0]} style={{ display: 'none' }} preview={false} />
+        </Image.PreviewGroup>
       )}
     </div>
   );
