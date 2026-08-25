@@ -901,8 +901,16 @@ input.ant-input,
   font-size: 13px;
 }
 
-.resizable-table .ant-pagination {
+/* U-1 续：分页吸底——填充模式之外（Tabs页签/包裹层/显式scroll.y）分页同样钉在滚动区底部。
+   填充模式下 shell 不滚动，sticky 自然失效停在原位，互不干扰。 */
+.resizable-table-shell .ant-pagination {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--color-bg-base);
+  border-top: 1px solid var(--color-border-light, #f0f0f0);
   margin: 12px 0 0;
+  padding: 8px 0 4px;
 }
 
 /* 抽屉/弹窗内嵌表格略收紧，避免大弹窗内表格过于稀疏 */
