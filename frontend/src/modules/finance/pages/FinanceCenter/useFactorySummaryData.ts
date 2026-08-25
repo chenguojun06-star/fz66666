@@ -35,12 +35,22 @@ export interface FactorySummaryRow {
   totalProductionCost: number;
   totalAmount: number;
   totalProfit: number;
-  /** D-134：已审批订单的扣款合计（QUALITY_DEFECT/PRODUCT_SCRAP/MATERIAL_PICKUP 等） */
+  /** D-134：已审批订单的扣款合计（未抵扣部分） */
   totalDeduction?: number;
   /** D-134：已审批订单的补款合计（SUPPLEMENT） */
   totalSupplement?: number;
   /** D-134：净额 = 加工费 − 扣款 + 补款（终审推送默认金额） */
   netAmount?: number;
+  /** D-136：抵扣清单（含上期结转项），前端勾选后随推送回传 deductionIds */
+  deductionItems?: Array<{
+    id: string;
+    deductionType?: string;
+    description?: string;
+    amount: number;
+    isSupplement?: boolean;
+    orderNo?: string;
+    carryOver?: boolean;
+  }>;
   orderNos: string[];
   approvedOrderNos?: string[];
   [key: string]: unknown;
@@ -206,9 +216,10 @@ export function useFactorySummaryData(
     const deduction = Number(record.totalDeduction || 0);
     const supplement = Number(record.totalSupplement || 0);
     const gross = Number(record.totalAmount || 0);
+    const items = record.deductionItems || [];
     const defaultSettle = record.netAmount != null ? Number(record.netAmount) : gross - deduction + supplement;
-    // D-134：本次结算金额可编辑——默认=加工费−扣款+补款；本月不想扣款可改回加工费金额
-    let settleAmount = defaultSettle;
+    // D-134/D-136：本次结算金额可编辑 + 抵扣清单勾选（取消勾选的扣款滚存下期）
+    const settleState = { amount: defaultSettle, checkedIds: items.map(i => i.id) };
     modal.confirm({
       width: '30vw',
       title: '推送到收付款中心',
@@ -216,10 +227,10 @@ export function useFactorySummaryData(
         factoryName: record.factoryName,
         orderCount: record.orderCount,
         gross,
-        deduction,
-        supplement,
+        items,
         defaultAmount: defaultSettle,
-        onAmountChange: (v: number) => { settleAmount = v; },
+        onAmountChange: (v: number) => { settleState.amount = v; },
+        onCheckedChange: (ids: string[]) => { settleState.checkedIds = ids; },
       }),
       okText: '确认终审',
       cancelText: '取消',
@@ -229,11 +240,12 @@ export function useFactorySummaryData(
             bizType: 'ORDER_SETTLEMENT',
             bizId: record.factoryId || record.factoryName,
             payeeName: record.factoryName,
-            amount: settleAmount,
+            amount: settleState.amount,
             description: buildPayableDescription(record),
             orderNos: record.orderNos,
+            deductionIds: settleState.checkedIds,
           });
-          message.success(`工厂「${record.factoryName}」已按 ¥${settleAmount.toFixed(2)} 推送到收付款中心`);
+          message.success(`工厂「${record.factoryName}」已按 ¥${settleState.amount.toFixed(2)} 推送到收付款中心`);
           setPushedFactoryIds(prev => new Set([...prev, record.factoryId || record.factoryName]));
           fetchData();
         } catch (e: unknown) {
@@ -280,6 +292,8 @@ export function useFactorySummaryData(
           const newPushedIds: string[] = [];
           for (const record of selected) {
             const amount = record.netAmount != null ? Number(record.netAmount) : Number(record.totalAmount || 0);
+            // D-136：批量推送默认把各厂当前清单内扣款全部纳入抵扣
+            const deductionIds = (record.deductionItems || []).map(i => i.id);
             await api.post('/finance/wage-payment/create-payable', {
               bizType: 'ORDER_SETTLEMENT',
               bizId: record.factoryId || record.factoryName,
@@ -287,6 +301,7 @@ export function useFactorySummaryData(
               amount,
               description: buildPayableDescription(record),
               orderNos: record.orderNos,
+              deductionIds,
             });
             newPushedIds.push(record.factoryId || record.factoryName);
           }

@@ -30,6 +30,9 @@ public class DeductionItem {
 
     private String sourceId;
 
+    /** D-136 是否已纳入工厂结算抵扣: 0=未抵扣(参与汇总/滚存) 1=已抵扣 */
+    private Integer settleFlag;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 

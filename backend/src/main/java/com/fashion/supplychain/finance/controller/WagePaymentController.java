@@ -48,6 +48,10 @@ public class WagePaymentController {
     @Autowired
     private UserService userService;
 
+    /** D-136：终审推送时把纳入抵扣的扣款项标记 settle_flag=1（未勾选的自然滚存到下期） */
+    @Autowired
+    private com.fashion.supplychain.finance.mapper.DeductionItemMapper deductionItemMapper;
+
     // ============================================================
     // 一、收款账户管理
     // ============================================================
@@ -403,6 +407,23 @@ public class WagePaymentController {
             .build();
 
         WagePayment payment = wagePaymentOrchestrator.createPendingPayable(paymentRequest);
+
+        // D-136：把本次纳入抵扣的扣款项标记为已抵扣（settle_flag=1），
+        // 未勾选/超出的扣款保持未抵扣 → 下期工厂汇总自动滚存
+        if ("ORDER_SETTLEMENT".equals(bizType)
+                && request.getDeductionIds() != null && !request.getDeductionIds().isEmpty()) {
+            try {
+                com.fashion.supplychain.finance.entity.DeductionItem patch = new com.fashion.supplychain.finance.entity.DeductionItem();
+                patch.setSettleFlag(1);
+                deductionItemMapper.update(patch,
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.finance.entity.DeductionItem>()
+                                .in(com.fashion.supplychain.finance.entity.DeductionItem::getId, request.getDeductionIds()));
+                log.info("[终审推送] 已标记{}条扣款项为已抵扣: factory={}", request.getDeductionIds().size(), request.getPayeeName());
+            } catch (Exception e) {
+                log.warn("[终审推送] 扣款抵扣标记失败(不影响推送): factory={}, err={}", request.getPayeeName(), e.getMessage());
+            }
+        }
+
         return Result.success(payment);
     }
 
@@ -616,6 +637,8 @@ public class WagePaymentController {
         private String description;
         /** 关联订单号列表 */
         private java.util.List<String> orderNos;
+        /** D-136：本次纳入抵扣的扣款项ID（未勾选的自动滚存到下期） */
+        private java.util.List<String> deductionIds;
     }
 
     @Data

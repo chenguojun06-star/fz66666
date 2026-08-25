@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
+import com.fashion.supplychain.finance.entity.FinishedSettlementApprovalStatus;
 import com.fashion.supplychain.finance.orchestration.SettlementOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
@@ -583,10 +584,14 @@ public class FinishedProductSettlementController {
     }
 
     /**
-     * D-134：按工厂聚合已审批订单的扣款/补款合计。
-     * 扣款项挂在订单的出货对账单上（reconciliation_id），按 对账单→订单号→工厂 归组；
-     * SUPPLEMENT 类型为补款（加项），其余（QUALITY_DEFECT/PRODUCT_SCRAP/MATERIAL_PICKUP 等）为扣款（减项）。
-     * 聚合失败不阻断汇总主流程，前端回退按 totalAmount 推送。
+     * D-134/D-136：按工厂聚合扣款/补款，并附带抵扣清单（前端勾选用）。
+     * <ul>
+     *   <li>只统计 settle_flag=0（未抵扣）的扣款项；已抵扣的不再出现（防重复扣）</li>
+     *   <li>已审批订单的扣款 → 计入本组 totalDeduction/totalSupplement</li>
+     *   <li>已支付订单（审批 paid）名下未抵扣的扣款 → 作为"上期结转"并入同厂组的抵扣清单（滚存）</li>
+     *   <li>SUPPLEMENT 类型为补款（加项），其余为扣款（减项）</li>
+     *   <li>聚合失败不阻断汇总主流程，前端回退按 totalAmount 推送</li>
+     * </ul>
      */
     private void fillDeductionTotals(Map<String, Map<String, Object>> grouped) {
         if (grouped == null || grouped.isEmpty()) {
@@ -594,26 +599,47 @@ public class FinishedProductSettlementController {
         }
         try {
             Long tenantId = UserContext.tenantId();
-            // 1. 订单号 → 工厂组
-            Map<String, Map<String, Object>> orderByNo = new HashMap<>();
+            // 1. 已审批订单号 → 工厂组
+            Map<String, Map<String, Object>> approvedOrderByNo = new HashMap<>();
             for (Map<String, Object> row : grouped.values()) {
                 List<String> nos = (List<String>) row.get("approvedOrderNos");
                 if (nos != null) {
                     for (String no : nos) {
                         if (StringUtils.isNotBlank(no)) {
-                            orderByNo.put(no, row);
+                            approvedOrderByNo.put(no, row);
                         }
                     }
                 }
             }
-            if (orderByNo.isEmpty()) {
+            // 2. 已支付订单（审批 paid）→ 结转扣款的归属
+            List<FinishedSettlementApprovalStatus> paidApprovals = approvalStatusService.lambdaQuery()
+                    .eq(FinishedSettlementApprovalStatus::getTenantId, tenantId)
+                    .eq(FinishedSettlementApprovalStatus::getStatus, "paid")
+                    .list();
+            Set<String> paidOrderIds = paidApprovals == null ? Collections.emptySet() :
+                    paidApprovals.stream()
+                            .map(FinishedSettlementApprovalStatus::getSettlementId)
+                            .filter(id -> StringUtils.isNotBlank(id))
+                            .collect(Collectors.toSet());
+            Map<String, com.fashion.supplychain.production.entity.ProductionOrder> paidOrders = Collections.emptyMap();
+            if (!paidOrderIds.isEmpty()) {
+                paidOrders = productionOrderService.listByIds(paidOrderIds).stream()
+                        .filter(o -> o != null && StringUtils.isNotBlank(o.getOrderNo()))
+                        .collect(Collectors.toMap(com.fashion.supplychain.production.entity.ProductionOrder::getId, o -> o, (a, b) -> a));
+            }
+            if (approvedOrderByNo.isEmpty() && paidOrders.isEmpty()) {
                 return;
             }
-            // 2. 订单号 → 对账单
+            // 3. 订单号 → 对账单（覆盖已审批+已支付的订单号）
+            Set<String> allOrderNos = new HashSet<>(approvedOrderByNo.keySet());
+            paidOrders.values().forEach(o -> allOrderNos.add(o.getOrderNo()));
+            if (allOrderNos.isEmpty()) {
+                return;
+            }
             List<com.fashion.supplychain.finance.entity.ShipmentReconciliation> recons =
                     shipmentReconciliationService.lambdaQuery()
                             .eq(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getTenantId, tenantId)
-                            .in(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getOrderNo, orderByNo.keySet())
+                            .in(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getOrderNo, allOrderNos)
                             .list();
             if (recons == null || recons.isEmpty()) {
                 return;
@@ -627,27 +653,65 @@ public class FinishedProductSettlementController {
             if (reconIdToOrderNo.isEmpty()) {
                 return;
             }
-            // 3. 拉取扣款项并归组累加
+            // 4. 拉取未抵扣的扣款项
             List<com.fashion.supplychain.finance.entity.DeductionItem> items =
                     deductionItemMapper.selectList(new LambdaQueryWrapper<com.fashion.supplychain.finance.entity.DeductionItem>()
                             .eq(com.fashion.supplychain.finance.entity.DeductionItem::getTenantId, tenantId)
+                            .and(w -> w.eq(com.fashion.supplychain.finance.entity.DeductionItem::getSettleFlag, 0)
+                                    .or().isNull(com.fashion.supplychain.finance.entity.DeductionItem::getSettleFlag))
                             .in(com.fashion.supplychain.finance.entity.DeductionItem::getReconciliationId, reconIdToOrderNo.keySet()));
+            // 5. 归组：已审批订单→本组扣补；已支付订单→同厂组"上期结转"
             for (com.fashion.supplychain.finance.entity.DeductionItem di : items) {
-                if (di == null || di.getDeductionAmount() == null) {
+                if (di == null || di.getDeductionAmount() == null || StringUtils.isBlank(di.getReconciliationId())) {
                     continue;
                 }
-                Map<String, Object> row = orderByNo.get(reconIdToOrderNo.get(di.getReconciliationId()));
-                if (row == null) {
+                String orderNo = reconIdToOrderNo.get(di.getReconciliationId());
+                if (StringUtils.isBlank(orderNo)) {
                     continue;
+                }
+                boolean isSupplement = "SUPPLEMENT".equals(di.getDeductionType());
+                Map<String, Object> row = approvedOrderByNo.get(orderNo);
+                boolean carryOver = false;
+                if (row == null) {
+                    // 不在已审批组：若是已支付订单的扣款 → 结转到同厂组
+                    com.fashion.supplychain.production.entity.ProductionOrder paidOrder = null;
+                    for (com.fashion.supplychain.production.entity.ProductionOrder o : paidOrders.values()) {
+                        if (orderNo.equals(o.getOrderNo())) {
+                            paidOrder = o;
+                            break;
+                        }
+                    }
+                    if (paidOrder == null || StringUtils.isBlank(paidOrder.getFactoryName())) {
+                        continue;
+                    }
+                    row = grouped.get(paidOrder.getFactoryName());
+                    if (row == null) {
+                        continue;
+                    }
+                    carryOver = true;
                 }
                 BigDecimal amt = di.getDeductionAmount();
-                if ("SUPPLEMENT".equals(di.getDeductionType())) {
+                if (isSupplement) {
                     row.put("totalSupplement", ((BigDecimal) row.getOrDefault("totalSupplement", BigDecimal.ZERO)).add(amt));
                 } else {
                     row.put("totalDeduction", ((BigDecimal) row.getOrDefault("totalDeduction", BigDecimal.ZERO)).add(amt));
                 }
+                List<Map<String, Object>> itemRows = (List<Map<String, Object>>) row.get("deductionItems");
+                if (itemRows == null) {
+                    itemRows = new ArrayList<>();
+                    row.put("deductionItems", itemRows);
+                }
+                Map<String, Object> itemRow = new HashMap<>();
+                itemRow.put("id", di.getId());
+                itemRow.put("deductionType", di.getDeductionType());
+                itemRow.put("description", di.getDescription());
+                itemRow.put("amount", amt);
+                itemRow.put("isSupplement", isSupplement);
+                itemRow.put("orderNo", orderNo);
+                itemRow.put("carryOver", carryOver);
+                itemRows.add(itemRow);
             }
-            // 4. 净额 = 加工费 − 扣款 + 补款
+            // 6. 净额 = 加工费 − 扣款(含结转) + 补款
             for (Map<String, Object> row : grouped.values()) {
                 BigDecimal total = (BigDecimal) row.getOrDefault("totalAmount", BigDecimal.ZERO);
                 BigDecimal ded = (BigDecimal) row.getOrDefault("totalDeduction", BigDecimal.ZERO);

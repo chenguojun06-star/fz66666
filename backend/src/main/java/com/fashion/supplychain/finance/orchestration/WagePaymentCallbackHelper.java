@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -36,6 +37,7 @@ public class WagePaymentCallbackHelper {
     private final ShipmentReconciliationService shipmentReconciliationService;
     private final BillAggregationService billAggregationService;
     private final ScanRecordMapper scanRecordMapper;
+    private final com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
 
     public void callbackPaidUpstream(String bizType, String bizId) {
         Long tenantId = UserContext.tenantId();
@@ -206,19 +208,72 @@ public class WagePaymentCallbackHelper {
     }
 
     private void markOrderSettlementPaid(String bizId, Long tenantId) {
+        // D-136 修复 ID 错位（与 D-131 工资链同款病灶）：ORDER_SETTLEMENT 终审推送时 bizId=工厂ID（或降级工厂名），
+        // 旧实现按 settlementId(订单ID)=bizId 查询永远落空 → 付款后订单停在 approved → 下月工厂汇总重复推送重复付款。
+        // 口径：付款成功 → 该工厂全部"已审批"订单的结算审批置为 paid（与推送时聚合全部已审批订单一致）。
+        // 先兼容旧口径（bizId 恰为某订单ID 的历史数据），再按工厂维度批量回写。
+        boolean singleHit = markSingleOrderSettlementPaid(bizId, tenantId);
+        int factoryHit = markFactoryOrdersSettlementPaid(bizId, tenantId);
+        if (!singleHit && factoryHit == 0) {
+            log.warn("[付款中心] 订单结算回写未命中任何订单: bizId={}", bizId);
+        }
+    }
+
+    private boolean markSingleOrderSettlementPaid(String bizId, Long tenantId) {
         FinishedSettlementApprovalStatus approval = finishedSettlementApprovalStatusService.lambdaQuery()
                 .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
                 .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
                 .last("LIMIT 1")
                 .one();
-        if (approval != null) {
-            FinishedSettlementApprovalStatus approvalPatch = new FinishedSettlementApprovalStatus();
-            approvalPatch.setSettlementId(approval.getSettlementId());
-            approvalPatch.setStatus("paid");
-            approvalPatch.setUpdateTime(LocalDateTime.now());
-            finishedSettlementApprovalStatusService.updateById(approvalPatch);
-            log.info("[付款中心] 回写成品结算审批为paid: settlementId={}", bizId);
+        if (approval == null) {
+            return false;
         }
+        FinishedSettlementApprovalStatus approvalPatch = new FinishedSettlementApprovalStatus();
+        approvalPatch.setSettlementId(approval.getSettlementId());
+        approvalPatch.setStatus("paid");
+        approvalPatch.setUpdateTime(LocalDateTime.now());
+        finishedSettlementApprovalStatusService.updateById(approvalPatch);
+        log.info("[付款中心] 回写成品结算审批为paid: settlementId={}", bizId);
+        return true;
+    }
+
+    private int markFactoryOrdersSettlementPaid(String bizId, Long tenantId) {
+        if (!org.springframework.util.StringUtils.hasText(bizId)) {
+            return 0;
+        }
+        List<com.fashion.supplychain.production.entity.ProductionOrder> factoryOrders =
+                productionOrderService.lambdaQuery()
+                        .eq(com.fashion.supplychain.production.entity.ProductionOrder::getTenantId, tenantId)
+                        .and(w -> w.eq(com.fashion.supplychain.production.entity.ProductionOrder::getFactoryId, bizId)
+                                .or().eq(com.fashion.supplychain.production.entity.ProductionOrder::getFactoryName, bizId))
+                        .list();
+        if (factoryOrders == null || factoryOrders.isEmpty()) {
+            return 0;
+        }
+        java.util.Set<String> orderIds = factoryOrders.stream()
+                .map(com.fashion.supplychain.production.entity.ProductionOrder::getId)
+                .filter(id -> id != null && !id.isEmpty())
+                .collect(java.util.stream.Collectors.toSet());
+        if (orderIds.isEmpty()) {
+            return 0;
+        }
+        List<FinishedSettlementApprovalStatus> approvals = finishedSettlementApprovalStatusService.lambdaQuery()
+                .eq(FinishedSettlementApprovalStatus::getTenantId, tenantId)
+                .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
+                .in(FinishedSettlementApprovalStatus::getSettlementId, orderIds)
+                .list();
+        if (approvals == null || approvals.isEmpty()) {
+            return 0;
+        }
+        for (FinishedSettlementApprovalStatus approval : approvals) {
+            FinishedSettlementApprovalStatus patch = new FinishedSettlementApprovalStatus();
+            patch.setSettlementId(approval.getSettlementId());
+            patch.setStatus("paid");
+            patch.setUpdateTime(LocalDateTime.now());
+            finishedSettlementApprovalStatusService.updateById(patch);
+        }
+        log.info("[付款中心] 按工厂回写成品结算审批为paid: bizId={}, 命中{}单", bizId, approvals.size());
+        return approvals.size();
     }
 
     private void markShipmentReconciliationPaid(String bizId, Long tenantId) {
