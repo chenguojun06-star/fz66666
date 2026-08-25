@@ -1,9 +1,30 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-127~D-131 财务链路P0修复包）
+> 最后更新：2026-08-25（新增 D-132 外发应付砍双轨：出货对账单不再推应付账单）
 
 ---
+
+## D-132：外发应付砍双轨——出货对账单降级为扣款载体，付款唯一走成品结算终审（2026-08-25，用户拍板"留一个砍一个"）
+
+**用户决策**：外发"出货对账单"与"成品结算"两条应付通道并存，留好的砍一条。
+
+### 核实结论（留谁砍谁）
+- **留成品结算轨**：有完整活UI（财务中心→外发结算：成品结算审核→工厂汇总终审推送），D-128 后金额=订单锁定单价×合格入库数，终审推送直通收付款中心
+- **砍出货对账单的应付推送**：对账单**一创建就自动推 PAYABLE/EXTERNAL_FACTORY 账单**（出库自动建对账单→立即推），且其状态机UI（ShipmentReconContent）是死组件从未被路由——账单只能积压在账单管理里被人误确认，与成品结算重复付款
+- **对账单实体保留两个职责**：① 成品结算页的**扣款明细/备注/日志载体**（deduction-items/remark/logs 接口都是按对账单挂的）；② **销售出货应收**（RECEIVABLE，收入侧不动）
+- 定时补账任务（ensureShipmentReconciliationForOrder）保留——它只是补建扣款容器
+
+### 改动
+- 三处停推外发应付：production/finance 两包的 pushReceivableBill 外发分支 + ReconciliationStatusOrchestrator 审批外发分支，均改为日志说明（销售 RECEIVABLE 分支原样保留）
+- 删死组件 ShipmentReconContent.tsx；清 ReconciliationStatusOrchestrator 无用注入
+- V202608250003：一次性作废遗留的 sourceType=SHIPMENT_RECONCILIATION 且 PENDING 的 PAYABLE 账单（已确认/已付款的不动，由财务人工处理）
+
+### 理由
+砍掉的是"没有UI、没人看得见、却会默默生成应付账单"的那条轨；留下的是用户实际在用、金额口径已修正的轨。对账单实体降级复用，扣款链路零迁移。
+
+### 验证
+tsc 0 errors；mvn compile 通过；check-flyway 通过；待重启后验证：外发订单出库不再产生 EXTERNAL_FACTORY 应付账单、成品结算终审推送照常
 
 ## D-127~D-131：财务四链路 P0 修复包（2026-08-25，四探索代理审查后用户拍板）
 

@@ -83,9 +83,6 @@ public class ReconciliationStatusOrchestrator {
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
-    @Autowired
-    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
-
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
 
@@ -201,20 +198,10 @@ public class ReconciliationStatusOrchestrator {
                     log.info("[ReconciliationStatus] 本厂订单对账不推账单: reconciliationNo={}",
                             sr.getReconciliationNo());
                 } else if (sr.getIsOwnFactory() != null && sr.getIsOwnFactory() == 0) {
-                    // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY
-                    // D-128：交易对手=订单的外发工厂（此前误写客户）
-                    String counterpartyId = sr.getCustomerId();
-                    String counterpartyName = sr.getCustomerName();
-                    com.fashion.supplychain.production.entity.ProductionOrder factoryOrder =
-                            StringUtils.hasText(sr.getOrderId())
-                                    ? productionOrderService.getById(sr.getOrderId()) : null;
-                    if (factoryOrder != null && StringUtils.hasText(factoryOrder.getFactoryId())) {
-                        counterpartyId = factoryOrder.getFactoryId();
-                        counterpartyName = factoryOrder.getFactoryName();
-                    }
-                    pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
-                            "PAYABLE", "EXTERNAL_FACTORY", "FACTORY", counterpartyId, counterpartyName,
-                            sr.getOrderId(), sr.getOrderNo(), sr.getFinalAmount(), sr.getTotalAmount(), now);
+                    // D-132：外发工厂对账审批不再推应付账单（与成品结算双轨并存曾造成重复付款风险）。
+                    // 对账单仅作扣款明细/备注载体；付款统一走 成品结算→工厂汇总→终审推送→收付款中心。
+                    log.info("[ReconciliationStatus] 外发工厂对账不推应付账单(付款统一走成品结算终审): reconciliationNo={}",
+                            sr.getReconciliationNo());
                 } else {
                     // 销售出货对账 → RECEIVABLE+PRODUCT（原逻辑）
                     pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),

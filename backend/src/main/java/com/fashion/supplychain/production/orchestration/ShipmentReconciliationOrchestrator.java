@@ -396,6 +396,13 @@ public class ShipmentReconciliationOrchestrator {
                     recon.getReconciliationNo());
             return;
         }
+        // D-132：外发工厂应付不再由出货对账单推送（与成品结算双轨并存曾造成重复付款风险）。
+        // 出货对账单对外发订单仅作扣款明细/备注载体；付款统一走 成品结算→工厂汇总→终审推送→收付款中心。
+        if (recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0) {
+            log.info("[ProdShipment] 外发工厂对账不推应付账单(付款统一走成品结算终审): reconciliationNo={}",
+                    recon.getReconciliationNo());
+            return;
+        }
         try {
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
             req.setSourceType("SHIPMENT_RECONCILIATION");
@@ -409,24 +416,10 @@ public class ShipmentReconciliationOrchestrator {
             req.setCounterpartyId(recon.getCustomerId());
             req.setCounterpartyName(recon.getCustomerName());
 
-            if (recon.getIsOwnFactory() != null && recon.getIsOwnFactory() == 0) {
-                // 外发工厂对账 → PAYABLE+EXTERNAL_FACTORY+FACTORY
-                // D-128：交易对手=订单的外发工厂（此前误写客户，导致应付挂错对象）
-                req.setBillType("PAYABLE");
-                req.setBillCategory("EXTERNAL_FACTORY");
-                req.setCounterpartyType("FACTORY");
-                ProductionOrder factoryOrder = StringUtils.hasText(recon.getOrderId())
-                        ? productionOrderService.getById(recon.getOrderId()) : null;
-                if (factoryOrder != null && StringUtils.hasText(factoryOrder.getFactoryId())) {
-                    req.setCounterpartyId(factoryOrder.getFactoryId());
-                    req.setCounterpartyName(factoryOrder.getFactoryName());
-                }
-            } else {
-                // 销售出货 → RECEIVABLE+SHIPMENT+CUSTOMER（原逻辑）
-                req.setBillType("RECEIVABLE");
-                req.setBillCategory("SHIPMENT");
-                req.setCounterpartyType("CUSTOMER");
-            }
+            // 销售出货 → RECEIVABLE+SHIPMENT+CUSTOMER（本厂/外发分支已在上方拦截返回）
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("SHIPMENT");
+            req.setCounterpartyType("CUSTOMER");
             billAggregationOrchestrator.pushBill(req);
             log.info("[ProdShipment] 推送账单: reconciliationNo={}, billType={}, billCategory={}, amount={}",
                     recon.getReconciliationNo(), req.getBillType(), req.getBillCategory(), req.getAmount());
