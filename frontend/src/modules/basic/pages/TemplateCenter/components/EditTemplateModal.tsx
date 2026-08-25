@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { App } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { TemplateLibrary } from '@/types/style';
 import TemplateInlineEditor from './inlineEditor/TemplateInlineEditor';
 import api from '@/utils/api';
@@ -64,14 +64,11 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
     React.useImperativeHandle(ref, () => ({ openEdit }), [openEdit]);
 
     return (
-      <ResizableModal
+      <SideDrawer
         title={editingRow?.templateName || '编辑模板'}
         open={editOpen}
-        centered
         width={modalWidth}
-        footer={null}
-        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-        onCancel={() => {
+        onClose={() => {
           setEditOpen(false);
           setEditingRow(null);
         }}
@@ -91,7 +88,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
             }}
           />
         ) : null}
-      </ResizableModal>
+      </SideDrawer>
     );
   }
 );
