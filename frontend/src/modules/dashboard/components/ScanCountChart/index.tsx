@@ -101,7 +101,7 @@ const ScanCountChart: React.FC = () => {
       top: 5,
       textStyle: {
         fontSize: 14,
-        color: 'var(--color-text-secondary)',
+        color: '#6b7280', // ECharts canvas 不支持 CSS 变量，必须用具体值
       },
     },
     grid: {
@@ -117,7 +117,7 @@ const ScanCountChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: 'var(--color-border)',
+          color: '#e5e7eb',
         },
       },
       axisLabel: {
@@ -155,7 +155,7 @@ const ScanCountChart: React.FC = () => {
           color: '#3b82f6', // 蓝色（与 areaStyle rgba(59,130,246) 一致）
         },
         itemStyle: {
-          color: 'var(--color-secondary)',
+          color: '#3b82f6', // canvas 不解析 CSS 变量，必须用具体色值
         },
         areaStyle: {
           color: {
@@ -181,7 +181,7 @@ const ScanCountChart: React.FC = () => {
           color: '#f97316', // 橙色（与 areaStyle rgba(249,115,22) 一致）
         },
         itemStyle: {
-          color: 'var(--color-orange-500)',
+          color: '#f97316',
         },
         areaStyle: {
           color: {

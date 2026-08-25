@@ -155,7 +155,7 @@ const OrderCuttingChart: React.FC = () => {
           color: '#6366f1', // 紫色（与 areaStyle rgba(99,102,241) 一致）
         },
         itemStyle: {
-          color: 'var(--color-indigo-500)',
+          color: '#6366f1', // canvas 不解析 CSS 变量，必须用具体色值
         },
         areaStyle: {
           color: {
@@ -181,7 +181,7 @@ const OrderCuttingChart: React.FC = () => {
           color: '#f59e0b', // 橙色（与 areaStyle rgba(245,158,11) 一致）
         },
         itemStyle: {
-          color: 'var(--color-warning)',
+          color: '#f59e0b',
         },
         areaStyle: {
           color: {

@@ -1,0 +1,183 @@
+.da-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.da-card .card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.da-more {
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--color-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 4px;
+}
+
+.da-more:hover {
+  background: rgba(45, 127, 249, 0.08);
+}
+
+/* 紧急/预警 数字块 */
+.da-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.da-num-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  background: var(--color-bg-subtle);
+}
+
+.da-num-block.is-danger {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.da-num-block.is-warning {
+  background: rgba(250, 173, 20, 0.1);
+}
+
+.da-num {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.da-num-block.is-danger .da-num {
+  color: var(--color-danger);
+}
+
+.da-num-block.is-warning .da-num {
+  color: var(--color-warning);
+}
+
+.da-num-label {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+/* 临期订单行 */
+.da-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.da-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  transition: background 0.15s ease;
+}
+
+.da-row:hover {
+  background: rgba(45, 127, 249, 0.06);
+}
+
+.da-row + .da-row {
+  margin-top: 2px;
+}
+
+.da-row-order {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.da-row-factory {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.da-row-days {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* 空态 */
+.da-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 0;
+}
+
+.da-empty-icon {
+  font-size: 28px;
+  color: var(--color-success);
+}
+
+.da-empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.da-empty-hint {
+  font-size: 12px;
+  color: var(--color-text-quaternary);
+}
+
+/* 深色主题 */
+:root[data-theme="dark"] .da-num-block {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .da-num-block.is-danger {
+  background: rgba(255, 77, 79, 0.12);
+}
+
+:root[data-theme="dark"] .da-num-block.is-warning {
+  background: rgba(250, 173, 20, 0.12);
+}
+
+:root[data-theme="dark"] .da-row:hover {
+  background: rgba(105, 177, 255, 0.1);
+}
+
+:root[data-theme="dark"] .da-row-days {
+  color: var(--color-red-300);
+  background: rgba(239, 68, 68, 0.18);
+}

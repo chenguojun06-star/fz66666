@@ -1,5 +1,5 @@
 .top-stats-container {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .top-stats-grid {
@@ -27,17 +27,17 @@
 }
 
 .top-stat-item {
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-radius: 10px;
   border: none;
   border-left: 3px solid var(--color-slate-200);
   background: var(--neutral-bg, var(--color-bg-base));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .top-stat-item:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -60,18 +60,20 @@
 }
 
 .stat-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   flex-shrink: 0;
   color: var(--neutral-text-secondary, var(--color-gray-700));
 }
 
+/* 累计总量：卡片主视觉 */
 .stat-total {
-  margin-left: auto;
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
+  letter-spacing: -0.3px;
   color: var(--neutral-text, var(--color-text-primary));
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-tags-row {
@@ -84,7 +86,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   padding: 3px 0;
   border-radius: 6px;
   border: 1px solid var(--neutral-border-light, var(--color-slate-200));
@@ -92,25 +94,22 @@
 }
 
 .stat-tag-label {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
   color: var(--neutral-text-light, var(--color-text-muted));
 }
 
 .stat-tag-value {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--neutral-text, var(--color-slate-700));
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── Default theme: colored left border + icon ── */
+/* ── 各卡强调色：仅左侧色条 + 图标，标签与数值统一中性色保持工整 ── */
 .top-stat--sample {
   border-left-color: var(--color-primary);
 }
 .top-stat--sample .stat-icon {
-  color: var(--color-primary);
-}
-.top-stat--sample .stat-total {
   color: var(--color-primary);
 }
 
@@ -118,10 +117,7 @@
   border-left-color: var(--color-accent-cyan);
 }
 .top-stat--bulk .stat-icon {
-  color: var(--color-accent-cyan);
-}
-.top-stat--bulk .stat-total {
-  color: var(--color-accent-cyan);
+  color: #0e9488;
 }
 
 .top-stat--cutting {
@@ -130,27 +126,18 @@
 .top-stat--cutting .stat-icon {
   color: var(--color-success);
 }
-.top-stat--cutting .stat-total {
-  color: var(--color-success);
-}
 
 .top-stat--inbound {
   border-left-color: var(--color-warning);
 }
 .top-stat--inbound .stat-icon {
-  color: var(--color-warning);
-}
-.top-stat--inbound .stat-total {
-  color: var(--color-warning);
+  color: #d48806;
 }
 
 .top-stat--outbound {
   border-left-color: var(--color-accent-purple);
 }
 .top-stat--outbound .stat-icon {
-  color: var(--color-accent-purple);
-}
-.top-stat--outbound .stat-total {
   color: var(--color-accent-purple);
 }
 
@@ -170,7 +157,7 @@
 }
 
 :root[data-theme="dark"] .stat-total {
-  color: var(--neutral-text, var(--color-border-light));
+  color: var(--neutral-text, var(--color-text-primary));
 }
 
 :root[data-theme="dark"] .stat-tag-label {
@@ -178,7 +165,7 @@
 }
 
 :root[data-theme="dark"] .stat-tag-value {
-  color: var(--neutral-text, var(--color-border-light));
+  color: var(--neutral-text, var(--color-text-primary));
 }
 
 :root[data-theme="dark"] .stat-tag {
@@ -188,23 +175,18 @@
 
 :root[data-theme="dark"] .top-stat--sample { border-left-color: var(--color-primary); }
 :root[data-theme="dark"] .top-stat--sample .stat-icon { color: var(--color-primary-light); }
-:root[data-theme="dark"] .top-stat--sample .stat-total { color: var(--color-primary-light); }
 
 :root[data-theme="dark"] .top-stat--bulk { border-left-color: var(--color-accent-cyan); }
 :root[data-theme="dark"] .top-stat--bulk .stat-icon { color: var(--color-cyan-400); }
-:root[data-theme="dark"] .top-stat--bulk .stat-total { color: var(--color-cyan-400); }
 
 :root[data-theme="dark"] .top-stat--cutting { border-left-color: var(--color-success); }
 :root[data-theme="dark"] .top-stat--cutting .stat-icon { color: var(--color-success); }
-:root[data-theme="dark"] .top-stat--cutting .stat-total { color: var(--color-success); }
 
 :root[data-theme="dark"] .top-stat--inbound { border-left-color: var(--color-warning); }
 :root[data-theme="dark"] .top-stat--inbound .stat-icon { color: var(--color-amber-300); }
-:root[data-theme="dark"] .top-stat--inbound .stat-total { color: var(--color-amber-300); }
 
 :root[data-theme="dark"] .top-stat--outbound { border-left-color: var(--color-accent-purple); }
 :root[data-theme="dark"] .top-stat--outbound .stat-icon { color: var(--color-accent-purple); }
-:root[data-theme="dark"] .top-stat--outbound .stat-total { color: var(--color-accent-purple); }
 
 /* ── White theme ── */
 :root[data-theme="white"] .top-stat-item {

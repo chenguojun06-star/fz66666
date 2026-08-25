@@ -1,7 +1,28 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 F-2/F-3 财务总览全金额日时间线+物料对账页头压缩）
+> 最后更新：2026-08-26（新增 D-140 仪表盘视觉层级重排+三张专业卡）
+
+---
+
+## D-140：首页仪表盘视觉层级重排+补齐专业性展示（2026-08-26，用户"要工整清晰布局合理+看缺哪些专业性展示"）
+
+### 审计结论
+- 后端 `/dashboard/delivery-alert`（交期预警）、`/quality-stats`（品质统计）、`/delayed-stage-breakdown`（延期环节）三个接口**后端早已存在但前端从未接入**
+- TopStats 卡层级混乱：20px 总量数字挤在 icon 行右侧，日/周/月/年标签与数值同字号无主次
+- ECharts canvas 不解析 CSS 变量：OrderCuttingChart itemStyle 用 `var(--color-indigo-500)` 等 4 处静默失效（图例/圆点颜色错乱），ScanCountChart legend 同病
+- QuickEntryCard 设置按钮没传 icon → 界面上是个空白按钮
+- 两套卡头风格混排（antd Card title 13px vs 自定义竖线标题 15px）；动效过度（rotateZ/scale/光泽扫过）；间距 16/20/24 混用
+
+### 落地
+- **新布局叙事**（漏斗式）：Toolbar → TopStats(5卡大数字主视觉) → AI洞察条 → 专业指标三卡(交期预警|品质概览|生产瓶颈) → 趋势双图并排等高 → 执行区(延期表2fr+右列动态/快捷入口1fr叠放)
+- **TopStats 重排**：26px 中性色大数字为主视觉，标签统一灰、仅图标+左色条带色；日/周/月/年 label 12px/value 13px 拉开层级
+- **三张新卡**：DeliveryAlertCard（紧急≤4天/预警5-7天双数字块+临期单行点击跳详情）、QualityStatsCard（合格率大数字按98/95分档变色+今日/本周/本月 Segmented+次品/返修行）、ProductionBottleneckCard（复用 useDelayedStageBreakdown hook，环节延期条形分布，大货/样衣切换，点击带 orderIds 精确跳转）
+- 卡头统一：图表/表格 antd Card 标题加同款左竖线+15px 600；区块间距统一 20px；动效收敛为 translateY(-2px)+阴影
+- 删除死样式约 300 行（filter-card 胶囊按钮系列——Dashboard 根本不渲染 filter-card、旧8卡 stat-card 系列、光泽/旋转动效）；删除零引用的模块根 styles.css
+
+### 验证
+tsc 0 errors ✓；vite build ✓；待用户浏览器验收视觉与三张新卡数据
 
 ---
 

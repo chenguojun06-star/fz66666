@@ -32,7 +32,6 @@ interface TopStatsData {
 interface StatCardProps {
   icon: React.ReactNode;
   label: string;
-  dataKey: keyof TopStatsData;
   data: TimeRangeStats | null;
   loading: boolean;
   colorClass?: string;
@@ -47,8 +46,8 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading, colorCl
             <div className="stat-header">
               <span className="stat-icon">{icon}</span>
               <span className="stat-label">{label}</span>
-              <Skeleton.Input active size="small" style={{ width: 60 }} />
             </div>
+            <Skeleton.Input active size="small" style={{ width: 90 }} />
             <div className="stat-tags-row">
               {[1, 2, 3, 4].map(i => (
                 <div className="stat-tag" key={i}>
@@ -62,8 +61,8 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading, colorCl
             <div className="stat-header">
               <span className="stat-icon">{icon}</span>
               <span className="stat-label">{label}</span>
-              <span className="stat-total">{data?.total?.toLocaleString() || 0}</span>
             </div>
+            <div className="stat-total">{data?.total?.toLocaleString() || 0}</div>
             <div className="stat-tags-row">
               <div className="stat-tag">
                 <span className="stat-tag-label">日</span>
@@ -71,17 +70,17 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading, colorCl
               </div>
               <div className="stat-tag">
                 <span className="stat-tag-label">周</span>
-              <span className="stat-tag-value">{data?.week?.toLocaleString() || 0}</span>
+                <span className="stat-tag-value">{data?.week?.toLocaleString() || 0}</span>
+              </div>
+              <div className="stat-tag">
+                <span className="stat-tag-label">月</span>
+                <span className="stat-tag-value">{data?.month?.toLocaleString() || 0}</span>
+              </div>
+              <div className="stat-tag">
+                <span className="stat-tag-label">年</span>
+                <span className="stat-tag-value">{data?.year?.toLocaleString() || 0}</span>
+              </div>
             </div>
-            <div className="stat-tag">
-              <span className="stat-tag-label">月</span>
-              <span className="stat-tag-value">{data?.month?.toLocaleString() || 0}</span>
-            </div>
-            <div className="stat-tag">
-              <span className="stat-tag-label">年</span>
-              <span className="stat-tag-value">{data?.year?.toLocaleString() || 0}</span>
-            </div>
-          </div>
           </>
         )}
       </div>
@@ -172,7 +171,6 @@ const TopStats: React.FC = () => {
         {statsConfig.map((config) => (
           <StatCard
             key={config.key}
-            dataKey={config.key}
             icon={config.icon}
             label={config.label}
             data={statsData?.[config.key] || null}

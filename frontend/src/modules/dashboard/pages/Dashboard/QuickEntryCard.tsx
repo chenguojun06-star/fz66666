@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import { QuickEntryConfig } from './quickEntryConfig';
 
 interface QuickEntryCardProps {
@@ -14,6 +15,8 @@ const QuickEntryCard: React.FC<QuickEntryCardProps> = ({ entries, onOpenSettings
         <h3 className="card-title">快捷入口</h3>
         <Button
           type="text"
+          size="small"
+          icon={<SettingOutlined />}
           onClick={onOpenSettings}
           title="设置快捷入口"
           style={{ color: 'var(--color-text-tertiary)' }}

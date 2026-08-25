@@ -8,6 +8,9 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
+import DeliveryAlertCard from '../../components/DeliveryAlertCard';
+import QualityStatsCard from '../../components/QualityStatsCard';
+import ProductionBottleneckCard from '../../components/ProductionBottleneckCard';
 
 import { useDashboardStats } from './useDashboardStats';
 import { useDashboardSearch } from './useDashboardSearch';
@@ -87,7 +90,7 @@ const Dashboard: React.FC = () => {
 
         <StandardToolbar
           left={(
-            <div className="dashboard-search-inline" style={{ width: 420 }}>
+            <div className="dashboard-search-inline" style={{ width: 'min(420px, 100%)' }}>
               <AutoComplete
                 value={searchKeyword}
                 options={searchOptions}
@@ -128,27 +131,26 @@ const Dashboard: React.FC = () => {
 
         <DashboardAiInsight />
 
-        <div className="dashboard-analysis-section">
-          <div className="dashboard-charts-left">
-            <div className="chart-item">
-              <OrderCuttingChart />
-            </div>
-            <div className="chart-item">
-              <ScanCountChart />
-            </div>
-          </div>
-
-          <div className="dashboard-table-right">
-            <OverdueOrderTable />
-          </div>
+        <div className="dashboard-insight-grid">
+          <DeliveryAlertCard />
+          <QualityStatsCard />
+          <ProductionBottleneckCard />
         </div>
 
-        <div className="dashboard-grid">
-          <RecentActivityCard activities={recentActivities} />
-          <QuickEntryCard
-            entries={quickEntries}
-            onOpenSettings={() => setSettingsVisible(true)}
-          />
+        <div className="dashboard-analysis-section">
+          <OrderCuttingChart />
+          <ScanCountChart />
+        </div>
+
+        <div className="dashboard-bottom-grid">
+          <OverdueOrderTable />
+          <div className="dashboard-side-stack">
+            <RecentActivityCard activities={recentActivities} />
+            <QuickEntryCard
+              entries={quickEntries}
+              onOpenSettings={() => setSettingsVisible(true)}
+            />
+          </div>
         </div>
       </PageLayout>
 
