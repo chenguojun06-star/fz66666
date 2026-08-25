@@ -51,7 +51,7 @@ export const factoryApi = {
     api.delete<{ code: number; message: string }>(`/system/factory/${id}`),
 
   approveAdmission: (id: string, action: string, reason?: string) =>
-    api.put<{ code: number; data: boolean }>(`/system/factory/${id}/admission`, null, { params: { action, reason } }),
+    api.put<{ code: number; message: string; data: boolean }>(`/system/factory/${id}/admission`, null, { params: { action, reason } }),
 
   updateContract: (id: string, data: Partial<Factory>) =>
     api.put<{ code: number; data: boolean }>(`/system/factory/${id}/contract`, data),

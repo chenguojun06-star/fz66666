@@ -192,11 +192,12 @@ if command -v cloudflared >/dev/null 2>&1; then
   : >"$TUNNEL_WEB_LOG"
   : >"$TUNNEL_API_LOG"
 
-  (cloudflared tunnel --no-autoupdate --url http://127.0.0.1:5173 2>&1 | tee -a "$TUNNEL_WEB_LOG") &
+  # --protocol http2：本机网络封禁 UDP/QUIC(7844 端口)，不强制回退则隧道一直重连失败(530)
+  (cloudflared tunnel --no-autoupdate --protocol http2 --url http://127.0.0.1:5173 2>&1 | tee -a "$TUNNEL_WEB_LOG") &
   TUNNEL_WEB_PID=$!
 
   if [[ "$BACKEND_READY" -eq 1 ]]; then
-    (cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8088 2>&1 | tee -a "$TUNNEL_API_LOG") &
+    (cloudflared tunnel --no-autoupdate --protocol http2 --url http://127.0.0.1:8088 2>&1 | tee -a "$TUNNEL_API_LOG") &
     TUNNEL_API_PID=$!
   fi
 

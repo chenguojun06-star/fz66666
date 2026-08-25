@@ -14,6 +14,7 @@ import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { Factory as FactoryType } from '@/types/system';
 import CustomerManagementTab from './CustomerManagementTab';
 import SupplierUserManager from './SupplierUserManager';
+import AdmissionAuditModal from './components/AdmissionAuditModal';
 import FactoryFormModal from './components/FactoryFormModal';
 import FactoryStatsCards from './components/FactoryStatsCards';
 import { logColumns } from './factoryListColumns';
@@ -40,6 +41,8 @@ const FactoryList: React.FC = () => {
     fieldConfigs, customFields,
     accountModalOpen, setAccountModalOpen, accountFactory,
     supplierUserModalOpen, setSupplierUserModalOpen, supplierUserFactory,
+    auditModalOpen, setAuditModalOpen, auditTarget, auditLoading,
+    handleAdmissionAudit,
     factoryStats,
     columns,
     openDialog, closeDialog,
@@ -278,6 +281,14 @@ const FactoryList: React.FC = () => {
         supplierId={supplierUserFactory.id}
         supplierName={supplierUserFactory.name}
         onClose={() => setSupplierUserModalOpen(false)}
+      />
+
+      <AdmissionAuditModal
+        open={auditModalOpen}
+        target={auditTarget}
+        loading={auditLoading}
+        onCancel={() => setAuditModalOpen(false)}
+        onOk={handleAdmissionAudit}
       />
 
       <RejectReasonModal

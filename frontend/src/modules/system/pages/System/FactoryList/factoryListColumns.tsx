@@ -25,6 +25,9 @@ export interface FactoryColumnActions {
   scorecardMap: Record<string, SupplierScore>;
   scorecardLoading: boolean;
   navigate: (to: string) => void;
+  /** D-126 准入审核：仅顶级管理员可见 */
+  canAuditAdmission: boolean;
+  openAdmissionAudit: (factory: FactoryType) => void;
 }
 
 export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<FactoryType> => {
@@ -33,6 +36,7 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
     setAccountFactory, setAccountModalOpen,
     setSupplierUserFactory, setSupplierUserModalOpen,
     loadScorecardOnce, scorecardMap, scorecardLoading, navigate,
+    canAuditAdmission, openAdmissionAudit,
   } = actions;
 
   return [
@@ -177,6 +181,14 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
           actions={[
             { key: 'view', label: '查看', title: '查看', onClick: () => openDialog('view', factory), primary: true },
             { key: 'edit', label: '编辑', title: '编辑', onClick: () => openDialog('edit', factory), primary: true },
+            ...(canAuditAdmission && ['pending', 'probation', 'rejected', 'suspended'].includes(String(factory.admissionStatus || ''))
+              ? [{
+                  key: 'admission',
+                  label: '准入审核',
+                  title: '准入审核',
+                  onClick: () => openAdmissionAudit(factory),
+                }]
+              : []),
             ...(factory.supplierType === 'OUTSOURCE'
               ? [{
                   key: 'workers',

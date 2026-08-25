@@ -1,9 +1,32 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-125 缩略图点击页内多图预览左右切换）
+> 最后更新：2026-08-25（新增 D-126 供应商准入闭环补全：审核入口+统计口径+历史回填）
 
 ---
+
+## D-126：供应商准入闭环补全——审核入口+统计口径+历史回填（2026-08-25，用户问"为什么有待审核逻辑，没搞懂"）
+
+**用户反馈**：供应商管理页统计卡"待审核 5"但表格里 4 行显示"-"只有 1 行标待审核；不明白准入/待审核是干嘛的。
+
+### 核实结论（半成品功能三处断裂）
+- **来源**：4-23"供应商管理"功能包引入准入审核流（5 状态机：pending/approved/probation/rejected/suspended）；新建时面辅料供应商默认 pending、外发厂默认 approved（FactoryOrchestrator.java:130）
+- **断裂1**：后端审核接口 `PUT /system/factory/{id}/admission` 齐全但**前端零调用**（factoryApi.approveAdmission 无组件使用）→ 待审核永远卡死
+- **断裂2**：统计卡把空状态也算待审核（utils.ts `admissionStatus === ''` → pendingCount++），而准入列空值渲染"-"→ 卡片与表格对不上；2 月老数据早于默认值逻辑全是空
+- **断裂3**：admissionStatus 全后端无任何业务消费（采购/下单/扫码都不查它）→ 纯展示不拦截
+- 用户拍板：补全（方案B）而非删除
+
+### 修复
+- **审核入口**：新增 AdmissionAuditModal（Radio 四结果：通过准入/试用合作/拒绝准入/暂停合作 + 意见，拒绝/暂停必填原因）；RowActions 对 pending/probation/rejected/suspended 行显示"准入审核"，仅 isAdmin 可见（后端 isTopAdmin 校验对应）
+- **统计口径**：空状态计入已准入（与回填语义一致），仅显式 pending 计待审核
+- **历史回填**：V202608250001__backfill_factory_admission_status.sql 幂等 UPDATE 空状态→approved
+- factoryApi.approveAdmission 返回类型补 message 字段
+
+### 理由
+准入流程的价值前提是"能审得动"：没有入口的状态机只会制造困惑数字。补全三处断裂后流程才真正闭环，且不动任何业务拦截逻辑（保持零侵入）。
+
+### 验证
+tsc 0 errors；check-flyway-sql 通过；环境重启后 Flyway 应用迁移、待审核数与表格一致
 
 ## D-125：图片预览左右切换——下沉到 StyleCoverThumb 全局生效（2026-08-25，用户截图反馈）
 

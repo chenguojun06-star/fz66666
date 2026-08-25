@@ -7,6 +7,9 @@ import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { organizationApi } from '@/services/system/organizationApi';
+import { factoryApi } from '@/services/system/factoryApi';
+import { useUser } from '@/utils/AuthContext';
+import { isAdmin } from '@/utils/AuthContext.helpers';
 import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -15,6 +18,7 @@ import { paths } from '@/routeConfig';
 import { useExtColumns } from '@/hooks/useExtColumns';
 import { flattenExtJson, collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
 import { getFactoryColumns } from './factoryListColumns';
+import type { AdmissionAuditTarget } from './components/AdmissionAuditModal';
 import { calculateFactoryStats, mergeColumnsWithExt } from './utils';
 import { useScorecard } from './useScorecard';
 import { useRemarkModal } from './useRemarkModal';
@@ -25,6 +29,7 @@ type DialogMode = 'create' | 'view' | 'edit';
 export function useFactoryListData() {
   const { message } = App.useApp();
   const [form] = Form.useForm();
+  const { user } = useUser();
   const { isMobile, modalWidth } = useViewport();
   const location = useLocation();
   const navigate = useNavigate();
@@ -88,6 +93,21 @@ export function useFactoryListData() {
   const [supplierUserModalOpen, setSupplierUserModalOpen] = useState(false);
   const [supplierUserFactory, setSupplierUserFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
 
+  // 准入审核（D-126）：后端仅顶级管理员可审，前端按 isAdmin 显隐入口
+  const canAuditAdmission = isAdmin(user);
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditTarget, setAuditTarget] = useState<AdmissionAuditTarget | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const openAdmissionAudit = useCallback((factory: FactoryType) => {
+    setAuditTarget({
+      id: String(factory.id || ''),
+      name: factory.factoryName || '',
+      currentStatus: String((factory as any).admissionStatus || ''),
+    });
+    setAuditModalOpen(true);
+  }, []);
+
   const { scorecardMap, scorecardLoading, loadScorecardOnce } = useScorecard();
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
@@ -126,6 +146,26 @@ export function useFactoryListData() {
       console.warn('[FactoryList] fetchData failed', error);
     }
   }, []);
+
+  const handleAdmissionAudit = useCallback(async (action: string, reason: string) => {
+    if (!auditTarget?.id) return;
+    setAuditLoading(true);
+    try {
+      const response = await factoryApi.approveAdmission(auditTarget.id, action, reason || undefined);
+      if (response.code === 200) {
+        message.success('准入审核完成');
+        setAuditModalOpen(false);
+        setAuditTarget(null);
+        fetchFactories();
+      } else {
+        message.error(response.message || '审核失败');
+      }
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '审核失败');
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [auditTarget, fetchFactories, message]);
 
   useEffect(() => {
     const codeChanged = debouncedFactoryCode !== (queryParams.factoryCode || '');
@@ -274,7 +314,9 @@ export function useFactoryListData() {
     scorecardMap,
     scorecardLoading,
     navigate,
-  }), [scorecardMap, scorecardLoading, loadScorecardOnce, navigate, handleDelete, openDialog, openLogModal]);
+    canAuditAdmission,
+    openAdmissionAudit,
+  }), [scorecardMap, scorecardLoading, loadScorecardOnce, navigate, handleDelete, openDialog, openLogModal, canAuditAdmission, openAdmissionAudit]);
 
   const columns = useMemo(() => mergeColumnsWithExt(baseColumns, extColumns), [baseColumns, extColumns]);
 
@@ -298,6 +340,8 @@ export function useFactoryListData() {
     setLogRecords,
     accountModalOpen, setAccountModalOpen, accountFactory,
     supplierUserModalOpen, setSupplierUserModalOpen, supplierUserFactory,
+    auditModalOpen, setAuditModalOpen, auditTarget, auditLoading,
+    handleAdmissionAudit,
     scorecardMap, scorecardLoading, loadScorecardOnce,
     factoryStats,
     columns,

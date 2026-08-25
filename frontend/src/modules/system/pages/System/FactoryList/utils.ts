@@ -25,8 +25,9 @@ export function calculateFactoryStats(factoryList: FactoryType[]) {
     if (status === 'active') activeCount++;
     else inactiveCount++;
 
-    if (admissionStatus === 'approved') approvedCount++;
-    if (admissionStatus === 'pending' || admissionStatus === '') pendingCount++;
+    // 空状态视为已准入：准入功能上线前的老供应商一直在正常合作（历史数据已由迁移回填为 approved）
+    if (admissionStatus === 'approved' || admissionStatus === '') approvedCount++;
+    if (admissionStatus === 'pending') pendingCount++;
   });
 
   return {
