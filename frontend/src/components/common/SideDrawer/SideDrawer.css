@@ -1,0 +1,26 @@
+/* SideDrawer — 统一右侧抽屉样式 */
+.side-drawer .side-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.side-drawer .side-drawer-footer-extra {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary, #999);
+}
+
+.side-drawer .side-drawer-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 抽屉内容区默认纵向布局，子内容可滚动 */
+.side-drawer .ant-drawer-body > * {
+  flex-shrink: 0;
+}

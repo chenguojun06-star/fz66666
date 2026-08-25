@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { App, Drawer, Space, Tag } from 'antd';
-import ResizableModal from '../ResizableModal';
+import { App, Space, Tag } from 'antd';
+import SideDrawer from '../SideDrawer';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useUser } from '@/utils/AuthContext';
 import { useNodeDetailData } from './useNodeDetailData';
@@ -22,7 +22,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   isPatternProduction = false,
   sourceType,
   patternId,
-  mode = 'modal',
+  // U-2：默认侧滑抽屉（原 modal 居中弹窗），调用方显式传 mode='modal' 可回退
+  mode = 'drawer',
   extraData: _extraData,
   onSaved,
   onOpenInspectDrawer,
@@ -314,32 +315,30 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   if (mode === 'drawer') {
     return (
-      <Drawer
+      <SideDrawer
         title={title}
         open={visible}
         onClose={onClose}
-        size="large"
-        styles={{ wrapper: { width: '50%' }, body: { padding: 16 } }}
+        width="85vw"
         footer={footer}
-        destroyOnHidden
+        styles={{ body: { padding: 16 } }}
       >
         {body}
-      </Drawer>
+      </SideDrawer>
     );
   }
 
   return (
-    <ResizableModal
+    <SideDrawer
       title={title}
       open={visible}
-      onCancel={onClose}
-      className="node-detail-modal"
-      footer={footer}
+      onClose={onClose}
       width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
+      footer={footer}
+      styles={{ body: { padding: 16 } }}
     >
       {body}
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

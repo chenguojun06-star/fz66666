@@ -59,11 +59,39 @@
   padding: 0;
 }
 
-/* 内容区域：表格等主内容，溢出时滚动 */
+/* 内容区域：U-1 改为 flex 列布局——非表格子项自然高度，表格 shell 填满剩余空间，
+   表体内部滚动（表头/分页钉死）。保留 overflow:auto 兜底：非直接子表格等旧场景仍可整页滚动。 */
 .page-layout-body {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: auto;
   min-height: 0;
+  flex: 1;
+}
+
+/* 非表格子项（提示条、统计块等）保持自然高度不被压缩 */
+.page-layout-body > * {
+  flex-shrink: 0;
+}
+
+/* 填充模式表格：占满剩余高度，表体由 ResizableTable 注入的 scroll.y 控制内部滚动 */
+.page-layout-body > .resizable-table-fill {
+  flex: 1 1 0;
+  min-height: 220px;
+}
+
+/* 页签页：Tabs 占满剩余高度，签内容整体滚动（头部/页签栏钉死） */
+.page-layout-body > .ant-tabs {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-layout-body > .ant-tabs > .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 /* 响应式：移动端 .layout-content padding 变为 12px */

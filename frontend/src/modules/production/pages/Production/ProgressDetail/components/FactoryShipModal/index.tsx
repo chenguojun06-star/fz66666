@@ -3,7 +3,7 @@ import {
   Form, Radio, Button, AutoComplete, Input, Divider, Popconfirm,
 } from 'antd';
 import type { FormInstance } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { ProductionOrder, FactoryShipment } from '@/types/production';
 import type { ShippableInfo, ShipDetailItem, ShippedDetailSum } from '@/services/production/factoryShipmentApi';
 import { parseProductionOrderLines } from '@/utils/api';
@@ -62,14 +62,13 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
   const hasMatrix = allSizes.length > 0 && detailSum.length > 0;
 
   return (
-    <ResizableModal
+    <SideDrawer
       open={open}
       title={`工厂发货 — ${orderNo ?? ''}`}
       width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
-      onCancel={onCancel}
+      onClose={onCancel}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <>
           <Button onClick={onCancel}>取消</Button>
           <Popconfirm
             title="确认发货"
@@ -84,9 +83,8 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
               确认发货
             </Button>
           </Popconfirm>
-        </div>
+        </>
       }
-      destroyOnHidden
     >
       <ShipSummaryBar
         shippableInfo={shippableInfo}
@@ -144,7 +142,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
           <Input.TextArea rows={2} placeholder="选填备注" />
         </Form.Item>
       </Form>
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

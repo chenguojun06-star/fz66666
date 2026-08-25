@@ -125,7 +125,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   const tableContent = (
     <div className={wrapperClassName} ref={shellRef}>
       {showExport && (
-        <div style={{ padding: '8px 0', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="resizable-table-export-row" style={{ padding: '8px 0', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button
             icon={<DownloadOutlined />}
             onClick={handleExportClick}

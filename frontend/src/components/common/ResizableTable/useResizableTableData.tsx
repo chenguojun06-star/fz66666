@@ -142,6 +142,59 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
   }, [columns, rowKey, storageKeyProp]);
 
   const stickyFooter = stickyFooterProp ?? false;
+
+  // ── U-1 填充模式：在 PageLayout 全高布局内自动计算 scroll.y ──────────────
+  // 表头 + 分页钉死，仅表体内部滚动（App 式布局）。
+  // 仅当：调用方未显式传 scroll.y，且表格是 .page-layout-body 的直接子元素时启用；
+  // 其余场景（Modal 内、包裹层、Tabs）保持原有自然高度行为，避免破坏现有页面。
+  const [fillScrollY, setFillScrollY] = useState<number | undefined>(undefined);
+  const lastFillYRef = useRef<number>(0);
+  const computeFillYRef = useRef<(() => void) | null>(null);
+
+  React.useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const container = shell.parentElement;
+    if (!container || !container.classList.contains('page-layout-body')) return;
+
+    const compute = () => {
+      const headerEl = shell.querySelector('.ant-table-header') as HTMLElement | null;
+      const paginationEl = shell.querySelector('.ant-pagination') as HTMLElement | null;
+      const exportEl = shell.querySelector('.resizable-table-export-row') as HTMLElement | null;
+      const chrome = (headerEl?.offsetHeight || 0)
+        + (paginationEl?.offsetHeight || 0)
+        + (paginationEl ? 16 : 0)
+        + (exportEl?.offsetHeight || 0);
+      const next = Math.max(80, Math.floor(container.clientHeight - chrome - 4));
+      if (Math.abs(next - lastFillYRef.current) > 1) {
+        lastFillYRef.current = next;
+        Promise.resolve().then(() => setFillScrollY(next));
+      }
+    };
+    computeFillYRef.current = compute;
+    compute();
+
+    const ro = new ResizeObserver(() => compute());
+    ro.observe(container);
+    ro.observe(shell);
+    window.addEventListener('resize', compute);
+    // scroll.y 注入后 antd 才会渲染独立表头，下一帧再精算一次收敛
+    const raf = requestAnimationFrame(() => compute());
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', compute);
+      cancelAnimationFrame(raf);
+      computeFillYRef.current = null;
+    };
+  }, []);
+
+  // scroll.y 注入引起表头/分页出现后，再精算一次
+  React.useEffect(() => {
+    if (fillScrollY === undefined) return;
+    const raf = requestAnimationFrame(() => computeFillYRef.current?.());
+    return () => cancelAnimationFrame(raf);
+  }, [fillScrollY]);
+
   const pageSizeStorageKey = React.useMemo(() => (
     resolvedStorageKey ? buildPageSizeStorageKey(resolvedStorageKey) : undefined
   ), [resolvedStorageKey]);
@@ -274,9 +327,15 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
   }, [finalColumns]);
 
   const mergedScroll = React.useMemo(() => {
-    if (!scroll) return hasFixedColumn ? { x: 'max-content' } : undefined;
-    return typeof scroll === 'object' ? scroll : undefined;
-  }, [scroll, hasFixedColumn]);
+    const callerY = typeof scroll === 'object' && scroll !== null ? (scroll as any).y : undefined;
+    const base: any = typeof scroll === 'object' && scroll !== null ? { ...scroll } : {};
+    if (!scroll && hasFixedColumn) base.x = 'max-content';
+    // U-1：调用方未指定 scroll.y 且处于全高布局时，注入测得的填充高度
+    if (callerY === undefined && fillScrollY !== undefined) {
+      base.y = fillScrollY;
+    }
+    return Object.keys(base).length > 0 ? base : undefined;
+  }, [scroll, hasFixedColumn, fillScrollY]);
 
   const mergedComponents = React.useMemo(() => {
     const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};
@@ -300,11 +359,12 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
       isScrollable ? 'resizable-table-shell--scrollable' : '',
       className,
       stickyFooter ? 'resizable-table-shell-sticky-footer' : '',
+      fillScrollY !== undefined ? 'resizable-table-fill' : '',
     ]
       .filter(Boolean)
       .join(' ');
     return next;
-  }, [className, stickyFooter, isScrollable]);
+  }, [className, stickyFooter, isScrollable, fillScrollY]);
 
   return {
     mergedLocale,
