@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Button, Form, Input, Select, Space } from 'antd';
 import type { FormInstance } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import ExtFieldsSection, { flattenExtJson } from '@/components/common/SchemaForm/ExtFieldsSection';
 import SchemaDescriptions from '@/components/common/SchemaDescriptions';
 import SchemaPrint from '@/components/common/SchemaPrint';
@@ -132,7 +133,12 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({
               <Input placeholder="请输入行业或品类" />
             </Form.Item>
             <Form.Item name="source" label="客户来源">
-              <Input placeholder="请输入客户来源" />
+              {/* D-121：手填改字典选择（可自由输入+自动收录），收敛来源值 */}
+              <DictAutoComplete
+                dictType="customer_source"
+                fallbackOptions={['转介绍', '展会', '网络', '门店', '电话营销', '其他']}
+                placeholder="选择或输入客户来源"
+              />
             </Form.Item>
           </div>
           <Form.Item name="address" label="地址">

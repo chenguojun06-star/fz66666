@@ -1,9 +1,27 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-120 预算天数不联动根治+采购操作列撤销悬停+弹窗统一）
+> 最后更新：2026-08-25（新增 D-121 手填改选择三连+员工菜单拍平）
 
 ---
+
+## D-121：交互简化三连——手填改选择/三层拍平/字典收敛（2026-08-25）
+
+**原则**：看着简单好用、功能一个不少——全部复用现成组件，零新接口。
+
+### 改动
+
+1. **仓库入库抽屉**（WarehouseLocationMap/InboundDrawer）：物料编码/名称全手填 → 复用 `useMaterialDbSearch`+`fillFormFromMaterialDb`（采购模块现成钩子，防抖搜 /material/database/list，选中自动回填 名称/类型/颜色/规格等），**已停用物料过滤不进候选**；颜色 Input → DictAutoComplete(dictType=color)；供应商手填 → SupplierSelect（带维护齿轮）。提交 payload 不变
+2. **人员列表**：调岗/离职/归档从 编辑→更多→变更在职状态→子项 三层拍平到「更多」一级（复用原回调 openRemarkModal 链路，零新逻辑）
+3. **客户来源**：客户管理弹窗 + CRM 客户表单两处 Input → DictAutoComplete(dictType=customer_source, fallback 转介绍/展会/网络/门店/电话营销/其他)，自由输入+自动收录，兼容旧脏数据
+
+### 新痛点扫描（列入待办，未改）
+- 成品仓无单入库手拼商品编码（FreeInboundModal L291/303）
+- 物料档案颜色/规格裸输入（MaterialFormDrawer L133/135，主数据源头不收敛持续产生脏值）
+- 领料单无"按 BOM 应发自动填充数量"（PickingForm）
+
+### 验证
+tsc 0 errors（修掉 antd AutoComplete 无 loading 属性的类型错误）；eslint 0/0
 
 ## D-120：订单"预算天数"调整不联动根治 + 采购操作列撤销悬停 + 弹窗统一（2026-08-25）
 

@@ -312,29 +312,24 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
                 key: 'more',
                 label: '更多',
                 children: [
+                  // D-121：调岗/离职/归档从三层子菜单拍平到一级，高频操作少点两层
                   {
-                    key: 'emp-status-group',
-                    label: '变更在职状态',
-                    children: [
-                      {
-                        key: 'set-transferred',
-                        label: '调岗',
-                        disabled: isTransferred,
-                        onClick: () => onChangeEmploymentStatus?.(record, 'transferred'),
-                      },
-                      {
-                        key: 'set-resigned',
-                        label: '离职',
-                        disabled: isResigned,
-                        onClick: () => onChangeEmploymentStatus?.(record, 'resigned'),
-                      },
-                      {
-                        key: 'set-archived',
-                        label: '归档',
-                        disabled: isArchived,
-                        onClick: () => onChangeEmploymentStatus?.(record, 'archived'),
-                      },
-                    ],
+                    key: 'set-transferred',
+                    label: '调岗',
+                    disabled: isTransferred,
+                    onClick: () => onChangeEmploymentStatus?.(record, 'transferred'),
+                  },
+                  {
+                    key: 'set-resigned',
+                    label: '离职',
+                    disabled: isResigned,
+                    onClick: () => onChangeEmploymentStatus?.(record, 'resigned'),
+                  },
+                  {
+                    key: 'set-archived',
+                    label: '归档',
+                    disabled: isArchived,
+                    onClick: () => onChangeEmploymentStatus?.(record, 'archived'),
                   },
                 ],
               },

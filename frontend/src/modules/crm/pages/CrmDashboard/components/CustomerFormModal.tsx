@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Col, Form, Input, Row, Select } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { customerApi, type Customer } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
 import { CUSTOMER_LEVEL_OPTIONS, CUSTOMER_FORM_STATUS_OPTIONS } from '../helpers';
@@ -98,7 +99,12 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="source" label="客户来源">
-              <Input placeholder="如：转介绍、展会、网络" />
+              {/* D-121：手填改字典选择（可自由输入+自动收录），与客户管理弹窗同规则 */}
+              <DictAutoComplete
+                dictType="customer_source"
+                fallbackOptions={['转介绍', '展会', '网络', '门店', '电话营销', '其他']}
+                placeholder="选择或输入客户来源"
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
