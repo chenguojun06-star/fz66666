@@ -39,11 +39,17 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
 }) => {
   const { modal } = App.useApp();
   const [editing, setEditing] = useState(false);
+  // D-120：保存后的新交期本地覆盖——原实现直接改 record 属性（不触发重渲染）+派发无监听者的
+  // 自定义事件，导致调整预算天数后界面永远不变（数据其实已入库）
+  const [shipDateOverride, setShipDateOverride] = useState<string | null>(null);
+  const effectiveShipDate = (shipDateOverride
+    || record.expectedShipDate
+    || record.plannedEndDate) as string | null;
 
   const hint = computeStageBudgetHint({
     nodeName,
     orderCreateTime: record.createTime as string | null,
-    expectedShipDate: (record.expectedShipDate || record.plannedEndDate) as string | null,
+    expectedShipDate: effectiveShipDate,
     stageStartTime: stageStartTime || undefined,
     stageEndTime: stageEndTime || undefined,
     isCompletedOrClosed,
@@ -71,14 +77,14 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     const computed = computeStageTimeline(
       timelineItems,
       record.createTime as string | null,
-      (record.expectedShipDate || record.plannedEndDate) as string | null,
+      effectiveShipDate,
     );
     const idx = timelineItems.findIndex(t => t.name === nodeName);
     if (idx < 0) return null;
     const stage = computed[idx];
     if (!stage?.gapText) return null;
     return { text: stage.gapText, color: stage.gapColor, from: stage.gapFrom };
-  }, [record, nodeName]);
+  }, [record, nodeName, effectiveShipDate]);
 
   const isStageCompleted = !!stageEndTime;
 
@@ -125,7 +131,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
           if (newBudgetHours === budgetHours) return;
           try {
             await onBudgetHoursChange(newBudgetHours);
-            window.dispatchEvent(new CustomEvent('progress-data-refresh'));
+            window.dispatchEvent(new Event('data:changed'));
             onUpdated?.();
           } catch { /* ignore */ }
         },
@@ -137,8 +143,8 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
 
     const currentBudgetDays = hint?.budgetDays ?? 1;
     const orderCreate = record.createTime ? dayjs(record.createTime as string) : dayjs();
-    const currentShipDate = (record.expectedShipDate || record.plannedEndDate)
-      ? dayjs(String(record.expectedShipDate || record.plannedEndDate))
+    const currentShipDate = effectiveShipDate
+      ? dayjs(String(effectiveShipDate))
       : orderCreate.add(30, 'day');
     const totalDays = currentShipDate.diff(orderCreate, 'day');
     let newBudgetDays = currentBudgetDays;
@@ -184,8 +190,9 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
             expectedShipDate: newShipDate,
           });
           if (res.code === 200) {
-            (record as any).expectedShipDate = newShipDate;
-            window.dispatchEvent(new CustomEvent('progress-data-refresh'));
+            // D-120：本地覆盖即时重算预算文字（不再直接改 props）；data:changed 通知列表页刷新
+            setShipDateOverride(newShipDate);
+            window.dispatchEvent(new Event('data:changed'));
             onUpdated?.();
           }
         } catch { /* ignore */ }
@@ -193,7 +200,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       onCancel: () => { setEditing(false); },
       afterClose: () => { setEditing(false); },
     });
-  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, budgetHours, onBudgetHoursChange, isStageCompleted]);
+  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, budgetHours, onBudgetHoursChange, isStageCompleted, effectiveShipDate]);
 
   if (!hint && !gapInfo && budgetHours == null) return null;
 

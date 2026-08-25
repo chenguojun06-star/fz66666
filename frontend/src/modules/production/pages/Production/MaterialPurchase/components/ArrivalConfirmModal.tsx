@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { App, Form, InputNumber, Descriptions } from 'antd';
 import type { FormInstance } from 'antd';
-import SmallModal from '@/components/common/SmallModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
@@ -25,14 +25,15 @@ const ArrivalConfirmModal: React.FC<ArrivalConfirmModalProps> = ({ open, target,
   const [loading, setLoading] = useState(false);
 
   return (
-    <SmallModal
-      open={open}
+    <ResizableModal
       title={`${target?.materialName || target?.materialCode || ''} — 到货入库`}
+      open={open}
       okText="确认入库"
       confirmLoading={loading}
       onOk={() => form.submit()}
       onCancel={() => { onCancel(); form.resetFields(); }}
-      destroyOnHidden
+      width="40vw"
+      minWidth={420}
     >
       <Form form={form} layout="vertical" onFinish={async (values) => {
         if (!target) return;
@@ -68,7 +69,7 @@ const ArrivalConfirmModal: React.FC<ArrivalConfirmModalProps> = ({ open, target,
           />
         </Form.Item>
       </Form>
-    </SmallModal>
+    </ResizableModal>
   );
 };
 

@@ -285,7 +285,6 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
         return (
           <RowActions
             maxInline={2}
-            revealOnHover
             actions={[
               ...(editing ? [] : [
                 { key: 'edit', label: '编辑', title: locked ? '样衣物料清单已完成，请先在样衣详情-物料清单退回' : '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled || locked },

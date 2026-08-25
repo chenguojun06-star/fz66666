@@ -5,6 +5,11 @@
 
 ## 已完成
 
+### 2026-08-25 D-120 预算天数联动根治+采购操作列回调 ✅（tsc/eslint 全过，待部署）
+
+- [x] BudgetDaysEditor 本地覆盖即时重算+系统广播；采购两表撤销悬停显现；到货入库弹窗统一 ResizableModal
+- [ ] 部署后验证：调预算天数立即变化
+
 ### 2026-08-25 D-119 采购一致性+手机端已完成筛选 ✅（mvn/tsc/eslint 全过，待部署）
 
 - [x] getMyTasks(includeCompleted) 重载+Controller 参数+小程序传参（三副本同步）

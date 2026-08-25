@@ -7,6 +7,13 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-25 ★★★ D-120 预算天数不联动根治 + 采购操作列撤销悬停 + 弹窗统一 ✅全绿待部署
+
+- [x] 预算天数：根因=改props+孤儿事件(零监听)+调用点全缺onUpdated；修=shipDateOverride本地即时重算+data:changed广播
+- [x] 采购两表操作列撤销悬停显现（用户反馈不合适）；样衣工序/物料出入库保留
+- [x] ArrivalConfirmModal 统一到 ResizableModal 40vw；RejectReasonModal 确认为系统标准组件保留
+- [ ] 待线上验证：订单管理调预算天数后文字立即变化；采购操作列按钮恢复常显
+
 ### 2026-08-25 ★ D-119 采购一致性+手机端已完成筛选根治 ✅全绿待部署
 
 - [x] 根因：getMyTasks 后端显式过滤已完成任务 → 手机端"已完成"Tab 永远 0 条；新增 includeCompleted 参数（默认行为不变）

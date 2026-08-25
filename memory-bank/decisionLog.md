@@ -1,9 +1,26 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-119 采购一致性跟进+手机端已完成筛选根治）
+> 最后更新：2026-08-25（新增 D-120 预算天数不联动根治+采购操作列撤销悬停+弹窗统一）
 
 ---
+
+## D-120：订单"预算天数"调整不联动根治 + 采购操作列撤销悬停 + 弹窗统一（2026-08-25）
+
+### 1. 预算天数不联动（用户报"像写死了"）——根因实锤
+`BudgetDaysEditor` 保存成功后 ①直接改 props（`record.expectedShipDate = newShipDate`，React 不触发重渲染）②派发 `progress-data-refresh` 自定义事件——**全系统零监听者**（孤儿事件）③四个调用点全都没传 onUpdated。数据其实已入库（quick-edit PUT 成功），但界面永远不变，手动刷新才可见。
+**修复**：组件内加 `shipDateOverride` 本地状态——保存成功即覆盖交期入参，hint/gapInfo/编辑基准全部即时重算（组件自渲染）；孤儿事件换系统广播 `data:changed`；删除 props 直改。预算工时分支同样换事件。
+
+### 2. 样衣采购操作列撤销悬停显现（用户反馈"这个操作列没必要"）
+MaterialPurchaseDetail/columns 与 materialStatusActionColumns（采购列表）两处撤掉 revealOnHover，恢复常显。保留悬停显现的：样衣工序、物料出入库（用户未反对，随时可撤）。
+
+### 3. 采购弹窗统一
+- ArrivalConfirmModal：SmallModal（体系外）→ ResizableModal 40vw（与 领取并到货/登记到货/回料确认 兄弟弹窗同档）
+- CancelReceiveModal 的 RejectReasonModal **保留**：全系统 20 处在用的"必填原因"标准组件，非体系外异类
+- 遗留：BatchPurchaseModal 960px/OrderPickerModal 900px/48vw 等档位归一列入后续
+
+### 验证
+tsc 0 errors；eslint 0 errors 0 warnings（含修复自己引入的 exhaustive-deps）
 
 ## D-119：采购链路一致性跟进 + 手机端"已完成"筛选根治（2026-08-25）
 
