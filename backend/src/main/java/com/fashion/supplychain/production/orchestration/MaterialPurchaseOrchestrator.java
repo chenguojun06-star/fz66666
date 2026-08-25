@@ -754,6 +754,11 @@ public class MaterialPurchaseOrchestrator {
         return queryHelper.getMyTasks();
     }
 
+    /** D-119：includeCompleted=true 含我名下已完成/已取消任务（手机端筛选用） */
+    public List<MaterialPurchase> getMyTasks(boolean includeCompleted) {
+        return queryHelper.getMyTasks(includeCompleted);
+    }
+
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
         return queryHelper.getStatusStats(params);
     }

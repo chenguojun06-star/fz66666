@@ -1,6 +1,6 @@
 import React from 'react';
-import { Alert, Button, Card, Space, Tag } from 'antd';
-import { UploadOutlined, RollbackOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Dropdown, Space, Tag } from 'antd';
+import { UploadOutlined, RollbackOutlined, ExclamationCircleOutlined, DownOutlined } from '@ant-design/icons';
 import PurchaseDocRecognizeModal from '../PurchaseDocRecognizeModal';
 import PurchaseReturnModal from '../PurchaseReturnModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
@@ -164,24 +164,35 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 >
                   上传采购单
                 </Button>
-                <Button
-                  type="primary"
-                  disabled={detailFrozen || !hasPendingForReceiveAll || !data.canProcure || hasReturnConfirmed}
-                  onClick={onReceiveAll}
+                {/* D-119：批量动作集成悬停下拉（与样衣明细页 D-118 同模式），消除与底部按钮的重复平铺 */}
+                <Dropdown
+                  trigger={['hover']}
+                  menu={{
+                    items: [
+                      {
+                        key: 'receive-all',
+                        label: '采购全部',
+                        disabled: detailFrozen || !hasPendingForReceiveAll || !data.canProcure || hasReturnConfirmed,
+                        onClick: onReceiveAll,
+                      },
+                      {
+                        key: 'batch-return',
+                        label: '批量回料确认',
+                        disabled: detailFrozen || !hasReceiveStatusForBatch,
+                        onClick: onBatchReturn,
+                      },
+                    ],
+                  }}
                 >
-                  采购全部
-                </Button>
+                  <Button disabled={detailFrozen || (!hasPendingForReceiveAll && !hasReceiveStatusForBatch)}>
+                    批量操作 <DownOutlined />
+                  </Button>
+                </Dropdown>
                 {data.bomIncomplete && (
                   <Tag icon={<ExclamationCircleOutlined />} color="warning" style={{ marginLeft: 4 }}>
                     请先编辑物料信息
                   </Tag>
                 )}
-                <Button
-                  disabled={detailFrozen || !hasReceiveStatusForBatch}
-                  onClick={onBatchReturn}
-                >
-                  批量回料确认
-                </Button>
                 <Button
                   icon={<RollbackOutlined />}
                   disabled={detailFrozen || !hasReceiveStatusForReturn}

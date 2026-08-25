@@ -78,7 +78,9 @@ public class MaterialPurchaseController {
         }
 
         if ("true".equals(String.valueOf(params.get("myTasks")))) {
-            return Result.success(materialPurchaseOrchestrator.getMyTasks());
+            // D-119：includeCompleted=true 时含我名下已完成/已取消任务（手机端"已完成"筛选用）
+            boolean includeCompleted = "true".equals(String.valueOf(params.get("includeCompleted")));
+            return Result.success(materialPurchaseOrchestrator.getMyTasks(includeCompleted));
         }
 
         return Result.success(materialPurchaseOrchestrator.listWithEnrichment(params));

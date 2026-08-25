@@ -1,9 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-25（新增 D-118 批量动作集成下拉+菜单命名直白化）
+> 最后更新：2026-08-25（新增 D-119 采购一致性跟进+手机端已完成筛选根治）
 
 ---
+
+## D-119：采购链路一致性跟进 + 手机端"已完成"筛选根治（2026-08-25）
+
+### 1. 手机端采购"已完成"筛选永远为空（根因在后端）
+`MaterialPurchaseQueryHelper.getMyTasks()`（/purchase/list?myTasks=true，手机端采购列表唯一数据源）只返回 待领取+我领取(received)，且**显式过滤掉已完成**（arrived>=purchase 剔除）与已回料确认——手机端"已完成"Tab 虽存在但永远是 0 条。
+**修复**：新增 `getMyTasks(boolean includeCompleted)` 重载——true 时返回 我名下任意状态+无主待领取，不过滤完成/回料/无效订单（已完成采购多属已完成订单，再过滤会再度隐藏）；Controller 支持 `includeCompleted` 参数；小程序 myProcurementTasks 传 includeCompleted=true；默认 false 待办语义完全不变。三副本已同步。
+
+### 2. 采购一致性审计结论与跟进
+- 全部采购弹窗盘点：以 ResizableModal 为主（40/48/60vw/960px 并存），SmallModal 与 RejectReasonModal 两处体系外、三个 Drawer（品质异常/智能收货/采购详情）——统一档位列入后续
+- 大货 PurchaseModal Drawer 内部工具栏的 采购全部/批量回料确认 与 footer 重复 → 收进「批量操作」悬停下拉（保留原 disabled 条件含 detailFrozen/canProcure，零行为变化）；footer 是抽屉主操作区保留不动
+- 采购列表页操作列补 revealOnHover（与明细页对齐）
+- PurchaseDetailCollapse 内联按钮未走 RowActions（重构面大，列入后续）
+- 手机端采购功能三副本 diff 一致；其余不一致文件（home/more-apps/scan.json）与采购无关
+
+### 验证
+mvn compile EXIT=0；tsc 0 errors；eslint 0 errors；node --check 通过
 
 ## D-118：采购工具栏批量动作集成 + 菜单命名直白化（2026-08-25）
 

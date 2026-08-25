@@ -218,6 +218,7 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         const canConfirmArrival = ['received', 'partial', 'partial_arrival'].includes(status) && !frozen;
         return (
           <RowActions
+            revealOnHover
             actions={[
               {
                 key: 'view',

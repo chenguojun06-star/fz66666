@@ -55,11 +55,34 @@ public class MaterialPurchaseQueryHelper {
     //   该方法在 MaterialPurchaseController.list 中已无引用，确认全代码库无其他调用方后删除。
 
     public List<MaterialPurchase> getMyTasks() {
+        return getMyTasks(false);
+    }
+
+    /**
+     * D-119：includeCompleted=true 时返回「待领取 + 我名下全部状态（含已完成/已取消/部分到货）」，
+     * 供手机端采购列表「已完成」等终态筛选使用——原逻辑把已完成任务全部过滤掉，
+     * 导致手机端"已完成"Tab 永远是 0 条。默认 false 保持待办语义不变。
+     */
+    public List<MaterialPurchase> getMyTasks(boolean includeCompleted) {
         Long tenantId = UserContext.tenantId();
         UserContext ctx = UserContext.get();
         String userId = ctx == null ? null : ctx.getUserId();
         if (!StringUtils.hasText(userId) || tenantId == null) {
             return new ArrayList<>();
+        }
+
+        if (includeCompleted) {
+            // 我名下任意状态的任务 + 无主待领取任务；不过滤已完成/已回料确认，
+            // 也不做无效订单过滤（已完成采购多属已完成订单，再过滤会再度隐藏）
+            return materialPurchaseService.lambdaQuery()
+                    .eq(MaterialPurchase::getTenantId, tenantId)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .and(w -> w
+                            .isNull(MaterialPurchase::getReceiverId).eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                            .or()
+                            .eq(MaterialPurchase::getReceiverId, userId))
+                    .orderByDesc(MaterialPurchase::getCreateTime)
+                    .list();
         }
 
         // 同时返回「待领取的任务」+「我已领取的任务」

@@ -199,7 +199,8 @@ const production = {
     return ok('/api/production/purchase/stock-check', 'GET', { materialCodes });
   },
   myProcurementTasks() {
-    return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });
+    // D-119：includeCompleted 含我名下已完成/已取消任务，供列表"已完成"筛选使用
+    return ok('/api/production/purchase/list', 'GET', { myTasks: 'true', includeCompleted: 'true' });
   },
   confirmReturnPurchase(payload) {
     return ok('/api/production/purchase/return-confirm', 'POST', payload || {});
