@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, createElement } from 'react';
 import { App, Form } from 'antd';
 import api from '@/utils/api';
+import FactorySettleConfirmContent from './FactorySettleConfirmContent';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -17,7 +18,6 @@ import {
   formatExportData,
   exportHeaders,
   buildExportFileName,
-  buildApproveConfirmContent,
   buildBatchApproveConfirmContent,
 } from './utils';
 
@@ -35,6 +35,12 @@ export interface FactorySummaryRow {
   totalProductionCost: number;
   totalAmount: number;
   totalProfit: number;
+  /** D-134：已审批订单的扣款合计（QUALITY_DEFECT/PRODUCT_SCRAP/MATERIAL_PICKUP 等） */
+  totalDeduction?: number;
+  /** D-134：已审批订单的补款合计（SUPPLEMENT） */
+  totalSupplement?: number;
+  /** D-134：净额 = 加工费 − 扣款 + 补款（终审推送默认金额） */
+  netAmount?: number;
   orderNos: string[];
   approvedOrderNos?: string[];
   [key: string]: unknown;
@@ -197,10 +203,24 @@ export function useFactorySummaryData(
   };
 
   const handleApprove = async (record: FactorySummaryRow) => {
+    const deduction = Number(record.totalDeduction || 0);
+    const supplement = Number(record.totalSupplement || 0);
+    const gross = Number(record.totalAmount || 0);
+    const defaultSettle = record.netAmount != null ? Number(record.netAmount) : gross - deduction + supplement;
+    // D-134：本次结算金额可编辑——默认=加工费−扣款+补款；本月不想扣款可改回加工费金额
+    let settleAmount = defaultSettle;
     modal.confirm({
       width: '30vw',
       title: '推送到收付款中心',
-      content: buildApproveConfirmContent(record),
+      content: createElement(FactorySettleConfirmContent, {
+        factoryName: record.factoryName,
+        orderCount: record.orderCount,
+        gross,
+        deduction,
+        supplement,
+        defaultAmount: defaultSettle,
+        onAmountChange: (v: number) => { settleAmount = v; },
+      }),
       okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
@@ -209,11 +229,11 @@ export function useFactorySummaryData(
             bizType: 'ORDER_SETTLEMENT',
             bizId: record.factoryId || record.factoryName,
             payeeName: record.factoryName,
-            amount: record.totalAmount,
+            amount: settleAmount,
             description: buildPayableDescription(record),
             orderNos: record.orderNos,
           });
-          message.success(`工厂「${record.factoryName}」已推送到收付款中心`);
+          message.success(`工厂「${record.factoryName}」已按 ¥${settleAmount.toFixed(2)} 推送到收付款中心`);
           setPushedFactoryIds(prev => new Set([...prev, record.factoryId || record.factoryName]));
           fetchData();
         } catch (e: unknown) {
@@ -236,10 +256,22 @@ export function useFactorySummaryData(
 
     const { content } = buildBatchApproveConfirmContent(selected);
 
+    // D-134：批量推送按净额（加工费−扣款+补款）汇总
+    const batchNetTotal = selected.reduce(
+      (s, r) => s + (r.netAmount != null ? Number(r.netAmount) : Number(r.totalAmount || 0)),
+      0,
+    );
+    const hasAdjustment = selected.some(
+      r => Number(r.totalDeduction || 0) > 0 || Number(r.totalSupplement || 0) > 0,
+    );
+    const batchContent = hasAdjustment
+      ? `${content}；扣补款调整后合计 ¥${batchNetTotal.toFixed(2)}（已按各厂加工费−扣款+补款计算，如需单厂调整金额请取消后逐厂推送）`
+      : content;
+
     modal.confirm({
       width: '30vw',
       title: '批量推送确认',
-      content,
+      content: batchContent,
       okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
@@ -247,11 +279,12 @@ export function useFactorySummaryData(
         try {
           const newPushedIds: string[] = [];
           for (const record of selected) {
+            const amount = record.netAmount != null ? Number(record.netAmount) : Number(record.totalAmount || 0);
             await api.post('/finance/wage-payment/create-payable', {
               bizType: 'ORDER_SETTLEMENT',
               bizId: record.factoryId || record.factoryName,
               payeeName: record.factoryName,
-              amount: record.totalAmount,
+              amount,
               description: buildPayableDescription(record),
               orderNos: record.orderNos,
             });

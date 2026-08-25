@@ -186,8 +186,13 @@ public class MaterialPickupOrchestrator {
 
         if ("APPROVED".equals(newStatus)) {
             if ("EXTERNAL".equalsIgnoreCase(record.getFactoryType())) {
-                materialPickupReceivableOrchestrator.syncAfterApproval(record, strOf(body.get("remark")));
-                pushPickupBill(record);
+                // D-133：面料费用统一走「扣款抵扣」（领料出库时自动记 MATERIAL_PICKUP 扣款项，
+                // 从当月加工费中抵扣）。不再向工厂推应收账单/CRM应收——旧机制与扣款并行会双重收取面料费。
+                if (StringUtils.hasText(record.getFinanceRemark())) {
+                    record.setFinanceRemark(record.getFinanceRemark());
+                } else {
+                    record.setFinanceRemark("审核通过：面料费用已按领料出库自动记入工厂扣款（方案A抵扣），不再单独收应收");
+                }
             } else {
                 // 内部工厂：汇总物料成本到订单
                 if (StringUtils.hasText(record.getOrderNo())) {
@@ -243,16 +248,23 @@ public class MaterialPickupOrchestrator {
             }
         }
         String financeRemark = strOf(body.get("remark"));
-        materialPickupReceivableOrchestrator.syncForFinance(record, financeRemark);
+        // D-133：外发工厂面料费走「扣款抵扣」（方案A），不再同步应收账单/CRM应收。
+        // 台账金额修正仅更新台账本身；如需调整抵扣金额，请在外发结算页「扣款明细」中修改对应扣款项。
+        if ("EXTERNAL".equalsIgnoreCase(record.getFactoryType())) {
+            record.setFinanceRemark("面料费用按扣款抵扣（方案A），如需调整抵扣额请到外发结算页扣款明细");
+        } else {
+            materialPickupReceivableOrchestrator.syncForFinance(record, financeRemark);
+        }
         record.setUpdateTime(LocalDateTime.now());
 
         pickupMapper.updateById(record);
         // P0-8 修复：财务核算修改金额后，同步 BillAggregation 聚合层 amount
         // - pushPickupBill 是幂等的，已存在账单会自动更新 amount
         // - 否则聚合视图金额与明细不一致，违反财务数据链路闭环
-        if (record.getAmount() != null && (oldAmount == null
-                || record.getAmount().compareTo(oldAmount) != 0)
-                && "EXTERNAL".equalsIgnoreCase(record.getFactoryType())) {
+        // D-133：外发工厂不再推应收账单（方案A扣款抵扣），仅历史遗留账单走此同步
+        if (!"EXTERNAL".equalsIgnoreCase(record.getFactoryType())
+                && record.getAmount() != null && (oldAmount == null
+                || record.getAmount().compareTo(oldAmount) != 0)) {
             try {
                 pushPickupBill(record);
             } catch (Exception e) {

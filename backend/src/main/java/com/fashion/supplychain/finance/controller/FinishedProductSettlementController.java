@@ -53,6 +53,7 @@ import java.util.Collections;
 @RestController
 @RequestMapping("/api/finance/finished-settlement")
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 @PreAuthorize("isAuthenticated()")
 public class FinishedProductSettlementController {
 
@@ -64,6 +65,9 @@ public class FinishedProductSettlementController {
     /** 绕过租户拦截器查询订单，用于超管跨租户查看成品结算。 */
     private final ProductionOrderMapper productionOrderMapper;
     private final ProductionOrderService productionOrderService;
+    /** D-134：工厂汇总聚合扣款/补款，终审推送金额 = 加工费 − 扣款 + 补款 */
+    private final com.fashion.supplychain.finance.mapper.DeductionItemMapper deductionItemMapper;
+    private final com.fashion.supplychain.finance.service.ShipmentReconciliationService shipmentReconciliationService;
 
     @Operation(summary = "分页查询成品结算列表")
     @PreAuthorize("isAuthenticated()")
@@ -416,6 +420,9 @@ public class FinishedProductSettlementController {
             }
         }
 
+        // D-134：聚合各工厂已审批订单的扣款/补款，终审推送金额 = 加工费 − 扣款 + 补款
+        fillDeductionTotals(grouped);
+
         // 批量查询工厂类型：factoryType（INTERNAL=本厂内部/EXTERNAL=外部工厂）
         Set<String> factoryIds = new HashSet<>();
         Set<String> orderIds = new HashSet<>();
@@ -572,6 +579,83 @@ public class FinishedProductSettlementController {
                     : factory != null ? factory.getOrgPath() : null);
             record.setApprovalStatus(approvedIds.contains(record.getOrderId()) ? "APPROVED" : "PENDING");
             applyLockedOrderPrice(record, order);
+        }
+    }
+
+    /**
+     * D-134：按工厂聚合已审批订单的扣款/补款合计。
+     * 扣款项挂在订单的出货对账单上（reconciliation_id），按 对账单→订单号→工厂 归组；
+     * SUPPLEMENT 类型为补款（加项），其余（QUALITY_DEFECT/PRODUCT_SCRAP/MATERIAL_PICKUP 等）为扣款（减项）。
+     * 聚合失败不阻断汇总主流程，前端回退按 totalAmount 推送。
+     */
+    private void fillDeductionTotals(Map<String, Map<String, Object>> grouped) {
+        if (grouped == null || grouped.isEmpty()) {
+            return;
+        }
+        try {
+            Long tenantId = UserContext.tenantId();
+            // 1. 订单号 → 工厂组
+            Map<String, Map<String, Object>> orderByNo = new HashMap<>();
+            for (Map<String, Object> row : grouped.values()) {
+                List<String> nos = (List<String>) row.get("approvedOrderNos");
+                if (nos != null) {
+                    for (String no : nos) {
+                        if (StringUtils.isNotBlank(no)) {
+                            orderByNo.put(no, row);
+                        }
+                    }
+                }
+            }
+            if (orderByNo.isEmpty()) {
+                return;
+            }
+            // 2. 订单号 → 对账单
+            List<com.fashion.supplychain.finance.entity.ShipmentReconciliation> recons =
+                    shipmentReconciliationService.lambdaQuery()
+                            .eq(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getTenantId, tenantId)
+                            .in(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getOrderNo, orderByNo.keySet())
+                            .list();
+            if (recons == null || recons.isEmpty()) {
+                return;
+            }
+            Map<String, String> reconIdToOrderNo = new HashMap<>();
+            for (com.fashion.supplychain.finance.entity.ShipmentReconciliation r : recons) {
+                if (StringUtils.isNotBlank(r.getId()) && StringUtils.isNotBlank(r.getOrderNo())) {
+                    reconIdToOrderNo.put(r.getId(), r.getOrderNo());
+                }
+            }
+            if (reconIdToOrderNo.isEmpty()) {
+                return;
+            }
+            // 3. 拉取扣款项并归组累加
+            List<com.fashion.supplychain.finance.entity.DeductionItem> items =
+                    deductionItemMapper.selectList(new LambdaQueryWrapper<com.fashion.supplychain.finance.entity.DeductionItem>()
+                            .eq(com.fashion.supplychain.finance.entity.DeductionItem::getTenantId, tenantId)
+                            .in(com.fashion.supplychain.finance.entity.DeductionItem::getReconciliationId, reconIdToOrderNo.keySet()));
+            for (com.fashion.supplychain.finance.entity.DeductionItem di : items) {
+                if (di == null || di.getDeductionAmount() == null) {
+                    continue;
+                }
+                Map<String, Object> row = orderByNo.get(reconIdToOrderNo.get(di.getReconciliationId()));
+                if (row == null) {
+                    continue;
+                }
+                BigDecimal amt = di.getDeductionAmount();
+                if ("SUPPLEMENT".equals(di.getDeductionType())) {
+                    row.put("totalSupplement", ((BigDecimal) row.getOrDefault("totalSupplement", BigDecimal.ZERO)).add(amt));
+                } else {
+                    row.put("totalDeduction", ((BigDecimal) row.getOrDefault("totalDeduction", BigDecimal.ZERO)).add(amt));
+                }
+            }
+            // 4. 净额 = 加工费 − 扣款 + 补款
+            for (Map<String, Object> row : grouped.values()) {
+                BigDecimal total = (BigDecimal) row.getOrDefault("totalAmount", BigDecimal.ZERO);
+                BigDecimal ded = (BigDecimal) row.getOrDefault("totalDeduction", BigDecimal.ZERO);
+                BigDecimal sup = (BigDecimal) row.getOrDefault("totalSupplement", BigDecimal.ZERO);
+                row.put("netAmount", total.subtract(ded).add(sup).setScale(2, RoundingMode.HALF_UP));
+            }
+        } catch (Exception e) {
+            log.warn("[FactorySummary] 扣款/补款聚合失败，回退按加工费推送: {}", e.getMessage());
         }
     }
 

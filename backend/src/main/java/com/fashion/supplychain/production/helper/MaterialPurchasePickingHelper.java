@@ -1157,51 +1157,14 @@ public class MaterialPurchasePickingHelper {
             MaterialStock stock,
             MaterialPickingItem item,
             MaterialPicking picking) {
-        if (billAggregationOrchestrator == null || outboundLog == null) {
-            return;
-        }
-        try {
-            BigDecimal unitPrice = stock != null ? stock.getUnitPrice() : item.getUnitPrice();
-            int qty = item.getQuantity() != null ? item.getQuantity() : 0;
-            if (unitPrice == null || qty <= 0) {
-                return;
-            }
-            BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(qty));
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                return;
-            }
-
-            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
-            req.setBillType("PAYABLE");
-            req.setSourceType("MATERIAL_OUTBOUND");
-            req.setSourceId(outboundLog.getId());
-            req.setSourceNo(outboundLog.getOutboundNo());
-
-            String supplierId = stock != null ? stock.getSupplierId() : null;
-            String supplierName = stock != null ? stock.getSupplierName() : null;
-            if (StringUtils.hasText(supplierId) || StringUtils.hasText(supplierName)) {
-                // 供应商提供物料 → 物料类别
-                req.setBillCategory("MATERIAL");
-                req.setCounterpartyType("SUPPLIER");
-                req.setCounterpartyId(supplierId);
-                req.setCounterpartyName(supplierName);
-            } else {
-                // P1-1 修复：fallback 到外发工厂 → 应归入"外发厂"类别（与 EXTERNAL_FACTORY 枚举一致）
-                req.setBillCategory("EXTERNAL_FACTORY");
-                req.setCounterpartyType("FACTORY");
-                req.setCounterpartyId(outboundLog.getFactoryId());
-                req.setCounterpartyName(outboundLog.getFactoryName());
-            }
-
-            req.setOrderId(outboundLog.getOrderId());
-            req.setOrderNo(outboundLog.getOrderNo());
-            req.setStyleNo(outboundLog.getStyleNo());
-            req.setAmount(amount);
-            req.setRemark("物料出库自动入账|pickingNo=" + (picking != null ? picking.getPickingNo() : "")
-                    + "|material=" + outboundLog.getMaterialCode() + "|qty=" + qty);
-            billAggregationOrchestrator.pushBill(req);
-        } catch (Exception e) {
-            log.warn("物料出库推送账单失败（不阻塞主流程）: outboundNo={}", outboundLog.getOutboundNo(), e);
+        // D-133：停用「物料出库自动推应付账单」——供应商的物料款已由 采购→入库→物料对账 链路统一产生应付，
+        // 此处再推一笔会造成供应商重复付款；外发工厂的面料费按方案A走领料扣款（applyMaterialDeduction），
+        // 不存在"应付工厂面料款"。保留方法与调用点仅作历史追溯说明。
+        if (log.isInfoEnabled()) {
+            log.info("[MaterialOutbound] 物料出库不再自动推应付账单(D-133 单一事实源收敛): outboundNo={}, material={}, qty={}",
+                    outboundLog != null ? outboundLog.getOutboundNo() : null,
+                    item != null ? item.getMaterialCode() : null,
+                    item != null ? item.getQuantity() : null);
         }
     }
 

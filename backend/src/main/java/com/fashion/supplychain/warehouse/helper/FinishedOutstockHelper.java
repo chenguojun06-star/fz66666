@@ -465,6 +465,15 @@ public class FinishedOutstockHelper {
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .last("LIMIT 1")
                 .one();
+        // D-135：客户收款统一进应收账本——出库单自身无账单时，依次兜底：
+        // ① 同订单的出货对账单应收（销售对账口径）；② 都没有（未走审批的出库）则现建一张应收，
+        // 保证每一笔收款都落在账本上，不再出现"账外收款孤岛"。
+        if (bill == null) {
+            bill = findShipmentReceivableBill(outstock, tenantId);
+        }
+        if (bill == null) {
+            bill = ensureOutstockReceivableBill(outstock);
+        }
         if (bill == null) {
             return;
         }
@@ -483,6 +492,46 @@ public class FinishedOutstockHelper {
             bill.setStatus("SETTLING");
         }
         billAggregationService.updateById(bill);
+    }
+
+    /** D-135：按订单号找销售出货对账单生成的应收账单（未取消的最近一张）。 */
+    private BillAggregation findShipmentReceivableBill(ProductOutstock outstock, Long tenantId) {
+        if (!StringUtils.hasText(outstock.getOrderNo())) {
+            return null;
+        }
+        return billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, "SHIPMENT_RECONCILIATION")
+                .eq(BillAggregation::getBillType, "RECEIVABLE")
+                .eq(BillAggregation::getOrderNo, outstock.getOrderNo())
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .ne(BillAggregation::getStatus, "CANCELLED")
+                .orderByDesc(BillAggregation::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+    }
+
+    /** D-135：为无账单的出库补建应收账单（幂等，pushBill 按 sourceType+sourceId 去重）。 */
+    private BillAggregation ensureOutstockReceivableBill(ProductOutstock outstock) {
+        try {
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("PRODUCT");
+            req.setSourceType("PRODUCT_OUTSTOCK");
+            req.setSourceId(outstock.getId());
+            req.setSourceNo(outstock.getOutstockNo());
+            req.setCounterpartyType("CUSTOMER");
+            req.setCounterpartyName(outstock.getCustomerName());
+            req.setOrderNo(outstock.getOrderNo());
+            req.setStyleNo(outstock.getStyleNo());
+            req.setAmount(outstock.getTotalAmount());
+            req.setRemark("D-135 客户收款补建应收: " + outstock.getOutstockNo());
+            return billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            log.warn("[D-135] 收款补建应收账单失败(不影响收款本身): outstockNo={}, err={}",
+                    outstock.getOutstockNo(), e.getMessage());
+            return null;
+        }
     }
 
     // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.approveOutstock 已有事务保护）
