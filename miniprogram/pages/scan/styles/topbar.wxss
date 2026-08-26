@@ -123,7 +123,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 .qe-hover {

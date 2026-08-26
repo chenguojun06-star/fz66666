@@ -385,7 +385,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 .tip-icon { flex-shrink: 0; font-size: var(--font-size-md); display: flex; align-items: center; }

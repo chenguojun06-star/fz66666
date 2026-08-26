@@ -313,7 +313,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 .overview-card--primary { border-top: 6rpx solid var(--color-primary, #165DFF); }
@@ -470,7 +470,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 .qc-form-info-row,
@@ -640,7 +640,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
