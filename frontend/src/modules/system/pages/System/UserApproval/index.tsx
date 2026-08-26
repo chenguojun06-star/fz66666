@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Alert, Button, Card, Empty, Space, Tabs } from 'antd';
+import { Alert, Button, Empty, Tabs } from 'antd';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useViewport } from '@/utils/useViewport';
 import { useUser } from '@/utils/AuthContext';
@@ -72,7 +73,7 @@ const UserApproval: React.FC = () => {
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无待审批用户" />
           ) : (
             <>
-              <Alert title={`当前有 ${total} 个租户员工待审批`} type="info" showIcon style={{ marginBottom: 16 }} />
+              <Alert message={`当前有 ${total} 个租户员工待审批`} type="info" showIcon style={{ marginBottom: 16 }} />
               <ResizableTable
                 columns={columns}
                 dataSource={pendingUsers}
@@ -104,7 +105,7 @@ const UserApproval: React.FC = () => {
           ) : (
             <>
               <Alert
-                title={canApproveFactory
+                message={canApproveFactory
                   ? `当前有 ${factoryTotal} 个外发工厂员工待审批，您可以直接审批或跳转到对应工厂的人员名册管理`
                   : "以下为外发工厂的待审批员工，由各外发工厂管理员自行审批，租户仅可查看"}
                 type={canApproveFactory ? "info" : "warning"}
@@ -130,21 +131,16 @@ const UserApproval: React.FC = () => {
 
   return (
     <>
-      <Card>
-        <div className="page-header">
-          <div>
-            <h2 className="page-title">用户审批</h2>
-            <p className="page-description">审批新注册的用户账号</p>
-          </div>
-          <Space>
-            <Button onClick={handleRefresh} loading={loading}>
-              刷新
-            </Button>
-          </Space>
-        </div>
-
+      <PageLayout
+        title="用户审批"
+        filterRight={
+          <Button onClick={handleRefresh} loading={loading}>
+            刷新
+          </Button>
+        }
+      >
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
-      </Card>
+      </PageLayout>
 
       <ApproveUserModal
         open={approveModalVisible}
