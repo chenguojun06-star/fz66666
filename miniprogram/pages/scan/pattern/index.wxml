@@ -18,9 +18,13 @@
     <view wx:if="{{detail.statusLabel && detail.statusLabel !== '-'}}" class="status-badge status-{{detail.statusType}}">{{detail.statusLabel}}</view>
   </view>
 
-  <!-- 菲号信息 -->
+  <!-- 无工序配置提示（D-157）：样衣未配置开发工序时说明走默认流程 -->
+    <view wx:if="{{detail.hasProcessSystem === false}}" class="process-hint">
+      该款未配置开发工序，当前为「领取 → 完成 → 审核 → 入库」默认流程；如需按工序领取，请在PC端款式资料中配置开发工序
+    </view>
+    <!-- 菲号信息 -->
   <view wx:if="{{detail.hasMatrix || detail.colorText || detail.sizeText}}" class="section-group">
-    <text class="section-group-title">菲号信息</text>
+    <text class="section-group-title">数量信息</text>
     <view class="group-card">
       <!-- 颜色码数聚合矩阵 -->
       <view wx:if="{{detail.hasMatrix}}" class="matrix-section">

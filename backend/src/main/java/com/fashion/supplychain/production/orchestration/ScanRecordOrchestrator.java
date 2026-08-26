@@ -260,6 +260,11 @@ public class ScanRecordOrchestrator {
 
     private Map<String, Object> executeQualityScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName, UserContext ctx) {
+        // D-157：样衣上下文委派样板链路——样衣工序配置里 scanType=quality 的环节，
+        // 原来直接落大货菲号查询，样衣无菲号必报"未匹配到菲号"
+        if (isSampleScanContext(params)) {
+            return submitSamplePatternScan(params);
+        }
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         final CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
         String orderId = TextUtils.safeText(params.get("orderId"));
@@ -275,8 +280,24 @@ public class ScanRecordOrchestrator {
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
     }
 
+    /**
+     * 样衣扫码上下文判定：小程序工序扫码传 patternId + sourceBizType=SAMPLE，
+     * 三个字段任一存在即视为样衣链路（与 executeProductionScan 同口径，D-157 补齐 quality/warehouse 入口）
+     */
+    private boolean isSampleScanContext(Map<String, Object> params) {
+        String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
+        if ("SAMPLE".equalsIgnoreCase(sourceBizType)) return true;
+        String patternProductionId = String.valueOf(params.get("patternProductionId"));
+        String patternId = String.valueOf(params.get("patternId"));
+        return hasText(patternProductionId) || hasText(patternId);
+    }
+
     private Map<String, Object> executeWarehouseScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName) {
+        // D-157：样衣上下文委派样板链路（scanType=warehouse 的样衣工序环节）
+        if (isSampleScanContext(params)) {
+            return submitSamplePatternScan(params);
+        }
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
@@ -311,7 +332,7 @@ public class ScanRecordOrchestrator {
         // + t_scan_record 计件镜像 + 状态流转（RECEIVE→IN_PROGRESS+receiver+receiveTime）+ 库存同步。
         String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
         String patternProductionId = TextUtils.safeText(params.get("patternProductionId"));
-        if ("SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId)) {
+        if ("SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId) || hasText(String.valueOf(params.get("patternId")))) {
             return submitSamplePatternScan(params);
         }
 

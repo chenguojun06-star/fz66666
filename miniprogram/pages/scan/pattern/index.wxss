@@ -525,3 +525,13 @@
   color: var(--color-text-primary, #000);
   font-variant-numeric: tabular-nums;
 }
+
+.process-hint {
+  margin: 12rpx 20rpx 0;
+  padding: 12rpx 20rpx;
+  border-radius: 10px;
+  background: var(--color-warning-bg, #fff5e6);
+  color: var(--color-warning, #ff9500);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
