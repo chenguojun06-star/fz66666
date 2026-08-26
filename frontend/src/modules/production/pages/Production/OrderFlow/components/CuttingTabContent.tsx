@@ -67,7 +67,18 @@ export const CuttingBundlesContent: React.FC<CuttingBundlesContentProps> = ({
             },
           },
           { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 80 },
-          { title: '标签号', dataIndex: 'bundleLabel', key: 'bundleLabel', width: 120, render: (v: any) => v || '-' },
+          {
+            title: '菲号',
+            dataIndex: 'bundleLabel',
+            key: 'bundleLabel',
+            width: 120,
+            // D-143：存量数据 bundleLabel 为空时按 床号-扎号 兜底显示（与打印菲票编号一致）
+            render: (v: any, record: any) => {
+              if (v) return v;
+              if (record?.bedNo && record?.bundleNo) return `${record.bedNo}-${record.bundleNo}`;
+              return '-';
+            },
+          },
           { title: '颜色', dataIndex: 'color', key: 'color', width: 100, render: (v: any) => String(v || '').trim() || '-' },
           { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
           { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },

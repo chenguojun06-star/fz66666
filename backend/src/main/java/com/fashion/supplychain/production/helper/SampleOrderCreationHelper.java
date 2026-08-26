@@ -183,6 +183,8 @@ public class SampleOrderCreationHelper {
             bundle.setQuantity(1);
             bundle.setBundleNo(bundleIndex + i);
             bundle.setBedNo(bedNo);
+            // D-143：与 generateBundles 同口径，生成时写入菲号（床号-扎号）
+            bundle.setBundleLabel(bedNo + "-" + (bundleIndex + i));
             bundle.setQrCode(buildSampleQrCode(order, color, size, 1, bundleIndex + i));
             bundle.setStatus("created");
             bundle.setCreateTime(now);

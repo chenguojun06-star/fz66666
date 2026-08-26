@@ -288,6 +288,10 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             bundle.setBundleNo(idx);
             bundle.setBedNo(nextBedNo);
             bundle.setBedSubNo(nextBedSubNo);
+            // D-143：生成时即写入菲号（床号-扎号，工厂习惯叫法）。
+            // 原先 bundleLabel 只有拆菲时才赋值，正常生成的扎该字段永远为空，
+            // 订单详情裁剪明细"标签号"列长期显示 "-"
+            bundle.setBundleLabel(nextBedNo + "-" + idx);
             bundle.setQrCode(buildQrCode(
                     StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo() : order.getQrCode(),
                     order.getStyleNo(), color, size, quantity, idx,
