@@ -26,7 +26,10 @@
           <view class="process-row-main" bindtap="onSelectProcess" data-index="{{index}}">
             <view class="process-row-index">{{index + 1}}</view>
             <view class="process-row-info">
-              <text class="process-row-name">{{item.processName}}</text>
+              <view class="process-row-name-line">
+                <text class="process-row-name">{{item.processName}}</text>
+                <text class="process-row-price" wx:if="{{item.unitPrice != null}}">¥{{item.unitPrice}}/件</text>
+              </view>
               <text class="process-row-sub" wx:if="{{item.status === 'CLAIMED' && item.claimedBy}}">{{item.claimedByMe ? '你已领取，可完成报工' : item.claimedBy + ' 制作中'}}</text>
               <text class="process-row-sub" wx:elif="{{item.status === 'PENDING'}}">待领取</text>
               <text class="process-row-sub" wx:elif="{{item.status === 'COMPLETED'}}">已完成</text>

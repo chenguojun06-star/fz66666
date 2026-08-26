@@ -161,6 +161,18 @@
   color: var(--color-text-primary);
   line-height: 1.2;
 }
+.process-row-name-line {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+.process-row-price {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  font-weight: var(--font-weight-medium);
+}
 .process-row-sub {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
@@ -190,12 +202,12 @@
 }
 .process-claim-btn {
   flex-shrink: 0;
-  min-width: 128rpx;
-  padding: 12rpx 28rpx;
+  min-width: 88rpx;
+  padding: 8rpx 20rpx;
   border-radius: 999rpx;
   background: var(--color-primary);
   color: #fff;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   text-align: center;
   line-height: 1.4;

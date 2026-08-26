@@ -105,26 +105,7 @@ Page({
     const sizes = patternDetail.sizes || [];
 
     // MES 报工模型：hasProcessSystem 时构建工序列表
-    let processList = [];
-    if (data.hasProcessSystem) {
-      processList = rawOptions.map(function(opt, idx) {
-        const procStatus = String(opt.status || 'PENDING').toUpperCase();
-        return {
-          processName: opt.processName || opt.label || opt.value,
-          progressStage: opt.progressStage || '',
-          scanType: opt.scanType || 'production',
-          unitPrice: opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : null),
-          status: procStatus,
-          statusLabel: procStatus === 'COMPLETED' ? '已完成'
-            : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '制作中(我)' : '制作中') : '待领取',
-          claimedBy: opt.claimedBy || '',
-          claimedByMe: !!opt.claimedByMe,
-          isWarehouse: opt.value === 'WAREHOUSE_IN',
-          isReview: opt.value === 'REVIEW',
-          value: opt.value,
-        };
-      });
-    }
+    let processList = this._buildProcessList(rawOptions);
 
     this.setData({
       detail: {
@@ -262,6 +243,46 @@ Page({
   // ---- 事件处理 ----
 
   /**
+   * 工序列表构建：onLoad 与刷新共用
+   */
+  _buildProcessList(rawOptions) {
+    const list = Array.isArray(rawOptions) ? rawOptions : [];
+    return list.map(function(opt) {
+      const procStatus = String(opt.status || 'PENDING').toUpperCase();
+      return {
+        processName: opt.processName || opt.label || opt.value,
+        progressStage: opt.progressStage || '',
+        scanType: opt.scanType || 'production',
+        unitPrice: opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : null),
+        status: procStatus,
+        statusLabel: procStatus === 'COMPLETED' ? '已完成'
+          : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '制作中(我)' : '制作中') : '待领取',
+        claimedBy: opt.claimedBy || '',
+        claimedByMe: !!opt.claimedByMe,
+        isWarehouse: opt.value === 'WAREHOUSE_IN',
+        isReview: opt.value === 'REVIEW',
+        value: opt.value,
+      };
+    });
+  },
+
+  /**
+   * 领取/报工成功后原地刷新工序状态（不退出页面，用户立即看到状态流转与领取人）
+   */
+  async _refreshProcessList() {
+    try {
+      const res = await api.production.getPatternProcessConfig(this.data.detail.patternId);
+      const config = (res && (res.data || res)) || [];
+      const list = Array.isArray(config) ? config : [];
+      if (list.length > 0) {
+        this.setData({ processList: this._buildProcessList(list), selectedProcess: null });
+      }
+    } catch (e) {
+      console.warn('[样板页] 刷新工序列表失败', e);
+    }
+  },
+
+  /**
    * MES 报工模型：领取工序（行内按钮）
    * 防重复领取：前端按状态禁用（他人 CLAIMED 不可点），后端 validateProcessClaim 兜底
    */
@@ -295,9 +316,9 @@ Page({
         color: this.data.detail.color,
         remark: '',
       });
-      toast.success((res && res.message) || '已领取工序【' + proc.processName + '】，完成后请扫码报工');
+      toast.success((res && res.message) || '已领取工序【' + proc.processName + '】');
       this._emitRefresh();
-      wx.navigateBack();
+      await this._refreshProcessList();
     } catch (err) {
       console.error('[样板页] 领取工序失败:', err);
       toast.error(err.errMsg || err.message || '领取工序失败');
@@ -707,7 +728,7 @@ Page({
         await Promise.all(tasks);
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
         this._emitRefresh();
-        wx.navigateBack();
+        await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');
@@ -750,7 +771,7 @@ Page({
         await api.production.executeScan(scanData);
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
         this._emitRefresh();
-        wx.navigateBack();
+        await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');
