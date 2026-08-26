@@ -221,7 +221,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 28px;
+  height: var(--btn-height-xs);
   padding: 0 10px;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
@@ -232,7 +232,7 @@
   white-space: nowrap;
 }
 .outline-btn--sm {
-  height: 32px;
+  height: var(--btn-height-sm);
   padding: 0 12px;
 }
 .outline-btn:active {
@@ -257,7 +257,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
+  height: var(--btn-height-sm);
   padding: 0 16px;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
@@ -287,7 +287,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  height: var(--btn-height-sm);
   border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid var(--color-success, #2e9e6b);
@@ -907,7 +907,7 @@
 }
 .action-btn {
   width: 28px;
-  height: 28px;
+  height: var(--btn-height-xs);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -1171,7 +1171,7 @@
 }
 .progress-editor__step-btn {
   width: 52px;
-  height: 36px;
+  height: var(--btn-height-sm);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   display: flex;
@@ -1209,7 +1209,7 @@
 }
 .progress-editor__quick-btn {
   flex: 1;
-  height: 36px;
+  height: var(--btn-height-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   display: flex;
@@ -1227,7 +1227,7 @@
 }
 .progress-editor__btn {
   flex: 1;
-  height: 44px;
+  height: var(--btn-height-md);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -1271,7 +1271,7 @@
 .data-tab {
   display: inline-block;
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary, #666);
   position: relative;
   white-space: nowrap;
@@ -1306,12 +1306,12 @@
   margin-bottom: 8px;
 }
 .tab-card__title {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-text-primary, #333);
 }
 .tab-card__count {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary, #999);
 }
 .tab-card__header-right {
@@ -1326,7 +1326,7 @@
   color: var(--color-primary, #1677ff);
   background: transparent;
   border-radius: 8rpx;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   line-height: 1.5;
 }
 .tab-card__proc-btn-hover {
@@ -1346,12 +1346,12 @@
 .info-label {
   width: 80px;
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-tertiary, #999);
 }
 .info-value {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary, #333);
   word-break: break-all;
 }
@@ -1382,7 +1382,7 @@
   gap: 6px;
 }
 .bom-item__name {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary, #333);
   flex: 1;
   overflow: hidden;
@@ -1390,7 +1390,7 @@
   white-space: nowrap;
 }
 .bom-item__part {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary, #999);
   background: var(--color-bg-page, #f5f5f5);
   padding: 1px 6px;
@@ -1404,14 +1404,14 @@
   flex-wrap: wrap;
 }
 .bom-item__tag {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-primary, #1677ff);
   background: rgba(22, 119, 255, 0.08);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
 }
 .bom-item__sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary, #999);
 }
 .bom-item__detail {
@@ -1428,11 +1428,11 @@
   gap: 2px;
 }
 .bom-item__detail-label {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary, #999);
 }
 .bom-item__detail-val {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary, #666);
 }
 .bom-item__detail-val--accent {
@@ -1463,11 +1463,11 @@
   background: var(--color-text-tertiary, #999);
 }
 .bom-item__stock-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary, #999);
 }
 .bom-item__stock-qty {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary, #666);
   margin-left: 4px;
 }
@@ -1500,11 +1500,11 @@
 .size-row--head .size-cell {
   font-weight: 600;
   color: var(--color-text-tertiary, #999);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 .size-cell {
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary, #333);
   white-space: nowrap;
   text-align: center;
@@ -1547,7 +1547,7 @@
   min-width: 0;
 }
 .file-item__name {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary, #333);
   display: block;
   overflow: hidden;
@@ -1555,7 +1555,7 @@
   white-space: nowrap;
 }
 .file-item__meta {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary, #999);
   margin-top: 2px;
 }
@@ -1564,7 +1564,7 @@
 .process-item__stage,
 .process-item__machine,
 .process-item__diff {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary, #999);
   margin-right: 6px;
 }

@@ -183,7 +183,7 @@
 
 .footer-bar .btn-cancel {
   flex: 1;
-  height: 48px;
+  height: var(--btn-height-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,7 +197,7 @@
 
 .footer-bar .btn-danger {
   flex: 1;
-  height: 48px;
+  height: var(--btn-height-lg);
   display: flex;
   align-items: center;
   justify-content: center;

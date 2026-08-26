@@ -230,7 +230,7 @@
 }
 .ship-method__btn {
   flex: 1;
-  height: 36px;
+  height: var(--btn-height-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -304,7 +304,7 @@
   z-index: var(--z-sticky);
 }
 .submit-btn {
-  height: 44px;
+  height: var(--btn-height-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -406,7 +406,7 @@
   justify-content: flex-end;
 }
 .record-btn {
-  height: 32px;
+  height: var(--btn-height-sm);
   padding: 0 16px;
   display: inline-flex;
   align-items: center;

@@ -469,8 +469,8 @@ page { background-color: var(--color-bg-page); }
 .next-btn {
   width: 100%;
   max-width: 400px;
-  height: 48px;
-  line-height: 48px;
+  height: var(--btn-height-lg);
+  line-height: var(--btn-height-lg);
   background: var(--color-primary);
   color: var(--color-text-white);
   border-radius: var(--radius-xl);

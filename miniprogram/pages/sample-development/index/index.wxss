@@ -491,7 +491,7 @@
 }
 
 .fact-label {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -600,7 +600,7 @@
 }
 
 .stage-tab-count {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 1px 5px;
   border-radius: var(--radius-full);
   background: var(--color-border);
@@ -688,7 +688,7 @@
   display: inline-block;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   font-weight: var(--font-weight-medium);
 }
 

@@ -30,7 +30,7 @@ page {
   right: 16px;
   top: 16px;
   width: 32px;
-  height: 32px;
+  height: var(--btn-height-sm);
   border-radius: 50%;
   background: var(--color-bg-page);
   display: flex;
@@ -169,7 +169,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
+  height: var(--btn-height-lg);
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
@@ -463,7 +463,7 @@ page {
 
 .mm-btn {
   flex: 1;
-  height: 44px;
+  height: var(--btn-height-md);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -134,13 +134,13 @@
 }
 
 .date-label {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
 .date-value {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
@@ -148,7 +148,7 @@
 }
 
 .date-sep {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }

@@ -13,7 +13,7 @@
 
 .doc-title {
   display: block;
-  font-size: 22px;
+  font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   letter-spacing: -0.02em;

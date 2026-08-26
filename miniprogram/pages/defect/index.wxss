@@ -31,7 +31,7 @@ page {
   padding: 0 16px;
   height: 32px;
   border-radius: var(--radius-full);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-tertiary);
   background: var(--color-bg-page);
@@ -43,7 +43,7 @@ page {
 }
 
 .filter-count {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-normal);
   opacity: 0.8;
 }
@@ -151,14 +151,14 @@ page {
 }
 
 .stats-value {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .stats-label {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-secondary);
 }
 
@@ -269,7 +269,7 @@ page {
 }
 
 .card-order-no {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   overflow: hidden;
@@ -282,7 +282,7 @@ page {
 
 /* 菲号（截断显示，次要色） */
 .card-bundle-no {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
@@ -295,7 +295,7 @@ page {
 /* 状态标签：药丸形 11px */
 .card-status-tag {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
   padding: 1px 8px;
   border-radius: var(--radius-full);
@@ -326,7 +326,7 @@ page {
 /* 第二行：款名 mt-1.5(6px) truncate 12px */
 .card-style-name {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -347,7 +347,7 @@ page {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
   background: var(--color-bg-page);
   padding: 1px 6px;
@@ -359,7 +359,7 @@ page {
 }
 
 .card-factory-type {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -368,7 +368,7 @@ page {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
@@ -437,7 +437,7 @@ page {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
   background: var(--color-bg-page);
   padding: 1px 6px;
@@ -458,7 +458,7 @@ page {
 
 /* 颜色/尺码标签 */
 .card-cs-tag {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
   background: var(--color-bg-page);
   padding: 1px 6px;
@@ -496,19 +496,19 @@ page {
 }
 
 .card-operator {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 
 .card-time {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 
 /* 数量：margin-left auto 靠右 */
 .card-qty {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
   margin-left: auto;
@@ -532,7 +532,7 @@ page {
 .action-btn {
   padding: 6px 16px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   display: inline-flex;
   align-items: center;
@@ -578,7 +578,7 @@ page {
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   box-shadow: var(--shadow-sm);
 }
@@ -594,14 +594,14 @@ page {
 }
 
 .empty-text {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   color: var(--color-text-secondary);
   text-align: center;
   margin-bottom: 4px;
 }
 
 .empty-hint {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   text-align: center;
 }
@@ -621,6 +621,6 @@ page {
 
 .loading-text {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }

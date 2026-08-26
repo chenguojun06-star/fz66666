@@ -278,7 +278,7 @@ page {
 }
 
 .attendance-status {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 1px 6px;
   border-radius: var(--radius-full);
   font-weight: 500;
@@ -311,7 +311,7 @@ page {
 }
 
 .attendance-time-key {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
@@ -325,7 +325,7 @@ page {
 }
 
 .attendance-time-sep {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
   margin: 0 2px;
 }
@@ -342,13 +342,13 @@ page {
 }
 
 .attendance-detail-link-text {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-primary);
   font-weight: 500;
 }
 
 .attendance-detail-link-arrow {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
   line-height: 1;
 }

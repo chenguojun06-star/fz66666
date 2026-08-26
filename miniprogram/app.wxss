@@ -697,7 +697,7 @@ page {
 
 .footer-bar .btn-danger {
   flex: 1;
-  height: 36px;
+  height: var(--btn-height-sm);
   display: flex;
   align-items: center;
   justify-content: center;

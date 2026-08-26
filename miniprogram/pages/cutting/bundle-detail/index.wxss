@@ -246,7 +246,7 @@
 }
 
 .mode-btn {
-  height: 28px;
+  height: var(--btn-height-xs);
   padding: 0 12px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);

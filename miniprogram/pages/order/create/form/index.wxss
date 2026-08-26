@@ -133,7 +133,7 @@ page { background-color: var(--color-bg-page); }
   box-shadow: var(--shadow-sm);
 }
 .bar-btn {
-  height: 44px; background: var(--color-primary); border-radius: var(--radius-full);
+  height: var(--btn-height-md); background: var(--color-primary); border-radius: var(--radius-full);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--font-size-base); font-weight: 600; color: var(--color-text-white);
 }
