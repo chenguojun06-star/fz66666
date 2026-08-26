@@ -162,9 +162,11 @@ async function loadProcurementTasks() {
     const groupMap = {};
     const order = [];
     mapped.forEach(item => {
+      // D-162：样衣采购行常无 orderNo/patternProductionId，补 styleNo 兜底——
+      // 原来同款的里料/主面料/口袋布各成一条，密密麻麻
       const groupKey = item.patternProductionId
         ? 'sample::' + item.patternProductionId
-        : 'order::' + (item.orderNo || item.id || 'unknown');
+        : 'order::' + (item.orderNo || item.styleNo || item.id || 'unknown');
 
       if (!groupMap[groupKey]) {
         groupMap[groupKey] = {
