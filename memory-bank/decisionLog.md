@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-26（新增 D-141 手机端僵尸待采购根治+订单详情图片轮播全局化）
+> 最后更新：2026-08-26（新增 D-142 财务总览营收口径对齐+趋势图线条化）
+
+---
+
+## D-142：财务总览营收口径对齐F-2+双趋势图改首页同款线条+饼图黑色修复（2026-08-26，用户报"总营收¥0/黑柱难看/要与首页线条一致"）
+
+### 核实结论
+- **总营收¥0根因**：顶部卡/按月趋势三处用 paid-only 严格口径（出货 status=paid×paidAt、电商 confirmed/reconciled×completeTime），与下方现金流时间线的 F-2 口径（创建即计）不一致 → 卡与图对不上
+- **黑柱根因**：现金流图支出堆叠柱 itemStyle 用 `var(--color-primary, #fallback)`——canvas 不解析 CSS 变量整串无效→黑色；图例/轴线同病；饼图 SVG fill **属性**写 var() 同样变黑
+- **按月趋势**是手写 CSS 叠条（橙色横条），非图表组件
+
+### 修复
+- 后端 FinanceDashboardHelper 三处对齐 F-2：sumShipmentRevenue/sumEcRevenue/aggregateRevenueByMonth 改出货 notIn(cancelled,rejected)×createTime + 电商全状态×createTime
+- 现金流趋势：5 条平滑线+渐变面积（营收#52c41a/工资#2d7ff9/物料#f59e0b/费用#ef4444/借支#722ed1），图例/轴/网格线具体色值，boundaryGap:false 与首页一致
+- 按月趋势：TrendChart 重写为 ECharts 双线（营收绿/成本橙渐变面积）
+- 饼图 PIE_COLORS 改具体色值（与折线同色系），中心圆改 style 写法（CSS 属性支持 var() 跟随主题）
+
+### 验证
+mvn ✓ tsc/build ✓ 已推送 ec485305e；待重启后端验证：总营收卡与现金流图数字一致、图表全线条无黑柱
 
 ---
 
