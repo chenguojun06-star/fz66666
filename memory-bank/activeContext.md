@@ -7,6 +7,22 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-27 裁剪领取人显示修复：不再显示"系统管理员" ✅编译通过待验收
+
+- [x] 根因：`CuttingBundle` 无 receiverName 字段，手机端 `b.receiverName || b.operatorName` 回退到 `operatorName` —— 该字段是 MyBatis-Plus 自动填充的"最后操作人"（FieldFill.INSERT_UPDATE，管理员编辑分扎即被覆盖），不是裁剪领取人；真正领取人在 `CuttingTask.receiverId/receiverName`
+- [x] 后端根源修复：`CuttingBundle` 加 `@TableField(exist=false) receiverName` 临时字段；`ProductionOrderFlowOrchestrationService.getOrderFlow` 新增 `enrichBundleReceiverNames()` 用裁剪任务的 receiverName 回填分扎（orderId+color+size 精确匹配 → 退化 orderId，取最新已领取任务）
+- [x] 前端防御（三副本同步 miniprogram / h5-web/source-miniapp / h5-web/public）：order-detail 去掉 `|| b.operatorName` 错误回退，只显示任务回填的 receiverName
+- [x] PC 端不受影响：打印模板 printDataTransform.ts 本就优先 `cuttingTask.receiverName`
+- [x] 验证：mvn compile EXIT:0；node --check 三副本通过；exist=false 不参与 SQL 不影响写入
+
+### 2026-08-27 小云待办污染修复：已完成采购不再出现在待办 ✅待小程序验收
+
+- [x] 根因：`myProcurementTasks()` 固定传 `includeCompleted:'true'`（D-119 为列表页"已完成"Tab 设计），小云待办 bellTaskLoader 复用同一 API → 我名下已完成/已取消采购全部进入待办
+- [x] 修复：`myProcurementTasks(includeCompleted=true)` 加参数（默认 true 保列表页行为不变）；bellTaskLoader 传 `false` + 客户端兜底过滤（status 终态 / 到货≥采购）双路径防御
+- [x] 后端零改动：`MaterialPurchaseQueryHelper.getMyTasks(false)` 原有过滤即正确（待领取+我已领取未完成+排除回料确认+排除无效订单）
+- [x] 三副本同步：miniprogram / h5-web/source-miniapp / h5-web/public/source-miniapp（dist 为构建产物 gitignored）
+- [ ] 待小程序验收：待办只剩待领取/进行中采购；采购列表页"已完成"Tab 仍有数据
+
 ### 2026-08-26 ★★★ D-140 仪表盘视觉层级重排+专业性展示补齐 ✅全绿待验收
 
 - [x] 新布局：TopStats大数字 → AI洞察条 → 专业指标三卡（交期预警/品质概览/生产瓶颈）→ 趋势双图并排 → 执行区（延期表+动态/快捷入口右列叠放）

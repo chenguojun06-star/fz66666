@@ -489,7 +489,8 @@ Page({
             quantity: fmtNum(b.quantity),
             status: st.text,
             statusCls: stCls,
-            receiverName: fmt(b.receiverName || b.operatorName, ''),
+            // 裁剪人只认任务表回填的 receiverName；operatorName 是"最后操作人"（管理员编辑即覆盖），禁止当领取人展示
+            receiverName: fmt(b.receiverName, ''),
             isClaimable: isClaimable,
           };
         });

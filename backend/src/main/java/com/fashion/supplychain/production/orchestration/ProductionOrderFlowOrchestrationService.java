@@ -237,6 +237,7 @@ public class ProductionOrderFlowOrchestrationService {
 
         List<CuttingTask> cuttingTasks = queryCuttingTasks(oid);
         List<CuttingBundle> cuttingBundles = queryCuttingBundles(oid);
+        enrichBundleReceiverNames(cuttingBundles, cuttingTasks);
         List<ProductWarehousing> warehousings = queryWarehousings(oid);
         List<ProductOutstock> outstocks = queryOutstocks(oid);
         List<ShipmentReconciliation> shipmentReconciliations = queryShipmentReconciliations(oid);
@@ -383,6 +384,46 @@ public class ProductionOrderFlowOrchestrationService {
         } catch (Exception e) {
             log.warn("[OrderFlow] 查询CuttingBundle失败: orderId={}, err={}", oid, e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 回填分扎的裁剪领取人（CuttingBundle.receiverName ← CuttingTask.receiverName）。
+     * 背景：分扎表的 operatorName 是自动填充的"最后操作人"（管理员编辑即被覆盖），
+     * 曾导致手机端"裁剪人"恒显示系统管理员名字。真正的领取人只存在裁剪任务表。
+     * 匹配策略：orderId + color + size 精确匹配 → 退化 orderId 匹配（取最新一条已领取任务）。
+     */
+    private void enrichBundleReceiverNames(List<CuttingBundle> bundles, List<CuttingTask> tasks) {
+        if (bundles == null || bundles.isEmpty() || tasks == null || tasks.isEmpty()) return;
+        // 已领取的任务（有领取人），按 createTime 倒序（queryCuttingTasks 已排）取最新
+        List<CuttingTask> received = tasks.stream()
+                .filter(t -> StringUtils.hasText(t.getReceiverName()))
+                .toList();
+        if (received.isEmpty()) return;
+        for (CuttingBundle b : bundles) {
+            if (StringUtils.hasText(b.getReceiverName())) continue;
+            // 1) orderId + color + size 精确匹配
+            CuttingTask matched = null;
+            for (CuttingTask t : received) {
+                if (t.getProductionOrderId() != null && t.getProductionOrderId().equals(b.getProductionOrderId())
+                        && StringUtils.hasText(b.getColor()) && b.getColor().equals(t.getColor())
+                        && StringUtils.hasText(b.getSize()) && b.getSize().equals(t.getSize())) {
+                    matched = t;
+                    break;
+                }
+            }
+            // 2) 退化：同订单任意已领取任务（多数订单只有一个裁剪任务）
+            if (matched == null) {
+                for (CuttingTask t : received) {
+                    if (t.getProductionOrderId() != null && t.getProductionOrderId().equals(b.getProductionOrderId())) {
+                        matched = t;
+                        break;
+                    }
+                }
+            }
+            if (matched != null) {
+                b.setReceiverName(matched.getReceiverName());
+            }
         }
     }
 

@@ -41,6 +41,14 @@ public class CuttingBundle {
     @TableField(exist = false)
     private String styleCover;
 
+    /**
+     * 裁剪领取人（临时字段：查询时从 CuttingTask.receiverName 回填）。
+     * 注意：operatorName 是自动填充的"最后操作人"（管理员编辑分扎会被覆盖），
+     * 不是裁剪领取人，前端禁止把它当领取人展示。
+     */
+    @TableField(exist = false)
+    private String receiverName;
+
     private String color;
 
     private String size;
