@@ -34,6 +34,9 @@ public class MaterialPurchaseQueryHelper {
     @Autowired
     private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.production.service.PatternProductionService patternProductionService;
+
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂采购记录
         Map<String, Object> effectiveParams = params != null ? params : new java.util.HashMap<>();
@@ -85,12 +88,16 @@ public class MaterialPurchaseQueryHelper {
                     .orderByDesc(MaterialPurchase::getCreateTime)
                     .list();
 
-            // 无主待领取任务：与 PC 端 excludeScrappedOrders 同口径，排除无效订单的僵尸行
+            // 无主待领取任务：与 PC 端 excludeScrappedOrders 同口径，排除无效订单的僵尸行；
+            // D-161：回料确认过的行(returnConfirmed=1)与样衣生产已完成/已作废的行同样排除——
+            // 原实现样衣采购回料确认后（回料数量0时状态仍PENDING）永远显示"待采购"
             List<MaterialPurchase> unclaimed = materialPurchaseService.lambdaQuery()
                     .eq(MaterialPurchase::getTenantId, tenantId)
                     .eq(MaterialPurchase::getDeleteFlag, 0)
                     .isNull(MaterialPurchase::getReceiverId)
                     .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                    .and(w -> w.isNull(MaterialPurchase::getReturnConfirmed)
+                            .or().eq(MaterialPurchase::getReturnConfirmed, 0))
                     .orderByDesc(MaterialPurchase::getCreateTime)
                     .list();
             if (!unclaimed.isEmpty()) {
@@ -110,10 +117,32 @@ public class MaterialPurchaseQueryHelper {
                     unclaimed = unclaimed.stream()
                             .filter(p -> {
                                 String orderId = p.getOrderId();
-                                // 无订单关联的独立采购保留
+                                // 无订单关联的独立采购保留（样衣采购由下方样衣状态过滤）
                                 return !StringUtils.hasText(orderId) || validOrderIds.contains(orderId);
                             })
                             .collect(Collectors.toList());
+                }
+                // D-161：样衣采购（patternProductionId）——样衣生产已完成/已作废的不再作为待采购展示
+                Set<String> patternIds = unclaimed.stream()
+                        .map(MaterialPurchase::getPatternProductionId)
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toSet());
+                if (!patternIds.isEmpty() && patternProductionService != null) {
+                    Set<String> deadPatternIds = patternProductionService.lambdaQuery()
+                            .in(com.fashion.supplychain.production.entity.PatternProduction::getId, patternIds)
+                            .and(w -> w
+                                    .eq(com.fashion.supplychain.production.entity.PatternProduction::getStatus, "COMPLETED")
+                                    .or().eq(com.fashion.supplychain.production.entity.PatternProduction::getDeleteFlag, 1))
+                            .list()
+                            .stream()
+                            .map(com.fashion.supplychain.production.entity.PatternProduction::getId)
+                            .map(String::valueOf)
+                            .collect(Collectors.toSet());
+                    if (!deadPatternIds.isEmpty()) {
+                        unclaimed = unclaimed.stream()
+                                .filter(p -> !deadPatternIds.contains(String.valueOf(p.getPatternProductionId())))
+                                .collect(Collectors.toList());
+                    }
                 }
             }
 

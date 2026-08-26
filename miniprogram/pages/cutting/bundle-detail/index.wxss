@@ -1365,3 +1365,89 @@
   background: var(--color-primary);
   flex: 1;
 }
+
+/* D-161：待领取裁剪任务横条 */
+.pending-tasks-card {
+  margin: 12px 16px 4px;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-primary-border, rgba(45,127,249,0.35));
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.pending-tasks-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+}
+
+.pending-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.pt-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--color-bg-page);
+}
+
+.pt-cover--ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-quaternary);
+  border: 1px dashed var(--color-border);
+  font-size: 18px;
+}
+
+.pt-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pt-style {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pt-sub {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pt-btn {
+  height: 32px;
+  line-height: 32px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pt-btn--receive {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.pt-btn-hover {
+  opacity: 0.75;
+}

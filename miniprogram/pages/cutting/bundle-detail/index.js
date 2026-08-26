@@ -1,4 +1,6 @@
 const api = require('../../../utils/api');
+const production = require('../../../utils/api-modules/production');
+const { getUserInfo } = require('../../../utils/storage');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -14,6 +16,7 @@ const { normalizeProcessName, displayStatusText: orderStatusText } = require('..
  */
 Page({
   data: {
+      pendingCuttingTasks: [],
     loading: false,
     orderNo: '',
     orderId: '',
@@ -157,7 +160,64 @@ Page({
       // 从首页直接进来（无参数）→ 显示订单列表供选择
       this.setData({ showOrderList: true });
       this._loadOrderList();
+      this._loadPendingCuttingTasks();
     }
+  },
+
+  /**
+   * D-161：待领取裁剪任务横条——领取动作并入裁剪管理页，不再单独建页
+   */
+  _loadPendingCuttingTasks() {
+    production.myCuttingTasks().then((res) => {
+      const list = Array.isArray(res) ? res : res?.records || [];
+      const pending = list
+        .filter(t => String(t.status || '').trim().toLowerCase() === 'pending')
+        .map(t => ({
+          id: String(t.id || t.taskId || ''),
+          orderNo: t.productionOrderNo || t.orderNo || '',
+          orderId: String(t.productionOrderId || t.orderId || ''),
+          styleNo: t.styleNo || '',
+          styleName: t.styleName || '',
+          cover: getAuthedImageUrl(t.styleCover || t.coverImage || ''),
+        }));
+      this.setData({ pendingCuttingTasks: pending });
+    }).catch(() => {});
+  },
+
+  onReceiveCuttingTask(e) {
+    const id = e.currentTarget.dataset.id;
+    const task = (this.data.pendingCuttingTasks || []).find(t => t.id === id);
+    if (!task) return;
+    const userInfo = getUserInfo() || {};
+    wx.showModal({
+      title: '领取裁剪任务',
+      content: `确认领取「${task.styleNo || task.orderNo}」？领取后可直接编菲`,
+      confirmText: '领取',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '领取中...' });
+        try {
+          await production.cuttingTaskReceive({
+            taskId: task.id,
+            receiverId: String(userInfo.id || userInfo.userId || ''),
+            receiverName: String(userInfo.name || userInfo.username || ''),
+          });
+          wx.hideLoading();
+          wx.showToast({ title: '领取成功', icon: 'success' });
+          // 领取后直接进入该订单编菲
+          this.setData({
+            orderNo: task.orderNo,
+            orderId: task.orderId,
+            showOrderList: false,
+            pendingCuttingTasks: (this.data.pendingCuttingTasks || []).filter(t => t.id !== id),
+          });
+          this.loadAll(task.orderNo);
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: (err && (err.message || err.errMsg)) || '领取失败', icon: 'none' });
+        }
+      },
+    });
   },
 
   onShow() {

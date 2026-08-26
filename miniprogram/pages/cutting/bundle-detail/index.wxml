@@ -2,6 +2,21 @@
   <!-- 订单选择列表（从首页直接进来时显示） -->
   <block wx:if="{{showOrderList}}">
     <view class="order-list-wrap">
+      <!-- D-161：待领取裁剪任务横条（领取并入裁剪管理页，不单独建页） -->
+      <view wx:if="{{pendingCuttingTasks.length > 0}}" class="pending-tasks-card">
+        <view class="pending-tasks-title">待领取裁剪任务（{{pendingCuttingTasks.length}}）</view>
+        <view class="pending-task-row" wx:for="{{pendingCuttingTasks}}" wx:key="id">
+          <image wx:if="{{item.cover}}" class="pt-cover" src="{{item.cover}}" mode="aspectFill" />
+          <view wx:else class="pt-cover pt-cover--ph">✂</view>
+          <view class="pt-info">
+            <text class="pt-style">{{item.styleNo || item.orderNo}}</text>
+            <text class="pt-sub">{{item.styleName || item.orderNo}}</text>
+          </view>
+          <view class="pt-actions">
+            <view class="pt-btn pt-btn--receive" data-id="{{item.id}}" bindtap="onReceiveCuttingTask" hover-class="pt-btn-hover">领取</view>
+          </view>
+        </view>
+      </view>
       <!-- 吸顶区：搜索 + 筛选器（与 dashboard/procurement 一致的通用组件） -->
       <sticky-search-bar
         placeholder="搜索订单号 / 款号"
