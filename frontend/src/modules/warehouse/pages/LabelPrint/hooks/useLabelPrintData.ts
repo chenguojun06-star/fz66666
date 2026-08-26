@@ -14,6 +14,7 @@ export const useLabelPrintData = () => {
   const [orders, setOrders] = useState<OrderInfo[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<OrderInfo | null>(null);
   const [selectedColor, setSelectedColor] = useState('');
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedSize, setSelectedSize] = useState('');
   const [printType, setPrintType] = useState<PrintType>('hangtag');
   const [printCount, setPrintCount] = useState(1);
@@ -189,8 +190,9 @@ export const useLabelPrintData = () => {
 
   const generateBarcodeHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';
-    return buildBarcodeHtml(selectedOrder, selectedColor, selectedSize, bar, count);
-  }, [selectedOrder, selectedColor, selectedSize, bar]);
+    const sizes = selectedSizes.length ? selectedSizes : (selectedSize ? [selectedSize] : ['']);
+    return buildBarcodeHtml(selectedOrder, selectedColor, sizes, bar, count);
+  }, [selectedOrder, selectedColor, selectedSizes, selectedSize, bar]);
 
   const generateWashlabelHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';
@@ -212,7 +214,7 @@ export const useLabelPrintData = () => {
   useEffect(() => {
     const timer = setTimeout(() => { updatePreview(); }, 80);
     return () => clearTimeout(timer);
-  }, [printType, selectedColor, selectedSize, selectedOrder, coverBase64,
+  }, [printType, selectedColor, selectedSize, selectedSizes, selectedOrder, coverBase64,
     hang.w, hang.h, hang.titleSz, hang.infoSz, hang.brandName, hang.showStyleNo, hang.showColorSize, hang.showComposition, hang.showOrderNo, hang.showPrice, hang.showUCode, hang.showImage, hang.showQr, hang.showBarcode, hang.showQualityGrade, hang.showExecuteStandard, hang.showSafetyCategory, hang.showInspector, hang.showInspectionDate,
     selectedOrder?.fabricComposition, selectedOrder?.qualityGrade, selectedOrder?.executeStandard, selectedOrder?.safetyCategory, selectedOrder?.inspector, selectedOrder?.inspectionDate,
     bar.w, bar.h, bar.codeSz, bar.textSz, bar.showName, bar.codeType,
@@ -263,6 +265,7 @@ export const useLabelPrintData = () => {
     selectedOrder, setSelectedOrder,
     selectedColor, setSelectedColor,
     selectedSize, setSelectedSize,
+    selectedSizes, setSelectedSizes,
     printType, setPrintType,
     printCount, setPrintCount,
     printing,

@@ -104,17 +104,22 @@ ${hang.showBarcode ? `<div class="barcode">${barcodeSvgStr}</div>` : ''}
 export const buildBarcodeHtml = async (
   order: OrderInfo,
   selectedColor: string,
-  selectedSize: string,
+  selectedSize: string | string[],
   bar: BarSettings,
   count: number,
 ): Promise<string> => {
   if (!order) return '';
-  const sku = `${order.styleNo}-${selectedColor}-${selectedSize}`;
+  // D-155：支持多尺码批量——每个尺码各生成 count 张
+  const sizes = Array.isArray(selectedSize) ? (selectedSize.length ? selectedSize : ['']) : [selectedSize];
   const cs = bar.codeSz; const ts = bar.textSz;
   const isBarcode128 = bar.codeType === 'barcode128';
-  const codeImgHtml = isBarcode128
-    ? `<div class="barcode-wrap">${generateBarcodeSvgString(sku)}</div>`
-    : `<img src="${await QRCode.toDataURL(sku, { width: 160, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '')}" />`;
+  const qrDataUrlBySize: Record<string, string> = {};
+  if (!isBarcode128) {
+    for (const size of sizes) {
+      const sizeSku = `${order.styleNo}-${selectedColor}-${size}`;
+      qrDataUrlBySize[size] = await QRCode.toDataURL(sizeSku, { width: 160, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
+    }
+  }
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${bar.w}mm ${bar.h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -130,10 +135,16 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color
 .lb .n{font-size:${ts}pt;color:#52525b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb .s{font-size:${ts * 0.85}pt;color:#888888;letter-spacing:0.2mm}
 </style></head><body>
-${Array.from({ length: count }, () => `<div class="lb">
-${codeImgHtml}
-<div class="i"><div class="c">${sku}</div>${bar.showName ? `<div class="n">${order.styleName}</div>` : ''}<div class="s">${selectedColor} / ${selectedSize}</div></div>
-</div>`).join('\n')}
+${sizes.flatMap(size => {
+  const sizeSku = `${order.styleNo}-${selectedColor}-${size}`;
+  const sizeImg = isBarcode128
+    ? `<div class="barcode-wrap">${generateBarcodeSvgString(sizeSku)}</div>`
+    : `<img src="${qrDataUrlBySize[size] || ''}" />`;
+  return Array.from({ length: count }, () => `<div class="lb">
+${sizeImg}
+<div class="i"><div class="c">${sizeSku}</div>${bar.showName ? `<div class="n">${order.styleName}</div>` : ''}<div class="s">${selectedColor} / ${size}</div></div>
+</div>`);
+}).join('\n')}
 </body></html>`;
 };
 

@@ -14,6 +14,10 @@ interface OrderDetailCardProps {
   setSelectedColor: (c: string) => void;
   selectedSize: string;
   setSelectedSize: (s: string) => void;
+  /** 条码模式：多尺码批量打印 */
+  printType: 'hangtag' | 'barcode' | 'washlabel';
+  selectedSizes: string[];
+  setSelectedSizes: (sizes: string[]) => void;
   coverBase64: string;
   previewHtml: string;
   ptLabel: string;
@@ -31,6 +35,9 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
   setSelectedColor,
   selectedSize,
   setSelectedSize,
+  printType,
+  selectedSizes,
+  setSelectedSizes,
   coverBase64,
   previewHtml,
   ptLabel,
@@ -72,10 +79,29 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
           )}
           {selectedOrder.sizes.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>尺码</div>
-              <Space wrap>{selectedOrder.sizes.map(s => (
-                <Button key={s} size="small" type={selectedSize === s ? 'primary' : 'default'} onClick={() => setSelectedSize(s)}>{s}</Button>
-              ))}</Space>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                尺码
+                {printType === 'barcode' && (
+                  <Space size={4}>
+                    <Button size="small" type="link" onClick={() => setSelectedSizes(selectedOrder.sizes)}>全选</Button>
+                    <Button size="small" type="link" onClick={() => setSelectedSizes(selectedSize ? [selectedSize] : [])}>仅当前</Button>
+                    <span style={{ color: 'var(--color-primary)', fontSize: 12 }}>已选 {selectedSizes.length || 1} 个尺码批量打印</span>
+                  </Space>
+                )}
+              </div>
+              <Space wrap>{selectedOrder.sizes.map(s => {
+                const active = printType === 'barcode' ? selectedSizes.includes(s) : selectedSize === s;
+                return (
+                  <Button key={s} size="small" type={active ? 'primary' : 'default'} onClick={() => {
+                    if (printType === 'barcode') {
+                      const next = selectedSizes.includes(s) ? selectedSizes.filter(x => x !== s) : [...selectedSizes, s];
+                      setSelectedSizes(next);
+                    } else {
+                      setSelectedSize(s);
+                    }
+                  }}>{s}</Button>
+                );
+              })}</Space>
             </div>
           )}
           <Divider style={{ margin: '10px 0' }} />

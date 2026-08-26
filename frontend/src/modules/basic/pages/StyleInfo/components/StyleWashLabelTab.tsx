@@ -68,6 +68,8 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const [previewH, setPreviewH] = useState(80);
   /** 全局字体缩放（0.5~1.6）：拖动直接生效 */
   const [fontScale, setFontScale] = useState(1);
+  /** 距剪口偏移（mm）：内容从剪口下方此处开始打印，用户可调 */
+  const [topOffsetMm, setTopOffsetMm] = useState(30);
   /** 行距/上下间距缩放（0.7~1.8）：行与行之间、各分区上下之间的距离 */
   const [lineHeightScale, setLineHeightScale] = useState(1);
 
@@ -164,8 +166,8 @@ const StyleWashLabelTab: React.FC<Props> = ({
       // 只打印用户输入的内容：制造区留空不显示，无自动日期兜底
       manufacturingText: manufacturingText,
       dateText: '',
-      // 距剪口偏移：内容从剪口下方 30mm 处开始（与预览一致）
-      topOffsetMm: 30,
+      // 距剪口偏移：用户可调（与预览一致）
+      topOffsetMm,
       fontScale,
       lineHeightScale,
     });
@@ -186,7 +188,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
     safePrint(html);
     } finally { setPrintLoading(false); }
-  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale]);
+  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale, topOffsetMm]);
 
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
@@ -341,6 +343,14 @@ const StyleWashLabelTab: React.FC<Props> = ({
         }}>
           <Space size={16}>
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              距剪口偏移
+              <InputNumber
+                min={0} max={Math.max(0, previewH - 10)} value={topOffsetMm}
+                onChange={v => setTopOffsetMm(v ?? 0)}
+                suffix="mm" style={{ width: 100 }}
+              />
+            </span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               字体大小
               <Slider
                 min={0.5} max={1.6} step={0.05} value={fontScale}
@@ -404,6 +414,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           height={previewH}
           fontScale={fontScale}
           lineHeightScale={lineHeightScale}
+          topOffsetMm={topOffsetMm}
         />
       </div>
     </div>

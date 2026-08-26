@@ -14,6 +14,7 @@ const LabelPrint: React.FC = () => {
     selectedOrder, setSelectedOrder,
     selectedColor, setSelectedColor,
     selectedSize, setSelectedSize,
+    selectedSizes, setSelectedSizes,
     printType, setPrintType,
     printCount, setPrintCount,
     printing,
@@ -91,6 +92,9 @@ const LabelPrint: React.FC = () => {
                 setSelectedColor={setSelectedColor}
                 selectedSize={selectedSize}
                 setSelectedSize={setSelectedSize}
+                printType={printType}
+                selectedSizes={selectedSizes}
+                setSelectedSizes={setSelectedSizes}
                 coverBase64={coverBase64}
                 previewHtml={previewHtml}
                 ptLabel={ptLabel}
