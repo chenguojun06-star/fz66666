@@ -184,7 +184,9 @@ async function loadProcurementTasks() {
       groupMap[groupKey].items.push(item);
       // 取最新的领取时间
       if (item.receivedTime) {
-        const t = new Date(item.receivedTime).getTime();
+        // iOS 不支持 "yyyy-MM-dd HH:mm:ss" 空格格式，需替换为 T 兼容 ISO 8601
+        const normalizedTime = typeof item.receivedTime === 'string' ? item.receivedTime.replace(' ', 'T') : item.receivedTime;
+        const t = new Date(normalizedTime).getTime();
         if (!isNaN(t) && (!groupMap[groupKey]._latestReceivedTime || t > groupMap[groupKey]._latestReceivedTime)) {
           groupMap[groupKey]._latestReceivedTime = t;
         }

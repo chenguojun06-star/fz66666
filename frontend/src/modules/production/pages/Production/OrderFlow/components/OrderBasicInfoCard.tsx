@@ -64,14 +64,14 @@ const OrderBasicInfoCard: React.FC<Props> = ({
   return (
     <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
       <Row gutter={0} align="top" wrap={false}>
-        {/* 左：订单图片 */}
-        <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, width: 340 }}>
+        {/* 左：订单图片（收窄，让位中间商品编码区） */}
+        <Col flex="none" style={{ paddingRight: 16, flexShrink: 0, paddingTop: 2, width: 240 }}>
           <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl}
             styleId={(order as any)?.styleId} styleNo={(order as any)?.styleNo} />
         </Col>
 
-        {/* 中：基本信息 + 颜色尺码 */}
-        <Col flex="1" style={{ minWidth: 260, padding: '0 20px', borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
+        {/* 中左：基本信息 */}
+        <Col flex="0.9 1 0" style={{ minWidth: 230, padding: '0 16px', borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
           <SectionTitle
             text="基本信息"
             extra={editing ? <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)' }}>点击字段值可编辑</span> : undefined}
@@ -112,8 +112,8 @@ const OrderBasicInfoCard: React.FC<Props> = ({
           </Descriptions>
         </Col>
 
-        {/* 中右：颜色尺码矩阵（独立成块，不再挤在基本信息流里） */}
-        <Col flex="1" style={{ minWidth: 240, padding: '0 20px', borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
+        {/* 中右：颜色尺码矩阵（主编辑区，加权放大） */}
+        <Col flex="1.7 1 0" style={{ minWidth: 380, padding: '0 16px', borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
           <SectionTitle
             text="颜色 / 尺码 / 商品编码"
             extra={
@@ -144,8 +144,8 @@ const OrderBasicInfoCard: React.FC<Props> = ({
                 items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity, skuNo: (l as any).skuNo }))}
                 totalLabel="总"
                 totalSuffix="件"
-                fontSize={13}
-                columnMinWidth={24}
+                fontSize={14}
+                columnMinWidth={44}
               />
             )
           ) : (
@@ -153,8 +153,8 @@ const OrderBasicInfoCard: React.FC<Props> = ({
           )}
         </Col>
 
-        {/* 右：生产统计 */}
-        <Col flex="1" style={{ minWidth: 260, paddingLeft: 20, borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
+        {/* 右：生产统计（收窄） */}
+        <Col flex="0.9 1 0" style={{ minWidth: 230, paddingLeft: 16, borderLeft: '1px solid var(--color-border-secondary, rgba(0,0,0,0.08))' }}>
           <SectionTitle text="生产统计" />
           <Descriptions column={1} size="small" bordered
             labelStyle={descLabelStyle} contentStyle={descContentStyle}

@@ -62,6 +62,11 @@ public class MaterialPurchaseQueryHelper {
      * D-119：includeCompleted=true 时返回「待领取 + 我名下全部状态（含已完成/已取消/部分到货）」，
      * 供手机端采购列表「已完成」等终态筛选使用——原逻辑把已完成任务全部过滤掉，
      * 导致手机端"已完成"Tab 永远是 0 条。默认 false 保持待办语义不变。
+     *
+     * D-141：无主待领取分支必须做订单有效性过滤（排除已完成/已关闭/已取消/已归档/已报废订单）。
+     *   原实现两分支都不过滤，订单走完后遗留的僵尸 PENDING 行在手机端永远显示"待领取"，
+     *   而 PC 列表与手机详情页走 listWithEnrichment（excludeScrappedOrders 会滤掉）→ 三端不一致：
+     *   手机列表有、点进详情空白、PC 没有。我名下历史任务仍不过滤（保住 D-119"已完成"Tab 语义）。
      */
     public List<MaterialPurchase> getMyTasks(boolean includeCompleted) {
         Long tenantId = UserContext.tenantId();
@@ -72,17 +77,54 @@ public class MaterialPurchaseQueryHelper {
         }
 
         if (includeCompleted) {
-            // 我名下任意状态的任务 + 无主待领取任务；不过滤已完成/已回料确认，
-            // 也不做无效订单过滤（已完成采购多属已完成订单，再过滤会再度隐藏）
-            return materialPurchaseService.lambdaQuery()
+            // 我名下任意状态的任务（含已完成/已取消/已回料确认，不过滤）
+            List<MaterialPurchase> myOwn = materialPurchaseService.lambdaQuery()
                     .eq(MaterialPurchase::getTenantId, tenantId)
                     .eq(MaterialPurchase::getDeleteFlag, 0)
-                    .and(w -> w
-                            .isNull(MaterialPurchase::getReceiverId).eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
-                            .or()
-                            .eq(MaterialPurchase::getReceiverId, userId))
+                    .eq(MaterialPurchase::getReceiverId, userId)
                     .orderByDesc(MaterialPurchase::getCreateTime)
                     .list();
+
+            // 无主待领取任务：与 PC 端 excludeScrappedOrders 同口径，排除无效订单的僵尸行
+            List<MaterialPurchase> unclaimed = materialPurchaseService.lambdaQuery()
+                    .eq(MaterialPurchase::getTenantId, tenantId)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .isNull(MaterialPurchase::getReceiverId)
+                    .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                    .orderByDesc(MaterialPurchase::getCreateTime)
+                    .list();
+            if (!unclaimed.isEmpty()) {
+                Set<String> orderIds = unclaimed.stream()
+                        .map(MaterialPurchase::getOrderId)
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toSet());
+                if (!orderIds.isEmpty()) {
+                    Set<String> validOrderIds = productionOrderService.lambdaQuery()
+                            .in(ProductionOrder::getId, orderIds)
+                            .eq(ProductionOrder::getDeleteFlag, 0)
+                            .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
+                            .list()
+                            .stream()
+                            .map(ProductionOrder::getId)
+                            .collect(Collectors.toSet());
+                    unclaimed = unclaimed.stream()
+                            .filter(p -> {
+                                String orderId = p.getOrderId();
+                                // 无订单关联的独立采购保留
+                                return !StringUtils.hasText(orderId) || validOrderIds.contains(orderId);
+                            })
+                            .collect(Collectors.toList());
+                }
+            }
+
+            List<MaterialPurchase> merged = new ArrayList<>(myOwn.size() + unclaimed.size());
+            merged.addAll(myOwn);
+            merged.addAll(unclaimed);
+            merged.sort(java.util.Comparator.comparing(
+                    MaterialPurchase::getCreateTime,
+                    java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+            injectStyleCover(merged, tenantId);
+            return merged;
         }
 
         // 同时返回「待领取的任务」+「我已领取的任务」

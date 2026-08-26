@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Empty, Image, Popconfirm, Spin } from 'antd';
+import { App, Button, Empty, Popconfirm, Spin } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined, EyeOutlined } from '@ant-design/icons';
+import { HistoryOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
 import type { OrderImage } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
+import ImageCarousel from '@/components/common/ImageCarousel';
 import { visualAnalyze } from '@/services/intelligence/intelligenceApi';
-import { arrowBtnStyle } from './utils';
 import ImageHistoryContent from './ImageHistoryContent';
 import AIAnalysisContent from './AIAnalysisContent';
 
@@ -153,9 +153,6 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     }
   };
 
-  const goPrev = () => setCurrentIdx((i) => (i > 0 ? i - 1 : totalCount - 1));
-  const goNext = () => setCurrentIdx((i) => (i < totalCount - 1 ? i + 1 : 0));
-
   const currentImg = allImageUrls[currentIdx];
   const currentOrderImg = currentImg && !currentImg.isCover ? images.find((im) => im.id === currentImg.id) : undefined;
 
@@ -181,97 +178,61 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
         {totalCount === 0 && !loading ? (
           <Empty description="暂无图片" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div
-            style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden' }}
-            onMouseEnter={() => setHovering(true)}
-            onMouseLeave={() => setHovering(false)}
-          >
-            <Image.PreviewGroup>
-              {allImageUrls.map((item, idx) => (
-                <Image
-                  key={
-                    item.isCover
-                      ? `cover-${idx}`
-                      : item.isStyle
-                        ? `style-${idx}-${item.url}`
-                        : `order-${item.id}`
-                  }
-                  src={item.url}
-                  style={{ display: idx === currentIdx ? 'block' : 'none', width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 6, cursor: 'pointer' }}
-                  preview={{ cover: '点击预览' }}
-                />
-              ))}
-            </Image.PreviewGroup>
-
-            {totalCount > 1 && (
-              <>
-                <Button type="text" icon={<LeftOutlined />} onClick={goPrev} style={arrowBtnStyle('left', hovering)} />
-                <Button type="text" icon={<RightOutlined />} onClick={goNext} style={arrowBtnStyle('right', hovering)} />
-              </>
-            )}
-
-            <div style={{
-              position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
-              background: 'rgba(0,0,0,0.45)', color: 'var(--color-bg-base)', fontSize: 11, padding: '1px 8px',
-              borderRadius: 10, lineHeight: '18px', pointerEvents: 'none',
-            }}>
-              {currentIdx + 1}/{totalCount}
-            </div>
-
-            {editable && currentOrderImg && (
-              <div style={{
-                position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4,
-                opacity: hovering ? 1 : 0, transition: 'opacity 0.2s ease', zIndex: 2,
-              }}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EyeOutlined />}
-                  loading={analyzing}
-                  style={{
-                    minWidth: 22, padding: 0,
-                    background: 'rgba(255,255,255,0.85)', borderRadius: 4,
-                  }}
-                  title="AI视觉分析"
-                  onClick={async () => {
-                    if (analyzing || !currentImg?.url) return;
-                    setAnalyzing(true);
-                    try {
-                      const res = await visualAnalyze({
-                        imageUrl: currentImg.url,
-                        taskType: 'STYLE_IDENTIFY',
-                      });
-                      setAnalysisResult(res);
-                    } catch {
-                      message.warning('AI分析暂不可用');
-                    } finally {
-                      setAnalyzing(false);
-                    }
-                  }}
-                />
-                <Popconfirm title="确定删除这张图片吗？" onConfirm={() => handleDelete(currentOrderImg.id)} okText="确定" cancelText="取消">
+          <div onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
+            <ImageCarousel
+              images={allImageUrls.map((item, idx) => ({
+                url: item.url,
+                key: item.isCover ? `cover-${idx}` : item.isStyle ? `style-${idx}-${item.url}` : `order-${item.id}`,
+                badge: item.isCover ? '封面' : undefined,
+              }))}
+              imageHeight={280}
+              onIndexChange={setCurrentIdx}
+              overlay={editable && currentOrderImg ? (
+                <div style={{
+                  position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4,
+                  opacity: hovering ? 1 : 0, transition: 'opacity 0.2s ease', zIndex: 6,
+                }}>
                   <Button
                     type="text"
                     size="small"
-                    danger
-                    icon={<DeleteOutlined />}
+                    icon={<EyeOutlined />}
+                    loading={analyzing}
                     style={{
                       minWidth: 22, padding: 0,
                       background: 'rgba(255,255,255,0.85)', borderRadius: 4,
                     }}
+                    title="AI视觉分析"
+                    onClick={async () => {
+                      if (analyzing || !currentImg?.url) return;
+                      setAnalyzing(true);
+                      try {
+                        const res = await visualAnalyze({
+                          imageUrl: currentImg.url,
+                          taskType: 'STYLE_IDENTIFY',
+                        });
+                        setAnalysisResult(res);
+                      } catch {
+                        message.warning('AI分析暂不可用');
+                      } finally {
+                        setAnalyzing(false);
+                      }
+                    }}
                   />
-                </Popconfirm>
-              </div>
-            )}
-
-            {currentImg?.isCover && (
-              <span style={{
-                position: 'absolute', top: 4, left: 4, fontSize: 10, padding: '0 5px',
-                background: 'rgba(0,0,0,0.5)', color: 'var(--color-bg-base)', borderRadius: 3, lineHeight: '18px',
-              }}>
-                封面
-              </span>
-            )}
+                  <Popconfirm title="确定删除这张图片吗？" onConfirm={() => handleDelete(currentOrderImg.id)} okText="确定" cancelText="取消">
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      style={{
+                        minWidth: 22, padding: 0,
+                        background: 'rgba(255,255,255,0.85)', borderRadius: 4,
+                      }}
+                    />
+                  </Popconfirm>
+                </div>
+              ) : undefined}
+            />
           </div>
         )}
 

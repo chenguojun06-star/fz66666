@@ -1,0 +1,71 @@
+/* 全局图片轮播 — 箭头常显，原生button避免antd hover样式覆盖导致按钮"消失" */
+
+/* antd 预览遮罩禁用指针事件：遮罩只做视觉提示，
+   否则"悬停→遮罩淡入盖住箭头→箭头区不再hover→遮罩淡出→又hover"死循环造成闪烁 */
+.image-carousel .ant-image-mask {
+  pointer-events: none !important;
+}
+
+.image-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  z-index: 5;
+  padding: 0;
+}
+
+.image-carousel-arrow--left {
+  left: 6px;
+}
+
+.image-carousel-arrow--right {
+  right: 6px;
+}
+
+.image-carousel-arrow:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+.image-carousel-counter {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  line-height: 18px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.image-carousel-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 10px;
+  padding: 0 5px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border-radius: 3px;
+  line-height: 18px;
+  z-index: 4;
+  pointer-events: none;
+}

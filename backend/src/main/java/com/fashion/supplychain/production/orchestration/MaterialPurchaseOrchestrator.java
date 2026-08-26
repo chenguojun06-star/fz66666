@@ -211,6 +211,10 @@ public class MaterialPurchaseOrchestrator {
         }
         // D-107：以数据库记录的 sourceType/styleId 为准做锁定校验（防前端伪造参数绕过）
         assertSamplePurchaseEditable(current);
+        // D-124 遗留兜底：已回料确认的行禁止编辑（前端按钮已置灰，此处防绕过UI直调API）
+        if (current.getReturnConfirmed() != null && current.getReturnConfirmed() == 1) {
+            throw new IllegalStateException("该物料已回料确认，不可编辑。如需调整请先在操作中「退回」撤销回料确认");
+        }
         boolean ok = updateAndSync(materialPurchase);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -684,6 +688,10 @@ public class MaterialPurchaseOrchestrator {
         }
         // D-107：样衣BOM已完成的采购数据锁定，删除同样需先退回
         assertSamplePurchaseEditable(current);
+        // D-124 遗留兜底：已回料确认的行禁止删除（前端按钮已置灰，此处防绕过UI直调API）
+        if (current.getReturnConfirmed() != null && current.getReturnConfirmed() == 1) {
+            throw new IllegalStateException("该物料已回料确认，不可删除。如需调整请先在操作中「退回」撤销回料确认");
+        }
         logAppendHelper.appendCancel(key, "删除采购单");
         boolean ok = materialPurchaseService.deleteById(key);
         if (!ok) {
