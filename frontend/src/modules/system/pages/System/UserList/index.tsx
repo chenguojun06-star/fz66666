@@ -140,16 +140,11 @@ const UserList: React.FC = () => {
           }
         >
           <div className="user-split-layout">
-            <div className="user-dept-panel">
-              <div className="user-dept-header">
-                <Text strong style={{ fontSize: 13 }}>部门</Text>
-              </div>
-              <DepartmentTree
-                departments={departments}
-                selectedId={selectedDeptId}
-                onSelect={setSelectedDeptId}
-              />
-            </div>
+            <DepartmentTree
+              departments={departments}
+              selectedId={selectedDeptId}
+              onSelect={setSelectedDeptId}
+            />
 
             <div className="user-list-panel">
               <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '10px 16px' } }}>

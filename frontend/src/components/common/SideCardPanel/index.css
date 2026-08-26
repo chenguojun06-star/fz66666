@@ -1,0 +1,149 @@
+/* 左右布局通用左侧面板 — 岗位管理卡片式标准 */
+
+.scp-panel {
+  background: var(--color-bg-base, var(--color-bg-base));
+  border-right: 1px solid var(--color-border-light, var(--color-border-light));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+.scp-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scp-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scp-header-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary, var(--color-gray-800));
+}
+
+.scp-header-sub {
+  font-size: 12px;
+  color: var(--color-text-tertiary, var(--color-gray-label));
+}
+
+.scp-items {
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scp-item {
+  border: 1px solid var(--color-border-light, var(--color-border-light));
+  border-radius: 6px;
+  background: var(--color-bg-base, var(--color-bg-base));
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.scp-item:hover {
+  border-color: var(--color-primary-border, var(--color-border-strong, #93c5fd));
+}
+
+.scp-item-active {
+  border-color: var(--color-primary);
+  background: var(--status-processing-bg);
+}
+
+.scp-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.scp-chevron {
+  width: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--color-text-tertiary, var(--color-gray-label));
+}
+
+.scp-item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.scp-item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, var(--color-gray-800));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scp-item-active .scp-item-title {
+  color: var(--color-primary);
+}
+
+.scp-item-badge-wrap {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.scp-item-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.scp-item:hover .scp-item-actions,
+.scp-item-active .scp-item-actions {
+  display: inline-flex;
+}
+
+.scp-item-meta {
+  margin-top: 4px;
+  padding-left: 20px;
+  font-size: 11px;
+  color: var(--color-text-tertiary, var(--color-gray-label));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scp-item-children {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scp-item-badge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 2px;
+  color: var(--color-primary);
+  background: var(--status-processing-bg);
+  border: 1px solid var(--status-processing-border);
+  white-space: nowrap;
+}

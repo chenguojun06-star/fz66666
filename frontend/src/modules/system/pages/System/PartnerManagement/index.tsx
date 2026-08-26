@@ -3,6 +3,8 @@ import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { organizationApi } from '@/services/system/organizationApi';
+import SideCardPanel from '@/components/common/SideCardPanel';
+import type { SidePanelNode } from '@/components/common/SideCardPanel';
 import tenantService from '@/services/tenantService';
 import type { ApiResult } from '@/utils/api';
 import type { OrganizationUnit, User } from '@/types/system';
@@ -42,50 +44,6 @@ function getDescendantIds(node: OrganizationUnit): string[] {
   return ids;
 }
 
-const ExternalTreeItem: React.FC<{
-  node: OrganizationUnit;
-  depth: number;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}> = ({ node, depth, selectedId, onSelect }) => {
-  const [expanded, setExpanded] = useState(depth < 2);
-  const hasChildren = Array.isArray(node.children) && node.children.length > 0;
-  const isSelected = String(node.id) === selectedId;
-
-  return (
-    <div>
-      <div
-        className={`partner-tree-item${isSelected ? ' partner-tree-item-selected' : ''}`}
-        style={{ paddingLeft: depth * 16 + 8 }}
-      >
-        <span
-          className="partner-tree-chevron"
-          onClick={() => hasChildren && setExpanded(v => !v)}
-          style={{ cursor: hasChildren ? 'pointer' : 'default', opacity: hasChildren ? 1 : 0 }}
-        >
-          {expanded ? '▼' : '▶'}
-        </span>
-        <span className="partner-tree-label" onClick={() => onSelect(String(node.id))}>
-          <BankOutlined style={{ color: 'var(--primary-color, var(--color-primary))', marginRight: 4 }} />
-          <span className="partner-tree-name">{node.unitName}</span>
-        </span>
-      </div>
-      {hasChildren && expanded && (
-        <div>
-          {node.children!.map((child: OrganizationUnit) => (
-            <ExternalTreeItem
-              key={child.id ?? child.unitName}
-              node={child}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const PartnerManagement: React.FC = () => {
   const { message } = App.useApp();
@@ -265,18 +223,24 @@ const PartnerManagement: React.FC = () => {
             <Empty description="暂无合作企业数据" style={{ padding: '60px 0' }} />
           ) : (
             <div className="partner-split-layout" style={{ height: 'calc(100vh - 180px)' }}>
-              <div className="partner-tree-panel" style={{ width: 240 }}>
-                <div className="partner-tree-header">合作工厂</div>
-                {treeData.map((node) => (
-                  <ExternalTreeItem
-                    key={node.id ?? node.unitName}
-                    node={node}
-                    depth={0}
-                    selectedId={selectedUnitId}
-                    onSelect={setSelectedUnitId}
-                  />
-                ))}
-              </div>
+              <SideCardPanel
+                style={{ width: 240 }}
+                headerTitle="合作工厂"
+                nodes={treeData.map((node): SidePanelNode => ({
+                  key: String(node.id),
+                  title: node.unitName,
+                  icon: <BankOutlined style={{ color: 'var(--color-primary)' }} />,
+                  children: node.children?.length ? node.children.map((c): SidePanelNode => ({
+                    key: String(c.id),
+                    title: c.unitName,
+                    icon: <BankOutlined style={{ color: 'var(--color-primary)' }} />,
+                  })) : undefined,
+                }))}
+                activeKey={selectedUnitId}
+                onSelect={(key) => setSelectedUnitId(String(key))}
+                defaultExpandedDepth={2}
+                emptyText="暂无合作企业"
+              />
 
               <div className="partner-member-panel">
                 {!selectedUnitId ? (

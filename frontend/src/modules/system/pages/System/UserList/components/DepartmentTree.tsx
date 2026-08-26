@@ -1,4 +1,11 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * 部门树 — 使用全局 SideCardPanel（岗位管理卡片式标准）
+ * 点击已选部门再次点击取消选择；"全部部门"为伪节点
+ */
+import React from 'react';
+import { ApartmentOutlined, TeamOutlined } from '@ant-design/icons';
+import SideCardPanel from '@/components/common/SideCardPanel';
+import type { SidePanelNode } from '@/components/common/SideCardPanel';
 import { OrganizationUnit } from '@/types/system';
 
 const DepartmentTree: React.FC<{
@@ -6,73 +13,37 @@ const DepartmentTree: React.FC<{
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }> = ({ departments, selectedId, onSelect }) => {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const ALL_KEY = '__all__';
 
-  useEffect(() => {
-    const ids = new Set<string>();
-    const collect = (nodes: OrganizationUnit[]) => {
-      for (const n of nodes) {
-        if (n.id) ids.add(String(n.id));
-        if (n.children?.length) collect(n.children);
-      }
-    };
-    collect(departments);
-    setExpandedIds(ids);
-  }, [departments]);
+  const toNode = (node: OrganizationUnit): SidePanelNode => ({
+    key: String(node.id),
+    title: node.unitName,
+    icon: <ApartmentOutlined style={{ color: 'var(--color-accent-purple)' }} />,
+    children: node.children?.length ? node.children.map(toNode) : undefined,
+  });
 
-  const toggleExpand = (id: string) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const renderNode = (node: OrganizationUnit, depth: number) => {
-    const id = String(node.id);
-    const isSelected = id === selectedId;
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedIds.has(id);
-
-    return (
-      <div key={id}>
-        <div
-          className={`user-dept-item${isSelected ? ' user-dept-item-selected' : ''}`}
-          style={{ paddingLeft: depth * 16 + 8 }}
-        >
-          <span
-            className="user-dept-chevron"
-            onClick={() => hasChildren && toggleExpand(id)}
-            style={{ cursor: hasChildren ? 'pointer' : 'default', opacity: hasChildren ? 1 : 0 }}
-          >
-            {isExpanded ? '▼' : '▶'}
-          </span>
-          <span className="user-dept-name" onClick={() => onSelect(isSelected ? null : id)}>
-            {node.unitName}
-          </span>
-        </div>
-        {hasChildren && isExpanded && (
-          <div>
-            {node.children!.map(child => renderNode(child, depth + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const nodes: SidePanelNode[] = [
+    { key: ALL_KEY, title: '全部部门', icon: <TeamOutlined style={{ color: 'var(--color-primary)' }} /> },
+    ...departments.map(toNode),
+  ];
 
   return (
-    <div className="user-dept-tree">
-      <div
-        className={`user-dept-item${!selectedId ? ' user-dept-item-selected' : ''}`}
-        style={{ paddingLeft: 8 }}
-      >
-        <span className="user-dept-chevron" style={{ opacity: 0 }}>▶</span>
-        <span className="user-dept-name" onClick={() => onSelect(null)}>
-          全部部门
-        </span>
-      </div>
-      {departments.map(node => renderNode(node, 0))}
-    </div>
+    <SideCardPanel
+      style={{ width: 240, height: '100%' }}
+      headerTitle="部门"
+      nodes={nodes}
+      activeKey={selectedId == null ? ALL_KEY : String(selectedId)}
+      autoExpandOnDataChange
+      onSelect={(key) => {
+        if (key === ALL_KEY) {
+          onSelect(null);
+        } else {
+          // 与原行为一致：再次点击已选部门取消筛选
+          onSelect(String(key) === String(selectedId) ? null : String(key));
+        }
+      }}
+      emptyText="暂无部门"
+    />
   );
 };
 

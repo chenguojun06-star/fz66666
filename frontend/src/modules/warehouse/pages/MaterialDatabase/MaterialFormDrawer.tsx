@@ -130,10 +130,11 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
         </Row>
         <Row gutter={[12, 8]}>
           <Col xs={24} sm={8} md={6} lg={5} xl={4}>
-            <Form.Item name="color" label="颜色"><Input placeholder="请输入颜色" /></Form.Item>
+            {/* D-126：颜色/规格字典化（自由输入+自动收录），主数据源头收敛脏值 */}
+            <Form.Item name="color" label="颜色"><DictAutoComplete dictType="color" placeholder="选择或输入颜色" /></Form.Item>
           </Col>
           <Col xs={24} sm={8} md={6} lg={5} xl={4}>
-            <Form.Item name="specifications" label="规格/幅宽"><Input placeholder="如：150cm 或请输入规格" /></Form.Item>
+            <Form.Item name="specifications" label="规格/幅宽"><DictAutoComplete dictType="material_specification" fallbackOptions={['150cm', '180cm']} placeholder="如：150cm" /></Form.Item>
           </Col>
           <Col xs={24} sm={8} md={6} lg={5} xl={4}>
             <Form.Item name="unit" label="单位" rules={[{ required: true, message: '请选择单位' }]}>

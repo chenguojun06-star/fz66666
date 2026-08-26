@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer } from 'antd';
+import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer, AutoComplete } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import CircleIconButton from '@/components/common/CircleIconButton';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { InboxOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
 import { safePrint } from '@/utils/safePrint';
 import { formatMoney } from '@/utils/format';
+import api from '@/utils/api';
 
 interface FreeInboundModalProps {
   open: boolean;
@@ -43,6 +45,30 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const loadingRef = useRef(false);
   const [autoCreate, setAutoCreate] = useState(false);
   const [showCreateFields, setShowCreateFields] = useState(false);
+  // D-126：自动建SKU字段改本地状态+款号搜索选择（原 form.getFieldValue 直读不触发重渲染且全手填）
+  const [autoStyleNo, setAutoStyleNo] = useState('');
+  const [autoStyleName, setAutoStyleName] = useState('');
+  const [autoColor, setAutoColor] = useState('');
+  const [autoSize, setAutoSize] = useState('');
+  const [styleOptions, setStyleOptions] = useState<Array<{ value: string; label: string; styleName?: string }>>([]);
+  const styleSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchStyleOptions = useCallback((keyword: string) => {
+    if (styleSearchTimerRef.current) clearTimeout(styleSearchTimerRef.current);
+    styleSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get<{ code: number; data: Array<{ styleNo: string; styleName?: string }> }>('/template-library/process-price-style-options', {
+          params: { keyword: String(keyword || '').trim() },
+        });
+        if (res.code === 200) {
+          const records = Array.isArray(res.data) ? res.data : [];
+          setStyleOptions(records
+            .map((r) => ({ value: String(r?.styleNo || '').trim(), label: r?.styleName ? `${r.styleNo}（${r.styleName}）` : String(r?.styleNo || ''), styleName: String(r?.styleName || '').trim() }))
+            .filter((x) => x.value));
+        }
+      } catch { setStyleOptions([]); }
+    }, 300);
+  }, []);
   const [selectedAreaId, setSelectedAreaId] = useState<string | undefined>(undefined);
   const [_quickCreating, _setQuickCreating] = useState(false);
   const [items, setItems] = useState<InboundItem[]>([]);
@@ -103,10 +129,10 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   };
 
   const handleAddAutoCreateSku = () => {
-    const styleNo = form.getFieldValue('styleNo');
-    const styleName = form.getFieldValue('styleName');
-    const color = form.getFieldValue('color');
-    const size = form.getFieldValue('size');
+    const styleNo = autoStyleNo.trim();
+    const styleName = autoStyleName.trim();
+    const color = autoColor.trim();
+    const size = autoSize.trim();
     if (!styleNo || !color || !size) {
       message.warning('请填写款号、颜色、尺码');
       return;
@@ -306,10 +332,34 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
                 </div>
                 {autoCreate && (
                   <Row gutter={8}>
-                    <Col span={6}><Input placeholder="款号" value={form.getFieldValue('styleNo')} onChange={e => form.setFieldValue('styleNo', e.target.value)} /></Col>
-                    <Col span={6}><Input placeholder="款名" value={form.getFieldValue('styleName')} onChange={e => form.setFieldValue('styleName', e.target.value)} /></Col>
-                    <Col span={6}><Input placeholder="颜色" value={form.getFieldValue('color')} onChange={e => form.setFieldValue('color', e.target.value)} /></Col>
-                    <Col span={6}><Input placeholder="尺码" value={form.getFieldValue('size')} onChange={e => form.setFieldValue('size', e.target.value)} /></Col>
+                    {/* D-126：款号搜索选择（选中自动带款名），颜色字典化 */}
+                    <Col span={6}>
+                      <AutoComplete
+                        value={autoStyleNo}
+                        options={styleOptions}
+                        onSearch={searchStyleOptions}
+                        onSelect={(value, option) => {
+                          setAutoStyleNo(String(value || ''));
+                          setAutoStyleName(String((option as { styleName?: string })?.styleName || ''));
+                        }}
+                        onChange={(v) => setAutoStyleNo(String(v || ''))}
+                        placeholder="搜索或输入款号"
+                        style={{ width: '100%' }}
+                        filterOption={false}
+                      />
+                    </Col>
+                    <Col span={6}><Input placeholder="款名" value={autoStyleName} onChange={e => setAutoStyleName(e.target.value)} /></Col>
+                    <Col span={6}>
+                      <DictAutoComplete
+                        dictType="color"
+                        fallbackOptions={['白色', '黑色', '灰色']}
+                        placeholder="选择或输入颜色"
+                        value={autoColor}
+                        onChange={(v) => setAutoColor(String(v || ''))}
+                        style={{ width: '100%' }}
+                      />
+                    </Col>
+                    <Col span={6}><Input placeholder="尺码" value={autoSize} onChange={e => setAutoSize(e.target.value)} /></Col>
                     <Col span={24} style={{ marginTop: 8 }}><Button type="primary" size="small" onClick={handleAddAutoCreateSku}>添加到列表</Button></Col>
                   </Row>
                 )}
