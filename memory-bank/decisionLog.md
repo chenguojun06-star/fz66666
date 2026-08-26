@@ -1,7 +1,27 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-26（新增 D-140 仪表盘视觉层级重排+三张专业卡）
+> 最后更新：2026-08-26（新增 D-141 手机端僵尸待采购根治+订单详情图片轮播全局化）
+
+---
+
+## D-141：手机端僵尸待采购根治+iOS日期兼容+订单详情图片轮播全局化（2026-08-26，用户报"手机端采购与PC不一致/详情空白/悬停闪烁"）
+
+### 根因链（三端不一致的完整解释）
+- **僵尸待领取**：`getMyTasks(includeCompleted=true)`（D-119引入）两分支都不做订单有效性过滤——订单走完后遗留的无主 PENDING 行在手机端永远显示"待领取"；而 PC 列表与手机详情页走 `listWithEnrichment`（会滤无效订单）→ 手机列表有、PC 没有
+- **详情页空白**：点进僵尸任务，详情按 orderNo 查 `listWithEnrichment` 被无效订单过滤 → "暂无采购物料"
+- **iOS日期警告刷屏**：bellTaskLoader `new Date("yyyy-MM-dd HH:mm:ss")` 空格格式 iOS 不支持
+
+### 修复
+- getMyTasks 拆两查询：我名下任务保留全量（保 D-119"已完成"Tab 语义），无主待领取行按订单有效性过滤（排除 closed/completed/cancelled/archived/scrapped，与 PC excludeScrappedOrders 同口径；无订单关联的独立采购保留）
+- 顺手：已回料确认行禁编辑/删除后端兜底（D-124 遗留，防绕过UI直调API）
+- bellTaskLoader 两处日期 `replace(' ', 'T')` 转 ISO 兼容
+- **悬停闪烁根因**：antd Image 悬停遮罩与箭头按钮互相触发 hover 死循环（遮罩盖按钮→按钮区不再hover→遮罩淡出→又hover）；且 antd text Button hover 样式覆盖内联深色底导致按钮"消失"
+- 新增**全局 ImageCarousel 组件**（components/common）：箭头常显（原生 button+半透明黑底白图标+z-index 5）、遮罩 `pointer-events:none` 根治循环、序号角标、onIndexChange 回调供外部浮层同步当前图；OrderImageManager 已接入
+- 订单详情布局（用户要求中间大两侧小）：图片列 340→240，颜色/尺码/商品编码区 flex 加权 1.7（minWidth 380），基本信息/生产统计 0.9；矩阵列宽 24→44、字号 13→14
+
+### 验证
+mvn compile ✓；tsc/vite build ✓；已推送 8cb871252；待手机端验证：僵尸待领取消失、详情不再空白、小云待办同步干净
 
 ---
 
