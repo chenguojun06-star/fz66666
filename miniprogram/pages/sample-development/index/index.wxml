@@ -85,16 +85,13 @@
         </view>
       </view>
 
-      <!-- 件数 + 延期/剩余天数 + 详情按钮 -->
-      <view class="card-info-row">
+      <!-- 件数 + 延期/剩余天数（整卡可点进详情，去掉重复的详情按钮） -->
+      <view class="card-info-row" data-item="{{item}}" catchtap="onCardTap">
         <view class="card-info-left">
           <text class="card-quantity">{{item.quantity ? item.quantity + '件' : ''}}</text>
           <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
         </view>
-        <view class="card-detail-btn" data-item="{{item}}" catchtap="onCardTap">
-          <text class="card-detail-btn__text">详情</text>
-          <view class="card-detail-btn__arrow"></view>
-        </view>
+        <view class="card-detail-arrow"></view>
       </view>
 
       <!-- 进度条 -->
@@ -110,7 +107,7 @@
 
       <!-- 展开明细按钮 -->
       <view class="card-expand-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
-        <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细（子工序 + 多码多色）'}}</text>
+        <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细'}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
       </view>
 

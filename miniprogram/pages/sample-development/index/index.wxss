@@ -168,7 +168,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  padding: 12px;
+  padding: 14px 14px 6px;
   box-sizing: border-box;
   /* 移除 .card:active 背景，避免点击子元素时整个卡片闪烁 */
   /* 注意：:active 会冒泡到祖先元素，所以 .card-top:active 也不能加，
@@ -293,12 +293,14 @@
   color: var(--color-text-tertiary);
 }
 
-/* 件数 + 交板日期 */
+/* 件数 + 交板日期：与上部信息用发丝线分隔，整行可点进详情 */
 .card-info-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
 }
 
 .card-info-left {
@@ -309,36 +311,14 @@
   min-width: 0;
 }
 
-/* 详情按钮：镂空风格，符合项目设计规范（透明背景+彩色边框+彩色文字） */
-.card-detail-btn {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 10px;
-  border: 1px solid var(--color-primary, #1677ff);
-  border-radius: var(--radius-xs);
-  background: transparent;
-  color: var(--color-primary, #1677ff);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.4;
-  transition: all 0.2s ease;
-}
-.card-detail-btn__text {
-  color: inherit;
-}
-.card-detail-btn__arrow {
-  width: 6px;
-  height: 6px;
-  border-top: 1.5px solid currentColor;
-  border-right: 1.5px solid currentColor;
+/* 右侧箭头：轻量指示可点，不再用描边按钮堆密度 */
+.card-detail-arrow {
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid var(--color-text-quaternary, var(--color-text-tertiary));
+  border-right: 1.5px solid var(--color-text-quaternary, var(--color-text-tertiary));
   transform: rotate(45deg);
-  margin-left: 1px;
-}
-.card-detail-btn:active {
-  background: var(--color-primary, #1677ff);
-  color: #fff;
-  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 .card-quantity {

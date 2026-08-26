@@ -496,6 +496,21 @@ public class PatternProductionOrchestrator {
         PatternProduction pattern = loadPatternForScan(patternId);
         statusHelper.validateWarehouseOperationFlow(patternId, operationType);
 
+        // D-145：防重复领取——样衣已被别人领取且未完成时，其他人不能再领（前端选项已过滤，此处兜底防并发/直调API）
+        if ("RECEIVE".equalsIgnoreCase(operationType.trim())) {
+            PatternScanRecord existingClaim = patternScanRecordService.lambdaQuery()
+                    .eq(PatternScanRecord::getPatternProductionId, pattern.getId())
+                    .eq(PatternScanRecord::getOperationType, "RECEIVE")
+                    .eq(PatternScanRecord::getDeleteFlag, 0)
+                    .orderByDesc(PatternScanRecord::getScanTime)
+                    .last("LIMIT 1")
+                    .one();
+            if (existingClaim != null && StringUtils.hasText(existingClaim.getOperatorId())
+                    && !existingClaim.getOperatorId().equals(UserContext.userId())) {
+                throw new IllegalArgumentException("该样衣已被 " + existingClaim.getOperatorName() + " 领取，不能再重复领取");
+            }
+        }
+
         String operatorId = UserContext.userId();
         String operatorName = UserContext.username();
         updatePatternQuantityIfNeeded(pattern, quantity, operatorName);

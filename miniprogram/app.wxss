@@ -888,3 +888,54 @@ page {
   color: var(--color-text-tertiary);
   margin-top: 4px;
 }
+
+/* ========== v11 整洁层（D-145）：统一卡片节奏，供各页面收敛 ========== */
+/* 卡内分区发丝线：替代各页自画的粗分隔 */
+.hairline-top {
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+
+/* 卡内统一纵向节奏：区块间 20rpx，配合发丝线 */
+.card-section + .card-section {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+}
+
+/* 信息行：label 左灰、value 右对齐，全 app 唯一写法 */
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  min-height: 56rpx;
+}
+
+.info-row-label {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.info-row-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 徽标：统一高度/字号，禁止页面自定大小 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 36rpx;
+  padding: 0 14rpx;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
