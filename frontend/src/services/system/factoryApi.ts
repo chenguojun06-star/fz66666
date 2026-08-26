@@ -47,8 +47,8 @@ export const factoryApi = {
   /**
    * 删除工厂/供应商
    */
-  delete: (id: string) =>
-    api.delete<{ code: number; message: string }>(`/system/factory/${id}`),
+  delete: (id: string, remark?: string) =>
+    api.delete<{ code: number; message: string }>(`/system/factory/${id}`, { params: remark ? { remark } : undefined }),
 
   approveAdmission: (id: string, action: string, reason?: string) =>
     api.put<{ code: number; message: string; data: boolean }>(`/system/factory/${id}/admission`, null, { params: { action, reason } }),

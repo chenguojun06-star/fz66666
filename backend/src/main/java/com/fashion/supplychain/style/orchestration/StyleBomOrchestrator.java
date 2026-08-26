@@ -311,7 +311,12 @@ public class StyleBomOrchestrator {
                 availableQty = Math.max(0, availableQty);
             }
 
-            if (availableQty >= requiredQty) {
+            // D-153：单件用量未填/为0时需求为0，旧逻辑 0>=0 误判"库存充足"——
+            // 没有需求就无法判定够不够，标记"未填用量"提醒补填
+            if (requiredQty <= 0) {
+                bom.setStockStatus("no_usage");
+                bom.setRequiredPurchase(0);
+            } else if (availableQty >= requiredQty) {
                 bom.setStockStatus("sufficient");
                 bom.setRequiredPurchase(0);
             } else if (availableQty > 0) {
@@ -368,6 +373,7 @@ public class StyleBomOrchestrator {
         int totalItems = bomList.size();
         int sufficientCount = 0;
         int insufficientCount = 0;
+        int noUsageCount = 0;
         int noneCount = 0;
         int totalRequiredPurchase = 0;
         BigDecimal totalPurchaseValue = BigDecimal.ZERO;
@@ -383,7 +389,11 @@ public class StyleBomOrchestrator {
                                     - (stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0));
                 }
 
-                if (availableQty >= requiredQty) {
+                // D-153：与 saveBomWithStockCheck 同口径——需求为0（用量未填）标记"未填用量"
+                if (requiredQty <= 0) {
+                    bom.setStockStatus("no_usage");
+                    bom.setRequiredPurchase(0);
+                } else if (availableQty >= requiredQty) {
                     bom.setStockStatus("sufficient");
                     bom.setRequiredPurchase(0);
                 } else if (availableQty > 0) {
@@ -406,6 +416,9 @@ public class StyleBomOrchestrator {
                 case "none":
                     noneCount++;
                     break;
+                case "no_usage":
+                    noUsageCount++;
+                    break;
             }
 
             if (bom.getRequiredPurchase() != null && bom.getRequiredPurchase() > 0) {
@@ -423,6 +436,7 @@ public class StyleBomOrchestrator {
         summary.put("sufficientCount", sufficientCount);
         summary.put("insufficientCount", insufficientCount);
         summary.put("noneCount", noneCount);
+        summary.put("noUsageCount", noUsageCount);
         summary.put("allSufficient", sufficientCount == totalItems);
         summary.put("totalRequiredPurchase", totalRequiredPurchase);
         summary.put("totalPurchaseValue", totalPurchaseValue);

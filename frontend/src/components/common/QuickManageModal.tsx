@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Empty, Input, Popconfirm, Spin, Tag, Tooltip } from 'antd';
+import { App, Button, Empty, Input, Popconfirm, Select, Spin, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined, SaveOutlined, SyncOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import factoryApi from '@/services/system/factoryApi';
@@ -27,6 +27,8 @@ interface ManageRow {
   contact?: string;
   phone?: string;
   address?: string;
+  /** 供应商标签：布行/辅料店/纱线行等（D-153） */
+  supplierTag?: string;
 }
 
 interface EditDraft {
@@ -34,9 +36,10 @@ interface EditDraft {
   contact?: string;
   phone?: string;
   address?: string;
+  supplierTag?: string;
 }
 
-const emptyDraft: EditDraft = { name: '', contact: '', phone: '', address: '' };
+const emptyDraft: EditDraft = { name: '', contact: '', phone: '', address: '', supplierTag: '' };
 
 const MODE_META: Record<QuickManageMode, { defaultTitle: string; nameLabel: string; unit: string; hasContact: boolean; searchPlaceholder: string }> = {
   dict: { defaultTitle: '选项', nameLabel: '选项名称', unit: '个选项', hasContact: false, searchPlaceholder: '搜索选项名称' },
@@ -58,7 +61,10 @@ const FIELD_ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 8, marginBo
  * - 支持：字典词条 / CRM客户 / 物料供应商（含地址）
  */
 const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, title }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
+
+/** 供应商标签预置选项（D-153）：区分外发工厂/布行/辅料店等 */
+const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料', '印染厂', '其它'].map(t => ({ value: t, label: t }));
   const meta = MODE_META[mode];
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -102,6 +108,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
           contact: f.contactPerson,
           phone: f.contactPhone,
           address: f.address,
+          supplierTag: (f as any).supplierTag || '',
         }));
       }
       setRows(result);
@@ -133,7 +140,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
   const selectRow = (row: ManageRow) => {
     setCreating(false);
     setSelectedId(row.id);
-    setDraft({ name: row.name, contact: row.contact, phone: row.phone, address: row.address });
+    setDraft({ name: row.name, contact: row.contact, phone: row.phone, address: row.address, supplierTag: row.supplierTag || '' });
   };
 
   const startCreate = () => {
@@ -173,6 +180,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             contactPerson: draft.contact?.trim() || undefined,
             contactPhone: draft.phone?.trim() || undefined,
             address: draft.address?.trim() || undefined,
+            supplierTag: draft.supplierTag?.trim() || undefined,
             supplierType: 'MATERIAL',
             factoryType: 'EXTERNAL',
             status: 'active',
@@ -185,7 +193,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
         const created = newList.find((r) => r.name === name);
         if (created) {
           setSelectedId(created.id);
-          setDraft({ name: created.name, contact: created.contact, phone: created.phone, address: created.address });
+          setDraft({ name: created.name, contact: created.contact, phone: created.phone, address: created.address, supplierTag: created.supplierTag || '' });
         }
       } else if (selectedRow) {
         if (mode === 'dict') {
@@ -205,6 +213,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             contactPerson: draft.contact?.trim() || undefined,
             contactPhone: draft.phone?.trim() || undefined,
             address: draft.address?.trim() || undefined,
+            supplierTag: draft.supplierTag?.trim() || undefined,
           } as any);
         }
         message.success('已保存');
@@ -220,6 +229,48 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
 
   const handleDelete = async () => {
     if (!selectedRow) return;
+    // D-153：供应商删除后端强制要求操作原因（操作留痕），缺失会 400——弹窗收集原因
+    if (mode === 'supplier') {
+      let reasonValue = '';
+      modal.confirm({
+        title: `删除供应商"${selectedRow.name}"`,
+        content: (
+          <div>
+            <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+              删除后不可恢复。存在未完成订单/在途采购时无法删除。
+            </div>
+            <Input.TextArea
+              id="deleteSupplierReason"
+              rows={3}
+              placeholder="请输入删除原因（必填）"
+              onChange={e => { reasonValue = e.target.value; }}
+            />
+          </div>
+        ),
+        okText: '删除',
+        okButtonProps: { danger: true },
+        cancelText: '取消',
+        onOk: async () => {
+          if (!reasonValue.trim()) {
+            message.error('请填写删除原因');
+            return Promise.reject(new Error('未填写原因'));
+          }
+          try {
+            await factoryApi.delete(selectedRow.id, reasonValue.trim());
+            message.success(`已删除"${selectedRow.name}"`);
+            setSelectedId(null);
+            setDraft(emptyDraft);
+            await loadList();
+            notifyChanged();
+          } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message || '删除失败';
+            message.error(msg);
+            return Promise.reject(err);
+          }
+        },
+      });
+      return;
+    }
     try {
       if (mode === 'dict') {
         await api.delete(`/system/dict/${selectedRow.id}`);
@@ -233,8 +284,9 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
       setDraft(emptyDraft);
       await loadList();
       notifyChanged();
-    } catch {
-      message.error('删除失败');
+    } catch (err: unknown) {
+      const msg = (err as any)?.response?.data?.message || '删除失败';
+      message.error(msg);
     }
   };
 
@@ -312,8 +364,11 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
                       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {row.name}
+                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
+                        {mode === 'supplier' && row.supplierTag && (
+                          <Tag style={{ flexShrink: 0, fontSize: 10, lineHeight: '16px', padding: '0 6px', margin: 0 }}>{row.supplierTag}</Tag>
+                        )}
                       </div>
                       {meta.hasContact && (
                         <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -351,6 +406,20 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                     <span style={FIELD_LABEL_STYLE}>地址</span>
                     {fieldInput('address', '请输入地址（选填）', 200, true)}
                   </div>
+                  {mode === 'supplier' && (
+                    <div style={FIELD_ROW_STYLE}>
+                      <span style={FIELD_LABEL_STYLE}>类型标签</span>
+                      <Select
+                        value={draft.supplierTag || undefined}
+                        onChange={v => setDraft(d => ({ ...d, supplierTag: v || '' }))}
+                        placeholder="布行/辅料店/纱线行等（选填）"
+                        allowClear
+                        showSearch
+                        style={{ flex: 1 }}
+                        options={SUPPLIER_TAG_OPTIONS}
+                      />
+                    </div>
+                  )}
                 </>
               )}
               <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
@@ -397,6 +466,20 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                     <span style={FIELD_LABEL_STYLE}>地址</span>
                     {fieldInput('address', '请输入地址', 200, true)}
                   </div>
+                  {mode === 'supplier' && (
+                    <div style={FIELD_ROW_STYLE}>
+                      <span style={FIELD_LABEL_STYLE}>类型标签</span>
+                      <Select
+                        value={draft.supplierTag || undefined}
+                        onChange={v => setDraft(d => ({ ...d, supplierTag: v || '' }))}
+                        placeholder="布行/辅料店/纱线行等（选填）"
+                        allowClear
+                        showSearch
+                        style={{ flex: 1 }}
+                        options={SUPPLIER_TAG_OPTIONS}
+                      />
+                    </div>
+                  )}
                 </>
               )}
               <div style={{ marginTop: 8 }}>

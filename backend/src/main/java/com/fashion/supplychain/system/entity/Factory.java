@@ -51,6 +51,11 @@ public class Factory {
      */
     private String supplierType;
 
+    /**
+     * 供应商标签: 布行/辅料店/纱线行/五金辅料/其它等细分标识（D-153，用于区分外发工厂与布行等）
+     */
+    private String supplierTag;
+
     /** 工厂组织节点ID */
     private String orgUnitId;
 

@@ -13,6 +13,7 @@ const STOCK_STATUS_CONFIG: Record<string, StockStatusConfig> = {
   sufficient: { color: 'success', text: '库存充足' },
   insufficient: { color: 'warning', text: '库存不足' },
   none: { color: 'error', text: '无库存' },
+  no_usage: { color: 'warning', text: '未填用量' },
   unchecked: { color: 'default', text: '未检查' },
 };
 

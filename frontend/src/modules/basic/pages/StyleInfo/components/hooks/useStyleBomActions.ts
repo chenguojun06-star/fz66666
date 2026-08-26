@@ -158,12 +158,12 @@ const useStyleBomActions = ({
       if (result.code === 200) {
         const checkedBomList = result.data as StyleBom[];
         setData(sortBomRows([...checkedBomList, ...tempRows]));
-        const stats = { sufficient: 0, insufficient: 0, none: 0, unchecked: 0 };
+        const stats = { sufficient: 0, insufficient: 0, none: 0, no_usage: 0, unchecked: 0 };
         checkedBomList.forEach((bom) => {
           const status = bom.stockStatus || 'unchecked';
           stats[status as keyof typeof stats] = (stats[status as keyof typeof stats] || 0) + 1;
         });
-        message.success(`库存检查完成：充足 ${stats.sufficient} | 不足 ${stats.insufficient} | 无库存 ${stats.none}`);
+        message.success(`库存检查完成：充足 ${stats.sufficient} | 不足 ${stats.insufficient} | 无库存 ${stats.none}${stats.no_usage > 0 ? ` | 未填用量 ${stats.no_usage}` : ''}`);
         return;
       }
       message.error(String(result.message || '检查失败'));

@@ -108,10 +108,11 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   // 若 label 是 React 元素（没有 nodeName 属性）会抛出 "nodeName.toLowerCase is not a function"。
   const options = useMemo(() => {
     return suppliers.map(factory => {
+      const tag = (factory as any).supplierTag ? `【${(factory as any).supplierTag}】` : '';
       const extra = [factory.contactPerson, factory.contactPhone].filter(Boolean).join(' · ');
       return {
         value: factory.factoryName,
-        label: extra ? `${factory.factoryName}（${extra}）` : factory.factoryName,
+        label: extra ? `${factory.factoryName}${tag}（${extra}）` : `${factory.factoryName}${tag}`,
         id: factory.id,
         factory: factory,
         // 附加字段，方便表单自动填充

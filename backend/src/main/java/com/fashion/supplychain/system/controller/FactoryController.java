@@ -130,6 +130,7 @@ public class FactoryController {
                     item.put("id", f.getId());
                     item.put("factoryName", f.getFactoryName());
                     item.put("factoryCode", f.getFactoryCode());
+                    item.put("supplierTag", f.getSupplierTag());
                     return item;
                 })
                 .collect(Collectors.toList());
