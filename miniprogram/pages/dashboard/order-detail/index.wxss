@@ -60,7 +60,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -171,7 +171,7 @@
   gap: 10px 16px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light, var(--color-border));
 }
 .info-cell {
   display: flex;
@@ -231,7 +231,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -420,7 +420,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -623,7 +623,7 @@
   color: var(--color-text-primary);
   text-align: right;
   line-height: 1.5;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light, var(--color-border));
   box-sizing: border-box;
 }
 /* 表头行：无上边框，背景色 */
@@ -664,7 +664,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
