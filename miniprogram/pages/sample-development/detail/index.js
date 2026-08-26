@@ -4,6 +4,7 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
+const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -1180,6 +1181,37 @@ Page({
     });
 
     return { columns: sizeSet, rows: rows };
+  },
+
+  /**
+   * D-157 闭环：详情页直达"按工序扫码"确认页——
+   * 复用主扫码页同一 PatternScanProcessor 流水线（详情+扫码记录+工序配置→操作选项），
+   * 确认页提交走 executeScan(sourceBizType=SAMPLE)，后端三入口统一委派样衣链路
+   */
+  async onProcessScan() {
+    const snapshot = this.data.patternSnapshot;
+    const patternId = snapshot && snapshot.id;
+    if (!patternId) return;
+    wx.showLoading({ title: '加载工序...' });
+    try {
+      const handler = {
+        api: { production },
+        SCAN_MODE: { PATTERN: 'pattern' },
+        _errorResult: (msg) => ({ success: false, message: msg }),
+      };
+      const result = await PatternScanProcessor.handlePatternScan(handler, { patternId: String(patternId) }, null);
+      wx.hideLoading();
+      if (!result || !result.success || !result.data) {
+        wx.showToast({ title: (result && result.message) || '无法打开工序扫码', icon: 'none' });
+        return;
+      }
+      const app = getApp();
+      app.globalData.patternScanData = result.data;
+      wx.navigateTo({ url: '/pages/scan/pattern/index' });
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || '打开失败', icon: 'none' });
+    }
   },
 
   onReceivePattern() {

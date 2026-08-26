@@ -1568,3 +1568,11 @@
   color: var(--color-text-tertiary, #999);
   margin-right: 6px;
 }
+
+.receive-btn--secondary {
+  background: var(--color-bg-card, #fff);
+  border: 2rpx solid var(--color-primary, #2d7ff9);
+}
+.receive-btn--secondary .receive-btn__text {
+  color: var(--color-primary, #2d7ff9);
+}
