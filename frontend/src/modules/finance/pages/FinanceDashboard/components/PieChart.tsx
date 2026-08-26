@@ -34,7 +34,8 @@ const PieChart: React.FC<PieChartProps> = ({ data }) => {
           const path = `M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
           return <path key={idx} d={path} fill={PIE_COLORS[idx % PIE_COLORS.length]} />;
         })}
-        <circle cx="50" cy="50" r="25" fill="var(--color-bg-base)" />
+        {/* style 而非 fill 属性：CSS 属性支持 var() 跟随主题，属性写法会变黑 */}
+        <circle cx="50" cy="50" r="25" style={{ fill: 'var(--color-bg-base)' }} />
       </svg>
       <div className={styles.pieLegend}>
         <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>

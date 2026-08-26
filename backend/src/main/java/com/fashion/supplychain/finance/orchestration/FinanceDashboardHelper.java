@@ -127,11 +127,13 @@ public class FinanceDashboardHelper {
 
     private BigDecimal sumShipmentRevenue(Long tenantId, LocalDateTime start, LocalDateTime end) {
         try {
+            // F-2 口径对齐（D-142）：出货对账创建即计（排除取消/驳回），与现金流时间线同口径，
+            // 原实现仅算 status=paid×paidAt，导致顶部总营收卡长期 ¥0 与下方图表对不上
             LambdaQueryWrapper<ShipmentReconciliation> qw = new LambdaQueryWrapper<>();
             qw.eq(ShipmentReconciliation::getTenantId, tenantId)
-              .eq(ShipmentReconciliation::getStatus, "paid")
-              .ge(ShipmentReconciliation::getPaidAt, start)
-              .le(ShipmentReconciliation::getPaidAt, end)
+              .notIn(ShipmentReconciliation::getStatus, "cancelled", "rejected")
+              .ge(ShipmentReconciliation::getCreateTime, start)
+              .le(ShipmentReconciliation::getCreateTime, end)
               .last("LIMIT " + QUERY_LIMIT);
             List<ShipmentReconciliation> list = shipmentReconciliationService.list(qw);
             return list.stream()
@@ -145,11 +147,11 @@ public class FinanceDashboardHelper {
 
     private BigDecimal sumEcRevenue(Long tenantId, LocalDateTime start, LocalDateTime end) {
         try {
+            // F-2 口径对齐（D-142）：电商销售全部状态 × createTime
             LambdaQueryWrapper<EcSalesRevenue> qw = new LambdaQueryWrapper<>();
             qw.eq(EcSalesRevenue::getTenantId, tenantId)
-              .in(EcSalesRevenue::getStatus, Arrays.asList("confirmed", "reconciled"))
-              .ge(EcSalesRevenue::getCompleteTime, start)
-              .le(EcSalesRevenue::getCompleteTime, end)
+              .ge(EcSalesRevenue::getCreateTime, start)
+              .le(EcSalesRevenue::getCreateTime, end)
               .last("LIMIT " + QUERY_LIMIT);
             List<EcSalesRevenue> list = ecSalesRevenueService.list(qw);
             return list.stream()
@@ -329,33 +331,32 @@ public class FinanceDashboardHelper {
     }
 
     private void aggregateRevenueByMonth(Long tenantId, LocalDate start, LocalDate end, Map<String, Map<String, BigDecimal>> buckets) {
-        // 出货对账：按 paidAt 月份
+        // 出货对账：创建即计（排除取消/驳回，F-2 口径对齐 D-142），按 createTime 月份
         try {
             LambdaQueryWrapper<ShipmentReconciliation> qw = new LambdaQueryWrapper<>();
             qw.eq(ShipmentReconciliation::getTenantId, tenantId)
-              .eq(ShipmentReconciliation::getStatus, "paid")
-              .ge(ShipmentReconciliation::getPaidAt, start.atStartOfDay())
-              .le(ShipmentReconciliation::getPaidAt, end.atTime(23, 59, 59))
+              .notIn(ShipmentReconciliation::getStatus, "cancelled", "rejected")
+              .ge(ShipmentReconciliation::getCreateTime, start.atStartOfDay())
+              .le(ShipmentReconciliation::getCreateTime, end.atTime(23, 59, 59))
               .last("LIMIT " + QUERY_LIMIT);
             for (ShipmentReconciliation r : shipmentReconciliationService.list(qw)) {
-                if (r.getPaidAt() != null) {
-                    addBucket(buckets, r.getPaidAt().format(MONTH_FMT), "revenue", r.getFinalAmount());
+                if (r.getCreateTime() != null) {
+                    addBucket(buckets, r.getCreateTime().format(MONTH_FMT), "revenue", r.getFinalAmount());
                 }
             }
         } catch (Exception e) {
             log.warn("[财务总览] 趋势-出货营收聚合失败", e);
         }
-        // 电商销售：按 completeTime 月份
+        // 电商销售：全部状态，按 createTime 月份
         try {
             LambdaQueryWrapper<EcSalesRevenue> qw = new LambdaQueryWrapper<>();
             qw.eq(EcSalesRevenue::getTenantId, tenantId)
-              .in(EcSalesRevenue::getStatus, Arrays.asList("confirmed", "reconciled"))
-              .ge(EcSalesRevenue::getCompleteTime, start.atStartOfDay())
-              .le(EcSalesRevenue::getCompleteTime, end.atTime(23, 59, 59))
+              .ge(EcSalesRevenue::getCreateTime, start.atStartOfDay())
+              .le(EcSalesRevenue::getCreateTime, end.atTime(23, 59, 59))
               .last("LIMIT " + QUERY_LIMIT);
             for (EcSalesRevenue r : ecSalesRevenueService.list(qw)) {
-                if (r.getCompleteTime() != null) {
-                    addBucket(buckets, r.getCompleteTime().format(MONTH_FMT), "revenue", r.getPayAmount());
+                if (r.getCreateTime() != null) {
+                    addBucket(buckets, r.getCreateTime().format(MONTH_FMT), "revenue", r.getPayAmount());
                 }
             }
         } catch (Exception e) {

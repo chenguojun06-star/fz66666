@@ -19,6 +19,42 @@ export interface DetailConfig {
   rows: any[];
 }
 
+// D-142：五类全用首页同款平滑线条+渐变面积（原支出堆叠柱因 CSS 变量进 canvas 全变黑柱，已废弃）
+// ECharts canvas 不解析 CSS 变量，必须用具体色值（tooltip 为 DOM 渲染可用变量）
+const CF_COLORS = {
+  营收: '#52c41a',
+  工资: '#2d7ff9',
+  物料: '#f59e0b',
+  费用: '#ef4444',
+  借支: '#722ed1',
+} as const;
+
+const buildCashFlowLineSeries = (name: string, data: number[], color: string) => {
+  const rgb = color === '#52c41a' ? '82,196,26'
+    : color === '#2d7ff9' ? '45,127,249'
+    : color === '#f59e0b' ? '245,158,11'
+    : color === '#ef4444' ? '239,68,68'
+    : '114,46,209';
+  return {
+    name,
+    type: 'line',
+    smooth: true,
+    data,
+    lineStyle: { width: 2, color },
+    itemStyle: { color },
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [
+          { offset: 0, color: `rgba(${rgb}, 0.22)` },
+          { offset: 1, color: `rgba(${rgb}, 0.02)` },
+        ],
+      },
+    },
+  };
+};
+
 const buildCashFlowChartOption = (
   dates: string[],
   incomes: number[],
@@ -60,7 +96,7 @@ const buildCashFlowChartOption = (
     top: 5,
     textStyle: {
       fontSize: 13,
-      color: 'var(--color-text-secondary)',
+      color: '#6b7280', // canvas 不解析 CSS 变量
     },
   },
   grid: {
@@ -72,15 +108,15 @@ const buildCashFlowChartOption = (
   },
   xAxis: {
     type: 'category',
-    boundaryGap: true,
+    boundaryGap: false,
     data: dates,
     axisLine: {
       lineStyle: {
-        color: 'var(--color-border)',
+        color: '#e5e7eb',
       },
     },
     axisLabel: {
-      color: 'var(--color-text-tertiary)',
+      color: '#9ca3af',
       fontSize: 12,
     },
   },
@@ -93,7 +129,7 @@ const buildCashFlowChartOption = (
       show: false,
     },
     axisLabel: {
-      color: 'var(--color-text-tertiary)',
+      color: '#9ca3af',
       fontSize: 12,
       formatter: (value: number) => {
         if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
@@ -102,63 +138,16 @@ const buildCashFlowChartOption = (
     },
     splitLine: {
       lineStyle: {
-        color: 'var(--color-border-light)',
+        color: '#f0f0f0',
       },
     },
   },
   series: [
-    {
-      name: '营收',
-      type: 'line',
-      smooth: true,
-      data: incomes,
-      lineStyle: {
-        width: 2,
-        color: 'var(--color-success)',
-      },
-      itemStyle: {
-        color: 'var(--color-success)',
-      },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(82, 196, 26, 0.25)' },
-            { offset: 1, color: 'rgba(82, 196, 26, 0.02)' },
-          ],
-        },
-      },
-    },
-    {
-      name: '工资',
-      type: 'bar',
-      stack: '支出',
-      barMaxWidth: 18,
-      data: wages,
-      itemStyle: { color: 'var(--color-primary, #2D7FF9)' },
-    },
-    {
-      name: '物料',
-      type: 'bar',
-      stack: '支出',
-      data: materials,
-      itemStyle: { color: 'var(--color-orange-300, #f6c344)' },
-    },
-    {
-      name: '费用',
-      type: 'bar',
-      stack: '支出',
-      data: expenseFees,
-      itemStyle: { color: 'var(--color-danger, #f5222d)' },
-    },
-    {
-      name: '借支',
-      type: 'bar',
-      stack: '支出',
-      data: advances,
-      itemStyle: { color: 'var(--color-success, #52c41a)' },
-    },
+    buildCashFlowLineSeries('营收', incomes, CF_COLORS.营收),
+    buildCashFlowLineSeries('工资', wages, CF_COLORS.工资),
+    buildCashFlowLineSeries('物料', materials, CF_COLORS.物料),
+    buildCashFlowLineSeries('费用', expenseFees, CF_COLORS.费用),
+    buildCashFlowLineSeries('借支', advances, CF_COLORS.借支),
   ],
 });
 
