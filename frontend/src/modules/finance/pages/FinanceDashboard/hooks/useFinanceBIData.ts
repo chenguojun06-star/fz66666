@@ -188,7 +188,12 @@ export const useFinanceBIData = () => {
         setCashFlowData(res.data.points.map((p: any) => ({
           date: p.date,
           income: Number(p.income ?? 0),
+          // F-2：五类金额事件全量映射（此前只映射 income/expense，新字段被丢弃导致图表全0）
+          wage: Number(p.wage ?? 0),
+          material: Number(p.material ?? 0),
           expense: Number(p.expense ?? 0),
+          advance: Number(p.advance ?? 0),
+          expenseTotal: Number(p.expenseTotal ?? 0),
         })));
       } else {
         setCashFlowData([]);
