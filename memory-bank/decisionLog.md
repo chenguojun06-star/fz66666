@@ -3026,3 +3026,23 @@ D-102 后用户要求"根治"。发现根因：IDE 警告只有打开文件才�
 
 ### 验证
 javac -Xlint 警告 0；mvn compile EXIT=0；Java LS 全目录诊断 0。三重清零
+
+## D-164 样衣工序扫码领取/报工闭环（MES CLAIM 模型）——2026-08-26
+
+### 背景
+用户强诉求：扫码样衣码 → 直接进工序页 → 按款式配置的工序逐道领取 → 本人完成报工 → 全部完成 → 审核 → 入库；必须有防重复领取。
+
+### 决策
+1. 后端新增 CLAIM operationType：领取写 t_pattern_scan_record(operation_type=CLAIM)，不写计件镜像不同步库存（领取不算工资）；完成报工才计件
+2. process-config 接口返回每道工序 status(PENDING/CLAIMED/COMPLETED)+claimedBy+claimedByMe，由 PatternEnrichmentHelper 推导
+3. validateProcessClaim 三层校验：工序必须在款式配置内 + 未完成 + 未被他人领取（本人幂等）；分布式锁 scan:sample:{patternId} 兜底并发
+4. 前端工序列表视图：PatternScanProcessor 返回全部工序（不再只显示第一道可执行的），pattern/index.wxml 行内领取/完成报工按钮
+5. 样衣列表页扫码路由修复：原 onScan 命中样板码直接跳详情页（用户炸点），改为复用 PatternScanProcessor 直达 /pages/scan/pattern/index
+
+### 踩坑（重要）
+- 小程序 config.js getBaseUrl() 强制把 localhost/内网地址替换为云端 https://api.webyszl.cn —— 开发者工具测的永远是云端后端，本地起后端无用，必须推送走 CI 部署
+- 推送后 GitHub Actions 可能不自动触发（webhook 延迟），需空提交重触发或再推一个 commit
+- 历史 fix 提交的 CI run 常被后续 docs 提交 cancel（concurrency cancel-in-progress），以最后一个 success run 为准
+
+### 验证
+本地实测（8088 + lilb/李老板）：领取裁剪成功→列表 CLAIMED+显示领取人；factory_meimei 领取被拒「已由 李老板 领取」；领取配置外工序被拒；跨租户拒绝；测试数据已清理
