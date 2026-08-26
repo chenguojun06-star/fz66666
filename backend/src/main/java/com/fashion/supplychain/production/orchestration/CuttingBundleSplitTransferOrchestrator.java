@@ -113,6 +113,16 @@ public class CuttingBundleSplitTransferOrchestrator {
                 .orElseThrow(() -> new BusinessException("未找到当前工序记录"));
         int currentOrder = currentTracking.getProcessOrder() == null ? Integer.MAX_VALUE : currentTracking.getProcessOrder();
         validatePreConditions(sourceTrackings, currentOrder, source);
+        // D-144：同一菲号同一工序已有待确认的拆菲请求时禁止重复发起，避免对方重复确认产生双份子菲
+        Long pendingCount = splitLogService.lambdaQuery()
+                .eq(CuttingBundleSplitLog::getSourceBundleId, source.getId())
+                .eq(CuttingBundleSplitLog::getCurrentProcessName, request.getCurrentProcessName().trim())
+                .eq(CuttingBundleSplitLog::getSplitStatus, "PENDING")
+                .eq(CuttingBundleSplitLog::getTenantId, UserContext.tenantId())
+                .count();
+        if (pendingCount != null && pendingCount > 0) {
+            throw new BusinessException("该菲号已有待确认的拆菲请求，请等待对方确认或撤销后再发起");
+        }
         CuttingBundleSplitLog logEntry = buildSplitLog(source, null, null, request);
         logEntry.setSplitStatus("PENDING");
         splitLogService.save(logEntry);
@@ -388,8 +398,16 @@ public class CuttingBundleSplitTransferOrchestrator {
         target.setSplitSeq(splitSeq);
         target.setSplitProcessName(splitProcessName);
         target.setSplitProcessOrder(splitProcessOrder);
-        target.setOperatorId(toWorkerId);
-        target.setOperatorName(toWorkerName);
+        // D-144：已完成子菲的操作人是原工人（活是A干的，工资也归A），
+        // 只有转派子菲才归属接手人。原实现两个子菲都写 toWorker，
+        // 菲号列表里 A 已完成的部分会显示成接手人的名字
+        if (transferChild) {
+            target.setOperatorId(toWorkerId);
+            target.setOperatorName(toWorkerName);
+        } else {
+            target.setOperatorId(source.getOperatorId());
+            target.setOperatorName(source.getOperatorName());
+        }
         target.setFactoryId(source.getFactoryId());
         target.setTenantId(UserContext.tenantId());
         return target;
