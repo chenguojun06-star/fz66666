@@ -29,7 +29,7 @@ import java.util.Map;
  *  1. generateRolls()     - 为某入库单批量生成料卷记录（PC端调用）
  *  2. scanRoll()          - 仓管扫料卷二维码（小程序调用）
  *                           - action=issue: 确认发料（IN_STOCK → ISSUED）
- *                           - action=confirm_inbound: 重新上架（ISSUED → IN_STOCK）
+ *                           - action=return: 退回入库（ISSUED → IN_STOCK）
  */
 @Slf4j
 @Service
@@ -43,6 +43,9 @@ public class MaterialRollOrchestrator {
 
     @Autowired
     private MaterialStockService materialStockService;
+
+    @Autowired
+    private com.fashion.supplychain.system.service.LoginLogService loginLogService;
 
     // ----------------------------------------------------------------
     // 1. 生成料卷 QR 标签（PC端调用）
@@ -189,6 +192,10 @@ public class MaterialRollOrchestrator {
             result.put("newStatus", "ISSUED");
             result.put("message", "发料成功！" + roll.getMaterialName() + " × " + roll.getQuantity() + roll.getUnit() + " 已出库");
             log.info("料卷发料: rollCode={}, operator={}, cuttingOrder={}", rollCode, operatorName, cuttingOrderNo);
+            // D-159：操作留痕（发料=物料出库）
+            saveRollOperationLog(roll, "ISSUE", operatorName,
+                    "扫码发料出库 " + roll.getMaterialName() + " × " + roll.getQuantity() + roll.getUnit()
+                            + (cuttingOrderNo != null && !cuttingOrderNo.isBlank() ? "（" + cuttingOrderNo + "）" : ""));
 
         } else if ("return".equals(action)) {
             // 退回：ISSUED → IN_STOCK
@@ -213,12 +220,27 @@ public class MaterialRollOrchestrator {
             result.put("newStatus", "IN_STOCK");
             result.put("message", "退回成功！" + roll.getMaterialName() + " 已重新入库");
             log.info("料卷退回: rollCode={}, operator={}", rollCode, operatorName);
+            // D-159：操作留痕（退回=物料入库）
+            saveRollOperationLog(roll, "RETURN", operatorName,
+                    "扫码退回入库 " + roll.getMaterialName() + " × " + roll.getQuantity() + roll.getUnit());
 
         } else {
             throw new RuntimeException("无效的操作类型，支持：issue（发料）/ return（退回）/ query（查询）");
         }
 
         return result;
+    }
+
+    /**
+     * D-159：料卷扫码操作留痕 → t_operation_log（失败不阻断主流程）
+     */
+    private void saveRollOperationLog(MaterialRoll roll, String action, String operatorName, String detail) {
+        try {
+            loginLogService.recordOperation("material_roll", String.valueOf(roll.getId()),
+                    roll.getRollCode(), action, operatorName, detail);
+        } catch (Exception e) {
+            log.warn("[MaterialRoll] 记录操作日志失败: {}", e.getMessage());
+        }
     }
 
     /**
