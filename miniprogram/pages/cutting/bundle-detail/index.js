@@ -323,18 +323,18 @@ Page({
   _matchCuttingStage(order, stageKey) {
     const s = String(order.status || '').trim().toLowerCase();
     if (!s) return false;
-    // D-162：已生成菲号（扎数>0）说明裁剪单已编菲，不再算"待裁剪"——
-    // 原来只按订单状态分类，泛化的 production/in_progress 状态让已编菲订单永远显示待裁剪
+    // D-162/D-163：三段判定
+    // - 待裁剪：未编菲（扎数=0）
+    // - 裁剪中：已编菲且裁剪完成时间为空（领取了正在裁）
+    // - 已完成：裁剪完成时间已回填，或订单已过裁剪工序
     const hasBundles = (Number(order.cuttingBundleCount) || 0) > 0;
-    // 待裁剪：未到裁剪工序
+    const cutFinished = !!order.cuttingEndTime;
     const pendingStatuses = ['not_started', 'pending', 'procurement', 'paused'];
-    // 裁剪中：正在裁剪，或已编菲但订单还在泛化进行中状态
     const cuttingStatuses = ['cutting'];
-    // 已完成：已过裁剪工序（后端 excludeTerminal 已排除 cancelled/scrapped/closed 等终态）
     const doneStatuses = ['sewing', 'ironing', 'secondary_process', 'packaging', 'quality_check', 'warehousing', 'completed'];
     if (stageKey === 'pending_cutting') return !hasBundles && pendingStatuses.includes(s);
-    if (stageKey === 'cutting') return hasBundles ? cuttingStatuses.includes(s) || ['production', 'in_progress'].includes(s) : cuttingStatuses.includes(s);
-    if (stageKey === 'done_cutting') return doneStatuses.includes(s);
+    if (stageKey === 'cutting') return hasBundles && !cutFinished;
+    if (stageKey === 'done_cutting') return cutFinished || doneStatuses.includes(s);
     return false;
   },
 
