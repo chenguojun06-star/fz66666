@@ -460,6 +460,19 @@ public class PatternProductionController {
     // ==================== 扫码记录相关API ====================
 
     /**
+     * D-167：软删 CLAIM 模型上线前（2026-07-01 前）的历史测试扫码记录（幂等，仅管理员）
+     */
+    @PostMapping("/cleanup-legacy-scans")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Map<String, Object>> cleanupLegacyScans() {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.forbidden("仅主管及以上权限可执行历史数据清理");
+        }
+        TenantAssert.assertTenantContext();
+        return Result.success(patternProductionOrchestrator.cleanupLegacyScanRecords());
+    }
+
+    /**
      * 提交样板生产扫码记录
      */
     @PostMapping("/scan")

@@ -957,27 +957,24 @@ Page({
         const tb = new Date(String(b.scanTime || b.createTime || '').replace(/-/g, '/')).getTime() || 0;
         return tb - ta;
       });
-      // 状态判断：有 COMPLETE → 已完成；有 RECEIVE 但无 COMPLETE → 进行中；无记录 → 待领取
+      // D-167：CLAIM（领取）不算扫码记录——领取人单独展示；报工记录去重展示
+      const claimRec = myScans.find(function (r) { return r.operationType === 'CLAIM'; });
+      const workScans = myScans.filter(function (r) { return r.operationType !== 'CLAIM'; });
+
+      // 状态判断：有报工记录 → 已完成；有 CLAIM 未报工 → 制作中；无记录 → 待领取
       let status = 'pending';
       let statusText = '待领取';
-      if (myScans.length > 0) {
-        const hasComplete = myScans.some(function (r) {
-          return r.operationType === 'COMPLETE' || r.success === true;
-        });
-        if (hasComplete) {
-          status = 'completed';
-          statusText = '已完成';
-        } else {
-          status = 'in_progress';
-          statusText = '进行中';
-        }
+      if (workScans.length > 0) {
+        status = 'completed';
+        statusText = '已完成';
+      } else if (claimRec) {
+        status = 'in_progress';
+        statusText = (claimRec.operatorName || '') + ' 制作中';
       }
-      // 数量统计
+      // 数量统计（D-167：CLAIM 不计入数量）
       let completedQty = 0;
-      myScans.forEach(function (r) {
-        if (r.operationType === 'COMPLETE' || r.success === true) {
-          completedQty += Number(r.quantity) || 0;
-        }
+      workScans.forEach(function (r) {
+        completedQty += Number(r.quantity) || 0;
       });
       let receivedQty = 0;
       myScans.forEach(function (r) {
@@ -995,8 +992,9 @@ Page({
         _assignee: p.assignee || '',
         _status: status,
         _statusText: statusText,
-        _scanCount: myScans.length,
-        _scanRecords: myScans.map(function (r) {
+        _claimBy: claimRec ? (claimRec.operatorName || '') : '',
+        _scanCount: workScans.length,
+        _scanRecords: workScans.map(function (r) {
           const timeStr = r.scanTime || r.createTime || '';
           let displayTime = '';
           if (timeStr) {

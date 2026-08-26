@@ -202,12 +202,12 @@
 }
 .process-claim-btn {
   flex-shrink: 0;
-  min-width: 88rpx;
-  padding: 8rpx 20rpx;
+  min-width: 72rpx;
+  padding: 6rpx 18rpx;
   border-radius: 999rpx;
   background: var(--color-primary);
   color: #fff;
-  font-size: var(--font-size-xs);
+  font-size: 22rpx;
   font-weight: var(--font-weight-medium);
   text-align: center;
   line-height: 1.4;

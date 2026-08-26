@@ -484,6 +484,30 @@ public class PatternProductionOrchestrator {
     }
 
     /**
+     * D-167：软删 2026-07-01 前的旧四步流程历史测试扫码记录（CLAIM 模型上线前的遗留垃圾）
+     * 幂等：可重复调用；仅软删（delete_flag=1），不触碰工资镜像与样板状态
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> cleanupLegacyScanRecords() {
+        java.time.LocalDateTime cutoff = java.time.LocalDateTime.of(2026, 7, 1, 0, 0, 0);
+        List<PatternScanRecord> legacy = patternScanRecordService.lambdaQuery()
+                .lt(PatternScanRecord::getScanTime, cutoff)
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .list();
+        int removed = 0;
+        if (legacy != null) {
+            for (PatternScanRecord r : legacy) {
+                r.setDeleteFlag(1);
+                removed += patternScanRecordService.updateById(r) ? 1 : 0;
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("removed", removed);
+        result.put("cutoff", cutoff.toString());
+        return result;
+    }
+
+    /**
      * 提交样板生产扫码记录（跨域：创建扫码记录 + 更新样板状态）
      */
     @Transactional(rollbackFor = Exception.class)
@@ -514,7 +538,12 @@ public class PatternProductionOrchestrator {
         // MES 报工模型：领取工序（CLAIM）校验——工序须存在配置、未完成、未被他人领取
         boolean isClaimOperation = "CLAIM".equalsIgnoreCase(operationType.trim());
         if (isClaimOperation) {
-            validateProcessClaim(pattern, processName);
+            PatternScanRecord selfClaim = validateProcessClaim(pattern, processName);
+            // D-167 幂等短路：本人已领取过该工序时直接返回既有记录，不再写重复 CLAIM（防连点产生垃圾记录）
+            if (selfClaim != null) {
+                return buildSubmitScanResult(selfClaim, patternId, pattern, operationType, UserContext.username(),
+                        warehouseCode, selfClaim.getUnitPrice());
+            }
         }
 
         String operatorId = UserContext.userId();
@@ -572,7 +601,7 @@ public class PatternProductionOrchestrator {
      * 2. 工序未完成（存在非 CLAIM 的完成记录则拒绝）
      * 3. 工序未被他人领取（存在他人的 CLAIM 记录且未完成则拒绝；本人重复领取幂等放行）
      */
-    private void validateProcessClaim(PatternProduction pattern, String processName) {
+    private PatternScanRecord validateProcessClaim(PatternProduction pattern, String processName) {
         if (!StringUtils.hasText(processName)) {
             throw new IllegalArgumentException("领取工序时工序名（processName）不能为空");
         }
@@ -601,7 +630,7 @@ public class PatternProductionOrchestrator {
                 .eq(PatternScanRecord::getDeleteFlag, 0)
                 .list();
         if (records == null || records.isEmpty()) {
-            return;
+            return null;
         }
 
         String currentUserId = UserContext.userId();
@@ -626,10 +655,14 @@ public class PatternProductionOrchestrator {
             }
         }
 
-        if (latestClaim != null && StringUtils.hasText(latestClaim.getOperatorId())
-                && !latestClaim.getOperatorId().equals(currentUserId)) {
-            throw new IllegalArgumentException("工序【" + target + "】已由 " + latestClaim.getOperatorName() + " 领取制作中");
+        if (latestClaim != null) {
+            if (StringUtils.hasText(latestClaim.getOperatorId())
+                    && !latestClaim.getOperatorId().equals(currentUserId)) {
+                throw new IllegalArgumentException("工序【" + target + "】已由 " + latestClaim.getOperatorName() + " 领取制作中");
+            }
+            return latestClaim;
         }
+        return null;
     }
 
     private PatternProduction loadPatternForScan(String patternId) {
