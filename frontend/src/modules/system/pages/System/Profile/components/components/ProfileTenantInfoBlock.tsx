@@ -2,8 +2,7 @@
  * 工厂信息区块 — 工厂名称/联系人/联系电话 + 企业微信 Webhook
  */
 import React from 'react';
-import { Button, Form, Input, Typography } from 'antd';
-import { TeamOutlined } from '@ant-design/icons';
+import { Button, Card, Form, Input, Typography } from 'antd';
 import type { FormInstance } from 'antd';
 import type { TenantInfo } from '../types';
 
@@ -23,12 +22,7 @@ const ProfileTenantInfoBlock: React.FC<ProfileTenantInfoBlockProps> = ({
     if (!tenantInfo?.tenantCode) return null;
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <TeamOutlined style={{ color: 'var(--primary-color)' }} />
-                <span style={{ fontWeight: 600, fontSize: 15 }}>工厂信息</span>
-                <Typography.Text type="secondary" style={{ fontSize: 14 }}>（如需修改请联系管理员）</Typography.Text>
-            </div>
+        <Card title={<>工厂信息 <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>（如需修改请联系管理员）</Typography.Text></>} style={{ marginBottom: 16 }}>
             <Form form={tenantForm} layout="vertical" requiredMark={false}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
                     <Form.Item label="工厂名称" name="tenantName"><Input disabled autoComplete="organization" /></Form.Item>
@@ -58,7 +52,7 @@ const ProfileTenantInfoBlock: React.FC<ProfileTenantInfoBlockProps> = ({
             <Typography.Text type="secondary" style={{ fontSize: 14 }}>
                 工厂码：<Typography.Text code copyable>{tenantInfo.tenantCode}</Typography.Text>（不可修改）
             </Typography.Text>
-        </div>
+        </Card>
     );
 };
 

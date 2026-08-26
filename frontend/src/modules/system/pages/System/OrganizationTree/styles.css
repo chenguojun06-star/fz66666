@@ -7,7 +7,7 @@
 }
 
 .org-tree-panel {
-  width: 220px;
+  width: 240px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border-light, var(--color-border-light));
   display: flex;
@@ -75,10 +75,34 @@
 .tree-node-label {
   flex: 1;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2px;
   overflow: hidden;
   min-width: 0;
+}
+
+.tree-node-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+}
+
+.tree-node-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding-left: 20px;
+  font-size: 11px;
+  color: var(--color-text-tertiary, var(--color-gray-label));
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tree-node-meta span {
+  flex-shrink: 0;
 }
 
 .tree-node-name {

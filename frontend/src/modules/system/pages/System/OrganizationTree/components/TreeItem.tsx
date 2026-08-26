@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Tag, Tooltip } from 'antd';
+import { Button, Tooltip } from 'antd';
 import {
   DownOutlined,
   RightOutlined,
@@ -10,7 +10,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  TeamOutlined,
 } from '@ant-design/icons';
 import type { OrganizationUnit } from '@/types/system';
 
@@ -57,30 +56,20 @@ export const TreeItem: React.FC<TreeItemProps> = ({
           {expanded ? <DownOutlined /> : <RightOutlined />}
         </span>
         <span className="tree-node-label" onClick={() => onSelect(String(node.id))}>
-          {isFactory
-            ? <BankOutlined style={{ color: 'var(--primary-color, var(--color-primary))', marginRight: 4 }} />
-            : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))', marginRight: 4 }} />
-          }
-          <span className="tree-node-name">{node.unitName}</span>
-
-          {/* 人数统计标签 */}
-          {totalMembers > 0 && (
-            <Tag color="blue" style={{ marginLeft: 6, fontSize: 12, lineHeight: '18px', padding: '0 6px' }}>
-              <TeamOutlined style={{ fontSize: 11 }} /> {totalMembers} 人
-            </Tag>
-          )}
-
-          {/* 子部门统计 */}
-          {subUnits > 0 && (
-            <Tag color="default" style={{ marginLeft: 4, fontSize: 12, lineHeight: '18px', padding: '0 6px' }}>
-              {subUnits} 个子部门
-            </Tag>
-          )}
-
-          {node.managerUserName && (
-            <Tag color="gold" style={{ marginLeft: 6, fontSize: 12, lineHeight: '18px', padding: '0 6px' }}>
-              审批人: {node.managerUserName}
-            </Tag>
+          <span className="tree-node-main">
+            {isFactory
+              ? <BankOutlined style={{ color: 'var(--primary-color, var(--color-primary))' }} />
+              : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))' }} />
+            }
+            <span className="tree-node-name">{node.unitName}</span>
+          </span>
+          {/* 第二行：灰色小字指标，不再用彩色标签堆 */}
+          {(totalMembers > 0 || subUnits > 0 || node.managerUserName) && (
+            <span className="tree-node-meta">
+              {totalMembers > 0 && <span>{totalMembers} 人</span>}
+              {subUnits > 0 && <span>{subUnits} 子部门</span>}
+              {node.managerUserName && <span>审批人 {node.managerUserName}</span>}
+            </span>
           )}
         </span>
         <div className="tree-item-actions">

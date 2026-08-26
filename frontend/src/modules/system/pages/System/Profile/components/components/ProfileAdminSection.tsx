@@ -84,7 +84,7 @@ const ProfileAdminSection: React.FC<ProfileAdminSectionProps> = ({
             {canManageSmartFlags && (
                 <div
                     style={{
-                        marginTop: 32,
+                        marginTop: 16,
                         display: 'grid',
                         gridTemplateColumns: tenantInfo?.tenantCode ? 'minmax(260px, 1fr) minmax(360px, 1fr)' : '1fr',
                         gap: 16,

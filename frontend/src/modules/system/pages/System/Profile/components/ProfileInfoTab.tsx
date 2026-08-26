@@ -35,7 +35,7 @@ const ProfileInfoTab: React.FC = () => {
             />
 
             {/* 2列布局：左列用户信息+密码，右列工厂信息+员工招募 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '480px 1fr', gap: '0 64px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(360px, 440px) 1fr', gap: '16px 24px', alignItems: 'start' }}>
                 {/* 左列：用户信息 + 修改密码 */}
                 <ProfileUserColumn
                     loading={data.loading}

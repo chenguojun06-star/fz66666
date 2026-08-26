@@ -1,8 +1,8 @@
 /**
- * 左列 — 用户信息表单 + 修改密码
+ * 左列 — 用户信息表单 + 修改密码（标准卡片分区）
  */
 import React from 'react';
-import { Button, Form, Input, Spin } from 'antd';
+import { Button, Card, Form, Input, Spin } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 
@@ -25,34 +25,31 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
 }) => {
     return (
         <div>
-            <Spin spinning={loading}>
-                <Form form={form} layout="vertical" requiredMark={false}>
-                    <Form.Item name="avatarUrl" hidden><Input /></Form.Item>
-                    <Form.Item label="用户名" name="username"><Input disabled autoComplete="username" /></Form.Item>
-                    <Form.Item label="角色" name="roleName"><Input disabled autoComplete="off" /></Form.Item>
-                    <Form.Item label="姓名" name="name"><Input disabled autoComplete="name" /></Form.Item>
-                    <Form.Item
-                        label="手机号" name="phone"
-                        rules={[{
-                            validator: async (_, value) => {
-                                const v = String(value || '').trim();
-                                if (!v) return;
-                                if (!/^1\d{10}$/.test(v)) throw new Error('手机号格式不正确');
-                            },
-                        }]}
-                    >
-                        <Input placeholder="请输入手机号" autoComplete="tel" />
-                    </Form.Item>
-                    <Form.Item label="邮箱" name="email"><Input disabled autoComplete="email" /></Form.Item>
-                </Form>
-            </Spin>
+            <Card title="个人信息" style={{ marginBottom: 16 }}>
+                <Spin spinning={loading}>
+                    <Form form={form} layout="vertical" requiredMark={false}>
+                        <Form.Item name="avatarUrl" hidden><Input /></Form.Item>
+                        <Form.Item label="用户名" name="username"><Input disabled autoComplete="username" /></Form.Item>
+                        <Form.Item label="角色" name="roleName"><Input disabled autoComplete="off" /></Form.Item>
+                        <Form.Item label="姓名" name="name"><Input disabled autoComplete="name" /></Form.Item>
+                        <Form.Item
+                            label="手机号" name="phone"
+                            rules={[{
+                                validator: async (_, value) => {
+                                    const v = String(value || '').trim();
+                                    if (!v) return;
+                                    if (!/^1\d{10}$/.test(v)) throw new Error('手机号格式不正确');
+                                },
+                            }]}
+                        >
+                            <Input placeholder="请输入手机号" autoComplete="tel" />
+                        </Form.Item>
+                        <Form.Item label="邮箱" name="email"><Input disabled autoComplete="email" /></Form.Item>
+                    </Form>
+                </Spin>
+            </Card>
 
-            {/* 修改密码 */}
-            <div style={{ marginTop: 32 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                    <LockOutlined style={{ color: 'var(--primary-color)' }} />
-                    <span style={{ fontWeight: 600, fontSize: 15 }}>修改密码</span>
-                </div>
+            <Card title="修改密码">
                 <Form form={pwdForm} layout="vertical" requiredMark={false}>
                     {/* Hidden username field for browser password manager accessibility */}
                     <input type="text" name="username" autoComplete="username" defaultValue={username ?? ''} style={{ display: 'none' }} readOnly aria-hidden="true" />
@@ -73,13 +70,13 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
                     ]}>
                         <Input.Password id="confirmPassword" placeholder="请再次输入新密码" autoComplete="new-password" />
                     </Form.Item>
-                    <Form.Item>
+                    <Form.Item style={{ marginBottom: 0 }}>
                         <Button type="primary" onClick={onChangePassword} loading={savingPwd} icon={<LockOutlined />}>
                             确认修改密码
                         </Button>
                     </Form.Item>
                 </Form>
-            </div>
+            </Card>
         </div>
     );
 };

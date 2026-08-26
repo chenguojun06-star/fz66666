@@ -24,7 +24,7 @@ const ProfileAvatarThemeCard: React.FC<ProfileAvatarThemeCardProps> = ({
     onAvatarChange,
 }) => {
     return (
-        <Card className="filter-card mb-sm">
+        <Card title="头像与主题" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <ImageUploadBox
