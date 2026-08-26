@@ -99,6 +99,8 @@ const UserList: React.FC = () => {
     isTenantOwner,
     onResetPassword: handleResetPassword,
     onChangeEmploymentStatus: changeEmploymentStatus,
+    departments,
+    onRefresh: () => { void getUserList(); },
   });
 
   return (

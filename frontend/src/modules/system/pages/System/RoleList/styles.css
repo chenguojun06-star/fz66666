@@ -195,7 +195,7 @@
 
 .role-perm-dual {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr);
+  grid-template-columns: minmax(0, 1fr) 230px;
   gap: 12px;
   min-height: 320px;
 }
@@ -349,14 +349,17 @@
 }
 
 .perm-matrix-section-body.has-prefix {
-  padding-left: 92px;
-  position: relative;
+  padding-left: 16px;
+  align-items: center;
 }
 
 .perm-matrix-section-prefix {
-  position: absolute;
-  left: 16px;
-  top: 12px;
+  position: static;
+  flex-shrink: 0;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
   font-size: 14px;
   color: var(--color-text-primary, var(--color-gray-800));
@@ -365,12 +368,14 @@
 .perm-matrix-item {
   display: inline-flex;
   align-items: center;
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .perm-matrix-item .ant-checkbox-wrapper {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-primary, var(--color-gray-800));
+  padding: 4px 0;
+  margin-inline-start: 0;
 }
 
 .perm-matrix-item .ant-checkbox-wrapper-checked {

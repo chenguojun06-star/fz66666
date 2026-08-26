@@ -1,8 +1,8 @@
 import React from 'react';
-import { Tag, Button, Dropdown, MenuProps, App } from 'antd';
+import { Tag, Button, Dropdown, MenuProps, App, Select, Typography } from 'antd';
 import { CheckOutlined, CloseOutlined, UserOutlined, AppstoreOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
-import { Role, User as UserType } from '@/types/system';
+import { Role, User as UserType, OrganizationUnit } from '@/types/system';
 import { formatDate } from '@/utils/datetime';
 import { requestWithPathFallback } from '@/utils/api';
 import PhoneCell from '../components/PhoneCell';
@@ -96,6 +96,10 @@ interface UseUserListColumnsProps {
   isTenantOwner?: boolean;
   onResetPassword?: (record: UserType) => void;
   onChangeEmploymentStatus?: (record: UserType, nextStatus: 'transferred' | 'resigned' | 'archived') => void;
+  /** 部门树（表格内联调整部门用） */
+  departments?: OrganizationUnit[];
+  /** 内联更新后刷新列表 */
+  onRefresh?: () => void;
 }
 
 export function useUserListColumns(props: UseUserListColumnsProps) {
@@ -111,8 +115,44 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
     isTenantOwner: _isTenantOwner,
     onResetPassword,
     onChangeEmploymentStatus,
+    departments,
+    onRefresh,
   } = props;
   const { message } = App.useApp();
+
+  // 表格内联更新（部门/职位）：部分字段 PUT，后端 null 字段保留原值
+  const handleInlineUpdate = async (user: UserType, patch: Record<string, unknown>, label: string) => {
+    try {
+      const response = await requestWithPathFallback('put', '/system/user', '/auth/user', {
+        id: user.id,
+        ...patch,
+        operationRemark: `表格内联调整${label}`,
+      });
+      const result = response as any;
+      if (result?.code === 200) {
+        message.success(`已更新 ${user.name || user.username} 的${label}`);
+        onRefresh?.();
+      } else {
+        message.error(result?.message || `更新${label}失败`);
+      }
+    } catch {
+      message.error(`更新${label}失败`);
+    }
+  };
+
+  // 部门树拍平成下拉选项（按层级缩进）
+  const deptOptions = React.useMemo(() => {
+    const opts: Array<{ value: string; label: string }> = [];
+    const walk = (nodes: OrganizationUnit[] | undefined, depth: number) => {
+      (nodes || []).forEach(n => {
+        if (!n.id) return;
+        opts.push({ value: String(n.id), label: `${'　'.repeat(depth)}${n.unitName}` });
+        walk(n.children, depth + 1);
+      });
+    };
+    walk(departments, 0);
+    return opts;
+  }, [departments]);
 
   // 快速切换用户角色
   const handleQuickChangeRole = async (user: UserType, newRole: Role) => {
@@ -155,15 +195,42 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       title: '部门',
       dataIndex: 'orgUnitName',
       key: 'orgUnitName',
-      width: 120,
-      render: (v: string) => v || '-',
+      width: 150,
+      render: (_v: string, r: UserType) => (
+        <Select
+          size="small"
+          variant="borderless"
+          value={r.orgUnitId ? String(r.orgUnitId) : undefined}
+          placeholder="未设置"
+          options={deptOptions}
+          showSearch
+          optionFilterProp="label"
+          style={{ width: '100%' }}
+          popupMatchSelectWidth={false}
+          onChange={(v) => { void handleInlineUpdate(r, { orgUnitId: v }, '部门'); }}
+        />
+      ),
     },
     {
       title: '岗位',
       dataIndex: 'position',
       key: 'position',
-      width: 140,
-      render: (v: string) => v ? <Tag color="info">{v}</Tag> : '-',
+      width: 160,
+      render: (v: string, r: UserType) => (
+        <Typography.Text
+          editable={{
+            tooltip: '点击编辑职位',
+            onChange: (next) => {
+              const t = next.trim();
+              if (t === (r.position || '').trim()) return;
+              void handleInlineUpdate(r, { position: t }, '职位');
+            },
+          }}
+          style={v ? undefined : { color: 'var(--color-text-quaternary, #bfbfbf)' }}
+        >
+          {v || '未设置'}
+        </Typography.Text>
+      ),
     },
     {
       title: '角色权限',
