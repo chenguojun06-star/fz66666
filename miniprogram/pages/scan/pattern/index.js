@@ -63,6 +63,8 @@ function normalizePositiveInt(value, fallback) {
 Page({
   data: {
     detail: {},
+    processList: [], // MES 工序列表：每道工序带状态（PENDING/CLAIMED/COMPLETED）与领取人
+    selectedProcess: null, // 当前选中待报工的工序
     skuList: [],
     summary: {},
     loading: false,
@@ -84,13 +86,11 @@ Page({
     // 构建样板详情页数据
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    // 四步扫码：领取 → 完成 → 审核 → 入库（与PC端对齐）
     const status = String(data.status || '').toUpperCase();
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
 
-    // 直接使用 PatternScanProcessor 已正确计算好的 operationType，不再从 status 重新推导
     const SUBMIT_LABEL_MAP = {
       RECEIVE: '领取', COMPLETE: '完成', REWORK: '返修完成', REVIEW: '审核',
       WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库', WAREHOUSE_RETURN: '归还',
@@ -104,6 +104,28 @@ Page({
     const submitLabel = SUBMIT_LABEL_MAP[operationType] || operationLabel;
     const sizes = patternDetail.sizes || [];
 
+    // MES 报工模型：hasProcessSystem 时构建工序列表
+    let processList = [];
+    if (data.hasProcessSystem) {
+      processList = rawOptions.map(function(opt, idx) {
+        const procStatus = String(opt.status || 'PENDING').toUpperCase();
+        return {
+          processName: opt.processName || opt.label || opt.value,
+          progressStage: opt.progressStage || '',
+          scanType: opt.scanType || 'production',
+          unitPrice: opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : null),
+          status: procStatus,
+          statusLabel: procStatus === 'COMPLETED' ? '已完成'
+            : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '制作中(我)' : '制作中') : '待领取',
+          claimedBy: opt.claimedBy || '',
+          claimedByMe: !!opt.claimedByMe,
+          isWarehouse: opt.value === 'WAREHOUSE_IN',
+          isReview: opt.value === 'REVIEW',
+          value: opt.value,
+        };
+      });
+    }
+
     this.setData({
       detail: {
         patternId: data.patternId,
@@ -116,7 +138,6 @@ Page({
         statusLabel: getPatternStatusLabel(status) || data.statusLabel || status || '-',
         statusType: status.toLowerCase().replace('_', ''),
         sizes: sizes,
-        // 多色多码：优先显示本条色码记录自己的码数，无则退化到全码列表
         sizesText: patternDetail.size || (sizes.length ? sizes.join('、') : '-'),
         operationType: operationType,
         operationLabel: operationLabel,
@@ -144,6 +165,7 @@ Page({
         orderNo: data.orderNo || '',
         stageGroups: data.stageGroups || [],
       },
+      processList: processList,
     });
 
     // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
@@ -238,6 +260,84 @@ Page({
   },
 
   // ---- 事件处理 ----
+
+  /**
+   * MES 报工模型：领取工序（行内按钮）
+   * 防重复领取：前端按状态禁用（他人 CLAIMED 不可点），后端 validateProcessClaim 兜底
+   */
+  async onClaimProcess(e) {
+    const idx = e.currentTarget.dataset.index;
+    const proc = this.data.processList[idx];
+    if (!proc || this.data.loading) return;
+
+    if (proc.status === 'COMPLETED') {
+      toast.info('该工序已完成');
+      return;
+    }
+    if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
+      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取制作中');
+      return;
+    }
+    if (proc.status === 'CLAIMED' && proc.claimedByMe) {
+      toast.info('你已领取该工序，请完成报工');
+      return;
+    }
+
+    this.setData({ loading: true });
+    try {
+      const res = await api.production.submitPatternScan({
+        patternId: this.data.detail.patternId,
+        operationType: 'CLAIM',
+        processName: proc.processName,
+        progressStage: proc.progressStage || proc.processName,
+        operatorRole: 'PLATE_WORKER',
+        quantity: normalizePositiveInt(this.data.detail.quantity, 1),
+        color: this.data.detail.color,
+        remark: '',
+      });
+      toast.success((res && res.message) || '已领取工序【' + proc.processName + '】，完成后请扫码报工');
+      this._emitRefresh();
+      wx.navigateBack();
+    } catch (err) {
+      console.error('[样板页] 领取工序失败:', err);
+      toast.error(err.errMsg || err.message || '领取工序失败');
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * MES 报工模型：选中工序进行报工（本人已领取的工序 / 入库 / 审核）
+   */
+  onSelectProcess(e) {
+    const idx = e.currentTarget.dataset.index;
+    const proc = this.data.processList[idx];
+    if (!proc) return;
+
+    if (proc.status === 'COMPLETED') {
+      toast.info('该工序已完成');
+      return;
+    }
+    if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
+      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取制作中，不能报工');
+      return;
+    }
+    if (proc.status === 'PENDING' && !proc.isWarehouse && !proc.isReview) {
+      toast.warning('请先领取工序【' + proc.processName + '】，领取后才能报工');
+      return;
+    }
+
+    // 选中后展示报工表单（数量/仓库/备注）并更新提交按钮语义
+    const opType = proc.value || proc.processName;
+    this.setData({
+      selectedProcess: proc,
+      'detail.operationType': opType,
+      'detail.operationLabel': proc.processName,
+      'detail.submitLabel': proc.isWarehouse ? '入库' : (proc.isReview ? '审核' : '完成报工'),
+      'detail.requiresWarehouseInput': proc.isWarehouse,
+      'detail.requiresReviewBeforeInbound': false,
+    });
+  },
 
   onOperationChange(e) {
     if (e.currentTarget.dataset.disabled) return;
@@ -421,8 +521,8 @@ Page({
     }
 
     // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
-    // 优先使用工序系统（如果有），否则使用传统样衣流程
-    if (d.hasProcessSystem) {
+    // 优先使用工序系统（如果有）；工序系统下的审核/入库走专用接口
+    if (d.hasProcessSystem && operationType !== 'REVIEW' && operationType !== 'WAREHOUSE_IN') {
       return await this._submitProcessScan(d, operationType, qty, remark);
     }
 

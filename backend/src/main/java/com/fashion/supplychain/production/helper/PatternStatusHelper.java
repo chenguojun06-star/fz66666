@@ -75,6 +75,10 @@ public class PatternStatusHelper {
         switch (operation) {
             case "RECEIVE":
                 return handleReceive(pattern, operatorName, now);
+            case "CLAIM":
+                // MES 报工模型：领取工序 → 样衣进入制作中 + 记录领取人（不推进进度节点，工序未完成）
+                ensureInProgress(pattern, operatorName);
+                return true;
             case "PLATE":
                 updateProgressNode(pattern, "裁剪", 100);
                 ensureInProgress(pattern, operatorName);

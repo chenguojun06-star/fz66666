@@ -4,6 +4,8 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
+const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
+const production = require('../../../utils/api-modules/production');
 
 // 6 个父阶段定义（与 PC 端 SAMPLE_PARENT_STAGES 对齐）
 const PARENT_STAGES = [
@@ -816,9 +818,35 @@ Page({
   },
 
   /**
+   * 扫码命中样板生产码后：加载工序数据 → 直达工序领取/报工页
+   * 复用主扫码页同一 PatternScanProcessor 流水线（详情+扫码记录+工序配置→操作选项）
+   */
+  async _openPatternProcessPage(patternId) {
+    wx.showLoading({ title: '加载工序...' });
+    try {
+      const handler = {
+        api: { production },
+        SCAN_MODE: { PATTERN: 'pattern' },
+        _errorResult: (msg) => ({ success: false, message: msg }),
+      };
+      const result = await PatternScanProcessor.handlePatternScan(handler, { patternId: String(patternId) }, null);
+      wx.hideLoading();
+      if (!result || !result.success || !result.data) {
+        wx.showToast({ title: (result && result.message) || '无法打开工序领取', icon: 'none' });
+        return;
+      }
+      getApp().globalData.patternScanData = result.data;
+      wx.navigateTo({ url: '/pages/scan/pattern/index' });
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || '打开失败', icon: 'none' });
+    }
+  },
+
+  /**
    * 扫码按钮：当前页直接扫码 → 匹配样衣 → 打开详情
    * 匹配优先级：
-   *   ① 样板生产二维码（打印资料单 QR：{"type":"pattern","id":...}）→ 直接打开该样衣详情
+   *   ① 样板生产二维码（打印资料单 QR：{"type":"pattern","id":...}）→ 直接进入工序领取/报工页
    *   ② 当前列表匹配（快路径）
    *   ③ 后端按款号查询（列表翻页/筛选后本地不命中的兜底）
    */
@@ -832,11 +860,9 @@ Page({
       }
       const d = parsed.data;
 
-      // ① 样板生产二维码：直接跳该样衣生产详情（详情页支持 id=patternId）
+      // ① 样板生产二维码：直接进入工序领取/报工页（与主扫码链路一致）
       if (d.qrType === 'pattern' && d.patternId) {
-        safeNavigate({
-          url: '/pages/sample-development/detail/index?id=' + encodeURIComponent(d.patternId),
-        }).catch(function () {});
+        that._openPatternProcessPage(d.patternId);
         return;
       }
 

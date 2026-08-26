@@ -13,8 +13,6 @@
  * @date 2026-05-31
  */
 
-var stageDetection = require('../../../shared/stageDetection');
-
 // 样衣生产操作类型（5个基本操作）
 const SAMPLE_OPERATIONS = [
   { key: 'RECEIVE', label: '领取样衣', colorClass: 'blue', icon: 'scan' },
@@ -240,115 +238,85 @@ async function getPatternProcessConfig(handler, patternId) {
 }
 
 /**
- * 基于工序配置构建操作选项
- * 核心逻辑：只显示当前可执行的工序，已完成的不显示
- * 门禁校验：与后端 ProductionScanStageSupport.validateParentStagePrerequisite 对齐
+ * 基于工序配置构建工序列表（MES 报工模型）
+ * 后端 getPatternProcessConfig 已返回每道工序的 status/claimedBy/claimedByMe：
+ * - PENDING（待领取）→ 可「领取」
+ * - CLAIMED（他人领取制作中）→ 显示领取人，不可操作
+ * - CLAIMED + claimedByMe（本人领取）→ 可「完成报工」
+ * - COMPLETED（已完成）→ 显示完成
+ * 全部完成后 → 入库操作
  */
 function buildProcessOperationOptions(processConfig, scanRecords, patternDetail, _manualScanType) {
   if (!processConfig || processConfig.length === 0) {
     return [];
   }
-  
-  // 提取已完成的工序（规范化为标准工序名）
-  const completedStages = new Set();
-  if (scanRecords && Array.isArray(scanRecords)) {
-    scanRecords.forEach(function(record) {
-      const opType = String(record.operationType || '').trim();
-      const processName = String(record.processName || '').trim();
-      const progressStage = String(record.progressStage || '').trim();
-      if (opType) {
-        completedStages.add(stageDetection.canonicalStageKey(opType));
-        completedStages.add(opType);
-      }
-      if (processName) {
-        completedStages.add(stageDetection.canonicalStageKey(processName));
-        completedStages.add(processName);
-      }
-      if (progressStage) {
-        completedStages.add(stageDetection.canonicalStageKey(progressStage));
-        completedStages.add(progressStage);
-      }
-    });
-  }
-  
+
   const options = [];
-  const status = String(patternDetail.status || '').toUpperCase();
-  
-  // 检查是否需要先领取
-  const needReceive = (status === 'PENDING' || status === '') && !completedStages.has('RECEIVE') && !completedStages.has('领取') && !completedStages.has('采购');
-  if (needReceive) {
-    options.push({
-      value: 'RECEIVE',
-      label: '领取样衣',
-      icon: 'scan',
-      processName: '领取样衣',
-      progressStage: '采购',
-      scanType: 'procurement'
-    });
-    return options;
-  }
-  
-  // 遍历工序配置，按顺序检查门禁
   for (let i = 0; i < processConfig.length; i++) {
     const config = processConfig[i];
     const processName = String(config.processName || config.operationType || '').trim();
+    if (!processName) continue;
     const progressStage = String(config.progressStage || processName).trim();
     const scanType = String(config.scanType || 'production').trim();
-    const isCompleted = completedStages.has(processName) || completedStages.has(config.operationType) || completedStages.has(stageDetection.canonicalStageKey(processName));
-    
-    if (isCompleted) {
-      continue; // 跳过已完成的
-    }
-    
-    // 门禁校验：检查父工序是否全部完成
-    const gate = stageDetection.checkParentStageGate(progressStage, completedStages);
-    if (!gate.pass) {
-      // 父工序未完成，不能执行当前工序
-      options.push({
-        value: processName,
-        label: processName,
-        icon: 'lock',
-        processName: processName,
-        progressStage: progressStage,
-        scanType: scanType,
-        sortOrder: config.sortOrder || i,
-        locked: true,
-        lockReason: '需先完成：' + gate.missing.join('、'),
-      });
-      break; // 门禁拦截后不再显示后续工序
-    }
-    
-    // 门禁通过，显示可执行操作
-    options.push({
+    const procStatus = String(config.status || 'PENDING').toUpperCase();
+
+    const option = {
       value: processName,
       label: processName,
       icon: 'tool',
       processName: processName,
       progressStage: progressStage,
       scanType: scanType,
-      sortOrder: config.sortOrder || i
-    });
-    break; // 只显示第一个可执行的工序
+      sortOrder: config.sortOrder || i,
+      unitPrice: config.unitPrice != null ? config.unitPrice : (config.price != null ? config.price : null),
+      status: procStatus,
+      claimedBy: config.claimedBy || '',
+      claimedByMe: !!config.claimedByMe,
+    };
+
+    if (procStatus === 'COMPLETED') {
+      option.icon = 'check-circle';
+    } else if (procStatus === 'CLAIMED') {
+      if (option.claimedByMe) {
+        option.icon = 'tool'; // 本人领取制作中 → 可完成报工
+      } else {
+        option.icon = 'lock';
+        option.locked = true;
+        option.lockReason = option.claimedBy ? (option.claimedBy + ' 制作中') : '已领取';
+      }
+    }
+    options.push(option);
   }
-  
-  // 如果所有工序都完成了，检查是否可以入库
-  if (options.length === 0 && (status === 'COMPLETED' || status === 'PRODUCTION_COMPLETED')) {
+
+  // 全部工序完成后，追加入库操作（审核通过后）
+  const allCompleted = options.length > 0 && options.every(function(o) { return o.status === 'COMPLETED'; });
+  const status = String(patternDetail.status || '').toUpperCase();
+  if (allCompleted || status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') {
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     if (reviewStatus === 'APPROVED' || reviewResult === 'APPROVED') {
-      if (!completedStages.has('WAREHOUSE_IN') && !completedStages.has('入库')) {
-        options.push({
-          value: 'WAREHOUSE_IN',
-          label: '样衣入库',
-          icon: 'inbox',
-          processName: '样衣入库',
-          progressStage: '入库',
-          scanType: 'warehouse'
-        });
-      }
+      options.push({
+        value: 'WAREHOUSE_IN',
+        label: '样衣入库',
+        icon: 'inbox',
+        processName: '样衣入库',
+        progressStage: '入库',
+        scanType: 'warehouse',
+        status: 'PENDING',
+      });
+    } else {
+      options.push({
+        value: 'REVIEW',
+        label: '样衣审核',
+        icon: 'eye',
+        processName: '样衣审核',
+        progressStage: '尾部',
+        scanType: 'production',
+        status: 'PENDING',
+      });
     }
   }
-  
+
   return options;
 }
 

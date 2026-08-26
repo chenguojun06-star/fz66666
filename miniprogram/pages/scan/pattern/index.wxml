@@ -22,6 +22,48 @@
     <view wx:if="{{detail.hasProcessSystem === false}}" class="process-hint">
       该款未配置开发工序，当前为「领取 → 完成 → 审核 → 入库」默认流程；如需按工序领取，请在PC端款式资料中配置开发工序
     </view>
+
+    <!-- MES 工序列表：扫码后直接展示该款配置的全部工序，支持领取/报工 -->
+    <view wx:if="{{detail.hasProcessSystem && processList.length > 0}}" class="section-group">
+      <text class="section-group-title">工序领取 / 报工</text>
+      <view class="group-card">
+        <view wx:for="{{processList}}" wx:key="processName" class="process-row {{item.status === 'COMPLETED' ? 'process-row--done' : ''}}">
+          <view class="process-row-main" bindtap="onSelectProcess" data-index="{{index}}">
+            <view class="process-row-index">{{index + 1}}</view>
+            <view class="process-row-info">
+              <text class="process-row-name">{{item.processName}}</text>
+              <text class="process-row-sub" wx:if="{{item.status === 'CLAIMED' && item.claimedBy}}">{{item.claimedByMe ? '你已领取，可完成报工' : item.claimedBy + ' 制作中'}}</text>
+              <text class="process-row-sub" wx:elif="{{item.status === 'PENDING'}}">待领取</text>
+              <text class="process-row-sub" wx:elif="{{item.status === 'COMPLETED'}}">已完成</text>
+            </view>
+            <view class="process-status-badge process-status--{{item.status === 'COMPLETED' ? 'completed' : (item.status === 'CLAIMED' ? (item.claimedByMe ? 'mine' : 'claimed') : 'pending')}}">
+              {{item.statusLabel}}
+            </view>
+          </view>
+          <!-- 待领取：领取按钮 -->
+          <view wx:if="{{item.status === 'PENDING' && !item.isWarehouse && !item.isReview}}"
+                class="process-claim-btn {{loading ? 'process-claim-btn--disabled' : ''}}"
+                hover-class="process-claim-btn-hover"
+                bindtap="onClaimProcess" data-index="{{index}}">
+            领取
+          </view>
+          <!-- 本人已领取：完成报工按钮 -->
+          <view wx:if="{{item.status === 'CLAIMED' && item.claimedByMe}}"
+                class="process-claim-btn process-claim-btn--report"
+                hover-class="process-claim-btn-hover"
+                bindtap="onSelectProcess" data-index="{{index}}">
+            完成报工
+          </view>
+          <!-- 入库/审核：直接可点 -->
+          <view wx:if="{{(item.isWarehouse || item.isReview) && item.status !== 'COMPLETED'}}"
+                class="process-claim-btn process-claim-btn--report"
+                hover-class="process-claim-btn-hover"
+                bindtap="onSelectProcess" data-index="{{index}}">
+            {{item.isWarehouse ? '去入库' : '去审核'}}
+          </view>
+        </view>
+      </view>
+    </view>
     <!-- 菲号信息 -->
   <view wx:if="{{detail.hasMatrix || detail.colorText || detail.sizeText}}" class="section-group">
     <text class="section-group-title">数量信息</text>
@@ -104,9 +146,9 @@
     </view>
   </view>
 
-  <!-- 操作区域 -->
-  <view class="section-card">
-    <view class="section-title">{{detail.operationLabel || '样衣操作'}}</view>
+  <!-- 操作区域（工序系统：选中工序后展示报工表单；默认流程：直接展示） -->
+  <view wx:if="{{!detail.hasProcessSystem || selectedProcess}}" class="section-card">
+    <view class="section-title">{{detail.hasProcessSystem ? ('报工：' + (detail.operationLabel || '工序')) : (detail.operationLabel || '样衣操作')}}</view>
 
     <!-- 审核未完成提示 -->
     <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="review-warning">
@@ -234,7 +276,7 @@
     </view>
   </view>
 
-  <view class="footer-bar">
+  <view wx:if="{{!detail.hasProcessSystem || selectedProcess}}" class="footer-bar">
     <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
       {{loading ? '提交中...' : (detail.submitLabel || '领取')}}

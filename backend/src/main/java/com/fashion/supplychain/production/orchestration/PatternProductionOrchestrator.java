@@ -511,6 +511,12 @@ public class PatternProductionOrchestrator {
             }
         }
 
+        // MES 报工模型：领取工序（CLAIM）校验——工序须存在配置、未完成、未被他人领取
+        boolean isClaimOperation = "CLAIM".equalsIgnoreCase(operationType.trim());
+        if (isClaimOperation) {
+            validateProcessClaim(pattern, processName);
+        }
+
         String operatorId = UserContext.userId();
         String operatorName = UserContext.username();
         updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
@@ -535,15 +541,21 @@ public class PatternProductionOrchestrator {
         // 自动追加操作日志到 PatternProduction.remarks（与大货 ProductionOrder.remarks 一致）
         appendPatternRemark(pattern, operationType, operatorName, scanRecord, unitPrice);
 
-        syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, effectiveUnitPrice, effectiveColor, effectiveSize);
+        // CLAIM（领取工序）不是报工：不写 t_scan_record 计件镜像（避免领取动作产生工资）
+        if (!isClaimOperation) {
+            syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, effectiveUnitPrice, effectiveColor, effectiveSize);
+        }
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
         if ("COMPLETE".equals(operationType.trim()) || "WAREHOUSE_IN".equals(operationType.trim())) {
             statusHelper.syncStyleInfoSampleStage(pattern);
         }
 
-        stockHelper.syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
-        statusHelper.syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
+        // CLAIM（领取工序）不是报工：不写计件工资镜像、不同步库存
+        if (!isClaimOperation) {
+            stockHelper.syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
+            statusHelper.syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
+        }
 
         return buildSubmitScanResult(scanRecord, patternId, pattern, operationType, operatorName, warehouseCode, effectiveUnitPrice);
     }
@@ -551,6 +563,73 @@ public class PatternProductionOrchestrator {
     private void assertSubmitScanParams(String patternId, String operationType) {
         if (!StringUtils.hasText(patternId)) throw new IllegalArgumentException("样板生产ID不能为空");
         if (!StringUtils.hasText(operationType)) throw new IllegalArgumentException("操作类型不能为空");
+    }
+
+    /**
+     * MES 报工模型：领取工序（CLAIM）校验
+     * 0. 工序必须在款式工序配置内（防止领取不存在的工序导致工序列表状态无法联动）
+     * 1. 工序名必填（领取必须指明哪道工序）
+     * 2. 工序未完成（存在非 CLAIM 的完成记录则拒绝）
+     * 3. 工序未被他人领取（存在他人的 CLAIM 记录且未完成则拒绝；本人重复领取幂等放行）
+     */
+    private void validateProcessClaim(PatternProduction pattern, String processName) {
+        if (!StringUtils.hasText(processName)) {
+            throw new IllegalArgumentException("领取工序时工序名（processName）不能为空");
+        }
+        String target = processName.trim();
+
+        // 0. 工序必须在该款式的工序配置内
+        Long styleIdLong;
+        try {
+            styleIdLong = Long.valueOf(pattern.getStyleId().trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("样板生产记录缺少有效款式ID，无法校验工序配置");
+        }
+        List<com.fashion.supplychain.style.entity.StyleProcess> configProcesses = styleProcessService.lambdaQuery()
+                .eq(com.fashion.supplychain.style.entity.StyleProcess::getStyleId, styleIdLong)
+                .list();
+        boolean inConfig = configProcesses != null && configProcesses.stream().anyMatch(sp -> {
+            String name = sp.getProcessName() == null ? "" : sp.getProcessName().trim();
+            return target.equals(name);
+        });
+        if (!inConfig) {
+            throw new IllegalArgumentException("工序【" + target + "】不在该款式的工序配置中，无法领取");
+        }
+
+        List<PatternScanRecord> records = patternScanRecordService.lambdaQuery()
+                .eq(PatternScanRecord::getPatternProductionId, pattern.getId())
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .list();
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        String currentUserId = UserContext.userId();
+        PatternScanRecord latestClaim = null;
+        for (PatternScanRecord r : records) {
+            String opType = r.getOperationType() == null ? "" : r.getOperationType().trim();
+            String recordProcess = r.getProcessName() == null ? "" : r.getProcessName().trim();
+            boolean sameProcess = target.equals(recordProcess)
+                    || target.equalsIgnoreCase(opType);
+            if (!sameProcess) {
+                continue;
+            }
+            if ("CLAIM".equalsIgnoreCase(opType)) {
+                if (latestClaim == null
+                        || (r.getScanTime() != null && (latestClaim.getScanTime() == null
+                            || r.getScanTime().isAfter(latestClaim.getScanTime())))) {
+                    latestClaim = r;
+                }
+            } else {
+                // 非 CLAIM 的匹配记录 = 该工序已完成报工
+                throw new IllegalArgumentException("工序【" + target + "】已完成报工，无需领取");
+            }
+        }
+
+        if (latestClaim != null && StringUtils.hasText(latestClaim.getOperatorId())
+                && !latestClaim.getOperatorId().equals(currentUserId)) {
+            throw new IllegalArgumentException("工序【" + target + "】已由 " + latestClaim.getOperatorName() + " 领取制作中");
+        }
     }
 
     private PatternProduction loadPatternForScan(String patternId) {
@@ -1140,6 +1219,7 @@ public class PatternProductionOrchestrator {
         if (operationType == null) return "样衣操作";
         switch (operationType) {
             case "RECEIVE":          return "领取样板";
+            case "CLAIM":            return "领取工序";
             case "PLATE":            return "车板扫码";
             case "FOLLOW_UP":        return "跟单确认";
             case "COMPLETE":         return "完成确认";

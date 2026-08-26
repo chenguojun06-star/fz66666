@@ -523,6 +523,11 @@ public class PatternEnrichmentHelper {
             return Collections.emptyList();
         }
 
+        // 查询扫码记录，推导每道工序的状态（MES 报工模型：领取 CLAIM → 完成报工）
+        List<PatternScanRecord> scanRecords = listPatternScanRecords(patternId);
+        boolean hasGlobalComplete = scanRecords.stream()
+                .anyMatch(r -> "COMPLETE".equalsIgnoreCase(safeTrim(r.getOperationType())));
+
         List<Map<String, Object>> result = new ArrayList<>();
         int sort = 1;
         for (StyleProcess process : processes) {
@@ -543,6 +548,21 @@ public class PatternEnrichmentHelper {
             item.put("scanType", inferPatternScanType(progressStage, processName));
             item.put("price", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
             item.put("unitPrice", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
+
+            // 工序状态：COMPLETED（已报工完成）/ CLAIMED（已领取制作中）/ PENDING（待领取）
+            boolean completed = hasGlobalComplete
+                    || isProcessCompletedByRecords(scanRecords, processName, progressStage);
+            PatternScanRecord activeClaim = null;
+            if (!completed) {
+                activeClaim = findActiveClaim(scanRecords, processName);
+            }
+            item.put("status", completed ? "COMPLETED" : (activeClaim != null ? "CLAIMED" : "PENDING"));
+            if (activeClaim != null) {
+                item.put("claimedBy", activeClaim.getOperatorName());
+                item.put("claimedById", activeClaim.getOperatorId());
+                item.put("claimedByMe", isCurrentUser(activeClaim.getOperatorId()));
+                item.put("claimedTime", activeClaim.getScanTime() != null ? activeClaim.getScanTime() : activeClaim.getCreateTime());
+            }
             result.add(item);
             sort++;
         }
@@ -682,5 +702,122 @@ public class PatternEnrichmentHelper {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // ==================== MES 报工模型：工序状态推导 ====================
+
+    private List<PatternScanRecord> listPatternScanRecords(String patternId) {
+        try {
+            LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(PatternScanRecord::getPatternProductionId, patternId)
+                    .eq(PatternScanRecord::getDeleteFlag, 0);
+            List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
+            return records != null ? records : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("[PatternEnrichment] 查询样衣扫码记录失败: patternId={}", patternId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    private String safeTrim(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    /**
+     * 判断工序是否已报工完成（与 PatternStatusHelper.isPatternAllProcessesCompleted 同口径）。
+     * CLAIM（领取）记录不算完成。
+     */
+    private boolean isProcessCompletedByRecords(List<PatternScanRecord> records, String processName, String progressStage) {
+        Set<String> scannedOps = new HashSet<>();
+        Set<String> scannedProcessNames = new HashSet<>();
+        for (PatternScanRecord r : records) {
+            String opType = safeTrim(r.getOperationType());
+            if (!StringUtils.hasText(opType) || "CLAIM".equalsIgnoreCase(opType)) {
+                continue;
+            }
+            scannedOps.add(opType.toLowerCase());
+            if (StringUtils.hasText(r.getProcessName())) {
+                scannedProcessNames.add(r.getProcessName().trim().toLowerCase());
+            }
+        }
+
+        List<String> candidates = new ArrayList<>();
+        if (StringUtils.hasText(processName)) {
+            candidates.add(processName.trim().toLowerCase());
+        }
+        if (StringUtils.hasText(progressStage)) {
+            candidates.add(progressStage.trim().toLowerCase());
+        }
+        String legacyOp = mapLegacyOperationByStage(progressStage);
+        if (StringUtils.hasText(legacyOp)) {
+            candidates.add(legacyOp.toLowerCase());
+        }
+
+        for (String candidate : candidates) {
+            if (StringUtils.hasText(candidate)
+                    && (scannedOps.contains(candidate) || scannedProcessNames.contains(candidate))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 查找工序的活跃领取记录（CLAIM 且工序未完成）：取最新一条。
+     */
+    private PatternScanRecord findActiveClaim(List<PatternScanRecord> records, String processName) {
+        if (!StringUtils.hasText(processName)) {
+            return null;
+        }
+        String target = processName.trim().toLowerCase();
+        PatternScanRecord latest = null;
+        for (PatternScanRecord r : records) {
+            if (!"CLAIM".equalsIgnoreCase(safeTrim(r.getOperationType()))) {
+                continue;
+            }
+            String recordProcess = safeTrim(r.getProcessName());
+            if (!StringUtils.hasText(recordProcess) || !recordProcess.trim().toLowerCase().equals(target)) {
+                continue;
+            }
+            if (latest == null || compareScanTime(r, latest) > 0) {
+                latest = r;
+            }
+        }
+        return latest;
+    }
+
+    private int compareScanTime(PatternScanRecord a, PatternScanRecord b) {
+        LocalDateTime ta = a.getScanTime() != null ? a.getScanTime() : a.getCreateTime();
+        LocalDateTime tb = b.getScanTime() != null ? b.getScanTime() : b.getCreateTime();
+        if (ta == null && tb == null) return 0;
+        if (ta == null) return -1;
+        if (tb == null) return 1;
+        return ta.compareTo(tb);
+    }
+
+    private boolean isCurrentUser(String operatorId) {
+        if (!StringUtils.hasText(operatorId)) {
+            return false;
+        }
+        try {
+            return operatorId.equals(String.valueOf(com.fashion.supplychain.common.UserContext.userId()));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String mapLegacyOperationByStage(String stage) {
+        if (!StringUtils.hasText(stage)) {
+            return null;
+        }
+        String normalized = stage.trim();
+        if (Objects.equals(normalized, "采购")) return "RECEIVE";
+        if (Objects.equals(normalized, "裁剪")) return "PLATE";
+        if (Objects.equals(normalized, "车缝")) return "FOLLOW_UP";
+        if (Objects.equals(normalized, "尾部")) return "COMPLETE";
+        if (Objects.equals(normalized, "入库")) return "WAREHOUSE_IN";
+        if (Objects.equals(normalized, "出库")) return "WAREHOUSE_OUT";
+        if (Objects.equals(normalized, "归还")) return "WAREHOUSE_RETURN";
+        return null;
     }
 }
