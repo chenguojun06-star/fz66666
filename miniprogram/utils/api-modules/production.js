@@ -198,9 +198,10 @@ const production = {
   checkMaterialStock(materialCodes) {
     return ok('/api/production/purchase/stock-check', 'GET', { materialCodes });
   },
-  myProcurementTasks() {
-    // D-119：includeCompleted 含我名下已完成/已取消任务，供列表"已完成"筛选使用
-    return ok('/api/production/purchase/list', 'GET', { myTasks: 'true', includeCompleted: 'true' });
+  // D-119：includeCompleted 含我名下已完成/已取消任务，供列表"已完成"筛选使用；
+  // 小云待办必须传 false（只取待领取+我已领取未完成），否则已完成采购会变成"待办"
+  myProcurementTasks(includeCompleted = true) {
+    return ok('/api/production/purchase/list', 'GET', { myTasks: 'true', includeCompleted: includeCompleted ? 'true' : 'false' });
   },
   confirmReturnPurchase(payload) {
     return ok('/api/production/purchase/return-confirm', 'POST', payload || {});

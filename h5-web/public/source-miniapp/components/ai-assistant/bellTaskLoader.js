@@ -139,8 +139,21 @@ async function loadCuttingTasks() {
  */
 async function loadProcurementTasks() {
   try {
-    const res = await api.production.myProcurementTasks();
-    const list = Array.isArray(res) ? res : res?.records || [];
+    // 待办语义：只要待领取 + 我已领取未完成的任务（不含已完成/已取消）
+    const res = await api.production.myProcurementTasks(false);
+    const rawList = Array.isArray(res) ? res : res?.records || [];
+
+    // 客户端兜底过滤（双路径防御）：后端已过滤终态，此处再排除
+    // 1) status 为 completed/cancelled 的行
+    // 2) 到货数 >= 采购数的行（数量维度已完成）
+    const list = rawList.filter(item => {
+      const status = String(item.status || '').toLowerCase();
+      if (status === 'completed' || status === 'cancelled') return false;
+      const purchased = Number(item.purchaseQuantity) || 0;
+      const arrived = Number(item.arrivedQuantity) || 0;
+      if (purchased > 0 && arrived >= purchased) return false;
+      return true;
+    });
 
     // 1. 物料级别规范化
     const mapped = list.map(item => ({
