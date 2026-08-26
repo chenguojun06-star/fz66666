@@ -1,0 +1,329 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+
+/* 状态筛选 */
+.tab-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px 4px;
+}
+
+.tab {
+  padding: 6px 18px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+}
+
+.tab--active {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* 状态态 */
+.state-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80px 0;
+  gap: 10px;
+}
+
+.state-wrap--empty {
+  padding: 100px 0;
+}
+
+.state-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-tertiary);
+}
+
+.state-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-quaternary);
+  padding: 0 40px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 任务卡片 */
+.task-list {
+  padding: 12px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.card-top {
+  display: flex;
+  gap: 12px;
+}
+
+.card-cover,
+.card-cover-ph {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-quaternary);
+  font-size: 22px;
+}
+
+.card-cover-ph {
+  border: 1px dashed var(--color-border);
+}
+
+.card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-style-no {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-md-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-tag {
+  flex-shrink: 0;
+  font-size: var(--font-size-2xs);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.status-tag--pending {
+  background: var(--color-warning-bg, #fff5e6);
+  color: var(--color-warning);
+}
+
+.status-tag--received {
+  background: var(--color-success-bg, #e9f9ee);
+  color: var(--color-success);
+}
+
+.card-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-sub--muted {
+  color: var(--color-text-tertiary);
+}
+
+/* 操作按钮 */
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.action-btn {
+  height: var(--btn-height-sm);
+  line-height: var(--btn-height-sm);
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+.action-btn--primary {
+  flex: 1;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.action-btn--ghost {
+  flex: 1;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.action-btn-hover {
+  opacity: 0.7;
+}
+
+/* 编菲表单弹层 */
+.form-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+
+.form-sheet {
+  width: 100%;
+  max-height: 85vh;
+  background: var(--color-bg-card);
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 8px;
+}
+
+.form-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.form-close {
+  font-size: 18px;
+  color: var(--color-text-tertiary);
+  padding: 4px 8px;
+}
+
+.form-task {
+  padding: 0 20px 10px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.form-head-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px 6px;
+}
+
+.form-col--color { flex: 1.2; }
+.form-col--size { flex: 1; }
+.form-col--qty { flex: 0.8; }
+.form-col--del { width: 36px; }
+
+.form-head-row .form-col {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.form-body {
+  max-height: 46vh;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.form-input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-base);
+  box-sizing: border-box;
+}
+
+.form-remove {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.form-add {
+  text-align: center;
+  padding: 10px 0 16px;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.form-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.form-btn {
+  flex: 1;
+  height: var(--btn-height-md);
+  line-height: var(--btn-height-md);
+  border-radius: 10px;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.form-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.form-btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}

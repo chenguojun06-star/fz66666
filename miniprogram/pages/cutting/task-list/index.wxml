@@ -1,0 +1,57 @@
+<view class="page">
+  <!-- 状态筛选 -->
+  <view class="tab-row">
+    <view class="tab {{activeTab === 'all' ? 'tab--active' : ''}}" data-tab="all" bindtap="onTabTap">全部</view>
+    <view class="tab {{activeTab === 'pending' ? 'tab--active' : ''}}" data-tab="pending" bindtap="onTabTap">待领取</view>
+    <view class="tab {{activeTab === 'received' ? 'tab--active' : ''}}" data-tab="received" bindtap="onTabTap">已领取</view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="state-wrap">
+    <view class="loading-spinner"></view>
+    <text class="state-text">加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{filtered.length === 0}}" class="state-wrap state-wrap--empty">
+    <text class="state-text">暂无裁剪任务</text>
+    <text class="state-hint">下单后自动生成裁剪任务，领取后可编菲（生成菲号）</text>
+  </view>
+
+  <!-- 任务卡片 -->
+  <view wx:else class="task-list">
+    <view class="task-card" wx:for="{{filtered}}" wx:key="id">
+      <view class="card-top" bindtap="onGoBundles">
+        <image wx:if="{{item.cover}}" class="card-cover" src="{{item.cover}}" mode="aspectFill" />
+        <view wx:else class="card-cover-ph">✂</view>
+        <view class="card-info">
+          <view class="card-title-row">
+            <text class="card-style-no">{{item.styleNo || item.orderNo || '-'}}</text>
+            <view class="status-tag status-tag--{{item.status}}">{{item.statusLabel}}</view>
+          </view>
+          <text wx:if="{{item.styleName}}" class="card-sub">{{item.styleName}}</text>
+          <text class="card-sub card-sub--muted">订单号：{{item.orderNo || '-'}}</text>
+          <text wx:if="{{item.receiverName}}" class="card-sub card-sub--muted">领取人：{{item.receiverName}}</text>
+        </view>
+      </view>
+      <view class="card-actions">
+        <view
+          wx:if="{{item.status === 'pending'}}"
+          class="action-btn action-btn--primary"
+          data-id="{{item.id}}"
+          bindtap="onReceiveTap"
+          hover-class="action-btn-hover"
+        >领取任务</view>
+        <view
+          wx:if="{{item.status === 'received'}}"
+          class="action-btn action-btn--primary"
+          data-id="{{item.id}}"
+          bindtap="onGoGenerate"
+          hover-class="action-btn-hover"
+        >去编菲</view>
+        <view class="action-btn action-btn--ghost" bindtap="onGoBundles" hover-class="action-btn-hover">查看菲号</view>
+      </view>
+    </view>
+  </view>
+
+</view>

@@ -215,6 +215,10 @@ const production = {
     // P0 修复：后端 CuttingTaskController @GetMapping 无路径（根路径），原前端误加 /list
     return ok('/api/production/cutting-task', 'GET', { myTasks: 'true' });
   },
+  // D-160：手机端领取裁剪任务（taskId + 领取人）
+  cuttingTaskReceive(payload) {
+    return ok('/api/production/cutting-task/receive', 'POST', payload || {});
+  },
   myQualityTasks() {
     return ok('/api/production/scan/my-quality-tasks', 'GET', {});
   },
