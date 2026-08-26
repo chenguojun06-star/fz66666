@@ -99,7 +99,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
-  padding: 12px;
+  padding: 14px;
   margin-bottom: 12px;
   box-shadow: var(--shadow-card);
   transition: transform 0.18s ease, background-color 0.18s ease;
@@ -186,7 +186,7 @@
 .card-body {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light, var(--color-border));
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px 12px;
@@ -229,7 +229,7 @@
 .card-footer {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light, var(--color-border));
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -270,7 +270,7 @@
   background: transparent;
   color: var(--color-primary);
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;

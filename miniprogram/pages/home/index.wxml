@@ -31,22 +31,27 @@
         <text class="attendance-title">考勤打卡</text>
         <text class="attendance-status {{attendanceStatusClass}}">{{attendanceStatusText}}</text>
       </view>
-      <view class="attendance-time-inline">
-        <text class="attendance-time-key">上班</text>
-        <text class="attendance-time-val">{{attendanceClockInText}}</text>
-        <text class="attendance-time-sep">·</text>
-        <text class="attendance-time-key">下班</text>
-        <text class="attendance-time-val">{{attendanceClockOutText}}</text>
-        <text class="attendance-time-sep">·</text>
-        <text class="attendance-time-key">本月</text>
-        <text class="attendance-time-val">{{monthlyHoursText}}h/{{monthlyDaysText}}天</text>
-      </view>
       <view class="attendance-detail-link" hover-class="attendance-detail-link-hover" hover-stay-time="100" bindtap="onViewAttendance">
         <text class="attendance-detail-link-text">明细</text>
         <text class="attendance-detail-link-arrow">›</text>
       </view>
     </view>
-    <!-- 第2行：打卡按钮 -->
+    <!-- 三格时间区：上班/下班/本月 -->
+    <view class="attendance-stats">
+      <view class="attendance-stat-cell">
+        <text class="attendance-stat-key">上班</text>
+        <text class="attendance-stat-val">{{attendanceClockInText}}</text>
+      </view>
+      <view class="attendance-stat-cell">
+        <text class="attendance-stat-key">下班</text>
+        <text class="attendance-stat-val">{{attendanceClockOutText}}</text>
+      </view>
+      <view class="attendance-stat-cell">
+        <text class="attendance-stat-key">本月</text>
+        <text class="attendance-stat-val">{{monthlyHoursText}}h/{{monthlyDaysText}}天</text>
+      </view>
+    </view>
+    <!-- 打卡按钮 -->
     <view class="attendance-actions">
       <view class="attendance-btn {{clockInBtnActive ? 'attendance-btn--active' : 'attendance-btn--idle'}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockIn">
         <text class="attendance-btn-text">上班打卡</text>
