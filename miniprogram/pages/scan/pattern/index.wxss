@@ -403,20 +403,25 @@
 }
 
 .warehouse-option-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
   margin-top: 8rpx;
   margin-bottom: 8rpx;
 }
 
 .warehouse-chip {
-  padding: 4px 14px;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--color-border);
   background: var(--color-bg-page);
   color: var(--color-text-primary);
+  text-align: center;
 }
 
 .warehouse-chip--active {

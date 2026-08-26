@@ -32,6 +32,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
 
   const {
     loading,
+    navigateToInspect,
     warehousingList: _warehousingList,
     sortedWarehousingList,
     total,
@@ -104,6 +105,13 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             onClick: () => openInspectDrawer(record.orderId, 'warehousing'),
           });
         }
+        // D-156：恢复详情页入口——抽屉只适合快速操作，完整信息看详情页
+        actions.push({
+          key: 'detail',
+          label: '详情',
+          title: '进入质检入库详情页',
+          onClick: () => navigateToInspect(record.orderId),
+        });
         return <RowActions actions={actions} />;
       },
     },

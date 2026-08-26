@@ -162,7 +162,8 @@ export default function SampleStageExpandedContent({
           <div className="sample-stage-expanded__qr-row">
             <QRCode
               value={JSON.stringify({ type: 'pattern', id: patternProductionId || patternId })}
-              size={72}
+              size={140}
+              errorLevel="M"
               style={{ flexShrink: 0 }}
             />
             <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>

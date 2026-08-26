@@ -291,7 +291,8 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                   <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
                     <QRCode
                       value={JSON.stringify({ type: 'pattern', id: sample.sampleSnapshot.id })}
-                      size={80}
+                      size={140}
+                      errorLevel="M"
                     />
                     <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
                       <div style={{ fontWeight: 500, color: 'var(--color-gray-700)' }}>工人扫码领取/完成</div>
