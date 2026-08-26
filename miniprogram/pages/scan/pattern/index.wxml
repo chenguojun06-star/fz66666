@@ -18,12 +18,7 @@
     <view wx:if="{{detail.statusLabel && detail.statusLabel !== '-'}}" class="status-badge status-{{detail.statusType}}">{{detail.statusLabel}}</view>
   </view>
 
-  <!-- 无工序配置提示（D-157）：样衣未配置开发工序时说明走默认流程 -->
-    <view wx:if="{{detail.hasProcessSystem === false}}" class="process-hint">
-      该款未配置开发工序，当前为「领取 → 完成 → 审核 → 入库」默认流程；如需按工序领取，请在PC端款式资料中配置开发工序
-    </view>
-
-    <!-- MES 工序列表：扫码后直接展示该款配置的全部工序，支持领取/报工 -->
+  <!-- MES 工序列表：扫码后直接展示该款配置的全部工序，支持领取/报工（未配置工序在扫码入口即拦截，D-165） -->
     <view wx:if="{{detail.hasProcessSystem && processList.length > 0}}" class="section-group">
       <text class="section-group-title">工序领取 / 报工</text>
       <view class="group-card">
@@ -146,9 +141,9 @@
     </view>
   </view>
 
-  <!-- 操作区域（工序系统：选中工序后展示报工表单；默认流程：直接展示） -->
-  <view wx:if="{{!detail.hasProcessSystem || selectedProcess}}" class="section-card">
-    <view class="section-title">{{detail.hasProcessSystem ? ('报工：' + (detail.operationLabel || '工序')) : (detail.operationLabel || '样衣操作')}}</view>
+  <!-- 报工表单：选中工序后展示 -->
+  <view wx:if="{{selectedProcess}}" class="section-card">
+    <view class="section-title">报工：{{detail.operationLabel || '工序'}}</view>
 
     <!-- 审核未完成提示 -->
     <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="review-warning">
@@ -276,7 +271,7 @@
     </view>
   </view>
 
-  <view wx:if="{{!detail.hasProcessSystem || selectedProcess}}" class="footer-bar">
+  <view wx:if="{{selectedProcess}}" class="footer-bar">
     <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
       {{loading ? '提交中...' : (detail.submitLabel || '领取')}}
