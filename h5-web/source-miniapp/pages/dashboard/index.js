@@ -36,7 +36,8 @@ function buildProcessNodes(order) {
 /** 为订单注入看板所需的扩展字段 */
 function enrichForDashboard(order) {
   const completed = Number(order.completedQuantity) || 0;
-  const total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+  // D-179：补充 totalQuantity（订单行色码合计）兜底，与 progressNodes 的 totalQty 链保持一致
+  const total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.totalQuantity) || Number(order.sizeTotal) || 0;
   order.processNodes = buildProcessNodes(order);
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);

@@ -193,10 +193,12 @@ function buildProcessNodesWithRates(order) {
   let hasRealRate = false;
   const totalBundles = Number(order.cuttingBundleCount) || 0;
   const processScannedMap = order.stageScannedBundleCount || {};
-  // P1-5 数据链路：总数量从 cuttingQuantity/cuttingQty/orderQuantity/sizeTotal 兜底
+  // P1-5 数据链路：总数量从 cuttingQuantity/cuttingQty/orderQuantity/totalQuantity/sizeTotal 兜底
   // 用于在工序进度区显示 已完成数/总数量/剩余 数量明细
+  // D-179：补充 totalQuantity（订单行色码合计）兜底——裁剪未回填且 orderQuantity 为空时仍可取到真实件数
   const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
-                  || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+                  || Number(order.orderQuantity) || Number(order.totalQuantity)
+                  || Number(order.sizeTotal) || 0;
   const result = nodes.map(function (n) {
     const name = n.name || n;
     const rate = getNodeRateFromOrder(name, order);
@@ -209,11 +211,12 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles),
       };
     }
-    // 数量明细：总数量>0 且有完成率时才计算，避免无完成率时显示 0/0
-    const qtyInfo = totalQty > 0 && rate >= 0 ? {
+    // 数量明细：总数量>0 且（有完成率 或 菲号有扫码）时计算
+    // D-179：菲号有数据但工序无完成率(rate=-1)时数量不再隐藏，completed 按 0 计
+    const qtyInfo = totalQty > 0 && (rate >= 0 || bundleInfo) ? {
       total: totalQty,
-      completed: Math.round(totalQty * rate / 100),
-      remaining: Math.max(0, totalQty - Math.round(totalQty * rate / 100)),
+      completed: rate >= 0 ? Math.round(totalQty * rate / 100) : 0,
+      remaining: Math.max(0, totalQty - (rate >= 0 ? Math.round(totalQty * rate / 100) : 0)),
     } : null;
     const children = childrenMap[name] || [];
     if (rate >= 0) {
@@ -284,7 +287,8 @@ function calcOrderProgress(order) {
   if (status === 'completed' || status === 'closed') {
     const completedQty = Number(order.completedQuantity) || 0;
     const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
-                   || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+                   || Number(order.orderQuantity) || Number(order.totalQuantity)
+                   || Number(order.sizeTotal) || 0;
     // 有已完成数量（或无总数可参照）→ 真实完成，返回100%
     if (completedQty > 0 || totalQty === 0) return 100;
     // completedQty=0 且有 totalQty → 仓库数量尚未录入，继续按工序完成率计算

@@ -1,6 +1,14 @@
   <!-- ① 今日统计（顶部） -->
   <wxs src="../../../utils/money.wxs" module="money" />
   <view class="today-stats-card">
+    <!-- D-178：恢复头部行+刷新按钮（f25698e2c UI 重构时误删），点击刷新今日统计 -->
+    <view class="tsc-head">
+      <text class="tsc-title">今日统计</text>
+      <view class="refresh-btn {{my.loadingStats ? 'refresh-btn-loading' : ''}}" bindtap="refreshMy" hover-class="refresh-btn-hover">
+        <view class="line-icon line-icon--sm icon-refresh refresh-icon"></view>
+        <text class="refresh-text">刷新</text>
+      </view>
+    </view>
     <view class="tsc-grid">
       <view class="tsc-item">
         <view class="tsc-num-row">
