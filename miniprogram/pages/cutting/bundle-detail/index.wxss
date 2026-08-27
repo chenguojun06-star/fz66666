@@ -268,7 +268,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 16rpx;
 }
 
 .stat-label {
@@ -290,17 +290,18 @@
   margin-left: 8rpx;
 }
 
-/* ── 裁货元信息（分行展示，避免窄屏挤压混乱） ──
+/* ── 裁货元信息（灰底面板，与矩阵表格分区，避免文字堆在一起显得杂乱） ──
  * 原：三项横向 flex 排列，窄屏一行摆不下导致换行错乱
- * 改：垂直堆叠，每行一项（标签固定宽度 + 值跟随），清晰易读
+ * 改：垂直堆叠 + 灰底圆角面板承载（标签固定宽度 + 值跟随），清晰易读
  */
 .cut-meta-row {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
-  margin-bottom: 8rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid var(--color-border);
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+  padding: 16rpx 20rpx;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
 }
 
 .cut-meta-item {
