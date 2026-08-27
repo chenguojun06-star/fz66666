@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-28（D-183 已入库仍显示入库按钮修复）
+> 最后更新：2026-08-28（D-184 生产管理五连修）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-28 生产管理五连修（D-184）✅QA全过
+
+- [x] 工序进度过滤采购/入库节点：progressNodes.js stripWarehousingNode 扩展过滤采购/入库/出货/发货，defaultNodes 收敛为4生产阶段（dashboard+factory 两副本同改）
+- [x] 订单详情下单明细矩阵：CSS Grid fr 挤压→scroll-x 横滚+固定列宽（96/150/88rpx）+nowrap，码数标签不再竖排截断
+- [x] 订单详情操作栏状态徽章：采购/裁剪/工序图标下显示 已完成(绿)/进行中(蓝)/未开始(灰)，按完成率联动
+- [x] 进行中tab：客户端过滤终态订单（completed/closed/archived/cancelled/scrapped），防旧云端忽略 excludeTerminal；后端新版 stats totalOrders=activeOrders 语义本已正确
+- [x] 工序编辑行重构：名称行+属性行两线结构、价格独立右对齐（min-width 96rpx tabular-nums）
+- [x] 核实：转单手机→裁剪管理转单面板→POST /production/order/transfer/create 与 PC 同端点✓；工序编辑 PUT /production/order/quick-edit 写同表✓；单价只显示裁剪=该订单 progressWorkflowJson.processesByNode 里只有裁剪子工序价格（逐单数据，需用户对同一单开工序编辑比对核实）；进行中31/仓库页三按钮等异常根因=云端后端旧版，需云端部署
 
 ### 2026-08-28 已入库样衣仍显示"样衣入库"按钮修复（D-183）✅QA全过
 
