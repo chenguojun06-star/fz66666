@@ -1627,3 +1627,8 @@
 .receive-btn--warehouse .receive-btn__text {
   color: var(--color-text-white, #fff);
 }
+
+/* D-181：按钮按压反馈（点按钮有变暗效果，便于确认点击已生效） */
+.receive-btn--pressed {
+  opacity: 0.6;
+}

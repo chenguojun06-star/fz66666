@@ -48,17 +48,17 @@
     <view class="section-card">
       <!-- 领取按钮（未领取时显示）+ 工序扫码入口（D-157闭环：详情页直达按工序扫码） -->
       <view wx:if="{{patternSnapshot && !patternSnapshot._isScrapped}}" class="receive-row">
-        <view wx:if="{{!patternSnapshot._isReceived && !patternSnapshot._isFullyCompleted}}" class="receive-btn" bindtap="onReceivePattern">
+        <view wx:if="{{!patternSnapshot._isReceived && !patternSnapshot._isFullyCompleted}}" class="receive-btn" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onReceivePattern">
           <text class="receive-btn__text">领取样衣</text>
         </view>
-        <view class="receive-btn receive-btn--secondary" bindtap="onProcessScan">
+        <view class="receive-btn receive-btn--secondary" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onProcessScan">
           <text class="receive-btn__text">工序扫码</text>
         </view>
         <!-- D-181 对齐PC：审核/入库是详情页动作，不是工序 -->
-        <view wx:if="{{patternSnapshot._showReviewAction}}" class="receive-btn receive-btn--secondary" bindtap="onSampleReview">
+        <view wx:if="{{patternSnapshot._showReviewAction}}" class="receive-btn receive-btn--secondary" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onSampleReview">
           <text class="receive-btn__text">样衣审核</text>
         </view>
-        <view wx:if="{{patternSnapshot._showWarehouseInAction}}" class="receive-btn receive-btn--warehouse" bindtap="onSampleWarehouseIn">
+        <view wx:if="{{patternSnapshot._showWarehouseInAction}}" class="receive-btn receive-btn--warehouse" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onSampleWarehouseIn">
           <text class="receive-btn__text">样衣入库</text>
         </view>
       </view>
