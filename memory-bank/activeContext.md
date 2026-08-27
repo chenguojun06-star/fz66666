@@ -7,6 +7,17 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-27 入库仓库/库位搜索+库位容量显示与满位拦截（D-171）✅已推送（c47417428），小程序待发布
+
+- [x] 用户问题「明明这么多仓库为什么选不到」核实结论：非 bug——各入库页按业务类型加载对应仓库（样衣→SAMPLE、大货→FINISHED、面辅料→MATERIAL），PC 仓库地图显示的是全部三类仓库；云端接口验证三类仓库+库位数据正常返回
+- [x] 仓库搜索：样衣扫码入库（scan/pattern）/样衣仓扫码（warehouse/sample/scan-action）/扫码结果页（scan/scan-result）仓库选项>2个时显示搜索框，关键词实时过滤
+- [x] 库位搜索：库位选项>4个时显示搜索框，按库位编号过滤
+- [x] 库位容量显示：库位 chip 显示「已用/容量」（如 A-01-1-1 3/100），后端 listByType 已返回 usedCapacity/capacity 前端直接消费
+- [x] 满库位拦截：used>=capacity 的库位红边置灰（picker 则名称标注「已满」），选择时 toast「库位XX已满（3/100），请选其他库位」
+- [x] 覆盖页面：scan/pattern、warehouse/sample/scan-action、scan/scan-result（chips 风格）+ quality-detail（picker 风格，名称含数量）
+- [x] 三副本同步 miniprogram/ + h5-web/source-miniapp/ + h5-web/public/source-miniapp/，node --check 4 文件全过，safe-push 10 项全 PASS
+- [x] 无后端/Flyway 变更（纯前端消费已有字段）；小程序需重新上传发布生效
+
 ### 2026-08-27 手机端工序列表采购/入库清除+工序tab布局对齐订单页（D-170）✅后端已部署（CI 33034330169 success），小程序待发布
 
 - [x] 问题「手机端工序列表还在显示采购/入库」核实结论：PC 端 SampleProcessList.tsx 早已移除采购/入库阶段（STAGE_ORDER 仅裁剪/二次工艺/车缝/尾部），手机端确实没同步——详情页工序 tab 读 /api/style/process/list 全量、扫码页读 getPatternProcessConfig 全量，t_style_process 残留采购/入库工序行（7款式11行：49/66/74/78/83/84/132）直接展示，不是快捷键
