@@ -4,15 +4,16 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
+const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
+const production = require('../../../utils/api-modules/production');
 
-// 6 个父阶段定义（与 PC 端 SAMPLE_PARENT_STAGES 对齐）
+// 4 个父阶段定义（与 PC 端/共享 sampleHelper.SAMPLE_PARENT_STAGES 对齐）
+// D-176：采购/入库是独立流程，不纳入工序列表（此前残留 6 阶段定义导致展开明细出现采购/入库 tab）
 const PARENT_STAGES = [
-  { key: 'procurement', label: '采购' },
   { key: 'cutting', label: '裁剪' },
   { key: 'secondary', label: '二次工艺' },
   { key: 'sewing', label: '车缝' },
   { key: 'tail', label: '尾部' },
-  { key: 'warehousing', label: '入库' },
 ];
 
 // 子工序名/progressStage → 父阶段 key 映射（参考 PC 端 resolveStageKey）
@@ -204,7 +205,8 @@ function buildSampleStages(configNodes, scanRecords, order) {
     delete stageMap.unknown;
   }
 
-  // 构造 6 个父阶段结果（按 PARENT_STAGES 顺序）
+  // 构造父阶段结果（按 PARENT_STAGES 顺序）
+  // D-176：只保留已配置子工序的阶段 tab——采购/入库不在 PARENT_STAGES，残留配置自动丢弃；无配置的空阶段不渲染 tab
   var stages = PARENT_STAGES.map(function (stage) {
     var subs = stageMap[stage.key] || [];
     var completedCount = 0;
@@ -221,6 +223,8 @@ function buildSampleStages(configNodes, scanRecords, order) {
       totalCount: totalCount,
       subProcesses: subs,
     };
+  }).filter(function (stage) {
+    return stage.totalCount > 0;
   });
 
   return { stages: stages, needsConfig: false };
@@ -239,7 +243,8 @@ function buildSubProcessRows(stage, order) {
   var receiveTimeShort = order._receiveTimeShort || '';
   var color = order.color || '';
   var size = order.size || '';
-  var qty = stage.key === 'procurement' ? '1种面料'
+  // D-177：优先用矩阵合计后的 _quantity（真实件数），退化用 quantity
+  var qty = Number(order._quantity) > 0 ? String(order._quantity)
     : (Number(order.quantity) > 0 ? String(order.quantity) : '-');
   return stage.subProcesses.map(function (sub) {
     var subDone = isDone || sub.completed;
@@ -330,12 +335,6 @@ function isSampleSnapshotFullyCompleted(item) {
     return true;
   }
   var allDone = SAMPLE_PARENT_STAGES.every(function (s) {
-    if (s.key === 'procurement') {
-      // 采购阶段用 procurementProgress 判断（MaterialPurchase 实时聚合）
-      var pp = item.procurementProgress;
-      var pct = (pp && typeof pp === 'object') ? pp.percent : (pp || 0);
-      return Number(pct) >= 100;
-    }
     return getSampleNodeProgress(item, s.key) >= 100;
   });
   return allDone && (status === 'IN_PROGRESS');
@@ -568,8 +567,10 @@ Page({
           item._activeStage = '';
           item._currentSubProcesses = [];
           item._configLoaded = false;
-          // 数量
-          item._quantity = item.quantity || si.sampleQuantity || '';
+          // 数量：D-177 色码矩阵合计优先（t_pattern_production.quantity 可能只记了1件，真实件数在 sizeColorConfig 矩阵里）
+          var matrixTotal = 0;
+          (item._matrix.rows || []).forEach(function (r) { matrixTotal += Number(r.rowTotal) || 0; });
+          item._quantity = matrixTotal > 0 ? matrixTotal : (item.quantity || si.sampleQuantity || '');
           item._overdue = false;
           item._nearDue = false;
           item._daysLeftText = '';
@@ -598,6 +599,7 @@ Page({
           var meta1Parts = [];
           var customer = item.customer || si.customer || item.company || si.company || item.brandName || '';
           if (customer) meta1Parts.push(customer);
+          item._customer = customer;
           var merchandiser = item.merchandiser || item.merchandiserName || si.merchandiser || '';
           if (merchandiser) meta1Parts.push('跟单: ' + merchandiser);
           var category = item.category || si.category || '';
@@ -607,6 +609,12 @@ Page({
           if (season && SEASON_MAP[season]) season = SEASON_MAP[season];
           if (season) meta1Parts.push(season);
           item._metaLine1 = meta1Parts.join(' · ');
+          // 生产管理同款卡片：行4 = 跟单 · 品类 · 季节（客户单独占行3）
+          var metaShortParts = [];
+          if (merchandiser) metaShortParts.push('跟单 ' + merchandiser);
+          if (category) metaShortParts.push(category);
+          if (season) metaShortParts.push(season);
+          item._metaShort = metaShortParts.join(' · ');
 
           // 元信息行2：颜色 · 尺码
           var meta2Parts = [];
@@ -622,21 +630,12 @@ Page({
           var received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT'].indexOf(statusUpper) >= 0
             || Boolean(item.receiver)
             || !!item.receiveTime;
-          var procurementProgress = clampPercent(
-            Number(
-              (item.procurementProgress && typeof item.procurementProgress === 'object'
-                ? item.procurementProgress.percent
-                : item.procurementProgress) || 0,
-            ),
-          );
 
           var totalPercent = 0;
           item._devStages = SAMPLE_PARENT_STAGES.map(function (s) {
             var percent;
             if (completed) {
               percent = 100;
-            } else if (s.key === 'procurement') {
-              percent = procurementProgress;
             } else if (received) {
               percent = getSampleNodeProgress(item, s.key);
             } else {
@@ -816,9 +815,35 @@ Page({
   },
 
   /**
+   * 扫码命中样板生产码后：加载工序数据 → 直达工序领取/报工页
+   * 复用主扫码页同一 PatternScanProcessor 流水线（详情+扫码记录+工序配置→操作选项）
+   */
+  async _openPatternProcessPage(patternId) {
+    wx.showLoading({ title: '加载工序...' });
+    try {
+      const handler = {
+        api: { production },
+        SCAN_MODE: { PATTERN: 'pattern' },
+        _errorResult: (msg) => ({ success: false, message: msg }),
+      };
+      const result = await PatternScanProcessor.handlePatternScan(handler, { patternId: String(patternId) }, null);
+      wx.hideLoading();
+      if (!result || !result.success || !result.data) {
+        wx.showToast({ title: (result && result.message) || '无法打开工序领取', icon: 'none' });
+        return;
+      }
+      getApp().globalData.patternScanData = result.data;
+      wx.navigateTo({ url: '/pages/scan/pattern/index' });
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || '打开失败', icon: 'none' });
+    }
+  },
+
+  /**
    * 扫码按钮：当前页直接扫码 → 匹配样衣 → 打开详情
    * 匹配优先级：
-   *   ① 样板生产二维码（打印资料单 QR：{"type":"pattern","id":...}）→ 直接打开该样衣详情
+   *   ① 样板生产二维码（打印资料单 QR：{"type":"pattern","id":...}）→ 直接进入工序领取/报工页
    *   ② 当前列表匹配（快路径）
    *   ③ 后端按款号查询（列表翻页/筛选后本地不命中的兜底）
    */
@@ -832,11 +857,9 @@ Page({
       }
       const d = parsed.data;
 
-      // ① 样板生产二维码：直接跳该样衣生产详情（详情页支持 id=patternId）
+      // ① 样板生产二维码：直接进入工序领取/报工页（与主扫码链路一致）
       if (d.qrType === 'pattern' && d.patternId) {
-        safeNavigate({
-          url: '/pages/sample-development/detail/index?id=' + encodeURIComponent(d.patternId),
-        }).catch(function () {});
+        that._openPatternProcessPage(d.patternId);
         return;
       }
 

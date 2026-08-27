@@ -39,10 +39,10 @@
     <text class="state-text">暂无样衣开发记录</text>
   </view>
 
-  <!-- 卡片列表 -->
+  <!-- 卡片列表（布局与生产管理 dashboard 完全一致） -->
   <view wx:else class="card-list">
     <view
-      class="card"
+      class="order-card {{item.expanded ? 'order-card--open' : ''}}"
       wx:for="{{list}}"
       wx:for-index="cardIdx"
       wx:key="id"
@@ -50,72 +50,63 @@
       data-card-idx="{{cardIdx}}"
       data-item="{{item}}"
     >
-      <!-- 封面 + 信息（点击跳详情） -->
-      <view class="card-top" data-item="{{item}}" catchtap="onCardTap">
-        <image
-          wx:if="{{item._cover}}"
-          class="card-cover"
-          src="{{item._cover}}"
-          mode="aspectFill"
-          data-src="{{item._cover}}"
-          catchtap="onPreviewImage"
-        />
-        <view wx:else class="card-cover-ph">
-          <view class="line-icon line-icon--lg icon-shirt card-cover-icon"></view>
+      <!-- 主行：封面 + 基本信息（点击跳详情） -->
+      <view class="order-main" data-item="{{item}}" catchtap="onCardTap">
+        <view class="order-cover" catchtap="onPreviewImage" data-src="{{item._cover}}">
+          <image wx:if="{{item._cover}}" class="cover-pic" src="{{item._cover}}" mode="aspectFill" lazy-load />
+          <view wx:else class="cover-placeholder">
+            <view class="cover-ph-text"><view class="line-icon line-icon--xl icon-shirt"></view></view>
+          </view>
         </view>
 
-        <view class="card-info">
-          <!-- 款号 + 状态标签 + 交板标签 -->
-          <view class="card-title-row">
-            <text class="card-style-no">{{item.styleNo || '-'}}</text>
-            <view class="card-tags">
+        <view class="order-info">
+          <!-- 行1：款号 + 状态标签 -->
+          <view class="info-line1">
+            <text class="order-no">{{item.styleNo || '-'}}</text>
+            <view class="info-badges">
               <view class="status-badge" style="background:{{item._statusColor}}">{{item._statusLabel}}</view>
-              <view
-                wx:if="{{item._deliveryTag}}"
-                class="delivery-tag {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}"
-              >交板 {{item._deliveryTag}}</view>
             </view>
           </view>
-          <!-- 款式名 -->
-          <text wx:if="{{item.styleName}}" class="card-style-name">{{item.styleName}}</text>
-          <!-- 元信息行1：公司 · 跟单 · 品类 · 季节 -->
-          <text wx:if="{{item._metaLine1}}" class="card-meta">{{item._metaLine1}}</text>
-          <!-- 元信息行2：颜色 · 尺码 -->
-          <text wx:if="{{item._metaLine2}}" class="card-meta card-meta--muted">{{item._metaLine2}}</text>
+          <!-- 行2：款名 -->
+          <view class="info-style">{{item.styleName || item.styleNo || '暂无款名'}}</view>
+          <!-- 行3：客户名 -->
+          <view class="info-customer" wx:if="{{item._customer}}">{{item._customer}}</view>
+          <!-- 行4：跟单 · 品类 · 季节 -->
+          <view class="info-factory" wx:if="{{item._metaShort}}">{{item._metaShort}}</view>
         </view>
       </view>
 
-      <!-- 件数 + 延期/剩余天数（整卡可点进详情，去掉重复的详情按钮） -->
-      <view class="card-info-row" data-item="{{item}}" catchtap="onCardTap">
-        <view class="card-info-left">
-          <text class="card-quantity">{{item.quantity ? item.quantity + '件' : ''}}</text>
-          <text wx:if="{{item._daysLeftText}}" class="card-days-left {{item._overdue ? 'overdue' : ''}} {{item._nearDue ? 'near-due' : ''}}">{{item._daysLeftText}}</text>
+      <!-- 进度行：数量·交板 + 进度条 + 百分比 + 剩余天数（同一行，与生产管理一致） -->
+      <view class="info-progress">
+        <view class="ip-left">
+          <text class="ip-qty">{{item._quantity || 0}}件</text>
+          <text class="ip-dot">·</text>
+          <text class="ip-delivery" wx:if="{{item._deliveryTag}}">交板 {{item._deliveryTag}}</text>
         </view>
-        <view class="card-detail-arrow"></view>
-      </view>
-
-      <!-- 进度条 -->
-      <view class="card-progress">
-        <view class="card-progress-track">
+        <view class="ip-bar">
           <view
-            class="card-progress-fill"
-            style="{{ {width: (item._progressPercent || 0) + '%', background: item._statusColor} }}"
+            class="ip-fill {{item._overdue ? 'ip-fill--overdue' : ''}} {{item._progressPercent >= 100 ? 'ip-fill--done' : ''}}"
+            style="width: {{item._progressPercent > 100 ? 100 : item._progressPercent || 0}}%"
           ></view>
         </view>
-        <text class="card-progress-percent">{{item._progressPercent || 0}}%</text>
+        <text class="ip-pct">{{item._progressPercent || 0}}%</text>
+        <text
+          wx:if="{{item._daysLeftText}}"
+          class="ip-remain {{item._overdue ? 'days-overdue' : (item._nearDue ? 'days-urgent' : 'days-safe')}}"
+        >{{item._daysLeftText}}</text>
       </view>
 
       <!-- 展开明细按钮 -->
-      <view class="card-expand-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
+      <view class="order-expand-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
         <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细'}}</text>
-        <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"></view>
+        <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
       </view>
 
       <!-- 展开区：多码多色 + 配置好的子工序 -->
       <view class="card-expand-area" wx:if="{{item.expanded}}">
         <!-- 多码多色矩阵（如有） -->
         <view wx:if="{{item._matrix.sizes.length > 0}}" class="expand-section">
-          <text class="section-title">多码多色</text>
+          <text class="section-title">码数颜色</text>
           <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
             <view class="matrix-table">
               <view class="matrix-row matrix-row--head">

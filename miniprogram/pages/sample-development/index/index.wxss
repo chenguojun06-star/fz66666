@@ -163,6 +163,231 @@
   padding: 8px var(--page-padding-x) 0;
 }
 
+/* ============================================================
+   D-175：订单卡片 —— 与生产管理（dashboard）完全同款布局
+   主行（封面+四行信息）+ 单行进度（数量·交板+进度条+百分比+剩余天数）
+   ============================================================ */
+.order-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+  box-sizing: border-box;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+/* — 主行：封面 + 信息 — */
+.order-main {
+  display: flex;
+  gap: 12px;
+}
+
+/* 封面图 80x80 圆角 */
+.order-cover {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+.cover-pic {
+  width: 100%;
+  height: 100%;
+}
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cover-ph-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 信息区 */
+.order-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 行1：款号 + 状态标签 */
+.info-line1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.order-no {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 状态标签容器 */
+.info-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* 实心状态标签 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 8px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  color: var(--color-text-white);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* 行2：款名 */
+.info-style {
+  margin-top: 4px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 行3：客户名 */
+.info-customer {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 行4：跟单 · 品类 · 季节 */
+.info-factory {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* — 进度行：数量·交板 + 进度条 + 百分比 + 剩余天数（同一行） — */
+.info-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ip-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ip-qty {
+  font-variant-numeric: tabular-nums;
+}
+.ip-dot {
+  color: var(--color-text-quaternary);
+}
+.ip-delivery {
+  font-variant-numeric: tabular-nums;
+}
+.ip-bar {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.ip-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s;
+}
+/* 已完成：绿色 */
+.ip-fill--done {
+  background: var(--color-success);
+}
+/* 延期：橙色 */
+.ip-fill--overdue {
+  background: var(--color-warning);
+}
+.ip-pct {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: right;
+}
+/* 剩余天数标签 */
+.ip-remain {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  line-height: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ip-remain.days-safe    { background: var(--color-success-bg); color: var(--color-success); }
+.ip-remain.days-warn    { background: var(--color-warning-bg); color: var(--color-warning); }
+.ip-remain.days-urgent  { background: var(--color-danger-bg); color: var(--color-danger); }
+.ip-remain.days-overdue { background: var(--color-danger-bg); color: var(--color-danger); font-weight: var(--font-weight-semibold); }
+.ip-remain.days-done    { background: var(--color-success-bg); color: var(--color-success); }
+
+/* — 展开按钮（全宽 border-top）— */
+.order-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+.order-expand-btn .expand-btn-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+.order-expand-btn .expand-btn-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  transition: transform 0.2s;
+}
+.order-expand-btn .expand-btn-arrow--up {
+  transform: rotate(180deg);
+}
+
 .card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -406,36 +631,7 @@
   white-space: nowrap;
 }
 
-/* 展开子工序按钮 */
-.card-expand-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 10px;
-  padding: 8px 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  border-top: 1px solid var(--color-border-light, var(--color-border));
-}
-
-.expand-btn-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
-
-.expand-btn-arrow {
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid var(--color-text-tertiary);
-  transition: transform 0.2s ease;
-}
-
-.expand-btn-arrow.expand-btn-arrow--up {
-  transform: rotate(180deg);
-}
+/* 展开子工序按钮（旧 .card-expand-btn 已废弃，改用生产管理同款 .order-expand-btn，样式见文件顶部 D-175 区块） */
 
 /* 展开区 */
 .card-expand-area {

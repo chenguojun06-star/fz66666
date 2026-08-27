@@ -7,6 +7,28 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-27 样衣跟进卡片数量真实化+区块改名（D-177）✅语法全过，待推送
+
+- [x] 卡片显示1件根因：`_quantity` 直接取 `t_pattern_production.quantity`（创建时只记了1），真实件数在 sizeColorConfig 色码矩阵。修复：矩阵行合计之和优先（matrixTotal>0 用之），退化 quantity→si.sampleQuantity
+- [x] 子工序明细行数量同步改用 `_quantity`（原来读 order.quantity 也会显示1）
+- [x] 展开区区块名「多码多色」→「码数颜色」（用户指定叫法）；详情页无矩阵区块，全小程序仅列表页一处用户可见文案
+- [x] 三副本同步 + node --check 全过
+
+### 2026-08-27 样衣跟进列表砍掉采购/入库阶段 tab（D-176）✅语法全过，待推送
+
+- [x] 根因：D-170 只修了详情页+DB+后端过滤，**列表页 sample-development/index 有自己的本地 6 阶段 PARENT_STAGES 定义**（含采购/入库），展开明细的 stage-tabs 把 6 个 tab 全渲染（含空的采购/入库 tab）——违反"一次性找出所有关联引用点"铁律，本次全量扫了三副本所有 sample-development 页面确认无其他残留
+- [x] 修复：本地 PARENT_STAGES 改为 4 阶段（裁剪/二次工艺/车缝/尾部，与共享 sampleHelper.SAMPLE_PARENT_STAGES 一致）；buildSampleStages 输出增加 filter(totalCount>0)——空阶段不渲染 tab，残留采购/入库配置自动丢弃（STAGE_KEY_MAP 映射保留，防残留数据掉进 unknown→尾部）
+- [x] 死代码清理：'1种面料' 特判、isSampleSnapshotFullyCompleted 的 procurement 分支、总进度的 procurementProgress 计算+分支（SAMPLE_PARENT_STAGES 本就只有4阶段，均为死代码）
+- [x] 三副本同步 + node --check 全过；纯前端无后端改动
+
+### 2026-08-27 样衣跟进列表卡片对齐生产管理（D-175）✅语法全过，待推送
+
+- [x] 用户诉求：样衣开发列表页卡片布局/大小/进度条全部与生产管理（pages/dashboard）一致——下午改的是详情页工序进度时间线，列表卡片确实没动，本次补上
+- [x] 重构 sample-development/index 卡片：主行（80px 封面 + 四行信息：款号+状态标签 / 款名 / 客户 / 跟单·品类·季节）+ 单行进度（数量·交板 + 6px 进度条 + 百分比 + 剩余天数标签）+ 全宽展开按钮（icon-chevron-down-sm 图标）
+- [x] 样式照搬 dashboard/index.wxss 的 .order-card 系列（padding 12px、封面 80x80、days-overdue/urgent/safe 天数标签色），wxss 页面级隔离无冲突；删除废弃的 .card-expand-btn/.expand-btn-text/.expand-btn-arrow 旧三角箭头样式（会与新图标冲突）
+- [x] JS 新增 item._customer / item._metaShort 字段（客户单独行3，跟单·品类·季芧行4）；展开区（多码多色矩阵+子工序明细）保持原样未动
+- [x] 三副本同步：miniprogram + h5-web/source-miniapp + h5-web/public/source-miniapp
+
 ### 2026-08-27 样衣工资历史脏数据修正接口（D-174）✅编译过，待推送
 
 - [x] 用户确认：清理脏数据 + 修正历史扫码工序单价
