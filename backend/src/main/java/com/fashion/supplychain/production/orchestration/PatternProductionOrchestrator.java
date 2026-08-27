@@ -508,6 +508,121 @@ public class PatternProductionOrchestrator {
     }
 
     /**
+     * D-174：修正样衣扫码计件工资镜像的历史脏数据（幂等，dryRun=true 只读预览）
+     * <p>
+     * 修正规则（仅针对 scan_type='pattern' 且未结算的记录，已结算记录不动以防破坏结算单）：
+     * 1. 数量虚增：D-172 之前报工镜像记录的是样板计划数量（如12件），样衣按件统计统一修正为 1 件
+     * 2. 单价回填：unit_price 为 0/NULL 时，按 款号→款式ID→工序配置价(t_style_process.price) 回填；
+     *    查不到配置价保持 0（领取/入库等流程动作本就无单价）
+     * 3. 金额对齐：total_amount/scan_cost 统一重算为 单价×数量
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> fixPatternScanWageData(boolean dryRun) {
+        Long tenantId = TenantAssert.requireTenantId();
+        List<ScanRecord> records = scanRecordService.lambdaQuery()
+                .eq(ScanRecord::getTenantId, tenantId)
+                .eq(ScanRecord::getScanType, "pattern")
+                .eq(ScanRecord::getScanResult, "success")
+                .and(w -> w.isNull(ScanRecord::getSettlementStatus)
+                        .or().notIn(ScanRecord::getSettlementStatus, "settled", "payroll_settled", "payroll_approved"))
+                .list();
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        int fixedQty = 0;
+        int fixedPrice = 0;
+        int fixedAmount = 0;
+        if (records != null) {
+            for (ScanRecord sr : records) {
+                boolean changed = false;
+                // 修正前快照（预览/审计用）
+                Integer oldQuantity = sr.getQuantity();
+                BigDecimal oldUnitPrice = sr.getUnitPrice();
+                BigDecimal oldTotalAmount = sr.getTotalAmount();
+                // 规则1：数量虚增修正（D-172 前镜像记录的是计划数量）
+                if (sr.getQuantity() != null && sr.getQuantity() > 1) {
+                    sr.setQuantity(1);
+                    fixedQty++;
+                    changed = true;
+                }
+                // 规则2：单价回填（按款号反查款式工序配置价）
+                if (sr.getUnitPrice() == null || sr.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    BigDecimal configured = lookupPriceByStyleNo(sr.getStyleNo(), sr.getProcessName());
+                    if (configured != null && configured.compareTo(BigDecimal.ZERO) > 0) {
+                        sr.setUnitPrice(configured);
+                        sr.setProcessUnitPrice(configured);
+                        fixedPrice++;
+                        changed = true;
+                    }
+                } else if (sr.getProcessUnitPrice() == null
+                        || sr.getProcessUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    sr.setProcessUnitPrice(sr.getUnitPrice());
+                    changed = true;
+                }
+                // 规则3：金额对齐（单价×数量）
+                BigDecimal price = sr.getUnitPrice() == null ? BigDecimal.ZERO : sr.getUnitPrice();
+                int qty = sr.getQuantity() == null ? 0 : sr.getQuantity();
+                BigDecimal expected = price.multiply(BigDecimal.valueOf(qty));
+                if (sr.getTotalAmount() == null || sr.getTotalAmount().compareTo(expected) != 0) {
+                    sr.setTotalAmount(expected);
+                    sr.setScanCost(expected);
+                    fixedAmount++;
+                    changed = true;
+                }
+                if (changed) {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("recordId", sr.getId());
+                    item.put("styleNo", sr.getStyleNo());
+                    item.put("processName", sr.getProcessName());
+                    item.put("operatorName", sr.getOperatorName());
+                    item.put("scanTime", sr.getScanTime());
+                    item.put("oldQuantity", oldQuantity);
+                    item.put("oldUnitPrice", oldUnitPrice);
+                    item.put("oldTotalAmount", oldTotalAmount);
+                    item.put("newQuantity", sr.getQuantity());
+                    item.put("newUnitPrice", sr.getUnitPrice());
+                    item.put("newTotalAmount", sr.getTotalAmount());
+                    items.add(item);
+                    if (!dryRun) {
+                        scanRecordService.updateById(sr);
+                    }
+                }
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("dryRun", dryRun);
+        result.put("totalScanned", records == null ? 0 : records.size());
+        result.put("toFixCount", items.size());
+        result.put("quantityFixed", fixedQty);
+        result.put("priceBackfilled", fixedPrice);
+        result.put("amountRecalculated", fixedAmount);
+        result.put("fixItems", items);
+        return result;
+    }
+
+    /**
+     * D-174：按款号反查款式工序配置单价（款号→StyleInfo.id→lookupStyleProcessPrice）
+     */
+    private BigDecimal lookupPriceByStyleNo(String styleNo, String processName) {
+        if (!StringUtils.hasText(styleNo) || !StringUtils.hasText(processName)) {
+            return null;
+        }
+        try {
+            StyleInfo style = styleInfoService.lambdaQuery()
+                    .select(StyleInfo::getId)
+                    .eq(StyleInfo::getStyleNo, styleNo)
+                    .last("LIMIT 1")
+                    .one();
+            if (style == null || style.getId() == null) {
+                return null;
+            }
+            return lookupStyleProcessPrice(String.valueOf(style.getId()), processName);
+        } catch (Exception e) {
+            log.warn("[D-174] 款式工序单价反查失败: styleNo={}, processName={}", styleNo, processName, e);
+            return null;
+        }
+    }
+
+    /**
      * 提交样板生产扫码记录（跨域：创建扫码记录 + 更新样板状态）
      */
     @Transactional(rollbackFor = Exception.class)
@@ -572,7 +687,8 @@ public class PatternProductionOrchestrator {
 
         // CLAIM（领取工序）不是报工：不写 t_scan_record 计件镜像（避免领取动作产生工资）
         if (!isClaimOperation) {
-            syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, effectiveUnitPrice, effectiveColor, effectiveSize);
+            syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, effectiveUnitPrice,
+                    effectiveColor, effectiveSize, scanRecord.getQuantity());
         }
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
@@ -734,7 +850,7 @@ public class PatternProductionOrchestrator {
      */
     private void syncToScanRecord(PatternProduction pattern, String operationType,
             String operatorId, String operatorName, String remark, BigDecimal unitPrice,
-            String effectiveColor, String effectiveSize) {
+            String effectiveColor, String effectiveSize, Integer scanQuantity) {
         ScanRecord sr = new ScanRecord();
         sr.setScanType("pattern");
         sr.setScanResult("success");
@@ -749,7 +865,15 @@ public class PatternProductionOrchestrator {
         sr.setProcessName(processLabel);
         sr.setProcessCode(processLabel);
         sr.setProgressStage(processLabel);
-        int patternQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
+        // D-172：工资镜像数量优先用本次扫码数量（样衣按件统计），扫码数量无效时才回退样板计划数量
+        int patternQty;
+        if (scanQuantity != null && scanQuantity > 0) {
+            patternQty = scanQuantity;
+        } else if (pattern.getQuantity() != null && pattern.getQuantity() > 0) {
+            patternQty = pattern.getQuantity();
+        } else {
+            patternQty = 1;
+        }
         sr.setQuantity(patternQty);
         if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(patternQty));

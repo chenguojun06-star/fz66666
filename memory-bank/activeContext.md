@@ -7,6 +7,34 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-27 样衣工资历史脏数据修正接口（D-174）✅编译过，待推送
+
+- [x] 用户确认：清理脏数据 + 修正历史扫码工序单价
+- [x] 方案：幂等修正接口 `POST /api/production/pattern/fix-scan-wage-data`（仅主管及以上，云端库本地无法直连，Flyway 不适合条件修正故走接口，项目有 backfill 先例）
+- [x] dryRun 机制：默认 true 只读预览（返回每条记录旧值→新值清单），确认后传 `{"dryRun": false}` 执行
+- [x] 修正规则（仅 scan_type='pattern' 且未结算记录，已结算不动）：①数量虚增>1→1件（D-172前镜像记的是计划数量）②单价0/NULL→按款号反查 t_style_process.price 回填③金额对齐 total_amount=单价×数量（scan_cost/process_unit_price 同步）
+- [x] 关键认知：CLAIM 不写工资镜像（仅报工写），用户工资页脏数据来自 D-172 前的报工镜像；"领取样板/样衣入库"单价0是流程动作本就无价，保持0合理
+- [x] 改动：PatternProductionOrchestrator.fixPatternScanWageData() + lookupPriceByStyleNo() + PatternProductionController 端点
+- [x] 修 bug：oldQuantity 快照必须在修改前取（首版写成了修改后取，永远等于新值）
+
+### 2026-08-27 样衣领取工序数量录入（D-173）✅语法全过，待推送
+
+- [x] 用户诉求：扫码领取工序时应能录入数量（此前点「领取」直接提交 quantity=1，无输入入口）
+- [x] 修复：`onClaimProcess` 改为进入领取表单（claimMode），填「计划制作数量」后提交；表单取消回到工序列表（不退出页面）
+- [x] 多色多码规则定型：领取=工序级单数量（1条 CLAIM 记录，含工序单价）；报工=色码级 SKU 明细（每色码一条记录，工资按报工实际数计算）；同码多件=同一行输入数量
+- [x] 关键防御：CLAIM 强制单数量路径（拆多条会因后端幂等短路丢失色码明细），wxml SKU 列表/单数量输入/汇总三处显示条件加 claimMode
+- [x] 链路核实：领取（submitPatternScan）与报工（executeScan→submitSamplePatternScan）后端已收敛到同一 `PatternProductionOrchestrator.submitScan`，单价自动查 t_style_process.price 兜底，`updatePatternQuantityIfNeeded` 仅在样板数量为空时回填（无覆盖风险）
+- [x] 改动文件：pattern/index.js + index.wxml（miniprogram + h5-web 两套三副本），无后端/Flyway 变更
+
+### 2026-08-27 样衣计件数量虚增修复（D-172）✅编译/语法全过，待推送
+
+- [x] 用户问题：工资统计中样衣订单 BR24XQ0098E「样衣操作」显示数量12（实做1件），金额虚增
+- [x] 根因三处：①前端 `PatternScanProcessor.js` 扫码默认数量取样板计划数量；②`pattern/index.js` SKU 列表默认填充 `totalQuantity`；③后端 `PatternProductionOrchestrator.syncToScanRecord` 工资镜像数量回退计划数量
+- [x] 修复：扫码/表单/SKU 默认数量统一为1（计划数量仅作 `maxQuantity` 上限）；后端 `syncToScanRecord` 新增 `scanQuantity` 参数优先用本次扫码数量
+- [x] 附带修复：样衣入库仓库为空时内联提示（`warehouseLoadEmpty`）+ 手动输入仓库编号自动关联 `warehouseAreaId` 并加载库位
+- [x] 验证：`mvn compile -q` exit 0；3 个 JS 文件 `node --check` 全过；本地库 t_warehouse_area 样衣仓数据正常（YY-001/YY-002），用户报的错误数据在云端库（BR24XQ0098E/BC25CQ0355A 本地 count=0）
+- [x] 注意：云端历史脏数据（quantity=12 的记录）需用户确认后清理；小程序需重新上传发布
+
 ### 2026-08-27 入库仓库/库位搜索+库位容量显示与满位拦截（D-171）✅已推送（c47417428），小程序待发布
 
 - [x] 用户问题「明明这么多仓库为什么选不到」核实结论：非 bug——各入库页按业务类型加载对应仓库（样衣→SAMPLE、大货→FINISHED、面辅料→MATERIAL），PC 仓库地图显示的是全部三类仓库；云端接口验证三类仓库+库位数据正常返回

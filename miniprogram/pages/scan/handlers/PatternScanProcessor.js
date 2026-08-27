@@ -71,7 +71,8 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
         operationOptions: operationOptions,
         styleNo: patternDetail.styleNo || parsedData.styleNo,
         color: patternDetail.color || parsedData.color,
-        quantity: patternDetail.quantity,
+        // D-172：样衣按件统计，扫码默认数量1件（计划数量仅作上限，防止工资统计虚增）
+        quantity: 1,
         status: patternDetail.status,
         hasProcessSystem: hasProcessSystem, // 样衣使用工序系统
       },

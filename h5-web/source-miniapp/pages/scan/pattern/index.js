@@ -65,12 +65,14 @@ Page({
     detail: {},
     processList: [], // MES 工序列表：每道工序带状态（PENDING/CLAIMED/COMPLETED）与领取人
     selectedProcess: null, // 当前选中待报工的工序
+    claimMode: false, // D-173：领取模式——点「领取」先填数量再提交，而非直接 quantity=1 提交
     skuList: [],
     summary: {},
     loading: false,
     warehouseOptions: [],
     filteredWarehouseOptions: [],
     warehouseSearchKey: '',
+    warehouseLoadEmpty: false, // D-172：样衣仓加载为空时在仓库选择区域显示内联提示
     warehouseAreaId: '',
     warehouseLocationCode: '',
     locationOptions: [],
@@ -118,7 +120,8 @@ Page({
         patternId: data.patternId,
         styleNo: data.styleNo,
         color: data.color || patternDetail.color || '-',
-        quantity: normalizePositiveInt(data.quantity, 1),
+        // D-172：样衣按件统计，默认数量1件；计划数量仅作输入上限
+        quantity: 1,
         maxQuantity: normalizePositiveInt(data.quantity, 1),
         warehouseCode: '',
         status: status,
@@ -214,6 +217,11 @@ Page({
       const skuItems = matrixItems.length > 0 ? matrixItems : (data.orderItems || []);
       const normalized = SKUProcessor.normalizeOrderItems(skuItems, data.orderNo, data.styleNo);
       const formItems = SKUProcessor.buildSKUInputList(normalized);
+      // D-172：样衣按件统计，每个颜色×码数默认1件（而非计划总数），用户可按实际制作件数调整
+      formItems.forEach(function(item) {
+        item.defaultQuantity = 1;
+        item.inputQuantity = 1;
+      });
       const summary = SKUProcessor.getSummary(formItems);
       this.setData({ skuList: formItems, summary: summary });
     }
@@ -281,7 +289,7 @@ Page({
       const config = (res && (res.data || res)) || [];
       const list = Array.isArray(config) ? config : [];
       if (list.length > 0) {
-        this.setData({ processList: this._buildProcessList(list), selectedProcess: null });
+        this.setData({ processList: this._buildProcessList(list), selectedProcess: null, claimMode: false });
       }
     } catch (e) {
       console.warn('[样板页] 刷新工序列表失败', e);
@@ -290,9 +298,10 @@ Page({
 
   /**
    * MES 报工模型：领取工序（行内按钮）
+   * D-173：点「领取」进入领取表单（录入本次计划制作数量），填完再提交；
    * 防重复领取：前端按状态禁用（他人 CLAIMED 不可点），后端 validateProcessClaim 兜底
    */
-  async onClaimProcess(e) {
+  onClaimProcess(e) {
     const idx = e.currentTarget.dataset.index;
     const proc = this.data.processList[idx];
     if (!proc || this.data.loading) return;
@@ -310,27 +319,18 @@ Page({
       return;
     }
 
-    this.setData({ loading: true });
-    try {
-      const res = await api.production.submitPatternScan({
-        patternId: this.data.detail.patternId,
-        operationType: 'CLAIM',
-        processName: proc.processName,
-        progressStage: proc.progressStage || proc.processName,
-        operatorRole: 'PLATE_WORKER',
-        quantity: normalizePositiveInt(this.data.detail.quantity, 1),
-        color: this.data.detail.color,
-        remark: '',
-      });
-      toast.success((res && res.message) || '已领取工序【' + proc.processName + '】');
-      this._emitRefresh();
-      await this._refreshProcessList();
-    } catch (err) {
-      console.error('[样板页] 领取工序失败:', err);
-      toast.error(err.errMsg || err.message || '领取工序失败');
-    } finally {
-      this.setData({ loading: false });
-    }
+    // 进入领取表单：数量默认1件，计划数量仅作上限
+    this.setData({
+      selectedProcess: proc,
+      claimMode: true,
+      'detail.operationType': 'CLAIM',
+      'detail.operationLabel': proc.processName,
+      'detail.submitLabel': '领取工序',
+      'detail.requiresWarehouseInput': false,
+      'detail.requiresReviewBeforeInbound': false,
+      'detail.quantity': 1,
+      'detail.remark': '',
+    });
   },
 
   /**
@@ -358,6 +358,7 @@ Page({
     const opType = proc.value || proc.processName;
     this.setData({
       selectedProcess: proc,
+      claimMode: false, // D-173：报工模式，非领取
       'detail.operationType': opType,
       'detail.operationLabel': proc.processName,
       'detail.submitLabel': proc.isWarehouse ? '入库' : (proc.isReview ? '审核' : '完成报工'),
@@ -410,7 +411,21 @@ Page({
   },
 
   onWarehouseInput(e) {
-    this.setData({ 'detail.warehouseCode': e.detail.value });
+    const value = e.detail.value;
+    this.setData({ 'detail.warehouseCode': value });
+    // D-172：手动输入的编号与仓库名完全匹配时，自动关联仓库区域并加载库位
+    const areaId = this._warehouseAreaMap && this._warehouseAreaMap[value];
+    if (areaId) {
+      this.setData({
+        warehouseAreaId: areaId,
+        warehouseLocationCode: '',
+        locationOptions: [],
+        locationItems: [],
+        filteredLocationItems: [],
+        locationSearchKey: '',
+      });
+      this._loadLocationOptions(areaId);
+    }
   },
 
   onRemarkInput(e) {
@@ -424,27 +439,32 @@ Page({
       const res = await api.warehouse.listWarehouseAreas('SAMPLE');
       const data = res?.data || res;
       const list = Array.isArray(data) ? data : [];
-      if (list.length > 0) {
-        const areaMap = {};
-        const options = [];
-        const sorted = list
-          .filter(function(item) { return item.areaName && item.id; })
-          .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); });
-        for (let i = 0; i < sorted.length; i++) {
-          const item = sorted[i];
-          options.push(item.areaName);
-          areaMap[item.areaName] = item.id;
-        }
-        if (options.length > 0) {
-          this.setData({
-            warehouseOptions: options,
-            filteredWarehouseOptions: this._filterListByKeyword(options, this.data.warehouseSearchKey),
-          });
-          this._warehouseAreaMap = areaMap;
-        }
+      const areaMap = {};
+      const options = [];
+      const sorted = list
+        .filter(function(item) { return item.areaName && item.id; })
+        .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); });
+      for (let i = 0; i < sorted.length; i++) {
+        const item = sorted[i];
+        options.push(item.areaName);
+        areaMap[item.areaName] = item.id;
+      }
+      if (options.length > 0) {
+        this.setData({
+          warehouseOptions: options,
+          filteredWarehouseOptions: this._filterListByKeyword(options, this.data.warehouseSearchKey),
+          warehouseLoadEmpty: false,
+        });
+        this._warehouseAreaMap = areaMap;
+      } else {
+        // D-172：记录空状态，仓库选择区域显示内联提示（避免用户困惑"选不了仓库"）
+        this._warehouseAreaMap = {};
+        this.setData({ warehouseLoadEmpty: true });
       }
     } catch (e) {
       console.warn('[PatternPage] 加载仓库选项失败', e);
+      this._warehouseAreaMap = {};
+      this.setData({ warehouseLoadEmpty: true });
     }
   },
 
@@ -574,6 +594,15 @@ Page({
   },
 
   goBack() {
+    wx.navigateBack();
+  },
+
+  // D-173：领取/报工表单取消——回到工序列表（不退出页面）；无表单时才返回上一页
+  onCancelForm() {
+    if (this.data.selectedProcess) {
+      this.setData({ selectedProcess: null, claimMode: false });
+      return;
+    }
     wx.navigateBack();
   },
 
@@ -724,12 +753,18 @@ Page({
 
   async _submitProcessScan(d, operationType, qty, remark) {
     const selectedOption = (d.operationOptions || []).find(function(o) { return o.value === operationType; });
-    const processName = selectedOption && selectedOption.processName || operationType;
-    const progressStage = selectedOption && selectedOption.progressStage || operationType;
+    // D-173：领取模式下 operationType=CLAIM 不在 operationOptions 里，工序名取所选工序
+    const proc = this.data.selectedProcess;
+    const claimMode = !!this.data.claimMode;
+    const processName = (claimMode && proc && proc.processName)
+      || (selectedOption && selectedOption.processName) || operationType;
+    const progressStage = (claimMode && proc && (proc.progressStage || proc.processName))
+      || (selectedOption && selectedOption.progressStage) || operationType;
     const scanType = selectedOption && selectedOption.scanType || 'production';
 
-    // 检查是否有多色多码选择
-    const hasSkuList = this.data.skuList && this.data.skuList.length > 0;
+    // D-173：领取是工序级动作，强制单数量路径（CLAIM 拆多条会因幂等短路丢失色码明细）；
+    // 多色多码的色码数量在报工（COMPLETE）时按 SKU 明细录入
+    const hasSkuList = !claimMode && this.data.skuList && this.data.skuList.length > 0;
     if (hasSkuList) {
       const validation = SKUProcessor.validateSKUInputBatch(this.data.skuList);
       if (!validation.valid) {
@@ -824,7 +859,9 @@ Page({
         if (this.data.warehouseLocationCode) scanData.warehouseLocationCode = this.data.warehouseLocationCode;
 
         await api.production.executeScan(scanData);
-        toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
+        toast.success(claimMode
+          ? '已领取工序【' + processName + '】，完成后请及时报工'
+          : ((selectedOption && selectedOption.label) || processName + ' 完成'));
         this._emitRefresh();
         await this._refreshProcessList();
       } catch (e) {

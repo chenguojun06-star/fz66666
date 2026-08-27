@@ -473,6 +473,25 @@ public class PatternProductionController {
     }
 
     /**
+     * D-174：修正样衣扫码计件工资镜像的历史脏数据（幂等，仅主管及以上）
+     * 修正规则：数量虚增（计划数量→1件）/ 单价回填（工序配置价）/ 金额对齐（单价×数量）。
+     * dryRun 默认 true 只读预览；确认清单无误后传 {"dryRun": false} 实际执行。
+     */
+    @PostMapping("/fix-scan-wage-data")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Map<String, Object>> fixScanWageData(@RequestBody Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.forbidden("仅主管及以上权限可执行工资数据修正");
+        }
+        TenantAssert.assertTenantContext();
+        boolean dryRun = true;
+        if (body != null && body.get("dryRun") != null) {
+            dryRun = !"false".equalsIgnoreCase(String.valueOf(body.get("dryRun")));
+        }
+        return Result.success(patternProductionOrchestrator.fixPatternScanWageData(dryRun));
+    }
+
+    /**
      * 提交样板生产扫码记录
      */
     @PostMapping("/scan")

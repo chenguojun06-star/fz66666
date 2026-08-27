@@ -144,9 +144,9 @@
     </view>
   </view>
 
-  <!-- 报工表单：选中工序后展示 -->
+  <!-- 报工/领取表单：选中工序后展示 -->
   <view wx:if="{{selectedProcess}}" class="section-card">
-    <view class="section-title">报工：{{detail.operationLabel || '工序'}}</view>
+    <view class="section-title">{{claimMode ? '领取工序：' : '报工：'}}{{detail.operationLabel || '工序'}}</view>
 
     <!-- 审核未完成提示 -->
     <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="review-warning">
@@ -169,8 +169,8 @@
       </view>
     </view>
 
-    <!-- 多色多码选择（当有 skuList 时显示） -->
-    <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="section-card" style="margin-top: 0; padding: 0; background: transparent;">
+    <!-- 多色多码选择（当有 skuList 时显示；领取为工序级单数量，不拆色码明细） -->
+    <view wx:if="{{skuList.length > 0 && !claimMode && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="section-card" style="margin-top: 0; padding: 0; background: transparent;">
       <text class="section-title">扫码明细（{{skuList.length}}项）</text>
       <view class="sku-list">
         <view wx:for="{{skuList}}" wx:key="id" class="sku-item">
@@ -190,16 +190,16 @@
     </view>
 
     <!-- 数量汇总（当有 skuList 时显示） -->
-    <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="summary-card">
+    <view wx:if="{{skuList.length > 0 && !claimMode && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="summary-card">
       <view class="summary-row">
         <text class="summary-label">总数量</text>
         <text class="summary-value">{{summary.totalQuantity}} 件</text>
       </view>
     </view>
 
-    <!-- 数量输入（完成/返修操作时隐藏，且没有 skuList 时显示） -->
-    <view wx:if="{{(!skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
-      <text class="input-label">数量</text>
+    <!-- 数量输入（完成/返修操作时隐藏；领取时强制单数量输入；无 skuList 时显示） -->
+    <view wx:if="{{(claimMode || !skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
+      <text class="input-label">{{claimMode ? '计划制作数量' : '数量'}}</text>
       <input
         class="input-field"
         type="digit"
@@ -213,6 +213,8 @@
     <!-- 仓位编号（仓库操作时显示） -->
     <view wx:if="{{detail.requiresWarehouseInput}}" class="warehouse-section">
       <view class="input-label">入库仓库</view>
+      <!-- D-172：样衣仓为空时内联提示，明确告知原因 -->
+      <view wx:if="{{warehouseLoadEmpty}}" class="warehouse-empty-tip">未找到可用的样衣仓库，请先在仓库地图中配置样衣仓（YY-001）</view>
       <!-- D-171：仓库搜索（仓库较多时快速定位） -->
       <input
         wx:if="{{warehouseOptions.length > 2}}"
@@ -290,7 +292,7 @@
   </view>
 
   <view wx:if="{{selectedProcess}}" class="footer-bar">
-    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="onCancelForm">取消</view>
     <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
       {{loading ? '提交中...' : (detail.submitLabel || '领取')}}
     </view>
