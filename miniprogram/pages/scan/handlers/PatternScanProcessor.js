@@ -177,6 +177,22 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
   // 全部工序完成后，追加入库操作（审核通过后）
   const allCompleted = options.length > 0 && options.every(function(o) { return o.status === 'COMPLETED'; });
   const status = String(patternDetail.status || '').toUpperCase();
+
+  // D-180：样衣已在库（WAREHOUSE_IN）——入库节点按"已完成"展示，
+  // 修复已入库后仍显示"待领取/去入库"的问题（后端此时会拒绝重复入库）
+  if (status === 'WAREHOUSE_IN') {
+    options.push({
+      value: 'WAREHOUSE_IN',
+      label: '样衣入库',
+      icon: 'check-circle',
+      processName: '样衣入库',
+      progressStage: '入库',
+      scanType: 'warehouse',
+      status: 'COMPLETED',
+    });
+    return options;
+  }
+
   if (allCompleted || status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') {
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();

@@ -1170,6 +1170,10 @@ public class PatternProductionOrchestrator {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
         String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
+        // D-180：已在库给明确提示（原来是误导性的"样板生产未完成"）
+        if ("WAREHOUSE_IN".equals(status)) {
+            throw new IllegalStateException("该样衣已在仓库中，请勿重复入库");
+        }
         if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status) && !"WAREHOUSE_OUT".equals(status)) {
             throw new IllegalStateException("样板生产未完成，无法入库");
         }
