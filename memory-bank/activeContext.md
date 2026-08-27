@@ -1,11 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-27（D-178 手机端应用分组对齐PC）
+> 最后更新：2026-08-27（D-179 登录体验三连修）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-27 登录体验三连修——告别频繁"重新登录"（D-179）✅QA全过
+
+- [x] 用户之问：为什么PC/手机老要核查登录，聚水潭为什么没有？——查实四大根因
+- [x] 根因1：access token 4h太短+refresh 72h，隔个周末必然重登 → 改12h/720h（application.yml默认值，无环境变量覆盖）
+- [x] 根因2：刷新失败一律清token踢登录页，网络抖动=被踢 → 小程序/PC全链路改「温和失败」：区分后端明确拒绝（清token跳登录）与网络/5xx暂时失败（保留登录态+退避补刷2次+友好报错）
+- [x] 根因3：PC无并发刷新锁 → core.ts 新增 refreshAccessTokenSingleFlight 单飞锁，请求预刷新/响应401/启动boot三处共用
+- [x] 根因4（未修，需用户确认）：云端部署JWT密钥是否固定、Redis持久化（pwdVer丢失会全员误踢）
+- [x] 改动：application.yml、miniprogram/utils/request.js+websocket.js（+h5副本）、frontend core.ts+useAuthProviderState.ts
+- [x] 注意：需重启后端生效；小程序/PC旧token（4h/72h签发）在滚动续期后自然过渡
 
 ### 2026-08-27 手机端应用分组对齐PC端菜单（D-178）✅QA全过
 
