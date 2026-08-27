@@ -2,7 +2,7 @@ const { style } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
-const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
+const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName, resolveStageKey } = require('../../../utils/sampleHelper');
 const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
 
@@ -131,6 +131,7 @@ Page({
 
     // 阶段进度
     stages: [],
+    noProcessConfig: false,    // D-182：明确未配置工序时为 true，阶段区显示提示而非假进度圆点
     activeStageKey: '',        // 当前选中的阶段（页面内切换）
     activeStageName: '',
     progressPercent: 0,
@@ -285,7 +286,28 @@ Page({
 
       this.processStyleInfo(styleInfo);
       this.setData({ patternSnapshot: snapshot });
-      this.buildStages(snapshot);
+      // D-182：拉取真实工序配置——只渲染有子工序配置的父阶段，未配置不显示（避免误以为已配置）
+      let configStageKeys = null; // null=配置未知（无patternId/接口失败），回退旧的4阶段渲染
+      if (snapshot && snapshot.id) {
+        try {
+          const configRes = await production.getPatternProcessConfig(snapshot.id);
+          const configNodes = (configRes && (configRes.data || configRes)) || [];
+          if (Array.isArray(configNodes) && configNodes.length > 0) {
+            configStageKeys = {};
+            configNodes.forEach(function (n) {
+              const key = resolveStageKey((n && (n.progressStage || n.name)) || '');
+              if (key && key !== 'unknown' && key !== 'procurement' && key !== 'warehousing') {
+                configStageKeys[key] = true;
+              }
+            });
+          } else {
+            configStageKeys = {}; // 明确无配置 → 阶段区显示"未配置"提示
+          }
+        } catch (_e) {
+          configStageKeys = null;
+        }
+      }
+      this.buildStages(snapshot, configStageKeys);
 
       this.setData({ loading: false });
       this.loadAttachments();
@@ -378,26 +400,36 @@ Page({
     });
   },
 
-  buildStages(snapshot) {
+  buildStages(snapshot, configStageKeys) {
+    // D-182：configStageKeys 为 null 时（配置未知，如无 patternId/接口失败）回退旧的4阶段渲染；
+    // 为空对象时明确无配置 → 不渲染阶段圆点，显示"未配置"提示；
+    // 有配置时只渲染配置了子工序的父阶段
+    configStageKeys = configStageKeys || null;
+    const stageDefs = configStageKeys === null
+      ? SAMPLE_PARENT_STAGES
+      : SAMPLE_PARENT_STAGES.filter(function (s) { return configStageKeys[s.key]; });
+    const noProcessConfig = configStageKeys !== null && stageDefs.length === 0;
+
     if (!snapshot) {
-      // snapshot 为空时仍展示阶段节点（全部"待开始"），不返回空数组
-      const stages = SAMPLE_PARENT_STAGES.map(function (s, idx) {
-        return {
-          key: s.key,
-          name: s.name,
-          index: idx + 1,
-          percent: 0,
-          status: 'not_started',
-          statusText: '待开始',
-          _clickable: false,
-          _showLine: idx > 0,
-        };
-      });
+      // 无样衣生产单：不展示假进度圆点
       this.setData({
-        stages: stages,
+        stages: [],
+        noProcessConfig: false,
         progressPercent: 0,
         completedCount: 0,
-        totalCount: SAMPLE_PARENT_STAGES.length,
+        totalCount: 0,
+      });
+      return;
+    }
+
+    if (noProcessConfig) {
+      // 明确未配置工序：不渲染阶段圆点，显示"未配置"提示（避免误以为已配置）
+      this.setData({
+        stages: [],
+        noProcessConfig: true,
+        progressPercent: 0,
+        completedCount: 0,
+        totalCount: 0,
       });
       return;
     }
@@ -451,6 +483,7 @@ Page({
 
     this.setData({
       stages: stages,
+      noProcessConfig: false,
       completedCount: completedCount,
       totalCount: totalCount,
       progressPercent: progressPercent,

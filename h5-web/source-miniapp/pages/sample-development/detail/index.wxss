@@ -1632,3 +1632,14 @@
 .receive-btn--pressed {
   opacity: 0.6;
 }
+
+/* D-182：未配置工序提示（替代固定父阶段假节点） */
+.stage-empty-hint {
+  padding: 20rpx 24rpx;
+  background: var(--color-bg-page, #f7f8fa);
+  border-radius: var(--radius-sm, 8rpx);
+}
+.stage-empty-hint__text {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #999);
+}

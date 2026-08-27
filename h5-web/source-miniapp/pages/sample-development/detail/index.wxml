@@ -95,7 +95,7 @@
         </view>
       </view>
       <!-- 横向滚动阶段时间线 -->
-      <scroll-view scroll-x class="stages-scroll" enhanced show-scrollbar="{{false}}">
+      <scroll-view scroll-x class="stages-scroll" enhanced show-scrollbar="{{false}}" wx:if="{{!noProcessConfig}}">
         <view class="stages-list">
           <view
             wx:for="{{stages}}"
@@ -113,6 +113,10 @@
           </view>
         </view>
       </scroll-view>
+      <!-- D-182：未配置工序时明确提示，不再显示固定的4个父阶段假节点 -->
+      <view wx:if="{{noProcessConfig}}" class="stage-empty-hint">
+        <text class="stage-empty-hint__text">该款未配置开发工序，请先在 PC 端款式资料中配置工序</text>
+      </view>
     </view>
 
     <!-- 资料区（筛选条 + 内容合并为一个卡片） -->
