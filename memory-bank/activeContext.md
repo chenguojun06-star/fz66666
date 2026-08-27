@@ -1,13 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-27（D-180 样衣已入库工序仍显示待领取修复）
+> 最后更新：2026-08-28（D-181 样衣入库/审核移出工序列表对齐PC）
 
 ---
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-27 样衣已入库，工序扫码仍显示"待领取/去入库"修复（D-180）✅QA全过
+### 2026-08-28 样衣入库/审核移出工序列表，对齐PC流程（D-181）✅QA全过
+
+- [x] 用户纠正：入库不是工序，不应出现在工序扫码列表——D-180"已入库显示已完成"是治标不治本
+- [x] PC标准（StyleInfo/StyleProductionTab）：工序列表仅真实工序；审核=详情页独立区块；入库=审核通过后按钮跳样衣仓库页（"审核通过只代表确认通过，完成入库才算闭环"）
+- [x] 手机端改造：①PatternScanProcessor 删除入库/审核虚拟节点（工序列表纯化）②样衣详情页 receive-row 新增「样衣审核」（PRODUCTION_COMPLETED且未过审，ActionSheet三选项）与「样衣入库」（过审未入库，带参跳样衣仓库scan-action）③扫码页全完成后显示指引条
+- [x] 关键复用：scan-action onLoad 本就支持 styleNo+color+size 直达样品出"入库"动作——手机版PC跳转的目标页天然存在
+- [x] 审核通过判定：reviewStatus/reviewResult ∈ {APPROVED, PASS}（后端isReviewApproved判APPROVED，PC历史值PASS，双兼容）
+- [x] 7文件三副本同步+QA全过；纯前端改动无需重启后端
+
+### 2026-08-27 登录体验三连修——告别频繁"重新登录"（D-179）✅QA全过
 
 - [x] 用户报：样衣已入库，样衣扫码页工序"样衣入库"仍显示待领取+去入库按钮
 - [x] 根因：虚拟节点写死 PENDING——PatternScanProcessor.buildProcessOperationOptions 在"全部工序完成+审核通过"时无条件追加"样衣入库"，从不检查 pattern.status 是否已 WAREHOUSE_IN（入库后端会把 status 改为 WAREHOUSE_IN 并拦截重复入库，但前端不读）
