@@ -8,5 +8,4 @@
 --       7 个款式（49/66/74/78/83/84/132）删除后仍保留全部真实生产工序。
 -- 幂等：DELETE 精确匹配，重复执行影响 0 行。
 
-DELETE FROM t_style_process
-WHERE process_name IN ('采购', '入库');
+DELETE FROM t_style_process WHERE process_name IN ('采购', '入库');
