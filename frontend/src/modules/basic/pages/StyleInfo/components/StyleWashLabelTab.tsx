@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Input, InputNumber, Slider, Space } from 'antd';
+import { App, Button, Checkbox, Input, InputNumber, Slider, Space } from 'antd';
 import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import CompositionPartsEditor from './CompositionPartsEditor';
@@ -19,6 +19,14 @@ import {
   washTextFromInstructions,
   type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';
+
+/** 今天日期（yyyy-MM-dd）：勾选日期时作为默认值 */
+function todayText(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 
 interface Props {
   styleId: string;
@@ -72,6 +80,11 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const [topOffsetMm, setTopOffsetMm] = useState(30);
   /** 行距/上下间距缩放（0.7~1.8）：行与行之间、各分区上下之间的距离 */
   const [lineHeightScale, setLineHeightScale] = useState(1);
+  /** 上部（码数/款号/成份）与洗涤区之间的间隔（mm，0~50）：用户自选距离，0=紧凑 */
+  const [sectionGapMm, setSectionGapMm] = useState(0);
+  /** 是否显示日期：勾选显示（默认当天，可编辑），不勾选不显示 */
+  const [showDate, setShowDate] = useState(false);
+  const [dateText, setDateText] = useState('');
 
   useEffect(() => {
     setCompositionParts(initialParts);
@@ -163,13 +176,14 @@ const StyleWashLabelTab: React.FC<Props> = ({
       compositionText: section.items.join('\n'),
       washInstructionsText: washNote,
       careIconCodes: selectedIconCodes,
-      // 只打印用户输入的内容：制造区留空不显示，无自动日期兜底
+      // 只打印用户输入的内容：制造区留空不显示；日期勾选时显示
       manufacturingText: manufacturingText,
-      dateText: '',
+      dateText: showDate ? (dateText || todayText()) : '',
       // 距剪口偏移：用户可调（与预览一致）
       topOffsetMm,
       fontScale,
       lineHeightScale,
+      sectionGapMm,
     });
 
     const washText = washTextFromInstructions(washInstructions, compositionParts);
@@ -188,7 +202,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
     safePrint(html);
     } finally { setPrintLoading(false); }
-  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale, topOffsetMm]);
+  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale, topOffsetMm, sectionGapMm, showDate, dateText]);
 
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
@@ -370,6 +384,33 @@ const StyleWashLabelTab: React.FC<Props> = ({
               />
               <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)', width: 40 }}>{Math.round(lineHeightScale * 100)}%</span>
             </span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              成份-洗涤间隔
+              <InputNumber
+                min={0} max={50} step={1} value={sectionGapMm}
+                onChange={v => setSectionGapMm(v ?? 0)}
+                suffix="mm" style={{ width: 110 }}
+              />
+            </span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Checkbox
+                checked={showDate}
+                onChange={e => {
+                  setShowDate(e.target.checked);
+                  if (e.target.checked && !dateText) setDateText(todayText());
+                }}
+              >
+                日期
+              </Checkbox>
+              {showDate && (
+                <Input
+                  value={dateText || todayText()}
+                  onChange={e => setDateText(e.target.value)}
+                  placeholder="默认当天日期，可修改"
+                  maxLength={20} style={{ width: 130 }}
+                />
+              )}
+            </span>
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>预览纸张宽</span>
             <InputNumber
               min={20} max={200} value={previewW}
@@ -415,6 +456,8 @@ const StyleWashLabelTab: React.FC<Props> = ({
           fontScale={fontScale}
           lineHeightScale={lineHeightScale}
           topOffsetMm={topOffsetMm}
+          sectionGapMm={sectionGapMm}
+          dateText={showDate ? (dateText || todayText()) : ''}
         />
       </div>
     </div>

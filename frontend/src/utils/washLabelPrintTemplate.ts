@@ -34,6 +34,8 @@ export interface WashLabelPrintData {
   fontScale?: number;
   /** 行距/上下间距缩放（0.7~1.8，默认 1）：用户自由调整行与行之间、各分区上下之间的距离 */
   lineHeightScale?: number;
+  /** 上部（码数/款号/成份）与下部（洗涤图标/文字）之间的间隔（mm，0~50）：0=紧凑基础间距；手动值不乘行距缩放，所见即所得 */
+  sectionGapMm?: number;
 }
 
 const PT_TO_MM = 0.3528;
@@ -118,6 +120,17 @@ const GAP_WASH_TO_MFG = 0.8;      // 洗涤文字 → 制造
 const CONTENT_PAD_TOP = 1;        // content-block padding-top
 
 /**
+ * 上部（码数/款号/成份）与下部（洗涤图标/文字）之间的间隔（mm）。
+ * 用户手动值（sectionGapMm > 0）优先，直接生效不乘行距缩放（所见即所得）；
+ * 未设置时回落到紧凑基础间距（0.8mm × 行距缩放）。
+ */
+function compToWashZoneGap(data: WashLabelPrintData, lhScale: number): number {
+  const manual = Math.max(0, Math.min(50, data.sectionGapMm ?? 0));
+  if (manual > 0) return manual;
+  return Math.max(GAP_COMP_TO_ICONS, GAP_ICONS_TO_WASH) * lhScale;
+}
+
+/**
  * 估算当前字号下全部内容的高度（mm）。留 5% 安全余量（字体渲染差异、letter-spacing）。
  * lhScale：行距缩放，控制行与行之间、各分区的上下距离（用户自由调整）。
  */
@@ -138,12 +151,16 @@ function estimateContentHeightMm(
     h += GAP_STYLE_TO_COMP * lhScale;
     h += estimateLineCount(data.compositionText, fsPt, availWidthMm) * fsPt * lhB * PT_TO_MM;
   }
-  if ((data.careIconCodes || []).length > 0) {
-    h += GAP_COMP_TO_ICONS * lhScale + iconRowH;
-  }
-  if (data.washInstructionsText?.trim()) {
-    h += GAP_ICONS_TO_WASH * lhScale;
-    h += estimateLineCount(data.washInstructionsText, fsPt, availWidthMm) * fsPt * lhB * PT_TO_MM;
+  // 洗涤区（图标 + 文字）：与上部之间的间隔可由用户手动调整（sectionGapMm）
+  const hasIcons = (data.careIconCodes || []).length > 0;
+  const hasWashText = Boolean(data.washInstructionsText?.trim());
+  if (hasIcons || hasWashText) {
+    h += compToWashZoneGap(data, lhScale);
+    if (hasIcons) h += iconRowH;
+    if (hasWashText) {
+      if (hasIcons) h += GAP_ICONS_TO_WASH * lhScale;
+      h += estimateLineCount(data.washInstructionsText, fsPt, availWidthMm) * fsPt * lhB * PT_TO_MM;
+    }
   }
   if (data.manufacturingText?.trim()) {
     h += GAP_WASH_TO_MFG * lhScale;
@@ -210,7 +227,7 @@ function fitFontSize(items: WashLabelPrintData[]): number {
 }
 
 function buildLabelCss(
-  w: number, h: number, iconSize: number, topOffsetMm: number, fs: number, iconCount: number, lhScale: number,
+  w: number, h: number, iconSize: number, topOffsetMm: number, fs: number, iconCount: number, lhScale: number, sectionGapMm?: number,
 ): string {
   const bottomSafe = 1.5;
   const iconGap = iconGapFor(w, iconCount);
@@ -221,10 +238,11 @@ function buildLabelCss(
   const lhB = (LH_BODY * lh).toFixed(2);
   const gSS = (GAP_SIZE_TO_STYLE * lh).toFixed(2);
   const gSC = (GAP_STYLE_TO_COMP * lh).toFixed(2);
-  const gCI = (GAP_COMP_TO_ICONS * lh).toFixed(2);
   const gIW = (GAP_ICONS_TO_WASH * lh).toFixed(2);
   const gWM = (GAP_WASH_TO_MFG * lh).toFixed(2);
   const padTop = (CONTENT_PAD_TOP * lh).toFixed(2);
+  // 上部（码数/款号/成份）与洗涤区之间的间隔：用户手动值优先（所见即所得），否则紧凑基础值
+  const gCZ = compToWashZoneGap({ sectionGapMm } as WashLabelPrintData, lh).toFixed(2);
 
   // iframe srcDoc 是独立文档上下文，不继承父页面 CSS 变量
   // 直接用硬编码颜色，避免 var(--color-*) 在 iframe 中失效
@@ -235,13 +253,18 @@ html,body{width:${w}mm;min-height:${h}mm}
 body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:${topPad}mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
-/* 内容区：从上到下依次排列 码数→款号→成份→图标→洗涤文字→制造，全部标准字体无加粗 */
+/* 顶部剪断虚线：剪口位置的裁剪指示（absolute 不占内容布局空间） */
+.cut-line{position:absolute;top:0.5mm;left:0;width:100%;border-top:0.35mm dashed #000}
+.cut-line span{position:absolute;right:1mm;top:-2.2mm;font-size:3.5pt;line-height:1;color:#000}
+/* 内容区：从上到下依次排列 码数→款号→成份→洗涤区→制造，全部标准字体无加粗 */
 .content-block{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;padding-top:${padTop}mm}
 .size-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.2mm;text-align:center;line-height:${lhT}}
 .style-line{font-size:${fs}pt;font-weight:400;letter-spacing:0.2mm;text-align:center;line-height:${lhT};margin-top:${gSS}mm}
 .comp-mats{font-size:${fs}pt;font-weight:400;line-height:${lhB};text-align:center;margin-top:${gSC}mm}
-/* 图标强制一排：数量多时按可用宽度自动缩小，绝不换行；与成份之间留 0.7mm 空隙 */
-.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin-top:${gCI}mm}
+/* 洗涤区（上排图标 + 下排文字）：与上部之间的间隔由用户调整（sectionGapMm） */
+.wash-zone{width:100%;display:flex;flex-direction:column;align-items:center;margin-top:${gCZ}mm}
+/* 图标强制一排：数量多时按可用宽度自动缩小，绝不换行 */
+.icons{display:flex;flex-direction:row;gap:${iconGap}mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%}
 .icon-cell{width:${iconSize}mm;height:${iconSize}mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:0;min-height:0}
 .icons svg{width:100%;height:100%;display:block}
 .care-wash{font-size:${fs}pt;font-weight:400;line-height:${lhB};text-align:center;margin-top:${gIW}mm}
@@ -270,13 +293,18 @@ function buildLabelContentHtml(data: WashLabelPrintData, _iconSize: number): str
     : '';
   const dateHtml = data.dateText?.trim() ? `<div class="date">${escapeHtml(data.dateText.trim())}</div>` : '';
 
-  // 只渲染用户输入的分区：不添加任何分隔线/默认文案等额外元素
+  // 洗涤区（上排图标 + 下排文字）：与上部之间的间隔由用户调整（sectionGapMm）
+  const washZoneHtml = (careIconsHtml || washHtml)
+    ? `<div class="wash-zone">${careIconsHtml}${washHtml}</div>`
+    : '';
+
+  // 只渲染用户输入的分区；顶部固定一条剪断虚线（剪口裁剪指示，用户要求保留）
   return `<div class="content-block">
+      <div class="cut-line"><span>✂</span></div>
       ${sizeHtml}
       ${styleHtml}
       ${compositionHtml}
-      ${careIconsHtml}
-      ${washHtml}
+      ${washZoneHtml}
       ${mfgHtml}
       ${dateHtml}
     </div>`;
@@ -304,7 +332,7 @@ export function buildWashLabelPrintHtml(data: WashLabelPrintData): string {
   const labelHtml = buildLabelContentHtml(data, iconSize);
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-${buildLabelCss(w, h, iconSize, data.topOffsetMm ?? 0, fs, iconCount, lineHeightScale)}
+${buildLabelCss(w, h, iconSize, data.topOffsetMm ?? 0, fs, iconCount, lineHeightScale, data.sectionGapMm)}
 </style></head><body><div class="label-page">
 ${labelHtml}
 </div></body></html>`;
@@ -332,7 +360,7 @@ ${content}
   }).join('\n');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-${buildLabelCss(w, h, iconSize, topOffset, fs, maxIconCount, lineHeightScale)}
+${buildLabelCss(w, h, iconSize, topOffset, fs, maxIconCount, lineHeightScale, items[0].sectionGapMm)}
 </style></head><body>
 ${pagesHtml}
 </body></html>`;

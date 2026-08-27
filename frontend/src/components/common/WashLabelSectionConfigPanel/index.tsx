@@ -29,6 +29,20 @@ export interface WashLabelSectionState {
   fontScale: number;
   /** 行距/上下间距缩放（0.7~1.8，默认 1）：用户自由调整行与行之间、各分区上下之间的距离 */
   lineHeightScale: number;
+  /** 上部（码数/款号/成份）与洗涤区之间的间隔（mm，0~50）：0=紧凑；用户自选距离 */
+  sectionGapMm: number;
+  /** 是否显示日期：勾选显示（默认填充当天，可编辑），不勾选不显示 */
+  showDate: boolean;
+  /** 日期文本（如 2026-08-27） */
+  dateText: string;
+}
+
+/** 今天日期（yyyy-MM-dd）：勾选日期时作为默认值（打印入口空值回落共用） */
+export function todayText(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 /** 从款式/订单数据构建默认分区状态（用户可在面板中自由修改） */
@@ -42,6 +56,9 @@ export function buildDefaultSections(defaults: {
   topOffsetMm?: number;
   fontScale?: number;
   lineHeightScale?: number;
+  sectionGapMm?: number;
+  showDate?: boolean;
+  dateText?: string;
 }): WashLabelSectionState {
   return {
     showSize: Boolean(defaults.sizeText?.trim()),
@@ -58,6 +75,9 @@ export function buildDefaultSections(defaults: {
     topOffsetMm: defaults.topOffsetMm ?? 30,
     fontScale: defaults.fontScale ?? 1,
     lineHeightScale: defaults.lineHeightScale ?? 1,
+    sectionGapMm: defaults.sectionGapMm ?? 0,
+    showDate: defaults.showDate ?? false,
+    dateText: defaults.dateText ?? '',
   };
 }
 
@@ -92,10 +112,11 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
       washInstructionsText: value.showWash ? value.washText : '',
       careIconCodes: value.showWash ? value.careIconCodes : [],
       manufacturingText: value.showManufacturing ? value.manufacturingText : '',
-      dateText: '',
+      dateText: value.showDate ? (value.dateText || todayText()) : '',
       topOffsetMm: value.topOffsetMm,
       fontScale: value.fontScale,
       lineHeightScale: value.lineHeightScale,
+      sectionGapMm: value.sectionGapMm,
     };
   }, [value, width, height, previewSizeText]);
 
@@ -162,6 +183,14 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
               {Math.round(value.lineHeightScale * 100)}%
             </span>
           </div>
+        </div>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', width: 76, flexShrink: 0 }}>成份-洗涤间隔</span>
+          <InputNumber
+            min={0} max={50} step={1} value={value.sectionGapMm}
+            onChange={v => patch({ sectionGapMm: v ?? 0 })} suffix="mm" style={{ width: 110 }}
+          />
+          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>上部成份与洗涤图标之间的距离，0=紧凑</span>
         </div>
         <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
           当前打印字号 <span style={{ color: 'var(--color-text-secondary)' }}>{adaptedFs}pt</span>
@@ -273,7 +302,7 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
           )}
         </div>
 
-        <div style={{ marginBottom: 4, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <Checkbox
             checked={value.showManufacturing}
             onChange={e => patch({ showManufacturing: e.target.checked })}
@@ -287,6 +316,27 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
               onChange={e => patch({ manufacturingText: e.target.value })}
               placeholder="输入制造信息，如 MADE IN CHINA"
               maxLength={60} style={{ flex: 1 }}
+            />
+          )}
+        </div>
+
+        <div style={{ marginBottom: 4, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <Checkbox
+            checked={value.showDate}
+            onChange={e => {
+              const checked = e.target.checked;
+              patch({ showDate: checked, dateText: checked && !value.dateText ? todayText() : value.dateText });
+            }}
+            style={sectionLabelStyle}
+          >
+            日期
+          </Checkbox>
+          {value.showDate && (
+            <Input
+              value={value.dateText || todayText()}
+              onChange={e => patch({ dateText: e.target.value })}
+              placeholder="打印当天日期，可自行修改"
+              maxLength={20} style={{ flex: 1 }}
             />
           )}
         </div>

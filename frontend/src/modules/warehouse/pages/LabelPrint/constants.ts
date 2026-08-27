@@ -15,6 +15,8 @@ export const defaultWash = {
   fontScale: 1,
   /** 行距/上下间距缩放（0.7~1.8）：行与行之间、各分区上下之间的距离 */
   lineHeightScale: 1,
+  /** 上部（码数/款号/成份）与洗涤区之间的间隔（mm，0~50）：0=紧凑；用户自选距离 */
+  sectionGapMm: 0,
   /** 码数区（只显示用户输入内容，空=不显示） */
   showSize: false,
   sizeText: '',

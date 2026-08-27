@@ -13,6 +13,7 @@ import {
 } from '@/utils/washLabelPrintTemplate';
 import WashLabelSectionConfigPanel, {
   buildDefaultSections,
+  todayText,
   type WashLabelSectionState,
 } from '@/components/common/WashLabelSectionConfigPanel';
 
@@ -102,10 +103,11 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
       washInstructionsText: sections.showWash ? sections.washText : '',
       careIconCodes: sections.showWash ? sections.careIconCodes : [],
       manufacturingText: sections.showManufacturing ? sections.manufacturingText : '',
-      dateText: '',
+      dateText: sections.showDate ? (sections.dateText || todayText()) : '',
       topOffsetMm: sections.topOffsetMm,
       fontScale: sections.fontScale,
       lineHeightScale: sections.lineHeightScale,
+      sectionGapMm: sections.sectionGapMm,
     });
     safePrint(html);
     setPrinting(false);

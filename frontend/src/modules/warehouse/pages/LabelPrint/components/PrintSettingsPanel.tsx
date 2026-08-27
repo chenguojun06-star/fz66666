@@ -205,6 +205,11 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
                   onChange={v => setWash(w => ({ ...w, lineHeightScale: v }))} />
               </div>
               <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>成份-洗涤间隔（0=紧凑）</div>
+                <InputNumber size="small" min={0} max={50} step={1} value={wash.sectionGapMm ?? 0}
+                  onChange={v => setWash(w => ({ ...w, sectionGapMm: v ?? 0 }))} suffix="mm" style={{ width: '100%' }} />
+              </div>
+              <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>码数（只打印你输入的内容）</div>
                 <Input size="small" value={wash.sizeText} placeholder="如 S / M / L，留空不显示"
                   onChange={e => setWash(w => ({ ...w, sizeText: e.target.value }))} maxLength={30} />

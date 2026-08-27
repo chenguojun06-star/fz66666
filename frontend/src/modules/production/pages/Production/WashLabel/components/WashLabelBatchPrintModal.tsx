@@ -11,6 +11,7 @@ import {
 import { parseCareIconCodes } from '@/utils/careIcons';
 import WashLabelSectionConfigPanel, {
   buildDefaultSections,
+  todayText,
   type WashLabelSectionState,
 } from '@/components/common/WashLabelSectionConfigPanel';
 
@@ -88,10 +89,11 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
         washInstructionsText: sections.showWash ? sections.washText : '',
         careIconCodes: sections.showWash ? sections.careIconCodes : [],
         manufacturingText: sections.showManufacturing ? sections.manufacturingText : '',
-        dateText: '',
+        dateText: sections.showDate ? (sections.dateText || todayText()) : '',
         topOffsetMm: sections.topOffsetMm,
         fontScale: sections.fontScale,
         lineHeightScale: sections.lineHeightScale,
+        sectionGapMm: sections.sectionGapMm,
       }));
       const html = buildWashLabelMultiPageHtml(printDataList);
       safePrint(html);

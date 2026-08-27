@@ -7,7 +7,7 @@ import {
 } from '@/utils/washLabelPrintTemplate';
 import type { ProductionOrder } from '@/types/production';
 import type { LabelStyleInfo, SkuRow } from './types';
-import type { WashLabelSectionState } from '@/components/common/WashLabelSectionConfigPanel';
+import { todayText, type WashLabelSectionState } from '@/components/common/WashLabelSectionConfigPanel';
 
 /** 加载订单的 商品编码 行（优先接口，降级到订单明细分组，再降级到单行兜底） */
 export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
@@ -88,13 +88,14 @@ export async function printWashLabels(
       washInstructionsText: sections.showWash ? sections.washText : '',
       careIconCodes: sections.showWash ? sections.careIconCodes : [],
       manufacturingText: sections.showManufacturing ? sections.manufacturingText : '',
-      dateText: '',
+      dateText: sections.showDate ? (sections.dateText || todayText()) : '',
       // 码数区开启时优先取用户输入；批量多码场景每页显示该 SKU 行自己的码数
       sizeText: sections.showSize ? (sections.sizeText.trim() || (row.size || '').trim()) : '',
       styleNo: sections.showStyleNo ? sections.styleNoText : '',
       topOffsetMm: sections.topOffsetMm,
       fontScale: sections.fontScale,
       lineHeightScale: sections.lineHeightScale,
+      sectionGapMm: sections.sectionGapMm,
     }))
   );
 

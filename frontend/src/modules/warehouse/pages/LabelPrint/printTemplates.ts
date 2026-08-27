@@ -6,6 +6,14 @@ import { getEffectiveCareIconCodes } from '@/utils/careIcons';
 import type { OrderInfo } from './types';
 import type { HangSettings, BarSettings, WashSettings } from './constants';
 
+/** 今天日期（yyyy-MM-dd）：洗水唛勾选日期且未填写时的默认值 */
+function todayText(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 /** Generate an inline SVG string for Code128 barcode (for print HTML) */
 export const generateBarcodeSvgString = (value: string): string => {
   try {
@@ -166,9 +174,10 @@ export const buildWashlabelHtml = async (
   const washInstructionsText = wash.showWashInstructions
     ? washTextFromInstructions(order.washInstructions, order.fabricCompositionParts)
     : '';
-  // 只显示用户输入的内容：无 MADE IN CHINA / 自动日期兜底
+  // 只显示用户输入的内容：无 MADE IN CHINA 兜底
   const manufacturingText = wash.showManufacturing ? (wash.manufacturingText || '') : '';
-  const dateText = wash.showDate ? (wash.dateText || '') : '';
+  // 日期：勾选即显示（留空回落当天日期），不勾选不显示
+  const dateText = wash.showDate ? (wash.dateText || todayText()) : '';
 
   const printData: WashLabelPrintData = {
     width: wash.w,
@@ -183,9 +192,10 @@ export const buildWashlabelHtml = async (
     styleNo: wash.showStyleNo ? (wash.styleNoText || '').trim() || (order.styleNo || '').trim() : '',
     // 距剪口偏移：内容从剪口下方此处开始打印
     topOffsetMm: wash.topOffsetMm,
-    // 全局字体缩放 + 行距
+    // 全局字体缩放 + 行距 + 成份-洗涤间隔（旧 localStorage 无此字段时回落 0=紧凑）
     fontScale: wash.fontScale,
     lineHeightScale: wash.lineHeightScale,
+    sectionGapMm: wash.sectionGapMm ?? 0,
   };
   if (count <= 1) return buildWashLabelPrintHtml(printData);
   return buildWashLabelMultiPageHtml(Array.from({ length: count }, () => printData));

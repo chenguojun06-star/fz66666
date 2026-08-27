@@ -25,6 +25,10 @@ interface Props {
   fontScale?: number;
   /** 行距/上下间距缩放（0.7~1.8，默认 1），与打印保持一致 */
   lineHeightScale?: number;
+  /** 上部（码数/款号/成份）与洗涤区之间的间隔（mm，0~50），与打印保持一致；0=紧凑 */
+  sectionGapMm?: number;
+  /** 日期文本：勾选显示时传入，与打印保持一致 */
+  dateText?: string;
 }
 
 const WashLabelPreview: React.FC<Props> = ({
@@ -38,6 +42,8 @@ const WashLabelPreview: React.FC<Props> = ({
   topOffsetMm = 30,
   fontScale = 1,
   lineHeightScale = 1,
+  sectionGapMm = 0,
+  dateText = '',
 }) => {
   const sections = useMemo(
     () => buildWashLabelSections(fabricCompositionParts, fabricComposition),
@@ -65,12 +71,13 @@ const WashLabelPreview: React.FC<Props> = ({
           compositionText: section.items.join('\n'),
           washInstructionsText: perPartWashNotes[section.key] || washText,
           careIconCodes,
-          // 预览与打印一致：只显示用户输入内容，制造区留空不显示、无自动日期
+          // 预览与打印一致：只显示用户输入内容，制造区留空不显示；日期勾选时显示
           manufacturingText: manufacturingText,
-          dateText: '',
+          dateText,
           topOffsetMm,
           fontScale,
           lineHeightScale,
+          sectionGapMm,
         };
         return buildWashLabelPrintHtml(data);
       });
@@ -82,15 +89,16 @@ const WashLabelPreview: React.FC<Props> = ({
       compositionText: singleSection.items.join('\n'),
       washInstructionsText: perPartWashNotes[singleSection.key] || washText,
       careIconCodes,
-      // 预览与打印一致：只显示用户输入内容，制造区留空不显示、无自动日期
+      // 预览与打印一致：只显示用户输入内容，制造区留空不显示；日期勾选时显示
       manufacturingText: manufacturingText,
-      dateText: '',
+      dateText,
       topOffsetMm,
       fontScale,
       lineHeightScale,
+      sectionGapMm,
     };
     return [buildWashLabelPrintHtml(data)];
-  }, [sections, perPartWashNotes, washText, careIconCodes, manufacturingText, width, height, topOffsetMm, fontScale, lineHeightScale, isMultiPart]);
+  }, [sections, perPartWashNotes, washText, careIconCodes, manufacturingText, width, height, topOffsetMm, fontScale, lineHeightScale, sectionGapMm, dateText, isMultiPart]);
 
   const previewW = Math.ceil(width * MM_TO_PX * ZOOM);
   const previewH = Math.ceil(height * MM_TO_PX * ZOOM);
