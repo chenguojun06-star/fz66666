@@ -60,7 +60,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -171,7 +171,7 @@
   gap: 10px 16px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light, var(--color-border));
 }
 .info-cell {
   display: flex;
@@ -231,7 +231,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -420,7 +420,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -609,9 +609,13 @@
  * ⑤ 下单明细矩阵表（CSS Grid）
  * grid-template-columns: 1.2fr repeat(N, 1fr) 1.1fr
  * ============================================================ */
+.matrix-scroll {
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
 .matrix-table {
   display: grid;
-  /* grid-template-columns 由 WXML 内联 style 动态设置 */
+  /* grid-template-columns 由 WXML 内联 style 动态设置（固定列宽，横向滚动） */
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -622,8 +626,9 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   text-align: right;
+  white-space: nowrap;
   line-height: 1.5;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light, var(--color-border));
   box-sizing: border-box;
 }
 /* 表头行：无上边框，背景色 */
@@ -664,7 +669,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -1061,4 +1066,20 @@
 }
 .am-btn-hover {
   opacity: 0.7;
+}
+
+/* D-184：采购/裁剪/工序完成状态徽章（联动完成率） */
+.action-status {
+  font-size: var(--font-size-2xs, 10px);
+  line-height: 1.2;
+}
+.action-status--done {
+  color: var(--color-success, #16a34a);
+  font-weight: 600;
+}
+.action-status--doing {
+  color: var(--color-primary, #2d7ff9);
+}
+.action-status--todo {
+  color: var(--color-text-tertiary, #999);
 }

@@ -536,9 +536,20 @@ Page({
         }
       }
 
+      // D-184：采购/裁剪/整体完成状态徽章——与完成率联动，让用户一眼看清各阶段是否已完成
+      const stageBadge = function (rate) {
+        const r = Number(rate) || 0;
+        if (r >= 100) return { text: '已完成', cls: 'done' };
+        if (r > 0) return { text: '进行中', cls: 'doing' };
+        return { text: '未开始', cls: 'todo' };
+      };
+
       that.setData({
         order: order,
         isEditable: isEditable,
+        procurementBadge: stageBadge(order.procurementCompletionRate),
+        cuttingBadge: stageBadge(order.cuttingCompletionRate),
+        overallBadge: stageBadge(progressPct),
         // 主管以上才显示订单生命周期操作按钮（报废/完成/关闭）
         isSupervisor: permission.isAdminOrSupervisor(),
         statusInfo: statusInfo,

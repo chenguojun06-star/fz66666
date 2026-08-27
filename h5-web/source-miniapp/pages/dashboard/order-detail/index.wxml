@@ -25,7 +25,7 @@
         <view class="top-left" bindtap="onPreviewImage">
           <swiper class="img-swiper" wx:if="{{imageList.length > 0}}" current="{{currentImageIndex}}" bindchange="onImageChange" autoplay="{{false}}" circular="{{false}}">
             <swiper-item wx:for="{{imageList}}" wx:key="index">
-              <image class="cover-img" src="{{item.url}}" mode="aspectFill" lazy-load />
+              <image class="cover-img" src="{{item.url}}" mode="aspectFit" lazy-load />
             </swiper-item>
           </swiper>
           <view wx:else class="cover-placeholder">
@@ -123,14 +123,18 @@
       <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--procurement"></view>
         <text class="action-text">采购</text>
+        <!-- D-184：阶段完成状态联动——一眼看出采购/裁剪/工序是否已完成 -->
+        <text class="action-status action-status--{{procurementBadge.cls}}">{{procurementBadge.text}}</text>
       </view>
       <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--cutting"></view>
         <text class="action-text">裁剪</text>
+        <text class="action-status action-status--{{cuttingBadge.cls}}">{{cuttingBadge.text}}</text>
       </view>
       <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">
         <view class="action-icon action-icon--process"></view>
         <text class="action-text">工序</text>
+        <text class="action-status action-status--{{overallBadge.cls}}">{{overallBadge.text}}</text>
       </view>
       <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--transfer"></view>
@@ -201,22 +205,25 @@
         <text class="section-title">下单明细</text>
         <text class="section-count">共 {{matrixModel.total}} 件 / {{matrixModel.colors.length}} 色 × {{matrixModel.allSizes.length}} 码</text>
       </view>
-      <view class="matrix-table" style="grid-template-columns: 1.2fr repeat({{matrixModel.allSizes.length}}, 1fr) 1.1fr;">
-        <!-- 表头行 -->
-        <text class="matrix-cell matrix-cell--head matrix-cell--color">颜色</text>
-        <text class="matrix-cell matrix-cell--head" wx:for="{{matrixModel.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
-        <text class="matrix-cell matrix-cell--head matrix-cell--total">小计</text>
-        <!-- 数据行 -->
-        <block wx:for="{{matrixModel.rows}}" wx:key="label">
-          <text class="matrix-cell matrix-cell--color">{{item.label}}</text>
-          <text class="matrix-cell" wx:for="{{item.quantities}}" wx:for-item="qty" wx:key="*this">{{qty > 0 ? qty : '-'}}</text>
-          <text class="matrix-cell matrix-cell--total">{{item.rowTotal}}</text>
-        </block>
-        <!-- 合计行 -->
-        <text class="matrix-cell matrix-cell--color matrix-cell--foot">合计</text>
-        <text class="matrix-cell matrix-cell--foot" wx:for="{{matrixModel.sizeSummary}}" wx:for-item="szSum" wx:key="size">{{szSum.qty > 0 ? szSum.qty : '-'}}</text>
-        <text class="matrix-cell matrix-cell--total matrix-cell--foot">{{matrixModel.total}}</text>
-      </view>
+      <!-- D-184：横向滚动+固定列宽——码数多/标签长时不再挤压竖排、看不全 -->
+      <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="matrix-table" style="grid-template-columns: 96rpx repeat({{matrixModel.allSizes.length}}, 150rpx) 88rpx;">
+          <!-- 表头行 -->
+          <text class="matrix-cell matrix-cell--head matrix-cell--color">颜色</text>
+          <text class="matrix-cell matrix-cell--head" wx:for="{{matrixModel.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
+          <text class="matrix-cell matrix-cell--head matrix-cell--total">小计</text>
+          <!-- 数据行 -->
+          <block wx:for="{{matrixModel.rows}}" wx:key="label">
+            <text class="matrix-cell matrix-cell--color">{{item.label}}</text>
+            <text class="matrix-cell" wx:for="{{item.quantities}}" wx:for-item="qty" wx:key="*this">{{qty > 0 ? qty : '-'}}</text>
+            <text class="matrix-cell matrix-cell--total">{{item.rowTotal}}</text>
+          </block>
+          <!-- 合计行 -->
+          <text class="matrix-cell matrix-cell--color matrix-cell--foot">合计</text>
+          <text class="matrix-cell matrix-cell--foot" wx:for="{{matrixModel.sizeSummary}}" wx:for-item="szSum" wx:key="size">{{szSum.qty > 0 ? szSum.qty : '-'}}</text>
+          <text class="matrix-cell matrix-cell--total matrix-cell--foot">{{matrixModel.total}}</text>
+        </view>
+      </scroll-view>
     </view>
 
     <!-- 裁剪明细（业务需要，设计稿无） -->

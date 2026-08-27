@@ -158,15 +158,26 @@
 .process-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
-.process-info {
+/* D-184：名称+属性两行结构，价格独立右对齐 */
+.process-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.process-name-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  min-width: 0;
+}
+.process-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .process-name-row {
   display: flex;
@@ -231,6 +242,10 @@
   background: var(--color-danger-bg);
 }
 .price-value {
+  flex-shrink: 0;
+  min-width: 96rpx;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-md-lg);
   color: var(--color-text-primary);
   font-weight: 600;
@@ -249,7 +264,7 @@
 .pact-btn {
   font-size: var(--font-size-lg);
   width: 28px;
-  height: 28px;
+  height: var(--btn-height-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -317,8 +332,8 @@
 .pef-btn {
   font-size: var(--font-size-md);
   padding: 0 20px;
-  height: 36px;
-  line-height: 36px;
+  height: var(--btn-height-sm);
+  line-height: var(--btn-height-sm);
   border-radius: var(--radius-md);
 }
 .pef-btn--cancel {
@@ -378,8 +393,8 @@
 .bba-btn {
   font-size: var(--font-size-sm);
   padding: 0 16px;
-  height: 36px;
-  line-height: 36px;
+  height: var(--btn-height-sm);
+  line-height: var(--btn-height-sm);
   border-radius: var(--radius-sm);
   font-weight: 500;
   text-align: center;
@@ -438,8 +453,8 @@
 .mf-btn {
   font-size: var(--font-size-md-lg);
   padding: 0 24px;
-  height: 44px;
-  line-height: 44px;
+  height: var(--btn-height-md);
+  line-height: var(--btn-height-md);
   border-radius: var(--radius-md);
   font-weight: 500;
   text-align: center;

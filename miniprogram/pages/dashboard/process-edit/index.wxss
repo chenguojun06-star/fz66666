@@ -158,15 +158,26 @@
 .process-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
-.process-info {
+/* D-184：名称+属性两行结构，价格独立右对齐 */
+.process-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.process-name-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  min-width: 0;
+}
+.process-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .process-name-row {
   display: flex;
@@ -231,6 +242,10 @@
   background: var(--color-danger-bg);
 }
 .price-value {
+  flex-shrink: 0;
+  min-width: 96rpx;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-md-lg);
   color: var(--color-text-primary);
   font-weight: 600;

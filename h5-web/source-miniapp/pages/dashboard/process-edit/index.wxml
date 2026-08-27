@@ -36,16 +36,21 @@
         <!-- 展示模式 -->
         <block wx:if="{{processEditId !== child.id}}">
           <view class="process-row">
-            <view class="process-info">
-              <text class="process-name">{{child.processName}}</text>
-              <text class="process-code" wx:if="{{child.processCode}}">{{child.processCode}}</text>
-              <text class="process-modified-badge" wx:if="{{child.modified}}">已改</text>
-              <text class="process-machine" wx:if="{{child.machineType}}">{{child.machineType}}</text>
-              <text wx:if="{{child.difficulty}}" class="process-diff-badge {{child.difficulty === '易' || child.difficulty === '简单' ? 'process-diff-badge--easy' : ''}} {{child.difficulty === '中' || child.difficulty === '中等' ? 'process-diff-badge--medium' : ''}} {{child.difficulty === '难' || child.difficulty === '困难' ? 'process-diff-badge--hard' : ''}}">{{child.difficulty}}</text>
-              <text class="process-meta-text" wx:if="{{child.standardTime}}">{{child.standardTime}}s</text>
-              <text class="price-value" wx:if="{{child.price}}">¥{{child.price}}</text>
-              <text class="price-value price-value--empty" wx:else>未定价</text>
+            <!-- D-184：两行结构——名称行 + 属性行，价格独立右对齐，不再全部挤一行 -->
+            <view class="process-main">
+              <view class="process-name-line">
+                <text class="process-name">{{child.processName}}</text>
+                <text class="process-code" wx:if="{{child.processCode}}">{{child.processCode}}</text>
+                <text class="process-modified-badge" wx:if="{{child.modified}}">已改</text>
+              </view>
+              <view class="process-meta-line" wx:if="{{child.machineType || child.difficulty || child.standardTime}}">
+                <text class="process-machine" wx:if="{{child.machineType}}">{{child.machineType}}</text>
+                <text wx:if="{{child.difficulty}}" class="process-diff-badge {{child.difficulty === '易' || child.difficulty === '简单' ? 'process-diff-badge--easy' : ''}} {{child.difficulty === '中' || child.difficulty === '中等' ? 'process-diff-badge--medium' : ''}} {{child.difficulty === '难' || child.difficulty === '困难' ? 'process-diff-badge--hard' : ''}}">{{child.difficulty}}</text>
+                <text class="process-meta-text" wx:if="{{child.standardTime}}">{{child.standardTime}}s</text>
+              </view>
             </view>
+            <text class="price-value" wx:if="{{child.price}}">¥{{child.price}}</text>
+            <text class="price-value price-value--empty" wx:else>未定价</text>
             <view class="process-actions" wx:if="{{editable}}">
               <view class="pact-btn pact-btn--edit" catchtap="onEditProcess" data-id="{{child.id}}" data-stage-id="{{item.id}}">
                 <view class="line-icon icon-edit"></view>

@@ -7,26 +7,31 @@ function _normalizeText(v) {
 }
 
 /**
- * 过滤掉出货/发货节点
+ * 过滤掉非生产工序节点
+ * D-184：采购/入库是独立流程（对齐 PC/D-170/D-176 标准），不进工序进度展示；
+ * 同时过滤出货/发货节点
  * @param {Array} list - 节点列表
  * @returns {Array} 过滤后的节点列表
  */
+const NON_PRODUCTION_NODE_NAMES = ['出货', '发货', '发运', '采购', '入库'];
+
 function stripWarehousingNode(list) {
   const items = Array.isArray(list) ? list : [];
   return items.filter(n => {
     const id = _normalizeText(n && n.id).toLowerCase();
     const name = _normalizeText(n && n.name);
-    return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
+    const isNonProduction = NON_PRODUCTION_NODE_NAMES.some(
+      bad => name === bad || name.indexOf(bad) >= 0 || id === bad,
+    );
+    return !(id === 'shipment' || isNonProduction);
   });
 }
 
 const defaultNodes = [
-  { id: 'procurement', name: '采购' },
   { id: 'cutting', name: '裁剪' },
   { id: 'secondaryProcess', name: '二次工艺' },
   { id: 'carSewing', name: '车缝' },
   { id: 'tailProcess', name: '尾部' },
-  { id: 'warehousing', name: '入库' },
 ];
 
 /**

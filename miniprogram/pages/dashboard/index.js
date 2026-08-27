@@ -175,6 +175,15 @@ Page({
         });
         that.setData({ 'orders.list': filtered });
       }
+      // D-184：进行中 tab 客户端兜底过滤终态订单（已完成/已关单/已取消/已报废不出现），
+      // 防御旧版云端后端忽略 excludeTerminal 参数
+      if (activeKey === 'all') {
+        const TERMINAL = ['completed', 'closed', 'archived', 'cancelled', 'canceled', 'scrapped'];
+        const filtered = (that.data.orders.list || []).filter(function (o) {
+          return TERMINAL.indexOf(String(o.status || '').toLowerCase()) === -1;
+        });
+        that.setData({ 'orders.list': filtered });
+      }
       if (reset) that._refreshStatCounts();
       if (that._pendingOrderId) {
         const pid = that._pendingOrderId;
