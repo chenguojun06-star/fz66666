@@ -152,6 +152,7 @@ public class MaterialPurchaseQueryHelper {
             merged.sort(java.util.Comparator.comparing(
                     MaterialPurchase::getCreateTime,
                     java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+            backfillShipDateFromOrders(merged, tenantId);
             injectStyleCover(merged, tenantId);
             return merged;
         }
@@ -235,10 +236,100 @@ public class MaterialPurchaseQueryHelper {
                 })
                 .collect(Collectors.toList());
 
-        // 注入款式图（styleCover）供小程序通知卡片展示
+        // 回填订单交货日期 + 注入款式图（styleCover）供小程序卡片展示
+        backfillShipDateFromOrders(result, tenantId);
         injectStyleCover(result, tenantId);
 
         return result;
+    }
+
+    /**
+     * 批量回填交货日期（expectedShipDate）到采购任务行。
+     * 背景（D-168）：手工创建的采购单 expectedArrivalDate 基本为空（仅 OpenAPI 对接写入），
+     * 小程序采购卡片的「交货日期 / 是否延期」长期显示 "-"。
+     * 照 CuttingTaskQueryHelper 先例：采购自身无日期时——
+     *   1) 生产订单采购：取订单交期（ProductionOrder.expectedShipDate，下单时必填）
+     *   2) 样衣采购（patternProductionId）：取样衣生产交期（PatternProduction.deliveryTime）
+     * 仅回填内存对象，不落库。
+     */
+    private void backfillShipDateFromOrders(List<MaterialPurchase> purchaseList, Long tenantId) {
+        if (purchaseList == null || purchaseList.isEmpty() || tenantId == null) return;
+        // 只处理「自身两个日期字段都为空」的行
+        List<MaterialPurchase> needBackfill = purchaseList.stream()
+                .filter(p -> p.getExpectedShipDate() == null
+                        && p.getExpectedArrivalDate() == null)
+                .collect(Collectors.toList());
+        if (needBackfill.isEmpty()) return;
+
+        // 1) 生产订单采购：取订单交期
+        List<MaterialPurchase> withOrder = needBackfill.stream()
+                .filter(p -> StringUtils.hasText(p.getOrderId()))
+                .collect(Collectors.toList());
+        if (!withOrder.isEmpty()) {
+            Set<String> orderIds = withOrder.stream()
+                    .map(MaterialPurchase::getOrderId)
+                    .collect(Collectors.toSet());
+            try {
+                Map<String, java.time.LocalDate> orderIdToShipDate = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getId, ProductionOrder::getExpectedShipDate)
+                        .in(ProductionOrder::getId, orderIds)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .list()
+                        .stream()
+                        .filter(o -> o.getExpectedShipDate() != null)
+                        .collect(Collectors.toMap(
+                                ProductionOrder::getId,
+                                o -> o.getExpectedShipDate().toLocalDate(),
+                                (v1, v2) -> v1));
+                if (!orderIdToShipDate.isEmpty()) {
+                    withOrder.forEach(p -> {
+                        java.time.LocalDate shipDate = orderIdToShipDate.get(p.getOrderId());
+                        if (shipDate != null) {
+                            p.setExpectedShipDate(shipDate);
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                log.warn("[MaterialPurchase] 回填订单交货日期失败（不影响主流程）: orderIds={}, err={}", orderIds, e.getMessage());
+            }
+        }
+
+        // 2) 样衣采购：取样衣生产交期（订单回填后仍未命中的行）
+        if (patternProductionService == null) return;
+        List<MaterialPurchase> withPattern = needBackfill.stream()
+                .filter(p -> p.getExpectedShipDate() == null
+                        && StringUtils.hasText(p.getPatternProductionId()))
+                .collect(Collectors.toList());
+        if (withPattern.isEmpty()) return;
+        Set<String> patternIds = withPattern.stream()
+                .map(MaterialPurchase::getPatternProductionId)
+                .collect(Collectors.toSet());
+        try {
+            Map<String, java.time.LocalDate> patternIdToDate = patternProductionService.lambdaQuery()
+                    .select(com.fashion.supplychain.production.entity.PatternProduction::getId,
+                            com.fashion.supplychain.production.entity.PatternProduction::getDeliveryTime)
+                    .in(com.fashion.supplychain.production.entity.PatternProduction::getId, patternIds)
+                    .eq(com.fashion.supplychain.production.entity.PatternProduction::getTenantId, tenantId)
+                    .eq(com.fashion.supplychain.production.entity.PatternProduction::getDeleteFlag, 0)
+                    .list()
+                    .stream()
+                    .filter(pp -> pp.getDeliveryTime() != null)
+                    .collect(Collectors.toMap(
+                            pp -> String.valueOf(pp.getId()),
+                            pp -> pp.getDeliveryTime().toLocalDate(),
+                            (v1, v2) -> v1));
+            if (!patternIdToDate.isEmpty()) {
+                withPattern.forEach(p -> {
+                    java.time.LocalDate deliveryDate = patternIdToDate.get(p.getPatternProductionId());
+                    if (deliveryDate != null) {
+                        p.setExpectedShipDate(deliveryDate);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            log.warn("[MaterialPurchase] 回填样衣交期失败（不影响主流程）: patternIds={}, err={}", patternIds, e.getMessage());
+        }
     }
 
     /**

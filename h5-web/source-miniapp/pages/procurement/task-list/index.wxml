@@ -37,16 +37,21 @@
     <text class="empty-hint">当有物料需要采购时，任务将出现在这里</text>
   </view>
 
-  <!-- 任务列表（按款聚合卡片：一个款一张卡片） -->
+  <!-- 任务列表（按款聚合卡片：与裁剪管理页同款紧凑布局） -->
   <block wx:else>
     <view
       wx:for="{{filteredItems}}"
       wx:key="groupKey"
-      class="task-card"
+      class="task-card procurement-task-card"
+      data-order-no="{{item.orderNo}}"
+      data-style-no="{{item.styleNo}}"
+      data-pattern-production-id="{{item.patternProductionId}}"
+      data-source-type="{{item.sourceType}}"
+      bindtap="onViewDetail"
     >
-      <!-- 头部：款式图 + 款号信息 + 状态标签 -->
-      <view class="card-header">
-        <view class="card-media">
+      <!-- 头部：款式图 + 款号信息 + 右侧状态/操作（对照裁剪卡片） -->
+      <view class="card-header procurement-card-header">
+        <view class="card-media procurement-card-media">
           <image
             wx:if="{{item.styleCoverUrl}}"
             class="media-img"
@@ -56,66 +61,42 @@
           />
           <view wx:else class="media-placeholder line-icon icon-package"></view>
         </view>
-        <view class="card-title-area">
+        <view class="card-title-area procurement-card-title-area">
           <text class="style-no">{{item.styleNo || '未知款号'}}</text>
           <text class="style-name" wx:if="{{item.styleName}}">{{item.styleName}}</text>
-          <text class="order-no" wx:if="{{item.orderNo}}">订单号：{{item.orderNo}}</text>
+          <text class="order-no" wx:if="{{item.orderNo}}">{{item.orderNo}}</text>
         </view>
-        <text class="tag {{item.statusTagClass}}">{{item.statusLabel}}</text>
-      </view>
-
-      <!-- 详情行：2 列网格 -->
-      <view class="card-body">
-        <view class="info-row">
-          <text class="info-label">物料数量</text>
-          <text class="info-value">{{item.materialCount}}项</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">采购总量</text>
-          <text class="info-value">{{item.quantityText}}</text>
-        </view>
-        <view class="info-row" wx:if="{{item.arrivalText}}">
-          <text class="info-label">到货情况</text>
-          <text class="info-value">{{item.arrivalText}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">{{item.dateLabel}}</text>
-          <text class="info-value">{{item.dateText || '-'}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">供应商</text>
-          <text class="info-value">{{item.supplierText}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">采购员</text>
-          <text class="info-value">{{item.buyerText}}</text>
+        <view class="procurement-card-right">
+          <text class="tag {{item.statusTagClass}}">{{item.statusLabel}}</text>
+          <view
+            wx:if="{{item.isPending}}"
+            class="btn-claim-sm"
+            data-group-key="{{item.groupKey}}"
+            catchtap="onClaimPurchase"
+            hover-class="btn-claim-sm-hover"
+            hover-stay-time="100"
+          >{{item.pendingCount > 1 ? '领取(' + item.pendingCount + '项)' : '领取'}}</view>
+          <view wx:else class="btn-detail-inline">详情 ›</view>
         </view>
       </view>
 
-      <!-- 操作按钮 -->
-      <view class="card-footer">
-        <view
-          wx:if="{{item.isPending}}"
-          class="btn-claim"
-          data-group-key="{{item.groupKey}}"
-          bindtap="onClaimPurchase"
-          hover-class="btn-claim-hover"
-          hover-stay-time="100"
-        >
-          <text>{{item.pendingCount > 1 ? '一键领取(' + item.pendingCount + '项)' : '领取采购'}}</text>
-          <view class="line-icon icon-arrow-right-sm claim-arrow"></view>
+      <!-- 紧凑统计条：物料 / 总量 / 交货日期 / 是否延期（供应商、采购员、到货明细等进详情页看） -->
+      <view class="card-body procurement-card-body">
+        <view class="stat-cell">
+          <text class="stat-cell-label">物料</text>
+          <text class="stat-cell-value">{{item.materialCount}}项</text>
         </view>
-        <view
-          class="btn-detail"
-          data-order-no="{{item.orderNo}}"
-          data-style-no="{{item.styleNo}}"
-          data-pattern-production-id="{{item.patternProductionId}}"
-          data-source-type="{{item.sourceType}}"
-          bindtap="onViewDetail"
-          hover-class="btn-detail-hover"
-          hover-stay-time="100"
-        >
-          查看详情
+        <view class="stat-cell">
+          <text class="stat-cell-label">总量</text>
+          <text class="stat-cell-value">{{item.quantityText}}</text>
+        </view>
+        <view class="stat-cell">
+          <text class="stat-cell-label">交货日期</text>
+          <text class="stat-cell-value">{{item.dateText || '-'}}</text>
+        </view>
+        <view class="stat-cell">
+          <text class="stat-cell-label">延期</text>
+          <text class="stat-cell-value {{item.overdue ? 'stat-cell-value--danger' : ''}}">{{item.overdueText}}</text>
         </view>
       </view>
     </view>

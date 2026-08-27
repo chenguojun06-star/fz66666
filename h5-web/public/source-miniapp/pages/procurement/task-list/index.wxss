@@ -50,3 +50,104 @@
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
 }
+
+/* =====================================================
+ * 紧凑卡片 — 与裁剪管理页（cutting-task-card）同规格
+ * padding 10px / 图 52px / body 间距 8px，无底部按钮区
+ * ===================================================== */
+
+.procurement-task-card {
+  padding: 10px;
+}
+
+.procurement-card-header {
+  gap: 10px;
+  align-items: stretch;
+}
+
+.procurement-card-media {
+  width: 52px;
+  height: 52px;
+}
+
+.procurement-card-title-area {
+  gap: 2px;
+  padding-top: 0;
+  flex: 1;
+}
+
+.procurement-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.procurement-card-right .tag {
+  align-self: flex-end;
+}
+
+.procurement-card-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+/* 一行 4 格统计条：label 小字在上、value 在下 */
+.stat-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-cell-label {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.stat-cell-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-cell-value--danger {
+  color: var(--color-danger);
+}
+
+/* 行内小领取按钮（与裁剪 pt-btn--receive 同款，紧凑 26px 高） */
+.btn-claim-sm {
+  height: 26px;
+  line-height: 26px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.btn-claim-sm:active,
+.btn-claim-sm-hover {
+  opacity: 0.8;
+}
+
+/* 行内详情小文字（与裁剪 btn-detail-inline 一致） */
+.procurement-card-right .btn-detail-inline {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+}

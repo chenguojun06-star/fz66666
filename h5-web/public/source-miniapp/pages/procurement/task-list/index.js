@@ -363,11 +363,10 @@ Page({
 
     // 总数量
     const totalQuantity = items.reduce((sum, it) => sum + (Number(it.purchaseQuantity) || 0), 0);
-    const totalArrived = items.reduce((sum, it) => sum + (Number(it.arrivedQuantity) || 0), 0);
 
-    // 到货日期：取最早的预计到货日期 / 最近的实际到货日期
+    // 交货日期：预计到货日期优先，为空时兜底订单交期（expectedShipDate，后端已回填）
     const expectedDates = items
-      .map(it => it.expectedArrivalDate)
+      .map(it => it.expectedArrivalDate || it.expectedShipDate)
       .filter(Boolean)
       .sort();
     const actualDates = items
@@ -379,13 +378,19 @@ Page({
     const expectedDateText = expectedDates.length ? this._formatDate(expectedDates[0]) : '';
     const actualDateText = actualDates.length ? this._formatDate(actualDates[actualDates.length - 1]) : '';
 
-    // 主要供应商（取第一个有供应商名的）
-    const supplierItem = items.find(it => it.supplierName);
-    const supplierText = supplierItem ? supplierItem.supplierName : '-';
-
-    // 采购员（取第一个有采购员的）
-    const buyerItem = items.find(it => it.receiverName);
-    const buyerText = buyerItem ? buyerItem.receiverName : '-';
+    // 是否延期：按最早预计到货日期距今天数计算（供应商/采购员/到货明细等进详情页看）
+    let overdue = false;
+    let overdueText = '—';
+    if (displayStatus === 'delayed' && expectedDates.length) {
+      const d = new Date(this._formatDate(expectedDates[0]) + 'T00:00:00');
+      if (!isNaN(d.getTime())) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = Math.round((today - d) / 86400000);
+        overdue = true;
+        overdueText = days > 0 ? '延期' + days + '天' : '已延期';
+      }
+    }
 
     // 是否有待领取物料（用于显示"一键领取"按钮）
     // 仅在非终态（非已取消/已完成）时显示
@@ -405,12 +410,10 @@ Page({
       statusTagClass: statusConfig.tagClass,
       materialCount,
       quantityText: this._formatQuantity(totalQuantity, items[0] && items[0].unit),
-      arrivalText: totalArrived > 0 ? totalArrived + '/' + totalQuantity : '',
       isArrived,
-      dateLabel: isArrived ? '到货日期' : '预计到货',
       dateText: isArrived ? actualDateText : expectedDateText,
-      supplierText,
-      buyerText,
+      overdue,
+      overdueText,
       isPending: pendingItems.length > 0,
       pendingCount: pendingItems.length,
       items,
@@ -457,7 +460,7 @@ Page({
       statusLabel: statusConfig.label,
       statusTagClass: statusConfig.tagClass,
       styleCoverUrl,
-      expectedDateText: this._formatDate(item.expectedArrivalDate),
+      expectedDateText: this._formatDate(item.expectedArrivalDate || item.expectedShipDate),
       actualDateText: this._formatDate(item.actualArrivalDate),
     };
   },
@@ -488,8 +491,8 @@ Page({
       return 'received';
     }
 
-    // 延期：未到货且已超期
-    if (this._isOverdue(item.expectedArrivalDate)) {
+    // 延期：未到货且已超期（预计到货日期为空时兜底订单交期）
+    if (this._isOverdue(item.expectedArrivalDate || item.expectedShipDate)) {
       return 'delayed';
     }
 

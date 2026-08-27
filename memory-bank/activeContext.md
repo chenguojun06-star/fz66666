@@ -7,6 +7,23 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-27 采购卡片「交货日期/延期」匹配不到修复（D-168）✅后端编译通过待验收
+
+- [x] 根因：`MaterialPurchase.expectedArrivalDate` 仅 OpenAPI 对接写入，手工采购全空 → 交货日期显示"-"；`_isOverdue(expectedArrivalDate=null)` 永远 false → 延期显示"—"
+- [x] 后端（根源）：MaterialPurchaseQueryHelper 新增 `backfillShipDateFromOrders`——采购自身两个日期字段均空时回填（仅内存不落库）：①有关联订单→取订单交期 ProductionOrder.expectedShipDate（下单必填）；②样衣采购（patternProductionId）→取样衣生产交期 PatternProduction.deliveryTime。getMyTasks 两个分支（includeCompleted true/false）都在 injectStyleCover 前调用；带 tenantId + try-catch 不阻断主流程
+- [x] 前端：task-list 三处加 `expectedShipDate` 兜底——expectedDates 聚合 / _computeDisplayStatus 的 _isOverdue / _normalizeItem 的 expectedDateText；`_formatDate` substring(0,10) 对 LocalDate/LocalDateTime 序列化格式都兼容
+- [x] 先例：CuttingTaskQueryHelper.java:247-248（裁剪任务同样从订单回填 expectedShipDate）
+- [x] 注意：**必须后端先部署**才生效——只发前端 expectedShipDate 仍为空（手工采购从未填过）。样衣交期源=PatternProduction.deliveryTime（用户确认样衣有交期）
+- [x] 三副本已同步（miniprogram + h5-web 两份）
+
+### 2026-08-27 采购列表卡片紧凑化：与裁剪管理页同规格 ✅待小程序验收
+
+- [x] 需求：采购页卡片太大 → 按裁剪管理页（cutting-task-card）布局重做，尺寸一致；二轮收紧：卡片只留 物料/总量/交货日期/是否延期 4 项，供应商/采购员/到货情况等全部移到详情页
+- [x] 改动：去掉整行 card-footer 底部按钮区；padding 14→10px、款式图 64→52px；右上角竖排 = 状态标签 + 行内操作（待领取→26px 小"领取(N项)"按钮 catchtap；否则→"详情 ›"）；整卡 bindtap 进详情
+- [x] body 改一行 4 格统计条（stat-cell：label 上 value 下）；JS 新增 overdue/overdueText（delayed 状态按最早预计到货日期算"延期N天"），删除 supplierText/buyerText/arrivalText/dateLabel 聚合
+- [x] 全局 order-card.wxss 未动（其他页面共用）；页面级覆盖类 .procurement-task-card 等
+- [x] 三副本同步已 diff 验证一致
+
 ### 2026-08-27 裁剪领取人显示修复：不再显示"系统管理员" ✅编译通过待验收
 
 - [x] 根因：`CuttingBundle` 无 receiverName 字段，手机端 `b.receiverName || b.operatorName` 回退到 `operatorName` —— 该字段是 MyBatis-Plus 自动填充的"最后操作人"（FieldFill.INSERT_UPDATE，管理员编辑分扎即被覆盖），不是裁剪领取人；真正领取人在 `CuttingTask.receiverId/receiverName`
