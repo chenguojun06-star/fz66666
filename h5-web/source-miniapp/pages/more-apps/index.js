@@ -3,7 +3,7 @@ const api = require('../../utils/api');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { isTenantOwner, getUserRole } = require('../../utils/storage');
 
-// 应用ID → 后端菜单权限key 映射
+// 应用ID → 后端菜单权限key 映射（与 home/index.js 的 APP_ID_TO_MENU_KEY 对齐）
 const APP_ID_TO_MENU_KEY = {
   'dashboard': 'miniprogram.menu.dashboard',
   'orderCreate': 'miniprogram.menu.orderCreate',
@@ -26,28 +26,33 @@ const APP_ID_TO_MENU_KEY = {
   'returnList': 'miniprogram.menu.returnList',
   'userApproval': 'miniprogram.menu.userApproval',
   'feedback': 'miniprogram.menu.feedback',
+  'quality': 'miniprogram.menu.quality',
+  'production': 'miniprogram.menu.production',
+  'history': 'miniprogram.menu.history',
 };
 
-// 所有应用配置（6大分类：开发/生产/仓库/财务/个人/其他）
+// 所有应用配置（7大分类：开发/生产/物料/成品/财务/系统/其他，分组对齐PC端菜单）
 const ALL_APPS = [
   { group: '开发', items: [
     { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/sample-development/index/index' },
     { id: 'sampleStock', name: '样衣仓库', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--violet', route: '/pages/warehouse/sample/scan-action/index' },
+    { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--green', route: '/pages/order/create/index' },
   ]},
   { group: '生产', items: [
     { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/index' },
-    { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--green', route: '/pages/order/create/index' },
     { id: 'cuttingDetail', name: '裁剪管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/cutting/bundle-detail/index' },
     { id: 'bundleSplit', name: '菲号管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--red', route: '/pages/work/bundle-split/index' },
     { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
     { id: 'factoryShipment', name: '外发管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--orange', route: '/pages/factory/shipment/index' },
   ]},
-  { group: '仓库', items: [
+  { group: '物料', items: [
     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
     { id: 'materialScan', name: '物料入库', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
-    { id: 'locationScan', name: '库位扫码', iconClass: 'icon-menu-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
     { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
+  ]},
+  { group: '成品', items: [
     { id: 'finishedInventory', name: '成品仓储', iconClass: 'icon-menu-stock-check', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inventory/index' },
+    { id: 'locationScan', name: '库位扫码', iconClass: 'icon-menu-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
   ]},
   { group: '财务', items: [
     { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/payroll/payroll' },
@@ -55,7 +60,7 @@ const ALL_APPS = [
     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--lightblue', route: '/pages/advance/list/index' },
     { id: 'salesOverview', name: '销售概览', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--violet', route: '/pages/sales/overview/index' },
   ]},
-  { group: '个人', items: [
+  { group: '系统', items: [
     { id: 'userApproval', name: '用户审批', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--gray', route: '/pages/admin/user-approval/index' },
     { id: 'feedback', name: '意见反馈', iconClass: 'icon-menu-feedback', circleClass: 'menu-icon-circle--blue', route: '/pages/admin/misc/feedback/index' },
   ]},
