@@ -356,6 +356,15 @@ Page({
       _completeTime: formatNodeTime(item.completeTime),
       _reviewStatus: String(item.reviewStatus || '').trim().toUpperCase(),
       _reviewTime: formatNodeTime(item.reviewTime),
+      // D-181 对齐PC：审核/入库是详情页动作（非工序）
+      // 审核通过 = reviewStatus/reviewResult 为 APPROVED（PC 端历史值为 PASS，兼容）
+      _showReviewAction: status === 'PRODUCTION_COMPLETED'
+        && !['APPROVED', 'PASS'].includes(String(item.reviewStatus || '').trim().toUpperCase())
+        && !['APPROVED', 'PASS'].includes(String(item.reviewResult || '').trim().toUpperCase()),
+      _showWarehouseInAction: (
+        ['APPROVED', 'PASS'].includes(String(item.reviewStatus || '').trim().toUpperCase())
+        || ['APPROVED', 'PASS'].includes(String(item.reviewResult || '').trim().toUpperCase())
+      ) && ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(status),
       _isReceived: ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT'].includes(status)
         || Boolean(item.receiver)
         || !!item.receiveTime,
@@ -1237,6 +1246,55 @@ Page({
       return;
     }
     this._doReceivePattern(snapshot.id);
+  },
+
+  // ── D-181 对齐PC：样衣审核是详情页动作（生产完成未审核时显示）──
+  onSampleReview() {
+    const snapshot = this.data.patternSnapshot;
+    const patternId = snapshot && snapshot.id;
+    if (!patternId) {
+      wx.showToast({ title: '缺少样衣生产单', icon: 'none' });
+      return;
+    }
+    wx.showActionSheet({
+      itemList: ['审核通过', '审核返修', '审核驳回'],
+      success: (res) => {
+        const resultMap = ['APPROVED', 'REWORK', 'REJECTED'];
+        const doneMap = ['审核已通过', '已标记返修', '已驳回'];
+        this._doSampleReview(patternId, resultMap[res.tapIndex], doneMap[res.tapIndex]);
+      },
+    });
+  },
+
+  async _doSampleReview(patternId, result, doneMsg) {
+    wx.showLoading({ title: '提交中...' });
+    try {
+      await production.reviewPattern(patternId, result, '');
+      wx.hideLoading();
+      wx.showToast({ title: doneMsg, icon: 'success' });
+      this.loadStyleDetail();
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || '审核提交失败', icon: 'none' });
+    }
+  },
+
+  // ── D-181 对齐PC：入库在样衣仓库完成（带参直达样品，与 PC 跳 /warehouse/sample 同构）──
+  onSampleWarehouseIn() {
+    const snapshot = this.data.patternSnapshot || {};
+    const styleNo = snapshot.styleNo || this.data.styleInfo?.styleNo || this.data.styleInfo?.styleCode || '';
+    const color = snapshot.color || '';
+    const size = snapshot.size || '';
+    let url = '/pages/warehouse/sample/scan-action/index';
+    if (styleNo && color && size) {
+      url += '?styleNo=' + encodeURIComponent(styleNo)
+        + '&color=' + encodeURIComponent(color)
+        + '&size=' + encodeURIComponent(size);
+    }
+    wx.navigateTo({
+      url,
+      fail: () => wx.showToast({ title: '打开样衣仓库失败', icon: 'none' }),
+    });
   },
 
   async _doReceivePattern(patternId) {

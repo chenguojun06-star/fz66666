@@ -499,15 +499,26 @@
 /* 仓库选择（对齐主扫码页样式） */
 .warehouse-section {
   margin-bottom: 20rpx;
-  
+
   background: rgba(var(--color-primary-rgb, 0, 122, 255), 0.02);
-  
-  
+
+
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 12px;
   box-sizing: border-box;
+}
+
+/* D-172：样衣仓为空时的内联提示 */
+.warehouse-empty-tip {
+  font-size: 24rpx;
+  color: #fa8c16;
+  background: rgba(250, 140, 22, 0.08);
+  border-radius: 8rpx;
+  padding: 10rpx 16rpx;
+  margin-bottom: 8rpx;
+  line-height: 1.5;
 }
 
 .warehouse-option-row {
@@ -672,4 +683,16 @@
   color: var(--color-warning, #ff9500);
   font-size: var(--font-size-sm);
   line-height: 1.6;
+}
+
+/* D-181：工序全部完成后的指引（审核/入库在样衣详情，对齐PC） */
+.process-next-hint {
+  margin-top: 12rpx;
+  padding: 16rpx 20rpx;
+  background: var(--color-primary-bg, rgba(45, 127, 249, 0.08));
+  border-radius: var(--radius-sm, 8rpx);
+}
+.process-next-hint__text {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-primary, #2d7ff9);
 }

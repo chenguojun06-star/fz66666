@@ -684,3 +684,15 @@
   font-size: var(--font-size-sm);
   line-height: 1.6;
 }
+
+/* D-181：工序全部完成后的指引（审核/入库在样衣详情，对齐PC） */
+.process-next-hint {
+  margin-top: 12rpx;
+  padding: 16rpx 20rpx;
+  background: var(--color-primary-bg, rgba(45, 127, 249, 0.08));
+  border-radius: var(--radius-sm, 8rpx);
+}
+.process-next-hint__text {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-primary, #2d7ff9);
+}

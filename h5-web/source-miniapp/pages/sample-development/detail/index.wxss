@@ -1618,3 +1618,12 @@
 .receive-btn--secondary .receive-btn__text {
   color: var(--color-primary, #2d7ff9);
 }
+
+/* D-181：样衣入库（对齐PC——审核通过后的主操作，实心强调） */
+.receive-btn--warehouse {
+  background: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+}
+.receive-btn--warehouse .receive-btn__text {
+  color: var(--color-text-white, #fff);
+}

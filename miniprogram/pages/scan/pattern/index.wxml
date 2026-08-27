@@ -61,6 +61,10 @@
           </view>
         </view>
       </view>
+      <!-- D-181：入库/审核不是工序，全部完成后指回样衣详情（对齐PC） -->
+      <view wx:if="{{processNextHint}}" class="process-next-hint">
+        <text class="process-next-hint__text">{{processNextHint}}</text>
+      </view>
     </view>
     <!-- 菲号信息 -->
   <view wx:if="{{detail.hasMatrix || detail.colorText || detail.sizeText}}" class="section-group">

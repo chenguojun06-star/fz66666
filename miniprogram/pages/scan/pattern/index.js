@@ -64,6 +64,7 @@ Page({
   data: {
     detail: {},
     processList: [], // MES 工序列表：每道工序带状态（PENDING/CLAIMED/COMPLETED）与领取人
+    processNextHint: '', // D-181：全部工序完成后的指引（审核/入库在样衣详情，对齐PC）
     selectedProcess: null, // 当前选中待报工的工序
     claimMode: false, // D-173：领取模式——点「领取」先填数量再提交，而非直接 quantity=1 提交
     skuList: [],
@@ -115,7 +116,12 @@ Page({
     // MES 报工模型：hasProcessSystem 时构建工序列表
     let processList = this._buildProcessList(rawOptions);
 
+    // D-181：入库/审核不再是工序——全部完成后指引用户回样衣详情完成（与 PC 流程一致）
+    const allProcessesDone = processList.length > 0 && processList.every(p => p.status === 'COMPLETED');
+    const processNextHint = allProcessesDone ? '工序已全部完成，请返回样衣详情完成样衣审核与入库' : '';
+
     this.setData({
+      processNextHint: processNextHint,
       detail: {
         patternId: data.patternId,
         styleNo: data.styleNo,
@@ -292,7 +298,14 @@ Page({
       const config = (res && (res.data || res)) || [];
       const list = Array.isArray(config) ? config : [];
       if (list.length > 0) {
-        this.setData({ processList: this._buildProcessList(list), selectedProcess: null, claimMode: false });
+        const newList = this._buildProcessList(list);
+        const allDone = newList.length > 0 && newList.every(p => p.status === 'COMPLETED');
+        this.setData({
+          processList: newList,
+          selectedProcess: null,
+          claimMode: false,
+          processNextHint: allDone ? '工序已全部完成，请返回样衣详情完成样衣审核与入库' : '',
+        });
       }
     } catch (e) {
       console.warn('[样板页] 刷新工序列表失败', e);

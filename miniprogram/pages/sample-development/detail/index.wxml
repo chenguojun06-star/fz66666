@@ -54,6 +54,13 @@
         <view class="receive-btn receive-btn--secondary" bindtap="onProcessScan">
           <text class="receive-btn__text">工序扫码</text>
         </view>
+        <!-- D-181 对齐PC：审核/入库是详情页动作，不是工序 -->
+        <view wx:if="{{patternSnapshot._showReviewAction}}" class="receive-btn receive-btn--secondary" bindtap="onSampleReview">
+          <text class="receive-btn__text">样衣审核</text>
+        </view>
+        <view wx:if="{{patternSnapshot._showWarehouseInAction}}" class="receive-btn receive-btn--warehouse" bindtap="onSampleWarehouseIn">
+          <text class="receive-btn__text">样衣入库</text>
+        </view>
       </view>
       <!-- P2：样衣完成 / 推送到下单管理（与 PC 端对齐的操作入口） -->
       <view wx:if="{{styleInfo._canCompleteSample || styleInfo._canPushToOrder}}" class="sample-action-row">

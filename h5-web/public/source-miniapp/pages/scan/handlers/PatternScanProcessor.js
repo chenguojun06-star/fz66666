@@ -130,7 +130,10 @@ async function getPatternProcessConfig(handler, patternId) {
  * - CLAIMED（他人领取制作中）→ 显示领取人，不可操作
  * - CLAIMED + claimedByMe（本人领取）→ 可「完成报工」
  * - COMPLETED（已完成）→ 显示完成
- * 全部完成后 → 入库操作
+ *
+ * D-181 对齐 PC 端：入库/审核不是工序，不再追加到工序列表（原虚拟节点写死 PENDING，
+ * 会出现"已入库仍显示待领取"）。审核与入库入口在样衣详情页：
+ * 生产完成 → 详情页「样衣审核」；审核通过 → 详情页「样衣入库」跳样衣仓库，与 PC 一致。
  */
 function buildProcessOperationOptions(processConfig, scanRecords, patternDetail, _manualScanType) {
   if (!processConfig || processConfig.length === 0) {
@@ -172,51 +175,6 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       }
     }
     options.push(option);
-  }
-
-  // 全部工序完成后，追加入库操作（审核通过后）
-  const allCompleted = options.length > 0 && options.every(function(o) { return o.status === 'COMPLETED'; });
-  const status = String(patternDetail.status || '').toUpperCase();
-
-  // D-180：样衣已在库（WAREHOUSE_IN）——入库节点按"已完成"展示，
-  // 修复已入库后仍显示"待领取/去入库"的问题（后端此时会拒绝重复入库）
-  if (status === 'WAREHOUSE_IN') {
-    options.push({
-      value: 'WAREHOUSE_IN',
-      label: '样衣入库',
-      icon: 'check-circle',
-      processName: '样衣入库',
-      progressStage: '入库',
-      scanType: 'warehouse',
-      status: 'COMPLETED',
-    });
-    return options;
-  }
-
-  if (allCompleted || status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') {
-    const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
-    const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
-    if (reviewStatus === 'APPROVED' || reviewResult === 'APPROVED') {
-      options.push({
-        value: 'WAREHOUSE_IN',
-        label: '样衣入库',
-        icon: 'inbox',
-        processName: '样衣入库',
-        progressStage: '入库',
-        scanType: 'warehouse',
-        status: 'PENDING',
-      });
-    } else {
-      options.push({
-        value: 'REVIEW',
-        label: '样衣审核',
-        icon: 'eye',
-        processName: '样衣审核',
-        progressStage: '尾部',
-        scanType: 'production',
-        status: 'PENDING',
-      });
-    }
   }
 
   return options;

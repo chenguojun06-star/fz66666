@@ -11,7 +11,7 @@
     <view class="info-card">
       <view class="info-card__body">
         <view class="info-card__cover">
-          <image wx:if="{{styleInfo._coverUrl}}" src="{{styleInfo._coverUrl}}" mode="aspectFill" class="info-card__img" />
+          <image wx:if="{{styleInfo._coverUrl}}" src="{{styleInfo._coverUrl}}" mode="aspectFit" class="info-card__img" />
           <view wx:else class="info-card__placeholder">
             <view class="icon-sample" style="width:28px;height:28px;"></view>
           </view>
@@ -53,6 +53,13 @@
         </view>
         <view class="receive-btn receive-btn--secondary" bindtap="onProcessScan">
           <text class="receive-btn__text">工序扫码</text>
+        </view>
+        <!-- D-181 对齐PC：审核/入库是详情页动作，不是工序 -->
+        <view wx:if="{{patternSnapshot._showReviewAction}}" class="receive-btn receive-btn--secondary" bindtap="onSampleReview">
+          <text class="receive-btn__text">样衣审核</text>
+        </view>
+        <view wx:if="{{patternSnapshot._showWarehouseInAction}}" class="receive-btn receive-btn--warehouse" bindtap="onSampleWarehouseIn">
+          <text class="receive-btn__text">样衣入库</text>
         </view>
       </view>
       <!-- P2：样衣完成 / 推送到下单管理（与 PC 端对齐的操作入口） -->
