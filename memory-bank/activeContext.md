@@ -1,11 +1,19 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-27（D-179 登录体验三连修）
+> 最后更新：2026-08-27（D-180 样衣已入库工序仍显示待领取修复）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-27 样衣已入库，工序扫码仍显示"待领取/去入库"修复（D-180）✅QA全过
+
+- [x] 用户报：样衣已入库，样衣扫码页工序"样衣入库"仍显示待领取+去入库按钮
+- [x] 根因：虚拟节点写死 PENDING——PatternScanProcessor.buildProcessOperationOptions 在"全部工序完成+审核通过"时无条件追加"样衣入库"，从不检查 pattern.status 是否已 WAREHOUSE_IN（入库后端会把 status 改为 WAREHOUSE_IN 并拦截重复入库，但前端不读）
+- [x] 修复：status===WAREHOUSE_IN 时该节点输出 COMPLETED（已完成徽章，无去入库按钮）；后端 warehouseIn 对 WAREHOUSE_IN 状态给明确提示"该样衣已在仓库中，请勿重复入库"
+- [x] 同族排查：写死 PENDING 虚拟节点全项目仅此2处（审核节点语义正确）；quality-detail"待入库"自洽；WAREHOUSE_OUT/COMPLETED 显示去入库是支持的借出重入流程非 bug
+- [x] 三副本同步+QA全过+后端已重启
 
 ### 2026-08-27 登录体验三连修——告别频繁"重新登录"（D-179）✅QA全过
 
