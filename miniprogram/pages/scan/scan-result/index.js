@@ -24,8 +24,14 @@ Page({
     warehouseCode: '',
     warehouseAreaId: '',
     warehouseOptions: [],
+    filteredWarehouseOptions: [],
+    warehouseSearchKey: '',
     warehouseLocationCode: '',
     locationOptions: [],
+    // D-171：库位富对象（含已用/容量，选库位时可见数量避免超限）
+    locationItems: [],
+    filteredLocationItems: [],
+    locationSearchKey: '',
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
@@ -390,13 +396,16 @@ Page({
         const options = [];
         const sorted = list
           .filter(function(item) { return item.areaName && item.id; })
-          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+          .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); });
         for (let i = 0; i < sorted.length; i++) {
           const item = sorted[i];
           options.push(item.areaName);
           areaMap[item.areaName] = item.id;
         }
-        this.setData({ warehouseOptions: options });
+        this.setData({
+          warehouseOptions: options,
+          filteredWarehouseOptions: this._filterListByKeyword(options, this.data.warehouseSearchKey),
+        });
         this._warehouseAreaMap = areaMap;
       }
     } catch (e) {
@@ -404,53 +413,94 @@ Page({
     }
   },
 
+  // D-171：仓库搜索（仓库多时快速定位）
+  onWarehouseSearchInput(e) {
+    this.setData({
+      warehouseSearchKey: e.detail.value,
+      filteredWarehouseOptions: this._filterListByKeyword(this.data.warehouseOptions, e.detail.value),
+    });
+  },
+
+  _filterListByKeyword(list, keyword) {
+    const kw = String(keyword || '').trim();
+    if (!kw) return (list || []).slice();
+    return (list || []).filter(function(name) { return String(name).indexOf(kw) !== -1; });
+  },
+
+  _filterLocationItems(items, keyword) {
+    const kw = String(keyword || '').trim();
+    if (!kw) return (items || []).slice();
+    return (items || []).filter(function(it) { return String(it.label).indexOf(kw) !== -1; });
+  },
+
+  _resetLocationState(extra) {
+    const patch = Object.assign({
+      locationOptions: [],
+      locationItems: [],
+      filteredLocationItems: [],
+      locationSearchKey: '',
+    }, extra || {});
+    this.setData(patch);
+    this._locationMap = {};
+  },
+
   async _loadLocationOptions(areaId) {
     if (!areaId) {
-      this.setData({ locationOptions: [], warehouseLocationCode: '' });
-      this._locationMap = {};
+      this._resetLocationState({ warehouseLocationCode: '' });
       return;
     }
     try {
       const res = await api.warehouse.listLocations('FINISHED', areaId);
       const data = res?.data || res;
       const list = Array.isArray(data) ? data : [];
-      if (list.length > 0) {
-        const locMap = {};
-        const options = [];
-        for (let i = 0; i < list.length; i++) {
-          const item = list[i];
-          const label = item.locationCode || item.locationName || '';
-          if (label) {
-            options.push(label);
-            locMap[label] = item.locationCode || label;
-          }
-        }
-        this.setData({ locationOptions: options });
-        this._locationMap = locMap;
-      } else {
-        this.setData({ locationOptions: [] });
-        this._locationMap = {};
+      const locMap = {};
+      const options = [];
+      const items = [];
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        const label = item.locationCode || item.locationName || '';
+        if (!label) continue;
+        // D-171：保留库位已用/容量（后端 listByType 已返回 usedCapacity/capacity）
+        const used = Number(item.usedCapacity || 0);
+        const capacity = Number(item.capacity || 0);
+        const isFull = capacity > 0 && used >= capacity;
+        options.push(label);
+        locMap[label] = item.locationCode || label;
+        items.push({ code: item.locationCode || label, label: label, used: used, capacity: capacity, isFull: isFull });
       }
+      this.setData({
+        locationOptions: options,
+        locationItems: items,
+        filteredLocationItems: this._filterLocationItems(items, this.data.locationSearchKey),
+      });
+      this._locationMap = locMap;
     } catch (e) {
       console.warn('[scan-result] 加载库位选项失败', e);
-      this.setData({ locationOptions: [] });
-      this._locationMap = {};
+      this._resetLocationState();
     }
+  },
+
+  // D-171：库位搜索（库位多时快速定位）
+  onLocationSearchInput(e) {
+    this.setData({
+      locationSearchKey: e.detail.value,
+      filteredLocationItems: this._filterLocationItems(this.data.locationItems, e.detail.value),
+    });
   },
 
   onWarehouseChipTap(e) {
     const val = e.currentTarget.dataset.value;
     if (this.data.warehouseCode === val) {
-      this.setData({ warehouseCode: '', warehouseAreaId: '', warehouseLocationCode: '', locationOptions: [] });
+      this._resetLocationState({ warehouseCode: '', warehouseAreaId: '', warehouseLocationCode: '' });
     } else {
       const areaId = (this._warehouseAreaMap && this._warehouseAreaMap[val]) || '';
-      this.setData({ warehouseCode: val, warehouseAreaId: areaId, warehouseLocationCode: '', locationOptions: [] });
+      this._resetLocationState({ warehouseCode: val, warehouseAreaId: areaId, warehouseLocationCode: '' });
       if (areaId) { this._loadLocationOptions(areaId); }
     }
   },
 
   onWarehouseClear() {
-    this.setData({ warehouseCode: '', warehouseAreaId: '', warehouseLocationCode: '', locationOptions: [] });
+    this._resetLocationState({ warehouseCode: '', warehouseAreaId: '', warehouseLocationCode: '' });
   },
 
   onWarehouseInput(e) {
@@ -460,12 +510,20 @@ Page({
     if (areaId) {
       this._loadLocationOptions(areaId);
     } else {
-      this.setData({ locationOptions: [] });
+      this._resetLocationState();
     }
   },
 
   onLocationChipTap(e) {
     const val = e.currentTarget.dataset.value;
+    // D-171：满库位拦截，避免超限
+    const items = this.data.locationItems || [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].label === val && items[i].isFull) {
+        wx.showToast({ title: '库位 ' + val + ' 已满（' + items[i].used + '/' + items[i].capacity + '），请选其他库位', icon: 'none' });
+        return;
+      }
+    }
     if (this.data.warehouseLocationCode === val) {
       this.setData({ warehouseLocationCode: '' });
     } else {

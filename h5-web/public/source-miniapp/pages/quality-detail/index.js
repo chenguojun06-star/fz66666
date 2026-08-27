@@ -1067,9 +1067,16 @@ Page({
       .then(function (res) {
         var list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
         var options = list.map(function (item) {
+          var code = item.locationCode || item.code || '';
+          var used = Number(item.usedCapacity || 0);
+          var capacity = Number(item.capacity || 0);
+          var isFull = capacity > 0 && used >= capacity;
+          // D-171：库位显示已用/容量，满库位标注，避免超限
+          var qty = capacity > 0 ? '（' + used + '/' + capacity + (isFull ? ' 已满' : '') + '）' : '';
           return {
-            code: item.locationCode || item.code || '',
-            name: item.locationName || item.name || item.locationCode || '-',
+            code: code,
+            name: (code || item.locationName || item.name || '-') + qty,
+            isFull: isFull,
           };
         });
         self.setData({ locationOptions: options });
@@ -1083,6 +1090,11 @@ Page({
     var index = Number(e.detail.value || 0);
     var opt = this.data.locationOptions[index];
     if (!opt) return;
+    // D-171：满库位拦截
+    if (opt.isFull) {
+      toast.error('该库位已满，请选择其他库位');
+      return;
+    }
     this.setData({ 'whSheetData.warehouseLocationCode': opt.code });
   },
 

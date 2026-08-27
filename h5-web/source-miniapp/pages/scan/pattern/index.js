@@ -63,13 +63,21 @@ function normalizePositiveInt(value, fallback) {
 Page({
   data: {
     detail: {},
+    processList: [], // MES 工序列表：每道工序带状态（PENDING/CLAIMED/COMPLETED）与领取人
+    selectedProcess: null, // 当前选中待报工的工序
     skuList: [],
     summary: {},
     loading: false,
     warehouseOptions: [],
+    filteredWarehouseOptions: [],
+    warehouseSearchKey: '',
     warehouseAreaId: '',
     warehouseLocationCode: '',
     locationOptions: [],
+    // D-171：库位富对象（含已用/容量，选库位时可见数量避免超限）
+    locationItems: [],
+    filteredLocationItems: [],
+    locationSearchKey: '',
   },
 
   onLoad() {
@@ -84,13 +92,11 @@ Page({
     // 构建样板详情页数据
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    // 四步扫码：领取 → 完成 → 审核 → 入库（与PC端对齐）
     const status = String(data.status || '').toUpperCase();
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
 
-    // 直接使用 PatternScanProcessor 已正确计算好的 operationType，不再从 status 重新推导
     const SUBMIT_LABEL_MAP = {
       RECEIVE: '领取', COMPLETE: '完成', REWORK: '返修完成', REVIEW: '审核',
       WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库', WAREHOUSE_RETURN: '归还',
@@ -104,6 +110,9 @@ Page({
     const submitLabel = SUBMIT_LABEL_MAP[operationType] || operationLabel;
     const sizes = patternDetail.sizes || [];
 
+    // MES 报工模型：hasProcessSystem 时构建工序列表
+    let processList = this._buildProcessList(rawOptions);
+
     this.setData({
       detail: {
         patternId: data.patternId,
@@ -116,7 +125,6 @@ Page({
         statusLabel: getPatternStatusLabel(status) || data.statusLabel || status || '-',
         statusType: status.toLowerCase().replace('_', ''),
         sizes: sizes,
-        // 多色多码：优先显示本条色码记录自己的码数，无则退化到全码列表
         sizesText: patternDetail.size || (sizes.length ? sizes.join('、') : '-'),
         operationType: operationType,
         operationLabel: operationLabel,
@@ -144,6 +152,7 @@ Page({
         orderNo: data.orderNo || '',
         stageGroups: data.stageGroups || [],
       },
+      processList: processList,
     });
 
     // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
@@ -239,6 +248,124 @@ Page({
 
   // ---- 事件处理 ----
 
+  /**
+   * 工序列表构建：onLoad 与刷新共用
+   */
+  _buildProcessList(rawOptions) {
+    const list = Array.isArray(rawOptions) ? rawOptions : [];
+    return list.map(function(opt) {
+      const procStatus = String(opt.status || 'PENDING').toUpperCase();
+      return {
+        processName: opt.processName || opt.label || opt.value,
+        progressStage: opt.progressStage || '',
+        scanType: opt.scanType || 'production',
+        unitPrice: opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : null),
+        status: procStatus,
+        statusLabel: procStatus === 'COMPLETED' ? '已完成'
+          : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '制作中(我)' : '制作中') : '待领取',
+        claimedBy: opt.claimedBy || '',
+        claimedByMe: !!opt.claimedByMe,
+        isWarehouse: opt.value === 'WAREHOUSE_IN',
+        isReview: opt.value === 'REVIEW',
+        value: opt.value,
+      };
+    });
+  },
+
+  /**
+   * 领取/报工成功后原地刷新工序状态（不退出页面，用户立即看到状态流转与领取人）
+   */
+  async _refreshProcessList() {
+    try {
+      const res = await api.production.getPatternProcessConfig(this.data.detail.patternId);
+      const config = (res && (res.data || res)) || [];
+      const list = Array.isArray(config) ? config : [];
+      if (list.length > 0) {
+        this.setData({ processList: this._buildProcessList(list), selectedProcess: null });
+      }
+    } catch (e) {
+      console.warn('[样板页] 刷新工序列表失败', e);
+    }
+  },
+
+  /**
+   * MES 报工模型：领取工序（行内按钮）
+   * 防重复领取：前端按状态禁用（他人 CLAIMED 不可点），后端 validateProcessClaim 兜底
+   */
+  async onClaimProcess(e) {
+    const idx = e.currentTarget.dataset.index;
+    const proc = this.data.processList[idx];
+    if (!proc || this.data.loading) return;
+
+    if (proc.status === 'COMPLETED') {
+      toast.info('该工序已完成');
+      return;
+    }
+    if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
+      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取制作中');
+      return;
+    }
+    if (proc.status === 'CLAIMED' && proc.claimedByMe) {
+      toast.info('你已领取该工序，请完成报工');
+      return;
+    }
+
+    this.setData({ loading: true });
+    try {
+      const res = await api.production.submitPatternScan({
+        patternId: this.data.detail.patternId,
+        operationType: 'CLAIM',
+        processName: proc.processName,
+        progressStage: proc.progressStage || proc.processName,
+        operatorRole: 'PLATE_WORKER',
+        quantity: normalizePositiveInt(this.data.detail.quantity, 1),
+        color: this.data.detail.color,
+        remark: '',
+      });
+      toast.success((res && res.message) || '已领取工序【' + proc.processName + '】');
+      this._emitRefresh();
+      await this._refreshProcessList();
+    } catch (err) {
+      console.error('[样板页] 领取工序失败:', err);
+      toast.error(err.errMsg || err.message || '领取工序失败');
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * MES 报工模型：选中工序进行报工（本人已领取的工序 / 入库 / 审核）
+   */
+  onSelectProcess(e) {
+    const idx = e.currentTarget.dataset.index;
+    const proc = this.data.processList[idx];
+    if (!proc) return;
+
+    if (proc.status === 'COMPLETED') {
+      toast.info('该工序已完成');
+      return;
+    }
+    if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
+      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取制作中，不能报工');
+      return;
+    }
+    if (proc.status === 'PENDING' && !proc.isWarehouse && !proc.isReview) {
+      toast.warning('请先领取工序【' + proc.processName + '】，领取后才能报工');
+      return;
+    }
+
+    // 选中后展示报工表单（数量/仓库/备注）并更新提交按钮语义
+    const opType = proc.value || proc.processName;
+    this.setData({
+      selectedProcess: proc,
+      'detail.operationType': opType,
+      'detail.operationLabel': proc.processName,
+      'detail.submitLabel': proc.isWarehouse ? '入库' : (proc.isReview ? '审核' : '完成报工'),
+      'detail.requiresWarehouseInput': proc.isWarehouse,
+      'detail.requiresReviewBeforeInbound': false,
+    });
+  },
+
   onOperationChange(e) {
     if (e.currentTarget.dataset.disabled) return;
     const type = e.currentTarget.dataset.type;
@@ -302,20 +429,43 @@ Page({
         const options = [];
         const sorted = list
           .filter(function(item) { return item.areaName && item.id; })
-          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+          .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); });
         for (let i = 0; i < sorted.length; i++) {
           const item = sorted[i];
           options.push(item.areaName);
           areaMap[item.areaName] = item.id;
         }
         if (options.length > 0) {
-          this.setData({ warehouseOptions: options });
+          this.setData({
+            warehouseOptions: options,
+            filteredWarehouseOptions: this._filterListByKeyword(options, this.data.warehouseSearchKey),
+          });
           this._warehouseAreaMap = areaMap;
         }
       }
     } catch (e) {
       console.warn('[PatternPage] 加载仓库选项失败', e);
     }
+  },
+
+  // D-171：仓库搜索（仓库多时快速定位）
+  onWarehouseSearchInput(e) {
+    this.setData({
+      warehouseSearchKey: e.detail.value,
+      filteredWarehouseOptions: this._filterListByKeyword(this.data.warehouseOptions, e.detail.value),
+    });
+  },
+
+  _filterListByKeyword(list, keyword) {
+    const kw = String(keyword || '').trim();
+    if (!kw) return (list || []).slice();
+    return (list || []).filter(function(name) { return String(name).indexOf(kw) !== -1; });
+  },
+
+  _filterLocationItems(items, keyword) {
+    const kw = String(keyword || '').trim();
+    if (!kw) return (items || []).slice();
+    return (items || []).filter(function(it) { return String(it.label).indexOf(kw) !== -1; });
   },
 
   onWarehouseChipTap(e) {
@@ -326,6 +476,9 @@ Page({
       warehouseAreaId: areaId || '',
       warehouseLocationCode: '',
       locationOptions: [],
+      locationItems: [],
+      filteredLocationItems: [],
+      locationSearchKey: '',
     });
     if (areaId) this._loadLocationOptions(areaId);
   },
@@ -336,12 +489,15 @@ Page({
       warehouseAreaId: '',
       warehouseLocationCode: '',
       locationOptions: [],
+      locationItems: [],
+      filteredLocationItems: [],
+      locationSearchKey: '',
     });
   },
 
   async _loadLocationOptions(areaId) {
     if (!areaId) {
-      this.setData({ locationOptions: [] });
+      this.setData({ locationOptions: [], locationItems: [], filteredLocationItems: [] });
       this._locationMap = {};
       return;
     }
@@ -349,32 +505,52 @@ Page({
       const res = await api.warehouse.listLocations('SAMPLE', areaId);
       const data = res?.data || res;
       const list = Array.isArray(data) ? data : [];
-      if (list.length > 0) {
-        const locMap = {};
-        const options = [];
-        for (let i = 0; i < list.length; i++) {
-          const item = list[i];
-          const label = item.locationCode || item.locationName || '';
-          if (label) {
-            options.push(label);
-            locMap[label] = item.locationCode || label;
-          }
-        }
-        this.setData({ locationOptions: options });
-        this._locationMap = locMap;
-      } else {
-        this.setData({ locationOptions: [] });
-        this._locationMap = {};
+      const locMap = {};
+      const options = [];
+      const items = [];
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        const label = item.locationCode || item.locationName || '';
+        if (!label) continue;
+        // D-171：保留库位已用/容量（后端 listByType 已返回 usedCapacity/capacity）
+        const used = Number(item.usedCapacity || 0);
+        const capacity = Number(item.capacity || 0);
+        const isFull = capacity > 0 && used >= capacity;
+        options.push(label);
+        locMap[label] = item.locationCode || label;
+        items.push({ code: item.locationCode || label, label: label, used: used, capacity: capacity, isFull: isFull });
       }
+      this.setData({
+        locationOptions: options,
+        locationItems: items,
+        filteredLocationItems: this._filterLocationItems(items, this.data.locationSearchKey),
+      });
+      this._locationMap = locMap;
     } catch (e) {
       console.warn('[PatternPage] 加载库位选项失败', e);
-      this.setData({ locationOptions: [] });
+      this.setData({ locationOptions: [], locationItems: [], filteredLocationItems: [] });
       this._locationMap = {};
     }
   },
 
+  // D-171：库位搜索（18+库位时快速定位）
+  onLocationSearchInput(e) {
+    this.setData({
+      locationSearchKey: e.detail.value,
+      filteredLocationItems: this._filterLocationItems(this.data.locationItems, e.detail.value),
+    });
+  },
+
   onLocationChipTap(e) {
     const value = e.currentTarget.dataset.value;
+    // D-171：满库位拦截，避免超限
+    const items = this.data.locationItems || [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].label === value && items[i].isFull) {
+        toast('库位 ' + value + ' 已满（' + items[i].used + '/' + items[i].capacity + '），请选其他库位');
+        return;
+      }
+    }
     this.setData({ warehouseLocationCode: value });
   },
 
@@ -421,8 +597,8 @@ Page({
     }
 
     // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
-    // 优先使用工序系统（如果有），否则使用传统样衣流程
-    if (d.hasProcessSystem) {
+    // 优先使用工序系统（如果有）；工序系统下的审核/入库走专用接口
+    if (d.hasProcessSystem && operationType !== 'REVIEW' && operationType !== 'WAREHOUSE_IN') {
       return await this._submitProcessScan(d, operationType, qty, remark);
     }
 
@@ -607,7 +783,7 @@ Page({
         await Promise.all(tasks);
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
         this._emitRefresh();
-        wx.navigateBack();
+        await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');
@@ -650,7 +826,7 @@ Page({
         await api.production.executeScan(scanData);
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
         this._emitRefresh();
-        wx.navigateBack();
+        await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');

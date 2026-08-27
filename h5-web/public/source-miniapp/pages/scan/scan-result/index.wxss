@@ -423,6 +423,28 @@
 .warehouse-chip-hover {
   opacity: 0.7;
 }
+/* D-171：仓库/库位搜索框 */
+.warehouse-search-input {
+  margin: 8rpx 0 16rpx;
+}
+/* D-171：库位 chip（含已用/容量） */
+.warehouse-chip--loc {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6rpx;
+}
+.warehouse-chip-qty {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+}
+.warehouse-chip--full {
+  opacity: 0.6;
+  border-color: var(--color-danger);
+}
+.warehouse-chip-qty--full {
+  color: var(--color-danger);
+}
 
 .warehouse-row {
   display: flex;

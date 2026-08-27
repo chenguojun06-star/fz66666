@@ -553,6 +553,36 @@
   opacity: 0.75;
 }
 
+/* D-171：仓库/库位搜索框 */
+.warehouse-search-input {
+  margin: 8rpx 0 12rpx;
+}
+
+/* D-171：库位chips显示已用/容量，避免超限 */
+.warehouse-chip--loc {
+  flex-direction: row;
+  gap: 6rpx;
+}
+
+.warehouse-chip-qty {
+  font-size: var(--font-size-2xs, 20rpx);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-regular, 400);
+}
+
+.warehouse-chip--full {
+  opacity: 0.6;
+  border-color: var(--color-danger);
+}
+
+.warehouse-chip-qty--full {
+  color: var(--color-danger);
+}
+
+.warehouse-chip--active .warehouse-chip-qty {
+  color: var(--color-text-white);
+}
+
 /* ===== SKU列表 ===== */
 .sku-list {
   display: flex;

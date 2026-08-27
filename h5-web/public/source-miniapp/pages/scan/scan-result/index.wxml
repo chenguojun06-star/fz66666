@@ -157,9 +157,16 @@
           <text class="warehouse-name-label">仓库：</text>
           <text class="warehouse-name-value">{{warehouseName}}</text>
         </view>
+        <input
+          wx:if="{{warehouseOptions.length > 2}}"
+          class="input-box warehouse-search-input"
+          placeholder="搜索仓库..."
+          value="{{warehouseSearchKey}}"
+          bindinput="onWarehouseSearchInput"
+        />
         <view class="warehouse-option-row" wx:if="{{warehouseOptions.length > 0}}">
           <view
-            wx:for="{{warehouseOptions}}"
+            wx:for="{{filteredWarehouseOptions}}"
             wx:key="index"
             class="warehouse-chip {{warehouseCode === item ? 'warehouse-chip--active' : ''}}"
             bindtap="onWarehouseChipTap"
@@ -176,22 +183,29 @@
         </view>
         <input
           class="input-box"
-          placeholder="{{warehouseOptions.length > 0 ? '或手动输入库位编号' : '请输入库位编号'}}"
+          placeholder="{{warehouseOptions.length > 0 ? '或手动输入仓库编号' : '请输入仓库编号'}}"
           value="{{warehouseCode}}"
           bindinput="onWarehouseInput"
         />
 
-        <!-- 库位选择 -->
-        <view wx:if="{{warehouseCode && locationOptions.length > 0}}" class="warehouse-option-row" style="margin-top: 16rpx;">
+        <!-- 库位选择（仓库选择后出现，显示已用/容量避免超限） -->
+        <input
+          wx:if="{{warehouseCode && locationItems.length > 4}}"
+          class="input-box warehouse-search-input"
+          placeholder="搜索库位编号..."
+          value="{{locationSearchKey}}"
+          bindinput="onLocationSearchInput"
+        />
+        <view wx:if="{{warehouseCode && locationItems.length > 0}}" class="warehouse-option-row" style="margin-top: 16rpx;">
           <view
-            wx:for="{{locationOptions}}"
-            wx:key="index"
-            class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
+            wx:for="{{filteredLocationItems}}"
+            wx:key="label"
+            class="warehouse-chip warehouse-chip--loc {{warehouseLocationCode === item.label ? 'warehouse-chip--active' : ''}} {{item.isFull ? 'warehouse-chip--full' : ''}}"
             bindtap="onLocationChipTap"
-            data-value="{{item}}"
+            data-value="{{item.label}}"
             hover-class="warehouse-chip-hover"
             hover-stay-time="100"
-          >{{item}}</view>
+          >{{item.label}}<text class="warehouse-chip-qty {{item.isFull ? 'warehouse-chip-qty--full' : ''}}">{{item.used}}/{{item.capacity}}</text></view>
           <view
             class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
             bindtap="onLocationClear"
