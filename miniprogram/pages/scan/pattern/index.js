@@ -151,12 +151,15 @@ Page({
         remark: '',
         reviewResult: 'PASS',
         hasProcessSystem: !!data.hasProcessSystem,
+        scannedQtyMap: data.scannedQtyMap || {},
+        taskQuantity: data.taskQuantity || 0,
         orderId: data.orderId || '',
         orderNo: data.orderNo || '',
         stageGroups: data.stageGroups || [],
       },
       processList: processList,
     });
+    this._refreshQtyHint();
 
     // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
     const matrix = patternDetail.sizeColorMatrix;
@@ -324,6 +327,7 @@ Page({
       selectedProcess: proc,
       claimMode: true,
       'detail.operationType': 'CLAIM',
+      'detail.processName': proc.processName,
       'detail.operationLabel': proc.processName,
       'detail.submitLabel': '领取工序',
       'detail.requiresWarehouseInput': false,
@@ -331,6 +335,7 @@ Page({
       'detail.quantity': 1,
       'detail.remark': '',
     });
+    this._refreshQtyHint();
   },
 
   /**
@@ -360,11 +365,13 @@ Page({
       selectedProcess: proc,
       claimMode: false, // D-173：报工模式，非领取
       'detail.operationType': opType,
+      'detail.processName': proc.processName,
       'detail.operationLabel': proc.processName,
       'detail.submitLabel': proc.isWarehouse ? '入库' : (proc.isReview ? '审核' : '完成报工'),
       'detail.requiresWarehouseInput': proc.isWarehouse,
       'detail.requiresReviewBeforeInbound': false,
     });
+    this._refreshQtyHint();
   },
 
   onOperationChange(e) {
@@ -389,12 +396,38 @@ Page({
     });
   },
 
+  /** D-164：当前操作剩余可报数量 = 任务数量 - 已报累计（任务数量未知时不限） */
+  /** D-164：数量提示（已报/任务/可报） */
+  _refreshQtyHint() {
+    const d = this.data.detail || {};
+    const taskQty = Number(d.taskQuantity) || 0;
+    if (taskQty <= 0) { this.setData({ qtyHint: '' }); return; }
+    const remain = this._remainingQty();
+    const proc = this.data.selectedProcess;
+    const procName = proc ? (proc.processName || '') : (d.processName || '');
+    const key = procName || String(d.operationType || '').toUpperCase();
+    const scanned = Math.min((d.scannedQtyMap || {})[key] || 0, taskQty);
+    this.setData({ qtyHint: '已报 ' + scanned + ' 件 / 任务 ' + taskQty + ' 件 · 可报 ' + remain + ' 件' });
+  },
+
+  _remainingQty() {
+    const d = this.data.detail || {};
+    const taskQty = Number(d.taskQuantity) || 0;
+    if (taskQty <= 0) return 999999;
+    const proc = this.data.selectedProcess;
+    const procName = proc ? (proc.processName || '') : (d.processName || '');
+    // D-164：与后端护栏同钥匙——有工序名按工序名（阶段预算），无则按操作类型
+    const key = procName || String(d.operationType || '').toUpperCase();
+    const scanned = (d.scannedQtyMap || {})[key] || 0;
+    return Math.max(0, taskQty - scanned);
+  },
+
   onQuantityInput(e) {
-    const maxQty = this.data.detail.maxQuantity || this.data.detail.quantity || 999999;
+    const maxQty = this._remainingQty();
     const inputQty = parseInt(e.detail.value, 10) || 0;
-    // 如果输入超过最大值，自动修正
+    // 如果输入超过剩余可报数量，自动修正
     if (inputQty > maxQty) {
-      toast.warning('数量不能超过最大数量 ' + maxQty + ' 件');
+      toast.warning(maxQty <= 0 ? '该工序任务数量已报满' : '数量不能超过剩余可报数量 ' + maxQty + ' 件');
       this.setData({ 'detail.quantity': maxQty });
     } else {
       this.setData({ 'detail.quantity': e.detail.value });
@@ -628,6 +661,14 @@ Page({
     // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
     // 优先使用工序系统（如果有）；工序系统下的审核/入库走专用接口
     if (d.hasProcessSystem && operationType !== 'REVIEW' && operationType !== 'WAREHOUSE_IN') {
+      // D-164：任务数量模式——报工数量不能超过剩余可报（领取CLAIM不受限，领取即整单认领）
+      if (operationType !== 'CLAIM' && qty > 0) {
+        const remain = this._remainingQty();
+        if (qty > remain) {
+          toast.error(remain <= 0 ? '该工序任务数量已报满' : '数量超过剩余可报数量 ' + remain + ' 件');
+          return;
+        }
+      }
       return await this._submitProcessScan(d, operationType, qty, remark);
     }
 
@@ -636,9 +677,9 @@ Page({
       toast.error('请输入正确数量');
       return;
     }
-    const maxQty = d.maxQuantity || d.quantity || 999999;
+    const maxQty = operationType === 'RECEIVE' ? this._remainingQty() : (d.maxQuantity || d.quantity || 999999);
     if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty > maxQty) {
-      toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
+      toast.error(maxQty <= 0 ? '任务数量已报满' : '数量不能超过剩余可报数量 ' + maxQty + ' 件');
       return;
     }
     if (operationType === 'REVIEW' && !remark) {

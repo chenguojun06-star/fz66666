@@ -207,7 +207,8 @@
         value="{{detail.quantity}}"
         bindinput="onQuantityInput"
       />
-      <text class="input-suffix">件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
+      <text class="input-suffix" wx:if="{{qtyHint}}">{{qtyHint}}</text>
+      <text class="input-suffix" wx:else>件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
     </view>
 
     <!-- 仓位编号（仓库操作时显示） -->

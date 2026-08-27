@@ -635,6 +635,37 @@ public class PatternProductionOrchestrator {
         PatternProduction pattern = loadPatternForScan(patternId);
         statusHelper.validateWarehouseOperationFlow(patternId, operationType);
 
+        // D-164：任务数量模式——同一操作（同操作类型+同工序）累计报工数量不能超过样板任务数量。
+        // 多人分批扫码报工时，累计到达任务数量后不允许再报（撤销扫码会释放额度）
+        Integer scanQty = quantity == null ? 0 : Math.max(0, quantity);
+        Integer taskQty = pattern.getQuantity();
+        if (scanQty > 0 && !"REVIEW".equalsIgnoreCase(operationType.trim())
+                && taskQty != null && taskQty > 0) {
+            String opKey = operationType.trim().toUpperCase();
+            // D-164：钥匙口径=有工序名按工序名（阶段预算），无工序名按操作类型——与小程序汇总一致
+            String procKey = StringUtils.hasText(processName) ? processName.trim() : opKey;
+            List<PatternScanRecord> priorRecords = patternScanRecordService.lambdaQuery()
+                    .eq(PatternScanRecord::getPatternProductionId, pattern.getId())
+                    .eq(PatternScanRecord::getDeleteFlag, 0)
+                    .list();
+            int summed = priorRecords.stream()
+                    .filter(r -> {
+                        String rProc = StringUtils.hasText(r.getProcessName()) ? r.getProcessName().trim() : "";
+                        String rKey = StringUtils.hasText(rProc) ? rProc
+                                : (r.getOperationType() == null ? "" : r.getOperationType().trim().toUpperCase());
+                        return rKey.equals(procKey);
+                    })
+                    .filter(r -> !StringUtils.hasText(r.getRemark()) || !r.getRemark().contains("撤销"))
+                    .filter(r -> r.getQuantity() != null)
+                    .mapToInt(PatternScanRecord::getQuantity)
+                    .sum();
+            if (summed + scanQty > taskQty) {
+                int remaining = Math.max(0, taskQty - summed);
+                throw new IllegalArgumentException("累计报工超限：该工序已报 " + summed + " 件，任务数量 "
+                        + taskQty + " 件，本次最多可报 " + remaining + " 件");
+            }
+        }
+
         // D-145：防重复领取——样衣已被别人领取且未完成时，其他人不能再领（前端选项已过滤，此处兜底防并发/直调API）
         if ("RECEIVE".equalsIgnoreCase(operationType.trim())) {
             PatternScanRecord existingClaim = patternScanRecordService.lambdaQuery()

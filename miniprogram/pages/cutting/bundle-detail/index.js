@@ -323,18 +323,14 @@ Page({
   _matchCuttingStage(order, stageKey) {
     const s = String(order.status || '').trim().toLowerCase();
     if (!s) return false;
-    // D-162/D-163：三段判定
-    // - 待裁剪：未编菲（扎数=0）
-    // - 裁剪中：已编菲且裁剪完成时间为空（领取了正在裁）
-    // - 已完成：裁剪完成时间已回填，或订单已过裁剪工序
-    const hasBundles = (Number(order.cuttingBundleCount) || 0) > 0;
-    const cutFinished = !!order.cuttingEndTime;
-    const pendingStatuses = ['not_started', 'pending', 'procurement', 'paused'];
-    const cuttingStatuses = ['cutting'];
+    // D-164：与 PC 裁剪管理同口径——按裁剪任务三态分类
+    // （PC：待领取 pending / 已领取 received / 已生成菲号 bundled，见 CuttingTaskListView）
+    const taskStatus = String((order.cuttingTask && order.cuttingTask.status) || '').trim().toLowerCase();
+    const orderStatus = String(order.status || '').trim().toLowerCase();
     const doneStatuses = ['sewing', 'ironing', 'secondary_process', 'packaging', 'quality_check', 'warehousing', 'completed'];
-    if (stageKey === 'pending_cutting') return !hasBundles && pendingStatuses.includes(s);
-    if (stageKey === 'cutting') return hasBundles && !cutFinished;
-    if (stageKey === 'done_cutting') return cutFinished || doneStatuses.includes(s);
+    if (stageKey === 'pending_cutting') return taskStatus === '' || taskStatus === 'pending';
+    if (stageKey === 'cutting') return taskStatus === 'received';
+    if (stageKey === 'done_cutting') return taskStatus === 'bundled' || (!taskStatus && doneStatuses.includes(orderStatus));
     return false;
   },
 
