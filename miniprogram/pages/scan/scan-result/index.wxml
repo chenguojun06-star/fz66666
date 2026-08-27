@@ -56,7 +56,7 @@
     </view>
     <view class="group-body style-body">
       <view class="style-header">
-        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFit" />
         <view class="style-header-info">
           <text class="style-header-name">{{detail.styleNo || detail.orderNo || '-'}}</text>
           <text class="style-header-sub" wx:if="{{detail.orderNo}}">{{detail.orderNo}}</text>

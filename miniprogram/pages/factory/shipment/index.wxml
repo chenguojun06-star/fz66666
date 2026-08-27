@@ -95,7 +95,7 @@
         <!-- 主行：封面图 + 基本信息 -->
         <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
           <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
-            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFit" lazy-load />
             <view wx:else class="cover-placeholder">
               <view class="cover-ph-text"><view class="line-icon line-icon--xl icon-package"></view></view>
             </view>

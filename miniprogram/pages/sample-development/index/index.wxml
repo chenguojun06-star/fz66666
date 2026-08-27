@@ -53,7 +53,7 @@
       <!-- 主行：封面 + 基本信息（点击跳详情） -->
       <view class="order-main" data-item="{{item}}" catchtap="onCardTap">
         <view class="order-cover" catchtap="onPreviewImage" data-src="{{item._cover}}">
-          <image wx:if="{{item._cover}}" class="cover-pic" src="{{item._cover}}" mode="aspectFill" lazy-load />
+          <image wx:if="{{item._cover}}" class="cover-pic" src="{{item._cover}}" mode="aspectFit" lazy-load />
           <view wx:else class="cover-placeholder">
             <view class="cover-ph-text"><view class="line-icon line-icon--xl icon-shirt"></view></view>
           </view>

@@ -56,7 +56,7 @@
             wx:if="{{item.styleCoverUrl}}"
             class="media-img"
             src="{{item.styleCoverUrl}}"
-            mode="aspectFill"
+            mode="aspectFit"
             lazy-load="true"
           />
           <view wx:else class="media-placeholder line-icon icon-package"></view>

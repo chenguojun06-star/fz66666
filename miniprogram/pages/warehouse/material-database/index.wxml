@@ -44,7 +44,7 @@
   <view wx:else class="list-wrap">
     <view wx:for="{{list}}" wx:key="id" class="material-item" data-id="{{item.id}}" bindtap="onItemTap" hover-class="material-item--hover" hover-stay-time="100">
       <view class="item-left">
-        <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFill" class="item-image" />
+        <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFit" class="item-image" />
         <view wx:else class="item-image item-image--placeholder">
           <text class="item-image-text">料</text>
         </view>
@@ -92,7 +92,7 @@
 
       <scroll-view class="detail-scroll" scroll-y="true">
         <view class="detail-hero">
-          <image wx:if="{{selectedItem._image}}" src="{{selectedItem._image}}" mode="aspectFill" class="detail-image" />
+          <image wx:if="{{selectedItem._image}}" src="{{selectedItem._image}}" mode="aspectFit" class="detail-image" />
           <view wx:else class="detail-image detail-image--placeholder">
             <text class="detail-image-text">料</text>
           </view>

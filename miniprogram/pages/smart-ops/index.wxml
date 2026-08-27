@@ -138,7 +138,7 @@
       <view class="card-body">
         <view class="order-row" wx:for="{{activeOrders}}" wx:key="orderNo" data-index="{{index}}" bindtap="onOrderTap">
           <view class="order-cover" wx:if="{{item.styleCoverUrl}}" catchtap="onPreviewCover" data-url="{{item.styleCoverUrl}}">
-            <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+            <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFit" lazy-load />
           </view>
           <view class="order-content">
             <view class="order-top">
@@ -188,7 +188,7 @@
           </view>
           <view class="order-row" wx:for="{{activeStageOrders}}" wx:key="orderNo" data-index="{{index}}" bindtap="onStageOrderTap">
             <view class="order-cover" wx:if="{{item.styleCoverUrl}}" catchtap="onPreviewCover" data-url="{{item.styleCoverUrl}}">
-              <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+              <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFit" lazy-load />
             </view>
             <view class="order-content">
               <view class="order-top">

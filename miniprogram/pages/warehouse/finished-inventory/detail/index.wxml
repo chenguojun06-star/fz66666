@@ -8,7 +8,7 @@
   <block wx:elif="{{skuList.length > 0 || activeTab === 'inbound'}}">
     <!-- 款式信息 -->
     <view class="section-card style-card">
-      <image wx:if="{{styleImage}}" src="{{styleImage}}" mode="aspectFill" class="style-image" />
+      <image wx:if="{{styleImage}}" src="{{styleImage}}" mode="aspectFit" class="style-image" />
       <view wx:else class="style-image style-image--placeholder">
         <text class="style-image-text">衣</text>
       </view>

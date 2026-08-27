@@ -63,7 +63,7 @@
         bindtap="onStockItemTap"
         data-stock="{{item}}"
       >
-        <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" mode="aspectFill" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
+        <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" mode="aspectFit" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
         <view wx:else class="stock-thumb-placeholder">
         </view>
         <view class="stock-info">

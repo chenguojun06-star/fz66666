@@ -23,7 +23,7 @@
       <view class="grid">
         <view class="card" wx:for="{{styleFilteredStyles}}" wx:key="id" data-id="{{item.id}}" data-cover="{{item.displayCover}}" data-no="{{item.styleNo}}" data-name="{{item.styleName}}" data-colors="{{item.color}}" data-sizes="{{item.size}}" data-cat="{{item.displayCategory}}" bindtap="onStyleTap">
           <view class="card-img">
-            <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFill" lazy-load />
+            <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFit" lazy-load />
             <text wx:else class="card-img-ph">{{item.styleNo}}</text>
           </view>
           <view class="card-body">
@@ -49,7 +49,7 @@
       </view>
       
       <view class="image-upload-large" bindtap="chooseNoDataImage">
-        <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" mode="aspectFill" />
+        <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" mode="aspectFit" />
         <view wx:else class="upload-placeholder-large">
           <view class="upload-icon-large line-icon icon-camera"></view>
           <text class="upload-text">点击上传款式图片</text>

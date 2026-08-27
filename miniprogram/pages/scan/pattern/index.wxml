@@ -108,7 +108,7 @@
     <view class="group-card">
       <!-- 款式头部（对齐设计稿：缩略图 + 品名 + 款号） -->
       <view class="style-header">
-        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFit" />
         <view class="style-header-info">
           <text class="style-header-name">{{detail.styleName || detail.styleNo || '-'}}</text>
           <text class="style-header-no" wx:if="{{detail.styleNo}}">款号：{{detail.styleNo}}</text>

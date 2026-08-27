@@ -25,7 +25,7 @@
         <view class="top-left" bindtap="onPreviewImage">
           <swiper class="img-swiper" wx:if="{{imageList.length > 0}}" current="{{currentImageIndex}}" bindchange="onImageChange" autoplay="{{false}}" circular="{{false}}">
             <swiper-item wx:for="{{imageList}}" wx:key="index">
-              <image class="cover-img" src="{{item.url}}" mode="aspectFill" lazy-load />
+              <image class="cover-img" src="{{item.url}}" mode="aspectFit" lazy-load />
             </swiper-item>
           </swiper>
           <view wx:else class="cover-placeholder">

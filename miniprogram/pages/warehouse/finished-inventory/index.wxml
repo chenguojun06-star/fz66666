@@ -55,7 +55,7 @@
   <view wx:else class="list-wrap">
     <view wx:for="{{list}}" wx:key="id" class="inventory-item" data-id="{{item.id}}" bindtap="onItemTap" hover-class="inventory-item--hover" hover-stay-time="100">
       <view class="item-header">
-        <image wx:if="{{item._styleImage}}" src="{{item._styleImage}}" mode="aspectFill" class="item-image" />
+        <image wx:if="{{item._styleImage}}" src="{{item._styleImage}}" mode="aspectFit" class="item-image" />
         <view wx:else class="item-image item-image--placeholder">
           <text class="item-image-text">衣</text>
         </view>

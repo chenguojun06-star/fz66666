@@ -6,7 +6,7 @@
       <view wx:if="{{pendingCuttingTasks.length > 0}}" class="pending-tasks-card">
         <view class="pending-tasks-title">待领取裁剪任务（{{pendingCuttingTasks.length}}）</view>
         <view class="pending-task-row" wx:for="{{pendingCuttingTasks}}" wx:key="id">
-          <image wx:if="{{item.cover}}" class="pt-cover" src="{{item.cover}}" mode="aspectFill" />
+          <image wx:if="{{item.cover}}" class="pt-cover" src="{{item.cover}}" mode="aspectFit" />
           <view wx:else class="pt-cover pt-cover--ph">✂</view>
           <view class="pt-info">
             <text class="pt-style">{{item.styleNo || item.orderNo}}</text>
@@ -70,7 +70,7 @@
                 wx:if="{{item.styleCoverUrl}}"
                 class="media-img"
                 src="{{item.styleCoverUrl}}"
-                mode="aspectFill"
+                mode="aspectFit"
                 lazy-load="true"
               />
               <view wx:else class="media-placeholder">
@@ -125,7 +125,7 @@
               wx:if="{{coverImage}}"
               class="cover-img"
               src="{{coverImage}}"
-              mode="aspectFill"
+              mode="aspectFit"
             />
             <view wx:else class="cover-placeholder">
               <text class="cover-abbr">{{orderInfo.styleNo ? orderInfo.styleNo.substring(0,2) : '--'}}</text>

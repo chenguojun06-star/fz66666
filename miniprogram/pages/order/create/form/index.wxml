@@ -3,7 +3,7 @@
     <!-- 款式 -->
     <view class="sec">
       <view class="style-row" wx:if="{{coverImage}}">
-        <image class="style-thumb" src="{{coverImage}}" mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
+        <image class="style-thumb" src="{{coverImage}}" mode="aspectFit" bindtap="onCoverPreview" data-url="{{coverImage}}" />
         <view class="style-txt">
           <text class="style-no">{{styleNo}}</text>
           <text class="style-nm">{{styleName}}</text>

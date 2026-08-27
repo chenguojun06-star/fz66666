@@ -11,7 +11,7 @@
     <view class="info-card">
       <view class="info-card__body">
         <view class="info-card__cover">
-          <image wx:if="{{styleInfo._coverUrl}}" src="{{styleInfo._coverUrl}}" mode="aspectFill" class="info-card__img" />
+          <image wx:if="{{styleInfo._coverUrl}}" src="{{styleInfo._coverUrl}}" mode="aspectFit" class="info-card__img" />
           <view wx:else class="info-card__placeholder">
             <view class="icon-sample" style="width:28px;height:28px;"></view>
           </view>

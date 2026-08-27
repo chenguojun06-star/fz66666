@@ -3,7 +3,7 @@
   <view wx:if="{{lastResult}}" class="result {{lastResult.success ? 'ok' : 'err'}}">
     <view class="res-top">
       <view class="res-cover" wx:if="{{lastResult.coverImage}}" catchtap="onPreviewCover" data-url="{{lastResult.coverImage}}">
-        <image class="res-cover-img" src="{{lastResult.coverImage}}" mode="aspectFill" lazy-load />
+        <image class="res-cover-img" src="{{lastResult.coverImage}}" mode="aspectFit" lazy-load />
       </view>
       <view class="res-top-text">
         <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
