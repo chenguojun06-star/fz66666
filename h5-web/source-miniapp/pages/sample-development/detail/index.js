@@ -4,6 +4,7 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName } = require('../../../utils/sampleHelper');
 const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
+const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -937,6 +938,19 @@ Page({
 
     const [processes, scans] = await Promise.all(tasks);
 
+    // D-170：与 PC 端对齐——采购/入库是独立流程，不进工序列表（客户端兜底过滤）
+    const isNonProductionProcess = function (p) {
+      const stage = String(p.progressStage || p.stage || '').trim();
+      const name = String(p.processName || p.name || '').trim();
+      return stage === '采购' || stage === '入库' || name === '采购' || name === '入库';
+    };
+    const validProcesses = (processes || []).filter(function (p) { return !isNonProductionProcess(p); });
+
+    // 样衣总数（进度条分母）：优先样衣生产记录数量，退化取款式数量
+    const snapshot = this.data.patternSnapshot || {};
+    const totalQty = Number(snapshot.quantity || snapshot.totalQuantity
+      || (this.data.styleInfo && (this.data.styleInfo.sampleQuantity || this.data.styleInfo.quantity)) || 0) || 0;
+
     // 处理工序：格式化显示 + 匹配扫码记录 + 计算进度状态
     // 先把扫码记录按 processName 分组（兼容 processName/operationType 两种匹配）
     const scansByProcessName = {};
@@ -947,7 +961,22 @@ Page({
       scansByProcessName[name].push(r);
     });
 
-    const allProcesses = (processes || []).map(function (p, idx) {
+    // 扫码时间格式化（MM-dd HH:mm）
+    const formatScanTime = function (r) {
+      const timeStr = r.scanTime || r.createTime || '';
+      if (!timeStr) return '';
+      try {
+        const d = new Date(String(timeStr).replace(/-/g, '/'));
+        if (isNaN(d.getTime())) return '';
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return mm + '-' + dd + ' ' + hh + ':' + mi;
+      } catch (_) { return ''; }
+    };
+
+    const allProcesses = (validProcesses || []).map(function (p, idx) {
       const stageRaw = p.progressStage || p.stage || '';
       const name = p.processName || p.name || ('工序' + (idx + 1));
       // 该工序的扫码记录（按时间倒序）
@@ -956,27 +985,24 @@ Page({
         const tb = new Date(String(b.scanTime || b.createTime || '').replace(/-/g, '/')).getTime() || 0;
         return tb - ta;
       });
-      // 状态判断：有 COMPLETE → 已完成；有 RECEIVE 但无 COMPLETE → 进行中；无记录 → 待领取
+      // D-167：CLAIM（领取）不算扫码记录——领取人单独展示；报工记录去重展示
+      const claimRec = myScans.find(function (r) { return r.operationType === 'CLAIM'; });
+      const workScans = myScans.filter(function (r) { return r.operationType !== 'CLAIM'; });
+
+      // 状态判断：有报工记录 → 已完成；有 CLAIM 未报工 → 制作中；无记录 → 待领取
       let status = 'pending';
       let statusText = '待领取';
-      if (myScans.length > 0) {
-        const hasComplete = myScans.some(function (r) {
-          return r.operationType === 'COMPLETE' || r.success === true;
-        });
-        if (hasComplete) {
-          status = 'completed';
-          statusText = '已完成';
-        } else {
-          status = 'in_progress';
-          statusText = '进行中';
-        }
+      if (workScans.length > 0) {
+        status = 'completed';
+        statusText = '已完成';
+      } else if (claimRec) {
+        status = 'in_progress';
+        statusText = (claimRec.operatorName || '') + ' 制作中';
       }
-      // 数量统计
+      // 数量统计（D-167：CLAIM 不计入数量）
       let completedQty = 0;
-      myScans.forEach(function (r) {
-        if (r.operationType === 'COMPLETE' || r.success === true) {
-          completedQty += Number(r.quantity) || 0;
-        }
+      workScans.forEach(function (r) {
+        completedQty += Number(r.quantity) || 0;
       });
       let receivedQty = 0;
       myScans.forEach(function (r) {
@@ -994,24 +1020,14 @@ Page({
         _assignee: p.assignee || '',
         _status: status,
         _statusText: statusText,
-        _scanCount: myScans.length,
-        _scanRecords: myScans.map(function (r) {
-          const timeStr = r.scanTime || r.createTime || '';
-          let displayTime = '';
-          if (timeStr) {
-            try {
-              const d = new Date(String(timeStr).replace(/-/g, '/'));
-              if (!isNaN(d.getTime())) {
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const hh = String(d.getHours()).padStart(2, '0');
-                const mi = String(d.getMinutes()).padStart(2, '0');
-                displayTime = mm + '-' + dd + ' ' + hh + ':' + mi;
-              }
-            } catch (_) {}
-          }
+        _claimBy: claimRec ? (claimRec.operatorName || '') : '',
+        _scanCount: workScans.length,
+        _totalQty: totalQty,
+        _percent: totalQty > 0 ? Math.min(100, Math.round((completedQty / totalQty) * 100)) : 0,
+        _lastTime: workScans.length > 0 ? formatScanTime(workScans[0]) : '',
+        _scanRecords: workScans.map(function (r) {
           return {
-            _displayTime: displayTime,
+            _displayTime: formatScanTime(r),
             _operationText: r.operationType === 'RECEIVE' ? '领取'
               : r.operationType === 'COMPLETE' ? '完成'
               : r.operationType === 'WAREHOUSE_IN' ? '入库'
@@ -1180,6 +1196,37 @@ Page({
     });
 
     return { columns: sizeSet, rows: rows };
+  },
+
+  /**
+   * D-157 闭环：详情页直达"按工序扫码"确认页——
+   * 复用主扫码页同一 PatternScanProcessor 流水线（详情+扫码记录+工序配置→操作选项），
+   * 确认页提交走 executeScan(sourceBizType=SAMPLE)，后端三入口统一委派样衣链路
+   */
+  async onProcessScan() {
+    const snapshot = this.data.patternSnapshot;
+    const patternId = snapshot && snapshot.id;
+    if (!patternId) return;
+    wx.showLoading({ title: '加载工序...' });
+    try {
+      const handler = {
+        api: { production },
+        SCAN_MODE: { PATTERN: 'pattern' },
+        _errorResult: (msg) => ({ success: false, message: msg }),
+      };
+      const result = await PatternScanProcessor.handlePatternScan(handler, { patternId: String(patternId) }, null);
+      wx.hideLoading();
+      if (!result || !result.success || !result.data) {
+        wx.showToast({ title: (result && result.message) || '无法打开工序扫码', icon: 'none' });
+        return;
+      }
+      const app = getApp();
+      app.globalData.patternScanData = result.data;
+      wx.navigateTo({ url: '/pages/scan/pattern/index' });
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || '打开失败', icon: 'none' });
+    }
   },
 
   onReceivePattern() {

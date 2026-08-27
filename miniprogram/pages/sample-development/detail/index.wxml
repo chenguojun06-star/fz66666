@@ -237,55 +237,64 @@
           <text class="tab-card__count">{{allProcesses.length}}项</text>
         </view>
         <view wx:if="{{processLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
-        <view wx:elif="{{allProcesses.length > 0}}" class="process-list">
+        <!-- D-170：工序时间线（布局对齐订单详情页「工序进度」） -->
+        <view wx:elif="{{allProcesses.length > 0}}" class="proc-timeline">
           <view
             wx:for="{{allProcesses}}"
             wx:key="_key"
-            class="process-item {{index === allProcesses.length - 1 ? 'process-item--last' : ''}} {{item._expanded ? 'process-item--expanded' : ''}} {{item._scanCount > 0 ? 'process-item--clickable' : ''}}"
+            class="proc-tl-item {{item._expanded ? 'proc-tl-item--expanded' : ''}}"
             data-idx="{{index}}"
             catchtap="onProcessItemTap"
           >
-            <view class="process-item__main">
-              <view class="process-item__left">
-                <view class="process-item__index">{{index + 1}}</view>
-                <view class="process-item__info">
-                  <text class="process-item__name">{{item._name}}</text>
-                  <view class="process-item__meta">
-                    <text wx:if="{{item._stage}}" class="process-item__stage">{{item._stage}}</text>
-                    <text wx:if="{{item.machineType}}" class="process-item__machine">{{item.machineType}}</text>
-                    <text wx:if="{{item.difficulty}}" class="process-item__diff">{{item.difficulty}}</text>
-                  </view>
+            <!-- 左侧轨道：状态圆点 + 连接线 -->
+            <view class="proc-tl-rail">
+              <view class="proc-tl-dot-wrap">
+                <view wx:if="{{item._status === 'in_progress'}}" class="proc-tl-pulse"></view>
+                <view class="proc-tl-dot proc-tl-dot--{{item._status}}">
+                  <view wx:if="{{item._status === 'completed'}}" class="icon-checkmark-sm"></view>
                 </view>
               </view>
-              <view class="process-item__right">
-                <text wx:if="{{item._price}}" class="process-item__price">¥{{item._price}}</text>
-                <view class="process-item__status process-item__status--{{item._status}}">
-                  <text class="status-dot"></text>
-                  <text class="status-text">{{item._statusText}}</text>
-                </view>
-                <view wx:if="{{item._scanCount > 0}}" class="process-item__arrow {{item._expanded ? 'process-item__arrow--up' : ''}}"></view>
-              </view>
+              <view wx:if="{{index < allProcesses.length - 1}}" class="proc-tl-line"></view>
             </view>
-
-            <!-- 展开区：扫码记录列表 -->
-            <view wx:if="{{item._expanded && item._scanRecords.length > 0}}" class="process-item__expand">
-              <view class="scan-summary">
-                <text class="scan-summary__label">扫码记录</text>
-                <text class="scan-summary__count">{{item._scanCount}}条</text>
-                <text wx:if="{{item._completedQty > 0}}" class="scan-summary__done">已完成 {{item._completedQty}}件</text>
-                <text wx:if="{{item._receivedQty > 0}}" class="scan-summary__received">已领 {{item._receivedQty}}件</text>
+            <!-- 右侧内容 -->
+            <view class="proc-tl-body">
+              <view class="proc-tl-info">
+                <view class="proc-tl-name-row">
+                  <text class="proc-tl-name {{item._status === 'pending' ? 'proc-tl-name--pending' : ''}}">{{item._name}}</text>
+                  <text wx:if="{{item._stage}}" class="proc-tl-stage">{{item._stage}}</text>
+                </view>
+                <text wx:if="{{item._totalQty > 0}}" class="proc-tl-qty">{{item._completedQty}}/{{item._totalQty}}</text>
               </view>
-              <view class="scan-record-list">
-                <view wx:for="{{item._scanRecords}}" wx:for-item="rec" wx:for-index="ri" wx:key="ri" class="scan-record-item">
-                  <view class="scan-record-item__top">
-                    <text class="scan-record-item__op scan-record-item__op--{{rec._operationClass}}">{{rec._operationText}}</text>
-                    <text class="scan-record-item__time">{{rec._displayTime || '-'}}</text>
-                  </view>
-                  <view class="scan-record-item__body">
-                    <text class="scan-record-item__operator">{{rec.operatorName}}</text>
-                    <text wx:if="{{rec.color}}" class="scan-record-item__color">· {{rec.color}}</text>
-                    <text wx:if="{{rec.size}}" class="scan-record-item__size">· {{rec.size}}</text>
-                    <text wx:if="{{rec.quantity > 0}}" class="scan-record-item__qty">· {{rec.quantity}}件</text>
+              <view wx:if="{{item._totalQty > 0}}" class="proc-tl-bar">
+                <view class="proc-tl-fill {{item._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{item._percent}}%"></view>
+              </view>
+              <view class="proc-tl-meta" wx:if="{{item._claimBy || item._lastTime || item._price}}">
+                <text wx:if="{{item._claimBy}}" class="proc-tl-meta-text">{{item._claimBy}}</text>
+                <text wx:if="{{item._claimBy && item._lastTime}}" class="proc-tl-meta-sep"> · </text>
+                <text wx:if="{{item._lastTime}}" class="proc-tl-meta-text">{{item._lastTime}}</text>
+                <text wx:if="{{item._price}}" class="proc-tl-meta-sep"> · </text>
+                <text wx:if="{{item._price}}" class="proc-tl-meta-text">¥{{item._price}}/件</text>
+              </view>
+              <!-- 展开明细：扫码记录列表 -->
+              <view wx:if="{{item._expanded && item._scanRecords.length > 0}}" class="proc-tl-expand">
+                <view class="scan-summary">
+                  <text class="scan-summary__label">扫码记录</text>
+                  <text class="scan-summary__count">{{item._scanCount}}条</text>
+                  <text wx:if="{{item._completedQty > 0}}" class="scan-summary__done">已完成 {{item._completedQty}}件</text>
+                  <text wx:if="{{item._receivedQty > 0}}" class="scan-summary__received">已领 {{item._receivedQty}}件</text>
+                </view>
+                <view class="scan-record-list">
+                  <view wx:for="{{item._scanRecords}}" wx:for-item="rec" wx:for-index="ri" wx:key="ri" class="scan-record-item">
+                    <view class="scan-record-item__top">
+                      <text class="scan-record-item__op scan-record-item__op--{{rec._operationClass}}">{{rec._operationText}}</text>
+                      <text class="scan-record-item__time">{{rec._displayTime || '-'}}</text>
+                    </view>
+                    <view class="scan-record-item__body">
+                      <text class="scan-record-item__operator">{{rec.operatorName}}</text>
+                      <text wx:if="{{rec.color}}" class="scan-record-item__color">· {{rec.color}}</text>
+                      <text wx:if="{{rec.size}}" class="scan-record-item__size">· {{rec.size}}</text>
+                      <text wx:if="{{rec.quantity > 0}}" class="scan-record-item__qty">· {{rec.quantity}}件</text>
+                    </view>
                   </view>
                 </view>
               </view>

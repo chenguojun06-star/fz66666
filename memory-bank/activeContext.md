@@ -7,6 +7,16 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-27 手机端工序列表采购/入库清除+工序tab布局对齐订单页（D-170）✅本地验证通过待部署
+
+- [x] 问题「手机端工序列表还在显示采购/入库」核实结论：PC 端 SampleProcessList.tsx 早已移除采购/入库阶段（STAGE_ORDER 仅裁剪/二次工艺/车缝/尾部），手机端确实没同步——详情页工序 tab 读 /api/style/process/list 全量、扫码页读 getPatternProcessConfig 全量，t_style_process 残留采购/入库工序行（7款式11行：49/66/74/78/83/84/132）直接展示，不是快捷键
+- [x] 修复1（根源）：V202708271200__remove_procurement_warehouse_style_processes.sql 删除全部采购/入库工序行（无扫码记录引用，7款式删除后均保留真实工序）；本地已执行验证 remaining=0
+- [x] 修复2（防御）：PatternEnrichmentHelper.getPatternProcessConfig 过滤 scanType=procurement/warehouse 的工序（与 PC 端对齐——采购走「管理采购」、入库走仓库扫码，不在扫码页领取列表）
+- [x] 修复3（前端兜底）：详情页 _loadProcessesAndScans 客户端过滤采购/入库工序（三重防御）
+- [x] 布局改造：详情页「工序进度」tab 从大卡片列表改为订单详情页同款时间线（左侧状态圆点轨道：完成=绿勾/进行中=蓝脉冲/待领取=灰空心 + 垂直连接线；右侧：工序名+阶段chip+数量completedQty/totalQty、6px进度条、领取人·时间·单价meta行；点击展开扫码记录明细保留）；进度分母取 patternSnapshot.quantity（退化款式数量）
+- [x] 三副本同步 miniprogram/ + h5-web/source-miniapp/ + h5-web/public/source-miniapp/，node --check 通过，mvn compile 通过
+- [x] 验收注意：后端部署后 Flyway 执行数据清理+过滤生效；小程序重新编译发布后生效
+
 ### 2026-08-27 样衣详情重复工序+入库无库位修复（D-169）✅本地验证通过待部署
 
 - [x] 问题1「详情页超级多一样的没用工序」根因：旧版创建样衣自动插入默认五连工序（采购/裁剪/整件/手工剪线/入库），逻辑已于2026-06删除但5/30-5/31历史数据残留（款式97/88/128/130共20行，同一秒插入且集合精确匹配）

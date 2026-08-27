@@ -938,6 +938,19 @@ Page({
 
     const [processes, scans] = await Promise.all(tasks);
 
+    // D-170：与 PC 端对齐——采购/入库是独立流程，不进工序列表（客户端兜底过滤）
+    const isNonProductionProcess = function (p) {
+      const stage = String(p.progressStage || p.stage || '').trim();
+      const name = String(p.processName || p.name || '').trim();
+      return stage === '采购' || stage === '入库' || name === '采购' || name === '入库';
+    };
+    const validProcesses = (processes || []).filter(function (p) { return !isNonProductionProcess(p); });
+
+    // 样衣总数（进度条分母）：优先样衣生产记录数量，退化取款式数量
+    const snapshot = this.data.patternSnapshot || {};
+    const totalQty = Number(snapshot.quantity || snapshot.totalQuantity
+      || (this.data.styleInfo && (this.data.styleInfo.sampleQuantity || this.data.styleInfo.quantity)) || 0) || 0;
+
     // 处理工序：格式化显示 + 匹配扫码记录 + 计算进度状态
     // 先把扫码记录按 processName 分组（兼容 processName/operationType 两种匹配）
     const scansByProcessName = {};
@@ -948,7 +961,22 @@ Page({
       scansByProcessName[name].push(r);
     });
 
-    const allProcesses = (processes || []).map(function (p, idx) {
+    // 扫码时间格式化（MM-dd HH:mm）
+    const formatScanTime = function (r) {
+      const timeStr = r.scanTime || r.createTime || '';
+      if (!timeStr) return '';
+      try {
+        const d = new Date(String(timeStr).replace(/-/g, '/'));
+        if (isNaN(d.getTime())) return '';
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return mm + '-' + dd + ' ' + hh + ':' + mi;
+      } catch (_) { return ''; }
+    };
+
+    const allProcesses = (validProcesses || []).map(function (p, idx) {
       const stageRaw = p.progressStage || p.stage || '';
       const name = p.processName || p.name || ('工序' + (idx + 1));
       // 该工序的扫码记录（按时间倒序）
@@ -994,23 +1022,12 @@ Page({
         _statusText: statusText,
         _claimBy: claimRec ? (claimRec.operatorName || '') : '',
         _scanCount: workScans.length,
+        _totalQty: totalQty,
+        _percent: totalQty > 0 ? Math.min(100, Math.round((completedQty / totalQty) * 100)) : 0,
+        _lastTime: workScans.length > 0 ? formatScanTime(workScans[0]) : '',
         _scanRecords: workScans.map(function (r) {
-          const timeStr = r.scanTime || r.createTime || '';
-          let displayTime = '';
-          if (timeStr) {
-            try {
-              const d = new Date(String(timeStr).replace(/-/g, '/'));
-              if (!isNaN(d.getTime())) {
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const hh = String(d.getHours()).padStart(2, '0');
-                const mi = String(d.getMinutes()).padStart(2, '0');
-                displayTime = mm + '-' + dd + ' ' + hh + ':' + mi;
-              }
-            } catch (_) {}
-          }
           return {
-            _displayTime: displayTime,
+            _displayTime: formatScanTime(r),
             _operationText: r.operationType === 'RECEIVE' ? '领取'
               : r.operationType === 'COMPLETE' ? '完成'
               : r.operationType === 'WAREHOUSE_IN' ? '入库'

@@ -540,12 +540,19 @@ public class PatternEnrichmentHelper {
 
             String progressStage = resolveProgressStage(process.getProgressStage(), processName);
 
+            // D-170：与 PC 端对齐——采购/入库是独立流程（采购走「管理采购」、入库走仓库扫码），
+            // 不属于生产工序列表，扫码页领取/报工列表中直接跳过
+            String scanType = inferPatternScanType(progressStage, processName);
+            if ("procurement".equals(scanType) || "warehouse".equals(scanType)) {
+                continue;
+            }
+
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("operationType", processName);
             item.put("processName", processName);
             item.put("progressStage", progressStage);
             item.put("sortOrder", process.getSortOrder() != null ? process.getSortOrder() : sort);
-            item.put("scanType", inferPatternScanType(progressStage, processName));
+            item.put("scanType", scanType);
             item.put("price", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
             item.put("unitPrice", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
 
