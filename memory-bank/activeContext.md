@@ -7,7 +7,7 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-27 手机端工序列表采购/入库清除+工序tab布局对齐订单页（D-170）✅本地验证通过待部署
+### 2026-08-27 手机端工序列表采购/入库清除+工序tab布局对齐订单页（D-170）✅后端已部署（CI 33034330169 success），小程序待发布
 
 - [x] 问题「手机端工序列表还在显示采购/入库」核实结论：PC 端 SampleProcessList.tsx 早已移除采购/入库阶段（STAGE_ORDER 仅裁剪/二次工艺/车缝/尾部），手机端确实没同步——详情页工序 tab 读 /api/style/process/list 全量、扫码页读 getPatternProcessConfig 全量，t_style_process 残留采购/入库工序行（7款式11行：49/66/74/78/83/84/132）直接展示，不是快捷键
 - [x] 修复1（根源）：V202708271200__remove_procurement_warehouse_style_processes.sql 删除全部采购/入库工序行（无扫码记录引用，7款式删除后均保留真实工序）；本地已执行验证 remaining=0
