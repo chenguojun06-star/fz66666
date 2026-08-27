@@ -213,8 +213,9 @@ app:
   auth:
     # 开发环境默认密钥，生产环境必须配置 APP_AUTH_JWT_SECRET 覆盖
     jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
-    jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:4}
-    refresh-token-ttl-hours: ${APP_AUTH_REFRESH_TOKEN_TTL_HOURS:72}
+    # D-179：access 12h（覆盖一个工作日）、refresh 30天+滚动续期——活跃用户不再被迫重登
+    jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:12}
+    refresh-token-ttl-hours: ${APP_AUTH_REFRESH_TOKEN_TTL_HOURS:720}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
     sms-login:
       code-ttl-seconds: ${APP_AUTH_SMS_LOGIN_CODE_TTL_SECONDS:300}

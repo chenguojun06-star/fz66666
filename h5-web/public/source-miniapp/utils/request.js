@@ -77,7 +77,12 @@ function triggerLoginRedirect() {
 /**
  * 尝试使用 refreshToken 刷新 access token
  * 全局锁防止并发刷新，刷新成功后通知所有等待的请求
- * @returns {Promise<string|null>} 新 token 或 null
+ *
+ * D-179 温和失败策略：区分「后端明确拒绝」（refreshToken 确凿失效，应清 token 跳登录）
+ * 与「网络/服务暂时不可用」（超时、5xx、网关重启——token 本身可能还有效，绝不能清，
+ * 否则一次网络抖动就把用户踢回登录页）
+ *
+ * @returns {Promise<{ok:boolean, token?:string, reason?:'rejected'|'network'|'no-token'}>}
  */
 function refreshTokenRequest() {
   return new Promise((resolve) => {
@@ -86,12 +91,17 @@ function refreshTokenRequest() {
       return;
     }
     isRefreshing = true;
+    const finish = (result) => {
+      isRefreshing = false;
+      refreshSubscribers.forEach(cb => cb(result));
+      refreshSubscribers = [];
+      resolve(result);
+    };
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-      isRefreshing = false;
       clearToken();
       clearRefreshToken();
-      resolve(null);
+      finish({ ok: false, reason: 'no-token' });
       return;
     }
     const baseUrl = getBaseUrl();
@@ -103,35 +113,46 @@ function refreshTokenRequest() {
       header: { 'content-type': 'application/json' },
       success(res) {
         const body = res.data;
-        if (body && body.code === 200 && body.data && body.data.token) {
+        const statusCode = res.statusCode || 0;
+        if (statusCode === 200 && body && body.code === 200 && body.data && body.data.token) {
           setToken(body.data.token);
           if (body.data.refreshToken) {
             setRefreshToken(body.data.refreshToken);
           }
-          isRefreshing = false;
-          const newToken = body.data.token;
-          refreshSubscribers.forEach(cb => cb(newToken));
-          refreshSubscribers = [];
-          resolve(newToken);
+          finish({ ok: true, token: body.data.token });
+          return;
+        }
+        // 后端明确拒绝：HTTP 401，或业务失败且消息带失效/过期语义（Result.fail "refreshToken 已失效或过期"）
+        const msg = extractServerMessage(body);
+        const rejected = statusCode === 401 ||
+          (body && typeof body.code === 'number' && body.code !== 200 &&
+            (msg.includes('失效') || msg.includes('过期') || msg.includes('invalid')));
+        if (rejected) {
+          finish({ ok: false, reason: 'rejected' });
         } else {
-          isRefreshing = false;
-          clearToken();
-          clearRefreshToken();
-          refreshSubscribers.forEach(cb => cb(null));
-          refreshSubscribers = [];
-          resolve(null);
+          // 5xx/网关重启/未知响应 → 暂时性失败，保留 token
+          finish({ ok: false, reason: 'network' });
         }
       },
       fail() {
-        isRefreshing = false;
-        clearToken();
-        clearRefreshToken();
-        refreshSubscribers.forEach(cb => cb(null));
-        refreshSubscribers = [];
-        resolve(null);
+        // 网络错误/超时 → 暂时性失败，保留 token
+        finish({ ok: false, reason: 'network' });
       },
     });
   });
+}
+
+/**
+ * 刷新失败后的温和重试：网络类失败最多再补 2 次（0.8s/1.6s 退避）
+ * @returns {Promise<{ok:boolean, token?:string, reason?:string}>}
+ */
+async function refreshTokenWithRetry() {
+  let result = await refreshTokenRequest();
+  for (let attempt = 0; attempt < 2 && !result.ok && result.reason === 'network'; attempt += 1) {
+    await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    result = await refreshTokenRequest();
+  }
+  return result;
 }
 
 function createError(errMsg, extra) {
@@ -172,14 +193,21 @@ function extractServerMessage(body) {
 }
 
 /**
- * 处理401未授权错误 — 先尝试静默刷新 token，失败后再跳转登录
+ * 处理401未授权错误 — 先尝试静默刷新 token
+ * D-179：仅后端明确拒绝（refreshToken 确凿失效）才清 token 跳登录；
+ * 网络/服务暂时不可用时保留登录态，本次请求以网络错误返回，不弹"登录已过期"
  */
 async function handle401Error({ statusCode, body, skipAuthRedirect, reject, resolve, options }) {
   const retryOn401 = options && options._retryOn401;
   if (!skipAuthRedirect && !retryOn401) {
-    const newToken = await refreshTokenRequest();
-    if (newToken) {
+    const result = await refreshTokenWithRetry();
+    if (result.ok) {
       request({ ...options, _retryOn401: true }).then(resolve).catch(reject);
+      return true;
+    }
+    if (result.reason === 'network') {
+      // 网络不稳定：不清 token、不跳登录页
+      reject(createError('网络不稳定，操作未完成，请稍后重试', { type: 'network', statusCode, data: body }));
       return true;
     }
     clearToken();
@@ -444,9 +472,11 @@ function request(options) {
     const isDevEnv = !envVersion || envVersion === 'develop';
 
     if (token && isTokenExpired()) {
-      const newToken = await refreshTokenRequest();
-      if (newToken) {
-        token = newToken;
+      const result = await refreshTokenWithRetry();
+      if (result.ok) {
+        token = result.token;
+      } else if (result.reason === 'network') {
+        // D-179：网络暂时不可用——保留登录态，带旧 token 照常发请求（后端拒绝时走 401 温和处理）
       } else {
         if (!skipAuthRedirect) {
           triggerLoginRedirect();
@@ -512,9 +542,11 @@ function uploadFile(options) {
     }
 
     if (token && isTokenExpired()) {
-      const newToken = await refreshTokenRequest();
-      if (newToken) {
-        token = newToken;
+      const result = await refreshTokenWithRetry();
+      if (result.ok) {
+        token = result.token;
+      } else if (result.reason === 'network') {
+        // D-179：网络暂时不可用，保留登录态照常上传（后端拒绝时走下方 401 温和处理）
       } else {
         triggerLoginRedirect();
         reject(createError('登录已过期，请重新登录', { type: 'auth' }));
@@ -545,9 +577,12 @@ function uploadFile(options) {
           if (statusCode === 401) {
             const retryOn401 = options && options._retryOn401;
             if (!retryOn401) {
-              refreshTokenRequest().then(newToken => {
-                if (newToken) {
+              refreshTokenWithRetry().then(result => {
+                if (result.ok) {
                   uploadFile({ ...options, _retryOn401: true }).then(resolve).catch(reject);
+                } else if (result.reason === 'network') {
+                  // D-179：网络暂时不可用，不踢登录页
+                  reject(createError('网络不稳定，上传未完成，请稍后重试', { type: 'network', statusCode }));
                 } else {
                   clearToken();
                   clearRefreshToken();

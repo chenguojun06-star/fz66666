@@ -72,6 +72,81 @@ const isJwtExpired = (token: string): boolean => {
   }
 };
 
+// ── D-179 单飞刷新：全局同一时刻只发一次 refresh-token 请求，所有调用方共享同一结果 ──
+// 温和失败语义：仅后端明确拒绝（HTTP 401 / 消息含失效过期语义）才算确凿失效应清 token 跳登录；
+// 网络错误/超时/5xx 一律视为暂时性失败（reason:'network'），保留登录态绝不踢人
+export type RefreshResult =
+  | { ok: true; token: string }
+  | { ok: false; reason: 'rejected' | 'network' | 'no-token' };
+
+let refreshInFlight: Promise<RefreshResult> | null = null;
+
+const clearAuthStorage = (alsoRefresh: boolean) => {
+  try {
+    localStorage.removeItem('authToken');
+    if (alsoRefresh) localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
+  } catch {
+    // Ignore
+  }
+};
+
+export const refreshAccessTokenSingleFlight = (): Promise<RefreshResult> => {
+  if (refreshInFlight) return refreshInFlight;
+  const attempt = (async (): Promise<RefreshResult> => {
+    let savedRefresh = '';
+    try {
+      savedRefresh = String(localStorage.getItem('refreshToken') || '').trim();
+    } catch {
+      savedRefresh = '';
+    }
+    if (!savedRefresh) {
+      clearAuthStorage(false);
+      return { ok: false, reason: 'no-token' };
+    }
+    try {
+      const refreshClient = axios.create({ baseURL: resolveApiBaseUrl(), timeout: 10000 });
+      const refreshRes = await refreshClient.post('/system/user/refresh-token', { refreshToken: savedRefresh });
+      const newToken = String(refreshRes.data?.data?.token || '').trim();
+      if (refreshRes.data?.code === 200 && newToken) {
+        const newRefresh = String(refreshRes.data?.data?.refreshToken || '').trim();
+        try {
+          localStorage.setItem('authToken', newToken);
+          if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
+        } catch {
+          // Ignore
+        }
+        import('@/utils/fileUrl').then(({ invalidateFileUrlTokenCache }) => invalidateFileUrlTokenCache()).catch(() => {});
+        return { ok: true, token: newToken };
+      }
+      const msg = String(refreshRes.data?.message || refreshRes.data?.msg || '');
+      const rejected = refreshRes.status === 401 ||
+        msg.includes('失效') || msg.includes('过期') || msg.includes('invalid');
+      return { ok: false, reason: rejected ? 'rejected' : 'network' };
+    } catch (e) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      return { ok: false, reason: status === 401 ? 'rejected' : 'network' };
+    }
+  })();
+  refreshInFlight = attempt;
+  attempt.then(() => {
+    if (refreshInFlight === attempt) refreshInFlight = null;
+  }, () => {
+    if (refreshInFlight === attempt) refreshInFlight = null;
+  });
+  return attempt;
+};
+
+// 网络类失败后的温和重试：最多补 2 次（0.8s/1.6s 退避）
+export const refreshAccessTokenWithRetry = async (): Promise<RefreshResult> => {
+  let result = await refreshAccessTokenSingleFlight();
+  for (let i = 0; i < 2 && !result.ok && result.reason === 'network'; i += 1) {
+    await new Promise(resolve => setTimeout(resolve, 800 * (i + 1)));
+    result = await refreshAccessTokenSingleFlight();
+  }
+  return result;
+};
+
 const pendingRequests = new Map<string, Promise<unknown>>();
 const responseCache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 30_000;
@@ -212,37 +287,15 @@ export const createApiClient = (): ApiClient => {
         const token = String(localStorage.getItem('authToken') || '').trim();
         if (token) {
           if (isJwtExpired(token)) {
-            const savedRefresh = localStorage.getItem('refreshToken');
-            if (savedRefresh) {
-              try {
-                const refreshClient = axios.create({ baseURL: resolveApiBaseUrl(), timeout: 10000 });
-                const refreshRes = await refreshClient.post('/system/user/refresh-token', { refreshToken: savedRefresh });
-                if (refreshRes.data?.code === 200 && refreshRes.data?.data?.token) {
-                  const newToken = String(refreshRes.data.data.token).trim();
-                  const newRefresh = String(refreshRes.data.data.refreshToken || '').trim();
-                  localStorage.setItem('authToken', newToken);
-                  if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
-                  setHeader('Authorization', `Bearer ${newToken}`);
-                  import('@/utils/fileUrl').then(({ invalidateFileUrlTokenCache }) => invalidateFileUrlTokenCache());
-                } else {
-                  try {
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('refreshToken');
-                    localStorage.removeItem('userId');
-                  } catch { /* ignore */ }
-                }
-              } catch {
-                try {
-                  localStorage.removeItem('authToken');
-                  localStorage.removeItem('refreshToken');
-                  localStorage.removeItem('userId');
-                } catch { /* ignore */ }
-              }
-            } else {
-              try {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userId');
-              } catch { /* ignore */ }
+            // D-179：预刷新走单飞+温和失败——网络暂时不可用时保留 token 照常发送，
+            // 由响应端 401 温和处理；仅后端明确拒绝才清理登录态
+            const result = await refreshAccessTokenSingleFlight();
+            if (result.ok) {
+              setHeader('Authorization', `Bearer ${result.token}`);
+            } else if (result.reason === 'rejected') {
+              clearAuthStorage(true);
+            } else if (!isJwtExpired(token)) {
+              setHeader('Authorization', `Bearer ${token}`);
             }
           } else {
             setHeader('Authorization', `Bearer ${token}`);
@@ -343,34 +396,26 @@ export const createApiClient = (): ApiClient => {
             errorMessage = msg || '请求参数错误';
             break;
           case 401: {
-            errorMessage = '登录已过期，请重新登录';
-            const savedRefresh = localStorage.getItem('refreshToken');
+            // D-179：单飞刷新 + 温和失败——网络暂时不可用不清登录态、不弹"登录已过期"，
+            // 仅后端明确拒绝（refreshToken 确凿失效）才清 token 登出
+            const savedRefresh = (() => {
+              try { return localStorage.getItem('refreshToken'); } catch { return null; }
+            })();
             if (savedRefresh && !config?._isRefreshAttempt) {
-              try {
-                const refreshClient = axios.create({ baseURL: resolveApiBaseUrl(), timeout: 10000 });
-                const refreshRes = await refreshClient.post('/system/user/refresh-token', { refreshToken: savedRefresh });
-                if (refreshRes.data?.code === 200 && refreshRes.data?.data?.token) {
-                  const newToken = String(refreshRes.data.data.token).trim();
-                  const newRefresh = String(refreshRes.data.data.refreshToken || '').trim();
-                  localStorage.setItem('authToken', newToken);
-                  if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
-                  import('@/utils/fileUrl').then(({ invalidateFileUrlTokenCache }) => invalidateFileUrlTokenCache());
-                  if (config) {
-                    (config as Record<string, unknown>)._isRefreshAttempt = true;
-                    return client(config);
-                  }
+              const result = await refreshAccessTokenWithRetry();
+              if (result.ok) {
+                if (config) {
+                  (config as Record<string, unknown>)._isRefreshAttempt = true;
+                  return client(config);
                 }
-              } catch {
-                // refresh failed, fall through to logout
+              } else if (result.reason === 'network') {
+                errorMessage = '网络不稳定，请稍后重试';
+                break;
               }
             }
-            try {
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('refreshToken');
-              localStorage.removeItem('userId');
-            } catch {
-              // Ignore
-            }
+            // 确凿失效（后端明确拒绝 / 无 refreshToken / 刷新后重试仍 401）→ 清理并登出
+            errorMessage = '登录已过期，请重新登录';
+            clearAuthStorage(true);
             try {
               window.dispatchEvent(new CustomEvent('app:auth:logout'));
             } catch {

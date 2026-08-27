@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from './api';
+import { refreshAccessTokenWithRetry } from './api/core';
 import { resetSmartFeatureFlags } from '@/smart/core/featureFlags';
 import type { UserInfo } from './AuthContext.types';
 import {
@@ -201,26 +202,14 @@ export const useAuthProviderState = () => {
         }
 
         if (isJwtExpired(token)) {
+          // D-179：启动刷新走单飞+温和重试——网络暂时不可用时保留登录态进入应用
+          //（token 若确凿失效，后续接口 401 会走明确的登出路径），仅后端明确拒绝才清 token
           const savedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
           if (savedRefreshToken) {
-            try {
-              const refreshRes = (await api.post('/system/user/refresh-token', { refreshToken: savedRefreshToken })) as { code?: number; data?: Record<string, unknown> };
-              if (refreshRes?.code === 200 && refreshRes.data?.token) {
-                const newToken = String(refreshRes.data.token).trim();
-                const newRefresh = String(refreshRes.data.refreshToken || '').trim();
-                localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
-                if (newRefresh) localStorage.setItem(REFRESH_TOKEN_KEY, newRefresh);
-              } else {
-                localStorage.removeItem(TOKEN_STORAGE_KEY);
-                localStorage.removeItem(REFRESH_TOKEN_KEY);
-                localStorage.removeItem('userId');
-                resetSmartFeatureFlags();
-                setUser(null);
-                setIsAuthenticated(false);
-                setLoading(false);
-                return;
-              }
-            } catch {
+            const result = await refreshAccessTokenWithRetry();
+            if (result.ok) {
+              // 新 token 已由 helper 写入 localStorage，继续恢复用户
+            } else if (result.reason === 'rejected' || result.reason === 'no-token') {
               localStorage.removeItem(TOKEN_STORAGE_KEY);
               localStorage.removeItem(REFRESH_TOKEN_KEY);
               localStorage.removeItem('userId');
@@ -230,6 +219,7 @@ export const useAuthProviderState = () => {
               setLoading(false);
               return;
             }
+            // reason === 'network'：保留 token，带缓存用户进入应用，数据加载失败会温和提示
           } else {
             localStorage.removeItem(TOKEN_STORAGE_KEY);
             localStorage.removeItem('userId');
@@ -304,18 +294,13 @@ export const useAuthProviderState = () => {
             restoreUserTheme(next.id);
             window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: next.id } }));
           } else {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            localStorage.removeItem(USER_STORAGE_KEY);
-            resetSmartFeatureFlags();
-            setUser(null);
-            setIsAuthenticated(false);
+            // D-179：非200可能是服务端暂时异常，保留登录态用缓存用户进入；
+            // token 确凿失效时由响应拦截器的 401 明确登出路径处理
+            console.warn('[Auth] 启动时拉取用户信息失败(code=' + String(res?.code) + ')，使用缓存用户进入');
           }
         } catch {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-          localStorage.removeItem(USER_STORAGE_KEY);
-          resetSmartFeatureFlags();
-          setUser(null);
-          setIsAuthenticated(false);
+          // D-179：网络失败不清 token、不踢登录页——保持已恢复的缓存用户会话
+          console.warn('[Auth] 启动时网络异常，使用缓存用户进入');
         }
       } catch {
         setUser(null);
