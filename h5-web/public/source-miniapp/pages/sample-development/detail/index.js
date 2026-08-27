@@ -380,13 +380,15 @@ Page({
       _reviewTime: formatNodeTime(item.reviewTime),
       // D-181 对齐PC：审核/入库是详情页动作（非工序）
       // 审核通过 = reviewStatus/reviewResult 为 APPROVED（PC 端历史值为 PASS，兼容）
+      // 注意：handleWarehouseIn 入库后 status=COMPLETED（已完成=已在库闭环），
+      // D-183：入库按钮只在「生产完成+审核通过+尚未入库」出现，已入库(COMPLETED)绝不再显示
       _showReviewAction: status === 'PRODUCTION_COMPLETED'
         && !['APPROVED', 'PASS'].includes(String(item.reviewStatus || '').trim().toUpperCase())
         && !['APPROVED', 'PASS'].includes(String(item.reviewResult || '').trim().toUpperCase()),
       _showWarehouseInAction: (
         ['APPROVED', 'PASS'].includes(String(item.reviewStatus || '').trim().toUpperCase())
         || ['APPROVED', 'PASS'].includes(String(item.reviewResult || '').trim().toUpperCase())
-      ) && ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(status),
+      ) && status === 'PRODUCTION_COMPLETED',
       _isReceived: ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED', 'WAREHOUSE_IN', 'WAREHOUSE_OUT'].includes(status)
         || Boolean(item.receiver)
         || !!item.receiveTime,

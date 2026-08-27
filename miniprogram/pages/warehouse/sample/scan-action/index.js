@@ -314,9 +314,14 @@ Page({
           || stock.inventoryStatus === 'SCRAP'
           || !!stock.destroyTime;
         d.scrappedCount = isScrapped ? (stock.quantity || 0) : 0;
+        // D-183：前端兜底——已有库存记录的样衣绝不显示「入库」（在库→借调、借出→归还），
+        // 防御旧版云端后端 scanQuery 对在库样品误返回 inbound 动作
+        const displayActions = d.found
+          ? (d.actions || []).filter(function (a) { return a !== 'inbound'; })
+          : (d.actions || []);
         this.setData({
           stockInfo: d,
-          actions: d.actions || [],
+          actions: displayActions,
           loading: false,
         });
       })
