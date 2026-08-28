@@ -1,7 +1,28 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-187 生产制单→工艺说明富文本化）
+> 最后更新：2026-08-28（新增 D-188 工艺说明编辑器乱码三连修）
+
+---
+
+## D-188：工艺说明编辑器乱码三连修（2026-08-28，用户"点击就出现乱码代码/背景色文字颜色全部不能用/摆设看板"）
+
+### 背景与根因（D-187 上线即爆）
+1. **双转义乱码（主根因）**：`isSheetRichHtml` 只认 `<img`/`<br>`，"加粗一行字"这类无换行无图的格式内容（`<span style="font-weight: bold;">…</span>`）被判为纯文本 → `escTextLines` 整段转义；父组件状态回声触发 effect 比对不等 → 用转义文本**当场覆盖编辑器**——用户点一下加粗立刻满屏 `&lt;span…`，再保存脏数据烙进库
+2. **删除线静默丢失**：Chrome styleWithCSS 删除线产出 `text-decoration-line: line-through`，不在 style 白名单 → 清洗即剥
+3. **颜色按钮难用**：Popover 套 ColorPicker 双层弹窗（点两次才出色板）；弹层收焦点丢选区，execCommand 落空
+4. **插表格/插图丢存**：insertHtmlAtCaret 不上报内容，插完直接保存存的是旧内容
+
+### 决策
+1. 富文本判定改白名单标签正则（与 ALLOWED_TAGS 同词表）；**存量双转义自愈**：plainTextToSheetHtml 入口对 `&lt;tag…&gt;` 一层解码后再清洗——编辑器重开即修复显示，重存即净库（下游查看器不主动改写，以编辑器重存为准）
+2. style 白名单补 text-decoration-line/text-decoration-style
+3. effect 回声免疫：外部值与 lastReported **双方先过 plainTextToSheetHtml 再比较**，自己上报的原始 innerHTML 回声不再触发覆盖
+4. selectionchange 持续缓存编辑器内非折叠选区 + exec/insert 前 focusEditor 恢复；ColorPicker 改 children 直触发（一层弹窗）
+5. insertHtmlAtCaret 统一上报（表格/图片插入即同步）
+
+### 关联
+- 提交：fix+docs 两个 commit；纯前端（vite dev 5173 刷新即生效，无需重启）
+- QA：tsc 通过；六场景用例（加粗回显/删除线保留/双转义自愈/回显幂等/老纯文本+脏行/危险拦截）全过
 
 ---
 
