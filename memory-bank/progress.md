@@ -1,9 +1,16 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-26（D-171续 资料单打印BOM列对齐+备注过滤日志）
+> 最后更新：2026-08-28（D-190 扫码历史回归+待裁剪守卫+采购封面+品类中文）
 
 ## 已完成
+
+### 2026-08-28 D-190 扫码历史图/交期回归+待裁剪待办面料守卫+采购详情封面+品类中文四连修 ✅（已推送；后端需重启）
+
+- [x] 样衣扫码历史：后端注入款式封面+交期（PatternProductionController.myPatternScanHistory），前端 HistoryHandler 透传 deliveryDateStr
+- [x] 待裁剪待办：CuttingTaskOrchestrator.getMyTasks 未领取(pending)任务加 hasCuttingMaterialReady 过滤，双路径待办自动同口径
+- [x] 采购详情：MaterialPurchaseOrchestratorHelper.listWithEnrichment 批量注入款式封面；小程序顶部卡条件渲染
+- [x] 品类中文：displayHelper.CATEGORY_LABEL 补齐 PC 全量枚举，scan/pattern+sample-development 两页本地映射收敛
 
 ### 2026-08-26 D-171续 资料单打印物料清单修正 ✅（已推送 7e6593e24）
 

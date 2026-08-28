@@ -1,7 +1,28 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-189 样衣报工数量逻辑根治+扫码页重排）
+> 最后更新：2026-08-28（新增 D-190 扫码历史图/交期回归+待裁剪待办面料守卫+采购详情封面+品类中文四连修）
+
+---
+
+## D-190：扫码历史图/交期回归+待裁剪待办面料守卫+采购详情封面+品类中文四连修（2026-08-28，用户"最近新款没图片与时间/面料没到齐怎么出现待裁剪/采购详情没款式图/品类显示英文SHIRT"）
+
+### 背景与根因
+1. **扫码历史缺图缺时间**：新款式条目走的是**样衣扫码链路**（/api/production/pattern/scan-records/my-history），该接口从不返回图片字段，且把款号当 orderNo 去匹配生产订单交期必然匹配不上——不是"被砍了"，是样衣链路从未有过；生产扫码链路（PO 单）一直正常
+2. **待裁剪待办误现**：裁剪任务下单即预创建（status=pending），getMyTasks 把 pending 任务原样当待办返回，hasCuttingMaterialReady 守卫只挂在"领取任务/生成裁剪单"两个动作点，不挂在待办查询点
+3. **采购详情无图**：顶部是写死的 icon-package 占位，模板从未绑定图片；后端 listWithEnrichment 也不返回款式封面
+4. **品类英文**：displayHelper.CATEGORY_LABEL 只有女装/男装维度 11 条，缺 SHIRT/连衣裙等款式维度；未命中回退原值直接漏出英文
+
+### 决策与实现
+1. 样衣扫码历史：后端批量查 StyleInfo（styleNo→cover/deliveryDate）注入 coverImage/styleImage + deliveryDateStr（交期优先 PatternProduction.deliveryTime 兜底款式档案）；前端 _createNewGroup 透传 record.deliveryDateStr（交期行 wx:if 自动点亮）
+2. 待裁剪守卫：getMyTasks 单点修复——未领取(pending)任务必须 hasCuttingMaterialReady 才进待办，已领取(received)不受影响；PendingTaskOrchestrator/ProductionPendingCollector 两条待办路径都委托 getMyTasks，改一处即三端同口径
+3. 采购封面：MaterialPurchaseOrchestratorHelper 注入 StyleInfoService，listWithEnrichment 批量注入 styleImage/coverImage（失败不阻断）；前端顶部卡有图显示图、无图保留占位图标
+4. 品类映射：displayHelper.CATEGORY_LABEL 对齐 PC styleCategory.ts 全量 38 条；scan/pattern 详情、sample-development 列表/详情三处本地残缺映射统一收敛到 displayCategory
+
+### 教训
+- "功能被砍了"先分辨数据链路：同一页面不同来源（生产 vs 样衣）字段能力不同，用户看到的是混合列表
+- 守卫挂在动作点不够，列表/待办等"展示点"也要同口径，否则用户在动作前就被误导
+- 多端字段映射必须以单一权威表为准（PC styleCategory.ts），本地副本必然漂移
 
 ---
 
