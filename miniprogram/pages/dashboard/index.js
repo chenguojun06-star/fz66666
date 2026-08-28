@@ -2,7 +2,7 @@
  * 进度看板 — 老板/管理者移动端生产关键指标总览
  *
  * 顶部：4 张摘要卡片（样衣/生产/入库/出库）
- * 中部：状态过滤条（全部/生产中/入库/已完成）
+ * 中部：状态过滤条（全部/生产中/已完成/延期）——全部=所有订单，与 totalOrders 计数同口径
  * 底部：完整订单列表（带封面图、工序进度明细、颜色尺码矩阵，可展开收起）
  *
  * 数据来源：
@@ -23,7 +23,7 @@ const app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
 const STATUS_FILTERS = [
-  { key: 'all',           label: '进行中', value: '' },
+  { key: 'all',           label: '全部',   value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
   { key: 'completed',     label: '已完成', value: 'completed' },
   { key: 'overdue',       label: '延期',   value: '' },
@@ -157,7 +157,7 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      const params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
+      const params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize };
       if (isOverdue) {
         params.status = 'production';
       } else if (filterVal) {
@@ -172,15 +172,6 @@ Page({
       if (isOverdue) {
         const filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-overdue';
-        });
-        that.setData({ 'orders.list': filtered });
-      }
-      // D-184：进行中 tab 客户端兜底过滤终态订单（已完成/已关单/已取消/已报废不出现），
-      // 防御旧版云端后端忽略 excludeTerminal 参数
-      if (activeKey === 'all') {
-        const TERMINAL = ['completed', 'closed', 'archived', 'cancelled', 'canceled', 'scrapped'];
-        const filtered = (that.data.orders.list || []).filter(function (o) {
-          return TERMINAL.indexOf(String(o.status || '').toLowerCase()) === -1;
         });
         that.setData({ 'orders.list': filtered });
       }
