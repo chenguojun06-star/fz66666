@@ -18,7 +18,7 @@
     <!-- ============ 1. 基本信息卡（设计稿：封面图 + 订单号 + 状态标签 + 行式信息 border-b 分隔） ============ -->
     <view class="detail-card">
       <view class="basic-header">
-        <image wx:if="{{styleCover}}" class="basic-cover" src="{{styleCover}}" mode="aspectFill" />
+        <image wx:if="{{styleCover}}" class="basic-cover" src="{{styleCover}}" mode="aspectFit" />
         <view wx:else class="basic-cover-placeholder">
           <view class="line-icon icon-shirt"></view>
         </view>
@@ -138,7 +138,7 @@
         </view>
         <view class="photo-grid-3">
           <image wx:for="{{latestRecord.imageList}}" wx:key="*this"
-                 class="defect-photo-img" src="{{item}}" mode="aspectFill"
+                 class="defect-photo-img" src="{{item}}" mode="aspectFit"
                  data-url="{{item}}" data-urls="{{latestRecord.imageList}}" bindtap="onPreviewImage" />
         </view>
       </view>
@@ -246,7 +246,7 @@
               <view class="qc-form-col-full"><text class="qc-form-label">不良品照片（可选，最多 5 张）</text>
                 <view class="upload-grid">
                   <view wx:for="{{qcSheetData.imageUrls}}" wx:key="*this" class="upload-item">
-                    <image class="upload-img" src="{{item}}" mode="aspectFill" data-index="{{index}}" data-url="{{item}}" data-urls="{{qcSheetData.imageUrls}}" bindtap="onQcImagePreview" />
+                    <image class="upload-img" src="{{item}}" mode="aspectFit" data-index="{{index}}" data-url="{{item}}" data-urls="{{qcSheetData.imageUrls}}" bindtap="onQcImagePreview" />
                     <view class="upload-remove" data-index="{{index}}" bindtap="onQcImageRemove">x</view>
                   </view>
                   <view wx:if="{{qcSheetData.imageUrls.length < 5}}" class="upload-add" bindtap="onQcImageAdd">
@@ -350,7 +350,7 @@
             <view class="qc-photos-title">不良品照片 ({{item.imageList.length}})</view>
             <view class="photo-grid-3">
               <image wx:for="{{item.imageList}}" wx:for-item="imgUrl" wx:key="*this"
-                     class="defect-photo-img" src="{{imgUrl}}" mode="aspectFill"
+                     class="defect-photo-img" src="{{imgUrl}}" mode="aspectFit"
                      data-url="{{imgUrl}}" data-urls="{{item.imageList}}" bindtap="onPreviewImage" />
             </view>
           </view>
@@ -365,18 +365,34 @@
                 <view class="wh-form-info-row"><text class="wh-form-info-label">合格数量</text><text class="wh-form-info-value wh-form-info-strong">{{whSheetData.qualifiedQty}}</text></view>
               </view>
               <view class="wh-form-divider"></view>
-              <view class="wh-form-row">
-                <view class="wh-form-col-full"><text class="wh-form-label">仓库</text>
-                  <picker class="wh-form-picker" mode="selector" range="{{warehouseOptions}}" range-key="name" bindchange="onWarehouseChange">
-                    <view class="picker-value {{whSheetData.warehouseAreaId ? '' : 'picker-placeholder'}}">{{whSheetData.warehouseAreaName || '请选择仓库'}}</view>
-                  </picker>
+              <!-- D-185：仓库/库位页面内直选（对齐样衣仓库页 chips 风格），废弃底部 picker 弹窗 -->
+              <view class="wh-form-col-full">
+                <text class="wh-form-label">选择仓库：</text>
+                <view class="wh-chip-row">
+                  <view
+                    wx:for="{{warehouseOptions}}"
+                    wx:key="id"
+                    class="wh-chip {{whSheetData.warehouseAreaId === item.id ? 'wh-chip--active' : ''}}"
+                    data-id="{{item.id}}"
+                    bindtap="onWarehouseChipTap"
+                    hover-class="wh-chip--hover"
+                  >{{item.name}}</view>
+                  <text wx:if="{{warehouseOptions.length === 0}}" class="wh-chip-empty">暂无可用仓库</text>
                 </view>
               </view>
-              <view class="wh-form-row">
-                <view class="wh-form-col-full"><text class="wh-form-label">库位</text>
-                  <picker class="wh-form-picker" mode="selector" range="{{locationOptions}}" range-key="name" bindchange="onLocationChange" disabled="{{!whSheetData.warehouseAreaId}}">
-                    <view class="picker-value {{whSheetData.warehouseLocationCode ? '' : 'picker-placeholder'}}">{{whSheetData.warehouseLocationCode || '请先选择仓库'}}</view>
-                  </picker>
+              <view class="wh-form-col-full" wx:if="{{whSheetData.warehouseAreaId}}">
+                <text class="wh-form-label">选择库位（已用/容量）：</text>
+                <view class="wh-chip-row">
+                  <view
+                    wx:for="{{locationOptions}}"
+                    wx:key="code"
+                    class="wh-chip wh-chip--loc {{whSheetData.warehouseLocationCode === item.code ? 'wh-chip--active' : ''}} {{item.isFull ? 'wh-chip--full' : ''}}"
+                    data-code="{{item.code}}"
+                    data-full="{{item.isFull}}"
+                    bindtap="onLocationChipTap"
+                    hover-class="wh-chip--hover"
+                  >{{item.label}}<text wx:if="{{item.capacityText}}" class="wh-chip-qty">{{item.capacityText}}</text></view>
+                  <text wx:if="{{locationOptions.length === 0}}" class="wh-chip-empty">该仓库暂无库位</text>
                 </view>
               </view>
               <view class="wh-form-actions">

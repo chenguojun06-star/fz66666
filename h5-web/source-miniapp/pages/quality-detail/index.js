@@ -1006,7 +1006,7 @@ Page({
         recordId: record.id,
         warehousingNo: record.warehousingNo || '',
         qualifiedQty: Number(record.qualifiedQuantity || 0),
-        bundleNo: record.bundleNo || '',
+        bundleNo: this._truncateBundleNo(record.bundleNo || record.bundleQrCode || '', record.orderNo || this.data.orderNo),
         warehouseAreaId: '',
         warehouseAreaName: '',
         warehouseLocationCode: '',
@@ -1076,6 +1076,8 @@ Page({
           return {
             code: code,
             name: (code || item.locationName || item.name || '-') + qty,
+            label: code || item.locationName || item.name || '-',
+            capacityText: qty,
             isFull: isFull,
           };
         });
@@ -1084,6 +1086,33 @@ Page({
       .catch(function (err) {
         console.warn('[QualityDetail] loadLocationOptions failed:', err);
       });
+  },
+
+  // D-185：仓库 chip 直选（页面内选，替代底部 picker 弹窗）
+  onWarehouseChipTap: function (e) {
+    var id = e.currentTarget.dataset.id;
+    var opt = (this.data.warehouseOptions || []).filter(function (o) { return String(o.id) === String(id); })[0];
+    if (!opt) return;
+    if (String(this.data.whSheetData.warehouseAreaId) === String(opt.id)) return;
+    this.setData({
+      'whSheetData.warehouseAreaId': opt.id,
+      'whSheetData.warehouseAreaName': opt.name,
+      'whSheetData.warehouseLocationCode': '',
+      locationOptions: [],
+    });
+    this._loadLocationOptions(opt.id);
+  },
+
+  // D-185：库位 chip 直选，满库位拦截
+  onLocationChipTap: function (e) {
+    var code = e.currentTarget.dataset.code;
+    var isFull = e.currentTarget.dataset.full === true || e.currentTarget.dataset.full === 'true';
+    if (isFull) {
+      toast.error('该库位已满，请选择其他库位');
+      return;
+    }
+    if (!code) return;
+    this.setData({ 'whSheetData.warehouseLocationCode': code });
   },
 
   onLocationChange: function (e) {

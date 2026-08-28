@@ -24,7 +24,8 @@
     <view class="group-body">
       <view wx:if="{{detail.bundleNo}}" class="group-field-row">
         <text class="group-field-label">菲号</text>
-        <text class="group-field-value">{{detail.bundleNo}}</text>
+        <!-- D-185：展示短版菲号，长按复制完整编号 -->
+        <text class="group-field-value" bindlongpress="onCopyFullBundleNo" data-full="{{detail.bundleNo}}">{{detail.bundleNoDisplay || detail.bundleNo}}</text>
       </view>
       <view wx:if="{{detail.color}}" class="group-field-row">
         <text class="group-field-label">颜色</text>
@@ -56,7 +57,7 @@
     </view>
     <view class="group-body style-body">
       <view class="style-header">
-        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFit" />
         <view class="style-header-info">
           <text class="style-header-name">{{detail.styleNo || detail.orderNo || '-'}}</text>
           <text class="style-header-sub" wx:if="{{detail.orderNo}}">{{detail.orderNo}}</text>
@@ -105,6 +106,37 @@
         <text class="group-field-value">{{productionHints.secondaryProcessText}}</text>
       </view>
     </view>
+  </view>
+
+  <!-- D-185：尺寸表（质检对照标准尺寸，当前码数列高亮） -->
+  <view wx:if="{{sizeSpec}}" class="group-section">
+    <view class="group-header">
+      <text class="group-header-title">尺寸表</text>
+      <text wx:if="{{sizeSpec.currentIdx >= 0}}" class="group-header-sub">已高亮当前码数</text>
+    </view>
+    <scroll-view scroll-x class="size-spec-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="size-spec-table">
+        <view class="ss-row ss-row--head">
+          <text class="ss-cell ss-cell--part">部位</text>
+          <text
+            wx:for="{{sizeSpec.sizeCols}}"
+            wx:for-index="colIdx"
+            wx:key="*this"
+            class="ss-cell ss-cell--head {{colIdx === sizeSpec.currentIdx ? 'ss-cell--cur' : ''}}"
+          >{{item}}</text>
+        </view>
+        <view class="ss-row" wx:for="{{sizeSpec.rows}}" wx:for-item="row" wx:key="part">
+          <text class="ss-cell ss-cell--part">{{row.part}}</text>
+          <text
+            wx:for="{{row.values}}"
+            wx:for-item="val"
+            wx:for-index="colIdx"
+            wx:key="*this"
+            class="ss-cell {{colIdx === sizeSpec.currentIdx ? 'ss-cell--cur' : ''}}"
+          >{{val}}</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 
   <!-- 菲号工序进度（保留生产功能） -->

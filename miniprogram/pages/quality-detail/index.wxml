@@ -365,18 +365,34 @@
                 <view class="wh-form-info-row"><text class="wh-form-info-label">合格数量</text><text class="wh-form-info-value wh-form-info-strong">{{whSheetData.qualifiedQty}}</text></view>
               </view>
               <view class="wh-form-divider"></view>
-              <view class="wh-form-row">
-                <view class="wh-form-col-full"><text class="wh-form-label">仓库</text>
-                  <picker class="wh-form-picker" mode="selector" range="{{warehouseOptions}}" range-key="name" bindchange="onWarehouseChange">
-                    <view class="picker-value {{whSheetData.warehouseAreaId ? '' : 'picker-placeholder'}}">{{whSheetData.warehouseAreaName || '请选择仓库'}}</view>
-                  </picker>
+              <!-- D-185：仓库/库位页面内直选（对齐样衣仓库页 chips 风格），废弃底部 picker 弹窗 -->
+              <view class="wh-form-col-full">
+                <text class="wh-form-label">选择仓库：</text>
+                <view class="wh-chip-row">
+                  <view
+                    wx:for="{{warehouseOptions}}"
+                    wx:key="id"
+                    class="wh-chip {{whSheetData.warehouseAreaId === item.id ? 'wh-chip--active' : ''}}"
+                    data-id="{{item.id}}"
+                    bindtap="onWarehouseChipTap"
+                    hover-class="wh-chip--hover"
+                  >{{item.name}}</view>
+                  <text wx:if="{{warehouseOptions.length === 0}}" class="wh-chip-empty">暂无可用仓库</text>
                 </view>
               </view>
-              <view class="wh-form-row">
-                <view class="wh-form-col-full"><text class="wh-form-label">库位</text>
-                  <picker class="wh-form-picker" mode="selector" range="{{locationOptions}}" range-key="name" bindchange="onLocationChange" disabled="{{!whSheetData.warehouseAreaId}}">
-                    <view class="picker-value {{whSheetData.warehouseLocationCode ? '' : 'picker-placeholder'}}">{{whSheetData.warehouseLocationCode || '请先选择仓库'}}</view>
-                  </picker>
+              <view class="wh-form-col-full" wx:if="{{whSheetData.warehouseAreaId}}">
+                <text class="wh-form-label">选择库位（已用/容量）：</text>
+                <view class="wh-chip-row">
+                  <view
+                    wx:for="{{locationOptions}}"
+                    wx:key="code"
+                    class="wh-chip wh-chip--loc {{whSheetData.warehouseLocationCode === item.code ? 'wh-chip--active' : ''}} {{item.isFull ? 'wh-chip--full' : ''}}"
+                    data-code="{{item.code}}"
+                    data-full="{{item.isFull}}"
+                    bindtap="onLocationChipTap"
+                    hover-class="wh-chip--hover"
+                  >{{item.label}}<text wx:if="{{item.capacityText}}" class="wh-chip-qty">{{item.capacityText}}</text></view>
+                  <text wx:if="{{locationOptions.length === 0}}" class="wh-chip-empty">该仓库暂无库位</text>
                 </view>
               </view>
               <view class="wh-form-actions">

@@ -118,6 +118,8 @@ Page({
         styleNo: raw.styleNo || orderDetail.styleNo || '',
         orderNo: raw.orderNo || '',
         bundleNo: bundleNo,
+        // D-185：菲号展示用短版（QR 内容可能超长），长按可复制完整号
+        bundleNoDisplay: this._shortBundleNo(bundleNo, raw.orderNo || ''),
         processName: normalizeProcessName(raw.processName || ''),
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
@@ -295,9 +297,87 @@ Page({
         patch.imageInsight = styleInfo.imageInsight;
       }
       this.setData(patch);
+
+      // D-185：尺寸表——质检对照标准尺寸，当前码数列高亮
+      try {
+        const sizeRes = await api.style.listSizes({ styleId: styleId });
+        const sizeList = (sizeRes && sizeRes.data) || sizeRes || [];
+        const sizeSpec = this._buildSizeSpec(Array.isArray(sizeList) ? sizeList : (sizeList.records || []), this.data.detail.size);
+        if (sizeSpec) this.setData({ sizeSpec: sizeSpec });
+      } catch (szErr) {
+        console.warn('[scan-result] 加载尺寸表失败:', szErr);
+      }
     } catch (e) {
       console.warn('[scan-result] 加载生产提示失败:', e);
     }
+  },
+
+  // D-185：长按菲号复制完整编号
+  onCopyFullBundleNo(e) {
+    const full = (e.currentTarget.dataset && e.currentTarget.dataset.full) || '';
+    if (!full) return;
+    wx.setClipboardData({
+      data: full,
+      success: function () {
+        wx.showToast({ title: '完整菲号已复制', icon: 'none' });
+      },
+    });
+  },
+
+  // D-185：菲号短版展示——QR 内容形如 "orderNo|xxx-序号|..."，截取可读段
+  _shortBundleNo(bundleNo, orderNo) {
+    if (!bundleNo) return '';
+    const t = String(bundleNo).split('|')[0].trim();
+    if (!t) return '';
+    if (orderNo && t.indexOf(orderNo) === 0 && t.length <= orderNo.length + 8) return t;
+    const parts = t.split('-');
+    const seq = parts[parts.length - 1] || '';
+    if (orderNo && seq) return orderNo + '-' + seq;
+    if (t.length > 24) return t.slice(0, 24) + '…';
+    return t;
+  },
+
+  // D-185：尺寸表透视——行=部位、列=尺码，当前码数列高亮
+  _buildSizeSpec(rawList, currentSize) {
+    if (!Array.isArray(rawList) || rawList.length === 0) return null;
+    const sizeSeen = {};
+    const sizeCols = [];
+    rawList.forEach(function (it) {
+      const sz = (it && (it.sizeName || it.baseSize)) || '';
+      if (sz && !sizeSeen[sz]) { sizeSeen[sz] = true; sizeCols.push(sz); }
+    });
+    if (sizeCols.length === 0) return null;
+    const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '3XL', '4XL', '5XL', 'F', 'OS'];
+    sizeCols.sort(function (a, b) {
+      const ia = sizeOrder.indexOf(String(a).toUpperCase());
+      const ib = sizeOrder.indexOf(String(b).toUpperCase());
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return String(a).localeCompare(String(b));
+    });
+    const partSeen = {};
+    const parts = [];
+    rawList.forEach(function (it) {
+      const p = (it && (it.partName || it.part)) || '';
+      if (p && !partSeen[p]) { partSeen[p] = true; parts.push(p); }
+    });
+    const valueMap = {};
+    rawList.forEach(function (it) {
+      const p = (it && (it.partName || it.part)) || '';
+      const sz = (it && (it.sizeName || it.baseSize)) || '';
+      if (p && sz) {
+        valueMap[p + '|' + sz] = it.standardValue != null ? it.standardValue : (it.value != null ? it.value : '-');
+      }
+    });
+    const rows = parts.map(function (p) {
+      return {
+        part: p,
+        values: sizeCols.map(function (sz) { return valueMap[p + '|' + sz] || '-'; }),
+      };
+    });
+    const currentIdx = currentSize ? sizeCols.indexOf(currentSize) : -1;
+    return { sizeCols: sizeCols, rows: rows, currentIdx: currentIdx };
   },
 
   _difficultySeverity(score) {

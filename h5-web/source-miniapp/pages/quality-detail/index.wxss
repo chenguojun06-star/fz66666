@@ -62,7 +62,7 @@
 /* 卡片基础 */
 .detail-card {
   margin: 0 0 12px 0;
-  padding: 12px;
+  padding: 14px;
   background: #fff;
   border: 1px solid var(--color-border, #e8e8e8);
   border-radius: var(--radius-xl);
@@ -313,7 +313,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 .overview-card--primary { border-top: 6rpx solid var(--color-primary, #165DFF); }
@@ -470,7 +470,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 .qc-form-info-row,
@@ -640,7 +640,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
@@ -972,3 +972,45 @@
 .line-icon--xl { width: 64rpx; height: 64rpx; }
 .icon-alert::before { content: '!'; font-size: 48rpx; color: var(--color-text-tertiary, #999); }
 .icon-shirt::before { content: '衫'; font-size: 40rpx; color: var(--color-text-tertiary, #999); }
+
+/* ═══ D-185：仓库/库位页面内直选 chips（对齐样衣仓库页风格） ═══ */
+.wh-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+.wh-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 24rpx;
+  border-radius: var(--radius-full, 999rpx);
+  font-size: var(--font-size-sm, 13px);
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-page, #f7f8fa);
+  color: var(--color-text-primary, #1f2937);
+}
+.wh-chip--hover {
+  opacity: 0.7;
+}
+.wh-chip--active {
+  background: var(--color-primary, #2d7ff9);
+  border-color: var(--color-primary, #2d7ff9);
+  color: var(--color-text-white, #fff);
+  font-weight: 600;
+}
+.wh-chip--loc.wh-chip--full {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.wh-chip-qty {
+  margin-left: 6rpx;
+  font-size: var(--font-size-2xs, 10px);
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.wh-chip-empty {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #999);
+  padding: 8rpx 0;
+}

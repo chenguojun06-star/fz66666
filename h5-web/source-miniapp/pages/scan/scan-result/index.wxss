@@ -470,3 +470,51 @@
   font-weight: 600;
   color: var(--color-text-primary);
 }
+
+/* ═══ D-185：尺寸表（横滚 + 当前码数列高亮） ═══ */
+.size-spec-scroll {
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+.size-spec-table {
+  min-width: 100%;
+  display: inline-block;
+}
+.ss-row {
+  display: flex;
+  border-bottom: 1rpx solid var(--color-border, #e5e7eb);
+}
+.ss-row:last-child {
+  border-bottom: none;
+}
+.ss-row--head {
+  background: var(--color-bg-page, #f7f8fa);
+}
+.ss-cell {
+  flex: 0 0 auto;
+  min-width: 110rpx;
+  padding: 12rpx 14rpx;
+  text-align: center;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-primary, #1f2937);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ss-cell--part {
+  min-width: 130rpx;
+  text-align: left;
+  color: var(--color-text-secondary, #6b7280);
+}
+.ss-cell--head {
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+}
+.ss-cell--cur {
+  background: var(--color-primary-bg, rgba(45, 127, 249, 0.08));
+  color: var(--color-primary, #2d7ff9);
+  font-weight: 600;
+}
+.group-header-sub {
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-tertiary, #999);
+}
