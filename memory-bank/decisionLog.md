@@ -1,7 +1,28 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-186 大货扫码误入样衣链路根治）
+> 最后更新：2026-08-28（新增 D-187 生产制单→工艺说明富文本化）
+
+---
+
+## D-187：生产制单→工艺说明富文本化（2026-08-28，用户"制单为什么有备注信息/一行一行的，要像正常文档，改名工艺说明，样衣开发做好下游只读"）
+
+### 背景与根因
+1. 制单 Tab 固定 15 行表格：内容按 \n 拆行塞表格，不足 15 行铺空行——UI 形态错误
+2. 脏数据：`style.description` 烙着历史日志行（D-069 前系统 append 的 `[日期] 人 BOM库存检查：…`），8月9日存量数据仍在；D-069 已改写 t_style_operation_log，但存量未清
+3. 数据形态：description 已是轻量 HTML（图片内嵌），下游多处按纯文本拆行渲染，新数据会裸露 HTML
+
+### 决策
+1. **改名**：内容展示处统一叫"工艺说明"（质检详情 Tab/入库独立详情/订单流转 Tab/样衣开发编辑器+Tab+阶段名/OCR 按钮/保存提示/数据中心详情/维护中心标签）；"生产制单"保留给单据实体（打印文档名/数据中心模块/推送阶段/附件命名）
+2. **编辑器**（ProductionRequirementsSection）：图二样式工具栏——撤销/重做/段落标题/BIU删除线/字色底色/四向对齐/缩进/列表/清除格式/插表格/插图/全屏；document.execCommand+styleWithCSS，仍存轻量 HTML 进 description，保存链路不变
+3. **下游只读**：新共享组件 SheetRichViewer（dangerouslySetInnerHTML 前走白名单清洗），替换全部行表格；打印 buildProductionSheetHtml 同清洗器同源
+4. **清洗器**（sheetRichText.ts）：标签白名单（b/i/u/s/p/div/h1-h4/ul/ol/li/table 系/span/font/blockquote）+ style 属性白名单（text-align/color/background 等，禁 url()/expression()/position）+ 剥历史日志脏行（行首 `[YYYY-MM-DD HH:MM(:SS)]` 整行丢弃）
+5. **手机端**：stage-detail 改名+rich-text 渲染（buildSheetRichHtml 剥脏行+危险标签）；scan-result 工艺提示剥标签转纯文本（防 HTML 裸露）
+6. 维护中心仍是纯文本 TextArea（数据修正工具，编辑 HTML 属可接受例外）
+
+### 关联
+- 提交：971b570b0（25 文件，三副本同步）；纯前端+小程序，无需重启后端
+- 用户验收点：质检详情工艺说明 Tab 图文文档化、编辑器工具栏、脏行消失、打印保格式
 
 ---
 
