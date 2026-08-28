@@ -475,3 +475,16 @@
 .mf-input--manual {
   font-size: var(--font-size-sm);
 }
+
+/* D-192：单价口径说明 */
+.page-hint {
+  margin: 0 24rpx 16rpx;
+  padding: 12rpx 20rpx;
+  background: var(--color-bg-subtle, #f7f8fa);
+  border-radius: var(--radius-sm, 6px);
+}
+.page-hint-text {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary, #86909c);
+  line-height: 1.5;
+}

@@ -6,6 +6,10 @@
     <text class="oib-style" wx:if="{{styleNo}}">{{styleNo}}</text>
     <text class="order-status {{statusClass}}">{{statusCn}}</text>
   </view>
+  <!-- D-192：单价口径说明——工序单价即该工序计件工资单价 -->
+  <view class="page-hint" wx:if="{{!loading}}">
+    <text class="page-hint-text">工序单价 = 该工序计件工资单价；裁剪按菲号计件，工资 = 裁剪单价 × 件数。采购/入库已独立为采购、仓库模块，不在生产工序内。</text>
+  </view>
 
   <!-- 加载中 -->
   <view class="loading-box" wx:if="{{loading}}">
