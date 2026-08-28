@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { displayCategory } = require('../../../utils/displayHelper');
 const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
@@ -275,17 +276,6 @@ function getPatternStatusLabel(status) {
   var upper = String(status).trim().toUpperCase();
   return PATTERN_STATUS_MAP[upper] || LOCAL_STATUS_FALLBACK[upper] || status;
 }
-
-const CATEGORY_MAP = {
-  WOMAN: '女装',
-  WOMEN: '女装',
-  MAN: '男装',
-  MEN: '男装',
-  KID: '童装',
-  KIDS: '童装',
-  WCMAN: '女童装',
-  UNISEX: '男女同款',
-};
 
 const SEASON_MAP = {
   SPRING: '春季',
@@ -603,7 +593,7 @@ Page({
           var merchandiser = item.merchandiser || item.merchandiserName || si.merchandiser || '';
           if (merchandiser) meta1Parts.push('跟单: ' + merchandiser);
           var category = item.category || si.category || '';
-          if (category && CATEGORY_MAP[category]) category = CATEGORY_MAP[category];
+          category = displayCategory(category);
           if (category) meta1Parts.push(category);
           var season = item.season || si.season || '';
           if (season && SEASON_MAP[season]) season = SEASON_MAP[season];

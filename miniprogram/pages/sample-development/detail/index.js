@@ -5,6 +5,7 @@ const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName, resolveStageKey } = require('../../../utils/sampleHelper');
 const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
+const { displayCategory } = require('../../../utils/displayHelper');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -30,17 +31,6 @@ const AVATAR_COLORS = [
   'var(--color-warning)',
   'var(--color-purple)',
 ];
-
-const CATEGORY_MAP = {
-  WOMAN: '女装',
-  WOMEN: '女装',
-  MAN: '男装',
-  MEN: '男装',
-  KID: '童装',
-  KIDS: '童装',
-  WCMAN: '女童装',
-  UNISEX: '男女同款',
-};
 
 const SEASON_MAP = {
   SPRING: '春季',
@@ -590,8 +580,7 @@ Page({
     if (info.merchandiser || info.merchandiserName || info.orderType) {
       parts.push('跟单: ' + (info.merchandiser || info.merchandiserName || info.orderType));
     }
-    let category = info.category;
-    if (category && CATEGORY_MAP[category]) category = CATEGORY_MAP[category];
+    let category = displayCategory(info.category);
     if (category) parts.push(category);
     let season = info.season;
     if (season && SEASON_MAP[season]) season = SEASON_MAP[season];

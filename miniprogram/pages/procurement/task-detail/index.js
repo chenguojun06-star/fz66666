@@ -73,6 +73,7 @@ Page({
     patternProductionId: '',
     sourceType: '',
     styleNo: '',
+    styleImage: '',
     isSampleMode: false,
     loading: false,
     submitting: false,
@@ -234,6 +235,7 @@ Page({
         orderId, materialPurchases, loading: false,
         overallArrivalRate, canConfirmProcurement, hasReturnConfirmed,
         overallStatus, overallStatusColor, overallStatusText,
+        styleImage: getAuthedImageUrl((materialPurchases[0] && (materialPurchases[0].styleImage || materialPurchases[0].coverImage)) || ''),
       });
     } catch (e) {
       console.error('加载采购详情失败:', e);

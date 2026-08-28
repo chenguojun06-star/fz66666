@@ -581,6 +581,21 @@ public class PatternProductionController {
                         productionMap.put(p.getId(), p));
             }
 
+            // 批量查款式封面与交板日期，供扫码历史卡片补图片/时间（与 CuttingTaskOrchestrator.injectStyleCover 同模式）
+            java.util.Set<String> historyStyleNos = records.stream()
+                    .map(PatternScanRecord::getStyleNo)
+                    .filter(StringUtils::hasText)
+                    .collect(java.util.stream.Collectors.toSet());
+            java.util.Map<String, StyleInfo> styleInfoMap = new HashMap<>();
+            if (!historyStyleNos.isEmpty()) {
+                styleInfoService.lambdaQuery()
+                        .select(StyleInfo::getStyleNo, StyleInfo::getCover, StyleInfo::getDeliveryDate)
+                        .in(StyleInfo::getStyleNo, historyStyleNos)
+                        .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                        .list()
+                        .forEach(s -> styleInfoMap.putIfAbsent(s.getStyleNo(), s));
+            }
+
             List<Map<String, Object>> result = records.stream().map(r -> {
                 Map<String, Object> item = new HashMap<>();
                 item.put("id", r.getId());
@@ -624,6 +639,19 @@ public class PatternProductionController {
                 item.put("patternProductionId", r.getPatternProductionId());
                 item.put("orderId", pp != null ? pp.getId() : null);
                 item.put("orderNo", r.getStyleNo());
+
+                // 款式封面图 + 交期（交期优先样衣生产任务交板时间，兜底款式档案交板日期）
+                StyleInfo si = StringUtils.hasText(r.getStyleNo()) ? styleInfoMap.get(r.getStyleNo()) : null;
+                if (si != null && StringUtils.hasText(si.getCover())) {
+                    item.put("coverImage", si.getCover());
+                    item.put("styleImage", si.getCover());
+                }
+                java.time.LocalDateTime delivery = pp != null && pp.getDeliveryTime() != null
+                        ? pp.getDeliveryTime()
+                        : (si != null ? si.getDeliveryDate() : null);
+                if (delivery != null) {
+                    item.put("deliveryDateStr", delivery.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                }
                 return item;
             }).collect(Collectors.toList());
 

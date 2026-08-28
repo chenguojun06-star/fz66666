@@ -277,6 +277,7 @@ const DEFECT_CATEGORY_LABEL = {
 
 /* ============== 款式类别（CATEGORY）映射 ============== */
 
+// 全量枚举对齐 PC 端 frontend/src/utils/styleCategory.ts（品类含款式维度，如 SHIRT=衬衫）
 const CATEGORY_LABEL = {
   WOMAN: '女装',
   WOMEN: '女装',
@@ -285,10 +286,37 @@ const CATEGORY_LABEL = {
   KID: '童装',
   KIDS: '童装',
   WCMAN: '女童装',
+  MCMAN: '男童装',
   UNISEX: '男女同款',
   SPORT: '运动装',
+  UNDERWEAR: '内衣',
   OUTDOOR: '户外装',
+  T_SHIRT: 'T恤',
+  SHIRT: '衬衫',
+  HOODIE: '卫衣',
+  SWEATER: '毛衣',
+  JACKET: '夹克',
+  COAT: '大衣',
+  TRENCH_COAT: '风衣',
+  DOWN_JACKET: '羽绒服',
+  PADDED_JACKET: '棉服',
+  SUIT: '西装',
+  VEST: '马甲',
+  DRESS: '连衣裙',
+  JUPE: '半身裙',
+  SHORTS: '短裤',
+  TROUSERS: '长裤',
+  JEANS: '牛仔裤',
+  CASUAL_PANTS: '休闲裤',
+  SWEATPANTS: '运动裤',
+  BASE_SHIRT: '打底衫',
+  BASE_PANTS: '打底裤',
+  YOGA_WEAR: '瑜伽服',
+  SUN_PROTECTION: '防晒服',
+  LOUNGEWEAR: '家居服',
   HOME: '家居服',
+  SWIMWEAR: '泳装',
+  WORKWEAR: '工作服',
 };
 
 /* ============== 季节（SEASON）映射 ============== */

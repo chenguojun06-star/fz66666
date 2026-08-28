@@ -48,6 +48,9 @@ public class MaterialPurchaseOrchestratorHelper {
     @Autowired
     private MaterialStockService materialStockService;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
     /* ========== 列表富化 ========== */
 
     /**
@@ -117,7 +120,48 @@ public class MaterialPurchaseOrchestratorHelper {
                     stockCache))
                 .collect(Collectors.toList());
 
+        // 批量注入款式封面图（采购详情/列表顶部卡片展示）
+        injectStyleCover(records, enrichedRecords, ctxTenantId);
+
         return buildPageResult(enrichedRecords, page);
+    }
+
+    /**
+     * 批量注入款式封面图（styleImage/coverImage）：按 styleNo 关联 StyleInfo.cover，
+     * 与 CuttingTaskOrchestrator.injectStyleCover 同模式。失败不阻断列表主流程。
+     */
+    private void injectStyleCover(List<MaterialPurchase> records,
+            List<Map<String, Object>> enrichedRecords, Long tenantId) {
+        if (tenantId == null) return;
+        Set<String> styleNos = records.stream()
+                .map(MaterialPurchase::getStyleNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (styleNos.isEmpty()) return;
+        try {
+            Map<String, String> styleNoToCover = styleInfoService.lambdaQuery()
+                    .select(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover)
+                    .in(com.fashion.supplychain.style.entity.StyleInfo::getStyleNo, styleNos)
+                    .eq(com.fashion.supplychain.style.entity.StyleInfo::getTenantId, tenantId)
+                    .list()
+                    .stream()
+                    .filter(s -> StringUtils.hasText(s.getStyleNo()) && StringUtils.hasText(s.getCover()))
+                    .collect(Collectors.toMap(
+                            com.fashion.supplychain.style.entity.StyleInfo::getStyleNo,
+                            com.fashion.supplychain.style.entity.StyleInfo::getCover,
+                            (v1, v2) -> v1));
+            if (styleNoToCover.isEmpty()) return;
+            for (int i = 0; i < enrichedRecords.size() && i < records.size(); i++) {
+                String cover = styleNoToCover.get(records.get(i).getStyleNo());
+                if (StringUtils.hasText(cover)) {
+                    enrichedRecords.get(i).put("styleImage", cover);
+                    enrichedRecords.get(i).put("coverImage", cover);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[采购列表] 款式封面注入失败(不阻断): {}", e.getMessage());
+        }
     }
 
     /**

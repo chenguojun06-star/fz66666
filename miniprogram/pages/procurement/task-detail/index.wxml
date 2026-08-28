@@ -18,7 +18,8 @@
       <view class="detail-card order-header">
         <view class="header-top">
           <view class="order-media">
-            <view class="media-placeholder line-icon icon-package"></view>
+            <image wx:if="{{styleImage}}" class="order-cover" src="{{styleImage}}" mode="aspectFit" lazy-load />
+            <view wx:else class="media-placeholder line-icon icon-package"></view>
           </view>
           <view class="header-title">
             <text class="order-no">{{isSampleMode ? '样衣采购' : orderNo}}</text>

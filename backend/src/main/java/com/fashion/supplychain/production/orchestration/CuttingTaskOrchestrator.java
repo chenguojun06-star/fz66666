@@ -524,20 +524,29 @@ public class CuttingTaskOrchestrator {
             return tasks;
         }
 
-        // P0 修复：校验订单归属当前租户
-        Set<String> validOrderIds = productionOrderService.lambdaQuery()
-            .select(ProductionOrder::getId)
+        // P0 修复：校验订单归属当前租户（同时取面料字段，供未领取任务的可裁确认过滤）
+        Map<String, ProductionOrder> validOrderMap = productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
+                        ProductionOrder::getMaterialArrivalRate, ProductionOrder::getProcurementManuallyCompleted)
                 .in(ProductionOrder::getId, orderIds)
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .list()
                 .stream()
-                .map(ProductionOrder::getId)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (v1, v2) -> v1));
 
         List<CuttingTask> result = tasks.stream()
-                .filter(task -> validOrderIds.contains(task.getProductionOrderId()))
+                .filter(task -> validOrderMap.containsKey(task.getProductionOrderId()))
+                // 面料未到齐/未做可裁确认时，未领取(pending)任务不进待办，避免"面料没到就催裁剪"
+                // （与领取任务/生成裁剪单两处守卫同口径）；已领取(received)任务照常返回
+                .filter(task -> {
+                    String status = task.getStatus() == null ? "" : task.getStatus().trim();
+                    if (!"pending".equals(status)) {
+                        return true;
+                    }
+                    return hasCuttingMaterialReady(validOrderMap.get(task.getProductionOrderId()), task);
+                })
                 .collect(Collectors.toList());
 
         // 注入款式图（coverImage/styleCover）供小程序通知卡片展示
