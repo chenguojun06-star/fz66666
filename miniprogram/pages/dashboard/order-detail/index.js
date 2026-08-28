@@ -723,6 +723,8 @@ Page({
     const params = [];
     if (order.id) params.push('orderId=' + encodeURIComponent(order.id));
     if (order.orderNo) params.push('orderNo=' + encodeURIComponent(order.orderNo));
+    // D-203：转单入口必须带 tab=transfer，落地页直开转单面板（与生产管理卡转单按钮同参），否则无菲号订单会落在裁剪分扎表单
+    params.push('tab=transfer');
     safeNavigate({ url: '/pages/cutting/bundle-detail/index?' + params.join('&') }).catch(function () {});
   },
 
