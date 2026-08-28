@@ -163,7 +163,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
               />
             </div>
           )},
-          { key: 'production', label: <span><StageDot completed={isStageCompleted('production')} inProgress={isStageInProgress('production')} />生产制单</span>, children: (
+          { key: 'production', label: <span><StageDot completed={isStageCompleted('production')} inProgress={isStageInProgress('production')} />工艺说明</span>, children: (
             <div style={tabContentStyle}>
               <StyleProductionTab
                 styleId={styleId}

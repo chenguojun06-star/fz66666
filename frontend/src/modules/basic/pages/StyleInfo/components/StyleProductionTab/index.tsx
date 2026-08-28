@@ -63,7 +63,7 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
     <div data-production-req>
       {/* 统一状态控制栏 */}
       <StyleStageControlBar
-        stageName="生产制单"
+        stageName="工艺说明"
         styleId={styleId}
         apiPath="production"
         styleNo={styleNo}

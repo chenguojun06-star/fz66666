@@ -1,6 +1,6 @@
 import React from 'react';
 import { Typography } from 'antd';
-import ResizableTable from '@/components/common/ResizableTable';
+import SheetRichViewer from '@/components/common/SheetRichViewer';
 import { formatDateTime } from '@/utils/datetime';
 
 const { Title } = Typography;
@@ -13,19 +13,15 @@ interface Props {
   reviewTime?: string;
 }
 
+/**
+ * 工艺说明 Tab（D-187 前叫"生产制单/生产要求"）：
+ * 只读展示样衣开发端编辑的富文本工艺说明（style.description），
+ * 历史日志脏行由 sheetRichText 统一剥离，不再按行拆表格。
+ */
 const ProductionSheetPanel: React.FC<Props> = ({
   description, reviewStatus, reviewComment, reviewer, reviewTime,
 }) => {
   const desc = String(description || '').trim();
-  if (!desc) {
-    return (
-      <div style={{ padding: '8px 0' }}>
-        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
-          暂无生产制单数据
-        </div>
-      </div>
-    );
-  }
 
   const status = String(reviewStatus || '').trim().toUpperCase();
   const comment = String(reviewComment || '').trim();
@@ -37,10 +33,6 @@ const ProductionSheetPanel: React.FC<Props> = ({
         : status === 'REJECT' ? '不通过'
           : status === 'PENDING' ? '待审核'
             : '';
-  const rawLines = desc.split(/\r?\n/).map(s => s.replace(/^\d+[.、\s]+/, '').trim()).filter(Boolean);
-  const fixedRows = Array.from({ length: Math.max(15, rawLines.length) }, (_, i) => ({
-    key: i, seq: i + 1, content: rawLines[i] || '',
-  }));
 
   return (
     <div style={{ padding: '8px 0' }}>
@@ -63,26 +55,8 @@ const ProductionSheetPanel: React.FC<Props> = ({
           {comment && <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>审核评语：{comment}</div>}
         </div>
       )}
-      <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
-      <ResizableTable
-        rowKey="key" pagination={false}
-        emptyDescription="暂无数据"
-        resizableColumns={false}
-        dataSource={fixedRows}
-        columns={[
-          {
-            title: '内容',
-            dataIndex: 'content',
-            key: 'content',
-            align: 'left' as const,
-            onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
-            onCell: () => ({ style: { textAlign: 'left' as const } }),
-            render: (text: string) => (
-              <span style={{ whiteSpace: 'pre-wrap', display: 'block', textAlign: 'left' }}>{text}</span>
-            ),
-          },
-        ]}
-      />
+      <Title level={5} style={{ marginBottom: 12 }}>工艺说明</Title>
+      <SheetRichViewer content={desc} />
     </div>
   );
 };

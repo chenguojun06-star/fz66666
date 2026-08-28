@@ -126,7 +126,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
     },
     {
       key: 'productionSheet',
-      label: '生产制单',
+      label: '工艺说明',
       children: (
         <ProductionSheetPanel
           description={style?.description || ''}

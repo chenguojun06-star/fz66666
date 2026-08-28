@@ -95,8 +95,8 @@ const TableModeView: React.FC<TableModeViewProps> = ({
         onCancel={() => { setEditModalVisible(false); editForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setEditModalVisible(false); editForm.resetFields(); }}>取消</Button><Button type="primary" loading={editSaving} onClick={handleEditSave}>保存</Button></Space>}>
         <Form form={editForm} layout="vertical">
-          <Form.Item name="description" label="生产要求/制单描述">
-            <TextArea rows={15} placeholder="请输入生产要求和制单描述信息&#10;示例：&#10;1. 面料：主面料用32支全棉平纹&#10;2. 颜色：藏蓝色（潘通色号19-4024）&#10;3. 缝制要求：1/4″四线包缝" />
+          <Form.Item name="description" label="工艺说明/制单描述">
+            <TextArea rows={15} placeholder="工艺说明由样衣开发端富文本编辑器维护（支持加粗/对齐/表格/图片的轻量HTML）&#10;此处仅供数据修正，普通文本将按行显示" />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -138,7 +138,7 @@ const TableModeView: React.FC<TableModeViewProps> = ({
                   <div><strong>维护人：</strong>{(detailRecord as any).updateBy || '-'}</div>
                 </div>
                 <div style={{ marginTop: 16 }}>
-                  <strong>生产要求：</strong>
+                  <strong>工艺说明：</strong>
                   <div style={{ whiteSpace: 'pre-wrap', marginTop: 8, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4, maxHeight: 200, overflowY: 'auto' }}>
                     {(detailRecord as any).description || '暂无'}
                   </div>

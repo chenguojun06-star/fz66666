@@ -35,6 +35,32 @@ function _unwrapList(res) {
   return [];
 }
 
+/**
+ * D-187 工艺说明轻量 HTML 清洗（供 rich-text 渲染）：
+ * - 剥历史日志脏行（D-069 前系统 append 进 description 的 "[日期] 人 操作：…" 行）
+ * - 剥 script/style/iframe 与 on* 事件属性（rich-text 本就不执行，双保险）
+ * - 老数据纯文本 \n→<br>；新数据轻量 HTML 原样保留排版标签
+ */
+const SHEET_LOG_LINE_RE = /^\s*[【[]\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?[】\]]\s/;
+function buildSheetRichHtml(raw) {
+  var s = String(raw || '');
+  if (!s) return '';
+  s = s
+    .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<\/?\s*(script|style|iframe|object|embed)[^>]*>/gi, '')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  var segments = s.split(/(<br\s*\/?>)/i);
+  var out = [];
+  for (var i = 0; i < segments.length; i++) {
+    if (/^<br/i.test(segments[i])) { out.push(segments[i]); continue; }
+    var cleaned = segments[i].split(/\r\n|\r|\n/).filter(function (line) {
+      return !SHEET_LOG_LINE_RE.test(line);
+    }).join('\n');
+    out.push(cleaned);
+  }
+  return out.join('');
+}
+
 // 二次工艺类型映射
 const PROCESS_TYPE_MAP = {
   embroidery: '绣花', printing: '印花', washing: '洗水',
@@ -1164,6 +1190,7 @@ Page({
           price: style.price || '',
           coverUrl: style.cover || '',
           description: style.description || '',
+          descriptionHtml: buildSheetRichHtml(style.description),
           sampleReview: reviewStatus ? {
             status: reviewStatus,
             statusText: reviewInfo.text,

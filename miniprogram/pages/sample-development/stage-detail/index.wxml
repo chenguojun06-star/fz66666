@@ -420,13 +420,13 @@
       </block>
     </block>
 
-    <!-- ══ ⑧ 生产制单（production / warehousing 阶段） ══ -->
+    <!-- ══ ⑧ 工艺说明（D-187 前叫生产制单，production / warehousing 阶段） ══ -->
     <block wx:if="{{stageKey === 'production' || stageKey === 'warehousing'}}">
       <view class="section-label">
-        <text class="sl-text">生产制单</text>
+        <text class="sl-text">工艺说明</text>
       </view>
       <view wx:if="{{!productionData}}" class="empty-state">
-        <text class="empty-text">暂无生产制单数据</text>
+        <text class="empty-text">暂无工艺说明数据</text>
       </view>
       <block wx:else>
         <!-- 封面 + 款式信息 -->
@@ -453,14 +453,16 @@
           </view>
         </view>
 
-        <!-- 生产要求 -->
+        <!-- 工艺说明（D-187：样衣开发端富文本，rich-text 渲染保排版+图片） -->
         <view class="data-card">
-          <view class="dc-header"><text class="dc-title">生产要求</text></view>
+          <view class="dc-header"><text class="dc-title">工艺说明</text></view>
           <view class="dc-body">
-            <block wx:if="{{productionData.description}}">
-              <text class="dc-text-block dc-requirement-text">{{productionData.description}}</text>
+            <block wx:if="{{productionData.descriptionHtml}}">
+              <view class="dc-text-block dc-requirement-text">
+                <rich-text nodes="{{productionData.descriptionHtml}}"></rich-text>
+              </view>
             </block>
-            <view wx:else class="empty-state compact"><text class="empty-text">暂无生产要求</text></view>
+            <view wx:else class="empty-state compact"><text class="empty-text">暂无工艺说明</text></view>
           </view>
         </view>
 

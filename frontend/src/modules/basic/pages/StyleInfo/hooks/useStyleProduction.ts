@@ -54,7 +54,7 @@ export function useStyleProduction({ currentStyle, fetchDetail, styleIdParam: _s
         category: currentStyle.category,
         description: content,
       });
-      message.success('生产制单保存成功');
+      message.success('工艺说明保存成功');
       fetchDetail(String(currentStyle.id));
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : '服务返回异常，请稍后重试';

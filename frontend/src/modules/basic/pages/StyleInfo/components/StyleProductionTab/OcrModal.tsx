@@ -127,8 +127,8 @@ const OcrModal: React.FC<Props> = ({
             style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 14, borderRadius: 6 }}
           />
           <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={onAppend}>追加到生产要求</Button>
-            <Button type="primary" onClick={onReplace}>替换生产要求</Button>
+            <Button onClick={onAppend}>追加到工艺说明</Button>
+            <Button type="primary" onClick={onReplace}>替换工艺说明</Button>
           </Space>
         </>
       )}

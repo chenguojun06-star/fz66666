@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Tabs, Spin, Button, Space, Tag } from 'antd';
 import { FileOutlined } from '@ant-design/icons';
-import ResizableTable from '@/components/common/ResizableTable';
+import SheetRichViewer from '@/components/common/SheetRichViewer';
 import type { StyleAttachment } from '@/types/style';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
@@ -159,48 +159,11 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
           },
           {
             key: 'production',
-            label: ' 生产制单',
+            label: ' 工艺说明',
             children: (
               <Card style={{ marginBottom: 16 }}>
                 <Spin spinning={loading}>
-                  {productionReq ? (
-                    (() => {
-                      // 与打印组件一致：拆分成多行并格式化
-                      const lines = productionReq
-                        .split(/\r?\n/)
-                        .map(l => String(l || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim())
-                        .filter(l => Boolean(l));
-
-                      return (
-                        <ResizableTable
-                          storageKey="style-pattern-requirements"
-                          emptyDescription="暂无数据"
-                          pagination={false}
-                          dataSource={lines.map((line, idx) => ({
-                            key: idx,
-                            content: line
-                          }))}
-                          columns={[
-                            {
-                              title: '生产要求',
-                              dataIndex: 'content',
-                              align: 'left' as const,
-                              onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
-                              onCell: () => ({ style: { textAlign: 'left' as const } }),
-                              render: (text: string) => (
-                                <span style={{ whiteSpace: 'pre-wrap', display: 'block', textAlign: 'left' }}>{text}</span>
-                              )
-                            }
-                          ]}
-                          style={{ fontSize: 'var(--font-size-base)' }}
-                        />
-                      );
-                    })()
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-text-disabled)' }}>
-                      暂无生产制单内容
-                    </div>
-                  )}
+                  <SheetRichViewer content={productionReq} emptyText="暂无工艺说明" />
                 </Spin>
               </Card>
             ),

@@ -1,12 +1,13 @@
 /**
- * 工艺制单富文本（生产要求 description）工具
+ * 工艺说明富文本（style.description）工具
  *
  * 数据形态：
  * - 老数据：纯文本（\n 分行）
- * - 新数据：轻量 HTML——仅 <img src>（附件库 URL）+ <br> + 文本
+ * - D-187 起编辑器带格式工具栏：轻量 HTML——文本排版标签（b/i/u/s/p/div/h1-h3/ul/ol/
+ *   table 等）+ 安全内联样式 + <img src>（附件库 URL）
  *
- * 编辑器粘贴已被拦截（只 insertText / insertImage），但仍统一走白名单过滤输出，
- * 防止其它入口（OCR 追加、历史数据）带入任意标签。
+ * 统一走白名单过滤输出，防止任意入口（OCR 追加、历史数据、粘贴）带入任意标签；
+ * 同时剥离历史日志脏行（D-069 之前日志曾被 append 进 description，见 LOG_LINE_RE）。
  */
 
 const escText = (s: string) => s
@@ -16,25 +17,78 @@ const escText = (s: string) => s
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
+/** 历史日志脏行：D-069 前系统往 description 追加的操作日志（如 "[2026-08-09 20:16:25] 李老板 BOM库存检查：…"） */
+const LOG_LINE_RE = /^\s*[【[]\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?[】\]]\s/;
+
+/** 文本剥脏行后转义，\n→<br>（脏行整行丢弃，用户看不到系统日志） */
+const escTextLines = (s: string) => s
+  .split(/\r\n|\r|\n/)
+  .filter((line) => !LOG_LINE_RE.test(line))
+  .map(escText)
+  .join('<br>');
+
 /** 是否为制单富文本（含内嵌图片/换行标签） */
 export const isSheetRichHtml = (raw: unknown): boolean => {
   const s = String(raw ?? '');
   return /<img\b/i.test(s) || /<br\s*\/?>/i.test(s);
 };
 
-/** 纯文本转编辑器 HTML（老数据回显用；文本整体转义，\n→<br>） */
+/** 纯文本转编辑器 HTML（老数据回显用；剥脏行 + 转义，\n→<br>） */
 export const plainTextToSheetHtml = (raw: unknown): string => {
   const s = String(raw ?? '');
   if (!s) return '';
-  if (isSheetRichHtml(s)) return s; // 已是 HTML 原样返回
-  return escText(s).replace(/\r\n|\r|\n/g, '<br>');
+  if (isSheetRichHtml(s)) return sanitizeSheetRichHtml(s); // 已是 HTML：白名单清洗后回显
+  return escTextLines(s);
+};
+
+/** 允许保留的排版标签（闭合与开启都按此白名单；其余标签剥除留文字） */
+const ALLOWED_TAGS = new Set([
+  'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'del',
+  'p', 'div', 'span', 'font', 'h1', 'h2', 'h3', 'h4', 'blockquote',
+  'ul', 'ol', 'li',
+  'table', 'thead', 'tbody', 'tr', 'td', 'th',
+]);
+
+/** 允许保留的内联样式属性（值不得含 url()/expression()，防注入） */
+const ALLOWED_STYLE_PROPS = new Set([
+  'text-align', 'color', 'background-color', 'font-weight', 'font-style',
+  'text-decoration', 'line-height', 'font-size',
+  'border', 'border-collapse', 'padding', 'margin', 'width', 'min-width',
+  'vertical-align', 'white-space',
+]);
+
+const safeStyleValue = (v: string) => !/url\s*\(|expression\s*\(|position\s*:|javascript:/i.test(v);
+
+/** 重建标签的 style 属性：仅保留白名单属性+安全值 */
+const filterStyleAttr = (tagMarkup: string): string => {
+  const styleMatch = /style\s*=\s*"([^"]*)"|style\s*=\s*'([^']*)'/i.exec(tagMarkup);
+  const withoutStyle = tagMarkup.replace(/\s*style\s*=\s*(["'])[^"']*\1/i, '');
+  if (!styleMatch) return withoutStyle;
+  const raw = styleMatch[1] ?? styleMatch[2] ?? '';
+  const kept = raw
+    .split(';')
+    .map((pair) => pair.trim())
+    .filter(Boolean)
+    .filter((pair) => {
+      const idx = pair.indexOf(':');
+      if (idx <= 0) return false;
+      const prop = pair.slice(0, idx).trim().toLowerCase();
+      const val = pair.slice(idx + 1).trim();
+      return ALLOWED_STYLE_PROPS.has(prop) && safeStyleValue(val);
+    })
+    .join('; ');
+  if (!kept) return withoutStyle;
+  const selfClosed = /\/>$/.test(withoutStyle);
+  const base = withoutStyle.replace(/\s*\/?>$/, '');
+  return `${base} style="${escText(kept)}"${selfClosed ? ' />' : '>'}`;
 };
 
 /**
- * 白名单过滤为安全的打印/展示 HTML：
+ * 白名单过滤为安全的打印/展示 HTML（D-187 扩展）：
+ * - 排版标签白名单保留（加粗/标题/对齐/列表/表格等），style 属性仅留安全子集
  * - <img src> 保留（可选加样式、URL 解析包装）
- * - <br> 保留；其余标签全部剥除（文字保留）
- * - 裸文本转义，\n→<br>
+ * - 其余标签全部剥除（文字保留）
+ * - 文本剥历史日志脏行 + 转义，\n→<br>
  */
 export const sanitizeSheetRichHtml = (
   raw: unknown,
@@ -45,23 +99,33 @@ export const sanitizeSheetRichHtml = (
   const imgStyle = opts?.imgStyle ?? '';
   const resolveUrl = opts?.resolveUrl;
   const parts: string[] = [];
-  const re = /<img\b[^>]*>|<br\s*\/?>|<[^>]+>/gi;
+  const re = /<img\b[^>]*>|<[^>]+>/gi;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(s))) {
-    parts.push(escText(s.slice(last, m.index)).replace(/\r\n|\r|\n/g, '<br>'));
-    const tag = m[0].toLowerCase();
-    if (tag.startsWith('<img')) {
-      const src = /src=["']([^"']+)["']/i.exec(m[0]);
+    parts.push(escTextLines(s.slice(last, m.index)));
+    const tag = m[0];
+    const tagName = (/^<\/?\s*([a-zA-Z0-9]+)/.exec(tag)?.[1] ?? '').toLowerCase();
+    if (tagName === 'img') {
+      const src = /src=["']([^"']+)["']/i.exec(tag);
       if (src && src[1]) {
         const url = resolveUrl ? resolveUrl(src[1]) : src[1];
         parts.push(`<img src="${escText(url)}" style="${imgStyle}" />`);
       }
-    } else if (tag.startsWith('<br')) {
-      parts.push('<br>');
+    } else if (ALLOWED_TAGS.has(tagName)) {
+      const isClose = tag.startsWith('</');
+      if (isClose) {
+        parts.push(`</${tagName}>`);
+      } else if (tagName === 'br') {
+        parts.push('<br>');
+      } else {
+        const selfClosed = /\/>$/.test(tag);
+        parts.push(selfClosed ? filterStyleAttr(tag) : filterStyleAttr(tag));
+      }
     }
-    last = m.index + m[0].length;
+    // 白名单外标签：整体丢弃，仅保留内部文字（由下一轮文本块承接）
+    last = m.index + tag.length;
   }
-  parts.push(escText(s.slice(last)).replace(/\r\n|\r|\n/g, '<br>'));
+  parts.push(escTextLines(s.slice(last)));
   return parts.join('');
 };

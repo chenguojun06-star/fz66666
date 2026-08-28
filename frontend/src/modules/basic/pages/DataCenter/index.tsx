@@ -4,6 +4,7 @@ import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
+import SheetRichViewer from '@/components/common/SheetRichViewer';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -134,8 +135,8 @@ const DataCenter: React.FC = () => {
         width="40vw"
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item name="description" label="生产要求" rules={[{ required: false }]}>
-            <Input.TextArea rows={3} placeholder="请输入生产要求，每行填写一条内容" />
+          <Form.Item name="description" label="工艺说明" rules={[{ required: false }]}>
+            <Input.TextArea rows={3} placeholder="工艺说明由样衣开发端编辑维护，此处仅作数据修正" />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -260,10 +261,13 @@ const DataCenter: React.FC = () => {
                   <div><span style={{ color: 'var(--neutral-text-secondary)' }}>推送时间：</span>{(detailRecord as any).productionCompletedTime ? formatDateTime((detailRecord as any).productionCompletedTime) : '-'}</div>
                 </div>
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>生产要求：</div>
-                  <div style={{ background: 'var(--color-bg-container)', padding: 12, maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap', fontSize: 14 }}>
-                    {detailRecord.description || '暂无生产要求'}
-                  </div>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>工艺说明：</div>
+                  <SheetRichViewer
+                    content={String(detailRecord.description || '')}
+                    emptyText="暂无工艺说明"
+                    minHeight={0}
+                    style={{ maxHeight: 240, overflow: 'auto' }}
+                  />
                 </div>
               </Col>
             </Row>

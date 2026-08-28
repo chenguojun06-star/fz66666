@@ -77,22 +77,14 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
   const coverUrl = resolveUrl(style.cover || coverFromAttachments || '');
 
   const rawReqText = String(style.description ?? '');
-  // 生产要求：新数据为轻量 HTML（图片内嵌其中），按富文本白名单渲染；老数据纯文本按行加粗
-  const isRich = /<img\b/i.test(rawReqText) || /<br\s*\/?>/i.test(rawReqText);
-  const productionReqHtml = isRich
+  // 工艺说明（D-187 前叫生产要求）：新数据为带格式轻量 HTML（加粗/对齐/表格/图片内嵌），
+  // 老数据纯文本；统一走白名单清洗并剥离历史日志脏行，用户输入什么打印什么
+  const productionReqHtml = rawReqText
     ? sanitizeSheetRichHtml(rawReqText, {
         imgStyle: 'max-width:100%;width:260px;object-fit:contain;border:1px solid rgba(0,0,0,0.08);border-radius:6px;display:block;margin:6px 0',
         resolveUrl: resolveUrl,
       })
-    : rawReqText
-      ? rawReqText.split('\n').map(line => {
-          const escaped = esc(line);
-          if (line.trim() && !/^\s*\d/.test(line)) {
-            return `<strong style="font-weight:700">${escaped}</strong>`;
-          }
-          return escaped;
-        }).join('<br>')
-      : '';
+    : '';
 
   const categoryText = toCategoryCn(style.category);
   const seasonText = toSeasonCn(style.season);
@@ -174,8 +166,8 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
     </div>
 
     <div class="section">
-      <div class="section-title">生产要求</div>
-      <div style="line-height:1.8;padding:8px 10px;border:1px solid var(--color-border-antd);border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:var(--color-text-quaternary)">暂无生产要求</span>'}</div>
+      <div class="section-title">工艺说明</div>
+      <div style="line-height:1.8;padding:8px 10px;border:1px solid var(--color-border-antd);border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:var(--color-text-quaternary)">暂无工艺说明</span>'}</div>
     </div>
 
     ${sampleReviewHtml}

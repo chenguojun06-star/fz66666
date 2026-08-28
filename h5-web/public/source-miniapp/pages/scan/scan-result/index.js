@@ -267,7 +267,7 @@ Page({
       const styleInfo = await api.style.getStyleDetail(styleId);
       if (!styleInfo) return;
 
-      const desc = styleInfo.description || '';
+      const desc = this._stripSheetHtml(styleInfo.description || '');
       const hints = {
         difficultyLabel: styleInfo.difficultyLabel || '',
         difficultyScore: styleInfo.difficultyScore || 0,
@@ -395,6 +395,31 @@ Page({
     const match = String(desc).match(/(\d{1,2}号针)/);
     if (match) return match[1];
     return '';
+  },
+
+  /**
+   * D-187 工艺说明剥壳：description 已升级为轻量 HTML（加粗/对齐/表格/图片），
+   * 生产提示区按纯文本展示——剥标签转行文本，同时剥离历史日志脏行
+   */
+  _stripSheetHtml(raw) {
+    const s = String(raw || '');
+    if (!s) return '';
+    const LOG_RE = /^\s*[【[]\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?[】\]]\s/;
+    return s
+      .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+      .replace(/<img[^>]*>/gi, '[图片]')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|h[1-6]|li|tr|table)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .split(/\r\n|\r|\n/)
+      .filter((l) => !LOG_RE.test(l))
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .join('\n');
   },
 
   _buildProcessOptions(raw) {

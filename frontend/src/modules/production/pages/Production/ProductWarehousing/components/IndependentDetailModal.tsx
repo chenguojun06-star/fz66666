@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tag, Space, Tabs, Typography, Drawer } from 'antd';
+import { Card, Tag, Space, Tabs, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import api, { toNumberSafe } from '@/utils/api';
@@ -9,9 +9,8 @@ import { ProductWarehousing as WarehousingType } from '@/types/production';
 import { OrderLineWarehousingRow } from '../types';
 import { useWarehousingData } from '../hooks/useWarehousingData';
 import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel } from '../utils';
+import ProductionSheetPanel from '../pages/InspectionDetail/ProductionSheetPanel';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
-
-const { Title } = Typography;
 
 interface IndependentDetailModalProps {
   open: boolean;
@@ -276,71 +275,16 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             },
             {
               key: 'production-sheet',
-              label: '生产制单',
+              label: '工艺说明',
               children: (
                 <Card style={{ height: '100%' }}>
-                  {(() => {
-                    if (!styleDescription) {
-                      return (
-                        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
-                          暂无生产制单数据
-                        </div>
-                      );
-                    }
-                    const reviewLabel =
-                      styleSampleReviewStatus === 'PASS' ? '通过'
-                        : styleSampleReviewStatus === 'REWORK' ? '需修改'
-                          : styleSampleReviewStatus === 'REJECT' ? '不通过'
-                            : styleSampleReviewStatus === 'PENDING' ? '待审核'
-                              : '';
-                    const rawLines = styleDescription.split(/\r?\n/).map(s => s.replace(/^\d+[.、\s]+/, '').trim()).filter(Boolean);
-                    const fixedRows = Array.from({ length: Math.max(15, rawLines.length) }, (_, i) => ({
-                      key: i, seq: i + 1, content: rawLines[i] || '',
-                    }));
-                    return (
-                      <>
-                        {(reviewLabel || styleSampleReviewComment || styleSampleReviewer || styleSampleReviewTime) && (
-                          <div style={{
-                            marginBottom: 12,
-                            padding: '10px 12px',
-                            border: '1px solid var(--neutral-border, var(--color-border-light))',
-                            borderRadius: 6,
-                            background: 'var(--neutral-bg, var(--color-bg-container))',
-                            fontSize: 14,
-                            lineHeight: '20px',
-                          }}>
-                            <div style={{ marginBottom: 4, fontWeight: 600 }}>样衣审核</div>
-                            <div>
-                              <span>审核状态：{reviewLabel || '-'}</span>
-                              <span style={{ marginLeft: 16 }}>审核人：{styleSampleReviewer || '-'}</span>
-                              <span style={{ marginLeft: 16 }}>审核时间：{styleSampleReviewTime ? formatDateTime(styleSampleReviewTime) : '-'}</span>
-                            </div>
-                            {styleSampleReviewComment && <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>审核评语：{styleSampleReviewComment}</div>}
-                          </div>
-                        )}
-                        <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
-                        <ResizableTable
-                          storageKey="independent-detail-requirements"
-                          rowKey="key" pagination={false}
-                          emptyDescription="暂无数据"
-                          showIndex={false}
-                          dataSource={fixedRows}
-                          style={{ fontSize: 14 }}
-                          columns={[
-                            { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const },
-                            {
-                              title: '内容',
-                              dataIndex: 'content',
-                              key: 'content',
-                              align: 'left' as const,
-                              onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
-                              onCell: () => ({ style: { textAlign: 'left' as const } }),
-                            },
-                          ]}
-                        />
-                      </>
-                    );
-                  })()}
+                  <ProductionSheetPanel
+                    description={styleDescription}
+                    reviewStatus={styleSampleReviewStatus}
+                    reviewComment={styleSampleReviewComment}
+                    reviewer={styleSampleReviewer}
+                    reviewTime={styleSampleReviewTime}
+                  />
                 </Card>
               ),
             },

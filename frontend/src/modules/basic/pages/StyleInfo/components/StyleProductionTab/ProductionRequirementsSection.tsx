@@ -1,12 +1,18 @@
-import React, { useEffect, useRef } from 'react';
-import { Button, Space } from 'antd';
+import React, { useEffect, useRef, useState } from 'react';
+import { Button, ColorPicker, InputNumber, Popover, Select, Space, Tooltip } from 'antd';
+import {
+  AlignCenterOutlined, AlignLeftOutlined, AlignRightOutlined, BoldOutlined,
+  ClearOutlined, FullscreenExitOutlined, FullscreenOutlined, ItalicOutlined,
+  OrderedListOutlined, PictureOutlined, RedoOutlined, StrikethroughOutlined,
+  TableOutlined, UnderlineOutlined, UndoOutlined, UnorderedListOutlined,
+} from '@ant-design/icons';
 import { plainTextToSheetHtml } from '@/utils/sheetRichText';
 import { message as warnMessage } from '@/utils/antdStatic';
 
 interface Props {
   productionReqLocked: boolean;
   productionReqSaving: boolean;
-  /** 生产要求内容（老数据纯文本 / 新数据轻量 HTML，含内嵌制单图片） */
+  /** 工艺说明内容（老数据纯文本 / 新数据轻量 HTML，含内嵌制单图片） */
   allRequirements: string;
   sheetImageMax: number;
   sheetUploading: boolean;
@@ -20,6 +26,12 @@ interface Props {
   onContentChange: (html: string) => void;
 }
 
+/**
+ * 工艺说明编辑器（D-187 前叫"生产要求"，仅裸编辑区）：
+ * 图二样式的格式工具栏——撤销/重做、段落标题、加粗/斜体/下划线/删除线、
+ * 字色/底色、对齐、缩进、列表、清除格式、插入表格、插图、全屏；
+ * 内容仍为轻量 HTML 存 style.description，下游只读展示（SheetRichViewer）与打印同源。
+ */
 const ProductionRequirementsSection: React.FC<Props> = ({
   productionReqLocked,
   productionReqSaving,
@@ -36,6 +48,11 @@ const ProductionRequirementsSection: React.FC<Props> = ({
   const editorRef = useRef<HTMLDivElement | null>(null);
   // 上次上报给外部的 HTML；外部新值 != 上次上报时才回写编辑器（避免打断光标）
   const lastReportedRef = useRef<string>('');
+  const [fullscreen, setFullscreen] = useState(false);
+  const [tableRows, setTableRows] = useState<number>(3);
+  const [tableCols, setTableCols] = useState<number>(3);
+  const [tableOpen, setTableOpen] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const canEdit = !productionReqLocked;
 
   // 外部值 → 编辑器（初始加载 / OCR 追加 / 切换款式）
@@ -58,6 +75,34 @@ const ProductionRequirementsSection: React.FC<Props> = ({
     document.execCommand('insertHTML', false, html);
   };
 
+  /** 执行格式命令并回吐内容（工具栏统一入口） */
+  const exec = (cmd: string, value?: string) => {
+    const el = editorRef.current;
+    if (!el || !canEdit) return;
+    el.focus();
+    document.execCommand('styleWithCSS', false, 'true');
+    document.execCommand(cmd, false, value);
+    lastReportedRef.current = el.innerHTML;
+    onContentChange(el.innerHTML);
+  };
+
+  /** 插入一张已上传图片（按钮选择 + 粘贴共用） */
+  const insertUploadedImage = async (file: File) => {
+    const cur = countImages();
+    if (cur + 1 > sheetImageMax) {
+      warnMessage.warning(`图片最多 ${sheetImageMax} 张（当前 ${cur} 张）`);
+      return;
+    }
+    try {
+      const url = await onUploadSheetImage(file);
+      insertHtmlAtCaret(`<img src="${url}" style="max-width:100%;width:240px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;display:block;margin:6px 0" /><br>`);
+      lastReportedRef.current = editorRef.current?.innerHTML ?? '';
+      onContentChange(lastReportedRef.current);
+    } catch (err) {
+      warnMessage.warning(err instanceof Error ? err.message : '图片上传失败');
+    }
+  };
+
   /** 粘贴：图片文件 → 上传后插入光标处；其余一律按纯文本插入（防带样式标签） */
   const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
     if (!canEdit) return;
@@ -70,15 +115,8 @@ const ProductionRequirementsSection: React.FC<Props> = ({
         return;
       }
       for (const file of files) {
-        try {
-          const url = await onUploadSheetImage(file);
-          insertHtmlAtCaret(`<img src="${url}" style="max-width:100%;width:240px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;display:block;margin:6px 0" /><br>`);
-        } catch (err) {
-          warnMessage.warning(err instanceof Error ? err.message : '图片上传失败');
-        }
+        await insertUploadedImage(file);
       }
-      lastReportedRef.current = editorRef.current?.innerHTML ?? '';
-      onContentChange(lastReportedRef.current);
       return;
     }
     // 纯文本粘贴（去掉富文本样式）
@@ -87,13 +125,43 @@ const ProductionRequirementsSection: React.FC<Props> = ({
     if (text) document.execCommand('insertText', false, text);
   };
 
+  const insertTable = () => {
+    const rows = Math.min(Math.max(tableRows || 2, 1), 20);
+    const cols = Math.min(Math.max(tableCols || 2, 1), 10);
+    const cell = '<td style="border:1px solid rgba(0,0,0,0.25);padding:4px 10px;min-width:36px">&nbsp;</td>';
+    const body = Array.from({ length: rows }, () => `<tr>${cell.repeat(cols)}</tr>`).join('');
+    insertHtmlAtCaret(`<table style="border-collapse:collapse;min-width:30%">${body}</table><br>`);
+    setTableOpen(false);
+  };
+
+  const toolbarStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    flexWrap: 'wrap',
+    padding: '6px 8px',
+    border: '1px solid rgba(0,0,0,0.12)',
+    borderBottom: 'none',
+    borderRadius: '6px 6px 0 0',
+    background: 'rgba(0,0,0,0.02)',
+  };
+  const toolBtn = { size: 'small' as const, disabled: !canEdit };
+
+  const editorWrapStyle: React.CSSProperties = fullscreen
+    ? {
+        position: 'fixed', inset: 0, zIndex: 1100, background: '#fff',
+        padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column',
+      }
+    : {};
+
   return (
     <div style={{
-      border: '1px solid var(--color-border, rgba(0,0,0,0.1))',
+      border: fullscreen ? 'none' : '1px solid var(--color-border, rgba(0,0,0,0.1))',
       borderRadius: 6,
       padding: '16px',
       marginBottom: 16,
       background: 'var(--color-bg-card, #fff)',
+      ...editorWrapStyle,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -103,13 +171,13 @@ const ProductionRequirementsSection: React.FC<Props> = ({
             letterSpacing: 0.5,
             paddingLeft: 10,
             borderLeft: '3px solid var(--color-primary)',
-          }}>生产要求</span>
+          }}>工艺说明</span>
           {sheetUploading && <span style={{ fontSize: 12, color: 'var(--color-primary)' }}>图片上传中…</span>}
         </div>
         <Space size={8} wrap>
           {!productionReqLocked && (
             <Button type="primary" loading={productionReqSaving} onClick={onProductionReqSave}>
-              保存生产要求
+              保存工艺说明
             </Button>
           )}
           <Button onClick={onDownloadWorkorder}>下载制单</Button>
@@ -120,7 +188,89 @@ const ProductionRequirementsSection: React.FC<Props> = ({
 
       {canEdit && (
         <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, rgba(0,0,0,0.45))', marginBottom: 8 }}>
-          在下方内容里直接 Ctrl+V 粘贴截图即可插入图片（最多 {sheetImageMax} 张），图片随文字一起保存并按顺序打印；选中图片按 Delete 可删除
+          推荐在 800 宽度内填写内容，超出可预览范围过多会导致打印出来的内容被截断；Ctrl+V 可直接粘贴截图（最多 {sheetImageMax} 张），选中图片按 Delete 可删除
+        </div>
+      )}
+
+      {/* 格式工具栏（对齐图二样式） */}
+      {canEdit && (
+        <div style={toolbarStyle}>
+          <Tooltip title="撤销"><Button {...toolBtn} type="text" icon={<UndoOutlined />} onClick={() => exec('undo')} /></Tooltip>
+          <Tooltip title="重做"><Button {...toolBtn} type="text" icon={<RedoOutlined />} onClick={() => exec('redo')} /></Tooltip>
+          <Select
+            size="small" style={{ width: 92, margin: '0 6px' }} disabled={!canEdit}
+            defaultValue="p" placeholder="段落"
+            onChange={(v) => exec('formatBlock', v === 'p' ? '<p>' : `<${v}>`)}
+            options={[
+              { value: 'p', label: '段落' },
+              { value: 'h1', label: '标题1' },
+              { value: 'h2', label: '标题2' },
+              { value: 'h3', label: '标题3' },
+            ]}
+          />
+          <Tooltip title="加粗"><Button {...toolBtn} type="text" icon={<BoldOutlined />} onClick={() => exec('bold')} /></Tooltip>
+          <Tooltip title="斜体"><Button {...toolBtn} type="text" icon={<ItalicOutlined />} onClick={() => exec('italic')} /></Tooltip>
+          <Tooltip title="下划线"><Button {...toolBtn} type="text" icon={<UnderlineOutlined />} onClick={() => exec('underline')} /></Tooltip>
+          <Tooltip title="删除线"><Button {...toolBtn} type="text" icon={<StrikethroughOutlined />} onClick={() => exec('strikeThrough')} /></Tooltip>
+          <Popover
+            trigger="click"
+            content={(
+              <ColorPicker
+                disabledAlpha
+                onChange={(c) => exec('foreColor', c.toHexString())}
+                presets={[{ label: '常用', colors: ['#000000', '#8c8c8c', '#f5222d', '#fa541c', '#faad14', '#52c41a', '#1677ff', '#722ed1'] }]}
+              />
+            )}
+          >
+            <Tooltip title="文字颜色"><Button {...toolBtn} type="text">A<span style={{ color: '#f5222d' }}>▾</span></Button></Tooltip>
+          </Popover>
+          <Popover
+            trigger="click"
+            content={(
+              <ColorPicker
+                disabledAlpha
+                onChange={(c) => exec('hiliteColor', c.toHexString())}
+                presets={[{ label: '底色', colors: ['#ffffff', '#fff1b8', '#ffd6e7', '#d6f0ff', '#d9f7be', '#efdbff'] }]}
+              />
+            )}
+          >
+            <Tooltip title="背景色"><Button {...toolBtn} type="text">██<span>▾</span></Button></Tooltip>
+          </Popover>
+          <span style={{ width: 1, height: 16, background: 'rgba(0,0,0,0.12)', margin: '0 4px' }} />
+          <Tooltip title="左对齐"><Button {...toolBtn} type="text" icon={<AlignLeftOutlined />} onClick={() => exec('justifyLeft')} /></Tooltip>
+          <Tooltip title="居中"><Button {...toolBtn} type="text" icon={<AlignCenterOutlined />} onClick={() => exec('justifyCenter')} /></Tooltip>
+          <Tooltip title="右对齐"><Button {...toolBtn} type="text" icon={<AlignRightOutlined />} onClick={() => exec('justifyRight')} /></Tooltip>
+          <Tooltip title="两端对齐"><Button {...toolBtn} type="text" onClick={() => exec('justifyFull')}>两端</Button></Tooltip>
+          <Tooltip title="减少缩进"><Button {...toolBtn} type="text" onClick={() => exec('outdent')}>⇤</Button></Tooltip>
+          <Tooltip title="增加缩进"><Button {...toolBtn} type="text" onClick={() => exec('indent')}>⇥</Button></Tooltip>
+          <Tooltip title="符号列表"><Button {...toolBtn} type="text" icon={<UnorderedListOutlined />} onClick={() => exec('insertUnorderedList')} /></Tooltip>
+          <Tooltip title="编号列表"><Button {...toolBtn} type="text" icon={<OrderedListOutlined />} onClick={() => exec('insertOrderedList')} /></Tooltip>
+          <Tooltip title="清除格式"><Button {...toolBtn} type="text" icon={<ClearOutlined />} onClick={() => exec('removeFormat')} /></Tooltip>
+          <span style={{ width: 1, height: 16, background: 'rgba(0,0,0,0.12)', margin: '0 4px' }} />
+          <Popover
+            trigger="click" open={tableOpen} onOpenChange={setTableOpen}
+            content={(
+              <Space>
+                <InputNumber size="small" min={1} max={20} value={tableRows} onChange={(v) => setTableRows(v || 3)} addonBefore="行" style={{ width: 110 }} />
+                <InputNumber size="small" min={1} max={10} value={tableCols} onChange={(v) => setTableCols(v || 3)} addonBefore="列" style={{ width: 110 }} />
+                <Button size="small" type="primary" onClick={insertTable}>插入</Button>
+              </Space>
+            )}
+          >
+            <Tooltip title="插入表格"><Button {...toolBtn} type="text" icon={<TableOutlined />} /></Tooltip>
+          </Popover>
+          <Tooltip title="插入图片"><Button {...toolBtn} type="text" icon={<PictureOutlined />} loading={sheetUploading} onClick={() => imageInputRef.current?.click()} /></Tooltip>
+          <input
+            ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void insertUploadedImage(file);
+              e.target.value = '';
+            }}
+          />
+          <Tooltip title={fullscreen ? '退出全屏' : '全屏编辑'}>
+            <Button {...toolBtn} type="text" icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />} onClick={() => setFullscreen(!fullscreen)} />
+          </Tooltip>
         </div>
       )}
 
@@ -148,11 +298,12 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           }
         }}
         style={{
-          minHeight: 320,
-          maxHeight: 560,
+          minHeight: fullscreen ? undefined : 320,
+          maxHeight: fullscreen ? undefined : 560,
+          flex: fullscreen ? 1 : undefined,
           overflowY: 'auto',
           padding: '14px 16px',
-          borderRadius: 6,
+          borderRadius: canEdit ? '0 0 6px 6px' : 6,
           border: '1px solid rgba(0,0,0,0.15)',
           background: '#fff',
           fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace",
@@ -165,6 +316,6 @@ const ProductionRequirementsSection: React.FC<Props> = ({
       />
     </div>
   );
-}
+};
 
 export default ProductionRequirementsSection;

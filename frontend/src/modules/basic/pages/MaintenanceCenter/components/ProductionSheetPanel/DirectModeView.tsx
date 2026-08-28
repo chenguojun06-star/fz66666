@@ -51,7 +51,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
     return (
       <div style={directCardStyle}>
         <ProductionSummary record={directRow} />
-        <div style={directFieldLabelStyle}>生产要求 / 制单描述</div>
+        <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
         <Input.TextArea value={String((directRow as any).description || '')} rows={10} readOnly />
         <div style={{ ...directMetaStyle, marginTop: 10 }}>当前账号仅可查看制单内容，不能直接编辑或退回。</div>
       </div>
@@ -81,7 +81,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
         </div>
         <div style={directCardStyle}>
           <ProductionSummary record={directRow} />
-          <div style={directFieldLabelStyle}>生产要求 / 制单描述</div>
+          <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
           <Input.TextArea value={String((directRow as any).description || '')} rows={10} readOnly />
         </div>
       </div>
@@ -97,7 +97,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
       ) : null}
       <ProductionSummary record={directRow} />
       <Form form={editForm} layout="vertical">
-        <div style={directFieldLabelStyle}>生产要求 / 制单描述</div>
+        <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
         <Form.Item name="description" style={{ marginBottom: 0 }}>
           <TextArea rows={10} placeholder={'请输入生产要求和制单描述信息\n示例：\n1. 面料：主面料用32支全棉平纹\n2. 颜色：藏蓝色（潘通色号19-4024）\n3. 缝制要求：1/4″四线包缝'} />
         </Form.Item>

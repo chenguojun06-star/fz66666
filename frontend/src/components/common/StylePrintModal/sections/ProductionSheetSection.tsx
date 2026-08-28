@@ -20,7 +20,7 @@ const ProductionSheetSection: React.FC<ProductionSheetSectionProps> = ({ product
     <table className="pt" style={{ marginBottom: 12 }}>
       <tbody>
         <tr>
-          <td className="label-cell">生产要求</td>
+          <td className="label-cell">工艺说明</td>
           <td style={{ whiteSpace: rich ? 'normal' : 'pre-wrap', minHeight: 40 }}>
             {description ? (
               rich ? (
