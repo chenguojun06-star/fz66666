@@ -62,29 +62,32 @@
     </view>
   </view>
 
-  <!-- 应用网格（按6大分类分组：开发/生产/仓库/财务/个人/其他） -->
+  <!-- 应用网格（按6大分类分组：开发/生产/仓库/财务/个人/其他）；≤2个应用的小类目两两并排一行 -->
   <view class="menu-section">
-    <view class="menu-group" wx:for="{{menuGroups}}" wx:key="group">
-      <view class="menu-group-title">
-        <text>{{item.group}}</text>
-        <text class="menu-group-count">{{item.items.length}}个</text>
-      </view>
-      <view class="menu-grid" style="grid-template-columns: repeat({{item.cols}}, 1fr);">
-        <view
-          class="menu-item"
-          wx:for="{{item.items}}"
-          wx:for-item="app"
-          wx:key="id"
-          bindtap="onMenuTap"
-          data-route="{{app.route}}"
-          data-id="{{app.id}}"
-          hover-class="menu-item-hover"
-          hover-stay-time="100"
-        >
-          <view class="menu-icon-circle {{app.circleClass}}">
-            <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
+    <view class="menu-row {{row.layout === 'pair' ? 'menu-row--pair' : ''}}"
+          wx:for="{{menuRows}}" wx:for-item="row" wx:key="key">
+      <view class="menu-group" wx:for="{{row.groups}}" wx:for-item="item" wx:key="group">
+        <view class="menu-group-title">
+          <text>{{item.group}}</text>
+          <text class="menu-group-count">{{item.items.length}}个</text>
+        </view>
+        <view class="menu-grid {{row.layout === 'pair' ? 'menu-grid--half' : ''}}">
+          <view
+            class="menu-item"
+            wx:for="{{item.items}}"
+            wx:for-item="app"
+            wx:key="id"
+            bindtap="onMenuTap"
+            data-route="{{app.route}}"
+            data-id="{{app.id}}"
+            hover-class="menu-item-hover"
+            hover-stay-time="100"
+          >
+            <view class="menu-icon-circle {{app.circleClass}}">
+              <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
+            </view>
+            <text class="menu-name">{{app.name}}</text>
           </view>
-          <text class="menu-name">{{app.name}}</text>
         </view>
       </view>
     </view>

@@ -148,8 +148,18 @@ page {
   box-shadow: var(--shadow-sm);
 }
 
-.menu-group + .menu-group {
+.menu-row + .menu-row {
   margin-top: 16px;
+}
+/* D-204v2：小类目配对行——两个矮类目并排 */
+.menu-row--pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+/* 半宽组内 2 个应用并排占满 */
+.menu-row--pair .menu-grid--half {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .menu-group-title {

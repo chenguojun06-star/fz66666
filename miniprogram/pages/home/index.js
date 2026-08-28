@@ -110,7 +110,7 @@ Page({
     orgName: '',
     avatarImgUrl: '',
     // 按分类分组的应用列表（与"编辑app"页面分组逻辑对齐）
-    menuGroups: [],
+    menuRows: [],
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
     // 考勤打卡
@@ -127,7 +127,7 @@ Page({
   onLoad: function () {
     this.setData({
       greeting: getGreeting(),
-      menuGroups: this._buildMenuGroups(null),
+      menuRows: this._buildMenuGroups(null),
     });
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
@@ -184,11 +184,11 @@ Page({
       try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
       const menuFlags = results[1] || {};
       that._lastMenuFlags = menuFlags;
-      that.setData({ menuGroups: that._buildMenuGroups(favorites, menuFlags) });
+      that.setData({ menuRows: that._buildMenuGroups(favorites, menuFlags) });
     }).catch(function () {
       let favorites = [];
       try { favorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
-      that.setData({ menuGroups: that._buildMenuGroups(favorites, {}) });
+      that.setData({ menuRows: that._buildMenuGroups(favorites, {}) });
     });
   },
 
@@ -240,14 +240,11 @@ Page({
     items.forEach(function (it) { itemMap[it.id] = it; });
 
     const groups = ALL_APPS.map(function (group) {
-      const groupItems = group.items
-        .filter(function (a) { return itemMap[a.id]; })
-        .map(function (a) { return itemMap[a.id]; });
       return {
         group: group.group,
-        items: groupItems,
-        // D-204：列数按应用数量自适应——≤2个2列并排、3个3列、4个2×2、更多恢复4列
-        cols: groupItems.length <= 2 ? 2 : (groupItems.length === 3 ? 3 : (groupItems.length === 4 ? 2 : 4)),
+        items: group.items
+          .filter(function (a) { return itemMap[a.id]; })
+          .map(function (a) { return itemMap[a.id]; }),
       };
     }).filter(function (g) { return g.items.length > 0; });
 
@@ -257,7 +254,29 @@ Page({
       items: [Object.assign({}, MORE_APPS_ENTRY)],
     });
 
-    return groups;
+    // D-204v2：≤2个应用的小类目两两配对一行显示，大类目独占一行
+    const menuRows = [];
+    let pendingSmall = null;
+    groups.forEach(function (g) {
+      const isSmall = g.items.length <= 2;
+      if (!isSmall) {
+        if (pendingSmall) {
+          menuRows.push({ key: pendingSmall.group, layout: 'pair', groups: [pendingSmall] });
+          pendingSmall = null;
+        }
+        menuRows.push({ key: g.group, layout: 'full', groups: [g] });
+      } else if (pendingSmall) {
+        menuRows.push({ key: pendingSmall.group + '_' + g.group, layout: 'pair', groups: [pendingSmall, g] });
+        pendingSmall = null;
+      } else {
+        pendingSmall = g;
+      }
+    });
+    if (pendingSmall) {
+      menuRows.push({ key: pendingSmall.group + '_tail', layout: 'pair', groups: [pendingSmall] });
+    }
+
+    return menuRows;
   },
 
   // ========== 事件 ==========
@@ -272,7 +291,7 @@ Page({
     this._onRefreshAll = function () { that._loadFavorites(); that._refreshHomeData(); };
     // 用户在 more-apps 页面增删收藏后，主页同步刷新分组显示
     this._onFavoritesChanged = function (favorites) {
-      that.setData({ menuGroups: that._buildMenuGroups(favorites, that._lastMenuFlags || {}) });
+      that.setData({ menuRows: that._buildMenuGroups(favorites, that._lastMenuFlags || {}) });
     };
     eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
     eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
