@@ -72,7 +72,9 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
     try {
       const response = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', { params: { page: 1, pageSize: 1000 } });
       if (response.code === 200) {
-        setFactories(response.data.records || []);
+        // D-200：生产下单/转单场景只留生产类工厂，排除面辅料供应商（布行/辅料店）；
+        // 存量未填 supplierType 的工厂保留，避免误伤
+        setFactories((response.data.records || []).filter((f) => f.supplierType !== 'MATERIAL'));
       }
     } catch (err) {
       console.error('加载工厂数据失败:', err);

@@ -439,6 +439,8 @@
               <view wx:if="{{processes.length}}" class="tf-processes-list">
                 <view wx:for="{{processes}}" wx:key="processCode" class="tf-process-row {{item._completed ? 'tf-process-row--disabled' : ''}}">
                   <view class="tf-process-check" bindtap="onToggleTransferProcess" data-code="{{item.processCode}}">
+                    <view wx:if="{{selectedProcessCodes[item.processCode]}}" class="icon-check-sm"></view>
+                    <text wx:else>○</text>
                   </view>
                   <view class="tf-process-body">
                     <view class="tf-process-top">

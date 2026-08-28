@@ -169,6 +169,9 @@ public class OrderTransferOrchestrator {
         // 只查启用状态的工厂
         queryWrapper.eq(Factory::getStatus, "active")
                 .and(w -> w.eq(Factory::getDeleteFlag, 0).or().isNull(Factory::getDeleteFlag))
+                // D-200：转单目标只收生产类工厂——排除面辅料供应商（布行/辅料店等，用户口径：本厂也是可选目标，不排除）；
+                // 存量未填 supplierType 的工厂保留，避免误伤（行业口径：布行不接生产转单）
+                .and(w -> w.isNull(Factory::getSupplierType).or().ne(Factory::getSupplierType, "MATERIAL"))
                 .orderByAsc(Factory::getFactoryName);
 
         Page<Factory> factoryPage = factoryService.page(new Page<>(page, pageSize), queryWrapper);

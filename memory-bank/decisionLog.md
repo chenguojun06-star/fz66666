@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-199 订单详情明细表横滑修复+信息格紧凑化）
+> 最后更新：2026-08-28（新增 D-200 转单工厂过滤布行+下单工厂过滤+转单页工整化）
+
+---
+
+## D-200：转单/下单工厂列表过滤布行+转单页工整化（2026-08-28，用户"转单怎么布行都能选到/布局乱全部优化/商品下单管理筛选也要弄清楚"）
+
+### 背景与根因
+1. 转单目标工厂 searchTransferableFactories 只过滤租户+active，不辨 supplierType——布行（Factory.supplierType=MATERIAL）全部混入转单目标
+2. PC 订单管理下单"请选择外发工厂"下拉同样用 /system/factory/list 全量列表，布行照选
+3. 转单面板 tf-process-check 是空 view——工序选择无可见勾选框；.search-row 零样式搜索框裸奔；行分隔线重
+
+### 决策与实现
+1. 后端 searchTransferableFactories 加 `supplierType != MATERIAL`（存量 NULL 保留防误伤）；**用户口径：本厂也是可选转单目标，不排除 INTERNAL**
+2. PC useOrderDataFetch.fetchFactories 统一过滤 supplierType !== 'MATERIAL'——下单下拉/侧栏洞察全消费方一次干净
+3. 转单面板：工序行补 ○/✓ 勾选（与菲号行同范式）；search-row 胶囊样式；行分隔线换 border-light+末行去线；勾选列 flex-shrink:0
+
+### 教训
+- "哪些工厂能被选"是业务口径，必须收在数据源/共享接口一处过滤（supplierType=MATERIAL=布行），而不是每个下拉各自判断
+- 选择类列表的勾选框必须是可见控件——空 view 占位=用户不知道能不能选/选没选
 
 ---
 

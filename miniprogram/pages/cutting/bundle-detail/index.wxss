@@ -1001,8 +1001,11 @@
 .tf-process-row {
   display: flex;
   align-items: flex-start;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid var(--color-border);
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid var(--color-border-light);
+}
+.tf-process-row:last-child {
+  border-bottom: none;
 }
 
 .tf-process-row--disabled {
@@ -1015,7 +1018,8 @@
   font-size: var(--font-size-lg-xl);
   color: var(--color-primary);
   text-align: center;
-  padding-top: 4rpx;
+  padding-top: 2rpx;
+  flex-shrink: 0;
 }
 
 .tf-process-body {
@@ -1088,6 +1092,22 @@
   color: var(--color-text-tertiary);
 }
 
+/* D-200：搜索框胶囊样式（原先无任何样式裸奔） */
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 14rpx 20rpx;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16rpx;
+}
+.search-row-input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
 /* 工厂/人员 Tab */
 .tf-tab-row {
   display: flex;
@@ -1119,8 +1139,8 @@
 .tf-result-item {
   display: flex;
   align-items: center;
-  padding: 18rpx 12rpx;
-  border-bottom: 1rpx solid var(--color-border);
+  padding: 18rpx 8rpx;
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .tf-result-item--active {
