@@ -279,7 +279,7 @@ Page({
         unitPrice: opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : null),
         status: procStatus,
         statusLabel: procStatus === 'COMPLETED' ? '已完成'
-          : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '制作中(我)' : '制作中') : '待领取',
+          : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '生产中(我)' : '生产中') : '待领取',
         claimedBy: opt.claimedBy || '',
         claimedByMe: !!opt.claimedByMe,
         isWarehouse: opt.value === 'WAREHOUSE_IN',
@@ -327,7 +327,7 @@ Page({
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
-      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取制作中');
+      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中');
       return;
     }
     if (proc.status === 'CLAIMED' && proc.claimedByMe) {
@@ -364,7 +364,7 @@ Page({
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
-      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取制作中，不能报工');
+      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中，不能报工');
       return;
     }
     if (proc.status === 'PENDING' && !proc.isWarehouse && !proc.isReview) {

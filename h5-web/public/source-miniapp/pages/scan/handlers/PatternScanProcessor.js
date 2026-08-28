@@ -127,7 +127,7 @@ async function getPatternProcessConfig(handler, patternId) {
  * 基于工序配置构建工序列表（MES 报工模型）
  * 后端 getPatternProcessConfig 已返回每道工序的 status/claimedBy/claimedByMe：
  * - PENDING（待领取）→ 可「领取」
- * - CLAIMED（他人领取制作中）→ 显示领取人，不可操作
+ * - CLAIMED（他人领取生产中）→ 显示领取人，不可操作
  * - CLAIMED + claimedByMe（本人领取）→ 可「完成报工」
  * - COMPLETED（已完成）→ 显示完成
  *
@@ -167,11 +167,11 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       option.icon = 'check-circle';
     } else if (procStatus === 'CLAIMED') {
       if (option.claimedByMe) {
-        option.icon = 'tool'; // 本人领取制作中 → 可完成报工
+        option.icon = 'tool'; // 本人领取生产中 → 可完成报工
       } else {
         option.icon = 'lock';
         option.locked = true;
-        option.lockReason = option.claimedBy ? (option.claimedBy + ' 制作中') : '已领取';
+        option.lockReason = option.claimedBy ? (option.claimedBy + ' 生产中') : '已领取';
       }
     }
     options.push(option);

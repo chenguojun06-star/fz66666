@@ -1033,7 +1033,7 @@ Page({
       const claimRec = myScans.find(function (r) { return r.operationType === 'CLAIM'; });
       const workScans = myScans.filter(function (r) { return r.operationType !== 'CLAIM'; });
 
-      // 状态判断：有报工记录 → 已完成；有 CLAIM 未报工 → 制作中；无记录 → 待领取
+      // 状态判断：有报工记录 → 已完成；有 CLAIM 未报工 → 生产中；无记录 → 待领取
       let status = 'pending';
       let statusText = '待领取';
       if (workScans.length > 0) {
@@ -1041,7 +1041,7 @@ Page({
         statusText = '已完成';
       } else if (claimRec) {
         status = 'in_progress';
-        statusText = (claimRec.operatorName || '') + ' 制作中';
+        statusText = (claimRec.operatorName || '') + ' 生产中';
       }
       // 数量统计（D-167：CLAIM 不计入数量）
       let completedQty = 0;

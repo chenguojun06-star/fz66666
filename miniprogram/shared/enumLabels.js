@@ -53,7 +53,7 @@ var PROCESS_STATUS_MAP = {
 var PATTERN_STATUS_MAP = {
   PENDING: '待领取',
   RECEIVED: '已领取',
-  IN_PROGRESS: '制作中',
+  IN_PROGRESS: '生产中',
   PRODUCTION_COMPLETED: '生产完成',
   COMPLETED: '已完成',
   WAREHOUSE_IN: '已入库',

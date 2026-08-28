@@ -288,12 +288,18 @@
 
 /* --- 颜色码数聚合矩阵 --- */
 .matrix-section {
-  padding: 32rpx;
+  padding: 24rpx 32rpx 32rpx;
+}
+/* D-189：码数列超宽不压缩，横向滑动查看（同 D-167 范式：flex 压缩 min-width:0 是重叠炸弹） */
+.matrix-scroll {
+  width: 100%;
 }
 .matrix-table {
   border: 1rpx solid var(--color-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  width: max-content;
+  min-width: 100%;
 }
 .matrix-row {
   display: flex;
@@ -311,15 +317,16 @@
   font-size: var(--font-size-sm);
 }
 .matrix-cell {
-  flex: 1;
+  flex: 0 0 auto;
+  min-width: 128rpx;
   text-align: center;
-  padding: 14rpx 4rpx;
+  padding: 14rpx 12rpx;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  min-width: 0;
+  white-space: nowrap;
 }
 .matrix-label-cell {
-  flex: 0 0 120rpx;
+  flex: 0 0 128rpx;
   text-align: left;
   padding-left: 16rpx;
   font-weight: 500;

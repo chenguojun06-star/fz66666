@@ -18,6 +18,80 @@
     <view wx:if="{{detail.statusLabel && detail.statusLabel !== '-'}}" class="status-badge status-{{detail.statusType}}">{{detail.statusLabel}}</view>
   </view>
 
+  <!-- 款式与数量（D-189：款式信息+码数数量表格合并一张卡，置于工序领取上方） -->
+  <view class="section-group">
+    <text class="section-group-title">款式与数量</text>
+    <view class="group-card">
+      <!-- 款式头部（缩略图 + 品名 + 款号） -->
+      <view class="style-header">
+        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFit" />
+        <view class="style-header-info">
+          <text class="style-header-name">{{detail.styleName || detail.styleNo || '-'}}</text>
+          <text class="style-header-no" wx:if="{{detail.styleNo}}">款号：{{detail.styleNo}}</text>
+        </view>
+      </view>
+      <!-- 款式详情字段（无矩阵时附带颜色/码数/数量聚合行） -->
+      <view class="field-list">
+        <view class="field-row" wx:if="{{detail.sourceLabel}}">
+          <text class="field-label">来源</text>
+          <text class="field-value">{{detail.sourceLabel}}</text>
+        </view>
+        <view class="field-row" wx:if="{{detail.categoryLabel}}">
+          <text class="field-label">品类</text>
+          <text class="field-value">{{detail.categoryLabel}}</text>
+        </view>
+        <view class="field-row" wx:if="{{detail.customer}}">
+          <text class="field-label">客户</text>
+          <text class="field-value">{{detail.customer}}</text>
+        </view>
+        <view class="field-row">
+          <text class="field-label">设计师</text>
+          <text class="field-value">{{detail.designer || '-'}}</text>
+        </view>
+        <view class="field-row">
+          <text class="field-label">纸样师</text>
+          <text class="field-value">{{detail.patternDeveloper || '-'}}</text>
+        </view>
+        <view class="field-row" wx:if="{{detail.deliveryTime && detail.deliveryTime !== '-'}}">
+          <text class="field-label">交板</text>
+          <text class="field-value">{{detail.deliveryTime}}</text>
+        </view>
+        <view class="field-row" wx:if="{{!detail.hasMatrix && detail.colorText}}">
+          <text class="field-label">颜色</text>
+          <text class="field-value">{{detail.colorText}}</text>
+        </view>
+        <view class="field-row" wx:if="{{!detail.hasMatrix && detail.sizeText}}">
+          <text class="field-label">码数</text>
+          <text class="field-value">{{detail.sizeText}}</text>
+        </view>
+        <view class="field-row" wx:if="{{!detail.hasMatrix && detail.totalQuantity}}">
+          <text class="field-label">数量</text>
+          <text class="field-value">{{detail.totalQuantity}} 件</text>
+        </view>
+      </view>
+      <!-- 颜色码数聚合矩阵（D-189：列不收缩，超宽横向滑动查看） -->
+      <view wx:if="{{detail.hasMatrix}}" class="matrix-section">
+        <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
+          <view class="matrix-table">
+            <!-- 表头 -->
+            <view class="matrix-row matrix-header">
+              <view class="matrix-cell matrix-label-cell">码数</view>
+              <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
+            </view>
+            <!-- 数据行 -->
+            <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:key="color" class="matrix-row">
+              <view class="matrix-cell matrix-label-cell">{{row.color}}</view>
+              <view wx:for="{{row.quantities}}" wx:for-item="qty" wx:for-index="qIdx" wx:key="qIdx" class="matrix-cell">{{qty}}</view>
+            </view>
+          </view>
+        </scroll-view>
+        <view class="matrix-footer">
+          <text class="matrix-grand-total">总数: {{detail.matrixTotal}} 件</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- MES 工序列表：扫码后直接展示该款配置的全部工序，支持领取/报工（未配置工序在扫码入口即拦截，D-165） -->
     <view wx:if="{{detail.hasProcessSystem && processList.length > 0}}" class="section-group">
       <text class="section-group-title">工序领取 / 报工</text>
@@ -30,7 +104,7 @@
                 <text class="process-row-name">{{item.processName}}</text>
                 <text class="process-row-price" wx:if="{{item.unitPrice != null}}">¥{{item.unitPrice}}/件</text>
               </view>
-              <text class="process-row-sub" wx:if="{{item.status === 'CLAIMED' && item.claimedBy}}">{{item.claimedByMe ? '你已领取，可完成报工' : item.claimedBy + ' 制作中'}}</text>
+              <text class="process-row-sub" wx:if="{{item.status === 'CLAIMED' && item.claimedBy}}">{{item.claimedByMe ? '你已领取，可完成报工' : item.claimedBy + ' 生产中'}}</text>
               <text class="process-row-sub" wx:elif="{{item.status === 'PENDING'}}">待领取</text>
               <text class="process-row-sub" wx:elif="{{item.status === 'COMPLETED'}}">已完成</text>
             </view>
@@ -67,86 +141,6 @@
       </view>
     </view>
     <!-- 菲号信息 -->
-  <view wx:if="{{detail.hasMatrix || detail.colorText || detail.sizeText}}" class="section-group">
-    <text class="section-group-title">数量信息</text>
-    <view class="group-card">
-      <!-- 颜色码数聚合矩阵 -->
-      <view wx:if="{{detail.hasMatrix}}" class="matrix-section">
-        <view class="matrix-table">
-          <!-- 表头 -->
-          <view class="matrix-row matrix-header">
-            <view class="matrix-cell matrix-label-cell">码数</view>
-            <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
-          </view>
-          <!-- 数据行 -->
-          <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:key="color" class="matrix-row">
-            <view class="matrix-cell matrix-label-cell">{{row.color}}</view>
-            <view wx:for="{{row.quantities}}" wx:for-item="qty" wx:for-index="qIdx" wx:key="qIdx" class="matrix-cell">{{qty}}</view>
-          </view>
-        </view>
-        <view class="matrix-footer">
-          <text class="matrix-grand-total">总数: {{detail.matrixTotal}} 件</text>
-        </view>
-      </view>
-
-      <view wx:if="{{!detail.hasMatrix}}" class="field-list">
-        <view class="field-row" wx:if="{{detail.colorText}}">
-          <text class="field-label">颜色</text>
-          <text class="field-value">{{detail.colorText}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.sizeText}}">
-          <text class="field-label">码数</text>
-          <text class="field-value">{{detail.sizeText}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.totalQuantity}}">
-          <text class="field-label">数量</text>
-          <text class="field-value">{{detail.totalQuantity}} 件</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 款式信息 -->
-  <view class="section-group">
-    <text class="section-group-title">款式信息</text>
-    <view class="group-card">
-      <!-- 款式头部（对齐设计稿：缩略图 + 品名 + 款号） -->
-      <view class="style-header">
-        <image-preview class="style-thumb" src="{{detail.coverImage || ''}}" mode="aspectFit" />
-        <view class="style-header-info">
-          <text class="style-header-name">{{detail.styleName || detail.styleNo || '-'}}</text>
-          <text class="style-header-no" wx:if="{{detail.styleNo}}">款号：{{detail.styleNo}}</text>
-        </view>
-      </view>
-      <!-- 款式详情字段 -->
-      <view class="field-list">
-        <view class="field-row" wx:if="{{detail.sourceLabel}}">
-          <text class="field-label">来源</text>
-          <text class="field-value">{{detail.sourceLabel}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.categoryLabel}}">
-          <text class="field-label">品类</text>
-          <text class="field-value">{{detail.categoryLabel}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.customer}}">
-          <text class="field-label">客户</text>
-          <text class="field-value">{{detail.customer}}</text>
-        </view>
-        <view class="field-row">
-          <text class="field-label">设计师</text>
-          <text class="field-value">{{detail.designer || '-'}}</text>
-        </view>
-        <view class="field-row">
-          <text class="field-label">纸样师</text>
-          <text class="field-value">{{detail.patternDeveloper || '-'}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.deliveryTime && detail.deliveryTime !== '-'}}">
-          <text class="field-label">交板</text>
-          <text class="field-value">{{detail.deliveryTime}}</text>
-        </view>
-      </view>
-    </view>
-  </view>
 
   <!-- 报工/领取表单：选中工序后展示 -->
   <view wx:if="{{selectedProcess}}" class="section-card">

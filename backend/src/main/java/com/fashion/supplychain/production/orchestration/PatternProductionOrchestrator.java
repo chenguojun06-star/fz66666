@@ -650,6 +650,12 @@ public class PatternProductionOrchestrator {
                     .list();
             int summed = priorRecords.stream()
                     .filter(r -> {
+                        String rOp = r.getOperationType() == null ? "" : r.getOperationType().trim();
+                        // D-189：领取（CLAIM/RECEIVE）不是报工——领取记录带数量1，
+                        // 之前被计入"累计已报"导致任务1件的样板领取后报工永远超限被拦
+                        if ("CLAIM".equalsIgnoreCase(rOp) || "RECEIVE".equalsIgnoreCase(rOp)) {
+                            return false;
+                        }
                         String rProc = StringUtils.hasText(r.getProcessName()) ? r.getProcessName().trim() : "";
                         String rKey = StringUtils.hasText(rProc) ? rProc
                                 : (r.getOperationType() == null ? "" : r.getOperationType().trim().toUpperCase());
