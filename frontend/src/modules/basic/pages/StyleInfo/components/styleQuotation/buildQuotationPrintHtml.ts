@@ -20,6 +20,8 @@ export interface BuildQuotationPrintHtmlParams {
   processList: any[];
   secondaryProcessList: any[];
   styleNo?: string;
+  /** 打印人（当前操作人姓名） */
+  printedBy?: string;
   materialCost: number;
   processCost: number;
   otherCost: number;
@@ -41,6 +43,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
     processList,
     secondaryProcessList,
     styleNo,
+    printedBy,
     materialCost,
     processCost,
     otherCost,
@@ -176,6 +179,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
 
   <div class="info-bar">
     <div class="info-item">款号：<b>${esc(styleNo || '-')}</b></div>
+    ${printedBy ? `<div class="info-item">打印人：<b>${esc(printedBy)}</b></div>` : ''}
     <div class="info-item">打印时间：<b>${printDate}</b></div>
   </div>
 
@@ -254,7 +258,10 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
     </table>
   </div>
 
-  <div class="footer">本报价单由系统自动生成 · 仅供参考 · 最终报价以双方确认为准</div>
+  <div class="footer">
+    ${printedBy ? `<div style="margin-bottom:4px">打印人：${esc(printedBy)} · 打印时间：${printDate}</div>` : ''}
+    本报价单由系统自动生成 · 仅供参考 · 最终报价以双方确认为准
+  </div>
 </body>
 </html>`;
 };

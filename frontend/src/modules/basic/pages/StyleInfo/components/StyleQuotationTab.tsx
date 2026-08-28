@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Row, Col, Button } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import { isAdmin } from '@/utils/AuthContext';
+import { isAdmin, useUser } from '@/utils/AuthContext';
 import QuotationBomSection from './styleQuotation/QuotationBomSection';
 import QuotationProcessSection from './styleQuotation/QuotationProcessSection';
 import QuotationSecondarySection from './styleQuotation/QuotationSecondarySection';
@@ -67,6 +67,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       processList,
       secondaryProcessList,
       styleNo,
+      printedBy: String(user?.name || user?.username || '') || undefined,
       materialCost,
       processCost,
       otherCost,
