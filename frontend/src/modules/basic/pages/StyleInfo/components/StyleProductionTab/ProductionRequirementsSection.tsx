@@ -48,6 +48,8 @@ const ProductionRequirementsSection: React.FC<Props> = ({
   const editorRef = useRef<HTMLDivElement | null>(null);
   // 上次上报给外部的 HTML；外部新值 != 上次上报时才回写编辑器（避免打断光标）
   const lastReportedRef = useRef<string>('');
+  // 工具栏点击（颜色面板等弹层）会让编辑器失焦丢选区，持续缓存编辑器内最后一个非折叠选区
+  const savedRangeRef = useRef<Range | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [tableRows, setTableRows] = useState<number>(3);
   const [tableCols, setTableCols] = useState<number>(3);
@@ -55,31 +57,61 @@ const ProductionRequirementsSection: React.FC<Props> = ({
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const canEdit = !productionReqLocked;
 
-  // 外部值 → 编辑器（初始加载 / OCR 追加 / 切换款式）
+  // 外部值 → 编辑器（初始加载 / OCR 追加 / 切换款式）。
+  // 双方都过一遍 plainTextToSheetHtml 再比较：自己上报的原始 innerHTML 回声不会被误判为外部变更
+  // （D-188 修正——旧版直接比原文，格式化内容回声时被判为"外部变了"，整段转义后覆盖编辑器即乱码）。
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
     const nextHtml = plainTextToSheetHtml(allRequirements);
-    if (nextHtml !== lastReportedRef.current || el.innerHTML !== nextHtml) {
-      if (el.innerHTML !== nextHtml) el.innerHTML = nextHtml;
-      lastReportedRef.current = nextHtml;
-    }
+    if (plainTextToSheetHtml(lastReportedRef.current) === nextHtml) return;
+    el.innerHTML = nextHtml;
+    lastReportedRef.current = nextHtml;
   }, [allRequirements]);
+
+  // 缓存编辑器内的选区（仅非折叠），供工具栏弹层收走焦点后恢复
+  useEffect(() => {
+    const onSelChange = () => {
+      const sel = window.getSelection();
+      const el = editorRef.current;
+      if (sel && sel.rangeCount > 0 && el && el.contains(sel.anchorNode) && !sel.isCollapsed) {
+        savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+      }
+    };
+    document.addEventListener('selectionchange', onSelChange);
+    return () => document.removeEventListener('selectionchange', onSelChange);
+  }, []);
+
+  /** 焦点回编辑器：选区已丢（点过颜色面板等弹层）则恢复缓存选区 */
+  const focusEditor = () => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    const inside = !!sel && sel.rangeCount > 0 && el.contains(sel.anchorNode);
+    if (!inside && savedRangeRef.current && el.contains(savedRangeRef.current.startContainer)) {
+      sel?.removeAllRanges();
+      sel?.addRange(savedRangeRef.current);
+    }
+  };
 
   const countImages = () => editorRef.current?.querySelectorAll('img').length ?? 0;
 
   const insertHtmlAtCaret = (html: string) => {
     const el = editorRef.current;
     if (!el) return;
-    el.focus();
+    focusEditor();
     document.execCommand('insertHTML', false, html);
+    // 表格/图片等插入后立即上报，否则用户插完直接保存会丢内容
+    lastReportedRef.current = el.innerHTML;
+    onContentChange(el.innerHTML);
   };
 
   /** 执行格式命令并回吐内容（工具栏统一入口） */
   const exec = (cmd: string, value?: string) => {
     const el = editorRef.current;
     if (!el || !canEdit) return;
-    el.focus();
+    focusEditor();
     document.execCommand('styleWithCSS', false, 'true');
     document.execCommand(cmd, false, value);
     lastReportedRef.current = el.innerHTML;
@@ -96,8 +128,6 @@ const ProductionRequirementsSection: React.FC<Props> = ({
     try {
       const url = await onUploadSheetImage(file);
       insertHtmlAtCaret(`<img src="${url}" style="max-width:100%;width:240px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;display:block;margin:6px 0" /><br>`);
-      lastReportedRef.current = editorRef.current?.innerHTML ?? '';
-      onContentChange(lastReportedRef.current);
     } catch (err) {
       warnMessage.warning(err instanceof Error ? err.message : '图片上传失败');
     }
@@ -212,30 +242,21 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           <Tooltip title="斜体"><Button {...toolBtn} type="text" icon={<ItalicOutlined />} onClick={() => exec('italic')} /></Tooltip>
           <Tooltip title="下划线"><Button {...toolBtn} type="text" icon={<UnderlineOutlined />} onClick={() => exec('underline')} /></Tooltip>
           <Tooltip title="删除线"><Button {...toolBtn} type="text" icon={<StrikethroughOutlined />} onClick={() => exec('strikeThrough')} /></Tooltip>
-          <Popover
-            trigger="click"
-            content={(
-              <ColorPicker
-                disabledAlpha
-                onChange={(c) => exec('foreColor', c.toHexString())}
-                presets={[{ label: '常用', colors: ['#000000', '#8c8c8c', '#f5222d', '#fa541c', '#faad14', '#52c41a', '#1677ff', '#722ed1'] }]}
-              />
-            )}
+          {/* ColorPicker 自带弹层，children 即触发按钮；旧版外面再套一层 Popover 导致要点两次还丢选区 */}
+          <ColorPicker
+            disabledAlpha
+            onChange={(c) => exec('foreColor', c.toHexString())}
+            presets={[{ label: '常用', colors: ['#000000', '#8c8c8c', '#f5222d', '#fa541c', '#faad14', '#52c41a', '#1677ff', '#722ed1'] }]}
           >
             <Tooltip title="文字颜色"><Button {...toolBtn} type="text">A<span style={{ color: '#f5222d' }}>▾</span></Button></Tooltip>
-          </Popover>
-          <Popover
-            trigger="click"
-            content={(
-              <ColorPicker
-                disabledAlpha
-                onChange={(c) => exec('hiliteColor', c.toHexString())}
-                presets={[{ label: '底色', colors: ['#ffffff', '#fff1b8', '#ffd6e7', '#d6f0ff', '#d9f7be', '#efdbff'] }]}
-              />
-            )}
+          </ColorPicker>
+          <ColorPicker
+            disabledAlpha
+            onChange={(c) => exec('hiliteColor', c.toHexString())}
+            presets={[{ label: '底色', colors: ['#ffffff', '#fff1b8', '#ffd6e7', '#d6f0ff', '#d9f7be', '#efdbff'] }]}
           >
             <Tooltip title="背景色"><Button {...toolBtn} type="text">██<span>▾</span></Button></Tooltip>
-          </Popover>
+          </ColorPicker>
           <span style={{ width: 1, height: 16, background: 'rgba(0,0,0,0.12)', margin: '0 4px' }} />
           <Tooltip title="左对齐"><Button {...toolBtn} type="text" icon={<AlignLeftOutlined />} onClick={() => exec('justifyLeft')} /></Tooltip>
           <Tooltip title="居中"><Button {...toolBtn} type="text" icon={<AlignCenterOutlined />} onClick={() => exec('justifyCenter')} /></Tooltip>

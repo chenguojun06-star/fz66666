@@ -27,20 +27,6 @@ const escTextLines = (s: string) => s
   .map(escText)
   .join('<br>');
 
-/** 是否为制单富文本（含内嵌图片/换行标签） */
-export const isSheetRichHtml = (raw: unknown): boolean => {
-  const s = String(raw ?? '');
-  return /<img\b/i.test(s) || /<br\s*\/?>/i.test(s);
-};
-
-/** 纯文本转编辑器 HTML（老数据回显用；剥脏行 + 转义，\n→<br>） */
-export const plainTextToSheetHtml = (raw: unknown): string => {
-  const s = String(raw ?? '');
-  if (!s) return '';
-  if (isSheetRichHtml(s)) return sanitizeSheetRichHtml(s); // 已是 HTML：白名单清洗后回显
-  return escTextLines(s);
-};
-
 /** 允许保留的排版标签（闭合与开启都按此白名单；其余标签剥除留文字） */
 const ALLOWED_TAGS = new Set([
   'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'del',
@@ -49,10 +35,35 @@ const ALLOWED_TAGS = new Set([
   'table', 'thead', 'tbody', 'tr', 'td', 'th',
 ]);
 
-/** 允许保留的内联样式属性（值不得含 url()/expression()，防注入） */
+/** 富文本判定：含白名单内任意标签即视为 HTML（D-188 修正——旧版只认 img/br，
+ *  导致"加粗一行字"这类无换行无图的格式内容被当纯文本整体转义，工具栏一点就满屏乱码） */
+const HTML_TAG_RE = /<(\/)?(b|strong|i|em|u|s|strike|del|span|div|p|font|h[1-4]|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|br|img)\b/i;
+
+/** 双转义自愈：存量数据里 &lt;span…&gt; 已烙成文字，解码一层还原为真标签（只跑一遍，不递归） */
+const ESCAPED_TAG_RE = /&lt;(\/?(?:b|strong|i|em|u|s|strike|del|span|div|p|font|h[1-4]|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|br|img)\b[^&>]*?)&gt;/gi;
+
+const unescapeDoubleEscapedTags = (s: string): string => {
+  if (!/&lt;\s*\/?[a-zA-Z]/.test(s)) return s;
+  return s.replace(ESCAPED_TAG_RE, '<$1>');
+};
+
+/** 是否为制单富文本（含白名单排版标签/内嵌图片/换行标签） */
+export const isSheetRichHtml = (raw: unknown): boolean => HTML_TAG_RE.test(String(raw ?? ''));
+
+/** 纯文本转编辑器 HTML（老数据回显用；剥脏行 + 转义，\n→<br>） */
+export const plainTextToSheetHtml = (raw: unknown): string => {
+  const s = String(raw ?? '');
+  if (!s) return '';
+  const healed = unescapeDoubleEscapedTags(s);
+  if (isSheetRichHtml(healed)) return sanitizeSheetRichHtml(healed); // 已是 HTML：白名单清洗后回显
+  return escTextLines(healed);
+};
+
+/** 允许保留的内联样式属性（值不得含 url()/expression()，防注入）。
+ *  text-decoration-line/style：Chrome styleWithCSS 下删除线/下划线产出的是这两个属性，缺了会静默丢格式 */
 const ALLOWED_STYLE_PROPS = new Set([
   'text-align', 'color', 'background-color', 'font-weight', 'font-style',
-  'text-decoration', 'line-height', 'font-size',
+  'text-decoration', 'text-decoration-line', 'text-decoration-style', 'line-height', 'font-size',
   'border', 'border-collapse', 'padding', 'margin', 'width', 'min-width',
   'vertical-align', 'white-space',
 ]);
