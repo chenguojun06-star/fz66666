@@ -1,7 +1,24 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-27（新增 D-171 入库仓库/库位搜索+容量显示）
+> 最后更新：2026-08-28（新增 D-186 大货扫码误入样衣链路根治）
+
+---
+
+## D-186：大货扫码误入样衣链路根治——String.valueOf(null) 陷阱（2026-08-28，用户"大货生产扫码为什么跟样板单扯关系"）
+
+### 事故
+D-157 样衣委派判定 `hasText(String.valueOf(params.get("patternId")))`：缺 key 时 `String.valueOf(null)` 返回字符串 `"null"` 而非空串 → 判定恒真 → 所有大货扫码（production/quality/warehouse 三入口）被劫持进样衣链路。PC 工序报工批量完成报"样衣扫码缺少样板生产单ID(patternId)"；大货质检/入库扫码同样全断。D-157 上线时只回归了样衣扫码（命中类流量），未验证不命中类（大货扫码），且后端延迟重启把爆炸推迟到了 D-185 之后。
+
+### 决策
+1. 判定改 `TextUtils.safeText(params.get(...))`（null→""，语义正确），两处：`isSampleScanContext` + `executeProductionScan` 委派条件
+2. `submitSamplePatternScan` 取 patternId 兜底链补齐为 patternProductionId→patternId→scanCode，与判定同口径
+3. 全后端排查 `hasText(String.valueOf(get)` 模式：其余命中均有 `!= null` 前置守卫，无同类裸奔
+4. 反模式沉淀 AP-BE-05；铁律补充：新路由判定上线必须两类流量各回归（命中+不命中）
+
+### 关联
+- 提交：e3006332a；需重启后端生效（本地+云端都要）
+- 反模式：anti-patterns.md AP-BE-05
 
 ---
 

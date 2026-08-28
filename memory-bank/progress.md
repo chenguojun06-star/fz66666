@@ -1,9 +1,16 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-08-28（D-185 质检页三连修——库位直选/尺寸表/短菲号）
+> 最后更新：2026-08-28（D-186 大货扫码误入样衣链路根治——需重启后端）
 
 ## 已完成
+
+### 2026-08-28 D-186 大货扫码误入样衣链路根治 ✅
+
+- [x] 根因：D-157 样衣委派判定 hasText(String.valueOf(params.get("patternId")))，缺 key 时 String.valueOf(null)=="null" 字符串恒真，大货扫码三入口（production/quality/warehouse）全被劫持进样衣链路
+- [x] 修复：isSampleScanContext + executeProductionScan 委派条件改 TextUtils.safeText；submitSamplePatternScan 兜底链补 patternId（与判定同口径）
+- [x] 全后端排查同类模式，其余命中均有 !=null 守卫；AP-BE-05 反模式沉淀
+- [x] 提交 e3006332a；需重启后端（本地+云端）
 
 ### 2026-08-28 D-185 质检页三连修 ✅
 

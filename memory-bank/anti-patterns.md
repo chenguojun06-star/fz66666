@@ -104,6 +104,15 @@ public Result audit() { ... }
 
 ---
 
+### AP-BE-05: String.valueOf(map.get(key)) 喂 hasText 判空（D-186 事故）
+**识别信号**：看到 `hasText(String.valueOf(params.get("xxx")))` 或 `String.valueOf(map.get(...))` 参与判空/路由分支
+**错误做法**：`String.valueOf(null)` 返回的是字符串 `"null"`（4个字符）不是空串 → `hasText` 恒真 → 判定分支永远命中。D-157 样衣委派判定踩中：所有不带 patternId 的大货扫码（production/quality/warehouse 三入口）被劫持进样衣链路，PC批量完成报"缺少样板生产单ID"，大货质检/入库扫码全断；D-157 当时只测了样衣扫码所以漏网，后端一重启才爆
+**正确做法**：Map 取值判空一律 `TextUtils.safeText(params.get("key"))`（null→""，语义正确）；`String.valueOf` 只用于"确定非 null"或展示拼接场景
+**触发P0铁律**：#3 全链路验证——新分支判定上线前，必须各跑一遍"命中"与"不命中"两类流量（样衣扫码 + 大货扫码）
+**排查命令**：`grep -rn "hasText(String.valueOf" backend/src/main/java`
+
+---
+
 ## 🖥️ 前端相关
 
 ### AP-FE-00: @ServerEndpoint 用 @Autowired 注入 Spring Bean
