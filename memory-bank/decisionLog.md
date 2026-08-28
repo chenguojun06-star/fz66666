@@ -1,7 +1,24 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-190 扫码历史图/交期回归+待裁剪待办面料守卫+采购详情封面+品类中文四连修）
+> 最后更新：2026-08-28（新增 D-191 图片预览左右切换全站生效修复）
+
+---
+
+## D-191：图片预览左右切换全站生效修复（2026-08-28，用户"只有订单详情页预览有左右切换按钮，其他页面都没有，持续好久没修好"）
+
+### 背景与根因
+1. antd v6 箭头显示条件（rc-component/image/Preview/index.js:73）= `groupContext && count > 1`：图片必须注册进某个 PreviewGroup 且组内不止一张
+2. D-138 在 Layout 埋了全局 `<Image.PreviewGroup>` 包 {children}，注释承诺"本页有几张图就能切几张"——**但从未真正生效**：全站列表缩略图走 StyleCoverThumb，它渲染的是**原生 `<img>`**，永远不会注册进全局组
+3. 唯独订单详情页有箭头：ImageCarousel 自带局部 PreviewGroup 包 antd `<Image>`（count=2）
+4. StyleCoverThumb 自己的 D-125 私有预览（openPreview 拉款式附件+自定义底部工具栏）只在附件≥2张时才有切换，且视觉与全局不一致
+
+### 决策与实现
+StyleCoverThumb 单点修复（21处引用全站生效）：裸 `<img>` → antd `<Image preview={!onClick}>`，每页所有缩略图注册进 Layout 全局组，点任意一张左右切换翻遍本页全部图片（D-138 承诺的行为真正落地）；传 onClick 的跳转场景 preview=false 不注册不预览，语义与旧行为一致；删除 D-125 私有预览（openPreview/previewSrcs/自定义工具栏/message 依赖），预览体验全站统一为 antd 原生侧边箭头+计数
+
+### 教训
+- "全局组件"要验证收集机制的实际链路：antd PreviewGroup 靠 context 收集 antd `<Image>`，原生 `<img>` 是盲区——埋了全局组≠全局生效
+- 图片组件三套实现并存（SmartImage/ImageCarousel/StyleCoverThumb 私有预览）必然体验漂移；缩略图组件必须用 antd Image 才能进组
 
 ---
 
