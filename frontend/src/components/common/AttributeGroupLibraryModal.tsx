@@ -105,6 +105,8 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [itemDraft, setItemDraft] = useState('');
+  // D-168：左右布局——左侧目录选中项（回退到第一项）
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     // groups 变化时校正激活 Tab（防止越界）
@@ -265,6 +267,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
           await api.delete(`/system/dict/${group.id}`);
           clearApiCache('/system/dict/list');
           message.success('删除成功');
+          setSelectedId(null);
           loadGroups(false);
         } catch (error: any) {
           message.error(error?.message || '删除失败');
@@ -287,52 +290,6 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
     }
   };
 
-  const renderGroupCard = (group: AttributeGroup) => {
-    const previewValues = group.values.slice(0, 10);
-    const restCount = group.values.length - previewValues.length;
-    return (
-      <div
-        key={group.id}
-        style={{
-          border: '1px solid var(--color-border)',
-          borderRadius: 8,
-          padding: '10px 12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{group.name}</span>
-          <Space size={4} wrap>
-            <Button type="primary" size="small" onClick={() => handleApply(group, 'replace')}>
-              使用
-            </Button>
-            <Button size="small" onClick={() => handleApply(group, 'append')}>
-              追加
-            </Button>
-            <Tooltip title="编辑组合">
-              <Button size="small" icon={<EditOutlined />} onClick={() => openEditor(group)} />
-            </Tooltip>
-            <Tooltip title="删除组合">
-              <CircleIconButton type="remove" size={22} onClick={() => handleDelete(group)} />
-            </Tooltip>
-          </Space>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {previewValues.map((value) => (
-            <Tag key={value} style={{ margin: 0 }}>
-              {value}
-            </Tag>
-          ))}
-          {restCount > 0 ? <Tag style={{ margin: 0 }}>等 {group.values.length} 项</Tag> : null}
-          {!group.values.length ? (
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>(空组合，请编辑补充成员)</span>
-          ) : null}
-        </div>
-      </div>
-    );
-  };
 
   const renderEditor = () => {
     if (!editor) return null;
@@ -391,6 +348,8 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
   };
 
   const currentGroups = groupsData[activeType.key] || [];
+  // D-168：左右布局——左侧组合目录，右侧选中组合的完整内容/编辑器（与人员管理等页面目录风格一致）
+  const selectedGroup = currentGroups.find((g) => g.id === selectedId) || currentGroups[0] || null;
 
   return (
     <Modal
@@ -398,7 +357,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
       open={open}
       onCancel={handleClose}
       footer={null}
-      width={680}
+      width={860}
       destroyOnHidden
     >
       <div style={{ marginBottom: 12, color: 'var(--color-text-tertiary)', fontSize: 13 }}>
@@ -411,6 +370,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
             setActiveKey(key);
             setEditor(null);
             setItemDraft('');
+            setSelectedId(null);
           }}
           items={groups.map((g) => ({ key: g.key, label: g.tabLabel }))}
         />
@@ -419,24 +379,109 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
         <div style={{ padding: '32px 0', textAlign: 'center' }}>
           <Spin />
         </div>
-      ) : editor ? (
-        renderEditor()
       ) : (
-        <div style={{ display: 'grid', gap: 10, maxHeight: 420, overflowY: 'auto', padding: '4px 2px' }}>
-          {currentGroups.length ? (
-            <>
+        <div style={{ display: 'flex', minHeight: 420, border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+          {/* 左：组合目录 */}
+          <div
+            style={{
+              width: 220,
+              flexShrink: 0,
+              borderRight: '1px solid var(--color-border)',
+              background: 'var(--color-bg-layout, var(--color-bg-page))',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{ padding: 8 }}>
               <Button type="dashed" block icon={<PlusOutlined />} onClick={() => openEditor()}>
                 新增{activeType.tabLabel}
               </Button>
-              {currentGroups.map(renderGroupCard)}
-            </>
-          ) : (
-            <Empty description={`暂无${activeType.tabLabel}`}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>
-                新增{activeType.tabLabel}
-              </Button>
-            </Empty>
-          )}
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {currentGroups.map((g) => {
+                const active = !!selectedGroup && g.id === selectedGroup.id;
+                return (
+                  <div
+                    key={g.id}
+                    onClick={() => setSelectedId(g.id)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      background: active ? 'var(--color-primary-bg, #e8f2ff)' : 'var(--color-bg-base)',
+                      border: active ? '1px solid var(--color-primary)' : '1px solid transparent',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      transition: 'border-color 0.15s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 13,
+                        color: active ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {g.name}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{g.values.length} 项</span>
+                  </div>
+                );
+              })}
+              {!currentGroups.length ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无组合" style={{ padding: '20px 0' }} />
+              ) : null}
+            </div>
+          </div>
+          {/* 右：选中组合内容 / 编辑器 */}
+          <div style={{ flex: 1, minWidth: 0, padding: 16, overflowY: 'auto', maxHeight: 480 }}>
+            {editor ? (
+              renderEditor()
+            ) : selectedGroup ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600, fontSize: 15 }}>{selectedGroup.name}</span>
+                  <Space size={6} wrap>
+                    <Button type="primary" size="small" onClick={() => handleApply(selectedGroup, 'replace')}>
+                      使用
+                    </Button>
+                    <Button size="small" onClick={() => handleApply(selectedGroup, 'append')}>
+                      追加
+                    </Button>
+                    <Tooltip title="编辑组合">
+                      <Button size="small" icon={<EditOutlined />} onClick={() => openEditor(selectedGroup)} />
+                    </Tooltip>
+                    <Tooltip title="删除组合">
+                      <CircleIconButton type="remove" size={22} onClick={() => handleDelete(selectedGroup)} />
+                    </Tooltip>
+                  </Space>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                  共 {selectedGroup.values.length} 项{activeType.itemLabel}（按添加顺序应用）
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {selectedGroup.values.map((value) => (
+                    <Tag key={value} style={{ margin: 0, padding: '2px 10px' }}>
+                      {value}
+                    </Tag>
+                  ))}
+                  {!selectedGroup.values.length ? (
+                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>(空组合，请编辑补充成员)</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <Empty description={`暂无${activeType.tabLabel}`} style={{ padding: '60px 0' }}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>
+                  新增{activeType.tabLabel}
+                </Button>
+              </Empty>
+            )}
+          </div>
         </div>
       )}
     </Modal>

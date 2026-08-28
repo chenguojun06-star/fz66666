@@ -613,16 +613,18 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
     }
 
     private String generateSkuCode(String styleNo, String color, String size, Integer useSkuPrefix) {
+        // D-167：改用"-"分隔（款号-颜色-尺码），与下单端 buildSkuNo 格式风格统一——
+        // 原来无分隔符直拼（BR26...A棕色S），与订单明细的带"-"编码（PO...-BR26...A-棕色-S）两个长相
         StringBuilder sb = new StringBuilder();
         if (useSkuPrefix != null && useSkuPrefix == 1) {
-            sb.append("SKU");
+            sb.append("SKU-");
         }
-        sb.append(styleNo);
+        sb.append(styleNo == null ? "" : styleNo.trim());
         if (color != null && !color.isEmpty()) {
-            sb.append(color);
+            sb.append("-").append(color.trim());
         }
         if (size != null && !size.isEmpty()) {
-            sb.append(size);
+            sb.append("-").append(size.trim());
         }
         return sb.toString();
     }
