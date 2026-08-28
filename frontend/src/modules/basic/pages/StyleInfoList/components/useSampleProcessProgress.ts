@@ -9,6 +9,10 @@ export interface ProcessNodeInfo {
   progressStage?: string;
   unitPrice?: number;
   completed?: boolean;
+  /** D-208：后端 process-config 算好的权威状态（单一事实源），CLAIMED=已领取生产中 */
+  status?: string;
+  claimedBy?: string;
+  claimedTime?: string;
 }
 
 export interface ProcessStageProgress {
@@ -152,6 +156,10 @@ export default function useSampleProcessProgress(
               processCode: item.operationType || item.processName || String(idx + 1),
               progressStage: item.progressStage || '',
               unitPrice: Number(item.unitPrice || item.price || 0),
+              // D-208：透传后端权威状态/领取人，行状态直接采用，不再从原始扫码记录自行推导
+              status: item.status || '',
+              claimedBy: item.claimedBy || '',
+              claimedTime: item.claimedTime || '',
             }));
           }
         }
@@ -185,6 +193,11 @@ export default function useSampleProcessProgress(
       }
 
       const markedNodes = nodes.map((n) => {
+        // D-208：process-config 有权威 status 时直接采用（修复"手机端已完成/PC待领取"两端判定不一致）；
+        // 无 status 时才退回扫码记录推导兜底
+        if (n.status) {
+          return { ...n, completed: String(n.status).trim().toUpperCase() === 'COMPLETED' };
+        }
         const normName = normalizeOperationType(n.name);
         const normCode = normalizeOperationType(n.processCode || '');
         return {

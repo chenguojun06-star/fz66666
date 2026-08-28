@@ -135,6 +135,8 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       render: (_: any, record: SubProcessRow) => {
         if (record.status === 'completed') return <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>;
         if (record.status === 'in_progress') return <Tag color="processing" style={{ fontSize: 11 }}>{record.percent}%</Tag>;
+        // D-208：已领取未报工=生产中（与手机端 process-config 口径一致）
+        if (record.status === 'claimed') return <Tag color="processing" style={{ fontSize: 11 }}>生产中</Tag>;
         return <Tag color="default" style={{ fontSize: 11 }}>待领取</Tag>;
       },
     },

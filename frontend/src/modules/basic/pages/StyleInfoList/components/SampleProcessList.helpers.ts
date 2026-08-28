@@ -11,7 +11,7 @@ export interface SubProcessRow {
   quantity: string;
   receiver: string;
   time: string;
-  status: 'completed' | 'in_progress' | 'pending';
+  status: 'completed' | 'in_progress' | 'claimed' | 'pending';
   percent: number;
   unitPrice?: number;
 }

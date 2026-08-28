@@ -1425,7 +1425,10 @@ public class PatternProductionOrchestrator {
             case "WAREHOUSE_IN":     return "样衣入库";
             case "WAREHOUSE_OUT":    return "样衣出库";
             case "WAREHOUSE_RETURN": return "样衣归还";
-            default:                 return "样衣操作";
+            default:
+                // D-208：动态工序（如"裁剪/剪线"等中文工序名直传）原样返回，
+                // 镜像 processName 保留真实工序名，PC 端订单路径才能按工序名匹配进度（原"样衣操作"致匹配永远失败）
+                return operationType.trim();
         }
     }
 

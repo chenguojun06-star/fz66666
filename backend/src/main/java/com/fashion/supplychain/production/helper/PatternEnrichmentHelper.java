@@ -525,8 +525,10 @@ public class PatternEnrichmentHelper {
 
         // 查询扫码记录，推导每道工序的状态（MES 报工模型：领取 CLAIM → 完成报工）
         List<PatternScanRecord> scanRecords = listPatternScanRecords(patternId);
-        boolean hasGlobalComplete = scanRecords.stream()
-                .anyMatch(r -> "COMPLETE".equalsIgnoreCase(safeTrim(r.getOperationType())));
+        // D-208：COMPLETE 全局短路收窄——仅在无 StyleProcess 工序配置的旧数据兜底场景使用。
+        // 已配置工序时，历史 COMPLETE（完成确认/标记完成）不应把从未领取的工序全部标成 COMPLETED
+        // （曾致"手机端裁剪显示已完成、PC 端待领取"两端状态打架）
+        boolean hasGlobalComplete = false;
 
         List<Map<String, Object>> result = new ArrayList<>();
         int sort = 1;
@@ -558,7 +560,11 @@ public class PatternEnrichmentHelper {
 
             // 工序状态：COMPLETED（已报工完成）/ CLAIMED（已领取制作中）/ PENDING（待领取）
             boolean completed = hasGlobalComplete
-                    || isProcessCompletedByRecords(scanRecords, processName, progressStage);
+                    || isProcessCompletedByRecords(scanRecords, processName, progressStage)
+                    // 带 processName 的 COMPLETE 报工只完成其声明的工序
+                    || scanRecords.stream().anyMatch(r ->
+                            "COMPLETE".equalsIgnoreCase(safeTrim(r.getOperationType()))
+                            && processName.equalsIgnoreCase(safeTrim(r.getProcessName())));
             PatternScanRecord activeClaim = null;
             if (!completed) {
                 activeClaim = findActiveClaim(scanRecords, processName);

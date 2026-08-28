@@ -18,7 +18,9 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
   const renderStageTab = (stage: ProcessStageProgress) => {
     const isActive = activeTab === stage.key;
     const c = STAGE_COLORS[stage.key] || 'var(--color-text-muted)';
-    const isDone = stage.percent >= 100;
+    // D-208：未配置子工序的阶段（如二次工艺）不算完成，不打✓
+    const isEmptyStage = stage.totalCount === 0;
+    const isDone = !isEmptyStage && stage.percent >= 100;
     return (
       <div
         key={stage.key}
@@ -39,6 +41,9 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
       >
         {isDone && <CheckCircleOutlined style={{ fontSize: 11 }} />}
         {stage.label}
+        {isEmptyStage && (
+          <span style={{ fontSize: 10, color: 'var(--color-text-quaternary)', fontWeight: 400 }}>未配置</span>
+        )}
         {stage.subProcesses.length > 0 && (
           <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: 2, fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
             {stage.subProcesses.length}

@@ -100,7 +100,9 @@ export default function useSampleProcessListData(
       // D-115：行状态取自身完成标记（原取阶段总进度——阶段未到100%时，已完成的行仍显示
       // "待领取/手动完成"，正是"操作了但状态不变、按钮还能点"的根因）。
       // percent>=100 作为兜底（trackingStats 口径完成的行 completed 标记可能缺）
-      const subDone = sub.completed === true || currentStage.percent >= 100;
+      const subStatus = String(sub.status || '').trim().toUpperCase();
+      // D-208：三态——COMPLETED=已完成；CLAIMED=已领取生产中；否则待领取（行级权威状态优先）
+      const subDone = subStatus === 'COMPLETED' || (subStatus !== 'CLAIMED' && sub.completed === true);
       let subQty = '-';
       if (currentStage.key === 'procurement') {
         subQty = '1种面料';
@@ -115,9 +117,9 @@ export default function useSampleProcessListData(
         color,
         size,
         quantity: subQty,
-        receiver: subDone ? receiver : '-',
-        time: subDone ? (receiveTime || '-') : '-',
-        status: subDone ? 'completed' as const : 'pending' as const,
+        receiver: sub.claimedBy || (subDone ? receiver : '-'),
+        time: sub.claimedTime || (subDone ? (receiveTime || '-') : '-'),
+        status: subDone ? 'completed' as const : (subStatus === 'CLAIMED' ? 'claimed' as const : 'pending' as const),
         percent: subDone ? 100 : 0,
         unitPrice: sub.unitPrice,
       };
