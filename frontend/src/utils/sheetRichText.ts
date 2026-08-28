@@ -39,12 +39,21 @@ const ALLOWED_TAGS = new Set([
  *  导致"加粗一行字"这类无换行无图的格式内容被当纯文本整体转义，工具栏一点就满屏乱码） */
 const HTML_TAG_RE = /<(\/)?(b|strong|i|em|u|s|strike|del|span|div|p|font|h[1-4]|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|br|img)\b/i;
 
-/** 双转义自愈：存量数据里 &lt;span…&gt; 已烙成文字，解码一层还原为真标签（只跑一遍，不递归） */
+/** 双转义自愈：存量数据里 &lt;span…&gt; 已烙成文字，解码还原为真标签 */
 const ESCAPED_TAG_RE = /&lt;(\/?(?:b|strong|i|em|u|s|strike|del|span|div|p|font|h[1-4]|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|br|img)\b[^&>]*?)&gt;/gi;
 
+/** D-169：Word 形状粘贴会产生多层转义（&amp;lt; 甚至 &amp;amp;gt;），
+ *  一层解码不够——循环解码 &amp; 与已转义标签直到内容稳定（上限 6 轮防死循环） */
 const unescapeDoubleEscapedTags = (s: string): string => {
-  if (!/&lt;\s*\/?[a-zA-Z]/.test(s)) return s;
-  return s.replace(ESCAPED_TAG_RE, '<$1>');
+  if (!/&(lt|amp)\s*;?\s*\/?[a-zA-Z]/i.test(s) && !/&amp;lt;/i.test(s)) return s;
+  let prev = s;
+  for (let i = 0; i < 6; i++) {
+    let next = prev.replace(/&amp;/gi, '&');
+    next = next.replace(ESCAPED_TAG_RE, '<$1>');
+    if (next === prev) break;
+    prev = next;
+  }
+  return prev;
 };
 
 /** 是否为制单富文本（含白名单排版标签/内嵌图片/换行标签） */

@@ -6,7 +6,7 @@ import {
   OrderedListOutlined, PictureOutlined, RedoOutlined, StrikethroughOutlined,
   TableOutlined, UnderlineOutlined, UndoOutlined, UnorderedListOutlined,
 } from '@ant-design/icons';
-import { plainTextToSheetHtml } from '@/utils/sheetRichText';
+import { plainTextToSheetHtml, isSheetRichHtml } from '@/utils/sheetRichText';
 import { message as warnMessage } from '@/utils/antdStatic';
 
 interface Props {
@@ -149,10 +149,19 @@ const ProductionRequirementsSection: React.FC<Props> = ({
       }
       return;
     }
-    // 纯文本粘贴（去掉富文本样式）
     e.preventDefault();
     const text = e.clipboardData?.getData('text/plain') ?? '';
-    if (text) document.execCommand('insertText', false, text);
+    if (!text) return;
+    // D-169：Word 形状/网页复制得到的纯文本常是转义HTML串（&lt;div…&gt; 甚至 &amp;lt;…）——
+    // 解码+白名单清洗后按富文本插入，不再作为裸文字进编辑器
+    if (text.includes('&lt;') || text.includes('&amp;') || /<\s*(div|p|span|table)\b/i.test(text)) {
+      const healed = plainTextToSheetHtml(text);
+      if (isSheetRichHtml(healed)) {
+        insertHtmlAtCaret(healed);
+        return;
+      }
+    }
+    document.execCommand('insertText', false, text);
   };
 
   const insertTable = () => {
