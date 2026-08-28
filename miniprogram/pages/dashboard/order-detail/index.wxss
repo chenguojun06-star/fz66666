@@ -202,6 +202,25 @@
   gap: 8rpx;
   flex-wrap: wrap;
 }
+/* D-198：尺码横向滑动标签 */
+.size-chip-scroll {
+  width: 100%;
+}
+.size-chip-row {
+  display: inline-flex;
+  gap: 8rpx;
+  padding: 2rpx 0;
+}
+.size-chip {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  background: var(--color-bg-subtle);
+  padding: 4rpx 12rpx;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 /* 交期剩余天数徽章 */
 .remain-badge {
   font-size: var(--font-size-xxs);

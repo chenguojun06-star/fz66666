@@ -68,9 +68,13 @@
           <text class="info-label">颜色</text>
           <text class="info-value info-value--strong">{{specSummary.colorText}}</text>
         </view>
-        <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
+        <view class="info-cell info-cell--full" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">尺码</text>
-          <text class="info-value info-value--strong">{{specSummary.sizeText}}</text>
+          <scroll-view scroll-x class="size-chip-scroll" enhanced show-scrollbar="{{false}}">
+            <view class="size-chip-row">
+              <text class="size-chip" wx:for="{{specSummary.sizeList}}" wx:key="*this">{{item}}</text>
+            </view>
+          </scroll-view>
         </view>
         <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">下单数</text>

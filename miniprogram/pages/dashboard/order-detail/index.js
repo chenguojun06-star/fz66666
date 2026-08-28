@@ -187,7 +187,7 @@ Page({
     completedQuantity: 0,
     remainQuantity: 0,
     progressPct: 0,
-    specSummary: { colorText: '', sizeText: '', qtyText: '', hasSpec: false },
+    specSummary: { colorText: '', sizeText: '', sizeList: [], qtyText: '', hasSpec: false },
 
     // 工序阶段
     stages: [],
@@ -513,12 +513,13 @@ Page({
       // 顶部信息卡需要的颜色/尺码汇总（用户要求：详情页也要有颜色数量信息）
       const specSummary = (function () {
         if (!matrixModel.hasData) {
-          return { colorText: '', sizeText: '', qtyText: '', hasSpec: false };
+          return { colorText: '', sizeText: '', sizeList: [], qtyText: '', hasSpec: false };
         }
         var colorText = matrixModel.colors.length ? matrixModel.colors.join(' / ') : '';
         var sizeText = matrixModel.allSizes.length ? matrixModel.allSizes.join(' / ') : '';
         var qtyText = matrixModel.total + '件';
-        return { colorText: colorText, sizeText: sizeText, qtyText: qtyText, hasSpec: true };
+        // D-198：尺码拆数组供横向滑动标签渲染，长码数不再挤成换行长串
+        return { colorText: colorText, sizeText: sizeText, sizeList: matrixModel.allSizes.slice(), qtyText: qtyText, hasSpec: true };
       })();
 
       // BOM 物料类型中文化
