@@ -240,11 +240,14 @@ Page({
     items.forEach(function (it) { itemMap[it.id] = it; });
 
     const groups = ALL_APPS.map(function (group) {
+      const groupItems = group.items
+        .filter(function (a) { return itemMap[a.id]; })
+        .map(function (a) { return itemMap[a.id]; });
       return {
         group: group.group,
-        items: group.items
-          .filter(function (a) { return itemMap[a.id]; })
-          .map(function (a) { return itemMap[a.id]; }),
+        items: groupItems,
+        // D-204：列数按应用数量自适应——≤2个2列并排、3个3列、4个2×2、更多恢复4列
+        cols: groupItems.length <= 2 ? 2 : (groupItems.length === 3 ? 3 : (groupItems.length === 4 ? 2 : 4)),
       };
     }).filter(function (g) { return g.items.length > 0; });
 
