@@ -129,7 +129,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       rowSelection={rowSelection}
       pagination={false}
       emptyDescription="暂无工序数据"
-      scroll={{ x: 1000 }}
+      scroll={{ x: 'max-content' }}
     />
   );
 
@@ -244,7 +244,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
           expandable={expandable}
           rowSelection={rowSelection}
           stickyHeader
-          scroll={{ x: 1000 }}
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: currentPage,
             pageSize: pageSize,

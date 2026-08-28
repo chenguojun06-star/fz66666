@@ -115,8 +115,17 @@ const FactoryTemplateTab: React.FC = () => {
         {viewingRow && (
           <TemplateViewContent
             activeRow={viewingRow as unknown as Record<string, unknown>}
-            viewObj={(() => { try { return JSON.parse(viewingRow.templateContent || '{}'); } catch { return {}; } })()}
-            viewContent={viewingRow.templateContent || '{}'}
+            viewObj={(() => {
+              // D-207：后端实体 @JsonRawValue 使 templateContent 可能已是对象，string 才 parse（与 TemplateInlineEditor/helpers 同口径）
+              const raw = viewingRow.templateContent;
+              if (raw && typeof raw === 'object') return raw;
+              try { return JSON.parse(String(raw || '{}')); } catch { return {}; }
+            })()}
+            viewContent={(() => {
+              const raw = viewingRow.templateContent;
+              if (raw && typeof raw === 'object') return JSON.stringify(raw, null, 2);
+              return String(raw || '{}');
+            })()}
           />
         )}
       </ResizableModal>

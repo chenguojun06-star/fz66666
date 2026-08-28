@@ -116,8 +116,8 @@ public class TemplateTableMigrator {
         try {
             String id = java.util.UUID.randomUUID().toString();
             jdbc.update(
-                    "INSERT IGNORE INTO t_template_library (id, template_type, template_key, template_name, source_style_no, template_content, tenant_id) VALUES (?,?,?,?,?,?,?)",
-                    id, templateType, templateKey, templateName, null, templateContent, tenantId);
+                    "INSERT IGNORE INTO t_template_library (id, template_type, template_key, template_name, source_style_no, template_content, locked, tenant_id) VALUES (?,?,?,?,?,?,?,?)",
+                    id, templateType, templateKey, templateName, null, templateContent, 0, tenantId);
         } catch (Exception e) {
             log.warn("Failed to seed template: tenantId={}, templateType={}, templateKey={}, err={}", tenantId, templateType, templateKey, e.getMessage());
         }
