@@ -509,42 +509,19 @@
 .node-bar-fill--done {
   background: var(--color-success);
 }
-/* 子工序列表 */
-.node-sub-procs {
-  margin-top: 6px;
-  padding-left: 4px;
-  border-left: 2px solid var(--color-border);
-}
-.sub-proc-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 3px 0;
-}
-.sp-name {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  flex: 1;
-}
-.sp-price {
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-medium);
-  margin-left: var(--spacing-sm);
-}
-.sp-price--free {
-  color: var(--color-text-tertiary);
-  font-weight: var(--font-weight-normal);
-}
 /* SKU 表格 */
 .sku-scroll {
   width: 100%;
 }
 .sku-table {
+  /* D-194：table 布局让每列按最宽内容对齐且不收缩（D-167 防重叠），超宽走 sku-scroll 横滑 */
+  display: table;
+  border-collapse: collapse;
+  width: auto;
   min-width: 100%;
 }
 .sku-row {
-  display: flex;
+  display: table-row;
   border-bottom: 1px solid var(--color-border-light);
 }
 .sku-row--head {
@@ -552,15 +529,14 @@
   border-radius: var(--radius-xs) var(--radius-xs) 0 0;
 }
 .sku-cell {
-  flex: 1;
-  min-width: 36px;
-  padding: 7px 2px;
+  display: table-cell;
+  padding: 7px 6px;
   font-size: var(--font-size-xs);
   text-align: center;
+  white-space: nowrap;
   color: var(--color-text-primary);
 }
 .sku-cell--color {
-  flex: none;
   width: 48px;
   text-align: left;
   padding-left: 8px;
@@ -568,7 +544,6 @@
   color: var(--color-text-secondary);
 }
 .sku-cell--total {
-  flex: none;
   width: 40px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
