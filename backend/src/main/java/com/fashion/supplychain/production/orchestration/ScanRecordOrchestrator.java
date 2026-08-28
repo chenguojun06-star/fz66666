@@ -287,9 +287,10 @@ public class ScanRecordOrchestrator {
     private boolean isSampleScanContext(Map<String, Object> params) {
         String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
         if ("SAMPLE".equalsIgnoreCase(sourceBizType)) return true;
-        String patternProductionId = String.valueOf(params.get("patternProductionId"));
-        String patternId = String.valueOf(params.get("patternId"));
-        return hasText(patternProductionId) || hasText(patternId);
+        // D-186：必须用 safeText——String.valueOf(null) 返回字符串"null"而非空串，
+        // 曾导致所有不带 patternId 的大货扫码被误判为样衣链路
+        return hasText(TextUtils.safeText(params.get("patternProductionId")))
+                || hasText(TextUtils.safeText(params.get("patternId")));
     }
 
     private Map<String, Object> executeWarehouseScan(Map<String, Object> params, String requestId, String operatorId,
@@ -332,7 +333,9 @@ public class ScanRecordOrchestrator {
         // + t_scan_record 计件镜像 + 状态流转（RECEIVE→IN_PROGRESS+receiver+receiveTime）+ 库存同步。
         String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
         String patternProductionId = TextUtils.safeText(params.get("patternProductionId"));
-        if ("SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId) || hasText(String.valueOf(params.get("patternId")))) {
+        // D-186：String.valueOf(null)=="null" 陷阱同 isSampleScanContext，改用 safeText
+        String patternIdParam = TextUtils.safeText(params.get("patternId"));
+        if ("SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId) || hasText(patternIdParam)) {
             return submitSamplePatternScan(params);
         }
 
@@ -351,6 +354,9 @@ public class ScanRecordOrchestrator {
      */
     private Map<String, Object> submitSamplePatternScan(Map<String, Object> params) {
         String patternId = TextUtils.safeText(params.get("patternProductionId"));
+        if (!hasText(patternId)) {
+            patternId = TextUtils.safeText(params.get("patternId")); // 与委派判定同口径（D-186）
+        }
         if (!hasText(patternId)) {
             patternId = TextUtils.safeText(params.get("scanCode")); // 小程序样衣扫码 scanCode 即 patternId
         }
