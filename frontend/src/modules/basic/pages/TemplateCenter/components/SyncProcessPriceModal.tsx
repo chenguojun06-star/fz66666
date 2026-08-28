@@ -1,13 +1,15 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Input, Popover, Space, Spin, Tooltip, Image } from 'antd';
 import SideDrawer from '@/components/common/SideDrawer';
 import CircleIconButton from '@/components/common/CircleIconButton';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 import {
   CloudSyncOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   SaveOutlined,
+  SettingOutlined,
   UndoOutlined,
   CameraOutlined,
 } from '@ant-design/icons';
@@ -36,9 +38,15 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
     setStyleInputVal, setNewSizeName, setAddSizePopoverOpen, setImageUrls,
     scheduleStyleSearch, handleUploadImage,
     enterEdit, exitEdit, handleAdd, handleDelete,
-    updateField, updateSizePrice, handleAddSize, handleRemoveSize,
+    updateField, updateSizePrice, handleAddSize, handleRemoveSize, applySizesFromLibrary,
     saveAll, syncToOrders, saveAndSync: hookSaveAndSync, handleClose,
   } = useProcessPriceActions(open, styleNo);
+
+  // D-205：基础属性库——尺码从属性库成组选择（与样衣开发详情同组件）
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const handleApplyAttrGroup = useCallback((_groupKey: string, values: string[], mode: 'replace' | 'append') => {
+    applySizesFromLibrary(values, mode);
+  }, [applySizesFromLibrary]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -102,11 +110,11 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                   <Input
 
-                    placeholder="尺码名"
+                    placeholder="输入尺码名，如 XL(175/96A)"
                     value={newSizeName}
                     onChange={(e) => setNewSizeName(e.target.value)}
                     onPressEnter={handleAddSize}
-                    style={{ width: 80 }}
+                    style={{ width: 220 }}
                   />
                   <CircleIconButton type="add" size={22} title="添加尺码" onClick={handleAddSize} />
                 </div>
@@ -115,6 +123,9 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
             >
               <Button icon={<PlusOutlined />}>添加尺码</Button>
             </Popover>
+            <Tooltip title="基础属性库——成组选择尺码">
+              <Button icon={<SettingOutlined />} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
+            </Tooltip>
           </>
         ) : (
           <Button icon={<EditOutlined />} onClick={enterEdit}>编辑</Button>
@@ -231,7 +242,12 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         scroll={{ x: 'max-content', y: 'calc(100vh - 380px)' }}
         pagination={false}
       />
-    </SideDrawer>
+          <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={handleApplyAttrGroup}
+      />
+  </SideDrawer>
   );
 });
 

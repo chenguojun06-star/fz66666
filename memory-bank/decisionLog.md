@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-204v2 首页小类目两两并排一行）
+> 最后更新：2026-08-28（新增 D-205 价格模板接入基础属性库选尺码）
 
 ---
 
@@ -12,6 +12,18 @@ menu-grid 原固定4列，组内只有2个应用时占半边显得空。改为�
 
 ### 教训
 网格列数不该写死——按内容数量自适应（≤2→2、3→3、4→2×2）在权限过滤后应用数骤减时尤其必要
+
+---
+
+## D-205：价格模板弹窗接入基础属性库选尺码+齿轮入口+输入框加长（2026-08-28，用户"配置模板为什么不能像样衣开发详情那样选基础属性库/没有齿轮/输入框要做长一点"）
+
+### 背景与实现
+工序进度单价模板（SyncProcessPriceModal）的尺码只能手输单个，而样衣开发详情的颜色码数区有"基础属性库"按钮成组选择。AttributeGroupLibraryModal 本就是通用组件（"任何成套属性录入表单传 groups+onApply 即可接入"），纯漏接。
+1. useProcessEditor 新增 applySizesFromLibrary(values, mode)：replace 覆盖/append 追加去重、sortSizeNames 排序、所有行新列价目默认沿用工价（sizePrices/sizePriceTouched 按新列重建，保留已改列）
+2. useProcessPriceActions 透传；SyncProcessPriceModal 加"基础属性库"按钮（SettingOutlined 齿轮，与样衣开发同款组件同交互），尺码名输入框 80→220px 占位提示"输入尺码名，如 XL(175/96A)"
+
+### 教训
+通用组件建好后要主动 grep 接入点（AttributeGroupLibraryModal 建了却只有样衣开发一处接）；"为什么别的页面有这个功能"多半是通用能力漏接而非要新开发
 
 ---
 

@@ -28,7 +28,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     data, editMode, sizes, newSizeName, addSizePopoverOpen,
     setData, setSizes, setNewSizeName, setAddSizePopoverOpen,
     resetEditingState, enterEdit, exitEdit, handleAdd, handleDelete,
-    updateField, updateSizePrice, handleAddSize, handleRemoveSize,
+    updateField, updateSizePrice, handleAddSize, handleRemoveSize, applySizesFromLibrary,
   } = editor;
 
   useEffect(() => {
@@ -233,7 +233,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     setSizes, setImageUrls, setNewSizeName, setAddSizePopoverOpen,
     scheduleStyleSearch, handleSelectStyle, handleUploadImage,
     enterEdit, exitEdit, handleAdd, handleDelete,
-    updateField, updateSizePrice, handleAddSize, handleRemoveSize,
+    updateField, updateSizePrice, handleAddSize, handleRemoveSize, applySizesFromLibrary,
     saveAll, syncToOrders, saveAndSync: handleSaveAndSync, handleClose, loadTemplate,
   };
 }

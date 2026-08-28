@@ -118,6 +118,26 @@ export function useProcessEditor() {
     message.success(`已添加尺码: ${trimmed}`);
   }, [newSizeName, sizes, message]);
 
+  /** D-205：基础属性库应用尺码组——replace 覆盖 / append 追加去重，新列价目默认沿用工价 */
+  const applySizesFromLibrary = useCallback((values: string[], mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim().toUpperCase()).filter(Boolean);
+    if (!incoming.length) return;
+    const base = mode === 'replace' ? [] : sizes;
+    const next = sortSizeNames(Array.from(new Set([...base, ...incoming])));
+    if (!next.length) return;
+    setSizes(next);
+    setData((prev) => prev.map((row) => {
+      const nextPrices: Record<string, number> = {};
+      const nextTouched: Record<string, boolean> = {};
+      next.forEach((sz) => {
+        nextPrices[sz] = row.sizePrices?.[sz] ?? toNumberSafe(row.price);
+        nextTouched[sz] = row.sizePriceTouched?.[sz] ?? false;
+      });
+      return { ...row, sizePrices: nextPrices, sizePriceTouched: nextTouched };
+    }));
+    message.success(mode === 'replace' ? '已覆盖尺码' : '已追加尺码');
+  }, [sizes, message]);
+
   const handleRemoveSize = useCallback((size: string) => {
     setSizes((prev) => prev.filter((item) => item !== size));
     setData((prev) => prev.map((row) => {
@@ -146,5 +166,6 @@ export function useProcessEditor() {
     updateSizePrice,
     handleAddSize,
     handleRemoveSize,
+    applySizesFromLibrary,
   };
 }
