@@ -199,6 +199,7 @@
 
           <!-- 裁剪明细表 -->
           <block wx:if="{{cuttingLinesHasData}}">
+            <scroll-view scroll-x class="cutting-table-scroll" enhanced show-scrollbar="{{false}}">
             <view class="cutting-table">
               <view class="table-header">
                 <text class="th th-color">颜色</text>
@@ -225,6 +226,7 @@
                 </view>
               </view>
             </view>
+            </scroll-view>
 
             <!-- 分扎描述行 -->
             <view class="bundle-desc-area">

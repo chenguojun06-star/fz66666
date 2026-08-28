@@ -1275,51 +1275,62 @@
   color: var(--color-text-tertiary);
 }
 
+.cutting-table-scroll {
+  width: 100%;
+}
 .cutting-table {
+  /* D-202：display:table 让列宽跨行严格对齐且不互相遮挡，超宽走外层 scroll-view 横滑 */
+  display: table;
+  border-collapse: collapse;
+  width: 100%;
   border-top: 1px solid var(--color-border);
   padding-top: 12rpx;
   margin-top: 8rpx;
 }
 
 .table-header {
-  display: flex;
-  align-items: center;
+  display: table-row;
   padding: 10rpx 0 14rpx;
   font-size: var(--font-size-xxs);
   color: var(--color-text-secondary);
   font-weight: 500;
 }
 
-.th { text-align: center; }
+.th { display: table-cell; text-align: center; white-space: nowrap; padding: 10rpx 0 14rpx; }
 .th-color { width: 110rpx; text-align: left; }
-.th-size  { width: 80rpx; }
+.th-size  { width: 80rpx; padding: 10rpx 10rpx 14rpx; }
 .th-order { width: 80rpx; }
 .th-cut   { width: 80rpx; }
 .th-bundles { width: 80rpx; }
-.th-last  { flex: 1; }
+.th-last  { width: 140rpx; }
 
 .table-row {
-  display: flex;
-  align-items: center;
+  display: table-row;
   padding: 14rpx 0;
   border-bottom: 1px solid var(--color-border);
 }
 
 .td {
+  display: table-cell;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   text-align: center;
+  white-space: nowrap;
+  padding: 14rpx 0;
 }
 
-.td-color { width: 110rpx; text-align: left; font-size: var(--font-size-xs); color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.td-size  { width: 80rpx; }
+.td-color { width: 110rpx; text-align: left; font-size: var(--font-size-xs); color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 14rpx 0; }
+.td-size  { width: 80rpx; padding: 14rpx 10rpx; }
 .td-order { width: 80rpx; }
 .td-cut   { width: 80rpx; font-weight: 600; color: var(--color-primary); }
 .td-cut.highlight { color: var(--color-primary); }
 .td-bundles { width: 80rpx; }
-.td-last  { flex: 1; display: flex; justify-content: center; }
+.td-last  { width: 140rpx; }
+.td-last-inner { display: flex; justify-content: center; }
 
 .td-last-input {
+  display: block;
+  margin: 0 auto;
   width: 100rpx;
   text-align: center;
   border: 1px solid var(--input-border);
