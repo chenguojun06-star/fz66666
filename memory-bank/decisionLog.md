@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-205 价格模板接入基础属性库选尺码）
+> 最后更新：2026-08-28（新增 D-206 PC端尺码录入全量接入基础属性库）
 
 ---
 
@@ -12,6 +12,19 @@ menu-grid 原固定4列，组内只有2个应用时占半边显得空。改为�
 
 ### 教训
 网格列数不该写死——按内容数量自适应（≤2→2、3→3、4→2×2）在权限过滤后应用数骤减时尤其必要
+
+---
+
+## D-206：PC端尺码/码数录入点全量接入基础属性库（2026-08-28，用户"所有要输入码数的都要接入属性库，全部核实"）
+
+### 盘点结论（14个候选逐一核对）
+- **已接 ✓**：样衣开发 ColorSizeSkuSection、价格模板 SyncProcessPriceModal（D-205）
+- **不该接 ✓**（码数源自订单/款式既有数据，非录入）：Cutting CuttingFreeBundlePanel、OrderLinesCard（从订单行 uniq 选码，接了会造出订单不存在的码）
+- **本轮新接 4 处**：①商品下单 MultiColorOrderEditor（颜色/码数两个 tags Select 旁各加齿轮，选组覆盖/追加）②价格模板内联编辑 ProcessInlineTable+useTemplateInlineEditorData.applySizes（覆盖/追加，新列沿用工价）③尺码表模板 SizeInlineTable（齿轮应用组，同步部位行 values 重建）④尺寸表工具条 StyleSizeToolbar（齿轮 → mergeSizeColumns 追加去重）
+
+### 教训
+- 判定"要不要接"的标准：该处是否产生**新的码数字符串**——产生（录入）就接，引用既有数据（选择）不接
+- python 批量 patch 的锚点必须先打印实文核对（SizeInlineTable 插错位截断 import，靠二次修复）
 
 ---
 

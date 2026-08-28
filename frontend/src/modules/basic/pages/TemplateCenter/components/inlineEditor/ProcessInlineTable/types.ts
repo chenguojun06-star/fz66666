@@ -13,6 +13,8 @@ export interface ProcessInlineTableProps {
   onNewSizeNameChange: (next: string) => void;
   onAddSize: () => void;
   onRemoveSize: (size: string) => void;
+  /** D-206：基础属性库成组应用尺码 */
+  onApplySizes: (values: string[], mode: 'replace' | 'append') => void;
   imageUrls: string[];
   imageUploading: boolean;
   onUploadImage: (file: File) => Promise<any>;

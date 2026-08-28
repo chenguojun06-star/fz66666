@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { App, Button, Dropdown, Input, Popover, Select, Space, Upload, message as antdMessage, Spin } from 'antd';
-import { DownOutlined, RobotOutlined } from '@ant-design/icons';
+import { DownOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
 import logger from '@/utils/logger';
@@ -8,6 +8,7 @@ import { TemplateLibrary } from '@/types/style';
 import ResizableModal from '@/components/common/ResizableModal';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import { hasSameSizeKey } from './shared';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 
 interface Props {
   editMode: boolean;
@@ -51,6 +52,14 @@ const StyleSizeToolbar: React.FC<Props> = ({
   const { modal } = App.useApp();
   const sizeSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [ocrModalOpen, setOcrModalOpen] = useState(false);
+
+  // D-206：基础属性库——尺寸表码数成组应用（mergeSizeColumns 追加去重）
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const handleApplyLibrarySizes = (_groupKey: string, values: string[], _mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);
+    if (!incoming.length) return;
+    mergeSizeColumns(sortSizeNames(incoming));
+  };
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrFile, setOcrFile] = useState<any>(null);
 
@@ -224,6 +233,8 @@ const StyleSizeToolbar: React.FC<Props> = ({
         >
           <Button disabled={loading || saving || isReadonly}>新增分组</Button>
         </Popover>
+        <Button icon={<SettingOutlined />} disabled={loading || saving || isReadonly}
+                onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
         <Select
           mode="multiple"
           allowClear
@@ -339,6 +350,11 @@ const StyleSizeToolbar: React.FC<Props> = ({
           </div>
         </Spin>
       </ResizableModal>
+          <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={handleApplyLibrarySizes}
+      />
     </div>
   );
 };

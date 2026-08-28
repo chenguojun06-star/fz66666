@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Empty, InputNumber, Select, Space, Tag } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
+import { Button, Empty, InputNumber, Select, Space, Tag, Tooltip } from 'antd';
+import { SettingOutlined, WarningOutlined } from '@ant-design/icons';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 import api from '@/utils/api';
 import type { OrderLine } from '../types';
 
@@ -93,6 +94,20 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
 }) => {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  // D-206：基础属性库——颜色/码数成组选择（与样衣开发同组件）
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const [attrLibTarget, setAttrLibTarget] = useState<'color' | 'size'>('size');
+  const handleApplyAttrGroup = (groupKey: string, values: string[], mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);
+    if (!incoming.length) return;
+    if (groupKey === 'color') {
+      const base = mode === 'replace' ? [] : selectedColors;
+      syncSelection(Array.from(new Set([...base, ...incoming])), selectedSizes);
+    } else {
+      const base = mode === 'replace' ? [] : selectedSizes;
+      syncSelection(selectedColors, Array.from(new Set([...base, ...incoming])));
+    }
+  };
   const [quickFillQty, setQuickFillQty] = useState<number>(1);
   const [availabilityMatrix, setAvailabilityMatrix] = useState<Record<string, Record<string, AvailabilityInfo>>>({});
   const [summary, setSummary] = useState<{ inProduction: number; stock: number; pendingSales: number } | null>(null);
@@ -268,6 +283,9 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           onChange={(values) => syncSelection(uniq(values as string[]), selectedSizes)}
           maxTagCount="responsive"
         />
+        <Tooltip title="基础属性库——成组选择颜色">
+          <Button icon={<SettingOutlined />} onClick={() => { setAttrLibTarget('color'); setAttrLibOpen(true); }} />
+        </Tooltip>
         <Select
           mode="tags"
           placeholder="选择或输入下单码数"
@@ -276,7 +294,15 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           onChange={(values) => syncSelection(selectedColors, uniq(values as string[]))}
           maxTagCount="responsive"
         />
+        <Tooltip title="基础属性库——成组选择码数">
+          <Button icon={<SettingOutlined />} onClick={() => { setAttrLibTarget('size'); setAttrLibOpen(true); }} />
+        </Tooltip>
       </div>
+      <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={handleApplyAttrGroup}
+      />
 
       <Space size={8} style={{ marginBottom: 12 }}>
         <Button onClick={() => syncSelection(availableColors, selectedSizes)}>全选颜色</Button>

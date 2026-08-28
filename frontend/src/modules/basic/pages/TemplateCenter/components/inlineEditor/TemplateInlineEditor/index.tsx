@@ -47,6 +47,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
     handleUploadImage,
     addSize,
     removeSize,
+    applySizes,
     handleSave,
     handleRemoveImage,
   } = useTemplateInlineEditorData({ row, onSaved });
@@ -74,6 +75,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
           onNewSizeNameChange={setNewSizeName}
           onAddSize={addSize}
           onRemoveSize={removeSize}
+          onApplySizes={applySizes}
           imageUrls={imageUrls}
           imageUploading={imageUploading}
           onUploadImage={handleUploadImage}

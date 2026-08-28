@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Checkbox, Dropdown, Input, Tag } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { DownOutlined, SettingOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 import CircleIconButton, { TagMinusCloseIcon } from '@/components/common/CircleIconButton';
 import { STAGE_ORDER } from '@/utils/productionStage';
 import { useProcessInlineTableData } from './useProcessInlineTableData';
@@ -22,11 +23,15 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
   onNewSizeNameChange,
   onAddSize,
   onRemoveSize,
+  onApplySizes,
   imageUrls,
   imageUploading,
   onUploadImage,
   onRemoveImage,
 }) => {
+  // D-206：基础属性库——尺码成组选择
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+
   const { sortedSteps, stageSpanMap, updateStep, deleteStep, addStepToStage } = useProcessInlineTableData({
     value,
     onChange,
@@ -92,8 +97,14 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                   style={{ width: compact ? 96 : 120 }}
                 />
                 <CircleIconButton type="add" size={22} title="添加尺码" onClick={onAddSize} />
+                <Button icon={<SettingOutlined />} disabled={readOnly} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
               </>
             )}
+      <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={(_groupKey, values, mode) => onApplySizes(values, mode)}
+      />
           </div>
         ) : null}
       </div>

@@ -33,6 +33,7 @@ export interface UseTemplateInlineEditorDataReturn {
   imageUrls: string[];
   handleUploadImage: (file: File) => Promise<void>;
   addSize: () => void;
+  applySizes: (values: string[], mode: 'replace' | 'append') => void;
   removeSize: (size: string) => void;
   handleSave: () => Promise<void>;
   handleRemoveImage: (url: string) => void;
@@ -257,6 +258,24 @@ export const useTemplateInlineEditorData = ({
     setEditTableData({ ...editTableData, sizes: nextSizes, steps: nextSteps });
   };
 
+  /** D-206：基础属性库成组应用尺码——replace 覆盖 / append 追加，新列价目默认沿用工价 */
+  const applySizes = (values: string[], mode: 'replace' | 'append') => {
+    if (!isProcessTableData(editTableData)) return;
+    const incoming = values.map((v) => String(v || '').trim().toUpperCase()).filter(Boolean);
+    if (!incoming.length) return;
+    const base = mode === 'replace' ? [] : templateSizes;
+    const nextSizes = sortSizeNames(Array.from(new Set([...base, ...incoming])));
+    const nextSteps = editTableData.steps.map((step) => {
+      const nextSizePrices: Record<string, number> = {};
+      nextSizes.forEach((sz) => {
+        nextSizePrices[sz] = step.sizePrices?.[sz] ?? (step.unitPrice ?? step.price ?? 0);
+      });
+      return { ...step, sizePrices: nextSizePrices };
+    });
+    setTemplateSizes(nextSizes);
+    setEditTableData({ ...editTableData, sizes: nextSizes, steps: nextSteps });
+  };
+
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
@@ -362,6 +381,7 @@ export const useTemplateInlineEditorData = ({
     handleUploadImage,
     addSize,
     removeSize,
+    applySizes,
     handleSave,
     handleRemoveImage,
   };

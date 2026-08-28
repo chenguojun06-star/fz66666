@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Select, Popconfirm, Modal, Tooltip } from 'antd';
-import { CopyOutlined, DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { CopyOutlined, DeleteOutlined, PlusOutlined, EditOutlined, SettingOutlined } from '@ant-design/icons';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
@@ -117,6 +118,23 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     });
     onChange({ ...value, sizes: nextSizes, parts: nextParts });
   }, [value, onChange]);
+
+  // D-206：基础属性库成组应用尺码——replace 覆盖 / append 追加，同步部位行取值
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const handleApplyLibrarySizes = (_groupKey: string, values: string[], mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);
+    if (!incoming.length) return;
+    const base = mode === 'replace' ? [] : value.sizes;
+    const nextSizes = sortSizeNames(Array.from(new Set([...base, ...incoming])));
+    const nextParts = value.parts.map((part) => {
+      const nextValues: Record<string, string> = {};
+      nextSizes.forEach((sz) => {
+        nextValues[sz] = part.values?.[sz] ?? '';
+      });
+      return { ...part, values: nextValues };
+    });
+    onChange({ ...value, sizes: nextSizes, parts: nextParts });
+  };
 
   const handleSizeHeaderConfirm = useCallback((oldSize: string) => {
     const newName = sizeHeaderDraft.trim() || oldSize;
@@ -307,6 +325,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
       {!readOnly && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12, gap: 8 }}>
             <Button icon={<PlusOutlined />} onClick={handleAddPart}>新增部位</Button>
+            <Button icon={<SettingOutlined />} disabled={readOnly} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
             <Select
               mode="tags"
               showSearch
@@ -345,7 +364,12 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
         dataSource={tableData}
         emptyDescription="暂无尺码数据"
       />
-    </div>
+    <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={handleApplyLibrarySizes}
+      />
+      </div>
   );
 };
 
