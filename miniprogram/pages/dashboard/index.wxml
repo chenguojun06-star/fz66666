@@ -67,8 +67,8 @@
         <text class="ip-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
       </view>
 
-      <!-- 展开按钮 -->
-      <view class="order-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+      <!-- 展开按钮：多菲才显示折叠切换，单菲直接展示 -->
+      <view class="order-expand-btn" wx:if="{{item.colorGroups.length > 1}}" data-index="{{index}}" catchtap="onCardToggle">
         <text class="expand-btn-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
       </view>
