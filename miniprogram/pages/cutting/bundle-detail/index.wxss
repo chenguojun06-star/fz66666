@@ -1193,12 +1193,13 @@
 .submit-btn {
   flex: 1;
   height: 88rpx;
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  /* D-201：对齐全局镂空主按钮规范（app.wxss .btn-primary），不用实心蓝底 */
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-xl);
   font-size: var(--font-size-md-lg);
-  font-weight: 600;
-  border: none;
+  font-weight: var(--font-weight-semibold);
 }
 
 .submit-btn::after {
@@ -1383,7 +1384,9 @@
 .cutting-summary-value.purple { color: var(--color-purple, #9333ea); }
 
 .print-btn--generate {
-  background: var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   flex: 1;
 }
 
@@ -1465,8 +1468,9 @@
 }
 
 .pt-btn--receive {
-  background: var(--color-primary);
-  color: #fff;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .pt-btn-hover {
