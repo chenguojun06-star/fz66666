@@ -68,7 +68,7 @@
           <text class="info-label">颜色</text>
           <text class="info-value info-value--strong">{{specSummary.colorText}}</text>
         </view>
-        <view class="info-cell info-cell--full" wx:if="{{specSummary.hasSpec}}">
+        <view class="info-cell info-cell--full info-cell--stack" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">尺码</text>
           <scroll-view scroll-x class="size-chip-scroll" enhanced show-scrollbar="{{false}}">
             <view class="size-chip-row">

@@ -168,16 +168,23 @@
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 16px;
+  gap: 12px 16px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--color-border-light, var(--color-border));
 }
+/* D-199：标签左值右单行式，消灭标签/值上下叠放的整片空白 */
 .info-cell {
   display: flex;
-  flex-direction: column;
-  gap: 4rpx;
+  align-items: baseline;
+  gap: 12rpx;
   min-width: 0;
+}
+/* 尺码横滑标签行保持上下结构 */
+.info-cell--stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8rpx;
 }
 .info-cell--full {
   grid-column: 1 / -1;
@@ -186,6 +193,8 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   line-height: 1.4;
+  flex-shrink: 0;
+  width: 84rpx;
 }
 .info-value {
   font-size: var(--font-size-sm);
@@ -635,6 +644,9 @@
 .matrix-table {
   display: grid;
   /* grid-template-columns 由 WXML 内联 style 动态设置（固定列宽，横向滚动） */
+  /* D-199：宽度按列定义收缩，scroll-view 才能感知溢出并横滑（默认 100% 宽=无溢出=划不动） */
+  width: max-content;
+  min-width: 100%;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
