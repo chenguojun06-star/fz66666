@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-29（新增 D-218 详情多图切换/本厂标签/维护不再触发样衣生产）
+> 最后更新：2026-08-29（新增 D-219 面料计算/预算天数打通/抽屉滚动/打印列表删除）
+
+---
+
+## D-219：面料计算全量展示+预算天数打通+抽屉滚动+打印列表删除（2026-08-29）
+
+### 各项根因与实现
+1. **面料计算只显一种+无单件口径**：计算层 materialAnalyses 本来就算全部面料+里料，是展示层砍到主面料1条/差异卡 slice(0,2)。改：散剪卡列全部面料（`单件 X米 × 下单 Y件 ≈ Z米`），差异卡放开条数并加每行"单件用料/下单数量"，面板加计算方式说明文案；materialAnalyses 补 perPieceMeters/matchedOrderQty 字段。
+2. **预算天数三重死链**：①BudgetDaysEditor 参数名写 `orderId`，后端只认 `id` 必 400，失败静默吞；②预算天数根本不落库（前端硬编码工序比例×出货窗口现算，t_production_order 的 8 个 *_budget_hours 字段从未被列表用）；③反推改的是 expectedShipDate（客户交期）而列表显示 plannedEndDate，语义拧反。修：参数改 id、落库 `getStageBudgetHoursField(nodeName)` 对应预算工时字段（天数×14h）、不再动 expectedShipDate、后端 quickEdit 在预算工时变化时 Σ工时/14 天从计划开工日顺推重算 plannedEndDate（客户交货日期不动）、列表传 record 已存预算工时（>0 优先于比例）、保存成功/失败 message 提示、useProductionListData 监听 data:changed 防抖刷新。
+3. **抽屉无滚动条**：SideDrawer（统一抽屉封装，4 个消费方）body inline `overflow:'hidden'` 压掉 antd 默认 auto，内容+分页器被静默裁剪。一处改 `overflowY:'auto'` 全局修复。D-137 单滚动条布局不背锅（Drawer portal 到 body）。
+4. **打印列表按钮**：商品下单页 SchemaPrint mode=list 纯摆设，按用户要求删除（组件与其他页面使用点保留）。
+
+### 教训
+- "调整没反应"三件套排查顺序：参数名对不对→有没有落库→落了库展示链路读没读；三环断任何一环都是摆设
+- 预算（内部计划 plannedEndDate）与交期（客户承诺 expectedShipDate）语义必须分开，联动只动前者
+- 统一封装组件里的 inline style 会压掉框架默认行为，抽屉类容器永远别写 overflow:hidden
 
 ---
 
