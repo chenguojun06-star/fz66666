@@ -33,11 +33,17 @@ const rowStyle: React.CSSProperties = {
   alignItems: 'center',
 };
 
+// D-213：码数格自适应宽度（chip 样式）——固定22px会让 XS(155/72A) 类长码溢出绘制堆成一片；
+// 码数/数量两行同宽 chip，wrap 换行时上下仍按列对齐
 const cellStyle: React.CSSProperties = {
-  width: '22px',
+  minWidth: '64px',
+  padding: '1px 4px',
   textAlign: 'center',
   fontSize: '11px',
   flexShrink: 0,
+  whiteSpace: 'nowrap',
+  background: 'var(--color-bg-subtle, #f5f5f5)',
+  borderRadius: 4,
 };
 
 const quantityCellStyle: React.CSSProperties = {

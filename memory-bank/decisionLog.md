@@ -38,6 +38,14 @@ BOM 编辑态单元格是 `Form.Item name={[rowId, field]}` 非受控，值全�
 
 ---
 
+## D-213：商品下单卡片码数堆积修复（2026-08-29，用户"码数全部堆积在一起看不到"）
+
+CardSizeQuantityFieldGroups（订单管理/商品下单/生产管理卡片共用）码数格写死 width:22px，XS(155/72A) 类长码溢出绘制盖成一片。改自适应 chip（minWidth 64+nowrap+浅底圆角），码数/数量两行同宽可换行对齐。全站共用组件一处修全局生效。
+
+### 串图排查结论（待数据确认）
+列表图=StyleCoverThumb(styleId,styleNo,cover)、SKU颜色图=getSkuColorImage(styleNo+color)——查询全部带款号/租户过滤，静态代码无跨款路径。判定为个别款数据本身存错（style_info.cover 或 sku_color_image 写入了别款文件URL）。临时修复：商品编码表该行图片点"清除"重传；防复发护栏与数据订正待用户提供具体款号后核查 t_style_info.cover / t_product_sku.sku_color_image。
+
+---
 ## D-212：删除 SKU 行同步清理 sizeColorConfig（2026-08-29 遗留修复，"删了又复活"根因）
 
 ### 背景与实现
