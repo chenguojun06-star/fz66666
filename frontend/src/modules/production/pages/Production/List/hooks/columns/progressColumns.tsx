@@ -2,6 +2,7 @@ import React from 'react';
 import type { ProductionOrder } from '@/types/production';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
+import { getStageBudgetHoursValue } from '@/utils/progressTimeBudget';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import {
   hasSecondaryProcessForOrder,
@@ -80,6 +81,7 @@ export function buildProgressColumns({
               stageEndTime={getStageCompletionTime?.(record, '采购', rate || 0) || undefined}
               isCompletedOrClosed={isCompletedOrClosed}
               isProcureNode
+              budgetHours={getStageBudgetHoursValue(record, '采购')}
             />
           </div>
         );

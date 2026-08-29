@@ -20,7 +20,6 @@ interface OrderManagementTabsProps {
   openCreate: (style?: StyleInfo) => void;
   fetchStyles: () => void;
   onNoDataOrder: () => void;
-  styleFieldConfigs: FieldConfigItem[];
   onGoToFieldConfig: () => void;
 }
 
@@ -37,7 +36,6 @@ const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
   openCreate,
   fetchStyles,
   onNoDataOrder,
-  styleFieldConfigs,
   onGoToFieldConfig,
 }) => {
   return (
@@ -61,7 +59,6 @@ const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
               openCreate={openCreate}
               fetchStyles={fetchStyles}
               onNoDataOrder={onNoDataOrder}
-              styleFieldConfigs={styleFieldConfigs}
               onGoToFieldConfig={onGoToFieldConfig}
             />
           </>

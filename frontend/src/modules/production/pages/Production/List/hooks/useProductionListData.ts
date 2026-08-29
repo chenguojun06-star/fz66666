@@ -226,6 +226,20 @@ export function useProductionListData() {
     return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
   }, [fetchProductionList]);
 
+  // D-219：预算天数调整等通用数据变更广播后刷新列表（BudgetDaysEditor 保存成功会派发）
+  useEffect(() => {
+    let timer: number | undefined;
+    const handleDataChanged = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => { wsRefreshRef.current += 1; fetchProductionList(); }, 500);
+    };
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('data:changed', handleDataChanged);
+    };
+  }, [fetchProductionList]);
+
   useEffect(() => {
     const handleWsProgress = (msg: { orderId: string }) => {
       if (!msg.orderId) return;

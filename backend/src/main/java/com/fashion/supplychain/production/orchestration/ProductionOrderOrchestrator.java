@@ -801,10 +801,12 @@ public class ProductionOrderOrchestrator {
                 "procurementBudgetHours", "cuttingBudgetHours", "secondaryProcessBudgetHours",
                 "carSewingBudgetHours", "ironingBudgetHours", "packagingBudgetHours",
                 "qualityBudgetHours", "warehousingBudgetHours"};
+        boolean budgetHoursChanged = false;
         for (String field : budgetHourFields) {
             if (payload.containsKey(field)) {
                 Object val = payload.get(field);
                 Integer hours = val != null ? Integer.parseInt(String.valueOf(val)) : null;
+                budgetHoursChanged = true;
                 switch (field) {
                     case "procurementBudgetHours" -> order.setProcurementBudgetHours(hours);
                     case "cuttingBudgetHours" -> order.setCuttingBudgetHours(hours);
@@ -815,6 +817,40 @@ public class ProductionOrderOrchestrator {
                     case "qualityBudgetHours" -> order.setQualityBudgetHours(hours);
                     case "warehousingBudgetHours" -> order.setWarehousingBudgetHours(hours);
                 }
+            }
+        }
+
+        // D-219：预算工时调整后重算"计划完工日期"（预计交期）——
+        // Σ各工序预算工时 / 14h工作日 从下单(或计划开工)日顺推；客户交货日期 expectedShipDate 不动
+        if (budgetHoursChanged) {
+            try {
+                long totalHours = 0;
+                Integer[] vals = {
+                        order.getProcurementBudgetHours(), order.getCuttingBudgetHours(),
+                        order.getSecondaryProcessBudgetHours(), order.getCarSewingBudgetHours(),
+                        order.getIroningBudgetHours(), order.getPackagingBudgetHours(),
+                        order.getQualityBudgetHours(), order.getWarehousingBudgetHours()};
+                boolean anySet = false;
+                for (Integer v : vals) {
+                    if (v != null && v > 0) {
+                        totalHours += v;
+                        anySet = true;
+                    }
+                }
+                if (anySet && totalHours > 0) {
+                    java.time.LocalDateTime base = order.getPlannedStartDate() != null
+                            ? order.getPlannedStartDate()
+                            : order.getCreateTime();
+                    if (base != null) {
+                        long plannedDays = Math.max(1, (long) Math.ceil(totalHours / 14.0));
+                        LocalDateTime newPlannedEnd = base.plusDays(plannedDays);
+                        log.info("[quickEdit] 预算工时调整重算计划完工日期: orderId={}, Σ{}h → +{}天, {} -> {}",
+                                id, totalHours, plannedDays, order.getPlannedEndDate(), newPlannedEnd);
+                        order.setPlannedEndDate(newPlannedEnd);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[quickEdit] 预算工时重算计划完工日期失败: orderId={}, err={}", id, e.getMessage());
             }
         }
 

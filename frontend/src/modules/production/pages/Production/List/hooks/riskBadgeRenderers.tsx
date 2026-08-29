@@ -6,6 +6,7 @@ import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { isOrderFrozenByStatus } from '@/utils/api';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
+import { getStageBudgetHoursValue } from '@/utils/progressTimeBudget';
 import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import { isSecondaryProcessSubNode } from '../../ProgressDetail/utils/stageMapping';
 
@@ -110,6 +111,7 @@ export function renderStageProgressCell(
         stageEndTime={ctx.getStageCompletionTime?.(record, nodeName, percent) || undefined}
         isCompletedOrClosed={isCompletedOrClosed}
         isProcureNode={/采购|物料|备料|辅料|面料/.test(nodeName)}
+        budgetHours={getStageBudgetHoursValue(record, nodeName)}
       />
     </div>
   );

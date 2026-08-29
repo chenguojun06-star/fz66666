@@ -1,6 +1,6 @@
 import type { StyleBom, StyleInfo } from '@/types/style';
 import type { OrderLine, ProgressNode } from '../types';
-import { buildOrderQtyStats, calcBomRequirementMeters } from './orderBomMetrics';
+import { buildOrderQtyStats, calcBomRequirementMeters, getMatchedOrderQty } from './orderBomMetrics';
 
 export type SizePriceRecord = {
   styleId?: number;
@@ -32,6 +32,8 @@ export type OrderOrchestrationResult = {
     categoryLabel: string;
     requiredMeters: number;
     benchmarkMeters: number;
+    perPieceMeters: number;
+    matchedOrderQty: number;
     noScatterQtyThreshold: number;
     qtyGapToNoScatter: number;
   }>;
@@ -199,6 +201,9 @@ export const analyzeOrderOrchestration = ({
       categoryLabel: String(row.materialType || '').startsWith('lining') ? '里布' : '面料',
       requiredMeters: Number(requiredMeters.toFixed(1)),
       benchmarkMeters,
+      // D-219：单件用料（含损耗，反推）与该行匹配的下单数量——用于"单件×下单数=需求量"展示
+      perPieceMeters: Number(perPieceMeters.toFixed(3)),
+      matchedOrderQty: getMatchedOrderQty(orderQtyStats, (row as Record<string, unknown>).color, (row as Record<string, unknown>).size),
       noScatterQtyThreshold: threshold,
       qtyGapToNoScatter: Math.max(0, threshold - totalQty),
     };

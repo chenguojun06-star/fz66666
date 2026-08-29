@@ -32,7 +32,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
   onPricingModeChange,
   orchestration,
 }) => {
-  const visibleMaterials = orchestration.materialAnalyses.filter((item) => item.requiredMeters > 0).slice(0, 6);
+  const visibleMaterials = orchestration.materialAnalyses.filter((item) => item.requiredMeters > 0);
   const scatterDecisionText = (() => {
     if ((orchestration.totalQty || 0) <= 0) {
       return '当前还没录入下单数量，暂时无法判断是多、少还是持平';
@@ -45,6 +45,8 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
     }
     return '当前已到免散剪线，与基准持平';
   })();
+  // D-219：计算方式说明——让用户看得懂单件用料怎么来的
+  const usageFormulaText = '面料需求 = 单件用料(含损耗) × 对应颜色/码数下单量，各色码求和；单件用料优先取纸样各码用量，未维护纸样时取单件用量。';
 
   return (
     <div
@@ -144,8 +146,15 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
             <Tag color={orchestration.scatterStatus}>{orchestration.scatterMode}</Tag>
           </div>
           <div>{orchestration.fabricFamily} / {orchestration.fabricSubcategory || '常规品类'}</div>
-          <div>{orchestration.primaryFabricName}：约 {orchestration.primaryRequiredMeters || 0} 米</div>
-          <div>基准段长：约 {orchestration.benchmarkRollMeters || 0} 米</div>
+          {/* D-219：列出全部面料（含里布），每行展示单件用料×下单数=需求量 */}
+          {visibleMaterials.length > 0 ? visibleMaterials.map((item) => (
+            <div key={item.key}>
+              {item.categoryLabel} {item.label}：单件 {item.perPieceMeters} 米 × 下单 {item.matchedOrderQty} 件 ≈ {item.requiredMeters} 米
+            </div>
+          )) : (
+            <div>{orchestration.primaryFabricName}：约 {orchestration.primaryRequiredMeters || 0} 米</div>
+          )}
+          <div>基准段长：约 {orchestration.benchmarkRollMeters || 0} 米（主面料）</div>
           <div>免散剪量：约 {orchestration.noScatterQtyThreshold || 0} 件</div>
         </div>
         <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
@@ -155,13 +164,15 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
               {scatterDecisionText}
             </div>
           </div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>{usageFormulaText}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
-            {visibleMaterials.slice(0, 2).map((item) => (
+            {visibleMaterials.map((item) => (
               <div key={item.key} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.categoryLabel}</div>
-                  <div style={{ color: 'var(--color-text-secondary)' }}>{item.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.categoryLabel} · {item.label}</div>
                 </div>
+                <div>单件用料：{item.perPieceMeters} 米/件（含损耗）</div>
+                <div>下单数量：{item.matchedOrderQty} 件</div>
                 <div>需求：{item.requiredMeters} 米</div>
                 <div>基准：{item.benchmarkMeters} 米</div>
                 <div>免散剪：{item.noScatterQtyThreshold || 0} 件</div>

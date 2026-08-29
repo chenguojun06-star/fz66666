@@ -20,6 +20,34 @@ export function getStageConfig(nodeName: string) {
   return { match: /./, ratio: DEFAULT_RATIO, label: nodeName.slice(0, 4) };
 }
 
+/** D-219：工序 → 订单表上的预算工时字段（quick-edit 落库用）。尾部列复用整烫/ironing 字段。 */
+const STAGE_BUDGET_HOUR_FIELDS: { match: RegExp; field: string }[] = [
+  { match: /采购|物料|备料|辅料|面料|procurement/i, field: 'procurementBudgetHours' },
+  { match: /裁剪|剪裁|cutting/i, field: 'cuttingBudgetHours' },
+  { match: /车缝|缝纫|平车|sewing/i, field: 'carSewingBudgetHours' },
+  { match: /大烫|整烫|熨烫|尾部|ironing|pressing/i, field: 'ironingBudgetHours' },
+  { match: /二次工艺|绣花|印花|特殊工艺|secondary/i, field: 'secondaryProcessBudgetHours' },
+  { match: /包装|打包|packaging/i, field: 'packagingBudgetHours' },
+  { match: /质检|检验|quality/i, field: 'qualityBudgetHours' },
+  { match: /入库|warehousing/i, field: 'warehousingBudgetHours' },
+];
+
+export function getStageBudgetHoursField(nodeName: string): string | null {
+  for (const s of STAGE_BUDGET_HOUR_FIELDS) {
+    if (s.match.test(nodeName)) return s.field;
+  }
+  return null;
+}
+
+/** 读取订单上该工序已设定的预算工时（小时），未设定返回 null */
+export function getStageBudgetHoursValue(record: unknown, nodeName: string): number | null {
+  const field = getStageBudgetHoursField(nodeName);
+  if (!field) return null;
+  const v = (record as Record<string, unknown> | null)?.[field];
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export interface StageBudgetHint {
   text: string;
   color: string;

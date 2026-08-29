@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { InputNumber, Space, Tooltip } from 'antd';
 import { App } from 'antd';
-import dayjs from 'dayjs';
 import { ProductionOrder } from '@/types/production';
-import { computeStageBudgetHint, getStageConfig } from '@/utils/progressTimeBudget';
+import { computeStageBudgetHint, getStageBudgetHoursField, getStageBudgetHoursValue } from '@/utils/progressTimeBudget';
 import { computeStageTimeline, type StageTimelineItem } from '@/components/common/StageTimelineHint';
 import {
   calculateActualDuration,
@@ -37,14 +36,12 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
   budgetHours,
   onBudgetHoursChange,
 }) => {
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const [editing, setEditing] = useState(false);
-  // D-120：保存后的新交期本地覆盖——原实现直接改 record 属性（不触发重渲染）+派发无监听者的
-  // 自定义事件，导致调整预算天数后界面永远不变（数据其实已入库）
-  const [shipDateOverride, setShipDateOverride] = useState<string | null>(null);
-  const effectiveShipDate = (shipDateOverride
-    || record.expectedShipDate
-    || record.plannedEndDate) as string | null;
+  // D-219：保存成功后本地即时生效（等列表刷新后以服务端 budgetHours 为准）
+  const [hoursOverride, setHoursOverride] = useState<number | null>(null);
+  const effectiveBudgetHours = hoursOverride ?? budgetHours ?? getStageBudgetHoursValue(record, nodeName);
+  const effectiveShipDate = (record.expectedShipDate || record.plannedEndDate) as string | null;
 
   const hint = computeStageBudgetHint({
     nodeName,
@@ -54,7 +51,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     stageEndTime: stageEndTime || undefined,
     isCompletedOrClosed,
     isProcureNode,
-    budgetHours,
+    budgetHours: effectiveBudgetHours,
   });
 
   const actualDaysText = (() => {
@@ -88,6 +85,9 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
 
   const isStageCompleted = !!stageEndTime;
 
+  // D-219：默认（天数）模式——把预算天数落库到订单的预算工时字段并重算计划完工日期。
+  // 旧实现把参数名写成 orderId（后端只认 id，请求必 400）且反推改 expectedShipDate（客户交期），
+  // 失败静默吞掉，用户看到的就是"改了没任何变化"的纯摆设。
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCompletedOrClosed || isStageCompleted) return;
@@ -142,11 +142,6 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     }
 
     const currentBudgetDays = hint?.budgetDays ?? 1;
-    const orderCreate = record.createTime ? dayjs(record.createTime as string) : dayjs();
-    const currentShipDate = effectiveShipDate
-      ? dayjs(String(effectiveShipDate))
-      : orderCreate.add(30, 'day');
-    const totalDays = currentShipDate.diff(orderCreate, 'day');
     let newBudgetDays = currentBudgetDays;
 
     modal.confirm({
@@ -158,13 +153,13 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       content: (
         <div style={{ marginTop: 12 }}>
           <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
-            当前预算 {currentBudgetDays} 天，调整后将自动更新预计交期
+            当前预算 {currentBudgetDays} 天。调整后将重算该工序预算与订单计划完工日期（预计交期），不影响订单交货日期。
           </div>
           <Space.Compact style={{ width: '100%' }}>
             <InputNumber
               defaultValue={currentBudgetDays}
               min={1}
-              max={totalDays > 0 ? totalDays * 2 : 60}
+              max={999}
               style={{ width: '100%' }}
               onChange={(v) => { newBudgetDays = v ?? currentBudgetDays; }}
             />
@@ -181,26 +176,33 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       ),
       onOk: async () => {
         if (newBudgetDays === currentBudgetDays) return;
-        const config = getStageConfig(nodeName);
-        const newTotalDays = Math.round(newBudgetDays / config.ratio);
-        const newShipDate = orderCreate.add(newTotalDays, 'day').format('YYYY-MM-DD HH:mm');
+        const hoursField = getStageBudgetHoursField(nodeName);
+        if (!hoursField) {
+          message.error(`「${nodeName}」没有对应的预算字段，无法调整`);
+          return;
+        }
         try {
           const res = await api.put('/production/order/quick-edit', {
-            orderId: String(record.id || ''),
-            expectedShipDate: newShipDate,
+            id: String(record.id || ''),
+            [hoursField]: newBudgetDays * 14,
           });
           if (res.code === 200) {
-            // D-120：本地覆盖即时重算预算文字（不再直接改 props）；data:changed 通知列表页刷新
-            setShipDateOverride(newShipDate);
+            setHoursOverride(newBudgetDays * 14);
+            message.success(`已调整「${nodeName}」预算为 ${newBudgetDays} 天，计划完工日期已重算`);
             window.dispatchEvent(new Event('data:changed'));
             onUpdated?.();
+          } else {
+            message.error(res.message || '保存失败，请重试');
           }
-        } catch { /* ignore */ }
+        } catch (err: unknown) {
+          const axiosErr = typeof err === 'object' && err !== null && 'response' in err ? (err as any).response?.data?.message : null;
+          message.error(axiosErr || '保存失败，请检查网络后重试');
+        }
       },
       onCancel: () => { setEditing(false); },
       afterClose: () => { setEditing(false); },
     });
-  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, budgetHours, onBudgetHoursChange, isStageCompleted, effectiveShipDate]);
+  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, message, budgetHours, onBudgetHoursChange, isStageCompleted, effectiveBudgetHours]);
 
   if (!hint && !gapInfo && budgetHours == null) return null;
 

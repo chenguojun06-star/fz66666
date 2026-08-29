@@ -13,7 +13,6 @@ import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
-import SchemaPrint from '@/components/common/SchemaPrint';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 interface Props {
@@ -29,14 +28,13 @@ interface Props {
   openCreate: (style: StyleInfo) => void;
   fetchStyles: () => void;
   onNoDataOrder?: () => void;
-  styleFieldConfigs: FieldConfigItem[];
   onGoToFieldConfig: () => void;
 }
 
 const OrderListContent: React.FC<Props> = ({
   viewMode, setViewMode, queryParams, setQueryParams,
   styles, total, loading, columns, cardColumns, openCreate, fetchStyles, onNoDataOrder,
-  styleFieldConfigs, onGoToFieldConfig,
+  onGoToFieldConfig,
 }) => {
   return (
     <>
@@ -83,15 +81,6 @@ const OrderListContent: React.FC<Props> = ({
               <a onClick={onGoToFieldConfig} style={{ fontSize: 13 }}>
                 <SettingOutlined /> 字段配置
               </a>
-              <SchemaPrint
-                mode="list"
-                fields={styleFieldConfigs}
-                data={styles as unknown as Record<string, unknown>[]}
-                title="款式列表"
-                subtitle={`共 ${total} 条`}
-                buttonText="打印列表"
-                type="default"
-              />
               <Button
                 icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                 onClick={() => {

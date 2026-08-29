@@ -67,7 +67,8 @@ const SideDrawer: React.FC<SideDrawerProps> = ({
     destroyOnHidden={destroyOnHidden}
     rootClassName="side-drawer"
     styles={{
-      body: { padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', ...styles?.body },
+      // D-219：overflowY auto——原 hidden 会静默裁掉超出内容（无滚动条、分页器看不见）
+      body: { padding: 16, display: 'flex', flexDirection: 'column', overflowY: 'auto', ...styles?.body },
       header: { borderBottom: '1px solid var(--color-border-light, #f0f0f0)', padding: '14px 20px', ...styles?.header },
       ...(footer ? { footer: { padding: '12px 20px', borderTop: '1px solid var(--color-border-light, #f0f0f0)', ...styles?.footer } } : {}),
     }}

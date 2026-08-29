@@ -50,7 +50,6 @@ const OrderManagement: React.FC = () => {
 
   // ===== 扩展字段配置 =====
   const { fields: orderFieldConfigs } = useFieldConfig({ bizType: 'order', platform: 'pc' });
-  const { fields: styleFieldConfigs } = useFieldConfig({ bizType: 'style', platform: 'pc' });
   const orderCustomFields = useMemo(
     () => orderFieldConfigs.filter(f => f.isSystem === 0),
     [orderFieldConfigs]
@@ -308,7 +307,6 @@ const OrderManagement: React.FC = () => {
           openCreate={openCreate}
           fetchStyles={fetchStyles}
           onNoDataOrder={cuttingCreateTask.openCreateTask}
-          styleFieldConfigs={styleFieldConfigs}
           onGoToFieldConfig={goToStyleFieldConfig}
         />
       </PageLayout>
