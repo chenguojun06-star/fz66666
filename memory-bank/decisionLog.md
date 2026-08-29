@@ -3592,3 +3592,24 @@ javac -Xlint 警告 0；mvn compile EXIT=0；Java LS 全目录诊断 0。三重�
 
 ### 验证
 本地实测（8088 + lilb/李老板）：领取裁剪成功→列表 CLAIMED+显示领取人；factory_meimei 领取被拒「已由 李老板 领取」；领取配置外工序被拒；跨租户拒绝；测试数据已清理
+
+## D-224c 自愈Runner补建SKU与横线条件冲突（BR26X1K0651A 列表不显示根治）——2026-08-30
+
+### 背景
+线上 BR26X1K0651A 棕色连衣裙：库位详情有 132 件（读 t_product_warehousing），成品仓库列表却无此款（读 t_product_sku 且 stock>0）。D-224/D-224b 已部署但仍不显示。
+
+### 根因
+StyleSnapshotBackfillRunner 内部逻辑自相矛盾：步骤 6.5（D-224b）把入库明细编码重建为**无横线直拼**格式（`BR26X1K0651A棕色XS`），但步骤 8 补建缺失 SKU 仍要求编码**含 >=2 个横线**且按横线切分提取色/码——条件永不成立，SKU 行永远补不出来。另外步骤 7 对账 JOIN 也可能因 SKU 表旧横线编码与入库直拼编码不匹配而失效。
+
+### 决策
+1. 新增步骤 6.6：SKU 编码分隔符归一化——行内有款号/色/码、编码与直拼格式仅差横线（保留 SKU- 前缀）的统一为直拼，使对账 JOIN 能命中；manually_edited=1 不动
+2. 步骤 8 重写：直接用入库明细行内 style_no/color/size 组装，去掉横线条件；INNER JOIN t_style_info 取 style_id（NOT NULL 约束）；NOT EXISTS 防护 uk_sku_code（全局唯一，跨租户）与 uk_style_color_size 唯一键，避免整批 INSERT 失败
+3. 菜单「成品出入库」更名「成品仓库」（cb4881eab，12 文件全端同步，仅 UI 名，权限码/路由不变）
+
+### 踩坑（重要）
+- 自愈 Runner 改动必须核对**步骤间执行顺序与格式约定的一致性**：前一步改变的数据格式，后一步的 WHERE 条件必须同步适配（本次 6.5 直拼 vs 8 横线即典型冲突）
+- t_product_sku 的 uk_sku_code 是**全局唯一**（不带 tenant_id），跨租户同码会冲突，批量 INSERT 必须 NOT EXISTS 防护
+- 旧版步骤 8 因横线条件从未真正执行过，其 INSERT 列清单从未被约束验证过——"部署了"≠"生效过"
+
+### 验证
+mvn compile 通过；safe-push 8 项全过；推送 dbd3f0719 触发 CI 部署，后端重启 15 秒后 Runner 自动补建，BR26X1K0651A 六个码（各 22 件）应出现在成品仓库列表
