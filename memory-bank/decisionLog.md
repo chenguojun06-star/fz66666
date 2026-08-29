@@ -3613,3 +3613,23 @@ StyleSnapshotBackfillRunner 内部逻辑自相矛盾：步骤 6.5（D-224b）把
 
 ### 验证
 mvn compile 通过；safe-push 8 项全过；推送 dbd3f0719 触发 CI 部署，后端重启 15 秒后 Runner 自动补建，BR26X1K0651A 六个码（各 22 件）应出现在成品仓库列表
+
+## D-227 质检/手工入库不同步SKU表（新入库款成品仓库列表缺失根治）——2026-08-30
+
+### 背景
+线上 BR26X1K0651A 入库 132 件（12 行明细，行内色/码各自正确），成品仓库列表却无此款；库位详情塌缩成"棕色XS 132件"一行。用户反馈所有新入库款都有此问题。通过线上 API（api.webyszl.cn，账号 lilb）实证：入库明细 12 行 sku_code 全为 NULL，t_product_sku 52 行中无该款任何行。
+
+### 根因（三处叠加）
+1. **根源**：ProductWarehousingOrchestrator.save/batchSave 只写 t_product_warehousing，从不生成 sku_code、从不同步 t_product_sku（updateSkuStock 方法只被 delete 调用，且用旧横线编码格式）
+2. **自愈失效一**：Runner 6.5 重建编码条件 `pw.sku_code <> CONCAT(...)` 在 sku_code IS NULL 时结果为 NULL（条件不成立）——NULL 行永不重建
+3. **自愈失效二**：Runner 8 补建条件 `IFNULL(sku_code,'') <> ''` 排除空编码行
+
+### 决策
+1. 新增 ProductWarehousingSkuSyncHelper：入库保存后生成直拼编码（款号+色+码）回填明细 sku_code + upsert SKU 行（按编码→按款色码租户二次查找→按款式档案补建），try-catch 不阻断主流程
+2. save/batchSave 接入同步；delete 恢复库存改直拼编码 + 行内色码兜底（原来只从菲号取色码）
+3. Runner 6.5 改 `IFNULL(pw.sku_code,'') <> CONCAT(...)`，NULL 编码可重建，后续对账/补建链条打通
+
+### 踩坑（重要）
+- **SQL NULL 比较陷阱**：`col <> x` 在 col 为 NULL 时结果为 NULL 而非 TRUE，所有"与期望值不等则修复"的自愈 SQL 必须用 IFNULL 包裹
+- **"部署了"≠"验证过"**：D-224 系列补建 SQL 因条件矛盾从未真正生效，直到用线上 API 查真实数据才暴露。线上问题必须查线上数据（本地库不同步），用 postdeploy-smoke-test.py 的 BASE_URL+账号 curl 登录即可
+- 出库弹窗前端曾用颜色×尺码笛卡尔积拼假编码且整款总量错标到每码（D-226 已修）
