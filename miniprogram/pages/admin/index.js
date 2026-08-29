@@ -246,6 +246,11 @@ Page({
         }
       }
       var freshPatch = {};
+      if (freshImgUrl) {
+        // D-212：PC 端换头像后文件路径可能相同，加时间戳破 <image> 缓存，保证与 PC 同步
+        var sep2 = freshImgUrl.indexOf('?') !== -1 ? '&' : '?';
+        freshImgUrl = freshImgUrl + sep2 + 't=' + Date.now();
+      }
       if (freshImgUrl !== avatarImgUrl) {
         freshPatch.avatarImgUrl = freshImgUrl;
       }

@@ -343,10 +343,16 @@ Page({
         const remoteOrgName = me.factoryName || me.tenantName || '';
         const remoteRawAvatar = me.avatarUrl || me.avatar || me.headUrl || '';
         const remoteAvatarImgUrl = remoteRawAvatar ? getAuthedImageUrl(remoteRawAvatar) : '';
+        let remoteAvatar = remoteAvatarImgUrl;
+        if (remoteAvatar) {
+          // D-212：PC 端换头像后文件路径可能相同，加时间戳破 <image> 缓存，保证与 PC 同步
+          const sep2 = remoteAvatar.indexOf('?') !== -1 ? '&' : '?';
+          remoteAvatar = remoteAvatar + sep2 + 't=' + Date.now();
+        }
         const remotePatch = {};
         if (remoteName && remoteName !== that.data.userName) remotePatch.userName = remoteName;
         if (remoteOrgName && remoteOrgName !== that.data.orgName) remotePatch.orgName = remoteOrgName;
-        if (remoteAvatarImgUrl && remoteAvatarImgUrl !== that.data.avatarImgUrl) remotePatch.avatarImgUrl = remoteAvatarImgUrl;
+        if (remoteAvatar && remoteAvatar !== that.data.avatarImgUrl) remotePatch.avatarImgUrl = remoteAvatar;
         if (Object.keys(remotePatch).length) that.setData(remotePatch);
       })
       .catch(function (e) { console.warn('[home] _loadUserName failed:', e.message || e); });
