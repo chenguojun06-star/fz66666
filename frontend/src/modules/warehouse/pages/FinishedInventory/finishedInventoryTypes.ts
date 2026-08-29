@@ -49,6 +49,8 @@ export interface FinishedInventory {
   salesPrice?: number;
   colors?: string[];
   sizes?: string[];
+  /** 该款下所有真实完整商品编码（来自 t_product_sku.sku_code，聚合行使用） */
+  skuCodes?: string[];
   inProductionQty?: number;
   pendingSalesQty?: number;
 }

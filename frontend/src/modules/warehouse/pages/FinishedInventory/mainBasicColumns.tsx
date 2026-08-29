@@ -58,5 +58,22 @@ export function getMainBasicColumns(): ColumnsType<FinishedInventory> {
         </div>
       ),
     },
+    {
+      // D-226：完整商品编码列——展示该款下每个真实编码（t_product_sku.sku_code 原样输出，不简写）
+      title: '商品编码',
+      dataIndex: 'skuCodes',
+      width: 220,
+      render: (_, record) => {
+        const codes = record.skuCodes?.length ? record.skuCodes : (record.sku ? [record.sku] : []);
+        if (codes.length === 0) return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {codes.map((code, i) => (
+              <div key={`${code}_${i}`} style={{ fontSize: 13, fontFamily: 'var(--font-family-mono, monospace)', color: 'var(--color-text)' }} title={code}>{code}</div>
+            ))}
+          </div>
+        );
+      },
+    },
   ];
 }

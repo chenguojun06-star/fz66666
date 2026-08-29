@@ -137,7 +137,8 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       message.warning('请填写款号、颜色、尺码');
       return;
     }
-    const skuCode = `${styleNo}-${color}-${size}`;
+    // D-226：商品编码用直拼格式（款号+颜色+尺码），与 t_product_sku.sku_code 真实编码保持一致，禁止带"-"简写拼接
+    const skuCode = `${styleNo}${color}${size}`;
     const exists = items.find(i => i.skuCode === skuCode);
     if (exists) {
       setItems(prev => prev.map(i => i.skuCode === skuCode ? { ...i, quantity: i.quantity + 1 } : i));

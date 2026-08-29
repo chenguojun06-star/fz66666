@@ -25,12 +25,24 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
   const outboundSubmittingRef = useRef(false);
 
   const handleOutbound = useCallback((record: FinishedInventory) => {
-    const styleSKUs: SKUDetail[] = rawDataSource.filter(item => item.styleNo === record.styleNo).flatMap(item => {
-      const colors = (item.color || '').includes(',') ? (item.color || '').split(',').map(c => c.trim()).filter(Boolean) : [item.color || ''];
-      const sizes = (item.size || '').includes(',') ? (item.size || '').split(',').map(s => s.trim()).filter(Boolean) : [item.size || ''];
-      return colors.flatMap(color => sizes.map(size => ({ color, size, sku: `${item.styleNo}-${color}-${size}`, availableQty: item.availableQty ?? 0, lockedQty: item.lockedQty ?? 0, defectQty: item.defectQty ?? 0, warehouseLocation: item.warehouseLocation || '-', costPrice: item.costPrice, salesPrice: item.salesPrice })));
-    });
-    setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{ color: record.color || '', size: record.size || '', sku: record.sku || `${record.styleNo}-${record.color}-${record.size}`, availableQty: record.availableQty ?? 0, lockedQty: record.lockedQty ?? 0, defectQty: record.defectQty ?? 0, warehouseLocation: record.warehouseLocation || '-', costPrice: record.costPrice, salesPrice: record.salesPrice }]);
+    // D-226：直接用后端返回的真实 SKU 行（每行 sku 即完整商品编码，库存/价格也是该编码自己的），
+    // 不再用颜色×尺码笛卡尔积拼假编码（旧逻辑把整款总量错标到每个码上，且编码格式与真实编码不一致）
+    const styleSKUs: SKUDetail[] = rawDataSource
+      .filter(item => item.styleNo === record.styleNo && (item.sku || item.id))
+      .map(item => ({
+        color: item.color || '',
+        size: item.size || '',
+        sku: item.sku || item.id || '',
+        availableQty: item.availableQty ?? 0,
+        lockedQty: item.lockedQty ?? 0,
+        defectQty: item.defectQty ?? 0,
+        warehouseLocation: item.warehouseLocation || '-',
+        costPrice: item.costPrice,
+        salesPrice: item.salesPrice,
+        inProductionQty: item.inProductionQty,
+        pendingSalesQty: item.pendingSalesQty,
+      }));
+    setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{ color: record.color || '', size: record.size || '', sku: record.sku || record.id || '', availableQty: record.availableQty ?? 0, lockedQty: record.lockedQty ?? 0, defectQty: record.defectQty ?? 0, warehouseLocation: record.warehouseLocation || '-', costPrice: record.costPrice, salesPrice: record.salesPrice }]);
     setOutboundType('sales'); setOutboundReason('');
     setOutboundProductionOrderNo(''); setOutboundTrackingNo(''); setOutboundExpressCompany('');
     setOutboundCustomerName(''); setOutboundCustomerPhone(''); setOutboundShippingAddress('');
@@ -127,6 +139,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
           id: String(item.id), styleNo: String((item.styleNo as string) || record.styleNo || '-'), orderNo: String(item.orderNo || '-'),
           inboundDate: String(item.warehousingEndTime || item.createTime || '-'), qualityInspectionNo: String(item.warehousingNo || '-'),
           cuttingBundleNo: String(item.cuttingBundleNo || '-'), color: String(item.color || '-'), size: String(item.size || '-'),
+          skuCode: String(item.skuCode || '-'),
           quantity: Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0),
           operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
           warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),

@@ -58,8 +58,10 @@ export const useFinishedInventoryData = () => {
         existing.defectQty = (existing.defectQty || 0) + (item.defectQty || 0);
         const colors = new Set(existing.colors || []); if (item.color) colors.add(item.color); existing.colors = Array.from(colors);
         const sizes = new Set(existing.sizes || []); if (item.size) sizes.add(item.size); existing.sizes = Array.from(sizes);
+        // D-226：聚合时保留每个真实完整商品编码（不简写），供主列表编码列与出库弹窗使用
+        const codes = new Set(existing.skuCodes || []); if (item.sku) codes.add(item.sku); existing.skuCodes = Array.from(codes);
         if ((item.totalInboundQty ?? 0) > (existing.totalInboundQty ?? 0)) existing.totalInboundQty = item.totalInboundQty;
-      } else { groupMap.set(key, { ...item, colors: item.colors?.length ? [...item.colors] : (item.color ? [item.color] : []), sizes: item.sizes?.length ? [...item.sizes] : (item.size ? [item.size] : []) }); }
+      } else { groupMap.set(key, { ...item, colors: item.colors?.length ? [...item.colors] : (item.color ? [item.color] : []), sizes: item.sizes?.length ? [...item.sizes] : (item.size ? [item.size] : []), skuCodes: item.sku ? [item.sku] : [] }); }
     }
     return Array.from(groupMap.values());
   }, [rawDataSource, searchText, selectedFactoryType, statusValue]);

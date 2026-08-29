@@ -190,8 +190,8 @@ const OutboundDrawer: React.FC<Props> = ({
                       borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
                     }}>
                       <div>选择</div>
-                      <div>颜色 / 尺码</div>
-                      <div style={{ textAlign: 'right' }}>库存</div>
+                    <div>商品编码</div>
+                    <div style={{ textAlign: 'right' }}>库存</div>
                       <div style={{ textAlign: 'right' }}>出库数量</div>
                       <div style={{ textAlign: 'right' }}>出库单价</div>
                       <div style={{ textAlign: 'right' }}>小计</div>
@@ -214,8 +214,14 @@ const OutboundDrawer: React.FC<Props> = ({
                             />
                           </div>
                           <div>
-                            <Tag color="blue" style={{ marginRight: 4 }}>{item.color}</Tag>
-                            <Tag>{item.size}</Tag>
+                            {/* D-226：完整商品编码原样显示，不简写 */}
+                            <div style={{ fontSize: 13, fontFamily: 'var(--font-family-mono, monospace)', color: 'var(--color-text)' }} title={item.skuCode}>
+                              {item.skuCode}
+                            </div>
+                            <div style={{ marginTop: 2 }}>
+                              <Tag color="blue" style={{ marginRight: 4 }}>{item.color}</Tag>
+                              <Tag>{item.size}</Tag>
+                            </div>
                           </div>
                           <div style={{ textAlign: 'right', fontWeight: 500 }}>
                             {item.stockQuantity}

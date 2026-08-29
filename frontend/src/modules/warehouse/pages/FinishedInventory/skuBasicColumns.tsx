@@ -6,6 +6,16 @@ import type { SKUDetail } from './finishedInventoryTypes';
 export function getSkuBasicColumns(): ColumnsType<SKUDetail> {
   return [
     {
+      // D-226：完整商品编码放首列（真实 sku_code 原样输出，不简写）
+      title: '商品编码',
+      dataIndex: 'sku',
+      key: 'sku',
+      width: 220,
+      render: (sku: string) => (
+        <span title={sku} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{sku || '-'}</span>
+      ),
+    },
+    {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
@@ -24,12 +34,6 @@ export function getSkuBasicColumns(): ColumnsType<SKUDetail> {
       render: (size: string) => (
         <Tag color="green">{size}</Tag>
       ),
-    },
-    {
-      title: '商品编码',
-      dataIndex: 'sku',
-      key: 'sku',
-      width: 180,
     },
     {
       title: '仓库位置',
