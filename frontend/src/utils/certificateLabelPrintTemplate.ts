@@ -99,9 +99,10 @@ function buildLabelHtml(
           .replace(/\{序号\}/g, String(page.seq));
       }
       const label = String(r.labelText ?? '');
-      // 中文标签两字/三字补空格对齐（品 名 / 款 号），四字以上不补
-      const padLabel = label.length === 2 ? `${label.charAt(0)}　${label.charAt(1)}`
-        : label.length === 3 ? `${label.charAt(0)}　${label.slice(1)}` : label;
+      // 中文标签两字/三字补全角空格对齐（品 名 / 款 号），四字以上不补（\u3000 转义避免 no-irregular-whitespace）
+      const IGAP = '\u3000';
+      const padLabel = label.length === 2 ? `${label.charAt(0)}${IGAP}${label.charAt(1)}`
+        : label.length === 3 ? `${label.charAt(0)}${IGAP}${label.slice(1)}` : label;
       return `<div class="cert-row">
         <span class="cert-lbl">${escapeHtml(padLabel)}${label.length > 0 && label.length < 4 ? '：' : ''}</span>
         <span class="cert-val">${escapeHtml(value)}</span>
