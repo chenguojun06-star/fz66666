@@ -353,7 +353,11 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
         preview={{
           open: previewOpen,
           onOpenChange: (isOpen) => setPreviewOpen(!!isOpen),
+          // current 为受控属性，必须用 onChange 同步索引，否则预览内左右切换会被拉回原位
           current: currentIndex >= 0 ? currentIndex : 0,
+          onChange: (next) => {
+            setSelectedUrl(assets[next]?.url || null);
+          },
         }}
       >
         <Image src={selectedImageUrl || undefined} style={{ display: 'none' }} alt="cover" />
