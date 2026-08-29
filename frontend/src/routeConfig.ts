@@ -560,7 +560,7 @@ export const menuConfig: MenuSection[] = [
     key: 'warehouse',
     icon: React.createElement(InboxOutlined),
     items: [
-      { label: '成品出入库', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
+      { label: '成品仓库', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
       { label: '成品资料', path: paths.productInfo, icon: React.createElement(ProfileOutlined) },
       { label: '标签打印', path: paths.labelPrint, icon: React.createElement(TagOutlined) },
       { label: '库存盘点', path: paths.inventoryCheck, icon: React.createElement(AuditOutlined) },

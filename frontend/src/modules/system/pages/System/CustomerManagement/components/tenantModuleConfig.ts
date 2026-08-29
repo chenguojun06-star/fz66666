@@ -33,7 +33,7 @@ export const MODULE_SECTIONS = [
     { path: '/system/partner-management', label: '合作企业管理' },
   ]},
   { key: 'warehouse', title: '成品管理', paths: [
-    { path: '/warehouse/finished', label: '成品出入库' },
+    { path: '/warehouse/finished', label: '成品仓库' },
     { path: '/warehouse/ecommerce', label: '电商订单' },
   ]},
   { key: 'ecommerce', title: '电商运营', paths: [

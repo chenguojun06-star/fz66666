@@ -37,7 +37,7 @@ export const MODULE_SECTIONS = [
   // 供应商管理/组织架构/合作企业共用 MENU_FACTORY 权限码，合并为一项
   { title: '供应商管理', items: [{ label: '供应商管理（含组织架构/合作企业）', code: permissionCodes.factory }] },
   { title: '成品管理', items: [
-    { label: '成品出入库（含电商订单/库存盘点）', code: permissionCodes.finishedInventory },
+    { label: '成品仓库（含电商订单/库存盘点）', code: permissionCodes.finishedInventory },
     { label: '成品资料', code: permissionCodes.productInfo },
     { label: '标签打印', code: permissionCodes.labelPrint },
     { label: '库位地图', code: permissionCodes.warehouseLocationMap },
