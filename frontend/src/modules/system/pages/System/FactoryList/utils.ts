@@ -19,8 +19,9 @@ export function calculateFactoryStats(factoryList: FactoryType[]) {
 
     if (supplierType === 'MATERIAL') materialCount++;
     if (supplierType === 'OUTSOURCE') outsourceCount++;
-    if (factoryType === 'INTERNAL') internalCount++;
-    if (factoryType === 'EXTERNAL') externalCount++;
+    // D-218：与列表"内外标签"列同口径——外发厂（含本厂）归外部
+    if (factoryType === 'INTERNAL' && supplierType !== 'OUTSOURCE') internalCount++;
+    if (factoryType === 'EXTERNAL' || supplierType === 'OUTSOURCE') externalCount++;
 
     if (status === 'active') activeCount++;
     else inactiveCount++;

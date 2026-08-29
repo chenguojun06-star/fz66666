@@ -119,6 +119,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
             open: previewOpen,
             onOpenChange: setPreviewOpen,
             current: previewIndex,
+            // D-218：受控 current 必须回写——否则内部切换不生效，‹›按钮点了画面不动
+            onChange: (cur: number) => setPreviewIndex(cur),
             // 自定义底部工具栏：左右切换上一张/下一张 + 默认缩放/旋转等操作按钮
             actionsRender: (originalNode, info) => (
               <div className="style-image-preview-toolbar">

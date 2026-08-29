@@ -96,7 +96,11 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       dataIndex: 'factoryType',
       key: 'factoryType',
       width: 110,
-      render: (v: string) => {
+      // D-218：外发厂（含"本厂"）在供应商列表一律显示外部——
+      // factoryType=INTERNAL 的结算语义（工资结算）保持不变，仅展示归类调整
+      render: (v: string, record: FactoryType) => {
+        const supplierType = String(record?.supplierType || '').toUpperCase();
+        if (supplierType === 'OUTSOURCE') return <Tag color="info">外部</Tag>;
         if (v === 'INTERNAL') return <Tag color="processing">内部</Tag>;
         if (v === 'EXTERNAL') return <Tag color="info">外部</Tag>;
         return <Tag>未标记</Tag>;

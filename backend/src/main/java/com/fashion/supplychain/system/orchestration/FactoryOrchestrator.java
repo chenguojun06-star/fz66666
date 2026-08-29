@@ -72,9 +72,19 @@ public class FactoryOrchestrator {
                 .like(StringUtils.hasText(name), Factory::getFactoryName, name)
                 .eq(StringUtils.hasText(st), Factory::getStatus, st)
                 .eq(StringUtils.hasText(sType), Factory::getSupplierType, sType)
-                .eq(StringUtils.hasText(fType), Factory::getFactoryType, fType)
                 .eq(StringUtils.hasText(parentId), Factory::getParentOrgUnitId, parentId)
                 .orderByDesc(Factory::getCreateTime);
+        // D-218：内外标签筛选与列表展示同口径——外发厂（supplierType=OUTSOURCE，含"本厂"）归外部；
+        // factoryType 存储值不动（工资/订单结算语义依赖它）
+        if ("EXTERNAL".equals(fType)) {
+            wrapper.and(w -> w.eq(Factory::getFactoryType, "EXTERNAL")
+                    .or().eq(Factory::getSupplierType, "OUTSOURCE"));
+        } else if ("INTERNAL".equals(fType)) {
+            wrapper.eq(Factory::getFactoryType, "INTERNAL")
+                    .and(w -> w.isNull(Factory::getSupplierType).or().ne(Factory::getSupplierType, "OUTSOURCE"));
+        } else if (StringUtils.hasText(fType)) {
+            wrapper.eq(Factory::getFactoryType, fType);
+        }
         IPage<Factory> result = factoryService.page(pageInfo, wrapper);
         if (result != null && result.getRecords() != null) {
             result.getRecords().forEach(factory -> applySnapshot(factory, organizationUnitBindingHelper.getFactorySnapshot(factory)));

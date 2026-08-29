@@ -290,6 +290,14 @@ public class StylePatternProductionHelper {
      * - 无矩阵配置 → 旧逻辑（全量覆盖 color/quantity/交期）
      */
     public void syncPatternProductionInfo(StyleInfo styleInfo) {
+        syncPatternProductionInfo(styleInfo, true);
+    }
+
+    /**
+     * D-218：allowCreate=false 用于"维护/编辑保存"——只同步已有记录（更新数量/交期、软删无进度废弃色码），
+     * 不补建、不新建生产记录，避免维护一下就冒出新样衣生产任务（重复生产记录根因）。
+     */
+    public void syncPatternProductionInfo(StyleInfo styleInfo, boolean allowCreate) {
         if (styleInfo == null || styleInfo.getId() == null) {
             return;
         }
@@ -300,6 +308,11 @@ public class StylePatternProductionHelper {
 
         List<PatternProduction> records = patternProductionService.list(wrapper);
         if (records == null || records.isEmpty()) {
+            if (!allowCreate) {
+                // D-218：维护/编辑保存不补建生产记录
+                log.info("款式无样衣生产记录，维护保存跳过补建: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo());
+                return;
+            }
             // 款式存在但无样衣生产记录（历史创建失败/旧版本遗漏，如 CI 停摆期间创建的款式）
             // → 补建记录（createPatternProductionRecord 自带幂等检查）
             log.info("款式无样衣生产记录，保存时补建: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo());
@@ -328,6 +341,7 @@ public class StylePatternProductionHelper {
         int created = 0;
         int updated = 0;
         int reused = 0;
+        int skipped = 0;
         // 需要批量落库的记录（matched + 从 legacy 改写的 reused，二者都要持久化）
         List<PatternProduction> toUpdate = new ArrayList<>();
 
@@ -344,6 +358,11 @@ public class StylePatternProductionHelper {
             }
 
             if (record == null) {
+                if (!allowCreate) {
+                    // D-218：维护/编辑保存不为新色码组合隐式创建生产任务（需走颜色尺码配置显式入口）
+                    skipped++;
+                    continue;
+                }
                 // 新建该色码记录
                 record = new PatternProduction();
                 record.setStyleId(String.valueOf(styleInfo.getId()));
@@ -388,6 +407,9 @@ public class StylePatternProductionHelper {
             }
         }
 
+        if (skipped > 0) {
+            log.info("[多色多码同步] 维护保存跳过新建 {} 个色码组合: styleId={}", skipped, styleInfo.getId());
+        }
         if (!toUpdate.isEmpty() && patternProductionService.updateBatchById(toUpdate)) {
             log.info("[多色多码同步] styleId={}, combos={}, updated={}, reused={}, created={}, removed={}, keptWithProgress={}",
                     styleInfo.getId(), matrix.size(), updated, reused, created, removed, legacy.size() - removed);

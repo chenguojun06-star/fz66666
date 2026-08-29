@@ -373,7 +373,8 @@ public class StyleInfoOrchestrator {
                     }
                 }
                 try {
-                    stylePatternProductionHelper.syncPatternProductionInfo(styleInfo);
+                    // D-218：维护/编辑保存只同步已有生产记录，不再隐式补建/新建样衣生产任务
+                    stylePatternProductionHelper.syncPatternProductionInfo(styleInfo, false);
                     styleOperationAppendHelper.appendUpdate(styleInfo, "基础信息");
                     // 同步颜色图片到SKU表
                     if (styleInfo.getId() != null && styleInfo.getSizeColorConfig() != null) {
