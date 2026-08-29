@@ -122,6 +122,13 @@ public class OrganizationUnitOrchestrator {
 
     private boolean isProductionRelated(OrganizationUnit unit) {
         if ("FACTORY".equals(unit.getNodeType())) return true;
+        // D-216：内部部门不再无条件放行——「面辅料/面料1组」曾借此混进生产下单的内部工厂下拉。
+        // 名称/路径含面料、辅料、布、仓库的部门一律视为非生产部门（与生产关键词冲突时排除优先）
+        String nameAndPath = (unit.getNodeName() == null ? "" : unit.getNodeName())
+                + " " + (unit.getCategory() == null ? "" : unit.getCategory());
+        for (String bad : new String[]{"面料", "辅料", "布行", "仓库"}) {
+            if (nameAndPath.contains(bad)) return false;
+        }
         if ("INTERNAL".equals(unit.getOwnerType())) return true;
         if (StringUtils.hasText(unit.getCategory())) {
             String cat = unit.getCategory().trim().toUpperCase();

@@ -282,10 +282,15 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           options={availableColors.map((value) => ({ label: value, value }))}
           onChange={(values) => syncSelection(uniq(values as string[]), selectedSizes)}
           maxTagCount="responsive"
+          suffix={(
+            <Tooltip title="基础属性库——成组选择颜色">
+              <SettingOutlined
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('color'); setAttrLibOpen(true); }}
+              />
+            </Tooltip>
+          )}
         />
-        <Tooltip title="基础属性库——成组选择颜色">
-          <Button icon={<SettingOutlined />} onClick={() => { setAttrLibTarget('color'); setAttrLibOpen(true); }} />
-        </Tooltip>
         <Select
           mode="tags"
           placeholder="选择或输入下单码数"
@@ -293,10 +298,15 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           options={availableSizes.map((value) => ({ label: value, value }))}
           onChange={(values) => syncSelection(selectedColors, uniq(values as string[]))}
           maxTagCount="responsive"
+          suffix={(
+            <Tooltip title="基础属性库——成组选择码数">
+              <SettingOutlined
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('size'); setAttrLibOpen(true); }}
+              />
+            </Tooltip>
+          )}
         />
-        <Tooltip title="基础属性库——成组选择码数">
-          <Button icon={<SettingOutlined />} onClick={() => { setAttrLibTarget('size'); setAttrLibOpen(true); }} />
-        </Tooltip>
       </div>
       <AttributeGroupLibraryModal
         open={attrLibOpen}

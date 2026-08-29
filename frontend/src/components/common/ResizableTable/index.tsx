@@ -144,7 +144,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout || 'fixed'}
+          tableLayout={tableLayout || ((mergedScroll as TableProps<T>['scroll'])?.x === 'max-content' ? 'auto' : 'fixed')}
           size={responsiveTableSize}
           style={{ wordBreak: 'break-all' }}
           pagination={mergedPagination as TableProps<T>['pagination']}

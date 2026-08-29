@@ -11,7 +11,7 @@ import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityF
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceText } from '@/utils/styleSource';
-import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
+import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import SchemaPrint from '@/components/common/SchemaPrint';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
@@ -152,7 +152,7 @@ const OrderListContent: React.FC<Props> = ({
               }),
               [
                 { label: '来源', key: 'developmentSourceType', render: (_v: any, record: any) => getStyleSourceText(record as StyleInfo) },
-                { label: '商品分类', key: 'category', render: (val: any) => toCategoryCn(val) },
+                { label: '商品分类', key: 'category', render: (val: any) => toCategoryCn(val, CATEGORY_CODE_OPTIONS) },
               ],
               [
                 { label: '季节分类', key: 'season', render: (val: any) => toSeasonCn(val) },

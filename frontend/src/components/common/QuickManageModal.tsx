@@ -17,6 +17,8 @@ interface QuickManageModalProps {
   onClose: () => void;
   /** mode=dict 时必填，如 category / product_type / style_theme */
   dictType?: string;
+  /** mode=supplier 时的供应商类型：MATERIAL=布行/辅料（默认），OUTSOURCE=外发工厂（D-216） */
+  supplierType?: 'MATERIAL' | 'OUTSOURCE';
   /** 弹窗标题，默认按 mode 生成 */
   title?: string;
 }
@@ -61,7 +63,7 @@ const FIELD_ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 8, marginBo
  * - 每次操作广播数据事件（dict:{type} / customer / supplier），当前表单下拉即时刷新
  * - 支持：字典词条 / CRM客户 / 物料供应商（含地址）
  */
-const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, title }) => {
+const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, supplierType = 'MATERIAL', title }) => {
   const { message, modal } = App.useApp();
 
 /** 供应商标签预置选项（D-153）：区分外发工厂/布行/辅料店等 */
@@ -101,7 +103,8 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
           address: c.address,
         }));
       } else {
-        const res = await factoryApi.list({ pageSize: 1000, supplierType: 'MATERIAL', status: 'active' });
+        // D-216：supplierType 可指定 OUTSOURCE（外发工厂快捷维护，下单抽屉齿轮入口）
+        const res = await factoryApi.list({ pageSize: 1000, supplierType, status: 'active' });
         const list = res?.data?.records || [];
         result = list.map((f) => ({
           id: String(f.id),
@@ -182,7 +185,7 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
             contactPhone: draft.phone?.trim() || undefined,
             address: draft.address?.trim() || undefined,
             supplierTag: draft.supplierTag?.trim() || undefined,
-            supplierType: 'MATERIAL',
+            supplierType,
             factoryType: 'EXTERNAL',
             status: 'active',
           } as any);

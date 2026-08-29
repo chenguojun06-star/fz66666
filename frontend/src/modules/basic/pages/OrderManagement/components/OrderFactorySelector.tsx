@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Form, Segmented, Select, Space, Tooltip, Button } from 'antd';
-import { QuestionCircleOutlined, RightOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import FactoryInsightDrawer from './FactoryInsightDrawer';
+import QuickManageModal from '@/components/common/QuickManageModal';
 
 /** 货期完成率兜底格式化：null/undefined/负值统一显示「暂无」 */
 const formatRate = (rate: number | null | undefined): { text: string; color: string } => {
@@ -110,6 +111,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
   tooltipTheme,
 }) => {
   const [insightOpen, setInsightOpen] = useState(false);
+  const [factoryManageOpen, setFactoryManageOpen] = useState(false);
 
   const renderInsightDrawer = () => {
     if (!selectedFactoryStat || !selectedFactoryStat.factoryName) return null;
@@ -195,6 +197,8 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                   const name = (dept.nodeName || '');
                   const path = (dept.pathNames || '');
                   const content = `${name} ${path}`;
+                  // D-216：面辅料/仓库类部门先排除（如「面辅料 / 面料1组」），再走生产关键词白名单
+                  if (['面料', '辅料', '布行', '仓库'].some((bad) => content.includes(bad))) return false;
                   return ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'].some((kw) => content.includes(kw));
                 })
                 .map((department) => ({ value: department.id, label: department.pathNames || department.nodeName }))}
@@ -216,6 +220,14 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
               showSearch
               optionFilterProp="label"
               allowClear
+              suffix={(
+                <Tooltip title="快捷维护外发工厂（联动合作伙伴，保存后下拉即时刷新）">
+                  <SettingOutlined
+                    style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFactoryManageOpen(true); }}
+                  />
+                </Tooltip>
+              )}
             />
           </Form.Item>
           {selectedFactoryStat && (
@@ -225,6 +237,15 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
       )}
     </Form.Item>
     {renderInsightDrawer()}
+    {/* D-216：外发厂快捷维护——与合作伙伴供应商同库联动（supplierType=OUTSOURCE，布行不进此列表），
+        保存后 QuickManageModal 广播 supplier 事件，useOrderDataFetch 订阅刷新下拉 */}
+    <QuickManageModal
+      open={factoryManageOpen}
+      mode="supplier"
+      supplierType="OUTSOURCE"
+      title="外发工厂维护"
+      onClose={() => setFactoryManageOpen(false)}
+    />
     </>
   );
 };

@@ -613,18 +613,19 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
     }
 
     private String generateSkuCode(String styleNo, String color, String size, Integer useSkuPrefix) {
-        // D-167：改用"-"分隔（款号-颜色-尺码），与下单端 buildSkuNo 格式风格统一——
-        // 原来无分隔符直拼（BR26...A棕色S），与订单明细的带"-"编码（PO...-BR26...A-棕色-S）两个长相
+        // D-216：默认不带分隔符（款号颜色尺码直拼，如 BM26QIS0958A草绿色M(165/74A)）——
+        // 用户拍板去掉 D-167 引入的"-"分隔；需要分隔符的场景由用户手动编辑编码实现。
+        // 仅 useSkuPrefix=1 时保留 SKU- 前缀。
         StringBuilder sb = new StringBuilder();
         if (useSkuPrefix != null && useSkuPrefix == 1) {
             sb.append("SKU-");
         }
         sb.append(styleNo == null ? "" : styleNo.trim());
         if (color != null && !color.isEmpty()) {
-            sb.append("-").append(color.trim());
+            sb.append(color.trim());
         }
         if (size != null && !size.isEmpty()) {
-            sb.append("-").append(size.trim());
+            sb.append(size.trim());
         }
         return sb.toString();
     }
@@ -637,9 +638,14 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             return;
         }
 
+        // D-216：按 styleId+颜色+尺码 匹配既有 SKU，不再按 skuCode 查——
+        // 编码格式变更（如 D-167 加-、D-216 去-）或款号变更后，旧码匹配不上会重复建行
         ProductSku existing = this.getOne(new LambdaQueryWrapper<ProductSku>()
-                .eq(ProductSku::getSkuCode, skuCode)
-                .eq(ProductSku::getTenantId, tenantId));
+                .eq(ProductSku::getStyleId, style.getId())
+                .eq(ProductSku::getColor, color)
+                .eq(ProductSku::getSize, size)
+                .eq(ProductSku::getTenantId, tenantId)
+                .last("LIMIT 1"), false);
 
         if (existing == null) {
             ProductSku sku = new ProductSku();

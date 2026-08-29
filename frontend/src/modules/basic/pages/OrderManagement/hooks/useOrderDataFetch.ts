@@ -5,6 +5,7 @@ import type { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { Factory } from '@/types/system';
 import { productionOrderApi, FactoryCapacityItem } from '@/services/production/productionApi';
 import { organizationApi } from '@/services/system/organizationApi';
+import { subscribeDataUpdated } from '@/utils/dataEvents';
 import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface UseOrderDataFetchParams {
@@ -93,6 +94,14 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       setDepartments([]);
     }
   };
+
+  // D-216：下单抽屉齿轮快捷维护外发厂后，订阅 supplier 数据事件即时刷新下拉
+  useEffect(() => {
+    const unsubscribe = subscribeDataUpdated('supplier', () => {
+      fetchFactories();
+    });
+    return unsubscribe;
+  }, []);
 
   const fetchUsers = async () => {
     try {
