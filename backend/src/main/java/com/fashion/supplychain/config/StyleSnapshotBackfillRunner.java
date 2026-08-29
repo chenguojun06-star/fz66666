@@ -81,6 +81,15 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 "UPDATE t_cutting_bundle cb JOIN t_style_info s ON cb.style_id = s.id AND cb.tenant_id = s.tenant_id "
                 + "SET cb.style_no = s.style_no WHERE cb.style_no <> s.style_no");
 
+        // 6.5) D-224b：重建被截断的入库明细编码——明细行存有颜色/尺码时，
+        // 编码与 款号+颜色+尺码 不符（塌缩成同款同色一个码）的行自动重建，后续校准步骤按码数拆回
+        exec("重建入库明细编码",
+                "UPDATE t_product_warehousing pw "
+                + "SET pw.sku_code = CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))) "
+                + "WHERE pw.delete_flag = 0 AND pw.style_no IS NOT NULL AND pw.style_no <> '' "
+                + "AND pw.color IS NOT NULL AND pw.color <> '' AND pw.size IS NOT NULL AND pw.size <> '' "
+                + "AND pw.sku_code <> CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))))");
+
         // 7) D-224：成品库存对账自愈——SKU 库存以成品入库单合计校准（入库成功但 SKU 库存没同步的存量修复）
         exec("成品库存对账校准",
                 "UPDATE t_product_sku sku "
