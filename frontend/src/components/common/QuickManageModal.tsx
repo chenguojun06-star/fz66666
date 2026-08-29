@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Empty, Input, Popconfirm, Select, Spin, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined, SaveOutlined, SyncOutlined } from '@ant-design/icons';
+import { clearApiCache } from '@/utils/api/core';
 import api from '@/utils/api';
 import factoryApi from '@/services/system/factoryApi';
 import { customerApi } from '@/services/crm/customerApi';
@@ -219,6 +220,10 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
         message.success('已保存');
         await loadList();
       }
+      // D-212：清 GET 缓存——否则表单下拉重拉时命中旧缓存，弹窗加/删后表单不更新
+      if (mode === 'dict') clearApiCache('/system/dict/list');
+      else if (mode === 'customer') clearApiCache('/customer');
+      else clearApiCache('/factory');
       notifyChanged();
     } catch {
       message.error(creating ? '添加失败' : '保存失败');

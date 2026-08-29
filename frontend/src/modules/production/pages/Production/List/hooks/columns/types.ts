@@ -25,6 +25,8 @@ export interface UseProductionColumnsProps {
   stagnantOrderIds?: Map<string, number>;
   handleShareOrder: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
+  /** D-212：合作合同打印弹窗 */
+  onOpenContract?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;

@@ -173,15 +173,6 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
           }}>
             {isManual ? '您手动维护：编码·颜色·尺码均可改' : '按「款号+颜色+尺码」自动生成，无需手写'}
           </span>
-          <Space size={8} align="center">
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>字面前缀</span>
-            <Switch
-              checked={useSkuPrefix}
-              onChange={handleUseSkuPrefixChange}
-              checkedChildren="加前缀"
-              unCheckedChildren="不加"
-            />
-          </Space>
         </Space>
 
         {/* 右：操作按钮 — 全部靠右对齐，主次分层 */}

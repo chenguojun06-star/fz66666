@@ -26,6 +26,7 @@ interface ProductionContentViewProps {
   quickEditModal: { open: (data: ProductionOrder) => void; visible: boolean; data: ProductionOrder | null; close: () => void };
   printModal: { open: (data: ProductionOrder) => void };
   handlePrintLabel: (record: ProductionOrder) => void;
+  onOpenContract?: (record: ProductionOrder) => void;
   openProcessDetail: (record: ProductionOrder, type: string) => void;
   openSubProcessRemap: (record: ProductionOrder) => void;
   smartReceiveModal: { open: (data: string) => void };
@@ -64,6 +65,7 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
   quickEditModal,
   printModal,
   handlePrintLabel,
+  onOpenContract,
   openProcessDetail,
   openSubProcessRemap,
   smartReceiveModal,

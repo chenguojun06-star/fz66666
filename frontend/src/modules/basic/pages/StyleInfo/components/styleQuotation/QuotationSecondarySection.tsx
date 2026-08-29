@@ -31,6 +31,7 @@ const QuotationSecondarySection: React.FC<Props> = ({ secondaryProcessList }) =>
         rowKey={(record: any) => record.id || String(Math.random())}
         pagination={false}
         size="small"
+        scroll={{ x: "max-content" }}
         emptyDescription="暂无数据"
         dataSource={secondaryProcessList}
         showIndex

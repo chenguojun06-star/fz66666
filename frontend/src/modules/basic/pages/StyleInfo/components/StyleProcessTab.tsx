@@ -133,29 +133,36 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
             </span>
           )}
           {editMode && !readOnly && (
-            <Input
-             
-              placeholder="输入码数名，如 XL(175/96A)"
-              style={{ width: 220 }}
-              onPressEnter={(e) => {
-                const input = e.target as HTMLInputElement;
-                const val = input.value.trim().toUpperCase();
-                if (!val) return;
-                if (sizes.includes(val)) { message.warning(`码数 ${val} 已存在`); return; }
-                const sortedSizes = sortSizeNames([...sizes, val]);
-                setSizes(sortedSizes);
-                setData((prev) => prev.map((row) => ({
-                  ...row,
-                  sizePrices: { ...(row.sizePrices || {}), [val]: toNumberSafe(row.price) },
-                  sizePriceTouched: { ...(row.sizePriceTouched || {}), [val]: false },
-                })));
-                input.value = '';
-              }}
-            />
+            <Popover
+              trigger="click"
+              placement="bottomRight"
+              content={
+                <div style={{ width: 220 }}>
+                  <Input
+                    placeholder="输入码数名，如 XL(175/96A)"
+                    style={{ width: '100%', marginBottom: 8 }}
+                    onPressEnter={(e) => {
+                      const input = e.target as HTMLInputElement;
+                      const val = input.value.trim().toUpperCase();
+                      if (!val) return;
+                      if (sizes.includes(val)) { message.warning(`码数 ${val} 已存在`); return; }
+                      const sortedSizes = sortSizeNames([...sizes, val]);
+                      setSizes(sortedSizes);
+                      setData((prev) => prev.map((row) => ({
+                        ...row,
+                        sizePrices: { ...(row.sizePrices || {}), [val]: toNumberSafe(row.price) },
+                        sizePriceTouched: { ...(row.sizePriceTouched || {}), [val]: false },
+                      })));
+                      input.value = '';
+                    }}
+                  />
+                  <Button block type="text" icon={<SettingOutlined />} onClick={() => setAttrLibOpen(true)}>从基础属性库选择</Button>
+                </div>
+              }
+            >
+              <Button>添加码数 <DownOutlined /></Button>
+            </Popover>
           )}
-          <Tooltip title="基础属性库——成组选择码数">
-            <Button icon={<SettingOutlined />} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
-          </Tooltip>
           {!editMode || readOnly ? (
             <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || !processStartTime}>编辑</Button>
           ) : (

@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, ColorPicker, InputNumber, Popover, Select, Space, Tooltip } from 'antd';
+import { Button, ColorPicker, InputNumber, Popover, Select, Space, Tooltip, Dropdown } from 'antd';
 import {
   AlignCenterOutlined, AlignLeftOutlined, AlignRightOutlined, BoldOutlined,
   ClearOutlined, FullscreenExitOutlined, FullscreenOutlined, ItalicOutlined,
   OrderedListOutlined, PictureOutlined, RedoOutlined, StrikethroughOutlined,
-  TableOutlined, UnderlineOutlined, UndoOutlined, UnorderedListOutlined,
-} from '@ant-design/icons';
+  TableOutlined, UnderlineOutlined, UndoOutlined, UnorderedListOutlined, DownOutlined } from '@ant-design/icons';
 import { plainTextToSheetHtml, isSheetRichHtml } from '@/utils/sheetRichText';
 import { message as warnMessage } from '@/utils/antdStatic';
 
@@ -219,9 +218,24 @@ const ProductionRequirementsSection: React.FC<Props> = ({
               保存工艺说明
             </Button>
           )}
-          <Button onClick={onDownloadWorkorder}>下载制单</Button>
-          <Button onClick={onPrintWorkorder}>打印制单</Button>
-          {!productionReqLocked && <Button onClick={onOpenOcr}>AI识别工艺单</Button>}
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'download', label: '下载制单' },
+                { key: 'print', label: '打印制单' },
+                ...(productionReqLocked ? [] : [{ key: 'ocr', label: 'AI识别工艺单' }]),
+              ],
+              onClick: ({ key }) => {
+                if (key === 'download') onDownloadWorkorder();
+                else if (key === 'print') onPrintWorkorder();
+                else onOpenOcr();
+              },
+            }}
+          >
+            <Button>
+              制单 <DownOutlined />
+            </Button>
+          </Dropdown>
         </Space>
       </div>
 

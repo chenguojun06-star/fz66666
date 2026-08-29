@@ -9,6 +9,7 @@ import {
 import type { UseProductionColumnsProps } from './types';
 
 export function buildActionColumns({
+  onOpenContract,
   handleCloseOrder,
   handleScrapOrder,
   handleCopyOrder,
@@ -47,9 +48,12 @@ export function buildActionColumns({
               {
                 key: 'print',
                 label: '打印',
-                title: frozen ? '打印（订单已关单）' : '打印生产制单',
-                disabled: frozen,
-                onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); },
+                title: '打印 / 合同',
+                children: [
+                  { key: 'prodSheet', label: '生产制单', disabled: frozen, onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                  ...(handlePrintLabel ? [{ key: 'printLabel', label: '洗水唛 / 吊牌', onClick: () => handlePrintLabel(record) }] : []),
+                  ...(onOpenContract ? [{ key: 'contract', label: '合作合同', onClick: () => onOpenContract(record) }] : []),
+                ],
               },
               ...(handlePrintLabel ? [{
                 key: 'printLabel',

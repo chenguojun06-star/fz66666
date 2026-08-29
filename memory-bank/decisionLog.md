@@ -49,6 +49,23 @@ BOM 编辑态单元格是 `Form.Item name={[rowId, field]}` 非受控，值全�
 
 ---
 
+## D-212：工具条精简聚合+合作合同模块+弹窗缓存修复等九项（2026-08-29，用户"全部内嵌不要多加按钮/聚合精简/输入框统一/报价单对齐/弹窗增删不更新/合同模块/头像同步/字面前缀删掉"）
+
+1. **属性库入口内嵌**：尺寸表工具条/各码用量"新增尺码(多选)"下拉 popupRender 顶部加"从基础属性库选择"（删独立按钮）；工序单价码数 Input+齿轮 合并为"添加码数▾"Popover（内含输入+属性库入口）
+2. **BOM 采购聚合**：生成采购单/重新生成/加入采购车 三按钮 → 一个"采购 ▾"Dropdown（已生成 N 条小 Tag 保留）
+3. **工艺说明聚合**：保存工艺说明（primary）+ "制单 ▾"Dropdown（下载/打印/AI识别）
+4. **字面前缀**开关整块删除（SKU编码模式行）
+5. **报价单三表**（BOM/工序/二次工艺）统一 scroll.x max-content，列宽=内容宽，三表一致
+6. **模板名 (null)**：sourceStyleNo 存了字符串 'null' 穿透三元——三处 label 过滤 'null'/'undefined'
+7. **QuickManageModal（维护商品分类/季节等）增删后表单下拉不更新根因**：notifyChanged 触发重拉但命中 GET responseCache 旧缓存——增删改成功后 clearApiCache（dict/customer/supplier 各自 pattern）
+8. **头像同步**：个人页 getMe 拉新后 freshImgUrl 加时间戳破 <image> 缓存（PC换头像路径可能不变）
+9. **合作合同模块**：CooperationContractModal（OrderManagement/components）挂生产订单列表行"打印▾→合作合同"——标准服装购销加工合同，订单数据自动填充（甲乙方/数量/单价/总额/交期），条款可编辑，独立窗口 A4 宋体打印（含签章栏）
+
+### 教训
+- "加按钮"是偷懒方案——入口该内嵌进宿主控件的下拉（dropdownRender/popupRender 顶部插一项）
+- 前端 GET 缓存是"弹窗增删后列表不更新"类 bug 的高频根因：写入后必须按 pattern 清缓存
+
+---
 ## D-211：出货页对齐生产管理（2026-08-29 遗留收尾）
 
 单菲/无菲默认展开明细不显示展开按钮（D-193 同范式）；快捷操作行上移展开区顶部（D-197）；进度卡删除子工序单价行（D-194）；SKU 表 flex→display:table 防列收缩（D-194 同范式）；复制订单号补 fail 提示。

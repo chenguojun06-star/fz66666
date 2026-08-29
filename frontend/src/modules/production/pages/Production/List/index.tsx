@@ -40,6 +40,7 @@ import { SettingOutlined } from '@ant-design/icons';
 import { paths } from '@/routeConfig';
 import { usePatrolTitleTags } from './hooks/usePatrolTitleTags.tsx';
 import { useTableColumns } from './hooks/useTableColumns';
+import CooperationContractModal from '@/modules/basic/pages/OrderManagement/components/CooperationContractModal';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -57,6 +58,7 @@ const ProductionList: React.FC = () => {
   const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'bulk' });
 
   const printModal = useModal<ProductionOrder>();
+  const [contractOrder, setContractOrder] = useState<ProductionOrder | null>(null);
   const workflowEditorModal = useModal<string>();
   const inspectDrawerModal = useModal<string>();
   const smartReceiveModal = useModal<string>();
@@ -209,6 +211,7 @@ const ProductionList: React.FC = () => {
           patrolTitleTags={patrolTitleTags}
           quickEditModal={quickEditModal}
           printModal={printModal}
+          onOpenContract={setContractOrder}
           handlePrintLabel={labelPrint.handlePrintLabel}
           openProcessDetail={processDetail.openProcessDetail}
           openSubProcessRemap={subProcessRemap.openSubProcessRemap}
@@ -331,7 +334,12 @@ const ProductionList: React.FC = () => {
         userId={user?.id as any}
         userName={user?.name || user?.username || ''}
       />
-    </>
+          <CooperationContractModal
+        open={!!contractOrder}
+        onClose={() => setContractOrder(null)}
+        order={contractOrder as unknown as Record<string, any>}
+      />
+</>
   );
 };
 

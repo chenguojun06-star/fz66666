@@ -141,40 +141,26 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         <Button onClick={onCheckStock} disabled={!dataLength || loading} loading={checkingStock}>
           检查库存
         </Button>
+        <Dropdown
+          disabled={locked || !dataLength || loading}
+          menu={{
+            items: [
+              { key: 'generate', label: purchaseStatus?.generated ? '重新生成采购单（覆盖待采购记录）' : '生成采购单' },
+              { key: 'cart', label: '加入采购车（可合并下单）' },
+            ],
+            onClick: ({ key }) => {
+              if (key === 'generate') onGeneratePurchase();
+              else onAddToPurchaseCart();
+            },
+          }}
+        >
+          <Button type="primary" loading={loading}>
+            采购 <DownOutlined />
+          </Button>
+        </Dropdown>
         {purchaseStatus?.generated ? (
-          <Space size={4}>
-            <Tooltip title={`该款式已生成过样衣采购（共 ${purchaseStatus.count} 条，待采购 ${purchaseStatus.pendingCount} 条）。点击将删除旧的【待采购】记录并重新生成，已领取/已完成的不受影响`}>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={onGeneratePurchase}
-                disabled={locked || !dataLength || loading}
-                loading={loading}
-              >
-                重新生成采购单
-              </Button>
-            </Tooltip>
-            <Tag color="success" style={{ marginInlineEnd: 0 }}>已生成采购 {purchaseStatus.count} 条</Tag>
-          </Space>
-        ) : (
-          <Button
-            type="primary"
-            onClick={onGeneratePurchase}
-            disabled={locked || !dataLength || loading}
-            loading={loading}
-          >
-            生成采购单
-          </Button>
-        )}
-        <Tooltip title="放入采购车草稿，可与其它款式合并下单后统一确认；单款式采购直接点「生成采购单」更快">
-          <Button
-            icon={<ShoppingCartOutlined />}
-            onClick={onAddToPurchaseCart}
-            disabled={locked || !dataLength || loading}
-            loading={loading}
-          >
-            加入采购车
-          </Button>
-        </Tooltip>
+          <Tag color="success" style={{ marginInlineEnd: 0 }}>已生成 {purchaseStatus.count} 条</Tag>
+        ) : null}
         </>
       }
       center={

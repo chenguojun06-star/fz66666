@@ -250,6 +250,9 @@ const StyleSizeToolbar: React.FC<Props> = ({
           }}
           popupRender={(menu) => (
             <>
+              <div style={{ padding: '8px 8px 4px', borderBottom: '1px solid var(--color-border-light)' }}>
+                <Button block type="text" icon={<SettingOutlined />} onClick={() => setAttrLibOpen(true)}>从基础属性库选择</Button>
+              </div>
               {menu}
               <div style={{ padding: '8px', borderTop: '1px solid var(--color-border-light)' }}>
                 <Input
@@ -273,8 +276,6 @@ const StyleSizeToolbar: React.FC<Props> = ({
       }
       right={
         <>
-        <Button icon={<SettingOutlined />} disabled={loading || saving || isReadonly}
-                onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
         {!editMode || readOnly ? (
           <Button type="primary" onClick={enterEdit} disabled={loading || saving || isReadonly}>
             编辑
