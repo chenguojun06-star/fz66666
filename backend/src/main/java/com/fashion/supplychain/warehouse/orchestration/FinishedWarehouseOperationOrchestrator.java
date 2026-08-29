@@ -747,9 +747,17 @@ public class FinishedWarehouseOperationOrchestrator {
         }
         if (scanCode.startsWith("WH-")) {
             String rest = scanCode.substring(3);
-            int secondDash = rest.indexOf('-', rest.indexOf('-') >= 0 ? rest.indexOf('-') + 1 : 0);
-            if (secondDash > 0) {
-                String possibleSkuCode = rest.substring(0, secondDash);
+            // D-224：格式 WH-<款-色-码>-<时间戳随机段>。skuCode 本身含"-"，
+            // 原来只取到第二个"-"把尺码剥掉，同款同色不同码共用一个编码 → 库位明细塌缩成一个码
+            int lastDash = rest.lastIndexOf('-');
+            if (lastDash > 0) {
+                String tail = rest.substring(lastDash + 1);
+                String possibleSkuCode;
+                if (tail.matches("\\d{10,}")) {
+                    possibleSkuCode = rest.substring(0, lastDash); // 尾段是时间戳随机段才剥离
+                } else {
+                    possibleSkuCode = rest; // 无时间戳尾段，整段就是 skuCode
+                }
                 if (possibleSkuCode.split("-", 3).length >= 2) {
                     return possibleSkuCode;
                 }

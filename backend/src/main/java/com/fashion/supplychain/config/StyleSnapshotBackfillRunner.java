@@ -81,6 +81,28 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 "UPDATE t_cutting_bundle cb JOIN t_style_info s ON cb.style_id = s.id AND cb.tenant_id = s.tenant_id "
                 + "SET cb.style_no = s.style_no WHERE cb.style_no <> s.style_no");
 
+        // 7) D-224：成品库存对账自愈——SKU 库存以成品入库单合计校准（入库成功但 SKU 库存没同步的存量修复）
+        exec("成品库存对账校准",
+                "UPDATE t_product_sku sku "
+                + "JOIN (SELECT sku_code, tenant_id, SUM(IFNULL(warehousing_quantity,0)) qty "
+                + "      FROM t_product_warehousing WHERE delete_flag = 0 GROUP BY sku_code, tenant_id) w "
+                + "ON w.sku_code = sku.sku_code AND w.tenant_id = sku.tenant_id "
+                + "SET sku.stock_quantity = w.qty WHERE sku.stock_quantity <> w.qty");
+
+        // 8) D-224：入库记录有但 SKU 行缺失的自动补建（款-色-码 三段完整才建，避免脏码建行）
+        exec("补建缺失成品SKU",
+                "INSERT INTO t_product_sku (sku_code, style_no, color, size, stock_quantity, status, tenant_id, create_time, update_time) "
+                + "SELECT w.sku_code, MAX(w.style_no), "
+                + "SUBSTRING_INDEX(SUBSTRING_INDEX(w.sku_code, '-', 2), '-', -1), "
+                + "SUBSTRING_INDEX(w.sku_code, '-', -1), "
+                + "w.qty, 'ENABLED', w.tenant_id, NOW(), NOW() "
+                + "FROM (SELECT sku_code, tenant_id, MAX(style_no) style_no, SUM(IFNULL(warehousing_quantity,0)) qty "
+                + "      FROM t_product_warehousing WHERE delete_flag = 0 GROUP BY sku_code, tenant_id) w "
+                + "LEFT JOIN t_product_sku sku ON sku.sku_code = w.sku_code AND sku.tenant_id = w.tenant_id "
+                + "WHERE sku.id IS NULL AND w.sku_code <> '' "
+                + "AND (LENGTH(w.sku_code) - LENGTH(REPLACE(w.sku_code, '-', ''))) >= 2 "
+                + "GROUP BY w.sku_code, w.tenant_id, w.qty");
+
         log.info("[StyleSnapshotBackfill] 存量款号/编码一致性回填完成");
     }
 

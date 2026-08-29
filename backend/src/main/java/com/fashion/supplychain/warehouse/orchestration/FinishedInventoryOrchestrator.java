@@ -120,7 +120,21 @@ public class FinishedInventoryOrchestrator {
                     .distinct()
                     .collect(Collectors.toList());
             if (factoryStyleNos.isEmpty()) {
-                return new Page<>(page, pageSize);
+                // D-224：该工厂没有生产订单时不再直接返回空页——
+                // 无采购单入库产生的款没有订单，工厂账号也要能看到自己入库的库存
+                factoryStyleNos = productWarehousingMapper.selectList(
+                        new LambdaQueryWrapper<com.fashion.supplychain.production.entity.ProductWarehousing>()
+                                .select(com.fashion.supplychain.production.entity.ProductWarehousing::getStyleNo)
+                                .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getTenantId, tid)
+                                .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getDeleteFlag, 0))
+                        .stream()
+                        .map(com.fashion.supplychain.production.entity.ProductWarehousing::getStyleNo)
+                        .filter(StringUtils::hasText)
+                        .distinct()
+                        .collect(Collectors.toList());
+                if (factoryStyleNos.isEmpty()) {
+                    return new Page<>(page, pageSize);
+                }
             }
             wrapper.in(ProductSku::getStyleNo, factoryStyleNos);
         }
