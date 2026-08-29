@@ -1,9 +1,58 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-28（新增 D-206 PC端尺码录入全量接入基础属性库）
+> 最后更新：2026-08-29（新增 D-213~D-215 物料清单三连修+款式编码放开编辑）
 
 ---
+
+## D-215：款式编码放开编辑+撞号提示+商品编码联动（2026-08-29，用户"做错了就什么都改变不了"）
+
+### 背景与实现
+款式编码（styleNo）原只要有 id 就锁死。放开为 editLocked 才禁用；编辑保存撞号双端拦截：前端 handleSave 编辑分支先查 `/style/info/list` 提示"请修改款号"，后端 `StyleInfoOrchestrator.update()` 新增 `styleNoExistsExcluding`（排除自身）明确抛"款号已被其他款式使用"。新建撞号从静默加 -1 后缀改为 modal.confirm 让用户选"返回修改/自动加后缀"。款号变更后 `ProductSkuService.resyncSkuCodesForStyleNoChange` 联动重算商品编码（款号-颜色-尺码，manuallyEdited=1 只同步 styleNo 冗余字段），与 updateUseSkuPrefix 同范式。
+
+### 教训
+- createOrUpdateSku 以 skuCode 为查重键，款号变更必须显式按 styleId 重算编码，否则下次生成会按新码新建重复行
+- 生产订单仍持旧款号，跨订单联动未做（推送前改码安全，已推订单慎改）
+
+---
+
+## D-214：检查库存用量口径纳入开发采购量（2026-08-29，用户"开发阶段肯定要判断开发的，大货才是实际纸样用量"）
+
+### 背景与实现
+`StyleBomOrchestrator.calculateRequirement` 只认 usageAmount（单件/纸样用量），开发阶段只填了开发采购量（devUsageAmount）被误判"未填用量"。改用已有 `pickEffectiveUsage` 口径：有纸样数据（patternSizeUsageMap 非空）→纸样用量；否则开发采购量优先。`StyleBomPurchaseHelper.buildPurchaseFromBom` 同步对齐（原先无条件 dev 优先，纸样完成后也不切换）。大货链路 `MaterialPurchaseServiceHelper.computeBomRequiredQuantity` 保持禁用 devUsageAmount 不动。
+
+### 教训
+- 同名"用量"三字段（usageAmount/devUsageAmount/sizeUsageMap）三处计算口径曾各自为政——改口径必须全链路核对（检查库存/生成采购单/采购车/大货）
+- 口径统一的锚点是前端 `calcTotalPrice`/后端 `pickEffectiveUsage`："有无纸样数据"是开发期与大货期的天然分界
+
+---
+
+## D-213：物料清单保存后再添加物料旧行清空（2026-08-29，用户"点保存在添加一行新的，前面物料信息全部没有了"）
+
+### 背景与实现
+BOM 编辑态单元格是 `Form.Item name={[rowId, field]}` 非受控，值全靠 form store。保存后 `fetchBom` 会 `form.resetFields()` 清空 store；再点"添加物料"时 `handleAddRows` 只用 `form.getFieldsValue()`（已是空）回填，旧行输入框全部失绑显示空白。修复：handleAddRows 改为 `buildFormValues(syncedData)` 从 data 全量重建（与 enterTableEdit 同范式）。
+
+### 教训
+- 编辑态值存 form store 的表格，任何"清 store 的刷新"之后必须从 data 重建 form 值，不能依赖 getFieldsValue 回填
+- 同一 hook 内已有正确范式（enterTableEdit）时，新增入口（handleAddRows）要对齐而非另起炉灶
+
+---
+
+## D-212：删除 SKU 行同步清理 sizeColorConfig（2026-08-29 遗留修复，"删了又复活"根因）
+
+### 背景与实现
+删除 SKU 行后 sizeColorConfig 仍留旧码数，下次配置保存 `generateSkusForStyle` 按旧 config 把行重建回来。`ProductSkuOrchestrator.syncRemoveSizesFromConfig` 删码后同步删 config.sizes 及 matrixRows.quantities 对应位（索引对齐），失败不阻断主流程。
+
+### 教训
+- 会话中断的半成品要重点核注解位置：@Transactional 曾被插入的私有方法抢占，batchUpdateSkus 丢事务+productSkuMapper 字段被误删编译不过
+- @Transactional 必须紧贴其方法签名，插入新方法时不得落在注解与原方法之间
+
+---
+
+## D-211：出货页对齐生产管理（2026-08-29 遗留收尾）
+
+单菲/无菲默认展开明细不显示展开按钮（D-193 同范式）；快捷操作行上移展开区顶部（D-197）；进度卡删除子工序单价行（D-194）；SKU 表 flex→display:table 防列收缩（D-194 同范式）；复制订单号补 fail 提示。
+
 
 ## D-204：首页应用网格列数按数量自适应（2026-08-28，用户"只有2个app就2个模块并排，4个"）
 

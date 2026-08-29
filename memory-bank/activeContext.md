@@ -1,11 +1,19 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-28（D-206 PC端尺码录入全量接入属性库）
+> 最后更新：2026-08-29（D-211~D-215 五连：物料清单三连修+款式编码放开+出货页对齐）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-08-29 D-211~D-215 批量修复 ✅已推送；后端项（D-212/214/215）需重启后端生效，待用户回归
+
+- [x] D-213 BOM保存后再"添加物料"旧行清空：handleAddRows 改 buildFormValues(syncedData) 全量重建（纯前端）
+- [x] D-214 检查库存/生成采购单用量口径：无纸样数据→开发采购量优先，有纸样数据→纸样用量（calculateRequirement 接 pickEffectiveUsage；buildPurchaseFromBom 对齐；需重启后端）
+- [x] D-215 款式编码放开编辑+撞号双端拦截提示+款号变更联动重算商品编码（前端+后端 resyncSkuCodesForStyleNoChange，需重启后端）
+- [x] D-212 遗留半成品修复：@Transactional 错位归位+productSkuMapper 字段恢复（删 SKU 行同步清 sizeColorConfig）
+- [x] D-211 遗留小程序改动收尾校验：出货页单菲直展/快捷操作上移/去单价行/SKU表 table 化+复制fail提示
 
 ### 2026-08-28 D-206 PC端尺码录入全量接入基础属性库 ✅已推送；纯前端，待用户回归
 
