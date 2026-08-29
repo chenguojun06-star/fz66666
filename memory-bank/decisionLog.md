@@ -1,7 +1,19 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-29（新增 D-220 大货打印下单明细矩阵化）
+> 最后更新：2026-08-29（新增 D-221 打印死按钮修复+合格证标签）
+
+---
+
+## D-221：RowActions 行内子菜单死按钮修复+打印标签新增合格证（2026-08-29）
+
+### 各项根因与实现
+1. **订单管理"打印"点击无反应**：D-212 给 actionColumns 加 `maxInline={1}` 把带子菜单的"打印"提为行内按钮，但 RowActions 对"有 children 无 onClick"的动作渲染裸 Button（onClick=undefined）→ 死按钮。修：RowActions 行内渲染时该类动作包 Dropdown（click 触发，子菜单 handlers 收集/剥离与"更多"同套）。**教训：maxInline 提升行内按钮时必须确认动作有自身 onClick**。
+2. **合格证标签**：LabelPrintModal 第三 tab（打印合格证）。`certificateLabelPrintTemplate.ts`：标题+左标签/右值行+底部 CODE128 条码（jsbarcode SVG 内联，非 ASCII 剔除保证可扫）；码值模板支持 `{款号}{颜色}{码数}{序号}` 占位符逐页替换；值列支持 `{颜色}{码数}` 占位（规格/颜色行随 SKU 逐页变）。配置面板：每行 Checkbox 勾选显隐+左右 Input 自由编辑（与洗水唛同哲学）+字号缩放+iframe 实时预览；纸型 7×10 竖/10×7 横。跨款固定项（产品标准/安全类别/质量等级/检验证明/企业名称/地址）打印时写 localStorage `certificate-print-settings` 记忆，下次打开自动恢复；款式相关行（品名/款号/规格/颜色/成分/零售价）按订单+款式数据预填。数据源：StyleInfo.executeStandard/safetyCategory/qualityGrade/inspector/salesPrice 由两个 useLabelPrint hook 透传。入口：生产订单列表/卡片/进度详情/外发工厂（复用同一 LabelPrintModal）自动获得；洗水唛独立批量页暂未加（后续需要再加 labelType='cert'）。
+
+### 教训
+- 标签打印三套已有管道：safePrint+@page size（洗水唛/U编码/合格证统一走这条）；条码一维 CODE128 用 jsbarcode SVG、二维码用 qrcode dataURL，别混
+- 用户编辑类打印配置的持久化分层：款式相关每次预填不落库，跨款固定项 localStorage 记忆（后端模板 /system/print-template 是第三选项，本次未用）
 
 ---
 

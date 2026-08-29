@@ -4,8 +4,11 @@ import type { ApiResult } from '@/utils/api';
 import { compositionFromSections, washTextFromInstructions } from '@/utils/washLabelPrintTemplate';
 import { parseCareIconCodes, DEFAULT_CARE_ICON_CODES } from '@/utils/careIcons';
 import type { ProductionOrder } from '@/types/production';
-import type { LabelStyleInfo, SkuRow } from './types';
-import { printWashLabels, printUCodeLabels } from './helpers';
+import type { CertificateSectionState, LabelStyleInfo, SkuRow } from './types';
+import { printWashLabels, printUCodeLabels, printCertificateLabels } from './helpers';
+import {
+  loadCertPersistedSettings,
+} from '@/utils/certificateLabelPrintTemplate';
 import {
   buildDefaultSections,
   type WashLabelSectionState,
@@ -34,6 +37,48 @@ export interface UseLabelPrintDataReturn {
   setSections: (v: WashLabelSectionState) => void;
   handleWashPrint: (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) => Promise<void>;
   handleUCodePrint: (selected: SkuRow[], ord: ProductionOrder) => Promise<void>;
+  certSize: '70x100' | '100x70';
+  setCertSize: (v: '70x100' | '100x70') => void;
+  certSections: CertificateSectionState;
+  setCertSections: (v: CertificateSectionState) => void;
+  handleCertificatePrint: (selected: SkuRow[], ord: ProductionOrder) => Promise<void>;
+}
+
+/** D-221：合格证行默认配置——非空预填自动勾选；跨款固定项（企业名称/地址等）从 localStorage 记忆恢复 */
+function buildDefaultCertSections(
+  order: ProductionOrder | null,
+  styleInfo: LabelStyleInfo | null,
+  compositionText: string,
+): CertificateSectionState {
+  const persisted = loadCertPersistedSettings();
+  const priceRaw = styleInfo?.salesPrice ?? styleInfo?.tagPrice;
+  const priceNum = Number(priceRaw);
+  const priceText = Number.isFinite(priceNum) && priceNum > 0 ? priceNum.toFixed(2) : '';
+  const inspector = (styleInfo?.inspector || '').trim();
+  const defs: Array<{ key: string; label: string; value: string; remember?: boolean }> = [
+    { key: 'pinming', label: '品名', value: (order?.styleName || '').trim() },
+    { key: 'kuanhao', label: '款号', value: (order?.styleNo || '').trim() },
+    { key: 'guige', label: '规格', value: '{码数}' },
+    { key: 'yanse', label: '颜色', value: '{颜色}' },
+    { key: 'chengfen', label: '成分', value: compositionText || '详情见洗水唛' },
+    { key: 'biaozhun', label: '产品标准', value: (styleInfo?.executeStandard || persisted.biaozhun || '').trim(), remember: true },
+    { key: 'anquan', label: '安全类别', value: (styleInfo?.safetyCategory || persisted.anquan || '').trim(), remember: true },
+    { key: 'zhiliang', label: '质量等级', value: (styleInfo?.qualityGrade || persisted.zhiliang || '合格品').trim(), remember: true },
+    { key: 'jianyan', label: '检验证明', value: persisted.jianyan ?? (inspector ? `检验员${inspector}` : ''), remember: true },
+    { key: 'qiye', label: '企业名称', value: (persisted.qiye ?? order?.factoryName ?? '').trim(), remember: true },
+    { key: 'dizhi', label: '企业地址', value: (persisted.dizhi || '').trim(), remember: true },
+    { key: 'lingshou', label: '零售价', value: priceText ? `¥ ${priceText}` : '' },
+  ];
+  return {
+    titleText: '合格证',
+    rows: defs.map(d => {
+      const value = d.remember && persisted[d.key] != null ? String(persisted[d.key]) : d.value;
+      return { key: d.key, show: !!String(value).trim(), labelText: d.label, valueText: value };
+    }),
+    showBarcode: true,
+    barcodeTemplate: '{款号}{颜色}{码数}',
+    fontScale: 1,
+  };
 }
 
 export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataArgs): UseLabelPrintDataReturn {
@@ -42,6 +87,8 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
   const [washH, setWashHState] = useState<number>(80);
   const [uCodeSize, setUCodeSize] = useState<UCodeSize>('40x70');
   const [suitPart, setSuitPart] = useState<string>('all');
+  const [certSize, setCertSize] = useState<'70x100' | '100x70'>('70x100');
+  const [certSections, setCertSections] = useState<CertificateSectionState>(() => buildDefaultCertSections(null, null, ''));
 
   const compositionText = useMemo(
     () => compositionFromSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition),
@@ -69,6 +116,7 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
       washText: washInstructionsText,
       careIconCodes,
     }));
+    setCertSections(buildDefaultCertSections(order, styleInfo, compositionText));
   }, [open, order?.styleNo, compositionText, washInstructionsText, careIconCodes]);
 
   useEffect(() => {
@@ -98,6 +146,14 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
     [orderFactoryCode, uCodeSize],
   );
 
+  const handleCertificatePrint = useCallback(
+    (selected: SkuRow[], ord: ProductionOrder) => {
+      const [cw, ch] = certSize === '70x100' ? [70, 100] : [100, 70];
+      return printCertificateLabels(selected, ord, cw, ch, certSections);
+    },
+    [certSize, certSections],
+  );
+
   return {
     orderFactoryCode,
     washW,
@@ -112,5 +168,10 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
     setSections,
     handleWashPrint,
     handleUCodePrint,
+    certSize,
+    setCertSize,
+    certSections,
+    setCertSections,
+    handleCertificatePrint,
   };
 }

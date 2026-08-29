@@ -4,6 +4,7 @@ import type { LabelPrintModalProps } from './types';
 import { useLabelPrintData } from './useLabelPrintData';
 import WashLabelTab from './WashLabelTab';
 import UCodeLabelTab from './UCodeLabelTab';
+import CertificateTab from './CertificateTab';
 
 export type { LabelStyleInfo } from './types';
 
@@ -13,6 +14,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
     uCodeSize, setUCodeSize,
     sections, setSections,
     handleWashPrint, handleUCodePrint,
+    certSize, setCertSize, certSections, setCertSections, handleCertificatePrint,
   } = useLabelPrintData({ open, order, styleInfo });
 
   return (
@@ -48,6 +50,18 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
                 uCodeSize={uCodeSize} setUCodeSize={setUCodeSize}
                 onClose={onClose}
                 onPrint={handleUCodePrint}
+              />
+            ),
+          },
+          {
+            key: 'cert', label: '打印合格证',
+            children: (
+              <CertificateTab
+                open={open} order={order} styleInfo={styleInfo}
+                certSize={certSize} setCertSize={setCertSize}
+                certSections={certSections} setCertSections={setCertSections}
+                onClose={onClose}
+                onPrint={handleCertificatePrint}
               />
             ),
           },

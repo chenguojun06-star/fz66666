@@ -12,6 +12,14 @@ export interface LabelPrintStyleData {
   tumbleDryCode?: string;
   ironCode?: string;
   dryCleanCode?: string;
+  // D-221：合格证字段透传（StyleInfo 已有）
+  styleName?: string;
+  salesPrice?: number | string;
+  tagPrice?: number | string;
+  executeStandard?: string;
+  safetyCategory?: string;
+  qualityGrade?: string;
+  inspector?: string;
 }
 
 export function useLabelPrint() {
@@ -36,6 +44,13 @@ export function useLabelPrint() {
         tumbleDryCode: d.tumbleDryCode,
         ironCode: d.ironCode,
         dryCleanCode: d.dryCleanCode,
+        styleName: d.styleName,
+        salesPrice: d.salesPrice,
+        tagPrice: d.tagPrice,
+        executeStandard: d.executeStandard,
+        safetyCategory: d.safetyCategory,
+        qualityGrade: d.qualityGrade,
+        inspector: d.inspector,
       });
     }
   }, []);

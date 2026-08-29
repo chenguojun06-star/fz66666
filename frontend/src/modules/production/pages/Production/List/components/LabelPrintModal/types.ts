@@ -11,6 +11,30 @@ export interface LabelStyleInfo {
   ironCode?: string;
   dryCleanCode?: string;
   careIconCodes?: string;
+  // D-221：合格证字段（StyleInfo 已有，useLabelPrint hooks 透传）
+  styleName?: string;
+  salesPrice?: number | string;
+  tagPrice?: number | string;
+  executeStandard?: string;
+  safetyCategory?: string;
+  qualityGrade?: string;
+  inspector?: string;
+}
+
+/** D-221：合格证行配置（勾选显隐 + 左右文字可编辑） */
+export interface CertRowState {
+  key: string;
+  show: boolean;
+  labelText: string;
+  valueText: string;
+}
+
+export interface CertificateSectionState {
+  titleText: string;
+  rows: CertRowState[];
+  showBarcode: boolean;
+  barcodeTemplate: string;
+  fontScale: number;
 }
 
 export interface LabelPrintModalProps {

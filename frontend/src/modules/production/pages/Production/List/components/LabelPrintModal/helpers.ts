@@ -6,8 +6,13 @@ import {
   type WashLabelPrintData,
 } from '@/utils/washLabelPrintTemplate';
 import type { ProductionOrder } from '@/types/production';
-import type { LabelStyleInfo, SkuRow } from './types';
+import type { CertificateSectionState, LabelStyleInfo, SkuRow } from './types';
 import { todayText, type WashLabelSectionState } from '@/components/common/WashLabelSectionConfigPanel';
+import {
+  buildCertificateMultiPageHtml,
+  type CertificatePageData,
+  saveCertPersistedSettings,
+} from '@/utils/certificateLabelPrintTemplate';
 
 /** 加载订单的 商品编码 行（优先接口，降级到订单明细分组，再降级到单行兜底） */
 export async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
@@ -182,5 +187,26 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
 .date-row { color: var(--color-gray-label); font-size: ${fs - 0.4}pt; margin-top: 1.5mm; letter-spacing: 0.2mm; }
 </style></head><body>${labelsHtml}</body></html>`;
 
+  safePrint(html);
+}
+
+/** D-221：打印合格证标签——每个选中 SKU × 打印数量一页，底部 CODE128 条码可扫码 */
+export async function printCertificateLabels(
+  selected: SkuRow[],
+  order: ProductionOrder,
+  w: number,
+  h: number,
+  certSections: CertificateSectionState,
+): Promise<void> {
+  const styleNo = order.styleNo || '';
+  const pages: CertificatePageData[] = selected.flatMap(row =>
+    Array.from({ length: Math.max(1, row.printCount) }, () => ({
+      color: row.color || '',
+      size: row.size || '',
+      seq: 0, // buildCertificateMultiPageHtml 内部按全局页序重排
+    }))
+  );
+  saveCertPersistedSettings(certSections.rows);
+  const html = buildCertificateMultiPageHtml(w, h, certSections, styleNo, pages);
   safePrint(html);
 }

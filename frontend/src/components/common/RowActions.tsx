@@ -174,6 +174,43 @@ const RowActions: React.FC<{
         ]
           .filter(Boolean)
           .join(' ');
+        const buttonNode = (
+          <Button
+            type="link"
+            size={size}
+            className={btnClassName}
+            title={text}
+            aria-label={text}
+            disabled={a.disabled}
+            danger={a.danger}
+            loading={a.loading}
+            onClick={a.onClick}
+          >
+            {a.label}
+          </Button>
+        );
+        // D-221：带子菜单且无自身 onClick 的动作（如"打印"），行内必须渲染为点击下拉——
+        // 原实现直接渲染裸 Button（onClick=undefined）成为死按钮
+        if (Array.isArray(a.children) && a.children.length > 0 && !a.onClick) {
+          const subHandlers = collectActionHandlers(a.children);
+          const subItems = stripMenuItemHandlers(a.children);
+          return (
+            <Dropdown
+              key={a.key}
+              trigger={['click']}
+              menu={{
+                items: subItems,
+                getPopupContainer: () => document.body,
+                onClick: ({ key, domEvent }) => {
+                  domEvent?.stopPropagation?.();
+                  subHandlers.get(String(key || '').trim())?.();
+                },
+              }}
+            >
+              {buttonNode}
+            </Dropdown>
+          );
+        }
         return (
           <Button
             key={a.key}
