@@ -16,7 +16,7 @@ import java.util.List;
  *
  * <p>职责：
  * <ul>
- *   <li>清理 factory_capacity:{tenantId} Redis 缓存（订单变更后立即失效）</li>
+ *   <li>清理 factory_capacity:v2:{tenantId} Redis 缓存（订单变更后立即失效）</li>
  *   <li>异步产能预警：下单后检查工厂负载，超阈值则记录 warning 日志</li>
  * </ul>
  *
@@ -32,7 +32,7 @@ import java.util.List;
 public class FactoryCapacityWarningHelper {
 
     /** 与 FactoryCapacityOrchestrator.CACHE_KEY_PREFIX 对齐 */
-    private static final String CACHE_KEY_PREFIX = "factory_capacity:";
+    private static final String CACHE_KEY_PREFIX = "factory_capacity:v2:";
 
     /** 工厂负载预警阈值：在制订单总件数超过此值则 warning */
     private static final int OVERLOAD_QUANTITY_THRESHOLD = 5000;

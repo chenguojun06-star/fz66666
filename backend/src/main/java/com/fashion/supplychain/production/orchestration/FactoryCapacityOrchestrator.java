@@ -46,8 +46,10 @@ public class FactoryCapacityOrchestrator {
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
-    private static final String CACHE_KEY_PREFIX = "factory_capacity:";
+    private static final String CACHE_KEY_PREFIX = "factory_capacity:v2:";
     private static final long CACHE_TTL_MINUTES = 5;
+    /** 历史评价统计窗口：近一年 */
+    private static final int HISTORY_DAYS = 365;
 
     /** 高风险预警：距截止日期不超过多少天 */
     private static final int AT_RISK_DAYS = 7;
@@ -67,6 +69,20 @@ public class FactoryCapacityOrchestrator {
         private int estimatedCompletionDays;
         private int matchScore;
         private String capacitySource;
+        /** 历史评价：品质分（近一年扫码合格率，-1=无数据） */
+        private double qualityScore = -1;
+        /** 历史评价：完成率（%），-1=无数据 */
+        private double completionRate = -1;
+        /** 历史评价：综合评分（-1=无数据），按 准时率40%+品质40%+完成率20% */
+        private double overallScore = -1;
+        /** 历史评价：评级 S/A/B/C（综合评分≥90/75/60/60以下） */
+        private String supplierTier;
+        /** 历史评价：累计单量（近一年已完成 + 当前在制） */
+        private int historyTotalOrders;
+        /** 历史评价：已完成单数 */
+        private int historyCompletedOrders;
+        /** 历史评价：历史逾期单数 */
+        private int historyOverdueOrders;
     }
 
     /**
@@ -118,6 +134,12 @@ public class FactoryCapacityOrchestrator {
         fillScanBasedCapacity(orders, result, now);
 
         fillDailyCapacityFallback(result, tenantId);
+
+        // 补齐无在制订单的外发工厂，保证历史评价数据可见
+        fillMissingFactories(result, tenantId);
+
+        // 填充历史评价：完成率/品质分/综合评分/评级（近一年口径）
+        fillHistoricalEvaluation(result, tenantId, now);
 
         calculateMatchScore(result);
 
@@ -328,6 +350,219 @@ public class FactoryCapacityOrchestrator {
                 item.setEstimatedCompletionDays(-1);
             }
         }
+    }
+
+    /**
+     * 补齐无在制订单的外发工厂，确保历史评价数据可见。
+     * 即使工厂当前没有进行中的订单，也保留在列表中（仅展示历史评价）。
+     */
+    private void fillMissingFactories(List<FactoryCapacityItem> result, Long tenantId) {
+        if (tenantId == null) return;
+        try {
+            QueryWrapper<Factory> fqw = new QueryWrapper<>();
+            fqw.eq("tenant_id", tenantId).eq("delete_flag", 0);
+            List<Factory> factories = factoryService.list(fqw);
+
+            Set<String> existing = result.stream()
+                .map(FactoryCapacityItem::getFactoryName)
+                .collect(Collectors.toSet());
+
+            for (Factory f : factories) {
+                String fn = f.getFactoryName();
+                if (fn == null || fn.isBlank()) continue;
+                fn = fn.trim();
+                if (existing.contains(fn)) continue;
+                // 仅补外发工厂或有评分数据的工厂
+                boolean isOutsource = "EXTERNAL".equalsIgnoreCase(f.getFactoryType())
+                        || "OUTSOURCE".equalsIgnoreCase(f.getSupplierType());
+                boolean hasScore = f.getOverallScore() != null
+                        || f.getQualityScore() != null
+                        || f.getCompletionRate() != null;
+                if (!isOutsource && !hasScore) continue;
+
+                FactoryCapacityItem item = new FactoryCapacityItem();
+                item.setFactoryName(fn);
+                item.setTotalOrders(0);
+                item.setTotalQuantity(0);
+                item.setAtRiskCount(0);
+                item.setOverdueCount(0);
+                item.setDeliveryOnTimeRate(-1);
+                item.setActiveWorkers(0);
+                item.setAvgDailyOutput(0);
+                item.setEstimatedCompletionDays(-1);
+                item.setCapacitySource("none");
+                if (f.getDailyCapacity() != null && f.getDailyCapacity() > 0 && f.getDailyCapacity() != 500) {
+                    item.setAvgDailyOutput(f.getDailyCapacity().doubleValue());
+                    item.setCapacitySource("configured");
+                }
+                result.add(item);
+                existing.add(fn);
+            }
+        } catch (Exception e) {
+            log.warn("[工厂产能] 补齐无在制工厂失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 填充历史评价数据（近一年口径）：
+     * <ul>
+     *   <li>完成率 = 已完成单数 / 近一年总单数（%），无单为 -1</li>
+     *   <li>准时率 = 按期完工单数 / 有排期已完成单数（%），覆盖产能口径</li>
+     *   <li>品质分 = 扫码成功条数 / 扫码总条数（%），无扫码取 t_factory.qualityScore，再无数据为 -1</li>
+     *   <li>综合评分 = 准时率40% + 品质40% + 完成率20%（已有值才计算），否则取 t_factory.overallScore</li>
+     *   <li>评级 = S/A/B/C（综合评分≥90/≥75/≥60/&lt;60）</li>
+     * </ul>
+     */
+    private void fillHistoricalEvaluation(List<FactoryCapacityItem> result, Long tenantId, LocalDateTime now) {
+        if (tenantId == null || result.isEmpty()) return;
+        try {
+            LocalDateTime yearAgo = now.minusDays(HISTORY_DAYS);
+            QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .eq("delete_flag", 0)
+              .isNotNull("factory_name")
+              .ne("factory_name", "")
+              .ge("create_time", yearAgo);
+            List<ProductionOrder> yearOrders = productionOrderService.list(qw);
+
+            Map<String, List<ProductionOrder>> byFactory = yearOrders.stream()
+                .collect(Collectors.groupingBy(o -> o.getFactoryName().trim()));
+
+            Map<String, long[]> scanStats = buildHistoricalScanStats(tenantId, yearOrders);
+
+            Map<String, Factory> factoryByName = loadFactoryByName(tenantId);
+
+            for (FactoryCapacityItem item : result) {
+                List<ProductionOrder> orders = byFactory.getOrDefault(item.getFactoryName(), Collections.emptyList());
+                int total = orders.size();
+                item.setHistoryTotalOrders(total);
+
+                int completed = 0, overdue = 0, doneWithPlan = 0, onTimeCount = 0;
+                long totalScan = 0, successScan = 0;
+                for (ProductionOrder o : orders) {
+                    if (isCompletedOrder(o)) {
+                        completed++;
+                        if (o.getActualEndDate() != null && o.getPlannedEndDate() != null) {
+                            doneWithPlan++;
+                            if (!o.getActualEndDate().isAfter(o.getPlannedEndDate())) {
+                                onTimeCount++;
+                            } else {
+                                overdue++;
+                            }
+                        }
+                    }
+                    long[] st = scanStats.get(o.getId());
+                    if (st != null) {
+                        totalScan += st[0];
+                        successScan += st[1];
+                    }
+                }
+                item.setHistoryCompletedOrders(completed);
+                item.setHistoryOverdueOrders(overdue);
+                item.setCompletionRate(total > 0 ? round1(completed * 100.0 / total) : -1);
+
+                // 准时率：覆盖为"有排期的已完成单"维度
+                double onTimeRate = doneWithPlan > 0 ? round1(onTimeCount * 100.0 / doneWithPlan) : -1;
+                if (onTimeRate >= 0) item.setDeliveryOnTimeRate((int) Math.round(onTimeRate));
+
+                // 品质分
+                double quality = totalScan > 0 ? round1(successScan * 100.0 / totalScan) : -1;
+                item.setQualityScore(quality);
+
+                Factory f = factoryByName.get(item.getFactoryName());
+
+                // 无订单数据的评分兜底：取 t_factory 已持久化的评分
+                if (total == 0 && f != null) {
+                    if (quality < 0 && f.getQualityScore() != null) {
+                        quality = f.getQualityScore().doubleValue();
+                        item.setQualityScore(quality);
+                    }
+                    if (item.getDeliveryOnTimeRate() < 0 && f.getOnTimeDeliveryRate() != null) {
+                        item.setDeliveryOnTimeRate(f.getOnTimeDeliveryRate().intValue());
+                    }
+                    if (item.getCompletionRate() < 0 && f.getCompletionRate() != null) {
+                        item.setCompletionRate(f.getCompletionRate().doubleValue());
+                    }
+                }
+
+                // 综合评分 + 评级
+                double overall = -1;
+                if (item.getDeliveryOnTimeRate() >= 0 && quality >= 0 && item.getCompletionRate() >= 0) {
+                    overall = round1(item.getDeliveryOnTimeRate() * 0.4 + quality * 0.4 + item.getCompletionRate() * 0.2);
+                } else if (f != null && f.getOverallScore() != null) {
+                    overall = f.getOverallScore().doubleValue();
+                }
+                item.setOverallScore(overall);
+                if (overall >= 0) {
+                    item.setSupplierTier(toTier(overall));
+                } else if (f != null) {
+                    item.setSupplierTier(f.getSupplierTier());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[工厂产能] 历史评价统计失败: {}", e.getMessage());
+        }
+    }
+
+    /** orderId → [totalScan, successScan]（近一年扫码记录） */
+    private Map<String, long[]> buildHistoricalScanStats(Long tenantId, List<ProductionOrder> orders) {
+        if (orders.isEmpty()) return Collections.emptyMap();
+        Map<String, long[]> result = new HashMap<>();
+        try {
+            Set<String> orderIds = orders.stream()
+                .map(ProductionOrder::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+            if (orderIds.isEmpty()) return result;
+            QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
+            sq.eq("tenant_id", tenantId)
+              .ne("scan_type", "orchestration")
+              .in("order_id", orderIds)
+              .select("order_id", "scan_result");
+            List<ScanRecord> records = scanRecordService.list(sq);
+            for (ScanRecord r : records) {
+                if (r.getOrderId() == null) continue;
+                result.computeIfAbsent(r.getOrderId(), k -> new long[]{0, 0});
+                result.get(r.getOrderId())[0]++;
+                if ("success".equalsIgnoreCase(r.getScanResult())) {
+                    result.get(r.getOrderId())[1]++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[工厂产能] 历史扫码质量统计失败: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    private Map<String, Factory> loadFactoryByName(Long tenantId) {
+        try {
+            QueryWrapper<Factory> fqw = new QueryWrapper<>();
+            fqw.eq("tenant_id", tenantId).eq("delete_flag", 0);
+            List<Factory> factories = factoryService.list(fqw);
+            return factories.stream()
+                .filter(f -> f.getFactoryName() != null)
+                .collect(Collectors.toMap(f -> f.getFactoryName().trim(), f -> f, (a, b) -> a));
+        } catch (Exception e) {
+            log.warn("[工厂产能] 加载工厂配置失败: {}", e.getMessage());
+        }
+        return Collections.emptyMap();
+    }
+
+    private boolean isCompletedOrder(ProductionOrder o) {
+        if (o.getStatus() == null) return false;
+        String s = o.getStatus();
+        return "completed".equalsIgnoreCase(s) || "warehoused".equalsIgnoreCase(s);
+    }
+
+    private double round1(double v) {
+        return Math.round(v * 10.0) / 10.0;
+    }
+
+    private String toTier(double score) {
+        if (score >= 90) return "S";
+        if (score >= 75) return "A";
+        if (score >= 60) return "B";
+        return "C";
     }
 
     private boolean isAtRisk(ProductionOrder o, LocalDateTime now) {

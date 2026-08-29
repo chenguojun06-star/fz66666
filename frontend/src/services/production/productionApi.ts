@@ -20,6 +20,20 @@ export interface FactoryCapacityItem {
   estimatedCompletionDays: number;
   matchScore: number;
   capacitySource: 'real' | 'configured' | 'none';
+  /** 历史评价：品质分（近一年扫码合格率，-1=无数据） */
+  qualityScore: number;
+  /** 历史评价：完成率（%），-1=无数据 */
+  completionRate: number;
+  /** 历史评价：综合评分（-1=无数据） */
+  overallScore: number;
+  /** 历史评价：评级 S/A/B/C */
+  supplierTier?: string;
+  /** 历史评价：累计单量（近一年已完成 + 当前在制） */
+  historyTotalOrders: number;
+  /** 历史评价：已完成单数 */
+  historyCompletedOrders: number;
+  /** 历史评价：历史逾期单数 */
+  historyOverdueOrders: number;
 }
 
 export interface ProductionOrderStats {

@@ -23,6 +23,20 @@ const FactoryStatBlock: React.FC<{
   onInsightClick: () => void;
 }> = ({ stat, emptyHint, onInsightClick }) => {
   const rate = formatRate(stat.deliveryOnTimeRate);
+  const quality = formatRate(stat.qualityScore);
+  const completion = formatRate(stat.completionRate);
+  const overall = formatRate(stat.overallScore);
+  const hasHistory = (stat.historyTotalOrders ?? 0) > 0
+    || stat.overallScore >= 0
+    || stat.qualityScore >= 0
+    || stat.completionRate >= 0;
+  const tierColor = (() => {
+    if (!stat.supplierTier) return undefined;
+    if (stat.supplierTier === 'S') return 'var(--color-success)';
+    if (stat.supplierTier === 'A') return 'var(--color-info)';
+    if (stat.supplierTier === 'B') return 'var(--color-warning)';
+    return 'var(--color-danger)';
+  })();
   return (
     <div
       style={{
@@ -36,19 +50,30 @@ const FactoryStatBlock: React.FC<{
         color: 'var(--color-text-secondary)',
       }}
     >
-      {stat.matchScore > 0 && (
+      {(stat.matchScore > 0 || stat.supplierTier) && (
         <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? 'var(--color-success)' : stat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-            推荐指数 {stat.matchScore}分
-          </span>
+          {stat.matchScore > 0 && (
+            <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? 'var(--color-success)' : stat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
+              推荐指数 {stat.matchScore}分
+            </span>
+          )}
           {stat.matchScore >= 70 && <span style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-success-border)' }}>推荐</span>}
+          {stat.supplierTier && (
+            <span style={{ background: 'rgba(0,0,0,0.04)', color: tierColor, padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--color-border)' }}>
+              历史评级 {stat.supplierTier}
+            </span>
+          )}
           {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-warning-border)' }}>配置产能</span>}
           {stat.capacitySource === 'none' && <span style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-error-border)' }}>无产能数据</span>}
         </div>
       )}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalOrders}</b> 单</span>
-        <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
+        {stat.totalOrders > 0 ? (
+          <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalOrders}</b> 单</span>
+        ) : (
+          <span style={{ color: 'var(--color-text-quaternary)' }}>当前无在制订单</span>
+        )}
+        {stat.totalQuantity > 0 ? <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span> : null}
         <span>
           货期完成率
           <b style={{ marginLeft: 4, color: rate.color }}>{rate.text}</b>
@@ -70,6 +95,28 @@ const FactoryStatBlock: React.FC<{
         ) : null}
         {stat.activeWorkers <= 0 && stat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（{emptyHint}近30天无扫码记录）</span> : null}
       </div>
+      {hasHistory && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border)' }}>
+          <span>
+            品质分
+            <b style={{ marginLeft: 4, color: quality.color }}>{quality.text}</b>
+          </span>
+          <span>
+            完成率
+            <b style={{ marginLeft: 4, color: completion.color }}>{completion.text}</b>
+          </span>
+          <span>
+            综合评分
+            <b style={{ marginLeft: 4, color: overall.color }}>{overall.text}</b>
+          </span>
+          <span>
+            近一年
+            <b style={{ color: 'var(--color-text-primary)' }}>{stat.historyTotalOrders ?? 0}</b> 单 · 已完成
+            <b style={{ color: 'var(--color-text-primary)' }}>{stat.historyCompletedOrders ?? 0}</b> · 逾期
+            <b style={{ marginLeft: 4, color: (stat.historyOverdueOrders ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{stat.historyOverdueOrders ?? 0}</b>
+          </span>
+        </div>
+      )}
       <div style={{ marginTop: 6, textAlign: 'right' }}>
         <Button
           size="small"
