@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-29（新增 D-221 打印死按钮修复+合格证标签）
+> 最后更新：2026-08-29（新增 D-222 全局滚动兜底+入库数量重复计算根治+入库详情兜底）
+
+---
+
+## D-222：全局滚动兜底+入库重复计算+入库详情无数据（2026-08-29）
+
+### 各项根因与实现
+1. **成品出入库等 20+ 页无滚动条**：D-138 锁 `.layout{height:100vh;overflow:hidden}` 时漏了 flex 断点——`.layout-main` 无 `min-height:0`，列向 flex 子项默认 min-height:auto 被内容撑高，`.layout-content` 的 overflow:auto 永远"无事可滚"，整棵树被 .layout 静默裁掉。**凡内容超一屏又没用标准 PageLayout（.page-layout-fullheight 视口 calc 定高）的页面全中招**（成品出入库/物料库存/面辅料库/盘点/标签打印/库位地图/电商订单/CRM/财务等多模块 20+ 页）。修复=一行 `.layout-main{min-height:0}`：标准页定高不受影响，非标准页恢复 .layout-content 滚动。入库详情抽屉同族问题已于 D-219 修（SideDrawer overflow:hidden）。
+2. **入库"已生产 264 件"重复计算**：两层放大——①视图 v_production_order_stage_done_agg 按原始 stage 名分组，入库/成品入库/质检入库各成一行，sumDoneQuantity 逐行相加；②tooltip stageMatch 的 `a.includes(s)` 空串全匹配，progressStage 为空的行被计入所有节点。修复：入库节点改权威口径 `productWarehousingService.sumQualifiedByOrderId`（成品入库单合格数）；其他工序同义变体行按归一化分组只取最大不累加；stageMatch 空 stage 直接 false + 入库只认 scanType warehouse/warehouse_manual。
+3. **入库详情弹窗工序跟踪 0 条**：入库不是计件工序，t_production_process_tracking（按工艺流子工序初始化）里没有"入库"行，而预警条用扫码聚合——两个数据源对不齐。修复：入库节点的工序跟踪 tab 顶部直接展示**成品入库单记录**（WarehousingInboundList，/production/warehousing/list，含合格合计），与预警条同一份入库事实。
+
+### 教训
+- flex 布局锁视口高度必须补全 `min-height:0` 断点链（.layout→.layout-main→.layout-content-row→.layout-content 任何一环断都被内容撑爆）
+- 统计口径"同一事实只算一次"：聚合视图按原始名分组+归一化匹配逐行求和=天然重复计算；同义变体取 max 或换权威表
+- "入库"在系统里有三套数据源（扫码镜像/跟踪表/入库单），展示口径必须统一到入库单
 
 ---
 
