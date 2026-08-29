@@ -74,7 +74,12 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     try {
       const res = await api.get<{ code: number; data: any[] }>(`/style/attachment/list?styleId=${styleId}`);
       if (res.code === 200) {
-        const imgs = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+        // D-225：只显示款式图片，纸样/放码/色卡类附件归各自 tab（此前纸样图片混进主图区）
+        const PATTERN_BIZ = ['pattern', 'pattern_final', 'pattern_grading', 'pattern_grading_final', 'colorway', 'size_table'];
+        const imgs = (res.data || []).filter((f: any) =>
+          String(f.fileType || '').includes('image')
+          && !PATTERN_BIZ.includes(String(f.bizType || '').trim().toLowerCase())
+          && !String(f.bizType || '').toLowerCase().startsWith('pattern'));
         const sorted = coverUrl
           ? [...imgs].sort((a, b) => {
               const aCover = String(a?.fileUrl || '') === String(coverUrl || '');

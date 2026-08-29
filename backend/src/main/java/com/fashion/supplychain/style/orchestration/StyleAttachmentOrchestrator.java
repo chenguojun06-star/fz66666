@@ -195,13 +195,22 @@ public class StyleAttachmentOrchestrator {
 
             styleAttachmentService.save(attachment);
 
-            if (contentType != null && contentType.startsWith("image/")) {
+            // D-225：不再"每传一张图就抢主图"——纸样类附件（pattern系）绝不改封面；
+            // 普通图片仅当款式还没有封面（第一张）时才自动设为主图，已有封面必须由用户"设为主图"显式修改
+            if (contentType != null && contentType.startsWith("image/") && !isPatternBizType(type)) {
                 try {
                     Long sid = Long.valueOf(resolvedStyleId);
-                    styleInfoService.lambdaUpdate()
+                    boolean hasCover = styleInfoService.lambdaQuery()
                             .eq(StyleInfo::getId, sid)
-                            .set(StyleInfo::getCover, attachment.getFileUrl())
-                            .update();
+                            .isNotNull(StyleInfo::getCover)
+                            .ne(StyleInfo::getCover, "")
+                            .exists();
+                    if (!hasCover) {
+                        styleInfoService.lambdaUpdate()
+                                .eq(StyleInfo::getId, sid)
+                                .set(StyleInfo::getCover, attachment.getFileUrl())
+                                .update();
+                    }
                 } catch (Exception e) {
                     log.warn("Failed to update style cover: styleId={}, fileUrl={}", resolvedStyleId,
                             attachment.getFileUrl(),
@@ -590,6 +599,13 @@ public class StyleAttachmentOrchestrator {
             return null;
         }
         return String.valueOf(style.getId());
+    }
+
+    /** D-225：纸样类附件（pattern系/colorway/size_table）不参与封面 */
+    private boolean isPatternBizType(String bizType) {
+        if (!StringUtils.hasText(bizType)) return false;
+        String t = bizType.trim().toLowerCase();
+        return t.startsWith("pattern") || t.equals("colorway") || t.equals("size_table");
     }
 
     private String normalizeNullable(String value) {

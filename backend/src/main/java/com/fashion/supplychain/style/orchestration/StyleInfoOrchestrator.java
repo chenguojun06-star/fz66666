@@ -342,6 +342,15 @@ public class StyleInfoOrchestrator {
                         .eq(StyleInfo::getTenantId, UserContext.tenantId())
                         .one();
                 ensureNotScrapped(existing);
+                // D-225：局部保存（工艺说明/洗水唛/预算工时等只带 id+styleNo+个别字段）不再 400——
+                // 必填字段缺失时回落库中已有值；仅当库里也没有才真正校验失败
+                if (existing != null) {
+                    if (!StringUtils.hasText(styleInfo.getStyleNo())) styleInfo.setStyleNo(existing.getStyleNo());
+                    if (!StringUtils.hasText(styleInfo.getStyleName())) styleInfo.setStyleName(existing.getStyleName());
+                    if (!StringUtils.hasText(styleInfo.getCategory()) && StringUtils.hasText(existing.getCategory())) {
+                        styleInfo.setCategory(existing.getCategory());
+                    }
+                }
                 // D-215：款式编码放开编辑后，编辑保存撞号必须明确拦截提示
                 // （此前仅靠 DB 唯一约束兜底，报错对用户不友好）
                 if (existing != null && StringUtils.hasText(styleInfo.getStyleNo())
