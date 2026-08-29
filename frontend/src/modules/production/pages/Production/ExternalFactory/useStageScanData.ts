@@ -40,7 +40,15 @@ const STAGE_ALIASES: Record<string, string[]> = {
 
 export function stageMatch(progressStage: string, stageKey: string): boolean {
   const s = progressStage.trim();
-  return (STAGE_ALIASES[stageKey] ?? []).some(a => s === a || s.includes(a) || a.includes(s));
+  if (!s) return false; // D-222：空串曾被 a.includes('') 全匹配——空 stage 行被计入所有节点（重复计算放大器）
+  return (STAGE_ALIASES[stageKey] ?? []).some(a => s === a || s.includes(a));
+}
+
+/** D-222：入库节点只认入库类扫码来源（warehouse/warehouse_manual），排除质检/裁剪等镜像行重复累计 */
+function scanTypeMatches(stageKey: string, scanType: unknown): boolean {
+  if (stageKey !== 'warehousing') return true;
+  const t = String(scanType ?? '').trim();
+  return !t || t === 'warehouse' || t === 'warehouse_manual';
 }
 
 interface SubProcess { name: string; qty: number }
@@ -67,7 +75,7 @@ export function useStageScanData(orderId: string, stageKey: string): ScanStageDa
     let cancelled = false;
     loadOrderScans(orderId).then(all => {
       if (cancelled) return;
-      const stage = all.filter(r => stageMatch(String(r.progressStage ?? ''), stageKey));
+      const stage = all.filter(r => scanTypeMatches(stageKey, r.scanType) && stageMatch(String(r.progressStage ?? ''), stageKey));
       const byProcess: Record<string, number> = {};
       let lastAt = '';
       const sevenAgo = dayjs().subtract(7, 'day');

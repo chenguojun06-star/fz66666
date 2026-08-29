@@ -55,6 +55,9 @@ public class ProgressPredictOrchestrator {
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductWarehousingService productWarehousingService;
+
     public PredictFinishResponse predictFinish(PredictFinishRequest request) {
         String predictionId = generatePredictionId();
         PredictFinishResponse response = new PredictFinishResponse();
@@ -160,21 +163,37 @@ public class ProgressPredictOrchestrator {
 
     private int sumDoneQuantity(String orderId, String stageName,
             String normalizedStage, Long tenantId) {
+        // D-222：入库节点的权威口径=成品入库单合格数合计（t_product_warehousing）。
+        // 扫码聚合视图对"入库"语义有多个来源/多个 stage 变体行（入库/成品入库/质检入库…），
+        // 逐行累加会重复计算（如 32 件被算成 264）。
+        boolean warehousingStage = (normalizedStage != null && normalizedStage.contains("入库"))
+                || (stageName != null && stageName.contains("入库"));
+        if (warehousingStage && StringUtils.hasText(orderId)) {
+            try {
+                return Math.max(0, productWarehousingService.sumQualifiedByOrderId(orderId));
+            } catch (Exception e) {
+                log.warn("[预测] 入库合格数汇总失败，降级扫码口径: orderId={}, err={}", orderId, e.getMessage());
+            }
+        }
         List<Map<String, Object>> aggs = scanRecordMapper.selectStageDoneAgg(
                 Collections.singletonList(orderId), tenantId);
         if (aggs == null) return 0;
-        int doneQty = 0;
+        // D-222：同一归一化工序的多个变体行（不同原始 stage 名分组）只取最大值——
+        // 它们是同一票货在不同命名下的重复聚合，逐行相加必然翻倍
+        java.util.Map<String, Integer> byNormalized = new java.util.LinkedHashMap<>();
         for (Map<String, Object> row : aggs) {
             String rowStage = row.get("stageName") == null
                     ? null : row.get("stageName").toString();
-            if (stageMatches(rowStage, stageName, normalizedStage)) {
-                Object doneVal = row.get("doneQuantity");
-                if (doneVal != null) {
-                    doneQty += Integer.parseInt(doneVal.toString());
-                }
+            if (!stageMatches(rowStage, stageName, normalizedStage)) {
+                continue;
             }
+            Object doneVal = row.get("doneQuantity");
+            if (doneVal == null) continue;
+            int qty = Integer.parseInt(doneVal.toString());
+            String key = ProcessStatsEngine.normalizeStage(rowStage);
+            byNormalized.merge(key == null ? rowStage : key, qty, Math::max);
         }
-        return doneQty;
+        return byNormalized.values().stream().mapToInt(Integer::intValue).sum();
     }
 
     private void fillAllDoneResponse(PredictFinishResponse response, String stageName,

@@ -8,6 +8,7 @@ import PredictionCard from '../PredictionCard';
 import OperatorsTab from '../OperatorsTab';
 import NodeSettingsTab from '../NodeSettingsTab';
 import InlinePurchasePanel from '../InlinePurchasePanel';
+import WarehousingInboundList from '../WarehousingInboundList';
 import type {
   NodeType,
   NodeOperationData,
@@ -213,6 +214,12 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
               label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
               children: (
                 <div>
+                  {/* D-222：入库不是计件工序，跟踪表通常没有"入库"行——直接展示成品入库单记录（权威入库事实） */}
+                  {nodeTypeKey === 'warehousing' && (
+                    <div style={{ marginBottom: 12 }}>
+                      <WarehousingInboundList orderId={orderId} orderNo={orderSummary.orderNo || orderNo} />
+                    </div>
+                  )}
                   <div style={{ marginBottom: 8, textAlign: 'right' }}>
                     <Button
                       loading={repairLoading}
