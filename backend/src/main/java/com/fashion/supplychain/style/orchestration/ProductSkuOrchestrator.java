@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.mapper.ProductSkuMapper;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -38,6 +39,9 @@ public class ProductSkuOrchestrator {
 
     @Autowired
     private ProductionOrderMapper productionOrderMapper;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
 
     @Autowired
     private ProductSkuMapper productSkuMapper;
@@ -87,6 +91,83 @@ public class ProductSkuOrchestrator {
         }
     }
 
+    /**
+     * D-212：把 sizeColorConfig 中"已无任何 SKU"的码数移除（新格式 {colors,sizes,matrixRows}）。
+     * matrixRows.quantities 与 sizes 按索引对齐，删码时同步删各颜色行的数量位。
+     */
+    private void syncRemoveSizesFromConfig(StyleInfo style, Long styleId, Long tenantId) {
+        try {
+            String configJson = style.getSizeColorConfig();
+            if (!org.springframework.util.StringUtils.hasText(configJson)
+                    || configJson.trim().startsWith("[")) {
+                return; // 旧格式（颜色分组数组）结构不同，跳过
+            }
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> config = mapper.readValue(configJson,
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+                    });
+            List<String> configSizes = new java.util.ArrayList<>();
+            Object sizesObj = config.get("sizes");
+            if (sizesObj instanceof List) {
+                for (Object o : (List<?>) sizesObj) {
+                    if (o != null) configSizes.add(String.valueOf(o).trim());
+                }
+            }
+            if (configSizes.isEmpty()) {
+                return;
+            }
+            // 剩余 SKU 的码数集合（删除后查询）
+            java.util.Set<String> remainingSizes = new java.util.HashSet<>();
+            for (ProductSku sku : productSkuService.lambdaQuery()
+                    .eq(ProductSku::getStyleId, styleId)
+                    .eq(ProductSku::getTenantId, tenantId)
+                    .list()) {
+                if (org.springframework.util.StringUtils.hasText(sku.getSize())) {
+                    remainingSizes.add(sku.getSize().trim());
+                }
+            }
+            List<Integer> removeIdx = new java.util.ArrayList<>();
+            for (int i = 0; i < configSizes.size(); i++) {
+                if (!remainingSizes.contains(configSizes.get(i))) {
+                    removeIdx.add(i);
+                }
+            }
+            if (removeIdx.isEmpty()) {
+                return;
+            }
+            List<String> newSizes = new java.util.ArrayList<>();
+            for (int i = 0; i < configSizes.size(); i++) {
+                if (!removeIdx.contains(i)) {
+                    newSizes.add(configSizes.get(i));
+                }
+            }
+            config.put("sizes", newSizes);
+            // matrixRows.quantities 同步删位
+            Object matrixObj = config.get("matrixRows");
+            if (matrixObj instanceof List) {
+                for (Object rowObj : (List<?>) matrixObj) {
+                    if (rowObj instanceof Map) {
+                        Object qtyObj = ((Map<?, ?>) rowObj).get("quantities");
+                        if (qtyObj instanceof List) {
+                            List<?> qty = (List<?>) qtyObj;
+                            List<Object> newQty = new java.util.ArrayList<>();
+                            for (int i = 0; i < qty.size(); i++) {
+                                if (!removeIdx.contains(i)) {
+                                    newQty.add(qty.get(i));
+                                }
+                            }
+                            ((java.util.Map<String, Object>) rowObj).put("quantities", newQty);
+                        }
+                    }
+                }
+            }
+            styleInfoService.updateSizeColorConfigOnly(styleId, mapper.writeValueAsString(config));
+        } catch (Exception e) {
+            // 联动失败不阻断删除主流程
+            log.warn("syncRemoveSizesFromConfig failed: styleId={}, err={}", styleId, e.getMessage());
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void batchUpdateSkus(Long styleId, List<ProductSku> skuList, List<Long> deletedIds) {
         if (styleId == null) {
@@ -119,6 +200,12 @@ public class ProductSkuOrchestrator {
                     log.info("Deleted SKU id={}, skuCode={}", sku.getId(), sku.getSkuCode());
                 }
             }
+        }
+
+        // D-212：删除 SKU 行后，同步把"已无任何 SKU"的码数从 sizeColorConfig 中移除——
+        // 否则下次配置保存时 generateSkusForStyle 会按旧 config 把删除的行重建回来（"删了又复活"根因）
+        if (deletedIds != null && !deletedIds.isEmpty()) {
+            syncRemoveSizesFromConfig(style, styleId, tenantId);
         }
 
         if (skuList != null && !skuList.isEmpty()) {

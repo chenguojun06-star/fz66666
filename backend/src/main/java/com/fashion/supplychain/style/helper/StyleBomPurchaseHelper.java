@@ -264,8 +264,17 @@ public class StyleBomPurchaseHelper {
     private MaterialPurchase buildPurchaseFromBom(StyleBom bom, StyleInfo styleInfo,
             SizeColorParseResult parseResult, String purchaseColor, String purchaseSize,
             String patternProductionId, String sampleOrderId) {
-        BigDecimal usageAmount = bom.getDevUsageAmount() != null ? bom.getDevUsageAmount()
-                : (bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO);
+        // D-214：与检查库存 pickEffectiveUsage 同口径——有纸样数据用纸样用量，否则开发采购量优先
+        String patternUsageMap = bom.getPatternSizeUsageMap();
+        boolean hasPatternData = patternUsageMap != null && patternUsageMap.trim().length() > 2;
+        BigDecimal usageAmount;
+        if (hasPatternData) {
+            usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+        } else if (bom.getDevUsageAmount() != null && bom.getDevUsageAmount().compareTo(BigDecimal.ZERO) > 0) {
+            usageAmount = bom.getDevUsageAmount();
+        } else {
+            usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+        }
         BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
         BigDecimal lossFactor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
         BigDecimal totalUsage = usageAmount.multiply(BigDecimal.valueOf(parseResult.styleTotalQty)).multiply(lossFactor);

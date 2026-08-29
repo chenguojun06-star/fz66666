@@ -96,7 +96,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
-        {/* 款式编码（必填，新建可填，编辑锁定） */}
+        {/* 款式编码（必填；D-215：编辑也放开可修改，保存时后端做唯一性校验并联动重算商品编码） */}
         <Col xs={24} md={12}>
           <Form.Item
             name="styleNo"
@@ -107,7 +107,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <Input
               id="styleNo"
               placeholder="请输入款式编码"
-              disabled={editLocked || Boolean(currentStyle?.id)}
+              disabled={editLocked}
               maxLength={64}
               suffix={
                 isNewPage || !currentStyle?.id ? (

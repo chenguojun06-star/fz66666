@@ -719,9 +719,43 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         }
     }
 
+    /**
+     * D-215：款号变更后联动重算商品编码。与 updateUseSkuPrefix 同范式：
+     * 非手动编辑的 SKU 按新款号重算"款号-颜色-尺码"，手动编辑的只同步 styleNo 冗余字段。
+     */
     @Override
-    public ProductSku getBySkuCode(String skuCode) {
-        if (!StringUtils.hasText(skuCode)) return null;
+    public void resyncSkuCodesForStyleNoChange(Long styleId, String newStyleNo) {
+        StyleInfo style = styleInfoMapper.selectById(styleId);
+        if (style == null || !StringUtils.hasText(newStyleNo)) {
+            return;
+        }
+        List<ProductSku> skus = listByStyleId(styleId);
+        List<ProductSku> toUpdate = new java.util.ArrayList<>();
+        for (ProductSku sku : skus) {
+            boolean changed = false;
+            if (!newStyleNo.equals(sku.getStyleNo())) {
+                sku.setStyleNo(newStyleNo);
+                changed = true;
+            }
+            if (!Integer.valueOf(1).equals(sku.getManuallyEdited())) {
+                String autoCode = generateSkuCode(newStyleNo, sku.getColor(), sku.getSize(), style.getUseSkuPrefix());
+                if (!autoCode.equals(sku.getSkuCode())) {
+                    sku.setSkuCode(autoCode);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                toUpdate.add(sku);
+            }
+        }
+        if (!toUpdate.isEmpty()) {
+            this.updateBatchById(toUpdate);
+            log.info("款号变更联动重算商品编码: styleId={}, newStyleNo={}, updated {} SKUs", styleId, newStyleNo, toUpdate.size());
+        }
+    }
+
+    @Override
+    public ProductSku getBySkuCode(String skuCode) {        if (!StringUtils.hasText(skuCode)) return null;
         Long tenantId = UserContext.tenantId();
         return getOne(new LambdaQueryWrapper<ProductSku>()
                 .eq(ProductSku::getTenantId, tenantId)

@@ -331,16 +331,36 @@ public class StyleInfoOrchestrator {
         // 同步客户信息到款号冗余字段
         styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
         validateStyleInfo(styleInfo);
+        StyleInfo existing = null;
         try {
             if (styleInfo.getId() != null) {
-                StyleInfo existing = styleInfoService.lambdaQuery()
+                existing = styleInfoService.lambdaQuery()
                         .eq(StyleInfo::getId, styleInfo.getId())
                         .eq(StyleInfo::getTenantId, UserContext.tenantId())
                         .one();
                 ensureNotScrapped(existing);
+                // D-215：款式编码放开编辑后，编辑保存撞号必须明确拦截提示
+                // （此前仅靠 DB 唯一约束兜底，报错对用户不友好）
+                if (existing != null && StringUtils.hasText(styleInfo.getStyleNo())
+                        && !styleInfo.getStyleNo().trim().equals(existing.getStyleNo())
+                        && styleNoExistsExcluding(styleInfo.getStyleNo().trim(), styleInfo.getId())) {
+                    throw new IllegalArgumentException("款号「" + styleInfo.getStyleNo().trim() + "」已被其他款式使用，请修改款号");
+                }
             }
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
+                // D-215：款号变更后联动重算该款式所有商品编码（款号-颜色-尺码）
+                if (existing != null && StringUtils.hasText(styleInfo.getStyleNo())
+                        && !styleInfo.getStyleNo().trim().equals(existing.getStyleNo())
+                        && styleInfo.getId() != null) {
+                    try {
+                        productSkuService.resyncSkuCodesForStyleNoChange(styleInfo.getId(), styleInfo.getStyleNo().trim());
+                        log.info("款号变更联动重算商品编码: styleId={}, {} -> {}",
+                                styleInfo.getId(), existing.getStyleNo(), styleInfo.getStyleNo().trim());
+                    } catch (Exception e) {
+                        log.warn("款号变更联动重算商品编码失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
+                    }
+                }
                 try {
                     stylePatternProductionHelper.syncPatternProductionInfo(styleInfo);
                     styleOperationAppendHelper.appendUpdate(styleInfo, "基础信息");
@@ -771,6 +791,18 @@ public class StyleInfoOrchestrator {
                 .select(StyleInfo::getId)
                 .eq(StyleInfo::getStyleNo, styleNo)
                 .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one() != null;
+    }
+
+    /** D-215：编辑保存时的款号查重，排除自身 id */
+    private boolean styleNoExistsExcluding(String styleNo, Long excludeId) {
+        Long tenantId = UserContext.tenantId();
+        return styleInfoService.lambdaQuery()
+                .select(StyleInfo::getId)
+                .eq(StyleInfo::getStyleNo, styleNo)
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .ne(excludeId != null, StyleInfo::getId, excludeId)
                 .last("LIMIT 1")
                 .one() != null;
     }

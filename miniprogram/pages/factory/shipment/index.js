@@ -45,7 +45,8 @@ function enrichForDashboard(order) {
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
   order.progressWidth = Math.min(100, Math.max(0, order.calculatedProgress || 0));
-  order.expanded = false;
+  // D-211：单菲/无菲直接展示明细（对齐生产管理 D-193）
+  order.expanded = Array.isArray(order.colorGroups) && order.colorGroups.length <= 1;
   return order;
 }
 
@@ -334,10 +335,18 @@ Page({
 
   onCopyOrderNo: function (e) {
     const orderNo = e.currentTarget.dataset.orderNo;
-    if (!orderNo) return;
-    wx.setClipboardData({ data: orderNo, success: function () {
-      wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
-    }});
+    if (!orderNo) { wx.showToast({ title: '订单号缺失', icon: 'none' }); return; }
+    // D-211：补 fail 提示——此前静默失败时用户以为按钮坏了
+    wx.setClipboardData({
+      data: orderNo,
+      success: function () {
+        wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+      },
+      fail: function (err) {
+        console.error('[copy] setClipboardData fail', err);
+        wx.showToast({ title: '复制失败：' + ((err && err.errMsg) || '未知错误'), icon: 'none', duration: 2500 });
+      },
+    });
   },
 
   onGoOrderDetail: function (e) {

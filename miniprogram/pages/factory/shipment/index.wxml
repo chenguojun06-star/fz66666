@@ -134,13 +134,16 @@
         </view>
 
         <!-- 展开按钮 -->
-        <view class="order-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+        <view class="order-expand-btn" wx:if="{{item.colorGroups.length > 1}}" data-index="{{index}}" catchtap="onCardToggle">
           <text class="expand-btn-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
           <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
         </view>
 
         <!-- 展开区域 -->
         <view class="order-expand" wx:if="{{item.expanded}}">
+        <!-- D-211：快捷操作上移到展开区顶部（对齐生产管理） -->
+          <view class="expand-actions">
+            <view class="act-btn act-btn--detail" catchtap="onGoOrderDetail" data-index="{{index}}">详情</view>
           <!-- 菲号明细 -->
           <view class="detail-head">
             <text class="detail-title">菲号明细</text>
@@ -182,14 +185,7 @@
               <view class="node-bar-bg">
                 <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width: {{node.percentWidth}}%"></view>
               </view>
-              <!-- 子工序列表 -->
-              <view class="node-sub-procs" wx:if="{{node.children && node.children.length > 0}}">
-                <view class="sub-proc-item" wx:for="{{node.children}}" wx:for-item="sp" wx:key="name">
-                  <text class="sp-name">{{sp.name}}</text>
-                  <text class="sp-price" wx:if="{{sp.unitPrice > 0}}">¥{{sp.unitPrice}}</text>
-                  <text class="sp-price sp-price--free" wx:else>待定价</text>
-                </view>
-              </view>
+              <!-- D-211：子工序单价行已移除——单价属工序编辑页，进度卡不展示金额 -->
             </view>
           </view>
 
@@ -212,9 +208,6 @@
             </scroll-view>
           </view>
 
-          <!-- 快捷操作 -->
-          <view class="expand-actions">
-            <view class="act-btn act-btn--detail" catchtap="onGoOrderDetail" data-index="{{index}}">详情</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>

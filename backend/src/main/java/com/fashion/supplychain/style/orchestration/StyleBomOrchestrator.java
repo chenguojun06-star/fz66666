@@ -446,10 +446,14 @@ public class StyleBomOrchestrator {
     }
 
     private int calculateRequirement(StyleBom bom, Integer productionQty) {
-        if (bom.getUsageAmount() == null) {
+        // D-214：用量口径与前端 calcTotalPrice/生成采购单对齐（pickEffectiveUsage）——
+        // 开发阶段（尚无纸样数据）按开发采购量 devUsageAmount 判库存；
+        // 纸样完成后（patternSizeUsageMap 非空）才按实际纸样用量 usageAmount。
+        // 旧逻辑只认 usageAmount，只填了开发采购量的物料被误判"未填用量"。
+        BigDecimal usageAmount = pickEffectiveUsage(bom);
+        if (usageAmount == null || usageAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
-        BigDecimal usageAmount = bom.getUsageAmount();
         BigDecimal qty = BigDecimal.valueOf(productionQty);
         BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
         BigDecimal lossFactor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));

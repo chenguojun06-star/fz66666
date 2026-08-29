@@ -44,7 +44,7 @@ export const useStyleFormActions = ({
   pendingImages = [],
   pendingColorImages = [],
 }: UseStyleFormActionsProps) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const navigate = useNavigate();
 
   const [saving, setSaving] = useState(false);
@@ -76,32 +76,43 @@ export const useStyleFormActions = ({
     return uploadResults.filter((r: any) => r.code === 200).length;
   };
 
-  const ensureUniqueStyleNo = async (initialStyleNo: string): Promise<string> => {
-    let finalStyleNo = initialStyleNo;
-    let suffix = 1;
-    let isDuplicate = true;
-
-    while (isDuplicate) {
-      try {
-        const checkRes = await api.get<{ code: number; data: { records: any[] } }>('/style/info/list', {
-          params: { styleNo: finalStyleNo, page: 1, pageSize: 1 }
-        });
-
-        if (checkRes.code === 200 && checkRes.data?.records && checkRes.data.records.length > 0) {
-          finalStyleNo = `${initialStyleNo}-${suffix}`;
-          suffix++;
-        } else {
-          isDuplicate = false;
-        }
-      } catch {
-        isDuplicate = false;
-      }
+  const styleNoTaken = async (styleNo: string): Promise<boolean> => {
+    try {
+      const checkRes = await api.get<{ code: number; data: { records: any[] } }>('/style/info/list', {
+        params: { styleNo, page: 1, pageSize: 1 }
+      });
+      return checkRes.code === 200 && (checkRes.data?.records?.length ?? 0) > 0;
+    } catch {
+      return false;
     }
+  };
 
-    if (finalStyleNo !== initialStyleNo) {
-      message.info(`款号 ${initialStyleNo} 已存在，自动调整为 ${finalStyleNo}`);
+  /**
+   * D-215：款号撞号不再静默加后缀——先弹窗提示用户"返回修改"或确认"自动加后缀"。
+   * 返回 null 表示用户选择返回修改，保存流程中止。
+   */
+  const ensureUniqueStyleNo = async (initialStyleNo: string): Promise<string | null> => {
+    if (!(await styleNoTaken(initialStyleNo))) {
+      return initialStyleNo;
     }
-    return finalStyleNo;
+    return new Promise((resolve) => {
+      modal.confirm({
+        title: '款号已存在',
+        content: `款号 ${initialStyleNo} 已被其他款式使用，可返回修改，或确认后自动加后缀保存（如 ${initialStyleNo}-1）`,
+        okText: '自动加后缀保存',
+        cancelText: '返回修改',
+        onOk: async () => {
+          let suffix = 1;
+          while (await styleNoTaken(`${initialStyleNo}-${suffix}`)) {
+            suffix += 1;
+          }
+          const finalStyleNo = `${initialStyleNo}-${suffix}`;
+          message.info(`已自动调整为 ${finalStyleNo}`);
+          resolve(finalStyleNo);
+        },
+        onCancel: () => resolve(null),
+      });
+    });
   };
 
   const generateStyleNo = async (): Promise<string> => {
@@ -140,6 +151,12 @@ export const useStyleFormActions = ({
 
       let res;
       if (currentStyle?.id) {
+        // D-215：编辑允许修改款式编码，撞号先在前端拦截提示（后端也会兜底校验）
+        const nextStyleNo = (normalizedValues.styleNo || '').trim();
+        if (nextStyleNo && nextStyleNo !== currentStyle.styleNo && (await styleNoTaken(nextStyleNo))) {
+          message.error(`款号 ${nextStyleNo} 已被其他款式使用，请修改款号`);
+          return false;
+        }
         const payload: Record<string, any> = { ...currentStyle, ...normalizedValues };
         delete payload.createTime;
         delete payload.completedTime;
@@ -154,6 +171,10 @@ export const useStyleFormActions = ({
           styleNo = await generateStyleNo();
         }
         const finalStyleNo = await ensureUniqueStyleNo(styleNo);
+        if (!finalStyleNo) {
+          // 用户选择"返回修改"，中止保存（saving 状态由 finally 复位）
+          return false;
+        }
         normalizedValues.styleNo = finalStyleNo;
 
         res = await api.post('/style/info', normalizePayload(normalizedValues));

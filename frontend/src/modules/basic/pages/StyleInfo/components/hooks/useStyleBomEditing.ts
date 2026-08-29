@@ -153,13 +153,15 @@ const useStyleBomEditing = ({
     }
 
     setData(sortBomRows([...syncedData, ...newRows]));
+    // D-213：旧行值必须从 data 全量重建——保存后 fetchBom 会 form.resetFields() 清空 store，
+    // 此时 allValues 为空对象，仅靠它回填会导致旧行输入框全部失绑显示空白
     form.setFieldsValue({
-      ...allValues,
+      ...buildFormValues(syncedData),
       ...newFormValues,
     });
     setEditingKey('');
     setTableEditable(true);
-  }, [activeColors, activeSizes, buildSizeSpecMap, buildSizeUsageMap, data, form, locked, message, setData, setEditingKey, setTableEditable, sortBomRows, styleId]);
+  }, [activeColors, activeSizes, buildFormValues, buildSizeSpecMap, buildSizeUsageMap, data, form, locked, message, setData, setEditingKey, setTableEditable, sortBomRows, styleId]);
 
   return {
     isEditing,

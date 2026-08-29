@@ -24,6 +24,12 @@ public interface ProductSkuService extends IService<ProductSku> {
 
     void updateUseSkuPrefix(Long styleId, Integer useSkuPrefix);
 
+    /**
+     * D-215：款号变更后联动重算该款式所有 SKU 的商品编码（款号-颜色-尺码）。
+     * manuallyEdited=1 的 SKU 仅同步 styleNo 冗余字段，不覆盖手动编码。
+     */
+    void resyncSkuCodesForStyleNoChange(Long styleId, String newStyleNo);
+
     ProductSku getBySkuCode(String skuCode);
 
     List<ProductSku> listByTenantId(Long tenantId);
