@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Space, Select, App, Popover, Dropdown, Tag } from 'antd';
-import { modal } from '@/utils/antdStatic';
+import { Button, Input, Space, Select, App, Popover, Dropdown, Tag, Tooltip } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
+import TabToolbar from '@/components/common/TabToolbar';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { toNumberSafe, sortSizeNames } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -16,11 +18,29 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   progressNode: _progressNode, processAssignee, processStartTime, processCompletedTime,
   onRefresh, onDataLoaded, sizeColorConfig,
 }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [editMode, setEditMode] = useState(false);
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
+  // D-210：基础属性库——码数成组选择（与样衣开发/价格模板同组件）
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const handleApplyAttrSizes = (values: string[], mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim().toUpperCase()).filter(Boolean);
+    if (!incoming.length) return;
+    const base = mode === 'replace' ? [] : sizes;
+    const next = sortSizeNames(Array.from(new Set([...base, ...incoming])));
+    setSizes(next);
+    setData((prev) => prev.map((row) => {
+      const nextPrices: Record<string, number> = {};
+      const nextTouched: Record<string, boolean> = {};
+      next.forEach((sz) => {
+        nextPrices[sz] = row.sizePrices?.[sz] ?? toNumberSafe(row.price);
+        nextTouched[sz] = row.sizePriceTouched?.[sz] ?? false;
+      });
+      return { ...row, sizePrices: nextPrices, sizePriceTouched: nextTouched };
+    }));
+  };
   const editHintTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
@@ -71,19 +91,23 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         readOnly={readOnly} onRefresh={onRefresh ?? (() => {})}
         onBeforeComplete={async () => { if (!data || data.length === 0) { message.error('请先配置工序单价'); return false; } return true; }}
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div />
-        <Space>
+      <TabToolbar
+        left={
+          <>
+            <Dropdown disabled={Boolean(readOnly) || !processStartTime || loading || saving}
+              menu={{ items: STAGE_ORDER.map(s => ({ key: s, label: s, icon: <PlusOutlined /> })), onClick: ({ key }) => handleAdd(key) }}>
+              <Button type="primary" disabled={Boolean(readOnly) || !processStartTime || loading || saving}>添加工序 <DownOutlined /></Button>
+            </Dropdown>
+          </>
+        }
+        center={
+          <>
           <Select allowClear style={{ width: 220 }} placeholder="导入工艺模板" value={processTemplateKey} onChange={(v) => setProcessTemplateKey(v)}
             options={processTemplates.map((t) => ({ value: String(t.id || ''), label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName }))}
             disabled={Boolean(readOnly) || loading || saving || templateLoading}
           />
           <Button onClick={() => { if (!processTemplateKey) { message.error('请选择模板'); return; } applyProcessTemplate(processTemplateKey); }}
             disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}>导入模板</Button>
-          <Dropdown disabled={Boolean(readOnly) || !processStartTime || loading || saving}
-            menu={{ items: STAGE_ORDER.map(s => ({ key: s, label: s, icon: <PlusOutlined /> })), onClick: ({ key }) => handleAdd(key) }}>
-            <Button type="primary" disabled={Boolean(readOnly) || !processStartTime || loading || saving}>添加工序 <DownOutlined /></Button>
-          </Dropdown>
           <Popover trigger="click" placement="bottomRight" open={aiOpen} onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
             content={
               <div style={{ width: 260 }}>
@@ -97,6 +121,10 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
               icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}></span>}
               style={{ background: 'transparent', borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontWeight: 500 }}>AI建议单价</Button>
           </Popover>
+          </>
+        }
+        right={
+          <>
           {editMode && !readOnly && sizes.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               {sizes.map((size) => (
@@ -107,8 +135,8 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
           {editMode && !readOnly && (
             <Input
              
-              placeholder="输入码数回车添加"
-              style={{ width: 130 }}
+              placeholder="输入码数名，如 XL(175/96A)"
+              style={{ width: 220 }}
               onPressEnter={(e) => {
                 const input = e.target as HTMLInputElement;
                 const val = input.value.trim().toUpperCase();
@@ -125,13 +153,23 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
               }}
             />
           )}
+          <Tooltip title="基础属性库——成组选择码数">
+            <Button icon={<SettingOutlined />} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
+          </Tooltip>
           {!editMode || readOnly ? (
             <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || !processStartTime}>编辑</Button>
           ) : (
             <><Button type="primary" onClick={saveAll} loading={saving}>保存</Button><Button disabled={saving} onClick={() => { modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit }); }}>取消</Button></>
           )}
-        </Space>
-      </div>
+          </>
+        }
+      >
+      </TabToolbar>
+      <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={(_k, values, mode) => handleApplyAttrSizes(values, mode)}
+      />
       <ProcessCostSummary data={data} />
       <ResizableTable bordered dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />
     </div>

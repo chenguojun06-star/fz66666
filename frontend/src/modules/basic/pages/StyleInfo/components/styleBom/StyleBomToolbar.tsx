@@ -6,6 +6,7 @@ import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { SamplePurchaseStatus } from '../hooks/useStyleBomActions';
+import TabToolbar from '@/components/common/TabToolbar';
 
 interface AiBomRecognizedItem {
   id: string;
@@ -44,15 +45,6 @@ interface StyleBomToolbarProps {
   purchaseStatus?: SamplePurchaseStatus;
   onBomRecognized: (items: AiBomRecognizedItem[]) => void;
 }
-
-const toolbarStyle = {
-  marginBottom: 16,
-  display: 'flex',
-  justifyContent: 'flex-end',
-  alignItems: 'center',
-  gap: 12,
-  flexWrap: 'wrap',
-} as const;
 
 const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   dataLength,
@@ -142,8 +134,10 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   };
 
   return (
-    <div style={toolbarStyle}>
-      <Space wrap>
+    <div>
+    <TabToolbar
+      left={
+        <>
         <Button onClick={onCheckStock} disabled={!dataLength || loading} loading={checkingStock}>
           检查库存
         </Button>
@@ -181,16 +175,10 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
             加入采购车
           </Button>
         </Tooltip>
-        <Button
-          type={tableEditable ? 'primary' : 'default'}
-          onClick={onToggleEdit}
-          disabled={locked || loading || templateLoading || hasEditingRow || (!tableEditable && !dataLength)}
-          loading={loading}
-        >
-          {tableEditable ? '保存' : '编辑'}
-        </Button>
-        {tableEditable ? <Button onClick={onCancelEdit} disabled={loading}>取消</Button> : null}
-
+        </>
+      }
+      center={
+        <>
         {!tableEditable && !locked && (
           <Button
             icon={<RobotOutlined />}
@@ -226,12 +214,27 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
             导入模板 <DownOutlined />
           </Button>
         </Dropdown>
-
         <StyleBomAddRowsDropdown
           onAddRows={onAddRows}
           disabled={locked || hasEditingRow || loading || templateLoading}
         />
-      </Space>
+        </>
+      }
+      right={
+        <>
+        <Button
+          type={tableEditable ? 'primary' : 'default'}
+          onClick={onToggleEdit}
+          disabled={locked || loading || templateLoading || hasEditingRow || (!tableEditable && !dataLength)}
+          loading={loading}
+        >
+          {tableEditable ? '保存' : '编辑'}
+        </Button>
+        {tableEditable ? <Button onClick={onCancelEdit} disabled={loading}>取消</Button> : null}
+        </>
+      }
+    >
+    </TabToolbar>
 
       <ResizableModal
         title="AI识别物料清单"

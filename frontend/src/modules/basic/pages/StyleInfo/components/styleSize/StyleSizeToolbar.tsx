@@ -9,6 +9,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import { hasSameSizeKey } from './shared';
 import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
+import TabToolbar from '@/components/common/TabToolbar';
 
 interface Props {
   editMode: boolean;
@@ -150,8 +151,10 @@ const StyleSizeToolbar: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <>
+    <TabToolbar
+      left={
+        <>
         {editMode && !readOnly && selectedRowKeys.length > 0 && (
           <Button type="primary" onClick={openBatchGradingConfig}>
             批量配置跳码区 ({selectedRowKeys.length})
@@ -160,23 +163,10 @@ const StyleSizeToolbar: React.FC<Props> = ({
         {editMode && !readOnly && selectedRowKeys.length > 0 && (
           <Button onClick={() => setSelectedRowKeys([])}>取消选择</Button>
         )}
-      </div>
-      <Space>
-        {!editMode || readOnly ? (
-          <Button type="primary" onClick={enterEdit} disabled={loading || saving || isReadonly}>
-            编辑
-          </Button>
-        ) : (
-          <>
-            <Button type="primary" onClick={saveAll} loading={saving}>保存</Button>
-            <Button
-              disabled={saving}
-              onClick={() => {
-                modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit });
-              }}
-            >取消</Button>
-          </>
-        )}
+        </>
+      }
+      center={
+        <>
         {!editMode && !readOnly && (
           <Button 
             icon={<RobotOutlined />} 
@@ -233,8 +223,6 @@ const StyleSizeToolbar: React.FC<Props> = ({
         >
           <Button disabled={loading || saving || isReadonly}>新增分组</Button>
         </Popover>
-        <Button icon={<SettingOutlined />} disabled={loading || saving || isReadonly}
-                onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
         <Select
           mode="multiple"
           allowClear
@@ -281,7 +269,31 @@ const StyleSizeToolbar: React.FC<Props> = ({
           )}
           onOpenChange={(open) => { if (open) fetchSizeDictOptions(); }}
         />
-      </Space>
+        </>
+      }
+      right={
+        <>
+        <Button icon={<SettingOutlined />} disabled={loading || saving || isReadonly}
+                onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
+        {!editMode || readOnly ? (
+          <Button type="primary" onClick={enterEdit} disabled={loading || saving || isReadonly}>
+            编辑
+          </Button>
+        ) : (
+          <>
+            <Button type="primary" onClick={saveAll} loading={saving}>保存</Button>
+            <Button
+              disabled={saving}
+              onClick={() => {
+                modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit });
+              }}
+            >取消</Button>
+          </>
+        )}
+        </>
+      }
+    >
+    </TabToolbar>
 
       {/* AI识别尺寸表 Modal */}
       <ResizableModal
@@ -355,7 +367,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
         onClose={() => setAttrLibOpen(false)}
         onApply={handleApplyLibrarySizes}
       />
-    </div>
+    </>
   );
 };
 

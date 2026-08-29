@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Card, Input, Select, Space, Spin, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { StyleBom } from '@/types/style';
 import type { PatternMaterialRow } from './helpers';
+import { SettingOutlined } from '@ant-design/icons';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 
 const { Text } = Typography;
 
@@ -38,6 +40,16 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
   setSizeOptions,
   onSaveUsage,
 }) => {
+  // D-210：基础属性库——各码用量尺码成组应用（覆盖/追加）
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const handleApplyAttrSizes = (_k: string, values: string[], mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);
+    if (!incoming.length) return;
+    const base = mode === 'replace' ? [] : activeSizes;
+    const merged = Array.from(new Set([...base, ...incoming]));
+    const additions = merged.filter((v) => !activeSizes.includes(v));
+    if (additions.length) onAddSizes(additions);
+  };
   return (
     <Card
       style={{ marginTop: 16 }}
@@ -52,12 +64,13 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
       extra={
         !childReadOnly && activeSizes.length > 0 && (
           <Space>
+            <Button icon={<SettingOutlined />} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
             <Select
               mode="multiple"
               allowClear
               showSearch
               placeholder="新增尺码(多选)"
-              style={{ minWidth: 160 }}
+              style={{ minWidth: 220 }}
               options={sizeOptions.filter(o => !activeSizes.includes(o.value))}
               value={[]}
               onChange={(values: string[]) => onAddSizes(values)}
@@ -98,6 +111,11 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
               onClick={onSaveUsage}
             >
               保存各码用量
+            <AttributeGroupLibraryModal
+              open={attrLibOpen}
+              onClose={() => setAttrLibOpen(false)}
+              onApply={handleApplyAttrSizes}
+            />
             </Button>
           </Space>
         )
