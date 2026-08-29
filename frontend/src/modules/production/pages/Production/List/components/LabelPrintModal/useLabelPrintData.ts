@@ -37,8 +37,10 @@ export interface UseLabelPrintDataReturn {
   setSections: (v: WashLabelSectionState) => void;
   handleWashPrint: (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) => Promise<void>;
   handleUCodePrint: (selected: SkuRow[], ord: ProductionOrder) => Promise<void>;
-  certSize: '70x100' | '100x70';
-  setCertSize: (v: '70x100' | '100x70') => void;
+  certW: number;
+  setCertW: (v: number | null) => void;
+  certH: number;
+  setCertH: (v: number | null) => void;
   certSections: CertificateSectionState;
   setCertSections: (v: CertificateSectionState) => void;
   handleCertificatePrint: (selected: SkuRow[], ord: ProductionOrder) => Promise<void>;
@@ -77,6 +79,7 @@ function buildDefaultCertSections(
     }),
     showBarcode: true,
     barcodeTemplate: '{款号}{颜色}{码数}',
+    showBarcodeText: true,
     fontScale: 1,
   };
 }
@@ -87,7 +90,8 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
   const [washH, setWashHState] = useState<number>(80);
   const [uCodeSize, setUCodeSize] = useState<UCodeSize>('40x70');
   const [suitPart, setSuitPart] = useState<string>('all');
-  const [certSize, setCertSize] = useState<'70x100' | '100x70'>('70x100');
+  const [certW, setCertWState] = useState<number>(70);
+  const [certH, setCertHState] = useState<number>(100);
   const [certSections, setCertSections] = useState<CertificateSectionState>(() => buildDefaultCertSections(null, null, ''));
 
   const compositionText = useMemo(
@@ -146,12 +150,13 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
     [orderFactoryCode, uCodeSize],
   );
 
+  const setCertW = useCallback((v: number | null) => setCertWState(v ?? 70), []);
+  const setCertH = useCallback((v: number | null) => setCertHState(v ?? 100), []);
+
   const handleCertificatePrint = useCallback(
-    (selected: SkuRow[], ord: ProductionOrder) => {
-      const [cw, ch] = certSize === '70x100' ? [70, 100] : [100, 70];
-      return printCertificateLabels(selected, ord, cw, ch, certSections);
-    },
-    [certSize, certSections],
+    (selected: SkuRow[], ord: ProductionOrder) =>
+      printCertificateLabels(selected, ord, certW, certH, certSections),
+    [certW, certH, certSections],
   );
 
   return {
@@ -168,8 +173,10 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
     setSections,
     handleWashPrint,
     handleUCodePrint,
-    certSize,
-    setCertSize,
+    certW,
+    setCertW,
+    certH,
+    setCertH,
     certSections,
     setCertSections,
     handleCertificatePrint,

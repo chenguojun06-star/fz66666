@@ -10,14 +10,14 @@ import SkuTable from './SkuTable';
 import type { CertificateSectionState, LabelStyleInfo, SkuRow } from './types';
 import { buildCertificatePreviewHtml } from '@/utils/certificateLabelPrintTemplate';
 
-export type CertSize = '70x100' | '100x70';
-
 export interface CertificateTabProps {
   open: boolean;
   order: ProductionOrder | null;
   styleInfo: LabelStyleInfo | null;
-  certSize: CertSize;
-  setCertSize: (v: CertSize) => void;
+  certW: number;
+  setCertW: (v: number | null) => void;
+  certH: number;
+  setCertH: (v: number | null) => void;
   certSections: CertificateSectionState;
   setCertSections: (v: CertificateSectionState) => void;
   onClose: () => void;
@@ -26,11 +26,12 @@ export interface CertificateTabProps {
 
 export default function CertificateTab({
   open, order,
-  certSize, setCertSize,
+  certW, setCertW, certH, setCertH,
   certSections, setCertSections,
   onClose, onPrint,
 }: CertificateTabProps) {
-  const [w, h] = certSize === '70x100' ? [70, 100] : [100, 70];
+  const w = certW;
+  const h = certH;
 
   const previewHtml = useMemo(() => {
     try {
@@ -55,16 +56,25 @@ export default function CertificateTab({
   return (
     <>
       <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Radio.Group
-          value={certSize}
-          onChange={e => setCertSize(e.target.value as CertSize)}
-          size="small"
-        >
-          <Radio.Button value="70x100">7×10cm 竖版</Radio.Button>
-          <Radio.Button value="100x70">10×7cm 横版</Radio.Button>
-        </Radio.Group>
+        <Space wrap align="center">
+          <Radio.Group
+            value={w <= h ? 'portrait' : 'landscape'}
+            onChange={e => {
+              if (e.target.value === 'portrait') { setCertW(70); setCertH(100); }
+              else { setCertW(100); setCertH(70); }
+            }}
+            size="small"
+          >
+            <Radio.Button value="portrait">竖版</Radio.Button>
+            <Radio.Button value="landscape">横版</Radio.Button>
+          </Radio.Group>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>宽</span>
+          <InputNumber min={20} max={200} value={certW} onChange={v => setCertW(v)} suffix="mm" style={{ width: 100 }} />
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>高</span>
+          <InputNumber min={30} max={400} value={certH} onChange={v => setCertH(v)} suffix="mm" style={{ width: 100 }} />
+        </Space>
         <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-          每行勾选才打印；左右文字均可编辑；条码码值支持占位符 {'{款号}'} {'{颜色}'} {'{码数}'} {'{序号}'}
+          每行勾选才打印；左右文字均可编辑，规格/颜色可留空自动带；条码码值支持 {'{款号}'} {'{颜色}'} {'{码数}'} {'{序号}'}
         </span>
       </div>
 
@@ -114,7 +124,7 @@ export default function CertificateTab({
                   size="small"
                   value={row.valueText}
                   onChange={e => updateRow(row.key, { valueText: e.target.value, show: e.target.checked ? row.show : !!e.target.value.trim() })}
-                  placeholder="内容（支持 {'{颜色}'} {'{码数}'} 占位）"
+                  placeholder={row.key === 'guige' ? '留空自动带码数' : row.key === 'yanse' ? '留空自动带颜色' : '内容'}
                   maxLength={60}
                 />
               </div>
@@ -136,6 +146,12 @@ export default function CertificateTab({
               placeholder="{'{款号}{颜色}{码数}'}"
               maxLength={40}
             />
+            <Checkbox
+              checked={certSections.showBarcodeText !== false}
+              onChange={e => setCertSections({ ...certSections, showBarcodeText: e.target.checked })}
+            >
+              条码下方显示商品编码（自动带）
+            </Checkbox>
           </div>
         </div>
 

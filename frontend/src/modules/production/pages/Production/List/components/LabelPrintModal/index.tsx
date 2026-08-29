@@ -14,7 +14,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
     uCodeSize, setUCodeSize,
     sections, setSections,
     handleWashPrint, handleUCodePrint,
-    certSize, setCertSize, certSections, setCertSections, handleCertificatePrint,
+    certW, setCertW, certH, setCertH, certSections, setCertSections, handleCertificatePrint,
   } = useLabelPrintData({ open, order, styleInfo });
 
   return (
@@ -58,7 +58,8 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
             children: (
               <CertificateTab
                 open={open} order={order} styleInfo={styleInfo}
-                certSize={certSize} setCertSize={setCertSize}
+                certW={certW} setCertW={setCertW}
+                certH={certH} setCertH={setCertH}
                 certSections={certSections} setCertSections={setCertSections}
                 onClose={onClose}
                 onPrint={handleCertificatePrint}

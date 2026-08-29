@@ -34,6 +34,7 @@ export interface CertificateSectionState {
   rows: CertRowState[];
   showBarcode: boolean;
   barcodeTemplate: string;
+  showBarcodeText: boolean;
   fontScale: number;
 }
 

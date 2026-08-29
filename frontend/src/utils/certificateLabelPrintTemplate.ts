@@ -19,6 +19,8 @@ export interface CertificateSectionState {
   showBarcode: boolean;
   /** 条码码值模板，如 "{款号}{颜色}{码数}"，支持占位符 {款号}{颜色}{码数}{序号} */
   barcodeTemplate: string;
+  /** D-223：条码下方显示商品编码（每页自动带该 SKU 的商品编码） */
+  showBarcodeText: boolean;
   fontScale: number;
 }
 
@@ -26,6 +28,7 @@ export interface CertificatePageData {
   color: string;
   size: string;
   seq: number;
+  sku?: string;
 }
 
 export const CERT_BARCODE_PLACEHOLDERS = ['{款号}', '{颜色}', '{码数}', '{序号}'] as const;
@@ -97,6 +100,11 @@ function buildLabelHtml(
           .replace(/\{颜色\}/g, page.color || '')
           .replace(/\{码数\}/g, page.size || '')
           .replace(/\{序号\}/g, String(page.seq));
+        // D-223：规格/颜色留空时自动带该页 SKU 的码数/颜色（与洗水唛码数区同一回落逻辑）
+        if (!value.trim()) {
+          if (r.key === 'guige') value = page.size || '';
+          else if (r.key === 'yanse') value = page.color || '';
+        }
       }
       const label = String(r.labelText ?? '');
       // 中文标签两字/三字补全角空格对齐（品 名 / 款 号），四字以上不补（\u3000 转义避免 no-irregular-whitespace）
@@ -115,6 +123,7 @@ function buildLabelHtml(
       ${cfg.titleText ? `<div class="cert-title">${escapeHtml(cfg.titleText)}</div>` : ''}
       <div class="cert-rows">${rowHtml}</div>
       ${cfg.showBarcode && barcodeSvg ? `<div class="cert-barcode">${barcodeSvg}</div>` : ''}
+      ${cfg.showBarcode && cfg.showBarcodeText && page?.sku ? `<div class="cert-sku">${escapeHtml(page.sku)}</div>` : ''}
     </div>
   </div>`;
 }
@@ -129,7 +138,8 @@ export function buildCertificatePreviewHtml(
   const svg = cfg.showBarcode
     ? generateCertBarcodeSvg(resolveBarcodeValue(cfg.barcodeTemplate, sample))
     : '';
-  return wrapDocument(w, h, cfg, buildLabelHtml(w, h, cfg, sample, svg));
+  const sku = `${sample.styleNo}${sample.color}${sample.size}`;
+  return wrapDocument(w, h, cfg, buildLabelHtml(w, h, cfg, { ...sample, sku }, svg));
 }
 
 /** 多页打印 HTML：每个选中 SKU × 打印数量 一页 */
@@ -149,7 +159,7 @@ export function buildCertificateMultiPageHtml(
         seq: p.seq,
       }))
       : '';
-    return buildLabelHtml(w, h, cfg, { ...p, seq: i + 1 }, svg);
+    return buildLabelHtml(w, h, cfg, { ...p, seq: i + 1, sku: p.sku || `${styleNo}${p.color}${p.size}` }, svg);
   }).join('\n');
   return wrapDocument(w, h, cfg, body);
 }
@@ -170,5 +180,6 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
 .cert-val { font-weight: 600; margin-left: 0.5mm; word-break: break-all; }
 .cert-barcode { margin-top: 1.5mm; display: flex; justify-content: center; }
 .cert-barcode svg { max-width: 100%; height: auto; }
+.cert-sku { text-align: center; font-size: ${(Number(fs) - 1).toFixed(1)}pt; letter-spacing: 0.2mm; margin-top: 0.5mm; }
 </style></head><body>${body}</body></html>`;
 }
