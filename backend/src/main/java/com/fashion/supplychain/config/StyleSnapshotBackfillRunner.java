@@ -90,6 +90,19 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 + "AND pw.color IS NOT NULL AND pw.color <> '' AND pw.size IS NOT NULL AND pw.size <> '' "
                 + "AND pw.sku_code <> CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))))");
 
+        // 6.6) D-224c：SKU 编码归一化——行内存有颜色/尺码、且编码与直拼格式仅差分隔符（含 SKU- 前缀）的，
+        // 统一为直拼格式，保证后续对账 JOIN（入库编码已直拼）能命中。手动编辑过的行不动。
+        exec("归一化SKU编码分隔符",
+                "UPDATE t_product_sku sku "
+                + "SET sku.sku_code = CONCAT(IF(sku.sku_code LIKE 'SKU-%', 'SKU-', ''), "
+                + "TRIM(IFNULL(sku.style_no,'')), TRIM(IFNULL(sku.color,'')), TRIM(IFNULL(sku.size,''))) "
+                + "WHERE (sku.manually_edited IS NULL OR sku.manually_edited <> 1) "
+                + "AND IFNULL(sku.color,'') <> '' AND IFNULL(sku.size,'') <> '' AND IFNULL(sku.style_no,'') <> '' "
+                + "AND REPLACE(sku.sku_code, '-', '') <> CONCAT(IF(sku.sku_code LIKE 'SKU-%', 'SKU-', ''), "
+                + "TRIM(IFNULL(sku.style_no,'')), TRIM(IFNULL(sku.color,'')), TRIM(IFNULL(sku.size,''))) "
+                + "AND sku.sku_code <> CONCAT(IF(sku.sku_code LIKE 'SKU-%', 'SKU-', ''), "
+                + "TRIM(IFNULL(sku.style_no,'')), TRIM(IFNULL(sku.color,'')), TRIM(IFNULL(sku.size,'')))");
+
         // 7) D-224：成品库存对账自愈——SKU 库存以成品入库单合计校准（入库成功但 SKU 库存没同步的存量修复）
         exec("成品库存对账校准",
                 "UPDATE t_product_sku sku "
@@ -98,19 +111,25 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 + "ON w.sku_code = sku.sku_code AND w.tenant_id = sku.tenant_id "
                 + "SET sku.stock_quantity = w.qty WHERE sku.stock_quantity <> w.qty");
 
-        // 8) D-224：入库记录有但 SKU 行缺失的自动补建（款-色-码 三段完整才建，避免脏码建行）
+        // 8) D-224c：入库记录有但 SKU 行缺失的自动补建——直接用入库明细行内的款号/颜色/尺码组装
+        // （不再依赖编码里的"-"分隔符：D-224b 已把入库编码重建为直拼格式，旧版按横线数>=2 判断的条件永远不成立，
+        //  导致 BR26X1K0651A 这类款入库明细存在但 SKU 行永远补不出来、成品仓库列表不显示）
+        // 约束防护：style_id NOT NULL → INNER JOIN 款式档案（档案缺失的跳过不建）；
+        // uk_sku_code 全局唯一 → 编码任意租户已存在则跳过；uk_style_color_size → 同款同色同码已有行则跳过
         exec("补建缺失成品SKU",
-                "INSERT INTO t_product_sku (sku_code, style_no, color, size, stock_quantity, status, tenant_id, create_time, update_time) "
-                + "SELECT w.sku_code, MAX(w.style_no), "
-                + "SUBSTRING_INDEX(SUBSTRING_INDEX(w.sku_code, '-', 2), '-', -1), "
-                + "SUBSTRING_INDEX(w.sku_code, '-', -1), "
-                + "w.qty, 'ENABLED', w.tenant_id, NOW(), NOW() "
-                + "FROM (SELECT sku_code, tenant_id, MAX(style_no) style_no, SUM(IFNULL(warehousing_quantity,0)) qty "
-                + "      FROM t_product_warehousing WHERE delete_flag = 0 GROUP BY sku_code, tenant_id) w "
-                + "LEFT JOIN t_product_sku sku ON sku.sku_code = w.sku_code AND sku.tenant_id = w.tenant_id "
-                + "WHERE sku.id IS NULL AND w.sku_code <> '' "
-                + "AND (LENGTH(w.sku_code) - LENGTH(REPLACE(w.sku_code, '-', ''))) >= 2 "
-                + "GROUP BY w.sku_code, w.tenant_id, w.qty");
+                "INSERT INTO t_product_sku (sku_code, style_id, style_no, color, size, stock_quantity, status, tenant_id, create_time, update_time) "
+                + "SELECT w.sku_code, MAX(s.id), w.style_no, w.color, w.size, w.qty, 'ENABLED', w.tenant_id, NOW(), NOW() "
+                + "FROM (SELECT sku_code, tenant_id, MAX(style_no) style_no, MAX(color) color, MAX(size) size, "
+                + "             SUM(IFNULL(warehousing_quantity,0)) qty "
+                + "      FROM t_product_warehousing WHERE delete_flag = 0 "
+                + "        AND IFNULL(style_no,'') <> '' AND IFNULL(color,'') <> '' AND IFNULL(size,'') <> '' "
+                + "        AND IFNULL(sku_code,'') <> '' "
+                + "      GROUP BY sku_code, tenant_id) w "
+                + "JOIN t_style_info s ON s.style_no = w.style_no AND s.tenant_id = w.tenant_id "
+                + "WHERE NOT EXISTS (SELECT 1 FROM t_product_sku e WHERE e.sku_code = w.sku_code) "
+                + "AND NOT EXISTS (SELECT 1 FROM t_product_sku e2 WHERE e2.style_id = s.id "
+                + "AND e2.color = w.color AND e2.size = w.size AND e2.tenant_id = w.tenant_id) "
+                + "GROUP BY w.sku_code, w.tenant_id, w.style_no, w.color, w.size, w.qty");
 
         log.info("[StyleSnapshotBackfill] 存量款号/编码一致性回填完成");
     }
