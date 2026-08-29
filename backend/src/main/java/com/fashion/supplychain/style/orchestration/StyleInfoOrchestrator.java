@@ -280,6 +280,8 @@ public class StyleInfoOrchestrator {
                             ? "超级管理员不能直接创建款式，请使用对应租户账号操作"
                             : "租户信息异常，请退出重新登录后再试");
         }
+        // D-225b：窄列防御——与 update 同一套截断，防止 AI 识别结果在新建时同样 Data truncation
+        truncateNarrowFields(styleInfo);
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         // 同步客户信息到款号冗余字段
         styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
@@ -330,6 +332,9 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleInfo styleInfo) {
+        // D-225b：窄列防御——AI 洞察/视觉原始分析列已扩为 TEXT 仍做极端兜底截断，
+        // 开发来源列仍是 VARCHAR(32)/64 必须截断；分析类字段截断无害
+        truncateNarrowFields(styleInfo);
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         // 同步客户信息到款号冗余字段
         styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
@@ -408,6 +413,11 @@ public class StyleInfoOrchestrator {
             String msg = e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : e.getMessage();
             if (msg != null && msg.toLowerCase().contains("duplicate")) {
                 throw new IllegalArgumentException("款号已存在");
+            }
+            // D-225b：超长截断错误报出具体列名，用户能定位是哪个字段
+            if (msg != null && msg.toLowerCase().contains("data too long")) {
+                String column = extractTooLongColumn(msg);
+                throw new IllegalArgumentException("字段「" + column + "」内容超出长度限制，请精简该字段内容后重试");
             }
             log.error("保存款号资料违反数据库约束: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo(), e);
             throw new IllegalStateException("保存失败: " + msg);
@@ -814,6 +824,30 @@ public class StyleInfoOrchestrator {
                 .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
                 .last("LIMIT 1")
                 .one() != null;
+    }
+
+    /**
+     * D-225b：窄列防御——AI 洞察/视觉原始分析列已扩为 TEXT（极端输入仍兜底截断），
+     * 开发来源列仍为 VARCHAR(32)/64 必须截断；分析类字段截断无害
+     */
+    private void truncateNarrowFields(StyleInfo styleInfo) {
+        styleInfo.setImageInsight(truncateQuietly(styleInfo.getImageInsight(), 16000));
+        styleInfo.setVisionRaw(truncateQuietly(styleInfo.getVisionRaw(), 16000));
+        styleInfo.setDevelopmentSourceType(truncateQuietly(styleInfo.getDevelopmentSourceType(), 30));
+        styleInfo.setDevelopmentSourceDetail(truncateQuietly(styleInfo.getDevelopmentSourceDetail(), 60));
+    }
+
+    private String truncateQuietly(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) return value;
+        log.warn("[D-225b] 字段超长已截断: length={}, max={}", value.length(), maxLength);
+        return value.substring(0, maxLength);
+    }
+
+    private String extractTooLongColumn(String msg) {
+        // MySQL 消息形如: Data truncation: Data too long for column 'image_insight' at row 1
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("column '([^']+)'").matcher(msg == null ? "" : msg);
+        return m.find() ? m.group(1) : "未知";
     }
 
     /** D-215：编辑保存时的款号查重，排除自身 id */
