@@ -66,9 +66,18 @@ const StyleCoverThumb: React.FC<{
   }, [src, styleId, styleNo]);
   const overrideKeys = React.useMemo(() => getStyleCoverOverrideKeys(styleId, styleNo), [styleId, styleNo]);
   const [url, setUrl] = React.useState<string | null>(preferredUrl);
+  const [gallery, setGallery] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [srcFailed, setSrcFailed] = React.useState(false);
   const [fallbackFailed, setFallbackFailed] = React.useState(false);
+
+  // D-217：本款图集（附件列表全部图片），预览组只含本款图片——
+  // 全局 PreviewGroup 会让预览左右切换翻到整页所有款式（串款），内层组就近覆盖退出全局组
+  const previewItems = React.useMemo(() => {
+    const list = url ? [url] : [];
+    gallery.forEach((u) => { if (u && !list.includes(u)) list.push(u); });
+    return list.map((u) => getFullAuthedFileUrl(u));
+  }, [url, gallery]);
 
   React.useEffect(() => {
     setUrl((prev) => prev === preferredUrl ? prev : preferredUrl);
@@ -127,12 +136,15 @@ const StyleCoverThumb: React.FC<{
           }
         }
         
-        // 如果没有商品编码颜色图片，获取款号封面图
+        // 如果没有商品编码颜色图片，获取款号封面图（同时收齐全款图集供预览切换）
         if (!imageUrl) {
           const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
           if (res.code === 200) {
             const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
             imageUrl = (images[0] as any)?.fileUrl || null;
+            if (mounted) {
+              setGallery(images.map((f: any) => f.fileUrl).filter(Boolean));
+            }
           }
         }
         
@@ -173,29 +185,31 @@ const StyleCoverThumb: React.FC<{
       {loading ? (
         <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (
-        <Image
-          src={getFullAuthedFileUrl(url)}
-          alt="cover"
-          width="100%"
-          height="100%"
-          style={{
-            objectFit: fit,
-            display: 'block',
-            background: isFill ? 'var(--color-bg-subtle)' : undefined,
-          }}
-          // 传了 onClick 的场景（跳转详情）不预览；否则注册进 Layout 全局 PreviewGroup，
-          // 点击可左右切换翻看本页所有图片（D-138 全局组承诺的行为，D-196 起真正生效）
-          preview={!onClick}
-          onError={() => {
-            if (url === preferredUrl && preferredUrl && !srcFailed) {
-              setSrcFailed(true);
-              setUrl(null);
-            } else {
-              setFallbackFailed(true);
-              setUrl(null);
-            }
-          }}
-        />
+        <Image.PreviewGroup items={previewItems}>
+          <Image
+            src={getFullAuthedFileUrl(url)}
+            alt="cover"
+            width="100%"
+            height="100%"
+            style={{
+              objectFit: fit,
+              display: 'block',
+              background: isFill ? 'var(--color-bg-subtle)' : undefined,
+            }}
+            // 传了 onClick 的场景（跳转详情）不预览；否则进本款专属预览组——
+            // D-217：预览只在当前款式自己的图集内左右切换，不再串到整页其他款式
+            preview={!onClick}
+            onError={() => {
+              if (url === preferredUrl && preferredUrl && !srcFailed) {
+                setSrcFailed(true);
+                setUrl(null);
+              } else {
+                setFallbackFailed(true);
+                setUrl(null);
+              }
+            }}
+          />
+        </Image.PreviewGroup>
       ) : (
         <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
       )}

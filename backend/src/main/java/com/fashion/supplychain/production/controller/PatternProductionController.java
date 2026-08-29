@@ -60,6 +60,9 @@ public class PatternProductionController {
     private StyleInfoService styleInfoService;
 
     @Autowired
+    private com.fashion.supplychain.style.service.StyleAttachmentService styleAttachmentService;
+
+    @Autowired
     private CuttingWorkflowBuilderHelper cuttingWorkflowBuilderHelper;
 
     /**
@@ -582,6 +585,20 @@ public class PatternProductionController {
             }
 
             // 批量查款式封面与交板日期，供扫码历史卡片补图片/时间（与 CuttingTaskOrchestrator.injectStyleCover 同模式）
+            // D-217：同时按 styleId 建索引——PC 改过款号后老记录的 styleNo 快照匹配不上，会彻底无图
+            java.util.Set<String> historyStyleIds = records.stream()
+                    .map(PatternScanRecord::getStyleId)
+                    .filter(StringUtils::hasText)
+                    .collect(java.util.stream.Collectors.toSet());
+            java.util.Map<String, StyleInfo> styleInfoByIdMap = new HashMap<>();
+            if (!historyStyleIds.isEmpty()) {
+                styleInfoService.lambdaQuery()
+                        .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCover, StyleInfo::getDeliveryDate)
+                        .in(StyleInfo::getId, historyStyleIds)
+                        .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                        .list()
+                        .forEach(s -> styleInfoByIdMap.putIfAbsent(String.valueOf(s.getId()), s));
+            }
             java.util.Set<String> historyStyleNos = records.stream()
                     .map(PatternScanRecord::getStyleNo)
                     .filter(StringUtils::hasText)
@@ -589,11 +606,35 @@ public class PatternProductionController {
             java.util.Map<String, StyleInfo> styleInfoMap = new HashMap<>();
             if (!historyStyleNos.isEmpty()) {
                 styleInfoService.lambdaQuery()
-                        .select(StyleInfo::getStyleNo, StyleInfo::getCover, StyleInfo::getDeliveryDate)
+                        .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCover, StyleInfo::getDeliveryDate)
                         .in(StyleInfo::getStyleNo, historyStyleNos)
                         .eq(StyleInfo::getTenantId, UserContext.tenantId())
                         .list()
                         .forEach(s -> styleInfoMap.putIfAbsent(s.getStyleNo(), s));
+            }
+            // D-217：无封面的款式二级兜底到附件图片（款式只传了附件图、没设封面时也有图）
+            java.util.Map<String, String> attachmentCoverMap = new HashMap<>();
+            java.util.Set<String> missingCoverStyleIds = styleInfoByIdMap.values().stream()
+                    .filter(s -> !StringUtils.hasText(s.getCover()) && historyStyleIds.contains(String.valueOf(s.getId())))
+                    .map(s -> String.valueOf(s.getId()))
+                    .collect(java.util.stream.Collectors.toSet());
+            if (!missingCoverStyleIds.isEmpty()) {
+                try {
+                    com.fashion.supplychain.style.entity.StyleAttachment first = null;
+                    java.util.List<com.fashion.supplychain.style.entity.StyleAttachment> attachments =
+                            styleAttachmentService.list(new LambdaQueryWrapper<com.fashion.supplychain.style.entity.StyleAttachment>()
+                                    .in(com.fashion.supplychain.style.entity.StyleAttachment::getStyleId, missingCoverStyleIds)
+                                    .like(com.fashion.supplychain.style.entity.StyleAttachment::getFileType, "image")
+                                    .eq(com.fashion.supplychain.style.entity.StyleAttachment::getStatus, "active")
+                                    .orderByAsc(com.fashion.supplychain.style.entity.StyleAttachment::getCreateTime));
+                    for (com.fashion.supplychain.style.entity.StyleAttachment a : attachments) {
+                        if (StringUtils.hasText(a.getStyleId()) && StringUtils.hasText(a.getFileUrl())) {
+                            attachmentCoverMap.putIfAbsent(a.getStyleId(), a.getFileUrl());
+                        }
+                    }
+                } catch (Exception ex) {
+                    // 附件兜底失败不阻断历史返回
+                }
             }
 
             List<Map<String, Object>> result = records.stream().map(r -> {
@@ -641,10 +682,16 @@ public class PatternProductionController {
                 item.put("orderNo", r.getStyleNo());
 
                 // 款式封面图 + 交期（交期优先样衣生产任务交板时间，兜底款式档案交板日期）
-                StyleInfo si = StringUtils.hasText(r.getStyleNo()) ? styleInfoMap.get(r.getStyleNo()) : null;
-                if (si != null && StringUtils.hasText(si.getCover())) {
-                    item.put("coverImage", si.getCover());
-                    item.put("styleImage", si.getCover());
+                // D-217：优先按 styleId 匹配（老款号快照也能命中），无封面再兜底附件图
+                StyleInfo si = StringUtils.hasText(r.getStyleId()) ? styleInfoByIdMap.get(r.getStyleId()) : null;
+                if (si == null && StringUtils.hasText(r.getStyleNo())) {
+                    si = styleInfoMap.get(r.getStyleNo());
+                }
+                String coverUrl = si != null && StringUtils.hasText(si.getCover()) ? si.getCover()
+                        : (StringUtils.hasText(r.getStyleId()) ? attachmentCoverMap.get(r.getStyleId()) : null);
+                if (StringUtils.hasText(coverUrl)) {
+                    item.put("coverImage", coverUrl);
+                    item.put("styleImage", coverUrl);
                 }
                 java.time.LocalDateTime delivery = pp != null && pp.getDeliveryTime() != null
                         ? pp.getDeliveryTime()

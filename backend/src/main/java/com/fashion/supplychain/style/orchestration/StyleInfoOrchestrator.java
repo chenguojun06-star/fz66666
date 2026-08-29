@@ -88,6 +88,9 @@ public class StyleInfoOrchestrator {
     private com.fashion.supplychain.style.helper.StyleCustomerSyncHelper styleCustomerSyncHelper;
 
     @Autowired
+    private com.fashion.supplychain.style.helper.StyleNoChangeSyncHelper styleNoChangeSyncHelper;
+
+    @Autowired
     private ProductionOrderService productionOrderService;
 
     @Autowired
@@ -359,6 +362,14 @@ public class StyleInfoOrchestrator {
                                 styleInfo.getId(), existing.getStyleNo(), styleInfo.getStyleNo().trim());
                     } catch (Exception e) {
                         log.warn("款号变更联动重算商品编码失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
+                    }
+                    // D-217：款号变更同步所有快照单据（样衣生产单/扫码记录/扫码镜像/生产订单/菲号），
+                    // 否则扫码端和各详情页永远显示老款号
+                    try {
+                        styleNoChangeSyncHelper.syncStyleNoEverywhere(
+                                styleInfo.getId(), existing.getStyleNo(), styleInfo.getStyleNo().trim());
+                    } catch (Exception e) {
+                        log.warn("款号变更快照同步失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
                     }
                 }
                 try {

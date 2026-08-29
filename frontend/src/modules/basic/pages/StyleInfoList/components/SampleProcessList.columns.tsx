@@ -68,7 +68,7 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       render: (val: string) => <span style={{ fontSize: 12 }}>{parseSizeDisplay(val)}</span>,
     },
     {
-      // 商品编码（完整格式：款号-颜色-尺码，与商品编码管理 SkuTable 同规则）
+      // 商品编码（D-216 起统一无分隔直拼：款号+颜色+尺码，与商品编码管理 SkuTable 同规则）
       title: '商品编码',
       key: 'sku',
       width: 150,
@@ -76,7 +76,7 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
         const colorText = record.color || '-';
         const sizeText = parseSizeDisplay(record.size);
         const skuText = record.styleNo
-          ? `${record.styleNo}-${colorText}-${sizeText}`
+          ? `${record.styleNo}${record.color || ''}${sizeText}`
           : `${colorText}/${sizeText}`;
         return (
           <StyleQuotePopover styleNo={record.styleNo}>
