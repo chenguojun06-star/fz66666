@@ -7,6 +7,15 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-08-29 D-216 商品下单抽屉六连修 ✅已推送；后端项（4内部工厂过滤/6编码去-号）需重启后端，待用户回归
+
+- [x] 颜色/码数属性库齿轮移入 Select suffix（纯前端）
+- [x] 商品卡片 SHIRT 英文：toCategoryCn 补传 CATEGORY_CODE_OPTIONS（纯前端）
+- [x] 工序库横滑根治：ResizableTable scroll.x=max-content 时 tableLayout 自动 auto（全站，纯前端）
+- [x] 内部工厂下拉排除面辅料/布行/仓库部门（后端 isProductionRelated+前端双保险，需重启后端）
+- [x] 外发厂 Select 加齿轮开 QuickManageModal OUTSOURCE 模式（联动合作伙伴供应商，布行不进；纯前端）
+- [x] 商品编码默认去-分隔符直拼 + createOrUpdateSku 查重键改 styleId+色+码（需重启后端；存量带-编码下次同步时自动转新格式）
+
 ### 2026-08-29 D-211~D-215 批量修复 ✅已推送；后端项（D-212/214/215）需重启后端生效，待用户回归
 
 - [x] D-213 BOM保存后再"添加物料"旧行清空：handleAddRows 改 buildFormValues(syncedData) 全量重建（纯前端）

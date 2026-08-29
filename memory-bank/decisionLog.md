@@ -1,7 +1,24 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-29（新增 D-213~D-215 物料清单三连修+款式编码放开编辑）
+> 最后更新：2026-08-29（新增 D-216 下单抽屉六连修）
+
+---
+
+## D-216：商品下单抽屉六连修（2026-08-29，用户"齿轮进输入框/SHIRT英文/工序库滑不动/面料部/外发厂齿轮/编码去-号"）
+
+### 各项根因与实现
+1. **齿轮入框**：MultiColorOrderEditor 颜色/码数 Select 的属性库齿轮原是旁边独立 Button，改 `suffix` 内置（onClick preventDefault+stopPropagation 防触发下拉），与 CustomerSelect/MaintainGear 同范式。
+2. **商品分类 SHIRT 英文**：字典有 SHIRT→衬衫，但 `OrderListContent.tsx` 调 `toCategoryCn(val)` 没传 options，兜底硬编码表只有 WOMAN/MAN/KIDS 等大类 → 改传 `CATEGORY_CODE_OPTIONS`。
+3. **工序库滑不动**：D-207 只改了 `scroll.x='max-content'`，但 ResizableTable 无条件 `tableLayout='fixed'` 把它顶掉——antd 官方 max-content 必须配 auto 布局（issue #25227）。通用层修复：scroll.x==='max-content' 时 tableLayout 自动降为 'auto'，全站受益。
+4. **内部工厂混入面辅料**：两层都漏——后端 `isProductionRelated` 对 ownerType=INTERNAL 无条件放行；前端白名单关键词 '组' 命中「面料1组」。双保险：后端名称/类别含面料/辅料/布行/仓库直接排除；前端 pathNames 同排除。
+5. **外发厂齿轮**：OrderFactorySelector 外发 Select 加 suffix 齿轮开 QuickManageModal（新增 `supplierType` 入参，OUTSOURCE 建厂/MATERIAL 布行互不串）；保存广播 supplier 事件，useOrderDataFetch 订阅刷新下拉。外发下拉数据源 `/system/factory/list` 已有 D-200 过滤 supplierType=MATERIAL，布行天然不进。
+6. **商品编码去-号**：`generateSkuCode` 恢复直拼（款号颜色尺码无分隔），用户拍板推翻 D-167 的"-"分隔。配套：`createOrUpdateSku` 查重键从 skuCode 改为 styleId+颜色+尺码（编码格式变更/款号变更后旧码匹配不上会重复建行的家族坑，D-215 已预警）。
+
+### 教训
+- ResizableTable 强制 tableLayout='fixed' 是全站 max-content 滚动的总闸——通用组件层的隐式默认会顶掉调用方的显式修复（D-207 修了表象没修闸门）
+- 齿轮/快捷维护入口的统一形态=输入控件 suffix+SettingOutlined+stopPropagation；QuickManageModal 用 supplierType 参数扩展而非新建组件
+- skuCode 格式改动必须同步查重键，否则存量行匹配不上
 
 ---
 
