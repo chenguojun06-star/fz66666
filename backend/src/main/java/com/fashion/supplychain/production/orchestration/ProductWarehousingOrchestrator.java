@@ -82,6 +82,9 @@ public class ProductWarehousingOrchestrator {
     private ProductWarehousingScanSyncHelper scanSyncHelper;
 
     @Autowired
+    private com.fashion.supplychain.production.helper.ProductWarehousingSkuSyncHelper warehousingSkuSyncHelper;
+
+    @Autowired
     private ScanRecordMapper scanRecordMapper;
 
     @Autowired
@@ -195,6 +198,9 @@ public class ProductWarehousingOrchestrator {
         // 同步入库扫码记录 + 工序跟踪"入库"行（订单时间轴/工序跟踪数据链路，失败不阻断主流程）
         scanSyncHelper.syncWarehouseScan(productWarehousing);
 
+        // D-227：同步 SKU 库存与商品编码（回填 sku_code + upsert t_product_sku，失败不阻断主流程）
+        warehousingSkuSyncHelper.syncSkuStockOnInbound(productWarehousing);
+
         logAppendHelper.appendSingleWarehousing(orderId,
                 productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0,
                 productWarehousing.getUnqualifiedQuantity() != null ? productWarehousing.getUnqualifiedQuantity() : 0);
@@ -277,6 +283,9 @@ public class ProductWarehousingOrchestrator {
 
         // 同步入库扫码记录 + 工序跟踪"入库"行（订单时间轴/工序跟踪数据链路，失败不阻断主流程）
         list.forEach(scanSyncHelper::syncWarehouseScan);
+
+        // D-227：同步 SKU 库存与商品编码（回填 sku_code + upsert t_product_sku，失败不阻断主流程）
+        list.forEach(warehousingSkuSyncHelper::syncSkuStockOnInbound);
 
         postActionHelper.triggerPostBatchSaveActions(oid, list.size());
         return true;
@@ -475,6 +484,15 @@ public class ProductWarehousingOrchestrator {
             }
         }
         if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+            // D-227：行内颜色/尺码兜底（手工入库明细行内已存 color/size，不一定有菲号）
+            if (!StringUtils.hasText(color) && StringUtils.hasText(w.getColor())) {
+                color = w.getColor().trim();
+            }
+            if (!StringUtils.hasText(size) && StringUtils.hasText(w.getSize())) {
+                size = w.getSize().trim();
+            }
+        }
+        if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
             if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
                 try {
                     CuttingBundle b = cuttingBundleService.getByQrCode(w.getCuttingBundleQrCode().trim());
@@ -489,7 +507,8 @@ public class ProductWarehousingOrchestrator {
         }
 
         if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+            // D-227：直拼编码（款号+颜色+尺码，与 t_product_sku.sku_code 规范一致），弃用"款号-色-码"横线格式
+            String skuCode = styleNo.trim() + color.trim() + size.trim();
             productSkuService.updateStock(skuCode, deltaQuantity);
         } else {
             log.warn("[SKUStock] 无法获取 color/size，跳过 SKU 库存更新: warehousingId={}, styleNo={}, delta={}",

@@ -83,12 +83,14 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
 
         // 6.5) D-224b：重建被截断的入库明细编码——明细行存有颜色/尺码时，
         // 编码与 款号+颜色+尺码 不符（塌缩成同款同色一个码）的行自动重建，后续校准步骤按码数拆回
+        // D-227：原条件 `pw.sku_code <> CONCAT(...)` 在 sku_code IS NULL 时结果为 NULL（不成立），
+        // 手工/质检入库的 sku_code 全是 NULL，永远不重建——必须用 IFNULL 比较
         exec("重建入库明细编码",
                 "UPDATE t_product_warehousing pw "
                 + "SET pw.sku_code = CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))) "
                 + "WHERE pw.delete_flag = 0 AND pw.style_no IS NOT NULL AND pw.style_no <> '' "
                 + "AND pw.color IS NOT NULL AND pw.color <> '' AND pw.size IS NOT NULL AND pw.size <> '' "
-                + "AND pw.sku_code <> CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))))");
+                + "AND IFNULL(pw.sku_code,'') <> CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))))");
 
         // 6.6) D-224c：SKU 编码归一化——行内存有颜色/尺码、且编码与直拼格式仅差分隔符（含 SKU- 前缀）的，
         // 统一为直拼格式，保证后续对账 JOIN（入库编码已直拼）能命中。手动编辑过的行不动。
