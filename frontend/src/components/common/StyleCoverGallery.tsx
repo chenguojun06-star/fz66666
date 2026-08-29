@@ -1,4 +1,5 @@
 import React from 'react';
+import { Image } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 import api from '@/utils/api';
@@ -136,6 +137,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
   ));
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(preferredUrl);
   const [isHovered, setIsHovered] = React.useState(false);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   const currentIndex = React.useMemo(() => {
     if (!selectedUrl) return -1;
@@ -203,6 +205,13 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
   const selectedAsset = assets.find((item) => item.url === selectedUrl) || assets[0] || null;
   const selectedImageUrl = getFullAuthedFileUrl(selectedAsset?.url || preferredUrl || null);
 
+  // 点大图打开本组件自带的预览组（含全部附件图，可左右切换），
+  // data-no-image-preview 让 App.tsx 全局预览监听跳过本图，避免只剩单图。
+  const previewItems = React.useMemo(
+    () => assets.map((item) => getFullAuthedFileUrl(item.url)),
+    [assets],
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
       <div
@@ -221,15 +230,15 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         onClick={(event) => {
           event.stopPropagation();
-          if (selectedImageUrl) {
-            window.open(selectedImageUrl, '_blank');
-          }
+          if (!selectedImageUrl) return;
+          setPreviewOpen(true);
         }}
       >
         {selectedImageUrl ? (
           <img
             src={selectedImageUrl}
             alt="cover"
+            data-no-image-preview="true"
             style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
           />
         ) : (
@@ -339,6 +348,16 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
           })}
         </div>
       ) : null}
+      <Image.PreviewGroup
+        items={previewItems}
+        preview={{
+          open: previewOpen,
+          onOpenChange: (isOpen) => setPreviewOpen(!!isOpen),
+          current: currentIndex >= 0 ? currentIndex : 0,
+        }}
+      >
+        <Image src={selectedImageUrl || undefined} style={{ display: 'none' }} alt="cover" />
+      </Image.PreviewGroup>
     </div>
   );
 };
