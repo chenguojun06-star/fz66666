@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-29（新增 D-216 下单抽屉六连修）
+> 最后更新：2026-08-29（新增 D-217 预览串款/扫码补图/款号快照全链同步/存量数据回填）
+
+---
+
+## D-217：预览串款+扫码补图+款号快照全链同步+存量数据统一（2026-08-29，用户"预览只看本款/扫码没图/老款号没同步/编码要全部统一"）
+
+### 各项根因与实现
+1. **预览串款**：D-138 全局 `Image.PreviewGroup`（Layout/index.tsx）把整页 antd Image 编成一组，点一行图能翻全部款式（2/14）。修法：StyleCoverThumb 内层包自己的 `Image.PreviewGroup items={本款图集}`——rc-image context 就近覆盖，嵌套组合法（SmartImage/ImageCarousel 已有先例）；`preview={{open,onOpenChange}}` 受控写法在有外层组时无效，不能用。图集=附件列表全部图片，预览在本款图内切换。
+2. **样衣扫码没图**：my-history 只按记录快照 styleNo 精确匹配 StyleInfo.cover，改过款号后失配彻底无图，且无附件兜底。修：优先按 styleId 匹配 + StyleAttachment 图片二级兜底；小程序 wxml 本来就渲染 coverImage，后端补齐即显示，小程序零改动。
+3. **款号变更没同步**：D-215 只重算了 t_product_sku。新 `StyleNoChangeSyncHelper.syncStyleNoEverywhere`：款号变更时同步 t_pattern_production / t_pattern_scan_record / t_scan_record(scan_type=pattern，order_no 冗余款号，顺带补 style_id) / t_production_order / t_cutting_bundle 的 style_no。PC 样衣工序列表"商品编码"列是前端拿快照 styleNo 现拼的（SampleProcessList.columns.tsx），拼接口径同步改直拼。
+4. **存量数据统一**：新 `StyleSnapshotBackfillRunner`（ApplicationRunner，启动 15s 后守护线程执行，幂等——值相等 0 行更新；每条 SQL 独立 try/catch 不阻断启动）：SKU 编码按款式档案直拼回填（manually_edited 不动、SKU- 前缀按 use_sku_prefix 保留）+ 五张快照表 style_no 回填当前款号。不用 Flyway SQL 做（sku_code 唯一键冲突会让迁移失败卡启动）。
+
+### 教训
+- 快照字段（styleNo/skuCode 写进单据表）在源头变更时必须全链盘点——"改了款式那边没变"=只同步了主表没同步快照
+- 存量格式迁移别用 Flyway UPDATE（唯一键冲突=迁移失败=启动挂），用幂等 Runner + 逐条容错
+- 内层 PreviewGroup 是退出全局预览组的唯一正解（rc-image context 就近覆盖）
 
 ---
 
