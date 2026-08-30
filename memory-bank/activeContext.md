@@ -4975,3 +4975,24 @@ if (!urlTenantId.equals(tokenTenantId)) {  // ⚠️ tokenTenantId为null时抛N
 D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资料选款）
 → D-248（客户选择器 + 属性库齿轮）。
 剩余仅「款式批量多选下单」一项未做（改动面广，非痛点）。
+
+## 2026-08-31 D-249 下单页按钮回归镂空规范 + 输入框改白底描边（纯 wxss，用户截图反馈）
+
+**用户反馈**（截图）：① 按钮不要实心蓝，"要全部镂空的那种"——项目规范本就是镂空，
+D-246 改版时被我写成了实心，是我的错；② 输入框灰色太深太黑，要跟其它灰一致。
+
+**修复**（2 个 wxss × 4 副本，无 js/wxml 改动）：
+- **按钮全部回归镂空**（对齐 app.wxss `.btn-primary` 规范：透明底 + 蓝边 + 蓝字）：
+  form 页 `.f-btn`（添加/生成/铺量）、`.f-btn.ghost`（清空，灰边灰字）、
+  `.bar-btn`（确认下单，1.5px 蓝边）；create 页 `.next-btn`（下一步）、`.submit-btn`
+- **输入/选择框统一白底 + 浅灰描边**：`.f-inp` / `.f-pv` / `.add-inp` / `.qfill-inp` /
+  `.mx-inp` / `.style-inp`——`background: var(--color-bg-card)`（#ffffff）+
+  `border: 1px solid var(--color-border)`（#e5e5ea），
+  替代原 `var(--input-bg)`（#f2f2f7 无边框灰块，用户观感"太黑"）
+- 白底描边是**确定性浅色**，无论变量解析环境如何都不会显示为深色块
+
+**验证**：两页 WXSS 括号配对（94/94、93/93）；四副本 MD5 一致；
+正则扫描 `background: var(--color-primary)`（实心蓝特征）**两页残留 0**。
+
+**教训（进 MEMORY.md）**：小程序端做 UI 必须先查 `app.wxss` 的既有按钮规范
+（`.btn-primary` = 蓝色镂空），**实心蓝底白字在该项目是明确违规**（D-201 曾整批纠偏过）。

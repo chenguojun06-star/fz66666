@@ -360,12 +360,14 @@ page { background-color: var(--color-bg-page); }
   box-shadow: var(--shadow-sm);
 }
 
+/* 提交按钮：蓝色镂空（对齐项目规范，禁止实心） */
 .submit-btn {
   width: 100%;
   height: 46px;
   line-height: 46px;
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
   border-radius: var(--radius-full);
   font-size: var(--font-size-lg);
   font-weight: 500;
@@ -484,17 +486,18 @@ page { background-color: var(--color-bg-page); }
   z-index: 10;
 }
 
+/* 下一步按钮：蓝色镂空（对齐项目规范，禁止实心） */
 .next-btn {
   width: 100%;
   max-width: 400px;
   height: var(--btn-height-lg);
   line-height: var(--btn-height-lg);
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
   border-radius: var(--radius-xl);
   font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
-  border: none;
   margin-top: 16px;
   box-shadow: var(--shadow-md);
 }

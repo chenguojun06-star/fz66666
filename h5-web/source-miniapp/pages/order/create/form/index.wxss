@@ -36,7 +36,7 @@ page { background-color: var(--color-bg-page); }
 }
 .style-inp {
   display: block; width: 100%; height: 26px; padding: 0 8px;
-  background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-xs);
+  background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-xs);
   font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-primary);
   box-sizing: border-box;
 }
@@ -70,26 +70,28 @@ page { background-color: var(--color-bg-page); }
   font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: 1.4;
 }
 
+/* 输入/选择框：白底 + 浅灰描边（与卡片同级，避免深色块感；描边用全局 --color-border） */
 .f-inp {
-  height: 40px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm);
+  height: 40px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   padding: 0 10px; font-size: var(--font-size-sm); color: var(--color-text-primary); width: 100%; box-sizing: border-box;
 }
 .f-pv {
   height: 40px; line-height: 40px;
-  background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm);
+  background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   padding: 0 10px; font-size: var(--font-size-sm); color: var(--color-text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   box-sizing: border-box;
 }
 .ph { color: var(--color-text-placeholder); }
 
+/* 按钮：项目规范为蓝色镂空（透明底+蓝边+蓝字，对齐 app.wxss .btn-primary），禁止实心 */
 .f-btn {
   flex-shrink: 0; height: 40px; padding: 0 14px;
-  background: var(--color-primary); border-radius: var(--radius-sm);
+  background: transparent; border: 1px solid var(--color-primary); border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
 }
-.f-btn text { font-size: var(--font-size-xs); color: var(--color-text-white); font-weight: 500; }
-.f-btn.ghost { background: var(--color-bg-page); border: 1px solid var(--color-border); }
+.f-btn text { font-size: var(--font-size-xs); color: var(--color-primary); font-weight: 500; }
+.f-btn.ghost { border-color: var(--color-border); }
 .f-btn.ghost text { color: var(--color-text-secondary); }
 
 .flex-1 { flex: 1; min-width: 0; }
@@ -135,7 +137,7 @@ page { background-color: var(--color-bg-page); }
 
 .add-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .add-inp {
-  height: 40px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm);
+  height: 40px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   padding: 0 10px; font-size: var(--font-size-sm); color: var(--color-text-primary); box-sizing: border-box;
 }
 
@@ -156,7 +158,7 @@ page { background-color: var(--color-bg-page); }
 /* ══ 批量铺量 ══ */
 .qfill { display: flex; align-items: center; gap: 8px; }
 .qfill-inp {
-  width: 64px; height: 40px; background: var(--input-bg); border: 1px solid var(--input-border);
+  width: 64px; height: 40px; background: var(--color-bg-card); border: 1px solid var(--color-border);
   border-radius: var(--radius-sm); padding: 0 8px; font-size: var(--font-size-sm);
   text-align: center; box-sizing: border-box; flex-shrink: 0;
 }
@@ -206,7 +208,7 @@ page { background-color: var(--color-bg-page); }
 
 .mx-inp {
   width: 100%; height: 32px;
-  background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-xs);
+  background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-xs);
   text-align: center; font-size: var(--font-size-sm); padding: 0 2px; box-sizing: border-box;
   font-variant-numeric: tabular-nums;
 }
@@ -239,10 +241,12 @@ page { background-color: var(--color-bg-page); }
 .bar-sum { flex-shrink: 0; display: flex; flex-direction: column; }
 .bar-sum-l { font-size: var(--font-size-2xs); color: var(--color-text-tertiary); }
 .bar-sum-n { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-primary); font-variant-numeric: tabular-nums; }
+/* 确认下单主按钮：蓝色镂空（对齐 app.wxss .btn-primary 规范，禁止实心） */
 .bar-btn {
-  flex: 1; height: var(--btn-height-md); background: var(--color-primary); border-radius: var(--radius-full);
+  flex: 1; height: var(--btn-height-md); background: transparent;
+  border: 1.5px solid var(--color-primary); border-radius: var(--radius-full);
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--font-size-base); font-weight: 600; color: var(--color-text-white);
+  font-size: var(--font-size-base); font-weight: 600; color: var(--color-primary);
 }
 .bar-btn.dis { opacity: 0.5; }
 

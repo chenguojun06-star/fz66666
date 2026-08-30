@@ -5,6 +5,13 @@
 
 ## 已完成
 
+### 2026-08-31 D-249 下单页按钮回归镂空规范 + 输入框改白底描边 ✅（纯 wxss，用户截图反馈）
+
+- [x] 按钮全部镂空：f-btn/bar-btn/next-btn/submit-btn（对齐 app.wxss .btn-primary 规范）
+- [x] 输入/选择框统一白底（--color-bg-card）+ 浅灰描边（--color-border），6 处
+- [x] 正则扫描实心蓝残留 0；四副本 MD5 一致；括号配对 OK
+- [ ] 真机验收观感
+
 ### 2026-08-30 D-248 下单页补齐：客户选择器 + 基础属性库齿轮 ✅（纯小程序，零后端改动，已提交推送）
 
 - [x] 客户选择器：新建 `api-modules/crm.js`，用 `GET /api/crm/customers/active-list`
