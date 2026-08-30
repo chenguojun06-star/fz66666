@@ -7,7 +7,8 @@ import CustomerInfoSection from './CustomerInfoSection';
 import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
-import type { FinishedInventory } from './finishedInventoryColumns';
+import type { FinishedInventory, FinishedInventoryRow } from './finishedInventoryColumns';
+import { flattenInventoryBySku } from './flattenBySku';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -47,6 +48,9 @@ const _FinishedInventory: React.FC = () => {
 
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
   const skuColumns = getSkuColumns({ handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange });
+  // D-228：一款多码时拆成每个商品编码一行，款级信息由 rowSpan 纵向合并，
+  // 避免 15 个编码堆在同一单元格把行高撑爆（列表密密麻麻的根因）
+  const flatRows = React.useMemo(() => flattenInventoryBySku(pagedDataSource), [pagedDataSource]);
   const totalAvailableQty = dataSource.reduce((sum, item) => sum + (item.availableQty || 0), 0);
   const totalDefectQty = dataSource.reduce((sum, item) => sum + (item.defectQty || 0), 0);
   const skuTotalOutbound = skuDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
@@ -66,7 +70,7 @@ const _FinishedInventory: React.FC = () => {
           label: '库存管理',
           children: (<>
           <Card>
-            <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }}
+            <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={flatRows} rowKey={(r: FinishedInventoryRow) => r.__rowKey} loading={loading} pagination={false} scroll={{ x: 'max-content' }}
               emptyDescription="暂无成品库存数据"
               emptyActionText="去扫码入库"
               onEmptyAction={() => { window.location.href = '/warehouse/scan-in'; }}

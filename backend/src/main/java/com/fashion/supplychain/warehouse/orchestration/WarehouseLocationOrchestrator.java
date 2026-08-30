@@ -6,16 +6,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.stock.entity.SampleStock;
 import com.fashion.supplychain.stock.service.SampleStockService;
 import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
@@ -47,6 +51,9 @@ public class WarehouseLocationOrchestrator {
     private final SampleStockService sampleStockService;
     private final OperationLogService operationLogService;
     private final WarehouseLocationLogAppendHelper logAppendHelper;
+    // D-228：库位明细表需要展示图片——成品取款式档案封面，物料取物料档案图片
+    private final StyleInfoService styleInfoService;
+    private final MaterialDatabaseService materialDatabaseService;
 
     private static final Map<String, String> WAREHOUSE_TYPE_LABELS = Map.of(
             "FINISHED", "成品仓",
@@ -474,6 +481,29 @@ public class WarehouseLocationOrchestrator {
                     .eq(MaterialStock::getTenantId, tenantId)
                     .eq(MaterialStock::getDeleteFlag, 0)
                     .in(MaterialStock::getLocation, identifiers));
+
+            // D-228：批量预取物料图片（t_material_database.image）——一次性查完再映射，避免逐行查库
+            Map<String, String> materialImageMap = new HashMap<>();
+            Set<String> materialCodes = stocks.stream()
+                    .map(MaterialStock::getMaterialCode)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.toSet());
+            if (!materialCodes.isEmpty()) {
+                try {
+                    List<MaterialDatabase> mds = materialDatabaseService.list(new LambdaQueryWrapper<MaterialDatabase>()
+                            .eq(MaterialDatabase::getTenantId, tenantId)
+                            .eq(MaterialDatabase::getDeleteFlag, 0)
+                            .in(MaterialDatabase::getMaterialCode, materialCodes));
+                    for (MaterialDatabase md : mds) {
+                        if (StringUtils.isNotBlank(md.getImage()) && StringUtils.isNotBlank(md.getMaterialCode())) {
+                            materialImageMap.putIfAbsent(md.getMaterialCode(), md.getImage());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[库位明细] 物料图片预取失败（不影响主流程）: {}", e.getMessage());
+                }
+            }
+
             for (MaterialStock s : stocks) {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("materialCode", s.getMaterialCode());
@@ -485,6 +515,7 @@ public class WarehouseLocationOrchestrator {
                 item.put("stockQuantity", s.getQuantity());
                 item.put("lockedQuantity", s.getLockedQuantity());
                 item.put("location", s.getLocation());
+                item.put("imageUrl", materialImageMap.get(s.getMaterialCode()));
                 items.add(item);
             }
         } else if ("SAMPLE".equals(location.getWarehouseType())) {
@@ -541,6 +572,28 @@ public class WarehouseLocationOrchestrator {
                 byKey.computeIfAbsent(key, k -> new ArrayList<>()).add(r);
             }
 
+            // D-228：批量预取款式封面图（t_style_info.cover）——一次性查完再映射，避免逐行查库
+            Map<String, String> styleCoverMap = new HashMap<>();
+            Set<String> styleNos = records.stream()
+                    .map(ProductWarehousing::getStyleNo)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.toSet());
+            if (!styleNos.isEmpty()) {
+                try {
+                    List<StyleInfo> styles = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
+                            .eq(StyleInfo::getTenantId, tenantId)
+                            .and(w -> w.isNull(StyleInfo::getDeleteFlag).or().eq(StyleInfo::getDeleteFlag, 0))
+                            .in(StyleInfo::getStyleNo, styleNos));
+                    for (StyleInfo si : styles) {
+                        if (StringUtils.isNotBlank(si.getCover()) && StringUtils.isNotBlank(si.getStyleNo())) {
+                            styleCoverMap.putIfAbsent(si.getStyleNo(), si.getCover());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[库位明细] 款式封面预取失败（不影响主流程）: {}", e.getMessage());
+                }
+            }
+
             for (Map.Entry<String, List<ProductWarehousing>> entry : byKey.entrySet()) {
                 String key = entry.getKey();
                 List<ProductWarehousing> recs = entry.getValue();
@@ -581,6 +634,11 @@ public class WarehouseLocationOrchestrator {
                     item.put("stockQuantity", remainingQty);
                     item.put("salesPrice", null);
                 }
+                // D-228：款式封面图——按入库行的款号匹配，SKU 行缺失时也能正常显示
+                String coverStyleNo = StringUtils.isNotBlank(recs.get(0).getStyleNo())
+                        ? recs.get(0).getStyleNo()
+                        : (matchedSku != null ? matchedSku.getStyleNo() : null);
+                item.put("imageUrl", coverStyleNo != null ? styleCoverMap.get(coverStyleNo) : null);
                 item.put("warehousedCount", recs.size());
                 item.put("warehousedQty", totalQty);
                 item.put("remainingQty", remainingQty);

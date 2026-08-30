@@ -832,11 +832,13 @@
   border-top: 1px solid var(--color-border-light);
 }
 /* 快捷操作（与 dashboard 一致） */
+/* D-228：对齐生产管理 dashboard —— 按钮组下方加分隔线，与后面的明细区形成视觉分区 */
 .expand-actions {
   display: flex;
   gap: var(--spacing-md);
-  padding-top: var(--spacing-lg);
-  margin-top: 2px;
+  padding: 2px 0 var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light);
   flex-wrap: wrap;
 }
 .act-btn--detail {

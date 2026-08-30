@@ -2,7 +2,21 @@
 import React from 'react';
 import { Drawer, Empty, Spin, Tag, Row, Col, Button } from 'antd';
 import { ImportOutlined, ExportOutlined, SwapOutlined } from '@ant-design/icons';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import type { LocationItem, LocationSkuItem } from './types';
+
+/** D-228：三种库位明细表共用的图片单元格（无图时组件回退为款号/编码占位） */
+const ItemThumb: React.FC<{ sku: LocationSkuItem }> = ({ sku }) => (
+  <div className="wlm-detail-td wlm-detail-td--image">
+    <StyleCoverThumb
+      src={sku.imageUrl || null}
+      styleNo={sku.styleNo || sku.materialCode}
+      color={sku.color}
+      size={40}
+      borderRadius={4}
+    />
+  </div>
+);
 
 interface Props {
   open: boolean;
@@ -92,6 +106,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
             ) : selectedLocation.warehouseType === 'MATERIAL' ? (
               <div className="wlm-detail-table wlm-detail-table--material" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">
+                  <div className="wlm-detail-th">图片</div>
                   <div className="wlm-detail-th">物料编码</div>
                   <div className="wlm-detail-th">物料名称</div>
                   <div className="wlm-detail-th">类型</div>
@@ -100,6 +115,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
+                    <ItemThumb sku={sku} />
                     <div className="wlm-detail-td" title={sku.materialCode || '-'}>{sku.materialCode || '-'}</div>
                     <div className="wlm-detail-td" title={sku.materialName || '-'}>{sku.materialName || '-'}</div>
                     <div className="wlm-detail-td" title={sku.materialType || '-'}>{sku.materialType || '-'}</div>
@@ -113,6 +129,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
             ) : selectedLocation.warehouseType === 'SAMPLE' ? (
               <div className="wlm-detail-table wlm-detail-table--sample" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">
+                  <div className="wlm-detail-th">图片</div>
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">款式名称</div>
                   <div className="wlm-detail-th">颜色</div>
@@ -121,6 +138,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
+                    <ItemThumb sku={sku} />
                     <div className="wlm-detail-td" title={sku.styleNo || '-'}>{sku.styleNo || '-'}</div>
                     <div className="wlm-detail-td" title={sku.styleName || '-'}>{sku.styleName || '-'}</div>
                     <div className="wlm-detail-td">
@@ -138,6 +156,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
             ) : (
               <div className="wlm-detail-table wlm-detail-table--finished" style={{ marginTop: 16 }}>
                 <div className="wlm-detail-table-header">
+                  <div className="wlm-detail-th">图片</div>
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">颜色</div>
                   <div className="wlm-detail-th">尺码</div>
@@ -147,6 +166,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
+                    <ItemThumb sku={sku} />
                     <div className="wlm-detail-td" title={sku.styleNo || '-'}>{sku.styleNo || '-'}</div>
                     <div className="wlm-detail-td">
                       <Tag color="blue">{sku.color || '-'}</Tag>

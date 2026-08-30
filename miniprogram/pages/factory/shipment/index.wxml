@@ -127,7 +127,7 @@
             <text class="ip-delivery" wx:if="{{item.deliveryDateStr}}">交期 {{item.deliveryDateStr}}</text>
           </view>
           <view class="ip-bar">
-            <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.isClosed ? 'ip-fill--done' : ''}}" style="width: {{item.progressWidth}}%"></view>
+            <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.isClosed ? 'ip-fill--done' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
           </view>
           <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
           <text class="ip-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
@@ -141,9 +141,21 @@
 
         <!-- 展开区域 -->
         <view class="order-expand" wx:if="{{item.expanded}}">
-        <!-- D-211：快捷操作上移到展开区顶部（对齐生产管理） -->
+          <!-- D-228：快捷操作统一置于展开区顶部（结构对齐生产管理 dashboard）
+               原实现把 .expand-actions 的开标签留在顶部、闭标签留在底部，
+               导致菲号明细 / 工序进度 / 颜色尺码被吞进按钮容器，
+               7 个操作按钮反被挤到展开区最底部。此处容器在按钮组结束后即闭合。 -->
           <view class="expand-actions">
             <view class="act-btn act-btn--detail" catchtap="onGoOrderDetail" data-index="{{index}}">详情</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
+            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory || isTenantAdmin}}">发货</view>
+            <view class="act-btn act-btn--remark" catchtap="onViewShipment" data-index="{{index}}">发货记录</view>
+            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
+            <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
+          </view>
+
           <!-- 菲号明细 -->
           <view class="detail-head">
             <text class="detail-title">菲号明细</text>
@@ -183,7 +195,7 @@
                 <text class="node-bundle-text" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
               </view>
               <view class="node-bar-bg">
-                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width: {{node.percentWidth}}%"></view>
+                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : node.percent}}%"></view>
               </view>
               <!-- D-211：子工序单价行已移除——单价属工序编辑页，进度卡不展示金额 -->
             </view>
@@ -208,14 +220,6 @@
             </scroll-view>
           </view>
 
-            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
-            <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
-            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
-            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory || isTenantAdmin}}">发货</view>
-            <view class="act-btn act-btn--remark" catchtap="onViewShipment" data-index="{{index}}">发货记录</view>
-            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
-            <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
-          </view>
         </view>
       </view>
     </view>

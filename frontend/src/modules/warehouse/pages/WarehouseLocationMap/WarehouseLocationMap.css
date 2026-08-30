@@ -339,22 +339,30 @@
 }
 
 /* 三种库位明细表按列数各用独立 grid 模板，避免共用错位/挤压 */
-/* 物料表 5 列：编码/名称/类型/规格/数量 */
+/* D-228：三种表首列统一加「图片」，列数各 +1，图片固定 56px */
+/* 物料表 6 列：图片/编码/名称/类型/规格/数量 */
 .wlm-detail-table--material .wlm-detail-table-header,
 .wlm-detail-table--material .wlm-detail-tr {
-  grid-template-columns: 1.1fr 1.6fr 0.9fr 1.4fr 90px;
+  grid-template-columns: 56px 1.1fr 1.6fr 0.9fr 1.4fr 90px;
 }
 
-/* 样衣表 5 列：款号/款式名称/颜色/尺码/数量 */
+/* 样衣表 6 列：图片/款号/款式名称/颜色/尺码/数量 */
 .wlm-detail-table--sample .wlm-detail-table-header,
 .wlm-detail-table--sample .wlm-detail-tr {
-  grid-template-columns: 1.2fr 1.6fr 0.8fr 1.2fr 80px;
+  grid-template-columns: 56px 1.2fr 1.6fr 0.8fr 1.2fr 80px;
 }
 
-/* 成品表 6 列：款号/颜色/尺码/商品编码/数量/单价 */
+/* 成品表 7 列：图片/款号/颜色/尺码/商品编码/数量/单价 */
 .wlm-detail-table--finished .wlm-detail-table-header,
 .wlm-detail-table--finished .wlm-detail-tr {
-  grid-template-columns: 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
+  grid-template-columns: 56px 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
+}
+
+/* 图片单元格：居中，缩略图不挤压行高 */
+.wlm-detail-td--image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .wlm-detail-table-header {

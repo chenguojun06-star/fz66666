@@ -3633,3 +3633,79 @@ mvn compile 通过；safe-push 8 项全过；推送 dbd3f0719 触发 CI 部署�
 - **SQL NULL 比较陷阱**：`col <> x` 在 col 为 NULL 时结果为 NULL 而非 TRUE，所有"与期望值不等则修复"的自愈 SQL 必须用 IFNULL 包裹
 - **"部署了"≠"验证过"**：D-224 系列补建 SQL 因条件矛盾从未真正生效，直到用线上 API 查真实数据才暴露。线上问题必须查线上数据（本地库不同步），用 postdeploy-smoke-test.py 的 BASE_URL+账号 curl 登录即可
 - 出库弹窗前端曾用颜色×尺码笛卡尔积拼假编码且整款总量错标到每码（D-226 已修）
+
+## D-228 出入库SKU编码统一直拼（D-227 从未上线 + 双重累加 P0）——2026-08-30
+
+### 背景
+用户连续反馈「成品仓库看不到新入库的款」「库位地图塌缩成一行」，D-224/224b/224c/226/227 五轮修复均「推送了但没变化」。
+
+### 一、D-227 从未上线（"没变化"的直接原因）
+- `141813033`（D-227 代码）→ CI `33281468565` **cancelled**（33秒，被后续提交顶掉）
+- `82947ddab`（决策记录）→ CI `33281483082` **failure**：后端测试 NPE
+  ```
+  Cannot invoke "ProductWarehousingSkuSyncHelper.syncSkuStockOnInbound(...)"
+  because "this.warehousingSkuSyncHelper" is null
+    at ProductWarehousingOrchestrator.save(:202)
+  ```
+  新增 Bean 未在 `WarehousingStockOrderIntegrationTest` 加 `@Mock` → 7 例 Error → deploy skipped
+- 云端一直是 D-226 代码
+
+### 二、D-227 即使上线也不生效（三处）
+1. **改错地方**：改的是 `ProductWarehousingOrchestrator` 里仅 delete 使用的副本；保存链路真正调用的是 `ProductWarehousingHelper.updateSkuStock(:576)`
+2. **编码仍是横线**：该处 `String.format("%s-%s-%s", ...)`，而 SKU 表自 D-215/216/217 已统一直拼 → 匹配不到任何行 → 库存静默不增
+3. **Runner SQL 引用不存在的列**：6.5/第8步用 `pw.color`/`pw.size`，但实体里是 `@TableField(exist=false)`，数据库无此列 → 线上必报 Unknown column，被 `exec()` 的 try-catch 吞掉只记 warn → **自愈从未真正执行过**
+
+### 三、P0：双重累加（幸因 CI 挂掉未上线）
+```
+Orchestrator.save(:255) → ServiceImpl(:172) → writeHelper.executePostSaveSideEffects(:190)
+    → updateSkuStockAfterSave(:244) → helper.updateSkuStock(qualifiedQuantity)   ← 第1次
+Orchestrator.save(:202) → skuSyncHelper.syncSkuStockOnInbound(qualifiedQuantity) ← 第2次
+```
+若部署，新入库库存翻倍。
+
+### 四、连带发现：出库侧对称 bug
+出入库链路共 6 处横线编码（含出库 3 处）→ 出库同样扣不到库存。已全部统一为直拼。
+
+### 决策
+1. 删除 `ProductWarehousingSkuSyncHelper` 及 Orchestrator 两处调用（202/288），**收敛为单一入口** `ProductWarehousingHelper.updateSkuStock`
+2. `ProductSkuService` 新增 `upsertStockByStyleKeys(skuCode, styleNo, color, size, delta, tenantId)`：
+   显式传色码，不靠字符串反解（直拼编码用 `-` 拆不出三段）；
+   按编码累加 → 按款色码(+租户)二次查找 → 按款式档案补建；**扣减不凭空建行**
+3. Runner 6.5/8 改为 `JOIN t_cutting_bundle`（颜色尺码的权威来源）
+
+### 踩坑（重要）
+- **改代码前必须确认"谁真正调用它"**：D-227 改的是同名方法的死副本。用 findReferences 确认调用链，不要假设
+- **`col <> x` 与"列不存在"是两类自愈杀手**：前者遇 NULL 恒不成立（D-227 已修），后者直接抛异常被 try-catch 吞掉（D-228 才修）。自愈 SQL 引用的列必须核对实体 `@TableField(exist=false)`
+- **新增同步点前先查是否已有**：库存这类共享状态，重复调用=数据翻倍。先 grep 全链路再动手
+- **CI 状态必须逐个 run 看**：`git push` 成功 ≠ 部署成功。cancelled/failure 都会让云端跑旧代码
+- **本地残留未跟踪测试文件会阻塞 testCompile**：`SmartSourcingListOrdersRegressionTest.java`（untracked，引用不存在的 `TestRedisConfig`）会导致本地 `mvn test` 编译失败；不进 git 故 CI 不受影响。已移至 `/tmp/bak_tests/` 备份
+- **移走文件后需清理 `target/test-classes` 残留 class**，否则 `mvn test` 仍会跑旧 class
+
+### 验证
+后端全量测试 **140 通过**（原 12 例 NPE 全部转绿），BUILD SUCCESS。
+
+### D-228b 补充：入库列表查询漏选 sku_code（2026-08-30）
+线上验证 D-228 时发现：`/api/production/warehousing/list` 返回对象**不含** skuCode 键，
+但 `/{id}` 单条详情有值且正确（`BR26X1K0651A棕色XL` 12 件等）。
+
+根因：`ProductWarehousingServiceImpl.buildWarehousingQueryWrapper(:106)` 使用**显式 `.select(...)` 列清单**，
+其中漏了 `ProductWarehousing::getSkuCode`。数据库有值 → 查询不选 → 前端拿不到 → 自行拼装假编码。
+
+**踩坑（新增）**：
+- **显式 `.select(...)` 列清单是"隐形数据丢失"高发区**：新增实体字段后，若列表查询用了显式列清单，
+  新字段不会自动出现在结果里，且不报任何错。排查手法：`/{id}` 详情（select *）与 `/list` 对比，
+  若详情有值而列表没有，99% 是列清单漏选
+- **Jackson NON_NULL 会隐藏 null 字段**：接口返回里"某个键不存在"≠"该字段不存在于实体"，
+  要用 `'key' in obj` 判断，不要只用 `obj.get(key)`
+- **判断修复是否生效必须查数据库真实值**，不能只看列表接口（列表可能漏选/前端可能拼装）
+
+修复：select 列清单补 `ProductWarehousing::getSkuCode`（出库列表为 select *，无此问题）。
+
+### D-228 线上验证结果（2026-08-30，部署后实测）
+- BR26X1K0651A：SKU 行 **6 行**，棕色 XS/S/M/L/XL/XXL **各 22 件、共 132 件**，编码为直拼格式 ✅
+- SKU 总行数 52 → **144**（+92 行），款数 28 → 用户此前反馈"所有新入库款都看不到"已一并修复 ✅
+- 同款同色同码重复组数 = **0**（未产生重复行）✅
+- 无库存异常放大款（未双重累加，单一入口方案正确）✅
+- 入库明细 sku_code 已由 Runner 6.5 正确回填（直拼格式，各码数量正确）✅
+- 遗留：46 个历史横线格式编码（款式档案旧数据），因 upsert 的"按款色码二次查找"兜底，
+  库存归集正确，仅显示格式未统一，不影响功能

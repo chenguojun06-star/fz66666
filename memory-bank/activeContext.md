@@ -4817,3 +4817,20 @@ if (!urlTenantId.equals(tokenTenantId)) {  // ⚠️ tokenTenantId为null时抛N
 - 这是 7-09 当天第二次 WebSocket 500 问题，第一次是注入失效（`01a91f4f3`），这次是 NPE
 - 根本原因：对 JWT payload 字段缺失的兼容性考虑不足
 - 以后写 equals 比较时，永远考虑 null 情况，尤其是从 JWT 取出来的字段都可能为 null
+
+## 2026-08-30 D-228 出入库SKU编码统一直拼（成品仓库新入库款不显示根治）
+
+**结论先行**：D-224/224b/224c/226/227 五轮「推送了但没变化」，真实原因是 **D-227 从未部署**（CI cancelled + 后端测试 failure → deploy skipped），云端一直是 D-226 代码。
+
+**修复**（9 个后端文件，commit 已推送，CI `33293037358`）：
+- 删除 `ProductWarehousingSkuSyncHelper` 及 Orchestrator 两处调用 → SKU 库存同步收敛为单一入口 `ProductWarehousingHelper.updateSkuStock`（原方案会双重累加导致库存翻倍）
+- 新增 `ProductSkuService.upsertStockByStyleKeys`：直拼编码累加 → 按款色码二次查找 → 按款式档案补建；扣减不凭空建行
+- 出入库链路 6 处横线编码（含**出库 3 处**，此前同样扣不到库存）统一为直拼
+- Runner 6.5/第8步 SQL 改为 `JOIN t_cutting_bundle` 取色码（原引用不存在的 `pw.color/pw.size`，线上静默失败）
+
+**验证**：后端全量测试 140 通过，BUILD SUCCESS。
+
+**待办**：
+- 待 CI 部署完成后，线上验证 BR26X1K0651A 是否出现在成品仓库列表（6 码各 22 件，共 132 件）
+- 前端列表编码列仍有拼接 bug：`HYY202601111` 显示为 `HYY2026011111黑色-XL`（多一个 1 + 横线格式），`0099988-白色-XL` 未归一化——D-226 前端补编码列的问题，尚未修复
+- 本地 `SmartSourcingListOrdersRegressionTest.java`（untracked，引用不存在的 `TestRedisConfig`）已移至 `/tmp/bak_tests/`，需确认是否彻底删除

@@ -53,6 +53,11 @@ export interface LocationSkuItem {
   styleName?: string;
   sampleType?: string;
   loanedQuantity?: number;
+  /**
+   * D-228：三种库位明细共用的图片地址。
+   * 成品仓取款式档案封面（t_style_info.cover）、物料仓取物料档案图片（t_material_database.image）、
+   * 样衣仓取样衣库存自带的 imageUrl。无图时前端回退为款号/编码占位。
+   */
   imageUrl?: string;
 }
 
