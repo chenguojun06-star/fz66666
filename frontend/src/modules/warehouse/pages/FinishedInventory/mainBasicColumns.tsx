@@ -35,8 +35,30 @@ function renderTagGroup(values: string[] | undefined, fallback: string | undefin
   );
 }
 
-export function getMainBasicColumns(): ColumnsType<FinishedInventoryRow> {
+/**
+ * @param indexOffset 分页偏移（(current - 1) * pageSize），保证翻页后序号连续。
+ */
+export function getMainBasicColumns(indexOffset = 0): ColumnsType<FinishedInventoryRow> {
   return [
+    {
+      // D-241：序号按「款」编号，与底部「共 N 条」口径一致。
+      // ResizableTable 自动注入的序号列是按「行」递增的，一款拆 15 个编码时
+      // 会出现 1~82 的序号，配合「共 19 条」让人误以为有 82 个款。
+      // 故这里自行实现（款级 rowSpan 合并），并在页面关闭自动序号列。
+      title: '序号',
+      key: '__groupNo__',
+      dataIndex: '__groupIndex',
+      width: 60,
+      align: 'center',
+      fixed: 'left' as const,
+      render: (_: unknown, record: FinishedInventoryRow) =>
+        mergeAcrossRows(
+          <span style={{ color: 'var(--color-text-tertiary)' }}>
+            {indexOffset + record.__groupIndex + 1}
+          </span>,
+          record
+        ),
+    },
     {
       title: '图片',
       dataIndex: 'styleImage',

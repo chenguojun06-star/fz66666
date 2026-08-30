@@ -136,7 +136,7 @@
         <!-- 操作按钮 -->
         <view class="record-actions">
           <view wx:if="{{item.receiveStatus==='pending' && isFactory}}" class="record-btn record-btn--danger" data-id="{{item.id}}" catchtap="onDeleteShipment">删除</view>
-          <view wx:if="{{item.receiveStatus==='pending' && isTenantAdmin}}" class="record-btn record-btn--primary" data-id="{{item.id}}" catchtap="onGoReceiveTab">收货确认</view>
+          <view wx:if="{{(item.receiveStatus==='pending' || item.receiveStatus==='partial') && isTenantAdmin}}" class="record-btn record-btn--primary" data-id="{{item.id}}" catchtap="onGoReceiveTab">{{item.receiveStatus==='partial' ? '继续收货' : '收货确认'}}</view>
         </view>
       </view>
     </view>

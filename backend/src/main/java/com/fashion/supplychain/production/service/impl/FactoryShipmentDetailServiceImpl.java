@@ -55,10 +55,15 @@ public class FactoryShipmentDetailServiceImpl
             String sizeName = (String) rd.getOrDefault("sizeName", "");
             int qty = rd.get("quantity") instanceof Number ? ((Number) rd.get("quantity")).intValue() : 0;
             if (qty <= 0) continue;
-            // 匹配已有明细，更新收货数量
+            // D-242：改为累加。原实现直接覆盖 receivedQuantity，
+            // 分批收货时会把上一批的数量抹掉，与 markReturned 的累加口径也不一致。
             for (FactoryShipmentDetail detail : existing) {
                 if (color.equals(detail.getColor()) && sizeName.equals(detail.getSizeName())) {
-                    detail.setReceivedQuantity(qty);
+                    int current = detail.getReceivedQuantity() == null ? 0 : detail.getReceivedQuantity();
+                    int next = current + qty;
+                    int shipped = detail.getQuantity() == null ? 0 : detail.getQuantity();
+                    // 该颜色尺码明细不允许超收
+                    detail.setReceivedQuantity(shipped > 0 ? Math.min(next, shipped) : next);
                     this.updateById(detail);
                     break;
                 }

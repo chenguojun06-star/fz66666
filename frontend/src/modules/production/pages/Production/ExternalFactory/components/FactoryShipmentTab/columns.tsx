@@ -12,7 +12,7 @@ import type { ColumnHandlers } from './types';
  * 构建发货记录表格列定义
  */
 export function buildColumns(handlers: ColumnHandlers): ColumnsType<FactoryShipment> {
-  const { onReceiveClick, onDelete } = handlers;
+  const { onReceiveClick, onDelete, isFactoryAccount } = handlers;
   return [
     { title: '发货单号', dataIndex: 'shipmentNo', key: 'shipmentNo', width: 160 },
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150 },
@@ -26,8 +26,18 @@ export function buildColumns(handlers: ColumnHandlers): ColumnsType<FactoryShipm
       width: 100,
       align: 'right',
       render: (val: number | undefined, record: FactoryShipment) => {
-        if (record.receiveStatus !== 'received') return '-';
-        return val != null ? val : record.shipQuantity;
+        const status = record.receiveStatus;
+        if (status !== 'received' && status !== 'partial') return '-';
+        const received = val != null ? val : record.shipQuantity;
+        // D-242：分批收货时显示「已收 / 共发」，一眼看出还有多少在途
+        if (status === 'partial') {
+          return (
+            <span style={{ color: 'var(--color-warning-deep)', fontWeight: 600 }}>
+              {received} / {record.shipQuantity ?? 0}
+            </span>
+          );
+        }
+        return received;
       },
     },
     {
@@ -71,17 +81,22 @@ export function buildColumns(handlers: ColumnHandlers): ColumnsType<FactoryShipm
       width: 120,
       fixed: 'right' as const,
       render: (_: unknown, record: FactoryShipment) => {
-        const isPending = record.receiveStatus === 'pending';
+        // D-242：pending 与 partial 都可以继续收货（分批到货）
+        // 外发工厂账号只能发货、不能收货（后端同样拦截，这里隐藏按钮避免误导）
+        const status = record.receiveStatus;
+        const canReceive = (status === 'pending' || status === 'partial') && !isFactoryAccount;
+        // 已部分收货的发货单不允许删除，否则已收数量会凭空消失
+        const canDelete = status === 'pending';
         const actions: RowAction[] = [
-          ...(isPending
+          ...(canReceive
             ? [{
                 key: 'receive',
-                label: '收货',
+                label: status === 'partial' ? '继续收货' : '收货',
                 primary: true,
                 onClick: () => onReceiveClick(record),
               }]
             : []),
-          ...(isPending
+          ...(canDelete
             ? [{
                 key: 'delete',
                 label: (

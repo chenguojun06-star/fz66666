@@ -7,7 +7,7 @@ import CustomerInfoSection from './CustomerInfoSection';
 import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
-import type { FinishedInventory, FinishedInventoryRow } from './finishedInventoryColumns';
+import type { FinishedInventoryRow } from './finishedInventoryColumns';
 import { flattenInventoryBySku } from './flattenBySku';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -46,7 +46,9 @@ const _FinishedInventory: React.FC = () => {
     return () => window.removeEventListener('data:changed', handleDataChanged);
   }, [loadData]);
 
-  const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
+  // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
+  const indexOffset = ((pagination.pagination.current || 1) - 1) * (pagination.pagination.pageSize || 0);
+  const columns = getMainColumns({ handleOutbound, handleViewInboundHistory }, indexOffset);
   const skuColumns = getSkuColumns({ handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange });
   // D-228：一款多码时拆成每个商品编码一行，款级信息由 rowSpan 纵向合并，
   // 避免 15 个编码堆在同一单元格把行高撑爆（列表密密麻麻的根因）
@@ -70,7 +72,8 @@ const _FinishedInventory: React.FC = () => {
           label: '库存管理',
           children: (<>
           <Card>
-            <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={flatRows} rowKey={(r: FinishedInventoryRow) => r.__rowKey} loading={loading} pagination={false} scroll={{ x: 'max-content' }}
+            {/* D-241：关闭组件自带的按行递增序号，改用主表按款编号的序号列 */}
+            <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={flatRows} rowKey={(r: FinishedInventoryRow) => r.__rowKey} loading={loading} pagination={false} scroll={{ x: 'max-content' }} showIndex={false}
               emptyDescription="暂无成品库存数据"
               emptyActionText="去扫码入库"
               onEmptyAction={() => { window.location.href = '/warehouse/scan-in'; }}

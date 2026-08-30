@@ -247,6 +247,8 @@ export const CUTTING_TASK_STATUS_MAP: StatusMap = {
 /* =========================== 外发工厂发货状态 ============================ */
 export const FACTORY_SHIPMENT_STATUS_MAP: StatusMap = {
   pending:           { text: '待收货',       color: 'warning' },
+  // D-242：分批收货中间态——已收部分、仍有在途未收
+  partial:           { text: '部分收货',     color: 'warning' },
   received:          { text: '已收货',       color: 'processing' },
   quality_checked:   { text: '已质检',       color: 'info' },
   partially_returned:{ text: '部分退回返修', color: 'error' },

@@ -93,6 +93,7 @@ const ExternalFactory: React.FC = () => {
         page: 1,
         pageSize: 1000,
         factoryType: 'EXTERNAL',
+        includeScrapped: true,
         excludeTerminal: false,
       });
       if (res && res.data) {
@@ -327,7 +328,7 @@ const ExternalFactory: React.FC = () => {
             {
               key: 'shipments',
               label: <span><InboxOutlined /> 收货管理</span>,
-              children: <div style={{ overflow: 'auto', height: '100%' }}><FactoryShipmentTab selectedFactoryId={selectedFactoryId} /></div>,
+              children: <div style={{ overflow: 'auto', height: '100%' }}><FactoryShipmentTab selectedFactoryId={selectedFactoryId} isFactoryAccount={isFactoryAccount} /></div>,
             },
           ]} />
         </div>

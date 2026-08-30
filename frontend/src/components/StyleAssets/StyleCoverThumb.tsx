@@ -70,6 +70,7 @@ const StyleCoverThumb: React.FC<{
   const [loading, setLoading] = React.useState(false);
   const [srcFailed, setSrcFailed] = React.useState(false);
   const [fallbackFailed, setFallbackFailed] = React.useState(false);
+  const loadedKeyRef = React.useRef<string | null>(null);
 
   // D-217：本款图集（附件列表全部图片），预览组只含本款图片——
   // 全局 PreviewGroup 会让预览左右切换翻到整页所有款式（串款），内层组就近覆盖退出全局组
@@ -112,14 +113,17 @@ const StyleCoverThumb: React.FC<{
   React.useEffect(() => {
     let mounted = true;
     if (fallbackFailed) return () => { mounted = false; };
-    if (preferredUrl && !srcFailed) return () => { mounted = false; };
     if (!styleId && !styleNo) return () => { mounted = false; };
+
+    // 同一款附件列表只需加载一次；颜色/款号变化时才重新加载
+    const loadKey = `${String(styleId || '')}:${String(styleNo || '')}:${String(color || '')}`;
+    if (loadedKeyRef.current === loadKey) return () => { mounted = false; };
 
     (async () => {
       setLoading(true);
       try {
         let imageUrl: string | null = null;
-        
+
         // 优先获取商品编码颜色图片（如果有color参数）
         // color参数可能是逗号分隔的多颜色值（如"白色,蓝色,黑色"），只取第一个颜色查询
         if (color && styleNo) {
@@ -135,24 +139,28 @@ const StyleCoverThumb: React.FC<{
             // 忽略颜色图片获取失败，继续获取款号封面图
           }
         }
-        
-        // 如果没有商品编码颜色图片，获取款号封面图（同时收齐全款图集供预览切换）
-        if (!imageUrl) {
-          const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
-          if (res.code === 200) {
-            const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+
+        // 始终拉取完整附件图集，保证预览时能看到全部图片（而不仅是封面）
+        const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
+        if (res.code === 200) {
+          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+          if (mounted) {
+            setGallery(images.map((f: any) => f.fileUrl).filter(Boolean));
+          }
+          // 没有颜色图且外部也没给封面时，才用附件第一张兜底
+          if (!imageUrl && !preferredUrl) {
             imageUrl = (images[0] as any)?.fileUrl || null;
-            if (mounted) {
-              setGallery(images.map((f: any) => f.fileUrl).filter(Boolean));
-            }
           }
         }
-        
-        if (mounted) {
+
+        if (mounted && imageUrl) {
           setUrl((prev) => prev === imageUrl ? prev : imageUrl);
+          loadedKeyRef.current = loadKey;
+        } else if (mounted) {
+          loadedKeyRef.current = loadKey;
         }
       } catch {
-        if (mounted) {
+        if (mounted && !preferredUrl) {
           setUrl((prev) => prev === null ? prev : null);
         }
       } finally {

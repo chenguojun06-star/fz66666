@@ -13,12 +13,16 @@ import type { FactoryShipmentTabProps } from './types';
 /**
  * 外发工厂发货 Tab：发货记录列表 + 新建发货 + 收货确认
  */
-const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactoryId }) => {
+const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactoryId, isFactoryAccount }) => {
   const data = useFactoryShipmentTabData(selectedFactoryId);
 
   const columns = useMemo(
-    () => buildColumns({ onReceiveClick: data.handleReceiveClick, onDelete: data.handleDelete }),
-    [data.handleReceiveClick, data.handleDelete],
+    () => buildColumns({
+      onReceiveClick: data.handleReceiveClick,
+      onDelete: data.handleDelete,
+      isFactoryAccount,
+    }),
+    [data.handleReceiveClick, data.handleDelete, isFactoryAccount],
   );
 
   return (

@@ -20,6 +20,12 @@ export interface FinishedInventoryRow extends FinishedInventory {
   __rowSpan: number;
   /** 展开后的唯一行 key（原 rowKey 在同一款的多个编码间会重复） */
   __rowKey: string;
+  /**
+   * D-241：所属款式在当前列表中的序号（从 0 开始）。
+   * 序号要按「款」编号而不是按「编码行」编号——一款拆出 15 个编码时，
+   * 若按行编号会出现 1~82 的序号，配合底部「共 19 条」看起来像是 82 个款。
+   */
+  __groupIndex: number;
 }
 
 /**
@@ -28,7 +34,7 @@ export interface FinishedInventoryRow extends FinishedInventory {
  */
 export function flattenInventoryBySku(list: FinishedInventory[]): FinishedInventoryRow[] {
   const rows: FinishedInventoryRow[] = [];
-  for (const item of list) {
+  list.forEach((item, groupIndex) => {
     const codes = (item.skuCodes ?? []).filter((c): c is string => !!c && !!c.trim());
     const effective = codes.length > 0 ? codes : [item.sku || ''];
     effective.forEach((code, idx) => {
@@ -38,9 +44,10 @@ export function flattenInventoryBySku(list: FinishedInventory[]): FinishedInvent
         __isGroupFirst: idx === 0,
         __rowSpan: idx === 0 ? effective.length : 0,
         __rowKey: `${item.orderNo}_${item.styleNo}_${code || `idx${idx}`}`,
+        __groupIndex: groupIndex,
       });
     });
-  }
+  });
   return rows;
 }
 

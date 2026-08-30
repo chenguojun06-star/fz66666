@@ -141,25 +141,32 @@ export function useFactoryShipmentTabData(selectedFactoryId: string | null) {
   const [receiveLoading, setReceiveLoading] = useState(false);
 
   const handleReceiveClick = useCallback((record: FactoryShipment) => {
+    const alreadyReceived = record.receivedQuantity ?? 0;
+    const remaining = Math.max(0, (record.shipQuantity ?? 0) - alreadyReceived);
     setReceiveRecord(record);
-    setReceiveQty(record.shipQuantity);
+    // D-242：默认填「剩余待收」而非发货总数，避免分批收货时默认就把剩余全部收掉
+    setReceiveQty(remaining);
     setReceiveModalOpen(true);
   }, []);
 
   const handleReceiveConfirm = useCallback(async () => {
     if (!receiveRecord) return;
+    const alreadyReceived = receiveRecord.receivedQuantity ?? 0;
+    const shipQty = receiveRecord.shipQuantity ?? 0;
+    const remaining = Math.max(0, shipQty - alreadyReceived);
     if (receiveQty <= 0) {
       message.warning('实际到货数量必须大于0');
       return;
     }
-    if (receiveQty > receiveRecord.shipQuantity) {
-      message.warning('实际到货数量不能超过发货数量');
+    if (receiveQty > remaining) {
+      message.warning(`本次最多可收 ${remaining} 件（共发 ${shipQty} 件，已收 ${alreadyReceived} 件）`);
       return;
     }
     setReceiveLoading(true);
     try {
       await factoryShipmentApi.receive(receiveRecord.id!, {
-        receivedQuantity: receiveQty === receiveRecord.shipQuantity ? undefined : receiveQty,
+        // 收满剩余时不传数量，由后端按「收完剩余」处理
+        receivedQuantity: receiveQty === remaining ? undefined : receiveQty,
       });
       message.success('收货成功');
       setReceiveModalOpen(false);

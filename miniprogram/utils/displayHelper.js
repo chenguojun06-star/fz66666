@@ -125,6 +125,27 @@ const QUALITY_STATUS_COLOR = {
   checking: STATUS_COLOR_PROCESSING,
 };
 
+/* ============== 外发发货单状态映射（收货状态） ============== */
+// D-242：此前小程序复用「采购状态」映射显示发货单状态，
+// 导致 received 显示成「已领取」、pending 显示成「待领取」，语义完全对不上。
+// 这里独立成一套，与 PC 端 FACTORY_SHIPMENT_STATUS_MAP 对齐。
+
+const FACTORY_SHIPMENT_STATUS_LABEL = {
+  pending: '待收货',
+  partial: '部分收货',
+  received: '已收货',
+  quality_checked: '已质检',
+  partially_returned: '部分退回返修',
+};
+
+const FACTORY_SHIPMENT_STATUS_COLOR = {
+  pending: STATUS_COLOR_WARNING,
+  partial: STATUS_COLOR_WARNING,
+  received: STATUS_COLOR_PROCESSING,
+  quality_checked: STATUS_COLOR_CYAN,
+  partially_returned: STATUS_COLOR_ERROR,
+};
+
 /* ============== 采购状态映射 ============== */
 
 const PURCHASE_STATUS_LABEL = {
@@ -699,6 +720,12 @@ function displayPurchaseStatus(status) {
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
 
+function displayFactoryShipmentStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, FACTORY_SHIPMENT_STATUS_LABEL, FACTORY_SHIPMENT_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
 function displayReturnStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, RETURN_STATUS_LABEL, RETURN_STATUS_COLOR);
@@ -777,6 +804,9 @@ module.exports = {
   displayPurchaseStatus,
   displayPurchaseStatusText: (s) => displayPurchaseStatus(s).text,
   displayPurchaseStatusColor: (s) => displayPurchaseStatus(s).color,
+  displayFactoryShipmentStatus,
+  displayFactoryShipmentStatusText: (s) => displayFactoryShipmentStatus(s).text,
+  displayFactoryShipmentStatusColor: (s) => displayFactoryShipmentStatus(s).color,
   displayReturnStatus,
   displayReturnStatusText: (s) => displayReturnStatus(s).text,
   displayReturnStatusColor: (s) => displayReturnStatus(s).color,

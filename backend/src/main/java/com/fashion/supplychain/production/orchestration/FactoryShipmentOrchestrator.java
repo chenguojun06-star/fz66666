@@ -155,8 +155,16 @@ public class FactoryShipmentOrchestrator {
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
-        if (!"pending".equals(fs.getReceiveStatus())) {
-            return Result.fail("该发货单状态为 " + fs.getReceiveStatus() + "，无法收货");
+        // D-242：支持分批（部分）收货。
+        // 旧逻辑无论收到多少都一把置为 received，导致「发 100 只到 60」时剩余 40 件
+        // 无法继续收货、也没有任何记录，形成悬空数据。
+        // 现改为：pending/partial 均可继续收货，累计达到发货数量才置为 received。
+        String currentStatus = fs.getReceiveStatus();
+        if ("received".equals(currentStatus)) {
+            return Result.fail("该发货单已全部收货完成，无需重复收货");
+        }
+        if (!"pending".equals(currentStatus) && !"partial".equals(currentStatus)) {
+            return Result.fail("该发货单状态为 " + currentStatus + "，无法收货");
         }
 
         String ctxFactoryId = UserContext.factoryId();
@@ -164,15 +172,24 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("外发工厂账号不可操作收货，请使用本厂账号登录");
         }
 
-        int actualQty = (receivedQuantity != null && receivedQuantity > 0)
-                ? receivedQuantity : fs.getShipQuantity();
-
-        if (actualQty > fs.getShipQuantity()) {
-            return Result.fail("实际到货数量(" + actualQty + ")不能超过发货数量(" + fs.getShipQuantity() + ")");
+        int shipQty = fs.getShipQuantity() == null ? 0 : fs.getShipQuantity();
+        int alreadyReceived = fs.getReceivedQuantity() == null ? 0 : fs.getReceivedQuantity();
+        int remaining = Math.max(0, shipQty - alreadyReceived);
+        if (remaining <= 0) {
+            return Result.fail("该发货单已收满(" + shipQty + "件)，无需重复收货");
         }
 
-        fs.setReceiveStatus("received");
-        fs.setReceivedQuantity(actualQty);
+        // 不传数量 = 收完剩余全部；传了则按本次到货数量累加
+        int actualQty = (receivedQuantity != null && receivedQuantity > 0) ? receivedQuantity : remaining;
+
+        if (actualQty > remaining) {
+            return Result.fail("本次到货数量(" + actualQty + ")超过待收数量(" + remaining
+                    + ")，该发货单共发 " + shipQty + " 件，已收 " + alreadyReceived + " 件");
+        }
+
+        int totalReceived = alreadyReceived + actualQty;
+        fs.setReceiveStatus(totalReceived >= shipQty ? "received" : "partial");
+        fs.setReceivedQuantity(totalReceived);
         fs.setReceiveTime(LocalDateTime.now());
         fs.setReceivedBy(UserContext.userId());
         fs.setReceivedByName(UserContext.username());
@@ -184,9 +201,9 @@ public class FactoryShipmentOrchestrator {
 
         revertBundleFactoryIdOnReceive(fs.getOrderId());
 
-        log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} receivedQty={} detailLines={}",
-                shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty,
-                receivedDetails != null ? receivedDetails.size() : 0);
+        log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} 本次={} 累计={} status={} detailLines={}",
+                shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty, totalReceived,
+                fs.getReceiveStatus(), receivedDetails != null ? receivedDetails.size() : 0);
         return Result.success(fs);
     }
 
@@ -206,8 +223,14 @@ public class FactoryShipmentOrchestrator {
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
+        // D-242：partial（已部分收货）同样不可删除，否则已收数量会凭空消失
         if ("received".equals(fs.getReceiveStatus())) {
             return Result.fail("已收货的发货单不可删除，如需退货请联系管理员");
+        }
+        if ("partial".equals(fs.getReceiveStatus())) {
+            return Result.fail("该发货单已收货 "
+                    + (fs.getReceivedQuantity() == null ? 0 : fs.getReceivedQuantity())
+                    + " 件，不可删除，请继续收货完成后再处理");
         }
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {

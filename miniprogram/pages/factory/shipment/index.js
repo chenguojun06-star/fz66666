@@ -1,7 +1,7 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { isFactoryOwner } = require('../../../utils/storage');
+const { isFactoryOwner, getUserInfo } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 const displayHelper = require('../../../utils/displayHelper');
@@ -26,12 +26,12 @@ const COLOR_TO_TAG_CLASS = {
 
 function receiveStatusText(s) {
   if (!s) return '';
-  return displayHelper.displayPurchaseStatusText(s);
+  return displayHelper.displayFactoryShipmentStatusText(s);
 }
 
 function receiveStatusCls(s) {
   if (!s) return 'tag-gray';
-  const color = displayHelper.displayPurchaseStatusColor(s);
+  const color = displayHelper.displayFactoryShipmentStatusColor(s);
   return COLOR_TO_TAG_CLASS[color] || 'tag-gray';
 }
 
@@ -74,7 +74,12 @@ Page({
   onLoad: function () {
     const factory = isFactoryOwner();
     const admin = isAdminOrSupervisor();
+    const userInfo = getUserInfo();
     this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0 });
+    // 工厂账号必须绑定 factoryId，否则后端无法做数据隔离，可能看到全租户数据
+    if (factory && !(userInfo && userInfo.factoryId)) {
+      toast.info('当前工厂账号未绑定工厂，请联系管理员处理');
+    }
   },
 
   /**
@@ -180,9 +185,18 @@ Page({
       // 已报废 / 已取消）。后端 buildQueryWrapper 默认会排除 status='scrapped'，
       // 这里显式声明包含，避免报废单在列表里凭空消失。
       params.includeScrapped = 'true';
+      // 与 PC 端外发工厂页保持一致，只查外发订单
+      params.factoryType = 'EXTERNAL';
       if (this.data.keyword) params.keyword = this.data.keyword;
-      // 未知工厂(factoryId=0)不传后端(后端无factory_id=0记录)，改由前端筛选 factoryId 为空的订单
-      if (this.data.selectedFactoryId != null && this.data.selectedFactoryId !== 0) params.factoryId = this.data.selectedFactoryId;
+      // 工厂账号显式带上 factoryId，与后端 UserContext 形成双重校验，防止上下文异常时看到其他工厂数据
+      const userInfo = getUserInfo();
+      const currentFactoryId = userInfo && userInfo.factoryId ? String(userInfo.factoryId) : '';
+      if (currentFactoryId) {
+        params.factoryId = currentFactoryId;
+      } else if (this.data.selectedFactoryId != null && this.data.selectedFactoryId !== 0) {
+        // 未知工厂(factoryId=0)不传后端(后端无factory_id=0记录)，改由前端筛选 factoryId 为空的订单
+        params.factoryId = this.data.selectedFactoryId;
+      }
       return api.production.listOrders(params).then(function (res) {
         const records = (res && res.records) || [];
         const total = (res && res.total) || 0;

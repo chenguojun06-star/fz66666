@@ -15,9 +15,9 @@ export type { FinishedInventoryRow } from './flattenBySku';
 export function getMainColumns(handlers: {
   handleOutbound: (record: FinishedInventory) => void;
   handleViewInboundHistory: (record: FinishedInventory) => void;
-}): ColumnsType<FinishedInventoryRow> {
+}, indexOffset = 0): ColumnsType<FinishedInventoryRow> {
   return [
-    ...getMainBasicColumns(),
+    ...getMainBasicColumns(indexOffset),
     ...getMainInventoryColumns(),
     ...getMainActionColumns(handlers),
   ];

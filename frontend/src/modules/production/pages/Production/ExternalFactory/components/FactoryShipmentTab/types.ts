@@ -3,6 +3,8 @@ import type { ShipDetailItem, ShippableInfo } from '@/services/production/factor
 
 export interface FactoryShipmentTabProps {
   selectedFactoryId: string | null;
+  /** D-242：外发工厂账号只能发货、不能收货（后端亦校验，此处用于隐藏按钮） */
+  isFactoryAccount?: boolean;
 }
 
 export interface ShipModalProps {
@@ -37,4 +39,6 @@ export interface ExpandedDetailProps {
 export interface ColumnHandlers {
   onReceiveClick: (record: FactoryShipment) => void;
   onDelete: (record: FactoryShipment) => void;
+  /** D-242：外发工厂账号隐藏「收货」按钮 */
+  isFactoryAccount?: boolean;
 }

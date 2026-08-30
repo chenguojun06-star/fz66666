@@ -192,6 +192,16 @@ public class ProductionOrderController {
             }
         }
 
+        // 工厂账号数据隔离兜底：与 /stats 保持一致，防止 token/上下文异常时越权查看全量数据
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            String ctxFactoryId = UserContext.factoryId();
+            if (ctxFactoryId == null) {
+                return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<ProductionOrder>());
+            }
+            params = new java.util.HashMap<>(params);
+            params.put("factoryId", ctxFactoryId);
+        }
+
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
         maskOrderPricesForFactoryAccount(page);
         return Result.success(page);
@@ -208,6 +218,17 @@ public class ProductionOrderController {
             params.putAll(body);
         }
         params.remove("filters");
+
+        // 工厂账号数据隔离兜底：与 /stats 保持一致
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            String ctxFactoryId = UserContext.factoryId();
+            if (ctxFactoryId == null) {
+                return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<ProductionOrder>());
+            }
+            params = new java.util.HashMap<>(params);
+            params.put("factoryId", ctxFactoryId);
+        }
+
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
         maskOrderPricesForFactoryAccount(page);
         return Result.success(page);
