@@ -131,39 +131,6 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
               </Space.Compact>
             </div>
 
-            {printType === 'hangtag' && (<>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>品牌名（留空=使用款名）</div>
-                <Input size="small" value={hang.brandName} placeholder={selectedOrder.styleName || selectedOrder.styleNo}
-                  onChange={e => setHang(h => ({ ...h, brandName: e.target.value }))} maxLength={20} />
-              </div>
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>标题字号: {hang.titleSz}pt</div>
-                <Slider min={8} max={20} step={0.5} value={hang.titleSz} onChange={v => setHang(h => ({ ...h, titleSz: v }))} />
-              </div>
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>信息字号: {hang.infoSz}pt</div>
-                <Slider min={5} max={12} step={0.5} value={hang.infoSz} onChange={v => setHang(h => ({ ...h, infoSz: v }))} />
-              </div>
-              <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
-              <Space orientation="vertical" style={{ width: '100%' }} size={2}>
-                {toggleRow('款号', 'showStyleNo', hang.showStyleNo, setHang)}
-                {toggleRow('颜色尺码', 'showColorSize', hang.showColorSize, setHang)}
-                {toggleRow('成分', 'showComposition', hang.showComposition, setHang)}
-                {toggleRow('质量等级', 'showQualityGrade', hang.showQualityGrade, setHang)}
-                {toggleRow('执行标准', 'showExecuteStandard', hang.showExecuteStandard, setHang)}
-                {toggleRow('安全类别', 'showSafetyCategory', hang.showSafetyCategory, setHang)}
-                {toggleRow('检验员', 'showInspector', hang.showInspector, setHang)}
-                {toggleRow('检验日期', 'showInspectionDate', hang.showInspectionDate, setHang)}
-                {toggleRow('价格', 'showPrice', hang.showPrice, setHang)}
-                {toggleRow('商品编码', 'showUCode', hang.showUCode, setHang)}
-                {toggleRow('订单号', 'showOrderNo', hang.showOrderNo, setHang)}
-                {toggleRow('商品图', 'showImage', hang.showImage, setHang)}
-                {toggleRow('二维码', 'showQr', hang.showQr, setHang)}
-                {toggleRow('条形码', 'showBarcode', hang.showBarcode, setHang)}
-              </Space>
-            </>)}
-
             {printType === 'barcode' && (<>
               <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>码类型</div>

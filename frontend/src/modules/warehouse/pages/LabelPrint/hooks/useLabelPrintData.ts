@@ -5,7 +5,18 @@ import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
 import { printTemplateApi } from '@/services/system/printTemplateApi';
 import type { OrderInfo, PrintType } from '../types';
 import { defaultHang, defaultBar, defaultWash, loadSavedSettings, STORAGE_KEY, type HangSettings, type BarSettings, type WashSettings } from '../constants';
-import { buildHangtagHtml, buildBarcodeHtml, buildWashlabelHtml } from '../printTemplates';
+import { buildBarcodeHtml, buildWashlabelHtml } from '../printTemplates';
+import {
+  buildCertificateMultiPageHtml,
+  buildCertificatePreviewHtml,
+  saveCertPersistedSettings,
+  type CertificateSectionState,
+} from '@/utils/certificateLabelPrintTemplate';
+import {
+  buildDefaultHangtagCert,
+  buildHangtagSkuRows,
+  type HangtagSkuRow,
+} from '../hangtagCert';
 
 export const useLabelPrintData = () => {
   const { message } = App.useApp();
@@ -31,6 +42,12 @@ export const useLabelPrintData = () => {
   const [hang, setHang] = useState<HangSettings>(saved.hang);
   const [bar, setBar] = useState<BarSettings>(saved.bar);
   const [wash, setWash] = useState<WashSettings>(saved.wash);
+
+  // D-230：吊牌改用合格证版式（标题 + 多行标签值 + 条码），支持按颜色×尺码批量出牌
+  const [hangCert, setHangCert] = useState<CertificateSectionState>(() => buildDefaultHangtagCert(null));
+  const [certW, setCertW] = useState(70);
+  const [certH, setCertH] = useState(100);
+  const [hangSkuRows, setHangSkuRows] = useState<HangtagSkuRow[]>([]);
 
   // 保存设置到本地存储
   const saveSettings = useCallback((newHang?: HangSettings, newBar?: BarSettings, newWash?: WashSettings) => {
@@ -157,9 +174,17 @@ export const useLabelPrintData = () => {
         setSelectedOrder(first);
         setSelectedColor(first.colors[0] || '');
         setSelectedSize(first.sizes[0] || '');
+        // 注：吊牌合格证配置与打印行由下方 selectedOrder 副作用统一重建（搜索/切换订单都覆盖）
       }
     } catch (e: any) { message.error(e.message || '搜索失败'); } finally { setLoading(false); }
   }, [keyword, message]);
+
+  // D-230：选中订单变化时重建吊牌合格证配置与打印行
+  // （搜索自动选中、从结果列表手动切换都会走到这里；此时款式档案字段已加载完毕）
+  useEffect(() => {
+    setHangCert(buildDefaultHangtagCert(selectedOrder));
+    setHangSkuRows(buildHangtagSkuRows(selectedOrder));
+  }, [selectedOrder]);
 
   useEffect(() => {
     const url = selectedOrder?.cover;
@@ -183,10 +208,23 @@ export const useLabelPrintData = () => {
     return () => { cancelled = true; };
   }, [selectedOrder?.cover]);
 
-  const generateHangtagHtml = useCallback(async (count: number) => {
+  // D-230：吊牌改用合格证版式——按勾选的「颜色×尺码」行 × 该行打印张数 逐页出牌。
+  // 不再使用旧的零散开关（showStyleNo/showColorSize…），打印张数由每行自行设置。
+  const generateHangtagHtml = useCallback(async () => {
     if (!selectedOrder) return '';
-    return buildHangtagHtml(selectedOrder, selectedColor, selectedSize, hang, coverBase64, count);
-  }, [selectedOrder, selectedColor, selectedSize, hang, coverBase64]);
+    const selected = hangSkuRows.filter((r) => r.printCount > 0);
+    if (selected.length === 0) return '';
+    const pages = selected.flatMap((row) =>
+      Array.from({ length: row.printCount }, () => ({
+        color: row.color,
+        size: row.size,
+        seq: 0, // buildCertificateMultiPageHtml 内部按全局页序重排
+        sku: row.sku,
+      }))
+    );
+    saveCertPersistedSettings(hangCert.rows);
+    return buildCertificateMultiPageHtml(certW, certH, hangCert, selectedOrder.styleNo, pages);
+  }, [selectedOrder, hangSkuRows, hangCert, certW, certH]);
 
   const generateBarcodeHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';
@@ -200,16 +238,29 @@ export const useLabelPrintData = () => {
   }, [selectedOrder, wash]);
 
   const generateHtml = useCallback(async (count: number) => {
-    if (printType === 'hangtag') return generateHangtagHtml(count);
+    if (printType === 'hangtag') return generateHangtagHtml();
     if (printType === 'barcode') return generateBarcodeHtml(count);
     return generateWashlabelHtml(count);
   }, [printType, generateHangtagHtml, generateBarcodeHtml, generateWashlabelHtml]);
 
   const updatePreview = useCallback(async () => {
     if (!selectedOrder) return;
+    // D-230：吊牌预览只渲染单页（取第一行做示例），避免把所有牌都塞进预览框
+    if (printType === 'hangtag') {
+      const sample = hangSkuRows.find((r) => r.printCount > 0);
+      setPreviewHtml(
+        buildCertificatePreviewHtml(certW, certH, hangCert, {
+          styleNo: selectedOrder.styleNo,
+          color: sample?.color || selectedColor || '示例色',
+          size: sample?.size || selectedSize || 'M',
+          seq: 1,
+        })
+      );
+      return;
+    }
     const html = await generateHtml(1);
     setPreviewHtml(html);
-  }, [selectedOrder, generateHtml]);
+  }, [selectedOrder, printType, hangSkuRows, certW, certH, hangCert, selectedColor, selectedSize, generateHtml]);
 
   useEffect(() => {
     const timer = setTimeout(() => { updatePreview(); }, 80);
@@ -219,10 +270,17 @@ export const useLabelPrintData = () => {
     selectedOrder?.fabricComposition, selectedOrder?.qualityGrade, selectedOrder?.executeStandard, selectedOrder?.safetyCategory, selectedOrder?.inspector, selectedOrder?.inspectionDate,
     bar.w, bar.h, bar.codeSz, bar.textSz, bar.showName, bar.codeType,
     wash.w, wash.h,
+    // D-230：吊牌合格证配置 / 纸张尺寸 / 打印行变化时刷新预览
+    hangCert, certW, certH, hangSkuRows,
     updatePreview]);
 
   const handlePrint = async () => {
     if (!selectedOrder) { message.warning('请先搜索订单'); return; }
+    // D-230：吊牌按行出牌，必须至少有一行设置了打印张数
+    if (printType === 'hangtag' && !hangSkuRows.some((r) => r.printCount > 0)) {
+      message.warning('请至少为一个「颜色 × 尺码」设置打印张数');
+      return;
+    }
     setPrinting(true);
     try { safePrint(await generateHtml(printCount)); } catch (e: any) { message.error(e.message || '打印失败'); } finally { setPrinting(false); }
   };
@@ -277,6 +335,11 @@ export const useLabelPrintData = () => {
     hang, setHang,
     bar, setBar,
     wash, setWash,
+    // D-230 吊牌（合格证版式）
+    hangCert, setHangCert,
+    certW, setCertW,
+    certH, setCertH,
+    hangSkuRows, setHangSkuRows,
     // methods
     resetSettings,
     loadTemplates,
