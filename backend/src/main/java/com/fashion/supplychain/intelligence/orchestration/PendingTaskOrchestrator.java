@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -13,12 +14,14 @@ import com.fashion.supplychain.intelligence.dto.PendingTaskDTO;
 import com.fashion.supplychain.intelligence.dto.PendingTaskSummaryDTO;
 import com.fashion.supplychain.production.entity.ProductionExceptionReport;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.helper.MaterialPurchaseQueryHelper;
 import com.fashion.supplychain.production.helper.ScanRecordQueryHelper;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
 import com.fashion.supplychain.production.service.ProductionExceptionReportService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.User;
@@ -70,6 +73,8 @@ public class PendingTaskOrchestrator {
     @Autowired private MaterialPurchaseQueryHelper materialPurchaseQueryHelper;
     @Autowired private ProductionExceptionReportService exceptionReportService;
     @Autowired private ProductionOrderService productionOrderService;
+    // D-237：统计质检不合格件数用，让小云能感知已经发生的质检异常
+    @Autowired private ProductionProcessTrackingService processTrackingService;
     @Autowired private StyleInfoService styleInfoService;
     @Autowired private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
     @Autowired private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
@@ -130,6 +135,14 @@ public class PendingTaskOrchestrator {
         }
         summary.setCategoryCounts(categoryCounts);
 
+        // D-237：补齐小程序端建议卡片读取的平铺字段。
+        // 原先 DTO 只有 categoryCounts 这个 Map，小程序读 overdueOrderCount /
+        // qualityTaskCount 取到的始终是 undefined，建议卡片从来没显示出来过。
+        summary.setOverdueOrderCount(countOfAccumulator(accumulators, "OVERDUE_ORDER"));
+        summary.setQualityTaskCount(countOfAccumulator(accumulators, "QUALITY_INSPECT"));
+        // D-237：质检不合格件数——用户要求「质检有问题的记录要让小云也知道」
+        summary.setQualityDefectCount(countQualityDefects());
+
         PendingTaskDTO topUrgent = all.stream()
                 .filter(t -> "high".equals(t.getPriority()))
                 .findFirst().orElse(null);
@@ -139,6 +152,37 @@ public class PendingTaskOrchestrator {
         }
 
         return summary;
+    }
+
+    /** D-237：从分类累加器里取指定分类的数量，供建议卡片使用 */
+    private int countOfAccumulator(Map<String, CategoryCountAccumulator> acc, String key) {
+        CategoryCountAccumulator a = acc.get(key);
+        return a == null ? 0 : a.count;
+    }
+
+    /**
+     * D-237：统计近 30 天质检不合格件数（defectQuantity > 0）。
+     * 只统计当前租户数据；异常时降级返回 0，不影响待办主流程。
+     */
+    private int countQualityDefects() {
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null || processTrackingService == null) return 0;
+            LocalDateTime since = LocalDateTime.now().minus(30, ChronoUnit.DAYS);
+            LambdaQueryWrapper<ProductionProcessTracking> qw = new LambdaQueryWrapper<>();
+            qw.eq(ProductionProcessTracking::getTenantId, tenantId)
+                    .gt(ProductionProcessTracking::getDefectQuantity, 0)
+                    .ge(ProductionProcessTracking::getQualityTime, since);
+            List<ProductionProcessTracking> list = processTrackingService.list(qw);
+            int total = 0;
+            for (ProductionProcessTracking t : list) {
+                total += (t != null && t.getDefectQuantity() != null) ? t.getDefectQuantity() : 0;
+            }
+            return total;
+        } catch (Exception e) {
+            log.warn("[PendingTask] 质检不合格统计失败: {}", e.getMessage());
+            return 0;
+        }
     }
 
     private List<PendingTaskDTO> collectCuttingTasks() {

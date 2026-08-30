@@ -263,7 +263,10 @@ Component({
   pageLifetimes: {
     show() {
       const now = Date.now();
-      if (!this._lastLoadTime || now - this._lastLoadTime > 30000) {
+      // D-237：先用缓存渲染任务列表，避免每次打开页面都在刷新。
+      // 只有缓存未命中时（首次进入 / 超过 5 分钟）才真正发请求。
+      const hitCache = this._loadTasksFromCache();
+      if (!hitCache && (!this._lastLoadTime || now - this._lastLoadTime > 30000)) {
         this._lastLoadTime = now;
         setTimeout(() => this.loadTasks(), 0);
       }
@@ -404,10 +407,35 @@ Component({
       }
     },
 
-    _loadDynamicSuggestions() {
+    // D-237：建议/洞察缓存 TTL（毫秒）。页面每次 show 都会触发加载，
+    // 原先无脑重新请求导致每次打开内容都在变，用户觉得"老在刷新、一点不专业"。
+    _suggestionCacheTTL: 5 * 60 * 1000,
+    _readSuggestionCache(key) {
+      try {
+        const cached = wx.getStorageSync(key);
+        if (cached && cached.ts && (Date.now() - cached.ts < this._suggestionCacheTTL)) {
+          return cached.data;
+        }
+      } catch (_e) { /* 缓存不可读则按未命中处理 */ }
+      return null;
+    },
+    _writeSuggestionCache(key, data) {
+      try { wx.setStorageSync(key, { ts: Date.now(), data: data }); } catch (_e) { /* 写入失败忽略 */ }
+    },
+
+    _loadDynamicSuggestions(force) {
       // 未登录或 token 不存在时跳过，避免触发 401 请求
       if (!(wx.getStorageSync('auth_token') || '')) return;
       const self = this;
+      const CACHE_KEY = 'ai_dynamic_suggestions';
+      // D-237：命中缓存直接渲染，避免每次打开页面内容跳动
+      if (!force) {
+        const cached = this._readSuggestionCache(CACHE_KEY);
+        if (cached && cached.length > 0) {
+          self.setData({ dynamicSuggestions: cached });
+          return;
+        }
+      }
       api.intelligence.getMyPendingTaskSummary().then(function (res) {
         const data = res;
         if (!data) return;
@@ -418,24 +446,41 @@ Component({
         if (data.qualityTaskCount > 0) {
           suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？' });
         }
+        // D-237：质检异常（不合格/次品）同步给小云，让用户一眼看到并可直接追问
+        if (data.qualityDefectCount > 0) {
+          suggestions.push({ icon: 'icon-alert', label: data.qualityDefectCount + '件不合格', question: '最近有哪些质检不合格的记录？帮我分析原因' });
+        }
         if (data.materialShortageCount > 0) {
           suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？' });
         }
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
+          self._writeSuggestionCache(CACHE_KEY, suggestions);
         }
       }).catch(function (e) { console.warn('[XiaoYun] 待办任务加载失败:', e); });
     },
 
     // P1-3: 加载小云主动洞察（Redis 未读列表，巡检写入的 delay_risk/combo_risk）
-    _loadProactiveInsights() {
+    _loadProactiveInsights(force) {
       if (!(wx.getStorageSync('auth_token') || '')) return;
       const self = this;
+      const CACHE_KEY = 'ai_proactive_insights';
+      // D-237：命中缓存直接渲染，避免每次打开页面都重新拉取导致列表跳动。
+      // 标记已读时会同步更新缓存，因此缓存内容始终与已读状态一致。
+      if (!force) {
+        const cached = this._readSuggestionCache(CACHE_KEY);
+        if (cached) {
+          self.setData({ proactiveInsights: cached });
+          return;
+        }
+      }
       api.intelligence.getProactiveInsights().then(function (res) {
         const list = Array.isArray(res) ? res : [];
         // 最多展示 5 条，按 createdAt 倒序
         list.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-        self.setData({ proactiveInsights: list.slice(0, 5) });
+        const top = list.slice(0, 5);
+        self.setData({ proactiveInsights: top });
+        self._writeSuggestionCache(CACHE_KEY, top);
       }).catch(function (_e) { /* 静默失败，不打扰用户 */ });
     },
 
@@ -446,10 +491,13 @@ Component({
       const prev = this.data.proactiveInsights;
       const next = prev.filter(function (it) { return it.id !== id; });
       this.setData({ proactiveInsights: next });
+      // D-237：同步写回缓存，否则下次打开会命中旧缓存又把已读的洞察显示出来
+      this._writeSuggestionCache('ai_proactive_insights', next);
       const self = this;
       api.intelligence.markProactiveInsightRead(id).catch(function () {
         // 失败回滚
         self.setData({ proactiveInsights: prev });
+        self._writeSuggestionCache('ai_proactive_insights', prev);
       });
     },
 
@@ -467,37 +515,59 @@ Component({
       }
     },
 
+    // D-237：把「过滤今日已忽略项 + 写 data」抽成公共方法，
+    // 缓存链路与网络链路共用，保证两条路径的 dismissed 过滤逻辑完全一致。
+    _applyTasksData(newData) {
+      const dismissed = this._getDismissedKeys();
+      const q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
+      const c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
+      const p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
+      const r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
+      const o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
+      const tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
+      const total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
+      this.setData({
+        qualityTasks: q,
+        cuttingTasks: c,
+        purchaseTasks: p,
+        repairTasks: r,
+        overdueOrders: o,
+        overdueSummary: newData.overdueSummary || null,
+        pendingUsers: newData.pendingUsers || [],
+        pendingRegistrations: newData.pendingRegistrations || [],
+        timeoutReminders: tm,
+        isAdmin: newData.isAdmin || false,
+        isTenantOwner: newData.isTenantOwner || false,
+        totalTasks: total,
+      });
+    },
+
+    // D-237：任务列表缓存。原先每次页面 show 都会重新请求（30 秒节流实际等于每次都刷），
+    // 任务列表内容不停变化，用户反馈"老在刷新、一点不专业"。
+    // 改为首次加载后写入缓存，5 分钟内打开直接读缓存渲染。
+    _loadTasksFromCache() {
+      try {
+        const cached = wx.getStorageSync('ai_tasks_cache');
+        if (cached && cached.ts && (Date.now() - cached.ts < this._suggestionCacheTTL)) {
+          this._applyTasksData(cached.data || {});
+          return true;
+        }
+      } catch (_e) { /* 缓存不可读按未命中处理 */ }
+      return false;
+    },
+
     async loadTasks() {
       if (!(wx.getStorageSync('auth_token') || '')) return;
       if (this.data.taskLoading) return;
       this.setData({ taskLoading: true });
       try {
+        const self = this;
         const mockCtx = {
           data: { loading: false },
           setData: (newData) => {
             if (newData.totalCount !== undefined) {
-              const dismissed = this._getDismissedKeys();
-              const q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
-              const c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
-              const p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
-              const r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
-              const o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
-              const tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
-              const total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
-              this.setData({
-                qualityTasks: q,
-                cuttingTasks: c,
-                purchaseTasks: p,
-                repairTasks: r,
-                overdueOrders: o,
-                overdueSummary: newData.overdueSummary || null,
-                pendingUsers: newData.pendingUsers || [],
-                pendingRegistrations: newData.pendingRegistrations || [],
-                timeoutReminders: tm,
-                isAdmin: newData.isAdmin || false,
-                isTenantOwner: newData.isTenantOwner || false,
-                totalTasks: total,
-              });
+              self._applyTasksData(newData);
+              try { wx.setStorageSync('ai_tasks_cache', { ts: Date.now(), data: newData }); } catch (_e) { /* 写入失败忽略 */ }
             }
           },
         };
