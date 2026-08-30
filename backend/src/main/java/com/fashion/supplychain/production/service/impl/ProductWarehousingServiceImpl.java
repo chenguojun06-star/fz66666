@@ -107,6 +107,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     ProductWarehousing::getId, ProductWarehousing::getWarehousingNo,
                     ProductWarehousing::getOrderId, ProductWarehousing::getOrderNo,
                     ProductWarehousing::getStyleId, ProductWarehousing::getStyleNo, ProductWarehousing::getStyleName,
+                    // D-228：入库列表必须返回 sku_code——此前该列被漏选，导致前端入库记录/出库弹窗
+                    // 拿不到真实商品编码，只能自行拼装（进而出现假编码与整款总量错标到单码的问题）
+                    ProductWarehousing::getSkuCode,
                     ProductWarehousing::getWarehousingQuantity, ProductWarehousing::getQualifiedQuantity,
                     ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getWarehousingType,
                     ProductWarehousing::getWarehouse, ProductWarehousing::getWarehousingStartTime,
