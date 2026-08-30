@@ -419,7 +419,10 @@ public class StyleInfoOrchestrator {
                 String column = extractTooLongColumn(msg);
                 throw new IllegalArgumentException("字段「" + column + "」内容超出长度限制，请精简该字段内容后重试");
             }
-            log.error("保存款号资料违反数据库约束: styleId={}, styleNo={}", styleInfo.getId(), styleInfo.getStyleNo(), e);
+            // D-238：原先这行只打印 styleId/styleNo，不打印具体约束原因，
+            // 线上出现大量该错误时无法定位（既非 duplicate 也非 data too long）。
+            // 补上 msg，便于直接看出是哪个约束/字段。
+            log.error("保存款号资料违反数据库约束: styleId={}, styleNo={}, 原因={}", styleInfo.getId(), styleInfo.getStyleNo(), msg, e);
             throw new IllegalStateException("保存失败: " + msg);
         } catch (IllegalStateException | IllegalArgumentException e) {
             // 业务校验异常（如"该开发样已报废，无法继续流转"）原样透出，

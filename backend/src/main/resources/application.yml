@@ -371,10 +371,19 @@ ai:
     model: ${AGNES_MODEL:agnes-2.5-flash}
     timeout-seconds: 60
   agnes2:
-    api-key: ${AGNES2_API_KEY:}             # Agnes AI 视觉模型 - 备用账号
+    api-key: ${AGNES2_API_KEY:}             # Agnes AI 视觉模型 - 备用账号（D-238：已降级为兜底）
     api-url: ${AGNES2_API_URL:https://apihub.agnes-ai.com/v1/chat/completions}
     model: ${AGNES2_MODEL:agnes-2.5-flash}
     timeout-seconds: 60
+  # D-238：统一视觉模型配置（主视觉模型）。
+  # 原主模型 agnes 频繁 401 鉴权失败并触发 30 分钟熔断，导致视觉功能整体不可用，
+  # 现改用 deepseek-v4-flash-vision-exp。默认复用 DeepSeek 的 Key 与 endpoint；
+  # 若该视觉模型走的是其他网关，用 VISION_API_URL / VISION_API_KEY 覆盖即可。
+  vision:
+    api-key: ${VISION_API_KEY:${DEEPSEEK_API_KEY:}}
+    api-url: ${VISION_API_URL:https://api.deepseek.com/v1/chat/completions}
+    model: ${VISION_MODEL:deepseek-v4-flash-vision-exp}
+    timeout-seconds: ${VISION_TIMEOUT_SECONDS:60}
   vision-models:
     strategy: ${VISION_MODEL_STRATEGY:failover}   # failover（故障转移）/ round-robin（轮询）/ concurrent（并发取最快）
     # 支持配置任意多个视觉模型（通过环境变量 VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY 等）
@@ -429,7 +438,7 @@ ai:
   model:
     fast: ${AI_MODEL_FAST:deepseek-v4-flash}        # 简单查询用这个（快）
     reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}  # 复杂分析用这个
-    vision: ${AI_MODEL_VISION:agnes-2.5-flash}     # 图片分析用这个
+    vision: ${AI_MODEL_VISION:deepseek-v4-flash-vision-exp}   # 图片分析用这个（D-238：原 agnes-2.5-flash 已弃用）
     default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
   openai-compat:
     enabled: ${AI_OPENAI_COMPAT_ENABLED:true}

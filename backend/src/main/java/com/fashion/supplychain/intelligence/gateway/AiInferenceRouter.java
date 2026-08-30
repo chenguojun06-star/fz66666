@@ -177,7 +177,8 @@ public class AiInferenceRouter implements AiInferenceGateway {
         IntelligenceInferenceResult empty = new IntelligenceInferenceResult();
         empty.setSuccess(false);
         empty.setProvider("none");
-        empty.setErrorMessage("没有可用的视觉模型（请配置AGNES_API_KEY或DEEPSEEK_API_KEY）");
+        // D-238：提示文案改为以新的主视觉模型配置为准
+        empty.setErrorMessage("没有可用的视觉模型（请配置 VISION_API_KEY，或旧配置 AGNES_API_KEY / DEEPSEEK_API_KEY）");
         recordCostAndAudit(scene, empty);
         return empty;
     }

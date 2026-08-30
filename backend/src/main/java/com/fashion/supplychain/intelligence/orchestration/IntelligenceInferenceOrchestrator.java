@@ -77,6 +77,12 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${app.public-base-url:}") private String appPublicBaseUrl;
     @Value("${ai.vision-models.strategy:failover}") private String visionModelStrategy;
 
+    // ===== D-238：统一视觉模型（主视觉模型，替代频繁 401 熔断的 agnes）=====
+    @Value("${ai.vision.api-key:}") private String visionApiKey;
+    @Value("${ai.vision.api-url:https://api.deepseek.com/v1/chat/completions}") private String visionApiUrl;
+    @Value("${ai.vision.model:deepseek-v4-flash-vision-exp}") private String visionModelName;
+    @Value("${ai.vision.timeout-seconds:60}") private int visionTimeoutSeconds;
+
     private List<VisionModelConfig> visionModels = new ArrayList<>();
     private AtomicInteger roundRobinIndex = new AtomicInteger(0);
     private ExecutorService visionExecutor;
@@ -117,7 +123,15 @@ public class IntelligenceInferenceOrchestrator {
     private void initVisionModels() {
         visionModels.clear();
 
-        // 1. 向后兼容：旧的 agnes 和 agnes2 配置
+        // 0. D-238：统一视觉模型（deepseek-v4-flash-vision-exp）作为首选。
+        //    原实现把 agnes 排在最前，而 agnes 频繁 401 鉴权失败并触发 30 分钟熔断，
+        //    熔断期内后续请求全部被跳过，导致视觉功能整体不可用。
+        //    现在主模型排在首位，agnes / agnes2 仅作为旧配置兜底排在后面。
+        if (hasText(visionApiKey)) {
+            visionModels.add(new VisionModelConfig("vision", visionApiKey, visionApiUrl, visionModelName, visionTimeoutSeconds));
+        }
+
+        // 1. 向后兼容：旧的 agnes 和 agnes2 配置（仅作兜底）
         if (hasText(agnesApiKey)) {
             visionModels.add(new VisionModelConfig("agnes", agnesApiKey, agnesApiUrl, agnesModel, agnesTimeoutSeconds));
         }
@@ -261,7 +275,8 @@ public class IntelligenceInferenceOrchestrator {
     public boolean isVisionEnabled() {
         if (!visionModels.isEmpty()) return true;
         // 兜底：@PostConstruct 未触发（如单元测试手动 setField）时，直接检查字段
-        if (hasText(agnesApiKey) || hasText(agnes2ApiKey)) return true;
+        // D-238：主视觉模型（ai.vision.api-key）也算已启用
+        if (hasText(visionApiKey) || hasText(agnesApiKey) || hasText(agnes2ApiKey)) return true;
         log.warn("[Vision] 未配置任何视觉模型");
         return false;
     }
@@ -433,7 +448,7 @@ public class IntelligenceInferenceOrchestrator {
                 if (code == 401) {
                     int fails = recordAuthFailure(model.name);
                     if (fails >= AUTH_FAIL_THRESHOLD) {
-                        log.error("[Vision] 模型 {} 连续 {} 次 401 鉴权失败，已熔断 {} 分钟。请检查 API Key 配置（AGNES_API_KEY/AGNES2_API_KEY）",
+                        log.error("[Vision] 模型 {} 连续 {} 次 401 鉴权失败，已熔断 {} 分钟。请检查 API Key 配置（主视觉模型: VISION_API_KEY / 兜底: AGNES_API_KEY、AGNES2_API_KEY）",
                                 model.name, fails, AUTH_CIRCUIT_RESET_MS / 60000);
                     } else {
                         log.warn("[Vision] 模型 {} 401 鉴权失败（{}/{}），请检查 API Key", model.name, fails, AUTH_FAIL_THRESHOLD);

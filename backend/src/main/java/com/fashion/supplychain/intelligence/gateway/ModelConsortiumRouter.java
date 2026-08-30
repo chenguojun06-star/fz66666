@@ -38,7 +38,9 @@ public class ModelConsortiumRouter {
     @Value("${ai.model.reasoning:deepseek-v4-flash}")
     private String reasoningModel;
 
-    @Value("${ai.model.vision:agnes-2.5-flash}")
+    // D-238：视觉模型默认改为 deepseek-v4-flash-vision-exp
+    // （原 agnes-2.5-flash 频繁 401 鉴权失败并触发熔断，已弃用）
+    @Value("${ai.model.vision:deepseek-v4-flash-vision-exp}")
     private String visionModel;
 
     @Value("${ai.model.default:deepseek-v4-flash}")
