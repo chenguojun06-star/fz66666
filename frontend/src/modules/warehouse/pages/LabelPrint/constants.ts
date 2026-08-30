@@ -1,3 +1,5 @@
+import { buildDefaultSections, type WashLabelSectionState } from '@/components/common/WashLabelSectionConfigPanel';
+
 export const defaultHang = {
   w: 100, h: 70, titleSz: 11, infoSz: 6.5, brandName: '',
   showStyleNo: true, showColorSize: true, showComposition: true, showOrderNo: false,
@@ -6,38 +8,29 @@ export const defaultHang = {
   showInspector: true, showInspectionDate: true,
 };
 export const defaultBar = { w: 40, h: 20, codeSz: 7, textSz: 5.5, showName: true, codeType: 'qr' as 'qr' | 'barcode128' };
-export const defaultWash = {
-  w: 30, h: 80,
-  titleSz: 7, textSz: 5, careSz: 4,
-  /** 距剪口偏移（mm）：内容从剪口下方此处开始打印 */
-  topOffsetMm: 30,
-  /** 全局字体缩放（0.5~1.6）：所有分区字号统一微调；内容装不下时轻微缩小保证不截断 */
-  fontScale: 1,
-  /** 行距/上下间距缩放（0.7~1.8）：行与行之间、各分区上下之间的距离 */
-  lineHeightScale: 1,
-  /** 上部（码数/款号/成份）与洗涤区之间的间隔（mm，0~50）：0=紧凑；用户自选距离 */
-  sectionGapMm: 0,
-  /** 码数区（只显示用户输入内容，空=不显示） */
-  showSize: false,
-  sizeText: '',
-  /** 款号区（只显示用户输入内容，空=不显示） */
-  showStyleNo: true,
-  styleNoText: '',
-  /** 制造区域：只显示用户输入内容，无默认文案 */
-  manufacturingText: '',
-  dateText: '',
-  showManufacturing: false,
-  showDate: false,
-  showCareIcons: true,
-  showComposition: true,
-  showWashInstructions: true
+/**
+ * D-232：洗水唛改用订单管理同款「分区配置」模型。
+ * 原先是一堆零散开关（showComposition / showWashInstructions / showCareIcons …），
+ * 内容只能从订单取、用户改不了，也不知道哪个开关对应打印出来哪一块。
+ * 现改为每块内容由用户自行编辑（切换订单时自动用款式资料预填，仍可改）。
+ */
+export interface WashSettings extends WashLabelSectionState {
+  /** 纸张宽 mm */
+  w: number;
+  /** 纸张高 mm */
+  h: number;
+}
+
+export const defaultWash: WashSettings = {
+  w: 30,
+  h: 80,
+  ...buildDefaultSections({ topOffsetMm: 30 }),
 };
 
 export const STORAGE_KEY = 'label-print-settings';
 
 export type HangSettings = typeof defaultHang;
 export type BarSettings = typeof defaultBar;
-export type WashSettings = typeof defaultWash;
 
 export interface SavedSettings {
   hang: HangSettings;
@@ -53,7 +46,9 @@ export const loadSavedSettings = (): SavedSettings => {
       return {
         hang: parsed.hang || defaultHang,
         bar: parsed.bar || defaultBar,
-        wash: parsed.wash || defaultWash,
+        // D-232：旧 localStorage 里的 wash 缺少分区文本字段（compositionText / washText /
+        // careIconCodes 等），浅合并用默认值补齐，避免改版后编辑区出现 undefined
+        wash: parsed.wash ? { ...defaultWash, ...parsed.wash } : defaultWash,
       };
     }
   } catch { /* ignore */ }

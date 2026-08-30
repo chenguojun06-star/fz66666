@@ -17,7 +17,7 @@ const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progr
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
-const { safeNavigate, quickScan } = require('../../utils/uiHelper');
+const { safeNavigate, scanInPage, toast } = require('../../utils/uiHelper');
 
 const app = getApp();
 
@@ -316,7 +316,32 @@ Page({
 
   /* ======== 扫码 ======== */
   onScanTap: function () {
-    quickScan();
+    const that = this;
+    scanInPage(function (parsed, raw) {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success || !parsed.data) {
+        toast('无法识别：' + (raw || ''));
+        return;
+      }
+      const orderNo = parsed.data.orderNo;
+      const styleNo = parsed.data.styleNo;
+      const orders = that.data.orders || [];
+      const matched = orders.find(function (o) {
+        return (orderNo && o.orderNo === orderNo) || (styleNo && o.styleNo === styleNo);
+      });
+      if (matched && matched.id) {
+        safeNavigate({
+          url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(matched.id) + '&orderNo=' + encodeURIComponent(matched.orderNo || '')
+        }).catch(function () {});
+      } else if (orderNo || styleNo) {
+        // D-234：当前列表未匹配到（分页/筛选导致），直接按单号/款号进入工序领取页
+        safeNavigate({
+          url: '/pages/dashboard/process-edit/index?orderNo=' + encodeURIComponent(orderNo || styleNo || '')
+        }).catch(function () {});
+      } else {
+        toast('未识别到订单号');
+      }
+    });
   },
 
   /* ======== 通知数量（小云 AI 助手浮标） ======== */

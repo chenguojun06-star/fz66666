@@ -40,6 +40,10 @@
       <view slot="filter" class="filter-row">
         <!-- 筛选 pill（生产中 / 已完成） -->
         <view class="filter-pills">
+          <view class="filter-pill {{activeFilter==='all'?'filter-pill--active':''}}" data-filter="all" bindtap="onFilterTap">
+            <text>全部</text>
+            <text class="pill-count">{{filterStats.all}}</text>
+          </view>
           <view class="filter-pill {{activeFilter==='production'?'filter-pill--active':''}}" data-filter="production" bindtap="onFilterTap">
             <text>生产中</text>
             <text class="pill-count">{{filterStats.production}}</text>

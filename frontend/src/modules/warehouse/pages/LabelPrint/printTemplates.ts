@@ -71,47 +71,64 @@ ${sizeImg}
 </body></html>`;
 };
 
+/**
+ * D-232：洗水唛改用「分区配置」内容（用户在面板里编辑什么就打印什么）。
+ * 旧的零散开关模型（showComposition / showWashInstructions / showCareIcons）已废弃，
+ * 为兼容历史模板：分区文本为空时回落到订单的款式资料，老模板仍能正常打印。
+ *
+ * @param sizeTexts 按打印行顺序的码数列表；超过 1 个时每个尺码单独出一张（与吊牌按行出牌一致）
+ */
 export const buildWashlabelHtml = async (
   order: OrderInfo,
   wash: WashSettings,
   count: number,
+  sizeTexts?: string[],
 ): Promise<string> => {
   if (!order) return '';
-  const careCodes = wash.showCareIcons ? getEffectiveCareIconCodes(
+
+  // 旧数据/旧模板的回落值（分区里没有用户填写内容时使用）
+  const fallbackComposition = compositionFromSections(order.fabricCompositionParts, order.fabricComposition);
+  const fallbackWash = washTextFromInstructions(order.washInstructions, order.fabricCompositionParts);
+  const fallbackIcons = getEffectiveCareIconCodes(
     order.careIconCodes,
-    { washTempCode: order.washTempCode, bleachCode: order.bleachCode, tumbleDryCode: order.tumbleDryCode, ironCode: order.ironCode, dryCleanCode: order.dryCleanCode },
+    {
+      washTempCode: order.washTempCode,
+      bleachCode: order.bleachCode,
+      tumbleDryCode: order.tumbleDryCode,
+      ironCode: order.ironCode,
+      dryCleanCode: order.dryCleanCode,
+    },
     order.washInstructions,
-  ) : [];
+  );
 
-  const compositionText = wash.showComposition
-    ? compositionFromSections(order.fabricCompositionParts, order.fabricComposition)
-    : '';
-  const washInstructionsText = wash.showWashInstructions
-    ? washTextFromInstructions(order.washInstructions, order.fabricCompositionParts)
-    : '';
-  // 只显示用户输入的内容：无 MADE IN CHINA 兜底
-  const manufacturingText = wash.showManufacturing ? (wash.manufacturingText || '') : '';
-  // 日期：勾选即显示（留空回落当天日期），不勾选不显示
-  const dateText = wash.showDate ? (wash.dateText || todayText()) : '';
-
-  const printData: WashLabelPrintData = {
+  const makeData = (sizeText?: string): WashLabelPrintData => ({
     width: wash.w,
     height: wash.h,
-    compositionText,
-    washInstructionsText,
-    careIconCodes: careCodes,
-    manufacturingText,
-    dateText,
-    // 码数/款号区：只显示用户输入内容；款号默认预填订单款号
-    sizeText: wash.showSize ? (wash.sizeText || '').trim() : '',
-    styleNo: wash.showStyleNo ? (wash.styleNoText || '').trim() || (order.styleNo || '').trim() : '',
+    compositionText: wash.showComposition ? (wash.compositionText || fallbackComposition) : '',
+    washInstructionsText: wash.showWash ? (wash.washText || fallbackWash) : '',
+    careIconCodes: wash.showWash
+      ? (wash.careIconCodes?.length ? wash.careIconCodes : fallbackIcons)
+      : [],
+    // 只显示用户输入的内容：无 MADE IN CHINA 兜底
+    manufacturingText: wash.showManufacturing ? (wash.manufacturingText || '') : '',
+    // 日期：勾选即显示（留空回落当天日期），不勾选不显示
+    dateText: wash.showDate ? (wash.dateText || todayText()) : '',
+    // 码数/款号区：只显示用户输入内容；款号留空时回落订单款号
+    sizeText: wash.showSize ? (sizeText ?? wash.sizeText ?? '').trim() : '',
+    styleNo: wash.showStyleNo ? ((wash.styleNoText || '').trim() || (order.styleNo || '').trim()) : '',
     // 距剪口偏移：内容从剪口下方此处开始打印
     topOffsetMm: wash.topOffsetMm,
     // 全局字体缩放 + 行距 + 成份-洗涤间隔（旧 localStorage 无此字段时回落 0=紧凑）
     fontScale: wash.fontScale,
     lineHeightScale: wash.lineHeightScale,
     sectionGapMm: wash.sectionGapMm ?? 0,
-  };
+  });
+
+  // 批量多码：每个尺码单独一页
+  if (sizeTexts && sizeTexts.length > 1) {
+    return buildWashLabelMultiPageHtml(sizeTexts.map(makeData));
+  }
+  const printData = makeData(sizeTexts?.[0]);
   if (count <= 1) return buildWashLabelPrintHtml(printData);
   return buildWashLabelMultiPageHtml(Array.from({ length: count }, () => printData));
 };

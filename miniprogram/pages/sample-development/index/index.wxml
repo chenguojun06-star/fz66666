@@ -60,9 +60,13 @@
         </view>
 
         <view class="order-info">
-          <!-- 行1：款号 + 状态标签 -->
+          <!-- 行1：款号 + 展开按钮 + 状态标签（D-233：展开按钮放中间，状态标签贴最右） -->
           <view class="info-line1">
             <text class="order-no">{{item.styleNo || '-'}}</text>
+            <view class="expand-mini-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
+              <text class="expand-mini-text">{{item.expanded ? '收起' : '展开'}}</text>
+              <view class="expand-mini-arrow {{item.expanded ? 'expand-mini-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
+            </view>
             <view class="info-badges">
               <view class="status-badge" style="background:{{item._statusColor}}">{{item._statusLabel}}</view>
             </view>
@@ -96,13 +100,7 @@
         >{{item._daysLeftText}}</text>
       </view>
 
-      <!-- 展开明细按钮 -->
-      <view class="order-expand-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
-        <text class="expand-btn-text">{{item.expanded ? '收起明细' : '展开明细'}}</text>
-        <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
-      </view>
-
-      <!-- 展开区：多码多色 + 配置好的子工序 -->
+      <!-- D-231：展开区（展开按钮已并入上方主卡） -->
       <view class="card-expand-area" wx:if="{{item.expanded}}">
         <!-- 多码多色矩阵（如有） -->
         <view wx:if="{{item._matrix.sizes.length > 0}}" class="expand-section">
@@ -123,52 +121,40 @@
           </scroll-view>
         </view>
 
-        <!-- 配置好的子工序列表（按父阶段分组） -->
+        <!-- D-233：子工序进度改成详情页同款时间线，一目了然 -->
         <view class="expand-section">
-          <text class="section-title">子工序明细</text>
+          <text class="section-title">子工序进度</text>
           <view wx:if="{{item._configLoading}}" class="state-hint">加载中...</view>
           <view wx:elif="{{item._needsConfig}}" class="state-hint">该款号尚未配置子工序，请先在款式工序配置中添加</view>
           <view wx:elif="{{item._stages.length === 0}}" class="state-hint">暂无子工序</view>
-          <view wx:else class="stage-tabs">
+          <view wx:else class="proc-timeline">
             <view
               wx:for="{{item._stages}}"
               wx:for-item="st"
               wx:key="key"
-              class="stage-tab {{item._activeStage === st.key ? 'stage-tab--active' : ''}} {{st.percent >= 100 ? 'stage-tab--done' : ''}}"
-              data-card-idx="{{cardIdx}}"
-              data-stage="{{st.key}}"
-              catchtap="onStageTabTap"
+              class="proc-tl-item"
             >
-              <text class="stage-tab-name">{{st.label}}</text>
-              <text class="stage-tab-count" wx:if="{{st.totalCount > 0}}">{{st.completedCount}}/{{st.totalCount}}</text>
+              <view class="proc-tl-rail">
+                <view class="proc-tl-dot-wrap">
+                  <view wx:if="{{st.percent > 0 && st.percent < 100}}" class="proc-tl-pulse"></view>
+                  <view class="proc-tl-dot proc-tl-dot--{{st.percent >= 100 ? 'completed' : (st.percent > 0 ? 'in_progress' : 'pending')}}">
+                    <view wx:if="{{st.percent >= 100}}" class="icon-checkmark-sm"></view>
+                  </view>
+                </view>
+                <view wx:if="{{index < item._stages.length - 1}}" class="proc-tl-line"></view>
+              </view>
+              <view class="proc-tl-body">
+                <view class="proc-tl-info">
+                  <view class="proc-tl-name-row">
+                    <text class="proc-tl-name {{st.percent === 0 ? 'proc-tl-name--pending' : ''}}">{{st.label}}</text>
+                  </view>
+                  <text wx:if="{{st.totalCount > 0}}" class="proc-tl-qty">{{st.completedCount}}/{{st.totalCount}}</text>
+                </view>
+                <view wx:if="{{st.totalCount > 0}}" class="proc-tl-bar">
+                  <view class="proc-tl-fill {{st.percent >= 100 ? 'proc-tl-fill--done' : ''}}" style="width:{{st.percent}}%"></view>
+                </view>
+              </view>
             </view>
-          </view>
-
-          <!-- 当前 tab 下的子工序列表 -->
-          <view wx:if="{{!item._configLoading && !item._needsConfig && item._stages.length > 0}}" class="sub-proc-table">
-            <view class="sub-proc-row sub-proc-row--head">
-              <text class="sp-cell sp-cell--name">工序</text>
-              <text class="sp-cell sp-cell--color">颜色</text>
-              <text class="sp-cell sp-cell--size">尺码</text>
-              <text class="sp-cell sp-cell--qty">数量</text>
-              <text class="sp-cell sp-cell--receiver">领取人</text>
-              <text class="sp-cell sp-cell--time">时间</text>
-              <text class="sp-cell sp-cell--status">状态</text>
-            </view>
-            <view wx:for="{{item._currentSubProcesses}}" wx:for-item="sp" wx:key="key" class="sub-proc-row">
-              <text class="sp-cell sp-cell--name">{{sp.name}}</text>
-              <text class="sp-cell sp-cell--color">{{sp.color || '-'}}</text>
-              <text class="sp-cell sp-cell--size">{{sp.size || '-'}}</text>
-              <text class="sp-cell sp-cell--qty">{{sp.quantity}}</text>
-              <text class="sp-cell sp-cell--receiver">{{sp.receiver || '-'}}</text>
-              <text class="sp-cell sp-cell--time">{{sp.time || '-'}}</text>
-              <text class="sp-cell sp-cell--status">
-                <text wx:if="{{sp.status === 'completed'}}" class="status-tag status-tag--done">已完成</text>
-                <text wx:elif="{{sp.status === 'in_progress'}}" class="status-tag status-tag--progress">{{sp.percent}}%</text>
-                <text wx:else class="status-tag status-tag--pending">待领取</text>
-              </text>
-            </view>
-            <view wx:if="{{item._currentSubProcesses.length === 0}}" class="sub-proc-empty">该阶段暂无子工序</view>
           </view>
         </view>
       </view>

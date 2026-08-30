@@ -5,6 +5,7 @@ import { useLabelPrintData } from './hooks/useLabelPrintData';
 import PrintSettingsPanel from './components/PrintSettingsPanel';
 import OrderDetailCard from './components/OrderDetailCard';
 import HangtagCertPanel from './components/HangtagCertPanel';
+import WashLabelPanel from './components/WashLabelPanel';
 import SaveTemplateModal from './components/SaveTemplateModal';
 
 /** D-230：打印种类说明——放在选择区下方，让用户一眼知道每种是什么 */
@@ -38,6 +39,7 @@ const LabelPrint: React.FC = () => {
     certW, setCertW,
     certH, setCertH,
     hangSkuRows, setHangSkuRows,
+    washSkuRows, setWashSkuRows,
     resetSettings,
     handleSaveTemplate,
     handleLoadTemplate,
@@ -138,8 +140,25 @@ const LabelPrint: React.FC = () => {
             printing={printing}
             onPrint={() => void handlePrint()}
           />
+        ) : printType === 'washlabel' ? (
+          /* 3b) D-232：洗水唛改用订单管理同款布局（分区配置 + 实时预览 + 按颜色尺码出标） */
+          <WashLabelPanel
+            selectedOrder={selectedOrder}
+            wash={wash}
+            setWash={setWash}
+            washSkuRows={washSkuRows}
+            setWashSkuRows={setWashSkuRows}
+            printing={printing}
+            onPrint={() => void handlePrint()}
+            onOpenSaveTemplate={() => setSaveTemplateOpen(true)}
+            templates={templates}
+            onSetDefaultTemplate={handleSetDefaultTemplate}
+            onDeleteTemplate={handleDeleteTemplate}
+            onLoadTemplate={handleLoadTemplate}
+            onResetSettings={resetSettings}
+          />
         ) : (
-          /* 3b) 条码 / 洗水唛：左侧设置 + 右侧预览 */
+          /* 3c) 条码：左侧设置 + 右侧预览 */
           <Row gutter={16}>
             <Col span={7}>
               <PrintSettingsPanel
@@ -159,8 +178,6 @@ const LabelPrint: React.FC = () => {
                 setHang={setHang}
                 bar={bar}
                 setBar={setBar}
-                wash={wash}
-                setWash={setWash}
                 resetSettings={resetSettings}
               />
             </Col>

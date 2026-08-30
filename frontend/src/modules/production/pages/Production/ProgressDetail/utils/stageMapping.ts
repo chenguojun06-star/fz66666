@@ -25,11 +25,12 @@ export function resolveDynamicParent(processName: string): string | undefined {
   return bestParent;
 }
 
+// D-234：默认只保留 4 个核心生产工序；质检/包装属于可选子工序，不应作为默认父阶段
 export const defaultNodes: ProgressNode[] = [
   { id: 'cutting', name: '裁剪', unitPrice: 0 },
-  { id: 'production', name: '生产', unitPrice: 0 },
-  { id: 'quality', name: '质检', unitPrice: 0 },
-  { id: 'packaging', name: '包装', unitPrice: 0 },
+  { id: 'secondaryProcess', name: '二次工艺', unitPrice: 0 },
+  { id: 'carSewing', name: '车缝', unitPrice: 0 },
+  { id: 'tailProcess', name: '尾部', unitPrice: 0 },
 ];
 
 export const getRecordStageName = (r: Record<string, unknown>) => {

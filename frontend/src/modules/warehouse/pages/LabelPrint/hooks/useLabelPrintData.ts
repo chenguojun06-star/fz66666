@@ -14,9 +14,12 @@ import {
 } from '@/utils/certificateLabelPrintTemplate';
 import {
   buildDefaultHangtagCert,
-  buildHangtagSkuRows,
+  buildSkuRows,
   type HangtagSkuRow,
 } from '../hangtagCert';
+import { compositionFromSections, washTextFromInstructions } from '@/utils/washLabelPrintTemplate';
+import { getEffectiveCareIconCodes } from '@/utils/careIcons';
+import { buildDefaultSections } from '@/components/common/WashLabelSectionConfigPanel';
 
 export const useLabelPrintData = () => {
   const { message } = App.useApp();
@@ -48,6 +51,8 @@ export const useLabelPrintData = () => {
   const [certW, setCertW] = useState(70);
   const [certH, setCertH] = useState(100);
   const [hangSkuRows, setHangSkuRows] = useState<HangtagSkuRow[]>([]);
+  // D-232：洗水唛同样按颜色 × 尺码逐行出标（与吊牌各自独立设张数，互不干扰）
+  const [washSkuRows, setWashSkuRows] = useState<HangtagSkuRow[]>([]);
 
   // 保存设置到本地存储
   const saveSettings = useCallback((newHang?: HangSettings, newBar?: BarSettings, newWash?: WashSettings) => {
@@ -104,7 +109,9 @@ export const useLabelPrintData = () => {
       const config = typeof tpl.configJson === 'string' ? JSON.parse(tpl.configJson) : tpl.configJson;
       if (tpl.templateType === 'hangtag') setHang(config);
       else if (tpl.templateType === 'barcode') setBar(config);
-      else if (tpl.templateType === 'washlabel') setWash(config);
+      // D-232：洗水唛模板做字段补齐——改版前保存的模板没有分区文本字段
+      // （compositionText / washText / careIconCodes 等），直接覆盖会让编辑区出现 undefined
+      else if (tpl.templateType === 'washlabel') setWash({ ...defaultWash, ...config });
       message.success(`已加载模板: ${tpl.templateName}`);
     } catch { message.error('模板加载失败'); }
   }, [message]);
@@ -183,7 +190,44 @@ export const useLabelPrintData = () => {
   // （搜索自动选中、从结果列表手动切换都会走到这里；此时款式档案字段已加载完毕）
   useEffect(() => {
     setHangCert(buildDefaultHangtagCert(selectedOrder));
-    setHangSkuRows(buildHangtagSkuRows(selectedOrder));
+    setHangSkuRows(buildSkuRows(selectedOrder));
+    setWashSkuRows(buildSkuRows(selectedOrder));
+    // D-232：切换订单时用款式资料预填洗水唛分区内容，用户仍可在面板里改。
+    // 制造区域 / 日期属跨款通用的用户输入，以及版式偏好（偏移 / 字号 / 行距 / 间隔）都保留，
+    // 不因换款被清空。
+    setWash((prev) => ({
+      ...prev,
+      ...buildDefaultSections({
+        sizeText: selectedOrder?.sizes?.[0] || '',
+        styleNoText: selectedOrder?.styleNo || '',
+        compositionText: compositionFromSections(
+          selectedOrder?.fabricCompositionParts || '',
+          selectedOrder?.fabricComposition || '',
+        ),
+        washText: washTextFromInstructions(
+          selectedOrder?.washInstructions || '',
+          selectedOrder?.fabricCompositionParts || '',
+        ),
+        careIconCodes: getEffectiveCareIconCodes(
+          selectedOrder?.careIconCodes || '',
+          {
+            washTempCode: selectedOrder?.washTempCode,
+            bleachCode: selectedOrder?.bleachCode,
+            tumbleDryCode: selectedOrder?.tumbleDryCode,
+            ironCode: selectedOrder?.ironCode,
+            dryCleanCode: selectedOrder?.dryCleanCode,
+          },
+          selectedOrder?.washInstructions || '',
+        ),
+        manufacturingText: prev.manufacturingText,
+        dateText: prev.dateText,
+        showDate: prev.showDate,
+        topOffsetMm: prev.topOffsetMm,
+        fontScale: prev.fontScale,
+        lineHeightScale: prev.lineHeightScale,
+        sectionGapMm: prev.sectionGapMm,
+      }),
+    }));
   }, [selectedOrder]);
 
   useEffect(() => {
@@ -232,15 +276,21 @@ export const useLabelPrintData = () => {
     return buildBarcodeHtml(selectedOrder, selectedColor, sizes, bar, count);
   }, [selectedOrder, selectedColor, selectedSizes, selectedSize, bar]);
 
-  const generateWashlabelHtml = useCallback(async (count: number) => {
+  // D-232：洗水唛按打印行出标——每行按张数展开、码数逐页带入（与吊牌按行出牌一致）
+  const generateWashlabelHtml = useCallback(async () => {
     if (!selectedOrder) return '';
-    return buildWashlabelHtml(selectedOrder, wash, count);
-  }, [selectedOrder, wash]);
+    const selected = washSkuRows.filter((r) => r.printCount > 0);
+    if (selected.length === 0) return '';
+    const sizePages = selected.flatMap((row) =>
+      Array.from({ length: row.printCount }, () => row.size)
+    );
+    return buildWashlabelHtml(selectedOrder, wash, sizePages.length, sizePages);
+  }, [selectedOrder, washSkuRows, wash]);
 
   const generateHtml = useCallback(async (count: number) => {
     if (printType === 'hangtag') return generateHangtagHtml();
     if (printType === 'barcode') return generateBarcodeHtml(count);
-    return generateWashlabelHtml(count);
+    return generateWashlabelHtml();
   }, [printType, generateHangtagHtml, generateBarcodeHtml, generateWashlabelHtml]);
 
   const updatePreview = useCallback(async () => {
@@ -258,6 +308,8 @@ export const useLabelPrintData = () => {
       );
       return;
     }
+    // D-232：洗水唛预览由 WashLabelSectionConfigPanel 自带且实时联动，这里不再生成
+    if (printType === 'washlabel') return;
     const html = await generateHtml(1);
     setPreviewHtml(html);
   }, [selectedOrder, printType, hangSkuRows, certW, certH, hangCert, selectedColor, selectedSize, generateHtml]);
@@ -269,15 +321,17 @@ export const useLabelPrintData = () => {
     hang.w, hang.h, hang.titleSz, hang.infoSz, hang.brandName, hang.showStyleNo, hang.showColorSize, hang.showComposition, hang.showOrderNo, hang.showPrice, hang.showUCode, hang.showImage, hang.showQr, hang.showBarcode, hang.showQualityGrade, hang.showExecuteStandard, hang.showSafetyCategory, hang.showInspector, hang.showInspectionDate,
     selectedOrder?.fabricComposition, selectedOrder?.qualityGrade, selectedOrder?.executeStandard, selectedOrder?.safetyCategory, selectedOrder?.inspector, selectedOrder?.inspectionDate,
     bar.w, bar.h, bar.codeSz, bar.textSz, bar.showName, bar.codeType,
-    wash.w, wash.h,
+    // D-232：整块洗水唛配置都参与联动（原先只监听 w/h，改分区内容预览根本不刷新）
+    wash, washSkuRows,
     // D-230：吊牌合格证配置 / 纸张尺寸 / 打印行变化时刷新预览
     hangCert, certW, certH, hangSkuRows,
     updatePreview]);
 
   const handlePrint = async () => {
     if (!selectedOrder) { message.warning('请先搜索订单'); return; }
-    // D-230：吊牌按行出牌，必须至少有一行设置了打印张数
-    if (printType === 'hangtag' && !hangSkuRows.some((r) => r.printCount > 0)) {
+    // D-232：吊牌 / 洗水唛都按打印行出标，必须至少有一行设置了张数（条码沿用「打印数量」）
+    const rowBased = printType === 'hangtag' ? hangSkuRows : printType === 'washlabel' ? washSkuRows : null;
+    if (rowBased && !rowBased.some((r) => r.printCount > 0)) {
       message.warning('请至少为一个「颜色 × 尺码」设置打印张数');
       return;
     }
@@ -340,6 +394,7 @@ export const useLabelPrintData = () => {
     certW, setCertW,
     certH, setCertH,
     hangSkuRows, setHangSkuRows,
+    washSkuRows, setWashSkuRows,
     // methods
     resetSettings,
     loadTemplates,

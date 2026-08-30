@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Checkbox, Input, InputNumber, Radio, Table, Tag, Space, Button } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import type { CertificateSectionState } from '@/utils/certificateLabelPrintTemplate';
 import type { HangtagSkuRow } from '../hangtagCert';
 import type { OrderInfo } from '../types';
@@ -57,6 +58,34 @@ const HangtagCertPanel: React.FC<Props> = ({
 
   return (
     <>
+      {/* D-230b：吊牌顶部显示款式图 + 基础信息，让用户知道在打哪个款 */}
+      {selectedOrder && (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <StyleCoverThumb
+              src={selectedOrder.cover || null}
+              styleNo={selectedOrder.styleNo}
+              color={selectedOrder.colors?.[0]}
+              size={72}
+              borderRadius={6}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
+                {selectedOrder.styleName || selectedOrder.styleNo}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                款号：{selectedOrder.styleNo || '-'} · 订单号：{selectedOrder.orderNo || '-'}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                {(selectedOrder.colors?.length ? `颜色：${selectedOrder.colors.join(' / ')}` : '') || '- '}
+                {selectedOrder.colors?.length && selectedOrder.sizes?.length ? ' · ' : ''}
+                {selectedOrder.sizes?.length ? `尺码：${selectedOrder.sizes.join(' / ')}` : ''}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card
         size="small"
         title="吊牌设置（合格证版式）"
@@ -185,17 +214,20 @@ const HangtagCertPanel: React.FC<Props> = ({
             <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
               预览（首张效果 · {certW}×{certH}mm）
             </div>
-            <iframe
-              title="吊牌预览"
-              srcDoc={previewHtml}
-              style={{
-                width: Math.round(certW * 3.4),
-                height: Math.round(certH * 3.4),
-                border: '1px solid var(--color-border)',
-                borderRadius: 6,
-                background: '#fff',
-              }}
-            />
+            {/* D-230b：预览放大到 4.5 倍，允许滚动，不再缩成一小块 */}
+            <div style={{ maxWidth: '100%', overflow: 'auto' }}>
+              <iframe
+                title="吊牌预览"
+                srcDoc={previewHtml}
+                style={{
+                  width: Math.round(certW * 4.5),
+                  height: Math.round(certH * 4.5),
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 6,
+                  background: '#fff',
+                }}
+              />
+            </div>
           </div>
         </div>
       </Card>

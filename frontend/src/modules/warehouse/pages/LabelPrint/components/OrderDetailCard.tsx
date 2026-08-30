@@ -56,9 +56,14 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
     <Card>
       <Row gutter={24}>
         <Col span={7}>
+          {/* D-230b：图片优先直接显示 URL（避免 base64 转码失败导致“暂无图片”），兜底 coverBase64 */}
           <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 12, textAlign: 'center', minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-container)' }}>
-            {coverBase64 ? (
-              <Image src={coverBase64} style={{ maxHeight: 200, objectFit: 'contain' }} />
+            {(coverBase64 || selectedOrder.cover) ? (
+              <Image
+                src={coverBase64 || selectedOrder.cover}
+                style={{ maxHeight: 200, objectFit: 'contain' }}
+                preview={false}
+              />
             ) : (
               <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>
             )}
@@ -223,7 +228,8 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
       <div>
         <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
         <div style={{ border: '1px solid var(--color-border-antd)', borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-base)' }}>
-          <iframe srcDoc={previewHtml} style={{ width: '100%', height: 350, border: 'none' }} title="打印预览" />
+          {/* D-230b：预览区放大（350 → 520），洗水唛/条码也能看得清 */}
+          <iframe srcDoc={previewHtml} style={{ width: '100%', height: 520, border: 'none' }} title="打印预览" />
         </div>
       </div>
     </Card>

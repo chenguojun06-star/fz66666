@@ -127,7 +127,9 @@ function resolveNodesFromOrder(order) {
     return parsed.length ? parsed : defaultNodes;
   }
   const parsed = parseProgressNodes(_normalizeText(raw));
-  return parsed.length ? parsed : defaultNodes;
+  const nodes = parsed.length ? parsed : defaultNodes;
+  // D-234：质检属于可选子工序，不应作为默认父阶段展示；若旧数据/旧配置仍带质检节点，前端过滤掉
+  return nodes.filter(function (n) { return n.name !== '质检'; });
 }
 
 const STAGE_RATE_MAP = [

@@ -81,7 +81,9 @@ export const parseProgressNodes = (raw: string): ProgressNode[] => {
         const progressStage = String(n?.progressStage || '').trim() || undefined;
         return { id, name, unitPrice, progressStage };
       })
-      .filter((n: ProgressNode) => n.name);
+      .filter((n: ProgressNode) => n.name)
+      // D-234：质检属于可选子工序，不应作为默认父阶段展示；旧数据仍带质检节点时前端过滤
+      .filter((n: ProgressNode) => n.name !== '质检');
     return _stripWarehousingNode(normalized);
   } catch {
     return [];

@@ -3709,3 +3709,38 @@ Orchestrator.save(:202) → skuSyncHelper.syncSkuStockOnInbound(qualifiedQuantit
 - 入库明细 sku_code 已由 Runner 6.5 正确回填（直拼格式，各码数量正确）✅
 - 遗留：46 个历史横线格式编码（款式档案旧数据），因 upsert 的"按款色码二次查找"兜底，
   库存归集正确，仅显示格式未统一，不影响功能
+
+## D-229 外发管理按钮归位/进度条修复 + 成品仓库按编码拆行 + 库位三表加图片（2026-08-30）
+
+### 一、手机端外发管理 —— 用户要求"按生产管理的布局来改"
+1. **按钮错位**：`factory/shipment/index.wxml` 的 `.expand-actions` **开标签在展开区顶部、闭标签在底部**，
+   菲号明细/工序进度/颜色尺码被吞进按钮容器，7 个操作按钮反被挤到最底部。
+   `dashboard/index.wxml`（生产管理）同一段结构是正确的（开闭标签都在按钮组内），故仅外发管理中招。
+   修复：8 个按钮归入顶部按钮组、容器即闭合，明细区移到容器外；容器样式补底部分隔线对齐生产管理。
+2. **进度条"截断"**：原用 `progressWidth`/`percentWidth` 中间变量，未赋值时渲染成 `width: %` → 宽度失效。
+   改为与生产管理一致的内联钳制 `calculatedProgress > 100 ? 100 : calculatedProgress`。
+
+### 二、PC 端成品仓库：一个商品编码一行（用户从三方案中选定）
+- 新增 `flattenBySku.ts`：款级记录 → 编码级行，标记 `__rowSpan`/`__rowKey`
+- 图片/成品信息/颜色尺码/库存状态/单价/入库/出库/操作 用 AntD `rowSpan` 合并
+- 库存指标 3 行→2 行（去掉单独占行的"件"），列宽 260→200；入库/出库精简冗余，190→150
+- 颜色/尺码 Tag 超 6 个折叠为 `+N` + tooltip
+
+### 三、库位地图三表加图片
+- 后端 `WarehouseLocationOrchestrator.queryLocationItems` 补 `imageUrl`：
+  成品取 `t_style_info.cover`、物料取 `t_material_database.image`、样衣原本就有；
+  **批量预取后映射**（避免 N+1），失败只 warn 不阻断
+- 前端三表首列加图片，CSS grid 各 +1 列（图片固定 56px）
+
+### 踩坑（新增）
+- **小程序 wxml 标签错位是"哑 bug"**：开闭标签分离不报错，只表现为内容被错误吞并。
+  排查手法：出现"元素跑到不该在的位置"时，优先核对容器的开闭标签配对
+- **小程序 style 绑定慎用中间变量**：`style="width: {{x}}%"` 在 x 未赋值时变成 `width: %`（无效），
+  且静默失败。直接用带兜底的表达式更安全
+- **AntD 合并单元格**：`render` 返回 `{ children, props: { rowSpan } }`，非首行传 0；
+  同时必须换掉会重复的 `rowKey`（否则拆行后 key 冲突）
+
+### 验证
+CI 全绿（后端 140 测试 / 前端 tsc 0 错误 / P0 冒烟）。线上实测：
+成品仓 A-01-1-2 返回 21 条且 imageUrl 有值、样衣仓 5 条有值；
+物料仓线上 18 个库位均无库存（usedCapacity=0），逻辑已就绪待有数据生效。

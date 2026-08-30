@@ -62,8 +62,8 @@ export function buildDefaultHangtagCert(order: OrderInfo | null): CertificateSec
   };
 }
 
-/** 按颜色 × 尺码生成吊牌打印行（默认每码 1 张） */
-export function buildHangtagSkuRows(order: OrderInfo | null): HangtagSkuRow[] {
+/** 按颜色 × 尺码生成打印行（默认每码 1 张）：吊牌与洗水唛共用 */
+export function buildSkuRows(order: OrderInfo | null): HangtagSkuRow[] {
   if (!order) return [];
   const rows: HangtagSkuRow[] = [];
   for (const color of order.colors || []) {
@@ -79,3 +79,6 @@ export function buildHangtagSkuRows(order: OrderInfo | null): HangtagSkuRow[] {
   }
   return rows;
 }
+
+/** @deprecated D-232：吊牌与洗水唛共用同一套行构造，直接用 buildSkuRows */
+export const buildHangtagSkuRows = buildSkuRows;
