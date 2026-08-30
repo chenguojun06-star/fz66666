@@ -289,7 +289,7 @@ public class ProductOutstockOrchestrator {
             String color = current.getColor();
             String size = current.getSize();
             if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                String skuCode = styleNo.trim() + color.trim() + size.trim();
                 productSkuService.updateStock(skuCode, qty);
                 log.info("Restored SKU stock after outstock delete: skuCode={}, qty={}", skuCode, qty);
             } else {

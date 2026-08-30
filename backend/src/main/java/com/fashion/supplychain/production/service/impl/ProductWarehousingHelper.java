@@ -558,7 +558,7 @@ public class ProductWarehousingHelper {
         if (deltaQuantity == 0) {
             return;
         }
-        String styleNo = w.getStyleNo();
+        String styleNo = trimToNull(w.getStyleNo());
 
         // ⚠️ 库存更新只允许从菲号（bundle）获取 color/size
         // 禁止从 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
@@ -569,15 +569,41 @@ public class ProductWarehousingHelper {
             return;
         }
 
-        String color = bundle.getColor();
-        String size = bundle.getSize();
+        String color = trimToNull(bundle.getColor());
+        String size = trimToNull(bundle.getSize());
 
-        if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
-            productSkuService.updateStock(skuCode, deltaQuantity);
-        } else {
+        if (styleNo == null || color == null || size == null) {
             log.warn("[SKUStock] bundle color/size 为空，跳过 SKU 库存更新: warehousingId={}, styleNo={}, color={}, size={}",
                     w.getId(), styleNo, color, size);
+            return;
+        }
+
+        // D-228：商品编码统一为「直拼」格式（款号+颜色+尺码，无分隔符），与款式档案/SKU 表一致。
+        // 原横线格式（%s-%s-%s）自 D-215/216/217 起已匹配不到任何 SKU 行 → 新入库库存静默不增，
+        // 成品仓库列表（按 SKU 表查询）看不到新入库的款；入库明细 sku_code 也始终为 NULL，
+        // 导致库位地图按 NULL 分组塌缩成一行（如"棕色XS 132件"，实为 6 码合计）。
+        String skuCode = styleNo + color + size;
+
+        // 1) 回填入库明细 sku_code（幂等；失败不阻断入库）
+        try {
+            if (!skuCode.equals(trimToNull(w.getSkuCode()))) {
+                productWarehousingMapper.update(null,
+                        new LambdaUpdateWrapper<ProductWarehousing>()
+                                .eq(ProductWarehousing::getId, w.getId())
+                                .set(ProductWarehousing::getSkuCode, skuCode));
+                w.setSkuCode(skuCode);
+            }
+        } catch (Exception e) {
+            log.warn("[SKUStock] 回填入库明细 sku_code 失败（不阻断）: warehousingId={}, skuCode={}, err={}",
+                    w.getId(), skuCode, e.getMessage());
+        }
+
+        // 2) upsert SKU 库存：行存在则累加，缺失则按款式档案补建（失败不阻断入库）
+        try {
+            productSkuService.upsertStockByStyleKeys(skuCode, styleNo, color, size, deltaQuantity, w.getTenantId());
+        } catch (Exception e) {
+            log.error("[SKUStock] SKU 库存同步失败（不阻断入库）: warehousingId={}, skuCode={}, delta={}",
+                    w.getId(), skuCode, deltaQuantity, e);
         }
     }
 

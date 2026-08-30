@@ -243,6 +243,71 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         }
     }
 
+    /**
+     * D-228：入库 SKU 库存同步唯一入口（直拼编码：款号+颜色+尺码）。
+     * 不通过字符串反解色码（直拼编码用 "-" 拆不出三段），由调用方显式传入 styleNo/color/size，
+     * 保证 SKU 行缺失时能正确补建 —— 这是新入库款在成品仓库列表不显示的根治点。
+     */
+    @Override
+    public void upsertStockByStyleKeys(String skuCode, String styleNo, String color, String size, int delta, Long tenantId) {
+        if (!StringUtils.hasText(skuCode) || delta == 0) {
+            return;
+        }
+        Long tid = tenantId != null ? tenantId : UserContext.tenantId();
+
+        // 1) 按编码直接累加（原子更新，命中即返回）
+        int rows = baseMapper.updateStockBySkuCode(skuCode, delta, tid);
+        if (rows > 0) {
+            log.info("[SkuStock] 库存累加成功: skuCode={}, delta={}", skuCode, delta);
+            return;
+        }
+
+        // 2) 编码未命中：按 款号+颜色+尺码(+租户) 二次查找，兼容历史横线/前缀编码，避免建出重复行
+        ProductSku exist = this.getOne(new LambdaQueryWrapper<ProductSku>()
+                .eq(StringUtils.hasText(styleNo), ProductSku::getStyleNo, styleNo)
+                .eq(StringUtils.hasText(color), ProductSku::getColor, color)
+                .eq(StringUtils.hasText(size), ProductSku::getSize, size)
+                .eq(tid != null, ProductSku::getTenantId, tid)
+                .last("LIMIT 1"));
+        if (exist != null) {
+            int current = exist.getStockQuantity() != null ? exist.getStockQuantity() : 0;
+            exist.setStockQuantity(Math.max(0, current + delta));
+            updateById(exist);
+            log.info("[SkuStock] 按款色码命中并累加: 请求编码={}, 命中编码={}, {} -> {}",
+                    skuCode, exist.getSkuCode(), current, exist.getStockQuantity());
+            return;
+        }
+
+        // 3) 仍缺行：仅入库（正数）才补建，出库扣减不凭空建行
+        if (delta <= 0) {
+            log.warn("[SkuStock] SKU 行不存在且为扣减，跳过: skuCode={}, delta={}", skuCode, delta);
+            return;
+        }
+
+        StyleInfo style = styleInfoMapper.selectOne(
+                new LambdaQueryWrapper<StyleInfo>()
+                        .eq(StyleInfo::getStyleNo, styleNo)
+                        .last("LIMIT 1"));
+
+        ProductSku created = new ProductSku();
+        created.setSkuCode(skuCode);
+        created.setStyleId(style != null ? style.getId() : 0L);
+        created.setStyleNo(styleNo);
+        created.setColor(color);
+        created.setSize(size);
+        created.setStatus("ENABLED");
+        created.setStockQuantity(delta);
+        created.setTenantId(tid);
+        if (style != null) {
+            created.setCostPrice(style.getPrice());        // 打板价 → 成本价
+            created.setTagPrice(style.getTagPrice());      // 吊牌价
+            created.setSalesPrice(style.getSalesPrice());  // 销售价
+        }
+        this.save(created);
+        log.info("[SkuStock] SKU 行补建: skuCode={}, stock={}, styleId={}, tenantId={}",
+                skuCode, delta, style != null ? style.getId() : null, tid);
+    }
+
     @Override
     public void updateStockById(Long id, int delta) {
         if (delta == 0 || id == null) {

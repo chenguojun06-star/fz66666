@@ -85,12 +85,16 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
         // 编码与 款号+颜色+尺码 不符（塌缩成同款同色一个码）的行自动重建，后续校准步骤按码数拆回
         // D-227：原条件 `pw.sku_code <> CONCAT(...)` 在 sku_code IS NULL 时结果为 NULL（不成立），
         // 手工/质检入库的 sku_code 全是 NULL，永远不重建——必须用 IFNULL 比较
+        // D-228：⚠️ t_product_warehousing 根本没有 color/size 列（实体里是 @TableField(exist=false) 内存字段），
+        // 原 SQL 直接引用 pw.color/pw.size → 线上执行必报 Unknown column，被 exec() 的 try-catch 吞掉只记 warn，
+        // 自愈从未真正生效。颜色/尺码的权威来源是 t_cutting_bundle（菲号），必须 JOIN 取得。
         exec("重建入库明细编码",
                 "UPDATE t_product_warehousing pw "
-                + "SET pw.sku_code = CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))) "
-                + "WHERE pw.delete_flag = 0 AND pw.style_no IS NOT NULL AND pw.style_no <> '' "
-                + "AND pw.color IS NOT NULL AND pw.color <> '' AND pw.size IS NOT NULL AND pw.size <> '' "
-                + "AND IFNULL(pw.sku_code,'') <> CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(pw.color,'')), TRIM(IFNULL(pw.size,''))))");
+                + "JOIN t_cutting_bundle cb ON cb.id = pw.cutting_bundle_id "
+                + "SET pw.sku_code = CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(cb.color,'')), TRIM(IFNULL(cb.size,''))) "
+                + "WHERE pw.delete_flag = 0 AND IFNULL(pw.style_no,'') <> '' "
+                + "AND IFNULL(cb.color,'') <> '' AND IFNULL(cb.size,'') <> '' "
+                + "AND IFNULL(pw.sku_code,'') <> CONCAT(TRIM(IFNULL(pw.style_no,'')), TRIM(IFNULL(cb.color,'')), TRIM(IFNULL(cb.size,'')))");
 
         // 6.6) D-224c：SKU 编码归一化——行内存有颜色/尺码、且编码与直拼格式仅差分隔符（含 SKU- 前缀）的，
         // 统一为直拼格式，保证后续对账 JOIN（入库编码已直拼）能命中。手动编辑过的行不动。
@@ -118,15 +122,19 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
         //  导致 BR26X1K0651A 这类款入库明细存在但 SKU 行永远补不出来、成品仓库列表不显示）
         // 约束防护：style_id NOT NULL → INNER JOIN 款式档案（档案缺失的跳过不建）；
         // uk_sku_code 全局唯一 → 编码任意租户已存在则跳过；uk_style_color_size → 同款同色同码已有行则跳过
+        // D-228：同上，color/size 必须 JOIN t_cutting_bundle 取，不能用不存在的 pw.color/pw.size
         exec("补建缺失成品SKU",
                 "INSERT INTO t_product_sku (sku_code, style_id, style_no, color, size, stock_quantity, status, tenant_id, create_time, update_time) "
                 + "SELECT w.sku_code, MAX(s.id), w.style_no, w.color, w.size, w.qty, 'ENABLED', w.tenant_id, NOW(), NOW() "
-                + "FROM (SELECT sku_code, tenant_id, MAX(style_no) style_no, MAX(color) color, MAX(size) size, "
-                + "             SUM(IFNULL(warehousing_quantity,0)) qty "
-                + "      FROM t_product_warehousing WHERE delete_flag = 0 "
-                + "        AND IFNULL(style_no,'') <> '' AND IFNULL(color,'') <> '' AND IFNULL(size,'') <> '' "
-                + "        AND IFNULL(sku_code,'') <> '' "
-                + "      GROUP BY sku_code, tenant_id) w "
+                + "FROM (SELECT pw.sku_code, pw.tenant_id, MAX(pw.style_no) style_no, "
+                + "             MAX(cb.color) color, MAX(cb.size) size, "
+                + "             SUM(IFNULL(pw.warehousing_quantity,0)) qty "
+                + "      FROM t_product_warehousing pw "
+                + "      JOIN t_cutting_bundle cb ON cb.id = pw.cutting_bundle_id "
+                + "      WHERE pw.delete_flag = 0 "
+                + "        AND IFNULL(pw.style_no,'') <> '' AND IFNULL(pw.sku_code,'') <> '' "
+                + "        AND IFNULL(cb.color,'') <> '' AND IFNULL(cb.size,'') <> '' "
+                + "      GROUP BY pw.sku_code, pw.tenant_id) w "
                 + "JOIN t_style_info s ON s.style_no = w.style_no AND s.tenant_id = w.tenant_id "
                 + "WHERE NOT EXISTS (SELECT 1 FROM t_product_sku e WHERE e.sku_code = w.sku_code) "
                 + "AND NOT EXISTS (SELECT 1 FROM t_product_sku e2 WHERE e2.style_id = s.id "

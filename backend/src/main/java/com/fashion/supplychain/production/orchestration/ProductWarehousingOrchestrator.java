@@ -82,9 +82,6 @@ public class ProductWarehousingOrchestrator {
     private ProductWarehousingScanSyncHelper scanSyncHelper;
 
     @Autowired
-    private com.fashion.supplychain.production.helper.ProductWarehousingSkuSyncHelper warehousingSkuSyncHelper;
-
-    @Autowired
     private ScanRecordMapper scanRecordMapper;
 
     @Autowired
@@ -198,8 +195,9 @@ public class ProductWarehousingOrchestrator {
         // 同步入库扫码记录 + 工序跟踪"入库"行（订单时间轴/工序跟踪数据链路，失败不阻断主流程）
         scanSyncHelper.syncWarehouseScan(productWarehousing);
 
-        // D-227：同步 SKU 库存与商品编码（回填 sku_code + upsert t_product_sku，失败不阻断主流程）
-        warehousingSkuSyncHelper.syncSkuStockOnInbound(productWarehousing);
+        // 注意：SKU 库存同步统一由 ServiceImpl.saveWarehousingAndUpdateOrder
+        // → WarehousingWriteHelper.executePostSaveSideEffects → ProductWarehousingHelper.updateSkuStock 单点负责。
+        // 此处不得再调用一次，否则库存翻倍（D-228）。
 
         logAppendHelper.appendSingleWarehousing(orderId,
                 productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0,
@@ -284,8 +282,7 @@ public class ProductWarehousingOrchestrator {
         // 同步入库扫码记录 + 工序跟踪"入库"行（订单时间轴/工序跟踪数据链路，失败不阻断主流程）
         list.forEach(scanSyncHelper::syncWarehouseScan);
 
-        // D-227：同步 SKU 库存与商品编码（回填 sku_code + upsert t_product_sku，失败不阻断主流程）
-        list.forEach(warehousingSkuSyncHelper::syncSkuStockOnInbound);
+        // 注意：SKU 库存同步由 ServiceImpl 批量保存链路单点负责，此处不得重复调用（D-228）。
 
         postActionHelper.triggerPostBatchSaveActions(oid, list.size());
         return true;
@@ -824,7 +821,7 @@ public class ProductWarehousingOrchestrator {
             }
 
             if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                String skuCode = styleNo.trim() + color.trim() + size.trim();
                 ProductSku sku = productSkuService.getBySkuCode(skuCode);
                 if (sku != null) {
                     int currentStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;

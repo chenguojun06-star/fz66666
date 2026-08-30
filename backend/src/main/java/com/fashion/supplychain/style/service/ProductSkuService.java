@@ -32,6 +32,15 @@ public interface ProductSkuService extends IService<ProductSku> {
 
     ProductSku getBySkuCode(String skuCode);
 
+    /**
+     * D-228：入库 SKU 库存同步唯一入口（直拼编码：款号+颜色+尺码，无分隔符）。
+     * 与 updateStock(skuCode) 的区别：不通过字符串反解色码（直拼编码无法用 "-" 拆分），
+     * 而是由调用方显式传入 styleNo/color/size，保证 SKU 行缺失时能正确补建。
+     *
+     * @param delta 正数入库累加，负数出库扣减
+     */
+    void upsertStockByStyleKeys(String skuCode, String styleNo, String color, String size, int delta, Long tenantId);
+
     List<ProductSku> listByTenantId(Long tenantId);
 
     /**

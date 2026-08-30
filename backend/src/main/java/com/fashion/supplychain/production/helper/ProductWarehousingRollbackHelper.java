@@ -100,7 +100,7 @@ public class ProductWarehousingRollbackHelper {
         // 用于多码情景会写入错误的 SKU 条目
 
         if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+            String skuCode = styleNo.trim() + color.trim() + size.trim();
             productSkuService.updateStock(skuCode, deltaQuantity);
         } else {
             log.warn("[SKUStock] 无法获取 color/size，跳过 SKU 库存更新: warehousingId={}, styleNo={}, delta={}",

@@ -151,7 +151,7 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
                 String color = outstock.getColor();
                 String size = outstock.getSize();
                 if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                    String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                    String skuCode = styleNo.trim() + color.trim() + size.trim();
                     if (!StringUtils.hasText(outstock.getSkuCode())) {
                         outstock.setSkuCode(skuCode);
                         this.updateById(outstock);
@@ -189,7 +189,7 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
                 String color = o.getColor();
                 String size = o.getSize();
                 if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                    String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                    String skuCode = styleNo.trim() + color.trim() + size.trim();
                     try {
                         productSkuService.updateStock(skuCode, qty);
                     } catch (Exception e) {
