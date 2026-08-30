@@ -48,6 +48,10 @@ Page({
     gridRows: [], gridSizes: [], sizeTotals: [],
     colorInput: '', sizeInput: '',
     colorOptions: [], sizeOptions: [],
+    // chips 渲染数据：{name, selected}——在 JS 里算好选中态，
+    // WXML 只读字段（WXML 表达式的 .indexOf() 方法调用不可靠，
+    // 曾导致选中 class 不生效、看不出有没有选）
+    colorChips: [], sizeChips: [],
     // 基础属性库（成组预设，读 t_dict 的 color_group / size_group）
     attrLibOpen: false, attrLibTarget: '', attrLibTitle: '', attrLibGroups: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
@@ -96,6 +100,8 @@ Page({
     });
 
     if (!isNoData && colors.length && sizes.length) { this._rebuildLines(); }
+    // 初始化 chips 选中态（无资料下单时 options 为空，也要保证字段就绪）
+    this._syncChips();
 
     this._genOrderNo();
 
@@ -109,6 +115,25 @@ Page({
     });
   },
 
+  /**
+   * 同步 chips 选中态到渲染数据。
+   * 单点收敛：色/码变化的入口（添加/toggle/全选/清空/属性库）最终都走
+   * _rebuildLines 或 onClearSelection，在它们末尾调用本方法即可全覆盖。
+   */
+  _syncChips: function () {
+    const selC = this.data.selectedColors;
+    const selS = this.data.selectedSizes;
+    const toChips = function (options, selected) {
+      return (options || []).map(function (name) {
+        return { name: name, selected: selected.indexOf(name) !== -1 };
+      });
+    };
+    this.setData({
+      colorChips: toChips(this.data.colorOptions, selC),
+      sizeChips: toChips(this.data.sizeOptions, selS),
+    });
+  },
+
   _rebuildLines: function () {
     const cs = this.data.selectedColors; const ss = this.data.selectedSizes;
     const old = {};
@@ -118,6 +143,7 @@ Page({
     this.setData({ orderLines: lines });
     this._recalcTotal();
     this._rebuildGrid();
+    this._syncChips();
   },
 
   _recalcTotal: function () {
@@ -495,6 +521,7 @@ Page({
   onClearSelection: function () {
     this.setData({ selectedColors: [], selectedSizes: [], orderLines: [], orderQuantity: 0 });
     this._rebuildGrid();
+    this._syncChips();
   },
 
   onQuickFillInput: function (e) { this.setData({ quickFillQty: parseInt(e.detail.value) || 0 }); },

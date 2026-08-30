@@ -158,8 +158,8 @@
           <input class="add-inp flex-1" value="{{colorInput}}" bindinput="onColorInput" bindconfirm="onColorAdd" placeholder="输入颜色，可粘贴「黑色,白色」批量添加" confirm-type="done" />
           <view class="f-btn" bindtap="onColorAdd"><text>添加</text></view>
         </view>
-        <view class="chip-wrap" wx:if="{{colorOptions.length > 0}}">
-          <view class="chip {{selectedColors.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{colorOptions}}" wx:key="*this" data-c="{{item}}" bindtap="onColorToggle">{{item}}</view>
+        <view class="chip-wrap" wx:if="{{colorChips.length > 0}}">
+          <view class="chip {{c.selected ? 'on' : ''}}" wx:for="{{colorChips}}" wx:for-item="c" wx:key="name" data-c="{{c.name}}" bindtap="onColorToggle">{{c.name}}<text wx:if="{{c.selected}}" class="chip-check">✓</text></view>
         </view>
         <view wx:else class="blk-empty">暂无颜色，请上方添加</view>
       </view>
@@ -177,8 +177,8 @@
           <input class="add-inp flex-1" value="{{sizeInput}}" bindinput="onSizeInput" bindconfirm="onSizeAdd" placeholder="输入码数，可粘贴「S,M,L」批量添加" confirm-type="done" />
           <view class="f-btn" bindtap="onSizeAdd"><text>添加</text></view>
         </view>
-        <view class="chip-wrap" wx:if="{{sizeOptions.length > 0}}">
-          <view class="chip {{selectedSizes.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{sizeOptions}}" wx:key="*this" data-s="{{item}}" bindtap="onSizeToggle">{{item}}</view>
+        <view class="chip-wrap" wx:if="{{sizeChips.length > 0}}">
+          <view class="chip {{s.selected ? 'on' : ''}}" wx:for="{{sizeChips}}" wx:for-item="s" wx:key="name" data-s="{{s.name}}" bindtap="onSizeToggle">{{s.name}}<text wx:if="{{s.selected}}" class="chip-check">✓</text></view>
         </view>
         <view wx:else class="blk-empty">暂无码数，请上方添加</view>
       </view>
