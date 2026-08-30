@@ -60,8 +60,11 @@ Page({
     var coverImage = '';
 
     if (isNoData) {
-      // 无资料下单：使用用户上传的临时图片
-      coverImage = decodeURIComponent(opts.tempImage || '');
+      // 无资料下单有两条路径：
+      //   方式一（上传图片）→ 传 tempImage（本地临时文件 wxfile://）
+      //   方式二（选已有款式）→ 传 coverImage（款式网络图）
+      // 两条都要拿到封面，tempImage 作为兜底
+      coverImage = decodeURIComponent(opts.coverImage || opts.tempImage || '');
     } else {
       // 有资料下单：使用款式的封面图
       coverImage = decodeURIComponent(opts.coverImage || '');
@@ -552,10 +555,42 @@ Page({
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
       wx.showToast({ title: '下单成功', icon: 'success' });
+      // 图片在订单创建成功后再保存：图片是附属信息，失败不应拖累下单主流程
+      self._persistCoverImage(d.orderNo);
       setTimeout(function () { wx.navigateBack(); }, 1500);
     }).catch(function (err) {
       self.setData({ submitting: false });
       wx.showToast({ title: (err && err.message) || '下单失败', icon: 'none', duration: 3000 });
+    });
+  },
+
+  /**
+   * 保存款式图到订单（t_order_image）
+   *
+   * ★ 为什么必须做：无资料下单没有款式档案，订单的 coverImage/styleImage
+   *   是查询时按 styleNo 从款式档案动态回填的（@TableField(exist=false)，不入库）。
+   *   无资料订单 styleNo 为空 → 三级回退全部落空 → 用户上传的图片永久丢失。
+   *   所以必须显式把图片存进 t_order_image，由后端 fillCoverFromOrderImages 回填。
+   *
+   * ★ 时序：订单必须先创建成功（后端 addOrderImage 会校验订单存在），
+   *   且图片失败只提示、不影响订单本身。
+   */
+  _persistCoverImage: function (orderNo) {
+    const cover = this.data.coverImage;
+    if (!orderNo || !cover) return;
+
+    // 只有本地临时文件需要上传（wx.chooseImage 返回 wxfile:// 或 http://tmp/ 开头）
+    const isLocal = cover.indexOf('wxfile://') === 0 || cover.indexOf('http://tmp/') === 0;
+    const uploadTask = isLocal
+      ? api.common.uploadImage(cover)
+      : Promise.resolve(cover);
+
+    uploadTask.then(function (url) {
+      if (!url) return null;
+      return api.production.addOrderImage(orderNo, url, url);
+    }).catch(function () {
+      wx.showToast({ title: '订单已创建，款式图保存失败，可在订单详情补传', icon: 'none', duration: 3000 });
+      return null;
     });
   },
 });

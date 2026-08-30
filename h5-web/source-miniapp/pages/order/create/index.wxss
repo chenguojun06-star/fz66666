@@ -1,6 +1,12 @@
 page { background-color: var(--color-bg-page); }
 
+.page {
+  display: flex; flex-direction: column;
+  height: 100vh; box-sizing: border-box;
+}
+
 .tab-bar {
+  flex-shrink: 0;
   display: flex;
   background: var(--color-border);
   padding: 4px;
@@ -29,8 +35,19 @@ page { background-color: var(--color-bg-page); }
   box-shadow: var(--shadow-sm);
 }
 
-.tab-content {
-  min-height: 100vh;
+/* 页面竖向 flex：tab 固定、上传区固定、款式列表占满剩余高度。
+   这样无论上面有没有上传区，列表都能自适应，不用写死 calc(100vh - Npx) */
+.list-section {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.list-hint { padding: 14px var(--page-padding-x) 2px; }
+.list-hint-t {
+  font-size: var(--font-size-md); font-weight: 600; color: var(--color-text-primary);
+}
+.list-hint-d {
+  display: block; margin-top: 2px;
+  font-size: var(--font-size-xs); color: var(--color-text-tertiary);
 }
 
 .container { padding-top: env(safe-area-inset-top); min-height: 100vh; }
@@ -51,7 +68,7 @@ page { background-color: var(--color-bg-page); }
 
 .state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: var(--font-size-md); color: var(--color-text-tertiary); }
 
-.grid-scroll { height: calc(100vh - env(safe-area-inset-top) - 120px); -webkit-overflow-scrolling: touch; }
+.grid-scroll { flex: 1; min-height: 0; -webkit-overflow-scrolling: touch; }
 .grid { display: flex; flex-wrap: wrap; padding: 8rpx var(--page-padding-x); box-sizing: border-box; }
 
 .card {
@@ -358,20 +375,21 @@ page { background-color: var(--color-bg-page); }
 .submit-btn:active { opacity: 0.9; transform: scale(0.98); }
 .submit-btn::after { border: none; }
 
-/* 无资料下单 - 上传图片页面 */
+/* 无资料下单 - 上传图片区（页面上部，下方接款式列表） */
 .no-data-upload-section {
-  padding: 40px var(--page-padding-x);
+  flex-shrink: 0;
+  padding: 20px var(--page-padding-x) 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 60vh;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .upload-hint {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 16px;
 }
 
 .hint-icon {
@@ -379,15 +397,15 @@ page { background-color: var(--color-bg-page); }
   margin-bottom: 16px;
 }
 
-.hint-title {
-  font-size: var(--font-size-4xl);
+.hint-h {
+  font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .hint-desc {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -395,7 +413,7 @@ page { background-color: var(--color-bg-page); }
 .image-upload-large {
   width: 100%;
   max-width: 400px;
-  height: 300px;
+  height: 200px;
   border: 2px dashed var(--color-border);
   border-radius: var(--radius-xl);
   display: flex;
@@ -469,15 +487,15 @@ page { background-color: var(--color-bg-page); }
 .next-btn {
   width: 100%;
   max-width: 400px;
-  height: 48px;
-  line-height: 48px;
+  height: var(--btn-height-lg);
+  line-height: var(--btn-height-lg);
   background: var(--color-primary);
   color: var(--color-text-white);
   border-radius: var(--radius-xl);
   font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
   border: none;
-  margin-top: 32px;
+  margin-top: 16px;
   box-shadow: var(--shadow-md);
 }
 

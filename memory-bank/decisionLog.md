@@ -3783,3 +3783,61 @@ CI 全绿（后端 140 测试 / 前端 tsc 0 错误 / P0 冒烟）。线上实�
 
 ### 待办
 微信开发者工具真机验收；下批做基础属性库齿轮 + 客户选择器。
+
+---
+
+## D-247 无资料下单图片丢失根治（P0）+ 开放「从已有款式下单」（2026-08-30）
+
+### 背景
+D-246 交付后主动审查下单链路，发现一个比码数一坨**更严重的 P0**：
+无资料下单上传的款式图片**提交后 100% 丢失**。
+
+### 根因（四层叠加）
+1. `wx.chooseImage` 返回本地临时路径（`wxfile://`），不是持久 URL
+2. 提交 payload 完全没有图片字段
+3. `ProductionOrder.coverImage` / `styleImage` 是 **`@TableField(exist = false)`**——不入库
+4. 回填逻辑 `fillStyleCover` 三级回退**全部依赖 styleNo**
+   （款式 cover → 款式附件 → 模板封面）；无资料订单无款式档案 → 三级全空
+
+### 关键决策
+1. **不新建表、不写 Flyway**：后端早有 `OrderImage` + `OrderImageOrchestrator` +
+   `POST /api/production/order-image`，小程序 `api.production.addOrderImage()` 也已封装。
+   **改代码前先搜是否已有现成体系**，比新造轮子安全得多。
+2. **时序：先建单，再存图**。图片是附属信息，上传失败不应阻断下单；
+   且后端 `addImage` 内部会校验订单存在，顺序上本来就要求先建单。
+3. **回填优先级：订单自带图 > 款式三级回退**。若订单自带图存在，
+   它就是用户真正上传的那张，语义上优先。
+4. **跨租户必须显式带 tenant_id**：本项目**未启用** MyBatis-Plus 多租户插件
+   （全局搜 `TenantLineInnerInterceptor` 零结果），`lambdaQuery()` 不会自动加租户条件。
+   取租户用 `UserContext.tenantId()`（静态方法，非 `getTenantId()`——后者是实例方法）。
+5. **改在 `fillStyleCover` 方法内部**而非各调用点：该方法有 6 个调用点
+   （订单列表、订单详情、裁剪任务、成品入库待办、成品入库查询、另一处列表），
+   改方法内部 → 全部自动受益，不用逐个改。
+6. **fail-safe 是硬要求**：回填属装饰逻辑，任何异常只 warn 不抛，绝不能让列表/详情查询失败。
+
+### P1：无资料下单两条路径
+原实现在 noData tab 加载全量款式却**不显示列表**（wxml 只在 style tab 渲染），
+属于死代码。改为"上传图片 / 选已有款式"两条路径并存——
+现实中"款已在系统里但这次颜色码数和档案不同"是常见场景，走无资料下单选款更合理。
+
+布局同步改 flex（`.page` 竖向 flex + `.list-section` flex:1 + `.grid-scroll` flex:1），
+替代原 `calc(100vh - 120px)` 硬编码，上面有无上传区都能自适应。
+
+### 自查发现并修复的引入问题
+P1 让无资料下单支持选款式后，`onStyleTap` 会传 `coverImage`（网络图），
+但 `form/index.js` 的 isNoData 分支**只读 `tempImage`** → 方式二封面丢失。
+**教训：新增入口路径时，必须回头检查接收方是否覆盖了该入口的参数形态。**
+
+### 本批刻意未做（风险 > 收益）
+- 删死页面 `pages/order/no-data-create`：注册在 `app.json` + `h5-web/generated/route-manifest.json`，
+  改 app.json 出错会导致小程序启动失败，收益（清一个空壳页）远小于风险
+- 款式批量多选下单（改动面广）、`pageSize:500` 下调（可能加载不全）、
+  款号强制校验（会阻碍"确实没款号"的正常场景）
+
+### 验证
+后端 `mvn compile` BUILD SUCCESS（EXIT=0，2297 源文件）；
+四副本 `node --check` 全过、3 文件 MD5 一致；
+WXML 处理器（create 5 / form 36）全部有 JS 实现、标签全闭合；WXSS 括号配对。
+
+### 待办
+真机验收无资料下单图片链路；下批做基础属性库齿轮 + 客户选择器。

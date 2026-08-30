@@ -4874,3 +4874,65 @@ if (!urlTenantId.equals(tokenTenantId)) {  // ⚠️ tokenTenantId为null时抛N
 客户选择器（PC 用 `CustomerSelect` → `/crm/customers/list`）因小程序无 crm 模块，暂时保留自由输入。
 
 **待办**：微信开发者工具真机验收（码数多列横滑 + 键盘弹出不挤压 + 按行/列铺量手感）。
+
+## 2026-08-30 D-247 无资料下单图片丢失根治（P0）+ 无资料下单开放选款（P1）
+
+**用户反馈**：`ok` 确认 D-246；`你看看怎么样优化这些` → 主动审查下单链路 →
+`可以 移动要做好这些啊 不要出现问题`（移动端，要求稳妥）。
+
+### P0：无资料下单上传的图片 100% 丢失（功能性缺陷）
+
+**根因链**：
+1. `create/index.js chooseNoDataImage` 只拿 `wx.chooseImage` 的**本地临时路径**（`wxfile://`）
+2. `goToNoDataOrderForm` 传 `tempImage=` 到表单页，仅用于页面显示
+3. `form/index.js _doSubmit` 的 payload **完全没有图片字段**
+4. `ProductionOrder.coverImage` / `styleImage` 是 **`@TableField(exist = false)`**——不入库，
+   由 `ProductionOrderQueryService.fillStyleCover` 按 **styleNo** 从款式档案三级回退动态填充
+5. 无资料下单没有款式档案、styleNo 也可能为空 → 三级回退（款式 cover / 附件 / 模板）**全部落空**
+   → 图片永久丢失（本地临时路径重启小程序即失效）
+
+**修复（零 Flyway 迁移，复用后端既有 OrderImage 体系）**：
+
+- **小程序** `form/index.js`
+  - 新增 `_persistCoverImage(orderNo)`：本地临时路径才上传（`wxfile://` / `http://tmp/` 开头），
+    网络 URL（选已有款式场景）直接存
+  - 时序：**建单成功后再存图**——图片是附属信息，上传失败只提示，不拖累下单主流程
+    （且后端 `OrderImageOrchestrator.addImage` 会校验订单存在，必须先建单）
+  - 修复 onLoad：无资料下单**两条路径**都要拿封面（方式一传 `tempImage`，方式二传 `coverImage`），
+    原实现 isNoData 分支只读 `tempImage` → 方式二封面丢失（本次 P1 引入后自查发现）
+- **后端** `ProductionOrderQueryService`
+  - 新增 `fillCoverFromOrderImages(records)`：按 orderNo 批量查 `t_order_image` 回填
+  - 调用点：`fillStyleCover` 末尾（覆盖三级回退结果）+ `styleNos.isEmpty()` 提前返回分支
+  - **跨租户**：项目**未启用** MyBatis-Plus 多租户插件（`TenantLineInnerInterceptor` 零结果），
+    必须显式 `.eq(OrderImage::getTenantId, tenantId)`，用 `UserContext.tenantId()`（静态方法）取
+  - fail-safe：异常只 warn 不抛，绝不影响订单列表/详情主流程
+  - **覆盖范围**：`fillStyleCover` 共 6 个调用点（订单列表 enrichOrderList / 详情 fillDetails /
+    裁剪任务 / 成品入库待办 / 成品入库查询 / 另一处列表），改在方法内部 → **全部自动受益**
+
+### P1：无资料下单开放「从已有款式下单」
+
+原 `create/index.js` 在 noData tab 加载全量款式存进 `_allStyles`，
+但 wxml 的 noData 分支**只渲染上传区，列表根本不显示** → 那个 `pageSize:500` 请求白发（死代码）。
+
+改为两条路径并存：
+- 方式一：上传款式图片（原有）
+- 方式二：从已有款式下单（沿用款式资料，自行填颜色码数）
+
+布局改 flex：`.page` 竖向 flex，`.list-section` 占满剩余高度，
+`.grid-scroll` 用 `flex:1` 替代原 `calc(100vh - 120px)` 硬编码 → 上面有无上传区都能自适应。
+
+### 本批**未做**（风险 > 收益，已向用户说明）
+- **删死页面 `pages/order/no-data-create`**：注册在 `app.json` 与 `h5-web/generated/route-manifest.json`，
+  改 app.json 出错会导致小程序启动失败，收益（清理空壳页）远小于风险 → 记低优先级
+- **款式批量多选下单**：改动面广，本批不做
+- **`pageSize: 500` 下调**：可能导致款式加载不全，保持原值
+- **款号强制校验**：无资料下单本就可能没款号，强制校验会阻碍正常场景；保持 placeholder 提示
+
+### 验证
+- [x] 后端 `mvn compile` **BUILD SUCCESS**（EXIT=0，2297 源文件，仅 2 个历史 warning）
+- [x] 四副本 `node --check` 全过
+- [x] 3 文件 MD5 四副本完全一致
+- [x] WXML 结构：create 页 5 处理器 / form 页 36 处理器，全部有 JS 实现，标签全闭合
+- [x] WXSS 括号：create 93/93、form 79/79
+- [x] 自查发现并修复：无资料下单方式二封面丢失
+- [ ] 真机验收：无资料下单上传图 → 订单列表/详情能看到图

@@ -5,6 +5,21 @@
 
 ## 已完成
 
+### 2026-08-30 D-247 无资料下单图片丢失根治（P0）+ 开放「从已有款式下单」（P1）✅（后端+小程序，已提交推送）
+
+- [x] **P0 根因**：订单 `coverImage`/`styleImage` 是 `@TableField(exist=false)`，靠 styleNo 三级回退；
+      无资料下单无款式档案 → 用户上传的图片 100% 丢失
+- [x] 小程序 `_persistCoverImage`：建单成功后上传并存 `t_order_image`（失败不阻断下单）
+- [x] 后端 `fillCoverFromOrderImages`：按 orderNo 回填，显式带 tenant_id，fail-safe
+- [x] 覆盖 6 个 fillStyleCover 调用点（列表 + 详情 + 裁剪 + 入库两处 + 另一列表）自动受益
+- [x] 零 Flyway 迁移（复用既有 OrderImage 体系）
+- [x] P1：无资料下单两条路径（上传图片 / 选已有款式），修复原「列表不显示」死代码
+- [x] 布局改 flex，`.grid-scroll` 去 `calc(100vh-Npx)` 硬编码
+- [x] 自查修复：方式二（选已有款式）封面丢失（onLoad 只读 tempImage）
+- [x] QA：后端 BUILD SUCCESS / 四副本 node --check / MD5 一致 / WXML 处理器全有实现
+- [ ] 待真机验收：无资料下单上传图 → 列表与详情能看到
+- [ ] 低优先级：删死页面 `pages/order/no-data-create`（风险 > 收益，本批未动）
+
 ### 2026-08-30 D-246 手机端下单页码数一坨根治 + 布局工整化 + 对齐PC批量操作 ✅（纯小程序，待开发者工具验收）
 
 - [x] 根因：小程序只按 `,` 切码数，旧 `/`-拼接数据（`XS(155/72A)/S(160/76)/...`）整段变 1 个 chip

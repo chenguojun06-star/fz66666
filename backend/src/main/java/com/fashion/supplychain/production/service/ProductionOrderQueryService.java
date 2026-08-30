@@ -7,9 +7,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
+import com.fashion.supplychain.production.entity.OrderImage;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
+import com.fashion.supplychain.production.service.OrderImageService;
 import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 import com.fashion.supplychain.production.helper.OrderProgressFillHelper;
@@ -77,6 +79,9 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private StyleAttachmentService styleAttachmentService;
+
+    @Autowired
+    private OrderImageService orderImageService;
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
@@ -440,6 +445,9 @@ public class ProductionOrderQueryService {
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toSet());
         if (styleNos.isEmpty()) {
+            // 无款号订单（无资料下单）——款式档案三级回退全部落空，
+            // 但仍要回填订单自带图（下单时上传到 t_order_image 的那张）
+            fillCoverFromOrderImages(records);
             return;
         }
 
@@ -470,6 +478,85 @@ public class ProductionOrderQueryService {
 
         fillCoverFromAttachments(records, styleIdByStyleNo);
         fillCoverFromTemplates(records);
+        // 订单自带图（无资料下单上传的那张）优先级最高，覆盖前面三级回退的结果
+        fillCoverFromOrderImages(records);
+    }
+
+    /**
+     * 无资料下单图片回填：图片存于 t_order_image（下单时上传），按 orderNo 匹配。
+     *
+     * ★ 为什么必须有这一步：
+     *   款式档案三级回退（cover / 附件 / 模板）全都依赖 styleNo，
+     *   而无资料下单没有款式档案，styleNo 也可能为空 → 三级全部落空，图片永久丢失。
+     *   订单自带图是这类订单唯一的图片来源。
+     *
+     * ★ 为什么放在最后且覆盖：
+     *   若订单自带图存在，它就是用户下单时真正上传的那张，语义上优先于款式档案封面。
+     *
+     * ★ 跨租户：项目未启用 MyBatis-Plus 多租户插件，tenant_id 必须显式带上。
+     *   fail-safe：任何异常只 warn 不抛出，绝不影响订单列表主流程。
+     */
+    private void fillCoverFromOrderImages(List<ProductionOrder> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        Long tenantId;
+        try {
+            tenantId = UserContext.tenantId();
+        } catch (Exception e) {
+            tenantId = null;
+        }
+        if (tenantId == null) {
+            return;
+        }
+
+        List<String> orderNos = records.stream()
+                .map(ProductionOrder::getOrderNo)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (orderNos.isEmpty()) {
+            return;
+        }
+
+        List<OrderImage> images;
+        try {
+            images = orderImageService.lambdaQuery()
+                    .in(OrderImage::getOrderNo, orderNos)
+                    .eq(OrderImage::getTenantId, tenantId)
+                    .eq(OrderImage::getDeleteFlag, 0)
+                    .orderByAsc(OrderImage::getSortOrder)
+                    .orderByAsc(OrderImage::getId)
+                    .list();
+        } catch (Exception e) {
+            log.warn("[OrderQuery] 订单图片回填失败，跳过: {}", e.getMessage());
+            return;
+        }
+        if (images == null || images.isEmpty()) {
+            return;
+        }
+
+        Map<String, String> coverByOrderNo = new HashMap<>();
+        for (OrderImage img : images) {
+            if (img == null || !StringUtils.hasText(img.getImageUrl())) continue;
+            String no = img.getOrderNo();
+            if (!StringUtils.hasText(no)) continue;
+            coverByOrderNo.putIfAbsent(no, img.getImageUrl());
+        }
+        if (coverByOrderNo.isEmpty()) {
+            return;
+        }
+
+        for (ProductionOrder order : records) {
+            if (order == null || !StringUtils.hasText(order.getOrderNo())) continue;
+            String url = coverByOrderNo.get(order.getOrderNo());
+            if (StringUtils.hasText(url)) {
+                order.setStyleCover(url);
+                order.setCoverImage(url);
+                order.setStyleImage(url);
+            }
+        }
     }
 
     private void fillCoverFromAttachments(List<ProductionOrder> records, Map<String, Long> styleIdByStyleNo) {

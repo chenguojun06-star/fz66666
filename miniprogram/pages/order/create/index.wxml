@@ -4,7 +4,38 @@
     <view class="tab-item {{activeTab === 'noData' ? 'active' : ''}}" data-tab="noData" bindtap="switchTab">无资料下单</view>
   </view>
 
-  <view class="tab-content" wx:if="{{activeTab === 'style'}}">
+  <!-- ══ 无资料下单：上传款式图片（路径一） ══ -->
+  <view wx:if="{{activeTab === 'noData'}}" class="no-data-upload-section">
+    <view class="upload-hint">
+      <view class="hint-icon line-icon icon-camera"></view>
+      <text class="hint-h">方式一：上传款式图片</text>
+      <text class="hint-desc">拍照或从相册选择，填写订单信息即可下单</text>
+    </view>
+
+    <view class="image-upload-large" bindtap="chooseNoDataImage">
+      <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" mode="aspectFit" />
+      <view wx:else class="upload-placeholder-large">
+        <view class="upload-icon-large line-icon icon-camera"></view>
+        <text class="upload-text">点击上传款式图片</text>
+        <text class="upload-hint-text">支持 JPG、PNG 格式</text>
+      </view>
+      <view class="delete-image-large" wx:if="{{noDataUploadedImage}}" catchtap="deleteNoDataImage">
+        <view class="icon-close"></view>
+      </view>
+    </view>
+
+    <button class="next-btn" wx:if="{{noDataUploadedImage}}" bindtap="goToNoDataOrderForm">
+      下一步：填写订单信息
+    </button>
+  </view>
+
+  <!-- ══ 款式列表：两个 Tab 共用（无资料下单为「方式二」） ══ -->
+  <view class="list-section">
+    <view wx:if="{{activeTab === 'noData'}}" class="list-hint">
+      <text class="list-hint-t">方式二：从已有款式下单</text>
+      <text class="list-hint-d">沿用款式资料，自行填写颜色与码数</text>
+    </view>
+
     <view class="search-bar">
       <view class="search-box">
         <view class="search-emoji line-icon icon-search"></view>
@@ -16,7 +47,7 @@
     <view wx:if="{{styleLoading}}" class="state-wrap"><text>加载中...</text></view>
 
     <view wx:elif="{{styleFilteredStyles.length === 0}}" class="state-wrap">
-      <text>{{styleKeyword ? '未找到匹配' : '暂无已完成入库的样衣'}}</text>
+      <text>{{styleKeyword ? '未找到匹配' : (activeTab === 'noData' ? '暂无款式' : '暂无已完成入库的样衣')}}</text>
     </view>
 
     <scroll-view wx:else scroll-y class="grid-scroll">
@@ -38,32 +69,6 @@
         </view>
       </view>
     </scroll-view>
-  </view>
-
-  <view class="tab-content" wx:if="{{activeTab === 'noData'}}">
-    <view class="no-data-upload-section">
-      <view class="upload-hint">
-        <view class="hint-icon line-icon icon-camera"></view>
-        <text class="hint-title">无资料下单</text>
-        <text class="hint-desc">上传款式图片后，填写订单信息即可下单</text>
-      </view>
-      
-      <view class="image-upload-large" bindtap="chooseNoDataImage">
-        <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" mode="aspectFit" />
-        <view wx:else class="upload-placeholder-large">
-          <view class="upload-icon-large line-icon icon-camera"></view>
-          <text class="upload-text">点击上传款式图片</text>
-          <text class="upload-hint-text">支持 JPG、PNG 格式</text>
-        </view>
-        <view class="delete-image-large" wx:if="{{noDataUploadedImage}}" bindtap="deleteNoDataImage" catchtap="deleteNoDataImage">
-          <view class="icon-close"></view>
-        </view>
-      </view>
-
-      <button class="next-btn" wx:if="{{noDataUploadedImage}}" bindtap="goToNoDataOrderForm">
-        下一步：填写订单信息
-      </button>
-    </view>
   </view>
   <ai-assistant />
 </view>
