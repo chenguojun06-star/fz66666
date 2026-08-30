@@ -45,8 +45,9 @@ function enrichForDashboard(order) {
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
   order.progressWidth = Math.min(100, Math.max(0, order.calculatedProgress || 0));
-  // D-211：单菲/无菲直接展示明细（对齐生产管理 D-193）
-  order.expanded = Array.isArray(order.colorGroups) && order.colorGroups.length <= 1;
+  // D-229：对齐生产管理 dashboard —— 默认全部收起，由用户点击展开
+  // 原 D-211 让单菲/无菲直接展开，导致页面进来所有单菲卡片都是展开的，视觉上很乱
+  order.expanded = false;
   return order;
 }
 
