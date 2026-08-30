@@ -118,6 +118,14 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       },
     },
     {
+      // D-244：类型标签（布行 / 辅料店 / 纱线行…），由字典 supplier_tag 维护，齿轮可自行增删
+      title: '标签',
+      dataIndex: 'supplierTag',
+      key: 'supplierTag',
+      width: 120,
+      render: (v: string) => (v ? <Tag>{v}</Tag> : '-'),
+    },
+    {
       title: '评级',
       dataIndex: 'supplierTier',
       key: 'supplierTier',

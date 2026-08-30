@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Empty, Input, Popconfirm, Select, Spin, Tag, Tooltip } from 'antd';
-import { QuestionCircleOutlined, SaveOutlined, SyncOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, SaveOutlined, SettingOutlined, SyncOutlined } from '@ant-design/icons';
 import { clearApiCache } from '@/utils/api/core';
 import api from '@/utils/api';
 import factoryApi from '@/services/system/factoryApi';
 import { customerApi } from '@/services/crm/customerApi';
-import { notifyDataUpdated } from '@/utils/dataEvents';
+import { notifyDataUpdated, subscribeDataUpdated } from '@/utils/dataEvents';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import StandardModal from './StandardModal';
 
@@ -57,6 +57,15 @@ const FIELD_LABEL_STYLE: React.CSSProperties = {
 const FIELD_ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 8, marginBottom: 12, alignItems: 'flex-start' };
 
 /**
+ * D-244：供应商「类型标签」的字典类型。
+ * 标签改为字典驱动（dictType=supplier_tag），用户可在齿轮里自行新增/改名/删除；
+ * 字典无数据时回落到 SUPPLIER_TAG_FALLBACK，保证老环境也有基础选项可用。
+ */
+const SUPPLIER_TAG_DICT_TYPE = 'supplier_tag';
+const SUPPLIER_TAG_FALLBACK = ['布行', '辅料店', '纱线行', '五金辅料', '印染厂', '其它']
+  .map(t => ({ value: t, label: t }));
+
+/**
  * 通用维护弹窗（左右宽屏布局：左侧目录 + 右侧编辑区）
  * - 左侧：搜索框 + 目录列表（点击选中）+ 新增入口
  * - 右侧：选中项的编辑表单（名称/联系人/电话/地址），保存/删除即时生效
@@ -66,8 +75,6 @@ const FIELD_ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 8, marginBo
 const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, supplierType = 'MATERIAL', title }) => {
   const { message, modal } = App.useApp();
 
-/** 供应商标签预置选项（D-153）：区分外发工厂/布行/辅料店等 */
-const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料', '印染厂', '其它'].map(t => ({ value: t, label: t }));
   const meta = MODE_META[mode];
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,6 +83,36 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState<EditDraft>(emptyDraft);
+
+  // D-244：供应商「类型标签」改为字典驱动，用户可自行维护（齿轮打开 dict 模式弹窗）
+  const [tagOptions, setTagOptions] = useState<{ value: string; label: string }[]>(SUPPLIER_TAG_FALLBACK);
+  const [tagManageOpen, setTagManageOpen] = useState(false);
+
+  const loadTagOptions = useCallback(async () => {
+    try {
+      const res: any = await api.get('/system/dict/list', {
+        params: { dictType: SUPPLIER_TAG_DICT_TYPE, page: 1, pageSize: 500 },
+      });
+      const list: any[] = res?.data?.records || res?.data || [];
+      const opts = list
+        .filter((r: any) => r?.dictLabel)
+        .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+        .map((r: any) => ({ value: String(r.dictLabel), label: String(r.dictLabel) }));
+      setTagOptions(opts.length > 0 ? opts : SUPPLIER_TAG_FALLBACK);
+    } catch {
+      setTagOptions(SUPPLIER_TAG_FALLBACK);
+    }
+  }, []);
+
+  // 供应商模式下打开时加载一次；标签弹窗增删改后即时刷新
+  useEffect(() => {
+    if (open && mode === 'supplier') void loadTagOptions();
+  }, [open, mode, loadTagOptions]);
+
+  useEffect(
+    () => subscribeDataUpdated(`dict:${SUPPLIER_TAG_DICT_TYPE}`, () => { void loadTagOptions(); }),
+    [loadTagOptions],
+  );
 
   const notifyChanged = useCallback(() => {
     notifyDataUpdated(mode === 'dict' ? `dict:${dictType}` : mode);
@@ -319,8 +356,9 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
     );
 
   return (
-    <StandardModal
-      title={`维护${title ?? meta.defaultTitle}`}
+    <>
+      <StandardModal
+        title={`维护${title ?? meta.defaultTitle}`}
       open={open}
       onCancel={onClose}
       footer={null}
@@ -424,8 +462,16 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
                         allowClear
                         showSearch
                         style={{ flex: 1 }}
-                        options={SUPPLIER_TAG_OPTIONS}
+                        options={tagOptions}
                       />
+                      {/* D-244：齿轮维护标签选项（新增 / 改名 / 删除），与 DictAutoComplete 同款交互 */}
+                      <Tooltip title="维护类型标签（新增 / 改名 / 删除）">
+                        <Button
+                          icon={<SettingOutlined />}
+                          onClick={() => setTagManageOpen(true)}
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
                     </div>
                   )}
                 </>
@@ -484,8 +530,16 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
                         allowClear
                         showSearch
                         style={{ flex: 1 }}
-                        options={SUPPLIER_TAG_OPTIONS}
+                        options={tagOptions}
                       />
+                      {/* D-244：齿轮维护标签选项（新增 / 改名 / 删除），与 DictAutoComplete 同款交互 */}
+                      <Tooltip title="维护类型标签（新增 / 改名 / 删除）">
+                        <Button
+                          icon={<SettingOutlined />}
+                          onClick={() => setTagManageOpen(true)}
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
                     </div>
                   )}
                 </>
@@ -506,7 +560,18 @@ const SUPPLIER_TAG_OPTIONS = ['布行', '辅料店', '纱线行', '五金辅料'
           )}
         </div>
       </div>
-    </StandardModal>
+      </StandardModal>
+      {/* D-244：标签维护弹窗。内层 mode=dict 不会渲染「类型标签」字段，故不会递归展开 */}
+      {tagManageOpen ? (
+        <QuickManageModal
+          open={tagManageOpen}
+          mode="dict"
+          dictType={SUPPLIER_TAG_DICT_TYPE}
+          title="类型标签"
+          onClose={() => setTagManageOpen(false)}
+        />
+      ) : null}
+    </>
   );
 };
 

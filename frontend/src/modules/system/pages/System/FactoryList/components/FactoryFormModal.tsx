@@ -7,6 +7,7 @@ import ImageUploadBox from '@/components/common/ImageUploadBox';
 import ExtFieldsSection from '@/components/common/SchemaForm/ExtFieldsSection';
 import SchemaDescriptions from '@/components/common/SchemaDescriptions';
 import SchemaPrint from '@/components/common/SchemaPrint';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import type { Factory, OrganizationUnit, User } from '@/types/system';
 import { formatDateTime } from '@/utils/datetime';
@@ -158,6 +159,21 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
               { value: 'MATERIAL', label: '面辅料供应商' },
               { value: 'OUTSOURCE', label: '外发供应商' },
             ]}
+          />
+        </Form.Item>
+        {/* D-244：类型标签（布行/辅料店/纱线行…）——字典驱动，输入新值自动收录，齿轮可增/删/改名 */}
+        <Form.Item
+          name="supplierTag"
+          label="类型标签"
+          extra="选填，用于区分布行 / 辅料店 / 纱线行等细分类型。可直接输入新标签（自动收录），点输入框右侧齿轮可统一管理"
+        >
+          <DictAutoComplete
+            id="supplierTag"
+            dictType="supplier_tag"
+            placeholder="请选择或输入类型标签（选填）"
+            fallbackOptions={['布行', '辅料店', '纱线行', '五金辅料', '印染厂', '其它']}
+            quickManageTitle="类型标签"
+            allowClear
           />
         </Form.Item>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
