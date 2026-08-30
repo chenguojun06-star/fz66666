@@ -53,78 +53,62 @@
   margin-top: 8px;
   width: 100%;
 }
+/* D-231：工厂筛选卡压缩为单行胶囊（高 30px）。
+   原实现是「工厂名 + 数字行 + 标签行」三行块，高约 90px，
+   加上 Tab 栏和搜索栏，手机上一进页面顶部就占掉一大半。 */
 .factory-card {
-  display: inline-block;
-  vertical-align: top;
-  width: 138px;
-  padding: 8px 10px;
-  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  margin-right: 6px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   transition: all .2s;
 }
 .factory-card--active {
   border-color: var(--color-primary);
-  border-width: 2px;
-  padding: 7px 9px;
+  background: var(--color-primary-bg);
 }
 .factory-name {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  max-width: 84px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: block;
+  flex-shrink: 0;
 }
-.factory-nums {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 4px;
-}
-.fn-item {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-}
-.fn-val {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  line-height: 1.2;
-}
-.fn-val--primary {
-  color: var(--color-primary);
-}
-.fn-val--sm {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-}
-.fn-lbl {
+.factory-meta {
   font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
+  white-space: nowrap;
 }
-.factory-tags {
+.factory-dots {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 3px;
-  margin-top: 4px;
+  flex-shrink: 0;
 }
-.ftag {
+/* 状态用「数字胶囊」替代原文字标签：逾期红 / 预警橙 / 进行中蓝 / 已完成绿 */
+.fdot {
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
   font-size: var(--font-size-xxs);
-  padding: 1px 6px;
-  border-radius: var(--radius-xs);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.5;
+  font-weight: 600;
+  text-align: center;
 }
-.ftag--primary   { background: var(--color-primary-bg); color: var(--color-primary); }
-.ftag--success   { background: var(--color-success-bg); color: var(--color-success); }
-.ftag--danger    { background: var(--color-danger-bg); color: var(--color-danger); }
-.ftag--warning   { background: var(--color-warning-bg); color: var(--color-warning); }
+.fdot--primary { background: var(--color-primary-bg); color: var(--color-primary); }
+.fdot--success { background: var(--color-success-bg); color: var(--color-success); }
+.fdot--danger  { background: var(--color-danger-bg); color: var(--color-danger); }
+.fdot--warning { background: var(--color-warning-bg); color: var(--color-warning); }
 
 /* ========== 搜索栏 ========== */
 .search-bar {

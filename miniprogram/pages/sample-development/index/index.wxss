@@ -369,9 +369,9 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border-top: 1px solid var(--color-border);
-  margin-top: 12px;
-  padding-top: 8px;
+  /* D-231：去掉分隔线，展开控件并入主卡——原 border-top 把卡片切成上下两半，很难看 */
+  margin-top: 8px;
+  padding-top: 0;
 }
 .order-expand-btn .expand-btn-text {
   font-size: var(--font-size-xs);

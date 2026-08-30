@@ -10,29 +10,18 @@
 
     <!-- 工厂筛选 · 横向滚动卡 -->
     <scroll-view wx:if="{{activeTab===0 && factoryStats.length > 0}}" class="factory-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <!-- D-231：工厂筛选卡压缩为单行胶囊（原为「工厂名+数字行+标签行」三行块，
+           高度近 90px，在手机上把顶部占掉一大半） -->
       <view class="factory-card {{selectedFactoryId === item.factoryId ? 'factory-card--active' : ''}}"
             wx:for="{{factoryStats}}" wx:key="factoryId"
             data-id="{{item.factoryId}}" bindtap="onSelectFactory">
         <text class="factory-name">{{item.factoryName}}</text>
-        <view class="factory-nums">
-          <view class="fn-item">
-            <text class="fn-val fn-val--primary">{{item.orderCount}}</text>
-            <text class="fn-lbl">单</text>
-          </view>
-          <view class="fn-item">
-            <text class="fn-val">{{item.totalQuantity}}</text>
-            <text class="fn-lbl">件</text>
-          </view>
-          <view class="fn-item">
-            <text class="fn-val fn-val--sm">{{item.styleCount}}</text>
-            <text class="fn-lbl">款</text>
-          </view>
-        </view>
-        <view class="factory-tags">
-          <text class="ftag ftag--primary" wx:if="{{item.inProgress > 0}}">{{item.inProgress}}进行中</text>
-          <text class="ftag ftag--success" wx:if="{{item.completed > 0}}">{{item.completed}}已完成</text>
-          <text class="ftag ftag--danger" wx:if="{{item.overdue > 0}}">{{item.overdue}}逾期</text>
-          <text class="ftag ftag--warning" wx:if="{{item.warning > 0}}">{{item.warning}}预警</text>
+        <text class="factory-meta">{{item.orderCount}}单·{{item.totalQuantity}}件</text>
+        <view class="factory-dots">
+          <text class="fdot fdot--danger" wx:if="{{item.overdue > 0}}" title="逾期">{{item.overdue}}</text>
+          <text class="fdot fdot--warning" wx:if="{{item.warning > 0}}" title="预警">{{item.warning}}</text>
+          <text class="fdot fdot--primary" wx:if="{{item.inProgress > 0}}" title="进行中">{{item.inProgress}}</text>
+          <text class="fdot fdot--success" wx:if="{{item.completed > 0}}" title="已完成">{{item.completed}}</text>
         </view>
       </view>
     </scroll-view>
