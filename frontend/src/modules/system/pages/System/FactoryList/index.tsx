@@ -7,8 +7,10 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SchemaPrint from '@/components/common/SchemaPrint';
-import { Button, Card, Space, Tabs, Tag } from 'antd';
-import { PlusOutlined, SettingOutlined, ShopOutlined } from '@ant-design/icons';
+import { Button, Card, Space, Tabs, Tag, Tooltip } from 'antd';
+import { PlusOutlined, SettingOutlined, ShopOutlined, SyncOutlined } from '@ant-design/icons';
+import { message } from '@/utils/antdStatic';
+import factoryApi from '@/services/system/factoryApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { Factory as FactoryType } from '@/types/system';
@@ -50,6 +52,30 @@ const FactoryList: React.FC = () => {
     handleSave,
     goToFieldConfig,
   } = useFactoryListData();
+
+  // D-243：一键修复 —— 按各供应商当前的内外标签刷新其名下订单的 factory_type
+  const [syncLoading, setSyncLoading] = React.useState(false);
+
+  const handleSyncOrderFactoryType = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await factoryApi.syncOrderFactoryType();
+      const data = res?.data;
+      const updated = data?.updatedOrders ?? 0;
+      if (updated > 0) {
+        message.success(
+          `已同步 ${data?.factoryCount ?? 0} 家供应商、${updated} 条订单的内外标签，外发管理列表已刷新`,
+        );
+        void fetchFactories();
+      } else {
+        message.info('订单的内外标签已全部与供应商一致，无需同步');
+      }
+    } catch (err: any) {
+      message.error(err?.message || '同步订单内外标签失败');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   return (
     <>
@@ -188,6 +214,16 @@ const FactoryList: React.FC = () => {
                         <Tag color="blue" style={{ marginRight: 0 }}>
                           {activeTab === 'ALL' ? '全部' : activeTab === 'MATERIAL' ? '面辅料' : '外发'} · 共 {total} 家
                         </Tag>
+                        {/* D-243：修复「改过内外标签但订单快照没跟着更新」的历史脏数据 */}
+                        <Tooltip title="按各供应商当前的内外标签，刷新其名下所有订单的工厂类型。用于修复外发管理列表漏单/混入本厂订单，可重复执行。">
+                          <Button
+                            icon={<SyncOutlined />}
+                            loading={syncLoading}
+                            onClick={() => { void handleSyncOrderFactoryType(); }}
+                          >
+                            同步订单标签
+                          </Button>
+                        </Tooltip>
                         <Button type="primary" onClick={() => openDialog('create')}>
                           {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
                         </Button>

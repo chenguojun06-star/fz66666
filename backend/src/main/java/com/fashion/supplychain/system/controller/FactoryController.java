@@ -89,6 +89,21 @@ public class FactoryController {
         return Result.success(factoryOrchestrator.update(factory));
     }
 
+    /**
+     * D-243：一键修复 —— 按各供应商当前的内外标签，全量刷新其名下所有订单的 factory_type 快照。
+     * <p>
+     * 用于清理历史脏数据：改过内外标签但订单快照没跟着更新的订单，
+     * 会导致外发管理页（按 factoryType=EXTERNAL 筛选）漏单或混入本厂订单。
+     * 幂等，可重复执行。
+     */
+    @PostMapping("/sync-order-factory-type")
+    public Result<Map<String, Object>> syncOrderFactoryType() {
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.fail("工厂账号无权执行该操作");
+        }
+        return Result.success(factoryOrchestrator.syncAllOrderFactoryType());
+    }
+
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id,
             @RequestParam(required = false) String remark) {

@@ -16,11 +16,14 @@ import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.PayableService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,6 +60,7 @@ public class FinanceDashboardHelper {
     private final ExpenseReimbursementService expenseReimbursementService;
     private final EmployeeAdvanceService employeeAdvanceService;
     private final ShipmentReconciliationService shipmentReconciliationService;
+    private final ScanRecordService scanRecordService;
 
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -105,6 +109,8 @@ public class FinanceDashboardHelper {
         BigDecimal materialCost = sumMaterialCost(tenantId, startTime, endTime);
         BigDecimal expenseCost = sumExpenseCost(tenantId, startTime, endTime);
         BigDecimal advanceAmount = sumAdvanceOutstanding(tenantId);
+        // D-243：工序产值仅作展示，不进 totalCost（避免与工资支出口径重叠导致成本翻倍）
+        BigDecimal laborCost = sumLaborCost(tenantId, startTime, endTime);
         BigDecimal totalCost = wageExpense.add(materialCost).add(expenseCost).add(advanceAmount);
         BigDecimal netProfit = totalRevenue.subtract(totalCost);
 
@@ -118,6 +124,7 @@ public class FinanceDashboardHelper {
         summary.put("materialCost", materialCost);
         summary.put("expenseCost", expenseCost);
         summary.put("advanceAmount", advanceAmount);
+        summary.put("laborCost", laborCost);
         summary.put("totalCost", totalCost);
         summary.put("netProfit", netProfit);
         summary.put("pendingApprovals", pendingApprovals);
@@ -253,6 +260,49 @@ public class FinanceDashboardHelper {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         } catch (Exception e) {
             log.warn("[财务总览] 统计借支余额失败", e);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * D-243：工序产值 = 本厂扫码结算金额。
+     * <p>
+     * 口径与 {@code FinancialReportOrchestrator.sumLaborCost} 一致：
+     * 只统计本厂内部扫码（factory_id 为空），外发工厂的扫码不计入——
+     * 外发部分按加工费走应付账款结算，若此处再计一次会与工资/应付重复。
+     * <p>
+     * ⚠️ 该指标仅作为独立卡片展示，<b>不计入 totalCost / netProfit</b>，
+     * 避免与「工资支出」可能存在的口径重叠导致成本翻倍。
+     */
+    private BigDecimal sumLaborCost(Long tenantId, LocalDateTime start, LocalDateTime end) {
+        try {
+            LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<>();
+            qw.eq(ScanRecord::getScanResult, "success")
+              .gt(ScanRecord::getQuantity, 0)
+              .eq(ScanRecord::getTenantId, tenantId)
+              .isNull(ScanRecord::getFactoryId)
+              .ne(ScanRecord::getScanType, "orchestration")
+              .ge(ScanRecord::getScanTime, start)
+              .le(ScanRecord::getScanTime, end)
+              .last("LIMIT " + QUERY_LIMIT);
+            List<ScanRecord> records = scanRecordService.list(qw);
+            return records.stream()
+                    .map(r -> {
+                        if (r.getTotalAmount() != null && r.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
+                            return r.getTotalAmount();
+                        }
+                        if (r.getScanCost() != null && r.getScanCost().compareTo(BigDecimal.ZERO) > 0) {
+                            return r.getScanCost();
+                        }
+                        if (r.getUnitPrice() != null && r.getQuantity() != null) {
+                            return r.getUnitPrice().multiply(BigDecimal.valueOf(r.getQuantity()));
+                        }
+                        return BigDecimal.ZERO;
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
+        } catch (Exception e) {
+            log.warn("[财务总览] 统计工序产值失败", e);
             return BigDecimal.ZERO;
         }
     }
@@ -693,6 +743,7 @@ public class FinanceDashboardHelper {
         summary.put("materialCost", BigDecimal.ZERO);
         summary.put("expenseCost", BigDecimal.ZERO);
         summary.put("advanceAmount", BigDecimal.ZERO);
+        summary.put("laborCost", BigDecimal.ZERO);
         summary.put("totalCost", BigDecimal.ZERO);
         summary.put("netProfit", BigDecimal.ZERO);
         summary.put("pendingApprovals", 0);

@@ -60,6 +60,9 @@ public class PayableOrchestrator {
         String keyword    = (String) params.get("keyword");
         String startDate  = (String) params.get("startDate");
         String endDate    = (String) params.get("endDate");
+        // D-243：日期范围按到期日筛选时，due_date 为 NULL 的记录会被 ge/le 直接过滤掉，
+        // 导致没填到期日的应付单在「计划付」里彻底不可见。该参数用于把它们一并纳入。
+        boolean includeNoDueDate = Boolean.parseBoolean(String.valueOf(params.get("includeNoDueDate")));
 
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -80,11 +83,25 @@ public class PayableOrchestrator {
                         .or().like(Payable::getOrderNo, keyword))
                 .and(isFactoryAccount && StringUtils.hasText(ctxFactoryId), w -> w
                         .eq(Payable::getCounterpartyId, ctxFactoryId)
-                        .or().eq(Payable::getSupplierId, ctxFactoryId))
-                // 日期范围筛选（按到期日 dueDate，更符合付款计划场景）
-                .ge(StringUtils.hasText(startDate), Payable::getDueDate, parseLocalDate(startDate))
-                .le(StringUtils.hasText(endDate), Payable::getDueDate, parseLocalDate(endDate))
-                .orderByDesc(Payable::getCreateTime);
+                        .or().eq(Payable::getSupplierId, ctxFactoryId));
+
+        // 日期范围筛选（按到期日 dueDate，更符合付款计划场景）
+        boolean hasRange = StringUtils.hasText(startDate) || StringUtils.hasText(endDate);
+        if (hasRange) {
+            // 用 and(...) 包一层，保证 includeNoDueDate 的 OR 不会污染前面 tenantId / 工厂隔离等条件
+            qw.and(w -> {
+                if (StringUtils.hasText(startDate)) {
+                    w.ge(Payable::getDueDate, parseLocalDate(startDate));
+                }
+                if (StringUtils.hasText(endDate)) {
+                    w.le(Payable::getDueDate, parseLocalDate(endDate));
+                }
+                if (includeNoDueDate) {
+                    w.or().isNull(Payable::getDueDate);
+                }
+            });
+        }
+        qw.orderByDesc(Payable::getCreateTime);
 
         return payableService.page(new Page<>(page, pageSize), qw);
     }

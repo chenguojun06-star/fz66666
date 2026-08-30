@@ -57,6 +57,26 @@ export const factoryApi = {
     api.put<{ code: number; data: boolean }>(`/system/factory/${id}/contract`, data),
 
   /**
+   * D-243：一键修复 —— 按各供应商当前的内外标签，全量刷新其名下订单的 factory_type 快照。
+   * 用于清理「改过内外标签但订单快照没跟着更新」的历史脏数据，幂等可重复执行。
+   */
+  syncOrderFactoryType: () =>
+    api.post<{
+      code: number;
+      message: string;
+      data: {
+        factoryCount: number;
+        updatedOrders: number;
+        details: Array<{
+          factoryId: string;
+          factoryName: string;
+          factoryType: string;
+          updatedOrders: number;
+        }>;
+      };
+    }>('/system/factory/sync-order-factory-type'),
+
+  /**
    * 获取供应商下拉列表
    */
   simpleList: <T = { id: string; factoryName: string }>() =>

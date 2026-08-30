@@ -13,6 +13,8 @@ export interface FinanceSummary {
   materialCost: number;
   expenseCost: number;
   advanceAmount: number;
+  /** D-243：工序产值（本厂扫码结算），仅展示，不计入 totalCost */
+  laborCost: number;
   totalCost: number;
   netProfit: number;
   pendingApprovals: number;
@@ -108,6 +110,7 @@ const DEFAULT_DATA: FinanceDashboardData = {
     materialCost: 0,
     expenseCost: 0,
     advanceAmount: 0,
+    laborCost: 0,
     totalCost: 0,
     netProfit: 0,
     pendingApprovals: 0,

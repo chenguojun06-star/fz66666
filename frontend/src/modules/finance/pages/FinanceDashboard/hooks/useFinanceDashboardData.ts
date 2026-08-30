@@ -162,6 +162,8 @@ const buildStatCards = (
   { key: 'material', title: '物料成本', value: summary.materialCost, color: 'var(--color-accent-cyan)' },
   { key: 'expense', title: '费用支出', value: summary.expenseCost, color: 'var(--color-orange-300)' },
   { key: 'advance', title: '员工借支', value: summary.advanceAmount, color: 'var(--color-danger)' },
+  // D-243：扫码工序产值。仅作展示，不计入总成本/净利润（避免与工资支出口径重叠）
+  { key: 'laborCost', title: '工序产值', value: summary.laborCost, color: 'var(--color-accent-neon)' },
 ];
 
 const buildDetailConfig = (
@@ -247,6 +249,21 @@ const buildDetailConfig = (
           { title: '创建时间', dataIndex: 'time', width: 110 },
         ],
         rows: data.details.advance,
+      };
+    case 'laborCost':
+      return {
+        title: '工序产值（本厂扫码结算）',
+        columns: [
+          { title: '项目', dataIndex: 'name', width: 160 },
+          { title: '说明', dataIndex: 'value' },
+        ],
+        rows: [
+          { name: '当前金额', value: `¥${Number(data.summary.laborCost || 0).toLocaleString()}` },
+          { name: '统计口径', value: '本厂内部扫码（未归属外发工厂）且扫码成功、数量大于 0 的记录' },
+          { name: '金额取值', value: '优先取结算金额，其次扫码成本，最后按 单价 × 数量 计算' },
+          { name: '不计入项', value: '外发工厂的扫码（其产值按加工费走应付账款结算，避免重复计算）' },
+          { name: '是否计入总成本', value: '否 —— 仅作独立指标展示，避免与「工资支出」口径重叠导致成本翻倍' },
+        ],
       };
     case 'profit':
       return {

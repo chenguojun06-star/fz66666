@@ -1,6 +1,7 @@
 package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
@@ -15,6 +16,10 @@ import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -188,9 +193,96 @@ public class FactoryOrchestrator {
             latest.setFactoryType(factory.getFactoryType());
             FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.syncFactoryNode(latest);
             persistSnapshot(latest.getId(), snapshot);
+            // D-243：内外标签变更后同步该工厂名下所有订单的 factory_type 快照。
+            // 订单的 factory_type 只在下单时写入一次，若不同步，改过标签的工厂其历史订单
+            // 会停留在旧值，导致外发管理页（按 factoryType=EXTERNAL 筛选）漏单或多单。
+            int synced = syncOrderFactoryType(latest.getId(), snapshot != null ? snapshot.getFactoryType() : null);
+            if (synced > 0) {
+                saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "SYNC_ORDER_FACTORY_TYPE",
+                        "内外标签变更为 " + (snapshot != null ? snapshot.getFactoryType() : "") + "，同步订单 " + synced + " 条");
+            }
         }
         saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "UPDATE", null);
         return true;
+    }
+
+    /**
+     * D-243：全量修复——按各工厂当前的内外标签快照，刷新其名下所有订单的 factory_type。
+     * <p>
+     * 用于清理历史脏数据：早期改过工厂标签、但订单快照未跟着更新的订单
+     * （表现为外发管理页只看到个别工厂的订单，或把"本厂"的订单当成外发单）。
+     * 快照值取自 {@code getFactorySnapshot}，因此最终以组织节点 ownerType 为准，
+     * 与下单时的取值逻辑完全一致。
+     *
+     * @return 修复统计：涉及工厂数、更新订单数、每个工厂的明细
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> syncAllOrderFactoryType() {
+        if (!UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        Long tenantId = UserContext.tenantId();
+        List<Factory> factories = factoryService.list(new LambdaQueryWrapper<Factory>()
+                .eq(Factory::getDeleteFlag, 0)
+                .eq(!UserContext.isSuperAdmin() && tenantId != null, Factory::getTenantId, tenantId));
+
+        int factoryCount = 0;
+        int orderCount = 0;
+        List<Map<String, Object>> details = new ArrayList<>();
+        for (Factory f : factories) {
+            if (f == null || !StringUtils.hasText(f.getId())) {
+                continue;
+            }
+            FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.getFactorySnapshot(f);
+            String type = snapshot != null ? snapshot.getFactoryType() : null;
+            if (!StringUtils.hasText(type)) {
+                continue;
+            }
+            int updated = syncOrderFactoryType(f.getId(), type);
+            factoryCount++;
+            orderCount += updated;
+            if (updated > 0) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("factoryId", f.getId());
+                item.put("factoryName", f.getFactoryName());
+                item.put("factoryType", type);
+                item.put("updatedOrders", updated);
+                details.add(item);
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("factoryCount", factoryCount);
+        result.put("updatedOrders", orderCount);
+        result.put("details", details);
+        saveOperationLog("factory", null, "全部供应商", "SYNC_ORDER_FACTORY_TYPE",
+                "全量同步订单内外标签：工厂 " + factoryCount + " 个，更新订单 " + orderCount + " 条");
+        return result;
+    }
+
+    /**
+     * 把某个工厂名下所有未删除订单的 factory_type 刷成指定值。
+     *
+     * @return 更新的订单条数
+     */
+    private int syncOrderFactoryType(String factoryId, String factoryType) {
+        if (!StringUtils.hasText(factoryId) || !StringUtils.hasText(factoryType)) {
+            return 0;
+        }
+        Long tenantId = UserContext.tenantId();
+        try {
+            // 用 baseMapper.update(null, wrapper) 而非 lambdaUpdate().update()：
+            // 后者只返回 boolean 拿不到影响行数，这里需要真实条数做反馈统计
+            LambdaUpdateWrapper<ProductionOrder> uw = new LambdaUpdateWrapper<>();
+            uw.eq(ProductionOrder::getFactoryId, factoryId)
+              .eq(ProductionOrder::getDeleteFlag, 0)
+              .eq(!UserContext.isSuperAdmin() && tenantId != null, ProductionOrder::getTenantId, tenantId)
+              .set(ProductionOrder::getFactoryType, factoryType);
+            return productionOrderService.getBaseMapper().update(null, uw);
+        } catch (Exception e) {
+            log.warn("[工厂类型同步] 同步订单 factoryType 失败: factoryId={}, error={}", factoryId, e.getMessage());
+            return 0;
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

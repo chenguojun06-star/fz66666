@@ -41,6 +41,11 @@ export interface PayableListReq {
   startDate?: string;
   /** 结束日期（YYYY-MM-DD），按到期日过滤 */
   endDate?: string;
+  /**
+   * D-243：是否把「未填写到期日」的应付单一并纳入。
+   * 不传时，dueDate 为 NULL 的记录会被日期范围条件直接过滤掉而查不到。
+   */
+  includeNoDueDate?: boolean;
 }
 
 // ============================================================

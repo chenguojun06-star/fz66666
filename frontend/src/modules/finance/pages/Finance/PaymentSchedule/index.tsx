@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Col, DatePicker, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Card, Col, DatePicker, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
   ClockCircleOutlined, DollarOutlined, ExclamationCircleOutlined, WarningOutlined,
 } from '@ant-design/icons';
@@ -50,6 +50,8 @@ const PaymentSchedule: React.FC = () => {
         pageSize,
         startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
         endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
+        // D-243：未填到期日的应付单也要能看到，否则会在这个页面彻底消失
+        includeNoDueDate: true,
       });
       const data = (res?.data ?? res) as Record<string, unknown> | undefined;
       setRecords((data?.records as Payable[]) ?? []);
@@ -99,6 +101,12 @@ const PaymentSchedule: React.FC = () => {
     };
   }, [records, nowTimestamp]);
 
+  // D-243：未填到期日的应付单无法做到期预测，单独统计出来提示用户补填
+  const noDueDateCount = useMemo(
+    () => records.filter(r => !r.dueDate && Number(r.amount) - Number(r.paidAmount ?? 0) > 0).length,
+    [records],
+  );
+
   const getRemainingDays = (dueDate?: string) => {
     if (!dueDate) return null;
     const due = new Date(dueDate);
@@ -140,7 +148,7 @@ const PaymentSchedule: React.FC = () => {
     {
       title: '到期日', dataIndex: 'dueDate', width: 110,
       render: v => {
-        if (!v) return '-';
+        if (!v) return <Tag>未设置</Tag>;
         const days = getRemainingDays(v);
         const color = getRemainingDaysColor(days);
         return <Text type={color as any}>{v}</Text>;
@@ -187,6 +195,16 @@ const PaymentSchedule: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      {/* D-243：未填到期日的应付单已计入待付总额，但无法归入 7/14/30 天预测 */}
+      {noDueDateCount > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={`有 ${noDueDateCount} 笔应付单未填写到期日`}
+          description="这些单据已计入「待付总额」，但因缺少到期日无法归入 7 / 14 / 30 天到期预测。建议补填到期日，付款计划才准确。"
+        />
+      )}
       <Row gutter={16} style={{ marginBottom: 12 }}>
         <Col span={6}>
           <Card>

@@ -5,6 +5,7 @@ export type StatKey =
   | 'material'
   | 'expense'
   | 'advance'
+  | 'laborCost'
   | 'profit'
   | 'approval';
 
