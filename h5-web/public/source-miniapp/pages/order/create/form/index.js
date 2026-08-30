@@ -1,4 +1,6 @@
 const api = require('../../../../utils/api');
+const { splitStyleOptions, mergeDistinctOptions } = require('../../../../utils/styleOptions');
+const { sortSizeNames } = require('../../../../utils/sizeUtils');
 
 function today() {
   const d = new Date();
@@ -12,6 +14,7 @@ function daysLater(n) {
 
 const PLATE_MAP = ['', 'FIRST', 'REORDER'];
 const BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
+const BIZ_TYPE_LABELS = ['FOB 离岸价', 'ODM 原厂设计', 'OEM 代工生产', 'CMT 来料加工'];
 const PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
 const PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
@@ -31,7 +34,7 @@ Page({
     urgencyLevel: 'normal',
     company: '', productCategory: '',
     plateType: '', plateTypeLabel: '',
-    orderBizType: '',
+    orderBizType: '', orderBizTypeLabel: '',
     patternMaker: '', merchandiser: '',
     pricingMode: 'PROCESS', pricingModeIdx: 0,
     pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '报价单价', '手动单价'],
@@ -39,11 +42,14 @@ Page({
     orderQuantity: 0, computedUnitPrice: 0,
     selectedColors: [], selectedSizes: [],
     orderLines: [],
-    gridRows: [], gridSizes: [],
+    // gridRows: [{color, cells:[{size,quantity}], total}]  行小计挂在 row.total
+    // sizeTotals: [{size, total}]                          列小计（码数合计）
+    gridRows: [], gridSizes: [], sizeTotals: [],
     colorInput: '', sizeInput: '',
     colorOptions: [], sizeOptions: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
-    factoryList: [], orgUnitList: [], categoryOptions: [],
+    bizTypeLabels: BIZ_TYPE_LABELS,
+    factoryList: [], orgUnitList: [], categoryOptions: [], userOptions: [],
     quickFillQty: 1, submitting: false,
   },
 
@@ -59,14 +65,20 @@ Page({
     } else {
       // 有资料下单：使用款式的封面图
       coverImage = decodeURIComponent(opts.coverImage || '');
-      colors = (decodeURIComponent(opts.colors || '')).split(',').filter(function (c) { return c.trim(); });
-      sizes = (decodeURIComponent(opts.sizes || '')).split(',').filter(function (s) { return s.trim(); });
+      // ★ 必须用 splitStyleOptions 智能切分：
+      //   款式 size 字段可能是旧 "/"-拼接（如 "L(170/84)/XL(175/88)"），
+      //   单纯按 "," 切会整段变成一个码数，页面上显示成一坨。
+      colors = splitStyleOptions(decodeURIComponent(opts.colors || ''));
+      sizes = splitStyleOptions(decodeURIComponent(opts.sizes || ''));
+      // 码数按小→大排序，矩阵列顺序整齐（与 PC 端 sortSizeWeight 同向）
+      sizes = sortSizeNames(sizes);
     }
 
     this.setData({
       styleId: decodeURIComponent(opts.styleId || ''),
       styleNo: decodeURIComponent(opts.styleNo || ''),
       styleName: decodeURIComponent(opts.styleName || ''),
+      productCategory: decodeURIComponent(opts.category || ''),
       coverImage: coverImage,
       isNoData: isNoData,
       plannedStartDate: today(),
@@ -110,20 +122,35 @@ Page({
 
   _rebuildGrid: function () {
     const cs = this.data.selectedColors; const ss = this.data.selectedSizes;
+    const lines = this.data.orderLines;
+    const qtyOf = function (c, s) {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].color === c && lines[i].size === s) return lines[i].quantity || 0;
+      }
+      return 0;
+    };
+
+    // 行小计直接挂在 row 上（WXML 用 row.total 读取，避免动态数组索引的兼容风险）
     const rows = [];
     cs.forEach(function (c) {
       const cells = [];
+      let rowSum = 0;
       ss.forEach(function (s) {
-        let q = 0;
-        for (let i = 0; i < this.data.orderLines.length; i++) {
-          const l = this.data.orderLines[i];
-          if (l.color === c && l.size === s) { q = l.quantity || 0; break; }
-        }
+        const q = qtyOf(c, s);
+        rowSum += q;
         cells.push({ size: s, quantity: q });
-      }.bind(this));
-      rows.push({ color: c, cells: cells });
-    }.bind(this));
-    this.setData({ gridRows: rows, gridSizes: ss });
+      });
+      rows.push({ color: c, cells: cells, total: rowSum });
+    });
+
+    // 码数合计（列小计），同样挂成 {size, total} 对象
+    const sizeTotals = ss.map(function (s) {
+      let sum = 0;
+      cs.forEach(function (c) { sum += qtyOf(c, s); });
+      return { size: s, total: sum };
+    });
+
+    this.setData({ gridRows: rows, gridSizes: ss, sizeTotals: sizeTotals });
   },
 
   /* ═══ 报价 + 工序 + 核价 → 五模定价 ═══ */
@@ -168,7 +195,7 @@ Page({
     this.setData({ computedUnitPrice: price.toFixed(2) });
   },
 
-  /* ═══ 工厂 / 部门（对标PC端） ═══ */
+  /* ═══ 工厂 / 部门 / 品类 / 人员（对标PC端） ═══ */
 
   _loadAux: function () {
     const self = this;
@@ -194,23 +221,40 @@ Page({
     api.system.getDictList('category').then(function (res) {
       const data = Array.isArray(res) ? res : (res && res.records ? res.records : []);
       self.setData({ categoryOptions: data });
-      if (data.length) {
+      // 有资料下单时品类已由款式带入，不覆盖
+      if (data.length && !self.data.productCategory) {
         self.setData({ productCategory: data[0].dictLabel || data[0].label || '' });
       }
     }).catch(function () {});
 
-    api.system.getMe().then(function (me) {
-      self.setData({ merchandiser: me.name || me.username || '' });
-    }).catch(function () {});
+    // 纸样师 / 跟单员：与 PC 端一致，从用户列表选择（不用手输）
+    api.system.listUsers({ page: 1, pageSize: 200 }).then(function (res) {
+      const list = (res && res.records) || (Array.isArray(res) ? res : []);
+      const names = [];
+      list.forEach(function (u) {
+        const n = u.name || u.username || '';
+        if (n && names.indexOf(n) === -1) names.push(n);
+      });
+      self.setData({ userOptions: names });
+      if (!self.data.merchandiser) {
+        api.system.getMe().then(function (me) {
+          self.setData({ merchandiser: me.name || me.username || '' });
+        }).catch(function () {});
+      }
+    }).catch(function () {
+      api.system.getMe().then(function (me) {
+        self.setData({ merchandiser: me.name || me.username || '' });
+      }).catch(function () {});
+    });
   },
 
   _genOrderNo: function () {
     const self = this;
     const isNoData = this.data.isNoData;
-    
+
     // 无资料下单使用 CUT 前缀，有资料下单使用 ORDER_NO
     const serialType = isNoData ? 'CUTTING_TASK_NO' : 'ORDER_NO';
-    
+
     api.serial.generate(serialType).then(function (no) {
       self.setData({ orderNo: String(no || '') });
     }).catch(function () {
@@ -223,7 +267,7 @@ Page({
         + String(d.getMinutes()).padStart(2, '0')
         + String(d.getSeconds()).padStart(2, '0')
         + String(d.getMilliseconds()).padStart(3, '0');
-      
+
       // 无资料下单使用 CUT 前缀，有资料下单使用 PO 前缀
       const prefix = isNoData ? 'CUT' : 'PO';
       self.setData({ orderNo: prefix + ts });
@@ -233,6 +277,10 @@ Page({
   /* ═══ 字段 bind ═══ */
   onOrderNoInput: function (e) { this.setData({ orderNo: e.detail.value }); },
   onAutoGenOrderNo: function () { this._genOrderNo(); },
+
+  // 无资料下单：款号 / 款名手填
+  onStyleNoInput: function (e) { this.setData({ styleNo: e.detail.value }); },
+  onStyleNameInput: function (e) { this.setData({ styleName: e.detail.value }); },
 
   onFactoryModeTap: function (e) {
     this.setData({ factoryMode: e.currentTarget.dataset.v, orgUnitId: '', orgUnitName: '', factoryId: '', factoryName: '' });
@@ -266,10 +314,23 @@ Page({
   },
 
   onBizTypeChange: function (e) {
-    this.setData({ orderBizType: BIZ_TYPES[e.detail.value] || '' });
+    const idx = e.detail.value;
+    this.setData({
+      orderBizType: BIZ_TYPES[idx] || '',
+      orderBizTypeLabel: BIZ_TYPE_LABELS[idx] || '',
+    });
   },
 
+  onPatternMakerChange: function (e) {
+    const item = this.data.userOptions[e.detail.value];
+    this.setData({ patternMaker: item || '' });
+  },
   onPatternMakerInput: function (e) { this.setData({ patternMaker: e.detail.value }); },
+
+  onMerchandiserChange: function (e) {
+    const item = this.data.userOptions[e.detail.value];
+    this.setData({ merchandiser: item || '' });
+  },
   onMerchandiserInput: function (e) { this.setData({ merchandiser: e.detail.value }); },
 
   /* ═══ 颜色 / 码数 ═══ */
@@ -277,10 +338,11 @@ Page({
   onColorAdd: function () {
     const v = (this.data.colorInput || '').trim();
     if (!v) return;
-    const opts = this.data.colorOptions.slice();
-    if (opts.indexOf(v) === -1) opts.push(v);
-    const sel = this.data.selectedColors.slice();
-    if (sel.indexOf(v) === -1) sel.push(v);
+    // 支持一次粘贴多个："黑色,白色" 或 "黑色/白色"
+    const incoming = mergeDistinctOptions(splitStyleOptions(v));
+    if (!incoming.length) return;
+    const opts = mergeDistinctOptions(this.data.colorOptions, incoming);
+    const sel = mergeDistinctOptions(this.data.selectedColors, incoming);
     this.setData({ colorOptions: opts, selectedColors: sel, colorInput: '' });
     this._rebuildLines();
   },
@@ -298,10 +360,11 @@ Page({
   onSizeAdd: function () {
     const v = (this.data.sizeInput || '').trim();
     if (!v) return;
-    const opts = this.data.sizeOptions.slice();
-    if (opts.indexOf(v) === -1) opts.push(v);
-    const sel = this.data.selectedSizes.slice();
-    if (sel.indexOf(v) === -1) sel.push(v);
+    // 支持一次粘贴多个码数（智能切分，兼容 "/" 拼接）
+    const incoming = mergeDistinctOptions(splitStyleOptions(v));
+    if (!incoming.length) return;
+    const opts = mergeDistinctOptions(this.data.sizeOptions, incoming);
+    const sel = mergeDistinctOptions(this.data.selectedSizes, incoming);
     this.setData({ sizeOptions: opts, selectedSizes: sel, sizeInput: '' });
     this._rebuildLines();
   },
@@ -315,15 +378,59 @@ Page({
     this._rebuildLines();
   },
 
-  /* ═══ 铺量 / 网格 ═══ */
+  /* ═══ 批量选择 / 批量铺量（对齐PC端：全选颜色 / 全选码数 / 清空 / 全部铺量） ═══ */
+  onSelectAllColors: function () {
+    this.setData({ selectedColors: this.data.colorOptions.slice() });
+    this._rebuildLines();
+  },
+  onSelectAllSizes: function () {
+    this.setData({ selectedSizes: this.data.sizeOptions.slice() });
+    this._rebuildLines();
+  },
+  onClearSelection: function () {
+    this.setData({ selectedColors: [], selectedSizes: [], orderLines: [], orderQuantity: 0 });
+    this._rebuildGrid();
+  },
+
   onQuickFillInput: function (e) { this.setData({ quickFillQty: parseInt(e.detail.value) || 0 }); },
+
+  /** 全部铺量：所有已选色×已选码填同一数量 */
   onQuickFill: function () {
     const q = this.data.quickFillQty;
-    if (q <= 0) return;
+    if (q <= 0) return wx.showToast({ title: '铺量需大于 0', icon: 'none' });
     const lines = this.data.orderLines.map(function (l) { return { color: l.color, size: l.size, quantity: q }; });
     this.setData({ orderLines: lines });
     this._recalcTotal();
     this._rebuildGrid();
+    wx.showToast({ title: '已铺量 ' + lines.length + ' 个组合', icon: 'none' });
+  },
+
+  /** 按行铺量：点左侧颜色格 → 该颜色所有码数填同一数量 */
+  onRowFill: function (e) {
+    const color = e.currentTarget.dataset.color;
+    const q = this.data.quickFillQty;
+    if (q <= 0) return wx.showToast({ title: '铺量需大于 0', icon: 'none' });
+    const lines = this.data.orderLines.map(function (l) {
+      return l.color === color ? { color: l.color, size: l.size, quantity: q } : l;
+    });
+    this.setData({ orderLines: lines });
+    this._recalcTotal();
+    this._rebuildGrid();
+    wx.showToast({ title: color + ' 已铺 ' + q, icon: 'none' });
+  },
+
+  /** 按列铺量：点表头码数格 → 该码数所有颜色填同一数量 */
+  onColFill: function (e) {
+    const size = e.currentTarget.dataset.size;
+    const q = this.data.quickFillQty;
+    if (q <= 0) return wx.showToast({ title: '铺量需大于 0', icon: 'none' });
+    const lines = this.data.orderLines.map(function (l) {
+      return l.size === size ? { color: l.color, size: l.size, quantity: q } : l;
+    });
+    this.setData({ orderLines: lines });
+    this._recalcTotal();
+    this._rebuildGrid();
+    wx.showToast({ title: size + ' 已铺 ' + q, icon: 'none' });
   },
 
   onGridQtyInput: function (e) {

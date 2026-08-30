@@ -4834,3 +4834,43 @@ if (!urlTenantId.equals(tokenTenantId)) {  // ⚠️ tokenTenantId为null时抛N
 - 待 CI 部署完成后，线上验证 BR26X1K0651A 是否出现在成品仓库列表（6 码各 22 件，共 132 件）
 - 前端列表编码列仍有拼接 bug：`HYY202601111` 显示为 `HYY2026011111黑色-XL`（多一个 1 + 横线格式），`0099988-白色-XL` 未归一化——D-226 前端补编码列的问题，尚未修复
 - 本地 `SmartSourcingListOrdersRegressionTest.java`（untracked，引用不存在的 `TestRedisConfig`）已移至 `/tmp/bak_tests/`，需确认是否彻底删除
+
+## 2026-08-30 D-246 手机端下单页码数一坨 + 布局工整化 + 对齐PC端批量操作
+
+**用户反馈**：手机端下单页码数全部堆在一个 chip 里；下单界面"一锅粥"；
+要求对齐 PC 端下单逻辑，且"不要一个个输入，要批量操作提效率"；无资料下单与正常下单都要优化。
+
+**根因（P0）**：该款式 `t_style_info.size` 是旧 `/`-拼接格式
+`XS(155/72A)/S(160/76)/M(165/80)/L(170/84)/XL(175/88)/...`
+- PC 端有 `frontend/src/utils/styleOptions.ts → splitStyleOptions`：优先按 `,` 切，
+  退化到 `/` 时**只切括号外的 `/`**（跳过 `L(170/84)` 内部的 `/`）→ 正常 7 个 chip
+- 小程序 `pages/order/create/form/index.js` 只有 `.split(',')` → 整段变 1 个 chip → 显示一坨
+
+**修复（1 新 + 4 改，纯小程序，5 文件 × 4 副本）**：
+- 【新】`miniprogram/utils/styleOptions.js` — PC `splitStyleOptions` / `mergeDistinctOptions` 1:1 JS 复刻（ES5 写法，加详细注释说明两种分隔符的坑）
+- `pages/order/create/form/index.js`
+  - onLoad 改用 `splitStyleOptions` 拆颜色/码数 + `sortSizeNames` 排序（复用既有 `utils/sizeUtils.js`）
+  - 颜色/码数添加支持**批量粘贴**（"黑色,白色" 或 "黑色/白色" 一次导入多个，自动去重）
+  - 新增批量操作：`onSelectAllColors` / `onSelectAllSizes` / `onClearSelection` / `onQuickFill`（对齐 PC 全选颜色/全选码数/清空/全部铺量）
+  - **新增按行铺量 `onRowFill` / 按列铺量 `onColFill`**（PC 端没有，手机端专属提效：点颜色名铺整行、点码数表头铺整列）
+  - 行小计挂 `row.total`、列小计（码数合计）改 `{size,total}` 对象数组——**刻意避开 WXML 动态数组索引 `arr[idx]` 的兼容风险**
+  - 纸样师/跟单员：自由输入 → **picker 选择器**（`api.system.listUsers`，对齐 PC 从用户列表选）
+  - 下单类型 label 带中文（FOB 离岸价 / ODM 原厂设计 / OEM 代工生产 / CMT 来料加工），对齐 PC
+  - 品类：有资料时不再被字典第一项覆盖；无资料下单也传 category
+- `pages/order/create/form/index.wxml` — 布局重写：款式头/订单信息/时间与交期/业务信息/下单数量/定价 六段；
+  并排字段改用**块级小标签**（`f-lbl-blk`）+ 40px 统一控件高；新增统计条（开发色/开发码/已选/组合，对齐 PC Tag）；
+  矩阵改 `scroll-x` + 左侧颜色列 `position:sticky` 固定（含行小计），底部码数合计行
+- `pages/order/create/form/index.wxss` — 全文重写，统一 tokens
+- `pages/order/create/index.js` — 无资料下单选中款式时同样传 category；无资料时款号/款名可手填
+
+**验证**：
+- 核心修复实测：`XS(155/72A)/S(160/76)/.../XXXL(185/96)` 旧实现 1 个码数 → 新实现 **7 个码数** ✓
+- 7 个边界场景全过（`,` 拼接 / 无括号 `/` / 中文逗号顿号 / 排序 / 批量去重 / null·空串·undefined）
+- 四副本 `node --check` 全过；5 文件 MD5 完全一致
+- WXML 标签栈校验 329 标签全闭合（四副本 OK）；36 个事件处理器 JS 中全部有实现
+- WXSS 大括号 79/79 配对
+
+**未做（下批）**：基础属性库齿轮（PC 端成组预设导入）工作量较大，本批未纳入；
+客户选择器（PC 用 `CustomerSelect` → `/crm/customers/list`）因小程序无 crm 模块，暂时保留自由输入。
+
+**待办**：微信开发者工具真机验收（码数多列横滑 + 键盘弹出不挤压 + 按行/列铺量手感）。

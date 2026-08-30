@@ -141,12 +141,14 @@ Page({
       'coverImage=' + encodeURIComponent(ds.cover || '')
     ];
 
+    // 品类两种下单都传：无资料下单同样需要带出款式品类，避免落到字典第一项
+    params.push('category=' + encodeURIComponent(ds.cat || ''));
+
     if (isNoData) {
       params.push('noData=true');
     } else {
       params.push('colors=' + encodeURIComponent(ds.colors || ''));
       params.push('sizes=' + encodeURIComponent(ds.sizes || ''));
-      params.push('category=' + encodeURIComponent(ds.cat || ''));
     }
 
     safeNavigate({ url: '/pages/order/create/form/index?' + params.join('&') }).catch(() => {});
