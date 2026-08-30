@@ -76,6 +76,7 @@ export const paths = {
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
   financeDashboard: '/finance/dashboard',
+  dailyFlow: '/finance/daily-flow',
   financeReceivables: '/finance/receivables',
   financePayable: '/finance/payable',
   financePaymentSchedule: '/finance/payment-schedule',
@@ -592,6 +593,8 @@ export const menuConfig: MenuSection[] = [
     items: [
       // ========== 总览 ==========
       { label: '财务总览', path: paths.financeDashboard, icon: React.createElement(DashboardOutlined) },
+      // D-245：每日流水——生产扫码 / 采购 / 物料出入库 / 成品出入库 六类流水一张表
+      { label: '每日流水', path: paths.dailyFlow, icon: React.createElement(FileTextOutlined) },
       // ========== 内部结算 ==========
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       // ========== 外部结算 ==========
@@ -728,6 +731,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.financeTaxExport]: permissionCodes.financeTaxExport,       // 财税导出 → MENU_FINANCE_EXPORT
   [paths.ecSalesRevenue]: permissionCodes.financeTaxExport,         // EC销售收入 → MENU_FINANCE_EXPORT
   [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
+  [paths.dailyFlow]: permissionCodes.financeDashboard,              // 每日流水 → 复用财务总览权限
   [paths.financePaymentSchedule]: permissionCodes.materialRecon,      // 付款计划 → 复用物料对账权限
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
