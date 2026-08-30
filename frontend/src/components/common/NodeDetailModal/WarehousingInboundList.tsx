@@ -5,15 +5,17 @@
  * 此组件直接展示 t_product_warehousing 成品入库单（权威入库事实），跟踪表无行时兜底显示。
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Table } from 'antd';
+import { Button, Table } from 'antd';
 import api from '@/utils/api';
 
 interface WarehousingInboundListProps {
   orderId?: string;
   orderNo?: string;
+  onNavigateInspect?: () => void;
+  completed?: boolean;
 }
 
-const WarehousingInboundList: React.FC<WarehousingInboundListProps> = ({ orderId, orderNo }) => {
+const WarehousingInboundList: React.FC<WarehousingInboundListProps> = ({ orderId, orderNo, onNavigateInspect, completed }) => {
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -42,8 +44,20 @@ const WarehousingInboundList: React.FC<WarehousingInboundListProps> = ({ orderId
 
   return (
     <div>
-      <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
-        入库不是计件工序，以下为该订单的<strong>成品入库单记录</strong>（合格合计 <b style={{ color: 'var(--color-primary)' }}>{totalQualified}</b> 件）：
+      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+          入库不是计件工序，以下为该订单的<strong>成品入库单记录</strong>（合格合计 <b style={{ color: 'var(--color-primary)' }}>{totalQualified}</b> 件）：
+        </div>
+        {onNavigateInspect && (
+          <Button
+            size="small"
+            style={completed ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
+            onClick={onNavigateInspect}
+          >
+            跳转详情页
+            {completed && <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>}
+          </Button>
+        )}
       </div>
       <Table
         size="small"

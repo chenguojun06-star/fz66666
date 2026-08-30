@@ -5,21 +5,37 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
-import { useUser } from '@/utils/AuthContext';
+import { useUser, isSupervisorOrAboveUser } from '@/utils/AuthContext';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { productionOrderApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { savePageSize, readPageSize } from '@/utils/pageSizeStore';
 import { isOrderTerminal } from '@/utils/api';
 import { useDebouncedValue } from '@/hooks/usePerformance';
+import { useModal } from '@/hooks';
+import { useFieldConfig } from '@/hooks/useFieldConfig';
 import '../../../styles.css';
 import { useProgressFilters } from '../ProgressDetail/hooks/useProgressFilters';
+import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
+import {
+  useNodeDetailModal,
+  useProcessDetail,
+  useProductionActions,
+  useProductionTransfer,
+  useLabelPrint,
+} from '../List/hooks';
+import { useSubProcessRemap } from '../List/hooks/useSubProcessRemap';
+import ProductionModals from '../List/components/ProductionModals';
 import FactorySidebar, { FactoryStats } from './components/FactorySidebar';
 import ExternalFactorySmartView from './ExternalFactorySmartView';
 import FactoryShipmentTab from './components/FactoryShipmentTab';
 
 const ExternalFactory: React.FC = () => {
   const { message } = App.useApp();
-  const { user: _user } = useUser();
+  const { user } = useUser();
+  const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
+  const isFactoryAccount = !!(user as any)?.factoryId;
+  // 工厂账号不能自行关单/报废，与生产管理保持一致
+  const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
@@ -191,6 +207,30 @@ const ExternalFactory: React.FC = () => {
     fetchFactoryStats();
   }, [fetchOrders, fetchFactoryStats]);
 
+  // ===== 以下能力对齐「生产管理」：阶段点击详情、工序、打印、编辑、关单/报废、备注、分享、子工序 =====
+  const quickEditModal = useModal<ProductionOrder>();
+  const printModal = useModal<ProductionOrder>();
+  const workflowEditorModal = useModal<string>();
+  const inspectDrawerModal = useModal<string>();
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string; defaultRole?: string; merchandiser?: string }>({ open: false, orderNo: '' });
+
+  const { fields: fieldConfigs } = useFieldConfig({ bizType: 'production', platform: 'pc' });
+  const customFields = useMemo(() => fieldConfigs.filter(f => f.isSystem === 0), [fieldConfigs]);
+
+  const nodeDetailModal = useNodeDetailModal();
+  const labelPrint = useLabelPrint();
+  const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
+  const productionActions = useProductionActions({
+    message, isSupervisorOrAbove, fetchProductionList: fetchOrders, customFields,
+  });
+  const processDetail = useProcessDetail({ message, fetchProductionList: fetchOrders });
+  const subProcessRemap = useSubProcessRemap({ message, fetchProductionList: fetchOrders });
+  const productionTransfer = useProductionTransfer({ message });
+
+  const handleSmartOpenRemark = useCallback((record: ProductionOrder) => {
+    setRemarkTarget({ open: true, orderNo: record.orderNo || '', merchandiser: record.merchandiser });
+  }, []);
+
   const selectedFactoryName = useMemo(() => {
     if (!selectedFactoryId) return null;
     const factory = factoryStats.find(f => f.factoryId === selectedFactoryId);
@@ -264,6 +304,21 @@ const ExternalFactory: React.FC = () => {
                       pageSize={queryParams.pageSize}
                       currentPage={queryParams.page}
                       onPageChange={handlePageChange}
+                      handleCloseOrder={productionActions.handleCloseOrder}
+                      handleScrapOrder={productionActions.handleScrapOrder}
+                      openProcessDetail={processDetail.openProcessDetail}
+                      syncProcessFromTemplate={processDetail.syncProcessFromTemplate}
+                      setPrintModalVisible={(v: boolean) => { if (!v) printModal.close(); }}
+                      setPrintingRecord={(r: ProductionOrder | null) => { if (r) printModal.open(r); else printModal.close(); }}
+                      quickEditModal={quickEditModal}
+                      handleShareOrder={handleShareOrder}
+                      onOpenRemark={handleSmartOpenRemark}
+                      handlePrintLabel={labelPrint.handlePrintLabel}
+                      canManageOrderLifecycle={canManageOrderLifecycle}
+                      isSupervisorOrAbove={isSupervisorOrAbove}
+                      openSubProcessRemap={subProcessRemap.openSubProcessRemap}
+                      isFactoryAccount={isFactoryAccount}
+                      openNodeDetail={nodeDetailModal.openNodeDetail}
                     />
                   )}
                 </div>
@@ -277,6 +332,101 @@ const ExternalFactory: React.FC = () => {
           ]} />
         </div>
       </div>
+
+      <ProductionModals
+        quickEditModal={quickEditModal}
+        quickEditSaving={productionActions.quickEditSaving}
+        onQuickEditSave={productionActions.handleQuickEditSave}
+        remarkPopoverId={productionActions.remarkPopoverId}
+        setRemarkPopoverId={productionActions.setRemarkPopoverId}
+        remarkText={productionActions.remarkText}
+        setRemarkText={productionActions.setRemarkText}
+        remarkSaving={productionActions.remarkSaving}
+        handleRemarkSave={productionActions.handleRemarkSave}
+        processDetailVisible={processDetail.processDetailVisible}
+        closeProcessDetail={processDetail.closeProcessDetail}
+        processDetailRecord={processDetail.processDetailRecord}
+        processDetailType={processDetail.processDetailType}
+        procurementStatus={processDetail.procurementStatus}
+        processStatus={processDetail.processStatus}
+        fetchProductionList={fetchOrders}
+        nodeDetailVisible={nodeDetailModal.nodeDetailVisible}
+        closeNodeDetail={nodeDetailModal.closeNodeDetail}
+        nodeDetailOrder={nodeDetailModal.nodeDetailOrder}
+        nodeDetailType={nodeDetailModal.nodeDetailType}
+        nodeDetailName={nodeDetailModal.nodeDetailName ?? ''}
+        nodeDetailStats={nodeDetailModal.nodeDetailStats}
+        nodeDetailUnitPrice={nodeDetailModal.nodeDetailUnitPrice ?? 0}
+        nodeDetailProcessList={nodeDetailModal.nodeDetailProcessList ?? []}
+        transferModalVisible={productionTransfer.transferModalVisible}
+        transferRecord={productionTransfer.transferRecord}
+        transferType={productionTransfer.transferType}
+        setTransferType={productionTransfer.setTransferType}
+        transferUserId={productionTransfer.transferUserId ?? ''}
+        setTransferUserId={productionTransfer.setTransferUserId}
+        transferMessage={productionTransfer.transferMessage}
+        setTransferMessage={productionTransfer.setTransferMessage}
+        transferUsers={productionTransfer.transferUsers}
+        transferSearching={productionTransfer.transferSearching}
+        transferFactoryId={productionTransfer.transferFactoryId ?? ''}
+        setTransferFactoryId={productionTransfer.setTransferFactoryId}
+        transferFactoryMessage={productionTransfer.transferFactoryMessage}
+        setTransferFactoryMessage={productionTransfer.setTransferFactoryMessage}
+        transferFactories={productionTransfer.transferFactories}
+        transferFactorySearching={productionTransfer.transferFactorySearching}
+        transferSubmitting={productionTransfer.transferSubmitting}
+        transferBundles={productionTransfer.transferBundles}
+        transferBundlesLoading={productionTransfer.transferBundlesLoading}
+        transferSelectedBundleIds={productionTransfer.transferSelectedBundleIds}
+        setTransferSelectedBundleIds={productionTransfer.setTransferSelectedBundleIds}
+        transferProcesses={productionTransfer.transferProcesses}
+        transferProcessesLoading={productionTransfer.transferProcessesLoading}
+        transferSelectedProcessCodes={productionTransfer.transferSelectedProcessCodes}
+        setTransferSelectedProcessCodes={productionTransfer.setTransferSelectedProcessCodes}
+        searchTransferUsers={productionTransfer.searchTransferUsers}
+        searchTransferFactories={productionTransfer.searchTransferFactories}
+        submitTransfer={productionTransfer.submitTransfer}
+        closeTransferModal={productionTransfer.closeTransferModal}
+        shareOrderDialog={shareOrderDialog}
+        remarkTarget={remarkTarget}
+        setRemarkTarget={setRemarkTarget}
+        isSupervisorOrAbove={isSupervisorOrAbove}
+        isFactoryAccount={isFactoryAccount}
+        user={user}
+        labelPrintOpen={labelPrint.labelPrintOpen}
+        closeLabelPrint={labelPrint.closeLabelPrint}
+        labelPrintOrder={labelPrint.labelPrintOrder}
+        labelPrintStyle={labelPrint.labelPrintStyle}
+        remapVisible={subProcessRemap.remapVisible}
+        remapRecord={subProcessRemap.remapRecord}
+        remapParentNodes={subProcessRemap.parentNodes}
+        remapConfig={subProcessRemap.remapConfig}
+        remapSaving={subProcessRemap.remapSaving}
+        saveRemap={subProcessRemap.saveRemap}
+        closeRemap={subProcessRemap.closeRemap}
+        printModalVisible={printModal.visible}
+        setPrintModalVisible={(v: boolean) => v ? undefined : printModal.close()}
+        printingRecord={printModal.data}
+        setPrintingRecord={(r: ProductionOrder | null) => r !== null ? printModal.open(r) : printModal.close()}
+        pendingCloseOrder={productionActions.pendingCloseOrder}
+        closeOrderLoading={productionActions.closeOrderLoading}
+        confirmCloseOrder={productionActions.confirmCloseOrder}
+        cancelCloseOrder={productionActions.cancelCloseOrder}
+        pendingScrapOrder={productionActions.pendingScrapOrder}
+        scrapOrderLoading={productionActions.scrapOrderLoading}
+        confirmScrapOrder={productionActions.confirmScrapOrder}
+        cancelScrapOrder={productionActions.cancelScrapOrder}
+        workflowEditorVisible={workflowEditorModal.visible}
+        workflowEditorStyleNo={workflowEditorModal.data ?? ''}
+        closeWorkflowEditor={() => workflowEditorModal.close()}
+        onWorkflowSaved={() => { void fetchOrders(); }}
+        onOpenInspectDrawer={(orderId: string) => inspectDrawerModal.open(orderId)}
+        inspectDrawerVisible={inspectDrawerModal.visible}
+        inspectDrawerOrderId={inspectDrawerModal.data ?? ''}
+        closeInspectDrawer={() => inspectDrawerModal.close()}
+        customFields={customFields}
+        fieldConfigs={fieldConfigs}
+      />
     </>
     </>
   );

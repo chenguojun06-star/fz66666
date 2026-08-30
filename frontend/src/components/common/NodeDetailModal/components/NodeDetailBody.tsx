@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Button, Space, Spin, Tabs } from 'antd';
+import { Alert, Button, Spin, Tabs } from 'antd';
 import type { TabsProps } from 'antd';
 import { FileTextOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
@@ -135,27 +135,11 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
       )}
       {nodeTypeKey === 'warehousing' && orderId && factoryType !== 'EXTERNAL' && (
         <div style={{ marginBottom: 8 }}>
-          <Space>
-            {onOpenInspectDrawer && (
-              <Button
-                type="primary"
-                onClick={() => onOpenInspectDrawer(orderId)}
-              >
-                侧滑质检
-              </Button>
-            )}
-            {mode !== 'drawer' && (
-              <Button
-                style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
-                onClick={() => navigate(`/production/warehousing/inspect/${orderId}`)}
-              >
-                跳转详情页
-                {(nodeStats?.percent || 0) >= 100 && (
-                  <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
-                )}
-              </Button>
-            )}
-          </Space>
+          {onOpenInspectDrawer && (
+            <Button type="primary" onClick={() => onOpenInspectDrawer(orderId)}>
+              侧滑质检
+            </Button>
+          )}
         </div>
       )}
       <Tabs
@@ -165,45 +149,54 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
           const isUnitPriceNode = typeof unitPrice === 'number';
           const showProductionTabs = !isPatternProduction && !isUnitPriceNode;
           const isProcurement = nodeTypeKey === 'procurement';
+          // D-239b：仅「入库」和「采购」两个节点不显示委派页面，其余节点保留「工序委派」。
+          //  - 入库：不是计件工序，也没有委派动作，下方已改用成品入库单记录展示
+          //  - 采购：走「面辅料采购」分支（采购业务，本身就不是委派页面）
+          //  - 质检：同样无委派动作（该节点已从默认工序中移除，仅兼容旧数据）
+          const showSettingsTab = !isPatternProduction
+            && nodeTypeKey !== 'warehousing'
+            && nodeTypeKey !== 'quality';
           return [
-            isProcurement
-              ? {
-                  key: 'purchase',
-                  label: <span><ShoppingOutlined /> 面辅料采购</span>,
-                  children: (
-                    <InlinePurchasePanel
-                      orderId={orderId}
-                      orderNo={orderSummary.orderNo || orderNo}
-                      sourceType={sourceType}
-                      patternId={patternId}
-                    />
-                  ),
-                }
-              : {
-                  key: 'settings',
-                  label: <span><FileTextOutlined /> 工序委派</span>,
-                  children: (
-                    <NodeSettingsTab
-                      nodeName={nodeName}
-                      nodeStats={nodeStats}
-                      delegateProcessCode={delegateProcessCode}
-                      processList={processList}
-                      currentNodeData={currentNodeData}
-                      matchedProcess={matchedProcess}
-                      disableEdit={disableEdit}
-                      saving={saving}
-                      factories={factories || []}
-                      users={users || []}
-                      orderSummary={orderSummary}
-                      orderNo={orderNo ?? ''}
-                      unitPrice={unitPrice}
-                      cuttingSizeItems={cuttingSizeItems}
-                      updateNodeData={updateNodeData}
-                      handleFactoryChange={handleFactoryChange}
-                      handleSave={handleSave}
-                    />
-                  ),
-                },
+            showSettingsTab && (
+              isProcurement
+                ? {
+                    key: 'purchase',
+                    label: <span><ShoppingOutlined /> 面辅料采购</span>,
+                    children: (
+                      <InlinePurchasePanel
+                        orderId={orderId}
+                        orderNo={orderSummary.orderNo || orderNo}
+                        sourceType={sourceType}
+                        patternId={patternId}
+                      />
+                    ),
+                  }
+                : {
+                    key: 'settings',
+                    label: <span><FileTextOutlined /> 工序委派</span>,
+                    children: (
+                      <NodeSettingsTab
+                        nodeName={nodeName}
+                        nodeStats={nodeStats}
+                        delegateProcessCode={delegateProcessCode}
+                        processList={processList}
+                        currentNodeData={currentNodeData}
+                        matchedProcess={matchedProcess}
+                        disableEdit={disableEdit}
+                        saving={saving}
+                        factories={factories || []}
+                        users={users || []}
+                        orderSummary={orderSummary}
+                        orderNo={orderNo ?? ''}
+                        unitPrice={unitPrice}
+                        cuttingSizeItems={cuttingSizeItems}
+                        updateNodeData={updateNodeData}
+                        handleFactoryChange={handleFactoryChange}
+                        handleSave={handleSave}
+                      />
+                    ),
+                  }
+            ),
             showProductionTabs && {
               key: 'operators',
               label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
@@ -211,36 +204,47 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
             },
             !isPatternProduction && !isProcurement && {
               key: 'processTracking',
-              label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
+              label: (
+                <span>
+                  <WalletOutlined />
+                  {nodeTypeKey === 'warehousing' ? ' 成品入库记录' : ' 工序跟踪（工资结算）'}
+                  ({processTrackingRecords.length})
+                </span>
+              ),
               children: (
                 <div>
-                  {/* D-222：入库不是计件工序，跟踪表通常没有"入库"行——直接展示成品入库单记录（权威入库事实） */}
-                  {nodeTypeKey === 'warehousing' && (
-                    <div style={{ marginBottom: 12 }}>
-                      <WarehousingInboundList orderId={orderId} orderNo={orderSummary.orderNo || orderNo} />
-                    </div>
+                  {nodeTypeKey === 'warehousing' ? (
+                    <WarehousingInboundList
+                      orderId={orderId}
+                      orderNo={orderSummary.orderNo || orderNo}
+                      onNavigateInspect={() => navigate(`/production/warehousing/inspect/${orderId}`)}
+                      completed={(nodeStats?.percent || 0) >= 100}
+                    />
+                  ) : (
+                    <>
+                      <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                        <Button
+                          loading={repairLoading}
+                          onClick={handleRepairTracking}
+                          title="将已入库但跟踪记录为pending的历史数据补同步"
+                        >
+                          同步入库跟踪
+                        </Button>
+                      </div>
+                      <ProcessTrackingTable
+                        records={processTrackingRecords}
+                        loading={trackingLoading}
+                        orderId={orderId}
+                        orderNo={orderSummary.orderNo || orderNo}
+                        nodeType={nodeTypeKey}
+                        nodeName={nodeName}
+                        processList={processList.length > 0 ? processList : undefined}
+                        onUndoSuccess={handleUndoSuccess}
+                        onOpenInspectDrawer={onOpenInspectDrawer}
+                        factoryType={factoryType}
+                      />
+                    </>
                   )}
-                  <div style={{ marginBottom: 8, textAlign: 'right' }}>
-                    <Button
-                      loading={repairLoading}
-                      onClick={handleRepairTracking}
-                      title="将已入库但跟踪记录为pending的历史数据补同步"
-                    >
-                      同步入库跟踪
-                    </Button>
-                  </div>
-                  <ProcessTrackingTable
-                    records={processTrackingRecords}
-                    loading={trackingLoading}
-                    orderId={orderId}
-                    orderNo={orderSummary.orderNo || orderNo}
-                    nodeType={nodeTypeKey}
-                    nodeName={nodeName}
-                    processList={processList.length > 0 ? processList : undefined}
-                    onUndoSuccess={handleUndoSuccess}
-                    onOpenInspectDrawer={onOpenInspectDrawer}
-                    factoryType={factoryType}
-                  />
                 </div>
               ),
             },
