@@ -708,8 +708,9 @@ Page({
     const cover = this.data.coverImage;
     if (!orderNo || !cover) return;
 
-    // 只有本地临时文件需要上传（wx.chooseImage 返回 wxfile:// 或 http://tmp/ 开头）
-    const isLocal = cover.indexOf('wxfile://') === 0 || cover.indexOf('http://tmp/') === 0;
+    // 网络图（方式二：选已有款式）直接存；
+    // 其余（chooseMedia/chooseImage 的本地临时路径：wxfile://、http://tmp/ 等）需先上传
+    const isLocal = !/^https?:\/\//.test(cover);
     const uploadTask = isLocal
       ? api.common.uploadImage(cover)
       : Promise.resolve(cover);

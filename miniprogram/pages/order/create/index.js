@@ -155,21 +155,47 @@ Page({
   },
 
   // 无资料下单：选择图片
+  // ★ 必须用 wx.chooseMedia：wx.chooseImage 自基础库 2.21.0 起已弃用，
+  //   新版开发者工具/真机调试下点击无反应（与全站其他 7 处选图入口保持一致）
   chooseNoDataImage: function () {
     var self = this;
-    wx.chooseImage({
-      count: 1,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: function (res) {
-        var tempPath = res.tempFilePaths[0];
-        console.log('[无资料下单] 选择图片:', tempPath);
-        self.setData({ noDataUploadedImage: tempPath });
-      },
-      fail: function () {
-        toast.error('选择图片失败');
-      }
-    });
+    var onPicked = function (tempPath) {
+      if (!tempPath) return;
+      console.log('[无资料下单] 选择图片:', tempPath);
+      self.setData({ noDataUploadedImage: tempPath });
+    };
+    var onFail = function (err) {
+      // 用户取消不算失败，不提示
+      var msg = (err && err.errMsg) || '';
+      if (msg.indexOf('cancel') !== -1) return;
+      toast.error('选择图片失败');
+    };
+
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['compressed'],
+        success: function (res) {
+          // chooseMedia 的返回结构与 chooseImage 不同：tempFiles[].tempFilePath
+          var files = (res && res.tempFiles) || [];
+          onPicked(files[0] && files[0].tempFilePath);
+        },
+        fail: onFail,
+      });
+    } else {
+      // 老基础库兜底
+      wx.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: function (res) {
+          onPicked(res.tempFilePaths && res.tempFilePaths[0]);
+        },
+        fail: onFail,
+      });
+    }
   },
 
   // 无资料下单：删除图片
