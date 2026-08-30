@@ -41,7 +41,14 @@ public class OrderListCacheHelper {
     public String buildDetailCacheKey(String orderId) {
         Long tenantId = UserContext.tenantId();
         String tenant = tenantId != null ? "t" + tenantId : "anon";
-        return DETAIL_CACHE_PREFIX + tenant + ":" + orderId;
+        // D-235 安全修复：详情缓存 key 必须带工厂维度。
+        // 原实现只有 tenant + orderId，而 ProductionOrderQueryService.getDetailById
+        // 是「先查缓存、命中即返回」，SQL 里的 factory_id 过滤在缓存命中时被完全绕过。
+        // 后果：同租户下 A 工厂查过的订单，B 工厂再查会直接拿到 A 留在缓存里的数据
+        // ——跨工厂数据泄露。此处补上工厂维度，与 buildListCacheKey 口径一致。
+        String factoryId = UserContext.factoryId();
+        String factory = factoryId != null ? ":f" + factoryId : "";
+        return DETAIL_CACHE_PREFIX + tenant + factory + ":" + orderId;
     }
 
     public IPage<?> getListCache(String cacheKey) {
@@ -104,7 +111,10 @@ public class OrderListCacheHelper {
         if (stringRedisTemplate == null) return;
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) return;
-        safeDelete(DETAIL_CACHE_PREFIX + "t" + tenantId + ":" + orderId);
+        // D-235：详情缓存 key 已带工厂维度，需按 pattern 清掉该订单在
+        // 「租户账号」与「各工厂账号」维度下的全部缓存，避免清不干净读到旧数据。
+        // pattern 形如 order:detail:t1:*POxxx，可同时匹配 t1:POxxx 与 t1:fA:POxxx。
+        safeDeleteByPattern(DETAIL_CACHE_PREFIX + "t" + tenantId + ":*" + orderId);
     }
 
     private String hashParams(Map<String, Object> params) {

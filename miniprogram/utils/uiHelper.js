@@ -6,7 +6,7 @@
 /**
  * Toast提示
  */
-const toast = {
+const toastMethods = {
   /**
    * 成功提示
    * @param {string} title - 提示文字
@@ -70,6 +70,20 @@ const toast = {
     wx.hideLoading();
   },
 };
+
+/**
+ * D-235 兼容性修复：历史上很多页面把 toast 当函数直接调用——toast('提示文字')，
+ * 但它一直是对象，运行时会抛 "toast is not a function"。
+ * 受影响模块：财务支付 / 工资 / 销售 / 借支 / 订单备注 / 退货 / 扫码 / 生产管理等。
+ *
+ * 改为让 toast 同时支持两种用法，一处修复全部历史调用：
+ *   toast('提示文字')       → 等价于 toast.info(...)
+ *   toast.error('提示文字') → 原有对象用法保持不变
+ */
+const toast = function (title, duration = 1500) {
+  return toastMethods.info(title, duration);
+};
+Object.assign(toast, toastMethods);
 
 /**
  * 提示后跳转

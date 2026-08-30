@@ -30,8 +30,11 @@ const ExternalFactory: React.FC = () => {
     page: 1,
     pageSize: readPageSize(20),
     keyword: '',
-    includeScrapped: false,
-    excludeTerminal: true,
+    // D-235：外发工厂要能看到本厂全部状态的订单（生产中 / 已完成 / 已关单 /
+    // 已报废 / 已取消）。原先 excludeTerminal=true 会把所有终态订单排除掉，
+    // includeScrapped=false 又会额外排除报废单，导致历史订单在列表里看不到。
+    includeScrapped: true,
+    excludeTerminal: false,
   });
 
   const debouncedKeyword = useDebouncedValue(searchInput, 300);

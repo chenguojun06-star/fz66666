@@ -176,6 +176,10 @@ Page({
       const that = this;
       this.setData({ orderLoading: true });
       const params = { page: this.data.orderPage, pageSize: 20 };
+      // D-235：外发工厂要能看到本厂全部状态的订单（生产中 / 已完成 / 已关单 /
+      // 已报废 / 已取消）。后端 buildQueryWrapper 默认会排除 status='scrapped'，
+      // 这里显式声明包含，避免报废单在列表里凭空消失。
+      params.includeScrapped = 'true';
       if (this.data.keyword) params.keyword = this.data.keyword;
       // 未知工厂(factoryId=0)不传后端(后端无factory_id=0记录)，改由前端筛选 factoryId 为空的订单
       if (this.data.selectedFactoryId != null && this.data.selectedFactoryId !== 0) params.factoryId = this.data.selectedFactoryId;
@@ -196,7 +200,7 @@ Page({
         });
       }).catch(function (_e) {
         that.setData({ orderLoading: false });
-        toast('加载失败');
+        toast.error('加载失败'); // D-235：toast 是对象，不能用 toast(...) 直接调用
       });
   },
 
@@ -285,7 +289,7 @@ Page({
     scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
       if (!parsed.success || !parsed.data) {
-        toast('无法识别：' + (raw || ''));
+        toast.error('无法识别：' + (raw || ''));
         return;
       }
       const orderNo = parsed.data.orderNo;
@@ -303,7 +307,7 @@ Page({
           url: '/pages/dashboard/process-edit/index?orderNo=' + encodeURIComponent(orderNo || styleNo || '')
         }).catch(function () {});
       } else {
-        toast('未识别到订单号');
+        toast.error('未识别到订单号');
       }
     });
   },

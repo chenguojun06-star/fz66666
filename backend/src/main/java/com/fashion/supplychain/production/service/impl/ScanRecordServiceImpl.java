@@ -96,9 +96,19 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 }
 
                 // 工厂账号隔离：限制只能查看本工厂的扫码记录
-                String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "factoryId"));
-                if (StringUtils.hasText(factoryId)) {
-                        wrapper.eq(ScanRecord::getFactoryId, factoryId);
+                // D-235 安全修复：原实现只按「请求参数 factoryId」过滤——工厂账号不传该参数时
+                // 完全没有工厂过滤；而下方 applyDataPermissionFilter() 又基于
+                // 「factoryId 已在调用处添加过滤」的假设对工厂账号直接 return 放行，
+                // 两道防线同时失效 → 工厂账号能看到所有工厂的扫码记录（含订单号/工序/数量/操作人）。
+                // 现改为以登录上下文为准：工厂账号强制锁定到本工厂，忽略请求参数。
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
+                } else {
+                        String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "factoryId"));
+                        if (StringUtils.hasText(factoryId)) {
+                                wrapper.eq(ScanRecord::getFactoryId, factoryId);
+                        }
                 }
 
                 // 外发工厂扫码明细：只查 factory_id 非空的记录（财务中心-扫码明细Tab）
@@ -128,10 +138,13 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
          * - 普通工人: 只能查看自己的数据
          */
         private void applyDataPermissionFilter(LambdaQueryWrapper<ScanRecord> wrapper) {
-                // 外发工厂账号：factoryId 已在调用处添加过滤，直接放行（可查看本工厂全部数据）
+                // 外发工厂账号：可查看本工厂全部数据，无需按个人/团队范围收窄
+                // D-235：此前这里直接 return，完全依赖「调用处已加工厂过滤」的假设，
+                // 一旦某个调用处漏加即越权。改为在此再强制补一次工厂条件（幂等，双保险）。
                 String ctxFactoryId = UserContext.factoryId();
                 if (StringUtils.hasText(ctxFactoryId)) {
-                        log.debug("数据权限: 外发工厂账号 factoryId={}, 跳过个人范围过滤", ctxFactoryId);
+                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
+                        log.debug("数据权限: 外发工厂账号 factoryId={}, 锁定本工厂并跳过个人范围过滤", ctxFactoryId);
                         return;
                 }
                 String dataScope = UserContext.getDataScope();

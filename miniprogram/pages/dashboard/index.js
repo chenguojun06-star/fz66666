@@ -320,12 +320,15 @@ Page({
     scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
       if (!parsed.success || !parsed.data) {
-        toast('无法识别：' + (raw || ''));
+        toast.error('无法识别：' + (raw || ''));
         return;
       }
       const orderNo = parsed.data.orderNo;
       const styleNo = parsed.data.styleNo;
-      const orders = that.data.orders || [];
+      // D-235 修复：本页 data.orders 是 { list, loading, hasMore } 分页对象，
+      // 订单数组挂在 orders.list 上，直接对 orders 调 .find 会抛
+      // "orders.find is not a function"（外发管理页 orders 才是数组）
+      const orders = (that.data.orders && that.data.orders.list) || [];
       const matched = orders.find(function (o) {
         return (orderNo && o.orderNo === orderNo) || (styleNo && o.styleNo === styleNo);
       });
@@ -339,7 +342,7 @@ Page({
           url: '/pages/dashboard/process-edit/index?orderNo=' + encodeURIComponent(orderNo || styleNo || '')
         }).catch(function () {});
       } else {
-        toast('未识别到订单号');
+        toast.error('未识别到订单号');
       }
     });
   },
