@@ -245,3 +245,47 @@ page { background-color: var(--color-bg-page); }
   font-size: var(--font-size-base); font-weight: 600; color: var(--color-text-white);
 }
 .bar-btn.dis { opacity: 0.5; }
+
+/* ══ 区块标题右侧操作组 ══ */
+.blk-acts { display: flex; gap: 6px; }
+
+/* ══ 基础属性库：底部半屏弹层 ══ */
+.mask {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.45); z-index: 100;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.sheet {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  max-height: 70vh; display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sheet-hd {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px var(--spacing-lg) 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+.sheet-t { font-size: var(--font-size-md); font-weight: 600; color: var(--color-text-primary); }
+.sheet-x { font-size: var(--font-size-sm); color: var(--color-text-secondary); padding: 4px 2px; }
+.sheet-bd { flex: 1; min-height: 0; padding: 12px var(--spacing-lg); box-sizing: border-box; }
+.sheet-empty {
+  font-size: var(--font-size-xs); color: var(--color-text-tertiary);
+  text-align: center; padding: 36px 0;
+}
+
+.gitem {
+  margin-bottom: 12px; padding: 12px;
+  background: var(--color-bg-page); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+.gitem-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.gitem-n { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text-primary); }
+.gitem-c { font-size: var(--font-size-2xs); color: var(--color-text-tertiary); }
+.gitem-acts { display: flex; gap: 8px; margin-top: 10px; }
+.gitem-acts .f-btn { flex: 1; height: 36px; }
+
+.chip.sm {
+  height: 26px; line-height: 26px; padding: 0 10px;
+  font-size: var(--font-size-2xs);
+}

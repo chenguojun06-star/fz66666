@@ -16,6 +16,7 @@ const { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSe
 const ecommerce = require('./api-modules/ecommerce');
 const { purchaseReturn, salesReturn } = require('./api-modules/return');
 const attendance = require('./api-modules/attendance');
+const crm = require('./api-modules/crm');
 
 // ── 聚合对象（与拆分前完全一致的接口） ──────────────────────
 const api = {
@@ -44,6 +45,7 @@ const api = {
   wageSettlementFeedback,
   ecommerce,
   attendance,
+  crm,
 };
 
 // ── 导出（保持原有 module.exports + named exports 兼容） ───
@@ -71,6 +73,7 @@ module.exports.ecommerce = ecommerce;
 module.exports.purchaseReturn = purchaseReturn;
 module.exports.salesReturn = salesReturn;
 module.exports.attendance = attendance;
+module.exports.crm = crm;
 
 /* --- 拆分前原始代码已归档至 api-modules/ 各领域文件 --- */
 /* helpers.js       — ok / raw / pickMessage / createBizError / uploadFile */

@@ -5,6 +5,18 @@
 
 ## 已完成
 
+### 2026-08-30 D-248 下单页补齐：客户选择器 + 基础属性库齿轮 ✅（纯小程序，零后端改动，已提交推送）
+
+- [x] 客户选择器：新建 `api-modules/crm.js`，用 `GET /api/crm/customers/active-list`
+      （后端已 tenantId + 工厂隔离）；form 页改 picker，无数据回退手输
+- [x] 提交补 `customerId` / `customerName`（原先恒 null）
+- [x] picker 首项插「（不选）」解决无法清空问题
+- [x] 基础属性库：复用 t_dict `color_group` / `size_group`，**零后端改动**
+- [x] 颜色/码数区块加「库」按钮 → 半屏弹层 → 覆盖 / 追加（追加自动去重）
+- [x] 只做「使用组合」，组合增删改留在 PC 端
+- [x] QA：四副本 node --check / MD5 一致 / 40 处理器全有实现 / WXSS 94/94
+- [ ] 真机验收：客户选择器 + 属性库覆盖追加
+
 ### 2026-08-30 D-247 无资料下单图片丢失根治（P0）+ 开放「从已有款式下单」（P1）✅（后端+小程序，已提交推送）
 
 - [x] **P0 根因**：订单 `coverImage`/`styleImage` 是 `@TableField(exist=false)`，靠 styleNo 三级回退；

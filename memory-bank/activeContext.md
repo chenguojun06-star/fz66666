@@ -4936,3 +4936,42 @@ if (!urlTenantId.equals(tokenTenantId)) {  // ⚠️ tokenTenantId为null时抛N
 - [x] WXSS 括号：create 93/93、form 79/79
 - [x] 自查发现并修复：无资料下单方式二封面丢失
 - [ ] 真机验收：无资料下单上传图 → 订单列表/详情能看到图
+
+## 2026-08-30 D-248 下单页补齐最后两项：客户选择器 + 基础属性库齿轮（纯小程序，零后端改动）
+
+承接 D-247 留下的下批待办，两项都已确认**不需要改后端**。
+
+### 1. 客户选择器（对齐 PC 端 CustomerSelect）
+
+- 新建 `miniprogram/utils/api-modules/crm.js` + `api.js` 引入导出
+- 接口用 **`GET /api/crm/customers/active-list`**——后端注释即"活跃客户下拉列表
+  （用于订单创建时选择客户）"，`CustomerOrchestrator.listActive()` **已做 tenantId 过滤
+  + 工厂账号只返回自己关联客户**（P0 铁律 #7 前端无需再过滤）
+- `form/index.wxml` 客户字段：有客户数据时用 picker（`range-key="companyName"`），
+  无数据时**回退手输**（与纸样师/跟单员同一容错模式）
+- 提交 payload 补 `customerId` / `customerName`（原先恒为 null）
+- **picker 无 allowClear** → 列表首项插入「（不选）」让用户能清空已选客户
+
+### 2. 基础属性库齿轮（对齐 PC 端 AttributeGroupLibraryModal）
+
+- **零后端改动**：PC 端组件注释明确"数据存储复用系统字典（t_dict，
+  dictType=xxx_group，dictValue=JSON 数组），**无独立后端接口**"
+- 小程序直接复用已有 `api.system.getDictList('color_group' / 'size_group')`
+- 颜色/码数区块标题右侧加「库」按钮 → 底部半屏弹层列出已保存组合
+  → 每个组合给「覆盖 / 追加」两个动作（追加走 `mergeDistinctOptions` 自动去重）
+- `parseGroupValues` 逻辑与 PC 端一致：先 `JSON.parse`，失败走 `[,，、]` 分隔符兼容
+- **本批只做「使用组合」**，组合的增删改留在 PC 端（手机端以"用"为主）
+- 弹层细节：`.sheet` 用 `catchtap` 防冒泡误关、`catchtouchmove` 防滚动穿透
+
+### 验证
+- [x] 四副本 `node --check` 全过（api.js / crm.js / form/index.js / create/index.js）
+- [x] 5 文件 MD5 四副本完全一致
+- [x] WXML：form 页 40 个事件处理器全部有 JS 实现，标签全闭合
+- [x] WXSS 括号 94/94 配对
+- [x] 走查补漏：客户 picker 无法清空（加「（不选）」）
+- [ ] 真机验收：选客户 → 订单带 customerId；点「库」→ 组合覆盖/追加生效
+
+### 至此下单页优化全部闭环
+D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资料选款）
+→ D-248（客户选择器 + 属性库齿轮）。
+剩余仅「款式批量多选下单」一项未做（改动面广，非痛点）。

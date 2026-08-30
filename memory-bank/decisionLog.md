@@ -3841,3 +3841,60 @@ WXML 处理器（create 5 / form 36）全部有 JS 实现、标签全闭合；WX
 
 ### 待办
 真机验收无资料下单图片链路；下批做基础属性库齿轮 + 客户选择器。
+
+---
+
+## D-248 下单页补齐：客户选择器 + 基础属性库齿轮（2026-08-30）
+
+### 背景
+D-247 收尾时列的下批两项：基础属性库齿轮、客户选择器。
+动手前先核实后端，结论是**两项都不需要改后端**。
+
+### 决策 1：客户选择器用 active-list，不用 customers/list
+
+后端 `CrmController` 有两个可用接口：
+- `POST /api/crm/customers/list`（分页 + 搜索，PC 端 CustomerSelect 用这个）
+- `GET /api/crm/customers/active-list`——**后端注释即"活跃客户下拉列表（用于订单创建时选择客户）"**
+
+选后者：下单场景要的就是活跃客户下拉，且 `CustomerOrchestrator.listActive()`
+**已做 tenantId 过滤 + 工厂账号只返回自己关联的客户**，前端零额外处理。
+PC 端那个带搜索是因为 PC 有 AutoComplete 组件；小程序 picker 不支持搜索，用简单列表即可。
+
+**客户字段名**：`Customer.companyName`（不是 customerName）。
+提交时 `customerId` + `customerName`（customerName 取展示用的 companyName）。
+
+### 决策 2：picker 没有 allowClear，用「（不选）」兜底
+
+小程序 `<picker>` 不像 antd Select 有 `allowClear`，选中后无法清空。
+客户是选填字段，必须能清空 → 在列表首项插入 `{id:'', companyName:'（不选）'}`，
+`onCustomerChange` 里 `item.id` 为空则清空 customerId 与 company。
+
+### 决策 3：基础属性库复用 t_dict，确认零后端改动
+
+PC 端 `AttributeGroupLibraryModal` 源码注释明确：
+"数据存储复用系统字典（t_dict，dictType=xxx_group，dictValue=JSON 数组），**无独立后端接口**"。
+所以小程序直接用已有的 `api.system.getDictList('color_group' / 'size_group')` 即可，
+不需要新增任何后端接口——**这与 D-246 的教训一致：动手前先确认有没有现成体系可复用**。
+
+### 决策 4：手机端只做「使用组合」，管理留在 PC
+
+组合的新增/编辑/删除是管理动作，手机上操作体验差、也非高频。
+本批只做「覆盖 / 追加」两个使用动作，管理入口仍走 PC 端。
+追加走 `mergeDistinctOptions` 自动去重，与手动添加码数的去重口径一致。
+
+### 决策 5：解析逻辑与 PC 端保持一致
+
+PC 端 `parseGroupValues`：先 `JSON.parse`，失败回退 `[,，、]` 分隔符。
+小程序原样复刻——存量数据可能两种格式都有，只支持一种会丢数据。
+
+### 走查补漏
+写完自查找出：客户 picker 选中后无法清空（已加「（不选）」）。
+
+### 验证
+四副本 `node --check` 全过；5 文件 MD5 一致；
+WXML form 页 40 个事件处理器全部有 JS 实现、标签全闭合；WXSS 94/94 配对。
+
+### 至此下单页优化闭环
+D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资料选款）
+→ D-248（客户选择器 + 属性库齿轮）。
+仅剩「款式批量多选下单」未做（改动面广、非痛点）。

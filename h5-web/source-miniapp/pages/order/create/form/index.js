@@ -33,6 +33,7 @@ Page({
     plannedStartDate: '', plannedEndDate: '',
     urgencyLevel: 'normal',
     company: '', productCategory: '',
+    customerId: '', customerList: [],
     plateType: '', plateTypeLabel: '',
     orderBizType: '', orderBizTypeLabel: '',
     patternMaker: '', merchandiser: '',
@@ -47,6 +48,8 @@ Page({
     gridRows: [], gridSizes: [], sizeTotals: [],
     colorInput: '', sizeInput: '',
     colorOptions: [], sizeOptions: [],
+    // 基础属性库（成组预设，读 t_dict 的 color_group / size_group）
+    attrLibOpen: false, attrLibTarget: '', attrLibTitle: '', attrLibGroups: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     bizTypeLabels: BIZ_TYPE_LABELS,
     factoryList: [], orgUnitList: [], categoryOptions: [], userOptions: [],
@@ -203,6 +206,20 @@ Page({
   _loadAux: function () {
     const self = this;
 
+    // 客户：与 PC 端 CustomerSelect 同源（活跃客户列表），选不中时可手输兜底
+    // 后端 listActive() 已按 tenantId + 工厂账号隔离，前端无需再过滤
+    api.crm.listActiveCustomers().then(function (res) {
+      const list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+      const opts = [];
+      list.forEach(function (c) {
+        const name = c.companyName || c.customerNo || '';
+        if (name) opts.push({ id: c.id, companyName: name });
+      });
+      // 小程序 picker 没有 allowClear，插入「（不选）」让用户能清空已选客户
+      if (opts.length) opts.unshift({ id: '', companyName: '（不选）' });
+      self.setData({ customerList: opts });
+    }).catch(function () {});
+
     api.factory.list().then(function (res) {
       const list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
       self.setData({ factoryList: list.map(function (f) { return { factoryName: f.factoryName || f.name || f.label || '', id: f.id }; }) });
@@ -306,6 +323,13 @@ Page({
 
   onCompanyInput: function (e) { this.setData({ company: e.detail.value }); },
 
+  onCustomerChange: function (e) {
+    const item = this.data.customerList[e.detail.value];
+    if (!item) return;
+    // 选中「（不选）」时 id 为空 → 清空客户
+    this.setData({ customerId: item.id || '', company: item.id ? item.companyName : '' });
+  },
+
   onCategoryChange: function (e) {
     const item = this.data.categoryOptions[e.detail.value];
     this.setData({ productCategory: item ? (item.dictLabel || item.label || '') : '' });
@@ -379,6 +403,84 @@ Page({
     if (i === -1) sel.push(s); else sel.splice(i, 1);
     this.setData({ selectedSizes: sel });
     this._rebuildLines();
+  },
+
+  /* ═══ 基础属性库（成组预设，与 PC 端 AttributeGroupLibraryModal 同源） ═══ */
+
+  /**
+   * 打开基础属性库
+   *
+   * ★ 数据来源：与 PC 端完全一致——复用系统字典 t_dict，
+   *   dictType = color_group / size_group，dictValue = JSON 数组。
+   *   **无独立后端接口**，所以小程序零后端改动即可接入。
+   * ★ 本批只做「使用组合」（覆盖/追加），组合的增删改留在 PC 端。
+   */
+  onOpenAttrLib: function (e) {
+    const target = e.currentTarget.dataset.target;
+    const dictType = target === 'color' ? 'color_group' : 'size_group';
+    const self = this;
+    this.setData({
+      attrLibOpen: true,
+      attrLibTarget: target,
+      attrLibTitle: target === 'color' ? '颜色组合' : '码数组合',
+      attrLibGroups: [],
+    });
+    api.system.getDictList(dictType).then(function (res) {
+      const data = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+      const groups = [];
+      data.forEach(function (d) {
+        // 与 PC 端 parseGroupValues 同逻辑：先试 JSON，失败走分隔符兼容
+        let values = [];
+        try {
+          const parsed = JSON.parse(d.dictValue || '[]');
+          if (Array.isArray(parsed)) {
+            values = parsed.map(function (v) { return String(v == null ? '' : v).trim(); }).filter(Boolean);
+          }
+        } catch (err) {
+          values = String(d.dictValue || '').split(/[,，、]/).map(function (v) { return v.trim(); }).filter(Boolean);
+        }
+        if (values.length) {
+          groups.push({ id: d.id, name: d.dictLabel || d.dictCode || '未命名', values: values });
+        }
+      });
+      self.setData({ attrLibGroups: groups });
+    }).catch(function () {});
+  },
+
+  onCloseAttrLib: function () { this.setData({ attrLibOpen: false }); },
+
+  /** 弹层内部拦截：同时用于 catchtouchmove（防滚动穿透）与 catchtap（防冒泡误关弹层） */
+  onSheetTouchMove: function () { return false; },
+
+  onApplyAttrGroup: function (e) {
+    const idx = e.currentTarget.dataset.idx;
+    const mode = e.currentTarget.dataset.mode;
+    const group = this.data.attrLibGroups[idx];
+    if (!group) return;
+    const values = group.values;
+    const isColor = this.data.attrLibTarget === 'color';
+
+    if (isColor) {
+      // replace=覆盖；append=在现有基础上追加（mergeDistinctOptions 自动去重）
+      const base = mode === 'replace' ? [] : this.data.selectedColors;
+      this.setData({
+        selectedColors: mergeDistinctOptions(base, values),
+        colorOptions: mergeDistinctOptions(this.data.colorOptions, values),
+      });
+    } else {
+      const base = mode === 'replace' ? [] : this.data.selectedSizes;
+      this.setData({
+        selectedSizes: mergeDistinctOptions(base, values),
+        sizeOptions: mergeDistinctOptions(this.data.sizeOptions, values),
+      });
+    }
+
+    this.setData({ attrLibOpen: false });
+    this._rebuildLines();
+    wx.showToast({
+      title: (mode === 'replace' ? '已覆盖为 ' : '已追加 ') + values.length + ' 项',
+      icon: 'none',
+    });
   },
 
   /* ═══ 批量选择 / 批量铺量（对齐PC端：全选颜色 / 全选码数 / 清空 / 全部铺量） ═══ */
@@ -536,7 +638,7 @@ Page({
       orgUnitId: d.factoryMode === 'INTERNAL' ? d.orgUnitId : null,
       factoryType: d.factoryMode,
       merchandiser: d.merchandiser || null, company: d.company || null,
-      customerId: null, customerName: null,
+      customerId: d.customerId || null, customerName: d.company || null,
       productCategory: d.productCategory || null, patternMaker: d.patternMaker || null,
       urgencyLevel: d.urgencyLevel, plateType: d.plateType || null,
       orderBizType: d.orderBizType || null, orderQuantity: d.orderQuantity,

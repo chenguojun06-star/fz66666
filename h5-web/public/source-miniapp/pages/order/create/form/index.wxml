@@ -84,7 +84,10 @@
       <view class="f-row-row">
         <view class="f-col">
           <text class="f-lbl-blk">客户</text>
-          <input class="f-inp" value="{{company}}" bindinput="onCompanyInput" placeholder="选填" />
+          <picker wx:if="{{customerList.length > 0}}" range="{{customerList}}" range-key="companyName" bindchange="onCustomerChange">
+            <view class="f-pv {{company?'':'ph'}}">{{company || '选填'}}</view>
+          </picker>
+          <input wx:else class="f-inp" value="{{company}}" bindinput="onCompanyInput" placeholder="选填" />
         </view>
         <view class="f-col">
           <text class="f-lbl-blk">品类</text>
@@ -146,7 +149,10 @@
       <view class="blk">
         <view class="blk-hd">
           <text class="blk-t">颜色</text>
-          <text class="blk-a" bindtap="onSelectAllColors">全选</text>
+          <view class="blk-acts">
+            <text class="blk-a" data-target="color" bindtap="onOpenAttrLib">库</text>
+            <text class="blk-a" bindtap="onSelectAllColors">全选</text>
+          </view>
         </view>
         <view class="add-row">
           <input class="add-inp flex-1" value="{{colorInput}}" bindinput="onColorInput" bindconfirm="onColorAdd" placeholder="输入颜色，可粘贴「黑色,白色」批量添加" confirm-type="done" />
@@ -162,7 +168,10 @@
       <view class="blk">
         <view class="blk-hd">
           <text class="blk-t">码数</text>
-          <text class="blk-a" bindtap="onSelectAllSizes">全选</text>
+          <view class="blk-acts">
+            <text class="blk-a" data-target="size" bindtap="onOpenAttrLib">库</text>
+            <text class="blk-a" bindtap="onSelectAllSizes">全选</text>
+          </view>
         </view>
         <view class="add-row">
           <input class="add-inp flex-1" value="{{sizeInput}}" bindinput="onSizeInput" bindconfirm="onSizeAdd" placeholder="输入码数，可粘贴「S,M,L」批量添加" confirm-type="done" />
@@ -253,6 +262,31 @@
     </view>
     <view class="bar-btn {{submitting?'dis':''}}" bindtap="onSubmit">
       <text>{{submitting ? '提交中...' : '确认下单'}}</text>
+    </view>
+  </view>
+  <!-- ══ 基础属性库：成组预设（覆盖 / 追加） ══ -->
+  <view wx:if="{{attrLibOpen}}" class="mask" bindtap="onCloseAttrLib" catchtouchmove="onSheetTouchMove">
+    <view class="sheet" catchtap="onSheetTouchMove">
+      <view class="sheet-hd">
+        <text class="sheet-t">{{attrLibTitle}}</text>
+        <text class="sheet-x" bindtap="onCloseAttrLib">关闭</text>
+      </view>
+      <scroll-view scroll-y class="sheet-bd">
+        <view wx:if="{{attrLibGroups.length === 0}}" class="sheet-empty">暂无已保存的组合，可在 PC 端「基础属性库」创建</view>
+        <view class="gitem" wx:for="{{attrLibGroups}}" wx:for-item="g" wx:for-index="gidx" wx:key="id">
+          <view class="gitem-hd">
+            <text class="gitem-n">{{g.name}}</text>
+            <text class="gitem-c">{{g.values.length}} 项</text>
+          </view>
+          <view class="chip-wrap">
+            <text class="chip sm" wx:for="{{g.values}}" wx:for-item="v" wx:key="*this">{{v}}</text>
+          </view>
+          <view class="gitem-acts">
+            <view class="f-btn ghost" data-idx="{{gidx}}" data-mode="replace" bindtap="onApplyAttrGroup"><text>覆盖</text></view>
+            <view class="f-btn" data-idx="{{gidx}}" data-mode="append" bindtap="onApplyAttrGroup"><text>追加</text></view>
+          </view>
+        </view>
+      </scroll-view>
     </view>
   </view>
   <ai-assistant />
