@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { Form, Input, InputNumber } from 'antd';
 import type { FormInstance } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
 import type { HookAPI as ModalHookAPI } from 'antd/es/modal/useModal';
@@ -40,11 +41,12 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
     setReturnModalRecord,
     setReturnModalVisible,
     returnForm,
-    setActionLoading,
     setConfirmCompleteLoading,
   } = params;
 
-  const handleConfirmReturn = useCallback(async (record: MaterialPurchase) => {
+  const [batchForm] = Form.useForm<{ items?: Array<{ purchaseId?: string; returnQuantity?: number }> }>();
+
+  const handleConfirmReturn = useCallback((record: MaterialPurchase) => {
     setReturnModalRecord(record);
     returnForm.setFieldsValue({ quantity: Number(record.arrivedQuantity || record.purchaseQuantity || 0) });
     setReturnModalVisible(true);
@@ -106,16 +108,52 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
       message.info('没有可回料确认的物料');
       return;
     }
+    const confirmerId = String(user?.id || '').trim();
+    const confirmerName = String(user?.name || user?.username || '').trim();
+    // 打开弹窗前预填每项默认回料数 = 已到货数（与列表页批量回料口径一致）
+    batchForm.setFieldsValue({
+      items: returnable.map((item) => ({
+        purchaseId: String(item.id || ''),
+        returnQuantity: Number(item.arrivedQuantity || item.purchaseQuantity || 0),
+      })),
+    });
     const contentEl = (
       <div>
-        <p>确认回料以下 {returnable.length} 项物料：</p>
-        <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 }}>
-          {returnable.map((item, idx) => (
-            <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{item.materialName || item.materialCode} · {item.color || '-'}</span>
-              <span style={{ color: 'var(--color-primary)' }}>到货 {item.arrivedQuantity || item.purchaseQuantity}{item.unit || ''}</span>
-            </div>
-          ))}
+        <p style={{ marginTop: 0 }}>确认回料以下 {returnable.length} 项物料，请填写每项实际回料数量：</p>
+        <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 4 }}>
+          <Form form={batchForm} layout="vertical" preserve={false}>
+            {returnable.map((item, idx) => (
+              <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.materialName || item.materialCode} {item.color ? `· ${item.color}` : ''}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                    采购 {Number(item.purchaseQuantity || 0)}{item.unit || ''} · 到货 {Number(item.arrivedQuantity || 0)}{item.unit || ''}
+                  </div>
+                </div>
+                <Form.Item name={['items', idx, 'purchaseId']} hidden style={{ margin: 0 }}>
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  name={['items', idx, 'returnQuantity']}
+                  style={{ margin: 0 }}
+                  rules={[
+                    { required: true, message: '请输入实际回料数量' },
+                    {
+                      validator: async (_, v) => {
+                        const n = Number(v);
+                        if (!Number.isFinite(n)) throw new Error('请输入数字');
+                        if (n < 0) throw new Error('不能小于0');
+                      },
+                    },
+                  ]}
+                >
+                  <InputNumber min={0} precision={2} step={0.01} style={{ width: 130 }} addonAfter={item.unit || undefined} />
+                </Form.Item>
+              </div>
+            ))}
+          </Form>
         </div>
       </div>
     );
@@ -126,30 +164,41 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
       cancelText: '取消',
       width: '40vw',
       onOk: async () => {
-        setActionLoading(true);
         try {
-          const confirmerId = String(user?.id || '').trim();
-          const confirmerName = String(user?.name || user?.username || '').trim();
-          const purchaseIds = returnable.map(p => String(p.id || '')).filter(Boolean);
-          const res = await api.post<{ code: number; message?: string }>('/production/purchase/batch-return-confirm', {
-            purchaseIds,
+          const values = await batchForm.validateFields();
+          const items = (values.items || [])
+            .map(it => ({ purchaseId: String(it?.purchaseId || '').trim(), returnQuantity: Number(it?.returnQuantity) }))
+            .filter(it => it.purchaseId);
+          if (!items.length) { message.error('没有可回料确认的采购任务'); return false; }
+          // 与列表页批量回料同结构：items[{purchaseId, returnQuantity}] 走 batch-return-confirm
+          const res = await api.post<{ code: number; message?: string; data?: { successCount?: number; failCount?: number; errors?: string[] } }>('/production/purchase/batch-return-confirm', {
+            items,
             confirmerId,
             confirmerName,
           });
+          const data = res?.data;
+          const successCount = Number(data?.successCount ?? items.length);
+          const failCount = Number(data?.failCount ?? 0);
           if (res?.code === 200) {
-            message.success(`已批量回料确认 ${returnable.length} 项`);
+            if (failCount > 0) {
+              const errText = data?.errors?.[0] || '部分失败';
+              message.warning(`批量回料确认成功 ${successCount} 项，失败 ${failCount} 项：${errText}`);
+            } else {
+              message.success(`已批量回料确认 ${successCount} 项`);
+            }
             loadData();
-          } else {
-            message.error(res?.message || '批量回料确认失败');
+            return true;
           }
+          message.error(res?.message || '批量回料确认失败');
+          return false;
         } catch (e) {
+          if (e && typeof e === 'object' && 'errorFields' in e) return false; // 校验未通过：保持弹窗
           message.error((e as Error)?.message || '批量回料确认失败');
-        } finally {
-          setActionLoading(false);
+          return false;
         }
       },
     });
-  }, [purchases, user, message, modal, loadData, setActionLoading]);
+  }, [purchases, user, message, modal, loadData, batchForm]);
 
   const handleConfirmComplete = useCallback(async () => {
     const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
