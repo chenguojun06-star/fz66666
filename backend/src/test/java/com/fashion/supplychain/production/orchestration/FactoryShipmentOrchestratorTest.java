@@ -285,7 +285,8 @@ class FactoryShipmentOrchestratorTest {
 
             Result<FactoryShipment> result = orchestrator.receive("fs-001", 50, null);
             assertEquals(500, result.getCode());
-            assertTrue(result.getMessage().contains("无法收货"));
+            // D-242 分批收货：received 状态防重复提示改为「已全部收货完成，无需重复收货」
+            assertTrue(result.getMessage().contains("无需重复收货"));
         }
 
         @Test
