@@ -633,6 +633,14 @@ public class MaterialPurchaseServiceHelper {
         mp.setStyleCover(resolveStyleCoverByStyleId(order.getStyleId()));
         mp.setColor(StringUtils.hasText(bomColor) ? bomColor : null);
         mp.setSize(StringUtils.hasText(bomSize) ? bomSize : null);
+        // D-252：物料属性直接从 BOM 带过来，不再完全依赖物料资料库回填。
+        // 此前这三项只由 enrichFromMaterialDatabase 从资料库补，而资料库若缺数据
+        // （见 StyleBomMaterialSyncHelper D-252 前的漏同步）采购单就永远是空的，
+        // 端到端表现为「颜色 克重什么都匹配不过来」。双保险：BOM 直带 + 资料库兜底。
+        mp.setFabricComposition(bom.getFabricComposition());
+        mp.setFabricWeight(bom.getFabricWeight());
+        // lossRate 字段注释明确「来源于款号BOM，贯通采购链路」，但此前从未赋值（注释与实现不符）
+        mp.setLossRate(bom.getLossRate());
         mp.setStatus(MaterialConstants.STATUS_PENDING);
         mp.setSourceType("order");
         LocalDateTime now = LocalDateTime.now();

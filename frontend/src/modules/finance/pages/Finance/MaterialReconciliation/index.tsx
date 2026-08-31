@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { App, Button, Card, DatePicker, Empty, Space, Statistic, Tag } from 'antd';
+import { App, Button, Card, DatePicker, Empty, Space, Statistic, Tag, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
+import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import PageLayout from '@/components/common/PageLayout';
@@ -19,7 +19,7 @@ import { useMaterialReconExport } from './hooks/useMaterialReconExport';
 import { useMaterialReconColumns } from './hooks/useMaterialReconColumns';
 
 const MaterialReconciliation: React.FC = () => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { user } = useUser();
 
   const {
@@ -32,6 +32,9 @@ const MaterialReconciliation: React.FC = () => {
   const [reconModalVisible, setReconModalVisible] = useState(false);
   const [reconModalData, setReconModalData] = useState<MaterialReconType | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
+  // D-252：补生成存量对账。修复工厂类型判定口径后，历史采购单的对账仍需手动触发一次；
+  // 否则修复只对新采购生效，用户看到的依旧是「大货采购全都不在对账里」。
+  const [backfilling, setBackfilling] = useState(false);
   const saveFormRef = useRef<(() => void) | null>(null);
 
   const openDialog = (recon?: MaterialReconType) => { setReconModalData(recon || null); setReconModalVisible(true); };
@@ -105,6 +108,31 @@ const MaterialReconciliation: React.FC = () => {
     } finally {
       setSubmitLoading(false);
     }
+  };
+
+  // D-252：补生成存量物料对账。历史采购单此前因工厂类型判定口径问题（factory_type 为 NULL
+  // 被误判成外发）导致对账被整批跳过，修复口径后需由本操作补回，否则用户看到的数据依旧缺失。
+  const handleBackfill = () => {
+    modal.confirm({
+      width: '32vw',
+      title: '补生成物料对账',
+      content: '将按最新规则重新扫描已到货的采购单，为缺失的对账单补生成。已存在的对账单只更新、不重复创建，可放心执行。',
+      okText: '开始补生成',
+      cancelText: '取消',
+      onOk: async () => {
+        setBackfilling(true);
+        try {
+          const res = await materialReconciliationApi.backfillMaterialReconciliation();
+          const touched = Number((res as any)?.data ?? 0) || 0;
+          message.success(`已补生成/更新 ${touched} 条对账单`);
+          fetchList();
+        } catch (error) {
+          errorHandler.handleError(error, '补生成失败');
+        } finally {
+          setBackfilling(false);
+        }
+      },
+    });
   };
 
   // 当前选中的待审批数量
@@ -243,6 +271,11 @@ const MaterialReconciliation: React.FC = () => {
               <Button ghost disabled={exporting} onClick={exportCsv} icon={<ExportOutlined />}>
                 导出
               </Button>
+              <Tooltip title="按最新规则重新扫描已到货的采购单，补回缺失的对账单（已存在的只更新、不重复创建）">
+                <Button ghost disabled={backfilling} onClick={handleBackfill} icon={<ReloadOutlined />}>
+                  补生成对账
+                </Button>
+              </Tooltip>
             </Space>
           </div>
         </Card>

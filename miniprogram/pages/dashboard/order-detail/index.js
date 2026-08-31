@@ -189,6 +189,9 @@ Page({
     progressPct: 0,
     specSummary: { colorText: '', sizeText: '', sizeList: [], qtyText: '', hasSpec: false },
 
+    // 尺寸表（只读查看，D-252）：{sizeCols, rows}，无款式资料/无尺寸数据时为 null 不显示
+    sizeSpec: null,
+
     // 工序阶段
     stages: [],
 
@@ -253,6 +256,76 @@ Page({
       eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._dataChangedHandler);
       this._dataChangedHandler = null;
     }
+  },
+
+  /* ═══ D-252：尺寸表（只读查看，生产管理/外发管理详情共用） ═══ */
+
+  /**
+   * 加载款式尺寸表。
+   * render 会被多次触发（onShow / 扫码事件刷新），同一 styleId 只拉一次接口。
+   * 无款式资料（无资料下单）或无 styleId 时不加载，区块不显示。
+   */
+  _loadSizeSpec: function (order) {
+    if (!order) return;
+    const styleId = order.styleId || order.style_id;
+    if (!styleId) return;
+    if (this._sizeSpecLoadedFor === styleId && this.data.sizeSpec) return;
+    this._sizeSpecLoadedFor = styleId;
+    const self = this;
+    api.style.listSizes({ styleId: styleId }).then(function (res) {
+      const list = (res && res.data) || res || [];
+      const spec = self._buildSizeSpec(Array.isArray(list) ? list : (list.records || []));
+      self.setData({ sizeSpec: spec });
+    }).catch(function (err) {
+      console.warn('[order-detail] 加载尺寸表失败:', err);
+      self.setData({ sizeSpec: null });
+    });
+  },
+
+  /**
+   * 尺寸表透视（与 scan-result D-185 同款算法）：
+   * 行=部位、列=尺码，尺码按标准码序（XXS→5XL→F）排序。
+   * 订单详情是多彩多码，无"当前码数"概念，不做列高亮。
+   */
+  _buildSizeSpec: function (rawList) {
+    if (!Array.isArray(rawList) || rawList.length === 0) return null;
+    const sizeSeen = {};
+    const sizeCols = [];
+    rawList.forEach(function (it) {
+      const sz = (it && (it.sizeName || it.baseSize)) || '';
+      if (sz && !sizeSeen[sz]) { sizeSeen[sz] = true; sizeCols.push(sz); }
+    });
+    if (sizeCols.length === 0) return null;
+    const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '3XL', '4XL', '5XL', 'F', 'OS'];
+    sizeCols.sort(function (a, b) {
+      const ia = sizeOrder.indexOf(String(a).toUpperCase());
+      const ib = sizeOrder.indexOf(String(b).toUpperCase());
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return String(a).localeCompare(String(b));
+    });
+    const partSeen = {};
+    const parts = [];
+    rawList.forEach(function (it) {
+      const p = (it && (it.partName || it.part)) || '';
+      if (p && !partSeen[p]) { partSeen[p] = true; parts.push(p); }
+    });
+    const valueMap = {};
+    rawList.forEach(function (it) {
+      const p = (it && (it.partName || it.part)) || '';
+      const sz = (it && (it.sizeName || it.baseSize)) || '';
+      if (p && sz) {
+        valueMap[p + '|' + sz] = it.standardValue != null ? it.standardValue : (it.value != null ? it.value : '-');
+      }
+    });
+    const rows = parts.map(function (p) {
+      return {
+        part: p,
+        values: sizeCols.map(function (sz) { return valueMap[p + '|' + sz] || '-'; }),
+      };
+    });
+    return { sizeCols: sizeCols, rows: rows };
   },
 
   onPullDownRefresh: function () {
@@ -578,6 +651,9 @@ Page({
         currentImageIndex: 0,
         loading: false,
       });
+
+      // 尺寸表（只读查看）：生产管理/外发管理详情共用，有款式才加载
+      that._loadSizeSpec(order);
 
       // 标题
       const realOrderNo = order.orderNo || order.order_no;

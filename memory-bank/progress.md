@@ -5,6 +5,34 @@
 
 ## 已完成
 
+### 2026-08-31 D-252 物料链路闭环修复（BOM→资料库→采购→对账）+ 工序导入模式可选 ✅（后端+前端，待用户验收推送）
+
+用户暴走「全部一起优化好…不要到处都是问题」，核心为「物料对账看不到大货采购」「颜色克重匹配不过来」。
+本次不再打补丁，改为打通整条数据链路，一次性修掉 3 个数据流断点 + 补存量入口。
+
+- [x] **断点1（P0）工厂类型 NULL 误判外发 → 对账整批跳过**
+  `MaterialReconciliationOrchestrator.isInternalFactoryPurchase` +
+  `MaterialPurchaseSyncHelper.isInternalOrderPurchase` 两处口径统一改为
+  「**只有明确 EXTERNAL 才是外发**」，NULL/未标注/INTERNAL 均按内部
+  （线上「最美服装工厂」「本厂」订单 factory_type 为 NULL，旧口径下对账全丢）
+  顺带给 isInternalOrderPurchase 补 tenantId 隔离（原 getById 不带租户，违反 P0 #7）
+- [x] **断点2 BOM→物料资料库漏同步属性**
+  `StyleBomMaterialSyncHelper` 抽 `applyBomFields()` 供 create/update/单条自动同步**共用**，
+  补齐 color / fabricComposition / fabricWeight / conversionRate
+- [x] **断点3 BOM→采购 属性全丢**
+  `MaterialPurchaseServiceHelper.createPurchaseFromBom` 直带
+  fabricComposition / fabricWeight / lossRate（lossRate 注释说「贯通采购链路」却从未赋值）
+- [x] **存量补生成入口**：后端 `/backfill` 早已存在但前端无入口 →
+  补 `materialReconciliationApi.backfillMaterialReconciliation` + 物料对账页「补生成对账」按钮
+- [x] **工序模板导入可选覆盖/追加**：前端加下拉（带 Tooltip）；
+  后端追加模式补「工序名+阶段」去重（幂等）+ sortOrder/processCode 续接重排
+  （原追加模式不去重，重复导入产生重复工序且编码冲突导致保存失败）
+- [x] 验证：后端 `mvn compile` BUILD SUCCESS / 前端 `npx tsc --noEmit` 零错误 / lint 0 错误
+- [ ] 待用户验收：进物料对账页点「补生成对账」→ 大货采购对账出现；
+      BOM 页「同步到物料资料库」→ 采购列表颜色/克重显示出来
+- [ ] 待办（本批未做，需下轮）：尺寸表简化（标准码+前后放码）、质检记录分类、
+      齿轮标签落库排查、款式图片上传保持
+
 ### 2026-08-31 D-249 下单页按钮回归镂空规范 + 输入框改白底描边 ✅（纯 wxss，用户截图反馈）
 
 - [x] 按钮全部镂空：f-btn/bar-btn/next-btn/submit-btn（对齐 app.wxss .btn-primary 规范）

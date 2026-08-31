@@ -64,16 +64,24 @@ export const useStyleProcessActions = ({
     setData((prev) => prev.map((r) => r.id === id ? { ...r, sizePrices: { ...(r.sizePrices || {}), [size]: value }, sizePriceTouched: { ...(r.sizePriceTouched || {}), [size]: true } } : r));
   };
 
-  const applyProcessTemplate = async (templateId: string) => {
+  /**
+   * 应用工艺模板到当前款式。
+   *
+   * D-252：新增 mode 参数，让用户选择「覆盖现有」还是「追加新增」。
+   * 此前恒为 overwrite，用户无法在保留现有工序的前提下追加模板工序。
+   * 后端 TemplateStyleOrchestrator 早已支持 mode（overwrite/cover/true → 覆盖，其余 → 追加），
+   * 且 D-252 已为追加模式补上幂等去重与编码续接，重复导入不会产生重复行。
+   */
+  const applyProcessTemplate = async (templateId: string, mode: 'overwrite' | 'append' = 'overwrite') => {
     if (readOnly) return;
     if (editMode) { message.error('请先保存或退出编辑再导入模板'); return; }
     const sid = Number(styleId);
     if (!Number.isFinite(sid) || sid <= 0) { message.error('styleId不合法'); return; }
     try {
-      const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', { templateId, targetStyleId: sid, mode: 'overwrite' });
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', { templateId, targetStyleId: sid, mode });
       const result = res as any;
       if (result.code !== 200) { message.error(result.message || '导入失败'); return; }
-      message.success('已导入工艺模板');
+      message.success(mode === 'append' ? '已追加导入工艺模板（已自动跳过重复工序）' : '已覆盖导入工艺模板');
       await fetchProcess();
       void enterEdit();
     } catch (e: unknown) { message.error(e instanceof Error ? e.message : '导入失败'); }

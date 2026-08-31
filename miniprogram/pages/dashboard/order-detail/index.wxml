@@ -230,6 +230,26 @@
       </scroll-view>
     </view>
 
+    <!-- ══ ⑥ 尺寸表（只读查看，D-252：行=部位 / 列=尺码，横滚） ══ -->
+    <view class="section-card" wx:if="{{sizeSpec}}">
+      <view class="section-hd">
+        <text class="section-title">尺寸表</text>
+        <text class="section-count">{{sizeSpec.rows.length}} 个部位 × {{sizeSpec.sizeCols.length}} 个尺码</text>
+      </view>
+      <scroll-view scroll-x class="size-spec-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="size-spec-table">
+          <view class="ss-row ss-row--head">
+            <text class="ss-cell ss-cell--part">部位</text>
+            <text class="ss-cell ss-cell--head" wx:for="{{sizeSpec.sizeCols}}" wx:key="*this">{{item}}</text>
+          </view>
+          <view class="ss-row" wx:for="{{sizeSpec.rows}}" wx:for-item="row" wx:key="part">
+            <text class="ss-cell ss-cell--part">{{row.part}}</text>
+            <text class="ss-cell" wx:for="{{row.values}}" wx:for-item="val" wx:key="*this">{{val}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
     <!-- 裁剪明细（业务需要，设计稿无） -->
     <view class="section-card" wx:if="{{cuttingBundleList.length > 0}}">
       <view class="section-hd">

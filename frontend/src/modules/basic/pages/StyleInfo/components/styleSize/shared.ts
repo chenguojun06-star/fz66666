@@ -83,6 +83,22 @@ export const splitSizeNames = (name: string) => {
 };
 
 /**
+ * 码数简称：去掉括号内的型体/国标后缀，仅保留码数代号。
+ *
+ * D-252：尺寸表列头与跳码区摘要此前直接渲染完整码数名
+ * （如 `XS(155/72A)/S(160/76A)`），列被撑爆、跳码区一行塞不下一屏。
+ * 表格里只显示简称（XS / S / D），完整名称通过 Tooltip 悬浮查看，信息不丢失。
+ *
+ * 示例：XS(155/72A) → XS；D(定制码) → D；160/76 → 160/76（无字母前缀时原样返回）
+ */
+export const shortSizeLabel = (name: string): string => {
+  const raw = String(name || '').trim();
+  if (!raw) return '';
+  const matched = raw.match(/^[A-Za-z]+/);
+  return matched ? matched[0].toUpperCase() : raw;
+};
+
+/**
  * 尺码语义归一化键：忽略型体后缀（如国标 A/B/C）与分隔符，
  * 使 S(160/76)、S(160/76A)、S 160/76a 归并为同一码，用于去重判断。
  */

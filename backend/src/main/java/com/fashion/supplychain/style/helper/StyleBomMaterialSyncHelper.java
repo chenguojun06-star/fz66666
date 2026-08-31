@@ -238,29 +238,15 @@ public class StyleBomMaterialSyncHelper {
 
             MaterialDatabase patch = new MaterialDatabase();
             patch.setId(existed.getId());
-            patch.setMaterialCode(code);
-            patch.setMaterialName(styleBom.getMaterialName());
-            patch.setStyleNo(styleNo);
-            patch.setMaterialType(normalizedType);
-            patch.setSpecifications(styleBom.getSpecification());
-            patch.setUnit(styleBom.getUnit());
-            patch.setSupplierName(styleBom.getSupplier());
-            patch.setUnitPrice(styleBom.getUnitPrice());
-            patch.setRemark(styleBom.getRemark());
+            applyBomFields(patch, styleBom, code, styleBom.getMaterialName(), styleNo, normalizedType,
+                    styleBom.getSpecification(), styleBom.getUnit(), styleBom.getSupplier(), styleBom.getRemark());
             materialDatabaseOrchestrator.update(patch);
             return;
         }
 
         MaterialDatabase toCreate = new MaterialDatabase();
-        toCreate.setMaterialCode(code);
-        toCreate.setMaterialName(styleBom.getMaterialName());
-        toCreate.setStyleNo(styleNo);
-        toCreate.setMaterialType(normalizedType);
-        toCreate.setSpecifications(styleBom.getSpecification());
-        toCreate.setUnit(styleBom.getUnit());
-        toCreate.setSupplierName(styleBom.getSupplier());
-        toCreate.setUnitPrice(styleBom.getUnitPrice());
-        toCreate.setRemark(styleBom.getRemark());
+        applyBomFields(toCreate, styleBom, code, styleBom.getMaterialName(), styleNo, normalizedType,
+                styleBom.getSpecification(), styleBom.getUnit(), styleBom.getSupplier(), styleBom.getRemark());
         materialDatabaseOrchestrator.save(toCreate);
     }
 
@@ -334,29 +320,13 @@ public class StyleBomMaterialSyncHelper {
         try {
             if (current == null) {
                 MaterialDatabase toCreate = new MaterialDatabase();
-                toCreate.setMaterialCode(code);
-                toCreate.setMaterialName(name);
-                toCreate.setStyleNo(styleNo);
-                toCreate.setMaterialType(normalizedType);
-                toCreate.setSpecifications(specifications);
-                toCreate.setUnit(unit);
-                toCreate.setSupplierName(supplierName);
-                toCreate.setUnitPrice(b.getUnitPrice());
-                toCreate.setRemark(remark);
+                applyBomFields(toCreate, b, code, name, styleNo, normalizedType, specifications, unit, supplierName, remark);
                 materialDatabaseOrchestrator.save(toCreate);
                 stats.created += 1;
             } else {
                 MaterialDatabase patch = new MaterialDatabase();
                 patch.setId(current.getId());
-                patch.setMaterialCode(code);
-                patch.setMaterialName(name);
-                patch.setStyleNo(styleNo);
-                patch.setMaterialType(normalizedType);
-                patch.setSpecifications(specifications);
-                patch.setUnit(unit);
-                patch.setSupplierName(supplierName);
-                patch.setUnitPrice(b.getUnitPrice());
-                patch.setRemark(remark);
+                applyBomFields(patch, b, code, name, styleNo, normalizedType, specifications, unit, supplierName, remark);
                 materialDatabaseOrchestrator.update(patch);
                 stats.updated += 1;
             }
@@ -367,6 +337,36 @@ public class StyleBomMaterialSyncHelper {
                 details.add(new LinkedHashMap<>(Map.of("materialCode", code, "status", "failed", "reason", msg)));
             }
         }
+    }
+
+    /**
+     * 将 BOM 行的物料属性写入物料资料库记录。
+     *
+     * <p>新建与更新共用同一份映射，避免两处各写一份导致字段不一致
+     * （历史教训：改一处漏一处，最终表现为「同步后字段还是丢」）。
+     *
+     * <p>D-252 补齐：颜色 / 成分 / 克重 / 米重换算此前未同步。
+     * 这些属性由用户在 BOM 里填写，若不同步到物料资料库，
+     * 后续采购单经 {@code enrichFromMaterialDatabase} 回填时取到空值，
+     * 端到端表现为「颜色 克重什么都匹配不过来」。
+     */
+    private void applyBomFields(MaterialDatabase target, StyleBom b,
+            String code, String name, String styleNo, String materialType,
+            String specifications, String unit, String supplierName, String remark) {
+        target.setMaterialCode(code);
+        target.setMaterialName(name);
+        target.setStyleNo(styleNo);
+        target.setMaterialType(materialType);
+        target.setSpecifications(specifications);
+        target.setUnit(unit);
+        target.setSupplierName(supplierName);
+        target.setUnitPrice(b.getUnitPrice());
+        target.setRemark(remark);
+        // D-252：物料属性贯通 BOM → 物料资料库 → 采购单
+        target.setColor(b.getColor());
+        target.setFabricComposition(b.getFabricComposition());
+        target.setFabricWeight(b.getFabricWeight());
+        target.setConversionRate(b.getConversionRate());
     }
 
     private String validateBomRequiredFields(String code, String name, String unit, String supplierName) {

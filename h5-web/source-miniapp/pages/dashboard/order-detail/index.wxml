@@ -68,9 +68,13 @@
           <text class="info-label">颜色</text>
           <text class="info-value info-value--strong">{{specSummary.colorText}}</text>
         </view>
-        <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
+        <view class="info-cell info-cell--full info-cell--stack" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">尺码</text>
-          <text class="info-value info-value--strong">{{specSummary.sizeText}}</text>
+          <scroll-view scroll-x class="size-chip-scroll" enhanced show-scrollbar="{{false}}">
+            <view class="size-chip-row">
+              <text class="size-chip" wx:for="{{specSummary.sizeList}}" wx:key="*this">{{item}}</text>
+            </view>
+          </scroll-view>
         </view>
         <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
           <text class="info-label">下单数</text>
@@ -222,6 +226,26 @@
           <text class="matrix-cell matrix-cell--color matrix-cell--foot">合计</text>
           <text class="matrix-cell matrix-cell--foot" wx:for="{{matrixModel.sizeSummary}}" wx:for-item="szSum" wx:key="size">{{szSum.qty > 0 ? szSum.qty : '-'}}</text>
           <text class="matrix-cell matrix-cell--total matrix-cell--foot">{{matrixModel.total}}</text>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- ══ ⑥ 尺寸表（只读查看，D-252：行=部位 / 列=尺码，横滚） ══ -->
+    <view class="section-card" wx:if="{{sizeSpec}}">
+      <view class="section-hd">
+        <text class="section-title">尺寸表</text>
+        <text class="section-count">{{sizeSpec.rows.length}} 个部位 × {{sizeSpec.sizeCols.length}} 个尺码</text>
+      </view>
+      <scroll-view scroll-x class="size-spec-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="size-spec-table">
+          <view class="ss-row ss-row--head">
+            <text class="ss-cell ss-cell--part">部位</text>
+            <text class="ss-cell ss-cell--head" wx:for="{{sizeSpec.sizeCols}}" wx:key="*this">{{item}}</text>
+          </view>
+          <view class="ss-row" wx:for="{{sizeSpec.rows}}" wx:for-item="row" wx:key="part">
+            <text class="ss-cell ss-cell--part">{{row.part}}</text>
+            <text class="ss-cell" wx:for="{{row.values}}" wx:for-item="val" wx:key="*this">{{val}}</text>
+          </view>
         </view>
       </scroll-view>
     </view>

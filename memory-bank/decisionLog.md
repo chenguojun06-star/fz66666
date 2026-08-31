@@ -3898,3 +3898,70 @@ WXML form 页 40 个事件处理器全部有 JS 实现、标签全闭合；WXSS 
 D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资料选款）
 → D-248（客户选择器 + 属性库齿轮）。
 仅剩「款式批量多选下单」未做（改动面广、非痛点）。
+
+---
+
+## D-252：物料链路闭环修复（BOM → 物料资料库 → 采购 → 对账）
+
+**日期**：2026-08-31
+**触发**：用户一次性吐槽 7 个模块，核心为「物料对账看不到大货采购」「颜色克重什么都匹配不过来」，
+并质问「为什么这几天越做越多的问题」。
+
+### 决策：不再逐点打补丁，改为打通整条数据链路
+
+此前 D-246~D-251 全部集中在小程序下单页 UI，从未回头核对 PC 端深层数据链路，
+导致用户每次打开都积累新怨气。本次改为先画数据流、定位每一跳的字段贯通情况，再动手。
+
+### 三个真实断点（均为数据流断点，非 UI 问题）
+
+**断点1（P0）：工厂类型 NULL 被误判为外发 → 对账整批跳过**
+- 位置：`MaterialReconciliationOrchestrator.isInternalFactoryPurchase`、
+  `MaterialPurchaseSyncHelper.isInternalOrderPurchase`（两处口径必须一致）
+- 原口径：`StringUtils.hasText(factoryType) && "INTERNAL".equals(...)`
+- 后果：线上大量订单 `factory_type` 为 NULL（D-243：「本厂」5 条、「最美服装工厂」2 条）
+  → 判为非内部 → `shouldRouteOrderLinkedPurchaseToInbound` 返回 true → 对账整批跳过
+  → 用户截图顶部的「最美服装工厂」采购在对账里一条都看不到
+- **口径修正（业务决策）**：改为「**只有明确 EXTERNAL 才是外发**」，
+  NULL / 未标注 / INTERNAL 均按内部处理
+  - 依据：外发工厂面料款走加工费扣款（D-133 方案A），本厂与未标注工厂走物料对账
+  - 权衡：宁可多进对账（用户能看到），不可整批丢失（用户完全看不到）
+- 附带：`isInternalOrderPurchase` 原用 `getById` 查订单不带租户，违反 P0 铁律 #7，
+  一并改为 `lambdaQuery` 带 tenantId
+
+**断点2：BOM → 物料资料库漏同步颜色/成分/克重/米重换算**
+- 位置：`StyleBomMaterialSyncHelper`（`MaterialDatabase` 本就有这些字段，同步时漏传）
+- 修：抽取 `applyBomFields()` 供 create / update / 单条自动同步**共用同一份映射**，
+  从机制上杜绝"改一处漏一处"
+
+**断点3：BOM → 采购 属性全丢**
+- 位置：`MaterialPurchaseServiceHelper.createPurchaseFromBom`
+- 原实现只依赖资料库回填，源头空则空（连锁断点2）
+- 另发现 `MaterialPurchase.lossRate` 注释写「来源于款号BOM，贯通采购链路」，
+  **代码从未赋值**——注释与实现不符导致链路静默断掉
+- 修：BOM 直带 `fabricComposition` / `fabricWeight` / `lossRate`，形成双保险
+
+### 闭环最后一环：存量数据补生成入口
+- 后端 `POST /finance/material-reconciliation/backfill` **早已存在**（含主管权限校验），
+  但**前端无任何入口**，用户无法触发 → 修复只对新数据生效
+- 补：`materialReconciliationApi.backfillMaterialReconciliation` +
+  PC 端物料对账页「补生成对账」按钮（带 modal.confirm 说明，避免误操作）
+- 采购属性显示无需额外处理：`MaterialPurchaseServiceImpl:75` 查询时已有
+  `enrichFromMaterialDatabase` 从资料库回填，资料库补齐即可自动显示
+
+### 附带：工序模板导入「覆盖 / 追加」可选
+- `useStyleProcessActions.applyProcessTemplate` 此前**写死 overwrite**，用户无法追加
+- 后端 `TemplateStyleOrchestrator` 早支持 mode（overwrite/cover/true → 覆盖，其余 → 追加），
+  但**追加模式既不去重也不重排编码**：重复导入产生重复工序，
+  processCode 与现有冲突还会导致前端「工序编码不能重复」校验失败（等于导入白做）
+- 修：前端加「覆盖现有 / 追加新增」下拉（带 Tooltip 说明差异）；
+  后端追加模式按「工序名 + 阶段」去重（幂等）+ sortOrder/processCode 续接重排
+
+### 验证
+后端 `mvn compile` BUILD SUCCESS；前端 `npx tsc --noEmit` 零错误；改动文件 lint 0 错误。
+（未提交推送，待用户验收后提交）
+
+### 方法论沉淀（回答"为什么越做越多问题"）
+1. **P0 铁律只防「扫码/工序/质检/入库」四块的链路安全，不防「业务规则与用户预期不符」这层盲区**
+2. 改写入侧逻辑后**必须确认存量数据能否自愈**，否则用户看到的还是旧数据，会认为"又没修好"
+3. **注释与实现不符是高危信号**，发现即修（lossRate 案例）
+4. 同一份字段映射必须**单点收敛**（`applyBomFields`），不要 create/update 各写一份

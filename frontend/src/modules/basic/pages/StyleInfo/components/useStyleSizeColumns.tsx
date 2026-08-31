@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { Button, Input, Select, Modal, Image } from 'antd';
+import { Button, Input, Select, Modal, Image, Tooltip } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 import { MatrixRow, DisplayRow, normalizeGradingZones } from './styleSizeTabUtils';
+import { shortSizeLabel } from './styleSize/shared';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import RowActions from '@/components/common/RowActions';
 import ExcelPasteInput from '@/components/common/ExcelPasteInput';
@@ -239,17 +240,20 @@ export function useStyleSizeColumns({
         dataIndex: 'baseSize',
         width: 40,
         align: 'center' as const,
+        // D-252：与列头口径一致，只显示码数简称，完整名悬浮可见（列宽仅 40，放不下全名）
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
             <Select
               value={record.baseSize || undefined}
               allowClear
               style={{ width: '100%' }}
-              options={sizeColumns.map((size) => ({ value: size, label: size }))}
+              options={sizeColumns.map((size) => ({ value: size, label: shortSizeLabel(size) }))}
               onChange={(value) => updateBaseSize(record.key, String(value || ''))}
             />
           ) : (
-            record.baseSize || '-'
+            <Tooltip title={record.baseSize || undefined}>
+              <span>{record.baseSize ? shortSizeLabel(record.baseSize) : '-'}</span>
+            </Tooltip>
           ),
       },
       {
@@ -258,22 +262,30 @@ export function useStyleSizeColumns({
         width: 120,
         render: (_: any, record: MatrixRow) => {
           const zones = normalizeGradingZones(record.gradingZones || [], sizeColumns);
-          const summary = zones.map((zone) => {
+          // D-252：同一份逻辑生成两种文案，避免摘要与明细不一致。
+          // withSizes=false → 精简摘要「前↓1 后↑1」，用于单元格（此前把每个码的全名
+          //   都拼进来，如 `前:XS(155/72A)/S(160/76A)↓1 后:L(170/84A)/...↑1`，一行塞不下）
+          // withSizes=true → 带具体码数的完整明细，用于 Tooltip，保证信息不丢失
+          const buildZoneText = (withSizes: boolean) => zones.map((zone) => {
             const frontInfo = (zone.frontSizes ?? []).length > 0
-              ? `前:${(zone.frontSizes ?? []).join('/')}↓${toNumberSafe(zone.frontStep)}`
+              ? `前${withSizes ? `:${(zone.frontSizes ?? []).map(shortSizeLabel).join('/')}` : ''}↓${toNumberSafe(zone.frontStep)}`
               : '';
             const backInfo = (zone.backSizes ?? []).length > 0
-              ? `后:${(zone.backSizes ?? []).join('/')}↑${toNumberSafe(zone.backStep)}`
+              ? `后${withSizes ? `:${(zone.backSizes ?? []).map(shortSizeLabel).join('/')}` : ''}↑${toNumberSafe(zone.backStep)}`
               : '';
             const extraInfo = (zone.sizeStepColumns || []).map((col, idx) => {
               if ((col.sizes || []).length === 0) return '';
-              return `列${idx + 1}:${col.sizes.join('/')}→${toNumberSafe(col.step)}`;
+              return `列${idx + 1}${withSizes ? `:${col.sizes.map(shortSizeLabel).join('/')}` : ''}→${toNumberSafe(col.step)}`;
             }).filter(Boolean).join(' ');
             return `${zone.label}(${[frontInfo, backInfo, extraInfo].filter(Boolean).join(' ')})`;
           }).join('；');
+          const summary = buildZoneText(false);
+          const detail = buildZoneText(true);
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
+              <Tooltip title={detail || undefined}>
+                <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap', cursor: detail ? 'help' : 'default' }}>{summary || '-'}</div>
+              </Tooltip>
               {editableMode ? (
                 <Button onClick={() => openGradingConfig(record)}>
                   配置跳码区
@@ -287,25 +299,28 @@ export function useStyleSizeColumns({
 
     const sizeCols = sizeColumns.map((sn, sizeIndex) => ({
       title: (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span>{sn}</span>
-          {editableMode ? (
-            <Button
-             
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              title={`删除尺码 ${sn}`}
-              onClick={() => {
-                Modal.confirm({
-                  width: '30vw',
-                  title: `确定删除尺码"${sn}"？`,
-                  onOk: () => handleDeleteSize(sn),
-                });
-              }}
-            />
-          ) : null}
-        </span>
+        // D-252：列头只显示码数简称（XS / S / D），完整名（XS(155/72A)）悬浮可见。
+        // 此前列头直接用完整码数名，多个码并列时列被撑爆。
+        <Tooltip title={sn}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontWeight: 600 }}>{shortSizeLabel(sn)}</span>
+            {editableMode ? (
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                title={`删除尺码 ${sn}`}
+                onClick={() => {
+                  Modal.confirm({
+                    width: '30vw',
+                    title: `确定删除尺码"${sn}"？`,
+                    onOk: () => handleDeleteSize(sn),
+                  });
+                }}
+              />
+            ) : null}
+          </span>
+        </Tooltip>
       ),
       dataIndex: sn,
       width: 60,

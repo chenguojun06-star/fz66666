@@ -231,22 +231,39 @@ public class MaterialPurchaseSyncHelper {
         }
     }
 
+    /**
+     * 判定该采购是否属于「内部工厂采购」（决定是否生成物料对账单）。
+     *
+     * <p>D-252：判定口径必须与
+     * {@code MaterialReconciliationOrchestrator#isInternalFactoryPurchase} 完全一致
+     * ——「只有明确 EXTERNAL 才是外发」，NULL / 未标注 / INTERNAL 均按内部处理。
+     * 两处口径此前都是「必须等于 INTERNAL」，导致 factory_type 为 NULL 的订单
+     * （本厂 / 最美服装工厂等）被误判为外发，对账被整批跳过。
+     *
+     * <p>同时按 P0 铁律 #7 补 tenantId 隔离：原实现用 getById 不带租户过滤。
+     */
     public boolean isInternalOrderPurchase(MaterialPurchase purchase) {
         if (purchase == null || !StringUtils.hasText(purchase.getOrderId())) {
             return false;
         }
         if (StringUtils.hasText(purchase.getFactoryType())) {
-            return "INTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
+            return !"EXTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
         }
         try {
-            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
-            return order != null
-                    && StringUtils.hasText(order.getFactoryType())
-                    && "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
+            Long tenantId = UserContext.tenantId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, purchase.getOrderId().trim())
+                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .one();
+            // 订单缺失或 factory_type 未标注（NULL）→ 按内部处理，保证对账不丢
+            if (order == null || !StringUtils.hasText(order.getFactoryType())) {
+                return true;
+            }
+            return !"EXTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
         } catch (Exception e) {
-            log.warn("syncAfterPurchaseChanged: 识别内部订单失败，按非内部处理 purchaseId={}, orderId={}",
+            log.warn("syncAfterPurchaseChanged: 识别内部订单失败，按内部处理（保证对账不丢）purchaseId={}, orderId={}",
                     purchase.getId(), purchase.getOrderId(), e);
-            return false;
+            return true;
         }
     }
 

@@ -406,13 +406,26 @@ public class MaterialReconciliationOrchestrator {
         return !isInternalFactoryPurchase(purchase);
     }
 
+    /**
+     * 判定该采购是否属于「内部工厂采购」（内部采购才生成物料对账单）。
+     *
+     * <p>D-252 修正：判定口径由「必须等于 INTERNAL」改为「只有明确 EXTERNAL 才是外发」。
+     *
+     * <p>原因：线上大量历史订单 factory_type 为 NULL（本厂 / 未标注工厂，见 D-243 数据分布：
+     * 「本厂」5 条、「最美服装工厂」2 条均为 NULL）。旧逻辑下 NULL → 判为非内部 →
+     * {@link #shouldRouteOrderLinkedPurchaseToInbound} 返回 true → 对账被整批跳过，
+     * 表现为「物料对账页面看不到大货采购」。
+     *
+     * <p>业务口径：外发工厂的面料款走加工费扣款（D-133 方案A），
+     * 本厂与未标注工厂走物料对账。因此 NULL 必须按内部处理，否则对账整批丢失。
+     */
     private boolean isInternalFactoryPurchase(MaterialPurchase purchase) {
         if (purchase == null) {
             return false;
         }
 
         if (StringUtils.hasText(purchase.getFactoryType())) {
-            return "INTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
+            return !"EXTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
         }
 
         if (!StringUtils.hasText(purchase.getOrderId())) {
@@ -425,13 +438,15 @@ public class MaterialReconciliationOrchestrator {
                     .eq(ProductionOrder::getId, purchase.getOrderId().trim())
                     .eq(ProductionOrder::getTenantId, tenantId)
                     .one();
-            return order != null
-                    && StringUtils.hasText(order.getFactoryType())
-                    && "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
+            // 订单缺失或 factory_type 未标注（NULL）→ 按内部处理，保证对账不丢
+            if (order == null || !StringUtils.hasText(order.getFactoryType())) {
+                return true;
+            }
+            return !"EXTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
         } catch (Exception e) {
-            log.warn("识别工厂类型失败，按非内部采购处理: purchaseId={}, orderId={}",
+            log.warn("识别工厂类型失败，按内部采购处理（保证对账不丢）: purchaseId={}, orderId={}",
                     purchase.getId(), purchase.getOrderId(), e);
-            return false;
+            return true;
         }
     }
 

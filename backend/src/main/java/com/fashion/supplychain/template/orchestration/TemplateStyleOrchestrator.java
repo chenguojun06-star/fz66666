@@ -324,24 +324,73 @@ public class TemplateStyleOrchestrator {
         log.info("应用工序模板: templateId={}, targetStyleId={}, parsedCount={}, overwrite={}",
                 template.getId(), targetStyleId, processes.size(), overwrite);
 
+        // D-252：已存在工序的「同名同阶段」索引，追加模式用于幂等去重
+        java.util.Set<String> existingKeys = new java.util.HashSet<>();
+        int nextSort;
+
         if (overwrite) {
             styleProcessService.lambdaUpdate()
                     .eq(StyleProcess::getStyleId, targetStyleId)
                     .remove();
+            nextSort = 1;
+        } else {
+            List<StyleProcess> existing = styleProcessService.lambdaQuery()
+                    .eq(StyleProcess::getStyleId, targetStyleId)
+                    .list();
+            if (existing != null) {
+                for (StyleProcess e : existing) {
+                    if (e != null) existingKeys.add(processKey(e.getProcessName(), e.getProgressStage()));
+                }
+                nextSort = existing.size() + 1;
+            } else {
+                nextSort = 1;
+            }
         }
 
+        int added = 0;
         for (StyleProcess process : processes) {
-            process.setProcessName(fixMojibake(process.getProcessName()));
-            process.setProgressStage(fixMojibake(process.getProgressStage()));
+            String name = fixMojibake(process.getProcessName());
+            String stage = fixMojibake(process.getProgressStage());
+            // 追加模式：跳过与现有工序同名同阶段的条目，保证重复导入幂等
+            if (!overwrite && existingKeys.contains(processKey(name, stage))) {
+                continue;
+            }
+            process.setProcessName(name);
+            process.setProgressStage(stage);
             process.setId(null);
             process.setStyleId(targetStyleId);
+            if (!overwrite) {
+                // 追加时按续接序号重排，避免与现有工序的 sortOrder / processCode 冲突
+                // （否则前端保存会因「工序编码不能重复」校验失败，等于导入白做）
+                process.setSortOrder(nextSort);
+                process.setProcessCode(String.format("%02d", nextSort));
+                nextSort++;
+                existingKeys.add(processKey(name, stage));
+            }
             styleProcessService.save(process);
+            added++;
         }
+
+        log.info("工序模板应用完成: templateId={}, targetStyleId={}, overwrite={}, 新增={}, 跳过重复={}",
+                template.getId(), targetStyleId, overwrite, added, processes.size() - added);
 
         // 自动回填工序开始时间（导入模板相当于开始工序配置）
         styleStageCompletionHelper.autoStartStage(targetStyleId, "process");
 
         return true;
+    }
+
+    /**
+     * 工序去重键：工序名称 + 所属阶段（归一化，忽略大小写与首尾空格）。
+     *
+     * <p>D-252：追加模式（overwrite=false）下用于跳过已存在工序。
+     * 此前追加模式既不去重也不重排编码，重复导入同一模板会产生重复工序，
+     * 且 processCode 与现有冲突会让前端「工序编码不能重复」校验失败。
+     */
+    private String processKey(String processName, String progressStage) {
+        String n = processName == null ? "" : processName.trim().toLowerCase();
+        String s = progressStage == null ? "" : progressStage.trim().toLowerCase();
+        return n + "|" + s;
     }
 
     private List<StyleProcess> parseProcessContent(String content) throws Exception {
