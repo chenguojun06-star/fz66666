@@ -253,6 +253,13 @@ public class MaterialPurchaseOrchestratorHelper {
         map.put("materialName", record.getMaterialName());
         map.put("materialType", record.getMaterialType());
         map.put("specifications", record.getSpecifications());
+        // D-258：回填字段透传。queryPage 已通过 enrichFromMaterialDatabase + enrichMissingFromBom
+        // 把资料库/BOM 的成分/克重/幅宽/颜色/尺码填进实体，但此处白名单未包含 → 前端永远收不到。
+        map.put("color", record.getColor());
+        map.put("size", record.getSize());
+        map.put("fabricComposition", record.getFabricComposition());
+        map.put("fabricWeight", record.getFabricWeight());
+        map.put("fabricWidth", record.getFabricWidth());
         map.put("unit", record.getUnit());
         map.put("purchaseQuantity", record.getPurchaseQuantity());
         map.put("arrivedQuantity", record.getArrivedQuantity());
