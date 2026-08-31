@@ -17,7 +17,7 @@
     "prepare:h5": "npm run sync:miniapp && npm run analyze:miniapp && npm run export:routes && npm run export:tokens"
   },
   "dependencies": {
-    "axios": "^1.11.0",
+    "axios": "^1.16.0",
     "html5-qrcode": "^2.3.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
