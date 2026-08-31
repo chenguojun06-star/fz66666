@@ -3965,3 +3965,43 @@ D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资
 2. 改写入侧逻辑后**必须确认存量数据能否自愈**，否则用户看到的还是旧数据，会认为"又没修好"
 3. **注释与实现不符是高危信号**，发现即修（lossRate 案例）
 4. 同一份字段映射必须**单点收敛**（`applyBomFields`），不要 create/update 各写一份
+
+---
+
+## D-253：D-252 下轮待办 4 项闭环（尺寸表简化 / 质检记录分类 / 齿轮标签落库 / 款式图片上传保持）
+
+**日期**：2026-08-31
+**触发**：D-252 遗留 4 项待办，用户要求「全部做好，一定要闭环」。
+
+### ① 尺寸表简化（标准码+前后放码）——已随 D-252 闭环，无新增改动
+- 列头仅显示码数简称（XS/S/D）+ Tooltip 完整名（防列宽撑爆）；
+- 样版码列同口径简写；跳码区单元格精简摘要「前↓1 后↑1」，Tooltip 见完整明细
+- 位置：`useStyleSizeColumns.tsx`
+
+### ② 质检记录分类——新增「不合格分布」分类聚合
+- 位置：`QcRecordsPanel.tsx`（成品仓质检记录面板）
+- 决策：**分类不做成服务端聚合接口**，在明细数据的『不合格记录』上按两维度前端聚合：
+  次品类别（颜色/尺寸/做工…）+ 处理方式（返修/报废…），各小组排序取 Top6 + 进度条占比
+- 理由：记录行本身已带 defectCategory / defectRemark，无需动后端；
+  「全合格」时不渲染该区块，避免空卡片噪音
+- 符合：quality-inspection-advisor 的「不合格构成分析」方向，后续可接视觉 AI 疵点映射
+
+### ③ 齿轮标签落库排查——链路完整，结论无需改动
+- 排查结论：**标签确实落库**，全链路已对齐：
+  迁移 `V202608260001` 加 `supplier_tag` → `Factory.java.supplierTag` →
+  `FactoryController` POST/PUT 走 `factoryOrchestrator.save/update`（MyBatis-Plus 全字段）→
+  前端 `QuickManageModal` 新增/编辑供应商均传 `supplierTag` → `simple-list` 返回标签
+- 经验：类似「XX排查」待办先画调用链验证再下结论，避免为已完好链路写无用代码
+
+### ④ 款式图片上传保持——修复一个真实 P0 缺口
+- 缺口：`useStyleFormActions.handleSave` 图片上传逻辑**只在 `isNewPage` 分支执行**（提交
+  款式后上传 pendingImages/pendingColorImages）。**编辑已有款式**时封面/主图区更换的图片
+  进入 `pendingImages`，保存后**从未上传 → 图片丢失**
+- 修：编辑分支（`currentStyle?.id`）同样执行 `separateStandaloneAndColorImages` →
+  `uploadStyleImages`（styleId + styleNo 均就绪）→ 成功后 `fetchDetail` 刷新
+- 附带验证：颜色图片编辑场景无需担心（`useColorImages.handleColorImageSync` 已有款式时
+  即时删旧传新，不积压 pending）
+
+### 验证
+前端 `npx tsc --noEmit` 零错误；改动文件 ESLint 0 错误；无后端改动。
+已提交推送 main。

@@ -205,6 +205,23 @@ export const useStyleFormActions = ({
 
           navigate(`/style-info/${newId}`);
         } else if (currentStyle?.id) {
+          // D-253:编辑保存后同样上传封面/主图区的待上传图片。
+          // 此前仅在新建分支上传，编辑时更换封面/主图(进入 pendingImages)保存后图片丢失
+          if (pendingImages.length > 0 || pendingColorImages.length > 0) {
+            try {
+              const { standaloneImages, colorUploads } = separateStandaloneAndColorImages(
+                pendingImages,
+                pendingColorImages
+              );
+              const styleNoStr = String(currentStyle.styleNo || normalizedValues.styleNo || '').trim();
+              const successCount = await uploadStyleImages(String(currentStyle.id), styleNoStr, standaloneImages, colorUploads);
+              if (successCount > 0) {
+                message.success(`成功上传 ${successCount} 张图片`);
+              }
+            } catch (error: unknown) {
+              message.error(error instanceof Error ? error.message : '图片上传失败');
+            }
+          }
           fetchDetail(String(currentStyle.id));
         }
 

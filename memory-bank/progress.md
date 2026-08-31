@@ -30,8 +30,22 @@
 - [x] 验证：后端 `mvn compile` BUILD SUCCESS / 前端 `npx tsc --noEmit` 零错误 / lint 0 错误
 - [ ] 待用户验收：进物料对账页点「补生成对账」→ 大货采购对账出现；
       BOM 页「同步到物料资料库」→ 采购列表颜色/克重显示出来
-- [ ] 待办（本批未做，需下轮）：尺寸表简化（标准码+前后放码）、质检记录分类、
-      齿轮标签落库排查、款式图片上传保持
+
+### 2026-08-31 D-252 下轮待办 4 项全部闭环 ✅（D-253，已推送）
+
+- [x] **尺寸表简化（标准码+前后放码）**：随 D-252 一并完成——尺寸表列头仅显示码数简称
+      （XS/S/D）+ Tooltip 完整名；样版码列简写；跳码区单元格精简摘要「前↓1 后↑1」、
+      Tooltip 看带码数明细（useStyleSizeColumns.tsx，已提交 4ad4fc8a2）
+- [x] **质检记录分类**：成品仓质检记录面板（QcRecordsPanel）新增「不合格分布」分类聚合
+      卡片——按次品类别 + 处理方式两个维度排序聚合 + 进度条占比，全部合格时不渲染
+- [x] **齿轮标签落库排查**：排查结论=链路完整已落库，无需改动——迁移
+      V202608260001 加 supplier_tag 列；Factory.java 有 supplierTag 字段；
+      FactoryController POST/PUT 走 factoryOrchestrator.save/update（MyBatis-Plus 全字段）
+      落库；前端 QuickManageModal 新增/编辑供应商均传 supplierTag；
+      simple-list 返回 supplierTag
+- [x] **款式图片上传保持**：修复 P0——useStyleFormActions.handleSave 编辑分支原先只在
+      新建（isNewPage）时上传 pendingImages/pendingColorImages，编辑已有款式时
+      封面/主图区更换的图片保存后丢失；现编辑分支同样上传后 fetchDetail 刷新
 
 ### 2026-08-31 D-249 下单页按钮回归镂空规范 + 输入框改白底描边 ✅（纯 wxss，用户截图反馈）
 

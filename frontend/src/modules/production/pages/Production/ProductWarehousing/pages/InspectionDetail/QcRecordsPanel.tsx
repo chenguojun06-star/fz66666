@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Alert, Statistic, Row, Col, Tag, Typography } from 'antd';
+import React, { useMemo } from 'react';
+import { Card, Alert, Statistic, Row, Col, Tag, Typography, Progress } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
 import { WarehousingDetailRecord } from '../../types';
@@ -23,7 +23,34 @@ interface Props {
   highlightWhNo: string;
 }
 
-const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, highlightWhNo }) => (
+const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, highlightWhNo }) => {
+  // D-253：质检记录分类——不合格记录按「次品类别」「处理方式」聚合，一眼看清主要缺陷构成；全部合格不渲染
+  const unqualifiedTotal = Number(qcStats.unqualified || 0);
+  const defectGroupList = useMemo(() => {
+    if (unqualifiedTotal <= 0) return [];
+    const map = new Map<string, number>();
+    qcRecords.forEach((r) => {
+      const qty = Number(r.unqualifiedQuantity || 0);
+      if (qty <= 0) return;
+      const label = getDefectCategoryLabel(r.defectCategory);
+      map.set(label, (map.get(label) || 0) + qty);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [qcRecords, unqualifiedTotal]);
+
+  const remarkGroupList = useMemo(() => {
+    if (unqualifiedTotal <= 0) return [];
+    const map = new Map<string, number>();
+    qcRecords.forEach((r) => {
+      const qty = Number(r.unqualifiedQuantity || 0);
+      if (qty <= 0) return;
+      const label = getDefectRemarkLabel(r.defectRemark);
+      map.set(label, (map.get(label) || 0) + qty);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [qcRecords, unqualifiedTotal]);
+
+  return (
   <div>
     {/* 统计卡片 */}
     <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -47,6 +74,44 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
         />
       );
     })()}
+
+    {/* 不合格记录分类聚合 */}
+    {unqualifiedTotal > 0 && (defectGroupList.length > 0 || remarkGroupList.length > 0) ? (
+      <Row gutter={16} style={{ marginBottom: 12 }}>
+        <Col xs={24} lg={12}>
+          <Card size="small" title={`不合格分布 · 次品类别（共 ${unqualifiedTotal} 件）`}>
+            {defectGroupList.length > 0 ? defectGroupList.map(([label, qty]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Tag color="error" style={{ width: 120, textAlign: 'center', marginInlineEnd: 0, flexShrink: 0 }}>{label}</Tag>
+                <Progress
+                  percent={Math.round(qty / unqualifiedTotal * 100)}
+                  size="small"
+                  strokeColor="var(--color-danger)"
+                  format={() => `${qty}件`}
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+              </div>
+            )) : <Typography.Text type="secondary">暂无次品类别标注</Typography.Text>}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card size="small" title={`不合格分布 · 处理方式（共 ${unqualifiedTotal} 件）`}>
+            {remarkGroupList.length > 0 ? remarkGroupList.map(([label, qty]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Tag color="warning" style={{ width: 120, textAlign: 'center', marginInlineEnd: 0, flexShrink: 0 }}>{label}</Tag>
+                <Progress
+                  percent={Math.round(qty / unqualifiedTotal * 100)}
+                  size="small"
+                  strokeColor="var(--color-warning)"
+                  format={() => `${qty}件`}
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+              </div>
+            )) : <Typography.Text type="secondary">暂无处理方式标注</Typography.Text>}
+          </Card>
+        </Col>
+      </Row>
+    ) : null}
 
     <Card title="质检记录明细" loading={recordsLoading}>
       <ResizableTable<WarehousingDetailRecord>
@@ -106,6 +171,7 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
       />
     </Card>
   </div>
-);
+  );
+};
 
 export default QcRecordsPanel;
