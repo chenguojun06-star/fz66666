@@ -4005,3 +4005,39 @@ D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资
 ### 验证
 前端 `npx tsc --noEmit` 零错误；改动文件 ESLint 0 错误；无后端改动。
 已提交推送 main。
+
+---
+
+## D-256：物料采购颜色/尺码/成分/克重/幅宽 空显根治（存量自愈 + 生成补漏）
+
+**日期**：2026-08-31
+**触发**：用户再次爆发——订单采购明细弹窗"面辅料信息"颜色/尺码全空、
+物料采购列表成分/克重/规格大量空："修复了这么多天了一直没有处理好"。
+
+### 根因（三个，D-252 只修了其一）
+
+1. **存量物料资料库属性 97% 为空（主根因）**：实测本地 219 条采购记录中
+   成分/克重/幅宽空 212 条。所有显示链路（列表页/订单弹窗/选料弹窗）都依赖
+   查询时 `enrichFromMaterialDatabase` 从资料库回填，资料库空 → 无米下锅 → 永远空。
+   D-252 断点2只修了"以后 BOM 同步资料库要带上这些字段"，**没有回填存量资料库**。
+2. **生成链路落库即空**：订单采购 `createPurchaseFromBom`（D-252 已补成分/克重）、
+   样衣采购 `StyleBomPurchaseHelper.buildPurchaseFromBom`（成分/克重/幅宽从不落库，
+   只靠查询回填）。且 BOM 未填颜色 + 订单单色时 `displayColor` 直接落空（订单颜色明明知道）。
+3. **尺码结构性为空**：分码 BOM（用量走 sizeUsageMap）的 size 本来就是空
+   （一料对全码），查询时也从不回填 size → 弹窗尺码列整列空白。
+
+### 修复（四件套）
+
+1. **查询时 BOM 兜底（核心，存量自愈）**：`MaterialPurchaseQueryHelper.enrichFromMaterialDatabase`
+   末尾追加 `enrichMissingFromBom`——资料库仍缺时从 t_style_bom 兜底：
+   成分/克重/规格为物料固有属性按 materialCode 任取非空；颜色/尺码与款式绑定，
+   仅 (styleId, materialCode) 去重后唯一才补（防多色行错配）。fail-safe 只 warn。
+   一处改动覆盖列表+弹窗全部调用点。
+2. **生成补漏**：`aggregateBomToPurchases` 单色订单且 BOM 无颜色时用订单颜色兜底。
+3. **前端空值兜底**：`MaterialPurchaseDetail/columns.tsx` 尺码空显示"全码"、颜色空显示"-"。
+4. **存量资料库回填脚本**：`scripts/backfill_material_database_from_bom.sql`
+   （幂等 UPDATE JOIN，只填空值，带 tenant_id）。本地已执行验证：三项全空行 0，
+   FAB001 成功补上 95%棉3%氨纶/160。**生产库需手动执行一次**。
+
+### 验证
+后端 `mvn compile` 通过；前端 `npx tsc --noEmit` 0 错误；lint 0 错误；回填脚本本地实测生效。

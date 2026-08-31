@@ -9,8 +9,10 @@ import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import com.fashion.supplychain.style.entity.StyleAttachment;
+import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
+import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +22,11 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component("materialPurchaseQueryHelperImpl")
@@ -39,6 +44,9 @@ class MaterialPurchaseQueryHelper {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleBomService styleBomService;
 
     @Autowired
     private StyleAttachmentService styleAttachmentService;
@@ -143,6 +151,91 @@ class MaterialPurchaseQueryHelper {
             if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
             if (!StringUtils.hasText(record.getColor()) && StringUtils.hasText(db.getColor())) record.setColor(db.getColor());
             if (!StringUtils.hasText(record.getSpecifications()) && StringUtils.hasText(db.getSpecifications())) record.setSpecifications(db.getSpecifications());
+        }
+        // D-256：资料库也缺属性时，从款式 BOM 兜底（存量采购记录显示自愈）
+        enrichMissingFromBom(records);
+    }
+
+    /**
+     * D-256：资料库仍缺属性时，从款式 BOM 兜底回填（存量采购记录显示自愈）。
+     * 背景：存量 t_material_database / t_material_purchase 的成分/克重/幅宽/颜色
+     * 绝大多数为空（实测 219 条采购中成分空 212 条），而所有显示链路都依赖
+     * 查询时回填 → 资料库无数据则永远空。BOM 里这些字段相对完整，按以下口径兜底：
+     * - 成分/克重/规格：物料固有属性，按 materialCode 任取非空值，跨款安全
+     * - 颜色/尺码：与款式绑定，仅当同款同编码 (styleId, materialCode) 的 BOM
+     *   非空值去重后唯一时才补，避免多色/多码 BOM 行错配
+     * fail-safe：任何异常只 log.warn，绝不影响主查询
+     */
+    private void enrichMissingFromBom(List<MaterialPurchase> records) {
+        try {
+            Set<String> codes = new LinkedHashSet<>();
+            for (MaterialPurchase r : records) {
+                if (r == null || !StringUtils.hasText(r.getMaterialCode())) continue;
+                boolean missingIntrinsic = !StringUtils.hasText(r.getFabricComposition())
+                        || !StringUtils.hasText(r.getFabricWeight())
+                        || !StringUtils.hasText(r.getSpecifications());
+                boolean missingStyleBound = (!StringUtils.hasText(r.getColor()) || !StringUtils.hasText(r.getSize()))
+                        && StringUtils.hasText(r.getStyleId());
+                if (missingIntrinsic || missingStyleBound) codes.add(r.getMaterialCode().trim());
+            }
+            if (codes.isEmpty()) return;
+            List<StyleBom> bomList = styleBomService.list(new LambdaQueryWrapper<StyleBom>()
+                    .in(StyleBom::getMaterialCode, codes)
+                    .select(StyleBom::getMaterialCode, StyleBom::getStyleId, StyleBom::getFabricComposition,
+                            StyleBom::getFabricWeight, StyleBom::getSpecification, StyleBom::getColor, StyleBom::getSize));
+            if (bomList == null || bomList.isEmpty()) return;
+
+            // 物料固有属性：按编码取首个非空
+            Map<String, StyleBom> intrinsicByCode = new HashMap<>();
+            // 款式绑定属性：key = styleId|code，值集合去重（唯一才敢补）
+            Map<String, Set<String>> colorsByStyleCode = new HashMap<>();
+            Map<String, Set<String>> sizesByStyleCode = new HashMap<>();
+            for (StyleBom b : bomList) {
+                if (b == null || !StringUtils.hasText(b.getMaterialCode())) continue;
+                String code = b.getMaterialCode().trim();
+                intrinsicByCode.putIfAbsent(code, b);
+                String sid = b.getStyleId() == null ? "" : String.valueOf(b.getStyleId()).trim();
+                String sk = sid + "|" + code;
+                if (StringUtils.hasText(b.getColor())) {
+                    colorsByStyleCode.computeIfAbsent(sk, k -> new HashSet<>()).add(b.getColor().trim());
+                }
+                if (StringUtils.hasText(b.getSize())) {
+                    sizesByStyleCode.computeIfAbsent(sk, k -> new HashSet<>()).add(b.getSize().trim());
+                }
+            }
+            for (MaterialPurchase r : records) {
+                if (r == null || !StringUtils.hasText(r.getMaterialCode())) continue;
+                String code = r.getMaterialCode().trim();
+                if (!StringUtils.hasText(r.getFabricComposition()) || !StringUtils.hasText(r.getFabricWeight())
+                        || !StringUtils.hasText(r.getSpecifications())) {
+                    StyleBom b = intrinsicByCode.get(code);
+                    if (b != null) {
+                        if (!StringUtils.hasText(r.getFabricComposition()) && StringUtils.hasText(b.getFabricComposition())) {
+                            r.setFabricComposition(b.getFabricComposition());
+                        }
+                        if (!StringUtils.hasText(r.getFabricWeight()) && StringUtils.hasText(b.getFabricWeight())) {
+                            r.setFabricWeight(b.getFabricWeight());
+                        }
+                        if (!StringUtils.hasText(r.getSpecifications()) && StringUtils.hasText(b.getSpecification())) {
+                            r.setSpecifications(b.getSpecification());
+                        }
+                    }
+                }
+                if (!StringUtils.hasText(r.getColor()) || !StringUtils.hasText(r.getSize())) {
+                    String sid = StringUtils.hasText(r.getStyleId()) ? r.getStyleId().trim() : "";
+                    String sk = sid + "|" + code;
+                    Set<String> colors = colorsByStyleCode.get(sk);
+                    if (!StringUtils.hasText(r.getColor()) && colors != null && colors.size() == 1) {
+                        r.setColor(colors.iterator().next());
+                    }
+                    Set<String> sizes = sizesByStyleCode.get(sk);
+                    if (!StringUtils.hasText(r.getSize()) && sizes != null && sizes.size() == 1) {
+                        r.setSize(sizes.iterator().next());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从款式BOM兜底回填采购属性失败(不影响主查询): {}", e.getMessage());
         }
     }
 

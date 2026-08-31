@@ -241,8 +241,9 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
     { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: colWidth || 100, render: (v: string) => <MaterialTypeTag value={v} /> },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: colWidth || 140, ellipsis: true },
     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: colWidth || 120, ellipsis: true },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: colWidth || 80, ellipsis: true },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: colWidth || 80, ellipsis: true },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: colWidth || 80, ellipsis: true, render: (v: string) => String(v || '').trim() || '-' },
+    // size 为空 = 该物料不按码数区分（各码用量走 sizeUsageMap 分码配比），显示「全码」避免整列空白
+    { title: '尺码', dataIndex: 'size', key: 'size', width: colWidth || 80, ellipsis: true, render: (v: string) => String(v || '').trim() || '全码' },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: colWidth || 70, ellipsis: true },
     { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: colWidth || 90, align: 'right' as const, render: (v: number) => Number.isFinite(Number(v)) ? formatMoney(v) : '-' },
     { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: colWidth || 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },

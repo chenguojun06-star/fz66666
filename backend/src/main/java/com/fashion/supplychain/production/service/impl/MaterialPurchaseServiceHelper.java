@@ -534,7 +534,11 @@ public class MaterialPurchaseServiceHelper {
             if (!orderHasMultipleColors) {
                 BigDecimal totalRequired = computeBomRequiredQuantity(bom, lines, matchColorSet, effectiveSizeSet, sizeUsageMapParsed);
                 if (totalRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
-                String displayColor = bomColorRaw.isEmpty() ? (matchColorSet == null ? "" : String.join(",", matchColorSet)) : bomColorRaw;
+                String displayColor = bomColorRaw.isEmpty()
+                        // D-256：BOM 未填颜色且订单仅单一颜色时，用订单颜色兜底；多色订单不猜
+                        ? (matchColorSet != null ? String.join(",", matchColorSet)
+                            : (orderColorSet.size() == 1 ? orderColorSet.iterator().next() : ""))
+                        : bomColorRaw;
                 String key = buildGroupingKey(bom, displayColor, bomSizeRaw);
                 MaterialPurchase agg = grouped.get(key);
                 if (agg == null) {
