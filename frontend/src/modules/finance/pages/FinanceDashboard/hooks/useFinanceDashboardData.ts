@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import { useFinanceBIData } from './useFinanceBIData';
 import { useSync } from '@/utils/syncManager';
@@ -299,15 +300,31 @@ const buildDetailConfig = (
 };
 
 export const useFinanceDashboardData = () => {
-  const { loading, data, customRange, setCustomRange, goToModule, refresh, cashFlowData, cashFlowLoading } = useFinanceBIData();
+  const { loading, data, customRange, setCustomRange, goToModule, refresh, cashFlowData, cashFlowLoading, loadCashFlow } = useFinanceBIData();
   const [selectedDetail, setSelectedDetail] = useState<StatKey>('revenue');
 
-  // 90s 轮询刷新财务看板数据
+  // 与 useFinanceBIData.getDateRanges 保持一致：默认当月，自定义区间优先
+  const reloadCashFlowByRange = useCallback(() => {
+    let startDate: string;
+    let endDate: string;
+    if (customRange && customRange[0] && customRange[1]) {
+      startDate = customRange[0].format('YYYY-MM-DD');
+      endDate = customRange[1].format('YYYY-MM-DD');
+    } else {
+      const today = dayjs();
+      startDate = today.startOf('month').format('YYYY-MM-DD');
+      endDate = today.endOf('month').format('YYYY-MM-DD');
+    }
+    loadCashFlow(startDate, endDate);
+  }, [customRange, loadCashFlow]);
+
+  // 90s 轮询刷新财务看板数据（含每日现金流图，此前现金流图只在改区间时刷新导致"每天数据不更新"）
   useSync(
     'finance-dashboard',
     async () => {
       try {
         await refresh();
+        reloadCashFlowByRange();
       } catch { /* 轮询失败忽略 */ }
       return null;
     },
@@ -315,13 +332,14 @@ export const useFinanceDashboardData = () => {
     { interval: 90000, pauseOnHidden: true },
   );
 
-  // 监听 data:changed 事件，500ms 防抖后刷新看板数据
+  // 监听 data:changed 事件，500ms 防抖后刷新看板数据 + 现金流图
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleChange = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         refresh();
+        reloadCashFlowByRange();
       }, 500);
     };
     window.addEventListener('data:changed', handleChange);
@@ -329,7 +347,7 @@ export const useFinanceDashboardData = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener('data:changed', handleChange);
     };
-  }, [refresh]);
+  }, [refresh, reloadCashFlowByRange]);
 
   const cashFlowChartOption = useMemo(
     () =>

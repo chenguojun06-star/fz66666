@@ -84,11 +84,16 @@ export function computeStageTimeline(
     if (!gapText && i > 0) {
       const prev = stages[i - 1];
       if (prev.endTime && !stage.startTime && !stage.isCompleted && !stage.endTime) {
-        const gapMs = dayjs().diff(dayjs(prev.endTime));
-        if (gapMs > 0) {
-          gapText = `⏱ 等待 ${formatGapDuration(gapMs)}`;
-          gapColor = gapColorForDays(gapMs / 86400000);
-          gapFrom = prev.name;
+        // 后续还有节点已开始/已结束 → 说明本阶段只是没有扫码记录（跳过/直裁等），
+        // 订单早已推进，不能用"现在时间"算出一个不断增长的"等待 X"误报
+        const hasLaterProgress = stages.slice(i + 1).some(s => s.startTime || s.endTime || s.isCompleted);
+        if (!hasLaterProgress) {
+          const gapMs = dayjs().diff(dayjs(prev.endTime));
+          if (gapMs > 0) {
+            gapText = `⏱ 等待 ${formatGapDuration(gapMs)}`;
+            gapColor = gapColorForDays(gapMs / 86400000);
+            gapFrom = prev.name;
+          }
         }
       }
     }
