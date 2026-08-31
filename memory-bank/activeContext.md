@@ -7,7 +7,21 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-08-31 D-256 物料采购颜色/尺码/成分/克重空显根治 ✅待推送+生产库跑回填SQL
+### 2026-09-01 D-257 样衣列表/详情子工序进度不一致根治（共享模块单点收敛）✅已推送
+
+- [x] 根因：两页各写一份构建逻辑且数据源不同（列表=pattern process-config 按父阶段聚合；详情=style 工序列表按子工序）
+- [x] 抽 miniprogram/utils/sampleProcessTimeline.js，两页共用；列表展开改为子工序时间线（含领取人/时间/单价）
+- [x] 三副本同步 md5 校验通过；node --check / WXML 标签栈扫描通过
+
+
+### 2026-09-01 D-257 CI失败→部署静默skip，线上跑旧代码（P0流程事故）✅已修复并真正部署
+
+- [x] 根因：FactoryShipmentOrchestratorTest 断言文案过时（D-242改了文案没同步测试）→ CI 连续8次失败 → 部署job静默skip → **D-250~D-256 全部没上线**，用户以为线上最新实际停在一周前
+- [x] 修复：更新断言 → 140/140 测试绿 → 推送 e783cf920 → CI 全绿 → 「部署到微信云托管」+「冒烟测试」首次真正执行成功
+- [x] 铁律：推送≠部署，每次 push 后必须 gh run watch 确认 deploy job conclusion=success
+- [ ] D-256 生产库可选跑一次 scripts/backfill_material_database_from_bom.sql（查询时兜底已自愈，SQL是补充）
+
+### 2026-08-31 D-256 物料采购颜色/尺码/成分/克重空显根治 ✅已部署上线（随D-257）
 
 - [x] 根因：存量 t_material_database 属性 97% 空 → 查询时回填无米下锅（D-252 只修了同步写入没回填存量）
 - [x] 查询时从 t_style_bom 兜底回填（成分/克重/规格按编码；颜色/尺码限同款同编码唯一才补），存量采购记录显示自愈

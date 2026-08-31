@@ -881,6 +881,30 @@
   color: var(--color-text-tertiary);
   font-weight: var(--font-weight-regular);
 }
+/* D-257：阶段标签 + meta 行（与详情页工序时间线同款） */
+.proc-tl-stage {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-hover, #f5f5f5);
+  border-radius: var(--radius-full);
+  padding: 2rpx 12rpx;
+  flex-shrink: 0;
+}
+.proc-tl-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+}
+.proc-tl-meta-text {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+}
+.proc-tl-meta-sep {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+}
 .proc-tl-qty {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);

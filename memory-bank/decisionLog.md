@@ -4041,3 +4041,67 @@ D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资
 
 ### 验证
 后端 `mvn compile` 通过；前端 `npx tsc --noEmit` 0 错误；lint 0 错误；回填脚本本地实测生效。
+
+## D-257：CI 失败 → 部署静默 skip，线上长期跑旧代码（P0 级流程事故）
+
+**日期**：2026-09-01
+**触发**：用户反馈"线上代码都是最新的"但 D-256 修复不生效，怀疑修复方向错误。
+
+### 根因（部署链路断裂，与代码无关）
+
+1. `FactoryShipmentOrchestratorTest$Receive.alreadyReceived_rejected` 断言过时：
+   D-242 引入分批收货时把"已收货防重复"文案从「无法收货」改为
+   「已全部收货完成，无需重复收货」，测试断言没同步 → CI 后端测试 job 失败。
+2. CI/CD 的「部署到微信云托管」job 依赖测试通过，失败即 **skip（静默）**。
+   自 2026-08-30 起连续 8 次 CI failure（D-250~D-256 全部中招），
+   **线上实际停在一周前的版本**，而本地/远程仓库代码已是最新。
+3. 排查时误判方向：以为本地后端进程旧 → 重启本地（无意义，用户用的是云端）；
+   以为数据/匹配逻辑问题 → 深挖回填代码。真正断点在 CI。
+
+### 修复
+
+1. 更新测试断言 `contains("无需重复收货")`（防重复行为本身正确，只是文案变了）。
+2. 本地全量 `mvn test`：140/140 通过 → 提交推送 e783cf920。
+3. CI 全绿：**「部署到微信云托管」+「部署后冒烟测试」首次真正执行**，
+   D-250~D-256 积累的全部修复随此次部署上线。
+
+### 铁律（新增）
+
+- **推送 ≠ 部署**：每次 push 后必须 `gh run watch` 确认 CI 绿 且
+  「部署到微信云托管」job conclusion=success（不是 skipped）。
+- 用户说"线上是最新代码"时，第一动作是查 CI 部署记录，不要先改代码。
+- 修 bug 前先问：**这个修复部署到线上了吗？**（gh run list 看 deploy job 状态）
+
+---
+
+## D-257：样衣列表页与详情页「子工序进度」显示不一致根治（单点收敛）
+
+**日期**：2026-09-01
+**触发**：用户反馈小程序样衣开发跟进列表展开的「子工序进度」只显示父阶段
+（裁剪/车缝/尾部，无扫码人/时间），详情页显示的却是子工序（裁剪/整件/尾部手工/整烫，
+带 李老板 08-29 14:08 元素）——"里面与外面显示的不一样，全部显示子工序就好了"。
+
+### 根因（两个页面各写一份构建逻辑 + 数据源都不同）
+
+- 列表页：`getPatternProcessConfig`（pattern 工序配置）→ `buildSampleStages`
+  按**父阶段**聚合，只渲染 stage label + n/n 进度条，无领取人/时间
+- 详情页：`style.listProcesses({styleId})` + `getPatternScanRecords(patternId)`
+  → 内联 builder 按子工序渲染（含 _claimBy/_lastTime/_price/_completedQty）
+- 两页数据源、聚合口径、字段、样式（列表缺 proc-tl-stage/proc-tl-meta）全不同
+
+### 修复（单点收敛，遵守"同一份字段映射必须单点"方法论）
+
+1. 抽共享模块 `miniprogram/utils/sampleProcessTimeline.js`：
+   `buildProcessTimeline(processes, scans, totalQty)` 返回
+   `{ processes, scanRecords }`（字段与详情页原 allProcesses 完全一致，含扫码记录明细）
+2. 详情页 `_loadProcessesAndScans` 改为调用共享模块（行为不变，-146 行）
+3. 列表页 onCardToggle 改为详情页同源数据（款式工序列表+扫码记录），
+   展开渲染子工序时间线：工序名 + 阶段标签 + 已完成/总数 + 进度条 +
+   领取人 · 时间 · ¥单价 meta 行；无 styleId/无配置显示"尚未配置工序"提示
+4. 列表页补齐 proc-tl-stage / proc-tl-meta 样式；删除死代码
+   （buildSampleStages/buildSubProcessRows/onStageTabTap/STAGE_KEY_MAP 等，-229 行）
+5. 三副本同步（miniprogram / h5-web/source-miniapp / h5-web/public），
+   5 个改动文件 md5 逐文件校验 = 1
+
+### 验证
+node --check 全过；WXML 标签栈扫描（修正自闭合判定后）两页 TAG_STACK_OK。

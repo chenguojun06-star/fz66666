@@ -121,37 +121,45 @@
           </scroll-view>
         </view>
 
-        <!-- D-233：子工序进度改成详情页同款时间线，一目了然 -->
+        <!-- D-257：子工序进度与详情页完全同源（款式工序列表+扫码记录），含领取人/时间/单价 -->
         <view class="expand-section">
           <text class="section-title">子工序进度</text>
           <view wx:if="{{item._configLoading}}" class="state-hint">加载中...</view>
-          <view wx:elif="{{item._needsConfig}}" class="state-hint">该款号尚未配置子工序，请先在款式工序配置中添加</view>
-          <view wx:elif="{{item._stages.length === 0}}" class="state-hint">暂无子工序</view>
+          <view wx:elif="{{item._needsConfig}}" class="state-hint">该款号尚未配置工序，请先在款式工序配置中添加</view>
+          <view wx:elif="{{item._processes.length === 0}}" class="state-hint">暂无子工序</view>
           <view wx:else class="proc-timeline">
             <view
-              wx:for="{{item._stages}}"
-              wx:for-item="st"
-              wx:key="key"
+              wx:for="{{item._processes}}"
+              wx:for-item="p"
+              wx:key="_key"
               class="proc-tl-item"
             >
               <view class="proc-tl-rail">
                 <view class="proc-tl-dot-wrap">
-                  <view wx:if="{{st.percent > 0 && st.percent < 100}}" class="proc-tl-pulse"></view>
-                  <view class="proc-tl-dot proc-tl-dot--{{st.percent >= 100 ? 'completed' : (st.percent > 0 ? 'in_progress' : 'pending')}}">
-                    <view wx:if="{{st.percent >= 100}}" class="icon-checkmark-sm"></view>
+                  <view wx:if="{{p._status === 'in_progress'}}" class="proc-tl-pulse"></view>
+                  <view class="proc-tl-dot proc-tl-dot--{{p._status}}">
+                    <view wx:if="{{p._status === 'completed'}}" class="icon-checkmark-sm"></view>
                   </view>
                 </view>
-                <view wx:if="{{index < item._stages.length - 1}}" class="proc-tl-line"></view>
+                <view wx:if="{{index < item._processes.length - 1}}" class="proc-tl-line"></view>
               </view>
               <view class="proc-tl-body">
                 <view class="proc-tl-info">
                   <view class="proc-tl-name-row">
-                    <text class="proc-tl-name {{st.percent === 0 ? 'proc-tl-name--pending' : ''}}">{{st.label}}</text>
+                    <text class="proc-tl-name {{p._status === 'pending' ? 'proc-tl-name--pending' : ''}}">{{p._name}}</text>
+                    <text wx:if="{{p._stage}}" class="proc-tl-stage">{{p._stage}}</text>
                   </view>
-                  <text wx:if="{{st.totalCount > 0}}" class="proc-tl-qty">{{st.completedCount}}/{{st.totalCount}}</text>
+                  <text wx:if="{{p._totalQty > 0}}" class="proc-tl-qty">{{p._completedQty}}/{{p._totalQty}}</text>
                 </view>
-                <view wx:if="{{st.totalCount > 0}}" class="proc-tl-bar">
-                  <view class="proc-tl-fill {{st.percent >= 100 ? 'proc-tl-fill--done' : ''}}" style="width:{{st.percent}}%"></view>
+                <view wx:if="{{p._totalQty > 0}}" class="proc-tl-bar">
+                  <view class="proc-tl-fill {{p._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{p._percent}}%"></view>
+                </view>
+                <view class="proc-tl-meta" wx:if="{{p._claimBy || p._lastTime || p._price}}">
+                  <text wx:if="{{p._claimBy}}" class="proc-tl-meta-text">{{p._claimBy}}</text>
+                  <text wx:if="{{p._claimBy && p._lastTime}}" class="proc-tl-meta-sep"> · </text>
+                  <text wx:if="{{p._lastTime}}" class="proc-tl-meta-text">{{p._lastTime}}</text>
+                  <text wx:if="{{p._price}}" class="proc-tl-meta-sep"> · </text>
+                  <text wx:if="{{p._price}}" class="proc-tl-meta-text">¥{{p._price}}/件</text>
                 </view>
               </view>
             </view>
