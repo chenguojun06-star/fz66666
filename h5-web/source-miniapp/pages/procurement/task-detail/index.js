@@ -73,6 +73,7 @@ Page({
     patternProductionId: '',
     sourceType: '',
     styleNo: '',
+    styleImage: '',
     isSampleMode: false,
     loading: false,
     submitting: false,
@@ -208,7 +209,7 @@ Page({
 
       // 头部状态：基于物料实际状态计算（不依赖到货率，对齐用户诉求"已完成的任务要显示已完成"）
       // 优先级：全部 completed → 已完成；含 cancelled 且其他都完成 → 已完成（取消的物料不阻断）
-      //        全部 received/partial → 已采购；含 pending → 待采购；否则 → 采购中
+      //        全部 received/partial → 已领取；含 pending → 待采购；否则 → 采购中
       const validItems = materialPurchases.filter(m => this._normalizeStatus(m.status) !== 'cancelled');
       const allCompleted = validItems.length > 0 && validItems.every(m => {
         const s = this._normalizeStatus(m.status);
@@ -234,6 +235,7 @@ Page({
         orderId, materialPurchases, loading: false,
         overallArrivalRate, canConfirmProcurement, hasReturnConfirmed,
         overallStatus, overallStatusColor, overallStatusText,
+        styleImage: getAuthedImageUrl((materialPurchases[0] && (materialPurchases[0].styleImage || materialPurchases[0].coverImage)) || ''),
       });
     } catch (e) {
       console.error('加载采购详情失败:', e);
@@ -276,7 +278,7 @@ Page({
 
     const pendingItems = this.data.materialPurchases.filter(item => item.needsReceive);
     if (pendingItems.length === 0) {
-      toast.success('所有物料均已采购');
+      toast.success('所有物料均已领取');
       return;
     }
 
@@ -290,7 +292,7 @@ Page({
         }),
       ));
       wx.hideLoading();
-      toast.success(`已采购 ${pendingItems.length} 项`);
+      toast.success(`已领取 ${pendingItems.length} 项`);
       this._loadDetail();
     } catch (e) {
       wx.hideLoading();
@@ -632,7 +634,7 @@ Page({
 
   /**
    * 领料出库：打开领料弹窗
-   * 从已采购物料中选择领料数量，调用 createPickingPending 创建待出库领料单
+   * 从已领取物料中选择领料数量，调用 createPickingPending 创建待出库领料单
    */
   onOpenPicking() {
     const pickableItems = this.data.materialPurchases.filter(m => {

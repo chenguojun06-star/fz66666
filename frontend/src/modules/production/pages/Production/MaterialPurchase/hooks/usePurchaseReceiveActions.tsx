@@ -150,7 +150,7 @@ export function usePurchaseReceiveActions({
             try {
               const res = await api.post<{ code: number; message?: string; data: boolean }>('/production/purchase/receive', { purchaseId: id, receiverId, receiverName: String(receiverName).trim() });
               if (res.code === 200) {
-                message.success('已采购');
+                message.success('已领取');
                 fetchMaterialPurchaseList();
                 const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
                 if (no) loadDetailByOrderNo(no);
@@ -178,12 +178,12 @@ export function usePurchaseReceiveActions({
           try {
             const res = await api.post<{ code: number; message?: string; data: boolean }>('/production/purchase/receive', { purchaseId: id, receiverId, receiverName: String(receiverName).trim() });
             if (res.code === 200) {
-              message.success('已采购');
+              message.success('已领取');
               fetchMaterialPurchaseList();
               const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
               if (no) loadDetailByOrderNo(no);
             } else {
-              message.error(res.message || '采购失败');
+              message.error(res.message || '领取失败');
             }
           } catch (err: unknown) { message.error(err instanceof Error ? err.message : '采购失败'); }
           finally { setSubmitLoading(false); }

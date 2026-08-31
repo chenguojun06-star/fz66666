@@ -31,7 +31,9 @@ function translatePurchaseStatus(status: string): string {
   const map: Record<string, string> = {
     pending: '待采购',
     purchasing: '采购中',
-    purchased: '已采购',
+    // D-258：采购任务被领取 = 已领取（与两端统一口径，"已采购"误导）
+    purchased: '已领取',
+    received: '已领取',
     arriving: '到货中',
     arrived: '已到货',
     awaiting_confirm: '待确认',

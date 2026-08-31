@@ -11,7 +11,7 @@ import type { Dayjs } from 'dayjs';
  *
  * 【分组规则（前端筛选 = 后端 stats 分组）】
  *   pending            → 待采购（仅 pending）
- *   received           → 已采购（received + warehouse_pending）
+ *   received           → 已领取（received + warehouse_pending）
  *   partial            → 部分到货（partial + partial_arrival）
  *   completed          → 已完成（completed + awaiting_confirm）
  *   cancelled          → 已取消
@@ -23,7 +23,7 @@ import type { Dayjs } from 'dayjs';
 const MATERIAL_PURCHASE_STATUS_OPTIONS = [
   { label: '全部', value: '' },
   { label: '待采购', value: MATERIAL_PURCHASE_STATUS.PENDING },
-  { label: '已采购', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
+  { label: '已领取', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
   { label: '部分到货', value: MATERIAL_PURCHASE_STATUS.PARTIAL },
   { label: '已完成', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
   { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },

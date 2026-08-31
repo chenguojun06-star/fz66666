@@ -7,13 +7,13 @@ const displayHelper = require('../../../utils/displayHelper');
 
 /**
  * 筛选 Tab 定义（与 PC 端 MaterialSearchForm 状态筛选对齐）
- * 全部 / 待采购 / 已采购 / 部分到货 / 已完成 / 已取消 / 已延期
+ * 全部 / 待采购 / 已领取 / 部分到货 / 已完成 / 已取消 / 已延期
  * pillClass 对应 dashboard 的 filter-pill--* 颜色类
  */
 const STATUS_TABS = [
   { key: '', label: '全部', pillClass: '' },
   { key: 'pending', label: '待采购', pillClass: '' },
-  { key: 'received', label: '已采购', pillClass: 'filter-pill--prod' },
+  { key: 'received', label: '已领取', pillClass: 'filter-pill--prod' },
   { key: 'partial', label: '部分到货', pillClass: 'filter-pill--prod' },
   { key: 'completed', label: '已完成', pillClass: 'filter-pill--done' },
   { key: 'cancelled', label: '已取消', pillClass: '' },
@@ -467,7 +467,7 @@ Page({
 
   /**
    * 计算展示状态（与 PC 端 MaterialSearchForm 状态对齐：7 档）
-   * 优先级：已取消 > 已完成 > 已延期 > 已采购 > 部分到货 > 待采购 > 采购中
+   * 优先级：已取消 > 已完成 > 已延期 > 已领取 > 部分到货 > 待采购 > 采购中
    * 注：cancelled 优先级高于 delayed，因为取消是终态；延期是过程态
    */
   _computeDisplayStatus(item) {
@@ -486,7 +486,7 @@ Page({
       return 'partial';
     }
 
-    // 已采购（received 状态：已领取但未到货或部分到货）
+    // 已领取（received 状态：已领取但未到货或部分到货）
     if (rawStatus === 'received') {
       return 'received';
     }

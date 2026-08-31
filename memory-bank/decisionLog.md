@@ -4105,3 +4105,33 @@ D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资
 
 ### 验证
 node --check 全过；WXML 标签栈扫描（修正自闭合判定后）两页 TAG_STACK_OK。
+
+---
+
+## D-258：采购状态文案"已采购"→"已领取"两端统一（数量类字段不动）
+
+**日期**：2026-09-01
+**触发**：用户指出采购页"已采购"状态误导人（实际是采购员领取了任务、还没到货），
+要求手机端与 PC 端全部核实统一。
+
+### 口径澄清（用户纠偏，必须记住）
+- **状态字段**：pending=待采购 / received=**已领取**（领取了采购任务，尚未到货）
+- **数量类列名**：「已采购量」「已采购数量」是数量（已采购多少米/件），**不改**
+  —— 我曾把 PC 码数用量明细的"已采购量"误改成"已领取量"，被用户抓回
+
+### 改动清单（8 处）
+PC：
+1. MaterialPurchase/statCardsConfig.ts 统计卡 已采购→已领取
+2. MaterialSearchForm.tsx 筛选下拉 已采购→已领取（+注释）
+3. usePurchaseReceiveActions.tsx 领取成功/失败提示 已采购/采购失败→已领取/领取失败
+4. OrderFlow/useOrderLinkTimeline.ts 采购节点翻译 purchased/received→已领取
+5. SizeUsageSummaryPanel.tsx "已采购量"曾误改已还原（数量列不动）
+小程序：
+6. pages/procurement/task-list STATUS_TABS received 已采购→已领取（顶部统计卡来源）+注释
+7. pages/procurement/task-detail 一键领取 toast"已采购 N 项"→"已领取 N 项" +注释
+8. shared/enumLabels.js PROCUREMENT_STATUS_MAP COMPLETED 已采购→已完成
+   （displayHelper.PURCHASE_STATUS_LABEL 本就已是 pending=待领取/received=已领取，无需改）
+
+### 验证
+前端 tsc 0 错误；node --check 全过；全库 grep 状态类"已采购"残留=0（仅注释说明与数量列）；
+三副本同步 md5 校验 = 1。

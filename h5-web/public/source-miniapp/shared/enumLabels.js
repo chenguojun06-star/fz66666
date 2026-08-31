@@ -124,10 +124,11 @@ var REVIEW_STATUS_MAP = {
 };
 
 // ── 采购任务状态映射 ──
+// D-258：状态文案统一"领取"口径，"已采购"误导（received=已领取；COMPLETED=任务已完成）
 var PROCUREMENT_STATUS_MAP = {
   PENDING: '待采购',
   IN_PROGRESS: '采购中',
-  COMPLETED: '已采购',
+  COMPLETED: '已完成',
   CANCELLED: '已取消',
   WAREHOUSE_IN: '已入库',
 };

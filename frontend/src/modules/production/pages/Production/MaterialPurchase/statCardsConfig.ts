@@ -30,7 +30,7 @@ export const buildStatCards = (
   {
     key: 'received',
     items: [
-      { label: '已采购', value: purchaseStats.receivedCount, unit: '条', color: 'var(--color-primary)' },
+      { label: '已领取', value: purchaseStats.receivedCount, unit: '条', color: 'var(--color-primary)' },
       { label: '数量', value: purchaseStats.receivedQuantity, unit: '件', color: 'var(--color-success)' },
     ],
     onClick: () => handleStatClick('received'),
