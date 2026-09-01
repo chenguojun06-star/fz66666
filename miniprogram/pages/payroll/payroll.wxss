@@ -210,27 +210,27 @@
 .record-item {
   background: var(--color-bg-card);
   
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   transition: background-color 0.18s ease;
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 10px;
+  padding: 8px;
   box-sizing: border-box;
   /* 卡片主体：左图 + 右文字 */
   display: flex;
   align-items: stretch;
-  gap: 12px;
+  gap: 10px;
 }
 
 .record-item:active {
   background: var(--color-bg-muted);
 }
 
-/* 款式封面图容器：宽度对齐扫码页面(128rpx)，高度压低，aspectFit 显示全图并左右留白 */
+/* 款式封面图容器：宽度对齐扫码页面(128rpx)，高度进一步压低，aspectFit 显示全图并左右留白 */
 .record-img-wrap {
   width: 128rpx;
-  height: 72rpx;
+  height: 56rpx;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -300,7 +300,7 @@
 }
 
 .record-sub {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   overflow: hidden;
