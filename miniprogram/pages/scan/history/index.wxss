@@ -178,7 +178,7 @@ page {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 14px;
+  padding: 10px;
   box-sizing: border-box;
   box-shadow: var(--shadow-sm);
   transition: transform 0.18s ease, background-color 0.18s ease;
@@ -189,10 +189,10 @@ page {
   align-items: stretch;
   gap: 12px;
 }
-/* 款式封面图容器：与扫码页面(128rpx)一致的正方形，aspectFit 显示全图并左右留白 */
+/* 款式封面图容器：宽度对齐扫码页面(128rpx)，高度压低，aspectFit 显示全图并左右留白 */
 .record-img-wrap {
   width: 128rpx;
-  height: 128rpx;
+  height: 72rpx;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -250,7 +250,7 @@ page {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 4px;
   font-size: var(--font-size-sm);
 }
 .record-bundle {

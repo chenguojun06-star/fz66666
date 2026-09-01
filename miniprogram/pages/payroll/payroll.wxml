@@ -2,13 +2,15 @@
 <view class="page">
   <!-- 汇总渐变卡片 (brand-50 -> brand-100) -->
   <view class="summary-card">
-    <text class="summary-month">{{currentMonthLabel}}</text>
-    <text class="summary-amount">¥{{totalAmount}}</text>
-    <view class="summary-mom" wx:if="{{momChange}}">
-      <view class="mom-arrow {{momChange >= 0 ? 'mom-up' : 'mom-down'}}"></view>
-      <text class="mom-text {{momChange >= 0 ? 'mom-up' : 'mom-down'}}">较上月 {{momChange >= 0 ? '+' : ''}}{{momChange}}%</text>
+    <view class="summary-left">
+      <text class="summary-month">{{currentMonthLabel}}</text>
+      <text class="summary-amount">¥{{totalAmount}}</text>
+      <view class="summary-mom" wx:if="{{momChange}}">
+        <view class="mom-arrow {{momChange >= 0 ? 'mom-up' : 'mom-down'}}"></view>
+        <text class="mom-text {{momChange >= 0 ? 'mom-up' : 'mom-down'}}">较上月 {{momChange >= 0 ? '+' : ''}}{{momChange}}%</text>
+      </view>
     </view>
-    <view class="summary-stats">
+    <view class="summary-right">
       <view class="summary-stat-item">
         <text class="summary-stat-label">计件工资</text>
         <text class="summary-stat-value">¥{{pieceworkAmount}}</text>

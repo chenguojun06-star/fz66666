@@ -10,14 +10,33 @@
 /* ========== 汇总渐变卡片 (brand-50 -> brand-100) ========== */
 .summary-card {
   margin-top: 12px;
-  
+  /* 左右双栏布局：左（月份+金额+环比）右（计件工资+奖金），避免右侧空白 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-primary-bg-dark) 100%);
-  
-
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 8px 12px;
+  padding: 12px 16px;
   box-sizing: border-box;
+}
+
+/* 左栏：月份 + 总金额 + 环比 */
+.summary-left {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 右栏：计件工资 / 奖金 双统计面板 */
+.summary-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-lg);
 }
 
 /* ========== 搜索框容器：负 margin 抵消 .page 水平 padding ========== */
@@ -81,13 +100,6 @@
 
 .mom-text.mom-down {
   color: var(--color-danger);
-}
-
-.summary-stats {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 6px;
 }
 
 .summary-stat-item {
@@ -198,14 +210,12 @@
 .record-item {
   background: var(--color-bg-card);
   
-  
-  
   margin-bottom: 10px;
   transition: background-color 0.18s ease;
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 10px;
   box-sizing: border-box;
   /* 卡片主体：左图 + 右文字 */
   display: flex;
@@ -217,10 +227,10 @@
   background: var(--color-bg-muted);
 }
 
-/* 款式封面图容器：与扫码页面(128rpx)一致的正方形，aspectFit 显示全图并左右留白 */
+/* 款式封面图容器：宽度对齐扫码页面(128rpx)，高度压低，aspectFit 显示全图并左右留白 */
 .record-img-wrap {
   width: 128rpx;
-  height: 128rpx;
+  height: 72rpx;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
