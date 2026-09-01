@@ -1,11 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-01（D-261 七连修：款式特征合并+尺寸表覆盖+公差±+排产滤布行+退回吞异常+视觉失败原因透传+样衣采购带色）
+> 最后更新：2026-09-01（D-262 生产/外发页扫码一步直达工序领取页，去扫码主页中转）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-01 D-262 小程序生产管理/外发管理页扫码——页内直达工序领取页 ✅代码完成，待用户重新编译验证
+
+- [x] 用户原话："我要的是直接扫码可以调领取工序的页面 不是还跳转到扫码主页再扫一次"
+- [x] 根因：旧链路 quickScan → switchTab 到 `/pages/scan/index`（tabBar）丢 ?code= 参数 → 必须二次扫码
+- [x] 新建 `miniprogram/pages/scan/handlers/InlineScanDispatcher.js`：`scanInPage`（原地扫码+本地解析，不导航）+ `dispatchInlineScanCode`（复用 ScanHandler 完整链路，直达 scan-result 领取/报工页 / ConfirmModal / QualityModal / scan-action）
+- [x] 生产管理 `dashboard/index.js#onScanTap`、外发管理 `factory/shipment/index.js#onScan` 均改接页内直达
+- [x] 链路验证：ScanHandler 无 navigateTo 不会二次跳转；`showScanResultConfirm` → `safeNavigate('/pages/scan/scan-result/index')`，全程不经过扫码主页
+- [x] ESLint：新文件零错误（已补 eol-last）；dashboard 3 个 unused 变量（dash/topStats/stats L127-129）为历史遗留，非本次引入
+- [ ] 待用户：开发者工具重新编译预览验证两种码型（菲号 bundle 码、订单 order 码）+ 异常分支
 
 ### 2026-09-01 D-261 用户暴走七连修（款式特征/尺寸表/公差/排产/退回/视觉AI/样衣采购）✅本地验证通过，待推送部署
 

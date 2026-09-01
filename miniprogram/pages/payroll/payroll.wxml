@@ -21,6 +21,20 @@
     </view>
   </view>
 
+  <!-- 搜索框：款号 / 订单号 / 款式名字 / 菲号 -->
+  <view class="ssb-wrap">
+    <sticky-search-bar
+      sticky="{{false}}"
+      placeholder="款号 / 订单号 / 款式名字 / 菲号"
+      value="{{searchKeyword}}"
+      show-scan="{{false}}"
+      show-filter="{{false}}"
+      bind:input="onKeywordInput"
+      bind:confirm="onSearch"
+      bind:clear="onClearSearch"
+    />
+  </view>
+
   <!-- 日期选择栏 -->
   <view class="date-bar">
     <picker mode="date" value="{{startDate}}" end="{{endDate}}" bindchange="onStartDateChange">
@@ -54,6 +68,10 @@
   <view class="detail-list">
     <block wx:for="{{filteredRecords}}" wx:key="index">
       <view class="record-item">
+        <!-- 款式封面全景图：长方形(宽>高)容器 + aspectFit 左右留白 -->
+        <view wx:if="{{item.coverUrl}}" class="record-img-wrap">
+          <image-preview class="record-img" src="{{item.coverUrl}}" mode="aspectFit" />
+        </view>
         <view class="record-main">
           <view class="record-left">
             <view class="record-tag-line">

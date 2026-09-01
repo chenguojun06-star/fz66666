@@ -65,18 +65,26 @@
   <!-- 记录卡片列表（对齐设计稿：卡片式，非表格） -->
   <view class="records-list" wx:if="{{displayRecords.length > 0}}">
     <view wx:for="{{displayRecords}}" wx:key="id" class="record-card">
-      <view class="record-top">
-        <view class="record-top-left">
-          <text class="record-date">{{item.displayTime}}</text>
-          <text class="record-order">{{item.displayOrderNo}}</text>
+      <view class="record-body">
+        <!-- 款式封面全景图：长方形(宽>高)容器 + aspectFit 左右留白 -->
+        <view wx:if="{{item.coverUrl}}" class="record-img-wrap">
+          <image-preview class="record-img" src="{{item.coverUrl}}" mode="aspectFit" />
         </view>
-        <text wx:if="{{item.lineAmount > 0}}" class="record-amount">¥{{item.displayLineAmount}}</text>
-      </view>
-      <view class="record-bottom">
-        <text class="record-bundle">{{item.displayBundleNo}}</text>
-        <text class="record-dot">·</text>
-        <text class="record-process">{{item.displayProcess}}</text>
-        <text class="record-qty">{{item.displayQuantity}}件</text>
+        <view class="record-info">
+          <view class="record-top">
+            <view class="record-top-left">
+              <text class="record-date">{{item.displayTime}}</text>
+              <text class="record-order">{{item.displayOrderNo}}</text>
+            </view>
+            <text wx:if="{{item.lineAmount > 0}}" class="record-amount">¥{{item.displayLineAmount}}</text>
+          </view>
+          <view class="record-bottom">
+            <text class="record-bundle">{{item.displayBundleNo}}</text>
+            <text class="record-dot">·</text>
+            <text class="record-process">{{item.displayProcess}}</text>
+            <text class="record-qty">{{item.displayQuantity}}件</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>

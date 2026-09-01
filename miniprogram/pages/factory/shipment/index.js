@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
+const { dispatchInlineScanCode } = require('../../scan/handlers/InlineScanDispatcher');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner, getUserInfo } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
@@ -296,10 +297,18 @@ Page({
   onKeywordInput: function (e) { this.setData({ keyword: e.detail.value }); },
   onKeywordSearch: function () { this._resetAndLoad(); },
   /**
-   * 扫码按钮：D-261 恢复统一扫码MES主流程（D-234 曾强制跳到工序编辑页，锁死领取/报工）
+   * 扫码按钮：D-262 页内扫码一步直达工序领取/报工页。
+   * 不再跳扫码主页（switchTab 丢参数需二次扫码），也不再跳工序编辑页（D-234 锁死领取/报工）
    */
   onScan: function () {
-    quickScan();
+    scanInPage(function (parsed, raw) {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success) {
+        toast(parsed.message || ('无法识别：' + raw));
+        return;
+      }
+      dispatchInlineScanCode(raw);
+    });
   },
 
   onCardToggle: function (e) {

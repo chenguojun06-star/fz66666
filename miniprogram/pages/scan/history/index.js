@@ -4,6 +4,7 @@
  */
 const api = require('../../../utils/api');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -59,6 +60,8 @@ function _formatPatternRecord(item) {
     displayLineAmount: '-',
     isPayable: false,
     displayBedNo: '-',
+    // 款式封面全景图（经鉴权处理，供卡片展示）
+    coverUrl: getAuthedImageUrl(item.coverImage || ''),
   };
 }
 
@@ -254,6 +257,8 @@ Page({
       );
       const formatted = newRecords.map((item) => ({
         ...item,
+        // 款式封面全景图（经鉴权处理，供卡片展示）
+        coverUrl: getAuthedImageUrl(item.coverImage || item.styleImageUrl || item.styleCover || item.styleImage || ''),
         displayTime: formatTime(item.scanTime),
         displayProcess: _normalizeQualityName(item.processName) || item.progressStage || item.scanType || '-',
         displayWorker: item.workerName || item.operatorName || '-',

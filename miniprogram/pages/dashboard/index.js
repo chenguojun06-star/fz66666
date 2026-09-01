@@ -17,7 +17,8 @@ const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progr
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
-const { safeNavigate, quickScan, toast } = require('../../utils/uiHelper');
+const { safeNavigate, scanInPage, toast } = require('../../utils/uiHelper');
+const { dispatchInlineScanCode } = require('../scan/handlers/InlineScanDispatcher');
 
 const app = getApp();
 
@@ -316,10 +317,18 @@ Page({
 
   /* ======== 扫码 ======== */
   onScanTap: function () {
-    // D-261：恢复 D-234 破坏的扫码链路。D-234 把扫码强扭到工序编辑页(process-edit)，
-    // 工序码被锁死在"编辑页面"无法领取/报工。改回 quickScan(）→ 统一扫码MES主流程，
-    // 由 /pages/scan/index 按码型识别，正确进入工序领取/报工、质检、入库等页面。
-    quickScan();
+    // D-262：页内扫码一步直达工序领取/报工页，不经过扫码主页中转。
+    // 原因：/pages/scan/index 是 tabBar 页，switchTab 会丢弃 ?code= 参数，跳过去会丢码并需二次扫码。
+    // D-234 曾强扭到工序编辑页(process-edit)锁死领取/报工；D-261 恢复 quickScan 仍是多一跳转。
+    scanInPage(function (parsed, raw) {
+      if (!parsed) return; // 用户取消
+      if (!parsed.success) {
+        toast(parsed.message || ('无法识别：' + raw));
+        return;
+      }
+      // 原地解析 + 工序检测，直接跳领取/报工/质检/入库等最终页面
+      dispatchInlineScanCode(raw);
+    });
   },
 
   /* ======== 通知数量（小云 AI 助手浮标） ======== */

@@ -16,23 +16,28 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 8px 12px;
   box-sizing: border-box;
+}
+
+/* ========== 搜索框容器：负 margin 抵消 .page 水平 padding ========== */
+.ssb-wrap {
+  margin: 12px calc(-1 * var(--page-padding-x)) 0;
 }
 
 .summary-month {
   display: block;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 
 .summary-amount {
   display: block;
-  margin-top: 4px;
-  font-size: var(--font-size-6xl);
+  margin-top: 2px;
+  font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   color: var(--color-primary);
   white-space: nowrap;
@@ -44,7 +49,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .mom-arrow {
@@ -82,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 12px;
+  margin-top: 6px;
 }
 
 .summary-stat-item {
@@ -92,14 +97,14 @@
 
 .summary-stat-label {
   display: block;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 
 .summary-stat-value {
   display: block;
-  margin-top: 2px;
-  font-size: var(--font-size-lg);
+  margin-top: 0;
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -108,7 +113,7 @@
 
 .summary-stat-divider {
   width: 1px;
-  height: 36px;
+  height: 24px;
   background: var(--color-border);
   flex-shrink: 0;
 }
@@ -202,13 +207,36 @@
   border-radius: var(--radius-xl);
   padding: 12px;
   box-sizing: border-box;
+  /* 卡片主体：左图 + 右文字 */
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
 }
 
 .record-item:active {
   background: var(--color-bg-muted);
 }
 
+/* 款式封面图容器：与扫码页面(128rpx)一致的正方形，aspectFit 显示全图并左右留白 */
+.record-img-wrap {
+  width: 128rpx;
+  height: 128rpx;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border);
+}
+
+.record-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .record-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;

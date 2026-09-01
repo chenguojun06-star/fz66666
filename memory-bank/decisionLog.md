@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-01（新增 D-261 用户暴走七连修）
+> 最后更新：2026-09-01（新增 D-262 页内扫码一步直达工序领取页）
+
+---
+
+## D-262：小程序生产管理/外发管理页扫码——页内直达工序领取页，去掉扫码主页中转（2026-09-01）
+
+用户原话："我要的是在这2个页面 直接扫码可以调领取工序的页面 不是扫码还跳转到扫码的主页面"。之前链路：业务页点扫码 → `quickScan()` → switchTab 到 `/pages/scan/index`（扫码主页，tabBar 页）→ **switchTab 丢弃 ?code= 参数，丢码** → 用户必须再扫一次。用户判定为"多做了一层、毫无意义"。
+
+**根因**：`/pages/scan/index` 是 tabBar 页，`safeNavigate` 会转成 `switchTab`，query 参数被丢弃；D-234 曾强扭到 process-edit 锁死领取/报工。
+
+**决策**：不复用扫码主页，业务页内原地处理：
+1. 新建 `miniprogram/pages/scan/handlers/InlineScanDispatcher.js`：
+   - `scanInPage()` 原地 `wx.scanCode` + QRCodeParser 本地解析（不导航）
+   - `dispatchInlineScanCode(raw)` 用与扫码主页完全相同的 `ScanHandler.handleScan` 完整链路（解析→验证→工序检测→needInput 弹窗重试→异常兜底），`_dispatchResult` 对齐扫码主页 `_handleScanResult` 派发到最终页：`ScanResultHandler.showScanResultConfirm` → `/pages/scan/scan-result/index`（工序领取/报工页）、`ConfirmModalHandler.showConfirmModal`（采购/裁剪领取）、`QualityHandler.showQualityModal`（质检入库）、`scan-action`（样衣/素材出入库）
+2. 生产管理 `dashboard/index.js#onScanTap`、外发管理 `factory/shipment/index.js#onScan` 改接 `scanInPage + dispatchInlineScanCode`
+
+**链路**：扫码 → 原地解析 → 一步直达 `scan-result` 领取页。全程不经过 `/pages/scan/index`，无需二次扫码。ScanHandler 本身不导航（无 navigateTo），不会二次跳转。
+
+**教训**：小程序 tabBar 页跳转丢参数是"多一跳"类缺陷的温床；业务页扫码应就地消费码，而非"先去扫码页"。
 
 ---
 

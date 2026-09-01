@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.ScanRecordEnrichHelper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.Data;
@@ -28,11 +29,14 @@ public class PayrollAggregationOrchestrator {
 
     private final ScanRecordService scanRecordService;
     private final ProductionOrderService productionOrderService;
+    private final ScanRecordEnrichHelper scanRecordEnrichHelper;
 
     public PayrollAggregationOrchestrator(ScanRecordService scanRecordService,
-                                          ProductionOrderService productionOrderService) {
+                                          ProductionOrderService productionOrderService,
+                                          ScanRecordEnrichHelper scanRecordEnrichHelper) {
         this.scanRecordService = scanRecordService;
         this.productionOrderService = productionOrderService;
+        this.scanRecordEnrichHelper = scanRecordEnrichHelper;
     }
 
     /**
@@ -126,6 +130,10 @@ public class PayrollAggregationOrchestrator {
         // 查询扫码记录（安全上限，防止无限制全表扫描）
         qw.last("LIMIT 5000");
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
+
+        // 批量补齐款式信息（styleName / coverImage），供小程序「我的工资」页面展示全景图
+        // 异常仅记日志不阻断主流程（enrichStyleInfo 内部自带 try-catch）
+        scanRecordEnrichHelper.enrichStyleInfo(scanRecords);
 
         // 按 operator_id + order_id + process_name + color + size + cutting_bundle_no 分组
         // ★ 必须含 orderId：否则同一工人对不同订单做同名工序时，数量会被错误累加到第一个订单上
@@ -265,6 +273,8 @@ public class PayrollAggregationOrchestrator {
         dto.setOrderId(first.getOrderId());
         dto.setOrderNo(first.getOrderNo());
         dto.setStyleNo(first.getStyleNo());
+        dto.setStyleName(first.getStyleName());
+        dto.setCoverImage(first.getCoverImage());
         dto.setColor(first.getColor());
         dto.setSize(first.getSize());
         dto.setOperatorId(first.getOperatorId());
@@ -366,6 +376,10 @@ public class PayrollAggregationOrchestrator {
         private String orderNo;
         private String orderStatus;
         private String styleNo;
+        /** 款式名称（由 ScanRecordEnrichHelper 从 StyleInfo 补齐） */
+        private String styleName;
+        /** 款式封面图（由 ScanRecordEnrichHelper 从 StyleInfo/StyleAttachment 补齐） */
+        private String coverImage;
         private String color;
         private String size;
         private String operatorId;
