@@ -26,6 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,6 +87,11 @@ public class IntelligenceInferenceOrchestrator {
     private List<VisionModelConfig> visionModels = new ArrayList<>();
     private AtomicInteger roundRobinIndex = new AtomicInteger(0);
     private ExecutorService visionExecutor;
+
+    // D-261：记录最近一次视觉调用失败的真实原因（401熔断/超时/配置缺失）。
+    // 原先失败只写日志、对调用方裸返回 null，前端只能看到"识别返回为空"，
+    // 用户换模型后一直失败却无从得知原因。现透传给上层编排器拼进错误提示。
+    private final AtomicReference<String> lastVisionError = new AtomicReference<>();
 
     // ===== 401 熔断器：某模型连续 401 后熔断，避免鉴权失败刷屏 =====
     private static final int AUTH_FAIL_THRESHOLD = 3;
@@ -293,6 +299,7 @@ public class IntelligenceInferenceOrchestrator {
     public String chatWithVision(String imageUrl, String textPrompt) {
         if (!hasText(imageUrl)) {
             log.warn("[Vision] 缺少必要参数：imageUrl 为空");
+            lastVisionError.set("imageUrl 为空");
             return null;
         }
 
@@ -312,12 +319,14 @@ public class IntelligenceInferenceOrchestrator {
 
         if (visionModels.isEmpty()) {
             log.warn("[Vision] 没有可用的视觉模型");
+            lastVisionError.set("未配置任何视觉模型（检查 ai.vision.api-key / VISION_MODEL_N_API_KEY / AGNES_API_KEY）");
             return null;
         }
 
         try {
             if (imageUrl.startsWith("data:") && imageUrl.length() > 8 * 1024 * 1024) {
                 log.warn("[Vision] Base64 数据URI超过8MB({}MB)，已跳过", imageUrl.length() / 1024 / 1024);
+                lastVisionError.set("图片超过8MB，超出视觉模型上限");
                 return null;
             }
 
@@ -327,16 +336,27 @@ public class IntelligenceInferenceOrchestrator {
                     visionModels.size(),
                     visionModelStrategy);
 
+            lastVisionError.set(null);
             // 根据策略选择执行方式
-            return switch (visionModelStrategy.toLowerCase()) {
+            String result = switch (visionModelStrategy.toLowerCase()) {
                 case "concurrent" -> chatWithVisionConcurrent(imageUrl, textPrompt);
                 case "round-robin" -> chatWithVisionRoundRobin(imageUrl, textPrompt);
                 default -> chatWithVisionFailover(imageUrl, textPrompt); // failover
             };
+            if (result == null && lastVisionError.get() == null) {
+                lastVisionError.set("所有视觉模型均未返回有效结果");
+            }
+            return result;
         } catch (Exception e) {
             log.warn("[Vision] 图像分析异常: {}", e.getMessage(), e);
+            lastVisionError.set("图像分析异常：" + e.getMessage());
         }
         return null;
+    }
+
+    /** 最近一次视觉调用失败的真实原因（供上层编排器拼进用户可见的错误提示），无失败记录时为 null */
+    public String getLastVisionError() {
+        return lastVisionError.get();
     }
 
     /**
@@ -348,6 +368,7 @@ public class IntelligenceInferenceOrchestrator {
             // 401 熔断检查：熔断期内直接跳过，不发请求不刷日志
             if (isAuthCircuitOpen(model.name)) {
                 log.debug("[Vision] 模型 {} 处于 401 熔断期，跳过", model.name);
+                lastVisionError.set("模型 " + model.name + " 连续401鉴权失败已熔断30分钟，请检查其 API Key");
                 continue;
             }
             try {
@@ -357,8 +378,13 @@ public class IntelligenceInferenceOrchestrator {
                     log.info("[Vision] 模型 {} 调用成功", model.name);
                     return result;
                 }
+                // 返回 null 通常是 401/4xx（invokeVisionModel 内部已记录）
+                if (lastVisionError.get() == null) {
+                    lastVisionError.set("模型 " + model.name + " 调用未返回有效内容");
+                }
             } catch (Exception e) {
                 log.warn("[Vision] 模型 {} 调用失败: {}", model.name, e.getMessage());
+                lastVisionError.set("模型 " + model.name + " 调用失败：" + e.getMessage());
                 if (i == visionModels.size() - 1) {
                     log.warn("[Vision] 所有视觉模型均调用失败");
                 }
@@ -453,6 +479,7 @@ public class IntelligenceInferenceOrchestrator {
                     } else {
                         log.warn("[Vision] 模型 {} 401 鉴权失败（{}/{}），请检查 API Key", model.name, fails, AUTH_FAIL_THRESHOLD);
                     }
+                    lastVisionError.set("模型 " + model.name + " 401 鉴权失败，请检查 API Key 配置");
                     return null;
                 }
                 // 成功 或其他 4xx（不重试：鉴权/参数错，重试也是同样错）

@@ -6,6 +6,7 @@ import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
 import { normalizeCategoryQuery, normalizeSeasonQuery } from '@/utils/styleCategory';
 import { flattenExtJson } from '@/components/common/SchemaForm/ExtFieldsSection';
+import { STYLE_FEATURE_KEY, resolveStyleFeature } from '../components/StyleBasicInfoForm/styleFeature';
 
 /**
  * 款式详情数据管理 Hook
@@ -120,12 +121,17 @@ export const useStyleDetail = (styleId?: string) => {
     nextValues.completedTime = rawCompletedTime ? dayjs(rawCompletedTime) : undefined;
     nextValues.deliveryDate = rawDeliveryDate ? dayjs(rawDeliveryDate) : undefined;
 
+    // extJson 必须以对象形式设置：若直接透传后端的 JSON 字符串，
+    // 嵌套 name={['extJson', 'styleFeature']} 取值为 undefined，刷新后特征永远为空。
+    const flatExt = flattenExtJson(currentStyle.extJson);
     form.setFieldsValue({
       ...nextValues,
-      // extJson 必须以对象形式设置：款式特征区用嵌套 name={['extJson','fabric']} 读取，
-      // 若直接透传后端的 JSON 字符串，嵌套字段取值为 undefined，刷新后特征字段永远为空
-      extJson: flattenExtJson(currentStyle.extJson),
-      ...flattenExtJson(currentStyle.extJson),
+      extJson: {
+        ...flatExt,
+        // 款式特征已合并为单一文本框：新字段缺失时由旧 6 字段自动合成为一段（历史数据不丢）
+        [STYLE_FEATURE_KEY]: resolveStyleFeature(currentStyle.extJson),
+      },
+      ...flatExt,
     });
   }, [currentStyle, form, isEditorOpen]);
 

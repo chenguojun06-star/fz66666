@@ -42,15 +42,25 @@ public class LegacyInferenceAdapter implements AiInferenceGateway {
         // 合并 systemPrompt 和 userMessage 传递给 delegate
         String fullPrompt = (systemPrompt != null ? systemPrompt + "\n\n" : "") + userMessage;
         String resultText = delegate.chatWithVision(imageUrl, fullPrompt);
-        
+
         IntelligenceInferenceResult result = new IntelligenceInferenceResult();
-        result.setSuccess(true);
         result.setProvider("legacy");
-        result.setContent(resultText);
         result.setPromptTokens(0);
         result.setCompletionTokens(0);
         result.setLatencyMs(0);
-        
+
+        // D-261：原实现无条件 success=true，模型全部失败（返回 null/空白）也谎报成功，
+        // 上层只能看到"识别返回为空"却不知真实原因（401/超时/配置缺失）。
+        // 现按实际内容判定成败，并把 delegate 记录的真实失败原因透传给上层。
+        if (resultText != null && !resultText.isBlank()) {
+            result.setSuccess(true);
+            result.setContent(resultText);
+        } else {
+            result.setSuccess(false);
+            String reason = delegate.getLastVisionError();
+            result.setErrorMessage("视觉模型调用失败：" + (reason != null ? reason : "未返回有效内容"));
+        }
+
         return result;
     }
 

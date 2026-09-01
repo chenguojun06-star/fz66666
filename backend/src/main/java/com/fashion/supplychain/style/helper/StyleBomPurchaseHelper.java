@@ -314,10 +314,21 @@ public class StyleBomPurchaseHelper {
 
         if (purchaseColor != null && !purchaseColor.isEmpty()) {
             purchase.setColor(purchaseColor);
+        } else if (StringUtils.hasText(bom.getColor())) {
+            // D-261：BOM 行自身带颜色时兜底（原先仅在调用方传入 purchaseColor 时才落库，
+            // 首个样衣采购因此颜色为空，前端显示"-"）
+            purchase.setColor(bom.getColor().trim());
         }
         if (purchaseSize != null && !purchaseSize.isEmpty()) {
             purchase.setSize(purchaseSize);
         }
+
+        // D-261：与大货路径（MaterialPurchaseServiceHelper.createPurchaseFromBom，D-252）对齐——
+        // 物料属性创建时直带 BOM 值，不再完全依赖查询时资料库/BOM 回填。
+        // 原先样衣采购创建只带规格/单位/换算率，成分/克重/损耗率全靠显示层兜底。
+        purchase.setFabricComposition(bom.getFabricComposition());
+        purchase.setFabricWeight(bom.getFabricWeight());
+        purchase.setLossRate(bom.getLossRate());
 
         purchase.setSourceType("sample");
         purchase.setPatternProductionId(patternProductionId);

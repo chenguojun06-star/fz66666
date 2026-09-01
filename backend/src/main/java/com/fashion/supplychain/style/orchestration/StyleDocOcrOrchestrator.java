@@ -54,7 +54,13 @@ public class StyleDocOcrOrchestrator {
                     "直接输出纯文本，不要输出JSON，不要添加额外解释。";
 
             String rawText = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
-            if (rawText == null) rawText = "";
+            if (rawText == null || rawText.trim().isEmpty()) {
+                // D-261：原先静默返回空文本，前端显示"识别成功但内容为空"，
+                // 用户误以为图形分析坏了。现明确报错并透传真实原因
+                String reason = inferenceOrchestrator.getLastVisionError();
+                throw new IllegalStateException("AI识别返回为空"
+                        + (reason != null ? "（" + reason + "）" : "") + "，请检查视觉模型配置后重试");
+            }
             log.info("[StyleDocOcr] 工艺单识别完成 tenantId={} 字符数={}", tenantId, rawText.length());
 
             Map<String, Object> result = new HashMap<>();
@@ -113,7 +119,11 @@ public class StyleDocOcrOrchestrator {
 
             String rawJson = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
             if (rawJson == null || rawJson.trim().isEmpty()) {
-                throw new IllegalStateException("AI识别返回为空，请重试");
+                // D-261：拼上后端记录的真实失败原因（401熔断/超时/配置缺失），
+                // 原先只报"返回为空"，用户换视觉模型后持续失败却无从排查
+                String reason = inferenceOrchestrator.getLastVisionError();
+                throw new IllegalStateException("AI识别返回为空"
+                        + (reason != null ? "（" + reason + "）" : "") + "，请检查视觉模型配置后重试");
             }
 
             log.info("[SizeTableOcr] 尺寸表识别完成 tenantId={} 字符数={}", tenantId, rawJson.length());
@@ -287,7 +297,10 @@ public class StyleDocOcrOrchestrator {
 
             String rawJson = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
             if (rawJson == null || rawJson.trim().isEmpty()) {
-                throw new IllegalStateException("AI识别返回为空，请重试");
+                // D-261：同尺寸表识别——透传真实失败原因
+                String reason = inferenceOrchestrator.getLastVisionError();
+                throw new IllegalStateException("AI识别返回为空"
+                        + (reason != null ? "（" + reason + "）" : "") + "，请检查视觉模型配置后重试");
             }
 
             log.info("[BomOcr] BOM清单识别完成 tenantId={} 字符数={}", tenantId, rawJson.length());

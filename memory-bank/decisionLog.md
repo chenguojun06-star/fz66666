@@ -1,7 +1,31 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-08-29（新增 D-222 全局滚动兜底+入库数量重复计算根治+入库详情兜底）
+> 最后更新：2026-09-01（新增 D-261 用户暴走七连修）
+
+---
+
+## D-261：用户暴走七连修——款式特征/尺寸表/公差/排产/退回/视觉AI/样衣采购（2026-09-01）
+
+用户一次性甩 10+ 截图抱怨"全部写的死的""做的什么垃圾""什么情况啊"。逐项核代码定位根因后批量修，共改前端 11 文件 + 后端 5 文件。教训/方法：
+
+1. **款式特征"看着成功实际没保存"**：原 6 个独立 Form.Item 嵌套 extJson 字段（fabric/sleeveType/neckline/version/pattern/craftStyle）+ 顶层拍平双写，路径脆弱；用户已要求"做成一个统一输入框" → 新建共享 `styleFeature.ts`（读旧 6 字段合并迁移，存 `extJson.styleFeature` 无需 Flyway），4 处消费点全收编。**反模式沉淀**：嵌套 Form.Item + 顶层 flatten 双写要避免，统一一个字段名最稳。
+
+2. **尺寸表导入码数"追加而非覆盖"**：`useStyleSizeAiRecognition` 硬 merge；行 key 用 `ai-row-${Date.now()}-${index}` 同毫秒重复识别 key 冲突 → React 复用错误节点 → "乱跳"。改：码数覆盖、行 key 加批次自增。**反模式沉淀**：动态行 key 必须含稳定唯一序号（`Date.now() + 自增批次 + 业务标识`），不能用 index。
+
+3. **公差 → "正负公差" + ± 号**：纯 UI 调整，但配套输入规范化（剥用户手输 ±）避免脏数据。
+
+4. **排产建议混入布行**：`SchedulingSuggestionOrchestrator.listFactories` 只按 tenant_id+delete_flag 查，没过滤 supplier_type → 布行全进。补 `isNull OR ne MATERIAL`，**与 D-200 转单过滤完全同口径**（保留存量未填类型）。教训：**所有"工厂列表"查询都要核 supplier_type 过滤是否到位**，不止转单/下单两处。
+
+5. **资料单价退回"没反应"**：3 处 `handleRollbackConfirm` 只有 try/finally **没有 catch**，后端异常被吞 → 弹窗原地不动无任何提示 = 用户觉得"摆设"。`!row?.id` 静默 return 加提示。**反模式沉淀**：异步操作 handler 必须 catch 透出错误，try/finally ≠ try/catch/finally；删除/退回/锁定类操作静默 return 是体验杀手。
+
+6. **视觉 AI 失败原因被吞**：洗水唛/图形分析/尺寸表/BOM OCR 全链路，`chatWithVision` 失败只返回 null，前端只看到"识别返回为空"。新增 `lastVisionError`（AtomicReference）追踪 401 熔断/超时/配置缺失具体原因；LegacyInferenceAdapter 不再无条件 success=true 谎报；StyleDocOcrOrchestrator 空结果由静默/泛化报错改为带真实原因抛出。**反模式沉淀**：AI 调用链路必须有失败原因透传字段，用户能区分"我图传错了"还是"配置坏了"。
+
+7. **样衣采购创建不带色/成分**：`StyleBomPurchaseHelper.buildPurchaseFromBom`（sample 路径）只带规格/单位/换算率/单价/供应商，**没带** fabricComposition/fabricWeight/lossRate（D-252 只修了大货路径 MaterialPurchaseServiceHelper.createPurchaseFromBom），且 purchaseColor 仅在调用方传时才落库 → 首个样衣采购颜色恒空。与大货路径对齐补 3 字段 + BOM 颜色兜底。**反模式沉淀**：同一实体多条创建路径（sample/order/factory）字段集必须对齐，改一条时核全部。
+
+- [x] mvn compile EXIT=0 / npx tsc EXIT=0 / eslint 11 文件 0 错误
+- [x] 无新 Bean / 无 Flyway / 无配置变更（启动风险极低）
+- [ ] 待用户验收推送 + 端到端验证
 
 ---
 
@@ -4042,7 +4066,7 @@ D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资
 ### 验证
 后端 `mvn compile` 通过；前端 `npx tsc --noEmit` 0 错误；lint 0 错误；回填脚本本地实测生效。
 
-## D-257：CI 失败 → 部署静默 skip，线上长期跑旧代码（P0 级流程事故）
+## D-259：CI 失败 → 部署静默 skip，线上长期跑旧代码（P0 级流程事故）
 
 **日期**：2026-09-01
 **触发**：用户反馈"线上代码都是最新的"但 D-256 修复不生效，怀疑修复方向错误。
@@ -4071,6 +4095,46 @@ D-246（码数一坨 + 布局 + 批量操作）→ D-247（图片丢失 + 无资
   「部署到微信云托管」job conclusion=success（不是 skipped）。
 - 用户说"线上是最新代码"时，第一动作是查 CI 部署记录，不要先改代码。
 - 修 bug 前先问：**这个修复部署到线上了吗？**（gh run list 看 deploy job 状态）
+
+## D-260：采购列表响应白名单丢字段——enrichRecord 重建 Map 未透传回填字段（D-256 空显的真正断点）
+
+**日期**：2026-09-01
+**触发**：D-257 部署上线后用户仍反馈采购列表成分/克重/颜色空显（订单 PO20260828173814，款 BC25CQ0355A）。
+
+### 根因（响应组装层丢字段，前两层修复都白修）
+
+数据链路四层，断在第四层：
+1. **落库层**：采购记录创建（08-28，旧代码）不写成分/克重/颜色 → 库里为空（快照属性）
+2. **查询回填层**：`queryPage` → `enrichFromMaterialDatabase`（资料库）→ `enrichMissingFromBom`（D-256 BOM兜底）→ **值确实填进了 MaterialPurchase 实体**（本次本地实测确认）
+3. **响应组装层（断点）**：`MaterialPurchaseOrchestratorHelper.enrichRecord` 把实体逐字段拷进 `LinkedHashMap`（白名单模式），白名单只有 `specifications`，**没有 color/size/fabricComposition/fabricWeight/fabricWidth** → 回填值在这被全部丢弃
+4. **前端展示层**：收到 undefined → 显示空/"-"/"全码"兜底
+
+**为什么难查**：`/list` 调用链 Controller→Orchestrator→OrchestratorHelper→Service.queryPage 任何一层看代码都"没问题"，断点藏在第三层的手工字段拷贝里。Jackson NON_NULL 序列化把 null 字段直接从 JSON 里省略，前端连字段都看不到。
+
+### 定位方法（可复用）
+
+本地起后端 + curl `/production/purchase/list`，打印**响应 JSON 的完整 key 列表**：发现根本没有 fabricComposition 这个 key（不是 null，是不存在）→ 反推响应组装层丢字段。资料库/BOM 回填逻辑全部正常。
+
+### 修复
+
+`enrichRecord` 白名单补 5 个字段：`color`/`size`/`fabricComposition`/`fabricWeight`/`fabricWidth`（一行 map.put × 5）。
+
+### 验证（运行时实测，非仅编译）
+
+本地 lilb 登录实测 API：
+- FAB001 → color=粉色 size=M 成分=95%棉3%氨纶 克重=160 ✅（资料库回填）
+- RIB002 → 成分=100%棉 克重=220 ✅（资料库没有，BOM 兜底生效）
+- LIN002 → 成分=90%涤10%棉 ✅
+140/140 测试通过；CI 全绿；**部署 job + 冒烟 job 均 success**（D-257 铁律：确认 deploy=success 而非 skipped）。
+
+### 铁律（新增）
+
+- **改"回填/富化"逻辑必须查响应组装层**：本项目大量使用"实体→Map 白名单"模式
+  （enrichRecord/buildPageResult），新增回填字段时必须同步 grep 所有 map.put 白名单。
+- **验证接口返回必须看原始 JSON key**（curl + python json），不能只看前端显示——
+  NON_NULL 序列化下"字段缺失"和"字段为null"前端表现一样，但根因完全不同。
+- D-256 的教训补录：当时只做了 `mvn compile` 验证没做运行时验证，修了两层（回填）却断在
+  第三层（透传），导致用户连续两天看到"没修复"。**编译通过 ≠ 运行正确 ≠ 端到端可见**。
 
 ---
 

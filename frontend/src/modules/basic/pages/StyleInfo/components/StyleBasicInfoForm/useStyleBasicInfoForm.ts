@@ -6,6 +6,7 @@ import { useDictOptions } from '@/hooks/useDictOptions';
 import type { StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import type { StyleBasicInfoFormRef } from './types';
 import { DEFAULT_SIZE_MAP, FALLBACK_SIZES, SIZE_COLOR_SYNC_DEBOUNCE_MS } from './constants';
+import { STYLE_FEATURE_KEY, appendFeatureText } from './styleFeature';
 
 interface UseStyleBasicInfoFormParams {
   _form: FormInstance;
@@ -42,6 +43,28 @@ interface UseStyleBasicInfoFormParams {
   setSize5: (v: string) => void;
   commonSizes: string[];
   setCommonSizes: (v: string[]) => void;
+}
+
+/**
+ * 由 AI 识别结果拼出款式特征整段文本（含难度/面料/工艺）。
+ * 优先用后端整合好的 summary（已是完整一段描述），缺失时回退字段拼接。
+ */
+function buildFeatureText(result: StyleFieldParseResult): string {
+  const summary = String(result.summary || '').trim();
+  if (summary) return summary;
+  const pairs: Array<[string, string | undefined]> = [
+    ['面料', result.fabric],
+    ['袖型', result.sleeveType],
+    ['领型', result.neckline],
+    ['版型', result.version],
+    ['图案', result.pattern],
+  ];
+  const parts: string[] = [];
+  pairs.forEach(([label, value]) => {
+    const text = String(value || '').trim();
+    if (text) parts.push(`${label}：${text}`);
+  });
+  return parts.join('；');
 }
 
 /**
@@ -148,34 +171,22 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
       if (sea) updates.season = sea.value;
     }
 
-    // 款式特征：面料/袖型/领型/版型/图案 — 回填到对应字段（而非堆在备注）
+    // 款式特征：合并写入单一整段文本（含难度/面料/工艺），而非拆成 6 个字段。
+    // D-261：整段展示用户一眼能看懂全貌，也避免多字段嵌套取值漏存。
     const currentExtJson = _form.getFieldValue('extJson') || {};
     const extJsonUpdates: Record<string, any> = { ...(typeof currentExtJson === 'object' ? currentExtJson : {}) };
     let extJsonChanged = false;
 
-    if (result.fabric && !extJsonUpdates.fabric) {
-      extJsonUpdates.fabric = result.fabric;
-      extJsonChanged = true;
-    }
-    if (result.sleeveType && !extJsonUpdates.sleeveType) {
-      extJsonUpdates.sleeveType = result.sleeveType;
-      extJsonChanged = true;
-    }
-    if (result.neckline && !extJsonUpdates.neckline) {
-      extJsonUpdates.neckline = result.neckline;
-      extJsonChanged = true;
-    }
-    if (result.version && !extJsonUpdates.version) {
-      extJsonUpdates.version = result.version;
-      extJsonChanged = true;
-    }
-    if (result.pattern && !extJsonUpdates.pattern) {
-      extJsonUpdates.pattern = result.pattern;
-      extJsonChanged = true;
-    }
-    if (result.summary && !extJsonUpdates.craftStyle) {
-      extJsonUpdates.craftStyle = result.summary;
-      extJsonChanged = true;
+    const featureText = buildFeatureText(result);
+    if (featureText) {
+      const existingFeature = typeof extJsonUpdates[STYLE_FEATURE_KEY] === 'string'
+        ? extJsonUpdates[STYLE_FEATURE_KEY]
+        : '';
+      const mergedFeature = appendFeatureText(existingFeature, featureText);
+      if (mergedFeature !== existingFeature) {
+        extJsonUpdates[STYLE_FEATURE_KEY] = mergedFeature;
+        extJsonChanged = true;
+      }
     }
 
     if (extJsonChanged) {

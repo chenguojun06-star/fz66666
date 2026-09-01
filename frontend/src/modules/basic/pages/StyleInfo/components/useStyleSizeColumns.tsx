@@ -31,6 +31,14 @@ interface UseStyleSizeColumnsParams {
   onDuplicateRow: (rowKey: string) => void;
 }
 
+/**
+ * 公差输入规范化：± 由输入框 addonBefore 统一展示，
+ * 剥离用户手输的 ± 前缀，避免存成 "±±1" 这类脏数据。
+ */
+function normalizeToleranceInput(raw: string): string {
+  return String(raw || '').trim().replace(/^±\s*/, '');
+}
+
 export function useStyleSizeColumns({
   editMode,
   readOnly,
@@ -216,7 +224,8 @@ export function useStyleSizeColumns({
       {
         title: '部位',
         dataIndex: 'partName',
-        width: 50,
+        // 原 50 过窄，"胸围"刚放下、"后中长"就被截断，D-261 加宽一倍
+        width: 100,
         render: (_: any, record: DisplayRow) =>
           editableMode ? (
             <Input value={record.partName} placeholder="如：胸围" onChange={(e) => updatePartName(record.key, e.target.value)} />
@@ -227,7 +236,8 @@ export function useStyleSizeColumns({
       {
         title: '度量方式',
         dataIndex: 'measureMethod',
-        width: 80,
+        // 原 80 同样偏窄，与部位列一档加宽
+        width: 100,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
             <Input value={record.measureMethod} placeholder="如：平量" onChange={(e) => updateMeasureMethod(record.key, e.target.value)} />
@@ -346,19 +356,24 @@ export function useStyleSizeColumns({
 
     const right = [
       {
-        title: '公差',
+        // D-261：列名「公差」→「正负公差」并加宽一倍；输入框前置 ± 号。
+        // 存储仍是纯数值（如 "1"），± 只作为展示符号，避免与历史数据耦合。
+        title: '正负公差',
         dataIndex: 'tolerance',
-        width: 50,
+        width: 110,
         align: 'center' as const,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
             <Input
               value={String(record.tolerance ?? '')}
+              addonBefore="±"
+              placeholder="如：1"
               style={{ width: '100%' }}
-              onChange={(e) => updateTolerance(record.key, e.target.value)}
+              onChange={(e) => updateTolerance(record.key, normalizeToleranceInput(e.target.value))}
             />
           ) : (
-            record.tolerance
+            // 只读态同样补 ±，与列名语义一致
+            record.tolerance ? `±${normalizeToleranceInput(String(record.tolerance))}` : record.tolerance
           ),
       },
       {

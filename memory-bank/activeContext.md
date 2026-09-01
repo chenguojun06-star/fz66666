@@ -1,11 +1,32 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-08-29（D-211~D-215 五连：物料清单三连修+款式编码放开+出货页对齐）
+> 最后更新：2026-09-01（D-261 七连修：款式特征合并+尺寸表覆盖+公差±+排产滤布行+退回吞异常+视觉失败原因透传+样衣采购带色）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-01 D-261 用户暴走七连修（款式特征/尺寸表/公差/排产/退回/视觉AI/样衣采购）✅本地验证通过，待推送部署
+
+- [x] **款式特征 6 栏合 1 个整段文本框**（用户明确要求）：新建共享模块 `styleFeature.ts`（读旧 6 字段自动合并迁移，存 extJson.styleFeature 无需 Flyway）；改 4 处消费点（表单/AI 识别回填/详情回填/打印弹窗 BasicInfoSection 收编重复解析）
+- [x] **尺寸表 AI 识别改覆盖语义**：码数列以识别结果为准不再"追加一波"；行 key 加批次自增修复同毫秒重复 key 导致的部位"乱跳"；覆盖优先取 AI 值（含 0），未识别格保留原值
+- [x] **公差列改名"正负公差"** + 输入框 addonBefore ± + 输入规范化剥 ±；部位列 50→100、度量方式 80→100、BOM 颜色列 90→180
+- [x] **排产建议排除布行**：`SchedulingSuggestionOrchestrator.listFactories` 补 `supplier_type != MATERIAL`（isNull OR ne，与 D-200 转单同口径保留存量）
+- [x] **资料单价退回"没反应"**：3 处 handleRollbackConfirm 只有 try/finally 无 catch，后端异常被吞 → 补 catch 透出错误（UnitPricePanel/SizeTablePanel/TemplateCenter）；!row.id 静默 return 补提示
+- [x] **视觉 AI 失败原因透传**（洗水唛/图形分析/尺寸表/BOM OCR 全链路）：新增 `lastVisionError` 追踪（401 熔断/超时/配置缺失具体原因）；LegacyInferenceAdapter 不再无条件 success=true 谎报；StyleDocOcrOrchestrator 空结果由静默/泛化报错改为带真实原因抛出
+- [x] **样衣采购创建带色/成分**：`StyleBomPurchaseHelper.buildPurchaseFromBom` 与大货路径（D-252）对齐，补 fabricComposition/fabricWeight/lossRate 直带 + BOM 颜色兜底（原首个样衣采购颜色恒空）
+- [x] 验证：mvn compile EXIT=0 / tsc EXIT=0 / eslint 11 文件 0 错误；无新 Bean/Flyway/配置（启动风险极低，推送前建议快速本地启动冒烟）
+- [ ] 待用户验收：7 项功能端到端 + 推送部署
+
+### 2026-09-01 D-260 采购列表白名单丢回填字段（成分/克重/颜色空显真正断点）✅已部署上线
+
+- [x] 根因：MaterialPurchaseOrchestratorHelper.enrichRecord 实体→Map 白名单不含 color/size/成分/克重/幅宽 → D-256 回填全白修（值填进实体后在响应组装层被丢弃）
+- [x] 定位：本地起后端 curl /production/purchase/list 打印响应 JSON key——fabricComposition 这个 key 根本不存在（NON_NULL 序列化省略 null）→ 反推白名单丢字段
+- [x] 修复：白名单补 5 个 map.put；本地实测 RIB002 成分/克重从 BOM 兜底成功返回
+- [x] CI 全绿，部署+冒烟 job 均 success，已真正上线
+- [x] 铁律：改回填逻辑必须同步查响应组装层白名单；验证接口要看原始 JSON key 不能只看前端显示
+
 
 ### 2026-09-01 D-258 采购状态"已采购"→"已领取"两端统一 ✅已推送
 
@@ -20,14 +41,14 @@
 - [x] 三副本同步 md5 校验通过；node --check / WXML 标签栈扫描通过
 
 
-### 2026-09-01 D-257 CI失败→部署静默skip，线上跑旧代码（P0流程事故）✅已修复并真正部署
+### 2026-09-01 D-259 CI失败→部署静默skip，线上跑旧代码（P0流程事故）✅已修复并真正部署
 
 - [x] 根因：FactoryShipmentOrchestratorTest 断言文案过时（D-242改了文案没同步测试）→ CI 连续8次失败 → 部署job静默skip → **D-250~D-256 全部没上线**，用户以为线上最新实际停在一周前
 - [x] 修复：更新断言 → 140/140 测试绿 → 推送 e783cf920 → CI 全绿 → 「部署到微信云托管」+「冒烟测试」首次真正执行成功
 - [x] 铁律：推送≠部署，每次 push 后必须 gh run watch 确认 deploy job conclusion=success
 - [ ] D-256 生产库可选跑一次 scripts/backfill_material_database_from_bom.sql（查询时兜底已自愈，SQL是补充）
 
-### 2026-08-31 D-256 物料采购颜色/尺码/成分/克重空显根治 ✅已部署上线（随D-257）
+### 2026-08-31 D-256 物料采购颜色/尺码/成分/克重空显根治 ✅已部署上线（随D-259）
 
 - [x] 根因：存量 t_material_database 属性 97% 空 → 查询时回填无米下锅（D-252 只修了同步写入没回填存量）
 - [x] 查询时从 t_style_bom 兜底回填（成分/克重/规格按编码；颜色/尺码限同款同编码唯一才补），存量采购记录显示自愈

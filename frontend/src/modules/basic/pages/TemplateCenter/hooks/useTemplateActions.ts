@@ -12,7 +12,11 @@ export const useTemplateActions = (onRefresh: (opts?: { page?: number }) => void
   const [deleteTemplateLoading, setDeleteTemplateLoading] = useState(false);
 
   const handleRollback = (row: TemplateLibrary, isAdminUser: boolean, isFactoryUser: boolean) => {
-    if (!row?.id) return;
+    // 原先 !row?.id 时静默 return，用户点"退回"毫无反应（D-261）
+    if (!row?.id) {
+      message.error('该模板缺少ID，无法退回，请刷新列表后重试');
+      return;
+    }
     if (!isAdminUser && !isFactoryUser) {
       message.error('仅管理员可退回修改');
       return;
@@ -32,6 +36,13 @@ export const useTemplateActions = (onRefresh: (opts?: { page?: number }) => void
       message.success('已退回，可修改');
       setRollbackTarget(null);
       onRefresh({ page: 1 });
+    } catch (e: unknown) {
+      // 原先只有 try/finally：后端异常被吞，弹窗原地不动无任何提示（D-261）。
+      // 与下方 handleDeleteConfirm 的 catch 对齐。
+      const msg = e instanceof Error
+        ? e.message
+        : (typeof e === 'object' && e !== null && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
+      message.error(msg || '退回失败');
     } finally {
       setRollbackLoading(false);
     }

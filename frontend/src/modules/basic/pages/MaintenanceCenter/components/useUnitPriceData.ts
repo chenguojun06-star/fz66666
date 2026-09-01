@@ -67,7 +67,8 @@ export const useUnitPriceData = ({ styleNo }: UseUnitPriceDataParams) => {
 
   /* ─── rollback ─── */
   const handleRollback = (row: TemplateLibrary) => {
-    if (!row?.id) return;
+    // 原先 !row?.id 时静默 return，用户点"退回"毫无反应，误以为功能是摆设（D-261）
+    if (!row?.id) { message.error('该模板缺少ID，无法退回，请刷新列表后重试'); return; }
     if (!isAdminUser && !isFactoryUser) { message.error('仅管理员可退回修改'); return; }
     setRollbackTarget(row);
   };
@@ -85,6 +86,10 @@ export const useUnitPriceData = ({ styleNo }: UseUnitPriceDataParams) => {
       if (styleNo && target) {
         editModalRef.current?.openEdit({ ...target, locked: 0 });
       }
+    } catch (error: unknown) {
+      // 原先只有 try/finally：后端异常（403/400/500）被吞，弹窗原地不动无任何提示，
+      // 表现为"确认退回点了没反应"（D-261）。必须把错误透出给用户。
+      message.error(getErrorMessage(error, '退回失败'));
     } finally {
       setRollbackLoading(false);
     }

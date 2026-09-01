@@ -12,23 +12,8 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { parseWashLabelParts } from '@/utils/washLabel';
 import { toSeasonCn, PrintOptions, PrintData } from '../types';
 import { translatePlateType, translateProductType } from '../helpers';
-
-/**
- * 解析 extJson 为对象。与 StyleFeatureSection.tsx 中保持一致。
- * 兼容三种返回形态：字符串 / 对象 / null。
- */
-function parseExtJson(raw: unknown): Record<string, unknown> {
-  if (!raw) return {};
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      return (parsed && typeof parsed === 'object') ? parsed as Record<string, unknown> : {};
-    } catch {
-      return {};
-    }
-  }
-  return (typeof raw === 'object') ? raw as Record<string, unknown> : {};
-}
+// 款式特征读取统一走共享实现，避免与样衣详情页各写一份解析导致口径漂移
+import { resolveStyleFeature } from '@/modules/basic/pages/StyleInfo/components/StyleBasicInfoForm/styleFeature';
 
 /** 价格格式化：¥12.34 / 空 */
 function formatPrice(v: unknown): string {
@@ -193,26 +178,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               // 款式特征（AI识别）：与样衣详情页 StyleFeatureSection 一致，从 extJson 解析
               // 仅在样衣模式下显示，避免大货模式信息过载
               if (mode === 'sample') {
-                const ext = parseExtJson((data.productionSheet as any)?.extJson);
-                const feat = (k: string) => {
-                  const v = ext[k];
-                  return typeof v === 'string' ? v.trim() : '';
-                };
-                const fabricFeat = feat('fabric');
-                // 面料特征：若 extJson.fabric 有值且与面料成分不同则显示，避免重复
-                if (fabricFeat && fabricFeat !== fabricVal) {
-                  allFields.push({ label: '面料', value: fabricFeat });
-                }
-                const sleeveType = feat('sleeveType');
-                if (sleeveType) allFields.push({ label: '袖型', value: sleeveType });
-                const neckline = feat('neckline');
-                if (neckline) allFields.push({ label: '领型', value: neckline });
-                const version = feat('version');
-                if (version) allFields.push({ label: '版型', value: version });
-                const pattern = feat('pattern');
-                if (pattern) allFields.push({ label: '图案', value: pattern });
-                const craftStyle = feat('craftStyle');
-                if (craftStyle) allFields.push({ label: '工艺风格', value: craftStyle });
+                // 款式特征已合并为单一整段文本（D-261）：整段打印，不再拆成 6 行
+                const featureText = resolveStyleFeature((data.productionSheet as any)?.extJson);
+                if (featureText) allFields.push({ label: '款式特征', value: featureText });
               }
               // 是否套里：从 BOM 物料中检测 lining 类型（自动联动 BOM，无需新字段）
               const hasLining = Array.isArray(data.bom) && data.bom.some((m: any) =>

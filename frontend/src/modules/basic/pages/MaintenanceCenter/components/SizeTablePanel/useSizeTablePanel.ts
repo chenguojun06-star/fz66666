@@ -71,7 +71,8 @@ export const useSizeTablePanel = ({ styleNo }: UseSizeTablePanelOptions) => {
   const isProcessing = (row?: TemplateLibrary | null) => !!row && !isLocked(row);
 
   const handleRollback = (row: TemplateLibrary) => {
-    if (!row?.id) return;
+    // 原先 !row?.id 时静默 return，用户点"退回"毫无反应（D-261）
+    if (!row?.id) { message.error('该模板缺少ID，无法退回，请刷新列表后重试'); return; }
     if (!isAdminUser && !isFactoryUser) { message.error('仅管理员可退回修改'); return; }
     setRollbackTarget(row);
   };
@@ -89,6 +90,9 @@ export const useSizeTablePanel = ({ styleNo }: UseSizeTablePanelOptions) => {
       if (styleNo && target) {
         editModalRef.current?.openEdit({ ...target, locked: 0 });
       }
+    } catch (error: unknown) {
+      // 原先只有 try/finally：后端异常被吞，弹窗原地不动无任何提示（D-261）
+      message.error(getErrorMessage(error, '退回失败'));
     } finally {
       setRollbackLoading(false);
     }

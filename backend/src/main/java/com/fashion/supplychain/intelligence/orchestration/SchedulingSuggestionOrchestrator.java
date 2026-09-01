@@ -105,7 +105,11 @@ public class SchedulingSuggestionOrchestrator {
 
     private List<Factory> listFactories(Long tenantId) {
         QueryWrapper<Factory> fqw = new QueryWrapper<>();
-        fqw.eq("tenant_id", tenantId).eq("delete_flag", 0);
+        fqw.eq("tenant_id", tenantId)
+           .eq("delete_flag", 0)
+           // D-261：排产建议只推生产类工厂——排除面辅料供应商（布行/辅料店不接生产订单）。
+           // 与 D-200 转单过滤同口径：存量未填 supplier_type 的工厂保留，避免误伤历史数据。
+           .and(w -> w.isNull("supplier_type").or().ne("supplier_type", "MATERIAL"));
         return factoryService.list(fqw);
     }
 

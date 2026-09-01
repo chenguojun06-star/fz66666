@@ -145,7 +145,9 @@ export const buildBasicColumns = (ctx: BomColumnsContext) => {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      width: 90,
+      // 原 90 过窄：颜色名常带色号/面料名（如"金都塔夫绸-香槟金塔夫绸"）被截断，
+      // 编辑态输入框同样挤到看不清，D-261 加长一倍
+      width: 180,
       ellipsis: true,
       editable: true,
       render: (text: string, record: StyleBom) => {
