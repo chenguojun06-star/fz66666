@@ -17,7 +17,7 @@ const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progr
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
-const { safeNavigate, scanInPage, toast } = require('../../utils/uiHelper');
+const { safeNavigate, quickScan, toast } = require('../../utils/uiHelper');
 
 const app = getApp();
 
@@ -316,35 +316,10 @@ Page({
 
   /* ======== 扫码 ======== */
   onScanTap: function () {
-    const that = this;
-    scanInPage(function (parsed, raw) {
-      if (!parsed) return; // 用户取消
-      if (!parsed.success || !parsed.data) {
-        toast.error('无法识别：' + (raw || ''));
-        return;
-      }
-      const orderNo = parsed.data.orderNo;
-      const styleNo = parsed.data.styleNo;
-      // D-235 修复：本页 data.orders 是 { list, loading, hasMore } 分页对象，
-      // 订单数组挂在 orders.list 上，直接对 orders 调 .find 会抛
-      // "orders.find is not a function"（外发管理页 orders 才是数组）
-      const orders = (that.data.orders && that.data.orders.list) || [];
-      const matched = orders.find(function (o) {
-        return (orderNo && o.orderNo === orderNo) || (styleNo && o.styleNo === styleNo);
-      });
-      if (matched && matched.id) {
-        safeNavigate({
-          url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(matched.id) + '&orderNo=' + encodeURIComponent(matched.orderNo || '')
-        }).catch(function () {});
-      } else if (orderNo || styleNo) {
-        // D-234：当前列表未匹配到（分页/筛选导致），直接按单号/款号进入工序领取页
-        safeNavigate({
-          url: '/pages/dashboard/process-edit/index?orderNo=' + encodeURIComponent(orderNo || styleNo || '')
-        }).catch(function () {});
-      } else {
-        toast.error('未识别到订单号');
-      }
-    });
+    // D-261：恢复 D-234 破坏的扫码链路。D-234 把扫码强扭到工序编辑页(process-edit)，
+    // 工序码被锁死在"编辑页面"无法领取/报工。改回 quickScan(）→ 统一扫码MES主流程，
+    // 由 /pages/scan/index 按码型识别，正确进入工序领取/报工、质检、入库等页面。
+    quickScan();
   },
 
   /* ======== 通知数量（小云 AI 助手浮标） ======== */

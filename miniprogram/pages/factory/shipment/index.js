@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
+const { toast, safeNavigate, quickScan } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner, getUserInfo } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
@@ -296,34 +296,10 @@ Page({
   onKeywordInput: function (e) { this.setData({ keyword: e.detail.value }); },
   onKeywordSearch: function () { this._resetAndLoad(); },
   /**
-   * 扫码按钮：D-234 直接跳转订单工序领取页
+   * 扫码按钮：D-261 恢复统一扫码MES主流程（D-234 曾强制跳到工序编辑页，锁死领取/报工）
    */
   onScan: function () {
-    const that = this;
-    scanInPage(function (parsed, raw) {
-      if (!parsed) return; // 用户取消
-      if (!parsed.success || !parsed.data) {
-        toast.error('无法识别：' + (raw || ''));
-        return;
-      }
-      const orderNo = parsed.data.orderNo;
-      const styleNo = parsed.data.styleNo;
-      const orders = that.data.orders || [];
-      const matched = orders.find(function (o) {
-        return (orderNo && o.orderNo === orderNo) || (styleNo && o.styleNo === styleNo);
-      });
-      if (matched && matched.id) {
-        safeNavigate({
-          url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(matched.id) + '&orderNo=' + encodeURIComponent(matched.orderNo || '')
-        }).catch(function () {});
-      } else if (orderNo || styleNo) {
-        safeNavigate({
-          url: '/pages/dashboard/process-edit/index?orderNo=' + encodeURIComponent(orderNo || styleNo || '')
-        }).catch(function () {});
-      } else {
-        toast.error('未识别到订单号');
-      }
-    });
+    quickScan();
   },
 
   onCardToggle: function (e) {
