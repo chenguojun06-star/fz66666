@@ -227,15 +227,15 @@
   background: var(--color-bg-muted);
 }
 
-/* 款式封面图容器：宽度对齐扫码页面(128rpx)，高度进一步压低，aspectFit 显示全图并左右留白 */
+/* 款式封面图：与扫码页 style-thumb 同款（128×128 正方形 + aspectFit），图片自然完整显示、不人为留白 */
 .record-img-wrap {
   width: 128rpx;
-  height: 56rpx;
+  height: 128rpx;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  background: var(--color-bg-page);
-  border: 1px solid var(--color-border);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-bg-dark);
 }
 
 .record-img {
