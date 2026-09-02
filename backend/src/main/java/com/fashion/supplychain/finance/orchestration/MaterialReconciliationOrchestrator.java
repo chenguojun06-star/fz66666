@@ -518,7 +518,13 @@ public class MaterialReconciliationOrchestrator {
                 if (p == null || !StringUtils.hasText(p.getId())) {
                     continue;
                 }
-                if (upsertFromPurchase(p, now)) {
+                // D-267：先恢复被误删（逻辑删除）的对账，再补缺失的；
+                // 全程 allowCleanup=false，补生成绝不删除任何历史对账
+                if (restoreDeletedReconciliation(p, now)) {
+                    touched++;
+                    continue;
+                }
+                if (upsertFromPurchase(p, now, false)) {
                     touched++;
                 }
             }
@@ -530,7 +536,63 @@ public class MaterialReconciliationOrchestrator {
         return touched;
     }
 
+    /**
+     * 对单个采购做对账 upsert（实时同步链路用：允许按最新口径清理不符合条件的 pending 对账）。
+     */
+    /**
+     * D-267 数据自愈：恢复该采购被逻辑删除的历史对账单。
+     *
+     * <p>事故背景：用户点「补生成对账」后，backfill 对所有「外发订单采购」执行
+     * {@link #cleanupPendingByPurchaseId}，10 条历史大货对账被逻辑删除（delete_flag=1）。
+     * 这些对账是用户正在使用的历史单据，补生成语义上不该删除它们。
+     *
+     * <p>全局配置了逻辑删除（{@code logic-delete-field: deleteFlag}），
+     * 因此 removeById 实际是 {@code UPDATE ... SET delete_flag=1}，数据仍在库中，可恢复。
+     *
+     * @return true 表示成功恢复了一条
+     */
+    private boolean restoreDeletedReconciliation(MaterialPurchase purchase, LocalDateTime now) {
+        if (purchase == null || !StringUtils.hasText(purchase.getId())) {
+            return false;
+        }
+        try {
+            MaterialReconciliation deleted = materialReconciliationService.lambdaQuery()
+                    .eq(MaterialReconciliation::getPurchaseId, purchase.getId().trim())
+                    .eq(MaterialReconciliation::getDeleteFlag, 1)
+                    .orderByDesc(MaterialReconciliation::getCreateTime)
+                    .last("limit 1")
+                    .one();
+            if (deleted == null || !StringUtils.hasText(deleted.getId())) {
+                return false;
+            }
+            materialReconciliationService.lambdaUpdate()
+                    .eq(MaterialReconciliation::getId, deleted.getId().trim())
+                    .set(MaterialReconciliation::getDeleteFlag, 0)
+                    .set(MaterialReconciliation::getUpdateTime, now == null ? LocalDateTime.now() : now)
+                    .update();
+            log.info("[MaterialReconciliation] 恢复被误删的对账 reconciliationId={} purchaseId={} purchaseNo={}",
+                    deleted.getId(), purchase.getId(), purchase.getPurchaseNo());
+            return true;
+        } catch (Exception e) {
+            log.warn("[MaterialReconciliation] 恢复误删对账失败 purchaseId={}: {}", purchase.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 对单个采购做对账 upsert（实时同步链路用：允许按最新口径清理不符合条件的 pending 对账）。
+     */
     private boolean upsertFromPurchase(MaterialPurchase purchase, LocalDateTime now) {
+        return upsertFromPurchase(purchase, now, true);
+    }
+
+    /**
+     * @param allowCleanup 是否允许清理（逻辑删除）不符合条件的 pending 对账。
+     *                     <b>backfill（补生成）必须传 false</b>：D-267 事故——用户点「补生成对账」后，
+     *                     10 条历史大货对账被 backfill 以「外发订单走加工费扣款」为由删除。
+     *                     「补」的语义是补齐缺失的，批量删除历史单据属数据丢失事故。
+     */
+    private boolean upsertFromPurchase(MaterialPurchase purchase, LocalDateTime now, boolean allowCleanup) {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
             return false;
         }
@@ -543,7 +605,9 @@ public class MaterialReconciliationOrchestrator {
             return false;
         }
         if (shouldRouteOrderLinkedPurchaseToInbound(purchase)) {
-            cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
+            if (allowCleanup) {
+                cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
+            }
             return false;
         }
         if (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0) {
