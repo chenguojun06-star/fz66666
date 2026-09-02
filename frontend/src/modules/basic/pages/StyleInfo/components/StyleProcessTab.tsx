@@ -23,8 +23,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
-  // D-252：工序模板导入方式 —— 覆盖现有 / 追加新增（此前恒为覆盖，用户无法追加）
-  const [processImportMode, setProcessImportMode] = useState<'overwrite' | 'append'>('overwrite');
+  // D-264：导入方式（覆盖/追加）收进"导入模板"下拉按钮，不再单独占一个选择器
   // D-210：基础属性库——码数成组选择（与样衣开发/价格模板同组件）
   const [attrLibOpen, setAttrLibOpen] = useState(false);
   const handleApplyAttrSizes = (values: string[], mode: 'replace' | 'append') => {
@@ -108,14 +107,22 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
             options={processTemplates.map((t) => ({ value: String(t.id || ''), label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName }))}
             disabled={Boolean(readOnly) || loading || saving || templateLoading}
           />
-          <Tooltip title="覆盖现有=先清空本款工序再导入；追加新增=保留现有工序，只补进模板里没有的工序（自动跳过重复）">
-            <Select style={{ width: 110 }} value={processImportMode} onChange={(v) => setProcessImportMode(v)}
-              options={[{ value: 'overwrite', label: '覆盖现有' }, { value: 'append', label: '追加新增' }]}
-              disabled={Boolean(readOnly) || loading || saving || templateLoading}
-            />
-          </Tooltip>
-          <Button onClick={() => { if (!processTemplateKey) { message.error('请选择模板'); return; } applyProcessTemplate(processTemplateKey, processImportMode); }}
-            disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}>导入模板</Button>
+          {/* D-264：覆盖/追加本就是一个动作的两个选项，收进"导入模板"下拉（悬停出现，点击即导入） */}
+          <Dropdown
+            disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}
+            menu={{
+              items: [
+                { key: 'overwrite', label: '覆盖现有（先清空本款工序再导入）' },
+                { key: 'append', label: '追加新增（保留现有，只补没有的）' },
+              ],
+              onClick: ({ key }) => {
+                if (!processTemplateKey) { message.error('请选择模板'); return; }
+                applyProcessTemplate(processTemplateKey, key as 'overwrite' | 'append');
+              },
+            }}
+          >
+            <Button disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}>导入模板 <DownOutlined /></Button>
+          </Dropdown>
           <Popover trigger="click" placement="bottomRight" open={aiOpen} onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
             content={
               <div style={{ width: 260 }}>
