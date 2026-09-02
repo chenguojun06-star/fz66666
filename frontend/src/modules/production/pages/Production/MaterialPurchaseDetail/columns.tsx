@@ -213,6 +213,8 @@ export interface ViewColumnsDeps {
   editing: boolean;
   /** 样衣采购场景：true 时隐藏"出库领取"按钮（样衣不经过仓库库存，按钮误点必返回 400 库存不足） */
   sampleMode?: boolean;
+  /** D-272：仓库库存映射（purchaseId → 可用库存）。出库领取仅在库存>0（做过入库）时显示 */
+  stockMap?: Record<string, number>;
   /** 样衣BOM已完成：锁定编辑/删除（需在样衣详情-物料清单退回后操作） */
   locked?: boolean;
   handleStartEdit: () => void;
@@ -229,7 +231,7 @@ export interface ViewColumnsDeps {
 
 export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPurchase> {
   const {
-    colWidth, editing, sampleMode, locked,
+    colWidth, editing, sampleMode, locked, stockMap,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,
@@ -312,9 +314,23 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回采购', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
               // D-117：已取消的采购不可再登记品质异常（终态行按钮置灰）
               { key: 'quality-issue', label: '品质异常', title: isCancelled ? '该采购已取消，不可登记品质异常' : '登记物料品质问题', disabled: isCancelled, onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
-              // 样衣采购场景不显示"出库领取"按钮：样衣采购不走仓库库存（直接到货登记→回料确认→完成），
-              // 旧逻辑按 isReturnConfirmed||isCompleted 显示按钮会让用户误点 → 后端 calcAvailableStock=0 → 400 仓库库存不足。
-              ...(!sampleMode && (isReturnConfirmed || isCompleted) ? [{ key: 'warehouse-pick', label: '出库领取', title: '从库存出库领取物料', onClick: () => handleWarehousePick(record, Number(record.arrivedQuantity || record.purchaseQuantity || 0)), primary: true }] : []),
+              // D-272：「出库领取」只在仓库真有库存（做过入库）时显示。
+              // 直采直用（登记到货但从未入库）的采购不走仓库流程，
+              // 显示按钮只会让用户误点 → 后端 calcAvailableStock=0 → 400 仓库库存不足。
+              // 样衣模式同理隐藏。
+              ...(() => {
+                if (sampleMode || !(isReturnConfirmed || isCompleted)) return [];
+                const stockQty = stockMap?.[String(record.id)];
+                if (stockQty == null || Number(stockQty) <= 0) return [];
+                const pickQty = Math.min(Number(stockQty), Number(record.arrivedQuantity || record.purchaseQuantity || 0));
+                return [{
+                  key: 'warehouse-pick',
+                  label: '出库领取',
+                  title: `从库存出库领取物料（仓库可用 ${stockQty}${record.unit ? ' ' + record.unit : ''}）`,
+                  onClick: () => handleWarehousePick(record, pickQty),
+                  primary: true,
+                }];
+              })(),
             ]}
           />
         );

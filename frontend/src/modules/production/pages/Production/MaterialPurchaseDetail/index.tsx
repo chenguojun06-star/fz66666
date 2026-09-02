@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App } from 'antd';
 import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined, DownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
+import api from '@/utils/api';
+import { buildStockMap } from '@/components/common/NodeDetailModal/utils';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
@@ -69,6 +71,22 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
   const [docListOpen, setDocListOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
+
+  // D-272：仓库库存映射——「出库领取」只在仓库真有库存（做过入库）时显示。
+  // 直采直用（登记到货但未入库）的采购不该出现该按钮，误点必报"仓库库存不足"。
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const no = String(orderNo || '').trim();
+    const sn = String(styleNo || '').trim();
+    if (!no && !sn) return;
+    api
+      .get<any>('/production/purchase/smart-receive-preview', { params: no ? { orderNo: no } : { styleNo: sn } })
+      .then((res: any) => {
+        const materials: any[] = res?.data?.materials || res?.materials || [];
+        setStockMap(buildStockMap(materials));
+      })
+      .catch(() => setStockMap({}));
+  }, [orderNo, styleNo]);
   const [batchPurchaseOpen, setBatchPurchaseOpen] = useState(false);
   const [batchPurchaseItems, setBatchPurchaseItems] = useState<BatchPurchaseItem[]>([]);
   const [batchReturnLoading, setBatchReturnLoading] = useState(false);
@@ -143,6 +161,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const viewColumns = buildViewColumns({
     colWidth, editing, sampleMode,
     locked: sampleBomLocked,
+    stockMap,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,
