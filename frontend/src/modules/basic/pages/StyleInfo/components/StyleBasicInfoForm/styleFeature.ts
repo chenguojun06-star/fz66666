@@ -65,3 +65,15 @@ export function appendFeatureText(existing: string, incoming: string): string {
   if (a.includes(b) || b.includes(a)) return a.length >= b.length ? a : b;
   return `${a}；${b}`;
 }
+
+/**
+ * 识别失败残留文本特征（D-264）：图片 URL 失效时视觉模型会返回
+ * "图片无法访问…需人工复核"这类逐字段复读的垃圾摘要，却带着 available=true 返回，
+ * 一旦写入款式特征就是一坨乱码且挡住后续正常回填。按关键词判定失败残留。
+ */
+const STYLE_FEATURE_FAILURE_PATTERN = /图片无法访问|无法访问提供的图片|无法进行任何实质性|无法获取(袖型|面料|领型|版型|颜色)信息/;
+
+export function isFailedParseText(text?: string | null): boolean {
+  const raw = String(text || '').trim();
+  return !!raw && STYLE_FEATURE_FAILURE_PATTERN.test(raw);
+}

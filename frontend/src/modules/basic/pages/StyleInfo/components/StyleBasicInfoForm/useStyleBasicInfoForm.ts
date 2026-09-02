@@ -6,7 +6,7 @@ import { useDictOptions } from '@/hooks/useDictOptions';
 import type { StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import type { StyleBasicInfoFormRef } from './types';
 import { DEFAULT_SIZE_MAP, FALLBACK_SIZES, SIZE_COLOR_SYNC_DEBOUNCE_MS } from './constants';
-import { STYLE_FEATURE_KEY, appendFeatureText } from './styleFeature';
+import { STYLE_FEATURE_KEY, appendFeatureText, isFailedParseText } from './styleFeature';
 
 interface UseStyleBasicInfoFormParams {
   _form: FormInstance;
@@ -147,6 +147,9 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
   // 智能识别结果填充：款名/品类/季节/颜色/尺码 + 款式特征（面料/袖型/领型/版型/图案）
   const applyStyleParseResult = (result: StyleFieldParseResult) => {
     if (!result || result.available === false) return;
+    // D-264：图片无法访问等失败分析（summary 全是"图片无法访问…需人工复核"）不得写入任何字段，
+    // 否则垃圾文本污染款式特征且挡住档案卡正确分析的回填
+    if (isFailedParseText(String(result.summary || ''))) return;
 
     const updates: Record<string, any> = {};
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App } from 'antd';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl, isSameFileUrl } from '@/utils/fileUrl';
+import { isFailedParseText } from '../StyleBasicInfoForm/styleFeature';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
 import { styleSearchByImage, styleParseFromImage, type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import type { CoverImageUploadProps, DisplayImage } from './types';
@@ -240,7 +241,8 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     (async () => {
       try {
         const res = await styleParseFromImage(imgUrl);
-        if (res?.available) {
+        // 失败残留（"图片无法访问…"）按识别失败处理，不给表单填充垃圾
+        if (res?.available && !isFailedParseText(res.summary)) {
           onStyleParseResult?.(res);
           onAutoParseResult?.(res);
           setParseSuccessConfidence(res.overallConfidence ?? null);
@@ -275,7 +277,8 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     setParseSuccessConfidence(null);
     (async () => {
       const res = await runStyleParseFromCurrentImage();
-      if (res?.available) {
+      // 失败残留（"图片无法访问…"）按识别失败处理，不给表单填充垃圾
+      if (res?.available && !isFailedParseText(res.summary)) {
         onStyleParseResult?.(res);
         onAutoParseResult?.(res);
         setParseSuccessConfidence(res.overallConfidence ?? null);
@@ -378,7 +381,8 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     setParseSuccessConfidence(null);
     try {
       const res = await runStyleParseFromCurrentImage();
-      if (res?.available) {
+      // 失败残留（"图片无法访问…"）按识别失败处理
+      if (res?.available && !isFailedParseText(res.summary)) {
         message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
         onStyleParseResult?.(res);
         onAutoParseResult?.(res);

@@ -571,7 +571,20 @@ public class VisionAnalysisService {
         if (report != null && !report.isBlank()) {
             summary.append("原始分析：").append(report.length() > 200 ? report.substring(0, 200) + "..." : report);
         }
-        r.setSummary(summary.toString());
+
+        // D-264：图片无法访问时视觉模型会返回逐字段复读"图片无法访问…需人工复核"的垃圾摘要，
+        // 此前带着 available=true 返回，前端把它当成功结果填进款式特征（垃圾文本污染表单）。
+        // 这里显式判定为失败返回，前端按识别失败提示。
+        String summaryText = summary.toString();
+        if (summaryText.contains("图片无法访问") || summaryText.contains("无法访问提供的图片")
+                || summaryText.contains("无法进行任何实质性")) {
+            r.setAvailable(false);
+            r.setErrorMessage("图片无法访问，请确认款式图已上传成功或更换图片后重试");
+            r.setSummary(summaryText);
+            log.warn("[VisionAnalysis] parseStyleFields 图片不可访问，按失败返回: imageUrl={}", imageUrl);
+            return r;
+        }
+        r.setSummary(summaryText);
 
         // 整体置信度（平均值）：0.0 - 1.0
         double overallConf = (style.getConfidence() + color.getConfidence()) / 200.0;
