@@ -70,59 +70,37 @@ public class ProcessParentNodeResolver {
         return false;
     }
 
-    public Integer resolveTrackingMinRate(Map<String, Integer> trackingByProcess, int baseQty,
-            String[] parentKeywords, String[] subProcessKeywords,
-            java.util.function.BiFunction<Integer, Integer, Integer> rateComputer) {
-        if (trackingByProcess.isEmpty() || baseQty <= 0) {
-            return null;
-        }
-        Map<String, Integer> subProcessQtys = new HashMap<>();
-        for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
-            String pname = entry.getKey() == null ? "" : entry.getKey().trim();
-            if (pname.isEmpty() || entry.getValue() == null || entry.getValue() <= 0) {
-                continue;
-            }
-            boolean isParent = false;
-            for (String kw : parentKeywords) {
-                if (pname.toLowerCase().contains(kw.toLowerCase())) {
-                    isParent = true;
-                    break;
-                }
-            }
-            if (isParent) {
-                continue;
-            }
-            boolean isSubProcess = false;
-            for (String kw : subProcessKeywords) {
-                if (pname.toLowerCase().contains(kw.toLowerCase())) {
-                    isSubProcess = true;
-                    break;
-                }
-            }
-            if (!isSubProcess) {
-                boolean matchesAnyParent = false;
-                for (String kw : parentKeywords) {
-                    if (pname.toLowerCase().contains(kw.toLowerCase())) {
-                        matchesAnyParent = true;
-                        break;
-                    }
-                }
-                if (!matchesAnyParent) {
-                    continue;
-                }
-            }
-            subProcessQtys.merge(pname, entry.getValue(), Integer::sum);
-        }
-        if (subProcessQtys.isEmpty()) {
+    /**
+     * D-276：按父子映射计算父节点阶段进度——min(各归属子工序的扫码率)。
+     *
+     * <p>口径：把每个已扫子工序通过 {@link #isParentNodeMatch}（同义词 + 租户配置映射）
+     * 归属到目标父节点，串行子工序链的完成度由最慢（最少）一道决定，故取最小值。
+     * trackingByProcess 只含 qty&gt;0 的已扫工序（未扫的不在表内，忽略）。
+     *
+     * @return null = 没有任何已扫子工序归属到该父节点（调用方自行回退）
+     */
+    public Integer resolveParentStageRate(Map<String, Integer> trackingByProcess, int baseQty,
+            String targetParent, java.util.function.BiFunction<Integer, Integer, Integer> rateComputer) {
+        if (trackingByProcess == null || trackingByProcess.isEmpty() || baseQty <= 0) {
             return null;
         }
         int minRate = 100;
-        for (Map.Entry<String, Integer> e : subProcessQtys.entrySet()) {
-            int rate = rateComputer.apply(e.getValue(), baseQty);
-            if (rate < minRate) {
+        boolean found = false;
+        for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
+            String pname = entry.getKey() == null ? "" : entry.getKey().trim();
+            Integer qty = entry.getValue();
+            if (pname.isEmpty() || qty == null || qty <= 0) {
+                continue;
+            }
+            if (!isParentNodeMatch(pname, targetParent)) {
+                continue;
+            }
+            int rate = rateComputer.apply(qty, baseQty);
+            if (!found || rate < minRate) {
                 minRate = rate;
+                found = true;
             }
         }
-        return minRate;
+        return found ? minRate : null;
     }
 }

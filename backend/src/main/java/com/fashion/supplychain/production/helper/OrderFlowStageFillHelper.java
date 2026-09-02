@@ -358,10 +358,21 @@ public class OrderFlowStageFillHelper {
         o.setPackagingCompletionRate(packagingRate);
 
         if (d.trackingByProcess != null && !d.trackingByProcess.isEmpty()) {
-            Integer tailMinRate = resolveTrackingMinRate(d.trackingByProcess, baseQtyForRate,
-                    new String[]{"尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process"},
-                    new String[]{"包装", "packaging"});
-            o.setTailProcessRate(tailMinRate != null ? tailMinRate : packagingRate);
+            // D-276：尾部球按父子映射口径计算——min(各归属子工序扫码率)。
+            // 旧逻辑把剪线/整烫/大烫等尾部子工序放进 parentKeywords 排除、只认"包装"，
+            // 子工序配置为剪线/整烫/质检（无包装）的订单尾部球恒 0%（用户实测 PO20260828152504）。
+            Integer tailMappedMinRate = processParentNodeResolver.resolveParentStageRate(
+                    d.trackingByProcess, baseQtyForRate, "尾部", this::computeRate);
+            Integer tailRate;
+            if (tailMappedMinRate != null) {
+                tailRate = tailMappedMinRate;
+            } else {
+                // 无子工序归属到尾部时回退：映射聚合量（与轻量路径 fillCompletionRates 同口径）→ 视图包装量
+                int mappedQty = processParentNodeResolver.buildParentNodeQtyMap(d.trackingByProcess)
+                        .getOrDefault("尾部", 0);
+                tailRate = mappedQty > 0 ? computeRate(mappedQty, baseQtyForRate) : packagingRate;
+            }
+            o.setTailProcessRate(tailRate);
         } else {
             Integer elseIroningRate = computeRate(d.ironingQty, baseQtyForRate);
             o.setTailProcessRate(elseIroningRate != null ? elseIroningRate : packagingRate);
@@ -775,11 +786,5 @@ public class OrderFlowStageFillHelper {
 
     private boolean isAnyRecognizedParentNode(String processName) {
         return processParentNodeResolver.isAnyRecognizedParentNode(processName);
-    }
-
-    private Integer resolveTrackingMinRate(Map<String, Integer> trackingByProcess, int baseQty,
-            String[] parentKeywords, String[] subProcessKeywords) {
-        return processParentNodeResolver.resolveTrackingMinRate(trackingByProcess, baseQty,
-                parentKeywords, subProcessKeywords, this::computeRate);
     }
 }
