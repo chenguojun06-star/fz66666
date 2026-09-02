@@ -7,6 +7,13 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-02 D-259 面辅料采购→结算全链路梳理 + 补生成对账 P0 修复 ✅已推送
+
+- [x] 数据流澄清：内部订单(INTERNAL)采购到货 100% 生成对账，链路是通的；EXTERNAL 走加工费扣款不进对账（设计）
+- [x] 补生成对账两处硬伤：跨租户扫描(P0#7)+LIMIT 5000 老数据补不到 → 已修（租户过滤+分页全量）
+- [ ] 待用户确认：他看到的"内部订单"实际 factory_type（INTERNAL / NULL / EXTERNAL）
+
+
 ### 2026-09-02 D-265 五连修（前端+后端）✅已推送待验收
 
 - [x] BOM第二条物料不计算：hasPatternData 改为 map 至少一个值>0 才算纸样口径（calcTotalPrice + bomUsageColumns 同口径），否则回落 devUsageAmount（原保存链路写全0 map → 误判纸样口径 → 用量/小计归0）

@@ -4277,3 +4277,53 @@ PC：
 ### 验证
 前端 tsc 0 错误；node --check 全过；全库 grep 状态类"已采购"残留=0（仅注释说明与数量列）；
 三副本同步 md5 校验 = 1。
+
+---
+
+## D-259：面辅料采购→出入库→结算 全链路梳理 + 补生成对账 P0 修复
+
+**日期**：2026-09-02
+**触发**：用户要求「把面辅料采购/出入库/结算 内部外部全部梳理清楚」，
+并反馈「内部订单采购的数据都没有扭转到物料对账里面」。
+
+### 数据流（采购 → 对账）五道关卡
+1. 采购生成（订单 BOM / 样衣 / 备货 batch）
+2. 领取（receive → status=received）
+3. 到货确认 → `MaterialPurchaseOrchestrator.updateArrivedQuantityAndSync`
+   → `statusHelper.syncAfterPurchaseChanged` → `MaterialPurchaseSyncHelper.syncAfterPurchaseChanged`
+4. **关卡1**：`allowReconciliation = !hasText(orderId) || isInternalOrderPurchase(p)`
+   （两处 isInternalOrderPurchase / isInternalFactoryPurchase 口径均为「只有 EXTERNAL 才是外发」）
+5. **关卡2**（upsertFromPurchaseId）：shouldCleanupByPurchase
+   = shouldRouteOrderLinkedPurchaseToInbound(外发走入库回流→跳过) / deleteFlag / cancelled
+   / **resolveEffectiveQuantity <= 0（到货量 0 → 跳过并清除 pending 对账）**
+6. 生成/更新 t_material_reconciliation(status=pending) → 初审(approved) → 付款(paid)
+   另：`ProcurementOrchestrator` 初审通过也会主动触发 upsertFromPurchaseId
+
+### 用数据推翻了推测（关键方法论）
+代码推演猜了 3 个断点，**逐条用按租户的真实数据验证，结论全反了**：
+
+| 租户 | 类型 | 采购 | 到货 | 有对账 |
+|---|---|---|---|---|
+| 2 | **INTERNAL** | 51 | 24 | **24 = 100%** |
+| 2 | EXTERNAL | 58 | 50 | **0（设计如此）** |
+| 106 | manual/stock | 86 | 46 | 46 = 100% |
+| 1 | batch 备货 | 10 | 6 | **0（真漏网，2026-02 老数据）** |
+
+→ **内部订单采购链路是通的，100% 扭转**。D-252 的口径补丁确实生效。
+用户感知的"没进去"指向两类：① 外发(EXTERNAL)按 D-133 方案A 走加工费扣款，本就不进对账；
+② 存量老数据（口径修正前创建/从未触发过同步）不会自愈。
+
+### 本次修复（`MaterialReconciliationOrchestrator.backfillFromPurchases`）
+1. **P0 跨租户**：原实现 lambdaQuery **不带 tenantId**，扫全表并为其他租户采购建对账
+   （upsertFromPurchase 内部也不校验归属）→ 违反 P0 铁律 #7。现已限定当前租户，
+   并在 upsertFromPurchase 内加第二道归属校验兜底（拒绝跨租户并告警）
+2. **老数据永远补不到**：原 `LIMIT 5000` + updateTime 倒序 → 采购超 5000 条时历史数据扫不到。
+   改为分页全量遍历（每页 500、上限 40 页、按 createTime 升序，先补最老的存量）
+
+### 结论/口径备忘
+- EXTERNAL 订单采购 0 条对账 = 设计（外发面料款走加工费扣款），不是 bug
+- 对账记录 tenant_id 由 `TenantMetaObjectHandler` 自动填充，不存在 NULL 租户（已验证 77 条全有值）
+- 存量补回：物料对账页「补生成对账」按钮（需主管及以上权限）
+
+### 验证
+后端 `mvn compile` 通过；改动文件 lint 0 错误。

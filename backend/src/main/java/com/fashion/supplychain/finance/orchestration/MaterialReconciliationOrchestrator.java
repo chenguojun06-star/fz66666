@@ -476,34 +476,70 @@ public class MaterialReconciliationOrchestrator {
         materialReconciliationService.removeById(existed.getId().trim());
     }
 
+    /**
+     * 补生成对账：扫描「已到货」的采购单，为缺失对账单的补生成。
+     *
+     * <p>D-259 修复两个缺陷：
+     * <ol>
+     *   <li><b>P0 跨租户</b>：原实现 lambdaQuery 不带 tenantId，会扫全表并为<b>其他租户</b>的采购
+     *       建对账（upsertFromPurchase 内部也不校验租户归属），违反 P0 铁律 #7。
+     *       现限定当前租户；upsertFromPurchase 内再加一道归属校验兜底。</li>
+     *   <li><b>老数据永远补不到</b>：原实现 {@code LIMIT 5000} 且按 updateTime 倒序，
+     *       采购超过 5000 条时，排在后面的历史数据（恰恰是最需要补的存量）永远扫不到。
+     *       现改为分页全量遍历（每页 500，上限 40 页 = 20000 条保护）。</li>
+     * </ol>
+     */
     @Transactional(rollbackFor = Exception.class)
     private int backfillFromPurchases() {
-        List<MaterialPurchase> list = materialPurchaseService.lambdaQuery()
-                .eq(MaterialPurchase::getDeleteFlag, 0)
-                .gt(MaterialPurchase::getArrivedQuantity, 0)
-                .ne(MaterialPurchase::getStatus, "cancelled")
-                .orderByDesc(MaterialPurchase::getUpdateTime)
-                .last("LIMIT 5000")
-                .list();
-        if (list == null || list.isEmpty()) {
-            return 0;
-        }
-
-        int touched = 0;
+        Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
-        for (MaterialPurchase p : list) {
-            if (p == null || !StringUtils.hasText(p.getId())) {
-                continue;
+        int touched = 0;
+        final int pageSize = 500;
+        final int maxPages = 40;
+
+        for (int pageNo = 1; pageNo <= maxPages; pageNo++) {
+            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase> wrapper =
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase>()
+                            .eq(MaterialPurchase::getDeleteFlag, 0)
+                            .gt(MaterialPurchase::getArrivedQuantity, 0)
+                            .ne(MaterialPurchase::getStatus, "cancelled")
+                            .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)
+                            .orderByAsc(MaterialPurchase::getCreateTime);
+
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> page =
+                    materialPurchaseService.page(
+                            new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNo, pageSize),
+                            wrapper);
+            List<MaterialPurchase> list = page == null ? null : page.getRecords();
+            if (list == null || list.isEmpty()) {
+                break;
             }
-            if (upsertFromPurchase(p, now)) {
-                touched++;
+            for (MaterialPurchase p : list) {
+                if (p == null || !StringUtils.hasText(p.getId())) {
+                    continue;
+                }
+                if (upsertFromPurchase(p, now)) {
+                    touched++;
+                }
+            }
+            if (list.size() < pageSize) {
+                break;
             }
         }
+        log.info("[MaterialReconciliation] 补生成对账完成 tenantId={} touched={}", tenantId, touched);
         return touched;
     }
 
     private boolean upsertFromPurchase(MaterialPurchase purchase, LocalDateTime now) {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
+            return false;
+        }
+        // P0 铁律 #7 兜底：任何路径（含 backfill 批量）都不得为跨租户的采购生成对账
+        Long ctxTenantId = UserContext.tenantId();
+        if (ctxTenantId != null && purchase.getTenantId() != null
+                && !java.util.Objects.equals(ctxTenantId, purchase.getTenantId())) {
+            log.warn("[MaterialReconciliation] 拒绝为跨租户采购生成对账 purchaseId={} purchaseTenant={} ctxTenant={}",
+                    purchase.getId(), purchase.getTenantId(), ctxTenantId);
             return false;
         }
         if (shouldRouteOrderLinkedPurchaseToInbound(purchase)) {
