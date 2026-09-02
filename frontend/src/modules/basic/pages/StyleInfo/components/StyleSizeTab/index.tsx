@@ -181,6 +181,7 @@ const StyleSizeTab: React.FC<Props> = ({
           newGroupName={structure.newGroupName}
           setNewGroupName={structure.setNewGroupName}
           confirmAddGroup={structure.confirmAddGroup}
+          handleAddPartRow={structure.handleAddPartRow}
           sizeOptions={sizeOptions}
           setSizeOptions={setSizeOptions}
           sizeColumns={sizeColumns}

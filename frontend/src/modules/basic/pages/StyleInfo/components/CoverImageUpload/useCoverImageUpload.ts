@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App } from 'antd';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { getFullAuthedFileUrl, isSameFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
 import { styleSearchByImage, styleParseFromImage, type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import type { CoverImageUploadProps, DisplayImage } from './types';
@@ -82,15 +82,16 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
           && !String(f.bizType || '').toLowerCase().startsWith('pattern'));
         const sorted = coverUrl
           ? [...imgs].sort((a, b) => {
-              const aCover = String(a?.fileUrl || '') === String(coverUrl || '');
-              const bCover = String(b?.fileUrl || '') === String(coverUrl || '');
+              // 剥离 token 等查询参数再比：附件裸路径与历史存的带参 cover 也能对上
+              const aCover = isSameFileUrl(a?.fileUrl, coverUrl);
+              const bCover = isSameFileUrl(b?.fileUrl, coverUrl);
               if (aCover === bCover) return 0;
               return aCover ? -1 : 1;
             })
           : imgs;
         setImages(sorted);
         if (sorted.length > 0) {
-          const coverIndex = coverUrl ? sorted.findIndex((item: any) => String(item?.fileUrl || '') === String(coverUrl || '')) : -1;
+          const coverIndex = coverUrl ? sorted.findIndex((item: any) => isSameFileUrl(item?.fileUrl, coverUrl)) : -1;
           if (coverIndex >= 0) setCurrentIndex(coverIndex);
           else if (currentIndex >= sorted.length) setCurrentIndex(0);
         }
@@ -340,9 +341,18 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     try {
       const res = await api.post<ApiResult<boolean>>(`/style/attachment/${img.id}/set-cover`);
       if (isApiSuccess(res)) {
-        setCurrentIndex(index);
-        onCoverChange?.(String(img.fileUrl || ''));
-        setStyleCoverOverride(styleId, undefined, String(img.fileUrl || ''));
+        // 展示列表已把 fileUrl 换成带 token 的地址，回写 cover 必须用附件裸 URL，
+        // 否则带 token 的链接会被存进款式数据，过期后 401
+        const rawUrl = String(images.find((item) => String(item?.id) === String(img.id))?.fileUrl || img.fileUrl || '');
+        // 本地把新主图排到第一位：列表顺序与徽标立即变化，不用等刷新
+        setImages((prev) => {
+          const target = prev.find((item) => String(item?.id) === String(img.id));
+          if (!target) return prev;
+          return [target, ...prev.filter((item) => String(item?.id) !== String(img.id))];
+        });
+        setCurrentIndex(0);
+        onCoverChange?.(rawUrl);
+        setStyleCoverOverride(styleId, undefined, rawUrl);
         message.success('已设置为主图');
       } else {
         message.error(getApiMessage(res, '设置主图失败'));

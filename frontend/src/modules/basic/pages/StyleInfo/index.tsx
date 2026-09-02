@@ -57,6 +57,26 @@ const StyleInfoDetailPage: React.FC = () => {
     basicInfoFormRef.current?.applyStyleParseResult(result);
   };
 
+  // 顶部档案卡的视觉AI分析（缓存 visionRaw / 手动"图像分析"产出）回填款式特征。
+  // 此前卡片上的 AI 识别结果与表单完全两条链路，款式特征永远空着（用户："根本没打通"）。
+  // 仅在特征为空时填充，人工已写的内容不被覆盖。
+  const handleVisionAnalysisFill = React.useCallback((payload: { visionRaw: string; difficultyLabel?: string; difficultyScore?: number }) => {
+    const text = String(payload?.visionRaw || '').trim();
+    if (!text) return;
+    const current = form.getFieldValue(['extJson', 'styleFeature']);
+    if (typeof current === 'string' && current.trim()) return;
+    basicInfoFormRef.current?.applyStyleParseResult({
+      imageUrl: '',
+      available: true,
+      overallConfidence: 1,
+      styleConfidence: 1,
+      colorConfidence: 1,
+      needManualReview: false,
+      colors: [],
+      summary: text,
+    });
+  }, [form]);
+
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
@@ -224,7 +244,7 @@ const StyleInfoDetailPage: React.FC = () => {
             }
           />
         ) : null}
-        <StyleIntelligenceProfileCard style={currentStyle} />
+        <StyleIntelligenceProfileCard style={currentStyle} onVisionAnalysis={handleVisionAnalysisFill} />
         <Card
           title={
             <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)' }}>样衣详情</span>

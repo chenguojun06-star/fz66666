@@ -224,8 +224,8 @@ export function useStyleSizeColumns({
       {
         title: '部位',
         dataIndex: 'partName',
-        // 原 50 过窄，"胸围"刚放下、"后中长"就被截断，D-261 加宽一倍
-        width: 100,
+        // 100 在编辑时仍看不全"插肩袖长"这类输入，加宽到 160（表格横滑，不挤压码数列）
+        width: 160,
         render: (_: any, record: DisplayRow) =>
           editableMode ? (
             <Input value={record.partName} placeholder="如：胸围" onChange={(e) => updatePartName(record.key, e.target.value)} />
@@ -236,8 +236,8 @@ export function useStyleSizeColumns({
       {
         title: '度量方式',
         dataIndex: 'measureMethod',
-        // 原 80 同样偏窄，与部位列一档加宽
-        width: 100,
+        // 与部位列一档加宽，编辑时输入内容可见
+        width: 120,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
             <Input value={record.measureMethod} placeholder="如：平量" onChange={(e) => updateMeasureMethod(record.key, e.target.value)} />

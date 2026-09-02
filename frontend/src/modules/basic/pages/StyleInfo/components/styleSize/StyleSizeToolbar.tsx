@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { App, Button, Dropdown, Input, Popover, Select, Space, Upload, message as antdMessage, Spin } from 'antd';
-import { DownOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
+import { DownOutlined, PlusOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
 import logger from '@/utils/logger';
@@ -30,6 +30,7 @@ interface Props {
   newGroupName: string;
   setNewGroupName: (v: string) => void;
   confirmAddGroup: () => void;
+  handleAddPartRow: () => void;
   sizeOptions: Array<{ value: string; label: string }>;
   setSizeOptions: React.Dispatch<React.SetStateAction<Array<{ value: string; label: string }>>>;
   sizeColumns: string[];
@@ -45,7 +46,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
   selectedRowKeys, setSelectedRowKeys, openBatchGradingConfig,
   enterEdit, exitEdit, saveAll,
   sizeTemplates, sizeTemplateKey, setSizeTemplateKey, applySizeTemplate,
-  newGroupName, setNewGroupName, confirmAddGroup,
+  newGroupName, setNewGroupName, confirmAddGroup, handleAddPartRow,
   sizeOptions, setSizeOptions, sizeColumns, mergeSizeColumns, fetchSizeDictOptions, message,
   styleId, onSizeTableRecognized,
 }) => {
@@ -192,8 +193,8 @@ const StyleSizeToolbar: React.FC<Props> = ({
           disabled={loading || saving || isReadonly || templateLoading}
           menu={{
             items: [
+              { key: 'merge', label: '智能导入（回填空缺，不动已填数据）' },
               { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
-              { key: 'merge', label: '追加导入（保留现有数据）' },
             ],
             onClick: ({ key }) => {
               if (!sizeTemplateKey) { message.error('请选择模板'); return; }
@@ -205,6 +206,14 @@ const StyleSizeToolbar: React.FC<Props> = ({
             导入模板 <DownOutlined />
           </Button>
         </Dropdown>
+        {/* 免分组直接加行：分组按部位名自动推断，单件款式不必先建分组 */}
+        <Button
+          icon={<PlusOutlined />}
+          disabled={loading || saving || isReadonly}
+          onClick={handleAddPartRow}
+        >
+          添加行
+        </Button>
         <Popover
           trigger="click"
           placement="bottom"

@@ -1,11 +1,36 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-01（D-262 生产/外发页扫码一步直达工序领取页，去扫码主页中转）
+> 最后更新：2026-09-02（D-263 样衣详情四连修：主图/AI填充/分组/模板导入，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-02 D-263 样衣详情四连修（PC前端+后端）✅已推送待验收
+
+- [x] 设置主图假动作修复：徽标原按"列表第一张"位置判定→按 coverUrl 真值判定（新增 `isSameFileUrl` 剥 token 归一比较）；设为主图成功后本地重排+回写裸 URL（不再把带 token URL 写进 cover）
+- [x] 款式特征 AI 填充打通：档案卡 `difficulty.visionRaw` → `onVisionAnalysis` 回调 → 表单 `extJson.styleFeature` 为空时回填（人工已写不覆盖，幂等）；手动"图像分析"同样回填
+- [x] 尺寸表免分组加行：工具条新增"添加行"，groupName 留空按部位名自动归组（原"添加行"藏在分组列内，空表必须先建分组）
+- [x] 尺寸模板导入 merge 改智能回填（后端 `TemplateStyleOrchestrator.applySizeTemplate`）：按部位名匹配+码数语义键定位，只填空缺（null/0），不再重复添加整份；部位列 160/度量方式 120 加宽
+- [x] 验证：tsc 0 错、mvn compile 过、vite build 过
+- [ ] 待用户：刷新 PC 页面验收四项；后端 merge 回填需等云端部署
+
+### 2026-09-02 质检详情页二维码号/样衣详情页长码数出界修复 ✅代码完成，待用户重编译验证
+
+- [x] 质检详情页：待检菲号列表 `tag-info`（二维码号）无 word-break/nowrap 导致长码出界 → 补 `max-width:100%; word-break:break-all; white-space:normal;`（`qc-form-info-value` 已有 break-all 无需改）
+- [x] 样衣详情页：头部 `tag-chip`（`_sizeText` 长码数/`_colorText` 长颜色）`white-space:nowrap` + 固定 height:20px 必出界 → 改 `height:auto; min-height:20px; white-space:normal; word-break:break-all; max-width:100%`，支持多行裹形
+- [x] 三端同步：miniprogram + h5-web/source-miniapp + h5-web/public/source-miniapp 各 2 个 wxss 共 6 处
+- [x] 未改 dist（构建产物，历史惯例不同步）
+- [ ] 待用户：微信开发者工具重新编译预览验证两个页面
+
+### 2026-09-01 工资页+扫码历史双页款式图/卡片布局/搜索功能 ✅已推送 f75b624d1，云端接口已验证
+- [x] 「我的工资」页按款号/订单号/款式名/菲号搜索：`sticky-search-bar` + 本地过滤（payroll.js `_matchSearchKeyword`）
+- [x] 双页款式全景图：后端 `PayrollAggregationOrchestrator` 注入 `coverImage/styleName`（`ScanRecordEnrichHelper.enrichStyleInfo`，已部署云端，实测接口 181 条中 180 条带 coverImage、图片带 token 访问 200）
+- [x] 图片容器：128rpx 宽对齐扫码页，高度再压缩至 56rpx，aspectFit 显示全景图左右留白
+- [x] 顶部汇总卡片改左右双栏（左：月份+总额+环比；右：计件工资|奖金），解决右侧空白
+- [x] 卡片高度压缩：padding 10px→8px、间距收紧（commit 43f04db6e + f75b624d1）
+- [ ] 待用户：微信开发者工具重新编译预览；顶部卡片布局修复 CI 部署完成后刷新
 
 ### 2026-09-01 D-262 小程序生产管理/外发管理页扫码——页内直达工序领取页 ✅代码完成，待用户重新编译验证
 

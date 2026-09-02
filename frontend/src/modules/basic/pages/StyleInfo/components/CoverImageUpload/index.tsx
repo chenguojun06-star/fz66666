@@ -6,6 +6,7 @@ import {
 } from '@ant-design/icons';
 import { useCoverImageUpload } from './useCoverImageUpload';
 import SearchResultCard from './SearchResultCard';
+import { isSameFileUrl } from '@/utils/fileUrl';
 import type { CoverImageUploadProps } from './types';
 
 /** 方形卡片尺寸（正方形，一排排列，不大） */
@@ -43,8 +44,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
-
-  const coverFileUrl = displayImages[0]?.fileUrl;
 
   /** 上传入口（数量校验 + 复用 hook 的上传逻辑） */
   const uploadFiles = (files: File[]) => {
@@ -163,7 +162,11 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
       {/* 图片卡一排排列 + ➕上传卡 + 行尾小工具 */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
         {displayImages.map((img, idx) => {
-            const isCover = !isNewMode && img.fileUrl === coverFileUrl && Boolean(coverUrl || displayImages.length > 0);
+            // 主图徽标按真实 cover 判定，不再钉在列表第一张：
+            // 此前 coverFileUrl 取 displayImages[0]，设为主图成功后列表不重排、
+            // 徽标纹丝不动，用户看起来就是"点了没反应"
+            const isCover = !isNewMode
+              && (coverUrl ? isSameFileUrl(img.fileUrl, coverUrl) : idx === 0);
             const active = idx === currentIndex;
             return (
               <div

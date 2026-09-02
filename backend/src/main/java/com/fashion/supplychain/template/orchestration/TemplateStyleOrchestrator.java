@@ -422,37 +422,82 @@ public class TemplateStyleOrchestrator {
             styleSizeService.lambdaUpdate()
                     .eq(StyleSize::getStyleId, targetStyleId)
                     .remove();
-        }
-
-        // 追加导入时按「部位+尺码语义键」跳过已存在行：模板通用码 S(160/76) 与款式开发码
-        // S(160/76A) 语义相同，不查重会重复成列（与前端 getSizeDedupeKey 同规则）
-        Set<String> existingKeys = new HashSet<>();
-        if (!overwrite) {
-            List<StyleSize> existing = styleSizeService.lambdaQuery()
-                    .eq(StyleSize::getStyleId, targetStyleId)
-                    .list();
-            for (StyleSize item : existing) {
-                existingKeys.add(sizeRowKey(item.getPartName(), item.getSizeName()));
+            for (StyleSize size : sizes) {
+                size.setId(null);
+                size.setStyleId(targetStyleId);
+                styleSizeService.save(size);
             }
+            return true;
         }
 
-        int skipped = 0;
+        // 智能导入（merge）：按「部位名」匹配已有行，只回填空缺值，绝不重复添加。
+        // 旧行为按「部位+码数语义键」追加，码数写法稍有差异就在同一部位下再插一份，
+        // 用户看到的是"又多了一份"，而已填的数值也没有被利用。
+        List<StyleSize> existing = styleSizeService.lambdaQuery()
+                .eq(StyleSize::getStyleId, targetStyleId)
+                .list();
+        Map<String, Map<String, StyleSize>> existingByPart = new HashMap<>();
+        for (StyleSize item : existing) {
+            existingByPart.computeIfAbsent(normalizePartKey(item.getPartName()), k -> new HashMap<>())
+                    .put(sizeDedupeKey(item.getSizeName()), item);
+        }
+
+        int filledRows = 0;
+        int addedParts = 0;
+        int unmatchedRows = 0;
         for (StyleSize size : sizes) {
-            String rowKey = sizeRowKey(size.getPartName(), size.getSizeName());
-            if (!existingKeys.add(rowKey)) {
-                skipped++;
+            String partKey = normalizePartKey(size.getPartName());
+            Map<String, StyleSize> partRows = partKey.isEmpty() ? null : existingByPart.get(partKey);
+
+            // 部位不存在：整行新增（带入模板的码数与数值）
+            if (partRows == null || partRows.isEmpty()) {
+                size.setId(null);
+                size.setStyleId(targetStyleId);
+                styleSizeService.save(size);
+                existingByPart.put(partKey, new HashMap<>());
+                addedParts++;
                 continue;
             }
-            size.setId(null);
-            size.setStyleId(targetStyleId);
-            styleSizeService.save(size);
+
+            // 部位已存在：按码数语义键定位对应格，只回填空缺（null/0 视为未填）
+            String sizeKey = sizeDedupeKey(size.getSizeName());
+            StyleSize target = sizeKey.isEmpty() ? null : partRows.get(sizeKey);
+            if (target == null) {
+                unmatchedRows++;
+                continue;
+            }
+            boolean updated = false;
+            if (isEmptyMeasurement(target.getStandardValue()) && !isEmptyMeasurement(size.getStandardValue())) {
+                target.setStandardValue(size.getStandardValue());
+                updated = true;
+            }
+            if (!StringUtils.hasText(target.getMeasureMethod()) && StringUtils.hasText(size.getMeasureMethod())) {
+                target.setMeasureMethod(size.getMeasureMethod());
+                updated = true;
+            }
+            if (!StringUtils.hasText(target.getTolerance()) && StringUtils.hasText(size.getTolerance())) {
+                target.setTolerance(size.getTolerance());
+                updated = true;
+            }
+            if (updated) {
+                styleSizeService.updateById(target);
+                filledRows++;
+            }
         }
 
-        if (skipped > 0 && log.isInfoEnabled()) {
-            log.info("尺寸模板追加导入去重：跳过 {} 行已存在尺码（targetStyleId={}）", skipped, targetStyleId);
-        }
-
+        log.info("尺寸模板智能导入完成（templateId={}, targetStyleId={}）：回填 {} 行空缺、新增 {} 个部位、{} 行码数不对应跳过",
+                template.getId(), targetStyleId, filledRows, addedParts, unmatchedRows);
         return true;
+    }
+
+    /** 部位名归一化：去首尾空格（含全角空格），作为模板行与已有行的匹配键 */
+    private String normalizePartKey(String partName) {
+        return String.valueOf(partName == null ? "" : partName.trim().replace("\u3000", " ").trim());
+    }
+
+    /** 测量值空缺判定：null 或 0 都视为未填（前端空格子按 0 存） */
+    private boolean isEmptyMeasurement(BigDecimal value) {
+        return value == null || value.compareTo(BigDecimal.ZERO) == 0;
     }
 
     /** 尺码语义归一化键：忽略型体后缀（国标 A/B/C）与分隔符，S(160/76A) 与 S(160/76) 同键 */
@@ -488,10 +533,6 @@ public class TemplateStyleOrchestrator {
             segments.add(chinese);
         }
         return String.join("|", segments);
-    }
-
-    private String sizeRowKey(String partName, String sizeName) {
-        return String.valueOf(partName == null ? "" : partName.trim()) + "::" + sizeDedupeKey(sizeName);
     }
 
     private List<StyleSize> parseSizeContent(String content) throws Exception {

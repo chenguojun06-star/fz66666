@@ -90,6 +90,26 @@ export function useStyleSizeStructure({
     if (!editMode) enterEdit();
   };
 
+  // 免分组直接添加行：单件款式（只有上装/只有下装）不该被迫先建分组。
+  // groupName 留空，展示层按部位名自动归组（resolveGroupName 推断上装区/下装区/其他区），
+  // 日后真需要显式分组时再在分组列下拉里选即可。
+  const handleAddPartRow = () => {
+    if (readOnly) return;
+    const key = `tmp-part-${Date.now()}-${Math.random()}`;
+    const cells: Record<string, MatrixCell> = {};
+    sizeColumns.forEach((sn) => { cells[sn] = { value: 0 }; });
+    setRows((prev) => normalizeRowSorts([
+      ...prev,
+      {
+        key, groupName: '', partName: '', measureMethod: '', baseSize: '',
+        gradingZones: [], tolerance: '',
+        sort: prev.length ? Math.max(...prev.map((r) => toNumberSafe(r.sort))) + 1 : 1,
+        cells,
+      },
+    ]));
+    if (!editMode) enterEdit();
+  };
+
   const parseSizeInput = (raw: string): string[] | null => {
     const parts = raw.split(/[\n,，、;；]+/g).map((x) => String(x || '').trim()).filter(Boolean);
     if (!parts.length) { message.error('请输入尺码'); return null; }
@@ -142,7 +162,7 @@ export function useStyleSizeStructure({
       });
       const result = res as any;
       if (result.code !== 200) { message.error(result.message as any || '导入失败'); return; }
-      message.success(mode === 'merge' ? '已追加导入尺寸模板' : '已覆盖导入尺寸模板');
+      message.success(mode === 'merge' ? '已按模板回填空缺尺寸（已填数据保持不变）' : '已覆盖导入尺寸模板');
       setSizeTemplateKey(undefined);
       await fetchSize();
       setEditMode(true);
@@ -188,6 +208,7 @@ export function useStyleSizeStructure({
     newGroupName, setNewGroupName,
     sizeTemplateKey, setSizeTemplateKey,
     handleAddPartInGroup,
+    handleAddPartRow,
     confirmAddGroup,
     confirmAddSize,
     mergeSizeColumns,

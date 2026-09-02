@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleInfo } from '@/types/style';
 import { intelligenceApi, visualAnalyze } from '@/services/intelligence/intelligenceApi';
 import type {
@@ -11,6 +11,8 @@ import { getDeliveryMeta, getProgressMeta, STAGE_MAP } from './helpers';
 
 interface UseStyleIntelligenceProfileDataParams {
   style: StyleInfo | null;
+  /** 视觉AI分析文本就绪时回调（档案卡缓存 visionRaw 或手动"图像分析"产出），供表单回填款式特征 */
+  onVisionAnalysis?: (payload: { visionRaw: string; difficultyLabel?: string; difficultyScore?: number }) => void;
 }
 
 interface UseStyleIntelligenceProfileDataResult {
@@ -33,7 +35,10 @@ interface UseStyleIntelligenceProfileDataResult {
 
 const EMPTY_STYLE = { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 } as StyleInfo;
 
-export const useStyleIntelligenceProfileData = ({ style }: UseStyleIntelligenceProfileDataParams): UseStyleIntelligenceProfileDataResult => {
+export const useStyleIntelligenceProfileData = ({ style, onVisionAnalysis }: UseStyleIntelligenceProfileDataParams): UseStyleIntelligenceProfileDataResult => {
+  // 回调走 ref：父组件每次渲染传新闭包，进依赖会让 loadProfile 反复重跑
+  const onVisionAnalysisRef = useRef(onVisionAnalysis);
+  onVisionAnalysisRef.current = onVisionAnalysis;
   const [loading, setLoading] = useState(false);
   const [quoteSuggestion, setQuoteSuggestion] = useState<StyleQuoteSuggestionResponse | null>(null);
   const [profile, setProfile] = useState<StyleIntelligenceProfileResponse | null>(null);
@@ -69,6 +74,11 @@ export const useStyleIntelligenceProfileData = ({ style }: UseStyleIntelligenceP
           summary: profileData.difficulty.visionRaw,
           dataSource: 'ai_vision',
         } as any);
+        onVisionAnalysisRef.current?.({
+          visionRaw: String(profileData.difficulty.visionRaw || ''),
+          difficultyLabel: profileData.difficulty?.difficultyLabel,
+          difficultyScore: profileData.difficulty?.difficultyScore,
+        });
       }
     } catch {
       setProfile(null);
@@ -107,7 +117,17 @@ export const useStyleIntelligenceProfileData = ({ style }: UseStyleIntelligenceP
         if (data) setLocalDifficulty(data);
       }
       if (visualRes.status === 'fulfilled') {
-        setVisualResult(visualRes.value as VisualAIResponse);
+        const fresh = visualRes.value as VisualAIResponse;
+        setVisualResult(fresh);
+        const freshText = String(fresh?.summary || '').trim();
+        const diffData = diffRes.status === 'fulfilled' ? (diffRes.value as any)?.data : null;
+        if (freshText) {
+          onVisionAnalysisRef.current?.({
+            visionRaw: freshText,
+            difficultyLabel: diffData?.difficultyLabel,
+            difficultyScore: diffData?.difficultyScore,
+          });
+        }
       }
     } catch {
       // 失败时保留原结构化结果

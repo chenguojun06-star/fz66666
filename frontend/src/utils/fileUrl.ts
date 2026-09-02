@@ -127,6 +127,35 @@ export function getFullAuthedFileUrl(fileUrl: string | undefined | null): string
 }
 
 /**
+ * 判断两个文件URL是否指向同一文件：剥离 token 等查询参数与站点前缀后比较。
+ *
+ * 背景：设置主图徽标此前按"列表第一张"判定，设为主图成功后界面毫无变化；
+ * 修为按 coverUrl 比对后，一边是 DB 裸路径、一边是带 token 的展示 URL，
+ * 直接 === 永不相等，因此必须剥查询参数再比。
+ */
+export function isSameFileUrl(a: string | undefined | null, b: string | undefined | null): boolean {
+  const strip = (raw: string | undefined | null): string => {
+    let url = String(raw || '').trim();
+    if (!url) return '';
+    if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      url = parsed.pathname;
+    } catch {
+      // 相对路径不带协议时 URL 解析也可能失败，退化为手工剥离查询串
+      url = url.split('?')[0];
+    }
+    // 统一剥掉站点/后端前缀，只留可标识文件的尾段
+    const marker = url.lastIndexOf('/api/');
+    if (marker >= 0) url = url.slice(marker);
+    return url.replace(/\/+$/, '');
+  };
+  const pa = strip(a);
+  const pb = strip(b);
+  return !!pa && !!pb && pa === pb;
+}
+
+/**
  * 触发文件下载（通过创建临时 <a> 标签）
  *
  * @param fileUrl 文件URL

@@ -11,9 +11,11 @@ import KeyTagsCloud from './StyleIntelligenceProfileCard/components/KeyTagsCloud
 
 interface Props {
   style: StyleInfo | null;
+  /** 视觉AI分析文本就绪时回调（供详情页把结果回填进款式特征） */
+  onVisionAnalysis?: (payload: { visionRaw: string; difficultyLabel?: string; difficultyScore?: number }) => void;
 }
 
-const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
+const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onVisionAnalysis }) => {
   const [expanded, setExpanded] = useState(false);
 
   const {
@@ -30,7 +32,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     stageTags,
     loadProfile,
     handleAiImageAnalysis,
-  } = useStyleIntelligenceProfileData({ style });
+  } = useStyleIntelligenceProfileData({ style, onVisionAnalysis });
 
   if (!style?.id) return null;
 
