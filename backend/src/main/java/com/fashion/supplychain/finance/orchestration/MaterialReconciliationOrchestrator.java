@@ -512,7 +512,10 @@ public class MaterialReconciliationOrchestrator {
             com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase> wrapper =
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase>()
                             .eq(MaterialPurchase::getDeleteFlag, 0)
-                            .gt(MaterialPurchase::getArrivedQuantity, 0)
+                            // D-264：不再按 arrivedQuantity>0 预过滤——新采购流（确认完成）的
+                            // 到货量记录路径不同，预过滤会让最近完成的采购整批静默漏掉
+                            //（实测：02-03月旧采购全进了对账、最近确认完成的7条一条没进）。
+                            // 放行全部非取消采购，由 upsertWithReason 统一判定并把原因透出到页面。
                             .ne(MaterialPurchase::getStatus, "cancelled")
                             .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)
                             .orderByAsc(MaterialPurchase::getCreateTime);

@@ -688,6 +688,14 @@ public class MaterialPurchaseStatusHelper {
         } catch (Exception e) {
             log.warn("[采购确认完成] 写日志失败（不阻断）: {}", e.getMessage());
         }
+        // D-264：确认完成即生成/更新物料对账——对账编排器此前只注入未调用，
+        // 内部工厂采购完成后从不入对账，全靠手动"补生成"兜底（用户："最近都没有进去"）
+        try {
+            materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
+        } catch (Exception e) {
+            log.warn("[采购确认完成] 生成物料对账失败（不阻断，可用补生成兜底）: purchaseId={}, error={}",
+                    purchaseId, e.getMessage());
+        }
         return result;
     }
 
