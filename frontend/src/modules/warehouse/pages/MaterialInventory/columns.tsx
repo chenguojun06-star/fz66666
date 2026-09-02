@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Tag, Space, Popconfirm } from 'antd';
 import { formatDateTime } from '@/utils/datetime';
+import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import type { PickingRow } from './hooks/useMaterialPickupData';
 import { STATUS_MAP, USAGE_TYPE_MAP } from './constants';
 
@@ -34,6 +35,15 @@ export function buildPickingColumns(actions: PickingActions) {
   } = actions;
 
   return [
+    {
+      title: '款式图',
+      key: 'styleCover',
+      width: 70,
+      align: 'center' as const,
+      render: (_: unknown, record: PickingRow) => (
+        <StyleCoverThumb styleNo={record.styleNo} size={44} />
+      ),
+    },
     { title: '领料单号', dataIndex: 'pickingNo', width: 180 },
     { title: '订单号', dataIndex: 'orderNo', width: 160 },
     { title: '款号', dataIndex: 'styleNo', width: 130 },
