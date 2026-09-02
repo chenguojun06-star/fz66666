@@ -51,8 +51,10 @@ interface DailyFlowItem {
  * D-245：每日经营流水。
  * 一张大表聚合「生产扫码 / 物料采购 / 物料入库 / 物料出库 / 成品入库 / 成品出库」，
  * 按流水时间倒序，支持类型与日期筛选、导出，用于对账。
+ *
+ * D-273：拆出 DailyFlowContent 供财务总览 tab 内嵌（不带 PageLayout 外壳）。
  */
-const DailyFlow: React.FC = () => {
+const DailyFlowContent: React.FC = () => {
   const [rows, setRows] = useState<DailyFlowItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([dayjs().subtract(29, 'day'), dayjs()]);
@@ -129,7 +131,7 @@ const DailyFlow: React.FC = () => {
   ];
 
   return (
-    <PageLayout title="每日流水">
+    <>
       <Card style={{ marginBottom: 12 }}>
         <Space wrap size={12}>
           <span>日期</span>
@@ -190,8 +192,15 @@ const DailyFlow: React.FC = () => {
         exportFilename="每日流水.xlsx"
         emptyDescription="所选条件下暂无流水数据"
       />
-    </PageLayout>
+    </>
   );
 };
 
+const DailyFlow: React.FC = () => (
+  <PageLayout title="每日流水">
+    <DailyFlowContent />
+  </PageLayout>
+);
+
 export default DailyFlow;
+export { DailyFlowContent };

@@ -808,7 +808,9 @@ public class MaterialReconciliationOrchestrator {
             needPatch = true;
         }
         if (!needPatch) {
-            return false;
+            // D-273：已审批对账没有可补字段 = 无事可做，按成功处理。
+            // 此前返回 false 被当成"更新已有对账失败"（一次补生成出现 22 条假失败）
+            return true;
         }
         patch.setUpdateTime(t);
         if (StringUtils.hasText(uid)) {

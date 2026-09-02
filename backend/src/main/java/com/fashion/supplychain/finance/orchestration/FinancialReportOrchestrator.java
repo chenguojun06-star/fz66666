@@ -51,6 +51,10 @@ public class FinancialReportOrchestrator {
     @Autowired
     private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
 
+    /** D-273：每日经营流水（生产扫码/采购/物料出入库/成品出入库六类），现金流时间线数据源 */
+    @Autowired
+    private com.fashion.supplychain.finance.orchestration.DailyFlowOrchestrator dailyFlowOrchestrator;
+
     /** 财务报表仅限管理层查看，工厂账户禁止访问 */
     private void assertNotFactoryAccount() {
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
@@ -324,6 +328,30 @@ public class FinancialReportOrchestrator {
             if (a.getCreateTime() != null && a.getAmount() != null) {
                 addToDayBucket(dayBuckets, a.getCreateTime().toLocalDate().toString(), 4, a.getAmount());
             }
+        }
+
+        // D-273（用户拍板"流水的全部要进财务总览时间线"）：并入每日经营流水（发生日口径）——
+        // 工序扫码工价→工资、物料采购→物料、成品出入库金额→营收；未审批的采购也看得见。
+        try {
+            List<com.fashion.supplychain.finance.dto.DailyFlowItem> flows =
+                    dailyFlowOrchestrator.query(startDate, endDate, null);
+            if (flows != null) {
+                for (com.fashion.supplychain.finance.dto.DailyFlowItem f : flows) {
+                    if (f.getFlowTime() == null || f.getAmount() == null
+                            || f.getAmount().compareTo(BigDecimal.ZERO) == 0) {
+                        continue;
+                    }
+                    String day = f.getFlowTime().toLocalDate().toString();
+                    switch (String.valueOf(f.getBizType())) {
+                        case "SCAN" -> addToDayBucket(dayBuckets, day, 1, f.getAmount());
+                        case "PURCHASE" -> addToDayBucket(dayBuckets, day, 2, f.getAmount());
+                        case "PRODUCT_INBOUND", "PRODUCT_OUTSTOCK" -> addToDayBucket(dayBuckets, day, 0, f.getAmount());
+                        default -> { /* 物料出入库无金额来源，天然跳过 */ }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[现金流] 并入每日经营流水失败（不影响已有序列）", e);
         }
 
         List<Map<String, Object>> points = new ArrayList<>();

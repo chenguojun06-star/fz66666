@@ -1,11 +1,12 @@
 import React, { Suspense, lazy } from 'react';
-import { Card, Row, Col, Spin, Space, Table, Empty, DatePicker } from 'antd';
+import { Card, Row, Col, Spin, Space, Table, Empty, DatePicker, Tabs } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useFinanceDashboardData } from './hooks/useFinanceDashboardData';
 import styles from './index.module.css';
 import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import PieChart from './components/PieChart';
+import { DailyFlowContent } from '../Finance/DailyFlow';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
@@ -26,8 +27,8 @@ const FinanceDashboard: React.FC = () => {
     detailConfig,
   } = useFinanceDashboardData();
 
-  return (
-    <Spin spinning={loading}>
+  const overviewContent = (
+    <>
       {/* 顶部筛选 */}
       <Card className={styles.filterCard}>
         <Space size={12} wrap>
@@ -81,7 +82,7 @@ const FinanceDashboard: React.FC = () => {
       <Row gutter={12} className={styles.chartRow}>
         <Col span={24}>
           <Card
-            title="现金流趋势"
+            title="现金流趋势（业务发生口径，含每日经营流水）"
             className={styles.chartCard}
           >
             <Spin spinning={cashFlowLoading}>
@@ -117,6 +118,19 @@ const FinanceDashboard: React.FC = () => {
           </Card>
         </Col>
       </Row>
+    </>
+  );
+
+  return (
+    <Spin spinning={loading}>
+      {/* D-273：每日流水并入财务总览做 tab（数据同源：六类业务流水） */}
+      <Tabs
+        type="card"
+        items={[
+          { key: 'overview', label: '总览', children: overviewContent },
+          { key: 'dailyFlow', label: '每日流水', children: <DailyFlowContent /> },
+        ]}
+      />
     </Spin>
   );
 };
