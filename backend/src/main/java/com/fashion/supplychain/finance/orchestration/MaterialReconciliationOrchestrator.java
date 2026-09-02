@@ -347,7 +347,7 @@ public class MaterialReconciliationOrchestrator {
         return true;
     }
 
-    public int backfill() {
+    public java.util.Map<String, Object> backfill() {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("仅主管级别及以上可执行补数据");
         }
@@ -498,10 +498,13 @@ public class MaterialReconciliationOrchestrator {
      * </ol>
      */
     @Transactional(rollbackFor = Exception.class)
-    private int backfillFromPurchases() {
+    private java.util.Map<String, Object> backfillFromPurchases() {
         Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
         int touched = 0;
+        int failed = 0;
+        java.util.Map<String, Integer> skipped = new java.util.LinkedHashMap<>();
+        java.util.List<java.util.Map<String, String>> failures = new java.util.ArrayList<>();
         final int pageSize = 500;
         final int maxPages = 40;
 
@@ -522,7 +525,6 @@ public class MaterialReconciliationOrchestrator {
             if (list == null || list.isEmpty()) {
                 break;
             }
-            int failed = 0;
             for (MaterialPurchase p : list) {
                 if (p == null || !StringUtils.hasText(p.getId())) {
                     continue;
@@ -535,11 +537,22 @@ public class MaterialReconciliationOrchestrator {
                         touched++;
                         continue;
                     }
-                    if (upsertFromPurchase(p, now, false)) {
+                    String reason = upsertWithReason(p, now, false);
+                    if (reason == null) {
                         touched++;
+                    } else {
+                        skipped.merge(reason, 1, Integer::sum);
                     }
                 } catch (Exception e) {
                     failed++;
+                    if (failures.size() < 20) {
+                        java.util.Map<String, String> f = new java.util.LinkedHashMap<>();
+                        f.put("purchaseId", String.valueOf(p.getId()));
+                        f.put("purchaseNo", p.getPurchaseNo() == null ? "" : p.getPurchaseNo());
+                        f.put("material", p.getMaterialName() == null ? "" : p.getMaterialName());
+                        f.put("error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                        failures.add(f);
+                    }
                     log.warn("[MaterialReconciliation] 补生成单条失败 purchaseId={} purchaseNo={}: {}",
                             p.getId(), p.getPurchaseNo(), e.getMessage(), e);
                 }
@@ -551,8 +564,13 @@ public class MaterialReconciliationOrchestrator {
                 break;
             }
         }
-        log.info("[MaterialReconciliation] 补生成对账完成 tenantId={} touched={}", tenantId, touched);
-        return touched;
+        log.info("[MaterialReconciliation] 补生成对账完成 tenantId={} touched={} failed={} skipped={}", tenantId, touched, failed, skipped);
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("touched", touched);
+        out.put("failed", failed);
+        out.put("skipped", skipped);
+        out.put("failures", failures);
+        return out;
     }
 
     /**
@@ -600,18 +618,17 @@ public class MaterialReconciliationOrchestrator {
      * 对单个采购做对账 upsert（实时同步链路用：允许按最新口径清理不符合条件的 pending 对账）。
      */
     private boolean upsertFromPurchase(MaterialPurchase purchase, LocalDateTime now) {
-        return upsertFromPurchase(purchase, now, true);
+        return upsertWithReason(purchase, now, true) == null;
     }
 
     /**
-     * @param allowCleanup 是否允许清理（逻辑删除）不符合条件的 pending 对账。
-     *                     <b>backfill（补生成）必须传 false</b>：D-267 事故——用户点「补生成对账」后，
-     *                     10 条历史大货对账被 backfill 以「外发订单走加工费扣款」为由删除。
-     *                     「补」的语义是补齐缺失的，批量删除历史单据属数据丢失事故。
+     * D-272b：带跳过原因的 upsert——backfill 把原因返回给页面，用户能看到每条为什么没生成。
+     *
+     * @return null = 成功生成/更新；否则返回跳过原因
      */
-    private boolean upsertFromPurchase(MaterialPurchase purchase, LocalDateTime now, boolean allowCleanup) {
+    private String upsertWithReason(MaterialPurchase purchase, LocalDateTime now, boolean allowCleanup) {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
-            return false;
+            return "采购ID为空";
         }
         // P0 铁律 #7 兜底：任何路径（含 backfill 批量）都不得为跨租户的采购生成对账
         Long ctxTenantId = UserContext.tenantId();
@@ -619,25 +636,25 @@ public class MaterialReconciliationOrchestrator {
                 && !java.util.Objects.equals(ctxTenantId, purchase.getTenantId())) {
             log.warn("[MaterialReconciliation] 拒绝为跨租户采购生成对账 purchaseId={} purchaseTenant={} ctxTenant={}",
                     purchase.getId(), purchase.getTenantId(), ctxTenantId);
-            return false;
+            return "跨租户数据(采购tenant=" + purchase.getTenantId() + "，当前=" + ctxTenantId + ")";
         }
         if (shouldRouteOrderLinkedPurchaseToInbound(purchase)) {
             if (allowCleanup) {
                 cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
             }
-            return false;
+            return "外发订单采购(走加工费扣款)";
         }
         if (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0) {
-            return false;
+            return "采购已删除";
         }
         String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
         if ("cancelled".equalsIgnoreCase(status)) {
-            return false;
+            return "采购已取消";
         }
 
         int qty = resolveEffectiveQuantity(purchase);
         if (qty <= 0) {
-            return false;
+            return "有效到货量为0(未到货)";
         }
 
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
@@ -656,11 +673,13 @@ public class MaterialReconciliationOrchestrator {
                 .one();
 
         if (existed != null) {
-            return patchExistingReconciliation(existed, purchase, qty, unitPrice, totalAmount, t, uid);
+            boolean patched = patchExistingReconciliation(existed, purchase, qty, unitPrice, totalAmount, t, uid);
+            return patched ? null : "更新已有对账失败";
         }
 
         MaterialReconciliation mr = buildNewReconciliation(purchase, qty, unitPrice, totalAmount, t, uid);
-        return materialReconciliationService.save(mr);
+        boolean saved = materialReconciliationService.save(mr);
+        return saved ? null : "新增对账保存失败";
     }
 
     private BigDecimal[] resolvePrices(MaterialPurchase purchase, int qty) {

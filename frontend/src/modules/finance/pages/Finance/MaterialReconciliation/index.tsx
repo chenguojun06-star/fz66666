@@ -123,8 +123,40 @@ const MaterialReconciliation: React.FC = () => {
         setBackfilling(true);
         try {
           const res = await materialReconciliationApi.backfillMaterialReconciliation();
-          const touched = Number((res as any)?.data ?? 0) || 0;
-          message.success(`已补生成/更新 ${touched} 条对账单`);
+          const d: any = (res as any)?.data;
+          // D-272b：后端返回诊断结构 {touched, failed, skipped:{原因:数}, failures:[{purchaseNo,material,error}]}
+          // 兼容旧后端纯数字返回
+          if (d != null && typeof d === 'object') {
+            const touched = Number(d.touched ?? 0) || 0;
+            const failed = Number(d.failed ?? 0) || 0;
+            const skipped: Record<string, number> = d.skipped || {};
+            const failures: any[] = d.failures || [];
+            const skippedText = Object.entries(skipped).map(([k, v]) => `${k}：${v} 条`).join('；');
+            if (failed > 0) {
+              modal.warning({
+                width: '52vw',
+                title: `补生成完成：成功 ${touched} 条，失败 ${failed} 条`,
+                content: (
+                  <div style={{ maxHeight: 320, overflow: 'auto' }}>
+                    {skippedText && <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>跳过：{skippedText}</div>}
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>失败明细（前 {failures.length} 条）：</div>
+                    {failures.map((f, i) => (
+                      <div key={i} style={{ fontSize: 12, color: 'var(--color-danger)', marginBottom: 2 }}>
+                        {f.purchaseNo || f.purchaseId} · {f.material}：{f.error}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              });
+            } else if (touched === 0) {
+              message.info(`本次没有需要补生成的对账${skippedText ? `（跳过：${skippedText}）` : ''}`);
+            } else {
+              message.success(`已补生成/更新 ${touched} 条对账单${skippedText ? `；跳过：${skippedText}` : ''}`);
+            }
+          } else {
+            const touched = Number(d ?? 0) || 0;
+            message.success(`已补生成/更新 ${touched} 条对账单`);
+          }
           fetchList();
         } catch (error) {
           errorHandler.handleError(error, '补生成失败');
