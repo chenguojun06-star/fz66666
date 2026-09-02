@@ -96,7 +96,8 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
               rules={[{ required: true, message: '请选择样衣类型' }]}
               initialValue="development"
             >
-              <Select disabled>
+              {/* D-264：原 disabled 写死开发样，用户选了别的类型也不生效；放开为始终可选择（默认仍为开发样） */}
+              <Select placeholder="请选择样衣类型">
                 {Object.entries(SampleTypeMap).map(([key, label]) => (
                   <Option key={key} value={key}>{label}</Option>
                 ))}

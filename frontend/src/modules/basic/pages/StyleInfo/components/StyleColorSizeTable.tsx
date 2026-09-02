@@ -358,7 +358,9 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                     addColor(quickColorDraft);
                   }
                 }}
-                style={{ width: 96 }}
+                // D-264：齿轮里新增颜色后直接加到本款，不再"加了看不到"
+                onEntryCreated={(name) => addColor(name)}
+                style={{ width: 160 }}
                 placeholder="选或输入后回车新增"
               />
             ) : null}
@@ -471,7 +473,9 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                     addSize(quickSizeDraft);
                   }
                 }}
-                style={{ width: 96 }}
+                // D-264：齿轮里新增码数后直接加到本款，与颜色输入框同宽对齐
+                onEntryCreated={(name) => addSize(name)}
+                style={{ width: 160 }}
                 placeholder="选或输入后回车新增"
               />
             ) : null}

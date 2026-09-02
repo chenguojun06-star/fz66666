@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { App } from 'antd';
 import type { FormInstance } from 'antd';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -14,12 +14,17 @@ export function useStyleDraft({ isNewPage, form, setCurrentStyle, sizeColorConfi
   const { modal } = App.useApp();
   const styleDraft = useFormDraft('style-create', { debounceMs: 300 });
   const [draftChecked, setDraftChecked] = useState(false);
+  // 同步守卫：draftChecked 只在用户点击弹窗按钮后才置真，而 effect 依赖（styleDraft 对象等）
+  // 每次 render 都会变——不加 ref 守卫，弹窗打开期间组件每重渲染一次就再叠一个 confirm，
+  // 用户眼里就是"恢复草稿要重复点很多次"（D-264）
+  const draftPromptShownRef = useRef(false);
 
   useEffect(() => {
-    if (!isNewPage || draftChecked) return;
+    if (!isNewPage || draftChecked || draftPromptShownRef.current) return;
 
     const draftInfo = styleDraft.getDraftInfo();
     if (draftInfo.hasDraft) {
+      draftPromptShownRef.current = true;
       modal.confirm({
         title: '发现未保存的草稿',
         content: (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Col, Form, Input, Row, Select, Tooltip } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
+import api from '@/utils/api';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import StaffSelect from '@/components/common/StaffSelect';
@@ -65,6 +66,32 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
 
+  // 款式编码查重（D-264）：输入后失焦自动查重，也可点"查重"手动触发。
+  // 原先是"重新同步"（清空编码让后端重新生成），用户完全看不出这是什么意思。
+  const [styleNoCheck, setStyleNoCheck] = useState<'idle' | 'checking' | 'taken' | 'free'>('idle');
+  const checkStyleNoDup = async () => {
+    const value = String(_form.getFieldValue('styleNo') || '').trim();
+    if (!value) {
+      setStyleNoCheck('idle');
+      return;
+    }
+    // 编辑态且没改款号时无需查重（自己占用自己）
+    if (currentStyle?.id && value === String(currentStyle.styleNo || '').trim()) {
+      setStyleNoCheck('idle');
+      return;
+    }
+    setStyleNoCheck('checking');
+    try {
+      const res = await api.get<{ code: number; data: { records: any[] } }>('/style/info/list', {
+        params: { styleNo: value, page: 1, pageSize: 1 },
+      });
+      const taken = res.code === 200 && (res.data?.records?.length ?? 0) > 0;
+      setStyleNoCheck(taken ? 'taken' : 'free');
+    } catch {
+      setStyleNoCheck('idle');
+    }
+  };
+
   return (
     <SectionBox title="基础信息" usePrimaryHighlight>
       {/* 图片资产：置于表单最上方通栏（款名上方），一排方形卡片+➕上传（最多9张，拖拽/粘贴）。
@@ -109,19 +136,28 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               placeholder="请输入款式编码"
               disabled={editLocked}
               maxLength={64}
+              onBlur={() => { if (!editLocked) void checkStyleNoDup(); }}
               suffix={
-                isNewPage || !currentStyle?.id ? (
-                  <Tooltip title="点击重新生成编码">
-                    <span
-                      style={{ color: 'var(--color-primary)', fontSize: 12, cursor: 'pointer', userSelect: 'none' }}
-                      onClick={() => {
-                        // 重新同步：清空当前编码，由后端保存时自动生成
-                        _form.setFieldValue('styleNo', '');
-                      }}
-                    >
-                      重新同步
-                    </span>
-                  </Tooltip>
+                !editLocked ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                    {styleNoCheck === 'checking' && (
+                      <span style={{ fontSize: 12, color: 'var(--color-text-quaternary)' }}>查重中…</span>
+                    )}
+                    {styleNoCheck === 'taken' && (
+                      <span style={{ fontSize: 12, color: 'var(--color-danger)' }}>已被使用</span>
+                    )}
+                    {styleNoCheck === 'free' && (
+                      <span style={{ fontSize: 12, color: 'var(--color-success)' }}>可用</span>
+                    )}
+                    <Tooltip title="检查该编码是否已被其他款式使用">
+                      <span
+                        style={{ color: 'var(--color-primary)', fontSize: 12, cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => { void checkStyleNoDup(); }}
+                      >
+                        查重
+                      </span>
+                    </Tooltip>
+                  </span>
                 ) : null
               }
             />

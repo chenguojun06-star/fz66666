@@ -1,7 +1,26 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-02（新增 D-263 样衣详情四连修：主图徽标/AI填充打通/免分组加行/模板智能回填）
+> 最后更新：2026-09-02（新增 D-264 退回缓存假死/DictAutoComplete丢disabled/草稿弹窗堆叠等九连修）
+
+---
+
+## D-264：用户九连修——退回没反应/弹窗抽屉化/入库类型写死/草稿弹窗堆叠/编码查重/锁定仍可改/齿轮不同步/颜色图片不同步（2026-09-02）
+
+用户连甩 6 截图报"退回提示成功却编辑不了""弹窗改侧滑""入库类型写死开发样""恢复草稿要点很多次""重新同步是什么""商品类型锁定还能随便改""齿轮加了信息保存没变化""上传图片商品编码不同步"。
+
+**根因与决策**：
+1. **退回成功但编辑不了（全局性根因）**：`api/core.ts` 的 GET 响应缓存（CACHEABLE_PATTERNS 含 `/template-library/`，TTL 30s）只写不失效——退回 POST 成功后 `fetchList` 重拉列表**命中缓存**拿回旧的 locked=1，界面纹丝不动。修复：响应拦截器里**任何成功的非 GET 请求清空整个 responseCache**（缓存只是 30s 微优化，正确性优先）。此修复惠及全站"改完立刻重拉"场景。
+2. **商品类型/品牌锁定仍可改**：`DictAutoComplete` 把 `disabled` 从 restProps 解构出来只用来隐藏齿轮，**从没传给 AutoComplete**——锁定态照样能输入。修复：显式 `disabled={disabled}` 透传。
+3. **草稿弹窗堆叠**：useStyleDraft 的 effect 依赖 styleDraft（每次 render 新对象），而 `draftChecked` 只在用户点击后才置真——弹窗打开期间每重渲染一次就叠一个 confirm，"恢复草稿要点很多次"。修复：`draftPromptShownRef` 同步守卫。已核实：下单（事件触发）、采购（已有 ref 守卫）无此问题。
+4. **资料维护面板弹窗→SideDrawer**：MaintenanceCenter 五个维护面板（纸样/制单/尺寸表/BOM/工序单价）从 85vw ResizableModal 改用通用 `SideDrawer`（width 85vw），与全站抽屉化口径一致。
+5. **样衣入库类型写死**：InboundModal 的样衣类型 Select 带 `disabled` + initialValue=development，用户根本选不了。修复：移除 disabled，默认仍为开发样。
+6. **款式编码"重新同步"**：原语义是清空编码让后端重新生成，用户看不懂。改为**查重**：失焦自动查 + 点击"查重"手动查（复用 style/info/list?styleNo=），内联显示 可用/已被使用。
+7. **颜色/码数输入框**：96px 过窄且被排序按钮/提示文字挤得不齐 → 两框统一加宽到 160px 等宽。
+8. **齿轮加了信息看不到**：QuickManageModal 新增 `onCreated(name)` 回调（DictAutoComplete 透传为 onEntryCreated），颜色/码数齿轮新增后**立即加入本款**，不再"加了没反应"。
+9. **颜色图片不同步商品编码**：handleColorImageSync 已 PUT /style/sku/color-images 写库但从不重拉 SKU 表。修复：useStyleBasicInfoForm 暴露 bumpSkuRefresh，StyleBasicInfoForm 包装 onColorImageSync 同步完成后 bump。
+
+**教训**：①"提示成功但界面没变"先查前端 GET 缓存——写操作不清缓存的缓存层是假死类 bug 的温床；②透传型组件里 `...restProps` 之前解构掉的 prop 必须显式回传，否则静默失效（同 D-154 Drawer width 教训）；③effect 内弹 confirm 必须配同步 ref 守卫，state 守卫对"点按钮才置真"的模式必然堆叠。
 
 ---
 

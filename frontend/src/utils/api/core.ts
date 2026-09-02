@@ -341,12 +341,19 @@ export const createApiClient = (): ApiClient => {
   client.interceptors.response.use(
     response => {
       const url = response.config?.url || '';
-      const method = response.config?.method || 'get';
+      const method = (response.config?.method || 'get').toLowerCase();
       const cacheKey = getCacheKey(url, response.config?.params);
 
       if (isCacheable(url, method)) {
         responseCache.set(cacheKey, { data: response.data, ts: Date.now() });
         pendingRequests.delete(cacheKey);
+      }
+
+      // 写操作（POST/PUT/DELETE）成功后清空 GET 缓存：否则"改完立刻重拉列表"会命中
+      // 30 秒内的旧缓存，界面纹丝不动（典型：资料维护退回成功后模板仍显示已锁定，
+      // 用户眼里就是"提示成功但根本编辑不了"）。缓存只是 30s 微优化，正确性优先。
+      if (method !== 'get' && responseCache.size > 0) {
+        responseCache.clear();
       }
 
       return response.data;

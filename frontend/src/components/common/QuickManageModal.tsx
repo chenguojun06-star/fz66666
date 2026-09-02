@@ -21,6 +21,8 @@ interface QuickManageModalProps {
   supplierType?: 'MATERIAL' | 'OUTSOURCE';
   /** 弹窗标题，默认按 mode 生成 */
   title?: string;
+  /** 新增条目成功后的回调（D-264）：宿主可立即把新值应用到表单/列表，免去"加了却看不到" */
+  onCreated?: (name: string) => void;
 }
 
 /** 统一行模型：dict=词条 / customer=客户 / supplier=供应商 */
@@ -72,7 +74,7 @@ const SUPPLIER_TAG_FALLBACK = ['布行', '辅料店', '纱线行', '五金辅料
  * - 每次操作广播数据事件（dict:{type} / customer / supplier），当前表单下拉即时刷新
  * - 支持：字典词条 / CRM客户 / 物料供应商（含地址）
  */
-const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, supplierType = 'MATERIAL', title }) => {
+const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose, dictType, supplierType = 'MATERIAL', title, onCreated }) => {
   const { message, modal } = App.useApp();
 
   const meta = MODE_META[mode];
@@ -228,6 +230,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
           } as any);
         }
         message.success(`已添加"${name}"`);
+        onCreated?.(name);
         setCreating(false);
         const newList = await loadList();
         // 自动选中新加的条目（按名称匹配），右侧直接进入编辑态

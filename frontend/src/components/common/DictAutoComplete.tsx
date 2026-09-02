@@ -18,6 +18,8 @@ interface DictAutoCompleteProps extends Omit<AutoCompleteProps, 'options'> {
   quickManageTitle?: string;
   /** 内置兜底选项：字典接口无数据时使用（如商品类型 FINISHED/SEMI_FINISHED） */
   fallbackOptions?: string[];
+  /** 齿轮弹窗新增词条成功后的回调（D-264）：宿主可立即把新值应用到表单（如直接加入颜色/码数） */
+  onEntryCreated?: (name: string) => void;
 }
 
 interface DictOption {
@@ -48,6 +50,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
   enableQuickManage = true,
   quickManageTitle,
   fallbackOptions,
+  onEntryCreated,
   ...restProps
 }) => {
   const [allItems, setAllItems] = useState<DictOption[]>([]);
@@ -180,6 +183,8 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
         filterOption={false}
         notFoundContent={loading ? <Spin /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
         suffix={manageSuffix ?? externalSuffix}
+        // disabled 此前只用来隐藏齿轮、没传给输入框，锁定态照样能改（D-264）
+        disabled={disabled}
         {...passProps}
       />
       {manageSuffix ? (
@@ -188,6 +193,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
           mode="dict"
           dictType={dictType}
           title={manageTitle}
+          onCreated={onEntryCreated}
           onClose={() => setManageOpen(false)}
         />
       ) : null}

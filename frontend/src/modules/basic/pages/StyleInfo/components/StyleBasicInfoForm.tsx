@@ -53,7 +53,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   onRefresh,
   renderBelowForm,
 }: StyleBasicInfoFormProps) => {
-  const { skuRefreshTrigger, handleStyleParseResult } = useStyleBasicInfoForm({
+  const { skuRefreshTrigger, bumpSkuRefresh, handleStyleParseResult } = useStyleBasicInfoForm({
     _form,
     styleId,
     forwardedRef,
@@ -68,6 +68,14 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     setSize1, setSize2, setSize3, setSize4, setSize5,
     commonSizes, setCommonSizes,
   });
+
+  // 颜色图片同步完成后主动刷新 商品编码 表（D-264）：
+  // 此后端 PUT /style/sku/color-images 已把图片写到 SKU 行，但表不重拉，
+  // 用户看到的是"传了图片商品编码里却是空的"
+  const handleColorImageSyncAndRefresh = async (color: string, file: File) => {
+    await onColorImageSync?.(color, file);
+    bumpSkuRefresh();
+  };
 
   const sectionFormContext = {
     _form,
@@ -133,7 +141,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         setColorOptions={setColorOptions}
         matrixRows={sizeColorMatrixRows}
         setMatrixRows={setSizeColorMatrixRows}
-        onImageSync={onColorImageSync}
+        onImageSync={handleColorImageSyncAndRefresh}
         onImageClear={onColorImageClear}
         commonSizes={commonSizes}
         setCommonSizes={setCommonSizes}

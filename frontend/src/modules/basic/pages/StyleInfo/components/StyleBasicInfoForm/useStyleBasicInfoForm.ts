@@ -237,6 +237,8 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
 
   return {
     skuRefreshTrigger,
+    /** 外部（如颜色图片同步完成）主动触发 商品编码 表刷新（D-264） */
+    bumpSkuRefresh: () => setSkuRefreshTrigger((prev) => prev + 1),
     applyStyleParseResult,
     handleStyleParseResult,
   };

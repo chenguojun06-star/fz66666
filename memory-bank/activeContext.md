@@ -1,11 +1,24 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-02（D-263 样衣详情四连修：主图/AI填充/分组/模板导入，已推送）
+> 最后更新：2026-09-02（D-264 九连修：退回缓存假死/抽屉化/入库类型/草稿堆叠等，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-02 D-264 用户九连修（纯前端）✅已推送待验收
+
+- [x] 全局：api/core.ts 写操作成功后清空 GET 响应缓存——根修"资料维护退回提示成功却编辑不了"（退回后 fetchList 命中 30s 旧缓存拿回 locked=1）
+- [x] DictAutoComplete 补传 disabled（原解构后丢弃，商品类型/商品品牌锁定态仍可改）
+- [x] MaintenanceCenter 五个维护面板 ResizableModal → 通用 SideDrawer（85vw）
+- [x] 样衣入库 InboundModal 样衣类型 Select 去掉 disabled（原写死开发样选不了）
+- [x] 新建款式草稿弹窗堆叠：useStyleDraft 加 draftPromptShownRef 同步守卫（原每渲染叠一个 confirm）
+- [x] 款式编码"重新同步"→"查重"：失焦自动查 + 手动点查，内联显示 可用/已被使用
+- [x] 颜色/码数输入框 96→160 等宽；齿轮新增条目 via onCreated 立即加入本款
+- [x] 颜色图片同步完成后 bump skuRefreshTrigger，商品编码表图片列即时刷新
+- [x] 验证：tsc 0 错、vite build 过
+- [ ] 待用户：刷新页面验收九项
 
 ### 2026-09-02 D-263 样衣详情四连修（PC前端+后端）✅已推送待验收
 

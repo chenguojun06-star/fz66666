@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import UniversalCardView, { type CardAction } from '@/components/common/UniversalCardView';
 import StandardPagination from '@/components/common/StandardPagination';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import PatternPanel from './components/PatternPanel';
 import ProductionSheetPanel from './components/ProductionSheetPanel';
 import SizeTablePanel from './components/SizeTablePanel';
@@ -337,13 +337,12 @@ const MaintenanceCenter: React.FC = () => {
         />
       </div>
 
-      <ResizableModal
-        title={panelType ? `${panelTitleMap[panelType]} — ${activeStyleNo}` : ''}
+      {/* 维护面板统一用右侧滑抽屉（D-264）：原 85vw 大弹窗遮挡全屏，抽屉保留左侧列表上下文 */}
+      <SideDrawer
         open={!!panelType}
-        onCancel={handlePanelClose}
+        onClose={handlePanelClose}
+        title={panelType ? `${panelTitleMap[panelType]} — ${activeStyleNo}` : ''}
         width="85vw"
-        initialHeight={Math.round(window.innerHeight * 0.82)}
-        footer={null}
         destroyOnHidden
       >
         {panelType === 'pattern' && <PatternPanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
@@ -351,7 +350,7 @@ const MaintenanceCenter: React.FC = () => {
         {panelType === 'size' && <SizeTablePanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
         {panelType === 'bom' && <BomPanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
         {panelType === 'price' && <UnitPricePanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
-      </ResizableModal>
+      </SideDrawer>
 
       <StylePrintModal
         visible={!!printingStyle}
