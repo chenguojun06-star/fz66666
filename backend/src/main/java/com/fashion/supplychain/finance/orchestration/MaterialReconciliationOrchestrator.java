@@ -38,6 +38,9 @@ public class MaterialReconciliationOrchestrator {
     private MaterialReconciliationService materialReconciliationService;
 
     @Autowired
+    private com.fashion.supplychain.finance.mapper.MaterialReconciliationMapper materialReconciliationMapper;
+
+    @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
     @Autowired
@@ -519,19 +522,30 @@ public class MaterialReconciliationOrchestrator {
             if (list == null || list.isEmpty()) {
                 break;
             }
+            int failed = 0;
             for (MaterialPurchase p : list) {
                 if (p == null || !StringUtils.hasText(p.getId())) {
                     continue;
                 }
-                // D-267：先恢复被误删（逻辑删除）的对账，再补缺失的；
-                // 全程 allowCleanup=false，补生成绝不删除任何历史对账
-                if (restoreDeletedReconciliation(p, now)) {
-                    touched++;
-                    continue;
+                // D-271 修复：单条失败绝不能让整个事务回滚（此前整体回滚 = 用户点按钮一条都没生成）
+                try {
+                    // 先恢复被误删（逻辑删除）的对账，再补缺失的；
+                    // 全程 allowCleanup=false，补生成绝不删除任何历史对账
+                    if (restoreDeletedReconciliation(p, now)) {
+                        touched++;
+                        continue;
+                    }
+                    if (upsertFromPurchase(p, now, false)) {
+                        touched++;
+                    }
+                } catch (Exception e) {
+                    failed++;
+                    log.warn("[MaterialReconciliation] 补生成单条失败 purchaseId={} purchaseNo={}: {}",
+                            p.getId(), p.getPurchaseNo(), e.getMessage(), e);
                 }
-                if (upsertFromPurchase(p, now, false)) {
-                    touched++;
-                }
+            }
+            if (failed > 0) {
+                log.warn("[MaterialReconciliation] 补生成完成 tenantId={} touched={} failed={}", tenantId, touched, failed);
             }
             if (list.size() < pageSize) {
                 break;
@@ -561,12 +575,10 @@ public class MaterialReconciliationOrchestrator {
             return false;
         }
         try {
-            MaterialReconciliation deleted = materialReconciliationService.lambdaQuery()
-                    .eq(MaterialReconciliation::getPurchaseId, purchase.getId().trim())
-                    .eq(MaterialReconciliation::getDeleteFlag, 1)
-                    .orderByDesc(MaterialReconciliation::getCreateTime)
-                    .last("limit 1")
-                    .one();
+            // D-271 修复：必须走原生 SQL——全局逻辑删除配置会让 wrapper 查询自动追加
+            // delete_flag=0，eq(deleteFlag,1) 永远查不到（这正是上一版恢复失效的原因）
+            MaterialReconciliation deleted = materialReconciliationMapper
+                    .selectDeletedByPurchaseId(purchase.getId().trim());
             if (deleted == null || !StringUtils.hasText(deleted.getId())) {
                 return false;
             }
