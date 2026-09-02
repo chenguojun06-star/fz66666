@@ -43,8 +43,14 @@ export const buildUsageColumns = (ctx: BomColumnsContext) => {
       width: 100,
       render: (text: number, record: StyleBom) => {
         const patternUsage = record.patternSizeUsageMap;
+        // 与 calcTotalPrice 同口径：map 里至少一个值 > 0 才算"有纸样数据"，
+        // 否则保存链路写入的全 0 map 会让单件用量显示成 0（第二条物料不计算的根因）
         const hasPatternData = (() => {
-          try { return patternUsage ? Object.keys(JSON.parse(patternUsage)).length > 0 : false; } catch { return false; }
+          try {
+            if (!patternUsage) return false;
+            const map = JSON.parse(patternUsage);
+            return !!map && typeof map === 'object' && Object.values(map).some((v) => Number(v) > 0);
+          } catch { return false; }
         })();
         if (canEdit(record)) {
           return (

@@ -1113,19 +1113,25 @@
 }
 
 /* ── 基础信息 Tab：表单标签在上、输入框在下 ──
-   让输入框左边缘与下方颜色码数表格对齐，消除左侧标签列留白，上下信息工整对齐 */
+   让输入框左边缘与下方颜色码数表格对齐，消除左侧标签列留白，上下信息工整对齐。
+   D-264：此前只对 .ant-form-item 设 flex-direction:column 无效——antd 的 label/control
+   包在 .ant-form-item-row 里，必须把 row 拆成块级才能让标签真正落到输入框上方。 */
 .style-basic-info-tab .ant-form-item {
-  flex-direction: column;
-  align-items: stretch;
+  display: block;
   margin-bottom: 12px;
 }
 
+.style-basic-info-tab .ant-form-item-row {
+  display: block;
+}
+
 .style-basic-info-tab .ant-form-item-label {
+  display: block;
   flex: none !important;
   width: auto !important;
   max-width: 100% !important;
   text-align: left;
-  padding-bottom: 2px;
+  padding: 0 0 4px;
   line-height: 1.4;
   white-space: normal;
   overflow: visible;
@@ -1133,10 +1139,13 @@
 
 .style-basic-info-tab .ant-form-item-label > label {
   height: auto;
+  justify-content: flex-start;
 }
 
 .style-basic-info-tab .ant-form-item-control {
+  display: block;
   flex: 1 1 auto;
+  width: 100%;
   max-width: 100% !important;
   min-height: auto;
 }

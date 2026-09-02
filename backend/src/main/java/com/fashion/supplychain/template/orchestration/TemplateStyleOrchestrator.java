@@ -442,15 +442,48 @@ public class TemplateStyleOrchestrator {
                     .put(sizeDedupeKey(item.getSizeName()), item);
         }
 
+        // 目标款规范码数：优先取款式基础码数（sizeColorConfig.sizes），兜底并入已有行的码数。
+        // D-264：merge 导入不得把模板自带的、目标款没有的码数列"拖进来"
+        // （此前导入别的款后凭空多出 XXL 列，而目标款现有码数全部还是空的）。
+        Set<String> canonicalSizeKeys = new LinkedHashSet<>();
+        StyleInfo targetStyle = styleInfoService.getById(targetStyleId);
+        if (targetStyle != null && StringUtils.hasText(targetStyle.getSizeColorConfig())) {
+            try {
+                JsonNode cfg = objectMapper.readTree(targetStyle.getSizeColorConfig());
+                if (cfg.has("sizes") && cfg.get("sizes").isArray()) {
+                    for (JsonNode s : cfg.get("sizes")) {
+                        String key = sizeDedupeKey(s.asText());
+                        if (!key.isEmpty()) {
+                            canonicalSizeKeys.add(key);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[尺寸模板导入] 解析款式基础码数失败 targetStyleId={}", targetStyleId);
+            }
+        }
+        for (StyleSize item : existing) {
+            String key = sizeDedupeKey(item.getSizeName());
+            if (!key.isEmpty()) {
+                canonicalSizeKeys.add(key);
+            }
+        }
+
         int filledRows = 0;
         int addedParts = 0;
         int unmatchedRows = 0;
+        int foreignSizeRows = 0;
         for (StyleSize size : sizes) {
             String partKey = normalizePartKey(size.getPartName());
             Map<String, StyleSize> partRows = partKey.isEmpty() ? null : existingByPart.get(partKey);
 
-            // 部位不存在：整行新增（带入模板的码数与数值）
+            // 部位不存在：整行新增（带入模板的码数与数值），但仅限目标款规范码数内的码
             if (partRows == null || partRows.isEmpty()) {
+                String sizeKey = sizeDedupeKey(size.getSizeName());
+                if (!canonicalSizeKeys.isEmpty() && (sizeKey.isEmpty() || !canonicalSizeKeys.contains(sizeKey))) {
+                    foreignSizeRows++;
+                    continue;
+                }
                 size.setId(null);
                 size.setStyleId(targetStyleId);
                 styleSizeService.save(size);
@@ -485,8 +518,8 @@ public class TemplateStyleOrchestrator {
             }
         }
 
-        log.info("尺寸模板智能导入完成（templateId={}, targetStyleId={}）：回填 {} 行空缺、新增 {} 个部位、{} 行码数不对应跳过",
-                template.getId(), targetStyleId, filledRows, addedParts, unmatchedRows);
+        log.info("尺寸模板智能导入完成（templateId={}, targetStyleId={}）：回填 {} 行空缺、新增 {} 个部位、{} 行码数不对应跳过、{} 行目标款没有的码数丢弃",
+                template.getId(), targetStyleId, filledRows, addedParts, unmatchedRows, foreignSizeRows);
         return true;
     }
 

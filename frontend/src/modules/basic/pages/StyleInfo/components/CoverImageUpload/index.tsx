@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { App, Image, Spin, Tooltip } from 'antd';
 import {
   DeleteOutlined, EyeOutlined, LeftOutlined, PictureOutlined, PlusOutlined,
-  RightOutlined, SearchOutlined, StarFilled, StarOutlined, ThunderboltOutlined,
+  RightOutlined, StarFilled, StarOutlined,
 } from '@ant-design/icons';
 import { useCoverImageUpload } from './useCoverImageUpload';
 import SearchResultCard from './SearchResultCard';
@@ -26,17 +26,12 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
   const {
     currentIndex,
     setCurrentIndex,
-    searching,
     searchResult,
     searchExpanded,
     setSearchExpanded,
-    parsing,
     displayImages,
-    currentImage,
-    runStyleSearchByImage,
     handleDelete,
     handleSetCover,
-    handleParseClick,
     handleUploadFiles,
     uploading,
   } = useCoverImageUpload(props);
@@ -267,42 +262,11 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
           </Spin>
         )}
 
-        {/* 行尾小工具：智能识别 / 搜相似（当前选中图） */}
-        <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'center' }}>
-          <Tooltip title="AI 智能识别当前图，填充款式信息">
-            <span
-              onClick={() => { if (currentImage && !parsing) void handleParseClick(); }}
-              style={{
-                width: 30, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: currentImage && !parsing ? 'pointer' : 'not-allowed',
-                border: '1px solid var(--color-border, #d9d9d9)',
-                color: parsing ? 'var(--color-text-quaternary)' : 'var(--color-primary, #1677ff)',
-                opacity: currentImage ? 1 : 0.4, background: '#fff',
-              }}
-            >
-              {parsing ? <Spin size="small" /> : <ThunderboltOutlined style={{ fontSize: 14 }} />}
-            </span>
-          </Tooltip>
-          <Tooltip title="以图搜款，查找相似款式">
-            <span
-              onClick={() => { if (currentImage && !searching) void runStyleSearchByImage(); }}
-              style={{
-                width: 30, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: currentImage && !searching ? 'pointer' : 'not-allowed',
-                border: '1px solid var(--color-border, #d9d9d9)',
-                color: searching ? 'var(--color-text-quaternary)' : 'var(--color-primary, #1677ff)',
-                opacity: currentImage ? 1 : 0.4, background: '#fff',
-              }}
-            >
-              {searching ? <Spin size="small" /> : <SearchOutlined style={{ fontSize: 14 }} />}
-            </span>
-          </Tooltip>
-          {displayImages.length === 0 && !isNewMode && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <PictureOutlined /> 暂无款式图，点击 + 上传或直接拖拽/粘贴图片
-            </span>
-          )}
-        </div>
+        {displayImages.length === 0 && !isNewMode && (
+          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <PictureOutlined /> 暂无款式图，点击 + 上传或直接拖拽/粘贴图片
+          </span>
+        )}
       </div>
 
       {/* 以图搜款结果（折叠） */}

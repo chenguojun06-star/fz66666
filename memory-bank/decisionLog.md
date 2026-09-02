@@ -1,7 +1,19 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-02（新增 D-264 退回缓存假死/DictAutoComplete丢disabled/草稿弹窗堆叠等九连修）
+> 最后更新：2026-09-02（新增 D-265 BOM纸样口径/导入码数污染/表单标签对齐/图片识别一次性开关）
+
+---
+
+## D-265：五连修——BOM第二条不计算/导入拖入外来码数/标签上布局/删闪电搜索/图片识别一次性（2026-09-02）
+
+1. **BOM 第二条物料不计算**：保存链路（useStyleBomMutations）给每行写入**全 0** 的 patternSizeUsageMap，而 hasPatternData 口径只看"map 有没有键"——键数>0 即判为纸样口径，devUsageAmount 被无视，单件用量/小计归 0。修复：helpers.calcTotalPrice 与 bomUsageColumns 统一改为 **map 里至少一个值 > 0 才算纸样口径**，否则回落 devUsageAmount。里布不背锅，是口径判据错了。
+2. **导入尺寸模板拖入外来码数**：merge 时目标款没有的码（如模板自带的 XXL）会整行插入，凭空多出一列，而目标款现有码数全是空的。修复（后端 applySizeTemplate）：新增部位只落**规范码数**内的值——规范码数=款式基础码数（sizeColorConfig.sizes）∪ 目标款已有行的码数；模板独有码数直接丢弃并记日志。规范码数为空时保持旧行为。
+3. **基础信息标签在上对齐**：CSS 早在（.style-basic-info-tab flex-direction:column）但选择器打偏——antd 的 label/control 包在 .ant-form-item-row 里，flex-direction 加在 .ant-form-item 上无效。修复：`.ant-form-item-row { display:block }` + label 块级左对齐。
+4. **删图片旁闪电/搜索按钮**：识别走档案卡（D-263 已回填款式特征），以图搜款另有通用入口，图片行尾两按钮纯冗余。删除，保留空态上传提示。
+5. **上传第二次才识别**：自动识别用 autoParseAttempted 一次性开关——首次失败/首图之后新传的图永远不再解析。改为 **lastParsedUrlRef 按 URL 各解析一次**：上传新图/切换主图都会触发。
+
+**教训**：①口径判据必须校验数据"实质"（有值）而非"形式"（有键），全 0 占位 map 是保存链路的常态；②antd 表单布局覆盖要打到 .ant-form-item-row 层，.ant-form-item 层的 flex-direction 不作用；③一次性开关型自动任务（attempted flag）会吞掉后续同类事件，改"按实体各一次"（URL/ID 去重）。
 
 ---
 

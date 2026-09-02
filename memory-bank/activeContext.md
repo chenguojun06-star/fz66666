@@ -1,11 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-02（D-264 九连修：退回缓存假死/抽屉化/入库类型/草稿堆叠等，已推送）
+> 最后更新：2026-09-02（D-265 五连修：BOM口径/导入码数/标签对齐/图片识别，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-02 D-265 五连修（前端+后端）✅已推送待验收
+
+- [x] BOM第二条物料不计算：hasPatternData 改为 map 至少一个值>0 才算纸样口径（calcTotalPrice + bomUsageColumns 同口径），否则回落 devUsageAmount（原保存链路写全0 map → 误判纸样口径 → 用量/小计归0）
+- [x] 导入尺寸模板不再拖入目标款没有的码数列：后端 merge 新增部位仅落规范码数（sizeColorConfig.sizes ∪ 已有行码数），模板独有码丢弃（applySizeTemplate）
+- [x] 基础信息标签在上：CSS 补 `.ant-form-item-row{display:block}`（原 flex-direction 加错层不生效）
+- [x] 删图片旁闪电识别+以图搜款按钮（识别走档案卡回填款式特征）
+- [x] 图片自动识别改 lastParsedUrlRef 按 URL 各解析一次（原 attempted 一次性开关吞掉新图）
+- [x] 验证：tsc 0 错、mvn compile 过、vite build 过
+- [ ] 待用户：刷新验收五项；后端导入码数限制需云端部署
 
 ### 2026-09-02 D-264 用户九连修（纯前端）✅已推送待验收
 

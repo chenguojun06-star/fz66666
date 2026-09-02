@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App } from 'antd';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl, isSameFileUrl } from '@/utils/fileUrl';
@@ -40,7 +40,6 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
   const [searchExpanded, setSearchExpanded] = useState(false);
   // 智能识别
   const [parsing, setParsing] = useState(false);
-  const [autoParseAttempted, setAutoParseAttempted] = useState(false);
   const [autoParseError, setAutoParseError] = useState<string | null>(null);
   // 新建模式下最近一次成功识别的置信度，用于状态展示
   const [parseSuccessConfidence, setParseSuccessConfidence] = useState<number | null>(null);
@@ -212,22 +211,27 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     }
   }, [displayImages, currentIndex, isNewMode, pendingFiles, searching, styleId, styleNo, message]);
 
-  // 编辑模式下首次加载时自动触发一次识别（保持原有行为）
+  // 统一的识别触发：当前选中图的 URL 变化（首次加载/上传新图/切换主图）时各解析一次。
+  // D-264：原实现用 autoParseAttempted 一次性开关——首次解析失败后上传的第二张图
+  // 永远不会再触发识别，用户看来"要上传第二次才填充信息"。
+  const lastParsedUrlRef = useRef<string>('');
+
   useEffect(() => {
     if (isNewMode) return;
     if (!styleId) return;
     if (!enabled) return;
     if (!onStyleParseResult) return;
     if (!autoParseEnabled) return;
-    if (autoParseAttempted) return;
+    if (parsing) return;
     const currentFileUrl = currentImage?.fileUrl;
     if (!currentFileUrl) return;
     if (currentFileUrl.startsWith('blob:') || currentFileUrl.startsWith('data:')) return;
 
     const imgUrl = getFullAuthedFileUrl(currentFileUrl);
     if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) return;
+    if (lastParsedUrlRef.current === imgUrl) return;
+    lastParsedUrlRef.current = imgUrl;
 
-    setAutoParseAttempted(true);
     onAutoParseStart?.();
     setParsing(true);
     setAutoParseError(null);
@@ -248,19 +252,21 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [styleId, enabled, isNewMode, currentImage, autoParseAttempted, autoParseEnabled, onStyleParseResult]);
+  }, [styleId, enabled, isNewMode, currentImage, autoParseEnabled, onStyleParseResult, parsing]);
 
-  // 新建模式下：本地图片加载完成后，自动触发识别（一次）
+  // 新建模式下：本地图片（blob 预览）加载后自动识别
   useEffect(() => {
     if (!isNewMode) return;
     if (!onStyleParseResult) return;
     if (!autoParseEnabled) return;
-    if (autoParseAttempted) return;
     if (parsing) return;
     const current = displayImages[currentIndex];
     if (!current) return;
 
-    setAutoParseAttempted(true);
+    const parseKey = String(current.fileUrl || `local-${current.localIndex ?? currentIndex}`);
+    if (lastParsedUrlRef.current === parseKey) return;
+    lastParsedUrlRef.current = parseKey;
+
     onAutoParseStart?.();
     setParsing(true);
     setAutoParseError(null);
@@ -277,7 +283,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
       setParsing(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNewMode, currentImage?.fileUrl, displayImages.length, currentIndex]);
+  }, [isNewMode, currentImage?.fileUrl, displayImages.length, currentIndex, autoParseEnabled, onStyleParseResult, parsing]);
 
   // 删除本地预览图片
   const handleRemoveLocalFile = (index: number) => {

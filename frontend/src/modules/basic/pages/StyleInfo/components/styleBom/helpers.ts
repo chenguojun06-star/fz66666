@@ -76,8 +76,15 @@ export const isTempId = (id: any) => {
 export const calcTotalPrice = (item: Partial<StyleBom>) => {
   // 与单件用量列显示逻辑保持一致：
   // 无纸样数据时，有效用量 = devUsageAmount（开发采购用量）；有纸样数据时用 usageAmount
+  // D-264：仅有键不算"有纸样数据"——保存链路会给每行写入全 0 的 patternSizeUsageMap，
+  // 按旧口径（只看键数）后加的物料会被误判成纸样口径，用量/小计全部归 0。
+  // 必须至少一个值 > 0 才按纸样口径计算。
   const hasPatternData = (() => {
-    try { return item.patternSizeUsageMap ? Object.keys(JSON.parse(item.patternSizeUsageMap as string)).length > 0 : false; } catch { return false; }
+    try {
+      if (!item.patternSizeUsageMap) return false;
+      const map = JSON.parse(item.patternSizeUsageMap as string);
+      return !!map && typeof map === 'object' && Object.values(map).some((v) => Number(v) > 0);
+    } catch { return false; }
   })();
   const effectiveUsage = hasPatternData
     ? (Number(item.usageAmount) || 0)
