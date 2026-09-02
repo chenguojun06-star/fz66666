@@ -202,6 +202,9 @@ public class TemplateStyleOrchestrator {
         List<StyleProcess> processes = styleProcessService.lambdaQuery()
                 .eq(StyleProcess::getStyleId, styleId)
                 .list();
+        // D-264：按工序编码排序后再序列化——库表返回顺序不保证，乱序数组会让
+        // 模板编辑页看着正常（按编码排序显示），导入到款式时却按数组序重排编号导致乱套
+        processes.sort(Comparator.comparingInt(p -> parseCodeOrdinal(p == null ? null : p.getProcessCode())));
         List<StyleSizePrice> sizePrices = styleSizePriceService.lambdaQuery()
                 .eq(StyleSizePrice::getStyleId, styleId)
                 .list();
@@ -321,6 +324,11 @@ public class TemplateStyleOrchestrator {
             throw new IllegalStateException("工序模板内容为空或解析失败，拒绝应用（templateId=" + template.getId() + "，contentLength=" + (template.getTemplateContent() == null ? 0 : template.getTemplateContent().length()) + "）");
         }
 
+        // D-264：模板内容的存储顺序可能与编码顺序不一致（从款式生成模板时按库表返回序序列化），
+        // 而模板编辑页按编码排序显示——直接按数组序导入/重排编号，会出现"01裁剪导入后变 05"的乱序。
+        // 导入前先按工序编码排成与编辑页一致的顺序，编码与工序名的配对保持不变。
+        processes.sort(Comparator.comparingInt(p -> parseCodeOrdinal(p == null ? null : p.getProcessCode())));
+
         log.info("应用工序模板: templateId={}, targetStyleId={}, parsedCount={}, overwrite={}",
                 template.getId(), targetStyleId, processes.size(), overwrite);
 
@@ -391,6 +399,15 @@ public class TemplateStyleOrchestrator {
         String n = processName == null ? "" : processName.trim().toLowerCase();
         String s = progressStage == null ? "" : progressStage.trim().toLowerCase();
         return n + "|" + s;
+    }
+
+    /** 工序编码序号：取编码中的数字（01→1），无数字的排最后（排序稳定） */
+    private int parseCodeOrdinal(String code) {
+        if (code == null) {
+            return Integer.MAX_VALUE;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\d+").matcher(code);
+        return matcher.find() ? Integer.parseInt(matcher.group()) : Integer.MAX_VALUE;
     }
 
     private List<StyleProcess> parseProcessContent(String content) throws Exception {
