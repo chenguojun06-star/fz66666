@@ -399,11 +399,16 @@ public class MaterialReconciliationOrchestrator {
         return resolveEffectiveQuantity(purchase) <= 0;
     }
 
+    /**
+     * D-270（用户拍板，废止旧口径）：所有采购一律生成物料对账，不再按订单工厂类型区分。
+     *
+     * <p>业务事实：采购的供应商是物料供应商（布行/面料商），面料款必须对账后付给供应商；
+     * 「订单外发」只决定加工费付给谁（走外发结算），与物料采购款是两笔钱。
+     * 旧口径把「订单 factory_type=EXTERNAL」当成「采购不进对账」的依据，
+     * 导致外发订单的面料采购被整批跳过，历史对账还被 cleanup 误删（D-268 事故根源）。
+     */
     private boolean shouldRouteOrderLinkedPurchaseToInbound(MaterialPurchase purchase) {
-        if (purchase == null || !StringUtils.hasText(purchase.getOrderId())) {
-            return false;
-        }
-        return !isInternalFactoryPurchase(purchase);
+        return false;
     }
 
     /**

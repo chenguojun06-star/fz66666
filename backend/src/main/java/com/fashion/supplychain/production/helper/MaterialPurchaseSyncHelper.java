@@ -75,9 +75,9 @@ public class MaterialPurchaseSyncHelper {
             return;
         }
 
-        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId())
-                || isInternalOrderPurchase(purchase);
-        if (allowReconciliation && StringUtils.hasText(purchase.getId())) {
+        // D-270（用户拍板）：所有采购一律同步对账——外发订单的面料是本厂向布行/面料商
+        // 采购的，面料款必须对账付款给供应商；订单外发只影响加工费归属（走外发结算）。
+        if (StringUtils.hasText(purchase.getId())) {
             try {
                 materialReconciliationOrchestrator.upsertFromPurchaseId(purchase.getId().trim());
             } catch (Exception e) {

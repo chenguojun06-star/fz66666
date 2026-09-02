@@ -4280,7 +4280,7 @@ PC：
 
 ---
 
-## D-259：面辅料采购→出入库→结算 全链路梳理 + 补生成对账 P0 修复
+## D-267：面辅料采购→出入库→结算 全链路梳理 + 补生成对账 P0 修复
 
 **日期**：2026-09-02
 **触发**：用户要求「把面辅料采购/出入库/结算 内部外部全部梳理清楚」，
@@ -4327,3 +4327,38 @@ PC：
 
 ### 验证
 后端 `mvn compile` 通过；改动文件 lint 0 错误。
+
+---
+
+## D-268：补生成对账误删 10 条历史对账事故（P0 数据丢失）+ 修复
+
+**日期**：2026-09-02
+**触发**：用户点「补生成对账」后，对账从 33 条变 23 条——待核实的 10 条（含 8 条大货采购，
+订单 PO20260307001/PO20260308001，供应商"最美服装工厂/最美布行"）被删除。
+
+### 根因
+`backfillFromPurchases` → `upsertFromPurchase` → `shouldRouteOrderLinkedPurchaseToInbound`
+（外发订单采购走加工费扣款，不进对账）→ `cleanupPendingByPurchaseId` → `removeById`。
+**"补生成"按钮实际会删除被判为外发的 pending 对账**。这些历史对账是早期代码生成的，
+用户一直在用；首次跑 backfill 就把它们删了。教训：**"补"的语义是补齐，批量删除是事故**。
+
+### 修复
+1. `upsertFromPurchase` 加 `allowCleanup` 参数：backfill 传 false——**补生成绝不删除任何对账**
+2. 新增 `restoreDeletedReconciliation`：全局配置了逻辑删除（logic-delete-field: deleteFlag），
+   removeById 实际是 delete_flag=1，数据还在。backfill 先恢复被误删的（delete_flag=1→0）再补缺失
+   → 用户再点一次「补生成对账」即可自愈还原
+3. 实时同步链路（upsertFromPurchaseId）保留 cleanup（采购取消/到货清零时清理 pending 是合理设计）
+
+### 遗留决策（待用户拍板）
+外发订单采购到底要不要进物料对账？历史数据显示用户的物料对账供应商是"最美布行/最美服装工厂"
+等**物料供应商**（面料采购款），与"外发加工费走外发结算"（D-133 方案A）不冲突——
+面料是本厂出钱买的，理应对账。若用户确认，应去掉 shouldRouteOrderLinkedPurchaseToInbound
+对大货采购的拦截（否则恢复的对账会在下次采购变更时又被实时链路删掉）。
+
+## D-269：恢复物料对账「采购类型」筛选（大货/样衣/批量）
+
+**日期**：2026-09-02
+**触发**：用户反馈"之前有采购类型筛选，现在没有了"。
+**核实**：筛选器曾存在（"采购来源"Select，queryParams.sourceType），在「refactor(finance):
+精简财务模块6个页面」重构中被误删；后端 queryPage 的 sourceType 筛选一直健在
+（batch 联动 batch/stock/manual）。已恢复前端下拉，tsc 0 错误。
