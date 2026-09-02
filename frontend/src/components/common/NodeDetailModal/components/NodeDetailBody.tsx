@@ -68,7 +68,6 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
   nodeName,
   nodeTypeKey,
   nodeStats,
-  mode,
   predicting,
   prediction,
   currentNodeData,
@@ -120,7 +119,10 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
           delegateProcessName={String(currentNodeData.delegateProcessName || '').trim() || undefined}
         />
       )}
-      {nodeTypeKey === 'cutting' && mode !== 'drawer' && (
+      {/* D-275：快捷跳转恢复——D-137 抽屉化后 mode 默认 'drawer'，原 `mode !== 'drawer'` 条件
+          导致「前往裁剪管理」按钮在任何情况下都不渲染（用户：裁剪弹窗里的快捷键没了）。
+          抽屉 body 顶部放按钮布局无冲突，两种形态都显示。 */}
+      {nodeTypeKey === 'cutting' && (
         <div style={{ marginBottom: 8 }}>
           <Button
             style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
