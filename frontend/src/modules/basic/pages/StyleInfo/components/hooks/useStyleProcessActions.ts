@@ -140,8 +140,18 @@ export const useStyleProcessActions = ({
     if (invalid) { message.error('请完善必填项：工序编码、工序名称、工价'); return; }
     setSaving(true);
     try {
-      const deleteTasks = Array.from(new Set(deletedIds.map((x) => String(x)).filter(Boolean))).map((id) => api.delete(`/style/process/${id}`));
-      if (deleteTasks.length) { const delResults = await Promise.all(deleteTasks); const delBad = delResults.find((r: Record<string, unknown>) => (r as any)?.code !== 200); if (delBad) { message.error((delBad as any)?.message || '删除失败'); return; } }
+      // D-264：404（数据已不存在）视作删除成功——deletedIds 此前保存成功后从不清空，
+      // 下次保存会把上次已删的行再删一遍，后端 404 直接中断整次保存，
+      // 用户看到"保存的信息不存在"且自己编辑的工序全部没保存
+      const deleteIds = Array.from(new Set(deletedIds.map((x) => String(x)).filter(Boolean)));
+      if (deleteIds.length) {
+        const delResults = await Promise.all(deleteIds.map((id) =>
+          api.delete(`/style/process/${id}`).catch((e: any) => ({ code: 404, message: e?.message }))
+        ));
+        const delBad = delResults.find((r: Record<string, unknown>) => (r as any)?.code !== 200 && (r as any)?.code !== 404);
+        if (delBad) { message.error((delBad as any)?.message || '删除失败'); return; }
+        setDeletedIds([]);
+      }
       const tasks: Array<Promise<unknown>> = [];
       rows.forEach((r) => {
         const payload: any = { id: r.id, styleId, processCode: norm(r.processCode), processName: norm(r.processName), description: norm(r.description), progressStage: norm(r.progressStage) || '车缝', machineType: norm(r.machineType), standardTime: r.standardTime != null ? toNumberSafe(r.standardTime) : 0, price: toNumberSafe(r.price), sortOrder: toNumberSafe(r.sortOrder) };
