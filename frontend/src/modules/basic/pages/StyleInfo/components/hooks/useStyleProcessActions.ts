@@ -87,8 +87,47 @@ export const useStyleProcessActions = ({
       if (result.code !== 200) { message.error(result.message || '导入失败'); return; }
       message.success(mode === 'append' ? '已追加导入工艺模板（已自动跳过重复工序）' : '已覆盖导入工艺模板');
       await fetchProcess();
+      // D-264：按模板步骤顺序就地纠正编码与排序。后端写入顺序不受控（旧版后端/模板内容
+      // 无编码时按数组序重编号），此前多次出现"01裁剪导入变03/05"的乱序——
+      // 以模板 steps 的顺序为准在前端重排列并重编码（按工序名称匹配），保存后即固化。
+      await reorderRowsByTemplate(templateId);
       void enterEdit();
     } catch (e: unknown) { message.error(e instanceof Error ? e.message : '导入失败'); }
+  };
+
+  /** 按模板 steps 顺序重排当前工序行并按 01..N 重编码（按工序名匹配模板顺序） */
+  const reorderRowsByTemplate = async (templateId: string) => {
+    try {
+      const res = await api.get<any>('/template-library/list', { params: { templateType: 'process', page: 1, pageSize: 200 } });
+      const records: any[] = res?.data?.records || res?.data || [];
+      const tpl = records.find((t) => String(t?.id || '') === String(templateId));
+      if (!tpl?.templateContent) return;
+      let steps: any[] = [];
+      const content: any = tpl.templateContent;
+      if (typeof content === 'object') {
+        steps = content.steps || content.rows || content.data || [];
+      } else {
+        try {
+          const parsed = JSON.parse(String(content));
+          steps = parsed?.steps || parsed?.rows || parsed?.data || [];
+        } catch { return; }
+      }
+      if (!Array.isArray(steps) || steps.length === 0) return;
+      const ordinalByName = new Map<string, number>();
+      steps.forEach((s: any, i: number) => {
+        const key = String(s?.processName || '').trim();
+        if (key && !ordinalByName.has(key)) ordinalByName.set(key, i);
+      });
+      if (ordinalByName.size === 0) return;
+      setData((prev) => {
+        const ordered = [...prev].sort((a, b) => {
+          const oa = ordinalByName.get(String(a.processName || '').trim()) ?? Number.MAX_SAFE_INTEGER;
+          const ob = ordinalByName.get(String(b.processName || '').trim()) ?? Number.MAX_SAFE_INTEGER;
+          return oa - ob;
+        });
+        return ordered.map((r, index) => ({ ...r, sortOrder: index + 1, processCode: String(index + 1).padStart(2, '0') }));
+      });
+    } catch { /* 纠序失败不影响导入结果 */ }
   };
 
   const handleDelete = (id: string | number) => {
