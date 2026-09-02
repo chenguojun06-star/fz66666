@@ -69,7 +69,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
   }, [isNewMode, pendingFiles]);
 
   const fetchImages = useCallback(async () => {
-    if (!styleId) return;
+    if (!styleId) return [];
     try {
       const res = await api.get<{ code: number; data: any[] }>(`/style/attachment/list?styleId=${styleId}`);
       if (res.code === 200) {
@@ -94,11 +94,13 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
           if (coverIndex >= 0) setCurrentIndex(coverIndex);
           else if (currentIndex >= sorted.length) setCurrentIndex(0);
         }
+        return sorted;
       }
     } catch {
       // 忽略错误
       setImages([]);
     }
+    return [];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleId, currentIndex]);
 
@@ -399,7 +401,10 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     const valid = files.filter((f) => f.type.startsWith('image/'));
     if (valid.length === 0) return;
     if (isNewMode) {
+      const firstNewIndex = pendingFiles.length;
       onPendingFilesChange?.([...pendingFiles, ...valid]);
+      // 选中第一张新加的本地图，触发自动识别（识别跟随当前选中图）
+      setCurrentIndex(firstNewIndex);
       message.success(`已添加 ${valid.length} 张图片，保存后生效`);
       return;
     }
@@ -409,6 +414,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     }
     setUploading(true);
     try {
+      let lastUploadedUrl = '';
       for (const file of valid) {
         const formData = new FormData();
         formData.append('file', file);
@@ -418,9 +424,16 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
         if (!isApiSuccess(uploadRes) || !uploadRes?.data?.fileUrl) {
           throw new Error(`图片 ${file.name} 上传失败`);
         }
+        lastUploadedUrl = uploadRes.data.fileUrl;
       }
       message.success(`成功上传 ${valid.length} 张图片`);
-      await fetchImages();
+      const sorted = await fetchImages();
+      // D-264：选中刚上传的图——识别跟随当前选中图，不切过去就永远不识别
+      //（此前列表按主图排序后选中图还停在老主图，用户看来"只有设为主图才识别"）
+      if (lastUploadedUrl && sorted.length > 0) {
+        const idx = sorted.findIndex((item: any) => isSameFileUrl(item?.fileUrl, lastUploadedUrl));
+        if (idx >= 0) setCurrentIndex(idx);
+      }
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '上传失败，请重试');
     } finally {
