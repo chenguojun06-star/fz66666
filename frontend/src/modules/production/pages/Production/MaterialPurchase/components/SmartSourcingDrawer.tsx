@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import { purchaseCartApi } from '@/services/purchaseCartApi';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
+import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import type {
   SmartSourcingFilter, OrderBasicDto, OrderOverviewDto, NetDemandDetail,
 } from '@/types/smartSourcing';
@@ -135,6 +136,9 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
   // ── 批量推送 ──
   const [batchPushLoading, setBatchPushLoading] = useState(false);
 
+  // ── 无缺料（=已采购完成）订单默认隐藏：用户核实"采购完成的还在推荐里" ──
+  const [hideNoShortage, setHideNoShortage] = useState(true);
+
   // ── 竞态保护：快速翻页/连续查询时只认最后一次请求的响应 ──
   const listReqSeqRef = useRef(0);
 
@@ -253,6 +257,16 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
     loadOrders(p, ps);
   }, [loadOrders]);
 
+  // ── 无缺料过滤：物料全部充足 = 无需采购（已完成），默认不占推荐位 ──
+  const visibleOrders = useMemo(() => {
+    if (!hideNoShortage) return orderList;
+    return orderList.filter((r) => {
+      const ov = overviewMap[r.orderNo];
+      // 概览未算出的保留（可能真缺料）；算出 shortageCount=0 的隐藏
+      return !ov || (ov.shortageCount ?? 0) > 0;
+    });
+  }, [orderList, overviewMap, hideNoShortage]);
+
   // ────────────────── 详情（单个订单，懒加载） ──────────────────
   const fetchDetail = useCallback(async (orderNo: string) => {
     setDetailLoadingMap((prev) => ({ ...prev, [orderNo]: true }));
@@ -306,18 +320,21 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
     {
       title: '订单 / 款式',
       dataIndex: 'orderNo',
-      width: 180,
+      width: 220,
       fixed: 'left',
       render: (v: string, r) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>
-            {v || '-'}
-            {r.urgencyLevel === 'urgent' && (
-              <Tag color="red" style={{ marginLeft: 4, fontSize: 10 }}>急</Tag>
-            )}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-            {r.styleNo || '-'} / {r.styleName || '-'}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <StyleCoverThumb styleNo={r.styleNo} size={44} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 600 }}>
+              {v || '-'}
+              {r.urgencyLevel === 'urgent' && (
+                <Tag color="red" style={{ marginLeft: 4, fontSize: 10 }}>急</Tag>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>
+              {r.styleNo || '-'} / {r.styleName || '-'}
+            </div>
           </div>
         </div>
       ),
@@ -361,7 +378,12 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
       title: '到位率',
       dataIndex: 'materialArrivalRate',
       width: 90,
-      render: (v) => {
+      render: (v, r) => {
+        const ov = overviewMap[r.orderNo];
+        // 物料全部充足（无缺料）时不展示刺眼的 0%——采购环节已完成，到位率无意义
+        if (ov && (ov.shortageCount ?? 0) === 0 && (ov.sufficientCount ?? 0) > 0) {
+          return <Tag color="green" style={{ fontSize: 10 }}>已齐料</Tag>;
+        }
         if (v == null) return <Tag style={{ fontSize: 10 }}>未维护</Tag>;
         const color = v >= 100 ? 'var(--color-success)'
           : v >= 60 ? 'var(--color-warning)' : 'var(--color-error)';
@@ -616,6 +638,14 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
                 <Checkbox>只看急单</Checkbox>
               </Form.Item>
             </Form.Item>
+            <Form.Item label="无缺料订单" style={{ marginBottom: 0 }}>
+              <Checkbox
+                checked={hideNoShortage}
+                onChange={(e) => setHideNoShortage(e.target.checked)}
+              >
+                隐藏已完成（物料全部充足）
+              </Checkbox>
+            </Form.Item>
             <Form.Item label="排序" style={{ marginBottom: 0 }}>
               <Space.Compact>
                 <Form.Item name="sortBy" noStyle>
@@ -644,7 +674,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         rowKey="orderNo"
         size="small"
         loading={listLoading}
-        dataSource={orderList}
+        dataSource={visibleOrders}
         columns={columns}
         scroll={{ x: 1250 }}
         rowSelection={{
@@ -969,7 +999,7 @@ const netDemandColumns: ColumnsType<NetDemandDetail> = [
             {r.lastPurchaseSupplier ? ` (${r.lastPurchaseSupplier})` : ''}
           </div>
         )}
-        {r.priceAlert && (
+        {typeof r.priceAlert === 'string' && r.priceAlert.trim() && (
           <Tag color="orange" style={{ fontSize: 10, marginTop: 2 }}>{r.priceAlert}</Tag>
         )}
       </div>
