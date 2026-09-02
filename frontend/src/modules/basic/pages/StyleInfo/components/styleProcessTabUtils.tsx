@@ -74,8 +74,16 @@ export const isTempId = (id: any) => {
   return s.startsWith('-');
 };
 
+export function processCodeOrdinal(code?: string): number {
+  const m = String(code || '').match(/\d+/);
+  return m ? Number(m[0]) : Number.MAX_SAFE_INTEGER;
+}
+
 export function computeSortedDataAndStageSpan(data: StyleProcessWithSizePrice[]) {
-  const { sorted, spanMap } = computeStageSortedAndSpan(data, STAGE_ORDER);
+  // D-264：先按工序编码数字序排，再做阶段分组（组内稳定排序保持编码序）。
+  // 展示顺序从此与编码一致，不受库表返回顺序影响——导入模板后顺序与模板编辑页一致。
+  const codeOrdered = [...data].sort((a, b) => processCodeOrdinal(a.processCode) - processCodeOrdinal(b.processCode));
+  const { sorted, spanMap } = computeStageSortedAndSpan(codeOrdered, STAGE_ORDER);
   const stageSpanMap = new Map<number, StageSpanInfo>();
   spanMap.forEach((info, idx) => {
     stageSpanMap.set(idx, info);

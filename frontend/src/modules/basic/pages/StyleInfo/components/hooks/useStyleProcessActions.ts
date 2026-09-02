@@ -46,7 +46,11 @@ export const useStyleProcessActions = ({
     const maxSort = data.length ? Math.max(...data.map((d) => toNumberSafe(d.sortOrder))) : 0;
     const newId = -Date.now();
     const nextSort = maxSort + 1;
-    const autoCode = String(nextSort).padStart(2, '0');
+    // D-264：编码按现有最大编码+1（删行不再重编后，sortOrder 可能小于最大编码，按 sortOrder 取会撞号）
+    const maxCode = data.reduce((acc, d) => { const m = String(d.processCode || '').match(/\d+/); return Math.max(acc, m ? Number(m[0]) : 0); }, 0);
+    let codeVal = maxCode + 1;
+    while (data.some((d) => String(d.processCode || '').trim() === String(codeVal).padStart(2, '0'))) codeVal += 1;
+    const autoCode = String(codeVal).padStart(2, '0');
     const sizePrices: Record<string, number> = {};
     const sizePriceTouched: Record<string, boolean> = {};
     sizes.forEach((s) => { sizePrices[s] = 0; sizePriceTouched[s] = false; });
@@ -92,7 +96,9 @@ export const useStyleProcessActions = ({
     if (!processStartTime) { message.warning('请先点击上方「开始工序单价」按钮再进行编辑'); return; }
     if (!editMode) enterEdit();
     if (!isTempId(id)) setDeletedIds((prev) => [...prev, id]);
-    setData((prev) => { const filtered = prev.filter((x) => x.id !== id); return filtered.map((item, index) => ({ ...item, sortOrder: index + 1, processCode: String(index + 1).padStart(2, '0') })); });
+    // D-264：删除只删行、不重编码——工序编码是身份（码数单价按 processCode 关联），
+    // 此前按剩余行顺序 processCode=index+1 全量重编，把编码与工序名的配对洗乱
+    setData((prev) => prev.filter((x) => x.id !== id));
   };
 
   const updateField = (id: string | number, field: keyof import('@/types/style').StyleProcess, value: any, fetchPriceHint?: (rowId: string | number, processName: string, standardTime?: number) => void) => {
@@ -113,7 +119,20 @@ export const useStyleProcessActions = ({
 
   const saveAll = async () => {
     if (readOnly) return;
-    const rows = data.map((r, index) => ({ ...r, sortOrder: index + 1, processCode: String(index + 1).padStart(2, '0') }));
+    // D-264：保存不得按显示顺序重编 processCode——编码是身份（模板导入配对、码数单价关联都靠它），
+    // 此前每次保存 processCode=index+1，导入模板后一保存就把"01裁剪"洗成别的编码。
+    // 只为没有编码的行（手工新增漏发）按现有最大编码+1 补号；sortOrder 仍按当前顺序持久化。
+    let maxCode = 0;
+    data.forEach((r) => { const m = String(r.processCode || '').match(/\d+/); if (m) maxCode = Math.max(maxCode, Number(m[0])); });
+    const usedCodes = new Set(data.map((r) => norm(r.processCode)).filter(Boolean));
+    const rows = data.map((r, index) => {
+      let code = norm(r.processCode);
+      if (!code) {
+        do { maxCode += 1; code = String(maxCode).padStart(2, '0'); } while (usedCodes.has(code));
+        usedCodes.add(code);
+      }
+      return { ...r, sortOrder: index + 1, processCode: code };
+    });
     if (!rows.length) { message.error('请先添加工序'); return; }
     const codes = rows.map((r) => norm(r.processCode)).filter(Boolean);
     if (codes.length !== new Set(codes).size) { message.error('工序编码不能重复'); return; }
