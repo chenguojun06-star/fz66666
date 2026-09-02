@@ -655,6 +655,10 @@ public class MaterialReconciliationOrchestrator {
             return "采购已取消";
         }
 
+        // D-274：已完成老采购的到货量自愈——修复「有效到货量为0」写路径断点，
+        // 让历史 completed 且 arrivedQuantity=0 的存量采购能进对账
+        healArrivedQuantityIfCompleted(purchase);
+
         int qty = resolveEffectiveQuantity(purchase);
         if (qty <= 0) {
             return "有效到货量为0(未到货)";
@@ -858,6 +862,53 @@ public class MaterialReconciliationOrchestrator {
         return mr;
     }
 
+
+    /**
+     * D-274：已完成采购的到货量自愈——修复「有效到货量为0」写路径断点。
+     *
+     * <p>背景：新采购流（购物车/智能采购）不走入库登记，历史版本的 confirmComplete
+     * 也不回写 arrivedQuantity，导致一批 status=completed 的采购到货量停留在 0，
+     * 对账按「有效到货量&gt;0」判定把这批完成单永久挡在账外（用户实测 7 条）。
+     * confirmComplete 的幂等分支对已完成单直接返回，也不会补写——
+     * 存量数据只有这里能自愈。
+     *
+     * <p>口径与 confirmComplete（D-273c）一致：人工确认完成 = 背书「这批货齐了」，
+     * 到货量为 0 时按采购数量回写并补 actualArrivalDate。
+     * 幂等：arrivedQuantity&gt;0 的不动；并发下乐观条件未命中也不报错。
+     */
+    private void healArrivedQuantityIfCompleted(MaterialPurchase purchase) {
+        String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
+        if (!"completed".equalsIgnoreCase(status)) {
+            return;
+        }
+        int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity().intValue();
+        if (aq > 0) {
+            return;
+        }
+        BigDecimal pq = purchase.getPurchaseQuantity();
+        if (pq == null || pq.intValue() <= 0) {
+            return;
+        }
+        try {
+            boolean updated = materialPurchaseService.lambdaUpdate()
+                    .eq(MaterialPurchase::getId, purchase.getId().trim())
+                    .and(w -> w.isNull(MaterialPurchase::getArrivedQuantity)
+                            .or().eq(MaterialPurchase::getArrivedQuantity, 0))
+                    .set(MaterialPurchase::getArrivedQuantity, pq.intValue())
+                    .set(MaterialPurchase::getActualArrivalDate, LocalDateTime.now())
+                    .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
+                    .update();
+            if (updated) {
+                // 回写内存对象，resolveEffectiveQuantity/resolvePrices 直接用新值
+                purchase.setArrivedQuantity(pq.intValue());
+                log.info("[MaterialReconciliation] 已完成采购到货量自愈 purchaseId={} purchaseNo={} arrivedQuantity={}",
+                        purchase.getId(), purchase.getPurchaseNo(), pq.intValue());
+            }
+        } catch (Exception e) {
+            log.warn("[MaterialReconciliation] 到货量自愈失败(不阻断) purchaseId={}: {}",
+                    purchase.getId(), e.getMessage());
+        }
+    }
 
     private int resolveEffectiveQuantity(MaterialPurchase purchase) {
         if (purchase == null) {
