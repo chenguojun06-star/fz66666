@@ -1121,6 +1121,12 @@
   margin-bottom: 12px;
 }
 
+/* 上面 display:block 的权重高于 antd 的 .ant-form-item-hidden{display:none}，
+   会把 hidden 占位字段（customerId/supplierId 等）顶成可见空白框，必须压回去 */
+.style-basic-info-tab .ant-form-item-hidden {
+  display: none !important;
+}
+
 .style-basic-info-tab .ant-form-item-row {
   display: block;
 }
