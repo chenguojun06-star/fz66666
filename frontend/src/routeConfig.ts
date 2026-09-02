@@ -593,8 +593,8 @@ export const menuConfig: MenuSection[] = [
     items: [
       // ========== 总览 ==========
       { label: '财务总览', path: paths.financeDashboard, icon: React.createElement(DashboardOutlined) },
-      // D-245：每日流水——生产扫码 / 采购 / 物料出入库 / 成品出入库 六类流水一张表
-      { label: '每日流水', path: paths.dailyFlow, icon: React.createElement(FileTextOutlined) },
+      // D-273：每日流水并入财务总览做 tab（D-245 独立菜单入口移除；路由保留兼容收藏/直达）
+      // { label: '每日流水', path: paths.dailyFlow, icon: React.createElement(FileTextOutlined) },
       // ========== 内部结算 ==========
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       // ========== 外部结算 ==========

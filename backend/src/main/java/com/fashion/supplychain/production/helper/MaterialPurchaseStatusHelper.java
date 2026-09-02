@@ -668,6 +668,15 @@ public class MaterialPurchaseStatusHelper {
           .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_AWAITING_CONFIRM)
           .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED)
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
+        // D-273：确认完成 = 人工背书"这批货齐了"。到货量为 0 时按采购数量回写——
+        // 新采购流（购物车/智能采购）不走入库登记，arrivedQuantity 一直是 0，
+        // 对账按"有效到货量>0"判定会把这批完成单全部挡在账外。
+        java.math.BigDecimal pq = purchase.getPurchaseQuantity();
+        int currentArrived = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity().intValue();
+        if (currentArrived <= 0 && pq != null && pq.intValue() > 0) {
+            uw.set(MaterialPurchase::getArrivedQuantity, pq.intValue());
+            uw.set(MaterialPurchase::getActualArrivalDate, LocalDateTime.now());
+        }
         materialPurchaseService.update(uw);
 
         MaterialPurchase updated = getPurchaseWithTenant(purchaseId);
