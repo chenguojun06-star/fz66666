@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { App, Button, Card, DatePicker, Empty, Space, Statistic, Tag, Tooltip } from 'antd';
+import { App, Button, Card, DatePicker, Empty, Select, Space, Statistic, Tag, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
@@ -249,6 +249,19 @@ const MaterialReconciliation: React.FC = () => {
                 allowClear
                 placeholder={['开始日期', '结束日期']}
                 style={{ width: 240 }}
+              />
+              {/* D-269：恢复采购类型筛选（大货/样衣/批量）——曾在财务精简重构中被误删，后端 queryPage 一直支持 */}
+              <Select
+                placeholder="采购类型"
+                style={{ width: 120 }}
+                value={queryParams.sourceType || undefined}
+                onChange={(value) => setQueryParams({ ...queryParams, sourceType: value || '', page: 1 })}
+                allowClear
+                options={[
+                  { value: 'order', label: '大货采购' },
+                  { value: 'sample', label: '样衣采购' },
+                  { value: 'batch', label: '批量采购' },
+                ]}
               />
             </Space>
             <Space size={8}>
