@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Button, InputNumber, Select, Tag, Tooltip } from 'antd';
+import { Button, Input, InputNumber, Select, Tag, Tooltip } from 'antd';
 import { DeleteOutlined, BulbOutlined, LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import { modal } from '@/utils/antdStatic';
 import { StyleProcess } from '@/types/style';
@@ -80,14 +80,25 @@ export function processCodeOrdinal(code?: string): number {
 }
 
 export function computeSortedDataAndStageSpan(data: StyleProcessWithSizePrice[]) {
-  // D-264：先按工序编码数字序排，再做阶段分组（组内稳定排序保持编码序）。
-  // 展示顺序从此与编码一致，不受库表返回顺序影响——导入模板后顺序与模板编辑页一致。
-  const codeOrdered = [...data].sort((a, b) => processCodeOrdinal(a.processCode) - processCodeOrdinal(b.processCode));
-  const { sorted, spanMap } = computeStageSortedAndSpan(codeOrdered, STAGE_ORDER);
+  // D-264（用户拍板）：工序编号即顺序——整表按编码数字序排列（无编码的排最后），
+  // 进度节点不再参与排序，仅把相邻同节点行合并展示（rowSpan）。
+  // 编码可在编辑态直接修改，改完即按新顺序排列，保存后固化。
+  const sorted = [...data].sort((a, b) => processCodeOrdinal(a.processCode) - processCodeOrdinal(b.processCode));
   const stageSpanMap = new Map<number, StageSpanInfo>();
-  spanMap.forEach((info, idx) => {
-    stageSpanMap.set(idx, info);
-  });
+  const stageOf = (row: StyleProcessWithSizePrice) => {
+    const ps = String(row.progressStage || '').trim();
+    return ps || STAGE_ORDER[0] || '裁剪';
+  };
+  let i = 0;
+  while (i < sorted.length) {
+    const stage = stageOf(sorted[i]);
+    let j = i + 1;
+    while (j < sorted.length && stageOf(sorted[j]) === stage) j++;
+    const count = j - i;
+    stageSpanMap.set(i, { rowSpan: count, stage, count });
+    for (let k = i + 1; k < j; k++) stageSpanMap.set(k, { rowSpan: 0, stage, count });
+    i = j;
+  }
   return { sortedData: sorted, stageSpanMap };
 }
 
@@ -122,7 +133,16 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
       dataIndex: 'processCode',
       width: 100,
       ellipsis: true,
-      render: (text: string) => text || '-',
+      // D-264（用户拍板）：工序编号开放编辑——编码即顺序，改编码即调顺序，
+      // 整表按编码数字序排列（见 computeSortedDataAndStageSpan）
+      render: (text: string, record: StyleProcessWithSizePrice) => editableMode ? (
+        <Input
+          value={text}
+          placeholder="如 01"
+          maxLength={10}
+          onChange={(e) => updateField(record.id as string | number, 'processCode', e.target.value)}
+        />
+      ) : (text || '-'),
     },
     {
       title: '工序名称',
