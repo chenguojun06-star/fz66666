@@ -96,9 +96,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
       if (!moved) return prev;
       arr.splice(from, 1);
       arr.splice(to, 0, moved);
-      // 进度节点跟随落点分组
-      const neighbor = arr[to + 1] ?? arr[to - 1];
-      if (neighbor && neighbor !== moved) moved.progressStage = neighbor.progressStage;
+      // D-289：拖动只调顺序，进度节点保持行自身归属不变（此前"跟随落点分组"会把行变成上面父节点的子工序）
       return arr.map((r, i) => ({ ...r, sortOrder: i + 1, processCode: String(i + 1).padStart(2, '0') }));
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,7 +204,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         right={
           <>
           {canDrag && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可拖动行排序（编码自动重排，进度节点跟随落点）</span>
+            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可拖动行排序（编码自动重排，进度节点保持不变）</span>
           )}
           {editMode && !readOnly && sizes.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

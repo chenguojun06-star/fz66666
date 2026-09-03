@@ -61,6 +61,9 @@ public class StyleDocOcrOrchestrator {
                 throw new IllegalStateException("AI识别返回为空"
                         + (reason != null ? "（" + reason + "）" : "") + "，请检查视觉模型配置后重试");
             }
+            // 工艺单常以 HTML 源码形态截图，识别结果会夹带 <div>/<span>/<h3> 等标签与行号痕迹，
+            // 返回前统一清洗为可读纯文本（D-263）
+            rawText = cleanRecognizedText(rawText);
             log.info("[StyleDocOcr] 工艺单识别完成 tenantId={} 字符数={}", tenantId, rawText.length());
 
             Map<String, Object> result = new HashMap<>();
@@ -71,6 +74,54 @@ public class StyleDocOcrOrchestrator {
             log.warn("[StyleDocOcr] AI识别异常 tenantId={}: {}", tenantId, e.getMessage());
             throw new IllegalStateException("AI识别失败，请重试：" + e.getMessage());
         }
+    }
+
+    /**
+     * 清洗 AI 工艺单识别文本（D-263）：
+     * 1. 块级标签（div/p/li/ul/ol/tr/h1-h6 等）与 &lt;br&gt; → 换行
+     * 2. 其余 HTML 标签剥除（标签间文字保留）
+     * 3. HTML 实体解码（&amp;nbsp; &amp;amp; &amp;lt; &amp;gt; &amp;quot; &amp;#39;）
+     * 4. 行首行号痕迹剥除：源码视图截图会把行号带出来（如 "2 供应链..."），
+     *    纯数字行丢弃，数字+空白+中文正文的前导数字剥除；3 位以上数字视为正文（如 "300 件"）保留
+     * 5. 行首尾空白清理 + 多余空行压缩
+     */
+    String cleanRecognizedText(String rawText) {
+        if (rawText == null || rawText.isEmpty()) return rawText;
+
+        String t = rawText;
+        // 1. 块级标签 → 换行；<br> → 换行
+        t = t.replaceAll("(?i)</?(?:div|p|li|ul|ol|tr|h[1-6]|section|article|table)(?:\\s[^>]*)?>", "\n");
+        t = t.replaceAll("(?i)<br\\s*/?>", "\n");
+        // 2. 其余 HTML 标签剥除
+        t = t.replaceAll("(?s)<[^>]+>", "");
+        // 3. HTML 实体解码
+        t = t.replaceAll("(?i)&nbsp;", " ")
+                .replaceAll("(?i)&amp;", "&")
+                .replaceAll("(?i)&lt;", "<")
+                .replaceAll("(?i)&gt;", ">")
+                .replaceAll("(?i)&quot;", "\"")
+                .replaceAll("(?i)&#39;", "'");
+        // 4. 行号痕迹剥除
+        StringBuilder sb = new StringBuilder();
+        for (String line : t.split("\\n", -1)) {
+            String trimmed = line.trim();
+            if (trimmed.matches("\\d{1,3}")) {
+                // 纯数字行（源码视图行号残留）直接丢弃
+                continue;
+            }
+            if (trimmed.matches("\\d{1,2}\\s+.*[\\u4e00-\\u9fa5].*")) {
+                // "15 整件熨烫平服，无线毛..." → "整件熨烫平服，无线毛..."
+                sb.append(trimmed.replaceFirst("\\d{1,2}\\s+", ""));
+            } else {
+                sb.append(line);
+            }
+            sb.append("\n");
+        }
+        t = sb.toString();
+        // 5. 行首尾空白 + 压缩多余空行
+        t = t.replaceAll("(?m)^[ \\t]+|[ \\t]+$", "");
+        t = t.replaceAll("\\n{3,}", "\n\n");
+        return t.trim();
     }
 
     /**

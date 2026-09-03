@@ -13,6 +13,45 @@ const SHEET_IMAGE_BIZ = 'workorder';
 /** 制单图片上限 */
 const SHEET_IMAGE_MAX = 9;
 
+/**
+ * AI 工艺单识别文本清洗（D-263，与后端 StyleDocOcrOrchestrator.cleanRecognizedText 同口径）：
+ * 工艺单常以 HTML 源码形态截图，识别结果会夹带 <div>/<span>/<h3> 标签与行号痕迹。
+ * - 块级标签与 <br> → 换行；其余标签剥除；HTML 实体解码
+ * - 行首行号痕迹剥除（纯数字行丢弃；"15 整件..." → "整件..."；3 位以上数字视为正文保留）
+ */
+const cleanOcrRawText = (raw: string): string => {
+  if (!raw) return raw;
+  let t = raw
+    .replace(/<\/?(?:div|p|li|ul|ol|tr|h[1-6]|section|article|table)\b[^>]*>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+  t = t
+    .split(/\r\n|\r|\n/)
+    .filter((line, _, arr) => {
+      const trimmed = line.trim();
+      // 纯数字行丢弃（源码视图行号残留，仅保留空行判别）
+      return !(trimmed && /^\d{1,3}$/.test(trimmed));
+    })
+    .map((line) => {
+      const trimmed = line.trim();
+      if (/^\d{1,2}\s+.*[\u4e00-\u9fa5]/.test(trimmed)) {
+        return trimmed.replace(/^\d{1,2}\s+/, '');
+      }
+      return trimmed;
+    })
+    .join('\n')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return t;
+};
+
 export function useStyleProductionTabData(props: StyleProductionTabProps) {
   const {
     styleId,
@@ -163,7 +202,8 @@ export function useStyleProductionTabData(props: StyleProductionTabProps) {
       if (res.code !== 200) {
         setOcrError(res.message || 'AI识别失败');
       } else {
-        setOcrText(res.data?.rawText || '');
+        // D-263：老后端/异常识别结果可能夹带 HTML 标签与行号痕迹，展示前统一清洗
+        setOcrText(cleanOcrRawText(res.data?.rawText || ''));
       }
     } catch (e: unknown) {
       setOcrError(e instanceof Error ? e.message : 'AI识别失败，请重试');

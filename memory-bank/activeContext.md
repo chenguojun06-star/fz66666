@@ -7,6 +7,15 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-03 D-263 工艺单AI识别结果夹带HTML标签/行号痕迹 → 识别前后统一清洗 ✅代码完成，待推送部署
+
+- [x] 根因：工艺单常以 HTML 源码形态截图上传，视觉模型把 `<div>/<span style=...>/<h3>` 标签和源码行号（"2 供应链..."）当正文识别出来；后端 recognizeRequirementDoc 原样透传 rawText，前端 OCR 弹窗纯文本预览直接暴露
+- [x] 后端 `StyleDocOcrOrchestrator.cleanRecognizedText`：块级标签/<br>→换行 → 其余标签剥除 → HTML实体解码 → 行首行号剥除（纯数字行丢弃；"15 整件..."→"整件..."；3位以上数字如"300 件"保留）→ 空行压缩
+- [x] 前端 `useStyleProductionTabData.cleanOcrRawText`：同口径清洗后 setOcrText（防御老后端/异常结果），追加/替换进工艺说明的也是干净文本
+- [x] 验证：用用户样例（大货工艺制造单 2/2）实测清洗后无标签残留、行号正确剥离，可读纯文本；后端 mvn compile EXIT=0、前端 tsc --noEmit EXIT=0（P0#23 降级：test-runner-mcp 本会话不可用，已用裸命令验证）
+- [ ] 注意：已保存的历史脏数据不会自动清洗，重新走一次 AI 识别（追加/替换）即可得到干净文本
+- [ ] 待用户：推送部署后重新识别验证
+
 ### 2026-09-03 D-283 工序单价租户级总开关（通用设置）✅待推送
 
 - [x] 需求：管理要一个通用开关控制单价在公共页面（生产管理/外发管理工序进度）显示/隐藏；时间显示不动
@@ -16,6 +25,11 @@
 - [x] procTimeline.js：`getTenantPriceVisible/cacheTenantPriceVisible/applyTenantPriceVisibility`（隐藏时清 priceText，_priceTextRaw 保留可恢复）；时间显示逻辑零改动
 - [x] 四副本同步 md5 一致；node --check / tsc / mvn compile 全过
 - [ ] 待推送+CI 部署（后端开关接口生效）后用户回归
+
+### 2026-09-03 D-289 拖动不改写进度节点 ✅已推送，待回归
+
+- [x] 去掉"进度节点跟随落点"：拖动只调顺序，行的父进度保持不变（用户实测反馈）
+- [ ] 待用户回归拖动调序
 
 ### 2026-09-03 D-287/288 行操作常显+工序单价排序拖动 ✅已推送，待回归
 
