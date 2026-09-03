@@ -341,28 +341,38 @@
   color: var(--color-text-primary, var(--color-gray-800));
 }
 
+/* D-279：section body 竖排——每个子模块一个分组块（子模块名行 + 按钮行），不再横向平成一堆 */
 .perm-matrix-section-body {
-  padding: 12px 16px;
+  padding: 8px 16px 12px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.perm-matrix-section-body.has-prefix {
-  padding-left: 16px;
-  align-items: center;
-}
-
-.perm-matrix-section-prefix {
-  position: static;
-  flex-shrink: 0;
-  max-width: 360px;
+.perm-matrix-item-group {
+  border: 1px solid var(--color-border-light, var(--color-border-light));
+  border-radius: 6px;
+  background: var(--color-bg-base);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.perm-matrix-item-head {
+  padding: 6px 10px;
+  background: var(--color-indigo-50, #f5f7ff);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
+}
+
+.perm-matrix-item-head .ant-checkbox-wrapper {
   font-weight: 600;
   font-size: 14px;
   color: var(--color-text-primary, var(--color-gray-800));
+}
+
+.perm-matrix-item-btns {
+  padding: 6px 10px 8px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 20px;
 }
 
 .perm-matrix-item {

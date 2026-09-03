@@ -6,7 +6,7 @@ const { Text } = Typography;
 
 interface PermissionSection {
   title: string;
-  items: Array<{ label: string; permNode: PermissionNode | null; sharedWith: string | null; allIds: number[] }>;
+  items: Array<{ label: string; permNode: PermissionNode | null; buttons: PermissionNode[]; sharedWith: string | null; allIds: number[] }>;
   moduleTotal: number;
   moduleChecked: number;
 }
@@ -135,8 +135,6 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
           const sectionIds = section.items.flatMap(it => it.allIds);
           const sectionAll = sectionIds.length > 0 && sectionIds.every(id => checkedPermIds.has(id));
           const sectionSome = sectionIds.some(id => checkedPermIds.has(id));
-          const singleItem = section.items.length === 1 ? section.items[0] : null;
-          const hasPrefix = !!singleItem && singleItem.label !== section.title && !singleItem.sharedWith;
 
           return (
             <div key={section.title} className="perm-matrix-section">
@@ -149,21 +147,46 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                   {section.title}
                 </Checkbox>
               </div>
-              <div className={`perm-matrix-section-body ${hasPrefix ? 'has-prefix' : ''}`}>
-                {hasPrefix && <span className="perm-matrix-section-prefix">{singleItem!.label}：</span>}
+              <div className="perm-matrix-section-body">
                 {section.items.map((item) => {
                   if (!item.permNode || item.sharedWith) return null;
-                  const nodes = [item.permNode, ...(item.permNode.children || [])].filter(n => n.id != null);
-                  return nodes.map((n) => (
-                    <span key={String(n.id)} className="perm-matrix-item">
-                      <Checkbox
-                        checked={checkedPermIds.has(Number(n.id))}
-                        onChange={(e) => onToggleIds([Number(n.id)], e.target.checked)}
-                      >
-                        {n.permissionName}
-                      </Checkbox>
-                    </span>
-                  ));
+                  const btnIds = item.buttons.map(b => Number(b.id));
+                  const nodeChecked = checkedPermIds.has(Number(item.permNode.id));
+                  const btnCheckedCount = btnIds.filter(id => checkedPermIds.has(id)).length;
+                  const groupAll = nodeChecked && btnIds.length > 0 && btnCheckedCount === btnIds.length;
+                  const groupSome = !groupAll && (nodeChecked || btnCheckedCount > 0);
+                  // 单子模块且名称与主模块相同时（如 客户管理/应用商店），头部勾选框已覆盖子模块权限本身，
+                  // 不再重复渲染一行同名子模块，只展示其按钮
+                  const singleDupe = section.items.length === 1 && item.label === section.title;
+                  return (
+                    <div key={item.label} className="perm-matrix-item-group">
+                      {!singleDupe && (
+                        <div className="perm-matrix-item-head">
+                          <Checkbox
+                            checked={groupAll}
+                            indeterminate={groupSome}
+                            onChange={(e) => onToggleIds([Number(item.permNode!.id), ...btnIds], e.target.checked)}
+                          >
+                            {item.label}
+                          </Checkbox>
+                        </div>
+                      )}
+                      {item.buttons.length > 0 && (
+                        <div className="perm-matrix-item-btns">
+                          {item.buttons.map((b) => (
+                            <span key={String(b.id)} className="perm-matrix-item">
+                              <Checkbox
+                                checked={checkedPermIds.has(Number(b.id))}
+                                onChange={(e) => onToggleIds([Number(b.id)], e.target.checked)}
+                              >
+                                {b.permissionName}
+                              </Checkbox>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
                 })}
               </div>
             </div>

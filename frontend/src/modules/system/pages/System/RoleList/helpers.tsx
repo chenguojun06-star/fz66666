@@ -14,24 +14,26 @@ import { permissionCodes } from '@/routeConfig';
 // ===== 权限模块配置（用于权限矩阵渲染） =====
 // 规则：每个权限码（MENU_*）只出现一次。多个菜单共享同一权限码时合并为一项并在标签中注明，
 // 避免同码多项造成的勾选联动、重复计数（历史遗留：外发工厂/工资结算/应付账款等 13 处重复项已清理）。
+// D-279：label 对齐侧边栏权威命名（menuConfig），子菜单中文名由迁移统一刷成同名，
+// 矩阵渲染子模块行用本表 label，不再直接显示 DB 节点名（历史名脱节：样衣出入库/我的订单/审批付款…）。
 export const MODULE_SECTIONS = [
   { title: '仪表盘', items: [{ label: '仪表盘', code: permissionCodes.dashboard }] },
   { title: '选品中心', items: [{ label: '选品中心', code: permissionCodes.selection }] },
   { title: '样衣管理', items: [
     { label: '样衣开发', code: permissionCodes.styleInfo },
-    { label: '资料单价', code: permissionCodes.dataCenter },
+    { label: '资料维护', code: permissionCodes.dataCenter },
     { label: '样衣库存', code: permissionCodes.sampleInventory },
     { label: '商品下单', code: permissionCodes.orderManagement },
   ]},
   { title: '物料管理', items: [
     { label: '物料采购', code: permissionCodes.materialPurchase },
     { label: '物料出入库', code: permissionCodes.materialInventory },
-    { label: '物料新增', code: permissionCodes.materialDatabase },
+    { label: '物料资料', code: permissionCodes.materialDatabase },
   ]},
   { title: '生产管理', items: [
     { label: '生产订单', code: permissionCodes.productionList },
     { label: '裁剪管理', code: permissionCodes.cutting },
-    { label: '工序跟进（含外发工厂）', code: permissionCodes.progress },
+    { label: '工序跟进（含外发/看板）', code: permissionCodes.progress },
     { label: '质检入库', code: permissionCodes.warehousing },
   ]},
   // 供应商管理/组织架构/合作企业共用 MENU_FACTORY 权限码，合并为一项
@@ -49,16 +51,19 @@ export const MODULE_SECTIONS = [
     { label: '客户档案（含应收账款）', code: permissionCodes.crm },
   ]},
   { title: '财务管理', items: [
-    { label: '财务总览（含工资/外发结算）', code: permissionCodes.financeDashboard },
+    // MENU_FINISHED_SETTLEMENT 同时是 财务总览/工资结算/外发结算 三个页面的准入码（routeToPermissionCode）
+    { label: '财务总览（含外发结算）', code: permissionCodes.financeDashboard },
+    { label: '工资结算', code: permissionCodes.payrollSummary },
     { label: '物料对账（含应付/付款计划）', code: permissionCodes.materialRecon },
     { label: '收付款中心', code: permissionCodes.wagePayment },
+    { label: '员工借支', code: permissionCodes.employeeAdvance },
     { label: '费用管理', code: permissionCodes.expenseReimbursement },
     { label: '财税工具（含EC销售收入）', code: permissionCodes.financeTaxExport },
   ]},
   { title: '系统设置', items: [
     { label: '个人中心', code: 'PUBLIC' },
-    { label: '人员管理', code: permissionCodes.user },
-    { label: '岗位管理', code: permissionCodes.role },
+    { label: '人员管理（含考勤管理）', code: permissionCodes.user },
+    { label: '岗位与权限', code: permissionCodes.role },
   ]},
   { title: '工具', items: [
     { label: '数据导入', code: permissionCodes.dataImport },

@@ -448,6 +448,7 @@ export const permissionCodes = {
   expenseReimbursement: 'MENU_EXPENSE_REIMBURSEMENT',
   employeeAdvance: 'MENU_EMPLOYEE_ADVANCE',
   wagePayment: 'MENU_PAYMENT_APPROVAL',
+  payrollSummary: 'MENU_PAYROLL_OPERATOR_SUMMARY',
 
   materialInventory: 'MENU_MATERIAL_INVENTORY',
   materialDatabase: 'MENU_MATERIAL_DATABASE',

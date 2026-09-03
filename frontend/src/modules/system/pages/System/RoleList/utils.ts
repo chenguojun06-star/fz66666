@@ -17,6 +17,8 @@ export function buildPermCodeMap(permTree: PermissionNode[]): Map<string, Permis
 export type SectionComputedItem = {
   label: string;
   permNode: PermissionNode | null;
+  /** 子模块自身菜单权限下的按钮级子节点（menu 类型子节点不算——历史数据有菜单嵌菜单，混进来就是"权限堆积"） */
+  buttons: PermissionNode[];
   sharedWith: string | null;
   allIds: number[];
 };
@@ -27,6 +29,11 @@ export type SectionComputed = {
   moduleTotal: number;
   moduleChecked: number;
 };
+
+/** 按钮级节点判定：permission_type 非 menu 都按按钮渲染（DB 里 menu/button 大小写不统一） */
+function isButtonChild(child: PermissionNode): boolean {
+  return String(child.permissionType || '').trim().toLowerCase() !== 'menu';
+}
 
 export function computeSections(
   permKeyword: string,
@@ -41,10 +48,14 @@ export function computeSections(
       const sharedWith = firstCodeLabel.has(item.code) ? firstCodeLabel.get(item.code)! : null;
       if (!firstCodeLabel.has(item.code)) firstCodeLabel.set(item.code, item.label);
       const node = permCodeMap.get(item.code) || null;
-      const childIds: number[] = (!sharedWith && node?.children) ? node.children.filter(c => c.id != null).map(c => Number(c.id)) : [];
+      // D-279：只把按钮级子节点算进本子模块（allIds 同步收窄，保证全选/半选状态与所见一致）
+      const buttons: PermissionNode[] = (!sharedWith && node?.children)
+        ? node.children.filter(c => c.id != null && isButtonChild(c))
+        : [];
+      const childIds = buttons.map(c => Number(c.id));
       const selfId = node?.id != null && !sharedWith ? [Number(node.id)] : [];
       const allIds = [...selfId, ...childIds];
-      items.push({ label: item.label, permNode: node, sharedWith, allIds });
+      items.push({ label: item.label, permNode: node, buttons, sharedWith, allIds });
     }
     let moduleTotal = 0;
     let moduleChecked = 0;
