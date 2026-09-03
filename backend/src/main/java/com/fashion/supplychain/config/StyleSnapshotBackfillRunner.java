@@ -178,6 +178,13 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 + "SET s.delete_flag = 1, s.update_time = NOW() "
                 + "WHERE s.delete_flag = 0 AND s.id <> d.keep_id");
 
+        // 10) D-281：报废/作废单被历史漏洞翻成 completed 的存量回归——真实完成的订单必有入库合格数
+        // （markOrderCompleted 写 completed_quantity>0），completed 且完成数为 0 的行均为脏数据，统一翻回 scrapped。
+        // 关单链路的翻转入口已同步加守卫（ProductionOrderFinanceOrchestrationService.closeOrder）
+        exec("报废单状态回归",
+                "UPDATE t_production_order SET status='scrapped', update_time=NOW() "
+                + "WHERE delete_flag=0 AND status='completed' AND IFNULL(completed_quantity,0)=0");
+
         log.info("[StyleSnapshotBackfill] 存量款号/编码一致性回填完成");
     }
 

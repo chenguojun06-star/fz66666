@@ -220,6 +220,13 @@ public class ProductionOrderFinanceOrchestrationService {
         if ("closed".equals(st) || "已关闭".equals(st)) {
             return order;
         }
+        // D-281：报废/取消/归档是终态，关单不得把状态翻成 completed（历史漏洞：入库合格数≥订单数时
+        // markOrderCompleted 会把 scrapped 单复活成 completed，用户看到"报废的订单显示已完成"）
+        if ("scrapped".equals(st) || "cancelled".equals(st) || "canceled".equals(st) || "archived".equals(st)) {
+            throw new IllegalStateException("订单已" +
+                    ("scrapped".equals(st) ? "报废" : "cancelled".equals(st) || "canceled".equals(st) ? "取消" : "归档") +
+                    "（" + st + "），无法关单");
+        }
 
         int warehousingQualified = resolveWarehousingQualified(oid, order);
 

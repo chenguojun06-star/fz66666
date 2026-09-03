@@ -145,8 +145,9 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
 
   // ── U-1 填充模式：在 PageLayout 全高布局内自动计算 scroll.y ──────────────
   // 表头 + 分页钉死，仅表体内部滚动（App 式布局）。
-  // 仅当：调用方未显式传 scroll.y，且表格是 .page-layout-body 的直接子元素时启用；
-  // 其余场景（Modal 内、包裹层、Tabs）保持原有自然高度行为，避免破坏现有页面。
+  // 仅当：调用方未显式传 scroll.y，且表格在填充型容器（.page-layout-body 或填满它的 Tabs 内容区）内时启用；
+  // D-281：从"直接子元素"放宽为"容器内任意深度"——Card/筛选栏包裹的表格同样吸底（用户反馈全站只有订单管理吸底）。
+  // Modal / Drawer / 折叠面板内保持自然高度（弹层有自己的滚动容器，注入填充反而破坏布局）。
   const [fillScrollY, setFillScrollY] = useState<number | undefined>(undefined);
   const lastFillYRef = useRef<number>(0);
   const computeFillYRef = useRef<(() => void) | null>(null);
@@ -154,8 +155,14 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
   React.useEffect(() => {
     const shell = shellRef.current;
     if (!shell) return;
-    const container = shell.parentElement;
-    if (!container || !container.classList.contains('page-layout-body')) return;
+    let container: HTMLElement | null = shell.closest<HTMLElement>('.page-layout-body');
+    if (!container) {
+      // 页签页：Tabs 自身已占满 page-layout-body 时，以签内容区为填充容器
+      const holder = shell.closest<HTMLElement>('.ant-tabs-content-holder');
+      if (holder && holder.closest('.page-layout-body')) container = holder;
+    }
+    if (!container) return;
+    if (shell.closest('.ant-modal, .ant-drawer, .ant-collapse-item')) return;
 
     const compute = () => {
       const headerEl = shell.querySelector('.ant-table-header') as HTMLElement | null;
@@ -165,7 +172,12 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
         + (paginationEl?.offsetHeight || 0)
         + (paginationEl ? 16 : 0)
         + (exportEl?.offsetHeight || 0);
-      const next = Math.max(80, Math.floor(container.clientHeight - chrome - 4));
+      // 表格上方（筛选栏/提示条）与下方（底部留白）占位一并扣除，分页正好钉在容器底
+      const bodyRect = container!.getBoundingClientRect();
+      const shellRect = shell.getBoundingClientRect();
+      const topOffset = Math.max(0, shellRect.top - bodyRect.top);
+      const below = shellRect.bottom > bodyRect.bottom ? 0 : Math.max(0, bodyRect.bottom - shellRect.bottom);
+      const next = Math.max(80, Math.floor(container!.clientHeight - topOffset - chrome - below - 4));
       if (Math.abs(next - lastFillYRef.current) > 1) {
         lastFillYRef.current = next;
         Promise.resolve().then(() => setFillScrollY(next));
@@ -177,11 +189,15 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
     const ro = new ResizeObserver(() => compute());
     ro.observe(container);
     ro.observe(shell);
+    // 容器子节点变化（筛选栏收起/展开、提示条消失）会改变表格顶部占位，同步重算
+    const mo = new MutationObserver(() => compute());
+    mo.observe(container, { childList: true, subtree: false });
     window.addEventListener('resize', compute);
     // scroll.y 注入后 antd 才会渲染独立表头，下一帧再精算一次收敛
     const raf = requestAnimationFrame(() => compute());
     return () => {
       ro.disconnect();
+      mo.disconnect();
       window.removeEventListener('resize', compute);
       cancelAnimationFrame(raf);
       computeFillYRef.current = null;

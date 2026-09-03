@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-03（新增 D-280 部门树联动/岗位关联人员过滤/手机端进度时间线+时间单价开关）
+> 最后更新：2026-09-03（新增 D-281 报废单状态一致性+分页吸底全站铺开）
+
+---
+
+## D-281：报废单显示"已完成"四端核实+分页吸底全站铺开（2026-09-03）
+
+用户：①很多报废的订单显示成已完成，状态要全部核实清楚，多端（PC订单管理/外发工厂、手机端生产管理/外发管理）显示一致；②全站只有订单管理的底部分页是固定的，其它页面一堆滚动条。
+
+**报废状态核实结论**：四端**显示映射本来就齐全**（PC orderStatus.ts/statusMaps.ts、PC外发工厂SmartView、手机端 displayHelper 均有 scrapped→已报废）——显示没错，是**数据错了**：这些行在库里 status 就是 'completed'。来源两个：
+1. **关单复活漏洞（已堵）**：`ProductionOrderFinanceOrchestrationService.closeOrder` 只对 closed 短路，报废/取消单在"入库合格数≥订单数"时被 `markOrderCompleted` 翻成 completed。修复：closeOrder 对 scrapped/cancelled/archived 明确抛错拒绝关单。
+2. **历史脏数据（自愈）**：守卫加上前已翻怪的行。真实完成的订单必有入库合格数（markOrderCompleted 写 completed_quantity>0），故 completed 且 completed_quantity=0 的行统一翻回 scrapped——StyleSnapshotBackfillRunner 第 10 步（幂等，本地实测 0 行影响）。
+
+**分页吸底**：填充模式（表头+分页钉死、表体内部滚动）要求 ResizableTable 是 `.page-layout-body` 的**直接子元素**，Card/筛选栏包一层就退化为整页滚动。修复 `useResizableTableData`：容器从 parentElement 放宽为 `closest('.page-layout-body')`（找不到再退 `.ant-tabs-content-holder`，且必须在 page-layout-body 内）；扣减高度改为动态量取表格上方占位+下方留白；Modal/Drawer/折叠面板内保持自然高度；MutationObserver 监听容器子节点变化（筛选收起/展开重算）。所有 PageLayout+ResizableTable 页面（物料采购/工序跟进/人员管理/考勤/财务列表等）自动获得吸底；外发工厂页本就是 Virtuoso 填充结构无需改动。
+
+**教训**：①"显示不一致"先查数据再查映射——四端映射齐全时问题在写入侧；②状态机的守卫要覆盖所有"顺路写状态"的入口（关单自动完成这种 bonus 行为最容易翻车）；③CSS 直接子元素选择器（`>`）+ JS parentElement 检查是"只在某个页面生效"类 bug 的头号嫌疑。
 
 ---
 
