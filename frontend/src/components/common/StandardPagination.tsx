@@ -7,6 +7,8 @@ interface StandardPaginationProps extends Omit<PaginationProps, 'align'> {
   align?: 'left' | 'center' | 'right';
   wrapperStyle?: React.CSSProperties;
   compact?: boolean;
+  /** D-282：吸底翻页器——position:sticky 钉在滚动容器底部（卡片视图等非填充表格页面用） */
+  sticky?: boolean;
 }
 
 const justifyMap: Record<NonNullable<StandardPaginationProps['align']>, React.CSSProperties['justifyContent']> = {
@@ -19,6 +21,7 @@ const StandardPagination: React.FC<StandardPaginationProps> = ({
   align = 'right',
   wrapperStyle,
   compact = false,
+  sticky = false,
   showTotal,
   showSizeChanger = true,
   showQuickJumper = true,
@@ -37,6 +40,7 @@ const StandardPagination: React.FC<StandardPaginationProps> = ({
 
   return (
     <div
+      className={sticky ? 'standard-pagination--sticky' : undefined}
       style={{
         display: 'flex',
         justifyContent: justifyMap[align],

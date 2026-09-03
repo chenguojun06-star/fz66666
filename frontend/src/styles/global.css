@@ -2481,3 +2481,13 @@ img.img-cover {
   font-size: 13px !important;
   font-weight: 600 !important;
 }
+
+
+/* D-282：吸底翻页器（卡片视图等自然流列表页用）——钉在滚动容器底部 */
+.standard-pagination--sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: var(--color-bg-base, #fff);
+  border-top: 1px solid var(--color-border-light, #f0f0f0);
+}

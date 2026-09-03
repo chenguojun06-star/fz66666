@@ -262,7 +262,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         getCardStyle={showFocus ? (record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? { boxShadow: '0 0 0 2px rgba(24, 144, 255, 0.28), 0 10px 24px rgba(24, 144, 255, 0.18)', transform: 'translateY(-2px)' } : undefined : undefined}
         actions={cardActions} hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />} titleTags={mergedTitleTags}
       />
-      <StandardPagination current={queryParams.page} pageSize={queryParams.pageSize} total={total} wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }} showQuickJumper={false} onChange={(page, pageSize) => { savePageSize(pageSize); setQueryParams((prev) => ({ ...prev, page, pageSize })); }} />
+      <StandardPagination sticky current={queryParams.page} pageSize={queryParams.pageSize} total={total} wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }} showQuickJumper={false} onChange={(page, pageSize) => { savePageSize(pageSize); setQueryParams((prev) => ({ ...prev, page, pageSize })); }} />
     </>
   );
 

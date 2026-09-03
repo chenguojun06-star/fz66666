@@ -264,6 +264,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       }}
     />
     <StandardPagination
+      sticky
       current={currentPage}
       pageSize={pageSize}
       total={total}

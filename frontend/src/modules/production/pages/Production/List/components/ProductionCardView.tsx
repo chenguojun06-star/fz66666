@@ -177,6 +177,7 @@ const ProductionCardView: React.FC<ProductionCardViewProps> = ({
     />
     {/* 卡片视图分页器 */}
     <StandardPagination
+      sticky
       current={page}
       pageSize={pageSize}
       total={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? sortedProductionList.length : total}

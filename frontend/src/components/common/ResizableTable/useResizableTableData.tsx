@@ -161,6 +161,10 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
       const holder = shell.closest<HTMLElement>('.ant-tabs-content-holder');
       if (holder && holder.closest('.page-layout-body')) container = holder;
     }
+    if (!container) {
+      // D-282：裸 Card 旧页（质检入库等）——兜底到全局滚动区，同样获得吸底填充
+      container = shell.closest<HTMLElement>('.layout-content');
+    }
     if (!container) return;
     if (shell.closest('.ant-modal, .ant-drawer, .ant-collapse-item')) return;
 
@@ -172,12 +176,13 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
         + (paginationEl?.offsetHeight || 0)
         + (paginationEl ? 16 : 0)
         + (exportEl?.offsetHeight || 0);
-      // 表格上方（筛选栏/提示条）与下方（底部留白）占位一并扣除，分页正好钉在容器底
-      const bodyRect = container!.getBoundingClientRect();
+      // D-282 修复：底边锚定——shell 底边贴到填充容器底边（留 4px）。
+      // 不可用"容器底-当前底"扣减：表格短时剩余空间被当成占位，自锁到最小高度（裁剪管理只剩一条）。
+      // 填充容器是固定高滚动区（flex+min-height:0），底边不随内容增长，无自指。
+      const containerRect = container!.getBoundingClientRect();
       const shellRect = shell.getBoundingClientRect();
-      const topOffset = Math.max(0, shellRect.top - bodyRect.top);
-      const below = shellRect.bottom > bodyRect.bottom ? 0 : Math.max(0, bodyRect.bottom - shellRect.bottom);
-      const next = Math.max(80, Math.floor(container!.clientHeight - topOffset - chrome - below - 4));
+      const available = containerRect.bottom - shellRect.top - 4;
+      const next = Math.max(80, Math.floor(available - chrome));
       if (Math.abs(next - lastFillYRef.current) > 1) {
         lastFillYRef.current = next;
         Promise.resolve().then(() => setFillScrollY(next));

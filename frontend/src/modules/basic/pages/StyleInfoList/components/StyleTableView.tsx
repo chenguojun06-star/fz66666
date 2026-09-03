@@ -116,6 +116,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
         <div className="style-smart-list__pagination">
           <StandardPagination
+            sticky
             current={currentPage}
             pageSize={pageSize}
             total={total}
