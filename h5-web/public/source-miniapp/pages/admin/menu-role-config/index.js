@@ -1,4 +1,6 @@
 const api = require('../../../utils/api');
+const { isTenantOwner, isSuperAdmin } = require('../../../utils/storage');
+const { PRICE_FLAG_KEY, getTenantPriceVisible, cacheTenantPriceVisible } = require('../../../utils/procTimeline');
 
 Page({
   data: {
@@ -12,10 +14,48 @@ Page({
     roleMenus: {},
     toastMsg: '',
     showToast: false,
+    /* D-285：租户级「工序单价显示」全局开关（唯一入口，对生产管理/外发管理等页面全员生效） */
+    canManagePrice: false,
+    priceVisible: true,
   },
 
   onLoad: function () {
+    const canManagePrice = isTenantOwner() || isSuperAdmin();
+    this.setData({ canManagePrice: canManagePrice, priceVisible: getTenantPriceVisible() });
+    if (canManagePrice) this.loadPriceFlag();
     this.loadConfig();
+  },
+
+  /* 拉取后端租户级开关值（本地缓存只做秒显兜底） */
+  loadPriceFlag: function () {
+    const that = this;
+    api.system.getSmartFeatureFlags().then(function (flags) {
+      const raw = flags && flags[PRICE_FLAG_KEY];
+      const visible = raw === undefined || raw === null ? true : !!raw;
+      cacheTenantPriceVisible(visible);
+      that.setData({ priceVisible: visible });
+    }).catch(function () { /* 拉取失败沿用本地缓存 */ });
+  },
+
+  onTogglePriceVisible: function () {
+    const that = this;
+    if (!that.data.canManagePrice) {
+      that._showToast('仅租户管理员可操作');
+      return;
+    }
+    const next = !that.data.priceVisible;
+    // 后端保存是全量覆盖语义：先 GET 全量 → 合并 → PUT 整体提交，避免把其他租户开关冲回默认值
+    api.system.getSmartFeatureFlags().then(function (flags) {
+      const nextFlags = Object.assign({}, flags || {});
+      nextFlags[PRICE_FLAG_KEY] = next;
+      return api.system.saveSmartFeatureFlags(nextFlags);
+    }).then(function () {
+      cacheTenantPriceVisible(next);
+      that.setData({ priceVisible: next });
+      that._showToast(next ? '单价已对全员显示' : '单价已对全员隐藏');
+    }).catch(function (e) {
+      that._showToast((e && e.message) || '修改失败：仅租户管理员可操作');
+    });
   },
 
   loadConfig: function () {

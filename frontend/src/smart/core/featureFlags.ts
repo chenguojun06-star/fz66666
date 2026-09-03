@@ -15,7 +15,8 @@ export type SmartFeatureKey =
   | 'print.washLabel.defaultTemplateId'
   | 'print.codeType'
   | 'outstock.allowPriceAdjust'
-  | 'outstock.priceAdjustRequireReason';
+  | 'outstock.priceAdjustRequireReason'
+  | 'display.process.unitPrice.visible';
 
 export type SmartFeatureFlags = Record<SmartFeatureKey, boolean>;
 
@@ -35,6 +36,8 @@ const defaultFlags: SmartFeatureFlags = {
   'print.codeType': false,
   'outstock.allowPriceAdjust': false,
   'outstock.priceAdjustRequireReason': false,
+  // 工序单价显示为业务默认开启（隐藏属例外，由管理员主动关闭）
+  'display.process.unitPrice.visible': true,
 };
 
 const storageKey = 'smart-feature-flags';

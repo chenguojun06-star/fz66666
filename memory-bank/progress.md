@@ -1,9 +1,21 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-03（D-282 吸底回归修复+卡片视图翻页器，已推送待 CI 部署）
+> 最后更新：2026-09-03（D-283 工序单价租户级总开关，待推送）
 
 ## 已完成
+
+### 2026-09-03 D-283 工序单价租户级总开关 ✅（后端1+前端3+小程序6含h5副本，node --check/tsc/mvn 过，待推送）
+
+- [x] 新增租户级开关 display.process.unitPrice.visible（复用 t_tenant_smart_feature，默认开，无迁移）
+- [x] PC 智能开关面板 + 小程序生产管理/外发管理管理员 chips 双入口
+- [x] 单价隐藏时时间显示不受影响；非管理员只读跟随
+- [ ] 待推送 CI 部署后用户回归：关开关→两页单价消失（全员）；开→恢复
+
+### 2026-09-03 D-283~286 工序时间线四连 ✅（后端2+PC3+小程序9含h5副本，全检查过，已推送待 CI 部署）
+
+- [x] D-283 租户单价开关（权限配置页）/ D-284 耗时停留等待 / D-285 时间恒显 / D-286 前沿呼吸
+- [ ] 待用户回归：呼吸点、单价开关全租户生效、耗时文本
 
 ### 2026-09-03 D-282 吸底回归修复+卡片视图翻页器 ✅（前端5文件，tsc/eslint 过，已推送待 CI 部署）
 
@@ -2933,3 +2945,32 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 - [x] 五道关卡数据流地图（含代码位置）
 - [x] backfillFromPurchases 跨租户(P0)+LIMIT5000 修复
 - [ ] 用户线上跑「补生成对账」后回归；确认其"内部订单"真实 factory_type
+
+### 2026-09-03 D-284 工序时间口径修正 + 小程序耗时/等待展示
+- [x] 后端 flow stages 全量输出 lastTime（真实末扫时间，completed 分支原先不吐）
+- [x] procTimeline.js：结束时间改末扫口径 + 耗时/停留/等待计算 + 等待 60s 计时
+- [x] 生产管理(dashboard) / 外发管理(factory/shipment) 双页展示，文案与配色对齐 PC
+- [x] 三副本同步（js/wxml 覆盖 + wxss 片段插入）+ node --check + 标签栈校验 + mvn compile
+- [ ] 真机验收：展开订单确认「开始/末扫/耗时/停留/等待」与 PC 进度看板一致
+
+### 2026-09-03 D-285 撤销页内开关 + 单价全局开关收敛到权限配置页
+- [x] 删两页「时间/单价」「单价」chips 及 JS 开关方法；时间恢复恒显示（含耗时/停留/等待，不受控制）
+- [x] 权限配置页（menu-role-config）新增「全局显示开关→工序单价显示」（租户老板/超管可见）
+- [x] procTimeline.js 时间开关逻辑下线；两页单价只读生效
+- [x] 三副本同步（8 文件 md5 唯一值=1）+ node --check + WXML 标签栈校验 + 旧开关逻辑零残留扫描
+- [ ] 真机验收：页面无任何 chips；时间恒显示；权限配置页切换单价后两页生效
+
+### 2026-09-03 D-285 热修复：等待计时器在未加载阶段数据时崩溃
+- [x] refreshWaitDurations 对 gapText 为 undefined 的节点（未懒加载阶段时间）跳过；null/undefined/空数组/单节点边界全防御
+- [x] 三副本同步 + 边界用例实测通过；开发者工具复现场景已消除
+
+### 2026-09-03 D-285 补充修复
+- [x] 发现第四副本 h5-web/dist/source-miniapp（构建产物，之前一直漏同步），已同步全部改动文件
+- [x] dashboard/shipment onShow 重拉租户单价开关（修复"权限配置页切完返回不生效"）
+- [ ] 用户反馈 navigateTo menu-role-config "未注册"：app.json 三/四副本均已注册、文件齐全 → 判断为 devtools 热重载缓存，待用户清缓存重编译验证
+
+### 2026-09-03 D-285 根因定位：「权限配置」页导航失败
+- [x] 排查：app.json 四副本均已注册、页面文件齐全、packOptions 无忽略、devtools 确认打开 miniprogram/ 工程
+- [x] 根因 = miniprogram/project.private.config.json 的 setting.ignoreDevUnusedFiles: true（「过滤无依赖文件」），
+      safeNavigate 动态字符串跳转的页面被静态依赖分析误剔出编译产物 → navigateTo 报"未注册"
+- [x] 已改 ignoreDevUnusedFiles: false；用户需在工具 详情→本地设置 确认该项未勾选后重编译

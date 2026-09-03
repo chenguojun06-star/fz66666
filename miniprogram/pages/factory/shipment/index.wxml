@@ -178,9 +178,6 @@
           <view class="expand-section" wx:if="{{item.processNodes && item.processNodes.length > 0}}">
             <view class="proc-head">
               <text class="expand-title">工序进度</text>
-              <view wx:if="{{isManager}}" class="proc-meta-toggle {{showProcMeta ? 'proc-meta-toggle--on' : ''}}" catchtap="onToggleProcMeta">
-                <text class="proc-meta-toggle-text">时间/单价</text>
-              </view>
             </view>
             <view class="proc-timeline">
               <view wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name" class="proc-tl-item">
@@ -204,13 +201,13 @@
                   <view class="proc-tl-bar">
                     <view class="proc-tl-fill {{node._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : (node.percent > 0 ? node.percent : 0)}}%"></view>
                   </view>
-                  <view class="proc-tl-meta" wx:if="{{node.bundleInfo || showProcMeta}}">
+                  <view class="proc-tl-meta" wx:if="{{node.bundleInfo || node.startTime || node.endTime || node.durationText || node.gapText || node.priceText}}">
                     <text wx:if="{{node.bundleInfo}}" class="proc-tl-meta-text">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-                    <block wx:if="{{showProcMeta}}">
-                      <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
-                      <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · 完成 {{node.endTime}}</text>
-                      <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
-                    </block>
+                    <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
+                    <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · {{node.endLabel}} {{node.endTime}}</text>
+                    <text wx:if="{{node.durationText}}" class="{{node.durationClass}}"> · 耗时 {{node.durationText}}</text>
+                    <text wx:if="{{node.gapText}}" class="{{node.gapClass}}"> · {{node.gapText}}</text>
+                    <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
                   </view>
                 </view>
               </view>

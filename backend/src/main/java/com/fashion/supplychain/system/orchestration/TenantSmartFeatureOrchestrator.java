@@ -9,6 +9,7 @@ import com.fashion.supplychain.system.service.TenantSmartFeatureService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,16 @@ public class TenantSmartFeatureOrchestrator {
             "print.washLabel.defaultTemplateId",
             "print.codeType",
             "outstock.allowPriceAdjust",
-            "outstock.priceAdjustRequireReason"
+            "outstock.priceAdjustRequireReason",
+            "display.process.unitPrice.visible"
+    );
+
+    /**
+     * 默认值为 true 的开关（业务语义：默认对全员显示/启用）。
+     * 其余 smart.* 类开关默认关闭（安全默认）。
+     */
+    public static final List<String> DEFAULT_TRUE_FEATURE_KEYS = Collections.singletonList(
+            "display.process.unitPrice.visible"
     );
 
     public static final List<String> MINIPROGRAM_MENU_KEYS = Arrays.asList(
@@ -471,7 +481,7 @@ public class TenantSmartFeatureOrchestrator {
     private Map<String, Boolean> defaultFeatureFlags() {
         Map<String, Boolean> flags = new LinkedHashMap<>();
         for (String key : SUPPORTED_FEATURE_KEYS) {
-            flags.put(key, false);
+            flags.put(key, DEFAULT_TRUE_FEATURE_KEYS.contains(key));
         }
         return flags;
     }

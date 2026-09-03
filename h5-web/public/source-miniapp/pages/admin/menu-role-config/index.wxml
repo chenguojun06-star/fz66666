@@ -43,6 +43,26 @@
         </view>
       </view>
     </view>
+
+    <!-- D-285：租户级全局显示开关（唯一入口，对全员生效） -->
+    <view class="feature-section" wx:if="{{canManagePrice}}">
+      <view class="feature-header">
+        <text class="feature-title">全局显示开关</text>
+      </view>
+      <view class="menu-list">
+        <view class="menu-item" bindtap="onTogglePriceVisible">
+          <text class="menu-name">工序单价显示</text>
+          <view class="switch-wrap">
+            <view class="switch {{priceVisible ? 'switch--on' : 'switch--off'}}">
+              <view class="switch-knob"></view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="tip-bar">
+        <text class="tip-text">关闭后，生产管理 / 外发管理等页面对全员隐藏工序单价；时间显示不受此开关影响</text>
+      </view>
+    </view>
   </view>
 
   <!-- Toast -->

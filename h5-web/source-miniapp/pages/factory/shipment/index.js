@@ -1,8 +1,9 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
-const { isAdminOrSupervisor, isManagerLevel } = require('../../../utils/permission');
-const { getShowProcMeta, setShowProcMeta, applyTimelineStatus, mergeStageMetaIntoNodes } = require('../../../utils/procTimeline');
-const { isFactoryOwner } = require('../../../utils/storage');
+const { dispatchInlineScanCode } = require('../../scan/handlers/InlineScanDispatcher');
+const { isAdminOrSupervisor } = require('../../../utils/permission');
+const { getTenantPriceVisible, cacheTenantPriceVisible, applyTenantPriceVisibility, PRICE_FLAG_KEY, applyTimelineStatus, mergeStageMetaIntoNodes, refreshWaitDurations } = require('../../../utils/procTimeline');
+const { isFactoryOwner, getUserInfo } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 const displayHelper = require('../../../utils/displayHelper');
@@ -27,12 +28,12 @@ const COLOR_TO_TAG_CLASS = {
 
 function receiveStatusText(s) {
   if (!s) return '';
-  return displayHelper.displayPurchaseStatusText(s);
+  return displayHelper.displayFactoryShipmentStatusText(s);
 }
 
 function receiveStatusCls(s) {
   if (!s) return 'tag-gray';
-  const color = displayHelper.displayPurchaseStatusColor(s);
+  const color = displayHelper.displayFactoryShipmentStatusColor(s);
   return COLOR_TO_TAG_CLASS[color] || 'tag-gray';
 }
 
@@ -46,6 +47,8 @@ function enrichForDashboard(order) {
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
   order.progressWidth = Math.min(100, Math.max(0, order.calculatedProgress || 0));
+  // D-229：对齐生产管理 dashboard —— 默认全部收起，由用户点击展开
+  // 原 D-211 让单菲/无菲直接展开，导致页面进来所有单菲卡片都是展开的，视觉上很乱
   order.expanded = false;
   return order;
 }
@@ -55,8 +58,8 @@ Page({
     activeTab: 0,
     isFactory: false,
     isTenantAdmin: false,
-    activeFilter: 'production',
-    filterStats: { production: 0, completed: 0, overdue: 0, warning: 0 },
+    activeFilter: 'all',
+    filterStats: { all: 0, production: 0, completed: 0, overdue: 0, warning: 0 },
     orders: [],
     orderLoading: false,
     orderPage: 1,
@@ -68,15 +71,20 @@ Page({
     shipmentHasMore: true,
     factoryStats: [],
     selectedFactoryId: null,
-    /* D-280：时间/单价显示开关（仅管理层可见可切换） */
-    isManager: false,
-    showProcMeta: false,
+    /* D-285：时间恒显示不受开关控制；单价仅受租户级全局开关控制（入口在「权限配置」页） */
+    priceVisible: true,
   },
 
   onLoad: function () {
     const factory = isFactoryOwner();
     const admin = isAdminOrSupervisor();
-    this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0, isManager: isManagerLevel(), showProcMeta: getShowProcMeta() });
+    const userInfo = getUserInfo();
+    this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0, priceVisible: getTenantPriceVisible() });
+    this.loadTenantPriceFlag();
+    // 工厂账号必须绑定 factoryId，否则后端无法做数据隔离，可能看到全租户数据
+    if (factory && !(userInfo && userInfo.factoryId)) {
+      toast.info('当前工厂账号未绑定工厂，请联系管理员处理');
+    }
   },
 
   /**
@@ -143,10 +151,55 @@ Page({
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._resetAndLoad();
+    this._startWaitTicker();
+    // D-285：从「权限配置」页切完单价开关返回时重新拉取，保证立即生效
+    this.loadTenantPriceFlag();
+  },
+
+  onHide: function () {
+    this._stopWaitTicker();
+  },
+
+  onUnload: function () {
+    this._stopWaitTicker();
   },
 
   onPullDownRefresh: function () {
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
+  },
+
+  /* ======== D-284：等待计时器（"等待 X"随时间走动，每分钟重算一次文案，不重拉接口） ======== */
+  _startWaitTicker: function () {
+    if (this._waitTimer) return;
+    const that = this;
+    this._waitTimer = setInterval(function () {
+      that._refreshWaitTexts();
+    }, 60000);
+  },
+
+  _stopWaitTicker: function () {
+    if (this._waitTimer) {
+      clearInterval(this._waitTimer);
+      this._waitTimer = null;
+    }
+  },
+
+  _refreshWaitTexts: function () {
+    const list = this.data.orders || [];
+    if (!list.length) return;
+    const updates = {};
+    let changed = false;
+    list.forEach(function (order, idx) {
+      if (!order.processNodes || !order.processNodes.length) return;
+      const snapshot = order.processNodes.map(function (n) { return (n && n.gapText) || ''; }).join('|');
+      refreshWaitDurations(order.processNodes);
+      const next = order.processNodes.map(function (n) { return (n && n.gapText) || ''; }).join('|');
+      if (snapshot !== next) {
+        updates['orders[' + idx + '].processNodes'] = order.processNodes;
+        changed = true;
+      }
+    });
+    if (changed) this.setData(updates);
   },
 
   onReachBottom: function () {
@@ -178,9 +231,22 @@ Page({
       const that = this;
       this.setData({ orderLoading: true });
       const params = { page: this.data.orderPage, pageSize: 20 };
+      // D-235：外发工厂要能看到本厂全部状态的订单（生产中 / 已完成 / 已关单 /
+      // 已报废 / 已取消）。后端 buildQueryWrapper 默认会排除 status='scrapped'，
+      // 这里显式声明包含，避免报废单在列表里凭空消失。
+      params.includeScrapped = 'true';
+      // 与 PC 端外发工厂页保持一致，只查外发订单
+      params.factoryType = 'EXTERNAL';
       if (this.data.keyword) params.keyword = this.data.keyword;
-      // 未知工厂(factoryId=0)不传后端(后端无factory_id=0记录)，改由前端筛选 factoryId 为空的订单
-      if (this.data.selectedFactoryId != null && this.data.selectedFactoryId !== 0) params.factoryId = this.data.selectedFactoryId;
+      // 工厂账号显式带上 factoryId，与后端 UserContext 形成双重校验，防止上下文异常时看到其他工厂数据
+      const userInfo = getUserInfo();
+      const currentFactoryId = userInfo && userInfo.factoryId ? String(userInfo.factoryId) : '';
+      if (currentFactoryId) {
+        params.factoryId = currentFactoryId;
+      } else if (this.data.selectedFactoryId != null && this.data.selectedFactoryId !== 0) {
+        // 未知工厂(factoryId=0)不传后端(后端无factory_id=0记录)，改由前端筛选 factoryId 为空的订单
+        params.factoryId = this.data.selectedFactoryId;
+      }
       return api.production.listOrders(params).then(function (res) {
         const records = (res && res.records) || [];
         const total = (res && res.total) || 0;
@@ -198,7 +264,7 @@ Page({
         });
       }).catch(function (_e) {
         that.setData({ orderLoading: false });
-        toast('加载失败');
+        toast.error('加载失败'); // D-235：toast 是对象，不能用 toast(...) 直接调用
       });
   },
 
@@ -222,7 +288,9 @@ Page({
       });
     }
     var filtered;
-    if (filter === 'completed') {
+    if (filter === 'all') {
+      filtered = all;
+    } else if (filter === 'completed') {
       filtered = all.filter(function (o) { return o.isClosed; });
     } else if (filter === 'overdue') {
       filtered = all.filter(function (o) { return o.remainDaysClass === 'days-overdue'; });
@@ -244,6 +312,7 @@ Page({
     });
     this.setData({
       filterStats: {
+        all: all.length,
         production: production,
         completed: completed,
         overdue: overdue,
@@ -277,43 +346,17 @@ Page({
   onKeywordInput: function (e) { this.setData({ keyword: e.detail.value }); },
   onKeywordSearch: function () { this._resetAndLoad(); },
   /**
-   * 扫码按钮：当前页直接扫码 → 匹配订单 → 展开卡片
-   * 不再跳转到统一扫码页
+   * 扫码按钮：D-262 页内扫码一步直达工序领取/报工页。
+   * 不再跳扫码主页（switchTab 丢参数需二次扫码），也不再跳工序编辑页（D-234 锁死领取/报工）
    */
   onScan: function () {
-    scanInPage((parsed, raw) => {
+    scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
-      if (!parsed.success || !parsed.data) {
-        toast.error('无法识别：' + (raw || ''));
+      if (!parsed.success) {
+        toast(parsed.message || ('无法识别：' + raw));
         return;
       }
-      const { orderNo, styleNo } = parsed.data;
-      // 在当前订单列表中匹配
-      const orders = this.data.orders || [];
-      const matchedIdx = orders.findIndex(o =>
-        (orderNo && o.orderNo === orderNo) ||
-        (styleNo && o.styleNo === styleNo)
-      );
-      if (matchedIdx >= 0) {
-        // 展开该订单卡片并滚动定位
-        const expandPath = 'orders[' + matchedIdx + '].expanded';
-        this.setData({ [expandPath]: true });
-        wx.showToast({ title: '已定位到订单', icon: 'success' });
-        // 滚动到该卡片（用 id 选择器）
-        const query = wx.createSelectorQuery();
-        query.select('#order-card-' + matchedIdx).boundingClientRect();
-        query.selectViewport().scrollOffset();
-        query.exec((res) => {
-          if (res[0] && res[1]) {
-            wx.pageScrollTo({
-              scrollTop: res[0].top + res[1].scrollTop - 80,
-              duration: 300,
-            });
-          }
-        });
-      } else {
-        toast.error('未匹配到出货订单');
-      }
+      dispatchInlineScanCode(raw);
     });
   },
 
@@ -322,23 +365,35 @@ Page({
     const path = 'orders[' + idx + '].expanded';
     const nextExpanded = !this.data.orders[idx].expanded;
     this.setData({ [path]: nextExpanded });
-    // D-280：展开且开着时间/单价开关时，懒加载该订单的阶段时间（每单只拉一次）
-    if (nextExpanded && this.data.isManager && this.data.showProcMeta) {
+    // D-285：时间恒显示，展开即懒加载该订单的阶段时间（每单只拉一次）
+    if (nextExpanded) {
       this.loadStageMeta(idx);
     }
   },
 
-  /* ======== 时间/单价显示开关（管理层） ======== */
-  onToggleProcMeta: function () {
-    if (!this.data.isManager) return;
-    const next = !this.data.showProcMeta;
-    setShowProcMeta(next);
-    this.setData({ showProcMeta: next });
-    if (next) {
-      this.data.orders.forEach((order, idx) => {
-        if (order.expanded && !order._stageMetaLoaded) this.loadStageMeta(idx);
-      });
-    }
+  /* ======== D-283：租户级「工序单价显示」总开关（入口已移至「权限配置」页，本页只读生效） ======== */
+  loadTenantPriceFlag: function () {
+    api.system.getSmartFeatureFlags().then((flags) => {
+      const raw = flags && flags[PRICE_FLAG_KEY];
+      const visible = raw === undefined || raw === null ? true : !!raw;
+      cacheTenantPriceVisible(visible);
+      if (visible !== this.data.priceVisible) {
+        this.setData({ priceVisible: visible });
+        this.applyPriceVisibilityToLoadedOrders();
+      }
+    }).catch(() => { /* 拉取失败沿用本地缓存，不阻断页面 */ });
+  },
+
+  applyPriceVisibilityToLoadedOrders: function () {
+    const visible = this.data.priceVisible;
+    const updates = {};
+    this.data.orders.forEach((order, idx) => {
+      if (order.processNodes && order.processNodes.length) {
+        applyTenantPriceVisibility(order.processNodes, visible);
+        updates['orders[' + idx + '].processNodes'] = order.processNodes;
+      }
+    });
+    if (Object.keys(updates).length) this.setData(updates);
   },
 
   /* 懒加载订单阶段时间（flow 接口的 stages 含 processName/startTime/completeTime） */
@@ -353,6 +408,8 @@ Page({
       const stages = Array.isArray(data.stages) ? data.stages : (data.stages && Array.isArray(data.stages.records)) ? data.stages.records : [];
       const path = 'orders[' + idx + '].processNodes';
       const merged = mergeStageMetaIntoNodes(order.processNodes, stages);
+      // D-283：合并后按租户级单价开关过滤（隐藏时不渲染 priceText）
+      applyTenantPriceVisibility(merged, this.data.priceVisible);
       order._stageMetaLoaded = true;
       order._stageMetaLoading = false;
       this.setData({ [path]: merged });
@@ -377,10 +434,18 @@ Page({
 
   onCopyOrderNo: function (e) {
     const orderNo = e.currentTarget.dataset.orderNo;
-    if (!orderNo) return;
-    wx.setClipboardData({ data: orderNo, success: function () {
-      wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
-    }});
+    if (!orderNo) { wx.showToast({ title: '订单号缺失', icon: 'none' }); return; }
+    // D-211：补 fail 提示——此前静默失败时用户以为按钮坏了
+    wx.setClipboardData({
+      data: orderNo,
+      success: function () {
+        wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+      },
+      fail: function (err) {
+        console.error('[copy] setClipboardData fail', err);
+        wx.showToast({ title: '复制失败：' + ((err && err.errMsg) || '未知错误'), icon: 'none', duration: 2500 });
+      },
+    });
   },
 
   onGoOrderDetail: function (e) {

@@ -1,11 +1,29 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-03（D-282 吸底回归修复+卡片视图翻页器，已推送）
+> 最后更新：2026-09-03（D-283 工序单价租户级总开关，已改完待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-03 D-283 工序单价租户级总开关（通用设置）✅待推送
+
+- [x] 需求：管理要一个通用开关控制单价在公共页面（生产管理/外发管理工序进度）显示/隐藏；时间显示不动
+- [x] 复用既有租户级智能开关机制（t_tenant_smart_feature，无表结构变更、无 Flyway）：新增 key `display.process.unitPrice.visible`，**默认开**（DEFAULT_TRUE_FEATURE_KEYS 特例，其余 smart.* 默认关）
+- [x] PC：系统→个人资料→智能开关面板新增「工序单价显示」行（featureFlags.ts / smartFeatureStore.ts / ProfileSmartSettingsPanel.tsx）
+- [x] 小程序：生产管理/外发管理页「时间/单价」旁新增管理员专属 chips「单价:全员可见/已隐藏」；非管理员自动跟随；切换走 GET 全量→合并→PUT（后端保存是全量覆盖语义，直接单 key PUT 会把其他开关冲回默认值）
+- [x] procTimeline.js：`getTenantPriceVisible/cacheTenantPriceVisible/applyTenantPriceVisibility`（隐藏时清 priceText，_priceTextRaw 保留可恢复）；时间显示逻辑零改动
+- [x] 四副本同步 md5 一致；node --check / tsc / mvn compile 全过
+- [ ] 待推送+CI 部署（后端开关接口生效）后用户回归
+
+### 2026-09-03 D-283~286 工序时间线四连 ✅已推送，待回归
+
+- [x] D-283 租户级单价开关（权限配置页入口，关=全租户看不到单价）
+- [x] D-284 阶段耗时/停留/等待（≥3天红/≥1天橙）；D-285 时间恒显开关只管单价
+- [x] D-286 前沿呼吸：第一个未完成工序蓝色脉冲，其后灰，全完成全绿
+- [x] "只有裁剪显示单价"=数据只有裁剪配了工价，非 bug
+- [ ] 待用户回归：呼吸点/单价开关/耗时文本
 
 ### 2026-09-03 D-282 吸底回归修复+卡片视图翻页器 ✅已推送，待回归
 
@@ -5183,3 +5201,30 @@ D-246 改版时被我写成了实心，是我的错；② 输入框灰色太深�
 
 **教训（进 MEMORY.md）**：小程序端做 UI 必须先查 `app.wxss` 的既有按钮规范
 （`.btn-primary` = 蓝色镂空），**实心蓝底白字在该项目是明确违规**（D-201 曾整批纠偏过）。
+
+## 2026-09-03 D-284 工序「开始/完成」时间口径修正 + 小程序显示耗时/等待
+
+**用户诉求**：开始 = 第一个人扫码的时间；结束 = 最后扫码完成的那个人的时间；
+小程序要像 PC 一样显示「多久完成」「等待了多久」。
+
+**核实到的问题**：小程序原 `endTime` 取 flow 接口的 `completeTime`，而它是
+「累计扫码量首次达到订单量」的时刻，**未达量恒为 null** → 大量进行中工序显示不出完成时间。
+
+**改动**：
+- 后端 `ProductionOrderFlowOrchestrationService.fillStageProgress()`：lastTime 提到 completed 判断之前，全量输出
+- 小程序 `utils/procTimeline.js`：endTime = lastTime || completeTime；新增 normalizeTimeText / parseTimeMs（iOS 日期坑）/
+  formatDuration / applyTimelineDurations / refreshWaitDurations；endLabel 区分「完成」与「末扫」
+- `pages/dashboard`、`pages/factory/shipment`：WXML 加耗时/停留/等待三行 + WXSS 配色 + 60s 等待计时器（onHide 清理）
+
+**当前进行中**：三副本已同步，等待真机验收。
+**已知问题**：等待时长按分钟级刷新（不实时秒级），跨天耗时按 PC 口径只显示到「天+时」（不显示分钟）。
+**下一步**：真机展开订单核对文案与 PC 是否一致；确认末尾节点「等待」不会误报（后续有进展的节点不显示等待）。
+
+## 2026-09-03 D-285 撤销页内时间/单价开关（用户强烈反馈）
+
+- 生产管理/外发管理页：删除「时间/单价」「单价」两个页内 chips；时间（含 D-284 的耗时/停留/等待）恢复恒显示
+- 单价全局开关唯一入口：更多应用 → 权限配置（menu-role-config）新增「全局显示开关→工序单价显示」
+- procTimeline.js 时间开关机制整体下线；两页只读消费租户级单价开关
+- 三副本 8 文件同步完成，旧开关逻辑全项目扫描零残留
+
+**下一步**：真机验收（页面无按钮、时间恒显、权限配置页切单价全端生效）。

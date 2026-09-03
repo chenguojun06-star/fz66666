@@ -71,6 +71,14 @@ const system = {
   saveMiniprogramMenuRoleConfig(roleMenus) {
     return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'PUT', { roleMenus });
   },
+  // 租户级智能开关（含「工序单价显示」display.process.unitPrice.visible）
+  getSmartFeatureFlags() {
+    return ok('/api/system/tenant-smart-feature/list', 'GET', {});
+  },
+  // 注意：后端保存是全量覆盖语义，必须先 GET 全量再合并单个 key 后整体提交
+  saveSmartFeatureFlags(features) {
+    return ok('/api/system/tenant-smart-feature', 'PUT', { features });
+  },
   // 收藏应用API
   _favFailCount: 0,
   getFavoriteApps() {

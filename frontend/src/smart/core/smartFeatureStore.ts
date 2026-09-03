@@ -23,6 +23,7 @@ const DEFAULT_FLAGS: SmartFeatureFlags = {
   'print.codeType': false,
   'outstock.allowPriceAdjust': false,
   'outstock.priceAdjustRequireReason': false,
+  'display.process.unitPrice.visible': true,
 };
 
 interface SmartFeatureState {

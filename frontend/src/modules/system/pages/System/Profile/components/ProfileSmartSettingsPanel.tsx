@@ -66,6 +66,10 @@ const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: strin
     title: '改价需填原因',
     desc: '出库改价时强制要求填写价格调整原因。',
   },
+  'display.process.unitPrice.visible': {
+    title: '工序单价显示',
+    desc: '控制生产管理/外发管理等公共页面工序进度中的单价是否对全员显示（时间显示不受影响）。',
+  },
 };
 
 export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
@@ -84,6 +88,7 @@ export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
   'print.codeType',
   'outstock.allowPriceAdjust',
   'outstock.priceAdjustRequireReason',
+  'display.process.unitPrice.visible',
 ];
 
 /** 后端动作类开关（backend.action.*）：控制智能化功能是否自动执行，默认全部关闭 */

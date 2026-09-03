@@ -777,6 +777,16 @@
   color: var(--color-text-tertiary);
   line-height: 1.5;
 }
+/* D-284：耗时/停留/等待时长配色（与 PC 进度看板同口径：≥3天红 / ≥1天橙） */
+.proc-tl-meta-text--normal {
+  color: var(--color-text-tertiary);
+}
+.proc-tl-meta-text--warn {
+  color: var(--color-warning);
+}
+.proc-tl-meta-text--danger {
+  color: var(--color-danger);
+}
 .proc-tl-bar {
   width: 100%;
   height: 6px;

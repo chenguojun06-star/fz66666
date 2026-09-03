@@ -1,7 +1,23 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-03（新增 D-282 吸底回归修复+卡片视图翻页器）
+> 最后更新：2026-09-03（新增 D-283~286 工序单价租户开关/阶段耗时/时间恒显/前沿呼吸）
+
+---
+
+## D-283~286：工序时间线四连——租户单价开关/阶段耗时/时间恒显/前沿呼吸（2026-09-03）
+
+用户在手机端实测时间线后四问：①生产中未完成工序没有蓝色呼吸；②为什么只有裁剪显示单价；③单价控制按钮（权限配置里的控制器）能不能真正控制别人看不到单价；④细节问题要修干净。
+
+**四项落地**：
+1. **D-283 租户级单价开关**：feature key `display.process.unitPrice.visible`（TenantSmartFeatureOrchestrator），入口在手机端「权限配置」页（menu-role-config）与 PC 个人中心智能设置。关=清空 priceText（_priceTextRaw 保留，重开无需重拉），**全租户生效**——控制器是真的能看不见。
+2. **D-284 阶段耗时/停留/等待**：flow stages 归并出 startTimeRaw/endTimeRaw，applyTimelineDurations 算 耗时（开始~完成）/停留/等待 文本与配色（≥3天红/≥1天橙）。
+3. **D-285 时间恒显**：开始/完成时间不再受开关控制，开关只管单价。
+4. **D-286 前沿呼吸**：旧口径 percent>0 才算进行中→0% 的当前工序死灰色。改**前沿推进口径**：第一个未完成工序=进行中（蓝色呼吸），其后待开始，全部完成全绿（applyTimelineStatus 前沿遍历，合并出口统一过一遍）。
+
+**"只有裁剪显示单价"非 bug**：单价来自工作流里各子工序的工价配置——该款只给裁剪配了 ¥2/件，其余子工序没配价，配置后自动显示。
+
+**教训**：多会话并行改同一共享模块（procTimeline）时，后手必须先 git diff 盘点前手未提交改动再叠加，复制覆盖会抹掉别人的功能。
 
 ---
 
@@ -4613,3 +4629,93 @@ parentKeywords={"尾部","大烫","整烫","剪线","尾工",...}, subProcessKey
 - 进度聚合**禁止用关键字数组硬编码**工序归属——租户的子工序配置是活的（本例尾部挂了质检），
   必须走映射服务/配置单一来源；关键字法在配置漂移时**静默返回空**而非报错
 - 同一指标多条计算路径（完整/轻量）时，改口径必须两路一起对齐或显式声明差异，否则同一数据两个显示
+
+---
+
+## D-283：工序单价租户级总开关（通用设置）
+
+**日期**：2026-09-03
+**触发**：用户要求"管理可以做一个通用的组件/设置，控制单价在公共页面显示与不显示"，明确时间显示正常不要动。
+
+### 决策
+1. **复用既有租户级智能开关机制**（t_tenant_smart_feature + /api/system/tenant-smart-feature），
+   不新建表/接口——该机制就是"通用开关组件"：PC 智能开关面板统一管理，按租户持久化，全员同读一套。
+   新增 key `display.process.unitPrice.visible`，**默认开**（defaultFeatureFlags 特例 DEFAULT_TRUE_FEATURE_KEYS，
+   因为其语义是"默认显示、隐藏属例外"，与 smart.* 的"默认关"相反）。
+2. **双入口**：PC 系统→个人资料→智能开关面板一行 + 小程序生产管理/外发管理页管理员专属 chips
+   （`单价:全员可见/已隐藏`，canManageFlags = 租户老板 || 超管，与后端 assertWritable 对齐）。
+3. **单价与时间解耦**：时间继续走 D-280 的管理层个人本地开关（showProcMeta），单价额外受租户级开关门控——
+   隐藏时 JS 侧清空 node.priceText（_priceTextRaw 保留，重新打开无需重拉），WXML 零改动。
+
+### 关键坑
+- 后端 saveCurrentTenantFeatures 是**全量覆盖语义**（对 SUPPORTED_FEATURE_KEYS 全部 upsert，
+  缺失 key 落默认值）→ 小程序切换单个开关必须 **先 GET 全量 → 合并 → PUT 整体提交**，
+  直接 PUT {单key: 值} 会把其他智能开关全部冲回默认关闭。
+
+### 教训
+租户级配置类开关优先挂进既有 smart-feature 机制，别另起炉灶；
+但接入前必须确认保存接口的覆盖语义（全量 vs 增量），增量语义的调用方按全量提交才能不误伤。
+
+---
+
+## D-284：工序「开始/完成」时间口径修正 + 小程序显示耗时/停留/等待（对齐 PC 进度看板）
+
+**日期**：2026-09-03
+**触发**：用户要求「开始 = 第一个人扫码的时间，结束 = 最后扫码完成的那个人的时间」，且小程序要像 PC 一样显示「多久完成 / 等待了多久」。
+
+### 核实结论（改前先查证，别凭代码推演）
+1. **flow 接口 stages 是「工序级」不是「阶段级」**：`ProductionOrderFlowOrchestrationService.buildProductionStageFlow()`
+   按 `progressStage`（fallback `processName`）把扫码记录分组，工序顺序来自模板 `loadProgressWeights()`。
+   - `startTime` = 该工序排序后第 0 条记录的 `scanTime` → 首扫 ✅
+   - `completeTime` = **累计扫码量首次达到 orderQuantity 的时刻**，未达量为 **null**（不是最后扫码时间）❌
+   - `lastTime` = 末条扫码记录的 `scanTime`，但**旧代码只在未完成分支 put**，completed 时前端拿不到
+2. **PC 口径**：`useBoardStats.ts` 的 `nodeTimeMap[节点] = max(scanTime)`（最后扫码，scanTime 空兜底 createTime）；
+   `nodeCalculations.ts` 的 `durationDisplay = completionTime - startTime`（>48h 标红）；
+   `StageTimelineHint.tsx` 的「停留」= 上节点 end → 本节点 start，「等待」= 上节点 end → now（**仅当后续节点无任何进展**，避免跳过/直裁节点被误报成持续增长的等待）。
+3. **数据源充足**：`t_scan_record.scan_time` 就是真实首扫/末扫，flow 接口已分好组，缺的只是把 lastTime 全量吐出。
+
+### 决策
+1. **后端**：`fillStageProgress()` 把 `lastTime/lastOperatorId/lastOperatorName` 提到 completed 判断之前，
+   **无论是否达量都输出**（completed 时 completeTime 是达量时刻，达量后若还有补扫/返工扫码会偏早）。
+2. **小程序 `utils/procTimeline.js`**：
+   - `endTime = lastTime || completeTime`（末扫优先），新增 `endLabel`：completed→「完成」，否则→「末扫」（进行中显示"完成 xx"会误导）
+   - 新增 `normalizeTimeText()`（兼容 `2026-09-01 15:15:00` 与 ISO `...T15:15:00.123`）、`parseTimeMs()`
+     （**手动拆分 y/M/d H:m:s 构造 Date，iOS 不支持 `new Date('yyyy-MM-dd HH:mm:ss')`**）、`formatDuration()`
+   - 新增 `applyTimelineDurations()`：耗时 = 末扫-首扫；停留 = 本节点首扫 - 上一节点末扫；等待 = now - 上一节点末扫（同样要求后续无进展）
+   - 新增 `refreshWaitDurations()` + 页面 60s ticker，让「等待 X」随时间走动而不重拉接口（onHide/onUnload 清理）
+   - 时间比较统一走**时间戳**，不再用短格式字符串比较（跨年会错）
+3. **配色与文案对齐 PC**：≥3天红 / ≥1天橙 / 其余灰；耗时 >48h 标红。
+
+### 关键坑
+- **三副本 wxss 本来就不一致**（miniprogram 与 h5-web/public 有历史 UI 差异），同步时
+  js/wxml 可整文件 cp（diff 确认差异正好是本次改动），**wxss 必须逐文件插入片段，不能覆盖**。
+- 小程序目录被 `h5-web/package.json` 的 `"type":"module"` 影响，直接 node require 会报
+  `require is not defined in ES module scope` → 自测时把文件复制到 /tmp 改成 .cjs 再跑。
+
+### 验证
+node --check 三副本 JS 全过；标签栈扫描 6 份 WXML 全闭合；`mvn -q compile` 通过；
+相对时间用例实测：裁剪「耗时 4时」/ 车缝「耗时 1天6时 · 停留 6时」/ 尾部「末扫 09-03 15:16 · 耗时 2天5时」/ 包装「等待 5时」。
+
+---
+
+## D-285：撤销页内时间/单价开关，单价全局开关唯一入口收敛到「权限配置」页
+
+**日期**：2026-09-03
+**触发**：用户强烈不满（截图「更多应用」页）：页面上按钮太多（生产管理/外发管理各有「时间/单价」+「单价」两个 chips），
+要求：① 只留**一个全局按钮**只控单价；② 开关不放在业务页面，放到**小程序「更多应用 → 权限配置」**；
+③ **时间恢复正常显示，不要用任何开关控制时间**。
+
+### 决策
+1. **删除** dashboard / factory/shipment 两页的 `onToggleProcMeta`（时间/单价 chips）和
+   `onToggleTenantPrice`（单价 chips）及 data 里 isManager/showProcMeta/canManageFlags；
+   procTimeline.js 删 META_TOGGLE_KEY/getShowProcMeta/setShowProcMeta（时间开关机制整体下线）。
+2. **时间恒显示**：WXML 去掉 `wx:if="{{showProcMeta}}"` 门控，meta 行条件改为
+   `bundleInfo || startTime || endTime || durationText || gapText || priceText`（gapText 可能单独出现，不能漏）。
+3. **单价全局开关唯一入口 = pages/admin/menu-role-config（权限配置）**：
+   新增「全局显示开关」区块（canManagePrice = 租户老板 || 超管才渲染），点按切换，
+   沿用 **GET 全量 → 合并 → PUT 整体提交**（后端全量覆盖语义，D-283 的坑）。
+   两页 JS 保留 loadTenantPriceFlag/applyTenantPriceVisibility **只读生效**，不再提供切换。
+
+### 教训
+- 功能开关入口要做减法：业务列表页不放配置按钮，统一收敛到系统/权限配置类页面。
+- 「管理层可切、默认开」的个人时间开关（D-280）是过度设计——时间本来就该显示，删掉比调参更对。

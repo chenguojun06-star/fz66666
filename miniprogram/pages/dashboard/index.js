@@ -14,9 +14,9 @@
 const api = require('../../utils/api');
 const { transformOrderData } = require('./utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
-const { isAdminOrSupervisor, isManagerLevel } = require('../../utils/permission');
+const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
-const { getShowProcMeta, setShowProcMeta, applyTimelineStatus, mergeStageMetaIntoNodes } = require('../../utils/procTimeline');
+const { getTenantPriceVisible, cacheTenantPriceVisible, applyTenantPriceVisibility, PRICE_FLAG_KEY, applyTimelineStatus, mergeStageMetaIntoNodes, refreshWaitDurations } = require('../../utils/procTimeline');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { safeNavigate, scanInPage, toast } = require('../../utils/uiHelper');
 const { dispatchInlineScanCode } = require('../scan/handlers/InlineScanDispatcher');
@@ -59,9 +59,8 @@ Page({
     searchKey: '',
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
-    /* D-280：时间/单价显示开关（仅管理层可见可切换） */
-    isManager: false,
-    showProcMeta: false,
+    /* D-285：时间恒显示不受开关控制；单价仅受租户级全局开关控制（入口在「权限配置」页） */
+    priceVisible: true,
   },
 
   onLoad: function (options) {
@@ -73,7 +72,8 @@ Page({
       return;
     }
     this._pendingOrderId = (options && options.orderId) ? decodeURIComponent(options.orderId) : '';
-    this.setData({ isManager: isManagerLevel(), showProcMeta: getShowProcMeta() });
+    this.setData({ priceVisible: getTenantPriceVisible() });
+    this.loadTenantPriceFlag();
     this.refreshCards();
     this.loadOrders(true);
   },
@@ -87,6 +87,9 @@ Page({
     }
     this._loaded = true;
     this._bindWsEvents();
+    this._startWaitTicker();
+    // D-285：从「权限配置」页切完单价开关返回时重新拉取，保证立即生效
+    this.loadTenantPriceFlag();
     const that = this;
     setTimeout(function () { that._loadUnreadCount(); }, 200);
   },
@@ -105,12 +108,48 @@ Page({
     clearTimeout(this._searchTimer);
     this._searchTimer = null;
     this._unbindWsEvents();
+    this._stopWaitTicker();
   },
 
   onUnload: function () {
     clearTimeout(this._searchTimer);
     this._searchTimer = null;
     this._unbindWsEvents();
+    this._stopWaitTicker();
+  },
+
+  /* ======== D-284：等待计时器（"等待 X"随时间走动，每分钟重算一次文案，不重拉接口） ======== */
+  _startWaitTicker: function () {
+    if (this._waitTimer) return;
+    const that = this;
+    this._waitTimer = setInterval(function () {
+      that._refreshWaitTexts();
+    }, 60000);
+  },
+
+  _stopWaitTicker: function () {
+    if (this._waitTimer) {
+      clearInterval(this._waitTimer);
+      this._waitTimer = null;
+    }
+  },
+
+  _refreshWaitTexts: function () {
+    const list = this.data.orders && this.data.orders.list;
+    if (!list || !list.length) return;
+    const updates = {};
+    let changed = false;
+    list.forEach(function (order, idx) {
+      if (!order.processNodes || !order.processNodes.length) return;
+      const snapshot = order.processNodes.map(function (n) { return (n && n.gapText) || ''; }).join('|');
+      refreshWaitDurations(order.processNodes);
+      const next = order.processNodes.map(function (n) { return (n && n.gapText) || ''; }).join('|');
+      if (snapshot !== next) {
+        updates['orders.list[' + idx + '].processNodes'] = order.processNodes;
+        changed = true;
+      }
+    });
+    if (changed) this.setData(updates);
   },
 
   /* ======== 刷新摘要卡片（3 个并发请求，与H5进度看板一致） ======== */
@@ -235,24 +274,35 @@ Page({
     const path = 'orders.list[' + idx + '].expanded';
     const nextExpanded = !this.data.orders.list[idx].expanded;
     this.setData({ [path]: nextExpanded });
-    // D-280：展开且开着时间/单价开关时，懒加载该订单的阶段时间（每单只拉一次）
-    if (nextExpanded && this.data.isManager && this.data.showProcMeta) {
+    // D-285：时间恒显示，展开即懒加载该订单的阶段时间（每单只拉一次）
+    if (nextExpanded) {
       this.loadStageMeta(idx);
     }
   },
 
-  /* ======== 时间/单价显示开关（管理层） ======== */
-  onToggleProcMeta: function () {
-    if (!this.data.isManager) return;
-    const next = !this.data.showProcMeta;
-    setShowProcMeta(next);
-    this.setData({ showProcMeta: next });
-    // 打开时为已展开但未拉过时间的订单补拉
-    if (next) {
-      this.data.orders.list.forEach((order, idx) => {
-        if (order.expanded && !order._stageMetaLoaded) this.loadStageMeta(idx);
-      });
-    }
+  /* ======== D-283：租户级「工序单价显示」总开关（入口已移至「权限配置」页，本页只读生效） ======== */
+  loadTenantPriceFlag: function () {
+    api.system.getSmartFeatureFlags().then((flags) => {
+      const raw = flags && flags[PRICE_FLAG_KEY];
+      const visible = raw === undefined || raw === null ? true : !!raw;
+      cacheTenantPriceVisible(visible);
+      if (visible !== this.data.priceVisible) {
+        this.setData({ priceVisible: visible });
+        this.applyPriceVisibilityToLoadedOrders();
+      }
+    }).catch(() => { /* 拉取失败沿用本地缓存，不阻断页面 */ });
+  },
+
+  applyPriceVisibilityToLoadedOrders: function () {
+    const visible = this.data.priceVisible;
+    const updates = {};
+    this.data.orders.list.forEach((order, idx) => {
+      if (order.processNodes && order.processNodes.length) {
+        applyTenantPriceVisibility(order.processNodes, visible);
+        updates['orders.list[' + idx + '].processNodes'] = order.processNodes;
+      }
+    });
+    if (Object.keys(updates).length) this.setData(updates);
   },
 
   /* 懒加载订单阶段时间（flow 接口的 stages 含 processName/startTime/completeTime） */
@@ -267,6 +317,8 @@ Page({
       const stages = Array.isArray(data.stages) ? data.stages : (data.stages && Array.isArray(data.stages.records)) ? data.stages.records : [];
       const path = 'orders.list[' + idx + '].processNodes';
       const merged = mergeStageMetaIntoNodes(order.processNodes, stages);
+      // D-283：合并后按租户级单价开关过滤（隐藏时不渲染 priceText）
+      applyTenantPriceVisibility(merged, this.data.priceVisible);
       order._stageMetaLoaded = true;
       order._stageMetaLoading = false;
       this.setData({ [path]: merged });

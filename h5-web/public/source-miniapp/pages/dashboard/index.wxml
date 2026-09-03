@@ -29,7 +29,7 @@
       <!-- 主行：封面图 + 基本信息 -->
       <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
         <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
-          <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+          <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFit" lazy-load />
           <view wx:else class="cover-placeholder">
             <view class="cover-ph-text"><view class="line-icon line-icon--xl icon-package"></view></view>
           </view>
@@ -67,14 +67,25 @@
         <text class="ip-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
       </view>
 
-      <!-- 展开按钮 -->
-      <view class="order-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+      <!-- 展开按钮：多菲才显示折叠切换，单菲直接展示 -->
+      <view class="order-expand-btn" wx:if="{{item.colorGroups.length > 1}}" data-index="{{index}}" catchtap="onCardToggle">
         <text class="expand-btn-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
       </view>
 
       <!-- 展开区域 -->
       <view class="order-expand" wx:if="{{item.expanded}}">
+        <!-- D-197：快捷操作上移到展开区顶部，先给动作再看明细 -->
+        <view class="expand-actions">
+          <view class="act-btn act-btn--detail" catchtap="onViewDetail" data-order-no="{{item.orderNo}}" data-index="{{index}}">详情</view>
+          <view class="act-btn act-btn--primary" catchtap="onGoProcurement" data-index="{{index}}">采购</view>
+          <view class="act-btn act-btn--primary" catchtap="onViewCuttingBundles" data-order-no="{{item.orderNo}}">裁剪</view>
+          <view class="act-btn act-btn--primary" catchtap="onEditProcess" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}" data-status="{{item.status}}" wx:if="{{item.status === 'production'}}">工序</view>
+          <view class="act-btn act-btn--warn" catchtap="onTransferOrder" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}">转单</view>
+          <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
+          <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
+        </view>
+
         <!-- 菲号明细 -->
         <view class="detail-head">
           <text class="detail-title">菲号明细</text>
@@ -104,9 +115,6 @@
         <view class="expand-section" wx:if="{{item.processNodes && item.processNodes.length > 0}}">
           <view class="proc-head">
             <text class="expand-title">工序进度</text>
-            <view wx:if="{{isManager}}" class="proc-meta-toggle {{showProcMeta ? 'proc-meta-toggle--on' : ''}}" catchtap="onToggleProcMeta">
-              <text class="proc-meta-toggle-text">时间/单价</text>
-            </view>
           </view>
           <view class="proc-timeline">
             <view wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name" class="proc-tl-item">
@@ -130,13 +138,13 @@
                 <view class="proc-tl-bar">
                   <view class="proc-tl-fill {{node._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : (node.percent > 0 ? node.percent : 0)}}%"></view>
                 </view>
-                <view class="proc-tl-meta" wx:if="{{node.bundleInfo || showProcMeta}}">
+                <view class="proc-tl-meta" wx:if="{{node.bundleInfo || node.startTime || node.endTime || node.durationText || node.gapText || node.priceText}}">
                   <text wx:if="{{node.bundleInfo}}" class="proc-tl-meta-text">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-                  <block wx:if="{{showProcMeta}}">
-                    <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
-                    <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · 完成 {{node.endTime}}</text>
-                    <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
-                  </block>
+                  <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
+                  <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · {{node.endLabel}} {{node.endTime}}</text>
+                  <text wx:if="{{node.durationText}}" class="{{node.durationClass}}"> · 耗时 {{node.durationText}}</text>
+                  <text wx:if="{{node.gapText}}" class="{{node.gapClass}}"> · {{node.gapText}}</text>
+                  <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
                 </view>
               </view>
             </view>
@@ -162,16 +170,6 @@
           </scroll-view>
         </view>
 
-        <!-- 快捷操作 -->
-        <view class="expand-actions">
-          <view class="act-btn act-btn--detail" catchtap="onViewDetail" data-order-no="{{item.orderNo}}" data-index="{{index}}">详情</view>
-          <view class="act-btn act-btn--primary" catchtap="onGoProcurement" data-index="{{index}}">采购</view>
-          <view class="act-btn act-btn--primary" catchtap="onViewCuttingBundles" data-order-no="{{item.orderNo}}">裁剪</view>
-          <view class="act-btn act-btn--primary" catchtap="onEditProcess" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}" data-status="{{item.status}}" wx:if="{{item.status === 'production'}}">工序</view>
-          <view class="act-btn act-btn--warn" catchtap="onTransferOrder" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}">转单</view>
-          <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
-          <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
-        </view>
       </view>
     </view>
   </view>

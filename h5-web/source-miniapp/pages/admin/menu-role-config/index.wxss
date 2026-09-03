@@ -198,3 +198,16 @@
   font-size: 28rpx;
   z-index: 999;
 }
+
+/* D-285：全局显示开关区块（租户级，唯一入口） */
+.feature-section {
+  margin-top: 24rpx;
+}
+.feature-header {
+  padding: 0 8rpx 16rpx;
+}
+.feature-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary);
+}

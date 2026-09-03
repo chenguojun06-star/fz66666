@@ -636,6 +636,12 @@ public class ProductionOrderFlowOrchestrationService {
             }
         }
         row.put("totalQuantity", (int) Math.min((long) Integer.MAX_VALUE, Math.max(0L, sum)));
+        // D-284：无论阶段是否「达量完成」，都输出该工序最后一次扫码时间（lastTime）。
+        // completeTime 是「累计扫码量首次达到订单量」的时刻，达量后若还有补扫/返工扫码会偏早；
+        // 前端「完成时间」口径 = 最后扫码完成的时间（与 PC 进度看板 max(scanTime) 一致），故统一取 lastTime。
+        row.put("lastTime", last == null ? null : last.getScanTime());
+        row.put("lastOperatorId", last == null ? null : last.getOperatorId());
+        row.put("lastOperatorName", last == null ? null : last.getOperatorName());
         if (doneTime != null) {
             row.put("completeTime", doneTime);
             row.put("completeOperatorId", doneOpId);
@@ -646,9 +652,6 @@ public class ProductionOrderFlowOrchestrationService {
             row.put("completeOperatorId", null);
             row.put("completeOperatorName", null);
             row.put("status", "in_progress");
-            row.put("lastTime", last == null ? null : last.getScanTime());
-            row.put("lastOperatorId", last == null ? null : last.getOperatorId());
-            row.put("lastOperatorName", last == null ? null : last.getOperatorName());
         }
     }
 }

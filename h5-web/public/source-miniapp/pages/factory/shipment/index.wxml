@@ -10,29 +10,18 @@
 
     <!-- 工厂筛选 · 横向滚动卡 -->
     <scroll-view wx:if="{{activeTab===0 && factoryStats.length > 0}}" class="factory-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <!-- D-231：工厂筛选卡压缩为单行胶囊（原为「工厂名+数字行+标签行」三行块，
+           高度近 90px，在手机上把顶部占掉一大半） -->
       <view class="factory-card {{selectedFactoryId === item.factoryId ? 'factory-card--active' : ''}}"
             wx:for="{{factoryStats}}" wx:key="factoryId"
             data-id="{{item.factoryId}}" bindtap="onSelectFactory">
         <text class="factory-name">{{item.factoryName}}</text>
-        <view class="factory-nums">
-          <view class="fn-item">
-            <text class="fn-val fn-val--primary">{{item.orderCount}}</text>
-            <text class="fn-lbl">单</text>
-          </view>
-          <view class="fn-item">
-            <text class="fn-val">{{item.totalQuantity}}</text>
-            <text class="fn-lbl">件</text>
-          </view>
-          <view class="fn-item">
-            <text class="fn-val fn-val--sm">{{item.styleCount}}</text>
-            <text class="fn-lbl">款</text>
-          </view>
-        </view>
-        <view class="factory-tags">
-          <text class="ftag ftag--primary" wx:if="{{item.inProgress > 0}}">{{item.inProgress}}进行中</text>
-          <text class="ftag ftag--success" wx:if="{{item.completed > 0}}">{{item.completed}}已完成</text>
-          <text class="ftag ftag--danger" wx:if="{{item.overdue > 0}}">{{item.overdue}}逾期</text>
-          <text class="ftag ftag--warning" wx:if="{{item.warning > 0}}">{{item.warning}}预警</text>
+        <text class="factory-meta">{{item.orderCount}}单·{{item.totalQuantity}}件</text>
+        <view class="factory-dots">
+          <text class="fdot fdot--danger" wx:if="{{item.overdue > 0}}" title="逾期">{{item.overdue}}</text>
+          <text class="fdot fdot--warning" wx:if="{{item.warning > 0}}" title="预警">{{item.warning}}</text>
+          <text class="fdot fdot--primary" wx:if="{{item.inProgress > 0}}" title="进行中">{{item.inProgress}}</text>
+          <text class="fdot fdot--success" wx:if="{{item.completed > 0}}" title="已完成">{{item.completed}}</text>
         </view>
       </view>
     </scroll-view>
@@ -51,6 +40,10 @@
       <view slot="filter" class="filter-row">
         <!-- 筛选 pill（生产中 / 已完成） -->
         <view class="filter-pills">
+          <view class="filter-pill {{activeFilter==='all'?'filter-pill--active':''}}" data-filter="all" bindtap="onFilterTap">
+            <text>全部</text>
+            <text class="pill-count">{{filterStats.all}}</text>
+          </view>
           <view class="filter-pill {{activeFilter==='production'?'filter-pill--active':''}}" data-filter="production" bindtap="onFilterTap">
             <text>生产中</text>
             <text class="pill-count">{{filterStats.production}}</text>
@@ -95,7 +88,7 @@
         <!-- 主行：封面图 + 基本信息 -->
         <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
           <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
-            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFit" lazy-load />
             <view wx:else class="cover-placeholder">
               <view class="cover-ph-text"><view class="line-icon line-icon--xl icon-package"></view></view>
             </view>
@@ -127,20 +120,35 @@
             <text class="ip-delivery" wx:if="{{item.deliveryDateStr}}">交期 {{item.deliveryDateStr}}</text>
           </view>
           <view class="ip-bar">
-            <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.isClosed ? 'ip-fill--done' : ''}}" style="width: {{item.progressWidth}}%"></view>
+            <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.isClosed ? 'ip-fill--done' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
           </view>
           <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
           <text class="ip-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
         </view>
 
         <!-- 展开按钮 -->
-        <view class="order-expand-btn" data-index="{{index}}" catchtap="onCardToggle">
+        <view class="order-expand-btn" wx:if="{{item.colorGroups.length > 1}}" data-index="{{index}}" catchtap="onCardToggle">
           <text class="expand-btn-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
           <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
         </view>
 
         <!-- 展开区域 -->
         <view class="order-expand" wx:if="{{item.expanded}}">
+          <!-- D-228：快捷操作统一置于展开区顶部（结构对齐生产管理 dashboard）
+               原实现把 .expand-actions 的开标签留在顶部、闭标签留在底部，
+               导致菲号明细 / 工序进度 / 颜色尺码被吞进按钮容器，
+               7 个操作按钮反被挤到展开区最底部。此处容器在按钮组结束后即闭合。 -->
+          <view class="expand-actions">
+            <view class="act-btn act-btn--detail" catchtap="onGoOrderDetail" data-index="{{index}}">详情</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
+            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory || isTenantAdmin}}">发货</view>
+            <view class="act-btn act-btn--remark" catchtap="onViewShipment" data-index="{{index}}">发货记录</view>
+            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
+            <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
+          </view>
+
           <!-- 菲号明细 -->
           <view class="detail-head">
             <text class="detail-title">菲号明细</text>
@@ -170,9 +178,6 @@
           <view class="expand-section" wx:if="{{item.processNodes && item.processNodes.length > 0}}">
             <view class="proc-head">
               <text class="expand-title">工序进度</text>
-              <view wx:if="{{isManager}}" class="proc-meta-toggle {{showProcMeta ? 'proc-meta-toggle--on' : ''}}" catchtap="onToggleProcMeta">
-                <text class="proc-meta-toggle-text">时间/单价</text>
-              </view>
             </view>
             <view class="proc-timeline">
               <view wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name" class="proc-tl-item">
@@ -196,13 +201,13 @@
                   <view class="proc-tl-bar">
                     <view class="proc-tl-fill {{node._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : (node.percent > 0 ? node.percent : 0)}}%"></view>
                   </view>
-                  <view class="proc-tl-meta" wx:if="{{node.bundleInfo || showProcMeta}}">
+                  <view class="proc-tl-meta" wx:if="{{node.bundleInfo || node.startTime || node.endTime || node.durationText || node.gapText || node.priceText}}">
                     <text wx:if="{{node.bundleInfo}}" class="proc-tl-meta-text">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-                    <block wx:if="{{showProcMeta}}">
-                      <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
-                      <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · 完成 {{node.endTime}}</text>
-                      <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
-                    </block>
+                    <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
+                    <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · {{node.endLabel}} {{node.endTime}}</text>
+                    <text wx:if="{{node.durationText}}" class="{{node.durationClass}}"> · 耗时 {{node.durationText}}</text>
+                    <text wx:if="{{node.gapText}}" class="{{node.gapClass}}"> · {{node.gapText}}</text>
+                    <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
                   </view>
                 </view>
               </view>
@@ -228,17 +233,6 @@
             </scroll-view>
           </view>
 
-          <!-- 快捷操作 -->
-          <view class="expand-actions">
-            <view class="act-btn act-btn--detail" catchtap="onGoOrderDetail" data-index="{{index}}">详情</view>
-            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
-            <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
-            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
-            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory || isTenantAdmin}}">发货</view>
-            <view class="act-btn act-btn--remark" catchtap="onViewShipment" data-index="{{index}}">发货记录</view>
-            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
-            <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
-          </view>
         </view>
       </view>
     </view>
