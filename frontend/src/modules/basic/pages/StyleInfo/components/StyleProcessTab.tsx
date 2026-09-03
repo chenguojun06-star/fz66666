@@ -76,6 +76,71 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   fetchPriceHintRef.current = fetchPriceHint;
 
   const { sortedData, stageSpanMap } = useMemo(() => computeSortedDataAndStageSpan(data), [data]);
+
+  // ── D-288：编辑态拖动排序 ──
+  // 拖动行=调整整表顺序；落点行的进度节点跟随（拖进哪个父进度组就归哪个组）；
+  // 编码按新顺序自动重排 01..N（编码即顺序），保存后固化
+  const dragIndexRef = useRef<number | null>(null);
+  const dragSuppressRef = useRef(false);
+  const canDrag = editMode && !readOnly;
+  const moveRow = useCallback((from: number, to: number) => {
+    if (from === to) return;
+    setData((prev) => {
+      const fromRow = sortedData[from];
+      const toRow = sortedData[to];
+      if (!fromRow || !toRow) return prev;
+      const arr = sortedData
+        .map((r) => prev.find((p) => p.id === r.id))
+        .filter((r): r is StyleProcessWithSizePrice => Boolean(r));
+      const moved = arr[from];
+      if (!moved) return prev;
+      arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      // 进度节点跟随落点分组
+      const neighbor = arr[to + 1] ?? arr[to - 1];
+      if (neighbor && neighbor !== moved) moved.progressStage = neighbor.progressStage;
+      return arr.map((r, i) => ({ ...r, sortOrder: i + 1, processCode: String(i + 1).padStart(2, '0') }));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedData]);
+  const draggableComponents = useMemo(() => {
+    if (!canDrag) return undefined;
+    return {
+      body: {
+        row: (props: any) => {
+          const rawIndex = (props as any)['data-index'];
+          const index = rawIndex == null ? null : Number(rawIndex);
+          const { 'data-index': _di, ...rest } = props;
+          return (
+            <tr
+              {...rest}
+              draggable
+              style={{ cursor: 'move' }}
+              onMouseDown={(e: React.MouseEvent) => {
+                const t = e.target as HTMLElement;
+                // 从输入框/选择器/按钮上起拖时抑制拖动，避免影响正常编辑
+                dragSuppressRef.current = Boolean(t.closest('input, textarea, select, button, .ant-select'));
+              }}
+              onDragStart={(e: React.DragEvent) => {
+                if (dragSuppressRef.current || index == null) { e.preventDefault(); return; }
+                dragIndexRef.current = Number(index);
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDrop={(e: React.DragEvent) => {
+                e.preventDefault();
+                const from = dragIndexRef.current;
+                const to = index == null ? null : Number(index);
+                dragIndexRef.current = null;
+                if (from == null || to == null || Number.isNaN(from) || Number.isNaN(to)) return;
+                moveRow(from, to);
+              }}
+            />
+          );
+        },
+      },
+    };
+  }, [canDrag, moveRow]);
   const columns = useMemo(() => buildProcessColumns({
     editableMode: editMode && !readOnly, hidePrice, showSizePrices: true, sizes, stageSpanMap, priceHints, priceHintLoading,
     updateField: (id: string | number, field: any, value: any) => updateField(id, field, value, fetchPriceHint),
@@ -140,6 +205,9 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         }
         right={
           <>
+          {canDrag && (
+            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可拖动行排序（编码自动重排，进度节点跟随落点）</span>
+          )}
           {editMode && !readOnly && sizes.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               {sizes.map((size) => (
@@ -193,7 +261,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         onApply={(_k, values, mode) => handleApplyAttrSizes(values, mode)}
       />
       <ProcessCostSummary data={data} />
-      <ResizableTable bordered dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />
+      <ResizableTable bordered components={draggableComponents as any} onRow={(_record: any, index?: number) => ({ 'data-index': index } as any)} dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />
     </div>
   );
 };

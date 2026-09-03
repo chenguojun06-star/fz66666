@@ -110,7 +110,7 @@
 }
 
 .scp-item-actions {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0;

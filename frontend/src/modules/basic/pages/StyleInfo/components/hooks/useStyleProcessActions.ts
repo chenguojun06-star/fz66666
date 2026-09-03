@@ -4,6 +4,7 @@ import { App } from 'antd';
 import api, { toNumberSafe } from '@/utils/api';
 import type { SizePrice, StyleProcessWithSizePrice } from '../styleProcessTabUtils';
 import { norm, isTempId } from '../styleProcessTabUtils';
+import { STAGE_ORDER } from '@/utils/productionStage';
 
 type UseStyleProcessActionsParams = {
   styleId: number | string;
@@ -112,18 +113,33 @@ export const useStyleProcessActions = ({
           steps = parsed?.steps || parsed?.rows || parsed?.data || [];
         } catch { return; }
       }
-      if (!Array.isArray(steps) || steps.length === 0) return;
+      // D-288：排序口径改为 阶段(裁剪→二次工艺→车缝→尾部)优先，模板步骤序/编码作阶段内次序——
+      // 修复"导入的模板不按父进度顺序、车缝排在裁剪前面"的乱套问题；随后按 01..N 重编码固化
+      const stageIndexOf = (row: StyleProcessWithSizePrice) => {
+        const st = String(row.progressStage || '').trim();
+        const idx = STAGE_ORDER.indexOf(st);
+        return idx === -1 ? STAGE_ORDER.length : idx;
+      };
+      const codeOrdinal = (row: StyleProcessWithSizePrice) => {
+        const m = String(row.processCode || '').match(/\d+/);
+        return m ? Number(m[0]) : Number.MAX_SAFE_INTEGER;
+      };
       const ordinalByName = new Map<string, number>();
-      steps.forEach((s: any, i: number) => {
-        const key = String(s?.processName || '').trim();
-        if (key && !ordinalByName.has(key)) ordinalByName.set(key, i);
-      });
-      if (ordinalByName.size === 0) return;
+      if (Array.isArray(steps)) {
+        steps.forEach((s: any, i: number) => {
+          const key = String(s?.processName || '').trim();
+          if (key && !ordinalByName.has(key)) ordinalByName.set(key, i);
+        });
+      }
       setData((prev) => {
         const ordered = [...prev].sort((a, b) => {
+          const sa = stageIndexOf(a);
+          const sb = stageIndexOf(b);
+          if (sa !== sb) return sa - sb;
           const oa = ordinalByName.get(String(a.processName || '').trim()) ?? Number.MAX_SAFE_INTEGER;
           const ob = ordinalByName.get(String(b.processName || '').trim()) ?? Number.MAX_SAFE_INTEGER;
-          return oa - ob;
+          if (oa !== ob) return oa - ob;
+          return codeOrdinal(a) - codeOrdinal(b);
         });
         return ordered.map((r, index) => ({ ...r, sortOrder: index + 1, processCode: String(index + 1).padStart(2, '0') }));
       });

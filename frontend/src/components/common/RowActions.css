@@ -6,9 +6,10 @@
  * 主按钮（primary）常驻可见，保证核心动作一眼可点。
  */
 
-/* 默认：非主按钮隐藏（visibility 而非 opacity，移除不可见按钮的误点击热区） */
+/* D-287：行操作按钮常显——不再依赖悬停显现（用户反馈悬停不出现、要点一下才出现）。
+   revealOnHover 的"悬停显现"规则保留但不再有隐藏默认值，等于全量常显。 */
 .row-actions--reveal .row-actions__btn:not(.row-actions__btn--primary) {
-  visibility: hidden;
+  visibility: visible;
 }
 
 /* 行悬停 / 行内聚焦 / 组件聚焦时全部显现（声明在隐藏规则之后，同优先级后者胜出） */
