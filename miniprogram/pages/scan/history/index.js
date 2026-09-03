@@ -53,12 +53,18 @@ function _formatPatternRecord(item) {
     // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
     // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
     displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
-    displayQuantity: 0,
-    displayUnitPrice: '-',
+    // 数量取接口返回的 quantity（后端已回填：记录数量 → 样衣表数量 → 1）
+    displayQuantity: item.quantity || 0,
+    // D-278：单价/金额与生产记录同口径——myPatternScanHistory 已透出 unitPrice/scanCost，
+    // 工资查询页同源数据有价，历史页不再硬编码 '-'
+    displayUnitPrice: item.unitPrice == null || item.unitPrice === '' ? '-' : Number(item.unitPrice).toFixed(2),
     displayPriceAmount: '-',
-    lineAmount: 0,
-    displayLineAmount: '-',
-    isPayable: false,
+    lineAmount: Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
+    displayLineAmount: (function () {
+      const amt = Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+      return amt > 0 ? amt.toFixed(2) : '-';
+    })(),
+    isPayable: (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
     displayBedNo: '-',
     // 款式封面全景图（经鉴权处理，供卡片展示）
     coverUrl: getAuthedImageUrl(item.coverImage || ''),
@@ -309,6 +315,10 @@ Page({
         if (r.orderNo && r.orderNo !== '-') {
           orderSet.add(r.orderNo);
         }
+      });
+      // 样衣扫码记录也计入总数量（后端已返回 quantity 字段）
+      patternRecords.forEach((r) => {
+        totalQuantity += r.quantity || 0;
       });
 
       // 优先使用工资 API 返回的准确总额，回退到客户端计算

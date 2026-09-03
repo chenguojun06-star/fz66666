@@ -78,9 +78,9 @@
           <view class="record-left">
             <view class="record-tag-line">
               <text class="process-tag {{item.wageType === 'bonus' ? 'tag-bonus' : 'tag-piecework'}}">{{item.processName}}</text>
-              <text class="record-product">{{item.styleName || item.styleNo}}</text>
+              <text class="record-order">{{item.orderNo}}</text>
             </view>
-            <text class="record-sub">{{item.orderNo}} · {{item.shortDate}}</text>
+            <text class="record-sub">{{item.styleNo !== '-' ? item.styleNo : (item.styleName || item.styleNo)}} · {{item.shortDate}}</text>
           </view>
           <view class="record-right">
             <text class="record-calc">{{item.quantity}}{{item.wageType === 'bonus' ? '' : '件'}} × ¥{{item.unitPrice}}</text>

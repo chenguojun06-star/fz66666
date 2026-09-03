@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-03（新增 D-277 样衣入库防重键含 sampleType 被手机端架空→扫码查库 found:2）
+> 最后更新：2026-09-03（新增 D-278 工资/扫码历史两页数据一致性——样衣链路缺图缺价根治）
+
+---
+
+## D-278：工资页图片缺失/扫码历史缺单价——两页数据一致性根治（2026-09-03）
+
+用户：手机端"工资查询"里样衣链路记录（样衣入库/剪线/包装/整烫）没图片，而"扫码历史"同样记录有图；反过来扫码历史的样衣记录没有计件单价金额，工资页却有。"正常是都需要显示一样的：工序、单价、图片、明细，数据要一致性。"
+
+**两条链路、两个互补缺口**：
+1. **工资页样衣记录缺图（后端）**：工资接口 `/operator-summary` → `PayrollAggregationOrchestrator` 用 `ScanRecordEnrichHelper.enrichStyleInfo` 补款式封面，但其查找键只有 **styleId → orderId 兜底** 两级；样衣链路扫码记录（scan_type=pattern）既不挂生产订单（orderId 空）也常无 styleId → 永远查不到款式 → coverImage 空。生产链路两级键都在，所以有图。修复：`enrichStyleInfo` 增加**第三级 styleNo 批量兜底**（与 PatternProductionController.myPatternScanHistory 的 styleInfoMap 同模式），附件二级兜底一并覆盖 styleNo 命中的款式。该 helper 是只补空值语义，ScanRecordOrchestrator 各列表页同步受益。
+2. **扫码历史样衣记录缺单价（前端）**：`myPatternScanHistory` 后端早已透出 `unitPrice/scanCost`（"P1修复(PC端缺失2)"），但前端 `_formatPatternRecord` 硬编码 `displayUnitPrice:'-'`/`lineAmount:0`/`isPayable:false`。修复：与生产记录同口径接上（单价→scanCost→单价×数量），顺带「仅看计薪」过滤器对样衣记录生效。
+
+**工作区遗留同步**：上次会话中断留下的半成品——h5 两副本（source-miniapp/public）落后小程序已提交版本（工资页图片/搜索框、历史页 coverUrl/数量汇总、json 组件注册 image-preview/sticky-search-bar），本次补齐并验证四副本字节一致；另含 quality-detail 长菲号标签换行、sample-development 码数 chip 防出界两条 wxss 遗留。
+
+**教训**：①"同源数据两页显示不一致"先对比两页各自接口的**富化路径**——通常是某个 helper 的查找键少一级兜底（styleId 有≠styleNo 有，样衣链路天然缺 orderId）；②接口已返回的字段前端硬编码 '-' 是假缺口，先查接口响应再动手；③小程序四副本（miniprogram+h5两份）改动必须同波同步，h5 落后会表现为"H5 和微信行为不一样"。
 
 ---
 

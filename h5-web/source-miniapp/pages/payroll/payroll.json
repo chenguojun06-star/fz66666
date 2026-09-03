@@ -3,6 +3,8 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "date-picker": "/components/common/date-picker/index",
-    "empty-state": "/components/empty-state/empty-state"
+    "empty-state": "/components/empty-state/empty-state",
+    "sticky-search-bar": "/components/sticky-search-bar/index",
+    "image-preview": "/components/common/image-preview/index"
   }
 }

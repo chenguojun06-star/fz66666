@@ -1,9 +1,17 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-03（D-277 样衣入库 selectOne found:2 根治，已推送待 CI 部署）
+> 最后更新：2026-09-03（D-278 工资/扫码历史两页数据一致性根治，已推送待 CI 部署）
 
 ## 已完成
+
+### 2026-09-03 D-278 工资页缺图/扫码历史缺单价 ✅（后端1文件+小程序26文件含h5副本，全检查过，已推送待 CI 部署）
+
+- [x] 工资页样衣记录缺图：enrichStyleInfo 加第三级 styleNo 批量兜底（样衣链路无 styleId/orderId）
+- [x] 扫码历史样衣记录缺单价：_formatPatternRecord 接上后端已返回的 unitPrice/scanCost，isPayable 同步生效
+- [x] h5 两副本遗留半成品补齐同步（工资页图片/搜索框、历史页封面/数量、json 组件注册），四副本一致
+- [x] 附带 quality-detail 长菲号标签换行 + sample-development 码数 chip 防出界两条遗留 wxss
+- [ ] 待 CI 部署后用户回归：两页 工序/单价/图片/明细 显示一致
 
 ### 2026-09-03 D-277 样衣仓库入库"selectOne found: 2"根治 ✅（后端3文件，mvn 过，已推送待 CI 部署）
 

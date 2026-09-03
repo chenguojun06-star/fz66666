@@ -130,14 +130,19 @@
 .tag-chip {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 8px;
+  height: auto;
+  min-height: 20px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
+  line-height: 1.4;
   background: var(--color-bg-page);
   color: var(--color-text-secondary);
-  white-space: nowrap;
+  /* 码数/颜色可能很长，允许换行，防止出界 */
+  white-space: normal;
+  word-break: break-all;
+  max-width: 100%;
 }
 
 /* 交板日期栏 */

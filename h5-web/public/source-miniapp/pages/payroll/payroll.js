@@ -2,6 +2,7 @@
 const api = require('../../utils/api');
 const { toast } = require('../../utils/uiHelper');
 const { hasFeaturePermission } = require('../../utils/permission');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
 
 function parseDateSafe(dateStr) {
   if (!dateStr) return new Date(NaN);
@@ -45,6 +46,9 @@ Page({
   data: {
     // 类型筛选
     wageTypeFilter: 'all',
+
+    // 搜索关键字：款号 / 订单号 / 款式名字 / 菲号
+    searchKeyword: '',
 
     // 汇总数据
     totalAmount: '0.00',
@@ -226,6 +230,10 @@ Page({
         orderNo: item.orderNo || '-',
         styleNo: item.styleNo || '-',
         styleName: item.styleName || '',
+        // 菲号（用于搜索）
+        bundleNo: item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '',
+        // 款式封面全景图（经鉴权处理）
+        coverUrl: getAuthedImageUrl(item.coverImage || ''),
         color: item.color || '-',
         size: item.size || '-',
         processName: item.processName || '-',
@@ -267,16 +275,61 @@ Page({
   },
 
   /**
-   * 应用筛选
+   * 搜索框输入（实时更新关键字，轻量本地过滤）
+   */
+  onKeywordInput(e) {
+    this.setData({ searchKeyword: e.detail.value }, () => {
+      this.applyFilter();
+    });
+  },
+
+  /**
+   * 搜索确认
+   */
+  onSearch() {
+    this.applyFilter();
+  },
+
+  /**
+   * 清空搜索
+   */
+  onClearSearch() {
+    this.setData({ searchKeyword: '' }, () => {
+      this.applyFilter();
+    });
+  },
+
+  /**
+   * 本地搜索匹配：款号 / 订单号 / 款式名字 / 菲号
+   */
+  _matchSearchKeyword(r, keyword) {
+    if (!keyword) return true;
+    const kw = keyword.toLowerCase();
+    const haystacks = [
+      String(r.styleNo || ''),
+      String(r.orderNo || ''),
+      String(r.styleName || ''),
+      String(r.bundleNo || ''),
+    ];
+    for (let i = 0; i < haystacks.length; i++) {
+      if (haystacks[i].toLowerCase().indexOf(kw) >= 0) return true;
+    }
+    return false;
+  },
+
+  /**
+   * 应用筛选（类型 + 关键字）
    */
   applyFilter() {
-    const { allRecords, wageTypeFilter } = this.data;
+    const { allRecords, wageTypeFilter, searchKeyword } = this.data;
+    const keyword = (searchKeyword || '').trim();
     let filtered;
     if (wageTypeFilter === 'all') {
       filtered = allRecords;
     } else {
       filtered = allRecords.filter(function (r) { return r.wageType === wageTypeFilter; });
     }
+    filtered = filtered.filter((r) => this._matchSearchKeyword(r, keyword));
 
     let total = 0;
     for (let i = 0; i < filtered.length; i++) {

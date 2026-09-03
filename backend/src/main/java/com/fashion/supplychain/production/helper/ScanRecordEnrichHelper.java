@@ -175,6 +175,36 @@ public class ScanRecordEnrichHelper {
             orderStyleIdMap.values().forEach(sid -> {
                 if (StringUtils.hasText(sid)) allStyleIds.add(sid.trim());
             });
+
+            // D-278：样衣链路的扫码记录（scan_type=pattern）常无 styleId 且无 orderId（不挂生产订单），
+            // 前两步全落空 → 工资页/扫码列表的样衣记录永远没封面图。按 styleNo 批量兜底查款式
+            // （与 PatternProductionController.myPatternScanHistory 的 styleInfoMap 同模式）。
+            Map<String, StyleInfo> styleByNoMap = new HashMap<>();
+            List<String> unresolvedStyleNos = records.stream()
+                    .filter(r -> {
+                        String sid = StringUtils.hasText(r.getStyleId()) ? r.getStyleId().trim()
+                                : orderStyleIdMap.get(r.getOrderId());
+                        return !StringUtils.hasText(sid);
+                    })
+                    .map(ScanRecord::getStyleNo)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!unresolvedStyleNos.isEmpty()) {
+                try {
+                    styleInfoService.lambdaQuery()
+                            .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getStyleName, StyleInfo::getCover)
+                            .in(StyleInfo::getStyleNo, unresolvedStyleNos)
+                            .list()
+                            .forEach(s -> styleByNoMap.putIfAbsent(s.getStyleNo(), s));
+                } catch (Exception e) {
+                    log.warn("按款号兜底查款式失败: styleNos={}", unresolvedStyleNos, e);
+                }
+            }
+            styleByNoMap.values().forEach(s -> {
+                if (s.getId() != null) allStyleIds.add(String.valueOf(s.getId()));
+            });
             if (allStyleIds.isEmpty()) return;
 
             // 批量查询 StyleInfo（避免 N+1）
@@ -198,11 +228,16 @@ public class ScanRecordEnrichHelper {
             }
             if (styleByIdStr.isEmpty()) return;
 
-            // 收集需要走二级兜底的 styleId（StyleInfo.cover 为空）
-            List<String> missingCoverStyleIds = styleByIdStr.entrySet().stream()
+            // 收集需要走二级兜底的 styleId（StyleInfo.cover 为空；含 styleNo 兜底命中的款式）
+            List<String> missingCoverStyleIds = new ArrayList<>();
+            styleByIdStr.entrySet().stream()
                     .filter(e -> !StringUtils.hasText(e.getValue().getCover()))
                     .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
+                    .forEach(missingCoverStyleIds::add);
+            styleByNoMap.values().stream()
+                    .filter(s -> !StringUtils.hasText(s.getCover()) && s.getId() != null)
+                    .map(s -> String.valueOf(s.getId()))
+                    .forEach(missingCoverStyleIds::add);
 
             // 二级兜底：StyleAttachment 查图片附件
             Map<String, String> attachCoverByStyleId = new HashMap<>();
@@ -232,9 +267,13 @@ public class ScanRecordEnrichHelper {
                     // 使用订单兜底 styleId（只用于本次富化，不持久化到数据库）
                     sid = orderStyleIdMap.get(r.getOrderId());
                 }
-                if (!StringUtils.hasText(sid)) continue;
-                StyleInfo info = styleByIdStr.get(sid.trim());
+                StyleInfo info = StringUtils.hasText(sid) ? styleByIdStr.get(sid.trim()) : null;
+                // D-278：styleId/orderId 都落空时按款号兜底命中款式
+                if (info == null && StringUtils.hasText(r.getStyleNo())) {
+                    info = styleByNoMap.get(r.getStyleNo().trim());
+                }
                 if (info == null) continue;
+                String infoIdStr = info.getId() != null ? String.valueOf(info.getId()) : null;
                 // 补齐 styleName
                 if (!StringUtils.hasText(r.getStyleName()) && StringUtils.hasText(info.getStyleName())) {
                     r.setStyleName(info.getStyleName());
@@ -243,8 +282,8 @@ public class ScanRecordEnrichHelper {
                 if (!StringUtils.hasText(r.getCoverImage())) {
                     if (StringUtils.hasText(info.getCover())) {
                         r.setCoverImage(info.getCover());
-                    } else {
-                        String attachCover = attachCoverByStyleId.get(sid.trim());
+                    } else if (infoIdStr != null) {
+                        String attachCover = attachCoverByStyleId.get(infoIdStr);
                         if (StringUtils.hasText(attachCover)) {
                             r.setCoverImage(attachCover);
                         }

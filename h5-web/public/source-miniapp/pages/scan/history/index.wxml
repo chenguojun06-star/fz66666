@@ -1,4 +1,25 @@
 <view class="container">
+  <!-- 汇总卡片（最顶部） -->
+  <view class="summary-card">
+    <view class="summary-item">
+      <text class="summary-num">{{summary.totalQuantity || 0}}</text>
+      <text class="summary-label">总数量</text>
+    </view>
+    <view class="summary-item">
+      <text class="summary-num">{{summary.orderCount || 0}}</text>
+      <text class="summary-label">订单数</text>
+    </view>
+    <view class="summary-item">
+      <text class="summary-num">{{summary.recordCount || 0}}</text>
+      <text class="summary-label">记录数</text>
+      <text class="summary-sub-label">样衣{{summary.patternRecordCount || 0}}</text>
+    </view>
+    <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-item-hl-hover" hover-stay-time="50">
+      <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
+      <text class="summary-label">工资</text>
+    </view>
+  </view>
+
   <!-- 搜索框 + 时间模式/日期筛选器：已迁移到通用组件 sticky-search-bar -->
   <view class="ssb-wrap">
     <sticky-search-bar
@@ -41,42 +62,31 @@
     </sticky-search-bar>
   </view>
 
-  <!-- 汇总卡片 -->
-  <view class="summary-card">
-    <view class="summary-item">
-      <text class="summary-num">{{summary.totalQuantity || 0}}</text>
-      <text class="summary-label">总数量</text>
-    </view>
-    <view class="summary-item">
-      <text class="summary-num">{{summary.orderCount || 0}}</text>
-      <text class="summary-label">订单数</text>
-    </view>
-    <view class="summary-item">
-      <text class="summary-num">{{summary.recordCount || 0}}</text>
-      <text class="summary-label">记录数</text>
-      <text class="summary-sub-label">样衣{{summary.patternRecordCount || 0}}</text>
-    </view>
-    <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-item-hl-hover" hover-stay-time="50">
-      <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
-      <text class="summary-label">工资</text>
-    </view>
-  </view>
-
   <!-- 记录卡片列表（对齐设计稿：卡片式，非表格） -->
   <view class="records-list" wx:if="{{displayRecords.length > 0}}">
     <view wx:for="{{displayRecords}}" wx:key="id" class="record-card">
-      <view class="record-top">
-        <view class="record-top-left">
-          <text class="record-date">{{item.displayTime}}</text>
-          <text class="record-order">{{item.displayOrderNo}}</text>
+      <view class="record-body">
+        <!-- 款式封面全景图：长方形(宽>高)容器 + aspectFit 左右留白 -->
+        <view wx:if="{{item.coverUrl}}" class="record-img-wrap">
+          <image-preview class="record-img" src="{{item.coverUrl}}" mode="aspectFit" />
         </view>
-        <text wx:if="{{item.lineAmount > 0}}" class="record-amount">¥{{item.displayLineAmount}}</text>
-      </view>
-      <view class="record-bottom">
-        <text class="record-bundle">{{item.displayBundleNo}}</text>
-        <text class="record-dot">·</text>
-        <text class="record-process">{{item.displayProcess}}</text>
-        <text class="record-qty">{{item.displayQuantity}}件</text>
+        <view class="record-info">
+          <view class="record-top">
+            <view class="record-top-left">
+              <text class="record-order">{{item.displayOrderNo}}</text>
+            </view>
+            <text wx:if="{{item.lineAmount > 0}}" class="record-amount">¥{{item.displayLineAmount}}</text>
+          </view>
+          <view class="record-bottom">
+            <text class="record-date">{{item.displayTime}}</text>
+            <text class="record-dot">·</text>
+            <text class="record-bundle">{{item.displayBundleNo}}</text>
+            <text class="record-dot">·</text>
+            <text class="record-process">{{item.displayProcess}}</text>
+            <text wx:if="{{item.displayUnitPrice !== '-'}}" class="record-qty">{{item.displayQuantity}}件 × ¥{{item.displayUnitPrice}}</text>
+            <text wx:else class="record-qty">{{item.displayQuantity}}件</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>
