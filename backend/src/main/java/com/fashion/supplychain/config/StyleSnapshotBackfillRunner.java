@@ -141,6 +141,43 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 + "AND e2.color = w.color AND e2.size = w.size AND e2.tenant_id = w.tenant_id) "
                 + "GROUP BY w.sku_code, w.tenant_id, w.style_no, w.color, w.size, w.qty");
 
+        // 9) D-277：样衣库存同SKU重复行自愈——手机端入库长期不传 sample_type，入库防重闸门
+        // eq(sample_type, null) 生成 `sample_type = NULL` 永不匹配被整体架空 → 同款同色同码插出多行，
+        // 扫码查库 selectOne 直接 "found: 2" 500。防重口径已收敛为 款号+颜色+尺码，此处合并存量：
+        // 数量/借出数并入最早一行 → 空缺字段回填 → 借调单重指向 → 其余行软删。
+        // 四步共用同一重复组子查询（HAVING COUNT(*)>1），合并后空转，天然幂等
+        String sampleDupGroup = "(SELECT tenant_id, IFNULL(style_no,'') style_no, IFNULL(color,'') color, IFNULL(size,'') size, "
+                + "MIN(id) keep_id, SUM(IFNULL(quantity,0)) total_qty, SUM(IFNULL(loaned_quantity,0)) total_loan "
+                + "FROM t_sample_stock WHERE delete_flag = 0 "
+                + "GROUP BY tenant_id, IFNULL(style_no,''), IFNULL(color,''), IFNULL(size,'') HAVING COUNT(*) > 1)";
+        exec("样衣库存重复行数量合并",
+                "UPDATE t_sample_stock k JOIN " + sampleDupGroup + " d ON d.keep_id = k.id "
+                + "SET k.quantity = d.total_qty, k.loaned_quantity = d.total_loan, k.update_time = NOW()");
+        // 空缺字段回填/借调单重指向必须在软删前做（重复行还须 delete_flag=0 才能命中）
+        exec("样衣库存幸存行空缺字段回填",
+                "UPDATE t_sample_stock k JOIN " + sampleDupGroup + " d ON d.keep_id = k.id "
+                + "JOIN t_sample_stock x ON x.tenant_id = d.tenant_id "
+                + "AND IFNULL(x.style_no,'') = d.style_no AND IFNULL(x.color,'') = d.color AND IFNULL(x.size,'') = d.size "
+                + "AND x.delete_flag = 0 AND x.id <> d.keep_id "
+                + "SET k.sample_type = COALESCE(k.sample_type, x.sample_type), "
+                + "k.image_url = COALESCE(k.image_url, x.image_url), "
+                + "k.warehouse_area_id = COALESCE(k.warehouse_area_id, x.warehouse_area_id), "
+                + "k.warehouse_area_name = COALESCE(k.warehouse_area_name, x.warehouse_area_name), "
+                + "k.location = COALESCE(k.location, x.location), "
+                + "k.update_time = NOW()");
+        exec("样衣借调单重指向幸存行",
+                "UPDATE t_sample_loan l "
+                + "JOIN t_sample_stock s ON s.id = l.sample_stock_id AND s.delete_flag = 0 "
+                + "JOIN " + sampleDupGroup + " d ON s.tenant_id = d.tenant_id "
+                + "AND IFNULL(s.style_no,'') = d.style_no AND IFNULL(s.color,'') = d.color AND IFNULL(s.size,'') = d.size "
+                + "AND s.id <> d.keep_id "
+                + "SET l.sample_stock_id = d.keep_id WHERE l.delete_flag = 0");
+        exec("样衣库存重复行软删",
+                "UPDATE t_sample_stock s JOIN " + sampleDupGroup + " d ON s.tenant_id = d.tenant_id "
+                + "AND IFNULL(s.style_no,'') = d.style_no AND IFNULL(s.color,'') = d.color AND IFNULL(s.size,'') = d.size "
+                + "SET s.delete_flag = 1, s.update_time = NOW() "
+                + "WHERE s.delete_flag = 0 AND s.id <> d.keep_id");
+
         log.info("[StyleSnapshotBackfill] 存量款号/编码一致性回填完成");
     }
 

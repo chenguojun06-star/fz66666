@@ -96,12 +96,14 @@ public class SampleStockOrchestrator {
             }
         }
 
+        // D-277：防重键=款号+颜色+尺码（与扫码查库/扫码自动入库同口径）。
+        // 不能带 sampleType——手机端入库不传该字段，eq(null) 生成 sample_type = NULL 永不匹配，
+        // 闸门被整体架空，每点一次入库就多插一行，随后扫码查库 selectOne 直接 found:2 报错
         LambdaQueryWrapper<SampleStock> query = new LambdaQueryWrapper<SampleStock>()
                 .eq(SampleStock::getDeleteFlag, 0)
                 .eq(SampleStock::getStyleNo, stock.getStyleNo())
                 .eq(SampleStock::getColor, stock.getColor())
                 .eq(SampleStock::getSize, stock.getSize())
-                .eq(SampleStock::getSampleType, stock.getSampleType())
                 .eq(SampleStock::getTenantId, currentTenantId);
 
         SampleStock exist = sampleStockService.getOne(query);
@@ -908,13 +910,21 @@ public class SampleStockOrchestrator {
             throw new IllegalArgumentException("款号、颜色、尺码不能为空");
         }
 
-        SampleStock stock = sampleStockService.lambdaQuery()
+        // D-277：历史上手机端入库不传 sampleType，防重闸门被 eq(null) 架空后存量出现同SKU多行，
+        // selectOne 直接 500（found: 2）——这里取最早一条兜底显示，存量重复行由启动 Runner 合并
+        List<SampleStock> stockRows = sampleStockService.lambdaQuery()
                 .eq(SampleStock::getStyleNo, styleNo)
                 .eq(SampleStock::getColor, color)
                 .eq(SampleStock::getSize, size)
                 .eq(SampleStock::getDeleteFlag, 0)
                 .eq(SampleStock::getTenantId, tenantId)
-                .one();
+                .orderByAsc(SampleStock::getId)
+                .list();
+        SampleStock stock = stockRows.isEmpty() ? null : stockRows.get(0);
+        if (stockRows.size() > 1) {
+            log.warn("[样衣库存] scanQuery 同SKU命中{}条库存(styleNo={} color={} size={})，已取最早一条，重复行待启动自愈合并",
+                    stockRows.size(), styleNo, color, size);
+        }
 
         Map<String, Object> result = new HashMap<>();
         List<String> actions = new ArrayList<>();

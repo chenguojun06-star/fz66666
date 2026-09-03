@@ -1,7 +1,26 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-02（新增 D-266 失败识别污染款式特征/档案卡回填可替换失败残留）
+> 最后更新：2026-09-03（新增 D-277 样衣入库防重键含 sampleType 被手机端架空→扫码查库 found:2）
+
+---
+
+## D-277：手机端样衣仓库入库报"selectOne found: 2"——防重键口径分裂+eq(null)架空闸门（2026-09-03）
+
+用户：手机端样衣扫码→仓库入库，整页报"服务器开小差了（Expected one result (or null) to be returned by selectOne(), but found: 2）"，重试无效。
+
+**根因链（三处口径互不一致）**：`t_sample_stock` 同一 SKU（款号+颜色+尺码）被插出了 2 行，而扫码查库 `SampleStockOrchestrator.scanQuery` 用 MyBatis-Plus `.one()`（selectOne）按 SKU 查 → 直接抛 TooManyResultsException，详情页整页 500。重复行怎么来的：
+1. **防重键分裂**：手动入库 `inbound()` 的防重查询键=款号+颜色+尺码+**sampleType**+租户；扫码查库和扫码自动入库（PatternStockHelper）的键=款号+颜色+尺码（无 sampleType）。
+2. **手机端不传 sampleType**：小程序入库载荷只有 styleNo/color/size/quantity/库区/库位 → `eq(SampleStock::getSampleType, null)` 生成 `sample_type = NULL`（SQL 三值逻辑，永不匹配）→ **防重闸门对手机端完全失效**，每点一次入库就插一行（数量上限校验同处也按 sampleType 过滤，同样被架空）。
+3. 结果：存量出现同 SKU 多行 → 扫码查库 selectOne 500（截图时点：还没走到入库按钮，查详情那一步就炸了）。
+
+**修复（防重口径全链路收敛为 款号+颜色+尺码+租户）**：
+1. `inbound()` 防重查询去掉 sampleType 维度——重复入库返回明确的"该颜色尺码已入库，禁止重复入库"，手机端/PC 端/扫码三条写入路径同一把闸。
+2. `scanQuery` 从 `.one()` 改 `.list()` 取最早一条兜底（>1 条记 warn），查详情永不再 500；重复行由自愈合并。
+3. `PatternStockHelper` 出库/归还查库存补尺码维度（pattern.size 非空时）+ `getOne(q, false)`——同色多尺码/重复行时同族 selectOne 崩溃的隐患点一并拆掉。
+4. 存量自愈：`StyleSnapshotBackfillRunner` 追加第 9 步（幂等四连）——数量/借出数并入组内最早一行→幸存行空缺字段（sampleType/图片/库区库位）回填→挂在重复行上的借调单重指向→其余行软删。
+
+**教训**：①MyBatis-Plus `eq(column, null)` 不跳过条件而是生成 `= NULL` 永不匹配——"防重/过滤"型查询带可空字段时等于没防，可选维度要么从键里去掉要么 `StringUtils.hasText` 条件式拼接；②同一张表的"唯一键"口径必须全链路（所有写入路径+所有 selectOne 读取点）一致，写侧多一个维度=读侧 selectOne 一颗雷；③selectOne 面对的查询键如果不是 DB 唯一键，500 只是时间问题。
 
 ---
 
@@ -4362,3 +4381,162 @@ PC：
 **核实**：筛选器曾存在（"采购来源"Select，queryParams.sourceType），在「refactor(finance):
 精简财务模块6个页面」重构中被误删；后端 queryPage 的 sourceType 筛选一直健在
 （batch 联动 batch/stock/manual）。已恢复前端下拉，tsc 0 错误。
+
+---
+
+## D-270（用户拍板）：废止「外发订单采购不进对账」，所有采购一律对账
+
+**日期**：2026-09-02
+**触发**：用户怒斥"那个是布行！采购的布行是谁你理解吗"——被删的 10 条对账供应商是
+"最美布行"等**物料供应商**（面料款欠布行的钱），与"订单发给外发工厂加工"无关。
+
+### 口径纠偏（两笔钱不能混）
+- **物料采购款**：付给布行/面料商 → 必须进物料对账（不管订单谁做）
+- **加工费**：付给外发工厂 → 走外发结算（D-133 方案A），与物料对账无关
+- 旧口径把「订单 factory_type=EXTERNAL」当成「采购不进对账」→ 外发订单面料采购整批跳过，
+  历史对账被 cleanup 误删（D-268 事故的深层根源）
+
+### 修改（两处口径同步放开）
+1. `MaterialReconciliationOrchestrator.shouldRouteOrderLinkedPurchaseToInbound` → 恒 return false
+2. `MaterialPurchaseSyncHelper.syncAfterPurchaseChanged` → 去掉 allowReconciliation 拦截
+（shouldCleanupByPurchase 的外发分支随之失效；到货量0/取消/已删的清理保留）
+
+### 预期影响
+部署后跑「补生成对账」：外发订单已到货采购（本地实测 50 条）会批量生成对账——**这是预期行为**，
+量大属正常。被 D-268 误删的 10 条会由 restoreDeletedReconciliation 自动还原。
+
+---
+
+## D-271：补生成对账"点了没反应"双 bug 根治
+
+**日期**：2026-09-02
+**触发**：D-268/D-270 部署后用户点「补生成对账」，大货对账依然一条没出现。
+
+### Bug 1（致命）：单条失败 → 整体事务回滚
+backfillFromPurchases 标注 @Transactional，循环内逐条 upsert 无隔离——
+任何一条抛异常（分布式锁超时/数据异常/NPE），**整个事务回滚，一条都不生成**，
+用户看到的就是"点了没有任何新数据"。→ 循环加 per-item try-catch + failed 统计日志。
+
+### Bug 2（隐蔽）：逻辑删除插件让"恢复误删"永远失效
+全局配置 logic-delete-field: deleteFlag 后，MP 对**所有 wrapper 查询**自动追加
+`AND delete_flag = 0` → `lambdaQuery().eq(deleteFlag, 1)` 生成
+`delete_flag = 1 AND delete_flag = 0` → **永远空结果**。
+上一版写的"恢复被误删对账"从未生效过。→ MaterialReconciliationMapper 加原生
+@Select `selectDeletedByPurchaseId`（自定义 SQL 不受插件影响），恢复改走它。
+
+### 方法论沉淀
+- **逻辑删除项目的"查已删除数据"必须走原生 SQL**，wrapper 怎么写都查不到
+- 批量写操作的 @Transactional 循环必须 per-item try-catch，否则一条毒丸毁全部
+- 修复"看起来执行了但零效果"的功能时，优先怀疑：①事务整体回滚 ②框架层隐式过滤（逻辑删除/租户插件）
+
+---
+
+## D-272：「出库领取」按钮只在仓库真有库存时显示
+
+**日期**：2026-09-02
+**触发**：用户反馈——"直接采购直接用"（登记到货但从未入库）的采购，操作列却显示
+「出库领取」，误点必报"仓库库存不足"。"采购了且做了入库才有出库逻辑"。
+
+### 根因
+`MaterialPurchaseDetail/columns.tsx` 出库领取按钮的显示条件只看采购状态
+（isReturnConfirmed || isCompleted），**不看仓库有没有库存**。样衣模式早已隐藏
+（D-117 注释记录了同样问题），但大货"直采直用"场景漏了。
+
+### 修复（复用 PurchaseModal 家族的现成模式）
+1. `MaterialPurchaseDetail/index.tsx`：加载 `/production/purchase/smart-receive-preview`
+   → `buildStockMap`（purchaseId → availableStock），按 orderNo 优先、无订单用 styleNo
+2. `columns.tsx`：出库领取显示条件加 `stockQty > 0`，标题带"仓库可用 N 单位"，
+   领取数量取 min(库存, 到货量)。库存未知（接口失败）时同样隐藏——宁可少显示不误点
+
+---
+
+## D-272b：补生成对账全透明化（诊断返回页面）
+
+**日期**：2026-09-02
+**触发**：D-270/D-271 部署后用户点补生成——2~5 月老采购的对账回来了（23→43条），
+**但 8/21 之后的新大货采购一条没生成**（PO20260901173322/PO20260828152504/PO20260821160742 均未对账）。
+
+### 现状判断
+- 08-21 是清晰分界线：之前的有、之后的没有——同一份 backfill、同一套判定，差异只能在数据或单条异常
+- 纯代码推演已到极限（口径/租户/状态/到货量全部符合条件），**停止猜测，让系统自己交代原因**
+- backfill 现返回 {touched, failed, skipped:{原因:数}, failures:[明细]}，前端弹窗展示
+- 下一次点击即可看到：每条采购是"到货量为0/跨租户/已取消/保存失败(具体异常)"——真凶直接上屏
+
+### 方法论
+修复"看起来执行了但部分数据没效果"时，与其无限推理，不如把系统的每个决策点透明化，
+让下一次执行直接产出诊断数据。
+
+---
+
+## D-274：已完成老采购到货量自愈（「有效到货量为0」写路径断点根治）
+
+**日期**：2026-09-02
+**触发**：D-273c（confirmComplete 回写到货量）部署后，用户指出那 7 条**已完成**的老采购
+仍卡在「有效到货量为0(未到货)」——修复只管"以后"，存量没有任何路径能自愈。
+
+### 写路径断点定位（三处状态推演）
+1. 补生成候选已放行全部非取消采购（D-264 去掉 arrivedQuantity>0 预过滤）✅
+2. 但 `upsertWithReason` → `resolveEffectiveQuantity`：completed 且 aq=0 → min(0,pq)=0 → 跳过 ❌
+3. `confirmComplete` 幂等分支对已完成单直接 return，永不补写 arrivedQuantity ❌
+
+### 修复
+`MaterialReconciliationOrchestrator` 新增 `healArrivedQuantityIfCompleted`，在 `upsertWithReason`
+qty 判定前调用（单点覆盖 backfill + 实时同步两条链路）：
+- 条件：status=completed && arrivedQuantity≤0 && purchaseQuantity>0
+- 动作：lambdaUpdate 回写 arrivedQuantity=purchaseQuantity + actualArrivalDate=now
+  （乐观条件 isNull(or eq 0) 防并发覆盖真实到货量），并回写内存对象供后续 resolve 用
+- 口径与 D-273c 一致：人工确认完成 = 背书「这批货齐了」；幂等（aq>0 不动）；失败只 warn 不阻断
+
+### 教训
+修"写路径断点"时必须区分**增量修复**（管以后）与**存量自愈**（管已坏的），
+只修入口不改存量 = 用户数据永远回不来；自愈逻辑放被调用方法内部（单点）而非各调用点。
+
+---
+
+## D-275：裁剪弹窗快捷跳转恢复（D-137 抽屉化的隐性回归）
+
+**日期**：2026-09-03
+**触发**：用户发现裁剪节点详情弹窗里原来的「跳转裁剪详情页」快捷键没了。
+
+### 根因（两处改动叠加的隐性回归）
+1. D-137「工序弹窗抽屉化」：NodeDetailModal 默认 `mode = 'drawer'`（原 modal 居中弹窗改 SideDrawer，
+   且连显式传 mode='modal' 的分支也渲染 SideDrawer），两个调用方都没传 mode → 永远是 'drawer'
+2. NodeDetailBody 的「前往裁剪管理 →」按钮条件 `nodeTypeKey === 'cutting' && mode !== 'drawer'`
+   ——原意可能是旧居中弹窗下的布局考虑，抽屉化后该条件使按钮**在任何情况下都不渲染**
+
+### 修复
+- 去掉 `mode !== 'drawer'`（抽屉 body 顶部放一个 Button 无布局冲突）
+- 清理 destructure 中不再使用的 `mode` 形参（interface 保留，调用方兼容）
+- 跳转目标 `/production/cutting/task/:orderNo` 路由确认存在（routeConfig.ts cuttingTask）
+
+### 教训
+改"容器形态"（modal→drawer）时，必须全局搜原形态的条件分支（`!== 'drawer'`、`=== 'modal'` 之类），
+形态默认值一改，散落在 body 组件里的形态相关 UI 会**静默消失**——这类回归不报错、tsc 不红，只有用户点不到才发现。
+
+---
+
+## D-276：订单管理页尾部进度球父子映射口径根治
+
+**日期**：2026-09-03
+**触发**：用户出示 PO20260828152504 尾部弹窗（12 菲号 × 3 子工序 = 36 条跟踪、3 条已扫），
+指出订单管理页多子工序情况下进度条不对，要按子父关系计算。
+
+### 根因（关键字硬编码 vs 租户配置漂移）
+主路径 `applyFlowStagesToOrder` 尾部球调 `resolveTrackingMinRate(tracking, baseQty,
+parentKeywords={"尾部","大烫","整烫","剪线","尾工",...}, subProcessKeywords={"包装"})`：
+- 尾部**自己的子工序**（剪线/整烫/大烫）被当 parentKeywords **排除**
+- 只统计包含「包装」的子工序；用户租户尾部子工序配置是 03剪线/04整烫/05质检（无包装）
+  → subProcessQtys 恒空 → null → 回退 packagingRate（视图包装量 0）→ **尾部球恒 0%**
+- 而轻量路径 fillCompletionRates 用映射服务（buildParentNodeQtyMap max）能正常显示——
+  两条路径口径不一致，同一订单不同入口显示不同
+
+### 修复
+1. `ProcessParentNodeResolver` 新增 `resolveParentStageRate`：逐个已扫子工序经
+   `isParentNodeMatch`（同义词 + 租户映射配置，来源唯一）归属到目标父节点，取 **min**
+   （串行子工序链完成度由最慢一道决定）；删除废弃的 resolveTrackingMinRate（关键字硬编码版本）
+2. `applyFlowStagesToOrder` 尾部球三级回退：min(归属子工序) → 映射聚合量 max（与轻量路径同口径）→ 视图包装量
+
+### 教训
+- 进度聚合**禁止用关键字数组硬编码**工序归属——租户的子工序配置是活的（本例尾部挂了质检），
+  必须走映射服务/配置单一来源；关键字法在配置漂移时**静默返回空**而非报错
+- 同一指标多条计算路径（完整/轻量）时，改口径必须两路一起对齐或显式声明差异，否则同一数据两个显示

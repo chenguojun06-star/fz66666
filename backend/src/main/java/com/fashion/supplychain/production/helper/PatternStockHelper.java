@@ -73,12 +73,15 @@ public class PatternStockHelper {
                 }
             }
         } else if ("WAREHOUSE_OUT".equals(operationType)) {
+            // D-277：补尺码维度 + getOne(throwEx=false)——同色多尺码或存量重复行时 selectOne 会直接
+            // "found: N" 500，出库/归还属登记动作，命中多条时取第一条继续即可
             LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
                     .eq(SampleStock::getDeleteFlag, 0)
                     .eq(SampleStock::getStyleNo, pattern.getStyleNo())
                     .eq(SampleStock::getColor, pattern.getColor())
+                    .eq(StringUtils.hasText(pattern.getSize()), SampleStock::getSize, pattern.getSize())
                     .eq(SampleStock::getTenantId, tenantId);
-            SampleStock stock = sampleStockService.getOne(q);
+            SampleStock stock = sampleStockService.getOne(q, false);
             if (stock == null) {
                 log.warn("[样衣出库] 未找到对应库存记录，跳过借出登记 styleNo={}", pattern.getStyleNo());
                 return;
@@ -106,12 +109,14 @@ public class PatternStockHelper {
             sampleStockMapper.updateLoanedQuantity(stock.getId(), qty, tenantId);
             log.info("[样衣出库] loanId={} stockId={} qty={}", loan.getId(), stock.getId(), qty);
         } else if ("WAREHOUSE_RETURN".equals(operationType)) {
+            // D-277：同上——补尺码维度 + 命中多条不抛异常
             LambdaQueryWrapper<SampleStock> sq = new LambdaQueryWrapper<SampleStock>()
                     .eq(SampleStock::getDeleteFlag, 0)
                     .eq(SampleStock::getStyleNo, pattern.getStyleNo())
                     .eq(SampleStock::getColor, pattern.getColor())
+                    .eq(StringUtils.hasText(pattern.getSize()), SampleStock::getSize, pattern.getSize())
                     .eq(SampleStock::getTenantId, tenantId);
-            SampleStock stock = sampleStockService.getOne(sq);
+            SampleStock stock = sampleStockService.getOne(sq, false);
             if (stock == null) {
                 log.warn("[样衣归还] 未找到库存记录，跳过 styleNo={}", pattern.getStyleNo());
                 return;

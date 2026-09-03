@@ -1,9 +1,36 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-01（D-261 七连修：款式特征合并+尺寸表覆盖+公差±+排产滤布行+退回吞异常+视觉失败原因透传+样衣采购带色）
+> 最后更新：2026-09-03（D-277 样衣入库 selectOne found:2 根治，已推送待 CI 部署）
 
 ## 已完成
+
+### 2026-09-03 D-277 样衣仓库入库"selectOne found: 2"根治 ✅（后端3文件，mvn 过，已推送待 CI 部署）
+
+- [x] 根因：手机端入库不传 sampleType → `inbound()` 防重键 eq(null) 永不匹配被架空 → 同 SKU 重复插行 → `scanQuery` `.one()` 抛 TooManyResultsException（截图 BR26Q1Q0929A 棕色 XS 实证）
+- [x] 修复：inbound 防重键收敛为款号+颜色+尺码；scanQuery 改 list 兜底取最早一条；PatternStockHelper 出库/归还补尺码+getOne(throwEx=false)
+- [x] 存量自愈：StyleSnapshotBackfillRunner 第 9 步幂等四连（数量合并→字段回填→借调单重指向→软删）
+- [ ] 待 CI 部署后用户回归：样衣扫码详情正常显示；已入库 SKU 再入库提示"该颜色尺码已入库"
+
+### 2026-09-03 D-276 尾部进度球父子映射口径根治 ✅（后端2文件，mvn 过，已推送待 CI 部署）
+
+- [x] 根因：主路径尾部球只认「包装」子工序，剪线/整烫/质检配置的订单恒 0%（PO20260828152504 实证）
+- [x] 修复：resolveParentStageRate（映射服务 + min 口径）+ 三级回退（min → 映射聚合 max → 视图包装量）
+- [ ] 待 CI 部署后用户验收尾部球
+
+### 2026-09-03 D-275 裁剪弹窗快捷跳转恢复 ✅（前端1文件，CI 全绿已部署）
+
+### 2026-09-03 D-275 裁剪弹窗快捷跳转恢复 ✅（前端1文件，tsc/eslint 0错，已推送待 CI 部署）
+
+- [x] 根因：D-137 抽屉化把 NodeDetailModal 默认 mode 改 'drawer'，「前往裁剪管理」按钮条件 `mode !== 'drawer'` → 永不渲染
+- [x] 修复：去掉形态条件 + 清理未用 mode 形参；路由 /production/cutting/task/:orderNo 确认存在
+- [ ] 待 CI 部署后用户刷新验收弹窗顶部快捷按钮
+
+### 2026-09-02 D-274 已完成老采购到货量自愈 ✅（后端1文件，mvn compile 过，已推送待 CI 部署）
+
+- [x] 定位：7 条已完成老采购卡「有效到货量为0」——D-273c 只修增量，存量无自愈路径（confirmComplete 幂等分支直接 return）
+- [x] 修复：MaterialReconciliationOrchestrator.upsertWithReason 前置 healArrivedQuantityIfCompleted（completed && aq≤0 → 回写 purchaseQuantity，幂等防并发）
+- [ ] 待 CI 部署成功后用户点「补生成对账」验收 7 条入账
 
 ### 2026-09-01 D-261 用户暴走七连修 ✅（前端11文件+后端5文件；mvn/tsc/eslint 全过，待推送）
 

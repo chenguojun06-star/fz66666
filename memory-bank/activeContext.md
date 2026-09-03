@@ -1,11 +1,39 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-02（D-265 五连修：BOM口径/导入码数/标签对齐/图片识别，已推送）
+> 最后更新：2026-09-03（D-277 样衣入库防重键架空→扫码查库 found:2 根治，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-03 D-277 样衣仓库入库"selectOne found: 2"根治 ✅已推送，待 CI 部署+用户回归
+
+- [x] 根因：手机端入库不传 sampleType，`inbound()` 防重键含 sampleType 被 eq(null) 架空 → 同 SKU 重复插行 → `scanQuery` 的 `.one()` 直接 TooManyResultsException 500
+- [x] 修复三处：inbound 防重键收敛为款号+颜色+尺码；scanQuery 改 list 取最早一条兜底；PatternStockHelper 出库/归还补尺码维度+getOne(throwEx=false)
+- [x] 存量自愈：StyleSnapshotBackfillRunner 第 9 步四连（数量合并→空缺字段回填→借调单重指向→软删），幂等
+- [x] mvn compile 过；**需 CI 部署后端生效**
+- [ ] 待用户回归：扫码 BR26Q1Q0929A 棕色 XS 详情页正常显示；若已在库再点入库应提示"该颜色尺码已入库"而非重复插行
+
+### 2026-09-03 D-276 订单管理页尾部进度球父子映射口径根治 ✅已推送（5f476c245），CI 核对中
+
+- [x] 根因：主路径 applyFlowStagesToOrder 尾部球调 resolveTrackingMinRate 时把尾部自己的子工序（剪线/整烫/大烫/尾工）放进 parentKeywords 排除、只认「包装」→ 子工序配置为 03剪线/04整烫/05质检（无包装）的订单尾部球恒 0%（用户实测 PO20260828152504：36 条跟踪 3 条已扫，球仍 0%）
+- [x] 修复：ProcessParentNodeResolver 新增 resolveParentStageRate（映射服务归属子工序，min=串行链最慢一道）；无归属时回退映射聚合量 max（与轻量路径 fillCompletionRates 同口径）→ 视图包装量；删除废弃的 resolveTrackingMinRate
+- [x] 注意：轻量路径 fillCompletionRates（tailQty=max）与主路径口径不完全一致（min vs max），本次未动轻量路径
+- [ ] 待 CI 部署后用户刷新订单管理页验收尾部球 >0%
+
+### 2026-09-03 D-275 裁剪弹窗快捷跳转恢复 ✅已部署（60f05eefe，CI 全绿含冒烟）
+
+- [x] 根因：D-137「工序弹窗抽屉化」把 NodeDetailModal 默认 mode 改为 'drawer'，而 NodeDetailBody 里「前往裁剪管理 →」按钮条件是 `nodeTypeKey === 'cutting' && mode !== 'drawer'` → 抽屉化后按钮在任何情况下都不渲染
+- [x] 修复：去掉 `mode !== 'drawer'` 条件（抽屉 body 顶部放按钮无布局冲突），清理未用的 mode 形参；跳转目标 /production/cutting/task/:orderNo 路由仍在
+- [x] tsc 0 错、ESLint 0 错
+- [ ] 待用户：刷新 PC 验收——打开裁剪节点弹窗顶部应有「前往裁剪管理 →」
+
+### 2026-09-02 D-274 已完成老采购到货量自愈 ✅已推送（157112010），CI 核对中
+
+- [x] 写路径断点确认：D-273c 只管"以后"，7 条已完成老采购在 resolveEffectiveQuantity 处 aq=0 被跳过，且 confirmComplete 幂等分支永不补写
+- [x] 修复：upsertWithReason 加 healArrivedQuantityIfCompleted——completed && aq≤0 时按 purchaseQuantity 回写（乐观锁防并发，幂等，不阻断）
+- [x] 部署后动作：用户点一次「补生成对账」，7 条应全部进账（页面会显示各自原因，不再有"有效到货量为0"）
 
 ### 2026-09-02 D-268 补生成误删10条对账事故修复（只补不删+自愈恢复）/ D-269 恢复采购类型筛选 ✅已推送
 
