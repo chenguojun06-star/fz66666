@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
-const { isAdminOrSupervisor } = require('../../../utils/permission');
+const { isAdminOrSupervisor, isManagerLevel } = require('../../../utils/permission');
+const { getShowProcMeta, setShowProcMeta, applyTimelineStatus, mergeStageMetaIntoNodes } = require('../../../utils/procTimeline');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
@@ -38,7 +39,7 @@ function receiveStatusCls(s) {
 function enrichForDashboard(order) {
   const completed = Number(order.completedQuantity) || 0;
   const total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
-  order.processNodes = buildProcessNodesWithRates(order);
+  order.processNodes = applyTimelineStatus(buildProcessNodesWithRates(order));
   order.processNodes.forEach(function (n) {
     n.percentWidth = Math.min(100, Math.max(0, n.percent >= 0 ? n.percent : 0));
   });
@@ -67,12 +68,15 @@ Page({
     shipmentHasMore: true,
     factoryStats: [],
     selectedFactoryId: null,
+    /* D-280：时间/单价显示开关（仅管理层可见可切换） */
+    isManager: false,
+    showProcMeta: false,
   },
 
   onLoad: function () {
     const factory = isFactoryOwner();
     const admin = isAdminOrSupervisor();
-    this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0 });
+    this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0, isManager: isManagerLevel(), showProcMeta: getShowProcMeta() });
   },
 
   /**
@@ -316,7 +320,46 @@ Page({
   onCardToggle: function (e) {
     const idx = e.currentTarget.dataset.index;
     const path = 'orders[' + idx + '].expanded';
-    this.setData({ [path]: !this.data.orders[idx].expanded });
+    const nextExpanded = !this.data.orders[idx].expanded;
+    this.setData({ [path]: nextExpanded });
+    // D-280：展开且开着时间/单价开关时，懒加载该订单的阶段时间（每单只拉一次）
+    if (nextExpanded && this.data.isManager && this.data.showProcMeta) {
+      this.loadStageMeta(idx);
+    }
+  },
+
+  /* ======== 时间/单价显示开关（管理层） ======== */
+  onToggleProcMeta: function () {
+    if (!this.data.isManager) return;
+    const next = !this.data.showProcMeta;
+    setShowProcMeta(next);
+    this.setData({ showProcMeta: next });
+    if (next) {
+      this.data.orders.forEach((order, idx) => {
+        if (order.expanded && !order._stageMetaLoaded) this.loadStageMeta(idx);
+      });
+    }
+  },
+
+  /* 懒加载订单阶段时间（flow 接口的 stages 含 processName/startTime/completeTime） */
+  loadStageMeta: function (idx) {
+    const order = this.data.orders[idx];
+    if (!order || order._stageMetaLoading || order._stageMetaLoaded) return;
+    const orderId = order.id;
+    if (!orderId) return;
+    order._stageMetaLoading = true;
+    api.production.getOrderFlow(orderId).then((res) => {
+      const data = res || {};
+      const stages = Array.isArray(data.stages) ? data.stages : (data.stages && Array.isArray(data.stages.records)) ? data.stages.records : [];
+      const path = 'orders[' + idx + '].processNodes';
+      const merged = mergeStageMetaIntoNodes(order.processNodes, stages);
+      order._stageMetaLoaded = true;
+      order._stageMetaLoading = false;
+      this.setData({ [path]: merged });
+    }).catch((err) => {
+      order._stageMetaLoading = false;
+      console.warn('[shipment] 阶段时间加载失败:', (err && err.message) || err);
+    });
   },
 
   onCoverPreview: function (e) {

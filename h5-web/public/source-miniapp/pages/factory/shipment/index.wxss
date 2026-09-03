@@ -882,3 +882,180 @@
   background: var(--color-primary-bg);
 }
 
+/* D-280：工序进度时间线（与样衣开发跟进 proc-tl-* 同款：圆点轨道+脉冲动画+进度条过渡） */
+.proc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.proc-meta-toggle {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 20rpx;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+}
+.proc-meta-toggle--on {
+  border-color: var(--color-primary);
+  background: var(--status-processing-bg, rgba(22, 119, 255, 0.08));
+}
+.proc-meta-toggle-text {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+}
+.proc-meta-toggle--on .proc-meta-toggle-text {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+.proc-timeline {
+  display: flex;
+  flex-direction: column;
+}
+.proc-tl-item {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 4rpx;
+}
+.proc-tl-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 48rpx;
+}
+.proc-tl-dot-wrap {
+  position: relative;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.proc-tl-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.proc-tl-dot--completed {
+  background: var(--color-success);
+}
+.proc-tl-dot--in_progress {
+  width: 20px;
+  height: 20px;
+  background: var(--color-primary);
+}
+.proc-tl-dot--pending {
+  background: var(--color-bg-card);
+  border: 2px solid var(--color-border);
+  box-sizing: border-box;
+}
+.proc-tl-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  margin-left: -12px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  opacity: 0.35;
+  animation: proc-tl-pulse-anim 1.8s ease-out infinite;
+  z-index: 0;
+}
+@keyframes proc-tl-pulse-anim {
+  0% { transform: scale(1); opacity: 0.35; }
+  70% { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.icon-checkmark-sm {
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.proc-tl-line {
+  flex: 1;
+  width: 2rpx;
+  min-height: 32rpx;
+  background: var(--color-border);
+  margin-top: 4rpx;
+}
+.proc-tl-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 20px;
+  padding-right: 8px;
+  padding-left: 8px;
+  margin-right: -8px;
+  margin-left: -8px;
+}
+.proc-tl-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.proc-tl-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  min-width: 0;
+  flex: 1;
+}
+.proc-tl-name {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proc-tl-name--pending {
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-regular);
+}
+.proc-tl-qty {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.proc-tl-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+}
+.proc-tl-meta-text {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+}
+.proc-tl-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.proc-tl-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+.proc-tl-fill--done {
+  background: var(--color-success);
+}

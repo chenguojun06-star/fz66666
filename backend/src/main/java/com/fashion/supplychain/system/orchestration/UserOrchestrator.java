@@ -105,6 +105,10 @@ public class UserOrchestrator {
     }
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId, String employmentStatus, String orgUnitId, String employeeNo, Boolean excludeFactoryUsers) {
+        return list(page, pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, employeeNo, excludeFactoryUsers, null);
+    }
+
+    public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId, String employmentStatus, String orgUnitId, String employeeNo, Boolean excludeFactoryUsers, Long roleId) {
         Long tenantId = UserContext.tenantId();
         String currentUserFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(currentUserFactoryId)) {
@@ -117,6 +121,11 @@ public class UserOrchestrator {
             if (StringUtils.hasText(username)) query.like("username", username);
             if (StringUtils.hasText(name)) query.like("name", name);
             if (StringUtils.hasText(roleName)) query.like("role_name", roleName);
+            // D-280：按岗位过滤——兼容旧 t_user.role_id 单角色与新 t_user_role 多角色（岗位"关联人员"弹窗/人员管理角色筛选都传 roleId）
+            if (roleId != null) {
+                query.and(w -> w.eq("role_id", roleId)
+                        .or().exists("SELECT 1 FROM t_user_role ur WHERE ur.user_id = t_user.id AND ur.role_id = {0} AND ur.delete_flag = 0", roleId));
+            }
             if (StringUtils.hasText(status)) query.eq("status", status);
             if (StringUtils.hasText(factoryId)) query.eq("factory_id", factoryId);
             if (StringUtils.hasText(employmentStatus)) query.eq("employment_status", employmentStatus);

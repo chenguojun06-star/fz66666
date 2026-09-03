@@ -166,28 +166,44 @@
             </view>
           </view>
 
-          <!-- 工序进度明细 -->
+          <!-- 工序进度明细（D-280：时间线布局/动画对齐样衣开发跟进） -->
           <view class="expand-section" wx:if="{{item.processNodes && item.processNodes.length > 0}}">
-            <text class="expand-title">工序进度</text>
-            <view class="process-node" wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name">
-              <view class="node-hd">
-                <text class="node-name">{{node.name}}</text>
-                <text class="node-pct {{node.percent >= 100 ? 'node-pct--done' : ''}}">{{node.percent}}%</text>
+            <view class="proc-head">
+              <text class="expand-title">工序进度</text>
+              <view wx:if="{{isManager}}" class="proc-meta-toggle {{showProcMeta ? 'proc-meta-toggle--on' : ''}}" catchtap="onToggleProcMeta">
+                <text class="proc-meta-toggle-text">时间/单价</text>
               </view>
-              <view class="node-meta">
-                <text class="node-qty" wx:if="{{node.qtyInfo}}">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
-                <text class="node-dot" wx:if="{{node.qtyInfo && node.bundleInfo}}">·</text>
-                <text class="node-bundle-text" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-              </view>
-              <view class="node-bar-bg">
-                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width: {{node.percentWidth}}%"></view>
-              </view>
-              <!-- 子工序列表 -->
-              <view class="node-sub-procs" wx:if="{{node.children && node.children.length > 0}}">
-                <view class="sub-proc-item" wx:for="{{node.children}}" wx:for-item="sp" wx:key="name">
-                  <text class="sp-name">{{sp.name}}</text>
-                  <text class="sp-price" wx:if="{{sp.unitPrice > 0}}">¥{{sp.unitPrice}}</text>
-                  <text class="sp-price sp-price--free" wx:else>待定价</text>
+            </view>
+            <view class="proc-timeline">
+              <view wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name" class="proc-tl-item">
+                <view class="proc-tl-rail">
+                  <view class="proc-tl-dot-wrap">
+                    <view wx:if="{{node._status === 'in_progress'}}" class="proc-tl-pulse"></view>
+                    <view class="proc-tl-dot proc-tl-dot--{{node._status}}">
+                      <view wx:if="{{node._status === 'completed'}}" class="icon-checkmark-sm"></view>
+                    </view>
+                  </view>
+                  <view wx:if="{{index < item.processNodes.length - 1}}" class="proc-tl-line"></view>
+                </view>
+                <view class="proc-tl-body">
+                  <view class="proc-tl-info">
+                    <view class="proc-tl-name-row">
+                      <text class="proc-tl-name {{node._status === 'pending' ? 'proc-tl-name--pending' : ''}}">{{node.name}}</text>
+                    </view>
+                    <text wx:if="{{node.qtyInfo}}" class="proc-tl-qty">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
+                    <text wx:else class="proc-tl-qty">{{node.percent > 0 ? node.percent : 0}}%</text>
+                  </view>
+                  <view class="proc-tl-bar">
+                    <view class="proc-tl-fill {{node._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : (node.percent > 0 ? node.percent : 0)}}%"></view>
+                  </view>
+                  <view class="proc-tl-meta" wx:if="{{node.bundleInfo || showProcMeta}}">
+                    <text wx:if="{{node.bundleInfo}}" class="proc-tl-meta-text">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
+                    <block wx:if="{{showProcMeta}}">
+                      <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
+                      <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · 完成 {{node.endTime}}</text>
+                      <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
+                    </block>
+                  </view>
                 </view>
               </view>
             </view>

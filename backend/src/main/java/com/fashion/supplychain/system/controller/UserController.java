@@ -50,6 +50,7 @@ public class UserController {
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String roleName,
+            @RequestParam(required = false) Long roleId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String factoryId,
             @RequestParam(required = false) String employmentStatus,
@@ -68,7 +69,7 @@ public class UserController {
             }
             factoryId = ctxFactoryId;
         }
-        Page<User> userPage = userOrchestrator.list((long) page, (long) pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, employeeNo, excludeFactoryUsers);
+        Page<User> userPage = userOrchestrator.list((long) page, (long) pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, employeeNo, excludeFactoryUsers, roleId);
         return Result.success(userPage);
     }
 

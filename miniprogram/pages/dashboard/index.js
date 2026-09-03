@@ -14,8 +14,9 @@
 const api = require('../../utils/api');
 const { transformOrderData } = require('./utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
-const { isAdminOrSupervisor } = require('../../utils/permission');
+const { isAdminOrSupervisor, isManagerLevel } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
+const { getShowProcMeta, setShowProcMeta, applyTimelineStatus, mergeStageMetaIntoNodes } = require('../../utils/procTimeline');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { safeNavigate, scanInPage, toast } = require('../../utils/uiHelper');
 const { dispatchInlineScanCode } = require('../scan/handlers/InlineScanDispatcher');
@@ -31,7 +32,8 @@ const STATUS_FILTERS = [
 ];
 
 function buildProcessNodes(order) {
-  return buildProcessNodesWithRates(order);
+  // D-280：时间线状态（completed/in_progress/pending）与样衣开发跟进同口径
+  return applyTimelineStatus(buildProcessNodesWithRates(order));
 }
 
 /** 为订单注入看板所需的扩展字段 */
@@ -57,6 +59,9 @@ Page({
     searchKey: '',
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
+    /* D-280：时间/单价显示开关（仅管理层可见可切换） */
+    isManager: false,
+    showProcMeta: false,
   },
 
   onLoad: function (options) {
@@ -68,6 +73,7 @@ Page({
       return;
     }
     this._pendingOrderId = (options && options.orderId) ? decodeURIComponent(options.orderId) : '';
+    this.setData({ isManager: isManagerLevel(), showProcMeta: getShowProcMeta() });
     this.refreshCards();
     this.loadOrders(true);
   },
@@ -227,7 +233,47 @@ Page({
   onCardToggle: function (e) {
     const idx = e.currentTarget.dataset.index;
     const path = 'orders.list[' + idx + '].expanded';
-    this.setData({ [path]: !this.data.orders.list[idx].expanded });
+    const nextExpanded = !this.data.orders.list[idx].expanded;
+    this.setData({ [path]: nextExpanded });
+    // D-280：展开且开着时间/单价开关时，懒加载该订单的阶段时间（每单只拉一次）
+    if (nextExpanded && this.data.isManager && this.data.showProcMeta) {
+      this.loadStageMeta(idx);
+    }
+  },
+
+  /* ======== 时间/单价显示开关（管理层） ======== */
+  onToggleProcMeta: function () {
+    if (!this.data.isManager) return;
+    const next = !this.data.showProcMeta;
+    setShowProcMeta(next);
+    this.setData({ showProcMeta: next });
+    // 打开时为已展开但未拉过时间的订单补拉
+    if (next) {
+      this.data.orders.list.forEach((order, idx) => {
+        if (order.expanded && !order._stageMetaLoaded) this.loadStageMeta(idx);
+      });
+    }
+  },
+
+  /* 懒加载订单阶段时间（flow 接口的 stages 含 processName/startTime/completeTime） */
+  loadStageMeta: function (idx) {
+    const order = this.data.orders.list[idx];
+    if (!order || order._stageMetaLoading || order._stageMetaLoaded) return;
+    const orderId = order.id;
+    if (!orderId) return;
+    order._stageMetaLoading = true;
+    api.production.getOrderFlow(orderId).then((res) => {
+      const data = res || {};
+      const stages = Array.isArray(data.stages) ? data.stages : (data.stages && Array.isArray(data.stages.records)) ? data.stages.records : [];
+      const path = 'orders.list[' + idx + '].processNodes';
+      const merged = mergeStageMetaIntoNodes(order.processNodes, stages);
+      order._stageMetaLoaded = true;
+      order._stageMetaLoading = false;
+      this.setData({ [path]: merged });
+    }).catch((err) => {
+      order._stageMetaLoading = false;
+      console.warn('[dashboard] 阶段时间加载失败:', (err && err.message) || err);
+    });
   },
 
   /* ======== 封面图预览 ======== */
