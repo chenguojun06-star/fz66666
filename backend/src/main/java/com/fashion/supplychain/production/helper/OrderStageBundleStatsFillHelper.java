@@ -52,6 +52,7 @@ public class OrderStageBundleStatsFillHelper {
         }
 
         Map<String, Map<String, Integer>> aggregated = queryProcessScannedBundles(orderIds, tenantId);
+        Map<String, Map<String, Integer>> aggregatedQty = queryProcessScannedQty(orderIds, tenantId);
 
         for (ProductionOrder o : records) {
             if (o == null) {
@@ -61,8 +62,8 @@ public class OrderStageBundleStatsFillHelper {
             if (!StringUtils.hasText(oid)) {
                 continue;
             }
-            Map<String, Integer> processMap = aggregated.getOrDefault(oid.trim(), new HashMap<>());
-            o.setStageScannedBundleCount(processMap);
+            o.setStageScannedBundleCount(aggregated.getOrDefault(oid.trim(), new HashMap<>()));
+            o.setStageScannedBundleQty(aggregatedQty.getOrDefault(oid.trim(), new HashMap<>()));
         }
     }
 
@@ -94,6 +95,43 @@ public class OrderStageBundleStatsFillHelper {
             }
 
             result.computeIfAbsent(orderId, k -> new HashMap<>()).put(processName, count);
+        }
+
+        return result;
+    }
+
+    /**
+     * 每工序已扫码件数（SUM quantity），与菲号数查询同口径。
+     * 手机端工序进度「件数」据此随扫码联动，不再依赖静态完成率。
+     */
+    private Map<String, Map<String, Integer>> queryProcessScannedQty(List<String> orderIds, Long tenantId) {
+        Map<String, Map<String, Integer>> result = new HashMap<>();
+
+        List<Map<String, Object>> rows;
+        try {
+            rows = trackingMapper.selectScannedBundleQtyByOrderIds(orderIds, tenantId);
+        } catch (Exception e) {
+            log.warn("[StageBundleStats] qty query failed: orderIdsCount={}", orderIds.size(), e);
+            return result;
+        }
+
+        if (rows == null || rows.isEmpty()) {
+            return result;
+        }
+
+        for (Map<String, Object> row : rows) {
+            if (row == null || row.isEmpty()) {
+                continue;
+            }
+            String orderId = toTrimmed(row.get("orderId"));
+            String processName = toTrimmed(row.get("processName"));
+            int qty = toInt(row.get("scannedQty"));
+
+            if (!StringUtils.hasText(orderId) || !StringUtils.hasText(processName)) {
+                continue;
+            }
+
+            result.computeIfAbsent(orderId, k -> new HashMap<>()).put(processName, qty);
         }
 
         return result;

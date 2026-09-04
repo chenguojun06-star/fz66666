@@ -200,6 +200,8 @@ function buildProcessNodesWithRates(order) {
   let hasRealRate = false;
   const totalBundles = Number(order.cuttingBundleCount) || 0;
   const processScannedMap = order.stageScannedBundleCount || {};
+  // D-29x：每工序已扫码件数，扫码后件数随扫码联动（替代静态完成率算法）
+  const scannedQtyMap = order.stageScannedBundleQty || {};
   // P1-5 数据链路：总数量从 cuttingQuantity/cuttingQty/orderQuantity/totalQuantity/sizeTotal 兜底
   // 用于在工序进度区显示 已完成数/总数量/剩余 数量明细
   // D-179：补充 totalQuantity（订单行色码合计）兜底——裁剪未回填且 orderQuantity 为空时仍可取到真实件数
@@ -220,10 +222,12 @@ function buildProcessNodesWithRates(order) {
     }
     // 数量明细：总数量>0 且（有完成率 或 菲号有扫码）时计算
     // D-179：菲号有数据但工序无完成率(rate=-1)时数量不再隐藏，completed 按 0 计
-    const qtyInfo = totalQty > 0 && (rate >= 0 || bundleInfo) ? {
+    // D-29x：completed 优先级改为「每工序扫码件数」，随扫码实时联动
+    const scannedQty = Number(scannedQtyMap[name]) || 0;
+    const qtyInfo = totalQty > 0 && (rate >= 0 || bundleInfo || scannedQty > 0) ? {
       total: totalQty,
-      completed: rate >= 0 ? Math.round(totalQty * rate / 100) : 0,
-      remaining: Math.max(0, totalQty - (rate >= 0 ? Math.round(totalQty * rate / 100) : 0)),
+      completed: scannedQty > 0 ? scannedQty : (rate >= 0 ? Math.round(totalQty * rate / 100) : 0),
+      remaining: Math.max(0, totalQty - (scannedQty > 0 ? scannedQty : (rate >= 0 ? Math.round(totalQty * rate / 100) : 0))),
     } : null;
     const children = childrenMap[name] || [];
     if (rate >= 0) {
@@ -278,10 +282,11 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles2),
       };
     }
+    const scannedQty2 = Number(scannedQtyMap[name2]) || 0;
     const qtyInfo2 = totalQty > 0 ? {
       total: totalQty,
-      completed: Math.round(totalQty * pct / 100),
-      remaining: Math.max(0, totalQty - Math.round(totalQty * pct / 100)),
+      completed: scannedQty2 > 0 ? scannedQty2 : Math.round(totalQty * pct / 100),
+      remaining: Math.max(0, totalQty - (scannedQty2 > 0 ? scannedQty2 : Math.round(totalQty * pct / 100))),
     } : null;
     return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, qtyInfo: qtyInfo2, children: childrenMap[name2] || [] };
   });

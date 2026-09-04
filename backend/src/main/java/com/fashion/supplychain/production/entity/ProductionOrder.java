@@ -340,6 +340,10 @@ public class ProductionOrder {
     @TableField(exist = false)
     private Map<String, Integer> stageScannedBundleCount;
 
+    /** 每工序已扫码件数（SUM quantity），手机端扫码后件数与扫码联动 */
+    @TableField(exist = false)
+    private Map<String, Integer> stageScannedBundleQty;
+
     /**
      * 裁剪任务详情（用于判断裁剪是否真正完成）
      * 包含 receivedTime, bundledTime, status 等字段

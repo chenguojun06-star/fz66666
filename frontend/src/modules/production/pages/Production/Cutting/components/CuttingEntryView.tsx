@@ -249,7 +249,9 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
           },
         }}
         loading={bundles.listLoading}
-        scroll={{ x: 'max-content' }}
+        // D-29x：去掉横向划窗口 + 禁用 Tab 内 U-1 限高，
+        // 让裁剪/菲号明细表按内容自然撑开平铺，不再"只显示一行内部滚动"
+        disableFillScrollY
         emptyDescription="暂无裁剪数据"
         pagination={{
           current: bundles.queryParams.page,

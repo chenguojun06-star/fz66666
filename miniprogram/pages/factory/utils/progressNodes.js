@@ -198,6 +198,8 @@ function buildProcessNodesWithRates(order) {
   let hasRealRate = false;
   const totalBundles = Number(order.cuttingBundleCount) || 0;
   const processScannedMap = order.stageScannedBundleCount || {};
+  // D-29x：每工序已扫码件数，扫码后件数随扫码联动（替代静态完成率算法）
+  const scannedQtyMap = order.stageScannedBundleQty || {};
   // P1-5 数据链路：总数量从 cuttingQuantity/cuttingQty/orderQuantity/sizeTotal 兜底
   // 用于在工序进度区显示 已完成数/总数量/剩余 数量明细
   const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
@@ -214,11 +216,12 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles),
       };
     }
-    // 数量明细：总数量>0 且有完成率时才计算，避免无完成率时显示 0/0
-    const qtyInfo = totalQty > 0 && rate >= 0 ? {
+    // 数量明细：右上优先用扫码件数（随扫码实时联动），兜底走完成率算法
+    const scannedQty = scannedQtyMap[name] || 0;
+    const qtyInfo = totalQty > 0 ? {
       total: totalQty,
-      completed: Math.round(totalQty * rate / 100),
-      remaining: Math.max(0, totalQty - Math.round(totalQty * rate / 100)),
+      completed: scannedQty > 0 ? scannedQty : (rate >= 0 ? Math.round(totalQty * rate / 100) : 0),
+      remaining: Math.max(0, totalQty - (scannedQty > 0 ? scannedQty : (rate >= 0 ? Math.round(totalQty * rate / 100) : 0))),
     } : null;
     const children = childrenMap[name] || [];
     if (rate >= 0) {
@@ -273,10 +276,11 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles2),
       };
     }
+    const scannedQty2 = scannedQtyMap[name2] || 0;
     const qtyInfo2 = totalQty > 0 ? {
       total: totalQty,
-      completed: Math.round(totalQty * pct / 100),
-      remaining: Math.max(0, totalQty - Math.round(totalQty * pct / 100)),
+      completed: scannedQty2 > 0 ? scannedQty2 : Math.round(totalQty * pct / 100),
+      remaining: Math.max(0, totalQty - (scannedQty2 > 0 ? scannedQty2 : Math.round(totalQty * pct / 100))),
     } : null;
     return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, qtyInfo: qtyInfo2, children: childrenMap[name2] || [] };
   });
