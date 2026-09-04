@@ -195,24 +195,35 @@
         <view wx:else class="empty-hint"><text class="empty-hint__text">暂无物料清单，请在 PC 端配置</text></view>
       </view>
 
-      <!-- 纸样（附件中 bizType=pattern） -->
+      <!-- 纸样（附件中 bizType 为 pattern* 的子集，含流转后的终版，避免样衣完成后纸样消失） -->
       <view wx:if="{{activeTab === 'pattern'}}" class="tab-card">
         <view class="tab-card__header">
           <text class="tab-card__title">纸样文件</text>
+          <text class="tab-card__count">{{patternFileList.length}}个</text>
         </view>
         <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
-        <view wx:elif="{{attachmentList.length > 0}}" class="file-list">
-          <block wx:for="{{attachmentList}}" wx:key="id">
-            <view wx:if="{{item.bizType === 'pattern' || item.bizType === 'pattern_grading' || item.bizType === 'pattern_final'}}" class="file-item">
-              <view class="file-item__icon file-item__icon--pattern"></view>
-              <view class="file-item__info">
-                <text class="file-item__name">{{item.fileName || '纸样文件'}}</text>
-                <text class="file-item__meta">v{{item.version || 1}} · {{item.uploader || ''}} · {{item.createTime || ''}}</text>
-              </view>
+        <view wx:elif="{{patternFileList.length > 0}}" class="file-list">
+          <view
+            wx:for="{{patternFileList}}"
+            wx:key="id"
+            class="file-item"
+            data-idx="{{item._srcIndex}}"
+            bindtap="onAttachmentTap"
+            hover-class="file-item--pressed"
+            hover-stay-time="60"
+          >
+            <image wx:if="{{item._isImage}}" src="{{item._previewUrl}}" mode="aspectFill" class="file-item__thumb" />
+            <view wx:else class="file-item__icon file-item__icon--pattern"></view>
+            <view class="file-item__info">
+              <text class="file-item__name">{{item.fileName || '纸样文件'}}</text>
+              <text class="file-item__meta">v{{item.version || 1}} · {{item._bizTypeText}} · {{item._uploadTimeText}}</text>
             </view>
-          </block>
+            <view class="file-item__action" data-idx="{{item._srcIndex}}" catchtap="onDownloadAttachment">
+              <view class="icon-cloud" style="width:16px;height:16px;"></view>
+            </view>
+          </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无纸样文件</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无纸样文件，请在 PC 端上传</text></view>
       </view>
 
       <!-- 尺寸表（横向：部位为行，尺码为列） -->
@@ -341,91 +352,49 @@
         <view wx:else class="empty-hint"><text class="empty-hint__text">暂无二次工艺</text></view>
       </view>
 
-      <!-- 备注日志（与 PC 端同步：扫码操作/进度更新等动作会自动写入 t_order_remark where targetType=pattern） -->
-      <view wx:if="{{activeTab === 'remark'}}" class="tab-card">
-        <view class="tab-card__header">
-          <text class="tab-card__title">备注日志</text>
-          <text class="tab-card__count">{{patternRemarkList.length}}条</text>
-        </view>
-        <view wx:if="{{patternRemarkLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
-        <view wx:elif="{{patternRemarkList.length > 0}}" class="remark-timeline">
-          <view wx:for="{{patternRemarkList}}" wx:key="id" class="remark-timeline__item {{index === patternRemarkList.length - 1 ? 'remark-timeline__item--last' : ''}}">
-            <view class="remark-timeline__avatar" style="background:{{item._avatarColor}};">
-              <text class="remark-timeline__avatar-text">{{item._avatarText}}</text>
-            </view>
-            <view class="remark-timeline__body">
-              <view class="remark-timeline__header">
-                <text class="remark-timeline__author">{{item._authorName}}</text>
-                <text wx:if="{{item._roleLabel}}" class="remark-timeline__role">{{item._roleLabel}}</text>
-                <text class="remark-timeline__time">{{item._timeText}}</text>
-              </view>
-              <view class="remark-timeline__content">{{item._content}}</view>
-            </view>
-          </view>
-        </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无备注日志</text></view>
-      </view>
-
-      <!-- 附件 -->
+      <!-- 附件（与 PC 端资料中心「附件文件」同源：/api/style/attachment/list?styleId=；底部不再重复展示，上传入口收进此处） -->
       <view wx:if="{{activeTab === 'attachment'}}" class="tab-card">
         <view class="tab-card__header">
           <text class="tab-card__title">附件</text>
-          <text class="tab-card__count">{{attachmentList.length}}个</text>
-        </view>
-        <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
-        <view wx:elif="{{attachmentList.length > 0}}" class="file-list">
-          <view wx:for="{{attachmentList}}" wx:key="id" class="file-item">
-            <view class="file-item__icon"></view>
-            <view class="file-item__info">
-              <text class="file-item__name">{{item.fileName || '附件'}}</text>
-              <text class="file-item__meta">{{item.bizType || 'general'}} · {{item.uploader || ''}} · {{item.createTime || ''}}</text>
+          <view class="tab-card__header-right">
+            <text class="tab-card__count">{{attachmentList.length}}个</text>
+            <view class="outline-btn outline-btn--sm" bindtap="onUploadAttachment">
+              <view class="icon-plus-sm" style="width:12px;height:12px;"></view>
+              <text class="outline-btn__text">上传</text>
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无附件</text></view>
+        <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:elif="{{attachmentList.length > 0}}" class="file-list">
+          <view
+            wx:for="{{attachmentList}}"
+            wx:key="id"
+            class="file-item"
+            data-idx="{{index}}"
+            bindtap="onAttachmentTap"
+            hover-class="file-item--pressed"
+            hover-stay-time="60"
+          >
+            <image wx:if="{{item._isImage}}" src="{{item._previewUrl}}" mode="aspectFill" class="file-item__thumb" />
+            <view wx:elif="{{item._isPattern}}" class="file-item__icon file-item__icon--pattern"></view>
+            <view wx:else class="file-item__icon"></view>
+            <view class="file-item__info">
+              <text class="file-item__name">{{item.fileName || '附件'}}</text>
+              <text class="file-item__meta">{{item._bizTypeText}} · {{item.fileSizeText}} · {{item._uploadTimeText}}</text>
+            </view>
+            <view class="file-item__action" data-idx="{{index}}" catchtap="onDownloadAttachment">
+              <view class="icon-cloud" style="width:16px;height:16px;"></view>
+            </view>
+          </view>
+        </view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无附件，可点击下方「上传」添加</text></view>
       </view>
 
     </view>
     </view>
     <!-- 资料区结束 -->
 
-    <!-- 3. 附件文件 -->
-    <view class="section-card">
-      <view class="section-card__header">
-        <view class="section-card__title-row">
-          <text class="section-card__title">附件文件</text>
-          <text class="section-card__count">{{attachmentList.length || 0}} 个</text>
-        </view>
-        <view class="outline-btn" bindtap="onUploadAttachment">
-          <view class="icon-plus-sm" style="width:14px;height:14px;"></view>
-          <text class="outline-btn__text">上传</text>
-        </view>
-      </view>
-      <view wx:if="{{attachmentList.length > 0}}" class="attachment-list">
-        <view wx:for="{{attachmentList}}" wx:key="id" class="attachment-item {{index === attachmentList.length - 1 ? 'attachment-item--last' : ''}}">
-          <view class="attachment-item__icon">
-            <view class="icon-paperclip" style="width:18px;height:18px;"></view>
-          </view>
-          <view class="attachment-item__body">
-            <text class="attachment-item__name">{{item.fileName || item.name || '--'}}</text>
-            <text wx:if="{{item._metaText}}" class="attachment-item__meta">{{item._metaText}}</text>
-          </view>
-          <view class="attachment-item__actions">
-            <view class="action-btn action-btn--download" data-url="{{item.fileUrl || item.url}}" data-name="{{item.fileName}}" bindtap="onDownloadAttachment">
-              <view class="icon-cloud" style="width:16px;height:16px;"></view>
-            </view>
-            <view class="action-btn action-btn--delete" data-id="{{item.id}}" bindtap="onDeleteAttachment">
-              <view class="icon-trash" style="width:16px;height:16px;"></view>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view wx:elif="{{!attachmentLoading}}" class="empty-hint">
-        <text class="empty-hint__text">暂无附件</text>
-      </view>
-    </view>
-
-    <!-- 4. 款式备注 -->
+    <!-- 3. 款式备注（附件与 tab 内合并为一份展示，上传入口在「附件」tab；此处只保留备注） -->
     <view class="remarks-section">
       <view class="remarks-title-row">
         <text class="remarks-title">款式备注</text>

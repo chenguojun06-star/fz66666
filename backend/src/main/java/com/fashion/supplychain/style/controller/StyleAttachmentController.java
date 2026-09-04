@@ -25,12 +25,18 @@ public class StyleAttachmentController {
         return Result.success(styleAttachmentOrchestrator.list(styleId, styleNo, bizType));
     }
 
+    /**
+     * 上传附件。
+     * fileName 为可选参数：小程序 wx.uploadFile 只能把 tempFilePath 的 basename 作为 multipart filename，
+     * 不传的话存库文件名会变成 tmp_xxx.png 之类的临时名，客户端需显式带上真实文件名。
+     */
     @PostMapping("/upload")
     public Result<StyleAttachment> upload(@RequestParam("file") MultipartFile file,
             @RequestParam(value = "styleId", required = false) String styleId,
             @RequestParam(value = "styleNo", required = false) String styleNo,
-            @RequestParam(value = "bizType", required = false) String bizType) {
-        return Result.success(styleAttachmentOrchestrator.upload(file, styleId, styleNo, bizType));
+            @RequestParam(value = "bizType", required = false) String bizType,
+            @RequestParam(value = "fileName", required = false) String fileName) {
+        return Result.success(styleAttachmentOrchestrator.upload(file, styleId, styleNo, bizType, fileName));
     }
 
     /**

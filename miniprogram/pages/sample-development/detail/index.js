@@ -1,12 +1,16 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { getToken } = require('../../../utils/storage');
+const { getBaseUrl } = require('../../../config');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName, resolveStageKey } = require('../../../utils/sampleHelper');
 const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
 const { displayCategory } = require('../../../utils/displayHelper');
 const { buildProcessTimeline } = require('../../../utils/sampleProcessTimeline');
+const { splitStyleOptions } = require('../../../utils/styleOptions');
+const { sortSizeNames } = require('../../../utils/sizeUtils');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -14,6 +18,60 @@ function formatFileSize(size) {
     return (size / 1024 / 1024).toFixed(1) + 'MB';
   }
   return (size / 1024).toFixed(0) + 'KB';
+}
+
+/**
+ * D-XXX：API 响应 → 数组的统一归一化。
+ * utils/api-modules 里的业务接口 95% 用 ok() 包装，ok() 已经把 Result.data 解包返回，
+ * 因此 res 本身就是数组（List 型接口）或 {records:[]}（分页型接口）。
+ * 写成 `res?.data?.records || res?.data || res?.records || []` 时，List 型接口全部落空 → 页面恒显示"暂无数据"。
+ * 与 utils/sampleProcessTimeline.js 的 toList 保持同一实现。
+ */
+function toArray(res) {
+  const list = (res && res.data) || res || [];
+  return Array.isArray(list) ? list : (list.records || []);
+}
+
+// 附件业务类型 → 中文（与 PC 端资料中心口径一致）
+const BIZ_TYPE_LABEL = {
+  general: '通用',
+  pattern: '纸样',
+  pattern_grading: '放码纸样',
+  pattern_final: '纸样(终版)',
+  pattern_grading_final: '放码纸样(终版)',
+  pattern_supplement: '补充纸样',
+  image: '图片',
+  colorway: '配色',
+  size_table: '尺寸表',
+  process: '工艺',
+  quote: '报价',
+};
+
+function bizTypeLabel(v) {
+  if (!v) return '通用';
+  return BIZ_TYPE_LABEL[String(v).trim()] || String(v).trim();
+}
+
+// 属于"纸样"的 bizType（含流转后的终版，避免样衣完成后纸样 tab 变空）
+const PATTERN_BIZ_TYPES = {
+  pattern: true,
+  pattern_grading: true,
+  pattern_final: true,
+  pattern_grading_final: true,
+  pattern_supplement: true,
+};
+
+// wx.openDocument 只认这几种 fileType；其余（dxf/plt/zip 等）不传，交给微信自行判断
+const OPEN_DOC_TYPES = {
+  doc: 'doc', docx: 'docx', xls: 'xls', xlsx: 'xlsx',
+  ppt: 'ppt', pptx: 'pptx', pdf: 'pdf',
+};
+
+function resolveDocType(fileName) {
+  const raw = String(fileName || '').toLowerCase().split('?')[0];
+  const dot = raw.lastIndexOf('.');
+  if (dot < 0) return '';
+  return OPEN_DOC_TYPES[raw.substring(dot + 1)] || '';
 }
 
 const REMARK_ROLES = [
@@ -137,7 +195,7 @@ Page({
     scanRecords: [],
     scanLoading: false,
 
-    // 备注日志（BOM 清单下方 tab，与 PC 端同步：拉取 t_order_remark where targetType=pattern）
+    // 备注日志（tab 已下线：与底部「款式备注」重复展示，用户拍板只留底部一处）
     patternRemarkList: [],
     patternRemarkLoading: false,
 
@@ -145,8 +203,10 @@ Page({
     bomList: [],
     bomLoading: false,
 
-    // 尺寸表
+    // 尺寸表（透视后：sizeColumns=尺码列，sizeRows=部位行）
     sizeList: [],
+    sizeColumns: [],
+    sizeRows: [],
     sizeLoading: false,
 
     // 二次工艺
@@ -157,19 +217,19 @@ Page({
     expandedStageKey: '',
 
     // 资料标签
-    activeTab: 'bom',       // bom/pattern/size/process/secondary/remark/attachment
+    activeTab: 'bom',       // bom/pattern/size/process/secondary/attachment（备注只保留底部「款式备注」，tab 不再重复展示）
     tabs: [
       { key: 'bom',        name: '物料清单' },
       { key: 'pattern',    name: '纸样' },
       { key: 'size',       name: '尺寸表' },
       { key: 'process',    name: '工序' },
       { key: 'secondary',  name: '二次工艺' },
-      { key: 'remark',     name: '备注日志' },
       { key: 'attachment', name: '附件' },
     ],
 
     // 附件
     attachmentList: [],
+    patternFileList: [],   // 纸样子集（bizType 含 pattern*），在 JS 里算好避免 WXML 过滤出空白页
     attachmentLoading: false,
 
     // 备注
@@ -305,7 +365,6 @@ Page({
       this.loadRemarks();
       this._loadProcessesAndScans();
       this._loadBomAndSizes();
-      this._loadPatternRemarks();
     } catch (e) {
       this.setData({ loading: false });
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -337,7 +396,7 @@ Page({
     if (!keyword) return null;
     try {
       const res = await production.listPatterns({ page: 1, pageSize: 20, keyword: keyword });
-      const records = (res?.data?.records || res?.data || res?.records || []);
+      const records = toArray(res);
       const matched = records.find(function (item) {
         return String(item.id || '') === String(patternId || '')
           || String(item.styleId || '') === String(styleInfo.id || '')
@@ -629,10 +688,15 @@ Page({
   // === 附件 ===
 
   async loadAttachments() {
+    const styleId = this.data.styleId;
+    if (!styleId) {
+      this.setData({ attachmentList: [], attachmentLoading: false });
+      return;
+    }
     this.setData({ attachmentLoading: true });
     try {
-      const res = await style.listAttachments({ styleId: this.data.styleId });
-      const rawList = res?.data?.records || res?.data || res?.records || [];
+      const res = await style.listAttachments({ styleId: styleId });
+      const rawList = toArray(res);
       const attachmentList = rawList.map(function(item) {
         const uploader = item.uploader || item.uploadByName || item.createdByName || '';
         const uploadDate = this.formatDate(item.createTime || item.createdAt || item.uploadTime);
@@ -640,81 +704,198 @@ Page({
         if (item.fileSizeText || formatFileSize(item.fileSize)) metaParts.push(item.fileSizeText || formatFileSize(item.fileSize));
         if (uploader) metaParts.push(uploader);
         if (uploadDate) metaParts.push(uploadDate.substring(5));
+        const rawUrl = item.fileUrl || item.url || '';
+        const isImage = this._isImageItem(item, rawUrl);
         return Object.assign({}, item, {
           fileSizeText: formatFileSize(item.fileSize),
           _metaText: metaParts.join(' · '),
+          _bizTypeText: bizTypeLabel(item.bizType),
+          _uploadTimeText: this.formatRemarkTime(item.createTime || item.createdAt || item.uploadTime),
+          _isImage: isImage,
+          // 图片走 <image> 预览（需 token 才能过鉴权），其它类型走 downloadFile + openDocument
+          _previewUrl: isImage ? getAuthedImageUrl(rawUrl) : '',
+          _downloadUrl: getAuthedImageUrl(rawUrl),
+          _isPattern: PATTERN_BIZ_TYPES[String(item.bizType || '').trim()] === true,
         });
       }.bind(this));
-      this.setData({ attachmentList: attachmentList });
+      // 纸样子集单独算好：WXML 里用 wx:if 逐项过滤会出现"列表有数据但一行都不渲染"的空白页
+      // _srcIndex 指回 attachmentList 下标，保证点击/下载取到的是同一条记录
+      const patternFileList = [];
+      attachmentList.forEach(function (a, i) {
+        if (a && a._isPattern) {
+          patternFileList.push(Object.assign({}, a, { _srcIndex: i }));
+        }
+      });
+      this.setData({ attachmentList: attachmentList, patternFileList: patternFileList });
     } catch (_e) {
       // 附件加载失败不阻塞主流程
+      this.setData({ attachmentList: [], patternFileList: [] });
     }
     this.setData({ attachmentLoading: false });
   },
 
+  /** 是否为可在小程序内直接预览的图片（image 组件不支持 dxf/plt 等纸样格式） */
+  _isImageItem(item, rawUrl) {
+    const type = String((item && item.fileType) || '').toLowerCase();
+    if (type.indexOf('image') >= 0) return true;
+    const url = String(rawUrl || '').toLowerCase();
+    const clean = url.split('?')[0];
+    return /\.(png|jpe?g|gif|bmp|webp|svg)$/.test(clean);
+  },
+
+  /**
+   * 上传附件
+   * 历史实现先 POST 到 /api/file/upload（后端根本不存在该接口，必然 404），
+   * 再拿返回的 url 调 /api/style/attachment/upload 传 JSON——
+   * 但后端该接口是 @RequestParam("file") MultipartFile，只收 multipart，必然报错。
+   * 现改为 wx.uploadFile 直传 multipart 到 /api/style/attachment/upload。
+   */
   onUploadAttachment() {
+    const that = this;
+    wx.showActionSheet({
+      itemList: ['从聊天选择文件', '拍照 / 从相册选图'],
+      success: function (r) {
+        if (r.tapIndex === 0) that._pickMessageFile();
+        else if (r.tapIndex === 1) that._pickMedia();
+      },
+      fail: function () { /* 取消选择，不提示 */ },
+    });
+  },
+
+  /** 从微信聊天记录选择任意类型文件（pdf/doc/xls/dxf 等） */
+  _pickMessageFile() {
     const that = this;
     wx.chooseMessageFile({
       count: 1,
       type: 'file',
-      success: async function (res) {
+      success: function (res) {
         const file = res.tempFiles && res.tempFiles[0];
         if (!file) return;
-        wx.showLoading({ title: '上传中...' });
-        try {
-          const uploadRes = await new Promise((resolve, reject) => {
-            wx.uploadFile({
-              url: (getApp().globalData && getApp().globalData.baseUrl || '') + '/api/file/upload',
-              filePath: file.path,
-              name: 'file',
-              header: that._getAuthHeader(),
-              success: (r) => {
-                try {
-                  const data = JSON.parse(r.data);
-                  resolve(data);
-                } catch (_e) {
-                  reject(new Error('上传响应解析失败'));
-                }
-              },
-              fail: reject,
-            });
-          });
-          const fileUrl = uploadRes.data || uploadRes.url || '';
-          if (!fileUrl) throw new Error('上传返回为空');
-          await style.uploadAttachment({
-            styleId: that.data.styleId,
-            fileName: file.name,
-            fileUrl: fileUrl,
-            fileSize: file.size,
-            fileType: file.name ? file.name.split('.').pop() : '',
-          });
-          wx.hideLoading();
-          wx.showToast({ title: '上传成功', icon: 'success' });
-          that.loadAttachments();
-        } catch (e) {
-          wx.hideLoading();
-          wx.showToast({ title: '上传失败', icon: 'none' });
-        }
+        that._uploadAttachmentFile(file.path, file.name || '');
+      },
+      fail: function (err) {
+        if (err && String(err.errMsg || '').indexOf('cancel') >= 0) return;
+        wx.showToast({ title: '选择文件失败', icon: 'none' });
       },
     });
   },
 
+  /** 拍照 / 从相册选图（wx.chooseImage 已废弃，必须用 wx.chooseMedia） */
+  _pickMedia() {
+    const that = this;
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: function (res) {
+        const file = res.tempFiles && res.tempFiles[0];
+        if (!file) return;
+        const name = that._guessFileName(file.tempFilePath, 'jpg');
+        that._uploadAttachmentFile(file.tempFilePath, name);
+      },
+      fail: function (err) {
+        if (err && String(err.errMsg || '').indexOf('cancel') >= 0) return;
+        wx.showToast({ title: '选择图片失败', icon: 'none' });
+      },
+    });
+  },
+
+  _guessFileName(path, defaultExt) {
+    const raw = String(path || '').split('?')[0];
+    const seg = raw.split('/');
+    const last = seg[seg.length - 1] || '';
+    if (last && last.indexOf('.') > 0) return last;
+    return 'upload-' + Date.now() + '.' + (defaultExt || 'jpg');
+  },
+
+  /** multipart 直传 /api/style/attachment/upload */
+  _uploadAttachmentFile(filePath, fileName) {
+    const that = this;
+    const styleId = this.data.styleId;
+    if (!styleId) {
+      wx.showToast({ title: '缺少款式ID', icon: 'none' });
+      return;
+    }
+    if (!filePath) return;
+    const token = getToken() || '';
+    wx.showLoading({ title: '上传中...', mask: true });
+    wx.uploadFile({
+      url: getBaseUrl() + '/api/style/attachment/upload',
+      filePath: filePath,
+      name: 'file',
+      formData: {
+        styleId: String(styleId),
+        bizType: 'general',
+        fileName: fileName || '',
+      },
+      header: token ? { Authorization: 'Bearer ' + token } : {},
+      success: function (r) {
+        wx.hideLoading();
+        let parsed = null;
+        try { parsed = JSON.parse(r.data); } catch (_e) { parsed = null; }
+        if (r.statusCode === 200 && parsed && parsed.code === 200) {
+          wx.showToast({ title: '上传成功', icon: 'success' });
+          that.loadAttachments();
+          return;
+        }
+        wx.showToast({
+          title: (parsed && parsed.message) || ('上传失败(' + r.statusCode + ')'),
+          icon: 'none',
+        });
+      },
+      fail: function () {
+        wx.hideLoading();
+        wx.showToast({ title: '上传失败', icon: 'none' });
+      },
+    });
+  },
+
+  /** 点击附件行：图片直接预览，其它类型下载后用系统文档打开 */
+  onAttachmentTap(e) {
+    const idx = Number(e.currentTarget.dataset.idx);
+    const item = this.data.attachmentList[idx];
+    if (!item) return;
+    if (item._isImage && item._previewUrl) {
+      const urls = (this.data.attachmentList || [])
+        .filter(function (a) { return a && a._isImage && a._previewUrl; })
+        .map(function (a) { return a._previewUrl; });
+      wx.previewImage({ current: item._previewUrl, urls: urls });
+      return;
+    }
+    this._openAttachmentFile(item._downloadUrl, item.fileName);
+  },
+
   onDownloadAttachment(e) {
-    const url = e.currentTarget.dataset.url;
-    if (!url) return;
-    wx.showLoading({ title: '下载中...' });
+    const idx = Number(e.currentTarget.dataset.idx);
+    const item = this.data.attachmentList[idx];
+    if (!item) return;
+    this._openAttachmentFile(item._downloadUrl, item.fileName);
+  },
+
+  /** 下载并用微信文档能力打开（URL 已带 token，TokenAuthFilter 从 query 读取鉴权） */
+  _openAttachmentFile(url, fileName) {
+    if (!url) {
+      wx.showToast({ title: '文件地址无效', icon: 'none' });
+      return;
+    }
+    wx.showLoading({ title: '打开中...', mask: true });
     wx.downloadFile({
       url: url,
       success: function (res) {
         wx.hideLoading();
-        if (res.statusCode === 200) {
-          wx.openDocument({
-            filePath: res.tempFilePath,
-            fail: function () {
-              wx.showToast({ title: '无法打开此文件', icon: 'none' });
-            },
-          });
+        if (res.statusCode !== 200) {
+          wx.showToast({ title: '下载失败(' + res.statusCode + ')', icon: 'none' });
+          return;
         }
+        wx.openDocument({
+          filePath: res.tempFilePath,
+          fileType: resolveDocType(fileName),
+          showMenu: true,
+          fail: function () {
+            wx.showToast({ title: '无法预览此文件类型', icon: 'none' });
+          },
+        });
       },
       fail: function () {
         wx.hideLoading();
@@ -743,23 +924,21 @@ Page({
     });
   },
 
-  _getAuthHeader() {
-    const app = getApp();
-    const token = app && app.globalData && app.globalData.token;
-    return token ? { Authorization: 'Bearer ' + token } : {};
-  },
-
   // === 备注模块 ===
 
   async loadRemarks() {
     const styleInfo = this.data.styleInfo || {};
     const targetNo = styleInfo.styleNo || styleInfo.styleCode || '';
-    if (!targetNo) return;
+    if (!targetNo) {
+      this.setData({ remarkList: [], remarkLoading: false });
+      return;
+    }
     this.setData({ remarkLoading: true });
     try {
       const res = await production.listOrderRemarks('style', targetNo);
-      const list = res?.data?.records || res?.data || res?.records || [];
-      const remarkList = (Array.isArray(list) ? list : []).map(function(item, idx) {
+      // 后端返回 Result<List<OrderRemark>>，ok() 解包后 res 就是数组
+      const list = toArray(res);
+      const remarkList = list.map(function(item, idx) {
         const authorName = item.authorName || item.createdByName || '匿名';
         return Object.assign({}, item, {
           _timeText: this.formatRemarkTime(item.createTime || item.createdAt),
@@ -818,44 +997,6 @@ Page({
       wx.showToast({ title: '提交失败', icon: 'none' });
     }
     this.setData({ submittingRemark: false });
-  },
-
-  // === 备注日志（与 PC 端同步：拉取 t_order_remark where targetType=pattern） ===
-
-  async _loadPatternRemarks() {
-    const snapshot = this.data.patternSnapshot || {};
-    const pid = String(snapshot.id || this.data.patternId || '');
-    if (!pid) return;
-    this.setData({ patternRemarkLoading: true });
-    try {
-      const res = await production.listOrderRemarks('pattern', pid);
-      const list = res?.data?.records || res?.data || res?.records || [];
-      const rawList = Array.isArray(list) ? list : [];
-      const patternRemarkList = rawList.map(function (item, idx) {
-        const authorName = item.authorName || item.createdByName || '匿名';
-        return Object.assign({}, item, {
-          _timeText: this._formatPatternRemarkTime(item.createTime || item.createdAt),
-          _roleLabel: item.authorRole || '',
-          _avatarText: authorName.charAt(0),
-          _avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-          _authorName: authorName,
-          _content: item.content || '',
-        });
-      }.bind(this));
-      this.setData({ patternRemarkList: patternRemarkList });
-    } catch (_e) {
-      // 备注日志加载失败不阻塞主流程
-    }
-    this.setData({ patternRemarkLoading: false });
-  },
-
-  _formatPatternRemarkTime(t) {
-    if (!t) return '';
-    const s = String(t).replace('T', ' ');
-    // 后端格式：yyyy-MM-dd HH:mm:ss
-    if (s.length >= 16) return s.substring(5, 16);
-    if (s.length >= 10) return s.substring(5);
-    return s;
   },
 
   // === 阶段操作（页面内切换，不跳转）===
@@ -944,10 +1085,8 @@ Page({
     if (this.data.styleId) {
       tasks.push(
         style.listProcesses({ styleId: this.data.styleId })
-          .then(function (res) {
-            const list = (res && res.data) || res || [];
-            return Array.isArray(list) ? list : (list.records || []);
-          }).catch(function () { return []; })
+          .then(toArray)
+          .catch(function () { return []; })
       );
     } else {
       tasks.push(Promise.resolve([]));
@@ -961,10 +1100,8 @@ Page({
     if (pid) {
       tasks.push(
         production.getPatternScanRecords(pid)
-          .then(function (res) {
-            const list = (res && res.data) || res || [];
-            return Array.isArray(list) ? list : (list.records || []);
-          }).catch(function () { return []; })
+          .then(toArray)
+          .catch(function () { return []; })
       );
     } else {
       tasks.push(Promise.resolve([]));
@@ -988,23 +1125,22 @@ Page({
 
   /** 并行加载 BOM、尺寸表、二次工艺 */
   async _loadBomAndSizes() {
-    if (!this.data.styleId) return;
+    // 只有 patternId 没有 styleId 时（样衣未关联款式），必须显式结束 loading，
+    // 否则三个 tab 会永远停在"加载中..."，看起来像"数据加载不出来"
+    if (!this.data.styleId) {
+      this.setData({
+        bomList: [], sizeList: [], sizeColumns: [], sizeRows: [], secondaryList: [],
+        bomLoading: false, sizeLoading: false, secondaryLoading: false,
+      });
+      return;
+    }
     this.setData({ bomLoading: true, sizeLoading: true, secondaryLoading: true });
 
     const styleId = this.data.styleId;
     const tasks = [
-      style.listBom({ styleId: styleId }).then(function (res) {
-        const list = (res && res.data) || res || [];
-        return Array.isArray(list) ? list : (list.records || []);
-      }).catch(function () { return []; }),
-      style.listSizes({ styleId: styleId }).then(function (res) {
-        const list = (res && res.data) || res || [];
-        return Array.isArray(list) ? list : (list.records || []);
-      }).catch(function () { return []; }),
-      style.listSecondaryProcesses({ styleId: styleId }).then(function (res) {
-        const list = (res && res.data) || res || [];
-        return Array.isArray(list) ? list : (list.records || []);
-      }).catch(function () { return []; }),
+      style.listBom({ styleId: styleId }).then(toArray).catch(function () { return []; }),
+      style.listSizes({ styleId: styleId }).then(toArray).catch(function () { return []; }),
+      style.listSecondaryProcesses({ styleId: styleId }).then(toArray).catch(function () { return []; }),
     ];
 
     const [bomList, sizeList, secondaryList] = await Promise.all(tasks);
@@ -1034,65 +1170,78 @@ Page({
     });
   },
 
-  /** 尺寸表透视：把 [{partName, sizeName, standardValue}] 转成行=部位、列=尺码 */
+  /**
+   * 尺寸表透视：把 [{partName, sizeName, standardValue}] 转成行=部位、列=尺码
+   *
+   * 与 PC 端 useStyleSizeData 同口径：
+   *  1. 合并尺码必须先展开成原子尺码（"S/M" → ["S","M"]），
+   *     否则小程序把 "S/M" 当成一整列，PC 端是 S、M 两列 → 列数/列名对不上。
+   *     切分复用 utils/styleOptions.js splitStyleOptions（PC splitStyleOptions 的 1:1 复刻），
+   *     保证 "L(170/84)" 这类含内部斜杠的码数不会被切成碎片。
+   *  2. 排序复用 utils/sizeUtils.js sortSizeNames，与下单页/列表页同一口径，
+   *     而不是页面内私有的固定 sizeOrder（覆盖不到 3XL(180/96A) 等带括号/数字码）。
+   */
   _pivotSizeTable(rawList) {
     if (!rawList || rawList.length === 0) {
       return { columns: [], rows: [] };
     }
 
-    // 收集所有尺码（去重 + 排序）
-    var sizeSet = [];
-    var sizeSeen = {};
+    // 1) 展开合并尺码 → 原子尺码
+    var normalized = [];
     rawList.forEach(function (item) {
-      var s = item.sizeName || item.baseSize || '';
-      if (s && !sizeSeen[s]) {
-        sizeSeen[s] = true;
-        sizeSet.push(s);
+      var rawSize = String(item.sizeName || item.baseSize || '').trim();
+      var atomic = splitStyleOptions(rawSize);
+      var list = atomic.length ? atomic : (rawSize ? [rawSize] : []);
+      list.forEach(function (sn) {
+        normalized.push({
+          partName: item.partName || '',
+          sizeName: sn,
+          value: item.standardValue,
+          tolerance: item.tolerance,
+        });
+      });
+    });
+
+    // 2) 尺码列（去重 + 统一排序）
+    var seen = {};
+    var sizeSet = [];
+    normalized.forEach(function (item) {
+      if (item.sizeName && !seen[item.sizeName]) {
+        seen[item.sizeName] = true;
+        sizeSet.push(item.sizeName);
       }
     });
+    var columns = sortSizeNames(sizeSet);
 
-    // 尺码排序：按服装行业常见顺序
-    var sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '3XL', '4XL', '5XL', 'F', 'OS'];
-    sizeSet.sort(function (a, b) {
-      var ia = sizeOrder.indexOf(a.toUpperCase());
-      var ib = sizeOrder.indexOf(b.toUpperCase());
-      if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
-      return a.localeCompare(b);
-    });
-
-    // 收集所有部位（去重，保持出现顺序）
+    // 3) 部位行（去重，保持首次出现顺序）
     var partList = [];
     var partSeen = {};
-    rawList.forEach(function (item) {
-      var p = item.partName || '';
+    normalized.forEach(function (item) {
+      var p = item.partName;
       if (p && !partSeen[p]) {
         partSeen[p] = true;
         partList.push(p);
       }
     });
 
-    // 构建查找索引：partName + sizeName → standardValue
+    // 4) partName + sizeName → 值（注意 0 是合法值，不能用 || 判空）
     var lookup = {};
-    rawList.forEach(function (item) {
-      var p = item.partName || '';
-      var s = item.sizeName || item.baseSize || '';
-      var key = p + '|' + s;
-      lookup[key] = item.standardValue || item.tolerance || '-';
+    normalized.forEach(function (item) {
+      var v = item.value;
+      var text = (v !== null && v !== undefined && v !== '') ? v : (item.tolerance || '-');
+      lookup[item.partName + '|' + item.sizeName] = text;
     });
 
-    // 构建行数据
     var rows = partList.map(function (part) {
       var values = {};
-      sizeSet.forEach(function (size) {
-        var key = part + '|' + size;
-        values[size] = lookup[key] || '-';
+      columns.forEach(function (size) {
+        var v = lookup[part + '|' + size];
+        values[size] = (v === null || v === undefined || v === '') ? '-' : v;
       });
       return { partName: part, values: values };
     });
 
-    return { columns: sizeSet, rows: rows };
+    return { columns: columns, rows: rows };
   },
 
   /**

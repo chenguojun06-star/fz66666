@@ -4740,3 +4740,45 @@ node --check 三副本 JS 全过；标签栈扫描 6 份 WXML 全闭合；`mvn -
 ### 教训
 - 功能开关入口要做减法：业务列表页不放配置按钮，统一收敛到系统/权限配置类页面。
 - 「管理层可切、默认开」的个人时间开关（D-280）是过度设计——时间本来就该显示，删掉比调参更对。
+
+## D-290（2026-09-04）小程序样衣详情页数据恒空 —— ok() 解包反模式 + 上传接口不存在
+
+**现象**：手机端样衣详情页「附件 / 纸样 / 款式备注 / 备注日志」永远显示"暂无"，上传附件必失败。
+
+**根因 A｜AP-MP-03 的另一种变体（不是判断 res.code，而是兜底链缺 `|| res`）**
+```js
+// ❌ 错：ok() 已解包，List 型接口 res 就是数组，res.data 恒 undefined
+const list = res?.data?.records || res?.data || res?.records || [];
+// ✅ 对：与 utils/sampleProcessTimeline.js 的 toList 同实现
+function toArray(res) {
+  const list = (res && res.data) || res || [];
+  return Array.isArray(list) ? list : (list.records || []);
+}
+```
+判别方法：看后端 Controller 返回的是 `Result<List<T>>`（data 是数组）还是 `Result<IPage<T>>`（data 是 {records}）。
+前者用上面的写法**必须**有 `|| res` 兜底，否则静默变空数组——比报错更难查。
+排查命令：`grep -rn 'res?.data?.records || res?.data || res?.records' miniprogram/`
+
+**根因 B｜改前端前没确认接口是否存在**
+`wx.uploadFile` 打到 `/api/file/upload`——`TenantFileController` 只有
+`tenant-download` 和 `storage-status`，**根本没有上传接口**，必然 404。
+再调 `/api/style/attachment/upload` 传 JSON，而它是 `@RequestParam("file") MultipartFile`，只收 multipart。
+→ 结论：小程序上传文件一律 `wx.uploadFile` 直传业务 multipart 接口，不要"先传通用接口拿 url 再存记录"。
+排查命令：`grep -rn "RequestMapping(\"/api/file" backend/src/main/java`
+
+**根因 C｜wx.uploadFile 的 multipart filename 是 temp 路径 basename**
+不显式传 fileName，存库名会变成 `tmp_3f9a1.png`。
+→ 后端 `StyleAttachmentController#upload` 加可选 `fileName` 参数，
+`StyleAttachmentOrchestrator` 新增 6 参 `uploadWithVersion(..., fileName, versionRemark)`，
+原 4 参/5 参重载全部保留（PC 端调用不受影响），并加 `sanitizeFileName()` 取 basename。
+
+**根因 D｜跨端口径未复用共享 utils（尺寸表）**
+小程序 `_pivotSizeTable` 把 "S/M" 当一整列，PC `useStyleSizeData` 用 `splitStyleOptions` 拆成两列。
+→ 统一：小程序复用 `utils/styleOptions.js splitStyleOptions` + `utils/sizeUtils.js sortSizeNames`。
+
+**副产品修复**
+- WXML 里 `wx:for` 套 `wx:if` 过滤子集 → 列表有数据但一行都不渲染（整片空白）。
+  正解：子集在 JS 里算好（如 `patternFileList`），子集项挂 `_srcIndex` 指回原数组避免点击错位。
+- 异步分支提前 return 但没重置 loading → tab 永久"加载中"。所有提前 return 必须显式结束 loading。
+- `wx.downloadFile` 访问 `/api/file/tenant-download/**` 必须带 token，
+  用 `utils/fileUrl.js getAuthedImageUrl()` 拼 `?token=`。

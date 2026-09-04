@@ -5248,3 +5248,69 @@ D-246 改版时被我写成了实心，是我的错；② 输入框灰色太深�
 - 三副本 8 文件同步完成，旧开关逻辑全项目扫描零残留
 
 **下一步**：真机验收（页面无按钮、时间恒显、权限配置页切单价全端生效）。
+
+## 2026-09-04 D-290 样衣详情页（小程序）多模块数据对接不上 PC —— 根因修复
+
+**用户诉求**：手机端样衣详情页很多模块对接不上 PC，附件完全看不到。
+
+**根因 1（P0，三个模块恒空）**：`ok()` 包装的 API 已把 `Result.data` 解包返回，
+但页面写成 `res?.data?.records || res?.data || res?.records || []`（缺 `|| res`）。
+List 型接口（`/api/style/attachment/list`、`/api/system/order-remark/list` 返回 `Result<List<T>>`）
+解包后 res 就是数组 → 兜底链全落空 → **永远 []**。命中反模式 AP-MP-03。
+影响：附件 tab / 纸样 tab / 底部附件文件区 / 款式备注 / 备注日志 共 5 处。
+
+**根因 2（P0，上传必失败）**：`onUploadAttachment` 先 POST 到 `/api/file/upload`
+（**后端根本不存在该接口**，TenantFileController 只有 tenant-download/storage-status），
+再拿 url 调 `/api/style/attachment/upload` 传 JSON——而该接口是
+`@RequestParam("file") MultipartFile`，只收 multipart。两步都必然失败。
+
+**根因 3（P1，尺寸表口径不一致）**：`_pivotSizeTable` 把合并尺码 "S/M" 当一整列，
+PC 端 `useStyleSizeData` 用 `splitStyleOptions` 拆成 S、M 两列 → 列数/列名对不上；
+且排序用页面私有固定 sizeOrder，未复用 `utils/sizeUtils.js sortSizeNames`。
+
+**根因 4（P1）**：附件下载 `wx.downloadFile` 直传裸 fileUrl，无 token → tenant-download 401。
+
+**改动清单**
+- `miniprogram/pages/sample-development/detail/index.js`
+  - 新增 `toArray(res)`（与 `sampleProcessTimeline.toList` 同实现），替换全部错误兜底链
+  - 附件：加 `_bizTypeText`/`_uploadTimeText`/`_isImage`/`_previewUrl`/`_downloadUrl`/
+    `_isPattern`；新增 `patternFileList`（挂 `_srcIndex` 指回 attachmentList，避免点击错位）
+  - 上传：改为 `wx.uploadFile` 直传 multipart 到 `/api/style/attachment/upload`；
+    入口改 actionSheet（从聊天选文件 / chooseMedia 选图，chooseImage 已废弃）
+  - 打开：`onAttachmentTap`（图片 previewImage，其它 downloadFile+openDocument，showMenu 可转发）
+  - 尺寸表：复用 `splitStyleOptions` 展开合并码 + `sortSizeNames` 排序；0 值不再被 `||` 吃掉
+  - `_loadBomAndSizes` 无 styleId 时显式结束 loading（此前三个 tab 永久"加载中"）
+- `index.wxml`：纸样 tab 用 `patternFileList`（原写法 wx:if 逐项过滤 → 有数据但整片空白）；
+  附件/纸样加缩略图、bizType 中文、下载按钮
+- `index.wxss`（三副本片段插入）：`.file-item__thumb/--pressed/__action`、`.attachment-item__thumb`
+- 后端 `StyleAttachmentController#upload` + `StyleAttachmentOrchestrator`：
+  新增可选 `fileName` 参数（wx.uploadFile 只能传 temp basename，否则存库名是 tmp_xxx.png）；
+  配套 `sanitizeFileName()` 取 basename 防路径穿越。4 参/5 参重载全部保留，PC 端调用不受影响
+
+**验证**：mvn compile ✅ + mvn test-compile ✅；四副本 js/wxml md5 唯一值=1；
+node --check 四副本全过；WXML 标签栈扫描四副本 OK；WXML 表达式方法调用扫描 0。
+
+**当前进行中**：等待真机验收。
+**已知问题**：PC 端 StyleInfo 还有「工艺说明/报价单/洗水唛/SKU」等 tab 小程序未覆盖（本次未做，属新增功能）。
+**下一步**：真机打开样衣详情，逐 tab 核对附件/纸样/备注/尺寸表是否与 PC 一致；试传一个附件确认文件名正确。
+
+## 2026-09-04 D-291 样衣详情页去重 + 无资料下单直达表单（用户真机反馈）
+
+**反馈 1｜附件显示两份**：tab「附件」与页面底部「附件文件」区块数据同源重复展示。
+→ 删底部整个 section-card，上传按钮移入附件 tab 头部（tab-card__header-right 内 outline-btn--sm）。
+
+**反馈 2｜备注显示两份**：tab「备注日志」（targetType=pattern）与底部「款式备注」（targetType=style）重复。
+→ 用户拍板删 tab：tabs 数组去 'remark'，WXML 删备注日志块，JS 删 _loadPatternRemarks/_formatPatternRemarkTime 及调用；底部款式备注保留。
+
+**反馈 3｜无资料下单无法传图**：列表页"方式一上传图"真机点击无反应，且强制传图才能下一步。
+→ 按用户拍板改为「点击直达内部下单页」：
+- `no-data-create/index.js`：redirectTo 直接进 `form?noData=true`（原跳 create 列表页）
+- create 页：下线方式一上传区块 + chooseNoDataImage/deleteNoDataImage/goToNoDataOrderForm；noData tab 保留"从已有款式下单"列表
+- form 页（isNoData）：款式区新增"款式图（可选）"上传——chooseMedia 优先/chooseImage 降级/权限引导/取消静默；
+  选完写 coverImage（缩略图即时显示），不传图可直接下单；提交成功后复用既有 _persistCoverImage
+  （本地临时图 uploadImage → addOrderImage → t_order_image），图片保存失败不影响订单
+
+**验证**：4 个 JS node --check 全过；四副本 8 文件 md5 唯一值=1；12 份 WXML 标签栈全 OK；
+WXML 表达式方法调用扫描 0；残留引用扫描仅剩注释。
+
+**下一步**：真机验收——①附件/备注只显示一份 ②无资料下单入口直达表单、选图可选、下单成功后订单详情能看到款式图。

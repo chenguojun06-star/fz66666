@@ -107,21 +107,35 @@ public class StyleAttachmentOrchestrator {
     }
 
     public StyleAttachment upload(MultipartFile file, String styleId, String bizType) {
-        return upload(file, styleId, null, bizType);
+        return upload(file, styleId, null, bizType, null);
     }
 
     public StyleAttachment upload(MultipartFile file, String styleId, String styleNo, String bizType) {
-        return uploadWithVersion(file, styleId, styleNo, bizType, null);
+        return upload(file, styleId, styleNo, bizType, null);
+    }
+
+    /**
+     * @param fileName 客户端显式指定的真实文件名（小程序必需，见 Controller 注释）
+     */
+    public StyleAttachment upload(MultipartFile file, String styleId, String styleNo, String bizType,
+            String fileName) {
+        return uploadWithVersion(file, styleId, styleNo, bizType, fileName, null);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public StyleAttachment uploadWithVersion(MultipartFile file, String styleId, String bizType, String versionRemark) {
-        return uploadWithVersion(file, styleId, null, bizType, versionRemark);
+        return uploadWithVersion(file, styleId, null, bizType, null, versionRemark);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public StyleAttachment uploadWithVersion(MultipartFile file, String styleId, String styleNo, String bizType,
             String versionRemark) {
+        return uploadWithVersion(file, styleId, styleNo, bizType, null, versionRemark);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StyleAttachment uploadWithVersion(MultipartFile file, String styleId, String styleNo, String bizType,
+            String fileName, String versionRemark) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("文件为空");
         }
@@ -136,8 +150,10 @@ public class StyleAttachmentOrchestrator {
         String type = StringUtils.hasText(bizType) ? bizType.trim() : "general";
 
         try {
-            String originalFilename = file.getOriginalFilename();
-            String safeOriginal = originalFilename == null ? "file" : originalFilename;
+            // 优先用客户端显式传的真实文件名；否则退回 multipart 自带的 filename。
+            // 只取 basename，防止带路径的文件名造成路径穿越/展示异常。
+            String originalFilename = StringUtils.hasText(fileName) ? fileName.trim() : file.getOriginalFilename();
+            String safeOriginal = sanitizeFileName(originalFilename);
             int dot = safeOriginal.lastIndexOf('.');
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
@@ -599,6 +615,16 @@ public class StyleAttachmentOrchestrator {
             return null;
         }
         return String.valueOf(style.getId());
+    }
+
+    /** 只保留 basename，去掉目录分隔符，空值兜底为 "file" */
+    private String sanitizeFileName(String raw) {
+        String name = raw == null ? "" : raw.trim();
+        int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        return StringUtils.hasText(name) ? name : "file";
     }
 
     /** D-225：纸样类附件（pattern系/colorway/size_table）不参与封面 */

@@ -24,6 +24,75 @@ Page({
     if (url) wx.previewImage({ current: url, urls: [url] });
   },
 
+  /**
+   * 无资料下单：在表单页内选填上传款式图（D-291）
+   * 选完写入 coverImage，提交成功后复用 _persistCoverImage 上传入库（t_order_image）。
+   * ★ wx.chooseMedia 优先（wx.chooseImage 已弃用，真机会静默无效），
+   *   失败自动降级 chooseImage 兜底；取消不提示；权限被拒引导去设置。
+   */
+  onPickNoDataCover: function () {
+    const self = this;
+    const onPicked = function (tempPath) {
+      if (!tempPath) return;
+      self.setData({ coverImage: tempPath });
+    };
+    const onFail = function (err) {
+      const msg = (err && err.errMsg) || '';
+      if (msg.indexOf('cancel') !== -1) return;
+      if (msg.indexOf('auth') !== -1 || msg.indexOf('deny') !== -1 || msg.indexOf('permission') !== -1) {
+        wx.showModal({
+          title: '相机/相册权限',
+          content: '需要相机或相册权限才能上传款式图片，请在设置中允许',
+          confirmText: '去设置',
+          cancelText: '取消',
+          success: function (r) {
+            if (r.confirm) wx.openSetting({});
+          },
+        });
+        return;
+      }
+      // 其他失败：降级 wx.chooseImage 再试一次（真机调试模式等兼容场景）
+      if (wx.chooseImage) {
+        wx.chooseImage({
+          count: 1,
+          sizeType: ['compressed'],
+          sourceType: ['album', 'camera'],
+          success: function (res) {
+            onPicked(res.tempFilePaths && res.tempFilePaths[0]);
+          },
+          fail: function (err2) {
+            const msg2 = (err2 && err2.errMsg) || '';
+            if (msg2.indexOf('cancel') !== -1) return;
+            wx.showToast({ title: '选择图片失败', icon: 'none' });
+          },
+        });
+        return;
+      }
+      wx.showToast({ title: '选择图片失败', icon: 'none' });
+    };
+
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['compressed'],
+        success: function (res) {
+          const files = (res && res.tempFiles) || [];
+          onPicked(files[0] && files[0].tempFilePath);
+        },
+        fail: onFail,
+      });
+    } else {
+      onFail({ errMsg: 'chooseMedia not supported' });
+    }
+  },
+
+  onDeleteNoDataCover: function () {
+    this.setData({ coverImage: '' });
+  },
+
+
   data: {
     styleId: '', styleNo: '', styleName: '', coverImage: '',
     isNoData: false,  // 是否为无资料下单

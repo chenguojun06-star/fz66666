@@ -297,3 +297,9 @@ page { background-color: var(--color-bg-page); }
   height: 26px; line-height: 26px; padding: 0 10px;
   font-size: var(--font-size-2xs);
 }
+
+/* ══ 无资料下单：款式图选填上传（D-291） ══ */
+.cover-optional-row { margin-top: 12px; }
+.cover-optional-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cover-optional-acts .f-btn { min-width: 0; }
+.cover-optional-tip { font-size: var(--font-size-2xs); color: var(--color-text-tertiary); }

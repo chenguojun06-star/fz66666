@@ -10,11 +10,12 @@ Page({
     styleFilteredStyles: [],
     styleKeyword: '',
     styleLoading: true,
-    
+
     _allStyles: [],  // 存储所有款式（用于无资料下单）
-    
-    // 无资料下单：上传的图片
-    noDataUploadedImage: '',
+
+    // D-291：无资料下单的"上传图片"路径已下线——
+    // 入口直达表单页（no-data-create → form?noData=true），款式图在表单页内选填上传。
+    // 本页 noData tab 只保留"从已有款式下单"列表。
   },
 
   onLoad: function () {
@@ -154,94 +155,7 @@ Page({
     safeNavigate({ url: '/pages/order/create/form/index?' + params.join('&') }).catch(() => {});
   },
 
-  // 无资料下单：选择图片
-  // ★ 必须用 wx.chooseMedia：wx.chooseImage 自基础库 2.21.0 起已弃用，
-  //   新版开发者工具/真机调试下点击无反应（与全站其他 7 处选图入口保持一致）
-  // ★ fail 三分支处理：cancel 静默 / 权限被拒引导去设置 / 其他自动降级 chooseImage 重试
-  //   （真机调试模式下 chooseMedia 有已知兼容问题，降级路径可兜住）
-  chooseNoDataImage: function () {
-    var self = this;
-    console.log('[无资料下单] 点击上传款式图'); // 点击即输出——Console 无此行 = 事件未触发（编译/绑定层问题）
-    var onPicked = function (tempPath) {
-      if (!tempPath) return;
-      console.log('[无资料下单] 选择图片:', tempPath);
-      self.setData({ noDataUploadedImage: tempPath });
-    };
-    var onFail = function (err) {
-      var msg = (err && err.errMsg) || '';
-      console.log('[无资料下单] 选图失败:', msg);
-      if (msg.indexOf('cancel') !== -1) return;
-      // 权限被拒：引导去设置开启（与订单备注页同一处理模式）
-      if (msg.indexOf('auth') !== -1 || msg.indexOf('deny') !== -1 || msg.indexOf('permission') !== -1) {
-        wx.showModal({
-          title: '相机/相册权限',
-          content: '需要相机或相册权限才能上传款式图片，请在设置中允许',
-          confirmText: '去设置',
-          cancelText: '取消',
-          success: function (r) {
-            if (r.confirm) wx.openSetting({});
-          },
-        });
-        return;
-      }
-      // 其他失败：自动降级 wx.chooseImage 再试一次（兼容真机调试模式等场景）
-      if (wx.chooseImage) {
-        wx.chooseImage({
-          count: 1,
-          sizeType: ['compressed'],
-          sourceType: ['album', 'camera'],
-          success: function (res) {
-            onPicked(res.tempFilePaths && res.tempFilePaths[0]);
-          },
-          fail: function (err2) {
-            var msg2 = (err2 && err2.errMsg) || '';
-            if (msg2.indexOf('cancel') !== -1) return;
-            toast.error('选择图片失败：' + msg2);
-          },
-        });
-        return;
-      }
-      toast.error('选择图片失败');
-    };
-
-    if (wx.chooseMedia) {
-      wx.chooseMedia({
-        count: 1,
-        mediaType: ['image'],
-        sourceType: ['album', 'camera'],
-        sizeType: ['compressed'],
-        success: function (res) {
-          // chooseMedia 的返回结构与 chooseImage 不同：tempFiles[].tempFilePath
-          var files = (res && res.tempFiles) || [];
-          onPicked(files[0] && files[0].tempFilePath);
-        },
-        fail: onFail,
-      });
-    } else {
-      // 极老基础库无 chooseMedia：直接走降级分支
-      onFail({ errMsg: 'chooseMedia not supported' });
-    }
-  },
-
-  // 无资料下单：删除图片
-  deleteNoDataImage: function () {
-    this.setData({ noDataUploadedImage: '' });
-  },
-
-  // 无资料下单：跳转到订单表单页面
-  goToNoDataOrderForm: function () {
-    if (!this.data.noDataUploadedImage) {
-      toast.error('请先上传款式图片');
-      return;
-    }
-
-    // 跳转到订单表单页面，传递无资料下单标识和图片路径
-    var params = [
-      'noData=true',
-      'tempImage=' + encodeURIComponent(this.data.noDataUploadedImage)
-    ];
-
-    console.log('[无资料下单] 跳转到表单页面:', params.join('&'));
-    safeNavigate({ url: '/pages/order/create/form/index?' + params.join('&') }).catch(() => {});
-  }
+  // D-291：无资料下单的选图/跳表单逻辑已迁移到 form 页内（chooseNoDataImage /
+  // deleteNoDataImage / goToNoDataOrderForm 一并下线）。
+  // 原因：列表页选图入口真机点击无反应，且"必须先传图才能下一步"阻断下单主流程。
 });

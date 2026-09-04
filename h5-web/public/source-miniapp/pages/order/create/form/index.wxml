@@ -4,6 +4,7 @@
     <view class="sec">
       <view class="style-row">
         <image wx:if="{{coverImage}}" class="style-thumb" src="{{coverImage}}" mode="aspectFit" bindtap="onCoverPreview" data-url="{{coverImage}}" />
+        <view wx:elif="{{isNoData}}" class="style-thumb no-img" bindtap="onPickNoDataCover"><text>传图</text></view>
         <view wx:else class="style-thumb no-img"><text>{{styleNo || '款'}}</text></view>
         <view class="style-txt">
           <!-- 无资料下单：款号 / 款名可手填 -->
@@ -13,6 +14,17 @@
           <text wx:else class="style-nm">{{styleName || '无资料下单'}}</text>
         </view>
         <view wx:if="{{productCategory}}" class="style-tag">{{productCategory}}</view>
+      </view>
+      <!-- 无资料下单：款式图选填上传（D-291：不再强制，列表页选图路径已下线） -->
+      <view wx:if="{{isNoData}}" class="cover-optional-row">
+        <view wx:if="{{coverImage}}" class="cover-optional-acts">
+          <view class="f-btn ghost" bindtap="onPickNoDataCover"><text>更换图片</text></view>
+          <view class="f-btn ghost" bindtap="onDeleteNoDataCover"><text>删除图片</text></view>
+        </view>
+        <view wx:else class="cover-optional-acts">
+          <view class="f-btn" bindtap="onPickNoDataCover"><text>上传款式图（可选）</text></view>
+          <text class="cover-optional-tip">拍照或从相册选择，不传也可直接下单</text>
+        </view>
       </view>
     </view>
 

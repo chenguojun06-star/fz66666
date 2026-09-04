@@ -2984,3 +2984,23 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 - [x] 根因 = miniprogram/project.private.config.json 的 setting.ignoreDevUnusedFiles: true（「过滤无依赖文件」），
       safeNavigate 动态字符串跳转的页面被静态依赖分析误剔出编译产物 → navigateTo 报"未注册"
 - [x] 已改 ignoreDevUnusedFiles: false；用户需在工具 详情→本地设置 确认该项未勾选后重编译
+
+### 2026-09-04 D-290 样衣详情页多模块数据对接不上 PC
+- [x] 修 ok() 解包反模式：附件/款式备注/备注日志 5 处恒空（新增 toArray 统一归一化）
+- [x] 修附件上传：改 wx.uploadFile multipart 直传 /api/style/attachment/upload（原 /api/file/upload 不存在）
+- [x] 后端新增可选 fileName 参数 + sanitizeFileName（修小程序上传后文件名变 tmp_xxx）
+- [x] 附件下载/预览加 token 鉴权（图片 previewImage，其它 openDocument + showMenu）
+- [x] 尺寸表对齐 PC：splitStyleOptions 拆合并码 + sortSizeNames 排序
+- [x] 纸样 tab 改用 JS 预算的 patternFileList（修"有数据但整片空白"）；_srcIndex 防点击错位
+- [x] _loadBomAndSizes 无 styleId 时结束 loading（修三 tab 永久转圈）
+- [x] 四副本同步（js/wxml 覆盖 + wxss 片段插入）+ mvn compile/test-compile + node --check + 标签栈校验
+- [ ] 真机验收：附件/纸样/备注/尺寸表与 PC 一致；上传附件文件名正确
+
+### 2026-09-04 D-291 样衣详情页去重 + 无资料下单直达表单
+- [x] 附件去重：删底部「附件文件」区块，上传按钮移入「附件」tab 头部，只显示一份
+- [x] 备注去重：删 tab「备注日志」（含 _loadPatternRemarks 全套），只留底部「款式备注」
+- [x] 无资料下单直达：no-data-create 直接 redirectTo form?noData=true（原跳列表页）
+- [x] create 页下线方式一选图区块与三个相关函数，noData tab 只留"从已有款式下单"
+- [x] form 页新增款式图选填上传（chooseMedia 优先+chooseImage 降级+权限引导），不传图可下单
+- [x] 四副本 8 文件同步（md5 唯一值=1）+ node --check + 12 份 WXML 标签栈 + 表达式扫描 0
+- [ ] 真机验收：附件/备注单份展示；无资料下单直达表单、图可选、下单后订单详情可见款式图
