@@ -333,7 +333,6 @@ export function useStyleSizeColumns({
         </Tooltip>
       ),
       dataIndex: sn,
-      width: 60,
       align: 'center' as const,
       render: (_: any, record: MatrixRow) => {
         const v = record.cells[sn]?.value;

@@ -131,7 +131,6 @@ export const useUsageColumns = ({
           </span>
         ),
         key: `size_${size}`,
-        width: 80,
         render: (_: unknown, record: PatternMaterialRow) => {
           const val = (usageEdits[record.bomId] ?? {})[size] ?? null;
           return (

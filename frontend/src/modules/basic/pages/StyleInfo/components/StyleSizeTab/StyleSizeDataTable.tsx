@@ -31,8 +31,9 @@ const StyleSizeDataTable: React.FC<StyleSizeDataTableProps> = ({
       pagination={false}
       loading={loading}
       emptyDescription="暂无数据"
+      allowFixedColumns={false}
+      showIndex={false}
       rowKey="key"
-      scroll={{ x: 'max-content' }}
       rowClassName={(_record, rowIndex) => {
         const row = displayRows[rowIndex];
         if (!row) return '';

@@ -137,7 +137,8 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
               columns={usageColumns}
               pagination={false}
               emptyDescription="暂无数据"
-              scroll={{ x: 'max-content' }}
+              allowFixedColumns={false}
+              showIndex={false}
             />
           )}
         </Spin>
