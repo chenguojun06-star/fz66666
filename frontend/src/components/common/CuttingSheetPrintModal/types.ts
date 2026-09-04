@@ -14,6 +14,19 @@ export interface CuttingSheetPrintModalProps {
     orderCreatorName?: string;
     expectedShipDate?: string;
   };
+  /** 打印人（当前登录用户） */
+  printerName?: string;
+}
+
+/** 颜色数量矩阵：行为颜色、列为码数 */
+export interface ColorSizeMatrix {
+  colors: string[];
+  sizes: string[];
+  /** 各颜色×码数的数量 { color: { size: qty } } */
+  data: Record<string, Record<string, number>>;
+  colorTotals: Record<string, number>;
+  sizeTotals: Record<string, number>;
+  total: number;
 }
 
 export interface OrderGroup {
@@ -32,4 +45,10 @@ export interface PrintPageData {
   sizes: string[];
   totalQuantity: number;
   sortedBundles: CuttingBundleRow[];
+  /** 打印人 */
+  printerName: string;
+  /** 打印时间（格式：YYYY-MM-DD HH:mm:ss） */
+  printTime: string;
+  /** 下单颜色数量矩阵 */
+  colorSizeMatrix: ColorSizeMatrix;
 }

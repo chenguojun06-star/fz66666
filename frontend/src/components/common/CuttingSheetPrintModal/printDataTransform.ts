@@ -1,6 +1,6 @@
 import type { CuttingBundleRow } from '@/modules/production/pages/Production/Cutting/hooks';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import type { CuttingSheetPrintModalProps, PrintPageData } from './types';
+import type { ColorSizeMatrix, CuttingSheetPrintModalProps, PrintPageData } from './types';
 
 export function groupBundlesByOrder(bundles: CuttingBundleRow[]): Record<string, CuttingBundleRow[]> {
   return bundles.reduce((acc, bundle) => {
@@ -21,10 +21,48 @@ export function getBedNoDisplay(bundles: CuttingBundleRow[]): string {
   return bedNos.length > 0 ? String(bedNos[0]) : '-';
 }
 
+/** 构建下单颜色数量矩阵：行为颜色，列为码数 */
+export function buildColorSizeMatrix(bundles: CuttingBundleRow[]): ColorSizeMatrix {
+  // 保留颜色与码数的自然出现顺序（按 bundle 先后），便于排版阅读
+  const colors: string[] = [];
+  const sizes: string[] = [];
+  const seenColor = new Set<string>();
+  const seenSize = new Set<string>();
+  const data: Record<string, Record<string, number>> = {};
+  const colorTotals: Record<string, number> = {};
+  const sizeTotals: Record<string, number> = {};
+  let total = 0;
+
+  for (const b of bundles) {
+    const color = (b.color || '').trim();
+    const size = (b.size || '').trim();
+    if (!color || !size) continue;
+    if (!seenColor.has(color)) {
+      seenColor.add(color);
+      colors.push(color);
+    }
+    if (!seenSize.has(size)) {
+      seenSize.add(size);
+      sizes.push(size);
+    }
+    if (!data[color]) data[color] = {};
+    data[color][size] = (data[color][size] || 0) + (b.quantity || 0);
+    colorTotals[color] = (colorTotals[color] || 0) + (b.quantity || 0);
+    sizeTotals[size] = (sizeTotals[size] || 0) + (b.quantity || 0);
+    total += b.quantity || 0;
+  }
+
+  return { colors, sizes, data, colorTotals, sizeTotals, total };
+}
+
+interface BuildOptions extends Pick<CuttingSheetPrintModalProps, 'styleImageUrl' | 'companyName' | 'cuttingTask' | 'printerName'> {
+  printTime?: string;
+}
+
 export function buildPrintPageData(
   orderNo: string,
   orderBundles: CuttingBundleRow[],
-  options: Pick<CuttingSheetPrintModalProps, 'styleImageUrl' | 'companyName' | 'cuttingTask'>
+  options: BuildOptions
 ): PrintPageData {
   const firstBundle = orderBundles[0];
 
@@ -38,6 +76,7 @@ export function buildPrintPageData(
 
   const sizes = [...new Set(orderBundles.map(b => b.size).filter(Boolean))];
   const totalQuantity = orderBundles.reduce((sum, b) => sum + (b.quantity || 0), 0);
+  const colorSizeMatrix = buildColorSizeMatrix(orderBundles);
 
   const sortedBundles = [...orderBundles].sort((a, b) => Number(a.bundleNo) - Number(b.bundleNo));
 
@@ -52,5 +91,8 @@ export function buildPrintPageData(
     sizes,
     totalQuantity,
     sortedBundles,
+    printerName: options.printerName || '-',
+    printTime: options.printTime || '',
+    colorSizeMatrix,
   };
 }

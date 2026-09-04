@@ -85,6 +85,7 @@ const CuttingModals: React.FC<CuttingModalsProps> = ({
           orderCreatorName: activeTask?.orderCreatorName,
           expectedShipDate: activeTask?.expectedShipDate,
         } : undefined}
+        printerName={user?.name || user?.realName || user?.nickname || ''}
       />
 
       <RejectReasonModal

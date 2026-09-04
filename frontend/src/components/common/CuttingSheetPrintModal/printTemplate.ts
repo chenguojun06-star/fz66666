@@ -5,12 +5,57 @@ function buildTableRows(sortedBundles: PrintPageData['sortedBundles']): string {
   return sortedBundles.map((bundle) => `
     <tr>
       <td style="text-align: center;">${bundle.styleNo || '-'}</td>
-      <td style="text-align: center; font-weight: 600;">${bundle.size || '-'}</td>
-      <td style="text-align: center; font-weight: 600; color: var(--color-primary);">${bundle.bundleNo || '-'}</td>
+      <td style="text-align: center;">${bundle.size || '-'}</td>
+      <td style="text-align: center;">${bundle.bundleNo || '-'}</td>
       <td style="text-align: center;">${bundle.color || '-'}</td>
-      <td style="text-align: center; font-weight: 600;">${bundle.quantity || 0}</td>
+      <td style="text-align: center;">${bundle.quantity || 0}</td>
     </tr>
   `).join('');
+}
+
+/** 下单颜色数量矩阵：行为颜色、列为码数 */
+function buildColorSizeMatrixHtml(colorSizeMatrix: PrintPageData['colorSizeMatrix']): string {
+  const { colors, sizes, data, colorTotals, sizeTotals, total } = colorSizeMatrix;
+  if (!sizes.length || !colors.length) return '';
+
+  const headCells = sizes.map((s) => `<th class="col-qty">${s}</th>`).join('');
+  const bodyRows = colors.map((color) => {
+    const cells = sizes.map((s) => {
+      const qty = data[color]?.[s] || 0;
+      return `<td class="cell-qty">${qty || ''}</td>`;
+    }).join('');
+    return `
+      <tr>
+        <td class="cell-color">${color}</td>
+        ${cells}
+        <td class="cell-qty cell-total">${colorTotals[color] || 0}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const totalRow = `
+    <tr class="matrix-foot-row">
+      <td class="cell-color">合计</td>
+      ${sizes.map((s) => `<td class="cell-qty cell-total">${sizeTotals[s] || 0}</td>`).join('')}
+      <td class="cell-qty cell-total">${total || 0}</td>
+    </tr>
+  `;
+
+  return `
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th class="cell-color">颜色\\码数</th>
+          ${headCells}
+          <th class="cell-qty">合计</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+        ${totalRow}
+      </tbody>
+    </table>
+  `;
 }
 
 function buildSinglePageHtml(pageData: PrintPageData, companyName: string): string {
@@ -23,9 +68,13 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
     imageUrl,
     totalQuantity,
     sortedBundles,
+    printerName,
+    printTime,
+    colorSizeMatrix,
   } = pageData;
 
   const tableRows = buildTableRows(sortedBundles);
+  const matrixHtml = buildColorSizeMatrixHtml(colorSizeMatrix);
   const factoryName = companyName || '';
   const pageTitle = '裁剪单';
   const headerHtml = buildPrintHeader(factoryName, pageTitle);
@@ -47,18 +96,21 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
               <span class="info-value">${orderNo}</span>
             </div>
             ${expectedShipDate ? `
-            <div class="info-item delivery-date-item">
+            <div class="info-item">
               <span class="info-label">交期：</span>
-              <span class="info-value delivery-date-value">${expectedShipDate}</span>
+              <span class="info-value">${expectedShipDate}</span>
             </div>
             ` : ''}
-            <div class="info-item bed-no-item">
-              <span class="info-label">床号：</span>
-              <span class="info-value bed-no-value">${bedNoDisplay}</span>
-            </div>
           </div>
         </div>
       </div>
+
+      ${matrixHtml ? `
+      <div class="matrix-block">
+        <div class="block-title">下单颜色数量矩阵</div>
+        ${matrixHtml}
+      </div>
+      ` : ''}
 
       <table class="detail-table">
         <thead>
@@ -75,8 +127,8 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="4" style="text-align: right; font-weight: 600;">合计：</td>
-            <td style="text-align: center; font-weight: 600; font-size: 16px;">${totalQuantity}</td>
+            <td colspan="4" style="text-align: right;">合计：</td>
+            <td style="text-align: center;">${totalQuantity}</td>
           </tr>
         </tfoot>
       </table>
@@ -103,6 +155,12 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
           <span class="signature-line">__________________</span>
         </div>
       </div>
+
+      <div class="print-footer">
+        <span class="footer-item">打印人：${printerName}</span>
+        <span class="footer-item">床号：${bedNoDisplay}</span>
+        <span class="footer-item">打印时间：${printTime}</span>
+      </div>
     </div>
   `;
 }
@@ -119,7 +177,8 @@ const printCss = `
   }
   html, body {
     font-family: 'Heiti SC', 'Songti SC', 'Hiragino Sans GB', 'STSong', 'Arial Unicode MS', serif;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: normal;
     color: var(--color-black);
     background: white;
   }
@@ -127,6 +186,9 @@ const printCss = `
     width: 100%;
     page-break-after: always;
     position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
   .cutting-sheet-page:last-child {
     page-break-after: auto;
@@ -134,13 +196,13 @@ const printCss = `
 
   .header-container {
     display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--color-black);
+    gap: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-black);
   }
   .header-left {
-    flex: 0 0 200px;
+    flex: 0 0 160px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -153,95 +215,85 @@ const printCss = `
     width: 100%;
     height: 100%;
     object-fit: contain;
-    max-height: 200px;
+    max-height: 160px;
   }
   .no-image {
-    width: 200px;
-    height: 150px;
+    width: 160px;
+    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--color-gray-label);
-    font-size: 12px;
+    font-size: 11px;
   }
   .header-right {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-  }
-  .company-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--color-black);
-    margin-bottom: 8px;
+    gap: 6px;
   }
   .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px 16px;
+    gap: 6px 16px;
   }
   .info-item {
     display: flex;
     align-items: center;
-    font-size: 13px;
+    font-size: 12px;
   }
   .info-label {
-    font-weight: 600;
     color: var(--color-gray-800);
-    min-width: 60px;
+    min-width: 56px;
   }
   .info-value {
     color: var(--color-black);
     flex: 1;
   }
-  .info-value.highlight {
+
+  .matrix-block {
+    margin: 8px 0 4px;
+  }
+  .block-title {
     font-size: 12px;
-    font-weight: 700;
-    color: var(--color-primary);
+    margin-bottom: 4px;
   }
-  .bed-no-item {
-    grid-column: 1 / -1;
-    border: 2px solid var(--color-primary);
-    padding: 8px 12px;
-    border-radius: 4px;
-    background: var(--status-processing-bg);
-    margin-top: 4px;
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
   }
-  .bed-no-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--color-primary) !important;
+  .matrix-table th,
+  .matrix-table td {
+    border: 1px solid var(--color-gray-800);
+    padding: 4px 6px;
+    text-align: center;
   }
-  .delivery-date-item {
-    grid-column: 1 / -1;
-    border: 2px solid var(--color-warning);
-    padding: 8px 12px;
-    border-radius: 4px;
-    background: var(--status-warning-bg);
-    margin-top: 4px;
+  .matrix-table thead th {
+    background-color: var(--color-bg-subtle);
+    text-align: center;
   }
-  .delivery-date-value {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--color-warning) !important;
+  .cell-color {
+    text-align: left;
+  }
+  .matrix-foot-row td {
+    background-color: var(--color-bg-container);
   }
 
   .detail-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 16px 0;
-    font-size: 12px;
+    margin: 12px 0;
+    font-size: 11px;
   }
   .detail-table th,
   .detail-table td {
     border: 1px solid var(--color-gray-800);
-    padding: 8px;
+    padding: 6px;
     text-align: left;
   }
   .detail-table thead th {
     background-color: var(--color-bg-subtle);
-    font-weight: 700;
     text-align: center;
   }
   .detail-table tbody tr:nth-child(even) {
@@ -249,21 +301,21 @@ const printCss = `
   }
   .detail-table tfoot td {
     background-color: var(--color-border-light);
-    font-weight: 600;
   }
 
   .signature-section {
-    margin-top: 32px;
+    margin-top: auto;
+    padding: 24px 0 8px;
     display: flex;
     justify-content: space-around;
     align-items: center;
   }
   .signature-item {
-    font-size: 13px;
+    font-size: 12px;
   }
   .signature-line {
     display: inline-block;
-    min-width: 120px;
+    min-width: 110px;
     border-bottom: 1px solid var(--color-black);
     margin-left: 8px;
   }
@@ -271,8 +323,18 @@ const printCss = `
     display: inline-block;
     min-width: 80px;
     margin-left: 8px;
-    font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-gray-800);
+  }
+
+  .print-footer {
+    border-top: 1px solid var(--color-gray-800);
+    padding-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+  .footer-item {
+    display: inline-block;
   }
 
   @media print {
