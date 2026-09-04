@@ -75,10 +75,13 @@ export const useStyleSizeAiRecognition = ({
         return;
       }
 
-      // 覆盖语义：码数列以 AI 识别结果为准，不再"追加一波码数"。
-      // 若本轮只识别到部位、没识别到码数，则保留现有码数，避免把已有列清空。
+      // D-29x：码数列固定为表格当前已有码数，AI 识别只负责把数值填进对应部位，
+      // 绝不因识别结果替换/追加码数列——此前用识别码数整列覆盖，遇到跳码说明、
+      // 说明文字被识别成"码数"时会铺进来一堆重复码（XS XS S S...）。
+      // 仅当表格本身还没有任何码数时，才用识别结果初始化码数列。
+      const initColsFromRecognition = sizeColumns.length === 0;
       const allSizes = normalizeSizeList(
-        recognizedSizes.length > 0 ? recognizedSizes : sizeColumns,
+        initColsFromRecognition ? recognizedSizes : sizeColumns,
       );
       const partMap = buildPartMap(result.parts || []);
       const batch = ++batchRef.current;
@@ -137,10 +140,14 @@ export const useStyleSizeAiRecognition = ({
         return normalizeRowSorts(updatedRows);
       });
 
-      setSizeColumns(allSizes);
+      if (initColsFromRecognition) setSizeColumns(allSizes);
 
       const msg: string[] = [];
-      if (recognizedSizes.length > 0) msg.push(`码数已覆盖为 ${allSizes.length} 个（${allSizes.join(', ')}）`);
+      if (initColsFromRecognition && recognizedSizes.length > 0) {
+        msg.push(`已用识别结果初始化码数（${allSizes.join(', ')}）`);
+      } else if (recognizedSizes.length > 0) {
+        msg.push('码数列保持不变，仅填充识别到的数值');
+      }
       if (partMap.size > 0) msg.push(`导入 ${partMap.size} 个部位数据`);
       if (msg.length) message.success(msg.join('，'));
 
