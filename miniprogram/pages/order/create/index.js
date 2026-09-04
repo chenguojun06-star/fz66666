@@ -155,7 +155,8 @@ Page({
     safeNavigate({ url: '/pages/order/create/form/index?' + params.join('&') }).catch(() => {});
   },
 
-  // D-291：无资料下单的选图/跳表单逻辑已迁移到 form 页内（chooseNoDataImage /
-  // deleteNoDataImage / goToNoDataOrderForm 一并下线）。
-  // 原因：列表页选图入口真机点击无反应，且"必须先传图才能下一步"阻断下单主流程。
+  // 空白无资料下单：直达表单页（无需款式/图片，款式图在表单内选填）
+  goNoDataOrderForm: function () {
+    safeNavigate({ url: '/pages/order/create/form/index?noData=true' }).catch(function () {});
+  },
 });

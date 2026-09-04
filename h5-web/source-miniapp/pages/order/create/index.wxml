@@ -4,12 +4,19 @@
     <view class="tab-item {{activeTab === 'noData' ? 'active' : ''}}" data-tab="noData" bindtap="switchTab">无资料下单</view>
   </view>
 
-  <!-- ══ 无资料下单提示（D-291：上传图片路径已下线，入口直达表单页，款式图在表单内选填） ══ -->
+  <!-- ══ 无资料下单：直达空白表单（无需款式、无需图片，款式图在表单内选填） ══ -->
   <view wx:if="{{activeTab === 'noData'}}" class="no-data-upload-section">
+    <view class="no-data-start" hover-class="no-data-start--pressed" hover-stay-time="60" bindtap="goNoDataOrderForm">
+      <view class="no-data-start-icon line-icon icon-edit"></view>
+      <view class="no-data-start-body">
+        <text class="no-data-start-t">空白无资料下单</text>
+        <text class="no-data-start-d">手动填写款号/款名/颜色/码数即可，款式图选填</text>
+      </view>
+      <view class="no-data-start-arrow">›</view>
+    </view>
     <view class="upload-hint">
-      <view class="hint-icon line-icon icon-camera"></view>
-      <text class="hint-h">从已有款式下单</text>
-      <text class="hint-desc">沿用款式资料，自行填写颜色与码数；款式图可选填</text>
+      <text class="hint-h">或者从已有款式下单</text>
+      <text class="hint-desc">沿用款式资料，自行填写颜色与码数</text>
     </view>
   </view>
 
