@@ -11,6 +11,7 @@ import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.style.util.StyleCategory;
 import java.math.BigDecimal;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
@@ -138,7 +139,7 @@ public class StyleInfoTool extends AbstractAgentTool {
             info.setStyleNo(styleNo);
             info.setStyleName(styleName);
             String cat = optionalString(args, "category");
-            if (cat != null) info.setCategory(cat);
+            if (cat != null) info.setCategory(StyleCategory.normalize(cat));
             String priceStr = optionalString(args, "price");
             if (priceStr != null) {
                 try { info.setPrice(new BigDecimal(priceStr)); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
@@ -171,7 +172,7 @@ public class StyleInfoTool extends AbstractAgentTool {
             String cat = optionalString(args, "category");
             String priceStr = optionalString(args, "price");
             if (styleName != null) info.setStyleName(styleName);
-            if (cat != null) info.setCategory(cat);
+            if (cat != null) info.setCategory(StyleCategory.normalize(cat));
             if (priceStr != null) {
                 try { info.setPrice(new BigDecimal(priceStr)); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
             }

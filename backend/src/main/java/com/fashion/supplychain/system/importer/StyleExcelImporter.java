@@ -7,6 +7,7 @@ import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.style.util.StyleCategory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -104,7 +105,7 @@ public class StyleExcelImporter {
                 StyleInfo style = new StyleInfo();
                 style.setStyleNo(styleNo);
                 style.setStyleName(StringUtils.hasText(importHelper.safe(item.get("款名"))) ? importHelper.safe(item.get("款名")) : styleNo);
-                style.setCategory(importHelper.safe(item.get("品类")));
+                style.setCategory(StyleCategory.normalize(importHelper.safe(item.get("品类"))));
                 style.setColor(importHelper.safe(item.get("颜色")));
                 style.setSize(importHelper.safe(item.get("码数")));
                 style.setSeason(importHelper.safe(item.get("季节")));
@@ -274,7 +275,7 @@ public class StyleExcelImporter {
 
         style.setStyleNo(styleNo);
         style.setStyleName(StringUtils.hasText(importHelper.safe(item.get("款名"))) ? importHelper.safe(item.get("款名")) : styleNo);
-        style.setCategory(importHelper.safe(item.get("品类")));
+        style.setCategory(StyleCategory.normalize(importHelper.safe(item.get("品类"))));
         style.setColor(importHelper.safe(item.get("颜色")));
         style.setSize(importHelper.safe(item.get("码数")));
         style.setSeason(importHelper.safe(item.get("季节")));

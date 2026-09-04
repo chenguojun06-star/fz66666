@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.entity.VisualAiLog;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.mapper.VisualAiLogMapper;
 import com.fashion.supplychain.service.RedisService;
+import com.fashion.supplychain.style.util.StyleCategory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -511,7 +512,7 @@ public class VisionAnalysisService {
                 r.addColor(normalizeColor(desc.isBlank() ? type : desc));
             } else if (type.contains("品类") || type.contains("类别") || type.contains("服装类型")
                     || desc.matches(".*(T恤|衬衫|裤|裙|连衣裙|外套|大衣|卫衣|毛衣|夹克|西装|马甲|POLO|背心).*")) {
-                r.setCategory(pickCategory(desc.isBlank() ? type : desc));
+                r.setCategory(StyleCategory.normalize(pickCategory(desc.isBlank() ? type : desc)));
             } else if (type.contains("季节") || type.contains("适用季节")
                     || desc.matches(".*(春|夏|秋|冬|四季|春秋).*")) {
                 r.setSeason(pickSeason(desc.isBlank() ? type : desc));

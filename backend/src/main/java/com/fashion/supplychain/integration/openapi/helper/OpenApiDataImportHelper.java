@@ -6,6 +6,7 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.style.util.StyleCategory;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.FactoryService;
@@ -109,7 +110,7 @@ public class OpenApiDataImportHelper {
                     StyleInfo style = new StyleInfo();
                     style.setStyleNo(styleNo);
                     style.setStyleName(StringUtils.hasText(styleName) ? styleName : styleNo);
-                    style.setCategory(OpenApiParseUtils.valueAsString(item.get("category"), null));
+                    style.setCategory(StyleCategory.normalize(OpenApiParseUtils.valueAsString(item.get("category"), null)));
                     style.setColor(OpenApiParseUtils.valueAsString(item.get("color"), null));
                     style.setSize(OpenApiParseUtils.valueAsString(item.get("size"), null));
                     style.setSeason(OpenApiParseUtils.valueAsString(item.get("season"), null));

@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.style.util.StyleCategory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -150,7 +151,7 @@ public class CuttingOrderFactory {
             StyleInfo newStyle = new StyleInfo();
             newStyle.setStyleNo(styleNo);
             newStyle.setStyleName(styleNo);
-            newStyle.setCategory("UNISEX");
+            newStyle.setCategory(StyleCategory.normalize("UNISEX"));
             newStyle.setStatus("ENABLED");
             newStyle.setTenantId(tenantId);
             newStyle.setDescriptionLocked(1);

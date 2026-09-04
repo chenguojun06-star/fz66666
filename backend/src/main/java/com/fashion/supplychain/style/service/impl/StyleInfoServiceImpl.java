@@ -6,6 +6,7 @@ import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
+import com.fashion.supplychain.style.util.StyleCategory;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -58,7 +59,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         String styleNo = (String) params.getOrDefault("styleNo", "");
         String styleNoExact = (String) params.getOrDefault("styleNoExact", "");
         String styleName = (String) params.getOrDefault("styleName", "");
-        String category = (String) params.getOrDefault("category", "");
+        String category = StyleCategory.normalize((String) params.getOrDefault("category", ""));
         String keyword = (String) params.getOrDefault("keyword", "");
         String progressNode = (String) params.getOrDefault("progressNode", "");
 
