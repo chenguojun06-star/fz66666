@@ -25,6 +25,8 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   showIndex?: boolean;
   /** 是否自动根据屏幕宽度切换表格 size（默认 true） */
   responsiveSize?: boolean;
+  /** 关闭 U-1 填充模式：不注入 scroll.y，表格按内容自然撑开、无内部上下滚动 */
+  disableFillScrollY?: boolean;
   /** 空状态描述文本 */
   emptyDescription?: string;
   /** 空状态主操作按钮文本 */
@@ -55,6 +57,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     stickyHeader: stickyHeaderProp,
     showIndex = true,
     responsiveSize = true,
+    disableFillScrollY = false,
     className,
     rowKey,
     size: sizeProp,
@@ -96,6 +99,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     stickyHeaderProp,
     showIndex,
     responsiveSize,
+    disableFillScrollY,
     className,
     sizeProp,
     rowKey,

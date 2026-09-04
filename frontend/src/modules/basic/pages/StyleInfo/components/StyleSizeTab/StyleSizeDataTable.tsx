@@ -33,6 +33,7 @@ const StyleSizeDataTable: React.FC<StyleSizeDataTableProps> = ({
       emptyDescription="暂无数据"
       allowFixedColumns={false}
       showIndex={false}
+      disableFillScrollY
       rowKey="key"
       rowClassName={(_record, rowIndex) => {
         const row = displayRows[rowIndex];

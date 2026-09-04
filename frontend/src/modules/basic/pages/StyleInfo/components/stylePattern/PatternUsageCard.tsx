@@ -139,6 +139,7 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
               emptyDescription="暂无数据"
               allowFixedColumns={false}
               showIndex={false}
+              disableFillScrollY
             />
           )}
         </Spin>

@@ -48,6 +48,8 @@ interface UseResizableTableDataParams<T> {
   emptySecondaryActionText?: string;
   onEmptySecondaryAction?: () => void;
   localeProp?: Record<string, any>;
+  /** 关闭 U-1 填充模式：不注入 scroll.y，表格按内容自然撑开、无内部上下滚动 */
+  disableFillScrollY?: boolean;
 }
 
 export const useResizableTableData = <T extends object>(params: UseResizableTableDataParams<T>) => {
@@ -72,6 +74,7 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
     emptySecondaryActionText,
     onEmptySecondaryAction,
     localeProp,
+    disableFillScrollY = false,
   } = params;
 
   const hasEmptyAction = Boolean(emptyActionText && onEmptyAction);
@@ -352,11 +355,12 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
     const base: any = typeof scroll === 'object' && scroll !== null ? { ...scroll } : {};
     if (!scroll && hasFixedColumn) base.x = 'max-content';
     // U-1：调用方未指定 scroll.y 且处于全高布局时，注入测得的填充高度
-    if (callerY === undefined && fillScrollY !== undefined) {
+    // D-29x：disableFillScrollY=true 时关闭注入，表格按内容自然撑开、无内部上下滚动
+    if (!disableFillScrollY && callerY === undefined && fillScrollY !== undefined) {
       base.y = fillScrollY;
     }
     return Object.keys(base).length > 0 ? base : undefined;
-  }, [scroll, hasFixedColumn, fillScrollY]);
+  }, [scroll, hasFixedColumn, fillScrollY, disableFillScrollY]);
 
   const mergedComponents = React.useMemo(() => {
     const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};
