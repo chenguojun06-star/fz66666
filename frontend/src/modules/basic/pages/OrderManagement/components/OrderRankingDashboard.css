@@ -1,12 +1,12 @@
 /* 下单排行网格数据看板 */
 
 .order-ranking-grid {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   border-radius: 6px;
 }
 
 .order-ranking-grid .ant-card-body {
-  padding: 12px 16px;
+  padding: 8px 12px;
 }
 
 /* 头部 */
@@ -14,8 +14,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--table-border-color, var(--color-border-light));
 }
 
@@ -25,7 +25,7 @@
 }
 
 .ranking-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--neutral-text, var(--color-gray-800));
   margin-right: auto;
@@ -34,7 +34,7 @@
 .ranking-stats {
   display: flex;
   gap: 12px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--neutral-text-light, var(--color-text-muted));
 }
 
@@ -43,12 +43,12 @@
   font-weight: 600;
 }
 
-/* 网格容器 - 5列布局，最大高度 */
+/* 网格容器 - 5列布局，压缩高度只显示头部几行（其余内部滚动） */
 .ranking-grid-container {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  max-height: 320px; /* 约10行的高度 */
+  gap: 6px;
+  max-height: 120px; /* 约4行的高度 */
   overflow-y: auto;
   padding-right: 4px;
 }

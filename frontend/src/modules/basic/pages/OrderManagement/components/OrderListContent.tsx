@@ -104,6 +104,7 @@ const OrderListContent: React.FC<Props> = ({
           dataSource={styles}
           loading={loading}
           stickyHeader
+          disableFillScrollY
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.pageSize,
