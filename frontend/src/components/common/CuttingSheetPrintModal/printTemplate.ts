@@ -95,6 +95,10 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
               <span class="info-label">订单号：</span>
               <span class="info-value">${orderNo}</span>
             </div>
+            <div class="info-item">
+              <span class="info-label">床号：</span>
+              <span class="info-value">${bedNoDisplay}</span>
+            </div>
             ${expectedShipDate ? `
             <div class="info-item">
               <span class="info-label">交期：</span>
@@ -157,9 +161,7 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
       </div>
 
       <div class="print-footer">
-        <span class="footer-item">打印人：${printerName}</span>
-        <span class="footer-item">床号：${bedNoDisplay}</span>
-        <span class="footer-item">打印时间：${printTime}</span>
+        <span class="footer-item">打印人：${printerName}&nbsp;&nbsp;${printTime}</span>
       </div>
     </div>
   `;
