@@ -68,7 +68,6 @@ const BomTableSection: React.FC<BomTableSectionProps> = ({ bom, showPrice }) => 
       { title: '单位', dataIndex: 'unit', key: 'unit', render: (v: unknown) => (v ? String(v) : '-') },
       { title: '供应商', dataIndex: 'supplier', key: 'supplier', render: (v: unknown) => (v ? String(v) : '-') },
     ] : []),
-    { title: '备注', dataIndex: 'remark', key: 'remark', render: (v: unknown) => String(v ?? '').trim() ? String(v) : '-' },
   ];
 
   return (
