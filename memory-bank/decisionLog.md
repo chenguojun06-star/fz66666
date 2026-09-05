@@ -1,7 +1,23 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-05（新增 D-299 财务钱流页续梳理）
+> 最后更新：2026-09-05（新增 D-300 外发扫码闭环+费用报销找回+财务权限全覆盖）
+
+---
+
+## D-300：外发扫码闭环 + 费用报销入口找回 + 财务页面权限全覆盖（2026-09-05）
+
+用户三问：①外发结算「外部工厂扫码」为什么没有记录；②费用报销页面怎么找不到了；③是不是所有页面都能控制给谁看。
+
+**①外发扫码空（两层根因）**：
+- 扫码落库 factory_id 取 `UserContext.factoryId()`（登录账号绑定工厂），外发工厂工人账号多未绑定 → 写 NULL；查询端 externalOnly 用 `isNotNull(factory_id)` → 永远空。
+- `delegate_target_type/id/name`（委托工厂三字段）**全后端无任何写入点**——纯展示死字段。
+- 修复：写入端兜底（上下文无工厂→回填订单承做工厂 order.factoryId，同步写 delegate 三件套）；查询端改 `inSql factory_type='OUTSOURCE'`（写入端回填后内部厂也会有 factory_id，不用 isNotNull 防混入）；存量 `ScanRecordFactoryBackfillRunner` 幂等回填（仅 OUTSOURCE 订单）。
+
+**②费用报销丢失**：菜单曾按"财税工具统一入口"裁掉独立入口，但 TaxExport 实际只有 发票台账/应付/税率/数据导出 四个 tab，没承接费用报销→入口凭空消失。找回：财务管理菜单补回「费用报销」「员工借支」两项。
+
+**③权限覆盖核实**：机制完整（routeToPermissionCode→resolvePermissionCode→hasPermissionForPath，无码=默认可见；管理员全可见）。缺口=财务总览/每日流水/付款计划/财税工具/EC收入五个路由**无权限码**→对所有角色永久可见、无法控制。补码：财务总览+每日流水→MENU_FINISHED_SETTLEMENT；付款计划→MENU_PAYMENT_APPROVAL；财税工具+EC→MENU_FINANCE_EXPORT；权限矩阵行 label 同步对齐（付款计划归"收付款中心（含付款计划）"，"费用管理"改"费用报销"）。
+**注意**：补码后非管理员角色若原来靠"无码默认可见"看这些页，现在需要在岗位权限矩阵勾选对应权限才可见——这是"可控"的代价与目的。
 
 ---
 

@@ -54,10 +54,10 @@ export const MODULE_SECTIONS = [
     // MENU_FINISHED_SETTLEMENT 同时是 财务总览/工资结算/外发结算 三个页面的准入码（routeToPermissionCode）
     { label: '财务总览（含外发结算）', code: permissionCodes.financeDashboard },
     { label: '工资结算', code: permissionCodes.payrollSummary },
-    { label: '物料对账（含应付/付款计划）', code: permissionCodes.materialRecon },
-    { label: '收付款中心', code: permissionCodes.wagePayment },
+    { label: '物料对账', code: permissionCodes.materialRecon },
+    { label: '收付款中心（含付款计划）', code: permissionCodes.wagePayment },
     { label: '员工借支', code: permissionCodes.employeeAdvance },
-    { label: '费用管理', code: permissionCodes.expenseReimbursement },
+    { label: '费用报销', code: permissionCodes.expenseReimbursement },
     { label: '财税工具（含EC销售收入）', code: permissionCodes.financeTaxExport },
   ]},
   { title: '系统设置', items: [

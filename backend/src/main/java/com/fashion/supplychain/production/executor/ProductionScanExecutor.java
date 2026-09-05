@@ -596,7 +596,18 @@ public class ProductionScanExecutor {
         sr.setTotalAmount(computeTotalAmount(unitPrice, quantity)); sr.setProcessCode(processCode);
         sr.setProgressStage(progressStage); sr.setProcessName(processName);
         sr.setOperatorId(operatorId); sr.setOperatorName(operatorName);
-        sr.setFactoryId(com.fashion.supplychain.common.UserContext.factoryId());
+        // D-300：外发工厂工人账号多未绑定 factory_id，写 NULL 导致财务「外部工厂扫码」永远查不到。
+        // 兜底：上下文无工厂时回填订单承做工厂（外发订单=外发厂ID），并把委托工厂三件套一并落库。
+        String scanFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (!org.springframework.util.StringUtils.hasText(scanFactoryId) && order != null) {
+            scanFactoryId = order.getFactoryId();
+        }
+        sr.setFactoryId(scanFactoryId);
+        if (order != null && org.springframework.util.StringUtils.hasText(order.getFactoryId())) {
+            sr.setDelegateTargetType("FACTORY");
+            sr.setDelegateTargetId(order.getFactoryId());
+            sr.setDelegateTargetName(order.getFactoryName());
+        }
 
         LocalDateTime now = LocalDateTime.now();
         if (clientScanTime != null && clientScanTime.isAfter(now.minusDays(7)) && !clientScanTime.isAfter(now.plusMinutes(5))) {

@@ -604,7 +604,10 @@ export const menuConfig: MenuSection[] = [
       // ========== 收付款 ==========
       { label: '付款计划', path: paths.financePaymentSchedule, icon: React.createElement(ClockCircleOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
-      // ========== 财税工具（统一入口：费用/借支/EC/损耗） ==========
+      // ========== 报销与借支（D-300 找回：此前裁掉独立入口后财税工具未承接，用户找不到） ==========
+      { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(DollarOutlined) },
+      { label: '员工借支', path: paths.employeeAdvance, icon: React.createElement(DollarOutlined) },
+      // ========== 财税工具（统一入口：发票台账/应付/税率/数据导出） ==========
       { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
   },
@@ -700,6 +703,12 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.payrollOperatorSummary]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）
   [paths.financeCenter]: permissionCodes.financeCenter,
+  // D-300 权限补配：财务总览/付款计划/财税工具/每日流水/EC收入此前无码=对所有角色永久可见无法控制
+  [paths.financeDashboard]: permissionCodes.financeDashboard, // 财务总览 MENU_FINISHED_SETTLEMENT（与工资/外发结算同码）
+  [paths.dailyFlow]: permissionCodes.financeDashboard, // 每日流水已并入财务总览tab，同码
+  [paths.financePaymentSchedule]: permissionCodes.wagePayment, // 付款计划属收付款链路，MENU_PAYMENT_APPROVAL
+  [paths.financeTaxExport]: permissionCodes.financeTaxExport, // 财税工具 MENU_FINANCE_EXPORT
+  [paths.ecSalesRevenue]: permissionCodes.financeTaxExport, // EC销售收入随财税工具同码
   [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.employeeAdvance]: permissionCodes.employeeAdvance,
   [paths.wagePayment]: permissionCodes.wagePayment,
