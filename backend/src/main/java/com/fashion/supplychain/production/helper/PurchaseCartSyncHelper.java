@@ -26,6 +26,9 @@ public class PurchaseCartSyncHelper {
     @Autowired
     private PurchaseCartItemMapper purchaseCartItemMapper;
 
+    @Autowired
+    private com.fashion.supplychain.production.mapper.PurchaseCartMapper purchaseCartMapper;
+
     /**
      * 采购单落库后同步清理购物车同需求条目。
      * 匹配规则：materialCode 必须相等；
@@ -85,6 +88,15 @@ public class PurchaseCartSyncHelper {
             }
             List<String> ids = hits.stream().map(PurchaseCartItem::getId).collect(Collectors.toList());
             purchaseCartItemMapper.deleteByIds(ids, tenantId);
+            // 删除后重算受影响购物车的汇总行（件数/合计金额），
+            // 否则抽屉标题/合计仍显示旧数字，列表却已空（僵尸计数）
+            java.util.Set<String> cartIds = hits.stream()
+                    .map(PurchaseCartItem::getCartId)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toSet());
+            for (String cartId : cartIds) {
+                recalculateCartTotal(cartId, tenantId);
+            }
             log.info("[CartSync] 采购单 {} 落库后清理购物车同需求条目 {} 条: materialCode={}, styleId={}, styleNo={}",
                     purchase.getPurchaseNo(), ids.size(), purchase.getMaterialCode(), purchase.getStyleId(), purchase.getStyleNo());
             return ids.size();
@@ -92,6 +104,26 @@ public class PurchaseCartSyncHelper {
             log.warn("[CartSync] 购物车同步清理失败（不影响采购主流程）: purchaseNo={}, err={}",
                     purchase.getPurchaseNo(), e.getMessage());
             return -1;
+        }
+    }
+
+    /** 与 PurchaseCartOrchestrator.recalculateCartTotal 同口径：按剩余条目重算购物车汇总行 */
+    private void recalculateCartTotal(String cartId, Long tenantId) {
+        try {
+            List<PurchaseCartItem> remaining = purchaseCartItemMapper.selectByCartId(cartId, tenantId);
+            com.fashion.supplychain.production.entity.PurchaseCart cart =
+                    purchaseCartMapper.selectById(cartId);
+            if (cart == null) {
+                return;
+            }
+            cart.setTotalItems(remaining.size());
+            cart.setTotalAmount(remaining.stream()
+                    .map(PurchaseCartItem::getTotalAmount)
+                    .filter(java.util.Objects::nonNull)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+            purchaseCartMapper.updateById(cart);
+        } catch (Exception e) {
+            log.warn("[CartSync] 重算购物车汇总失败: cartId={}, err={}", cartId, e.getMessage());
         }
     }
 }

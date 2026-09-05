@@ -551,9 +551,10 @@ public class PurchaseCartOrchestrator {
             purchaseNos.add(purchaseNo);
         }
         
-        // 删除已下单的物料
+        // 删除已下单的物料（删除后必须重算汇总行，否则购物车抽屉仍显示旧"件数/合计"僵尸数字）
         if (itemIds != null && !itemIds.isEmpty()) {
             purchaseCartItemMapper.deleteByIds(itemIds, tenantId);
+            recalculateCartTotal(cart.getId());
         } else {
             purchaseCartService.clearCart(tenantId, userId);
         }

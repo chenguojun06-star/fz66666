@@ -59,6 +59,26 @@ public class PurchaseCartServiceImpl extends ServiceImpl<PurchaseCartMapper, Pur
         List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cart.getId(), tenantId);
         // 读取自愈：历史草稿（样衣BOM入口此前未存图片）按 SAMPLE 来源回查款式封面，列表/预览即时显示款式图
         purchaseCartOrchestrator.enrichItemsStyleLink(tenantId, items);
+        // 读取自愈（D-297）：历史删除路径（跨节点同步/部分结算）曾不重算汇总行，
+        // 出现"2件/¥440"僵尸计数而列表已空。发现不一致即修正。
+        int actualCount = items.size();
+        BigDecimal actualAmount = items.stream()
+                .map(PurchaseCartItem::getTotalAmount)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        boolean countMismatch = cart.getTotalItems() == null || cart.getTotalItems() != actualCount;
+        boolean amountMismatch = cart.getTotalAmount() == null
+                ? actualAmount.compareTo(BigDecimal.ZERO) != 0
+                : cart.getTotalAmount().compareTo(actualAmount) != 0;
+        if (countMismatch || amountMismatch) {
+            cart.setTotalItems(actualCount);
+            cart.setTotalAmount(actualAmount);
+            PurchaseCart patch = new PurchaseCart();
+            patch.setId(cart.getId());
+            patch.setTotalItems(actualCount);
+            patch.setTotalAmount(actualAmount);
+            purchaseCartMapper.updateById(patch);
+        }
         cart.setItems(items);
         return cart;
     }

@@ -17,8 +17,12 @@ export const CartSummary: React.FC<CartSummaryProps> = ({
   onConfirm,
   submitting,
 }) => {
-  const totalItems = cart?.totalItems || 0;
-  const totalAmount = cart?.totalAmount || 0;
+  // 汇总行可能因后端删除路径未重算而滞后（僵尸计数），按实际条目推导
+  const items = cart?.items || [];
+  const totalItems = items.length || cart?.totalItems || 0;
+  const totalAmount = items.length > 0
+    ? items.reduce((sum, it) => sum + (Number(it.totalAmount) || 0), 0)
+    : 0;
 
   return (
     <div

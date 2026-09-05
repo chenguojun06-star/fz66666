@@ -9,7 +9,8 @@ interface CartHeaderProps {
 }
 
 export const CartHeader: React.FC<CartHeaderProps> = ({ cart, onClear }) => {
-  const itemCount = cart?.totalItems || 0;
+  // 汇总行可能因后端删除路径未重算而滞后（僵尸计数），以实际条目数为准
+  const itemCount = cart?.items?.length ?? cart?.totalItems ?? 0;
   
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
