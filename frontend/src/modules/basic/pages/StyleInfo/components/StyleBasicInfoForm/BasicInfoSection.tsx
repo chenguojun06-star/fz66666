@@ -261,9 +261,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
         {/* 客户（从 CustomerInfoSection 迁移至此） */}
         <Col xs={24} md={12}>
-          <Form.Item name="customerId" noStyle hidden>
-            <Input id="customerId" />
-          </Form.Item>
           <Form.Item
             name="customer"
             label="客户"
