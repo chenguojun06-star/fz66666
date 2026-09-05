@@ -175,6 +175,18 @@ public class ProductWarehousing {
     private String size;
 
     /**
+     * 床号（从菲号CuttingBundle填充，用于区分同扎号不同床的重复菲号显示）
+     */
+    @TableField(exist = false)
+    private Integer bedNo;
+
+    /**
+     * 子床次编号（从菲号CuttingBundle填充）
+     */
+    @TableField(exist = false)
+    private Integer bedSubNo;
+
+    /**
      * 裁剪数（从菲号CuttingBundle.quantity填充）
      */
     private Integer cuttingQuantity;

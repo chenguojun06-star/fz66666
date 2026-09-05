@@ -5,6 +5,7 @@ import { buildActionColumns } from './columnsAction';
 
 export interface BuildColumnsParams {
   goToDetail: (record: WarehousingType, tab?: string) => void;
+  goToDetailPage: (record: WarehousingType, tab?: string) => void;
   isOrderFrozen: (orderId: string) => boolean;
   dataSource: WarehousingType[];
 }

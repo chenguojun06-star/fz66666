@@ -7,7 +7,7 @@ import api from '@/utils/api';
 import { printWarehousingQr } from './helpers';
 import type { BuildColumnsParams } from './columns';
 
-export function buildActionColumns({ goToDetail, isOrderFrozen }: BuildColumnsParams) {
+export function buildActionColumns({ goToDetail, goToDetailPage, isOrderFrozen }: BuildColumnsParams) {
   return [
     {
       title: '操作',
@@ -182,6 +182,14 @@ export function buildActionColumns({ goToDetail, isOrderFrozen }: BuildColumnsPa
             ),
           });
         }
+
+        // D-156：详情页入口——抽屉适合快捷操作，完整信息请进入内部详情页
+        actions.push({
+          key: 'detail',
+          label: '详情',
+          title: '进入质检入库内部详情页',
+          onClick: () => goToDetailPage(record),
+        });
 
         return <RowActions actions={actions} />;
       },

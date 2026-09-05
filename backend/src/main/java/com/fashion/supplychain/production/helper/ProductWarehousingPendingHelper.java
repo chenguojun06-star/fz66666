@@ -275,6 +275,8 @@ public class ProductWarehousingPendingHelper {
             Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("bundleId", bundleId);
             item.put("bundleNo", bundle != null ? bundle.getBundleNo() : null);
+            item.put("bedNo", bundle != null ? bundle.getBedNo() : null);
+            item.put("bedSubNo", bundle != null ? bundle.getBedSubNo() : null);
             item.put("qrCode", bundle != null ? bundle.getQrCode() : "");
             item.put("color", bundle != null ? bundle.getColor() : "");
             item.put("size", bundle != null ? bundle.getSize() : "");
@@ -455,6 +457,7 @@ public class ProductWarehousingPendingHelper {
             return null;
         }
         Map<String, Object> styleData = new java.util.LinkedHashMap<>();
+        styleData.put("styleId", styleInfo.getId());
         styleData.put("cover", styleInfo.getCover());
         styleData.put("sizeColorConfig", styleInfo.getSizeColorConfig());
         styleData.put("category", styleInfo.getCategory());

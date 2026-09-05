@@ -194,6 +194,13 @@ public class ProductWarehousingQueryHelper {
             if (w.getCuttingQuantity() == null && bundle.getQuantity() != null) {
                 w.setCuttingQuantity(bundle.getQuantity());
             }
+            // 床号/子床次：用于区分同扎号不同床的重复菲号显示
+            if (w.getBedNo() == null) {
+                w.setBedNo(bundle.getBedNo());
+            }
+            if (w.getBedSubNo() == null) {
+                w.setBedSubNo(bundle.getBedSubNo());
+            }
         }
     }
 

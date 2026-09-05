@@ -25,8 +25,8 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
   isMobile: _isMobile,
   onOpenInspect,
 }) => {
-  const { goToDetail } = useWarehousingTableData({ onOpenInspect });
-  const columns = buildColumns({ goToDetail, isOrderFrozen, dataSource });
+  const { goToDetail, goToDetailPage } = useWarehousingTableData({ onOpenInspect });
+  const columns = buildColumns({ goToDetail, goToDetailPage, isOrderFrozen, dataSource });
 
   return (
     <ResizableTable
