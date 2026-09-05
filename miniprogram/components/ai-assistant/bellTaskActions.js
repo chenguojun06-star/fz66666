@@ -257,22 +257,19 @@ function handleUrgentEvent(_task) { // eslint-disable-line no-unused-vars
 }
 
 /**
- * 处理延期订单 - 跳转到工作页面并定位该订单
+ * 处理延期订单 - 直达该订单详情页（D-306 用户拍板：不再落生产管理列表定位）
  * @param {Object} task - 延期订单对象
  * @returns {void}
  */
 function handleOverdueOrder(task) {
   const orderNo = task.orderNo || '';
   const orderId = task.id || '';
-  try {
-    wx.setStorageSync('pending_order_hint', orderNo);
-    wx.setStorageSync('highlight_order_no', orderNo);
-  } catch (e) {
-    console.error('存储失败', e);
-  }
 
-  if (orderId) {
-    safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(orderId) }, 'navigateTo').catch(() => {});
+  if (orderId || orderNo) {
+    const params = [];
+    if (orderId) params.push('orderId=' + encodeURIComponent(orderId));
+    if (orderNo) params.push('orderNo=' + encodeURIComponent(orderNo));
+    safeNavigate({ url: '/pages/dashboard/order-detail/index?' + params.join('&') }, 'navigateTo').catch(() => {});
   } else {
     safeNavigate({ url: '/pages/smart-ops/index' }, 'navigateTo').catch(() => {});
   }
