@@ -217,10 +217,10 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {/* 类型筛选：defaultBillType 锁定时不显示 */}
         {!defaultBillType && (
-          <Select id="billTypeFilter" style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
+          <Select style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
         )}
-        <Select id="billCategoryFilter" style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
-        <Select id="billStatusFilter" style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
+        <Select style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
+        <Select style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
         {/* 结算月选择器 */}
         <DatePicker.MonthPicker
           style={{ width: 120 }}
@@ -254,9 +254,9 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
             }
           }}
         />
-        <Input id="counterpartyNameSearch" style={{ width: 160 }} placeholder="对方名称" allowClear prefix={<SearchOutlined />}
+        <Input style={{ width: 160 }} placeholder="对方名称" allowClear prefix={<SearchOutlined />}
           onPressEnter={e => updateQuery({ counterpartyName: (e.target as HTMLInputElement).value || undefined })} />
-        <Input id="orderNoSearch" style={{ width: 160 }} placeholder="订单号" allowClear prefix={<FileTextOutlined />}
+        <Input style={{ width: 160 }} placeholder="订单号" allowClear prefix={<FileTextOutlined />}
           onPressEnter={e => updateQuery({ orderNo: (e.target as HTMLInputElement).value || undefined })} />
         {selectedKeys.length > 0 && (
           <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleBatchConfirm}>

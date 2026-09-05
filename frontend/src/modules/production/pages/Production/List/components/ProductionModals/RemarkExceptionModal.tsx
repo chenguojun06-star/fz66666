@@ -31,7 +31,6 @@ const RemarkExceptionModal: React.FC<RemarkExceptionModalProps> = ({
       confirmLoading={remarkSaving}
     >
       <Input.TextArea
-        id="productionRemark"
         value={remarkText}
         onChange={(e) => setRemarkText(e.target.value)}
         rows={3}

@@ -69,7 +69,6 @@ const ApproveUserModal: React.FC<ApproveUserModalProps> = ({
             批准原因<span style={{ color: 'var(--color-danger)' }}>*</span>
           </div>
           <TextArea
-            id="approveReason"
             rows={3}
             maxLength={200}
             showCount

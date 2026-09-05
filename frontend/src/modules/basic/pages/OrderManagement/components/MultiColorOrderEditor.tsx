@@ -318,7 +318,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
         <Button onClick={() => syncSelection(availableColors, selectedSizes)}>全选颜色</Button>
         <Button onClick={() => syncSelection(selectedColors, availableSizes)}>全选码数</Button>
         <Button onClick={() => syncSelection([], [])}>清空</Button>
-        <InputNumber id="quickFillQty" min={1} value={quickFillQty} onChange={(value) => setQuickFillQty(Math.max(1, Number(value) || 1))} />
+        <InputNumber min={1} value={quickFillQty} onChange={(value) => setQuickFillQty(Math.max(1, Number(value) || 1))} />
         <Button type="primary" ghost onClick={() => applyQuickFill(quickFillQty)}>全部铺量</Button>
       </Space>
 

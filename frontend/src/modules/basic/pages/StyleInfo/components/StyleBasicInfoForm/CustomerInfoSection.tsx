@@ -22,18 +22,17 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
   return (
     <SectionBox title="客户与定价">
       <Form.Item name="customerId" noStyle hidden>
-        <Input id="customerId" />
+        <Input />
       </Form.Item>
       <Row gutter={[16, 8]}>
         <Col xs={24} sm={12}>
           <Form.Item name="orderType" label="跟单员" style={{ marginBottom: 8 }}>
-            <StaffSelect id="orderType" placeholder="搜索或选择跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
+            <StaffSelect placeholder="搜索或选择跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>
           <Form.Item name="salesChannel" label="销售渠道" style={{ marginBottom: 8 }}>
             <Select
-              id="salesChannel"
               placeholder="选择销售渠道"
               disabled={editLocked}
               allowClear
@@ -44,22 +43,22 @@ const CustomerInfoSection: React.FC<SectionFormContextProps> = ({
         </Col>
         <Col xs={24} sm={12}>
           <Form.Item name="plateType" label="板类" style={{ marginBottom: 8 }}>
-            <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)} style={{ width: '100%' }} id="plateType" />
+            <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)} style={{ width: '100%' }} />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>
           <Form.Item name="price" label="打板价" style={{ marginBottom: 8 }}>
-            <InputNumber id="price" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
+            <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>
           <Form.Item name="tagPrice" label="吊牌价" style={{ marginBottom: 8 }}>
-            <InputNumber id="tagPrice" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
+            <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>
           <Form.Item name="salesPrice" label="销售价" style={{ marginBottom: 8 }}>
-            <InputNumber id="salesPrice" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
+            <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
           </Form.Item>
         </Col>
       </Row>

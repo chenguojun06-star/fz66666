@@ -54,10 +54,10 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
                     {/* Hidden username field for browser password manager accessibility */}
                     <input type="text" name="username" autoComplete="username" defaultValue={username ?? ''} style={{ display: 'none' }} readOnly aria-hidden="true" />
                     <Form.Item label="原密码" name="oldPassword" rules={[{ required: true, message: '请输入原密码' }]}>
-                        <Input.Password id="oldPassword" placeholder="请输入当前密码" autoComplete="current-password" />
+                        <Input.Password placeholder="请输入当前密码" autoComplete="current-password" />
                     </Form.Item>
                     <Form.Item label="新密码" name="newPassword" rules={[{ required: true, min: 6, message: '新密码不能少于6位' }]}>
-                        <Input.Password id="newPassword" placeholder="请输入新密码（至少6位）" autoComplete="new-password" />
+                        <Input.Password placeholder="请输入新密码（至少6位）" autoComplete="new-password" />
                     </Form.Item>
                     <Form.Item label="确认新密码" name="confirmPassword" dependencies={['newPassword']} rules={[
                         { required: true, message: '请再次输入新密码' },
@@ -68,7 +68,7 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
                             },
                         }),
                     ]}>
-                        <Input.Password id="confirmPassword" placeholder="请再次输入新密码" autoComplete="new-password" />
+                        <Input.Password placeholder="请再次输入新密码" autoComplete="new-password" />
                     </Form.Item>
                     <Form.Item style={{ marginBottom: 0 }}>
                         <Button type="primary" onClick={onChangePassword} loading={savingPwd} icon={<LockOutlined />}>

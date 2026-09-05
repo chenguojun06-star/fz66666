@@ -212,26 +212,25 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                   <ImageUploadBox size={104} label="物料图片" enableDrop />
                 </Form.Item>
                 <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
-                  <Input id="materialCode" />
+                  <Input />
                 </Form.Item>
                 <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '必填' }]}>
-                  <Input id="materialName" />
+                  <Input />
                 </Form.Item>
                 <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
-                  <DictAutoComplete dictType="material_unit" placeholder="请输入或选择单位" id="unit" />
+                  <DictAutoComplete dictType="material_unit" placeholder="请输入或选择单位" />
                 </Form.Item>
                 <Form.Item name="supplierId" hidden>
-                  <Input id="supplierId" />
+                  <Input />
                 </Form.Item>
                 <Form.Item name="supplierContactPerson" hidden>
-                  <Input id="supplierContactPerson" />
+                  <Input />
                 </Form.Item>
                 <Form.Item name="supplierContactPhone" hidden>
-                  <Input id="supplierContactPhone" />
+                  <Input />
                 </Form.Item>
                 <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '必填' }]}>
                   <SupplierSelect
-                    id="supplierName"
                     placeholder="选择供应商"
                     onChange={(_value, option) => {
                       const selectedOption = Array.isArray(option) ? option[0] : option;
@@ -247,7 +246,6 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                 </Form.Item>
                 <Form.Item name="materialType" label="物料类型" initialValue="accessory">
                   <Select
-                    id="materialType"
                     options={[
                       { value: 'fabric', label: '面料' },
                       { value: 'lining', label: '里料' },
@@ -267,22 +265,22 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                   />
                 </Form.Item>
                 <Form.Item name="color" label="颜色">
-                  <DictAutoComplete dictType="color" placeholder="请输入或选择颜色" id="color" />
+                  <DictAutoComplete dictType="color" placeholder="请输入或选择颜色" />
                 </Form.Item>
                 <Form.Item name="specifications" label="规格">
-                  <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" id="specifications" />
+                  <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" />
                 </Form.Item>
                 <Form.Item name="fabricComposition" label="成分">
-                  <Input id="fabricComposition" placeholder="如：100%棉" />
+                  <Input placeholder="如：100%棉" />
                 </Form.Item>
                 <Form.Item name="fabricWeight" label="克重">
-                  <Input id="fabricWeight" placeholder="如：220g" />
+                  <Input placeholder="如：220g" />
                 </Form.Item>
                 <Form.Item name="unitPrice" label="单价" initialValue={0}>
-                  <InputNumber id="unitPrice" min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
+                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
                 </Form.Item>
                 <Form.Item name="remark" label="备注">
-                  <Input.TextArea id="remark" rows={3} placeholder="请输入备注" />
+                  <Input.TextArea rows={3} placeholder="请输入备注" />
                 </Form.Item>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

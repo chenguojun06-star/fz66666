@@ -68,7 +68,6 @@ export function useRemarks({ orderNo }: UseRemarksArgs) {
               请输入{actionLabel}原因（将记录到订单操作记录）：
             </p>
             <Input.TextArea
-              id="action-reason-input"
               rows={3}
               maxLength={500}
               showCount

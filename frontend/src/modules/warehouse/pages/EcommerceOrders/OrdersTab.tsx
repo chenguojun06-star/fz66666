@@ -81,11 +81,11 @@ const OrdersTab: React.FC<Props> = ({ onInitReturn }) => {
 
       <Card style={{ marginBottom: 10 }}>
         <Space wrap>
-          <Select id="ecomPlatformFilter" placeholder="全部平台" allowClear value={h.filterPlatform || undefined}
+          <Select placeholder="全部平台" allowClear value={h.filterPlatform || undefined}
             onChange={v => { h.setFilterPlatform(v ?? ''); h.setPage(1); }} style={{ width: 120 }}
             options={getPlatformOptions()}
           />
-          <Select id="ecomStatusFilter" placeholder="全部状态" allowClear value={h.filterStatus}
+          <Select placeholder="全部状态" allowClear value={h.filterStatus}
             onChange={v => { h.setFilterStatus(v); h.setPage(1); }} style={{ width: 100 }}>
             {Object.entries(STATUS_MAP).map(([k, v]) => (
               <Option key={k} value={Number(k)}>{v.label}</Option>

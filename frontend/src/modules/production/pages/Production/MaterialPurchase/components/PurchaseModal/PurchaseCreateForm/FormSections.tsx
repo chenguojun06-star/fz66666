@@ -68,7 +68,7 @@ export const MaterialInfoSection: React.FC<MaterialInfoSectionProps> = ({
   <Row gutter={[16, 0]}>
     <Col xs={24} md={6}>
       <Form.Item name="materialType" label="物料类型" rules={[{ required: true, message: '必填' }]}>
-        <Select id="materialType">
+        <Select>
           <Option value="fabricA">面料A</Option>
           <Option value="fabricB">面料B</Option>
           <Option value="fabricC">面料C</Option>
@@ -90,7 +90,6 @@ export const MaterialInfoSection: React.FC<MaterialInfoSectionProps> = ({
     <Col xs={24} md={6}>
       <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
         <Select
-          id="materialCode"
           showSearch
           filterOption={false}
           loading={materialDbLoading}
@@ -105,12 +104,12 @@ export const MaterialInfoSection: React.FC<MaterialInfoSectionProps> = ({
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '必填' }]}>
-        <Input id="materialName" />
+        <Input />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
-        <Input id="unit" />
+        <Input />
       </Form.Item>
     </Col>
   </Row>
@@ -139,35 +138,35 @@ export const MaterialDetailSection: React.FC<MaterialDetailSectionProps> = ({
         rules={colorOptions && colorOptions.length > 1 ? [{ required: true, message: '多颜色订单必须选择颜色' }] : undefined}
       >
         {colorOptions && colorOptions.length > 1 ? (
-          <Select id="color" placeholder="选择颜色" options={colorOptions} allowClear />
+          <Select placeholder="选择颜色" options={colorOptions} allowClear />
         ) : (
-          <Input id="color" placeholder="输入颜色" />
+          <Input placeholder="输入颜色" />
         )}
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="size" label="尺码">
-        <Input id="size" placeholder="输入尺码" />
+        <Input placeholder="输入尺码" />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="specifications" label="规格">
-        <Input id="specifications" />
+        <Input />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="fabricComposition" label="成分">
-        <Input id="fabricComposition" placeholder="如：棉100%" />
+        <Input placeholder="如：棉100%" />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="fabricWidth" label="幅宽">
-        <Input id="fabricWidth" placeholder="如：150cm" />
+        <Input placeholder="如：150cm" />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="fabricWeight" label="克重">
-        <Input id="fabricWeight" placeholder="如：280g/m²" />
+        <Input placeholder="如：280g/m²" />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
@@ -185,7 +184,6 @@ export const SupplierSection: React.FC<SupplierSectionProps> = ({ form }) => (
     <Col xs={24} md={6}>
       <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '必填' }]}>
         <SupplierSelect
-          id="supplierName"
           onChange={(value, option) => {
             form.setFieldsValue({
               supplierName: value,
@@ -197,28 +195,28 @@ export const SupplierSection: React.FC<SupplierSectionProps> = ({ form }) => (
         />
       </Form.Item>
       <Form.Item name="supplierId" hidden>
-        <Input id="supplierId" />
+        <Input />
       </Form.Item>
       <Form.Item name="supplierContactPerson" hidden>
-        <Input id="supplierContactPerson" />
+        <Input />
       </Form.Item>
       <Form.Item name="supplierContactPhone" hidden>
-        <Input id="supplierContactPhone" />
+        <Input />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="unitPrice" label="单价(元)" rules={[{ required: true, message: '必填' }]}>
-        <InputNumber id="unitPrice" style={{ width: '100%' }} min={0} step={0.01} />
+        <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="totalAmount" label="金额(元)">
-        <InputNumber id="totalAmount" disabled style={{ width: '100%' }} />
+        <InputNumber disabled style={{ width: '100%' }} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="status" label="状态" rules={[{ required: true, message: '必填' }]}>
-        <Select id="status">
+        <Select>
           <Option value="pending">待采购</Option>
           <Option value="partial">部分到货</Option>
           <Option value="completed">全部到货</Option>
@@ -240,12 +238,12 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({ form: _form, p
   <Row gutter={[16, 0]}>
     <Col xs={24} md={6}>
       <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>
-        <InputNumber id="purchaseQuantity" style={{ width: '100%' }} min={0} />
+        <InputNumber style={{ width: '100%' }} min={0} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="arrivedQuantity" label="到货数量">
-        <InputNumber id="arrivedQuantity" style={{ width: '100%' }} min={0} />
+        <InputNumber style={{ width: '100%' }} min={0} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
@@ -273,7 +271,7 @@ export const DocumentSection: React.FC<DocumentSectionProps> = ({ form }) => (
   <Row gutter={[16, 0]}>
     <Col span={24}>
       <Form.Item name="invoiceUrls" hidden>
-        <Input id="invoiceUrls" />
+        <Input />
       </Form.Item>
       <Form.Item label="采购单据" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
         <MultiImageUploadBox
@@ -298,6 +296,6 @@ interface RemarkSectionProps {}
 
 export const RemarkSection: React.FC<RemarkSectionProps> = () => (
   <Form.Item name="remark" label="备注" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
-    <Input.TextArea id="remark" rows={4} />
+    <Input.TextArea rows={4} />
   </Form.Item>
 );

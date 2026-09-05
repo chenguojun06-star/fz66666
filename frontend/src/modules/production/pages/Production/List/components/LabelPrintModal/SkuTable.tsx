@@ -49,7 +49,7 @@ export default function SkuTable({ open, order, styleInfo, printColLabel, onPrin
 
   const columns: ColumnsType<SkuRow> = [
     {
-      title: <Checkbox id="labelSelectAll" checked={allSelected} indeterminate={partialSelected} onChange={toggleAll} />,
+      title: <Checkbox checked={allSelected} indeterminate={partialSelected} onChange={toggleAll} />,
       width: 36, key: 'chk',
       render: (_: unknown, r: SkuRow) =>
         <Checkbox id={`labelRow-${r.key}`} checked={selectedKeys.includes(r.key)} onChange={e => toggleRow(r.key, e.target.checked)} />,

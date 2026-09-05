@@ -109,7 +109,7 @@ export const useSmartReceiveActions = (
     let reason = '';
     Modal.confirm({
       width: '30vw', title: '撤销出库单', icon: <ExclamationCircleOutlined />,
-      content: (<div><p>出库单号：<strong>{record.pickingNo}</strong></p><p>领料人：{record.pickerName}</p><p style={{ marginBottom: 8 }}>撤销后将回退库存并恢复采购任务状态。</p><Input.TextArea id="revokeReason" placeholder="请填写撤销原因（必填）" rows={3} onChange={(e) => { reason = e.target.value; }} /></div>),
+      content: (<div><p>出库单号：<strong>{record.pickingNo}</strong></p><p>领料人：{record.pickerName}</p><p style={{ marginBottom: 8 }}>撤销后将回退库存并恢复采购任务状态。</p><Input.TextArea placeholder="请填写撤销原因（必填）" rows={3} onChange={(e) => { reason = e.target.value; }} /></div>),
       okText: '确认撤销', okButtonProps: { danger: true, type: 'default' }, cancelText: '取消',
       onOk: async () => {
         if (!reason.trim()) { message.error('请填写撤销原因'); throw new Error('请填写撤销原因'); }

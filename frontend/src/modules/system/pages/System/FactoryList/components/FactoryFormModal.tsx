@@ -154,7 +154,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
         <Form form={form} layout="vertical" disabled={mode === 'view'} onFinish={onOk}>
         <Form.Item name="supplierType" label="供应商类型" rules={[{ required: true, message: '请选择供应商类型' }]}>
           <Select
-            id="supplierType"
             options={[
               { value: 'MATERIAL', label: '面辅料供应商' },
               { value: 'OUTSOURCE', label: '外发供应商' },
@@ -168,7 +167,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           extra="选填，用于区分布行 / 辅料店 / 纱线行等细分类型。可直接输入新标签（自动收录），点输入框右侧齿轮可统一管理"
         >
           <DictAutoComplete
-            id="supplierTag"
             dictType="supplier_tag"
             placeholder="请选择或输入类型标签（选填）"
             fallbackOptions={['布行', '辅料店', '纱线行', '五金辅料', '印染厂', '其它']}
@@ -197,7 +195,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
             rules={[{ required: true, message: '请选择内外标签' }]}
           >
             <Select
-              id="factoryType"
               onChange={(val) => {
                 if (val === 'INTERNAL') {
                   form.setFieldsValue({ contactPerson: '', contactPhone: '' });
@@ -213,7 +210,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           </Form.Item>
           <Form.Item name="parentOrgUnitId" label="归属部门">
             <Select
-              id="parentOrgUnitId"
               showSearch
               allowClear
               optionFilterProp="label"
@@ -227,10 +223,10 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
-            <Input id="factoryCode" placeholder="请输入供应商编码" autoComplete="off" />
+            <Input placeholder="请输入供应商编码" autoComplete="off" />
           </Form.Item>
           <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
-            <Input id="factoryName" placeholder="请输入供应商名称" />
+            <Input placeholder="请输入供应商名称" />
           </Form.Item>
         </div>
         <Row gutter={16}>
@@ -244,7 +240,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                     {isInternal ? (
                       <Form.Item name="managerId" label="领取人">
                         <Select
-                          id="managerId"
                           showSearch
                           optionFilterProp="label"
                           placeholder="选择系统用户"
@@ -262,10 +257,10 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                       </Form.Item>
                     ) : (
                       <Form.Item name="contactPerson" label="联系人">
-                        <Input id="contactPerson" placeholder="请输入联系人" />
+                        <Input placeholder="请输入联系人" />
                       </Form.Item>
                     )}
-                    {isInternal && <Form.Item name="contactPerson" hidden><Input id="contactPersonHidden" /></Form.Item>}
+                    {isInternal && <Form.Item name="contactPerson" hidden><Input /></Form.Item>}
                   </>
                 );
               }}
@@ -273,12 +268,12 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           </Col>
           <Col span={8}>
             <Form.Item name="contactPhone" label="联系电话">
-              <Input id="contactPhone" placeholder="请输入联系电话" />
+              <Input placeholder="请输入联系电话" />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item name="address" label="地址">
-              <Input id="address" placeholder="请输入地址" />
+              <Input placeholder="请输入地址" />
             </Form.Item>
           </Col>
         </Row>
@@ -288,7 +283,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           extra="填写实际日均可生产件数，直接影响排产建议评分的准确性"
         >
           <InputNumber
-            id="dailyCapacity"
             min={1}
             max={99999}
             precision={0}
@@ -298,7 +292,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           />
         </Form.Item>
         <Form.Item name="businessLicense" label="营业执照" hidden>
-          <Input id="businessLicense" />
+          <Input />
         </Form.Item>
         <Form.Item label="营业执照图片">
           <ImageUploadBox
@@ -311,11 +305,10 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea id="remark" rows={3} placeholder="请输入备注" />
+          <Input.TextArea rows={3} placeholder="请输入备注" />
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
           <Select
-            id="status"
             options={[
               { value: 'active', label: '营业中' },
               { value: 'inactive', label: '停业' },

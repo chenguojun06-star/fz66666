@@ -114,7 +114,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <Input
-              id="styleName"
               placeholder="请输入款名称"
               disabled={editLocked}
               maxLength={100}
@@ -132,7 +131,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <Input
-              id="styleNo"
               placeholder="请输入款式编码"
               disabled={editLocked}
               maxLength={64}
@@ -173,7 +171,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <Select
-              id="category"
               placeholder="请选择商品分类"
               disabled={isFieldLocked(currentStyle?.category)}
               style={{ width: '100%' }}
@@ -194,7 +191,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <Select
-              id="season"
               placeholder="请选择季节分类"
               disabled={isFieldLocked(currentStyle?.season)}
               style={{ width: '100%' }}
@@ -233,7 +229,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <StaffSelect
-              id="designer"
               placeholder="搜索或选择设计师"
               disabled={editLocked}
             />
@@ -253,7 +248,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               placeholder="请输入或选择商品品牌"
               disabled={editLocked}
               style={{ width: '100%' }}
-              id="theme"
               enableQuickManage={!editLocked}
             />
           </Form.Item>
@@ -267,7 +261,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <CustomerSelect
-              id="customer"
               placeholder="搜索或输入客户名称"
               disabled={isFieldLocked(currentStyle?.customer)}
               enableQuickManage={!isFieldLocked(currentStyle?.customer)}
@@ -286,13 +279,13 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         {/* 供应商（新增字段） */}
         <Col xs={24} md={12}>
           <Form.Item name="supplierId" noStyle hidden>
-            <Input id="supplierId" />
+            <Input />
           </Form.Item>
           <Form.Item name="supplierContactPerson" noStyle hidden>
-            <Input id="supplierContactPerson" />
+            <Input />
           </Form.Item>
           <Form.Item name="supplierContactPhone" noStyle hidden>
-            <Input id="supplierContactPhone" />
+            <Input />
           </Form.Item>
           <Form.Item
             name="supplier"
@@ -300,7 +293,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <SupplierSelect
-              id="supplier"
               placeholder="请选择或输入供应商"
               disabled={editLocked}
               style={{ width: '100%' }}
@@ -332,7 +324,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             style={{ marginBottom: 8 }}
           >
             <Input.TextArea
-              id="remark"
               rows={3}
               maxLength={500}
               showCount
@@ -347,7 +338,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={8}>
           <Form.Item name="createTime" label="创建时间" style={{ marginBottom: 8 }}>
             <UnifiedDatePicker
-              id="createTime"
               disabled
               allowClear={false}
               placeholder="系统自动生成"
@@ -359,7 +349,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={8}>
           <Form.Item name="completedTime" label="完成时间" style={{ marginBottom: 8 }}>
             <UnifiedDatePicker
-              id="completedTime"
               disabled
               allowClear={false}
               placeholder="全部环节入库完成后自动生成"
@@ -371,7 +360,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <Col xs={24} md={8}>
           <Form.Item name="deliveryDate" label="交板日期" rules={[{ required: true, message: '请选择交板日期' }]} style={{ marginBottom: 8 }}>
             <UnifiedDatePicker
-              id="deliveryDate"
               disabled={isFieldLocked(currentStyle?.deliveryDate)}
               allowClear
               placeholder="请选择交板日期"

@@ -46,7 +46,6 @@ const FactoryRejectModal: React.FC<FactoryRejectModalProps> = ({
         <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该员工将无法登录系统</p>
       </div>
       <TextArea
-        id="factoryRejectReason"
         placeholder="请输入拒绝原因（必填）"
         value={factoryRejectReason}
         onChange={(e) => setFactoryRejectReason(e.target.value)}

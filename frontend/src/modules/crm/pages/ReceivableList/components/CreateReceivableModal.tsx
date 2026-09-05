@@ -76,7 +76,7 @@ const CreateReceivableModal: React.FC<{
           </Col>
         </Row>
         <Form.Item name="description" label="备注">
-          <Input.TextArea id="description" rows={3} placeholder="备注说明" />
+          <Input.TextArea rows={3} placeholder="备注说明" />
         </Form.Item>
       </Form>
     </ResizableModal>

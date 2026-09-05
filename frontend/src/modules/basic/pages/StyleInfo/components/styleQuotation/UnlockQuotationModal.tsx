@@ -34,7 +34,6 @@ const UnlockQuotationModal: React.FC<Props> = ({
     >
       <div style={{ marginBottom: 8 }}>解锁原因/备注（必填）：</div>
       <Input.TextArea
-        id="unlockRemark"
         value={remark}
         onChange={(e) => onRemarkChange(e.target.value)}
         rows={3}

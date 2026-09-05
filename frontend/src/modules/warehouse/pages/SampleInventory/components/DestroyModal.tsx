@@ -63,7 +63,7 @@ const DestroyModal: React.FC<DestroyModalProps> = ({ visible, stock, onCancel, o
     >
       <Form form={destroyForm} layout="vertical">
         <Form.Item label="库存编号">
-          <Input id="destroyInventoryId" value={stock?.id || '-'} readOnly />
+          <Input value={stock?.id || '-'} readOnly />
         </Form.Item>
         <Form.Item label="基础信息">
           <Input

@@ -52,7 +52,6 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
         <div>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>纸张方向</div>
           <Radio.Group
-            id="cuttingOrientation"
             value={orientation}
             onChange={(e) => setOrientation(e.target.value)}
           >

@@ -104,7 +104,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         <UnifiedRangePicker showTime value={dateRange as any} onChange={(v) => setDateRange(v as any)} style={{ width: 280 }} />
                         <Space>
                             <span style={{ color: 'var(--neutral-text-secondary)' }}>含已结算</span>
-                            <Switch id="includeSettledSwitch" checked={includeSettled} onChange={setIncludeSettled} />
+                            <Switch checked={includeSettled} onChange={setIncludeSettled} />
                         </Space>
                         <Button type="primary" ghost onClick={fetchData} loading={loading}>查询</Button>
                         <Button ghost onClick={reset} disabled={loading}>重置</Button>

@@ -288,7 +288,6 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
               删除后不可恢复。存在未完成订单/在途采购时无法删除。
             </div>
             <Input.TextArea
-              id="deleteSupplierReason"
               rows={3}
               placeholder="请输入删除原因（必填）"
               onChange={e => { reasonValue = e.target.value; }}

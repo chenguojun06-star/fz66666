@@ -94,7 +94,6 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
             审批负责人将负责审批该部门下成员发起的重要操作（删除/撤回/报废等）。
           </p>
           <Select
-            id="managerSelect"
             style={{ width: '100%' }}
             showSearch
             allowClear

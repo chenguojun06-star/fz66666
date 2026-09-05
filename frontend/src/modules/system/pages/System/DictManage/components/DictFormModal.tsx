@@ -56,7 +56,7 @@ const DictFormModal: React.FC<DictFormModalProps> = ({
                 { pattern: /^[A-Za-z0-9_()/-]+$/, message: '编码只能包含字母、数字、下划线、括号、斜杠和连字符' }
               ]}
             >
-              <Input id="dictCode" placeholder="如：XS(155/80A)、S、160/84A" disabled={Boolean(data)} />
+              <Input placeholder="如：XS(155/80A)、S、160/84A" disabled={Boolean(data)} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -65,7 +65,7 @@ const DictFormModal: React.FC<DictFormModalProps> = ({
               label="字典标签"
               rules={[{ required: true, message: '请输入字典标签' }]}
             >
-              <Input id="dictLabel" placeholder="显示名称" />
+              <Input placeholder="显示名称" />
             </Form.Item>
           </Col>
         </Row>
@@ -74,14 +74,14 @@ const DictFormModal: React.FC<DictFormModalProps> = ({
           name="sort"
           label="排序"
         >
-          <Input id="sort" type="number" placeholder="数字越小越靠前" />
+          <Input type="number" placeholder="数字越小越靠前" />
         </Form.Item>
 
         <Form.Item
           name="description"
           label="备注"
         >
-          <Input.TextArea id="description" rows={3} placeholder="请输入备注信息" />
+          <Input.TextArea rows={3} placeholder="请输入备注信息" />
         </Form.Item>
       </Form>
     </StandardModal>

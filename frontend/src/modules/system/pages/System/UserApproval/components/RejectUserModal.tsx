@@ -43,7 +43,6 @@ const RejectUserModal: React.FC<RejectUserModalProps> = ({
         <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该用户将无法登录系统</p>
       </div>
       <TextArea
-        id="rejectReason"
         placeholder="请输入拒绝原因（必填）"
         value={rejectReason}
         onChange={(e) => setRejectReason(e.target.value)}
