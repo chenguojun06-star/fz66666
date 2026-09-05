@@ -486,6 +486,12 @@ public class TemplateStyleOrchestrator {
             }
         }
 
+        // D-XXX：目标款是否已有尺寸数据。目标款完全没有尺寸行时，模板是唯一数据来源，
+        // 必须整表按模板写入；只有目标款已具备尺寸结构时才用规范码数过滤（防止模板把目标款
+        // 没有的码数列"拖进来"，D-264）。否则模板码与款式基础码数写法不一致（如简单码 S vs
+        // 款式配置 S(155/80A)）时，模板所有行会被静默丢弃 → 提示"导入成功"但尺寸表仍空白。
+        boolean hasExistingData = existing != null && !existing.isEmpty();
+
         int filledRows = 0;
         int addedParts = 0;
         int unmatchedRows = 0;
@@ -494,10 +500,10 @@ public class TemplateStyleOrchestrator {
             String partKey = normalizePartKey(size.getPartName());
             Map<String, StyleSize> partRows = partKey.isEmpty() ? null : existingByPart.get(partKey);
 
-            // 部位不存在：整行新增（带入模板的码数与数值），但仅限目标款规范码数内的码
+            // 部位不存在：整行新增（带入模板的码数与数值）
             if (partRows == null || partRows.isEmpty()) {
                 String sizeKey = sizeDedupeKey(size.getSizeName());
-                if (!canonicalSizeKeys.isEmpty() && (sizeKey.isEmpty() || !canonicalSizeKeys.contains(sizeKey))) {
+                if (hasExistingData && !canonicalSizeKeys.isEmpty() && (sizeKey.isEmpty() || !canonicalSizeKeys.contains(sizeKey))) {
                     foreignSizeRows++;
                     continue;
                 }
