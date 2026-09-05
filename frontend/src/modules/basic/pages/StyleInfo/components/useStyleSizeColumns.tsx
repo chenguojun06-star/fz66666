@@ -278,14 +278,14 @@ export function useStyleSizeColumns({
           // withSizes=true → 带具体码数的完整明细，用于 Tooltip，保证信息不丢失
           const buildZoneText = (withSizes: boolean) => zones.map((zone) => {
             const frontInfo = (zone.frontSizes ?? []).length > 0
-              ? `前${withSizes ? `:${(zone.frontSizes ?? []).map(shortSizeLabel).join('/')}` : ''}↓${toNumberSafe(zone.frontStep)}`
+              ? `前${withSizes ? `:${(zone.frontSizes ?? []).join('/')}` : ''}↓${toNumberSafe(zone.frontStep)}`
               : '';
             const backInfo = (zone.backSizes ?? []).length > 0
-              ? `后${withSizes ? `:${(zone.backSizes ?? []).map(shortSizeLabel).join('/')}` : ''}↑${toNumberSafe(zone.backStep)}`
+              ? `后${withSizes ? `:${(zone.backSizes ?? []).join('/')}` : ''}↑${toNumberSafe(zone.backStep)}`
               : '';
             const extraInfo = (zone.sizeStepColumns || []).map((col, idx) => {
               if ((col.sizes || []).length === 0) return '';
-              return `列${idx + 1}${withSizes ? `:${col.sizes.map(shortSizeLabel).join('/')}` : ''}→${toNumberSafe(col.step)}`;
+              return `列${idx + 1}${withSizes ? `:${col.sizes.join('/')}` : ''}→${toNumberSafe(col.step)}`;
             }).filter(Boolean).join(' ');
             return `${zone.label}(${[frontInfo, backInfo, extraInfo].filter(Boolean).join(' ')})`;
           }).join('；');
@@ -309,28 +309,28 @@ export function useStyleSizeColumns({
 
     const sizeCols = sizeColumns.map((sn, sizeIndex) => ({
       title: (
-        // D-252：列头只显示码数简称（XS / S / D），完整名（XS(155/72A)）悬浮可见。
-        // 此前列头直接用完整码数名，多个码并列时列被撑爆。
-        <Tooltip title={sn}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontWeight: 600 }}>{shortSizeLabel(sn)}</span>
-            {editableMode ? (
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                title={`删除尺码 ${sn}`}
-                onClick={() => {
-                  Modal.confirm({
-                    width: '30vw',
-                    title: `确定删除尺码"${sn}"？`,
-                    onOk: () => handleDeleteSize(sn),
-                  });
-                }}
-              />
-            ) : null}
-          </span>
-        </Tooltip>
+        // D-XXX：列头显示完整码数名（与同页"各码实际用量"表、小程序样衣详情页口径一致）。
+        // 此前 D-252 只显示简称 S，而带型体的码（如 S(155/80A)）被简称后看似重复（S/S/M/M…），
+        // 用户误以为数据被简化/丢失，且与同页下方用量表、小程序显示不一致。
+        // 完整名支持换行，列宽由表格自适应，避免此前"多个码并列列被撑爆"的问题回归。
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
+          <span style={{ fontWeight: 600 }}>{sn}</span>
+          {editableMode ? (
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              title={`删除尺码 ${sn}`}
+              onClick={() => {
+                Modal.confirm({
+                  width: '30vw',
+                  title: `确定删除尺码"${sn}"？`,
+                  onOk: () => handleDeleteSize(sn),
+                });
+              }}
+            />
+          ) : null}
+        </span>
       ),
       dataIndex: sn,
       align: 'center' as const,
