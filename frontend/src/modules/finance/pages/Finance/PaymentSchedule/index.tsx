@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Card, Col, DatePicker, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
   ClockCircleOutlined, DollarOutlined, ExclamationCircleOutlined, WarningOutlined,
@@ -42,6 +42,10 @@ const PaymentSchedule: React.FC = () => {
     () => [dayjs(), dayjs().add(30, 'day')], // 默认未来30天
   );
 
+  // 统计单独拉全量（不分页），否则"待付总额/7/14/30天"只算当前页20条是假数字
+  const [allStats, setAllStats] = useState({ totalPending: 0, in7Days: 0, in14Days: 0, in30Days: 0 });
+  const [noDueDateAll, setNoDueDateAll] = useState(0);
+
   const fetchPayables = useCallback(async () => {
     setLoading(true);
     try {
@@ -56,6 +60,38 @@ const PaymentSchedule: React.FC = () => {
       const data = (res?.data ?? res) as Record<string, unknown> | undefined;
       setRecords((data?.records as Payable[]) ?? []);
       setTotal((data?.total as number) ?? 0);
+
+      // 全量拉一份做统计（与列表同筛选条件，数量级为应付单总数）
+      const statsRes: ApiResult = await payableApi.list({
+        page: 1,
+        pageSize: 1000,
+        startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+        endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
+        includeNoDueDate: true,
+      });
+      const statsData = (statsRes?.data ?? statsRes) as Record<string, unknown> | undefined;
+      const allRecords = (statsData?.records as Payable[]) ?? [];
+      const pendingRecords = allRecords.filter(r => Number(r.amount) - Number(r.paidAmount ?? 0) > 0);
+      const calcAmountInDays = (days: number) => {
+        const targetDate = new Date();
+        targetDate.setHours(0, 0, 0, 0);
+        targetDate.setDate(targetDate.getDate() + days);
+        return pendingRecords
+          .filter(r => {
+            if (!r.dueDate) return false;
+            const due = new Date(r.dueDate);
+            due.setHours(0, 0, 0, 0);
+            return due <= targetDate;
+          })
+          .reduce((sum, r) => sum + (Number(r.amount) - Number(r.paidAmount ?? 0)), 0);
+      };
+      setAllStats({
+        totalPending: pendingRecords.reduce((sum, r) => sum + (Number(r.amount) - Number(r.paidAmount ?? 0)), 0),
+        in7Days: calcAmountInDays(7),
+        in14Days: calcAmountInDays(14),
+        in30Days: calcAmountInDays(30),
+      });
+      setNoDueDateAll(pendingRecords.filter(r => !r.dueDate).length);
     } catch {
       message.error('加载付款计划失败');
     } finally {
@@ -69,43 +105,6 @@ const PaymentSchedule: React.FC = () => {
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const nowTimestamp = now.getTime();
-
-  // 仅对待付（remaining > 0）的记录做统计
-  const stats = useMemo(() => {
-    const pendingRecords = records.filter(r => {
-      const remaining = Number(r.amount) - Number(r.paidAmount ?? 0);
-      return remaining > 0;
-    });
-
-    const totalPending = pendingRecords.reduce((sum, r) => sum + (Number(r.amount) - Number(r.paidAmount ?? 0)), 0);
-
-    const calcAmountInDays = (days: number) => {
-      const targetDate = new Date(nowTimestamp);
-      targetDate.setDate(targetDate.getDate() + days);
-      return pendingRecords
-        .filter(r => {
-          if (!r.dueDate) return false;
-          const due = new Date(r.dueDate);
-          due.setHours(0, 0, 0, 0);
-          return due <= targetDate;
-        })
-        .reduce((sum, r) => sum + (Number(r.amount) - Number(r.paidAmount ?? 0)), 0);
-    };
-
-    return {
-      totalPending,
-      in7Days: calcAmountInDays(7),
-      in14Days: calcAmountInDays(14),
-      in30Days: calcAmountInDays(30),
-    };
-  }, [records, nowTimestamp]);
-
-  // D-243：未填到期日的应付单无法做到期预测，单独统计出来提示用户补填
-  const noDueDateCount = useMemo(
-    () => records.filter(r => !r.dueDate && Number(r.amount) - Number(r.paidAmount ?? 0) > 0).length,
-    [records],
-  );
 
   const getRemainingDays = (dueDate?: string) => {
     if (!dueDate) return null;
@@ -181,10 +180,11 @@ const PaymentSchedule: React.FC = () => {
       render: (_, _record) => {
         const actions: RowAction[] = [
           {
-            key: 'view',
-            label: '查看详情',
+            key: 'pay',
+            label: '去付款',
             onClick: () => {
-              message.info('待实现：跳转到应付详情');
+              // 打款统一在收付款中心完成；?tab=pending 直达待付款页签
+              window.open('/finance/wage-payment?tab=pending', '_blank');
             },
           },
         ];
@@ -195,13 +195,28 @@ const PaymentSchedule: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      {/* 页头说明 */}
+      <Card size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 16 }}>
+              <ClockCircleOutlined style={{ marginRight: 8 }} />
+              付款计划
+            </h2>
+            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              未来要付给供应商的钱按到期日排列；实际打款去「财务管理 → 收付款中心」
+            </span>
+          </div>
+        </div>
+      </Card>
+
       {/* D-243：未填到期日的应付单已计入待付总额，但无法归入 7/14/30 天预测 */}
-      {noDueDateCount > 0 && (
+      {noDueDateAll > 0 && (
         <Alert
           type="warning"
           showIcon
           style={{ marginBottom: 12 }}
-          message={`有 ${noDueDateCount} 笔应付单未填写到期日`}
+          message={`有 ${noDueDateAll} 笔应付单未填写到期日`}
           description="这些单据已计入「待付总额」，但因缺少到期日无法归入 7 / 14 / 30 天到期预测。建议补填到期日，付款计划才准确。"
         />
       )}
@@ -210,7 +225,7 @@ const PaymentSchedule: React.FC = () => {
           <Card>
             <Statistic
               title="待付总额"
-              value={stats.totalPending}
+              value={allStats.totalPending}
               precision={2}
               prefix={<DollarOutlined />}
               styles={{ content: { color: 'var(--color-primary)' } }}
@@ -221,8 +236,8 @@ const PaymentSchedule: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="7天内应付"
-              value={stats.in7Days}
+              title="7天内到期应付"
+              value={allStats.in7Days}
               precision={2}
               prefix={<WarningOutlined />}
               styles={{ content: { color: 'var(--color-danger)' } }}
@@ -233,8 +248,8 @@ const PaymentSchedule: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="14天内应付"
-              value={stats.in14Days}
+              title="14天内到期应付"
+              value={allStats.in14Days}
               precision={2}
               prefix={<ExclamationCircleOutlined />}
               styles={{ content: { color: 'var(--color-warning)' } }}
@@ -245,8 +260,8 @@ const PaymentSchedule: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="30天内应付"
-              value={stats.in30Days}
+              title="30天内到期应付"
+              value={allStats.in30Days}
               precision={2}
               prefix={<ClockCircleOutlined />}
               styles={{ content: { color: 'var(--color-info)' } }}

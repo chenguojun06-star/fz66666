@@ -58,6 +58,17 @@ const ReceivableList: React.FC = () => {
   return (
     <>
       <div style={{ padding: 24 }}>
+        {/* 页头说明 */}
+        <Card size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
+          <h2 style={{ margin: 0, fontSize: 16 }}>
+            <DollarOutlined style={{ marginRight: 8 }} />
+            应收管理
+          </h2>
+          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+            客户欠我们的钱：订单/样衣产生的应收在这里登记与催收；到账后登记收款核销
+          </span>
+        </Card>
+
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 12 }}>
           <Col span={6}>
@@ -108,13 +119,13 @@ const ReceivableList: React.FC = () => {
           </Col>
         </Row>
 
-        {/* 逾期提示 */}
+        {/* 逾期提示（Alert 必须用 message，title 不是 antd Alert 属性——原先根本不显示） */}
         {stats.overdueCount > 0 && (
           <Alert
             type="warning"
             showIcon
             icon={<WarningOutlined />}
-            title={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${toMoneyLocale(Number(stats.totalOverdue))}，请及时催款。`}
+            message={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${toMoneyLocale(Number(stats.totalOverdue))}，请及时催款。`}
             style={{ marginBottom: 16 }}
             closable
           />
@@ -133,6 +144,7 @@ const ReceivableList: React.FC = () => {
                     fetchList(1, v, keyword, sourceBizType, sourceBizNo);
                   }}
                   style={{ width: 140 }}
+                  placeholder="收款状态"
                   options={STATUS_FILTER_OPTIONS}
                 />
                 <Select
@@ -143,6 +155,7 @@ const ReceivableList: React.FC = () => {
                     fetchList(1, statusFilter, keyword, v, sourceBizNo);
                   }}
                   style={{ width: 160 }}
+                  placeholder="来源类型"
                   options={SOURCE_BIZ_TYPE_OPTIONS}
                 />
                 <Input

@@ -28,7 +28,11 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   }, [showSmartErrorNotice]);
 
   // ---- Tab ----
-  const [activeTab, setActiveTab] = useState<string>('pending');
+  // 支持 ?tab=pending|records|receivable|payable 直达（付款计划页"去付款"等入口跳转用）
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return ['pending', 'records', 'receivable', 'payable'].includes(tab || '') ? (tab as string) : 'pending';
+  });
 
   // ---- 待收付款列表 ----
   const [payables, setPayables] = useState<PayableItem[]>([]);
