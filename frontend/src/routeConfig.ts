@@ -702,12 +702,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.payrollOperatorSummary]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）
   [paths.financeCenter]: permissionCodes.financeCenter,
-  // D-300 权限补配：财务总览/付款计划/财税工具/每日流水/EC收入此前无码=对所有角色永久可见无法控制
-  [paths.financeDashboard]: permissionCodes.financeDashboard, // 财务总览 MENU_FINISHED_SETTLEMENT（与工资/外发结算同码）
-  [paths.dailyFlow]: permissionCodes.financeDashboard, // 每日流水已并入财务总览tab，同码
-  [paths.financePaymentSchedule]: permissionCodes.wagePayment, // 付款计划属收付款链路，MENU_PAYMENT_APPROVAL
-  [paths.financeTaxExport]: permissionCodes.financeTaxExport, // 财税工具 MENU_FINANCE_EXPORT
-  [paths.ecSalesRevenue]: permissionCodes.financeTaxExport, // EC销售收入随财税工具同码
   [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.employeeAdvance]: permissionCodes.employeeAdvance,
   [paths.wagePayment]: permissionCodes.wagePayment,
@@ -741,7 +735,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.ecSalesRevenue]: permissionCodes.financeTaxExport,         // EC销售收入 → MENU_FINANCE_EXPORT
   [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
   [paths.dailyFlow]: permissionCodes.financeDashboard,              // 每日流水 → 复用财务总览权限
-  [paths.financePaymentSchedule]: permissionCodes.materialRecon,      // 付款计划 → 复用物料对账权限
+  [paths.financePaymentSchedule]: permissionCodes.wagePayment,      // 付款计划 → 收付款权限（D-300：与权限矩阵"收付款中心（含付款计划）"行对齐）
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.selectionBatch]: permissionCodes.selection,

@@ -16,7 +16,7 @@ const tabSuspense = (
   </div>
 );
 
-interface ExpenseAdvanceCenterProps {
+export interface ExpenseAdvanceCenterProps {
   /** 路径直达时定位的初始页签（/finance/employee-advance → advance） */
   initialTab?: 'expense' | 'advance';
 }
@@ -29,7 +29,7 @@ const ExpenseAdvanceCenter: React.FC<ExpenseAdvanceCenterProps> = ({ initialTab 
     initialTab === 'advance' && canAdvance ? 'advance' : canExpense ? 'expense' : canAdvance ? 'advance' : 'expense',
   );
 
-  const items = [];
+  const items: Array<{ key: string; label: string; children: JSX.Element }> = [];
   if (canExpense) {
     items.push({
       key: 'expense',
