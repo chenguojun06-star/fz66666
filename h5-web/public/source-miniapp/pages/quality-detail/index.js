@@ -6,6 +6,8 @@ const { getUserInfo } = require('../../utils/storage');
 const qualityHelper = require('../../utils/quality-helper');
 const { calcDeliveryInfo } = require('../../utils/deliveryHelper');
 const { QUALITY_STATUS_LABEL } = require('../../utils/displayHelper');
+const { splitStyleOptions } = require('../../utils/styleOptions');
+const { sortSizeNames } = require('../../utils/sizeUtils');
 
 const getQualityCategory = qualityHelper.getQualityCategory;
 const DEFECT_CATEGORY_MAP = qualityHelper.DEFECT_CATEGORY_MAP;
@@ -72,6 +74,12 @@ Page({
   data: {
     orderId: '',
     warehousingNo: '',
+    // 质检明细 / 尺寸表 双 tab（尺寸表布局对齐样衣开发详情页）
+    activeTab: 'qc',
+    styleId: '',
+    sizeColumns: [],
+    sizeRows: [],
+    sizeLoading: false,
     briefing: null,
     order: null,
     style: null,
@@ -106,6 +114,7 @@ Page({
       qualifiedQty: 0,
       unqualifiedQty: 0,
       defectCategory: '',
+      defectCategoryLabel: '',
       defectRemark: '',
       remark: '',
       imageUrls: [],
@@ -119,6 +128,7 @@ Page({
     batchUnqualFormVisible: false,
     batchUnqualData: {
       defectCategory: '',
+      defectCategoryLabel: '',
       defectRemark: '',
     },
     // 页面内入库表单（记录下方展开，-1 表示未展开）
@@ -183,10 +193,22 @@ Page({
     this.fetchPendingBundles();
     this.fetchAiSuggestion();
     this._bindWsEvents();
+
+    // 隐私授权弹窗监听（拍照/选图需隐私授权），与 scan/quality 页面保持一致
+    var self = this;
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', function (resolve) {
+        try {
+          var dialog = self.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
+        } catch (_e) { /* 静默 */ }
+      });
+    }
   },
 
   onUnload: function () {
     this._unbindWsEvents();
+    if (this._unsubPrivacy) { this._unsubPrivacy(); this._unsubPrivacy = null; }
   },
 
   onPullDownRefresh: function () {
@@ -197,6 +219,7 @@ Page({
       this.fetchPendingBundles(),
       this.fetchAiSuggestion(),
     ]).finally(function () {
+      // 尺寸表随 briefing 的 styleId 一起刷新（fetchBriefing 内部已触发）
       wx.stopPullDownRefresh();
     });
   },
@@ -238,6 +261,9 @@ Page({
           styleCover = getAuthedImageUrl(order.styleCover);
         }
 
+        // 款式ID：尺寸表 tab 用（briefing.style.styleId，后端 buildStyleInfo 已补齐）
+        var styleId = (style && (style.styleId || style.id)) || order.styleId || '';
+
         bom = bom.map(function (b) {
           b.materialTypeText = MATERIAL_TYPE_MAP[b.materialType] || b.materialType || '-';
           return b;
@@ -249,8 +275,14 @@ Page({
           style: style,
           bom: bom,
           styleCover: styleCover,
+          styleId: styleId,
           loading: false,
         });
+
+        // 尺寸表加载（styleId 就绪后异步拉取，不阻塞主流程）
+        if (styleId) {
+          self.fetchSizeTable(styleId);
+        }
       })
       .catch(function (err) {
         console.error('[QualityDetail] fetchBriefing failed:', err);
@@ -261,6 +293,114 @@ Page({
           toast.error('加载质检简报失败');
         }
       });
+  },
+
+  /**
+   * 尺寸表 tab 切换
+   */
+  onTabChange: function (e) {
+    var key = e.currentTarget.dataset.key;
+    if (!key || key === this.data.activeTab) return;
+    this.setData({ activeTab: key });
+  },
+
+  /**
+   * 加载款式尺寸表（与样衣开发详情页同接口 /api/style/size/list）
+   * 透视后：sizeColumns=尺码列，sizeRows=部位行（横向：部位为行，尺码为列）
+   */
+  fetchSizeTable: function (styleId) {
+    var self = this;
+    var sid = String(styleId || '').trim();
+    if (!sid) {
+      self.setData({ sizeLoading: false });
+      return Promise.resolve();
+    }
+    self.setData({ sizeLoading: true });
+    return api.style
+      .listSizes({ styleId: sid })
+      .then(function (res) {
+        var list = (res && (res.data || res.records)) || res || [];
+        if (!Array.isArray(list)) list = [];
+        var table = self._pivotSizeTable(list);
+        self.setData({
+          sizeColumns: table.columns,
+          sizeRows: table.rows,
+          sizeLoading: false,
+        });
+      })
+      .catch(function (err) {
+        console.error('[QualityDetail] fetchSizeTable failed:', err);
+        self.setData({ sizeLoading: false });
+      });
+  },
+
+  /**
+   * 尺寸表透视：把 [{partName, sizeName, standardValue}] 转成行=部位、列=尺码
+   * 与样衣开发详情页 _pivotSizeTable 同口径：
+   *  1. 合并尺码必须先展开成原子尺码（"S/M" → ["S","M"]），复用 utils/styleOptions.js splitStyleOptions
+   *  2. 排序复用 utils/sizeUtils.js sortSizeNames，与下单页/列表页同一口径
+   */
+  _pivotSizeTable: function (rawList) {
+    if (!rawList || rawList.length === 0) {
+      return { columns: [], rows: [] };
+    }
+
+    // 1) 展开合并尺码 → 原子尺码
+    var normalized = [];
+    rawList.forEach(function (item) {
+      var rawSize = String(item.sizeName || item.baseSize || '').trim();
+      var atomic = splitStyleOptions(rawSize);
+      var list = atomic.length ? atomic : (rawSize ? [rawSize] : []);
+      list.forEach(function (sn) {
+        normalized.push({
+          partName: item.partName || '',
+          sizeName: sn,
+          value: item.standardValue,
+          tolerance: item.tolerance,
+        });
+      });
+    });
+
+    // 2) 尺码列（去重 + 统一排序）
+    var seen = {};
+    var sizeSet = [];
+    normalized.forEach(function (item) {
+      if (item.sizeName && !seen[item.sizeName]) {
+        seen[item.sizeName] = true;
+        sizeSet.push(item.sizeName);
+      }
+    });
+    var columns = sortSizeNames(sizeSet);
+
+    // 3) 部位行（去重，保持首次出现顺序）
+    var partList = [];
+    var partSeen = {};
+    normalized.forEach(function (item) {
+      var p = item.partName;
+      if (p && !partSeen[p]) {
+        partSeen[p] = true;
+        partList.push(p);
+      }
+    });
+
+    // 4) partName + sizeName → 值（注意 0 是合法值，不能用 || 判空）
+    var lookup = {};
+    normalized.forEach(function (item) {
+      var v = item.value;
+      var text = (v !== null && v !== undefined && v !== '') ? v : (item.tolerance || '-');
+      lookup[item.partName + '|' + item.sizeName] = text;
+    });
+
+    var rows = partList.map(function (part) {
+      var values = {};
+      columns.forEach(function (size) {
+        var v = lookup[part + '|' + size];
+        values[size] = (v === null || v === undefined || v === '') ? '-' : v;
+      });
+      return { partName: part, values: values };
+    });
+
+    return { columns: columns, rows: rows };
   },
 
   /**
@@ -396,7 +536,8 @@ Page({
       .then(function (res) {
         var bundles = Array.isArray(res) ? res : (res && res.records ? res.records : []);
         bundles = bundles.map(function (b) {
-          b.bundleNoShort = self._truncateBundleNo(b.bundleQrCode || b.bundleNo || b.cuttingBundleQrCode, b.orderNo || self.data.orderNo);
+          // 菲号显示带床号，区分同扎号不同床的重复菲号
+          b.bundleNoShort = self._truncateBundleNo(b.bundleQrCode || b.bundleNo || b.cuttingBundleQrCode, b.orderNo || self.data.orderNo, b.bedNo, b.bedSubNo);
           // 多选用 key：优先 qrCode，缺省回退 bundleId
           b.selectKey = b.qrCode || b.bundleId || '';
           b.selected = false;
@@ -438,8 +579,8 @@ Page({
 
     r.defectCategoryText = DEFECT_CATEGORY_MAP[r.defectCategory] || r.defectCategory || '';
 
-    // 菲号显示：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
-    r.bundleNoShort = this._truncateBundleNo(r.bundleQrCode || r.bundleNo || r.cuttingBundleQrCode, r.orderNo || this.data.orderNo);
+    // 菲号显示：订单号+菲号+床号（与 PC 端 orderNo-bundleNo 对齐，带床号区分同扎号不同床）
+    r.bundleNoShort = this._truncateBundleNo(r.bundleQrCode || r.bundleNo || r.cuttingBundleQrCode, r.orderNo || this.data.orderNo, r.bedNo, r.bedSubNo);
 
     r.isHighlighted = !!this.data.warehousingNo &&
       String(r.warehousingNo || '').trim() === this.data.warehousingNo;
@@ -542,9 +683,10 @@ Page({
   },
 
   /**
-   * 菲号格式化：订单号+菲号（与 PC 端 orderNo-bundleNo 对齐）
+   * 菲号格式化：订单号+菲号+床号（与 PC 端 orderNo-bundleNo 对齐）
+   * 床号（bedNo/bedSubNo）用于区分同一扎号在不同裁剪床的菲号，避免显示重复
    */
-  _truncateBundleNo: function (qr, orderNo) {
+  _truncateBundleNo: function (qr, orderNo, bedNo, bedSubNo) {
     if (!qr) {
       if (orderNo) return orderNo + '-?';
       return '-';
@@ -555,7 +697,11 @@ Page({
     var bundleSeq = parts[parts.length - 1] || '';
     var ord = orderNo || parts[0] || '';
     if (ord && bundleSeq) {
-      return ord + '-' + bundleSeq;
+      var label = ord + '-' + bundleSeq;
+      if (bedNo) {
+        label += '-床' + bedNo + (bedSubNo ? '-' + bedSubNo : '');
+      }
+      return label;
     }
     return parts.length > 3 ? parts.slice(-3).join('-') : t;
   },
@@ -651,6 +797,7 @@ Page({
           qualifiedQty: qty,
           unqualifiedQty: 0,
           defectCategory: '',
+          defectCategoryLabel: '',
           defectRemark: '',
           remark: '',
           imageUrls: [],
@@ -661,7 +808,7 @@ Page({
         qcSheetData: {
           bundleId: '', bundleNo: '', qrCode: '', quantity: 0,
           qualifiedQty: 0, unqualifiedQty: 0,
-          defectCategory: '', defectRemark: '', remark: '', imageUrls: [],
+          defectCategory: '', defectCategoryLabel: '', defectRemark: '', remark: '', imageUrls: [],
         },
       });
     }
@@ -708,7 +855,11 @@ Page({
   onDefectCategoryChange: function (e) {
     var index = Number(e.detail.value || 0);
     var opt = this.data.defectCategoryOptions[index];
-    this.setData({ 'qcSheetData.defectCategory': opt ? opt.value : '' });
+    // 必须同时同步 value 与 label，否则底部弹窗确认后 picker 仍显示占位符，看起来像"选取不上"
+    this.setData({
+      'qcSheetData.defectCategory': opt ? opt.value : '',
+      'qcSheetData.defectCategoryLabel': opt ? opt.label : '',
+    });
   },
 
   onDefectRemarkChange: function (e) {
@@ -728,15 +879,43 @@ Page({
       toast.info('最多上传 5 张照片');
       return;
     }
+    // 与全站其他选图入口一致：调用 chooseMedia 前清除残留 toast/loading，
+    // 避免灰度基础库下原生提示条压住相册选择器导致静默无响应
+    if (wx.hideToast) wx.hideToast();
+    if (wx.hideLoading) wx.hideLoading();
     wx.chooseMedia({
       count: 5 - current.length,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       success: function (res) {
-        var newUrls = res.tempFiles.map(function (f) { return f.tempFilePath; });
-        self.setData({
-          'qcSheetData.imageUrls': current.concat(newUrls),
+        var files = res.tempFiles || [];
+        var tasks = files.map(function (f) {
+          return api.common.uploadImage(f.tempFilePath);
         });
+        Promise.all(tasks).then(function (urls) {
+          // 上传后返回相对路径 /api/file/tenant-download/...，
+          // <image> 标签无法携带 Authorization header，需追加 ?token=
+          var authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
+          self.setData({
+            'qcSheetData.imageUrls': current.concat(authedUrls),
+          });
+        }).catch(function () {
+          toast.error('图片上传失败');
+        });
+      },
+      fail: function (err) {
+        console.warn('[QualityDetail] chooseMedia fail:', err);
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showModal({
+            title: '相机/相册权限',
+            content: '需要相机或相册权限才能上传照片，请在设置中允许',
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: function (modalRes) {
+              if (modalRes.confirm) wx.openSetting({ success: function () {} });
+            },
+          });
+        }
       },
     });
   },
@@ -902,14 +1081,17 @@ Page({
     }
     this.setData({
       batchUnqualFormVisible: true,
-      batchUnqualData: { defectCategory: '', defectRemark: '' },
+      batchUnqualData: { defectCategory: '', defectCategoryLabel: '', defectRemark: '' },
     });
   },
 
   onBatchUnqualDefectCategoryChange: function (e) {
     var index = Number(e.detail.value || 0);
     var opt = this.data.defectCategoryOptions[index];
-    this.setData({ 'batchUnqualData.defectCategory': opt ? opt.value : '' });
+    this.setData({
+      'batchUnqualData.defectCategory': opt ? opt.value : '',
+      'batchUnqualData.defectCategoryLabel': opt ? opt.label : '',
+    });
   },
 
   onBatchUnqualDefectRemarkChange: function (e) {
@@ -1302,8 +1484,22 @@ Page({
   // ========== 图片预览 ==========
 
   onPreviewImage: function (e) {
-    var url = e.currentTarget.dataset.url;
-    var urls = e.currentTarget.dataset.urls || [url];
+    var d = e.currentTarget.dataset;
+    var url = d.url;
+    var urls;
+    if (d.src === 'latest') {
+      // 顶部"不良品照片"区：来自 latestRecord.imageList
+      var latest = this.data.latestRecord;
+      urls = (latest && Array.isArray(latest.imageList) && latest.imageList.length > 0)
+        ? latest.imageList
+        : [url];
+    } else {
+      // 质检记录列表：来自 qcRecords[recIdx].imageList
+      var rec = this.data.qcRecords[Number(d.recIdx)];
+      urls = (rec && Array.isArray(rec.imageList) && rec.imageList.length > 0)
+        ? rec.imageList
+        : [url];
+    }
     wx.previewImage({
       current: url,
       urls: urls,

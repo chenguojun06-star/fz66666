@@ -18,11 +18,8 @@
     <!-- ============ 1. 基本信息卡（设计稿：封面图 + 订单号 + 状态标签 + 行式信息 border-b 分隔） ============ -->
     <view class="detail-card">
       <view class="basic-header">
-        <image wx:if="{{styleCover}}" class="basic-cover" src="{{styleCover}}" mode="aspectFit" />
-        <view wx:else class="basic-cover-placeholder">
-          <view class="line-icon icon-shirt"></view>
-        </view>
-        <view class="basic-header-info">
+        <image wx:if="{{styleCover}}" class="basic-cover" src="{{styleCover}}" mode="aspectFill" />
+        <view class="basic-header-info {{styleCover ? '' : 'basic-header-info--full'}}">
           <view class="basic-title-row">
             <text class="basic-order-no">{{order.orderNo || (detail.orderNo || '-')}}</text>
             <view wx:if="{{latestRecord.qualityStatusText}}" class="status-pill {{latestRecord.qualityStatusCls}}">{{latestRecord.qualityStatusText}}</view>
@@ -67,6 +64,15 @@
         </view>
       </view>
     </view>
+
+    <!-- ============ 1.5 页内 tab 栏（质检明细 / 尺寸表，布局对齐样衣开发详情页） ============ -->
+    <view class="detail-tabs">
+      <view class="detail-tab {{activeTab === 'qc' ? 'detail-tab--active' : ''}}" data-key="qc" bindtap="onTabChange">质检明细</view>
+      <view class="detail-tab {{activeTab === 'size' ? 'detail-tab--active' : ''}}" data-key="size" bindtap="onTabChange">尺寸表</view>
+    </view>
+
+    <!-- ============ 质检明细 tab 内容 ============ -->
+    <block wx:if="{{activeTab === 'qc'}}">
 
     <!-- ============ 2. 数量进度卡（设计稿：4列大数字 22px） ============ -->
     <view class="detail-card">
@@ -139,7 +145,7 @@
         <view class="photo-grid-3">
           <image wx:for="{{latestRecord.imageList}}" wx:key="*this"
                  class="defect-photo-img" src="{{item}}" mode="aspectFit"
-                 data-url="{{item}}" data-urls="{{latestRecord.imageList}}" bindtap="onPreviewImage" />
+                 data-url="{{item}}" data-idx="{{index}}" data-src="latest" bindtap="onPreviewImage" />
         </view>
       </view>
     </view>
@@ -203,8 +209,7 @@
             </view>
             <view class="bundle-select-meta">
               <text class="bundle-select-meta-item" wx:if="{{item.color}}">颜色 {{item.color}}</text>
-              <text class="bundle-select-meta-item" wx:if="{{item.size}}">尺码 {{item.size}}</text>
-              <text class="bundle-select-meta-item">数量 {{item.quantity || 0}}</text>
+              <text class="bundle-select-meta-item">码数 {{item.size || '-'}} · {{item.quantity || 0}}件</text>
             </view>
           </view>
         </view>
@@ -228,7 +233,7 @@
             <view class="qc-form-row">
               <view class="qc-form-col"><text class="qc-form-label">缺陷类别</text>
                 <picker class="qc-form-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" bindchange="onDefectCategoryChange">
-                  <view class="picker-value {{qcSheetData.defectCategory ? '' : 'picker-placeholder'}}">{{qcSheetData.defectCategory ? qcSheetData.defectCategory : '请选择缺陷类别'}}</view>
+                  <view class="picker-value {{qcSheetData.defectCategoryLabel ? '' : 'picker-placeholder'}}">{{qcSheetData.defectCategoryLabel ? qcSheetData.defectCategoryLabel : '请选择缺陷类别'}}</view>
                 </picker>
               </view>
               <view class="qc-form-col"><text class="qc-form-label">处理方式</text>
@@ -272,7 +277,7 @@
             <view class="qc-form-row">
               <view class="qc-form-col"><text class="qc-form-label">缺陷类别</text>
                 <picker class="qc-form-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" bindchange="onBatchUnqualDefectCategoryChange">
-                  <view class="picker-value {{batchUnqualData.defectCategory ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectCategory ? batchUnqualData.defectCategory : '请选择缺陷类别'}}</view>
+                  <view class="picker-value {{batchUnqualData.defectCategoryLabel ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectCategoryLabel ? batchUnqualData.defectCategoryLabel : '请选择缺陷类别'}}</view>
                 </picker>
               </view>
               <view class="qc-form-col"><text class="qc-form-label">处理方式</text>
@@ -349,9 +354,9 @@
           <view wx:if="{{item.imageList.length > 0}}" class="qc-photos">
             <view class="qc-photos-title">不良品照片 ({{item.imageList.length}})</view>
             <view class="photo-grid-3">
-              <image wx:for="{{item.imageList}}" wx:for-item="imgUrl" wx:key="*this"
+              <image wx:for="{{item.imageList}}" wx:for-item="imgUrl" wx:for-index="imgIndex" wx:key="*this"
                      class="defect-photo-img" src="{{imgUrl}}" mode="aspectFit"
-                     data-url="{{imgUrl}}" data-urls="{{item.imageList}}" bindtap="onPreviewImage" />
+                     data-url="{{imgUrl}}" data-idx="{{imgIndex}}" data-rec-idx="{{index}}" data-src="record" bindtap="onPreviewImage" />
             </view>
           </view>
 
@@ -476,7 +481,45 @@
       </block>
     </view>
 
+    </block>
+    <!-- ============ / 质检明细 tab 内容 ============ -->
+
+    <!-- ============ 尺寸表 tab 内容（布局对齐样衣开发详情页：部位为行、尺码为列，横向滚动） ============ -->
+    <block wx:if="{{activeTab === 'size'}}">
+      <view class="detail-card">
+        <view class="card-title-row">
+          <view class="card-title-with-tag">
+            <text class="card-title">尺寸表</text>
+            <text class="card-badge" wx:if="{{sizeRows.length > 0}}">{{sizeRows.length}}</text>
+          </view>
+          <text class="card-title-hint" wx:if="{{sizeRows.length > 0}}">{{sizeRows.length}}个部位</text>
+        </view>
+        <view wx:if="{{sizeLoading}}" class="loading-inline"><text class="loading-text">加载中...</text></view>
+        <scroll-view scroll-x wx:elif="{{sizeRows.length > 0}}" class="size-scroll" enhanced show-scrollbar="{{false}}">
+          <view class="size-table">
+            <!-- 表头：部位 | S | M | L | ... -->
+            <view class="size-row size-row--head">
+              <text class="size-cell size-cell--part">部位</text>
+              <text wx:for="{{sizeColumns}}" wx:key="*this" class="size-cell size-cell--size">{{item}}</text>
+            </view>
+            <!-- 数据行：胸围 | 90 | 94 | 98 | ... -->
+            <view wx:for="{{sizeRows}}" wx:key="partName" class="size-row">
+              <text class="size-cell size-cell--part">{{item.partName}}</text>
+              <block wx:for="{{sizeColumns}}" wx:for-item="col" wx:key="*this">
+                <text class="size-cell size-cell--val">{{item.values[col]}}</text>
+              </block>
+            </view>
+          </view>
+        </scroll-view>
+        <view wx:else class="empty-inline">
+          <text class="empty-text-inline">暂无尺寸表，请在 PC 端配置</text>
+        </view>
+      </view>
+    </block>
+    <!-- ============ / 尺寸表 tab 内容 ============ -->
+
     <view style="height: 120rpx;"></view>
   </block>
+  <privacy-dialog id="privacyDialog" />
   <ai-assistant />
 </view>

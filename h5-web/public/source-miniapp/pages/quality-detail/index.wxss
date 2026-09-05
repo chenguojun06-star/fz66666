@@ -124,29 +124,98 @@
   padding: 8rpx 16rpx;
 }
 
-/* ========== 1. 基本信息卡 ========== */
+/* ========== 1.5 页内 tab 栏（质检明细 / 尺寸表，对齐样衣开发详情页） ========== */
+.detail-tabs {
+  display: flex;
+  margin: 0 24rpx;
+  background: #fff;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border-light, #f0f0f0);
+}
+.detail-tab {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 28rpx;
+  color: var(--color-text-secondary, #666);
+  position: relative;
+}
+.detail-tab--active {
+  color: var(--color-primary, #165DFF);
+  font-weight: 600;
+}
+.detail-tab--active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 48rpx;
+  height: 6rpx;
+  border-radius: 6rpx;
+  background: var(--color-primary, #165DFF);
+}
+
+/* ========== 尺寸表（横向：部位为行，尺码为列，对齐样衣开发详情页） ========== */
+.size-scroll {
+  width: 100%;
+  overflow: hidden;
+}
+.size-table {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 100%;
+  border: 1px solid var(--color-border-light, #eee);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.size-row {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-light, #f5f5f5);
+}
+.size-row:last-child {
+  border-bottom: none;
+}
+.size-row--head {
+  background: var(--color-bg-page, #f7f8fa);
+}
+.size-row--head .size-cell {
+  font-weight: 600;
+  color: var(--color-text-tertiary, #999);
+  font-size: var(--font-size-xs);
+}
+.size-cell {
+  padding: 16rpx 12rpx;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary, #333);
+  white-space: nowrap;
+  text-align: center;
+  flex-shrink: 0;
+}
+.size-cell--part { width: 160rpx; text-align: left; font-weight: 500; }
+.size-cell--size { width: 120rpx; font-weight: 600; }
+.size-cell--val { width: 120rpx; }
+
+/* ========== 基本信息卡 ========== */
 .basic-header {
   display: flex;
   align-items: flex-start;
 }
-.basic-cover,
-.basic-cover-placeholder {
+.basic-cover {
   width: 160rpx;
   height: 160rpx;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   background: #f0f1f3;
 }
-.basic-cover-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-tertiary, #999);
-}
 .basic-header-info {
   margin-left: 24rpx;
   flex: 1;
   min-width: 0;
+}
+.basic-header-info--full {
+  margin-left: 0;
 }
 .basic-title-row {
   display: flex;
@@ -170,24 +239,24 @@
 .status-pill.status-warning { background: rgba(255, 159, 0, 0.12); color: #FF9F00; }
 .status-pill.status-info { background: rgba(22, 93, 255, 0.12); color: #165DFF; }
 .basic-style-no {
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   font-size: 24rpx;
   color: var(--color-text-tertiary, #999);
   display: block;
 }
 .basic-info-rows {
-  margin-top: 16rpx;
+  margin-top: 12rpx;
 }
 .basic-info-row {
   display: flex;
   align-items: center;
-  padding: 14rpx 0;
+  padding: 12rpx 0;
   border-bottom: 1rpx solid var(--color-border-light, #f0f0f0);
   font-size: 26rpx;
 }
 .basic-info-row.last { border-bottom: none; }
 .basic-info-label {
-  width: 140rpx;
+  width: 120rpx;
   color: var(--color-text-tertiary, #999);
   flex-shrink: 0;
 }
@@ -297,23 +366,20 @@
   background: #f0f1f3;
 }
 
-/* ========== 5. 质检概览 ========== */
+/* ========== 5. 质检概览（待质检/待入库/合格率，紧凑小卡片） ========== */
 .overview-grid {
   display: flex;
-  margin: 20rpx 24rpx;
-  gap: 16rpx;
+  margin: 12rpx 0;
+  gap: 12rpx;
 }
 .overview-card {
   flex: 1;
   background: #fff;
-  
-  
   text-align: center;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
-
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 14px;
+  border-radius: var(--radius-md);
+  padding: 16rpx 8rpx;
   box-sizing: border-box;
 }
 .overview-card--primary { border-top: 6rpx solid var(--color-primary, #165DFF); }
@@ -321,19 +387,19 @@
 .overview-card--success { border-top: 6rpx solid #52C41A; }
 .overview-card--active { box-shadow: 0 8rpx 32rpx rgba(22, 93, 255, 0.16); }
 .overview-value {
-  font-size: 48rpx;
+  font-size: 36rpx;
   font-weight: 700;
   color: var(--color-text-primary, #1A1A1A);
   line-height: 1.1;
 }
 .overview-label {
-  margin-top: 8rpx;
-  font-size: 24rpx;
+  margin-top: 6rpx;
+  font-size: 22rpx;
   color: var(--color-text-tertiary, #999);
 }
 .overview-hint {
-  margin-top: 12rpx;
-  font-size: 22rpx;
+  margin-top: 8rpx;
+  font-size: 20rpx;
   color: var(--color-primary, #165DFF);
 }
 .overview-hint--muted { color: var(--color-text-quaternary, #C0C0C0); }
@@ -978,7 +1044,6 @@
 .line-icon { display: inline-block; }
 .line-icon--xl { width: 64rpx; height: 64rpx; }
 .icon-alert::before { content: '!'; font-size: 48rpx; color: var(--color-text-tertiary, #999); }
-.icon-shirt::before { content: '衫'; font-size: 40rpx; color: var(--color-text-tertiary, #999); }
 
 /* ═══ D-185：仓库/库位页面内直选 chips（对齐样衣仓库页风格） ═══ */
 .wh-chip-row {

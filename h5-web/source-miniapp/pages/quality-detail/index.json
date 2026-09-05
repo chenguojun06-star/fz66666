@@ -2,5 +2,7 @@
   "navigationBarTitleText": "质检详情",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
-  "usingComponents": {}
+  "usingComponents": {
+    "privacy-dialog": "/components/privacy-dialog/index"
+  }
 }
